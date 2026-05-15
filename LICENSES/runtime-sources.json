@@ -1,0 +1,76 @@
+{
+  "GCC-Runtime-Exception.txt": {
+    "url": "https://raw.githubusercontent.com/gcc-mirror/gcc/releases/gcc-15.2.0/COPYING.RUNTIME",
+    "sha256": "9d6b43ce4d8de0c878bf16b54d8e7a10d9bd42b75178153e3af6a815bdc90f74",
+    "bytes": 3324
+  },
+  "GPL-3.0.txt": {
+    "url": "https://raw.githubusercontent.com/gcc-mirror/gcc/releases/gcc-15.2.0/COPYING3",
+    "sha256": "8ceb4b9ee5adedde47b31e975c1d90c73ad27b6b165a1dcd80c7c545eb65b903",
+    "bytes": 35147
+  },
+  "GPL-2.0.txt": {
+    "url": "https://raw.githubusercontent.com/gcc-mirror/gcc/releases/gcc-15.2.0/COPYING",
+    "sha256": "231f7edcc7352d7734a96eef0b8030f77982678c516876fcb81e25b32d68564c",
+    "bytes": 18002
+  },
+  "MinGW-w64-COPYING.txt": {
+    "url": "https://raw.githubusercontent.com/mingw-w64/mingw-w64/v13.0.0/COPYING",
+    "sha256": "99a69660981156c21336fdb5661f89341b013c94e4bf9e1c7467b4745718397f",
+    "bytes": 2326
+  },
+  "MinGW-winpthreads.txt": {
+    "url": "https://raw.githubusercontent.com/mingw-w64/mingw-w64/v13.0.0/mingw-w64-libraries/winpthreads/COPYING",
+    "sha256": "63263614cdd29f2f93cba85e992f041b31f9fc7b4033692f31269489a8a1b177",
+    "bytes": 2883
+  },
+  "LLVM-libcxx.txt": {
+    "url": "https://raw.githubusercontent.com/llvm/llvm-project/llvmorg-17.0.2/libcxx/LICENSE.TXT",
+    "sha256": "539dd7aed86e8a4f12cbdd0e6c50c189c7d74847e4fecc64ce2c6ee3a01da38b",
+    "bytes": 16703
+  },
+  "LLVM-libunwind.txt": {
+    "url": "https://raw.githubusercontent.com/llvm/llvm-project/llvmorg-17.0.2/libunwind/LICENSE.TXT",
+    "sha256": "b5efebcaca80879234098e52d1725e6d9eb8fb96a19fce625d39184b705f7b6d",
+    "bytes": 16706
+  },
+  "LLVM-compiler-rt.txt": {
+    "url": "https://raw.githubusercontent.com/llvm/llvm-project/llvmorg-17.0.2/compiler-rt/LICENSE.TXT",
+    "sha256": "1a8f1058753f1ba890de984e48f0242a3a5c29a6a8f2ed9fd813f36985387e8d",
+    "bytes": 16708
+  },
+  "MinGW-w64-AUTHORS.txt": {
+    "url": "https://raw.githubusercontent.com/mingw-w64/mingw-w64/v13.0.0/AUTHORS",
+    "sha256": "8f308316e7a94b8410f871868bd3948f126526dc1775aeee97a0e365f9a0fd9f"
+  },
+  "MinGW-runtime-source-notices.txt": {
+    "url": "https://codeload.github.com/mingw-w64/mingw-w64/tar.gz/refs/tags/v13.0.0",
+    "archive_sha256": "1a910473313a329316025fa4563160deae378884e4b8ee573d1d03ac006b2e61",
+    "sha256": "a90742ec8591912df022143377f5ca4d83bfbde8008a89c50e5c94c06d05c010",
+    "selection": "Complete notice comment blocks in CRT and winpthreads, excluding profiling/tests."
+  },
+  "CC0-1.0.txt": {
+    "url": "https://raw.githubusercontent.com/spdx/license-list-data/main/text/CC0-1.0.txt",
+    "canonical_url": "https://creativecommons.org/publicdomain/zero/1.0/legalcode.txt",
+    "sha256": "a2010f343487d3f7618affe54f789f5487602331c0a8d03f49e9a7c547cf0499"
+  },
+  "LLVM-libcxxabi.txt": {
+    "url": "https://raw.githubusercontent.com/llvm/llvm-project/llvmorg-17.0.2/libcxxabi/LICENSE.TXT",
+    "sha256": "e2b35be49f7284a45b7baca8fc7b3ab7440e7902392b2528a457816b5bb2a15c"
+  },
+  "GCC-runtime-source-notices.txt": {
+    "sources": [
+      {
+        "url": "https://raw.githubusercontent.com/gcc-mirror/gcc/releases/gcc-13.3.0/libssp/ssp.c",
+        "upstream_sha256": "c289eb99c4af3bb7caf171f8d4fd45d7aa45f1cd7fa4bc8aa6e0cba3a37306db"
+      },
+      {
+        "url": "https://raw.githubusercontent.com/gcc-mirror/gcc/releases/gcc-13.3.0/libgcc/libgcc2.c",
+        "upstream_sha256": "97d364b0d74d6bf073eb3829ab12884ce243c68af8f7601d84baade12ee15599"
+      }
+    ],
+    "sha256": "f48b32db0c4bf613869838a37e5285971caaa3965bdf396f3ec13c21f4498d46",
+    "bytes": 2607,
+    "selection": "Verbatim copyright and licensing comment blocks from GCC 13.3.0 runtime sources"
+  }
+}

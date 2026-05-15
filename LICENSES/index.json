@@ -1,0 +1,373 @@
+[
+  {
+    "file": "LICENSES/AnyBOR-original-BSD-3-Clause.txt",
+    "license": "BSD-3-Clause",
+    "scope": "Original AnyBOR work and original contributions by retrodiv; third-party portions retain their terms",
+    "sha256": "abeb4a9677c142a681910f7a2e937918213c68b83849b1431ccb4f3f5466a0fa",
+    "source": "LICENSE"
+  },
+  {
+    "file": "LICENSES/AnyBOR-BSD-3-Clause.txt",
+    "license": "BSD-3-Clause",
+    "scope": "Inherited BSD portions and earlier BSD grants; does not relicense other components",
+    "sha256": "d153be644b641d99507cf6a749cc8cc5df3470a3b9a54a19b54b9a17f5b5b6fb",
+    "source": "Retained former combined BSD notice; see LICENSES.md"
+  },
+  {
+    "file": "LICENSES/OpenBOR-3400.txt",
+    "license": "LicenseRef-OpenBOR-NoSale",
+    "scope": "source and binary",
+    "sha256": "0854d130894ce6dafecc0b067b30eb26b8661bdcfca246f96c0677fd7d7c1e2a",
+    "source": "src/engines/3400/LICENSE"
+  },
+  {
+    "file": "LICENSES/OpenBOR-3842.txt",
+    "license": "BSD-3-Clause",
+    "scope": "source and binary",
+    "sha256": "dcb763dc21d44d294ad1914f1dbaeb5417cf31e8d39dc6a867fe4d8731bbc98f",
+    "source": "src/engines/3842/LICENSE"
+  },
+  {
+    "file": "LICENSES/OpenBOR-4086.txt",
+    "license": "BSD-3-Clause",
+    "scope": "source and binary",
+    "sha256": "dcb763dc21d44d294ad1914f1dbaeb5417cf31e8d39dc6a867fe4d8731bbc98f",
+    "source": "src/engines/4086/LICENSE"
+  },
+  {
+    "file": "LICENSES/OpenBOR-4432.txt",
+    "license": "BSD-3-Clause",
+    "scope": "source and binary",
+    "sha256": "3f12a435af24fce556b67e4c97a45fa750bccb9d3a17ff25209311b865efe3fb",
+    "source": "src/engines/4432/LICENSE"
+  },
+  {
+    "file": "LICENSES/OpenBOR-6412.txt",
+    "license": "BSD-3-Clause",
+    "scope": "source and binary",
+    "sha256": "adfc28feba4d32bb3933b29fe55fd0a6aa746084704c3ee71fc3f732706b9aa4",
+    "source": "src/engines/6412/LICENSE"
+  },
+  {
+    "file": "LICENSES/zlib.txt",
+    "license": "Zlib",
+    "scope": "source and binary",
+    "sha256": "e32ff4e00d9d94930537635291da39e7e612703334bf6fde8c7f1686fe8a45a2",
+    "source": "src/deps/zlib/LICENSE"
+  },
+  {
+    "file": "LICENSES/zlib--contrib--dotzlib--LICENSE_1_0.txt.txt",
+    "license": "see notice",
+    "scope": "component-specific; see source map",
+    "sha256": "c9bff75738922193e67fa726fa225535870d2aa1059f91452c411736284ad566",
+    "source": "src/deps/zlib/contrib/dotzlib/LICENSE_1_0.txt"
+  },
+  {
+    "file": "LICENSES/zlib--contrib--minizip--LICENSE.Info-Zip.txt",
+    "license": "see notice",
+    "scope": "component-specific; see source map",
+    "sha256": "fc686023047ce5ce3a18a9b8a777156f0e475929d3de06bac279f3c025d2b2ca",
+    "source": "src/deps/zlib/contrib/minizip/LICENSE.Info-Zip"
+  },
+  {
+    "file": "LICENSES/libpng.txt",
+    "license": "Libpng-2.0",
+    "scope": "source and binary",
+    "sha256": "bdb0a645ea18c60507d0368379b1ac5474b92255fcc2d115e07486a7672ba526",
+    "source": "src/deps/libpng/LICENSE"
+  },
+  {
+    "file": "LICENSES/libpng--AUTHORS.txt",
+    "license": "see notice",
+    "scope": "component-specific; see source map",
+    "sha256": "0c777e9f2a67bd4058ab91050eb7a56106c92ed038ba8fe5f54c83344f2d93ca",
+    "source": "src/deps/libpng/AUTHORS"
+  },
+  {
+    "file": "LICENSES/libpng--ci--LICENSE_MIT.txt.txt",
+    "license": "see notice",
+    "scope": "component-specific; see source map",
+    "sha256": "508a77d2e7b51d98adeed32648ad124b7b30241a8e70b2e72c99f92d8e5874d1",
+    "source": "src/deps/libpng/ci/LICENSE_MIT.txt"
+  },
+  {
+    "file": "LICENSES/libpng--contrib--gregbook--COPYING.txt",
+    "license": "see notice",
+    "scope": "component-specific; see source map",
+    "sha256": "d6cb0e9e560f51085556949a84af12b79a00f10ab8b66c752537faf7cd665572",
+    "source": "src/deps/libpng/contrib/gregbook/COPYING"
+  },
+  {
+    "file": "LICENSES/libpng--contrib--gregbook--LICENSE.txt",
+    "license": "see notice",
+    "scope": "component-specific; see source map",
+    "sha256": "b6a03c1803eb58ffb1f1278d5c7d4096c4c116e66dce8a7553e8c77d163c3438",
+    "source": "src/deps/libpng/contrib/gregbook/LICENSE"
+  },
+  {
+    "file": "LICENSES/libpng--contrib--pngexif--LICENSE_MIT.txt.txt",
+    "license": "see notice",
+    "scope": "component-specific; see source map",
+    "sha256": "508a77d2e7b51d98adeed32648ad124b7b30241a8e70b2e72c99f92d8e5874d1",
+    "source": "src/deps/libpng/contrib/pngexif/LICENSE_MIT.txt"
+  },
+  {
+    "file": "LICENSES/libpng--contrib--pngminus--LICENSE.txt.txt",
+    "license": "see notice",
+    "scope": "component-specific; see source map",
+    "sha256": "1806f1f10d393e9e377b3a8d1b968452b54f1a90378f14eeef45426946ace330",
+    "source": "src/deps/libpng/contrib/pngminus/LICENSE.txt"
+  },
+  {
+    "file": "LICENSES/libpng--scripts--cmake--AUTHORS.md.txt",
+    "license": "see notice",
+    "scope": "component-specific; see source map",
+    "sha256": "50633b976f0133862c921aa67d56de2c0b42eb344c8ca3853686efb092a447db",
+    "source": "src/deps/libpng/scripts/cmake/AUTHORS.md"
+  },
+  {
+    "file": "LICENSES/libogg.txt",
+    "license": "BSD-3-Clause",
+    "scope": "source and binary",
+    "sha256": "d2ab5758336489da61c12cc5bb757da5339c4ae9001f9bb0562b4370249af814",
+    "source": "src/deps/libogg/COPYING"
+  },
+  {
+    "file": "LICENSES/libogg--AUTHORS.txt",
+    "license": "see notice",
+    "scope": "component-specific; see source map",
+    "sha256": "6fcb33d0cdd60b5054e7df820916388b590427514288c2bab01c626bb8ae9506",
+    "source": "src/deps/libogg/AUTHORS"
+  },
+  {
+    "file": "LICENSES/libvorbis.txt",
+    "license": "BSD-3-Clause",
+    "scope": "source and binary",
+    "sha256": "ec1815db59fcd302846df949d7424876cb2e2dc5ed1606c5fb0b36787b1cf43a",
+    "source": "src/deps/libvorbis/COPYING"
+  },
+  {
+    "file": "LICENSES/libvorbis--AUTHORS.txt",
+    "license": "see notice",
+    "scope": "component-specific; see source map",
+    "sha256": "f5cab9f16035f770f50299f85cf2938c06dc3a9a30425961067788102ec896d3",
+    "source": "src/deps/libvorbis/AUTHORS"
+  },
+  {
+    "file": "LICENSES/libvpx.txt",
+    "license": "BSD-3-Clause",
+    "scope": "source and binary",
+    "sha256": "aa56ba9024f01edde9bfa5f5364644e6dd305874c3da8b73b92eb8af05539861",
+    "source": "src/deps/libvpx/LICENSE"
+  },
+  {
+    "file": "LICENSES/libvpx--AUTHORS.txt",
+    "license": "see notice",
+    "scope": "component-specific; see source map",
+    "sha256": "fd2d1ac03d9d3c864bd98c2042de2d8f7fbd78b298c8d9c506076b6c6a9de889",
+    "source": "src/deps/libvpx/AUTHORS"
+  },
+  {
+    "file": "LICENSES/libvpx--PATENTS.txt",
+    "license": "see notice",
+    "scope": "component-specific; see source map",
+    "sha256": "cc3273e0694ea5896145e0677699b53471b03ea43021ddc50e7923fbb9f5023c",
+    "source": "src/deps/libvpx/PATENTS"
+  },
+  {
+    "file": "LICENSES/libvpx--third_party--googletest--src--LICENSE.txt",
+    "license": "see notice",
+    "scope": "component-specific; see source map",
+    "sha256": "9702de7e4117a8e2b20dafab11ffda58c198aede066406496bef670d40a22138",
+    "source": "src/deps/libvpx/third_party/googletest/src/LICENSE"
+  },
+  {
+    "file": "LICENSES/libvpx--third_party--libwebm--AUTHORS.TXT.txt",
+    "license": "see notice",
+    "scope": "component-specific; see source map",
+    "sha256": "3edb5f5496bfff3d6d4a62fa75fe996b814920d0d6e348c2e65c589e7ac5d177",
+    "source": "src/deps/libvpx/third_party/libwebm/AUTHORS.TXT"
+  },
+  {
+    "file": "LICENSES/libvpx--third_party--libwebm--LICENSE.TXT.txt",
+    "license": "see notice",
+    "scope": "component-specific; see source map",
+    "sha256": "e293d1dddc9785200b1f58a4f5293543cf8566d9e0b8a3c02fad955035b19f42",
+    "source": "src/deps/libvpx/third_party/libwebm/LICENSE.TXT"
+  },
+  {
+    "file": "LICENSES/libvpx--third_party--libwebm--PATENTS.TXT.txt",
+    "license": "see notice",
+    "scope": "component-specific; see source map",
+    "sha256": "cc3273e0694ea5896145e0677699b53471b03ea43021ddc50e7923fbb9f5023c",
+    "source": "src/deps/libvpx/third_party/libwebm/PATENTS.TXT"
+  },
+  {
+    "file": "LICENSES/libvpx--third_party--libyuv--LICENSE.txt",
+    "license": "see notice",
+    "scope": "component-specific; see source map",
+    "sha256": "2b2cc1180c7e6988328ad2033b04b80117419db9c4c584918bbb3cfec7e9364f",
+    "source": "src/deps/libvpx/third_party/libyuv/LICENSE"
+  },
+  {
+    "file": "LICENSES/libvpx--third_party--nalloc--LICENSE.txt",
+    "license": "see notice",
+    "scope": "component-specific; see source map",
+    "sha256": "d7dd0396ec46975e1bf9093680068ef301bc0ed204603e623a6f7073ab922ab1",
+    "source": "src/deps/libvpx/third_party/nalloc/LICENSE"
+  },
+  {
+    "file": "LICENSES/libvpx--third_party--x86inc--LICENSE.txt",
+    "license": "see notice",
+    "scope": "component-specific; see source map",
+    "sha256": "719d8fa235f2068e0ae6d6a7dceb0a7720d7840f0f0ebed29957989e6ded3cd8",
+    "source": "src/deps/libvpx/third_party/x86inc/LICENSE"
+  },
+  {
+    "file": "LICENSES/libco-ISC.txt",
+    "license": "ISC",
+    "scope": "source and binary",
+    "sha256": "0f25fd67af50f471ebc1330e7de135626e0932473683d295f42d41f0a994bc62",
+    "source": "src/port/libretro/libco/LICENSE"
+  },
+  {
+    "file": "LICENSES/miniz-MIT.txt",
+    "license": "BSD-3-Clause",
+    "scope": "source and binary",
+    "sha256": "6f20fa7672b00e2e975c291df737cf227addf3ad32e36fef3fe0f416e4664d3d",
+    "source": "src/third_party/LICENSE"
+  },
+  {
+    "file": "LICENSES/Doug-Lea-dlmalloc.txt",
+    "license": "CC0-1.0",
+    "scope": "source and binary",
+    "sha256": "c9c0f4879df94f00413079bdd2d4730a292d6dd0e0886dc0cedc6559d3a36e35",
+    "source": "src/port/libretro/dlmalloc.inc"
+  },
+  {
+    "file": "LICENSES/WebM-4432-halloc.txt",
+    "license": "see notice",
+    "scope": "source and binary",
+    "sha256": "ae4b9e1073a9579c0ac13d406d66c01c3a941ed072af7a70091dc153b8c903d5",
+    "source": "src/engines/4432/source/webmlib/halloc/LICENSE"
+  },
+  {
+    "file": "LICENSES/WebM-4432-nestegg.txt",
+    "license": "see notice",
+    "scope": "source and binary",
+    "sha256": "505ee8e018326f36bb4070f69c6eb3caa6079b8fb796cd53a8d1bb168337e5ae",
+    "source": "src/engines/4432/source/webmlib/nestegg/LICENSE"
+  },
+  {
+    "file": "LICENSES/WebM-6412-halloc.txt",
+    "license": "see notice",
+    "scope": "source and binary",
+    "sha256": "ae4b9e1073a9579c0ac13d406d66c01c3a941ed072af7a70091dc153b8c903d5",
+    "source": "src/engines/6412/source/webmlib/halloc/LICENSE"
+  },
+  {
+    "file": "LICENSES/WebM-6412-nestegg.txt",
+    "license": "see notice",
+    "scope": "source and binary",
+    "sha256": "505ee8e018326f36bb4070f69c6eb3caa6079b8fb796cd53a8d1bb168337e5ae",
+    "source": "src/engines/6412/source/webmlib/nestegg/LICENSE"
+  },
+  {
+    "file": "LICENSES/Embedded-source-notices.txt",
+    "license": "see each notice",
+    "scope": "source and binary",
+    "sha256": "f4f5ae9ae03aa65ca3417784a0f6b405c492e6100e5299651c686d4ef33aa691",
+    "source": "Individual source headers listed in this document"
+  },
+  {
+    "file": "LICENSES/CC0-1.0.txt",
+    "license": "see notice",
+    "scope": "runtime or build support as described in LICENSES.md",
+    "sha256": "a2010f343487d3f7618affe54f789f5487602331c0a8d03f49e9a7c547cf0499",
+    "source": "Pinned licensing reference; see PROVENANCE.md"
+  },
+  {
+    "file": "LICENSES/GCC-Runtime-Exception.txt",
+    "license": "see notice",
+    "scope": "runtime or build support as described in LICENSES.md",
+    "sha256": "28e85c5aa4af9b4f1dfe6b4817aa3eefb3eaaee7fd735045016f29ccf50276a1",
+    "source": "Pinned licensing reference; see PROVENANCE.md"
+  },
+  {
+    "file": "LICENSES/GCC-runtime-source-notices.txt",
+    "license": "see notice",
+    "scope": "runtime or build support as described in LICENSES.md",
+    "sha256": "f48b32db0c4bf613869838a37e5285971caaa3965bdf396f3ec13c21f4498d46",
+    "source": "Pinned licensing reference; see PROVENANCE.md"
+  },
+  {
+    "file": "LICENSES/GPL-2.0.txt",
+    "license": "see notice",
+    "scope": "runtime or build support as described in LICENSES.md",
+    "sha256": "231f7edcc7352d7734a96eef0b8030f77982678c516876fcb81e25b32d68564c",
+    "source": "Pinned licensing reference; see PROVENANCE.md"
+  },
+  {
+    "file": "LICENSES/GPL-3.0.txt",
+    "license": "see notice",
+    "scope": "runtime or build support as described in LICENSES.md",
+    "sha256": "8ceb4b9ee5adedde47b31e975c1d90c73ad27b6b165a1dcd80c7c545eb65b903",
+    "source": "Pinned licensing reference; see PROVENANCE.md"
+  },
+  {
+    "file": "LICENSES/LLVM-compiler-rt.txt",
+    "license": "see notice",
+    "scope": "runtime or build support as described in LICENSES.md",
+    "sha256": "1a8f1058753f1ba890de984e48f0242a3a5c29a6a8f2ed9fd813f36985387e8d",
+    "source": "Pinned licensing reference; see PROVENANCE.md"
+  },
+  {
+    "file": "LICENSES/LLVM-libcxx.txt",
+    "license": "see notice",
+    "scope": "runtime or build support as described in LICENSES.md",
+    "sha256": "539dd7aed86e8a4f12cbdd0e6c50c189c7d74847e4fecc64ce2c6ee3a01da38b",
+    "source": "Pinned licensing reference; see PROVENANCE.md"
+  },
+  {
+    "file": "LICENSES/LLVM-libcxxabi.txt",
+    "license": "see notice",
+    "scope": "runtime or build support as described in LICENSES.md",
+    "sha256": "e2b35be49f7284a45b7baca8fc7b3ab7440e7902392b2528a457816b5bb2a15c",
+    "source": "Pinned licensing reference; see PROVENANCE.md"
+  },
+  {
+    "file": "LICENSES/LLVM-libunwind.txt",
+    "license": "see notice",
+    "scope": "runtime or build support as described in LICENSES.md",
+    "sha256": "b5efebcaca80879234098e52d1725e6d9eb8fb96a19fce625d39184b705f7b6d",
+    "source": "Pinned licensing reference; see PROVENANCE.md"
+  },
+  {
+    "file": "LICENSES/MinGW-runtime-source-notices.txt",
+    "license": "see notice",
+    "scope": "runtime or build support as described in LICENSES.md",
+    "sha256": "a90742ec8591912df022143377f5ca4d83bfbde8008a89c50e5c94c06d05c010",
+    "source": "Pinned licensing reference; see PROVENANCE.md"
+  },
+  {
+    "file": "LICENSES/MinGW-w64-AUTHORS.txt",
+    "license": "see notice",
+    "scope": "runtime or build support as described in LICENSES.md",
+    "sha256": "8f308316e7a94b8410f871868bd3948f126526dc1775aeee97a0e365f9a0fd9f",
+    "source": "Pinned licensing reference; see PROVENANCE.md"
+  },
+  {
+    "file": "LICENSES/MinGW-w64-COPYING.txt",
+    "license": "see notice",
+    "scope": "runtime or build support as described in LICENSES.md",
+    "sha256": "99a69660981156c21336fdb5661f89341b013c94e4bf9e1c7467b4745718397f",
+    "source": "Pinned licensing reference; see PROVENANCE.md"
+  },
+  {
+    "file": "LICENSES/MinGW-winpthreads.txt",
+    "license": "see notice",
+    "scope": "runtime or build support as described in LICENSES.md",
+    "sha256": "63263614cdd29f2f93cba85e992f041b31f9fc7b4033692f31269489a8a1b177",
+    "source": "Pinned licensing reference; see PROVENANCE.md"
+  }
+]

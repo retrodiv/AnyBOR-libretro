@@ -1,0 +1,11 @@
+.build/
+dist/
+libs/
+obj/
+anybor_libretro.so
+anybor_libretro_android.so
+anybor_libretro.dll
+*.o
+*.sym
+__pycache__/
+*.py[cod]
