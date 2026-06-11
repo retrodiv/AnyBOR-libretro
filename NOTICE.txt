@@ -1754,6 +1754,23 @@ Source: src/deps/libpng/arm/palette_neon_intrinsics.c
  * and license in png.h
  */
 
+Source: src/deps/libogg/include/ogg/os_types.h
+/********************************************************************
+ *                                                                  *
+ * THIS FILE IS PART OF THE OggVorbis SOFTWARE CODEC SOURCE CODE.   *
+ * USE, DISTRIBUTION AND REPRODUCTION OF THIS LIBRARY SOURCE IS     *
+ * GOVERNED BY A BSD-STYLE SOURCE LICENSE INCLUDED WITH THIS SOURCE *
+ * IN 'COPYING'. PLEASE READ THESE TERMS BEFORE DISTRIBUTING.       *
+ *                                                                  *
+ * THE OggVorbis SOURCE CODE IS (C) COPYRIGHT 1994-2002             *
+ * by the Xiph.Org Foundation http://www.xiph.org/                  *
+ *                                                                  *
+ ********************************************************************
+
+ function: Define a consistent set of types on each platform.
+
+ ********************************************************************/
+
 Source: src/third_party/miniz.c, src/third_party/miniz.c, src/third_party/miniz.c
 /**************************************************************************
  *
@@ -1781,6 +1798,19 @@ Source: src/third_party/miniz.c, src/third_party/miniz.c, src/third_party/miniz.
  *
  **************************************************************************/
 
+Source: src/deps/libogg/src/crctable.h
+/********************************************************************
+ *                                                                  *
+ * THIS FILE IS PART OF THE Ogg CONTAINER SOURCE CODE.              *
+ * USE, DISTRIBUTION AND REPRODUCTION OF THIS LIBRARY SOURCE IS     *
+ * GOVERNED BY A BSD-STYLE SOURCE LICENSE INCLUDED WITH THIS SOURCE *
+ * IN 'COPYING'. PLEASE READ THESE TERMS BEFORE DISTRIBUTING.       *
+ *                                                                  *
+ * THE OggVorbis SOURCE CODE IS (C) COPYRIGHT 1994-2018             *
+ * by the Xiph.Org Foundation http://www.xiph.org/                  *
+ *                                                                  *
+ ********************************************************************/
+
 Source: src/deps/libpng/pngget.c
 /* pngget.c - retrieval of values from info struct
  *
@@ -1807,6 +1837,28 @@ Source: src/deps/libpng/pngpriv.h
  * For conditions of distribution and use, see the disclaimer
  * and license in png.h
  */
+
+Source: src/deps/libogg/src/framing.c
+/********************************************************************
+ *                                                                  *
+ * THIS FILE IS PART OF THE Ogg CONTAINER SOURCE CODE.              *
+ * USE, DISTRIBUTION AND REPRODUCTION OF THIS LIBRARY SOURCE IS     *
+ * GOVERNED BY A BSD-STYLE SOURCE LICENSE INCLUDED WITH THIS SOURCE *
+ * IN 'COPYING'. PLEASE READ THESE TERMS BEFORE DISTRIBUTING.       *
+ *                                                                  *
+ * THE OggVorbis SOURCE CODE IS (C) COPYRIGHT 1994-2018             *
+ * by the Xiph.Org Foundation http://www.xiph.org/                  *
+ *                                                                  *
+ ********************************************************************
+
+ function: code raw packets into framed OggSquish stream and
+           decode Ogg streams back into raw packets
+
+ note: The CRC code is directly derived from public domain code by
+ Ross Williams (ross@guest.adelaide.edu.au).  See docs/framing.html
+ for details.
+
+ ********************************************************************/
 
 Source: src/deps/libpng/pngread.c
 /* pngread.c - read a PNG file
@@ -1898,6 +1950,23 @@ Source: src/deps/zlib/inflate.h
  * Copyright (C) 1995-2019 Mark Adler
  * For conditions of distribution and use, see copyright notice in zlib.h
  */
+
+Source: src/deps/libogg/include/ogg/ogg.h
+/********************************************************************
+ *                                                                  *
+ * THIS FILE IS PART OF THE OggVorbis SOFTWARE CODEC SOURCE CODE.   *
+ * USE, DISTRIBUTION AND REPRODUCTION OF THIS LIBRARY SOURCE IS     *
+ * GOVERNED BY A BSD-STYLE SOURCE LICENSE INCLUDED WITH THIS SOURCE *
+ * IN 'COPYING'. PLEASE READ THESE TERMS BEFORE DISTRIBUTING.       *
+ *                                                                  *
+ * THE OggVorbis SOURCE CODE IS (C) COPYRIGHT 1994-2007             *
+ * by the Xiph.Org Foundation http://www.xiph.org/                  *
+ *                                                                  *
+ ********************************************************************
+
+ function: toplevel libogg include
+
+ ********************************************************************/
 
 Source: src/deps/libpng/mips/filter_msa_intrinsics.c
 /* filter_msa_intrinsics.c - MSA optimised filter functions
@@ -2406,6 +2475,23 @@ Source: src/deps/libpng/arm/filter_neon.S
  * For conditions of distribution and use, see the disclaimer
  * and license in png.h
  */
+
+Source: src/deps/libogg/src/bitwise.c
+/********************************************************************
+ *                                                                  *
+ * THIS FILE IS PART OF THE Ogg CONTAINER SOURCE CODE.              *
+ * USE, DISTRIBUTION AND REPRODUCTION OF THIS LIBRARY SOURCE IS     *
+ * GOVERNED BY A BSD-STYLE SOURCE LICENSE INCLUDED WITH THIS SOURCE *
+ * IN 'COPYING'. PLEASE READ THESE TERMS BEFORE DISTRIBUTING.       *
+ *                                                                  *
+ * THE OggVorbis SOURCE CODE IS (C) COPYRIGHT 1994-2014             *
+ * by the Xiph.Org Foundation http://www.xiph.org/                  *
+ *                                                                  *
+ ********************************************************************
+
+  function: packing variable sized words into an octet stream
+
+ ********************************************************************/
 
 Source: src/deps/libpng/pngwutil.c
 /* pngwutil.c - utilities to write a PNG file
