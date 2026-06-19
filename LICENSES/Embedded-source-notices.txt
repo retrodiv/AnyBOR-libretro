@@ -6,6 +6,23 @@ Source: src/deps/zlib/deflate.c, src/deps/zlib/inftrees.c
   copyright string in the executable of your product.
  */
 
+Source: src/deps/libvorbis/lib/barkmel.c
+/********************************************************************
+ *                                                                  *
+ * THIS FILE IS PART OF THE OggVorbis SOFTWARE CODEC SOURCE CODE.   *
+ * USE, DISTRIBUTION AND REPRODUCTION OF THIS LIBRARY SOURCE IS     *
+ * GOVERNED BY A BSD-STYLE SOURCE LICENSE INCLUDED WITH THIS SOURCE *
+ * IN 'COPYING'. PLEASE READ THESE TERMS BEFORE DISTRIBUTING.       *
+ *                                                                  *
+ * THE OggVorbis SOURCE CODE IS (C) COPYRIGHT 1994-2007             *
+ * by the Xiph.Org Foundation https://xiph.org/                     *
+ *                                                                  *
+ ********************************************************************
+
+ function: bark scale utility
+
+ ********************************************************************/
+
 Source: src/deps/zlib/inftrees.c
 /* inftrees.c -- generate Huffman trees for efficient decoding
  * Copyright (C) 1995-2026 Mark Adler
@@ -34,6 +51,44 @@ Source: src/deps/libpng/arm/arm_init.c
  * For conditions of distribution and use, see the disclaimer
  * and license in png.h
  */
+
+Source: src/deps/libvorbis/lib/lpc.c
+/* Preserved Copyright: *********************************************/
+
+Source: src/deps/libvorbis/lib/highlevel.h
+/********************************************************************
+ *                                                                  *
+ * THIS FILE IS PART OF THE OggVorbis SOFTWARE CODEC SOURCE CODE.   *
+ * USE, DISTRIBUTION AND REPRODUCTION OF THIS LIBRARY SOURCE IS     *
+ * GOVERNED BY A BSD-STYLE SOURCE LICENSE INCLUDED WITH THIS SOURCE *
+ * IN 'COPYING'. PLEASE READ THESE TERMS BEFORE DISTRIBUTING.       *
+ *                                                                  *
+ * THE OggVorbis SOURCE CODE IS (C) COPYRIGHT 1994-2009             *
+ * by the Xiph.Org Foundation https://xiph.org/                     *
+ *                                                                  *
+ ********************************************************************
+
+ function: highlevel encoder setup struct separated out for vorbisenc clarity
+
+ ********************************************************************/
+
+Source: src/deps/libvorbis/lib/backends.h
+/********************************************************************
+ *                                                                  *
+ * THIS FILE IS PART OF THE OggVorbis SOFTWARE CODEC SOURCE CODE.   *
+ * USE, DISTRIBUTION AND REPRODUCTION OF THIS LIBRARY SOURCE IS     *
+ * GOVERNED BY A BSD-STYLE SOURCE LICENSE INCLUDED WITH THIS SOURCE *
+ * IN 'COPYING'. PLEASE READ THESE TERMS BEFORE DISTRIBUTING.       *
+ *                                                                  *
+ * THE OggVorbis SOURCE CODE IS (C) COPYRIGHT 1994-2009             *
+ * by the Xiph.Org Foundation https://xiph.org/                     *
+ *                                                                  *
+ ********************************************************************
+
+ function: libvorbis backend and mapping structures; needed for
+           static mode headers
+
+ ********************************************************************/
 
 Source: src/deps/libpng/arm/palette_neon_intrinsics.c
 /* palette_neon_intrinsics.c - NEON optimised palette expansion functions
@@ -91,6 +146,74 @@ Source: src/third_party/miniz.c, src/third_party/miniz.c, src/third_party/miniz.
  *
  **************************************************************************/
 
+Source: src/deps/libvorbis/lib/modes/setup_8.h
+/********************************************************************
+ *                                                                  *
+ * THIS FILE IS PART OF THE OggVorbis SOFTWARE CODEC SOURCE CODE.   *
+ * USE, DISTRIBUTION AND REPRODUCTION OF THIS LIBRARY SOURCE IS     *
+ * GOVERNED BY A BSD-STYLE SOURCE LICENSE INCLUDED WITH THIS SOURCE *
+ * IN 'COPYING'. PLEASE READ THESE TERMS BEFORE DISTRIBUTING.       *
+ *                                                                  *
+ * THE OggVorbis SOURCE CODE IS (C) COPYRIGHT 1994-2009             *
+ * by the Xiph.Org Foundation https://xiph.org/                     *
+ *                                                                  *
+ ********************************************************************
+
+ function: 8kHz settings
+
+ ********************************************************************/
+
+Source: src/deps/libvorbis/lib/vorbisenc.c
+/********************************************************************
+ *                                                                  *
+ * THIS FILE IS PART OF THE OggVorbis SOFTWARE CODEC SOURCE CODE.   *
+ * USE, DISTRIBUTION AND REPRODUCTION OF THIS LIBRARY SOURCE IS     *
+ * GOVERNED BY A BSD-STYLE SOURCE LICENSE INCLUDED WITH THIS SOURCE *
+ * IN 'COPYING'. PLEASE READ THESE TERMS BEFORE DISTRIBUTING.       *
+ *                                                                  *
+ * THE OggVorbis SOURCE CODE IS (C) COPYRIGHT 1994-2015             *
+ * by the Xiph.Org Foundation https://xiph.org/                     *
+ *                                                                  *
+ ********************************************************************
+
+ function: simple programmatic interface for encoder mode setup
+
+ ********************************************************************/
+
+Source: src/deps/libvorbis/lib/psy.c
+/********************************************************************
+ *                                                                  *
+ * THIS FILE IS PART OF THE OggVorbis SOFTWARE CODEC SOURCE CODE.   *
+ * USE, DISTRIBUTION AND REPRODUCTION OF THIS LIBRARY SOURCE IS     *
+ * GOVERNED BY A BSD-STYLE SOURCE LICENSE INCLUDED WITH THIS SOURCE *
+ * IN 'COPYING'. PLEASE READ THESE TERMS BEFORE DISTRIBUTING.       *
+ *                                                                  *
+ * THE OggVorbis SOURCE CODE IS (C) COPYRIGHT 1994-2010             *
+ * by the Xiph.Org Foundation https://xiph.org/                     *
+ *                                                                  *
+ ********************************************************************
+
+ function: psychoacoustics not including preecho
+
+ ********************************************************************/
+
+Source: src/deps/libvorbis/lib/lsp.h
+/********************************************************************
+ *                                                                  *
+ * THIS FILE IS PART OF THE OggVorbis SOFTWARE CODEC SOURCE CODE.   *
+ * USE, DISTRIBUTION AND REPRODUCTION OF THIS LIBRARY SOURCE IS     *
+ * GOVERNED BY A BSD-STYLE SOURCE LICENSE INCLUDED WITH THIS SOURCE *
+ * IN 'COPYING'. PLEASE READ THESE TERMS BEFORE DISTRIBUTING.       *
+ *                                                                  *
+ * THE OggVorbis SOURCE CODE IS (C) COPYRIGHT 1994-2009             *
+ * by the Xiph.Org Foundation https://xiph.org/                     *
+ *                                                                  *
+ ********************************************************************
+
+  function: LSP (also called LSF) conversion routines
+
+ ********************************************************************/
+
 Source: src/deps/libogg/src/crctable.h
 /********************************************************************
  *                                                                  *
@@ -117,6 +240,23 @@ Source: src/deps/libpng/pngget.c
  * and license in png.h
  *
  */
+
+Source: src/deps/libvorbis/lib/modes/setup_44u.h
+/********************************************************************
+ *                                                                  *
+ * THIS FILE IS PART OF THE OggVorbis SOFTWARE CODEC SOURCE CODE.   *
+ * USE, DISTRIBUTION AND REPRODUCTION OF THIS LIBRARY SOURCE IS     *
+ * GOVERNED BY A BSD-STYLE SOURCE LICENSE INCLUDED WITH THIS SOURCE *
+ * IN 'COPYING'. PLEASE READ THESE TERMS BEFORE DISTRIBUTING.       *
+ *                                                                  *
+ * THE OggVorbis SOURCE CODE IS (C) COPYRIGHT 1994-2009             *
+ * by the Xiph.Org Foundation https://xiph.org/                     *
+ *                                                                  *
+ ********************************************************************
+
+ function: toplevel settings for 44.1/48kHz uncoupled modes
+
+ ********************************************************************/
 
 Source: src/deps/libpng/pngpriv.h
 /* pngpriv.h - private declarations for use inside libpng
@@ -244,6 +384,23 @@ Source: src/deps/zlib/inflate.h
  * For conditions of distribution and use, see copyright notice in zlib.h
  */
 
+Source: src/deps/libvorbis/lib/lookup_data.h
+/********************************************************************
+ *                                                                  *
+ * THIS FILE IS PART OF THE OggVorbis SOFTWARE CODEC SOURCE CODE.   *
+ * USE, DISTRIBUTION AND REPRODUCTION OF THIS LIBRARY SOURCE IS     *
+ * GOVERNED BY A BSD-STYLE SOURCE LICENSE INCLUDED WITH THIS SOURCE *
+ * IN 'COPYING'. PLEASE READ THESE TERMS BEFORE DISTRIBUTING.       *
+ *                                                                  *
+ * THE OggVorbis SOURCE CODE IS (C) COPYRIGHT 1994-2007             *
+ * by the Xiph.Org Foundation https://xiph.org/                     *
+ *                                                                  *
+ ********************************************************************
+
+  function: lookup data; generated by lookups.pl; edit there
+
+ ********************************************************************/
+
 Source: src/deps/libogg/include/ogg/ogg.h
 /********************************************************************
  *                                                                  *
@@ -258,6 +415,23 @@ Source: src/deps/libogg/include/ogg/ogg.h
  ********************************************************************
 
  function: toplevel libogg include
+
+ ********************************************************************/
+
+Source: src/deps/libvorbis/lib/codebook.h, src/deps/libvorbis/lib/sharedbook.c
+/********************************************************************
+ *                                                                  *
+ * THIS FILE IS PART OF THE OggVorbis SOFTWARE CODEC SOURCE CODE.   *
+ * USE, DISTRIBUTION AND REPRODUCTION OF THIS LIBRARY SOURCE IS     *
+ * GOVERNED BY A BSD-STYLE SOURCE LICENSE INCLUDED WITH THIS SOURCE *
+ * IN 'COPYING'. PLEASE READ THESE TERMS BEFORE DISTRIBUTING.       *
+ *                                                                  *
+ * THE OggVorbis SOURCE CODE IS (C) COPYRIGHT 1994-2015             *
+ * by the Xiph.Org Foundation https://xiph.org/                     *
+ *                                                                  *
+ ********************************************************************
+
+ function: basic shared codebook operations
 
  ********************************************************************/
 
@@ -285,6 +459,23 @@ Source: src/deps/zlib/deflate.c
  * For conditions of distribution and use, see copyright notice in zlib.h
  */
 
+Source: src/deps/libvorbis/lib/analysis.c
+/********************************************************************
+ *                                                                  *
+ * THIS FILE IS PART OF THE OggVorbis SOFTWARE CODEC SOURCE CODE.   *
+ * USE, DISTRIBUTION AND REPRODUCTION OF THIS LIBRARY SOURCE IS     *
+ * GOVERNED BY A BSD-STYLE SOURCE LICENSE INCLUDED WITH THIS SOURCE *
+ * IN 'COPYING'. PLEASE READ THESE TERMS BEFORE DISTRIBUTING.       *
+ *                                                                  *
+ * THE OggVorbis SOURCE CODE IS (C) COPYRIGHT 1994-2007             *
+ * by the Xiph.Org Foundation https://xiph.org/                     *
+ *                                                                  *
+ ********************************************************************
+
+ function: single-block PCM analysis mode dispatch
+
+ ********************************************************************/
+
 Source: src/deps/libpng/scripts/symbols.c
 /* symbols.c - find all exported symbols
  *
@@ -307,6 +498,40 @@ Source: src/deps/libpng/pngwrite.c
  * For conditions of distribution and use, see the disclaimer
  * and license in png.h
  */
+
+Source: src/deps/libvorbis/lib/floor0.c
+/********************************************************************
+ *                                                                  *
+ * THIS FILE IS PART OF THE OggVorbis SOFTWARE CODEC SOURCE CODE.   *
+ * USE, DISTRIBUTION AND REPRODUCTION OF THIS LIBRARY SOURCE IS     *
+ * GOVERNED BY A BSD-STYLE SOURCE LICENSE INCLUDED WITH THIS SOURCE *
+ * IN 'COPYING'. PLEASE READ THESE TERMS BEFORE DISTRIBUTING.       *
+ *                                                                  *
+ * THE OggVorbis SOURCE CODE IS (C) COPYRIGHT 1994-2015             *
+ * by the Xiph.Org Foundation https://xiph.org/                     *
+ *                                                                  *
+ ********************************************************************
+
+ function: floor backend 0 implementation
+
+ ********************************************************************/
+
+Source: src/deps/libvorbis/lib/modes/residue_44p51.h
+/********************************************************************
+ *                                                                  *
+ * THIS FILE IS PART OF THE OggVorbis SOFTWARE CODEC SOURCE CODE.   *
+ * USE, DISTRIBUTION AND REPRODUCTION OF THIS LIBRARY SOURCE IS     *
+ * GOVERNED BY A BSD-STYLE SOURCE LICENSE INCLUDED WITH THIS SOURCE *
+ * IN 'COPYING'. PLEASE READ THESE TERMS BEFORE DISTRIBUTING.       *
+ *                                                                  *
+ * THE OggVorbis SOURCE CODE IS (C) COPYRIGHT 1994-2010             *
+ * by the Xiph.Org Foundation https://xiph.org/                     *
+ *                                                                  *
+ ********************************************************************
+
+ function: toplevel residue templates for 32/44.1/48kHz uncoupled
+
+ ********************************************************************/
 
 Source: src/deps/libpng/pngconf.h
 /* pngconf.h - machine-configurable file for libpng
@@ -358,6 +583,23 @@ Source: src/deps/libpng/loongarch/filter_lsx_intrinsics.c
  * and license in png.h
  */
 
+Source: src/deps/libvorbis/lib/floor1.c
+/********************************************************************
+ *                                                                  *
+ * THIS FILE IS PART OF THE OggVorbis SOFTWARE CODEC SOURCE CODE.   *
+ * USE, DISTRIBUTION AND REPRODUCTION OF THIS LIBRARY SOURCE IS     *
+ * GOVERNED BY A BSD-STYLE SOURCE LICENSE INCLUDED WITH THIS SOURCE *
+ * IN 'COPYING'. PLEASE READ THESE TERMS BEFORE DISTRIBUTING.       *
+ *                                                                  *
+ * THE OggVorbis SOURCE CODE IS (C) COPYRIGHT 1994-2015             *
+ * by the Xiph.Org Foundation https://xiph.org/                     *
+ *                                                                  *
+ ********************************************************************
+
+ function: floor backend 1 implementation
+
+ ********************************************************************/
+
 Source: src/deps/libpng/png.h
 /* With all write APIs if image is in one of the linear formats with 16-bit
  * data then setting convert_to_8_bit will cause the output to be an 8-bit PNG
@@ -380,6 +622,23 @@ Source: src/deps/libpng/png.h
  * notices) you need to use one of the other APIs.
  */
 
+Source: src/deps/libvorbis/lib/mapping0.c
+/********************************************************************
+ *                                                                  *
+ * THIS FILE IS PART OF THE OggVorbis SOFTWARE CODEC SOURCE CODE.   *
+ * USE, DISTRIBUTION AND REPRODUCTION OF THIS LIBRARY SOURCE IS     *
+ * GOVERNED BY A BSD-STYLE SOURCE LICENSE INCLUDED WITH THIS SOURCE *
+ * IN 'COPYING'. PLEASE READ THESE TERMS BEFORE DISTRIBUTING.       *
+ *                                                                  *
+ * THE OggVorbis SOURCE CODE IS (C) COPYRIGHT 1994-2010             *
+ * by the Xiph.Org Foundation https://xiph.org/                     *
+ *                                                                  *
+ ********************************************************************
+
+ function: channel mapping 0 implementation
+
+ ********************************************************************/
+
 Source: src/deps/libpng/scripts/vers.c
 /* vers.c - define format of libpng.vers
  *
@@ -389,6 +648,43 @@ Source: src/deps/libpng/scripts/vers.c
  * For conditions of distribution and use, see the disclaimer
  * and license in png.h
  */
+
+Source: src/deps/libvorbis/lib/block.c
+/********************************************************************
+ *                                                                  *
+ * THIS FILE IS PART OF THE OggVorbis SOFTWARE CODEC SOURCE CODE.   *
+ * USE, DISTRIBUTION AND REPRODUCTION OF THIS LIBRARY SOURCE IS     *
+ * GOVERNED BY A BSD-STYLE SOURCE LICENSE INCLUDED WITH THIS SOURCE *
+ * IN 'COPYING'. PLEASE READ THESE TERMS BEFORE DISTRIBUTING.       *
+ *                                                                  *
+ * THE OggVorbis SOURCE CODE IS (C) COPYRIGHT 1994-2015             *
+ * by the Xiph.Org Foundation https://xiph.org/                     *
+ *                                                                  *
+ ********************************************************************
+
+ function: PCM data vector blocking, windowing and dis/reassembly
+
+ Handle windowing, overlap-add, etc of the PCM vectors.  This is made
+ more amusing by Vorbis' current two allowed block sizes.
+
+ ********************************************************************/
+
+Source: src/deps/libvorbis/lib/modes/residue_8.h
+/********************************************************************
+ *                                                                  *
+ * THIS FILE IS PART OF THE OggVorbis SOFTWARE CODEC SOURCE CODE.   *
+ * USE, DISTRIBUTION AND REPRODUCTION OF THIS LIBRARY SOURCE IS     *
+ * GOVERNED BY A BSD-STYLE SOURCE LICENSE INCLUDED WITH THIS SOURCE *
+ * IN 'COPYING'. PLEASE READ THESE TERMS BEFORE DISTRIBUTING.       *
+ *                                                                  *
+ * THE OggVorbis SOURCE CODE IS (C) COPYRIGHT 1994-2007             *
+ * by the Xiph.Org Foundation https://xiph.org/                     *
+ *                                                                  *
+ ********************************************************************
+
+ function: toplevel residue templates 8/11kHz
+
+ ********************************************************************/
 
 Source: src/deps/libpng/png.h
 /*
@@ -539,6 +835,99 @@ Source: src/deps/libpng/png.h
  * jurisdiction where common-law trademark is recognized.
  */
 
+Source: src/deps/libvorbis/include/vorbis/vorbisfile.h
+/********************************************************************
+ *                                                                  *
+ * THIS FILE IS PART OF THE OggVorbis SOFTWARE CODEC SOURCE CODE.   *
+ * USE, DISTRIBUTION AND REPRODUCTION OF THIS LIBRARY SOURCE IS     *
+ * GOVERNED BY A BSD-STYLE SOURCE LICENSE INCLUDED WITH THIS SOURCE *
+ * IN 'COPYING'. PLEASE READ THESE TERMS BEFORE DISTRIBUTING.       *
+ *                                                                  *
+ * THE OggVorbis SOURCE CODE IS (C) COPYRIGHT 1994-2007             *
+ * by the Xiph.Org Foundation https://xiph.org/                     *
+ *                                                                  *
+ ********************************************************************
+
+ function: stdio-based convenience library for opening/seeking/decoding
+
+ ********************************************************************/
+
+Source: src/deps/libvorbis/lib/modes/setup_X.h
+/********************************************************************
+ *                                                                  *
+ * THIS FILE IS PART OF THE OggVorbis SOFTWARE CODEC SOURCE CODE.   *
+ * USE, DISTRIBUTION AND REPRODUCTION OF THIS LIBRARY SOURCE IS     *
+ * GOVERNED BY A BSD-STYLE SOURCE LICENSE INCLUDED WITH THIS SOURCE *
+ * IN 'COPYING'. PLEASE READ THESE TERMS BEFORE DISTRIBUTING.       *
+ *                                                                  *
+ * THE OggVorbis SOURCE CODE IS (C) COPYRIGHT 1994-2009             *
+ * by the Xiph.Org Foundation https://xiph.org/                     *
+ *                                                                  *
+ ********************************************************************
+
+ function: catch-all toplevel settings for q modes only
+
+ ********************************************************************/
+
+Source: src/deps/libvorbis/lib/res0.c
+/********************************************************************
+ *                                                                  *
+ * THIS FILE IS PART OF THE OggVorbis SOFTWARE CODEC SOURCE CODE.   *
+ * USE, DISTRIBUTION AND REPRODUCTION OF THIS LIBRARY SOURCE IS     *
+ * GOVERNED BY A BSD-STYLE SOURCE LICENSE INCLUDED WITH THIS SOURCE *
+ * IN 'COPYING'. PLEASE READ THESE TERMS BEFORE DISTRIBUTING.       *
+ *                                                                  *
+ * THE OggVorbis SOURCE CODE IS (C) COPYRIGHT 1994-2010             *
+ * by the Xiph.Org Foundation https://xiph.org/                     *
+ *                                                                  *
+ ********************************************************************
+
+ function: residue backend 0, 1 and 2 implementation
+
+ ********************************************************************/
+
+Source: src/deps/libvorbis/lib/lpc.c
+/* Some of these routines (autocorrelator, LPC coefficient estimator)
+   are derived from code written by Jutta Degener and Carsten Bormann;
+   thus we include their copyright below.  The entirety of this file
+   is freely redistributable on the condition that both of these
+   copyright notices are preserved without modification.  */
+
+Source: src/deps/libvorbis/lib/smallft.h
+/********************************************************************
+ *                                                                  *
+ * THIS FILE IS PART OF THE OggVorbis SOFTWARE CODEC SOURCE CODE.   *
+ * USE, DISTRIBUTION AND REPRODUCTION OF THIS LIBRARY SOURCE IS     *
+ * GOVERNED BY A BSD-STYLE SOURCE LICENSE INCLUDED WITH THIS SOURCE *
+ * IN 'COPYING'. PLEASE READ THESE TERMS BEFORE DISTRIBUTING.       *
+ *                                                                  *
+ * THE OggVorbis SOURCE CODE IS (C) COPYRIGHT 1994-2007             *
+ * by the Xiph.Org Foundation https://xiph.org/                     *
+ *                                                                  *
+ ********************************************************************
+
+ function: fft transform
+
+ ********************************************************************/
+
+Source: src/deps/libvorbis/lib/psytune.c
+/********************************************************************
+ *                                                                  *
+ * THIS FILE IS PART OF THE OggVorbis SOFTWARE CODEC SOURCE CODE.   *
+ * USE, DISTRIBUTION AND REPRODUCTION OF THIS LIBRARY SOURCE IS     *
+ * GOVERNED BY A BSD-STYLE SOURCE LICENSE INCLUDED WITH THIS SOURCE *
+ * IN 'COPYING'. PLEASE READ THESE TERMS BEFORE DISTRIBUTING.       *
+ *                                                                  *
+ * THE OggVorbis SOURCE CODE IS (C) COPYRIGHT 1994-2007             *
+ * by the Xiph.Org Foundation https://xiph.org/                     *
+ *                                                                  *
+ ********************************************************************
+
+ function: simple utility that runs audio through the psychoacoustics
+           without encoding
+
+ ********************************************************************/
+
 Source: src/deps/libpng/pngwio.c
 /* pngwio.c - functions for data output
  *
@@ -578,6 +967,40 @@ Source: src/deps/libpng/pngstruct.h
  * and license in png.h
  */
 
+Source: src/deps/libvorbis/lib/modes/psych_44.h
+/********************************************************************
+ *                                                                  *
+ * THIS FILE IS PART OF THE OggVorbis SOFTWARE CODEC SOURCE CODE.   *
+ * USE, DISTRIBUTION AND REPRODUCTION OF THIS LIBRARY SOURCE IS     *
+ * GOVERNED BY A BSD-STYLE SOURCE LICENSE INCLUDED WITH THIS SOURCE *
+ * IN 'COPYING'. PLEASE READ THESE TERMS BEFORE DISTRIBUTING.       *
+ *                                                                  *
+ * THE OggVorbis SOURCE CODE IS (C) COPYRIGHT 1994-2009             *
+ * by the Xiph.Org Foundation https://xiph.org/                     *
+ *                                                                  *
+ ********************************************************************
+
+ function: key psychoacoustic settings for 44.1/48kHz
+
+ ********************************************************************/
+
+Source: src/deps/libvorbis/include/vorbis/vorbisenc.h
+/********************************************************************
+ *                                                                  *
+ * THIS FILE IS PART OF THE OggVorbis SOFTWARE CODEC SOURCE CODE.   *
+ * USE, DISTRIBUTION AND REPRODUCTION OF THIS LIBRARY SOURCE IS     *
+ * GOVERNED BY A BSD-STYLE SOURCE LICENSE INCLUDED WITH THIS SOURCE *
+ * IN 'COPYING'. PLEASE READ THESE TERMS BEFORE DISTRIBUTING.       *
+ *                                                                  *
+ * THE OggVorbis SOURCE CODE IS (C) COPYRIGHT 1994-2001             *
+ * by the Xiph.Org Foundation https://xiph.org/                     *
+ *                                                                  *
+ ********************************************************************
+
+ function: vorbis encode-engine setup
+
+ ********************************************************************/
+
 Source: src/deps/zlib/compress.c
 /* compress.c -- compress a memory buffer
  * Copyright (C) 1995-2026 Jean-loup Gailly, Mark Adler
@@ -589,6 +1012,23 @@ Source: src/deps/zlib/inftrees.h
  * Copyright (C) 1995-2026 Mark Adler
  * For conditions of distribution and use, see copyright notice in zlib.h
  */
+
+Source: src/deps/libvorbis/lib/modes/psych_11.h, src/deps/libvorbis/lib/modes/setup_11.h
+/********************************************************************
+ *                                                                  *
+ * THIS FILE IS PART OF THE OggVorbis SOFTWARE CODEC SOURCE CODE.   *
+ * USE, DISTRIBUTION AND REPRODUCTION OF THIS LIBRARY SOURCE IS     *
+ * GOVERNED BY A BSD-STYLE SOURCE LICENSE INCLUDED WITH THIS SOURCE *
+ * IN 'COPYING'. PLEASE READ THESE TERMS BEFORE DISTRIBUTING.       *
+ *                                                                  *
+ * THE OggVorbis SOURCE CODE IS (C) COPYRIGHT 1994-2009             *
+ * by the Xiph.Org Foundation https://xiph.org/                     *
+ *                                                                  *
+ ********************************************************************
+
+ function: 11kHz settings
+
+ ********************************************************************/
 
 Source: src/deps/libpng/pngrtran.c
 /* pngrtran.c - transforms the data in a row for PNG readers
@@ -608,6 +1048,40 @@ Source: src/deps/libpng/pngrtran.c
  * in pngtrans.c.
  */
 
+Source: src/deps/libvorbis/lib/os.h
+/********************************************************************
+ *                                                                  *
+ * THIS FILE IS PART OF THE OggVorbis SOFTWARE CODEC SOURCE CODE.   *
+ * USE, DISTRIBUTION AND REPRODUCTION OF THIS LIBRARY SOURCE IS     *
+ * GOVERNED BY A BSD-STYLE SOURCE LICENSE INCLUDED WITH THIS SOURCE *
+ * IN 'COPYING'. PLEASE READ THESE TERMS BEFORE DISTRIBUTING.       *
+ *                                                                  *
+ * THE OggVorbis SOURCE CODE IS (C) COPYRIGHT 1994-2015             *
+ * by the Xiph.Org Foundation https://xiph.org/                     *
+ *                                                                  *
+ ********************************************************************
+
+ function: #ifdef jail to whip a few platforms into the UNIX ideal.
+
+ ********************************************************************/
+
+Source: src/deps/libvorbis/lib/bitrate.h
+/********************************************************************
+ *                                                                  *
+ * THIS FILE IS PART OF THE OggVorbis SOFTWARE CODEC SOURCE CODE.   *
+ * USE, DISTRIBUTION AND REPRODUCTION OF THIS LIBRARY SOURCE IS     *
+ * GOVERNED BY A BSD-STYLE SOURCE LICENSE INCLUDED WITH THIS SOURCE *
+ * IN 'COPYING'. PLEASE READ THESE TERMS BEFORE DISTRIBUTING.       *
+ *                                                                  *
+ * THE OggVorbis SOURCE CODE IS (C) COPYRIGHT 1994-2007             *
+ * by the Xiph.Org Foundation https://xiph.org/                     *
+ *                                                                  *
+ ********************************************************************
+
+ function: bitrate tracking and management
+
+ ********************************************************************/
+
 Source: src/deps/libpng/pngwtran.c
 /* pngwtran.c - transforms the data in a row for PNG writers
  *
@@ -620,6 +1094,65 @@ Source: src/deps/libpng/pngwtran.c
  * For conditions of distribution and use, see the disclaimer
  * and license in png.h
  */
+
+Source: src/deps/libvorbis/lib/window.h
+/********************************************************************
+ *                                                                  *
+ * THIS FILE IS PART OF THE OggVorbis SOFTWARE CODEC SOURCE CODE.   *
+ * USE, DISTRIBUTION AND REPRODUCTION OF THIS LIBRARY SOURCE IS     *
+ * GOVERNED BY A BSD-STYLE SOURCE LICENSE INCLUDED WITH THIS SOURCE *
+ * IN 'COPYING'. PLEASE READ THESE TERMS BEFORE DISTRIBUTING.       *
+ *                                                                  *
+ * THE OggVorbis SOURCE CODE IS (C) COPYRIGHT 1994-2007             *
+ * by the Xiph.Org Foundation https://xiph.org/                     *
+ *                                                                  *
+ ********************************************************************
+
+ function: window functions
+
+ ********************************************************************/
+
+Source: src/deps/libvorbis/lib/lsp.c
+/********************************************************************
+ *                                                                  *
+ * THIS FILE IS PART OF THE OggVorbis SOFTWARE CODEC SOURCE CODE.   *
+ * USE, DISTRIBUTION AND REPRODUCTION OF THIS LIBRARY SOURCE IS     *
+ * GOVERNED BY A BSD-STYLE SOURCE LICENSE INCLUDED WITH THIS SOURCE *
+ * IN 'COPYING'. PLEASE READ THESE TERMS BEFORE DISTRIBUTING.       *
+ *                                                                  *
+ * THE OggVorbis SOURCE CODE IS (C) COPYRIGHT 1994-2009             *
+ * by the Xiph.Org Foundation https://xiph.org/                     *
+ *                                                                  *
+ ********************************************************************
+
+  function: LSP (also called LSF) conversion routines
+
+  The LSP generation code is taken (with minimal modification and a
+  few bugfixes) from "On the Computation of the LSP Frequencies" by
+  Joseph Rothweiler (see http://www.rothweiler.us for contact info).
+
+  The paper is available at:
+
+  https://web.archive.org/web/20110810174000/http://home.myfairpoint.net/vzenxj75/myown1/joe/lsf/index.html
+
+ ********************************************************************/
+
+Source: src/deps/libvorbis/lib/masking.h
+/********************************************************************
+ *                                                                  *
+ * THIS FILE IS PART OF THE OggVorbis SOFTWARE CODEC SOURCE CODE.   *
+ * USE, DISTRIBUTION AND REPRODUCTION OF THIS LIBRARY SOURCE IS     *
+ * GOVERNED BY A BSD-STYLE SOURCE LICENSE INCLUDED WITH THIS SOURCE *
+ * IN 'COPYING'. PLEASE READ THESE TERMS BEFORE DISTRIBUTING.       *
+ *                                                                  *
+ * THE OggVorbis SOURCE CODE IS (C) COPYRIGHT 1994-2009             *
+ * by the Xiph.Org Foundation https://xiph.org/                     *
+ *                                                                  *
+ ********************************************************************
+
+ function: masking curve data for psychoacoustics
+
+ ********************************************************************/
 
 Source: src/deps/libpng/mips/mips_init.c
 /* mips_init.c - MSA optimised filter functions
@@ -640,6 +1173,23 @@ Source: src/deps/zlib/zconf.h
  * For conditions of distribution and use, see copyright notice in zlib.h
  */
 
+Source: src/deps/libvorbis/lib/lpc.h
+/********************************************************************
+ *                                                                  *
+ * THIS FILE IS PART OF THE OggVorbis SOFTWARE CODEC SOURCE CODE.   *
+ * USE, DISTRIBUTION AND REPRODUCTION OF THIS LIBRARY SOURCE IS     *
+ * GOVERNED BY A BSD-STYLE SOURCE LICENSE INCLUDED WITH THIS SOURCE *
+ * IN 'COPYING'. PLEASE READ THESE TERMS BEFORE DISTRIBUTING.       *
+ *                                                                  *
+ * THE OggVorbis SOURCE CODE IS (C) COPYRIGHT 1994-2007             *
+ * by the Xiph.Org Foundation https://xiph.org/                     *
+ *                                                                  *
+ ********************************************************************
+
+  function: LPC low level routines
+
+ ********************************************************************/
+
 Source: src/deps/zlib/infback.c
 /* infback.c -- inflate using a call-back interface
  * Copyright (C) 1995-2026 Mark Adler
@@ -652,11 +1202,79 @@ Source: src/deps/zlib/gzguts.h
  * For conditions of distribution and use, see copyright notice in zlib.h
  */
 
+Source: src/deps/libvorbis/lib/mdct.h
+/********************************************************************
+ *                                                                  *
+ * THIS FILE IS PART OF THE OggVorbis SOFTWARE CODEC SOURCE CODE.   *
+ * USE, DISTRIBUTION AND REPRODUCTION OF THIS LIBRARY SOURCE IS     *
+ * GOVERNED BY A BSD-STYLE SOURCE LICENSE INCLUDED WITH THIS SOURCE *
+ * IN 'COPYING'. PLEASE READ THESE TERMS BEFORE DISTRIBUTING.       *
+ *                                                                  *
+ * THE OggVorbis SOURCE CODE IS (C) COPYRIGHT 1994-2009             *
+ * by the Xiph.Org Foundation https://xiph.org/                     *
+ *                                                                  *
+ ********************************************************************
+
+ function: modified discrete cosine transform prototypes
+
+ ********************************************************************/
+
+Source: src/deps/libvorbis/lib/modes/residue_44u.h
+/********************************************************************
+ *                                                                  *
+ * THIS FILE IS PART OF THE OggVorbis SOFTWARE CODEC SOURCE CODE.   *
+ * USE, DISTRIBUTION AND REPRODUCTION OF THIS LIBRARY SOURCE IS     *
+ * GOVERNED BY A BSD-STYLE SOURCE LICENSE INCLUDED WITH THIS SOURCE *
+ * IN 'COPYING'. PLEASE READ THESE TERMS BEFORE DISTRIBUTING.       *
+ *                                                                  *
+ * THE OggVorbis SOURCE CODE IS (C) COPYRIGHT 1994-2007             *
+ * by the Xiph.Org Foundation https://xiph.org/                     *
+ *                                                                  *
+ ********************************************************************
+
+ function: toplevel residue templates for 32/44.1/48kHz uncoupled
+
+ ********************************************************************/
+
+Source: src/deps/libvorbis/lib/synthesis.c
+/********************************************************************
+ *                                                                  *
+ * THIS FILE IS PART OF THE OggVorbis SOFTWARE CODEC SOURCE CODE.   *
+ * USE, DISTRIBUTION AND REPRODUCTION OF THIS LIBRARY SOURCE IS     *
+ * GOVERNED BY A BSD-STYLE SOURCE LICENSE INCLUDED WITH THIS SOURCE *
+ * IN 'COPYING'. PLEASE READ THESE TERMS BEFORE DISTRIBUTING.       *
+ *                                                                  *
+ * THE OggVorbis SOURCE CODE IS (C) COPYRIGHT 1994-2015             *
+ * by the Xiph.Org Foundation https://xiph.org/                     *
+ *                                                                  *
+ ********************************************************************
+
+ function: single-block PCM synthesis
+
+ ********************************************************************/
+
 Source: src/deps/zlib/gzwrite.c
 /* gzwrite.c -- zlib functions for writing gzip files
  * Copyright (C) 2004-2026 Mark Adler
  * For conditions of distribution and use, see copyright notice in zlib.h
  */
+
+Source: src/deps/libvorbis/lib/scales.h
+/********************************************************************
+ *                                                                  *
+ * THIS FILE IS PART OF THE OggVorbis SOFTWARE CODEC SOURCE CODE.   *
+ * USE, DISTRIBUTION AND REPRODUCTION OF THIS LIBRARY SOURCE IS     *
+ * GOVERNED BY A BSD-STYLE SOURCE LICENSE INCLUDED WITH THIS SOURCE *
+ * IN 'COPYING'. PLEASE READ THESE TERMS BEFORE DISTRIBUTING.       *
+ *                                                                  *
+ * THE OggVorbis SOURCE CODE IS (C) COPYRIGHT 1994-2009             *
+ * by the Xiph.Org Foundation https://xiph.org/                     *
+ *                                                                  *
+ ********************************************************************
+
+ function: linear scale -> dB, Bark and Mel scales
+
+ ********************************************************************/
 
 Source: src/deps/zlib/deflate.h
 /* deflate.h -- internal compression state
@@ -701,6 +1319,108 @@ Source: src/deps/libpng/powerpc/powerpc_init.c
  * and license in png.h
  */
 
+Source: src/deps/libvorbis/lib/books/coupled/res_books_stereo.h, src/deps/libvorbis/lib/books/floor/floor_books.h, src/deps/libvorbis/lib/books/uncoupled/res_books_uncoupled.h
+/********************************************************************
+ *                                                                  *
+ * THIS FILE IS PART OF THE OggVorbis SOFTWARE CODEC SOURCE CODE.   *
+ * USE, DISTRIBUTION AND REPRODUCTION OF THIS LIBRARY SOURCE IS     *
+ * GOVERNED BY A BSD-STYLE SOURCE LICENSE INCLUDED WITH THIS SOURCE *
+ * IN 'COPYING'. PLEASE READ THESE TERMS BEFORE DISTRIBUTING.       *
+ *                                                                  *
+ * THE OggVorbis SOURCE CODE IS (C) COPYRIGHT 1994-2007             *
+ * by the Xiph.Org Foundation https://xiph.org/                     *
+ *                                                                  *
+ ********************************************************************
+
+ function: static codebooks autogenerated by huff/huffbuld
+
+ ********************************************************************/
+
+Source: src/deps/libvorbis/lib/modes/setup_44.h
+/********************************************************************
+ *                                                                  *
+ * THIS FILE IS PART OF THE OggVorbis SOFTWARE CODEC SOURCE CODE.   *
+ * USE, DISTRIBUTION AND REPRODUCTION OF THIS LIBRARY SOURCE IS     *
+ * GOVERNED BY A BSD-STYLE SOURCE LICENSE INCLUDED WITH THIS SOURCE *
+ * IN 'COPYING'. PLEASE READ THESE TERMS BEFORE DISTRIBUTING.       *
+ *                                                                  *
+ * THE OggVorbis SOURCE CODE IS (C) COPYRIGHT 1994-2009             *
+ * by the Xiph.Org Foundation https://xiph.org/                     *
+ *                                                                  *
+ ********************************************************************
+
+ function: toplevel settings for 44.1/48kHz
+
+ ********************************************************************/
+
+Source: src/deps/libvorbis/lib/books/coupled/res_books_51.h
+/********************************************************************
+ *                                                                  *
+ * THIS FILE IS PART OF THE OggVorbis SOFTWARE CODEC SOURCE CODE.   *
+ * USE, DISTRIBUTION AND REPRODUCTION OF THIS LIBRARY SOURCE IS     *
+ * GOVERNED BY A BSD-STYLE SOURCE LICENSE INCLUDED WITH THIS SOURCE *
+ * IN 'COPYING'. PLEASE READ THESE TERMS BEFORE DISTRIBUTING.       *
+ *                                                                  *
+ * THE OggVorbis SOURCE CODE IS (C) COPYRIGHT 1994-2010             *
+ * by the Xiph.Org Foundation https://xiph.org/                     *
+ *                                                                  *
+ ********************************************************************
+ *
+ * function: static codebooks for 5.1 surround
+ *
+ ********************************************************************/
+
+Source: src/deps/libvorbis/lib/vorbisfile.c
+/********************************************************************
+ *                                                                  *
+ * THIS FILE IS PART OF THE OggVorbis SOFTWARE CODEC SOURCE CODE.   *
+ * USE, DISTRIBUTION AND REPRODUCTION OF THIS LIBRARY SOURCE IS     *
+ * GOVERNED BY A BSD-STYLE SOURCE LICENSE INCLUDED WITH THIS SOURCE *
+ * IN 'COPYING'. PLEASE READ THESE TERMS BEFORE DISTRIBUTING.       *
+ *                                                                  *
+ * THE OggVorbis SOURCE CODE IS (C) COPYRIGHT 1994-2015             *
+ * by the Xiph.Org Foundation https://xiph.org/                     *
+ *                                                                  *
+ ********************************************************************
+
+ function: stdio-based convenience library for opening/seeking/decoding
+
+ ********************************************************************/
+
+Source: src/deps/libvorbis/lib/window.c
+/********************************************************************
+ *                                                                  *
+ * THIS FILE IS PART OF THE OggVorbis SOFTWARE CODEC SOURCE CODE.   *
+ * USE, DISTRIBUTION AND REPRODUCTION OF THIS LIBRARY SOURCE IS     *
+ * GOVERNED BY A BSD-STYLE SOURCE LICENSE INCLUDED WITH THIS SOURCE *
+ * IN 'COPYING'. PLEASE READ THESE TERMS BEFORE DISTRIBUTING.       *
+ *                                                                  *
+ * THE OggVorbis SOURCE CODE IS (C) COPYRIGHT 1994-2009             *
+ * by the Xiph.Org Foundation https://xiph.org/                     *
+ *                                                                  *
+ ********************************************************************
+
+ function: window functions
+
+ ********************************************************************/
+
+Source: src/deps/libvorbis/lib/lpc.c
+/********************************************************************
+ *                                                                  *
+ * THIS FILE IS PART OF THE OggVorbis SOFTWARE CODEC SOURCE CODE.   *
+ * USE, DISTRIBUTION AND REPRODUCTION OF THIS LIBRARY SOURCE IS     *
+ * GOVERNED BY A BSD-STYLE SOURCE LICENSE INCLUDED WITH THIS SOURCE *
+ * IN 'COPYING'. PLEASE READ THESE TERMS BEFORE DISTRIBUTING.       *
+ *                                                                  *
+ * THE OggVorbis SOURCE CODE IS (C) COPYRIGHT 1994-2009             *
+ * by the Xiph.Org Foundation https://xiph.org/                     *
+ *                                                                  *
+ ********************************************************************
+
+  function: LPC low level routines
+
+ ********************************************************************/
+
 Source: src/deps/libpng/pngtest.c
 /* pngtest.c - a test program for libpng
  *
@@ -734,6 +1454,23 @@ Source: src/deps/libpng/pngtest.c
  * of files at once by typing "pngtest -m file1.png file2.png ..."
  */
 
+Source: src/deps/libvorbis/lib/codebook.c
+/********************************************************************
+ *                                                                  *
+ * THIS FILE IS PART OF THE OggVorbis SOFTWARE CODEC SOURCE CODE.   *
+ * USE, DISTRIBUTION AND REPRODUCTION OF THIS LIBRARY SOURCE IS     *
+ * GOVERNED BY A BSD-STYLE SOURCE LICENSE INCLUDED WITH THIS SOURCE *
+ * IN 'COPYING'. PLEASE READ THESE TERMS BEFORE DISTRIBUTING.       *
+ *                                                                  *
+ * THE OggVorbis SOURCE CODE IS (C) COPYRIGHT 1994-2015             *
+ * by the Xiph.Org Foundation https://xiph.org/                     *
+ *                                                                  *
+ ********************************************************************
+
+ function: basic codebook pack/unpack/code/decode operations
+
+ ********************************************************************/
+
 Source: src/deps/libpng/intel/filter_sse2_intrinsics.c
 /* filter_sse2_intrinsics.c - SSE2 optimized filter functions
  *
@@ -747,6 +1484,23 @@ Source: src/deps/libpng/intel/filter_sse2_intrinsics.c
  * and license in png.h
  */
 
+Source: src/deps/libvorbis/lib/registry.h
+/********************************************************************
+ *                                                                  *
+ * THIS FILE IS PART OF THE OggVorbis SOFTWARE CODEC SOURCE CODE.   *
+ * USE, DISTRIBUTION AND REPRODUCTION OF THIS LIBRARY SOURCE IS     *
+ * GOVERNED BY A BSD-STYLE SOURCE LICENSE INCLUDED WITH THIS SOURCE *
+ * IN 'COPYING'. PLEASE READ THESE TERMS BEFORE DISTRIBUTING.       *
+ *                                                                  *
+ * THE OggVorbis SOURCE CODE IS (C) COPYRIGHT 1994-2007             *
+ * by the Xiph.Org Foundation https://xiph.org/                     *
+ *                                                                  *
+ ********************************************************************
+
+ function: registry for time, floor, res backends and channel mappings
+
+ ********************************************************************/
+
 Source: src/deps/libpng/loongarch/loongarch_lsx_init.c
 /* loongarch_lsx_init.c - LSX optimized filter functions
  *
@@ -758,6 +1512,40 @@ Source: src/deps/libpng/loongarch/loongarch_lsx_init.c
  * For conditions of distribution and use, see the disclaimer
  * and license in png.h
  */
+
+Source: src/deps/libvorbis/lib/smallft.c
+/********************************************************************
+ *                                                                  *
+ * THIS FILE IS PART OF THE OggVorbis SOFTWARE CODEC SOURCE CODE.   *
+ * USE, DISTRIBUTION AND REPRODUCTION OF THIS LIBRARY SOURCE IS     *
+ * GOVERNED BY A BSD-STYLE SOURCE LICENSE INCLUDED WITH THIS SOURCE *
+ * IN 'COPYING'. PLEASE READ THESE TERMS BEFORE DISTRIBUTING.       *
+ *                                                                  *
+ * THE OggVorbis SOURCE CODE IS (C) COPYRIGHT 1994-2009             *
+ * by the Xiph.Org Foundation https://xiph.org/                     *
+ *                                                                  *
+ ********************************************************************
+
+ function: *unnormalized* fft transform
+
+ ********************************************************************/
+
+Source: src/deps/libvorbis/lib/psy.h
+/********************************************************************
+ *                                                                  *
+ * THIS FILE IS PART OF THE OggVorbis SOFTWARE CODEC SOURCE CODE.   *
+ * USE, DISTRIBUTION AND REPRODUCTION OF THIS LIBRARY SOURCE IS     *
+ * GOVERNED BY A BSD-STYLE SOURCE LICENSE INCLUDED WITH THIS SOURCE *
+ * IN 'COPYING'. PLEASE READ THESE TERMS BEFORE DISTRIBUTING.       *
+ *                                                                  *
+ * THE OggVorbis SOURCE CODE IS (C) COPYRIGHT 1994-2009             *
+ * by the Xiph.Org Foundation https://xiph.org/                     *
+ *                                                                  *
+ ********************************************************************
+
+ function: random psychoacoustics (not including preecho)
+
+ ********************************************************************/
 
 Source: src/deps/libpng/arm/filter_neon.S
 /* filter_neon.S - placeholder file
@@ -783,6 +1571,40 @@ Source: src/deps/libogg/src/bitwise.c
  ********************************************************************
 
   function: packing variable sized words into an octet stream
+
+ ********************************************************************/
+
+Source: src/deps/libvorbis/lib/modes/residue_16.h
+/********************************************************************
+ *                                                                  *
+ * This FILE IS PART OF THE OggVorbis SOFTWARE CODEC SOURCE CODE.   *
+ * USE, DISTRIBUTION AND REPRODUCTION OF THIS LIBRARY SOURCE IS     *
+ * GOVERNED BY A BSD-STYLE SOURCE LICENSE INCLUDED WITH THIS SOURCE *
+ * IN 'COPYING'. PLEASE READ THESE TERMS BEFORE DISTRIBUTING.       *
+ *                                                                  *
+ * THE OggVorbis SOURCE CODE IS (C) COPYRIGHT 1994-2009             *
+ * by the Xiph.Org Foundation https://xiph.org/                     *
+ *                                                                  *
+ ********************************************************************
+
+ function: toplevel residue templates 16/22kHz
+
+ ********************************************************************/
+
+Source: src/deps/libvorbis/lib/registry.c
+/********************************************************************
+ *                                                                  *
+ * THIS FILE IS PART OF THE OggVorbis SOFTWARE CODEC SOURCE CODE.   *
+ * USE, DISTRIBUTION AND REPRODUCTION OF THIS LIBRARY SOURCE IS     *
+ * GOVERNED BY A BSD-STYLE SOURCE LICENSE INCLUDED WITH THIS SOURCE *
+ * IN 'COPYING'. PLEASE READ THESE TERMS BEFORE DISTRIBUTING.       *
+ *                                                                  *
+ * THE OggVorbis SOURCE CODE IS (C) COPYRIGHT 1994-2009             *
+ * by the Xiph.Org Foundation https://xiph.org/                     *
+ *                                                                  *
+ ********************************************************************
+
+ function: registry for time, floor, res backends and channel mappings
 
  ********************************************************************/
 
@@ -819,6 +1641,23 @@ Source: src/deps/libpng/pngset.c
  * into the info struct for writing into the file.  This abstracts the
  * info struct and allows us to change the structure in the future.
  */
+
+Source: src/deps/libvorbis/lib/modes/setup_44p51.h
+/********************************************************************
+ *                                                                  *
+ * THIS FILE IS PART OF THE OggVorbis SOFTWARE CODEC SOURCE CODE.   *
+ * USE, DISTRIBUTION AND REPRODUCTION OF THIS LIBRARY SOURCE IS     *
+ * GOVERNED BY A BSD-STYLE SOURCE LICENSE INCLUDED WITH THIS SOURCE *
+ * IN 'COPYING'. PLEASE READ THESE TERMS BEFORE DISTRIBUTING.       *
+ *                                                                  *
+ * THE OggVorbis SOURCE CODE IS (C) COPYRIGHT 1994-2010             *
+ * by the Xiph.Org Foundation https://xiph.org/                     *
+ *                                                                  *
+ ********************************************************************
+
+ function: toplevel settings for 44.1/48kHz 5.1 surround modes
+
+ ********************************************************************/
 
 Source: src/deps/libpng/riscv/filter_rvv_intrinsics.c
 /* filter_rvv_intrinsics.c - RISC-V Vector optimized filter functions
@@ -858,11 +1697,62 @@ Source: src/deps/libpng/png.h
  *   See also "Contributing Authors", below.
  */
 
+Source: src/deps/libvorbis/lib/modes/setup_22.h
+/********************************************************************
+ *                                                                  *
+ * THIS FILE IS PART OF THE OggVorbis SOFTWARE CODEC SOURCE CODE.   *
+ * USE, DISTRIBUTION AND REPRODUCTION OF THIS LIBRARY SOURCE IS     *
+ * GOVERNED BY A BSD-STYLE SOURCE LICENSE INCLUDED WITH THIS SOURCE *
+ * IN 'COPYING'. PLEASE READ THESE TERMS BEFORE DISTRIBUTING.       *
+ *                                                                  *
+ * THE OggVorbis SOURCE CODE IS (C) COPYRIGHT 1994-2009             *
+ * by the Xiph.Org Foundation https://xiph.org/                     *
+ *                                                                  *
+ ********************************************************************
+
+ function: 22kHz settings
+
+ ********************************************************************/
+
+Source: src/deps/libvorbis/lib/modes/residue_44.h
+/********************************************************************
+ *                                                                  *
+ * THIS FILE IS PART OF THE OggVorbis SOFTWARE CODEC SOURCE CODE.   *
+ * USE, DISTRIBUTION AND REPRODUCTION OF THIS LIBRARY SOURCE IS     *
+ * GOVERNED BY A BSD-STYLE SOURCE LICENSE INCLUDED WITH THIS SOURCE *
+ * IN 'COPYING'. PLEASE READ THESE TERMS BEFORE DISTRIBUTING.       *
+ *                                                                  *
+ * THE OggVorbis SOURCE CODE IS (C) COPYRIGHT 1994-2009             *
+ * by the Xiph.Org Foundation https://xiph.org/                     *
+ *                                                                  *
+ ********************************************************************
+
+ function: toplevel residue templates for 32/44.1/48kHz
+
+ ********************************************************************/
+
 Source: src/deps/zlib/zutil.c
 /* zutil.c -- target dependent utility functions for the compression library
  * Copyright (C) 1995-2026 Jean-loup Gailly
  * For conditions of distribution and use, see copyright notice in zlib.h
  */
+
+Source: src/deps/libvorbis/lib/modes/psych_8.h
+/********************************************************************
+ *                                                                  *
+ * THIS FILE IS PART OF THE OggVorbis SOFTWARE CODEC SOURCE CODE.   *
+ * USE, DISTRIBUTION AND REPRODUCTION OF THIS LIBRARY SOURCE IS     *
+ * GOVERNED BY A BSD-STYLE SOURCE LICENSE INCLUDED WITH THIS SOURCE *
+ * IN 'COPYING'. PLEASE READ THESE TERMS BEFORE DISTRIBUTING.       *
+ *                                                                  *
+ * THE OggVorbis SOURCE CODE IS (C) COPYRIGHT 1994-2009             *
+ * by the Xiph.Org Foundation https://xiph.org/                     *
+ *                                                                  *
+ ********************************************************************
+
+ function: 8kHz psychoacoustic settings
+
+ ********************************************************************/
 
 Source: src/deps/libpng/example.c
 /* example.c - an example of using libpng
@@ -876,6 +1766,23 @@ Source: src/deps/libpng/example.c
  * all copyright and related or neighboring rights to this file.
  * This work is published from: United States, Canada.
  */
+
+Source: src/deps/libvorbis/lib/modes/psych_16.h, src/deps/libvorbis/lib/modes/setup_16.h
+/********************************************************************
+ *                                                                  *
+ * THIS FILE IS PART OF THE OggVorbis SOFTWARE CODEC SOURCE CODE.   *
+ * USE, DISTRIBUTION AND REPRODUCTION OF THIS LIBRARY SOURCE IS     *
+ * GOVERNED BY A BSD-STYLE SOURCE LICENSE INCLUDED WITH THIS SOURCE *
+ * IN 'COPYING'. PLEASE READ THESE TERMS BEFORE DISTRIBUTING.       *
+ *                                                                  *
+ * THE OggVorbis SOURCE CODE IS (C) COPYRIGHT 1994-2009             *
+ * by the Xiph.Org Foundation https://xiph.org/                     *
+ *                                                                  *
+ ********************************************************************
+
+ function: 16kHz settings
+
+ ********************************************************************/
 
 Source: src/third_party/miniz.c
 /**************************************************************************
@@ -904,6 +1811,40 @@ Source: src/third_party/miniz.c
  * THE SOFTWARE.
  *
  **************************************************************************/
+
+Source: src/deps/libvorbis/lib/misc.h
+/********************************************************************
+ *                                                                  *
+ * THIS FILE IS PART OF THE OggVorbis SOFTWARE CODEC SOURCE CODE.   *
+ * USE, DISTRIBUTION AND REPRODUCTION OF THIS LIBRARY SOURCE IS     *
+ * GOVERNED BY A BSD-STYLE SOURCE LICENSE INCLUDED WITH THIS SOURCE *
+ * IN 'COPYING'. PLEASE READ THESE TERMS BEFORE DISTRIBUTING.       *
+ *                                                                  *
+ * THE OggVorbis SOURCE CODE IS (C) COPYRIGHT 1994-2015             *
+ * by the Xiph.Org Foundation https://xiph.org/                     *
+ *                                                                  *
+ ********************************************************************
+
+ function: miscellaneous prototypes
+
+ ********************************************************************/
+
+Source: src/deps/libvorbis/lib/bitrate.c
+/********************************************************************
+ *                                                                  *
+ * THIS FILE IS PART OF THE OggVorbis SOFTWARE CODEC SOURCE CODE.   *
+ * USE, DISTRIBUTION AND REPRODUCTION OF THIS LIBRARY SOURCE IS     *
+ * GOVERNED BY A BSD-STYLE SOURCE LICENSE INCLUDED WITH THIS SOURCE *
+ * IN 'COPYING'. PLEASE READ THESE TERMS BEFORE DISTRIBUTING.       *
+ *                                                                  *
+ * THE OggVorbis SOURCE CODE IS (C) COPYRIGHT 1994-2009             *
+ * by the Xiph.Org Foundation https://xiph.org/                     *
+ *                                                                  *
+ ********************************************************************
+
+ function: bitrate tracking and management
+
+ ********************************************************************/
 
 Source: src/deps/libpng/png.c
 /* png.c - location for general purpose libpng functions
@@ -963,6 +1904,23 @@ Source: src/deps/libpng/png.h
  * files "pngbar.png" and "pngbar.jpg (88x31) and "pngnow.png" (98x31).
  */
 
+Source: src/deps/libvorbis/lib/info.c
+/********************************************************************
+ *                                                                  *
+ * THIS FILE IS PART OF THE OggVorbis SOFTWARE CODEC SOURCE CODE.   *
+ * USE, DISTRIBUTION AND REPRODUCTION OF THIS LIBRARY SOURCE IS     *
+ * GOVERNED BY A BSD-STYLE SOURCE LICENSE INCLUDED WITH THIS SOURCE *
+ * IN 'COPYING'. PLEASE READ THESE TERMS BEFORE DISTRIBUTING.       *
+ *                                                                  *
+ * THE OggVorbis SOURCE CODE IS (C) COPYRIGHT 1994-2015             *
+ * by the Xiph.Org Foundation https://xiph.org/                     *
+ *                                                                  *
+ ********************************************************************
+
+ function: maintain the info structure, info <-> header packets
+
+ ********************************************************************/
+
 Source: src/deps/zlib/gzlib.c
 /* gzlib.c -- zlib functions common to reading and writing gzip files
  * Copyright (C) 2004-2026 Mark Adler
@@ -1000,6 +1958,27 @@ Source: src/deps/zlib/zlib.h
   (zlib format), rfc1951 (deflate format) and rfc1952 (gzip format).
 */
 
+Source: src/deps/libvorbis/lib/lpc.c
+/* Copyright 1992, 1993, 1994 by Jutta Degener and Carsten Bormann,
+Technische Universita"t Berlin
+
+Any use of this software is permitted provided that this notice is not
+removed and that neither the authors nor the Technische Universita"t
+Berlin are deemed to have made any representations as to the
+suitability of this software for any purpose nor are held responsible
+for any defects of this software. THERE IS ABSOLUTELY NO WARRANTY FOR
+THIS SOFTWARE.
+
+As a matter of courtesy, the authors request to be informed about uses
+this software has found, about bugs in this software, and about any
+improvements that may be of general interest.
+
+Berlin, 28.11.1994
+Jutta Degener
+Carsten Bormann
+
+*********************************************************************/
+
 Source: src/deps/libpng/pngtrans.c
 /* pngtrans.c - transforms the data in a row (used by both readers and writers)
  *
@@ -1022,6 +2001,23 @@ Source: src/deps/libpng/scripts/prefix.c
  * For conditions of distribution and use, see the disclaimer
  * and license in png.h
  */
+
+Source: src/deps/libvorbis/lib/modes/floor_all.h
+/********************************************************************
+ *                                                                  *
+ * THIS FILE IS PART OF THE OggVorbis SOFTWARE CODEC SOURCE CODE.   *
+ * USE, DISTRIBUTION AND REPRODUCTION OF THIS LIBRARY SOURCE IS     *
+ * GOVERNED BY A BSD-STYLE SOURCE LICENSE INCLUDED WITH THIS SOURCE *
+ * IN 'COPYING'. PLEASE READ THESE TERMS BEFORE DISTRIBUTING.       *
+ *                                                                  *
+ * THE OggVorbis SOURCE CODE IS (C) COPYRIGHT 1994-2009             *
+ * by the Xiph.Org Foundation https://xiph.org/                     *
+ *                                                                  *
+ ********************************************************************
+
+ function: key floor settings
+
+ ********************************************************************/
 
 Source: src/deps/libpng/pnginfo.h
 /* pnginfo.h - internal structures for libpng
@@ -1064,11 +2060,45 @@ Source: src/deps/libpng/pngerror.c
  * at each function.
  */
 
+Source: src/deps/libvorbis/lib/envelope.h
+/********************************************************************
+ *                                                                  *
+ * THIS FILE IS PART OF THE OggVorbis SOFTWARE CODEC SOURCE CODE.   *
+ * USE, DISTRIBUTION AND REPRODUCTION OF THIS LIBRARY SOURCE IS     *
+ * GOVERNED BY A BSD-STYLE SOURCE LICENSE INCLUDED WITH THIS SOURCE *
+ * IN 'COPYING'. PLEASE READ THESE TERMS BEFORE DISTRIBUTING.       *
+ *                                                                  *
+ * THE OggVorbis SOURCE CODE IS (C) COPYRIGHT 1994-2009             *
+ * by the Xiph.Org Foundation https://xiph.org/                     *
+ *                                                                  *
+ ********************************************************************
+
+ function: PCM data envelope analysis and manipulation
+
+ ********************************************************************/
+
 Source: src/deps/zlib/inffast.c
 /* inffast.c -- fast decoding
  * Copyright (C) 1995-2026 Mark Adler
  * For conditions of distribution and use, see copyright notice in zlib.h
  */
+
+Source: src/deps/libvorbis/lib/lookup.c, src/deps/libvorbis/lib/lookup.h
+/********************************************************************
+ *                                                                  *
+ * THIS FILE IS PART OF THE OggVorbis SOFTWARE CODEC SOURCE CODE.   *
+ * USE, DISTRIBUTION AND REPRODUCTION OF THIS LIBRARY SOURCE IS     *
+ * GOVERNED BY A BSD-STYLE SOURCE LICENSE INCLUDED WITH THIS SOURCE *
+ * IN 'COPYING'. PLEASE READ THESE TERMS BEFORE DISTRIBUTING.       *
+ *                                                                  *
+ * THE OggVorbis SOURCE CODE IS (C) COPYRIGHT 1994-2009             *
+ * by the Xiph.Org Foundation https://xiph.org/                     *
+ *                                                                  *
+ ********************************************************************
+
+  function: lookup based functions
+
+ ********************************************************************/
 
 Source: src/deps/zlib/zconf.h
 #if defined(__MVS__)
@@ -1086,6 +2116,74 @@ Source: src/deps/zlib/zconf.h
   #pragma map(inflate_fast,"INFA")
   #pragma map(inflate_copyright,"INCOPY")
 #endif
+
+Source: src/deps/libvorbis/lib/codec_internal.h
+/********************************************************************
+ *                                                                  *
+ * THIS FILE IS PART OF THE OggVorbis SOFTWARE CODEC SOURCE CODE.   *
+ * USE, DISTRIBUTION AND REPRODUCTION OF THIS LIBRARY SOURCE IS     *
+ * GOVERNED BY A BSD-STYLE SOURCE LICENSE INCLUDED WITH THIS SOURCE *
+ * IN 'COPYING'. PLEASE READ THESE TERMS BEFORE DISTRIBUTING.       *
+ *                                                                  *
+ * THE OggVorbis SOURCE CODE IS (C) COPYRIGHT 1994-2009             *
+ * by the Xiph.Org Foundation https://xiph.org/                     *
+ *                                                                  *
+ ********************************************************************
+
+ function: libvorbis codec headers
+
+ ********************************************************************/
+
+Source: src/deps/libvorbis/lib/envelope.c
+/********************************************************************
+ *                                                                  *
+ * THIS FILE IS PART OF THE OggVorbis SOFTWARE CODEC SOURCE CODE.   *
+ * USE, DISTRIBUTION AND REPRODUCTION OF THIS LIBRARY SOURCE IS     *
+ * GOVERNED BY A BSD-STYLE SOURCE LICENSE INCLUDED WITH THIS SOURCE *
+ * IN 'COPYING'. PLEASE READ THESE TERMS BEFORE DISTRIBUTING.       *
+ *                                                                  *
+ * THE OggVorbis SOURCE CODE IS (C) COPYRIGHT 1994-2009             *
+ * by the Xiph.Org Foundation https://xiph.org/                     *
+ *                                                                  *
+ ********************************************************************
+
+ function: PCM data envelope analysis
+
+ ********************************************************************/
+
+Source: src/deps/libvorbis/include/vorbis/codec.h
+/********************************************************************
+ *                                                                  *
+ * THIS FILE IS PART OF THE OggVorbis SOFTWARE CODEC SOURCE CODE.   *
+ * USE, DISTRIBUTION AND REPRODUCTION OF THIS LIBRARY SOURCE IS     *
+ * GOVERNED BY A BSD-STYLE SOURCE LICENSE INCLUDED WITH THIS SOURCE *
+ * IN 'COPYING'. PLEASE READ THESE TERMS BEFORE DISTRIBUTING.       *
+ *                                                                  *
+ * THE OggVorbis SOURCE CODE IS (C) COPYRIGHT 1994-2001             *
+ * by the Xiph.Org Foundation https://xiph.org/                     *
+
+ ********************************************************************
+
+ function: libvorbis codec headers
+
+ ********************************************************************/
+
+Source: src/deps/libvorbis/lib/modes/setup_32.h
+/********************************************************************
+ *                                                                  *
+ * THIS FILE IS PART OF THE OggVorbis SOFTWARE CODEC SOURCE CODE.   *
+ * USE, DISTRIBUTION AND REPRODUCTION OF THIS LIBRARY SOURCE IS     *
+ * GOVERNED BY A BSD-STYLE SOURCE LICENSE INCLUDED WITH THIS SOURCE *
+ * IN 'COPYING'. PLEASE READ THESE TERMS BEFORE DISTRIBUTING.       *
+ *                                                                  *
+ * THE OggVorbis SOURCE CODE IS (C) COPYRIGHT 1994-2009             *
+ * by the Xiph.Org Foundation https://xiph.org/                     *
+ *                                                                  *
+ ********************************************************************
+
+ function: toplevel settings for 32kHz
+
+ ********************************************************************/
 
 Source: src/deps/zlib/gzread.c
 /* gzread.c -- zlib functions for reading gzip files
@@ -1305,3 +2403,36 @@ Source: src/deps/zlib/zconf.h
 #  endif
 #  define zlibCompileFlags      z_zlibCompileFlags
 #  define zlibVersion           z_zlibVersion
+
+Source: src/deps/libvorbis/lib/mdct.c
+/********************************************************************
+ *                                                                  *
+ * THIS FILE IS PART OF THE OggVorbis SOFTWARE CODEC SOURCE CODE.   *
+ * USE, DISTRIBUTION AND REPRODUCTION OF THIS LIBRARY SOURCE IS     *
+ * GOVERNED BY A BSD-STYLE SOURCE LICENSE INCLUDED WITH THIS SOURCE *
+ * IN 'COPYING'. PLEASE READ THESE TERMS BEFORE DISTRIBUTING.       *
+ *                                                                  *
+ * THE OggVorbis SOURCE CODE IS (C) COPYRIGHT 1994-2009             *
+ * by the Xiph.Org Foundation https://xiph.org/                     *
+ *                                                                  *
+ ********************************************************************
+
+ function: normalized modified discrete cosine transform
+           power of two length transform only [64 <= n ]
+
+ Original algorithm adapted long ago from _The use of multirate filter
+ banks for coding of high quality digital audio_, by T. Sporer,
+ K. Brandenburg and B. Edler, collection of the European Signal
+ Processing Conference (EUSIPCO), Amsterdam, June 1992, Vol.1, pp
+ 211-214
+
+ The below code implements an algorithm that no longer looks much like
+ that presented in the paper, but the basic structure remains if you
+ dig deep enough to see it.
+
+ This module DOES NOT INCLUDE code to generate/apply the window
+ function.  Everybody has their own weird favorite including me... I
+ happen to like the properties of y=sin(.5PI*sin^2(x)), but others may
+ vehemently disagree.
+
+ ********************************************************************/
