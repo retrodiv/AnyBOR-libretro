@@ -407,6 +407,9 @@ Source: src/deps/libogg/src/framing.c
 
  ********************************************************************/
 
+Source: src/glue/obor_engines.h
+/* Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+
 Source: src/deps/libvpx/vpx_dsp/arm/intrapred_neon_asm.asm, src/deps/libvpx/vpx_dsp/x86/avg_ssse3_x86_64.asm, src/deps/libvpx/vpx_dsp/x86/highbd_intrapred_sse2.asm, src/deps/libvpx/vpx_dsp/x86/highbd_sad4d_sse2.asm, src/deps/libvpx/vpx_dsp/x86/highbd_sad_sse2.asm, src/deps/libvpx/vpx_dsp/x86/highbd_subpel_variance_impl_sse2.asm, src/deps/libvpx/vpx_dsp/x86/highbd_variance_impl_sse2.asm, src/deps/libvpx/vpx_dsp/x86/vpx_high_subpixel_8t_sse2.asm, src/deps/libvpx/vpx_dsp/x86/vpx_high_subpixel_bilinear_sse2.asm, src/deps/libvpx/vpx_dsp/x86/vpx_subpixel_bilinear_sse2.asm, src/deps/libvpx/vpx_dsp/x86/vpx_subpixel_bilinear_ssse3.asm
 ;
 ;  Copyright (c) 2014 The WebM project authors. All Rights Reserved.
@@ -1615,6 +1618,10 @@ Source: src/deps/zlib/gzwrite.c
  * For conditions of distribution and use, see copyright notice in zlib.h
  */
 
+Source: src/glue/obor_crt.h, src/glue/obor_legacy_api.h, src/glue/obor_pak_validate.h, src/glue/obor_state_padding.h, src/glue/obor_zip_path.h, src/port/libretro/obor_script_compact.h, src/port/libretro/obor_state_copy.h
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+
 Source: src/deps/libvorbis/lib/scales.h
 /********************************************************************
  *                                                                  *
@@ -1880,6 +1887,14 @@ Source: src/deps/libpng/loongarch/loongarch_lsx_init.c
  * and license in png.h
  */
 
+Source: src/port/libretro/obor_adpcm.c
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ * IMA/DVI ADPCM with the OpenBOR stream convention: high nibble first,
+ * and, for stereo, one left/right pair per byte. Lengths are bytes.
+ * The step table and index transitions are the codec's numeric parameters.
+ */
+
 Source: src/deps/libvpx/vp9/decoder/vp9_decodemv.c, src/deps/libvpx/vp9/decoder/vp9_dsubexp.c
 /*
   Copyright (c) 2010 The WebM project authors. All Rights Reserved.
@@ -2032,6 +2047,36 @@ Source: src/deps/libvpx/vp8/common/mips/msa/bilinear_filter_msa.c, src/deps/libv
  *  tree. An additional intellectual property rights grant can be found
  *  in the file PATENTS.  All contributing project authors may
  *  be found in the AUTHORS file in the root of the source tree.
+ */
+
+Source: src/third_party/libretro.h
+/*!
+ * libretro.h is a simple API that allows for the creation of games and emulators.
+ *
+ * @file libretro.h
+ * @version 1
+ * @author libretro
+ * @copyright Copyright (C) 2010-2024 The RetroArch team
+ *
+ * @paragraph LICENSE
+ * The following license statement only applies to this libretro API header (libretro.h).
+ *
+ * Copyright (C) 2010-2024 The RetroArch team
+ *
+ * Permission is hereby granted, free of charge,
+ * to any person obtaining a copy of this software and associated documentation files (the "Software"),
+ * to deal in the Software without restriction, including without limitation the rights to
+ * use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software,
+ * and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
+ * INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+ * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+ * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
 Source: src/deps/libpng/pngset.c
@@ -2345,6 +2390,12 @@ Source: src/deps/zlib/adler32.c
  * For conditions of distribution and use, see copyright notice in zlib.h
  */
 
+Source: src/glue/obor_profile.h
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ * Opt-in measurement of the real frontend. No game-specific routes or data.
+ */
+
 Source: src/deps/libpng/png.h
 /*
  * A "png_get_copyright" function is available, for convenient use in "about"
@@ -2372,6 +2423,11 @@ Source: src/deps/libvorbis/lib/info.c
  function: maintain the info structure, info <-> header packets
 
  ********************************************************************/
+
+Source: src/port/libretro/obor_endian.h
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ * Fixed-width byte-order helpers for the OpenBOR interfaces. */
 
 Source: src/deps/zlib/gzlib.c
 /* gzlib.c -- zlib functions common to reading and writing gzip files
@@ -2495,6 +2551,64 @@ Source: src/deps/libvorbis/lib/modes/floor_all.h
  function: key floor settings
 
  ********************************************************************/
+
+Source: src/port/libretro/libco/valgrind.h
+/* -*- c -*-
+   ----------------------------------------------------------------
+
+   Notice that the following BSD-style license applies to this one
+   file (valgrind.h) only.  The rest of Valgrind is licensed under the
+   terms of the GNU General Public License, version 2, unless
+   otherwise indicated.  See the COPYING file in the source
+   distribution for details.
+
+   ----------------------------------------------------------------
+
+   This file is part of Valgrind, a dynamic binary instrumentation
+   framework.
+
+   Copyright (C) 2000-2017 Julian Seward.  All rights reserved.
+
+   Redistribution and use in source and binary forms, with or without
+   modification, are permitted provided that the following conditions
+   are met:
+
+   1. Redistributions of source code must retain the above copyright
+      notice, this list of conditions and the following disclaimer.
+
+   2. The origin of this software must not be misrepresented; you must 
+      not claim that you wrote the original software.  If you use this 
+      software in a product, an acknowledgment in the product 
+      documentation would be appreciated but is not required.
+
+   3. Altered source versions must be plainly marked as such, and must
+      not be misrepresented as being the original software.
+
+   4. The name of the author may not be used to endorse or promote 
+      products derived from this software without specific prior written 
+      permission.
+
+   THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS
+   OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+   WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+   ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY
+   DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+   DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
+   GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+   INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+   WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+   NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+   ----------------------------------------------------------------
+
+   Notice that the above BSD-style license applies to this one file
+   (valgrind.h) only.  The entire rest of Valgrind is licensed under
+   the terms of the GNU General Public License, version 2.  See the
+   COPYING file in the source distribution for details.
+
+   ---------------------------------------------------------------- 
+*/
 
 Source: src/deps/libpng/pnginfo.h
 /* pnginfo.h - internal structures for libpng
@@ -2744,6 +2858,11 @@ Source: src/deps/libvorbis/include/vorbis/codec.h
 
  ********************************************************************/
 
+Source: src/compat/glibc_compat_math.c, src/glue/libretro.cpp, src/glue/obor_abi.h, src/glue/obor_debug.h, src/glue/obor_markers.h, src/glue/obor_padmap.h, src/glue/obor_sha256.h, src/glue/obor_zip.h, src/port/libretro/control.c, src/port/libretro/control.h, src/port/libretro/libretroport.c, src/port/libretro/libretroport.h, src/port/libretro/obor_abi.h, src/port/libretro/obor_alloc.c, src/port/libretro/obor_state.c, src/port/libretro/obor_threads.h, src/port/libretro/playerinfo.c, src/port/libretro/sblaster.c, src/port/libretro/sblaster.h, src/port/libretro/threads.c, src/port/libretro/timer.c, src/port/libretro/vga.h, src/port/libretro/video.c, src/port/libretro/video.h
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ * Earlier incorporated material retains its original authorship notices. */
+
 Source: src/deps/libvorbis/lib/modes/setup_32.h
 /********************************************************************
  *                                                                  *
@@ -2797,6 +2916,9 @@ Source: src/deps/libpng/scripts/sym.c
  * and license in png.h
  */
 
+Source: src/glue/obor_engines.h
+/* SPDX-License-Identifier: BSD-3-Clause */
+
 Source: src/deps/libvpx/vpx_util/loongson_intrinsics.h
 /*
  * Copyright (c) 2021 Loongson Technology Corporation Limited
@@ -2818,6 +2940,14 @@ Source: src/deps/libvpx/vpx_util/loongson_intrinsics.h
 
 Source: src/deps/libpng/png.c
 #ifdef PNG_STRING_COPYRIGHT
+
+Source: src/port/libretro/obor_circle.h
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ * Integer circle rasterization from x*x + y*y = radius*radius.
+ * Each octant uses the nearest integer ordinate. Axis and diagonal points
+ * are emitted once, so blending does not apply twice at octant boundaries.
+ */
 
 Source: src/deps/libpng/pngdebug.h
 /* pngdebug.h - internal debugging macros for libpng

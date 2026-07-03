@@ -61,6 +61,8 @@ The `LICENSES/` directory and its checksummed `index.json` preserve the exact
 component notices. `NOTICE.txt` assembles that documentation, including
 individual source-header notices. It is embedded verbatim in every release
 DLL/SO, including stripped cores delivered as a single file by an updater.
+On loading content the core attempts to write `anybor-license-notices.txt` in the
+frontend's save directory; the write is best-effort.
 Release ZIPs include the dossier as ordinary files.
 Retain the dossier when redistributing either form; do not remove the embedded
 documentation when producing a bare core.
