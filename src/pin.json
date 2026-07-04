@@ -2,7 +2,7 @@
   "core_name": "AnyBOR",
   "core_basename": "anybor_libretro",
   "version": "0.1.0",
-  "fallback_build": "0",
+  "fallback_build": "3400",
   "deps": {
     "dlmalloc": {
       "url": "https://gee.cs.oswego.edu/pub/misc/malloc-2.8.6.c",
@@ -55,5 +55,13 @@
   "engine_repo": {
     "url": "https://github.com/DCurrent/openbor.git"
   },
-  "engines": []
+  "engines": [
+    {
+      "build": "3400",
+      "commit": "66fa1529897131ca51528967fbb21ee124e45775",
+      "date": "2011-08-31",
+      "covers": "<= 3400 including lost pre-3020 era (best effort)",
+      "major": "v2-v3"
+    }
+  ]
 }

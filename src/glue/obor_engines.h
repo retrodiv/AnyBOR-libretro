@@ -4,7 +4,7 @@
 #include "obor_abi.h"
 
 #define OBOR_CORE_VERSION "0.1.0"
-#define OBOR_FALLBACK_BUILD 0
+#define OBOR_FALLBACK_BUILD 3400
 
 typedef struct {
     uint32_t (*abi_version)(void);
@@ -23,8 +23,23 @@ typedef struct {
 } obor_vtbl;
 
 extern "C" {
+extern char __obor_bss_begin_3400[], __obor_bss_end_3400[];
+uint32_t obor_abi_version_3400(void);
+int32_t obor_boot_3400(const obor_boot_info *);
+int32_t obor_run_frame_3400(void);
+void obor_get_video_3400(const uint32_t **, int32_t *, int32_t *, int32_t *);
+void obor_set_button_3400(int32_t, int32_t, int32_t);
+int32_t obor_get_audio_3400(int16_t *, int32_t);
+uint32_t obor_serialize_size_3400(void);
+uint32_t obor_serialize_3400(void *, uint32_t);
+int32_t obor_unserialize_3400(const void *, uint32_t);
+void obor_shutdown_3400(void);
+void obor_get_rumble_3400(int32_t, int32_t *, int32_t *);
+void obor_get_arena_3400(void **, uint32_t *);
+int32_t obor_get_player_state_3400(int32_t, char *, int32_t, int32_t *);
 }
 
 typedef struct { int build; const char *name; const char *disp; obor_vtbl v; const char *bss_begin, *bss_end; } obor_engine_def;
 static const obor_engine_def kEngineDefs[] = {
+    { 3400, "3400", "v2-v3 3400", { obor_abi_version_3400, obor_boot_3400, obor_run_frame_3400, obor_get_video_3400, obor_set_button_3400, obor_get_audio_3400, obor_serialize_size_3400, obor_serialize_3400, obor_unserialize_3400, obor_shutdown_3400, obor_get_rumble_3400, obor_get_arena_3400, obor_get_player_state_3400 }, __obor_bss_begin_3400, __obor_bss_end_3400 },
 };
