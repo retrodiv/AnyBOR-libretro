@@ -62,6 +62,13 @@
       "date": "2011-08-31",
       "covers": "<= 3400 including lost pre-3020 era (best effort)",
       "major": "v2-v3"
+    },
+    {
+      "build": "3842",
+      "commit": "1f702a991ace7fa31884262e458a85e351f62713",
+      "date": "2013-02-23",
+      "covers": "3401-3842",
+      "major": "v3"
     }
   ]
 }

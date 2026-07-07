@@ -1,0 +1,172 @@
+# SPDX-License-Identifier: BSD-3-Clause
+# Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+# Makefile.libretro — builds one OpenBOR engine as a partial relocatable
+# object for the single-file libretro core.
+#
+# Placed by the AnyBOR source export. Invoked as e.g.:
+#   make -f Makefile.libretro BUILD_NUM=6412 PLATFORM=linux \
+#        CC=gcc DEPS_PREFIX=/path/to/static/deps
+#
+# Object list mirrors the upstream Makefile with the SDL platform layer
+# replaced by the libretro port layer. GFX filters are compiled out because
+# frontends scale; WebM is enabled in eras that ship the decoder sources.
+
+BUILD_NUM   ?= 0000
+PLATFORM    ?= linux
+CC          ?= gcc
+DEPS_PREFIX ?=
+OBJDIR      ?= .objs-libretro
+PORT_ROOT   ?= libretro
+
+ifeq ($(PLATFORM),windows)
+PLAT_DEF    = -DWIN=1
+else
+PLAT_DEF    = -DLINUX=1
+endif
+
+INCS = $(PORT_ROOT) . source source/adpcmlib source/gamelib source/gfxlib \
+       source/preprocessorlib source/ramlib source/randlib source/scriptlib \
+       source/openborscript source/pnglib source/webmlib
+ifneq ($(DEPS_PREFIX),)
+INCS += $(DEPS_PREFIX)/include
+endif
+
+# Source lists use wildcards because the per-directory file sets differ
+# between engine eras (e.g. openborscript/ was reorganized for v4.x).
+# EXCLUDE lists files that exist in some eras but must not build here.
+EXCLUDE = source/gamelib/filters.c source/scriptlib/List_unittest.c \
+          source/adpcmlib/adpcm.c \
+          source/ramlib/tracelib2.c source/ramlib/tracelib2_test.c \
+          $(EXTRA_EXCLUDE)
+
+MAIN_SRCS   = openbor.c openborscript.c
+PORT_SRCS   = $(wildcard $(PORT_ROOT)/*.c) $(PORT_ROOT)/libco/libco.c
+LIB_SRCS    = $(wildcard source/*.c) \
+              $(wildcard source/adpcmlib/*.c) \
+              $(wildcard source/gamelib/*.c) \
+              $(wildcard source/scriptlib/*.c) \
+              $(wildcard source/preprocessorlib/*.c) \
+              $(wildcard source/openborscript/*.c) \
+              $(wildcard source/ramlib/*.c) \
+              $(wildcard source/randlib/*.c) \
+              $(wildcard source/pnglib/*.c)
+# yuv conversion lives in webmlib but has no libvpx dependency; the video
+# backend uses it for cutscene frames (absent in pre-webm eras)
+YUV_SRCS    = $(wildcard source/webmlib/yuv.c)
+
+# webm cutscenes: eras that ship vidplay.c (>= 4432) get the full decoder
+# stack — nestegg demuxer + halloc + the pinned static libvpx. The engine
+# gates all playback code on -DWEBM.
+WEBM_MAIN   = $(wildcard source/webmlib/vidplay.c)
+ifneq ($(WEBM_MAIN),)
+CFLAGS     += -DWEBM
+WEBM_SRCS   = source/webmlib/vidplay.c source/webmlib/vorbis.c \
+              source/webmlib/samplecvt.c \
+              source/webmlib/halloc/halloc.c \
+              source/webmlib/nestegg/nestegg.c
+DEP_WEBM    = $(DEPS_PREFIX)/lib/libvpx.a
+endif
+
+MOVIE_MAIN = $(wildcard source/webmlib/movie_playback.c)
+ifneq ($(MOVIE_MAIN),)
+CFLAGS += -DOBOR_HAS_MOVIE_PLAYBACK=1
+WEBM_SRCS += $(MOVIE_MAIN)
+endif
+
+ENGINE_SRCS = $(filter-out $(EXCLUDE),$(MAIN_SRCS) $(LIB_SRCS) \
+       $(YUV_SRCS) $(WEBM_SRCS))
+ENGINE_OBJS = $(addprefix $(OBJDIR)/,$(ENGINE_SRCS:.c=.o))
+PORT_BASE_SRCS = $(notdir $(filter-out %/libco.c,$(PORT_SRCS)))
+PORT_BASE_OBJS = $(addprefix $(OBJDIR)/port/,$(PORT_BASE_SRCS:.c=.o))
+PORT_LIBCO_OBJ = $(OBJDIR)/port/libco.o
+
+OBJS = $(ENGINE_OBJS) $(PORT_BASE_OBJS) $(PORT_LIBCO_OBJ)
+
+CFLAGS += $(addprefix -I,$(INCS)) -DLIBRETRO=1 -DOBOR_ENGINE_BUILD=$(BUILD_NUM) $(PLAT_DEF)
+CFLAGS += -O2 -g0 -Wall -fsigned-char -std=gnu99 -fPIC -fvisibility=hidden
+CFLAGS += -ffile-prefix-map=$(CURDIR)=. -fdebug-prefix-map=$(CURDIR)=.
+CFLAGS += -ffile-prefix-map=$(PORT_ROOT)=port/libretro
+# old engine code relies on tentative definitions in headers (pre-gcc10 default)
+CFLAGS += -fcommon
+# save states restore the engine coroutine stack across processes; per-process
+# stack-protector canaries in restored frames would trip on return. The fixed
+# guard page under the coroutine stack covers real overflows instead.
+CFLAGS += -fno-stack-protector
+CFLAGS += -Wno-unused-result -Wno-unused-but-set-variable -Wno-unused-variable
+CFLAGS += -DOV_EXCLUDE_STATIC_CALLBACKS
+CFLAGS += $(USER_CFLAGS)
+# one section per function/datum so the final core link can --gc-sections
+# the library-grade dead weight (unused nestegg/dlmalloc/scriptlib entry
+# points, pixelformat tables, ...) out of every era at once. ELF only: on
+# PE the localize step strips the COMDAT associativity that ties per-
+# function .pdata/.xdata to their code, so nothing can be collected — and
+# -fdata-sections turns multi-MB .bss into file-backed .data there.
+ifneq ($(PLATFORM),windows)
+CFLAGS += -ffunction-sections -fdata-sections
+endif
+
+all: partial
+
+# Everything this engine needs (its code, its libretro port layer, its
+# static libs) is partial-linked with the malloc wraps resolved inside,
+# then every symbol except the obor_* ABI is localized and the ABI gets a
+# per-build suffix. The glue links six of these into one traditional core.
+# inside OBJDIR: linux and windows builds share the tree — a common output
+# path would let concurrent/interleaved builds overwrite each other's partial
+PARTIAL     = $(OBJDIR)/obor_engine_$(BUILD_NUM).o
+ABI_SYMS    = obor_abi_version obor_boot obor_run_frame obor_get_video \
+              obor_set_button obor_get_audio obor_serialize_size \
+              obor_serialize obor_unserialize obor_shutdown \
+              obor_get_rumble obor_get_arena obor_get_player_state
+LDR         = $(patsubst %gcc,%ld,$(CC))
+OBJCOPY     = $(patsubst %gcc,%objcopy,$(CC))
+# partial links need STATIC archives explicitly (a -lpng in `ld -r` would
+# grab the shared .so, which cannot be relocatable-linked)
+DEP_ARCH    = $(DEPS_PREFIX)/lib/libvorbisfile.a $(DEPS_PREFIX)/lib/libvorbis.a \
+              $(DEPS_PREFIX)/lib/libogg.a $(DEP_WEBM)
+# windows and cross-arch linux (no system libpng for the target) carry
+# their own static png/z inside the partial
+STATIC_PNGZ ?= 0
+ifeq ($(PLATFORM),windows)
+DEP_ARCH   += $(DEPS_PREFIX)/lib/libpng.a $(DEPS_PREFIX)/lib/libz.a
+else ifeq ($(STATIC_PNGZ),1)
+DEP_ARCH   += $(DEPS_PREFIX)/lib/libpng.a $(DEPS_PREFIX)/lib/libz.a
+endif
+# linux: system libpng.a is non-PIC — png/z stay undefined in the partial
+# and the final core links them dynamically (libpng allocations are
+# transient, so they never touch the snapshot arena)
+
+# NOTE (windows): mingw emits a COMDAT .rdata$.refptr.<sym> indirection
+# slot per extern-data reference. Six partials carry slots with the SAME
+# section names pointing at their OWN localized symbols; the final link
+# dedups same-named COMDATs and five engines end up loading garbage
+# pointers (crashed every era but the first at its second printf).
+# The build renames those sections per build right after this rule
+# (uniquify_refptr_sections) — a `ld -r -T` fold here corrupts COFF output.
+
+partial: $(OBJS)
+	printf '%s\n' $(ABI_SYMS) > $(OBJDIR)/keep.txt
+	$(LDR) -r -d --wrap=malloc --wrap=calloc --wrap=realloc \
+	    --wrap=free --wrap=strdup -o $(OBJDIR)/whole.o $(OBJS) $(DEP_ARCH)
+	$(OBJCOPY) --keep-global-symbols=$(OBJDIR)/keep.txt $(OBJDIR)/whole.o \
+	    $(OBJDIR)/kept.o
+	$(OBJCOPY) --remove-section=.drectve \
+	    $(foreach s,$(ABI_SYMS),--redefine-sym $(s)=$(s)_$(BUILD_NUM)) \
+	    $(OBJDIR)/kept.o $(PARTIAL)
+
+$(OBJDIR)/%.o: %.c
+	@mkdir -p $(dir $@)
+	$(CC) $(CFLAGS) -c $< -o $@
+
+$(OBJDIR)/port/%.o: $(PORT_ROOT)/%.c
+	@mkdir -p $(dir $@)
+	$(CC) $(CFLAGS) -c $< -o $@
+
+$(PORT_LIBCO_OBJ): $(PORT_ROOT)/libco/libco.c
+	@mkdir -p $(dir $@)
+	$(CC) $(CFLAGS) -c $< -o $@
+
+clean:
+	rm -rf $(OBJDIR)
+
+.PHONY: all partial clean
