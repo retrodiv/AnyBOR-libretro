@@ -51,10 +51,25 @@ void obor_shutdown_3842(void);
 void obor_get_rumble_3842(int32_t, int32_t *, int32_t *);
 void obor_get_arena_3842(void **, uint32_t *);
 int32_t obor_get_player_state_3842(int32_t, char *, int32_t, int32_t *);
+extern char __obor_bss_begin_4086[], __obor_bss_end_4086[];
+uint32_t obor_abi_version_4086(void);
+int32_t obor_boot_4086(const obor_boot_info *);
+int32_t obor_run_frame_4086(void);
+void obor_get_video_4086(const uint32_t **, int32_t *, int32_t *, int32_t *);
+void obor_set_button_4086(int32_t, int32_t, int32_t);
+int32_t obor_get_audio_4086(int16_t *, int32_t);
+uint32_t obor_serialize_size_4086(void);
+uint32_t obor_serialize_4086(void *, uint32_t);
+int32_t obor_unserialize_4086(const void *, uint32_t);
+void obor_shutdown_4086(void);
+void obor_get_rumble_4086(int32_t, int32_t *, int32_t *);
+void obor_get_arena_4086(void **, uint32_t *);
+int32_t obor_get_player_state_4086(int32_t, char *, int32_t, int32_t *);
 }
 
 typedef struct { int build; const char *name; const char *disp; obor_vtbl v; const char *bss_begin, *bss_end; } obor_engine_def;
 static const obor_engine_def kEngineDefs[] = {
     { 3400, "3400", "v2-v3 3400", { obor_abi_version_3400, obor_boot_3400, obor_run_frame_3400, obor_get_video_3400, obor_set_button_3400, obor_get_audio_3400, obor_serialize_size_3400, obor_serialize_3400, obor_unserialize_3400, obor_shutdown_3400, obor_get_rumble_3400, obor_get_arena_3400, obor_get_player_state_3400 }, __obor_bss_begin_3400, __obor_bss_end_3400 },
     { 3842, "3842", "v3 3842", { obor_abi_version_3842, obor_boot_3842, obor_run_frame_3842, obor_get_video_3842, obor_set_button_3842, obor_get_audio_3842, obor_serialize_size_3842, obor_serialize_3842, obor_unserialize_3842, obor_shutdown_3842, obor_get_rumble_3842, obor_get_arena_3842, obor_get_player_state_3842 }, __obor_bss_begin_3842, __obor_bss_end_3842 },
+    { 4086, "4086", "v3 4086", { obor_abi_version_4086, obor_boot_4086, obor_run_frame_4086, obor_get_video_4086, obor_set_button_4086, obor_get_audio_4086, obor_serialize_size_4086, obor_serialize_4086, obor_unserialize_4086, obor_shutdown_4086, obor_get_rumble_4086, obor_get_arena_4086, obor_get_player_state_4086 }, __obor_bss_begin_4086, __obor_bss_end_4086 },
 };
