@@ -1893,7 +1893,7 @@ Source: src/deps/libvorbis/lib/modes/setup_8.h
 
  ********************************************************************/
 
-Source: src/engines/3842/openbor.c, src/engines/3842/source/globals.h, src/engines/3842/source/preprocessorlib/pp_expr.c, src/engines/3842/source/preprocessorlib/pp_parser.c, src/engines/3842/source/preprocessorlib/pp_parser.h, src/engines/3842/source/scriptlib/FirstFollow.h, src/engines/3842/source/scriptlib/Instruction.c, src/engines/3842/source/scriptlib/Instruction.h, src/engines/3842/source/scriptlib/Interpreter.c, src/engines/3842/source/scriptlib/Parser.c, src/engines/3842/source/scriptlib/Parser.h, src/engines/3842/source/scriptlib/Productions.h, src/engines/3842/source/utils.c, src/engines/3842/source/utils.h, src/engines/4086/source/preprocessorlib/pp_expr.c
+Source: src/engines/3842/openbor.c, src/engines/3842/source/globals.h, src/engines/3842/source/preprocessorlib/pp_expr.c, src/engines/3842/source/preprocessorlib/pp_parser.c, src/engines/3842/source/preprocessorlib/pp_parser.h, src/engines/3842/source/scriptlib/FirstFollow.h, src/engines/3842/source/scriptlib/Instruction.c, src/engines/3842/source/scriptlib/Instruction.h, src/engines/3842/source/scriptlib/Interpreter.c, src/engines/3842/source/scriptlib/Parser.c, src/engines/3842/source/scriptlib/Parser.h, src/engines/3842/source/scriptlib/Productions.h, src/engines/3842/source/utils.c, src/engines/3842/source/utils.h, src/engines/4086/source/preprocessorlib/pp_expr.c, src/engines/4432/source/preprocessorlib/pp_expr.c
 /*
  * OpenBOR - http://www.LavaLit.com
  * -----------------------------------------------------------------------
@@ -1902,7 +1902,7 @@ Source: src/engines/3842/openbor.c, src/engines/3842/source/globals.h, src/engin
  * Copyright (c) 2004 - 2013 OpenBOR Team
  */
 
-Source: src/engines/4086/source/randlib/rand32.c
+Source: src/engines/4086/source/randlib/rand32.c, src/engines/4432/source/omath.c, src/engines/4432/source/randlib/rand32.c
 /*
  * OpenBOR - http://www.chronocrash.com
  * -----------------------------------------------------------------------
@@ -2062,6 +2062,15 @@ Source: src/deps/libvorbis/lib/modes/setup_44u.h
 
  ********************************************************************/
 
+Source: src/engines/4432/source/gamelib/threads.h, src/engines/4432/source/safealloc.h, src/engines/4432/source/savedata.h, src/engines/4432/source/webmlib/samplecvt.c, src/engines/4432/source/webmlib/samplecvt.h, src/engines/4432/source/webmlib/vidplay.c, src/engines/4432/source/webmlib/vidplay.h, src/engines/4432/source/webmlib/vorbis.c, src/engines/4432/source/webmlib/vorbis.h, src/engines/4432/source/webmlib/yuv.c, src/engines/4432/source/webmlib/yuv.h
+/*
+ * OpenBOR - http://www.chronocrash.com
+ * -----------------------------------------------------------------------
+ * All rights reserved, see LICENSE in OpenBOR root for details.
+ *
+ * Copyright (c) 2004 - 2015 OpenBOR Team
+ */
+
 Source: src/deps/libvpx/vpx_ports/loongarch.h, src/deps/libvpx/vpx_ports/loongarch_cpudetect.c
 /*
  * Copyright (c) 2021 Loongson Technology Corporation Limited
@@ -2134,6 +2143,39 @@ Source: src/deps/libogg/src/framing.c
 
 Source: src/glue/obor_engines.h
 /* Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+
+Source: src/engines/4432/source/webmlib/samplecvt.c, src/engines/4432/source/webmlib/vorbisfpu.h
+/* This code was derived from code carrying the following copyright notice:
+ *
+ * Copyright (c) 2002-2015 Xiph.org Foundation
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ *
+ * - Redistributions of source code must retain the above copyright
+ * notice, this list of conditions and the following disclaimer.
+ *
+ * - Redistributions in binary form must reproduce the above copyright
+ * notice, this list of conditions and the following disclaimer in the
+ * documentation and/or other materials provided with the distribution.
+ *
+ * - Neither the name of the Xiph.org Foundation nor the names of its
+ * contributors may be used to endorse or promote products derived from
+ * this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+ * A PARTICULAR PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL THE FOUNDATION
+ * OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+ * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
 
 Source: src/deps/libvpx/vpx_dsp/arm/intrapred_neon_asm.asm, src/deps/libvpx/vpx_dsp/x86/avg_ssse3_x86_64.asm, src/deps/libvpx/vpx_dsp/x86/highbd_intrapred_sse2.asm, src/deps/libvpx/vpx_dsp/x86/highbd_sad4d_sse2.asm, src/deps/libvpx/vpx_dsp/x86/highbd_sad_sse2.asm, src/deps/libvpx/vpx_dsp/x86/highbd_subpel_variance_impl_sse2.asm, src/deps/libvpx/vpx_dsp/x86/highbd_variance_impl_sse2.asm, src/deps/libvpx/vpx_dsp/x86/vpx_high_subpixel_8t_sse2.asm, src/deps/libvpx/vpx_dsp/x86/vpx_high_subpixel_bilinear_sse2.asm, src/deps/libvpx/vpx_dsp/x86/vpx_subpixel_bilinear_sse2.asm, src/deps/libvpx/vpx_dsp/x86/vpx_subpixel_bilinear_ssse3.asm
 ;
@@ -2245,6 +2287,14 @@ Source: src/deps/zlib/gzclose.c
  * For conditions of distribution and use, see copyright notice in zlib.h
  */
 
+Source: src/engines/4432/source/webmlib/nestegg/nestegg.c, src/engines/4432/source/webmlib/nestegg/nestegg.h
+/*
+ * Copyright © 2010 Mozilla Foundation
+ *
+ * This program is made available under an ISC-style license.  See the
+ * accompanying file LICENSE for details.
+ */
+
 Source: src/deps/libpng/arm/filter_neon_intrinsics.c
 /* filter_neon_intrinsics.c - NEON optimised filter functions
  *
@@ -2273,6 +2323,18 @@ Source: src/deps/libpng/mips/filter_mmi_inline_assembly.c
  * This code is released under the libpng license.
  * For conditions of distribution and use, see the disclaimer
  * and license in png.h
+ */
+
+Source: src/engines/4432/source/gamelib/draw.c
+/* AnyBOR modification record: 2026-09-12.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Route circle drawing through the port's integer rasterizer.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/4432.md
+ * at the source repository root. Original notices follow below.
  */
 
 Source: src/deps/zlib/inflate.h
@@ -2332,7 +2394,7 @@ Source: src/deps/libvorbis/lib/codebook.h, src/deps/libvorbis/lib/sharedbook.c
 
  ********************************************************************/
 
-Source: src/engines/3400/source/gamelib/triangle.c, src/engines/3400/source/gamelib/triangle.h, src/engines/3842/source/gamelib/transform.c, src/engines/3842/source/gamelib/transform.h, src/engines/3842/source/gamelib/triangle.c, src/engines/3842/source/gamelib/triangle.h, src/engines/4086/source/gamelib/transform.c, src/engines/4086/source/gamelib/transform.h
+Source: src/engines/3400/source/gamelib/triangle.c, src/engines/3400/source/gamelib/triangle.h, src/engines/3842/source/gamelib/transform.c, src/engines/3842/source/gamelib/transform.h, src/engines/3842/source/gamelib/triangle.c, src/engines/3842/source/gamelib/triangle.h, src/engines/4086/source/gamelib/transform.c, src/engines/4086/source/gamelib/transform.h, src/engines/4432/source/gamelib/transform.c, src/engines/4432/source/gamelib/transform.h
 /*
  * OpenBOR - http://www.LavaLit.com
  * -----------------------------------------------------------------------
@@ -2413,7 +2475,7 @@ Source: src/deps/libvpx/vp9/encoder/vp9_alt_ref_aq.c, src/deps/libvpx/vp9/encode
  *  the root of the source tree.
  */
 
-Source: src/engines/4086/openborscript.c, src/engines/4086/source/adpcmlib/adpcm.h, src/engines/4086/source/gamelib/anigif.c, src/engines/4086/source/gamelib/anigif.h, src/engines/4086/source/gamelib/bitmap.c, src/engines/4086/source/gamelib/bitmap.h, src/engines/4086/source/gamelib/borendian.h, src/engines/4086/source/gamelib/draw.c, src/engines/4086/source/gamelib/draw.h, src/engines/4086/source/gamelib/draw16.c, src/engines/4086/source/gamelib/draw32.c, src/engines/4086/source/gamelib/font.c, src/engines/4086/source/gamelib/font.h, src/engines/4086/source/gamelib/loadimg.c, src/engines/4086/source/gamelib/loadimg.h, src/engines/4086/source/gamelib/packfile.c, src/engines/4086/source/gamelib/packfile.h, src/engines/4086/source/gamelib/palette.c, src/engines/4086/source/gamelib/palette.h, src/engines/4086/source/gamelib/pixelformat.c, src/engines/4086/source/gamelib/screen.c, src/engines/4086/source/gamelib/screen.h, src/engines/4086/source/gamelib/screen16.c, src/engines/4086/source/gamelib/screen32.c, src/engines/4086/source/gamelib/soundmix.c, src/engines/4086/source/gamelib/soundmix.h, src/engines/4086/source/gamelib/sprite.c, src/engines/4086/source/gamelib/sprite.h, src/engines/4086/source/gamelib/spriteq.c, src/engines/4086/source/gamelib/spriteq.h, src/engines/4086/source/gamelib/spritex8p16.c, src/engines/4086/source/gamelib/spritex8p32.c, src/engines/4086/source/gamelib/timer.h, src/engines/4086/source/gamelib/types.h, src/engines/4086/source/gfxlib/gfxtypes.h, src/engines/4086/source/preprocessorlib/pp_lexer.c, src/engines/4086/source/preprocessorlib/pp_lexer.h, src/engines/4086/source/ramlib/ram.c, src/engines/4086/source/ramlib/ram.h, src/engines/4086/source/randlib/rand32.h, src/engines/4086/source/scriptlib/Interpreter.h, src/engines/4086/source/scriptlib/Lexer.c, src/engines/4086/source/scriptlib/Lexer.h, src/engines/4086/source/scriptlib/ParserSet.c, src/engines/4086/source/scriptlib/ParserSet.h, src/engines/4086/source/scriptlib/ScriptVariant.c, src/engines/4086/source/scriptlib/ScriptVariant.h, src/engines/4086/source/scriptlib/Stack.c, src/engines/4086/source/scriptlib/Stack.h, src/engines/4086/source/scriptlib/StackedSymbolTable.c, src/engines/4086/source/scriptlib/StackedSymbolTable.h, src/engines/4086/source/scriptlib/SymbolTable.c, src/engines/4086/source/scriptlib/SymbolTable.h, src/engines/4086/source/scriptlib/depends.h, src/engines/4086/source/stringptr.c, src/engines/4086/source/stringptr.h, src/engines/4086/source/stristr.c, src/engines/4086/source/stristr.h
+Source: src/engines/4086/openborscript.c, src/engines/4086/source/adpcmlib/adpcm.h, src/engines/4086/source/gamelib/anigif.c, src/engines/4086/source/gamelib/anigif.h, src/engines/4086/source/gamelib/bitmap.c, src/engines/4086/source/gamelib/bitmap.h, src/engines/4086/source/gamelib/borendian.h, src/engines/4086/source/gamelib/draw.c, src/engines/4086/source/gamelib/draw.h, src/engines/4086/source/gamelib/draw16.c, src/engines/4086/source/gamelib/draw32.c, src/engines/4086/source/gamelib/font.c, src/engines/4086/source/gamelib/font.h, src/engines/4086/source/gamelib/loadimg.c, src/engines/4086/source/gamelib/loadimg.h, src/engines/4086/source/gamelib/packfile.c, src/engines/4086/source/gamelib/packfile.h, src/engines/4086/source/gamelib/palette.c, src/engines/4086/source/gamelib/palette.h, src/engines/4086/source/gamelib/pixelformat.c, src/engines/4086/source/gamelib/screen.c, src/engines/4086/source/gamelib/screen.h, src/engines/4086/source/gamelib/screen16.c, src/engines/4086/source/gamelib/screen32.c, src/engines/4086/source/gamelib/soundmix.c, src/engines/4086/source/gamelib/soundmix.h, src/engines/4086/source/gamelib/sprite.c, src/engines/4086/source/gamelib/sprite.h, src/engines/4086/source/gamelib/spriteq.c, src/engines/4086/source/gamelib/spriteq.h, src/engines/4086/source/gamelib/spritex8p16.c, src/engines/4086/source/gamelib/spritex8p32.c, src/engines/4086/source/gamelib/timer.h, src/engines/4086/source/gamelib/types.h, src/engines/4086/source/gfxlib/gfxtypes.h, src/engines/4086/source/preprocessorlib/pp_lexer.c, src/engines/4086/source/preprocessorlib/pp_lexer.h, src/engines/4086/source/ramlib/ram.c, src/engines/4086/source/ramlib/ram.h, src/engines/4086/source/randlib/rand32.h, src/engines/4086/source/scriptlib/Interpreter.h, src/engines/4086/source/scriptlib/Lexer.c, src/engines/4086/source/scriptlib/Lexer.h, src/engines/4086/source/scriptlib/ParserSet.c, src/engines/4086/source/scriptlib/ParserSet.h, src/engines/4086/source/scriptlib/ScriptVariant.c, src/engines/4086/source/scriptlib/ScriptVariant.h, src/engines/4086/source/scriptlib/Stack.c, src/engines/4086/source/scriptlib/Stack.h, src/engines/4086/source/scriptlib/StackedSymbolTable.c, src/engines/4086/source/scriptlib/StackedSymbolTable.h, src/engines/4086/source/scriptlib/SymbolTable.c, src/engines/4086/source/scriptlib/SymbolTable.h, src/engines/4086/source/scriptlib/depends.h, src/engines/4086/source/stringptr.c, src/engines/4086/source/stringptr.h, src/engines/4086/source/stristr.c, src/engines/4086/source/stristr.h, src/engines/4432/openborscript.c, src/engines/4432/source/adpcmlib/adpcm.h, src/engines/4432/source/gamelib/anigif.c, src/engines/4432/source/gamelib/anigif.h, src/engines/4432/source/gamelib/bitmap.c, src/engines/4432/source/gamelib/bitmap.h, src/engines/4432/source/gamelib/borendian.h, src/engines/4432/source/gamelib/draw.c, src/engines/4432/source/gamelib/draw.h, src/engines/4432/source/gamelib/draw16.c, src/engines/4432/source/gamelib/draw32.c, src/engines/4432/source/gamelib/font.c, src/engines/4432/source/gamelib/font.h, src/engines/4432/source/gamelib/loadimg.c, src/engines/4432/source/gamelib/loadimg.h, src/engines/4432/source/gamelib/packfile.c, src/engines/4432/source/gamelib/packfile.h, src/engines/4432/source/gamelib/palette.c, src/engines/4432/source/gamelib/palette.h, src/engines/4432/source/gamelib/pixelformat.c, src/engines/4432/source/gamelib/screen.c, src/engines/4432/source/gamelib/screen.h, src/engines/4432/source/gamelib/screen16.c, src/engines/4432/source/gamelib/screen32.c, src/engines/4432/source/gamelib/soundmix.c, src/engines/4432/source/gamelib/soundmix.h, src/engines/4432/source/gamelib/sprite.c, src/engines/4432/source/gamelib/sprite.h, src/engines/4432/source/gamelib/spriteq.c, src/engines/4432/source/gamelib/spriteq.h, src/engines/4432/source/gamelib/spritex8p16.c, src/engines/4432/source/gamelib/spritex8p32.c, src/engines/4432/source/gamelib/timer.h, src/engines/4432/source/gamelib/types.h, src/engines/4432/source/gamelib/vga.h, src/engines/4432/source/gfxlib/gfxtypes.h, src/engines/4432/source/omath.h, src/engines/4432/source/preprocessorlib/pp_lexer.c, src/engines/4432/source/preprocessorlib/pp_lexer.h, src/engines/4432/source/ramlib/ram.c, src/engines/4432/source/ramlib/ram.h, src/engines/4432/source/randlib/rand32.h, src/engines/4432/source/scriptlib/Interpreter.h, src/engines/4432/source/scriptlib/Lexer.c, src/engines/4432/source/scriptlib/Lexer.h, src/engines/4432/source/scriptlib/ParserSet.c, src/engines/4432/source/scriptlib/ParserSet.h, src/engines/4432/source/scriptlib/ScriptVariant.c, src/engines/4432/source/scriptlib/ScriptVariant.h, src/engines/4432/source/scriptlib/Stack.c, src/engines/4432/source/scriptlib/Stack.h, src/engines/4432/source/scriptlib/StackedSymbolTable.c, src/engines/4432/source/scriptlib/StackedSymbolTable.h, src/engines/4432/source/scriptlib/SymbolTable.c, src/engines/4432/source/scriptlib/SymbolTable.h, src/engines/4432/source/scriptlib/depends.h, src/engines/4432/source/stringptr.c, src/engines/4432/source/stringptr.h, src/engines/4432/source/stristr.c, src/engines/4432/source/stristr.h
 /*
  * OpenBOR - http://www.chronocrash.com
  * -----------------------------------------------------------------------
@@ -2496,7 +2558,7 @@ Source: src/deps/libvorbis/lib/modes/residue_44p51.h
 
  ********************************************************************/
 
-Source: src/engines/3400/source/gamelib/models.c, src/engines/3400/source/gamelib/models.h, src/engines/3400/source/pnglib/pngdec.c, src/engines/3400/source/pnglib/savepng.c, src/engines/3400/source/pnglib/savepng.h, src/engines/3400/source/scriptlib/ImportCache.c, src/engines/3400/source/scriptlib/ImportCache.h, src/engines/3842/source/gamelib/models.c, src/engines/3842/source/gamelib/models.h, src/engines/3842/source/pnglib/pngdec.c, src/engines/3842/source/pnglib/savepng.c, src/engines/3842/source/pnglib/savepng.h, src/engines/4086/source/gamelib/models.c, src/engines/4086/source/gamelib/models.h, src/engines/4086/source/pnglib/pngdec.c, src/engines/4086/source/pnglib/savepng.c, src/engines/4086/source/pnglib/savepng.h
+Source: src/engines/3400/source/gamelib/models.c, src/engines/3400/source/gamelib/models.h, src/engines/3400/source/pnglib/pngdec.c, src/engines/3400/source/pnglib/savepng.c, src/engines/3400/source/pnglib/savepng.h, src/engines/3400/source/scriptlib/ImportCache.c, src/engines/3400/source/scriptlib/ImportCache.h, src/engines/3842/source/gamelib/models.c, src/engines/3842/source/gamelib/models.h, src/engines/3842/source/pnglib/pngdec.c, src/engines/3842/source/pnglib/savepng.c, src/engines/3842/source/pnglib/savepng.h, src/engines/4086/source/gamelib/models.c, src/engines/4086/source/gamelib/models.h, src/engines/4086/source/pnglib/pngdec.c, src/engines/4086/source/pnglib/savepng.c, src/engines/4086/source/pnglib/savepng.h, src/engines/4432/source/gamelib/models.c, src/engines/4432/source/gamelib/models.h, src/engines/4432/source/pnglib/pngdec.c, src/engines/4432/source/pnglib/pngdec.h, src/engines/4432/source/pnglib/savepng.c, src/engines/4432/source/pnglib/savepng.h
 /*
  * OpenBOR - http://www.LavaLit.com
  * -----------------------------------------------------------------------
@@ -2928,6 +2990,14 @@ Source: src/deps/libvorbis/lib/smallft.h
 
  ********************************************************************/
 
+Source: src/engines/4432/source/webmlib/halloc/align.h, src/engines/4432/source/webmlib/halloc/halloc.h, src/engines/4432/source/webmlib/halloc/hlist.h, src/engines/4432/source/webmlib/halloc/macros.h
+/*
+ *	Copyright (c) 2004-2010 Alex Pankratov. All rights reserved.
+ *
+ *	Hierarchical memory allocator, 1.2.1
+ *	http://swapped.cc/halloc
+ */
+
 Source: src/deps/libvorbis/lib/psytune.c
 /********************************************************************
  *                                                                  *
@@ -3008,7 +3078,7 @@ Source: src/deps/libpng/pngstruct.h
  * and license in png.h
  */
 
-Source: src/engines/4086/openborscript.h
+Source: src/engines/4086/openborscript.h, src/engines/4432/openborscript.h
 /*
  * OpenBOR - http://www.chronocrash.com
  * -----------------------------------------------------------------------
@@ -3180,7 +3250,7 @@ Source: src/deps/libvpx/vp9/encoder/vp9_ext_ratectrl.c, src/deps/libvpx/vp9/enco
  *  be found in the AUTHORS file in the root of the source tree.
  */
 
-Source: src/engines/4086/openbor.c, src/engines/4086/source/globals.h, src/engines/4086/source/preprocessorlib/pp_parser.c, src/engines/4086/source/preprocessorlib/pp_parser.h, src/engines/4086/source/scriptlib/FirstFollow.h, src/engines/4086/source/scriptlib/Instruction.c, src/engines/4086/source/scriptlib/Instruction.h, src/engines/4086/source/scriptlib/Interpreter.c, src/engines/4086/source/scriptlib/Parser.c, src/engines/4086/source/scriptlib/Parser.h, src/engines/4086/source/scriptlib/Productions.h, src/engines/4086/source/utils.c, src/engines/4086/source/utils.h
+Source: src/engines/4086/openbor.c, src/engines/4086/source/globals.h, src/engines/4086/source/preprocessorlib/pp_parser.c, src/engines/4086/source/preprocessorlib/pp_parser.h, src/engines/4086/source/scriptlib/FirstFollow.h, src/engines/4086/source/scriptlib/Instruction.c, src/engines/4086/source/scriptlib/Instruction.h, src/engines/4086/source/scriptlib/Interpreter.c, src/engines/4086/source/scriptlib/Parser.c, src/engines/4086/source/scriptlib/Parser.h, src/engines/4086/source/scriptlib/Productions.h, src/engines/4086/source/utils.c, src/engines/4086/source/utils.h, src/engines/4432/openbor.c, src/engines/4432/source/globals.h, src/engines/4432/source/preprocessorlib/pp_parser.c, src/engines/4432/source/preprocessorlib/pp_parser.h, src/engines/4432/source/scriptlib/FirstFollow.h, src/engines/4432/source/scriptlib/Instruction.c, src/engines/4432/source/scriptlib/Instruction.h, src/engines/4432/source/scriptlib/Interpreter.c, src/engines/4432/source/scriptlib/Parser.c, src/engines/4432/source/scriptlib/Parser.h, src/engines/4432/source/scriptlib/Productions.h, src/engines/4432/source/utils.c, src/engines/4432/source/utils.h
 /*
  * OpenBOR - http://www.chronocrash.com
  * -----------------------------------------------------------------------
@@ -3384,7 +3454,7 @@ Source: src/deps/libvorbis/lib/modes/residue_44u.h
 
  ********************************************************************/
 
-Source: src/engines/3400/source/gamelib/commands.h, src/engines/3842/source/gamelib/commands.h, src/engines/4086/source/gamelib/commands.h
+Source: src/engines/3400/source/gamelib/commands.h, src/engines/3842/source/gamelib/commands.h, src/engines/4086/source/gamelib/commands.h, src/engines/4432/source/gamelib/commands.h
 /*
  * OpenBOR - http://www.LavaLit.com
  * -
@@ -3428,7 +3498,7 @@ Source: src/deps/zlib/gzwrite.c
  * For conditions of distribution and use, see copyright notice in zlib.h
  */
 
-Source: src/engines/3400/version.h, src/engines/3842/version.h, src/engines/4086/version.h, src/glue/obor_crt.h, src/glue/obor_legacy_api.h, src/glue/obor_pak_validate.h, src/glue/obor_state_padding.h, src/glue/obor_zip_path.h, src/port/libretro/obor_script_compact.h, src/port/libretro/obor_state_copy.h
+Source: src/engines/3400/version.h, src/engines/3842/version.h, src/engines/4086/version.h, src/engines/4432/version.h, src/glue/obor_crt.h, src/glue/obor_legacy_api.h, src/glue/obor_pak_validate.h, src/glue/obor_state_padding.h, src/glue/obor_zip_path.h, src/port/libretro/obor_script_compact.h, src/port/libretro/obor_state_copy.h
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
 
@@ -3552,6 +3622,14 @@ Source: src/deps/libvpx/vp9/vp9_iface_common.c
  *  intellectual property  rights grant can  be found in the  file PATENTS.
  *  All contributing  project authors may be  found in the AUTHORS  file in
  *  the root of the source tree.
+ */
+
+Source: src/engines/4432/source/webmlib/halloc/halloc.c
+/*
+ *	Copyright (c) 2004i-2010 Alex Pankratov. All rights reserved.
+ *
+ *	Hierarchical memory allocator, 1.2.1
+ *	http://swapped.cc/halloc
  */
 
 Source: src/deps/libvorbis/lib/vorbisfile.c
@@ -3745,7 +3823,7 @@ Source: src/deps/libvorbis/lib/smallft.c
 
  ********************************************************************/
 
-Source: src/engines/3842/source/scriptlib/ImportCache.c, src/engines/3842/source/scriptlib/ImportCache.h, src/engines/4086/source/scriptlib/ImportCache.c, src/engines/4086/source/scriptlib/ImportCache.h
+Source: src/engines/3842/source/scriptlib/ImportCache.c, src/engines/3842/source/scriptlib/ImportCache.h, src/engines/4086/source/scriptlib/ImportCache.c, src/engines/4086/source/scriptlib/ImportCache.h, src/engines/4432/source/scriptlib/ImportCache.c, src/engines/4432/source/scriptlib/ImportCache.h
 /*
  * OpenBOR - http://www.LavaLit.com
  * -----------------------------------------------------------------------
@@ -4718,6 +4796,85 @@ Source: src/deps/libvorbis/lib/envelope.c
 
  ********************************************************************/
 
+Source: src/engines/4432/source/webmlib/yuv.c
+/* This code was derived from code carrying the following copyright notices:
+
+ *  Copyright (C) 1997-2014 Sam Lantinga <slouken@libsdl.org>
+ *
+ *  This software is provided 'as-is', without any express or implied
+ *  warranty.  In no event will the authors be held liable for any damages
+ *  arising from the use of this software.
+ *
+ *  Permission is granted to anyone to use this software for any purpose,
+ *  including commercial applications, and to alter it and redistribute it
+ *  freely, subject to the following restrictions:
+ *
+ *  1. The origin of this software must not be misrepresented; you must not
+ *     claim that you wrote the original software. If you use this software
+ *     in a product, an acknowledgment in the product documentation would be
+ *     appreciated but is not required.
+ *  2. Altered source versions must be plainly marked as such, and must not be
+ *     misrepresented as being the original software.
+ *  3. This notice may not be removed or altered from any source distribution.
+
+ * Copyright (c) 1995 The Regents of the University of California.
+ * All rights reserved.
+ *
+ * Permission to use, copy, modify, and distribute this software and its
+ * documentation for any purpose, without fee, and without written agreement is
+ * hereby granted, provided that the above copyright notice and the following
+ * two paragraphs appear in all copies of this software.
+ *
+ * IN NO EVENT SHALL THE UNIVERSITY OF CALIFORNIA BE LIABLE TO ANY PARTY FOR
+ * DIRECT, INDIRECT, SPECIAL, INCIDENTAL, OR CONSEQUENTIAL DAMAGES ARISING OUT
+ * OF THE USE OF THIS SOFTWARE AND ITS DOCUMENTATION, EVEN IF THE UNIVERSITY OF
+ * CALIFORNIA HAS BEEN ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ * THE UNIVERSITY OF CALIFORNIA SPECIFICALLY DISCLAIMS ANY WARRANTIES,
+ * INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY
+ * AND FITNESS FOR A PARTICULAR PURPOSE.  THE SOFTWARE PROVIDED HEREUNDER IS
+ * ON AN "AS IS" BASIS, AND THE UNIVERSITY OF CALIFORNIA HAS NO OBLIGATION TO
+ * PROVIDE MAINTENANCE, SUPPORT, UPDATES, ENHANCEMENTS, OR MODIFICATIONS.
+
+ * Copyright (c) 1995 Erik Corry
+ * All rights reserved.
+ *
+ * Permission to use, copy, modify, and distribute this software and its
+ * documentation for any purpose, without fee, and without written agreement is
+ * hereby granted, provided that the above copyright notice and the following
+ * two paragraphs appear in all copies of this software.
+ *
+ * IN NO EVENT SHALL ERIK CORRY BE LIABLE TO ANY PARTY FOR DIRECT, INDIRECT,
+ * SPECIAL, INCIDENTAL, OR CONSEQUENTIAL DAMAGES ARISING OUT OF THE USE OF
+ * THIS SOFTWARE AND ITS DOCUMENTATION, EVEN IF ERIK CORRY HAS BEEN ADVISED
+ * OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ * ERIK CORRY SPECIFICALLY DISCLAIMS ANY WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
+ * PARTICULAR PURPOSE.  THE SOFTWARE PROVIDED HEREUNDER IS ON AN "AS IS"
+ * BASIS, AND ERIK CORRY HAS NO OBLIGATION TO PROVIDE MAINTENANCE, SUPPORT,
+ * UPDATES, ENHANCEMENTS, OR MODIFICATIONS.
+
+ * Portions of this software Copyright (c) 1995 Brown University.
+ * All rights reserved.
+ *
+ * Permission to use, copy, modify, and distribute this software and its
+ * documentation for any purpose, without fee, and without written agreement
+ * is hereby granted, provided that the above copyright notice and the
+ * following two paragraphs appear in all copies of this software.
+ *
+ * IN NO EVENT SHALL BROWN UNIVERSITY BE LIABLE TO ANY PARTY FOR
+ * DIRECT, INDIRECT, SPECIAL, INCIDENTAL, OR CONSEQUENTIAL DAMAGES ARISING OUT
+ * OF THE USE OF THIS SOFTWARE AND ITS DOCUMENTATION, EVEN IF BROWN
+ * UNIVERSITY HAS BEEN ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ * BROWN UNIVERSITY SPECIFICALLY DISCLAIMS ANY WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
+ * PARTICULAR PURPOSE.  THE SOFTWARE PROVIDED HEREUNDER IS ON AN "AS IS"
+ * BASIS, AND BROWN UNIVERSITY HAS NO OBLIGATION TO PROVIDE MAINTENANCE,
+ * SUPPORT, UPDATES, ENHANCEMENTS, OR MODIFICATIONS.
+ */
+
 Source: src/deps/libvorbis/include/vorbis/codec.h
 /********************************************************************
  *                                                                  *
@@ -4827,7 +4984,7 @@ Source: src/deps/libvpx/vpx_util/loongson_intrinsics.h
  *
  */
 
-Source: src/engines/4086/openbor.h
+Source: src/engines/4086/openbor.h, src/engines/4432/openbor.h
 /*
  * OpenBOR - http://www.chronocrash.com
  * -
@@ -4906,6 +5063,18 @@ Source: src/deps/zlib/trees.c
  * Copyright (C) 1995-2026 Jean-loup Gailly
  * detect_data_type() function provided freely by Cosmin Truta, 2006
  * For conditions of distribution and use, see copyright notice in zlib.h
+ */
+
+Source: src/engines/4432/source/gamelib/borendian.h
+/* AnyBOR modification record: 2026-09-12.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Use the port's fixed-width endian conversions.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/4432.md
+ * at the source repository root. Original notices follow below.
  */
 
 Source: src/deps/zlib/zconf.h
