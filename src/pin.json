@@ -2,7 +2,7 @@
   "core_name": "AnyBOR",
   "core_basename": "anybor_libretro",
   "version": "0.1.0",
-  "fallback_build": "3400",
+  "fallback_build": "6412",
   "deps": {
     "dlmalloc": {
       "url": "https://gee.cs.oswego.edu/pub/misc/malloc-2.8.6.c",
@@ -82,6 +82,13 @@
       "commit": "2566cbee6185025e6a69d2aa1823b15c7a154ff9",
       "date": "2017-01-25",
       "covers": "4087-4432",
+      "major": "v3"
+    },
+    {
+      "build": "6412",
+      "commit": "d9bfceeb0d53cd43ed7cf5cfdfb0c60bba4df3f8",
+      "date": "2018-08-29",
+      "covers": "4433-6412; default fallback",
       "major": "v3"
     }
   ]

@@ -186,7 +186,7 @@ Source: src/deps/libvorbis/lib/modes/setup_8.h
 
  ********************************************************************/
 
-Source: src/engines/3842/openbor.c, src/engines/3842/source/globals.h, src/engines/3842/source/preprocessorlib/pp_expr.c, src/engines/3842/source/preprocessorlib/pp_parser.c, src/engines/3842/source/preprocessorlib/pp_parser.h, src/engines/3842/source/scriptlib/FirstFollow.h, src/engines/3842/source/scriptlib/Instruction.c, src/engines/3842/source/scriptlib/Instruction.h, src/engines/3842/source/scriptlib/Interpreter.c, src/engines/3842/source/scriptlib/Parser.c, src/engines/3842/source/scriptlib/Parser.h, src/engines/3842/source/scriptlib/Productions.h, src/engines/3842/source/utils.c, src/engines/3842/source/utils.h, src/engines/4086/source/preprocessorlib/pp_expr.c, src/engines/4432/source/preprocessorlib/pp_expr.c
+Source: src/engines/3842/openbor.c, src/engines/3842/source/globals.h, src/engines/3842/source/preprocessorlib/pp_expr.c, src/engines/3842/source/preprocessorlib/pp_parser.c, src/engines/3842/source/preprocessorlib/pp_parser.h, src/engines/3842/source/scriptlib/FirstFollow.h, src/engines/3842/source/scriptlib/Instruction.c, src/engines/3842/source/scriptlib/Instruction.h, src/engines/3842/source/scriptlib/Interpreter.c, src/engines/3842/source/scriptlib/Parser.c, src/engines/3842/source/scriptlib/Parser.h, src/engines/3842/source/scriptlib/Productions.h, src/engines/3842/source/utils.c, src/engines/3842/source/utils.h, src/engines/4086/source/preprocessorlib/pp_expr.c, src/engines/4432/source/preprocessorlib/pp_expr.c, src/engines/6412/source/preprocessorlib/pp_expr.c
 /*
  * OpenBOR - http://www.LavaLit.com
  * -----------------------------------------------------------------------
@@ -220,6 +220,18 @@ Source: src/deps/libvorbis/lib/vorbisenc.c
  function: simple programmatic interface for encoder mode setup
 
  ********************************************************************/
+
+Source: src/engines/6412/source/gamelib/draw.c
+/* AnyBOR modification record: 2026-09-12.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Route circle drawing through the port's integer rasterizer.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/6412.md
+ * at the source repository root. Original notices follow below.
+ */
 
 Source: src/deps/libvpx/vp9/encoder/vp9_encoder.c
 /*
@@ -355,7 +367,7 @@ Source: src/deps/libvorbis/lib/modes/setup_44u.h
 
  ********************************************************************/
 
-Source: src/engines/4432/source/gamelib/threads.h, src/engines/4432/source/safealloc.h, src/engines/4432/source/savedata.h, src/engines/4432/source/webmlib/samplecvt.c, src/engines/4432/source/webmlib/samplecvt.h, src/engines/4432/source/webmlib/vidplay.c, src/engines/4432/source/webmlib/vidplay.h, src/engines/4432/source/webmlib/vorbis.c, src/engines/4432/source/webmlib/vorbis.h, src/engines/4432/source/webmlib/yuv.c, src/engines/4432/source/webmlib/yuv.h
+Source: src/engines/4432/source/gamelib/threads.h, src/engines/4432/source/safealloc.h, src/engines/4432/source/savedata.h, src/engines/4432/source/webmlib/samplecvt.c, src/engines/4432/source/webmlib/samplecvt.h, src/engines/4432/source/webmlib/vidplay.c, src/engines/4432/source/webmlib/vidplay.h, src/engines/4432/source/webmlib/vorbis.c, src/engines/4432/source/webmlib/vorbis.h, src/engines/4432/source/webmlib/yuv.c, src/engines/4432/source/webmlib/yuv.h, src/engines/6412/source/gamelib/threads.h, src/engines/6412/source/safealloc.h, src/engines/6412/source/savedata.h, src/engines/6412/source/webmlib/samplecvt.c, src/engines/6412/source/webmlib/samplecvt.h, src/engines/6412/source/webmlib/vidplay.c, src/engines/6412/source/webmlib/vidplay.h, src/engines/6412/source/webmlib/vorbis.c, src/engines/6412/source/webmlib/vorbis.h, src/engines/6412/source/webmlib/yuv.c, src/engines/6412/source/webmlib/yuv.h
 /*
  * OpenBOR - http://www.chronocrash.com
  * -----------------------------------------------------------------------
@@ -437,7 +449,7 @@ Source: src/deps/libogg/src/framing.c
 Source: src/glue/obor_engines.h
 /* Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
 
-Source: src/engines/4432/source/webmlib/samplecvt.c, src/engines/4432/source/webmlib/vorbisfpu.h
+Source: src/engines/4432/source/webmlib/samplecvt.c, src/engines/4432/source/webmlib/vorbisfpu.h, src/engines/6412/source/webmlib/samplecvt.c, src/engines/6412/source/webmlib/vorbisfpu.h
 /* This code was derived from code carrying the following copyright notice:
  *
  * Copyright (c) 2002-2015 Xiph.org Foundation
@@ -580,7 +592,7 @@ Source: src/deps/zlib/gzclose.c
  * For conditions of distribution and use, see copyright notice in zlib.h
  */
 
-Source: src/engines/4432/source/webmlib/nestegg/nestegg.c, src/engines/4432/source/webmlib/nestegg/nestegg.h
+Source: src/engines/4432/source/webmlib/nestegg/nestegg.c, src/engines/4432/source/webmlib/nestegg/nestegg.h, src/engines/6412/source/webmlib/nestegg/nestegg.c, src/engines/6412/source/webmlib/nestegg/nestegg.h
 /*
  * Copyright © 2010 Mozilla Foundation
  *
@@ -734,6 +746,24 @@ Source: src/deps/libpng/mips/filter_msa_intrinsics.c
  * and license in png.h
  */
 
+Source: src/engines/6412/openborscript.c
+/*
+ * OpenBOR - http://www.chronocrash.com
+ * -----------------------------------------------------------------------
+ * All rights reserved, see LICENSE in OpenBOR root for details.
+ *
+ * Copyright (c) 2004 - 2017 OpenBOR Team
+ */
+
+Source: src/engines/6412/source/openborscript/energy_status.c, src/engines/6412/source/openborscript/energy_status.h, src/engines/6412/source/openborscript/entity.c, src/engines/6412/source/openborscript/entity.h
+/*
+ * OpenBOR - http://www.chronocrash.com
+ * -----------------------------------------------------------------------
+ * All rights reserved. See LICENSE in OpenBOR root for license details.
+ *
+ * Copyright (c) 2004 - 2018 OpenBOR Team
+ */
+
 Source: src/deps/libvpx/vp8/vp8_ratectrl_rtc.cc, src/deps/libvpx/vp8/vp8_ratectrl_rtc.h, src/deps/libvpx/vpx/internal/vpx_ratectrl_rtc.h, src/deps/libvpx/vpx_dsp/arm/sad4d_neon_dotprod.c, src/deps/libvpx/vpx_dsp/arm/sad_neon_dotprod.c, src/deps/libvpx/vpx_dsp/arm/variance_neon_dotprod.c, src/deps/libvpx/vpx_dsp/arm/vpx_convolve8_neon_dotprod.c
 /*
  *  Copyright (c) 2021 The WebM project authors. All Rights Reserved.
@@ -768,7 +798,7 @@ Source: src/deps/libvpx/vp9/encoder/vp9_alt_ref_aq.c, src/deps/libvpx/vp9/encode
  *  the root of the source tree.
  */
 
-Source: src/engines/4086/openborscript.c, src/engines/4086/source/adpcmlib/adpcm.h, src/engines/4086/source/gamelib/anigif.c, src/engines/4086/source/gamelib/anigif.h, src/engines/4086/source/gamelib/bitmap.c, src/engines/4086/source/gamelib/bitmap.h, src/engines/4086/source/gamelib/borendian.h, src/engines/4086/source/gamelib/draw.c, src/engines/4086/source/gamelib/draw.h, src/engines/4086/source/gamelib/draw16.c, src/engines/4086/source/gamelib/draw32.c, src/engines/4086/source/gamelib/font.c, src/engines/4086/source/gamelib/font.h, src/engines/4086/source/gamelib/loadimg.c, src/engines/4086/source/gamelib/loadimg.h, src/engines/4086/source/gamelib/packfile.c, src/engines/4086/source/gamelib/packfile.h, src/engines/4086/source/gamelib/palette.c, src/engines/4086/source/gamelib/palette.h, src/engines/4086/source/gamelib/pixelformat.c, src/engines/4086/source/gamelib/screen.c, src/engines/4086/source/gamelib/screen.h, src/engines/4086/source/gamelib/screen16.c, src/engines/4086/source/gamelib/screen32.c, src/engines/4086/source/gamelib/soundmix.c, src/engines/4086/source/gamelib/soundmix.h, src/engines/4086/source/gamelib/sprite.c, src/engines/4086/source/gamelib/sprite.h, src/engines/4086/source/gamelib/spriteq.c, src/engines/4086/source/gamelib/spriteq.h, src/engines/4086/source/gamelib/spritex8p16.c, src/engines/4086/source/gamelib/spritex8p32.c, src/engines/4086/source/gamelib/timer.h, src/engines/4086/source/gamelib/types.h, src/engines/4086/source/gfxlib/gfxtypes.h, src/engines/4086/source/preprocessorlib/pp_lexer.c, src/engines/4086/source/preprocessorlib/pp_lexer.h, src/engines/4086/source/ramlib/ram.c, src/engines/4086/source/ramlib/ram.h, src/engines/4086/source/randlib/rand32.h, src/engines/4086/source/scriptlib/Interpreter.h, src/engines/4086/source/scriptlib/Lexer.c, src/engines/4086/source/scriptlib/Lexer.h, src/engines/4086/source/scriptlib/ParserSet.c, src/engines/4086/source/scriptlib/ParserSet.h, src/engines/4086/source/scriptlib/ScriptVariant.c, src/engines/4086/source/scriptlib/ScriptVariant.h, src/engines/4086/source/scriptlib/Stack.c, src/engines/4086/source/scriptlib/Stack.h, src/engines/4086/source/scriptlib/StackedSymbolTable.c, src/engines/4086/source/scriptlib/StackedSymbolTable.h, src/engines/4086/source/scriptlib/SymbolTable.c, src/engines/4086/source/scriptlib/SymbolTable.h, src/engines/4086/source/scriptlib/depends.h, src/engines/4086/source/stringptr.c, src/engines/4086/source/stringptr.h, src/engines/4086/source/stristr.c, src/engines/4086/source/stristr.h, src/engines/4432/openborscript.c, src/engines/4432/source/adpcmlib/adpcm.h, src/engines/4432/source/gamelib/anigif.c, src/engines/4432/source/gamelib/anigif.h, src/engines/4432/source/gamelib/bitmap.c, src/engines/4432/source/gamelib/bitmap.h, src/engines/4432/source/gamelib/borendian.h, src/engines/4432/source/gamelib/draw.c, src/engines/4432/source/gamelib/draw.h, src/engines/4432/source/gamelib/draw16.c, src/engines/4432/source/gamelib/draw32.c, src/engines/4432/source/gamelib/font.c, src/engines/4432/source/gamelib/font.h, src/engines/4432/source/gamelib/loadimg.c, src/engines/4432/source/gamelib/loadimg.h, src/engines/4432/source/gamelib/packfile.c, src/engines/4432/source/gamelib/packfile.h, src/engines/4432/source/gamelib/palette.c, src/engines/4432/source/gamelib/palette.h, src/engines/4432/source/gamelib/pixelformat.c, src/engines/4432/source/gamelib/screen.c, src/engines/4432/source/gamelib/screen.h, src/engines/4432/source/gamelib/screen16.c, src/engines/4432/source/gamelib/screen32.c, src/engines/4432/source/gamelib/soundmix.c, src/engines/4432/source/gamelib/soundmix.h, src/engines/4432/source/gamelib/sprite.c, src/engines/4432/source/gamelib/sprite.h, src/engines/4432/source/gamelib/spriteq.c, src/engines/4432/source/gamelib/spriteq.h, src/engines/4432/source/gamelib/spritex8p16.c, src/engines/4432/source/gamelib/spritex8p32.c, src/engines/4432/source/gamelib/timer.h, src/engines/4432/source/gamelib/types.h, src/engines/4432/source/gamelib/vga.h, src/engines/4432/source/gfxlib/gfxtypes.h, src/engines/4432/source/omath.h, src/engines/4432/source/preprocessorlib/pp_lexer.c, src/engines/4432/source/preprocessorlib/pp_lexer.h, src/engines/4432/source/ramlib/ram.c, src/engines/4432/source/ramlib/ram.h, src/engines/4432/source/randlib/rand32.h, src/engines/4432/source/scriptlib/Interpreter.h, src/engines/4432/source/scriptlib/Lexer.c, src/engines/4432/source/scriptlib/Lexer.h, src/engines/4432/source/scriptlib/ParserSet.c, src/engines/4432/source/scriptlib/ParserSet.h, src/engines/4432/source/scriptlib/ScriptVariant.c, src/engines/4432/source/scriptlib/ScriptVariant.h, src/engines/4432/source/scriptlib/Stack.c, src/engines/4432/source/scriptlib/Stack.h, src/engines/4432/source/scriptlib/StackedSymbolTable.c, src/engines/4432/source/scriptlib/StackedSymbolTable.h, src/engines/4432/source/scriptlib/SymbolTable.c, src/engines/4432/source/scriptlib/SymbolTable.h, src/engines/4432/source/scriptlib/depends.h, src/engines/4432/source/stringptr.c, src/engines/4432/source/stringptr.h, src/engines/4432/source/stristr.c, src/engines/4432/source/stristr.h
+Source: src/engines/4086/openborscript.c, src/engines/4086/source/adpcmlib/adpcm.h, src/engines/4086/source/gamelib/anigif.c, src/engines/4086/source/gamelib/anigif.h, src/engines/4086/source/gamelib/bitmap.c, src/engines/4086/source/gamelib/bitmap.h, src/engines/4086/source/gamelib/borendian.h, src/engines/4086/source/gamelib/draw.c, src/engines/4086/source/gamelib/draw.h, src/engines/4086/source/gamelib/draw16.c, src/engines/4086/source/gamelib/draw32.c, src/engines/4086/source/gamelib/font.c, src/engines/4086/source/gamelib/font.h, src/engines/4086/source/gamelib/loadimg.c, src/engines/4086/source/gamelib/loadimg.h, src/engines/4086/source/gamelib/packfile.c, src/engines/4086/source/gamelib/packfile.h, src/engines/4086/source/gamelib/palette.c, src/engines/4086/source/gamelib/palette.h, src/engines/4086/source/gamelib/pixelformat.c, src/engines/4086/source/gamelib/screen.c, src/engines/4086/source/gamelib/screen.h, src/engines/4086/source/gamelib/screen16.c, src/engines/4086/source/gamelib/screen32.c, src/engines/4086/source/gamelib/soundmix.c, src/engines/4086/source/gamelib/soundmix.h, src/engines/4086/source/gamelib/sprite.c, src/engines/4086/source/gamelib/sprite.h, src/engines/4086/source/gamelib/spriteq.c, src/engines/4086/source/gamelib/spriteq.h, src/engines/4086/source/gamelib/spritex8p16.c, src/engines/4086/source/gamelib/spritex8p32.c, src/engines/4086/source/gamelib/timer.h, src/engines/4086/source/gamelib/types.h, src/engines/4086/source/gfxlib/gfxtypes.h, src/engines/4086/source/preprocessorlib/pp_lexer.c, src/engines/4086/source/preprocessorlib/pp_lexer.h, src/engines/4086/source/ramlib/ram.c, src/engines/4086/source/ramlib/ram.h, src/engines/4086/source/randlib/rand32.h, src/engines/4086/source/scriptlib/Interpreter.h, src/engines/4086/source/scriptlib/Lexer.c, src/engines/4086/source/scriptlib/Lexer.h, src/engines/4086/source/scriptlib/ParserSet.c, src/engines/4086/source/scriptlib/ParserSet.h, src/engines/4086/source/scriptlib/ScriptVariant.c, src/engines/4086/source/scriptlib/ScriptVariant.h, src/engines/4086/source/scriptlib/Stack.c, src/engines/4086/source/scriptlib/Stack.h, src/engines/4086/source/scriptlib/StackedSymbolTable.c, src/engines/4086/source/scriptlib/StackedSymbolTable.h, src/engines/4086/source/scriptlib/SymbolTable.c, src/engines/4086/source/scriptlib/SymbolTable.h, src/engines/4086/source/scriptlib/depends.h, src/engines/4086/source/stringptr.c, src/engines/4086/source/stringptr.h, src/engines/4086/source/stristr.c, src/engines/4086/source/stristr.h, src/engines/4432/openborscript.c, src/engines/4432/source/adpcmlib/adpcm.h, src/engines/4432/source/gamelib/anigif.c, src/engines/4432/source/gamelib/anigif.h, src/engines/4432/source/gamelib/bitmap.c, src/engines/4432/source/gamelib/bitmap.h, src/engines/4432/source/gamelib/borendian.h, src/engines/4432/source/gamelib/draw.c, src/engines/4432/source/gamelib/draw.h, src/engines/4432/source/gamelib/draw16.c, src/engines/4432/source/gamelib/draw32.c, src/engines/4432/source/gamelib/font.c, src/engines/4432/source/gamelib/font.h, src/engines/4432/source/gamelib/loadimg.c, src/engines/4432/source/gamelib/loadimg.h, src/engines/4432/source/gamelib/packfile.c, src/engines/4432/source/gamelib/packfile.h, src/engines/4432/source/gamelib/palette.c, src/engines/4432/source/gamelib/palette.h, src/engines/4432/source/gamelib/pixelformat.c, src/engines/4432/source/gamelib/screen.c, src/engines/4432/source/gamelib/screen.h, src/engines/4432/source/gamelib/screen16.c, src/engines/4432/source/gamelib/screen32.c, src/engines/4432/source/gamelib/soundmix.c, src/engines/4432/source/gamelib/soundmix.h, src/engines/4432/source/gamelib/sprite.c, src/engines/4432/source/gamelib/sprite.h, src/engines/4432/source/gamelib/spriteq.c, src/engines/4432/source/gamelib/spriteq.h, src/engines/4432/source/gamelib/spritex8p16.c, src/engines/4432/source/gamelib/spritex8p32.c, src/engines/4432/source/gamelib/timer.h, src/engines/4432/source/gamelib/types.h, src/engines/4432/source/gamelib/vga.h, src/engines/4432/source/gfxlib/gfxtypes.h, src/engines/4432/source/omath.h, src/engines/4432/source/preprocessorlib/pp_lexer.c, src/engines/4432/source/preprocessorlib/pp_lexer.h, src/engines/4432/source/ramlib/ram.c, src/engines/4432/source/ramlib/ram.h, src/engines/4432/source/randlib/rand32.h, src/engines/4432/source/scriptlib/Interpreter.h, src/engines/4432/source/scriptlib/Lexer.c, src/engines/4432/source/scriptlib/Lexer.h, src/engines/4432/source/scriptlib/ParserSet.c, src/engines/4432/source/scriptlib/ParserSet.h, src/engines/4432/source/scriptlib/ScriptVariant.c, src/engines/4432/source/scriptlib/ScriptVariant.h, src/engines/4432/source/scriptlib/Stack.c, src/engines/4432/source/scriptlib/Stack.h, src/engines/4432/source/scriptlib/StackedSymbolTable.c, src/engines/4432/source/scriptlib/StackedSymbolTable.h, src/engines/4432/source/scriptlib/SymbolTable.c, src/engines/4432/source/scriptlib/SymbolTable.h, src/engines/4432/source/scriptlib/depends.h, src/engines/4432/source/stringptr.c, src/engines/4432/source/stringptr.h, src/engines/4432/source/stristr.c, src/engines/4432/source/stristr.h, src/engines/6412/source/adpcmlib/adpcm.h, src/engines/6412/source/gamelib/anigif.c, src/engines/6412/source/gamelib/anigif.h, src/engines/6412/source/gamelib/bitmap.c, src/engines/6412/source/gamelib/bitmap.h, src/engines/6412/source/gamelib/borendian.h, src/engines/6412/source/gamelib/draw.c, src/engines/6412/source/gamelib/draw.h, src/engines/6412/source/gamelib/draw16.c, src/engines/6412/source/gamelib/draw32.c, src/engines/6412/source/gamelib/font.c, src/engines/6412/source/gamelib/font.h, src/engines/6412/source/gamelib/loadimg.c, src/engines/6412/source/gamelib/loadimg.h, src/engines/6412/source/gamelib/packfile.c, src/engines/6412/source/gamelib/packfile.h, src/engines/6412/source/gamelib/palette.c, src/engines/6412/source/gamelib/palette.h, src/engines/6412/source/gamelib/pixelformat.c, src/engines/6412/source/gamelib/screen.c, src/engines/6412/source/gamelib/screen.h, src/engines/6412/source/gamelib/screen16.c, src/engines/6412/source/gamelib/screen32.c, src/engines/6412/source/gamelib/soundmix.c, src/engines/6412/source/gamelib/soundmix.h, src/engines/6412/source/gamelib/sprite.c, src/engines/6412/source/gamelib/sprite.h, src/engines/6412/source/gamelib/spriteq.c, src/engines/6412/source/gamelib/spriteq.h, src/engines/6412/source/gamelib/spritex8p16.c, src/engines/6412/source/gamelib/spritex8p32.c, src/engines/6412/source/gamelib/timer.h, src/engines/6412/source/gamelib/types.h, src/engines/6412/source/gamelib/vga.h, src/engines/6412/source/gfxlib/gfxtypes.h, src/engines/6412/source/omath.c, src/engines/6412/source/omath.h, src/engines/6412/source/preprocessorlib/pp_lexer.c, src/engines/6412/source/preprocessorlib/pp_lexer.h, src/engines/6412/source/ramlib/ram.c, src/engines/6412/source/ramlib/ram.h, src/engines/6412/source/randlib/rand32.c, src/engines/6412/source/randlib/rand32.h, src/engines/6412/source/scriptlib/Interpreter.h, src/engines/6412/source/scriptlib/Lexer.c, src/engines/6412/source/scriptlib/Lexer.h, src/engines/6412/source/scriptlib/ParserSet.c, src/engines/6412/source/scriptlib/ParserSet.h, src/engines/6412/source/scriptlib/ScriptVariant.c, src/engines/6412/source/scriptlib/ScriptVariant.h, src/engines/6412/source/scriptlib/Stack.c, src/engines/6412/source/scriptlib/Stack.h, src/engines/6412/source/scriptlib/StackedSymbolTable.c, src/engines/6412/source/scriptlib/StackedSymbolTable.h, src/engines/6412/source/scriptlib/SymbolTable.c, src/engines/6412/source/scriptlib/SymbolTable.h, src/engines/6412/source/scriptlib/depends.h, src/engines/6412/source/stringptr.c, src/engines/6412/source/stringptr.h, src/engines/6412/source/stristr.c, src/engines/6412/source/stristr.h
 /*
  * OpenBOR - http://www.chronocrash.com
  * -----------------------------------------------------------------------
@@ -851,7 +881,7 @@ Source: src/deps/libvorbis/lib/modes/residue_44p51.h
 
  ********************************************************************/
 
-Source: src/engines/3400/source/gamelib/models.c, src/engines/3400/source/gamelib/models.h, src/engines/3400/source/pnglib/pngdec.c, src/engines/3400/source/pnglib/savepng.c, src/engines/3400/source/pnglib/savepng.h, src/engines/3400/source/scriptlib/ImportCache.c, src/engines/3400/source/scriptlib/ImportCache.h, src/engines/3842/source/gamelib/models.c, src/engines/3842/source/gamelib/models.h, src/engines/3842/source/pnglib/pngdec.c, src/engines/3842/source/pnglib/savepng.c, src/engines/3842/source/pnglib/savepng.h, src/engines/4086/source/gamelib/models.c, src/engines/4086/source/gamelib/models.h, src/engines/4086/source/pnglib/pngdec.c, src/engines/4086/source/pnglib/savepng.c, src/engines/4086/source/pnglib/savepng.h, src/engines/4432/source/gamelib/models.c, src/engines/4432/source/gamelib/models.h, src/engines/4432/source/pnglib/pngdec.c, src/engines/4432/source/pnglib/pngdec.h, src/engines/4432/source/pnglib/savepng.c, src/engines/4432/source/pnglib/savepng.h
+Source: src/engines/3400/source/gamelib/models.c, src/engines/3400/source/gamelib/models.h, src/engines/3400/source/pnglib/pngdec.c, src/engines/3400/source/pnglib/savepng.c, src/engines/3400/source/pnglib/savepng.h, src/engines/3400/source/scriptlib/ImportCache.c, src/engines/3400/source/scriptlib/ImportCache.h, src/engines/3842/source/gamelib/models.c, src/engines/3842/source/gamelib/models.h, src/engines/3842/source/pnglib/pngdec.c, src/engines/3842/source/pnglib/savepng.c, src/engines/3842/source/pnglib/savepng.h, src/engines/4086/source/gamelib/models.c, src/engines/4086/source/gamelib/models.h, src/engines/4086/source/pnglib/pngdec.c, src/engines/4086/source/pnglib/savepng.c, src/engines/4086/source/pnglib/savepng.h, src/engines/4432/source/gamelib/models.c, src/engines/4432/source/gamelib/models.h, src/engines/4432/source/pnglib/pngdec.c, src/engines/4432/source/pnglib/pngdec.h, src/engines/4432/source/pnglib/savepng.c, src/engines/4432/source/pnglib/savepng.h, src/engines/6412/source/gamelib/models.c, src/engines/6412/source/gamelib/models.h, src/engines/6412/source/pnglib/pngdec.c, src/engines/6412/source/pnglib/pngdec.h, src/engines/6412/source/pnglib/savepng.c, src/engines/6412/source/pnglib/savepng.h
 /*
  * OpenBOR - http://www.LavaLit.com
  * -----------------------------------------------------------------------
@@ -896,7 +926,7 @@ Source: src/deps/libpng/pngrutil.c
  * libpng itself during the course of reading an image.
  */
 
-Source: src/engines/3400/openbor.c, src/engines/3400/openborscript.c, src/engines/3400/source/adpcmlib/adpcm.h, src/engines/3400/source/gamelib/anigif.c, src/engines/3400/source/gamelib/anigif.h, src/engines/3400/source/gamelib/bitmap.c, src/engines/3400/source/gamelib/bitmap.h, src/engines/3400/source/gamelib/borendian.h, src/engines/3400/source/gamelib/draw.c, src/engines/3400/source/gamelib/draw.h, src/engines/3400/source/gamelib/draw16.c, src/engines/3400/source/gamelib/draw32.c, src/engines/3400/source/gamelib/font.c, src/engines/3400/source/gamelib/font.h, src/engines/3400/source/gamelib/loadimg.c, src/engines/3400/source/gamelib/loadimg.h, src/engines/3400/source/gamelib/packfile.c, src/engines/3400/source/gamelib/packfile.h, src/engines/3400/source/gamelib/palette.c, src/engines/3400/source/gamelib/palette.h, src/engines/3400/source/gamelib/pixelformat.c, src/engines/3400/source/gamelib/screen.c, src/engines/3400/source/gamelib/screen.h, src/engines/3400/source/gamelib/screen16.c, src/engines/3400/source/gamelib/screen32.c, src/engines/3400/source/gamelib/soundmix.c, src/engines/3400/source/gamelib/soundmix.h, src/engines/3400/source/gamelib/sprite.h, src/engines/3400/source/gamelib/spritef.c, src/engines/3400/source/gamelib/spriteq.c, src/engines/3400/source/gamelib/spriteq.h, src/engines/3400/source/gamelib/spritex8p16.c, src/engines/3400/source/gamelib/spritex8p32.c, src/engines/3400/source/gamelib/texture.c, src/engines/3400/source/gamelib/texture.h, src/engines/3400/source/gamelib/texture16.c, src/engines/3400/source/gamelib/texture32.c, src/engines/3400/source/gamelib/timer.h, src/engines/3400/source/gamelib/types.h, src/engines/3400/source/gfxlib/gfxtypes.h, src/engines/3400/source/globals.h, src/engines/3400/source/preprocessorlib/pp_lexer.c, src/engines/3400/source/preprocessorlib/pp_lexer.h, src/engines/3400/source/preprocessorlib/pp_parser.c, src/engines/3400/source/preprocessorlib/pp_parser.h, src/engines/3400/source/ramlib/ram.c, src/engines/3400/source/ramlib/ram.h, src/engines/3400/source/randlib/rand32.c, src/engines/3400/source/randlib/rand32.h, src/engines/3400/source/scriptlib/FirstFollow.h, src/engines/3400/source/scriptlib/Instruction.c, src/engines/3400/source/scriptlib/Instruction.h, src/engines/3400/source/scriptlib/Interpreter.c, src/engines/3400/source/scriptlib/Interpreter.h, src/engines/3400/source/scriptlib/Lexer.c, src/engines/3400/source/scriptlib/Lexer.h, src/engines/3400/source/scriptlib/Parser.c, src/engines/3400/source/scriptlib/Parser.h, src/engines/3400/source/scriptlib/ParserSet.c, src/engines/3400/source/scriptlib/ParserSet.h, src/engines/3400/source/scriptlib/Productions.h, src/engines/3400/source/scriptlib/ScriptVariant.c, src/engines/3400/source/scriptlib/ScriptVariant.h, src/engines/3400/source/scriptlib/Stack.c, src/engines/3400/source/scriptlib/Stack.h, src/engines/3400/source/scriptlib/StackedSymbolTable.c, src/engines/3400/source/scriptlib/StackedSymbolTable.h, src/engines/3400/source/scriptlib/SymbolTable.c, src/engines/3400/source/scriptlib/SymbolTable.h, src/engines/3400/source/scriptlib/depends.h, src/engines/3400/source/stringptr.c, src/engines/3400/source/stringptr.h, src/engines/3400/source/stristr.c, src/engines/3400/source/stristr.h, src/engines/3400/source/utils.c, src/engines/3400/source/utils.h, src/engines/3842/openborscript.c, src/engines/3842/source/adpcmlib/adpcm.h, src/engines/3842/source/gamelib/anigif.c, src/engines/3842/source/gamelib/anigif.h, src/engines/3842/source/gamelib/bitmap.c, src/engines/3842/source/gamelib/bitmap.h, src/engines/3842/source/gamelib/borendian.h, src/engines/3842/source/gamelib/draw.c, src/engines/3842/source/gamelib/draw.h, src/engines/3842/source/gamelib/draw16.c, src/engines/3842/source/gamelib/draw32.c, src/engines/3842/source/gamelib/font.c, src/engines/3842/source/gamelib/font.h, src/engines/3842/source/gamelib/loadimg.c, src/engines/3842/source/gamelib/loadimg.h, src/engines/3842/source/gamelib/packfile.c, src/engines/3842/source/gamelib/packfile.h, src/engines/3842/source/gamelib/palette.c, src/engines/3842/source/gamelib/palette.h, src/engines/3842/source/gamelib/pixelformat.c, src/engines/3842/source/gamelib/screen.c, src/engines/3842/source/gamelib/screen.h, src/engines/3842/source/gamelib/screen16.c, src/engines/3842/source/gamelib/screen32.c, src/engines/3842/source/gamelib/soundmix.c, src/engines/3842/source/gamelib/soundmix.h, src/engines/3842/source/gamelib/sprite.c, src/engines/3842/source/gamelib/sprite.h, src/engines/3842/source/gamelib/spriteq.c, src/engines/3842/source/gamelib/spriteq.h, src/engines/3842/source/gamelib/spritex8p16.c, src/engines/3842/source/gamelib/spritex8p32.c, src/engines/3842/source/gamelib/timer.h, src/engines/3842/source/gamelib/types.h, src/engines/3842/source/gfxlib/gfxtypes.h, src/engines/3842/source/preprocessorlib/pp_lexer.c, src/engines/3842/source/preprocessorlib/pp_lexer.h, src/engines/3842/source/ramlib/ram.c, src/engines/3842/source/ramlib/ram.h, src/engines/3842/source/randlib/rand32.c, src/engines/3842/source/randlib/rand32.h, src/engines/3842/source/scriptlib/Interpreter.h, src/engines/3842/source/scriptlib/Lexer.c, src/engines/3842/source/scriptlib/Lexer.h, src/engines/3842/source/scriptlib/ParserSet.c, src/engines/3842/source/scriptlib/ParserSet.h, src/engines/3842/source/scriptlib/ScriptVariant.c, src/engines/3842/source/scriptlib/ScriptVariant.h, src/engines/3842/source/scriptlib/Stack.c, src/engines/3842/source/scriptlib/Stack.h, src/engines/3842/source/scriptlib/StackedSymbolTable.c, src/engines/3842/source/scriptlib/StackedSymbolTable.h, src/engines/3842/source/scriptlib/SymbolTable.c, src/engines/3842/source/scriptlib/SymbolTable.h, src/engines/3842/source/scriptlib/depends.h, src/engines/3842/source/stringptr.c, src/engines/3842/source/stringptr.h, src/engines/3842/source/stristr.c, src/engines/3842/source/stristr.h
+Source: src/engines/3400/openbor.c, src/engines/3400/openborscript.c, src/engines/3400/source/adpcmlib/adpcm.h, src/engines/3400/source/gamelib/anigif.c, src/engines/3400/source/gamelib/anigif.h, src/engines/3400/source/gamelib/bitmap.c, src/engines/3400/source/gamelib/bitmap.h, src/engines/3400/source/gamelib/borendian.h, src/engines/3400/source/gamelib/draw.c, src/engines/3400/source/gamelib/draw.h, src/engines/3400/source/gamelib/draw16.c, src/engines/3400/source/gamelib/draw32.c, src/engines/3400/source/gamelib/font.c, src/engines/3400/source/gamelib/font.h, src/engines/3400/source/gamelib/loadimg.c, src/engines/3400/source/gamelib/loadimg.h, src/engines/3400/source/gamelib/packfile.c, src/engines/3400/source/gamelib/packfile.h, src/engines/3400/source/gamelib/palette.c, src/engines/3400/source/gamelib/palette.h, src/engines/3400/source/gamelib/pixelformat.c, src/engines/3400/source/gamelib/screen.c, src/engines/3400/source/gamelib/screen.h, src/engines/3400/source/gamelib/screen16.c, src/engines/3400/source/gamelib/screen32.c, src/engines/3400/source/gamelib/soundmix.c, src/engines/3400/source/gamelib/soundmix.h, src/engines/3400/source/gamelib/sprite.h, src/engines/3400/source/gamelib/spritef.c, src/engines/3400/source/gamelib/spriteq.c, src/engines/3400/source/gamelib/spriteq.h, src/engines/3400/source/gamelib/spritex8p16.c, src/engines/3400/source/gamelib/spritex8p32.c, src/engines/3400/source/gamelib/texture.c, src/engines/3400/source/gamelib/texture.h, src/engines/3400/source/gamelib/texture16.c, src/engines/3400/source/gamelib/texture32.c, src/engines/3400/source/gamelib/timer.h, src/engines/3400/source/gamelib/types.h, src/engines/3400/source/gfxlib/gfxtypes.h, src/engines/3400/source/globals.h, src/engines/3400/source/preprocessorlib/pp_lexer.c, src/engines/3400/source/preprocessorlib/pp_lexer.h, src/engines/3400/source/preprocessorlib/pp_parser.c, src/engines/3400/source/preprocessorlib/pp_parser.h, src/engines/3400/source/ramlib/ram.c, src/engines/3400/source/ramlib/ram.h, src/engines/3400/source/randlib/rand32.c, src/engines/3400/source/randlib/rand32.h, src/engines/3400/source/scriptlib/FirstFollow.h, src/engines/3400/source/scriptlib/Instruction.c, src/engines/3400/source/scriptlib/Instruction.h, src/engines/3400/source/scriptlib/Interpreter.c, src/engines/3400/source/scriptlib/Interpreter.h, src/engines/3400/source/scriptlib/Lexer.c, src/engines/3400/source/scriptlib/Lexer.h, src/engines/3400/source/scriptlib/Parser.c, src/engines/3400/source/scriptlib/Parser.h, src/engines/3400/source/scriptlib/ParserSet.c, src/engines/3400/source/scriptlib/ParserSet.h, src/engines/3400/source/scriptlib/Productions.h, src/engines/3400/source/scriptlib/ScriptVariant.c, src/engines/3400/source/scriptlib/ScriptVariant.h, src/engines/3400/source/scriptlib/Stack.c, src/engines/3400/source/scriptlib/Stack.h, src/engines/3400/source/scriptlib/StackedSymbolTable.c, src/engines/3400/source/scriptlib/StackedSymbolTable.h, src/engines/3400/source/scriptlib/SymbolTable.c, src/engines/3400/source/scriptlib/SymbolTable.h, src/engines/3400/source/scriptlib/depends.h, src/engines/3400/source/stringptr.c, src/engines/3400/source/stringptr.h, src/engines/3400/source/stristr.c, src/engines/3400/source/stristr.h, src/engines/3400/source/utils.c, src/engines/3400/source/utils.h, src/engines/3842/openborscript.c, src/engines/3842/source/adpcmlib/adpcm.h, src/engines/3842/source/gamelib/anigif.c, src/engines/3842/source/gamelib/anigif.h, src/engines/3842/source/gamelib/bitmap.c, src/engines/3842/source/gamelib/bitmap.h, src/engines/3842/source/gamelib/borendian.h, src/engines/3842/source/gamelib/draw.c, src/engines/3842/source/gamelib/draw.h, src/engines/3842/source/gamelib/draw16.c, src/engines/3842/source/gamelib/draw32.c, src/engines/3842/source/gamelib/font.c, src/engines/3842/source/gamelib/font.h, src/engines/3842/source/gamelib/loadimg.c, src/engines/3842/source/gamelib/loadimg.h, src/engines/3842/source/gamelib/packfile.c, src/engines/3842/source/gamelib/packfile.h, src/engines/3842/source/gamelib/palette.c, src/engines/3842/source/gamelib/palette.h, src/engines/3842/source/gamelib/pixelformat.c, src/engines/3842/source/gamelib/screen.c, src/engines/3842/source/gamelib/screen.h, src/engines/3842/source/gamelib/screen16.c, src/engines/3842/source/gamelib/screen32.c, src/engines/3842/source/gamelib/soundmix.c, src/engines/3842/source/gamelib/soundmix.h, src/engines/3842/source/gamelib/sprite.c, src/engines/3842/source/gamelib/sprite.h, src/engines/3842/source/gamelib/spriteq.c, src/engines/3842/source/gamelib/spriteq.h, src/engines/3842/source/gamelib/spritex8p16.c, src/engines/3842/source/gamelib/spritex8p32.c, src/engines/3842/source/gamelib/timer.h, src/engines/3842/source/gamelib/types.h, src/engines/3842/source/gfxlib/gfxtypes.h, src/engines/3842/source/preprocessorlib/pp_lexer.c, src/engines/3842/source/preprocessorlib/pp_lexer.h, src/engines/3842/source/ramlib/ram.c, src/engines/3842/source/ramlib/ram.h, src/engines/3842/source/randlib/rand32.c, src/engines/3842/source/randlib/rand32.h, src/engines/3842/source/scriptlib/Interpreter.h, src/engines/3842/source/scriptlib/Lexer.c, src/engines/3842/source/scriptlib/Lexer.h, src/engines/3842/source/scriptlib/ParserSet.c, src/engines/3842/source/scriptlib/ParserSet.h, src/engines/3842/source/scriptlib/ScriptVariant.c, src/engines/3842/source/scriptlib/ScriptVariant.h, src/engines/3842/source/scriptlib/Stack.c, src/engines/3842/source/scriptlib/Stack.h, src/engines/3842/source/scriptlib/StackedSymbolTable.c, src/engines/3842/source/scriptlib/StackedSymbolTable.h, src/engines/3842/source/scriptlib/SymbolTable.c, src/engines/3842/source/scriptlib/SymbolTable.h, src/engines/3842/source/scriptlib/depends.h, src/engines/3842/source/stringptr.c, src/engines/3842/source/stringptr.h, src/engines/3842/source/stristr.c, src/engines/3842/source/stristr.h, src/engines/6412/source/gamelib/transform.c, src/engines/6412/source/gamelib/transform.h
 /*
  * OpenBOR - http://www.LavaLit.com
  * -----------------------------------------------------------------------
@@ -1283,7 +1313,7 @@ Source: src/deps/libvorbis/lib/smallft.h
 
  ********************************************************************/
 
-Source: src/engines/4432/source/webmlib/halloc/align.h, src/engines/4432/source/webmlib/halloc/halloc.h, src/engines/4432/source/webmlib/halloc/hlist.h, src/engines/4432/source/webmlib/halloc/macros.h
+Source: src/engines/4432/source/webmlib/halloc/align.h, src/engines/4432/source/webmlib/halloc/halloc.h, src/engines/4432/source/webmlib/halloc/hlist.h, src/engines/4432/source/webmlib/halloc/macros.h, src/engines/6412/source/webmlib/halloc/align.h, src/engines/6412/source/webmlib/halloc/halloc.h, src/engines/6412/source/webmlib/halloc/hlist.h, src/engines/6412/source/webmlib/halloc/macros.h
 /*
  *	Copyright (c) 2004-2010 Alex Pankratov. All rights reserved.
  *
@@ -1543,7 +1573,7 @@ Source: src/deps/libvpx/vp9/encoder/vp9_ext_ratectrl.c, src/deps/libvpx/vp9/enco
  *  be found in the AUTHORS file in the root of the source tree.
  */
 
-Source: src/engines/4086/openbor.c, src/engines/4086/source/globals.h, src/engines/4086/source/preprocessorlib/pp_parser.c, src/engines/4086/source/preprocessorlib/pp_parser.h, src/engines/4086/source/scriptlib/FirstFollow.h, src/engines/4086/source/scriptlib/Instruction.c, src/engines/4086/source/scriptlib/Instruction.h, src/engines/4086/source/scriptlib/Interpreter.c, src/engines/4086/source/scriptlib/Parser.c, src/engines/4086/source/scriptlib/Parser.h, src/engines/4086/source/scriptlib/Productions.h, src/engines/4086/source/utils.c, src/engines/4086/source/utils.h, src/engines/4432/openbor.c, src/engines/4432/source/globals.h, src/engines/4432/source/preprocessorlib/pp_parser.c, src/engines/4432/source/preprocessorlib/pp_parser.h, src/engines/4432/source/scriptlib/FirstFollow.h, src/engines/4432/source/scriptlib/Instruction.c, src/engines/4432/source/scriptlib/Instruction.h, src/engines/4432/source/scriptlib/Interpreter.c, src/engines/4432/source/scriptlib/Parser.c, src/engines/4432/source/scriptlib/Parser.h, src/engines/4432/source/scriptlib/Productions.h, src/engines/4432/source/utils.c, src/engines/4432/source/utils.h
+Source: src/engines/4086/openbor.c, src/engines/4086/source/globals.h, src/engines/4086/source/preprocessorlib/pp_parser.c, src/engines/4086/source/preprocessorlib/pp_parser.h, src/engines/4086/source/scriptlib/FirstFollow.h, src/engines/4086/source/scriptlib/Instruction.c, src/engines/4086/source/scriptlib/Instruction.h, src/engines/4086/source/scriptlib/Interpreter.c, src/engines/4086/source/scriptlib/Parser.c, src/engines/4086/source/scriptlib/Parser.h, src/engines/4086/source/scriptlib/Productions.h, src/engines/4086/source/utils.c, src/engines/4086/source/utils.h, src/engines/4432/openbor.c, src/engines/4432/source/globals.h, src/engines/4432/source/preprocessorlib/pp_parser.c, src/engines/4432/source/preprocessorlib/pp_parser.h, src/engines/4432/source/scriptlib/FirstFollow.h, src/engines/4432/source/scriptlib/Instruction.c, src/engines/4432/source/scriptlib/Instruction.h, src/engines/4432/source/scriptlib/Interpreter.c, src/engines/4432/source/scriptlib/Parser.c, src/engines/4432/source/scriptlib/Parser.h, src/engines/4432/source/scriptlib/Productions.h, src/engines/4432/source/utils.c, src/engines/4432/source/utils.h, src/engines/6412/openbor.c, src/engines/6412/source/globals.h, src/engines/6412/source/preprocessorlib/pp_parser.c, src/engines/6412/source/preprocessorlib/pp_parser.h, src/engines/6412/source/scriptlib/FirstFollow.h, src/engines/6412/source/scriptlib/Instruction.c, src/engines/6412/source/scriptlib/Instruction.h, src/engines/6412/source/scriptlib/Interpreter.c, src/engines/6412/source/scriptlib/Parser.c, src/engines/6412/source/scriptlib/Parser.h, src/engines/6412/source/scriptlib/Productions.h, src/engines/6412/source/utils.c, src/engines/6412/source/utils.h
 /*
  * OpenBOR - http://www.chronocrash.com
  * -----------------------------------------------------------------------
@@ -1747,7 +1777,7 @@ Source: src/deps/libvorbis/lib/modes/residue_44u.h
 
  ********************************************************************/
 
-Source: src/engines/3400/source/gamelib/commands.h, src/engines/3842/source/gamelib/commands.h, src/engines/4086/source/gamelib/commands.h, src/engines/4432/source/gamelib/commands.h
+Source: src/engines/3400/source/gamelib/commands.h, src/engines/3842/source/gamelib/commands.h, src/engines/4086/source/gamelib/commands.h, src/engines/4432/source/gamelib/commands.h, src/engines/6412/source/openborscript/commands.h
 /*
  * OpenBOR - http://www.LavaLit.com
  * -
@@ -1791,7 +1821,7 @@ Source: src/deps/zlib/gzwrite.c
  * For conditions of distribution and use, see copyright notice in zlib.h
  */
 
-Source: src/engines/3400/version.h, src/engines/3842/version.h, src/engines/4086/version.h, src/engines/4432/version.h, src/glue/obor_crt.h, src/glue/obor_legacy_api.h, src/glue/obor_pak_validate.h, src/glue/obor_state_padding.h, src/glue/obor_zip_path.h, src/port/libretro/obor_script_compact.h, src/port/libretro/obor_state_copy.h
+Source: src/engines/3400/version.h, src/engines/3842/version.h, src/engines/4086/version.h, src/engines/4432/version.h, src/engines/6412/version.h, src/glue/obor_crt.h, src/glue/obor_legacy_api.h, src/glue/obor_pak_validate.h, src/glue/obor_state_padding.h, src/glue/obor_zip_path.h, src/port/libretro/obor_script_compact.h, src/port/libretro/obor_state_copy.h
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
 
@@ -1841,6 +1871,15 @@ Source: src/deps/libpng/powerpc/filter_vsx_intrinsics.c
  * This code is released under the libpng license.
  * For conditions of distribution and use, see the disclaimer
  * and license in png.h
+ */
+
+Source: src/engines/6412/source/openborscript/axis.c
+/*
+ * OpenBOR - http://www.chronocrash.com
+ * -----------------------------------------------------------------------
+ * All rights reserved. See LICENSE in OpenBOR root for license details.
+ *
+ * Copyright (c) 2004 OpenBOR Team
  */
 
 Source: src/deps/libpng/powerpc/powerpc_init.c
@@ -1917,7 +1956,7 @@ Source: src/deps/libvpx/vp9/vp9_iface_common.c
  *  the root of the source tree.
  */
 
-Source: src/engines/4432/source/webmlib/halloc/halloc.c
+Source: src/engines/4432/source/webmlib/halloc/halloc.c, src/engines/6412/source/webmlib/halloc/halloc.c
 /*
  *	Copyright (c) 2004i-2010 Alex Pankratov. All rights reserved.
  *
@@ -2116,7 +2155,7 @@ Source: src/deps/libvorbis/lib/smallft.c
 
  ********************************************************************/
 
-Source: src/engines/3842/source/scriptlib/ImportCache.c, src/engines/3842/source/scriptlib/ImportCache.h, src/engines/4086/source/scriptlib/ImportCache.c, src/engines/4086/source/scriptlib/ImportCache.h, src/engines/4432/source/scriptlib/ImportCache.c, src/engines/4432/source/scriptlib/ImportCache.h
+Source: src/engines/3842/source/scriptlib/ImportCache.c, src/engines/3842/source/scriptlib/ImportCache.h, src/engines/4086/source/scriptlib/ImportCache.c, src/engines/4086/source/scriptlib/ImportCache.h, src/engines/4432/source/scriptlib/ImportCache.c, src/engines/4432/source/scriptlib/ImportCache.h, src/engines/6412/source/scriptlib/ImportCache.c, src/engines/6412/source/scriptlib/ImportCache.h
 /*
  * OpenBOR - http://www.LavaLit.com
  * -----------------------------------------------------------------------
@@ -2978,6 +3017,18 @@ Source: src/deps/libvpx/vp9/encoder/arm/neon/vp9_highbd_error_neon.c, src/deps/l
  *  be found in the AUTHORS file in the root of the source tree.
  */
 
+Source: src/engines/6412/source/gamelib/borendian.h
+/* AnyBOR modification record: 2026-09-12.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Use the port's fixed-width endian conversions.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/6412.md
+ * at the source repository root. Original notices follow below.
+ */
+
 Source: src/deps/libvorbis/lib/codec_internal.h
 /********************************************************************
  *                                                                  *
@@ -3072,6 +3123,15 @@ Source: src/deps/libvpx/third_party/x86inc/x86inc.asm
 ;* OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 ;*****************************************************************************
 
+Source: src/engines/6412/source/openborscript/animation.c, src/engines/6412/source/openborscript/binding.c, src/engines/6412/source/openborscript/collision_attack.c, src/engines/6412/source/openborscript/collision_body.c, src/engines/6412/source/openborscript/collision_coordinates.c, src/engines/6412/source/openborscript/collision_entity.c, src/engines/6412/source/openborscript/config.h, src/engines/6412/source/openborscript/constants.c, src/engines/6412/source/openborscript/index.c, src/engines/6412/source/openborscript/layer.c, src/engines/6412/source/openborscript/level.c, src/engines/6412/source/openborscript/math.c, src/engines/6412/source/openborscript/scriptcommon.h, src/engines/6412/source/openborscript/string.c
+/*
+ * OpenBOR - http://www.chronocrash.com
+ * -----------------------------------------------------------------------
+ * All rights reserved. See LICENSE in OpenBOR root for license details.
+ *
+ * Copyright (c) 2004 - 2017 OpenBOR Team
+ */
+
 Source: src/deps/libvorbis/lib/envelope.c
 /********************************************************************
  *                                                                  *
@@ -3089,7 +3149,7 @@ Source: src/deps/libvorbis/lib/envelope.c
 
  ********************************************************************/
 
-Source: src/engines/4432/source/webmlib/yuv.c
+Source: src/engines/4432/source/webmlib/yuv.c, src/engines/6412/source/webmlib/yuv.c
 /* This code was derived from code carrying the following copyright notices:
 
  *  Copyright (C) 1997-2014 Sam Lantinga <slouken@libsdl.org>
@@ -3277,7 +3337,7 @@ Source: src/deps/libvpx/vpx_util/loongson_intrinsics.h
  *
  */
 
-Source: src/engines/4086/openbor.h, src/engines/4432/openbor.h
+Source: src/engines/4086/openbor.h, src/engines/4432/openbor.h, src/engines/6412/openbor.h
 /*
  * OpenBOR - http://www.chronocrash.com
  * -
