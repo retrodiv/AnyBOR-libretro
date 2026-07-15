@@ -16,6 +16,13 @@ struct bor_thread;
 typedef struct bor_thread bor_thread;
 typedef mutex_t bor_mutex;
 typedef cond_t bor_cond;
+#elif LIBRETRO
+struct bor_thread;
+typedef struct bor_thread bor_thread;
+struct bor_mutex;
+typedef struct bor_mutex bor_mutex;
+struct bor_cond;
+typedef struct bor_cond bor_cond;
 #elif SDL
 #include "SDL.h"
 #include "SDL_thread.h"

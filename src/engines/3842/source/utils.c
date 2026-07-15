@@ -40,6 +40,11 @@
 #include "savepng.h"
 #endif
 
+#ifdef LIBRETRO
+#include "libretroport.h"
+#include "savepng.h"
+#endif
+
 #ifdef DC
 #include "dcport.h"
 #endif

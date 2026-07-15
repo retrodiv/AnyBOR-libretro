@@ -1,6 +1,8 @@
 {
   "build": "3400",
-  "changes": [],
+  "changes": [
+    "Libretro platform"
+  ],
   "files": [
     {
       "distributed_sha256": "f3801b6b2e30b61eb1254d1fc98676dd28b21c124731833f78e853a47f09a9e0",
@@ -267,7 +269,7 @@
       "upstream_sha256": "bf7ad0fe4271883a483a7cb9dc6887951b263cb480c471018ef6e777bb10449b"
     },
     {
-      "distributed_sha256": "9fc22d1b175914b94c156f4eddbf59fa92d52eaeb3254ac4a268e27fb95f35a9",
+      "distributed_sha256": "942564031a220d9a3d20dfec3cb7879f323802d3baf0cf2505d6ce6e5c63ce17",
       "path": "source/globals.h",
       "upstream_sha256": "9fc22d1b175914b94c156f4eddbf59fa92d52eaeb3254ac4a268e27fb95f35a9"
     },
@@ -472,7 +474,7 @@
       "upstream_sha256": "afba2d9766d6b24437982791f9bbe1ed97be5adc8b81f9a5172170e639a3c3ba"
     },
     {
-      "distributed_sha256": "7ec79f6cf1635f4b82bab6286c6d91e01837ea863e82112f3383f87f6d5ec0f9",
+      "distributed_sha256": "c73719acf0908b2f92271cf552f521864d87950b1e39bcd2fe4d795cc15defe5",
       "path": "source/utils.c",
       "upstream_sha256": "7ec79f6cf1635f4b82bab6286c6d91e01837ea863e82112f3383f87f6d5ec0f9"
     },

@@ -1,6 +1,8 @@
 {
   "build": "4432",
-  "changes": [],
+  "changes": [
+    "Libretro platform"
+  ],
   "files": [
     {
       "distributed_sha256": "88be43c97bbb0321122585c7c0e15a546819ffa420d8051e1153b343febd97a9",
@@ -222,7 +224,7 @@
       "upstream_sha256": "9461fddcc732973c80aa1e01fb064edd131ac059f3e0371f37a854b19c3ef100"
     },
     {
-      "distributed_sha256": "ce56878a72e32b5ef7ebe2fa942002154e4974596a02233fc2d98c5f258bac14",
+      "distributed_sha256": "4f46d18145860a110c6c0dc2b4e1bb8066d74f0cc0a8166ccb033679234fc5d6",
       "path": "source/gamelib/threads.h",
       "upstream_sha256": "ce56878a72e32b5ef7ebe2fa942002154e4974596a02233fc2d98c5f258bac14"
     },
@@ -272,7 +274,7 @@
       "upstream_sha256": "4bef63009edff08783e0ddda56f6cb5154025e9ada5674143ac10f2f42caa39f"
     },
     {
-      "distributed_sha256": "e640a27cf58714d01e1d79554f65e5a1b10e6eda289da5ce46b08ec8984b2708",
+      "distributed_sha256": "7c9e1bda388fb14952b6adb016d59103d2dae691d23e99ef057291cbe1e188c7",
       "path": "source/globals.h",
       "upstream_sha256": "e640a27cf58714d01e1d79554f65e5a1b10e6eda289da5ce46b08ec8984b2708"
     },
@@ -512,7 +514,7 @@
       "upstream_sha256": "d9bf8cdb39ccbdc026f120a82f8dd12cc9d30a65e410617da7462b3317ffa8ca"
     },
     {
-      "distributed_sha256": "49adf339f758401b48f0d45e605390ad4f88e957bd316699aab0dc5be8f66ad9",
+      "distributed_sha256": "730c5fd343ce28d24268febe828bca91a94d111aa04415a293dd2503a9f4cc5b",
       "path": "source/utils.c",
       "upstream_sha256": "49adf339f758401b48f0d45e605390ad4f88e957bd316699aab0dc5be8f66ad9"
     },

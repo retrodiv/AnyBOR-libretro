@@ -35,6 +35,10 @@
 #include "sdlport.h"
 #endif
 
+#ifdef LIBRETRO
+#include "libretroport.h"
+#endif
+
 #ifdef GP2X
 #include "gp2xport.h"
 #endif
