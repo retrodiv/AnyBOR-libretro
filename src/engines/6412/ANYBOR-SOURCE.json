@@ -1,7 +1,8 @@
 {
   "build": "6412",
   "changes": [
-    "Libretro platform"
+    "Libretro platform",
+    "Savestate packfile fixup"
   ],
   "files": [
     {
@@ -124,7 +125,7 @@
       "upstream_sha256": "bb9095aeea455e8b435ca545683a9508f4b3fd60e374d6cd93b74b0ed0f27882"
     },
     {
-      "distributed_sha256": "3509664132af753d2755e0a10c292ace24211d5333b196b984b3491616c7fbce",
+      "distributed_sha256": "79831f24018cd983195fdf14c5217cce6718c2dd8975ae2bd7ce48df632d0369",
       "path": "source/gamelib/packfile.c",
       "upstream_sha256": "3509664132af753d2755e0a10c292ace24211d5333b196b984b3491616c7fbce"
     },

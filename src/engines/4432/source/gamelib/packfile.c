@@ -82,6 +82,52 @@ static int packhandle[MAXPACKHANDLES] = { -1, -1, -1, -1, -1, -1, -1, -1 };
 // Own file pointers and sizes
 static unsigned int packfilepointer[MAXPACKHANDLES];
 static unsigned int packfilesize[MAXPACKHANDLES];
+
+// libretro save states: bytes restore everything except OS handles. After a
+// state load this revalidates each open pak fd (identity via fstat) and
+// reopens stale ones at the position the restored bytes dictate.
+#include <sys/stat.h>
+// reset support: the glue restores pristine engine state in-place; close
+// every pak fd this instance opened so resets never leak.
+void obor_packfile_closeall(void)
+{
+    int h;
+    for(h = 0; h < MAXPACKHANDLES; h++)
+    {
+        if(packhandle[h] > -1)
+        {
+            close(packhandle[h]);
+            packhandle[h] = -1;
+        }
+    }
+}
+
+void obor_packfile_fixup(const char *pakpath)
+{
+    struct stat want, got;
+    int h;
+    if(stat(pakpath, &want) != 0)
+    {
+        return;
+    }
+    for(h = 0; h < MAXPACKHANDLES; h++)
+    {
+        if(packhandle[h] <= -1)
+        {
+            continue;
+        }
+        if(fstat(packhandle[h], &got) == 0 &&
+           got.st_dev == want.st_dev && got.st_ino == want.st_ino)
+        {
+            continue;
+        }
+        packhandle[h] = open(pakpath, O_RDONLY | O_BINARY, 777);
+        if(packhandle[h] > -1)
+        {
+            lseek(packhandle[h], packfilepointer[h], SEEK_SET);
+        }
+    }
+}
 //char packfile[128] <- defined in sdl/sdlport.c... hmmm
 List *filenamelist = NULL;
 
