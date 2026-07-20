@@ -2,7 +2,8 @@
   "build": "3400",
   "changes": [
     "Libretro platform",
-    "Savestate packfile fixup"
+    "Savestate packfile fixup",
+    "Missing override fallbacks"
   ],
   "files": [
     {
@@ -16,7 +17,7 @@
       "upstream_sha256": null
     },
     {
-      "distributed_sha256": "8d70c8b55eba868e6dfe09d3f1139104195506c83beedf889f3544cabbb48ed8",
+      "distributed_sha256": "bc2e1da4ff179bbc87b853226841729fa189e65d54dbb7a54e27a47a87aea5d5",
       "path": "openbor.c",
       "upstream_sha256": "8d70c8b55eba868e6dfe09d3f1139104195506c83beedf889f3544cabbb48ed8"
     },

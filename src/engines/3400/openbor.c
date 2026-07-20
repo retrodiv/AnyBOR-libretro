@@ -7385,6 +7385,12 @@ int load_models()
 	{
 		strcpy(filename, "data/");
 		strcat(filename, custModels);
+		// libretro: v2-era paks may reference a missing custom model list.
+		if(testpackfile(filename, packfile) < 0)
+		{
+			printf("Warning: custom model list %s missing, using default\n", filename);
+			strcpy(filename, "data/models.txt");
+		}
 	}
 
 	// Read file
@@ -7791,6 +7797,11 @@ void load_levelorder()
 	{
 		strcpy(filename,"data/");
 		strcat(filename,custLevels);
+		if(testpackfile(filename, packfile) < 0)
+		{
+			printf("Warning: custom level list %s missing, using default\n", filename);
+			strcpy(filename,"data/levels.txt");
+		}
 	}
 	else strcpy(filename,"data/levels.txt");
 
@@ -21850,6 +21861,15 @@ readfile:
 		}
 		// Go to next line
 	pos += getNewLineStart(buf + pos);
+	}
+
+	// libretro: old template video.txt files may name absent overrides.
+	{
+		char chk[256];
+		if(custLevels){ sprintf(chk, "data/%s", custLevels); if(!obor_pak_has_prefix(packfile, chk)) { printf("Warning: dropping missing levels override '%s'\n", chk); free(custLevels); custLevels = NULL; } }
+		if(custModels){ sprintf(chk, "data/%s", custModels); if(!obor_pak_has_prefix(packfile, chk)) { printf("Warning: dropping missing models override '%s'\n", chk); free(custModels); custModels = NULL; } }
+		if(custScenes && !obor_pak_has_prefix(packfile, custScenes)) { printf("Warning: dropping missing scenes override '%s'\n", custScenes); free(custScenes); custScenes = NULL; }
+		if(custBkgrds && !obor_pak_has_prefix(packfile, custBkgrds)) { printf("Warning: dropping missing backgrounds override '%s'\n", custBkgrds); free(custBkgrds); custBkgrds = NULL; }
 	}
 
 	if(buf != NULL){
