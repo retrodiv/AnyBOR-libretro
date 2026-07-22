@@ -2,7 +2,8 @@
   "build": "4432",
   "changes": [
     "Libretro platform",
-    "Savestate packfile fixup"
+    "Savestate packfile fixup",
+    "Provenance and circle"
   ],
   "files": [
     {

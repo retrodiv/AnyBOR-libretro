@@ -3,7 +3,8 @@
   "changes": [
     "Libretro platform",
     "Savestate packfile fixup",
-    "Missing override fallbacks"
+    "Missing override fallbacks",
+    "Provenance and circle"
   ],
   "files": [
     {
