@@ -4,7 +4,8 @@
     "Libretro platform",
     "Savestate packfile fixup",
     "Missing override fallbacks",
-    "Provenance and circle"
+    "Provenance and circle",
+    "Fixed width endian"
   ],
   "files": [
     {

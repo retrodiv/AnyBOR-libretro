@@ -4,7 +4,8 @@
     "Libretro platform",
     "Savestate packfile fixup",
     "Provenance and circle",
-    "Halloc license"
+    "Halloc license",
+    "Fixed width endian"
   ],
   "files": [
     {

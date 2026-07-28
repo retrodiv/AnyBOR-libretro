@@ -3,7 +3,8 @@
   "changes": [
     "Libretro platform",
     "Savestate packfile fixup",
-    "Provenance and circle"
+    "Provenance and circle",
+    "Fixed width endian"
   ],
   "files": [
     {
