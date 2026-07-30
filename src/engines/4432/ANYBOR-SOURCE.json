@@ -5,7 +5,8 @@
     "Savestate packfile fixup",
     "Provenance and circle",
     "Halloc license",
-    "Fixed width endian"
+    "Fixed width endian",
+    "Webm lifecycle"
   ],
   "files": [
     {
@@ -583,7 +584,7 @@
       "upstream_sha256": "3fd1c478b5c9bce2a44c4a1cee1001ed95069568cfcd4b23b02f6ad0e3205835"
     },
     {
-      "distributed_sha256": "2c2989562fef714e29cca88909d93c5e841c3151c03bf3c468d5f6d5fdacf8e0",
+      "distributed_sha256": "bb1c6b515fdd2454a53196e63a47165976dfb8b98d9cd3e830e539acee0cb39d",
       "path": "source/webmlib/vidplay.c",
       "upstream_sha256": "2c2989562fef714e29cca88909d93c5e841c3151c03bf3c468d5f6d5fdacf8e0"
     },

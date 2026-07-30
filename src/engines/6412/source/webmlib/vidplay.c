@@ -28,6 +28,12 @@
 #include "globals.h"
 #include "soundmix.h"
 
+/* AnyBOR, 2026-09-08: these sleeps run on playback workers,
+ * not on the engine coroutine. Keep the host OS sleep function. */
+#ifdef LIBRETRO
+#undef usleep
+#endif
+
 // lowering these might save a bit of memory but could also cause lag
 #define PACKET_QUEUE_SIZE 20
 #define FRAME_QUEUE_SIZE 10
@@ -80,6 +86,10 @@ struct webm_context {
 
 static int quit_video;
 
+/* The frontend may unload content while the engine coroutine is parked
+ * inside playwebm. Keep its context available for orderly worker shutdown. */
+static webm_context *obor_webm_active;
+
 int webm_read(void *buffer, size_t length, void *userdata)
 {
     int bytesRead = readpackfile((int)(size_t)userdata, buffer, length);
@@ -123,7 +133,7 @@ int queue_insert(FixedSizeQueue *queue, void *data)
     {
         while(cond_wait_timed(queue->not_full, queue->mutex, 10) != 0)
         {
-            if (quit_video)
+            if (__atomic_load_n(&quit_video, __ATOMIC_RELAXED))
             {
                 mutex_unlock(queue->mutex);
                 return -1;
@@ -151,7 +161,7 @@ void *queue_get(FixedSizeQueue *queue)
     {
         while (cond_wait_timed(queue->not_empty, queue->mutex, 10) != 0)
         {
-            if (quit_video)
+            if (__atomic_load_n(&quit_video, __ATOMIC_RELAXED))
             {
                 mutex_unlock(queue->mutex);
                 return NULL;
@@ -180,7 +190,7 @@ void queue_destroy(FixedSizeQueue *queue)
 // used to keep playing current BGM in videos with no audio track
 static int bgm_update_thread(void *data)
 {
-    while (!quit_video)
+    while (!__atomic_load_n(&quit_video, __ATOMIC_RELAXED))
     {
         sound_update_music();
         usleep(5000);
@@ -233,7 +243,7 @@ static int audio_thread(void *data)
     audio_context *audio_ctx = (audio_context *)data;
     int i, j;
 
-    while(!quit_video)
+    while(!__atomic_load_n(&quit_video, __ATOMIC_RELAXED))
     {
         if(musicchannel.paused)
         {
@@ -350,14 +360,14 @@ static int video_thread(void *data)
     video_context *ctx = (video_context*) data;
     uint64_t timestamp;
 
-    while(!quit_video)
+    while(!__atomic_load_n(&quit_video, __ATOMIC_RELAXED))
     {
         unsigned int chunk, chunks;
         nestegg_packet *pkt;
 
         debug_printf("video queue size=%i\n", ctx->packet_queue->size);
         pkt = queue_get(ctx->packet_queue);
-        if (quit_video || pkt == NULL) break;
+        if (__atomic_load_n(&quit_video, __ATOMIC_RELAXED) || pkt == NULL) break;
         nestegg_packet_count(pkt, &chunks);
         nestegg_packet_tstamp(pkt, &timestamp);
 
@@ -372,7 +382,7 @@ static int video_thread(void *data)
             if (vpx_codec_decode(&ctx->vpx_ctx, data, data_size, NULL, 0))
             {
                 printf("Error: libvpx failed to decode chunk\n");
-                quit_video = 1;
+                __atomic_store_n(&quit_video, 1, __ATOMIC_RELAXED);
                 break;
             }
             while((img = vpx_codec_get_frame(&ctx->vpx_ctx, &iter)))
@@ -485,7 +495,7 @@ static int demux_thread(void *data)
             }
         }
 
-        if (quit_video) break;
+        if (__atomic_load_n(&quit_video, __ATOMIC_RELAXED)) break;
     }
     queue_insert(ctx->video_ctx.packet_queue, NULL);
     if (ctx->audio_track >= 0) queue_insert(ctx->audio_ctx.packet_queue, NULL);
@@ -498,7 +508,7 @@ webm_context *webm_start_playback(const char *path, int volume)
     nestegg_io io;
     int video_track = -1, audio_track = -1;
 
-    quit_video = 0;
+    __atomic_store_n(&quit_video, 0, __ATOMIC_RELAXED);
     ctx = malloc(sizeof(*ctx));
     if(!ctx) return NULL;
     memset(ctx, 0, sizeof(*ctx));
@@ -572,6 +582,7 @@ webm_context *webm_start_playback(const char *path, int volume)
     // finally, start the demuxing thread
     ctx->the_demux_thread = thread_create(demux_thread, "demux", ctx);
     assert(ctx->the_demux_thread);
+    obor_webm_active = ctx;
     return ctx;
 
 error3:
@@ -585,7 +596,8 @@ error1:
 
 void webm_close(webm_context *ctx)
 {
-    quit_video = 1;
+    if (obor_webm_active == ctx) obor_webm_active = NULL;
+    __atomic_store_n(&quit_video, 1, __ATOMIC_RELAXED);
     thread_join(ctx->the_demux_thread);
     thread_join(ctx->the_video_thread);
     close_video(&(ctx->video_ctx));
@@ -594,6 +606,12 @@ void webm_close(webm_context *ctx)
     nestegg_destroy(ctx->nestegg_ctx);
     closepackfile(ctx->packhandle);
     free(ctx);
+}
+
+/* Called only when the parked coroutine will be discarded by the port. */
+void obor_webm_stop(void)
+{
+    if (obor_webm_active) webm_close(obor_webm_active);
 }
 
 void webm_get_video_info(webm_context *ctx, yuv_video_mode *dims)
@@ -608,6 +626,29 @@ void webm_get_video_info(webm_context *ctx, yuv_video_mode *dims)
 
 yuv_frame *webm_get_next_frame(webm_context *ctx)
 {
+#ifdef LIBRETRO
+    /* Audio is pulled by the frontend between coroutine frames. A blocking
+     * queue_get here can deadlock with demux waiting for audio queue space.
+     * Give workers a short wait, then yield without holding their mutex. */
+    FixedSizeQueue *queue = ctx->video_ctx.frame_queue;
+    mutex_lock(queue->mutex);
+    while (queue->size == 0)
+    {
+        if (__atomic_load_n(&quit_video, __ATOMIC_RELAXED))
+        {
+            mutex_unlock(queue->mutex);
+            return NULL;
+        }
+        cond_wait_timed(queue->not_empty, queue->mutex, 1);
+        if (queue->size == 0)
+        {
+            mutex_unlock(queue->mutex);
+            obor_wait_frame();
+            mutex_lock(queue->mutex);
+        }
+    }
+    mutex_unlock(queue->mutex);
+#endif
     debug_printf("frame queue size=%i\n", ctx->video_ctx.frame_queue->size);
     return (yuv_frame *)queue_get(ctx->video_ctx.frame_queue);
 }
