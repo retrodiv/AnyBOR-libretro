@@ -33,7 +33,8 @@ static int default_minimum_run_bytes = 131072;
 
 // fd for pak file
 // lba for pak file (if negative)
-static int real_pakfd;
+/* Process resource retained across libretro state restores. */
+int real_pakfd = -1;
 
 // total number of blocks in the pak
 static int total_pakblocks;

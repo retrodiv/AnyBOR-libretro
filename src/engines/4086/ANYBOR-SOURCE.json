@@ -4,7 +4,8 @@
     "Libretro platform",
     "Savestate packfile fixup",
     "Provenance and circle",
-    "Fixed width endian"
+    "Fixed width endian",
+    "Resource lifecycle"
   ],
   "files": [
     {
@@ -102,7 +103,7 @@
       "upstream_sha256": "2a2b4854ea77583f9af7e3cf005fb6a2820e1aa651ab531bca903b64ffb76007"
     },
     {
-      "distributed_sha256": "b84b27f9371df294ef4c89ed7b850656023342cb60000789afa398dd26415610",
+      "distributed_sha256": "195ee4d945d13f54249bc377115ce9c6bffbcf5e3b763b9ca3d2e74d23e120d3",
       "path": "source/gamelib/filecache.c",
       "upstream_sha256": "b84b27f9371df294ef4c89ed7b850656023342cb60000789afa398dd26415610"
     },
@@ -142,7 +143,7 @@
       "upstream_sha256": "35621ea64c356f8f50e514ac848d090b077b16a8d7e52f5530acf8ff1a633307"
     },
     {
-      "distributed_sha256": "d0243d866991a794c8fffdc060df5700e23205c9a12932292725d0fb259554b2",
+      "distributed_sha256": "58e42ecf39fad8a1babdce0796ec89bc87bf76d5fefba9153dac32bfc1c4be9e",
       "path": "source/gamelib/packfile.c",
       "upstream_sha256": "8c43bade55c67a42b661b1a25653c0ec0f1bba2c3f12647ced8d7f1bef5ebbdc"
     },

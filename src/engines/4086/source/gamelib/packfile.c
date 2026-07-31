@@ -89,6 +89,7 @@ static unsigned int packfilesize[MAXPACKHANDLES];
 // state load this revalidates each open pak fd (identity via fstat) and
 // reopens stale ones at the position the restored bytes dictate.
 #include <sys/stat.h>
+extern int pakfd;
 // reset support: the glue restores pristine engine state in-place; close
 // every pak fd this instance opened so resets never leak.
 void obor_packfile_closeall(void)
@@ -101,6 +102,11 @@ void obor_packfile_closeall(void)
             close(packhandle[h]);
             packhandle[h] = -1;
         }
+    }
+    if(pakfd >= 0)
+    {
+        close(pakfd);
+        pakfd = -1;
     }
 }
 
@@ -137,7 +143,8 @@ List *filenamelist = NULL;
 //
 // This variables are only used for with Caching code
 //
-static int pakfd;
+/* Process resource retained across libretro state restores. */
+int pakfd = -1;
 static int paksize;
 static int pak_vfdexists[MAXPACKHANDLES];
 static int pak_vfdstart[MAXPACKHANDLES];
@@ -1332,6 +1339,7 @@ int pak_init()
     pakfd = sceOpen(ps2gethostfilename(packfile), SCE_RDONLY, 0);
 #else
     close(pakfd);
+    pakfd = -1;
     pakfd = open(packfile, O_RDONLY | O_BINARY, 777);
 #endif
 
@@ -1339,12 +1347,14 @@ int pak_init()
     if(read(pakfd, &magic, 4) != 4 || magic != SwapLSB32(PACKMAGIC))
     {
         close(pakfd);
+        pakfd = -1;
         return -1;
     }
     // Read version from packfile
     if(read(pakfd, &version, 4) != 4 || version != SwapLSB32(PACKVERSION))
     {
         close(pakfd);
+        pakfd = -1;
         return -1;
     }
 

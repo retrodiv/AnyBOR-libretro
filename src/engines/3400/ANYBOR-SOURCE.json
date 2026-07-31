@@ -5,7 +5,8 @@
     "Savestate packfile fixup",
     "Missing override fallbacks",
     "Provenance and circle",
-    "Fixed width endian"
+    "Fixed width endian",
+    "Resource lifecycle"
   ],
   "files": [
     {
@@ -103,7 +104,7 @@
       "upstream_sha256": "95536ad64998e185e763166ff98cf9ac6e139471913459b744eccdafd342d88a"
     },
     {
-      "distributed_sha256": "3e33afdbc2c7d7ba4cbc4f13dbd50ad7860ef0eef6739562b4cbec6b03807623",
+      "distributed_sha256": "d00f071fe3a256719570fa0a044f2ebcfec7c5c12a1c131c168cf59c6676e825",
       "path": "source/gamelib/filecache.c",
       "upstream_sha256": "3e33afdbc2c7d7ba4cbc4f13dbd50ad7860ef0eef6739562b4cbec6b03807623"
     },
@@ -143,7 +144,7 @@
       "upstream_sha256": "a7ff19177bb6c3d61095d5d8aafb335b311654bbe89a37958bce8eaae8d981a0"
     },
     {
-      "distributed_sha256": "6965c8bf2f9aa9643eb9fc61f82ca2598751f1345773c976d535442e8382720c",
+      "distributed_sha256": "518451857c4c99d86459f71d79c83a9b3375cd29aa515b34d686480efeedfbc3",
       "path": "source/gamelib/packfile.c",
       "upstream_sha256": "0acb452831c85d2ff820b65f7dcc79ea53351e4f126a8ccf1916d7d1da759c48"
     },

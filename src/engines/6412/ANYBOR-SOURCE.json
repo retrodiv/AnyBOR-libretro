@@ -6,7 +6,8 @@
     "Provenance and circle",
     "Halloc license",
     "Fixed width endian",
-    "Webm lifecycle"
+    "Webm lifecycle",
+    "Resource lifecycle"
   ],
   "files": [
     {
@@ -89,7 +90,7 @@
       "upstream_sha256": "2a2b4854ea77583f9af7e3cf005fb6a2820e1aa651ab531bca903b64ffb76007"
     },
     {
-      "distributed_sha256": "b84a2f1ff0c1d932eb4461b20f76c3888cc6a37b2087625fe81588bca9a79c21",
+      "distributed_sha256": "a9e019f0ba05823cc2bc6ab6a3ae5a730863a423a90a8d48cbcc952596c64762",
       "path": "source/gamelib/filecache.c",
       "upstream_sha256": "b84a2f1ff0c1d932eb4461b20f76c3888cc6a37b2087625fe81588bca9a79c21"
     },
@@ -129,7 +130,7 @@
       "upstream_sha256": "bb9095aeea455e8b435ca545683a9508f4b3fd60e374d6cd93b74b0ed0f27882"
     },
     {
-      "distributed_sha256": "79831f24018cd983195fdf14c5217cce6718c2dd8975ae2bd7ce48df632d0369",
+      "distributed_sha256": "069a66bc9f66c7748f194e83df2430fa8fab1fb0f3a1d5d62efb514a460ce8f8",
       "path": "source/gamelib/packfile.c",
       "upstream_sha256": "3509664132af753d2755e0a10c292ace24211d5333b196b984b3491616c7fbce"
     },
