@@ -5483,14 +5483,15 @@ void lcmHandleCommandWeapons(ArgList* arglist, s_model* newchar) {
 
 	if(!weap) return;
 
-	newchar->numweapons = weap;
-
-	if(!newchar->weapon)
-	{
-		newchar->weapon = malloc(sizeof(*newchar->weapon)*newchar->numweapons);
-		memset(newchar->weapon, 0xFF, sizeof(*newchar->weapon)*newchar->numweapons);
-		newchar->ownweapons = 1;
-	}
+    /* Repeated weapons commands replace the list, including its capacity.
+     * A model may borrow a parent's list; never resize that shared storage. */
+    int *weapons = realloc(newchar->ownweapons ? newchar->weapon : NULL,
+                           sizeof(*weapons) * weap);
+    if(!weapons)
+        shutdown(1, "Unable to allocate model weapon list");
+    newchar->weapon = weapons;
+    newchar->numweapons = weap;
+    newchar->ownweapons = 1;
 	for(weap = 0; weap<newchar->numweapons ; weap++){
 		value = GET_ARGP(weap+1);
 		if(stricmp(value, "none")!=0){

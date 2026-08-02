@@ -5,7 +5,8 @@
     "Savestate packfile fixup",
     "Provenance and circle",
     "Fixed width endian",
-    "Resource lifecycle"
+    "Resource lifecycle",
+    "Repeated weapons"
   ],
   "files": [
     {
@@ -19,7 +20,7 @@
       "upstream_sha256": null
     },
     {
-      "distributed_sha256": "d2638ad5cf319be18bc22a07f1d9b9b999d17cbcd83830433a59b819a40339a9",
+      "distributed_sha256": "4122fe83615c5ffd00c2c87baa6da306c2e548abe56626d9f71b30e198f9ca10",
       "path": "openbor.c",
       "upstream_sha256": "d2638ad5cf319be18bc22a07f1d9b9b999d17cbcd83830433a59b819a40339a9"
     },

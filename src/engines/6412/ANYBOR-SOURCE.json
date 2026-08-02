@@ -7,7 +7,8 @@
     "Halloc license",
     "Fixed width endian",
     "Webm lifecycle",
-    "Resource lifecycle"
+    "Resource lifecycle",
+    "Repeated weapons"
   ],
   "files": [
     {
@@ -21,7 +22,7 @@
       "upstream_sha256": null
     },
     {
-      "distributed_sha256": "0cd98321fd3e6276bc60075eb8a4143ddf2b95ff779de02c1ca8d4ec95654264",
+      "distributed_sha256": "146044f2138ebb0c6bd609ebcfaef2b5498437d388135c09540db946ae3da379",
       "path": "openbor.c",
       "upstream_sha256": "0cd98321fd3e6276bc60075eb8a4143ddf2b95ff779de02c1ca8d4ec95654264"
     },
