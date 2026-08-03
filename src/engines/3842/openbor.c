@@ -1598,7 +1598,10 @@ void execute_animation_script(entity* ent)
 	Script* s2 = ent->defaultmodel->scripts->animation_script;
 	if(Script_IsInitialized(s1) || Script_IsInitialized(s2))
 	{
-		if(cs->pinterpreter->bReset)
+		/* A model can acquire its animation script before the entity-local
+		 * interpreter is created (for example during scripted map entities).
+		 * Newer OpenBOR builds already guard this optional interpreter. */
+		if(cs->pinterpreter && cs->pinterpreter->bReset)
 			handle = Script_Save_Local_Variant(cs, namelist);
 		ScriptVariant_Init(&tempvar);
 		ScriptVariant_ChangeType(&tempvar, VT_PTR);
