@@ -6,7 +6,8 @@
     "Missing override fallbacks",
     "Provenance and circle",
     "Fixed width endian",
-    "Resource lifecycle"
+    "Resource lifecycle",
+    "Player slot spawn safety"
   ],
   "files": [
     {
@@ -20,7 +21,7 @@
       "upstream_sha256": null
     },
     {
-      "distributed_sha256": "bc2e1da4ff179bbc87b853226841729fa189e65d54dbb7a54e27a47a87aea5d5",
+      "distributed_sha256": "c5b7ebfea2aa64dc29bbb0e963bd3358fc303f8de499f49ba5ade7d07f68c87c",
       "path": "openbor.c",
       "upstream_sha256": "8d70c8b55eba868e6dfe09d3f1139104195506c83beedf889f3544cabbb48ed8"
     },

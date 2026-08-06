@@ -6,7 +6,8 @@
     "Provenance and circle",
     "Fixed width endian",
     "Resource lifecycle",
-    "Repeated weapons"
+    "Repeated weapons",
+    "Player slot spawn safety"
   ],
   "files": [
     {
@@ -20,7 +21,7 @@
       "upstream_sha256": null
     },
     {
-      "distributed_sha256": "d145aae489609e5f5a46c6495b8cf9f56e481c8c37e4dc9b619bfc4ad8ce40b2",
+      "distributed_sha256": "884932f897ee1cc87d9186a304d3b28260a77b92122f52c788d17f8b7f377c7a",
       "path": "openbor.c",
       "upstream_sha256": "fa319b01a0cd47dea0921e31eaa3532f614716c72ae3a780c5e2675bdcb0703a"
     },

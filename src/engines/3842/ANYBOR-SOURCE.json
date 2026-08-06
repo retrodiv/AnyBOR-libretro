@@ -7,7 +7,8 @@
     "Fixed width endian",
     "Resource lifecycle",
     "Repeated weapons",
-    "Animation script null interpreter"
+    "Animation script null interpreter",
+    "Player slot spawn safety"
   ],
   "files": [
     {
@@ -21,7 +22,7 @@
       "upstream_sha256": null
     },
     {
-      "distributed_sha256": "c5dca47fb3c4a08aff1b8acb4aa5b7c7b2f81bba458d7042ab304255e7b08c6e",
+      "distributed_sha256": "fcba88de9d6ce7117e5022d785db459954779678686f93da0e983010954e6e06",
       "path": "openbor.c",
       "upstream_sha256": "d2638ad5cf319be18bc22a07f1d9b9b999d17cbcd83830433a59b819a40339a9"
     },

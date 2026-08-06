@@ -8,7 +8,8 @@
     "Fixed width endian",
     "Webm lifecycle",
     "Resource lifecycle",
-    "Repeated weapons"
+    "Repeated weapons",
+    "Player slot spawn safety"
   ],
   "files": [
     {
@@ -22,7 +23,7 @@
       "upstream_sha256": null
     },
     {
-      "distributed_sha256": "bb76fc6674870b6c7cde874bc1dfb4cd762abc82f40012ffab4f4d97bb51b30d",
+      "distributed_sha256": "b4db658a48082a4a144d9d579a9dfae6e455aebc8a9846e11c55cade3543d6dd",
       "path": "openbor.c",
       "upstream_sha256": "16bc3699253b5738707ac89e5422d6dde467b0a518928ad7e3c4eae1dd22329b"
     },

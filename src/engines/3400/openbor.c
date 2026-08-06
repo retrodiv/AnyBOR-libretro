@@ -20979,7 +20979,9 @@ int playlevel(char *filename)
 	// Fixes the start level executing last button bug
 	for(i=0; i<maxplayers[current_set]; i++)
 	{
-		if(player[i].lives > 0)
+		/* Scripts may provision lives for an empty multiplayer slot.  Such a
+		 * slot has no model name yet and must remain available to join. */
+		if(player[i].lives > 0 && player[i].name[0])
 		{
 			player[i].newkeys = player[i].playkeys = 0;
 			player[i].weapnum = level->setweap;
