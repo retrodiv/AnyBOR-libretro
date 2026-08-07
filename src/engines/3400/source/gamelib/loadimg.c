@@ -655,7 +655,15 @@ static int openpcx(char *filename, char *packname){
 	pcx_header.bytesperline = SwapLSB16(pcx_header.bytesperline);
 	pcx_header.paltype = SwapLSB16(pcx_header.paltype);
 
-	if(pcx_header.colorplanes==3){
+	/* Do not interpret arbitrary files as dimensions.  In particular, RIFF
+	 * audio can otherwise become a bogus bitmap when a mod mistypes a sound
+	 * path as an animation frame. */
+	if((unsigned char)pcx_header.manufacturer != 0x0A ||
+	   (unsigned char)pcx_header.encoding != 1 ||
+	   (unsigned char)pcx_header.bitspp != 8 ||
+	   (unsigned char)pcx_header.colorplanes != 1 ||
+	   pcx_header.xmax < pcx_header.xmin ||
+	   pcx_header.ymax < pcx_header.ymin){
 		closepackfile(handle);
 		return 0;
 	}
@@ -873,6 +881,20 @@ static void closeimage(){
 	}
 }
 
+/* Preserve an animation slot whose frame path is structurally a WAV file,
+ * without treating audio bytes as pixels or aborting the whole game. */
+static int iswavefile(char *filename, char *packname){
+	unsigned char signature[12];
+	int fd = openpackfile(filename, packname);
+	int wave = 0;
+	if(fd >= 0){
+		wave = readpackfile(fd, signature, sizeof(signature)) == sizeof(signature) &&
+			!memcmp(signature, "RIFF", 4) && !memcmp(signature + 8, "WAVE", 4);
+		closepackfile(fd);
+	}
+	return wave;
+}
+
 // ============================== Interface ===============================
 
 int loadscreen(char *filename, char *packfile, unsigned char *pal, int format, s_screen **screen){
@@ -908,7 +930,15 @@ s_bitmap * loadbitmap(char *filename, char *packfile, int format){
 	s_bitmap * bitmap;
 	int maxwidth, maxheight;
 
-	if(!openimage(filename, packfile)) return NULL;
+	if(!openimage(filename, packfile)){
+		if(!iswavefile(filename, packfile)) return NULL;
+		bitmap = allocbitmap(1, 1, format);
+		if(bitmap){
+			memset(bitmap->data, 0, pixelbytes[format]);
+			if(bitmap->palette) memset(bitmap->palette, 0, PAL_BYTES);
+		}
+		return bitmap;
+	}
 
 	maxwidth = res[0];
 	maxheight = res[1];

@@ -7,7 +7,8 @@
     "Provenance and circle",
     "Fixed width endian",
     "Resource lifecycle",
-    "Player slot spawn safety"
+    "Player slot spawn safety",
+    "Image signature safety"
   ],
   "files": [
     {
@@ -125,7 +126,7 @@
       "upstream_sha256": "be38caf09258969a0f9c68502c91e7ca46546f65d68f4aa5c169e1665838054a"
     },
     {
-      "distributed_sha256": "767927558bbcb1ee3317f8d021c1d689c6f27cce8a2aef1e63d096984ee0a9ba",
+      "distributed_sha256": "d30c1d4c45da00e219936f1335a7beebdbcd943cae04a8236f6756eed4024026",
       "path": "source/gamelib/loadimg.c",
       "upstream_sha256": "767927558bbcb1ee3317f8d021c1d689c6f27cce8a2aef1e63d096984ee0a9ba"
     },

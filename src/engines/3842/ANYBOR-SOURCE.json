@@ -8,7 +8,8 @@
     "Resource lifecycle",
     "Repeated weapons",
     "Animation script null interpreter",
-    "Player slot spawn safety"
+    "Player slot spawn safety",
+    "Image signature safety"
   ],
   "files": [
     {
@@ -126,7 +127,7 @@
       "upstream_sha256": "1cd9bad27b7c481f5a84bcf5ad3e3d195e4785ea0f11937480aee273ad42758e"
     },
     {
-      "distributed_sha256": "1b54ac7b265ce7a4b3bf9c5ca1c849b6400ff5bb8d771d966878bedbb7669c0c",
+      "distributed_sha256": "9a30097c76fa5614fa75bc9b2665741f35788c25538b1c5e6b0d4f467e006ed1",
       "path": "source/gamelib/loadimg.c",
       "upstream_sha256": "1b54ac7b265ce7a4b3bf9c5ca1c849b6400ff5bb8d771d966878bedbb7669c0c"
     },
