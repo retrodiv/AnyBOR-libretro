@@ -7,7 +7,8 @@
     "Fixed width endian",
     "Resource lifecycle",
     "Repeated weapons",
-    "Player slot spawn safety"
+    "Player slot spawn safety",
+    "Active pak alias"
   ],
   "files": [
     {
@@ -21,7 +22,7 @@
       "upstream_sha256": null
     },
     {
-      "distributed_sha256": "884932f897ee1cc87d9186a304d3b28260a77b92122f52c788d17f8b7f377c7a",
+      "distributed_sha256": "4517b238f88a5b5510a6c5595eadd9b5e68e5caae0cfedc5dbcab613aa29b379",
       "path": "openbor.c",
       "upstream_sha256": "fa319b01a0cd47dea0921e31eaa3532f614716c72ae3a780c5e2675bdcb0703a"
     },

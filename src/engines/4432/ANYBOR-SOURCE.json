@@ -9,7 +9,8 @@
     "Webm lifecycle",
     "Resource lifecycle",
     "Repeated weapons",
-    "Player slot spawn safety"
+    "Player slot spawn safety",
+    "Active pak alias"
   ],
   "files": [
     {
@@ -23,7 +24,7 @@
       "upstream_sha256": null
     },
     {
-      "distributed_sha256": "b4db658a48082a4a144d9d579a9dfae6e455aebc8a9846e11c55cade3543d6dd",
+      "distributed_sha256": "1fcb4a61d43ac27251a8ef99a1b7586a9cb8bbea1fe528dadfcbefc80e046d6d",
       "path": "openbor.c",
       "upstream_sha256": "16bc3699253b5738707ac89e5422d6dde467b0a518928ad7e3c4eae1dd22329b"
     },

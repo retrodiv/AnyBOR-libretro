@@ -889,6 +889,12 @@ int buffer_pakfile(char *filename, char **pbuffer, size_t *psize)
     {
         return 1;
     }
+#ifdef LIBRETRO
+    if(obor_buffer_content_alias(filename, pbuffer, psize))
+    {
+        return 1;
+    }
+#endif
 
     // Read file
 #ifdef VERBOSE
