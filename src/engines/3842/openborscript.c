@@ -856,15 +856,15 @@ void Script_LowerConstants(Script* pscript)
 			for(j=0; j<size; j++)
 			{
 				Instruction* tmp = (Instruction*)(pinterpreter->theInstructionList.solidlist[j]);
-				if(tmp->theVal == pInstruction->theRef || tmp->theVal2 == pInstruction->theRef)   pSrc1 = tmp;
-				if(tmp->theVal == pInstruction->theRef2 || tmp->theVal2 == pInstruction->theRef2) pSrc2 = tmp;
+				if(tmp->theVal == pInstruction->theRef)  pSrc1 = tmp;
+				if(tmp->theVal == pInstruction->theRef2) pSrc2 = tmp;
 			}
 
 			if(ISCONST(pSrc1) && ISCONST(pSrc2))
 			{
-				ScriptVariant* sum = ScriptVariant_Add(pSrc1->theVal2, pSrc2->theVal2);
-				ScriptVariant_ToString(pSrc1->theVal2, buf);
-		    	ScriptVariant_ToString(pSrc2->theVal2, buf2);
+				ScriptVariant* sum = ScriptVariant_Add(pSrc1->theVal, pSrc2->theVal);
+				ScriptVariant_ToString(pSrc1->theVal, buf);
+		    	ScriptVariant_ToString(pSrc2->theVal, buf2);
 		    	ScriptVariant_ToString(sum, buf3);
 		    	//printf("ADD 0x%08X: %s + %s = %s\n", pInstruction, buf, buf2, buf3);
 			}

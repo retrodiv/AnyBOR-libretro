@@ -9,7 +9,8 @@
     "Repeated weapons",
     "Animation script null interpreter",
     "Player slot spawn safety",
-    "Image signature safety"
+    "Image signature safety",
+    "Single script constant"
   ],
   "files": [
     {
@@ -33,7 +34,7 @@
       "upstream_sha256": "19888c33f34b9cb80222de1439a1745461b8353d99ef40dc0a8184f081b45ed9"
     },
     {
-      "distributed_sha256": "80fc85d07a86206647d4d4877a4f91b2cbe5e94598b6cd934ebf05d184bf719b",
+      "distributed_sha256": "f1c5e5dbe00fce292c254f26672586d991ba6135e02e978e5fd1f2f3a2000f0a",
       "path": "openborscript.c",
       "upstream_sha256": "80fc85d07a86206647d4d4877a4f91b2cbe5e94598b6cd934ebf05d184bf719b"
     },
@@ -352,17 +353,17 @@
       "upstream_sha256": "522a59c18c903bd0f2b696c604ba80e1fe725852f9acd8dfebc44388d8b461dc"
     },
     {
-      "distributed_sha256": "0e40d52fb5bab32466bf88f8235d7380c5038fac6a546651b61370bb3389b0ee",
+      "distributed_sha256": "86917b75868270998db3375c569983b8d2e6c99cd6477047444a2301d06f0d67",
       "path": "source/scriptlib/Instruction.c",
       "upstream_sha256": "0e40d52fb5bab32466bf88f8235d7380c5038fac6a546651b61370bb3389b0ee"
     },
     {
-      "distributed_sha256": "c4ef4c752ec66a5ec170842990d8dec82fa62437ff09fdab352c83a87e21ae56",
+      "distributed_sha256": "6dd8b01491f81be5cae3a977df06a4341616cf052087c482ba4584f2e8166526",
       "path": "source/scriptlib/Instruction.h",
       "upstream_sha256": "c4ef4c752ec66a5ec170842990d8dec82fa62437ff09fdab352c83a87e21ae56"
     },
     {
-      "distributed_sha256": "6d2b9d8d641491b379340431bfe932bb3f27b2b0f9840a30d054818f86db5017",
+      "distributed_sha256": "f24e7fb9c03235f5d6ed9ea9a41dc8ccdb2f44a3c5308ba9d449a8753970068b",
       "path": "source/scriptlib/Interpreter.c",
       "upstream_sha256": "6d2b9d8d641491b379340431bfe932bb3f27b2b0f9840a30d054818f86db5017"
     },

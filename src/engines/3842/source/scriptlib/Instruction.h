@@ -22,13 +22,12 @@ typedef enum OpCode{ CONSTSTR, CONSTDBL, CONSTINT, LOAD, SAVE, INC, DEC, FIELD, 
 }OpCode;
 
 typedef struct Instruction{
-   unsigned OpCode;
-   unsigned jumpTargetType;
    unsigned step;
+   unsigned char OpCode;
+   unsigned char jumpTargetType;
    Token* theToken;
    CHAR* Label;//[MAX_STR_LEN+1];
    ScriptVariant* theVal;
-   ScriptVariant* theVal2;
    ScriptVariant* theRef;
    ScriptVariant* theRef2;
    List* theRefList;
@@ -47,7 +46,6 @@ void Instruction_Init(Instruction* pins);
 void Instruction_Clear(Instruction* pins);
 
 void Instruction_NewData(Instruction* pins);
-void Instruction_NewData2(Instruction* pins);
 void Instruction_ConvertConstant(Instruction* pins);
 
 void Instruction_ToString(Instruction* pins, LPSTR strRep);

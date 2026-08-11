@@ -413,9 +413,7 @@ HRESULT Interpreter_CompileInstructions(Interpreter* pinterpreter)
 		case CONSTINT:
 			//convert to constant first
 			Instruction_ConvertConstant(pInstruction);
-			Instruction_NewData2(pInstruction);
-			ScriptVariant_Copy(pInstruction->theVal2, pInstruction->theVal);
-			Stack_Push(&(pinterpreter->theDataStack), (void*)pInstruction->theVal2);
+			Stack_Push(&(pinterpreter->theDataStack), (void*)pInstruction->theVal);
 			break;
 
 		   //Load a value into the data stack
