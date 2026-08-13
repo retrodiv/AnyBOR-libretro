@@ -8,7 +8,8 @@
     "Fixed width endian",
     "Resource lifecycle",
     "Player slot spawn safety",
-    "Image signature safety"
+    "Image signature safety",
+    "Active pak alias"
   ],
   "files": [
     {
@@ -22,7 +23,7 @@
       "upstream_sha256": null
     },
     {
-      "distributed_sha256": "c5b7ebfea2aa64dc29bbb0e963bd3358fc303f8de499f49ba5ade7d07f68c87c",
+      "distributed_sha256": "c2d99e92274103c2a48ef0963827eee4af523f1ca194f83df6b21541a69e28f9",
       "path": "openbor.c",
       "upstream_sha256": "8d70c8b55eba868e6dfe09d3f1139104195506c83beedf889f3544cabbb48ed8"
     },
