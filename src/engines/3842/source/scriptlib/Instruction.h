@@ -21,21 +21,32 @@ typedef enum OpCode{ CONSTSTR, CONSTDBL, CONSTINT, LOAD, SAVE, INC, DEC, FIELD, 
              IMMEDIATE, DEFERRED, RET, CHECKARG, CLEAN, JUMPR, FUNCDECL, OPCODE_END
 }OpCode;
 
+typedef enum InstructionStorageType{
+   INSTRUCTION_SOURCE_TOKEN, INSTRUCTION_SOURCE_LABEL, INSTRUCTION_COMPILED
+}InstructionStorageType;
+
+typedef enum InstructionTargetType{
+   INSTRUCTION_TARGET_NONE, INSTRUCTION_TARGET_INDEX,
+   INSTRUCTION_TARGET_JUMP, INSTRUCTION_TARGET_FUNCTION
+}InstructionTargetType;
+
 typedef struct Instruction{
    unsigned step;
    unsigned char OpCode;
    unsigned char jumpTargetType;
-   Token* theToken;
-   CHAR* Label;//[MAX_STR_LEN+1];
+   unsigned char storageType;
+   union {
+      Token* theToken;
+      CHAR* Label;//[MAX_STR_LEN+1];
+      HRESULT (*functionRef)(ScriptVariant**, ScriptVariant**, int);
+      int theJumpTargetIndex;
+      struct Instruction** ptheJumpTarget;
+   };
    ScriptVariant* theVal;
    ScriptVariant* theRef;
-   ScriptVariant* theRef2;
-   List* theRefList;
-   HRESULT (*functionRef)(ScriptVariant**, ScriptVariant**, int);
-   union{
-	  int theJumpTargetIndex;
-	  struct Instruction** ptheJumpTarget;
-	  //struct Instruction* theJumpTarget;
+   union {
+      ScriptVariant* theRef2;
+      List* theRefList;
    };
 }Instruction;
 

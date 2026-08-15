@@ -14,6 +14,7 @@ void Instruction_InitViaToken(Instruction* pins, OpCode code, Token* pToken )
 {
 	memset(pins, 0, sizeof(Instruction));
 	pins->OpCode = code;
+	pins->storageType = INSTRUCTION_SOURCE_TOKEN;
 	pins->theToken = malloc(sizeof(Token));
 	memset(pins->theToken, 0, sizeof(Token));
 	if(pToken) *(pins->theToken) = *pToken;
@@ -24,9 +25,7 @@ void Instruction_InitViaLabel(Instruction* pins, OpCode code, LPCSTR label )
 {
 	memset(pins, 0, sizeof(Instruction));
 	pins->OpCode = code;
-	pins->theToken = malloc(sizeof(Token));
-	memset(pins->theToken, 0, sizeof(Token));
-	pins->theToken->theType = END_OF_TOKENS;
+	pins->storageType = INSTRUCTION_SOURCE_LABEL;
 	pins->Label = malloc(sizeof(CHAR)*(MAX_STR_LEN+1));
 	strcpy(pins->Label, label);
 }
@@ -34,6 +33,7 @@ void Instruction_InitViaLabel(Instruction* pins, OpCode code, LPCSTR label )
 void Instruction_Init(Instruction* pins)
 {
 	memset(pins, 0, sizeof(Instruction));
+	pins->storageType = INSTRUCTION_SOURCE_TOKEN;
 	pins->theToken = malloc(sizeof(Token));
 	memset(pins->theToken, 0, sizeof(Token));
 	pins->theToken->theType = END_OF_TOKENS;
@@ -42,13 +42,19 @@ void Instruction_Init(Instruction* pins)
 void Instruction_Clear(Instruction* pins)
 {
 	if(pins->theVal) {ScriptVariant_Clear(pins->theVal);free((void*)pins->theVal);}
-	if(pins->theRefList)
+	if(pins->OpCode == CALL && pins->theRefList)
 	{
 		List_Clear(pins->theRefList);
 		free(pins->theRefList);
 	}
-	if(pins->Label) free(pins->Label);
-	if(pins->theToken) free(pins->theToken);
+	if(pins->storageType == INSTRUCTION_SOURCE_LABEL)
+	{
+		if(pins->Label) free(pins->Label);
+	}
+	else if(pins->storageType == INSTRUCTION_SOURCE_TOKEN)
+	{
+		if(pins->theToken) free(pins->theToken);
+	}
 	memset(pins, 0, sizeof(Instruction));
 }
 
@@ -115,8 +121,7 @@ void Instruction_ConvertConstant(Instruction* pins)
 		pvar = (ScriptVariant*)malloc(sizeof(ScriptVariant));
 		ScriptVariant_Init(pvar);
 		ScriptVariant_ChangeType(pvar, VT_INTEGER);
-		sc = pins->theToken->theSource;
-		if (pins->theToken->theType != END_OF_TOKENS){
+		if (pins->storageType == INSTRUCTION_SOURCE_TOKEN){
 			sc = pins->theToken->theSource;
 			if(sc[0]=='!' || sc[0]=='-') sc++;
 			if(pins->theToken->theType == TOKEN_HEXCONSTANT)
@@ -302,9 +307,10 @@ void Instruction_ToString(Instruction* pins, LPSTR strRep)
 	}
 
    //If the label isn't NULL, then copy that into the buffer as well
-	if (pins->Label && pins->Label[0])
+	if (pins->storageType == INSTRUCTION_SOURCE_LABEL && pins->Label && pins->Label[0])
 	   strcat( strRep, pins->Label);
-	if (pins->theToken && pins->theToken->theType != END_OF_TOKENS) {
+	if (pins->storageType == INSTRUCTION_SOURCE_TOKEN && pins->theToken &&
+	    pins->theToken->theType != END_OF_TOKENS) {
 		if(pins->OpCode==CONSTSTR) strcat( strRep, "\"");
 	   strcat( strRep, pins->theToken->theSource );
 		if(pins->OpCode==CONSTSTR) strcat( strRep, "\"");

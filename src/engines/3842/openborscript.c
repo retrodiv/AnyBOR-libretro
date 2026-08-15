@@ -733,7 +733,8 @@ int Script_MapStringConstants(Script* pscript)
 	for(i=0; i<size; i++)
 	{
 		pInstruction = (Instruction*)(pinterpreter->theInstructionList.solidlist[i]);
-		if(pInstruction->functionRef)
+		if(pInstruction->jumpTargetType == INSTRUCTION_TARGET_FUNCTION &&
+		   pInstruction->functionRef)
 		{
 			params = (ScriptVariant**)pInstruction->theRefList->solidlist;
 			paramCount = (int)pInstruction->theRef->lVal;

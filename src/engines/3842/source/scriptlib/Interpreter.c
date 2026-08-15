@@ -197,11 +197,11 @@ HRESULT Interpreter_Call(Interpreter* pinterpreter)
 	pinterpreter->pCurrentCall = pCurrentCall;
 	currentCall = *((Instruction**)(pinterpreter->pCurrentInstruction));
 	//Search for the specified entry point.
-	if (currentCall->ptheJumpTarget){
+	if (currentCall->jumpTargetType == INSTRUCTION_TARGET_JUMP && currentCall->ptheJumpTarget){
 		pinterpreter->pCurrentInstruction = currentCall->ptheJumpTarget;
 		hr = Interpreter_EvaluateCall(pinterpreter);
 	}
-	else if( currentCall->functionRef)
+	else if(currentCall->jumpTargetType == INSTRUCTION_TARGET_FUNCTION && currentCall->functionRef)
 	{
 		pretvar = currentCall->theVal;
 		hr = currentCall->functionRef((ScriptVariant**)currentCall->theRefList->solidlist, &(pretvar), (int)currentCall->theRef->lVal);
@@ -368,6 +368,8 @@ HRESULT Interpreter_CompileInstructions(Interpreter* pinterpreter)
 	ScriptVariant* pRetVal = NULL;
 	ImportNode* pImport = NULL;
 	HRESULT hr = S_OK;
+	Token* compileToken = NULL;
+	CHAR* compileLabel = NULL;
 
 	// Import any scripts named in #import directives (parsed by the preprocessor)
 	size = pinterpreter->theContext.imports.size;
@@ -403,6 +405,10 @@ HRESULT Interpreter_CompileInstructions(Interpreter* pinterpreter)
 	for(i=0; i<size; i++)
 	{
 		pInstruction = (Instruction*)List_Retrieve(&(pinterpreter->theInstructionList));
+		compileToken = pInstruction->storageType == INSTRUCTION_SOURCE_TOKEN ?
+		               pInstruction->theToken : NULL;
+		compileLabel = pInstruction->storageType == INSTRUCTION_SOURCE_LABEL ?
+		               pInstruction->Label : NULL;
 		//The OpCode will tell us what operation to perform.
 		switch( pInstruction->OpCode ){
 			//Push a constant string
@@ -506,16 +512,19 @@ HRESULT Interpreter_CompileInstructions(Interpreter* pinterpreter)
 			pToken = pInstruction->theToken;
 
 			pInstruction->functionRef = NULL;
+			pInstruction->jumpTargetType = INSTRUCTION_TARGET_NONE;
 			//cache the jump target
 			if(List_FindByName(&(pinterpreter->theInstructionList), pToken->theSource)){
 				pInstruction->theJumpTargetIndex = List_GetIndex(&(pinterpreter->theInstructionList));
-				pInstruction->jumpTargetType = 1;
+				pInstruction->jumpTargetType = INSTRUCTION_TARGET_INDEX;
 				List_FindByName(&(pinterpreter->theInstructionList), pLabel); //hop back
 			} else if(ImportList_GetFunctionPointer(&(pinterpreter->theImportList), pToken->theSource)){
 				pInstruction->ptheJumpTarget = ImportList_GetFunctionPointer(&(pinterpreter->theImportList), pToken->theSource);
+				pInstruction->jumpTargetType = INSTRUCTION_TARGET_JUMP;
 				assert(pInstruction->ptheJumpTarget >= (Instruction**)size); // should be true in any sane environments
 			} else if(List_FindByName( pinterpreter->ptheFunctionList, pToken->theSource)){
 				pInstruction->functionRef = (SCRIPTFUNCTION)List_Retrieve(pinterpreter->ptheFunctionList);
+				pInstruction->jumpTargetType = INSTRUCTION_TARGET_FUNCTION;
 			}
 			else // can't find the jump target
 			{
@@ -552,7 +561,7 @@ HRESULT Interpreter_CompileInstructions(Interpreter* pinterpreter)
 			//cache the jump target
 			if(List_FindByName(&(pinterpreter->theInstructionList), pLabel)){
 				pInstruction->theJumpTargetIndex = List_GetIndex(&(pinterpreter->theInstructionList));
-				pInstruction->jumpTargetType = 1;
+				pInstruction->jumpTargetType = INSTRUCTION_TARGET_INDEX;
 				List_Includes(&(pinterpreter->theInstructionList), pInstruction); // hop back
 			} else hr = E_FAIL;
 			break;
@@ -564,7 +573,7 @@ HRESULT Interpreter_CompileInstructions(Interpreter* pinterpreter)
 			//cache the jump target
 			if(List_FindByName(&(pinterpreter->theInstructionList), pLabel)){
 				pInstruction->theJumpTargetIndex = List_GetIndex(&(pinterpreter->theInstructionList));
-				pInstruction->jumpTargetType = 1;
+				pInstruction->jumpTargetType = INSTRUCTION_TARGET_INDEX;
 				List_Includes(&(pinterpreter->theInstructionList), pInstruction); // hop back
 			} else hr = E_FAIL;
 			break;
@@ -579,7 +588,7 @@ HRESULT Interpreter_CompileInstructions(Interpreter* pinterpreter)
 			//cache the jump target
 			if(List_FindByName(&(pinterpreter->theInstructionList), pLabel)){
 				pInstruction->theJumpTargetIndex = List_GetIndex(&(pinterpreter->theInstructionList));
-				pInstruction->jumpTargetType = 1;
+				pInstruction->jumpTargetType = INSTRUCTION_TARGET_INDEX;
 				List_Includes(&(pinterpreter->theInstructionList), pInstruction); // hop back
 			} else hr = E_FAIL;
 			break;
@@ -595,7 +604,7 @@ HRESULT Interpreter_CompileInstructions(Interpreter* pinterpreter)
 			} else hr = E_FAIL;
 			if(List_FindByName(&(pinterpreter->theInstructionList), pLabel)){
 				pInstruction->theJumpTargetIndex = List_GetIndex(&(pinterpreter->theInstructionList));
-				pInstruction->jumpTargetType = 1;
+				pInstruction->jumpTargetType = INSTRUCTION_TARGET_INDEX;
 				List_Includes(&(pinterpreter->theInstructionList), pInstruction); // hop back
 			} else hr = E_FAIL;
 			break;
@@ -612,7 +621,7 @@ HRESULT Interpreter_CompileInstructions(Interpreter* pinterpreter)
 			//cache the jump target
 			if(List_FindByName(&(pinterpreter->theInstructionList), pLabel)){
 				pInstruction->theJumpTargetIndex = List_GetIndex(&(pinterpreter->theInstructionList));
-				pInstruction->jumpTargetType = 1;
+				pInstruction->jumpTargetType = INSTRUCTION_TARGET_INDEX;
 				List_Includes(&(pinterpreter->theInstructionList), pInstruction); // hop back
 			} else hr = E_FAIL;
 			break;
@@ -672,15 +681,19 @@ HRESULT Interpreter_CompileInstructions(Interpreter* pinterpreter)
 		}
 		// if we fail, go back to normal, clear up the compile productions
 		if(FAILED(hr)){
+			/* CALL overwrote the source union while resolving its target. Put the
+			 * token back so ordinary instruction-list cleanup owns it again. */
+			if(pInstruction->OpCode == CALL && compileToken)
+				pInstruction->theToken = compileToken;
 			printf("\nScript compile error in '%s': %s line %d, column %d\n",
-			pinterpreter->theSymbolTable.name, (pInstruction->theToken)?pInstruction->theToken->theSource:"",
-			(pInstruction->theToken)?pInstruction->theToken->theTextPosition.row:-1,
-			(pInstruction->theToken)?pInstruction->theToken->theTextPosition.col:-1);
+			pinterpreter->theSymbolTable.name, compileToken?compileToken->theSource:"",
+			compileToken?compileToken->theTextPosition.row:-1,
+			compileToken?compileToken->theTextPosition.col:-1);
 			List_Reset(&(pinterpreter->theInstructionList));
 			for(i=0; i<size; i++){
 				pInstruction = (Instruction*)List_Retrieve(&(pinterpreter->theInstructionList));
 				if(pInstruction->theVal) free(pInstruction->theVal);
-				if(pInstruction->theRefList){
+				if(pInstruction->OpCode == CALL && pInstruction->theRefList){
 					List_Clear(pInstruction->theRefList);
 					free(pInstruction->theRefList);
 				}
@@ -693,6 +706,18 @@ HRESULT Interpreter_CompileInstructions(Interpreter* pinterpreter)
 			pinterpreter->initEntryIndex = -1;
 			break;
 		}
+		/* CALL and jump compilation replace their parser source with a runtime
+		 * target. Release the source through the saved pointer first. */
+		if(pInstruction->OpCode == CALL && compileToken)
+		{
+			free(compileToken);
+			pInstruction->storageType = INSTRUCTION_COMPILED;
+		}
+		else if(compileLabel && pInstruction->jumpTargetType != INSTRUCTION_TARGET_NONE)
+		{
+			free(compileLabel);
+			pInstruction->storageType = INSTRUCTION_COMPILED;
+		}
 		List_GotoNext(&(pinterpreter->theInstructionList));
 	}
 
@@ -703,8 +728,17 @@ HRESULT Interpreter_CompileInstructions(Interpreter* pinterpreter)
 	{
 		pInstruction = (Instruction*)List_Retrieve(&(pinterpreter->theInstructionList));
 		// we might not need these 2, free them to cut some memory usage
-		if(pInstruction->theToken) {free(pInstruction->theToken); pInstruction->theToken=NULL;}
-		if(pInstruction->Label) {free(pInstruction->Label); pInstruction->Label=NULL;}
+		if(pInstruction->storageType == INSTRUCTION_SOURCE_TOKEN && pInstruction->theToken)
+		{
+			free(pInstruction->theToken);
+			pInstruction->theToken=NULL;
+		}
+		else if(pInstruction->storageType == INSTRUCTION_SOURCE_LABEL && pInstruction->Label)
+		{
+			free(pInstruction->Label);
+			pInstruction->Label=NULL;
+		}
+		pInstruction->storageType = INSTRUCTION_COMPILED;
 		List_GotoNext(&(pinterpreter->theInstructionList));
 	}
 
@@ -735,7 +769,7 @@ HRESULT Interpreter_CompileInstructions(Interpreter* pinterpreter)
 	{
 		pInstruction = (Instruction*)(pinterpreter->theInstructionList.solidlist[i]);
 		pInstruction->step = 1;
-		if(i<size-1 && !pInstruction->jumpTargetType && !pInstruction->theJumpTargetIndex) {
+		if(i<size-1 && pInstruction->jumpTargetType == INSTRUCTION_TARGET_NONE && !pInstruction->theJumpTargetIndex) {
 			for(j=i; j<size-1; j++) {
 				switch(((Instruction*)(pinterpreter->theInstructionList.solidlist[j+1]))->OpCode){
 				case DATA:case CLEAN:case NOOP:case FUNCDECL:case PUSH:case POP:case CONSTINT:case CONSTDBL:case CONSTSTR:
@@ -747,9 +781,10 @@ HRESULT Interpreter_CompileInstructions(Interpreter* pinterpreter)
 				}
 			}
 		}
-		if(pInstruction->jumpTargetType && pInstruction->theJumpTargetIndex >= 0 && pInstruction->theJumpTargetIndex < size) {
+		if(pInstruction->jumpTargetType == INSTRUCTION_TARGET_INDEX && pInstruction->theJumpTargetIndex >= 0 && pInstruction->theJumpTargetIndex < size) {
 			t = pInstruction->theJumpTargetIndex;
 			pInstruction->ptheJumpTarget = (Instruction**)&(pinterpreter->theInstructionList.solidlist[pInstruction->theJumpTargetIndex]);
+			pInstruction->jumpTargetType = INSTRUCTION_TARGET_JUMP;
 			//jump targets are always placeholders, so skip those opcode that does nothing
 			for(j=t; j<size-1; j++) {
 				switch(pInstruction->ptheJumpTarget[1]->OpCode) {
@@ -997,7 +1032,7 @@ HRESULT Interpreter_EvalInstruction(Interpreter* pinterpreter)
 				currentCall = *(pinterpreter->pCurrentCall);
 				if(pInstruction->theVal->lVal != currentCall->theRef->lVal)
 				{
-					printf("Runtime error: argument count(%d) doesn't match, check your function call: %s.\n", (int)pInstruction->theVal->lVal, currentCall->Label);
+					printf("Runtime error: argument count(%d) doesn't match the compiled function call.\n", (int)pInstruction->theVal->lVal);
 					hr = E_FAIL;
 				}
 			}
