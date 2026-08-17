@@ -11,7 +11,8 @@
     "Player slot spawn safety",
     "Image signature safety",
     "Single script constant",
-    "Runtime instruction unions"
+    "Runtime instruction unions",
+    "Intern animation drawmethods"
   ],
   "files": [
     {
@@ -25,7 +26,7 @@
       "upstream_sha256": null
     },
     {
-      "distributed_sha256": "fcba88de9d6ce7117e5022d785db459954779678686f93da0e983010954e6e06",
+      "distributed_sha256": "9deeb007bbe4fa701ace945f115f4c1b9cdd654282808f3cdc1270a3c74cff89",
       "path": "openbor.c",
       "upstream_sha256": "d2638ad5cf319be18bc22a07f1d9b9b999d17cbcd83830433a59b819a40339a9"
     },

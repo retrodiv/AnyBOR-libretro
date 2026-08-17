@@ -662,6 +662,75 @@ s_drawmethod* getDrawMethod(s_anim* a, ptrdiff_t index) {
 	return a->drawmethods[index];
 }
 
+#define ANIM_DRAWMETHOD_BUCKETS 4096
+typedef struct anim_drawmethod_cache_entry
+{
+	s_drawmethod method;
+	struct anim_drawmethod_cache_entry *next;
+	unsigned references;
+} anim_drawmethod_cache_entry;
+
+static anim_drawmethod_cache_entry *anim_drawmethod_cache[ANIM_DRAWMETHOD_BUCKETS];
+
+static unsigned anim_drawmethod_hash(const s_drawmethod *method)
+{
+	const unsigned char *bytes = (const unsigned char *)method;
+	unsigned hash = 2166136261U;
+	size_t i;
+	for(i = 0; i < sizeof(*method); ++i)
+	{
+		hash ^= bytes[i];
+		hash *= 16777619U;
+	}
+	return hash;
+}
+
+static s_drawmethod *retain_anim_drawmethod(const s_drawmethod *method)
+{
+	unsigned bucket = anim_drawmethod_hash(method) & (ANIM_DRAWMETHOD_BUCKETS - 1);
+	anim_drawmethod_cache_entry *entry;
+	for(entry = anim_drawmethod_cache[bucket]; entry; entry = entry->next)
+	{
+		if(!memcmp(&entry->method, method, sizeof(*method)))
+		{
+			++entry->references;
+			return &entry->method;
+		}
+	}
+	entry = malloc(sizeof(*entry));
+	if(!entry) return NULL;
+	memcpy(&entry->method, method, sizeof(*method));
+	entry->references = 1;
+	entry->next = anim_drawmethod_cache[bucket];
+	anim_drawmethod_cache[bucket] = entry;
+	return &entry->method;
+}
+
+static void release_anim_drawmethod(s_drawmethod *method)
+{
+	unsigned bucket;
+	anim_drawmethod_cache_entry **link, *entry;
+	if(!method) return;
+	bucket = anim_drawmethod_hash(method) & (ANIM_DRAWMETHOD_BUCKETS - 1);
+	link = &anim_drawmethod_cache[bucket];
+	while((entry = *link))
+	{
+		if(&entry->method == method)
+		{
+			if(--entry->references == 0)
+			{
+				*link = entry->next;
+				free(entry);
+			}
+			return;
+		}
+		link = &entry->next;
+	}
+	/* Preserve the ownership behavior for a pointer installed by old or
+	 * external code rather than leaking it. */
+	free(method);
+}
+
 int isLoadingScreenTypeBg(loadingScreenType what) {
 	return (what & LSTYPE_BACKGROUND) == LSTYPE_BACKGROUND;
 }
@@ -4039,7 +4108,7 @@ void free_frames(s_anim * anim)
 		{
 			if(anim->drawmethods[i])
 			{
-				free(anim->drawmethods[i]);
+				release_anim_drawmethod(anim->drawmethods[i]);
 				anim->drawmethods[i] = NULL;
 			}
 		}
@@ -4309,10 +4378,7 @@ int addframe(s_anim * a, int spriteindex, int framecount, int delay, unsigned id
 			a->drawmethods = malloc(framecount * sizeof(*a->drawmethods));
 			memset(a->drawmethods, 0, framecount * sizeof(*a->drawmethods));
 		}
-		setDrawMethod(a, currentframe, malloc(sizeof(**a->drawmethods)));
-		//a->drawmethods[currenframe] = malloc(sizeof(s_drawmethod));
-		memcpy(getDrawMethod(a,currentframe), drawmethod, sizeof(**a->drawmethods));
-		//memcpy(a->drawmethods[currentframe], drawmethod, sizeof(s_drawmethod));
+		setDrawMethod(a, currentframe, retain_anim_drawmethod(drawmethod));
 	}
 	if(idle && !a->idle)
 	{
