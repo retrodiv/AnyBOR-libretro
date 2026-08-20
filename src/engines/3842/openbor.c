@@ -811,6 +811,9 @@ int buffer_pakfile(char* filename, char** pbuffer, size_t* psize)
 	*pbuffer = NULL;
 
 	if(buffer_file(filename, pbuffer, psize)==1) return 1;
+#ifdef LIBRETRO
+	if(obor_buffer_content_alias(filename, pbuffer, psize)) return 1;
+#endif
 
 	// Read file
 #ifdef VERBOSE

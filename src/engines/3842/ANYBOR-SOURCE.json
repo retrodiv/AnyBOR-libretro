@@ -12,7 +12,8 @@
     "Image signature safety",
     "Single script constant",
     "Runtime instruction unions",
-    "Intern animation drawmethods"
+    "Intern animation drawmethods",
+    "Active pak alias"
   ],
   "files": [
     {
@@ -26,7 +27,7 @@
       "upstream_sha256": null
     },
     {
-      "distributed_sha256": "9deeb007bbe4fa701ace945f115f4c1b9cdd654282808f3cdc1270a3c74cff89",
+      "distributed_sha256": "5d33b98c109da62d3e5bcd6d58ccbad5e8d2d45db9a24aaa3c008c294bdb06e1",
       "path": "openbor.c",
       "upstream_sha256": "d2638ad5cf319be18bc22a07f1d9b9b999d17cbcd83830433a59b819a40339a9"
     },
