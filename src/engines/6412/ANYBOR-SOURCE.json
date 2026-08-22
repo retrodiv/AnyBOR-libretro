@@ -10,7 +10,8 @@
     "Resource lifecycle",
     "Repeated weapons",
     "Player slot spawn safety",
-    "Active pak alias"
+    "Active pak alias",
+    "Compact instruction storage"
   ],
   "files": [
     {
@@ -503,12 +504,12 @@
       "upstream_sha256": "c11f3c10c95e428253195f44b0c16249ce8099adcd5425a35d37b31536cdc478"
     },
     {
-      "distributed_sha256": "d548f115c4f107d5cd4d8f6ecda5f3059dd1d704b1f289d465524bd3439e68e7",
+      "distributed_sha256": "ea463ee446adcfedb5ebb7d46317d399a63ad042ddec43dc21fb39992b45c49a",
       "path": "source/scriptlib/Interpreter.c",
       "upstream_sha256": "d548f115c4f107d5cd4d8f6ecda5f3059dd1d704b1f289d465524bd3439e68e7"
     },
     {
-      "distributed_sha256": "8b23f1870a6eccc1ee2ff4f5ae7e13acea6f672342bdab1bc060acea7e7b1046",
+      "distributed_sha256": "7c360a5c7bcabd9887333c84cb0f68990a032730f401a7e1f351cba6b20a2c71",
       "path": "source/scriptlib/Interpreter.h",
       "upstream_sha256": "8b23f1870a6eccc1ee2ff4f5ae7e13acea6f672342bdab1bc060acea7e7b1046"
     },

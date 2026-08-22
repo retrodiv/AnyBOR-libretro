@@ -21,6 +21,7 @@ typedef struct Interpreter
     List *ptheFunctionList;               //external functionlist, to save some memory
     List theImportList;
     List theInstructionList;
+    Instruction *instructionStorage;
     List paramList;
     Stack theDataStack;
     Stack theLabelStack;

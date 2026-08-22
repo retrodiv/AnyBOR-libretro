@@ -13,7 +13,8 @@
     "Single script constant",
     "Runtime instruction unions",
     "Intern animation drawmethods",
-    "Active pak alias"
+    "Active pak alias",
+    "Compact instruction storage"
   ],
   "files": [
     {
@@ -366,12 +367,12 @@
       "upstream_sha256": "c4ef4c752ec66a5ec170842990d8dec82fa62437ff09fdab352c83a87e21ae56"
     },
     {
-      "distributed_sha256": "46030b7d8906e00efcc41617ce559916cd8f80b72eb865683f4aa521579006f2",
+      "distributed_sha256": "b3937107daf69acdf7ed8662e9df36de262bbed518735b31041fb71f022d4f60",
       "path": "source/scriptlib/Interpreter.c",
       "upstream_sha256": "6d2b9d8d641491b379340431bfe932bb3f27b2b0f9840a30d054818f86db5017"
     },
     {
-      "distributed_sha256": "10c10620958916a67e5710b1191b569d3297e71a754b45c90071c4510fad2f21",
+      "distributed_sha256": "408898cf1dac0c93a90d52646bbc8e1ae85221b50ab7565c22650b2b30d5cd4f",
       "path": "source/scriptlib/Interpreter.h",
       "upstream_sha256": "10c10620958916a67e5710b1191b569d3297e71a754b45c90071c4510fad2f21"
     },

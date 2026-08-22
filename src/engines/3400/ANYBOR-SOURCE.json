@@ -9,7 +9,8 @@
     "Resource lifecycle",
     "Player slot spawn safety",
     "Image signature safety",
-    "Active pak alias"
+    "Active pak alias",
+    "Compact instruction storage"
   ],
   "files": [
     {
@@ -362,12 +363,12 @@
       "upstream_sha256": "e8654f70a184ec07f0936619661c7217a06e1235c561b37ca5a2060fab8e6093"
     },
     {
-      "distributed_sha256": "2e326ec9caba813eb9009564cd34f474ba0dc9a85ab4c613e818ca8f157add2f",
+      "distributed_sha256": "305c8b0829187e7e2cdc0764d2ce767f96e0489eef17a5a55aa3d494c3d43adb",
       "path": "source/scriptlib/Interpreter.c",
       "upstream_sha256": "2e326ec9caba813eb9009564cd34f474ba0dc9a85ab4c613e818ca8f157add2f"
     },
     {
-      "distributed_sha256": "2cbf7ead1fe80d6fc115764d2ee0fec4268fd8555a31f9f809d3ddb929f7254a",
+      "distributed_sha256": "cc0eb8adfaa07056c3e84032ee294b99682bda9c541145f8a8a8e061c82998ee",
       "path": "source/scriptlib/Interpreter.h",
       "upstream_sha256": "2cbf7ead1fe80d6fc115764d2ee0fec4268fd8555a31f9f809d3ddb929f7254a"
     },

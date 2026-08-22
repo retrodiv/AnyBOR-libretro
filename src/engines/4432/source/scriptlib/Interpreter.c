@@ -13,6 +13,34 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+static void Interpreter_CompactInstructionStorage(Interpreter *pinterpreter)
+{
+    Instruction *storage;
+    int i;
+    int size = pinterpreter->theInstructionList.size;
+
+    if(pinterpreter->instructionStorage || size <= 0 ||
+       !pinterpreter->theInstructionList.solidlist)
+    {
+        return;
+    }
+
+    storage = (Instruction *)malloc((size_t)size * sizeof(*storage));
+    if(!storage)
+    {
+        return;
+    }
+
+    for(i = 0; i < size; i++)
+    {
+        Instruction *old = pinterpreter->theInstructionList.solidlist[i];
+        storage[i] = *old;
+        free(old);
+        pinterpreter->theInstructionList.solidlist[i] = &(storage[i]);
+    }
+    pinterpreter->instructionStorage = storage;
+}
+
 void Interpreter_Init(Interpreter *pinterpreter, LPCSTR name, List *pflist)
 {
     memset(pinterpreter, 0, sizeof(Interpreter));
@@ -43,7 +71,10 @@ void Interpreter_Clear(Interpreter *pinterpreter)
         for(i = 0; i < size; i++)
         {
             Instruction_Clear(pinterpreter->theInstructionList.solidlist[i]);
-            free((void *)pinterpreter->theInstructionList.solidlist[i]);
+            if(!pinterpreter->instructionStorage)
+            {
+                free((void *)pinterpreter->theInstructionList.solidlist[i]);
+            }
             pinterpreter->theInstructionList.solidlist[i] = NULL;
         }
     }
@@ -66,6 +97,7 @@ void Interpreter_Clear(Interpreter *pinterpreter)
     }
     List_Clear(&(pinterpreter->theLabelStack));
     List_Clear(&(pinterpreter->theInstructionList));
+    free(pinterpreter->instructionStorage);
     List_Clear(&(pinterpreter->paramList));
     memset(pinterpreter, 0, sizeof(Interpreter));
 }
@@ -848,6 +880,7 @@ HRESULT Interpreter_CompileInstructions(Interpreter *pinterpreter)
 
     // make a solid list that can be referenced by index
     List_Solidify(&(pinterpreter->theInstructionList));
+    Interpreter_CompactInstructionStorage(pinterpreter);
     StackedSymbolTable_Clear(&(pinterpreter->theSymbolTable));
     List_Clear(&(pinterpreter->theDataStack));
     List_Clear(&(pinterpreter->theLabelStack));
@@ -1323,4 +1356,3 @@ void Interpreter_Reset(Interpreter *pinterpreter)
     pinterpreter->bReset = TRUE;
     pinterpreter->bCallCompleted = FALSE;
 }
-
