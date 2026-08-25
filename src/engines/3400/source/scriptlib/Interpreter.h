@@ -21,6 +21,7 @@ typedef struct Interpreter {
    List theImportList;
    List theInstructionList;
    Instruction* instructionStorage;
+   ScriptVariant *valueStorage;
    List paramList;
    Stack theDataStack;
    Stack theLabelStack;

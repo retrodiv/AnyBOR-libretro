@@ -12,6 +12,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include "obor_script_compact.h"
 
 static void Interpreter_CompactInstructionStorage(Interpreter *pinterpreter)
 {
@@ -70,6 +71,9 @@ void Interpreter_Clear(Interpreter *pinterpreter)
         size = pinterpreter->theInstructionList.size;
         for(i = 0; i < size; i++)
         {
+            obor_script_clear_compact_values(
+                pinterpreter,
+                (Instruction *)pinterpreter->theInstructionList.solidlist[i]);
             Instruction_Clear(pinterpreter->theInstructionList.solidlist[i]);
             if(!pinterpreter->instructionStorage)
             {
@@ -98,6 +102,7 @@ void Interpreter_Clear(Interpreter *pinterpreter)
     List_Clear(&(pinterpreter->theLabelStack));
     List_Clear(&(pinterpreter->theInstructionList));
     free(pinterpreter->instructionStorage);
+    free(pinterpreter->valueStorage);
     List_Clear(&(pinterpreter->paramList));
     memset(pinterpreter, 0, sizeof(Interpreter));
 }
@@ -878,6 +883,7 @@ HRESULT Interpreter_CompileInstructions(Interpreter *pinterpreter)
     // make a solid list that can be referenced by index
     List_Solidify(&(pinterpreter->theInstructionList));
     Interpreter_CompactInstructionStorage(pinterpreter);
+    obor_script_compact_values(pinterpreter);
     StackedSymbolTable_Clear(&(pinterpreter->theSymbolTable));
     List_Clear(&(pinterpreter->theDataStack));
     List_Clear(&(pinterpreter->theLabelStack));
