@@ -11,7 +11,8 @@
     "Image signature safety",
     "Active pak alias",
     "Compact instruction storage",
-    "Compact script values"
+    "Compact script values",
+    "Release compiled parser"
   ],
   "files": [
     {
@@ -364,12 +365,12 @@
       "upstream_sha256": "e8654f70a184ec07f0936619661c7217a06e1235c561b37ca5a2060fab8e6093"
     },
     {
-      "distributed_sha256": "359d418c03d5591fb654216f51da10f6ded37140f84d2f78bafc65e62c39044d",
+      "distributed_sha256": "44c73e214c39e59b127422e64d94adb59a17416e4f206d6f8a344894a2619743",
       "path": "source/scriptlib/Interpreter.c",
       "upstream_sha256": "2e326ec9caba813eb9009564cd34f474ba0dc9a85ab4c613e818ca8f157add2f"
     },
     {
-      "distributed_sha256": "eeaef02790eb2fb16bf15f1d4cfbdbb9a383e93da0514c020f88511dfc976443",
+      "distributed_sha256": "fd398a3c4c00b1ebe5967eb439ef0344b1bb9b56dee5466718beb157922b5e5e",
       "path": "source/scriptlib/Interpreter.h",
       "upstream_sha256": "2cbf7ead1fe80d6fc115764d2ee0fec4268fd8555a31f9f809d3ddb929f7254a"
     },

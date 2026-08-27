@@ -15,7 +15,8 @@
     "Intern animation drawmethods",
     "Active pak alias",
     "Compact instruction storage",
-    "Compact script values"
+    "Compact script values",
+    "Release compiled parser"
   ],
   "files": [
     {
@@ -368,12 +369,12 @@
       "upstream_sha256": "c4ef4c752ec66a5ec170842990d8dec82fa62437ff09fdab352c83a87e21ae56"
     },
     {
-      "distributed_sha256": "cac6ed6f40100cb226aa2c622d1b893523dfc555508da32941045e08ceae5cfa",
+      "distributed_sha256": "d7d44b262a6725736eb14b371e0cdc38f2fa00d2c0ede8212c73544b0c6b57f9",
       "path": "source/scriptlib/Interpreter.c",
       "upstream_sha256": "6d2b9d8d641491b379340431bfe932bb3f27b2b0f9840a30d054818f86db5017"
     },
     {
-      "distributed_sha256": "7a9f06bc631ff0afba1080aa6e5945138cf643b67704a21102f83d63a37f5ed3",
+      "distributed_sha256": "eed068291378a2bb066598697e900c6ee12584282bab9d39b3fd92ebc220708a",
       "path": "source/scriptlib/Interpreter.h",
       "upstream_sha256": "10c10620958916a67e5710b1191b569d3297e71a754b45c90071c4510fad2f21"
     },

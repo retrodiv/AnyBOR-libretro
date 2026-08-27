@@ -95,7 +95,11 @@ HRESULT ImportNode_Init(ImportNode *self, const char *path)
 
     List_Init(&self->functions);
     Interpreter_Init(&self->interpreter, path, &theFunctionList);
-    self->interpreter.theParser.isImport = TRUE;
+    if(!self->interpreter.theParser)
+    {
+        goto error;
+    }
+    self->interpreter.theParser->isImport = TRUE;
     scriptText = readscript(path);
     if(scriptText == NULL)
     {

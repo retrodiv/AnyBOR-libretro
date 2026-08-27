@@ -12,7 +12,8 @@
     "Player slot spawn safety",
     "Active pak alias",
     "Compact instruction storage",
-    "Compact script values"
+    "Compact script values",
+    "Release compiled parser"
   ],
   "files": [
     {
@@ -485,7 +486,7 @@
       "upstream_sha256": "7e833ce4fddf92a755f98381eabc738a6a0fe78739abc9a6daa75a6fb5a1423b"
     },
     {
-      "distributed_sha256": "0469b5561f56a45e03d5d4c49cac49725244187a8c662ecdb036faac77b914fd",
+      "distributed_sha256": "ff32553284f16bf1da7693b1ae7476d2c2d33d30c782e020501814c296e9eb2c",
       "path": "source/scriptlib/ImportCache.c",
       "upstream_sha256": "0469b5561f56a45e03d5d4c49cac49725244187a8c662ecdb036faac77b914fd"
     },
@@ -505,12 +506,12 @@
       "upstream_sha256": "c11f3c10c95e428253195f44b0c16249ce8099adcd5425a35d37b31536cdc478"
     },
     {
-      "distributed_sha256": "8ceba53b30b0dfde01a7d067d15dd5edb26f628a3e56bc40cb4e3f886f50a888",
+      "distributed_sha256": "5dc90ea7bbc01414cb1769985063fc8f24a8de19e8505250d3abc97b23501342",
       "path": "source/scriptlib/Interpreter.c",
       "upstream_sha256": "d548f115c4f107d5cd4d8f6ecda5f3059dd1d704b1f289d465524bd3439e68e7"
     },
     {
-      "distributed_sha256": "d4c175909d7fe75c8de7309a30ba416f11e6194557e193aacb05157c38b0d9ea",
+      "distributed_sha256": "54d816e43b1163805f1d25c5e6f39251956195b5d0cbf3e9761becd3512f09a8",
       "path": "source/scriptlib/Interpreter.h",
       "upstream_sha256": "8b23f1870a6eccc1ee2ff4f5ae7e13acea6f672342bdab1bc060acea7e7b1046"
     },

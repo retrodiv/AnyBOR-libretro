@@ -26,7 +26,7 @@ typedef struct Interpreter
     List paramList;
     Stack theDataStack;
     Stack theLabelStack;
-    Parser theParser;
+    Parser *theParser;
     pp_context theContext;
 
     Instruction **pCurrentInstruction;
