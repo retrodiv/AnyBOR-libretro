@@ -16,7 +16,8 @@
     "Active pak alias",
     "Compact instruction storage",
     "Compact script values",
-    "Release compiled parser"
+    "Release compiled parser",
+    "Dynamic animation table"
   ],
   "files": [
     {
@@ -30,12 +31,12 @@
       "upstream_sha256": null
     },
     {
-      "distributed_sha256": "5d33b98c109da62d3e5bcd6d58ccbad5e8d2d45db9a24aaa3c008c294bdb06e1",
+      "distributed_sha256": "a0674b9f7b2c13c9f1d78a5d00f67c9ee622bf04e7c0a5074a6e6f2417381026",
       "path": "openbor.c",
       "upstream_sha256": "d2638ad5cf319be18bc22a07f1d9b9b999d17cbcd83830433a59b819a40339a9"
     },
     {
-      "distributed_sha256": "19888c33f34b9cb80222de1439a1745461b8353d99ef40dc0a8184f081b45ed9",
+      "distributed_sha256": "7ee2e808290e0e248e405fce43093c1af16d79887e46f06700d5c1a1bd24107a",
       "path": "openbor.h",
       "upstream_sha256": "19888c33f34b9cb80222de1439a1745461b8353d99ef40dc0a8184f081b45ed9"
     },

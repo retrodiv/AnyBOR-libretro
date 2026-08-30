@@ -4206,7 +4206,7 @@ void cache_model_sprites(s_model* m, int ld){
 		cachesprite(m->parrow[i][0], ld);
 
 	//if(hasFreetype(model, MF_ANIMLIST)){
-	for(i=0; i<max_animations; i++){
+	for(i=0; i<m->animation_capacity; i++){
 		anim = m->animation[i];
 		if(anim){
 			for(f=0;f<anim->numframes;f++){
@@ -4260,7 +4260,7 @@ int free_model(s_model* model)
 		{free(model->branch); model->branch = NULL;}
 	printf(".");
 	if(hasFreetype(model, MF_ANIMATION) && model->animation)
-		{free(model->animation); model->animation = NULL;}
+		{free(model->animation); model->animation = NULL; model->animation_capacity = 0;}
 	printf(".");
 	if(hasFreetype(model, MF_DEFENSE) && model->defense)
 		{free(model->defense); model->defense = NULL;}
@@ -5669,7 +5669,8 @@ s_model* init_model(int cacheindex, int unload) {
 	newchar->attackthrottle				= 0.0f;
 	newchar->attackthrottletime			= noatk_duration*GAME_SPEED;
 
-	newchar->animation = calloc(max_animations, sizeof(*newchar->animation));
+	newchar->animation_capacity = max_animations < MAX_ANIS ? max_animations : MAX_ANIS;
+	newchar->animation = calloc(newchar->animation_capacity, sizeof(*newchar->animation));
 	if(!newchar->animation) shutdown(1, (char*)E_OUT_OF_MEMORY);
 
 	// default string value, only by reference
@@ -5692,6 +5693,23 @@ s_model* init_model(int cacheindex, int unload) {
     newchar->sight.zmax = 9999;
 
 	return newchar;
+}
+
+static int model_animation_reserve(s_model* model, int animation_id)
+{
+	int capacity;
+	s_anim** animation;
+	if(!model || animation_id < 0 || animation_id >= max_animations) return 0;
+	if(animation_id < model->animation_capacity) return 1;
+	capacity = (animation_id + 64) & ~63;
+	if(capacity > max_animations) capacity = max_animations;
+	animation = realloc(model->animation, sizeof(*animation) * capacity);
+	if(!animation) return 0;
+	memset(animation + model->animation_capacity, 0,
+	       sizeof(*animation) * (capacity - model->animation_capacity));
+	model->animation = animation;
+	model->animation_capacity = capacity;
+	return 1;
 }
 
 void update_model_loadflag(s_model* model, char unload) {
@@ -6823,6 +6841,7 @@ s_model* load_cached_model(char * name, char * owner, char unload)
 							goto lCleanup;
 						}
 
+						if(!model_animation_reserve(newchar, ani_id)) shutdown(1, (char*)E_OUT_OF_MEMORY);
 						newchar->animation[ani_id] = newanim;
 					}
 					break;
@@ -14304,7 +14323,11 @@ void set_model_ex(entity* ent, char* modelname, int index, s_model* newmodel, in
 		if(newmodel->dust[1]        <   0)  newmodel->dust[1]       = model->dust[1];
 		if(newmodel->diesound       <   0)  newmodel->diesound      = model->diesound;
 
-		for(i=0; i<max_animations; i++)
+		if(model->animation_capacity > 0 &&
+		   !model_animation_reserve(newmodel, model->animation_capacity - 1))
+			shutdown(1, "Out of memory while copying model animations.\n");
+
+		for(i=0; i<model->animation_capacity; i++)
 		{
 			if(!newmodel->animation[i] && model->animation[i] && model->animation[i]->numframes>0)
 				newmodel->animation[i] = model->animation[i];

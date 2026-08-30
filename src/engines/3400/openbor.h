@@ -572,7 +572,9 @@
 		e->frozen = 0;\
 		e->freezetime = 0;
 
-#define validanim(e, a) ((e)->modeldata.animation[a]&&(e)->modeldata.animation[a]->numframes)
+#define validanim(e, a) ((a) >= 0 && (a) < (e)->modeldata.animation_capacity && \
+                        (e)->modeldata.animation[a] && \
+                        (e)->modeldata.animation[a]->numframes)
 
 //#define     MAX_MOVES             16
 //#define     MAX_MOVE_STEPS        16
@@ -1079,6 +1081,7 @@ typedef struct
 	char            atchain[MAX_ATCHAIN];
 	char		    chainlength:8;
 	s_anim**        animation;
+	int             animation_capacity;
 	char			credit:8;
 	char			escapehits:8;					// Escape spammers!
 	char			chargerate:8;					// For the charge animation

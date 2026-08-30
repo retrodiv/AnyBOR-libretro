@@ -1169,7 +1169,9 @@ if(n<1) n = 1;
 		e->frozen = 0;\
 		e->freezetime = 0;
 
-#define validanim(e, a) ((e)->modeldata.animation[a]&&(e)->modeldata.animation[a]->numframes)
+#define validanim(e, a) ((a) >= 0 && (a) < (e)->modeldata.animation_capacity && \
+                        (e)->modeldata.animation[a] && \
+                        (e)->modeldata.animation[a]->numframes)
 
 #define inScreen ( selectScreen || titleScreen || hallOfFame || gameOver || showComplete || currentScene || enginecreditsScreen || menuScreen || startgameMenu || \
                   newgameMenu || loadgameMenu || optionsMenu || controloptionsMenu || soundoptionsMenu || videooptionsMenu || systemoptionsMenu )
@@ -1872,6 +1874,7 @@ typedef struct
     int atchain[MAX_ATCHAIN];
     int chainlength;
     s_anim **animation;
+    int animation_capacity;
     int credit;
     int escapehits; // Escape spammers!
     int chargerate; // For the charge animation
