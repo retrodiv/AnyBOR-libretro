@@ -23,17 +23,35 @@ typedef enum OpCode { CONSTSTR, CONSTDBL, CONSTINT, LOAD, SAVE, INC, DEC, FIELD,
 
 #pragma pack(4)
 
+typedef enum InstructionReferenceStorageType
+{
+    INSTRUCTION_REFERENCE_LIST,
+    INSTRUCTION_REFERENCE_COMPACT
+} InstructionReferenceStorageType;
+
+typedef struct CallReferenceList
+{
+    int index;
+    int size;
+    ScriptVariant *values[];
+} CallReferenceList;
+
 typedef struct Instruction
 {
     unsigned OpCode;
     unsigned jumpTargetType;
     unsigned step;
+    unsigned char referenceStorageType;
     Token *theToken;
     CHAR *Label;//[MAX_STR_LEN+1];
     ScriptVariant *theVal;
     ScriptVariant *theRef;
     ScriptVariant *theRef2;
-    List *theRefList;
+    union
+    {
+        List *theRefList;
+        CallReferenceList *callReferences;
+    };
     HRESULT (*functionRef)(ScriptVariant **, ScriptVariant **, int);
     union
     {
@@ -52,6 +70,10 @@ void Instruction_Clear(Instruction *pins);
 
 void Instruction_NewData(Instruction *pins);
 void Instruction_ConvertConstant(Instruction *pins);
+int Instruction_CompactCallReferences(Instruction *pins);
+int Instruction_CallReferenceCount(const Instruction *pins);
+ScriptVariant **Instruction_CallReferenceValues(const Instruction *pins);
+int *Instruction_CallReferenceIndex(Instruction *pins);
 
 void Instruction_ToString(Instruction *pins, LPSTR strRep);
 #endif

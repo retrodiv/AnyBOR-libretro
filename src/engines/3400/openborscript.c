@@ -542,7 +542,7 @@ int Script_MapStringConstants(Script* pscript)
 		pInstruction = (Instruction*)(pinterpreter->theInstructionList.solidlist[i]);
 		if(pInstruction->functionRef)
 		{
-			params = (ScriptVariant**)pInstruction->theRefList->solidlist;
+			params = Instruction_CallReferenceValues(pInstruction);
 			paramCount = (int)pInstruction->theRef->lVal;
 
 			// Get the pointer to the correct mapstrings function, if one exists.

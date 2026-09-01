@@ -269,7 +269,7 @@ HRESULT Interpreter_Call(Interpreter *pinterpreter)
     {
         pretvar = currentCall->theVal;
         // ScriptVariant_Clear(pretvar); // commenting this out since ScriptVariant_ChangeType is now doing the job
-        hr = currentCall->functionRef((ScriptVariant **)currentCall->theRefList->solidlist, &(pretvar), (int)currentCall->theRef->lVal);
+        hr = currentCall->functionRef(Instruction_CallReferenceValues(currentCall), &(pretvar), (int)currentCall->theRef->lVal);
         if(FAILED(hr))
         {
             List_Includes(pinterpreter->ptheFunctionList, currentCall->functionRef);
@@ -279,8 +279,8 @@ HRESULT Interpreter_Call(Interpreter *pinterpreter)
                 printf(" parameters: ");
                 for(i = 0; i < (int)currentCall->theRef->lVal; i++)
                 {
-                    ScriptVariant_ToString(((ScriptVariant **)currentCall->theRefList->solidlist)[i], buf);
-                    if(((ScriptVariant **)currentCall->theRefList->solidlist)[i]->vt == VT_STR)
+                    ScriptVariant_ToString(Instruction_CallReferenceValues(currentCall)[i], buf);
+                    if(Instruction_CallReferenceValues(currentCall)[i]->vt == VT_STR)
                     {
                         printf("\"%s\", ", buf);
                     }
@@ -887,6 +887,13 @@ HRESULT Interpreter_CompileInstructions(Interpreter *pinterpreter)
     }
 
     // make a solid list that can be referenced by index
+    List_Reset(&(pinterpreter->theInstructionList));
+    for(i = 0; i < size; i++)
+    {
+        pInstruction = (Instruction *)List_Retrieve(&(pinterpreter->theInstructionList));
+        if(pInstruction->OpCode == CALL) Instruction_CompactCallReferences(pInstruction);
+        List_GotoNext(&(pinterpreter->theInstructionList));
+    }
     List_Solidify(&(pinterpreter->theInstructionList));
     Interpreter_CompactInstructionStorage(pinterpreter);
     obor_script_compact_values(pinterpreter);
@@ -1155,21 +1162,25 @@ HRESULT Interpreter_EvalInstruction(Interpreter *pinterpreter)
             //copy value from the cached parameter
             //assert(pinterpreter->pCurrentCall);
             currentCall = *(pinterpreter->pCurrentCall);
-            if(List_GetSize(currentCall->theRefList) <= currentCall->theRefList->index)
+            {
+            int *referenceIndex = Instruction_CallReferenceIndex(currentCall);
+            ScriptVariant **references = Instruction_CallReferenceValues(currentCall);
+            if(!referenceIndex || Instruction_CallReferenceCount(currentCall) <= *referenceIndex)
             {
                 ScriptVariant_Clear(pInstruction->theVal);
             }
             else
             {
-                ScriptVariant_Copy(pInstruction->theVal, (ScriptVariant *)(currentCall->theRefList->solidlist[currentCall->theRefList->index]));
+                ScriptVariant_Copy(pInstruction->theVal, references[*referenceIndex]);
             }
-            currentCall->theRefList->index++;
+            if(referenceIndex) (*referenceIndex)++;
+            }
             break;
 
             //Call the specified method, and pass in a ScriptVariant* to receive the
             //return value.  If it's not NULL, then push it onto the data stack.
         case CALL:
-            pInstruction->theRefList->index = 0;
+            *Instruction_CallReferenceIndex(pInstruction) = 0;
             hr = Interpreter_Call(pinterpreter);
             //Reset the m_bCallCompleted flag back to false
             //pinterpreter->bCallCompleted = FALSE;
