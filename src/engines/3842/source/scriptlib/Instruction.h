@@ -49,9 +49,9 @@ typedef struct Instruction{
       HRESULT (*functionRef)(ScriptVariant**, ScriptVariant**, int);
       int theJumpTargetIndex;
       struct Instruction** ptheJumpTarget;
+      ScriptVariant* theRef;
    };
    ScriptVariant* theVal;
-   ScriptVariant* theRef;
    union {
       ScriptVariant* theRef2;
       List* theRefList;
@@ -71,6 +71,8 @@ int Instruction_CompactCallReferences(Instruction* pins);
 int Instruction_CallReferenceCount(const Instruction* pins);
 ScriptVariant** Instruction_CallReferenceValues(const Instruction* pins);
 int* Instruction_CallReferenceIndex(Instruction* pins);
+int Instruction_OwnsValue(const Instruction* pins);
+ScriptVariant** Instruction_FirstReferenceAddress(Instruction* pins);
 
 void Instruction_ToString(Instruction* pins, LPSTR strRep);
 #endif

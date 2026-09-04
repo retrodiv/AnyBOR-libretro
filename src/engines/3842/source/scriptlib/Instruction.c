@@ -40,9 +40,57 @@ void Instruction_Init(Instruction* pins)
 	pins->theToken->theType = END_OF_TOKENS;
 }
 
+int Instruction_OwnsValue(const Instruction* pins)
+{
+	if(!pins) return 0;
+	return pins->OpCode != JUMPR && pins->OpCode != Branch_FALSE &&
+	       pins->OpCode != Branch_TRUE && pins->OpCode != Branch_EQUAL;
+}
+
+ScriptVariant** Instruction_FirstReferenceAddress(Instruction* pins)
+{
+	if(!pins) return NULL;
+	switch(pins->OpCode)
+	{
+	case JUMPR:
+	case Branch_FALSE:
+	case Branch_TRUE:
+	case Branch_EQUAL:
+		return &pins->theVal;
+	case LOAD:
+	case SAVE:
+	case INC:
+	case DEC:
+	case POS:
+	case NEG:
+	case NOT:
+	case MUL:
+	case DIV:
+	case MOD:
+	case ADD:
+	case SUB:
+	case SHL:
+	case SHR:
+	case GE:
+	case LE:
+	case LT:
+	case GT:
+	case EQ:
+	case NE:
+	case OR:
+	case AND:
+	case BIT_OR:
+	case XOR:
+	case BIT_AND:
+		return &pins->theRef;
+	default:
+		return NULL;
+	}
+}
+
 void Instruction_Clear(Instruction* pins)
 {
-	if(pins->theVal) {ScriptVariant_Clear(pins->theVal);free((void*)pins->theVal);}
+	if(Instruction_OwnsValue(pins) && pins->theVal) {ScriptVariant_Clear(pins->theVal);free((void*)pins->theVal);}
 	if(pins->OpCode == CALL && pins->theRefList)
 	{
 		if(pins->storageType & INSTRUCTION_REFERENCE_COMPACT_FLAG)

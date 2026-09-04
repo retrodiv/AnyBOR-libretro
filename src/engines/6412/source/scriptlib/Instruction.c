@@ -15,6 +15,7 @@ void Instruction_InitViaToken(Instruction *pins, OpCode code, Token *pToken )
 {
     memset(pins, 0, sizeof(Instruction));
     pins->OpCode = code;
+    pins->storageType = INSTRUCTION_SOURCE_TOKEN;
     pins->theToken = malloc(sizeof(Token));
     memset(pins->theToken, 0, sizeof(Token));
     if(pToken)
@@ -31,9 +32,7 @@ void Instruction_InitViaLabel(Instruction *pins, OpCode code, LPCSTR label )
 {
     memset(pins, 0, sizeof(Instruction));
     pins->OpCode = code;
-    pins->theToken = malloc(sizeof(Token));
-    memset(pins->theToken, 0, sizeof(Token));
-    pins->theToken->theType = END_OF_TOKENS;
+    pins->storageType = INSTRUCTION_SOURCE_LABEL;
     pins->Label = malloc(sizeof(CHAR) * (MAX_STR_LEN + 1));
     strcpy(pins->Label, label);
 }
@@ -41,19 +40,44 @@ void Instruction_InitViaLabel(Instruction *pins, OpCode code, LPCSTR label )
 void Instruction_Init(Instruction *pins)
 {
     memset(pins, 0, sizeof(Instruction));
+    pins->storageType = INSTRUCTION_SOURCE_TOKEN;
     pins->theToken = malloc(sizeof(Token));
     memset(pins->theToken, 0, sizeof(Token));
     pins->theToken->theType = END_OF_TOKENS;
 }
 
+int Instruction_OwnsValue(const Instruction *pins)
+{
+    if(!pins) return 0;
+    return pins->OpCode != JUMPR && pins->OpCode != Branch_FALSE &&
+           pins->OpCode != Branch_TRUE && pins->OpCode != Branch_EQUAL;
+}
+
+ScriptVariant **Instruction_FirstReferenceAddress(Instruction *pins)
+{
+    if(!pins) return NULL;
+    switch(pins->OpCode)
+    {
+    case JUMPR: case Branch_FALSE: case Branch_TRUE: case Branch_EQUAL:
+        return &pins->theVal;
+    case LOAD: case SAVE: case INC: case DEC: case POS: case NEG: case NOT:
+    case MUL: case DIV: case MOD: case ADD: case SUB: case SHL: case SHR:
+    case GE: case LE: case LT: case GT: case EQ: case NE: case OR: case AND:
+    case BIT_OR: case XOR: case BIT_AND:
+        return &pins->theRef;
+    default:
+        return NULL;
+    }
+}
+
 void Instruction_Clear(Instruction *pins)
 {
-    if(pins->theVal)
+    if(Instruction_OwnsValue(pins) && pins->theVal)
     {
         ScriptVariant_Clear(pins->theVal);
         free((void *)pins->theVal);
     }
-    if(pins->theRefList)
+    if(pins->OpCode == CALL && pins->theRefList)
     {
         if(pins->referenceStorageType == INSTRUCTION_REFERENCE_COMPACT)
             free(pins->callReferences);
@@ -63,11 +87,11 @@ void Instruction_Clear(Instruction *pins)
             free(pins->theRefList);
         }
     }
-    if(pins->Label)
+    if(pins->storageType == INSTRUCTION_SOURCE_LABEL && pins->Label)
     {
         free(pins->Label);
     }
-    if(pins->theToken)
+    if(pins->storageType == INSTRUCTION_SOURCE_TOKEN && pins->theToken)
     {
         free(pins->theToken);
     }
@@ -214,7 +238,7 @@ void Instruction_ConvertConstant(Instruction *pins)
         ScriptVariant_Init(pvar);
         ScriptVariant_ChangeType(pvar, VT_INTEGER);
         sc = pins->theToken->theSource;
-        if (pins->theToken->theType != END_OF_TOKENS)
+        if (pins->storageType == INSTRUCTION_SOURCE_TOKEN && pins->theToken->theType != END_OF_TOKENS)
         {
             sc = pins->theToken->theSource;
             if(sc[0] == '!' || sc[0] == '-')
@@ -423,11 +447,11 @@ void Instruction_ToString(Instruction *pins, LPSTR strRep)
     }
 
     //If the label isn't NULL, then copy that into the buffer as well
-    if (pins->Label && pins->Label[0])
+    if (pins->storageType == INSTRUCTION_SOURCE_LABEL && pins->Label && pins->Label[0])
     {
         strcat( strRep, pins->Label);
     }
-    if (pins->theToken && pins->theToken->theType != END_OF_TOKENS)
+    if (pins->storageType == INSTRUCTION_SOURCE_TOKEN && pins->theToken && pins->theToken->theType != END_OF_TOKENS)
     {
         if(pins->OpCode == CONSTSTR)
         {

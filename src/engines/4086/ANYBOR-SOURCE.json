@@ -13,7 +13,8 @@
     "Compact script values",
     "Release compiled parser",
     "Dynamic animation table",
-    "Compact call references"
+    "Compact call references",
+    "Compact runtime instruction operands"
   ],
   "files": [
     {
@@ -37,7 +38,7 @@
       "upstream_sha256": "3d54f4d40f76c0e51fc30617c5dedd968ab57168a063cd349dc104ae5fc8756b"
     },
     {
-      "distributed_sha256": "5e2122db87383adf6665a9f8190a252a25856c5526d26bb445af6ebae653c64f",
+      "distributed_sha256": "4f5970f19be00e5d2828540ae226c62f45f8083a5e19647e54a3ff6481b7948d",
       "path": "openborscript.c",
       "upstream_sha256": "4be42b223e003565531d785e6182127d75307e4e0625028b7e03e2ab124ffa45"
     },
@@ -361,17 +362,17 @@
       "upstream_sha256": "61e7a9cb89e0ebb37f68f29c1c4cc90f6617d104bbaa4195072f785424a91e20"
     },
     {
-      "distributed_sha256": "462537ffe6f3af8fb7a42d4a1f379ee97b1f35ddcd8ecc25f5453aab81fe917f",
+      "distributed_sha256": "3f5cd49fbbb4b157c004385522b2390615cbe09b0cd43d2404017c4b9d831d0e",
       "path": "source/scriptlib/Instruction.c",
       "upstream_sha256": "73d3f7c89520bb752f14e891960f56d832e41b6f9c86489c9a41d05dbe4fcb1e"
     },
     {
-      "distributed_sha256": "d1912b75f7440a30e204e59d7d9cc12dd59b08abdf934873fba56a3d86afa472",
+      "distributed_sha256": "70eb9b46de70e5a1abda22d83ed95f122c2cb372cc0bc638c72b60980df42d18",
       "path": "source/scriptlib/Instruction.h",
       "upstream_sha256": "e283e23b1f8636ba4bf5a9a254c7a5897ad599dcb6c64d255552def5ac5ab60e"
     },
     {
-      "distributed_sha256": "6e6eb76b46dd46c3b371a58220cbdfa69e44ab706519470600faaf1e452bd3f3",
+      "distributed_sha256": "7f68421da36011a3779653af34135b780a11240e51b6fc86f3abc4ff7759246c",
       "path": "source/scriptlib/Interpreter.c",
       "upstream_sha256": "9cc76b5b2d888c92ba3a3d75f0f5e08872a6dc14a748dd1e94f1c121efd8c1c2"
     },

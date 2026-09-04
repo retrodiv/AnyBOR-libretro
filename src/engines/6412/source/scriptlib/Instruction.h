@@ -29,6 +29,17 @@ typedef enum InstructionReferenceStorageType
     INSTRUCTION_REFERENCE_COMPACT
 } InstructionReferenceStorageType;
 
+typedef enum InstructionStorageType
+{
+    INSTRUCTION_SOURCE_TOKEN, INSTRUCTION_SOURCE_LABEL, INSTRUCTION_COMPILED
+} InstructionStorageType;
+
+typedef enum InstructionTargetType
+{
+    INSTRUCTION_TARGET_NONE, INSTRUCTION_TARGET_INDEX,
+    INSTRUCTION_TARGET_JUMP, INSTRUCTION_TARGET_FUNCTION
+} InstructionTargetType;
+
 typedef struct CallReferenceList
 {
     int index;
@@ -38,26 +49,26 @@ typedef struct CallReferenceList
 
 typedef struct Instruction
 {
-    unsigned OpCode;
-    unsigned jumpTargetType;
     unsigned step;
+    unsigned char OpCode;
+    unsigned char jumpTargetType;
+    unsigned char storageType;
     unsigned char referenceStorageType;
-    Token *theToken;
-    CHAR *Label;//[MAX_STR_LEN+1];
-    ScriptVariant *theVal;
-    ScriptVariant *theRef;
-    ScriptVariant *theRef2;
     union
     {
-        List *theRefList;
-        CallReferenceList *callReferences;
-    };
-    HRESULT (*functionRef)(ScriptVariant **, ScriptVariant **, int);
-    union
-    {
+        Token *theToken;
+        CHAR *Label;//[MAX_STR_LEN+1];
+        HRESULT (*functionRef)(ScriptVariant **, ScriptVariant **, int);
         int theJumpTargetIndex;
         struct Instruction **ptheJumpTarget;
-        //struct Instruction* theJumpTarget;
+        ScriptVariant *theRef;
+    };
+    ScriptVariant *theVal;
+    union
+    {
+        ScriptVariant *theRef2;
+        List *theRefList;
+        CallReferenceList *callReferences;
     };
 } Instruction;
 
@@ -74,6 +85,8 @@ int Instruction_CompactCallReferences(Instruction *pins);
 int Instruction_CallReferenceCount(const Instruction *pins);
 ScriptVariant **Instruction_CallReferenceValues(const Instruction *pins);
 int *Instruction_CallReferenceIndex(Instruction *pins);
+int Instruction_OwnsValue(const Instruction *pins);
+ScriptVariant **Instruction_FirstReferenceAddress(Instruction *pins);
 
 void Instruction_ToString(Instruction *pins, LPSTR strRep);
 #endif

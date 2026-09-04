@@ -247,7 +247,7 @@ HRESULT Interpreter_Call(Interpreter* pinterpreter)
 	else if(currentCall->jumpTargetType == INSTRUCTION_TARGET_FUNCTION && currentCall->functionRef)
 	{
 		pretvar = currentCall->theVal;
-		hr = currentCall->functionRef(Instruction_CallReferenceValues(currentCall), &(pretvar), (int)currentCall->theRef->lVal);
+		hr = currentCall->functionRef(Instruction_CallReferenceValues(currentCall), &(pretvar), Instruction_CallReferenceCount(currentCall));
 		if(FAILED(hr))
 		{
 			List_Includes(pinterpreter->ptheFunctionList, currentCall->functionRef);
@@ -577,7 +577,6 @@ HRESULT Interpreter_CompileInstructions(Interpreter* pinterpreter)
 			//cache the paramCount
 			pSVar1 = (ScriptVariant*)Stack_Top(&(pinterpreter->theDataStack));
 			Stack_Pop(&(pinterpreter->theDataStack));
-			pInstruction->theRef = pSVar1;
 			//printf("#%u\n", pInstruction->theRef);
 			// alloc the param ref list;
 			pInstruction->theRefList = (List*)malloc(sizeof(List));
@@ -626,7 +625,7 @@ HRESULT Interpreter_CompileInstructions(Interpreter* pinterpreter)
 			pSVar1 = (ScriptVariant*)Stack_Top(&(pinterpreter->theDataStack));
 			Stack_Pop(&(pinterpreter->theDataStack));
 			// cache the return value
-			pInstruction->theRef = pSVar1;
+			pInstruction->theVal = pSVar1;
 			pLabel = pInstruction->Label;
 			//cache the jump target
 			if(List_FindByName(&(pinterpreter->theInstructionList), pLabel)){
@@ -642,7 +641,7 @@ HRESULT Interpreter_CompileInstructions(Interpreter* pinterpreter)
 			if (pinterpreter->theDataStack.size >= 2){
 				pInstruction->theRef2 = Stack_Top(&(pinterpreter->theDataStack));
 				Stack_Pop(&(pinterpreter->theDataStack));
-				pInstruction->theRef = Stack_Top(&(pinterpreter->theDataStack));
+				pInstruction->theVal = Stack_Top(&(pinterpreter->theDataStack));
 				//note that we do *not* pop the second value from the stack
 			} else hr = E_FAIL;
 			if(List_FindByName(&(pinterpreter->theInstructionList), pLabel)){
@@ -659,7 +658,7 @@ HRESULT Interpreter_CompileInstructions(Interpreter* pinterpreter)
 			//cache the reference target
 			pLabel = pInstruction->Label;
 			pSVar1 = Stack_Top(&(pinterpreter->theDataStack));
-			pInstruction->theRef = pSVar1;
+			pInstruction->theVal = pSVar1;
 			Stack_Pop(&(pinterpreter->theDataStack));
 			//cache the jump target
 			if(List_FindByName(&(pinterpreter->theInstructionList), pLabel)){
@@ -724,10 +723,18 @@ HRESULT Interpreter_CompileInstructions(Interpreter* pinterpreter)
 		}
 		// if we fail, go back to normal, clear up the compile productions
 		if(FAILED(hr)){
-			/* CALL overwrote the source union while resolving its target. Put the
-			 * token back so ordinary instruction-list cleanup owns it again. */
-			if(pInstruction->OpCode == CALL && compileToken)
+			/* Compilation may overwrite the parser source union. Restore its
+			 * owned source so ordinary cleanup remains valid on failure. */
+			if(compileToken)
+			{
 				pInstruction->theToken = compileToken;
+				pInstruction->storageType = INSTRUCTION_SOURCE_TOKEN;
+			}
+			else if(compileLabel)
+			{
+				pInstruction->Label = compileLabel;
+				pInstruction->storageType = INSTRUCTION_SOURCE_LABEL;
+			}
 			printf("\nScript compile error in '%s': %s line %d, column %d\n",
 			pinterpreter->theSymbolTable.name, compileToken?compileToken->theSource:"",
 			compileToken?compileToken->theTextPosition.row:-1,
@@ -735,7 +742,7 @@ HRESULT Interpreter_CompileInstructions(Interpreter* pinterpreter)
 			List_Reset(&(pinterpreter->theInstructionList));
 			for(i=0; i<size; i++){
 				pInstruction = (Instruction*)List_Retrieve(&(pinterpreter->theInstructionList));
-				if(pInstruction->theVal) free(pInstruction->theVal);
+				if(Instruction_OwnsValue(pInstruction) && pInstruction->theVal) free(pInstruction->theVal);
 				if(pInstruction->OpCode == CALL && pInstruction->theRefList){
 					List_Clear(pInstruction->theRefList);
 					free(pInstruction->theRefList);
@@ -749,14 +756,13 @@ HRESULT Interpreter_CompileInstructions(Interpreter* pinterpreter)
 			pinterpreter->initEntryIndex = -1;
 			break;
 		}
-		/* CALL and jump compilation replace their parser source with a runtime
-		 * target. Release the source through the saved pointer first. */
-		if(pInstruction->OpCode == CALL && compileToken)
+		/* Runtime references and targets share the parser source slot. */
+		if(compileToken)
 		{
 			free(compileToken);
 			pInstruction->storageType = INSTRUCTION_COMPILED;
 		}
-		else if(compileLabel && pInstruction->jumpTargetType != INSTRUCTION_TARGET_NONE)
+		else if(compileLabel)
 		{
 			free(compileLabel);
 			pInstruction->storageType = INSTRUCTION_COMPILED;
@@ -1059,19 +1065,19 @@ HRESULT Interpreter_EvalInstruction(Interpreter* pinterpreter)
 
 		 //Jump if the top two ScriptVariants are equal
 		case Branch_EQUAL:
-			if(ScriptVariant_Eq(pInstruction->theRef, pInstruction->theRef2)->lVal)
+			if(ScriptVariant_Eq(pInstruction->theVal, pInstruction->theRef2)->lVal)
 				pinterpreter->pCurrentInstruction = pInstruction->ptheJumpTarget;
 			break;
 
 		 //Jump if the top ScriptVariant resolves to false
 		case Branch_FALSE:
-			if(!ScriptVariant_IsTrue(pInstruction->theRef))
+			if(!ScriptVariant_IsTrue(pInstruction->theVal))
 				pinterpreter->pCurrentInstruction = pInstruction->ptheJumpTarget;
 			break;
 
 		 //Jump if the top ScriptVariant resolves to true
 		case Branch_TRUE:
-			if(ScriptVariant_IsTrue(pInstruction->theRef))
+			if(ScriptVariant_IsTrue(pInstruction->theVal))
 				pinterpreter->pCurrentInstruction = pInstruction->ptheJumpTarget;
 			break;
 
@@ -1080,10 +1086,11 @@ HRESULT Interpreter_EvalInstruction(Interpreter* pinterpreter)
 		case RET:
 			if(pinterpreter->pReturnEntry){
 				returnEntry = *(pinterpreter->pReturnEntry);
-				if(returnEntry->theRef && pinterpreter->pCurrentCall)
+				ScriptVariant** returnReference = Instruction_FirstReferenceAddress(returnEntry);
+				if(returnReference && *returnReference && pinterpreter->pCurrentCall)
 				{
 					currentCall = *(pinterpreter->pCurrentCall);
-					ScriptVariant_Copy(currentCall->theVal, returnEntry->theRef);
+					ScriptVariant_Copy(currentCall->theVal, *returnReference);
 				}
 			}
 			pinterpreter->pReturnEntry = NULL;
