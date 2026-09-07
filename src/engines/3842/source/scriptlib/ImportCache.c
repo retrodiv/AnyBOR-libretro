@@ -1,3 +1,14 @@
+/* AnyBOR modification record: 2026-09-12.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Retain imported entry points as direct instruction pointers.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/3842.md
+ * at the source repository root. Original notices follow below.
+ */
+
 /*
  * OpenBOR - http://www.LavaLit.com
  * -----------------------------------------------------------------------
@@ -24,7 +35,7 @@
 
 struct ImportNode {
 	Interpreter interpreter;
-	List functions; // values are Instruction**; names are function names
+	List functions; // values are Instruction*; names are function names
 };
 
 List imports; // values are ImportNode*; names are lowercased, forward-slashed paths
@@ -98,14 +109,14 @@ HRESULT ImportNode_Init(ImportNode* self, const char* path)
 
 	// finish compiling and convert indices to pointers to the function entry points
 	if(FAILED(Interpreter_CompileInstructions(&self->interpreter))) goto error;
-	assert(list->solidlist != NULL);
+	assert(self->interpreter.instructionStorage != NULL);
 	List_Reset(&self->functions);
 	size = List_GetSize(&self->functions);
 	for(i=0; i<size; i++)
 	{
 		int index = (int)List_Retrieve(&self->functions);
-		List_Update(&self->functions, &(list->solidlist[index]));
-		assert(((Instruction*)(list->solidlist[index]))->OpCode == FUNCDECL);
+		List_Update(&self->functions, &(self->interpreter.instructionStorage[index]));
+		assert(self->interpreter.instructionStorage[index].OpCode == FUNCDECL);
 		List_GotoNext(&self->functions);
 	}
 
@@ -122,10 +133,10 @@ error:
  * Returns a pointer to the function entry point if this script has a function
  * with the specified name; returns NULL otherwise.
  */
-Instruction** ImportNode_GetFunctionPointer(ImportNode* self, const char* name)
+Instruction* ImportNode_GetFunctionPointer(ImportNode* self, const char* name)
 {
 	if(List_FindByName(&self->functions, name))
-		return (Instruction**)List_Retrieve(&self->functions);
+		return (Instruction*)List_Retrieve(&self->functions);
 	else
 		return NULL;
 }
@@ -142,14 +153,14 @@ void ImportNode_Clear(ImportNode* self)
  * have priority, so if the modder imports two script files with the same
  * function name, the function used will be from the file imported last.
  */
-Instruction** ImportList_GetFunctionPointer(List* list, const char* name)
+Instruction* ImportList_GetFunctionPointer(List* list, const char* name)
 {
 	int i;
 	List_GotoLast(list);
 	for(i=List_GetSize(list); i>0; i--)
 	{
 		ImportNode* node = List_Retrieve(list);
-		Instruction** inst = ImportNode_GetFunctionPointer(node, name);
+		Instruction* inst = ImportNode_GetFunctionPointer(node, name);
 		if(inst != NULL)
 		{
 #ifdef IC_DEBUG

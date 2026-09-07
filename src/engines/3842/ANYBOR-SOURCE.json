@@ -19,7 +19,8 @@
     "Release compiled parser",
     "Dynamic animation table",
     "Compact call references",
-    "Compact runtime instruction operands"
+    "Compact runtime instruction operands",
+    "Direct instruction storage"
   ],
   "files": [
     {
@@ -43,7 +44,7 @@
       "upstream_sha256": "19888c33f34b9cb80222de1439a1745461b8353d99ef40dc0a8184f081b45ed9"
     },
     {
-      "distributed_sha256": "01e96c001dc5b217a166dfacb7f5f095bd5d831f6f43a12501b1bdc5f2c7953e",
+      "distributed_sha256": "a47f059696c5bf9568edb3930fdd32cb017eb73fe27f94cc983eb3f0bd850078",
       "path": "openborscript.c",
       "upstream_sha256": "80fc85d07a86206647d4d4877a4f91b2cbe5e94598b6cd934ebf05d184bf719b"
     },
@@ -352,12 +353,12 @@
       "upstream_sha256": "b7ef11c9a212d277e8e0740c374be82e044eeb66326527a708ef2f7f14f98805"
     },
     {
-      "distributed_sha256": "010a3f859c307660d70442a230b4ab6814bd118a9363819915d336954314809e",
+      "distributed_sha256": "82a4ee1af5a01a8ae5ee1e707d1b9610ff3ab45f3bd25951ad1ffe2a8bb00108",
       "path": "source/scriptlib/ImportCache.c",
       "upstream_sha256": "010a3f859c307660d70442a230b4ab6814bd118a9363819915d336954314809e"
     },
     {
-      "distributed_sha256": "522a59c18c903bd0f2b696c604ba80e1fe725852f9acd8dfebc44388d8b461dc",
+      "distributed_sha256": "9103d5c69d4b9cd6b8872da5191e58b2c9a207517f123ee5fe1e21e81404ce1c",
       "path": "source/scriptlib/ImportCache.h",
       "upstream_sha256": "522a59c18c903bd0f2b696c604ba80e1fe725852f9acd8dfebc44388d8b461dc"
     },
@@ -367,17 +368,17 @@
       "upstream_sha256": "0e40d52fb5bab32466bf88f8235d7380c5038fac6a546651b61370bb3389b0ee"
     },
     {
-      "distributed_sha256": "b265fbcccc803bf3ee8fc77a84d8ea2d6dde0a9a8a9c315581941e93056602d6",
+      "distributed_sha256": "799ce2b75fab8ee38727999bb1f3903c0ed4f9b895580425bbe2a2afff553376",
       "path": "source/scriptlib/Instruction.h",
       "upstream_sha256": "c4ef4c752ec66a5ec170842990d8dec82fa62437ff09fdab352c83a87e21ae56"
     },
     {
-      "distributed_sha256": "2076992dda3cb8b873678d2f341384a2c67b881907ae6bd684c4bdf43b716b56",
+      "distributed_sha256": "39524f9121f7794142057039d370d5b3f95bc41dc31e3cbfd83a256f948f9987",
       "path": "source/scriptlib/Interpreter.c",
       "upstream_sha256": "6d2b9d8d641491b379340431bfe932bb3f27b2b0f9840a30d054818f86db5017"
     },
     {
-      "distributed_sha256": "eed068291378a2bb066598697e900c6ee12584282bab9d39b3fd92ebc220708a",
+      "distributed_sha256": "475bd77c46d467a5a2db262e7270ba4b9c15ee554f01f9a988bbeb0fe5b477b9",
       "path": "source/scriptlib/Interpreter.h",
       "upstream_sha256": "10c10620958916a67e5710b1191b569d3297e71a754b45c90071c4510fad2f21"
     },

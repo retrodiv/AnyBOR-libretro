@@ -25,7 +25,7 @@
 struct ImportNode
 {
     Interpreter interpreter;
-    List functions; // values are Instruction**; names are function names
+    List functions; // values are Instruction*; names are function names
 };
 
 List *builtins; // builtin script functions (drawstring, getlocalvar, etc.)
@@ -137,14 +137,15 @@ HRESULT ImportNode_Init(ImportNode *self, const char *path)
         printf("Script error: failed to import '%s': failed to compile\n", path);
         goto error;
     }
-    assert(list->solidlist != NULL);
+    assert(self->interpreter.instructionStorage != NULL);
     List_Reset(&self->functions);
     size = List_GetSize(&self->functions);
     for(i = 0; i < size; i++)
     {
         int index = (size_t)List_Retrieve(&self->functions);
-        List_Update(&self->functions, &(list->solidlist[index]));
-        assert(((Instruction *)(list->solidlist[index]))->OpCode == FUNCDECL);
+        List_Update(&self->functions,
+                    &(self->interpreter.instructionStorage[index]));
+        assert(self->interpreter.instructionStorage[index].OpCode == FUNCDECL);
         List_GotoNext(&self->functions);
     }
 
@@ -164,11 +165,11 @@ error:
  * Returns a pointer to the function entry point if this script has a function
  * with the specified name; returns NULL otherwise.
  */
-Instruction **ImportNode_GetFunctionPointer(ImportNode *self, const char *name)
+Instruction *ImportNode_GetFunctionPointer(ImportNode *self, const char *name)
 {
     if(List_FindByName(&self->functions, name))
     {
-        return (Instruction **)List_Retrieve(&self->functions);
+        return (Instruction *)List_Retrieve(&self->functions);
     }
     else
     {
@@ -188,14 +189,14 @@ void ImportNode_Clear(ImportNode *self)
  * have priority, so if the modder imports two script files with the same
  * function name, the function used will be from the file imported last.
  */
-Instruction **ImportList_GetFunctionPointer(List *list, const char *name)
+Instruction *ImportList_GetFunctionPointer(List *list, const char *name)
 {
     int i;
     List_GotoLast(list);
     for(i = List_GetSize(list); i > 0; i--)
     {
         ImportNode *node = List_Retrieve(list);
-        Instruction **inst = ImportNode_GetFunctionPointer(node, name);
+        Instruction *inst = ImportNode_GetFunctionPointer(node, name);
         if(inst != NULL)
         {
 #ifdef IC_DEBUG

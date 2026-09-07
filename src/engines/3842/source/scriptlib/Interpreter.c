@@ -70,19 +70,25 @@ void Interpreter_Clear(Interpreter* pinterpreter)
 		Parser_Clear(pinterpreter->theParser);
 		free(pinterpreter->theParser);
 	}
-	if(pinterpreter->theInstructionList.solidlist)
+	if(pinterpreter->instructionStorage)
 	{
 		size = pinterpreter->theInstructionList.size;
 		for(i=0;i<size;i++)
 		{
-			obor_script_clear_compact_values(
-				pinterpreter,
-				(Instruction *)pinterpreter->theInstructionList.solidlist[i]);
-			Instruction_Clear(pinterpreter->theInstructionList.solidlist[i]);
-			if(!pinterpreter->instructionStorage)
-			{
-				free((void*)pinterpreter->theInstructionList.solidlist[i]);
-			}
+			Instruction* instruction = &(pinterpreter->instructionStorage[i]);
+			obor_script_clear_compact_values(pinterpreter, instruction);
+			Instruction_Clear(instruction);
+		}
+	}
+	else if(pinterpreter->theInstructionList.solidlist)
+	{
+		size = pinterpreter->theInstructionList.size;
+		for(i=0;i<size;i++)
+		{
+			Instruction* instruction = (Instruction*)pinterpreter->theInstructionList.solidlist[i];
+			obor_script_clear_compact_values(pinterpreter, instruction);
+			Instruction_Clear(instruction);
+			free((void*)pinterpreter->theInstructionList.solidlist[i]);
 			pinterpreter->theInstructionList.solidlist[i] = NULL;
 		}
 	}
@@ -228,8 +234,8 @@ HRESULT Interpreter_GetValueByRef(Interpreter* pinterpreter, LPCSTR variable, Sc
 HRESULT Interpreter_Call(Interpreter* pinterpreter)
 {
 	HRESULT hr = E_FAIL;
-	Instruction** temp = pinterpreter->pCurrentCall;
-	Instruction** pCurrentCall = (Instruction**)(pinterpreter->pCurrentInstruction);
+	Instruction* temp = pinterpreter->pCurrentCall;
+	Instruction* pCurrentCall = pinterpreter->pCurrentInstruction;
 	Instruction* currentCall;
 	ScriptVariant *pretvar;
 
@@ -238,7 +244,7 @@ HRESULT Interpreter_Call(Interpreter* pinterpreter)
 		goto endcall;
 	}
 	pinterpreter->pCurrentCall = pCurrentCall;
-	currentCall = *((Instruction**)(pinterpreter->pCurrentInstruction));
+	currentCall = pCurrentCall;
 	//Search for the specified entry point.
 	if (currentCall->jumpTargetType == INSTRUCTION_TARGET_JUMP && currentCall->ptheJumpTarget){
 		pinterpreter->pCurrentInstruction = currentCall->ptheJumpTarget;
@@ -297,7 +303,7 @@ HRESULT Interpreter_EvaluateImmediate(Interpreter* pinterpreter)
 		size = pinterpreter->theInstructionList.size;
 		for(index = 0; index<size; index++)
 		{
-			pInstruction = (Instruction*)(pinterpreter->theInstructionList.solidlist[index]);
+			pInstruction = &(pinterpreter->instructionStorage[index]);
 			//Check the current mode
 			if (pInstruction->OpCode == IMMEDIATE)
 				bImmediate = TRUE;
@@ -306,7 +312,7 @@ HRESULT Interpreter_EvaluateImmediate(Interpreter* pinterpreter)
 
 			//If the current mode is Immediate, then evaluate the instruction
 			if (bImmediate){
-				pinterpreter->pCurrentInstruction = ((Instruction**)pinterpreter->theInstructionList.solidlist) + index;
+				pinterpreter->pCurrentInstruction = pInstruction;
 				hr = Interpreter_EvalInstruction(pinterpreter);
 			}
 			//If we failed, then we need to break out of this loop
@@ -564,7 +570,7 @@ HRESULT Interpreter_CompileInstructions(Interpreter* pinterpreter)
 			} else if(ImportList_GetFunctionPointer(&(pinterpreter->theImportList), pToken->theSource)){
 				pInstruction->ptheJumpTarget = ImportList_GetFunctionPointer(&(pinterpreter->theImportList), pToken->theSource);
 				pInstruction->jumpTargetType = INSTRUCTION_TARGET_JUMP;
-				assert(pInstruction->ptheJumpTarget >= (Instruction**)size); // should be true in any sane environments
+				assert((size_t)pInstruction->ptheJumpTarget >= (size_t)size); // should be true in any sane environments
 			} else if(List_FindByName( pinterpreter->ptheFunctionList, pToken->theSource)){
 				pInstruction->functionRef = (SCRIPTFUNCTION)List_Retrieve(pinterpreter->ptheFunctionList);
 				pInstruction->jumpTargetType = INSTRUCTION_TARGET_FUNCTION;
@@ -806,30 +812,30 @@ HRESULT Interpreter_CompileInstructions(Interpreter* pinterpreter)
 	List_Clear(&(pinterpreter->theDataStack));
 	List_Clear(&(pinterpreter->theLabelStack));
 
-	// convert mainEntryIndex (int) to pMainEntry (Instruction**)
+	// convert mainEntryIndex (int) to a direct instruction pointer
 	if(pinterpreter->mainEntryIndex >= 0)
-		pinterpreter->pMainEntry = (Instruction**)(&(pinterpreter->theInstructionList.solidlist[pinterpreter->mainEntryIndex]));
+		pinterpreter->pMainEntry = &(pinterpreter->instructionStorage[pinterpreter->mainEntryIndex]);
 	else
 		pinterpreter->pMainEntry = NULL;
 
 	if(pinterpreter->clearEntryIndex >= 0)
-		pinterpreter->pClearEntry = (Instruction**)(&(pinterpreter->theInstructionList.solidlist[pinterpreter->clearEntryIndex]));
+		pinterpreter->pClearEntry = &(pinterpreter->instructionStorage[pinterpreter->clearEntryIndex]);
 	else
 		pinterpreter->pClearEntry = NULL;
 
 	if(pinterpreter->initEntryIndex >= 0)
-		pinterpreter->pInitEntry = (Instruction**)(&(pinterpreter->theInstructionList.solidlist[pinterpreter->initEntryIndex]));
+		pinterpreter->pInitEntry = &(pinterpreter->instructionStorage[pinterpreter->initEntryIndex]);
 	else
 		pinterpreter->pInitEntry = NULL;
 
-	// convert theJumpTargetIndex (int) to ptheJumpTarget (Instruction**)
+	// convert theJumpTargetIndex (int) to a direct instruction pointer
 	for(i=0; i<size; i++)
 	{
-		pInstruction = (Instruction*)(pinterpreter->theInstructionList.solidlist[i]);
+		pInstruction = &(pinterpreter->instructionStorage[i]);
 		pInstruction->step = 1;
 		if(i<size-1 && pInstruction->jumpTargetType == INSTRUCTION_TARGET_NONE && !pInstruction->theJumpTargetIndex) {
 			for(j=i; j<size-1; j++) {
-				switch(((Instruction*)(pinterpreter->theInstructionList.solidlist[j+1]))->OpCode){
+				switch(pinterpreter->instructionStorage[j+1].OpCode){
 				case DATA:case CLEAN:case NOOP:case FUNCDECL:case PUSH:case POP:case CONSTINT:case CONSTDBL:case CONSTSTR:
 					pInstruction->step++;
 					break;
@@ -841,11 +847,11 @@ HRESULT Interpreter_CompileInstructions(Interpreter* pinterpreter)
 		}
 		if(pInstruction->jumpTargetType == INSTRUCTION_TARGET_INDEX && pInstruction->theJumpTargetIndex >= 0 && pInstruction->theJumpTargetIndex < size) {
 			t = pInstruction->theJumpTargetIndex;
-			pInstruction->ptheJumpTarget = (Instruction**)&(pinterpreter->theInstructionList.solidlist[pInstruction->theJumpTargetIndex]);
+			pInstruction->ptheJumpTarget = &(pinterpreter->instructionStorage[pInstruction->theJumpTargetIndex]);
 			pInstruction->jumpTargetType = INSTRUCTION_TARGET_JUMP;
 			//jump targets are always placeholders, so skip those opcode that does nothing
 			for(j=t; j<size-1; j++) {
-				switch(pInstruction->ptheJumpTarget[1]->OpCode) {
+				switch(pInstruction->ptheJumpTarget[1].OpCode) {
 				case DATA:case CLEAN:case NOOP:case FUNCDECL:case PUSH:case POP:case CONSTINT:case CONSTDBL:case CONSTSTR:
 					pInstruction->ptheJumpTarget++;
 					break;
@@ -863,6 +869,9 @@ HRESULT Interpreter_CompileInstructions(Interpreter* pinterpreter)
 		free(pinterpreter->theParser);
 		pinterpreter->theParser = NULL;
 	}
+
+	free(pinterpreter->theInstructionList.solidlist);
+	pinterpreter->theInstructionList.solidlist = NULL;
 
 	return hr;
 }
@@ -882,7 +891,7 @@ HRESULT Interpreter_EvalInstruction(Interpreter* pinterpreter)
 	Instruction* currentCall;
 	Instruction* returnEntry;
 
-	if((pInstruction=*((Instruction**)pinterpreter->pCurrentInstruction))){
+	if((pInstruction=pinterpreter->pCurrentInstruction)){
 
 		//The OpCode will tell us what operation to perform.
 		switch( pInstruction->OpCode ){
@@ -1030,7 +1039,7 @@ HRESULT Interpreter_EvalInstruction(Interpreter* pinterpreter)
 		case PARAM:
 			//copy value from the cached parameter
 			//assert(pinterpreter->pCurrentCall);
-			currentCall = *(pinterpreter->pCurrentCall);
+			currentCall = pinterpreter->pCurrentCall;
 			{
 				int* referenceIndex = Instruction_CallReferenceIndex(currentCall);
 				ScriptVariant** references = Instruction_CallReferenceValues(currentCall);
@@ -1085,11 +1094,11 @@ HRESULT Interpreter_EvalInstruction(Interpreter* pinterpreter)
 		 //instructions
 		case RET:
 			if(pinterpreter->pReturnEntry){
-				returnEntry = *(pinterpreter->pReturnEntry);
+				returnEntry = pinterpreter->pReturnEntry;
 				ScriptVariant** returnReference = Instruction_FirstReferenceAddress(returnEntry);
 				if(returnReference && *returnReference && pinterpreter->pCurrentCall)
 				{
-					currentCall = *(pinterpreter->pCurrentCall);
+					currentCall = pinterpreter->pCurrentCall;
 					ScriptVariant_Copy(currentCall->theVal, *returnReference);
 				}
 			}
@@ -1102,7 +1111,7 @@ HRESULT Interpreter_EvalInstruction(Interpreter* pinterpreter)
 		case CHECKARG:
 			if(pinterpreter->pCurrentCall)
 			{
-				currentCall = *(pinterpreter->pCurrentCall);
+				currentCall = pinterpreter->pCurrentCall;
 				if(pInstruction->theVal->lVal != currentCall->theRef->lVal)
 				{
 					printf("Runtime error: argument count(%d) doesn't match the compiled function call.\n", (int)pInstruction->theVal->lVal);

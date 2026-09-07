@@ -16,7 +16,8 @@
     "Release compiled parser",
     "Dynamic animation table",
     "Compact call references",
-    "Compact runtime instruction operands"
+    "Compact runtime instruction operands",
+    "Direct instruction storage"
   ],
   "files": [
     {
@@ -489,12 +490,12 @@
       "upstream_sha256": "7e833ce4fddf92a755f98381eabc738a6a0fe78739abc9a6daa75a6fb5a1423b"
     },
     {
-      "distributed_sha256": "ff32553284f16bf1da7693b1ae7476d2c2d33d30c782e020501814c296e9eb2c",
+      "distributed_sha256": "6191277fda79962bf71788c93a2b8c282a50368914df0f5d0fa466623f059c7b",
       "path": "source/scriptlib/ImportCache.c",
       "upstream_sha256": "0469b5561f56a45e03d5d4c49cac49725244187a8c662ecdb036faac77b914fd"
     },
     {
-      "distributed_sha256": "0e9408c351e17abb471a76da666460664604ae0c93a90d1f554f65fab8ab6f73",
+      "distributed_sha256": "bc8536162294dcd403825c987ac22f0504a47edbea25648b02014da7b78efc86",
       "path": "source/scriptlib/ImportCache.h",
       "upstream_sha256": "0e9408c351e17abb471a76da666460664604ae0c93a90d1f554f65fab8ab6f73"
     },
@@ -504,17 +505,17 @@
       "upstream_sha256": "73d3f7c89520bb752f14e891960f56d832e41b6f9c86489c9a41d05dbe4fcb1e"
     },
     {
-      "distributed_sha256": "606c10fb2c9e1b93e4c3184def8d69124d49da2373f3e784e2609caa697d3d88",
+      "distributed_sha256": "6d3ff3bd945eef3d448eebfcdab3bfd770b4ad5504416b6d4f04e03107da8dcb",
       "path": "source/scriptlib/Instruction.h",
       "upstream_sha256": "c11f3c10c95e428253195f44b0c16249ce8099adcd5425a35d37b31536cdc478"
     },
     {
-      "distributed_sha256": "03f3f04f81280396d34c7a635a965f82d4588a3376d77906f7a64d292d4098c0",
+      "distributed_sha256": "d9a03e8df1c4ae497dca9c4d173d0744e6ec640defe7e09207f7872f9e3d9f81",
       "path": "source/scriptlib/Interpreter.c",
       "upstream_sha256": "d548f115c4f107d5cd4d8f6ecda5f3059dd1d704b1f289d465524bd3439e68e7"
     },
     {
-      "distributed_sha256": "54d816e43b1163805f1d25c5e6f39251956195b5d0cbf3e9761becd3512f09a8",
+      "distributed_sha256": "9709fe29e1ea4dee3892c28fee8ab07d0b49ca3f4034c57f858ef9744a744e34",
       "path": "source/scriptlib/Interpreter.h",
       "upstream_sha256": "8b23f1870a6eccc1ee2ff4f5ae7e13acea6f672342bdab1bc060acea7e7b1046"
     },

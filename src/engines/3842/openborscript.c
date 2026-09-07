@@ -704,7 +704,7 @@ const ScriptVariant* Script_Find_Constant(Script* pscript, const ScriptVariant* 
 	size = List_GetSize(&(pinterpreter->theInstructionList));
 	for(i=0; i<size; i++)
 	{
-		pInstruction = (Instruction*)(pinterpreter->theInstructionList.solidlist[i]);
+		pInstruction = &(pinterpreter->instructionStorage[i]);
 		if(pInstruction->theVal2 == value)
 			return pInstruction->theVal;
 	}
@@ -732,7 +732,7 @@ int Script_MapStringConstants(Script* pscript)
 	size = List_GetSize(&(pinterpreter->theInstructionList));
 	for(i=0; i<size; i++)
 	{
-		pInstruction = (Instruction*)(pinterpreter->theInstructionList.solidlist[i]);
+		pInstruction = &(pinterpreter->instructionStorage[i]);
 		if(pInstruction->jumpTargetType == INSTRUCTION_TARGET_FUNCTION &&
 		   pInstruction->functionRef)
 		{
@@ -756,7 +756,7 @@ int Script_MapStringConstants(Script* pscript)
 					if(flags[j]==params[j]->vt) continue;
 					for(k=i; k>=0; k--)
 					{
-						pInstruction2 = (Instruction*)(pinterpreter->theInstructionList.solidlist[k]);
+						pInstruction2 = &(pinterpreter->instructionStorage[k]);
 						if(pInstruction2->theVal2 == params[j])
 						{
 							ScriptVariant_Copy(pInstruction2->theVal, pInstruction2->theVal2);

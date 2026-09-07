@@ -28,11 +28,11 @@ typedef struct Interpreter {
    Parser *theParser;
    pp_context theContext;
 
-   Instruction** pCurrentInstruction;
-   Instruction** pCurrentCall;
-   Instruction** pReturnEntry;
+   Instruction* pCurrentInstruction;
+   Instruction* pCurrentCall;
+   Instruction* pReturnEntry;
    union { // we have to use the index before solidifying the instruction list
-	  Instruction** pMainEntry;
+	  Instruction* pMainEntry;
 	  int mainEntryIndex;
    };
    int bHasImmediateCode;
