@@ -1112,7 +1112,7 @@ HRESULT Interpreter_EvalInstruction(Interpreter* pinterpreter)
 			if(pinterpreter->pCurrentCall)
 			{
 				currentCall = pinterpreter->pCurrentCall;
-				if(pInstruction->theVal->lVal != currentCall->theRef->lVal)
+				if(pInstruction->theVal->lVal != Instruction_CallReferenceCount(currentCall))
 				{
 					printf("Runtime error: argument count(%d) doesn't match the compiled function call.\n", (int)pInstruction->theVal->lVal);
 					hr = E_FAIL;

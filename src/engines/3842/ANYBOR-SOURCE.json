@@ -20,7 +20,8 @@
     "Dynamic animation table",
     "Compact call references",
     "Compact runtime instruction operands",
-    "Direct instruction storage"
+    "Direct instruction storage",
+    "Script call argument count"
   ],
   "files": [
     {
@@ -373,7 +374,7 @@
       "upstream_sha256": "c4ef4c752ec66a5ec170842990d8dec82fa62437ff09fdab352c83a87e21ae56"
     },
     {
-      "distributed_sha256": "39524f9121f7794142057039d370d5b3f95bc41dc31e3cbfd83a256f948f9987",
+      "distributed_sha256": "8dbe82b0e8d87b2a5f8ed848efcf1ee26fa1009e426025bde3421dabafe02f3c",
       "path": "source/scriptlib/Interpreter.c",
       "upstream_sha256": "6d2b9d8d641491b379340431bfe932bb3f27b2b0f9840a30d054818f86db5017"
     },
