@@ -71,11 +71,6 @@ int pakread(int fd, void *buf, int len);
 void pakclose(int fd);
 int paklseek(int fd, int n, int whence);
 int openreadaheadpackfile(const char *filename, const char *packfilename, int readaheadsize, int prebuffersize);
-int readpackfile_noblock(int fd, void *buf, int len);
-int packfileeof(int fd);
-int packfile_supported(struct dirent *ds);
-void packfile_music_read(struct fileliststruct *filelist, int dListTotal);
-int packfile_music_play(struct fileliststruct *filelist, FILE *bgmFile, int bgmLoop, int curPos, int scrPos);
 void freefilenamecache(void);
 
 #endif

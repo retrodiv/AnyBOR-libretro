@@ -15,7 +15,8 @@
     "Dynamic animation table",
     "Compact call references",
     "Compact runtime instruction operands",
-    "Direct instruction storage"
+    "Direct instruction storage",
+    "Strip dead code"
   ],
   "files": [
     {
@@ -153,12 +154,12 @@
       "upstream_sha256": "35621ea64c356f8f50e514ac848d090b077b16a8d7e52f5530acf8ff1a633307"
     },
     {
-      "distributed_sha256": "58e42ecf39fad8a1babdce0796ec89bc87bf76d5fefba9153dac32bfc1c4be9e",
+      "distributed_sha256": "7bb4583e6bbc1f104010da544ed957d20b9d61d51638c33fafed2af16d886f68",
       "path": "source/gamelib/packfile.c",
       "upstream_sha256": "8c43bade55c67a42b661b1a25653c0ec0f1bba2c3f12647ced8d7f1bef5ebbdc"
     },
     {
-      "distributed_sha256": "c2fafc94ce4b81f4b85873a86b9df04708868ed17a9316d594e66901b530136a",
+      "distributed_sha256": "1f0d66a55f1b5b078e87f7bec68ea861399a48ff91a24f369632b05269b8be93",
       "path": "source/gamelib/packfile.h",
       "upstream_sha256": "c2fafc94ce4b81f4b85873a86b9df04708868ed17a9316d594e66901b530136a"
     },

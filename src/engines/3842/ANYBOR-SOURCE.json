@@ -21,7 +21,8 @@
     "Compact call references",
     "Compact runtime instruction operands",
     "Direct instruction storage",
-    "Script call argument count"
+    "Script call argument count",
+    "Strip dead code"
   ],
   "files": [
     {
@@ -159,12 +160,12 @@
       "upstream_sha256": "a7ff19177bb6c3d61095d5d8aafb335b311654bbe89a37958bce8eaae8d981a0"
     },
     {
-      "distributed_sha256": "c819d631dda8c6348cb673a1de1aaa380e391616ccd28f984766005b3b522208",
+      "distributed_sha256": "8d7220d13a880a30197c2c35a8f19f5c189b71bf3b53d705f8f8693bb01c0fe4",
       "path": "source/gamelib/packfile.c",
       "upstream_sha256": "df479e13b71aa9f7e59fdb99998a05d1fec77b8b6d799d8469d8aee08107f51d"
     },
     {
-      "distributed_sha256": "8bfd0a3c0ea500133201dd85ea32904ebf4998eca894450cc6c472d5a01f0175",
+      "distributed_sha256": "93877d0b4b1492c6fa340da6ed8e1171b167ca306a9ca30fece76f9396791ec0",
       "path": "source/gamelib/packfile.h",
       "upstream_sha256": "8bfd0a3c0ea500133201dd85ea32904ebf4998eca894450cc6c472d5a01f0175"
     },

@@ -743,11 +743,6 @@ int readpackfileblocking(int fd, void *buf, int len, int blocking)
 	return n;
 }
 
-int readpackfile_noblock(int handle, void *buf, int len)
-{
-	return readpackfileblocking(handle, buf, len, 0);
-}
-
 int readPackfileCached(int handle, void *buf, int len)
 {
 	return readpackfileblocking(handle, buf, len, 1);
@@ -1143,104 +1138,6 @@ int pak_init()
 	filecache_init(pakfd, (paksize + 0x7FF) / 0x800, CACHEBLOCKSIZE, CACHEBLOCKS, MAXPACKHANDLES);
 	pak_initialized = 1;
 	return (CACHEBLOCKSIZE * CACHEBLOCKS + 64);
-}
-
-/////////////////////////////////////////////////////////////////////////////
-
-int packfileeof(int handle)
-{
-	if(!pak_isvalidhandle(handle)) return -1;
-	return (pak_vfdpos[handle] >= pak_vfdsize[handle]);
-}
-
-/////////////////////////////////////////////////////////////////////////////
-
-int packfile_supported(struct dirent* ds)
-{
-	if(stricmp(ds->d_name, "menu.pak") != 0)
-	{
-		if (stristr(ds->d_name, ".pak")) return 1;
-	}
-	return 0;
-}
-
-/////////////////////////////////////////////////////////////////////////////
-
-void packfile_get_titlename(char In[80], char Out[80])
-{
-	int i, x=0, y=0;
-	for(i=0; i<(int)strlen(In); i++){
-		if((In[i] == '/') || (In[i] == '\\')) x = i;
-	}
-	for(i=0; i<(int)strlen(In); i++){
-		if(i > x){
-			Out[y] = In[i];
-			y++;
-		}
-	}
-}
-
-void packfile_music_read(fileliststruct *filelist, int dListTotal)
-{
-	pnamestruct pn;
-	FILE *fd;
-	int len, i;
-	unsigned int off;
-	char pack[4], *p = NULL;
-	for(i = 0; i < dListTotal; i++)
-	{
-		getBasePath(packfile, filelist[i].filename, 1);
-		if(stristr(packfile, ".pak"))
-		{
-			memset(filelist[i].bgmTracks, 0, 256);
-			filelist[i].nTracks = 0;
-			fd = fopen(packfile, "rb");
-			if(fd == NULL) continue;
-			if(!fread(pack, 4, 1, fd)) goto closepak;
-			if(fseek(fd, -4, SEEK_END) < 0) goto closepak;
-			if(!fread(&off, 4, 1, fd)) goto closepak;
-			if(fseek(fd, off, SEEK_SET) < 0) goto closepak;
-			while((len = fread(&pn, 1, sizeof(pn), fd)) > 12) {
-				p = strrchr(pn.namebuf, '.');
-				if((p && (!stricmp(p, ".bor") || !stricmp(p, ".ogg"))) || (stristr(pn.namebuf, "music"))) {
-					if(!stristr(pn.namebuf, ".bor") && !stristr(pn.namebuf, ".ogg")) goto nextpak;
-					if(filelist[i].nTracks < 256)
-					{
-						packfile_get_titlename(pn.namebuf, filelist[i].bgmFileName[filelist[i].nTracks]);
-						filelist[i].bgmTracks[filelist[i].nTracks] = off;
-						filelist[i].nTracks++;
-					}
-				}
-nextpak:
-				off += pn.pns_len;
-				if(fseek(fd, off, SEEK_SET) < 0) goto closepak;
-			}
-closepak:
-			fclose(fd);
-		}
-	}
-}
-
-/////////////////////////////////////////////////////////////////////////////
-
-int packfile_music_play(struct fileliststruct* filelist, FILE *bgmFile, int bgmLoop, int curPos, int scrPos)
-{
-	pnamestruct pn;
-	int len;
-	getBasePath(packfile, filelist[curPos+scrPos].filename, 1);
-	if (bgmFile)
-	{
-		fclose(bgmFile);
-		bgmFile = NULL;
-	}
-	bgmFile = fopen(packfile, "rb");
-	if (!bgmFile) return 0;
-	if (stristr(packfile, ".pak"))
-	{
-		if(fseek(bgmFile, filelist[curPos+scrPos].bgmTracks[filelist[curPos+scrPos].bgmTrack], SEEK_SET) < 0) return 0;
-		if((len = fread(&pn, 1, sizeof(pn), bgmFile)) > 12) sound_open_music(pn.namebuf, packfile, savedata.musicvol, bgmLoop, 0);
-	}
-	return 1;
 }
 
 #endif
