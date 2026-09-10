@@ -2389,6 +2389,12 @@ Source: src/deps/libogg/include/ogg/ogg.h
 
  ********************************************************************/
 
+Source: src/glue/obor_transform_source.c
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ * AnyBOR adaptations: retrodiv <retrodiv@proton.me>
+ */
+
 Source: src/deps/libvorbis/lib/codebook.h, src/deps/libvorbis/lib/sharedbook.c
 /********************************************************************
  *                                                                  *
@@ -3552,7 +3558,7 @@ Source: src/deps/zlib/gzwrite.c
  * For conditions of distribution and use, see copyright notice in zlib.h
  */
 
-Source: src/engines/3400/version.h, src/engines/3842/version.h, src/engines/4086/version.h, src/engines/4432/version.h, src/engines/6412/version.h, src/glue/obor_crt.h, src/glue/obor_legacy_api.h, src/glue/obor_pak_validate.h, src/glue/obor_state_padding.h, src/glue/obor_zip_path.h, src/port/libretro/obor_script_compact.h, src/port/libretro/obor_state_copy.h
+Source: src/engines/3400/version.h, src/engines/3842/version.h, src/engines/4086/version.h, src/engines/4432/version.h, src/engines/6412/version.h, src/glue/obor_crt.h, src/glue/obor_legacy_api.h, src/glue/obor_packed_prepare.h, src/glue/obor_pak_repair.h, src/glue/obor_pak_validate.h, src/glue/obor_state_padding.h, src/glue/obor_transform.h, src/glue/obor_zip_path.h, src/port/libretro/obor_script_compact.h, src/port/libretro/obor_state_copy.h
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
 
@@ -4698,6 +4704,12 @@ Source: src/deps/libvorbis/lib/envelope.h
 
  ********************************************************************/
 
+Source: src/glue/obor_transform_vm.c
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ * AnyBOR adaptations: retrodiv <retrodiv@proton.me>
+ * Adapted for AnyBOR: standalone bounded byte-buffer interpreter. */
+
 Source: src/deps/zlib/inffast.c
 /* inffast.c -- fast decoding
  * Copyright (C) 1995-2026 Mark Adler
@@ -4737,6 +4749,12 @@ Source: src/deps/zlib/zconf.h
   #pragma map(inflate_fast,"INFA")
   #pragma map(inflate_copyright,"INCOPY")
 #endif
+
+Source: src/glue/obor_transform_vm.h
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ * AnyBOR adaptations: retrodiv <retrodiv@proton.me>
+ * Adapted for AnyBOR: compiler and buffer VM only. */
 
 Source: src/deps/libvpx/md5_utils.h
 /*

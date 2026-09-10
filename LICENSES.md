@@ -84,3 +84,5 @@ grants no rights to third-party game content. Load content you are entitled
 to use. Project names identify compatibility and authorship; their presence
 does not grant trademark rights.
 
+The generic content-transform compiler and interpreter are original AnyBOR
+components and are covered by the repository's BSD-3-Clause license.

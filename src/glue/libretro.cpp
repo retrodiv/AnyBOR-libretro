@@ -1647,6 +1647,7 @@ static void mkdir_p(const char *path)
 
 #include "obor_zip.h"
 #include "obor_pak_validate.h"
+#include "obor_packed_prepare.h"
 
 static void abspath(const char *in, char *out, size_t out_len)
 {
@@ -1820,6 +1821,12 @@ bool retro_load_game(const struct retro_game_info *info)
             log_cb(RETRO_LOG_ERROR, "[OpenBOR] unsupported content path\n");
             return false;
         }
+        char prepared[4096];
+        const char *system = NULL;
+        env_cb(RETRO_ENVIRONMENT_GET_SYSTEM_DIRECTORY, &system);
+        if (!obor_packed_prepare(g_pak_path, g_save_dir, system, prepared, sizeof(prepared)))
+            return false;
+        snprintf(g_pak_path, sizeof(g_pak_path), "%s", prepared);
         const char *error = obor_pak_validate(g_pak_path);
         if (error) {
             log_cb(RETRO_LOG_ERROR, "[OpenBOR] %s: %s\n", error, g_pak_path);
