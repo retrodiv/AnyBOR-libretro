@@ -1,7 +1,8 @@
 {
   "build": "8020",
   "changes": [
-    "Libretro platform"
+    "Libretro platform",
+    "Savestate packfile fixup"
   ],
   "files": [
     {
@@ -129,7 +130,7 @@
       "upstream_sha256": "97bfca87a0eab276a7899153a0a0bdfa0e8e7ed32081df161eaba839fae3de78"
     },
     {
-      "distributed_sha256": "720b3e5b788ed60cf48dd8422d993bd86484cc1db055e9626dd407cd4c368ac6",
+      "distributed_sha256": "254be501f453768be0ad77115dab874766e2e3d4e77a28c31674918a34982d91",
       "path": "source/gamelib/packfile.c",
       "upstream_sha256": "720b3e5b788ed60cf48dd8422d993bd86484cc1db055e9626dd407cd4c368ac6"
     },
@@ -139,12 +140,12 @@
       "upstream_sha256": "856d3a57e07ee3720f30f18d93f65a95aba9212dfbb6ee9dff61aa9632edd0e6"
     },
     {
-      "distributed_sha256": "4d6759763435e90b68c558acacc79043b80469a9599a3674a447246dbcacfa8d",
+      "distributed_sha256": "5896452eb7822964b17625bacbfe19a7b6c8b7cc5cdb9893e69f69b77cc48639",
       "path": "source/gamelib/packfile_handle.c",
       "upstream_sha256": "4d6759763435e90b68c558acacc79043b80469a9599a3674a447246dbcacfa8d"
     },
     {
-      "distributed_sha256": "cf6e60cb796045938903a58d23d8c920d4a23ded8d72599396c4af66cb28b34b",
+      "distributed_sha256": "358a91fbe9d82a12745c3f3217b6e0a91f0dc1e039c82c524a5f34584aa7e2f5",
       "path": "source/gamelib/packfile_handle.h",
       "upstream_sha256": "cf6e60cb796045938903a58d23d8c920d4a23ded8d72599396c4af66cb28b34b"
     },

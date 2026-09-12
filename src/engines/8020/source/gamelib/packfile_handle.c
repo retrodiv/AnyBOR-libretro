@@ -106,6 +106,8 @@ void packfile_handle_table_destroy(s_packfile_handle_table *table){
         return;
     }
 
+    for(size_t i = 0; i < table->capacity; ++i)
+        free(table->handle[i].source_path);
     free(table->handle);
     packfile_handle_table_init(table);
 }
@@ -156,6 +158,7 @@ void packfile_handle_release(s_packfile_handle_table *table, int handle) {
         return;
     }
 
+    free(record->source_path);
     memset(record, 0, sizeof(*record));
     record->type = PACKFILE_HANDLE_FREE;
     record->file_descriptor = -1;

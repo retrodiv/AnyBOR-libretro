@@ -24,6 +24,7 @@ typedef struct s_packfile_handle
     e_packfile_handle_type type;
     int next_free;
     int file_descriptor;
+    char *source_path; /* AnyBOR: owned path for direct-reader restoration. */
     uint64_t data_start;
     uint64_t size;
     uint64_t position;

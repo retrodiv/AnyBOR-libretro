@@ -767,6 +767,48 @@ static void packfile_release_all_handles(void) {
     packfile_handle_table_destroy(&packfile_handle_table);
 }
 
+/* Close only live process descriptors before restoring the handle table.
+ * Saved descriptor numbers must never be used to close frontend resources. */
+void obor_packfile_suspend(void)
+{
+    for(size_t i = 0; i < packfile_handle_table.capacity; ++i) {
+        s_packfile_handle *h = &packfile_handle_table.handle[i];
+        if(h->type == PACKFILE_HANDLE_DIRECT && h->file_descriptor >= 0) {
+            close(h->file_descriptor);
+            h->file_descriptor = -1;
+        }
+    }
+}
+
+void obor_packfile_closeall(void)
+{
+    obor_packfile_suspend();
+    if(pakfd >= 0) {
+        close(pakfd);
+        pakfd = -1;
+    }
+}
+
+int obor_packfile_fixup(const char *pakpath)
+{
+    int ok = 1;
+    (void)pakpath;
+    for(size_t i = 0; i < packfile_handle_table.capacity; ++i) {
+        s_packfile_handle *h = &packfile_handle_table.handle[i];
+        if(h->type != PACKFILE_HANDLE_DIRECT) continue;
+        h->file_descriptor = h->source_path ? open(h->source_path, O_RDONLY | O_BINARY) : -1;
+        if(h->file_descriptor < 0) {
+            ok = 0;
+        } else if(h->position > UINT64_MAX - h->data_start ||
+                  packfile_seek_fd_unsigned(h->file_descriptor, h->data_start + h->position, SEEK_SET) < 0) {
+            close(h->file_descriptor);
+            h->file_descriptor = -1;
+            ok = 0;
+        }
+    }
+    return ok;
+}
+
 void packfile_mode(int mode) {
     if(!mode || !pak_cache_enabled)  {
         pOpenPackfile = openPackfile;
@@ -874,6 +916,12 @@ static int openPackfileLoose(const char *filename) {
         virtual_handle,
         PACKFILE_HANDLE_DIRECT
     );
+    handle_record->source_path = strdup(disk_filename);
+    if(!handle_record->source_path) {
+        close(real_handle);
+        packfile_handle_release(&packfile_handle_table, virtual_handle);
+        return -1;
+    }
     handle_record->file_descriptor = real_handle;
     handle_record->size = (packfile_size_t)loose_file_size;
     return virtual_handle;
@@ -961,6 +1009,13 @@ int openPackfile(const char *filename, const char *packfilename) {
                 return -1;
             }
 
+            handle_record->source_path = strdup(packfilename);
+            if(!handle_record->source_path) {
+                close(real_handle);
+                packfile_handle_release(&packfile_handle_table, virtual_handle);
+                return -1;
+            }
+            handle_record->data_start = entry.data_offset;
             handle_record->file_descriptor = real_handle;
             handle_record->size = entry.data_size;
             return virtual_handle;
