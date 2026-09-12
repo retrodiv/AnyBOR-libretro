@@ -28,6 +28,11 @@
 #include "savepng.h"
 #endif
 
+#ifdef LIBRETRO
+#include "libretroport.h"
+#include "savepng.h"
+#endif
+
 #if _POSIX_VERSION > 0
 #include <sys/stat.h>
 #endif

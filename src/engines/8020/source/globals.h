@@ -34,6 +34,10 @@
 #include "sdlport.h"
 #endif
 
+#ifdef LIBRETRO
+#include "libretroport.h"
+#endif
+
 #include "packfile.h"
 
 /////////////////////////////////////////////////////////////////////////////

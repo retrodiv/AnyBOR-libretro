@@ -9,7 +9,14 @@
 #ifndef THREADS_H
 #define THREADS_H
 
-#if SDL
+#if LIBRETRO
+struct bor_thread;
+typedef struct bor_thread bor_thread;
+struct bor_mutex;
+typedef struct bor_mutex bor_mutex;
+struct bor_cond;
+typedef struct bor_cond bor_cond;
+#elif SDL
 #include "SDL.h"
 #include "SDL_thread.h"
 typedef SDL_Thread bor_thread;
