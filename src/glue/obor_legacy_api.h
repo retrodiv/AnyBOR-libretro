@@ -33,7 +33,7 @@ static size_t obor_script_quote(const char *s, size_t n, size_t p)
 }
 
 /* The legacy getentityproperty(..., "attack", ...) API is present through
- * pinned build 4086 and absent in 4432 and 6412. Those later compilers
+ * pinned build 4086 and absent in 4432, 6412 and 8020. Those later compilers
  * reject it, whereas model-command vocabulary can merely be ignored by an
  * older parser. This is an API-support constraint, not content identity.
  * Recognize a literal second argument, including nested first arguments. */

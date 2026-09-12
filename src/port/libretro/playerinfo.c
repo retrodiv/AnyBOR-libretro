@@ -8,7 +8,7 @@
  * (entity/model/player types); that header redefines printf and drags in
  * the whole engine surface, which the rest of the port layer avoids.
  * The field chain player[i].ent->model->name and ent->direction is stable
- * across every pinned era (verified 3400..6412).
+ * across every pinned era (verified 3400..8020).
  */
 #include "openbor.h"
 #include "obor_abi.h"

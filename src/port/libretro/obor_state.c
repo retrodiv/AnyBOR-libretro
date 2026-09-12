@@ -478,7 +478,7 @@ uint32_t obor_serialize_size(void)
              * estimate for the images/scripts cached by typical mods while
              * discounting
              * streamed music and video.  The inactive-engine subtraction
-             * below reduces the snapshot size: cap the estimate at
+             * below removes about 24 MiB from build 8020: cap the estimate at
              * 216 MiB so a large first-run game still advertises the proven
              * 223 MiB transport size, below a 256 MiB rewind ring. */
             if (packed > (216ULL << 20))

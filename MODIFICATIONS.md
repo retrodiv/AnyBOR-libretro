@@ -15,6 +15,7 @@ The root [LICENSE](LICENSE) covers original AnyBOR contributions only.
 - OpenBOR 4086: [modification inventory](docs/modifications/4086.md).
 - OpenBOR 4432: [modification inventory](docs/modifications/4432.md).
 - OpenBOR 6412: [modification inventory](docs/modifications/6412.md).
+- OpenBOR 8020: [modification inventory](docs/modifications/8020.md).
 
 The portable circle and fixed-width endian implementations accompany each
 engine from its first public import. No removed historical implementation is

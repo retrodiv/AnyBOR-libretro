@@ -49,6 +49,13 @@
     "source": "src/engines/6412/LICENSE"
   },
   {
+    "file": "LICENSES/OpenBOR-8020.txt",
+    "license": "BSD-3-Clause",
+    "scope": "source and binary",
+    "sha256": "b8f3916944f0b5aee216ef7a494820d17ae658336a4680992dc244ebedecf3ea",
+    "source": "src/engines/8020/LICENSE"
+  },
+  {
     "file": "LICENSES/zlib.txt",
     "license": "Zlib",
     "scope": "source and binary",
@@ -232,7 +239,7 @@
   },
   {
     "file": "LICENSES/miniz-MIT.txt",
-    "license": "BSD-3-Clause",
+    "license": "MIT",
     "scope": "source and binary",
     "sha256": "6f20fa7672b00e2e975c291df737cf227addf3ad32e36fef3fe0f416e4664d3d",
     "source": "src/third_party/LICENSE"
@@ -273,10 +280,17 @@
     "source": "src/engines/6412/source/webmlib/nestegg/LICENSE"
   },
   {
+    "file": "LICENSES/WebM-8020-nestegg.txt",
+    "license": "see notice",
+    "scope": "source and binary",
+    "sha256": "505ee8e018326f36bb4070f69c6eb3caa6079b8fb796cd53a8d1bb168337e5ae",
+    "source": "src/engines/8020/source/webmlib/nestegg/LICENSE"
+  },
+  {
     "file": "LICENSES/Embedded-source-notices.txt",
     "license": "see each notice",
     "scope": "source and binary",
-    "sha256": "ae3aba4553823cb02aa879888b3ac25ac5de08477ed9254d1c192751f964bfe4",
+    "sha256": "9bdaa3bcc2166c6a25d09dd193f8e4fe4c9933936c6d889f3897af4a4c677413",
     "source": "Individual source headers listed in this document"
   },
   {

@@ -1,0 +1,916 @@
+{
+  "build": "8020",
+  "changes": [],
+  "files": [
+    {
+      "distributed_sha256": "b8f3916944f0b5aee216ef7a494820d17ae658336a4680992dc244ebedecf3ea",
+      "path": "LICENSE",
+      "upstream_sha256": "b8f3916944f0b5aee216ef7a494820d17ae658336a4680992dc244ebedecf3ea"
+    },
+    {
+      "distributed_sha256": "0d7fd690fee6730e55c0af33c60025aef59b4f250de9583fb761e5755cebf705",
+      "path": "Makefile.libretro",
+      "upstream_sha256": null
+    },
+    {
+      "distributed_sha256": "8d210999b4af34c1932e0865daf39a007aec54155b1ed909176a39af905f5b2f",
+      "path": "openbor.c",
+      "upstream_sha256": "8d210999b4af34c1932e0865daf39a007aec54155b1ed909176a39af905f5b2f"
+    },
+    {
+      "distributed_sha256": "e3891b5810d35f0584af98f9eb3dd6f7f2305a7185d0f6ffcbca3f1cfacd6964",
+      "path": "openbor.h",
+      "upstream_sha256": "e3891b5810d35f0584af98f9eb3dd6f7f2305a7185d0f6ffcbca3f1cfacd6964"
+    },
+    {
+      "distributed_sha256": "24b9fe5794af8226cda3b7424fae2d754b76773f4f60483200d33c24783fdb90",
+      "path": "openborscript.c",
+      "upstream_sha256": "24b9fe5794af8226cda3b7424fae2d754b76773f4f60483200d33c24783fdb90"
+    },
+    {
+      "distributed_sha256": "d28161304911a69764b5eb3e8fc475dd52520fc34f8a4ec19197c495221f0ae4",
+      "path": "source/bitmask.h",
+      "upstream_sha256": "d28161304911a69764b5eb3e8fc475dd52520fc34f8a4ec19197c495221f0ae4"
+    },
+    {
+      "distributed_sha256": "6b069a6c79ab8f11610484ef9564f96d15f4e7c9dee322b9413fe6e748cedc10",
+      "path": "source/defense_fields.def",
+      "upstream_sha256": "6b069a6c79ab8f11610484ef9564f96d15f4e7c9dee322b9413fe6e748cedc10"
+    },
+    {
+      "distributed_sha256": "29f501b015da45039518424dd5792a3785f6e81aaae3d3e355137c493bb4735a",
+      "path": "source/gamelib/anigif.c",
+      "upstream_sha256": "29f501b015da45039518424dd5792a3785f6e81aaae3d3e355137c493bb4735a"
+    },
+    {
+      "distributed_sha256": "4e8aa4d2f443279a5f0cff0d01f2663df1ac8fd8b338139ec7bb393238148d81",
+      "path": "source/gamelib/anigif.h",
+      "upstream_sha256": "4e8aa4d2f443279a5f0cff0d01f2663df1ac8fd8b338139ec7bb393238148d81"
+    },
+    {
+      "distributed_sha256": "8427555f80358437125777c4a2fa552cd4b15f27dac42cc6c30ef2a4aeecac5e",
+      "path": "source/gamelib/bitmap.c",
+      "upstream_sha256": "8427555f80358437125777c4a2fa552cd4b15f27dac42cc6c30ef2a4aeecac5e"
+    },
+    {
+      "distributed_sha256": "d7975da83659bac74b45002eab6c560689d402569935203195253171cee018cf",
+      "path": "source/gamelib/bitmap.h",
+      "upstream_sha256": "d7975da83659bac74b45002eab6c560689d402569935203195253171cee018cf"
+    },
+    {
+      "distributed_sha256": "f482b1d8cbcf445e6055789f4f55088344294e8e3d117caab0ac3332daf3bc10",
+      "modified": true,
+      "path": "source/gamelib/borendian.h",
+      "summary": "Portable circle rasterization and fixed-width endian adaptations are included from the first public import.",
+      "upstream_sha256": "18856c2f73a5d01654f209f2513e0d04666b417a8df83d1ba11a8b383d9dc613"
+    },
+    {
+      "distributed_sha256": "278d672f27f76a7ec3715ab5b317bce9bcc419caf3430a725f1423b8caebfdba",
+      "modified": true,
+      "path": "source/gamelib/draw.c",
+      "summary": "Portable circle rasterization and fixed-width endian adaptations are included from the first public import.",
+      "upstream_sha256": "73db8ffc5ccc6f5a6cf58160f73f393dba1b48a7b21efbd2f596257d44fbdfa2"
+    },
+    {
+      "distributed_sha256": "377f78ac847552076d0444a44a45b0949334f83606255569f6e124d91bb58f2a",
+      "path": "source/gamelib/draw.h",
+      "upstream_sha256": "377f78ac847552076d0444a44a45b0949334f83606255569f6e124d91bb58f2a"
+    },
+    {
+      "distributed_sha256": "0d1c0a1ebc4b2f296ab10b683fefb0a10ac993b89d888c527da7b7e49cb85fb3",
+      "path": "source/gamelib/draw16.c",
+      "upstream_sha256": "0d1c0a1ebc4b2f296ab10b683fefb0a10ac993b89d888c527da7b7e49cb85fb3"
+    },
+    {
+      "distributed_sha256": "d52b763bcfe74a656de28ef92b8f16da5f6f97465848991107758e97b5c68798",
+      "path": "source/gamelib/draw32.c",
+      "upstream_sha256": "d52b763bcfe74a656de28ef92b8f16da5f6f97465848991107758e97b5c68798"
+    },
+    {
+      "distributed_sha256": "89dfd1122fc8956320744e3284e7e60b21043dba8593c223b26492c2f293731d",
+      "path": "source/gamelib/filecache.c",
+      "upstream_sha256": "89dfd1122fc8956320744e3284e7e60b21043dba8593c223b26492c2f293731d"
+    },
+    {
+      "distributed_sha256": "78d6646031e59ddc71ee45c965380f3edd1d6f2362dba8639169051d3990dbfc",
+      "path": "source/gamelib/filecache.h",
+      "upstream_sha256": "78d6646031e59ddc71ee45c965380f3edd1d6f2362dba8639169051d3990dbfc"
+    },
+    {
+      "distributed_sha256": "74944769b719009836cb98571823536234bbc63d95f6b28dcd7ae1af0ff98f1a",
+      "path": "source/gamelib/font.c",
+      "upstream_sha256": "74944769b719009836cb98571823536234bbc63d95f6b28dcd7ae1af0ff98f1a"
+    },
+    {
+      "distributed_sha256": "300070e53fa576bd550bc11c377e6328c90d1cd266e18e5fce7d275c79257fc0",
+      "path": "source/gamelib/font.h",
+      "upstream_sha256": "300070e53fa576bd550bc11c377e6328c90d1cd266e18e5fce7d275c79257fc0"
+    },
+    {
+      "distributed_sha256": "9c6a61772c1ed714c16e7fa0c777c46f1c54c05861d1bf9e13c875f2b2801edc",
+      "path": "source/gamelib/loadimg.c",
+      "upstream_sha256": "9c6a61772c1ed714c16e7fa0c777c46f1c54c05861d1bf9e13c875f2b2801edc"
+    },
+    {
+      "distributed_sha256": "b6483ed3afbedefbaf001a7d695a42c7e0a2c178831bd4cc98ff7b13e9679d70",
+      "path": "source/gamelib/loadimg.h",
+      "upstream_sha256": "b6483ed3afbedefbaf001a7d695a42c7e0a2c178831bd4cc98ff7b13e9679d70"
+    },
+    {
+      "distributed_sha256": "bbd99a89a2ccbd4700393018f503607235914fad0e3f1056e782a65527f33ea6",
+      "path": "source/gamelib/models.c",
+      "upstream_sha256": "bbd99a89a2ccbd4700393018f503607235914fad0e3f1056e782a65527f33ea6"
+    },
+    {
+      "distributed_sha256": "97bfca87a0eab276a7899153a0a0bdfa0e8e7ed32081df161eaba839fae3de78",
+      "path": "source/gamelib/models.h",
+      "upstream_sha256": "97bfca87a0eab276a7899153a0a0bdfa0e8e7ed32081df161eaba839fae3de78"
+    },
+    {
+      "distributed_sha256": "720b3e5b788ed60cf48dd8422d993bd86484cc1db055e9626dd407cd4c368ac6",
+      "path": "source/gamelib/packfile.c",
+      "upstream_sha256": "720b3e5b788ed60cf48dd8422d993bd86484cc1db055e9626dd407cd4c368ac6"
+    },
+    {
+      "distributed_sha256": "856d3a57e07ee3720f30f18d93f65a95aba9212dfbb6ee9dff61aa9632edd0e6",
+      "path": "source/gamelib/packfile.h",
+      "upstream_sha256": "856d3a57e07ee3720f30f18d93f65a95aba9212dfbb6ee9dff61aa9632edd0e6"
+    },
+    {
+      "distributed_sha256": "4d6759763435e90b68c558acacc79043b80469a9599a3674a447246dbcacfa8d",
+      "path": "source/gamelib/packfile_handle.c",
+      "upstream_sha256": "4d6759763435e90b68c558acacc79043b80469a9599a3674a447246dbcacfa8d"
+    },
+    {
+      "distributed_sha256": "cf6e60cb796045938903a58d23d8c920d4a23ded8d72599396c4af66cb28b34b",
+      "path": "source/gamelib/packfile_handle.h",
+      "upstream_sha256": "cf6e60cb796045938903a58d23d8c920d4a23ded8d72599396c4af66cb28b34b"
+    },
+    {
+      "distributed_sha256": "b20f0c35439894e04f2d2d9b58e5a145dcdfc70e270f38fc9d74273b18d0d383",
+      "path": "source/gamelib/palette.c",
+      "upstream_sha256": "b20f0c35439894e04f2d2d9b58e5a145dcdfc70e270f38fc9d74273b18d0d383"
+    },
+    {
+      "distributed_sha256": "0a3ed9b87f66d2cd51810d86d79cc1beec83ca477172fb033f2851404da143b8",
+      "path": "source/gamelib/palette.h",
+      "upstream_sha256": "0a3ed9b87f66d2cd51810d86d79cc1beec83ca477172fb033f2851404da143b8"
+    },
+    {
+      "distributed_sha256": "5e08195d171f7baf370c3e2937fd7232e36492d6c30e55d6a0d5ce30b521e474",
+      "path": "source/gamelib/pixelformat.c",
+      "upstream_sha256": "5e08195d171f7baf370c3e2937fd7232e36492d6c30e55d6a0d5ce30b521e474"
+    },
+    {
+      "distributed_sha256": "26fbe12d0b37aee37299f5d8834d7f2b99cf7ca143df8cd00399fbad18955f8a",
+      "path": "source/gamelib/screen.c",
+      "upstream_sha256": "26fbe12d0b37aee37299f5d8834d7f2b99cf7ca143df8cd00399fbad18955f8a"
+    },
+    {
+      "distributed_sha256": "3098fd0b25542eeb90836c6e1a8d1d84aa930ecfc55f24665389af1c704210a9",
+      "path": "source/gamelib/screen.h",
+      "upstream_sha256": "3098fd0b25542eeb90836c6e1a8d1d84aa930ecfc55f24665389af1c704210a9"
+    },
+    {
+      "distributed_sha256": "1532aa5470a37b10b3ded3778399de8e64ba407124204789dc290083a4f53732",
+      "path": "source/gamelib/screen16.c",
+      "upstream_sha256": "1532aa5470a37b10b3ded3778399de8e64ba407124204789dc290083a4f53732"
+    },
+    {
+      "distributed_sha256": "d69a29810c89cbf421a723c1eb78ae2a6bbf1f4ccfab304d0a3a0e9b532a4b19",
+      "path": "source/gamelib/screen32.c",
+      "upstream_sha256": "d69a29810c89cbf421a723c1eb78ae2a6bbf1f4ccfab304d0a3a0e9b532a4b19"
+    },
+    {
+      "distributed_sha256": "a2592c94a584e951ea2f59be56bb915b605aa1b5d9ee3261a927ffff2c331e04",
+      "path": "source/gamelib/sound_channel.c",
+      "upstream_sha256": "a2592c94a584e951ea2f59be56bb915b605aa1b5d9ee3261a927ffff2c331e04"
+    },
+    {
+      "distributed_sha256": "756ace108021811d15a5f0cdc732f87817708c0cd471aa75602575d1698ad31a",
+      "path": "source/gamelib/sound_channel.h",
+      "upstream_sha256": "756ace108021811d15a5f0cdc732f87817708c0cd471aa75602575d1698ad31a"
+    },
+    {
+      "distributed_sha256": "e111d264762f53dd42532b4dc21448062b959adb8eeae4ce129c13796ae52a3e",
+      "path": "source/gamelib/sound_stream.c",
+      "upstream_sha256": "e111d264762f53dd42532b4dc21448062b959adb8eeae4ce129c13796ae52a3e"
+    },
+    {
+      "distributed_sha256": "c1953b4ab90fbeee0f144486cb9f14d55dddb9f083138ab55b843fc1d154e370",
+      "path": "source/gamelib/sound_stream.h",
+      "upstream_sha256": "c1953b4ab90fbeee0f144486cb9f14d55dddb9f083138ab55b843fc1d154e370"
+    },
+    {
+      "distributed_sha256": "4b070f8f9fcbdc0894c085f2b0513b0d473047a105e757d8e96819c61e640e60",
+      "path": "source/gamelib/soundmix.c",
+      "upstream_sha256": "4b070f8f9fcbdc0894c085f2b0513b0d473047a105e757d8e96819c61e640e60"
+    },
+    {
+      "distributed_sha256": "71995015fb3c03b972afd453d6fcfee20addda286c16ceba94b8b108a09168dd",
+      "path": "source/gamelib/soundmix.h",
+      "upstream_sha256": "71995015fb3c03b972afd453d6fcfee20addda286c16ceba94b8b108a09168dd"
+    },
+    {
+      "distributed_sha256": "14a82dcaf9f0344e7a5be9519da527b9cccff36e431761d67db2821cae43415f",
+      "path": "source/gamelib/sprite.c",
+      "upstream_sha256": "14a82dcaf9f0344e7a5be9519da527b9cccff36e431761d67db2821cae43415f"
+    },
+    {
+      "distributed_sha256": "160dc24d8b7db9726c29fca911d506dd36c1462eb2b40fc6251a8b381f53d74e",
+      "path": "source/gamelib/sprite.h",
+      "upstream_sha256": "160dc24d8b7db9726c29fca911d506dd36c1462eb2b40fc6251a8b381f53d74e"
+    },
+    {
+      "distributed_sha256": "a94c17b1a6788c0348f3f7e5626f31250e2566bec8ef92a7e8ef1738adec1602",
+      "path": "source/gamelib/spriteq.c",
+      "upstream_sha256": "a94c17b1a6788c0348f3f7e5626f31250e2566bec8ef92a7e8ef1738adec1602"
+    },
+    {
+      "distributed_sha256": "e998d23615d4bffb684e0aa5ece2ace6a1162ff30f33857a1aab322011079427",
+      "path": "source/gamelib/spriteq.h",
+      "upstream_sha256": "e998d23615d4bffb684e0aa5ece2ace6a1162ff30f33857a1aab322011079427"
+    },
+    {
+      "distributed_sha256": "fc095a69ae5411127dc09cbddadcbf39a94dc8a1a0bb10b5fb434cb7385dd5b9",
+      "path": "source/gamelib/spritex8p16.c",
+      "upstream_sha256": "fc095a69ae5411127dc09cbddadcbf39a94dc8a1a0bb10b5fb434cb7385dd5b9"
+    },
+    {
+      "distributed_sha256": "b12956d4e68a449432ff435bed488cfc276fd52b417d4b45c9f883563a58c20c",
+      "path": "source/gamelib/spritex8p32.c",
+      "upstream_sha256": "b12956d4e68a449432ff435bed488cfc276fd52b417d4b45c9f883563a58c20c"
+    },
+    {
+      "distributed_sha256": "13a31d7611db2af96760d1202c32be49f4a1f4078236eb11b6dcd6754d9f9094",
+      "path": "source/gamelib/threads.h",
+      "upstream_sha256": "13a31d7611db2af96760d1202c32be49f4a1f4078236eb11b6dcd6754d9f9094"
+    },
+    {
+      "distributed_sha256": "d4fd205857100a808b95265eb3203d064e118ea494c9d053d5585c16ad81789f",
+      "path": "source/gamelib/timer.h",
+      "upstream_sha256": "d4fd205857100a808b95265eb3203d064e118ea494c9d053d5585c16ad81789f"
+    },
+    {
+      "distributed_sha256": "b0636ffe0f3913b573d9f0fbad239c110084c18a9f6a366e507902803bc7dea0",
+      "path": "source/gamelib/transform.c",
+      "upstream_sha256": "b0636ffe0f3913b573d9f0fbad239c110084c18a9f6a366e507902803bc7dea0"
+    },
+    {
+      "distributed_sha256": "43b84b0cc41903d36d4e775fddf2798ed1e4fa70896ef130545ddca157f1c8b8",
+      "path": "source/gamelib/transform.h",
+      "upstream_sha256": "43b84b0cc41903d36d4e775fddf2798ed1e4fa70896ef130545ddca157f1c8b8"
+    },
+    {
+      "distributed_sha256": "c3825ddfd00aaf0f9bd89d330d946164fb8244b65548426b95c5b834d44f3226",
+      "path": "source/gamelib/translation.c",
+      "upstream_sha256": "c3825ddfd00aaf0f9bd89d330d946164fb8244b65548426b95c5b834d44f3226"
+    },
+    {
+      "distributed_sha256": "c100dcbcc5b2f7f486ed5707a358bf480564a2d0dc4f65738dd3c0c29871107b",
+      "path": "source/gamelib/translation.h",
+      "upstream_sha256": "c100dcbcc5b2f7f486ed5707a358bf480564a2d0dc4f65738dd3c0c29871107b"
+    },
+    {
+      "distributed_sha256": "2540de17aca7d0a0280aaa3235f645f5051ca5b38c59074aa162c7ddb47b49c9",
+      "path": "source/gamelib/types.h",
+      "upstream_sha256": "2540de17aca7d0a0280aaa3235f645f5051ca5b38c59074aa162c7ddb47b49c9"
+    },
+    {
+      "distributed_sha256": "811fbd5f87a508d6a505a14f6f1891837d9d4142d79839ab191f5e0dd7185861",
+      "path": "source/gamelib/vga.h",
+      "upstream_sha256": "811fbd5f87a508d6a505a14f6f1891837d9d4142d79839ab191f5e0dd7185861"
+    },
+    {
+      "distributed_sha256": "4165f3a4c223a0856a828b8256bc5cf15b5d9a530441a7c1ab61c4cf2b4841dc",
+      "path": "source/gamelib/writepixel.h",
+      "upstream_sha256": "4165f3a4c223a0856a828b8256bc5cf15b5d9a530441a7c1ab61c4cf2b4841dc"
+    },
+    {
+      "distributed_sha256": "206f06742c0eca6cf6c36018775d875d1a1188b593392f548794d88e66bd0d6d",
+      "path": "source/gfxlib/gfxtypes.h",
+      "upstream_sha256": "206f06742c0eca6cf6c36018775d875d1a1188b593392f548794d88e66bd0d6d"
+    },
+    {
+      "distributed_sha256": "5c30e0920ff08c9e790342a623db93462355ab30ac0b923eb0d944c88d8d2f5f",
+      "path": "source/globals.h",
+      "upstream_sha256": "5c30e0920ff08c9e790342a623db93462355ab30ac0b923eb0d944c88d8d2f5f"
+    },
+    {
+      "distributed_sha256": "78cb800d6a4e1d57e66e8d5c464da27b6854f39318d7bf5f0bfcf3278e5badda",
+      "path": "source/omath.c",
+      "upstream_sha256": "78cb800d6a4e1d57e66e8d5c464da27b6854f39318d7bf5f0bfcf3278e5badda"
+    },
+    {
+      "distributed_sha256": "6e830bec468485c1e2dc4445b265a7d47cf200a40e3a88bd506acd8d9a0a17ff",
+      "path": "source/omath.h",
+      "upstream_sha256": "6e830bec468485c1e2dc4445b265a7d47cf200a40e3a88bd506acd8d9a0a17ff"
+    },
+    {
+      "distributed_sha256": "a3645bf36c9a860bdf394d7f740a7aa336a3e332122e3ebb2b544036e20c9573",
+      "path": "source/openborscript/animation.c",
+      "upstream_sha256": "a3645bf36c9a860bdf394d7f740a7aa336a3e332122e3ebb2b544036e20c9573"
+    },
+    {
+      "distributed_sha256": "fc00aab9e9a98dff37978f4747ce3fe2542539f1d95c57fe1a7a796e79a9fe18",
+      "path": "source/openborscript/animation.h",
+      "upstream_sha256": "fc00aab9e9a98dff37978f4747ce3fe2542539f1d95c57fe1a7a796e79a9fe18"
+    },
+    {
+      "distributed_sha256": "81ce996be3f7c705d97410e15dee72f2f966b43ff0b9fa329354a55ba7dfa7aa",
+      "path": "source/openborscript/audio.c",
+      "upstream_sha256": "81ce996be3f7c705d97410e15dee72f2f966b43ff0b9fa329354a55ba7dfa7aa"
+    },
+    {
+      "distributed_sha256": "1b95a9710449993d0f61182757048cf4ed1e4638cc54d83dc3a98816dddf17c6",
+      "path": "source/openborscript/audio.h",
+      "upstream_sha256": "1b95a9710449993d0f61182757048cf4ed1e4638cc54d83dc3a98816dddf17c6"
+    },
+    {
+      "distributed_sha256": "f96cb2b06d60bb2fb2f4d345a907ab5064db3fd1835b3f3e54f5924660bc7f4d",
+      "path": "source/openborscript/axis.c",
+      "upstream_sha256": "f96cb2b06d60bb2fb2f4d345a907ab5064db3fd1835b3f3e54f5924660bc7f4d"
+    },
+    {
+      "distributed_sha256": "28d5b01b29bf9c70a44cb52962e4d8b6e4d64cccf1b6c798999b3846c860878c",
+      "path": "source/openborscript/axis.h",
+      "upstream_sha256": "28d5b01b29bf9c70a44cb52962e4d8b6e4d64cccf1b6c798999b3846c860878c"
+    },
+    {
+      "distributed_sha256": "d3e6e1d83ccc6ae30ac51222bd4a440a792851a4b4799d9bec87691e59273184",
+      "path": "source/openborscript/binding.c",
+      "upstream_sha256": "d3e6e1d83ccc6ae30ac51222bd4a440a792851a4b4799d9bec87691e59273184"
+    },
+    {
+      "distributed_sha256": "0819bc8b0a292033cc7d5579f133ae740f9018d23074be9f30556db13d6de3ec",
+      "path": "source/openborscript/binding.h",
+      "upstream_sha256": "0819bc8b0a292033cc7d5579f133ae740f9018d23074be9f30556db13d6de3ec"
+    },
+    {
+      "distributed_sha256": "351918413a0b54928e40c59e9a5b17544432358707db640b8e0bbab428737656",
+      "path": "source/openborscript/collision_attack.c",
+      "upstream_sha256": "351918413a0b54928e40c59e9a5b17544432358707db640b8e0bbab428737656"
+    },
+    {
+      "distributed_sha256": "dd08a730b8d47e7b5c864431b715557fcbfc7e7f2665439cff092b40ad5d56ca",
+      "path": "source/openborscript/collision_attack.h",
+      "upstream_sha256": "dd08a730b8d47e7b5c864431b715557fcbfc7e7f2665439cff092b40ad5d56ca"
+    },
+    {
+      "distributed_sha256": "be1a8e364d16f183d1e044a65cca25a9d12a151b6002ea56e1d335e7254963c4",
+      "path": "source/openborscript/collision_body.c",
+      "upstream_sha256": "be1a8e364d16f183d1e044a65cca25a9d12a151b6002ea56e1d335e7254963c4"
+    },
+    {
+      "distributed_sha256": "296608b5732fdfc91c9959c3ba066210c81fcebf59b7e534e1026543fc23803d",
+      "path": "source/openborscript/collision_coordinates.c",
+      "upstream_sha256": "296608b5732fdfc91c9959c3ba066210c81fcebf59b7e534e1026543fc23803d"
+    },
+    {
+      "distributed_sha256": "3d7647c4e8f9f586e5a64bc4640b34a925d427ca00e81e1b6829680e6792347c",
+      "path": "source/openborscript/colorset.c",
+      "upstream_sha256": "3d7647c4e8f9f586e5a64bc4640b34a925d427ca00e81e1b6829680e6792347c"
+    },
+    {
+      "distributed_sha256": "c4e98bd87c81e2941474a09ab0e0c95eb283717e46489df1442f9dfee3f900a8",
+      "path": "source/openborscript/colorset.h",
+      "upstream_sha256": "c4e98bd87c81e2941474a09ab0e0c95eb283717e46489df1442f9dfee3f900a8"
+    },
+    {
+      "distributed_sha256": "32ac8dee1190a3a4ea08de50fefb25f71bb1a3cf39292ee1edd739cd25e3d498",
+      "path": "source/openborscript/command_input.c",
+      "upstream_sha256": "32ac8dee1190a3a4ea08de50fefb25f71bb1a3cf39292ee1edd739cd25e3d498"
+    },
+    {
+      "distributed_sha256": "311b82f9740cd02a18e9531a66d2b70bd53f86b72a3502cf72e3fb4acb5dc548",
+      "path": "source/openborscript/command_input.h",
+      "upstream_sha256": "311b82f9740cd02a18e9531a66d2b70bd53f86b72a3502cf72e3fb4acb5dc548"
+    },
+    {
+      "distributed_sha256": "12a462821119a0056fb7a955e5c246dae44e6271d146ec11b107c0bedf052344",
+      "path": "source/openborscript/commands.c",
+      "upstream_sha256": "12a462821119a0056fb7a955e5c246dae44e6271d146ec11b107c0bedf052344"
+    },
+    {
+      "distributed_sha256": "bd85b0518c11c5afe3d1239d3ea55ffda751b0b2ca0e271b5099d3d8322a8ddd",
+      "path": "source/openborscript/commands.h",
+      "upstream_sha256": "bd85b0518c11c5afe3d1239d3ea55ffda751b0b2ca0e271b5099d3d8322a8ddd"
+    },
+    {
+      "distributed_sha256": "442139566fac12ff9f1189221724c96dc7ea7bbc588071279fd635c25ffddf4a",
+      "path": "source/openborscript/common_property.c",
+      "upstream_sha256": "442139566fac12ff9f1189221724c96dc7ea7bbc588071279fd635c25ffddf4a"
+    },
+    {
+      "distributed_sha256": "fcf14e9d6fbb0cbbb5867afef575bfb50db99e1e5a8bf3ccfe356517e143a8bc",
+      "path": "source/openborscript/config.h",
+      "upstream_sha256": "fcf14e9d6fbb0cbbb5867afef575bfb50db99e1e5a8bf3ccfe356517e143a8bc"
+    },
+    {
+      "distributed_sha256": "05c2040e0d51acbccf97a9224e0b66a6fba0676f961df02df95e8e9f2f727de5",
+      "path": "source/openborscript/constants.c",
+      "upstream_sha256": "05c2040e0d51acbccf97a9224e0b66a6fba0676f961df02df95e8e9f2f727de5"
+    },
+    {
+      "distributed_sha256": "754f085432c134cf10b0420637a13aff931f2106309fb859fe321ca762e9ef26",
+      "path": "source/openborscript/datetime.c",
+      "upstream_sha256": "754f085432c134cf10b0420637a13aff931f2106309fb859fe321ca762e9ef26"
+    },
+    {
+      "distributed_sha256": "c763cdc6e5cd8e12c3944ad4126299f373849dc938383e36b23442f1e370c5c6",
+      "path": "source/openborscript/datetime.h",
+      "upstream_sha256": "c763cdc6e5cd8e12c3944ad4126299f373849dc938383e36b23442f1e370c5c6"
+    },
+    {
+      "distributed_sha256": "4fc50b76831cd99c2c8a729ae706eaa0ec6a71018c76bd5acd7ffb16ef371fe5",
+      "path": "source/openborscript/drawmethod.c",
+      "upstream_sha256": "4fc50b76831cd99c2c8a729ae706eaa0ec6a71018c76bd5acd7ffb16ef371fe5"
+    },
+    {
+      "distributed_sha256": "2311947a6cc24b1805ef4cb1210fd67431627c17af1c8dff405d24c83b6a919b",
+      "path": "source/openborscript/drawmethod.h",
+      "upstream_sha256": "2311947a6cc24b1805ef4cb1210fd67431627c17af1c8dff405d24c83b6a919b"
+    },
+    {
+      "distributed_sha256": "b4c5882d23ed25b129a384116edabafe5d898531788d13d16a32aa09ba802c35",
+      "path": "source/openborscript/entity.c",
+      "upstream_sha256": "b4c5882d23ed25b129a384116edabafe5d898531788d13d16a32aa09ba802c35"
+    },
+    {
+      "distributed_sha256": "137b28a8821f81cd265600bd60f630e589def92e89525c9007dded08334b41b6",
+      "path": "source/openborscript/entity.h",
+      "upstream_sha256": "137b28a8821f81cd265600bd60f630e589def92e89525c9007dded08334b41b6"
+    },
+    {
+      "distributed_sha256": "08f0d33a9867b50c528a403898a9335b90127251c0a460b455b93c5d74c29204",
+      "path": "source/openborscript/faction.c",
+      "upstream_sha256": "08f0d33a9867b50c528a403898a9335b90127251c0a460b455b93c5d74c29204"
+    },
+    {
+      "distributed_sha256": "de4b7e22bc89c6f5f65341fff98b8e59dfe3f0de926248fa3b2c4d32696604eb",
+      "path": "source/openborscript/faction.h",
+      "upstream_sha256": "de4b7e22bc89c6f5f65341fff98b8e59dfe3f0de926248fa3b2c4d32696604eb"
+    },
+    {
+      "distributed_sha256": "9c99ec996dee4f8d1ef9692fd41a0c543e8874640722f8ef3e805a89b2a92118",
+      "path": "source/openborscript/flash.c",
+      "upstream_sha256": "9c99ec996dee4f8d1ef9692fd41a0c543e8874640722f8ef3e805a89b2a92118"
+    },
+    {
+      "distributed_sha256": "d793eff42299f32f4154e6003ec096cefd48cbb2cf225e73e3640029874f74df",
+      "path": "source/openborscript/flash.h",
+      "upstream_sha256": "d793eff42299f32f4154e6003ec096cefd48cbb2cf225e73e3640029874f74df"
+    },
+    {
+      "distributed_sha256": "755ff4af3716c2f42d0597fe95e79b7cfb482a92bf2a55a9122d60159f29617a",
+      "path": "source/openborscript/global_config.c",
+      "upstream_sha256": "755ff4af3716c2f42d0597fe95e79b7cfb482a92bf2a55a9122d60159f29617a"
+    },
+    {
+      "distributed_sha256": "a169cfe9ba70cbc88e3e546ef438d9f7b7c95f8ebb75e772ba1ac506bddf920a",
+      "path": "source/openborscript/global_config.h",
+      "upstream_sha256": "a169cfe9ba70cbc88e3e546ef438d9f7b7c95f8ebb75e772ba1ac506bddf920a"
+    },
+    {
+      "distributed_sha256": "8d3fbdb3b94b13157254b0fb57bb0f75f9133f234b7b43c65bd99527e0a882d7",
+      "path": "source/openborscript/icon.c",
+      "upstream_sha256": "8d3fbdb3b94b13157254b0fb57bb0f75f9133f234b7b43c65bd99527e0a882d7"
+    },
+    {
+      "distributed_sha256": "00fe52601bfab561a9a9a3bda4e0e3a0f79e925dbd4c5483eeee7f841e9f6e71",
+      "path": "source/openborscript/icon.h",
+      "upstream_sha256": "00fe52601bfab561a9a9a3bda4e0e3a0f79e925dbd4c5483eeee7f841e9f6e71"
+    },
+    {
+      "distributed_sha256": "fb14b874fa453e10110cd7159523f709adf2b1c2103c3495a1785ef95811e6b8",
+      "path": "source/openborscript/index.c",
+      "upstream_sha256": "fb14b874fa453e10110cd7159523f709adf2b1c2103c3495a1785ef95811e6b8"
+    },
+    {
+      "distributed_sha256": "7ff27e41939d64ad60b49891bd00956eebd97355aeec1f0d1e0783ae08b50509",
+      "path": "source/openborscript/layer.c",
+      "upstream_sha256": "7ff27e41939d64ad60b49891bd00956eebd97355aeec1f0d1e0783ae08b50509"
+    },
+    {
+      "distributed_sha256": "c4183f2e58d234b72e06e20d5961d8b6a0f6498112845e912b1d8fa6c13069da",
+      "path": "source/openborscript/level.c",
+      "upstream_sha256": "c4183f2e58d234b72e06e20d5961d8b6a0f6498112845e912b1d8fa6c13069da"
+    },
+    {
+      "distributed_sha256": "9e18909a6ab431241bca8148b3522b9c54ec851eb1d825257c2a6a84f27407cb",
+      "path": "source/openborscript/math.c",
+      "upstream_sha256": "9e18909a6ab431241bca8148b3522b9c54ec851eb1d825257c2a6a84f27407cb"
+    },
+    {
+      "distributed_sha256": "a0da4377db90ee645570726dfb1799d19e885309016c7178d6977f03d9cb81b8",
+      "path": "source/openborscript/model.c",
+      "upstream_sha256": "a0da4377db90ee645570726dfb1799d19e885309016c7178d6977f03d9cb81b8"
+    },
+    {
+      "distributed_sha256": "54ef6ab181e54d5e50451e6af979197f0c5bab77a3179067af728af2783f42c9",
+      "path": "source/openborscript/model.h",
+      "upstream_sha256": "54ef6ab181e54d5e50451e6af979197f0c5bab77a3179067af728af2783f42c9"
+    },
+    {
+      "distributed_sha256": "262e58c1575c90b5ced0030f4b093a8c90e14768ca307c100f4a273589b6674a",
+      "path": "source/openborscript/movie.c",
+      "upstream_sha256": "262e58c1575c90b5ced0030f4b093a8c90e14768ca307c100f4a273589b6674a"
+    },
+    {
+      "distributed_sha256": "9a5b187ffcb0a2d4d0e230d19a26748804727d8f4cceb0212a78edd9042fa2c4",
+      "path": "source/openborscript/movie.h",
+      "upstream_sha256": "9a5b187ffcb0a2d4d0e230d19a26748804727d8f4cceb0212a78edd9042fa2c4"
+    },
+    {
+      "distributed_sha256": "1cc38873c1dbdeb9010877d830335b6b60780404d5c08f74b9b7556fac068c1b",
+      "path": "source/openborscript/recursive_effect.c",
+      "upstream_sha256": "1cc38873c1dbdeb9010877d830335b6b60780404d5c08f74b9b7556fac068c1b"
+    },
+    {
+      "distributed_sha256": "8d9f9d26c7e41a995b74a8515b988e6e7d871e7a00bfdc301750924601f9192a",
+      "path": "source/openborscript/recursive_effect.h",
+      "upstream_sha256": "8d9f9d26c7e41a995b74a8515b988e6e7d871e7a00bfdc301750924601f9192a"
+    },
+    {
+      "distributed_sha256": "4a92e5031f30e7632ee36c39cd70aab170f5c37f2ec1e28acd008c6dd1d7d6a9",
+      "path": "source/openborscript/scriptcommon.h",
+      "upstream_sha256": "4a92e5031f30e7632ee36c39cd70aab170f5c37f2ec1e28acd008c6dd1d7d6a9"
+    },
+    {
+      "distributed_sha256": "24c1ede14139d2f06eb0af6458ec30d039abc6e2d3fe9f334b1316660ee8f151",
+      "path": "source/openborscript/spawn_hud.c",
+      "upstream_sha256": "24c1ede14139d2f06eb0af6458ec30d039abc6e2d3fe9f334b1316660ee8f151"
+    },
+    {
+      "distributed_sha256": "7745b8450ed5af8df168284306535e9927b3391ed33d7761b4bb7a6d2b05d1ea",
+      "path": "source/openborscript/spawn_hud.h",
+      "upstream_sha256": "7745b8450ed5af8df168284306535e9927b3391ed33d7761b4bb7a6d2b05d1ea"
+    },
+    {
+      "distributed_sha256": "986ca183a1c70568fc5b29bfd86f78782543175b3bf8852c8addaa1f752ccc3d",
+      "path": "source/openborscript/status_dial.c",
+      "upstream_sha256": "986ca183a1c70568fc5b29bfd86f78782543175b3bf8852c8addaa1f752ccc3d"
+    },
+    {
+      "distributed_sha256": "28084322423341532f015433725cf9e679e30d5cbed93414fede5ca6e46eebd6",
+      "path": "source/openborscript/status_dial.h",
+      "upstream_sha256": "28084322423341532f015433725cf9e679e30d5cbed93414fede5ca6e46eebd6"
+    },
+    {
+      "distributed_sha256": "112bfd9ed459e076c7daa28b960e25031cbab90d14a8ed388cd2d4cbedc50f4f",
+      "path": "source/openborscript/string.c",
+      "upstream_sha256": "112bfd9ed459e076c7daa28b960e25031cbab90d14a8ed388cd2d4cbedc50f4f"
+    },
+    {
+      "distributed_sha256": "765fe35e9db56c6d0faaba2057885025e25e5853df63e01b994a198c327c49db",
+      "path": "source/pnglib/pngdec.c",
+      "upstream_sha256": "765fe35e9db56c6d0faaba2057885025e25e5853df63e01b994a198c327c49db"
+    },
+    {
+      "distributed_sha256": "45ec467dd0e471bd69d76733b2829e8e5d29b5f3708f0b517050f0aa461f0fc1",
+      "path": "source/pnglib/pngdec.h",
+      "upstream_sha256": "45ec467dd0e471bd69d76733b2829e8e5d29b5f3708f0b517050f0aa461f0fc1"
+    },
+    {
+      "distributed_sha256": "71ed2fc5b7f512afb62e61b0ba02c85a0d6b77b26c134ca1b6f61379754041b5",
+      "path": "source/pnglib/savepng.c",
+      "upstream_sha256": "71ed2fc5b7f512afb62e61b0ba02c85a0d6b77b26c134ca1b6f61379754041b5"
+    },
+    {
+      "distributed_sha256": "cb75f07b6ec70dca1b1be98036d2be0fa37a6e6b1f97dde8163bdcc4c639d8e0",
+      "path": "source/pnglib/savepng.h",
+      "upstream_sha256": "cb75f07b6ec70dca1b1be98036d2be0fa37a6e6b1f97dde8163bdcc4c639d8e0"
+    },
+    {
+      "distributed_sha256": "58ab88db573295f7d8ae0c42448c02b2e8c10565c1c74c89daa6f2f3d8680115",
+      "path": "source/preprocessorlib/pp_expr.c",
+      "upstream_sha256": "58ab88db573295f7d8ae0c42448c02b2e8c10565c1c74c89daa6f2f3d8680115"
+    },
+    {
+      "distributed_sha256": "7dea0de0f286d884fc5bc918d92ea9e44f55dfc72169b8051617ff1729b8bf2a",
+      "path": "source/preprocessorlib/pp_expr.h",
+      "upstream_sha256": "7dea0de0f286d884fc5bc918d92ea9e44f55dfc72169b8051617ff1729b8bf2a"
+    },
+    {
+      "distributed_sha256": "a874cc0a23ec5c1ff92994ec55e17c103147810a915f7531f5aae0ef1f6df4bc",
+      "path": "source/preprocessorlib/pp_lexer.c",
+      "upstream_sha256": "a874cc0a23ec5c1ff92994ec55e17c103147810a915f7531f5aae0ef1f6df4bc"
+    },
+    {
+      "distributed_sha256": "db211b75991b558150cad257d7d22c8077413a47760676600b0861a67a4dc001",
+      "path": "source/preprocessorlib/pp_lexer.h",
+      "upstream_sha256": "db211b75991b558150cad257d7d22c8077413a47760676600b0861a67a4dc001"
+    },
+    {
+      "distributed_sha256": "cf32fd0e5050c7cd9f2730534d45d9eda78835636a1a6c9c9766f4cae423c23d",
+      "path": "source/preprocessorlib/pp_parser.c",
+      "upstream_sha256": "cf32fd0e5050c7cd9f2730534d45d9eda78835636a1a6c9c9766f4cae423c23d"
+    },
+    {
+      "distributed_sha256": "6e3857eec19a3380e1a651b51cf27e961af3af7a0ebd25a07d63693a5a5dad6d",
+      "path": "source/preprocessorlib/pp_parser.h",
+      "upstream_sha256": "6e3857eec19a3380e1a651b51cf27e961af3af7a0ebd25a07d63693a5a5dad6d"
+    },
+    {
+      "distributed_sha256": "3d16cc774553f173dbaf7fb9d8171952f3e3883530bfedc086cec862e7283b59",
+      "path": "source/ramlib/ram.c",
+      "upstream_sha256": "3d16cc774553f173dbaf7fb9d8171952f3e3883530bfedc086cec862e7283b59"
+    },
+    {
+      "distributed_sha256": "225955d4a422a7efc224108aad95f7bf74742f26a287b0ea66c31b9f585d9536",
+      "path": "source/ramlib/ram.h",
+      "upstream_sha256": "225955d4a422a7efc224108aad95f7bf74742f26a287b0ea66c31b9f585d9536"
+    },
+    {
+      "distributed_sha256": "d6811da7a1b4087d7ccf8db77bdda58598d911ad4d539bbeda0ba9190041b655",
+      "path": "source/randlib/rand32.c",
+      "upstream_sha256": "d6811da7a1b4087d7ccf8db77bdda58598d911ad4d539bbeda0ba9190041b655"
+    },
+    {
+      "distributed_sha256": "f34dee9b34983dc52b77084e0183a95df5d534892f6d46225de825c50b6761c5",
+      "path": "source/randlib/rand32.h",
+      "upstream_sha256": "f34dee9b34983dc52b77084e0183a95df5d534892f6d46225de825c50b6761c5"
+    },
+    {
+      "distributed_sha256": "d4e525a429a2f9138073747501f78d1d15f65f9bf1e3ee44b7215bc2b4624d36",
+      "path": "source/safealloc.h",
+      "upstream_sha256": "d4e525a429a2f9138073747501f78d1d15f65f9bf1e3ee44b7215bc2b4624d36"
+    },
+    {
+      "distributed_sha256": "1aeb853dc11b9546ec3b63374d246b6659be864fcdd36b5bbdd302c8ab72ab8d",
+      "path": "source/savedata.h",
+      "upstream_sha256": "1aeb853dc11b9546ec3b63374d246b6659be864fcdd36b5bbdd302c8ab72ab8d"
+    },
+    {
+      "distributed_sha256": "2441e1bff107106625a69ef3a712bebb0e2954cf018e508b4151f127f6d21826",
+      "path": "source/scriptlib/FirstFollow.h",
+      "upstream_sha256": "2441e1bff107106625a69ef3a712bebb0e2954cf018e508b4151f127f6d21826"
+    },
+    {
+      "distributed_sha256": "d42ccb253d606fce0a7d29138c176d7c6c836be9192d4510c4d4bfd8cbb73975",
+      "path": "source/scriptlib/ImportCache.c",
+      "upstream_sha256": "d42ccb253d606fce0a7d29138c176d7c6c836be9192d4510c4d4bfd8cbb73975"
+    },
+    {
+      "distributed_sha256": "df915a9313a63554c538f5c35e0a911381eca5aac6793ab1f4912e09983b6e3b",
+      "path": "source/scriptlib/ImportCache.h",
+      "upstream_sha256": "df915a9313a63554c538f5c35e0a911381eca5aac6793ab1f4912e09983b6e3b"
+    },
+    {
+      "distributed_sha256": "01fad7f4dbab2c3c7b1efc88d78bbf9bd141fa5351f045243666c2ec2cf092ff",
+      "path": "source/scriptlib/Instruction.c",
+      "upstream_sha256": "01fad7f4dbab2c3c7b1efc88d78bbf9bd141fa5351f045243666c2ec2cf092ff"
+    },
+    {
+      "distributed_sha256": "dd67bb4336f9b2a0e75f15466f99e8d2faa9e0c55604395bdb4c844fa2cdca98",
+      "path": "source/scriptlib/Instruction.h",
+      "upstream_sha256": "dd67bb4336f9b2a0e75f15466f99e8d2faa9e0c55604395bdb4c844fa2cdca98"
+    },
+    {
+      "distributed_sha256": "54f5a0c67fa15ef479b26bc18395f8b67e653970b0e59b7eb3a9157d470f349c",
+      "path": "source/scriptlib/Interpreter.c",
+      "upstream_sha256": "54f5a0c67fa15ef479b26bc18395f8b67e653970b0e59b7eb3a9157d470f349c"
+    },
+    {
+      "distributed_sha256": "4ac5a8f1cde462dfbb991b1bd83926005a82472477273f97152a587905d876bb",
+      "path": "source/scriptlib/Interpreter.h",
+      "upstream_sha256": "4ac5a8f1cde462dfbb991b1bd83926005a82472477273f97152a587905d876bb"
+    },
+    {
+      "distributed_sha256": "717fecd14553754474bd6de6f8ca30a22c7071d9c87601a0ec603f293ac30036",
+      "path": "source/scriptlib/Lexer.c",
+      "upstream_sha256": "717fecd14553754474bd6de6f8ca30a22c7071d9c87601a0ec603f293ac30036"
+    },
+    {
+      "distributed_sha256": "7f8af0760f14c3ce2bb449d1ad0fdfb7ba1fe7cd722bf7a9585dca86853fdbdc",
+      "path": "source/scriptlib/Lexer.h",
+      "upstream_sha256": "7f8af0760f14c3ce2bb449d1ad0fdfb7ba1fe7cd722bf7a9585dca86853fdbdc"
+    },
+    {
+      "distributed_sha256": "058e7f733faa1e0df59f87f325a1dd4fd2401bb89de77dc93cedca0f70b6cbb3",
+      "path": "source/scriptlib/List.c",
+      "upstream_sha256": "058e7f733faa1e0df59f87f325a1dd4fd2401bb89de77dc93cedca0f70b6cbb3"
+    },
+    {
+      "distributed_sha256": "7f93b469d3f14a35b2113ed082259a372162f8d4bba91b81ee3d05b7b6c07ebb",
+      "path": "source/scriptlib/List.h",
+      "upstream_sha256": "7f93b469d3f14a35b2113ed082259a372162f8d4bba91b81ee3d05b7b6c07ebb"
+    },
+    {
+      "distributed_sha256": "590483a1cd5fc502c0dbe0c263ef0609ab7698a353758925fe7a7a1eae57666e",
+      "path": "source/scriptlib/Parser.c",
+      "upstream_sha256": "590483a1cd5fc502c0dbe0c263ef0609ab7698a353758925fe7a7a1eae57666e"
+    },
+    {
+      "distributed_sha256": "db345b0fabe204add4bef6196b4a984aabcfcfe3d19325b8440419e0b33330fb",
+      "path": "source/scriptlib/Parser.h",
+      "upstream_sha256": "db345b0fabe204add4bef6196b4a984aabcfcfe3d19325b8440419e0b33330fb"
+    },
+    {
+      "distributed_sha256": "2b05f5e6dd94813cdaa6bf6e89d8d6c68375d157978e4a4e38401e78aabf06d3",
+      "path": "source/scriptlib/ParserSet.c",
+      "upstream_sha256": "2b05f5e6dd94813cdaa6bf6e89d8d6c68375d157978e4a4e38401e78aabf06d3"
+    },
+    {
+      "distributed_sha256": "a2fb3da1ad4edb4503e63728fe3650b15a41a2b13d741014c377906be1192bf1",
+      "path": "source/scriptlib/ParserSet.h",
+      "upstream_sha256": "a2fb3da1ad4edb4503e63728fe3650b15a41a2b13d741014c377906be1192bf1"
+    },
+    {
+      "distributed_sha256": "e00dba361933bea5cca030f5ee8c9adbbe312b94ef6bc98ae6d0b78c3c91d923",
+      "path": "source/scriptlib/Productions.h",
+      "upstream_sha256": "e00dba361933bea5cca030f5ee8c9adbbe312b94ef6bc98ae6d0b78c3c91d923"
+    },
+    {
+      "distributed_sha256": "9b306921bba8c136757757b4e392459bd1c70329ae567e3ee4d68fcaea459f6e",
+      "path": "source/scriptlib/ScriptVariant.c",
+      "upstream_sha256": "9b306921bba8c136757757b4e392459bd1c70329ae567e3ee4d68fcaea459f6e"
+    },
+    {
+      "distributed_sha256": "b5e02bf4a3c9701d2d54a50744aa0f3002f90cbafa6329dcf445708e189c7c20",
+      "path": "source/scriptlib/ScriptVariant.h",
+      "upstream_sha256": "b5e02bf4a3c9701d2d54a50744aa0f3002f90cbafa6329dcf445708e189c7c20"
+    },
+    {
+      "distributed_sha256": "e3078c7593823a8d3aac4dc2c4137f12ef6bc31a060cbacbaecfec2425976632",
+      "path": "source/scriptlib/ScriptVariantInteger.c",
+      "upstream_sha256": "e3078c7593823a8d3aac4dc2c4137f12ef6bc31a060cbacbaecfec2425976632"
+    },
+    {
+      "distributed_sha256": "eb81f9d06e7cb8e153fce0ed16c764485a9d6a0b037df144431d6a692c680ae0",
+      "path": "source/scriptlib/ScriptVariantInteger.h",
+      "upstream_sha256": "eb81f9d06e7cb8e153fce0ed16c764485a9d6a0b037df144431d6a692c680ae0"
+    },
+    {
+      "distributed_sha256": "da185aa596adc7fc7aeb5ae43910c68d3e70b4e27dab2a3b0c79f98203828a91",
+      "path": "source/scriptlib/Stack.c",
+      "upstream_sha256": "da185aa596adc7fc7aeb5ae43910c68d3e70b4e27dab2a3b0c79f98203828a91"
+    },
+    {
+      "distributed_sha256": "0629ed69cc3fe8ce21fe1dfe09c5aabdd7a6e0c9b0018236398ea1e224bfbe0e",
+      "path": "source/scriptlib/Stack.h",
+      "upstream_sha256": "0629ed69cc3fe8ce21fe1dfe09c5aabdd7a6e0c9b0018236398ea1e224bfbe0e"
+    },
+    {
+      "distributed_sha256": "ba3b2924948ca074a6022104b0bfc435cec80b7d39e809468d6156a777d16d99",
+      "path": "source/scriptlib/StackedSymbolTable.c",
+      "upstream_sha256": "ba3b2924948ca074a6022104b0bfc435cec80b7d39e809468d6156a777d16d99"
+    },
+    {
+      "distributed_sha256": "8e75fa82587e534e2d7d38ddc18d3e021ecc8e9f1fec75940afb68e6c23b4053",
+      "path": "source/scriptlib/StackedSymbolTable.h",
+      "upstream_sha256": "8e75fa82587e534e2d7d38ddc18d3e021ecc8e9f1fec75940afb68e6c23b4053"
+    },
+    {
+      "distributed_sha256": "4c7e29a8d23e6269362b07c5de21f230306c3fd8e8610f34f66dcad31bc95fe3",
+      "path": "source/scriptlib/SymbolTable.c",
+      "upstream_sha256": "4c7e29a8d23e6269362b07c5de21f230306c3fd8e8610f34f66dcad31bc95fe3"
+    },
+    {
+      "distributed_sha256": "8131410aaa919c93fce2f0fbb7e6779c60ad890704cd00de51196a2f25aab305",
+      "path": "source/scriptlib/SymbolTable.h",
+      "upstream_sha256": "8131410aaa919c93fce2f0fbb7e6779c60ad890704cd00de51196a2f25aab305"
+    },
+    {
+      "distributed_sha256": "d48cac73d86847ecafc336de4e2b6040e4bbba9eae2f7bd46c51772f964d1183",
+      "path": "source/scriptlib/depends.h",
+      "upstream_sha256": "d48cac73d86847ecafc336de4e2b6040e4bbba9eae2f7bd46c51772f964d1183"
+    },
+    {
+      "distributed_sha256": "6c4823ce1e2930ecb3cf13f52efecdc63c2730579619fe6e3bf3f7d24f0ad976",
+      "path": "source/stringptr.c",
+      "upstream_sha256": "6c4823ce1e2930ecb3cf13f52efecdc63c2730579619fe6e3bf3f7d24f0ad976"
+    },
+    {
+      "distributed_sha256": "95cf2d2ba65ce8b3332ce098d61646f13765e4626b09ccdab4236a25b16ffb9c",
+      "path": "source/stringptr.h",
+      "upstream_sha256": "95cf2d2ba65ce8b3332ce098d61646f13765e4626b09ccdab4236a25b16ffb9c"
+    },
+    {
+      "distributed_sha256": "05c8ee34217c401b73f37015c50b189f696412d1ca86407a09e6e2b09cf21f04",
+      "path": "source/stristr.c",
+      "upstream_sha256": "05c8ee34217c401b73f37015c50b189f696412d1ca86407a09e6e2b09cf21f04"
+    },
+    {
+      "distributed_sha256": "d96196d834fe4a16fdf704a9f69658ff220c405f9da1a01be466e9548e5dcb06",
+      "path": "source/stristr.h",
+      "upstream_sha256": "d96196d834fe4a16fdf704a9f69658ff220c405f9da1a01be466e9548e5dcb06"
+    },
+    {
+      "distributed_sha256": "a393a33eb782680d32c3529ac39ac269440756d63e31647d689694dfd30959a2",
+      "path": "source/utils.c",
+      "upstream_sha256": "a393a33eb782680d32c3529ac39ac269440756d63e31647d689694dfd30959a2"
+    },
+    {
+      "distributed_sha256": "60df1283bd1261ca53dbc968befc17cb90bdfb3b0b7bc7fd2b8d46c982d60931",
+      "path": "source/utils.h",
+      "upstream_sha256": "60df1283bd1261ca53dbc968befc17cb90bdfb3b0b7bc7fd2b8d46c982d60931"
+    },
+    {
+      "distributed_sha256": "64b2aa0cab13b8b1bdf51f697fc25a3ec77cc8358b25500c60aa3016b32251d8",
+      "path": "source/webmlib/halloc/align.h",
+      "upstream_sha256": "64b2aa0cab13b8b1bdf51f697fc25a3ec77cc8358b25500c60aa3016b32251d8"
+    },
+    {
+      "distributed_sha256": "0d1e0d894aa9fe4eef0b7e1e27f2a0b5e4feac7312668284ee813fb77704db7e",
+      "path": "source/webmlib/halloc/halloc.c",
+      "upstream_sha256": "0d1e0d894aa9fe4eef0b7e1e27f2a0b5e4feac7312668284ee813fb77704db7e"
+    },
+    {
+      "distributed_sha256": "fd4dde7cde0fc609a0c1598d58b2ba387158d9ed29fbe1f4e86b43301e4c257b",
+      "path": "source/webmlib/halloc/halloc.h",
+      "upstream_sha256": "fd4dde7cde0fc609a0c1598d58b2ba387158d9ed29fbe1f4e86b43301e4c257b"
+    },
+    {
+      "distributed_sha256": "594971bf6cdc832ea51057417e89e11bb92c96ad830f84c021401b8454d28199",
+      "path": "source/webmlib/halloc/hlist.h",
+      "upstream_sha256": "594971bf6cdc832ea51057417e89e11bb92c96ad830f84c021401b8454d28199"
+    },
+    {
+      "distributed_sha256": "c6eb0318f268aadf04aca4ba89482c7b0e83823206d994c46efa2431966399e2",
+      "path": "source/webmlib/halloc/macros.h",
+      "upstream_sha256": "c6eb0318f268aadf04aca4ba89482c7b0e83823206d994c46efa2431966399e2"
+    },
+    {
+      "distributed_sha256": "2f0d7fc8e227ed4ddb15c6a87a7e21f7e4926b3386fa71ff95765e7870785a46",
+      "path": "source/webmlib/movie_playback.c",
+      "upstream_sha256": "2f0d7fc8e227ed4ddb15c6a87a7e21f7e4926b3386fa71ff95765e7870785a46"
+    },
+    {
+      "distributed_sha256": "8bb16eb6a0654bfe0a96af1287a0852ca6608fb5c36f1102e52eff6e574e742e",
+      "path": "source/webmlib/movie_playback.h",
+      "upstream_sha256": "8bb16eb6a0654bfe0a96af1287a0852ca6608fb5c36f1102e52eff6e574e742e"
+    },
+    {
+      "distributed_sha256": "505ee8e018326f36bb4070f69c6eb3caa6079b8fb796cd53a8d1bb168337e5ae",
+      "path": "source/webmlib/nestegg/LICENSE",
+      "upstream_sha256": "505ee8e018326f36bb4070f69c6eb3caa6079b8fb796cd53a8d1bb168337e5ae"
+    },
+    {
+      "distributed_sha256": "d9d9d90a552729bc440947dbfbd9a2513624f412606c2322aca818c46bf9c4f9",
+      "path": "source/webmlib/nestegg/nestegg.c",
+      "upstream_sha256": "d9d9d90a552729bc440947dbfbd9a2513624f412606c2322aca818c46bf9c4f9"
+    },
+    {
+      "distributed_sha256": "a2de8d88affaafd3cfc4df36e1b267d531ff17e90d049b0e5e242f4a0afce659",
+      "path": "source/webmlib/nestegg/nestegg.h",
+      "upstream_sha256": "a2de8d88affaafd3cfc4df36e1b267d531ff17e90d049b0e5e242f4a0afce659"
+    },
+    {
+      "distributed_sha256": "eef72c58bb2e6af56075b27e0539b03127423b3272cfa19229c47e75f1710cea",
+      "path": "source/webmlib/samplecvt.c",
+      "upstream_sha256": "eef72c58bb2e6af56075b27e0539b03127423b3272cfa19229c47e75f1710cea"
+    },
+    {
+      "distributed_sha256": "da664e303c0fe5045dd102b07023b175b0952776a85439c4eccbd50b675ef4b2",
+      "path": "source/webmlib/samplecvt.h",
+      "upstream_sha256": "da664e303c0fe5045dd102b07023b175b0952776a85439c4eccbd50b675ef4b2"
+    },
+    {
+      "distributed_sha256": "cea561d089a1fd7c71f3385c2a6a234b4888d2b97aad90bf4ff992553dd92e13",
+      "path": "source/webmlib/vidplay.c",
+      "upstream_sha256": "cea561d089a1fd7c71f3385c2a6a234b4888d2b97aad90bf4ff992553dd92e13"
+    },
+    {
+      "distributed_sha256": "16c60331d1fd9e4e79f70fac4f7e5161a1ee7993a3d7933c7d5fbc4d80176690",
+      "path": "source/webmlib/vidplay.h",
+      "upstream_sha256": "16c60331d1fd9e4e79f70fac4f7e5161a1ee7993a3d7933c7d5fbc4d80176690"
+    },
+    {
+      "distributed_sha256": "6b55858a6111d0c1f0343c87e97f570903921111d33e41456176c9a67d9db801",
+      "path": "source/webmlib/vorbis.c",
+      "upstream_sha256": "6b55858a6111d0c1f0343c87e97f570903921111d33e41456176c9a67d9db801"
+    },
+    {
+      "distributed_sha256": "959b4881669b0eb847677ac599206ba130a7a0be04b274696c8f8e3ee36d6532",
+      "path": "source/webmlib/vorbis.h",
+      "upstream_sha256": "959b4881669b0eb847677ac599206ba130a7a0be04b274696c8f8e3ee36d6532"
+    },
+    {
+      "distributed_sha256": "898d40cf3451ad2a044ec587cf1b2e605afa55973aa4d5a6bcf61954a85124ea",
+      "path": "source/webmlib/vorbisfpu.h",
+      "upstream_sha256": "898d40cf3451ad2a044ec587cf1b2e605afa55973aa4d5a6bcf61954a85124ea"
+    },
+    {
+      "distributed_sha256": "ad7fafa81d9e795b743c408dc1399fbd53259f7c3e0af33291d4956e8e795173",
+      "path": "source/webmlib/yuv.c",
+      "upstream_sha256": "ad7fafa81d9e795b743c408dc1399fbd53259f7c3e0af33291d4956e8e795173"
+    },
+    {
+      "distributed_sha256": "d6cd759ad44ec8aed0b9eaa28f283060cbe1ae91cd76119ca29b96a63999437d",
+      "path": "source/webmlib/yuv.h",
+      "upstream_sha256": "d6cd759ad44ec8aed0b9eaa28f283060cbe1ae91cd76119ca29b96a63999437d"
+    },
+    {
+      "distributed_sha256": "aa3a055095f545c8c016957a15f8c819bd49448916d7d2efe80234d1eee41059",
+      "path": "version.h",
+      "upstream_sha256": null
+    }
+  ],
+  "import_adaptations": [
+    "portable-circle-rasterization",
+    "fixed-width-endian-helpers"
+  ],
+  "schema": 1,
+  "upstream": "https://github.com/DCurrent/openbor.git"
+}

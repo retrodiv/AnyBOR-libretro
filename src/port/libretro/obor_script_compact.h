@@ -16,7 +16,8 @@ typedef struct obor_script_value_move {
 static int obor_script_instruction_owns_value(const Instruction *instruction)
 {
 #if OBOR_ENGINE_BUILD == 3842 || OBOR_ENGINE_BUILD == 4086 || \
-    OBOR_ENGINE_BUILD == 4432 || OBOR_ENGINE_BUILD == 6412
+    OBOR_ENGINE_BUILD == 4432 || OBOR_ENGINE_BUILD == 6412 || \
+    OBOR_ENGINE_BUILD == 8020
     return Instruction_OwnsValue(instruction);
 #else
     return 1;
@@ -26,7 +27,8 @@ static int obor_script_instruction_owns_value(const Instruction *instruction)
 static ScriptVariant **obor_script_first_reference(Instruction *instruction)
 {
 #if OBOR_ENGINE_BUILD == 3842 || OBOR_ENGINE_BUILD == 4086 || \
-    OBOR_ENGINE_BUILD == 4432 || OBOR_ENGINE_BUILD == 6412
+    OBOR_ENGINE_BUILD == 4432 || OBOR_ENGINE_BUILD == 6412 || \
+    OBOR_ENGINE_BUILD == 8020
     return Instruction_FirstReferenceAddress(instruction);
 #else
     return &instruction->theRef;
@@ -142,7 +144,7 @@ static void obor_script_compact_values(Interpreter *interpreter)
                 *reference = moved;
         }
 
-#if OBOR_ENGINE_BUILD == 3842
+#if OBOR_ENGINE_BUILD == 3842 || OBOR_ENGINE_BUILD == 8020
         if (instruction->OpCode != CALL) {
             moved = obor_script_find_moved_value(moves, count,
                                                  instruction->theRef2);

@@ -101,6 +101,14 @@
       "date": "2018-08-29",
       "covers": "4433-6412; default fallback",
       "major": "v3"
+    },
+    {
+      "build": "8020",
+      "commit": "9d81480f8481fbb9e76b0b5f2a5dfa408376761a",
+      "date": "2026-08-24",
+      "covers": "6413-8020; newer builds best effort via latest pinned v4 anchor",
+      "major": "v4",
+      "version_major": "4"
     }
   ]
 }
