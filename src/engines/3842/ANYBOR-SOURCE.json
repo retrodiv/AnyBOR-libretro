@@ -22,7 +22,8 @@
     "Compact runtime instruction operands",
     "Direct instruction storage",
     "Script call argument count",
-    "Strip dead code"
+    "Strip dead code",
+    "Modification notices"
   ],
   "files": [
     {
@@ -36,17 +37,17 @@
       "upstream_sha256": null
     },
     {
-      "distributed_sha256": "a0674b9f7b2c13c9f1d78a5d00f67c9ee622bf04e7c0a5074a6e6f2417381026",
+      "distributed_sha256": "e3811dbf919125f405c50d963e41d00c4c802b54ed5f7adcf5b8dd9ef26592e5",
       "path": "openbor.c",
       "upstream_sha256": "d2638ad5cf319be18bc22a07f1d9b9b999d17cbcd83830433a59b819a40339a9"
     },
     {
-      "distributed_sha256": "7ee2e808290e0e248e405fce43093c1af16d79887e46f06700d5c1a1bd24107a",
+      "distributed_sha256": "5d6b4b628f7ce73e210e153972c993494f0ccfeabf1524a29f60666cb3e23c6e",
       "path": "openbor.h",
       "upstream_sha256": "19888c33f34b9cb80222de1439a1745461b8353d99ef40dc0a8184f081b45ed9"
     },
     {
-      "distributed_sha256": "a47f059696c5bf9568edb3930fdd32cb017eb73fe27f94cc983eb3f0bd850078",
+      "distributed_sha256": "5884321810936c0a80837bcc3334e5c42125901df96ac49c165bb944be316d6d",
       "path": "openborscript.c",
       "upstream_sha256": "80fc85d07a86206647d4d4877a4f91b2cbe5e94598b6cd934ebf05d184bf719b"
     },
@@ -120,7 +121,7 @@
       "upstream_sha256": "efa6bdf208fdfb481c4fb8d3715e4a6964d6cc301d0a69d45ce38b13bae7a04f"
     },
     {
-      "distributed_sha256": "f55feec1634f55898ace6b1c914747e519fd58277d6139278a822f209016776e",
+      "distributed_sha256": "1f1e22a5b9942e73c7c433ff1cbd3a6f3a93a57e374efa2090d394bd2333b877",
       "path": "source/gamelib/filecache.c",
       "upstream_sha256": "ff8d218f99c72b9ddcbf16b4723401dafd000e354b6c34d408abfc95d35e7465"
     },
@@ -140,7 +141,7 @@
       "upstream_sha256": "1cd9bad27b7c481f5a84bcf5ad3e3d195e4785ea0f11937480aee273ad42758e"
     },
     {
-      "distributed_sha256": "9a30097c76fa5614fa75bc9b2665741f35788c25538b1c5e6b0d4f467e006ed1",
+      "distributed_sha256": "b0449d1761c4b9383b49faca2349e34d4000c313376b802a8e784fc8ba61e089",
       "path": "source/gamelib/loadimg.c",
       "upstream_sha256": "1b54ac7b265ce7a4b3bf9c5ca1c849b6400ff5bb8d771d966878bedbb7669c0c"
     },
@@ -160,12 +161,12 @@
       "upstream_sha256": "a7ff19177bb6c3d61095d5d8aafb335b311654bbe89a37958bce8eaae8d981a0"
     },
     {
-      "distributed_sha256": "8d7220d13a880a30197c2c35a8f19f5c189b71bf3b53d705f8f8693bb01c0fe4",
+      "distributed_sha256": "341a2603ccf5b1af15e777b93e3f38fb3538ac1ffd6d1f07d1e471e765412c99",
       "path": "source/gamelib/packfile.c",
       "upstream_sha256": "df479e13b71aa9f7e59fdb99998a05d1fec77b8b6d799d8469d8aee08107f51d"
     },
     {
-      "distributed_sha256": "93877d0b4b1492c6fa340da6ed8e1171b167ca306a9ca30fece76f9396791ec0",
+      "distributed_sha256": "b78153aa3506ee440688ed877fdab3ff9bcc566bf383dd613318c80f35a365fe",
       "path": "source/gamelib/packfile.h",
       "upstream_sha256": "8bfd0a3c0ea500133201dd85ea32904ebf4998eca894450cc6c472d5a01f0175"
     },
@@ -280,7 +281,7 @@
       "upstream_sha256": "bf7ad0fe4271883a483a7cb9dc6887951b263cb480c471018ef6e777bb10449b"
     },
     {
-      "distributed_sha256": "67e2a2749c66218a3316a8be20b36026008e1982710812a2d0e09ebc508a91d8",
+      "distributed_sha256": "d700b309cce4a24f4b8ab97ae2a231bc575b568e45cea7f9d7cde209b4ff4e40",
       "path": "source/globals.h",
       "upstream_sha256": "632c93b635f0098080c1f04c64f67c29621cea36097f8bba86d1b90bbbf612d2"
     },
@@ -365,22 +366,22 @@
       "upstream_sha256": "522a59c18c903bd0f2b696c604ba80e1fe725852f9acd8dfebc44388d8b461dc"
     },
     {
-      "distributed_sha256": "14d3217031657ed41ef1db2ccbce2b5576271a7321d6e269e7d52da460086cd4",
+      "distributed_sha256": "2b5bd2ee43c31b8074585cad15385bbab4231f22f9a82b9f6bad9cda4246766c",
       "path": "source/scriptlib/Instruction.c",
       "upstream_sha256": "0e40d52fb5bab32466bf88f8235d7380c5038fac6a546651b61370bb3389b0ee"
     },
     {
-      "distributed_sha256": "799ce2b75fab8ee38727999bb1f3903c0ed4f9b895580425bbe2a2afff553376",
+      "distributed_sha256": "fdddd75fb2354b62ff976272c89372d95ee061ded646d5513ef44db279695182",
       "path": "source/scriptlib/Instruction.h",
       "upstream_sha256": "c4ef4c752ec66a5ec170842990d8dec82fa62437ff09fdab352c83a87e21ae56"
     },
     {
-      "distributed_sha256": "8dbe82b0e8d87b2a5f8ed848efcf1ee26fa1009e426025bde3421dabafe02f3c",
+      "distributed_sha256": "c684278e15351c09019441f763ea343361990fc2b4d846432be68113faa7c8b3",
       "path": "source/scriptlib/Interpreter.c",
       "upstream_sha256": "6d2b9d8d641491b379340431bfe932bb3f27b2b0f9840a30d054818f86db5017"
     },
     {
-      "distributed_sha256": "475bd77c46d467a5a2db262e7270ba4b9c15ee554f01f9a988bbeb0fe5b477b9",
+      "distributed_sha256": "3010faf3b4707549b336da2a25f1ad459c699969bd80c5c38f56cef4885d7d22",
       "path": "source/scriptlib/Interpreter.h",
       "upstream_sha256": "10c10620958916a67e5710b1191b569d3297e71a754b45c90071c4510fad2f21"
     },
@@ -495,7 +496,7 @@
       "upstream_sha256": "afba2d9766d6b24437982791f9bbe1ed97be5adc8b81f9a5172170e639a3c3ba"
     },
     {
-      "distributed_sha256": "d2f3002611aafe3f5d03f8c097044acef55c3ac4067b1b234860311c2e23e2f7",
+      "distributed_sha256": "bb132a3c916a0329e72d4f2d9c5a280c65439d09608749ac7c716bb35e0152cf",
       "path": "source/utils.c",
       "upstream_sha256": "32cf119a6dc6437d0bdfe21d0fcb1bc8a71573e6ad58f70feb925ba9bde41cbd"
     },
