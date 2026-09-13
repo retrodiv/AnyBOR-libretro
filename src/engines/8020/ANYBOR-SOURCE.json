@@ -10,7 +10,8 @@
     "Resource lifecycle",
     "Four player defaults",
     "Webm worker waits",
-    "Player slot spawn safety"
+    "Player slot spawn safety",
+    "Runtime instruction unions"
   ],
   "files": [
     {
@@ -34,7 +35,7 @@
       "upstream_sha256": "e3891b5810d35f0584af98f9eb3dd6f7f2305a7185d0f6ffcbca3f1cfacd6964"
     },
     {
-      "distributed_sha256": "24b9fe5794af8226cda3b7424fae2d754b76773f4f60483200d33c24783fdb90",
+      "distributed_sha256": "d57e420bc3f6a1477a2368aeca6c33d08e2fc925d09b83ac6aafd900f7da100f",
       "path": "openborscript.c",
       "upstream_sha256": "24b9fe5794af8226cda3b7424fae2d754b76773f4f60483200d33c24783fdb90"
     },
@@ -668,17 +669,17 @@
       "upstream_sha256": "df915a9313a63554c538f5c35e0a911381eca5aac6793ab1f4912e09983b6e3b"
     },
     {
-      "distributed_sha256": "01fad7f4dbab2c3c7b1efc88d78bbf9bd141fa5351f045243666c2ec2cf092ff",
+      "distributed_sha256": "ce85424802afc590183d53f165be805476e012b23694e382573762634145e305",
       "path": "source/scriptlib/Instruction.c",
       "upstream_sha256": "01fad7f4dbab2c3c7b1efc88d78bbf9bd141fa5351f045243666c2ec2cf092ff"
     },
     {
-      "distributed_sha256": "dd67bb4336f9b2a0e75f15466f99e8d2faa9e0c55604395bdb4c844fa2cdca98",
+      "distributed_sha256": "9fa8745ce5dd63897501362e9e6a9ad267047ddbc9f01e5643c62fbc940f69aa",
       "path": "source/scriptlib/Instruction.h",
       "upstream_sha256": "dd67bb4336f9b2a0e75f15466f99e8d2faa9e0c55604395bdb4c844fa2cdca98"
     },
     {
-      "distributed_sha256": "54f5a0c67fa15ef479b26bc18395f8b67e653970b0e59b7eb3a9157d470f349c",
+      "distributed_sha256": "64447fa3556fd21537935ad13ce4e7fbcbfb9eeec4ea5177737100484c2f1d41",
       "path": "source/scriptlib/Interpreter.c",
       "upstream_sha256": "54f5a0c67fa15ef479b26bc18395f8b67e653970b0e59b7eb3a9157d470f349c"
     },

@@ -663,7 +663,8 @@ bool Script_MapStringConstants(Instruction *pInstruction) {
     * Script and imported calls do not use native
     * string-constant mapping.
     */
-    if(!pInstruction->functionRef) {
+    if(pInstruction->jumpTargetType != INSTRUCTION_TARGET_FUNCTION ||
+       !pInstruction->functionRef) {
         return true;
     }
 
