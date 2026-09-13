@@ -52578,7 +52578,14 @@ int playwebm(const char *path, int noskip)
                 screenshot(screenshot_frame, NULL, 0);
             }
         }
+#ifdef LIBRETRO
+        if(!present_frame) {
+            obor_worker_pause();
+            obor_wait_frame();
+        }
+#else
         usleep(1000);
+#endif
     }
 
 quit:
@@ -52593,7 +52600,12 @@ quit:
     }
     while(source_id >= 0 && !movie_source_unload(source_id)) {
         movie_playback_update(0);
+#ifdef LIBRETRO
+        obor_worker_pause();
+        obor_wait_frame();
+#else
         usleep(1000);
+#endif
     }
     return retval;
 }

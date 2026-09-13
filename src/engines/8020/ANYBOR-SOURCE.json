@@ -8,7 +8,8 @@
     "Fixed width endian",
     "Webm lifecycle",
     "Resource lifecycle",
-    "Four player defaults"
+    "Four player defaults",
+    "Webm worker waits"
   ],
   "files": [
     {
@@ -22,7 +23,7 @@
       "upstream_sha256": null
     },
     {
-      "distributed_sha256": "ee7c563c571edbfe05ff8c3234657557647ee022740db3a07133451c66f8788e",
+      "distributed_sha256": "19336c82abbe728f3938c303c039a033275c298fa276725abf82fad8cfae1962",
       "path": "openbor.c",
       "upstream_sha256": "8d210999b4af34c1932e0865daf39a007aec54155b1ed909176a39af905f5b2f"
     },
