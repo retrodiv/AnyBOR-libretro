@@ -2785,6 +2785,42 @@ void execute_pdie_script(int index)
 
 // ------------------------ Save/load -----------------------------
 
+#ifdef LIBRETRO
+/* RetroArch supplies a separate RetroPad for every player. SDL's automatic
+ * joystick binding is absent from this backend, so keyboard-style virtual
+ * keys must be initialized for players 2-4 as well. */
+static void libretro_default_buttons(int player)
+{
+    static const int keys[] = {
+        CONTROL_DEFAULT1_UP, CONTROL_DEFAULT1_DOWN,
+        CONTROL_DEFAULT1_LEFT, CONTROL_DEFAULT1_RIGHT,
+        CONTROL_DEFAULT1_FIRE1, CONTROL_DEFAULT1_FIRE2,
+        CONTROL_DEFAULT1_FIRE3, CONTROL_DEFAULT1_FIRE4,
+        CONTROL_DEFAULT1_FIRE5, CONTROL_DEFAULT1_FIRE6,
+        CONTROL_DEFAULT1_START, CONTROL_DEFAULT1_SCREENSHOT
+    };
+    int button;
+    for(button = 0; button < SDID_ESC; ++button)
+        savedata.keys[player][button] = keys[button] + player * OBOR_KEYSPAN;
+}
+
+/* Older AnyBOR builds persisted CONTROL_NONE for the entire P2-P4 row.
+ * Repair only that exact empty profile, including default.cfg imports.
+ * Partial/custom bindings, P1, rumble and the rest of savedata are retained. */
+static void libretro_restore_unbound_players(void)
+{
+    int player, button;
+    for(player = 1; player < MAX_PLAYERS; ++player)
+    {
+        for(button = 0; button < SDID_ESC; ++button)
+            if(savedata.keys[player][button] != CONTROL_NONE)
+                break;
+        if(button == SDID_ESC)
+            libretro_default_buttons(player);
+    }
+}
+#endif
+
 void clearbuttons(int player)
 {
     savedata.joyrumble[player] = 0;
@@ -2890,6 +2926,10 @@ void clearbuttons(int player)
             //savedata.keys[3][SDID_ESC]       = CONTROL_DEFAULT4_ESC;
         #endif
     }
+#ifdef LIBRETRO
+    if(player > 0 && player < MAX_PLAYERS)
+        libretro_default_buttons(player);
+#endif
 }
 
 void clearsettings()
@@ -2995,6 +3035,9 @@ void loadsettings()
     {
         clearsettings();
     }
+#ifdef LIBRETRO
+    libretro_restore_unbound_players();
+#endif
 }
 
 void loadfromdefault()
@@ -3015,6 +3058,9 @@ void loadfromdefault()
     {
         clearsettings();
     }
+#ifdef LIBRETRO
+    libretro_restore_unbound_players();
+#endif
 }
 
 
