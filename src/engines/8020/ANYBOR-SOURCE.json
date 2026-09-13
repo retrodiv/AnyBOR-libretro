@@ -5,7 +5,8 @@
     "Savestate packfile fixup",
     "Provenance and circle",
     "Halloc license",
-    "Fixed width endian"
+    "Fixed width endian",
+    "Webm lifecycle"
   ],
   "files": [
     {
@@ -843,7 +844,7 @@
       "upstream_sha256": "c6eb0318f268aadf04aca4ba89482c7b0e83823206d994c46efa2431966399e2"
     },
     {
-      "distributed_sha256": "2f0d7fc8e227ed4ddb15c6a87a7e21f7e4926b3386fa71ff95765e7870785a46",
+      "distributed_sha256": "0a268d4aaa7cd417e49701772514f39de48d37a5313ca9fc9938fb976c57bd86",
       "path": "source/webmlib/movie_playback.c",
       "upstream_sha256": "2f0d7fc8e227ed4ddb15c6a87a7e21f7e4926b3386fa71ff95765e7870785a46"
     },
@@ -878,7 +879,7 @@
       "upstream_sha256": "da664e303c0fe5045dd102b07023b175b0952776a85439c4eccbd50b675ef4b2"
     },
     {
-      "distributed_sha256": "cea561d089a1fd7c71f3385c2a6a234b4888d2b97aad90bf4ff992553dd92e13",
+      "distributed_sha256": "197d57e3d3f4aa1313183303b81865415c6a786f4ff73761d7f27a3a60fff63a",
       "path": "source/webmlib/vidplay.c",
       "upstream_sha256": "cea561d089a1fd7c71f3385c2a6a234b4888d2b97aad90bf4ff992553dd92e13"
     },

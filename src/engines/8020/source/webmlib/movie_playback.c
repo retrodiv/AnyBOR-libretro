@@ -1880,3 +1880,9 @@ bool movie_playback_set_width(s_movie_playback *playback, uint64_t width)
     playback->frame_dirty = 1;
     return true;
 }
+
+/* Abort/reset follows the same joined-worker lifecycle as normal shutdown. */
+void obor_webm_stop(void)
+{
+    movie_playback_shutdown();
+}

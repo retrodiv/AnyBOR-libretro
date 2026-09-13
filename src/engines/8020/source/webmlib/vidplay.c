@@ -28,6 +28,10 @@
 #include "threads.h"
 #include "types.h"
 #include "globals.h"
+#ifdef LIBRETRO
+#include "obor_threads.h"
+#undef usleep /* Worker waits use wall time, never the coroutine clock. */
+#endif
 #include "borendian.h"
 #include "soundmix.h"
 #include "timer.h"
@@ -70,7 +74,7 @@ typedef struct {
     int max_size;
     uint64_t replacement_count;
     uint64_t resync_count;
-    SDL_atomic_t *quit;
+    obor_atomic_int *quit;
     bor_mutex *mutex;
     bor_cond *not_full;
     bor_cond *not_empty;
@@ -95,7 +99,7 @@ typedef struct {
     uint64_t playback_start_timestamp;
     uint64_t output_timestamp;
     uint64_t leading_silence_frames;
-    SDL_atomic_t *quit;
+    obor_atomic_int *quit;
     uint8_t pcm_buffer[SOUND_STREAM_BUFFER_SIZE];
 } audio_context;
 
@@ -109,7 +113,7 @@ typedef struct {
     int display_height;
     int playback_paused;
     uint64_t frame_delay;
-    SDL_atomic_t *quit;
+    obor_atomic_int *quit;
 } video_context;
 
 typedef struct {
@@ -146,7 +150,7 @@ struct webm_context {
     int close_requested;
     int video_initialized;
     int audio_initialized;
-    SDL_atomic_t quit;
+    obor_atomic_int quit;
 };
 
 static bor_mutex *webm_lifecycle_operation_mutex;
@@ -159,9 +163,9 @@ static bor_mutex *webm_lifecycle_operation_mutex;
 * lifecycle workers share this flag without relying on volatile accesses
 * that provide no cross-thread synchronization in C.
 */
-static int webm_stop_is_requested(SDL_atomic_t *stop)
+static int webm_stop_is_requested(obor_atomic_int *stop)
 {
-    return !stop || SDL_AtomicGet(stop) != 0;
+    return !stop || obor_atomic_get(stop) != 0;
 }
 
 /*
@@ -171,10 +175,10 @@ static int webm_stop_is_requested(SDL_atomic_t *stop)
 * Publish decoder cancellation through the same SDL atomic consumed by every
 * queue and worker, preserving one stop path across lifecycle transitions.
 */
-static void webm_request_decoder_stop(SDL_atomic_t *stop)
+static void webm_request_decoder_stop(obor_atomic_int *stop)
 {
     if(stop) {
-        SDL_AtomicSet(stop, 1);
+        obor_atomic_set(stop, 1);
     }
 }
 
@@ -365,7 +369,7 @@ static int64_t webm_io_tell(void *userdata)
     return seekpackfile64(io_ctx->packhandle, 0, SEEK_CUR);
 }
 
-static FixedSizeQueue *queue_init(int max_size, SDL_atomic_t *quit)
+static FixedSizeQueue *queue_init(int max_size, obor_atomic_int *quit)
 {
     FixedSizeQueue *queue;
 
@@ -990,7 +994,7 @@ static int audio_thread(void *data)
     uint64_t underrun_count;
 
     /* Priority elevation may be denied on restricted platforms. */
-    SDL_SetThreadPriority(SDL_THREAD_PRIORITY_HIGH);
+    obor_thread_high_priority();
 
     while(!webm_stop_is_requested(audio_ctx->quit))
     {
@@ -1170,7 +1174,7 @@ static void webm_wait_for_preroll(webm_context *ctx)
     if(!ctx || !ctx->video_initialized) {
         return;
     }
-    start_time = timer_uticks();
+    start_time = obor_wall_uticks();
 
     while(!webm_stop_is_requested(&ctx->quit) &&
           !webm_close_is_requested(ctx)) {
@@ -1206,7 +1210,7 @@ static void webm_wait_for_preroll(webm_context *ctx)
             return;
         }
 
-        now = timer_uticks();
+        now = obor_wall_uticks();
         if(now < start_time ||
            now - start_time >= WEBM_PREROLL_TIMEOUT_MICROSECONDS) {
             printf(
@@ -1240,7 +1244,7 @@ static int init_audio(
     int sound_channel,
     uint64_t seek_timestamp,
     int replace_all_audio,
-    SDL_atomic_t *quit
+    obor_atomic_int *quit
 )
 {
     // read vorbis header and initialize vorbis decoding
@@ -1502,7 +1506,7 @@ static unsigned int video_decoder_thread_count(
     uint64_t pixel_count = (uint64_t)width * (uint64_t)height;
     unsigned int resolution_limit;
     unsigned int threads;
-    int cpu_count = SDL_GetCPUCount();
+    int cpu_count = obor_cpu_count();
 
     if(pixel_count <= UINT64_C(640) * UINT64_C(480)) {
         resolution_limit = 1;
@@ -1540,7 +1544,7 @@ static int init_video(
     nestegg *nestegg_ctx,
     int track,
     video_context *video_ctx,
-    SDL_atomic_t *quit
+    obor_atomic_int *quit
 )
 {
     nestegg_video_params video_params;
@@ -1693,7 +1697,7 @@ static int demux_thread(void *data)
 
     if(ctx->audio_track >= 0) {
         /* Priority elevation may be denied on restricted platforms. */
-        SDL_SetThreadPriority(SDL_THREAD_PRIORITY_HIGH);
+        obor_thread_high_priority();
     }
 
     while ((r = nestegg_read_packet(ctx->nestegg_ctx, &pkt)) > 0)
@@ -2167,7 +2171,7 @@ webm_context *webm_start_playback_ex(
     ctx->play_audio = play_audio != 0;
     ctx->replace_all_audio = replace_all_audio != 0;
     ctx->decoder_state = WEBM_DECODER_STATE_OPENING;
-    SDL_AtomicSet(&ctx->quit, 0);
+    obor_atomic_set(&ctx->quit, 0);
     ctx->the_lifecycle_thread = thread_create(
         webm_lifecycle_thread,
         "webm-lifecycle",
@@ -2446,4 +2450,15 @@ int webm_try_get_next_frame(webm_context *ctx, yuv_frame **frame)
 
     *frame = queued_frame;
     return queued_frame ? 1 : -1;
+}
+
+/* Native synchronization objects are rebuilt after arena restoration.
+ * Snapshots are admitted only after every decoder worker has been joined. */
+void obor_webm_state_suspend(void)
+{
+    obor_mutex_suspend(webm_lifecycle_operation_mutex);
+}
+void obor_webm_state_resume(void)
+{
+    obor_mutex_resume(webm_lifecycle_operation_mutex);
 }
