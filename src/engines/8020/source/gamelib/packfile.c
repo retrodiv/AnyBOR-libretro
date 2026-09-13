@@ -125,7 +125,7 @@ List *filenamelist = NULL;
 /*
 * These variables are only used for cached code.
 */
-static int pakfd = -1;
+int pakfd = -1;
 static size_t pak_entry_header_size = PAK32_TABLE_ENTRY_HEADER_SIZE;
 static size_t pak_footer_size = PAK32_FOOTER_SIZE;
 static packfile_size_t paksize;
