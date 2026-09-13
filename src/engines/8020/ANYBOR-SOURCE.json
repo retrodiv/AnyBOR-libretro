@@ -9,7 +9,8 @@
     "Webm lifecycle",
     "Resource lifecycle",
     "Four player defaults",
-    "Webm worker waits"
+    "Webm worker waits",
+    "Player slot spawn safety"
   ],
   "files": [
     {
@@ -23,7 +24,7 @@
       "upstream_sha256": null
     },
     {
-      "distributed_sha256": "19336c82abbe728f3938c303c039a033275c298fa276725abf82fad8cfae1962",
+      "distributed_sha256": "c116761921023c15d4ac28a8d6dda82d1fab2adbd049078d6b860b47f5e9d239",
       "path": "openbor.c",
       "upstream_sha256": "8d210999b4af34c1932e0865daf39a007aec54155b1ed909176a39af905f5b2f"
     },
