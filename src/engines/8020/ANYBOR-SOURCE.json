@@ -3,7 +3,8 @@
   "changes": [
     "Libretro platform",
     "Savestate packfile fixup",
-    "Provenance and circle"
+    "Provenance and circle",
+    "Halloc license"
   ],
   "files": [
     {
@@ -809,6 +810,11 @@
       "distributed_sha256": "60df1283bd1261ca53dbc968befc17cb90bdfb3b0b7bc7fd2b8d46c982d60931",
       "path": "source/utils.h",
       "upstream_sha256": "60df1283bd1261ca53dbc968befc17cb90bdfb3b0b7bc7fd2b8d46c982d60931"
+    },
+    {
+      "distributed_sha256": "ae4b9e1073a9579c0ac13d406d66c01c3a941ed072af7a70091dc153b8c903d5",
+      "path": "source/webmlib/halloc/LICENSE",
+      "upstream_sha256": null
     },
     {
       "distributed_sha256": "64b2aa0cab13b8b1bdf51f697fc25a3ec77cc8358b25500c60aa3016b32251d8",

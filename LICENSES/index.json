@@ -280,6 +280,13 @@
     "source": "src/engines/6412/source/webmlib/nestegg/LICENSE"
   },
   {
+    "file": "LICENSES/WebM-8020-halloc.txt",
+    "license": "see notice",
+    "scope": "source and binary",
+    "sha256": "ae4b9e1073a9579c0ac13d406d66c01c3a941ed072af7a70091dc153b8c903d5",
+    "source": "src/engines/8020/source/webmlib/halloc/LICENSE"
+  },
+  {
     "file": "LICENSES/WebM-8020-nestegg.txt",
     "license": "see notice",
     "scope": "source and binary",
