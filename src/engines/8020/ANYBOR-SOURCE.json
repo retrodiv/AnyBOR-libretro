@@ -11,7 +11,8 @@
     "Four player defaults",
     "Webm worker waits",
     "Player slot spawn safety",
-    "Runtime instruction unions"
+    "Runtime instruction unions",
+    "Active pak alias"
   ],
   "files": [
     {
@@ -25,7 +26,7 @@
       "upstream_sha256": null
     },
     {
-      "distributed_sha256": "c116761921023c15d4ac28a8d6dda82d1fab2adbd049078d6b860b47f5e9d239",
+      "distributed_sha256": "28cae366cfca1dad330f566bb47c24a2bf0c0c3210522e42dd6a067b4e72b576",
       "path": "openbor.c",
       "upstream_sha256": "8d210999b4af34c1932e0865daf39a007aec54155b1ed909176a39af905f5b2f"
     },
