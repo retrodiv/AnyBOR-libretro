@@ -46,7 +46,11 @@ void Interpreter_Init(Interpreter *pinterpreter, LPCSTR name, List *pflist)
 {
     memset(pinterpreter, 0, sizeof(Interpreter));
     StackedSymbolTable_Init(&(pinterpreter->theSymbolTable), name);
-    Parser_Init(&(pinterpreter->theParser));
+    pinterpreter->theParser = malloc(sizeof(*pinterpreter->theParser));
+    if(pinterpreter->theParser)
+    {
+        Parser_Init(pinterpreter->theParser);
+    }
     pinterpreter->ptheFunctionList = pflist;
     List_Init(&(pinterpreter->theImportList));
     List_Init(&(pinterpreter->theInstructionList));
@@ -65,7 +69,11 @@ void Interpreter_Clear(Interpreter *pinterpreter)
     pp_context_destroy(&(pinterpreter->theContext));
 
     StackedSymbolTable_Clear(&(pinterpreter->theSymbolTable));
-    Parser_Clear(&(pinterpreter->theParser));
+    if(pinterpreter->theParser)
+    {
+        Parser_Clear(pinterpreter->theParser);
+        free(pinterpreter->theParser);
+    }
     if(pinterpreter->theInstructionList.solidlist)
     {
         size = pinterpreter->theInstructionList.size;
@@ -123,10 +131,14 @@ HRESULT Interpreter_ParseText(Interpreter *pinterpreter, LPSTR scriptText,
 {
 
     //Parse the script
-    Parser_ParseText(&(pinterpreter->theParser), &(pinterpreter->theContext),
+    if(!pinterpreter->theParser)
+    {
+        return E_FAIL;
+    }
+    Parser_ParseText(pinterpreter->theParser, &(pinterpreter->theContext),
                      &(pinterpreter->theInstructionList), scriptText, startingLineNumber, path );
 
-    if(pinterpreter->theParser.errorFound)
+    if(pinterpreter->theParser->errorFound)
     {
         return E_FAIL;
     }
@@ -1341,6 +1353,13 @@ HRESULT Interpreter_CompileInstructions(Interpreter *pinterpreter)
                 }
             }
         }
+    }
+
+    if(pinterpreter->theParser)
+    {
+        Parser_Clear(pinterpreter->theParser);
+        free(pinterpreter->theParser);
+        pinterpreter->theParser = NULL;
     }
 
     return hr;

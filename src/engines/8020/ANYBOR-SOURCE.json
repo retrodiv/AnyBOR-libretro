@@ -15,7 +15,8 @@
     "Active pak alias",
     "Compact instruction storage",
     "Compact script values",
-    "Dynamic collision slots"
+    "Dynamic collision slots",
+    "Release compiled parser"
   ],
   "files": [
     {
@@ -663,7 +664,7 @@
       "upstream_sha256": "2441e1bff107106625a69ef3a712bebb0e2954cf018e508b4151f127f6d21826"
     },
     {
-      "distributed_sha256": "d42ccb253d606fce0a7d29138c176d7c6c836be9192d4510c4d4bfd8cbb73975",
+      "distributed_sha256": "db6994639bdf5102b89a3df1ae65d1384bdc20623a4585dd5ae2b2a1f110707f",
       "path": "source/scriptlib/ImportCache.c",
       "upstream_sha256": "d42ccb253d606fce0a7d29138c176d7c6c836be9192d4510c4d4bfd8cbb73975"
     },
@@ -683,12 +684,12 @@
       "upstream_sha256": "dd67bb4336f9b2a0e75f15466f99e8d2faa9e0c55604395bdb4c844fa2cdca98"
     },
     {
-      "distributed_sha256": "aa73ccd54bd02b4da3f5d5ac348e94d33b0d1c73092e7712f3d6fb1c62304466",
+      "distributed_sha256": "31d382ef5f0dac03203ba1ba4d99df45320ba5e540a7cdf96e8e3cddad80b117",
       "path": "source/scriptlib/Interpreter.c",
       "upstream_sha256": "54f5a0c67fa15ef479b26bc18395f8b67e653970b0e59b7eb3a9157d470f349c"
     },
     {
-      "distributed_sha256": "f1b98ab37e1605630cc1cd6a869fe51f4412c5505075670ab9098b5e372c5064",
+      "distributed_sha256": "2e17cd737a4e816017045a275112d3789735af02ae690c7697777e455b4829e4",
       "path": "source/scriptlib/Interpreter.h",
       "upstream_sha256": "4ac5a8f1cde462dfbb991b1bd83926005a82472477273f97152a587905d876bb"
     },
