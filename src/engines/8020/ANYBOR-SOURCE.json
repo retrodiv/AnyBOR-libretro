@@ -13,7 +13,8 @@
     "Player slot spawn safety",
     "Runtime instruction unions",
     "Active pak alias",
-    "Compact instruction storage"
+    "Compact instruction storage",
+    "Compact script values"
   ],
   "files": [
     {
@@ -681,12 +682,12 @@
       "upstream_sha256": "dd67bb4336f9b2a0e75f15466f99e8d2faa9e0c55604395bdb4c844fa2cdca98"
     },
     {
-      "distributed_sha256": "091b4a3d2ddc766e7be649d81ecd80e3292b111ab895d18600480e1089e73134",
+      "distributed_sha256": "aa73ccd54bd02b4da3f5d5ac348e94d33b0d1c73092e7712f3d6fb1c62304466",
       "path": "source/scriptlib/Interpreter.c",
       "upstream_sha256": "54f5a0c67fa15ef479b26bc18395f8b67e653970b0e59b7eb3a9157d470f349c"
     },
     {
-      "distributed_sha256": "999f62cbc2878190300213177a2977a24fc9ac426335ee05642980c1a714b51b",
+      "distributed_sha256": "f1b98ab37e1605630cc1cd6a869fe51f4412c5505075670ab9098b5e372c5064",
       "path": "source/scriptlib/Interpreter.h",
       "upstream_sha256": "4ac5a8f1cde462dfbb991b1bd83926005a82472477273f97152a587905d876bb"
     },
