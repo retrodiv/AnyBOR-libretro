@@ -313,7 +313,7 @@ HRESULT Interpreter_Call(Interpreter *pinterpreter) {
     * It must agree with the count cached on the CALL
     * instruction.
     */
-    if(List_GetSize(currentCall->theRefList) != paramCount) {
+    if(Instruction_CallReferenceCount(currentCall) != paramCount) {
 
         printf("Script runtime error: cached parameter count does not match reference list size.\n");
 
@@ -324,13 +324,12 @@ HRESULT Interpreter_Call(Interpreter *pinterpreter) {
     * Empty calls legitimately have no contiguous pointer
     * table. Nonempty calls require one.
     */
-    if(paramCount > 0 && !currentCall->theRefList->solidlist) {
+    parameters = Instruction_CallReferenceValues(currentCall);
+    if(paramCount > 0 && !parameters) {
         printf("Script runtime error: missing solid parameter reference table.\n");
 
         goto endcall;
     }
-
-    parameters = (ScriptVariant **)currentCall->theRefList->solidlist;
 
     /*
     * Script and imported functions execute through an
@@ -1256,6 +1255,20 @@ HRESULT Interpreter_CompileInstructions(Interpreter *pinterpreter)
     // clear the import list since we no longer need it
     List_Clear(&(pinterpreter->theImportList));
 
+    /* Replace each compiled CALL's general-purpose List with the exact
+     * contiguous reference storage used at runtime. Allocation failure is
+     * harmless: that CALL retains its valid List representation. */
+    List_Reset(&(pinterpreter->theInstructionList));
+    for(i = 0; i < size; i++)
+    {
+        pInstruction = (Instruction *)List_Retrieve(&(pinterpreter->theInstructionList));
+        if(pInstruction->OpCode == CALL)
+        {
+            Instruction_CompactCallReferences(pInstruction);
+        }
+        List_GotoNext(&(pinterpreter->theInstructionList));
+    }
+
     // make a solid list that can be referenced by index
     List_Solidify(&(pinterpreter->theInstructionList));
     Interpreter_CompactInstructionStorage(pinterpreter);
@@ -1533,28 +1546,46 @@ HRESULT Interpreter_EvalInstruction(Interpreter *pinterpreter)
             //Create a new CSymbol from a value on the stack and add it to the
             //symbol table.
         case PARAM:
+        {
+            int *referenceIndex;
+            ScriptVariant **references;
+
             //copy value from the cached parameter
             //assert(pinterpreter->pCurrentCall);
             currentCall = *(pinterpreter->pCurrentCall);
-            if(List_GetSize(currentCall->theRefList) <= currentCall->theRefList->index)
+            referenceIndex = Instruction_CallReferenceIndex(currentCall);
+            references = Instruction_CallReferenceValues(currentCall);
+            if(!referenceIndex ||
+               Instruction_CallReferenceCount(currentCall) <= *referenceIndex)
             {
                 ScriptVariant_Clear(pInstruction->theVal);
             }
             else
             {
-                ScriptVariant_Copy(pInstruction->theVal, (ScriptVariant *)(currentCall->theRefList->solidlist[currentCall->theRefList->index]));
+                ScriptVariant_Copy(pInstruction->theVal,
+                                   references[*referenceIndex]);
             }
-            currentCall->theRefList->index++;
+            if(referenceIndex)
+            {
+                (*referenceIndex)++;
+            }
             break;
+        }
 
             //Call the specified method, and pass in a ScriptVariant* to receive the
             //return value.  If it's not NULL, then push it onto the data stack.
         case CALL:
-            pInstruction->theRefList->index = 0;
+        {
+            int *referenceIndex = Instruction_CallReferenceIndex(pInstruction);
+            if(referenceIndex)
+            {
+                *referenceIndex = 0;
+            }
             hr = Interpreter_Call(pinterpreter);
             //Reset the m_bCallCompleted flag back to false
             //pinterpreter->bCallCompleted = FALSE;
             break;
+        }
 
             // return
         case JUMPR:

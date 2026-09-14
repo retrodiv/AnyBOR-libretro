@@ -689,7 +689,7 @@ bool Script_MapStringConstants(Instruction *pInstruction) {
     * The cached count must agree with the logical size
     * retained by the solidified reference list.
     */
-    if(List_GetSize(pInstruction->theRefList) != paramCount) {
+    if(Instruction_CallReferenceCount(pInstruction) != paramCount) {
         return false;
     }
 
@@ -697,12 +697,10 @@ bool Script_MapStringConstants(Instruction *pInstruction) {
     * Empty calls legitimately have no solid pointer
     * table. Nonempty calls require one.
     */
-    if(paramCount > 0 
-        && !pInstruction->theRefList->solidlist) {
+    params = Instruction_CallReferenceValues(pInstruction);
+    if(paramCount > 0 && !params) {
         return false;
     }
-
-    params = (ScriptVariant **)pInstruction->theRefList->solidlist;
 
     /*
     * Only native functions with a registered mapper

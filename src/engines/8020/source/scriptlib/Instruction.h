@@ -30,6 +30,17 @@ typedef enum InstructionTargetType {
     INSTRUCTION_TARGET_JUMP, INSTRUCTION_TARGET_FUNCTION
 } InstructionTargetType;
 
+typedef enum InstructionReferenceStorageType {
+    INSTRUCTION_REFERENCE_LIST,
+    INSTRUCTION_REFERENCE_COMPACT
+} InstructionReferenceStorageType;
+
+typedef struct CallReferenceList {
+    int index;
+    int size;
+    ScriptVariant *values[];
+} CallReferenceList;
+
 #pragma pack(4)
 
 typedef struct Instruction
@@ -38,6 +49,7 @@ typedef struct Instruction
     unsigned char OpCode;
     unsigned char jumpTargetType;
     unsigned char storageType;
+    unsigned char referenceStorageType;
     union
     {
         Token *theToken;
@@ -52,6 +64,7 @@ typedef struct Instruction
     {
         ScriptVariant *theRef2;
         List *theRefList;
+        CallReferenceList *callReferences;
     };
 } Instruction;
 
@@ -64,6 +77,10 @@ void Instruction_Clear(Instruction *pins);
 
 void Instruction_NewData(Instruction *pins);
 HRESULT Instruction_ConvertConstant(Instruction *pins);
+int Instruction_CompactCallReferences(Instruction *pins);
+int Instruction_CallReferenceCount(const Instruction *pins);
+ScriptVariant **Instruction_CallReferenceValues(const Instruction *pins);
+int *Instruction_CallReferenceIndex(Instruction *pins);
 
 void Instruction_ToString(Instruction *pins, LPSTR strRep);
 #endif

@@ -78,8 +78,15 @@ void Instruction_Clear(Instruction *pins)
     }
     if(pins->OpCode == CALL && pins->theRefList)
     {
-        List_Clear(pins->theRefList);
-        free(pins->theRefList);
+        if(pins->referenceStorageType == INSTRUCTION_REFERENCE_COMPACT)
+        {
+            free(pins->callReferences);
+        }
+        else
+        {
+            List_Clear(pins->theRefList);
+            free(pins->theRefList);
+        }
     }
     if(pins->storageType == INSTRUCTION_SOURCE_LABEL && pins->Label)
     {
@@ -90,6 +97,76 @@ void Instruction_Clear(Instruction *pins)
         free(pins->theToken);
     }
     memset(pins, 0, sizeof(Instruction));
+}
+
+int Instruction_CompactCallReferences(Instruction *pins)
+{
+    List *source;
+    CallReferenceList *compact;
+    size_t bytes;
+    int count;
+
+    if(!pins || pins->OpCode != CALL || !pins->theRefList ||
+       pins->referenceStorageType == INSTRUCTION_REFERENCE_COMPACT)
+    {
+        return 1;
+    }
+    source = pins->theRefList;
+    count = List_GetSize(source);
+    if(count < 0 || (count > 0 && !source->solidlist) ||
+       (size_t)count > (SIZE_MAX - sizeof(*compact)) / sizeof(compact->values[0]))
+    {
+        return 0;
+    }
+    bytes = sizeof(*compact) + (size_t)count * sizeof(compact->values[0]);
+    compact = malloc(bytes);
+    if(!compact)
+    {
+        return 0;
+    }
+    compact->index = 0;
+    compact->size = count;
+    if(count)
+    {
+        memcpy(compact->values, source->solidlist,
+               (size_t)count * sizeof(compact->values[0]));
+    }
+    List_Clear(source);
+    free(source);
+    pins->callReferences = compact;
+    pins->referenceStorageType = INSTRUCTION_REFERENCE_COMPACT;
+    return 1;
+}
+
+int Instruction_CallReferenceCount(const Instruction *pins)
+{
+    if(!pins || pins->OpCode != CALL || !pins->theRefList)
+    {
+        return 0;
+    }
+    return pins->referenceStorageType == INSTRUCTION_REFERENCE_COMPACT
+        ? pins->callReferences->size : List_GetSize(pins->theRefList);
+}
+
+ScriptVariant **Instruction_CallReferenceValues(const Instruction *pins)
+{
+    if(!pins || pins->OpCode != CALL || !pins->theRefList)
+    {
+        return NULL;
+    }
+    return pins->referenceStorageType == INSTRUCTION_REFERENCE_COMPACT
+        ? (ScriptVariant **)pins->callReferences->values
+        : (ScriptVariant **)pins->theRefList->solidlist;
+}
+
+int *Instruction_CallReferenceIndex(Instruction *pins)
+{
+    if(!pins || pins->OpCode != CALL || !pins->theRefList)
+    {
+        return NULL;
+    }
+    return pins->referenceStorageType == INSTRUCTION_REFERENCE_COMPACT
+        ? &pins->callReferences->index : &pins->theRefList->index;
 }
 
 void Instruction_NewData(Instruction *pins)
