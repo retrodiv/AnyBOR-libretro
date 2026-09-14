@@ -14,7 +14,8 @@
     "Runtime instruction unions",
     "Active pak alias",
     "Compact instruction storage",
-    "Compact script values"
+    "Compact script values",
+    "Dynamic collision slots"
   ],
   "files": [
     {
@@ -28,12 +29,12 @@
       "upstream_sha256": null
     },
     {
-      "distributed_sha256": "28cae366cfca1dad330f566bb47c24a2bf0c0c3210522e42dd6a067b4e72b576",
+      "distributed_sha256": "c0e32a4acfa87c98c3627a9d80c2b802d37f1fec6e91d0a8d2063f25ab0166c2",
       "path": "openbor.c",
       "upstream_sha256": "8d210999b4af34c1932e0865daf39a007aec54155b1ed909176a39af905f5b2f"
     },
     {
-      "distributed_sha256": "e3891b5810d35f0584af98f9eb3dd6f7f2305a7185d0f6ffcbca3f1cfacd6964",
+      "distributed_sha256": "34558a8a559a83380eaafc0ed8f5e71e629caca73aecd15de6a9ca3d99b084cf",
       "path": "openbor.h",
       "upstream_sha256": "e3891b5810d35f0584af98f9eb3dd6f7f2305a7185d0f6ffcbca3f1cfacd6964"
     },

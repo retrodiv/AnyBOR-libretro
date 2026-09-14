@@ -2408,7 +2408,8 @@ typedef struct s_collision_instance {
 */
 typedef struct s_collision_collection {
     uint64_t                active_status; /* Bitmask indicating active collision slots. */
-    s_collision_instance*   slots[MAX_COLLISION_BOXES_PER_FRAME]; /* Array of pointers to collision instances. */
+    s_collision_instance**  slots;         /* Pointer slots allocated through the highest used index. */
+    int                     slot_capacity; /* Number of allocated pointer slots. */
 } s_collision_collection;
 
 /*

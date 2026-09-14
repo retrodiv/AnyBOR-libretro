@@ -10258,6 +10258,33 @@ s_collision_collection* collision_collection_allocate(void) {
 }
 
 /*
+* Grow the pointer table only through the highest author-facing slot used by
+* this collection. Most frames contain one collision box, so reserving all 64
+* pointers in every collection wastes substantially more memory than the
+* collision data itself.
+*/
+static void collision_collection_ensure_slot(s_collision_collection* const collection, const int collision_index) {
+    s_collision_instance** slots;
+    const int capacity = collision_index + 1;
+
+    if (capacity <= collection->slot_capacity) {
+        return;
+    }
+
+    slots = realloc(collection->slots, (size_t)capacity * sizeof(*slots));
+
+    if (!slots) {
+        borShutdown(1, E_OUT_OF_MEMORY);
+    }
+
+    memset(slots + collection->slot_capacity,
+           0,
+           (size_t)(capacity - collection->slot_capacity) * sizeof(*slots));
+    collection->slots = slots;
+    collection->slot_capacity = capacity;
+}
+
+/*
 * Caskey, Damon V.
 * 2026-06-27 (rework from 2021)
 *
@@ -10442,13 +10469,14 @@ void collision_collection_free(s_collision_collection* const collection) {
     * to find active slots. Just to ensure we 
     * get everythign cleaned up.
     */
-    for (collision_index = 0; collision_index < MAX_COLLISION_BOXES_PER_FRAME; collision_index++) {
+    for (collision_index = 0; collision_index < collection->slot_capacity; collision_index++) {
         collision_instance_free(collection->slots[collision_index]);
         collection->slots[collision_index] = NULL;
     }
 
     collection->active_status = COLLISION_ACTIVE_STATUS_NONE;
 
+    free(collection->slots);
     free(collection);
 }
 
@@ -10538,6 +10566,8 @@ s_collision_collection* collision_collection_clone(const s_collision_collection*
         if (!result) {
             result = collision_collection_allocate();
         }
+
+        collision_collection_ensure_slot(result, collision_index);
 
         /*
         * Clone the collision instance. The instance clone
@@ -10636,6 +10666,10 @@ s_collision_instance* collision_find_slot_index(s_collision_collection* const co
     * collision instance pointer. In a healthy collection,
     * this should be non-null.
     */
+    if (collision_index >= collection->slot_capacity) {
+        return NULL;
+    }
+
     return collection->slots[collision_index];
 }
 
@@ -10697,6 +10731,8 @@ s_collision_instance* collision_upsert_index(s_collision_collection** const coll
     if (!*collection) {
         *collection = collision_collection_allocate();
     }
+
+    collision_collection_ensure_slot(*collection, collision_index);
 
     /*
     * Try to find an already-active collision instance
