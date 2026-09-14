@@ -1864,7 +1864,9 @@ if(n<1) n = 1;
 
 #define getpal ((current_palette&&level)?(level->palettes[current_palette-1]):pal)
 
-#define validanim(e, a) ((e)->modeldata.animation[a]&&(e)->modeldata.animation[a]->numframes)
+#define validanim(e, a) ((a) >= 0 && (a) < (e)->modeldata.animation_capacity && \
+                        (e)->modeldata.animation[a] && \
+                        (e)->modeldata.animation[a]->numframes)
 
 //#define     MAX_MOVES             16
 //#define     MAX_MOVE_STEPS        16
@@ -3737,6 +3739,7 @@ typedef struct
     int atchain[MAX_ATCHAIN];
     int chainlength;
     s_anim **animation;
+    int animation_capacity;
     int credit;
     int escapehits; // Escape spammers!
     int chargerate; // For the charge animation
