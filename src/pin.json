@@ -55,14 +55,9 @@
   "transform_vm": {
     "component": "AnyBOR bounded transform compiler and interpreter",
     "license": "BSD-3-Clause",
-    "revision": "a243f3642fd76aafc62f87e896e568c3105bca9c",
-    "sources": {
-      "content_transform.c": "2d356b600760bcd0a0953b213820898e9d7239b49172d7f0a40ed6c3d175a3d8",
-      "content_transform.h": "fcd730278c23f7b6e904aab64f0868adec7350dacecab9e1a3c3cfb8204f3e08",
-      "content_transform_source.c": "de78731fe4d8dd873fd853fbe49413f35933593b83a6faffba2900f8e5a3f153"
-    },
-    "adaptation": "Standalone source compiler and execute function; AnyBOR namespace. No format programs, pipelines or external patch loaders imported."
+    "scope": "Standalone source compiler and execute function; no format programs, pipelines or external patch loaders."
   },
+  "source_date_epoch": 1788739200,
   "engine_repo": {
     "url": "https://github.com/DCurrent/openbor.git"
   },

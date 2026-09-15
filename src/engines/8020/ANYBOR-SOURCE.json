@@ -1,944 +1,1464 @@
 {
   "build": "8020",
-  "changes": [
-    "Libretro platform",
-    "Savestate packfile fixup",
-    "Provenance and circle",
-    "Halloc license",
-    "Fixed width endian",
-    "Webm lifecycle",
-    "Resource lifecycle",
-    "Four player defaults",
-    "Webm worker waits",
-    "Player slot spawn safety",
-    "Runtime instruction unions",
-    "Active pak alias",
-    "Compact instruction storage",
-    "Compact script values",
-    "Dynamic collision slots",
-    "Release compiled parser",
-    "Dynamic animation table",
-    "Compact call references",
-    "Compact runtime instruction operands",
-    "Direct instruction storage",
-    "Stream large samples",
-    "Modification notices"
-  ],
-  "files": [
-    {
+  "commit": "9d81480f8481fbb9e76b0b5f2a5dfa408376761a",
+  "files": {
+    "LICENSE": {
       "distributed_sha256": "b8f3916944f0b5aee216ef7a494820d17ae658336a4680992dc244ebedecf3ea",
-      "path": "LICENSE",
+      "modified": false,
+      "topics": [],
       "upstream_sha256": "b8f3916944f0b5aee216ef7a494820d17ae658336a4680992dc244ebedecf3ea"
     },
-    {
+    "Makefile.libretro": {
       "distributed_sha256": "0d7fd690fee6730e55c0af33c60025aef59b4f250de9583fb761e5755cebf705",
-      "path": "Makefile.libretro",
+      "modified": true,
+      "origin": "Project libretro build overlay",
+      "summary": "Supply the shared libretro engine build and symbol-isolation rules.",
+      "topics": [],
       "upstream_sha256": null
     },
-    {
+    "openbor.c": {
       "distributed_sha256": "fa47ef0604926c5e8d95a5e24f4c569105784e23561b2307df4b21719c9ee092",
-      "path": "openbor.c",
+      "modified": true,
+      "summary": "Apply the port's engine corrections. Leave multiplayer slots without a selected model available to join even if game scripts preassign lives to them. Let a missing basename-only PAK self-check read the active frontend content after it has been validated and prepared. Allocate each model's animation pointer table through the highest animation index that model uses, and bound cache, copy and cleanup paths to that capacity. Initialize all four RetroPads and repair legacy unbound player profiles without replacing custom bindings. Yield to the frontend and decoder workers while asynchronous movies are pending. Grow each collision collection's pointer table only through its highest author-facing slot.",
+      "topics": [
+        "active-content-pak-aliases",
+        "animation-memory-layout",
+        "collision-memory-layout",
+        "empty-player-slot-safety",
+        "four-player-controls",
+        "record-dates-and-file-notices",
+        "webm-playback-lifecycle"
+      ],
       "upstream_sha256": "8d210999b4af34c1932e0865daf39a007aec54155b1ed909176a39af905f5b2f"
     },
-    {
+    "openbor.h": {
       "distributed_sha256": "6d6b1975a84ee928039930e7fd2e481871969d8c6e2fd9c2668c024b9aca83b7",
-      "path": "openbor.h",
+      "modified": true,
+      "summary": "Allocate collision pointer slots through the highest author-facing index used by each collection. Track each model's allocated animation-table capacity and reject lookups outside it.",
+      "topics": [
+        "animation-memory-layout",
+        "collision-memory-layout",
+        "record-dates-and-file-notices"
+      ],
       "upstream_sha256": "e3891b5810d35f0584af98f9eb3dd6f7f2305a7185d0f6ffcbca3f1cfacd6964"
     },
-    {
+    "openborscript.c": {
       "distributed_sha256": "9664519e7edda386e2c0222cbeef58cee26178a2780bd73ac2a70adff26afd01",
-      "path": "openborscript.c",
+      "modified": true,
+      "summary": "Dispatch native string mapping through explicitly tagged compiled call targets.",
+      "topics": [
+        "record-dates-and-file-notices",
+        "script-memory-layout"
+      ],
       "upstream_sha256": "24b9fe5794af8226cda3b7424fae2d754b76773f4f60483200d33c24783fdb90"
     },
-    {
+    "source/bitmask.h": {
       "distributed_sha256": "d28161304911a69764b5eb3e8fc475dd52520fc34f8a4ec19197c495221f0ae4",
-      "path": "source/bitmask.h",
+      "modified": false,
+      "topics": [],
       "upstream_sha256": "d28161304911a69764b5eb3e8fc475dd52520fc34f8a4ec19197c495221f0ae4"
     },
-    {
+    "source/defense_fields.def": {
       "distributed_sha256": "6b069a6c79ab8f11610484ef9564f96d15f4e7c9dee322b9413fe6e748cedc10",
-      "path": "source/defense_fields.def",
+      "modified": false,
+      "topics": [],
       "upstream_sha256": "6b069a6c79ab8f11610484ef9564f96d15f4e7c9dee322b9413fe6e748cedc10"
     },
-    {
+    "source/gamelib/anigif.c": {
       "distributed_sha256": "29f501b015da45039518424dd5792a3785f6e81aaae3d3e355137c493bb4735a",
-      "path": "source/gamelib/anigif.c",
+      "modified": false,
+      "topics": [],
       "upstream_sha256": "29f501b015da45039518424dd5792a3785f6e81aaae3d3e355137c493bb4735a"
     },
-    {
+    "source/gamelib/anigif.h": {
       "distributed_sha256": "4e8aa4d2f443279a5f0cff0d01f2663df1ac8fd8b338139ec7bb393238148d81",
-      "path": "source/gamelib/anigif.h",
+      "modified": false,
+      "topics": [],
       "upstream_sha256": "4e8aa4d2f443279a5f0cff0d01f2663df1ac8fd8b338139ec7bb393238148d81"
     },
-    {
+    "source/gamelib/bitmap.c": {
       "distributed_sha256": "8427555f80358437125777c4a2fa552cd4b15f27dac42cc6c30ef2a4aeecac5e",
-      "path": "source/gamelib/bitmap.c",
+      "modified": false,
+      "topics": [],
       "upstream_sha256": "8427555f80358437125777c4a2fa552cd4b15f27dac42cc6c30ef2a4aeecac5e"
     },
-    {
+    "source/gamelib/bitmap.h": {
       "distributed_sha256": "d7975da83659bac74b45002eab6c560689d402569935203195253171cee018cf",
-      "path": "source/gamelib/bitmap.h",
+      "modified": false,
+      "topics": [],
       "upstream_sha256": "d7975da83659bac74b45002eab6c560689d402569935203195253171cee018cf"
     },
-    {
+    "source/gamelib/borendian.h": {
       "distributed_sha256": "f482b1d8cbcf445e6055789f4f55088344294e8e3d117caab0ac3332daf3bc10",
       "modified": true,
-      "path": "source/gamelib/borendian.h",
-      "summary": "Portable circle rasterization and fixed-width endian adaptations are included from the first public import.",
+      "summary": "Use the port's fixed-width endian conversions.",
+      "topics": [
+        "record-dates-and-file-notices",
+        "replacement-implementations-and-attribution"
+      ],
       "upstream_sha256": "18856c2f73a5d01654f209f2513e0d04666b417a8df83d1ba11a8b383d9dc613"
     },
-    {
+    "source/gamelib/draw.c": {
       "distributed_sha256": "278d672f27f76a7ec3715ab5b317bce9bcc419caf3430a725f1423b8caebfdba",
       "modified": true,
-      "path": "source/gamelib/draw.c",
-      "summary": "Portable circle rasterization and fixed-width endian adaptations are included from the first public import.",
+      "summary": "Route circle drawing through the port's integer rasterizer.",
+      "topics": [
+        "record-dates-and-file-notices",
+        "replacement-implementations-and-attribution"
+      ],
       "upstream_sha256": "73db8ffc5ccc6f5a6cf58160f73f393dba1b48a7b21efbd2f596257d44fbdfa2"
     },
-    {
+    "source/gamelib/draw.h": {
       "distributed_sha256": "377f78ac847552076d0444a44a45b0949334f83606255569f6e124d91bb58f2a",
-      "path": "source/gamelib/draw.h",
+      "modified": false,
+      "topics": [],
       "upstream_sha256": "377f78ac847552076d0444a44a45b0949334f83606255569f6e124d91bb58f2a"
     },
-    {
+    "source/gamelib/draw16.c": {
       "distributed_sha256": "0d1c0a1ebc4b2f296ab10b683fefb0a10ac993b89d888c527da7b7e49cb85fb3",
-      "path": "source/gamelib/draw16.c",
+      "modified": false,
+      "topics": [],
       "upstream_sha256": "0d1c0a1ebc4b2f296ab10b683fefb0a10ac993b89d888c527da7b7e49cb85fb3"
     },
-    {
+    "source/gamelib/draw32.c": {
       "distributed_sha256": "d52b763bcfe74a656de28ef92b8f16da5f6f97465848991107758e97b5c68798",
-      "path": "source/gamelib/draw32.c",
+      "modified": false,
+      "topics": [],
       "upstream_sha256": "d52b763bcfe74a656de28ef92b8f16da5f6f97465848991107758e97b5c68798"
     },
-    {
+    "source/gamelib/filecache.c": {
       "distributed_sha256": "f873f09830586b415126aa2f78e4910191d43d6079d1f79d287c5c3b461667cb",
-      "path": "source/gamelib/filecache.c",
+      "modified": true,
+      "summary": "Expose the cache descriptor for resource restoration and initialize it to -1.",
+      "topics": [
+        "packfile-state-and-resource-lifecycle",
+        "record-dates-and-file-notices"
+      ],
       "upstream_sha256": "89dfd1122fc8956320744e3284e7e60b21043dba8593c223b26492c2f293731d"
     },
-    {
+    "source/gamelib/filecache.h": {
       "distributed_sha256": "78d6646031e59ddc71ee45c965380f3edd1d6f2362dba8639169051d3990dbfc",
-      "path": "source/gamelib/filecache.h",
+      "modified": false,
+      "topics": [],
       "upstream_sha256": "78d6646031e59ddc71ee45c965380f3edd1d6f2362dba8639169051d3990dbfc"
     },
-    {
+    "source/gamelib/font.c": {
       "distributed_sha256": "74944769b719009836cb98571823536234bbc63d95f6b28dcd7ae1af0ff98f1a",
-      "path": "source/gamelib/font.c",
+      "modified": false,
+      "topics": [],
       "upstream_sha256": "74944769b719009836cb98571823536234bbc63d95f6b28dcd7ae1af0ff98f1a"
     },
-    {
+    "source/gamelib/font.h": {
       "distributed_sha256": "300070e53fa576bd550bc11c377e6328c90d1cd266e18e5fce7d275c79257fc0",
-      "path": "source/gamelib/font.h",
+      "modified": false,
+      "topics": [],
       "upstream_sha256": "300070e53fa576bd550bc11c377e6328c90d1cd266e18e5fce7d275c79257fc0"
     },
-    {
+    "source/gamelib/loadimg.c": {
       "distributed_sha256": "9c6a61772c1ed714c16e7fa0c777c46f1c54c05861d1bf9e13c875f2b2801edc",
-      "path": "source/gamelib/loadimg.c",
+      "modified": false,
+      "topics": [],
       "upstream_sha256": "9c6a61772c1ed714c16e7fa0c777c46f1c54c05861d1bf9e13c875f2b2801edc"
     },
-    {
+    "source/gamelib/loadimg.h": {
       "distributed_sha256": "b6483ed3afbedefbaf001a7d695a42c7e0a2c178831bd4cc98ff7b13e9679d70",
-      "path": "source/gamelib/loadimg.h",
+      "modified": false,
+      "topics": [],
       "upstream_sha256": "b6483ed3afbedefbaf001a7d695a42c7e0a2c178831bd4cc98ff7b13e9679d70"
     },
-    {
+    "source/gamelib/models.c": {
       "distributed_sha256": "bbd99a89a2ccbd4700393018f503607235914fad0e3f1056e782a65527f33ea6",
-      "path": "source/gamelib/models.c",
+      "modified": false,
+      "topics": [],
       "upstream_sha256": "bbd99a89a2ccbd4700393018f503607235914fad0e3f1056e782a65527f33ea6"
     },
-    {
+    "source/gamelib/models.h": {
       "distributed_sha256": "97bfca87a0eab276a7899153a0a0bdfa0e8e7ed32081df161eaba839fae3de78",
-      "path": "source/gamelib/models.h",
+      "modified": false,
+      "topics": [],
       "upstream_sha256": "97bfca87a0eab276a7899153a0a0bdfa0e8e7ed32081df161eaba839fae3de78"
     },
-    {
+    "source/gamelib/packfile.c": {
       "distributed_sha256": "9e24774149d98b63fb11a089ddf7243cbcd5f7cc28f308fdfb6b725e46614378",
-      "path": "source/gamelib/packfile.c",
+      "modified": true,
+      "summary": "Repair PAK handles after state loads, close resources on reset, and prune unused frontend APIs.",
+      "topics": [
+        "packfile-state-and-resource-lifecycle",
+        "record-dates-and-file-notices"
+      ],
       "upstream_sha256": "720b3e5b788ed60cf48dd8422d993bd86484cc1db055e9626dd407cd4c368ac6"
     },
-    {
+    "source/gamelib/packfile.h": {
       "distributed_sha256": "856d3a57e07ee3720f30f18d93f65a95aba9212dfbb6ee9dff61aa9632edd0e6",
-      "path": "source/gamelib/packfile.h",
+      "modified": false,
+      "topics": [],
       "upstream_sha256": "856d3a57e07ee3720f30f18d93f65a95aba9212dfbb6ee9dff61aa9632edd0e6"
     },
-    {
+    "source/gamelib/packfile_handle.c": {
       "distributed_sha256": "065aaa8fcb201e70a029f34f181641c0f939551a98984c934471530d8b657a24",
-      "path": "source/gamelib/packfile_handle.c",
+      "modified": true,
+      "summary": "Own and release direct-reader source paths for state restoration.",
+      "topics": [
+        "packfile-state-and-resource-lifecycle",
+        "record-dates-and-file-notices"
+      ],
       "upstream_sha256": "4d6759763435e90b68c558acacc79043b80469a9599a3674a447246dbcacfa8d"
     },
-    {
+    "source/gamelib/packfile_handle.h": {
       "distributed_sha256": "c3a99cc415a89a575182fd42ea43ab41517b7270aac21d4af9c9eb12947658d0",
-      "path": "source/gamelib/packfile_handle.h",
+      "modified": true,
+      "summary": "Record direct-reader source paths for state restoration.",
+      "topics": [
+        "packfile-state-and-resource-lifecycle",
+        "record-dates-and-file-notices"
+      ],
       "upstream_sha256": "cf6e60cb796045938903a58d23d8c920d4a23ded8d72599396c4af66cb28b34b"
     },
-    {
+    "source/gamelib/palette.c": {
       "distributed_sha256": "b20f0c35439894e04f2d2d9b58e5a145dcdfc70e270f38fc9d74273b18d0d383",
-      "path": "source/gamelib/palette.c",
+      "modified": false,
+      "topics": [],
       "upstream_sha256": "b20f0c35439894e04f2d2d9b58e5a145dcdfc70e270f38fc9d74273b18d0d383"
     },
-    {
+    "source/gamelib/palette.h": {
       "distributed_sha256": "0a3ed9b87f66d2cd51810d86d79cc1beec83ca477172fb033f2851404da143b8",
-      "path": "source/gamelib/palette.h",
+      "modified": false,
+      "topics": [],
       "upstream_sha256": "0a3ed9b87f66d2cd51810d86d79cc1beec83ca477172fb033f2851404da143b8"
     },
-    {
+    "source/gamelib/pixelformat.c": {
       "distributed_sha256": "5e08195d171f7baf370c3e2937fd7232e36492d6c30e55d6a0d5ce30b521e474",
-      "path": "source/gamelib/pixelformat.c",
+      "modified": false,
+      "topics": [],
       "upstream_sha256": "5e08195d171f7baf370c3e2937fd7232e36492d6c30e55d6a0d5ce30b521e474"
     },
-    {
+    "source/gamelib/screen.c": {
       "distributed_sha256": "26fbe12d0b37aee37299f5d8834d7f2b99cf7ca143df8cd00399fbad18955f8a",
-      "path": "source/gamelib/screen.c",
+      "modified": false,
+      "topics": [],
       "upstream_sha256": "26fbe12d0b37aee37299f5d8834d7f2b99cf7ca143df8cd00399fbad18955f8a"
     },
-    {
+    "source/gamelib/screen.h": {
       "distributed_sha256": "3098fd0b25542eeb90836c6e1a8d1d84aa930ecfc55f24665389af1c704210a9",
-      "path": "source/gamelib/screen.h",
+      "modified": false,
+      "topics": [],
       "upstream_sha256": "3098fd0b25542eeb90836c6e1a8d1d84aa930ecfc55f24665389af1c704210a9"
     },
-    {
+    "source/gamelib/screen16.c": {
       "distributed_sha256": "1532aa5470a37b10b3ded3778399de8e64ba407124204789dc290083a4f53732",
-      "path": "source/gamelib/screen16.c",
+      "modified": false,
+      "topics": [],
       "upstream_sha256": "1532aa5470a37b10b3ded3778399de8e64ba407124204789dc290083a4f53732"
     },
-    {
+    "source/gamelib/screen32.c": {
       "distributed_sha256": "d69a29810c89cbf421a723c1eb78ae2a6bbf1f4ccfab304d0a3a0e9b532a4b19",
-      "path": "source/gamelib/screen32.c",
+      "modified": false,
+      "topics": [],
       "upstream_sha256": "d69a29810c89cbf421a723c1eb78ae2a6bbf1f4ccfab304d0a3a0e9b532a4b19"
     },
-    {
+    "source/gamelib/sound_channel.c": {
       "distributed_sha256": "a2592c94a584e951ea2f59be56bb915b605aa1b5d9ee3261a927ffff2c331e04",
-      "path": "source/gamelib/sound_channel.c",
+      "modified": false,
+      "topics": [],
       "upstream_sha256": "a2592c94a584e951ea2f59be56bb915b605aa1b5d9ee3261a927ffff2c331e04"
     },
-    {
+    "source/gamelib/sound_channel.h": {
       "distributed_sha256": "756ace108021811d15a5f0cdc732f87817708c0cd471aa75602575d1698ad31a",
-      "path": "source/gamelib/sound_channel.h",
+      "modified": false,
+      "topics": [],
       "upstream_sha256": "756ace108021811d15a5f0cdc732f87817708c0cd471aa75602575d1698ad31a"
     },
-    {
+    "source/gamelib/sound_stream.c": {
       "distributed_sha256": "e111d264762f53dd42532b4dc21448062b959adb8eeae4ce129c13796ae52a3e",
-      "path": "source/gamelib/sound_stream.c",
+      "modified": false,
+      "topics": [],
       "upstream_sha256": "e111d264762f53dd42532b4dc21448062b959adb8eeae4ce129c13796ae52a3e"
     },
-    {
+    "source/gamelib/sound_stream.h": {
       "distributed_sha256": "c1953b4ab90fbeee0f144486cb9f14d55dddb9f083138ab55b843fc1d154e370",
-      "path": "source/gamelib/sound_stream.h",
+      "modified": false,
+      "topics": [],
       "upstream_sha256": "c1953b4ab90fbeee0f144486cb9f14d55dddb9f083138ab55b843fc1d154e370"
     },
-    {
+    "source/gamelib/soundmix.c": {
       "distributed_sha256": "e75f49f8211ec3ed902e9f551be39a84c66b6e443eb1bf12962b76cd1d7be103",
-      "path": "source/gamelib/soundmix.c",
+      "modified": true,
+      "summary": "Stream large decoded samples instead of retaining immutable PCM in rewind state.",
+      "topics": [
+        "audio-memory-layout"
+      ],
       "upstream_sha256": "4b070f8f9fcbdc0894c085f2b0513b0d473047a105e757d8e96819c61e640e60"
     },
-    {
+    "source/gamelib/soundmix.h": {
       "distributed_sha256": "71995015fb3c03b972afd453d6fcfee20addda286c16ceba94b8b108a09168dd",
-      "path": "source/gamelib/soundmix.h",
+      "modified": false,
+      "topics": [],
       "upstream_sha256": "71995015fb3c03b972afd453d6fcfee20addda286c16ceba94b8b108a09168dd"
     },
-    {
+    "source/gamelib/sprite.c": {
       "distributed_sha256": "14a82dcaf9f0344e7a5be9519da527b9cccff36e431761d67db2821cae43415f",
-      "path": "source/gamelib/sprite.c",
+      "modified": false,
+      "topics": [],
       "upstream_sha256": "14a82dcaf9f0344e7a5be9519da527b9cccff36e431761d67db2821cae43415f"
     },
-    {
+    "source/gamelib/sprite.h": {
       "distributed_sha256": "160dc24d8b7db9726c29fca911d506dd36c1462eb2b40fc6251a8b381f53d74e",
-      "path": "source/gamelib/sprite.h",
+      "modified": false,
+      "topics": [],
       "upstream_sha256": "160dc24d8b7db9726c29fca911d506dd36c1462eb2b40fc6251a8b381f53d74e"
     },
-    {
+    "source/gamelib/spriteq.c": {
       "distributed_sha256": "a94c17b1a6788c0348f3f7e5626f31250e2566bec8ef92a7e8ef1738adec1602",
-      "path": "source/gamelib/spriteq.c",
+      "modified": false,
+      "topics": [],
       "upstream_sha256": "a94c17b1a6788c0348f3f7e5626f31250e2566bec8ef92a7e8ef1738adec1602"
     },
-    {
+    "source/gamelib/spriteq.h": {
       "distributed_sha256": "e998d23615d4bffb684e0aa5ece2ace6a1162ff30f33857a1aab322011079427",
-      "path": "source/gamelib/spriteq.h",
+      "modified": false,
+      "topics": [],
       "upstream_sha256": "e998d23615d4bffb684e0aa5ece2ace6a1162ff30f33857a1aab322011079427"
     },
-    {
+    "source/gamelib/spritex8p16.c": {
       "distributed_sha256": "fc095a69ae5411127dc09cbddadcbf39a94dc8a1a0bb10b5fb434cb7385dd5b9",
-      "path": "source/gamelib/spritex8p16.c",
+      "modified": false,
+      "topics": [],
       "upstream_sha256": "fc095a69ae5411127dc09cbddadcbf39a94dc8a1a0bb10b5fb434cb7385dd5b9"
     },
-    {
+    "source/gamelib/spritex8p32.c": {
       "distributed_sha256": "b12956d4e68a449432ff435bed488cfc276fd52b417d4b45c9f883563a58c20c",
-      "path": "source/gamelib/spritex8p32.c",
+      "modified": false,
+      "topics": [],
       "upstream_sha256": "b12956d4e68a449432ff435bed488cfc276fd52b417d4b45c9f883563a58c20c"
     },
-    {
+    "source/gamelib/threads.h": {
       "distributed_sha256": "10967b414a84b52df1334ef8e2786a5b5b09c6e8fc6914c5b9b9c984508de2c1",
-      "path": "source/gamelib/threads.h",
+      "modified": true,
+      "summary": "Declare the libretro thread, mutex and condition types.",
+      "topics": [
+        "platform-integration",
+        "record-dates-and-file-notices"
+      ],
       "upstream_sha256": "13a31d7611db2af96760d1202c32be49f4a1f4078236eb11b6dcd6754d9f9094"
     },
-    {
+    "source/gamelib/timer.h": {
       "distributed_sha256": "d4fd205857100a808b95265eb3203d064e118ea494c9d053d5585c16ad81789f",
-      "path": "source/gamelib/timer.h",
+      "modified": false,
+      "topics": [],
       "upstream_sha256": "d4fd205857100a808b95265eb3203d064e118ea494c9d053d5585c16ad81789f"
     },
-    {
+    "source/gamelib/transform.c": {
       "distributed_sha256": "b0636ffe0f3913b573d9f0fbad239c110084c18a9f6a366e507902803bc7dea0",
-      "path": "source/gamelib/transform.c",
+      "modified": false,
+      "topics": [],
       "upstream_sha256": "b0636ffe0f3913b573d9f0fbad239c110084c18a9f6a366e507902803bc7dea0"
     },
-    {
+    "source/gamelib/transform.h": {
       "distributed_sha256": "43b84b0cc41903d36d4e775fddf2798ed1e4fa70896ef130545ddca157f1c8b8",
-      "path": "source/gamelib/transform.h",
+      "modified": false,
+      "topics": [],
       "upstream_sha256": "43b84b0cc41903d36d4e775fddf2798ed1e4fa70896ef130545ddca157f1c8b8"
     },
-    {
+    "source/gamelib/translation.c": {
       "distributed_sha256": "c3825ddfd00aaf0f9bd89d330d946164fb8244b65548426b95c5b834d44f3226",
-      "path": "source/gamelib/translation.c",
+      "modified": false,
+      "topics": [],
       "upstream_sha256": "c3825ddfd00aaf0f9bd89d330d946164fb8244b65548426b95c5b834d44f3226"
     },
-    {
+    "source/gamelib/translation.h": {
       "distributed_sha256": "c100dcbcc5b2f7f486ed5707a358bf480564a2d0dc4f65738dd3c0c29871107b",
-      "path": "source/gamelib/translation.h",
+      "modified": false,
+      "topics": [],
       "upstream_sha256": "c100dcbcc5b2f7f486ed5707a358bf480564a2d0dc4f65738dd3c0c29871107b"
     },
-    {
+    "source/gamelib/types.h": {
       "distributed_sha256": "2540de17aca7d0a0280aaa3235f645f5051ca5b38c59074aa162c7ddb47b49c9",
-      "path": "source/gamelib/types.h",
+      "modified": false,
+      "topics": [],
       "upstream_sha256": "2540de17aca7d0a0280aaa3235f645f5051ca5b38c59074aa162c7ddb47b49c9"
     },
-    {
+    "source/gamelib/vga.h": {
       "distributed_sha256": "811fbd5f87a508d6a505a14f6f1891837d9d4142d79839ab191f5e0dd7185861",
-      "path": "source/gamelib/vga.h",
+      "modified": false,
+      "topics": [],
       "upstream_sha256": "811fbd5f87a508d6a505a14f6f1891837d9d4142d79839ab191f5e0dd7185861"
     },
-    {
+    "source/gamelib/writepixel.h": {
       "distributed_sha256": "4165f3a4c223a0856a828b8256bc5cf15b5d9a530441a7c1ab61c4cf2b4841dc",
-      "path": "source/gamelib/writepixel.h",
+      "modified": false,
+      "topics": [],
       "upstream_sha256": "4165f3a4c223a0856a828b8256bc5cf15b5d9a530441a7c1ab61c4cf2b4841dc"
     },
-    {
+    "source/gfxlib/gfxtypes.h": {
       "distributed_sha256": "206f06742c0eca6cf6c36018775d875d1a1188b593392f548794d88e66bd0d6d",
-      "path": "source/gfxlib/gfxtypes.h",
+      "modified": false,
+      "topics": [],
       "upstream_sha256": "206f06742c0eca6cf6c36018775d875d1a1188b593392f548794d88e66bd0d6d"
     },
-    {
+    "source/globals.h": {
       "distributed_sha256": "5a2a63a645aecc349bf0752a9282e5eda5d0319034826da9563050866a3ad253",
-      "path": "source/globals.h",
+      "modified": true,
+      "summary": "Include the libretro platform interface.",
+      "topics": [
+        "platform-integration",
+        "record-dates-and-file-notices"
+      ],
       "upstream_sha256": "5c30e0920ff08c9e790342a623db93462355ab30ac0b923eb0d944c88d8d2f5f"
     },
-    {
+    "source/omath.c": {
       "distributed_sha256": "78cb800d6a4e1d57e66e8d5c464da27b6854f39318d7bf5f0bfcf3278e5badda",
-      "path": "source/omath.c",
+      "modified": false,
+      "topics": [],
       "upstream_sha256": "78cb800d6a4e1d57e66e8d5c464da27b6854f39318d7bf5f0bfcf3278e5badda"
     },
-    {
+    "source/omath.h": {
       "distributed_sha256": "6e830bec468485c1e2dc4445b265a7d47cf200a40e3a88bd506acd8d9a0a17ff",
-      "path": "source/omath.h",
+      "modified": false,
+      "topics": [],
       "upstream_sha256": "6e830bec468485c1e2dc4445b265a7d47cf200a40e3a88bd506acd8d9a0a17ff"
     },
-    {
+    "source/openborscript/animation.c": {
       "distributed_sha256": "a3645bf36c9a860bdf394d7f740a7aa336a3e332122e3ebb2b544036e20c9573",
-      "path": "source/openborscript/animation.c",
+      "modified": false,
+      "topics": [],
       "upstream_sha256": "a3645bf36c9a860bdf394d7f740a7aa336a3e332122e3ebb2b544036e20c9573"
     },
-    {
+    "source/openborscript/animation.h": {
       "distributed_sha256": "fc00aab9e9a98dff37978f4747ce3fe2542539f1d95c57fe1a7a796e79a9fe18",
-      "path": "source/openborscript/animation.h",
+      "modified": false,
+      "topics": [],
       "upstream_sha256": "fc00aab9e9a98dff37978f4747ce3fe2542539f1d95c57fe1a7a796e79a9fe18"
     },
-    {
+    "source/openborscript/audio.c": {
       "distributed_sha256": "81ce996be3f7c705d97410e15dee72f2f966b43ff0b9fa329354a55ba7dfa7aa",
-      "path": "source/openborscript/audio.c",
+      "modified": false,
+      "topics": [],
       "upstream_sha256": "81ce996be3f7c705d97410e15dee72f2f966b43ff0b9fa329354a55ba7dfa7aa"
     },
-    {
+    "source/openborscript/audio.h": {
       "distributed_sha256": "1b95a9710449993d0f61182757048cf4ed1e4638cc54d83dc3a98816dddf17c6",
-      "path": "source/openborscript/audio.h",
+      "modified": false,
+      "topics": [],
       "upstream_sha256": "1b95a9710449993d0f61182757048cf4ed1e4638cc54d83dc3a98816dddf17c6"
     },
-    {
+    "source/openborscript/axis.c": {
       "distributed_sha256": "f96cb2b06d60bb2fb2f4d345a907ab5064db3fd1835b3f3e54f5924660bc7f4d",
-      "path": "source/openborscript/axis.c",
+      "modified": false,
+      "topics": [],
       "upstream_sha256": "f96cb2b06d60bb2fb2f4d345a907ab5064db3fd1835b3f3e54f5924660bc7f4d"
     },
-    {
+    "source/openborscript/axis.h": {
       "distributed_sha256": "28d5b01b29bf9c70a44cb52962e4d8b6e4d64cccf1b6c798999b3846c860878c",
-      "path": "source/openborscript/axis.h",
+      "modified": false,
+      "topics": [],
       "upstream_sha256": "28d5b01b29bf9c70a44cb52962e4d8b6e4d64cccf1b6c798999b3846c860878c"
     },
-    {
+    "source/openborscript/binding.c": {
       "distributed_sha256": "d3e6e1d83ccc6ae30ac51222bd4a440a792851a4b4799d9bec87691e59273184",
-      "path": "source/openborscript/binding.c",
+      "modified": false,
+      "topics": [],
       "upstream_sha256": "d3e6e1d83ccc6ae30ac51222bd4a440a792851a4b4799d9bec87691e59273184"
     },
-    {
+    "source/openborscript/binding.h": {
       "distributed_sha256": "0819bc8b0a292033cc7d5579f133ae740f9018d23074be9f30556db13d6de3ec",
-      "path": "source/openborscript/binding.h",
+      "modified": false,
+      "topics": [],
       "upstream_sha256": "0819bc8b0a292033cc7d5579f133ae740f9018d23074be9f30556db13d6de3ec"
     },
-    {
+    "source/openborscript/collision_attack.c": {
       "distributed_sha256": "351918413a0b54928e40c59e9a5b17544432358707db640b8e0bbab428737656",
-      "path": "source/openborscript/collision_attack.c",
+      "modified": false,
+      "topics": [],
       "upstream_sha256": "351918413a0b54928e40c59e9a5b17544432358707db640b8e0bbab428737656"
     },
-    {
+    "source/openborscript/collision_attack.h": {
       "distributed_sha256": "dd08a730b8d47e7b5c864431b715557fcbfc7e7f2665439cff092b40ad5d56ca",
-      "path": "source/openborscript/collision_attack.h",
+      "modified": false,
+      "topics": [],
       "upstream_sha256": "dd08a730b8d47e7b5c864431b715557fcbfc7e7f2665439cff092b40ad5d56ca"
     },
-    {
+    "source/openborscript/collision_body.c": {
       "distributed_sha256": "be1a8e364d16f183d1e044a65cca25a9d12a151b6002ea56e1d335e7254963c4",
-      "path": "source/openborscript/collision_body.c",
+      "modified": false,
+      "topics": [],
       "upstream_sha256": "be1a8e364d16f183d1e044a65cca25a9d12a151b6002ea56e1d335e7254963c4"
     },
-    {
+    "source/openborscript/collision_coordinates.c": {
       "distributed_sha256": "296608b5732fdfc91c9959c3ba066210c81fcebf59b7e534e1026543fc23803d",
-      "path": "source/openborscript/collision_coordinates.c",
+      "modified": false,
+      "topics": [],
       "upstream_sha256": "296608b5732fdfc91c9959c3ba066210c81fcebf59b7e534e1026543fc23803d"
     },
-    {
+    "source/openborscript/colorset.c": {
       "distributed_sha256": "3d7647c4e8f9f586e5a64bc4640b34a925d427ca00e81e1b6829680e6792347c",
-      "path": "source/openborscript/colorset.c",
+      "modified": false,
+      "topics": [],
       "upstream_sha256": "3d7647c4e8f9f586e5a64bc4640b34a925d427ca00e81e1b6829680e6792347c"
     },
-    {
+    "source/openborscript/colorset.h": {
       "distributed_sha256": "c4e98bd87c81e2941474a09ab0e0c95eb283717e46489df1442f9dfee3f900a8",
-      "path": "source/openborscript/colorset.h",
+      "modified": false,
+      "topics": [],
       "upstream_sha256": "c4e98bd87c81e2941474a09ab0e0c95eb283717e46489df1442f9dfee3f900a8"
     },
-    {
+    "source/openborscript/command_input.c": {
       "distributed_sha256": "32ac8dee1190a3a4ea08de50fefb25f71bb1a3cf39292ee1edd739cd25e3d498",
-      "path": "source/openborscript/command_input.c",
+      "modified": false,
+      "topics": [],
       "upstream_sha256": "32ac8dee1190a3a4ea08de50fefb25f71bb1a3cf39292ee1edd739cd25e3d498"
     },
-    {
+    "source/openborscript/command_input.h": {
       "distributed_sha256": "311b82f9740cd02a18e9531a66d2b70bd53f86b72a3502cf72e3fb4acb5dc548",
-      "path": "source/openborscript/command_input.h",
+      "modified": false,
+      "topics": [],
       "upstream_sha256": "311b82f9740cd02a18e9531a66d2b70bd53f86b72a3502cf72e3fb4acb5dc548"
     },
-    {
+    "source/openborscript/commands.c": {
       "distributed_sha256": "12a462821119a0056fb7a955e5c246dae44e6271d146ec11b107c0bedf052344",
-      "path": "source/openborscript/commands.c",
+      "modified": false,
+      "topics": [],
       "upstream_sha256": "12a462821119a0056fb7a955e5c246dae44e6271d146ec11b107c0bedf052344"
     },
-    {
+    "source/openborscript/commands.h": {
       "distributed_sha256": "bd85b0518c11c5afe3d1239d3ea55ffda751b0b2ca0e271b5099d3d8322a8ddd",
-      "path": "source/openborscript/commands.h",
+      "modified": false,
+      "topics": [],
       "upstream_sha256": "bd85b0518c11c5afe3d1239d3ea55ffda751b0b2ca0e271b5099d3d8322a8ddd"
     },
-    {
+    "source/openborscript/common_property.c": {
       "distributed_sha256": "442139566fac12ff9f1189221724c96dc7ea7bbc588071279fd635c25ffddf4a",
-      "path": "source/openborscript/common_property.c",
+      "modified": false,
+      "topics": [],
       "upstream_sha256": "442139566fac12ff9f1189221724c96dc7ea7bbc588071279fd635c25ffddf4a"
     },
-    {
+    "source/openborscript/config.h": {
       "distributed_sha256": "fcf14e9d6fbb0cbbb5867afef575bfb50db99e1e5a8bf3ccfe356517e143a8bc",
-      "path": "source/openborscript/config.h",
+      "modified": false,
+      "topics": [],
       "upstream_sha256": "fcf14e9d6fbb0cbbb5867afef575bfb50db99e1e5a8bf3ccfe356517e143a8bc"
     },
-    {
+    "source/openborscript/constants.c": {
       "distributed_sha256": "05c2040e0d51acbccf97a9224e0b66a6fba0676f961df02df95e8e9f2f727de5",
-      "path": "source/openborscript/constants.c",
+      "modified": false,
+      "topics": [],
       "upstream_sha256": "05c2040e0d51acbccf97a9224e0b66a6fba0676f961df02df95e8e9f2f727de5"
     },
-    {
+    "source/openborscript/datetime.c": {
       "distributed_sha256": "754f085432c134cf10b0420637a13aff931f2106309fb859fe321ca762e9ef26",
-      "path": "source/openborscript/datetime.c",
+      "modified": false,
+      "topics": [],
       "upstream_sha256": "754f085432c134cf10b0420637a13aff931f2106309fb859fe321ca762e9ef26"
     },
-    {
+    "source/openborscript/datetime.h": {
       "distributed_sha256": "c763cdc6e5cd8e12c3944ad4126299f373849dc938383e36b23442f1e370c5c6",
-      "path": "source/openborscript/datetime.h",
+      "modified": false,
+      "topics": [],
       "upstream_sha256": "c763cdc6e5cd8e12c3944ad4126299f373849dc938383e36b23442f1e370c5c6"
     },
-    {
+    "source/openborscript/drawmethod.c": {
       "distributed_sha256": "4fc50b76831cd99c2c8a729ae706eaa0ec6a71018c76bd5acd7ffb16ef371fe5",
-      "path": "source/openborscript/drawmethod.c",
+      "modified": false,
+      "topics": [],
       "upstream_sha256": "4fc50b76831cd99c2c8a729ae706eaa0ec6a71018c76bd5acd7ffb16ef371fe5"
     },
-    {
+    "source/openborscript/drawmethod.h": {
       "distributed_sha256": "2311947a6cc24b1805ef4cb1210fd67431627c17af1c8dff405d24c83b6a919b",
-      "path": "source/openborscript/drawmethod.h",
+      "modified": false,
+      "topics": [],
       "upstream_sha256": "2311947a6cc24b1805ef4cb1210fd67431627c17af1c8dff405d24c83b6a919b"
     },
-    {
+    "source/openborscript/entity.c": {
       "distributed_sha256": "b4c5882d23ed25b129a384116edabafe5d898531788d13d16a32aa09ba802c35",
-      "path": "source/openborscript/entity.c",
+      "modified": false,
+      "topics": [],
       "upstream_sha256": "b4c5882d23ed25b129a384116edabafe5d898531788d13d16a32aa09ba802c35"
     },
-    {
+    "source/openborscript/entity.h": {
       "distributed_sha256": "137b28a8821f81cd265600bd60f630e589def92e89525c9007dded08334b41b6",
-      "path": "source/openborscript/entity.h",
+      "modified": false,
+      "topics": [],
       "upstream_sha256": "137b28a8821f81cd265600bd60f630e589def92e89525c9007dded08334b41b6"
     },
-    {
+    "source/openborscript/faction.c": {
       "distributed_sha256": "08f0d33a9867b50c528a403898a9335b90127251c0a460b455b93c5d74c29204",
-      "path": "source/openborscript/faction.c",
+      "modified": false,
+      "topics": [],
       "upstream_sha256": "08f0d33a9867b50c528a403898a9335b90127251c0a460b455b93c5d74c29204"
     },
-    {
+    "source/openborscript/faction.h": {
       "distributed_sha256": "de4b7e22bc89c6f5f65341fff98b8e59dfe3f0de926248fa3b2c4d32696604eb",
-      "path": "source/openborscript/faction.h",
+      "modified": false,
+      "topics": [],
       "upstream_sha256": "de4b7e22bc89c6f5f65341fff98b8e59dfe3f0de926248fa3b2c4d32696604eb"
     },
-    {
+    "source/openborscript/flash.c": {
       "distributed_sha256": "9c99ec996dee4f8d1ef9692fd41a0c543e8874640722f8ef3e805a89b2a92118",
-      "path": "source/openborscript/flash.c",
+      "modified": false,
+      "topics": [],
       "upstream_sha256": "9c99ec996dee4f8d1ef9692fd41a0c543e8874640722f8ef3e805a89b2a92118"
     },
-    {
+    "source/openborscript/flash.h": {
       "distributed_sha256": "d793eff42299f32f4154e6003ec096cefd48cbb2cf225e73e3640029874f74df",
-      "path": "source/openborscript/flash.h",
+      "modified": false,
+      "topics": [],
       "upstream_sha256": "d793eff42299f32f4154e6003ec096cefd48cbb2cf225e73e3640029874f74df"
     },
-    {
+    "source/openborscript/global_config.c": {
       "distributed_sha256": "755ff4af3716c2f42d0597fe95e79b7cfb482a92bf2a55a9122d60159f29617a",
-      "path": "source/openborscript/global_config.c",
+      "modified": false,
+      "topics": [],
       "upstream_sha256": "755ff4af3716c2f42d0597fe95e79b7cfb482a92bf2a55a9122d60159f29617a"
     },
-    {
+    "source/openborscript/global_config.h": {
       "distributed_sha256": "a169cfe9ba70cbc88e3e546ef438d9f7b7c95f8ebb75e772ba1ac506bddf920a",
-      "path": "source/openborscript/global_config.h",
+      "modified": false,
+      "topics": [],
       "upstream_sha256": "a169cfe9ba70cbc88e3e546ef438d9f7b7c95f8ebb75e772ba1ac506bddf920a"
     },
-    {
+    "source/openborscript/icon.c": {
       "distributed_sha256": "8d3fbdb3b94b13157254b0fb57bb0f75f9133f234b7b43c65bd99527e0a882d7",
-      "path": "source/openborscript/icon.c",
+      "modified": false,
+      "topics": [],
       "upstream_sha256": "8d3fbdb3b94b13157254b0fb57bb0f75f9133f234b7b43c65bd99527e0a882d7"
     },
-    {
+    "source/openborscript/icon.h": {
       "distributed_sha256": "00fe52601bfab561a9a9a3bda4e0e3a0f79e925dbd4c5483eeee7f841e9f6e71",
-      "path": "source/openborscript/icon.h",
+      "modified": false,
+      "topics": [],
       "upstream_sha256": "00fe52601bfab561a9a9a3bda4e0e3a0f79e925dbd4c5483eeee7f841e9f6e71"
     },
-    {
+    "source/openborscript/index.c": {
       "distributed_sha256": "fb14b874fa453e10110cd7159523f709adf2b1c2103c3495a1785ef95811e6b8",
-      "path": "source/openborscript/index.c",
+      "modified": false,
+      "topics": [],
       "upstream_sha256": "fb14b874fa453e10110cd7159523f709adf2b1c2103c3495a1785ef95811e6b8"
     },
-    {
+    "source/openborscript/layer.c": {
       "distributed_sha256": "7ff27e41939d64ad60b49891bd00956eebd97355aeec1f0d1e0783ae08b50509",
-      "path": "source/openborscript/layer.c",
+      "modified": false,
+      "topics": [],
       "upstream_sha256": "7ff27e41939d64ad60b49891bd00956eebd97355aeec1f0d1e0783ae08b50509"
     },
-    {
+    "source/openborscript/level.c": {
       "distributed_sha256": "c4183f2e58d234b72e06e20d5961d8b6a0f6498112845e912b1d8fa6c13069da",
-      "path": "source/openborscript/level.c",
+      "modified": false,
+      "topics": [],
       "upstream_sha256": "c4183f2e58d234b72e06e20d5961d8b6a0f6498112845e912b1d8fa6c13069da"
     },
-    {
+    "source/openborscript/math.c": {
       "distributed_sha256": "9e18909a6ab431241bca8148b3522b9c54ec851eb1d825257c2a6a84f27407cb",
-      "path": "source/openborscript/math.c",
+      "modified": false,
+      "topics": [],
       "upstream_sha256": "9e18909a6ab431241bca8148b3522b9c54ec851eb1d825257c2a6a84f27407cb"
     },
-    {
+    "source/openborscript/model.c": {
       "distributed_sha256": "a0da4377db90ee645570726dfb1799d19e885309016c7178d6977f03d9cb81b8",
-      "path": "source/openborscript/model.c",
+      "modified": false,
+      "topics": [],
       "upstream_sha256": "a0da4377db90ee645570726dfb1799d19e885309016c7178d6977f03d9cb81b8"
     },
-    {
+    "source/openborscript/model.h": {
       "distributed_sha256": "54ef6ab181e54d5e50451e6af979197f0c5bab77a3179067af728af2783f42c9",
-      "path": "source/openborscript/model.h",
+      "modified": false,
+      "topics": [],
       "upstream_sha256": "54ef6ab181e54d5e50451e6af979197f0c5bab77a3179067af728af2783f42c9"
     },
-    {
+    "source/openborscript/movie.c": {
       "distributed_sha256": "262e58c1575c90b5ced0030f4b093a8c90e14768ca307c100f4a273589b6674a",
-      "path": "source/openborscript/movie.c",
+      "modified": false,
+      "topics": [],
       "upstream_sha256": "262e58c1575c90b5ced0030f4b093a8c90e14768ca307c100f4a273589b6674a"
     },
-    {
+    "source/openborscript/movie.h": {
       "distributed_sha256": "9a5b187ffcb0a2d4d0e230d19a26748804727d8f4cceb0212a78edd9042fa2c4",
-      "path": "source/openborscript/movie.h",
+      "modified": false,
+      "topics": [],
       "upstream_sha256": "9a5b187ffcb0a2d4d0e230d19a26748804727d8f4cceb0212a78edd9042fa2c4"
     },
-    {
+    "source/openborscript/recursive_effect.c": {
       "distributed_sha256": "1cc38873c1dbdeb9010877d830335b6b60780404d5c08f74b9b7556fac068c1b",
-      "path": "source/openborscript/recursive_effect.c",
+      "modified": false,
+      "topics": [],
       "upstream_sha256": "1cc38873c1dbdeb9010877d830335b6b60780404d5c08f74b9b7556fac068c1b"
     },
-    {
+    "source/openborscript/recursive_effect.h": {
       "distributed_sha256": "8d9f9d26c7e41a995b74a8515b988e6e7d871e7a00bfdc301750924601f9192a",
-      "path": "source/openborscript/recursive_effect.h",
+      "modified": false,
+      "topics": [],
       "upstream_sha256": "8d9f9d26c7e41a995b74a8515b988e6e7d871e7a00bfdc301750924601f9192a"
     },
-    {
+    "source/openborscript/scriptcommon.h": {
       "distributed_sha256": "4a92e5031f30e7632ee36c39cd70aab170f5c37f2ec1e28acd008c6dd1d7d6a9",
-      "path": "source/openborscript/scriptcommon.h",
+      "modified": false,
+      "topics": [],
       "upstream_sha256": "4a92e5031f30e7632ee36c39cd70aab170f5c37f2ec1e28acd008c6dd1d7d6a9"
     },
-    {
+    "source/openborscript/spawn_hud.c": {
       "distributed_sha256": "24c1ede14139d2f06eb0af6458ec30d039abc6e2d3fe9f334b1316660ee8f151",
-      "path": "source/openborscript/spawn_hud.c",
+      "modified": false,
+      "topics": [],
       "upstream_sha256": "24c1ede14139d2f06eb0af6458ec30d039abc6e2d3fe9f334b1316660ee8f151"
     },
-    {
+    "source/openborscript/spawn_hud.h": {
       "distributed_sha256": "7745b8450ed5af8df168284306535e9927b3391ed33d7761b4bb7a6d2b05d1ea",
-      "path": "source/openborscript/spawn_hud.h",
+      "modified": false,
+      "topics": [],
       "upstream_sha256": "7745b8450ed5af8df168284306535e9927b3391ed33d7761b4bb7a6d2b05d1ea"
     },
-    {
+    "source/openborscript/status_dial.c": {
       "distributed_sha256": "986ca183a1c70568fc5b29bfd86f78782543175b3bf8852c8addaa1f752ccc3d",
-      "path": "source/openborscript/status_dial.c",
+      "modified": false,
+      "topics": [],
       "upstream_sha256": "986ca183a1c70568fc5b29bfd86f78782543175b3bf8852c8addaa1f752ccc3d"
     },
-    {
+    "source/openborscript/status_dial.h": {
       "distributed_sha256": "28084322423341532f015433725cf9e679e30d5cbed93414fede5ca6e46eebd6",
-      "path": "source/openborscript/status_dial.h",
+      "modified": false,
+      "topics": [],
       "upstream_sha256": "28084322423341532f015433725cf9e679e30d5cbed93414fede5ca6e46eebd6"
     },
-    {
+    "source/openborscript/string.c": {
       "distributed_sha256": "112bfd9ed459e076c7daa28b960e25031cbab90d14a8ed388cd2d4cbedc50f4f",
-      "path": "source/openborscript/string.c",
+      "modified": false,
+      "topics": [],
       "upstream_sha256": "112bfd9ed459e076c7daa28b960e25031cbab90d14a8ed388cd2d4cbedc50f4f"
     },
-    {
+    "source/pnglib/pngdec.c": {
       "distributed_sha256": "765fe35e9db56c6d0faaba2057885025e25e5853df63e01b994a198c327c49db",
-      "path": "source/pnglib/pngdec.c",
+      "modified": false,
+      "topics": [],
       "upstream_sha256": "765fe35e9db56c6d0faaba2057885025e25e5853df63e01b994a198c327c49db"
     },
-    {
+    "source/pnglib/pngdec.h": {
       "distributed_sha256": "45ec467dd0e471bd69d76733b2829e8e5d29b5f3708f0b517050f0aa461f0fc1",
-      "path": "source/pnglib/pngdec.h",
+      "modified": false,
+      "topics": [],
       "upstream_sha256": "45ec467dd0e471bd69d76733b2829e8e5d29b5f3708f0b517050f0aa461f0fc1"
     },
-    {
+    "source/pnglib/savepng.c": {
       "distributed_sha256": "71ed2fc5b7f512afb62e61b0ba02c85a0d6b77b26c134ca1b6f61379754041b5",
-      "path": "source/pnglib/savepng.c",
+      "modified": false,
+      "topics": [],
       "upstream_sha256": "71ed2fc5b7f512afb62e61b0ba02c85a0d6b77b26c134ca1b6f61379754041b5"
     },
-    {
+    "source/pnglib/savepng.h": {
       "distributed_sha256": "cb75f07b6ec70dca1b1be98036d2be0fa37a6e6b1f97dde8163bdcc4c639d8e0",
-      "path": "source/pnglib/savepng.h",
+      "modified": false,
+      "topics": [],
       "upstream_sha256": "cb75f07b6ec70dca1b1be98036d2be0fa37a6e6b1f97dde8163bdcc4c639d8e0"
     },
-    {
+    "source/preprocessorlib/pp_expr.c": {
       "distributed_sha256": "58ab88db573295f7d8ae0c42448c02b2e8c10565c1c74c89daa6f2f3d8680115",
-      "path": "source/preprocessorlib/pp_expr.c",
+      "modified": false,
+      "topics": [],
       "upstream_sha256": "58ab88db573295f7d8ae0c42448c02b2e8c10565c1c74c89daa6f2f3d8680115"
     },
-    {
+    "source/preprocessorlib/pp_expr.h": {
       "distributed_sha256": "7dea0de0f286d884fc5bc918d92ea9e44f55dfc72169b8051617ff1729b8bf2a",
-      "path": "source/preprocessorlib/pp_expr.h",
+      "modified": false,
+      "topics": [],
       "upstream_sha256": "7dea0de0f286d884fc5bc918d92ea9e44f55dfc72169b8051617ff1729b8bf2a"
     },
-    {
+    "source/preprocessorlib/pp_lexer.c": {
       "distributed_sha256": "a874cc0a23ec5c1ff92994ec55e17c103147810a915f7531f5aae0ef1f6df4bc",
-      "path": "source/preprocessorlib/pp_lexer.c",
+      "modified": false,
+      "topics": [],
       "upstream_sha256": "a874cc0a23ec5c1ff92994ec55e17c103147810a915f7531f5aae0ef1f6df4bc"
     },
-    {
+    "source/preprocessorlib/pp_lexer.h": {
       "distributed_sha256": "db211b75991b558150cad257d7d22c8077413a47760676600b0861a67a4dc001",
-      "path": "source/preprocessorlib/pp_lexer.h",
+      "modified": false,
+      "topics": [],
       "upstream_sha256": "db211b75991b558150cad257d7d22c8077413a47760676600b0861a67a4dc001"
     },
-    {
+    "source/preprocessorlib/pp_parser.c": {
       "distributed_sha256": "cf32fd0e5050c7cd9f2730534d45d9eda78835636a1a6c9c9766f4cae423c23d",
-      "path": "source/preprocessorlib/pp_parser.c",
+      "modified": false,
+      "topics": [],
       "upstream_sha256": "cf32fd0e5050c7cd9f2730534d45d9eda78835636a1a6c9c9766f4cae423c23d"
     },
-    {
+    "source/preprocessorlib/pp_parser.h": {
       "distributed_sha256": "6e3857eec19a3380e1a651b51cf27e961af3af7a0ebd25a07d63693a5a5dad6d",
-      "path": "source/preprocessorlib/pp_parser.h",
+      "modified": false,
+      "topics": [],
       "upstream_sha256": "6e3857eec19a3380e1a651b51cf27e961af3af7a0ebd25a07d63693a5a5dad6d"
     },
-    {
+    "source/ramlib/ram.c": {
       "distributed_sha256": "3d16cc774553f173dbaf7fb9d8171952f3e3883530bfedc086cec862e7283b59",
-      "path": "source/ramlib/ram.c",
+      "modified": false,
+      "topics": [],
       "upstream_sha256": "3d16cc774553f173dbaf7fb9d8171952f3e3883530bfedc086cec862e7283b59"
     },
-    {
+    "source/ramlib/ram.h": {
       "distributed_sha256": "225955d4a422a7efc224108aad95f7bf74742f26a287b0ea66c31b9f585d9536",
-      "path": "source/ramlib/ram.h",
+      "modified": false,
+      "topics": [],
       "upstream_sha256": "225955d4a422a7efc224108aad95f7bf74742f26a287b0ea66c31b9f585d9536"
     },
-    {
+    "source/randlib/rand32.c": {
       "distributed_sha256": "d6811da7a1b4087d7ccf8db77bdda58598d911ad4d539bbeda0ba9190041b655",
-      "path": "source/randlib/rand32.c",
+      "modified": false,
+      "topics": [],
       "upstream_sha256": "d6811da7a1b4087d7ccf8db77bdda58598d911ad4d539bbeda0ba9190041b655"
     },
-    {
+    "source/randlib/rand32.h": {
       "distributed_sha256": "f34dee9b34983dc52b77084e0183a95df5d534892f6d46225de825c50b6761c5",
-      "path": "source/randlib/rand32.h",
+      "modified": false,
+      "topics": [],
       "upstream_sha256": "f34dee9b34983dc52b77084e0183a95df5d534892f6d46225de825c50b6761c5"
     },
-    {
+    "source/safealloc.h": {
       "distributed_sha256": "d4e525a429a2f9138073747501f78d1d15f65f9bf1e3ee44b7215bc2b4624d36",
-      "path": "source/safealloc.h",
+      "modified": false,
+      "topics": [],
       "upstream_sha256": "d4e525a429a2f9138073747501f78d1d15f65f9bf1e3ee44b7215bc2b4624d36"
     },
-    {
+    "source/savedata.h": {
       "distributed_sha256": "1aeb853dc11b9546ec3b63374d246b6659be864fcdd36b5bbdd302c8ab72ab8d",
-      "path": "source/savedata.h",
+      "modified": false,
+      "topics": [],
       "upstream_sha256": "1aeb853dc11b9546ec3b63374d246b6659be864fcdd36b5bbdd302c8ab72ab8d"
     },
-    {
+    "source/scriptlib/FirstFollow.h": {
       "distributed_sha256": "2441e1bff107106625a69ef3a712bebb0e2954cf018e508b4151f127f6d21826",
-      "path": "source/scriptlib/FirstFollow.h",
+      "modified": false,
+      "topics": [],
       "upstream_sha256": "2441e1bff107106625a69ef3a712bebb0e2954cf018e508b4151f127f6d21826"
     },
-    {
+    "source/scriptlib/ImportCache.c": {
       "distributed_sha256": "03c0a70afa732b0ce356653a85c4765993d5ed1ad87369e32e13a8106c78499c",
-      "path": "source/scriptlib/ImportCache.c",
+      "modified": true,
+      "summary": "Guard parser-only import metadata after compilation. Read import metadata only while an interpreter still owns parser state.",
+      "topics": [
+        "record-dates-and-file-notices",
+        "script-memory-layout"
+      ],
       "upstream_sha256": "d42ccb253d606fce0a7d29138c176d7c6c836be9192d4510c4d4bfd8cbb73975"
     },
-    {
+    "source/scriptlib/ImportCache.h": {
       "distributed_sha256": "fa5d5fc72d534c8806482256f4be05f76fe7ae57bf98f851c15b38999e13af4a",
-      "path": "source/scriptlib/ImportCache.h",
+      "modified": true,
+      "summary": "Retain imported entry points as direct instruction pointers.",
+      "topics": [
+        "script-memory-layout"
+      ],
       "upstream_sha256": "df915a9313a63554c538f5c35e0a911381eca5aac6793ab1f4912e09983b6e3b"
     },
-    {
+    "source/scriptlib/Instruction.c": {
       "distributed_sha256": "f139947c461d7400170e6de89826d7e3111bcdddb29b2f9bb8816a04cfd6e80e",
-      "path": "source/scriptlib/Instruction.c",
+      "modified": true,
+      "summary": "Track parser-source ownership for compact compiled instructions.",
+      "topics": [
+        "record-dates-and-file-notices",
+        "script-memory-layout"
+      ],
       "upstream_sha256": "01fad7f4dbab2c3c7b1efc88d78bbf9bd141fa5351f045243666c2ec2cf092ff"
     },
-    {
+    "source/scriptlib/Instruction.h": {
       "distributed_sha256": "e71cef95239e25a1d11492f8dd5ad7175cb19205eabd372b1031ef1e54704fbc",
-      "path": "source/scriptlib/Instruction.h",
+      "modified": true,
+      "summary": "Overlay mutually exclusive parser and runtime fields and use bounded opcode and target tags.",
+      "topics": [
+        "record-dates-and-file-notices",
+        "script-memory-layout"
+      ],
       "upstream_sha256": "dd67bb4336f9b2a0e75f15466f99e8d2faa9e0c55604395bdb4c844fa2cdca98"
     },
-    {
+    "source/scriptlib/Interpreter.c": {
       "distributed_sha256": "b0cef1d5fd24a368a9025046b132426e94f834dc507f666743572b270d597d5e",
-      "path": "source/scriptlib/Interpreter.c",
+      "modified": true,
+      "summary": "Release parser sources, pack compiled instructions and their owned values into exact contiguous storage, and dispatch the compact representation through explicit target tags. Allocate parser state only while compiling and release it once runtime instructions are ready.",
+      "topics": [
+        "record-dates-and-file-notices",
+        "script-memory-layout"
+      ],
       "upstream_sha256": "54f5a0c67fa15ef479b26bc18395f8b67e653970b0e59b7eb3a9157d470f349c"
     },
-    {
+    "source/scriptlib/Interpreter.h": {
       "distributed_sha256": "a850cf1e53669ea69feb7b3d10cd1fbd3559a64a13d9a2d7515d91dd4167882f",
-      "path": "source/scriptlib/Interpreter.h",
+      "modified": true,
+      "summary": "Own the exact contiguous storage used by compiled instructions and their values. Store parser state indirectly so compiled interpreters do not retain it.",
+      "topics": [
+        "record-dates-and-file-notices",
+        "script-memory-layout"
+      ],
       "upstream_sha256": "4ac5a8f1cde462dfbb991b1bd83926005a82472477273f97152a587905d876bb"
     },
-    {
+    "source/scriptlib/Lexer.c": {
       "distributed_sha256": "717fecd14553754474bd6de6f8ca30a22c7071d9c87601a0ec603f293ac30036",
-      "path": "source/scriptlib/Lexer.c",
+      "modified": false,
+      "topics": [],
       "upstream_sha256": "717fecd14553754474bd6de6f8ca30a22c7071d9c87601a0ec603f293ac30036"
     },
-    {
+    "source/scriptlib/Lexer.h": {
       "distributed_sha256": "7f8af0760f14c3ce2bb449d1ad0fdfb7ba1fe7cd722bf7a9585dca86853fdbdc",
-      "path": "source/scriptlib/Lexer.h",
+      "modified": false,
+      "topics": [],
       "upstream_sha256": "7f8af0760f14c3ce2bb449d1ad0fdfb7ba1fe7cd722bf7a9585dca86853fdbdc"
     },
-    {
+    "source/scriptlib/List.c": {
       "distributed_sha256": "058e7f733faa1e0df59f87f325a1dd4fd2401bb89de77dc93cedca0f70b6cbb3",
-      "path": "source/scriptlib/List.c",
+      "modified": false,
+      "topics": [],
       "upstream_sha256": "058e7f733faa1e0df59f87f325a1dd4fd2401bb89de77dc93cedca0f70b6cbb3"
     },
-    {
+    "source/scriptlib/List.h": {
       "distributed_sha256": "7f93b469d3f14a35b2113ed082259a372162f8d4bba91b81ee3d05b7b6c07ebb",
-      "path": "source/scriptlib/List.h",
+      "modified": false,
+      "topics": [],
       "upstream_sha256": "7f93b469d3f14a35b2113ed082259a372162f8d4bba91b81ee3d05b7b6c07ebb"
     },
-    {
+    "source/scriptlib/Parser.c": {
       "distributed_sha256": "590483a1cd5fc502c0dbe0c263ef0609ab7698a353758925fe7a7a1eae57666e",
-      "path": "source/scriptlib/Parser.c",
+      "modified": false,
+      "topics": [],
       "upstream_sha256": "590483a1cd5fc502c0dbe0c263ef0609ab7698a353758925fe7a7a1eae57666e"
     },
-    {
+    "source/scriptlib/Parser.h": {
       "distributed_sha256": "db345b0fabe204add4bef6196b4a984aabcfcfe3d19325b8440419e0b33330fb",
-      "path": "source/scriptlib/Parser.h",
+      "modified": false,
+      "topics": [],
       "upstream_sha256": "db345b0fabe204add4bef6196b4a984aabcfcfe3d19325b8440419e0b33330fb"
     },
-    {
+    "source/scriptlib/ParserSet.c": {
       "distributed_sha256": "2b05f5e6dd94813cdaa6bf6e89d8d6c68375d157978e4a4e38401e78aabf06d3",
-      "path": "source/scriptlib/ParserSet.c",
+      "modified": false,
+      "topics": [],
       "upstream_sha256": "2b05f5e6dd94813cdaa6bf6e89d8d6c68375d157978e4a4e38401e78aabf06d3"
     },
-    {
+    "source/scriptlib/ParserSet.h": {
       "distributed_sha256": "a2fb3da1ad4edb4503e63728fe3650b15a41a2b13d741014c377906be1192bf1",
-      "path": "source/scriptlib/ParserSet.h",
+      "modified": false,
+      "topics": [],
       "upstream_sha256": "a2fb3da1ad4edb4503e63728fe3650b15a41a2b13d741014c377906be1192bf1"
     },
-    {
+    "source/scriptlib/Productions.h": {
       "distributed_sha256": "e00dba361933bea5cca030f5ee8c9adbbe312b94ef6bc98ae6d0b78c3c91d923",
-      "path": "source/scriptlib/Productions.h",
+      "modified": false,
+      "topics": [],
       "upstream_sha256": "e00dba361933bea5cca030f5ee8c9adbbe312b94ef6bc98ae6d0b78c3c91d923"
     },
-    {
+    "source/scriptlib/ScriptVariant.c": {
       "distributed_sha256": "9b306921bba8c136757757b4e392459bd1c70329ae567e3ee4d68fcaea459f6e",
-      "path": "source/scriptlib/ScriptVariant.c",
+      "modified": false,
+      "topics": [],
       "upstream_sha256": "9b306921bba8c136757757b4e392459bd1c70329ae567e3ee4d68fcaea459f6e"
     },
-    {
+    "source/scriptlib/ScriptVariant.h": {
       "distributed_sha256": "b5e02bf4a3c9701d2d54a50744aa0f3002f90cbafa6329dcf445708e189c7c20",
-      "path": "source/scriptlib/ScriptVariant.h",
+      "modified": false,
+      "topics": [],
       "upstream_sha256": "b5e02bf4a3c9701d2d54a50744aa0f3002f90cbafa6329dcf445708e189c7c20"
     },
-    {
+    "source/scriptlib/ScriptVariantInteger.c": {
       "distributed_sha256": "e3078c7593823a8d3aac4dc2c4137f12ef6bc31a060cbacbaecfec2425976632",
-      "path": "source/scriptlib/ScriptVariantInteger.c",
+      "modified": false,
+      "topics": [],
       "upstream_sha256": "e3078c7593823a8d3aac4dc2c4137f12ef6bc31a060cbacbaecfec2425976632"
     },
-    {
+    "source/scriptlib/ScriptVariantInteger.h": {
       "distributed_sha256": "eb81f9d06e7cb8e153fce0ed16c764485a9d6a0b037df144431d6a692c680ae0",
-      "path": "source/scriptlib/ScriptVariantInteger.h",
+      "modified": false,
+      "topics": [],
       "upstream_sha256": "eb81f9d06e7cb8e153fce0ed16c764485a9d6a0b037df144431d6a692c680ae0"
     },
-    {
+    "source/scriptlib/Stack.c": {
       "distributed_sha256": "da185aa596adc7fc7aeb5ae43910c68d3e70b4e27dab2a3b0c79f98203828a91",
-      "path": "source/scriptlib/Stack.c",
+      "modified": false,
+      "topics": [],
       "upstream_sha256": "da185aa596adc7fc7aeb5ae43910c68d3e70b4e27dab2a3b0c79f98203828a91"
     },
-    {
+    "source/scriptlib/Stack.h": {
       "distributed_sha256": "0629ed69cc3fe8ce21fe1dfe09c5aabdd7a6e0c9b0018236398ea1e224bfbe0e",
-      "path": "source/scriptlib/Stack.h",
+      "modified": false,
+      "topics": [],
       "upstream_sha256": "0629ed69cc3fe8ce21fe1dfe09c5aabdd7a6e0c9b0018236398ea1e224bfbe0e"
     },
-    {
+    "source/scriptlib/StackedSymbolTable.c": {
       "distributed_sha256": "ba3b2924948ca074a6022104b0bfc435cec80b7d39e809468d6156a777d16d99",
-      "path": "source/scriptlib/StackedSymbolTable.c",
+      "modified": false,
+      "topics": [],
       "upstream_sha256": "ba3b2924948ca074a6022104b0bfc435cec80b7d39e809468d6156a777d16d99"
     },
-    {
+    "source/scriptlib/StackedSymbolTable.h": {
       "distributed_sha256": "8e75fa82587e534e2d7d38ddc18d3e021ecc8e9f1fec75940afb68e6c23b4053",
-      "path": "source/scriptlib/StackedSymbolTable.h",
+      "modified": false,
+      "topics": [],
       "upstream_sha256": "8e75fa82587e534e2d7d38ddc18d3e021ecc8e9f1fec75940afb68e6c23b4053"
     },
-    {
+    "source/scriptlib/SymbolTable.c": {
       "distributed_sha256": "4c7e29a8d23e6269362b07c5de21f230306c3fd8e8610f34f66dcad31bc95fe3",
-      "path": "source/scriptlib/SymbolTable.c",
+      "modified": false,
+      "topics": [],
       "upstream_sha256": "4c7e29a8d23e6269362b07c5de21f230306c3fd8e8610f34f66dcad31bc95fe3"
     },
-    {
+    "source/scriptlib/SymbolTable.h": {
       "distributed_sha256": "8131410aaa919c93fce2f0fbb7e6779c60ad890704cd00de51196a2f25aab305",
-      "path": "source/scriptlib/SymbolTable.h",
+      "modified": false,
+      "topics": [],
       "upstream_sha256": "8131410aaa919c93fce2f0fbb7e6779c60ad890704cd00de51196a2f25aab305"
     },
-    {
+    "source/scriptlib/depends.h": {
       "distributed_sha256": "d48cac73d86847ecafc336de4e2b6040e4bbba9eae2f7bd46c51772f964d1183",
-      "path": "source/scriptlib/depends.h",
+      "modified": false,
+      "topics": [],
       "upstream_sha256": "d48cac73d86847ecafc336de4e2b6040e4bbba9eae2f7bd46c51772f964d1183"
     },
-    {
+    "source/stringptr.c": {
       "distributed_sha256": "6c4823ce1e2930ecb3cf13f52efecdc63c2730579619fe6e3bf3f7d24f0ad976",
-      "path": "source/stringptr.c",
+      "modified": false,
+      "topics": [],
       "upstream_sha256": "6c4823ce1e2930ecb3cf13f52efecdc63c2730579619fe6e3bf3f7d24f0ad976"
     },
-    {
+    "source/stringptr.h": {
       "distributed_sha256": "95cf2d2ba65ce8b3332ce098d61646f13765e4626b09ccdab4236a25b16ffb9c",
-      "path": "source/stringptr.h",
+      "modified": false,
+      "topics": [],
       "upstream_sha256": "95cf2d2ba65ce8b3332ce098d61646f13765e4626b09ccdab4236a25b16ffb9c"
     },
-    {
+    "source/stristr.c": {
       "distributed_sha256": "05c8ee34217c401b73f37015c50b189f696412d1ca86407a09e6e2b09cf21f04",
-      "path": "source/stristr.c",
+      "modified": false,
+      "topics": [],
       "upstream_sha256": "05c8ee34217c401b73f37015c50b189f696412d1ca86407a09e6e2b09cf21f04"
     },
-    {
+    "source/stristr.h": {
       "distributed_sha256": "d96196d834fe4a16fdf704a9f69658ff220c405f9da1a01be466e9548e5dcb06",
-      "path": "source/stristr.h",
+      "modified": false,
+      "topics": [],
       "upstream_sha256": "d96196d834fe4a16fdf704a9f69658ff220c405f9da1a01be466e9548e5dcb06"
     },
-    {
+    "source/utils.c": {
       "distributed_sha256": "424474140b27ce8cb2de6ce935e166b9b0210ad23bde1369d8e254b126323f2f",
-      "path": "source/utils.c",
+      "modified": true,
+      "summary": "Enable libretro platform and PNG helper declarations.",
+      "topics": [
+        "platform-integration",
+        "record-dates-and-file-notices"
+      ],
       "upstream_sha256": "a393a33eb782680d32c3529ac39ac269440756d63e31647d689694dfd30959a2"
     },
-    {
+    "source/utils.h": {
       "distributed_sha256": "60df1283bd1261ca53dbc968befc17cb90bdfb3b0b7bc7fd2b8d46c982d60931",
-      "path": "source/utils.h",
+      "modified": false,
+      "topics": [],
       "upstream_sha256": "60df1283bd1261ca53dbc968befc17cb90bdfb3b0b7bc7fd2b8d46c982d60931"
     },
-    {
+    "source/webmlib/halloc/LICENSE": {
       "distributed_sha256": "ae4b9e1073a9579c0ac13d406d66c01c3a941ed072af7a70091dc153b8c903d5",
-      "path": "source/webmlib/halloc/LICENSE",
+      "modified": true,
+      "summary": "Supply the BSD terms referenced by the original halloc headers.",
+      "topics": [
+        "replacement-implementations-and-attribution"
+      ],
       "upstream_sha256": null
     },
-    {
+    "source/webmlib/halloc/align.h": {
       "distributed_sha256": "64b2aa0cab13b8b1bdf51f697fc25a3ec77cc8358b25500c60aa3016b32251d8",
-      "path": "source/webmlib/halloc/align.h",
+      "modified": false,
+      "topics": [],
       "upstream_sha256": "64b2aa0cab13b8b1bdf51f697fc25a3ec77cc8358b25500c60aa3016b32251d8"
     },
-    {
+    "source/webmlib/halloc/halloc.c": {
       "distributed_sha256": "0d1e0d894aa9fe4eef0b7e1e27f2a0b5e4feac7312668284ee813fb77704db7e",
-      "path": "source/webmlib/halloc/halloc.c",
+      "modified": false,
+      "topics": [],
       "upstream_sha256": "0d1e0d894aa9fe4eef0b7e1e27f2a0b5e4feac7312668284ee813fb77704db7e"
     },
-    {
+    "source/webmlib/halloc/halloc.h": {
       "distributed_sha256": "fd4dde7cde0fc609a0c1598d58b2ba387158d9ed29fbe1f4e86b43301e4c257b",
-      "path": "source/webmlib/halloc/halloc.h",
+      "modified": false,
+      "topics": [],
       "upstream_sha256": "fd4dde7cde0fc609a0c1598d58b2ba387158d9ed29fbe1f4e86b43301e4c257b"
     },
-    {
+    "source/webmlib/halloc/hlist.h": {
       "distributed_sha256": "594971bf6cdc832ea51057417e89e11bb92c96ad830f84c021401b8454d28199",
-      "path": "source/webmlib/halloc/hlist.h",
+      "modified": false,
+      "topics": [],
       "upstream_sha256": "594971bf6cdc832ea51057417e89e11bb92c96ad830f84c021401b8454d28199"
     },
-    {
+    "source/webmlib/halloc/macros.h": {
       "distributed_sha256": "c6eb0318f268aadf04aca4ba89482c7b0e83823206d994c46efa2431966399e2",
-      "path": "source/webmlib/halloc/macros.h",
+      "modified": false,
+      "topics": [],
       "upstream_sha256": "c6eb0318f268aadf04aca4ba89482c7b0e83823206d994c46efa2431966399e2"
     },
-    {
+    "source/webmlib/movie_playback.c": {
       "distributed_sha256": "de2b08bdddf241957e5e3a1916a82c52c3689469cab44b0bb1e3228efc7d5823",
-      "path": "source/webmlib/movie_playback.c",
+      "modified": true,
+      "summary": "Join movie workers and release decoder resources when the core resets.",
+      "topics": [
+        "record-dates-and-file-notices",
+        "webm-playback-lifecycle"
+      ],
       "upstream_sha256": "2f0d7fc8e227ed4ddb15c6a87a7e21f7e4926b3386fa71ff95765e7870785a46"
     },
-    {
+    "source/webmlib/movie_playback.h": {
       "distributed_sha256": "8bb16eb6a0654bfe0a96af1287a0852ca6608fb5c36f1102e52eff6e574e742e",
-      "path": "source/webmlib/movie_playback.h",
+      "modified": false,
+      "topics": [],
       "upstream_sha256": "8bb16eb6a0654bfe0a96af1287a0852ca6608fb5c36f1102e52eff6e574e742e"
     },
-    {
+    "source/webmlib/nestegg/LICENSE": {
       "distributed_sha256": "505ee8e018326f36bb4070f69c6eb3caa6079b8fb796cd53a8d1bb168337e5ae",
-      "path": "source/webmlib/nestegg/LICENSE",
+      "modified": false,
+      "topics": [],
       "upstream_sha256": "505ee8e018326f36bb4070f69c6eb3caa6079b8fb796cd53a8d1bb168337e5ae"
     },
-    {
+    "source/webmlib/nestegg/nestegg.c": {
       "distributed_sha256": "d9d9d90a552729bc440947dbfbd9a2513624f412606c2322aca818c46bf9c4f9",
-      "path": "source/webmlib/nestegg/nestegg.c",
+      "modified": false,
+      "topics": [],
       "upstream_sha256": "d9d9d90a552729bc440947dbfbd9a2513624f412606c2322aca818c46bf9c4f9"
     },
-    {
+    "source/webmlib/nestegg/nestegg.h": {
       "distributed_sha256": "a2de8d88affaafd3cfc4df36e1b267d531ff17e90d049b0e5e242f4a0afce659",
-      "path": "source/webmlib/nestegg/nestegg.h",
+      "modified": false,
+      "topics": [],
       "upstream_sha256": "a2de8d88affaafd3cfc4df36e1b267d531ff17e90d049b0e5e242f4a0afce659"
     },
-    {
+    "source/webmlib/samplecvt.c": {
       "distributed_sha256": "eef72c58bb2e6af56075b27e0539b03127423b3272cfa19229c47e75f1710cea",
-      "path": "source/webmlib/samplecvt.c",
+      "modified": false,
+      "topics": [],
       "upstream_sha256": "eef72c58bb2e6af56075b27e0539b03127423b3272cfa19229c47e75f1710cea"
     },
-    {
+    "source/webmlib/samplecvt.h": {
       "distributed_sha256": "da664e303c0fe5045dd102b07023b175b0952776a85439c4eccbd50b675ef4b2",
-      "path": "source/webmlib/samplecvt.h",
+      "modified": false,
+      "topics": [],
       "upstream_sha256": "da664e303c0fe5045dd102b07023b175b0952776a85439c4eccbd50b675ef4b2"
     },
-    {
+    "source/webmlib/vidplay.c": {
       "distributed_sha256": "38e8dec760ca759483cc2bfbe7e65d1ba3c55199d067a8b3fd4ed4b35c3bcd1e",
-      "path": "source/webmlib/vidplay.c",
+      "modified": true,
+      "summary": "Coordinate WebM worker shutdown and yield while waiting for video frames.",
+      "topics": [
+        "record-dates-and-file-notices",
+        "webm-playback-lifecycle"
+      ],
       "upstream_sha256": "cea561d089a1fd7c71f3385c2a6a234b4888d2b97aad90bf4ff992553dd92e13"
     },
-    {
+    "source/webmlib/vidplay.h": {
       "distributed_sha256": "16c60331d1fd9e4e79f70fac4f7e5161a1ee7993a3d7933c7d5fbc4d80176690",
-      "path": "source/webmlib/vidplay.h",
+      "modified": false,
+      "topics": [],
       "upstream_sha256": "16c60331d1fd9e4e79f70fac4f7e5161a1ee7993a3d7933c7d5fbc4d80176690"
     },
-    {
+    "source/webmlib/vorbis.c": {
       "distributed_sha256": "6b55858a6111d0c1f0343c87e97f570903921111d33e41456176c9a67d9db801",
-      "path": "source/webmlib/vorbis.c",
+      "modified": false,
+      "topics": [],
       "upstream_sha256": "6b55858a6111d0c1f0343c87e97f570903921111d33e41456176c9a67d9db801"
     },
-    {
+    "source/webmlib/vorbis.h": {
       "distributed_sha256": "959b4881669b0eb847677ac599206ba130a7a0be04b274696c8f8e3ee36d6532",
-      "path": "source/webmlib/vorbis.h",
+      "modified": false,
+      "topics": [],
       "upstream_sha256": "959b4881669b0eb847677ac599206ba130a7a0be04b274696c8f8e3ee36d6532"
     },
-    {
+    "source/webmlib/vorbisfpu.h": {
       "distributed_sha256": "898d40cf3451ad2a044ec587cf1b2e605afa55973aa4d5a6bcf61954a85124ea",
-      "path": "source/webmlib/vorbisfpu.h",
+      "modified": false,
+      "topics": [],
       "upstream_sha256": "898d40cf3451ad2a044ec587cf1b2e605afa55973aa4d5a6bcf61954a85124ea"
     },
-    {
+    "source/webmlib/yuv.c": {
       "distributed_sha256": "ad7fafa81d9e795b743c408dc1399fbd53259f7c3e0af33291d4956e8e795173",
-      "path": "source/webmlib/yuv.c",
+      "modified": false,
+      "topics": [],
       "upstream_sha256": "ad7fafa81d9e795b743c408dc1399fbd53259f7c3e0af33291d4956e8e795173"
     },
-    {
+    "source/webmlib/yuv.h": {
       "distributed_sha256": "d6cd759ad44ec8aed0b9eaa28f283060cbe1ae91cd76119ca29b96a63999437d",
-      "path": "source/webmlib/yuv.h",
+      "modified": false,
+      "topics": [],
       "upstream_sha256": "d6cd759ad44ec8aed0b9eaa28f283060cbe1ae91cd76119ca29b96a63999437d"
     },
-    {
+    "version.h": {
       "distributed_sha256": "aa3a055095f545c8c016957a15f8c819bd49448916d7d2efe80234d1eee41059",
-      "path": "version.h",
+      "modified": true,
+      "origin": "Generated from the pinned source manifest",
+      "summary": "Generate the pinned build identity instead of depending on upstream VCS version generation.",
+      "topics": [],
       "upstream_sha256": null
     }
-  ],
-  "import_adaptations": [
-    "portable-circle-rasterization",
-    "fixed-width-endian-helpers"
-  ],
-  "schema": 1,
-  "upstream": "https://github.com/DCurrent/openbor.git"
+  },
+  "modification_record": "docs/modifications/8020.md",
+  "omitted_upstream_files": {
+    "README": "81b585cca93d60f0637141ae8a9bfa5fff1d9e4b8c9186d87b58a6222750deb8",
+    "android/.gitignore": "7b6ab26d71ef6a4bbe91a14dd0dcdee3212157c6ab132a8a86b835f235298360",
+    "android/README": "46e6da02130258074fda9972e18611f46d0fbf4dcda2936b2c4248561b833a5f",
+    "android/app/.idea/.gitignore": "a9e54fc4f08bc97d82c04bd86ff37d3af84ba9ef4ad87fcfcb438dab622e8aaa",
+    "android/app/.idea/AndroidProjectSystem.xml": "bcdc8749688b237f88ee6c20e6cc2e655a600e4ec9e69478f396783b383d48bc",
+    "android/app/.idea/caches/deviceStreaming.xml": "a3d8a7666368625ed3b5ac3eb4519de05f857065f25913a005afe81589bd362e",
+    "android/app/.idea/gradle.xml": "f19cf41d15bc77221a70fb421b16bb4017a82a9da0abe1c35f1fdf9857f9f345",
+    "android/app/.idea/migrations.xml": "b714eb426b7fda953cba49ad303ea7f2c575215359713eb4c79ae8534bc64306",
+    "android/app/.idea/misc.xml": "a21ecdb2cc80b75cb72a9e6fd3eb63e3c45a7628b36c125ea85cea5dc522fd5c",
+    "android/app/.idea/runConfigurations.xml": "f9a438180a87c9074496a4368ffc240cb8ec30fab87f01bce6d6dd00ea03f394",
+    "android/app/build.gradle": "39beecd7f626cee14873fbcf9ce9b6fa8add24ae89a49c26bc1216c40b3438aa",
+    "android/app/debug.keystore": "304a15efde13228125dacaa253ee6cf8963d8d0f871fdf8bd8bdcd7639da8c84",
+    "android/app/jni/Android.mk": "2376aa30a8bb0bcb8e20c4bec6c239ce84e68358626145fe3ef19a6d0a644153",
+    "android/app/jni/Application.mk": "c18c17a12e5335226eb9c83bfc08868859d3f057bbb533b3e001cbda02c05b14",
+    "android/app/jni/openbor/Android.mk": "141496f549fae0209fcfc8210b670bc1e7c0ad59c96ae63c9dfff755a702c9f6",
+    "android/app/jni/openbor/Development.txt": "ee09bceaeb8513ba839450033833013e20c8f2ac39452af38a5584c949818217",
+    "android/app/jni/openbor/SDL_android_main.cpp": "5c6e7430a011ffef5b129c846c30c9fd3a2abe9e0d93dfe6082b72e5238eb12f",
+    "android/app/jni/openbor/button_png_800x480.h": "5241910a1f013d2a2e447c22c8ef7c46e22fdd48852530c449b61f6af151c416",
+    "android/app/jni/openbor/include/ogg/config_types.h": "74aa46f220754c0d655e20cf9e7b4590cf973212dd35672a544101ad0e046760",
+    "android/app/jni/openbor/include/ogg/ogg.h": "3b97bfa8c96e5574bf8ff36e287b966e58f5070f7e8bc619d525a391ee05bca7",
+    "android/app/jni/openbor/include/ogg/os_types.h": "c77c482ac84d201173bf4f503415369211f7317c3c625ba12c5a3785058864e4",
+    "android/app/jni/openbor/include/png/png.h": "31be588c8931d62c28c05c2e3df48c27de1dbbb0b014daa2cacafe7440d28d57",
+    "android/app/jni/openbor/include/png/pngconf.h": "9b1f2c5abfe5aad9ea0e24498ce2111e68535ea1b088a027a83fd79a3041537a",
+    "android/app/jni/openbor/include/png/pnglibconf.h": "c7b90959fe91957cbf573d9d20ced84566790e565e27946eb35b027a6b6eeb2e",
+    "android/app/jni/openbor/include/sdl/SDL.h": "1d06f95f1423726720bba2e8a74f19eb63f37cf83bac8d88f7a74f8c1d4207cb",
+    "android/app/jni/openbor/include/sdl/SDL_assert.h": "e0b37770c68b6c0bd9734d0f42d50f90f177860a66c17a073b24f60a4127c4e0",
+    "android/app/jni/openbor/include/sdl/SDL_atomic.h": "2336842f224830327e07cac01271d27e53b050dc9ea906e13f022ecce197d29b",
+    "android/app/jni/openbor/include/sdl/SDL_audio.h": "2b1ba1a7cb9bd87a7f67bd1773913a64ab251ada99cb772e86402e28d963cec0",
+    "android/app/jni/openbor/include/sdl/SDL_bits.h": "0b1a120609eb21c9e9c959cd0430fa78ac01d0fac65582ed93624b4b4888f6da",
+    "android/app/jni/openbor/include/sdl/SDL_blendmode.h": "972b4a7b999a9f399426c5d5933d9fed1bbe8d7190b6a5104a831dff5de1fafe",
+    "android/app/jni/openbor/include/sdl/SDL_clipboard.h": "2e99007801e4d5f97583e8c487effcbfe1a1bdb4b337153b1198fb18ab0da071",
+    "android/app/jni/openbor/include/sdl/SDL_config.h": "1a0f4d269204c7db41adf5f28dd5d9298f1e642aef73cd5d31cf2757d052ecdd",
+    "android/app/jni/openbor/include/sdl/SDL_config_android.h": "a5119d881d1325d477c8b3f3e5e55d59a035e4c7589b6baf672a6b15cb263cc2",
+    "android/app/jni/openbor/include/sdl/SDL_config_minimal.h": "bd2f341147a474986a630f0d3216f4074a61cc708a3bcdbc2b1792947a257a75",
+    "android/app/jni/openbor/include/sdl/SDL_config_os2.h": "b0f15ca67ccb2efe8c3b7bdf0be9f5df4c21356caf84f92855c385cb1ac836ea",
+    "android/app/jni/openbor/include/sdl/SDL_copying.h": "5ef945fd70b5a25a9b726f32371804a9370f5a8e239406fb20b5185cf04fb3f3",
+    "android/app/jni/openbor/include/sdl/SDL_cpuinfo.h": "a1e34dd770e6e7e3014b16cc23c9b79f2972be17a1b9b7d0d082695a14078e53",
+    "android/app/jni/openbor/include/sdl/SDL_egl.h": "bcea0490f49c3fda72e883e46e1cc82f4c4261ae18a18265099716bf4b0c1f38",
+    "android/app/jni/openbor/include/sdl/SDL_endian.h": "06703a4c4e305759b81f2b0e25440543eb45d27cb7f2c82125f7088ffb4d913c",
+    "android/app/jni/openbor/include/sdl/SDL_error.h": "8a0558a9af698e92d42f828524346d8b88f9fdd7e6de9ece445a902e1142e235",
+    "android/app/jni/openbor/include/sdl/SDL_events.h": "96094a908123a4128a5a3f4a5af0350aeee0724bad14f1a61004798f78bdab27",
+    "android/app/jni/openbor/include/sdl/SDL_filesystem.h": "4c4e63283a8792ac8c2d1661482a4c4cb5bdc87cc4fd97976e61c5a835e47056",
+    "android/app/jni/openbor/include/sdl/SDL_gamecontroller.h": "8fedd2171c2bde26c8fe16ea16fa5aeda6afd54def77a6f616487244b6cce34b",
+    "android/app/jni/openbor/include/sdl/SDL_gesture.h": "c83dc733246b7925c15981e400c99ddb678d72c755f55849e05c5350489642f2",
+    "android/app/jni/openbor/include/sdl/SDL_haptic.h": "e765f56063b3d312eb5f5f166ae7dee7e5a3907b576cdca788acbd7c75111928",
+    "android/app/jni/openbor/include/sdl/SDL_hints.h": "ae8f58268146f25380426746adc46b1f17d7e0c1579d3adec29782e54fce963e",
+    "android/app/jni/openbor/include/sdl/SDL_joystick.h": "cb35747a0a9641f92f0ba03608b04d2299113e9b533e47afdba1251b6eec6389",
+    "android/app/jni/openbor/include/sdl/SDL_keyboard.h": "6070a29c89c39178750339694039ff6518a81c521f7c55293eb60e98d5b945a6",
+    "android/app/jni/openbor/include/sdl/SDL_keycode.h": "b5f8f95f02a6286674b7778170a076b730e0a625851a758a534f4e4cf56af4da",
+    "android/app/jni/openbor/include/sdl/SDL_loadso.h": "9f7806c6d4d7a9ad5587801cf8019350879fcffe38cb854c4dc42329ac33f0f9",
+    "android/app/jni/openbor/include/sdl/SDL_log.h": "ac045e6b4b2c3f73d61fd856dc64cae784d16a3b0254884e086df3c3ac920c52",
+    "android/app/jni/openbor/include/sdl/SDL_main.h": "ef21cd16574026a97bffb700a041a5301df8b0f28a59fcab393f627c6f36ab8f",
+    "android/app/jni/openbor/include/sdl/SDL_messagebox.h": "ab1cd0e84c761cdf6fb86fb9d2e74e232d58fde115707e3a5a25bb35fd84cd7c",
+    "android/app/jni/openbor/include/sdl/SDL_mouse.h": "311c12e4c5d2563f2293549d1587255d4a9f41cb634a07ff6babb0be75ca72be",
+    "android/app/jni/openbor/include/sdl/SDL_mutex.h": "a9f2ca73ca0446d19b291f5a003bc0934f2fb88c1d5695d3e4b5c38e4877d297",
+    "android/app/jni/openbor/include/sdl/SDL_name.h": "38c93cf6425742ed9253fceae8fa72e7c8d3f24b3291cbed3b4f7f1a0f86ff08",
+    "android/app/jni/openbor/include/sdl/SDL_opengl.h": "cc04b8594b8619d5d6bbd2039124ac7e2e34b72bf3bbd36f7587aa2b3ce8c00a",
+    "android/app/jni/openbor/include/sdl/SDL_opengl_glext.h": "2142c12ff9beac17375103eabbaf30e850ccfcc75ae7ca326c59e5ca7dce9231",
+    "android/app/jni/openbor/include/sdl/SDL_opengles.h": "f1079c59de8722052148a21a0b73878cbd1f0a11d16f46f3dcf726df589634aa",
+    "android/app/jni/openbor/include/sdl/SDL_opengles2.h": "195a275b92891d0cbc3fc77237d8ed9ec124c3e741d78234064276932cc35802",
+    "android/app/jni/openbor/include/sdl/SDL_opengles2_gl2.h": "f460302b4720f183eb647595a8c1a9c95c0a173dc0cbd5478b2cfbd23cd696d0",
+    "android/app/jni/openbor/include/sdl/SDL_opengles2_gl2ext.h": "e78d3824e1d71f8a463bad2047fb8b873f735ba7cacbd8ef74cc398b5593729a",
+    "android/app/jni/openbor/include/sdl/SDL_opengles2_gl2platform.h": "c252914ec99332b9e7898a92bd092525f6fd545d3b274303a6acd839c7e20c36",
+    "android/app/jni/openbor/include/sdl/SDL_opengles2_khrplatform.h": "7631de0f2ce64747bfd893486eaa41aa08b9e8c5e5c6501b81c045c6ebf04b2a",
+    "android/app/jni/openbor/include/sdl/SDL_pixels.h": "8fa337bcde24d398922b7532f5f7ec4f2f8158e49710d89b91a63b78f2c128f8",
+    "android/app/jni/openbor/include/sdl/SDL_platform.h": "f69d08338f8c7f260107be73f1e5d9737196d247bc87f3817adea07579bced86",
+    "android/app/jni/openbor/include/sdl/SDL_power.h": "32c302d6b82ce4b7e927b3097c595d5c04ebdd17a43075883e52c5093547b051",
+    "android/app/jni/openbor/include/sdl/SDL_quit.h": "660b476dbe35f94b4bc959ba00ff65657689f05a7f409ba7a23cf22723052579",
+    "android/app/jni/openbor/include/sdl/SDL_rect.h": "b8166cb3ccbdf8908a6ec6f17eefae79ff26f553ed2ecd0d81e658a908f9dab8",
+    "android/app/jni/openbor/include/sdl/SDL_render.h": "67ce2d8d04c560b3739c726affc82224fa2b54f0834cfd9b1c862649ced92ef0",
+    "android/app/jni/openbor/include/sdl/SDL_revision.h": "522580e2af87c3fe07251ab1bf9bcadcbbea585ac97391674a1c68d90247f88c",
+    "android/app/jni/openbor/include/sdl/SDL_rwops.h": "83f6d6c08ad4a359aa2bb838bcb5f2607a5187e5d28d92cb4fa4cd9c2df22550",
+    "android/app/jni/openbor/include/sdl/SDL_scancode.h": "a6ec2d02d3c57e48f2765f125a649efd20af64531ccf0ab4e310a87740ce8d95",
+    "android/app/jni/openbor/include/sdl/SDL_sensor.h": "57e2c729ce14a6c513fad5c5330a2380d4c44abf82bd25c4d3282f8e049f4ede",
+    "android/app/jni/openbor/include/sdl/SDL_shape.h": "51df0caa7d5a6def98fcf0a10868b722c4f4e950e913ee8fefd6498ce0e79a47",
+    "android/app/jni/openbor/include/sdl/SDL_stdinc.h": "89eeb2337e3278c3f81dacec5b6533d75c057f2a3a831ed2fa1ff6fb8dba27af",
+    "android/app/jni/openbor/include/sdl/SDL_surface.h": "0222247142b7ab3e4c318cca34770097919794e01168ff8732678e4cf8421294",
+    "android/app/jni/openbor/include/sdl/SDL_system.h": "eb0d62dedd9db30693430f79f3836e2cd2b1fbd8969a8dd139c2e3a1a60330cc",
+    "android/app/jni/openbor/include/sdl/SDL_syswm.h": "1c38e2120ba4381ce96ca9fb990ca699f7946ee162bf205295a2ca6686919ac3",
+    "android/app/jni/openbor/include/sdl/SDL_test.h": "ee282ce14ba3946572a70368d32ae230f8c7e7dde17b746803975ec395a708b6",
+    "android/app/jni/openbor/include/sdl/SDL_test_assert.h": "0cf2619f39564e2e4c3e6da2725bce5d97718cb4ba05b9edcfd5673af3d263e9",
+    "android/app/jni/openbor/include/sdl/SDL_test_common.h": "50eb30fc9bbec8dc4a187dda073a76a2d79d05076723acc15c86373abad9ed1c",
+    "android/app/jni/openbor/include/sdl/SDL_test_compare.h": "9f2dbb6fa626050ae86b37b79bf8386f16d1945d3db380d1b53ae9d1e4271001",
+    "android/app/jni/openbor/include/sdl/SDL_test_crc32.h": "8573d939d84c8146c1230b19d62c539ce9b5a2709f4dfcc10bdc073877b4cb9e",
+    "android/app/jni/openbor/include/sdl/SDL_test_font.h": "b1e91be0fc03dff91e83de07061ebb92553f4009b069d833b89e9c88aa9b50c3",
+    "android/app/jni/openbor/include/sdl/SDL_test_fuzzer.h": "e01f67579c29410a755abea7eb4416e2ecf6081036b30ec453bc85c9262ac288",
+    "android/app/jni/openbor/include/sdl/SDL_test_harness.h": "088ed643f3d679a68c339e5d1114b75bfbdcd3191e111d5d3f9ae74eb2291046",
+    "android/app/jni/openbor/include/sdl/SDL_test_images.h": "7bafd8d2fa41cc9bcd4c5daa0bfe4482a2dd9388f149ede008a3aff444a62101",
+    "android/app/jni/openbor/include/sdl/SDL_test_log.h": "c269a5c68090ae02dbcbe277a7df2228d942da941eb81c127cab133b2441b6a3",
+    "android/app/jni/openbor/include/sdl/SDL_test_md5.h": "997ec517c4d3494252b7aedf6fe74ed618d06b6786733df16c215ed5b7b251e5",
+    "android/app/jni/openbor/include/sdl/SDL_test_memory.h": "2e539e7449c3b046759defe1c22598fa40d8aac9671c3d58703e04fc5bbc46ca",
+    "android/app/jni/openbor/include/sdl/SDL_test_random.h": "1508df36f19d165c81953bb57c44ef933dc770fadcbad1baa16751bf0fd22ca8",
+    "android/app/jni/openbor/include/sdl/SDL_thread.h": "a8bbe57be02bdf218d911ce122b49c45b7a4fc799ca3ba1b0caf3fa024f7ddbc",
+    "android/app/jni/openbor/include/sdl/SDL_timer.h": "808321cc74f076bfdb133040bd926429fe710c0b13fc902b9e05ef695c39cf7a",
+    "android/app/jni/openbor/include/sdl/SDL_touch.h": "71e623ce2192b679beaefaf769efd1bc63dffcb89213cd188156a3ee8a1909f4",
+    "android/app/jni/openbor/include/sdl/SDL_types.h": "74e8c538a89befe2cd1a934e1a0ced5245293f5ec233f6558db5f62f8124bd24",
+    "android/app/jni/openbor/include/sdl/SDL_version.h": "bae398de6398a08776097105a85f3da4a0d070143b00441bb5b80e7f14b691e1",
+    "android/app/jni/openbor/include/sdl/SDL_video.h": "52d9e98e788a4bbe9cae30265daf22f3073380b403531890a18bb4cbbe8148d1",
+    "android/app/jni/openbor/include/sdl/SDL_vulkan.h": "65497667aae3e2b236fa68ad25007677ee214c8b9323355fd1fafb28cf6180ac",
+    "android/app/jni/openbor/include/sdl/begin_code.h": "552df85a6f235d9cb3ab9bd381dc8b042d6ace6962a35d4e8c41ba8df88b7aa8",
+    "android/app/jni/openbor/include/sdl/close_code.h": "dbdd5212f3233bf8a496b5a07e2fa81fa0c14cea00051e0e5daf09a1f0c45a87",
+    "android/app/jni/openbor/include/tremor/config_types.h": "266d235686b3c04d3a75202923540032f5f8e7161ae5e57451131e8c6d4e0b7d",
+    "android/app/jni/openbor/include/tremor/ivorbiscodec.h": "bbf025d8f5b531e31baa73caa82f9e64aebc54caba3a832fb2ea49b2730d3be5",
+    "android/app/jni/openbor/include/tremor/ivorbisfile.h": "59b5460f22fb2ed28be89cf9f75d86dd591abac56b9f0fff7338e0fb1c1a624e",
+    "android/app/jni/openbor/include/vpx/vp8.h": "8bd4f03ef5771d7f08b103733f09bd5fdb665c0b1a0f039a5ca1b9c4fbd0bdb8",
+    "android/app/jni/openbor/include/vpx/vp8cx.h": "96948f4e1b3408e70888e621bfded56f22182fa0ee94820eea1992a061320ee0",
+    "android/app/jni/openbor/include/vpx/vp8dx.h": "27c28f977ecc8b03f1cd7eca7ee3db6822b2635443c4912a1c6dfc1c7d02947e",
+    "android/app/jni/openbor/include/vpx/vpx_codec.h": "d85adb8d0efb33bab7f1ff53f81aa5ea0b12561390fa33a8ed5dcea56aa38d97",
+    "android/app/jni/openbor/include/vpx/vpx_decoder.h": "135fb5c3625502e798cafe06bca0e06311a8614ea337bafbcfa9ee444de54631",
+    "android/app/jni/openbor/include/vpx/vpx_encoder.h": "002a2738a5f69053d68264ba0ab1580551b01b352fd6e1da425d110ae0a4735d",
+    "android/app/jni/openbor/include/vpx/vpx_frame_buffer.h": "371ed0a3a25d5fbc155761d707523a6beb325ba61c6d84643939c35d9be2b3e4",
+    "android/app/jni/openbor/include/vpx/vpx_image.h": "71f832f7089e8a38c253a72e005fa73f617b202553cee1348d77ee9e48fc42f9",
+    "android/app/jni/openbor/include/vpx/vpx_integer.h": "84df10e90143c130ac8087105af0f5704e894c8506d99af4e71993962670bc12",
+    "android/app/jni/openbor/jniutils.cpp": "e1fe31737e06d5a1664c06571b54e7350bbc24d1570d56e78e1c99f0f2e9aa48",
+    "android/app/jni/openbor/jniutils.h": "d02da294b4708dc18b5ffcd0ec35075fd35f219022605c5e779b0febd8288f68",
+    "android/app/jni/openbor/lib/arm64-v8a/README.md": "06c6b3fa3cca016180b8e199aa2547541dc287986e6e64237b6440cd72f6d3a3",
+    "android/app/jni/openbor/lib/arm64-v8a/libSDL2.so": "210647f2281acac0f51824f2ce13d89d3d7f43e7333c1e0861a9e77a55ce6e25",
+    "android/app/jni/openbor/lib/arm64-v8a/libhidapi.so": "d6a3629fd475d5651275c4d2039230e6e0a3fb546bab4aa66258c0c5a0087bce",
+    "android/app/jni/openbor/lib/arm64-v8a/libogg.a": "70e55d2dfef85ff42627f99332bea6f545ce843e2a12b6a15dfc389091a28e0c",
+    "android/app/jni/openbor/lib/arm64-v8a/libpng.a": "3dd0c510247ca0d7149b6e707b82c0506bae7c3419124ce02d01eb3927c71fb6",
+    "android/app/jni/openbor/lib/arm64-v8a/libvorbisidec.a": "2d130e9865f4598be77aee2e1deb7133e8f8e227853928288e2c064528421127",
+    "android/app/jni/openbor/lib/arm64-v8a/libvpx.a": "3f571da84bf91bcd2ff02e167e09eecd4460fa1474c009c79b159bacd21d8c07",
+    "android/app/jni/openbor/video.c": "95d27d503420ea14ba22541c22620de9c93d034f2ae1f974e695e394f45e2d7b",
+    "android/app/proguard-rules.pro": "6fe2e9ad98d6667c0f86a1c27c250203c5bdf7a10e7d604386af4c1392cbaead",
+    "android/app/src/main/AndroidManifest.xml": "85e7ee95c36cefe098a69d018d239c74e471776b7b4535d460170cf64e05e0df",
+    "android/app/src/main/assets/.gitkeep": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "android/app/src/main/java/org/libsdl/app/HIDDevice.java": "9f46b398102983118d8ace6361343091cbe669d8dcc100d201e48f780c0fc3c7",
+    "android/app/src/main/java/org/libsdl/app/HIDDeviceBLESteamController.java": "de7b89b7986df36c7edfde936524d92844ad9696b920e4bf619adf51ceefcdd1",
+    "android/app/src/main/java/org/libsdl/app/HIDDeviceManager.java": "ff341f172936ad59b95d73ac410c630e8d80c807598eb933a891f098e79ab097",
+    "android/app/src/main/java/org/libsdl/app/HIDDeviceUSB.java": "aeea6a9ec6ecc9f69174d27ffa6156b178d6fff696dbaa7b0e47197e4a40114a",
+    "android/app/src/main/java/org/libsdl/app/SDL.java": "575b332c2907a03eaf6f5ee4c776c3f7a23b34bec4f151682dd43dd221e924b1",
+    "android/app/src/main/java/org/libsdl/app/SDLActivity.java": "4a061c8096a4aaaba211a89235125a3523df7a50f3cd870a032d82f8a10cb0c3",
+    "android/app/src/main/java/org/libsdl/app/SDLAudioManager.java": "b6174f3c32622bd855c63450b7a05a24bad41bfef72dfeaadacdf4c9626ca59c",
+    "android/app/src/main/java/org/libsdl/app/SDLControllerManager.java": "dfc41d7871322fb286923828a8da374f0bab9b0e3eeaeb3c326c045508c6dfd1",
+    "android/app/src/main/java/org/openbor/engine/GameActivity.java": "453a2f6a1d7bd2005f1b9ca8f29cfc23861749ceee889dfc6aef28f79d4ef118",
+    "android/app/src/main/java/org/openbor/engine/LauncherActivity.java": "412ce707914390d948386ca802e3cb5b41832313e971edcc53e2b96adfabd1e2",
+    "android/app/src/main/res/drawable/background.png": "1f1ae28feb2b2f1d3dc2a510b37afcfe3cd6ee55fe3a35834aeb24d4db4a468b",
+    "android/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml": "26310833a35076dfe3bdcd9fa469c5c7e36c26623eaf6009bf2d450f779189a3",
+    "android/app/src/main/res/mipmap-hdpi/ic_launcher_background.png": "f3ec9782bb6f9b44f552016ba4e7ce06948b59fdf1c412281170e6259a77245f",
+    "android/app/src/main/res/mipmap-hdpi/ic_launcher_foreground.png": "cc6589091752ce25483de39a74159aa07728831cc3cc34ab7978e94998d7654c",
+    "android/app/src/main/res/mipmap-hdpi/ic_launcher_monochrome.png": "cc6589091752ce25483de39a74159aa07728831cc3cc34ab7978e94998d7654c",
+    "android/app/src/main/res/mipmap-hdpi/ic_launcher_round.png": "532d4f6458e7ee52922f9fc37347a7b9e93c421b51d7c728cc9aaf3fd6184340",
+    "android/app/src/main/res/mipmap-mdpi/ic_launcher_background.png": "b89998fee6837f9b341e67fe3cfebdbbb50bd116a389aebbf3157c161f5910fc",
+    "android/app/src/main/res/mipmap-mdpi/ic_launcher_foreground.png": "af86fce4e730437a4798c016373fb1411c8983d8f050b00d0104df099b86b620",
+    "android/app/src/main/res/mipmap-mdpi/ic_launcher_monochrome.png": "af86fce4e730437a4798c016373fb1411c8983d8f050b00d0104df099b86b620",
+    "android/app/src/main/res/mipmap-mdpi/ic_launcher_round.png": "a3429b00ae478736fe6ee84cc82bbe85879497be356c443d856093e2b18760bb",
+    "android/app/src/main/res/mipmap-xhdpi/ic_launcher_background.png": "1e89065769ff30da4166600a8af0815034c23046880f36c5dc792d60107045c3",
+    "android/app/src/main/res/mipmap-xhdpi/ic_launcher_foreground.png": "027955c916650f0c9ad89c000fa04693cbec6953285c49bb4df35d8219654477",
+    "android/app/src/main/res/mipmap-xhdpi/ic_launcher_monochrome.png": "027955c916650f0c9ad89c000fa04693cbec6953285c49bb4df35d8219654477",
+    "android/app/src/main/res/mipmap-xhdpi/ic_launcher_round.png": "9bd037c6df6d87578949f458044c657dd741bebaf7ffbb60f7c6b5c0cd56921a",
+    "android/app/src/main/res/mipmap-xxhdpi/ic_launcher_background.png": "6cfe7408e2643d58a498d23e464d502ad995855a08f158bf6d3839cb13404ff2",
+    "android/app/src/main/res/mipmap-xxhdpi/ic_launcher_foreground.png": "ae39b3370c3b661f75fade6d219e386e07ad7fc00894f8ef3c40186b91be8554",
+    "android/app/src/main/res/mipmap-xxhdpi/ic_launcher_monochrome.png": "ae39b3370c3b661f75fade6d219e386e07ad7fc00894f8ef3c40186b91be8554",
+    "android/app/src/main/res/mipmap-xxhdpi/ic_launcher_round.png": "5ee6e402cb7b87105a703d738eaa34299a7fe9f9ceade0420143c662ac3a23ae",
+    "android/app/src/main/res/mipmap-xxxhdpi/ic_launcher_background.png": "b8400422ffa4106c86add2158d9c52febf387d2eda9ecdbd8550e9b553bf87be",
+    "android/app/src/main/res/mipmap-xxxhdpi/ic_launcher_foreground.png": "b1280a4240c5072b6a9d47266099759d122bba9ab7f94d4ac735d31c7029a02f",
+    "android/app/src/main/res/mipmap-xxxhdpi/ic_launcher_monochrome.png": "b1280a4240c5072b6a9d47266099759d122bba9ab7f94d4ac735d31c7029a02f",
+    "android/app/src/main/res/mipmap-xxxhdpi/ic_launcher_round.png": "1a00d9ef39256bfa973b6d45c5aad7ef4622cba9b0b41d391253ee7dc4b0b209",
+    "android/app/src/main/res/values/strings.xml": "6b25429fd2f2d2ee045ae9978eb9bf12ac5754903d15e7da5ffc42ad6b00d29a",
+    "android/app/src/main/res/values/styles.xml": "873590ec87f64f7477c8260ca0cac3b79f297c4422b0228ddbceb4427e33b9d2",
+    "android/build.bat": "3150cf33d246d455747d7c0396a91bde9a90f6a7ba33612d9a4a715f838d7827",
+    "android/build.gradle": "15973daf40acb68cdaa69ecb38b7915735903540eb10107c49478ee49e2f81dc",
+    "android/build.sh": "01718ac06cac7f20268902687d668d88dae3989df5cb37d59ffa4f0ca9bb28e5",
+    "android/gradle.properties": "53f1375fc9c591a81f8d0cdfdee1245a45d138b6dbdb04efbea29155a8086f24",
+    "android/gradle/wrapper/gradle-wrapper.jar": "498495120a03b9a6ab5d155f5de3c8f0d986a449153702fb80fc80e134484f17",
+    "android/gradle/wrapper/gradle-wrapper.properties": "65f14d066b3edc34c513457ab883cc835591166eba81598722150b5956a25932",
+    "android/gradlew": "a3648413b47ef77af21d5ebc36c687c7d103aaef3e17f33de7d4f080a6f300a3",
+    "android/gradlew.bat": "2209f919a22528af59a2af2ad97e8d056cca18e39f7d87aa3fd549a73b180150",
+    "android/make-my-key.bat": "be565d88585621d089fc0d66eb037284a6130c2f2a819907914f112a748fb9a6",
+    "android/make-my-key.sh": "d74a76b0e9cbcb2666c726b94dc7ef5efeccba5ca3d9bae3506cf3073fda6e3f",
+    "android/settings.gradle": "4b919cfffaed71637d1ee9c89f21f4247273e14eb8433afdcd0672eba906b41f",
+    "darwin.sh": "aac1aaa28db7d7cf0d6b60ffb100449d3a261b288e9f2c246245efab3a45937b",
+    "fixindentation.sh": "d8932ac6dbd616457adfa388a248b42366cca7085aee5025c96626b8a90acacd",
+    "fixtrailingwhitespace.sh": "bf6af83b23c45adf7e062cc06e5cd1b5c1bd53259e7e0bc9931bd6405efb83e9",
+    "resources/A.ico": "d59f614170f69fe062eb173e05b03242dfd060af0435a921cbadd42adb2def1e",
+    "resources/BOR_Menu_Font_1.gif": "51c64774053088412f46064ceba53d2a8895155069a7c303a994f8711e8c8709",
+    "resources/BOR_Menu_Font_2.gif": "79bdfb02f35359485e49e0207e83c075ee969897c2bb172e89fe16d6297295b8",
+    "resources/BOR_Menu_Font_3.gif": "7144008ae80e90749282f421381712272d71f18a9cf2dfcf0f971f83321161bb",
+    "resources/OpenBOR.icns": "949e51697b21cd8671c0bd60a9ea8a700a3b631d95bfb772aacdba8a09dde7d9",
+    "resources/OpenBOR.rc": "6c9df61e4c688d40631075e1a8d3053f299a02b285af2a4872c32f595f2ef2e7",
+    "resources/OpenBOR_Icon_128x128.h": "5f8df82d740cacb02e8cbcf293058df283d089b4a8e9bdfd4ded37cfd9e11e3a",
+    "resources/OpenBOR_Icon_128x128.png": "9909e28299b63fd2c4d3eaba8786b608ba49ea33ffb3c02663e6e790d3108038",
+    "resources/OpenBOR_Icon_128x128_png.h": "3c005e4cfbc20404f1e0f50f8165ad2af690b112488ff82134799436a9c80b26",
+    "resources/OpenBOR_Icon_128x48.png": "121b716cc3ba0109fb247dda7ef9243750234a758c64447eccf907123afe7db6",
+    "resources/OpenBOR_Icon_128x48_png.h": "157a6a7d2bd6149ffe3258c2fff2f2650d567892c18fffa8590db22f8b4ea914",
+    "resources/OpenBOR_Icon_144x80.png": "1133848df3eadea2d53c49ecfa6e808030eef2439aa3385fa43c6f384929a3d7",
+    "resources/OpenBOR_Icon_144x80_png.h": "de8078803274e25263f63f7d3771caaedcc2824eddd350e43123af013863eaa9",
+    "resources/OpenBOR_Icon_32x32.h": "1909e71b126d6383134f414ef3d4266ee4755541d4a8a80ed6682c40ec133798",
+    "resources/OpenBOR_Icon_32x32.ico": "2db6607ef276d40cd09ed14e0ef44c0fe6318288649a765d875f303a55e44391",
+    "resources/OpenBOR_Icon_32x32_png.h": "d83417ad5c284af8c5a76ca4d8c7a569904842dc1cca0d456616c3eb69955eab",
+    "resources/OpenBOR_Logo_320x240.h": "2a7800870b21e454fc25b607d632dc1d1838a58c91c0c222fc1efeba01c72055",
+    "resources/OpenBOR_Logo_320x240.png": "82879dee0d93f4e8fe56152f2547ba8a2fa639ea1e56dffb4e17dd9f346510d0",
+    "resources/OpenBOR_Logo_320x240_Link.h": "45d885c5d03d726bdee0a7b5e3f7c51a165e710615898085313f17509caa9abe",
+    "resources/OpenBOR_Logo_320x240_Link.png": "9ceffb13176b5af2a0701dd202d77c6cf21d8e8605ec899e502cd45d9bd0c3b2",
+    "resources/OpenBOR_Logo_320x240_Link_png.h": "f666fd4d32349c254e7ca0cfd11acbaf9b80a6a5fb5eeb3b42fa9a76616e7f3e",
+    "resources/OpenBOR_Logo_320x240_png.h": "75f571394209e550f9a21e1f5610b1ddb6dd044ee085f1bf04e29f731706dddc",
+    "resources/OpenBOR_Logo_480x272.h": "782abdbbbcab4faea86402def61fad3ee58525214118eab0daf4f23b35a7f260",
+    "resources/OpenBOR_Logo_480x272.png": "e5d94594b539c705f4e63d3e98ff73b90824f31e520f5f24232bc08a5a418b20",
+    "resources/OpenBOR_Logo_480x272_Link.h": "ebe847e4800d3679c33f07f8c7795def52e3b131945b30bebb4f2b2da8546d02",
+    "resources/OpenBOR_Logo_480x272_Link.png": "8132dd320591524f4d931da7740bbd51bfaaf78d20de3af6165497a6026cf8c8",
+    "resources/OpenBOR_Logo_480x272_Link_png.h": "2c047f767933e01f467212ef8a9042ef2a8a7cd3f4e4bcf12019369d41643dc1",
+    "resources/OpenBOR_Logo_480x272_png.h": "133d8c0b7ff8106297cbe690fc1a85c6dc55577c0a8e9f4f74b66ba72982ad5f",
+    "resources/OpenBOR_Menu_320x240.h": "81462729544fe9ff0bf80d2ea24568ee18626e823486f8d7358eae9efe04620b",
+    "resources/OpenBOR_Menu_320x240.png": "0d15b651822731081479f67b82a0cbad9b4789c55bc75a75916114dbaf260763",
+    "resources/OpenBOR_Menu_320x240_Consoles.png": "cb36ea2183a7fd7376ef5bcdbdbc6a72a0e218a8c13914168289d4e095e575a6",
+    "resources/OpenBOR_Menu_320x240_Consoles_png.h": "d35fd0db52f93680f642494ac7b4a0f579e614f718992ab3efd45befe0406830",
+    "resources/OpenBOR_Menu_320x240_Sony.png": "56013d4aed6dc99c4fb8bbe40a20278320cdb424f30cb102665ae857c06ac765",
+    "resources/OpenBOR_Menu_320x240_Sony_png.h": "576c89a9289a2c34c643e3ffd458e6efda7f995aa07bb985110e68e168aebac1",
+    "resources/OpenBOR_Menu_320x240_png.h": "758db8683488e4af0cbdb91b0ef9c95b72123af030563784535b07399edce6d1",
+    "resources/OpenBOR_Menu_480x272.h": "90a856225a4d25d5d2254691de2df5cff5c90a6039ed7e9f9096428af0c1a6b0",
+    "resources/OpenBOR_Menu_480x272.png": "a7e9f14e485cccfcaaf5bdf5251cbbad12eab4d371579636f37a7fe27965fa9a",
+    "resources/OpenBOR_Menu_480x272_Consoles.png": "9c4d5c10bf3f57f45bd288e5fe67465d6eb0130e4cfd0ba350acbe6c860916ac",
+    "resources/OpenBOR_Menu_480x272_Consoles_png.h": "2914b1a4e6db822e136291541132c58346ae2b92ffc1d9c72dfa250a244f3067",
+    "resources/OpenBOR_Menu_480x272_Sony.png": "8e31e0943dcdc4bbd148907a0f21b0487f93b38c711602d2de05682b9ecbe223",
+    "resources/OpenBOR_Menu_480x272_Sony_png.h": "fe9e98b741dcc1150e3131bc6298d40dbd2f04ea9e2d1ef73bc8e0dca226fce9",
+    "resources/OpenBOR_Menu_480x272_png.h": "fb80e7435a08bc8f20d4b0f516c3bfe6f003fdca74981a00adb3c45b3351ddb9",
+    "resources/PkgInfo": "7b2a49b4c169b4dbd6b50c898b68a3a4af6e62e499ff781d10e40343417d692b",
+    "resources/logviewer_320x240_png.h": "96b6138cd99972c3458568cbe9dc7c522589b2f878a3b0e9de01933ec5d8ab70",
+    "resources/logviewer_480x272_png.h": "a49902d760709b1161e4457393517e861265054ba96e50cc3120c622c1dbc908",
+    "resources/makeheader.pl": "db2024e96a33f761fa21d3c884cf478442bfe63d5205eb0dc94925db2eaf9db3",
+    "resources/vita_icon.png": "e542454043055005f17e8c60a88f0f157980d31cc1d06712c344de2634be78b7",
+    "sdl/control.c": "02ab62186d0cf1cbd160b81d2cb0d16b88d9a90dfa513040cc7feb79666b3ce8",
+    "sdl/control.h": "bb9106f70186e3f10b9f5d3bb243761483e66ae4f19d451199b807bb376a87be",
+    "sdl/hankaku.h": "017822c4d0daa521752fb5a1d4f76c7d2e5438573dd76d8a46256c9f7dac7429",
+    "sdl/joysticks.c": "ec575115ed494b3315e922c869437a31abab202d0e57f518f69b7c3e749a82a6",
+    "sdl/joysticks.h": "612dd0064527fa4bafd085333544a54193ef24b7ab08e70d0dce7924df15a9b2",
+    "sdl/loadgl.c": "8a6b6ea67e1e04da6e8fcb638eb56f082580f8c454ad57c89b239f95c892dd0a",
+    "sdl/loadgl.h": "b316cfa11261be0284885ad7dc702d095300413e73646c03cf1c8dcac0de4171",
+    "sdl/menu.c": "9c0174e9db2fc435f45bbe1d0e0424f134437d13429e576152bcee9bd3e1a858",
+    "sdl/menu.h": "fd4aa10f7b79d8c4f983f7ee3977e3a579001c469ca057a037fbb81de9635a9a",
+    "sdl/opengl.c": "76cc9d306b64fa94bded2608145d10677b73ca5e5b3f766d72ebd17b71db45c5",
+    "sdl/opengl.h": "9a83b772b4a6fa8646ab1a6e7ec10addccd0ddf73ab750341d9a708fe0937ab2",
+    "sdl/sblaster.c": "52b8035a3038937bc6ad4bb6aead94fceb0dd1887a72e97c70e263b31610ca16",
+    "sdl/sblaster.h": "8c33bc2e851e5fc622b6bc0b6d1023e5c7b09133833c2cc03fb90195ea7a7df1",
+    "sdl/sdlport.c": "b47f39e22d2b37bad1940c7ac843b826668cdd1a196bf737d53ff3a2d1889fc8",
+    "sdl/sdlport.h": "f3d2afdacd8b7bcbebcb7b60dc84c94eb9794d5af07e1197a92fbb5c956ee6cb",
+    "sdl/threads.c": "bea0e9478410f79cacaf16f8bfc04a242542fd6bc7f7e980d61e98319fdc994f",
+    "sdl/timer.c": "4a481daaf2d381b89f2e258cc678ebcda27297974f942dcf2bfd16e38f313c7d",
+    "sdl/video.c": "bcd3015eb22cf9e2ad23df92e16107503bc4c9b14ff7ac303c556a193c1cea15",
+    "sdl/video.h": "5965dd590745d2fc71cacd85823b92bbf2e4b092b968e44b3d43ebfe0ecda545",
+    "sdl/videocommon.c": "5c63af5c48f7d645898b8db26da79d0c3e7088e1699fae0b95128fe65270dd56",
+    "sdl/videocommon.h": "15b4b9cf05196d03114bb47c8b55573372338b167dc7c676ffeb0aeded7fa3ed",
+    "source/gamelib/filters.c": "d8ea2be4dcd660bb6f795e857d7ab8e30050a3e9184d6a57ca4547b6cd7f9f9a",
+    "source/gamelib/filters.h": "dd5e0edaddf61a9fd1b357d969d1e90fa6d78f751838f994798c236fef87a6f0",
+    "source/gamelib/workspace.code-workspace": "cd1495cdf031e4caa0cf6f772c7178fbabb03d3fcf363d485db2312b20cfbefb",
+    "source/gfxlib/bilinear.c": "a2c290e1a967c94158fd1ddd666045ac6e1000a672d101ccde539ea1b0a0aca0",
+    "source/gfxlib/dotmatrix.c": "a3d01bb980fc07f8ea1210482b82b8b9c90e5e2cb1782ef53b03192e4a80d023",
+    "source/gfxlib/gfx.c": "09a2e40262e03676af8566c87425a582cbb85dd6f953704d19f5be228dea9514",
+    "source/gfxlib/gfx.h": "29d9a497a11f9bc94f25696e007bd87ec25603b212e0efd71cac442c1a962898",
+    "source/gfxlib/interp.h": "788b7daaef47346864f61ce4df551a927f09441efcb114e04963b5f56980e058",
+    "source/gfxlib/scale2x.c": "dc3281fe34afbdd5853319ca16c67a17f8a9f40fc8cc4c23976a4c48ae5bb1cf",
+    "source/gfxlib/scanline.c": "c64c19ea0ea701b2da05ea418f0927a41e0ce9f90d585cf5952968444dfbeb63",
+    "source/gfxlib/simple2x.c": "23fca2d9a54d47cb9bad6e169aff49e0f935f77abc8f7f06c7771502ff256ed7",
+    "source/gfxlib/tv2x.c": "fba4f8a4a978bf08b90304a46e02d3b4e3de29758888e408635b504721fd3dd5",
+    "source/preprocessorlib/README": "893218a5ac6fb2270f18796219e15495d1557d1a042f89a67da8d7ee57e3ab7d",
+    "source/preprocessorlib/test/build.sh": "afd244ac485047629c62a37ebce41c601e959d69219d0b224fbfa1d86c31f604",
+    "source/preprocessorlib/test/calculator.c": "b47845accf54165075353613b78c51d9f39a7fc421a6f99aba24b2b12fe141d9",
+    "source/preprocessorlib/test/infixparser.c": "c6e6b8ea8a1ea4c65b98a15d316529624dfbf924a2389dec2b0950cb8fe0e998",
+    "source/preprocessorlib/test/pp_test.c": "4abcc5207fe946b24e16a3271ce628a002ef653953e0385ba6e583e734c3b4c6",
+    "source/preprocessorlib/test/tmp.c": "09fcd73b5817403d3c71f2734affba8f6f85201a4c22183a53c54a3da6671970",
+    "source/preprocessorlib/test/tokendiff.c": "c34ca086fd29dc0390226cd06a2a33ce4ab6071aa2b595735962534d98a807ae",
+    "source/preprocessorlib/test/tokendiff.sh": "3c78522a8f260519eaf56cf43b464d3590d2f573dc17759140d29394f205c542",
+    "source/scriptlib/List_unittest.c": "9209c529b6e990e354306ac1e1ff96851c29d0f9c09d1e4858ba93d13f83353e",
+    "source/tracelib2/tracelib2.c": "9e2a043d277b43024f20c7105ebd5185e4f115427ff5b38240fa19d55315ee30",
+    "source/tracelib2/tracelib2.h": "5e3e16ab11221d3f3a26334a7bd13eae0b648b25d75ebbc206ed7d11a360a519",
+    "source/tracelib2/tracelib2_test.c": "6cc2950b6b5850a46577095f3a90ce15ca4192b3fd88e1ed9bf5fa8ec57225fa",
+    "source/webmlib/halloc/README": "c4feade32b85078568abdd8155e9f81b6139b1886c88d55a3863376f70d010cd",
+    "translation.txt": "4303c4136688fa629225561f3d92d6edb94c1dd58983efafdfe8f4dec78b6899",
+    "version.sh": "cb3a0a6ad56b7585df6516e8409972b49d334035afa2fd0d564e50b301935703",
+    "version.tmp": "7f0971472c5d83600ad6bd48007686e81e8fd52771fb953f6020feb133712eda"
+  },
+  "record_date": "2026-09-12",
+  "repository": "https://github.com/DCurrent/openbor.git",
+  "schema": 3,
+  "selection": "Libretro build dependency closure and original license notices; omitted paths are relative to the upstream engine/ subtree"
 }

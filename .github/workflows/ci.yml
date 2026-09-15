@@ -1,0 +1,46 @@
+name: Build and validate
+on: [push, pull_request, workflow_dispatch]
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        target: [linux-x86_64, linux-aarch64, windows-x86_64, android-arm64]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install host build tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential nasm python3 gcc-aarch64-linux-gnu g++-aarch64-linux-gnu gcc-mingw-w64-x86-64 g++-mingw-w64-x86-64
+      - name: Install Android NDK
+        if: matrix.target == 'android-arm64'
+        run: |
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" 'ndk;26.3.11579264'
+      - name: Check distribution and focused regression tests
+        run: make check
+      - name: Build and package
+        env:
+          TARGET: ${{ matrix.target }}
+        run: |
+          if [ "$TARGET" = android-arm64 ]; then
+            export ANDROID_NDK="$ANDROID_HOME/ndk/26.3.11579264"
+          fi
+          make TARGET="$TARGET" release
+          if [ "$TARGET" = linux-x86_64 ]; then
+            make source-release
+          fi
+      - name: Exercise native runtime regressions
+        if: matrix.target == 'linux-x86_64'
+        run: |
+          sudo apt-get install -y ffmpeg
+          python3 tools/smoke.py
+          python3 tools/regression.py --webm
+          python3 tools/test_multiplayer.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: anybor-${{ matrix.target }}
+          path: dist/*
+          if-no-files-found: error
