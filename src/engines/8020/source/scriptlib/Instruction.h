@@ -56,7 +56,7 @@ typedef struct Instruction
         CHAR *Label;//[MAX_STR_LEN+1];
         HRESULT (*functionRef)(ScriptVariant **, ScriptVariant **, int);
         int theJumpTargetIndex;
-        struct Instruction **ptheJumpTarget;
+        struct Instruction *ptheJumpTarget;
         ScriptVariant *theRef;
     };
     ScriptVariant *theVal;
