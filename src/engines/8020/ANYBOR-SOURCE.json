@@ -20,7 +20,8 @@
     "Dynamic animation table",
     "Compact call references",
     "Compact runtime instruction operands",
-    "Direct instruction storage"
+    "Direct instruction storage",
+    "Stream large samples"
   ],
   "files": [
     {
@@ -223,7 +224,7 @@
       "upstream_sha256": "c1953b4ab90fbeee0f144486cb9f14d55dddb9f083138ab55b843fc1d154e370"
     },
     {
-      "distributed_sha256": "4b070f8f9fcbdc0894c085f2b0513b0d473047a105e757d8e96819c61e640e60",
+      "distributed_sha256": "e75f49f8211ec3ed902e9f551be39a84c66b6e443eb1bf12962b76cd1d7be103",
       "path": "source/gamelib/soundmix.c",
       "upstream_sha256": "4b070f8f9fcbdc0894c085f2b0513b0d473047a105e757d8e96819c61e640e60"
     },

@@ -4631,6 +4631,19 @@ Source: src/deps/libpng/loongarch/loongarch_lsx_init.c
  * and license in png.h
  */
 
+Source: src/engines/8020/source/gamelib/soundmix.c
+/* AnyBOR modification record: 2026-09-12.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Stream large decoded samples instead of retaining immutable PCM in rewind
+ * state.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/8020.md
+ * at the source repository root. Original notices follow below.
+ */
+
 Source: src/deps/libvpx/vp9/decoder/vp9_decodemv.c, src/deps/libvpx/vp9/decoder/vp9_dsubexp.c
 /*
   Copyright (c) 2010 The WebM project authors. All Rights Reserved.

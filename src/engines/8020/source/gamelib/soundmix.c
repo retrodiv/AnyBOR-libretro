@@ -1,3 +1,15 @@
+/* AnyBOR modification record: 2026-09-12.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Stream large decoded samples instead of retaining immutable PCM in rewind
+ * state.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/8020.md
+ * at the source repository root. Original notices follow below.
+ */
+
 /*
  * OpenBOR - http://www.chronocrash.com
  * -----------------------------------------------------------------------
@@ -68,6 +80,7 @@ Caution: move vorbis headers here otherwise the structs will
 #define     SOUND_PCM_24_TO_S32  256
 #define     SOUND_OUTPUT_BITS_FALLBACK        16
 #define     SOUND_OUTPUT_FREQUENCY_FALLBACK   44100
+#define     SOUND_SAMPLE_STREAM_THRESHOLD     (UINT64_C(64) << 10)
 
 /*
     Kratus (01-2024) Reverted all volume values but separated both music/sample volumes in different constants 
@@ -991,6 +1004,34 @@ int sound_load_sample(char *filename, char *packfilename, bool log_errors, bool 
             printf("sound_load_sample can't load sample from file '%s'!\n", filename);
         }
         return -1;
+    }
+
+    /*
+    * Reuse the engine's streamed-sample path for large effects even when
+    * legacy content requested a resident sample. Keeping decoded PCM copies
+    * in the arena makes every rewind checkpoint copy immutable audio. Small
+    * effects remain resident so common impacts retain their low-latency path.
+    *
+    * Convert only after the normal resident load succeeds. If reopening the
+    * source as a stream fails, the validated resident sample remains intact.
+    * Auto-converted entries retain the legacy request's cache key so repeated
+    * non-stream requests reuse the same streamed object.
+    */
+    if(!stream && sample.soundbytes >= SOUND_SAMPLE_STREAM_THRESHOLD) {
+        samplestruct streamed_sample;
+
+        memset(&streamed_sample, 0, sizeof(streamed_sample));
+        if(sound_load_sample_source(
+               filename,
+               packfilename,
+               &streamed_sample,
+               sound_parameters.sound_length_max,
+               true
+           )) {
+            free(sample.sampleptr);
+            sample = streamed_sample;
+            stream = true;
+        }
     }
 
     source_filename = malloc(strlen(filename) + 1U);
