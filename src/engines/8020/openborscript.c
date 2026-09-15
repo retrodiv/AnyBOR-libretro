@@ -672,10 +672,7 @@ bool Script_MapStringConstants(Instruction *pInstruction) {
     * Native calls require a nonnegative cached parameter
     * count and an allocated parameter-reference list.
     */
-    if(!pInstruction->theRef
-       || pInstruction->theRef->vt != VT_INTEGER
-       || pInstruction->theRef->lVal < 0
-       || !pInstruction->theRefList) {
+    if(!pInstruction->theRefList) {
         return false;
     }
 
@@ -683,7 +680,7 @@ bool Script_MapStringConstants(Instruction *pInstruction) {
     * The parser generates parameter counts as int values
     * stored in legacy integer variants.
     */
-    paramCount =  (int)pInstruction->theRef->lVal;
+    paramCount = Instruction_CallReferenceCount(pInstruction);
 
     /*
     * The cached count must agree with the logical size

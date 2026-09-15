@@ -18,7 +18,8 @@
     "Dynamic collision slots",
     "Release compiled parser",
     "Dynamic animation table",
-    "Compact call references"
+    "Compact call references",
+    "Compact runtime instruction operands"
   ],
   "files": [
     {
@@ -42,7 +43,7 @@
       "upstream_sha256": "e3891b5810d35f0584af98f9eb3dd6f7f2305a7185d0f6ffcbca3f1cfacd6964"
     },
     {
-      "distributed_sha256": "4f284fc7c6524f70a1c490fd1137f468b63a29232ae93fe2c8336c63673696df",
+      "distributed_sha256": "2569b98a47a65b326d1479ae9baf2fb5aa3073e39390ccfcd2ad1652a4245a2c",
       "path": "openborscript.c",
       "upstream_sha256": "24b9fe5794af8226cda3b7424fae2d754b76773f4f60483200d33c24783fdb90"
     },
@@ -676,17 +677,17 @@
       "upstream_sha256": "df915a9313a63554c538f5c35e0a911381eca5aac6793ab1f4912e09983b6e3b"
     },
     {
-      "distributed_sha256": "ed8b6c2aa9a9a36e4f037dc9625cb634f7a9fcecb010d512b76737886add4a12",
+      "distributed_sha256": "811283e8563df6ec4cd7e54f8c220b54cc5be53eb4974126b3284a76a4ec1bc0",
       "path": "source/scriptlib/Instruction.c",
       "upstream_sha256": "01fad7f4dbab2c3c7b1efc88d78bbf9bd141fa5351f045243666c2ec2cf092ff"
     },
     {
-      "distributed_sha256": "e0667cd49a0bbd2458a2803297dc3c39ac6190c84ddc52f4d3c2ffb5ea694b3a",
+      "distributed_sha256": "d15f1313dca3787b84e06c344197c2006e44fc3c47ecb0e3caa3d6a68e8bfd59",
       "path": "source/scriptlib/Instruction.h",
       "upstream_sha256": "dd67bb4336f9b2a0e75f15466f99e8d2faa9e0c55604395bdb4c844fa2cdca98"
     },
     {
-      "distributed_sha256": "7d7be26725c9371981012e40cbe15a7111dd72b664a7340ddc369406e1ba9f14",
+      "distributed_sha256": "9bb7aa3f7e0feff8394bf9fd1459f5a0de82e77375fd64c9dfabe8063d774a83",
       "path": "source/scriptlib/Interpreter.c",
       "upstream_sha256": "54f5a0c67fa15ef479b26bc18395f8b67e653970b0e59b7eb3a9157d470f349c"
     },
