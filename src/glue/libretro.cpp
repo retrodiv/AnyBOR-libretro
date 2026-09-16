@@ -27,6 +27,9 @@
 #include "obor_state_padding.h"
 #include "obor_profile.h"
 
+static void mkdir_p(const char *path);
+#include "obor_storage.h"
+
 static bool g_arena_owned;
 #include "obor_engines.h"
 #include "obor_debug.h"
@@ -64,6 +67,7 @@ static int g_width = 320, g_height = 240;
 static uint32_t *g_crt_pixels; /* presentation scratch, outside engine states */
 static char g_engine[48];           /* engine actually loaded, e.g. "6412" */
 static char g_save_dir[1024];
+static char g_game_dir[1600];
 static char g_pak_path[4096];
 static bool g_raw; /* content is an unpacked mod dir, not a .pak */
 
@@ -530,6 +534,7 @@ static void refresh_options(void)
     g_macros_on = opt_is_on("obor_macros", true);
     g_gamelog_on = opt_is_on("obor_gamelog", false);
     g_crt_on = opt_is_on("obor_crt_tv", false);
+    g_storage.clear_on_unload = opt_is_on("obor_clear_game_cache", true);
 }
 
 /* ---------------------------------------------- frame-loop accessories --- */
@@ -596,7 +601,7 @@ static void memmap_maybe_send(void)
 
 /* game log tail: mirror OpenBorLog.txt into the frontend log */
 static FILE *g_glog_fp;
-static char g_glog_path[1200];
+static char g_glog_path[2048];
 
 static void gamelog_frame(void)
 {
@@ -604,7 +609,7 @@ static void gamelog_frame(void)
         return;
     if (!g_glog_fp) {
         snprintf(g_glog_path, sizeof(g_glog_path),
-                 "%s/AnyBOR/%s/Logs/OpenBorLog.txt", g_save_dir, g_engine);
+                 "%s/%s/Logs/OpenBorLog.txt", g_game_dir, g_engine);
         g_glog_fp = fopen(g_glog_path, "rb");
         if (!g_glog_fp)
             return;
@@ -748,6 +753,8 @@ static void content_stop(void)
         p_shutdown();
     g_booted = false;
     gamelog_close();
+    if (!obor_storage_finish() && log_cb)
+        log_cb(RETRO_LOG_WARN, "[OpenBOR] Could not remove all current game cache files.\n");
     macro_reset_all();
     trace_close();
     obor_dbg_uninstall();
@@ -783,6 +790,7 @@ void retro_set_environment(retro_environment_t cb)
             { "video", "Video", "Video output." },
             { "input", "Input", "Controller behaviour." },
             { "system", "System", "Engine selection." },
+            { "development", "Development", "Tools for exercising content." },
             { NULL, NULL, NULL },
         };
         static struct retro_core_option_v2_definition defs[] = {
@@ -826,6 +834,21 @@ void retro_set_environment(retro_environment_t cb)
               "(useful to debug mods).",
               NULL, "system",
               { { "Off", NULL }, { "On", NULL }, { NULL, NULL } }, "Off" },
+            { "obor_clear_local_data", "Clear current game saved data on load", NULL,
+              "Deletes everything in this game's folder under AnyBOR before it loads, "
+              "so the next run behaves like the first on this machine. Includes saved "
+              "data from all engine builds. Other games and frontend save states are unaffected.", NULL, "development",
+              { { "Off", NULL }, { "On", NULL }, { NULL, NULL } }, "Off" },
+            { "obor_clear_game_cache", "Clear current game cache on unload", NULL,
+              "Deletes the cache directories used by the current game after unloading it "
+              "or closing the core. The next load rebuilds them. Saved game data is unaffected.",
+              NULL, "development",
+              { { "On", NULL }, { "Off", NULL }, { NULL, NULL } }, "On" },
+            { "obor_clear_all_caches", "Clear all game caches on load", NULL,
+              "Deletes all contents of AnyBOR-cache before loading a game or generating its "
+              "cache. Every load starts with an empty cache while this is On. Saved game "
+              "data is unaffected.", NULL, "development",
+              { { "On", NULL }, { "Off", NULL }, { NULL, NULL } }, "On" },
             { NULL, NULL, NULL, NULL, NULL, NULL, { { NULL, NULL } }, NULL },
         };
         for (struct retro_core_option_v2_definition *def = defs; def->key; ++def) {
@@ -862,6 +885,9 @@ void retro_set_environment(retro_environment_t cb)
         { "obor_macros", "Special move macros (L2/R2/L3/R3); On|Off" },
         { "obor_engine", values },
         { "obor_gamelog", "Forward game log; Off|On" },
+        { "obor_clear_local_data", "Clear current game saved data on load; Off|On" },
+        { "obor_clear_game_cache", "Clear current game cache on unload; On|Off" },
+        { "obor_clear_all_caches", "Clear all game caches on load; On|Off" },
         { NULL, NULL },
     };
     cb(RETRO_ENVIRONMENT_SET_VARIABLES, (void *)vars);
@@ -887,7 +913,10 @@ void retro_init(void)
         (quirks & RETRO_SERIALIZATION_QUIRK_FRONT_VARIABLE_SIZE);
 }
 
-void retro_deinit(void) { content_stop(); }
+void retro_deinit(void) {
+    if (g_storage.root[0]) refresh_options();
+    content_stop();
+}
 
 unsigned retro_api_version(void) { return RETRO_API_VERSION; }
 
@@ -930,7 +959,7 @@ static bool boot_engine(void)
     memset(&boot, 0, sizeof(boot));
     boot.abi_version = OBOR_ABI_VERSION;
     boot.pak_path = g_pak_path;
-    boot.save_dir = g_save_dir[0] ? g_save_dir : NULL;
+    boot.save_dir = g_game_dir[0] ? g_game_dir : NULL;
     boot.log_dir = NULL;
     boot.arena_reserved = g_arena_owned ? 1 : 0;
     boot.sample_rate = 44100;
@@ -1307,6 +1336,8 @@ typedef struct {
     obor_pm_char pm_chars[OBOR_PM_MAXCH];
     int pm_nchars;
     obor_diagnostics_state diagnostics;
+    char game_dir[sizeof(g_game_dir)];
+    obor_storage_session storage;
     uint8_t *pristine;
     gseg_t segments[16];
     int nsegments;
@@ -1337,6 +1368,8 @@ static void glue_save(glue_regs *r)
     memcpy(r->pm_chars, g_pm_chars, sizeof(g_pm_chars));
     r->pm_nchars = g_pm_nchars;
     r->diagnostics = g_diagnostics;
+    r->storage = g_storage;
+    memcpy(r->game_dir, g_game_dir, sizeof(g_game_dir));
     r->pristine = g_pristine;
     r->nsegments = g_ngsegs2;
     memcpy(r->segments, g_gsegs2, sizeof(g_gsegs2));
@@ -1368,6 +1401,8 @@ static void glue_load(const glue_regs *r)
     memcpy(g_pm_chars, r->pm_chars, sizeof(g_pm_chars));
     g_pm_nchars = r->pm_nchars;
     g_diagnostics = r->diagnostics;
+    g_storage = r->storage;
+    memcpy(g_game_dir, r->game_dir, sizeof(g_game_dir));
     g_pristine = r->pristine;
     g_ngsegs2 = r->nsegments;
     memcpy(g_gsegs2, r->segments, sizeof(g_gsegs2));
@@ -1623,7 +1658,7 @@ static void decide_engine(void)
  * dirExists only creates one level. */
 static void mkdir_p(const char *path)
 {
-    char tmp[1200];
+    char tmp[4096];
     strncpy(tmp, path, sizeof(tmp) - 1);
     tmp[sizeof(tmp) - 1] = '\0';
     for (char *c = tmp + 1; *c; c++) {
@@ -1728,7 +1763,7 @@ static void write_license_documentation(void)
         log_cb(RETRO_LOG_WARN, "[OpenBOR] Could not finish writing the license documentation.\n");
 }
 
-bool retro_load_game(const struct retro_game_info *info)
+static bool load_game(const struct retro_game_info *info)
 {
     if (!info || !info->path) {
         log_cb(RETRO_LOG_ERROR, "[OpenBOR] no content path (need_fullpath)\n");
@@ -1737,7 +1772,8 @@ bool retro_load_game(const struct retro_game_info *info)
 
     /* some frontend paths (netplay content reinit) load again without an
      * unload in between — shut the running engine down first */
-    if (g_booted || g_vtbl)
+    if (g_storage.root[0]) refresh_options();
+    if (g_booted || g_vtbl || g_storage.root[0])
         content_stop();
 
     /* The engine chdir()s into the save root (old engine eras hardcode
@@ -1761,6 +1797,17 @@ bool retro_load_game(const struct retro_game_info *info)
     if (!g_save_dir[0]) {
         log_cb(RETRO_LOG_ERROR,
                "[OpenBOR] frontend did not provide a writable save directory\n");
+        return false;
+    }
+
+    if (!obor_storage_game_directory(g_save_dir, g_pak_path, g_game_dir, sizeof(g_game_dir))) {
+        log_cb(RETRO_LOG_ERROR, "[OpenBOR] Could not resolve a safe game save directory.\n");
+        return false;
+    }
+    refresh_options();
+    if (!obor_storage_begin(g_save_dir, opt_is_on("obor_clear_all_caches", true),
+                            opt_is_on("obor_clear_game_cache", true))) {
+        log_cb(RETRO_LOG_ERROR, "[OpenBOR] Could not clear the cache directory.\n");
         return false;
     }
 
@@ -1860,6 +1907,13 @@ bool retro_load_game(const struct retro_game_info *info)
     decide_engine();
     obor_dbg("load_game: engine %s (save_dir=%s)", g_engine, g_save_dir);
 
+    if (opt_is_on("obor_clear_local_data", false) && !obor_storage_remove(g_game_dir)) {
+        log_cb(RETRO_LOG_ERROR, "[OpenBOR] Could not clear current game saved data.\n");
+        return false;
+    }
+    mkdir_p(g_game_dir);
+    if (!obor_storage_directory(g_game_dir)) return false;
+
     char err[256] = "";
     if (!select_engine_vtbl(g_engine, err, sizeof(err))) {
         log_cb(RETRO_LOG_ERROR, "[OpenBOR] engine selection failed: %s\n", err);
@@ -1894,6 +1948,13 @@ bool retro_load_game(const struct retro_game_info *info)
     return true;
 }
 
+bool retro_load_game(const struct retro_game_info *info)
+{
+    bool ok = load_game(info);
+    if (!ok) content_stop();
+    return ok;
+}
+
 bool retro_load_game_special(unsigned type, const struct retro_game_info *info,
                              size_t num)
 {
@@ -1905,6 +1966,7 @@ bool retro_load_game_special(unsigned type, const struct retro_game_info *info,
 
 void retro_unload_game(void)
 {
+    if (g_storage.root[0]) refresh_options();
     content_stop();
 }
 

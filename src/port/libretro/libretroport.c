@@ -20,6 +20,8 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <errno.h>
+#include <sys/stat.h>
 #ifdef _WIN32
 #include <direct.h> /* chdir */
 #include <windows.h> /* NT_TIB stack-range fixup around co_switch */
@@ -283,6 +285,19 @@ static void engine_entry(void)
 
 /* ------------------------------------------------------------- ABI ----- */
 
+/* The old dirExists helper truncates absolute paths to 128 bytes. Per-game
+ * namespaces can exceed that even when the frontend root itself is short. */
+static int obor_make_dir(const char *path)
+{
+#ifdef _WIN32
+    if (_mkdir(path) == 0) return 1;
+#else
+    if (mkdir(path, 0755) == 0) return 1;
+#endif
+    struct stat st;
+    return errno == EEXIST && stat(path, &st) == 0 && S_ISDIR(st.st_mode);
+}
+
 uint32_t obor_abi_version(void)
 {
     return OBOR_ABI_VERSION;
@@ -324,14 +339,14 @@ int32_t obor_boot(const obor_boot_info *info)
         if (!info->save_dir || !info->save_dir[0])
             goto fail;
         char base[MAX_FILENAME_LEN], root[MAX_FILENAME_LEN];
-        int bn = snprintf(base, sizeof(base), "%s/AnyBOR", info->save_dir);
-        int rn = snprintf(root, sizeof(root), "%s/AnyBOR/%d",
+        int bn = snprintf(base, sizeof(base), "%s", info->save_dir);
+        int rn = snprintf(root, sizeof(root), "%s/%d",
                           info->save_dir, (int)OBOR_ENGINE_BUILD);
         if (bn < 0 || (size_t)bn >= sizeof(base) ||
             rn < 0 || (size_t)rn >= sizeof(root))
             goto fail;
-        dirExists(base, 1);
-        dirExists(root, 1);
+        if (!obor_make_dir(base)) goto fail;
+        if (!obor_make_dir(root)) goto fail;
         if (snprintf(savesDir, sizeof(savesDir), "%s/Saves", root) >=
                 (int)sizeof(savesDir) ||
             snprintf(logsDir, sizeof(logsDir), "%s/Logs", root) >=
@@ -339,9 +354,9 @@ int32_t obor_boot(const obor_boot_info *info)
             snprintf(screenShotsDir, sizeof(screenShotsDir),
                      "%s/ScreenShots", root) >= (int)sizeof(screenShotsDir))
             goto fail;
-        dirExists(savesDir, 1);
-        dirExists(logsDir, 1);
-        dirExists(screenShotsDir, 1);
+        if (!obor_make_dir(savesDir)) goto fail;
+        if (!obor_make_dir(logsDir)) goto fail;
+        if (!obor_make_dir(screenShotsDir)) goto fail;
         if (info->sample_rate > 0)
             obor_snd_rate = info->sample_rate;
         packfile_mode(0);
@@ -368,27 +383,27 @@ int32_t obor_boot(const obor_boot_info *info)
     }
     /* Old eras hardcode "./Logs", "./Saves", ... relative to the CWD, and
      * newer ones default their *Dir globals to the same names — so chdir to
-     * a writable root and let every era use its native layout. The root is
+     * a writable root and let every era use its native layout. The frontend supplies a per-game root. Its subdirectory is
      * per engine build: a settings .cfg written by one build read by another
      * (different savedata layout) yields garbage — e.g. soundrate 0 and a
      * division-by-zero crash at game start. */
     if (info->save_dir && info->save_dir[0]) {
-        char root[MAX_FILENAME_LEN];
-        snprintf(root, sizeof(root), "%s/AnyBOR", info->save_dir);
-        dirExists(root, 1);
-        snprintf(root, sizeof(root), "%s/AnyBOR/%d", info->save_dir,
+        char root[4096];
+        snprintf(root, sizeof(root), "%s", info->save_dir);
+        if (!obor_make_dir(root)) goto fail;
+        snprintf(root, sizeof(root), "%s/%d", info->save_dir,
                  (int)OBOR_ENGINE_BUILD);
-        dirExists(root, 1);
+        if (!obor_make_dir(root)) goto fail;
         if (chdir(root) != 0)
             goto fail;
     }
     strcpy(savesDir, "Saves");
     strcpy(logsDir, "Logs");
     strcpy(screenShotsDir, "ScreenShots");
-    dirExists("Saves", 1);
-    dirExists("Logs", 1);
-    dirExists("ScreenShots", 1);
-    dirExists("Paks", 1);
+    if (!obor_make_dir("Saves")) goto fail;
+    if (!obor_make_dir("Logs")) goto fail;
+    if (!obor_make_dir("ScreenShots")) goto fail;
+    if (!obor_make_dir("Paks")) goto fail;
 
     if (info->sample_rate > 0)
         obor_snd_rate = info->sample_rate;

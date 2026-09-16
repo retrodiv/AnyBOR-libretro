@@ -13,13 +13,13 @@ necessarily literal folders called `system` and `saves`.
 | Item | Location |
 |---|---|
 | Optional external configuration | `AnyBOR.ini` in the frontend system directory |
-| In-game saves, settings and logs | `AnyBOR/<engine>/` below the frontend save directory |
-| ZIP extraction cache | `AnyBOR/zipcache/` below the frontend save directory |
-| Prepared content cache | `AnyBOR/prepared-v1/` below the frontend save directory |
+| In-game saves, settings and logs | `AnyBOR/<game>/<engine>/` below the frontend save directory |
+| ZIP extraction cache | `AnyBOR-cache/zipcache/` below the frontend save directory |
+| Prepared content cache | `AnyBOR-cache/prepared-v1/` below the frontend save directory |
 | License dossier | `anybor-license-notices.txt`, attempted in the frontend save directory when content is loaded |
 
 If the frontend sorts saves by core name, it can add its own outer core
-folder, producing a path such as `saves/AnyBOR/AnyBOR/<engine>/`. Frontend
+folder, producing a path such as `saves/AnyBOR/AnyBOR/<game>/<engine>/`. Frontend
 overrides, core options, controller remaps and shader presets can also have
 per-core folders or filenames. Use `AnyBOR` wherever the frontend asks for
 the core name.

@@ -74,6 +74,9 @@ The macros account for the active character's facing direction.
 | Special move macros (L2/R2/L3/R3) | `obor_macros` | **On**. Executes supported character move sequences. |
 | Engine build | `obor_engine` | **Auto**. Select an explicit pinned engine when needed; changes apply on Restart. |
 | Forward game log | `obor_gamelog` | **Off**. Mirrors the engine log into the frontend log. |
+| Clear current game saved data on load | `obor_clear_local_data` | **Off**. In Development. Deletes the current game's entire `AnyBOR/<game>/` folder before loading, across all engine builds. |
+| Clear current game cache on unload | `obor_clear_game_cache` | **On**. In Development. Deletes the cache directories used by this game after unloading or closing the core. The next load rebuilds them; saved data is unaffected. |
+| Clear all game caches on load | `obor_clear_all_caches` | **On**. In Development. Empties `AnyBOR-cache/` before each load and before generating new cache files; saved data is unaffected. |
 
 Automatic selection uses filename version tags, nearby engine-version data
 and PAK content markers, with build 6412 as the current fallback. An explicit
@@ -88,9 +91,31 @@ Paths below are relative to the frontend's **Save Files** directory:
 
 | Path | Purpose |
 |---|---|
-| `AnyBOR/<engine build>/` | Engine-specific saves, settings, logs and learned memory-peak data. Different engine settings layouts stay separate. |
-| `AnyBOR/zipcache/` | Cached extraction of ZIP content. |
+| `AnyBOR/<game>/<engine build>/` | Engine-specific saves, settings, logs and learned memory-peak data. Different engine settings layouts stay separate. |
+| `AnyBOR-cache/zipcache/` | Cached extraction of ZIP content. |
+| `AnyBOR-cache/prepared-v1/` | Prepared content derived from the source archive. |
 | `anybor-license-notices.txt` | The complete notice dossier embedded in the loaded core; attempted in this directory when content is loaded. |
+
+The three cleanup options are grouped in **Development**, including on frontends
+with categorized Core Options. Turn both cache options Off to retain and reuse
+cache files across sessions. Restart keeps the currently loaded cache available;
+load cleanup runs when loading content. The unload option also honors a change
+made in the frontend menu immediately before closing content.
+
+Each game has its own folder named after the original PAK, SPK or ZIP without
+its extension, or the unpacked mod directory. The name stays stable when content
+is extracted or prepared. Identically named games share this namespace; give
+unrelated games different filenames. Inside it, engine builds stay separate
+because their settings layouts are incompatible.
+
+Saved-data cleanup removes that whole game folder, including settings, progress,
+script output, logs, screenshots and learned memory peaks for every engine build.
+Other games and frontend save states remain intact. Script output explicitly
+written outside the game's folder is outside this cleanup operation.
+
+This layout replaces the earlier `AnyBOR/<engine>/` layout without migration.
+Old saves and the old `AnyBOR/prepared-v1/` and `AnyBOR/zipcache/` caches are no
+longer used and are left untouched.
 
 RetroArch places save-state files in its configured **Save States** directory.
 Ordinary engine saves use their own files rather than a libretro save-RAM block.

@@ -4920,7 +4920,7 @@ static const char obor_license_text[] =
 ";  file in the root of the source tree.\n"
 ";\n"
 "\n"
-"Source: src/engines/3400/version.h, src/engines/3842/version.h, src/engines/4086/version.h, src/engines/4432/version.h, src/engines/6412/version.h, src/engines/8020/version.h, src/port/libretro/obor_files.c, src/port/libretro/obor_script_compact.h, src/port/libretro/obor_state_copy.h, src/glue/obor_crt.h, src/glue/obor_legacy_api.h, src/glue/obor_packed_prepare.h, src/glue/obor_pak_repair.h, src/glue/obor_pak_validate.h, src/glue/obor_state_padding.h, src/glue/obor_transform.h, src/glue/obor_zip_path.h\n"
+"Source: src/engines/3400/version.h, src/engines/3842/version.h, src/engines/4086/version.h, src/engines/4432/version.h, src/engines/6412/version.h, src/engines/8020/version.h, src/port/libretro/obor_files.c, src/port/libretro/obor_script_compact.h, src/port/libretro/obor_state_copy.h, src/glue/obor_crt.h, src/glue/obor_legacy_api.h, src/glue/obor_packed_prepare.h, src/glue/obor_pak_repair.h, src/glue/obor_pak_validate.h, src/glue/obor_state_padding.h, src/glue/obor_storage.h, src/glue/obor_transform.h, src/glue/obor_zip_path.h\n"
 "/* SPDX-License-Identifier: BSD-3-Clause\n"
 " * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */\n"
 "\n"

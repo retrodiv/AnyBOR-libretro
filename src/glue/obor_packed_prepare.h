@@ -5,6 +5,7 @@
 #include "obor_pak_repair.h"
 #include "obor_transform.h"
 #include <fcntl.h>
+#include "obor_storage.h"
 
 struct obor_transform_buffers {
     unsigned char *input, *output;
@@ -73,9 +74,8 @@ static bool obor_packed_prepare(const char *source, const char *save_dir,
         if (!obor_sha256_file(source, source_hash)) { fclose(input); return false; }
         snprintf(config_hash, sizeof(config_hash), "directory-rebase-v2");
     }
-    int n = snprintf(parent, sizeof(parent), "%s/AnyBOR/prepared-v1", save_dir);
-    if (n < 0 || (size_t)n >= sizeof(parent)) { fclose(input); return false; }
-    mkdir_p(parent);
+    if (!obor_storage_parent(save_dir, "prepared-v1", parent, sizeof(parent))) { fclose(input); return false; }
+    int n;
     if (!obor_zip_space_ok(parent, (uint64_t)bytes + (64u << 20))) { fclose(input); return false; }
 #if defined(_WIN32)
     unsigned long pid = (unsigned long)GetCurrentProcessId();
@@ -134,9 +134,9 @@ static bool obor_packed_prepare(const char *source, const char *save_dir,
     base = base ? base+1 : source;
     n = snprintf(out, out_cap, "%s/%s", cache, base);
     if (n < 0 || (size_t)n >= out_cap) { remove(temp); return false; }
-
-
+    if (!obor_storage_track(cache)) { remove(temp); return false; }
     mkdir_p(cache);
+    if (!obor_storage_directory(cache)) { remove(temp); return false; }
     if (obor_sha256_file(out, current_hash) && !strcmp(current_hash, result_hash)) {
         remove(temp);
     } else {

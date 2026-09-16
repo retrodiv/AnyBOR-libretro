@@ -83,7 +83,7 @@ def main():
                          OBOR_SAVE_AT=120, OBOR_SAVE_STATE=state)
             if not state.is_file() or "saved state" not in result:
                 raise RuntimeError("State was not saved: " + result)
-            peak = work / engine / "saves/AnyBOR" / engine / "Saves/.obor_peak_sparse_v2_diagnostic.pak.txt"
+            peak = work / engine / "saves/AnyBOR/diagnostic" / engine / "Saves/.obor_peak_sparse_v2_diagnostic.pak.txt"
             if not peak.is_file() or int(peak.read_text()) <= 0:
                 raise RuntimeError("Missing peak in the frontend save directory")
             for option in ("On", "Off"):
@@ -103,7 +103,7 @@ def main():
                 raise RuntimeError("Repeated restarts did not complete: " + result)
             state.unlink()
 
-        peak = work / "6412/saves/AnyBOR/6412/Saves/.obor_peak_sparse_v2_diagnostic.pak.txt"
+        peak = work / "6412/saves/AnyBOR/diagnostic/6412/Saves/.obor_peak_sparse_v2_diagnostic.pak.txt"
         peak.write_text(str(64 << 20) + "\n")
         run("6412", pak, "retain a previous larger peak", OBOR_SAVE_AT=120,
             OBOR_SAVE_STATE=work / "peak.state")
@@ -111,7 +111,7 @@ def main():
             raise RuntimeError("A smaller session overwrote the learned peak")
         run("6412", raw / "data/models.txt", "unpacked mod save directory",
             OBOR_SAVE_AT=120, OBOR_SAVE_STATE=work / "raw.state")
-        if not (peak.parent / ".obor_peak_sparse_v2_raw.pak.txt").is_file():
+        if not (work / "6412/saves/AnyBOR/raw/6412/Saves/.obor_peak_sparse_v2_raw.pak.txt").is_file():
             raise RuntimeError("Unpacked mod peak is missing")
 
         if args.webm:

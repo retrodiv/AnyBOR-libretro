@@ -4,6 +4,7 @@
 
 ### Recent changes
 
+- Separate persistent game saves from disposable caches and manage cache cleanup.
 - Isolate settings for unpacked content and read uncompressed indexed PCX images
   in the legacy engines.
 - Bound rewind state capacity when the frontend supplies smaller buffers.

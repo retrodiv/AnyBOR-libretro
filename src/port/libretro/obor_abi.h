@@ -27,7 +27,7 @@
 extern "C" {
 #endif
 
-#define OBOR_ABI_VERSION 1u
+#define OBOR_ABI_VERSION 2u
 
 /* Snapshot-arena fixed virtual address, shared by the glue (which CLAIMS
  * the range in a load-time constructor, before the frontend allocates its
@@ -81,7 +81,7 @@ typedef struct {
     const char *pak_path;      /* absolute path to the .pak — or, with
                                 * raw_dir, to the mod ROOT (the directory
                                 * that contains data/) */
-    const char *save_dir;      /* writable dir for Saves/ (may be NULL -> next to pak) */
+    const char *save_dir;      /* required per-game writable root; engine appends <build>/ */
     const char *log_dir;       /* writable dir for Logs/  (may be NULL -> save_dir) */
     int32_t     arena_reserved; /* 1 only if this loaded core owns the entire range */
     int32_t     sample_rate;   /* requested mixer rate (44100) */

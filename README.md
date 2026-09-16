@@ -59,8 +59,8 @@ effort basis through the latest pinned engine.
 No third-party game data, artwork, music, BIOS or game executables are included. Use
 content you are entitled to use. Engine compatibility does not grant rights
 to redistribute a game's assets. Saves use the directory supplied by the
-frontend, under `AnyBOR/<engine build>/`; ZIP extraction uses
-`AnyBOR/zipcache/`. Save states require the same core build and content.
+frontend, under `AnyBOR/<game>/<engine build>/`; ZIP extraction uses
+`AnyBOR-cache/zipcache/`. Save states require the same core build and content.
 
 See [installation and data directories](docs/INSTALLATION.md) for frontend
 setup, external INI configuration and backup guidance.

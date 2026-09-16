@@ -7,6 +7,7 @@
 
 #include "miniz.h"
 #include "obor_sha256.h"
+#include "obor_storage.h"
 
 #if !defined(_WIN32)
 #include <sys/statvfs.h>
@@ -131,13 +132,14 @@ static int obor_zip_prepare(const char *zip_path, const char *save_dir,
     }
 
     char parent[1200], cache[1400], marker[1500];
-    snprintf(parent, sizeof(parent), "%s/AnyBOR/zipcache",
-             save_dir && save_dir[0] ? save_dir : ".");
+    if (!obor_storage_parent(save_dir, "zipcache", parent, sizeof(parent))) {
+        mz_zip_reader_end(&za); return 0;
+    }
     snprintf(cache, sizeof(cache), "%s/%s", parent, hash);
     snprintf(marker, sizeof(marker), "%s/.complete", cache);
-    mkdir_p(parent);
+    if (!obor_storage_track(cache)) { mz_zip_reader_end(&za); return 0; }
 
-    if (!obor_zip_marker_ok(marker, hash)) {
+    if (!obor_storage_directory(cache) || !obor_zip_marker_ok(marker, hash)) {
         if (!obor_zip_space_ok(parent, total_sz + (64ULL << 20))) {
             log_cb(RETRO_LOG_ERROR,
                    "[OpenBOR] zip: insufficient cache space for %llu bytes\n",
@@ -152,7 +154,9 @@ static int obor_zip_prepare(const char *zip_path, const char *save_dir,
 #endif
         char temp[1500];
         snprintf(temp, sizeof(temp), "%s.partial-%lu", cache, pid);
+        if (!obor_storage_track(temp)) { mz_zip_reader_end(&za); return 0; }
         mkdir_p(temp);
+        if (!obor_storage_directory(temp)) { mz_zip_reader_end(&za); return 0; }
         int extracted = 0;
         for (unsigned i = 0; i < n; i++) {
             mz_zip_archive_file_stat st;
@@ -193,7 +197,8 @@ static int obor_zip_prepare(const char *zip_path, const char *save_dir,
         if (!m) { mz_zip_reader_end(&za); return 0; }
         fprintf(m, "oborzip-v2 %s\n", hash);
         if (fclose(m) != 0) { mz_zip_reader_end(&za); return 0; }
-        if (rename(temp, cache) != 0 && !obor_zip_marker_ok(marker, hash)) {
+        if (rename(temp, cache) != 0 &&
+            (!obor_storage_directory(cache) || !obor_zip_marker_ok(marker, hash))) {
             log_cb(RETRO_LOG_ERROR, "[OpenBOR] zip: cannot publish cache\n");
             mz_zip_reader_end(&za);
             return 0;

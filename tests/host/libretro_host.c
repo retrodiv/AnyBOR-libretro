@@ -313,6 +313,16 @@ static bool env_cb(unsigned cmd, void *data)
         *(const char **)data = g_savedir;
         return true;
     case RETRO_ENVIRONMENT_GET_VARIABLE: {
+        struct retro_variable *storage_var = (struct retro_variable *)data;
+        const char *storage_env = NULL;
+        if (!strcmp(storage_var->key, "obor_clear_local_data")) storage_env = "OBOR_CLEAR_LOCAL_DATA";
+        if (!strcmp(storage_var->key, "obor_clear_game_cache")) storage_env = "OBOR_CLEAR_GAME_CACHE";
+        if (!strcmp(storage_var->key, "obor_clear_all_caches")) storage_env = "OBOR_CLEAR_ALL_CACHES";
+        if (storage_env && getenv(storage_env)) {
+            storage_var->value = getenv(storage_env);
+            return true;
+        }
+
         struct retro_variable *var = (struct retro_variable *)data;
         if (!strcmp(var->key, "obor_crt_tv") && g_crt_opt) {
             var->value = g_crt_opt;

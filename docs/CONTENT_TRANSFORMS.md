@@ -157,7 +157,7 @@ needed. This avoids unnecessary disk traffic for ordinary archives that the
 configured function leaves unchanged.
 
 A completed result is published atomically below
-`<save>/AnyBOR/prepared-v1/<identity>/<original-name>.pak`. A cached result is
+`<save>/AnyBOR-cache/prepared-v1/<identity>/<original-name>.pak`. A cached result is
 reused only when its complete SHA-256 matches the newly prepared bytes. Failed
 operations remove their temporary output and publish no partial result. Programs
 are freed before engine boot; they are not serialized with gameplay state.

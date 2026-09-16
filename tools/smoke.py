@@ -42,7 +42,7 @@ def main():
             raise RuntimeError("Smoke check failed for engine " + engine + ": " + result)
         if "library_name=" + pin["core_name"] not in result.splitlines():
             raise RuntimeError("Frontend core identity mismatch: " + result)
-        if not (system / "saves" / pin["core_name"] / engine).is_dir():
+        if not (system / "saves" / pin["core_name"] / fixture.stem / engine).is_dir():
             raise RuntimeError("Runtime save directory missing for engine " + engine)
         document = system / "saves/anybor-license-notices.txt"
         if not document.is_file() or (root / "NOTICE.txt").read_bytes() not in document.read_bytes():

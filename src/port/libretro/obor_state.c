@@ -107,7 +107,7 @@ int obor_state_set_save_dir(const char *dir)
 {
     if (!dir || !dir[0])
         return 0;
-    int n = snprintf(g_peak_dir, sizeof(g_peak_dir), "%s/AnyBOR/%d/Saves",
+    int n = snprintf(g_peak_dir, sizeof(g_peak_dir), "%s/%d/Saves",
                      dir, (int)OBOR_ENGINE_BUILD);
     g_peak_written = 0;
     return n >= 0 && (size_t)n < sizeof(g_peak_dir);
