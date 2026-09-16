@@ -1965,7 +1965,14 @@ bool retro_unserialize(const void *data, size_t size)
          * glue's own registers must survive the bulk restore */
         glue_regs r;
         glue_save(&r);
-        ok = g_booted && p_unserialize(data, (uint32_t)size) == 1;
+        /* A fixed-capacity frontend can pass an older, larger manual state
+         * after the core has selected a smaller rewind-safe allocation.
+         * Reject it before restoring pointers from an incompatible module
+         * image. The frontend retains its current game on failure. */
+        ok = g_booted && size <= UINT32_MAX &&
+             (g_variable_state_size || !g_state_capacity ||
+              size <= g_state_capacity) &&
+             p_unserialize(data, (uint32_t)size) == 1;
         if (getenv("OBOR_DEBUG"))
             fprintf(stderr, "[obor] engine unserialize returned ok=%d\n", ok);
         glue_load(&r);

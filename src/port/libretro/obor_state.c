@@ -58,6 +58,7 @@ static int collect_segments(void);
  * on, so it must hug reality: only the live stack slice (not the 16 MB
  * region) and a measured-heap-based bound (no pak-size padding). */
 #define OBOR_STACK_BUDGET (4ULL << 20)
+#define OBOR_REWIND_COMPACT_CAP (160ULL << 20)
 #if defined(__aarch64__) || defined(__arm__)
 #define OBOR_STACK_HEAD (16ULL * 1024) /* cothread context page */
 #else
@@ -455,12 +456,19 @@ uint32_t obor_serialize_size(void)
 {
     if (!collect_segments())
         return 0;
+    uint64_t hn = obor_heap_sparse_size();
+    if (!hn)
+        return 0;
+    uint64_t required = sizeof(obs_header) +
+                        (uint64_t)g_nsegs * sizeof(seg_t) + segs_bytes() +
+                        OBOR_STACK_HEAD + OBOR_STACK_BUDGET + hn +
+                        (8ULL << 20);
+    required = (required + (1ULL << 20) - 1) & ~((1ULL << 20) - 1);
+    if (required > UINT32_MAX)
+        return 0;
     if (!g_size_bound) {
         uint64_t fixed = sizeof(obs_header) + (uint64_t)g_nsegs * sizeof(seg_t) +
                          g_full_segment_bytes + OBOR_STACK_HEAD + OBOR_STACK_BUDGET;
-        uint64_t hn = obor_heap_sparse_size();
-        if (!hn)
-            return 0;
         uint64_t peak = peak_read();
         uint64_t bound;
         if (peak) {
@@ -495,6 +503,16 @@ uint32_t obor_serialize_size(void)
          * allowance on which an already-working larger level relied. */
         bound -= g_full_segment_bytes - segs_bytes();
         bound = (bound + (1ULL << 20) - 1) & ~((1ULL << 20) - 1);
+        /* RetroArch's fixed-size rewind ring can fail while restoring a
+         * large advertised state even when its live payload is much smaller.
+         * When the current state plus the normal growth allowance fits this
+         * compact capacity, avoid advertising the unused cold/peak reserve.
+         * The condition depends only on live state structure, never content
+         * identity. A later larger state still raises the reported bound for
+         * frontends that query it again. */
+        if (bound > OBOR_REWIND_COMPACT_CAP &&
+            required <= OBOR_REWIND_COMPACT_CAP)
+            bound = OBOR_REWIND_COMPACT_CAP;
         g_size_bound = (uint32_t)bound;
     }
 
@@ -502,14 +520,6 @@ uint32_t obor_serialize_size(void)
      * level that grows beyond the initial rewind allocation. RetroArch keeps
      * its rewind ring at the earlier size; captures then fail cleanly while
      * a manual save, which re-queries this function, remains lossless. */
-    uint64_t hn = obor_heap_sparse_size();
-    uint64_t required = sizeof(obs_header) +
-                        (uint64_t)g_nsegs * sizeof(seg_t) + segs_bytes() +
-                        OBOR_STACK_HEAD + OBOR_STACK_BUDGET + hn +
-                        (8ULL << 20);
-    required = (required + (1ULL << 20) - 1) & ~((1ULL << 20) - 1);
-    if (required > UINT32_MAX)
-        return 0;
     if (required > g_size_bound)
         g_size_bound = (uint32_t)required;
     return g_size_bound;
@@ -566,6 +576,12 @@ uint32_t obor_serialize(void *buf, uint32_t size)
                      (uint64_t)g_nsegs * sizeof(seg_t) + segs_bytes() +
                      OBOR_STACK_HEAD + stack_len;
     if (fixed >= size)
+        return 0;
+    /* A frontend may retain an earlier rewind allocation after the heap
+     * grows. Do not partially overwrite its previous valid snapshot when
+     * the new heap no longer fits. */
+    uint64_t heap_required = obor_heap_sparse_size();
+    if (!heap_required || heap_required > size - fixed)
         return 0;
 
     uint8_t *p = (uint8_t *)buf;

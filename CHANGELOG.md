@@ -2,6 +2,10 @@
 
 ## Unreleased — 0.1.0
 
+### Recent changes
+
+- Bound rewind state capacity when the frontend supplies smaller buffers.
+
 ### Core implementation
 
 - Include OpenBOR builds 3400, 3842, 4086, 4432, 6412 and 8020 with the shared
