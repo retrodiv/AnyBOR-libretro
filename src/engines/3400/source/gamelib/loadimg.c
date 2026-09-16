@@ -3,8 +3,8 @@
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
  * Upstream code retains its original license and notices.
- * Validate legacy PCX headers and represent RIFF/WAVE paths used as
- * animation frames with an empty frame.
+ * Validate legacy PCX headers, read uncompressed indexed PCX scanlines, and
+ * represent RIFF/WAVE paths used as animation frames with an empty frame.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/3400.md
  * at the source repository root. Original notices follow below.
@@ -671,7 +671,7 @@ static int openpcx(char *filename, char *packname){
 	 * audio can otherwise become a bogus bitmap when a mod mistypes a sound
 	 * path as an animation frame. */
 	if((unsigned char)pcx_header.manufacturer != 0x0A ||
-	   (unsigned char)pcx_header.encoding != 1 ||
+	   (unsigned char)pcx_header.encoding > 1 ||
 	   (unsigned char)pcx_header.bitspp != 8 ||
 	   (unsigned char)pcx_header.colorplanes != 1 ||
 	   pcx_header.xmax < pcx_header.xmin ||
@@ -682,6 +682,14 @@ static int openpcx(char *filename, char *packname){
 
 	res[0] = pcx_header.xmax;
 	res[1] = pcx_header.ymax;
+	if(pcx_header.encoding == 0){
+		res[0] = pcx_header.xmax - pcx_header.xmin + 1;
+		res[1] = pcx_header.ymax - pcx_header.ymin + 1;
+		if(pcx_header.bytesperline < res[0]){
+			closepackfile(handle);
+			return 0;
+		}
+	}
 
 	return 1;
 }
@@ -698,7 +706,27 @@ static int readpcx(unsigned char *buf, unsigned char *pal, int maxwidth, int max
 	unsigned char* pbuf;
 	int pb = PAL_BYTES;
 
-	if(buf){
+	if(buf && pcx_header.encoding == 0){
+		/* Raw indexed PCX stores literal pixels, including values >= 0xC0,
+		 * followed by any scanline padding. Never feed these bytes to RLE. */
+		unsigned stride = pcx_header.bytesperline;
+		unsigned width = pcx_header.xmax - pcx_header.xmin + 1;
+		unsigned height = pcx_header.ymax - pcx_header.ymin + 1;
+		if(stride < width || maxwidth < 0 || maxheight < 0) return 0;
+		codebuffer = malloc(stride);
+		if(!codebuffer) return 0;
+		seekpackfile(handle, 128, SEEK_SET);
+		for(y=0; y<height && y<(unsigned)maxheight; ++y){
+			if(readpackfile(handle, codebuffer, stride) != (int)stride){
+				free(codebuffer);
+				return 0;
+			}
+			memcpy(buf + (size_t)y*maxwidth, codebuffer,
+			       width < (unsigned)maxwidth ? width : (unsigned)maxwidth);
+		}
+		free(codebuffer);
+	}
+	else if(buf){
 
 		if(!(codebuffer=(unsigned char*)malloc(64000))) return 0;
 

@@ -107,19 +107,6 @@ Source: src/deps/libvorbis/lib/highlevel.h
 
  ********************************************************************/
 
-Source: src/engines/3400/source/gamelib/loadimg.c
-/* AnyBOR modification record: 2026-09-12.
- * Port maintained by retrodiv <retrodiv@proton.me>.
- * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
- * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
- * Upstream code retains its original license and notices.
- * Validate legacy PCX headers and represent RIFF/WAVE paths used as
- * animation frames with an empty frame.
- * Existing changes recorded here; this is not their implementation date.
- * See MODIFICATIONS.md and docs/modifications/3400.md
- * at the source repository root. Original notices follow below.
- */
-
 Source: src/deps/libvorbis/lib/backends.h
 /********************************************************************
  *                                                                  *
@@ -861,19 +848,6 @@ Source: src/engines/3842/source/scriptlib/Interpreter.c
  * compiled instructions, values, and call references into exact contiguous
  * storage. Allocate parser state only while compiling and release it once
  * runtime instructions are ready.
- * Existing changes recorded here; this is not their implementation date.
- * See MODIFICATIONS.md and docs/modifications/3842.md
- * at the source repository root. Original notices follow below.
- */
-
-Source: src/engines/3842/source/gamelib/loadimg.c
-/* AnyBOR modification record: 2026-09-12.
- * Port maintained by retrodiv <retrodiv@proton.me>.
- * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
- * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
- * Upstream code retains its original license and notices.
- * Validate legacy PCX headers and represent RIFF/WAVE paths used as
- * animation frames with an empty frame.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/3842.md
  * at the source repository root. Original notices follow below.
@@ -2076,6 +2050,19 @@ Source: src/engines/8020/openbor.h
  * at the source repository root. Original notices follow below.
  */
 
+Source: src/engines/3842/source/gamelib/loadimg.c
+/* AnyBOR modification record: 2026-09-12.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Validate legacy PCX headers, read uncompressed indexed PCX scanlines, and
+ * represent RIFF/WAVE paths used as animation frames with an empty frame.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/3842.md
+ * at the source repository root. Original notices follow below.
+ */
+
 Source: src/engines/3842/openbor.h
 /* AnyBOR modification record: 2026-09-12.
  * Port maintained by retrodiv <retrodiv@proton.me>.
@@ -2484,6 +2471,19 @@ Source: src/deps/libvorbis/lib/mdct.h
  function: modified discrete cosine transform prototypes
 
  ********************************************************************/
+
+Source: src/engines/3400/source/gamelib/loadimg.c
+/* AnyBOR modification record: 2026-09-12.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Validate legacy PCX headers, read uncompressed indexed PCX scanlines, and
+ * represent RIFF/WAVE paths used as animation frames with an empty frame.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/3400.md
+ * at the source repository root. Original notices follow below.
+ */
 
 Source: src/deps/libvorbis/lib/modes/residue_44u.h
 /********************************************************************
@@ -3142,7 +3142,7 @@ Source: src/deps/libvpx/vpx_dsp/arm/idct4x4_1_add_neon.asm
 ;  file in the root of the source tree.
 ;
 
-Source: src/engines/3400/version.h, src/engines/3842/version.h, src/engines/4086/version.h, src/engines/4432/version.h, src/engines/6412/version.h, src/engines/8020/version.h, src/port/libretro/obor_script_compact.h, src/port/libretro/obor_state_copy.h, src/glue/obor_crt.h, src/glue/obor_legacy_api.h, src/glue/obor_packed_prepare.h, src/glue/obor_pak_repair.h, src/glue/obor_pak_validate.h, src/glue/obor_state_padding.h, src/glue/obor_transform.h, src/glue/obor_zip_path.h
+Source: src/engines/3400/version.h, src/engines/3842/version.h, src/engines/4086/version.h, src/engines/4432/version.h, src/engines/6412/version.h, src/engines/8020/version.h, src/port/libretro/obor_files.c, src/port/libretro/obor_script_compact.h, src/port/libretro/obor_state_copy.h, src/glue/obor_crt.h, src/glue/obor_legacy_api.h, src/glue/obor_packed_prepare.h, src/glue/obor_pak_repair.h, src/glue/obor_pak_validate.h, src/glue/obor_state_padding.h, src/glue/obor_transform.h, src/glue/obor_zip_path.h
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
 

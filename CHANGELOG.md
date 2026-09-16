@@ -4,6 +4,8 @@
 
 ### Recent changes
 
+- Isolate settings for unpacked content and read uncompressed indexed PCX images
+  in the legacy engines.
 - Bound rewind state capacity when the frontend supplies smaller buffers.
 
 ### Core implementation

@@ -147,7 +147,7 @@ endif
 partial: $(OBJS)
 	printf '%s\n' $(ABI_SYMS) > $(OBJDIR)/keep.txt
 	$(LDR) -r -d --wrap=malloc --wrap=calloc --wrap=realloc \
-	    --wrap=free --wrap=strdup -o $(OBJDIR)/whole.o $(OBJS) $(DEP_ARCH)
+	    --wrap=free --wrap=strdup --wrap=fopen -o $(OBJDIR)/whole.o $(OBJS) $(DEP_ARCH)
 	$(OBJCOPY) --keep-global-symbols=$(OBJDIR)/keep.txt $(OBJDIR)/whole.o \
 	    $(OBJDIR)/kept.o
 	$(OBJCOPY) --remove-section=.drectve \

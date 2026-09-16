@@ -9,7 +9,7 @@
       "upstream_sha256": "fc53280baa67ef58e507cea648f8838fad9abe675fa098a5dc99dfe4ecd0e75c"
     },
     "Makefile.libretro": {
-      "distributed_sha256": "0d7fd690fee6730e55c0af33c60025aef59b4f250de9583fb761e5755cebf705",
+      "distributed_sha256": "c8590328b3ea70e568efe3861638c4c2055d2f8af70d2fe574a90ee489a43081",
       "modified": true,
       "origin": "Project libretro build overlay",
       "summary": "Supply the shared libretro engine build and symbol-isolation rules.",
@@ -166,9 +166,9 @@
       "upstream_sha256": "1cd9bad27b7c481f5a84bcf5ad3e3d195e4785ea0f11937480aee273ad42758e"
     },
     "source/gamelib/loadimg.c": {
-      "distributed_sha256": "b0449d1761c4b9383b49faca2349e34d4000c313376b802a8e784fc8ba61e089",
+      "distributed_sha256": "4d3df2b161be1b3a03360b96c91bcfb271221632bcbaefbd52f19ae668c82e9e",
       "modified": true,
-      "summary": "Validate legacy PCX headers and represent RIFF/WAVE paths used as animation frames with an empty frame.",
+      "summary": "Validate legacy PCX headers, read uncompressed indexed PCX scanlines, and represent RIFF/WAVE paths used as animation frames with an empty frame.",
       "topics": [
         "image-loader-safety",
         "record-dates-and-file-notices"
