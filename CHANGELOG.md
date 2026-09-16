@@ -4,6 +4,7 @@
 
 ### Recent changes
 
+- Flatten and shorten prepared-content cache paths for filesystem compatibility.
 - Separate persistent game saves from disposable caches and manage cache cleanup.
 - Isolate settings for unpacked content and read uncompressed indexed PCX images
   in the legacy engines.

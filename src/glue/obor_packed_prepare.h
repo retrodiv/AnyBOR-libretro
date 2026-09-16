@@ -74,7 +74,7 @@ static bool obor_packed_prepare(const char *source, const char *save_dir,
         if (!obor_sha256_file(source, source_hash)) { fclose(input); return false; }
         snprintf(config_hash, sizeof(config_hash), "directory-rebase-v2");
     }
-    if (!obor_storage_parent(save_dir, "prepared-v1", parent, sizeof(parent))) { fclose(input); return false; }
+    if (!obor_storage_root(save_dir, parent, sizeof(parent))) { fclose(input); return false; }
     int n;
     if (!obor_zip_space_ok(parent, (uint64_t)bytes + (64u << 20))) { fclose(input); return false; }
 #if defined(_WIN32)
@@ -127,7 +127,8 @@ static bool obor_packed_prepare(const char *source, const char *save_dir,
     obor_sha256_update(&identity, result_hash, strlen(result_hash) + 1);
     obor_sha256_final(&identity, digest);
     for (unsigned i = 0; i < 32; ++i) snprintf(key + i*2, 3, "%02x", digest[i]);
-    n = snprintf(cache, sizeof(cache), "%s/%s", parent, key);
+    /* Keep paths short; reuse still requires the complete result SHA-256. */
+    n = snprintf(cache, sizeof(cache), "%s/input-%.8s", parent, key);
     if (n < 0 || (size_t)n >= sizeof(cache)) { remove(temp); return false; }
     const char *base = strrchr(source, '/'), *backslash = strrchr(source, '\\');
     if (!base || (backslash && backslash > base)) base = backslash;

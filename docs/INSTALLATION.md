@@ -15,7 +15,7 @@ necessarily literal folders called `system` and `saves`.
 | Optional external configuration | `AnyBOR.ini` in the frontend system directory |
 | In-game saves, settings and logs | `AnyBOR/<game>/<engine>/` below the frontend save directory |
 | ZIP extraction cache | `AnyBOR-cache/zipcache/` below the frontend save directory |
-| Prepared content cache | `AnyBOR-cache/prepared-v1/` below the frontend save directory |
+| Prepared content cache | `AnyBOR-cache/input-<8-hex>/` below the frontend save directory |
 | License dossier | `anybor-license-notices.txt`, attempted in the frontend save directory when content is loaded |
 
 If the frontend sorts saves by core name, it can add its own outer core

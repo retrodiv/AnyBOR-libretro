@@ -93,7 +93,7 @@ Paths below are relative to the frontend's **Save Files** directory:
 |---|---|
 | `AnyBOR/<game>/<engine build>/` | Engine-specific saves, settings, logs and learned memory-peak data. Different engine settings layouts stay separate. |
 | `AnyBOR-cache/zipcache/` | Cached extraction of ZIP content. |
-| `AnyBOR-cache/prepared-v1/` | Prepared content derived from the source archive. |
+| `AnyBOR-cache/input-<8-hex>/` | Prepared content derived from the source archive. |
 | `anybor-license-notices.txt` | The complete notice dossier embedded in the loaded core; attempted in this directory when content is loaded. |
 
 The three cleanup options are grouped in **Development**, including on frontends

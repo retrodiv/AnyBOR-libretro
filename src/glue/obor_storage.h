@@ -118,12 +118,18 @@ static bool obor_storage_finish(void)
 }
 
 /* Both cache producers share this root; refuse redirected cache namespaces. */
+static bool obor_storage_root(const char *save_dir, char *out, size_t cap)
+{
+    if (!obor_storage_join(out, cap, save_dir, "AnyBOR-cache")) return false;
+    mkdir_p(out);
+    return obor_storage_directory(out);
+}
+
 static bool obor_storage_parent(const char *save_dir, const char *kind, char *out, size_t cap)
 {
     char root[1200];
-    if (!obor_storage_join(root, sizeof(root), save_dir, "AnyBOR-cache")) return false;
-    mkdir_p(root);
-    if (!obor_storage_directory(root) || !obor_storage_join(out, cap, root, kind)) return false;
+    if (!obor_storage_root(save_dir, root, sizeof(root)) ||
+        !obor_storage_join(out, cap, root, kind)) return false;
     mkdir_p(out);
     return obor_storage_directory(out);
 }

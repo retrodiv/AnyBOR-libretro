@@ -157,12 +157,15 @@ needed. This avoids unnecessary disk traffic for ordinary archives that the
 configured function leaves unchanged.
 
 A completed result is published atomically below
-`<save>/AnyBOR-cache/prepared-v1/<identity>/<original-name>.pak`. A cached result is
-reused only when its complete SHA-256 matches the newly prepared bytes. Failed
-operations remove their temporary output and publish no partial result. Programs
-are freed before engine boot; they are not serialized with gameplay state.
+`<save>/AnyBOR-cache/input-<8-hex>/<original-name>.pak`. The directory uses the
+first eight hexadecimal characters of the source/configuration/result identity
+to keep paths short. A cached result is reused only when its complete SHA-256
+matches the newly prepared bytes; a short-prefix collision replaces the cached
+file with the correct result. Failed operations remove their temporary output
+and publish no partial result. Programs are freed before engine boot; they are
+not serialized with gameplay state.
 
-## Origin
+## Implementation
 
 The compiler and byte-buffer VM are original AnyBOR components. They provide
 generic compilation and bounded byte-buffer execution only.
