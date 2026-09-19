@@ -1,4 +1,4 @@
-display_name = "AnyBOR"
+display_name = "OpenBOR (AnyBOR)"
 authors = "Senile Team|OpenBOR Team|retrodiv <retrodiv@proton.me>"
 supported_extensions = "pak|spk|txt|zip"
 corename = "AnyBOR"

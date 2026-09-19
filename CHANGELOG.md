@@ -4,6 +4,9 @@
 
 ### Recent changes
 
+- Show `OpenBOR (AnyBOR)` as the core's name in frontends and the Core
+  Downloader; the core name, library name and file names stay `AnyBOR` and
+  `anybor_libretro`.
 - Select desktop macOS toolchains for libvpx on Intel and Apple Silicon,
   preserving the configured minimum macOS version.
 - Drop the retired PowerPC-era cpusubtype switch from the bundled Xiph build

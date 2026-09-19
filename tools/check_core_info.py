@@ -39,7 +39,9 @@ def check_core_info(root, pin):
     basename = pin["core_basename"]
     info = read_info(root / (basename + ".info"))
     expected = {
-        "display_name": pin["core_name"], "corename": pin["core_name"],
+        # The downloader shows the engine first and the project in parentheses;
+        # the core name, library name and file names stay the project name.
+        "display_name": "OpenBOR (AnyBOR)", "corename": pin["core_name"],
         "display_version": pin["version"], "supported_extensions": "pak|spk|txt|zip",
         "systemname": "OpenBOR", "license": "Non-commercial",
         "firmware_count": 0, "supports_no_game": "false",

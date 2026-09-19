@@ -44,7 +44,9 @@ notice dossier also remains in every core binary; see [LICENSES.md](../LICENSES.
 ## Target contracts
 
 The core name supplied to libretro infrastructure is **`anybor`**, producing
-the basename **`anybor_libretro`**. `MAKEFILE=Makefile`, `MAKEFILE_PATH=.` and
+the basename **`anybor_libretro`**. Frontends and the Core Downloader display
+the name **`OpenBOR (AnyBOR)`**; the library name reported at runtime and every
+file name remain `AnyBOR` and `anybor_libretro`. `MAKEFILE=Makefile`, `MAKEFILE_PATH=.` and
 `STRIP_CORE_LIB=0` are set in `.core-defs`: the builder already strips the
 published binary and records its exact hash and embedded notices.
 
