@@ -1,10 +1,13 @@
 # AnyBOR
 
 An independent libretro core for OpenBOR games, combining engine builds
-3400, 3842, 4086, 4432, 6412 and 8020 in one library. The core selects an
-engine for the content and supports save states, rewind and four players.
-OpenBOR, Senile Team and libretro credits identify upstream work; they do
-not imply endorsement of this port.
+3400 (2011-08-31), 3842 (2013-02-23), 4086 (2014-11-02), 4432 (2017-01-25),
+6412 (2018-08-29) and 8020 (2026-08-24) in one library. Spanning the oldest
+build to the newest gives the core maximum compatibility: it automatically
+selects the most accurate engine for each .pak, whatever its release date.
+Save states, rewind and four players are supported. OpenBOR, Senile Team and
+libretro credits identify upstream work; they do not imply endorsement of
+this port.
 
 Original AnyBOR work by retrodiv is [BSD-3-Clause-licensed](LICENSE). Bundled engines and
 dependencies retain their own licenses. The combined core includes OpenBOR 3400,
@@ -58,7 +61,7 @@ Silicon jobs.
 Availability in RetroArch's Core Updater is managed by the libretro project.
 The required submission files, target commands and external registration steps
 are listed in [docs/PUBLISHING.md](docs/PUBLISHING.md). The core's frontend
-requirements, controls and options are in [docs/ANYBOR.md](docs/ANYBOR.md).
+requirements, controls and core options are in [docs/ANYBOR.md](docs/ANYBOR.md).
 
 ## Content
 
@@ -102,60 +105,6 @@ restart the content to use the learned peak.
 Saving, loading and rewind are unavailable during threaded video playback.
 Frontend rewind history length also depends on its buffer size and the
 amount of state that changes each frame.
-
-## Video options
-
-`Video > Adjust for 4:3 CRT TV` defaults to `Off`. With it enabled, games keep
-their native resolution, aspect and pixels when their width is at most 364,
-their height is at most 244, and their aspect is within 4:3 +/-10%
-(inclusive 1.2 through 22/15, approximately 1.4666667). Small images outside
-that interval receive centred black padding on one axis to reach 4:3 without
-resampling. Fractional extents round up; opposite borders may differ by one
-pixel. The size limits are then checked again, including the padding.
-If the width is greater than 364 **or** the height is greater than 244,
-the complete original image is
-scaled to fit inside a 640x480 frame with a 4:3 display aspect. The image keeps
-its original aspect ratio without cropping. Wider-than-4:3 images have centred
-black borders above and below; narrower images have borders on the left and
-right. An exact 4:3 image fills the frame.
-
-For example, 320x180 becomes 320x240 with 30 black rows above and below;
-320x200 becomes 320x240 with 20 rows on each side. A square 240x240 image
-becomes 320x240 with 40 black columns at each side. A 360x180 image would
-need 360x270, exceeding the height limit, so it instead becomes a 640x320
-image inside 640x480 with 80 black rows above and below. Likewise, 364x244
-requires padding and then a 640x480 frame. A 368x240 image becomes 640x417,
-while 320x256 becomes 600x480. Each dimension is checked independently.
-
-With the option set to `On`, the standard OpenBOR video modes become:
-
-| Mode | Internal resolution | Original aspect | Output frame | Game image inside the frame | Black borders: top / bottom |
-|---|---|---|---|---|---|
-| 0 | 320x240 | 4:3 | 320x240 | 320x240 (native) | None |
-| 1 | 480x272 | Approximately 16:9 | 640x480 | 640x362 | 59 / 59 pixels |
-| 2 | 640x480 | 4:3 | 640x480 | 640x480 (identity scale) | None |
-| 3 | 720x480 | 3:2 | 640x480 | 640x426 | 27 / 27 pixels |
-| 4 | 800x480 | 5:3 | 640x480 | 640x384 | 48 / 48 pixels |
-| 5 | 800x600 | 4:3 | 640x480 | 640x480 | None |
-| 6 | 960x540 | 16:9 | 640x480 | 640x360 | 60 / 60 pixels |
-
-With `Off`, each mode keeps its internal resolution as the output frame,
-without borders added by the core. With `On`, mode 0 stays below both limits
-and **remains 320x240**. Mode 2 uses the 640x480 frame at identity scale and
-also keeps its native pixels. The other modes are scaled to the image
-dimensions above, without cropping. Scaled dimensions are truncated to whole pixels, giving
-362 image lines in mode 1 and 426 in mode 3. None of these seven modes gains
-left or right borders.
-
-The output frame and border sizes refer to pixels submitted to the frontend,
-not the physical CRT scan mode.
-Changes apply during play. Scaling uses
-sharp bilinear: integer enlargements stay crisp, while fractional scales
-interpolate at pixel edges to reduce uneven text strokes and scrolling shimmer.
-This changes the image submitted to the frontend; it does not reduce the
-engine's internal drawing resolution or guarantee a frame rate.
-The frontend controls the physical TV mode and interlacing;
-use the core-provided aspect ratio or 4:3 in its video settings.
 
 ## Licenses and redistribution
 

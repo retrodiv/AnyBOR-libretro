@@ -68,7 +68,7 @@ The macros account for the active character's facing direction.
 
 | Option | Key | Default and effect |
 |---|---|---|
-| Adjust for 4:3 CRT TV | `obor_crt_tv` | **Off**. Fit images wider than 364 pixels or taller than 244 pixels into 640x480, preserving their aspect with borders and sharp-bilinear scaling. Smaller images outside 4:3 +/-10% receive native-pixel black padding to 4:3, then the size limits are checked again. Applies during play; see the [video contract](../README.md#video-options) for thresholds and examples. |
+| Adjust for 4:3 CRT TV | `obor_crt_tv` | **Off**. Fit images wider than 364 pixels or taller than 244 pixels into 640x480, preserving their aspect with borders and sharp-bilinear scaling. Smaller images outside 4:3 +/-10% receive native-pixel black padding to 4:3, then the size limits are checked again. Applies during play; see the [video contract](#video-contract-adjust-for-43-crt-tv) for thresholds and examples. |
 | Left analog stick as D-pad | `obor_analog` | **On**. Adds movement with the left stick. |
 | Rumble | `obor_rumble` | **On**. Forwards game hit vibration. |
 | Special move macros (L2/R2/L3/R3) | `obor_macros` | **On**. Executes supported character move sequences. |
@@ -84,6 +84,60 @@ engine choice takes precedence. Games predating the available source history
 use the 3400 anchor on a best-effort basis; games newer than the latest anchor
 also have best-effort coverage. [COMPATIBILITY.md](../COMPATIBILITY.md) describes
 the supported engine ranges.
+
+### Video contract: Adjust for 4:3 CRT TV
+
+`Video > Adjust for 4:3 CRT TV` defaults to `Off`. With it enabled, games keep
+their native resolution, aspect and pixels when their width is at most 364,
+their height is at most 244, and their aspect is within 4:3 +/-10%
+(inclusive 1.2 through 22/15, approximately 1.4666667). Small images outside
+that interval receive centred black padding on one axis to reach 4:3 without
+resampling. Fractional extents round up; opposite borders may differ by one
+pixel. The size limits are then checked again, including the padding.
+If the width is greater than 364 **or** the height is greater than 244,
+the complete original image is
+scaled to fit inside a 640x480 frame with a 4:3 display aspect. The image keeps
+its original aspect ratio without cropping. Wider-than-4:3 images have centred
+black borders above and below; narrower images have borders on the left and
+right. An exact 4:3 image fills the frame.
+
+For example, 320x180 becomes 320x240 with 30 black rows above and below;
+320x200 becomes 320x240 with 20 rows on each side. A square 240x240 image
+becomes 320x240 with 40 black columns at each side. A 360x180 image would
+need 360x270, exceeding the height limit, so it instead becomes a 640x320
+image inside 640x480 with 80 black rows above and below. Likewise, 364x244
+requires padding and then a 640x480 frame. A 368x240 image becomes 640x417,
+while 320x256 becomes 600x480. Each dimension is checked independently.
+
+With the option set to `On`, the standard OpenBOR video modes become:
+
+| Mode | Internal resolution | Original aspect | Output frame | Game image inside the frame | Black borders: top / bottom |
+|---|---|---|---|---|---|
+| 0 | 320x240 | 4:3 | 320x240 | 320x240 (native) | None |
+| 1 | 480x272 | Approximately 16:9 | 640x480 | 640x362 | 59 / 59 pixels |
+| 2 | 640x480 | 4:3 | 640x480 | 640x480 (identity scale) | None |
+| 3 | 720x480 | 3:2 | 640x480 | 640x426 | 27 / 27 pixels |
+| 4 | 800x480 | 5:3 | 640x480 | 640x384 | 48 / 48 pixels |
+| 5 | 800x600 | 4:3 | 640x480 | 640x480 | None |
+| 6 | 960x540 | 16:9 | 640x480 | 640x360 | 60 / 60 pixels |
+
+With `Off`, each mode keeps its internal resolution as the output frame,
+without borders added by the core. With `On`, mode 0 stays below both limits
+and **remains 320x240**. Mode 2 uses the 640x480 frame at identity scale and
+also keeps its native pixels. The other modes are scaled to the image
+dimensions above, without cropping. Scaled dimensions are truncated to whole pixels, giving
+362 image lines in mode 1 and 426 in mode 3. None of these seven modes gains
+left or right borders.
+
+The output frame and border sizes refer to pixels submitted to the frontend,
+not the physical CRT scan mode.
+Changes apply during play. Scaling uses
+sharp bilinear: integer enlargements stay crisp, while fractional scales
+interpolate at pixel edges to reduce uneven text strokes and scrolling shimmer.
+This changes the image submitted to the frontend; it does not reduce the
+engine's internal drawing resolution or guarantee a frame rate.
+The frontend controls the physical TV mode and interlacing;
+use the core-provided aspect ratio or 4:3 in its video settings.
 
 ## Files and directories
 
