@@ -5,7 +5,7 @@ source, metadata and build entry points for an independent 64-bit core. The
 version in [src/pin.json](../src/pin.json) is the release identity used by the
 core, metadata and versioned packages.
 
-The current version is unreleased; [CHANGELOG.md](../CHANGELOG.md) records its
+0.1.0 is the first released version; [CHANGELOG.md](../CHANGELOG.md) records its
 status. `source_date_epoch` fixes timestamps for reproducible builds and source
 metadata. It is not a publication date.
 
