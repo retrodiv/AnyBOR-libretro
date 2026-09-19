@@ -1,0 +1,80 @@
+#!/bin/sh
+# SPDX-License-Identifier: BSD-3-Clause
+# Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+#
+# Refuse a commit that does not advance the project version.
+#
+# The version is written once, in src/pin.json, and the core reports it to the
+# frontend at runtime.  This repository publishes states, and a state that
+# keeps the previous number is the mistake nobody notices until a report names
+# the wrong build.  The hook compares the staged version with the committed
+# one, requires the patch component to have advanced, and checks that the
+# other recorded copies in the staged tree still agree.
+#
+# Enable it in a clone that will commit here:
+#
+#   git config core.hooksPath .githooks
+#
+# git commit --no-verify is the documented path for rewriting an existing
+# commit (amend, rebase, cherry-pick, revert) and for a change the maintainer
+# has explicitly decided to publish without advancing the version.
+
+set -eu
+
+git rev-parse --verify -q HEAD >/dev/null 2>&1 || exit 0
+
+git_directory=$(git rev-parse --absolute-git-dir)
+for marker in MERGE_HEAD CHERRY_PICK_HEAD REVERT_HEAD rebase-merge rebase-apply; do
+  if [ -e "$git_directory/$marker" ]; then
+    exit 0
+  fi
+done
+
+read_version() {
+    git show "$1" 2>/dev/null | sed -n 's/^ *"version": *"\([^"]*\)".*/\1/p' | head -n 1
+}
+
+staged=$(read_version ":src/pin.json") || staged=
+previous=$(read_version "HEAD:src/pin.json") || previous=
+
+# A tree without the version, or one that is the first to declare it, has
+# nothing to compare.
+if [ -z "$staged" ] || [ -z "$previous" ]; then
+    exit 0
+fi
+
+# The new value must be a strictly greater MAJOR.MINOR.PATCH made of plain
+# integers without leading zeros; the version step guarantees it and a hand
+# edit is caught here.
+if ! awk -v new="$staged" -v old="$previous" 'BEGIN {
+        split(new, n, "."); split(old, o, ".");
+        if (length(n) != 3 || length(o) != 3) exit 1;
+        for (i = 1; i <= 3; i++) {
+            if (n[i] !~ /^[0-9]+$/ || (n[i] != "0" && n[i] ~ /^0/)) exit 1;
+            if (o[i] !~ /^[0-9]+$/) exit 1;
+        }
+        for (i = 1; i <= 3; i++) {
+            if (n[i] + 0 > o[i] + 0) exit 0;
+            if (n[i] + 0 < o[i] + 0) exit 1;
+        }
+        exit 1;
+    }'; then
+    printf '%s\n' \
+        "AnyBOR version: $staged does not advance the committed $previous." \
+        "Run the version step (see AGENTS.md), or pass --no-verify for a rewrite or an agreed exception." >&2
+    exit 1
+fi
+
+# The staged tree must agree with itself: the generated header carries the
+# same version, and the publishable metadata names the series instead of a
+# number.
+header=$(git show ":src/glue/obor_engines.h" 2>/dev/null \
+         | sed -n 's/^#define OBOR_CORE_VERSION "\([^"]*\)"$/\1/p' | head -n 1) || header=
+metadata=$(git show ":anybor_libretro.info" 2>/dev/null \
+           | sed -n 's/^display_version = "\([^"]*\)"$/\1/p' | head -n 1) || metadata=
+if [ "$header" != "$staged" ] || [ "$metadata" != "Git" ]; then
+    printf '%s\n' \
+        "AnyBOR version: the staged tree disagrees with $staged (header='$header', metadata='$metadata')." \
+        "Regenerate the tree from the version source instead of editing copies." >&2
+    exit 1
+fi

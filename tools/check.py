@@ -22,6 +22,29 @@ from check_core_info import check_core_info
 
 ROOT = release.ROOT
 
+VERSION_LITERAL = re.compile(r"\b0\.1\.[0-9]+\b")
+# Files that legitimately carry the release series: the single source of the
+# version, the generated runtime identity, the generated records and the
+# release history.  Everywhere else a literal is a copy that can go stale.
+VERSION_CARRIERS = {"src/pin.json", "src/glue/obor_engines.h", "CHANGELOG.md",
+                    "SOURCES.json", "SBOM.spdx.json"}
+
+
+def check_version_records(root, files):
+    """The version is written once; repeated literals are how copies go stale."""
+    found = []
+    for name in sorted(files):
+        if name in VERSION_CARRIERS:
+            continue
+        try:
+            text = (root / name).read_text(encoding="utf-8")
+        except (OSError, UnicodeDecodeError):
+            continue
+        found.extend("%s in %s" % (match.group(0), name) for match in VERSION_LITERAL.finditer(text))
+    if found:
+        raise RuntimeError("Version literal outside the version records: " + ", ".join(found[:5]))
+    print("Version literals confined to the version records: OK")
+
 
 def check_sources():
     expected = release.read_json(ROOT / "SOURCES.json")["files"]
@@ -36,6 +59,7 @@ def check_sources():
             raise RuntimeError("Binary or game payload in source inventory: " + name)
         if ".git" in path.relative_to(ROOT).parts or path.is_symlink():
             raise RuntimeError("History or symlink in source inventory: " + name)
+    check_version_records(ROOT, current)
     # Operational project files must stay free of local filesystem paths.
     for directory in ("tools", "docs"):
         for path in (ROOT / directory).rglob("*"):

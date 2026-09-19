@@ -9,7 +9,7 @@ systemid = "openbor"
 license = "Non-commercial"
 # The combined core includes OpenBOR 3400; exact terms are in LICENSES.md.
 permissions = ""
-display_version = "0.1.0"
+display_version = "Git"
 supports_no_game = "false"
 savestate = "true"
 savestate_features = "serialized"

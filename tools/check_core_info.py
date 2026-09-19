@@ -33,6 +33,10 @@ def check_core_info(root, pin):
         raise RuntimeError("Unexpected public source metadata fields")
     if type(pin["source_date_epoch"]) is not int or pin["source_date_epoch"] < 0:
         raise RuntimeError("Invalid reproducible build timestamp")
+    # MAJOR.MINOR.PATCH as plain integers without leading zeros: the patch
+    # component is what advances per published state.
+    if not re.fullmatch(r"(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)", str(pin["version"])):
+        raise RuntimeError("Invalid runtime version in src/pin.json: " + str(pin["version"]))
     for engine in pin["engines"]:
         if set(engine) - engine_fields or not {"build", "commit", "date", "major"} <= set(engine):
             raise RuntimeError("Unexpected public engine metadata fields")
@@ -42,7 +46,9 @@ def check_core_info(root, pin):
         # The downloader shows the engine first and the project in parentheses;
         # the core name, library name and file names stay the project name.
         "display_name": "OpenBOR (AnyBOR)", "corename": pin["core_name"],
-        "display_version": pin["version"], "supported_extensions": "pak|spk|txt|zip",
+        # The offered metadata names the series, never a build: the core
+        # reports its own version at runtime, so this copy cannot go stale.
+        "display_version": "Git", "supported_extensions": "pak|spk|txt|zip",
         "systemname": "OpenBOR", "license": "Non-commercial",
         "firmware_count": 0, "supports_no_game": "false",
         "savestate": "true", "savestate_features": "serialized",

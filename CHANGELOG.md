@@ -7,6 +7,10 @@
 - Show `OpenBOR (AnyBOR)` as the core's name in frontends and the Core
   Downloader; the core name, library name and file names stay `AnyBOR` and
   `anybor_libretro`.
+- Publish the core-info version as `Git`; the runtime version comes from
+  `src/pin.json` and advances with each published state.
+- Ship a commit hook that refuses a published state whose version did not
+  advance, and confine version literals to the version records.
 - Select desktop macOS toolchains for libvpx on Intel and Apple Silicon,
   preserving the configured minimum macOS version.
 - Drop the retired PowerPC-era cpusubtype switch from the bundled Xiph build

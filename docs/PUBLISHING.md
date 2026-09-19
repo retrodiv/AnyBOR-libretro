@@ -1,13 +1,19 @@
 # Publishing AnyBOR and requesting libretro integration
 
 Infrastructure reference review: **2026-09-11**. This repository supplies the
-source, metadata and build entry points for an independent 64-bit core. The
-version in [src/pin.json](../src/pin.json) is the release identity used by the
-core, metadata and versioned packages.
+source, metadata and build entry points for an independent 64-bit core.
 
-0.1.0 is the first released version; [CHANGELOG.md](../CHANGELOG.md) records its
-status. `source_date_epoch` fixes timestamps for reproducible builds and source
-metadata. It is not a publication date.
+The version in [src/pin.json](../src/pin.json) is the runtime identity the core
+reports to the frontend and the one carried by versioned packages. Its patch
+component is a plain integer that advances per published state, without leading
+zeros; the series components change only by an explicit maintainer decision.
+[CHANGELOG.md](../CHANGELOG.md) records released states and their status.
+
+The published core-info metadata declares `display_version = "Git"` in every
+copy instead of a number, so the metadata offered to libretro infrastructure
+cannot fall out of date: the frontend reads the built core's own version at
+runtime. `source_date_epoch` fixes timestamps for reproducible builds and
+source metadata. It is not a publication date.
 
 ## Publication material
 
