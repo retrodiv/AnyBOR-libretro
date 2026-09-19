@@ -1903,6 +1903,45 @@ Source: src/deps/libpng/arm/palette_neon_intrinsics.c
  * and license in png.h
  */
 
+Source: src/engines/6412/source/pnglib/savepng.c
+/* AnyBOR modification record: 2026-09-12.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Include the standard library declarations instead of the glibc-only
+ * <malloc.h> when writing a screenshot.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/6412.md
+ * at the source repository root. Original notices follow below.
+ */
+
+Source: src/engines/4086/source/pnglib/savepng.c
+/* AnyBOR modification record: 2026-09-12.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Include the standard library declarations instead of the glibc-only
+ * <malloc.h> when writing a screenshot.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/4086.md
+ * at the source repository root. Original notices follow below.
+ */
+
+Source: src/engines/3400/source/pnglib/savepng.c
+/* AnyBOR modification record: 2026-09-12.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Include the standard library declarations instead of the glibc-only
+ * <malloc.h> when writing a screenshot.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/3400.md
+ * at the source repository root. Original notices follow below.
+ */
+
 Source: src/engines/8020/source/gamelib/models.h
 /*
  * OpenBOR - http://www.chronocrash.com
@@ -2038,6 +2077,20 @@ Source: src/engines/3842/openbor.c, src/engines/3842/source/globals.h, src/engin
  * All rights reserved, see LICENSE in OpenBOR root for details.
  *
  * Copyright (c) 2004 - 2013 OpenBOR Team
+ */
+
+Source: src/engines/4432/source/utils.c
+/* AnyBOR modification record: 2026-09-12.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Enable libretro platform and PNG helper declarations, the POSIX directory
+ * and mkdir forms macOS also uses, and the standard allocation declarations
+ * instead of the glibc-only <malloc.h>.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/4432.md
+ * at the source repository root. Original notices follow below.
  */
 
 Source: src/glue/obor_engines.h
@@ -2273,6 +2326,20 @@ Source: src/deps/libvpx/vpx_ports/loongarch.h, src/deps/libvpx/vpx_ports/loongar
  * be found in the AUTHORS file in the root of the source tree.
  */
 
+Source: src/engines/8020/source/utils.c
+/* AnyBOR modification record: 2026-09-12.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Enable libretro platform and PNG helper declarations, the POSIX directory
+ * and mkdir forms macOS also uses, and the standard allocation declarations
+ * instead of the glibc-only <malloc.h>.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/8020.md
+ * at the source repository root. Original notices follow below.
+ */
+
 Source: src/deps/libvpx/vp9/encoder/x86/vp9_frame_scale_ssse3.c, src/deps/libvpx/vpx_dsp/arm/deblock_neon.c, src/deps/libvpx/vpx_dsp/arm/hadamard_neon.c, src/deps/libvpx/vpx_dsp/arm/highbd_idct4x4_add_neon.c, src/deps/libvpx/vpx_dsp/arm/highbd_idct8x8_add_neon.c, src/deps/libvpx/vpx_dsp/arm/highbd_intrapred_neon.c, src/deps/libvpx/vpx_dsp/arm/highbd_loopfilter_neon.c, src/deps/libvpx/vpx_dsp/arm/highbd_vpx_convolve8_neon.c, src/deps/libvpx/vpx_dsp/arm/highbd_vpx_convolve_avg_neon.c, src/deps/libvpx/vpx_dsp/arm/highbd_vpx_convolve_copy_neon.c, src/deps/libvpx/vpx_dsp/arm/idct32x32_135_add_neon.c, src/deps/libvpx/vpx_dsp/arm/idct32x32_34_add_neon.c, src/deps/libvpx/vpx_dsp/arm/idct_neon.h, src/deps/libvpx/vpx_dsp/arm/loopfilter_neon.c, src/deps/libvpx/vpx_dsp/arm/transpose_neon.h, src/deps/libvpx/vpx_dsp/deblock.c, src/deps/libvpx/vpx_dsp/mips/deblock_msa.c, src/deps/libvpx/vpx_dsp/postproc.h, src/deps/libvpx/vpx_dsp/psnr.c, src/deps/libvpx/vpx_dsp/psnr.h, src/deps/libvpx/vpx_dsp/sum_squares.c, src/deps/libvpx/vpx_dsp/x86/sum_squares_sse2.c
 /*
  *  Copyright (c) 2016 The WebM project authors. All Rights Reserved.
@@ -2440,32 +2507,6 @@ Source: src/engines/6412/source/globals.h
  * at the source repository root. Original notices follow below.
  */
 
-Source: src/engines/3842/source/utils.c
-/* AnyBOR modification record: 2026-09-12.
- * Port maintained by retrodiv <retrodiv@proton.me>.
- * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
- * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
- * Upstream code retains its original license and notices.
- * Enable libretro platform and PNG helper declarations, and the POSIX
- * directory and mkdir forms macOS also uses.
- * Existing changes recorded here; this is not their implementation date.
- * See MODIFICATIONS.md and docs/modifications/3842.md
- * at the source repository root. Original notices follow below.
- */
-
-Source: src/engines/3400/source/utils.c
-/* AnyBOR modification record: 2026-09-12.
- * Port maintained by retrodiv <retrodiv@proton.me>.
- * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
- * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
- * Upstream code retains its original license and notices.
- * Enable libretro platform and PNG helper declarations, and the POSIX
- * directory and mkdir forms macOS also uses.
- * Existing changes recorded here; this is not their implementation date.
- * See MODIFICATIONS.md and docs/modifications/3400.md
- * at the source repository root. Original notices follow below.
- */
-
 Source: src/engines/8020/source/openborscript/animation.c, src/engines/8020/source/openborscript/audio.c, src/engines/8020/source/openborscript/collision_attack.c, src/engines/8020/source/openborscript/collision_body.c, src/engines/8020/source/openborscript/collision_coordinates.c, src/engines/8020/source/openborscript/config.h, src/engines/8020/source/openborscript/constants.c, src/engines/8020/source/openborscript/drawmethod.c, src/engines/8020/source/openborscript/entity.c, src/engines/8020/source/openborscript/flash.c, src/engines/8020/source/openborscript/global_config.c, src/engines/8020/source/openborscript/index.c, src/engines/8020/source/openborscript/layer.c, src/engines/8020/source/openborscript/level.c, src/engines/8020/source/openborscript/math.c, src/engines/8020/source/openborscript/scriptcommon.h, src/engines/8020/source/openborscript/string.c
 /*
  * OpenBOR - http://www.chronocrash.com
@@ -2550,19 +2591,6 @@ Source: src/engines/8020/source/webmlib/samplecvt.c, src/engines/8020/source/web
  * Copyright (c)  OpenBOR Team
  */
 
-Source: src/engines/4086/source/utils.c
-/* AnyBOR modification record: 2026-09-12.
- * Port maintained by retrodiv <retrodiv@proton.me>.
- * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
- * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
- * Upstream code retains its original license and notices.
- * Enable libretro platform and PNG helper declarations, and the POSIX
- * directory and mkdir forms macOS also uses.
- * Existing changes recorded here; this is not their implementation date.
- * See MODIFICATIONS.md and docs/modifications/4086.md
- * at the source repository root. Original notices follow below.
- */
-
 Source: src/engines/3842/source/ramlib/ram.c
 /* AnyBOR modification record: 2026-09-12.
  * Port maintained by retrodiv <retrodiv@proton.me>.
@@ -2603,6 +2631,19 @@ Source: src/deps/zlib/gzclose.c
 /* gzclose.c -- zlib gzclose() function
  * Copyright (C) 2004, 2010 Mark Adler
  * For conditions of distribution and use, see copyright notice in zlib.h
+ */
+
+Source: src/engines/8020/source/preprocessorlib/pp_parser.c
+/* AnyBOR modification record: 2026-09-12.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Drop the glibc-only <malloc.h> and rely on the standard library
+ * declarations the parser already includes.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/8020.md
+ * at the source repository root. Original notices follow below.
  */
 
 Source: src/engines/4432/source/webmlib/nestegg/nestegg.c, src/engines/4432/source/webmlib/nestegg/nestegg.h, src/engines/6412/source/webmlib/nestegg/nestegg.c, src/engines/6412/source/webmlib/nestegg/nestegg.h, src/engines/8020/source/webmlib/nestegg/nestegg.c, src/engines/8020/source/webmlib/nestegg/nestegg.h, src/engines/4432/source/webmlib/nestegg/nestegg.c, src/engines/4432/source/webmlib/nestegg/nestegg.h, src/engines/6412/source/webmlib/nestegg/nestegg.c, src/engines/6412/source/webmlib/nestegg/nestegg.h, src/engines/8020/source/webmlib/nestegg/nestegg.c, src/engines/8020/source/webmlib/nestegg/nestegg.h
@@ -2683,19 +2724,6 @@ Source: src/deps/zlib/inflate.h
 /* inflate.h -- internal inflate state definition
  * Copyright (C) 1995-2019 Mark Adler
  * For conditions of distribution and use, see copyright notice in zlib.h
- */
-
-Source: src/engines/6412/source/utils.c
-/* AnyBOR modification record: 2026-09-12.
- * Port maintained by retrodiv <retrodiv@proton.me>.
- * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
- * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
- * Upstream code retains its original license and notices.
- * Enable libretro platform and PNG helper declarations, and the POSIX
- * directory and mkdir forms macOS also uses.
- * Existing changes recorded here; this is not their implementation date.
- * See MODIFICATIONS.md and docs/modifications/6412.md
- * at the source repository root. Original notices follow below.
  */
 
 Source: src/deps/libvorbis/lib/lookup_data.h
@@ -3343,6 +3371,19 @@ Source: src/deps/libpng/scripts/vers.c
  * and license in png.h
  */
 
+Source: src/engines/3400/source/preprocessorlib/pp_parser.c
+/* AnyBOR modification record: 2026-09-12.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Drop the glibc-only <malloc.h> and rely on the standard library
+ * declarations the parser already includes.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/3400.md
+ * at the source repository root. Original notices follow below.
+ */
+
 Source: src/engines/3842/source/scriptlib/Instruction.h
 /* AnyBOR modification record: 2026-09-12.
  * Port maintained by retrodiv <retrodiv@proton.me>.
@@ -3682,6 +3723,20 @@ Source: src/deps/libvorbis/lib/lpc.c
    is freely redistributable on the condition that both of these
    copyright notices are preserved without modification.  */
 
+Source: src/engines/3842/source/utils.c
+/* AnyBOR modification record: 2026-09-12.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Enable libretro platform and PNG helper declarations, the POSIX directory
+ * and mkdir forms macOS also uses, and the standard allocation declarations
+ * instead of the glibc-only <malloc.h>.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/3842.md
+ * at the source repository root. Original notices follow below.
+ */
+
 Source: src/engines/8020/source/gamelib/borendian.h
 /* AnyBOR modification record: 2026-09-12.
  * Port maintained by retrodiv <retrodiv@proton.me>.
@@ -3970,6 +4025,21 @@ Source: src/engines/3842/openbor.h
  * at the source repository root. Original notices follow below.
  */
 
+Source: src/engines/6412/source/utils.c
+/* AnyBOR modification record: 2026-09-12.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Enable libretro platform and PNG helper declarations, the POSIX directory
+ * and mkdir forms macOS also uses, reach the standard allocation
+ * declarations without the glibc-only <malloc.h>, and report memory usage at
+ * exit on macOS through the port's own accounting instead of mallinfo().
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/6412.md
+ * at the source repository root. Original notices follow below.
+ */
+
 Source: src/deps/zlib/compress.c
 /* compress.c -- compress a memory buffer
  * Copyright (C) 1995-2026 Jean-loup Gailly, Mark Adler
@@ -4213,6 +4283,20 @@ Source: src/deps/libvpx/vpx_dsp/loongarch/loopfilter_16_lsx.c
  * tree. An additional intellectual property rights grant can be found
  * in the file PATENTS.  All contributing project authors may
  * be found in the AUTHORS file in the root of the source tree.
+ */
+
+Source: src/engines/4086/source/utils.c
+/* AnyBOR modification record: 2026-09-12.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Enable libretro platform and PNG helper declarations, the POSIX directory
+ * and mkdir forms macOS also uses, and the standard allocation declarations
+ * instead of the glibc-only <malloc.h>.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/4086.md
+ * at the source repository root. Original notices follow below.
  */
 
 Source: src/deps/libvpx/vpx_util/endian_inl.h
@@ -4492,6 +4576,19 @@ Source: src/deps/zlib/gzwrite.c
 /* gzwrite.c -- zlib functions for writing gzip files
  * Copyright (C) 2004-2026 Mark Adler
  * For conditions of distribution and use, see copyright notice in zlib.h
+ */
+
+Source: src/engines/8020/source/pnglib/savepng.c
+/* AnyBOR modification record: 2026-09-12.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Include the standard library declarations instead of the glibc-only
+ * <malloc.h> when writing a screenshot.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/8020.md
+ * at the source repository root. Original notices follow below.
  */
 
 Source: src/engines/4086/source/gamelib/filecache.c
@@ -4930,6 +5027,20 @@ Source: src/engines/3400/source/scriptlib/Interpreter.h
  * Own the exact contiguous storage used by compiled instructions and their
  * values. Store parser state indirectly so compiled interpreters do not
  * retain it.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/3400.md
+ * at the source repository root. Original notices follow below.
+ */
+
+Source: src/engines/3400/source/utils.c
+/* AnyBOR modification record: 2026-09-12.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Enable libretro platform and PNG helper declarations, the POSIX directory
+ * and mkdir forms macOS also uses, and the standard allocation declarations
+ * instead of the glibc-only <malloc.h>.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/3400.md
  * at the source repository root. Original notices follow below.
@@ -5402,6 +5513,19 @@ Source: src/engines/3842/source/gamelib/filecache.c
  * at the source repository root. Original notices follow below.
  */
 
+Source: src/engines/6412/source/preprocessorlib/pp_parser.c
+/* AnyBOR modification record: 2026-09-12.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Drop the glibc-only <malloc.h> and rely on the standard library
+ * declarations the parser already includes.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/6412.md
+ * at the source repository root. Original notices follow below.
+ */
+
 Source: src/deps/libpng/example.c
 /* example.c - an example of using libpng
  *
@@ -5467,19 +5591,6 @@ Source: src/deps/libvpx/vpx_dsp/arm/idct4x4_add_neon.asm, src/deps/libvpx/vpx_ds
 ;  in the file PATENTS.  All contributing project authors may
 ;  be found in the AUTHORS file in the root of the source tree.
 ;
-
-Source: src/engines/4432/source/utils.c
-/* AnyBOR modification record: 2026-09-12.
- * Port maintained by retrodiv <retrodiv@proton.me>.
- * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
- * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
- * Upstream code retains its original license and notices.
- * Enable libretro platform and PNG helper declarations, and the POSIX
- * directory and mkdir forms macOS also uses.
- * Existing changes recorded here; this is not their implementation date.
- * See MODIFICATIONS.md and docs/modifications/4432.md
- * at the source repository root. Original notices follow below.
- */
 
 Source: src/third_party/miniz.c
 /**************************************************************************
@@ -5768,6 +5879,19 @@ Source: src/engines/6412/source/gamelib/threads.h
  * at the source repository root. Original notices follow below.
  */
 
+Source: src/engines/4432/source/preprocessorlib/pp_parser.c
+/* AnyBOR modification record: 2026-09-12.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Drop the glibc-only <malloc.h> and rely on the standard library
+ * declarations the parser already includes.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/4432.md
+ * at the source repository root. Original notices follow below.
+ */
+
 Source: src/deps/libpng/pngtrans.c
 /* pngtrans.c - transforms the data in a row (used by both readers and writers)
  *
@@ -5804,6 +5928,19 @@ Source: src/engines/6412/source/gamelib/borendian.h
  * Use the port's fixed-width endian conversions.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/6412.md
+ * at the source repository root. Original notices follow below.
+ */
+
+Source: src/engines/3842/source/pnglib/savepng.c
+/* AnyBOR modification record: 2026-09-12.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Include the standard library declarations instead of the glibc-only
+ * <malloc.h> when writing a screenshot.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/3842.md
  * at the source repository root. Original notices follow below.
  */
 
@@ -5993,6 +6130,19 @@ Source: src/engines/6412/source/gamelib/packfile.c
  * at the source repository root. Original notices follow below.
  */
 
+Source: src/engines/4432/source/pnglib/savepng.c
+/* AnyBOR modification record: 2026-09-12.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Include the standard library declarations instead of the glibc-only
+ * <malloc.h> when writing a screenshot.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/4432.md
+ * at the source repository root. Original notices follow below.
+ */
+
 Source: src/engines/4086/openborscript.c
 /* AnyBOR modification record: 2026-09-12.
  * Port maintained by retrodiv <retrodiv@proton.me>.
@@ -6166,6 +6316,19 @@ Source: src/deps/libvorbis/lib/codec_internal.h
 
  ********************************************************************/
 
+Source: src/engines/4086/source/preprocessorlib/pp_parser.c
+/* AnyBOR modification record: 2026-09-12.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Drop the glibc-only <malloc.h> and rely on the standard library
+ * declarations the parser already includes.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/4086.md
+ * at the source repository root. Original notices follow below.
+ */
+
 Source: src/engines/3400/source/gamelib/draw.c
 /* AnyBOR modification record: 2026-09-12.
  * Port maintained by retrodiv <retrodiv@proton.me>.
@@ -6278,6 +6441,19 @@ Source: src/engines/8020/openbor.c
  * at the source repository root. Original notices follow below.
  */
 
+Source: src/engines/3842/source/preprocessorlib/pp_parser.c
+/* AnyBOR modification record: 2026-09-12.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Drop the glibc-only <malloc.h> and rely on the standard library
+ * declarations the parser already includes.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/3842.md
+ * at the source repository root. Original notices follow below.
+ */
+
 Source: src/deps/libvpx/third_party/x86inc/x86inc.asm
 ;*****************************************************************************
 ;* x86inc.asm: x264asm abstraction layer
@@ -6309,19 +6485,6 @@ Source: src/engines/6412/source/openborscript/animation.c, src/engines/6412/sour
  * All rights reserved. See LICENSE in OpenBOR root for license details.
  *
  * Copyright (c) 2004 - 2017 OpenBOR Team
- */
-
-Source: src/engines/8020/source/utils.c
-/* AnyBOR modification record: 2026-09-12.
- * Port maintained by retrodiv <retrodiv@proton.me>.
- * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
- * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
- * Upstream code retains its original license and notices.
- * Enable libretro platform and PNG helper declarations, and the POSIX
- * directory and mkdir forms macOS also uses.
- * Existing changes recorded here; this is not their implementation date.
- * See MODIFICATIONS.md and docs/modifications/8020.md
- * at the source repository root. Original notices follow below.
  */
 
 Source: src/engines/3842/source/gamelib/borendian.h

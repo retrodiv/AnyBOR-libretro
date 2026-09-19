@@ -85,9 +85,12 @@ engine so the POSIX paths macOS also implements are compiled: case-insensitive
 loose-file search and `isRawData()` in `source/gamelib/packfile.c`,
 `O_BINARY`/`unistd.h` in `source/gamelib/packfile.h`, `dirent.h`,
 `sys/stat.h` and the two-argument `mkdir` in `source/utils.c`, `stricmp` in
-`source/gamelib/soundmix.c`, the PC video configuration in `openbor.c`, and
-the mach-based memory queries in `source/ramlib/ram.c` instead of the
-glibc-only `<malloc.h>`. Each engine's inventory links the affected files and
+`source/gamelib/soundmix.c`, the PC video configuration in `openbor.c`, the
+standard allocation declarations in `source/utils.c`,
+`source/preprocessorlib/pp_parser.c` and `source/pnglib/savepng.c` where the
+macOS SDK does not provide the glibc-only `<malloc.h>`, and the mach-based
+memory queries in `source/ramlib/ram.c` plus 6412's out-of-memory diagnostic in
+`source/utils.c`. Each engine's inventory links the affected files and
 this topic.
 
 Mach-O has no `objcopy`, no linker scripts and no `--wrap`, so the maintained

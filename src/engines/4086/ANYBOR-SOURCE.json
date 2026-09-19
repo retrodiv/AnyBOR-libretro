@@ -370,9 +370,13 @@
       "upstream_sha256": "f21913409b690b23f5034d325b481a4c08418a1108eb530876cb3c5366c8f465"
     },
     "source/pnglib/savepng.c": {
-      "distributed_sha256": "e256d8de2b68fdae42fd1033f446f3e980d3a59b1a26005eb9eeda0866946f21",
-      "modified": false,
-      "topics": [],
+      "distributed_sha256": "8320c4e145ed8d28f254b964b775a614a1d371570b59e1d10aca368cbea807d1",
+      "modified": true,
+      "summary": "Include the standard library declarations instead of the glibc-only <malloc.h> when writing a screenshot.",
+      "topics": [
+        "darwin-platform-support",
+        "record-dates-and-file-notices"
+      ],
       "upstream_sha256": "e256d8de2b68fdae42fd1033f446f3e980d3a59b1a26005eb9eeda0866946f21"
     },
     "source/pnglib/savepng.h": {
@@ -406,9 +410,13 @@
       "upstream_sha256": "14ea9856cad63f1c9e17dd3ae1bf9116d2fc962b179b1de86d713c1e8db58e1b"
     },
     "source/preprocessorlib/pp_parser.c": {
-      "distributed_sha256": "6c7daca5100da62ac7155bfd79e6826b449581b22be2937ef00e629f8db481a9",
-      "modified": false,
-      "topics": [],
+      "distributed_sha256": "3e563d9232834b84c33e0f5e35a4c2a33ac7ecd605f341d9f90732da2d55d686",
+      "modified": true,
+      "summary": "Drop the glibc-only <malloc.h> and rely on the standard library declarations the parser already includes.",
+      "topics": [
+        "darwin-platform-support",
+        "record-dates-and-file-notices"
+      ],
       "upstream_sha256": "6c7daca5100da62ac7155bfd79e6826b449581b22be2937ef00e629f8db481a9"
     },
     "source/preprocessorlib/pp_parser.h": {
@@ -643,9 +651,9 @@
       "upstream_sha256": "d9bf8cdb39ccbdc026f120a82f8dd12cc9d30a65e410617da7462b3317ffa8ca"
     },
     "source/utils.c": {
-      "distributed_sha256": "583dd7429440a55e44c88b476aa3fa94262dc153ff1fc3f1da67ad7e3900e6a8",
+      "distributed_sha256": "859f1fd71f722866339263cd300bdf713909a9a959696e2e3c1bf84dbb06dce3",
       "modified": true,
-      "summary": "Enable libretro platform and PNG helper declarations, and the POSIX directory and mkdir forms macOS also uses.",
+      "summary": "Enable libretro platform and PNG helper declarations, the POSIX directory and mkdir forms macOS also uses, and the standard allocation declarations instead of the glibc-only <malloc.h>.",
       "topics": [
         "darwin-platform-support",
         "platform-integration",

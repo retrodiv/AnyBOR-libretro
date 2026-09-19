@@ -3,8 +3,10 @@
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
  * Upstream code retains its original license and notices.
- * Enable libretro platform and PNG helper declarations, and the POSIX
- * directory and mkdir forms macOS also uses.
+ * Enable libretro platform and PNG helper declarations, the POSIX directory
+ * and mkdir forms macOS also uses, reach the standard allocation
+ * declarations without the glibc-only <malloc.h>, and report memory usage at
+ * exit on macOS through the port's own accounting instead of mallinfo().
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/6412.md
  * at the source repository root. Original notices follow below.
@@ -22,7 +24,10 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdarg.h>
+#include <stdlib.h>
+#ifndef DARWIN
 #include <malloc.h>
+#endif
 #include <locale.h>
 #include <math.h>
 
@@ -320,7 +325,9 @@ void *checkAlloc(void *ptr, size_t size, const char *func, const char *file, int
                        "\n*            Shutting Down            *\n\n");
         writeToLogFile("Out of memory!\n");
         writeToLogFile("Allocation of size %i failed in function '%s' at %s:%i.\n", size, func, file, line);
-#ifndef WIN
+#if defined(DARWIN)
+        writeToLogFile("Memory usage at exit: %llu\n", (unsigned long long)getUsedRam(BYTES));
+#elif !defined(WIN)
         writeToLogFile("Memory usage at exit: %u\n", mallinfo().arena);
 #endif
         borExit(2);
