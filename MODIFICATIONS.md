@@ -362,6 +362,10 @@ archive identities are retained. libco includes the AMD64 and AArch64 backends
 needed by the published targets; dependency examples, media and unused platform
 files are omitted as described in their manifests and [PROVENANCE.md](PROVENANCE.md).
 
+Bundled build scripts run as published; where a released script would set a
+linker switch the local toolchain rejects, the build removes that switch from
+its own disposable copy instead of editing the pinned archive.
+
 `make check` checks the source inventory, component hashes, file
 notices and catalogue links, and runs the public primitive checks. The original
 diagnostic fixture and smoke/regression/rewind/CRT tools are described in

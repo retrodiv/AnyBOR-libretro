@@ -25,6 +25,10 @@ BUILD_ROOT = Path(os.path.abspath(os.path.expanduser(
 JOBS = max(1, int(os.environ.get("NUMPROC", os.environ.get("JOBS", min(4, os.cpu_count() or 4)))))
 FIXED_ELF_IMAGE_BASE = "0x600000000000"
 FIXED_PE_IMAGE_BASE = "0x240f10000"
+# Switches a dependency's own build script may inject but current Apple linkers
+# refuse: the bundled Xiph releases predate Xcode 15 and still carry the
+# PowerPC-era -force_cpusubtype_ALL in their *-*-darwin* default CFLAGS.
+DARWIN_LINKER_SWITCHES = ("-force_cpusubtype_ALL",)
 
 
 def uses_fixed_elf_image(spec):
@@ -66,6 +70,58 @@ def arch_flags(spec):
     floor = os.environ.get('MACOSX_DEPLOYMENT_TARGET') or spec.get('min_version', '11.0')
     flags.append('-mmacosx-version-min=' + floor)
     return flags
+
+
+def darwin_linker_rejects(spec, switch):
+    """Return whether this toolchain's linker refuses one switch.
+
+    The answer comes from linking a trivial program, not from a version table,
+    so a toolchain that still accepts the switch keeps the dependency's own
+    build flags.
+    """
+    command = shlex.split(spec["cc"]) + arch_flags(spec) + [switch, "-x", "c", "-o", os.devnull, "-"]
+    probe = subprocess.run(command, input="int main(void) { return 0; }\n",
+                           universal_newlines=True,
+                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    return probe.returncode != 0
+
+
+def rejected_darwin_switches(spec):
+    """Return the switches this toolchain's linker refuses."""
+    return tuple(switch for switch in DARWIN_LINKER_SWITCHES if darwin_linker_rejects(spec, switch))
+
+
+def drop_switches(directory, switches):
+    """Delete rejected switches from the throw-away copy of a dependency.
+
+    A build script that sets a switch the linker refuses fails every compile or
+    link test that follows it, which reads as a missing dependency.  Only the
+    copy under the build root is edited - the bundled release sources stay
+    byte-identical - and binary files or files without the switch are left
+    alone.  The number of removed occurrences is returned for reporting.
+    """
+    removed = 0
+    for path in sorted(directory.rglob("*")):
+        if not path.is_file():
+            continue
+        try:
+            data = path.read_bytes()
+        except OSError:
+            continue
+        if b"\x00" in data:
+            # Build archives are binary and must stay byte-identical.
+            continue
+        try:
+            text = data.decode("utf-8")
+        except UnicodeDecodeError:
+            continue
+        for switch in switches:
+            occurrences = text.count(" " + switch)
+            if occurrences:
+                text = text.replace(" " + switch, "")
+                removed += occurrences
+                path.write_text(text, encoding="utf-8")
+    return removed
 
 
 def android_ndk_root():
@@ -234,6 +290,7 @@ def deps_fingerprint(target):
         "host": spec.get("configure_host"),
         "assembler": tool_identity(os.environ.get("NASM", "nasm")) if spec["arch"] == "x86_64" else None,
         "cflags": " ".join(["-O2", "-fPIC", "-fstack-protector-strong"] + arch_flags(spec)),
+        "darwin_switches": list(rejected_darwin_switches(spec)) if uses_macho(spec) else [],
         "deps": {n: pin["deps"][n] for n in sorted(dep_names)},
         "sources": {str(p.relative_to(SRC)): sha256_file(p)
                     for n in sorted(dep_names) for p in sorted((SRC / "deps" / n).rglob("*"))
@@ -256,6 +313,16 @@ def build_dep(target, name, fingerprint):
         sys.exit("Missing bundled dependency source: " + str(source))
     root.parent.mkdir(parents=True, exist_ok=True)
     shutil.copytree(str(source), str(root))
+    if uses_macho(spec):
+        # A dependency whose own build script injects a switch the local linker
+        # refuses fails every link test that follows it: the bundled libvorbis
+        # then reports "must have Ogg installed!" for a perfectly good libogg.
+        # The switch is only dropped from this disposable copy.
+        refused = rejected_darwin_switches(spec)
+        dropped = drop_switches(root, refused) if refused else 0
+        if dropped:
+            print("Dropped {0} unsupported Darwin switch(es) from the {1} build script: {2}".format(
+                dropped, name, ", ".join(refused)), flush=True)
     # The bundled release-generated configure/Makefile.in files are the
     # build inputs. A Git checkout gives configure.ac/Makefile.am fresh
     # mtimes, which must not trigger regeneration of the bundled scripts.

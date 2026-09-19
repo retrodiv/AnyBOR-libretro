@@ -4,6 +4,8 @@
 
 ### Recent changes
 
+- Drop the retired PowerPC-era cpusubtype switch from the bundled Xiph build
+  scripts so dependency builds link with current Apple linkers.
 - Make native test-host descriptor and memory checks portable to macOS.
 - Run rewind and CRT runtime regressions in Linux CI as well as macOS CI.
 - Allow auxiliary local files during normal builds while retaining strict
