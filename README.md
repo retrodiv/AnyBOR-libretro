@@ -21,7 +21,7 @@ older libretro build images. Configure scripts are included; autoreconf is
 not required.
 
 ```sh
-make -j8                         # native Linux x86-64 or ARM64
+NUMPROC=4 make                   # native Linux x86-64 or ARM64
 make platform=win64              # MinGW-w64 x86-64 cross toolchain
 make TARGET=linux-aarch64        # GNU ARM64 cross toolchain
 make TARGET=recalbox-aarch64     # ARM64, GLIBC ceiling 2.38
@@ -41,6 +41,12 @@ system linker, and accepts the `LIBRETRO_APPLE_PLATFORM` and
 Set `NUMPROC` or `JOBS` to limit parallel compilation, and `OBOR_BUILD_ROOT`
 to move temporary outputs outside this directory. Dependencies are built
 from `src/deps/`; there is no download or prebuilt-library fallback.
+
+Normal builds allow local logs and editor files outside `SOURCES.json`; these
+files are not added to the build's source receipt. `make check`, `make release`
+and `make source-release` require the checked source inventory. Keep temporary
+files under `.build/` or outside the checkout when running publication checks.
+For intentional source additions, see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 Only 64-bit x86 and ARM targets are supported. Android uses ARM64 and API 24
 or later. macOS targets Intel (10.13 or newer) and Apple Silicon (11.0 or

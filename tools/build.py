@@ -675,7 +675,7 @@ def main():
     outdir = BUILD_ROOT / "dist" / args.target
     outdir.mkdir(parents=True, exist_ok=True)
     import release
-    source_snapshot = release.source_files()
+    source_snapshot = release.source_files(strict=False)
     ensure_deps(args.target)
     for eng in load_pin()["engines"]:
         build_engine(args.target, eng, spec, outdir, check_only=args.glue_only)

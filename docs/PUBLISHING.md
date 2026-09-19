@@ -97,7 +97,7 @@ Run these in a fresh checkout or extracted source distribution:
 
 ```sh
 make check
-make -j8
+NUMPROC=4 make
 make check-binary BINARY=anybor_libretro.so
 make check-binary BINARY=anybor_libretro.dylib    # macOS build
 python3 tools/smoke.py

@@ -51,8 +51,19 @@ def inventory():
     return files
 
 
-def source_files():
+def source_files(strict=True):
+    """Hash build inputs; publication additionally rejects unlisted files."""
     expected = read_json(ROOT / "SOURCES.json")["files"]
+    if not strict:
+        files = {}
+        for name in expected:
+            path = ROOT / name
+            if path.is_symlink():
+                raise RuntimeError("Linked source file: " + name)
+            if not path.is_file():
+                raise RuntimeError("Missing source file: " + name)
+            files[name] = sha256(path)
+        return files
     files = inventory()
     if set(files) != set(expected):
         changed = sorted(set(files).symmetric_difference(expected))
@@ -137,7 +148,7 @@ def record_build(target, spec, outdir, expected_sources):
     pin = read_json(ROOT / "src/pin.json")
     binary = outdir / (pin["core_basename"] + spec["ext"])
     verify_notices(binary)
-    files = source_files()
+    files = source_files(strict=False)
     if files != expected_sources:
         raise RuntimeError("Source files changed during compilation; rebuild from a stable tree.")
     compiler = command_version(spec["cc"])

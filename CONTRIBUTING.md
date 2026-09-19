@@ -12,7 +12,7 @@ engine file; preserve each file's baseline and existing modification explanation
 
 ```sh
 make check
-make -j8
+NUMPROC=4 make
 make check-binary BINARY=anybor_libretro.so
 make release
 ```

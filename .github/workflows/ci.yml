@@ -44,7 +44,9 @@ jobs:
           sudo apt-get install -y ffmpeg
           python3 tools/smoke.py
           python3 tools/regression.py --webm
+          python3 tools/test_rewind.py
           python3 tools/test_multiplayer.py
+          python3 tools/test_crt.py
       - uses: actions/upload-artifact@v4
         with:
           name: anybor-${{ matrix.target }}

@@ -4,6 +4,10 @@
 
 ### Recent changes
 
+- Make native test-host descriptor and memory checks portable to macOS.
+- Run rewind and CRT runtime regressions in Linux CI as well as macOS CI.
+- Allow auxiliary local files during normal builds while retaining strict
+  source inventories for publication checks and release packaging.
 - Include matching source archives inside platform release ZIPs.
 - Reject failed binary inspections and require the expected architecture,
   dependencies and exports in release checks.

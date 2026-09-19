@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
 /*
- * Minimal headless libretro host for AnyBOR (Linux).
+ * Minimal headless libretro host for AnyBOR (Linux, macOS and Windows).
  *
  * Usage: libretro_host <core.so> <game.pak> <system_dir> <nframes> [ppm_prefix]
  *
@@ -22,7 +22,7 @@
  *       act on the first frame of width N (synthetic WebM regression)
  *   OBOR_POST_UNLOAD_MS=N   keep the frontend alive after content unload
  *   OBOR_RESET_EVERY=N / OBOR_LOAD_EVERY=N   repeat lifecycle operations
- *   OBOR_CHECK_FDS=1   require the Linux descriptor count to return to baseline
+ *   OBOR_CHECK_FDS=1   require the POSIX descriptor count to return to baseline
  *   OBOR_FD_PADDING=N  keep N host files open to shift core descriptor numbers
  *
  * Prints: frames=N last=WxH nonblack_max=N audio_energy=N
@@ -34,6 +34,9 @@
 #else
 #include <dlfcn.h>
 #include <dirent.h>
+#include <errno.h>
+#include <fcntl.h>
+#include <limits.h>
 #include <unistd.h>
 #define host_getcwd getcwd
 #endif
@@ -43,9 +46,6 @@
 #include <signal.h>
 #include <sys/mman.h>
 #include "obor_abi.h"
-#ifndef MAP_FIXED_NOREPLACE
-#define MAP_FIXED_NOREPLACE 0x100000
-#endif
 #endif
 #include <stdint.h>
 #include <stdio.h>
@@ -58,6 +58,25 @@
 #ifndef _WIN32
 static int count_open_fds(void)
 {
+#if defined(__APPLE__)
+    /* Darwin has no procfs. F_GETFD also sees descriptors above the small
+     * set of device nodes that may be listed under /dev/fd. */
+    long limit = sysconf(_SC_OPEN_MAX);
+    if (limit < 0 || limit > INT_MAX)
+        return -1;
+    int count = 0;
+    for (int fd = 0; fd < limit; ++fd) {
+        int result;
+        do {
+            result = fcntl(fd, F_GETFD);
+        } while (result < 0 && errno == EINTR);
+        if (result >= 0)
+            ++count;
+        else if (errno != EBADF)
+            return -1;
+    }
+    return count;
+#else
     DIR *dir = opendir("/proc/self/fd");
     if (!dir)
         return -1;
@@ -68,6 +87,24 @@ static int count_open_fds(void)
             count++;
     closedir(dir);
     return count;
+#endif
+}
+
+static void *reserve_host_range(void *address, size_t bytes, int protection)
+{
+    int flags = MAP_PRIVATE | MAP_ANONYMOUS;
+#if defined(MAP_FIXED_NOREPLACE) && !defined(__APPLE__)
+    flags |= MAP_FIXED_NOREPLACE;
+#endif
+    /* On systems without NOREPLACE, use a hint and reject a different
+     * address. Never replace an existing frontend mapping with MAP_FIXED. */
+    void *mapped = mmap(address, bytes, protection, flags, -1, 0);
+    if (mapped != address) {
+        if (mapped != MAP_FAILED)
+            munmap(mapped, bytes);
+        return MAP_FAILED;
+    }
+    return mapped;
 }
 
 static void crash_handler(int sig, siginfo_t *si, void *uc)
@@ -517,8 +554,8 @@ int main(int argc, char **argv)
     for (int i = 0; i < 5; ++i) sigaction(check_signals[i], NULL, &saved_signals[i]);
     unsigned char *occupied = NULL;
     if (getenv("OBOR_OCCUPIED_ARENA")) {
-        occupied = mmap((void *)OBOR_ARENA_BASE_VA, 4096, PROT_READ | PROT_WRITE,
-                        MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED_NOREPLACE, -1, 0);
+        occupied = reserve_host_range((void *)OBOR_ARENA_BASE_VA, 4096,
+                                      PROT_READ | PROT_WRITE);
         if (occupied != (void *)OBOR_ARENA_BASE_VA) return 2;
         memset(occupied, 0xa5, 4096);
     }
@@ -549,8 +586,10 @@ int main(int argc, char **argv)
     }
 #ifndef _WIN32
     int fds_before = getenv("OBOR_CHECK_FDS") ? count_open_fds() : -1;
-    if (getenv("OBOR_CHECK_FDS") && fds_before < 0)
+    if (getenv("OBOR_CHECK_FDS") && fds_before < 0) {
+        fprintf(stderr, "cannot count open file descriptors\n");
         return 2;
+    }
 #endif
     void *h = dlopen(core_path, RTLD_NOW | RTLD_LOCAL);
     if (!h) {
@@ -985,8 +1024,8 @@ int main(int argc, char **argv)
             return 1;
         }
     }
-    void *probe = mmap((void *)OBOR_ARENA_BASE_VA, OBOR_ARENA_MAX_SZ, PROT_NONE,
-                      MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED_NOREPLACE, -1, 0);
+    void *probe = reserve_host_range((void *)OBOR_ARENA_BASE_VA,
+                                    OBOR_ARENA_MAX_SZ, PROT_NONE);
     if (probe != (void *)OBOR_ARENA_BASE_VA) {
         fprintf(stderr, "arena reservation leaked after dlclose\n");
         return 1;

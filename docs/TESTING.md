@@ -80,7 +80,12 @@ integer/identity sampling, clamped edges, very narrow/tall images, and six
 horizontal-scroll phases of one-pixel strokes at 480x272. Runtime frames from
 all six engines are compared against the same independent reference.
 
-On the Linux host, `OBOR_OCCUPIED_ARENA=1` checks that a pre-existing mapping
+On the Linux and macOS hosts, `OBOR_CHECK_FDS=1` checks that the number of open
+file descriptors returns to its baseline after unloading the core. Linux uses
+procfs; macOS queries descriptor validity through POSIX `fcntl`. Both hosts
+check arena reservations without replacing existing memory mappings.
+
+`OBOR_OCCUPIED_ARENA=1` checks that a pre-existing mapping
 is preserved when content loading is refused. `OBOR_LIFECYCLE=1` unloads and
 reloads the module; combine it with `OBOR_DEBUG=1` and `OBOR_RESET_AT=180` to
 exercise diagnostic cleanup across restarts. `OBOR_FASTCHECK=120,30` compares
