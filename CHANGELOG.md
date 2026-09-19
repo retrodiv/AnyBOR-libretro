@@ -4,6 +4,8 @@
 
 ### Recent changes
 
+- Select desktop macOS toolchains for libvpx on Intel and Apple Silicon,
+  preserving the configured minimum macOS version.
 - Drop the retired PowerPC-era cpusubtype switch from the bundled Xiph build
   scripts so dependency builds link with current Apple linkers.
 - Make native test-host descriptor and memory checks portable to macOS.

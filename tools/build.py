@@ -380,8 +380,12 @@ def build_dep(target, name, fingerprint):
     elif name == "libvpx":
         if spec["plat"] == "windows": vpx_target = "x86_64-win64-gcc"
         elif spec.get("android"): vpx_target = "arm64-android-gcc"
-        elif uses_macho(spec): vpx_target = ("arm64-darwin-gcc" if spec["arch"] == "arm64"
-                                             else "x86_64-darwin-gcc")
+        elif uses_macho(spec):
+            # libvpx's unversioned arm64-darwin target means iOS, and its
+            # x86_64 counterpart does not exist. Both architectures support
+            # darwin20, which selects macOS without overriding the deployment
+            # floor already supplied by arch_flags (unlike older targets).
+            vpx_target = spec["arch"] + "-darwin20-gcc"
         elif spec["arch"] == "aarch64": vpx_target = "arm64-linux-gcc"
         else: vpx_target = "x86_64-linux-gcc"
         cfg = ["sh", "./configure", "--prefix=" + str(prefix),
