@@ -41,6 +41,10 @@
 /* MinGW's stack protector guard lives in the module's writable data.
  * It belongs to the current process, not to the serialized game. */
 extern uintptr_t __stack_chk_guard;
+#elif defined(__APPLE__)
+#include <unistd.h>
+/* Mach-O: the writable ranges come from this image's own load commands. */
+#include "obor_macho.h"
 #else
 #include <link.h>
 #include <unistd.h>
@@ -296,6 +300,38 @@ static int collect_segments(void)
         }
         push_seg(va, va + sz);
     }
+    return g_nsegs > 0 && !g_segments_failed;
+}
+
+#elif defined(__APPLE__)
+
+/* Darwin: dyld slides the whole image and applies relocations before our
+ * constructors run, so the snapshot ranges are read straight from the
+ * mach_header_64 of the image that contains this code.  __DATA_CONST is
+ * already read-only at that point (the Mach-O equivalent of PT_GNU_RELRO)
+ * and is excluded by the segment permissions, exactly like the ELF path.
+ * There is no fixed image address on Darwin: states are rebased on load by
+ * rebase_range(), as on Android. */
+static void macho_seg_cb(uint64_t lo, uint64_t hi, void *context)
+{
+    (void)context;
+    push_seg(lo, hi);
+}
+
+static int collect_segments(void)
+{
+    if (!g_region_count || g_segments_failed)
+        return 0;
+    if (g_nsegs)
+        return 1;
+    const struct mach_header_64 *header =
+        obor_macho_own_header((const void *)&collect_segments);
+    if (!header) {
+        g_segments_failed = 1;
+        return 0;
+    }
+    obor_macho_image_range(header, &g_image_lo, &g_image_hi);
+    obor_macho_writable_segments(header, macho_seg_cb, NULL);
     return g_nsegs > 0 && !g_segments_failed;
 }
 

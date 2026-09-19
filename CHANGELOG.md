@@ -4,6 +4,14 @@
 
 ### Recent changes
 
+- Include matching source archives inside platform release ZIPs.
+- Reject failed binary inspections and require the expected architecture,
+  dependencies and exports in release checks.
+- Bound Mach-O export parsing, preserve section addresses when collecting
+  engine state, and query the Apple linker version through its native interface.
+
+- Build the two Mach-O targets (Intel and Apple Silicon) with clang and
+  Apple's linker, keeping save states, rewind and cross-process state loads.
 - Flatten and shorten prepared-content cache paths for filesystem compatibility.
 - Separate persistent game saves from disposable caches and manage cache cleanup.
 - Isolate settings for unpacked content and read uncompressed indexed PCX images

@@ -5,6 +5,9 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-24.04
+    env:
+      TARGET: ${{ matrix.target }}
+      NUMPROC: 4
     strategy:
       fail-fast: false
       matrix:
@@ -22,16 +25,19 @@ jobs:
       - name: Check distribution and focused regression tests
         run: make check
       - name: Build and package
-        env:
-          TARGET: ${{ matrix.target }}
         run: |
           if [ "$TARGET" = android-arm64 ]; then
             export ANDROID_NDK="$ANDROID_HOME/ndk/26.3.11579264"
           fi
           make TARGET="$TARGET" release
-          if [ "$TARGET" = linux-x86_64 ]; then
-            make source-release
-          fi
+      - name: Inspect the built core (format, architecture, dependencies, exports)
+        run: |
+          case "$TARGET" in
+            linux-*)   python3 tools/check.py --target "$TARGET" --binary anybor_libretro.so ;;
+            windows-*) python3 tools/check.py --target "$TARGET" --binary anybor_libretro.dll ;;
+            android-*) python3 tools/check.py --target "$TARGET" --binary anybor_libretro_android.so ;;
+            *) echo "Unknown or missing TARGET: $TARGET" >&2; exit 1 ;;
+          esac
       - name: Exercise native runtime regressions
         if: matrix.target == 'linux-x86_64'
         run: |
@@ -42,5 +48,65 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: anybor-${{ matrix.target }}
-          path: dist/*
+          path: |
+            dist/*.zip
+            dist/*.zip.sha256
+          if-no-files-found: error
+
+  macos:
+    # Native Intel and Apple Silicon builds.  Both labels are GitHub-hosted
+    # runner images: macos-15-intel is the x64 image and macos-15 the arm64
+    # one.  The build and inspection steps mirror what libretro's osx-x64 and
+    # osx-arm64 CI templates do (platform=osx, clang, dylib artifact, lipo
+    # architecture check) and add the runtime checks this source tree ships.
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-15-intel
+            target: macos-x86_64
+            arch: x86_64
+          - runner: macos-15
+            target: macos-arm64
+            arch: arm64
+    runs-on: ${{ matrix.runner }}
+    env:
+      TARGET: ${{ matrix.target }}
+      NUMPROC: 4
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Report toolchain
+        run: |
+          clang --version
+          xcodebuild -version || true
+          python3 --version
+      - name: Install x86 assembler
+        if: matrix.arch == 'x86_64'
+        run: command -v nasm || brew install nasm
+      - name: Build, check and package
+        run: make TARGET="$TARGET" release
+      - name: Inspect format, architecture, dependencies and exports
+        run: |
+          python3 tools/check.py --target "$TARGET" --binary anybor_libretro.dylib
+          lipo -info anybor_libretro.dylib
+          otool -l anybor_libretro.dylib | grep -A4 'LC_BUILD_VERSION' || true
+          otool -L anybor_libretro.dylib
+          if [ "$(lipo -info anybor_libretro.dylib | grep -c '${{ matrix.arch }}')" = 0 ]; then
+            echo "wrong architecture in the built dylib"; exit 1
+          fi
+      - name: Exercise native runtime regressions
+        run: |
+          python3 tools/smoke.py --core anybor_libretro.dylib
+          python3 tools/regression.py --core anybor_libretro.dylib
+          python3 tools/test_rewind.py --core anybor_libretro.dylib
+          python3 tools/test_multiplayer.py --core anybor_libretro.dylib
+          python3 tools/test_crt.py --core anybor_libretro.dylib
+      - uses: actions/upload-artifact@v4
+        with:
+          name: anybor-${{ matrix.target }}
+          path: |
+            dist/*.zip
+            dist/*.zip.sha256
           if-no-files-found: error

@@ -10,10 +10,14 @@ import re
 import shlex
 import struct
 import subprocess
+import sys
 import tempfile
 from pathlib import Path
 import make_fixture
 import release
+
+DEFAULT_CORE = release.ROOT / ("anybor_libretro.dylib" if sys.platform == "darwin"
+                               else "anybor_libretro.so")
 
 BUTTONS = ('up', 'down', 'left', 'right', 'attack', 'attack2', 'attack3',
            'attack4', 'jump', 'special', 'start')
@@ -148,7 +152,7 @@ def after_launch(data):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--core', default=str(release.ROOT / 'anybor_libretro.so'))
+    parser.add_argument('--core', default=str(DEFAULT_CORE))
     parser.add_argument('--host', help='precompiled test host')
     parser.add_argument('--runner', default='', help='optional emulator command')
     parser.add_argument('--windows', action='store_true', help='Wine Z: paths')
@@ -163,6 +167,9 @@ def main():
                 str(release.ROOT / 'tests/host/libretro_host.c'), '-ldl', '-o', str(host)])
         pak = work / 'fourpads.pak'
         make_fixture.write_pak(pak, fixture())
+        # Saved state, logs and paks live under the content's own namespace:
+        # saves/AnyBOR/<content>/<engine>/ (docs/INSTALLATION.md).
+        game = pak.stem
         timelines, vectors, frames = schedule()
 
         def target(path):
@@ -185,11 +192,11 @@ def main():
                 raise AssertionError(engine + ' ' + label + ' timed out:\n' + output[-6000:])
             assert process.returncode == 0, engine + ' ' + label + ':\n' + output[-6000:]
             assert 'frames=%d' % frames in output and 'cwd_restored=1' in output, output
-            logs = system / 'saves/AnyBOR' / engine / 'Logs'
+            logs = system / 'saves/AnyBOR' / game / engine / 'Logs'
             text = '\n'.join(p.read_text(errors='replace') for p in logs.glob('*Log.txt'))
             check_inputs(text, expected)
             print('PASS ' + engine + ' ' + label + ': four players, ordered buttons/sticks and press/release edges', flush=True)
-            return system / 'saves/AnyBOR' / engine / 'Saves/fourpads.cfg'
+            return system / 'saves/AnyBOR' / game / engine / 'Saves' / (game + '.cfg')
 
         for engine in args.engine or [e['build'] for e in release.read_json(release.ROOT / 'src/pin.json')['engines']]:
             system = work / engine

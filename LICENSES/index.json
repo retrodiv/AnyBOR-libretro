@@ -297,7 +297,7 @@
     "file": "LICENSES/Embedded-source-notices.txt",
     "license": "see each notice",
     "scope": "source and binary",
-    "sha256": "47cf06a3cc7547a5e074c121c49854eb718b0a5b02ea4ec6500d232e0741def7",
+    "sha256": "f8d14d477d06032beb3192b713d15823ff571397361de063b00098bea9c177cc",
     "source": "Individual source headers listed in this document"
   },
   {

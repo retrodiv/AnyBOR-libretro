@@ -26,6 +26,11 @@
 #include "obor_crt.h"
 #include "obor_state_padding.h"
 #include "obor_profile.h"
+#if defined(__APPLE__)
+/* Mach-O image introspection: writable snapshot ranges (pristine capture)
+ * and the per-engine state sections of this same image. */
+#include "obor_macho.h"
+#endif
 
 static void mkdir_p(const char *path);
 #include "obor_storage.h"
@@ -1447,6 +1452,30 @@ static void glue_collect_segments(void)
         g_ngsegs2++;
     }
 }
+#elif defined(__APPLE__)
+#include "obor_macho.h"
+
+static void glue_macho_seg_cb(uint64_t lo, uint64_t hi, void *context)
+{
+    (void)context;
+    if (g_ngsegs2 >= 16 || hi <= lo)
+        return;
+    g_gsegs2[g_ngsegs2].vaddr = (uintptr_t)lo;
+    g_gsegs2[g_ngsegs2].size = (size_t)(hi - lo);
+    g_ngsegs2++;
+}
+
+/* Darwin: dyld has already slid the image by the time a core is loaded, so
+ * the writable ranges of this module come from its own load commands. */
+static void glue_collect_segments(void)
+{
+    if (g_ngsegs2)
+        return;
+    const struct mach_header_64 *header =
+        obor_macho_own_header((const void *)&glue_collect_segments);
+    if (header)
+        obor_macho_writable_segments(header, glue_macho_seg_cb, NULL);
+}
 #else
 #include <link.h>
 static int glue_phdr_cb(struct dl_phdr_info *info, size_t size, void *data)
@@ -1714,6 +1743,19 @@ __attribute__((constructor)) static void obor_arena_claim(void)
     g_arena_owned = p == (void *)OBOR_ARENA_BASE_VA;
     if (p && !g_arena_owned)
         VirtualFree(p, 0, MEM_RELEASE);
+#elif defined(__APPLE__)
+    /* Darwin has no MAP_FIXED_NOREPLACE.  Without MAP_FIXED the address is a
+     * hint: the kernel maps exactly there when the range is free and
+     * somewhere else when it is not — the same reserve-or-refuse contract,
+     * and it can never displace another module's mapping. */
+#ifndef MAP_ANONYMOUS
+#define MAP_ANONYMOUS MAP_ANON
+#endif
+    void *p = mmap((void *)OBOR_ARENA_BASE_VA, OBOR_ARENA_MAX_SZ, PROT_NONE,
+                   MAP_PRIVATE | MAP_ANONYMOUS | MAP_NORESERVE, -1, 0);
+    g_arena_owned = p == (void *)OBOR_ARENA_BASE_VA;
+    if (p != MAP_FAILED && !g_arena_owned)
+        munmap(p, OBOR_ARENA_MAX_SZ);
 #else
 #ifndef MAP_FIXED_NOREPLACE
 #define MAP_FIXED_NOREPLACE 0x100000

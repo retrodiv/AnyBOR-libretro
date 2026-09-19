@@ -17,11 +17,27 @@ CC          ?= gcc
 DEPS_PREFIX ?=
 OBJDIR      ?= .objs-libretro
 PORT_ROOT   ?= libretro
+PYTHON      ?= python3
 
 ifeq ($(PLATFORM),windows)
 PLAT_DEF    = -DWIN=1
+else ifeq ($(PLATFORM),darwin)
+# OpenBOR's own macOS branches (ram.c, openborscript.c) key off DARWIN.
+PLAT_DEF    = -DDARWIN=1
 else
 PLAT_DEF    = -DLINUX=1
+endif
+
+# Mach-O targets: the architecture and the deployment floor are separate
+# flags.  clang takes both; the partial link is a direct ld invocation and
+# only understands -arch (the deployment floor travels in the objects'
+# LC_BUILD_VERSION, which clang embeds from -mmacosx-version-min).
+ifeq ($(PLATFORM),darwin)
+DARWIN_ARCH    ?=
+DARWIN_MINVER  ?= 11.0
+DARWIN_ARCH_FLAG := $(if $(DARWIN_ARCH),-arch $(DARWIN_ARCH),)
+DARWIN_CC_FLAGS  := $(DARWIN_ARCH_FLAG) -mmacosx-version-min=$(DARWIN_MINVER)
+MACHO_REWRITE  ?= $(PYTHON) $(PORT_ROOT)/../../../tools/macho_rewrite.py
 endif
 
 INCS = $(PORT_ROOT) . source source/adpcmlib source/gamelib source/gfxlib \
@@ -100,8 +116,11 @@ CFLAGS += $(USER_CFLAGS)
 # points, pixelformat tables, ...) out of every era at once. ELF only: on
 # PE the localize step strips the COMDAT associativity that ties per-
 # function .pdata/.xdata to their code, so nothing can be collected — and
-# -fdata-sections turns multi-MB .bss into file-backed .data there.
-ifneq ($(PLATFORM),windows)
+# -fdata-sections turns multi-MB .bss into file-backed .data there. On
+# Darwin there is no equivalent: -fdata-sections would give every zero-
+# initialized datum its own section, outside the per-engine state region
+# the rewriter collects, and ld64 dead-strips through atom symbols instead.
+ifeq ($(PLATFORM),linux)
 CFLAGS += -ffunction-sections -fdata-sections
 endif
 
@@ -146,6 +165,18 @@ endif
 
 partial: $(OBJS)
 	printf '%s\n' $(ABI_SYMS) > $(OBJDIR)/keep.txt
+ifeq ($(PLATFORM),darwin)
+	# Mach-O: ld -r merges the engine's objects and its static libraries
+	# (the three -wrap groups below are replaced by the allocation
+	# interposers in obor_alloc.c/obor_files.c, which the rewriter keeps
+	# inside the engine's namespace).  -d turns the tentative definitions
+	# that -fcommon produces into real definitions, so every engine static
+	# lands in a section the rewriter can collect.
+	$(LDR) -r -d $(DARWIN_ARCH_FLAG) -o $(OBJDIR)/whole.o $(OBJS) $(DEP_ARCH)
+	$(MACHO_REWRITE) --input $(OBJDIR)/whole.o --output $(PARTIAL) \
+	    --build $(BUILD_NUM) --section __obss$(BUILD_NUM) \
+	    --abi $(OBJDIR)/keep.txt --manifest $(OBJDIR)/macho-$(BUILD_NUM).json
+else
 	$(LDR) -r -d --wrap=malloc --wrap=calloc --wrap=realloc \
 	    --wrap=free --wrap=strdup --wrap=fopen -o $(OBJDIR)/whole.o $(OBJS) $(DEP_ARCH)
 	$(OBJCOPY) --keep-global-symbols=$(OBJDIR)/keep.txt $(OBJDIR)/whole.o \
@@ -153,6 +184,7 @@ partial: $(OBJS)
 	$(OBJCOPY) --remove-section=.drectve \
 	    $(foreach s,$(ABI_SYMS),--redefine-sym $(s)=$(s)_$(BUILD_NUM)) \
 	    $(OBJDIR)/kept.o $(PARTIAL)
+endif
 
 $(OBJDIR)/%.o: %.c
 	@mkdir -p $(dir $@)

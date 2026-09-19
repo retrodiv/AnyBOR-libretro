@@ -15,6 +15,10 @@ include:
     file: /windows-x64-mingw.yml
   - project: libretro-infrastructure/ci-templates
     file: /android-jni.yml
+  - project: libretro-infrastructure/ci-templates
+    file: /osx-x64.yml
+  - project: libretro-infrastructure/ci-templates
+    file: /osx-arm64.yml
 
 stages:
   - build-shared
@@ -59,6 +63,32 @@ libretro-build-android-arm64:
   artifacts:
     paths:
       - anybor_libretro_android.so
+      - anybor_libretro.info
+      - NOTICE.txt
+      - LICENSES/
+
+# Both jobs run the repository's default make target with platform=osx, which
+# Makefile + tools/build.py resolve to macos-x86_64 or macos-arm64 from the
+# compiler triple.  osx-arm64 additionally exports LIBRETRO_APPLE_PLATFORM /
+# LIBRETRO_APPLE_ISYSROOT, which the build honors as cross-compilation flags.
+libretro-build-osx-x64:
+  extends:
+    - .libretro-osx-x64-make-default
+    - .core-defs
+  artifacts:
+    paths:
+      - anybor_libretro.dylib
+      - anybor_libretro.info
+      - NOTICE.txt
+      - LICENSES/
+
+libretro-build-osx-arm64:
+  extends:
+    - .libretro-osx-arm64-make-default
+    - .core-defs
+  artifacts:
+    paths:
+      - anybor_libretro.dylib
       - anybor_libretro.info
       - NOTICE.txt
       - LICENSES/

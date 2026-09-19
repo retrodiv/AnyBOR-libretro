@@ -3,8 +3,9 @@
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
  * Upstream code retains its original license and notices.
- * Repair PAK handles after state loads, close resources on reset, and prune
- * unused frontend APIs.
+ * Repair PAK handles after state loads, close resources on reset, prune
+ * unused frontend APIs, and compile the case-insensitive loose-file search
+ * on macOS.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/6412.md
  * at the source repository root. Original notices follow below.
@@ -49,11 +50,11 @@
 #include "savedata.h"
 #include "List.h"
 
-#if WIN || LINUX
+#if WIN || LINUX || defined(DARWIN)
 #include <dirent.h>
 #endif
 
-#if _POSIX_SOURCE || SYMBIAN
+#if _POSIX_SOURCE || SYMBIAN || defined(DARWIN)
 #define	stricmp	strcasecmp
 #endif
 
@@ -339,7 +340,7 @@ static char *slashfwd(const char *sz)
 }
 #endif
 
-#ifdef LINUX
+#if defined(LINUX) || defined(DARWIN)
 char *casesearch(const char *dir, const char *filepath)
 {
     DIR *d;
@@ -438,7 +439,7 @@ void packfile_mode(int mode)
 
 /////////////////////////////////////////////////////////////////////////////
 
-#if WIN || LINUX
+#if WIN || LINUX || defined(DARWIN)
 int isRawData()
 {
     DIR *d;
@@ -480,7 +481,7 @@ int openPackfile(const char *filename, const char *packfilename)
     int h, handle;
     unsigned int magic, version, headerstart, p;
     pnamestruct pn;
-#ifdef LINUX
+#if defined(LINUX) || defined(DARWIN)
     char *fspath;
 #endif
 
@@ -523,7 +524,7 @@ int openPackfile(const char *filename, const char *packfilename)
         return h;
     }
 
-#ifdef LINUX
+#if defined(LINUX) || defined(DARWIN)
     // Try a case-insensitive search for a separate file.
     fspath = casesearch(".", filename);
     if (fspath != NULL)
@@ -1277,7 +1278,7 @@ int pak_init()
         return 0;
     }
 
-#if WIN || LINUX
+#if WIN || LINUX || defined(DARWIN)
     if(isRawData())
     {
         pak_initialized = 1;

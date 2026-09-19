@@ -8,14 +8,18 @@ import argparse
 import os
 import shlex
 import subprocess
+import sys
 from pathlib import Path
 import make_fixture
 import release
 
+DEFAULT_CORE = release.ROOT / ("anybor_libretro.dylib" if sys.platform == "darwin"
+                               else "anybor_libretro.so")
+
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--core", default=str(release.ROOT / "anybor_libretro.so"))
+    parser.add_argument("--core", default=str(DEFAULT_CORE))
     parser.add_argument("--frames", type=int, default=400)
     parser.add_argument("--engine", action="append")
     args = parser.parse_args()

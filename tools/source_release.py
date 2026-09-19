@@ -1,37 +1,65 @@
 #!/usr/bin/env python3
-"""Package exactly the reviewed source inventory, with no build workspace.
+"""Archive the checked source inventory for inclusion in a binary package.
 
 SPDX-License-Identifier: BSD-3-Clause
 Copyright (c) 2026 retrodiv <retrodiv@proton.me>
 """
 import argparse
+import gzip
 import hashlib
-import zipfile
+import io
+import tarfile
 from pathlib import Path
-import check
 import release
 
 
-def package(dest):
-    check.check_sources()
-    root = release.ROOT
-    pin = release.read_json(root / "src/pin.json")
-    files = dict(release.read_json(root / "SOURCES.json")["files"])
-    files["SOURCES.json"] = release.sha256(root / "SOURCES.json")
-    dest.mkdir(parents=True, exist_ok=True)
-    archive = dest / (pin["core_basename"] + "-" + pin["version"] + "-source.zip")
-    temporary = archive.with_suffix(".zip.tmp")
+def source_inventory():
+    files = dict(release.read_json(release.ROOT / "SOURCES.json")["files"])
+    if release.source_files() != files:
+        raise RuntimeError("Source inventory changed before archiving")
+    files["SOURCES.json"] = release.sha256(release.ROOT / "SOURCES.json")
+    return files
+
+
+def write_archive(archive, files):
+    """Stream one file at a time and validate the archive actually delivered."""
     prefix = "AnyBOR-libretro/"
+    epoch = release.read_json(release.ROOT / "src/pin.json")["source_date_epoch"]
+    with archive.open("wb") as raw:
+        with gzip.GzipFile(fileobj=raw, mode="wb", filename="", mtime=epoch) as compressed:
+            with tarfile.open(fileobj=compressed, mode="w", format=tarfile.PAX_FORMAT) as tf:
+                for name, checksum in sorted(files.items()):
+                    path = release.ROOT / name
+                    if path.is_symlink():
+                        raise RuntimeError("Linked source file: " + name)
+                    data = path.read_bytes()
+                    if hashlib.sha256(data).hexdigest() != checksum:
+                        raise RuntimeError("Source changed while archiving: " + name)
+                    info = tarfile.TarInfo(prefix + name)
+                    info.size, info.mtime = len(data), epoch
+                    info.mode = 0o755 if data.startswith(b"#!") else 0o644
+                    tf.addfile(info, io.BytesIO(data))
+    with tarfile.open(str(archive), "r:gz") as tf:
+        members = tf.getmembers()
+        if sorted(m.name for m in members) != sorted(prefix + n for n in files):
+            raise RuntimeError("Source archive file set differs from its inventory")
+        for member in members:
+            if not member.isfile():
+                raise RuntimeError("Non-regular source archive member")
+            data = tf.extractfile(member).read()
+            if hashlib.sha256(data).hexdigest() != files[member.name[len(prefix):]]:
+                raise RuntimeError("Source archive checksum mismatch: " + member.name)
+
+
+def package(dest):
+    import check
+    check.check_sources()
+    pin = release.read_json(release.ROOT / "src/pin.json")
+    dest.mkdir(parents=True, exist_ok=True)
+    archive = dest / (pin["core_basename"] + "-" + pin["version"] + "-source.tar.gz")
+    temporary = archive.with_name(archive.name + ".tmp")
     try:
-        with zipfile.ZipFile(str(temporary), "w", zipfile.ZIP_DEFLATED) as zf:
-            for name in sorted(files):
-                zf.write(str(root / name), prefix + name)
-        with zipfile.ZipFile(str(temporary)) as zf:
-            if sorted(zf.namelist()) != sorted(prefix + name for name in files):
-                raise RuntimeError("Source archive file set differs from its inventory")
-            for name, checksum in files.items():
-                if hashlib.sha256(zf.read(prefix + name)).hexdigest() != checksum:
-                    raise RuntimeError("Source changed during packaging: " + name)
+        write_archive(temporary, source_inventory())
         temporary.replace(archive)
     finally:
         if temporary.exists():

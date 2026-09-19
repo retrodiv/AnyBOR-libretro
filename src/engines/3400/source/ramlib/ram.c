@@ -1,3 +1,15 @@
+/* AnyBOR modification record: 2026-09-12.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Read host memory statistics through mach on macOS instead of the glibc-
+ * only <malloc.h>.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/3400.md
+ * at the source repository root. Original notices follow below.
+ */
+
 /*
  * OpenBOR - http://www.LavaLit.com
  * -----------------------------------------------------------------------
@@ -38,7 +50,10 @@
 #include <stdlib.h>
 #endif
 
+/* Darwin reaches memory through mach, not <malloc.h>. */
+#ifndef DARWIN
 #include <malloc.h>
+#endif
 #include <string.h>
 #include <stdio.h>
 #include "globals.h"

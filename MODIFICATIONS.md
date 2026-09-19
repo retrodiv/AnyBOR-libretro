@@ -75,6 +75,35 @@ Each engine gets a generated `version.h` with its pinned build number and a
 `Makefile.libretro` from the shared overlay. The version header reports `VERSION_MAJOR="4"` for the 8020 anchor and
 retains the historical v3 version strings for the five older anchors.
 
+## Darwin platform support
+
+The macOS targets reuse OpenBOR's own `DARWIN` branches, which upstream kept
+in `source/ramlib/ram.c` (mach memory queries instead of `sysinfo`) and in the
+script-visible platform constant, but which the Linux-only conditionals around
+them had disabled. `30-darwin-platform.patch` extends those conditionals per
+engine so the POSIX paths macOS also implements are compiled: case-insensitive
+loose-file search and `isRawData()` in `source/gamelib/packfile.c`,
+`O_BINARY`/`unistd.h` in `source/gamelib/packfile.h`, `dirent.h`,
+`sys/stat.h` and the two-argument `mkdir` in `source/utils.c`, `stricmp` in
+`source/gamelib/soundmix.c`, the PC video configuration in `openbor.c`, and
+the mach-based memory queries in `source/ramlib/ram.c` instead of the
+glibc-only `<malloc.h>`. Each engine's inventory links the affected files and
+this topic.
+
+Mach-O has no `objcopy`, no linker scripts and no `--wrap`, so the maintained
+port supplies what those provided: [`macho_rewrite.py`](tools/macho_rewrite.py)
+localizes one engine's symbols, renames its ABI entry points with the build
+suffix and collects its zero-initialized statics into a single per-engine
+section; the allocation and `fopen` entry points are defined by
+[`obor_alloc.c`](src/port/libretro/obor_alloc.c) and
+[`obor_files.c`](src/port/libretro/obor_files.c) so the glue keeps the system
+allocator; segment discovery, the snapshot arena claim and the crash reporter's
+module range use dyld through
+[`obor_macho.h`](src/port/libretro/obor_macho.h) instead of `dl_iterate_phdr`.
+The exported entry points are listed explicitly for `ld64` in
+[`exports.macho`](src/glue/exports.macho); dyld slides every image, so save
+states take the rebasing path rather than the fixed-image one.
+
 ## Repeated weapon lists
 
 The 8020 anchor already includes upstream's dynamically sized, ownership-aware weapon-list replacement; it requires no corresponding modification.
@@ -317,6 +346,7 @@ in their respective files.
 | Optional CRT framing | Fit images wider than 364 pixels or taller than 244 pixels into 640x480 with their original aspect, centred borders and sharp-bilinear scaling, preserving the engine's internal render size. Smaller images outside 4:3 +/-10% receive native-pixel black padding on one axis, then the size limits are checked again. [`obor_crt.h`](src/glue/obor_crt.h), `retro_run` in [`libretro.cpp`](src/glue/libretro.cpp); [option contract](README.md#video-options). |
 | Memory snapshots and rewind | Allocate engine state and coroutine stack in a fixed-address arena; preserve writable module data, repair process resources, and retain historical input on rewind. [`obor_alloc.c`](src/port/libretro/obor_alloc.c), [`obor_state.c`](src/port/libretro/obor_state.c), `glue_save` / `glue_load` in [`libretro.cpp`](src/glue/libretro.cpp). |
 | Snapshot size and reset correctness | Exclude inactive engines' BSS using linker boundaries; permit growth only when the frontend supports variable serialization sizes, otherwise keep the advertised size fixed until unload; clear unused transport bytes; restore the pristine writable module image for a new engine boot. [`state_layout.py`](tools/state_layout.py), [`obor_state_padding.h`](src/glue/obor_state_padding.h), `pristine_restore` / `retro_reset` in [`libretro.cpp`](src/glue/libretro.cpp). |
+| Mach-O targets | Apple's linker performs the relocatable engine link (`ld -r -d`); [`macho_rewrite.py`](tools/macho_rewrite.py) then localizes each engine's symbols, applies the ABI build suffix and merges its zero-initialized statics into one `__obss<build>` section whose boundaries the engine region table uses. Allocation and `fopen` interposers in the port layer replace `--wrap`, dyld supplies segment and image ranges through [`obor_macho.h`](src/port/libretro/obor_macho.h), and the exported entry points come from [`exports.macho`](src/glue/exports.macho). [`macho_inspect.py`](tools/macho_inspect.py) reads the same fields back for build receipts and checks. |
 | PAK, unpacked content and ZIP loading | Accept a PAK, `data/models.txt`, or one game in a ZIP. Validate archive paths and limits before extraction and key the extraction cache by content hash. [`obor_zip.h`](src/glue/obor_zip.h), [`obor_zip_path.h`](src/glue/obor_zip_path.h), [`obor_sha256.h`](src/glue/obor_sha256.h). |
 | Frontend save directories | Place per-engine saves/settings under the frontend directory's `AnyBOR/<game>/<build>/`, create missing parents, and use `AnyBOR-cache/zipcache/` for extraction. This isolates incompatible settings layouts. `retro_load_game` / `mkdir_p` in [`libretro.cpp`](src/glue/libretro.cpp), `obor_boot` in [`libretroport.c`](src/port/libretro/libretroport.c). |
 | Threading and host portability | Supply pthread/Windows workers and synchronization, publish workers before execution so snapshots cannot race startup, preserve Windows coroutine stack bounds, isolate MinGW reference sections, and generate ELF/PE BSS layouts. [`threads.c`](src/port/libretro/threads.c), [`libretroport.c`](src/port/libretro/libretroport.c), [`tools/build.py`](tools/build.py), [`glibc_compat_math.c`](src/compat/glibc_compat_math.c). The Recalbox target disables input descriptors, content-derived pad labels and routine on-screen notifications (load errors remain visible), and enforces a GLIBC 2.38 ceiling. |

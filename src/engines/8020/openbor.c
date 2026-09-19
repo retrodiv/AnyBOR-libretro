@@ -3,16 +3,17 @@
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
  * Upstream code retains its original license and notices.
- * Apply the port's engine corrections. Leave multiplayer slots without a
- * selected model available to join even if game scripts preassign lives to
- * them. Let a missing basename-only PAK self-check read the active frontend
- * content after it has been validated and prepared. Allocate each model's
- * animation pointer table through the highest animation index that model
- * uses, and bound cache, copy and cleanup paths to that capacity. Initialize
- * all four RetroPads and repair legacy unbound player profiles without
- * replacing custom bindings. Yield to the frontend and decoder workers while
- * asynchronous movies are pending. Grow each collision collection's pointer
- * table only through its highest author-facing slot.
+ * Apply the port's engine corrections and select the PC video configuration
+ * on macOS. Leave multiplayer slots without a selected model available to
+ * join even if game scripts preassign lives to them. Let a missing basename-
+ * only PAK self-check read the active frontend content after it has been
+ * validated and prepared. Allocate each model's animation pointer table
+ * through the highest animation index that model uses, and bound cache, copy
+ * and cleanup paths to that capacity. Initialize all four RetroPads and
+ * repair legacy unbound player profiles without replacing custom bindings.
+ * Yield to the frontend and decoder workers while asynchronous movies are
+ * pending. Grow each collision collection's pointer table only through its
+ * highest author-facing slot.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/8020.md
  * at the source repository root. Original notices follow below.
@@ -54617,7 +54618,7 @@ void init_videomodes(int log)
 
     // Use an alternative video.txt if there is one.  Some of these are long filenames; create your PAKs with borpak and you'll be fine.
 #define tryfile(X) if((tmp=openpackfile(X,packfile))!=-1) { closepackfile(tmp); filename=X; goto readfile; }
-#if WIN || LINUX
+#if WIN || LINUX || defined(DARWIN)
     tryfile("data/videopc.txt");
 #endif
 #undef tryfile

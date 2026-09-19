@@ -9,7 +9,7 @@
       "upstream_sha256": "fc53280baa67ef58e507cea648f8838fad9abe675fa098a5dc99dfe4ecd0e75c"
     },
     "Makefile.libretro": {
-      "distributed_sha256": "c8590328b3ea70e568efe3861638c4c2055d2f8af70d2fe574a90ee489a43081",
+      "distributed_sha256": "28a9eed8ac0dcd19113b136e1a52f262b35ab19b1878ece7f47f5999db0620f3",
       "modified": true,
       "origin": "Project libretro build overlay",
       "summary": "Supply the shared libretro engine build and symbol-isolation rules.",
@@ -17,12 +17,13 @@
       "upstream_sha256": null
     },
     "openbor.c": {
-      "distributed_sha256": "8643eccea399e6dd0963b7f084262e9b9ecf94834fc70565389c40b160135c6f",
+      "distributed_sha256": "97935cee50160f198583899b238594f3a0a4fd5d3c13647f00e4b0ddec1aee15",
       "modified": true,
-      "summary": "Apply the port's engine corrections. Leave multiplayer slots without a selected model available to join even if game scripts preassign lives to them. Let a missing basename-only PAK self-check read the active frontend content after it has been validated and prepared. Allocate each model's animation pointer table through the highest animation index that model uses, and bound cache, copy and cleanup paths to that capacity. Resize repeated weapon lists and detach borrowed lists before replacing their entries.",
+      "summary": "Apply the port's engine corrections and select the PC video configuration on macOS. Leave multiplayer slots without a selected model available to join even if game scripts preassign lives to them. Let a missing basename-only PAK self-check read the active frontend content after it has been validated and prepared. Allocate each model's animation pointer table through the highest animation index that model uses, and bound cache, copy and cleanup paths to that capacity. Resize repeated weapon lists and detach borrowed lists before replacing their entries.",
       "topics": [
         "active-content-pak-aliases",
         "animation-memory-layout",
+        "darwin-platform-support",
         "empty-player-slot-safety",
         "record-dates-and-file-notices",
         "repeated-weapon-lists"
@@ -188,10 +189,11 @@
       "upstream_sha256": "35621ea64c356f8f50e514ac848d090b077b16a8d7e52f5530acf8ff1a633307"
     },
     "source/gamelib/packfile.c": {
-      "distributed_sha256": "c379ef04f15b770cd321a0c0c73a3110fab991d782332e14e5f4958f95a1e8cd",
+      "distributed_sha256": "c42ea3cab6e5c6ff47a11edd70a31c98e7bdf7645a6f14d881ed32f4003f3062",
       "modified": true,
-      "summary": "Repair PAK handles after state loads, close resources on reset, and prune unused frontend APIs.",
+      "summary": "Repair PAK handles after state loads, close resources on reset, prune unused frontend APIs, and compile the case-insensitive loose-file search on macOS.",
       "topics": [
+        "darwin-platform-support",
         "packfile-state-and-resource-lifecycle",
         "record-dates-and-file-notices",
         "source-selection-and-pruning"
@@ -199,10 +201,11 @@
       "upstream_sha256": "8c43bade55c67a42b661b1a25653c0ec0f1bba2c3f12647ced8d7f1bef5ebbdc"
     },
     "source/gamelib/packfile.h": {
-      "distributed_sha256": "3e24e64c0937742f855dd164197094d30c29b107b7f19de25499d87badedf03e",
+      "distributed_sha256": "be867220454367ff33c976af8dce3b8773dc72c9e9f7beb3661238003370f313",
       "modified": true,
-      "summary": "Remove declarations of unused standalone frontend APIs.",
+      "summary": "Remove declarations of unused standalone frontend APIs and define O_BINARY where macOS lacks it.",
       "topics": [
+        "darwin-platform-support",
         "record-dates-and-file-notices",
         "source-selection-and-pruning"
       ],
@@ -251,9 +254,13 @@
       "upstream_sha256": "007f773be5f17eedda442b0be564c42d74d3b5780b869c88538e6fddd8505da7"
     },
     "source/gamelib/soundmix.c": {
-      "distributed_sha256": "362a92f4f69b9e50bde1bed25720afeb048eea75c883e9c9f8803baac2789617",
-      "modified": false,
-      "topics": [],
+      "distributed_sha256": "8916dabd3df90b70224e0f831a42493893800086a4bb1aaf98aeb14d5952d06c",
+      "modified": true,
+      "summary": "Stream large decoded samples instead of retaining immutable PCM in rewind state, and map stricmp on macOS.",
+      "topics": [
+        "darwin-platform-support",
+        "record-dates-and-file-notices"
+      ],
       "upstream_sha256": "362a92f4f69b9e50bde1bed25720afeb048eea75c883e9c9f8803baac2789617"
     },
     "source/gamelib/soundmix.h": {
@@ -411,9 +418,13 @@
       "upstream_sha256": "bf743d291108ab411fc0e34ed891ad78f2d52f1bf20bdfb36d226f0df279155e"
     },
     "source/ramlib/ram.c": {
-      "distributed_sha256": "762b5d45a4ac29965a46bb29a939f827ef045dce51b1d0dd82a5a07a5373818a",
-      "modified": false,
-      "topics": [],
+      "distributed_sha256": "93a5b167990dcf44b8eca0f8a87d39cf36ecf2b3b2d649b4777714f5bb124d72",
+      "modified": true,
+      "summary": "Read host memory statistics through mach on macOS instead of the glibc-only <malloc.h>.",
+      "topics": [
+        "darwin-platform-support",
+        "record-dates-and-file-notices"
+      ],
       "upstream_sha256": "762b5d45a4ac29965a46bb29a939f827ef045dce51b1d0dd82a5a07a5373818a"
     },
     "source/ramlib/ram.h": {
@@ -632,10 +643,11 @@
       "upstream_sha256": "d9bf8cdb39ccbdc026f120a82f8dd12cc9d30a65e410617da7462b3317ffa8ca"
     },
     "source/utils.c": {
-      "distributed_sha256": "5919184f413fd0fd99858adbd7a8b771b2bef47d28b3971121d3536d53925538",
+      "distributed_sha256": "583dd7429440a55e44c88b476aa3fa94262dc153ff1fc3f1da67ad7e3900e6a8",
       "modified": true,
-      "summary": "Enable libretro platform and PNG helper declarations.",
+      "summary": "Enable libretro platform and PNG helper declarations, and the POSIX directory and mkdir forms macOS also uses.",
       "topics": [
+        "darwin-platform-support",
         "platform-integration",
         "record-dates-and-file-notices"
       ],

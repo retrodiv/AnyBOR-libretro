@@ -3,8 +3,9 @@
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
  * Upstream code retains its original license and notices.
- * Repair PAK handles after state loads, close resources on reset, and prune
- * unused frontend APIs.
+ * Repair PAK handles after state loads, close resources on reset, prune
+ * unused frontend APIs, and compile the case-insensitive loose-file search
+ * on macOS.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/8020.md
  * at the source repository root. Original notices follow below.
@@ -71,11 +72,11 @@
 #include "savedata.h"
 #include "List.h"
 
-#if WIN || LINUX
+#if WIN || LINUX || defined(DARWIN)
 #include <dirent.h>
 #endif
 
-#if _POSIX_SOURCE
+#if _POSIX_SOURCE || defined(DARWIN)
 #define stricmp strcasecmp
 #endif
 
@@ -695,7 +696,7 @@ static char *slashfwd(const char *source) {
 }
 #endif
 
-#ifdef LINUX
+#if defined(LINUX) || defined(DARWIN)
 char *casesearch(const char *dir, const char *filepath) {
     DIR *directory;
     struct dirent *entry;
@@ -842,7 +843,7 @@ int isRawData() {
 }
 #endif
 
-#if LINUX
+#if LINUX || defined(DARWIN)
 int isRawData() {
     DIR *directory;
     struct dirent *entry;
@@ -879,7 +880,7 @@ static int openPackfileLoose(const char *filename) {
     packfile_signed_offset_t loose_file_size;
     s_packfile_handle *handle_record;
     const char *disk_filename;
-#ifdef LINUX
+#if defined(LINUX) || defined(DARWIN)
     char *case_corrected_path;
 #endif
 
@@ -895,7 +896,7 @@ static int openPackfileLoose(const char *filename) {
 
     real_handle = open(disk_filename, O_RDONLY | O_BINARY, file_permission);
 
-#ifdef LINUX
+#if defined(LINUX) || defined(DARWIN)
     if(real_handle == -1)  {
         case_corrected_path = casesearch(".", disk_filename);
         if(case_corrected_path != NULL)  {
@@ -1577,7 +1578,7 @@ int pak_init() {
         return 0;
     }
 
-#if WIN || LINUX
+#if WIN || LINUX || defined(DARWIN)
     if(isRawData())  {
         pak_initialized = 1;
         packfile_mode(0);

@@ -1,0 +1,33 @@
+# SPDX-License-Identifier: BSD-3-Clause
+# Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+# The libretro entry points this core exports, in Mach-O symbol form.
+# ld64 -exported_symbols_list takes no wildcards, so every name is listed
+# here; the ELF and PE targets export the same set through their version
+# script.  tools/check.py compares a built core against this list on every
+# target, so the three binary formats cannot drift apart.
+
+_retro_api_version
+_retro_cheat_reset
+_retro_cheat_set
+_retro_deinit
+_retro_get_memory_data
+_retro_get_memory_size
+_retro_get_region
+_retro_get_system_av_info
+_retro_get_system_info
+_retro_init
+_retro_load_game
+_retro_load_game_special
+_retro_reset
+_retro_run
+_retro_serialize
+_retro_serialize_size
+_retro_set_audio_sample
+_retro_set_audio_sample_batch
+_retro_set_controller_port_device
+_retro_set_environment
+_retro_set_input_poll
+_retro_set_input_state
+_retro_set_video_refresh
+_retro_unload_game
+_retro_unserialize

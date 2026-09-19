@@ -9,7 +9,7 @@
       "upstream_sha256": "b8f3916944f0b5aee216ef7a494820d17ae658336a4680992dc244ebedecf3ea"
     },
     "Makefile.libretro": {
-      "distributed_sha256": "c8590328b3ea70e568efe3861638c4c2055d2f8af70d2fe574a90ee489a43081",
+      "distributed_sha256": "28a9eed8ac0dcd19113b136e1a52f262b35ab19b1878ece7f47f5999db0620f3",
       "modified": true,
       "origin": "Project libretro build overlay",
       "summary": "Supply the shared libretro engine build and symbol-isolation rules.",
@@ -17,13 +17,14 @@
       "upstream_sha256": null
     },
     "openbor.c": {
-      "distributed_sha256": "fa47ef0604926c5e8d95a5e24f4c569105784e23561b2307df4b21719c9ee092",
+      "distributed_sha256": "2328bc0f3926dd1bab94c6fd6c4016970af7dc4fd199ea731ab2ae1c2d52526f",
       "modified": true,
-      "summary": "Apply the port's engine corrections. Leave multiplayer slots without a selected model available to join even if game scripts preassign lives to them. Let a missing basename-only PAK self-check read the active frontend content after it has been validated and prepared. Allocate each model's animation pointer table through the highest animation index that model uses, and bound cache, copy and cleanup paths to that capacity. Initialize all four RetroPads and repair legacy unbound player profiles without replacing custom bindings. Yield to the frontend and decoder workers while asynchronous movies are pending. Grow each collision collection's pointer table only through its highest author-facing slot.",
+      "summary": "Apply the port's engine corrections and select the PC video configuration on macOS. Leave multiplayer slots without a selected model available to join even if game scripts preassign lives to them. Let a missing basename-only PAK self-check read the active frontend content after it has been validated and prepared. Allocate each model's animation pointer table through the highest animation index that model uses, and bound cache, copy and cleanup paths to that capacity. Initialize all four RetroPads and repair legacy unbound player profiles without replacing custom bindings. Yield to the frontend and decoder workers while asynchronous movies are pending. Grow each collision collection's pointer table only through its highest author-facing slot.",
       "topics": [
         "active-content-pak-aliases",
         "animation-memory-layout",
         "collision-memory-layout",
+        "darwin-platform-support",
         "empty-player-slot-safety",
         "four-player-controls",
         "record-dates-and-file-notices",
@@ -179,10 +180,11 @@
       "upstream_sha256": "97bfca87a0eab276a7899153a0a0bdfa0e8e7ed32081df161eaba839fae3de78"
     },
     "source/gamelib/packfile.c": {
-      "distributed_sha256": "9e24774149d98b63fb11a089ddf7243cbcd5f7cc28f308fdfb6b725e46614378",
+      "distributed_sha256": "40e1696692c49794373d8967e627bb9a494a6d4a227a5309afe27cac6cb7412e",
       "modified": true,
-      "summary": "Repair PAK handles after state loads, close resources on reset, and prune unused frontend APIs.",
+      "summary": "Repair PAK handles after state loads, close resources on reset, prune unused frontend APIs, and compile the case-insensitive loose-file search on macOS.",
       "topics": [
+        "darwin-platform-support",
         "packfile-state-and-resource-lifecycle",
         "record-dates-and-file-notices"
       ],
@@ -281,9 +283,9 @@
       "upstream_sha256": "c1953b4ab90fbeee0f144486cb9f14d55dddb9f083138ab55b843fc1d154e370"
     },
     "source/gamelib/soundmix.c": {
-      "distributed_sha256": "e75f49f8211ec3ed902e9f551be39a84c66b6e443eb1bf12962b76cd1d7be103",
+      "distributed_sha256": "a9f1ebe22302e3b3a3ef9efa35416742b4bbbb0db8b60a66fe3d891c767ce383",
       "modified": true,
-      "summary": "Stream large decoded samples instead of retaining immutable PCM in rewind state.",
+      "summary": "Stream large decoded samples instead of retaining immutable PCM in rewind state, and map stricmp on macOS.",
       "topics": [
         "audio-memory-layout"
       ],
@@ -784,9 +786,13 @@
       "upstream_sha256": "6e3857eec19a3380e1a651b51cf27e961af3af7a0ebd25a07d63693a5a5dad6d"
     },
     "source/ramlib/ram.c": {
-      "distributed_sha256": "3d16cc774553f173dbaf7fb9d8171952f3e3883530bfedc086cec862e7283b59",
-      "modified": false,
-      "topics": [],
+      "distributed_sha256": "ed70d64b52ac0f29c79badaf771334c06094d024b5b0fe05451a7496f9d7c5d9",
+      "modified": true,
+      "summary": "Read host memory statistics through mach on macOS instead of the glibc-only <malloc.h>.",
+      "topics": [
+        "darwin-platform-support",
+        "record-dates-and-file-notices"
+      ],
       "upstream_sha256": "3d16cc774553f173dbaf7fb9d8171952f3e3883530bfedc086cec862e7283b59"
     },
     "source/ramlib/ram.h": {
@@ -1029,9 +1035,9 @@
       "upstream_sha256": "d96196d834fe4a16fdf704a9f69658ff220c405f9da1a01be466e9548e5dcb06"
     },
     "source/utils.c": {
-      "distributed_sha256": "424474140b27ce8cb2de6ce935e166b9b0210ad23bde1369d8e254b126323f2f",
+      "distributed_sha256": "b4b7a55216e808f1edd1cb12b88150b0ff67dd3238000c0ddd03769b444a71cc",
       "modified": true,
-      "summary": "Enable libretro platform and PNG helper declarations.",
+      "summary": "Enable libretro platform and PNG helper declarations, and the POSIX directory and mkdir forms macOS also uses.",
       "topics": [
         "platform-integration",
         "record-dates-and-file-notices"

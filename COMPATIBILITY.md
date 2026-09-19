@@ -14,6 +14,12 @@ Targets:
   of observed frontend crashes. Basic controls remain available.
 - `windows-x86_64`: static MinGW runtime/dependencies.
 - `android-arm64`: Android API 24 ARM64; no `libc++_shared` dependency.
+- `macos-x86_64`: Intel macOS 10.13 or newer (`platform=osx` on an Intel
+  runner); only `libSystem` is a dynamic dependency.
+- `macos-arm64`: Apple Silicon macOS 11.0 or newer (`platform=osx` on an
+  Apple Silicon runner, or the libretro `osx-arm64` recipe with
+  `LIBRETRO_APPLE_PLATFORM`/`LIBRETRO_APPLE_ISYSROOT`); only `libSystem` is a
+  dynamic dependency.
 
 Release confidence requires a real redistributable fixture for each anchor.
 Where one is unavailable, metadata and code coverage do not substitute for a

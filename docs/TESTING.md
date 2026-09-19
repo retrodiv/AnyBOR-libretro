@@ -5,8 +5,11 @@ provenance and license dossier, then tests circle rasterization and IMA
 ADPCM format vectors, fixed-width endian conversions and portable ZIP path
 validation and CRT framing using a host C compiler. It does not require games.
 It also validates the core-info capability/version contract and the required
-publication entry points. `make source-release` verifies the source inventory
-and reopens the resulting source ZIP to check every member against its hash.
+publication entry points. `make release` includes an exact source tar.gz in
+each platform ZIP and reopens both archives to verify their contents.
+`make source-release` produces the same source archive on explicit request.
+Binary checks fail if the inspection tool is missing, fails, or finds an
+incorrect format, architecture, dependency or exported interface.
 
 After a native Linux build, run:
 

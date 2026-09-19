@@ -12,10 +12,16 @@ import re
 import shlex
 import subprocess
 import sys
+import tempfile
 import zipfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import macho_inspect
+
+CORE_BINARIES = ("anybor_libretro.so", "anybor_libretro.dll",
+                 "anybor_libretro_android.so", "anybor_libretro.dylib")
 
 
 def sha256(path):
@@ -37,7 +43,7 @@ def inventory():
         for name in sorted(names):
             path = Path(folder) / name
             rel = path.relative_to(ROOT).as_posix()
-            if rel == "SOURCES.json" or rel in ("anybor_libretro.so", "anybor_libretro.dll", "anybor_libretro_android.so") or name.endswith((".pyc", ".sym")):
+            if rel == "SOURCES.json" or rel in CORE_BINARIES or name.endswith((".pyc", ".sym")):
                 continue
             if path.is_symlink():
                 raise RuntimeError("Linked source file: " + rel)
@@ -118,9 +124,13 @@ def verify_notices(binary=None):
             raise RuntimeError("The binary does not contain the matching license dossier.")
 
 
-def command_version(command):
-    args = shlex.split(command) + ["--version"]
-    return subprocess.check_output(args, universal_newlines=True).splitlines()[0]
+def command_version(command, apple_linker=False):
+    args = shlex.split(command) + (["-v"] if apple_linker else ["--version"])
+    output = subprocess.check_output(args, stderr=subprocess.STDOUT,
+                                     universal_newlines=True, timeout=30).strip()
+    if not output:
+        raise RuntimeError("Tool returned no version: " + command)
+    return output.splitlines()[0]
 
 
 def record_build(target, spec, outdir, expected_sources):
@@ -131,8 +141,27 @@ def record_build(target, spec, outdir, expected_sources):
     if files != expected_sources:
         raise RuntimeError("Source files changed during compilation; rebuild from a stable tree.")
     compiler = command_version(spec["cc"])
-    linker = command_version(spec["ld"])
-    if spec["plat"] == "windows":
+    linker = command_version(spec["ld"], apple_linker=spec["plat"] == "darwin")
+    binary_format = {}
+    if spec["plat"] == "darwin":
+        # Mach-O: no objdump on a stock macOS.  The dependency list and the
+        # exported symbol set come from the inspector, which reads the load
+        # commands and the export trie directly.
+        info = macho_inspect.inspect(binary)
+        imports = info["dependencies"]
+        binary_format = {
+            "kind": info["filetype"], "arch": info["arch"],
+            "platform": info["platform"], "min_os": info["min_os"],
+            "install_name": info["install_name"],
+            "exported_symbols": info["exports"],
+            "expected_export_count": 25,
+        }
+        if info["filetype"] != "DYLIB":
+            raise RuntimeError("macOS core is not a dylib: " + str(info["filetype"]))
+        if len(info["exports"]) != 25:
+            raise RuntimeError("macOS core exports %d symbols, expected 25"
+                               % len(info["exports"]))
+    elif spec["plat"] == "windows":
         imports = subprocess.check_output([spec["objdump"], "-p", str(binary)], universal_newlines=True)
         imports = sorted(line.split("DLL Name:", 1)[1].strip() for line in imports.splitlines()
                          if "DLL Name:" in line)
@@ -161,6 +190,7 @@ def record_build(target, spec, outdir, expected_sources):
                   ("CFLAGS", "CXXFLAGS", "CPPFLAGS", "LDFLAGS", "NASM", "SOURCE_DATE_EPOCH")},
         "dynamic_dependencies": imports,
         "static_dependencies": list(spec["dep_builds"]),
+        "binary_format": binary_format,
         "notice_sha256": sha256(ROOT / "NOTICE.txt"),
     }
     (outdir / "build.json").write_text(json.dumps(receipt, indent=2, sort_keys=True) + "\n", encoding="utf-8")
@@ -169,7 +199,7 @@ def record_build(target, spec, outdir, expected_sources):
 def package(target, build_root, dest):
     folder = build_root / "dist" / target
     receipt = read_json(folder / "build.json")
-    if receipt["binary"] not in ("anybor_libretro.so", "anybor_libretro.dll", "anybor_libretro_android.so"):
+    if receipt["binary"] not in CORE_BINARIES:
         raise RuntimeError("Unexpected binary filename in build receipt")
     binary = folder / receipt["binary"]
     if receipt["target"] != target or sha256(binary) != receipt["sha256"]:
@@ -179,6 +209,10 @@ def package(target, build_root, dest):
     if sha256(ROOT / "NOTICE.txt") != receipt["notice_sha256"]:
         raise RuntimeError("Notices changed since this binary was built.")
     verify_notices(binary)
+    import check
+    import source_release
+    check.check_sources()
+    check.check_binary(binary, target)
     dest.mkdir(parents=True, exist_ok=True)
     filename = "{0}-{1}-{2}.zip".format(
         read_json(ROOT / "src/pin.json")["core_basename"], receipt["version"], target)
@@ -191,16 +225,40 @@ def package(target, build_root, dest):
     entries += [(p, p.relative_to(ROOT).as_posix()) for p in sorted((ROOT / "examples").rglob("*")) if p.is_file()]
     entries += [(p, p.relative_to(ROOT).as_posix()) for p in sorted((ROOT / "LICENSES").rglob("*")) if p.is_file()]
     entries += [(p, p.name) for p in ROOT.glob("*.info")]
-    with zipfile.ZipFile(str(archive), "w", zipfile.ZIP_DEFLATED) as zf:
-        for path, name in entries:
-            zf.write(str(path), name)
-    # Reopen the downloadable unit, rather than trusting the staging directory.
-    with zipfile.ZipFile(str(archive)) as zf:
-        if hashlib.sha256(zf.read(binary.name)).hexdigest() != receipt["sha256"]:
-            raise RuntimeError("Packaged binary checksum mismatch.")
-        for path, name in entries:
-            if zf.read(name) != path.read_bytes():
-                raise RuntimeError("Incomplete release archive: " + name)
+    # Each downloadable ZIP carries its own exact sources, as a tar.gz.
+    # Keep temporary output off the release surface until every member passes.
+    with tempfile.TemporaryDirectory(prefix="anybor-package-") as temporary_dir:
+        source = Path(temporary_dir) / (read_json(ROOT / "src/pin.json")["core_basename"]
+                                      + "-" + receipt["version"] + "-source.tar.gz")
+        files = source_release.source_inventory()
+        source_release.write_archive(source, files)
+        metadata = Path(temporary_dir) / "PACKAGE.json"
+        metadata.write_text(json.dumps({
+            "schema": 1, "binary": binary.name, "binary_sha256": receipt["sha256"],
+            "source_archive": source.name, "source_archive_sha256": sha256(source),
+            "source_digest": receipt["source_digest"],
+            "build_receipt_sha256": sha256(folder / "build.json"),
+        }, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        entries += [(source, source.name), (metadata, metadata.name)]
+        temporary = archive.with_name(archive.name + ".tmp")
+        try:
+            with zipfile.ZipFile(str(temporary), "w", zipfile.ZIP_DEFLATED) as zf:
+                for path, name in entries:
+                    zf.write(str(path), name)
+            with zipfile.ZipFile(str(temporary)) as zf:
+                if sorted(zf.namelist()) != sorted(name for _, name in entries):
+                    raise RuntimeError("Release archive file set differs")
+                for path, name in entries:
+                    if zf.read(name) != path.read_bytes():
+                        raise RuntimeError("Incomplete release archive: " + name)
+                if hashlib.sha256(zf.read(binary.name)).hexdigest() != receipt["sha256"]:
+                    raise RuntimeError("Packaged binary checksum mismatch")
+            if source_digest(source_files()) != receipt["source_digest"]:
+                raise RuntimeError("Sources changed during packaging")
+            temporary.replace(archive)
+        finally:
+            if temporary.exists():
+                temporary.unlink()
     checksum = sha256(archive) + "  " + archive.name + "\n"
     (dest / (archive.name + ".sha256")).write_text(checksum, encoding="utf-8")
     print(str(archive))

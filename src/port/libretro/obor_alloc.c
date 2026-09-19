@@ -1002,3 +1002,55 @@ char *__wrap_strdup(const char *s)
     }
     return d;
 }
+
+/* ------------------------------------------------------------- Darwin ---- */
+/* Mach-O has no --wrap equivalent that works on a relocatable partial, so
+ * the Darwin build defines the allocation entry points themselves: every
+ * engine object that calls malloc()/free()/... is renamed with its build
+ * suffix by tools/macho_rewrite.py (see MODIFICATIONS.md), which keeps the
+ * glue's own references bound to libSystem while the engines reach the
+ * arena.
+ *
+ * The real allocator is reached through the malloc zone that owns a given
+ * pointer: dlsym(RTLD_NEXT, "malloc") would re-enter this file's malloc
+ * while dyld builds the lookup. */
+#if defined(__APPLE__)
+#include <malloc/malloc.h>
+
+void *__real_malloc(size_t n)
+{
+    return malloc_zone_malloc(malloc_default_zone(), n);
+}
+
+void *__real_calloc(size_t n, size_t sz)
+{
+    return malloc_zone_calloc(malloc_default_zone(), n, sz);
+}
+
+void *__real_realloc(void *p, size_t n)
+{
+    if (!p)
+        return malloc_zone_malloc(malloc_default_zone(), n);
+    malloc_zone_t *zone = malloc_zone_from_ptr(p);
+    if (!zone) {
+        errno = EINVAL;
+        return NULL;
+    }
+    return malloc_zone_realloc(zone, p, n);
+}
+
+void __real_free(void *p)
+{
+    if (!p)
+        return;
+    malloc_zone_t *zone = malloc_zone_from_ptr(p);
+    if (zone)
+        malloc_zone_free(zone, p);
+}
+
+void *malloc(size_t n) { return __wrap_malloc(n); }
+void *calloc(size_t n, size_t sz) { return __wrap_calloc(n, sz); }
+void *realloc(void *p, size_t n) { return __wrap_realloc(p, n); }
+void free(void *p) { __wrap_free(p); }
+char *strdup(const char *s) { return __wrap_strdup(s); }
+#endif

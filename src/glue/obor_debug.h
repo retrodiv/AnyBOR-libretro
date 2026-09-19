@@ -20,6 +20,9 @@
  *                    windows: x86_64-w64-mingw32-addr2line -f
  *                               -e anybor_libretro.dll.sym 0x<base+rva>
  *                             (base = ImageBase from objdump -p ....dll.sym)
+ *                    macos:   atos -o anybor_libretro.dylib.sym -l <base>
+ *                             0x<base+rva>   (base = the image base printed
+ *                             in the log header; the dylib is slid by dyld)
  *   obor_debug.log — breadcrumbs (boot steps, pristine capture, engine
  *                    selection), fflush'd per line so a crash mid-step
  *                    loses nothing.
@@ -41,8 +44,13 @@
 #else
 #include <signal.h>
 #include <ucontext.h>
+#if defined(__APPLE__)
+/* Mach-O module range comes from dyld, not from the ELF phdr walk. */
+#include "obor_macho.h"
+#else
 #include <link.h>
-#if defined(__GLIBC__)
+#endif
+#if defined(__GLIBC__) || defined(__APPLE__)
 #include <execinfo.h>
 #endif
 #endif
@@ -132,7 +140,7 @@ static void obor_dbg(const char *fmt, ...)
 
 /* ---- crash reporter ---------------------------------------------------- */
 
-#if !defined(_WIN32)
+#if !defined(_WIN32) && !defined(__APPLE__)
 struct obor_crash_range {
     uintptr_t self, lo, hi;
 };
@@ -178,6 +186,12 @@ static void obor_module_range(uintptr_t *lo, uintptr_t *hi)
         *lo = (uintptr_t)mod;
         *hi = (uintptr_t)mod + nt->OptionalHeader.SizeOfImage;
     }
+#elif defined(__APPLE__)
+    uint64_t low = 0, high = 0;
+    obor_macho_image_range(obor_macho_own_header((const void *)&obor_module_range),
+                           &low, &high);
+    *lo = (uintptr_t)low;
+    *hi = (uintptr_t)high;
 #else
     struct obor_crash_range ctx = {
         (uintptr_t)(const void *)&obor_module_range, 0, 0};
@@ -253,7 +267,18 @@ static void obor_posix_crash(int sig, siginfo_t *si, void *ucv)
                 si ? si->si_addr : (void *)0);
         uintptr_t pc = 0;
         ucontext_t *uc = (ucontext_t *)ucv;
+#if defined(__APPLE__)
+        /* Darwin reports registers through the mcontext64 of the ucontext. */
 #if defined(__x86_64__)
+        if (uc && uc->uc_mcontext)
+            pc = (uintptr_t)uc->uc_mcontext->__ss.__rip;
+#elif defined(__aarch64__)
+        if (uc && uc->uc_mcontext)
+            pc = (uintptr_t)uc->uc_mcontext->__ss.__pc;
+#else
+        (void)uc;
+#endif
+#elif defined(__x86_64__)
         if (uc)
             pc = (uintptr_t)uc->uc_mcontext.gregs[REG_RIP];
 #elif defined(__aarch64__)
@@ -264,7 +289,7 @@ static void obor_posix_crash(int sig, siginfo_t *si, void *ucv)
 #endif
         uintptr_t lo = 0, hi = 0;
         obor_crash_head(f, &lo, &hi, pc);
-#if defined(__GLIBC__)
+#if defined(__GLIBC__) || defined(__APPLE__)
         void *bt[64];
         int n = backtrace(bt, 64);
         for (int i = 0; i < n; i++)

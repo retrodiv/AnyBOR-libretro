@@ -8,11 +8,15 @@ import argparse
 import os
 import shlex
 import subprocess
+import sys
 import tempfile
 from pathlib import Path
 import make_fixture
 import release
 import crt_reference
+
+DEFAULT_CORE = release.ROOT / ("anybor_libretro.dylib" if sys.platform == "darwin"
+                               else "anybor_libretro.so")
 
 
 def read_ppm(path):
@@ -27,7 +31,7 @@ def read_ppm(path):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--core", default=str(release.ROOT / "anybor_libretro.so"))
+    parser.add_argument("--core", default=str(DEFAULT_CORE))
     args = parser.parse_args()
     root = release.ROOT
     core = Path(args.core).resolve()

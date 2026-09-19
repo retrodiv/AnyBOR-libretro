@@ -9,7 +9,7 @@
       "upstream_sha256": "fc53280baa67ef58e507cea648f8838fad9abe675fa098a5dc99dfe4ecd0e75c"
     },
     "Makefile.libretro": {
-      "distributed_sha256": "c8590328b3ea70e568efe3861638c4c2055d2f8af70d2fe574a90ee489a43081",
+      "distributed_sha256": "28a9eed8ac0dcd19113b136e1a52f262b35ab19b1878ece7f47f5999db0620f3",
       "modified": true,
       "origin": "Project libretro build overlay",
       "summary": "Supply the shared libretro engine build and symbol-isolation rules.",
@@ -17,14 +17,15 @@
       "upstream_sha256": null
     },
     "openbor.c": {
-      "distributed_sha256": "e3811dbf919125f405c50d963e41d00c4c802b54ed5f7adcf5b8dd9ef26592e5",
+      "distributed_sha256": "1ffc85d492ef80a0c53339209f4d9cec5f2d14052f90144a4667111783345d0f",
       "modified": true,
-      "summary": "Apply the port's engine corrections. Leave multiplayer slots without a selected model available to join even if game scripts preassign lives to them. Let a missing basename-only PAK self-check read the active frontend content after it has been validated and prepared. Allocate each model's animation pointer table through the highest animation index that model uses, and bound cache, copy and cleanup paths to that capacity. Resize repeated weapon lists and detach borrowed lists before replacing their entries. Guard an optional entity animation interpreter before reading its reset state. Share identical immutable animation-frame draw methods with reference-counted ownership.",
+      "summary": "Apply the port's engine corrections and select the PC video configuration on macOS. Leave multiplayer slots without a selected model available to join even if game scripts preassign lives to them. Let a missing basename-only PAK self-check read the active frontend content after it has been validated and prepared. Allocate each model's animation pointer table through the highest animation index that model uses, and bound cache, copy and cleanup paths to that capacity. Resize repeated weapon lists and detach borrowed lists before replacing their entries. Guard an optional entity animation interpreter before reading its reset state. Share identical immutable animation-frame draw methods with reference-counted ownership.",
       "topics": [
         "active-content-pak-aliases",
         "animation-draw-method-storage",
         "animation-memory-layout",
         "animation-script-safety",
+        "darwin-platform-support",
         "empty-player-slot-safety",
         "record-dates-and-file-notices",
         "repeated-weapon-lists"
@@ -194,10 +195,11 @@
       "upstream_sha256": "a7ff19177bb6c3d61095d5d8aafb335b311654bbe89a37958bce8eaae8d981a0"
     },
     "source/gamelib/packfile.c": {
-      "distributed_sha256": "341a2603ccf5b1af15e777b93e3f38fb3538ac1ffd6d1f07d1e471e765412c99",
+      "distributed_sha256": "fa7bec42db307205f39b9ab4ab1a9e00a7d85b9757e8d8e3315d1dcbc181834a",
       "modified": true,
-      "summary": "Repair PAK handles after state loads, close resources on reset, and prune unused frontend APIs.",
+      "summary": "Repair PAK handles after state loads, close resources on reset, prune unused frontend APIs, and compile the case-insensitive loose-file search on macOS.",
       "topics": [
+        "darwin-platform-support",
         "packfile-state-and-resource-lifecycle",
         "record-dates-and-file-notices",
         "source-selection-and-pruning"
@@ -205,10 +207,11 @@
       "upstream_sha256": "df479e13b71aa9f7e59fdb99998a05d1fec77b8b6d799d8469d8aee08107f51d"
     },
     "source/gamelib/packfile.h": {
-      "distributed_sha256": "b78153aa3506ee440688ed877fdab3ff9bcc566bf383dd613318c80f35a365fe",
+      "distributed_sha256": "14f00ad15c2b38eaca4889e38e0c03e8abad213b3451b16248e5dcc4f925679a",
       "modified": true,
-      "summary": "Remove declarations of unused standalone frontend APIs.",
+      "summary": "Remove declarations of unused standalone frontend APIs and define O_BINARY where macOS lacks it.",
       "topics": [
+        "darwin-platform-support",
         "record-dates-and-file-notices",
         "source-selection-and-pruning"
       ],
@@ -257,9 +260,13 @@
       "upstream_sha256": "aea628c1ab97d06ada78d87cffef625176fb8186190e5d601fc9a575e8f6d40e"
     },
     "source/gamelib/soundmix.c": {
-      "distributed_sha256": "864c598fc63e27c1182aa62b47cdf50724018abf06b091f09a420b08dae5a7d2",
-      "modified": false,
-      "topics": [],
+      "distributed_sha256": "12a773156319509430766037f0fa701babee1832bdc7b51a4c1e5dd7c890c954",
+      "modified": true,
+      "summary": "Stream large decoded samples instead of retaining immutable PCM in rewind state, and map stricmp on macOS.",
+      "topics": [
+        "darwin-platform-support",
+        "record-dates-and-file-notices"
+      ],
       "upstream_sha256": "864c598fc63e27c1182aa62b47cdf50724018abf06b091f09a420b08dae5a7d2"
     },
     "source/gamelib/soundmix.h": {
@@ -411,9 +418,13 @@
       "upstream_sha256": "13907a32a8a5cca5e08e9cdada2ad33cc5217a979350b82cc8a62ae9196d5e0f"
     },
     "source/ramlib/ram.c": {
-      "distributed_sha256": "643dfa21c74b95f7cf8518dfd06a437ecc0c87330de9d22d1d9cdccd78c57696",
-      "modified": false,
-      "topics": [],
+      "distributed_sha256": "7937ec4224bbd476d5905cbd21f2f21d6d7f0d7c5354afc56cdaa44df35de334",
+      "modified": true,
+      "summary": "Read host memory statistics through mach on macOS instead of the glibc-only <malloc.h>.",
+      "topics": [
+        "darwin-platform-support",
+        "record-dates-and-file-notices"
+      ],
       "upstream_sha256": "643dfa21c74b95f7cf8518dfd06a437ecc0c87330de9d22d1d9cdccd78c57696"
     },
     "source/ramlib/ram.h": {
@@ -631,10 +642,11 @@
       "upstream_sha256": "afba2d9766d6b24437982791f9bbe1ed97be5adc8b81f9a5172170e639a3c3ba"
     },
     "source/utils.c": {
-      "distributed_sha256": "bb132a3c916a0329e72d4f2d9c5a280c65439d09608749ac7c716bb35e0152cf",
+      "distributed_sha256": "2fa4792480cfd1893553379ed65ef39b73d17c2a274994aa4881f991d30db460",
       "modified": true,
-      "summary": "Enable libretro platform and PNG helper declarations.",
+      "summary": "Enable libretro platform and PNG helper declarations, and the POSIX directory and mkdir forms macOS also uses.",
       "topics": [
+        "darwin-platform-support",
         "platform-integration",
         "record-dates-and-file-notices"
       ],

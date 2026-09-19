@@ -5,6 +5,7 @@ obj/
 anybor_libretro.so
 anybor_libretro_android.so
 anybor_libretro.dll
+anybor_libretro.dylib
 *.o
 *.sym
 __pycache__/

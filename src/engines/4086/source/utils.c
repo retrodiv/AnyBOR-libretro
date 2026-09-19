@@ -3,7 +3,8 @@
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
  * Upstream code retains its original license and notices.
- * Enable libretro platform and PNG helper declarations.
+ * Enable libretro platform and PNG helper declarations, and the POSIX
+ * directory and mkdir forms macOS also uses.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/4086.md
  * at the source repository root. Original notices follow below.
@@ -31,11 +32,11 @@
 #include "openbor.h"
 #include "packfile.h"
 
-#if PSP || WIN || LINUX || GP2X || OPENDINGUX || SYMBIAN
+#if PSP || WIN || LINUX || GP2X || OPENDINGUX || SYMBIAN || defined(DARWIN)
 #include <dirent.h>
 #endif
 
-#if GP2X || LINUX || OPENDINGUX
+#if GP2X || LINUX || OPENDINGUX || defined(DARWIN)
 #include <sys/stat.h>
 #endif
 
@@ -75,7 +76,7 @@
 #include "savepng.h"
 #endif
 
-#if PSP || GP2X || LINUX || OPENDINGUX || WII || SYMBIAN
+#if PSP || GP2X || LINUX || OPENDINGUX || WII || SYMBIAN || defined(DARWIN)
 #define MKDIR(x) mkdir(x, 0777)
 #else
 #define MKDIR(x) mkdir(x)

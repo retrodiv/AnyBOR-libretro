@@ -1,3 +1,15 @@
+/* AnyBOR modification record: 2026-09-12.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Stream large decoded samples instead of retaining immutable PCM in rewind
+ * state, and map stricmp on macOS.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/3842.md
+ * at the source repository root. Original notices follow below.
+ */
+
 /*
  * OpenBOR - http://www.LavaLit.com
  * -----------------------------------------------------------------------
@@ -51,7 +63,7 @@ Caution: move vorbis headers here otherwise the structs will
 #include "borendian.h"
 
 
-#if LINUX || GP2X || OPENDINGUX || SYMBIAN
+#if LINUX || GP2X || OPENDINGUX || SYMBIAN || defined(DARWIN)
 #define stricmp strcasecmp
 #endif
 

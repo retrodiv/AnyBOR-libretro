@@ -33,3 +33,26 @@ FILE *__wrap_fopen(const char *path, const char *mode)
     }
     return __real_fopen(path, mode);
 }
+
+/* ------------------------------------------------------------- Darwin ---- */
+/* Matching the allocator interposers in obor_alloc.c: the Darwin engine build
+ * renames every symbol an engine defines, so this fopen() only captures the
+ * engine's own calls while the glue keeps libSystem's. */
+#if defined(__APPLE__)
+#include <dlfcn.h>
+
+FILE *__real_fopen(const char *path, const char *mode)
+{
+    static FILE *(*original)(const char *, const char *);
+    if (!original) {
+        *(void **)(&original) = dlsym(RTLD_NEXT, "fopen");
+        if (!original) {
+            errno = ENOSYS;
+            return NULL;
+        }
+    }
+    return original(path, mode);
+}
+
+FILE *fopen(const char *path, const char *mode) { return __wrap_fopen(path, mode); }
+#endif

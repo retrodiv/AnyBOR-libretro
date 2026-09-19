@@ -26,22 +26,29 @@ make platform=win64              # MinGW-w64 x86-64 cross toolchain
 make TARGET=linux-aarch64        # GNU ARM64 cross toolchain
 make TARGET=recalbox-aarch64     # ARM64, GLIBC ceiling 2.38
 ANDROID_NDK=/path/to/ndk make platform=android
+make platform=osx                # native macOS, Intel or Apple Silicon
 make check
 make release                    # ZIP and SHA-256 file under dist/
-make source-release             # complete source ZIP, without caches or binaries
+make source-release             # optional source tar.gz; also included in each release ZIP
 ```
 
-The libraries are named `anybor_libretro.so`, `anybor_libretro.dll` and
-`anybor_libretro_android.so`. `CC`, `CXX`, `AR`, `LD`, `OBJCOPY`, `STRIP`,
-`CFLAGS`, `CXXFLAGS`, `LDFLAGS` and `NASM` can select an installed toolchain.
+The libraries are named `anybor_libretro.so`, `anybor_libretro.dll`,
+`anybor_libretro_android.so` and `anybor_libretro.dylib`. `CC`, `CXX`, `AR`,
+`LD`, `OBJCOPY`, `STRIP`, `CFLAGS`, `CXXFLAGS`, `LDFLAGS` and `NASM` can select
+an installed toolchain. On macOS the build selects `clang`/`clang++` and the
+system linker, and accepts the `LIBRETRO_APPLE_PLATFORM` and
+`LIBRETRO_APPLE_ISYSROOT` variables the libretro `osx-arm64` recipe exports.
 Set `NUMPROC` or `JOBS` to limit parallel compilation, and `OBOR_BUILD_ROOT`
 to move temporary outputs outside this directory. Dependencies are built
 from `src/deps/`; there is no download or prebuilt-library fallback.
 
 Only 64-bit x86 and ARM targets are supported. Android uses ARM64 and API 24
-or later. `jni/Android.mk` and `jni/Application.mk` provide the ndk-build
-entry point used by the libretro Android runner. `.gitlab-ci.yml` uses the
-libretro CI templates; GitHub Actions also compiles and packages the core.
+or later. macOS targets Intel (10.13 or newer) and Apple Silicon (11.0 or
+newer) and links only against `libSystem`. `jni/Android.mk` and
+`jni/Application.mk` provide the ndk-build entry point used by the libretro
+Android runner. `.gitlab-ci.yml` uses the libretro CI templates; GitHub Actions
+also compiles and packages the core, including native macOS Intel and Apple
+Silicon jobs.
 Availability in RetroArch's Core Updater is managed by the libretro project.
 The required submission files, target commands and external registration steps
 are listed in [docs/PUBLISHING.md](docs/PUBLISHING.md). The core's frontend
@@ -152,8 +159,9 @@ written permission from the OpenBOR Team.** Free redistribution must retain
 its terms and all other applicable notices. The port's BSD-3-Clause license does not
 replace engine or dependency licenses. Read [LICENSES.md](LICENSES.md).
 
-`make release` packages the exact binary with its license dossier and build
-receipt. The complete dossier is also embedded in every core library; when content is
+`make release` packages the exact binary with its license dossier, build
+receipt and matching sources in a `source.tar.gz`. `PACKAGE.json` records the
+binary and source-archive hashes. The complete dossier is also embedded in every core library; when content is
 loaded, the core attempts to write it as `anybor-license-notices.txt` in the
 frontend's save directory. This preserves access to notices
 when an updater transports a bare DLL/SO. `NOTICE.txt` is the same dossier

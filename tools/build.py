@@ -22,7 +22,7 @@ SRC = HERE / "src"
 CORE = "anybor_libretro"
 BUILD_ROOT = Path(os.path.abspath(os.path.expanduser(
     os.environ.get("OBOR_BUILD_ROOT", str(HERE / ".build")))))
-JOBS = max(1, int(os.environ.get("NUMPROC", os.environ.get("JOBS", min(8, os.cpu_count() or 4)))))
+JOBS = max(1, int(os.environ.get("NUMPROC", os.environ.get("JOBS", min(4, os.cpu_count() or 4)))))
 FIXED_ELF_IMAGE_BASE = "0x600000000000"
 FIXED_PE_IMAGE_BASE = "0x240f10000"
 
@@ -35,6 +35,37 @@ def uses_fixed_elf_image(spec):
 def uses_fixed_pe_image(spec):
     """Return whether this target uses a stable Windows DLL image address."""
     return spec["plat"] == "windows"
+
+
+def uses_macho(spec):
+    """Return whether this target produces a Mach-O image."""
+    return spec["plat"] == "darwin"
+
+
+def arch_flags(spec):
+    """Per-architecture flags a Darwin build must pass to clang and to ld.
+
+    Darwin has no -march-style target selection: the architecture and the
+    deployment floor travel as separate flags and both the compiler and the
+    linker driver must see them.  libretro's macOS runners drive cross builds
+    through LIBRETRO_APPLE_PLATFORM / LIBRETRO_APPLE_ISYSROOT (see the
+    osx-arm64.yml CI template) and export MACOSX_DEPLOYMENT_TARGET, so those
+    take precedence over the target defaults recorded here.
+    """
+    if not uses_macho(spec):
+        return []
+    apple_target = os.environ.get('LIBRETRO_APPLE_PLATFORM')
+    flags = []
+    if apple_target:
+        flags += ['-target', apple_target]
+        sysroot = os.environ.get('LIBRETRO_APPLE_ISYSROOT')
+        if sysroot:
+            flags += ['-isysroot', sysroot]
+    else:
+        flags += ['-arch', spec['arch']]
+    floor = os.environ.get('MACOSX_DEPLOYMENT_TARGET') or spec.get('min_version', '11.0')
+    flags.append('-mmacosx-version-min=' + floor)
+    return flags
 
 
 def android_ndk_root():
@@ -106,6 +137,36 @@ TARGETS = {
         "dep_builds": ["zlib", "libpng", "libogg", "libvorbis", "libvpx"],
         "configure_host": "aarch64-linux-android",
     },
+    # Mach-O targets.  Apple's linker is the only one that implements the
+    # relocatable-link step the engine build depends on, so these build on
+    # macOS (macos-15-intel / macos-15 runners) or through an equally
+    # complete cross toolchain such as OSXCross with a licensed SDK.
+    "macos-x86_64": {
+        "cc": "clang",
+        "cxx": "clang++",
+        "strip": "strip",
+        "plat": "darwin",
+        "ext": ".dylib",
+        "arch": "x86_64",
+        "min_version": "10.13",
+        "glue_link": ["-dynamiclib"],
+        "static_pngz": True,
+        "dep_builds": ["zlib", "libpng", "libogg", "libvorbis", "libvpx"],
+        "configure_host": None,
+    },
+    "macos-arm64": {
+        "cc": "clang",
+        "cxx": "clang++",
+        "strip": "strip",
+        "plat": "darwin",
+        "ext": ".dylib",
+        "arch": "arm64",
+        "min_version": "11.0",
+        "glue_link": ["-dynamiclib"],
+        "static_pngz": True,
+        "dep_builds": ["zlib", "libpng", "libogg", "libvorbis", "libvpx"],
+        "configure_host": None,
+    },
 }
 
 
@@ -172,7 +233,7 @@ def deps_fingerprint(target):
                         ("CFLAGS", "CXXFLAGS", "CPPFLAGS", "LDFLAGS", "NASM", "SOURCE_DATE_EPOCH")},
         "host": spec.get("configure_host"),
         "assembler": tool_identity(os.environ.get("NASM", "nasm")) if spec["arch"] == "x86_64" else None,
-        "cflags": "-O2 -fPIC -fstack-protector-strong",
+        "cflags": " ".join(["-O2", "-fPIC", "-fstack-protector-strong"] + arch_flags(spec)),
         "deps": {n: pin["deps"][n] for n in sorted(dep_names)},
         "sources": {str(p.relative_to(SRC)): sha256_file(p)
                     for n in sorted(dep_names) for p in sorted((SRC / "deps" / n).rglob("*"))
@@ -212,7 +273,13 @@ def build_dep(target, name, fingerprint):
     env["CXX"] = spec["cxx"]
     env["AR"] = spec["ar"]
     env["RANLIB"] = spec["ranlib"]
-    env["CFLAGS"] = "-O2 -fPIC -fstack-protector-strong " + os.environ.get("CFLAGS", "")
+    # Darwin builds carry the architecture and deployment floor on every
+    # compile and link: the checked-in dependency sources are shared between
+    # the two Mach-O targets.
+    darwin = " ".join(arch_flags(spec))
+    env["CFLAGS"] = "-O2 -fPIC -fstack-protector-strong " + darwin + " " + os.environ.get("CFLAGS", "")
+    if darwin:
+        env["LDFLAGS"] = darwin + " " + os.environ.get("LDFLAGS", "")
     host = (["--host=" + spec["configure_host"]]
             if spec.get("configure_host") else [])
     if name == "zlib":
@@ -229,7 +296,7 @@ def build_dep(target, name, fingerprint):
     elif name == "libpng":
         run(["sh", "./configure", "--prefix=" + str(prefix), "--disable-shared",
              "--enable-static", "--disable-tests", "--disable-tools", "CPPFLAGS=-I" + str(prefix / "include"),
-             "LDFLAGS=-L" + str(prefix / "lib"), *host], src, env)
+             "LDFLAGS=-L" + str(prefix / "lib") + ((" " + darwin) if darwin else ""), *host], src, env)
         run(["make", "-s", "-j" + str(JOBS), "install"], src, env)
     elif name == "libogg":
         run(["sh", "./configure", "--prefix=" + str(prefix), "--disable-shared",
@@ -240,12 +307,14 @@ def build_dep(target, name, fingerprint):
         run(["sh", "./configure", "--prefix=" + str(prefix), "--disable-shared",
              "--enable-static", "--disable-dependency-tracking", "--with-ogg=" + str(prefix),
              "CPPFLAGS=-I" + str(prefix / "include"),
-             "LDFLAGS=-L" + str(prefix / "lib"), *host], src, env)
+             "LDFLAGS=-L" + str(prefix / "lib") + ((" " + darwin) if darwin else ""), *host], src, env)
         for directory in ("lib", "include"):
             run(["make", "-s", "-C", directory, "-j" + str(JOBS), "install"], src, env)
     elif name == "libvpx":
         if spec["plat"] == "windows": vpx_target = "x86_64-win64-gcc"
         elif spec.get("android"): vpx_target = "arm64-android-gcc"
+        elif uses_macho(spec): vpx_target = ("arm64-darwin-gcc" if spec["arch"] == "arm64"
+                                             else "x86_64-darwin-gcc")
         elif spec["arch"] == "aarch64": vpx_target = "arm64-linux-gcc"
         else: vpx_target = "x86_64-linux-gcc"
         cfg = ["sh", "./configure", "--prefix=" + str(prefix),
@@ -348,7 +417,13 @@ def build_engine(target, eng, spec, outdir, check_only=False):
     # Make's timestamps alone cannot detect compiler/flag changes or a source
     # regenerated with an older mtime. Fingerprint the actual local inputs.
     engine_flags = os.environ.get("CFLAGS", "")
-    if uses_fixed_elf_image(spec):
+    if uses_macho(spec):
+        # Darwin has no fixed image address: dyld slides and rebases every
+        # loaded image, so save states take the rebasing path the Android
+        # target uses instead of the fixed-ELF/fixed-PE one.  The architecture
+        # and deployment floor must reach the compiler and the partial link.
+        engine_flags += " " + " ".join(arch_flags(spec))
+    elif uses_fixed_elf_image(spec):
         engine_flags += " -DOBOR_FIXED_ELF_IMAGE=1"
     elif uses_fixed_pe_image(spec):
         engine_flags += " -DOBOR_FIXED_PE_IMAGE=1"
@@ -357,6 +432,8 @@ def build_engine(target, eng, spec, outdir, check_only=False):
                "files": {str(p.relative_to(SRC)): sha256_file(p)
                          for root in (tree, SRC / "port/libretro")
                          for p in sorted(root.rglob("*")) if p.is_file()}}
+    if uses_macho(spec):
+        payload["macho_rewrite"] = sha256_file(HERE / "tools/macho_rewrite.py")
     fingerprint = hashlib.sha256(json.dumps(payload, sort_keys=True).encode()).hexdigest()
     stamp = objdir / ".inputs-sha256"
     if check_only:
@@ -377,8 +454,14 @@ def build_engine(target, eng, spec, outdir, check_only=False):
         'PORT_ROOT={0}'.format(SRC / 'port' / 'libretro'),
         'STATIC_PNGZ={0}'.format(1 if spec.get('static_pngz') else 0),
         'EXTRA_EXCLUDE={0}'.format(' '.join(eng.get('exclude', []))),
-        "LDR=" + spec["ld"] + " -Map=" + str(outdir / ("engine-" + build + ".map")),
+        "LDR=" + spec["ld"] + (
+            " -map " + str(outdir / ("engine-" + build + ".map")) if uses_macho(spec)
+            else " -Map=" + str(outdir / ("engine-" + build + ".map"))),
         "OBJCOPY=" + spec["objcopy"],
+        "PYTHON=" + sys.executable,
+        "DARWIN_ARCH=" + spec.get("arch", ""),
+        "DARWIN_MINVER=" + (os.environ.get("MACOSX_DEPLOYMENT_TARGET")
+                            or spec.get("min_version", "11.0")),
         "USER_CFLAGS=" + engine_flags,
     ]
     run(mk, cwd=tree)
@@ -408,10 +491,12 @@ def build_glue(target, spec, outdir):
     # the COMDAT association of per-function .pdata/.xdata (nothing gets
     # collected) and -fdata-sections turns .bss into file-backed .data.
     gc_cflags = (["-ffunction-sections", "-fdata-sections"]
-                 if spec["plat"] != "windows" else [])
-    gc_ldflags = ["-Wl,--gc-sections"] if spec["plat"] != "windows" else []
+                 if spec["plat"] == "linux" else [])
+    gc_ldflags = (["-Wl,--gc-sections"] if spec["plat"] == "linux" else
+                  ["-Wl,-dead_strip"] if uses_macho(spec) else [])
     miniz_o = outdir / "miniz.o"
     run([spec["cc"], "-O2", "-fPIC", "-fvisibility=hidden",
+         *arch_flags(spec),
          "-fstack-protector-strong", *gc_cflags,
          "-ffile-prefix-map=" + str(HERE) + "=.",
          "-c", third / "miniz.c", "-o", miniz_o])
@@ -420,6 +505,7 @@ def build_glue(target, spec, outdir):
     for name in ("obor_transform_vm", "obor_transform_source"):
         obj = outdir / (name + ".o")
         run([spec["cc"], "-O2", "-std=c99", "-fPIC", "-fvisibility=hidden",
+             *arch_flags(spec),
              "-fstack-protector-strong", *gc_cflags,
              "-ffile-prefix-map=" + str(HERE) + "=.",
              "-c", SRC / "glue" / (name + ".c"), "-o", obj])
@@ -443,7 +529,8 @@ def build_glue(target, spec, outdir):
 
     out = outdir / '{0}{1}'.format(core, spec['ext'])
     bss_script = outdir / "state-bss.ld"
-    write_bss_script(bss_script, engines, pe=spec["plat"] == "windows")
+    if not uses_macho(spec):
+        write_bss_script(bss_script, engines, pe=spec["plat"] == "windows")
     cmd = [
         spec["cxx"], "-O2", "-std=c++11", "-fvisibility=hidden",
         "-fstack-protector-strong",
@@ -459,8 +546,22 @@ def build_glue(target, spec, outdir):
         *gc_ldflags,
         *spec["glue_link"],
         *compat_flags,
-        "-Wl,-T," + str(bss_script),
     ]
+    if uses_macho(spec):
+        # Mach-O: no linker script (the per-engine regions come from the
+        # partials), no version script; the exported ABI is an explicit list
+        # because Mach-O has no wildcard version scripts.  The image stays
+        # position independent and dyld is free to slide it, exactly like the
+        # ELF targets that reserve their own address.
+        # Glue uses C++ lifetime syntax but no C++ library, RTTI or exceptions.
+        # Do not introduce a libc++ dependency into the libSystem-only core.
+        cmd += arch_flags(spec) + ["-fno-exceptions", "-fno-rtti", "-nostdlib++"]
+        cmd += ["-Wl,-exported_symbols_list," + str(SRC / "glue" / "exports.macho"),
+                "-Wl,-install_name,@rpath/" + core + ".dylib",
+                "-Wl,-no_uuid",  # reproducible: no random LC_UUID
+                "-lm"]
+    else:
+        cmd += ["-Wl,-T," + str(bss_script)]
     if spec["plat"] == "linux":
         cmd += ["-Wl,-z,relro", "-Wl,-z,now",
                 '-Wl,--version-script={0}'.format(SRC / 'glue' / 'exports.map'),
@@ -477,14 +578,15 @@ def build_glue(target, spec, outdir):
             cmd += ["-Wl,-Ttext-segment=" + FIXED_ELF_IMAGE_BASE, "-lpthread"]
         if not spec.get("static_pngz"):
             cmd += ["-lpng", "-lz"]
-    else:
+    elif spec["plat"] == "windows":
         # PE savestates carry the same module pointers as ELF states.  Disable
         # loader randomization and request the same otherwise-unused high base;
         # retain relocations so an actual collision fails safely at state load.
         cmd += ["-lwinmm", "-lpsapi", "-Wl,-Bstatic", "-lpthread",
                 "-Wl,--image-base," + FIXED_PE_IMAGE_BASE,
                 "-Wl,--disable-dynamicbase"]
-    cmd += ["-Wl,-Map=" + str(outdir / "link.map")]
+    cmd += (["-Wl,-map," + str(outdir / "link.map")] if uses_macho(spec)
+            else ["-Wl,-Map=" + str(outdir / "link.map")])
     cmd += shlex.split(os.environ.get("CXXFLAGS", ""))
     cmd += shlex.split(os.environ.get("LDFLAGS", ""))
     run(cmd)
@@ -497,7 +599,9 @@ def build_glue(target, spec, outdir):
         if not alignment or min(alignment) < 14:
             sys.exit("Android ELF load segments must be aligned to at least 16 KiB.")
     shutil.copy2(str(out), str(out.with_suffix(out.suffix + ".sym")))
-    run([spec["strip"], "--strip-unneeded", out])
+    # Apple's strip has no --strip-unneeded; -x drops exactly the local
+    # symbols the export list already hides from the frontend.
+    run([spec["strip"], "-x" if uses_macho(spec) else "--strip-unneeded", out])
     if spec["plat"] == "windows":
         normalize_pe_metadata(out)
     shutil.copy2(str(out), str(HERE / out.name))
@@ -523,11 +627,18 @@ def configure_target(requested, build_platform):
             inferred_native = True
             command = shlex.split(os.environ.get("CC", "gcc"))
             machine = subprocess.check_output(command + ["-dumpmachine"], universal_newlines=True)
-            requested = "linux-aarch64" if machine.startswith(("aarch64", "arm64")) else "linux-x86_64"
+            if "apple" in machine or "darwin" in machine:
+                # Native macOS: which of the two Mach-O targets this is comes
+                # from the compiler triple, not from the platform argument,
+                # because libretro's runner passes platform=osx for both.
+                requested = ("macos-arm64" if machine.startswith(("aarch64", "arm64"))
+                             else "macos-x86_64")
+            else:
+                requested = "linux-aarch64" if machine.startswith(("aarch64", "arm64")) else "linux-x86_64"
     spec = dict(TARGETS[requested])
     if spec.get("android") and not android_ndk_root():
         sys.exit("Set ANDROID_NDK or NDK_ROOT to an installed Android NDK.")
-    if inferred_native:
+    if inferred_native and not uses_macho(spec):
         spec.update(cc="gcc", cxx="g++")
     spec["cc"] = os.environ.get("CC", spec["cc"])
     cxx_default = spec["cc"][:-3] + "g++" if spec["cc"].endswith("gcc") else spec["cxx"]
@@ -541,7 +652,8 @@ def configure_target(requested, build_platform):
         if spec.get("android"):
             default = ndk + ("ld.lld" if key == "ld" else "llvm-" + executable)
         spec[key] = os.environ.get(key.upper(), default)
-    spec["arch"] = "aarch64" if "aarch64" in requested or spec.get("android") else "x86_64"
+    spec["arch"] = spec.get("arch") or (
+        "aarch64" if "aarch64" in requested or spec.get("android") else "x86_64")
     if spec.get("android"):
         spec["ext"] = "_android.so"
     if spec.get("configure_host"):
