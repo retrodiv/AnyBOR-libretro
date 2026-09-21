@@ -1,3 +1,15 @@
+/* AnyBOR modification record: 2026-09-12.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Restore the header's pragma pack state so including it leaves the caller's
+ * alignment untouched.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/4086.md
+ * at the source repository root. Original notices follow below.
+ */
+
 /*
  * OpenBOR - http://www.chronocrash.com
  * -----------------------------------------------------------------------
@@ -26,7 +38,7 @@
 #define			NO_CODE				-1
 
 
-#pragma pack (1)
+#pragma pack(push, 1)
 typedef struct
 {
     char		magic[6];
@@ -47,7 +59,8 @@ typedef struct
 
 #define anigif_magic 0x464947
 
-#pragma pack(4)
+#pragma pack(pop)
+#pragma pack(push, 4)
 typedef struct
 {
     int magic;
@@ -87,5 +100,7 @@ int anigif_decode_frame(anigif_info *info);
 
 s_screen *anigif_getbuffer(anigif_info *info);
 void anigif_close(anigif_info *info);
+
+#pragma pack(pop)
 
 #endif

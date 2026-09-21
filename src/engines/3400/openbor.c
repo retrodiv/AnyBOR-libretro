@@ -8667,7 +8667,7 @@ char* llHandleCommandSpawnscript(ArgList* arglist, s_spawn_entry* next) {
 
 
 void load_level(char *filename){
-	char *buf;
+	char *buf = NULL;
 	size_t size, len;
 	ptrdiff_t pos, oldpos;
 	char *command;
@@ -16703,7 +16703,6 @@ void didfind_item(entity *other)
 		if(self->weapent && self->weapent->modeldata.typeshot)
 		{
 			self->weapent->modeldata.shootnum += other->modeldata.reload;
-			if(self->weapent->modeldata.shootnum > self->weapent->modeldata.shootnum) self->weapent->modeldata.shootnum = self->weapent->modeldata.shootnum;
 			if(SAMPLE_GET >= 0) sound_play_sample(SAMPLE_GET, 0, savedata.effectvol,savedata.effectvol, 100);
 		}
 		else
@@ -22100,7 +22099,7 @@ void keyboard_setup(int player){
 	ArgList arglist;
 	char argbuf[MAX_ARG_LEN+1] = "";
 	char *buf, *command, *filename = "data/menu.txt",
-	     buttonnames[12][16];
+	     buttonnames[13][16];
 
 	printf("Loading control settings.......\t");
 

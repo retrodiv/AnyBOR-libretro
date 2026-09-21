@@ -43,7 +43,16 @@
 #include <windows.h>
 #else
 #include <signal.h>
+#if defined(__APPLE__) && !defined(_XOPEN_SOURCE)
+/* Apple's ucontext.h refuses to declare the legacy routines without it. */
+#define _XOPEN_SOURCE 600
+#define OBOR_DEBUG_XOPEN_SOURCE_ADDED 1
+#endif
 #include <ucontext.h>
+#if defined(OBOR_DEBUG_XOPEN_SOURCE_ADDED)
+#undef OBOR_DEBUG_XOPEN_SOURCE_ADDED
+#undef _XOPEN_SOURCE
+#endif
 #if defined(__APPLE__)
 /* Mach-O module range comes from dyld, not from the ELF phdr walk. */
 #include "obor_macho.h"

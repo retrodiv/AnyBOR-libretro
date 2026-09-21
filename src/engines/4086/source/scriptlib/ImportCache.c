@@ -101,7 +101,7 @@ error:
  */
 HRESULT ImportNode_Init(ImportNode *self, const char *path)
 {
-    char *scriptText;
+    char *scriptText = NULL;
     int i, size;
     List *list; // more readable than "&self->interpreter.theInstructionList"
 
@@ -137,7 +137,7 @@ HRESULT ImportNode_Init(ImportNode *self, const char *path)
 #ifdef IC_DEBUG
             fprintf(stderr, "ImportNode_Init: %s: %s@%i\n", path, List_GetName(list), i);
 #endif
-            List_InsertAfter(&self->functions, (void *)i, List_GetName(list));
+            List_InsertAfter(&self->functions, (void *)(intptr_t)i, List_GetName(list));
         }
         List_GotoNext(list);
     }
@@ -153,7 +153,7 @@ HRESULT ImportNode_Init(ImportNode *self, const char *path)
     size = List_GetSize(&self->functions);
     for(i = 0; i < size; i++)
     {
-        int index = (int)List_Retrieve(&self->functions);
+        int index = (int)(intptr_t)List_Retrieve(&self->functions);
         List_Update(&self->functions,
                     &(self->interpreter.instructionStorage[index]));
         assert(self->interpreter.instructionStorage[index].OpCode == FUNCDECL);

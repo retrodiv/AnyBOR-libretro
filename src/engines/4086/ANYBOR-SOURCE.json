@@ -9,7 +9,7 @@
       "upstream_sha256": "fc53280baa67ef58e507cea648f8838fad9abe675fa098a5dc99dfe4ecd0e75c"
     },
     "Makefile.libretro": {
-      "distributed_sha256": "28a9eed8ac0dcd19113b136e1a52f262b35ab19b1878ece7f47f5999db0620f3",
+      "distributed_sha256": "973f39786dfdc363da1270cd00134ae11bc2f92c90e9d22177a198edd730d572",
       "modified": true,
       "origin": "Project libretro build overlay",
       "summary": "Supply the shared libretro engine build and symbol-isolation rules.",
@@ -17,12 +17,13 @@
       "upstream_sha256": null
     },
     "openbor.c": {
-      "distributed_sha256": "97935cee50160f198583899b238594f3a0a4fd5d3c13647f00e4b0ddec1aee15",
+      "distributed_sha256": "57f2dbe8247d3f791107593f1a4c3b54974e6817cf6c7dddfa2f09953aa1ecd7",
       "modified": true,
       "summary": "Apply the port's engine corrections and select the PC video configuration on macOS. Leave multiplayer slots without a selected model available to join even if game scripts preassign lives to them. Let a missing basename-only PAK self-check read the active frontend content after it has been validated and prepared. Allocate each model's animation pointer table through the highest animation index that model uses, and bound cache, copy and cleanup paths to that capacity. Resize repeated weapon lists and detach borrowed lists before replacing their entries.",
       "topics": [
         "active-content-pak-aliases",
         "animation-memory-layout",
+        "compiler-warning-cleanup",
         "darwin-platform-support",
         "empty-player-slot-safety",
         "record-dates-and-file-notices",
@@ -31,20 +32,22 @@
       "upstream_sha256": "fa319b01a0cd47dea0921e31eaa3532f614716c72ae3a780c5e2675bdcb0703a"
     },
     "openbor.h": {
-      "distributed_sha256": "9fe9706cc44d37d8e129cb73930a51dee58e980c204371abdc733a25493f8099",
+      "distributed_sha256": "dfc0bef2fdd4a483f32c61c730a0944c2f9efaa3662405c18457d96d696e9069",
       "modified": true,
       "summary": "Allocate collision pointer slots through the highest author-facing index used by each collection. Track each model's allocated animation-table capacity and reject lookups outside it.",
       "topics": [
         "animation-memory-layout",
+        "compiler-warning-cleanup",
         "record-dates-and-file-notices"
       ],
       "upstream_sha256": "3d54f4d40f76c0e51fc30617c5dedd968ab57168a063cd349dc104ae5fc8756b"
     },
     "openborscript.c": {
-      "distributed_sha256": "c12019ccb9e35ac3708ed7aeb8a2e654003f5447b8df2daebb1806bbb74d3f24",
+      "distributed_sha256": "a68bc8caa855be4c80eb52bb296deaee8866f0666d8f3afa559e256c085f8d4c",
       "modified": true,
       "summary": "Keep the dormant constant-lowering diagnostic compatible with the single-value instruction layout.",
       "topics": [
+        "compiler-warning-cleanup",
         "record-dates-and-file-notices",
         "script-memory-layout"
       ],
@@ -69,9 +72,13 @@
       "upstream_sha256": "2020899c73cce34b91f5793396c67fc1815a551fdc0a3270e69b5824fd9c7ec3"
     },
     "source/gamelib/anigif.h": {
-      "distributed_sha256": "b7cf511c85a1587e2dca651911a4fa98d984e64e81a07a08acfec166b6503197",
-      "modified": false,
-      "topics": [],
+      "distributed_sha256": "0b5ca07c7c383b12b88ac8746aaa7481335e8555ae89b4ef0d42f295108f3b71",
+      "modified": true,
+      "summary": "Restore the header's pragma pack state so including it leaves the caller's alignment untouched.",
+      "topics": [
+        "compiler-warning-cleanup",
+        "record-dates-and-file-notices"
+      ],
       "upstream_sha256": "b7cf511c85a1587e2dca651911a4fa98d984e64e81a07a08acfec166b6503197"
     },
     "source/gamelib/bitmap.c": {
@@ -97,9 +104,13 @@
       "upstream_sha256": "54377e86b27c03f1b41abc4cad9bb0466a3ab870cd2f9bec70392715709e32f7"
     },
     "source/gamelib/commands.c": {
-      "distributed_sha256": "06a482b84de6b363ad4af0f779293a2150b3ea9fa00af81795823264cfba5b95",
-      "modified": false,
-      "topics": [],
+      "distributed_sha256": "5a6f98a687492a2baf804671789c257b365e69f1e70f566292a225af109b9748",
+      "modified": true,
+      "summary": "Convert the command-list lookup result to its command enumeration explicitly instead of through a plain pointer cast.",
+      "topics": [
+        "compiler-warning-cleanup",
+        "record-dates-and-file-notices"
+      ],
       "upstream_sha256": "06a482b84de6b363ad4af0f779293a2150b3ea9fa00af81795823264cfba5b95"
     },
     "source/gamelib/commands.h": {
@@ -189,10 +200,11 @@
       "upstream_sha256": "35621ea64c356f8f50e514ac848d090b077b16a8d7e52f5530acf8ff1a633307"
     },
     "source/gamelib/packfile.c": {
-      "distributed_sha256": "c42ea3cab6e5c6ff47a11edd70a31c98e7bdf7645a6f14d881ed32f4003f3062",
+      "distributed_sha256": "aedcde1ad4c6cf0c0c68e9ed56a46c599541228ab2047c84a7eacc8d6835ce69",
       "modified": true,
       "summary": "Repair PAK handles after state loads, close resources on reset, prune unused frontend APIs, and compile the case-insensitive loose-file search on macOS.",
       "topics": [
+        "compiler-warning-cleanup",
         "darwin-platform-support",
         "packfile-state-and-resource-lifecycle",
         "record-dates-and-file-notices",
@@ -254,10 +266,11 @@
       "upstream_sha256": "007f773be5f17eedda442b0be564c42d74d3b5780b869c88538e6fddd8505da7"
     },
     "source/gamelib/soundmix.c": {
-      "distributed_sha256": "8916dabd3df90b70224e0f831a42493893800086a4bb1aaf98aeb14d5952d06c",
+      "distributed_sha256": "b5d3fc723ea5508746939bd1774fd98e5d156016e16d89c00c730c19cebeb858",
       "modified": true,
       "summary": "Stream large decoded samples instead of retaining immutable PCM in rewind state, and map stricmp on macOS.",
       "topics": [
+        "compiler-warning-cleanup",
         "darwin-platform-support",
         "record-dates-and-file-notices"
       ],
@@ -318,9 +331,13 @@
       "upstream_sha256": "9a9d994fe14a181ced3783f185f3f219689afed8461a0150b8a5d79e671b51a4"
     },
     "source/gamelib/transform.h": {
-      "distributed_sha256": "fb55a58e6d90bb5611004305ad3a0290a85715653bb62a943b73b44e7a4b97fc",
-      "modified": false,
-      "topics": [],
+      "distributed_sha256": "158d8de5fd960339dffd01b4ab0ba02d03c410f39366820636808107e2a99826",
+      "modified": true,
+      "summary": "Declare the raster helpers as ordinary functions; the header only declared them inline and the definitions live in transform.c.",
+      "topics": [
+        "compiler-warning-cleanup",
+        "record-dates-and-file-notices"
+      ],
       "upstream_sha256": "fb55a58e6d90bb5611004305ad3a0290a85715653bb62a943b73b44e7a4b97fc"
     },
     "source/gamelib/translation.c": {
@@ -460,10 +477,11 @@
       "upstream_sha256": "a07de58fe3114e86282e178250f054c28fb6f7eea52657d917809b6895c02696"
     },
     "source/scriptlib/ImportCache.c": {
-      "distributed_sha256": "12e5fce7f8b21bf289966d79743ea085ade13c35e337ae61368adcfffebe3345",
+      "distributed_sha256": "2ec13b8089d564d4fb68096d3042d5a86176bcc473072648f564562586d035e5",
       "modified": true,
       "summary": "Guard parser-only import metadata after compilation. Read import metadata only while an interpreter still owns parser state.",
       "topics": [
+        "compiler-warning-cleanup",
         "record-dates-and-file-notices",
         "script-memory-layout"
       ],
@@ -579,9 +597,13 @@
       "upstream_sha256": "e086a602db4889a5755b5e201f714ccee7dcb1b16245b76464daff44011fb57f"
     },
     "source/scriptlib/ScriptVariant.h": {
-      "distributed_sha256": "3559914f0ed49c4222cdb8d5b53aabea847fbcf2acefbe1154540a0473a2c273",
-      "modified": false,
-      "topics": [],
+      "distributed_sha256": "a8c874ad1437cdb418ca98db46de3e4791838b44c7b1951e3322c26f737c1808",
+      "modified": true,
+      "summary": "Declare the cache and variant helpers as ordinary functions; the header only declared them inline and the definitions live in ScriptVariant.c.",
+      "topics": [
+        "compiler-warning-cleanup",
+        "record-dates-and-file-notices"
+      ],
       "upstream_sha256": "3559914f0ed49c4222cdb8d5b53aabea847fbcf2acefbe1154540a0473a2c273"
     },
     "source/scriptlib/Stack.c": {
@@ -621,9 +643,13 @@
       "upstream_sha256": "7c93317f6e6e487d5ce6928fab0d8edf8cfaedf787ab6a0862e02d16e80f1d74"
     },
     "source/scriptlib/depends.h": {
-      "distributed_sha256": "f4a2d729ca3197c409f87b60f1d70d494690a8c24ddbdb50f0511428e7a1dd38",
-      "modified": false,
-      "topics": [],
+      "distributed_sha256": "1639f25b740cf08fecd5aff10fbef34209cdf6c5dc5d012a93747215f9151c85",
+      "modified": true,
+      "summary": "Restore the pragma pack state the script headers rely on instead of leaving it set for every includer.",
+      "topics": [
+        "compiler-warning-cleanup",
+        "record-dates-and-file-notices"
+      ],
       "upstream_sha256": "f4a2d729ca3197c409f87b60f1d70d494690a8c24ddbdb50f0511428e7a1dd38"
     },
     "source/stringptr.c": {

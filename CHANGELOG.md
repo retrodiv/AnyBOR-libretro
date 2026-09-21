@@ -1,5 +1,28 @@
 # Changelog
 
+## 0.1.1 — the macOS targets build
+
+### Recent changes
+
+- Finalize the engine objects for Mach-O during the build: the moved commons are
+  aligned and their references relocated, the arm64 page relocations are
+  migrated, the region segment grows to hold the packed layout and the linker
+  emits the `LC_UUID` dyld requires, so both Mach-O targets link with current
+  Apple linkers.
+- Probe the linker for the `-d` commons switch instead of assuming it: Xcode 15
+  and later define tentative definitions themselves and refuse the option, while
+  older toolchains keep it.
+- Reserve the snapshot arena through macOS's native virtual-memory interface and
+  give Apple Silicon its own free base, so content loading no longer depends on
+  the kernel granting an address hint.
+- Build every engine with the macOS SDK headers and satisfy the SDK's
+  `ucontext` guard.
+- Clear the diagnostics the Apple toolchain reports: room for the button-name
+  table's exit entry and `intptr_t` for the values carried through the
+  pointer-typed sound APIs.
+- Read linker maps tolerantly when a build records its archive members, and stop
+  denying dyld the `LC_UUID` it requires.
+
 ## 0.1.0 — first released version
 
 ### Recent changes

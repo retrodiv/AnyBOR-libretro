@@ -9,7 +9,7 @@
       "upstream_sha256": "b8f3916944f0b5aee216ef7a494820d17ae658336a4680992dc244ebedecf3ea"
     },
     "Makefile.libretro": {
-      "distributed_sha256": "28a9eed8ac0dcd19113b136e1a52f262b35ab19b1878ece7f47f5999db0620f3",
+      "distributed_sha256": "973f39786dfdc363da1270cd00134ae11bc2f92c90e9d22177a198edd730d572",
       "modified": true,
       "origin": "Project libretro build overlay",
       "summary": "Supply the shared libretro engine build and symbol-isolation rules.",
@@ -516,9 +516,13 @@
       "upstream_sha256": "311b82f9740cd02a18e9531a66d2b70bd53f86b72a3502cf72e3fb4acb5dc548"
     },
     "source/openborscript/commands.c": {
-      "distributed_sha256": "12a462821119a0056fb7a955e5c246dae44e6271d146ec11b107c0bedf052344",
-      "modified": false,
-      "topics": [],
+      "distributed_sha256": "777ebc692299cf514bf0c7d53a16adb38aa91aee291286dbfa9228c544ce363a",
+      "modified": true,
+      "summary": "Convert the command-list lookup result to its command enumeration explicitly instead of through a plain pointer cast.",
+      "topics": [
+        "compiler-warning-cleanup",
+        "record-dates-and-file-notices"
+      ],
       "upstream_sha256": "12a462821119a0056fb7a955e5c246dae44e6271d146ec11b107c0bedf052344"
     },
     "source/openborscript/commands.h": {
@@ -840,10 +844,11 @@
       "upstream_sha256": "2441e1bff107106625a69ef3a712bebb0e2954cf018e508b4151f127f6d21826"
     },
     "source/scriptlib/ImportCache.c": {
-      "distributed_sha256": "03c0a70afa732b0ce356653a85c4765993d5ed1ad87369e32e13a8106c78499c",
+      "distributed_sha256": "a6195af31007ca03223f7187fccf50d74419afa47a86cef578b47505eb3c1fcc",
       "modified": true,
       "summary": "Guard parser-only import metadata after compilation. Read import metadata only while an interpreter still owns parser state.",
       "topics": [
+        "compiler-warning-cleanup",
         "record-dates-and-file-notices",
         "script-memory-layout"
       ],

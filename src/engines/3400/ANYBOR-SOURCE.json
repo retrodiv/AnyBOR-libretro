@@ -9,7 +9,7 @@
       "upstream_sha256": "f3801b6b2e30b61eb1254d1fc98676dd28b21c124731833f78e853a47f09a9e0"
     },
     "Makefile.libretro": {
-      "distributed_sha256": "28a9eed8ac0dcd19113b136e1a52f262b35ab19b1878ece7f47f5999db0620f3",
+      "distributed_sha256": "973f39786dfdc363da1270cd00134ae11bc2f92c90e9d22177a198edd730d572",
       "modified": true,
       "origin": "Project libretro build overlay",
       "summary": "Supply the shared libretro engine build and symbol-isolation rules.",
@@ -17,12 +17,13 @@
       "upstream_sha256": null
     },
     "openbor.c": {
-      "distributed_sha256": "2b4c84f3cfeecb4fdb353fe12ea2bc7a8efbc245c9c107f9ca442d413c1c477d",
+      "distributed_sha256": "a109a710900bd8ca9d4dada9e0b4e6ad5f84e5d65d6e45d0e422200de104a497",
       "modified": true,
       "summary": "Apply the port's engine corrections and select the PC video configuration on macOS. Leave multiplayer slots without a selected model available to join even if game scripts preassign lives to them. Let a missing basename-only PAK self-check read the active frontend content after it has been validated and prepared. Allocate each model's animation pointer table through the highest animation index that model uses, and bound cache, copy and cleanup paths to that capacity. Fall back when legacy content names missing model, level, scene or background overrides.",
       "topics": [
         "active-content-pak-aliases",
         "animation-memory-layout",
+        "compiler-warning-cleanup",
         "darwin-platform-support",
         "empty-player-slot-safety",
         "legacy-content-fallbacks",
@@ -31,20 +32,22 @@
       "upstream_sha256": "8d70c8b55eba868e6dfe09d3f1139104195506c83beedf889f3544cabbb48ed8"
     },
     "openbor.h": {
-      "distributed_sha256": "10aa9bc0b98ca542ec121f4939a8a3055e14b71641b45a2d08c277e9a37b116c",
+      "distributed_sha256": "63e8436eb8fe7bf0ce73b9353ab6c9e8cb35d0e4546e60d5d08f4cfa4661f67d",
       "modified": true,
       "summary": "Allocate collision pointer slots through the highest author-facing index used by each collection. Track each model's allocated animation-table capacity and reject lookups outside it.",
       "topics": [
         "animation-memory-layout",
+        "compiler-warning-cleanup",
         "record-dates-and-file-notices"
       ],
       "upstream_sha256": "47e3db32c70d173e16edf0dca15207a185d113cc09cca46685e6589c318bad23"
     },
     "openborscript.c": {
-      "distributed_sha256": "3f6c011ecbdb244262c0eb91a154202d5d84e3b06458379a7baba7a320f672e8",
+      "distributed_sha256": "1e687d0debe4f38f5cfd35cc25def9a2aad6d8a9227215f97dc788e4a39f7cc1",
       "modified": true,
       "summary": "Keep the dormant constant-lowering diagnostic compatible with the single-value instruction layout and map string constants from direct contiguous instruction storage.",
       "topics": [
+        "compiler-warning-cleanup",
         "record-dates-and-file-notices",
         "script-memory-layout"
       ],
@@ -97,9 +100,13 @@
       "upstream_sha256": "654557656bc299e94e0fe149175052d9721608ccd4c051a1aeff100f9448e0c6"
     },
     "source/gamelib/commands.c": {
-      "distributed_sha256": "17c879d9c01b52a667b9049abf0cd198664708bf71d5db2d3d8d41d48aa8c766",
-      "modified": false,
-      "topics": [],
+      "distributed_sha256": "9d0c979e4d75d3da323daafe5e39a090f2a65de773b7886e10330c290def393e",
+      "modified": true,
+      "summary": "Convert the command-list lookup result to its command enumeration explicitly instead of through a plain pointer cast.",
+      "topics": [
+        "compiler-warning-cleanup",
+        "record-dates-and-file-notices"
+      ],
       "upstream_sha256": "17c879d9c01b52a667b9049abf0cd198664708bf71d5db2d3d8d41d48aa8c766"
     },
     "source/gamelib/commands.h": {
@@ -193,10 +200,11 @@
       "upstream_sha256": "a7ff19177bb6c3d61095d5d8aafb335b311654bbe89a37958bce8eaae8d981a0"
     },
     "source/gamelib/packfile.c": {
-      "distributed_sha256": "446ba048c7183a3be0bf3516ca03d9b6e9c2e85a64d780d291db03c4e573a6c7",
+      "distributed_sha256": "4d1163a1c124d5e10d6033c68643ea1666e826c2c253c3be3f3840071d6ec8b9",
       "modified": true,
       "summary": "Repair PAK handles after state loads, close resources on reset, prune unused frontend APIs, and compile the case-insensitive loose-file search on macOS.",
       "topics": [
+        "compiler-warning-cleanup",
         "darwin-platform-support",
         "packfile-state-and-resource-lifecycle",
         "record-dates-and-file-notices",
@@ -234,9 +242,13 @@
       "upstream_sha256": "c3371b58605f5b5f2ebe58b2afaeafb265e92cf8d4fe5d7a371cd3fa0a7e786d"
     },
     "source/gamelib/screen.c": {
-      "distributed_sha256": "ffc299d9e574ecc42c4f0acb214340c8469ee7c007c0e6c9b03975f4bfe71da1",
-      "modified": false,
-      "topics": [],
+      "distributed_sha256": "b72de3ef131993555ad8f9b1b33535a2ae31c2b982882f57d892a33fbb1b1fa8",
+      "modified": true,
+      "summary": "Remove a guard whose only statement assigned the counter to itself.",
+      "topics": [
+        "compiler-warning-cleanup",
+        "record-dates-and-file-notices"
+      ],
       "upstream_sha256": "ffc299d9e574ecc42c4f0acb214340c8469ee7c007c0e6c9b03975f4bfe71da1"
     },
     "source/gamelib/screen.h": {
@@ -352,9 +364,13 @@
       "upstream_sha256": "1edaa8fe5251e08c9a435e095b0c204e3c1aee1a26d9b55e82625f5a40c6c5a3"
     },
     "source/gamelib/types.h": {
-      "distributed_sha256": "205809bfa5fe01289cb7a97cc8358f19249786e08a71e140a136ea01f1c98401",
-      "modified": false,
-      "topics": [],
+      "distributed_sha256": "06d78a6f21f4bc1e3941536f591855a8432a9c18010541603c2bce07fc858be1",
+      "modified": true,
+      "summary": "Declare the draw-method one-bit flags unsigned so the constant assignments the engine already writes store the intended value.",
+      "topics": [
+        "compiler-warning-cleanup",
+        "record-dates-and-file-notices"
+      ],
       "upstream_sha256": "205809bfa5fe01289cb7a97cc8358f19249786e08a71e140a136ea01f1c98401"
     },
     "source/gfxlib/gfxtypes.h": {

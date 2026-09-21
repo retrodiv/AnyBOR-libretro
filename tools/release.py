@@ -182,7 +182,10 @@ def record_build(target, spec, outdir, expected_sources):
                          if line.strip().startswith("NEEDED"))
     members = []
     archives = {}
-    maps = "\n".join(p.read_text(encoding="utf-8") for p in sorted(outdir.glob("*.map")))
+    # The map is scanned for archive members only, and a linker may write
+    # raw symbol bytes into it, so unreadable sequences are replaced.
+    maps = "\n".join(p.read_text(encoding="utf-8", errors="replace")
+                     for p in sorted(outdir.glob("*.map")))
     for path, member in re.findall(r"([^\s()]+\.a)\(([^()]+)\)", maps):
         archive = Path(path)
         entry = {"archive": archive.name, "member": member}

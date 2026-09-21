@@ -102,7 +102,7 @@ error:
  */
 HRESULT ImportNode_Init(ImportNode *self, const char *path)
 {
-    char *scriptText;
+    char *scriptText = NULL;
     int i, size;
     List *list; // more readable than "&self->interpreter.theInstructionList"
 

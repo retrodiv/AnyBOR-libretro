@@ -176,6 +176,19 @@ Source: src/engines/3400/source/pnglib/savepng.c
  * at the source repository root. Original notices follow below.
  */
 
+Source: src/engines/4432/source/gamelib/commands.c
+/* AnyBOR modification record: 2026-09-12.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Convert the command-list lookup result to its command enumeration
+ * explicitly instead of through a plain pointer cast.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/4432.md
+ * at the source repository root. Original notices follow below.
+ */
+
 Source: src/engines/8020/source/gamelib/models.h
 /*
  * OpenBOR - http://www.chronocrash.com
@@ -422,6 +435,19 @@ Source: src/deps/libvpx/vpx_dsp/arm/vpx_convolve8_avg_vert_filter_type1_neon.asm
 ;    r5 =>  ht
 ;    r3 =>  wd
 
+Source: src/engines/6412/source/openborscript/commands.c
+/* AnyBOR modification record: 2026-09-12.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Convert the command-list lookup result to its command enumeration
+ * explicitly instead of through a plain pointer cast.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/6412.md
+ * at the source repository root. Original notices follow below.
+ */
+
 Source: src/engines/4086/source/gamelib/packfile.c
 /* AnyBOR modification record: 2026-09-12.
  * Port maintained by retrodiv <retrodiv@proton.me>.
@@ -641,6 +667,18 @@ Source: src/deps/libogg/src/framing.c
 
 Source: src/glue/obor_engines.h
 /* Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+
+Source: src/engines/3842/source/gamelib/transform.c
+/* AnyBOR modification record: 2026-09-12.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Drop comma expressions that read the variables they were meant to declare.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/3842.md
+ * at the source repository root. Original notices follow below.
+ */
 
 Source: src/engines/4432/source/webmlib/samplecvt.c, src/engines/4432/source/webmlib/vorbisfpu.h, src/engines/6412/source/webmlib/samplecvt.c, src/engines/6412/source/webmlib/vorbisfpu.h, src/engines/8020/source/webmlib/samplecvt.c, src/engines/8020/source/webmlib/vorbisfpu.h, src/engines/4432/source/webmlib/samplecvt.c, src/engines/4432/source/webmlib/vorbisfpu.h, src/engines/6412/source/webmlib/samplecvt.c, src/engines/6412/source/webmlib/vorbisfpu.h, src/engines/8020/source/webmlib/samplecvt.c, src/engines/8020/source/webmlib/vorbisfpu.h
 /* This code was derived from code carrying the following copyright notice:
@@ -886,6 +924,19 @@ Source: src/engines/4432/source/webmlib/nestegg/nestegg.c, src/engines/4432/sour
  *
  * This program is made available under an ISC-style license.  See the
  * accompanying file LICENSE for details.
+ */
+
+Source: src/engines/4432/source/gamelib/anigif.h
+/* AnyBOR modification record: 2026-09-12.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Restore the header's pragma pack state so including it leaves the caller's
+ * alignment untouched.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/4432.md
+ * at the source repository root. Original notices follow below.
  */
 
 Source: src/engines/8020/source/gamelib/filecache.c
@@ -1429,6 +1480,18 @@ Source: src/engines/3400/openbor.c, src/engines/3400/openborscript.c, src/engine
  * Copyright (c) 2004 - 2011 OpenBOR Team
  */
 
+Source: src/engines/3400/source/gamelib/screen.c
+/* AnyBOR modification record: 2026-09-12.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Remove a guard whose only statement assigned the counter to itself.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/3400.md
+ * at the source repository root. Original notices follow below.
+ */
+
 Source: src/engines/4432/source/gamelib/borendian.h
 /* AnyBOR modification record: 2026-09-12.
  * Port maintained by retrodiv <retrodiv@proton.me>.
@@ -1629,6 +1692,19 @@ Source: src/engines/3842/source/scriptlib/Instruction.h
  * replacements.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/3842.md
+ * at the source repository root. Original notices follow below.
+ */
+
+Source: src/engines/4432/source/scriptlib/ScriptVariant.h
+/* AnyBOR modification record: 2026-09-12.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Declare the cache and variant helpers as ordinary functions; the header
+ * only declared them inline and the definitions live in ScriptVariant.c.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/4432.md
  * at the source repository root. Original notices follow below.
  */
 
@@ -1921,6 +1997,32 @@ Source: src/engines/4086/openbor.h
  * at the source repository root. Original notices follow below.
  */
 
+Source: src/engines/8020/source/openborscript/commands.c
+/* AnyBOR modification record: 2026-09-12.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Convert the command-list lookup result to its command enumeration
+ * explicitly instead of through a plain pointer cast.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/8020.md
+ * at the source repository root. Original notices follow below.
+ */
+
+Source: src/engines/3400/source/gamelib/commands.c
+/* AnyBOR modification record: 2026-09-12.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Convert the command-list lookup result to its command enumeration
+ * explicitly instead of through a plain pointer cast.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/3400.md
+ * at the source repository root. Original notices follow below.
+ */
+
 Source: src/deps/libvorbis/lib/res0.c
 /********************************************************************
  *                                                                  *
@@ -1956,6 +2058,19 @@ Source: src/deps/libvorbis/lib/lpc.c
    thus we include their copyright below.  The entirety of this file
    is freely redistributable on the condition that both of these
    copyright notices are preserved without modification.  */
+
+Source: src/engines/4086/source/gamelib/transform.h
+/* AnyBOR modification record: 2026-09-12.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Declare the raster helpers as ordinary functions; the header only declared
+ * them inline and the definitions live in transform.c.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/4086.md
+ * at the source repository root. Original notices follow below.
+ */
 
 Source: src/engines/3842/source/utils.c
 /* AnyBOR modification record: 2026-09-12.
@@ -2093,6 +2208,19 @@ Source: src/deps/libpng/pngwio.c
  * use different output methods.  Note that you shouldn't change these
  * functions, but rather write replacement functions and then change
  * them at run time with png_set_write_fn(...).
+ */
+
+Source: src/engines/3842/source/scriptlib/depends.h
+/* AnyBOR modification record: 2026-09-12.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Restore the pragma pack state the script headers rely on instead of
+ * leaving it set for every includer.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/3842.md
+ * at the source repository root. Original notices follow below.
  */
 
 Source: src/engines/3400/source/ramlib/ram.c
@@ -2355,6 +2483,19 @@ Source: src/deps/libpng/pngrtran.c
  * in pngtrans.c.
  */
 
+Source: src/engines/4432/source/gamelib/transform.h
+/* AnyBOR modification record: 2026-09-12.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Declare the raster helpers as ordinary functions; the header only declared
+ * them inline and the definitions live in transform.c.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/4432.md
+ * at the source repository root. Original notices follow below.
+ */
+
 Source: src/deps/libvorbis/lib/os.h
 /********************************************************************
  *                                                                  *
@@ -2452,6 +2593,19 @@ Source: src/engines/4086/openbor.c, src/engines/4086/source/globals.h, src/engin
  * Copyright (c) 2004 - 2013 OpenBOR Team
  */
 
+Source: src/engines/4086/source/scriptlib/depends.h
+/* AnyBOR modification record: 2026-09-12.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Restore the pragma pack state the script headers rely on instead of
+ * leaving it set for every includer.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/4086.md
+ * at the source repository root. Original notices follow below.
+ */
+
 Source: src/engines/4086/source/scriptlib/ImportCache.c
 /* AnyBOR modification record: 2026-09-12.
  * Port maintained by retrodiv <retrodiv@proton.me>.
@@ -2530,6 +2684,19 @@ Source: src/engines/4086/source/utils.c
  * instead of the glibc-only <malloc.h>.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/4086.md
+ * at the source repository root. Original notices follow below.
+ */
+
+Source: src/engines/3842/source/gamelib/transform.h
+/* AnyBOR modification record: 2026-09-12.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Declare the raster helpers as ordinary functions; the header only declared
+ * them inline and the definitions live in transform.c.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/3842.md
  * at the source repository root. Original notices follow below.
  */
 
@@ -3365,6 +3532,19 @@ Source: src/deps/libvpx/vpx_dsp/arm/idct4x4_1_add_neon.asm
 ;  file in the root of the source tree.
 ;
 
+Source: src/engines/4086/source/gamelib/anigif.h
+/* AnyBOR modification record: 2026-09-12.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Restore the header's pragma pack state so including it leaves the caller's
+ * alignment untouched.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/4086.md
+ * at the source repository root. Original notices follow below.
+ */
+
 Source: src/engines/3400/version.h, src/engines/3842/version.h, src/engines/4086/version.h, src/engines/4432/version.h, src/engines/6412/version.h, src/engines/8020/version.h, src/port/libretro/obor_files.c, src/port/libretro/obor_script_compact.h, src/port/libretro/obor_state_copy.h, src/glue/obor_crt.h, src/glue/obor_legacy_api.h, src/glue/obor_packed_prepare.h, src/glue/obor_pak_repair.h, src/glue/obor_pak_validate.h, src/glue/obor_state_padding.h, src/glue/obor_storage.h, src/glue/obor_transform.h, src/glue/obor_zip_path.h
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
@@ -3397,6 +3577,19 @@ Source: src/deps/libogg/src/bitwise.c
   function: packing variable sized words into an octet stream
 
  ********************************************************************/
+
+Source: src/engines/3842/source/gamelib/anigif.h
+/* AnyBOR modification record: 2026-09-12.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Restore the header's pragma pack state so including it leaves the caller's
+ * alignment untouched.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/3842.md
+ * at the source repository root. Original notices follow below.
+ */
 
 Source: src/port/libretro/obor_endian.h
 /* SPDX-License-Identifier: BSD-3-Clause
@@ -3495,6 +3688,19 @@ Source: src/engines/8020/source/webmlib/movie_playback.c, src/engines/8020/sourc
  * All rights reserved. See LICENSE in OpenBOR root for license details.
  *
  * Copyright (c) OpenBOR Team
+ */
+
+Source: src/engines/6412/source/scriptlib/ScriptVariant.h
+/* AnyBOR modification record: 2026-09-12.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Declare the cache and variant helpers as ordinary functions; the header
+ * only declared them inline and the definitions live in ScriptVariant.c.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/6412.md
+ * at the source repository root. Original notices follow below.
  */
 
 Source: src/third_party/libretro.h
@@ -3711,6 +3917,19 @@ Source: src/deps/libvorbis/lib/modes/residue_44.h
 
  ********************************************************************/
 
+Source: src/engines/3842/source/gamelib/commands.c
+/* AnyBOR modification record: 2026-09-12.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Convert the command-list lookup result to its command enumeration
+ * explicitly instead of through a plain pointer cast.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/3842.md
+ * at the source repository root. Original notices follow below.
+ */
+
 Source: src/deps/zlib/zutil.c
 /* zutil.c -- target dependent utility functions for the compression library
  * Copyright (C) 1995-2026 Jean-loup Gailly
@@ -3900,6 +4119,19 @@ Source: src/deps/libvorbis/lib/bitrate.c
 
  ********************************************************************/
 
+Source: src/engines/4086/source/scriptlib/ScriptVariant.h
+/* AnyBOR modification record: 2026-09-12.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Declare the cache and variant helpers as ordinary functions; the header
+ * only declared them inline and the definitions live in ScriptVariant.c.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/4086.md
+ * at the source repository root. Original notices follow below.
+ */
+
 Source: src/deps/libpng/png.c
 /* png.c - location for general purpose libpng functions
  *
@@ -3940,6 +4172,19 @@ Source: src/third_party/miniz.c
 
   For more information, please refer to <http://unlicense.org/>
 */
+
+Source: src/engines/4086/source/gamelib/commands.c
+/* AnyBOR modification record: 2026-09-12.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Convert the command-list lookup result to its command enumeration
+ * explicitly instead of through a plain pointer cast.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/4086.md
+ * at the source repository root. Original notices follow below.
+ */
 
 Source: src/engines/6412/source/gamelib/filecache.c
 /* AnyBOR modification record: 2026-09-12.
@@ -4188,6 +4433,19 @@ Source: src/deps/libpng/scripts/prefix.c
  * and license in png.h
  */
 
+Source: src/engines/3842/source/scriptlib/ScriptVariant.h
+/* AnyBOR modification record: 2026-09-12.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Declare the cache and variant helpers as ordinary functions; the header
+ * only declared them inline and the definitions live in ScriptVariant.c.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/3842.md
+ * at the source repository root. Original notices follow below.
+ */
+
 Source: src/deps/libvorbis/lib/modes/floor_all.h
 /********************************************************************
  *                                                                  *
@@ -4303,6 +4561,19 @@ Source: src/deps/zlib/crc32.c
  * This interleaved implementation of a CRC makes use of pipelined multiple
  * arithmetic-logic units, commonly found in modern CPU cores. It is due to
  * Kadatch and Jenkins (2010). See doc/crc-doc.1.0.pdf in this distribution.
+ */
+
+Source: src/engines/4432/source/scriptlib/depends.h
+/* AnyBOR modification record: 2026-09-12.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Restore the pragma pack state the script headers rely on instead of
+ * leaving it set for every includer.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/4432.md
+ * at the source repository root. Original notices follow below.
  */
 
 Source: src/engines/3842/source/gamelib/packfile.h
@@ -4759,6 +5030,19 @@ Source: src/engines/3842/source/gamelib/draw.c
  * Route circle drawing through the port's integer rasterizer.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/3842.md
+ * at the source repository root. Original notices follow below.
+ */
+
+Source: src/engines/3400/source/gamelib/types.h
+/* AnyBOR modification record: 2026-09-12.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Declare the draw-method one-bit flags unsigned so the constant assignments
+ * the engine already writes store the intended value.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/3400.md
  * at the source repository root. Original notices follow below.
  */
 

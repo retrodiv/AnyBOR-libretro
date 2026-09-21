@@ -592,7 +592,7 @@
 //#define     MAX_MOVES             16
 //#define     MAX_MOVE_STEPS        16
 
-#pragma pack (4)
+#pragma pack(push, 4)
 
 typedef struct
 {
@@ -1667,7 +1667,7 @@ float randf(float max);
 int _makecolour(int r, int g, int b);
 int load_colourmap(s_model * model, char *image1, char *image2);
 int load_palette(unsigned char* pal, char* filename);
-void standard_palette();
+void standard_palette(int immediate);
 void change_system_palette(int palindex);
 void unload_background();
 void lifebar_colors();
@@ -1929,5 +1929,7 @@ float getValidFloat(char* text, char* file, char* cmd);
 s_savelevel savelevel[MAX_DIFFICULTIES];
 s_savescore savescore;
 s_savedata savedata;
+
+#pragma pack(pop)
 
 #endif

@@ -1,3 +1,15 @@
+/* AnyBOR modification record: 2026-09-12.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Declare the draw-method one-bit flags unsigned so the constant assignments
+ * the engine already writes store the intended value.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/3400.md
+ * at the source repository root. Original notices follow below.
+ */
+
 /*
  * OpenBOR - http://www.LavaLit.com
  * -----------------------------------------------------------------------
@@ -168,12 +180,12 @@ typedef struct
 	unsigned char* table;
 	void* fp;
 	unsigned fillcolor;
-	int flag:1;
+	unsigned int flag:1;
 	int alpha:8;
 	int remap:8;
-	int flipx:1;
-	int flipy:1;
-	int transbg:1;
+	unsigned int flipx:1;
+	unsigned int flipy:1;
+	unsigned int transbg:1;
 	int fliprotate:1; // entity only, whether the flip is affected by the entity's facing(not the sprite's flip )
 	int rotate:11; // 360 degrees
 	int scalex;

@@ -379,7 +379,7 @@ char *casesearch(const char *dir, const char *filepath)
         }
     }
 
-    if (entry != NULL && entry->d_name != NULL)
+    if (entry != NULL)
     {
         sprintf(fullpath, "%s/%s", dir, entry->d_name);
     }
@@ -403,7 +403,7 @@ char *casesearch(const char *dir, const char *filepath)
 int getFreeHandle(void)
 {
     int h;
-    for(h = 0; h < MAXPACKHANDLES && packhandle[h] > -1; h++); // Find free handle
+    for(h = 0; h < MAXPACKHANDLES && packhandle[h] > -1; h++) { } // Find free handle
     if(h >= MAXPACKHANDLES)
     {
         printf ("no free handles\n"); // since this condition shuts down openbor, we can savely give more info.

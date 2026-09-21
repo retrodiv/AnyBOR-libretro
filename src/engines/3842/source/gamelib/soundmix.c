@@ -317,7 +317,7 @@ int sound_load_sample(char *filename, char *packfilename, int iLog){
 	strcpy(convcache, filename);
 	lc(convcache, strlen(convcache));
 	if(List_FindByName(&samplelist, convcache)) {
-		cache=&soundcache[(int)List_Retrieve(&samplelist)];
+		cache=&soundcache[(int)(intptr_t)List_Retrieve(&samplelist)];
 		if(!cache->sample.sampleptr) {
 			if(!sound_reload_sample(cache->index) && iLog)
 				printf("sound_load_sample can't restore sampleptr from file '%s'!\n", filename);
@@ -335,7 +335,7 @@ int sound_load_sample(char *filename, char *packfilename, int iLog){
 	soundcache[sound_cached].sample = sample;
 
 	List_GotoLast(&samplelist);
-	List_InsertAfter(&samplelist, (void*)sound_cached, convcache);
+	List_InsertAfter(&samplelist, (void*)(intptr_t)sound_cached, convcache);
 	soundcache[sound_cached].index=sound_cached;
 	soundcache[sound_cached].filename=List_GetName(&samplelist);
 

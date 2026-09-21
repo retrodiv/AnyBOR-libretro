@@ -1192,7 +1192,7 @@ if(n<1) n = 1;
 //#define     MAX_MOVES             16
 //#define     MAX_MOVE_STEPS        16
 
-#pragma pack (4)
+#pragma pack(push, 4)
 
 typedef struct
 {
@@ -2500,7 +2500,7 @@ float randf(float max);
 int _makecolour(int r, int g, int b);
 int load_colourmap(s_model *model, char *image1, char *image2);
 int load_palette(unsigned char *pal, char *filename);
-void standard_palette();
+void standard_palette(int immediate);
 void change_system_palette(int palindex);
 void unload_background();
 void lifebar_colors();
@@ -2781,7 +2781,7 @@ void init_videomodes(int log);
 void safe_set(int *arr, int index, int newkey, int oldkey);
 
 void keyboard_setup(int player);
-void inputrefresh();
+void inputrefresh(int playrecmode);
 
 int menu_difficulty();
 void menu_options();
@@ -2808,5 +2808,7 @@ void goto_mainmenu(int);
 
 extern s_savelevel   *savelevel;
 extern s_savescore    savescore;
+
+#pragma pack(pop)
 
 #endif

@@ -964,7 +964,7 @@ if(n<1) n = 1;
 //#define     MAX_MOVES             16
 //#define     MAX_MOVE_STEPS        16
 
-#pragma pack (4)
+#pragma pack(push, 4)
 
 typedef struct
 {
@@ -2224,7 +2224,7 @@ float randf(float max);
 int _makecolour(int r, int g, int b);
 int load_colourmap(s_model *model, char *image1, char *image2);
 int load_palette(unsigned char *pal, char *filename);
-void standard_palette();
+void standard_palette(int immediate);
 void change_system_palette(int palindex);
 void unload_background();
 void lifebar_colors();
@@ -2486,5 +2486,7 @@ int dograb(entity *attacker, entity *target, e_dograb_adjustcheck adjustcheck);
 extern s_savedata     savedata;
 extern s_savelevel   *savelevel;
 extern s_savescore    savescore;
+
+#pragma pack(pop)
 
 #endif

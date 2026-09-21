@@ -1,3 +1,14 @@
+/* AnyBOR modification record: 2026-09-12.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Remove a guard whose only statement assigned the counter to itself.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/3400.md
+ * at the source repository root. Original notices follow below.
+ */
+
 /*
  * OpenBOR - http://www.LavaLit.com
  * -----------------------------------------------------------------------
@@ -25,10 +36,6 @@ static unsigned short asCnt = 0;
 s_screen * allocscreen(int width, int height, int pixelformat)
 {
 	s_screen * screen;
-	if (asCnt == 9)
-	{
-		asCnt = asCnt;
-	}
 	sprintf(asBuf, "as-id: %d", asCnt++);
 	width &= (0xFFFFFFFF-3);
 	if(pixelformat==PIXEL_x8)

@@ -1,3 +1,15 @@
+/* AnyBOR modification record: 2026-09-12.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Convert the command-list lookup result to its command enumeration
+ * explicitly instead of through a plain pointer cast.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/6412.md
+ * at the source repository root. Original notices follow below.
+ */
+
 #include <string.h>
 #include "commands.h"
 #include "globals.h"
@@ -27,22 +39,22 @@ fail:
 
 modelCommands getModelCommand(List *list, char *usercommand)
 {
-    return (modelCommands) getCommandlistCommand(list, usercommand);
+    return (modelCommands)(intptr_t) getCommandlistCommand(list, usercommand);
 }
 
 modelstxtCommands getModelstxtCommand(List *list, char *usercommand)
 {
-    return (modelstxtCommands) getCommandlistCommand(list, usercommand);
+    return (modelstxtCommands)(intptr_t) getCommandlistCommand(list, usercommand);
 }
 
 levelCommands getLevelCommand(List *list, char *usercommand)
 {
-    return (levelCommands) getCommandlistCommand(list, usercommand);
+    return (levelCommands)(intptr_t) getCommandlistCommand(list, usercommand);
 }
 
 levelOrderCommands getLevelOrderCommand(List *list, char *usercommand)
 {
-    return (levelOrderCommands) getCommandlistCommand(list, usercommand);
+    return (levelOrderCommands)(intptr_t) getCommandlistCommand(list, usercommand);
 }
 
 List *prepareList(void)

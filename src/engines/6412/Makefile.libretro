@@ -38,6 +38,19 @@ DARWIN_MINVER  ?= 11.0
 DARWIN_ARCH_FLAG := $(if $(DARWIN_ARCH),-arch $(DARWIN_ARCH),)
 DARWIN_CC_FLAGS  := $(DARWIN_ARCH_FLAG) -mmacosx-version-min=$(DARWIN_MINVER)
 MACHO_REWRITE  ?= $(PYTHON) $(PORT_ROOT)/../../../tools/macho_rewrite.py
+# The tentative definitions that -fcommon produces must reach the rewriter as
+# real definitions: ld64 needs -d for that, while the linker in Xcode 15 and
+# later defines commons itself and refuses the option.  Acceptance is probed
+# by linking a trivial object - not looked up in a version table - so a
+# toolchain that still takes the switch keeps it.
+ifeq ($(origin MACHO_COMMONS_FLAG), undefined)
+MACHO_COMMONS_FLAG := $(shell \
+	mkdir -p $(OBJDIR) && \
+	printf 'int obor_linker_probe;\n' > $(OBJDIR)/linker-probe.c && \
+	$(CC) -c $(OBJDIR)/linker-probe.c -o $(OBJDIR)/linker-probe.o >/dev/null 2>&1 && \
+	$(LDR) -r -d -o $(OBJDIR)/linker-probe.bin $(OBJDIR)/linker-probe.o >/dev/null 2>&1 && \
+	printf '%s' -d)
+endif
 endif
 
 INCS = $(PORT_ROOT) . source source/adpcmlib source/gamelib source/gfxlib \
@@ -169,10 +182,12 @@ ifeq ($(PLATFORM),darwin)
 	# Mach-O: ld -r merges the engine's objects and its static libraries
 	# (the three -wrap groups below are replaced by the allocation
 	# interposers in obor_alloc.c/obor_files.c, which the rewriter keeps
-	# inside the engine's namespace).  -d turns the tentative definitions
-	# that -fcommon produces into real definitions, so every engine static
-	# lands in a section the rewriter can collect.
-	$(LDR) -r -d $(DARWIN_ARCH_FLAG) -o $(OBJDIR)/whole.o $(OBJS) $(DEP_ARCH)
+	# inside the engine's namespace).  MACHO_COMMONS_FLAG is "-d" on
+	# linkers that need it to turn the tentative definitions that -fcommon
+	# produces into real definitions, and empty on linkers that define
+	# commons themselves, so every engine static lands in a section the
+	# rewriter can collect either way.
+	$(LDR) -r $(MACHO_COMMONS_FLAG) $(DARWIN_ARCH_FLAG) -o $(OBJDIR)/whole.o $(OBJS) $(DEP_ARCH)
 	$(MACHO_REWRITE) --input $(OBJDIR)/whole.o --output $(PARTIAL) \
 	    --build $(BUILD_NUM) --section __obss$(BUILD_NUM) \
 	    --abi $(OBJDIR)/keep.txt --manifest $(OBJDIR)/macho-$(BUILD_NUM).json

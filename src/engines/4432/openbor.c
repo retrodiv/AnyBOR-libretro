@@ -11771,7 +11771,7 @@ void load_model_constants()
         if(ParseArgs(&arglist, buf + pos, argbuf))
         {
             command = GET_ARG(0);
-            cmd = getModelCommand(modelstxtcmdlist, command);
+            cmd = (modelstxtCommands)getModelCommand(modelstxtcmdlist, command);
             switch(cmd)
             {
             case CMD_MODELSTXT_MAX_COLLISIONS:
@@ -12050,7 +12050,7 @@ int load_models()
         if(ParseArgs(&arglist, buf + pos, argbuf))
         {
             command = GET_ARG(0);
-            cmd = getModelCommand(modelstxtcmdlist, command);
+            cmd = (modelstxtCommands)getModelCommand(modelstxtcmdlist, command);
             switch(cmd)
             {
             case CMD_MODELSTXT_COMBODELAY:
@@ -12247,14 +12247,11 @@ void unload_levelorder()
                     {
                         free(le->filename);
                     }
-                    if(le->skipselect)
+                    for(t = 0; t < MAX_PLAYERS; t++)
                     {
-                        for(t = 0; t < MAX_PLAYERS; t++)
+                        if(le->skipselect[t])
                         {
-                            if(le->skipselect[t])
-                            {
-                                free(le->skipselect[t]);
-                            }
+                            free(le->skipselect[t]);
                         }
                     }
                 }
@@ -14010,7 +14007,7 @@ void generate_basemap(int map_index, float rx, float rz, float x_size, float z_s
 
 void load_level(char *filename)
 {
-    char *buf;
+    char *buf = NULL;
     size_t size, len, sblen;
     ptrdiff_t pos, oldpos;
     char *command;
@@ -19287,7 +19284,7 @@ void do_attack(entity *e)
             else if(self->animation->counterrange &&	// Has counter range?
                     (self->animpos >= self->animation->counterrange->frame.min && self->animpos <= self->animation->counterrange->frame.max) &&  // Current frame within counter range frames?
                     !self->frozen &&
-                    (self->health > force || (self->health-force <= 0 && COUNTERACTION_CONDITION_ALWAYS_RAGE)) &&   // Rage or not?
+                    (self->health > force || (self->health-force <= 0 && COUNTERACTION_CONDITION_ALWAYS_RAGE != 0)) &&   // Rage or not?
                     // counterrange conditions
                     ( (self->animation->counterrange->condition == COUNTERACTION_CONDITION_ALWAYS) || (self->animation->counterrange->condition == COUNTERACTION_CONDITION_ALWAYS_RAGE) ||
                     (self->animation->counterrange->condition == COUNTERACTION_CONDITION_HOSTILE && e->modeldata.type & them) ||
@@ -21781,8 +21778,8 @@ int reset_backpain(entity *ent)
         if (ent->normaldamageflipdir == DIRECTION_RIGHT) ent->direction = DIRECTION_RIGHT;
         else ent->direction = DIRECTION_LEFT;
 
-        if(ent->direction == DIRECTION_RIGHT) ent->velocity.x = -1*abs(ent->velocity.x);
-        else ent->velocity.x = abs(ent->velocity.x);
+        if(ent->direction == DIRECTION_RIGHT) ent->velocity.x = -1*fabsf(ent->velocity.x);
+        else ent->velocity.x = fabsf(ent->velocity.x);
 
         return 1;
     }
@@ -25908,7 +25905,7 @@ int common_try_wander(entity *target, int dox, int doz)
         mod = -mod;
     }
     //if ((self->sortid / 100) % 2)
-    if (abs(rand32()) % 2)
+    if (rand32() % 2)
     {
         mod = 3 - mod;
     }
@@ -27550,10 +27547,6 @@ void didfind_item(entity *other)
         if(self->weapent && self->weapent->modeldata.typeshot)
         {
             self->weapent->modeldata.shootnum += other->modeldata.reload;
-            if(self->weapent->modeldata.shootnum > self->weapent->modeldata.shootnum)
-            {
-                self->weapent->modeldata.shootnum = self->weapent->modeldata.shootnum;
-            }
             if(SAMPLE_GET >= 0)
             {
                 sound_play_sample(SAMPLE_GET, 0, savedata.effectvol, savedata.effectvol, 100);
@@ -34686,7 +34679,7 @@ void keyboard_setup(int player)
     ArgList arglist;
     char argbuf[MAX_ARG_LEN + 1] = "";
     char *buf, *command, *filename = "data/menu.txt",
-                          buttonnames[btnnum][16];
+                          buttonnames[btnnum + 1][16];
 
     printf("Loading control settings.......\t");
 

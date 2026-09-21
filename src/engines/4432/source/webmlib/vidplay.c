@@ -103,7 +103,7 @@ static webm_context *obor_webm_active;
 
 int webm_read(void *buffer, size_t length, void *userdata)
 {
-    int bytesRead = readpackfile((int)userdata, buffer, length);
+    int bytesRead = readpackfile((int)(intptr_t)userdata, buffer, length);
     if (bytesRead < 0) return -1;
     else if (bytesRead == 0) return 0;
     else return 1;
@@ -111,12 +111,12 @@ int webm_read(void *buffer, size_t length, void *userdata)
 
 int webm_seek(int64_t offset, int whence, void *userdata)
 {
-    return seekpackfile((int)userdata, (int)offset, whence);
+    return seekpackfile((int)(intptr_t)userdata, (int)offset, whence);
 }
 
 int64_t webm_tell(void *userdata)
 {
-    return seekpackfile((int)userdata, 0, SEEK_CUR);
+    return seekpackfile((int)(intptr_t)userdata, 0, SEEK_CUR);
 }
 
 FixedSizeQueue *queue_init(int max_size)
@@ -536,7 +536,7 @@ webm_context *webm_start_playback(const char *path, int volume)
         printf("Error: Unable to open file %s for playback\n", path);
         goto error1;
     }
-    io.userdata = (void*)ctx->packhandle;
+    io.userdata = (void *)(intptr_t)ctx->packhandle;
     if(nestegg_init(&(ctx->nestegg_ctx), io, NULL, -1) < 0) goto error2;
 
     // get number of tracks

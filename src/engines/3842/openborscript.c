@@ -380,7 +380,7 @@ int Script_Save_Local_Variant(Script* cs, char* namelist[])
 		if(!name[0]) break;
 		var = Script_Get_Local_Variant(cs, name);
 		if(var) {
-			_set_var(name, var, (Script*)handle);
+			_set_var(name, var, (Script*)(intptr_t)handle);
 		}
 	}
 	handle += 2; //odd value is safer
@@ -392,7 +392,7 @@ void Script_Load_Local_Variant(Script* cs, int handle)
 	int i;
 	for(i=0; i<=max_global_var_index; i++)
 	{
-		if(global_var_list[i]->owner == (Script*)handle &&
+		if(global_var_list[i]->owner == (Script*)(intptr_t)handle &&
 			global_var_list[i]->key[0]) {
 			_set_var(global_var_list[i]->key, &(global_var_list[i]->value), cs);
 			global_var_list[i]->key[0] = 0;
@@ -2483,16 +2483,8 @@ HRESULT openbor_strleft(ScriptVariant** varlist , ScriptVariant** pretvar, int p
 	strncpy(tempstr, (char*)StrCache_Get(varlist[0]->strVal), varlist[1]->lVal);
 	ScriptVariant_Clear(*pretvar);
 
-	if (tempstr != NULL)
-	{
-		ScriptVariant_ChangeType(*pretvar, VT_STR);
-		strcpy(StrCache_Get((*pretvar)->strVal),tempstr);
-	}
-	else
-	{
-		 ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
-		(*pretvar)->lVal = -1;
-	}
+	ScriptVariant_ChangeType(*pretvar, VT_STR);
+	strcpy(StrCache_Get((*pretvar)->strVal),tempstr);
 
 	return S_OK;
 }
@@ -9573,7 +9565,7 @@ changetextobjproperty_error:
 HRESULT openbor_settextobj(ScriptVariant** varlist , ScriptVariant** pretvar, int paramCount)
 {
 	LONG ind;
-	LONG X,Y,Z,F,T;
+	LONG X,Y,Z,F,T=0;
 	static char buf[MAX_STR_VAR_LEN];
 	const char* stotext = "settextobj(int index, int x, int y, int font, int z, char text, int time {optional})";
 

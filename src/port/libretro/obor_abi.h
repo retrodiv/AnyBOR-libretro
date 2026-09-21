@@ -36,7 +36,13 @@ extern "C" {
  * states carry absolute dlmalloc chunk pointers into it, so cross-process
  * state load / netplay only work when the base matches. ARM kernels often
  * run 39-bit user VA (512 GiB) where the x86 base would not fit. */
-#if defined(__aarch64__) || defined(__arm__)
+#if defined(__APPLE__) && (defined(__aarch64__) || defined(__arm64__))
+/* macOS on Apple silicon keeps anonymous reservations of its own low in
+ * the address space: 4 GiB..256 GiB all refused a fixed reservation, and
+ * nothing is mapped with a file behind it.  16 TiB is measured free on
+ * the runner and inside the 47-bit space macOS allows. */
+#define OBOR_ARENA_BASE_VA 0x100000000000ULL  /* 16 TiB */
+#elif defined(__aarch64__) || defined(__arm__)
 #define OBOR_ARENA_BASE_VA 0x2A00000000ULL    /* 168 GiB */
 #else
 #define OBOR_ARENA_BASE_VA 0x2A000000000ULL   /* ~2.6 TiB */

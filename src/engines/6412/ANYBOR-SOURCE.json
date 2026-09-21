@@ -9,7 +9,7 @@
       "upstream_sha256": "adfc28feba4d32bb3933b29fe55fd0a6aa746084704c3ee71fc3f732706b9aa4"
     },
     "Makefile.libretro": {
-      "distributed_sha256": "28a9eed8ac0dcd19113b136e1a52f262b35ab19b1878ece7f47f5999db0620f3",
+      "distributed_sha256": "973f39786dfdc363da1270cd00134ae11bc2f92c90e9d22177a198edd730d572",
       "modified": true,
       "origin": "Project libretro build overlay",
       "summary": "Supply the shared libretro engine build and symbol-isolation rules.",
@@ -31,11 +31,12 @@
       "upstream_sha256": "0cd98321fd3e6276bc60075eb8a4143ddf2b95ff779de02c1ca8d4ec95654264"
     },
     "openbor.h": {
-      "distributed_sha256": "3ac2ccb3fcd3926ba06a71dcd65dfe57e83d76de3713e4cfba86ac28fd0b4d16",
+      "distributed_sha256": "2f687d9413ac99658575a63793550f437bdfb1d6386e3472b9d43b868fa0e9e3",
       "modified": true,
       "summary": "Allocate collision pointer slots through the highest author-facing index used by each collection. Track each model's allocated animation-table capacity and reject lookups outside it.",
       "topics": [
         "animation-memory-layout",
+        "compiler-warning-cleanup",
         "record-dates-and-file-notices"
       ],
       "upstream_sha256": "06088161662a000dfe43d2a11e1316f1d27f48f6026ddb806739c93a72f23a65"
@@ -423,9 +424,13 @@
       "upstream_sha256": "e1893bcaf3ae9937f57322d1b01ce923786b65f3bc7f32b3429a68212b4b7cc7"
     },
     "source/openborscript/commands.c": {
-      "distributed_sha256": "754e9b42decf73be9a226513f16be873ad34180dd57f93088f66a459537daeee",
-      "modified": false,
-      "topics": [],
+      "distributed_sha256": "727bba1c0ef7a90a71288b35c2afe7fc4f4ec14d1bd287749367ebb1c7aac4fe",
+      "modified": true,
+      "summary": "Convert the command-list lookup result to its command enumeration explicitly instead of through a plain pointer cast.",
+      "topics": [
+        "compiler-warning-cleanup",
+        "record-dates-and-file-notices"
+      ],
       "upstream_sha256": "754e9b42decf73be9a226513f16be873ad34180dd57f93088f66a459537daeee"
     },
     "source/openborscript/commands.h": {
@@ -621,10 +626,11 @@
       "upstream_sha256": "7e833ce4fddf92a755f98381eabc738a6a0fe78739abc9a6daa75a6fb5a1423b"
     },
     "source/scriptlib/ImportCache.c": {
-      "distributed_sha256": "888da8e218ef5fe68a077917ddbfd133af57d8c9e608f6af9822efe0ab418b2c",
+      "distributed_sha256": "677fcfb5613210eb87befaa11a784b33c1507a201c5325ffcb613beb59186156",
       "modified": true,
       "summary": "Guard parser-only import metadata after compilation. Read import metadata only while an interpreter still owns parser state.",
       "topics": [
+        "compiler-warning-cleanup",
         "record-dates-and-file-notices",
         "script-memory-layout"
       ],
@@ -740,9 +746,13 @@
       "upstream_sha256": "f77ad8f03ca585ed88b23ac452d37e85c85608f8b38c2ebaa1c6ef2294d496ce"
     },
     "source/scriptlib/ScriptVariant.h": {
-      "distributed_sha256": "43dc6e22e16f07af6fb6abe588c71876c502756caae70ba89d8a19dba5fff9ad",
-      "modified": false,
-      "topics": [],
+      "distributed_sha256": "a47f849f4e15d4b713bfd6ada830f10899634ccab75fe7d6b04092cb69371046",
+      "modified": true,
+      "summary": "Declare the cache and variant helpers as ordinary functions; the header only declared them inline and the definitions live in ScriptVariant.c.",
+      "topics": [
+        "compiler-warning-cleanup",
+        "record-dates-and-file-notices"
+      ],
       "upstream_sha256": "43dc6e22e16f07af6fb6abe588c71876c502756caae70ba89d8a19dba5fff9ad"
     },
     "source/scriptlib/Stack.c": {

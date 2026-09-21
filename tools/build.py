@@ -629,7 +629,6 @@ def build_glue(target, spec, outdir):
         cmd += arch_flags(spec) + ["-fno-exceptions", "-fno-rtti", "-nostdlib++"]
         cmd += ["-Wl,-exported_symbols_list," + str(SRC / "glue" / "exports.macho"),
                 "-Wl,-install_name,@rpath/" + core + ".dylib",
-                "-Wl,-no_uuid",  # reproducible: no random LC_UUID
                 "-lm"]
     else:
         cmd += ["-Wl,-T," + str(bss_script)]

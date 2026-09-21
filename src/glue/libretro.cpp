@@ -1735,6 +1735,39 @@ static void abspath(const char *in, char *out, size_t out_len)
 #include <sys/mman.h>
 #include <errno.h>
 #endif
+#if defined(__APPLE__)
+#include <mach/mach.h>
+#include <mach/mach_vm.h>
+#include <libproc.h>
+#include <unistd.h>
+#endif
+
+#if defined(__APPLE__)
+static int obor_arena_range_is_free(unsigned long long base, size_t size)
+{
+    mach_vm_address_t cursor = (mach_vm_address_t)base;
+    mach_vm_address_t limit = (mach_vm_address_t)(base + size);
+    while (cursor < limit) {
+        mach_vm_size_t region = 0;
+        vm_region_basic_info_data_64_t info;
+        mach_port_t object = MACH_PORT_NULL;
+        mach_msg_type_number_t count = VM_REGION_BASIC_INFO_COUNT_64;
+        kern_return_t kr = mach_vm_region(mach_task_self(), &cursor, &region,
+                                          VM_REGION_BASIC_INFO_64,
+                                          (vm_region_info_t)&info, &count,
+                                          &object);
+        if (kr == KERN_INVALID_ADDRESS)
+            return 1;               /* nothing mapped from base upwards */
+        if (kr != KERN_SUCCESS)
+            return 0;
+        if (cursor <= base)
+            return 0;               /* a region covers the base itself */
+        cursor += region;
+    }
+    return 1;
+}
+#endif /* __APPLE__ */
+
 __attribute__((constructor)) static void obor_arena_claim(void)
 {
 #if defined(_WIN32)
@@ -1744,18 +1777,56 @@ __attribute__((constructor)) static void obor_arena_claim(void)
     if (p && !g_arena_owned)
         VirtualFree(p, 0, MEM_RELEASE);
 #elif defined(__APPLE__)
-    /* Darwin has no MAP_FIXED_NOREPLACE.  Without MAP_FIXED the address is a
-     * hint: the kernel maps exactly there when the range is free and
-     * somewhere else when it is not — the same reserve-or-refuse contract,
-     * and it can never displace another module's mapping. */
-#ifndef MAP_ANONYMOUS
-#define MAP_ANONYMOUS MAP_ANON
-#endif
-    void *p = mmap((void *)OBOR_ARENA_BASE_VA, OBOR_ARENA_MAX_SZ, PROT_NONE,
-                   MAP_PRIVATE | MAP_ANONYMOUS | MAP_NORESERVE, -1, 0);
-    g_arena_owned = p == (void *)OBOR_ARENA_BASE_VA;
-    if (p != MAP_FAILED && !g_arena_owned)
-        munmap(p, OBOR_ARENA_MAX_SZ);
+    {
+        static const unsigned long long candidates[] = {
+            (unsigned long long)OBOR_ARENA_BASE_VA, 0x400000000000ULL,
+        };
+        size_t index;
+        for (index = 0; index < sizeof(candidates) / sizeof(candidates[0]);
+             index++) {
+            mach_vm_address_t where = (mach_vm_address_t)candidates[index];
+            kern_return_t kr = mach_vm_allocate(mach_task_self(), &where,
+                                                OBOR_ARENA_MAX_SZ,
+                                                VM_FLAGS_FIXED);
+            fprintf(stderr, "[OpenBOR] arena mach 0x%llx -> 0x%llx (kr=%d)\n",
+                    candidates[index], (unsigned long long)where, (int)kr);
+            if (kr != KERN_SUCCESS) {
+                char holder[1024] = "";
+                proc_regionfilename(getpid(),
+                                    (uint64_t)candidates[index],
+                                    holder, sizeof(holder));
+                fprintf(stderr, "[OpenBOR] arena held at 0x%llx by '%s'\n",
+                        candidates[index], holder);
+            }
+            if (kr != KERN_SUCCESS &&
+                obor_arena_range_is_free(candidates[index],
+                                         OBOR_ARENA_MAX_SZ)) {
+                /* The fixed reserve refused a range nothing else maps, so
+                 * MAP_FIXED cannot displace anything: the same contract the
+                 * Linux path gets from MAP_FIXED_NOREPLACE. */
+                void *forced = mmap((void *)candidates[index],
+                                    OBOR_ARENA_MAX_SZ, PROT_NONE,
+                                    MAP_PRIVATE | MAP_ANONYMOUS |
+                                        MAP_NORESERVE | MAP_FIXED, -1, 0);
+                fprintf(stderr, "[OpenBOR] arena mmap 0x%llx -> %p\n",
+                        candidates[index], forced);
+                if (forced == (void *)candidates[index]) {
+                    kr = KERN_SUCCESS;
+                    where = (mach_vm_address_t)candidates[index];
+                }
+            }
+            if (kr == KERN_SUCCESS &&
+                where == (mach_vm_address_t)candidates[index]) {
+                g_arena_owned = candidates[index] ==
+                                (unsigned long long)OBOR_ARENA_BASE_VA;
+                if (!g_arena_owned)
+                    munmap((void *)candidates[index], OBOR_ARENA_MAX_SZ);
+                break;
+            }
+        }
+        if (index == sizeof(candidates) / sizeof(candidates[0]))
+            fprintf(stderr, "[OpenBOR] arena refused at every candidate\n");
+    }
 #else
 #ifndef MAP_FIXED_NOREPLACE
 #define MAP_FIXED_NOREPLACE 0x100000

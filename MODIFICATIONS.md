@@ -333,6 +333,34 @@ where present. The remaining engine logic is retained; ordinary linker dead
 code removal is not represented as a source edit. See each engine's
 `source/gamelib/packfile.c` and `packfile.h`.
 
+## Compiler warning cleanup
+
+The engine is built with `-Wall` on clang, and the exported sources now compile
+free of warnings on every target. The cleanup only restores intended behaviour;
+no structure layout changes, and the pack-state edits were verified with
+record-layout dumps to leave every type byte-identical:
+
+- Headers that set a `#pragma pack` alignment for their own declarations now
+  bracket it with `push`/`pop` (`openbor.h`, `source/gamelib/anigif.h`,
+  `source/gamelib/depends.h`), so including them no longer leaves the caller's
+  alignment modified. The packed declarations themselves are unchanged.
+- The draw-method one-bit flags are declared `unsigned`; the engine assigns
+  them `1`, which a signed one-bit field stores as `-1`.
+- Entry points that were declared with empty parentheses while their
+  definitions take parameters now carry real prototypes (`standard_palette`,
+  `inputrefresh`, `cache_model_sprites`, `free_model`, `StrCache_Pop`).
+- Command-list lookups and stored indices convert through `intptr_t`/`uintptr_t`
+  instead of plain pointer casts; the values themselves are unchanged.
+- Genuine defects found by the same pass: the level loader's file buffer and
+  the imported script text are initialized before their error paths can free
+  them, an optional text-object timeout and an optional stall argument start at
+  zero, bounce velocities use the float absolute value, and dead tests or
+  statements (always-true array checks, a self-comparison, a self-assignment,
+  an unused local typedef) were removed.
+- Headers that only declared `inline` helpers whose definitions live in the
+  matching source file now declare ordinary functions (`ScriptVariant.h`,
+  `source/gamelib/transform.h`).
+
 ## Shared port and frontend
 
 These maintained sources are additions or platform replacements, rather than
@@ -349,7 +377,7 @@ in their respective files.
 | Optional CRT framing | Fit images wider than 364 pixels or taller than 244 pixels into 640x480 with their original aspect, centred borders and sharp-bilinear scaling, preserving the engine's internal render size. Smaller images outside 4:3 +/-10% receive native-pixel black padding on one axis, then the size limits are checked again. [`obor_crt.h`](src/glue/obor_crt.h), `retro_run` in [`libretro.cpp`](src/glue/libretro.cpp); [option contract](docs/ANYBOR.md#video-contract-adjust-for-43-crt-tv). |
 | Memory snapshots and rewind | Allocate engine state and coroutine stack in a fixed-address arena; preserve writable module data, repair process resources, and retain historical input on rewind. [`obor_alloc.c`](src/port/libretro/obor_alloc.c), [`obor_state.c`](src/port/libretro/obor_state.c), `glue_save` / `glue_load` in [`libretro.cpp`](src/glue/libretro.cpp). |
 | Snapshot size and reset correctness | Exclude inactive engines' BSS using linker boundaries; permit growth only when the frontend supports variable serialization sizes, otherwise keep the advertised size fixed until unload; clear unused transport bytes; restore the pristine writable module image for a new engine boot. [`state_layout.py`](tools/state_layout.py), [`obor_state_padding.h`](src/glue/obor_state_padding.h), `pristine_restore` / `retro_reset` in [`libretro.cpp`](src/glue/libretro.cpp). |
-| Mach-O targets | Apple's linker performs the relocatable engine link (`ld -r -d`); [`macho_rewrite.py`](tools/macho_rewrite.py) then localizes each engine's symbols, applies the ABI build suffix and merges its zero-initialized statics into one `__obss<build>` section whose boundaries the engine region table uses. Allocation and `fopen` interposers in the port layer replace `--wrap`, dyld supplies segment and image ranges through [`obor_macho.h`](src/port/libretro/obor_macho.h), and the exported entry points come from [`exports.macho`](src/glue/exports.macho). [`macho_inspect.py`](tools/macho_inspect.py) reads the same fields back for build receipts and checks. |
+| Mach-O targets | Apple's linker performs the relocatable engine link (`ld -r`); the common-definition switch is probed by linking a trivial object and only passed when the toolchain accepts it, since the linker in Xcode 15 and later defines commons itself. [`macho_rewrite.py`](tools/macho_rewrite.py) then localizes each engine's symbols, applies the ABI build suffix, gives any tentative definition the linker left unresolved storage in the engine's region, and merges its zero-initialized statics into one `__obss<build>` section whose boundaries the engine region table uses; references that address the moved section by ordinal are repointed at the region and refused when their form cannot be followed safely. Allocation and `fopen` interposers in the port layer replace `--wrap`, dyld supplies segment and image ranges through [`obor_macho.h`](src/port/libretro/obor_macho.h), and the exported entry points come from [`exports.macho`](src/glue/exports.macho). [`macho_inspect.py`](tools/macho_inspect.py) reads the same fields back for build receipts and checks. |
 | PAK, unpacked content and ZIP loading | Accept a PAK, `data/models.txt`, or one game in a ZIP. Validate archive paths and limits before extraction and key the extraction cache by content hash. [`obor_zip.h`](src/glue/obor_zip.h), [`obor_zip_path.h`](src/glue/obor_zip_path.h), [`obor_sha256.h`](src/glue/obor_sha256.h). |
 | Frontend save directories | Place per-engine saves/settings under the frontend directory's `AnyBOR/<game>/<build>/`, create missing parents, and use `AnyBOR-cache/zipcache/` for extraction. This isolates incompatible settings layouts. `retro_load_game` / `mkdir_p` in [`libretro.cpp`](src/glue/libretro.cpp), `obor_boot` in [`libretroport.c`](src/port/libretro/libretroport.c). |
 | Threading and host portability | Supply pthread/Windows workers and synchronization, publish workers before execution so snapshots cannot race startup, preserve Windows coroutine stack bounds, isolate MinGW reference sections, and generate ELF/PE BSS layouts. [`threads.c`](src/port/libretro/threads.c), [`libretroport.c`](src/port/libretro/libretroport.c), [`tools/build.py`](tools/build.py), [`glibc_compat_math.c`](src/compat/glibc_compat_math.c). The Recalbox target disables input descriptors, content-derived pad labels and routine on-screen notifications (load errors remain visible), and enforces a GLIBC 2.38 ceiling. |

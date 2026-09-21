@@ -2290,16 +2290,8 @@ HRESULT openbor_strleft(ScriptVariant** varlist , ScriptVariant** pretvar, int p
 	strncpy(tempstr, (char*)StrCache_Get(varlist[0]->strVal), varlist[1]->lVal);
 	ScriptVariant_Clear(*pretvar);
 
-	if (tempstr != NULL)
-	{
-		ScriptVariant_ChangeType(*pretvar, VT_STR);
-		strcpy(StrCache_Get((*pretvar)->strVal),tempstr);
-	}
-	else
-	{
-		 ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
-		(*pretvar)->lVal = -1;
-	}
+	ScriptVariant_ChangeType(*pretvar, VT_STR);
+	strcpy(StrCache_Get((*pretvar)->strVal),tempstr);
 
 	return S_OK;
 }
@@ -6494,14 +6486,14 @@ HRESULT openbor_changeentityproperty(ScriptVariant** varlist , ScriptVariant** p
 	{
 		if(SUCCEEDED(ScriptVariant_IntegerValue(varlist[2], &ltemp)))
 			(*pretvar)->lVal = (LONG)1;
-			self->modeldata.maps.hide_start = ltemp;
+		self->modeldata.maps.hide_start = ltemp;
 		break;
 	}
 	case _cep_hmapu:
 	{
 		if(SUCCEEDED(ScriptVariant_IntegerValue(varlist[2], &ltemp)))
 			(*pretvar)->lVal = (LONG)1;
-			self->modeldata.maps.hide_end = ltemp;
+		self->modeldata.maps.hide_end = ltemp;
 		break;
 	}
     case _cep_hostile:
@@ -10965,7 +10957,7 @@ HRESULT openbor_getlevelproperty(ScriptVariant** varlist , ScriptVariant** pretv
 		"scrollspeed",
 	};
 
-	typedef enum
+	enum
 	{
 		_lp_bgspeed,
 		_lp_cameraxoffset,
@@ -11363,7 +11355,7 @@ performattack_error:
 //setidle(entity, int anim, int resetable, int stalladd);
 HRESULT openbor_setidle(ScriptVariant** varlist , ScriptVariant** pretvar, int paramCount)
 {
-	LONG anim, resetable=0, stalladd;
+	LONG anim, resetable=0, stalladd=0;
 	entity* e;
 	extern unsigned int time;
 

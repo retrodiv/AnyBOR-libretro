@@ -8113,7 +8113,7 @@ void load_model_constants() {
 		line++;
 		if(ParseArgs(&arglist,buf+pos,argbuf)){
 			command = GET_ARG(0);
-			cmd = getModelCommand(modelstxtcmdlist, command);
+			cmd = (modelstxtCommands)getModelCommand(modelstxtcmdlist, command);
 			switch(cmd) {
 				case CMD_MODELSTXT_MAXIDLES:
 					// max idle stances
@@ -8281,7 +8281,7 @@ int load_models()
 		line++;
 		if(ParseArgs(&arglist,buf+pos,argbuf)){
 			command = GET_ARG(0);
-			cmd = getModelCommand(modelstxtcmdlist, command);
+			cmd = (modelstxtCommands)getModelCommand(modelstxtcmdlist, command);
 			switch(cmd) {
 				case CMD_MODELSTXT_COMBODELAY:
 					combodelay = GET_INT_ARG(1);
@@ -9307,7 +9307,7 @@ void unload_level(){
 }
 
 void load_level(char *filename){
-	char *buf;
+	char *buf = NULL;
 	size_t size, len, sblen;
 	ptrdiff_t pos, oldpos;
 	char *command;
@@ -10196,7 +10196,7 @@ void load_level(char *filename){
 		{
 			__realloc(level->layersref,level->numlayersref);
 			level->layersref[level->numlayersref] = *(level->background);
-			level->background = (s_layer*)level->numlayersref++;
+			level->background = (s_layer*)(intptr_t)level->numlayersref++;
 		}
 
 
@@ -10210,25 +10210,25 @@ void load_level(char *filename){
 				switch(bgl->oldtype){
 				case bgt_bglayer:
 					__realloc(level->bglayers,level->numbglayers);
-					level->bglayers[level->numbglayers++] = (s_layer*)level->numlayersref;
+					level->bglayers[level->numbglayers++] = (s_layer*)(intptr_t)level->numlayersref;
 					break;
 				case bgt_fglayer:
 					__realloc(level->fglayers,level->numfglayers);
-					level->fglayers[level->numfglayers++] = (s_layer*)level->numlayersref;
+					level->fglayers[level->numfglayers++] = (s_layer*)(intptr_t)level->numlayersref;
 					break;
 				case bgt_water:
 					__realloc(level->waters,level->numwaters);
-					level->waters[level->numwaters++] = (s_layer*)level->numlayersref;
+					level->waters[level->numwaters++] = (s_layer*)(intptr_t)level->numlayersref;
 					break;
 				case bgt_generic:
 					__realloc(level->genericlayers,level->numgenericlayers);
-					level->genericlayers[level->numgenericlayers++] = (s_layer*)level->numlayersref;
+					level->genericlayers[level->numgenericlayers++] = (s_layer*)(intptr_t)level->numlayersref;
 					break;
 				case bgt_frontpanel:
 					bgl->xoffset = level->numfrontpanels*bgl->width;
 					bgl->xspacing = (frontpanels_loaded-1)*bgl->width;
 					__realloc(level->frontpanels,level->numfrontpanels);
-					level->frontpanels[level->numfrontpanels++] = (s_layer*)level->numlayersref;
+					level->frontpanels[level->numfrontpanels++] = (s_layer*)(intptr_t)level->numlayersref;
 					break;
 				default:
 					break;
@@ -10245,7 +10245,7 @@ void load_level(char *filename){
 					level->layersref[level->numlayersref] = level->layers[panels[order[i]][j]];
 					bgl = &(level->layersref[level->numlayersref]);
 					bgl->xoffset = panel_width*i;
-					level->panels[i][j] = (s_layer*)level->numlayersref;
+					level->panels[i][j] = (s_layer*)(intptr_t)level->numlayersref;
 					level->numlayersref++;
 				}
 			}
@@ -18315,7 +18315,6 @@ void didfind_item(entity *other)
 		if(self->weapent && self->weapent->modeldata.typeshot)
 		{
 			self->weapent->modeldata.shootnum += other->modeldata.reload;
-			if(self->weapent->modeldata.shootnum > self->weapent->modeldata.shootnum) self->weapent->modeldata.shootnum = self->weapent->modeldata.shootnum;
 			if(SAMPLE_GET >= 0) sound_play_sample(SAMPLE_GET, 0, savedata.effectvol,savedata.effectvol, 100);
 		}
 		else
@@ -23299,7 +23298,7 @@ void keyboard_setup(int player){
 	ArgList arglist;
 	char argbuf[MAX_ARG_LEN+1] = "";
 	char *buf, *command, *filename = "data/menu.txt",
-	     buttonnames[12][16];
+	     buttonnames[13][16];
 
 	printf("Loading control settings.......\t");
 

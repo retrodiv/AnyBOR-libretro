@@ -4983,7 +4983,7 @@ HRESULT openbor_getentityproperty(ScriptVariant **varlist , ScriptVariant **pret
             break;
         case _ep_attack_staydown:
             ScriptVariant_ChangeType(*pretvar, VT_PTR);
-            (*pretvar)->ptrVal = (VOID *)attack->staydown.rise;
+            (*pretvar)->ptrVal = (VOID *)(uintptr_t)attack->staydown.rise;
             break;
         case _ep_attack_steal:
             ScriptVariant_ChangeType(*pretvar, VT_INTEGER);

@@ -8,10 +8,14 @@ The ELF/PE targets localize each engine's symbols with objcopy
 (--keep-global-symbols / --redefine-sym) and bound its zero-initialized
 statics with a linker script.  Darwin has neither objcopy nor linker
 scripts, so this tool performs the same work on the object produced by
-`ld -r -d` (which turns tentative definitions into real definitions):
+`ld -r`.  ld64 needs -d to turn the tentative definitions that -fcommon
+produces into real definitions; the linker in Xcode 15 and later defines
+them itself and refuses that option.  Either shape is accepted, and
+tentative definitions that are still unresolved get storage here:
 
   * collect the engine's zero-initialized statics — the linker's
-    __DATA,__bss and __DATA,__common sections — into one per-engine
+    __DATA,__bss and __DATA,__common sections, plus any tentative
+    definition the linker left undefined — into one per-engine
     zerofill section (default __obss<build>), so a save state can skip the
     statics of the five engines that are not running,
   * define the region boundary symbols the glue's engine table uses
@@ -45,6 +49,14 @@ N_SECT = 0x0E
 N_UNDF = 0x00
 N_ABS = 0x02
 SCATTERED_RELOCATION = 0x80000000
+
+# Absolute address forms (x86_64 and arm64): the addend travels in the word.
+ADDRESS_RELOCATIONS = (0, 1, 6, 7, 8)
+
+# arm64 names a moved section from code with a page pair; an explicit addend
+# record (ARM64_RELOC_ADDEND) may carry the offset ahead of either member.
+PAGE_RELOCATIONS = (3, 4)
+ARM64_ADDEND = 10
 
 BSS_NAME = b'__bss'
 COMMON_NAME = b'__common'
@@ -118,6 +130,15 @@ class Symbol(object):
         return (self.type & N_TYPE) == N_UNDF
 
     @property
+    def common(self):
+        """A tentative definition the linker left for the final link to place.
+
+        A Mach-O common is an undefined symbol whose n_value holds the size; a
+        plain import has n_value 0.
+        """
+        return self.undefined and self.external and self.value > 0
+
+    @property
     def debug(self):
         return bool(self.type & N_STAB)
 
@@ -144,6 +165,7 @@ class MachOObject(object):
             raise RewriteError('expected MH_OBJECT, found filetype 0x%x' %
                                self.filetype)
         self.sections = []
+        self.segments = []
         self.section_offset = None
         self.symtab_offset = None
         self.symoff = self.nsyms = self.stroff = self.strsize = 0
@@ -164,6 +186,10 @@ class MachOObject(object):
                     raise RewriteError('section headers exceed the load command')
                 if self.section_offset is None:
                     self.section_offset = first
+                self.segments.append(dict(
+                    offset=offset, first=len(self.sections), nsects=nsects,
+                    vmaddr=struct.unpack_from('<Q', self.data, offset + 24)[0],
+                    vmsize=struct.unpack_from('<Q', self.data, offset + 32)[0]))
                 for index in range(nsects):
                     self.sections.append(Section(
                         self.data[first + index * 80:first + (index + 1) * 80]))
@@ -203,9 +229,50 @@ class MachOObject(object):
         start = self.section_offset + index * 80
         self.data[start:start + 80] = self.sections[index].pack()
 
-    def check_section_relocations(self, ordinal, section_name):
-        """Refuse to empty a section other code addresses by section number."""
+    def grow_segment(self, index):
+        """Keep the segment that owns a section covering all its sections.
+
+        Widening a zerofill section past its segment's end is what the
+        linker reports as a section end address beyond the containing
+        segment's end, so the segment command is extended to the farthest
+        section end.  Only the virtual size changes: zerofill sections
+        occupy no file space.
+        """
+        for segment in self.segments:
+            if segment['first'] <= index < segment['first'] + segment['nsects']:
+                break
+        else:
+            return
+        farthest = segment['vmaddr']
+        for section in self.sections[segment['first']:
+                                     segment['first'] + segment['nsects']]:
+            farthest = max(farthest, section.addr + section.size)
+        if farthest > segment['vmaddr'] + segment['vmsize']:
+            struct.pack_into('<Q', self.data, segment['offset'] + 32,
+                             farthest - segment['vmaddr'])
+
+    def migrate_section_relocations(self, ordinal, target, extra_base,
+                                    remap=None):
+        """Repoint references that address the moved section by ordinal.
+
+        A relocatable link may address a section by number instead of by
+        symbol: a local tentative definition the linker resolved inside
+        __common is the common case, and the linker in Xcode 15 and later
+        emits it that way for arm64.  The storage is about to move to the
+        tail of the region, so every such reference names the target
+        section and gains that offset.  Two shapes are accepted: an
+        absolute relocation that keeps its addend in the relocated word,
+        and the arm64 page pair whose addend is either an explicit
+        ARM64_RELOC_ADDEND record ahead of it or zero in the instruction.
+        An offset that lives in an instruction this tool does not rewrite
+        is refused rather than guessed.
+        """
+        migrated = 0
         for index, section in enumerate(self.sections):
+            if index + 1 == ordinal:
+                continue
+            addend_entry = None
+            addend_shifted = False
             for entry in range(section.nreloc):
                 offset = section.reloff + entry * 8
                 if offset + 8 > len(self.data):
@@ -213,24 +280,85 @@ class MachOObject(object):
                 word0, word1 = struct.unpack_from('<II', self.data, offset)
                 if word0 & SCATTERED_RELOCATION:
                     raise RewriteError('scattered relocations are not supported')
-                if (word1 >> 27) & 1:
+                pcrel = (word1 >> 24) & 1
+                length = (word1 >> 25) & 3
+                kind = (word1 >> 28) & 0xF
+                if not (word1 >> 27) & 1 and kind == ARM64_ADDEND:
+                    # Names no section: it carries the addend of the record
+                    # that follows it, and one addend serves a page pair.
+                    addend_entry = entry
+                    addend_shifted = False
                     continue
-                if (word1 & 0xFFFFFF) == ordinal:
+                if (word1 >> 27) & 1 or (word1 & 0xFFFFFF) != ordinal:
+                    addend_entry = None
+                    addend_shifted = False
+                    continue
+                if kind in PAGE_RELOCATIONS:
+                    if addend_entry is None or length != 2:
+                        raise RewriteError(
+                            'section %d is addressed by relocation type %d '
+                            'without an explicit addend record in section '
+                            '%d; cannot move its storage'
+                            % (ordinal, kind, index + 1))
+                    struct.pack_into('<I', self.data, offset + 4,
+                                     (word1 & ~0xFFFFFF) | target)
+                    if not addend_shifted:
+                        aoff = section.reloff + addend_entry * 8
+                        _, addend_word = struct.unpack_from('<II', self.data,
+                                                            aoff)
+                        addend = addend_word & 0xFFFFFF
+                        if addend & 0x800000:
+                            addend -= 1 << 24
+                        adjusted = extra_base + (
+                            remap(addend) if remap else addend)
+                        if not -0x800000 <= adjusted < 0x800000:
+                            raise RewriteError(
+                                'moved reference does not fit its addend '
+                                'field')
+                        struct.pack_into('<I', self.data, aoff + 4,
+                                         (addend_word & ~0xFFFFFF) |
+                                         (adjusted & 0xFFFFFF))
+                        addend_shifted = True
+                    migrated += 1
+                    continue
+                if pcrel or kind not in ADDRESS_RELOCATIONS or \
+                        addend_entry is not None:
                     raise RewriteError(
-                        'section %s is addressed by a non-external relocation '
-                        'in section %d; cannot move its storage'
-                        % (section_name, index + 1))
-        return True
+                        'section %d is addressed by relocation type %d '
+                        '(pcrel %d) in section %d; cannot move its storage'
+                        % (ordinal, kind, pcrel, index + 1))
+                if section.zerofill:
+                    raise RewriteError(
+                        'section %d has no file content for the relocated '
+                        'address' % (index + 1))
+                size = 1 << length
+                at = section.offset + (word0 & 0xFFFFFF)
+                if at + size > len(self.data):
+                    raise RewriteError('relocated address outside the file')
+                addend = int.from_bytes(self.data[at:at + size], 'little')
+                adjusted = extra_base + (remap(addend) if remap else addend)
+                if adjusted >= 1 << (8 * size):
+                    raise RewriteError(
+                        'relocated address does not fit its field')
+                self.data[at:at + size] = adjusted.to_bytes(size, 'little')
+                struct.pack_into('<I', self.data, offset + 4,
+                                 (word1 & ~0xFFFFFF) | target)
+                migrated += 1
+                addend_entry = None
+        return migrated
 
 
 def collect_regions(obj, report):
     """Return (target_ordinal, extra_ordinal, extra_base, extra_size).
 
     The engine's zero-initialized statics are the linker's __bss section plus
-    the tentative-definition section __common (`ld -r -d` has already turned
-    the tentatives into definitions).  Both must end up in the engine's
-    region; the tool moves the __common storage to the tail of __bss and
-    leaves __common empty.
+    the tentative-definition section __common: ld64 with -d, and the linker in
+    Xcode 15 and later by default, have already turned the tentatives into
+    definitions there (anything still unresolved is placed by define_commons).
+    Both must end up in the engine's region; the tool moves the __common
+    storage to the tail of __bss and leaves __common empty.  The tail keeps a
+    16-byte alignment: a common's alignment lives in its symbol entry and
+    arm64 LDR/STR fixups require the storage to keep it.
     """
     bss = obj.ordinal(BSS_NAME)
     common = obj.ordinal(COMMON_NAME)
@@ -241,10 +369,60 @@ def collect_regions(obj, report):
             if not section.zerofill:
                 raise RewriteError('%s is not a zerofill section (flags 0x%x)'
                                    % (section.title, section.flags))
-        obj.check_section_relocations(common, '__common')
-        base = align_up(bss_section.size, max(common_section.align, 3))
+        # A common records its alignment in the high byte of n_desc, and a
+        # dependency may ask for more than the sections declare; the tail has
+        # to keep the strictest of them or arm64 LDR/STR fixups fail.  A
+        # materialized common carries no alignment record at all, so its
+        # placement is not trusted either: every moved symbol is laid out
+        # again at an aligned offset and the references are remapped.
+        symbols = obj.read_symbols()
+        moved = sorted((s for s in symbols if s.defined and s.sect == common),
+                       key=lambda s: s.value)
+        alignment = max(common_section.align, 4)
+        for symbol in moved:
+            declared = (symbol.desc >> 8) & 0xF
+            if 0 < declared <= 6:
+                alignment = max(alignment, declared)
+        bss_section.align = max(bss_section.align, alignment)
+        base = align_up(bss_section.size, max(alignment, 4))
+        # The region keeps the address the partial link gave it and that
+        # address is often only 8-byte aligned, which drags every moved
+        # symbol to the same residue.  Shift the block so the values stay
+        # 16-byte aligned as recorded, references follow through the base.
+        base += (-(bss_section.addr + base)) % 16
+        layout = {}
+        cursor = 0
+        for position, symbol in enumerate(moved):
+            if position + 1 < len(moved):
+                size = moved[position + 1].value - symbol.value
+            else:
+                size = common_section.addr + common_section.size - symbol.value
+            cursor = align_up(cursor, 4)
+            layout[symbol.value - common_section.addr] = (cursor, max(size, 1))
+            cursor += max(size, 1)
+        # Blank storage nobody names must survive the move: the block keeps
+        # its own size when the packed symbols do not fill it, so a reference
+        # into an unnamed tail stays inside real storage.
+        moved_bytes = max(align_up(cursor, 4), common_section.size)
+
+        def remap(offset):
+            for old, (new, size) in layout.items():
+                if old <= offset < old + size:
+                    return new + (offset - old)
+            if not moved or offset < min(layout):
+                # A reference to the block's own start (or to alignment
+                # padding ahead of the first symbol) keeps its place.
+                return offset
+            raise RewriteError(
+                'a reference at offset 0x%x of the moved section does not '
+                'fall inside any of its symbols' % offset)
+
+        migrated = obj.migrate_section_relocations(common, bss, base, remap)
+        if migrated:
+            report['migrated_relocations'] = (
+                report.get('migrated_relocations', 0) + migrated)
         report['merged_sections'] = ['__DATA,__bss', '__DATA,__common']
-        return bss, common, base, common_section.size
+        return bss, common, base, moved_bytes, remap
     if common:
         report['merged_sections'] = ['__DATA,__common']
         return common, 0, 0, 0
@@ -256,6 +434,39 @@ def collect_regions(obj, report):
     return 0, 0, 0, 0
 
 
+def define_commons(obj, commons, target, report):
+    """Give tentative definitions the linker left undefined real storage.
+
+    ld64 with -d (and the linker in Xcode 15 and later by default) turn
+    tentative definitions into definitions the section sweep collects.  A
+    linker that does neither leaves them commons, which the final link would
+    coalesce across all six engines; this places each one at the tail of the
+    engine's zerofill region instead, so every engine keeps its own instance.
+    A 16-byte alignment is used unconditionally: over-aligning data is always
+    safe, and the region is zero-filled memory either way.
+    """
+    if not target:
+        raise RewriteError(
+            '%d tentative definitions are still unresolved and the object has '
+            'no zerofill section to hold them; the partial link must define '
+            'commons (pass -d on ld64)' % len(commons))
+    section = obj.sections[target - 1]
+    offset = section.size
+    for symbol in sorted(commons, key=lambda entry: entry.name):
+        size = symbol.value
+        offset = align_up(offset, 4)
+        symbol.type = N_SECT | N_EXT
+        symbol.sect = target
+        symbol.value = section.addr + offset
+        offset += max(size, 1)
+    section.size = align_up(offset, 4)
+    section.align = max(section.align, 4)
+    obj.write_section_header(target - 1)
+    report['defined_commons'] = len(commons)
+    report['region_bytes'] = section.size
+    return len(commons)
+
+
 def rewrite(data, build, section_name, abi_names, begin_symbol=None,
             end_symbol=None):
     """Return (rewritten file bytes, report dict)."""
@@ -264,8 +475,11 @@ def rewrite(data, build, section_name, abi_names, begin_symbol=None,
     report = {'build': str(build), 'section': section_name,
               'abi_symbols': sorted(abi), 'localized': 0, 'renamed': [],
               'merged_sections': [], 'boundary_symbols': [],
-              'region_bytes': 0, 'symbols': 0, 'warnings': []}
-    target, extra, extra_base, extra_size = collect_regions(obj, report)
+              'defined_commons': 0, 'region_bytes': 0, 'symbols': 0,
+              'migrated_relocations': 0, 'warnings': []}
+    regions = collect_regions(obj, report)
+    target, extra, extra_base, extra_size = regions[:4]
+    remap = regions[4] if len(regions) > 4 else None
     symbols = obj.read_symbols()
 
     if target:
@@ -274,7 +488,10 @@ def rewrite(data, build, section_name, abi_names, begin_symbol=None,
             previous = obj.sections[extra - 1]
             for symbol in symbols:
                 if symbol.sect == extra and symbol.defined:
-                    symbol.value = section.addr + extra_base + (symbol.value - previous.addr)
+                    offset = symbol.value - previous.addr
+                    if remap is not None:
+                        offset = remap(offset)
+                    symbol.value = section.addr + extra_base + offset
                     symbol.sect = target
             section.align = max(section.align, previous.align)
             previous.size = 0
@@ -290,6 +507,13 @@ def rewrite(data, build, section_name, abi_names, begin_symbol=None,
         obj.write_section_header(target - 1)
         if extra:
             obj.write_section_header(extra - 1)
+
+    commons = [symbol for symbol in symbols if symbol.common]
+    if commons:
+        define_commons(obj, commons, target, report)
+
+    if target:
+        obj.grow_segment(target - 1)
 
     for symbol in symbols:
         if symbol.debug or not symbol.defined:
@@ -363,11 +587,17 @@ def main():
         if args.manifest:
             with open(args.manifest, 'w') as handle:
                 handle.write(json.dumps(report, indent=2, sort_keys=True) + '\n')
+        detail = '+'.join(report['merged_sections']) or 'nothing'
+        if report['defined_commons']:
+            detail += ', %d tentative definitions placed' % \
+                report['defined_commons']
+        if report['migrated_relocations']:
+            detail += ', %d section references repointed' % \
+                report['migrated_relocations']
         print('macho_rewrite: %s -> %s (%d symbols, %d localized, %d renamed, '
               'region %d bytes from %s)' %
               (args.input, args.output, report['symbols'], report['localized'],
-               len(report['renamed']), report['region_bytes'],
-               '+'.join(report['merged_sections']) or 'nothing'))
+               len(report['renamed']), report['region_bytes'], detail))
     except (RewriteError, OSError, struct.error, ValueError) as error:
         sys.exit('macho_rewrite: ' + str(error))
     return 0

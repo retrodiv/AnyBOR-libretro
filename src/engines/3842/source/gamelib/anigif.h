@@ -1,3 +1,15 @@
+/* AnyBOR modification record: 2026-09-12.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Restore the header's pragma pack state so including it leaves the caller's
+ * alignment untouched.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/3842.md
+ * at the source repository root. Original notices follow below.
+ */
+
 /*
  * OpenBOR - http://www.LavaLit.com
  * -----------------------------------------------------------------------
@@ -26,7 +38,7 @@
 #define			NO_CODE				-1
 
 
-#pragma pack (1)
+#pragma pack(push, 1)
 typedef struct{
 	char		magic[6];
 	unsigned short	screenwidth, screenheight;
@@ -36,7 +48,8 @@ typedef struct{
 }gifheaderstruct;
 
 
-#pragma pack(4)
+#pragma pack(pop)
+#pragma pack(push, 4)
 typedef struct {
 	short	left, top;
 	unsigned short width, height;
@@ -71,5 +84,7 @@ int anigif_open(char *filename, char *packfilename, unsigned char *pal, anigif_i
 int anigif_decode(s_screen * screen, int *delay, int x, int y, unsigned char* pal, anigif_info* info);
 
 void anigif_close(anigif_info* info);
+
+#pragma pack(pop)
 
 #endif

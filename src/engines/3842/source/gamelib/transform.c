@@ -1,3 +1,14 @@
+/* AnyBOR modification record: 2026-09-12.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Drop comma expressions that read the variables they were meant to declare.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/3842.md
+ * at the source repository root. Original notices follow below.
+ */
+
 /*
  * OpenBOR - http://www.LavaLit.com
  * -----------------------------------------------------------------------
@@ -626,8 +637,8 @@ void gfx_draw_rotate(s_screen* dest, gfx_entry* src, int x, int y, int centerx, 
 	y -= ry0;
     cx = -(rx0+x)*rzoomx*cosa+(ry0+y)*rzoomy*sina+rx0;
     cy = -(rx0+x)*rzoomx*sina-(ry0+y)*rzoomy*cosa+ry0; 
-	srcx0_f= cx+ymin*bx+xmin*ax, srcx_f;
-    srcy0_f= cy+ymin*by+xmin*ay, srcy_f;
+	srcx0_f= cx+ymin*bx+xmin*ax;
+    srcy0_f= cy+ymin*by+xmin*ay;
 
     for (j=ymin; j<ymax; j++)
     {
