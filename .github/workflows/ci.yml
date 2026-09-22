@@ -3,8 +3,22 @@ on: [push, pull_request, workflow_dispatch]
 permissions:
   contents: read
 jobs:
-  build:
+  sources:
     runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Check the exact revision before starting platform builds
+        run: |
+          python3 tools/check_revision.py HEAD
+          python3 tools/check.py --sources-only
+
+  build:
+    needs: sources
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
     env:
       TARGET: ${{ matrix.target }}
       NUMPROC: 4
@@ -14,6 +28,13 @@ jobs:
         target: [linux-x86_64, linux-aarch64, windows-x86_64, android-arm64]
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Enable bounded build and test scopes
+        run: |
+          sudo systemctl start "user@$(id -u).service"
+          echo "XDG_RUNTIME_DIR=/run/user/$(id -u)" >> "$GITHUB_ENV"
+          echo "DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/$(id -u)/bus" >> "$GITHUB_ENV"
       - name: Install host build tools
         run: |
           sudo apt-get update
@@ -23,13 +44,13 @@ jobs:
         run: |
           "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" 'ndk;26.3.11579264'
       - name: Check distribution and focused regression tests
-        run: make check
+        run: python3 tools/run_guarded.py --memory-mib 1024 --seconds 180 -- make check
       - name: Build and package
         run: |
           if [ "$TARGET" = android-arm64 ]; then
             export ANDROID_NDK="$ANDROID_HOME/ndk/26.3.11579264"
           fi
-          make TARGET="$TARGET" release
+          python3 tools/run_guarded.py --memory-mib 6144 --seconds 1800 -- make TARGET="$TARGET" release
       - name: Inspect the built core (format, architecture, dependencies, exports)
         run: |
           case "$TARGET" in
@@ -42,11 +63,19 @@ jobs:
         if: matrix.target == 'linux-x86_64'
         run: |
           sudo apt-get install -y ffmpeg
-          python3 tools/smoke.py
-          python3 tools/regression.py --webm
-          python3 tools/test_rewind.py
-          python3 tools/test_multiplayer.py
-          python3 tools/test_crt.py
+          python3 tools/run_guarded.py --memory-mib 2048 --seconds 900 -- python3 tools/smoke.py
+          python3 tools/run_guarded.py --memory-mib 2048 --seconds 900 -- python3 tools/regression.py --webm
+          python3 tools/run_guarded.py --memory-mib 2048 --seconds 900 -- python3 tools/test_rewind.py
+          python3 tools/run_guarded.py --memory-mib 2048 --seconds 900 -- python3 tools/test_multiplayer.py
+          python3 tools/run_guarded.py --memory-mib 2048 --seconds 900 -- python3 tools/test_crt.py
+      - name: Boot every Windows engine with fresh and existing saves
+        if: matrix.target == 'windows-x86_64'
+        env:
+          WINEPREFIX: ${{ runner.temp }}/anybor-wine
+          WINEDEBUG: '-all'
+        run: |
+          sudo apt-get install -y wine64 wine
+          python3 tools/run_guarded.py --memory-mib 2048 --seconds 900 -- python3 tools/smoke.py --core anybor_libretro.dll --windows --runner wine
       - uses: actions/upload-artifact@v4
         with:
           name: anybor-${{ matrix.target }}
@@ -56,6 +85,8 @@ jobs:
           if-no-files-found: error
 
   macos:
+    needs: sources
+    timeout-minutes: 45
     # Native Intel and Apple Silicon builds.  Both labels are GitHub-hosted
     # runner images: macos-15-intel is the x64 image and macos-15 the arm64
     # one.  The build and inspection steps mirror what libretro's osx-x64 and

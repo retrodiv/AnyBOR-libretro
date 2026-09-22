@@ -11,6 +11,13 @@ each platform ZIP and reopens both archives to verify their contents.
 Binary checks fail if the inspection tool is missing, fails, or finds an
 incorrect format, architecture, dependency or exported interface.
 
+`make release` checks source integrity before compiling. CI checks the committed
+source inventory before starting any platform build. Enable the local push check
+with `git config core.hooksPath .githooks`; it checks the exact outgoing revisions,
+including tags and branches other than the current checkout. It catches stale
+manifests even when the working copy has already been repaired. Run it explicitly
+with `python3 tools/check_revision.py HEAD`.
+
 After a native Linux build, run:
 
 ```sh
@@ -30,6 +37,21 @@ engines and checks frame output, working-directory restoration and the
 runtime license document, signal-handler restoration and arena release on
 module unload. This checks basic engine boot/rendering; it does
 not claim compatibility with every game.
+
+Each engine boots in a new process with fresh saves and then again with existing
+saves; a user-data marker must survive the second run. Windows CI executes the
+same cases under Wine using a MinGW-built host:
+
+```sh
+python3 tools/smoke.py --core anybor_libretro.dll --windows --runner wine
+```
+
+`--host` accepts a precompiled host. Native macOS CI runs on both Intel and Apple
+Silicon. On Linux, `tools/run_guarded.py --memory-mib 2048 --seconds 900 -- COMMAND`
+bounds a runtime process tree using cgroup memory, with swap disabled. Use 1024 MiB
+for small regression suites and 6144 MiB / 1800 seconds with at most four compiler
+jobs for builds. The guard requires a working systemd user manager and refuses an
+unlimited fallback.
 
 The regression suite saves with Forward game log enabled and loads in new
 processes with that option both on and off, then restarts the content. It

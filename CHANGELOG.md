@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.1.3 — release regression checks
+
+### Recent changes
+
+- Validate the exact outgoing Git revisions before pushing, and check source
+  inventories before CI starts platform builds or release packaging compiles.
+- Boot every Windows engine under Wine with fresh and existing saves, preserving
+  existing user data and checking visible frames and runtime notices.
+- Bound Linux build and test process trees with separate memory and time limits.
+- Keep release notes and generated source inventories synchronized.
+
 ## 0.1.2 — the 8020 engine boots on Windows
 
 ### Recent changes

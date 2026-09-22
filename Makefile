@@ -26,7 +26,9 @@ all:
 glue:
 	+$(PYTHON) tools/build.py --target $(TARGET) --platform $(platform) --glue-only
 
-release deploy: all
+release deploy:
+	$(PYTHON) tools/check.py --sources-only
+	+$(MAKE) all
 	$(PYTHON) tools/package_current.py --target $(TARGET) --platform $(platform) --dest $(DIST_DIR)
 
 source-release:
