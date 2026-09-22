@@ -289,13 +289,23 @@ static void engine_entry(void)
  * namespaces can exceed that even when the frontend root itself is short. */
 static int obor_make_dir(const char *path)
 {
-#ifdef _WIN32
+#if defined(_WIN32)
     if (_mkdir(path) == 0) return 1;
+    /* Attributes instead of stat(): an engine header can set
+     * _FILE_OFFSET_BITS=64 (the 8020 tree does) after <sys/stat.h> was already
+     * read here, and mingw then maps the stat() CALL to the 88-byte stat64
+     * while this file keeps the 48-byte struct stat. The call then writes 40
+     * bytes past its slot, over the caller's saved frame, and kills the boot
+     * of exactly the engines that expose that define. Asking for the
+     * attributes answers the same question with no struct to size wrong. */
+    DWORD attrs = GetFileAttributesA(path);
+    return attrs != INVALID_FILE_ATTRIBUTES &&
+           (attrs & FILE_ATTRIBUTE_DIRECTORY) != 0;
 #else
     if (mkdir(path, 0755) == 0) return 1;
-#endif
     struct stat st;
     return errno == EEXIST && stat(path, &st) == 0 && S_ISDIR(st.st_mode);
+#endif
 }
 
 uint32_t obor_abi_version(void)

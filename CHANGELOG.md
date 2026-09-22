@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.1.2 — the 8020 engine boots on Windows
+
+### Recent changes
+
+- Create the content's save tree through the platform's own directory attributes
+  instead of `stat()`. An engine header can set `_FILE_OFFSET_BITS` once the C
+  library headers were already read, and the Windows C library then bound the call
+  to a larger structure than the one the caller had reserved; the write crossed the
+  stack frame and crashed the boot of exactly the engines that expose that define,
+  the 8020 build among them.
+
 ## 0.1.1 — the macOS targets build
 
 ### Recent changes

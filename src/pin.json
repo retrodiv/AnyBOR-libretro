@@ -1,7 +1,7 @@
 {
   "core_name": "AnyBOR",
   "core_basename": "anybor_libretro",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "fallback_build": "6412",
   "deps": {
     "dlmalloc": {
