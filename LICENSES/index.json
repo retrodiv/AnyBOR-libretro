@@ -49,11 +49,18 @@
     "source": "src/engines/6391/LICENSE"
   },
   {
-    "file": "LICENSES/OpenBOR-8020.txt",
+    "file": "LICENSES/OpenBOR-7533.txt",
     "license": "BSD-3-Clause",
     "scope": "source and binary",
     "sha256": "b8f3916944f0b5aee216ef7a494820d17ae658336a4680992dc244ebedecf3ea",
-    "source": "src/engines/8020/LICENSE"
+    "source": "src/engines/7533/LICENSE"
+  },
+  {
+    "file": "LICENSES/OpenBOR-8023.txt",
+    "license": "BSD-3-Clause",
+    "scope": "source and binary",
+    "sha256": "b8f3916944f0b5aee216ef7a494820d17ae658336a4680992dc244ebedecf3ea",
+    "source": "src/engines/8023/LICENSE"
   },
   {
     "file": "LICENSES/zlib.txt",
@@ -280,24 +287,38 @@
     "source": "src/engines/6391/source/webmlib/nestegg/LICENSE"
   },
   {
-    "file": "LICENSES/WebM-8020-halloc.txt",
+    "file": "LICENSES/WebM-7533-halloc.txt",
     "license": "see notice",
     "scope": "source and binary",
     "sha256": "ae4b9e1073a9579c0ac13d406d66c01c3a941ed072af7a70091dc153b8c903d5",
-    "source": "src/engines/8020/source/webmlib/halloc/LICENSE"
+    "source": "src/engines/7533/source/webmlib/halloc/LICENSE"
   },
   {
-    "file": "LICENSES/WebM-8020-nestegg.txt",
+    "file": "LICENSES/WebM-7533-nestegg.txt",
     "license": "see notice",
     "scope": "source and binary",
     "sha256": "505ee8e018326f36bb4070f69c6eb3caa6079b8fb796cd53a8d1bb168337e5ae",
-    "source": "src/engines/8020/source/webmlib/nestegg/LICENSE"
+    "source": "src/engines/7533/source/webmlib/nestegg/LICENSE"
+  },
+  {
+    "file": "LICENSES/WebM-8023-halloc.txt",
+    "license": "see notice",
+    "scope": "source and binary",
+    "sha256": "ae4b9e1073a9579c0ac13d406d66c01c3a941ed072af7a70091dc153b8c903d5",
+    "source": "src/engines/8023/source/webmlib/halloc/LICENSE"
+  },
+  {
+    "file": "LICENSES/WebM-8023-nestegg.txt",
+    "license": "see notice",
+    "scope": "source and binary",
+    "sha256": "505ee8e018326f36bb4070f69c6eb3caa6079b8fb796cd53a8d1bb168337e5ae",
+    "source": "src/engines/8023/source/webmlib/nestegg/LICENSE"
   },
   {
     "file": "LICENSES/Embedded-source-notices.txt",
     "license": "see each notice",
     "scope": "source and binary",
-    "sha256": "11a9226d49d65a6baf6bf6077bd4c0f5846b570862a7890473b0ca5a62c6d6d6",
+    "sha256": "52d63d96637cc92d860f33b91275757c34cca5579a5d47327873b994e58b7395",
     "source": "Individual source headers listed in this document"
   },
   {

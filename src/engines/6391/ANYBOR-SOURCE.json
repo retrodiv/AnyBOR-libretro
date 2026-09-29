@@ -9,7 +9,7 @@
       "upstream_sha256": "adfc28feba4d32bb3933b29fe55fd0a6aa746084704c3ee71fc3f732706b9aa4"
     },
     "Makefile.libretro": {
-      "distributed_sha256": "973f39786dfdc363da1270cd00134ae11bc2f92c90e9d22177a198edd730d572",
+      "distributed_sha256": "eb41e004225e1352ffb0776701568c8c42171deda1da3c9046eafc8e03759a37",
       "modified": true,
       "origin": "Project libretro build overlay",
       "summary": "Supply the shared libretro engine build and symbol-isolation rules.",
@@ -676,7 +676,6 @@
       "modified": true,
       "summary": "Retain imported entry points as direct instruction pointers.",
       "topics": [
-        "record-dates-and-file-notices",
         "script-memory-layout"
       ],
       "upstream_sha256": "0e9408c351e17abb471a76da666460664604ae0c93a90d1f554f65fab8ab6f73"

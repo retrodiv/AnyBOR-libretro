@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.1.6 — eight selectable engines
+
+- Add the 7533 engine and replace the 8020 physical anchor with the public
+  8023 controller branch. Core Options offers eight engines plus Auto.
+- Bridge the controller branch to four RetroPads, including saved button
+  mappings and in-game reassignment. Align player state so the Windows core
+  can enter gameplay safely.
+- Open structurally valid PACK archives whose four-byte header is damaged.
+- Keep external transform programs in the frontend system directory's
+  `AnyBOR.ini`.
+
 ## 0.1.3 — release regression checks
 
 ### Recent changes

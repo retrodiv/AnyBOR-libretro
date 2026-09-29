@@ -20,12 +20,18 @@ static bool obor_packed_prepare(const char *source, const char *save_dir,
                                 const char *system_dir, char *out, size_t out_cap)
 {
     obor_input_transform transform;
-    if (!obor_transform_load(system_dir, transform)) return false;
     FILE *input = fopen(source, "rb");
     if (!input) return false;
+    bool header_repair = obor_pak_header_repair_detect(input) != 0;
+    /* A complete plain PACK structure takes precedence over an unrelated
+     * external transform, including a malformed or unavailable configuration. */
+    if (!header_repair && !obor_transform_load(system_dir, transform)) {
+        fclose(input);
+        return false;
+    }
     int64_t bias = 0;
-    bool repair = !transform.program && obor_pak_repair_detect(input, &bias);
-    if (!transform.program && !repair) {
+    bool repair = !header_repair && !transform.program && obor_pak_repair_detect(input, &bias);
+    if (!transform.program && !repair && !header_repair) {
         fclose(input);
         int n = snprintf(out, out_cap, "%s", source);
         return n >= 0 && (size_t)n < out_cap;
@@ -72,7 +78,8 @@ static bool obor_packed_prepare(const char *source, const char *save_dir,
         obor_transform_identity(transform, config_hash);
     } else {
         if (!obor_sha256_file(source, source_hash)) { fclose(input); return false; }
-        snprintf(config_hash, sizeof(config_hash), "directory-rebase-v2");
+        snprintf(config_hash, sizeof(config_hash), "%s",
+                 header_repair ? "pack-header-repair-v1" : "directory-rebase-v2");
     }
     if (!obor_storage_root(save_dir, parent, sizeof(parent))) { fclose(input); return false; }
     int n;
@@ -94,7 +101,9 @@ static bool obor_packed_prepare(const char *source, const char *save_dir,
     FILE *output = fdopen(fd, "wb");
     if (!output) { close(fd); remove(temp); fclose(input); return false; }
     bool ok = false;
-    if (repair) {
+    if (header_repair) {
+        ok = obor_pak_repair_header(input, output) != 0;
+    } else if (repair) {
         ok = obor_pak_repair_bias(input, output, bias) != 0;
     } else {
         ok = fwrite(buffers.output, 1, buffers.size, output) == buffers.size;
@@ -149,6 +158,7 @@ static bool obor_packed_prepare(const char *source, const char *save_dir,
         if (!ok) { remove(temp); return false; }
     }
     log_cb(RETRO_LOG_INFO, "[OpenBOR] %s: validated prepared PACK\n",
+           header_repair ? "structural header repair" :
            repair ? "structural directory repair" : "configured input transform");
     return true;
 }

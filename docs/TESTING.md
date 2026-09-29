@@ -32,7 +32,7 @@ python3 tools/test_multiplayer.py
 The smoke test generates a tiny diagnostic PAK from original scripts and
 geometric graphics in `tools/make_fixture.py`, under the project's BSD
 license. The synthetic font consists of simple rectangular markers. No
-existing game or font artwork is copied. It loads the content with all six
+existing game or font artwork is copied. It loads the content with all seven
 engines and checks frame output, working-directory restoration and the
 runtime license document, signal-handler restoration and arena release on
 module unload. This checks basic engine boot/rendering; it does
@@ -73,7 +73,7 @@ before sharing them, as described in `DEBUGGING.md`.
 
 The CRT suite checks the Video / Input / System category order, matching flat
 option order on legacy frontends, disabled default,
-black borders and pixel output against native frames in all six engines.
+black borders and pixel output against native frames in all seven engines.
 Output must remain byte-identical to disabled output when its width is at
 most 364, its height is at most 244, and its aspect is within inclusive
 4:3 +/-10%. Smaller images outside that tolerance receive native-pixel black
@@ -100,7 +100,7 @@ texture-sampling reference, allowing at most one 8-bit channel level for Q16
 and separable rounding. Coverage includes fractional enlargement, reduction,
 integer/identity sampling, clamped edges, very narrow/tall images, and six
 horizontal-scroll phases of one-pixel strokes at 480x272. Runtime frames from
-all six engines are compared against the same independent reference.
+all seven engines are compared against the same independent reference.
 
 On the Linux and macOS hosts, `OBOR_CHECK_FDS=1` checks that the number of open
 file descriptors returns to its baseline after unloading the core. Linux uses
@@ -114,11 +114,11 @@ exercise diagnostic cleanup across restarts. `OBOR_FASTCHECK=120,30` compares
 the incremental heap/stack payload against a fresh full snapshot. Module
 bookkeeping and unused buffer tails are intentionally outside that comparison.
 
-The rewind suite checks all six engines using a capacity obtained before
+The rewind suite checks all seven engines using a capacity obtained before
 the first frame. It compares complete frame hashes while stepping backwards,
 restores a state in a fresh process, toggles CRT adaptation, resets and
 switches engines through Reset. Capacity must remain constant and every
-capture/restore must succeed. Deliberately dirty, guarded buffers check OBS v1
+capture/restore must succeed. Deliberately dirty, guarded buffers check OBS v3
 layout, active-engine segment size and zeroed padding; invalid-version and
 truncated snapshots must be rejected. Optional `--host`, `--runner` and
 `--windows` arguments allow the same cases to run under an emulator or Wine.
@@ -127,12 +127,11 @@ through 2048, sixteen alignments, zero, dirty and sparse patterns.
 These short synthetic cases are contract tests, not full game playthroughs.
 
 The multiplayer suite joins four players in an original diagnostic game on
-all six engines. Game scripts report held buttons and press/release edges
+all seven engines. Game scripts report held buttons and press/release edges
 for each player. The suite checks isolated and simultaneous buttons, left
-sticks, combined stick/D-pad directions and saved configurations. Engine
-8020 also checks migration of legacy unbound P2-P4 profiles from game and
-default configurations, while preserving custom mappings and unrelated
-settings. The host accepts independent `OBOR_INPUT_P1` through
+sticks, combined stick/D-pad directions and saved configurations. Engine 8023
+also checks independent saved device mappings and recovery from a truncated
+controls file. The host accepts independent `OBOR_INPUT_P1` through
 `OBOR_INPUT_P4` timelines; `OBOR_INPUT` remains available for player one.
 Optional `--host`, `--runner` and `--windows` arguments support the same
 checks under emulation or Wine. These tests inject virtual RetroPad inputs;

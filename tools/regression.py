@@ -134,7 +134,7 @@ def main():
                 video_pak = work / "video.pak"
                 make_fixture.write_pak(video_pak, video_members)
                 kind = "WebM with audio" if audio else "WebM without audio"
-                for engine in ("4432", "6412", "8020"):
+                for engine in ("4432", "6412", "8023"):
                     result = run(engine, video_pak, kind + " unload", frames=1300, OBOR_STOP_WIDTH=160)
                     if "stop_width=160" not in result:
                         raise RuntimeError("Video did not start: " + result)

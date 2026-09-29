@@ -158,23 +158,23 @@ static struct seg g_segs[320];
 static int g_nsegs;
 static int g_frame;
 
-/* OBS v2 contract, independent of the core's range collector. Test-only:
+/* OBS v3 contract, independent of the core's range collector. Test-only:
  * call with a deliberately dirty destination and verify the whole transport
  * buffer, including guard bytes and deterministic capacity padding. */
 static int check_state_blob(const unsigned char *data, size_t size, int report)
 {
-    uint32_t head[4];
+    uint32_t head[5];
     uint64_t fields[7];
-    if (size < 72) return 0;
+    if (size < 80) return 0;
     memcpy(head, data, sizeof(head));
-    memcpy(fields, data + 16, sizeof(fields));
-    if (head[0] != 0x3153424f || head[1] != 2 || !head[3] || head[3] > 16)
+    memcpy(fields, data + 24, sizeof(fields));
+    if (head[0] != 0x3153424f || head[1] != 3 || !head[4] || head[4] > 16)
         return 0;
-    size_t table = 72 + head[3] * 16, segments = 0;
+    size_t table = 80 + head[4] * 16, segments = 0;
     if (table > size) return 0;
-    for (unsigned i = 0; i < head[3]; ++i) {
+    for (unsigned i = 0; i < head[4]; ++i) {
         uint64_t bytes;
-        memcpy(&bytes, data + 72 + i * 16 + 8, 8);
+        memcpy(&bytes, data + 80 + i * 16 + 8, 8);
         if (bytes > size - segments) return 0;
         segments += (size_t)bytes;
     }
@@ -673,7 +673,7 @@ int main(int argc, char **argv)
             fprintf(stderr, "initial state contract failed\n");
             return 1;
         }
-        uint32_t invalid_version = 0, current_version = 2;
+        uint32_t invalid_version = 0, current_version = 3;
         memcpy(contract_buf + 12, &invalid_version, 4);
         if (p_retro_unserialize(contract_buf + 8, contract_sz)) return 1;
         memcpy(contract_buf + 12, &current_version, 4);
@@ -876,7 +876,7 @@ int main(int argc, char **argv)
             if (g_frame == fc_start + fc_count) {
                 unsigned char *fc_b = calloc(1, sz);
                 p_retro_serialize(fc_b, sz);
-                /* OBS v2 serializes module bookkeeping as well as game data.
+                /* OBS v3 serializes module bookkeeping as well as game data.
                  * The second call changes serializer counters/pointers and old
                  * buffers retain unused tail bytes. Compare the actual heap and
                  * parked stack payload, whose incremental path is under test. */

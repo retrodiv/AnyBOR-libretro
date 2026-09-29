@@ -27,7 +27,7 @@
  *                    selection), fflush'd per line so a crash mid-step
  *                    loses nothing.
  * The single-file core makes one handler cover everything: glue and all
- * six engines share this module, so any PC inside the port shows as
+ * seven engines share this module, so any PC inside the port shows as
  * core+0x... The handler never swallows the crash: Windows returns
  * EXCEPTION_CONTINUE_SEARCH, POSIX restores SIG_DFL and re-raises.
  */

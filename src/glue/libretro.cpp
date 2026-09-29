@@ -3,7 +3,7 @@
  * Earlier incorporated material retains its original authorship notices. */
 /* AnyBOR glue: the libretro scaffolding of the single-file core.
  *
- * Contains NO engine code. The six engine eras are linked in as partial
+ * Contains NO engine code. The seven engine eras are linked in as partial
  * objects whose only visible symbols are their suffixed obor_* ABI (see
  * obor_engines.h, generated from pin.json). At retro_load_game — and again
  * at retro_reset — the glue detects which OpenBOR build the pak needs
@@ -412,7 +412,7 @@ static int build_from_content(const char *pak_path)
 
     /* Removed vocabulary provides an upper bound; newer required vocabulary
      * provides a lower bound. Otherwise leave the decision to the caller. */
-    if (g_content_ub && g_content_ub < 6412 && lb <= g_content_ub)
+    if (g_content_ub && g_content_ub < 8020 && lb <= g_content_ub)
         return g_content_ub;
     if (lb >= 6412)
         return lb;
@@ -1306,7 +1306,7 @@ void retro_run(void)
 }
 
 /* ---- single-file core machinery -------------------------------------
- * The six engines live in this same module as partial-linked objects with
+ * The seven engines live in this same module as partial-linked objects with
  * only their suffixed ABI exported (see Makefile.libretro `partial`). Two
  * consequences handled here:
  *  - a fresh boot needs pristine engine statics: capture the module's
@@ -1629,8 +1629,8 @@ static void decide_engine(void)
             how = "core option";
     }
     int filename_build = build_from_filename(g_pak_path);
-    if (!build && filename_build == 6412) {
-        build = 6412;
+    if (!build && (filename_build == 6412 || filename_build == 7533)) {
+        build = filename_build;
         how = "filename tag";
     }
     if (!build && !g_raw && (build = obor_legacy_api_build(g_pak_path)) != 0)
@@ -1653,7 +1653,8 @@ static void decide_engine(void)
         build = OBOR_FALLBACK_BUILD;
 
     int anchor = (strcmp(how, "core option") == 0 ||
-                  (strcmp(how, "filename tag") == 0 && build == 6412))
+                  (strcmp(how, "filename tag") == 0 &&
+                   (build == 6412 || build == 7533)))
                      ? build : pick_anchor(build);
     const obor_profile_def *selected = NULL;
     for (int i = 0; i < n_avail; i++)

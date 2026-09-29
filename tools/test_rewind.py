@@ -77,7 +77,7 @@ def main():
             if not windows:
                 assert "file_descriptors_restored=1" in log, log
             assert "FAILED" not in log and "MISMATCH" not in log, log
-            sizes = re.findall(r"state_contract version=2 capacity=(\d+)", log)
+            sizes = re.findall(r"state_contract version=3 capacity=(\d+)", log)
             assert len(sizes) == 2 and sizes[0] == sizes[1], log
             if "OBOR_RAREWIND" in options:
                 assert log.count(" MATCH") == 7 and log.count(" NOREF") == 1, log

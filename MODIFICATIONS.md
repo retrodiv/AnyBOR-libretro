@@ -3,7 +3,7 @@
 Record updated: **2026-09-12**. Port maintainer: **retrodiv**
 (<retrodiv@proton.me>).
 
-AnyBOR combines six modified OpenBOR snapshots with a shared libretro port.
+AnyBOR combines seven modified OpenBOR snapshots with a shared libretro port.
 The original engine work is credited to Senile Team, OpenBOR Team and the
 contributors named in the retained sources. The port's own notices identify
 its maintained code. Component terms remain as recorded in
@@ -48,7 +48,8 @@ The notices are documentation; they do not change engine behavior.
 | 4086 | `af23dc9c2316bb7853bb266ccf40986aa9765aeb` | [4086](docs/modifications/4086.md) |
 | 4432 | `2566cbee6185025e6a69d2aa1823b15c7a154ff9` | [4432](docs/modifications/4432.md) |
 | 6391 | `494708eb34e71d1afda237873907701c4ec3a569` | [6391](docs/modifications/6391.md) |
-| 8020 | `9d81480f8481fbb9e76b0b5f2a5dfa408376761a` | [8020](docs/modifications/8020.md) |
+| 7533 | `5c8261444de6b61f8e2ce6e79e3d86a2949e55bd` | [7533](docs/modifications/7533.md) |
+| 8023 | `16aae1a30b81063778f21977ae20b849bd1c76f9` | [8023](docs/modifications/8023.md) |
 
 Each inventory links every modified or added engine file to its explanation,
 original source at the pinned commit (where it existed). The accompanying `ANYBOR-SOURCE.json` also lists unchanged
@@ -64,16 +65,20 @@ hashes remain recorded for comparison.
 
 ## Platform integration
 
-All six engines include `libretroport.h` through `source/globals.h` and expose
-the platform/PNG helper declarations in `source/utils.c`. Builds 4432, 6391
-and 8020 also declare libretro thread, mutex and condition types in
+All seven physical engine trees include `libretroport.h` through `source/globals.h` and expose
+the platform/PNG helper declarations in `source/utils.c`. Builds 4432, 6391, 7533
+and 8023 also declare libretro thread, mutex and condition types in
 `source/gamelib/threads.h`. Each inventory identifies the affected files.
+
+Build 8023 places the player array in aligned storage. The PE linker otherwise
+allocates its tentative common symbol at a four-byte boundary even though
+compiled menu code reads it with a 16-byte SIMD operand.
 
 The platform implementation is shared under
 [`src/port/libretro/`](src/port/libretro). It replaces standalone host backends
 with frontend video, audio, controls and timing; its files are catalogued below.
 Each engine gets a generated `version.h` with its pinned build number and a
-`Makefile.libretro` from the shared overlay. The version header reports `VERSION_MAJOR="4"` for the 8020 anchor and
+`Makefile.libretro` from the shared overlay. The version header reports `VERSION_MAJOR="4"` for the 7533 and 8023 anchors and
 retains the historical v3 version strings for the five older anchors.
 
 ## Darwin platform support
@@ -110,7 +115,7 @@ states take the rebasing path rather than the fixed-image one.
 
 ## Repeated weapon lists
 
-The 8020 anchor already includes upstream's dynamically sized, ownership-aware weapon-list replacement; it requires no corresponding modification.
+The 8023 anchor already includes upstream's dynamically sized, ownership-aware weapon-list replacement; it requires no corresponding modification.
 
 Builds 3842, 4086, 4432 and 6391 now resize the model's weapon list
 when a later `weapons` command replaces an earlier one. Previously, a longer
@@ -125,7 +130,7 @@ Build 3842 now checks that an entity-local animation interpreter exists before
 reading its reset flag. Some scripted map entities have an initialized model
 animation script before that optional local interpreter is allocated. The old
 code dereferenced a null pointer when the entity entered its animation frame;
-the guarded behavior matches the later 4086, 4432, 6391 and 8020 engines.
+the guarded behavior matches the later 4086, 4432, 6391, 7533 and 8023 engines.
 The correction is structural and applies to every build-3842 game.
 
 ## Script memory layout
@@ -139,14 +144,14 @@ integer widths so each instruction occupies a smaller allocator class on
 without changing script values, execution order or the state restoration
 contract.
 
-Build 8020 now stores parser-only token and label pointers in the same slot as
+Build 8023 now stores parser-only token and label pointers in the same slot as
 the compiled call or jump target, and stores the mutually exclusive second
 operand and call-parameter list in one slot. Its opcode and target kind also
 use their bounded widths. This reduces each compiled instruction from 76 to 40
 bytes on 64-bit targets while retaining explicit tags for cleanup, diagnostics
 and runtime dispatch.
 
-After compilation, all six builds copy the final instructions into one exact
+After compilation, all seven builds copy the final instructions into one exact
 contiguous allocation per interpreter and release the individual parser
 allocations. The existing solid instruction pointer list is then retargeted to
 the compact storage before entry points and jump targets are resolved. If the
@@ -154,12 +159,12 @@ allocation fails, the engines retain their original representation. This
 reduces allocator overhead and the number of live chunks the state serializer
 must traverse without changing script execution or state completeness.
 
-All six builds resolve execution and jump entry points directly into that
+All seven builds resolve execution and jump entry points directly into that
 contiguous allocation, and builds with indexed imports do the same for imported
 entry points. They then release the redundant pointer table; instruction
 stepping uses pointer arithmetic over the same ordered block.
 
-All six builds also copy the independently allocated constant values owned by
+All seven builds also copy the independently allocated constant values owned by
 those instructions into one exact contiguous allocation per interpreter. Every
 instruction operand, call argument and compiled reference is retargeted before
 the old value allocations are released. If ownership is ambiguous or either
@@ -168,7 +173,7 @@ clears each value exactly once, so strings and other owned data retain their
 normal lifetime while allocator overhead and serialized heap metadata shrink.
 
 The parser workspace is now allocated only while an interpreter is compiling.
-After labels, imports and entry points have been resolved, all six builds
+After labels, imports and entry points have been resolved, all seven builds
 release that workspace and keep only the compiled instruction representation.
 Import-cache diagnostics check that parser state is still present before
 reading parser-only metadata. Runtime scripts and complete save states therefore
@@ -186,7 +191,7 @@ consulting game identity.
 
 ## Collision memory layout
 
-Build 8020 keeps the 64 author-facing collision indexes and their active
+Build 8023 keeps the 64 author-facing collision indexes and their active
 bitmask, but allocates each collection's pointer table only through its highest
 used index. Lookup, cloning, mutation and cleanup retain the same indexed
 behavior, including sparse indexes. This avoids reserving 64 native pointers
@@ -194,7 +199,7 @@ for every animation frame whose collision collection uses only a few slots.
 
 ## Animation memory layout
 
-All six engines initially allocate each model's animation pointer table for
+All seven engines initially allocate each model's animation pointer table for
 the built-in animation range and grow it in bounded blocks only when authored
 content assigns a higher animation index. Lookup, sprite-cache, model-copy,
 normalization and cleanup paths use the model's recorded capacity. The global
@@ -204,7 +209,7 @@ largest table for every loaded model.
 
 ## Empty player slot safety
 
-All six engines now require both remaining lives and a selected model name
+All seven engines now require both remaining lives and a selected model name
 before automatically spawning a player at the start of a level. Game scripts
 may assign lives to an empty multiplayer slot before that player joins; the
 previous condition then tried to spawn an unnamed model and aborted the level.
@@ -212,7 +217,7 @@ The empty slot remains available through the engines' existing join path. Each e
 
 ## Active content PAK aliases
 
-All six libretro engines treat a missing basename-only `Paks/*.pak` file read
+All seven libretro engines treat a missing basename-only `Paks/*.pak` file read
 as a probe of the active, already validated content archive. Some mods check
 the archive name they were originally distributed with from a loading script;
 a frontend may legitimately rename that file when organizing a library. The
@@ -255,14 +260,12 @@ instead of decoding audio bytes as pixels or allocating a bogus bitmap.
 ## Four player controls
 
 All engines receive four independent RetroPads through the shared port.
-The upstream **8020** engine leaves the entire default control rows for players
-2-4 unbound, relying on joystick assignment from its standalone backend.
-The port supplies each player's libretro virtual keys
-when defaults are initialized or restored from the in-game control menu.
-When loading a game configuration or `default.cfg`, it also repairs the exact
-legacy profile whose twelve gameplay/screenshot bindings are all `CONTROL_NONE`.
-Partial/custom bindings, player 1, rumble preferences and other settings remain
-unchanged. See [`openbor.c`](src/engines/8020/openbor.c).
+The upstream 7533 engine leaves players 2-4 without default bindings; the
+port initializes those rows and repairs wholly empty older profiles. The
+8023 controller branch uses four independent RetroPad devices and persists
+per-device button mappings in `.controls` files. Its in-game control menu can
+reassign devices and buttons. The frontend can remap each RetroPad as usual.
+See [`openbor.c`](src/engines/8023/openbor.c).
 
 The multiplayer regression uses four independent frontend input timelines
 and an original diagnostic game that reports each player's held, newly pressed
@@ -291,7 +294,7 @@ and the video-settings loader.
 
 ## WebM playback lifecycle
 
-Builds **4432 and 6391** change `source/webmlib/vidplay.c`:
+Builds **4432, 6391 and 7533** change `source/webmlib/vidplay.c`:
 
 - Worker-thread sleeps use the host OS sleep function; they must not advance
   the engine coroutine's emulated clock.
@@ -302,7 +305,7 @@ Builds **4432 and 6391** change `source/webmlib/vidplay.c`:
   mutex. This lets the frontend consume audio while demux/video workers make
   progress, avoiding a blocking video wait with a full audio queue.
 
-Build **8020** uses upstream's asynchronous movie layer. Its worker sleeps and timeout clocks use wall time, SDL atomics and CPU queries use the native port, and reset joins the entire movie pool. Persistent native synchronization is rebuilt after a state restore.
+Build **8023** uses upstream's asynchronous movie layer. Its worker sleeps and timeout clocks use wall time, SDL atomics and CPU queries use the native port, and reset joins the entire movie pool. Persistent native synchronization is rebuilt after a state restore.
 
 The platform's [`threads.c`](src/port/libretro/threads.c) publishes each live
 worker before its entry point can run, and rolls the count back if native
@@ -317,7 +320,7 @@ during threaded playback. This remains a limitation of save/load/rewind.
 | Circle drawing, all engines | Replace the inherited circle routine with the port's integer geometry rasterizer, keeping each engine's pixel-writing interface, clipping and alpha handling. | `source/gamelib/draw.c`, `circle` / `obor_circle_emit`; [`obor_circle.h`](src/port/libretro/obor_circle.h). |
 | Endian helpers, all engines | Replace the historical SDL-derived endian implementation with fixed-width types; a 64-bit Windows `long` assumption no longer determines the width of a 64-bit conversion. | `source/gamelib/borendian.h`; [`obor_endian.h`](src/port/libretro/obor_endian.h). |
 | ADPCM, shared replacement | Compile the port's IMA ADPCM encoder/decoder for the existing OpenBOR audio API. The inherited `adpcm.c` implementation is omitted from the export; the required upstream interface header is retained. | [`obor_adpcm.c`](src/port/libretro/obor_adpcm.c); [`Makefile.libretro`](src/engines/6391/Makefile.libretro); [provenance](PROVENANCE.md). |
-| halloc terms, WebM engines | Add a local `source/webmlib/halloc/LICENSE` containing the terms referenced by the original headers. This is a notice addition. | The 4432, 6391 and 8020 inventories; [provenance](PROVENANCE.md). |
+| halloc terms, WebM engines | Add a local `source/webmlib/halloc/LICENSE` containing the terms referenced by the original headers. This is a notice addition. | The 4432, 6391, 7533 and 8023 inventories; [provenance](PROVENANCE.md). |
 
 ## Source selection and pruning
 
@@ -383,7 +386,7 @@ in their respective files.
 
 | Capability or change | Behaviour and current implementation |
 |---|---|
-| Six physical engines and seven profiles | Each engine is partially linked with private symbols; suffixed ABI entry points select the active engine. The profile table maps logical build identity to one engine. [`obor_abi.h`](src/glue/obor_abi.h), [`obor_engines.h`](src/glue/obor_engines.h), [`Makefile.libretro`](src/engines/6391/Makefile.libretro), [`tools/build.py`](tools/build.py). |
+| Seven physical engines and eight profiles | Each engine is partially linked with private symbols; suffixed ABI entry points select the active engine. The profile table maps logical build identity to one engine. [`obor_abi.h`](src/glue/obor_abi.h), [`obor_engines.h`](src/glue/obor_engines.h), [`Makefile.libretro`](src/engines/6391/Makefile.libretro), [`tools/build.py`](tools/build.py). |
 | Automatic engine selection | An explicit core option takes precedence; otherwise inspect legacy script API requirements, filename tags, nearby executables as data, and PAK content tokens, then use the pinned fallback. Selection is rerun on Reset. [`libretro.cpp`](src/glue/libretro.cpp), `decide_engine`, `pick_anchor`, `build_from_content`; [`obor_markers.h`](src/glue/obor_markers.h). |
 | Frontend-owned frame delivery | Run the engine main loop on a libco coroutine, yield at video submission, and advance an emulated microsecond clock. Sleep/input-wait paths also yield so frontend input remains live. [`libretroport.c`](src/port/libretro/libretroport.c), [`libretroport.h`](src/port/libretro/libretroport.h), [`timer.c`](src/port/libretro/timer.c). |
 | Video and audio backends | Convert engine video to XRGB8888, publish geometry, and pull engine audio through the frontend. [`video.c`](src/port/libretro/video.c), [`video.h`](src/port/libretro/video.h), [`vga.h`](src/port/libretro/vga.h), [`sblaster.c`](src/port/libretro/sblaster.c), [`sblaster.h`](src/port/libretro/sblaster.h). |
@@ -425,9 +428,16 @@ every retained change has an explanation, evidence and an applicable notice.
 
 ## Current v4 integration
 
-The 8020 anchor is official upstream master commit
-`9d81480f8481fbb9e76b0b5f2a5dfa408376761a` (2026-08-24), verified on
-2026-09-12. Its import follows the five historical engines;
+The 7533 anchor is upstream release commit
+[`5c8261444de6b61f8e2ce6e79e3d86a2949e55bd`](https://github.com/DCurrent/openbor/commit/5c8261444de6b61f8e2ce6e79e3d86a2949e55bd)
+(2024-01-01). Its own patched source, engine object, logical profile and
+save directory are separate from 8023. The physical port includes PAK-handle
+repair for save states, resource cleanup on reset, bounded animation tables,
+compact script storage and the common WebM lifecycle correction.
+
+The 8023 anchor is upstream `new_controller_code` branch commit
+`16aae1a30b81063778f21977ae20b849bd1c76f9` (2026-09-28), verified on
+2026-09-29. Its import follows the six earlier physical engines;
 6391 remains the default fallback. Content markers are updated for this set.
 
 The shared audio backend converts upstream's signed 32-bit transport for

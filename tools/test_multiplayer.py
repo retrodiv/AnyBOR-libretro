@@ -22,7 +22,6 @@ DEFAULT_CORE = release.ROOT / ("anybor_libretro.dylib" if sys.platform == "darwi
 BUTTONS = ('up', 'down', 'left', 'right', 'attack', 'attack2', 'attack3',
            'attack4', 'jump', 'special', 'start')
 SCRIPT_KEYS = ('moveup', 'movedown', 'moveleft', 'moveright') + BUTTONS[4:]
-NONE = 6937  # CONTROL_NONE in libretro virtual keyboard profiles.
 
 
 def fixture():
@@ -126,30 +125,6 @@ def check_inputs(text, expected):
     assert actual == expected, ('Game-visible input sequence differs', actual, expected)
 
 
-def config_rows(data):
-    # Persisted 8020 libretro s_savedata: ten 32-bit header fields followed by
-    # four rows of thirteen keys. Keep this legacy on-disk fixture explicit;
-    # a future format change needs a deliberate migration-test update.
-    assert len(data) == 308, 'Unexpected 8020 saved configuration format'
-    keys = struct.unpack_from('<52i', data, 40)
-    return [list(keys[p * 13:(p + 1) * 13]) for p in range(4)]
-
-
-def write_rows(data, rows):
-    result = bytearray(data)
-    struct.pack_into('<52i', result, 40, *[k for row in rows for k in row])
-    return bytes(result)
-
-
-def after_launch(data):
-    # Upstream cycles savedata.logo at each launch; every other byte must stay
-    # intact apart from the control rows explicitly repaired by this test.
-    result = bytearray(data)
-    logo = struct.unpack_from('<i', data, 276)[0]
-    struct.pack_into('<i', result, 276, 0 if logo > 10 else logo + 1)
-    return bytes(result)
-
-
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--core', default=str(DEFAULT_CORE))
@@ -202,31 +177,21 @@ def main():
             system = work / engine
             config = run(engine, 'fresh defaults', system)
             run(engine, 'saved configuration', system)
-            if engine != '8020':
+            if engine == '8023':
+                controls = config.with_suffix('.controls')
+                original = controls.read_bytes()
+                assert len(original) == 8 + 4 * 13 * 4 and original[:8] == b'ABCTRL01', 'Unexpected 8023 controls format'
+                rows = [list(struct.unpack_from('<13i', original, 8 + p * 52)) for p in range(4)]
+                for row in rows:
+                    row[4], row[8] = row[8], row[4]
+                custom = original[:8] + struct.pack('<52i', *[key for row in rows for key in row])
+                controls.write_bytes(custom)
+                virtual_rows = [[100 + p * 32 + key for key in row] for p, row in enumerate(rows)]
+                run(engine, 'saved per-device remapping', system, remap(vectors, virtual_rows))
+                assert controls.read_bytes() == custom, '8023 overwrote custom per-device mappings'
+                controls.write_bytes(custom[:-1])
+                run(engine, 'truncated controls reset to defaults', system)
                 continue
-            original = config.read_bytes()
-            defaults = config_rows(original)
-            empty = [row[:] for row in defaults]
-            for p in range(1, 4):
-                empty[p][:12] = [NONE] * 12
-            legacy = write_rows(original, empty)
-            config.write_bytes(legacy)
-            run(engine, 'legacy empty P2-P4 migration', system)
-            assert config.read_bytes() == after_launch(original), 'Migration changed unrelated saved settings'
-            config.unlink()
-            default_file = config.parent / 'default.cfg'
-            default_file.write_bytes(legacy)
-            run(engine, 'legacy default.cfg import', system)
-            assert config.read_bytes() == after_launch(original) and default_file.read_bytes() == legacy
-            default_file.unlink()
-            custom = [row[:] for row in defaults]
-            for p in range(4):
-                custom[p][4], custom[p][8] = custom[p][8], custom[p][4]
-            custom[2][7] = NONE  # A deliberately unbound action in a custom row.
-            custom_data = write_rows(original, custom)
-            config.write_bytes(custom_data)
-            run(engine, 'custom mappings retained', system, remap(vectors, custom))
-            assert config.read_bytes() == after_launch(custom_data), 'Custom controls were replaced'
     print('Four-player runtime regressions: OK', flush=True)
 
 

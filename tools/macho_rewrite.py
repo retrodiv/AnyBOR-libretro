@@ -17,7 +17,7 @@ tentative definitions that are still unresolved get storage here:
     __DATA,__bss and __DATA,__common sections, plus any tentative
     definition the linker left undefined — into one per-engine
     zerofill section (default __obss<build>), so a save state can skip the
-    statics of the five engines that are not running,
+    statics of the six engines that are not running,
   * define the region boundary symbols the glue's engine table uses
     (___obor_bss_begin_<build> / ___obor_bss_end_<build>),
   * localize every symbol the engine defines except its obor_* ABI, and
@@ -440,7 +440,7 @@ def define_commons(obj, commons, target, report):
     ld64 with -d (and the linker in Xcode 15 and later by default) turn
     tentative definitions into definitions the section sweep collects.  A
     linker that does neither leaves them commons, which the final link would
-    coalesce across all six engines; this places each one at the tail of the
+    coalesce across all seven engines; this places each one at the tail of the
     engine's zerofill region instead, so every engine keeps its own instance.
     A 16-byte alignment is used unconditionally: over-aligning data is always
     safe, and the region is zero-filled memory either way.

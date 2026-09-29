@@ -12,6 +12,70 @@ static int obor_pak_write_u32(FILE *fp, uint32_t value)
     return fwrite(b, 1, 4, fp) == 4;
 }
 
+/* A damaged magic can be recovered only when the rest of the file is already
+ * an ordinary, unencoded PACK: version zero, an exhaustive directory, a
+ * contiguous data area, and two image records at their declared positions.
+ * This inspects structure and plain asset signatures, never a game identity. */
+static int obor_pak_header_repair_detect(FILE *fp)
+{
+    unsigned char h[12], name[256], signature[8];
+    long end;
+    uint32_t directory, position, cursor = 8;
+    unsigned count = 0, anchors = 0;
+    if (fseek(fp, 0, SEEK_SET) || fread(h, 1, 8, fp) != 8 ||
+        !memcmp(h, "PACK", 4) || !memcmp(h, "SPAK", 4) ||
+        obor_pak_u32(h + 4) || fseek(fp, 0, SEEK_END) ||
+        (end = ftell(fp)) < 12 || end > INT_MAX ||
+        fseek(fp, end - 4, SEEK_SET) || fread(h, 1, 4, fp) != 4)
+        return 0;
+    directory = obor_pak_u32(h);
+    if (directory <= 8 || directory >= (uint32_t)end - 4 ||
+        fseek(fp, directory, SEEK_SET)) return 0;
+    position = directory;
+    while (position < (uint32_t)end - 4) {
+        uint32_t length, start, size, n;
+        int kind = 0;
+        if ((uint32_t)end - 4 - position < 12 || fread(h, 1, 12, fp) != 12)
+            return 0;
+        length = obor_pak_u32(h); start = obor_pak_u32(h + 4); size = obor_pak_u32(h + 8);
+        if (length < 14 || length > 268 || length > (uint32_t)end - 4 - position)
+            return 0;
+        n = length - 12;
+        if (fread(name, 1, n, fp) != n || !name[0] || name[n - 1]) return 0;
+        for (uint32_t j = 0; j + 1 < n; ++j) {
+            if (name[j] < 32 || name[j] == 127) return 0;
+            if (name[j] >= 'A' && name[j] <= 'Z') name[j] += 'a' - 'A';
+        }
+        if (start != cursor || size > directory - cursor) return 0;
+        cursor += size;
+        if (++count > 1048576) return 0;
+        if (n > 4 && !strcmp((char *)name + n - 5, ".gif")) kind = 1;
+        if (n > 4 && !strcmp((char *)name + n - 5, ".png")) kind = 2;
+        if (kind && anchors < 2) {
+            size_t bytes = kind == 1 ? 6 : 8;
+            if (size < bytes || fseek(fp, start, SEEK_SET) ||
+                fread(signature, 1, bytes, fp) != bytes) return 0;
+            if (kind == 1 && memcmp(signature, "GIF87a", 6) && memcmp(signature, "GIF89a", 6)) return 0;
+            if (kind == 2 && memcmp(signature, "\x89PNG\r\n\x1a\n", 8)) return 0;
+            ++anchors;
+            if (fseek(fp, position + length, SEEK_SET)) return 0;
+        }
+        position += length;
+    }
+    return count >= 2 && anchors >= 2 && cursor == directory;
+}
+
+static int obor_pak_repair_header(FILE *input, FILE *output)
+{
+    unsigned char block[65536];
+    size_t n;
+    if (!obor_pak_header_repair_detect(input) || fseek(input, 4, SEEK_SET) ||
+        fwrite("PACK", 1, 4, output) != 4) return 0;
+    while ((n = fread(block, 1, sizeof(block), input)) != 0)
+        if (fwrite(block, 1, n, output) != n) return 0;
+    return !ferror(input) && fflush(output) == 0;
+}
+
 /* Recognize only a complete, tightly packed data area with a uniform stale
  * base. Every directory range must meet the next, with no gaps, overlaps or
  * reordering, and their combined size must exactly fill [8, directory).

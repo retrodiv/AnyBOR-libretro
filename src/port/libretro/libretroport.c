@@ -293,7 +293,7 @@ static int obor_make_dir(const char *path)
 #if defined(_WIN32)
     if (_mkdir(path) == 0) return 1;
     /* Attributes instead of stat(): an engine header can set
-     * _FILE_OFFSET_BITS=64 (the 8020 tree does) after <sys/stat.h> was already
+     * _FILE_OFFSET_BITS=64 (the 8023 tree does) after <sys/stat.h> was already
      * read here, and mingw then maps the stat() CALL to the 88-byte stat64
      * while this file keeps the 48-byte struct stat. The call then writes 40
      * bytes past its slot, over the caller's saved frame, and kills the boot

@@ -1,8 +1,8 @@
 # OpenBOR (AnyBOR)
 
-AnyBOR is an independent libretro core for OpenBOR games. It combines OpenBOR
-physical builds 3400, 3842, 4086, 4432, 6391 and 8020 and selects a logical
-profile for each game. The 6391 engine also serves the 6412 profile.
+AnyBOR is an independent libretro core for OpenBOR games. Its eight selectable
+engines are 3400, 3842, 4086, 4432, 6391, 6412, 7533 and 8023. Auto uses
+available build tags and content clues; you can also select an engine manually.
 OpenBOR and Beats of Rage originate with Senile Team and OpenBOR Team; the port
 is maintained by retrodiv. The combined core has multiple component licenses,
 including OpenBOR 3400's no-sale terms. See [LICENSES.md](../LICENSES.md).
@@ -18,7 +18,7 @@ Load one of these with **Load Content**, then select AnyBOR:
 
 | Extension | Accepted content |
 |---|---|
-| `.pak` | An OpenBOR game archive. |
+| `.pak` | An OpenBOR game archive. An otherwise complete, unencoded PACK with a damaged four-byte signature is repaired automatically after structural validation. |
 | `.spk` | Accepted only for an ordinary PACK archive misnamed with this extension. A genuine SPAK/protected archive is recognized and rejected with an explicit error; it is never decoded. |
 | `.txt` | Exactly the `data/models.txt` entry point of an unpacked game. |
 | `.zip` | One PAK or one unpacked game's data tree. The core handles extraction. |

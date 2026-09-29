@@ -1,11 +1,9 @@
 # AnyBOR
 
-An independent libretro core for OpenBOR games, combining engine builds
-3400 (2011-08-31), 3842 (2013-02-23), 4086 (2014-11-02), 4432 (2017-01-25),
-6391 (2018-08-21) and 8020 (2026-08-24) in one library. The 6391 engine also
-offers a 6412 logical compatibility profile. Spanning the oldest
-build to the newest gives the core maximum compatibility: it automatically
-selects the most accurate engine for each .pak, whatever its release date.
+An independent libretro core for OpenBOR games, offering eight selectable
+engines in one library: 3400, 3842, 4086, 4432, 6391, 6412, 7533 and 8023.
+Core Options also provides Auto, which uses build tags and content clues to
+choose an engine. You can select one manually when a game needs it.
 Save states, rewind and four players are supported. OpenBOR, Senile Team and
 libretro credits identify upstream work; they do not imply endorsement of
 this port.
@@ -128,13 +126,17 @@ with their downloads.
 The original diagnostic fixture generator and native smoke test are described
 in [docs/TESTING.md](docs/TESTING.md).
 
-See [MODIFICATIONS.md](MODIFICATIONS.md) for changes from the six pinned
-OpenBOR builds, with file inventories and source references,
+See [MODIFICATIONS.md](MODIFICATIONS.md) for changes supporting the eight
+selectable OpenBOR engines, with file inventories and source references,
 [PROVENANCE.md](PROVENANCE.md) for source origins,
 [CONTRIBUTING.md](CONTRIBUTING.md) for development, and
 [SECURITY.md](SECURITY.md) for content trust and private reporting.
 
 ## Optional content preparation
+
+An otherwise complete, unencoded PACK with a damaged four-byte signature is
+repaired automatically after its directory and plain image assets are validated.
+This does not require `AnyBOR.ini`.
 
 Optional buffer transforms can extract an archive from a custom header or a
 specified byte range, or convert stored 32-bit words to the byte order expected

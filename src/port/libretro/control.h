@@ -13,6 +13,40 @@
 #ifndef CONTROL_H
 #define CONTROL_H
 
+#if OBOR_ENGINE_BUILD >= 8023
+#include <stdbool.h>
+#include <stdint.h>
+
+#define MAX_DEVICES 32
+#define CONTROL_DEVICE_NAME_SIZE 64
+#define OBOR_INPUT_COUNT 13
+
+typedef struct {
+    int deviceID;
+    uint32_t keyflags;
+    uint32_t newkeyflags;
+} s_playercontrols;
+
+void control_init(void);
+void control_exit(void);
+void control_remapdevice(int deviceID);
+int control_getremappedkey(void);
+int *control_getmappings(int deviceID);
+void control_resetmappings(int deviceID);
+void control_update(s_playercontrols **allPlayerControls, int numPlayers);
+void control_update_keyboard(s_playercontrols *keyboardControls);
+const char *control_getkeyname(int deviceID, int keycode);
+bool control_isvaliddevice(int deviceID);
+const char *control_getdevicename(int deviceID);
+void control_rumble(int deviceID, int ratio, int msec);
+bool control_loadmappings(const char *filename);
+bool control_savemappings(const char *filename);
+void control_clearmappings(void);
+#define control_getmappedkeyname(deviceID, key) \
+    control_getkeyname(deviceID, control_getmappings(deviceID)[key])
+
+#else
+
 #define OBOR_KEYBASE 100
 #define OBOR_KEYSPAN 32
 #define OBOR_KEY(pl, btn) (OBOR_KEYBASE + (pl) * OBOR_KEYSPAN + (btn))
@@ -115,4 +149,5 @@ void control_rumble(int port, int msec);
 #endif
 int keyboard_getlastkey(void);
 
+#endif /* OBOR_ENGINE_BUILD >= 8023 */
 #endif

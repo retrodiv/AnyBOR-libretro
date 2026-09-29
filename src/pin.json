@@ -1,7 +1,7 @@
 {
   "core_name": "AnyBOR",
   "core_basename": "anybor_libretro",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "fallback_build": "6391",
   "profiles": [
     {
@@ -43,9 +43,15 @@
       "major": "v3"
     },
     {
-      "build": "8020",
-      "engine": "8020",
-      "covers": "6413-8020; newer builds best effort via latest pinned v4 anchor",
+      "build": "7533",
+      "engine": "7533",
+      "covers": "6413-7533 by automatic detection",
+      "major": "v4"
+    },
+    {
+      "build": "8023",
+      "engine": "8023",
+      "covers": "7534-8023; newer builds best effort via latest pinned v4 anchor",
       "major": "v4"
     }
   ],
@@ -144,10 +150,18 @@
       "major": "v3"
     },
     {
-      "build": "8020",
-      "commit": "9d81480f8481fbb9e76b0b5f2a5dfa408376761a",
-      "date": "2026-08-24",
-      "covers": "6413-8020; newer builds best effort via latest pinned v4 anchor",
+      "build": "7533",
+      "commit": "5c8261444de6b61f8e2ce6e79e3d86a2949e55bd",
+      "date": "2024-01-01",
+      "covers": "6413-7533 through logical profile 7533",
+      "major": "v4",
+      "version_major": "4"
+    },
+    {
+      "build": "8023",
+      "commit": "16aae1a30b81063778f21977ae20b849bd1c76f9",
+      "date": "2026-09-28",
+      "covers": "7534-8023; newer builds best effort via latest pinned v4 anchor",
       "major": "v4",
       "version_major": "4"
     }

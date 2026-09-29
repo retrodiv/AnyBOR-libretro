@@ -142,7 +142,7 @@ all: partial
 # Everything this engine needs (its code, its libretro port layer, its
 # static libs) is partial-linked with the malloc wraps resolved inside,
 # then every symbol except the obor_* ABI is localized and the ABI gets a
-# per-build suffix. The glue links six of these into one traditional core.
+# per-build suffix. The glue links seven of these into one traditional core.
 # inside OBJDIR: linux and windows builds share the tree — a common output
 # path would let concurrent/interleaved builds overwrite each other's partial
 PARTIAL     = $(OBJDIR)/obor_engine_$(BUILD_NUM).o
@@ -171,7 +171,7 @@ endif
 # NOTE (windows): mingw emits a COMDAT .rdata$.refptr.<sym> indirection
 # slot per extern-data reference. Six partials carry slots with the SAME
 # section names pointing at their OWN localized symbols; the final link
-# dedups same-named COMDATs and five engines end up loading garbage
+# dedups same-named COMDATs and six engines end up loading garbage
 # pointers (crashed every era but the first at its second printf).
 # The build renames those sections per build right after this rule
 # (uniquify_refptr_sections) — a `ld -r -T` fold here corrupts COFF output.
