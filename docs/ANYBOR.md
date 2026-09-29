@@ -1,7 +1,8 @@
 # OpenBOR (AnyBOR)
 
 AnyBOR is an independent libretro core for OpenBOR games. It combines OpenBOR
-builds 3400, 3842, 4086, 4432, 6412 and 8020 and selects an engine for each game.
+physical builds 3400, 3842, 4086, 4432, 6391 and 8020 and selects a logical
+profile for each game. The 6391 engine also serves the 6412 profile.
 OpenBOR and Beats of Rage originate with Senile Team and OpenBOR Team; the port
 is maintained by retrodiv. The combined core has multiple component licenses,
 including OpenBOR 3400's no-sale terms. See [LICENSES.md](../LICENSES.md).
@@ -79,7 +80,7 @@ The macros account for the active character's facing direction.
 | Clear all game caches on load | `obor_clear_all_caches` | **On**. In Development. Empties `AnyBOR-cache/` before each load and before generating new cache files; saved data is unaffected. |
 
 Automatic selection uses filename version tags, nearby engine-version data
-and PAK content markers, with build 6412 as the current fallback. An explicit
+and PAK content markers, with profile 6391 as the current fallback. An explicit
 profile choice takes precedence. A detected build selects a logical profile,
 which maps to a compiled physical engine. Games predating the available source history
 use the 3400 anchor on a best-effort basis; games newer than the latest anchor

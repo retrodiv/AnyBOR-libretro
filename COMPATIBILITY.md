@@ -1,7 +1,10 @@
 # Compatibility contract
 
-Pinned engine anchors are 3400, 3842, 4086, 4432, 6412 and 8020. Automatic
-routing combines filename/sidecar metadata with conservative content markers.
+Pinned physical engine anchors are 3400, 3842, 4086, 4432, 6391 and 8020.
+The 6391 engine provides logical profiles 6391 and 6412. Automatic routing
+selects 6391 for builds 4433 through 6412; a PAK explicitly tagged Build 6412
+or the manual 6412 core option selects the 6412 profile. Other routing combines
+filename/sidecar metadata with conservative content markers.
 Builds newer than 8020 are best effort through the latest pinned v4 anchor;
 they are not claimed as universally compatible.
 
@@ -24,4 +27,3 @@ Targets:
 Release confidence requires a real redistributable fixture for each anchor.
 Where one is unavailable, metadata and code coverage do not substitute for a
 runtime compatibility claim.
-

@@ -101,7 +101,7 @@ def primitives():
             "-std=c99", "-O2", "-Wall", "-Wextra", "-Werror",
             "-I", str(ROOT / "src/port/libretro"),
             "-I", str(ROOT / "src/glue"),
-            "-I", str(ROOT / "src/engines/6412/source/adpcmlib"),
+            "-I", str(ROOT / "src/engines/6391/source/adpcmlib"),
             str(ROOT / "tests/test_primitives.c"),
             str(ROOT / "src/port/libretro/obor_adpcm.c"), "-o", output])
         subprocess.check_call([output])

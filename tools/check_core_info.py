@@ -29,7 +29,7 @@ def check_core_info(root, pin):
     expected_fields = {"core_name", "core_basename", "version", "source_date_epoch",
                        "fallback_build", "engine_repo", "engines", "profiles", "deps", "transform_vm"}
     engine_fields = {"build", "commit", "date", "covers", "major", "version_major"}
-    profile_fields = {"build", "engine", "covers", "major"}
+    profile_fields = {"build", "engine", "covers", "major", "auto_until", "automatic"}
     if set(pin) != expected_fields or set(pin["engine_repo"]) != {"url"}:
         raise RuntimeError("Unexpected public source metadata fields")
     if type(pin["source_date_epoch"]) is not int or pin["source_date_epoch"] < 0:
@@ -44,7 +44,11 @@ def check_core_info(root, pin):
     physical = {engine["build"] for engine in pin["engines"]}
     logical = set()
     for profile in pin["profiles"]:
-        if set(profile) != profile_fields or profile["engine"] not in physical or profile["build"] in logical:
+        if (set(profile) - profile_fields or
+                not {"build", "engine", "covers", "major"} <= set(profile) or
+                profile["engine"] not in physical or profile["build"] in logical or
+                int(profile.get("auto_until", profile["build"])) < int(profile["build"]) or
+                type(profile.get("automatic", True)) is not bool):
             raise RuntimeError("Invalid public logical profile metadata")
         logical.add(profile["build"])
     if pin["fallback_build"] not in logical:

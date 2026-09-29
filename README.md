@@ -2,7 +2,8 @@
 
 An independent libretro core for OpenBOR games, combining engine builds
 3400 (2011-08-31), 3842 (2013-02-23), 4086 (2014-11-02), 4432 (2017-01-25),
-6412 (2018-08-29) and 8020 (2026-08-24) in one library. Spanning the oldest
+6391 (2018-08-21) and 8020 (2026-08-24) in one library. The 6391 engine also
+offers a 6412 logical compatibility profile. Spanning the oldest
 build to the newest gives the core maximum compatibility: it automatically
 selects the most accurate engine for each .pak, whatever its release date.
 Save states, rewind and four players are supported. OpenBOR, Senile Team and

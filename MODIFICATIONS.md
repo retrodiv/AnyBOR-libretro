@@ -26,6 +26,7 @@ and documentation alongside their existing notices and receipts.
 
 The 2026-09-11 review catalogued existing changes and added file notices and
 source references. It is not an implementation date for those earlier changes.
+The 6391 physical profile split was recorded on 2026-09-29.
 Existing dated comments keep their own dates. Each retained, modified upstream
 C/header file has a short AnyBOR notice before its existing contents, with
 its scope and a link to this record. Generated `version.h` files identify
@@ -46,7 +47,7 @@ The notices are documentation; they do not change engine behavior.
 | 3842 | `1f702a991ace7fa31884262e458a85e351f62713` | [3842](docs/modifications/3842.md) |
 | 4086 | `af23dc9c2316bb7853bb266ccf40986aa9765aeb` | [4086](docs/modifications/4086.md) |
 | 4432 | `2566cbee6185025e6a69d2aa1823b15c7a154ff9` | [4432](docs/modifications/4432.md) |
-| 6412 | `d9bfceeb0d53cd43ed7cf5cfdfb0c60bba4df3f8` | [6412](docs/modifications/6412.md) |
+| 6391 | `494708eb34e71d1afda237873907701c4ec3a569` | [6391](docs/modifications/6391.md) |
 | 8020 | `9d81480f8481fbb9e76b0b5f2a5dfa408376761a` | [8020](docs/modifications/8020.md) |
 
 Each inventory links every modified or added engine file to its explanation,
@@ -64,7 +65,7 @@ hashes remain recorded for comparison.
 ## Platform integration
 
 All six engines include `libretroport.h` through `source/globals.h` and expose
-the platform/PNG helper declarations in `source/utils.c`. Builds 4432, 6412
+the platform/PNG helper declarations in `source/utils.c`. Builds 4432, 6391
 and 8020 also declare libretro thread, mutex and condition types in
 `source/gamelib/threads.h`. Each inventory identifies the affected files.
 
@@ -89,7 +90,7 @@ loose-file search and `isRawData()` in `source/gamelib/packfile.c`,
 standard allocation declarations in `source/utils.c`,
 `source/preprocessorlib/pp_parser.c` and `source/pnglib/savepng.c` where the
 macOS SDK does not provide the glibc-only `<malloc.h>`, and the mach-based
-memory queries in `source/ramlib/ram.c` plus 6412's out-of-memory diagnostic in
+memory queries in `source/ramlib/ram.c` plus 6391's out-of-memory diagnostic in
 `source/utils.c`. Each engine's inventory links the affected files and
 this topic.
 
@@ -111,7 +112,7 @@ states take the rebasing path rather than the fixed-image one.
 
 The 8020 anchor already includes upstream's dynamically sized, ownership-aware weapon-list replacement; it requires no corresponding modification.
 
-Builds 3842, 4086, 4432 and 6412 now resize the model's weapon list
+Builds 3842, 4086, 4432 and 6391 now resize the model's weapon list
 when a later `weapons` command replaces an earlier one. Previously, a longer
 replacement wrote beyond the original allocation, corrupting the heap while
 loading the affected model. Borrowed lists are copied
@@ -124,7 +125,7 @@ Build 3842 now checks that an entity-local animation interpreter exists before
 reading its reset flag. Some scripted map entities have an initialized model
 animation script before that optional local interpreter is allocated. The old
 code dereferenced a null pointer when the entity entered its animation frame;
-the guarded behavior matches the later 4086, 4432, 6412 and 8020 engines.
+the guarded behavior matches the later 4086, 4432, 6391 and 8020 engines.
 The correction is structural and applies to every build-3842 game.
 
 ## Script memory layout
@@ -290,7 +291,7 @@ and the video-settings loader.
 
 ## WebM playback lifecycle
 
-Builds **4432 and 6412** change `source/webmlib/vidplay.c`:
+Builds **4432 and 6391** change `source/webmlib/vidplay.c`:
 
 - Worker-thread sleeps use the host OS sleep function; they must not advance
   the engine coroutine's emulated clock.
@@ -315,8 +316,8 @@ during threaded playback. This remains a limitation of save/load/rewind.
 |---|---|---|
 | Circle drawing, all engines | Replace the inherited circle routine with the port's integer geometry rasterizer, keeping each engine's pixel-writing interface, clipping and alpha handling. | `source/gamelib/draw.c`, `circle` / `obor_circle_emit`; [`obor_circle.h`](src/port/libretro/obor_circle.h). |
 | Endian helpers, all engines | Replace the historical SDL-derived endian implementation with fixed-width types; a 64-bit Windows `long` assumption no longer determines the width of a 64-bit conversion. | `source/gamelib/borendian.h`; [`obor_endian.h`](src/port/libretro/obor_endian.h). |
-| ADPCM, shared replacement | Compile the port's IMA ADPCM encoder/decoder for the existing OpenBOR audio API. The inherited `adpcm.c` implementation is omitted from the export; the required upstream interface header is retained. | [`obor_adpcm.c`](src/port/libretro/obor_adpcm.c); [`Makefile.libretro`](src/engines/6412/Makefile.libretro); [provenance](PROVENANCE.md). |
-| halloc terms, WebM engines | Add a local `source/webmlib/halloc/LICENSE` containing the terms referenced by the original headers. This is a notice addition. | The 4432, 6412 and 8020 inventories; [provenance](PROVENANCE.md). |
+| ADPCM, shared replacement | Compile the port's IMA ADPCM encoder/decoder for the existing OpenBOR audio API. The inherited `adpcm.c` implementation is omitted from the export; the required upstream interface header is retained. | [`obor_adpcm.c`](src/port/libretro/obor_adpcm.c); [`Makefile.libretro`](src/engines/6391/Makefile.libretro); [provenance](PROVENANCE.md). |
+| halloc terms, WebM engines | Add a local `source/webmlib/halloc/LICENSE` containing the terms referenced by the original headers. This is a notice addition. | The 4432, 6391 and 8020 inventories; [provenance](PROVENANCE.md). |
 
 ## Source selection and pruning
 
@@ -361,6 +362,19 @@ record-layout dumps to leave every type byte-identical:
   matching source file now declare ordinary functions (`ScriptVariant.h`,
   `source/gamelib/transform.h`).
 
+## Logical profile compatibility
+
+The physical 6391 engine is pinned to upstream commit
+[`494708eb34e71d1afda237873907701c4ec3a569`](https://github.com/DCurrent/openbor/commit/494708eb34e71d1afda237873907701c4ec3a569).
+Patch `96-logical-6412-compat.patch` adapts the later upstream 6412 script
+changes from commit
+[`d9bfceeb0d53cd43ed7cf5cfdfb0c60bba4df3f8`](https://github.com/DCurrent/openbor/commit/d9bfceeb0d53cd43ed7cf5cfdfb0c60bba4df3f8)
+to that one source tree. The 6391 profile retains its scalar binding properties
+and numeric property IDs. The 6412 profile exposes axis-handle binding
+properties, owner and opponent entity properties, binding animation flags,
+the corrected Y-axis setter, frame-kill binding behavior, and `unload_model`.
+Both profiles use the same compiled engine object and separate save directories.
+
 ## Shared port and frontend
 
 These maintained sources are additions or platform replacements, rather than
@@ -369,7 +383,7 @@ in their respective files.
 
 | Capability or change | Behaviour and current implementation |
 |---|---|
-| Six engines in one core | Each engine is partially linked with private symbols; suffixed ABI entry points select the active engine. [`obor_abi.h`](src/glue/obor_abi.h), [`obor_engines.h`](src/glue/obor_engines.h), [`Makefile.libretro`](src/engines/6412/Makefile.libretro), [`tools/build.py`](tools/build.py). |
+| Six physical engines and seven profiles | Each engine is partially linked with private symbols; suffixed ABI entry points select the active engine. The profile table maps logical build identity to one engine. [`obor_abi.h`](src/glue/obor_abi.h), [`obor_engines.h`](src/glue/obor_engines.h), [`Makefile.libretro`](src/engines/6391/Makefile.libretro), [`tools/build.py`](tools/build.py). |
 | Automatic engine selection | An explicit core option takes precedence; otherwise inspect legacy script API requirements, filename tags, nearby executables as data, and PAK content tokens, then use the pinned fallback. Selection is rerun on Reset. [`libretro.cpp`](src/glue/libretro.cpp), `decide_engine`, `pick_anchor`, `build_from_content`; [`obor_markers.h`](src/glue/obor_markers.h). |
 | Frontend-owned frame delivery | Run the engine main loop on a libco coroutine, yield at video submission, and advance an emulated microsecond clock. Sleep/input-wait paths also yield so frontend input remains live. [`libretroport.c`](src/port/libretro/libretroport.c), [`libretroport.h`](src/port/libretro/libretroport.h), [`timer.c`](src/port/libretro/timer.c). |
 | Video and audio backends | Convert engine video to XRGB8888, publish geometry, and pull engine audio through the frontend. [`video.c`](src/port/libretro/video.c), [`video.h`](src/port/libretro/video.h), [`vga.h`](src/port/libretro/vga.h), [`sblaster.c`](src/port/libretro/sblaster.c), [`sblaster.h`](src/port/libretro/sblaster.h). |
@@ -414,7 +428,7 @@ every retained change has an explanation, evidence and an applicable notice.
 The 8020 anchor is official upstream master commit
 `9d81480f8481fbb9e76b0b5f2a5dfa408376761a` (2026-08-24), verified on
 2026-09-12. Its import follows the five historical engines;
-6412 remains the default fallback. Content markers are updated for this set.
+6391 remains the default fallback. Content markers are updated for this set.
 
 The shared audio backend converts upstream's signed 32-bit transport for
 24-bit PCM at 48 kHz into libretro stereo PCM at 44.1 kHz. Recursive audio

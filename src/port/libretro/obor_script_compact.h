@@ -16,7 +16,7 @@ typedef struct obor_script_value_move {
 static int obor_script_instruction_owns_value(const Instruction *instruction)
 {
 #if OBOR_ENGINE_BUILD == 3842 || OBOR_ENGINE_BUILD == 4086 || \
-    OBOR_ENGINE_BUILD == 4432 || OBOR_ENGINE_BUILD == 6412 || \
+    OBOR_ENGINE_BUILD == 4432 || OBOR_ENGINE_BUILD == 6391 || \
     OBOR_ENGINE_BUILD == 8020
     return Instruction_OwnsValue(instruction);
 #else
@@ -27,7 +27,7 @@ static int obor_script_instruction_owns_value(const Instruction *instruction)
 static ScriptVariant **obor_script_first_reference(Instruction *instruction)
 {
 #if OBOR_ENGINE_BUILD == 3842 || OBOR_ENGINE_BUILD == 4086 || \
-    OBOR_ENGINE_BUILD == 4432 || OBOR_ENGINE_BUILD == 6412 || \
+    OBOR_ENGINE_BUILD == 4432 || OBOR_ENGINE_BUILD == 6391 || \
     OBOR_ENGINE_BUILD == 8020
     return Instruction_FirstReferenceAddress(instruction);
 #else

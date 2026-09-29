@@ -3,8 +3,8 @@
 /* Engine ABI table generated from src/pin.json. */
 #include "obor_abi.h"
 
-#define OBOR_CORE_VERSION "0.1.4"
-#define OBOR_FALLBACK_BUILD 6412
+#define OBOR_CORE_VERSION "0.1.5"
+#define OBOR_FALLBACK_BUILD 6391
 
 typedef struct {
     uint32_t (*abi_version)(void);
@@ -79,20 +79,20 @@ void obor_shutdown_4432(void);
 void obor_get_rumble_4432(int32_t, int32_t *, int32_t *);
 void obor_get_arena_4432(void **, uint32_t *);
 int32_t obor_get_player_state_4432(int32_t, char *, int32_t, int32_t *);
-extern char __obor_bss_begin_6412[], __obor_bss_end_6412[];
-uint32_t obor_abi_version_6412(void);
-int32_t obor_boot_6412(const obor_boot_info *);
-int32_t obor_run_frame_6412(void);
-void obor_get_video_6412(const uint32_t **, int32_t *, int32_t *, int32_t *);
-void obor_set_button_6412(int32_t, int32_t, int32_t);
-int32_t obor_get_audio_6412(int16_t *, int32_t);
-uint32_t obor_serialize_size_6412(void);
-uint32_t obor_serialize_6412(void *, uint32_t);
-int32_t obor_unserialize_6412(const void *, uint32_t);
-void obor_shutdown_6412(void);
-void obor_get_rumble_6412(int32_t, int32_t *, int32_t *);
-void obor_get_arena_6412(void **, uint32_t *);
-int32_t obor_get_player_state_6412(int32_t, char *, int32_t, int32_t *);
+extern char __obor_bss_begin_6391[], __obor_bss_end_6391[];
+uint32_t obor_abi_version_6391(void);
+int32_t obor_boot_6391(const obor_boot_info *);
+int32_t obor_run_frame_6391(void);
+void obor_get_video_6391(const uint32_t **, int32_t *, int32_t *, int32_t *);
+void obor_set_button_6391(int32_t, int32_t, int32_t);
+int32_t obor_get_audio_6391(int16_t *, int32_t);
+uint32_t obor_serialize_size_6391(void);
+uint32_t obor_serialize_6391(void *, uint32_t);
+int32_t obor_unserialize_6391(const void *, uint32_t);
+void obor_shutdown_6391(void);
+void obor_get_rumble_6391(int32_t, int32_t *, int32_t *);
+void obor_get_arena_6391(void **, uint32_t *);
+int32_t obor_get_player_state_6391(int32_t, char *, int32_t, int32_t *);
 extern char __obor_bss_begin_8020[], __obor_bss_end_8020[];
 uint32_t obor_abi_version_8020(void);
 int32_t obor_boot_8020(const obor_boot_info *);
@@ -115,16 +115,17 @@ static const obor_engine_def kEngineDefs[] = {
     { 3842, "3842", { obor_abi_version_3842, obor_boot_3842, obor_run_frame_3842, obor_get_video_3842, obor_set_button_3842, obor_get_audio_3842, obor_serialize_size_3842, obor_serialize_3842, obor_unserialize_3842, obor_shutdown_3842, obor_get_rumble_3842, obor_get_arena_3842, obor_get_player_state_3842 }, __obor_bss_begin_3842, __obor_bss_end_3842 },
     { 4086, "4086", { obor_abi_version_4086, obor_boot_4086, obor_run_frame_4086, obor_get_video_4086, obor_set_button_4086, obor_get_audio_4086, obor_serialize_size_4086, obor_serialize_4086, obor_unserialize_4086, obor_shutdown_4086, obor_get_rumble_4086, obor_get_arena_4086, obor_get_player_state_4086 }, __obor_bss_begin_4086, __obor_bss_end_4086 },
     { 4432, "4432", { obor_abi_version_4432, obor_boot_4432, obor_run_frame_4432, obor_get_video_4432, obor_set_button_4432, obor_get_audio_4432, obor_serialize_size_4432, obor_serialize_4432, obor_unserialize_4432, obor_shutdown_4432, obor_get_rumble_4432, obor_get_arena_4432, obor_get_player_state_4432 }, __obor_bss_begin_4432, __obor_bss_end_4432 },
-    { 6412, "6412", { obor_abi_version_6412, obor_boot_6412, obor_run_frame_6412, obor_get_video_6412, obor_set_button_6412, obor_get_audio_6412, obor_serialize_size_6412, obor_serialize_6412, obor_unserialize_6412, obor_shutdown_6412, obor_get_rumble_6412, obor_get_arena_6412, obor_get_player_state_6412 }, __obor_bss_begin_6412, __obor_bss_end_6412 },
+    { 6391, "6391", { obor_abi_version_6391, obor_boot_6391, obor_run_frame_6391, obor_get_video_6391, obor_set_button_6391, obor_get_audio_6391, obor_serialize_size_6391, obor_serialize_6391, obor_unserialize_6391, obor_shutdown_6391, obor_get_rumble_6391, obor_get_arena_6391, obor_get_player_state_6391 }, __obor_bss_begin_6391, __obor_bss_end_6391 },
     { 8020, "8020", { obor_abi_version_8020, obor_boot_8020, obor_run_frame_8020, obor_get_video_8020, obor_set_button_8020, obor_get_audio_8020, obor_serialize_size_8020, obor_serialize_8020, obor_unserialize_8020, obor_shutdown_8020, obor_get_rumble_8020, obor_get_arena_8020, obor_get_player_state_8020 }, __obor_bss_begin_8020, __obor_bss_end_8020 },
 };
 
-typedef struct { int build; const char *name; const char *disp; int engine_build; } obor_profile_def;
+typedef struct { int build; const char *name; const char *disp; int engine_build; int auto_until; int automatic; } obor_profile_def;
 static const obor_profile_def kProfiles[] = {
-    { 3400, "3400", "v2-v3 3400", 3400 },
-    { 3842, "3842", "v3 3842", 3842 },
-    { 4086, "4086", "v3 4086", 4086 },
-    { 4432, "4432", "v3 4432", 4432 },
-    { 6412, "6412", "v3 6412", 6412 },
-    { 8020, "8020", "v4 8020", 8020 },
+    { 3400, "3400", "v2-v3 3400", 3400, 3400, 1 },
+    { 3842, "3842", "v3 3842", 3842, 3842, 1 },
+    { 4086, "4086", "v3 4086", 4086, 4086, 1 },
+    { 4432, "4432", "v3 4432", 4432, 4432, 1 },
+    { 6391, "6391", "v3 6391", 6391, 6412, 1 },
+    { 6412, "6412", "v3 6412", 6391, 6412, 0 },
+    { 8020, "8020", "v4 8020", 8020, 8020, 1 },
 };

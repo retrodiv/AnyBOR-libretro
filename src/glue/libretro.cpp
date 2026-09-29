@@ -231,8 +231,8 @@ static int build_from_exe(const char *exe_path)
  * actually USE? Tokens (models.txt commands at line starts, script calls
  * name-followed-by-paren) are matched against obor_markers.h — each marker
  * maps to the engine build that introduced it, tuned so prose
- * never fires. Gives a reliable LOWER bound; only bounds >= 6412 reroute
- * (below that the proven 6412 fallback stays). */
+ * never fires. A lower bound is converted to an automatic profile below;
+ * the 6412 profile requires an explicit filename or core option. */
 #include "obor_markers.h"
 
 static int marker_cmp(const void *k, const void *m)
@@ -488,22 +488,24 @@ static int build_from_sidecar(const char *pak_path)
     return build;
 }
 
-/* Choose the anchor engine for a required build: smallest anchor >= build,
- * else the newest. Restricted to engines actually present in the container
- * when we have that list. */
-static int pick_anchor(int build, const int *avail, int n_avail)
+/* Choose the first automatic profile whose covered range reaches the
+ * detected build. Explicit-only profiles never win a heuristic. */
+static int pick_anchor(int build)
 {
-    int best = 0;
-    for (int i = 0; i < n_avail; i++) {
-        if (avail[i] >= build && (best == 0 || avail[i] < best))
-            best = avail[i];
+    const obor_profile_def *best = NULL;
+    for (size_t i = 0; i < sizeof(kProfiles) / sizeof(kProfiles[0]); i++) {
+        const obor_profile_def *p = &kProfiles[i];
+        if (p->automatic && p->auto_until >= build &&
+            (!best || p->auto_until < best->auto_until))
+            best = p;
     }
     if (!best) {
-        for (int i = 0; i < n_avail; i++)
-            if (avail[i] > best)
-                best = avail[i];
+        for (size_t i = 0; i < sizeof(kProfiles) / sizeof(kProfiles[0]); i++)
+            if (kProfiles[i].automatic &&
+                (!best || kProfiles[i].auto_until > best->auto_until))
+                best = &kProfiles[i];
     }
-    return best;
+    return best ? best->build : 0;
 }
 
 /* ------------------------------------------------------- core options --- */
@@ -1612,10 +1614,7 @@ static void decide_engine(void)
     char opt[48];
     get_engine_option(opt, sizeof(opt));
 
-    int avail[16];
     int n_avail = (int)(sizeof(kProfiles) / sizeof(kProfiles[0]));
-    for (int i = 0; i < n_avail; i++)
-        avail[i] = kProfiles[i].build;
 
     int build = 0;
     const char *how = "fallback";
@@ -1629,9 +1628,14 @@ static void decide_engine(void)
         if (build)
             how = "core option";
     }
+    int filename_build = build_from_filename(g_pak_path);
+    if (!build && filename_build == 6412) {
+        build = 6412;
+        how = "filename tag";
+    }
     if (!build && !g_raw && (build = obor_legacy_api_build(g_pak_path)) != 0)
         how = "legacy script API";
-    if (!build && (build = build_from_filename(g_pak_path)) != 0)
+    if (!build && (build = filename_build) != 0)
         how = "filename tag";
     if (!build && g_raw && (build = build_from_sidecar_dir(g_pak_path)) != 0)
         how = "exe in mod dir";
@@ -1648,7 +1652,9 @@ static void decide_engine(void)
     if (!build)
         build = OBOR_FALLBACK_BUILD;
 
-    int anchor = pick_anchor(build, avail, n_avail);
+    int anchor = (strcmp(how, "core option") == 0 ||
+                  (strcmp(how, "filename tag") == 0 && build == 6412))
+                     ? build : pick_anchor(build);
     const obor_profile_def *selected = NULL;
     for (int i = 0; i < n_avail; i++)
         if (kProfiles[i].build == anchor)
