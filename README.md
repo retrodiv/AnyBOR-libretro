@@ -93,7 +93,8 @@ bytes are deterministically zero, without rewriting reserve pages that are
 already zero. There is no per-frame general compression stage or dependency
 on an earlier snapshot.
 
-Save states use the OBS v1 format. Games may grow their heap substantially
+Save states use the OBS v3 format and record both the logical profile and
+physical engine. Games may grow their heap substantially
 during play: the core records its observed peak for sizing the next session
 and retains a growth allowance. Before the first recorded peak, packed
 resource size also informs the initial reserve so menu-only allocations do

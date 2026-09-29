@@ -72,7 +72,7 @@ The macros account for the active character's facing direction.
 | Left analog stick as D-pad | `obor_analog` | **On**. Adds movement with the left stick. |
 | Rumble | `obor_rumble` | **On**. Forwards game hit vibration. |
 | Special move macros (L2/R2/L3/R3) | `obor_macros` | **On**. Executes supported character move sequences. |
-| Engine build | `obor_engine` | **Auto**. Select an explicit pinned engine when needed; changes apply on Restart. |
+| Engine build | `obor_engine` | **Auto**. Select an explicit compatibility profile when needed; changes apply on Restart. |
 | Forward game log | `obor_gamelog` | **Off**. Mirrors the engine log into the frontend log. |
 | Clear current game saved data on load | `obor_clear_local_data` | **Off**. In Development. Deletes the current game's entire `AnyBOR/<game>/` folder before loading, across all engine builds. |
 | Clear current game cache on unload | `obor_clear_game_cache` | **On**. In Development. Deletes the cache directories used by this game after unloading or closing the core. The next load rebuilds them; saved data is unaffected. |
@@ -80,7 +80,8 @@ The macros account for the active character's facing direction.
 
 Automatic selection uses filename version tags, nearby engine-version data
 and PAK content markers, with build 6412 as the current fallback. An explicit
-engine choice takes precedence. Games predating the available source history
+profile choice takes precedence. A detected build selects a logical profile,
+which maps to a compiled physical engine. Games predating the available source history
 use the 3400 anchor on a best-effort basis; games newer than the latest anchor
 also have best-effort coverage. [COMPATIBILITY.md](../COMPATIBILITY.md) describes
 the supported engine ranges.
@@ -145,7 +146,7 @@ Paths below are relative to the frontend's **Save Files** directory:
 
 | Path | Purpose |
 |---|---|
-| `AnyBOR/<game>/<engine build>/` | Engine-specific saves, settings, logs and learned memory-peak data. Different engine settings layouts stay separate. |
+| `AnyBOR/<game>/<profile build>/` | Profile-specific saves, settings, logs and learned memory-peak data. Different settings layouts stay separate. |
 | `AnyBOR-cache/zipcache/` | Cached extraction of ZIP content. |
 | `AnyBOR-cache/input-<8-hex>/` | Prepared content derived from the source archive. |
 | `anybor-license-notices.txt` | The complete notice dossier embedded in the loaded core; attempted in this directory when content is loaded. |
@@ -159,11 +160,11 @@ made in the frontend menu immediately before closing content.
 Each game has its own folder named after the original PAK, SPK or ZIP without
 its extension, or the unpacked mod directory. The name stays stable when content
 is extracted or prepared. Identically named games share this namespace; give
-unrelated games different filenames. Inside it, engine builds stay separate
+unrelated games different filenames. Inside it, logical profiles stay separate
 because their settings layouts are incompatible.
 
 Saved-data cleanup removes that whole game folder, including settings, progress,
-script output, logs, screenshots and learned memory peaks for every engine build.
+script output, logs, screenshots and learned memory peaks for every profile.
 Other games and frontend save states remain intact. Script output explicitly
 written outside the game's folder is outside this cleanup operation.
 

@@ -56,6 +56,7 @@ char screenShotsDir[MAX_FILENAME_LEN] = { "ScreenShots" };
 unsigned long long obor_clock_us;
 unsigned char obor_pad[4][16];
 int obor_snd_bits = 16, obor_snd_rate = 44100, obor_snd_started;
+uint32_t obor_profile_build;
 
 static cothread_t co_frontend;
 static cothread_t co_engine;
@@ -315,8 +316,10 @@ uint32_t obor_abi_version(void)
 
 int32_t obor_boot(const obor_boot_info *info)
 {
-    if (!info || info->abi_version != OBOR_ABI_VERSION || !info->arena_reserved)
+    if (!info || info->abi_version != OBOR_ABI_VERSION ||
+        !info->arena_reserved || !info->profile_build)
         return 0;
+    obor_profile_build = info->profile_build;
     obor_arena_authorize(info->arena_reserved);
     char frontend_cwd[4096];
     if (!obor_getcwd(frontend_cwd, sizeof(frontend_cwd)))
@@ -324,7 +327,8 @@ int32_t obor_boot(const obor_boot_info *info)
     engine_cwd[0] = '\0';
     content_alias_name[0] = '\0';
 
-    if (!obor_state_set_save_dir(info->save_dir) || !obor_state_set_regions(info))
+    if (!obor_state_set_save_dir(info->save_dir, obor_profile_build) ||
+        !obor_state_set_regions(info))
         return 0;
 
     if (info->raw_dir) {
@@ -351,7 +355,7 @@ int32_t obor_boot(const obor_boot_info *info)
         char base[MAX_FILENAME_LEN], root[MAX_FILENAME_LEN];
         int bn = snprintf(base, sizeof(base), "%s", info->save_dir);
         int rn = snprintf(root, sizeof(root), "%s/%d",
-                          info->save_dir, (int)OBOR_ENGINE_BUILD);
+                          info->save_dir, (int)obor_profile_build);
         if (bn < 0 || (size_t)bn >= sizeof(base) ||
             rn < 0 || (size_t)rn >= sizeof(root))
             goto fail;
@@ -402,7 +406,7 @@ int32_t obor_boot(const obor_boot_info *info)
         snprintf(root, sizeof(root), "%s", info->save_dir);
         if (!obor_make_dir(root)) goto fail;
         snprintf(root, sizeof(root), "%s/%d", info->save_dir,
-                 (int)OBOR_ENGINE_BUILD);
+                 (int)obor_profile_build);
         if (!obor_make_dir(root)) goto fail;
         if (chdir(root) != 0)
             goto fail;

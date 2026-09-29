@@ -53,7 +53,7 @@ extern uintptr_t __stack_chk_guard;
 static int collect_segments(void);
 
 #define OBS_MAGIC 0x3153424FU /* "OBS1" */
-#define OBS_VERSION 2U
+#define OBS_VERSION 3U
 
 /* Snapshots omit inactive engines' BSS. The heap precedes the variable-length
  * stack slice, keeping its offset stable for incremental dirty-page copies. */
@@ -106,13 +106,15 @@ static uint64_t heap_used(void)
 
 static char g_peak_dir[4096];
 static uint64_t g_peak_written;
+static uint32_t g_profile_build;
 
-int obor_state_set_save_dir(const char *dir)
+int obor_state_set_save_dir(const char *dir, uint32_t profile_build)
 {
-    if (!dir || !dir[0])
+    if (!dir || !dir[0] || !profile_build)
         return 0;
+    g_profile_build = profile_build;
     int n = snprintf(g_peak_dir, sizeof(g_peak_dir), "%s/%d/Saves",
-                     dir, (int)OBOR_ENGINE_BUILD);
+                     dir, (int)g_profile_build);
     g_peak_written = 0;
     return n >= 0 && (size_t)n < sizeof(g_peak_dir);
 }
@@ -437,7 +439,8 @@ static void ensure_boot_id(void)
 
 typedef struct {
     uint32_t magic, version;
-    uint32_t engine_build;
+    uint32_t profile_build;
+    uint32_t physical_build;
     uint32_t nsegs;
     uint64_t image_lo, image_hi;
     uint64_t boot_id;
@@ -625,7 +628,8 @@ uint32_t obor_serialize(void *buf, uint32_t size)
     memset(&h, 0, sizeof(h));
     h.magic = OBS_MAGIC;
     h.version = OBS_VERSION;
-    h.engine_build = (uint32_t)OBOR_ENGINE_BUILD;
+    h.profile_build = g_profile_build;
+    h.physical_build = (uint32_t)OBOR_ENGINE_BUILD;
     h.nsegs = (uint32_t)g_nsegs;
     h.image_lo = g_image_lo;
     h.image_hi = g_image_hi;
@@ -634,7 +638,7 @@ uint32_t obor_serialize(void *buf, uint32_t size)
     h.stack_off = (uint64_t)(slice - stack_lo);
     h.stack_len = stack_len;
 
-    /* v2 blob layout: header | seg table | seg data | stack head |
+    /* v3 blob layout: header | seg table | seg data | stack head |
      * sparse heap | stack slice.  The heap encoder retains complete live
      * chunks and allocator metadata while omitting free user bytes. */
     uint8_t *heap_blob = p + sizeof(h) + (size_t)g_nsegs * sizeof(seg_t) +
@@ -732,9 +736,11 @@ int32_t obor_unserialize(const void *buf, uint32_t size)
     memcpy(&h, buf, sizeof(h));
     if (h.magic != OBS_MAGIC || h.version != OBS_VERSION)
         return 0;
-    if (h.engine_build != (uint32_t)OBOR_ENGINE_BUILD) {
-        fprintf(stderr, "[obor] state from engine %u, running %u — rejected\n",
-                h.engine_build, (unsigned)OBOR_ENGINE_BUILD);
+    if (h.profile_build != g_profile_build ||
+        h.physical_build != (uint32_t)OBOR_ENGINE_BUILD) {
+        fprintf(stderr, "[obor] state from profile %u / engine %u, running %u / %u — rejected\n",
+                h.profile_build, h.physical_build, g_profile_build,
+                (unsigned)OBOR_ENGINE_BUILD);
         return 0;
     }
     if (h.nsegs == 0 || h.nsegs > MAX_SEGS ||

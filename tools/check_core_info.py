@@ -27,8 +27,9 @@ def read_info(path):
 
 def check_core_info(root, pin):
     expected_fields = {"core_name", "core_basename", "version", "source_date_epoch",
-                       "fallback_build", "engine_repo", "engines", "deps", "transform_vm"}
+                       "fallback_build", "engine_repo", "engines", "profiles", "deps", "transform_vm"}
     engine_fields = {"build", "commit", "date", "covers", "major", "version_major"}
+    profile_fields = {"build", "engine", "covers", "major"}
     if set(pin) != expected_fields or set(pin["engine_repo"]) != {"url"}:
         raise RuntimeError("Unexpected public source metadata fields")
     if type(pin["source_date_epoch"]) is not int or pin["source_date_epoch"] < 0:
@@ -40,6 +41,14 @@ def check_core_info(root, pin):
     for engine in pin["engines"]:
         if set(engine) - engine_fields or not {"build", "commit", "date", "major"} <= set(engine):
             raise RuntimeError("Unexpected public engine metadata fields")
+    physical = {engine["build"] for engine in pin["engines"]}
+    logical = set()
+    for profile in pin["profiles"]:
+        if set(profile) != profile_fields or profile["engine"] not in physical or profile["build"] in logical:
+            raise RuntimeError("Invalid public logical profile metadata")
+        logical.add(profile["build"])
+    if pin["fallback_build"] not in logical:
+        raise RuntimeError("Fallback build has no logical profile")
     basename = pin["core_basename"]
     info = read_info(root / (basename + ".info"))
     expected = {

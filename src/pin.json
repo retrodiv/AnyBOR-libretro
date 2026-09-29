@@ -1,8 +1,46 @@
 {
   "core_name": "AnyBOR",
   "core_basename": "anybor_libretro",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "fallback_build": "6412",
+  "profiles": [
+    {
+      "build": "3400",
+      "engine": "3400",
+      "covers": "<= 3400 including lost pre-3020 era (best effort)",
+      "major": "v2-v3"
+    },
+    {
+      "build": "3842",
+      "engine": "3842",
+      "covers": "3401-3842",
+      "major": "v3"
+    },
+    {
+      "build": "4086",
+      "engine": "4086",
+      "covers": "3843-4086",
+      "major": "v3"
+    },
+    {
+      "build": "4432",
+      "engine": "4432",
+      "covers": "4087-4432",
+      "major": "v3"
+    },
+    {
+      "build": "6412",
+      "engine": "6412",
+      "covers": "4433-6412; default fallback",
+      "major": "v3"
+    },
+    {
+      "build": "8020",
+      "engine": "8020",
+      "covers": "6413-8020; newer builds best effort via latest pinned v4 anchor",
+      "major": "v4"
+    }
+  ],
   "deps": {
     "dlmalloc": {
       "url": "https://gee.cs.oswego.edu/pub/misc/malloc-2.8.6.c",

@@ -90,8 +90,9 @@ extern int obor_live_threads;
 
 
 /* Bind snapshot bookkeeping to the frontend's absolute save directory. */
-int obor_state_set_save_dir(const char *dir);
+int obor_state_set_save_dir(const char *dir, uint32_t profile_build);
 int obor_state_set_regions(const obor_boot_info *info);
+extern uint32_t obor_profile_build;
 
 /* Snapshot arena (obor_alloc.c). */
 int obor_arena_init(void);

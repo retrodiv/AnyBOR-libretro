@@ -70,7 +70,8 @@ static uint32_t g_state_capacity;
 static bool g_variable_state_size;
 static int g_width = 320, g_height = 240;
 static uint32_t *g_crt_pixels; /* presentation scratch, outside engine states */
-static char g_engine[48];           /* engine actually loaded, e.g. "6412" */
+static char g_engine[48];           /* physical engine actually loaded */
+static char g_logical_engine[48];   /* selected logical compatibility profile */
 static char g_save_dir[1024];
 static char g_game_dir[1600];
 static char g_pak_path[4096];
@@ -614,7 +615,7 @@ static void gamelog_frame(void)
         return;
     if (!g_glog_fp) {
         snprintf(g_glog_path, sizeof(g_glog_path),
-                 "%s/%s/Logs/OpenBorLog.txt", g_game_dir, g_engine);
+                 "%s/%s/Logs/OpenBorLog.txt", g_game_dir, g_logical_engine);
         g_glog_fp = fopen(g_glog_path, "rb");
         if (!g_glog_fp)
             return;
@@ -768,6 +769,7 @@ static void content_stop(void)
     g_map_sent = 0;
     g_raw = false;
     g_engine[0] = '\0';
+    g_logical_engine[0] = '\0';
     g_pak_path[0] = '\0';
     free(g_crt_pixels);
     g_crt_pixels = NULL;
@@ -785,7 +787,7 @@ static void content_stop(void)
 void retro_set_environment(retro_environment_t cb)
 {
     env_cb = cb;
-    size_t n_eng = sizeof(kEngineDefs) / sizeof(kEngineDefs[0]);
+    size_t n_profiles = sizeof(kProfiles) / sizeof(kProfiles[0]);
 
     unsigned cov = 0;
     if (!cb(RETRO_ENVIRONMENT_GET_CORE_OPTIONS_VERSION, &cov))
@@ -859,12 +861,12 @@ void retro_set_environment(retro_environment_t cb)
         for (struct retro_core_option_v2_definition *def = defs; def->key; ++def) {
             if (strcmp(def->key, "obor_engine"))
                 continue;
-            for (size_t i = 0; i < n_eng && i + 2 < 128; i++) {
-                def->values[i + 1].value = kEngineDefs[i].disp;
+            for (size_t i = 0; i < n_profiles && i + 2 < 128; i++) {
+                def->values[i + 1].value = kProfiles[i].disp;
                 def->values[i + 1].label = NULL;
             }
-            def->values[n_eng + 1].value = NULL;
-            def->values[n_eng + 1].label = NULL;
+            def->values[n_profiles + 1].value = NULL;
+            def->values[n_profiles + 1].label = NULL;
             break;
         }
         static struct retro_core_options_v2 opts = { cats, defs };
@@ -876,11 +878,11 @@ void retro_set_environment(retro_environment_t cb)
     static char values[320];
     if (!values[0]) {
         strcpy(values, "Engine build (needs restart); Auto");
-        for (size_t i = 0; i < n_eng; i++) {
+        for (size_t i = 0; i < n_profiles; i++) {
             size_t used = strlen(values);
-            if (strlen(kEngineDefs[i].disp) + 2 > sizeof(values) - used)
+            if (strlen(kProfiles[i].disp) + 2 > sizeof(values) - used)
                 break;
-            snprintf(values + used, sizeof(values) - used, "|%s", kEngineDefs[i].disp);
+            snprintf(values + used, sizeof(values) - used, "|%s", kProfiles[i].disp);
         }
     }
     static const struct retro_variable vars[] = {
@@ -969,6 +971,7 @@ static bool boot_engine(void)
     boot.arena_reserved = g_arena_owned ? 1 : 0;
     boot.sample_rate = 44100;
     boot.raw_dir = g_raw ? 1 : 0;
+    boot.profile_build = (uint32_t)atoi(g_logical_engine);
     obor_engine_region regions[OBOR_MAX_ENGINE_REGIONS];
     const size_t n_eng = sizeof(kEngineDefs) / sizeof(kEngineDefs[0]);
     static_assert(sizeof(kEngineDefs) / sizeof(kEngineDefs[0]) <= OBOR_MAX_ENGINE_REGIONS,
@@ -1328,6 +1331,7 @@ typedef struct {
     int width, height;
     uint32_t *crt_pixels;
     char engine[48];
+    char logical_engine[48];
     char saved[1024], pak[4096];
     FILE *trace, *glog;
     obor_profile_state profile;
@@ -1358,6 +1362,7 @@ static void glue_save(glue_regs *r)
     r->crt_pixels = g_crt_pixels;
     r->crt = g_crt_on;
     memcpy(r->engine, g_engine, sizeof(g_engine));
+    memcpy(r->logical_engine, g_logical_engine, sizeof(g_logical_engine));
     memcpy(r->saved, g_save_dir, sizeof(g_save_dir));
     memcpy(r->pak, g_pak_path, sizeof(g_pak_path));
     r->trace = g_trace; r->glog = g_glog_fp;
@@ -1390,6 +1395,7 @@ static void glue_load(const glue_regs *r)
     g_crt_pixels = r->crt_pixels;
     g_crt_on = r->crt;
     memcpy(g_engine, r->engine, sizeof(g_engine));
+    memcpy(g_logical_engine, r->logical_engine, sizeof(g_logical_engine));
     memcpy(g_save_dir, r->saved, sizeof(g_save_dir));
     memcpy(g_pak_path, r->pak, sizeof(g_pak_path));
     /* FILE objects belong to this frontend process, never to a snapshot. */
@@ -1607,9 +1613,9 @@ static void decide_engine(void)
     get_engine_option(opt, sizeof(opt));
 
     int avail[16];
-    int n_avail = (int)(sizeof(kEngineDefs) / sizeof(kEngineDefs[0]));
+    int n_avail = (int)(sizeof(kProfiles) / sizeof(kProfiles[0]));
     for (int i = 0; i < n_avail; i++)
-        avail[i] = kEngineDefs[i].build;
+        avail[i] = kProfiles[i].build;
 
     int build = 0;
     const char *how = "fallback";
@@ -1617,9 +1623,9 @@ static void decide_engine(void)
         /* match the display value ("v3 4086") or the bare build ("4086",
          * used by the test harness via OBOR_ENGINE) */
         for (int i = 0; i < n_avail; i++)
-            if (strcmp(opt, kEngineDefs[i].disp) == 0 ||
-                strcmp(opt, kEngineDefs[i].name) == 0)
-                build = kEngineDefs[i].build;
+            if (strcmp(opt, kProfiles[i].disp) == 0 ||
+                strcmp(opt, kProfiles[i].name) == 0)
+                build = kProfiles[i].build;
         if (build)
             how = "core option";
     }
@@ -1643,16 +1649,23 @@ static void decide_engine(void)
         build = OBOR_FALLBACK_BUILD;
 
     int anchor = pick_anchor(build, avail, n_avail);
-    snprintf(g_engine, sizeof(g_engine), "%d", anchor);
+    const obor_profile_def *selected = NULL;
+    for (int i = 0; i < n_avail; i++)
+        if (kProfiles[i].build == anchor)
+            selected = &kProfiles[i];
+    if (!selected) {
+        g_engine[0] = '\0';
+        g_logical_engine[0] = '\0';
+        return;
+    }
+    snprintf(g_logical_engine, sizeof(g_logical_engine), "%d", anchor);
+    snprintf(g_engine, sizeof(g_engine), "%d", selected->engine_build);
     log_cb(RETRO_LOG_INFO,
-           "[OpenBOR] pak needs build %d (%s) -> engine %s\n", build, how,
-           g_engine);
+           "[OpenBOR] pak needs build %d (%s) -> profile %s -> engine %s\n",
+           build, how, g_logical_engine, g_engine);
 
     /* surface the decision in the frontend UI (OSD notification) */
-    const char *disp = g_engine;
-    for (size_t i = 0; i < sizeof(kEngineDefs) / sizeof(kEngineDefs[0]); i++)
-        if (strcmp(kEngineDefs[i].name, g_engine) == 0)
-            disp = kEngineDefs[i].disp;
+    const char *disp = selected->disp;
     char msg[160];
     if (strcmp(how, "core option") == 0)
         snprintf(msg, sizeof(msg), "AnyBOR %s (core option)", disp);

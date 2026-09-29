@@ -27,7 +27,7 @@
 extern "C" {
 #endif
 
-#define OBOR_ABI_VERSION 2u
+#define OBOR_ABI_VERSION 3u
 
 /* Snapshot-arena fixed virtual address, shared by the glue (which CLAIMS
  * the range in a load-time constructor, before the frontend allocates its
@@ -97,6 +97,7 @@ typedef struct {
                                 * save directory */
     const obor_engine_region *engine_regions; /* copied during boot */
     uint32_t engine_region_count;
+    uint32_t profile_build; /* logical identity; may share a physical engine */
 } obor_boot_info;
 
 /* Every function below is implemented by each linked engine object and wired
