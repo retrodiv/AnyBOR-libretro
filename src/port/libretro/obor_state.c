@@ -35,6 +35,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <time.h>
+#include "obor_runtime.h"
 
 #if defined(_WIN32)
 #include <windows.h>
@@ -243,7 +244,7 @@ static void push_raw_seg(uint64_t lo, uint64_t hi)
     g_segs[g_nsegs++].size = hi - lo;
 }
 
-static void push_seg(uint64_t lo, uint64_t hi)
+static void push_engine_seg(uint64_t lo, uint64_t hi)
 {
     if (hi <= lo)
         return;
@@ -261,6 +262,16 @@ static void push_seg(uint64_t lo, uint64_t hi)
         lo = r->end;
     }
     push_raw_seg(lo, hi);
+}
+
+static void push_seg(uint64_t lo, uint64_t hi)
+{
+    uintptr_t runtime_lo, runtime_hi;
+    obor_runtime_bounds(&runtime_lo, &runtime_hi);
+    if (runtime_hi > runtime_lo && runtime_lo < hi && runtime_hi > lo) {
+        if (runtime_lo > lo) push_engine_seg(lo, runtime_lo);
+        if (runtime_hi < hi) push_engine_seg(runtime_hi, hi);
+    } else push_engine_seg(lo, hi);
 }
 
 #if defined(_WIN32)
@@ -491,7 +502,7 @@ static uint64_t cold_pack_reserve(void)
     return result;
 }
 
-uint32_t obor_serialize_size(void)
+static uint32_t serialize_size_impl(void)
 {
     if (!collect_segments())
         return 0;
@@ -566,7 +577,7 @@ uint32_t obor_serialize_size(void)
 
 /* -------------------------------------------------------- serialize ---- */
 
-uint32_t obor_serialize(void *buf, uint32_t size)
+static uint32_t serialize_impl(void *buf, uint32_t size)
 {
     static int profile_heap_reported;
     if (!collect_segments())
@@ -656,6 +667,7 @@ uint32_t obor_serialize(void *buf, uint32_t size)
     }
     memcpy(p, stack_lo, OBOR_STACK_HEAD);
     p += OBOR_STACK_HEAD;
+    obor_test_fault_phase("save-copy");
     clock_gettime(CLOCK_MONOTONIC, &ts1);
     {
         static int dbg3 = -1, n3;
@@ -718,7 +730,7 @@ static void rebase_range(void *region, size_t nbytes, uint64_t old_lo,
 }
 #endif
 
-int32_t obor_unserialize(const void *buf, uint32_t size)
+static int32_t unserialize_impl(const void *buf, uint32_t size, int *committed)
 {
     /* Restoring the arena while playback workers use it would destroy
      * their queues and synchronization objects. As with serialization,
@@ -856,6 +868,9 @@ int32_t obor_unserialize(const void *buf, uint32_t size)
 
     uint8_t *stack_dst = (uint8_t *)obor_stack_ptr() + h.stack_off;
 
+    /* From here onwards a failed load cannot retain a coherent live world. */
+    *committed = 1;
+
 #ifdef OBOR_HAS_MOVIE_PLAYBACK
     if (debug_restore)
         fprintf(stderr, "[obor] unserialize suspending live resources\n");
@@ -867,7 +882,9 @@ int32_t obor_unserialize(const void *buf, uint32_t size)
     for (int i = 0; i < nsegs_l; i++) {
         memcpy((void *)(uintptr_t)segs_l[i].vaddr, p, (size_t)segs_l[i].size);
         p += segs_l[i].size;
+        if (i == 0) obor_test_fault_phase("load-partial");
     }
+    obor_test_fault_phase("load-copy");
 #if defined(_WIN32)
     __stack_chk_guard = stack_guard_l;
 #endif
@@ -875,6 +892,7 @@ int32_t obor_unserialize(const void *buf, uint32_t size)
     p += OBOR_STACK_HEAD;
     if (!obor_heap_sparse_restore(p, h.heap_len, h.arena_used))
         return 0;
+    obor_test_fault_phase("load-heap");
     p += h.heap_len;
     memcpy(stack_dst, p, (size_t)h.stack_len);
     p += h.stack_len;
@@ -955,4 +973,55 @@ int32_t obor_unserialize(const void *buf, uint32_t size)
 #else
     return 1;
 #endif
+}
+
+#include "obor_state_padding.h"
+
+/* These contexts and the recovery point live on the frontend stack. In
+ * particular they survive faults partway through restoring module globals. */
+typedef struct {
+    void *buffer;
+    uint32_t size, result;
+    int operation, committed;
+} state_call;
+
+static void execute_state(void *context)
+{
+    state_call *call = (state_call *)context;
+    if (call->operation == 0) {
+        obor_test_fault_phase("size");
+        call->result = serialize_size_impl();
+    } else if (call->operation == 1) {
+        obor_test_fault_phase("save");
+        call->result = serialize_impl(call->buffer, call->size);
+        if (call->result && call->result < call->size)
+        {
+            obor_test_fault_phase("save-padding");
+            obor_state_clear_padding((uint8_t *)call->buffer + call->result,
+                                      call->size - call->result);
+        }
+    } else {
+        obor_test_fault_phase("load");
+        call->result = unserialize_impl(call->buffer, call->size, &call->committed);
+        if (!call->result && call->committed)
+            obor_fault_abort(OBOR_FAULT_STATE, 0);
+    }
+}
+
+uint32_t obor_serialize_size(void)
+{
+    state_call call = {NULL, 0, 0, 0, 0};
+    return obor_protect_call(execute_state, &call, "state size") ? call.result : 0;
+}
+
+uint32_t obor_serialize(void *buffer, uint32_t size)
+{
+    state_call call = {buffer, size, 0, 1, 0};
+    return obor_protect_call(execute_state, &call, "save state") ? call.result : 0;
+}
+
+int32_t obor_unserialize(const void *buffer, uint32_t size)
+{
+    state_call call = {(void *)buffer, size, 0, 2, 0};
+    return obor_protect_call(execute_state, &call, "load state") ? (int32_t)call.result : 0;
 }

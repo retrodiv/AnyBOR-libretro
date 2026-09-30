@@ -1,16 +1,20 @@
-/* AnyBOR modification record: 2026-09-12.
+/* AnyBOR modification record: 2026-09-30.
  * Port maintained by retrodiv <retrodiv@proton.me>.
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
  * Upstream code retains its original license and notices.
  * Apply the port's engine corrections and select the PC video configuration
- * on macOS. Leave multiplayer slots without a selected model available to
- * join even if game scripts preassign lives to them. Let a missing basename-
- * only PAK self-check read the active frontend content after it has been
- * validated and prepared. Allocate each model's animation pointer table
- * through the highest animation index that model uses, and bound cache, copy
- * and cleanup paths to that capacity. Resize repeated weapon lists and
- * detach borrowed lists before replacing their entries.
+ * on macOS. Select the 4453 profile's 32-bit screen and palette behavior,
+ * preserve the 4432 12-key native settings format while 4453 uses 13 keys,
+ * and disable the Exit mapping in the 4453 control menu. Bound the DOT loop
+ * and control-menu arrays to allocated storage. Leave multiplayer slots
+ * without a selected model available to join even if game scripts preassign
+ * lives to them. Let a missing basename-only PAK self-check read the active
+ * frontend content after it has been validated and prepared. Allocate each
+ * model's animation pointer table through the highest animation index that
+ * model uses, and bound cache, copy and cleanup paths to that capacity.
+ * Resize repeated weapon lists and detach borrowed lists before replacing
+ * their entries.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/4432.md
  * at the source repository root. Original notices follow below.
@@ -30,6 +34,7 @@
 /////////////////////////////////////////////////////////////////////////////
 
 #include "openbor.h"
+#include <stddef.h>
 #include "commands.h"
 #include "models.h"
 #include "translation.h"
@@ -3075,6 +3080,71 @@ void clearsettings()
 }
 
 
+/* The shared runtime has room for the later 13-key layout. Preserve the
+ * original 4432 on-disk layout, including the fields following keys. */
+#define OBOR_SETTINGS_4432_SIZE (sizeof(s_savedata) - MAX_PLAYERS * sizeof(int))
+
+static void obor_pack_settings_4432(unsigned char *data)
+{
+    size_t prefix = offsetof(s_savedata, keys);
+    size_t tail = offsetof(s_savedata, showtitles);
+    int player;
+    memcpy(data, &savedata, prefix);
+    for(player = 0; player < MAX_PLAYERS; player++)
+    {
+        memcpy(data + prefix + player * 12 * sizeof(int),
+               savedata.keys[player], 12 * sizeof(int));
+    }
+    memcpy(data + prefix + MAX_PLAYERS * 12 * sizeof(int),
+           (unsigned char *)&savedata + tail, sizeof(savedata) - tail);
+}
+
+static void obor_unpack_settings_4432(const unsigned char *data)
+{
+    size_t prefix = offsetof(s_savedata, keys);
+    size_t tail = offsetof(s_savedata, showtitles);
+    int player;
+    memcpy(&savedata, data, prefix);
+    for(player = 0; player < MAX_PLAYERS; player++)
+    {
+        memcpy(savedata.keys[player], data + prefix + player * 12 * sizeof(int),
+               12 * sizeof(int));
+        savedata.keys[player][12] = 0;
+    }
+    memcpy((unsigned char *)&savedata + tail,
+           data + prefix + MAX_PLAYERS * 12 * sizeof(int), sizeof(savedata) - tail);
+}
+
+static void obor_write_settings(FILE *handle)
+{
+    if(obor_profile_build == 4453)
+    {
+        fwrite(&savedata, 1, sizeof(savedata), handle);
+    }
+    else
+    {
+        unsigned char data[OBOR_SETTINGS_4432_SIZE];
+        obor_pack_settings_4432(data);
+        fwrite(data, 1, sizeof(data), handle);
+    }
+}
+
+static void obor_read_settings(FILE *handle)
+{
+    if(obor_profile_build == 4453)
+    {
+        fread(&savedata, 1, sizeof(savedata), handle);
+    }
+    else
+    {
+        unsigned char data[OBOR_SETTINGS_4432_SIZE];
+        /* Like the upstream partial read, leave unread fields at defaults. */
+        obor_pack_settings_4432(data);
+        fread(data, 1, sizeof(data), handle);
+        obor_unpack_settings_4432(data);
+    }
+}
+
 void savesettings()
 {
 #ifndef DC
@@ -3089,7 +3159,7 @@ void savesettings()
     {
         return;
     }
-    fwrite(&savedata, 1, sizeof(savedata), handle);
+    obor_write_settings(handle);
     fclose(handle);
 #endif
 }
@@ -3106,7 +3176,7 @@ void saveasdefault()
     {
         return;
     }
-    fwrite(&savedata, 1, sizeof(savedata), handle);
+    obor_write_settings(handle);
     fclose(handle);
 #endif
 }
@@ -3132,7 +3202,7 @@ void loadsettings()
     {
         return;
     }
-    fread(&savedata, 1, sizeof(savedata), handle);
+    obor_read_settings(handle);
     fclose(handle);
     if(savedata.compatibleversion != COMPATIBLEVERSION)
     {
@@ -3156,7 +3226,7 @@ void loadfromdefault()
     {
         return;
     }
-    fread(&savedata, 1, sizeof(savedata), handle);
+    obor_read_settings(handle);
     fclose(handle);
     if(savedata.compatibleversion != COMPATIBLEVERSION)
     {
@@ -11512,7 +11582,7 @@ s_model *load_cached_model(char *name, char *owner, char unload)
     }
 
     // we need to convert 8bit colourmap into 24bit palette
-    if(pixelformat == PIXEL_x8)
+    if(pixelformat == PIXEL_x8 && obor_profile_build != 4453)
     {
         convert_map_to_palette(newchar, mapflag);
     }
@@ -20540,7 +20610,7 @@ void common_dot()
     entity     *eOpp;       //Owner of dot effect.
     s_collision_attack    attack;     //Attack struct.
 
-    for(iIndex = 0; iIndex <= MAX_DOTS; iIndex++)                                               //Loop through all DOT indexes.
+    for(iIndex = 0; iIndex < MAX_DOTS; iIndex++)                                               //Loop through all DOT indexes.
     {
         iDot_time   =   self->dot_time[iIndex];                                                 //Get expire time.
         iDot_cnt    =   self->dot_cnt[iIndex];                                                  //Get next tick time.
@@ -34352,6 +34422,14 @@ void init_videomodes(int log)
     ArgList arglist;
     char argbuf[MAX_ARG_LEN + 1] = "";
 
+    if(obor_profile_build == 4453)
+    {
+        /* 4453 dropped screenformat: its framebuffer is always PIXEL_32,
+         * while model images retain their individual indexed palettes. */
+        screenformat = PIXEL_32;
+        pixelformat = PIXEL_x8;
+    }
+
     if(log)
     {
         printf("Initializing video............\n");
@@ -34455,6 +34533,12 @@ readfile:
             }
             else if(stricmp(command, "colourdepth") == 0)
             {
+                if(obor_profile_build == 4453)
+                {
+                    printf("\nColordepth is depreciated. All modules are displayed with a 32bit color screen.\n\n");
+                    pos += getNewLineStart(buf + pos);
+                    continue;
+                }
                 pixelformat = PIXEL_x8;
                 value = GET_ARG(1);
                 if(stricmp(value, "8bit") == 0)
@@ -34667,12 +34751,12 @@ void safe_set(int *arr, int index, int newkey, int oldkey)
 
 void keyboard_setup(int player)
 {
-    const int btnnum = MAX_BTN_NUM;
+    const int btnnum = obor_profile_build == 4453 ? MAX_BTN_NUM : 12;
     int quit = 0, sdid,
         selector = 0,
         setting = -1,
         i, k, ok = 0,
-              disabledkey[MAX_BTN_NUM+1] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+              disabledkey[MAX_BTN_NUM+2] = {0},
                                 col1 = -8, col2 = 6;
     ptrdiff_t pos, voffset;
     size_t size;
@@ -34696,6 +34780,7 @@ void keyboard_setup(int player)
     strncpy(buttonnames[SDID_START], "Start", 16);
     strncpy(buttonnames[SDID_SCREENSHOT], "Screenshot", 16);
     strncpy(buttonnames[SDID_ESC], "Exit", 16);
+    if(obor_profile_build == 4453) disabledkey[SDID_ESC] = 1;
 
     savesettings();
     bothnewkeys = 0;
@@ -34739,7 +34824,7 @@ void keyboard_setup(int player)
         }
     }
 
-    while(disabledkey[selector]) if(++selector > btnnum-1)
+    while(selector < btnnum && disabledkey[selector]) if(++selector > btnnum-1)
         {
             break;
         }
@@ -34797,7 +34882,7 @@ void keyboard_setup(int player)
                         break;
                     }
                 }
-                while(disabledkey[selector]);
+                while(selector < btnnum && disabledkey[selector]);
                 sound_play_sample(SAMPLE_BEEP, 0, savedata.effectvol, savedata.effectvol, 100);
             }
             if(bothnewkeys & FLAG_MOVEDOWN)
@@ -34809,7 +34894,7 @@ void keyboard_setup(int player)
                         break;
                     }
                 }
-                while(disabledkey[selector]);
+                while(selector < btnnum && disabledkey[selector]);
                 sound_play_sample(SAMPLE_BEEP, 0, savedata.effectvol, savedata.effectvol, 100);
             }
             if(selector < 0)
@@ -34819,7 +34904,7 @@ void keyboard_setup(int player)
             if(selector > btnnum+1)
             {
                 selector = 0;
-                while(disabledkey[selector]) if(++selector > btnnum-1)
+                while(selector < btnnum && disabledkey[selector]) if(++selector > btnnum-1)
                     {
                         break;
                     }

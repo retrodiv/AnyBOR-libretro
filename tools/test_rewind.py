@@ -86,7 +86,7 @@ def main():
             print("PASS", engine, name, "capacity=" + sizes[0], flush=True)
             return (root / "frame000180.ppm").read_bytes(), log
 
-        for entry in release.read_json(release.ROOT / "src/pin.json")["engines"]:
+        for entry in release.read_json(release.ROOT / "src/pin.json")["profiles"]:
             engine = entry["build"]
             state = work / (engine + ".state")
             # An allocation is fixed before frame zero and then used for

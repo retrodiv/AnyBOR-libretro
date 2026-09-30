@@ -18,12 +18,16 @@
 #include <string.h>
 #if !defined(_WIN32)
 #include <unistd.h>
+#include <dlfcn.h>
 #endif
 
 #include "libretro.h"
 #include "obor_abi.h"
+#include "obor_runtime.h"
+#include "obor_engine_resources.h"
 #include "obor_notices.h"
 #include "obor_crt.h"
+#include "obor_error_screen.h"
 #include "obor_state_padding.h"
 #include "obor_profile.h"
 #if defined(__APPLE__)
@@ -66,6 +70,12 @@ static void fallback_log(enum retro_log_level level, const char *fmt, ...)
 
 static const obor_vtbl *g_vtbl;
 static bool g_booted;
+static bool g_error_active;
+static bool g_fault_pending;
+static char g_error_reason[512];
+static char g_error_engine[48];
+static char g_error_path[4096];
+static uint32_t g_error_pixels[OBOR_ERROR_WIDTH * OBOR_ERROR_HEIGHT];
 static uint32_t g_state_capacity;
 static bool g_variable_state_size;
 static int g_width = 320, g_height = 240;
@@ -81,10 +91,14 @@ static bool g_raw; /* content is an unpacked mod dir, not a .pak */
 static FILE *g_trace;
 static long g_frame_no;
 static long g_last_unser = -99;
+static bool g_fault_quarantined;
 
 #define p_abi_version (g_vtbl->abi_version)
 #define p_boot (g_vtbl->boot)
 #define p_run_frame (g_vtbl->run_frame)
+#define p_get_exit_status (g_vtbl->get_exit_status)
+#define p_get_fault_message (g_vtbl->get_fault_message)
+#define p_abandon (g_vtbl->abandon)
 #define p_get_video (g_vtbl->get_video)
 #define p_set_button (g_vtbl->set_button)
 #define p_get_audio (g_vtbl->get_audio)
@@ -101,6 +115,8 @@ static void glue_collect_segments(void);
 static void pristine_capture(void);
 static void pristine_restore(void);
 static bool select_engine_vtbl(const char *engine, char *err, int err_len);
+static bool obor_load_retry(const struct retro_game_info *info);
+static void stop_faulted_engine(void);
 
 /* ------------------------------------------------- version detection --- */
 
@@ -232,7 +248,7 @@ static int build_from_exe(const char *exe_path)
  * name-followed-by-paren) are matched against obor_markers.h — each marker
  * maps to the engine build that introduced it, tuned so prose
  * never fires. A lower bound is converted to an automatic profile below;
- * the 6412 profile requires an explicit filename or core option. */
+ * profiles 4453 and 6412 require an explicit filename or core option. */
 #include "obor_markers.h"
 
 static int marker_cmp(const void *k, const void *m)
@@ -753,12 +769,17 @@ static void trace_close(void)
 
 static void content_stop(void)
 {
+    if (g_fault_pending) {
+        g_fault_pending = false;
+        stop_faulted_engine();
+    }
     obor_profile_close();
     g_state_capacity = 0;
     rumble_stop();
     g_pm_nchars = 0;
     if (g_booted && g_vtbl)
         p_shutdown();
+    if (!g_fault_quarantined) engine_resources_close();
     g_booted = false;
     gamelog_close();
     if (!obor_storage_finish() && log_cb)
@@ -777,6 +798,111 @@ static void content_stop(void)
     g_crt_pixels = NULL;
     g_width = 320;
     g_height = 240;
+}
+
+static void error_reason(const char *reason)
+{
+    snprintf(g_error_reason, sizeof(g_error_reason), "%s",
+             reason && reason[0] ? reason : "The game could not be loaded.");
+}
+
+/* borShutdown writes the reason just after this marker. Ignore the later
+ * teardown chatter and any log from a different engine profile. */
+static bool engine_log_error(char *out, size_t cap)
+{
+    if (g_vtbl && p_get_fault_message(out, (uint32_t)cap)) return true;
+    if (!g_game_dir[0] || !g_logical_engine[0]) return false;
+    char path[2048];
+    int n = snprintf(path, sizeof(path), "%s/%s/Logs/OpenBorLog.txt",
+                     g_game_dir, g_logical_engine);
+    if (n < 0 || (size_t)n >= sizeof(path)) return false;
+    FILE *fp = fopen(path, "rb");
+    if (!fp) return false;
+    char line[512];
+    bool marker = false, found = false;
+    while (fgets(line, sizeof(line), fp)) {
+        if (strstr(line, "An Error Occurred")) {
+            marker = true;
+            found = false;
+            continue;
+        }
+        if (!marker) continue;
+        size_t len = strlen(line);
+        while (len && (line[len - 1] == '\n' || line[len - 1] == '\r'))
+            line[--len] = '\0';
+        if (!len || line[0] == '*') continue;
+        snprintf(out, cap, "%s", line);
+        found = true;
+        break;
+    }
+    fclose(fp);
+    return found;
+}
+
+static void stop_faulted_engine(void)
+{
+    g_booted = false;
+    if (p_abandon()) {
+        engine_resources_close();
+        return;
+    }
+    /* A second fault while stopping workers can leave a decoder alive.
+     * Retain its code, statics, resources and arena; do not let dlclose or a
+     * subsequent pristine restore turn that worker into a use-after-free. */
+    g_fault_quarantined = true;
+#ifdef _WIN32
+    HMODULE retained;
+    GetModuleHandleExA(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS |
+                      GET_MODULE_HANDLE_EX_FLAG_PIN,
+                      (LPCSTR)&stop_faulted_engine, &retained);
+#else
+    Dl_info module;
+    if (dladdr((const void *)&stop_faulted_engine, &module))
+        (void)dlopen(module.dli_fname, RTLD_NOW); /* Deliberately retain. */
+#endif
+}
+
+static void error_screen(const char *reason, bool deferred = false)
+{
+    char engine[sizeof(g_error_engine)];
+    snprintf(engine, sizeof(engine), "%s", g_logical_engine[0] ?
+             g_logical_engine : (g_engine[0] ? g_engine : "not selected"));
+    if (reason) error_reason(reason);
+    if (g_fault_quarantined) {
+        const char *suffix = "\nWorkers could not be stopped safely. Restart RetroArch.";
+        size_t used = strlen(g_error_reason);
+        snprintf(g_error_reason + used, sizeof(g_error_reason) - used, "%s", suffix);
+    }
+    if (deferred) {
+        /* State callbacks return outside retro_run. Keep the last submitted
+         * pixels alive until the next video callback or explicit unload/reset. */
+        g_fault_pending = true;
+        g_booted = false;
+    } else content_stop();
+    snprintf(g_error_engine, sizeof(g_error_engine), "%s", engine);
+    g_error_active = true;
+    obor_error_render(g_error_pixels, g_error_path, g_error_engine,
+                      g_error_reason);
+    struct retro_system_av_info av;
+    retro_get_system_av_info(&av);
+    if (!deferred) env_cb(RETRO_ENVIRONMENT_SET_GEOMETRY, &av.geometry);
+    if (log_cb) log_cb(RETRO_LOG_ERROR, "[OpenBOR] %s\n", g_error_reason);
+}
+
+static bool queue_state_fault(void)
+{
+    if (!g_vtbl || p_get_exit_status() != OBOR_EXIT_MEMORY_FAULT) return false;
+    char reason[sizeof(g_error_reason)];
+    if (!p_get_fault_message(reason, sizeof(reason)))
+        snprintf(reason, sizeof(reason), "Engine failed during a state operation.");
+    error_screen(reason, true);
+    return true;
+}
+
+static void present_error_frame(void)
+{
+    video_cb(g_error_pixels, OBOR_ERROR_WIDTH, OBOR_ERROR_HEIGHT,
+             OBOR_ERROR_WIDTH * sizeof(uint32_t));
 }
 
 /* ------------------------------------------------------------ libretro --- */
@@ -974,6 +1100,7 @@ static bool boot_engine(void)
     boot.sample_rate = 44100;
     boot.raw_dir = g_raw ? 1 : 0;
     boot.profile_build = (uint32_t)atoi(g_logical_engine);
+    boot.resource_event = engine_resource_event;
     obor_engine_region regions[OBOR_MAX_ENGINE_REGIONS];
     const size_t n_eng = sizeof(kEngineDefs) / sizeof(kEngineDefs[0]);
     static_assert(sizeof(kEngineDefs) / sizeof(kEngineDefs[0]) <= OBOR_MAX_ENGINE_REGIONS,
@@ -987,6 +1114,8 @@ static bool boot_engine(void)
     boot.engine_region_count = (uint32_t)n_eng;
     obor_dbg("boot: p_boot enter (engine %s)", g_engine);
     int r = p_boot(&boot);
+    if (!r && p_get_exit_status() == OBOR_EXIT_MEMORY_FAULT)
+        stop_faulted_engine();
     obor_dbg("boot: p_boot -> %d", r);
     return r != 0;
 }
@@ -996,6 +1125,17 @@ void retro_reset(void)
     /* True restart: shut the engine down (fds, logs, the whole arena),
      * restore pristine statics and boot again — re-running the version
      * decision so a changed obor_engine core option takes effect NOW. */
+    if (g_error_active) {
+        struct retro_game_info info = {};
+        char path[sizeof(g_error_path)];
+        snprintf(path, sizeof(path), "%s", g_error_path);
+        info.path = path;
+        g_error_active = false;
+        /* Retry from the original content path, with the new core option.
+         * The normal load path is used, without clearing game saves. */
+        obor_load_retry(&info);
+        return;
+    }
     if (!g_booted)
         return;
     g_booted = false;
@@ -1005,14 +1145,21 @@ void retro_reset(void)
     gamelog_close();
     g_map_sent = 0;
     p_shutdown();
+    engine_resources_close();
 
     decide_engine(); /* may pick a different engine than last time */
     log_cb(RETRO_LOG_INFO, "[OpenBOR] reset: booting engine %s\n", g_engine);
 
     char err[256] = "";
-    if (!select_engine_vtbl(g_engine, err, sizeof(err)) || !boot_engine()) {
-        log_cb(RETRO_LOG_ERROR, "[OpenBOR] reset failed: %s\n", err);
-        env_cb(RETRO_ENVIRONMENT_SHUTDOWN, NULL);
+    if (!select_engine_vtbl(g_engine, err, sizeof(err))) {
+        error_screen(err);
+        return;
+    }
+    if (!boot_engine()) {
+        char reason[sizeof(g_error_reason)];
+        if (!engine_log_error(reason, sizeof(reason)))
+            snprintf(reason, sizeof(reason), "Engine %s failed to start this game.", g_engine);
+        error_screen(reason);
         return;
     }
     g_booted = true;
@@ -1169,6 +1316,21 @@ static const struct { unsigned retro; int obor; } kPadMap[] = {
 
 void retro_run(void)
 {
+    if (g_error_active) {
+        if (g_fault_pending) {
+            char reason[sizeof(g_error_reason)];
+            snprintf(reason, sizeof(reason), "%s", g_error_reason);
+            g_fault_pending = false;
+            stop_faulted_engine();
+            error_screen(reason);
+        }
+        bool upd = false;
+        if (env_cb(RETRO_ENVIRONMENT_GET_VARIABLE_UPDATE, &upd) && upd)
+            refresh_options();
+        if (input_poll_cb) input_poll_cb();
+        present_error_frame();
+        return;
+    }
     if (!g_booted)
         return;
 
@@ -1243,7 +1405,21 @@ void retro_run(void)
     if (!engine_running) {
         obor_profile_record("run", g_frame_no, profile_begin,
                             obor_profile_now(), 0, 0, 0, 0, -1);
-        env_cb(RETRO_ENVIRONMENT_SHUTDOWN, NULL);
+        int32_t status = p_get_exit_status();
+        if (status != 0) {
+            char reason[sizeof(g_error_reason)];
+            /* Closing the engine log flushes borShutdown's final message. */
+            if (status == OBOR_EXIT_MEMORY_FAULT) stop_faulted_engine();
+            else { p_shutdown(); engine_resources_close(); }
+            g_booted = false;
+            if (!engine_log_error(reason, sizeof(reason)))
+                snprintf(reason, sizeof(reason), "Engine %s stopped with error %d.",
+                         g_engine, (int)status);
+            error_screen(reason);
+            present_error_frame();
+        } else {
+            env_cb(RETRO_ENVIRONMENT_SHUTDOWN, NULL);
+        }
         return;
     }
     uint64_t profile_core_end = obor_profile_now();
@@ -1264,7 +1440,8 @@ void retro_run(void)
                     OBOR_CRT_WIDTH * OBOR_CRT_HEIGHT * sizeof(uint32_t));
             if (!g_crt_pixels) {
                 log_cb(RETRO_LOG_ERROR, "[OpenBOR] CRT framebuffer allocation failed\n");
-                env_cb(RETRO_ENVIRONMENT_SHUTDOWN, NULL);
+                error_screen("Could not allocate the CRT framebuffer.");
+                present_error_frame();
                 return;
             }
             obor_crt_present(g_crt_pixels, px, w, h, pitch);
@@ -1288,6 +1465,14 @@ void retro_run(void)
 
     static int16_t abuf[2048 * 2];
     int32_t frames = p_get_audio(abuf, 2048);
+    if (p_get_exit_status() == OBOR_EXIT_MEMORY_FAULT) {
+        char reason[sizeof(g_error_reason)];
+        p_get_fault_message(reason, sizeof(reason));
+        stop_faulted_engine();
+        error_screen(reason);
+        present_error_frame();
+        return;
+    }
     if (frames > 0)
         audio_batch_cb(abuf, (size_t)frames);
     /* For run rows the final profile column is an active-player bitmask.
@@ -1329,12 +1514,15 @@ typedef struct {
     retro_log_printf_t log;
     const obor_vtbl *vtbl;
     bool booted;
+    bool fault_quarantined;
+    bool fault_pending;
     uint32_t state_capacity;
     int width, height;
     uint32_t *crt_pixels;
     char engine[48];
     char logical_engine[48];
     char saved[1024], pak[4096];
+    char error_path[sizeof(g_error_path)];
     FILE *trace, *glog;
     obor_profile_state profile;
     gseg input_segments[16];
@@ -1359,6 +1547,8 @@ static void glue_save(glue_regs *r)
     r->env = env_cb; r->video = video_cb; r->audio = audio_batch_cb;
     r->poll = input_poll_cb; r->input = input_state_cb; r->log = log_cb;
     r->vtbl = g_vtbl; r->booted = g_booted;
+    r->fault_quarantined = g_fault_quarantined;
+    r->fault_pending = g_fault_pending;
     r->state_capacity = g_state_capacity;
     r->width = g_width; r->height = g_height;
     r->crt_pixels = g_crt_pixels;
@@ -1367,6 +1557,7 @@ static void glue_save(glue_regs *r)
     memcpy(r->logical_engine, g_logical_engine, sizeof(g_logical_engine));
     memcpy(r->saved, g_save_dir, sizeof(g_save_dir));
     memcpy(r->pak, g_pak_path, sizeof(g_pak_path));
+    memcpy(r->error_path, g_error_path, sizeof(g_error_path));
     r->trace = g_trace; r->glog = g_glog_fp;
     r->profile = g_profile;
     memcpy(r->input_segments, g_gsegs, sizeof(g_gsegs));
@@ -1392,6 +1583,8 @@ static void glue_load(const glue_regs *r)
     env_cb = r->env; video_cb = r->video; audio_batch_cb = r->audio;
     input_poll_cb = r->poll; input_state_cb = r->input; log_cb = r->log;
     g_vtbl = r->vtbl; g_booted = r->booted;
+    g_fault_quarantined = r->fault_quarantined;
+    g_fault_pending = r->fault_pending;
     g_state_capacity = r->state_capacity;
     g_width = r->width; g_height = r->height;
     g_crt_pixels = r->crt_pixels;
@@ -1400,6 +1593,7 @@ static void glue_load(const glue_regs *r)
     memcpy(g_logical_engine, r->logical_engine, sizeof(g_logical_engine));
     memcpy(g_save_dir, r->saved, sizeof(g_save_dir));
     memcpy(g_pak_path, r->pak, sizeof(g_pak_path));
+    memcpy(g_error_path, r->error_path, sizeof(g_error_path));
     /* FILE objects belong to this frontend process, never to a snapshot. */
     g_trace = r->trace; g_glog_fp = r->glog;
     g_profile = r->profile;
@@ -1421,6 +1615,22 @@ static void glue_load(const glue_regs *r)
     memcpy(g_gsegs2, r->segments, sizeof(g_gsegs2));
 }
 
+
+static void glue_add_segment(uintptr_t begin, uintptr_t end)
+{
+    uintptr_t runtime_lo, runtime_hi;
+    obor_runtime_bounds(&runtime_lo, &runtime_hi);
+    if (end <= begin) return;
+    if (runtime_hi > runtime_lo && runtime_lo < end && runtime_hi > begin) {
+        if (runtime_lo > begin) glue_add_segment(begin, runtime_lo);
+        if (runtime_hi < end) glue_add_segment(runtime_hi, end);
+        return;
+    }
+    if (g_ngsegs2 < 16) {
+        g_gsegs2[g_ngsegs2].vaddr = begin;
+        g_gsegs2[g_ngsegs2++].size = end - begin;
+    }
+}
 
 #if defined(_WIN32)
 static void glue_collect_segments(void)
@@ -1455,9 +1665,7 @@ static void glue_collect_segments(void)
             start += 32;
             bytes -= 32;
         }
-        g_gsegs2[g_ngsegs2].vaddr = start;
-        g_gsegs2[g_ngsegs2].size = bytes;
-        g_ngsegs2++;
+        glue_add_segment(start, start + bytes);
     }
 }
 #elif defined(__APPLE__)
@@ -1468,9 +1676,7 @@ static void glue_macho_seg_cb(uint64_t lo, uint64_t hi, void *context)
     (void)context;
     if (g_ngsegs2 >= 16 || hi <= lo)
         return;
-    g_gsegs2[g_ngsegs2].vaddr = (uintptr_t)lo;
-    g_gsegs2[g_ngsegs2].size = (size_t)(hi - lo);
-    g_ngsegs2++;
+    glue_add_segment((uintptr_t)lo, (uintptr_t)hi);
 }
 
 /* Darwin: dyld has already slid the image by the time a core is loaded, so
@@ -1518,19 +1724,13 @@ static int glue_phdr_cb(struct dl_phdr_info *info, size_t size, void *data)
         uint64_t hi = lo + ph->p_memsz;
         if (rh > rl && rl < hi && rh > lo) {
             if (rl > lo && g_ngsegs2 < 16) {
-                g_gsegs2[g_ngsegs2].vaddr = lo;
-                g_gsegs2[g_ngsegs2].size = (size_t)(rl - lo);
-                g_ngsegs2++;
+                glue_add_segment((uintptr_t)lo, (uintptr_t)rl);
             }
             if (rh < hi && g_ngsegs2 < 16) {
-                g_gsegs2[g_ngsegs2].vaddr = (uintptr_t)rh;
-                g_gsegs2[g_ngsegs2].size = (size_t)(hi - rh);
-                g_ngsegs2++;
+                glue_add_segment((uintptr_t)rh, (uintptr_t)hi);
             }
         } else if (g_ngsegs2 < 16) {
-            g_gsegs2[g_ngsegs2].vaddr = lo;
-            g_gsegs2[g_ngsegs2].size = (size_t)(hi - lo);
-            g_ngsegs2++;
+            glue_add_segment((uintptr_t)lo, (uintptr_t)hi);
         }
     }
     return 1;
@@ -1629,7 +1829,7 @@ static void decide_engine(void)
             how = "core option";
     }
     int filename_build = build_from_filename(g_pak_path);
-    if (!build && (filename_build == 6412 || filename_build == 7533)) {
+    if (!build && (filename_build == 4453 || filename_build == 6412 || filename_build == 7533)) {
         build = filename_build;
         how = "filename tag";
     }
@@ -1654,7 +1854,7 @@ static void decide_engine(void)
 
     int anchor = (strcmp(how, "core option") == 0 ||
                   (strcmp(how, "filename tag") == 0 &&
-                   (build == 6412 || build == 7533)))
+                   (build == 4453 || build == 6412 || build == 7533)))
                      ? build : pick_anchor(build);
     const obor_profile_def *selected = NULL;
     for (int i = 0; i < n_avail; i++)
@@ -1896,10 +2096,15 @@ static void write_license_documentation(void)
         log_cb(RETRO_LOG_WARN, "[OpenBOR] Could not finish writing the license documentation.\n");
 }
 
-static bool load_game(const struct retro_game_info *info)
+static bool load_game(const struct retro_game_info *info, bool retry)
 {
+    if (g_fault_quarantined) {
+        error_reason("The previous engine still has live workers. Restart RetroArch.");
+        return false;
+    }
     if (!info || !info->path) {
         log_cb(RETRO_LOG_ERROR, "[OpenBOR] no content path (need_fullpath)\n");
+        error_reason("No content path was provided by the frontend.");
         return false;
     }
 
@@ -1916,6 +2121,7 @@ static bool load_game(const struct retro_game_info *info)
     enum retro_pixel_format fmt = RETRO_PIXEL_FORMAT_XRGB8888;
     if (!env_cb(RETRO_ENVIRONMENT_SET_PIXEL_FORMAT, &fmt)) {
         log_cb(RETRO_LOG_ERROR, "[OpenBOR] XRGB8888 not supported\n");
+        error_reason("The frontend does not support XRGB8888 video.");
         return false;
     }
 
@@ -1930,17 +2136,20 @@ static bool load_game(const struct retro_game_info *info)
     if (!g_save_dir[0]) {
         log_cb(RETRO_LOG_ERROR,
                "[OpenBOR] frontend did not provide a writable save directory\n");
+        error_reason("The frontend did not provide a writable save directory.");
         return false;
     }
 
     if (!obor_storage_game_directory(g_save_dir, g_pak_path, g_game_dir, sizeof(g_game_dir))) {
         log_cb(RETRO_LOG_ERROR, "[OpenBOR] Could not resolve a safe game save directory.\n");
+        error_reason("Could not resolve a safe game save directory.");
         return false;
     }
     refresh_options();
-    if (!obor_storage_begin(g_save_dir, opt_is_on("obor_clear_all_caches", true),
+    if (!obor_storage_begin(g_save_dir, !retry && opt_is_on("obor_clear_all_caches", true),
                             opt_is_on("obor_clear_game_cache", true))) {
         log_cb(RETRO_LOG_ERROR, "[OpenBOR] Could not clear the cache directory.\n");
+        error_reason("Could not prepare the game cache directory.");
         return false;
     }
 
@@ -1953,8 +2162,10 @@ static bool load_game(const struct retro_game_info *info)
         if (n > 4 && strcasecmp(g_pak_path + n - 4, ".zip") == 0) {
             char newpath[4096];
             if (!obor_zip_prepare(g_pak_path, g_save_dir, newpath,
-                                  sizeof(newpath)))
+                                  sizeof(newpath))) {
+                error_reason("Could not extract a single OpenBOR game from the ZIP.");
                 return false;
+            }
             strncpy(g_pak_path, newpath, sizeof(g_pak_path) - 1);
             obor_dbg("load_game: zip -> %s", g_pak_path);
         }
@@ -1976,6 +2187,7 @@ static bool load_game(const struct retro_game_info *info)
             if (!s || strcasecmp(s + 1, "models.txt") != 0) {
                 log_cb(RETRO_LOG_ERROR,
                        "[OpenBOR] unpacked content must be data/models.txt\n");
+                error_reason("Unpacked content must be data/models.txt.");
                 return false;
             }
             *s = '\0';
@@ -1985,6 +2197,7 @@ static bool load_game(const struct retro_game_info *info)
             if (!s || strcasecmp(s + 1, "data") != 0) {
                 log_cb(RETRO_LOG_ERROR,
                        "[OpenBOR] unpacked content must be data/models.txt\n");
+                error_reason("Unpacked content must be data/models.txt.");
                 return false;
             }
             *s = '\0';
@@ -1999,17 +2212,21 @@ static bool load_game(const struct retro_game_info *info)
         if (n <= 4 || (strcasecmp(g_pak_path + n - 4, ".pak") != 0 &&
                        strcasecmp(g_pak_path + n - 4, ".spk") != 0)) {
             log_cb(RETRO_LOG_ERROR, "[OpenBOR] unsupported content path\n");
+            error_reason("Unsupported content path; expected PAK, SPK, ZIP or data/models.txt.");
             return false;
         }
         char prepared[4096];
         const char *system = NULL;
         env_cb(RETRO_ENVIRONMENT_GET_SYSTEM_DIRECTORY, &system);
-        if (!obor_packed_prepare(g_pak_path, g_save_dir, system, prepared, sizeof(prepared)))
+        if (!obor_packed_prepare(g_pak_path, g_save_dir, system, prepared, sizeof(prepared))) {
+            error_reason("Could not read or prepare the packed content.");
             return false;
+        }
         snprintf(g_pak_path, sizeof(g_pak_path), "%s", prepared);
         const char *error = obor_pak_validate(g_pak_path);
         if (error) {
             log_cb(RETRO_LOG_ERROR, "[OpenBOR] %s: %s\n", error, g_pak_path);
+            error_reason(error);
             /* Load failures remain actionable even on targets that suppress
              * routine engine-selection notifications. No engine has booted. */
             unsigned version = 0;
@@ -2040,22 +2257,33 @@ static bool load_game(const struct retro_game_info *info)
     decide_engine();
     obor_dbg("load_game: engine %s (save_dir=%s)", g_engine, g_save_dir);
 
-    if (opt_is_on("obor_clear_local_data", false) && !obor_storage_remove(g_game_dir)) {
+    if (!retry && opt_is_on("obor_clear_local_data", false) &&
+        !obor_storage_remove(g_game_dir)) {
         log_cb(RETRO_LOG_ERROR, "[OpenBOR] Could not clear current game saved data.\n");
+        error_reason("Could not clear current game saved data.");
         return false;
     }
     mkdir_p(g_game_dir);
-    if (!obor_storage_directory(g_game_dir)) return false;
+    if (!obor_storage_directory(g_game_dir)) {
+        error_reason("Could not create the game save directory.");
+        return false;
+    }
 
     char err[256] = "";
     if (!select_engine_vtbl(g_engine, err, sizeof(err))) {
         log_cb(RETRO_LOG_ERROR, "[OpenBOR] engine selection failed: %s\n", err);
+        error_reason(err);
         return false;
     }
 
     if (!boot_engine()) {
         log_cb(RETRO_LOG_ERROR, "[OpenBOR] engine boot failed\n");
         obor_dbg("load_game: boot FAILED");
+        if (!engine_log_error(g_error_reason, sizeof(g_error_reason))) {
+            char reason[160];
+            snprintf(reason, sizeof(reason), "Engine %s failed to start this game.", g_engine);
+            error_reason(reason);
+        }
         return false;
     }
 
@@ -2083,8 +2311,29 @@ static bool load_game(const struct retro_game_info *info)
 
 bool retro_load_game(const struct retro_game_info *info)
 {
-    bool ok = load_game(info);
-    if (!ok) content_stop();
+    g_error_active = false;
+    g_error_reason[0] = '\0';
+    g_error_path[0] = '\0';
+    if (info && info->path)
+        abspath(info->path, g_error_path, sizeof(g_error_path));
+    bool ok = load_game(info, false);
+    if (!ok) {
+        /* Without a negotiated pixel format there is no safe frame to send. */
+        if (strcmp(g_error_reason, "The frontend does not support XRGB8888 video.") == 0) {
+            content_stop();
+            return false;
+        }
+        error_screen(NULL);
+        return true;
+    }
+    return true;
+}
+
+static bool obor_load_retry(const struct retro_game_info *info)
+{
+    g_error_reason[0] = '\0';
+    bool ok = load_game(info, true);
+    if (!ok) error_screen(NULL);
     return ok;
 }
 
@@ -2101,6 +2350,8 @@ void retro_unload_game(void)
 {
     if (g_storage.root[0]) refresh_options();
     content_stop();
+    g_error_active = false;
+    g_error_path[0] = '\0';
 }
 
 unsigned retro_get_region(void) { return RETRO_REGION_NTSC; }
@@ -2110,11 +2361,15 @@ size_t retro_serialize_size(void)
     if (!g_booted)
         return 0;
     if (g_variable_state_size)
-        return p_serialize_size();
+    {
+        uint32_t size = p_serialize_size();
+        return queue_state_fault() ? 0 : size;
+    }
     /* The frontend can keep its first rewind allocation across Reset.
      * A learned heap peak must not silently change that session contract. */
     if (!g_state_capacity)
         g_state_capacity = p_serialize_size();
+    if (queue_state_fault()) return 0;
     return g_state_capacity;
 }
 
@@ -2126,10 +2381,7 @@ bool retro_serialize(void *data, size_t size)
                        p_serialize(data, (uint32_t)size) : 0;
     uint64_t profile_core_end = obor_profile_now();
     bool ok = written > 0 && written <= size;
-    /* The frontend copies/diffs the entire advertised capacity, not only
-     * our payload. Never feed it uninitialized or stale tail bytes. */
-    if (ok && written < size)
-        obor_state_clear_padding((uint8_t *)data + written, size - written);
+    if (!written && g_booted && queue_state_fault()) ok = false;
     if (g_profile.file) {
         uint64_t heap = 0;
         uint32_t magic = 0;
@@ -2174,6 +2426,7 @@ bool retro_unserialize(const void *data, size_t size)
         if (getenv("OBOR_DEBUG"))
             fprintf(stderr, "[obor] glue state restored after unserialize\n");
     }
+    if (!ok && g_booted) queue_state_fault();
     if (ok)
         g_last_unser = g_frame_no;
     obor_profile_record("unserialize", g_frame_no, profile_begin,

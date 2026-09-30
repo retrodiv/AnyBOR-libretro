@@ -61,8 +61,8 @@ def exercise(args, root, pin, work):
         path = str(Path(path).resolve())
         return "Z:" + path.replace("/", "\\") if args.windows and os.name != "nt" else path
 
-    selected = args.engine or [e["build"] for e in pin["engines"]]
-    if set(selected) - set(e["build"] for e in pin["engines"]):
+    selected = args.engine or [e["build"] for e in pin["profiles"]]
+    if set(selected) - set(e["build"] for e in pin["profiles"]):
         raise RuntimeError("Unknown engine requested")
     for engine in selected:
         system = work / engine

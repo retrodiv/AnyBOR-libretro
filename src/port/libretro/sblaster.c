@@ -41,15 +41,24 @@ void SB_unlock_audio_direct(void)
     if(--audio_depth == 0)
         __atomic_store_n(&audio_owner, 0, __ATOMIC_RELEASE);
 }
+void obor_audio_fault_unlock(void)
+{
+    if (__atomic_load_n(&audio_owner, __ATOMIC_ACQUIRE) == obor_thread_identity()) {
+        audio_depth = 0;
+        __atomic_store_n(&audio_owner, 0, __ATOMIC_RELEASE);
+    }
+}
 #else
 void SB_lock_audio_direct(void) {}
 void SB_unlock_audio_direct(void) {}
+void obor_audio_fault_unlock(void) {}
 #endif
 void SB_lock_audio(void) { SB_lock_audio_direct(); }
 void SB_unlock_audio(void) { SB_unlock_audio_direct(); }
 static void mix_samples(unsigned char *buffer, int bytes)
 {
     SB_lock_audio_direct();
+    obor_test_fault_phase("audio-mix");
     update_sample(buffer, bytes);
     SB_unlock_audio_direct();
 }
@@ -83,7 +92,7 @@ void SB_updatevolume(int volume)
 
 /* ---- ABI: mix and deliver interleaved stereo s16 at 44100 Hz ---- */
 
-int32_t obor_get_audio(int16_t *out, int32_t max_frames)
+static int32_t get_audio_impl(int16_t *out, int32_t max_frames)
 {
     if (!obor_snd_started) {
         return 0;
@@ -128,4 +137,19 @@ int32_t obor_get_audio(int16_t *out, int32_t max_frames)
         out[i * 2 + 1] = tmp[j * 2 + 1];
     }
     return want;
+}
+
+typedef struct { int16_t *out; int32_t max_frames, result; } audio_call;
+static void execute_audio(void *context)
+{
+    audio_call *call = (audio_call *)context;
+    obor_test_fault_phase("audio");
+    call->result = get_audio_impl(call->out, call->max_frames);
+}
+
+int32_t obor_get_audio(int16_t *out, int32_t max_frames)
+{
+    if (!out || max_frames <= 0) return 0;
+    audio_call call = {out, max_frames, 0};
+    return obor_protect_call(execute_audio, &call, "audio mixing") ? call.result : 0;
 }

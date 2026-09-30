@@ -17,6 +17,7 @@
 #include "packfile.h"
 #include "utils.h"
 #include "libco/libco.h"
+#include "obor_fault.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -27,6 +28,7 @@
 #include <windows.h> /* NT_TIB stack-range fixup around co_switch */
 #else
 #include <unistd.h>
+#include <signal.h>
 #endif
 
 #define FRAME_US 16667ULL
@@ -61,6 +63,15 @@ uint32_t obor_profile_build;
 static cothread_t co_frontend;
 static cothread_t co_engine;
 static int engine_alive;
+static int engine_exit_status = -1;
+static obor_fault engine_fault;
+static char engine_fault_message[256];
+static int test_fault_at = -1, test_fault_frame;
+static char test_fault_kind[16];
+static volatile uintptr_t test_fault_address;
+void (*obor_resource_event)(uint32_t kind, uintptr_t handle);
+extern int obor_live_threads;
+void obor_co_restore_active(cothread_t frontend);
 static int frame_ready;
 static unsigned long long us_since_yield; /* sleep accumulator */
 
@@ -188,16 +199,9 @@ int obor_buffer_content_alias(const char *requested, char **buffer,
  * the process before reaching a single handler: real Windows dies
  * silently, wine logs "Exception frame is not in stack limits". Point the
  * TIB at the arena stack for exactly the span the engine executes. */
-static void switch_to_engine(void)
+static void execute_engine(void *context)
 {
-    char frontend_cwd[4096];
-    int restore_cwd = engine_cwd[0] != '\0';
-    if (restore_cwd &&
-        (!obor_getcwd(frontend_cwd, sizeof(frontend_cwd)) ||
-         chdir(engine_cwd) != 0)) {
-        engine_alive = 0;
-        return;
-    }
+    (void)context;
 #if defined(_WIN32)
     NT_TIB *tib = (NT_TIB *)NtCurrentTeb();
     void *save_base = tib->StackBase;
@@ -210,6 +214,123 @@ static void switch_to_engine(void)
 #else
     co_switch(co_engine);
 #endif
+}
+
+/* Opt-in test instrumentation: inject real memory faults inside the engine
+ * coroutine. Inert unless the host explicitly selects this physical engine.
+ * Format: OBOR_TEST_FAULT=<build>:<yield-number>:<read|write|null|context>.
+ * Yield 0 faults before openborMain; later yields exercise runtime capture. */
+__attribute__((noinline)) static unsigned exhaust_stack(unsigned n)
+{
+    volatile unsigned char padding[4096];
+    padding[n & 4095] = (unsigned char)n;
+    return exhaust_stack(n + 1) + padding[n & 4095];
+}
+
+static void inject_fault_kind(const char *kind, uintptr_t address)
+{
+    if (!strcmp(kind, "stack")) { (void)exhaust_stack(0); return; }
+    if (!strcmp(kind, "allocator")) {
+        /* Corrupt the in-use bit of a real arena chunk. dlmalloc's usage
+         * check in realloc must reach the same hook as corpus heap damage. */
+        void *(*volatile allocate)(size_t) = malloc;
+        void *(*volatile resize)(void *, size_t) = realloc;
+        void *block = allocate(64), *following = allocate(64);
+        if (!block || !following) return;
+        ((volatile size_t *)block)[-1] &= ~(size_t)2;
+        void *result = resize(block, 128);
+        (void)result;
+        return;
+    }
+    if (!strcmp(kind, "context")) co_frontend = (cothread_t)(uintptr_t)1;
+    if (!strcmp(kind, "write")) *(volatile unsigned char *)address = 42;
+    else { volatile unsigned char value = *(volatile unsigned char *)address; (void)value; }
+}
+
+static void inject_test_fault(int frame)
+{
+    if (frame != test_fault_at) return;
+    inject_fault_kind(test_fault_kind, test_fault_address);
+}
+
+void obor_test_fault_phase(const char *phase)
+{
+    const char *request = getenv("OBOR_TEST_CALL_FAULT");
+    int build;
+    char requested_phase[24], kind[16];
+    if (request && sscanf(request, "%d:%23[^:]:%15s", &build, requested_phase, kind) == 3 &&
+        build == OBOR_ENGINE_BUILD && !strcmp(phase, requested_phase) &&
+        (!strcmp(kind, "read") || !strcmp(kind, "write") || !strcmp(kind, "null") ||
+         !strcmp(kind, "allocator") || !strcmp(kind, "context")))
+        inject_fault_kind(kind, !strcmp(kind, "null") ? 0 : OBOR_ARENA_BASE_VA);
+}
+
+int obor_protect_call(void (*execute)(void *), void *context, const char *phase)
+{
+#ifdef _WIN32
+    extern uintptr_t __stack_chk_guard;
+    uintptr_t frontend_stack_canary = __stack_chk_guard;
+#endif
+    /* Keep the recovery identity outside engine BSS: the engine may have
+     * damaged its co_frontend global before the invalid access surfaced. */
+    cothread_t frontend = co_active();
+    int returned;
+    obor_fault fault;
+    returned = obor_fault_run_stack(execute, context, &fault,
+                                    obor_stack_ptr(), obor_stack_size());
+#ifdef _WIN32
+    /* A fault can interrupt snapshot copying before obor_state repairs it. */
+    __stack_chk_guard = frontend_stack_canary;
+#endif
+    if (returned != 1) {
+        obor_co_restore_active(frontend);
+        engine_alive = 0;
+        engine_exit_status = OBOR_EXIT_MEMORY_FAULT;
+        if (returned < 0)
+            snprintf(engine_fault_message, sizeof(engine_fault_message),
+                     "Could not install the engine memory-fault guard.");
+        else {
+            engine_fault = fault;
+            if (fault.kind == OBOR_FAULT_ALLOCATOR)
+                snprintf(engine_fault_message, sizeof(engine_fault_message),
+                         "Allocator failed: invalid or corrupted memory.\nDuring: %s\nAddress: 0x%llx\nPC: 0x%llx", phase,
+                         (unsigned long long)fault.address, (unsigned long long)fault.pc);
+            else if (fault.kind == OBOR_FAULT_STACK)
+                snprintf(engine_fault_message, sizeof(engine_fault_message),
+                         "Engine stack exhausted.\nDuring: %s\nPC: 0x%llx", phase,
+                         (unsigned long long)fault.pc);
+            else if (fault.kind == OBOR_FAULT_STATE)
+                snprintf(engine_fault_message, sizeof(engine_fault_message),
+                         "State restore failed after modifying engine memory.\nDuring: %s", phase);
+            else
+            snprintf(engine_fault_message, sizeof(engine_fault_message),
+#ifdef _WIN32
+                     "Memory access violation (0x%08x).\nAddress: 0x%llx\nPC: 0x%llx\nDuring: %s",
+#else
+                     "%s: invalid memory access.\nAddress: 0x%llx\nPC: 0x%llx\nDuring: %s",
+                     engine_fault.code == SIGBUS ? "SIGBUS" : "SIGSEGV",
+#endif
+#ifdef _WIN32
+                     (unsigned)engine_fault.code,
+#endif
+                     (unsigned long long)engine_fault.address,
+                     (unsigned long long)engine_fault.pc, phase);
+        }
+    }
+    return returned == 1;
+}
+
+static void switch_to_engine(void)
+{
+    char frontend_cwd[4096];
+    int restore_cwd = engine_cwd[0] != '\0';
+    if (restore_cwd &&
+        (!obor_getcwd(frontend_cwd, sizeof(frontend_cwd)) ||
+         chdir(engine_cwd) != 0)) {
+        engine_alive = 0;
+        return;
+    }
+    obor_protect_call(execute_engine, NULL, "engine execution");
     if (restore_cwd)
         chdir(frontend_cwd);
 }
@@ -229,6 +350,7 @@ static unsigned polls_since_yield;
 
 void obor_yield_frame(void)
 {
+    inject_test_fault(++test_fault_frame);
     us_since_yield = 0;
     polls_since_yield = 0;
     co_switch(co_frontend);
@@ -265,7 +387,7 @@ void obor_port_sleep_us(unsigned long long us)
 
 void borExit(int reset)
 {
-    (void)reset;
+    engine_exit_status = reset;
     engine_alive = 0;
     /* Never return into the engine: park forever yielding to the frontend. */
     for (;;)
@@ -274,6 +396,7 @@ void borExit(int reset)
 
 static void engine_entry(void)
 {
+    inject_test_fault(0);
     /* openborMain reads the pak from the `packfile` global (set in
      * obor_boot); its argv only carries debug switches we don't use. */
     static char arg0[] = "openbor";
@@ -436,11 +559,31 @@ capture_cwd:
         goto fail;
     boot_dbg("boot: arena ok");
     co_frontend = co_active();
+    if (!obor_fault_stack_prepare(obor_stack_ptr(), obor_stack_size())) goto fail;
     co_engine = co_derive(obor_stack_ptr(), (unsigned)obor_stack_size(),
                           engine_entry);
     if (!co_engine)
         goto fail;
     engine_alive = 1;
+    engine_exit_status = -1;
+    memset(&engine_fault, 0, sizeof(engine_fault));
+    engine_fault_message[0] = '\0';
+    obor_resource_event = info->resource_event;
+    test_fault_at = -1;
+    test_fault_frame = 0;
+    {
+        const char *request = getenv("OBOR_TEST_FAULT");
+        int build, at;
+        char kind[16];
+        if (request && sscanf(request, "%d:%d:%15s", &build, &at, kind) == 3 &&
+            build == OBOR_ENGINE_BUILD && at >= 0 &&
+            (!strcmp(kind, "read") || !strcmp(kind, "write") || !strcmp(kind, "null") ||
+             !strcmp(kind, "context") || !strcmp(kind, "allocator") || !strcmp(kind, "stack"))) {
+            test_fault_at = at;
+            snprintf(test_fault_kind, sizeof(test_fault_kind), "%s", kind);
+            test_fault_address = !strcmp(kind, "null") ? 0 : OBOR_ARENA_BASE_VA;
+        }
+    }
     obor_clock_us = 0;
     boot_dbg("boot: entering engine");
 
@@ -448,9 +591,9 @@ capture_cwd:
     frame_ready = 0;
     switch_to_engine();
     boot_dbg("boot: first frame reached");
-    if (engine_alive || frame_ready)
+    if (engine_alive || (frame_ready && engine_exit_status == 0))
         return 1;
-    obor_shutdown();
+    if (engine_exit_status != OBOR_EXIT_MEMORY_FAULT) obor_shutdown();
     return 0;
 
 fail:
@@ -481,6 +624,50 @@ int32_t obor_run_frame(void)
                     obor_arena_used() / 1024);
     }
     return engine_alive;
+}
+
+int32_t obor_get_exit_status(void)
+{
+    return engine_exit_status;
+}
+
+int32_t obor_get_fault_message(char *out, uint32_t capacity)
+{
+    if (engine_exit_status != OBOR_EXIT_MEMORY_FAULT) return 0;
+    if (out && capacity) snprintf(out, capacity, "%s", engine_fault_message);
+    return 1;
+}
+
+#ifdef WEBM
+static void stop_workers(void *unused)
+{
+    extern void obor_webm_stop(void);
+    (void)unused;
+    obor_webm_stop();
+}
+#endif
+
+int32_t obor_abandon(void)
+{
+    extern void obor_audio_fault_unlock(void);
+    engine_alive = 0;
+    co_engine = NULL;
+    /* dlmalloc can fail while holding its lock. Workers must not enter a
+     * corrupted allocator, and joining them here could wait on that lock. */
+    if (__atomic_load_n(&obor_live_threads, __ATOMIC_SEQ_CST) &&
+        engine_fault.kind == OBOR_FAULT_ALLOCATOR) return 0;
+    obor_audio_fault_unlock();
+#ifdef WEBM
+    if (__atomic_load_n(&obor_live_threads, __ATOMIC_SEQ_CST)) {
+        obor_fault cleanup_fault;
+        if (obor_fault_run(stop_workers, NULL, &cleanup_fault) != 1 ||
+            __atomic_load_n(&obor_live_threads, __ATOMIC_SEQ_CST)) return 0;
+    }
+#endif
+    obor_arena_release();
+    engine_cwd[0] = '\0';
+    obor_resource_event = NULL;
+    return 1;
 }
 
 void *obor_engine_sp(void)

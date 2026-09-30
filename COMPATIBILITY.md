@@ -1,10 +1,12 @@
 # Compatibility contract
 
-Pinned physical engine anchors are 3400, 3842, 4086, 4432, 6391, 7533 and 8023.
-The 6391 engine provides logical profiles 6391 and 6412. Automatic routing
-selects 6391 for builds 4433 through 6412; a PAK explicitly tagged Build 6412
-or the manual 6412 core option selects the 6412 profile. Builds 6413 through
-7533 select the physical 7533 engine; builds 7534 through 8023 select 8023.
+Available engines are 3400, 3842, 4086, 4432, 4453, 6391, 6412, 7533 and 8023.
+An explicit Build 4453 filename or the manual 4453 core option selects 4453.
+It uses 32-bit color, ignores `colourdepth` and follows the removal of legacy
+`remap` palette conversion. Select 4432 for games that need its older behavior.
+Automatic routing selects 6391 for builds 4433 through 6412; a PAK explicitly
+tagged Build 6412 or the manual 6412 core option selects 6412. Builds 6413
+through 7533 select 7533; builds 7534 through 8023 select 8023.
 Other routing combines filename/sidecar metadata with conservative content
 markers.
 Builds newer than 8023 are best effort through the latest pinned v4 anchor;

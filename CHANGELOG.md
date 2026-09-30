@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- Add engine 4453, selectable by its core option or an explicit Build 4453
+  filename, with its original 32-bit color and palette behavior.
+- Preserve native settings and separate saved data for 4432 and 4453.
+
 ## 0.1.6 — eight selectable engines
 
 - Add the 7533 engine and replace the 8020 physical anchor with the public

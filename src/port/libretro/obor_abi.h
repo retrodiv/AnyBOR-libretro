@@ -27,7 +27,11 @@
 extern "C" {
 #endif
 
-#define OBOR_ABI_VERSION 3u
+#define OBOR_ABI_VERSION 5u
+
+#define OBOR_EXIT_MEMORY_FAULT (-2)
+enum { OBOR_RESOURCE_FILE_OPEN = 1, OBOR_RESOURCE_FILE_CLOSE,
+       OBOR_RESOURCE_FD_OPEN, OBOR_RESOURCE_FD_CLOSE };
 
 /* Snapshot-arena fixed virtual address, shared by the glue (which CLAIMS
  * the range in a load-time constructor, before the frontend allocates its
@@ -98,6 +102,8 @@ typedef struct {
     const obor_engine_region *engine_regions; /* copied during boot */
     uint32_t engine_region_count;
     uint32_t profile_build; /* logical identity; may share a physical engine */
+    /* Frontend-owned resource ledger survives abandoning a damaged arena. */
+    void (*resource_event)(uint32_t kind, uintptr_t handle);
 } obor_boot_info;
 
 /* Every function below is implemented by each linked engine object and wired
@@ -111,6 +117,14 @@ OBOR_API int32_t obor_boot(const obor_boot_info *info);
 /* Advance exactly one video frame (1/60 s of emulated time).
  * Returns 1 while the engine is alive, 0 once it exited (user quit). */
 OBOR_API int32_t obor_run_frame(void);
+
+/* -1 while running, 0 for a normal quit, positive for an engine-reported
+ * failure, OBOR_EXIT_MEMORY_FAULT for a contained synchronous memory fault. */
+OBOR_API int32_t obor_get_exit_status(void);
+OBOR_API int32_t obor_get_fault_message(char *out, uint32_t capacity);
+/* Discard a faulted coroutine without normal engine teardown. Movie workers
+ * are stopped under a separate guard first; 0 requires retaining the arena. */
+OBOR_API int32_t obor_abandon(void);
 
 /* Framebuffer of the last completed frame, XRGB8888. Pointer owned by the
  * engine, valid until the next obor_run_frame call. Dimensions may change

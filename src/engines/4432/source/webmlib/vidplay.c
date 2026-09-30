@@ -1,4 +1,4 @@
-/* AnyBOR modification record: 2026-09-12.
+/* AnyBOR modification record: 2026-09-30.
  * Port maintained by retrodiv <retrodiv@proton.me>.
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.

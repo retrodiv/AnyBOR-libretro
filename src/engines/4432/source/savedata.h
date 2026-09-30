@@ -1,3 +1,15 @@
+/* AnyBOR modification record: 2026-09-30.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Reserve 13 control entries in the shared runtime while the settings I/O
+ * retains each logical profile's native layout.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/4432.md
+ * at the source repository root. Original notices follow below.
+ */
+
 /*
  * OpenBOR - http://www.chronocrash.com
  * -----------------------------------------------------------------------
@@ -10,7 +22,7 @@
 #define SAVEDATA_H
 
 #define     MAX_PLAYERS         4
-#define     MAX_BTN_NUM         12
+#define     MAX_BTN_NUM         13
 
 typedef struct
 {

@@ -22,6 +22,7 @@
 #include <string.h>
 
 #include "obor_abi.h" /* OBOR_ARENA_BASE_VA / OBOR_ARENA_MAX_SZ */
+#include "obor_fault.h"
 #if defined(__linux__) && defined(__x86_64__) && !defined(__ANDROID__)
 #define OBOR_BATCH_SPARSE_SPANS 1
 #include "obor_state_copy.h"
@@ -319,6 +320,8 @@ static void *obor_morecore(intptr_t incr)
 #define MORECORE_CANNOT_TRIM 1
 #define NO_MALLOC_STATS 1
 #define ABORT_ON_ASSERT_FAILURE 0
+#define CORRUPTION_ERROR_ACTION(m) obor_fault_allocator_error((uintptr_t)(m))
+#define USAGE_ERROR_ACTION(m, p) obor_fault_allocator_error((uintptr_t)(p))
 #include "dlmalloc.inc"
 
 extern void *__real_malloc(size_t);
@@ -765,12 +768,16 @@ static void sparse_emit(obor_sparse_scan *scan, const void *address,
 
 static int sparse_scan_heap(obor_sparse_scan *scan)
 {
+    obor_fault_allocator_activity(1);
     ensure_initialization();
     mstate m = gm;
-    if (PREACTION(m))
+    if (PREACTION(m)) {
+        obor_fault_allocator_activity(0);
         return 0;
+    }
     if (!is_initialized(m)) {
         POSTACTION(m);
+        obor_fault_allocator_activity(0);
         return 0;
     }
     for (msegmentptr segment = &m->seg; segment; segment = segment->next) {
@@ -806,6 +813,7 @@ static int sparse_scan_heap(obor_sparse_scan *scan)
         scan->have_previous = 0; /* segment list order need not be ascending */
     }
     POSTACTION(m);
+    obor_fault_allocator_activity(0);
     return !scan->failed;
 }
 
@@ -937,7 +945,9 @@ static void profile_large_alloc(const char *kind, size_t bytes, void *result,
 
 void *__wrap_malloc(size_t n)
 {
+    obor_fault_allocator_activity(1);
     void *result = dlmalloc(n);
+    obor_fault_allocator_activity(0);
     if (result)
         arena_live_chunk_bytes += chunksize(mem2chunk(result));
     profile_large_alloc("malloc", n, result, __builtin_return_address(0));
@@ -947,7 +957,9 @@ void *__wrap_malloc(size_t n)
 
 void *__wrap_calloc(size_t n, size_t sz)
 {
+    obor_fault_allocator_activity(1);
     void *result = dlcalloc(n, sz);
+    obor_fault_allocator_activity(0);
     if (result)
         arena_live_chunk_bytes += chunksize(mem2chunk(result));
     size_t bytes = sz && n > SIZE_MAX / sz ? SIZE_MAX : n * sz;
@@ -960,7 +972,9 @@ void *__wrap_realloc(void *p, size_t n)
 {
     if (!p || in_arena(p)) {
         size_t old_chunk = p ? chunksize(mem2chunk(p)) : 0;
+        obor_fault_allocator_activity(1);
         void *result = dlrealloc(p, n);
+        obor_fault_allocator_activity(0);
         if (result) {
             profile_live_remove(p);
             arena_live_chunk_bytes -= old_chunk;
@@ -985,7 +999,9 @@ void __wrap_free(void *p)
     {
         profile_live_remove(p);
         arena_live_chunk_bytes -= chunksize(mem2chunk(p));
+        obor_fault_allocator_activity(1);
         dlfree(p);
+        obor_fault_allocator_activity(0);
     }
     else
         __real_free(p);
@@ -994,7 +1010,9 @@ void __wrap_free(void *p)
 char *__wrap_strdup(const char *s)
 {
     size_t n = strlen(s) + 1;
+    obor_fault_allocator_activity(1);
     char *d = (char *)dlmalloc(n);
+    obor_fault_allocator_activity(0);
     if (d) {
         arena_live_chunk_bytes += chunksize(mem2chunk(d));
         memcpy(d, s, n);

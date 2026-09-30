@@ -118,6 +118,20 @@ Source: src/engines/7533/source/preprocessorlib/pp_parser.c
  * at the source repository root. Original notices follow below.
  */
 
+Source: src/engines/4432/openbor.h
+/* AnyBOR modification record: 2026-09-30.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Allocate collision pointer slots through the highest author-facing index
+ * used by each collection. Track each model's allocated animation-table
+ * capacity and reject lookups outside it.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/4432.md
+ * at the source repository root. Original notices follow below.
+ */
+
 Source: src/engines/7533/openbor.c, src/engines/8023/openbor.c
 /*
  * OpenBOR - http://www.chronocrash.com
@@ -215,19 +229,6 @@ Source: src/engines/3400/source/pnglib/savepng.c
  * at the source repository root. Original notices follow below.
  */
 
-Source: src/engines/4432/source/gamelib/commands.c
-/* AnyBOR modification record: 2026-09-12.
- * Port maintained by retrodiv <retrodiv@proton.me>.
- * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
- * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
- * Upstream code retains its original license and notices.
- * Convert the command-list lookup result to its command enumeration
- * explicitly instead of through a plain pointer cast.
- * Existing changes recorded here; this is not their implementation date.
- * See MODIFICATIONS.md and docs/modifications/4432.md
- * at the source repository root. Original notices follow below.
- */
-
 Source: src/engines/7533/source/gamelib/models.h, src/engines/8023/source/gamelib/models.h
 /*
  * OpenBOR - http://www.chronocrash.com
@@ -293,19 +294,6 @@ Source: src/deps/libvpx/vpx_util/vpx_pthread.h
 //
 // pthread.h wrapper
 
-Source: src/engines/4432/source/gamelib/packfile.h
-/* AnyBOR modification record: 2026-09-12.
- * Port maintained by retrodiv <retrodiv@proton.me>.
- * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
- * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
- * Upstream code retains its original license and notices.
- * Remove declarations of unused standalone frontend APIs and define O_BINARY
- * where macOS lacks it.
- * Existing changes recorded here; this is not their implementation date.
- * See MODIFICATIONS.md and docs/modifications/4432.md
- * at the source repository root. Original notices follow below.
- */
-
 Source: src/deps/libvorbis/lib/modes/setup_8.h
 /********************************************************************
  *                                                                  *
@@ -330,20 +318,6 @@ Source: src/engines/3842/openbor.c, src/engines/3842/source/globals.h, src/engin
  * All rights reserved, see LICENSE in OpenBOR root for details.
  *
  * Copyright (c) 2004 - 2013 OpenBOR Team
- */
-
-Source: src/engines/4432/source/utils.c
-/* AnyBOR modification record: 2026-09-12.
- * Port maintained by retrodiv <retrodiv@proton.me>.
- * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
- * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
- * Upstream code retains its original license and notices.
- * Enable libretro platform and PNG helper declarations, the POSIX directory
- * and mkdir forms macOS also uses, and the standard allocation declarations
- * instead of the glibc-only <malloc.h>.
- * Existing changes recorded here; this is not their implementation date.
- * See MODIFICATIONS.md and docs/modifications/4432.md
- * at the source repository root. Original notices follow below.
  */
 
 Source: src/glue/obor_engines.h
@@ -403,20 +377,6 @@ Source: src/deps/libvpx/vp9/encoder/vp9_encoder.c
  *  be found in the AUTHORS file in the root of the source tree.
  */
 
-Source: src/engines/4432/openbor.h
-/* AnyBOR modification record: 2026-09-12.
- * Port maintained by retrodiv <retrodiv@proton.me>.
- * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
- * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
- * Upstream code retains its original license and notices.
- * Allocate collision pointer slots through the highest author-facing index
- * used by each collection. Track each model's allocated animation-table
- * capacity and reject lookups outside it.
- * Existing changes recorded here; this is not their implementation date.
- * See MODIFICATIONS.md and docs/modifications/4432.md
- * at the source repository root. Original notices follow below.
- */
-
 Source: src/deps/libvorbis/lib/psy.c
 /********************************************************************
  *                                                                  *
@@ -452,6 +412,19 @@ Source: src/deps/libvpx/vpx_dsp/arm/vpx_convolve8_avg_vert_filter_type1_neon.asm
 ;    r12 => filter_y0
 ;    r5 =>  ht
 ;    r3 =>  wd
+
+Source: src/engines/4432/source/pnglib/savepng.c
+/* AnyBOR modification record: 2026-09-30.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Include the standard library declarations instead of the glibc-only
+ * <malloc.h> when writing a screenshot.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/4432.md
+ * at the source repository root. Original notices follow below.
+ */
 
 Source: src/engines/4086/source/gamelib/packfile.c
 /* AnyBOR modification record: 2026-09-12.
@@ -553,6 +526,19 @@ Source: src/deps/libvorbis/lib/modes/setup_44u.h
  function: toplevel settings for 44.1/48kHz uncoupled modes
 
  ********************************************************************/
+
+Source: src/engines/4432/source/gamelib/commands.c
+/* AnyBOR modification record: 2026-09-30.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Convert the command-list lookup result to its command enumeration
+ * explicitly instead of through a plain pointer cast.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/4432.md
+ * at the source repository root. Original notices follow below.
+ */
 
 Source: src/engines/7533/source/ramlib/ram.c
 /* AnyBOR modification record: 2026-09-29.
@@ -856,7 +842,7 @@ Source: src/deps/libvpx/rate_hist.c, src/deps/libvpx/rate_hist.h, src/deps/libvp
  *  be found in the AUTHORS file in the root of the source tree.
  */
 
-Source: src/engines/7533/source/webmlib/samplecvt.c, src/engines/7533/source/webmlib/samplecvt.h, src/engines/7533/source/webmlib/vidplay.c, src/engines/7533/source/webmlib/vidplay.h, src/engines/7533/source/webmlib/vorbis.c, src/engines/7533/source/webmlib/vorbis.h, src/engines/7533/source/webmlib/yuv.c, src/engines/7533/source/webmlib/yuv.h, src/engines/8023/source/webmlib/samplecvt.c, src/engines/8023/source/webmlib/samplecvt.h, src/engines/8023/source/webmlib/vidplay.c, src/engines/8023/source/webmlib/vidplay.h, src/engines/8023/source/webmlib/vorbis.c, src/engines/8023/source/webmlib/vorbis.h, src/engines/8023/source/webmlib/yuv.c, src/engines/8023/source/webmlib/yuv.h, src/engines/7533/source/adpcmlib/adpcm.h, src/engines/7533/source/gamelib/anigif.c, src/engines/7533/source/gamelib/anigif.h, src/engines/7533/source/gamelib/bitmap.c, src/engines/7533/source/gamelib/bitmap.h, src/engines/7533/source/gamelib/borendian.h, src/engines/7533/source/gamelib/draw.c, src/engines/7533/source/gamelib/draw.h, src/engines/7533/source/gamelib/draw16.c, src/engines/7533/source/gamelib/draw32.c, src/engines/7533/source/gamelib/font.c, src/engines/7533/source/gamelib/font.h, src/engines/7533/source/gamelib/loadimg.c, src/engines/7533/source/gamelib/loadimg.h, src/engines/7533/source/gamelib/packfile.c, src/engines/7533/source/gamelib/packfile.h, src/engines/7533/source/gamelib/palette.c, src/engines/7533/source/gamelib/palette.h, src/engines/7533/source/gamelib/pixelformat.c, src/engines/7533/source/gamelib/screen.c, src/engines/7533/source/gamelib/screen.h, src/engines/7533/source/gamelib/screen16.c, src/engines/7533/source/gamelib/screen32.c, src/engines/7533/source/gamelib/soundmix.c, src/engines/7533/source/gamelib/soundmix.h, src/engines/7533/source/gamelib/sprite.c, src/engines/7533/source/gamelib/sprite.h, src/engines/7533/source/gamelib/spriteq.c, src/engines/7533/source/gamelib/spriteq.h, src/engines/7533/source/gamelib/spritex8p16.c, src/engines/7533/source/gamelib/spritex8p32.c, src/engines/7533/source/gamelib/threads.h, src/engines/7533/source/gamelib/timer.h, src/engines/7533/source/gamelib/types.h, src/engines/7533/source/gamelib/vga.h, src/engines/7533/source/gfxlib/gfxtypes.h, src/engines/7533/source/globals.h, src/engines/7533/source/omath.c, src/engines/7533/source/omath.h, src/engines/7533/source/preprocessorlib/pp_lexer.c, src/engines/7533/source/preprocessorlib/pp_lexer.h, src/engines/7533/source/preprocessorlib/pp_parser.c, src/engines/7533/source/preprocessorlib/pp_parser.h, src/engines/7533/source/ramlib/ram.c, src/engines/7533/source/ramlib/ram.h, src/engines/7533/source/randlib/rand32.c, src/engines/7533/source/randlib/rand32.h, src/engines/7533/source/safealloc.h, src/engines/7533/source/savedata.h, src/engines/7533/source/scriptlib/FirstFollow.h, src/engines/7533/source/scriptlib/Instruction.c, src/engines/7533/source/scriptlib/Instruction.h, src/engines/7533/source/scriptlib/Interpreter.c, src/engines/7533/source/scriptlib/Interpreter.h, src/engines/7533/source/scriptlib/Lexer.c, src/engines/7533/source/scriptlib/Lexer.h, src/engines/7533/source/scriptlib/Parser.c, src/engines/7533/source/scriptlib/Parser.h, src/engines/7533/source/scriptlib/ParserSet.c, src/engines/7533/source/scriptlib/ParserSet.h, src/engines/7533/source/scriptlib/Productions.h, src/engines/7533/source/scriptlib/ScriptVariant.c, src/engines/7533/source/scriptlib/ScriptVariant.h, src/engines/7533/source/scriptlib/Stack.c, src/engines/7533/source/scriptlib/Stack.h, src/engines/7533/source/scriptlib/StackedSymbolTable.c, src/engines/7533/source/scriptlib/StackedSymbolTable.h, src/engines/7533/source/scriptlib/SymbolTable.c, src/engines/7533/source/scriptlib/SymbolTable.h, src/engines/7533/source/scriptlib/depends.h, src/engines/7533/source/stringptr.c, src/engines/7533/source/stringptr.h, src/engines/7533/source/stristr.c, src/engines/7533/source/stristr.h, src/engines/7533/source/utils.c, src/engines/7533/source/utils.h, src/engines/7533/source/webmlib/samplecvt.c, src/engines/7533/source/webmlib/samplecvt.h, src/engines/7533/source/webmlib/vidplay.c, src/engines/7533/source/webmlib/vidplay.h, src/engines/7533/source/webmlib/vorbis.c, src/engines/7533/source/webmlib/vorbis.h, src/engines/7533/source/webmlib/yuv.c, src/engines/7533/source/webmlib/yuv.h, src/engines/8023/source/gamelib/anigif.c, src/engines/8023/source/gamelib/anigif.h, src/engines/8023/source/gamelib/bitmap.c, src/engines/8023/source/gamelib/bitmap.h, src/engines/8023/source/gamelib/borendian.h, src/engines/8023/source/gamelib/draw.c, src/engines/8023/source/gamelib/draw.h, src/engines/8023/source/gamelib/draw16.c, src/engines/8023/source/gamelib/draw32.c, src/engines/8023/source/gamelib/font.c, src/engines/8023/source/gamelib/font.h, src/engines/8023/source/gamelib/loadimg.c, src/engines/8023/source/gamelib/loadimg.h, src/engines/8023/source/gamelib/packfile.h, src/engines/8023/source/gamelib/palette.c, src/engines/8023/source/gamelib/palette.h, src/engines/8023/source/gamelib/pixelformat.c, src/engines/8023/source/gamelib/screen.c, src/engines/8023/source/gamelib/screen.h, src/engines/8023/source/gamelib/screen16.c, src/engines/8023/source/gamelib/screen32.c, src/engines/8023/source/gamelib/soundmix.c, src/engines/8023/source/gamelib/soundmix.h, src/engines/8023/source/gamelib/sprite.c, src/engines/8023/source/gamelib/sprite.h, src/engines/8023/source/gamelib/spriteq.c, src/engines/8023/source/gamelib/spriteq.h, src/engines/8023/source/gamelib/spritex8p16.c, src/engines/8023/source/gamelib/spritex8p32.c, src/engines/8023/source/gamelib/threads.h, src/engines/8023/source/gamelib/timer.h, src/engines/8023/source/gamelib/types.h, src/engines/8023/source/gamelib/vga.h, src/engines/8023/source/gfxlib/gfxtypes.h, src/engines/8023/source/globals.h, src/engines/8023/source/omath.c, src/engines/8023/source/omath.h, src/engines/8023/source/preprocessorlib/pp_lexer.c, src/engines/8023/source/preprocessorlib/pp_lexer.h, src/engines/8023/source/preprocessorlib/pp_parser.c, src/engines/8023/source/preprocessorlib/pp_parser.h, src/engines/8023/source/ramlib/ram.c, src/engines/8023/source/ramlib/ram.h, src/engines/8023/source/randlib/rand32.c, src/engines/8023/source/randlib/rand32.h, src/engines/8023/source/safealloc.h, src/engines/8023/source/savedata.h, src/engines/8023/source/scriptlib/FirstFollow.h, src/engines/8023/source/scriptlib/Instruction.c, src/engines/8023/source/scriptlib/Instruction.h, src/engines/8023/source/scriptlib/Interpreter.c, src/engines/8023/source/scriptlib/Interpreter.h, src/engines/8023/source/scriptlib/Lexer.c, src/engines/8023/source/scriptlib/Lexer.h, src/engines/8023/source/scriptlib/Parser.c, src/engines/8023/source/scriptlib/Parser.h, src/engines/8023/source/scriptlib/ParserSet.c, src/engines/8023/source/scriptlib/ParserSet.h, src/engines/8023/source/scriptlib/Productions.h, src/engines/8023/source/scriptlib/ScriptVariant.c, src/engines/8023/source/scriptlib/ScriptVariant.h, src/engines/8023/source/scriptlib/Stack.c, src/engines/8023/source/scriptlib/Stack.h, src/engines/8023/source/scriptlib/StackedSymbolTable.c, src/engines/8023/source/scriptlib/StackedSymbolTable.h, src/engines/8023/source/scriptlib/SymbolTable.c, src/engines/8023/source/scriptlib/SymbolTable.h, src/engines/8023/source/scriptlib/depends.h, src/engines/8023/source/stringptr.c, src/engines/8023/source/stringptr.h, src/engines/8023/source/stristr.c, src/engines/8023/source/stristr.h, src/engines/8023/source/utils.c, src/engines/8023/source/utils.h, src/engines/8023/source/webmlib/samplecvt.c, src/engines/8023/source/webmlib/samplecvt.h, src/engines/8023/source/webmlib/vidplay.c, src/engines/8023/source/webmlib/vidplay.h, src/engines/8023/source/webmlib/vorbis.c, src/engines/8023/source/webmlib/vorbis.h, src/engines/8023/source/webmlib/yuv.c, src/engines/8023/source/webmlib/yuv.h
+Source: src/engines/7533/source/webmlib/samplecvt.c, src/engines/7533/source/webmlib/samplecvt.h, src/engines/7533/source/webmlib/vidplay.c, src/engines/7533/source/webmlib/vidplay.h, src/engines/7533/source/webmlib/vorbis.c, src/engines/7533/source/webmlib/vorbis.h, src/engines/7533/source/webmlib/yuv.c, src/engines/7533/source/webmlib/yuv.h, src/engines/8023/source/webmlib/samplecvt.c, src/engines/8023/source/webmlib/samplecvt.h, src/engines/8023/source/webmlib/vidplay.c, src/engines/8023/source/webmlib/vidplay.h, src/engines/8023/source/webmlib/vorbis.c, src/engines/8023/source/webmlib/vorbis.h, src/engines/8023/source/webmlib/yuv.c, src/engines/8023/source/webmlib/yuv.h, src/engines/7533/source/adpcmlib/adpcm.h, src/engines/7533/source/gamelib/anigif.c, src/engines/7533/source/gamelib/anigif.h, src/engines/7533/source/gamelib/bitmap.c, src/engines/7533/source/gamelib/bitmap.h, src/engines/7533/source/gamelib/borendian.h, src/engines/7533/source/gamelib/draw.c, src/engines/7533/source/gamelib/draw.h, src/engines/7533/source/gamelib/draw16.c, src/engines/7533/source/gamelib/draw32.c, src/engines/7533/source/gamelib/font.c, src/engines/7533/source/gamelib/font.h, src/engines/7533/source/gamelib/loadimg.c, src/engines/7533/source/gamelib/loadimg.h, src/engines/7533/source/gamelib/packfile.c, src/engines/7533/source/gamelib/packfile.h, src/engines/7533/source/gamelib/palette.c, src/engines/7533/source/gamelib/palette.h, src/engines/7533/source/gamelib/pixelformat.c, src/engines/7533/source/gamelib/screen.c, src/engines/7533/source/gamelib/screen.h, src/engines/7533/source/gamelib/screen16.c, src/engines/7533/source/gamelib/screen32.c, src/engines/7533/source/gamelib/soundmix.c, src/engines/7533/source/gamelib/soundmix.h, src/engines/7533/source/gamelib/sprite.c, src/engines/7533/source/gamelib/sprite.h, src/engines/7533/source/gamelib/spriteq.c, src/engines/7533/source/gamelib/spriteq.h, src/engines/7533/source/gamelib/spritex8p16.c, src/engines/7533/source/gamelib/spritex8p32.c, src/engines/7533/source/gamelib/threads.h, src/engines/7533/source/gamelib/timer.h, src/engines/7533/source/gamelib/types.h, src/engines/7533/source/gamelib/vga.h, src/engines/7533/source/gfxlib/gfxtypes.h, src/engines/7533/source/globals.h, src/engines/7533/source/omath.c, src/engines/7533/source/omath.h, src/engines/7533/source/preprocessorlib/pp_lexer.c, src/engines/7533/source/preprocessorlib/pp_lexer.h, src/engines/7533/source/preprocessorlib/pp_parser.c, src/engines/7533/source/preprocessorlib/pp_parser.h, src/engines/7533/source/ramlib/ram.c, src/engines/7533/source/ramlib/ram.h, src/engines/7533/source/randlib/rand32.c, src/engines/7533/source/randlib/rand32.h, src/engines/7533/source/safealloc.h, src/engines/7533/source/savedata.h, src/engines/7533/source/scriptlib/FirstFollow.h, src/engines/7533/source/scriptlib/Instruction.c, src/engines/7533/source/scriptlib/Instruction.h, src/engines/7533/source/scriptlib/Interpreter.c, src/engines/7533/source/scriptlib/Interpreter.h, src/engines/7533/source/scriptlib/Lexer.c, src/engines/7533/source/scriptlib/Lexer.h, src/engines/7533/source/scriptlib/Parser.c, src/engines/7533/source/scriptlib/Parser.h, src/engines/7533/source/scriptlib/ParserSet.c, src/engines/7533/source/scriptlib/ParserSet.h, src/engines/7533/source/scriptlib/Productions.h, src/engines/7533/source/scriptlib/ScriptVariant.c, src/engines/7533/source/scriptlib/ScriptVariant.h, src/engines/7533/source/scriptlib/Stack.c, src/engines/7533/source/scriptlib/Stack.h, src/engines/7533/source/scriptlib/StackedSymbolTable.c, src/engines/7533/source/scriptlib/StackedSymbolTable.h, src/engines/7533/source/scriptlib/SymbolTable.c, src/engines/7533/source/scriptlib/SymbolTable.h, src/engines/7533/source/scriptlib/depends.h, src/engines/7533/source/stringptr.c, src/engines/7533/source/stringptr.h, src/engines/7533/source/stristr.c, src/engines/7533/source/stristr.h, src/engines/7533/source/utils.c, src/engines/7533/source/utils.h, src/engines/7533/source/webmlib/samplecvt.c, src/engines/7533/source/webmlib/samplecvt.h, src/engines/7533/source/webmlib/vidplay.c, src/engines/7533/source/webmlib/vidplay.h, src/engines/7533/source/webmlib/vorbis.c, src/engines/7533/source/webmlib/vorbis.h, src/engines/7533/source/webmlib/yuv.c, src/engines/7533/source/webmlib/yuv.h, src/engines/8023/source/gamelib/anigif.c, src/engines/8023/source/gamelib/anigif.h, src/engines/8023/source/gamelib/bitmap.c, src/engines/8023/source/gamelib/bitmap.h, src/engines/8023/source/gamelib/borendian.h, src/engines/8023/source/gamelib/draw.c, src/engines/8023/source/gamelib/draw.h, src/engines/8023/source/gamelib/draw16.c, src/engines/8023/source/gamelib/draw32.c, src/engines/8023/source/gamelib/font.c, src/engines/8023/source/gamelib/font.h, src/engines/8023/source/gamelib/loadimg.c, src/engines/8023/source/gamelib/loadimg.h, src/engines/8023/source/gamelib/packfile.h, src/engines/8023/source/gamelib/palette.c, src/engines/8023/source/gamelib/palette.h, src/engines/8023/source/gamelib/pixelformat.c, src/engines/8023/source/gamelib/screen.c, src/engines/8023/source/gamelib/screen.h, src/engines/8023/source/gamelib/screen16.c, src/engines/8023/source/gamelib/screen32.c, src/engines/8023/source/gamelib/soundmix.c, src/engines/8023/source/gamelib/soundmix.h, src/engines/8023/source/gamelib/sprite.c, src/engines/8023/source/gamelib/sprite.h, src/engines/8023/source/gamelib/spriteq.c, src/engines/8023/source/gamelib/spriteq.h, src/engines/8023/source/gamelib/spritex8p16.c, src/engines/8023/source/gamelib/spritex8p32.c, src/engines/8023/source/gamelib/threads.h, src/engines/8023/source/gamelib/timer.h, src/engines/8023/source/gamelib/types.h, src/engines/8023/source/gamelib/vga.h, src/engines/8023/source/gfxlib/gfxtypes.h, src/engines/8023/source/globals.h, src/engines/8023/source/omath.c, src/engines/8023/source/omath.h, src/engines/8023/source/preprocessorlib/pp_lexer.c, src/engines/8023/source/preprocessorlib/pp_lexer.h, src/engines/8023/source/preprocessorlib/pp_parser.c, src/engines/8023/source/preprocessorlib/pp_parser.h, src/engines/8023/source/ramlib/ram.c, src/engines/8023/source/ramlib/ram.h, src/engines/8023/source/randlib/rand32.c, src/engines/8023/source/randlib/rand32.h, src/engines/8023/source/safealloc.h, src/engines/8023/source/savedata.h, src/engines/8023/source/scriptlib/FirstFollow.h, src/engines/8023/source/scriptlib/Instruction.c, src/engines/8023/source/scriptlib/Instruction.h, src/engines/8023/source/scriptlib/Interpreter.c, src/engines/8023/source/scriptlib/Interpreter.h, src/engines/8023/source/scriptlib/Lexer.c, src/engines/8023/source/scriptlib/Lexer.h, src/engines/8023/source/scriptlib/Parser.c, src/engines/8023/source/scriptlib/Parser.h, src/engines/8023/source/scriptlib/ParserSet.c, src/engines/8023/source/scriptlib/ParserSet.h, src/engines/8023/source/scriptlib/Productions.h, src/engines/8023/source/scriptlib/ScriptVariant.c, src/engines/8023/source/scriptlib/ScriptVariant.h, src/engines/8023/source/scriptlib/Stack.c, src/engines/8023/source/scriptlib/Stack.h, src/engines/8023/source/scriptlib/StackedSymbolTable.c, src/engines/8023/source/scriptlib/StackedSymbolTable.h, src/engines/8023/source/scriptlib/SymbolTable.c, src/engines/8023/source/scriptlib/SymbolTable.h, src/engines/8023/source/scriptlib/depends.h, src/engines/8023/source/stringptr.c, src/engines/8023/source/stringptr.h, src/engines/8023/source/stristr.c, src/engines/8023/source/stristr.h, src/engines/8023/source/utils.c, src/engines/8023/source/utils.h, src/engines/8023/source/webmlib/samplecvt.c, src/engines/8023/source/webmlib/samplecvt.h, src/engines/8023/source/webmlib/vidplay.c, src/engines/8023/source/webmlib/vidplay.h, src/engines/8023/source/webmlib/vorbis.c, src/engines/8023/source/webmlib/vorbis.h, src/engines/8023/source/webmlib/yuv.c, src/engines/8023/source/webmlib/yuv.h, src/glue/obor_hankaku.h
 /*
  * OpenBOR - http://www.chronocrash.com
  * -----------------------------------------------------------------------
@@ -901,19 +887,6 @@ Source: src/engines/4432/source/webmlib/nestegg/nestegg.c, src/engines/4432/sour
  *
  * This program is made available under an ISC-style license.  See the
  * accompanying file LICENSE for details.
- */
-
-Source: src/engines/4432/source/gamelib/anigif.h
-/* AnyBOR modification record: 2026-09-12.
- * Port maintained by retrodiv <retrodiv@proton.me>.
- * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
- * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
- * Upstream code retains its original license and notices.
- * Restore the header's pragma pack state so including it leaves the caller's
- * alignment untouched.
- * Existing changes recorded here; this is not their implementation date.
- * See MODIFICATIONS.md and docs/modifications/4432.md
- * at the source repository root. Original notices follow below.
  */
 
 Source: src/engines/8023/source/gamelib/packfile_handle.c
@@ -979,20 +952,6 @@ Source: src/engines/6391/source/webmlib/vidplay.c, src/engines/6391/source/webml
  * at the source repository root. Original notices follow below.
  */
 
-Source: src/engines/4432/source/scriptlib/Instruction.c
-/* AnyBOR modification record: 2026-09-12.
- * Port maintained by retrodiv <retrodiv@proton.me>.
- * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
- * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
- * Upstream code retains its original license and notices.
- * Store each compiled script constant once, compact call parameter
- * references, and distinguish parser storage from compiled call and jump
- * targets.
- * Existing changes recorded here; this is not their implementation date.
- * See MODIFICATIONS.md and docs/modifications/4432.md
- * at the source repository root. Original notices follow below.
- */
-
 Source: src/deps/zlib/inflate.h
 /* inflate.h -- internal inflate state definition
  * Copyright (C) 1995-2019 Mark Adler
@@ -1016,6 +975,29 @@ Source: src/deps/libvorbis/lib/lookup_data.h
 
  ********************************************************************/
 
+Source: src/engines/4432/openbor.c
+/* AnyBOR modification record: 2026-09-30.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Apply the port's engine corrections and select the PC video configuration
+ * on macOS. Select the 4453 profile's 32-bit screen and palette behavior,
+ * preserve the 4432 12-key native settings format while 4453 uses 13 keys,
+ * and disable the Exit mapping in the 4453 control menu. Bound the DOT loop
+ * and control-menu arrays to allocated storage. Leave multiplayer slots
+ * without a selected model available to join even if game scripts preassign
+ * lives to them. Let a missing basename-only PAK self-check read the active
+ * frontend content after it has been validated and prepared. Allocate each
+ * model's animation pointer table through the highest animation index that
+ * model uses, and bound cache, copy and cleanup paths to that capacity.
+ * Resize repeated weapon lists and detach borrowed lists before replacing
+ * their entries.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/4432.md
+ * at the source repository root. Original notices follow below.
+ */
+
 Source: src/engines/6391/source/openborscript/index.c
 /* AnyBOR modification record: 2026-09-29.
  * Port maintained by retrodiv <retrodiv@proton.me>.
@@ -1038,6 +1020,30 @@ Source: src/engines/4086/source/gamelib/packfile.h
  * where macOS lacks it.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/4086.md
+ * at the source repository root. Original notices follow below.
+ */
+
+Source: src/engines/4432/source/gamelib/draw.c
+/* AnyBOR modification record: 2026-09-30.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Route circle drawing through the port's integer rasterizer.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/4432.md
+ * at the source repository root. Original notices follow below.
+ */
+
+Source: src/engines/4432/source/scriptlib/ImportCache.h
+/* AnyBOR modification record: 2026-09-30.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Retain imported entry points as direct instruction pointers.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/4432.md
  * at the source repository root. Original notices follow below.
  */
 
@@ -1179,6 +1185,18 @@ Source: src/engines/7533/openbor.c
  * repair legacy unbound player profiles without replacing custom bindings.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/7533.md
+ * at the source repository root. Original notices follow below.
+ */
+
+Source: src/engines/4432/source/globals.h
+/* AnyBOR modification record: 2026-09-30.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Include the libretro platform interface.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/4432.md
  * at the source repository root. Original notices follow below.
  */
 
@@ -1520,18 +1538,6 @@ Source: src/engines/3400/source/gamelib/screen.c
  * at the source repository root. Original notices follow below.
  */
 
-Source: src/engines/4432/source/gamelib/borendian.h
-/* AnyBOR modification record: 2026-09-12.
- * Port maintained by retrodiv <retrodiv@proton.me>.
- * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
- * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
- * Upstream code retains its original license and notices.
- * Use the port's fixed-width endian conversions.
- * Existing changes recorded here; this is not their implementation date.
- * See MODIFICATIONS.md and docs/modifications/4432.md
- * at the source repository root. Original notices follow below.
- */
-
 Source: src/deps/libpng/loongarch/filter_lsx_intrinsics.c
 /* filter_lsx_intrinsics.c - LSX optimized filter functions
  *
@@ -1729,18 +1735,6 @@ Source: src/engines/6391/source/ramlib/ram.c
  * at the source repository root. Original notices follow below.
  */
 
-Source: src/engines/4432/source/globals.h
-/* AnyBOR modification record: 2026-09-12.
- * Port maintained by retrodiv <retrodiv@proton.me>.
- * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
- * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
- * Upstream code retains its original license and notices.
- * Include the libretro platform interface.
- * Existing changes recorded here; this is not their implementation date.
- * See MODIFICATIONS.md and docs/modifications/4432.md
- * at the source repository root. Original notices follow below.
- */
-
 Source: src/engines/8023/source/scriptlib/ImportCache.h
 /* AnyBOR modification record: 2026-09-12.
  * Port maintained by retrodiv <retrodiv@proton.me>.
@@ -1802,19 +1796,6 @@ Source: src/engines/3842/source/scriptlib/Instruction.h
  * at the source repository root. Original notices follow below.
  */
 
-Source: src/engines/4432/source/scriptlib/ScriptVariant.h
-/* AnyBOR modification record: 2026-09-12.
- * Port maintained by retrodiv <retrodiv@proton.me>.
- * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
- * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
- * Upstream code retains its original license and notices.
- * Declare the cache and variant helpers as ordinary functions; the header
- * only declared them inline and the definitions live in ScriptVariant.c.
- * Existing changes recorded here; this is not their implementation date.
- * See MODIFICATIONS.md and docs/modifications/4432.md
- * at the source repository root. Original notices follow below.
- */
-
 Source: src/deps/libvorbis/lib/block.c
 /********************************************************************
  *                                                                  *
@@ -1849,6 +1830,18 @@ Source: src/engines/3400/openbor.h
  * at the source repository root. Original notices follow below.
  */
 
+Source: src/engines/4432/source/gamelib/borendian.h
+/* AnyBOR modification record: 2026-09-30.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Use the port's fixed-width endian conversions.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/4432.md
+ * at the source repository root. Original notices follow below.
+ */
+
 Source: src/deps/libvorbis/lib/modes/residue_8.h
 /********************************************************************
  *                                                                  *
@@ -1865,20 +1858,6 @@ Source: src/deps/libvorbis/lib/modes/residue_8.h
  function: toplevel residue templates 8/11kHz
 
  ********************************************************************/
-
-Source: src/engines/4432/source/scriptlib/Instruction.h
-/* AnyBOR modification record: 2026-09-12.
- * Port maintained by retrodiv <retrodiv@proton.me>.
- * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
- * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
- * Upstream code retains its original license and notices.
- * Remove redundant value storage, compact opcode and call-reference
- * bookkeeping, and share parser-only fields with their compiled
- * replacements.
- * Existing changes recorded here; this is not their implementation date.
- * See MODIFICATIONS.md and docs/modifications/4432.md
- * at the source repository root. Original notices follow below.
- */
 
 Source: src/engines/7533/source/gamelib/threads.h
 /* AnyBOR modification record: 2026-09-29.
@@ -2088,6 +2067,20 @@ Source: src/deps/libvorbis/lib/modes/setup_X.h
  function: catch-all toplevel settings for q modes only
 
  ********************************************************************/
+
+Source: src/engines/4432/source/gamelib/packfile.c
+/* AnyBOR modification record: 2026-09-30.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Repair PAK handles after state loads, close resources on reset, prune
+ * unused frontend APIs, and compile the case-insensitive loose-file search
+ * on macOS.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/4432.md
+ * at the source repository root. Original notices follow below.
+ */
 
 Source: src/engines/8023/source/globals.h
 /* AnyBOR modification record: 2026-09-12.
@@ -2328,6 +2321,19 @@ Source: src/engines/3842/source/scriptlib/depends.h
  * at the source repository root. Original notices follow below.
  */
 
+Source: src/engines/4432/openborscript.c
+/* AnyBOR modification record: 2026-09-30.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Keep the dormant constant-lowering diagnostic compatible with the single-
+ * value instruction layout.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/4432.md
+ * at the source repository root. Original notices follow below.
+ */
+
 Source: src/engines/3400/source/ramlib/ram.c
 /* AnyBOR modification record: 2026-09-12.
  * Port maintained by retrodiv <retrodiv@proton.me>.
@@ -2362,6 +2368,18 @@ Source: src/deps/libvpx/md5_utils.c
  * definitions
  *  - Ian Jackson <ian@chiark.greenend.org.uk>.
  * Still in the public domain.
+ */
+
+Source: src/engines/4432/source/gamelib/threads.h
+/* AnyBOR modification record: 2026-09-30.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Declare the libretro thread, mutex and condition types.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/4432.md
+ * at the source repository root. Original notices follow below.
  */
 
 Source: src/deps/zlib/zutil.h
@@ -2478,18 +2496,6 @@ Source: src/deps/zlib/inftrees.h
  * For conditions of distribution and use, see copyright notice in zlib.h
  */
 
-Source: src/engines/4432/source/webmlib/vidplay.c, src/engines/4432/source/webmlib/vidplay.c
-/* AnyBOR modification record: 2026-09-12.
- * Port maintained by retrodiv <retrodiv@proton.me>.
- * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
- * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
- * Upstream code retains its original license and notices.
- * Coordinate WebM worker shutdown and yield while waiting for video frames.
- * Existing changes recorded here; this is not their implementation date.
- * See MODIFICATIONS.md and docs/modifications/4432.md
- * at the source repository root. Original notices follow below.
- */
-
 Source: src/deps/libvpx/args.c, src/deps/libvpx/args.h, src/deps/libvpx/tools_common.c, src/deps/libvpx/tools_common.h, src/deps/libvpx/vp8/common/alloccommon.c, src/deps/libvpx/vp8/common/alloccommon.h, src/deps/libvpx/vp8/common/arm/loopfilter_arm.c, src/deps/libvpx/vp8/common/arm/neon/idct_blk_neon.c, src/deps/libvpx/vp8/common/blockd.c, src/deps/libvpx/vp8/common/blockd.h, src/deps/libvpx/vp8/common/coefupdateprobs.h, src/deps/libvpx/vp8/common/common.h, src/deps/libvpx/vp8/common/context.c, src/deps/libvpx/vp8/common/debugmodes.c, src/deps/libvpx/vp8/common/default_coef_probs.h, src/deps/libvpx/vp8/common/dequantize.c, src/deps/libvpx/vp8/common/entropy.c, src/deps/libvpx/vp8/common/entropy.h, src/deps/libvpx/vp8/common/entropymode.c, src/deps/libvpx/vp8/common/entropymode.h, src/deps/libvpx/vp8/common/entropymv.c, src/deps/libvpx/vp8/common/entropymv.h, src/deps/libvpx/vp8/common/extend.c, src/deps/libvpx/vp8/common/extend.h, src/deps/libvpx/vp8/common/filter.c, src/deps/libvpx/vp8/common/findnearmv.c, src/deps/libvpx/vp8/common/findnearmv.h, src/deps/libvpx/vp8/common/generic/systemdependent.c, src/deps/libvpx/vp8/common/header.h, src/deps/libvpx/vp8/common/idct_blk.c, src/deps/libvpx/vp8/common/idctllm.c, src/deps/libvpx/vp8/common/invtrans.h, src/deps/libvpx/vp8/common/loopfilter.h, src/deps/libvpx/vp8/common/loopfilter_filters.c, src/deps/libvpx/vp8/common/mbpitch.c, src/deps/libvpx/vp8/common/modecont.c, src/deps/libvpx/vp8/common/modecont.h, src/deps/libvpx/vp8/common/mv.h, src/deps/libvpx/vp8/common/onyx.h, src/deps/libvpx/vp8/common/onyxc_int.h, src/deps/libvpx/vp8/common/onyxd.h, src/deps/libvpx/vp8/common/postproc.c, src/deps/libvpx/vp8/common/postproc.h, src/deps/libvpx/vp8/common/ppflags.h, src/deps/libvpx/vp8/common/quant_common.c, src/deps/libvpx/vp8/common/quant_common.h, src/deps/libvpx/vp8/common/reconinter.c, src/deps/libvpx/vp8/common/reconinter.h, src/deps/libvpx/vp8/common/reconintra.c, src/deps/libvpx/vp8/common/reconintra.h, src/deps/libvpx/vp8/common/reconintra4x4.c, src/deps/libvpx/vp8/common/reconintra4x4.h, src/deps/libvpx/vp8/common/setupintrarecon.c, src/deps/libvpx/vp8/common/setupintrarecon.h, src/deps/libvpx/vp8/common/swapyv12buffer.c, src/deps/libvpx/vp8/common/swapyv12buffer.h, src/deps/libvpx/vp8/common/systemdependent.h, src/deps/libvpx/vp8/common/threading.h, src/deps/libvpx/vp8/common/treecoder.c, src/deps/libvpx/vp8/common/treecoder.h, src/deps/libvpx/vp8/common/vp8_entropymodedata.h, src/deps/libvpx/vp8/common/vp8_loopfilter.c, src/deps/libvpx/vp8/common/x86/idct_blk_mmx.c, src/deps/libvpx/vp8/common/x86/idct_blk_sse2.c, src/deps/libvpx/vp8/common/x86/loopfilter_x86.c, src/deps/libvpx/vp8/common/x86/vp8_asm_stubs.c, src/deps/libvpx/vp8/decoder/dboolhuff.c, src/deps/libvpx/vp8/decoder/dboolhuff.h, src/deps/libvpx/vp8/decoder/decodeframe.c, src/deps/libvpx/vp8/decoder/decodemv.c, src/deps/libvpx/vp8/decoder/decodemv.h, src/deps/libvpx/vp8/decoder/decoderthreading.h, src/deps/libvpx/vp8/decoder/detokenize.c, src/deps/libvpx/vp8/decoder/detokenize.h, src/deps/libvpx/vp8/decoder/onyxd_if.c, src/deps/libvpx/vp8/decoder/onyxd_int.h, src/deps/libvpx/vp8/decoder/threading.c, src/deps/libvpx/vp8/decoder/treereader.h, src/deps/libvpx/vp8/encoder/bitstream.c, src/deps/libvpx/vp8/encoder/bitstream.h, src/deps/libvpx/vp8/encoder/block.h, src/deps/libvpx/vp8/encoder/boolhuff.c, src/deps/libvpx/vp8/encoder/boolhuff.h, src/deps/libvpx/vp8/encoder/copy_c.c, src/deps/libvpx/vp8/encoder/dct.c, src/deps/libvpx/vp8/encoder/defaultcoefcounts.h, src/deps/libvpx/vp8/encoder/encodeframe.c, src/deps/libvpx/vp8/encoder/encodeintra.c, src/deps/libvpx/vp8/encoder/encodeintra.h, src/deps/libvpx/vp8/encoder/encodemb.c, src/deps/libvpx/vp8/encoder/encodemb.h, src/deps/libvpx/vp8/encoder/encodemv.c, src/deps/libvpx/vp8/encoder/encodemv.h, src/deps/libvpx/vp8/encoder/ethreading.c, src/deps/libvpx/vp8/encoder/firstpass.c, src/deps/libvpx/vp8/encoder/firstpass.h, src/deps/libvpx/vp8/encoder/mcomp.c, src/deps/libvpx/vp8/encoder/mcomp.h, src/deps/libvpx/vp8/encoder/modecosts.c, src/deps/libvpx/vp8/encoder/modecosts.h, src/deps/libvpx/vp8/encoder/mr_dissim.c, src/deps/libvpx/vp8/encoder/mr_dissim.h, src/deps/libvpx/vp8/encoder/onyx_if.c, src/deps/libvpx/vp8/encoder/onyx_int.h, src/deps/libvpx/vp8/encoder/pickinter.c, src/deps/libvpx/vp8/encoder/pickinter.h, src/deps/libvpx/vp8/encoder/picklpf.c, src/deps/libvpx/vp8/encoder/quantize.h, src/deps/libvpx/vp8/encoder/ratectrl.c, src/deps/libvpx/vp8/encoder/ratectrl.h, src/deps/libvpx/vp8/encoder/rdopt.c, src/deps/libvpx/vp8/encoder/rdopt.h, src/deps/libvpx/vp8/encoder/segmentation.c, src/deps/libvpx/vp8/encoder/segmentation.h, src/deps/libvpx/vp8/encoder/temporal_filter.c, src/deps/libvpx/vp8/encoder/tokenize.c, src/deps/libvpx/vp8/encoder/tokenize.h, src/deps/libvpx/vp8/encoder/treewriter.c, src/deps/libvpx/vp8/encoder/treewriter.h, src/deps/libvpx/vp8/encoder/vp8_quantize.c, src/deps/libvpx/vp8/vp8_cx_iface.c, src/deps/libvpx/vp8/vp8_dx_iface.c, src/deps/libvpx/vp9/common/vp9_alloccommon.c, src/deps/libvpx/vp9/common/vp9_alloccommon.h, src/deps/libvpx/vp9/common/vp9_blockd.h, src/deps/libvpx/vp9/common/vp9_common.h, src/deps/libvpx/vp9/common/vp9_common_data.c, src/deps/libvpx/vp9/common/vp9_common_data.h, src/deps/libvpx/vp9/common/vp9_debugmodes.c, src/deps/libvpx/vp9/common/vp9_entropy.c, src/deps/libvpx/vp9/common/vp9_entropy.h, src/deps/libvpx/vp9/common/vp9_entropymode.c, src/deps/libvpx/vp9/common/vp9_entropymode.h, src/deps/libvpx/vp9/common/vp9_entropymv.c, src/deps/libvpx/vp9/common/vp9_entropymv.h, src/deps/libvpx/vp9/common/vp9_enums.h, src/deps/libvpx/vp9/common/vp9_filter.c, src/deps/libvpx/vp9/common/vp9_idct.c, src/deps/libvpx/vp9/common/vp9_idct.h, src/deps/libvpx/vp9/common/vp9_loopfilter.c, src/deps/libvpx/vp9/common/vp9_loopfilter.h, src/deps/libvpx/vp9/common/vp9_mv.h, src/deps/libvpx/vp9/common/vp9_onyxc_int.h, src/deps/libvpx/vp9/common/vp9_postproc.c, src/deps/libvpx/vp9/common/vp9_postproc.h, src/deps/libvpx/vp9/common/vp9_ppflags.h, src/deps/libvpx/vp9/common/vp9_quant_common.c, src/deps/libvpx/vp9/common/vp9_quant_common.h, src/deps/libvpx/vp9/common/vp9_reconinter.c, src/deps/libvpx/vp9/common/vp9_reconinter.h, src/deps/libvpx/vp9/common/vp9_reconintra.c, src/deps/libvpx/vp9/common/vp9_reconintra.h, src/deps/libvpx/vp9/common/vp9_scan.c, src/deps/libvpx/vp9/common/vp9_seg_common.c, src/deps/libvpx/vp9/common/vp9_tile_common.c, src/deps/libvpx/vp9/common/vp9_tile_common.h, src/deps/libvpx/vp9/decoder/vp9_decodeframe.c, src/deps/libvpx/vp9/decoder/vp9_decodeframe.h, src/deps/libvpx/vp9/decoder/vp9_decodemv.h, src/deps/libvpx/vp9/decoder/vp9_decoder.c, src/deps/libvpx/vp9/decoder/vp9_decoder.h, src/deps/libvpx/vp9/decoder/vp9_detokenize.c, src/deps/libvpx/vp9/decoder/vp9_detokenize.h, src/deps/libvpx/vp9/encoder/vp9_bitstream.c, src/deps/libvpx/vp9/encoder/vp9_bitstream.h, src/deps/libvpx/vp9/encoder/vp9_block.h, src/deps/libvpx/vp9/encoder/vp9_dct.c, src/deps/libvpx/vp9/encoder/vp9_encodeframe.c, src/deps/libvpx/vp9/encoder/vp9_encodeframe.h, src/deps/libvpx/vp9/encoder/vp9_encodemb.c, src/deps/libvpx/vp9/encoder/vp9_encodemb.h, src/deps/libvpx/vp9/encoder/vp9_encodemv.c, src/deps/libvpx/vp9/encoder/vp9_encodemv.h, src/deps/libvpx/vp9/encoder/vp9_encoder.h, src/deps/libvpx/vp9/encoder/vp9_extend.c, src/deps/libvpx/vp9/encoder/vp9_extend.h, src/deps/libvpx/vp9/encoder/vp9_firstpass.c, src/deps/libvpx/vp9/encoder/vp9_firstpass.h, src/deps/libvpx/vp9/encoder/vp9_mbgraph.c, src/deps/libvpx/vp9/encoder/vp9_mbgraph.h, src/deps/libvpx/vp9/encoder/vp9_mcomp.c, src/deps/libvpx/vp9/encoder/vp9_mcomp.h, src/deps/libvpx/vp9/encoder/vp9_picklpf.c, src/deps/libvpx/vp9/encoder/vp9_picklpf.h, src/deps/libvpx/vp9/encoder/vp9_quantize.c, src/deps/libvpx/vp9/encoder/vp9_quantize.h, src/deps/libvpx/vp9/encoder/vp9_ratectrl.c, src/deps/libvpx/vp9/encoder/vp9_ratectrl.h, src/deps/libvpx/vp9/encoder/vp9_rd.c, src/deps/libvpx/vp9/encoder/vp9_rd.h, src/deps/libvpx/vp9/encoder/vp9_rdopt.c, src/deps/libvpx/vp9/encoder/vp9_rdopt.h, src/deps/libvpx/vp9/encoder/vp9_segmentation.h, src/deps/libvpx/vp9/encoder/vp9_speed_features.c, src/deps/libvpx/vp9/encoder/vp9_speed_features.h, src/deps/libvpx/vp9/encoder/vp9_temporal_filter.c, src/deps/libvpx/vp9/encoder/vp9_temporal_filter.h, src/deps/libvpx/vp9/encoder/vp9_tokenize.c, src/deps/libvpx/vp9/encoder/vp9_tokenize.h, src/deps/libvpx/vp9/encoder/vp9_treewriter.c, src/deps/libvpx/vp9/encoder/vp9_treewriter.h, src/deps/libvpx/vp9/vp9_cx_iface.c, src/deps/libvpx/vp9/vp9_dx_iface.c, src/deps/libvpx/vpx/internal/vpx_codec_internal.h, src/deps/libvpx/vpx/src/vpx_codec.c, src/deps/libvpx/vpx/src/vpx_decoder.c, src/deps/libvpx/vpx/src/vpx_encoder.c, src/deps/libvpx/vpx/src/vpx_image.c, src/deps/libvpx/vpx/vp8.h, src/deps/libvpx/vpx/vp8cx.h, src/deps/libvpx/vpx/vp8dx.h, src/deps/libvpx/vpx/vpx_codec.h, src/deps/libvpx/vpx/vpx_decoder.h, src/deps/libvpx/vpx/vpx_encoder.h, src/deps/libvpx/vpx/vpx_image.h, src/deps/libvpx/vpx/vpx_integer.h, src/deps/libvpx/vpx_dsp/bitreader.c, src/deps/libvpx/vpx_dsp/bitreader.h, src/deps/libvpx/vpx_dsp/bitwriter.c, src/deps/libvpx/vpx_dsp/bitwriter.h, src/deps/libvpx/vpx_dsp/inv_txfm.h, src/deps/libvpx/vpx_dsp/ssim.c, src/deps/libvpx/vpx_dsp/variance.c, src/deps/libvpx/vpx_dsp/x86/loopfilter_avx2.c, src/deps/libvpx/vpx_dsp/x86/loopfilter_sse2.c, src/deps/libvpx/vpx_dsp/x86/variance_sse2.c, src/deps/libvpx/vpx_dsp/x86/vpx_subpixel_8t_intrin_avx2.c, src/deps/libvpx/vpx_dsp/x86/vpx_subpixel_8t_intrin_ssse3.c, src/deps/libvpx/vpx_mem/include/vpx_mem_intrnl.h, src/deps/libvpx/vpx_mem/vpx_mem.c, src/deps/libvpx/vpx_mem/vpx_mem.h, src/deps/libvpx/vpx_ports/arm.h, src/deps/libvpx/vpx_ports/bitops.h, src/deps/libvpx/vpx_ports/mem.h, src/deps/libvpx/vpx_ports/mem_ops.h, src/deps/libvpx/vpx_ports/mem_ops_aligned.h, src/deps/libvpx/vpx_ports/vpx_timer.h, src/deps/libvpx/vpx_ports/x86.h, src/deps/libvpx/vpx_scale/generic/gen_scalers.c, src/deps/libvpx/vpx_scale/generic/vpx_scale.c, src/deps/libvpx/vpx_scale/generic/yv12config.c, src/deps/libvpx/vpx_scale/generic/yv12extend.c, src/deps/libvpx/vpx_scale/vpx_scale.h, src/deps/libvpx/vpx_scale/yv12config.h, src/deps/libvpx/vpxdec.c, src/deps/libvpx/vpxenc.c
 /*
  *  Copyright (c) 2010 The WebM project authors. All Rights Reserved.
@@ -2547,19 +2553,6 @@ Source: src/deps/libpng/pngrtran.c
  * in pngtrans.c.
  */
 
-Source: src/engines/4432/source/gamelib/transform.h
-/* AnyBOR modification record: 2026-09-12.
- * Port maintained by retrodiv <retrodiv@proton.me>.
- * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
- * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
- * Upstream code retains its original license and notices.
- * Declare the raster helpers as ordinary functions; the header only declared
- * them inline and the definitions live in transform.c.
- * Existing changes recorded here; this is not their implementation date.
- * See MODIFICATIONS.md and docs/modifications/4432.md
- * at the source repository root. Original notices follow below.
- */
-
 Source: src/engines/7533/source/scriptlib/ImportCache.h
 /* AnyBOR modification record: 2026-09-29.
  * Port maintained by retrodiv <retrodiv@proton.me>.
@@ -2600,20 +2593,6 @@ Source: src/engines/3842/source/scriptlib/Interpreter.h
  * retain it.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/3842.md
- * at the source repository root. Original notices follow below.
- */
-
-Source: src/engines/4432/source/gamelib/packfile.c
-/* AnyBOR modification record: 2026-09-12.
- * Port maintained by retrodiv <retrodiv@proton.me>.
- * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
- * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
- * Upstream code retains its original license and notices.
- * Repair PAK handles after state loads, close resources on reset, prune
- * unused frontend APIs, and compile the case-insensitive loose-file search
- * on macOS.
- * Existing changes recorded here; this is not their implementation date.
- * See MODIFICATIONS.md and docs/modifications/4432.md
  * at the source repository root. Original notices follow below.
  */
 
@@ -2709,6 +2688,11 @@ Source: src/engines/4086/source/scriptlib/ImportCache.c
  * at the source repository root. Original notices follow below.
  */
 
+Source: src/port/libretro/obor_libco.c
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ * The included libco implementation retains its upstream license. */
+
 Source: src/deps/libvorbis/lib/bitrate.h
 /********************************************************************
  *                                                                  *
@@ -2765,6 +2749,20 @@ Source: src/engines/4086/source/utils.c
  * at the source repository root. Original notices follow below.
  */
 
+Source: src/engines/4432/source/scriptlib/Interpreter.h
+/* AnyBOR modification record: 2026-09-30.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Own the exact contiguous storage used by compiled instructions and their
+ * values. Store parser state indirectly so compiled interpreters do not
+ * retain it.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/4432.md
+ * at the source repository root. Original notices follow below.
+ */
+
 Source: src/engines/3842/source/gamelib/transform.h
 /* AnyBOR modification record: 2026-09-12.
  * Port maintained by retrodiv <retrodiv@proton.me>.
@@ -2806,6 +2804,19 @@ Source: src/deps/libvorbis/lib/window.h
  function: window functions
 
  ********************************************************************/
+
+Source: src/engines/4432/source/gamelib/transform.h
+/* AnyBOR modification record: 2026-09-30.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Declare the raster helpers as ordinary functions; the header only declared
+ * them inline and the definitions live in transform.c.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/4432.md
+ * at the source repository root. Original notices follow below.
+ */
 
 Source: src/deps/libvorbis/lib/lsp.c
 /********************************************************************
@@ -3055,6 +3066,20 @@ Source: src/engines/4086/source/gamelib/filecache.c
  * at the source repository root. Original notices follow below.
  */
 
+Source: src/engines/4432/source/scriptlib/Instruction.h
+/* AnyBOR modification record: 2026-09-30.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Remove redundant value storage, compact opcode and call-reference
+ * bookkeeping, and share parser-only fields with their compiled
+ * replacements.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/4432.md
+ * at the source repository root. Original notices follow below.
+ */
+
 Source: src/engines/6391/source/gamelib/borendian.h
 /* AnyBOR modification record: 2026-09-29.
  * Port maintained by retrodiv <retrodiv@proton.me>.
@@ -3115,6 +3140,19 @@ Source: src/deps/libpng/pngpread.c
  * and license in png.h
  */
 
+Source: src/engines/4432/source/savedata.h
+/* AnyBOR modification record: 2026-09-30.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Reserve 13 control entries in the shared runtime while the settings I/O
+ * retains each logical profile's native layout.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/4432.md
+ * at the source repository root. Original notices follow below.
+ */
+
 Source: src/engines/4086/source/globals.h
 /* AnyBOR modification record: 2026-09-12.
  * Port maintained by retrodiv <retrodiv@proton.me>.
@@ -3124,6 +3162,19 @@ Source: src/engines/4086/source/globals.h
  * Include the libretro platform interface.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/4086.md
+ * at the source repository root. Original notices follow below.
+ */
+
+Source: src/engines/4432/source/scriptlib/depends.h
+/* AnyBOR modification record: 2026-09-30.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Restore the pragma pack state the script headers rely on instead of
+ * leaving it set for every includer.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/4432.md
  * at the source repository root. Original notices follow below.
  */
 
@@ -3194,21 +3245,6 @@ Source: src/deps/libpng/powerpc/powerpc_init.c
  * and license in png.h
  */
 
-Source: src/engines/4432/source/scriptlib/Interpreter.c
-/* AnyBOR modification record: 2026-09-12.
- * Port maintained by retrodiv <retrodiv@proton.me>.
- * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
- * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
- * Upstream code retains its original license and notices.
- * Push canonical constants, release parser-only instruction data, and pack
- * compiled instructions, values, and call references into exact contiguous
- * storage. Allocate parser state only while compiling and release it once
- * runtime instructions are ready.
- * Existing changes recorded here; this is not their implementation date.
- * See MODIFICATIONS.md and docs/modifications/4432.md
- * at the source repository root. Original notices follow below.
- */
-
 Source: src/engines/7533/source/openborscript/commands.h, src/engines/8023/source/openborscript/commands.h
 /*
  * OpenBOR - https://www.chronocrash.com
@@ -3235,19 +3271,6 @@ Source: src/deps/libvorbis/lib/books/coupled/res_books_stereo.h, src/deps/libvor
  function: static codebooks autogenerated by huff/huffbuld
 
  ********************************************************************/
-
-Source: src/engines/4432/openborscript.c
-/* AnyBOR modification record: 2026-09-12.
- * Port maintained by retrodiv <retrodiv@proton.me>.
- * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
- * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
- * Upstream code retains its original license and notices.
- * Keep the dormant constant-lowering diagnostic compatible with the single-
- * value instruction layout.
- * Existing changes recorded here; this is not their implementation date.
- * See MODIFICATIONS.md and docs/modifications/4432.md
- * at the source repository root. Original notices follow below.
- */
 
 Source: src/deps/libvorbis/lib/modes/setup_44.h
 /********************************************************************
@@ -3338,6 +3361,19 @@ Source: src/engines/8023/source/scriptlib/Interpreter.h
  * retain it.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/8023.md
+ * at the source repository root. Original notices follow below.
+ */
+
+Source: src/engines/4432/source/preprocessorlib/pp_parser.c
+/* AnyBOR modification record: 2026-09-30.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Drop the glibc-only <malloc.h> and rely on the standard library
+ * declarations the parser already includes.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/4432.md
  * at the source repository root. Original notices follow below.
  */
 
@@ -3730,7 +3766,7 @@ Source: src/engines/4086/source/gamelib/anigif.h
  * at the source repository root. Original notices follow below.
  */
 
-Source: src/engines/3400/version.h, src/engines/3842/version.h, src/engines/4086/version.h, src/engines/4432/version.h, src/engines/6391/version.h, src/engines/7533/version.h, src/engines/8023/version.h, src/port/libretro/obor_files.c, src/port/libretro/obor_script_compact.h, src/port/libretro/obor_state_copy.h, src/glue/obor_crt.h, src/glue/obor_legacy_api.h, src/glue/obor_packed_prepare.h, src/glue/obor_pak_repair.h, src/glue/obor_pak_validate.h, src/glue/obor_state_padding.h, src/glue/obor_storage.h, src/glue/obor_transform.h, src/glue/obor_zip_path.h
+Source: src/engines/3400/version.h, src/engines/3842/version.h, src/engines/4086/version.h, src/engines/4432/version.h, src/engines/6391/version.h, src/engines/7533/version.h, src/engines/8023/version.h, src/port/libretro/obor_fault.c, src/port/libretro/obor_fault.h, src/port/libretro/obor_files.c, src/port/libretro/obor_runtime.h, src/port/libretro/obor_script_compact.h, src/port/libretro/obor_state_copy.h, src/port/libretro/obor_state_padding.h, src/glue/obor_crt.h, src/glue/obor_engine_resources.h, src/glue/obor_error_screen.h, src/glue/obor_legacy_api.h, src/glue/obor_packed_prepare.h, src/glue/obor_pak_repair.h, src/glue/obor_pak_validate.h, src/glue/obor_runtime.h, src/glue/obor_state_padding.h, src/glue/obor_storage.h, src/glue/obor_transform.h, src/glue/obor_zip_path.h
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
 
@@ -3768,19 +3804,6 @@ Source: src/port/libretro/obor_endian.h
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
  * Fixed-width byte-order helpers for the OpenBOR interfaces. */
-
-Source: src/engines/4432/source/gamelib/filecache.c
-/* AnyBOR modification record: 2026-09-12.
- * Port maintained by retrodiv <retrodiv@proton.me>.
- * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
- * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
- * Upstream code retains its original license and notices.
- * Expose the cache descriptor for resource restoration and initialize it to
- * -1.
- * Existing changes recorded here; this is not their implementation date.
- * See MODIFICATIONS.md and docs/modifications/4432.md
- * at the source repository root. Original notices follow below.
- */
 
 Source: src/engines/7533/source/gamelib/packfile.c
 /* AnyBOR modification record: 2026-09-29.
@@ -3822,6 +3845,18 @@ Source: src/deps/libvpx/vp9/common/x86/vp9_mfqe_sse2.asm, src/deps/libvpx/vpx_ds
 ;  in the file PATENTS.  All contributing project authors may
 ;  be found in the AUTHORS file in the root of the source tree.
 ;
+
+Source: src/engines/4432/source/webmlib/vidplay.c, src/engines/4432/source/webmlib/vidplay.c
+/* AnyBOR modification record: 2026-09-30.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Coordinate WebM worker shutdown and yield while waiting for video frames.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/4432.md
+ * at the source repository root. Original notices follow below.
+ */
 
 Source: src/deps/libvorbis/lib/registry.c
 /********************************************************************
@@ -3930,25 +3965,6 @@ Source: src/third_party/libretro.h
  * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
  * WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
- */
-
-Source: src/engines/4432/openbor.c
-/* AnyBOR modification record: 2026-09-12.
- * Port maintained by retrodiv <retrodiv@proton.me>.
- * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
- * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
- * Upstream code retains its original license and notices.
- * Apply the port's engine corrections and select the PC video configuration
- * on macOS. Leave multiplayer slots without a selected model available to
- * join even if game scripts preassign lives to them. Let a missing basename-
- * only PAK self-check read the active frontend content after it has been
- * validated and prepared. Allocate each model's animation pointer table
- * through the highest animation index that model uses, and bound cache, copy
- * and cleanup paths to that capacity. Resize repeated weapon lists and
- * detach borrowed lists before replacing their entries.
- * Existing changes recorded here; this is not their implementation date.
- * See MODIFICATIONS.md and docs/modifications/4432.md
- * at the source repository root. Original notices follow below.
  */
 
 Source: src/deps/libpng/pngset.c
@@ -4290,6 +4306,19 @@ Source: src/deps/libvpx/vpx_dsp/arm/idct4x4_add_neon.asm, src/deps/libvpx/vpx_ds
 ;  be found in the AUTHORS file in the root of the source tree.
 ;
 
+Source: src/engines/4432/source/gamelib/anigif.h
+/* AnyBOR modification record: 2026-09-30.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Restore the header's pragma pack state so including it leaves the caller's
+ * alignment untouched.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/4432.md
+ * at the source repository root. Original notices follow below.
+ */
+
 Source: src/third_party/miniz.c
 /**************************************************************************
  *
@@ -4551,19 +4580,6 @@ Source: src/deps/zlib/zlib.h
   (zlib format), rfc1951 (deflate format) and rfc1952 (gzip format).
 */
 
-Source: src/engines/4432/source/scriptlib/ImportCache.c
-/* AnyBOR modification record: 2026-09-12.
- * Port maintained by retrodiv <retrodiv@proton.me>.
- * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
- * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
- * Upstream code retains its original license and notices.
- * Guard parser-only import metadata after compilation. Read import metadata
- * only while an interpreter still owns parser state.
- * Existing changes recorded here; this is not their implementation date.
- * See MODIFICATIONS.md and docs/modifications/4432.md
- * at the source repository root. Original notices follow below.
- */
-
 Source: src/engines/7533/openbor.h, src/engines/8023/openbor.h
 /*
  * OpenBOR - http://www.chronocrash.com
@@ -4605,19 +4621,6 @@ Jutta Degener
 Carsten Bormann
 
 *********************************************************************/
-
-Source: src/engines/4432/source/preprocessorlib/pp_parser.c
-/* AnyBOR modification record: 2026-09-12.
- * Port maintained by retrodiv <retrodiv@proton.me>.
- * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
- * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
- * Upstream code retains its original license and notices.
- * Drop the glibc-only <malloc.h> and rely on the standard library
- * declarations the parser already includes.
- * Existing changes recorded here; this is not their implementation date.
- * See MODIFICATIONS.md and docs/modifications/4432.md
- * at the source repository root. Original notices follow below.
- */
 
 Source: src/deps/libpng/pngtrans.c
 /* pngtrans.c - transforms the data in a row (used by both readers and writers)
@@ -4669,6 +4672,19 @@ Source: src/engines/3842/source/pnglib/savepng.c
  * <malloc.h> when writing a screenshot.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/3842.md
+ * at the source repository root. Original notices follow below.
+ */
+
+Source: src/engines/4432/source/gamelib/filecache.c
+/* AnyBOR modification record: 2026-09-30.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Expose the cache descriptor for resource restoration and initialize it to
+ * -1.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/4432.md
  * at the source repository root. Original notices follow below.
  */
 
@@ -4740,6 +4756,19 @@ Source: src/deps/libvorbis/lib/modes/floor_all.h
  function: key floor settings
 
  ********************************************************************/
+
+Source: src/engines/4432/source/ramlib/ram.c
+/* AnyBOR modification record: 2026-09-30.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Read host memory statistics through mach on macOS instead of the glibc-
+ * only <malloc.h>.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/4432.md
+ * at the source repository root. Original notices follow below.
+ */
 
 Source: src/port/libretro/libco/valgrind.h, src/port/libretro/libco/valgrind.h
 /* -*- c -*-
@@ -4818,6 +4847,21 @@ Source: src/engines/6391/source/scriptlib/ScriptVariant.h
  * at the source repository root. Original notices follow below.
  */
 
+Source: src/engines/4432/source/scriptlib/Interpreter.c
+/* AnyBOR modification record: 2026-09-30.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Push canonical constants, release parser-only instruction data, and pack
+ * compiled instructions, values, and call references into exact contiguous
+ * storage. Allocate parser state only while compiling and release it once
+ * runtime instructions are ready.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/4432.md
+ * at the source repository root. Original notices follow below.
+ */
+
 Source: src/deps/libpng/pnginfo.h
 /* pnginfo.h - internal structures for libpng
  *
@@ -4854,19 +4898,6 @@ Source: src/engines/7533/source/scriptlib/ImportCache.c
  * at the source repository root. Original notices follow below.
  */
 
-Source: src/engines/4432/source/scriptlib/depends.h
-/* AnyBOR modification record: 2026-09-12.
- * Port maintained by retrodiv <retrodiv@proton.me>.
- * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
- * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
- * Upstream code retains its original license and notices.
- * Restore the pragma pack state the script headers rely on instead of
- * leaving it set for every includer.
- * Existing changes recorded here; this is not their implementation date.
- * See MODIFICATIONS.md and docs/modifications/4432.md
- * at the source repository root. Original notices follow below.
- */
-
 Source: src/engines/3842/source/gamelib/packfile.h
 /* AnyBOR modification record: 2026-09-12.
  * Port maintained by retrodiv <retrodiv@proton.me>.
@@ -4877,20 +4908,6 @@ Source: src/engines/3842/source/gamelib/packfile.h
  * where macOS lacks it.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/3842.md
- * at the source repository root. Original notices follow below.
- */
-
-Source: src/engines/4432/source/scriptlib/Interpreter.h
-/* AnyBOR modification record: 2026-09-12.
- * Port maintained by retrodiv <retrodiv@proton.me>.
- * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
- * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
- * Upstream code retains its original license and notices.
- * Own the exact contiguous storage used by compiled instructions and their
- * values. Store parser state indirectly so compiled interpreters do not
- * retain it.
- * Existing changes recorded here; this is not their implementation date.
- * See MODIFICATIONS.md and docs/modifications/4432.md
  * at the source repository root. Original notices follow below.
  */
 
@@ -4910,19 +4927,6 @@ Source: src/deps/libpng/pngerror.c
  * need special error handling are expected to write replacement functions
  * and use png_set_error_fn() to use those functions.  See the instructions
  * at each function.
- */
-
-Source: src/engines/4432/source/pnglib/savepng.c
-/* AnyBOR modification record: 2026-09-12.
- * Port maintained by retrodiv <retrodiv@proton.me>.
- * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
- * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
- * Upstream code retains its original license and notices.
- * Include the standard library declarations instead of the glibc-only
- * <malloc.h> when writing a screenshot.
- * Existing changes recorded here; this is not their implementation date.
- * See MODIFICATIONS.md and docs/modifications/4432.md
- * at the source repository root. Original notices follow below.
  */
 
 Source: src/engines/4086/openborscript.c
@@ -4969,18 +4973,6 @@ Source: src/deps/libvorbis/lib/envelope.h
 
  ********************************************************************/
 
-Source: src/engines/4432/source/scriptlib/ImportCache.h
-/* AnyBOR modification record: 2026-09-12.
- * Port maintained by retrodiv <retrodiv@proton.me>.
- * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
- * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
- * Upstream code retains its original license and notices.
- * Retain imported entry points as direct instruction pointers.
- * Existing changes recorded here; this is not their implementation date.
- * See MODIFICATIONS.md and docs/modifications/4432.md
- * at the source repository root. Original notices follow below.
- */
-
 Source: src/deps/zlib/inffast.c
 /* inffast.c -- fast decoding
  * Copyright (C) 1995-2026 Mark Adler
@@ -5025,6 +5017,20 @@ Source: src/deps/zlib/zconf.h
   #pragma map(inflate_fast,"INFA")
   #pragma map(inflate_copyright,"INCOPY")
 #endif
+
+Source: src/engines/4432/source/scriptlib/Instruction.c
+/* AnyBOR modification record: 2026-09-30.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Store each compiled script constant once, compact call parameter
+ * references, and distinguish parser storage from compiled call and jump
+ * targets.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/4432.md
+ * at the source repository root. Original notices follow below.
+ */
 
 Source: src/engines/8023/source/gamelib/packfile.c
 /*
@@ -5154,18 +5160,6 @@ Source: src/deps/libvpx/vp9/encoder/arm/neon/vp9_error_sve.c, src/deps/libvpx/vp
  *  be found in the AUTHORS file in the root of the source tree.
  */
 
-Source: src/engines/4432/source/gamelib/threads.h
-/* AnyBOR modification record: 2026-09-12.
- * Port maintained by retrodiv <retrodiv@proton.me>.
- * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
- * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
- * Upstream code retains its original license and notices.
- * Declare the libretro thread, mutex and condition types.
- * Existing changes recorded here; this is not their implementation date.
- * See MODIFICATIONS.md and docs/modifications/4432.md
- * at the source repository root. Original notices follow below.
- */
-
 Source: src/deps/libvpx/vpx_dsp/arm/highbd_variance_sve.c
 /*
  * Copyright (c) 2024 The WebM project authors. All Rights Reserved.
@@ -5187,18 +5181,6 @@ Source: src/engines/3842/source/gamelib/soundmix.c
  * state, and map stricmp on macOS.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/3842.md
- * at the source repository root. Original notices follow below.
- */
-
-Source: src/engines/4432/source/gamelib/draw.c
-/* AnyBOR modification record: 2026-09-12.
- * Port maintained by retrodiv <retrodiv@proton.me>.
- * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
- * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
- * Upstream code retains its original license and notices.
- * Route circle drawing through the port's integer rasterizer.
- * Existing changes recorded here; this is not their implementation date.
- * See MODIFICATIONS.md and docs/modifications/4432.md
  * at the source repository root. Original notices follow below.
  */
 
@@ -5239,6 +5221,19 @@ Source: src/deps/libvpx/third_party/x86inc/x86inc.asm
 ;* OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 ;*****************************************************************************
 
+Source: src/engines/4432/source/scriptlib/ScriptVariant.h
+/* AnyBOR modification record: 2026-09-30.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Declare the cache and variant helpers as ordinary functions; the header
+ * only declared them inline and the definitions live in ScriptVariant.c.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/4432.md
+ * at the source repository root. Original notices follow below.
+ */
+
 Source: src/engines/6391/source/openborscript/binding.h
 /* AnyBOR modification record: 2026-09-29.
  * Port maintained by retrodiv <retrodiv@proton.me>.
@@ -5249,6 +5244,19 @@ Source: src/engines/6391/source/openborscript/binding.h
  * 6412 axis handles.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/6391.md
+ * at the source repository root. Original notices follow below.
+ */
+
+Source: src/engines/4432/source/scriptlib/ImportCache.c
+/* AnyBOR modification record: 2026-09-30.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Guard parser-only import metadata after compilation. Read import metadata
+ * only while an interpreter still owns parser state.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/4432.md
  * at the source repository root. Original notices follow below.
  */
 
@@ -5400,6 +5408,19 @@ Source: src/glue/obor_profile.h
  * Opt-in measurement of the real frontend. No game-specific routes or data.
  */
 
+Source: src/engines/4432/source/gamelib/packfile.h
+/* AnyBOR modification record: 2026-09-30.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Remove declarations of unused standalone frontend APIs and define O_BINARY
+ * where macOS lacks it.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/4432.md
+ * at the source repository root. Original notices follow below.
+ */
+
 Source: src/engines/6391/source/openborscript/entity.c
 /* AnyBOR modification record: 2026-09-29.
  * Port maintained by retrodiv <retrodiv@proton.me>.
@@ -5422,6 +5443,20 @@ Source: src/engines/6391/source/globals.h
  * Include the libretro platform interface.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/6391.md
+ * at the source repository root. Original notices follow below.
+ */
+
+Source: src/engines/4432/source/utils.c
+/* AnyBOR modification record: 2026-09-30.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Enable libretro platform and PNG helper declarations, the POSIX directory
+ * and mkdir forms macOS also uses, and the standard allocation declarations
+ * instead of the glibc-only <malloc.h>.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/4432.md
  * at the source repository root. Original notices follow below.
  */
 
@@ -5701,19 +5736,6 @@ Source: src/deps/libvpx/vp9/encoder/x86/vp9_dct_sse2.asm, src/deps/libvpx/vpx_ds
 ;  in the file PATENTS.  All contributing project authors may
 ;  be found in the AUTHORS file in the root of the source tree.
 ;
-
-Source: src/engines/4432/source/ramlib/ram.c
-/* AnyBOR modification record: 2026-09-12.
- * Port maintained by retrodiv <retrodiv@proton.me>.
- * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
- * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
- * Upstream code retains its original license and notices.
- * Read host memory statistics through mach on macOS instead of the glibc-
- * only <malloc.h>.
- * Existing changes recorded here; this is not their implementation date.
- * See MODIFICATIONS.md and docs/modifications/4432.md
- * at the source repository root. Original notices follow below.
- */
 
 Source: src/deps/libpng/intel/intel_init.c
 /* intel_init.c - SSE2 optimized filter functions

@@ -14,6 +14,7 @@
 #include <stddef.h>
 #include <string.h>
 #include "obor_abi.h"
+#include "obor_fault.h"
 
 /* mingw ships a unistd.h too — include it before the usleep macro below so
  * later includes are guard-stopped and never see the macro as a prototype */
@@ -51,6 +52,10 @@ extern char logsDir[MAX_FILENAME_LEN];
 extern char screenShotsDir[MAX_FILENAME_LEN];
 
 /* ---- internal hooks between the libretro platform files ---- */
+/* Protected calls may run on the frontend stack (audio/state), as well as
+ * inside the engine coroutine. A fault abandons the current world. */
+int obor_protect_call(void (*execute)(void *), void *context, const char *phase);
+void obor_test_fault_phase(const char *phase);
 
 /* Emulated clock (microseconds). Advanced by frame yields and sleeps. */
 extern unsigned long long obor_clock_us;

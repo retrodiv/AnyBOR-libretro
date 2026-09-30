@@ -1,7 +1,7 @@
 # OpenBOR (AnyBOR)
 
-AnyBOR is an independent libretro core for OpenBOR games. Its eight selectable
-engines are 3400, 3842, 4086, 4432, 6391, 6412, 7533 and 8023. Auto uses
+AnyBOR is an independent libretro core for OpenBOR games. Its nine selectable
+engines are 3400, 3842, 4086, 4432, 4453, 6391, 6412, 7533 and 8023. Auto uses
 available build tags and content clues; you can also select an engine manually.
 OpenBOR and Beats of Rage originate with Senile Team and OpenBOR Team; the port
 is maintained by retrodiv. The combined core has multiple component licenses,
@@ -80,12 +80,14 @@ The macros account for the active character's facing direction.
 | Clear all game caches on load | `obor_clear_all_caches` | **On**. In Development. Empties `AnyBOR-cache/` before each load and before generating new cache files; saved data is unaffected. |
 
 Automatic selection uses filename version tags, nearby engine-version data
-and PAK content markers, with profile 6391 as the current fallback. An explicit
-profile choice takes precedence. A detected build selects a logical profile,
-which maps to a compiled physical engine. Games predating the available source history
+and PAK content markers, with engine 6391 as the current fallback. An explicit
+engine choice takes precedence. Games predating the available source history
 use the 3400 anchor on a best-effort basis; games newer than the latest anchor
 also have best-effort coverage. [COMPATIBILITY.md](../COMPATIBILITY.md) describes
 the supported engine ranges.
+
+Choose **v3 4453** explicitly or use a filename tagged **Build 4453** to select
+that engine. It uses 32-bit color and ignores `colourdepth`.
 
 ### Video contract: Adjust for 4:3 CRT TV
 
@@ -161,7 +163,7 @@ made in the frontend menu immediately before closing content.
 Each game has its own folder named after the original PAK, SPK or ZIP without
 its extension, or the unpacked mod directory. The name stays stable when content
 is extracted or prepared. Identically named games share this namespace; give
-unrelated games different filenames. Inside it, logical profiles stay separate
+unrelated games different filenames. Inside it, engines stay separate
 because their settings layouts are incompatible.
 
 Saved-data cleanup removes that whole game folder, including settings, progress,

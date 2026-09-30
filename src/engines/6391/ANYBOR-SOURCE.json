@@ -9,7 +9,7 @@
       "upstream_sha256": "adfc28feba4d32bb3933b29fe55fd0a6aa746084704c3ee71fc3f732706b9aa4"
     },
     "Makefile.libretro": {
-      "distributed_sha256": "eb41e004225e1352ffb0776701568c8c42171deda1da3c9046eafc8e03759a37",
+      "distributed_sha256": "92171f26daa59637b87cba5893d858f56058dafd8b7bf65fb50c200d2b4178f4",
       "modified": true,
       "origin": "Project libretro build overlay",
       "summary": "Supply the shared libretro engine build and symbol-isolation rules.",

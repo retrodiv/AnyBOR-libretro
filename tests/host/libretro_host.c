@@ -150,6 +150,7 @@ static size_t g_fpitch;
 static long g_nonblack_max;
 static unsigned long long g_audio_energy;
 static int g_shutdown;
+static unsigned long g_video_calls;
 static int g_variable_states;
 
 /* input timeline */
@@ -455,6 +456,7 @@ static bool env_cb(unsigned cmd, void *data)
 static void video_cb(const void *data, unsigned width, unsigned height,
                      size_t pitch)
 {
+    ++g_video_calls;
     g_fw = width;
     g_fh = height;
     g_fpitch = pitch;
@@ -638,13 +640,18 @@ int main(int argc, char **argv)
     int loaded = p_retro_load_game(&info);
 #ifndef _WIN32
     if (occupied) {
-        if (loaded) { fprintf(stderr, "occupied arena was accepted\n"); return 1; }
+        if (!loaded || p_retro_serialize_size() != 0) {
+            fprintf(stderr, "occupied arena did not enter the error screen\n");
+            return 1;
+        }
+        p_retro_run();
+        if (!g_fb || g_fw != 320 || g_fh != 240 || g_shutdown) return 1;
         for (int i = 0; i < 4096; ++i) if (occupied[i] != 0xa5) return 1;
         p_retro_deinit();
         dlclose(h);
         for (int i = 0; i < 4096; ++i) if (occupied[i] != 0xa5) return 1;
         munmap(occupied, 4096);
-        puts("occupied_arena_rejected=1 foreign_mapping_preserved=1");
+        puts("occupied_arena_error_screen=1 foreign_mapping_preserved=1");
         return 0;
     }
 #endif
@@ -726,6 +733,8 @@ int main(int argc, char **argv)
     int stop_width = getenv("OBOR_STOP_WIDTH") ? atoi(getenv("OBOR_STOP_WIDTH")) : 0;
     int reset_width = getenv("OBOR_RESET_WIDTH") ? atoi(getenv("OBOR_RESET_WIDTH")) : 0;
     int load_width = getenv("OBOR_LOAD_WIDTH") ? atoi(getenv("OBOR_LOAD_WIDTH")) : 0;
+    int expect_error_at = getenv("OBOR_EXPECT_ERROR_AT") ? atoi(getenv("OBOR_EXPECT_ERROR_AT")) : -1;
+    int expect_recover_at = getenv("OBOR_EXPECT_RECOVER_AT") ? atoi(getenv("OBOR_EXPECT_RECOVER_AT")) : -1;
 
     for (g_frame = 0; g_frame < nframes && !g_shutdown; g_frame++) {
         size_t current_state_size = p_retro_serialize_size();
@@ -758,7 +767,43 @@ int main(int argc, char **argv)
             rw_step++;
             rw_popped = 1;
         }
+        unsigned long video_calls_before = g_video_calls;
         p_retro_run();
+        if (getenv("OBOR_REQUIRE_VIDEO_EVERY_RUN") && !g_shutdown &&
+            g_video_calls == video_calls_before) {
+            fprintf(stderr, "video callback missing at frame %d\n", g_frame);
+            return 1;
+        }
+        if (g_frame == expect_error_at) {
+            if (!g_fb || g_fw != 320 || g_fh != 240 ||
+                p_retro_serialize_size() != 0 || g_shutdown) {
+                fprintf(stderr, "error screen missing at frame %d\n", g_frame);
+                return 1;
+            }
+            long white = 0;
+            for (unsigned y = 0; y < g_fh; ++y) {
+                const uint32_t *row = (const uint32_t *)((const uint8_t *)g_fb + y * g_fpitch);
+                for (unsigned x = 0; x < g_fw; ++x) {
+                    if (row[x] == 0x00ffffffu) ++white;
+                    else if (row[x] != 0) return 1;
+                }
+            }
+            if (white < 100) return 1;
+            unsigned char rejected[64];
+            memset(rejected, 0xa5, sizeof(rejected));
+            if (p_retro_serialize(rejected, sizeof(rejected)) ||
+                p_retro_unserialize(rejected, sizeof(rejected))) return 1;
+            for (size_t i = 0; i < sizeof(rejected); ++i)
+                if (rejected[i] != 0xa5) return 1;
+            printf("error_screen=320x240 black_white=1 state_rejected=1 frame=%d\n", g_frame);
+        }
+        if (g_frame == expect_recover_at) {
+            if (!p_retro_serialize_size() || g_shutdown) {
+                fprintf(stderr, "engine did not recover at frame %d\n", g_frame);
+                return 1;
+            }
+            printf("error_screen_recovered=1 frame=%d\n", g_frame);
+        }
         if (contract_buf) {
             memset(contract_buf, 0xa5, contract_sz + 16);
             if (!p_retro_serialize(contract_buf + 8, contract_sz) ||
@@ -920,6 +965,16 @@ int main(int argc, char **argv)
             g_var_dirty = 1;
             printf("core option obor_engine := %s at frame %d\n", setopt_val,
                    g_frame);
+        }
+        if (getenv("OBOR_CLEAR_TEST_FAULT_AT") &&
+            g_frame == atoi(getenv("OBOR_CLEAR_TEST_FAULT_AT"))) {
+#ifdef _WIN32
+            _putenv("OBOR_TEST_FAULT=");
+            _putenv("OBOR_TEST_CALL_FAULT=");
+#else
+            unsetenv("OBOR_TEST_FAULT");
+            unsetenv("OBOR_TEST_CALL_FAULT");
+#endif
         }
         if (g_frame == reset_at ||
             (reset_every > 0 && g_frame > 0 && g_frame % reset_every == 0)) {

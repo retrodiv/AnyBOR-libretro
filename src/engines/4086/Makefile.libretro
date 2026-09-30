@@ -69,7 +69,7 @@ EXCLUDE = source/gamelib/filters.c source/scriptlib/List_unittest.c \
           $(EXTRA_EXCLUDE)
 
 MAIN_SRCS   = openbor.c openborscript.c
-PORT_SRCS   = $(wildcard $(PORT_ROOT)/*.c) $(PORT_ROOT)/libco/libco.c
+PORT_SRCS   = $(wildcard $(PORT_ROOT)/*.c)
 LIB_SRCS    = $(wildcard source/*.c) \
               $(wildcard source/adpcmlib/*.c) \
               $(wildcard source/gamelib/*.c) \
@@ -105,7 +105,7 @@ endif
 ENGINE_SRCS = $(filter-out $(EXCLUDE),$(MAIN_SRCS) $(LIB_SRCS) \
        $(YUV_SRCS) $(WEBM_SRCS))
 ENGINE_OBJS = $(addprefix $(OBJDIR)/,$(ENGINE_SRCS:.c=.o))
-PORT_BASE_SRCS = $(notdir $(filter-out %/libco.c,$(PORT_SRCS)))
+PORT_BASE_SRCS = $(notdir $(filter-out %/obor_libco.c,$(PORT_SRCS)))
 PORT_BASE_OBJS = $(addprefix $(OBJDIR)/port/,$(PORT_BASE_SRCS:.c=.o))
 PORT_LIBCO_OBJ = $(OBJDIR)/port/libco.o
 
@@ -146,7 +146,7 @@ all: partial
 # inside OBJDIR: linux and windows builds share the tree — a common output
 # path would let concurrent/interleaved builds overwrite each other's partial
 PARTIAL     = $(OBJDIR)/obor_engine_$(BUILD_NUM).o
-ABI_SYMS    = obor_abi_version obor_boot obor_run_frame obor_get_video \
+ABI_SYMS    = obor_abi_version obor_boot obor_run_frame obor_get_exit_status obor_get_fault_message obor_abandon obor_get_video \
               obor_set_button obor_get_audio obor_serialize_size \
               obor_serialize obor_unserialize obor_shutdown \
               obor_get_rumble obor_get_arena obor_get_player_state
@@ -167,6 +167,12 @@ endif
 # linux: system libpng.a is non-PIC — png/z stay undefined in the partial
 # and the final core links them dynamically (libpng allocations are
 # transient, so they never touch the snapshot arena)
+FILE_WRAPS = --wrap=fopen --wrap=fclose --wrap=open --wrap=close
+ifeq ($(PLATFORM),windows)
+FILE_WRAPS += --wrap=_open --wrap=_close
+else
+FILE_WRAPS += --wrap=open64
+endif
 
 # NOTE (windows): mingw emits a COMDAT .rdata$.refptr.<sym> indirection
 # slot per extern-data reference. Six partials carry slots with the SAME
@@ -193,7 +199,7 @@ ifeq ($(PLATFORM),darwin)
 	    --abi $(OBJDIR)/keep.txt --manifest $(OBJDIR)/macho-$(BUILD_NUM).json
 else
 	$(LDR) -r -d --wrap=malloc --wrap=calloc --wrap=realloc \
-	    --wrap=free --wrap=strdup --wrap=fopen -o $(OBJDIR)/whole.o $(OBJS) $(DEP_ARCH)
+	    --wrap=free --wrap=strdup $(FILE_WRAPS) -o $(OBJDIR)/whole.o $(OBJS) $(DEP_ARCH)
 	$(OBJCOPY) --keep-global-symbols=$(OBJDIR)/keep.txt $(OBJDIR)/whole.o \
 	    $(OBJDIR)/kept.o
 	$(OBJCOPY) --remove-section=.drectve \
@@ -209,7 +215,7 @@ $(OBJDIR)/port/%.o: $(PORT_ROOT)/%.c
 	@mkdir -p $(dir $@)
 	$(CC) $(CFLAGS) -c $< -o $@
 
-$(PORT_LIBCO_OBJ): $(PORT_ROOT)/libco/libco.c
+$(PORT_LIBCO_OBJ): $(PORT_ROOT)/obor_libco.c $(PORT_ROOT)/libco/libco.c
 	@mkdir -p $(dir $@)
 	$(CC) $(CFLAGS) -c $< -o $@
 

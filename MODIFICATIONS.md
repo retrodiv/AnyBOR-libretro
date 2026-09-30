@@ -367,6 +367,19 @@ record-layout dumps to leave every type byte-identical:
 
 ## Logical profile compatibility
 
+Patch `96-logical-4453-compat.patch` adapts the behavior of upstream
+[4453](https://github.com/DCurrent/openbor/commit/7906e2573fcd70e9eafcd30fbdcc680832c4ae42)
+(2017-04-08). Profile 4453 forces 32-bit screens, keeps model-local indexed
+palettes, ignores `colourdepth` and skips the legacy `remap`-to-palette
+conversion removed in that revision. The earlier profile retains its video
+configuration and palette conversion. Native settings I/O packs and unpacks
+the original 4432 12-entry
+layout and uses the 4453 13-entry layout directly. Profile identity keeps
+their directories and save states separate. The later control menu disables
+Exit reassignment. Both profiles bound the DOT loop to its allocated slots
+and keep control-menu indexing within its arrays.
+
+
 The physical 6391 engine is pinned to upstream commit
 [`494708eb34e71d1afda237873907701c4ec3a569`](https://github.com/DCurrent/openbor/commit/494708eb34e71d1afda237873907701c4ec3a569).
 Patch `96-logical-6412-compat.patch` adapts the later upstream 6412 script
@@ -386,7 +399,7 @@ in their respective files.
 
 | Capability or change | Behaviour and current implementation |
 |---|---|
-| Seven physical engines and eight profiles | Each engine is partially linked with private symbols; suffixed ABI entry points select the active engine. The profile table maps logical build identity to one engine. [`obor_abi.h`](src/glue/obor_abi.h), [`obor_engines.h`](src/glue/obor_engines.h), [`Makefile.libretro`](src/engines/6391/Makefile.libretro), [`tools/build.py`](tools/build.py). |
+| Nine selectable engines | Each engine is partially linked with private symbols; suffixed ABI entry points select the active engine. The profile table maps logical build identity to one engine. [`obor_abi.h`](src/glue/obor_abi.h), [`obor_engines.h`](src/glue/obor_engines.h), [`Makefile.libretro`](src/engines/6391/Makefile.libretro), [`tools/build.py`](tools/build.py). |
 | Automatic engine selection | An explicit core option takes precedence; otherwise inspect legacy script API requirements, filename tags, nearby executables as data, and PAK content tokens, then use the pinned fallback. Selection is rerun on Reset. [`libretro.cpp`](src/glue/libretro.cpp), `decide_engine`, `pick_anchor`, `build_from_content`; [`obor_markers.h`](src/glue/obor_markers.h). |
 | Frontend-owned frame delivery | Run the engine main loop on a libco coroutine, yield at video submission, and advance an emulated microsecond clock. Sleep/input-wait paths also yield so frontend input remains live. [`libretroport.c`](src/port/libretro/libretroport.c), [`libretroport.h`](src/port/libretro/libretroport.h), [`timer.c`](src/port/libretro/timer.c). |
 | Video and audio backends | Convert engine video to XRGB8888, publish geometry, and pull engine audio through the frontend. [`video.c`](src/port/libretro/video.c), [`video.h`](src/port/libretro/video.h), [`vga.h`](src/port/libretro/vga.h), [`sblaster.c`](src/port/libretro/sblaster.c), [`sblaster.h`](src/port/libretro/sblaster.h). |

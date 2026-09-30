@@ -9,7 +9,7 @@
       "upstream_sha256": "88be43c97bbb0321122585c7c0e15a546819ffa420d8051e1153b343febd97a9"
     },
     "Makefile.libretro": {
-      "distributed_sha256": "eb41e004225e1352ffb0776701568c8c42171deda1da3c9046eafc8e03759a37",
+      "distributed_sha256": "92171f26daa59637b87cba5893d858f56058dafd8b7bf65fb50c200d2b4178f4",
       "modified": true,
       "origin": "Project libretro build overlay",
       "summary": "Supply the shared libretro engine build and symbol-isolation rules.",
@@ -17,22 +17,23 @@
       "upstream_sha256": null
     },
     "openbor.c": {
-      "distributed_sha256": "6d220d38667a6d13d9b87abb98df11280b8eed13fba3c0c1f926d9f149903937",
+      "distributed_sha256": "e3d64f3c487a80c4d536ccb1ac0248cfa84905a8bc2c67d798e1b4c95971d9fb",
       "modified": true,
-      "summary": "Apply the port's engine corrections and select the PC video configuration on macOS. Leave multiplayer slots without a selected model available to join even if game scripts preassign lives to them. Let a missing basename-only PAK self-check read the active frontend content after it has been validated and prepared. Allocate each model's animation pointer table through the highest animation index that model uses, and bound cache, copy and cleanup paths to that capacity. Resize repeated weapon lists and detach borrowed lists before replacing their entries.",
+      "summary": "Apply the port's engine corrections and select the PC video configuration on macOS. Select the 4453 profile's 32-bit screen and palette behavior, preserve the 4432 12-key native settings format while 4453 uses 13 keys, and disable the Exit mapping in the 4453 control menu. Bound the DOT loop and control-menu arrays to allocated storage. Leave multiplayer slots without a selected model available to join even if game scripts preassign lives to them. Let a missing basename-only PAK self-check read the active frontend content after it has been validated and prepared. Allocate each model's animation pointer table through the highest animation index that model uses, and bound cache, copy and cleanup paths to that capacity. Resize repeated weapon lists and detach borrowed lists before replacing their entries.",
       "topics": [
         "active-content-pak-aliases",
         "animation-memory-layout",
         "compiler-warning-cleanup",
         "darwin-platform-support",
         "empty-player-slot-safety",
+        "logical-profile-compatibility",
         "record-dates-and-file-notices",
         "repeated-weapon-lists"
       ],
       "upstream_sha256": "16bc3699253b5738707ac89e5422d6dde467b0a518928ad7e3c4eae1dd22329b"
     },
     "openbor.h": {
-      "distributed_sha256": "40e642a1410f5a317965cf0f845b91f42c84b14c3c8b44daef2c1f9279b2ad12",
+      "distributed_sha256": "0fb8b53c371ddac801d62ad3d2f0e127b2a60ef6833f8b0d9a2f5726fea5bd40",
       "modified": true,
       "summary": "Allocate collision pointer slots through the highest author-facing index used by each collection. Track each model's allocated animation-table capacity and reject lookups outside it.",
       "topics": [
@@ -43,7 +44,7 @@
       "upstream_sha256": "0f8ed97474bbdc9936f217247023cd04014cd226c18969493b7fbc7e6f527dd0"
     },
     "openborscript.c": {
-      "distributed_sha256": "e7a8763acfd742b13541eaa5072b245f3e6023800d33394ccb5e55fdda05ebf4",
+      "distributed_sha256": "e9026e06fe71c9c8932414685d955f2ff267a34fe8286ee40ca7723ef7b09fb0",
       "modified": true,
       "summary": "Keep the dormant constant-lowering diagnostic compatible with the single-value instruction layout.",
       "topics": [
@@ -71,7 +72,7 @@
       "upstream_sha256": "2020899c73cce34b91f5793396c67fc1815a551fdc0a3270e69b5824fd9c7ec3"
     },
     "source/gamelib/anigif.h": {
-      "distributed_sha256": "7f39e570893c67b41af23ecee1ec6b72aec4a521db6342b341be80b20119e67a",
+      "distributed_sha256": "f6396cceedb2c426fa95b1d588e60ce8fe5cc4be0c2f147473147ac836a8e2d8",
       "modified": true,
       "summary": "Restore the header's pragma pack state so including it leaves the caller's alignment untouched.",
       "topics": [
@@ -93,7 +94,7 @@
       "upstream_sha256": "0fd839992c90f9f3d8557f2757adfee05848f4c0b8c3a30270ddf947907e0c4a"
     },
     "source/gamelib/borendian.h": {
-      "distributed_sha256": "6da33b7d4f6e8fdf47439c4b2897d7b9cc4d269ccc75c5b50cde6011e56344a3",
+      "distributed_sha256": "464fc8870c4eb7cf3af39384e320ac40e9a0e61ee6cce692846e83e5992d8d63",
       "modified": true,
       "summary": "Use the port's fixed-width endian conversions.",
       "topics": [
@@ -103,7 +104,7 @@
       "upstream_sha256": "54377e86b27c03f1b41abc4cad9bb0466a3ab870cd2f9bec70392715709e32f7"
     },
     "source/gamelib/commands.c": {
-      "distributed_sha256": "653f655dc485eb3b830c7e896629f68382d863d12f2582634868e2c3db4b49bc",
+      "distributed_sha256": "73ee774191cb0252412b24c4f1a897ecbe2ade06f8c5926cc4e62c87bd5826f6",
       "modified": true,
       "summary": "Convert the command-list lookup result to its command enumeration explicitly instead of through a plain pointer cast.",
       "topics": [
@@ -119,7 +120,7 @@
       "upstream_sha256": "c9727e690c23a6a3c06fc027c54f33eeed25b3e920758b872624c574c8b1a139"
     },
     "source/gamelib/draw.c": {
-      "distributed_sha256": "6bc42f15eafa551b7c54c18e386a30e59994b50f3c77895ba7f547372d09590e",
+      "distributed_sha256": "694359cf0b2e6c177621978c58c6b1fc3f18a0bc695827e44d461defe499b2cc",
       "modified": true,
       "summary": "Route circle drawing through the port's integer rasterizer.",
       "topics": [
@@ -147,7 +148,7 @@
       "upstream_sha256": "2a2b4854ea77583f9af7e3cf005fb6a2820e1aa651ab531bca903b64ffb76007"
     },
     "source/gamelib/filecache.c": {
-      "distributed_sha256": "e93c02a2c32d29026f5d48b34d52eeb5de30826d62cb5ca56f99b8648929a3e6",
+      "distributed_sha256": "da16a03c96f0e90e09bd10bc7f17a4d23cee0d057b0defce804ae887deef3052",
       "modified": true,
       "summary": "Expose the cache descriptor for resource restoration and initialize it to -1.",
       "topics": [
@@ -199,7 +200,7 @@
       "upstream_sha256": "35621ea64c356f8f50e514ac848d090b077b16a8d7e52f5530acf8ff1a633307"
     },
     "source/gamelib/packfile.c": {
-      "distributed_sha256": "c79500b12a8c66050dedf59402bfa50cbe56db3079f875421c5e532928826a94",
+      "distributed_sha256": "67c5fcaf332e2a670e9ff0d77828267999727f21972163d1b85906bf0b5862bc",
       "modified": true,
       "summary": "Repair PAK handles after state loads, close resources on reset, prune unused frontend APIs, and compile the case-insensitive loose-file search on macOS.",
       "topics": [
@@ -212,7 +213,7 @@
       "upstream_sha256": "2c416de4ec88555c9a69aad7b7c147d798919708cbd9dc85fb7104a794963961"
     },
     "source/gamelib/packfile.h": {
-      "distributed_sha256": "9431fd664d9ed4d7ee7a2b59a37bee360f4df3a54182d955e9d8c5fa12c57adb",
+      "distributed_sha256": "74c488c2b5c6f7defbce72a5cc9d515dfce397bdc6d028b63cda44a8275f3001",
       "modified": true,
       "summary": "Remove declarations of unused standalone frontend APIs and define O_BINARY where macOS lacks it.",
       "topics": [
@@ -312,7 +313,7 @@
       "upstream_sha256": "9461fddcc732973c80aa1e01fb064edd131ac059f3e0371f37a854b19c3ef100"
     },
     "source/gamelib/threads.h": {
-      "distributed_sha256": "075acf52fa1a73e6c17cc02a21e1019cf47a0758a1c715ce19b0bbaa862fed71",
+      "distributed_sha256": "892d6569a7bc65d4685c6a5038b9399b03a0b50cdcfc550de7b5bc9f73cd77d7",
       "modified": true,
       "summary": "Declare the libretro thread, mutex and condition types.",
       "topics": [
@@ -334,7 +335,7 @@
       "upstream_sha256": "b49aae0ae71011df05a0e3a6acdc822a042feb961a2114b6bdae122d701e543b"
     },
     "source/gamelib/transform.h": {
-      "distributed_sha256": "35b9d371fbe92ab2a2f94693f7f27923c753e165b6c02953cb6222fd862f2feb",
+      "distributed_sha256": "c769b8021e9711420c6a0cf79d084cb69abb545deaa57e79d8aa182453b4fb2a",
       "modified": true,
       "summary": "Declare the raster helpers as ordinary functions; the header only declared them inline and the definitions live in transform.c.",
       "topics": [
@@ -380,7 +381,7 @@
       "upstream_sha256": "4bef63009edff08783e0ddda56f6cb5154025e9ada5674143ac10f2f42caa39f"
     },
     "source/globals.h": {
-      "distributed_sha256": "a2d15cdd7726c8dd45d4b807ddddb5314eca7e1c1744f982a08d025fdab0c164",
+      "distributed_sha256": "d369abe9538289f24f592ab45bc33cba5d924fc513f664a71bc3769d4bd51083",
       "modified": true,
       "summary": "Include the libretro platform interface.",
       "topics": [
@@ -414,7 +415,7 @@
       "upstream_sha256": "098be505005a0a6e7de5aee51fc09a94be6961b582b35b9b6eb1ce413ae83a96"
     },
     "source/pnglib/savepng.c": {
-      "distributed_sha256": "ad77fa197a1728f25117257fac6cbb2dc419ce1064ac79a1db5e94d92aeea5a5",
+      "distributed_sha256": "21cd8823185e7151a0d8f10e9fc49b33cb15f061bdc28678cfe0a1e4f209ebb2",
       "modified": true,
       "summary": "Include the standard library declarations instead of the glibc-only <malloc.h> when writing a screenshot.",
       "topics": [
@@ -454,7 +455,7 @@
       "upstream_sha256": "14ea9856cad63f1c9e17dd3ae1bf9116d2fc962b179b1de86d713c1e8db58e1b"
     },
     "source/preprocessorlib/pp_parser.c": {
-      "distributed_sha256": "6b295e80019eb88302f4586c9cfe84051db5f34588beb3e03424136b9400dfff",
+      "distributed_sha256": "4a5020772b84058cb3e91dea728bbbe83188cfd6ddcb509d8dcc288ed5004669",
       "modified": true,
       "summary": "Drop the glibc-only <malloc.h> and rely on the standard library declarations the parser already includes.",
       "topics": [
@@ -470,7 +471,7 @@
       "upstream_sha256": "bf743d291108ab411fc0e34ed891ad78f2d52f1bf20bdfb36d226f0df279155e"
     },
     "source/ramlib/ram.c": {
-      "distributed_sha256": "ac067b13910d096d34fca325696709e77a1e53842df9ce59e9b1cba76cbbe942",
+      "distributed_sha256": "251cc6c717ab7565656128240213e2ff5d290c16868cdd1b1beb8f57f1ec51d5",
       "modified": true,
       "summary": "Read host memory statistics through mach on macOS instead of the glibc-only <malloc.h>.",
       "topics": [
@@ -504,9 +505,13 @@
       "upstream_sha256": "1e3b444f22bd02b8b41561affec9ec6be338c6c149be706bfea390a3171718ca"
     },
     "source/savedata.h": {
-      "distributed_sha256": "e827cbf47ed5b2df4328c3a8baa560badaf999fdae11e64cf9d7451d0fe18754",
-      "modified": false,
-      "topics": [],
+      "distributed_sha256": "e05d6d8c365d9399fb16c827b266ab55f4b48a96b59dd4c537d5f953029beabc",
+      "modified": true,
+      "summary": "Reserve 13 control entries in the shared runtime while the settings I/O retains each logical profile's native layout.",
+      "topics": [
+        "logical-profile-compatibility",
+        "record-dates-and-file-notices"
+      ],
       "upstream_sha256": "e827cbf47ed5b2df4328c3a8baa560badaf999fdae11e64cf9d7451d0fe18754"
     },
     "source/scriptlib/FirstFollow.h": {
@@ -516,7 +521,7 @@
       "upstream_sha256": "26420a726cdec255f1e125ffd75ff1d166872ed30eb71de994fc9cd89fdecd09"
     },
     "source/scriptlib/ImportCache.c": {
-      "distributed_sha256": "9ce16845d49b9660c7ebb5b1c9674f1731e4bf7d50f529eead048b708fe33a34",
+      "distributed_sha256": "9e852517d47a1bb45f86a8189ea5fa1b7b76fbe60a1b00d0b085c7b3cb9d7593",
       "modified": true,
       "summary": "Guard parser-only import metadata after compilation. Read import metadata only while an interpreter still owns parser state.",
       "topics": [
@@ -527,7 +532,7 @@
       "upstream_sha256": "0469b5561f56a45e03d5d4c49cac49725244187a8c662ecdb036faac77b914fd"
     },
     "source/scriptlib/ImportCache.h": {
-      "distributed_sha256": "403ee8ea13c60b61ef46f68c15808a416bba876076e21d4185536d84af24fdf0",
+      "distributed_sha256": "f5c3122cae1cce4059dd73969abc428d054f6387545c31ec5d8534668294d3ca",
       "modified": true,
       "summary": "Retain imported entry points as direct instruction pointers.",
       "topics": [
@@ -536,7 +541,7 @@
       "upstream_sha256": "0e9408c351e17abb471a76da666460664604ae0c93a90d1f554f65fab8ab6f73"
     },
     "source/scriptlib/Instruction.c": {
-      "distributed_sha256": "7485f48594bb6adf29a25d8168fb4c352dce0e20756ea9e2568a2bffcc1b7743",
+      "distributed_sha256": "2dba7db17714207043d049aef1d9fe0fe4e191573c9c5e14beebd3ff7e4cd9c3",
       "modified": true,
       "summary": "Store each compiled script constant once, compact call parameter references, and distinguish parser storage from compiled call and jump targets.",
       "topics": [
@@ -546,7 +551,7 @@
       "upstream_sha256": "73d3f7c89520bb752f14e891960f56d832e41b6f9c86489c9a41d05dbe4fcb1e"
     },
     "source/scriptlib/Instruction.h": {
-      "distributed_sha256": "4d876ed8c2b8883ab69618f043f44c623c746fa586bae9012ea7dd1e8dc165ed",
+      "distributed_sha256": "c3a38054342cdb280b9b7598f5cb603e714967a145e4d315d0b81a5f9fb41cba",
       "modified": true,
       "summary": "Remove redundant value storage, compact opcode and call-reference bookkeeping, and share parser-only fields with their compiled replacements.",
       "topics": [
@@ -556,7 +561,7 @@
       "upstream_sha256": "e283e23b1f8636ba4bf5a9a254c7a5897ad599dcb6c64d255552def5ac5ab60e"
     },
     "source/scriptlib/Interpreter.c": {
-      "distributed_sha256": "2c1e245506cb8aea7931abac8dde1cda55691a5d13c6adc5cf8404bd3f91bd0f",
+      "distributed_sha256": "01104fd4e0c299eb6122d2b06512898f6ceed7520708387573beb8cb37854686",
       "modified": true,
       "summary": "Push canonical constants, release parser-only instruction data, and pack compiled instructions, values, and call references into exact contiguous storage. Allocate parser state only while compiling and release it once runtime instructions are ready.",
       "topics": [
@@ -566,7 +571,7 @@
       "upstream_sha256": "3a83a416a2c4a9d4f2b53ef0d6fbbdcaae213f812733629c7e12d9f7e5c10472"
     },
     "source/scriptlib/Interpreter.h": {
-      "distributed_sha256": "c5924614af12a3957e55980c57554e64583889336b32d10ae4d43df475d18a85",
+      "distributed_sha256": "fa9ee6e39a0de0432c56c5f7773c1b8bb0090e8e173ea2bfdcebd4b614fb624b",
       "modified": true,
       "summary": "Own the exact contiguous storage used by compiled instructions and their values. Store parser state indirectly so compiled interpreters do not retain it.",
       "topics": [
@@ -636,7 +641,7 @@
       "upstream_sha256": "e086a602db4889a5755b5e201f714ccee7dcb1b16245b76464daff44011fb57f"
     },
     "source/scriptlib/ScriptVariant.h": {
-      "distributed_sha256": "a8e9ba74c86f5d2f91fae9b057974a083ed62d029edb11956796a22eac509366",
+      "distributed_sha256": "d16b74caeeac1b9bc21ee65e77eda8adc8cdd16600a391f059670076f1cbd9ff",
       "modified": true,
       "summary": "Declare the cache and variant helpers as ordinary functions; the header only declared them inline and the definitions live in ScriptVariant.c.",
       "topics": [
@@ -682,7 +687,7 @@
       "upstream_sha256": "7c93317f6e6e487d5ce6928fab0d8edf8cfaedf787ab6a0862e02d16e80f1d74"
     },
     "source/scriptlib/depends.h": {
-      "distributed_sha256": "e14470589ce2c5800c9333a09b8b94bb8e0e13f7b2666e04e17d158f90a11b30",
+      "distributed_sha256": "619d07ef60ebb65160415aa139064ca7f5351f7e35e281fb6a4fbaad83100119",
       "modified": true,
       "summary": "Restore the pragma pack state the script headers rely on instead of leaving it set for every includer.",
       "topics": [
@@ -716,7 +721,7 @@
       "upstream_sha256": "d9bf8cdb39ccbdc026f120a82f8dd12cc9d30a65e410617da7462b3317ffa8ca"
     },
     "source/utils.c": {
-      "distributed_sha256": "4326c596f0434763a06ef6df73980c33537a85ac3b493cd34b86465ee5b9fd30",
+      "distributed_sha256": "08582700f698cbd88d031e92e123462feaf736c96fefb709690a6e0136a16638",
       "modified": true,
       "summary": "Enable libretro platform and PNG helper declarations, the POSIX directory and mkdir forms macOS also uses, and the standard allocation declarations instead of the glibc-only <malloc.h>.",
       "topics": [
@@ -802,7 +807,7 @@
       "upstream_sha256": "3fd1c478b5c9bce2a44c4a1cee1001ed95069568cfcd4b23b02f6ad0e3205835"
     },
     "source/webmlib/vidplay.c": {
-      "distributed_sha256": "7b305480909b7424520cf2a6fd3133a097863c84946f0a120fcbe7413c1ac8b2",
+      "distributed_sha256": "e22710d3fdb4965f734d739d69fcb4bdffe744b724a6f8185d9d63166db6dfe5",
       "modified": true,
       "summary": "Coordinate WebM worker shutdown and yield while waiting for video frames.",
       "topics": [
@@ -1251,7 +1256,7 @@
     "xbox/video.h": "914e7b353daef650d39025fce339f3feed8a8664c889d7017e4b7fbae5e357c0",
     "xcode/mac/OpenBOR.xcodeproj/project.pbxproj": "0f4229c1f694e719e37438e24240ebf6a9ca85f4b8db0821e1e6f1a73a38d927"
   },
-  "record_date": "2026-09-12",
+  "record_date": "2026-09-30",
   "repository": "https://github.com/DCurrent/openbor.git",
   "schema": 3,
   "selection": "Libretro build dependency closure and original license notices; omitted paths are relative to the upstream engine/ subtree"

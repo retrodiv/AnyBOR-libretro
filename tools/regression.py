@@ -81,7 +81,7 @@ def main():
             print("PASS " + engine + " " + label, flush=True)
             return result
 
-        for engine in [e["build"] for e in release.read_json(root / "src/pin.json")["engines"]]:
+        for engine in [e["build"] for e in release.read_json(root / "src/pin.json")["profiles"]]:
             state = work / (engine + ".state")
             result = run(engine, pak, "save with game log", OBOR_GAMELOG="On",
                          OBOR_SAVE_AT=120, OBOR_SAVE_STATE=state)
