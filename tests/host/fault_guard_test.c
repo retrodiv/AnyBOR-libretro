@@ -92,6 +92,38 @@ static void execute(void *unused)
 }
 
 static void harmless(void *context) { ++*(int *)context; }
+#if defined(OBOR_FAULT_PTHREAD_TLS) || defined(__APPLE__)
+static void allocator_fault(void *context)
+{ (void)context; obor_fault_allocator_error(1234); }
+
+static void test_slots(void)
+{
+    obor_fault fault;
+    int value = 0;
+    /* Exceed libpthread's key capacity through repeated normal/fault exits. */
+    for (int i = 0; i < 4096; ++i) {
+        assert(obor_fault_run(harmless, &value, &fault) == 1);
+        assert(obor_fault_run(allocator_fault, NULL, &fault) == 0);
+        assert(fault.kind == OBOR_FAULT_ALLOCATOR && fault.address == 1234);
+    }
+    assert(value == 4096);
+    pthread_key_t keys[4096];
+    size_t count = 0;
+    while (count < 4096 && pthread_key_create(&keys[count], NULL) == 0) {
+        assert(pthread_setspecific(keys[count], (void *)(uintptr_t)1) == 0);
+        ++count;
+    }
+    assert(count && count < 4096);
+    /* Released slots now belong to other clients, with values that would
+     * fault if idle allocator hooks mistook them for a fault_guard. */
+    obor_fault_allocator_activity(1);
+    obor_fault_allocator_activity(0);
+    assert(obor_fault_run(harmless, &value, &fault) == -1 && value == 4096);
+    for (size_t i = 0; i < count; ++i) assert(pthread_key_delete(keys[i]) == 0);
+    assert(obor_fault_run(harmless, &value, &fault) == 1 && value == 4097);
+    puts("pthread_slots_released=1 exhausted_guard_rejected=1");
+}
+#endif
 
 int main(int argc, char **argv)
 {
@@ -173,6 +205,9 @@ int main(int argc, char **argv)
 #endif
     }
     assert(value == operations);
+#if defined(OBOR_FAULT_PTHREAD_TLS) || defined(__APPLE__)
+    if (argc > 1 && !strcmp(argv[1], "tls")) test_slots();
+#endif
 #ifdef _WIN32
     /* Stack fault handling can change page protection. Restore the invalid
      * address before testing faults outside the guard. */

@@ -149,13 +149,65 @@ typedef struct {
     volatile sig_atomic_t kind;
     volatile unsigned allocator_depth;
 } fault_guard;
-static __thread fault_guard *active_guard;
-static struct { int busy; struct sigaction previous[2]; } runtime OBOR_RUNTIME;
+#if defined(__APPLE__)
+/* Mach-O compiler TLS makes dyld retain the whole core after dlclose. */
+#define OBOR_FAULT_PTHREAD_TLS 1
+#endif
+#if defined(OBOR_FAULT_PTHREAD_TLS)
+#include <pthread.h>
+#endif
+static struct {
+    int busy;
+    struct sigaction previous[2];
+#if defined(OBOR_FAULT_PTHREAD_TLS)
+    pthread_key_t slot;
+    pthread_t owner;
+    int slot_live;
+#endif
+} runtime OBOR_RUNTIME;
 static const int memory_signals[2] = {SIGSEGV, SIGBUS};
+
+#if defined(OBOR_FAULT_PTHREAD_TLS)
+/* Darwin's get/set operations access existing per-thread slots without
+ * allocation. Create/delete the key outside the signal handler, and keep
+ * its identity outside snapshots just like the installed signal actions. */
+static int guard_thread_prepare(void)
+{
+    int result = pthread_key_create(&runtime.slot, NULL);
+    if (!result) {
+        __atomic_store_n(&runtime.owner, pthread_self(), __ATOMIC_RELAXED);
+        __atomic_store_n(&runtime.slot_live, 1, __ATOMIC_RELEASE);
+    }
+    return result;
+}
+static void guard_thread_finish(void)
+{
+    __atomic_store_n(&runtime.slot_live, 0, __ATOMIC_RELEASE);
+    pthread_key_delete(runtime.slot);
+}
+static fault_guard *current_guard(void)
+{
+    /* Only the owner may look up this short-lived key. Workers must not race
+     * its deletion/reuse, and idle allocator hooks must not read another
+     * client's value after the key has been returned to libpthread. */
+    if (!__atomic_load_n(&runtime.slot_live, __ATOMIC_ACQUIRE) ||
+        !pthread_equal(pthread_self(),
+                       __atomic_load_n(&runtime.owner, __ATOMIC_RELAXED))) return NULL;
+    return (fault_guard *)pthread_getspecific(runtime.slot);
+}
+static int set_guard(fault_guard *guard)
+{ return pthread_setspecific(runtime.slot, guard); }
+#else
+static __thread fault_guard *active_guard;
+static int guard_thread_prepare(void) { return 0; }
+static void guard_thread_finish(void) {}
+static fault_guard *current_guard(void) { return active_guard; }
+static int set_guard(fault_guard *guard) { active_guard = guard; return 0; }
+#endif
 
 void obor_fault_allocator_activity(int entering)
 {
-    fault_guard *guard = active_guard;
+    fault_guard *guard = current_guard();
     if (guard) {
         if (entering) ++guard->allocator_depth;
         else --guard->allocator_depth;
@@ -164,18 +216,18 @@ void obor_fault_allocator_activity(int entering)
 
 void obor_fault_abort(uint32_t kind, uintptr_t address)
 {
-    fault_guard *guard = active_guard;
+    fault_guard *guard = current_guard();
     if (!guard) abort();
     guard->kind = kind;
     guard->address = address;
     guard->pc = (uintptr_t)__builtin_return_address(0);
-    active_guard = NULL;
+    set_guard(NULL);
     siglongjmp(guard->resume, 1);
 }
 
 static void memory_signal(int signal, siginfo_t *info, void *context)
 {
-    fault_guard *guard = active_guard;
+    fault_guard *guard = current_guard();
     if (guard && info && info->si_code > 0) {
         ucontext_t *machine = (ucontext_t *)context;
         guard->code = signal;
@@ -190,7 +242,7 @@ static void memory_signal(int signal, siginfo_t *info, void *context)
 #elif defined(__aarch64__)
         guard->pc = machine->uc_mcontext.pc;
 #endif
-        active_guard = NULL;
+        set_guard(NULL);
         /* Do not allocate, log, inspect the arena or run engine cleanup here. */
         siglongjmp(guard->resume, 1);
     }
@@ -221,10 +273,14 @@ int obor_fault_run_stack(void (*execute)(void *), void *context,
     memset(&guard, 0, sizeof(guard));
     memset(fault, 0, sizeof(*fault));
     if (__atomic_exchange_n(&runtime.busy, 1, __ATOMIC_ACQUIRE)) return -1;
+    if (guard_thread_prepare() != 0) {
+        __atomic_store_n(&runtime.busy, 0, __ATOMIC_RELEASE); return -1;
+    }
     memset(&alternate, 0, sizeof(alternate));
     alternate.ss_sp = signal_stack;
     alternate.ss_size = sizeof(signal_stack);
     if (sigaltstack(&alternate, &saved_stack) != 0) {
+        guard_thread_finish();
         __atomic_store_n(&runtime.busy, 0, __ATOMIC_RELEASE); return -1;
     }
     memset(&action, 0, sizeof(action));
@@ -237,18 +293,20 @@ int obor_fault_run_stack(void (*execute)(void *), void *context,
     if (installed != 2) {
         while (installed) { --installed; sigaction(memory_signals[installed], &runtime.previous[installed], NULL); }
         sigaltstack(&saved_stack, NULL);
+        guard_thread_finish();
         __atomic_store_n(&runtime.busy, 0, __ATOMIC_RELEASE);
         return -1;
     }
     returned = sigsetjmp(guard.resume, 1) == 0;
     if (returned) {
-        active_guard = &guard;
-        execute(context);
+        if (set_guard(&guard) == 0) execute(context);
+        else returned = -1;
     }
-    active_guard = NULL;
+    set_guard(NULL);
     for (installed = 0; installed < 2; ++installed)
         sigaction(memory_signals[installed], &runtime.previous[installed], NULL);
     sigaltstack(&saved_stack, NULL);
+    guard_thread_finish();
     __atomic_store_n(&runtime.busy, 0, __ATOMIC_RELEASE);
     if (!returned) {
         fault->code = guard.code;

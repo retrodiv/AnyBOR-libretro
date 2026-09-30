@@ -46,6 +46,10 @@
 #include <signal.h>
 #include <sys/mman.h>
 #include "obor_abi.h"
+#ifdef __APPLE__
+#include <mach/mach.h>
+#include <mach/mach_vm.h>
+#endif
 #endif
 #include <stdint.h>
 #include <stdio.h>
@@ -92,6 +96,21 @@ static int count_open_fds(void)
 
 static void *reserve_host_range(void *address, size_t bytes, int protection)
 {
+#ifdef __APPLE__
+    /* An mmap hint can be ignored even when this high range is free.
+     * FIXED without OVERWRITE claims the exact range atomically and refuses
+     * any overlap, so the unload probe cannot hide a leaked reservation. */
+    mach_vm_address_t where = (mach_vm_address_t)(uintptr_t)address;
+    if (mach_vm_allocate(mach_task_self(), &where, bytes, VM_FLAGS_FIXED) != KERN_SUCCESS)
+        return MAP_FAILED;
+    if (where != (mach_vm_address_t)(uintptr_t)address ||
+        mach_vm_protect(mach_task_self(), where, bytes, FALSE,
+                        (vm_prot_t)protection) != KERN_SUCCESS) {
+        mach_vm_deallocate(mach_task_self(), where, bytes);
+        return MAP_FAILED;
+    }
+    return address;
+#else
     int flags = MAP_PRIVATE | MAP_ANONYMOUS;
 #if defined(MAP_FIXED_NOREPLACE) && !defined(__APPLE__)
     flags |= MAP_FIXED_NOREPLACE;
@@ -105,6 +124,7 @@ static void *reserve_host_range(void *address, size_t bytes, int protection)
         return MAP_FAILED;
     }
     return mapped;
+#endif
 }
 
 static void crash_handler(int sig, siginfo_t *si, void *uc)

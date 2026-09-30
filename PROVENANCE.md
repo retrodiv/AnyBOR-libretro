@@ -1,10 +1,10 @@
 # Source provenance
 
-This distribution packages seven pinned OpenBOR source snapshots with a shared
-libretro platform layer. `src/pin.json` records the upstream repository,
-full commit IDs and dependency archive SHA-256 hashes. Each engine has an
-`ANYBOR-SOURCE.json` manifest identifying the original and distributed hash
-of every retained upstream file. This makes the port's modifications
+This distribution offers nine selectable OpenBOR engines from pinned source
+snapshots with a shared libretro platform layer. `src/pin.json` records the
+upstream repository, full commit IDs and dependency archive SHA-256 hashes.
+Each engine has an `ANYBOR-SOURCE.json` manifest identifying the original and
+distributed hash of every retained upstream file. This makes the port's modifications
 distinguishable from upstream code without importing upstream Git history.
 The shared port, frontend glue and build tooling are included as source.
 

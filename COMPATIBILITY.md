@@ -1,6 +1,6 @@
 # Compatibility contract
 
-Available engines are 3400, 3842, 4086, 4432, 4453, 6391, 6412, 7533 and 8023.
+The nine available engines are 3400, 3842, 4086, 4432, 4453, 6391, 6412, 7533 and 8023.
 An explicit Build 4453 filename or the manual 4453 core option selects 4453.
 It uses 32-bit color, ignores `colourdepth` and follows the removal of legacy
 `remap` palette conversion. Select 4432 for games that need its older behavior.

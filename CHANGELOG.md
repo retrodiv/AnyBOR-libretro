@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Release the snapshot arena on macOS module unload by keeping fault guards
+  in temporary pthread slots instead of compiler thread-local storage.
+- Reject macOS cores with compiler TLS during binary inspection and probe
+  arena release with an exact, non-overwriting Mach reservation.
 - Resolve partial filename build tags to the highest available profile in
   their interval, or route the interval's upper endpoint when none exists.
 - Add engine 4453, selectable by its core option or an explicit Build 4453

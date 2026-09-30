@@ -137,6 +137,9 @@ def check_binary(path, target=None):
             raise RuntimeError("Mach-O warnings: " + "; ".join(info["errors"]))
         if info["filetype"] != "DYLIB":
             raise RuntimeError("not a dylib: " + str(info["filetype"]))
+        # dyld retains images with compiler TLS, skipping the arena destructor.
+        if info["flags"] & 0x800000:  # MH_HAS_TLV_DESCRIPTORS
+            raise RuntimeError("Mach-O compiler TLS prevents core unload and arena release")
         expected_arch = "arm64" if target == "macos-arm64" else "x86_64"
         if target and info["arch"] != expected_arch:
             raise RuntimeError("Mach-O architecture does not match " + target)
