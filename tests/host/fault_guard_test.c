@@ -106,7 +106,7 @@ int main(int argc, char **argv)
     DWORD old;
     assert(mapping && VirtualProtect(mapping, page, PAGE_NOACCESS, &old));
     bad_address = (uintptr_t)mapping;
-    assert(AddVectoredExceptionHandler(0, previous_handler));
+    assert(AddVectoredExceptionHandler(1, previous_handler));
     NT_TIB *tib = (NT_TIB *)NtCurrentTeb();
     void *base = tib->StackBase, *limit = tib->StackLimit;
 #else
@@ -173,6 +173,11 @@ int main(int argc, char **argv)
 #endif
     }
     assert(value == operations);
+#ifdef _WIN32
+    /* Stack fault handling can change page protection. Restore the invalid
+     * address before testing faults outside the guard. */
+    assert(VirtualProtect((void *)bad_address, page, PAGE_NOACCESS, &old));
+#endif
     if (argc > 1 && !strcmp(argv[1], "worker")) {
         (void)obor_fault_run(outside_thread, NULL, &fault);
         abort(); /* Must have reached the previous handler on the worker. */
