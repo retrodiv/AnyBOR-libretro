@@ -7,7 +7,8 @@
  * objects whose only visible symbols are their suffixed obor_* ABI (see
  * obor_engines.h, generated from pin.json). At retro_load_game — and again
  * at retro_reset — the glue detects which OpenBOR build the pak needs
- * (filename tag -> sidecar exe -> content scan -> core option -> fallback),
+ * (core option -> explicit special profile -> legacy API -> filename tag
+ * -> sidecar exe -> content scan -> fallback),
  * points g_vtbl at that engine and shuttles video/audio/input.
  */
 #include <ctype.h>
@@ -147,9 +148,14 @@ static int date_to_build(int year, int month)
     return best;
 }
 
-/* Parse "[v.3.0_Build_4086]" / "Build 4086" / "[v.2.1933]" out of a filename. */
-static int build_from_filename(const char *path)
+/* Parse complete builds or a numeric prefix followed by trailing X digits.
+ * A partial tag selects the highest available profile in its interval,
+ * including explicit-only profiles. With no match, its upper endpoint goes
+ * through normal automatic routing. profile is zero for that fallback and
+ * for complete tags, whose existing special-profile handling stays below. */
+static int build_from_filename(const char *path, int *profile)
 {
+    *profile = 0;
     const char *base = strrchr(path, PATH_SEP);
     base = base ? base + 1 : path;
     const char *p = base;
@@ -159,9 +165,44 @@ static int build_from_filename(const char *path)
             while (*q == '_' || *q == ' ' || *q == '.' || *q == '-')
                 q++;
             if (isdigit((unsigned char)*q)) {
-                int v = atoi(q);
-                if (v >= 1000 && v <= 99999)
-                    return v;
+                int lower = 0, upper = 0, digits = 0;
+                while (isdigit((unsigned char)*q)) {
+                    if (digits < 5)
+                        lower = lower * 10 + (*q - '0');
+                    ++digits;
+                    ++q;
+                }
+                /* Keep complete-tag parsing, including leading zeroes. */
+                if (*q != 'X' && *q != 'x') {
+                    const char *start = q - digits;
+                    while (start < q && *start == '0') ++start;
+                    if (q - start <= 5) {
+                        int v = atoi(start);
+                        if (v >= 1000 && v <= 99999)
+                            return v;
+                    }
+                } else {
+                    upper = lower;
+                    while (*q == 'X' || *q == 'x') {
+                        if (digits < 5) {
+                            lower *= 10;
+                            upper = upper * 10 + 9;
+                        }
+                        ++digits;
+                        ++q;
+                    }
+                    if (digits <= 5 && lower >= 1000 &&
+                        !isalnum((unsigned char)*q)) {
+                        int best = 0;
+                        for (size_t i = 0; i < sizeof(kProfiles) / sizeof(kProfiles[0]); ++i)
+                            if (kProfiles[i].build >= lower &&
+                                kProfiles[i].build <= upper &&
+                                kProfiles[i].build > best)
+                                best = kProfiles[i].build;
+                        *profile = best;
+                        return best ? best : upper;
+                    }
+                }
             }
         }
         /* v2 era tag: "v.2.1933" or "v2.1933" (no "Build" word) */
@@ -1828,10 +1869,14 @@ static void decide_engine(void)
         if (build)
             how = "core option";
     }
-    int filename_build = build_from_filename(g_pak_path);
-    if (!build && (filename_build == 4453 || filename_build == 6412 || filename_build == 7533)) {
-        build = filename_build;
-        how = "filename tag";
+    int filename_profile = 0;
+    int filename_build = build_from_filename(g_pak_path, &filename_profile);
+    if (filename_build == 4453 || filename_build == 6412 || filename_build == 7533) {
+        filename_profile = filename_build;
+        if (!build) {
+            build = filename_build;
+            how = "filename tag";
+        }
     }
     if (!build && !g_raw && (build = obor_legacy_api_build(g_pak_path)) != 0)
         how = "legacy script API";
@@ -1852,10 +1897,9 @@ static void decide_engine(void)
     if (!build)
         build = OBOR_FALLBACK_BUILD;
 
-    int anchor = (strcmp(how, "core option") == 0 ||
-                  (strcmp(how, "filename tag") == 0 &&
-                   (build == 4453 || build == 6412 || build == 7533)))
-                     ? build : pick_anchor(build);
+    int anchor = strcmp(how, "core option") == 0 ? build :
+                 (strcmp(how, "filename tag") == 0 && filename_profile) ?
+                     filename_profile : pick_anchor(build);
     const obor_profile_def *selected = NULL;
     for (int i = 0; i < n_avail; i++)
         if (kProfiles[i].build == anchor)

@@ -86,6 +86,12 @@ use the 3400 anchor on a best-effort basis; games newer than the latest anchor
 also have best-effort coverage. [COMPATIBILITY.md](../COMPATIBILITY.md) describes
 the supported engine ranges.
 
+Filename build tags may end in unknown digits: **Build 4XXX** selects the
+highest available profile from 4000 through 4999 (4453), and **Build 6XXX**
+selects the highest from 6000 through 6999 (6412). If no profile falls within
+the interval, Auto routes its upper endpoint normally: **Build 42XX** routes
+4299 to 4432, and **Build 405X** routes 4059 to 4086. Lowercase `x` also works.
+
 Choose **v3 4453** explicitly or use a filename tagged **Build 4453** to select
 that engine. It uses 32-bit color and ignores `colourdepth`.
 

@@ -250,6 +250,13 @@ quoted prose, handles nested first arguments and selects 4086 for this generic
 compatibility condition. No game or script digest selects this correction.
 Manual engine selection still takes precedence.
 
+Filename build tags accept a numeric prefix followed by trailing `X` digits.
+The selector picks the highest available logical profile inside that interval,
+including explicit-only profiles, and preserves that profile directly. If
+there is no match, the interval's upper endpoint goes through ordinary
+automatic routing. Existing exact-build, manual and legacy-API priorities
+remain in effect.
+
 ## Image loader safety
 
 The legacy image probe validates the PCX signature before using its header

@@ -9,6 +9,13 @@ tagged Build 6412 or the manual 6412 core option selects 6412. Builds 6413
 through 7533 select 7533; builds 7534 through 8023 select 8023.
 Other routing combines filename/sidecar metadata with conservative content
 markers.
+Partial filename tags choose the highest selectable profile in their interval,
+including explicit-only profiles: `Build 4XXX` selects 4453, `Build 6XXX`
+selects 6412 and `Build 63XX` selects 6391. If the interval contains no profile,
+its upper endpoint follows ordinary automatic routing: `Build 42XX` uses 4299
+as the detected build and selects 4432; `Build 405X` uses 4059 and selects 4086.
+Trailing `X` digits are case-insensitive. Manual selection and the existing
+special-profile/legacy-script priorities still apply.
 Builds newer than 8023 are best effort through the latest pinned v4 anchor;
 they are not claimed as universally compatible.
 
