@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Respect inclusive filename build intervals, including unknown endpoints,
+  and report when no available physical engine fits the bounds.
 - Release the snapshot arena on macOS module unload by keeping fault guards
   in temporary pthread slots instead of compiler thread-local storage.
 - Reject macOS cores with compiler TLS during binary inspection and probe

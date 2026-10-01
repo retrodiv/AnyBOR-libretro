@@ -16,6 +16,13 @@ its upper endpoint follows ordinary automatic routing: `Build 42XX` uses 4299
 as the detected build and selects 4432; `Build 405X` uses 4059 and selects 4086.
 Trailing `X` digits are case-insensitive. Manual selection and the existing
 special-profile/legacy-script priorities still apply.
+Inclusive numeric bounds are accepted as `Build 3800-4200`. Use `XXXX` for an
+unknown endpoint, such as `Build 3800-XXXX` or `Build XXXX-4200`. These bounds
+remain unchanged when available engines change. Auto selects the highest
+profile whose logical and physical builds both satisfy the bounds. A detected
+legacy script requirement also has to satisfy them. It reports
+an unavailable engine when none satisfies them, rather than routing outside
+the interval. A manual core option can override the bounds.
 Builds newer than 8023 are best effort through the latest pinned v4 anchor;
 they are not claimed as universally compatible.
 

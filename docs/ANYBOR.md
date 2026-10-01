@@ -92,6 +92,13 @@ selects the highest from 6000 through 6999 (6412). If no profile falls within
 the interval, Auto routes its upper endpoint normally: **Build 42XX** routes
 4299 to 4432, and **Build 405X** routes 4059 to 4086. Lowercase `x` also works.
 
+For inclusive bounds, use **Build 3800-4200**. An unknown endpoint can be
+written **XXXX**, as in **Build 3800-XXXX** or **Build XXXX-4200**. Auto selects
+the highest profile whose logical and physical builds both fit the interval.
+Detected legacy script requirements must also fit those bounds.
+If none fits, it reports that no engine is available; you can select one
+manually to override the bounds. Adding engines does not change the filename.
+
 Choose **v3 4453** explicitly or use a filename tagged **Build 4453** to select
 that engine. It uses 32-bit color and ignores `colourdepth`.
 

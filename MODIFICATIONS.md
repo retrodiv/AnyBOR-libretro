@@ -256,6 +256,11 @@ including explicit-only profiles, and preserves that profile directly. If
 there is no match, the interval's upper endpoint goes through ordinary
 automatic routing. Existing exact-build, manual and legacy-API priorities
 remain in effect.
+Explicit inclusive intervals (`Build 3800-4200`, with `XXXX` allowed at either
+endpoint) constrain both the selected profile and its physical engine. Auto
+reports an unavailable engine if no candidate lies within those bounds;
+manual selection can override them. The bounds describe content evidence,
+independently of the engines included in a particular release.
 
 ## Image loader safety
 

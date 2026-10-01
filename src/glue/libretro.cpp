@@ -12,6 +12,7 @@
  * points g_vtbl at that engine and shuttles video/audio/input.
  */
 #include <ctype.h>
+#include <limits.h>
 #include <stdarg.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -83,6 +84,7 @@ static int g_width = 320, g_height = 240;
 static uint32_t *g_crt_pixels; /* presentation scratch, outside engine states */
 static char g_engine[48];           /* physical engine actually loaded */
 static char g_logical_engine[48];   /* selected logical compatibility profile */
+static char g_selection_error[160];
 static char g_save_dir[1024];
 static char g_game_dir[1600];
 static char g_pak_path[4096];
@@ -148,6 +150,70 @@ static int date_to_build(int year, int month)
     return best;
 }
 
+struct filename_build_interval { int lower, upper; bool lower_known, upper_known; };
+
+static bool build_interval_endpoint(const char **cursor, int unknown, int *value)
+{
+    const char *p = *cursor;
+    if (strncasecmp(p, "XXXX", 4) == 0) {
+        *value = unknown;
+        *cursor = p + 4;
+        return true;
+    }
+    if (!isdigit((unsigned char)*p))
+        return false;
+    int n = 0;
+    while (isdigit((unsigned char)*p)) {
+        int digit = *p++ - '0';
+        if (n > (INT_MAX - digit) / 10)
+            return false;
+        n = n * 10 + digit;
+    }
+    if (n < 1)
+        return false;
+    *value = n;
+    *cursor = p;
+    return true;
+}
+
+/* Inclusive evidence bounds, independent of the engines currently linked.
+ * XXXX denotes an unknown endpoint, not an asserted build number. */
+static bool build_interval_from_filename(const char *path,
+                                         filename_build_interval *interval)
+{
+    const char *base = strrchr(path, PATH_SEP);
+    base = base ? base + 1 : path;
+    for (const char *p = base; *p; ++p) {
+        if (strncasecmp(p, "build", 5) != 0)
+            continue;
+        const char *q = p + 5;
+        while (*q == '_' || *q == ' ' || *q == '.' || *q == '-') ++q;
+        int lower, upper;
+        bool lower_known = isdigit((unsigned char)*q) != 0;
+        if (!build_interval_endpoint(&q, 0, &lower) || *q++ != '-')
+            continue;
+        bool upper_known = isdigit((unsigned char)*q) != 0;
+        if (!build_interval_endpoint(&q, INT_MAX, &upper) ||
+            isalnum((unsigned char)*q) || *q == '-' || lower > upper)
+            continue;
+        interval->lower = lower;
+        interval->upper = upper;
+        interval->lower_known = lower_known;
+        interval->upper_known = upper_known;
+        return true;
+    }
+    return false;
+}
+
+static void format_build_interval(const filename_build_interval *interval,
+                                  char *out, size_t size)
+{
+    char lower[12] = "XXXX", upper[12] = "XXXX";
+    if (interval->lower_known) snprintf(lower, sizeof(lower), "%d", interval->lower);
+    if (interval->upper_known) snprintf(upper, sizeof(upper), "%d", interval->upper);
+    snprintf(out, size, "%s-%s", lower, upper);
+}
+
 /* Parse complete builds or a numeric prefix followed by trailing X digits.
  * A partial tag selects the highest available profile in its interval,
  * including explicit-only profiles. With no match, its upper endpoint goes
@@ -156,6 +222,20 @@ static int date_to_build(int year, int month)
 static int build_from_filename(const char *path, int *profile)
 {
     *profile = 0;
+    filename_build_interval interval;
+    if (build_interval_from_filename(path, &interval)) {
+        int best = 0;
+        for (size_t i = 0; i < sizeof(kProfiles) / sizeof(kProfiles[0]); ++i) {
+            const obor_profile_def *candidate = &kProfiles[i];
+            /* A logical alias cannot admit an out-of-range physical engine. */
+            if (candidate->build >= interval.lower && candidate->build <= interval.upper &&
+                candidate->engine_build >= interval.lower &&
+                candidate->engine_build <= interval.upper && candidate->build > best)
+                best = candidate->build;
+        }
+        *profile = best ? best : -1;
+        return best;
+    }
     const char *base = strrchr(path, PATH_SEP);
     base = base ? base + 1 : path;
     const char *p = base;
@@ -173,7 +253,7 @@ static int build_from_filename(const char *path, int *profile)
                     ++q;
                 }
                 /* Keep complete-tag parsing, including leading zeroes. */
-                if (*q != 'X' && *q != 'x') {
+                if (*q != 'X' && *q != 'x' && *q != '-') {
                     const char *start = q - digits;
                     while (start < q && *start == '0') ++start;
                     if (q - start <= 5) {
@@ -181,7 +261,7 @@ static int build_from_filename(const char *path, int *profile)
                         if (v >= 1000 && v <= 99999)
                             return v;
                     }
-                } else {
+                } else if (*q == 'X' || *q == 'x') {
                     upper = lower;
                     while (*q == 'X' || *q == 'x') {
                         if (digits < 5) {
@@ -1828,6 +1908,10 @@ static void pristine_restore(void)
 static bool select_engine_vtbl(const char *engine, char *err, int err_len)
 {
     g_vtbl = NULL;
+    if (!*engine && *g_selection_error) {
+        snprintf(err, (size_t)err_len, "%s", g_selection_error);
+        return false;
+    }
     for (size_t i = 0; i < sizeof(kEngineDefs) / sizeof(kEngineDefs[0]); i++) {
         if (strcmp(kEngineDefs[i].name, engine) == 0) {
             g_vtbl = &kEngineDefs[i].v;
@@ -1852,6 +1936,7 @@ static bool select_engine_vtbl(const char *engine, char *err, int err_len)
 
 static void decide_engine(void)
 {
+    g_selection_error[0] = '\0';
     char opt[48];
     get_engine_option(opt, sizeof(opt));
 
@@ -1871,6 +1956,34 @@ static void decide_engine(void)
     }
     int filename_profile = 0;
     int filename_build = build_from_filename(g_pak_path, &filename_profile);
+    filename_build_interval interval;
+    bool has_interval = build_interval_from_filename(g_pak_path, &interval);
+    char interval_text[28] = "";
+    if (has_interval) format_build_interval(&interval, interval_text, sizeof(interval_text));
+    if (!build && has_interval) {
+        if (filename_profile > 0 && !g_raw) {
+            int legacy_build = obor_legacy_api_build(g_pak_path);
+            if (legacy_build) {
+                if (legacy_build < interval.lower || legacy_build > interval.upper)
+                    filename_profile = -1;
+                else {
+                    filename_profile = legacy_build;
+                    filename_build = legacy_build;
+                }
+            }
+        }
+        if (filename_profile < 0) {
+            g_engine[0] = '\0';
+            g_logical_engine[0] = '\0';
+            snprintf(g_selection_error, sizeof(g_selection_error),
+                     "No available engine satisfies the filename build interval. Select an engine manually to override it.");
+            log_cb(RETRO_LOG_ERROR, "[OpenBOR] %s Bounds: %s\n",
+                   g_selection_error, interval_text);
+            return;
+        }
+        build = filename_build;
+        how = "filename interval";
+    }
     if (filename_build == 4453 || filename_build == 6412 || filename_build == 7533) {
         filename_profile = filename_build;
         if (!build) {
@@ -1898,7 +2011,8 @@ static void decide_engine(void)
         build = OBOR_FALLBACK_BUILD;
 
     int anchor = strcmp(how, "core option") == 0 ? build :
-                 (strcmp(how, "filename tag") == 0 && filename_profile) ?
+                 ((strcmp(how, "filename tag") == 0 ||
+                   strcmp(how, "filename interval") == 0) && filename_profile) ?
                      filename_profile : pick_anchor(build);
     const obor_profile_def *selected = NULL;
     for (int i = 0; i < n_avail; i++)
@@ -1911,7 +2025,11 @@ static void decide_engine(void)
     }
     snprintf(g_logical_engine, sizeof(g_logical_engine), "%d", anchor);
     snprintf(g_engine, sizeof(g_engine), "%d", selected->engine_build);
-    log_cb(RETRO_LOG_INFO,
+    if (strcmp(how, "filename interval") == 0)
+        log_cb(RETRO_LOG_INFO,
+               "[OpenBOR] pak build bounds %s (filename interval) -> profile %s -> engine %s\n",
+               interval_text, g_logical_engine, g_engine);
+    else log_cb(RETRO_LOG_INFO,
            "[OpenBOR] pak needs build %d (%s) -> profile %s -> engine %s\n",
            build, how, g_logical_engine, g_engine);
 
@@ -1920,6 +2038,8 @@ static void decide_engine(void)
     char msg[160];
     if (strcmp(how, "core option") == 0)
         snprintf(msg, sizeof(msg), "AnyBOR %s (core option)", disp);
+    else if (strcmp(how, "filename interval") == 0)
+        snprintf(msg, sizeof(msg), "AnyBOR %s (auto: build interval %s)", disp, interval_text);
     else
         snprintf(msg, sizeof(msg), "AnyBOR %s (auto: %s, build %d)", disp,
                  how, build);
