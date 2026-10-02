@@ -92,12 +92,41 @@ selects the highest from 6000 through 6999 (6412). If no profile falls within
 the interval, Auto routes its upper endpoint normally: **Build 42XX** routes
 4299 to 4432, and **Build 405X** routes 4059 to 4086. Lowercase `x` also works.
 
-For inclusive bounds, use **Build 3800-4200**. An unknown endpoint can be
-written **XXXX**, as in **Build 3800-XXXX** or **Build XXXX-4200**. Auto selects
-the highest profile whose logical and physical builds both fit the interval.
-Detected legacy script requirements must also fit those bounds.
-If none fits, it reports that no engine is available; you can select one
-manually to override the bounds. Adding engines does not change the filename.
+For inclusive bounds, use **Build 3800-4200**. Each endpoint accepts trailing
+unknown digits: **Build 63XX-7762** means 6300-7762, and **Build 6352-65XX**
+means 6352-6599. **XXXX** leaves that endpoint open. A generation directly
+before the Build tag intersects the range: **v.3.0 Build 63XX-7762** becomes
+6300-7532, while **v.4.0 Build XXXX-7762** starts at 7533. A version in a
+separate bracket or in the title does not constrain the range.
+
+Auto selects the highest profile whose logical and physical builds both fit
+an explicit interval. If none fits, it uses the first available physical engine
+above the upper endpoint; 7369-7532 therefore uses 7533. If there is no later
+engine, loading reports an error. An explicit interval takes precedence over
+other inferred requirements; manual selection overrides it. An alias cannot
+stand in for an engine outside the interval: profile 6412 uses engine 6391.
+
+Build numbers and ranges require the word **Build**, followed by a space.
+Matching is case-insensitive and uses only the filename, not its parent path.
+**Build_6391**, **ReBuild 6391**, and unrelated numbers do not supply a build.
+The historical **v.2.1933** filename form remains supported separately.
+
+When no higher-priority clue supplies a build, a bounded PAK text scan combines
+known command, animation, native-function and literal-constant introductions
+and removals into an inclusive range, then applies the same highest-profile /
+next-engine policy. Content inference offers only automatic profiles; 4453
+and 6412 remain explicit selections. Native rules ignore comments and quoted
+prose. Preprocessor directives or a local declaration of a reviewed builtin
+make native evidence inconclusive; model evidence remains usable. This scan
+is a heuristic and does not certify a whole game or resolve dynamic arguments,
+imports, reachability, media dependencies, or temporary historical regressions.
+
+The content pass inspects at most 800 text files, 2 MiB per file, 16 MiB total,
+and 65536 directory entries, with a 750 ms processing deadline. An incomplete
+pass discards its inference and uses the 6391 fallback. Legacy API detection
+has its own 750 ms budget and bounded argument lookahead. Filesystem reads
+can still be delayed by the host storage. The older sparse token estimates
+remain a fallback when no exact syntax rule fires.
 
 Choose **v3 4453** explicitly or use a filename tagged **Build 4453** to select
 that engine. It uses 32-bit color and ignores `colourdepth`.

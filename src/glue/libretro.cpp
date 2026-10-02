@@ -162,18 +162,75 @@ static bool build_interval_endpoint(const char **cursor, int unknown, int *value
     }
     if (!isdigit((unsigned char)*p))
         return false;
-    int n = 0;
+    int n = 0, digits = 0;
     while (isdigit((unsigned char)*p)) {
         int digit = *p++ - '0';
         if (n > (INT_MAX - digit) / 10)
             return false;
         n = n * 10 + digit;
+        ++digits;
     }
+    bool partial = false;
+    while (*p == 'X' || *p == 'x') {
+        if (++digits > 5 || n > (INT_MAX - 9) / 10) return false;
+        n = n * 10 + (unknown == INT_MAX ? 9 : 0);
+        partial = true;
+        ++p;
+    }
+    if (partial && (digits < 4 || n < 1000)) return false;
     if (n < 1)
         return false;
     *value = n;
     *cursor = p;
     return true;
+}
+
+/* Only a version directly attached to this Build tag constrains it. A title's
+ * release version or a version in another bracket is not engine evidence. */
+static int build_tag_generation(const char *base, const char *build)
+{
+    for (const char *p = base; p < build; ++p) {
+        if (*p != 'v' && *p != 'V') continue;
+        const char *q = p + 1;
+        if (q < build && *q == '.') ++q;
+        if (build - q < 3 || (q[0] != '3' && q[0] != '4') ||
+            q[1] != '.' || q[2] != '0') continue;
+        int generation = q[0] - '0';
+        q += 3;
+        while (q < build && (*q == ' ' || *q == '_' || *q == '.' || *q == '-')) ++q;
+        if (q == build) return generation;
+    }
+    return 0;
+}
+
+static int profile_in_range(int lower, int upper, bool automatic_only)
+{
+    int best = 0;
+    for (size_t i = 0; i < sizeof(kProfiles) / sizeof(kProfiles[0]); ++i) {
+        const obor_profile_def *p = &kProfiles[i];
+        if ((!automatic_only || p->automatic) && p->build >= lower && p->build <= upper &&
+            p->engine_build >= lower && p->engine_build <= upper && p->build > best)
+            best = p->build;
+    }
+    return best;
+}
+
+/* An uncovered range uses the first physical engine beyond its upper bound.
+ * Explicit-only aliases never masquerade as a newer physical engine. */
+static int profile_for_range(int lower, int upper, bool automatic_only)
+{
+    int best = profile_in_range(lower, upper, automatic_only);
+    if (best) return best;
+    int next_engine = INT_MAX;
+    for (size_t i = 0; i < sizeof(kProfiles) / sizeof(kProfiles[0]); ++i) {
+        const obor_profile_def *p = &kProfiles[i];
+        if (p->automatic && p->engine_build > upper && p->engine_build >= lower &&
+            p->engine_build < next_engine) {
+            best = p->build;
+            next_engine = p->engine_build;
+        }
+    }
+    return best;
 }
 
 /* Inclusive evidence bounds, independent of the engines currently linked.
@@ -184,18 +241,22 @@ static bool build_interval_from_filename(const char *path,
     const char *base = strrchr(path, PATH_SEP);
     base = base ? base + 1 : path;
     for (const char *p = base; *p; ++p) {
-        if (strncasecmp(p, "build", 5) != 0)
+        if ((p != base && (isalnum((unsigned char)p[-1]) || p[-1] == '_')) ||
+            strncasecmp(p, "build ", 6) != 0)
             continue;
-        const char *q = p + 5;
-        while (*q == '_' || *q == ' ' || *q == '.' || *q == '-') ++q;
+        const char *q = p + 6;
+        while (*q == ' ') ++q;
         int lower, upper;
         bool lower_known = isdigit((unsigned char)*q) != 0;
         if (!build_interval_endpoint(&q, 0, &lower) || *q++ != '-')
             continue;
         bool upper_known = isdigit((unsigned char)*q) != 0;
         if (!build_interval_endpoint(&q, INT_MAX, &upper) ||
-            isalnum((unsigned char)*q) || *q == '-' || lower > upper)
+            isalnum((unsigned char)*q) || *q == '_' || *q == '-' || lower > upper)
             continue;
+        int generation = build_tag_generation(base, p);
+        if (generation == 3 && upper > 7532) { upper = 7532; upper_known = true; }
+        if (generation == 4 && lower < 7533) { lower = 7533; lower_known = true; }
         interval->lower = lower;
         interval->upper = upper;
         interval->lower_known = lower_known;
@@ -224,15 +285,7 @@ static int build_from_filename(const char *path, int *profile)
     *profile = 0;
     filename_build_interval interval;
     if (build_interval_from_filename(path, &interval)) {
-        int best = 0;
-        for (size_t i = 0; i < sizeof(kProfiles) / sizeof(kProfiles[0]); ++i) {
-            const obor_profile_def *candidate = &kProfiles[i];
-            /* A logical alias cannot admit an out-of-range physical engine. */
-            if (candidate->build >= interval.lower && candidate->build <= interval.upper &&
-                candidate->engine_build >= interval.lower &&
-                candidate->engine_build <= interval.upper && candidate->build > best)
-                best = candidate->build;
-        }
+        int best = profile_for_range(interval.lower, interval.upper, false);
         *profile = best ? best : -1;
         return best;
     }
@@ -240,10 +293,10 @@ static int build_from_filename(const char *path, int *profile)
     base = base ? base + 1 : path;
     const char *p = base;
     while (*p) {
-        if ((p[0] == 'B' || p[0] == 'b') && strncasecmp(p, "build", 5) == 0) {
-            const char *q = p + 5;
-            while (*q == '_' || *q == ' ' || *q == '.' || *q == '-')
-                q++;
+        if ((p == base || (!isalnum((unsigned char)p[-1]) && p[-1] != '_')) &&
+            strncasecmp(p, "build ", 6) == 0) {
+            const char *q = p + 6;
+            while (*q == ' ') ++q;
             if (isdigit((unsigned char)*q)) {
                 int lower = 0, upper = 0, digits = 0;
                 while (isdigit((unsigned char)*q)) {
@@ -253,7 +306,7 @@ static int build_from_filename(const char *path, int *profile)
                     ++q;
                 }
                 /* Keep complete-tag parsing, including leading zeroes. */
-                if (*q != 'X' && *q != 'x' && *q != '-') {
+                if (!isalnum((unsigned char)*q) && *q != '_' && *q != '-') {
                     const char *start = q - digits;
                     while (start < q && *start == '0') ++start;
                     if (q - start <= 5) {
@@ -364,197 +417,8 @@ static int build_from_exe(const char *exe_path)
     return 0;
 }
 
-/* ---- content-based lower bound: which engine vocabulary does the pak
- * actually USE? Tokens (models.txt commands at line starts, script calls
- * name-followed-by-paren) are matched against obor_markers.h — each marker
- * maps to the engine build that introduced it, tuned so prose
- * never fires. A lower bound is converted to an automatic profile below;
- * profiles 4453 and 6412 require an explicit filename or core option. */
-#include "obor_markers.h"
-
-static int marker_cmp(const void *k, const void *m)
-{
-    return strcmp((const char *)k, ((const obor_marker *)m)->tok);
-}
-
-static int marker_lookup(const char *tok)
-{
-    const obor_marker *m = (const obor_marker *)bsearch(
-        tok, kMarkers, sizeof(kMarkers) / sizeof(kMarkers[0]),
-        sizeof(kMarkers[0]), marker_cmp);
-    return m ? m->build : 0;
-}
-
-static int removed_lookup(const char *tok)
-{
-    const obor_marker *m = (const obor_marker *)bsearch(
-        tok, kRemovedMarkers,
-        sizeof(kRemovedMarkers) / sizeof(kRemovedMarkers[0]),
-        sizeof(kRemovedMarkers[0]), marker_cmp);
-    return m ? m->build : 0;
-}
-
-static int g_content_ub; /* min "last build" among removed tokens seen */
-
-static int content_token(int *lb, const char *tok)
-{
-    int b = marker_lookup(tok);
-    if (b > *lb) {
-        *lb = b;
-        if (getenv("OBOR_CONTENT_DEBUG"))
-            fprintf(stderr, "[content] lb -> %d from '%s'\n", b, tok);
-    }
-    int r = removed_lookup(tok);
-    if (r && (!g_content_ub || r < g_content_ub)) {
-        g_content_ub = r;
-        if (getenv("OBOR_CONTENT_DEBUG"))
-            fprintf(stderr, "[content] ub -> %d from '%s' (removed)\n", r, tok);
-    }
-    return b;
-}
-
-/* scan one text buffer; is_script selects call-site vs line-start rules */
-static void content_scan_buf(int *lb, char *data, size_t n, int is_script)
-{
-    char tok[32];
-    if (is_script) {
-        /* strip // and C comments in place */
-        size_t w = 0;
-        for (size_t i = 0; i < n;) {
-            if (data[i] == '/' && i + 1 < n && data[i + 1] == '/') {
-                while (i < n && data[i] != '\n')
-                    i++;
-            } else if (data[i] == '/' && i + 1 < n && data[i + 1] == '*') {
-                i += 2;
-                while (i + 1 < n && !(data[i] == '*' && data[i + 1] == '/'))
-                    i++;
-                i = i + 2 < n ? i + 2 : n;
-            } else {
-                data[w++] = data[i++];
-            }
-        }
-        n = w;
-        for (size_t i = 0; i < n;) {
-            if ((data[i] >= 'a' && data[i] <= 'z')) {
-                size_t j = i, k = 0;
-                while (j < n && k < 31 &&
-                       ((data[j] >= 'a' && data[j] <= 'z') ||
-                        (data[j] >= '0' && data[j] <= '9') || data[j] == '_'))
-                    tok[k++] = data[j++];
-                tok[k] = '\0';
-                size_t sp = j;
-                while (sp < n && (data[sp] == ' ' || data[sp] == '\t'))
-                    sp++;
-                if (sp < n && data[sp] == '(' && k >= 3)
-                    content_token(lb, tok);
-                i = j;
-            } else {
-                i++;
-            }
-        }
-    } else {
-        for (size_t i = 0; i < n;) {
-            while (i < n && (data[i] == ' ' || data[i] == '\t' ||
-                             data[i] == '\r'))
-                i++;
-            size_t k = 0;
-            while (i < n && data[i] != '\n' && data[i] > ' ' && k < 31) {
-                char c = data[i];
-                if (c >= 'A' && c <= 'Z')
-                    c += 32;
-                tok[k++] = c;
-                i++;
-            }
-            tok[k] = '\0';
-            if (k >= 3)
-                content_token(lb, tok);
-            while (i < n && data[i] != '\n')
-                i++;
-            if (i < n)
-                i++;
-        }
-    }
-}
-
-static int build_from_content(const char *pak_path)
-{
-    FILE *fp = fopen(pak_path, "rb");
-    if (!fp)
-        return 0;
-    unsigned char tail[4];
-    if (fseek(fp, -4, SEEK_END) != 0 || fread(tail, 1, 4, fp) != 4) {
-        fclose(fp);
-        return 0;
-    }
-    long end = ftell(fp) - 4;
-    unsigned int dir = (unsigned)tail[0] | ((unsigned)tail[1] << 8) |
-                       ((unsigned)tail[2] << 16) | ((unsigned)tail[3] << 24);
-    if (fseek(fp, (long)dir, SEEK_SET) != 0) {
-        fclose(fp);
-        return 0;
-    }
-    /* collect .txt/.c/.h entries first (bounded) */
-    enum { MAXE = 800 };
-    static struct { unsigned start, size; char script; } ent[MAXE];
-    int ne = 0;
-    long long budget = 16LL << 20;
-    while (ftell(fp) < end && ne < MAXE) {
-        unsigned char e[12];
-        if (fread(e, 1, 12, fp) != 12)
-            break;
-        unsigned pns = (unsigned)e[0] | ((unsigned)e[1] << 8) |
-                       ((unsigned)e[2] << 16) | ((unsigned)e[3] << 24);
-        unsigned st = (unsigned)e[4] | ((unsigned)e[5] << 8) |
-                      ((unsigned)e[6] << 16) | ((unsigned)e[7] << 24);
-        unsigned sz = (unsigned)e[8] | ((unsigned)e[9] << 8) |
-                      ((unsigned)e[10] << 16) | ((unsigned)e[11] << 24);
-        if (pns < 13 || pns > 1000)
-            break;
-        char name[1024];
-        unsigned nlen = pns - 12;
-        if (nlen >= sizeof(name) || fread(name, 1, nlen, fp) != nlen)
-            break;
-        name[nlen] = '\0';
-        size_t L = strlen(name);
-        int script = 0, text = 0;
-        if (L > 4 && !strcasecmp(name + L - 4, ".txt"))
-            text = 1;
-        else if (L > 2 && (!strcasecmp(name + L - 2, ".c") ||
-                           !strcasecmp(name + L - 2, ".h")))
-            script = 1;
-        if ((text || script) && sz <= (2u << 20) && budget - sz > 0) {
-            ent[ne].start = st;
-            ent[ne].size = sz;
-            ent[ne].script = (char)script;
-            ne++;
-            budget -= sz;
-        }
-    }
-    int lb = 0;
-    g_content_ub = 0;
-    char *buf = (char *)malloc(2u << 20);
-    if (buf) {
-        for (int i = 0; i < ne; i++) {
-            if (fseek(fp, (long)ent[i].start, SEEK_SET) != 0)
-                continue;
-            size_t got = fread(buf, 1, ent[i].size, fp);
-            content_scan_buf(&lb, buf, got, ent[i].script);
-        }
-    }
-
-    free(buf);
-    fclose(fp);
-    if (getenv("OBOR_CONTENT_DEBUG"))
-        fprintf(stderr, "[content] lb=%d ub=%d\n", lb, g_content_ub);
-
-    /* Removed vocabulary provides an upper bound; newer required vocabulary
-     * provides a lower bound. Otherwise leave the decision to the caller. */
-    if (g_content_ub && g_content_ub < 8020 && lb <= g_content_ub)
-        return g_content_ub;
-    if (lb >= 6412)
-        return lb;
-    return 0;
-}
+/* Bounded, syntax-scoped content range inference. */
+#include "obor_content_scan.h"
 
 /* Look for an OpenBOR exe next to the pak or one directory up
  * (the common "<Game>/<Game>.exe + <Game>/Paks/<game>.pak" layout). */
@@ -1030,7 +894,7 @@ static void present_error_frame(void)
 
 #define ENGINE_OPT_INFO \
     "Which OpenBOR engine runs the game. Auto detects it from the pak " \
-    "(filename tag, sidecar exe, content scan). A manual choice is " \
+    "(filename build range or tag, sidecar exe, bounded content scan). A manual choice is " \
     "applied on Restart."
 
 void retro_set_environment(retro_environment_t cb)
@@ -1961,22 +1825,11 @@ static void decide_engine(void)
     char interval_text[28] = "";
     if (has_interval) format_build_interval(&interval, interval_text, sizeof(interval_text));
     if (!build && has_interval) {
-        if (filename_profile > 0 && !g_raw) {
-            int legacy_build = obor_legacy_api_build(g_pak_path);
-            if (legacy_build) {
-                if (legacy_build < interval.lower || legacy_build > interval.upper)
-                    filename_profile = -1;
-                else {
-                    filename_profile = legacy_build;
-                    filename_build = legacy_build;
-                }
-            }
-        }
         if (filename_profile < 0) {
             g_engine[0] = '\0';
             g_logical_engine[0] = '\0';
             snprintf(g_selection_error, sizeof(g_selection_error),
-                     "No available engine satisfies the filename build interval. Select an engine manually to override it.");
+                     "No available engine lies in or above the filename build interval. Select an engine manually to override it.");
             log_cb(RETRO_LOG_ERROR, "[OpenBOR] %s Bounds: %s\n",
                    g_selection_error, interval_text);
             return;
@@ -1999,9 +1852,22 @@ static void decide_engine(void)
         how = "exe in mod dir";
     if (!build && (build = build_from_sidecar(g_pak_path)) != 0)
         how = "sidecar exe";
+    int content_profile = 0;
     if (!build && !g_raw) { /* the content scan reads the pak's file table */
         int cb = build_from_content(g_pak_path);
-        log_cb(RETRO_LOG_INFO, "[OpenBOR] content scan verdict: %d\n", cb);
+        if (!g_content_scan_complete)
+            log_cb(RETRO_LOG_INFO, "[OpenBOR] content scan budget or input limit reached; using fallback.\n");
+        if (g_content_range_seen) {
+            content_profile = profile_for_range(g_content_lower, g_content_upper, true);
+            log_cb(RETRO_LOG_INFO, "[OpenBOR] content build bounds %d-%d -> profile %d\n",
+                   g_content_lower, g_content_upper, content_profile);
+            if (!content_profile) {
+                g_engine[0] = g_logical_engine[0] = '\0';
+                snprintf(g_selection_error, sizeof(g_selection_error),
+                         "No available engine lies in or above the content build range. Select an engine manually.");
+                return;
+            }
+        } else log_cb(RETRO_LOG_INFO, "[OpenBOR] content scan verdict: %d\n", cb);
         if (cb > 0) {
             build = cb;
             how = "content scan";
@@ -2010,7 +1876,7 @@ static void decide_engine(void)
     if (!build)
         build = OBOR_FALLBACK_BUILD;
 
-    int anchor = strcmp(how, "core option") == 0 ? build :
+    int anchor = content_profile ? content_profile : strcmp(how, "core option") == 0 ? build :
                  ((strcmp(how, "filename tag") == 0 ||
                    strcmp(how, "filename interval") == 0) && filename_profile) ?
                      filename_profile : pick_anchor(build);

@@ -7,22 +7,13 @@ It uses 32-bit color, ignores `colourdepth` and follows the removal of legacy
 Automatic routing selects 6391 for builds 4433 through 6412; a PAK explicitly
 tagged Build 6412 or the manual 6412 core option selects 6412. Builds 6413
 through 7533 select 7533; builds 7534 through 8023 select 8023.
-Other routing combines filename/sidecar metadata with conservative content
-markers.
-Partial filename tags choose the highest selectable profile in their interval,
-including explicit-only profiles: `Build 4XXX` selects 4453, `Build 6XXX`
-selects 6412 and `Build 63XX` selects 6391. If the interval contains no profile,
-its upper endpoint follows ordinary automatic routing: `Build 42XX` uses 4299
-as the detected build and selects 4432; `Build 405X` uses 4059 and selects 4086.
-Trailing `X` digits are case-insensitive. Manual selection and the existing
-special-profile/legacy-script priorities still apply.
-Inclusive numeric bounds are accepted as `Build 3800-4200`. Use `XXXX` for an
-unknown endpoint, such as `Build 3800-XXXX` or `Build XXXX-4200`. These bounds
-remain unchanged when available engines change. Auto selects the highest
-profile whose logical and physical builds both satisfy the bounds. A detected
-legacy script requirement also has to satisfy them. It reports
-an unavailable engine when none satisfies them, rather than routing outside
-the interval. A manual core option can override the bounds.
+Other routing combines filename/sidecar metadata with bounded content ranges
+and sparse marker estimates. Filename ranges select the highest available
+profile within their effective bounds, or the next physical engine above the
+upper bound when none fits. Generation prefixes clip explicit ranges.
+See [Engine build rules](docs/ANYBOR.md#core-options) for the authoritative
+filename grammar, priorities, examples and processing limits. Filename tags
+and manual options can select explicit-only profiles; content inference cannot.
 Builds newer than 8023 are best effort through the latest pinned v4 anchor;
 they are not claimed as universally compatible.
 
