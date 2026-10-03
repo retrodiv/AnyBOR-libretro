@@ -44,6 +44,29 @@ Set `NUMPROC` or `JOBS` to limit parallel compilation, and `OBOR_BUILD_ROOT`
 to move temporary outputs outside this directory. Dependencies are built
 from `src/deps/`; there is no download or prebuilt-library fallback.
 
+External toolchains can set `CONFIGURE_HOST` and `CONFIGURE_BUILD` to the
+Autoconf system triplets used by libpng, libogg and libvorbis. For a Buildroot
+package, pass `CONFIGURE_HOST="$(GNU_TARGET_NAME)"` and
+`CONFIGURE_BUILD="$(GNU_HOST_NAME)"` to Make alongside its toolchain environment.
+The host is where the resulting library runs; the build is where compilation
+takes place. These settings do not select a compiler or a new AnyBOR target.
+
+`CONFIGURE_HOST=auto` queries the selected `CC` with `-dumpmachine`, including
+compiler launchers such as `ccache`. An explicit host also selects the build
+triplet using the bundled `config.guess` unless `CONFIGURE_BUILD` is supplied.
+`CONFIGURE_BUILD=auto` requests that same detection, honoring `CC_FOR_BUILD`
+or `HOST_CC` instead of the cross compiler. Both resolved values invalidate
+the dependency cache when changed. With neither setting, existing target
+defaults apply.
+
+Direct Python calls accept `--configure-host=TRIPLET|auto` and
+`--configure-build=TRIPLET|auto`; command-line values override the environment.
+For example:
+
+```sh
+CC=x86_64-buildroot-linux-gnu-gcc make TARGET=linux-x86_64 CONFIGURE_HOST=auto
+```
+
 Normal builds allow local logs and editor files outside `SOURCES.json`; these
 files are not added to the build's source receipt. `make check`, `make release`
 and `make source-release` require the checked source inventory. Keep temporary

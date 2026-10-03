@@ -9,6 +9,7 @@ import hashlib
 import json
 import os
 import platform
+import re
 import shlex
 import shutil
 import struct
@@ -288,6 +289,7 @@ def deps_fingerprint(target):
         "environment": {k: os.environ.get(k, "") for k in
                         ("CFLAGS", "CXXFLAGS", "CPPFLAGS", "LDFLAGS", "NASM", "SOURCE_DATE_EPOCH")},
         "host": spec.get("configure_host"),
+        "build": spec.get("configure_build"),
         "assembler": tool_identity(os.environ.get("NASM", "nasm")) if spec["arch"] == "x86_64" else None,
         "cflags": " ".join(["-O2", "-fPIC", "-fstack-protector-strong"] + arch_flags(spec)),
         "darwin_switches": list(rejected_darwin_switches(spec)) if uses_macho(spec) else [],
@@ -349,6 +351,8 @@ def build_dep(target, name, fingerprint):
         env["LDFLAGS"] = darwin + " " + os.environ.get("LDFLAGS", "")
     host = (["--host=" + spec["configure_host"]]
             if spec.get("configure_host") else [])
+    if spec.get("configure_build"):
+        host.append("--build=" + spec["configure_build"])
     if name == "zlib":
         if spec["plat"] == "windows":
             run(["make", "-f", "win32/Makefile.gcc",
@@ -683,8 +687,28 @@ def build_glue(target, spec, outdir):
         sym.unlink()
 
 
-def configure_target(requested, build_platform):
+def checked_triplet(value, option):
+    """Accept one configure argument, never extra flags or an empty probe."""
+    if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_.+-]*", value):
+        raise ValueError("%s requires a non-empty system triplet: %r" % (option, value))
+    return value
+
+
+def probe_triplet(command, option, env=None):
+    try:
+        value = subprocess.check_output(command, universal_newlines=True,
+                                        env=env, timeout=30).strip()
+    except (OSError, subprocess.SubprocessError) as exc:
+        raise ValueError("Cannot resolve %s: %s" % (option, exc))
+    return checked_triplet(value, option)
+
+
+def configure_target(requested, build_platform, configure_host=None, configure_build=None):
     """Honor the tools supplied by libretro runners, including native ARM64."""
+    if configure_host is None:
+        configure_host = os.environ.get("CONFIGURE_HOST") or None
+    if configure_build is None:
+        configure_build = os.environ.get("CONFIGURE_BUILD") or None
     inferred_native = False
     if requested == "auto":
         if build_platform in ("win", "win64", "windows"):
@@ -696,7 +720,7 @@ def configure_target(requested, build_platform):
         else:
             inferred_native = True
             command = shlex.split(os.environ.get("CC", "gcc"))
-            machine = subprocess.check_output(command + ["-dumpmachine"], universal_newlines=True)
+            machine = probe_triplet(command + ["-dumpmachine"], "target")
             if "apple" in machine or "darwin" in machine:
                 # Native macOS: which of the two Mach-O targets this is comes
                 # from the compiler triple, not from the platform argument,
@@ -726,9 +750,20 @@ def configure_target(requested, build_platform):
         "aarch64" if "aarch64" in requested or spec.get("android") else "x86_64")
     if spec.get("android"):
         spec["ext"] = "_android.so"
-    if spec.get("configure_host"):
-        spec["configure_host"] = subprocess.check_output(
-            shlex.split(spec["cc"]) + ["-dumpmachine"], universal_newlines=True).strip()
+    if configure_host is not None and configure_host != "auto":
+        spec["configure_host"] = checked_triplet(configure_host, "configure-host")
+    elif configure_host == "auto" or spec.get("configure_host"):
+        spec["configure_host"] = probe_triplet(
+            shlex.split(spec["cc"]) + ["-dumpmachine"], "configure-host")
+    if configure_build is not None and configure_build != "auto":
+        spec["configure_build"] = checked_triplet(configure_build, "configure-build")
+    elif configure_build == "auto" or configure_host is not None:
+        # config.guess must describe the build machine, even when CC is cross.
+        # Its explicit CC_FOR_BUILD / HOST_CC overrides remain available.
+        env = os.environ.copy()
+        env.pop("CC", None)
+        spec["configure_build"] = probe_triplet(
+            ["sh", str(SRC / "deps/libpng/config.guess")], "configure-build", env)
     TARGETS[requested] = spec
     return requested, spec
 
@@ -737,11 +772,19 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--target", choices=["auto"] + list(TARGETS), default="auto")
     ap.add_argument("--platform", default=os.environ.get("platform", "unix"))
+    ap.add_argument("--configure-host", metavar="TRIPLET|auto",
+                    help="dependency Autoconf host (default: CONFIGURE_HOST or target policy)")
+    ap.add_argument("--configure-build", metavar="TRIPLET|auto",
+                    help="dependency Autoconf build (default: CONFIGURE_BUILD; guessed with explicit host)")
     ap.add_argument("--glue-only", action="store_true")
     args = ap.parse_args()
     epoch = load_pin()["source_date_epoch"]
     os.environ.setdefault("SOURCE_DATE_EPOCH", str(epoch))
-    args.target, spec = configure_target(args.target, args.platform)
+    try:
+        args.target, spec = configure_target(args.target, args.platform,
+                                             args.configure_host, args.configure_build)
+    except ValueError as exc:
+        ap.error(str(exc))
     outdir = BUILD_ROOT / "dist" / args.target
     outdir.mkdir(parents=True, exist_ok=True)
     import release

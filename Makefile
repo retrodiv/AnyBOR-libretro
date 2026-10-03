@@ -19,6 +19,7 @@ ifeq ($(filter default undefined,$(origin AR)),)
 export AR
 endif
 export CFLAGS CXXFLAGS CPPFLAGS LDFLAGS
+export CONFIGURE_HOST CONFIGURE_BUILD
 
 all:
 	+$(PYTHON) tools/build.py --target $(TARGET) --platform $(platform)
