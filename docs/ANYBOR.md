@@ -52,9 +52,9 @@ Configure controller assignments and button remapping in the frontend.
 |---|---|
 | D-pad | Movement |
 | Left analog stick | Movement when the analog option is enabled |
-| Y | Attack |
-| B | Jump |
-| A | Special |
+| Y (west) | Attack |
+| B (south) | Jump |
+| A (east) | Special |
 | X | Attack 2 |
 | L / R | Attack 3 / Attack 4 |
 | Start | Start |
