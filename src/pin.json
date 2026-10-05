@@ -1,7 +1,7 @@
 {
   "core_name": "AnyBOR",
   "core_basename": "anybor_libretro",
-  "version": "0.1.14",
+  "version": "0.1.15",
   "fallback_build": "6391",
   "profiles": [
     {
@@ -36,6 +36,13 @@
       "major": "v3"
     },
     {
+      "build": "6330",
+      "engine": "6391",
+      "covers": "explicit Build 6330 filename or core option",
+      "automatic": false,
+      "major": "v3"
+    },
+    {
       "build": "6391",
       "engine": "6391",
       "covers": "4433-6412 by automatic detection; default fallback",
@@ -46,6 +53,13 @@
       "build": "6412",
       "engine": "6391",
       "covers": "explicit Build 6412 filename or core option",
+      "automatic": false,
+      "major": "v3"
+    },
+    {
+      "build": "6510",
+      "engine": "6391",
+      "covers": "explicit Build 6510 filename or core option",
       "automatic": false,
       "major": "v3"
     },
@@ -153,7 +167,7 @@
       "build": "6391",
       "commit": "494708eb34e71d1afda237873907701c4ec3a569",
       "date": "2018-08-21",
-      "covers": "4433-6412 through logical profiles 6391 and 6412; default fallback",
+      "covers": "4433-6412 automatically; explicit logical profiles 6330, 6412 and 6510; default fallback",
       "major": "v3"
     },
     {

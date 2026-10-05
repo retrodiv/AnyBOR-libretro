@@ -1,3 +1,14 @@
+/* AnyBOR modification record: 2026-10-05.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Select the native 6330 decimal negation fallthrough.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/6391.md
+ * at the source repository root. Original notices follow below.
+ */
+
 /*
  * OpenBOR - http://www.chronocrash.com
  * -----------------------------------------------------------------------
@@ -11,6 +22,7 @@
 #include <stdlib.h>
 #include "globals.h"
 #include "ScriptVariant.h"
+#include "libretroport.h"
 
 #define STRCACHE_INC      64
 
@@ -926,7 +938,7 @@ void ScriptVariant_Neg( ScriptVariant *svar)
     {
     case VT_DECIMAL:
         svar->dblVal = -(svar->dblVal);
-		break;
+        if(obor_profile_build != 6330) break;
     case VT_INTEGER:
         svar->lVal = -(svar->lVal);
     default:

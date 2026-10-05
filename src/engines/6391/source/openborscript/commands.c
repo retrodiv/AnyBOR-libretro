@@ -1,4 +1,4 @@
-/* AnyBOR modification record: 2026-09-29.
+/* AnyBOR modification record: 2026-10-05.
  * Port maintained by retrodiv <retrodiv@proton.me>.
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
@@ -225,6 +225,9 @@ List *createModelCommandList(void)
     LIST_ADD(CMD_MODEL_BLOCKODDS, "blockodds");
     LIST_ADD(CMD_MODEL_BLOCKPAIN, "blockpain");
     LIST_ADD(CMD_MODEL_BOMB, "bomb");
+    if(obor_profile_build == 6330) LIST_ADD(CMD_MODEL_CUSTBOOMERANG, "custboomerang");
+    if(obor_profile_build == 6330) LIST_ADD(CMD_MODEL_BOOMERANGVALUES, "boomerangvalues");
+    if(obor_profile_build == 6330) LIST_ADD(CMD_MODEL_BOOMERANG, "boomerang");
     LIST_ADD(CMD_MODEL_BOUNCE, "bounce");
     LIST_ADD(CMD_MODEL_BOUNCEFACTOR, "bouncefactor");
     LIST_ADD(CMD_MODEL_BRANCH, "branch");
@@ -263,19 +266,19 @@ List *createModelCommandList(void)
     LIST_ADD(CMD_MODEL_DROPFRAME, "dropframe");
     LIST_ADD(CMD_MODEL_DROPV, "dropv");
     LIST_ADD(CMD_MODEL_DUST, "dust");
-    LIST_ADD(CMD_MODEL_EBOX, "ebox");
-    LIST_ADD(CMD_MODEL_EBOX_INDEX, "ebox.index");
-    LIST_ADD(CMD_MODEL_EBOX_POSITION_X, "ebox.position.x");
-    LIST_ADD(CMD_MODEL_EBOX_POSITION_Y, "ebox.position.y");
-    LIST_ADD(CMD_MODEL_EBOX_SIZE_X, "ebox.size.x");
-    LIST_ADD(CMD_MODEL_EBOX_SIZE_Y, "ebox.size.y");
-    LIST_ADD(CMD_MODEL_EBOX_SIZE_Z_1, "ebox.size.z.1");
-    LIST_ADD(CMD_MODEL_EBOX_SIZE_Z_2, "ebox.size.z.2");
-    LIST_ADD(CMD_MODEL_EBOXZ, "eboxz");
+    if(obor_profile_build != 6330) LIST_ADD(CMD_MODEL_EBOX, "ebox");
+    if(obor_profile_build != 6330) LIST_ADD(CMD_MODEL_EBOX_INDEX, "ebox.index");
+    if(obor_profile_build != 6330) LIST_ADD(CMD_MODEL_EBOX_POSITION_X, "ebox.position.x");
+    if(obor_profile_build != 6330) LIST_ADD(CMD_MODEL_EBOX_POSITION_Y, "ebox.position.y");
+    if(obor_profile_build != 6330) LIST_ADD(CMD_MODEL_EBOX_SIZE_X, "ebox.size.x");
+    if(obor_profile_build != 6330) LIST_ADD(CMD_MODEL_EBOX_SIZE_Y, "ebox.size.y");
+    if(obor_profile_build != 6330) LIST_ADD(CMD_MODEL_EBOX_SIZE_Z_1, "ebox.size.z.1");
+    if(obor_profile_build != 6330) LIST_ADD(CMD_MODEL_EBOX_SIZE_Z_2, "ebox.size.z.2");
+    if(obor_profile_build != 6330) LIST_ADD(CMD_MODEL_EBOXZ, "eboxz");
     LIST_ADD(CMD_MODEL_EDELAY, "edelay");
     LIST_ADD(CMD_MODEL_EDGERANGE, "edgerange");
     LIST_ADD(CMD_MODEL_ENERGYCOST, "energycost");
-    LIST_ADD(CMD_MODEL_ENTITYPUSHING, "entitypushing");
+    if(obor_profile_build != 6330) LIST_ADD(CMD_MODEL_ENTITYPUSHING, "entitypushing");
     LIST_ADD(CMD_MODEL_ESCAPEHITS, "escapehits");
     LIST_ADD(CMD_MODEL_FACING, "facing");
     LIST_ADD(CMD_MODEL_FALLDIE, "falldie");
@@ -385,7 +388,7 @@ List *createModelCommandList(void)
     LIST_ADD(CMD_MODEL_ONDEATHSCRIPT, "ondeathscript");
     LIST_ADD(CMD_MODEL_ONDOATTACKSCRIPT, "ondoattackscript");
     LIST_ADD(CMD_MODEL_ONDRAWSCRIPT, "ondrawscript");
-    LIST_ADD(CMD_MODEL_ONENTITYCOLLISIONSCRIPT, "onentitycollisionscript");
+    if(obor_profile_build != 6330) LIST_ADD(CMD_MODEL_ONENTITYCOLLISIONSCRIPT, "onentitycollisionscript");
     LIST_ADD(CMD_MODEL_ONFALLSCRIPT, "onfallscript");
     LIST_ADD(CMD_MODEL_ONKILLSCRIPT, "onkillscript");
     LIST_ADD(CMD_MODEL_ONMODELCOPYSCRIPT, "onmodelcopyscript");
@@ -414,7 +417,7 @@ List *createModelCommandList(void)
     LIST_ADD(CMD_MODEL_PSHOTFRAME, "pshotframe");
     LIST_ADD(CMD_MODEL_PSHOTFRAMENO, "pshotframeno");
     LIST_ADD(CMD_MODEL_PSHOTFRAMEW, "pshotframew");
-    LIST_ADD(CMD_MODEL_PUSHINGFACTOR, "pushingfactor");
+    if(obor_profile_build != 6330) LIST_ADD(CMD_MODEL_PUSHINGFACTOR, "pushingfactor");
     LIST_ADD(CMD_MODEL_QUAKEFRAME, "quakeframe");
     LIST_ADD(CMD_MODEL_RANGE, "range");
     LIST_ADD(CMD_MODEL_RANGEA, "rangea");
@@ -473,6 +476,11 @@ List *createModelCommandList(void)
     LIST_ADD(CMD_MODEL_SUMMONKILL, "summonkill");
     LIST_ADD(CMD_MODEL_SYNC, "sync");
     LIST_ADD(CMD_MODEL_TAKEDAMAGESCRIPT, "takedamagescript");
+    if(obor_profile_build == 6510)
+    {
+        LIST_ADD(CMD_MODEL_ON_BIND_UPDATE_OTHER_TO_SELF_SCRIPT, "on_bind_update_other_to_self_script");
+        LIST_ADD(CMD_MODEL_ON_BIND_UPDATE_SELF_TO_OTHER_SCRIPT, "on_bind_update_self_to_other_script");
+    }
     LIST_ADD(CMD_MODEL_THINKSCRIPT, "thinkscript");
     LIST_ADD(CMD_MODEL_THOLD, "thold");
     LIST_ADD(CMD_MODEL_THROW, "throw");

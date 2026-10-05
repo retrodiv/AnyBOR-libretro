@@ -1,3 +1,14 @@
+/* AnyBOR modification record: 2026-10-05.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Translate native attack-type IDs at the script API boundary.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/6391.md
+ * at the source repository root. Original notices follow below.
+ */
+
 /*
  * OpenBOR - http://www.chronocrash.com
  * -----------------------------------------------------------------------
@@ -13,6 +24,7 @@
 // Access to attack and attack collision properties.
 
 #include "scriptcommon.h"
+#include "profile_ids.h"
 
 // Attack specific properties.
 // Caskey, Damon V.
@@ -230,7 +242,7 @@ HRESULT openbor_get_attack_property(ScriptVariant **varlist, ScriptVariant **pre
         case ATTACK_PROP_DAMAGE_TYPE:
 
             ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
-            (*pretvar)->lVal = (LONG)handle->attack_type;
+            (*pretvar)->lVal = obor_attack_to_native(handle->attack_type);
             break;
 
 //        case ATTACK_PROP_DAMAGE_RECURSIVE_FORCE:
@@ -531,7 +543,7 @@ HRESULT openbor_set_attack_property(ScriptVariant **varlist, ScriptVariant **pre
 
             if(SUCCEEDED(ScriptVariant_IntegerValue(varlist[ARG_VALUE], &temp_int)))
             {
-                handle->attack_type = temp_int;
+                handle->attack_type = obor_attack_from_native(temp_int);
             }
             break;
 

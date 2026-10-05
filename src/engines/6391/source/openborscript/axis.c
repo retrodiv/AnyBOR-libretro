@@ -1,10 +1,9 @@
-/* AnyBOR modification record: 2026-09-29.
+/* AnyBOR modification record: 2026-10-05.
  * Port maintained by retrodiv <retrodiv@proton.me>.
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
  * Upstream code retains its original license and notices.
- * Preserve the 6391 axis setter and select the corrected Y setter for
- * profile 6412.
+ * Select native axis setter behavior for the logical profiles.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/6391.md
  * at the source repository root. Original notices follow below.
@@ -893,7 +892,7 @@ HRESULT openbor_set_axis_principal_int_property(ScriptVariant **varlist, ScriptV
 
         case _AXIS_PRINCIPAL_Y:
 
-            if(obor_profile_build == 6412)
+            if((obor_profile_build == 6412 || obor_profile_build == 6510))
                 handle->y = temp_int;
             else
                 handle->x = temp_int;

@@ -1837,7 +1837,7 @@ static void decide_engine(void)
         build = filename_build;
         how = "filename interval";
     }
-    if (filename_build == 4453 || filename_build == 6412 || filename_build == 7533) {
+    if (filename_build == 4453 || filename_build == 6330 || filename_build == 6412 || filename_build == 6510 || filename_build == 7533) {
         filename_profile = filename_build;
         if (!build) {
             build = filename_build;

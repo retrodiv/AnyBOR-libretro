@@ -1,10 +1,10 @@
-/* AnyBOR modification record: 2026-09-29.
+/* AnyBOR modification record: 2026-10-05.
  * Port maintained by retrodiv <retrodiv@proton.me>.
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
  * Upstream code retains its original license and notices.
- * Map the 6412 owner and opponent properties without shifting the legacy
- * numeric property IDs.
+ * Translate native entity property names, numeric IDs and animation values
+ * for each logical profile.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/6391.md
  * at the source repository root. Original notices follow below.
@@ -19,6 +19,7 @@
  */
 
  #include "scriptcommon.h"
+#include "profile_ids.h"
 
 // Use string property argument to find an
 // integer property constant and populate
@@ -79,7 +80,7 @@ int mapstrings_entity_property(ScriptVariant **varlist, int paramCount)
         return 1;
     }
 
-    if(obor_profile_build == 6412 && varlist[ARG_PROPERTY]->vt == VT_STR)
+    if((obor_profile_build == 6412 || obor_profile_build == 6510) && varlist[ARG_PROPERTY]->vt == VT_STR)
     {
         const char *name = StrCache_Get(varlist[ARG_PROPERTY]->strVal);
         if(stricmp(name, "opponent") == 0 || stricmp(name, "owner") == 0)
@@ -89,15 +90,59 @@ int mapstrings_entity_property(ScriptVariant **varlist, int paramCount)
             varlist[ARG_PROPERTY]->lVal = modern;
             return 1;
         }
-        MAPSTRINGS(varlist[ARG_PROPERTY], proplist, _ENTITY_LEGACY_END,
+        MAPSTRINGS(varlist[ARG_PROPERTY], proplist, _ENTITY_BOOMERANG_LOOP,
                    "\n\n Error: '%s' is not a known entity property.\n");
         if(varlist[ARG_PROPERTY]->lVal >= _ENTITY_PLAYER_INDEX)
             varlist[ARG_PROPERTY]->lVal += 2;
         return 1;
     }
 
+    if(obor_profile_build == 6330)
+    {
+        static const char *names[] = {
+            "ai_target_entity",
+            "animation_animating",
+            "animation_animation",
+            "animation_collection",
+            "animation_frame",
+            "arrow_on",
+            "attacking",
+            "attack_id_incoming",
+            "attack_id_outgoing",
+            "autokill",
+            "binding",
+            "blink",
+            "blocking",
+            "boomerang_loop",
+            "boss",
+            "charging",
+            "colorset_default",
+            "colorset_dying_health_1",
+            "colorset_dying_health_2",
+            "colorset_dying_index_1",
+            "colorset_dying_index_2",
+            "colorset_table",
+            "colorset_time",
+            "combo_step",
+            "combo_time",
+            "damage_on_landing",
+            "deduct_ammo",
+            "energy_status",
+            "player_index",
+            "position_base_alternate",
+            "position_base_default",
+            "position_coordinates",
+            "position_direction",
+            "projectile_prime",
+            "spawn_type",
+        };
+        MAPSTRINGS(varlist[ARG_PROPERTY], names, sizeof(names)/sizeof(*names),
+                   "Unknown entity property '%s'.\n");
+        return 1;
+    }
+
     // See macro - will return 0 on fail.
-    MAPSTRINGS(varlist[ARG_PROPERTY], proplist, _ENTITY_LEGACY_END,
+    MAPSTRINGS(varlist[ARG_PROPERTY], proplist, _ENTITY_BOOMERANG_LOOP,
                "\n\n Error: '%s' is not a known entity property.\n");
 
 
@@ -110,13 +155,20 @@ int mapstrings_entity_property(ScriptVariant **varlist, int paramCount)
 
 static e_entity_properties profile_entity_property(LONG property)
 {
-    if(obor_profile_build == 6412)
+    if(obor_profile_build == 6330)
+    {
+        if(property == 13) return _ENTITY_BOOMERANG_LOOP;
+        if(property > 13) --property;
+        return property >= 0 && property < _ENTITY_BOOMERANG_LOOP
+            ? (e_entity_properties)property : _ENTITY_END;
+    }
+    if((obor_profile_build == 6412 || obor_profile_build == 6510))
     {
         if(property == 27) return _ENTITY_OPPONENT;
         if(property == 28) return _ENTITY_OWNER;
-        if(property >= 29 && property < _ENTITY_END) return (e_entity_properties)(property - 2);
+        if(property >= 29 && property < _ENTITY_BOOMERANG_LOOP + 2) return (e_entity_properties)(property - 2);
     }
-    return property >= 0 && property < _ENTITY_LEGACY_END
+    return property >= 0 && property < _ENTITY_BOOMERANG_LOOP
                ? (e_entity_properties)property : _ENTITY_END;
 }
 
@@ -184,7 +236,7 @@ HRESULT openbor_get_entity_property(ScriptVariant **varlist , ScriptVariant **pr
         case _ENTITY_ANIMATION_ANIMATION:
 
             ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
-            (*pretvar)->lVal = (LONG)handle->animnum;
+            (*pretvar)->lVal = obor_animation_to_native(handle->animnum);
 
             break;
 
@@ -262,6 +314,13 @@ HRESULT openbor_get_entity_property(ScriptVariant **varlist , ScriptVariant **pr
 
             ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
             (*pretvar)->lVal = (LONG)handle->blocking;
+
+            break;
+
+        case _ENTITY_BOOMERANG_LOOP:
+
+            ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
+            (*pretvar)->lVal = (LONG)handle->boomerang_loop;
 
             break;
 
@@ -422,7 +481,7 @@ HRESULT openbor_get_entity_property(ScriptVariant **varlist , ScriptVariant **pr
         case _ENTITY_SPAWN_TYPE:
 
             ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
-            (*pretvar)->lVal = (LONG)handle->spawntype;
+            (*pretvar)->lVal = obor_spawn_type_to_native(handle->spawntype);
 
             break;
 
@@ -514,7 +573,7 @@ HRESULT openbor_set_entity_property(ScriptVariant **varlist, ScriptVariant **pre
 
             if(SUCCEEDED(ScriptVariant_IntegerValue(varlist[ARG_VALUE], &temp_int)))
             {
-                handle->animnum = temp_int;
+                handle->animnum = obor_animation_from_native(temp_int);
             }
 
             break;
@@ -599,6 +658,15 @@ HRESULT openbor_set_entity_property(ScriptVariant **varlist, ScriptVariant **pre
             if(SUCCEEDED(ScriptVariant_IntegerValue(varlist[ARG_VALUE], &temp_int)))
             {
                 handle->blocking = temp_int;
+            }
+
+            break;
+
+        case _ENTITY_BOOMERANG_LOOP:
+
+            if(SUCCEEDED(ScriptVariant_IntegerValue(varlist[ARG_VALUE], &temp_int)))
+            {
+                handle->boomerang_loop = temp_int;
             }
 
             break;
@@ -784,7 +852,7 @@ HRESULT openbor_set_entity_property(ScriptVariant **varlist, ScriptVariant **pre
 
             if(SUCCEEDED(ScriptVariant_IntegerValue(varlist[ARG_VALUE], &temp_int)))
             {
-                handle->spawntype = temp_int;
+                handle->spawntype = obor_spawn_type_from_native(temp_int);
             }
 
             break;

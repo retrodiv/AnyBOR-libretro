@@ -1,9 +1,12 @@
 # Compatibility contract
 
-The nine available engines are 3400, 3842, 4086, 4432, 4453, 6391, 6412, 7533 and 8023.
+The eleven available engines are 3400, 3842, 4086, 4432, 4453, 6330, 6391, 6412, 6510, 7533 and 8023.
 An explicit Build 4453 filename or the manual 4453 core option selects 4453.
 It uses 32-bit color, ignores `colourdepth` and follows the removal of legacy
 `remap` palette conversion. Select 4432 for games that need its older behavior.
+Profiles 6330 and 6510 also use the shared 6391 engine, with their original
+behavior selected by an explicit Build tag or the manual core option.
+
 Automatic routing selects 6391 for builds 4433 through 6412; a PAK explicitly
 tagged Build 6412 or the manual 6412 core option selects 6412. Builds 6413
 through 7533 select 7533; builds 7534 through 8023 select 8023.

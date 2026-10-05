@@ -1,10 +1,10 @@
-/* AnyBOR modification record: 2026-09-29.
+/* AnyBOR modification record: 2026-10-05.
  * Port maintained by retrodiv <retrodiv@proton.me>.
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
  * Upstream code retains its original license and notices.
- * Keep the legacy binding property IDs and add internal selectors for the
- * 6412 axis handles.
+ * Keep legacy binding IDs and append shared selectors for modern profile
+ * properties.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/6391.md
  * at the source repository root. Original notices follow below.
@@ -26,6 +26,8 @@ typedef enum
     _BINDING_LEGACY_END,
     _BINDING_ENABLE = _BINDING_LEGACY_END,
     _BINDING_OFFSET,
+    _BINDING_OVERRIDING,
+    _BINDING_TAG,
     _BINDING_END,
 } e_binding_properties;
 

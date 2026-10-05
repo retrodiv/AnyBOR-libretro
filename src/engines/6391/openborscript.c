@@ -1,11 +1,11 @@
-/* AnyBOR modification record: 2026-09-29.
+/* AnyBOR modification record: 2026-10-05.
  * Port maintained by retrodiv <retrodiv@proton.me>.
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
  * Upstream code retains its original license and notices.
  * Keep the dormant constant-lowering diagnostic compatible with the single-
- * value instruction layout. Supply the upstream 6412 unload_model script
- * function for its logical profile.
+ * value instruction layout. Supply native profile script APIs and translate
+ * numeric animation, attack, subtype and spawn IDs.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/6391.md
  * at the source repository root. Original notices follow below.
@@ -42,6 +42,7 @@
 
 #include "config.h"
 #include "openbor.h"
+#include "source/openborscript/profile_ids.h"
 #include "soundmix.h"
 #include "globals.h"
 #include "ImportCache.h"
@@ -2215,6 +2216,7 @@ enum entityproperty_enum
     _ep_y,
     _ep_z,
     _ep_zdir,
+    _ep_boomerang,
     _ep_the_end,
 };
 
@@ -2419,6 +2421,7 @@ static const char *eplist[] =
     "y",
     "z",
     "zdir",
+    "boomerang",
 };
 
 enum aiflag_enum
@@ -2483,6 +2486,19 @@ static const char *eplist_aiflag[] =
     "turning",
     "walking",
     "walkmode",
+};
+
+enum boomerang_enum
+{
+    _ep_boomerang_acceleration,
+    _ep_boomerang_hdistance,
+    _ep_boomerang_the_end,
+};
+
+static const char *eplist_boomerang[] =
+{
+    "acceleration",
+    "hdistance",
 };
 
 enum edgerange_enum
@@ -2927,6 +2943,407 @@ int mapstrings_animationproperty(ScriptVariant **varlist, int paramCount)
 //    return result;
 }
 
+static const int obor_entityproperty6330[] = {
+    _ep_a,
+    _ep_aggression,
+    _ep_aiattack,
+    _ep_aiflag,
+    _ep_aimove,
+    _ep_alpha,
+    _ep_animal,
+    _ep_animating,
+    _ep_animation,
+    _ep_animation_handle,
+    _ep_animationid,
+    _ep_animheight,
+    _ep_animhits,
+    _ep_animnum,
+    _ep_animpos,
+    _ep_animvalid,
+    _ep_antigrab,
+    _ep_antigravity,
+    _ep_attackid,
+    _ep_attacking,
+    _ep_attackthrottle,
+    _ep_attackthrottletime,
+    _ep_autokill,
+    _ep_base,
+    _ep_bbox,
+    _ep_binding,
+    _ep_blink,
+    _ep_blockback,
+    _ep_blockodds,
+    _ep_blockpain,
+    _ep_boomerang,
+    _ep_boss,
+    _ep_bounce,
+    _ep_bound,
+    _ep_candamage,
+    _ep_chargerate,
+    _ep_colourmap,
+    _ep_colourtable,
+    _ep_combostep,
+    _ep_combotime,
+    _ep_custom_target,
+    _ep_damage_on_landing,
+    _ep_dead,
+    _ep_defaultmodel,
+    _ep_defaultname,
+    _ep_defense,
+    _ep_destx,
+    _ep_destz,
+    _ep_detect,
+    _ep_die_on_landing,
+    _ep_direction,
+    _ep_dot,
+    _ep_dropframe,
+    _ep_edelay,
+    _ep_edge,
+    _ep_edgerange,
+    _ep_energycost,
+    _ep_escapecount,
+    _ep_escapehits,
+    _ep_exists,
+    _ep_facing,
+    _ep_falldie,
+    _ep_flash,
+    _ep_freezetime,
+    _ep_frozen,
+    _ep_gfxshadow,
+    _ep_grabbing,
+    _ep_grabforce,
+    _ep_guardpoints,
+    _ep_hasplatforms,
+    _ep_health,
+    _ep_height,
+    _ep_hitbyid,
+    _ep_hitheadplatform,
+    _ep_hitwall,
+    _ep_hmapl,
+    _ep_hmapu,
+    _ep_hostile,
+    _ep_icon,
+    _ep_iconposition,
+    _ep_invincible,
+    _ep_invinctime,
+    _ep_jugglepoints,
+    _ep_jumpheight,
+    _ep_jumpmovex,
+    _ep_jumpmovez,
+    _ep_jumpspeed,
+    _ep_knockdowncount,
+    _ep_komap,
+    _ep_landedplatform,
+    _ep_landframe,
+    _ep_lifeposition,
+    _ep_lifespancountdown,
+    _ep_link,
+    _ep_map,
+    _ep_mapcount,
+    _ep_mapdefault,
+    _ep_maps,
+    _ep_maptime,
+    _ep_maxguardpoints,
+    _ep_maxhealth,
+    _ep_maxjugglepoints,
+    _ep_maxmp,
+    _ep_model,
+    _ep_mp,
+    _ep_mpdroprate,
+    _ep_mprate,
+    _ep_mpset,
+    _ep_mpstable,
+    _ep_mpstableval,
+    _ep_name,
+    _ep_nameposition,
+    _ep_nextanim,
+    _ep_nextmove,
+    _ep_nextthink,
+    _ep_no_adjust_base,
+    _ep_noaicontrol,
+    _ep_nodieblink,
+    _ep_nodrop,
+    _ep_nograb,
+    _ep_nohithead,
+    _ep_nolife,
+    _ep_nopain,
+    _ep_numweapons,
+    _ep_offense,
+    _ep_offscreen_noatk_factor,
+    _ep_offscreenkill,
+    _ep_opponent,
+    _ep_owner,
+    _ep_pain_time,
+    _ep_parent,
+    _ep_path,
+    _ep_pathfindstep,
+    _ep_playerindex,
+    _ep_position,
+    _ep_prevanimationid,
+    _ep_projectile,
+    _ep_projectilehit,
+    _ep_range,
+    _ep_releasetime,
+    _ep_running,
+    _ep_rush_count,
+    _ep_rush_tally,
+    _ep_rush_time,
+    _ep_score,
+    _ep_scroll,
+    _ep_seal,
+    _ep_sealtime,
+    _ep_setlayer,
+    _ep_shadowbase,
+    _ep_sortid,
+    _ep_spawntype,
+    _ep_speed,
+    _ep_sprite,
+    _ep_spritea,
+    _ep_stalltime,
+    _ep_staydown,
+    _ep_staydownatk,
+    _ep_stealth,
+    _ep_subentity,
+    _ep_subject_to_basemap,
+    _ep_subject_to_gravity,
+    _ep_subject_to_hole,
+    _ep_subject_to_maxz,
+    _ep_subject_to_minz,
+    _ep_subject_to_obstacle,
+    _ep_subject_to_platform,
+    _ep_subject_to_screen,
+    _ep_subject_to_wall,
+    _ep_subtype,
+    _ep_takeaction,
+    _ep_think,
+    _ep_thold,
+    _ep_throwdamage,
+    _ep_throwdist,
+    _ep_throwframewait,
+    _ep_throwheight,
+    _ep_tosstime,
+    _ep_tossv,
+    _ep_trymove,
+    _ep_type,
+    _ep_velocity,
+    _ep_vulnerable,
+    _ep_walkoffmovex,
+    _ep_walkoffmovez,
+    _ep_weapent,
+    _ep_weaploss,
+    _ep_weapnum,
+    _ep_weapon,
+    _ep_x,
+    _ep_xdir,
+    _ep_y,
+    _ep_z,
+    _ep_zdir,
+};
+
+static int obor_entityproperty(int native)
+{
+    if(obor_profile_build != 6330) return native >= 0 && native < _ep_boomerang ? native : _ep_the_end;
+    return native >= 0 && native < (int)(sizeof(obor_entityproperty6330)/sizeof(*obor_entityproperty6330))
+        ? obor_entityproperty6330[native] : _ep_the_end;
+}
+
+static const char *obor_eplist6330[] = {
+    "a",
+    "aggression",
+    "aiattack",
+    "aiflag",
+    "aimove",
+    "alpha",
+    "animal",
+    "animating",
+    "animation",
+    "animation.handle",
+    "animationid",
+    "animheight",
+    "animhits",
+    "animnum",
+    "animpos",
+    "animvalid",
+    "antigrab",
+    "antigravity",
+    "attackid",
+    "attacking",
+    "attackthrottle",
+    "attackthrottletime",
+    "autokill",
+    "base",
+    "bbox",
+    "binding",
+    "blink",
+    "blockback",
+    "blockodds",
+    "blockpain",
+    "boomerang",
+    "boss",
+    "bounce",
+    "bound",
+    "candamage",
+    "chargerate",
+    "colourmap",
+    "colourtable",
+    "combostep",
+    "combotime",
+    "custom_target",
+    "damage_on_landing",
+    "dead",
+    "defaultmodel",
+    "defaultname",
+    "defense",
+    "destx",
+    "destz",
+    "detect",
+    "die_on_landing",
+    "direction",
+    "dot",
+    "dropframe",
+    "edelay",
+    "edge",
+    "edgerange",
+    "energycost",
+    "escapecount",
+    "escapehits",
+    "exists",
+    "facing",
+    "falldie",
+    "flash",
+    "freezetime",
+    "frozen",
+    "gfxshadow",
+    "grabbing",
+    "grabforce",
+    "guardpoints",
+    "hasplatforms",
+    "health",
+    "height",
+    "hitbyid",
+    "hitheadplatform",
+    "hitwall",
+    "hmapl",
+    "hmapu",
+    "hostile",
+    "icon",
+    "iconposition",
+    "invincible",
+    "invinctime",
+    "jugglepoints",
+    "jumpheight",
+    "jumpmovex",
+    "jumpmovez",
+    "jumpspeed",
+    "knockdowncount",
+    "komap",
+    "landedplatform",
+    "landframe",
+    "lifeposition",
+    "lifespancountdown",
+    "link",
+    "map",
+    "mapcount",
+    "mapdefault",
+    "maps",
+    "maptime",
+    "maxguardpoints",
+    "maxhealth",
+    "maxjugglepoints",
+    "maxmp",
+    "model",
+    "mp",
+    "mpdroprate",
+    "mprate",
+    "mpset",
+    "mpstable",
+    "mpstableval",
+    "name",
+    "nameposition",
+    "nextanim",
+    "nextmove",
+    "nextthink",
+    "no_adjust_base",
+    "noaicontrol",
+    "nodieblink",
+    "nodrop",
+    "nograb",
+    "nohithead",
+    "nolife",
+    "nopain",
+    "numweapons",
+    "offense",
+    "offscreennoatkfactor",
+    "offscreenkill",
+    "opponent",
+    "owner",
+    "pain_time",
+    "parent",
+    "path",
+    "pathfindstep",
+    "playerindex",
+    "position",
+    "prevanimationid",
+    "projectile",
+    "projectilehit",
+    "range",
+    "releasetime",
+    "running",
+    "rush_count",
+    "rush_tally",
+    "rush_time",
+    "score",
+    "scroll",
+    "seal",
+    "sealtime",
+    "setlayer",
+    "shadowbase",
+    "sortid",
+    "spawntype",
+    "speed",
+    "sprite",
+    "spritea",
+    "stalltime",
+    "staydown",
+    "staydownatk",
+    "stealth",
+    "subentity",
+    "subject_to_basemap",
+    "subject_to_gravity",
+    "subject_to_hole",
+    "subject_to_maxz",
+    "subject_to_minz",
+    "subject_to_obstacle",
+    "subject_to_platform",
+    "subject_to_screen",
+    "subject_to_wall",
+    "subtype",
+    "takeaction",
+    "think",
+    "thold",
+    "throwdamage",
+    "throwdist",
+    "throwframewait",
+    "throwheight",
+    "tosstime",
+    "tossv",
+    "trymove",
+    "type",
+    "velocity",
+    "vulnerable",
+    "walkoffmovex",
+    "walkoffmovez",
+    "weapent",
+    "weaploss",
+    "weapnum",
+    "weapon",
+    "x",
+    "xdir",
+    "y",
+    "z",
+    "zdir",
+};
+
 int mapstrings_entityproperty(ScriptVariant **varlist, int paramCount)
 {
     char *propname;
@@ -3112,15 +3529,23 @@ int mapstrings_entityproperty(ScriptVariant **varlist, int paramCount)
     }
 
     // map entity properties
-    MAPSTRINGS(varlist[1], eplist, _ep_the_end,
+    if(obor_profile_build == 6330)
+    {
+        MAPSTRINGS(varlist[1], obor_eplist6330, sizeof(obor_eplist6330)/sizeof(*obor_eplist6330),
+                   "Property name '%s' is not supported by function getentityproperty.\n");
+    }
+    else
+    {
+    MAPSTRINGS(varlist[1], eplist, _ep_boomerang,
                "Property name '%s' is not supported by function getentityproperty.\n");
+    }
 
     if(paramCount < 3 || varlist[1]->vt != VT_INTEGER)
     {
         return 1;
     }
 
-    ep = varlist[1]->lVal;
+    ep = obor_entityproperty(varlist[1]->lVal);
     eps = (ep < _ep_the_end && ep >= 0) ? eplist[ep] : "";
 
     switch (ep)
@@ -3135,6 +3560,13 @@ int mapstrings_entityproperty(ScriptVariant **varlist, int paramCount)
     case _ep_aiflag:
     {
         MAPSTRINGS(varlist[2], eplist_aiflag, _ep_aiflag_the_end,
+                   _is_not_a_known_subproperty_of_, eps);
+        break;
+    }
+    // map subproperties of edgerange property
+    case _ep_boomerang:
+    {
+        MAPSTRINGS(varlist[2], eplist_boomerang, _ep_boomerang_the_end,
                    _is_not_a_known_subproperty_of_, eps);
         break;
     }
@@ -3318,7 +3750,7 @@ HRESULT openbor_getentityproperty(ScriptVariant **varlist , ScriptVariant **pret
         printf("Function getentityproperty must have a string property name.\n");
     }
 
-    propind = arg->lVal;
+    propind = obor_entityproperty(arg->lVal);
 
     switch(propind)
     {
@@ -3362,7 +3794,7 @@ HRESULT openbor_getentityproperty(ScriptVariant **varlist , ScriptVariant **pret
             (*pretvar)->lVal = (LONG)ent->dead;
             break;
         case _ep_aiflag_jumpid:
-            (*pretvar)->lVal = (LONG)ent->jump.animation_id;
+            (*pretvar)->lVal = obor_animation_to_native(ent->jump.animation_id);
             break;
         case _ep_aiflag_jumping:
             (*pretvar)->lVal = (LONG)ent->jumping;
@@ -3489,6 +3921,9 @@ HRESULT openbor_getentityproperty(ScriptVariant **varlist , ScriptVariant **pret
             ltemp = (LONG)ent->animnum;
         }
 
+        if(paramCount > 2 && SUCCEEDED(ScriptVariant_IntegerValue(varlist[2], &ltemp)))
+            ltemp = obor_animation_from_native(ltemp);
+
         // If the animation exists, get the handle.
         if(validanim(ent, ltemp))
         {
@@ -3519,13 +3954,13 @@ HRESULT openbor_getentityproperty(ScriptVariant **varlist , ScriptVariant **pret
     case _ep_animationid:
     {
         ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
-        (*pretvar)->lVal = (LONG)ent->animnum;
+        (*pretvar)->lVal = obor_animation_to_native(ent->animnum);
         break;
     }
     case _ep_prevanimationid:
     {
         ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
-        (*pretvar)->lVal = (LONG)ent->prevanimnum;
+        (*pretvar)->lVal = obor_animation_to_native(ent->prevanimnum);
         break;
     }
     case _ep_animpos:
@@ -3546,7 +3981,7 @@ HRESULT openbor_getentityproperty(ScriptVariant **varlist , ScriptVariant **pret
             }
         }
         ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
-        (*pretvar)->lVal = (LONG)validanim(ent, ltemp);
+        (*pretvar)->lVal = (LONG)validanim(ent, obor_animation_from_native(ltemp));
         break;
     }
     case _ep_antigrab:
@@ -3602,7 +4037,7 @@ HRESULT openbor_getentityproperty(ScriptVariant **varlist , ScriptVariant **pret
         }
         else
         {
-            i		= varlist[2]->lVal;												//Animation parameter.
+            i		= obor_animation_from_native(varlist[2]->lVal);												//Animation parameter.
             tempint	= varlist[3]->lVal;												//Frame parameter.
         }
         ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
@@ -3631,6 +4066,35 @@ HRESULT openbor_getentityproperty(ScriptVariant **varlist , ScriptVariant **pret
     {
         ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
         (*pretvar)->lVal = (LONG)ent->modeldata.blockpain;
+        break;
+    }
+    case _ep_boomerang:
+    {
+        if(paramCount < 3)
+        {
+            break;
+        }
+        arg = varlist[2];
+        if(arg->vt != VT_INTEGER)
+        {
+            printf("You must give a string name for boomerang.\n");
+            return E_FAIL;
+        }
+        ltemp = arg->lVal;
+
+        ScriptVariant_ChangeType(*pretvar, VT_DECIMAL);
+        switch(ltemp)
+        {
+        case _ep_boomerang_acceleration:
+            (*pretvar)->dblVal = (DOUBLE)ent->modeldata.boomerang_prop.acceleration;
+            break;
+        case _ep_boomerang_hdistance:
+            (*pretvar)->dblVal = (DOUBLE)ent->modeldata.boomerang_prop.hdistance;
+            break;
+        default:
+            ScriptVariant_Clear(*pretvar);
+            return E_FAIL;
+        }
         break;
     }
     case _ep_boss:
@@ -3772,37 +4236,37 @@ HRESULT openbor_getentityproperty(ScriptVariant **varlist , ScriptVariant **pret
         {
         case _ep_defense_factor:
         {
-            (*pretvar)->dblVal = (DOUBLE)ent->defense[(LONG)ltemp].factor;
+            (*pretvar)->dblVal = (DOUBLE)ent->defense[obor_attack_from_native(ltemp)].factor;
             break;
         }
         case _ep_defense_blockpower:
         {
-            (*pretvar)->dblVal = (DOUBLE)ent->defense[(LONG)ltemp].blockpower;
+            (*pretvar)->dblVal = (DOUBLE)ent->defense[obor_attack_from_native(ltemp)].blockpower;
             break;
         }
         case _ep_defense_blockratio:
         {
-            (*pretvar)->dblVal = (DOUBLE)ent->defense[(LONG)ltemp].blockratio;
+            (*pretvar)->dblVal = (DOUBLE)ent->defense[obor_attack_from_native(ltemp)].blockratio;
             break;
         }
         case _ep_defense_blockthreshold:
         {
-            (*pretvar)->dblVal = (DOUBLE)ent->defense[(LONG)ltemp].blockthreshold;
+            (*pretvar)->dblVal = (DOUBLE)ent->defense[obor_attack_from_native(ltemp)].blockthreshold;
             break;
         }
         case _ep_defense_blocktype:
         {
-            (*pretvar)->dblVal = (DOUBLE)ent->defense[(LONG)ltemp].blocktype;
+            (*pretvar)->dblVal = (DOUBLE)ent->defense[obor_attack_from_native(ltemp)].blocktype;
             break;
         }
         case _ep_defense_knockdown:
         {
-            (*pretvar)->dblVal = (DOUBLE)ent->defense[(LONG)ltemp].knockdown;
+            (*pretvar)->dblVal = (DOUBLE)ent->defense[obor_attack_from_native(ltemp)].knockdown;
             break;
         }
         case _ep_defense_pain:
         {
-            (*pretvar)->dblVal = (DOUBLE)ent->defense[(LONG)ltemp].pain;
+            (*pretvar)->dblVal = (DOUBLE)ent->defense[obor_attack_from_native(ltemp)].pain;
             break;
         }
         default:
@@ -3896,7 +4360,7 @@ HRESULT openbor_getentityproperty(ScriptVariant **varlist , ScriptVariant **pret
         case _ep_dot_type:
         {
             ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
-            (*pretvar)->lVal = (LONG)ent->dot_atk[i];
+            (*pretvar)->lVal = obor_attack_to_native(ent->dot_atk[i]);
             break;
         }
         case _ep_dot_owner:
@@ -3922,9 +4386,9 @@ HRESULT openbor_getentityproperty(ScriptVariant **varlist , ScriptVariant **pret
 
         ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
 
-        if(ent->modeldata.animation[ltemp]->dropframe)
+        if(ent->modeldata.animation[obor_animation_from_native(ltemp)]->dropframe)
         {
-            (*pretvar)->lVal = ent->modeldata.animation[ltemp]->dropframe->frame;
+            (*pretvar)->lVal = ent->modeldata.animation[obor_animation_from_native(ltemp)]->dropframe->frame;
         }
 
         break;
@@ -4037,8 +4501,10 @@ HRESULT openbor_getentityproperty(ScriptVariant **varlist , ScriptVariant **pret
             *pretvar = NULL;
             return E_FAIL;
         }
-        ltemp	= varlist[2]->lVal;												//Subproperty.
-        i		= varlist[3]->lVal;												//Animation.
+        ltemp	= varlist[2]->lVal;
+												//Subproperty.
+        i		= varlist[3]->lVal;
+        i = obor_animation_from_native(i);												//Animation.
 
         if(!validanim(ent, i))													//Verify animation.
         {
@@ -4460,8 +4926,10 @@ HRESULT openbor_getentityproperty(ScriptVariant **varlist , ScriptVariant **pret
             *pretvar = NULL;
             return E_FAIL;
         }
-        ltemp	= varlist[2]->lVal;												//Subproperty.
-        i		= varlist[3]->lVal;												//Animation.
+        ltemp	= varlist[2]->lVal;
+												//Subproperty.
+        i		= varlist[3]->lVal;
+        i = obor_animation_from_native(i);												//Animation.
 
         if(!validanim(ent, i))													//Verify animation.
         {
@@ -4756,7 +5224,7 @@ HRESULT openbor_getentityproperty(ScriptVariant **varlist , ScriptVariant **pret
     case _ep_nextanim:
     {
         ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
-        (*pretvar)->lVal = (LONG)ent->nextanim;
+        (*pretvar)->lVal = obor_animation_to_native(ent->nextanim);
         break;
     }
     case _ep_nextmove:
@@ -4831,7 +5299,7 @@ HRESULT openbor_getentityproperty(ScriptVariant **varlist , ScriptVariant **pret
             }
         }
         ScriptVariant_ChangeType(*pretvar, VT_DECIMAL);
-        (*pretvar)->dblVal = (DOUBLE)ent->offense_factors[(LONG)ltemp];
+        (*pretvar)->dblVal = (DOUBLE)ent->offense_factors[obor_attack_from_native(ltemp)];
         break;
     }
     case _ep_offscreen_noatk_factor:
@@ -4922,8 +5390,10 @@ HRESULT openbor_getentityproperty(ScriptVariant **varlist , ScriptVariant **pret
             *pretvar = NULL;
             return E_FAIL;
         }
-        ltemp	= varlist[2]->lVal;												//Subproperty.
-        i		= varlist[3]->lVal;												//Animation.
+        ltemp	= varlist[2]->lVal;
+												//Subproperty.
+        i		= varlist[3]->lVal;
+        i = obor_animation_from_native(i);												//Animation.
 
         if(!validanim(ent, i))													//Verify animation.
         {
@@ -5076,7 +5546,7 @@ HRESULT openbor_getentityproperty(ScriptVariant **varlist , ScriptVariant **pret
     case _ep_spawntype:
     {
         ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
-        (*pretvar)->lVal = (LONG)ent->spawntype;
+        (*pretvar)->lVal = obor_spawn_type_to_native(ent->spawntype);
         break;
     }
     case _ep_speed:
@@ -5111,12 +5581,12 @@ HRESULT openbor_getentityproperty(ScriptVariant **varlist , ScriptVariant **pret
         Request from animation or frame that doesn't exist = shutdown.
         Let's be more user friendly then that; return empty so modder can evaluate
         and take action accordingly.*/
-        if(!validanim(ent, arg->lVal) || !(ent->modeldata.animation[arg->lVal]->numframes >= arg1->lVal))
+        if(!validanim(ent, obor_animation_from_native(arg->lVal)) || !(ent->modeldata.animation[obor_animation_from_native(arg->lVal)]->numframes >= arg1->lVal))
         {
             break;
         }
 
-        i = ent->modeldata.animation[arg->lVal]->sprite[arg1->lVal];
+        i = ent->modeldata.animation[obor_animation_from_native(arg->lVal)]->sprite[arg1->lVal];
 
         switch(ltemp)
         {
@@ -5297,7 +5767,7 @@ HRESULT openbor_getentityproperty(ScriptVariant **varlist , ScriptVariant **pret
     case _ep_subtype:
     {
         ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
-        (*pretvar)->lVal = (LONG)ent->modeldata.subtype;
+        (*pretvar)->lVal = obor_subtype_to_native(ent->modeldata.subtype);
         break;
     }
     case _ep_thold:
@@ -5520,7 +5990,7 @@ HRESULT openbor_changeentityproperty(ScriptVariant **varlist , ScriptVariant **p
         goto changeentityproperty_error;
     }
 
-    propind = varlist[1]->lVal;
+    propind = obor_entityproperty(varlist[1]->lVal);
 
     switch(propind)
     {
@@ -5563,7 +6033,7 @@ HRESULT openbor_changeentityproperty(ScriptVariant **varlist , ScriptVariant **p
                 ent->dead = (LONG)ltemp;
                 break;
             case _ep_aiflag_jumpid:
-                ent->jump.animation_id = (LONG)ltemp;
+                ent->jump.animation_id = obor_animation_from_native(ltemp);
                 break;
             case _ep_aiflag_jumping:
                 ent->jumping = (LONG)ltemp;
@@ -5772,6 +6242,38 @@ HRESULT openbor_changeentityproperty(ScriptVariant **varlist , ScriptVariant **p
         }
         break;
     }
+    case _ep_boomerang:
+    {
+        if(varlist[2]->vt != VT_INTEGER)
+        {
+            if(varlist[2]->vt != VT_STR)
+            {
+                printf("You must give a string value for boomerang name.\n");
+            }
+            goto changeentityproperty_error;
+        }
+        if(paramCount < 4)
+        {
+            break;
+        }
+
+        if(SUCCEEDED(ScriptVariant_DecimalValue(varlist[3], &dbltemp)))
+        {
+            switch(varlist[2]->lVal)
+            {
+            case _ep_boomerang_acceleration:
+                ent->modeldata.boomerang_prop.acceleration = (DOUBLE)dbltemp;
+                break;
+            case _ep_boomerang_hdistance:
+                ent->modeldata.boomerang_prop.hdistance = (DOUBLE)dbltemp;
+                break;
+            default:
+                printf("Unknown boomerang.\n");
+                goto changeentityproperty_error;
+            }
+        }
+        break;
+    }
     case _ep_boss:
     {
         if(SUCCEEDED(ScriptVariant_IntegerValue(varlist[2], &ltemp)))
@@ -5890,32 +6392,32 @@ HRESULT openbor_changeentityproperty(ScriptVariant **varlist , ScriptVariant **p
                      SUCCEEDED(ScriptVariant_DecimalValue(varlist[3], &dbltemp)))
            ))
         {
-            ent->defense[(LONG)ltemp].factor = (DOUBLE)dbltemp;
+            ent->defense[obor_attack_from_native(ltemp)].factor = (DOUBLE)dbltemp;
         }
 
         if(paramCount >= 5 && ltemp2 && (ltemp2 = SUCCEEDED(ScriptVariant_DecimalValue(varlist[4], &dbltemp))))
         {
-            ent->defense[(LONG)ltemp].pain = (DOUBLE)dbltemp;
+            ent->defense[obor_attack_from_native(ltemp)].pain = (DOUBLE)dbltemp;
         }
         if(paramCount >= 6 && ltemp2 && (ltemp2 = SUCCEEDED(ScriptVariant_DecimalValue(varlist[5], &dbltemp))))
         {
-            ent->defense[(LONG)ltemp].knockdown = (DOUBLE)dbltemp;
+            ent->defense[obor_attack_from_native(ltemp)].knockdown = (DOUBLE)dbltemp;
         }
         if(paramCount >= 7 && ltemp2 && (ltemp2 = SUCCEEDED(ScriptVariant_DecimalValue(varlist[6], &dbltemp))))
         {
-            ent->defense[(LONG)ltemp].blockpower = (DOUBLE)dbltemp;
+            ent->defense[obor_attack_from_native(ltemp)].blockpower = (DOUBLE)dbltemp;
         }
         if(paramCount >= 8 && ltemp2 && (ltemp2 = SUCCEEDED(ScriptVariant_DecimalValue(varlist[7], &dbltemp))))
         {
-            ent->defense[(LONG)ltemp].blockthreshold = (DOUBLE)dbltemp;
+            ent->defense[obor_attack_from_native(ltemp)].blockthreshold = (DOUBLE)dbltemp;
         }
         if(paramCount >= 9 && ltemp2 && (ltemp2 = SUCCEEDED(ScriptVariant_DecimalValue(varlist[8], &dbltemp))))
         {
-            ent->defense[(LONG)ltemp].blockratio = (DOUBLE)dbltemp;
+            ent->defense[obor_attack_from_native(ltemp)].blockratio = (DOUBLE)dbltemp;
         }
         if(paramCount >= 10 && ltemp2 && SUCCEEDED(ScriptVariant_DecimalValue(varlist[9], &dbltemp)))
         {
-            ent->defense[(LONG)ltemp].blocktype = dbltemp;
+            ent->defense[obor_attack_from_native(ltemp)].blocktype = dbltemp;
         }
 
         break;
@@ -5975,7 +6477,7 @@ HRESULT openbor_changeentityproperty(ScriptVariant **varlist , ScriptVariant **p
             }
             if(paramCount >= 8 && SUCCEEDED(ScriptVariant_DecimalValue(varlist[7], &dbltemp)))
             {
-                ent->dot_atk[i] = (int)dbltemp;
+                ent->dot_atk[i] = obor_attack_from_native((int)dbltemp);
             }
             if(paramCount >= 9)
             {
@@ -6067,7 +6569,7 @@ HRESULT openbor_changeentityproperty(ScriptVariant **varlist , ScriptVariant **p
             goto changeentityproperty_error;
         }
 
-        i = (LONG)ltemp;
+        i = obor_animation_from_native(ltemp);
 
         if(!validanim(ent, i))
         {
@@ -6646,7 +7148,7 @@ HRESULT openbor_changeentityproperty(ScriptVariant **varlist , ScriptVariant **p
     {
         if(SUCCEEDED(ScriptVariant_IntegerValue(varlist[2], &ltemp)))
         {
-            ent->nextanim = (LONG)ltemp;
+            ent->nextanim = obor_animation_from_native(ltemp);
         }
         break;
     }
@@ -6737,7 +7239,7 @@ HRESULT openbor_changeentityproperty(ScriptVariant **varlist , ScriptVariant **p
                 ltemp < (LONG)MAX_ATKS && ltemp >= (LONG)0 &&
                 SUCCEEDED(ScriptVariant_DecimalValue(varlist[3], &dbltemp)))
         {
-            ent->offense_factors[(LONG)ltemp] = (DOUBLE)dbltemp;
+            ent->offense_factors[obor_attack_from_native(ltemp)] = (DOUBLE)dbltemp;
         }
         break;
     }
@@ -6986,12 +7488,12 @@ HRESULT openbor_changeentityproperty(ScriptVariant **varlist , ScriptVariant **p
         /*
         Failsafe checks. Any attempt to access a sprite property on invalid frame would cause instant shutdown.
         */
-        if(!validanim(ent, varlist[3]->lVal) || !(ent->modeldata.animation[varlist[3]->lVal]->numframes >= varlist[4]->lVal) || paramCount < 5)
+        if(!validanim(ent, obor_animation_from_native(varlist[3]->lVal)) || !(ent->modeldata.animation[obor_animation_from_native(varlist[3]->lVal)]->numframes >= varlist[4]->lVal) || paramCount < 5)
         {
             break;
         }
 
-        i = ent->modeldata.animation[varlist[3]->lVal]->sprite[varlist[4]->lVal];   //Get sprite index.
+        i = ent->modeldata.animation[obor_animation_from_native(varlist[3]->lVal)]->sprite[varlist[4]->lVal];   //Get sprite index.
 
         switch(ltemp)
         {
@@ -7215,7 +7717,7 @@ HRESULT openbor_changeentityproperty(ScriptVariant **varlist , ScriptVariant **p
     {
         if(SUCCEEDED(ScriptVariant_IntegerValue(varlist[2], &ltemp)))
         {
-            ent->modeldata.subtype = (LONG)ltemp;
+            ent->modeldata.subtype = obor_subtype_from_native(ltemp);
         }
         break;
     }
@@ -8404,7 +8906,7 @@ int getsyspropertybyindex(ScriptVariant *var, int index)
 
         if(lasthit.attack)
         {
-            var->lVal = lasthit.attack->attack_type;
+            var->lVal = obor_attack_to_native(lasthit.attack->attack_type);
         }
 
         break;
@@ -8724,11 +9226,11 @@ int getsyspropertybyindex(ScriptVariant *var, int index)
         var->lVal = level ? level->waiting : 0;
     case _sv_maxattacktypes:
         ScriptVariant_ChangeType(var, VT_INTEGER);
-        var->lVal = max_attack_types;
+        var->lVal = obor_attack_to_native(max_attack_types);
         break;
     case _sv_maxanimations:
         ScriptVariant_ChangeType(var, VT_INTEGER);
-        var->lVal = max_animations;
+        var->lVal = obor_animation_to_native(max_animations);
         break;
     case _sv_ticks:
         ScriptVariant_ChangeType(var, VT_INTEGER);
@@ -8924,7 +9426,7 @@ int changesyspropertybyindex(int index, ScriptVariant *value)
     case _sv_lasthitt:
         if(SUCCEEDED(ScriptVariant_IntegerValue(value, &ltemp)))
         {
-            lasthit.attack->attack_type = (LONG)ltemp;
+            lasthit.attack->attack_type = obor_attack_from_native(ltemp);
         }
         break;
     case _sv_smartbomber:
@@ -10121,7 +10623,7 @@ HRESULT openbor_damageentity(ScriptVariant **varlist , ScriptVariant **pretvar, 
             atk.dropv.x = (float)DEFAULT_ATK_DROPV_X;
             atk.dropv.z = (float)DEFAULT_ATK_DROPV_Z;
         }
-        atk.attack_type = type;
+        atk.attack_type = obor_attack_from_native(type);
     }
     else
     {
@@ -10217,7 +10719,7 @@ HRESULT openbor_getcomputeddamage(ScriptVariant **varlist , ScriptVariant **pret
         atk.dropv.x = (float)DEFAULT_ATK_DROPV_X;
         atk.dropv.z = (float)DEFAULT_ATK_DROPV_Z;
     }
-    atk.attack_type = type;
+    atk.attack_type = obor_attack_from_native(type);
 
     temp = self;
     self = defender;
@@ -10359,6 +10861,7 @@ HRESULT openbor_findtarget(ScriptVariant **varlist , ScriptVariant **pretvar, in
     {
         return E_FAIL;
     }
+    if(paramCount > 1) anim = obor_animation_from_native(anim);
     tempself = self;
     self = ent;
     target = normal_find_target((int)anim, i);
@@ -10409,6 +10912,8 @@ HRESULT openbor_checkrange(ScriptVariant **varlist , ScriptVariant **pretvar, in
     {
         ani = ent->animnum;
     }
+
+    if(paramCount > 2) ani = obor_animation_from_native(ani);
 
     if(ani < 0 || ani >= max_animations)
     {
@@ -14054,6 +14559,7 @@ HRESULT openbor_performattack(ScriptVariant **varlist , ScriptVariant **pretvar,
     {
         goto performattack_error;
     }
+    if(paramCount > 1) anim = obor_animation_from_native(anim);
     if(paramCount > 2 && FAILED(ScriptVariant_IntegerValue(varlist[2], &resetable)))
     {
         goto performattack_error;
@@ -14123,6 +14629,7 @@ HRESULT openbor_setidle(ScriptVariant **varlist , ScriptVariant **pretvar, int p
     {
         goto setidle_error;
     }
+    if(paramCount > 1) anim = obor_animation_from_native(anim);
     if(paramCount > 2 && FAILED(ScriptVariant_IntegerValue(varlist[2], &resetable)))
     {
         goto setidle_error;

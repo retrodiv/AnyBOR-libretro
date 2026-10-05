@@ -1,10 +1,10 @@
-/* AnyBOR modification record: 2026-09-29.
+/* AnyBOR modification record: 2026-10-05.
  * Port maintained by retrodiv <retrodiv@proton.me>.
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
  * Upstream code retains its original license and notices.
- * Map legacy binding properties and the 6412 axis-handle properties to one
- * binding layout according to the logical profile.
+ * Map native legacy, 6412 and 6510 binding property names and IDs to the
+ * shared layout.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/6391.md
  * at the source repository root. Original notices follow below.
@@ -64,6 +64,16 @@ int mapstrings_binding(ScriptVariant **varlist, int paramCount)
     }
 
     // See macro - will return 0 on fail.
+    if(obor_profile_build == 6510)
+    {
+        static const char *names[] = {
+            "direction", "matching", "offset", "overriding",
+            "positioning", "sort_id", "tag", "target"
+        };
+        MAPSTRINGS(varlist[ARG_PROPERTY], names, 8,
+                   "Property name '%s' is not supported by binding.\n");
+    }
+    else
     if(obor_profile_build == 6412)
     {
         MAPSTRINGS(varlist[ARG_PROPERTY], proplist6412, 6,
@@ -89,6 +99,15 @@ static e_binding_properties profile_binding_property(LONG property)
         _BINDING_ANIMATION, _BINDING_DIRECTION, _BINDING_ENABLE,
         _BINDING_OFFSET, _BINDING_SORT_ID, _BINDING_TARGET
     };
+    if(obor_profile_build == 6510)
+    {
+        static const e_binding_properties modern6510[] = {
+            _BINDING_DIRECTION, _BINDING_ANIMATION, _BINDING_OFFSET,
+            _BINDING_OVERRIDING, _BINDING_ENABLE, _BINDING_SORT_ID,
+            _BINDING_TAG, _BINDING_TARGET
+        };
+        return property >= 0 && property < 8 ? modern6510[property] : _BINDING_END;
+    }
     if(obor_profile_build == 6412)
         return property >= 0 && property < 6 ? modern[property] : _BINDING_END;
     return property >= 0 && property < _BINDING_LEGACY_END
@@ -219,6 +238,20 @@ HRESULT openbor_get_binding_property(ScriptVariant **varlist , ScriptVariant **p
 
             break;
 
+
+        case _BINDING_OVERRIDING:
+
+            ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
+            (*pretvar)->lVal = (LONG)handle->overriding;
+
+            break;
+
+        case _BINDING_TAG:
+
+            ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
+            (*pretvar)->lVal = (LONG)handle->tag;
+
+            break;
         case _BINDING_TARGET:
 
             // If there is no entity bound, we just
@@ -388,6 +421,24 @@ HRESULT openbor_set_binding_property(ScriptVariant **varlist, ScriptVariant **pr
 
             break;
 
+
+    case _BINDING_OVERRIDING:
+
+		if (SUCCEEDED(ScriptVariant_IntegerValue(varlist[ARG_VALUE], &temp_int)))
+		{
+			handle->overriding = temp_int;
+		}
+
+		break;
+
+    case _BINDING_TAG:
+
+		if (SUCCEEDED(ScriptVariant_IntegerValue(varlist[ARG_VALUE], &temp_int)))
+		{
+			handle->tag = temp_int;
+		}
+
+		break;
         case _BINDING_TARGET:
 
             handle->ent = (entity *)varlist[ARG_VALUE]->ptrVal;

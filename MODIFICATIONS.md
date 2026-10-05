@@ -3,7 +3,7 @@
 Record updated: **2026-09-30**. Port maintainer: **retrodiv**
 (<retrodiv@proton.me>).
 
-AnyBOR offers nine selectable OpenBOR engines with a shared libretro port.
+AnyBOR offers eleven selectable OpenBOR engines with a shared libretro port.
 The original engine work is credited to Senile Team, OpenBOR Team and the
 contributors named in the retained sources. The port's own notices identify
 its maintained code. Component terms remain as recorded in
@@ -199,7 +199,7 @@ for every animation frame whose collision collection uses only a few slots.
 
 ## Animation memory layout
 
-All nine selectable engines initially allocate each model's animation pointer table for
+All eleven selectable engines initially allocate each model's animation pointer table for
 the built-in animation range and grow it in bounded blocks only when authored
 content assigns a higher animation index. Lookup, sprite-cache, model-copy,
 normalization and cleanup paths use the model's recorded capacity. The global
@@ -209,7 +209,7 @@ largest table for every loaded model.
 
 ## Empty player slot safety
 
-All nine selectable engines now require both remaining lives and a selected model name
+All eleven selectable engines now require both remaining lives and a selected model name
 before automatically spawning a player at the start of a level. Game scripts
 may assign lives to an empty multiplayer slot before that player joins; the
 previous condition then tried to spawn an unnamed model and aborted the level.
@@ -217,7 +217,7 @@ The empty slot remains available through the engines' existing join path. Each e
 
 ## Active content PAK aliases
 
-All nine selectable engines treat a missing basename-only `Paks/*.pak` file read
+All eleven selectable engines treat a missing basename-only `Paks/*.pak` file read
 as a probe of the active, already validated content archive. Some mods check
 the archive name they were originally distributed with from a loading script;
 a frontend may legitimately rename that file when organizing a library. The
@@ -401,7 +401,19 @@ for engine 6412. Engine 6391 retains its scalar binding properties
 and numeric property IDs. Engine 6412 exposes axis-handle binding
 properties, owner and opponent entity properties, binding animation flags,
 the corrected Y-axis setter, frame-kill binding behavior, and `unload_model`.
-Each engine has its own save directory.
+Each profile has its own save directory.
+
+Patches `97-logical-6330-compat.patch` and `98-logical-6510-compat.patch`
+adapt the earlier [6330 source](https://github.com/DCurrent/openbor/commit/4b1705fa37457ab38bc5d0fcc561242019588e32)
+and later [6510 source](https://github.com/DCurrent/openbor/commit/ecce29b95700468aa3401915625dac2d56e4ca60)
+inside the same 6391 engine object. Runtime profile branches restore 6330's
+boomerang model commands, projectile movement and catching, earlier juggle
+condition and settings layout. The 6510 branches supply binding matching,
+positioning, tags, overrides and script events, revised blocking and flashes,
+and the distinct boss-death attack type. Native animation, attack, entity,
+subtype and spawn IDs are translated at script boundaries so adding shared
+selectors does not change the public numbering of older profiles. The earlier
+collision scripting entry points remain unavailable in profile 6330.
 
 ## Shared port and frontend
 
@@ -411,7 +423,7 @@ in their respective files.
 
 | Capability or change | Behaviour and current implementation |
 |---|---|
-| Nine selectable engines | Core Options offers 3400, 3842, 4086, 4432, 4453, 6391, 6412, 7533 and 8023, plus Auto. Each selection retains its own compatibility behavior and save directory. [`obor_abi.h`](src/glue/obor_abi.h), [`obor_engines.h`](src/glue/obor_engines.h), [`Makefile.libretro`](src/engines/6391/Makefile.libretro), [`tools/build.py`](tools/build.py). |
+| Eleven selectable engines | Core Options offers 3400, 3842, 4086, 4432, 4453, 6330, 6391, 6412, 6510, 7533 and 8023, plus Auto. Each selection retains its own compatibility behavior and save directory. [`obor_abi.h`](src/glue/obor_abi.h), [`obor_engines.h`](src/glue/obor_engines.h), [`Makefile.libretro`](src/engines/6391/Makefile.libretro), [`tools/build.py`](tools/build.py). |
 | Automatic engine selection | An explicit core option takes precedence; otherwise inspect legacy script API requirements, filename tags, nearby executables as data, and PAK content tokens, then use the pinned fallback. Selection is rerun on Reset. [`libretro.cpp`](src/glue/libretro.cpp), `decide_engine`, `pick_anchor`, `build_from_content`; [`obor_markers.h`](src/glue/obor_markers.h). |
 | Frontend-owned frame delivery | Run the engine main loop on a libco coroutine, yield at video submission, and advance an emulated microsecond clock. Sleep/input-wait paths also yield so frontend input remains live. [`libretroport.c`](src/port/libretro/libretroport.c), [`libretroport.h`](src/port/libretro/libretroport.h), [`timer.c`](src/port/libretro/timer.c). |
 | Video and audio backends | Convert engine video to XRGB8888, publish geometry, and pull engine audio through the frontend. [`video.c`](src/port/libretro/video.c), [`video.h`](src/port/libretro/video.h), [`vga.h`](src/port/libretro/vga.h), [`sblaster.c`](src/port/libretro/sblaster.c), [`sblaster.h`](src/port/libretro/sblaster.h). |

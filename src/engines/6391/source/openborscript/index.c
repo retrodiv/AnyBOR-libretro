@@ -1,9 +1,10 @@
-/* AnyBOR modification record: 2026-09-29.
+/* AnyBOR modification record: 2026-10-05.
  * Port maintained by retrodiv <retrodiv@proton.me>.
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
  * Upstream code retains its original license and notices.
- * Register the upstream 6412 unload_model function only for profile 6412.
+ * Register native functions according to each logical profile's upstream
+ * API.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/6391.md
  * at the source repository root. Original notices follow below.
@@ -1163,12 +1164,16 @@ void Script_LoadSystemFunctions()
                      (void *)openbor_set_body_collision_property, "set_body_collision_property");
 
     // Entity collision (ebox) properties.
+    if(obor_profile_build != 6330)
     List_InsertAfter(&theFunctionList,
                      (void *)openbor_get_entity_collision_collection, "get_entity_collision_collection");
+    if(obor_profile_build != 6330)
     List_InsertAfter(&theFunctionList,
                      (void *)openbor_get_entity_collision_instance, "get_entity_collision_instance");
+    if(obor_profile_build != 6330)
     List_InsertAfter(&theFunctionList,
                      (void *)openbor_get_entity_collision_property, "get_entity_collision_property");
+    if(obor_profile_build != 6330)
     List_InsertAfter(&theFunctionList,
                      (void *)openbor_set_entity_collision_property, "set_entity_collision_property");
 
@@ -1391,7 +1396,7 @@ void Script_LoadSystemFunctions()
                      (void *)openbor_getentity, "getentity");
     List_InsertAfter(&theFunctionList,
                      (void *)openbor_loadmodel, "loadmodel");
-    if(obor_profile_build == 6412)
+    if((obor_profile_build == 6412 || obor_profile_build == 6510))
         List_InsertAfter(&theFunctionList,
                          (void *)openbor_unload_model, "unload_model");
     List_InsertAfter(&theFunctionList,

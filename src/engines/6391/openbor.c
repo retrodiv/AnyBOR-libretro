@@ -1,17 +1,18 @@
-/* AnyBOR modification record: 2026-09-29.
+/* AnyBOR modification record: 2026-10-05.
  * Port maintained by retrodiv <retrodiv@proton.me>.
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
  * Upstream code retains its original license and notices.
  * Apply the port's engine corrections and select the PC video configuration
- * on macOS. Select the upstream 6412 frame-kill binding behavior for its
- * logical profile. Leave multiplayer slots without a selected model
- * available to join even if game scripts preassign lives to them. Let a
- * missing basename-only PAK self-check read the active frontend content
- * after it has been validated and prepared. Allocate each model's animation
- * pointer table through the highest animation index that model uses, and
- * bound cache, copy and cleanup paths to that capacity. Resize repeated
- * weapon lists and detach borrowed lists before replacing their entries.
+ * on macOS. Select native 6330 boomerang, collision and settings behavior,
+ * 6412 frame-kill binding behavior, and 6510 binding, blocking and attack
+ * behavior. Leave multiplayer slots without a selected model available to
+ * join even if game scripts preassign lives to them. Let a missing basename-
+ * only PAK self-check read the active frontend content after it has been
+ * validated and prepared. Allocate each model's animation pointer table
+ * through the highest animation index that model uses, and bound cache, copy
+ * and cleanup paths to that capacity. Resize repeated weapon lists and
+ * detach borrowed lists before replacing their entries.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/6391.md
  * at the source repository root. Original notices follow below.
@@ -31,6 +32,7 @@
 /////////////////////////////////////////////////////////////////////////////
 
 #include "openbor.h"
+#include "source/openborscript/profile_ids.h"
 #include "commands.h"
 #include "models.h"
 #include "translation.h"
@@ -1359,13 +1361,13 @@ void execute_animation_script(entity *ent)
         tempvar.ptrVal = (VOID *)ent;
         Script_Set_Local_Variant(cs, "self",    &tempvar);
         ScriptVariant_ChangeType(&tempvar, VT_INTEGER);
-        tempvar.lVal = (LONG)ent->animnum;
+        tempvar.lVal = obor_animation_to_native(ent->animnum);
         Script_Set_Local_Variant(cs, "animnum", &tempvar);
         ScriptVariant_ChangeType(&tempvar, VT_INTEGER);
         tempvar.lVal = (LONG)ent->animpos;
         Script_Set_Local_Variant(cs, "frame",   &tempvar);
         ScriptVariant_ChangeType(&tempvar, VT_INTEGER);
-        tempvar.lVal = (LONG)ent->animation->index;
+        tempvar.lVal = obor_animation_to_native(ent->animation->index);
         Script_Set_Local_Variant(cs, "animhandle",   &tempvar);
         if(is1)
         {
@@ -1413,7 +1415,7 @@ void execute_takedamage_script(entity *ent, entity *other, s_collision_attack *a
         tempvar.lVal = (LONG)attack->attack_drop;
         Script_Set_Local_Variant(cs, "drop",        &tempvar);
 
-        tempvar.lVal = (LONG)attack->attack_type;
+        tempvar.lVal = obor_attack_to_native(attack->attack_type);
         Script_Set_Local_Variant(cs, "attacktype",  &tempvar);
 
         tempvar.lVal = (LONG)attack->no_block;
@@ -1459,7 +1461,7 @@ void execute_onpain_script(entity *ent, int iType, int iReset)
         ScriptVariant_ChangeType(&tempvar, VT_PTR);
         tempvar.ptrVal = (VOID *)ent;
         Script_Set_Local_Variant(cs, "self",        &tempvar);
-        tempvar.lVal = (LONG)iType;
+        tempvar.lVal = obor_attack_to_native(iType);
         Script_Set_Local_Variant(cs, "attacktype",   &tempvar);
         tempvar.lVal = (LONG)iReset;
         Script_Set_Local_Variant(cs, "reset",       &tempvar);
@@ -1494,7 +1496,7 @@ void execute_onfall_script(entity *ent, entity *other, s_collision_attack *attac
         tempvar.lVal = (LONG)attack->attack_drop;
         Script_Set_Local_Variant(cs, "drop",        &tempvar);
 
-        tempvar.lVal = (LONG)attack->attack_type;
+        tempvar.lVal = obor_attack_to_native(attack->attack_type);
         Script_Set_Local_Variant(cs, "attacktype",  &tempvar);
 
         tempvar.lVal = (LONG)attack->no_block;
@@ -1827,7 +1829,7 @@ void execute_ondeath_script(entity *ent, entity *other, s_collision_attack *atta
         tempvar.lVal = (LONG)attack->attack_drop;
         Script_Set_Local_Variant(cs, "drop",        &tempvar);
 
-        tempvar.lVal = (LONG)attack->attack_type;
+        tempvar.lVal = obor_attack_to_native(attack->attack_type);
         Script_Set_Local_Variant(cs, "attacktype",  &tempvar);
 
         tempvar.lVal = (LONG)attack->no_block;
@@ -1902,7 +1904,7 @@ void execute_didblock_script(entity *ent, entity *other, s_collision_attack *att
         tempvar.lVal = (LONG)attack->attack_drop;
         Script_Set_Local_Variant(cs, "drop",        &tempvar);
 
-        tempvar.lVal = (LONG)attack->attack_type;
+        tempvar.lVal = obor_attack_to_native(attack->attack_type);
         Script_Set_Local_Variant(cs, "attacktype",  &tempvar);
 
         tempvar.lVal = (LONG)attack->no_block;
@@ -1958,7 +1960,7 @@ void execute_ondoattack_script(entity *ent, entity *other, s_collision_attack *a
         tempvar.lVal = (LONG)attack->attack_drop;
         Script_Set_Local_Variant(cs, "drop",        &tempvar);
 
-        tempvar.lVal = (LONG)attack->attack_type;
+        tempvar.lVal = obor_attack_to_native(attack->attack_type);
         Script_Set_Local_Variant(cs, "attacktype",  &tempvar);
 
         tempvar.lVal = (LONG)attack->no_block;
@@ -2055,7 +2057,7 @@ static void _execute_didhit_script(Script *cs, entity *ent, entity *other, s_col
     tempvar.lVal = (LONG)attack->attack_drop;
     Script_Set_Local_Variant(cs, "drop",        &tempvar);
 
-    tempvar.lVal = (LONG)attack->attack_type;
+    tempvar.lVal = obor_attack_to_native(attack->attack_type);
     Script_Set_Local_Variant(cs, "attacktype",  &tempvar);
 
     tempvar.lVal = (LONG)attack->no_block;
@@ -2509,6 +2511,33 @@ void clearsettings()
 }
 
 
+static void obor_profile_read_settings(FILE *file)
+{
+    size_t offset = offsetof(s_savedata, debug_collision_entity);
+    if(obor_profile_build != 6330)
+    {
+        fread(&savedata, 1, sizeof(savedata), file);
+        return;
+    }
+    fread(&savedata, 1, offset, file);
+    savedata.debug_collision_entity = 0;
+    fread((char *)&savedata + offset + sizeof(int), 1,
+          sizeof(savedata) - offset - sizeof(int), file);
+}
+
+static void obor_profile_write_settings(FILE *file)
+{
+    size_t offset = offsetof(s_savedata, debug_collision_entity);
+    if(obor_profile_build != 6330)
+    {
+        fwrite(&savedata, 1, sizeof(savedata), file);
+        return;
+    }
+    fwrite(&savedata, 1, offset, file);
+    fwrite((char *)&savedata + offset + sizeof(int), 1,
+           sizeof(savedata) - offset - sizeof(int), file);
+}
+
 void savesettings()
 {
 #ifndef DC
@@ -2523,7 +2552,7 @@ void savesettings()
     {
         return;
     }
-    fwrite(&savedata, 1, sizeof(savedata), handle);
+    obor_profile_write_settings(handle);
     fclose(handle);
 #endif
 }
@@ -2540,7 +2569,7 @@ void saveasdefault()
     {
         return;
     }
-    fwrite(&savedata, 1, sizeof(savedata), handle);
+    obor_profile_write_settings(handle);
     fclose(handle);
 #endif
 }
@@ -2566,7 +2595,7 @@ void loadsettings()
     {
         return;
     }
-    fread(&savedata, 1, sizeof(savedata), handle);
+    obor_profile_read_settings(handle);
     fclose(handle);
     if(savedata.compatibleversion != COMPATIBLEVERSION)
     {
@@ -2590,7 +2619,7 @@ void loadfromdefault()
     {
         return;
     }
-    fread(&savedata, 1, sizeof(savedata), handle);
+    obor_profile_read_settings(handle);
     fclose(handle);
     if(savedata.compatibleversion != COMPATIBLEVERSION)
     {
@@ -5831,7 +5860,7 @@ int addframe(s_anim             *a,
     }
 
     // Allocate entity boxes.
-    if((entity_coords->width - entity_coords->x)
+    if(obor_profile_build != 6330 && (entity_coords->width - entity_coords->x)
         && (entity_coords->height - entity_coords->y))
     {
         if(!a->collision_entity)
@@ -6191,7 +6220,7 @@ static int translate_attack_type(char *command)
         {
             tempInt = MAX_ATKS - STA_ATKS + 1;
         }
-        atk_id = tempInt + STA_ATKS - 1;
+        atk_id = obor_attack_from_native(tempInt + obor_attack_to_native(MAX_ATKS) - 11);
         break;
     default:
         break;
@@ -6249,6 +6278,15 @@ static int translate_ani_id(const char *value, s_model *newchar, s_anim *newanim
     {
         ani_id = ANI_BACKRUN;
     }
+    else if(obor_profile_build == 6330 && stricmp(value, "getboomerang") == 0)
+    {
+        ani_id = ANI_GETBOOMERANG;
+    }
+    else if(obor_profile_build == 6330 && stricmp(value, "getboomeranginair") == 0)
+    {
+        ani_id = ANI_GETBOOMERANGINAIR;
+    }
+
     else if(starts_with_num(value, "up"))
     {
         get_tail_number(tempInt, value, "up");
@@ -6330,7 +6368,7 @@ static int translate_ani_id(const char *value, s_model *newchar, s_anim *newanim
             {
                 tempInt = MAX_ATKS - STA_ATKS + 1;
             }
-            ani_id = animpains[tempInt + STA_ATKS - 1];
+            ani_id = animpains[obor_attack_from_native(tempInt + obor_attack_to_native(MAX_ATKS) - 11)];
         }
     }
     else if(starts_with_num(value, "backpain"))
@@ -6382,7 +6420,7 @@ static int translate_ani_id(const char *value, s_model *newchar, s_anim *newanim
             {
                 tempInt = MAX_ATKS - STA_ATKS + 1;
             }
-            ani_id = animbackpains[tempInt + STA_ATKS - 1];
+            ani_id = animbackpains[obor_attack_from_native(tempInt + obor_attack_to_native(MAX_ATKS) - 11)];
         }
     }
     else if(stricmp(value, "spain") == 0)   // If shock attacks don't knock opponent down, play this
@@ -6450,7 +6488,7 @@ static int translate_ani_id(const char *value, s_model *newchar, s_anim *newanim
             {
                 tempInt = MAX_ATKS - STA_ATKS + 1;
             }
-            ani_id = animfalls[tempInt + STA_ATKS - 1];
+            ani_id = animfalls[obor_attack_from_native(tempInt + obor_attack_to_native(MAX_ATKS) - 11)];
         }
         newanim->bounce = 4;
     }
@@ -6503,7 +6541,7 @@ static int translate_ani_id(const char *value, s_model *newchar, s_anim *newanim
             {
                 tempInt = MAX_ATKS - STA_ATKS + 1;
             }
-            ani_id = animbackfalls[tempInt + STA_ATKS - 1];
+            ani_id = animbackfalls[obor_attack_from_native(tempInt + obor_attack_to_native(MAX_ATKS) - 11)];
         }
         newanim->bounce = 4;
     }
@@ -6576,7 +6614,7 @@ static int translate_ani_id(const char *value, s_model *newchar, s_anim *newanim
             {
                 tempInt = MAX_ATKS - STA_ATKS + 1;
             }
-            ani_id = animdies[tempInt + STA_ATKS - 1];
+            ani_id = animdies[obor_attack_from_native(tempInt + obor_attack_to_native(MAX_ATKS) - 11)];
         }
     }
     else if(starts_with_num(value, "backdeath"))
@@ -6628,7 +6666,7 @@ static int translate_ani_id(const char *value, s_model *newchar, s_anim *newanim
             {
                 tempInt = MAX_ATKS - STA_ATKS + 1;
             }
-            ani_id = animbackdies[tempInt + STA_ATKS - 1];
+            ani_id = animbackdies[obor_attack_from_native(tempInt + obor_attack_to_native(MAX_ATKS) - 11)];
         }
     }
     else if(stricmp(value, "sdie") == 0)
@@ -6720,7 +6758,7 @@ static int translate_ani_id(const char *value, s_model *newchar, s_anim *newanim
             {
                 tempInt = MAX_ATKS - STA_ATKS + 1;
             }
-            ani_id = animrises[tempInt + STA_ATKS - 1];
+            ani_id = animrises[obor_attack_from_native(tempInt + obor_attack_to_native(MAX_ATKS) - 11)];
         }
     }
     else if(starts_with_num(value, "backrise"))
@@ -6772,7 +6810,7 @@ static int translate_ani_id(const char *value, s_model *newchar, s_anim *newanim
             {
                 tempInt = MAX_ATKS - STA_ATKS + 1;
             }
-            ani_id = animbackrises[tempInt + STA_ATKS - 1];
+            ani_id = animbackrises[obor_attack_from_native(tempInt + obor_attack_to_native(MAX_ATKS) - 11)];
         }
     }
     else if(stricmp(value, "riseattackb") == 0)
@@ -6840,7 +6878,7 @@ static int translate_ani_id(const char *value, s_model *newchar, s_anim *newanim
             {
                 tempInt = MAX_ATKS - STA_ATKS + 1;
             }
-            ani_id = animriseattacks[tempInt + STA_ATKS - 1];
+            ani_id = animriseattacks[obor_attack_from_native(tempInt + obor_attack_to_native(MAX_ATKS) - 11)];
         }
     }
     else if(starts_with_num(value, "backriseattack"))
@@ -6892,7 +6930,7 @@ static int translate_ani_id(const char *value, s_model *newchar, s_anim *newanim
             {
                 tempInt = MAX_ATKS - STA_ATKS + 1;
             }
-            ani_id = animbackriseattacks[tempInt + STA_ATKS - 1];
+            ani_id = animbackriseattacks[obor_attack_from_native(tempInt + obor_attack_to_native(MAX_ATKS) - 11)];
         }
     }
     else if(stricmp(value, "select") == 0)
@@ -7259,7 +7297,7 @@ static int translate_ani_id(const char *value, s_model *newchar, s_anim *newanim
             {
                 tempInt = MAX_ATKS - STA_ATKS + 1;
             }
-            ani_id = animblkpains[tempInt + STA_ATKS - 1];
+            ani_id = animblkpains[obor_attack_from_native(tempInt + obor_attack_to_native(MAX_ATKS) - 11)];
         }
     }
     else if(stricmp(value, "backblockpainb") == 0)
@@ -7319,7 +7357,7 @@ static int translate_ani_id(const char *value, s_model *newchar, s_anim *newanim
             {
                 tempInt = MAX_ATKS - STA_ATKS + 1;
             }
-            ani_id = animbackblkpains[tempInt + STA_ATKS - 1];
+            ani_id = animbackblkpains[obor_attack_from_native(tempInt + obor_attack_to_native(MAX_ATKS) - 11)];
         }
     }
     else if(stricmp(value, "duckattack") == 0)
@@ -7600,6 +7638,29 @@ void lcmHandleCommandSubtype(ArgList *arglist, s_model *newchar, char *filename)
         newchar->subject_to_maxz        = 1;
         newchar->no_adjust_base         = 1;
     }
+    else if(obor_profile_build == 6330 && stricmp(value, "boomerang") == 0) // 16-12-2016 Boomrang type
+    {
+        newchar->subtype = SUBTYPE_BOOMERANG;   // 16-12-2016 Boomrang type
+        if(newchar->aimove == -1)
+        {
+            newchar->aimove = 0;
+        }
+        newchar->aimove |= AIMOVE1_BOOMERANG;
+        if(!newchar->offscreenkill)
+        {
+            newchar->offscreenkill = 200;
+        }
+        newchar->subject_to_hole        = 0;
+        newchar->subject_to_gravity     = 1;
+        newchar->subject_to_basemap     = 0;
+        newchar->subject_to_wall        = 0;
+        newchar->subject_to_platform    = 0;
+        newchar->subject_to_screen      = 0;
+        newchar->subject_to_minz        = 1;
+        newchar->subject_to_maxz        = 1;
+        newchar->no_adjust_base         = 1;
+    }
+
     else if(stricmp(value, "notgrab") == 0)
     {
         newchar->subtype = SUBTYPE_NOTGRAB;
@@ -7658,7 +7719,7 @@ void lcmHandleCommandSmartbomb(ArgList *arglist, s_model *newchar, char *filenam
     }
 
     newchar->smartbomb->attack_force = atoi(GET_ARGP(1));			// Special force
-    newchar->smartbomb->attack_type = atoi(GET_ARGP(2));			// Special attack type
+    newchar->smartbomb->attack_type = obor_attack_from_native(atoi(GET_ARGP(2)));			// Special attack type
     newchar->smartbomb->attack_drop = 1; //by default
     newchar->smartbomb->dropv.y = default_model_dropv.y;
 
@@ -7866,6 +7927,10 @@ void lcmHandleCommandAimove(ArgList *arglist, s_model *newchar, int *aimoveset, 
         else if(stricmp(value, "bomb") == 0)
         {
             newchar->aimove |= AIMOVE1_BOMB;
+        }
+        else if(obor_profile_build == 6330 && stricmp(value, "boomerang") == 0)
+        {
+            newchar->aimove |= AIMOVE1_BOOMERANG;
         }
         else if(stricmp(value, "nomove") == 0)
         {
@@ -8492,6 +8557,9 @@ s_model *init_model(int cacheindex, int unload)
     newchar->dust.fall_land             = -1;
     newchar->dust.jump_land             = -1;
     newchar->dust.jump_start            = -1;
+    newchar->boomerang                  = -1;
+    newchar->boomerang_prop.acceleration = 0;
+    newchar->boomerang_prop.hdistance = 0;
     newchar->bomb                       = -1;
     newchar->star                       = -1;
     newchar->knife                      = -1;
@@ -9042,6 +9110,22 @@ s_model *load_cached_model(char *name, char *owner, char unload)
                     newchar->star = get_cached_model_index(value);
                 }
                 break;
+            case CMD_MODEL_BOOMERANG:
+                value = GET_ARG(1);
+                if(stricmp(value, "none") == 0)
+                {
+                    newchar->boomerang = -1;
+                }
+                else
+                {
+                    newchar->boomerang = get_cached_model_index(value);
+                }
+                break;
+            case CMD_MODEL_BOOMERANGVALUES:
+                newchar->boomerang_prop.acceleration = GET_FLOAT_ARG(1);
+                newchar->boomerang_prop.hdistance = GET_FLOAT_ARG(2);
+                break;
+
             case CMD_MODEL_BOMB:
             case CMD_MODEL_PLAYBOMB:
                 value = GET_ARG(1);
@@ -9196,7 +9280,7 @@ s_model *load_cached_model(char *name, char *owner, char unload)
                 break;
             case CMD_MODEL_DEFENSE:
 #define tempdef(x, y) \
-					x(stricmp(value, #y)==0)\
+					x(stricmp(value, #y)==0 && (obor_profile_build == 6510 || ATK_##y != ATK_BOSS_DEATH))\
 					{\
 						newchar->defense[ATK_##y] = defense;\
 					}
@@ -9252,7 +9336,8 @@ s_model *load_cached_model(char *name, char *owner, char unload)
                                                                 tempdef(else if, BURN)
                                                                     tempdef(else if, SHOCK)
                                                                         tempdef(else if, FREEZE)
-                                                                            tempdef(else if, ITEM)
+                                                                            tempdef(else if, BOSS_DEATH)
+                                                                                tempdef(else if, ITEM)
                                                                                 tempdef(else if, LAND)
                                                                                     tempdef(else if, PIT)
                                                                                         tempdef(else if, LIFESPAN)
@@ -9261,7 +9346,7 @@ s_model *load_cached_model(char *name, char *owner, char unload)
                                                                                                     else if(starts_with(value, "normal"))
                                                                                                     {
                                                                                                         get_tail_number(tempInt, value, "normal");
-                                                                                                        newchar->defense[tempInt + STA_ATKS - 1] = defense;
+                                                                                                        newchar->defense[obor_attack_from_native(tempInt + obor_attack_to_native(MAX_ATKS) - 11)] = defense;
                                                                                                     }
                                                                                                     else if(stricmp(value, "ALL") == 0)
                                                                                                     {
@@ -9270,7 +9355,8 @@ s_model *load_cached_model(char *name, char *owner, char unload)
                                                                                                             /*
                                                                                                             Skip the pit, lifespan, and time over attack types as these are for engine use. Nothing stops an author from defining defense settings for them individually.
                                                                                                             */
-                                                                                                            if(i != ATK_PIT && i != ATK_TIMEOVER && i != ATK_LIFESPAN && i != ATK_LOSE)
+                                                                                                            if(i != ATK_PIT && i != ATK_TIMEOVER && i != ATK_LIFESPAN && i != ATK_LOSE &&
+                                               (obor_profile_build != 6510 || (i != ATK_BOSS_DEATH && i != ATK_ITEM)))
                                                                                                             {
                                                                                                                 newchar->defense[i] = defense;
                                                                                                             }
@@ -9281,7 +9367,7 @@ s_model *load_cached_model(char *name, char *owner, char unload)
             break;
             case CMD_MODEL_OFFENSE:
 #define tempoff(x, y, z) \
-					x(stricmp(value, #y)==0)\
+					x(stricmp(value, #y)==0 && (obor_profile_build == 6510 || ATK_##y != ATK_BOSS_DEATH))\
 					{\
 					newchar->z[ATK_##y] = GET_FLOAT_ARG(2);\
 					/*newchar->z[ATK_##y] /= 100;*/\
@@ -9303,6 +9389,7 @@ s_model *load_cached_model(char *name, char *owner, char unload)
                                                                 tempoff(else if,    BURN,       offense_factors)
                                                                     tempoff(else if,    SHOCK,      offense_factors)
                                                                         tempoff(else if,    FREEZE,     offense_factors)
+                                                                            tempoff(else if,    BOSS_DEATH, offense_factors)
                                                                             tempoff(else if,    ITEM,		offense_factors)
                                                                                 tempoff(else if,    LAND,		offense_factors)
                                                                                     tempoff(else if,    PIT,		offense_factors)
@@ -9312,7 +9399,7 @@ s_model *load_cached_model(char *name, char *owner, char unload)
                                                                                                     else if(starts_with(value, "normal"))
                                                                                                     {
                                                                                                         get_tail_number(tempInt, value, "normal");
-                                                                                                        newchar->offense_factors[tempInt + STA_ATKS - 1] = GET_FLOAT_ARG(2);
+                                                                                                        newchar->offense_factors[obor_attack_from_native(tempInt + obor_attack_to_native(MAX_ATKS) - 11)] = GET_FLOAT_ARG(2);
                                                                                                     }
                                                                                                     else if(stricmp(value, "ALL") == 0)
                                                                                                     {
@@ -9320,7 +9407,8 @@ s_model *load_cached_model(char *name, char *owner, char unload)
                                                                                                         for(i = 0; i < max_attack_types; i++)
                                                                                                         {
                                                                                                             //offense hardly need those, just in case
-                                                                                                            if(i != ATK_PIT && i != ATK_TIMEOVER && i != ATK_LIFESPAN && i != ATK_LOSE)
+                                                                                                            if(i != ATK_PIT && i != ATK_TIMEOVER && i != ATK_LIFESPAN && i != ATK_LOSE &&
+                                               (obor_profile_build != 6510 || (i != ATK_BOSS_DEATH && i != ATK_ITEM)))
                                                                                                             {
                                                                                                                 newchar->offense_factors[i] = tempFloat;
                                                                                                             }
@@ -9952,6 +10040,13 @@ s_model *load_cached_model(char *name, char *owner, char unload)
             case CMD_MODEL_TAKEDAMAGESCRIPT:
                 pos += lcmHandleCommandScripts(&arglist, buf + pos, newchar->scripts->takedamage_script, "takedamagescript", filename, 1, 0);
                 break;
+            case CMD_MODEL_ON_BIND_UPDATE_OTHER_TO_SELF_SCRIPT:
+                pos += lcmHandleCommandScripts(&arglist, buf + pos, newchar->scripts->on_bind_update_other_to_self_script, "on_bind_update_other_to_self_script", filename, 1, 0);
+                break;
+            case CMD_MODEL_ON_BIND_UPDATE_SELF_TO_OTHER_SCRIPT:
+                pos += lcmHandleCommandScripts(&arglist, buf + pos, newchar->scripts->on_bind_update_self_to_other_script, "on_bind_update_self_to_other_script", filename, 1, 0);
+                break;
+
             case CMD_MODEL_ONFALLSCRIPT:
                 pos += lcmHandleCommandScripts(&arglist, buf + pos, newchar->scripts->onfall_script, "onfallscript", filename, 1, 0);
                 break;
@@ -10094,6 +10189,7 @@ s_model *load_cached_model(char *name, char *owner, char unload)
                 newanim->animhits               = 0; //OX counts hits on a per anim basis for cancels.
                 newanim->subentity              = newanim->projectile.bomb = newanim->projectile.knife =
                                                   newanim->projectile.star = newanim->projectile.flash = -1;
+                newanim->projectile.boomerang = -1;
                 newanim->quakeframe.framestart  = 0;
                 newanim->sync                   = -1;
 
@@ -10204,6 +10300,10 @@ s_model *load_cached_model(char *name, char *owner, char unload)
             case CMD_MODEL_CUSTPSHOTW:
                 newanim->projectile.knife = get_cached_model_index(GET_ARG(1));
                 break;
+            case CMD_MODEL_CUSTBOOMERANG:
+                newanim->projectile.boomerang = get_cached_model_index(GET_ARG(1));
+                break;
+
             case CMD_MODEL_CUSTPSHOTNO:
                 newanim->projectile.flash = get_cached_model_index(GET_ARG(1));
                 break;
@@ -10739,7 +10839,7 @@ s_model *load_cached_model(char *name, char *owner, char unload)
                 attack.steal = GET_INT_ARG(1);
                 break;
             case CMD_MODEL_COLLISION_DAMAGE_TYPE:
-                attack.attack_type = GET_INT_ARG(1);
+                attack.attack_type = obor_attack_from_native(GET_INT_ARG(1));
                 break;
             case CMD_MODEL_COLLISION_DAMAGE_RECURSIVE_FORCE:
                 recursive.force = GET_INT_ARG(1);
@@ -10987,7 +11087,7 @@ s_model *load_cached_model(char *name, char *owner, char unload)
                     {
                         tempInt = MAX_ATKS - STA_ATKS + 1;
                     }
-                    attack.attack_type = tempInt + STA_ATKS - 1;
+                    attack.attack_type = obor_attack_from_native(tempInt + obor_attack_to_native(MAX_ATKS) - 11);
                 }
                 break;
             case CMD_MODEL_HITWALLTYPE:
@@ -11728,7 +11828,7 @@ s_model *load_cached_model(char *name, char *owner, char unload)
             break;
         case TYPE_ENEMY:
             newchar->candamage = TYPE_PLAYER | TYPE_SHOT;
-            if(newchar->subtype == SUBTYPE_ARROW)
+            if(newchar->subtype == SUBTYPE_ARROW || (obor_profile_build == 6330 && newchar->subtype == SUBTYPE_BOOMERANG))
             {
                 newchar->candamage |= TYPE_OBSTACLE;
             }
@@ -11929,8 +12029,74 @@ int load_script_setting()
     return 1;
 }
 
+static void obor_profile_attack_defaults(void)
+{
+    if(obor_profile_build != 6510) return;
+    {
+        static const int native[] = { ANI_FALL, ANI_FALL2, ANI_FALL3, ANI_FALL4, ANI_FALL, ANI_BURN, ANI_FALL, ANI_SHOCK, ANI_FALL, ANI_FALL5, ANI_FALL6, ANI_FALL7, ANI_FALL8, ANI_FALL9, ANI_FALL10, ANI_FALL, ANI_FALL, ANI_FALL, ANI_FALL, ANI_FALLLOSE, ANI_FALL };
+        for(int i = 0; i < MAX_ATKS; ++i)
+            falls[obor_attack_from_native(i)] = i < (int)(sizeof(native)/sizeof(*native)) ? native[i] : ANI_NONE;
+    }
+    {
+        static const int native[] = { ANI_BACKFALL, ANI_BACKFALL2, ANI_BACKFALL3, ANI_BACKFALL4, ANI_BACKFALL, ANI_BACKBURN, ANI_BACKFALL, ANI_BACKSHOCK, ANI_BACKFALL, ANI_BACKFALL5, ANI_BACKFALL6, ANI_BACKFALL7, ANI_BACKFALL8, ANI_BACKFALL9, ANI_BACKFALL10, ANI_BACKFALL, ANI_BACKFALL, ANI_BACKFALL, ANI_BACKFALL, ANI_FALLLOSE, ANI_BACKFALL };
+        for(int i = 0; i < MAX_ATKS; ++i)
+            backfalls[obor_attack_from_native(i)] = i < (int)(sizeof(native)/sizeof(*native)) ? native[i] : ANI_NONE;
+    }
+    {
+        static const int native[] = { ANI_RISE, ANI_RISE2, ANI_RISE3, ANI_RISE4, ANI_RISE, ANI_RISEB, ANI_RISE, ANI_RISES, ANI_RISE, ANI_RISE5, ANI_RISE6, ANI_RISE7, ANI_RISE8, ANI_RISE9, ANI_RISE10, ANI_RISE, ANI_RISE, ANI_RISE, ANI_RISE, ANI_RISE, ANI_RISE };
+        for(int i = 0; i < MAX_ATKS; ++i)
+            rises[obor_attack_from_native(i)] = i < (int)(sizeof(native)/sizeof(*native)) ? native[i] : ANI_NONE;
+    }
+    {
+        static const int native[] = { ANI_BACKRISE, ANI_BACKRISE2, ANI_BACKRISE3, ANI_BACKRISE4, ANI_BACKRISE, ANI_BACKRISEB, ANI_BACKRISE, ANI_BACKRISES, ANI_BACKRISE, ANI_BACKRISE5, ANI_BACKRISE6, ANI_BACKRISE7, ANI_BACKRISE8, ANI_BACKRISE9, ANI_BACKRISE10, ANI_BACKRISE, ANI_BACKRISE, ANI_BACKRISE, ANI_BACKRISE, ANI_BACKRISE, ANI_BACKRISE };
+        for(int i = 0; i < MAX_ATKS; ++i)
+            backrises[obor_attack_from_native(i)] = i < (int)(sizeof(native)/sizeof(*native)) ? native[i] : ANI_NONE;
+    }
+    {
+        static const int native[] = { ANI_RISEATTACK, ANI_RISEATTACK2, ANI_RISEATTACK3, ANI_RISEATTACK4, ANI_RISEATTACK, ANI_RISEATTACKB, ANI_RISEATTACK, ANI_RISEATTACKS, ANI_RISEATTACK, ANI_RISEATTACK5, ANI_RISEATTACK6, ANI_RISEATTACK7, ANI_RISEATTACK8, ANI_RISEATTACK9, ANI_RISEATTACK10, ANI_RISEATTACK, ANI_RISEATTACK, ANI_RISEATTACK, ANI_RISEATTACK, ANI_RISEATTACK, ANI_RISEATTACK };
+        for(int i = 0; i < MAX_ATKS; ++i)
+            riseattacks[obor_attack_from_native(i)] = i < (int)(sizeof(native)/sizeof(*native)) ? native[i] : ANI_NONE;
+    }
+    {
+        static const int native[] = { ANI_BACKRISEATTACK, ANI_BACKRISEATTACK2, ANI_BACKRISEATTACK3, ANI_BACKRISEATTACK4, ANI_BACKRISEATTACK, ANI_BACKRISEATTACKB, ANI_BACKRISEATTACK, ANI_BACKRISEATTACKS, ANI_BACKRISEATTACK, ANI_BACKRISEATTACK5, ANI_BACKRISEATTACK6, ANI_BACKRISEATTACK7, ANI_BACKRISEATTACK8, ANI_BACKRISEATTACK9, ANI_BACKRISEATTACK10, ANI_BACKRISEATTACK, ANI_BACKRISEATTACK, ANI_BACKRISEATTACK, ANI_BACKRISEATTACK, ANI_BACKRISEATTACK, ANI_BACKRISEATTACK };
+        for(int i = 0; i < MAX_ATKS; ++i)
+            backriseattacks[obor_attack_from_native(i)] = i < (int)(sizeof(native)/sizeof(*native)) ? native[i] : ANI_NONE;
+    }
+    {
+        static const int native[] = { ANI_PAIN, ANI_PAIN2, ANI_PAIN3, ANI_PAIN4, ANI_PAIN, ANI_BURNPAIN, ANI_PAIN, ANI_SHOCKPAIN, ANI_PAIN, ANI_PAIN5, ANI_PAIN6, ANI_PAIN7, ANI_PAIN8, ANI_PAIN9, ANI_PAIN10, ANI_PAIN, ANI_PAIN, ANI_PAIN, ANI_PAIN, ANI_PAIN, ANI_PAIN };
+        for(int i = 0; i < MAX_ATKS; ++i)
+            pains[obor_attack_from_native(i)] = i < (int)(sizeof(native)/sizeof(*native)) ? native[i] : ANI_NONE;
+    }
+    {
+        static const int native[] = { ANI_BACKPAIN, ANI_BACKPAIN2, ANI_BACKPAIN3, ANI_BACKPAIN4, ANI_BACKPAIN, ANI_BACKBURNPAIN, ANI_BACKPAIN, ANI_BACKSHOCKPAIN, ANI_BACKPAIN, ANI_BACKPAIN5, ANI_BACKPAIN6, ANI_BACKPAIN7, ANI_BACKPAIN8, ANI_BACKPAIN9, ANI_BACKPAIN10, ANI_BACKPAIN, ANI_BACKPAIN, ANI_BACKPAIN, ANI_BACKPAIN, ANI_BACKPAIN, ANI_BACKPAIN };
+        for(int i = 0; i < MAX_ATKS; ++i)
+            backpains[obor_attack_from_native(i)] = i < (int)(sizeof(native)/sizeof(*native)) ? native[i] : ANI_NONE;
+    }
+    {
+        static const int native[] = { ANI_DIE, ANI_DIE2, ANI_DIE3, ANI_DIE4, ANI_DIE, ANI_BURNDIE, ANI_DIE, ANI_SHOCKDIE, ANI_DIE, ANI_DIE5, ANI_DIE6, ANI_DIE7, ANI_DIE8, ANI_DIE9, ANI_DIE10, ANI_DIE, ANI_DIE, ANI_DIE, ANI_DIE, ANI_LOSE, ANI_DIE };
+        for(int i = 0; i < MAX_ATKS; ++i)
+            deaths[obor_attack_from_native(i)] = i < (int)(sizeof(native)/sizeof(*native)) ? native[i] : ANI_NONE;
+    }
+    {
+        static const int native[] = { ANI_BACKDIE, ANI_BACKDIE2, ANI_BACKDIE3, ANI_BACKDIE4, ANI_BACKDIE, ANI_BACKBURNDIE, ANI_BACKDIE, ANI_BACKSHOCKDIE, ANI_BACKDIE, ANI_BACKDIE5, ANI_BACKDIE6, ANI_BACKDIE7, ANI_BACKDIE8, ANI_BACKDIE9, ANI_BACKDIE10, ANI_BACKDIE, ANI_BACKDIE, ANI_BACKDIE, ANI_BACKDIE, ANI_LOSE, ANI_BACKDIE };
+        for(int i = 0; i < MAX_ATKS; ++i)
+            backdeaths[obor_attack_from_native(i)] = i < (int)(sizeof(native)/sizeof(*native)) ? native[i] : ANI_NONE;
+    }
+    {
+        static const int native[] = { ANI_BLOCKPAIN, ANI_BLOCKPAIN2, ANI_BLOCKPAIN3, ANI_BLOCKPAIN4, ANI_BLOCKPAIN, ANI_BLOCKPAINB, ANI_BLOCKPAIN, ANI_BLOCKPAINS, ANI_BLOCKPAIN, ANI_BLOCKPAIN5, ANI_BLOCKPAIN6, ANI_BLOCKPAIN7, ANI_BLOCKPAIN8, ANI_BLOCKPAIN9, ANI_BLOCKPAIN10, ANI_BLOCKPAIN, ANI_BLOCKPAIN, ANI_BLOCKPAIN, ANI_BLOCKPAIN, ANI_BLOCKPAIN, ANI_BLOCKPAIN };
+        for(int i = 0; i < MAX_ATKS; ++i)
+            blkpains[obor_attack_from_native(i)] = i < (int)(sizeof(native)/sizeof(*native)) ? native[i] : ANI_NONE;
+    }
+    {
+        static const int native[] = { ANI_BACKBLOCKPAIN, ANI_BACKBLOCKPAIN2, ANI_BACKBLOCKPAIN3, ANI_BACKBLOCKPAIN4, ANI_BACKBLOCKPAIN, ANI_BACKBLOCKPAINB, ANI_BACKBLOCKPAIN, ANI_BACKBLOCKPAINS, ANI_BACKBLOCKPAIN, ANI_BACKBLOCKPAIN5, ANI_BACKBLOCKPAIN6, ANI_BACKBLOCKPAIN7, ANI_BACKBLOCKPAIN8, ANI_BACKBLOCKPAIN9, ANI_BACKBLOCKPAIN10, ANI_BACKBLOCKPAIN, ANI_BACKBLOCKPAIN, ANI_BACKBLOCKPAIN, ANI_BACKBLOCKPAIN, ANI_BACKBLOCKPAIN, ANI_BACKBLOCKPAIN };
+        for(int i = 0; i < MAX_ATKS; ++i)
+            backblkpains[obor_attack_from_native(i)] = i < (int)(sizeof(native)/sizeof(*native)) ? native[i] : ANI_NONE;
+    }
+}
+
 void load_model_constants()
 {
+    obor_profile_attack_defaults();
     char filename[MAX_BUFFER_LEN] = "data/models.txt";
     int i;
     char *buf;
@@ -12124,7 +12290,7 @@ void load_model_constants()
                 break;
             case CMD_MODELSTXT_MAXATTACKTYPES:
                 // max attacktype/pain/fall/die
-                max_attack_types = GET_INT_ARG(1) + STA_ATKS;
+                max_attack_types = obor_attack_from_native(GET_INT_ARG(1) + obor_attack_to_native(MAX_ATKS) - 10);
                 if(max_attack_types < MAX_ATKS)
                 {
                     max_attack_types = MAX_ATKS;
@@ -16452,7 +16618,7 @@ void draw_visual_debug()
         }
 
         // Collision entity debug requested?
-        if(savedata.debug_collision_entity)
+        if(obor_profile_build != 6330 && savedata.debug_collision_entity)
         {
             // Animation has collision?
             if(entity->animation->collision_entity)
@@ -16754,11 +16920,11 @@ void predrawstatus()
     // Performance info.
     if(savedata.debuginfo)
     {
-        spriteq_add_box(0, videomodes.dOffset - 12, videomodes.hRes, videomodes.dOffset + 12, LAYER_Z_LIMIT_BOX_MAX, 0, NULL);
-        font_printf(2, videomodes.dOffset - 10, 0, LAYER_Z_LIMIT_MAX, Tr("FPS: %03d"), getFPS());
-        font_printf(videomodes.hRes / 2, videomodes.dOffset - 10, 0, LAYER_Z_LIMIT_MAX, Tr("Free Ram: %s KB"), commaprint(freeram / KBYTES));
-        font_printf(2, videomodes.dOffset, 0, LAYER_Z_LIMIT_MAX, Tr("Sprites: %d / %d"), spriteq_get_sprite_count(), spriteq_get_sprite_max());
-        font_printf(videomodes.hRes / 2, videomodes.dOffset, 0, LAYER_Z_LIMIT_MAX, Tr("Used Ram: %s KB"), commaprint(usedram / KBYTES));
+        spriteq_add_box(0, videomodes.dOffset - 12, videomodes.hRes, videomodes.dOffset + 12, (obor_profile_build == 6330 ? 0x0FFFFFFE : LAYER_Z_LIMIT_BOX_MAX), 0, NULL);
+        font_printf(2, videomodes.dOffset - 10, 0, (obor_profile_build == 6330 ? 0 : LAYER_Z_LIMIT_MAX), Tr("FPS: %03d"), getFPS());
+        font_printf(videomodes.hRes / 2, videomodes.dOffset - 10, 0, (obor_profile_build == 6330 ? 0 : LAYER_Z_LIMIT_MAX), Tr("Free Ram: %s KB"), commaprint(freeram / (obor_profile_build == 6330 ? 1000 : KBYTES)));
+        font_printf(2, videomodes.dOffset, 0, (obor_profile_build == 6330 ? 0 : LAYER_Z_LIMIT_MAX), Tr("Sprites: %d / %d"), spriteq_get_sprite_count(), spriteq_get_sprite_max());
+        font_printf(videomodes.hRes / 2, videomodes.dOffset, 0, (obor_profile_build == 6330 ? 0 : LAYER_Z_LIMIT_MAX), Tr("Used Ram: %s KB"), commaprint(usedram / (obor_profile_build == 6330 ? 1000 : KBYTES)));
     }
 }
 
@@ -17246,6 +17412,7 @@ static float find_nearest_wall_x(int wall, float x, float z)
 // this method initialize an entity's A.I. behaviors
 void ent_default_init(entity *e)
 {
+    if(obor_profile_build == 6510) e->binding.animation = ANI_NONE;
     int dodrop;
     int wall;
     entity *other;
@@ -17367,7 +17534,7 @@ void ent_default_init(entity *e)
             break;
         }
         // define new subtypes
-        else if(e->modeldata.subtype == SUBTYPE_ARROW)
+        else if(e->modeldata.subtype == SUBTYPE_ARROW || (obor_profile_build == 6330 && e->modeldata.subtype == SUBTYPE_BOOMERANG))
         {
             e->energy_status.health_current = 1;
             if(!e->modeldata.speed && !e->modeldata.nomove)
@@ -17424,7 +17591,7 @@ void ent_default_init(entity *e)
         }
         else
         {
-            dodrop = (e->modeldata.subtype != SUBTYPE_ARROW && level && (level->scrolldir == SCROLL_UP || level->scrolldir == SCROLL_DOWN));
+            dodrop = (e->modeldata.subtype != SUBTYPE_ARROW && (obor_profile_build != 6330 || e->modeldata.subtype != SUBTYPE_BOOMERANG) && level && (level->scrolldir == SCROLL_UP || level->scrolldir == SCROLL_DOWN));
 
             if(!nodropspawn && (dodrop || (e->position.x > advancex - 30 && e->position.x < advancex + videomodes.hRes + 30 && e->position.y == 0)) )
             {
@@ -17593,7 +17760,7 @@ void ent_spawn_ent(entity *ent)
         {
             s_ent->playerindex = ent->playerindex;
         }
-        if(s_ent->modeldata.subtype == SUBTYPE_ARROW)
+        if(s_ent->modeldata.subtype == SUBTYPE_ARROW || (obor_profile_build == 6330 && s_ent->modeldata.subtype == SUBTYPE_BOOMERANG))
         {
             s_ent->owner = ent;
         }
@@ -17642,7 +17809,7 @@ void ent_summon_ent(entity *ent)
         {
             s_ent->playerindex = ent->playerindex;
         }
-        if(s_ent->modeldata.subtype == SUBTYPE_ARROW)
+        if(s_ent->modeldata.subtype == SUBTYPE_ARROW || (obor_profile_build == 6330 && s_ent->modeldata.subtype == SUBTYPE_BOOMERANG))
         {
             s_ent->owner = ent;
         }
@@ -17860,7 +18027,7 @@ void update_frame(entity *ent, unsigned int f)
             attack.dropv.x = default_model_dropv.x;
             attack.dropv.z = default_model_dropv.z;
             attack.attack_force = self->energy_status.health_current;
-            attack.attack_type = max_attack_types - 1;
+            attack.attack_type = obor_attack_from_native(obor_attack_to_native(max_attack_types) - 1);
             if(self->takedamage)
             {
                 self->takedamage(self, &attack, 0);
@@ -17908,6 +18075,43 @@ void update_frame(entity *ent, unsigned int f)
 
         #define __trystar star_spawn(self->position.x + (self->direction == DIRECTION_RIGHT ? 56 : -56), self->position.z, self->position.y+67, self->direction)
         #define __tryknife knife_spawn(NULL, -1, self->position.x, self->position.z, self->position.y + anim->projectile.position.y, self->direction, 0, 0)
+        #define __tryboomerang boomerang_spawn(NULL, -1, self->position.x, self->position.z, self->position.y + anim->projectile.position.y, self->direction, 0)
+
+        if(obor_profile_build == 6330)
+        {
+
+        if(anim->projectile.knife >= 0 || anim->projectile.flash >= 0)
+        {
+            __tryknife;
+        }
+        else if(anim->projectile.star >= 0)
+        {
+            __trystar;
+        }
+        else if(anim->projectile.boomerang >= 0)
+        {
+            __tryboomerang;
+        }
+        else if(self->jumping)
+        {
+            if(!__trystar)
+            {
+                if(!__tryknife)
+                {
+                    __tryboomerang;
+                }
+            }
+        }
+        else if(!__tryknife)
+        {
+            if(!__trystar)
+            {
+                __tryboomerang;
+            }
+        }
+        }
+        else
+        {
 
         if(anim->projectile.knife >= 0 || anim->projectile.flash >= 0)
         {
@@ -17927,6 +18131,7 @@ void update_frame(entity *ent, unsigned int f)
         else if(!__tryknife)
         {
             __trystar;
+        }
         }
         self->deduct_ammo = 1;
     }
@@ -17950,6 +18155,7 @@ uf_interrupted:
 
     #undef __trystar
     #undef __tryknife
+    #undef __tryboomerang
 }
 
 
@@ -18402,7 +18608,7 @@ void kill_entity(entity *victim)
     if(victim->modeldata.summonkill)
     {
         attack = emptyattack;
-        attack.attack_type = max_attack_types - 1;
+        attack.attack_type = obor_attack_from_native(obor_attack_to_native(max_attack_types) - 1);
         attack.dropv.y = default_model_dropv.y;
         attack.dropv.x = default_model_dropv.x;
         attack.dropv.z = default_model_dropv.z;
@@ -19402,6 +19608,378 @@ void set_opponent(entity *ent, entity *other)
 }
 
 
+void execute_on_bind_update_other_to_self(entity *ent, entity *other, s_bind *binding)
+{
+    ScriptVariant tempvar;
+    Script *cs = ent->scripts->on_bind_update_other_to_self_script;
+
+    if(Script_IsInitialized(cs))
+    {
+        ScriptVariant_Init(&tempvar);
+        ScriptVariant_ChangeType(&tempvar, VT_PTR);
+
+        tempvar.ptrVal = (entity *)ent;
+        Script_Set_Local_Variant(cs, "self",    &tempvar);
+
+        tempvar.ptrVal = (entity *)other;
+        Script_Set_Local_Variant(cs, "other",   &tempvar);
+
+        tempvar.ptrVal = (s_bind *)binding;
+        Script_Set_Local_Variant(cs, "binding", &tempvar);
+
+        Script_Execute(cs);
+
+        //clear to save variant space
+        ScriptVariant_Clear(&tempvar);
+        Script_Set_Local_Variant(cs, "self",        &tempvar);
+        Script_Set_Local_Variant(cs, "other",       &tempvar);
+        Script_Set_Local_Variant(cs, "binding",     &tempvar);
+    }
+}
+
+void execute_on_bind_update_self_to_other(entity *ent, entity *other, s_bind *binding)
+{
+    ScriptVariant tempvar;
+    Script *cs = ent->scripts->on_bind_update_self_to_other_script;
+
+    if(Script_IsInitialized(cs))
+    {
+        ScriptVariant_Init(&tempvar);
+        ScriptVariant_ChangeType(&tempvar, VT_PTR);
+
+        tempvar.ptrVal = (entity *)ent;
+        Script_Set_Local_Variant(cs, "self",    &tempvar);
+
+        tempvar.ptrVal = (entity *)other;
+        Script_Set_Local_Variant(cs, "other",   &tempvar);
+
+        tempvar.ptrVal = (s_bind *)binding;
+        Script_Set_Local_Variant(cs, "binding", &tempvar);
+
+        Script_Execute(cs);
+
+        //clear to save variant space
+        ScriptVariant_Clear(&tempvar);
+        Script_Set_Local_Variant(cs, "self",        &tempvar);
+        Script_Set_Local_Variant(cs, "other",       &tempvar);
+        Script_Set_Local_Variant(cs, "binding",     &tempvar);
+    }
+}
+
+int check_blocking_eligible(entity *ent, entity *other, s_collision_attack *attack)
+{
+    // If guardpoints are set, then find out if they've been depleted.
+    if(ent->modeldata.guardpoints.max)
+    {
+        if(ent->modeldata.guardpoints.current <= 0)
+        {
+            return 0;
+        }
+    }
+
+    // Grappling?
+    if(ent->link)
+    {
+        return 0;
+    }
+
+    //  Airborne?
+    if(inair(ent))
+    {
+        return 0;
+    }
+
+    // Frozen?
+    if(ent->frozen)
+    {
+        return 0;
+    }
+
+    // Falling?
+    if(ent->falling)
+    {
+        return 0;
+    }
+
+    // Attack block breaking exceeds block power?
+    if(ent->defense[attack->attack_type].blockpower)
+    {
+        if(attack->no_block >= ent->defense[attack->attack_type].blockpower)
+        {
+            return 0;
+        }
+    }
+
+    // Attack from behind? Can't block that if
+    // we don't have blockback flag enabled.
+    if(ent->direction == other->direction)
+    {
+        if(!ent->modeldata.blockback)
+        {
+            return 0;
+        }
+    }
+
+    // if there is a blocking threshold? Verify it vs. attack force.
+    if(ent->modeldata.thold)
+    {
+        // Threshold value vs. attack.
+        if(attack->attack_force >= ent->modeldata.thold)
+        {
+            return 0;
+        }
+    }
+
+    // is there a blocking threshhold for the attack type?
+    // Verify it vs. attack force.
+    if(ent->defense[attack->attack_type].blockthreshold)
+    {
+        if(ent->defense[attack->attack_type].blockthreshold > attack->attack_force)
+        {
+            return 0;
+        }
+    }
+
+    // If we made it through all that, then entity can block. Return true.
+    return 1;
+}
+
+int check_blocking_chance(entity *ent)
+{
+    // If we have nopassiveblock enabled and we're
+    // already blocking, then we want the AI to
+    // keep blocking (like most players would).
+    if(ent->modeldata.nopassiveblock)
+    {
+        if(ent->blocking)
+        {
+           return 1;
+        }
+    }
+
+    // Run random chance against blockodds.
+    if((rand32()&ent->modeldata.blockodds) == 1)
+    {
+        return 1;
+    }
+
+    // If we got this far, we never decided to
+    // block, so return false.
+    return 0;
+}
+
+int check_blocking_conditions(entity *ent, entity *other, s_collision_attack *attack)
+{
+    e_entity_type entity_type;
+
+    entity_type = ent->modeldata.type;
+
+    // 2018-09-17, we only distinguish between
+    // players and everything else, but let's use
+    // a Switch instead of an IF in case we ever
+    // need to be more nuanced.
+    switch(entity_type)
+    {
+        case TYPE_PLAYER:
+
+            // For players, all we need to know is if they
+            // are in a blocking state. If not we exit.
+            if(!self->blocking)
+            {
+                return 0;
+            }
+
+            // Verify we can block the attack. If so, we can
+            // return true.
+            if(check_blocking_eligible(ent, other, attack))
+            {
+                return 1;
+            }
+
+            break;
+
+        default:
+
+            // No blocking animation?
+            if(!validanim(ent, ANI_BLOCK))
+            {
+                return 0;
+            }
+
+            // Have to be idle.
+            if(!ent->idling)
+            {
+                return 0;
+            }
+
+            // AI can't be preparing to attack.
+            if(ent->attacking != ATTACKING_INACTIVE)
+            {
+                return 0;
+            }
+
+            // AI must decide to block.
+            if(!check_blocking_chance(ent))
+            {
+                return 0;
+            }
+
+            // Verify we can block the attack. If so, we can
+            // return true.
+            if(check_blocking_eligible(ent, other, attack))
+            {
+                return 1;
+            }
+
+            break;
+    }
+
+    return 0;
+}
+
+int check_blockpain(entity *ent, s_collision_attack *attack)
+{
+    // If we don't have blockpain,
+    // nothing else to do!
+    if(!self->modeldata.blockpain)
+    {
+        return 0;
+    }
+
+    // If blockpain is greater than attack
+    // force, we don't apply it.
+    if(self->modeldata.blockpain > attack->attack_force)
+    {
+        return 0;
+    }
+
+    // If we are in blocking animation or pain
+    // flag is true, then we're elgible for blockpain.
+    // Return true.
+    if(self->animation == self->modeldata.animation[ANI_BLOCK]
+       || self->inpain)
+    {
+        return 1;
+    }
+
+    return 0;
+}
+
+void set_blocking_action(entity *ent, entity *other, s_collision_attack *attack)
+{
+    // Execute the attacker's didhit script with blocked flag.
+    execute_didhit_script(other, ent, attack, 1);
+
+    // Set up blocking action and flag.
+    ent->takeaction = common_block;
+    set_blocking(ent);
+
+    // Stop movement.
+    ent->velocity.x = ent->velocity.z = 0;
+
+    // Enter block animation.
+    ent_set_anim(ent, ANI_BLOCK, 0);
+
+    // Execute our block script.
+    execute_didblock_script(ent, other, attack);
+
+    // If we have guardpoints, then reduce them here.
+    if(ent->modeldata.guardpoints.max > 0)
+    {
+        ent->modeldata.guardpoints.current -= attack->guardcost;
+    }
+
+    // If we have an appropriate blockpain, lets
+    // apply it here.
+    if(check_blockpain(ent, attack))
+    {
+        set_blockpain(self, attack->attack_type, 0);
+    }
+
+    // Blocked hit is still a hit, so
+    // increment the attacker's hit counter.
+    ++other->animation->animhits;
+
+    // Spawn the blocking flash.
+    spawn_attack_flash(ent, attack, attack->blockflash, ent->modeldata.bflash);
+}
+
+entity *spawn_attack_flash(entity *ent, s_collision_attack *attack, int attack_flash, int model_flash)
+{
+    int to_spawn;
+    entity *flash;
+
+    // Flash disabled by attack?
+    // We're done. Do nothing and exit.
+    if(attack->no_flash)
+    {
+       return NULL;
+    }
+
+    // If the model has custom flash disabled,
+    // then default to the model's global flash.
+    //
+    // Otherwise we need to see if the custom
+    // attack flash index is valid. If it is, then
+    // we will use it to spawn a flash effect.
+    if(!ent->modeldata.noatflash)
+    {
+        // Valid custom flash index?
+        if(attack->blockflash >= 0)
+        {
+            to_spawn = attack_flash;
+        }
+        else
+        {
+            to_spawn = model_flash;
+        }
+    }
+    else
+    {
+        to_spawn = model_flash;
+    }
+
+    // Spawn the flash at last hit position.
+    flash = spawn(lasthit.position.x, lasthit.position.z, lasthit.position.y, DIRECTION_LEFT, NULL, to_spawn, NULL);
+
+    // One last check to make sure we
+    // were able to spawn to flash entity.
+    if(flash)
+    {
+        // Set up basic properties.
+        flash->spawntype    = SPAWN_TYPE_FLASH;
+        flash->base         = lasthit.position.y;
+        flash->autokill     = 1;
+
+        // If flipping enabled, flip the flash based on which
+        // side of entity the hit came from.
+        if(flash->modeldata.toflip)
+        {
+            flash->direction = (lasthit.position.x > ent->position.x);
+        }
+
+        // Run flash's spawn script.
+        execute_onspawn_script(flash);
+
+        return flash;
+    }
+
+    return NULL;
+}
+
+int check_bind_override(entity *ent, e_binding_overriding overriding)
+{
+    if(obor_profile_build == 6510 && ent->binding.ent)
+    {
+        if(ent->binding.overriding & overriding)
+        {
+            return TRUE;
+        }
+    }
+
+    return FALSE;
+}
+
 void do_attack(entity *e)
 {
     int them;
@@ -19574,7 +20152,7 @@ void do_attack(entity *e)
         }
 
         // If in the air, then check the juggle cost.
-        if(inair(target))
+        if(obor_profile_build == 6330 ? target->falling == 1 : inair(target))
         {
             if(attack->jugglecost > target->modeldata.jugglepoints.current)
             {
@@ -19658,7 +20236,12 @@ void do_attack(entity *e)
             }
 
             //if #053
-            if( !self->modeldata.nopassiveblock && // cant block by itself
+            if(obor_profile_build == 6510 && check_blocking_conditions(self, e, attack))
+            {
+                set_blocking_action(self, e, attack);
+                didblock = 1;
+            }
+            else if(obor_profile_build != 6510 && !self->modeldata.nopassiveblock && // cant block by itself
                     validanim(self, ANI_BLOCK) && // of course, move it here to avoid some useless checking
                     ((self->modeldata.guardpoints.max == 0) || (self->modeldata.guardpoints.max > 0 && self->modeldata.guardpoints.current > 0)) &&
                     !(self->link ||
@@ -19708,7 +20291,7 @@ void do_attack(entity *e)
                     }
                     //ent_default_init(flash); // initiliaze this because there're no default values now
 
-                    if(flash)
+                    if(obor_profile_build != 6510 && flash)
                     {
                         flash->spawntype = SPAWN_TYPE_FLASH;
                         execute_onspawn_script(flash);
@@ -19716,7 +20299,7 @@ void do_attack(entity *e)
                 }
                 //end of if #0531
             }
-            else if((self->modeldata.nopassiveblock || self->modeldata.type == TYPE_PLAYER) &&  // can block by itself
+            else if(obor_profile_build != 6510 && (self->modeldata.nopassiveblock || self->modeldata.type == TYPE_PLAYER) &&  // can block by itself
                     self->blocking &&  // of course he must be blocking
                     ((self->modeldata.guardpoints.max == 0) || (self->modeldata.guardpoints.max > 0 && self->modeldata.guardpoints.current > 0)) &&
                     !((self->direction == e->direction && self->modeldata.blockback < 1) || self->frozen) &&   // Can't block if facing the wrong direction (unless blockback flag is enabled) or frozen in the block animation or opponent is a projectile
@@ -19762,7 +20345,7 @@ void do_attack(entity *e)
                         flash = spawn(lasthit.position.x, lasthit.position.z, lasthit.position.y, 0, NULL, self->modeldata.bflash, NULL);
                     }
                     //ent_default_init(flash); // initiliaze this because there're no default values now
-                    if(flash)
+                    if(obor_profile_build != 6510 && flash)
                     {
                         flash->spawntype = SPAWN_TYPE_FLASH;
                         execute_onspawn_script(flash);
@@ -19822,6 +20405,11 @@ void do_attack(entity *e)
                         self->attack_id_incoming = current_attack_id;
                     }
 
+                    if(obor_profile_build == 6510)
+                    {
+                        spawn_attack_flash(self, attack, attack->blockflash, self->modeldata.bflash);
+                    }
+                    else
                     if(!attack->no_flash)
                     {
                         if(!self->modeldata.noatflash)
@@ -19840,7 +20428,7 @@ void do_attack(entity *e)
                             flash = spawn(lasthit.position.x, lasthit.position.z, lasthit.position.y, 0, NULL, self->modeldata.bflash, NULL);
                         }
                         //ent_default_init(flash); // initiliaze this because there're no default values now
-                        if(flash)
+                        if(obor_profile_build != 6510 && flash)
                         {
                             flash->spawntype = SPAWN_TYPE_FLASH;
                             execute_onspawn_script(flash);
@@ -19856,6 +20444,11 @@ void do_attack(entity *e)
                 e->lasthit = self;
 
                 // Spawn a flash
+                if(obor_profile_build == 6510)
+                {
+                    spawn_attack_flash(self, attack, attack->hitflash, self->modeldata.flash);
+                }
+                else
                 if(!attack->no_flash)
                 {
                     if(!self->modeldata.noatflash)
@@ -19873,7 +20466,7 @@ void do_attack(entity *e)
                     {
                         flash = spawn(lasthit.position.x, lasthit.position.z, lasthit.position.y, 0, NULL, self->modeldata.flash, NULL);
                     }
-                    if(flash)
+                    if(obor_profile_build != 6510 && flash)
                     {
                         flash->spawntype = SPAWN_TYPE_FLASH;
                         execute_onspawn_script(flash);
@@ -19905,7 +20498,7 @@ void do_attack(entity *e)
             // end of if #053
 
             // if #054
-            if(flash)
+            if(obor_profile_build != 6510 && flash)
             {
                 if(flash->modeldata.toflip)
                 {
@@ -20158,6 +20751,7 @@ void do_attack(entity *e)
 // Go to landing frame if available. Also spawns an effect ("dust") entity if set.
 bool check_landframe(entity *ent)
 {
+    if(check_bind_override(ent, BINDING_OVERRIDING_LANDFRAME)) return 0;
     entity *effect;
 
     // Must have a landframe.
@@ -20370,7 +20964,8 @@ void check_gravity(entity *e)
 
             // UTunnels: tossv <= 0 means land, while >0 means still rising, so
             // you wont be stopped if you are passing the edge of a wall
-            if( (self->position.y <= self->base || !inair(self)) && self->velocity.y <= 0 )
+            if( (self->position.y <= self->base || !inair(self)) && self->velocity.y <= 0 &&
+                !check_bind_override(self, BINDING_OVERRIDING_FALL_LAND))
             {
                 self->position.y = self->base;
                 self->falling = 0;
@@ -20418,9 +21013,12 @@ void check_gravity(entity *e)
                 else if((!self->animation->move[self->animpos]->base || self->animation->move[self->animpos]->base < 0) &&
                         (!self->animation->move[self->animpos]->axis.y || self->animation->move[self->animpos]->axis.y <= 0))
                 {
-                    self->velocity.x = 0;
-                    self->velocity.z = 0;
-                    self->velocity.y = 0;
+                    if(obor_profile_build != 6330 || !(self->modeldata.aimove & AIMOVE1_BOOMERANG))
+                    {
+                        self->velocity.x = 0;
+                        self->velocity.z = 0;
+                        self->velocity.y = 0;
+                    }
                 }
                 else
                 {
@@ -21349,8 +21947,237 @@ void damage_recursive(entity *target)
     }
 }
 
+static void adjust_bind_6510(entity *e)
+{
+    #define ADJUST_BIND_SET_ANIM_RESETABLE 1
+    #define ADJUST_BIND_NO_FRAME_MATCH -1
+
+    // If there is no binding
+    // target, just get out.
+    if(!e->binding.ent)
+    {
+        return;
+    }
+
+    // Run bind update script on the bind target.
+    execute_on_bind_update_other_to_self(e->binding.ent, e, &e->binding);
+
+    // Run bind update script on *e (entity performing bind).
+    execute_on_bind_update_self_to_other(e, e->binding.ent, &e->binding);
+
+    // Animation match flag in use?
+    if(e->binding.ani_bind)
+    {
+        e_animations    animation;
+        int             frame;
+
+        // If a defined value is requested,
+        // use the binding member value.
+        // Otherwise use target's current value.
+        if(e->binding.ani_bind & BINDING_MATCHING_ANIMATION_DEFINED)
+        {
+            animation = e->binding.animation;
+        }
+        else
+        {
+            animation = e->binding.ent->animnum;
+        }
+
+        // Are we NOT currently playing the target animation?
+        if(e->animnum != animation)
+        {
+            // If we don't have the target animation
+            // and animation kill flag is set, then
+            // we kill ourselves and exit the function.
+            if(!validanim(e, animation))
+            {
+                // Don't have the animation? Kill ourself.
+                if(e->binding.ani_bind & BINDING_MATCHING_ANIMATION_REMOVE)
+                {
+                    kill_entity(e);
+                }
+
+                // Cancel the bind and exit.
+                e->binding.ent = NULL;
+                return;
+            }
+
+            // Made it this far, we must have the target
+            // animation, so let's apply it.
+            ent_set_anim(e, animation, ADJUST_BIND_SET_ANIM_RESETABLE);
+        }
+
+        // If a defined value is requested,
+        // use the binding member value.
+        // If target value is requested use
+        // target's current value (duh).
+        // if no frame match at all requested
+        // then set ADJUST_BIND_NO_FRAME_MATCH
+        // so frame matching logic is skipped.
+        if(e->binding.ani_bind & BINDING_MATCHING_FRAME_DEFINED)
+        {
+            frame = obor_animation_to_native(e->binding.animation);
+        }
+        else if(e->binding.ani_bind & BINDING_MATCHING_FRAME_TARGET)
+        {
+            frame = e->binding.ent->animpos;
+        }
+        else
+        {
+            frame = ADJUST_BIND_NO_FRAME_MATCH;
+        }
+
+        // Any frame match flag set?
+        if(frame != ADJUST_BIND_NO_FRAME_MATCH)
+        {
+            // Are we NOT currently playing the target frame?
+            if(e->animpos != frame)
+            {
+                // If we don't have the frame and frame kill flag is
+                // set, kill ourselves.
+                if(e->animation[e->animnum].numframes < frame)
+                {
+                    if(e->binding.ani_bind & BINDING_MATCHING_FRAME_REMOVE)
+                    {
+                        kill_entity(e);
+                    }
+
+                    // Cancel the bind and exit.
+                    e->binding.ent = NULL;
+                    return;
+                }
+
+                // Made it this far, we must have the target
+                // frame, so let's apply it.
+                update_frame(e, frame);
+            }
+        }
+    }
+
+    // Apply sort ID adjustment.
+    e->sortid = e->binding.ent->sortid + e->binding.sortid;
+
+    // Apply direction adjustment.
+    switch(e->binding.direction)
+    {
+        default:
+        case DIRECTION_ADJUST_NONE:
+
+            break;
+
+        case DIRECTION_ADJUST_SAME:
+
+            e->direction = e->binding.ent->direction;
+
+            break;
+
+        case DIRECTION_ADJUST_OPPOSITE:
+
+            e->direction = !e->binding.ent->direction;
+
+            break;
+
+        case DIRECTION_ADJUST_RIGHT:
+
+            e->direction = DIRECTION_RIGHT;
+
+            break;
+
+        case DIRECTION_ADJUST_LEFT:
+
+            e->direction = DIRECTION_LEFT;
+
+            break;
+    }
+
+
+    // If binding is enabled on a given axis, then
+    // apply offset and set position accordingly.
+
+    switch(e->binding.bind_toggle.z)
+    {
+        case BINDING_POSITIONING_TARGET:
+
+            e->position.z = e->binding.ent->position.z + e->binding.offset.z;
+
+            break;
+
+        case BINDING_POSITIONING_LEVEL:
+
+            e->position.z = e->binding.offset.z;
+
+            break;
+
+        case BINDING_POSITIONING_NONE:
+        default:
+
+            // Leave position as-is.
+            break;
+    }
+
+    switch(e->binding.bind_toggle.y)
+    {
+        case BINDING_POSITIONING_TARGET:
+
+            e->position.y = e->binding.ent->position.y + e->binding.offset.y;
+
+            break;
+
+        case BINDING_POSITIONING_LEVEL:
+
+            e->position.y = e->binding.offset.y;
+
+            break;
+
+        case BINDING_POSITIONING_NONE:
+        default:
+
+            // Leave position as-is.
+            break;
+    }
+
+    switch(e->binding.bind_toggle.x)
+    {
+        case BINDING_POSITIONING_TARGET:
+
+            // For X axis, we'll need to adjust differently based
+            // on the position relationship with binding target.
+
+            if(e->binding.ent->direction == DIRECTION_RIGHT)
+            {
+                e->position.x = e->binding.ent->position.x + e->binding.offset.x;
+            }
+            else
+            {
+                e->position.x = e->binding.ent->position.x - e->binding.offset.x;
+            }
+
+            break;
+
+        case BINDING_POSITIONING_LEVEL:
+
+            e->position.x = e->binding.offset.x;
+
+            break;
+
+        case BINDING_POSITIONING_NONE:
+        default:
+
+            // Leave position as-is.
+            break;
+    }
+
+    #undef ADJUST_BIND_SET_ANIM_RESETABLE
+    #undef ADJUST_BIND_NO_FRAME_MATCH
+}
+
 void adjust_bind(entity *e)
 {
+    if(obor_profile_build == 6510)
+    {
+        adjust_bind_6510(e);
+        return;
+    }
     if(e->binding.ent)
     {
         if(e->binding.ani_bind)
@@ -21525,7 +22352,7 @@ void check_move(entity *e)
 void ent_post_update(entity *e)
 {
     check_gravity(e);// check gravity
-    check_entity_collision_for(e);
+    if(obor_profile_build != 6330) check_entity_collision_for(e);
     check_move(e);
 
     adjust_bind(e);
@@ -21784,7 +22611,8 @@ void display_ents()
                     {
                         // If this entity is not an exception to the rule,
                         // move its display order in front of owner.
-                        if (!(self->modeldata.aimove & AIMOVE1_STAR))
+                        if (!(self->modeldata.aimove & AIMOVE1_STAR) &&
+                            (obor_profile_build != 6330 || !(self->modeldata.aimove & AIMOVE1_BOOMERANG)))
                         {
                             sortid = e->owner->sortid + 1;
                         }
@@ -22806,6 +23634,10 @@ void set_model_ex(entity *ent, char *modelname, int index, s_model *newmodel, in
         if(newmodel->star           <   0)
         {
             newmodel->star          = model->star;
+        }
+        if(obor_profile_build == 6330 && newmodel->boomerang < 0)
+        {
+            newmodel->boomerang = model->boomerang;
         }
         if(newmodel->flash          <   0)
         {
@@ -27908,6 +28740,476 @@ void sort_invert_by_parent(entity *ent, entity *parent)
     }
 }
 
+int do_catch(entity *ent, entity *target, int animation_catch)
+{
+    // Valid catch animation?
+    if(validanim(ent, animation_catch))
+    {
+        // If target is in range, then destroy it
+        // while we play the catch animation,
+        // and return true.
+        if(check_range_target_all(ent, target, animation_catch))
+        {
+            ent->takeaction = common_animation_normal;
+            ent->attacking = ATTACKING_INACTIVE;
+            ent->idling = IDLING_INACTIVE;
+            ent->ducking = DUCK_INACTIVE;
+            ent_set_anim(ent, animation_catch, 0);
+            kill_entity(target);
+
+            return 1;
+        }
+    }
+
+    // Did not catch anything.
+    return 0;
+}
+
+int boomerang_catch(entity *ent, float distance_x_current)
+{
+    int animation_catch; // Animation for owner catching boomerang.
+    entity* owner = NULL;
+
+    if (ent->owner) owner = ent->owner;
+    else owner = ent->parent;
+
+    // Only catch if in front of owner and traveling
+    // back toward them. Otherwise exit function since
+    // any further checks are pointless.
+    if(owner->direction == DIRECTION_RIGHT)
+    {
+        // Traveling right?
+        if(ent->velocity.x >= 0)
+        {
+            return 0;
+        }
+
+        // At or to left of owner?
+        if(ent->position.x <= owner->position.x)
+        {
+            return 0;
+        }
+    }
+    else if(owner->direction == DIRECTION_LEFT)
+    {
+        // Traveling left?
+        if(ent->velocity.x <= 0)
+        {
+            return 0;
+        }
+
+        // At or to right of owner?
+        if(ent->position.x >= owner->position.x)
+        {
+            return 0;
+        }
+    }
+
+    // Can't catch if owner is under any sort of duress.
+
+    // Pain?
+    if(owner->inpain)
+    {
+        return 0;
+    }
+
+    // Knocked down?
+    if(owner->falling)
+    {
+        return 0;
+    }
+
+    // Dead?
+    if(owner->dead)
+    {
+        return 0;
+    }
+
+    // Have to be beyond first cycle of
+    // boomerang logic.
+    if(ent->boomerang_loop <= 1)
+    {
+        return 0;
+    }
+
+    // In air? Then use air catch. Otherwise use ground catch.
+    if(inair(owner))
+    {
+        animation_catch = ANI_GETBOOMERANGINAIR;
+    }
+    else
+    {
+        animation_catch = ANI_GETBOOMERANG;
+    }
+
+    // Verify owner has catch animation and that we
+    // are in catch animation range, attempt to
+    // perform catch, and return result.
+    return do_catch(owner, ent, animation_catch);
+}
+
+void boomerang_initialize(entity *ent)
+{
+    #define GRABFORCE           -99999
+    #define OFF_SCREEN_LIMIT    80
+
+    entity* owner = NULL;
+
+    if (ent->owner) owner = ent->owner;
+    else owner = ent->parent;
+
+    // We don't want our directional facing
+    // changing automatically.
+    ent->modeldata.noflip = 1;
+
+    // Populate offscreenkill in case our
+    // boomerang gets out of bounds.
+    ent->modeldata.offscreenkill = OFF_SCREEN_LIMIT;
+
+    // If we have a owner entity, then we need
+    // should set up to match the owner's attributes.
+    if(owner)
+    {
+        // Make sure we're not hostile to our owner
+        // model type.
+        ent->modeldata.hostile &= ~(owner->modeldata.type);
+
+        // If we were thrown by an enemy or player faction
+        // then make sure we're hostile to the opposite
+        // faction.
+        if (owner->modeldata.type == TYPE_PLAYER
+            || owner->modeldata.type == TYPE_NPC)
+        {
+            ent->modeldata.hostile |= TYPE_ENEMY;
+        }
+        else if(owner->modeldata.type == TYPE_ENEMY)
+        {
+            ent->modeldata.hostile |= (TYPE_PLAYER | TYPE_NPC);
+        }
+
+        // Match the owner's direction and drawing order
+        // layer position in the sprite que.
+        ent->direction = owner->direction;
+        ent->sortid = owner->sortid + 1;
+    }
+
+    // Move along X axis according to the direction
+    // we're facing.
+    if(ent->direction == DIRECTION_LEFT)
+    {
+        ent->velocity.x = -ent->modeldata.speed;
+    }
+    else if(ent->direction == DIRECTION_RIGHT)
+    {
+        ent->velocity.x = ent->modeldata.speed;
+    }
+
+    // Synchronize with owner's vertical
+    // and lateral position.
+    ent->position.z = owner->position.z;
+    ent->position.y = owner->position.y;
+
+    // Make sure that we can't grab or be grabbed.
+    ent->modeldata.antigrab = 1;
+    ent->modeldata.grabforce = GRABFORCE;
+
+    ++ent->boomerang_loop;
+
+    #undef GRABFORCE
+    #undef OFF_SCREEN_LIMIT
+}
+
+int boomerang_move()
+{
+    float acceleration;             // Rate of velocity difference per update.
+    float distance_x_current;       // Current X axis distance from owner.
+    float distance_x_max;           // Maximum X axis distance allowed from owner.
+    float velocity_x_accelerated;   // X velocity after acceleration applied as an addition vs. current velocity.
+    float velocity_x_decelerated;   // X velocity after acceleration applied as a reduction vs. current velocity.
+
+    if(!self->modeldata.nomove)
+    {
+        // Populate local vars with acceleration and
+        // maximum horizontal distance from modeldata.
+        // If there is no model data defined then we'll
+        // need to use some default values instead.
+        entity* owner = NULL;
+
+        if (self->owner) owner = self->owner;
+        else owner = self->parent;
+
+        // Acceleration.
+        if(self->modeldata.boomerang_prop.acceleration != 0)
+        {
+            acceleration = self->modeldata.boomerang_prop.acceleration;
+        }
+        else
+        {
+            acceleration = self->modeldata.speed/(GAME_SPEED/20);
+        }
+
+        // Maximum X distance from owner.
+        if(self->modeldata.boomerang_prop.hdistance > 0)
+        {
+            distance_x_max = self->modeldata.boomerang_prop.hdistance;
+        }
+        else
+        {
+            distance_x_max = videomodes.hRes/(3);
+        }
+
+        // If not moving on X axis and loop count
+        // is 0, then this must be a new boomerang.
+        // Run the initialize function to set up
+        // all of the attributes we'll need.
+        if(self->velocity.x == 0)
+        {
+            if(!self->boomerang_loop)
+            {
+               boomerang_initialize(self);
+            }
+        }
+
+        // No lateral movement.
+        if(self->velocity.z != 0) self->velocity.z = 0;
+
+        // If our boomerang has no owner and gets
+        // too far off the screen, then we will
+        // destroy it and exit the function.
+        if(!owner)
+        {
+            // Did check_lost() kill us?
+            if (check_lost())
+            {
+               return 0;
+            }
+        }
+
+        if(owner)
+        {
+            distance_x_current = diff(self->position.x,owner->position.x);
+            self->position.z = owner->position.z;
+            self->position.y = owner->position.y;
+
+            // Movement.
+
+            // Right of owner on X axis?
+            if (self->position.x >= owner->position.x)
+            {
+                // Get a possible X velocity to apply that
+                // will slightly decelerate us.
+                velocity_x_decelerated = self->velocity.x - acceleration;
+
+                // Exceeded maximum distance from owner?
+                if (distance_x_current >= distance_x_max)
+                {
+                    // Have we stopped accelerating?
+                    if(velocity_x_decelerated <= 0)
+                    {
+                        // Moving right along X axis?
+                        if(self->velocity.x > 0)
+                        {
+                            // Increment tracking loop
+                            ++self->boomerang_loop;
+
+                            // Reverse sorting in relation to owner.
+                            sort_invert_by_parent(self,owner);
+                        }
+                    }
+
+                    // This is where we reverse our X velocity and
+                    // return to thrower.
+                    //
+                    // If we're already reversed, then we just make sure
+                    // our X axis velocity is equal to our model
+                    // speed (inverted).
+                    //
+                    // If we're still moving forward (away from owner)
+                    // then apply the next velocity. This will
+                    // have the effect of reducing the X velocity
+                    // until it falls below inverted model speed, at
+                    // which point our reversed condition will be true.
+                    if(velocity_x_decelerated < -self->modeldata.speed)
+                    {
+                        self->velocity.x = -self->modeldata.speed;
+                    }
+                    else
+                    {
+                        self->velocity.x = velocity_x_decelerated;
+                    }
+                }
+                else if (self->velocity.x <= 0)
+                {
+                    if(velocity_x_decelerated < -self->modeldata.speed)
+                    {
+                        self->velocity.x = -self->modeldata.speed;
+                    }
+                    else
+                    {
+                        self->velocity.x = velocity_x_decelerated;
+                    }
+                }
+            }
+            else if (self->position.x <= owner->position.x)
+            {
+                // Calculate an X velocity with acceleration added.
+                velocity_x_accelerated = self->velocity.x + acceleration;
+
+                if(distance_x_current >= distance_x_max)
+                {
+                    if(velocity_x_accelerated >= 0 && self->velocity.x < 0)
+                    {
+                        ++self->boomerang_loop;
+
+                        // Reverse sorting in relation to owner.
+                        sort_invert_by_parent(self,owner);
+                    }
+
+                    // Make sure X velocity is no greater than
+                    // the model speed setting.
+                    if(velocity_x_accelerated > self->modeldata.speed)
+                    {
+                        self->velocity.x = self->modeldata.speed;
+                    }
+                    else
+                    {
+                        self->velocity.x = velocity_x_accelerated;
+                    }
+                }
+                else if (self->velocity.x >= 0)
+                {
+                    if(velocity_x_accelerated > self->modeldata.speed)
+                    {
+                        self->velocity.x = self->modeldata.speed;
+                    }
+                    else
+                    {
+                        self->velocity.x = velocity_x_accelerated;
+                    }
+                }
+            }
+
+            // Catch the boomerang.
+            boomerang_catch(self, distance_x_current);
+
+            //debug_printf("cur_distx:%f velx:%f",distance_x_current,self->velocity.x);
+            //debug_printf("acceleration:%f speed:%f",acceleration,self->modeldata.speed);
+            //debug_printf("boomerang_loop:%d",self->boomerang_loop);
+            //debug_printf("sortid:%d",self->sortid);
+        }
+    }
+
+    // Bounce off walls or platforms.
+    projectile_wall_deflect(self);
+
+    return 1;
+}
+
+entity *boomerang_spawn(char *name, int index, float x, float z, float a, int direction, int map)
+{
+    entity *e = NULL;
+
+    if(index >= 0 || name)
+    {
+        e = spawn(x, z, a, direction, name, index, NULL);
+    }
+    else if(self->weapent && self->weapent->modeldata.subtype == SUBTYPE_PROJECTILE && self->weapent->modeldata.project >= 0)
+    {
+        e = spawn(x, z, a, direction, NULL, self->weapent->modeldata.project, NULL);
+    }
+    else if(self->animation->projectile.boomerang >= 0)
+    {
+        e = spawn(x, z, a, direction, NULL, self->animation->projectile.boomerang, NULL);
+    }
+    else if(self->modeldata.boomerang >= 0)
+    {
+        e = spawn(x, z, a, direction, NULL, self->modeldata.boomerang, NULL);
+    }
+
+    if(e == NULL)
+    {
+        return NULL;
+    }
+    else if(self->modeldata.type & TYPE_PLAYER)
+    {
+        e->modeldata.type = TYPE_NPC;
+    }
+    else if(self->modeldata.type & TYPE_ENEMY)
+    {
+        e->modeldata.type = TYPE_ENEMY;
+    }
+    else
+    {
+        e->modeldata.type = self->modeldata.type;
+    }
+
+    if(!e->model->speed && !e->modeldata.nomove)
+    {
+        e->modeldata.speed = 2;
+    }
+    else if(e->modeldata.nomove)
+    {
+        e->modeldata.speed = 0;
+    }
+
+    e->spawntype = SPAWN_TYPE_PROJECTILE_BOOMERANG;
+    e->owner = self;                                                     // Added so projectiles don't hit the owner
+    e->nograb = 1;                                                       // Prevents trying to grab a projectile
+    e->attacking = ATTACKING_ACTIVE;
+    //e->direction = direction;
+    e->think = common_think;
+    e->nextthink = _time + 1;
+    e->trymove = NULL;
+    e->takedamage = common_takedamage;
+    e->takeaction = NULL;
+    e->modeldata.aimove = AIMOVE1_BOOMERANG;
+    if(!e->modeldata.offscreenkill)
+    {
+        e->modeldata.offscreenkill = 200;    //default value
+    }
+    e->modeldata.aiattack = AIATTACK1_NOATTACK;
+    e->remove_on_attack = e->modeldata.remove;
+    e->autokill = e->modeldata.nomove;
+    e->speedmul = 2;
+
+    ent_set_colourmap(e, map);
+
+    if(e->projectile_prime & PROJECTILE_PRIME_BASE_FLOOR)
+    {
+        e->base = 0;
+    }
+    else
+    {
+        e->base = a;
+    }
+
+    if(e->modeldata.hostile < 0)
+    {
+        e->modeldata.hostile = self->modeldata.hostile;
+    }
+    if(e->modeldata.candamage < 0)
+    {
+        e->modeldata.candamage = self->modeldata.candamage;
+    }
+    if((self->modeldata.type & TYPE_PLAYER) && ((level && level->nohit == DAMAGE_FROM_PLAYER_OFF) || savedata.mode))
+    {
+        e->modeldata.hostile &= ~TYPE_PLAYER;
+        e->modeldata.candamage &= ~TYPE_PLAYER;
+    }
+
+    e->modeldata.subject_to_hole        = 0;
+    e->modeldata.subject_to_gravity     = 1;
+    e->modeldata.subject_to_basemap     = 0;
+    e->modeldata.subject_to_wall        = 0;
+    e->modeldata.subject_to_platform    = 0;
+    e->modeldata.subject_to_screen      = 0;
+    e->modeldata.subject_to_minz        = 1;
+    e->modeldata.subject_to_maxz        = 1;
+    e->modeldata.no_adjust_base         = 1;
+
+    return e;
+}
+
 // for common bomb types
 int bomb_move()
 {
@@ -28026,6 +29328,10 @@ int common_move()
     {
         // for a bomb, travel in a arc
         return bomb_move();
+    }
+    else if(obor_profile_build == 6330 && (aimove & AIMOVE1_BOOMERANG))
+    {
+        return boomerang_move();
     }
     else if(aimove & AIMOVE1_NOMOVE)
     {
@@ -28881,6 +30187,24 @@ int check_energy(e_cost_check which, int ani)
     {
         // Get entity type.
         type	   = self->modeldata.type;
+    // If we're bind and special is overridden, then
+    // return false.
+    if(type & (TYPE_ENEMY  | TYPE_NPC))
+    {
+        if(check_bind_override(self, BINDING_OVERRIDING_SPECIAL_AI))
+        {
+            return FALSE;
+        }
+    }
+    else if(type & TYPE_PLAYER)
+    {
+        if(check_bind_override(self, BINDING_OVERRIDING_SPECIAL_PLAYER))
+        {
+            return FALSE;
+        }
+    }
+
+
 
         // Caskey, Damon V.
         // 2010-05-08
@@ -31353,8 +32677,8 @@ void kill_all_enemies()
     entity *tmpself = NULL;
 
     attack = emptyattack;
-	attack.attack_type = ATK_NORMAL;
-    //attack.attack_type = max_attack_types - 1;
+	attack.attack_type = obor_profile_build == 6510 ? ATK_BOSS_DEATH : ATK_NORMAL;
+    //attack.attack_type = obor_attack_from_native(obor_attack_to_native(max_attack_types) - 1);
     attack.dropv.y = default_model_dropv.y;
     attack.dropv.x = default_model_dropv.x;
     attack.dropv.z = default_model_dropv.z;
@@ -37583,9 +38907,13 @@ void menu_options_debug()
         _menutext((selector == ITEM_COL_BODY),       COLUMN_2_POS_X, pos_y, (savedata.debug_collision_body ? Tr("Enabled") : Tr("Disabled")));
         pos_y++;
 
+        if(obor_profile_build != 6330)
+        {
         _menutext((selector == ITEM_COL_ENTITY),       COLUMN_1_POS_X, pos_y, Tr("Collision Entity:"));
         _menutext((selector == ITEM_COL_ENTITY),       COLUMN_2_POS_X, pos_y, (savedata.debug_collision_entity ? Tr("Enabled") : Tr("Disabled")));
         pos_y++;
+
+        }
 
         _menutext((selector == ITEM_COL_RANGE),      COLUMN_1_POS_X, pos_y, Tr("Range:"));
         _menutext((selector == ITEM_COL_RANGE),      COLUMN_2_POS_X, pos_y, (savedata.debug_collision_range ? Tr("Enabled") : Tr("Disabled")));
@@ -37643,6 +38971,9 @@ void menu_options_debug()
             }
         }
 
+
+        if(obor_profile_build == 6330 && selector == ITEM_COL_ENTITY)
+            selector += (bothnewkeys & FLAG_MOVEUP) ? -1 : 1;
 
         // Toggle selection value on left/right or
         // trigger button press.

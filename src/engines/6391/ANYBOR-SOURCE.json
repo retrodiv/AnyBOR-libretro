@@ -17,9 +17,9 @@
       "upstream_sha256": null
     },
     "openbor.c": {
-      "distributed_sha256": "e78399a42386cbb70d2ecd763fb1f35264c4c744f4cc3a7b4235a06b65edb21b",
+      "distributed_sha256": "ad240e5404b7494bf217efc0a0881a837fe7ca479f7d65a2c8a0bda61118c327",
       "modified": true,
-      "summary": "Apply the port's engine corrections and select the PC video configuration on macOS. Select the upstream 6412 frame-kill binding behavior for its logical profile. Leave multiplayer slots without a selected model available to join even if game scripts preassign lives to them. Let a missing basename-only PAK self-check read the active frontend content after it has been validated and prepared. Allocate each model's animation pointer table through the highest animation index that model uses, and bound cache, copy and cleanup paths to that capacity. Resize repeated weapon lists and detach borrowed lists before replacing their entries.",
+      "summary": "Apply the port's engine corrections and select the PC video configuration on macOS. Select native 6330 boomerang, collision and settings behavior, 6412 frame-kill binding behavior, and 6510 binding, blocking and attack behavior. Leave multiplayer slots without a selected model available to join even if game scripts preassign lives to them. Let a missing basename-only PAK self-check read the active frontend content after it has been validated and prepared. Allocate each model's animation pointer table through the highest animation index that model uses, and bound cache, copy and cleanup paths to that capacity. Resize repeated weapon lists and detach borrowed lists before replacing their entries.",
       "topics": [
         "active-content-pak-aliases",
         "animation-memory-layout",
@@ -32,9 +32,9 @@
       "upstream_sha256": "09b28ba38c5c89ffe4ceba4aa1cbb5263319dda43c2251ce5a2b266a597cdfb5"
     },
     "openbor.h": {
-      "distributed_sha256": "154c14dab58f232220c0c0641ffb7f58d103bd74c52ac3df667148fe7769ea9b",
+      "distributed_sha256": "cc6ca0855565f8998047833e7c50293d8fee1722cdf14d691a7ab72334c631fc",
       "modified": true,
-      "summary": "Allocate collision pointer slots through the highest author-facing index used by each collection. Define the upstream 6412 binding-animation flags for profile-specific script behavior. Track each model's allocated animation-table capacity and reject lookups outside it.",
+      "summary": "Allocate collision pointer slots through the highest author-facing index used by each collection. Define shared selectors and layouts for native 6330, 6412 and 6510 behavior. Track each model's allocated animation-table capacity and reject lookups outside it.",
       "topics": [
         "animation-memory-layout",
         "compiler-warning-cleanup",
@@ -44,9 +44,9 @@
       "upstream_sha256": "5a69069cc1d8dfdec66dba09c2df2141d050ea2f564f2f8c0a199a7842ff8345"
     },
     "openborscript.c": {
-      "distributed_sha256": "3646adfb07f0a9076c0e3b7be9892649f751c453ea1d8c202a504610addd363a",
+      "distributed_sha256": "322ba666d0dc20e25593b948ff629db0d94b49273d4de3b3f495a3078365899c",
       "modified": true,
-      "summary": "Keep the dormant constant-lowering diagnostic compatible with the single-value instruction layout. Supply the upstream 6412 unload_model script function for its logical profile.",
+      "summary": "Keep the dormant constant-lowering diagnostic compatible with the single-value instruction layout. Supply native profile script APIs and translate numeric animation, attack, subtype and spawn IDs.",
       "topics": [
         "logical-profile-compatibility",
         "record-dates-and-file-notices",
@@ -85,7 +85,7 @@
       "upstream_sha256": "0fd839992c90f9f3d8557f2757adfee05848f4c0b8c3a30270ddf947907e0c4a"
     },
     "source/gamelib/borendian.h": {
-      "distributed_sha256": "95cbb2cf7f367cdcff78feda2b8262ba089ccf1d6531a437885fb4a92da3f439",
+      "distributed_sha256": "5649a28a6d05f733a5395c6e56447c12c09bb43a5b0b0016184dd63185453279",
       "modified": true,
       "summary": "Use the port's fixed-width endian conversions.",
       "topics": [
@@ -95,7 +95,7 @@
       "upstream_sha256": "54377e86b27c03f1b41abc4cad9bb0466a3ab870cd2f9bec70392715709e32f7"
     },
     "source/gamelib/draw.c": {
-      "distributed_sha256": "82e49035dc3388d54692c5906846e792b79bfd4f212534e6b2b0108afc735976",
+      "distributed_sha256": "844852ac574f92aeed3a20761081b678af99365da07c01de82791e482717fa48",
       "modified": true,
       "summary": "Route circle drawing through the port's integer rasterizer.",
       "topics": [
@@ -123,7 +123,7 @@
       "upstream_sha256": "2a2b4854ea77583f9af7e3cf005fb6a2820e1aa651ab531bca903b64ffb76007"
     },
     "source/gamelib/filecache.c": {
-      "distributed_sha256": "dc2298984e7a5af67f159f4bf9b859052f5074a2413dce650cbecb0d35eb80e6",
+      "distributed_sha256": "1096dc7e12db1391db25696f0d0d6b91e4faefbe141f6a9c7f94c72514541c70",
       "modified": true,
       "summary": "Expose the cache descriptor for resource restoration and initialize it to -1.",
       "topics": [
@@ -175,7 +175,7 @@
       "upstream_sha256": "bb9095aeea455e8b435ca545683a9508f4b3fd60e374d6cd93b74b0ed0f27882"
     },
     "source/gamelib/packfile.c": {
-      "distributed_sha256": "dc33db7828b8511810c1d4c877584a25fbe9a32139cd0e0c1c187dbe8a899635",
+      "distributed_sha256": "950ea8af30450ce1c2de5bd4ef6f799695ed9157320c7d6a557019fc983b3780",
       "modified": true,
       "summary": "Repair PAK handles after state loads, close resources on reset, prune unused frontend APIs, and compile the case-insensitive loose-file search on macOS.",
       "topics": [
@@ -187,7 +187,7 @@
       "upstream_sha256": "3509664132af753d2755e0a10c292ace24211d5333b196b984b3491616c7fbce"
     },
     "source/gamelib/packfile.h": {
-      "distributed_sha256": "0f2e2f52143e3d07d8c09fc1cb4cb9442fc5de95987aacdf0595d226602871b9",
+      "distributed_sha256": "fa84582872965721111fa2f15d8880339b6c24ee254b8ac12adfe9d10a11cfb4",
       "modified": true,
       "summary": "Remove declarations of unused standalone frontend APIs and define O_BINARY where macOS lacks it.",
       "topics": [
@@ -287,7 +287,7 @@
       "upstream_sha256": "9461fddcc732973c80aa1e01fb064edd131ac059f3e0371f37a854b19c3ef100"
     },
     "source/gamelib/threads.h": {
-      "distributed_sha256": "68c4587b56923f072cb104ff3722327994b38faceaa9a076266d104f626f51ca",
+      "distributed_sha256": "91f5717eb7f5d2326c0ed70b0b10f5fd17dcff14ac408810e59a5844add37de9",
       "modified": true,
       "summary": "Declare the libretro thread, mutex and condition types.",
       "topics": [
@@ -351,7 +351,7 @@
       "upstream_sha256": "4bef63009edff08783e0ddda56f6cb5154025e9ada5674143ac10f2f42caa39f"
     },
     "source/globals.h": {
-      "distributed_sha256": "afda34677d77fede3810e07da6851f8c272ba33103e9582cc04e0be120326490",
+      "distributed_sha256": "4562ef8029a691dd444a1abf862f2e02ba39f1acbcd65407b16ac7579dcdab37",
       "modified": true,
       "summary": "Include the libretro platform interface.",
       "topics": [
@@ -373,15 +373,19 @@
       "upstream_sha256": "053f95e573ed4643a449d3231a003db6808bc7b59d44b6a4a457cc2a2c44d912"
     },
     "source/openborscript/animation.c": {
-      "distributed_sha256": "0d97ae13f4feaaeec784d5b6e59ecbfd98b4d51424a4306411996e6cb738242d",
-      "modified": false,
-      "topics": [],
+      "distributed_sha256": "f731a2e9f40bf09881be946ce07e18dce8ec066a66e51f87ecd88ceb5aa5939c",
+      "modified": true,
+      "summary": "Translate native animation property IDs for the logical profile.",
+      "topics": [
+        "logical-profile-compatibility",
+        "record-dates-and-file-notices"
+      ],
       "upstream_sha256": "0d97ae13f4feaaeec784d5b6e59ecbfd98b4d51424a4306411996e6cb738242d"
     },
     "source/openborscript/axis.c": {
-      "distributed_sha256": "758b0aba85ffa75307533e105cc528f942866be025d064d9ffb6290a3ad230e5",
+      "distributed_sha256": "5e9638a97cfc08e8db606cfc8db7e48f91f9a31ebc4c7b37f645f2633f1277d3",
       "modified": true,
-      "summary": "Preserve the 6391 axis setter and select the corrected Y setter for profile 6412.",
+      "summary": "Select native axis setter behavior for the logical profiles.",
       "topics": [
         "logical-profile-compatibility",
         "record-dates-and-file-notices"
@@ -395,9 +399,9 @@
       "upstream_sha256": "28d5b01b29bf9c70a44cb52962e4d8b6e4d64cccf1b6c798999b3846c860878c"
     },
     "source/openborscript/binding.c": {
-      "distributed_sha256": "3567b69031c2b34b91c0c20c9328709fc076ad0d572e54946a9cc4642b6ecad8",
+      "distributed_sha256": "bd92cd148e31f2f3a8d6fb4e67b8c462eac895ad831e1b65df0bbd2d2452ccc0",
       "modified": true,
-      "summary": "Map legacy binding properties and the 6412 axis-handle properties to one binding layout according to the logical profile.",
+      "summary": "Map native legacy, 6412 and 6510 binding property names and IDs to the shared layout.",
       "topics": [
         "logical-profile-compatibility",
         "record-dates-and-file-notices"
@@ -405,9 +409,9 @@
       "upstream_sha256": "f9752ea518ec9df411783c99c019f52affbe6e1bd4034c6a31181102e51b37fe"
     },
     "source/openborscript/binding.h": {
-      "distributed_sha256": "bcdf9c16e811993c0e782dc0abbbfefc0ecf049cd2ae251110a00d6b4d1732d8",
+      "distributed_sha256": "7c5076a7fe571e0d5d72d4101354f59b6b4ec01d0ef207f6725a090b354c81a2",
       "modified": true,
-      "summary": "Keep the legacy binding property IDs and add internal selectors for the 6412 axis handles.",
+      "summary": "Keep legacy binding IDs and append shared selectors for modern profile properties.",
       "topics": [
         "logical-profile-compatibility",
         "record-dates-and-file-notices"
@@ -415,9 +419,13 @@
       "upstream_sha256": "8949653d6bb3be4677d74ec520d262a03332a5d119d8b19a1ea48276e68af773"
     },
     "source/openborscript/collision_attack.c": {
-      "distributed_sha256": "a2a2f4c662944eb33d9b82ffe7a610350907c6a51003d00a3e793a833413b2dc",
-      "modified": false,
-      "topics": [],
+      "distributed_sha256": "4b94e5222814ff82376e59b84f5ecc2241519b5fda8a986dd83b1a5b6c46e347",
+      "modified": true,
+      "summary": "Translate native attack-type IDs at the script API boundary.",
+      "topics": [
+        "logical-profile-compatibility",
+        "record-dates-and-file-notices"
+      ],
       "upstream_sha256": "a2a2f4c662944eb33d9b82ffe7a610350907c6a51003d00a3e793a833413b2dc"
     },
     "source/openborscript/collision_body.c": {
@@ -439,25 +447,30 @@
       "upstream_sha256": "e1893bcaf3ae9937f57322d1b01ce923786b65f3bc7f32b3429a68212b4b7cc7"
     },
     "source/openborscript/commands.c": {
-      "distributed_sha256": "5ca8a0099ae16f4e293da758d5993284ac7e01487fac69e9b2a327f962f05f20",
+      "distributed_sha256": "e7f71986bfc5833f39bb9232625299bef86ec39b30a1f26456fb705c05b923b3",
       "modified": true,
       "summary": "Convert the command-list lookup result to its command enumeration explicitly instead of through a plain pointer cast.",
       "topics": [
         "compiler-warning-cleanup",
+        "logical-profile-compatibility",
         "record-dates-and-file-notices"
       ],
       "upstream_sha256": "754e9b42decf73be9a226513f16be873ad34180dd57f93088f66a459537daeee"
     },
     "source/openborscript/commands.h": {
-      "distributed_sha256": "582ec018581bded82ae599de2889dbfb0e23c75f6554af75fa4fada5b285d916",
-      "modified": false,
-      "topics": [],
+      "distributed_sha256": "3320b57d8ccd18059c675369669c5c3f8b67361eddcc6401dc9da7df97cd9674",
+      "modified": true,
+      "summary": "Append shared selectors for logical-profile model commands without shifting existing selectors.",
+      "topics": [
+        "logical-profile-compatibility",
+        "record-dates-and-file-notices"
+      ],
       "upstream_sha256": "582ec018581bded82ae599de2889dbfb0e23c75f6554af75fa4fada5b285d916"
     },
     "source/openborscript/config.h": {
-      "distributed_sha256": "03d1215fed4cd00f4710658781c302a6be04e62124f11010a67fb86f1f07b002",
+      "distributed_sha256": "47f5f45e91c6a52a6215979fc9caf973815ec9a488f5142d0e40de512c97aebb",
       "modified": true,
-      "summary": "Declare the 6412-only unload_model script entry point.",
+      "summary": "Declare the modern logical profiles' unload_model script entry point.",
       "topics": [
         "logical-profile-compatibility",
         "record-dates-and-file-notices"
@@ -465,9 +478,9 @@
       "upstream_sha256": "33d661990d87256135d39abb62204ad051b070d285ac3267863c0bf9f5feae5b"
     },
     "source/openborscript/constants.c": {
-      "distributed_sha256": "9271932c5e319318d24c4b7da6e10f15cd6bb087082ce9708d39278355949814",
+      "distributed_sha256": "c5a85f130d30e15829a3a7429d4cf57f7ddb8632032cc1f3590dfa920c37cff7",
       "modified": true,
-      "summary": "Expose the upstream 6412 binding-animation constants only under the 6412 logical profile.",
+      "summary": "Expose each logical profile's native constants and translate shared selectors to native values.",
       "topics": [
         "logical-profile-compatibility",
         "record-dates-and-file-notices"
@@ -487,9 +500,9 @@
       "upstream_sha256": "7c8e2b71838ada091de35f48ba38014bffd983321ced597f2ade422454da1016"
     },
     "source/openborscript/entity.c": {
-      "distributed_sha256": "30620b6d34b905fe24748a6f2aae655cbd9f86bc50111b8b93b1cf252177819a",
+      "distributed_sha256": "72e61dbcd01d124eaed902375ec3b4b7780dfc122c91a4c79277524c286c32a3",
       "modified": true,
-      "summary": "Map the 6412 owner and opponent properties without shifting the legacy numeric property IDs.",
+      "summary": "Translate native entity property names, numeric IDs and animation values for each logical profile.",
       "topics": [
         "logical-profile-compatibility",
         "record-dates-and-file-notices"
@@ -497,9 +510,9 @@
       "upstream_sha256": "13a0f6018d7cc95352c6eb7f74f309df9ac7a78e9958819d5c626a308de3ff37"
     },
     "source/openborscript/entity.h": {
-      "distributed_sha256": "e39cd7faf05334843216fa2e599be733f86682380d0e5ff0041551c68fffb8d1",
+      "distributed_sha256": "20682559125ce42e541e401b6ac5f7167b0a241736a1e3577fc171df9e876eee",
       "modified": true,
-      "summary": "Keep legacy entity property IDs and add owner and opponent selectors for profile 6412.",
+      "summary": "Keep legacy entity IDs and append selectors needed by the nearby logical profiles.",
       "topics": [
         "logical-profile-compatibility",
         "record-dates-and-file-notices"
@@ -507,9 +520,9 @@
       "upstream_sha256": "94470a80ac5fdc76cd14444aeb54fc604b1b6db80ca49527febf5b2f51942a32"
     },
     "source/openborscript/index.c": {
-      "distributed_sha256": "98672738ebe0502ec372b5d2e14458f627fa2651154b0eecee4941f685c8a5bb",
+      "distributed_sha256": "6dba930516d78733e1d382fa6a86cbd3f829c1c6ff3be928cc71e2392d49c76c",
       "modified": true,
-      "summary": "Register the upstream 6412 unload_model function only for profile 6412.",
+      "summary": "Register native functions according to each logical profile's upstream API.",
       "topics": [
         "logical-profile-compatibility",
         "record-dates-and-file-notices"
@@ -523,9 +536,13 @@
       "upstream_sha256": "ea42303e1f173f50f5f0c2a5a57f4af0c7e35bee099d55b387cd3c2115f422db"
     },
     "source/openborscript/level.c": {
-      "distributed_sha256": "0857989e4c8762a9111c79acd4760df71d9d543ad7af0deb5d704e72e50b6410",
-      "modified": false,
-      "topics": [],
+      "distributed_sha256": "073a528a84c9b6bf8cfa2fb653c17c67de911e55c119f37cc8cc20da0bf38873",
+      "modified": true,
+      "summary": "Select the native 6330 background-speed return representation.",
+      "topics": [
+        "logical-profile-compatibility",
+        "record-dates-and-file-notices"
+      ],
       "upstream_sha256": "0857989e4c8762a9111c79acd4760df71d9d543ad7af0deb5d704e72e50b6410"
     },
     "source/openborscript/math.c": {
@@ -533,6 +550,16 @@
       "modified": false,
       "topics": [],
       "upstream_sha256": "bb7b74c3d04121233c5f27ac6923df3bcc713604646843fd4e0bf10e611c1535"
+    },
+    "source/openborscript/profile_ids.h": {
+      "distributed_sha256": "73478da3c70290b6df33aa4473b7b45591ba190f74f401e2c3472b91ea2f1a07",
+      "modified": true,
+      "summary": "Map native logical-profile animation, attack, subtype and spawn IDs to the shared engine selectors.",
+      "topics": [
+        "logical-profile-compatibility",
+        "record-dates-and-file-notices"
+      ],
+      "upstream_sha256": null
     },
     "source/openborscript/scriptcommon.h": {
       "distributed_sha256": "d46e41f3734f7a6efb11652e5c0babd4cecd2c253db4608b0e6d9c794e758aef",
@@ -559,7 +586,7 @@
       "upstream_sha256": "098be505005a0a6e7de5aee51fc09a94be6961b582b35b9b6eb1ce413ae83a96"
     },
     "source/pnglib/savepng.c": {
-      "distributed_sha256": "974439b2cb86bb280d41c7b6630bae9ce57999acd13dcb50eaa4d4e2ee188842",
+      "distributed_sha256": "62a9ed47579833d059fff9174aed0a8382fe5c6d1f88172785f8260de31e6e98",
       "modified": true,
       "summary": "Include the standard library declarations instead of the glibc-only <malloc.h> when writing a screenshot.",
       "topics": [
@@ -599,7 +626,7 @@
       "upstream_sha256": "6261af9812335c94aea4cd2fc38bce2cec0ac4f5cdf2b5880e21cfac5b93e668"
     },
     "source/preprocessorlib/pp_parser.c": {
-      "distributed_sha256": "533c7fbc0e8320e4fd53734ccba9385589f53e710abfe2504a7433640dde52bf",
+      "distributed_sha256": "6c8926111261433052aad3a49d70eb0401c5072bbcba9592eab5527026ec1131",
       "modified": true,
       "summary": "Drop the glibc-only <malloc.h> and rely on the standard library declarations the parser already includes.",
       "topics": [
@@ -615,7 +642,7 @@
       "upstream_sha256": "bf743d291108ab411fc0e34ed891ad78f2d52f1bf20bdfb36d226f0df279155e"
     },
     "source/ramlib/ram.c": {
-      "distributed_sha256": "ffe35f45c59ce01c8c0e7e19da206d9efb59239ceee47a9ecf7c96d04f541e2e",
+      "distributed_sha256": "6e4bd2e90958616e8df0d1c63d18da360ebc18eea8834fd209ec7446a40e7e5c",
       "modified": true,
       "summary": "Read host memory statistics through mach on macOS instead of the glibc-only <malloc.h>.",
       "topics": [
@@ -661,7 +688,7 @@
       "upstream_sha256": "7e833ce4fddf92a755f98381eabc738a6a0fe78739abc9a6daa75a6fb5a1423b"
     },
     "source/scriptlib/ImportCache.c": {
-      "distributed_sha256": "fc9cda468689adeb88a725ef5f61facbebd9e55257511b1638959112c81c2e13",
+      "distributed_sha256": "ca79ee758f602e34a9e93155f83f29b4776cc26edfae23397407c11a21b5bad5",
       "modified": true,
       "summary": "Guard parser-only import metadata after compilation. Read import metadata only while an interpreter still owns parser state.",
       "topics": [
@@ -672,7 +699,7 @@
       "upstream_sha256": "0469b5561f56a45e03d5d4c49cac49725244187a8c662ecdb036faac77b914fd"
     },
     "source/scriptlib/ImportCache.h": {
-      "distributed_sha256": "a7660c28f744817c622185b6e6697a077e7a48693a108061f5f8ed2d74764bb1",
+      "distributed_sha256": "112024dffa3c1aea7862bb965e51d8663de05097e634e746f884bda22e45c429",
       "modified": true,
       "summary": "Retain imported entry points as direct instruction pointers.",
       "topics": [
@@ -681,7 +708,7 @@
       "upstream_sha256": "0e9408c351e17abb471a76da666460664604ae0c93a90d1f554f65fab8ab6f73"
     },
     "source/scriptlib/Instruction.c": {
-      "distributed_sha256": "4c0376fef388ad639c72be1c5a801e84193dde712d0e03264846b9f2afe51613",
+      "distributed_sha256": "9f1d402fb4895445a9dcccf4f756d59bab5aad3ae454114e822a7391a437f17c",
       "modified": true,
       "summary": "Store each compiled script constant once, compact call parameter references, and distinguish parser storage from compiled call and jump targets.",
       "topics": [
@@ -691,7 +718,7 @@
       "upstream_sha256": "73d3f7c89520bb752f14e891960f56d832e41b6f9c86489c9a41d05dbe4fcb1e"
     },
     "source/scriptlib/Instruction.h": {
-      "distributed_sha256": "9924a8c0a9f65ab66558d14ed550c03733a91513bcbcdbc31c4ad3957d187b32",
+      "distributed_sha256": "0d4d436becbb53271113e85b75437cde0aa7973c4215bdaab53d44b55e160d75",
       "modified": true,
       "summary": "Remove redundant value storage, compact opcode and call-reference bookkeeping, and share parser-only fields with their compiled replacements.",
       "topics": [
@@ -701,7 +728,7 @@
       "upstream_sha256": "c11f3c10c95e428253195f44b0c16249ce8099adcd5425a35d37b31536cdc478"
     },
     "source/scriptlib/Interpreter.c": {
-      "distributed_sha256": "e836dc364b08cda94c48c32c20096e7e270fe7afb0a93214a0a815e24e94e1f4",
+      "distributed_sha256": "ab5b35cdc50180acf26a24b19493af3f85ad13ebf40b267ea0fe15b1f364c119",
       "modified": true,
       "summary": "Push canonical constants, release parser-only instruction data, and pack compiled instructions, values, and call references into exact contiguous storage. Allocate parser state only while compiling and release it once runtime instructions are ready.",
       "topics": [
@@ -711,7 +738,7 @@
       "upstream_sha256": "d548f115c4f107d5cd4d8f6ecda5f3059dd1d704b1f289d465524bd3439e68e7"
     },
     "source/scriptlib/Interpreter.h": {
-      "distributed_sha256": "4c661a685721f26aaf69073f7dcbbe50102dda13edbc6c927c82c74d065d4e38",
+      "distributed_sha256": "2037f9594bf3fe991fea0b5ea6390e3b28d6167b843b8f179372271a43b7ab15",
       "modified": true,
       "summary": "Own the exact contiguous storage used by compiled instructions and their values. Store parser state indirectly so compiled interpreters do not retain it.",
       "topics": [
@@ -775,13 +802,17 @@
       "upstream_sha256": "1d66448d1f58d03690abf08980ca24e5f02e7ff6b7003273829d7e08f026cc49"
     },
     "source/scriptlib/ScriptVariant.c": {
-      "distributed_sha256": "f77ad8f03ca585ed88b23ac452d37e85c85608f8b38c2ebaa1c6ef2294d496ce",
-      "modified": false,
-      "topics": [],
+      "distributed_sha256": "57750d5d54bf76022798a2ab10001f7319f18af5d1eefd18f625e7363f97a2b8",
+      "modified": true,
+      "summary": "Select the native 6330 decimal negation fallthrough.",
+      "topics": [
+        "logical-profile-compatibility",
+        "record-dates-and-file-notices"
+      ],
       "upstream_sha256": "f77ad8f03ca585ed88b23ac452d37e85c85608f8b38c2ebaa1c6ef2294d496ce"
     },
     "source/scriptlib/ScriptVariant.h": {
-      "distributed_sha256": "c680c692f6cd026447770ffd8d383b8644394ac458eb2aa4a54a9ca598f4be07",
+      "distributed_sha256": "f6907c456c709829caf156621dd6a3a843f6775bb4f2d60e034e49418f3d51e2",
       "modified": true,
       "summary": "Declare the cache and variant helpers as ordinary functions; the header only declared them inline and the definitions live in ScriptVariant.c.",
       "topics": [
@@ -857,7 +888,7 @@
       "upstream_sha256": "d9bf8cdb39ccbdc026f120a82f8dd12cc9d30a65e410617da7462b3317ffa8ca"
     },
     "source/utils.c": {
-      "distributed_sha256": "98c24ed8ee9ba3ae8ab60edb66a9e4d47e222fdb3b809a5414508515151a539c",
+      "distributed_sha256": "00912d7c238a88bfe089a483bf79bb5eb989d5cffcdb988d7add07a64a589c3b",
       "modified": true,
       "summary": "Enable libretro platform and PNG helper declarations, the POSIX directory and mkdir forms macOS also uses, reach the standard allocation declarations without the glibc-only <malloc.h>, and report memory usage at exit on macOS through the port's own accounting instead of mallinfo().",
       "topics": [
@@ -943,7 +974,7 @@
       "upstream_sha256": "3fd1c478b5c9bce2a44c4a1cee1001ed95069568cfcd4b23b02f6ad0e3205835"
     },
     "source/webmlib/vidplay.c": {
-      "distributed_sha256": "1c081495fd873b15b7142065caeddd56494235ef894a1018e3cee2c08b8c23d3",
+      "distributed_sha256": "58a61f77e27a8035e2e67a88bce5b26a56f7ce65e365b2ad9ab0487f723c3b20",
       "modified": true,
       "summary": "Coordinate WebM worker shutdown and yield while waiting for video frames.",
       "topics": [
@@ -1419,7 +1450,7 @@
     "xbox/video.h": "914e7b353daef650d39025fce339f3feed8a8664c889d7017e4b7fbae5e357c0",
     "xcode/mac/OpenBOR.xcodeproj/project.pbxproj": "0f4229c1f694e719e37438e24240ebf6a9ca85f4b8db0821e1e6f1a73a38d927"
   },
-  "record_date": "2026-09-29",
+  "record_date": "2026-10-05",
   "repository": "https://github.com/DCurrent/openbor.git",
   "schema": 3,
   "selection": "Libretro build dependency closure and original license notices; omitted paths are relative to the upstream engine/ subtree"

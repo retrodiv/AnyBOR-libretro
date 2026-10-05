@@ -1,12 +1,12 @@
-/* AnyBOR modification record: 2026-09-29.
+/* AnyBOR modification record: 2026-10-05.
  * Port maintained by retrodiv <retrodiv@proton.me>.
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
  * Upstream code retains its original license and notices.
  * Allocate collision pointer slots through the highest author-facing index
- * used by each collection. Define the upstream 6412 binding-animation flags
- * for profile-specific script behavior. Track each model's allocated
- * animation-table capacity and reject lookups outside it.
+ * used by each collection. Define shared selectors and layouts for native
+ * 6330, 6412 and 6510 behavior. Track each model's allocated animation-table
+ * capacity and reject lookups outside it.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/6391.md
  * at the source repository root. Original notices follow below.
@@ -287,7 +287,8 @@ typedef enum
     SPAWN_TYPE_PROJECTILE_NORMAL,
     SPAWN_TYPE_PROJECTILE_STAR,
     SPAWN_TYPE_STEAM,
-    SPAWN_TYPE_WEAPON
+    SPAWN_TYPE_WEAPON,
+    SPAWN_TYPE_PROJECTILE_BOOMERANG
 } e_spawn_type;
 
 typedef enum
@@ -397,7 +398,8 @@ typedef enum
     SUBTYPE_BOTH,		// Used with TYPE_ENDLEVEL to force both players to reach the point before ending level
     SUBTYPE_PROJECTILE, // New weapon projectile type that can be picked up by players/enemies
     SUBTYPE_FOLLOW,     // Used by NPC character, if set, they will try to follow players
-    SUBTYPE_CHASE       // Used by enemy always chasing you
+    SUBTYPE_CHASE,      // Used by enemy always chasing you
+    SUBTYPE_BOOMERANG
 } e_entity_type_sub;
 
 typedef enum
@@ -428,6 +430,7 @@ typedef enum
     AIMOVE1_STAR        = 0x00000200,   // fly like a star, subject to ground
     AIMOVE1_BOMB        = 0x00000400,   // fly like a bomb, subject to ground/wall etc
     AIMOVE1_NOMOVE      = 0x00000800,   // don't move at all
+    AIMOVE1_BOOMERANG   = 0x00001000,
     MASK_AIMOVE1        = 0x0000FFFF
 } e_aimove_1;
 
@@ -483,6 +486,7 @@ typedef enum //Animations
     2013-12-27
     */
 
+    ANI_NONE = -1,
     ANI_IDLE,
     ANI_WALK,
     ANI_JUMP,
@@ -727,6 +731,8 @@ typedef enum //Animations
     ANI_VICTORY,
     ANI_FALLLOSE,
     ANI_LOSE,
+    ANI_GETBOOMERANG,
+    ANI_GETBOOMERANGINAIR,
     MAX_ANIS                // Maximum # of animations. This must always be last.
 } e_animations;
 
@@ -934,6 +940,7 @@ typedef enum
     ATK_LIFESPAN,
     ATK_LOSE,
     ATK_TIMEOVER,
+    ATK_BOSS_DEATH,
     MAX_ATKS,                       //Default max attack types (must be below all attack types in enum to get correct value)
     STA_ATKS        = (MAX_ATKS-10)
 } e_attack_types;
@@ -1138,6 +1145,49 @@ typedef enum
     DIRECTION_LEFT,
     DIRECTION_RIGHT
 } e_direction;
+
+typedef enum
+{
+    // These must be kept in the current order
+    // to ensure backward compatibility with
+    // modules that used magic numbers before
+    // constants were available.
+
+    BINDING_MATCHING_NONE               = 0,
+    BINDING_MATCHING_ANIMATION_TARGET   = 1,
+    BINDING_MATCHING_FRAME_TARGET       = 2,
+    BINDING_MATCHING_ANIMATION_REMOVE   = 4,
+    BINDING_MATCHING_FRAME_REMOVE       = 6,
+
+    BINDING_MATCHING_ANIMATION_DEFINED  = 8,
+    BINDING_MATCHING_FRAME_DEFINED      = 10
+} e_binding_matching;
+
+typedef enum
+{
+    // These must be kept in the current order
+    // to ensure backward compatibility with
+    // modules that used magic numbers before
+    // constants were available.
+
+    BINDING_POSITIONING_NONE,
+    BINDING_POSITIONING_TARGET,
+    BINDING_POSITIONING_LEVEL
+} e_binding_positioning;
+
+typedef enum
+{
+    // Double each value so we can use
+    // bitwise logic (0, 1, 2, 4, 8...).
+
+    BINDING_OVERRIDING_NONE             = 0,
+    BINDING_OVERRIDING_FALL_LAND        = 1,
+    BINDING_OVERRIDING_LANDFRAME        = 2,
+    BINDING_OVERRIDING_SPECIAL_AI       = 4,
+    BINDING_OVERRIDING_SPECIAL_PLAYER   = 8
+} e_binding_overriding;
+
+
 
 typedef enum
 {
@@ -1421,7 +1471,7 @@ if(n<1) n = 1;
 
 #define freezeall        (smartbomber || textbox)
 
-#define is_projectile(e) (e->modeldata.type == TYPE_SHOT || e->model->subtype == SUBTYPE_ARROW || e->owner)
+#define is_projectile(e) (e->modeldata.type == TYPE_SHOT || e->model->subtype == SUBTYPE_ARROW || (obor_profile_build == 6330 && e->model->subtype == SUBTYPE_BOOMERANG) || e->owner)
 
 #define screeny (level?((level->scrolldir == SCROLL_UP || level->scrolldir == SCROLL_DOWN )? 0:advancey ):0)
 #define screenx (level?advancex:0)
@@ -1516,6 +1566,12 @@ typedef struct
     s_axis_principal_int    axis;
     int                     base;
 } s_move;
+
+typedef struct
+{
+    float acceleration;
+    float hdistance;
+} s_boomerang_props;
 
 // distance x and z for edge animation
 typedef struct
@@ -1877,6 +1933,7 @@ typedef struct
     int                     knife;      // custknife;
     s_axis_principal_int  position;   // Location at which projectiles are spawned
     int                     star;       // custstar;
+    int boomerang;
 } s_projectile;
 
 typedef struct
@@ -1986,6 +2043,8 @@ typedef struct
     Script			*onmodelcopy_script;			//execute when set_model_ex is done
     Script			*ondraw_script;					//when update_ents is called
     Script			*onentitycollision_script;		//execute when entity collides with other entity
+    Script *on_bind_update_other_to_self_script;
+    Script *on_bind_update_self_to_other_script;
 } s_scripts;
 
 typedef struct
@@ -2150,6 +2209,8 @@ typedef struct
     int knife; // 7-1-2005 now every enemy can have their own "knife" projectile
     int pshotno; // 7-1-2005 now every enemy can have their own "knife" projectile
     int star; // 7-1-2005 now every enemy can have their own "ninja star" projectiles
+    int boomerang;
+    s_boomerang_props boomerang_prop;
     int bomb; // New projectile type for exploding bombs/grenades/dynamite
     int flash; // Now each entity can have their own flash
     int bflash; // Flash that plays when an attack is blocked
@@ -2294,6 +2355,10 @@ typedef struct
     s_axis_principal_int  offset;         // x,y,z offset.
     e_direction_adjust      direction;      // Direction force
     struct entity *ent;                     // Entity to bind.
+    int tag;
+    int frame;
+    e_binding_overriding overriding;
+    e_animations animation;
 } s_bind;
 
 typedef struct
@@ -2347,6 +2412,7 @@ typedef struct entity
     s_item_properties   *item_properties;       // Properties copied to an item entity when it is dropped.
     bool boss;
     unsigned int dying;   // Corresponds with which remap is to be used for the dying flash
+    unsigned int boomerang_loop;
     unsigned int dying2;  // Corresponds with which remap is to be used for the dying flash for per2
     unsigned int per1;    // Used to store at what health value the entity begins to flash
     unsigned int per2;    // Used to store at what health value the entity flashes more rapidly
@@ -2944,6 +3010,22 @@ void ents_link(entity *e1, entity *e2);
 void kill_entity(entity *victim);
 void kill_all();
 
+
+int do_catch(entity *ent, entity *target, int animation_catch);
+int boomerang_catch(entity *ent, float distance_x_current);
+void boomerang_initialize(entity *ent);
+int boomerang_move(void);
+entity *boomerang_spawn(char *name, int index, float x, float z, float a, int direction, int map);
+
+void execute_on_bind_update_other_to_self(entity *ent, entity *other, s_bind *binding);
+void execute_on_bind_update_self_to_other(entity *ent, entity *other, s_bind *binding);
+int check_bind_override(entity *ent, e_binding_overriding overriding);
+int check_blocking_eligible(entity *ent, entity *other, s_collision_attack *attack);
+int check_blocking_chance(entity *ent);
+int check_blocking_conditions(entity *ent, entity *other, s_collision_attack *attack);
+int check_blockpain(entity *ent, s_collision_attack *attack);
+void set_blocking_action(entity *ent, entity *other, s_collision_attack *attack);
+entity *spawn_attack_flash(entity *ent, s_collision_attack *attack, int attack_flash, int model_flash);
 
 int projectile_wall_deflect(entity *ent);
 

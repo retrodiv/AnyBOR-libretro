@@ -1,7 +1,7 @@
 # AnyBOR
 
-An independent libretro core for OpenBOR games, offering nine selectable
-engines in one library: 3400, 3842, 4086, 4432, 4453, 6391, 6412, 7533 and 8023.
+An independent libretro core for OpenBOR games, offering eleven selectable
+engines in one library: 3400, 3842, 4086, 4432, 4453, 6330, 6391, 6412, 6510, 7533 and 8023.
 Core Options also provides Auto, which uses build tags and content clues to
 choose an engine. You can select one manually when a game needs it.
 Save states, rewind and four players are supported. OpenBOR, Senile Team and
@@ -149,7 +149,7 @@ with their downloads.
 The original diagnostic fixture generator and native smoke test are described
 in [docs/TESTING.md](docs/TESTING.md).
 
-See [MODIFICATIONS.md](MODIFICATIONS.md) for changes supporting the nine
+See [MODIFICATIONS.md](MODIFICATIONS.md) for changes supporting the eleven
 selectable OpenBOR engines, with file inventories and source references,
 [PROVENANCE.md](PROVENANCE.md) for source origins,
 [CONTRIBUTING.md](CONTRIBUTING.md) for development, and

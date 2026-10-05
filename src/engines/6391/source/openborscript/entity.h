@@ -1,10 +1,10 @@
-/* AnyBOR modification record: 2026-09-29.
+/* AnyBOR modification record: 2026-10-05.
  * Port maintained by retrodiv <retrodiv@proton.me>.
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
  * Upstream code retains its original license and notices.
- * Keep legacy entity property IDs and add owner and opponent selectors for
- * profile 6412.
+ * Keep legacy entity IDs and append selectors needed by the nearby logical
+ * profiles.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/6391.md
  * at the source repository root. Original notices follow below.
@@ -63,6 +63,7 @@ typedef enum
     _ENTITY_POSITION_DIRECTION,
     _ENTITY_PROJECTILE_PRIME,
     _ENTITY_SPAWN_TYPE,
+    _ENTITY_BOOMERANG_LOOP,
     _ENTITY_LEGACY_END,
     _ENTITY_OPPONENT = _ENTITY_LEGACY_END,
     _ENTITY_OWNER,

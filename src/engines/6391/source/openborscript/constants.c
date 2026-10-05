@@ -1,10 +1,10 @@
-/* AnyBOR modification record: 2026-09-29.
+/* AnyBOR modification record: 2026-10-05.
  * Port maintained by retrodiv <retrodiv@proton.me>.
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
  * Upstream code retains its original license and notices.
- * Expose the upstream 6412 binding-animation constants only under the 6412
- * logical profile.
+ * Expose each logical profile's native constants and translate shared
+ * selectors to native values.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/6391.md
  * at the source repository root. Original notices follow below.
@@ -25,6 +25,7 @@
 // Mapping constants for use in script.
 
 #include "scriptcommon.h"
+#include "profile_ids.h"
 
 // ===== openborconstant =====
 #define IICMPCONST(x) \
@@ -36,6 +37,16 @@ if(stricmp(#x, constname)==0) {\
 #define ICMPCONST(x) \
 else if(stricmp(#x, constname)==0) {\
 	v.lVal = (LONG)x;\
+}
+
+#define ICMPCONST6510(x) \
+else if(obor_profile_build == 6510 && stricmp(#x, constname)==0) {\
+    v.lVal = (LONG)x;\
+}
+
+#define ICMPCONST6330(x) \
+else if(obor_profile_build == 6330 && stricmp(#x, constname)==0) {\
+    v.lVal = (LONG)x;\
 }
 
 #define ICMPCONST6412(x) \
@@ -52,13 +63,13 @@ else if(strnicmp(constname, #x, sizeof(#x)-1)==0 && constname[sizeof(#x)-1] >= '
 #define ICMPSCONSTB(x, y) \
 else if(strnicmp(constname, #x, sizeof(#x)-1)==0 && constname[sizeof(#x)-1] >= '1' && constname[sizeof(#x)-1]<='9') \
 { \
-	v.lVal = (LONG)(y[atoi(constname+(sizeof(#x)-1))+STA_ATKS-1]);\
+	v.lVal = (LONG)(y[obor_attack_from_native(atoi(constname+(sizeof(#x)-1))+obor_attack_to_native(MAX_ATKS)-11)]);\
 }
 
 #define ICMPSCONSTC(x) \
 else if(strnicmp(constname, #x, sizeof(#x)-1)==0 && constname[sizeof(#x)-1] >= '1' && constname[sizeof(#x)-1]<='9') \
 { \
-	v.lVal = (LONG)(atoi(constname+(sizeof(#x)-1))+STA_ATKS-1);\
+	v.lVal = (LONG)(obor_attack_from_native(atoi(constname+(sizeof(#x)-1))+obor_attack_to_native(MAX_ATKS)-11));\
 }
 
 int mapstrings_transconst(ScriptVariant **varlist, int paramCount)
@@ -79,6 +90,22 @@ int mapstrings_transconst(ScriptVariant **varlist, int paramCount)
         constname = (char *)StrCache_Get(varlist[0]->strVal);
 
         IICMPCONST(COMPATIBLEVERSION)
+        ICMPCONST6510(ATK_LOSE)
+        ICMPCONST6510(ATK_BOSS_DEATH)
+        ICMPCONST6510(BINDING_POSITIONING_LEVEL)
+        ICMPCONST6510(BINDING_POSITIONING_TARGET)
+        ICMPCONST6510(BINDING_POSITIONING_NONE)
+        ICMPCONST6510(BINDING_MATCHING_FRAME_DEFINED)
+        ICMPCONST6510(BINDING_MATCHING_ANIMATION_DEFINED)
+        ICMPCONST6510(BINDING_MATCHING_FRAME_REMOVE)
+        ICMPCONST6510(BINDING_MATCHING_ANIMATION_REMOVE)
+        ICMPCONST6510(BINDING_MATCHING_FRAME_TARGET)
+        ICMPCONST6510(BINDING_MATCHING_ANIMATION_TARGET)
+        ICMPCONST6510(BINDING_MATCHING_NONE)
+        ICMPCONST6330(ANI_GETBOOMERANGINAIR)
+        ICMPCONST6330(ANI_GETBOOMERANG)
+        ICMPCONST6330(AIMOVE1_BOOMERANG)
+        ICMPCONST6330(SUBTYPE_BOOMERANG)
         ICMPCONST6412(BINDING_ANI_NONE)
         ICMPCONST6412(BINDING_ANI_ANIMATION_MATCH)
         ICMPCONST6412(BINDING_ANI_FRAME_MATCH)
@@ -721,7 +748,7 @@ int mapstrings_transconst(ScriptVariant **varlist, int paramCount)
         ICMPCONST(ANI_PROP_ATTACK)
         ICMPCONST(ANI_PROP_COLLISIONONE)
         ICMPCONST(ANI_PROP_BODY_COLLISION)
-        ICMPCONST(ANI_PROP_ENTITY_COLLISION)
+        else if(obor_profile_build != 6330 && stricmp("ANI_PROP_ENTITY_COLLISION", constname)==0) { v.lVal = ANI_PROP_ENTITY_COLLISION; }
         ICMPCONST(ANI_PROP_BOUNCE)
         ICMPCONST(ANI_PROP_CANCEL)
         ICMPCONST(ANI_PROP_CHARGETIME)
@@ -804,8 +831,8 @@ int mapstrings_transconst(ScriptVariant **varlist, int paramCount)
         ICMPCONST(BODY_COLLISION_PROP_TAG)
 
         // Entity Collision (ebox) properties.
-        ICMPCONST(ENTITY_COLLISION_PROP_COORDINATES)
-        ICMPCONST(ENTITY_COLLISION_PROP_TAG)
+        else if(obor_profile_build != 6330 && stricmp("ENTITY_COLLISION_PROP_COORDINATES", constname)==0) { v.lVal = ENTITY_COLLISION_PROP_COORDINATES; }
+        else if(obor_profile_build != 6330 && stricmp("ENTITY_COLLISION_PROP_TAG", constname)==0) { v.lVal = ENTITY_COLLISION_PROP_TAG; }
 
         // Collision coordinate properties.
         ICMPCONST(COLLISION_COORDINATES_PROP_DEPTH_BACKGROUND)
@@ -843,6 +870,18 @@ int mapstrings_transconst(ScriptVariant **varlist, int paramCount)
 
         if(found)
         {
+            if(strnicmp(constname, "ANI_PROP_", 9) == 0)
+                v.lVal = obor_animation_property_to_native(v.lVal);
+            else if(strnicmp(constname, "ANI_", 4) == 0 || stricmp(constname, "MAX_ANIS") == 0)
+                v.lVal = obor_animation_to_native(v.lVal);
+            else if(strnicmp(constname, "ATK_", 4) == 0 || stricmp(constname, "MAX_ATKS") == 0)
+                v.lVal = obor_attack_to_native(v.lVal);
+            else if(stricmp(constname, "STA_ATKS") == 0)
+                v.lVal = obor_attack_to_native(MAX_ATKS) - 10;
+            else if(strnicmp(constname, "SUBTYPE_", 8) == 0)
+                v.lVal = obor_subtype_to_native(v.lVal);
+            else if(strnicmp(constname, "SPAWN_TYPE_", 11) == 0)
+                v.lVal = obor_spawn_type_to_native(v.lVal);
             ScriptVariant_Copy(varlist[0], &v);
         }
         else

@@ -1,3 +1,14 @@
+/* AnyBOR modification record: 2026-10-05.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Translate native animation property IDs for the logical profile.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/6391.md
+ * at the source repository root. Original notices follow below.
+ */
+
 /*
  * OpenBOR - http://www.chronocrash.com
  * -----------------------------------------------------------------------
@@ -13,6 +24,7 @@
 // Access animation properties.
 
 #include "scriptcommon.h"
+#include "profile_ids.h"
 
 // Get animation property.
 // Caskey, Damon V.
@@ -49,7 +61,7 @@ HRESULT openbor_get_animation_property(ScriptVariant **varlist, ScriptVariant **
     else
     {
         handle      = (s_anim *)varlist[ARG_HANDLE]->ptrVal;
-        property    = (LONG)varlist[ARG_PROPERTY]->lVal;
+        property    = obor_animation_property_from_native((LONG)varlist[ARG_PROPERTY]->lVal);
     }
 
     // Which property to get?
@@ -202,7 +214,7 @@ HRESULT openbor_set_animation_property(ScriptVariant **varlist, ScriptVariant **
     else
     {
         handle      = (s_anim *)varlist[ARG_HANDLE]->ptrVal;
-        property    = (LONG)varlist[ARG_PROPERTY]->lVal;
+        property    = obor_animation_property_from_native((LONG)varlist[ARG_PROPERTY]->lVal);
     }
 
     // Which property to modify?

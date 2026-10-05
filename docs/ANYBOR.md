@@ -1,7 +1,7 @@
 # OpenBOR (AnyBOR)
 
-AnyBOR is an independent libretro core for OpenBOR games. Its nine selectable
-engines are 3400, 3842, 4086, 4432, 4453, 6391, 6412, 7533 and 8023. Auto uses
+AnyBOR is an independent libretro core for OpenBOR games. Its eleven selectable
+engines are 3400, 3842, 4086, 4432, 4453, 6330, 6391, 6412, 6510, 7533 and 8023. Auto uses
 available build tags and content clues; you can also select an engine manually.
 OpenBOR and Beats of Rage originate with Senile Team and OpenBOR Team; the port
 is maintained by retrodiv. The combined core has multiple component licenses,
@@ -88,7 +88,7 @@ the supported engine ranges.
 
 Filename build tags may end in unknown digits: **Build 4XXX** selects the
 highest available profile from 4000 through 4999 (4453), and **Build 6XXX**
-selects the highest from 6000 through 6999 (6412). If no profile falls within
+selects the highest from 6000 through 6999 (6510). If no profile falls within
 the interval, Auto routes its upper endpoint normally: **Build 42XX** routes
 4299 to 4432, and **Build 405X** routes 4059 to 4086. Lowercase `x` also works.
 
@@ -114,8 +114,8 @@ The historical **v.2.1933** filename form remains supported separately.
 When no higher-priority clue supplies a build, a bounded PAK text scan combines
 known command, animation, native-function and literal-constant introductions
 and removals into an inclusive range, then applies the same highest-profile /
-next-engine policy. Content inference offers only automatic profiles; 4453
-and 6412 remain explicit selections. Native rules ignore comments and quoted
+next-engine policy. Content inference offers only automatic profiles; 4453,
+6330, 6412 and 6510 remain explicit selections. Native rules ignore comments and quoted
 prose. Preprocessor directives or a local declaration of a reviewed builtin
 make native evidence inconclusive; model evidence remains usable. This scan
 is a heuristic and does not certify a whole game or resolve dynamic arguments,

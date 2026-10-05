@@ -1,3 +1,14 @@
+/* AnyBOR modification record: 2026-10-05.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Select the native 6330 background-speed return representation.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/6391.md
+ * at the source repository root. Original notices follow below.
+ */
+
 /*
  * OpenBOR - http://www.chronocrash.com
  * -----------------------------------------------------------------------
@@ -1818,13 +1829,15 @@ HRESULT openbor_getlevelproperty(ScriptVariant **varlist , ScriptVariant **pretv
     case _lp_bgspeed:
     {
         ScriptVariant_ChangeType(*pretvar, VT_DECIMAL);
-        (*pretvar)->dblVal = (DOUBLE)level->bgspeed;
+        if(obor_profile_build == 6330) (*pretvar)->lVal = (DOUBLE)level->bgspeed;
+        else (*pretvar)->dblVal = (DOUBLE)level->bgspeed;
         break;
     }
     case _lp_vbgspeed:
     {
         ScriptVariant_ChangeType(*pretvar, VT_DECIMAL);
-        (*pretvar)->dblVal = (DOUBLE)level->vbgspeed;
+        if(obor_profile_build == 6330) (*pretvar)->lVal = (DOUBLE)level->vbgspeed;
+        else (*pretvar)->dblVal = (DOUBLE)level->vbgspeed;
         break;
     }
     case _lp_cameraxoffset:

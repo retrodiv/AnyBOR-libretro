@@ -1,3 +1,15 @@
+/* AnyBOR modification record: 2026-10-05.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Append shared selectors for logical-profile model commands without
+ * shifting existing selectors.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/6391.md
+ * at the source repository root. Original notices follow below.
+ */
+
 /*
  * OpenBOR - http://www.LavaLit.com
  * -
@@ -601,6 +613,11 @@ typedef enum modelCommand
     CMD_MODEL_WEAPONFRAME,
     CMD_MODEL_WEAPONS,
 
+    CMD_MODEL_BOOMERANG,
+    CMD_MODEL_BOOMERANGVALUES,
+    CMD_MODEL_CUSTBOOMERANG,
+    CMD_MODEL_ON_BIND_UPDATE_OTHER_TO_SELF_SCRIPT,
+    CMD_MODEL_ON_BIND_UPDATE_SELF_TO_OTHER_SCRIPT,
 } modelCommands;
 
 typedef enum
