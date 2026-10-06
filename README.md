@@ -111,6 +111,9 @@ setup, external INI configuration and backup guidance.
 
 ## Save states and rewind
 
+For rewind in RetroArch, we recommend **Rewind Frames** set to **10** and
+**Rewind Buffer Size (MB)** set to **256**.
+
 Snapshots retain the running engine's writable state, complete allocated
 game heap and live coroutine stack. The inactive engines' zero-initialized
 data is excluded using linker-owned boundaries; shared data is retained.
@@ -124,9 +127,10 @@ on an earlier snapshot.
 Save states use the OBS v3 format and identify the selected engine.
 Games may grow their heap substantially
 during play: the core records its observed peak for sizing the next session
-and retains a growth allowance. Resource initialization completes before
-the frontend can fix its initial state capacity, and that loaded footprint
-updates the peak even if an older cache contains only startup allocations.
+and retains a growth allowance. Packed content reserves its initial state
+capacity before preparation, using archive size and learned peaks. Captures
+become available after resource initialization, which updates the measured
+peak even if an older cache contains only startup allocations.
 Captures that outgrow a fixed frontend buffer also record the needed heap
 without overwriting the previous snapshot. If no measured peak can be read,
 packed resource size informs the initial reserve. These are estimates, not
