@@ -237,6 +237,26 @@ static int profile_for_range(int lower, int upper, bool automatic_only)
     return best;
 }
 
+/* An introduction is a minimum requirement, not evidence for the newest
+ * snapshot. Keep the official v3 fallback while it satisfies the bounds;
+ * use the first intervening era, then the latest post-release v4 snapshot. */
+static int content_profile_for_range(int lower, int upper)
+{
+    for (size_t i = 0; i < sizeof(kProfiles) / sizeof(kProfiles[0]); ++i) {
+        const obor_profile_def *p = &kProfiles[i];
+        if (p->build == OBOR_FALLBACK_BUILD && p->build >= lower && p->build <= upper &&
+            p->engine_build >= lower && p->engine_build <= upper) return p->build;
+    }
+    if (upper < OBOR_FALLBACK_BUILD) return profile_for_range(lower, upper, true);
+    for (size_t i = 0; i < sizeof(kProfiles) / sizeof(kProfiles[0]); ++i) {
+        const obor_profile_def *p = &kProfiles[i];
+        if (p->automatic && p->build > OBOR_FALLBACK_BUILD && p->build <= 7533 &&
+            p->build >= lower && p->build <= upper &&
+            p->engine_build >= lower && p->engine_build <= upper) return p->build;
+    }
+    return profile_for_range(lower, upper, true);
+}
+
 /* Inclusive evidence bounds, independent of the engines currently linked.
  * XXXX denotes an unknown endpoint, not an asserted build number. */
 static bool build_interval_from_filename(const char *path,
@@ -260,7 +280,7 @@ static bool build_interval_from_filename(const char *path,
             continue;
         int generation = build_tag_generation(base, p);
         if (generation == 3 && upper > 7532) { upper = 7532; upper_known = true; }
-        if (generation == 4 && lower < 7533) { lower = 7533; lower_known = true; }
+        if (generation == 4 && lower < 7142) { lower = 7142; lower_known = true; }
         interval->lower = lower;
         interval->upper = upper;
         interval->lower_known = lower_known;
@@ -1813,12 +1833,14 @@ static void decide_engine(void)
     int build = 0;
     const char *how = "fallback";
     if (strcasecmp(opt, "auto") != 0) {
-        /* match the display value ("v3 4086") or the bare build ("4086",
-         * used by the test harness via OBOR_ENGINE) */
-        for (int i = 0; i < n_avail; i++)
+        /* Preserve saved options using the old v3/v4 display strings. */
+        for (int i = 0; i < n_avail; i++) {
+            char previous[48];
+            snprintf(previous, sizeof(previous), "%.2s %s", kProfiles[i].disp, kProfiles[i].name);
             if (strcmp(opt, kProfiles[i].disp) == 0 ||
-                strcmp(opt, kProfiles[i].name) == 0)
+                strcmp(opt, kProfiles[i].name) == 0 || strcmp(opt, previous) == 0)
                 build = kProfiles[i].build;
+        }
         if (build)
             how = "core option";
     }
@@ -1841,7 +1863,7 @@ static void decide_engine(void)
         build = filename_build;
         how = "filename interval";
     }
-    if (filename_build == 4453 || filename_build == 6330 || filename_build == 6412 || filename_build == 6510 || filename_build == 7533) {
+    if (filename_build == 4453 || filename_build == 6330 || filename_build == 6412 || filename_build == 6510 || filename_build == 7123 || filename_build == 7142 || filename_build == 7533 || filename_build == 8023) {
         filename_profile = filename_build;
         if (!build) {
             build = filename_build;
@@ -1862,7 +1884,7 @@ static void decide_engine(void)
         if (!g_content_scan_complete)
             log_cb(RETRO_LOG_INFO, "[OpenBOR] content scan budget or input limit reached; using fallback.\n");
         if (g_content_range_seen) {
-            content_profile = profile_for_range(g_content_lower, g_content_upper, true);
+            content_profile = content_profile_for_range(g_content_lower, g_content_upper);
             log_cb(RETRO_LOG_INFO, "[OpenBOR] content build bounds %d-%d -> profile %d\n",
                    g_content_lower, g_content_upper, content_profile);
             if (!content_profile) {

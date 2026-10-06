@@ -14,13 +14,50 @@
  * marker estimates. No resource names or content identities select a rule. */
 struct obor_content_rule { const char *name; int lower, upper; };
 static const obor_content_rule kContentCommands[] = {
+    { "attack.coordinates", 7830, INT_MAX },
+    { "bbox.coordinates", 7830, INT_MAX },
     { "cameraoffset", 2048, INT_MAX },
+    { "child_follow_direction_adjust_config", 7530, INT_MAX },
+    { "child_follow_direction_adjust_range_x_max", 7530, INT_MAX },
+    { "child_follow_direction_adjust_range_x_min", 7530, INT_MAX },
+    { "child_follow_direction_adjust_range_y_max", 7530, INT_MAX },
+    { "child_follow_direction_adjust_range_y_min", 7530, INT_MAX },
+    { "child_follow_direction_adjust_range_z_max", 7530, INT_MAX },
+    { "child_follow_direction_adjust_range_z_min", 7530, INT_MAX },
+    { "child_follow_offset_x", 7530, INT_MAX },
+    { "child_follow_offset_y", 7530, INT_MAX },
+    { "child_follow_offset_z", 7530, INT_MAX },
+    { "child_follow_range_recall_base_max", 7530, INT_MAX },
+    { "child_follow_range_recall_base_min", 7530, INT_MAX },
+    { "child_follow_range_recall_x_max", 7530, INT_MAX },
+    { "child_follow_range_recall_x_min", 7530, INT_MAX },
+    { "child_follow_range_recall_y_max", 7530, INT_MAX },
+    { "child_follow_range_recall_y_min", 7530, INT_MAX },
+    { "child_follow_range_recall_z_max", 7530, INT_MAX },
+    { "child_follow_range_recall_z_min", 7530, INT_MAX },
+    { "child_follow_range_run_x_max", 7530, INT_MAX },
+    { "child_follow_range_run_x_min", 7530, INT_MAX },
+    { "child_follow_range_run_y_max", 7530, INT_MAX },
+    { "child_follow_range_run_y_min", 7530, INT_MAX },
+    { "child_follow_range_run_z_max", 7530, INT_MAX },
+    { "child_follow_range_run_z_min", 7530, INT_MAX },
+    { "child_follow_range_x_max", 7530, INT_MAX },
+    { "child_follow_range_x_min", 7530, INT_MAX },
+    { "child_follow_range_y_max", 7530, INT_MAX },
+    { "child_follow_range_y_min", 7530, INT_MAX },
+    { "child_follow_range_z_max", 7530, INT_MAX },
+    { "child_follow_range_z_min", 7530, INT_MAX },
+    { "child_follow_recall_animation", 7530, INT_MAX },
+    { "child_follow_recall_offset_x", 7530, INT_MAX },
+    { "child_follow_recall_offset_y", 7530, INT_MAX },
+    { "child_follow_recall_offset_z", 7530, INT_MAX },
     { "colourdepth", 1612, INT_MAX },
     { "counterframe", 1, 4258 },
     { "counterrange", 2718, INT_MAX },
     { "dropframe", 868, INT_MAX },
     { "forcemap", 1140, INT_MAX },
     { "fshadow", 1121, INT_MAX },
+    { "global_config_game_speed", 7832, INT_MAX },
     { "hmap", 952, INT_MAX },
     { "keyscript", 1401, INT_MAX },
     { "landframe", 868, INT_MAX },
@@ -31,6 +68,7 @@ static const obor_content_rule kContentCommands[] = {
     { "offscreen_noatk_factor", 4404, INT_MAX },
     { "offscreenkill", 2414, INT_MAX },
     { "shadowcoords", 1121, INT_MAX },
+    { "sound.group", 7902, INT_MAX },
     { "spdirection", 62, INT_MAX },
     { "stun", 1196, INT_MAX },
     { "sync", 3841, INT_MAX },
@@ -47,6 +85,14 @@ static const obor_content_rule kContentAnimations[] = {
 static const obor_content_rule kContentConstants[] = {
     { "ani_freespecial", 3826, INT_MAX },
     { "ani_walkoff", 3466, INT_MAX },
+    { "global_config_property_ajspecial", 7556, INT_MAX },
+    { "global_config_property_block_ratio", 7556, INT_MAX },
+    { "global_config_property_block_type", 7556, INT_MAX },
+    { "global_config_property_cheats", 7556, INT_MAX },
+    { "global_config_property_flash_layer_adjust", 7556, INT_MAX },
+    { "global_config_property_flash_layer_source", 7556, INT_MAX },
+    { "global_config_property_flash_z_source", 7556, INT_MAX },
+    { "global_config_property_show_go", 7556, INT_MAX },
     { "max_int", 3552, INT_MAX },
     { "min_int", 3552, INT_MAX },
     { "player_max_z", 1, 7468 },
@@ -55,12 +101,21 @@ static const obor_content_rule kContentConstants[] = {
     { "vt_ptr", 3922, INT_MAX },
 };
 static const obor_content_rule kContentFunctions[] = {
+    { "allocate_drawmethod", 6982, INT_MAX },
     { "array", 3428, INT_MAX },
     { "checkrange", 1723, INT_MAX },
+    { "copy_drawmethod", 6982, INT_MAX },
+    { "free_drawmethod", 6982, INT_MAX },
+    { "get_bind_property", 6965, INT_MAX },
+    { "get_drawmethod_property", 6982, INT_MAX },
+    { "get_global_config_property", 7368, INT_MAX },
     { "getentityvar", 1205, INT_MAX },
     { "getindexedvar", 1205, INT_MAX },
     { "getscriptvar", 1205, INT_MAX },
     { "jumptobranch", 1262, INT_MAX },
+    { "set_bind_property", 6965, INT_MAX },
+    { "set_drawmethod_property", 6982, INT_MAX },
+    { "set_global_config_property", 7368, INT_MAX },
     { "setentityvar", 1205, INT_MAX },
     { "setindexedvar", 1205, INT_MAX },
     { "setscriptvar", 1205, INT_MAX },
@@ -276,10 +331,13 @@ static unsigned content_u32(const unsigned char *p)
     return (unsigned)p[0] | ((unsigned)p[1] << 8) | ((unsigned)p[2] << 16) | ((unsigned)p[3] << 24);
 }
 
+#include "obor_modern_api.h"
+
 static int build_from_content(const char *pak_path)
 {
     g_content_lower = 1; g_content_upper = INT_MAX;
     g_content_range_seen = false; g_content_scan_complete = false;
+    int modern = obor_modern_api_build(pak_path);
     obor_content_scan s = {1, INT_MAX, 1, INT_MAX, 0, 0, false, false, false, true, 0,
                           obor_detection_now()};
     FILE *fp = fopen(pak_path, "rb");
@@ -326,7 +384,15 @@ static int build_from_content(const char *pak_path)
     fclose(fp);
     g_content_scan_complete = s.complete;
     /* A truncated scan is inconclusive, never a complete compatibility range. */
-    if (!s.complete) return 0;
+    if (!s.complete) {
+        if (!modern) return 0;
+        /* A completed dependency probe supplies a minimum even when the
+         * broad historical scan cannot establish a full interval. */
+        g_content_lower = modern;
+        g_content_range_seen = g_content_scan_complete = true;
+        return modern;
+    }
+    if (modern) content_bounds(&s, modern, INT_MAX, false);
     if (s.script_seen && !s.ambiguous_scripts) content_bounds(&s, s.script_lower, s.script_upper, false);
     if (s.seen) {
         g_content_lower = s.lower; g_content_upper = s.upper; g_content_range_seen = true;

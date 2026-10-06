@@ -80,7 +80,7 @@ enum {
 
 #define OBOR_MAX_PLAYERS 4
 
-#define OBOR_MAX_ENGINE_REGIONS 8
+#define OBOR_MAX_ENGINE_REGIONS 16
 typedef struct {
     uint64_t begin, end;
     uint32_t engine_build;

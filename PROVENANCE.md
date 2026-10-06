@@ -1,6 +1,6 @@
 # Source provenance
 
-This distribution offers nine selectable OpenBOR engines from pinned source
+This distribution offers thirteen selectable OpenBOR engines from pinned source
 snapshots with a shared libretro platform layer. `src/pin.json` records the
 upstream repository, full commit IDs and dependency archive SHA-256 hashes.
 Each engine has an `ANYBOR-SOURCE.json` manifest identifying the original and

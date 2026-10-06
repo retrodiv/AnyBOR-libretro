@@ -3,7 +3,7 @@
 Record updated: **2026-09-30**. Port maintainer: **retrodiv**
 (<retrodiv@proton.me>).
 
-AnyBOR offers eleven selectable OpenBOR engines with a shared libretro port.
+AnyBOR offers thirteen selectable OpenBOR engines with a shared libretro port.
 The original engine work is credited to Senile Team, OpenBOR Team and the
 contributors named in the retained sources. The port's own notices identify
 its maintained code. Component terms remain as recorded in
@@ -43,13 +43,15 @@ The notices are documentation; they do not change engine behavior.
 
 | OpenBOR build | Pinned commit | File inventory |
 |---|---|---|
-| 3400 | `66fa1529897131ca51528967fbb21ee124e45775` | [3400](docs/modifications/3400.md) |
-| 3842 | `1f702a991ace7fa31884262e458a85e351f62713` | [3842](docs/modifications/3842.md) |
-| 4086 | `af23dc9c2316bb7853bb266ccf40986aa9765aeb` | [4086](docs/modifications/4086.md) |
-| 4432 | `2566cbee6185025e6a69d2aa1823b15c7a154ff9` | [4432](docs/modifications/4432.md) |
-| 6391 | `494708eb34e71d1afda237873907701c4ec3a569` | [6391](docs/modifications/6391.md) |
-| 7533 | `5c8261444de6b61f8e2ce6e79e3d86a2949e55bd` | [7533](docs/modifications/7533.md) |
-| 8023 | `16aae1a30b81063778f21977ae20b849bd1c76f9` | [8023](docs/modifications/8023.md) |
+| v3.0 3400 | `66fa1529897131ca51528967fbb21ee124e45775` | [v3.0 3400](docs/modifications/3400.md) |
+| v3.0 3842 | `1f702a991ace7fa31884262e458a85e351f62713` | [v3.0 3842](docs/modifications/3842.md) |
+| v3.0 4086 | `af23dc9c2316bb7853bb266ccf40986aa9765aeb` | [v3.0 4086](docs/modifications/4086.md) |
+| v3.0 4432 | `2566cbee6185025e6a69d2aa1823b15c7a154ff9` | [v3.0 4432](docs/modifications/4432.md) |
+| v3.0 6391 | `494708eb34e71d1afda237873907701c4ec3a569` | [v3.0 6391](docs/modifications/6391.md) |
+| v3.0 7123-dev | `81049d95c50c4c26e2637cc89ab3056bfcc77d16` | [v3.0 7123-dev](docs/modifications/7123.md) |
+| v4.0 7142-alpha | `9dcd966d1dc8e93ff03c39edbd6bd262f4a2d7ab` | [v4.0 7142-alpha](docs/modifications/7142.md) |
+| v4.0 7533 | `5c8261444de6b61f8e2ce6e79e3d86a2949e55bd` | [v4.0 7533](docs/modifications/7533.md) |
+| v4.0 8023-dev | `16aae1a30b81063778f21977ae20b849bd1c76f9` | [v4.0 8023-dev](docs/modifications/8023.md) |
 
 Each inventory links every modified or added engine file to its explanation,
 original source at the pinned commit (where it existed). The accompanying `ANYBOR-SOURCE.json` also lists unchanged
@@ -66,11 +68,11 @@ hashes remain recorded for comparison.
 ## Platform integration
 
 All engine source trees include `libretroport.h` through `source/globals.h` and expose
-the platform/PNG helper declarations in `source/utils.c`. Builds 4432, 6391, 7533
-and 8023 also declare libretro thread, mutex and condition types in
+the platform/PNG helper declarations in `source/utils.c`. Engines v3.0 4432, v3.0 6391, v3.0 7123-dev, v4.0 7142-alpha,
+v4.0 7533 and v4.0 8023-dev also declare libretro thread, mutex and condition types in
 `source/gamelib/threads.h`. Each inventory identifies the affected files.
 
-Build 8023 places the player array in aligned storage. The PE linker otherwise
+Engines v4.0 8023-dev place the player array in aligned storage. The PE linker otherwise
 allocates its tentative common symbol at a four-byte boundary even though
 compiled menu code reads it with a 16-byte SIMD operand.
 
@@ -78,8 +80,9 @@ The platform implementation is shared under
 [`src/port/libretro/`](src/port/libretro). It replaces standalone host backends
 with frontend video, audio, controls and timing; its files are catalogued below.
 Each engine gets a generated `version.h` with its pinned build number and a
-`Makefile.libretro` from the shared overlay. The version header reports `VERSION_MAJOR="4"` for the 7533 and 8023 anchors and
-retains the historical v3 version strings for the five older anchors.
+`Makefile.libretro` from the shared overlay. The version header reports `VERSION_MAJOR="4"` for v4.0 7533 and v4.0 8023-dev.
+The other headers preserve upstream version 3, including v4.0 7142-alpha;
+frontend labels describe its actual published alpha identity.
 
 ## Darwin platform support
 
@@ -199,7 +202,7 @@ for every animation frame whose collision collection uses only a few slots.
 
 ## Animation memory layout
 
-All eleven selectable engines initially allocate each model's animation pointer table for
+All thirteen selectable engines initially allocate each model's animation pointer table for
 the built-in animation range and grow it in bounded blocks only when authored
 content assigns a higher animation index. Lookup, sprite-cache, model-copy,
 normalization and cleanup paths use the model's recorded capacity. The global
@@ -209,7 +212,7 @@ largest table for every loaded model.
 
 ## Empty player slot safety
 
-All eleven selectable engines now require both remaining lives and a selected model name
+All thirteen selectable engines now require both remaining lives and a selected model name
 before automatically spawning a player at the start of a level. Game scripts
 may assign lives to an empty multiplayer slot before that player joins; the
 previous condition then tried to spawn an unnamed model and aborted the level.
@@ -217,7 +220,7 @@ The empty slot remains available through the engines' existing join path. Each e
 
 ## Active content PAK aliases
 
-All eleven selectable engines treat a missing basename-only `Paks/*.pak` file read
+All thirteen selectable engines treat a missing basename-only `Paks/*.pak` file read
 as a probe of the active, already validated content archive. Some mods check
 the archive name they were originally distributed with from a loading script;
 a frontend may legitimately rename that file when organizing a library. The

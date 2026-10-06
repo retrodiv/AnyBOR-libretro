@@ -1,79 +1,96 @@
 {
   "core_name": "AnyBOR",
   "core_basename": "anybor_libretro",
-  "version": "0.1.17",
+  "version": "0.1.18",
   "fallback_build": "6391",
   "profiles": [
     {
       "build": "3400",
       "engine": "3400",
       "covers": "<= 3400 including lost pre-3020 era (best effort)",
-      "major": "v2-v3"
+      "major": "v3.0"
     },
     {
       "build": "3842",
       "engine": "3842",
       "covers": "3401-3842",
-      "major": "v3"
+      "major": "v3.0"
     },
     {
       "build": "4086",
       "engine": "4086",
       "covers": "3843-4086",
-      "major": "v3"
+      "major": "v3.0"
     },
     {
       "build": "4432",
       "engine": "4432",
       "covers": "4087-4432",
-      "major": "v3"
+      "major": "v3.0"
     },
     {
       "build": "4453",
       "engine": "4432",
       "covers": "explicit Build 4453 filename or core option",
       "automatic": false,
-      "major": "v3"
+      "major": "v3.0"
     },
     {
       "build": "6330",
       "engine": "6391",
       "covers": "explicit Build 6330 filename or core option",
       "automatic": false,
-      "major": "v3"
+      "major": "v3.0"
     },
     {
       "build": "6391",
       "engine": "6391",
       "covers": "4433-6412 by automatic detection; default fallback",
       "auto_until": "6412",
-      "major": "v3"
+      "major": "v3.0"
     },
     {
       "build": "6412",
       "engine": "6391",
       "covers": "explicit Build 6412 filename or core option",
       "automatic": false,
-      "major": "v3"
+      "major": "v3.0",
+      "stage": "dev"
     },
     {
       "build": "6510",
       "engine": "6391",
       "covers": "explicit Build 6510 filename or core option",
       "automatic": false,
-      "major": "v3"
+      "major": "v3.0",
+      "stage": "dev"
+    },
+    {
+      "build": "7123",
+      "engine": "7123",
+      "covers": "6413-7123 by automatic detection",
+      "major": "v3.0",
+      "stage": "dev"
+    },
+    {
+      "build": "7142",
+      "engine": "7142",
+      "covers": "7124-7142 by automatic detection",
+      "major": "v4.0",
+      "stage": "alpha"
     },
     {
       "build": "7533",
       "engine": "7533",
-      "covers": "6413-7533 by automatic detection",
-      "major": "v4"
+      "covers": "7143-7533 by automatic detection; stable v4.0 anchor",
+      "major": "v4.0"
     },
     {
       "build": "8023",
       "engine": "8023",
       "covers": "7534-8023; newer builds best effort via latest pinned v4 anchor",
-      "major": "v4"
+      "major": "v4.0",
+      "stage": "dev"
     }
   ],
   "deps": {
@@ -140,42 +157,58 @@
       "commit": "66fa1529897131ca51528967fbb21ee124e45775",
       "date": "2011-08-31",
       "covers": "<= 3400 including lost pre-3020 era (best effort)",
-      "major": "v2-v3"
+      "major": "v3.0"
     },
     {
       "build": "3842",
       "commit": "1f702a991ace7fa31884262e458a85e351f62713",
       "date": "2013-02-23",
       "covers": "3401-3842",
-      "major": "v3"
+      "major": "v3.0"
     },
     {
       "build": "4086",
       "commit": "af23dc9c2316bb7853bb266ccf40986aa9765aeb",
       "date": "2014-11-02",
       "covers": "3843-4086",
-      "major": "v3"
+      "major": "v3.0"
     },
     {
       "build": "4432",
       "commit": "2566cbee6185025e6a69d2aa1823b15c7a154ff9",
       "date": "2017-01-25",
       "covers": "4087-4432 automatically; explicit logical profile 4453",
-      "major": "v3"
+      "major": "v3.0"
     },
     {
       "build": "6391",
       "commit": "494708eb34e71d1afda237873907701c4ec3a569",
       "date": "2018-08-21",
       "covers": "4433-6412 automatically; explicit logical profiles 6330, 6412 and 6510; default fallback",
-      "major": "v3"
+      "major": "v3.0"
+    },
+    {
+      "build": "7123",
+      "commit": "81049d95c50c4c26e2637cc89ab3056bfcc77d16",
+      "date": "2019-11-25",
+      "covers": "6413-7123 by automatic detection",
+      "major": "v3.0",
+      "stage": "dev"
+    },
+    {
+      "build": "7142",
+      "commit": "9dcd966d1dc8e93ff03c39edbd6bd262f4a2d7ab",
+      "date": "2019-12-08",
+      "covers": "7124-7142 by automatic detection",
+      "major": "v4.0",
+      "stage": "alpha"
     },
     {
       "build": "7533",
       "commit": "5c8261444de6b61f8e2ce6e79e3d86a2949e55bd",
       "date": "2024-01-01",
-      "covers": "6413-7533 through logical profile 7533",
-      "major": "v4",
+      "covers": "7143-7533; stable v4.0 anchor, includes the 7530 release corrections",
+      "major": "v4.0",
       "version_major": "4"
     },
     {
@@ -183,7 +216,8 @@
       "commit": "16aae1a30b81063778f21977ae20b849bd1c76f9",
       "date": "2026-09-28",
       "covers": "7534-8023; newer builds best effort via latest pinned v4 anchor",
-      "major": "v4",
+      "major": "v4.0",
+      "stage": "dev",
       "version_major": "4"
     }
   ]

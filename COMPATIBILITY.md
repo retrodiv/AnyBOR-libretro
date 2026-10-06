@@ -1,6 +1,6 @@
 # Compatibility contract
 
-The eleven available engines are 3400, 3842, 4086, 4432, 4453, 6330, 6391, 6412, 6510, 7533 and 8023.
+The thirteen available profiles are v3.0 3400, v3.0 3842, v3.0 4086, v3.0 4432, v3.0 4453, v3.0 6330, v3.0 6391, v3.0 6412-dev, v3.0 6510-dev, v3.0 7123-dev, v4.0 7142-alpha, v4.0 7533, v4.0 8023-dev.
 An explicit Build 4453 filename or the manual 4453 core option selects 4453.
 It uses 32-bit color, ignores `colourdepth` and follows the removal of legacy
 `remap` palette conversion. Select 4432 for games that need its older behavior.
@@ -9,7 +9,9 @@ behavior selected by an explicit Build tag or the manual core option.
 
 Automatic routing selects 6391 for builds 4433 through 6412; a PAK explicitly
 tagged Build 6412 or the manual 6412 core option selects 6412. Builds 6413
-through 7533 select 7533; builds 7534 through 8023 select 8023.
+through 7123 select v3.0 7123-dev; builds 7124 through 7142 select
+v4.0 7142-alpha; builds 7143 through 7533 select v4.0 7533. Builds 7534
+through 8023 and later builds select v4.0 8023-dev.
 Other routing combines filename/sidecar metadata with bounded content ranges
 and sparse marker estimates. Filename ranges select the highest available
 profile within their effective bounds, or the next physical engine above the

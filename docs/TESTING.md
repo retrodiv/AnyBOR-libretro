@@ -32,7 +32,7 @@ python3 tools/test_multiplayer.py
 The smoke test generates a tiny diagnostic PAK from original scripts and
 geometric graphics in `tools/make_fixture.py`, under the project's BSD
 license. The synthetic font consists of simple rectangular markers. No
-existing game or font artwork is copied. It loads the content with all nine
+existing game or font artwork is copied. It loads the content with all thirteen
 engines and checks frame output, working-directory restoration and the
 runtime license document, signal-handler restoration and arena release on
 module unload. This checks basic engine boot/rendering; it does
@@ -114,7 +114,7 @@ exercise diagnostic cleanup across restarts. `OBOR_FASTCHECK=120,30` compares
 the incremental heap/stack payload against a fresh full snapshot. Module
 bookkeeping and unused buffer tails are intentionally outside that comparison.
 
-The rewind suite checks all nine engines using a capacity obtained before
+The rewind suite checks all thirteen profiles using a capacity obtained before
 the first frame. It compares complete frame hashes while stepping backwards,
 restores a state in a fresh process, toggles CRT adaptation, resets and
 switches engines through Reset. Capacity must remain constant and every

@@ -1,7 +1,7 @@
 # OpenBOR (AnyBOR)
 
-AnyBOR is an independent libretro core for OpenBOR games. Its eleven selectable
-engines are 3400, 3842, 4086, 4432, 4453, 6330, 6391, 6412, 6510, 7533 and 8023. Auto uses
+AnyBOR is an independent libretro core for OpenBOR games. Its thirteen selectable
+engines are v3.0 3400, v3.0 3842, v3.0 4086, v3.0 4432, v3.0 4453, v3.0 6330, v3.0 6391, v3.0 6412-dev, v3.0 6510-dev, v3.0 7123-dev, v4.0 7142-alpha, v4.0 7533 and v4.0 8023-dev. Auto uses
 available build tags and content clues; you can also select an engine manually.
 OpenBOR and Beats of Rage originate with Senile Team and OpenBOR Team; the port
 is maintained by retrodiv. The combined core has multiple component licenses,
@@ -96,7 +96,7 @@ For inclusive bounds, use **Build 3800-4200**. Each endpoint accepts trailing
 unknown digits: **Build 63XX-7762** means 6300-7762, and **Build 6352-65XX**
 means 6352-6599. **XXXX** leaves that endpoint open. A generation directly
 before the Build tag intersects the range: **v.3.0 Build 63XX-7762** becomes
-6300-7532, while **v.4.0 Build XXXX-7762** starts at 7533. A version in a
+6300-7532, while **v.4.0 Build XXXX-7762** starts at 7142. A version in a
 separate bracket or in the title does not constrain the range.
 
 Auto selects the highest profile whose logical and physical builds both fit
@@ -113,7 +113,10 @@ The historical **v.2.1933** filename form remains supported separately.
 
 When no higher-priority clue supplies a build, a bounded PAK text scan combines
 known command, animation, native-function and literal-constant introductions
-and removals into an inclusive range, then applies the same highest-profile /
+and removals into an inclusive range, then keeps v3.0 6391 when it satisfies that range. Requirements beyond it
+select the first compatible intervening era up to v4.0 7533; requirements
+beyond that stable release select the latest compatible snapshot, currently
+v4.0 8023-dev. Explicit filename intervals retain their highest-profile /
 next-engine policy. Content inference offers only automatic profiles; 4453,
 6330, 6412 and 6510 remain explicit selections. Native rules ignore comments and quoted
 prose. Preprocessor directives or a local declaration of a reviewed builtin
@@ -121,14 +124,25 @@ make native evidence inconclusive; model evidence remains usable. This scan
 is a heuristic and does not certify a whole game or resolve dynamic arguments,
 imports, reachability, media dependencies, or temporary historical regressions.
 
+A separate dependency probe follows the engine's fixed global script paths,
+literal imports, and model paths listed by `load`/`cache` in `data/models.txt`.
+It can retain a proven modern minimum when the broad scan exceeds its limit.
+`child_follow_*` commands require the stable v4 era; literal
+`GLOBAL_CONFIG_PROPERTY_*` constants and later coordinate, speed and sound-group
+commands require a snapshot newer than v4.0 7533. Comments, strings, local
+builtin declarations and uncertain conditional preprocessing supply no native
+requirement. The dependency probe permits 4096 eligible entries, 2 MiB per
+source, 16 MiB total and 65536 directory entries, with its own 750 ms deadline.
+
 The content pass inspects at most 800 text files, 2 MiB per file, 16 MiB total,
 and 65536 directory entries, with a 750 ms processing deadline. An incomplete
-pass discards its inference and uses the 6391 fallback. Legacy API detection
+pass discards its full interval; without a completed modern dependency probe,
+it uses the v3.0 6391 fallback. Legacy API detection
 has its own 750 ms budget and bounded argument lookahead. Filesystem reads
 can still be delayed by the host storage. The older sparse token estimates
 remain a fallback when no exact syntax rule fires.
 
-Choose **v3 4453** explicitly or use a filename tagged **Build 4453** to select
+Choose **v3.0 4453** explicitly or use a filename tagged **Build 4453** to select
 that engine. It uses 32-bit color and ignores `colourdepth`.
 
 ### Video contract: Adjust for 4:3 CRT TV

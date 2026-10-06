@@ -28,8 +28,8 @@ def read_info(path):
 def check_core_info(root, pin):
     expected_fields = {"core_name", "core_basename", "version", "source_date_epoch",
                        "fallback_build", "engine_repo", "engines", "profiles", "deps", "transform_vm"}
-    engine_fields = {"build", "commit", "date", "covers", "major", "version_major"}
-    profile_fields = {"build", "engine", "covers", "major", "auto_until", "automatic"}
+    engine_fields = {"build", "commit", "date", "covers", "major", "stage", "version_major"}
+    profile_fields = {"build", "engine", "covers", "major", "stage", "auto_until", "automatic"}
     if set(pin) != expected_fields or set(pin["engine_repo"]) != {"url"}:
         raise RuntimeError("Unexpected public source metadata fields")
     if type(pin["source_date_epoch"]) is not int or pin["source_date_epoch"] < 0:
@@ -41,6 +41,9 @@ def check_core_info(root, pin):
     for engine in pin["engines"]:
         if set(engine) - engine_fields or not {"build", "commit", "date", "major"} <= set(engine):
             raise RuntimeError("Unexpected public engine metadata fields")
+    for item in pin["engines"] + pin["profiles"]:
+        if item.get("stage", "") not in ("", "dev", "alpha"):
+            raise RuntimeError("Invalid engine release stage")
     physical = {engine["build"] for engine in pin["engines"]}
     logical = set()
     for profile in pin["profiles"]:
