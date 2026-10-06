@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Validate macOS release exports against the linker symbol list, including the
+  optional rewind interface. Wait for cooperative initialization before rewind
+  regression captures and after Reset, retaining the original buffer capacity
+  and reporting host diagnostics on failure.
 - Read game video settings before showing preparation artwork, using native
   320x240, 480x272 or 640x480 backgrounds derived at build time from one master
   and an ephemeral centred Lanczos3 resize for other sizes. Share video geometry and CRT adjustment with

@@ -57,7 +57,7 @@ def main():
             root.mkdir()
             env = {k: v for k, v in os.environ.items() if not k.startswith("OBOR_")}
             env.update(OBOR_ENGINE=engine, OBOR_STATE_CHECK="1",
-                       OBOR_FIXED_STATE_FRONTEND="1")
+                       OBOR_FIXED_STATE_FRONTEND="1", OBOR_SKIP_LOADING="1")
             if not windows:
                 env["OBOR_CHECK_FDS"] = "1"
             env.update({k: target_path(v) if isinstance(v, Path) else str(v)
@@ -67,18 +67,25 @@ def main():
                 # processes unless named in WSLENV. Paths are converted above.
                 env["WSLENV"] = ":".join(filter(None, [env.get("WSLENV", "")] +
                                                  [k for k in env if k.startswith("OBOR_")]))
-            log = subprocess.check_output(shlex.split(args.runner) + [
-                                           str(host), target_path(core), target_path(pak),
-                                           target_path(root), "180", target_path(root / "frame")],
-                                          env=env, cwd=str(work), stderr=subprocess.STDOUT,
-                                          universal_newlines=True, timeout=90)
+            command = shlex.split(args.runner) + [
+                str(host), target_path(core), target_path(pak), target_path(root),
+                "180", target_path(root / "frame")]
+            result = subprocess.run(command, env=env, cwd=str(work),
+                                    stderr=subprocess.STDOUT, stdout=subprocess.PIPE,
+                                    universal_newlines=True, timeout=90)
+            log = result.stdout
+            if result.returncode:
+                raise RuntimeError("%s %s host exited %d:\n%s" %
+                                   (engine, name, result.returncode, log))
             assert "invalid_version_and_truncation_rejected=1" in log, log
             assert "frames=180" in log, log
+            initial = re.search(r"loading_frames=\d+ initial_capacity=(\d+)", log)
+            assert initial, log
             if not windows:
                 assert "file_descriptors_restored=1" in log, log
             assert "FAILED" not in log and "MISMATCH" not in log, log
             sizes = re.findall(r"state_contract version=3 capacity=(\d+)", log)
-            assert len(sizes) == 2 and sizes[0] == sizes[1], log
+            assert len(sizes) == 2 and sizes[0] == sizes[1] == initial.group(1), log
             if "OBOR_RAREWIND" in options:
                 assert log.count(" MATCH") == 7 and log.count(" NOREF") == 1, log
             if "OBOR_LOAD_AT" in options:

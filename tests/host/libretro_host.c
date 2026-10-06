@@ -565,6 +565,23 @@ static void dump_ppm(const char *prefix, int frame)
     fclose(f);
 }
 
+static int complete_loading(void (*run)(void))
+{
+    int frame = g_frame;
+    g_frame = -1;
+    int loading_frames = 0;
+    while (!g_startup_complete && loading_frames < 5000 && !g_shutdown) {
+        run();
+        ++loading_frames;
+    }
+    g_frame = frame;
+    if (!g_startup_complete || g_shutdown) {
+        fprintf(stderr, "cooperative initialization did not complete\n");
+        return -1;
+    }
+    return loading_frames;
+}
+
 int main(int argc, char **argv)
 {
     if (argc < 5) {
@@ -711,17 +728,8 @@ int main(int argc, char **argv)
     if (getenv("OBOR_SKIP_LOADING")) {
         initial_capacity = p_retro_serialize_size();
         if (!initial_capacity) return 1;
-        g_frame = -1;
-        int loading_frames = 0;
-        while (!g_startup_complete && loading_frames < 5000 && !g_shutdown) {
-            p_retro_run();
-            ++loading_frames;
-        }
-        if (!g_startup_complete || g_shutdown) {
-            fprintf(stderr, "cooperative initialization did not complete\n");
-            return 1;
-        }
-        g_frame = 0;
+        int loading_frames = complete_loading(p_retro_run);
+        if (loading_frames < 0) return 1;
         printf("loading_frames=%d initial_capacity=%zu\n", loading_frames, initial_capacity);
     }
 
@@ -1087,7 +1095,10 @@ int main(int argc, char **argv)
         if (g_frame == reset_at ||
             (reset_every > 0 && g_frame > 0 && g_frame % reset_every == 0)) {
             printf("reset at frame %d\n", g_frame);
+            g_startup_complete = 0;
             p_retro_reset();
+            if (getenv("OBOR_SKIP_LOADING") && complete_loading(p_retro_run) < 0)
+                return 1;
         }
         if (g_frame == save_at && getenv("OBOR_SAVE_STATE")) {
             size_t sz = p_retro_serialize_size();

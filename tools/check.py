@@ -116,9 +116,7 @@ def expected_exports():
     their version script.  The names are stored in Mach-O form (leading
     underscore), so the ELF/PE comparison drops it.
     """
-    text = (ROOT / "src/glue/exports.macho").read_text(encoding="utf-8")
-    return sorted(line.strip() for line in text.splitlines()
-                  if line.strip().startswith("_"))
+    return release.expected_exports()
 
 
 def check_binary(path, target=None):

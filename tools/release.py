@@ -24,6 +24,13 @@ CORE_BINARIES = ("anybor_libretro.so", "anybor_libretro.dll",
                  "anybor_libretro_android.so", "anybor_libretro.dylib")
 
 
+def expected_exports():
+    """Read the symbol contract used by the Mach-O linker and every checker."""
+    text = (ROOT / "src/glue/exports.macho").read_text(encoding="utf-8")
+    return sorted(line.strip() for line in text.splitlines()
+                  if line.strip().startswith("_"))
+
+
 def sha256(path):
     h = hashlib.sha256()
     with open(str(path), "rb") as f:
@@ -159,19 +166,22 @@ def record_build(target, spec, outdir, expected_sources):
         # exported symbol set come from the inspector, which reads the load
         # commands and the export trie directly.
         info = macho_inspect.inspect(binary)
+        expected = expected_exports()
         imports = info["dependencies"]
         binary_format = {
             "kind": info["filetype"], "arch": info["arch"],
             "platform": info["platform"], "min_os": info["min_os"],
             "install_name": info["install_name"],
             "exported_symbols": info["exports"],
-            "expected_export_count": 25,
+            "expected_export_count": len(expected),
         }
         if info["filetype"] != "DYLIB":
             raise RuntimeError("macOS core is not a dylib: " + str(info["filetype"]))
-        if len(info["exports"]) != 25:
-            raise RuntimeError("macOS core exports %d symbols, expected 25"
-                               % len(info["exports"]))
+        if info["exports"] != expected:
+            missing = sorted(set(expected) - set(info["exports"]))
+            extra = sorted(set(info["exports"]) - set(expected))
+            raise RuntimeError("Mach-O export set differs: missing=" + repr(missing) +
+                               " extra=" + repr(extra))
     elif spec["plat"] == "windows":
         imports = subprocess.check_output([spec["objdump"], "-p", str(binary)], universal_newlines=True)
         imports = sorted(line.split("DLL Name:", 1)[1].strip() for line in imports.splitlines()
