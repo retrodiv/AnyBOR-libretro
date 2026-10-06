@@ -31,6 +31,7 @@
 #include "obor_crt.h"
 #include "obor_error_screen.h"
 #include "obor_loading_screen.h"
+#include "obor_video_config.h"
 #include "obor_prepare_co.h"
 #include "obor_prepare_progress.h"
 #include "obor_state_padding.h"
@@ -90,6 +91,8 @@ static bool g_loading_first, g_loading_retry;
 static void *g_loading_stack, *g_loading_context, *g_loading_frontend;
 static uint64_t g_loading_yield;
 static unsigned g_loading_tick;
+static uint32_t *g_loading_pixels; /* ephemeral presentation, never an engine state */
+static int g_loading_width, g_loading_height;
 static int g_width = 320, g_height = 240;
 static uint32_t *g_crt_pixels; /* presentation scratch, outside engine states */
 static char g_engine[48];           /* physical engine actually loaded */
@@ -137,6 +140,9 @@ static void stop_faulted_engine(void);
 static void loading_dispose(void);
 static bool loading_begin(const struct retro_game_info *info, bool retry);
 static void loading_run(void);
+static bool loading_image(const char *path, bool notify, bool raw = false);
+static bool loading_image_size(int width, int height, bool notify);
+static void glue_dump_maybe(const uint32_t *px, int w, int h, int pitch_px);
 
 /* ------------------------------------------------- version detection --- */
 
@@ -792,6 +798,9 @@ static void trace_close(void)
 static void content_stop(void)
 {
     loading_dispose();
+    free(g_loading_pixels);
+    g_loading_pixels = NULL;
+    g_loading_width = g_loading_height = 0;
     if (g_fault_pending) {
         g_fault_pending = false;
         stop_faulted_engine();
@@ -1102,6 +1111,47 @@ void retro_get_system_av_info(struct retro_system_av_info *info)
     info->timing.sample_rate = 44100.0;
 }
 
+/* One geometry and composition route for preparation, native loading and
+ * gameplay. Initial load records it before the frontend queries AV info;
+ * subsequent option or native-mode changes notify the frontend as usual. */
+static void video_geometry(int width, int height, bool notify)
+{
+    int w = width, h = height;
+    if (g_crt_on) obor_crt_output_size(width, height, &w, &h);
+    if (w == g_width && h == g_height) return;
+    g_width = w; g_height = h;
+    if (notify) {
+        struct retro_system_av_info av;
+        retro_get_system_av_info(&av);
+        env_cb(RETRO_ENVIRONMENT_SET_GEOMETRY, &av.geometry);
+    }
+}
+
+static bool present_video(const uint32_t *px, int width, int height, int pitch)
+{
+    if (!px || width <= 0 || height <= 0) {
+        video_cb(NULL, (unsigned)g_width, (unsigned)g_height, 0);
+        return true;
+    }
+    video_geometry(width, height, true);
+    int out_w, out_h;
+    if (g_crt_on && obor_crt_output_size(width, height, &out_w, &out_h)) {
+        if (!g_crt_pixels)
+            g_crt_pixels = (uint32_t *)malloc(OBOR_CRT_WIDTH * OBOR_CRT_HEIGHT * sizeof(uint32_t));
+        if (!g_crt_pixels) {
+            log_cb(RETRO_LOG_ERROR, "[OpenBOR] CRT framebuffer allocation failed\n");
+            error_screen("Could not allocate the CRT framebuffer.");
+            present_error_frame();
+            return false;
+        }
+        obor_crt_present(g_crt_pixels, px, width, height, pitch);
+        px = g_crt_pixels; width = out_w; height = out_h; pitch = out_w;
+    }
+    glue_dump_maybe(px, width, height, pitch);
+    video_cb(px, (unsigned)width, (unsigned)height, (size_t)pitch * sizeof(uint32_t));
+    return true;
+}
+
 void retro_set_controller_port_device(unsigned port, unsigned device)
 {
     (void)port;
@@ -1160,7 +1210,6 @@ void retro_reset(void)
         snprintf(path, sizeof(path), "%s", g_error_path);
         info.path = path;
         uint32_t capacity = g_state_capacity;
-        content_stop();
         if (!loading_begin(&info, true)) error_screen(NULL);
         if (g_state_capacity < capacity) g_state_capacity = capacity;
         return;
@@ -1485,35 +1534,10 @@ void retro_run(void)
     const uint32_t *px = NULL;
     int32_t w = 0, h = 0, pitch = 0;
     p_get_video(&px, &w, &h, &pitch);
+    if (!present_video(px, w, h, pitch)) return;
     if (px && w > 0 && h > 0) {
-        int out_w, out_h;
-        if (g_crt_on && obor_crt_output_size(w, h, &out_w, &out_h)) {
-            if (!g_crt_pixels)
-                g_crt_pixels = (uint32_t *)malloc(
-                    OBOR_CRT_WIDTH * OBOR_CRT_HEIGHT * sizeof(uint32_t));
-            if (!g_crt_pixels) {
-                log_cb(RETRO_LOG_ERROR, "[OpenBOR] CRT framebuffer allocation failed\n");
-                error_screen("Could not allocate the CRT framebuffer.");
-                present_error_frame();
-                return;
-            }
-            obor_crt_present(g_crt_pixels, px, w, h, pitch);
-            px = g_crt_pixels;
-            w = out_w;
-            h = out_h;
-            pitch = out_w;
-        }
-        if (w != g_width || h != g_height) {
-            g_width = w;
-            g_height = h;
-            struct retro_system_av_info av;
-            retro_get_system_av_info(&av);
-            env_cb(RETRO_ENVIRONMENT_SET_GEOMETRY, &av.geometry);
-        }
-        glue_dump_maybe(px, w, h, pitch);
-        video_cb(px, (unsigned)w, (unsigned)h, (size_t)pitch * sizeof(uint32_t));
-    } else {
-        video_cb(NULL, (unsigned)g_width, (unsigned)g_height, 0);
+        free(g_loading_pixels);
+        g_loading_pixels = NULL;
     }
 
     static int16_t abuf[2048 * 2];
@@ -1573,6 +1597,8 @@ typedef struct {
     uint32_t state_capacity;
     int width, height;
     uint32_t *crt_pixels;
+    uint32_t *loading_pixels;
+    int loading_width, loading_height;
     char engine[48];
     char logical_engine[48];
     char saved[1024], pak[4096];
@@ -1607,6 +1633,8 @@ static void glue_save(glue_regs *r)
     r->state_capacity = g_state_capacity;
     r->width = g_width; r->height = g_height;
     r->crt_pixels = g_crt_pixels;
+    r->loading_pixels = g_loading_pixels;
+    r->loading_width = g_loading_width; r->loading_height = g_loading_height;
     r->crt = g_crt_on;
     memcpy(r->engine, g_engine, sizeof(g_engine));
     memcpy(r->logical_engine, g_logical_engine, sizeof(g_logical_engine));
@@ -1644,6 +1672,8 @@ static void glue_load(const glue_regs *r)
     g_state_capacity = r->state_capacity;
     g_width = r->width; g_height = r->height;
     g_crt_pixels = r->crt_pixels;
+    g_loading_pixels = r->loading_pixels;
+    g_loading_width = r->loading_width; g_loading_height = r->loading_height;
     g_crt_on = r->crt;
     memcpy(g_engine, r->engine, sizeof(g_engine));
     memcpy(g_logical_engine, r->logical_engine, sizeof(g_logical_engine));
@@ -2359,6 +2389,7 @@ static bool load_game(const struct retro_game_info *info, bool retry, bool prepa
     obor_dbg("load_game: pak=%s", g_pak_path);
 
     refresh_options();
+    if (prepare_only && !g_loading_pixels) loading_image(g_pak_path, true, g_raw);
     decide_engine();
     obor_dbg("load_game: engine %s (save_dir=%s)", g_engine, g_save_dir);
 
@@ -2544,6 +2575,25 @@ static uint32_t loading_capacity(const char *path)
     return capacity <= UINT32_MAX ? (uint32_t)capacity : 0;
 }
 
+static bool loading_image_size(int width, int height, bool notify)
+{
+    uint32_t *pixels = obor_loading_create(width, height);
+    if (!pixels) return false;
+    free(g_loading_pixels);
+    g_loading_pixels = pixels;
+    g_loading_width = width; g_loading_height = height;
+    video_geometry(width, height, notify);
+    return true;
+}
+
+static bool loading_image(const char *path, bool notify, bool raw)
+{
+    int width, height;
+    if (!(raw ? obor_video_directory_resolution(path, &width, &height) :
+                obor_video_resolution(path, &width, &height))) return false;
+    return loading_image_size(width, height, notify);
+}
+
 static bool loading_begin(const struct retro_game_info *info, bool retry)
 {
     if (g_fault_quarantined) {
@@ -2553,7 +2603,9 @@ static bool loading_begin(const struct retro_game_info *info, bool retry)
     if (!info || !info->path) { error_reason("No content path was provided by the frontend."); return false; }
     char path[sizeof(g_error_path)];
     abspath(info->path, path, sizeof(path));
+    int previous_width = g_width, previous_height = g_height;
     content_stop();
+    if (retry) { g_width = previous_width; g_height = previous_height; }
     snprintf(g_error_path, sizeof(g_error_path), "%s", path);
     enum retro_pixel_format format = RETRO_PIXEL_FORMAT_XRGB8888;
     if (!env_cb(RETRO_ENVIRONMENT_SET_PIXEL_FORMAT, &format)) {
@@ -2577,6 +2629,10 @@ static bool loading_begin(const struct retro_game_info *info, bool retry)
     if (!obor_storage_game_directory(g_save_dir, path, g_game_dir, sizeof(g_game_dir))) {
         error_reason("Could not resolve a safe game save directory."); return false;
     }
+    refresh_options();
+    /* Unknown/protected or outer ZIP content keeps preparation running until
+     * its ordinary settings become accessible. Never guess a custom raster. */
+    loading_image(path, retry);
     g_state_capacity = loading_capacity(path);
     if (!g_state_capacity) { error_reason("Could not reserve the initial state capacity."); return false; }
     g_loading_stack = malloc(2u << 20);
@@ -2598,7 +2654,9 @@ static bool loading_begin(const struct retro_game_info *info, bool retry)
 static void loading_run(void)
 {
     if (input_poll_cb) input_poll_cb();
-    if (!g_loading_first) {
+    bool upd = false;
+    if (env_cb(RETRO_ENVIRONMENT_GET_VARIABLE_UPDATE, &upd) && upd) refresh_options();
+    if (!g_loading_first || !g_loading_pixels) {
         g_loading_yield = obor_detection_now();
         loading_switch();
     }
@@ -2611,10 +2669,23 @@ static void loading_run(void)
             present_error_frame();
             return;
         }
+        if (!g_loading_pixels) {
+            /* Large or unusual settings outside the quick probe's bounds
+             * are still valid engine inputs. Its first yielded framebuffer
+             * supplies the exact raster before any custom image is shown. */
+            const uint32_t *pixels;
+            int32_t width, height, pitch;
+            p_get_video(&pixels, &width, &height, &pitch);
+            if (!loading_image_size(width, height, true)) {
+                error_screen("Could not prepare the loading image.");
+                present_error_frame();
+                return;
+            }
+        }
     }
-    obor_loading_render(g_error_pixels, g_loading_tick++);
-    video_cb(g_error_pixels, OBOR_ERROR_WIDTH, OBOR_ERROR_HEIGHT,
-             OBOR_ERROR_WIDTH * sizeof(uint32_t));
+    if (g_loading_pixels)
+        obor_loading_render(g_loading_pixels, g_loading_width, g_loading_height, g_loading_tick++);
+    present_video(g_loading_pixels, g_loading_width, g_loading_height, g_loading_width);
 }
 
 bool retro_load_game(const struct retro_game_info *info)

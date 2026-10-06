@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Read game video settings before showing preparation artwork, using native
+  320x240, 480x272 or 640x480 backgrounds derived at build time from one master
+  and an ephemeral centred Lanczos3 resize for other sizes. Share video geometry and CRT adjustment with
+  native loading and gameplay so their output modes agree at transition.
 - Preserve inline animation allocation handles and next-animation timestamps
   across the shared 6330, 6391, 6412 and 6510 profiles, allowing scripted
   cutscenes to finish and retaining exact animation scheduling.

@@ -560,6 +560,11 @@ def build_glue(target, spec, outdir):
             sys.exit('missing {0}'.format(obj))
 
     third = SRC / "third_party"
+    # Generate the native-size artwork for this compilation from one master.
+    # The checked source copy keeps unchanged builds usable without Pillow;
+    # its input hashes must match before that fallback can be selected.
+    run([sys.executable, HERE / "tools/embed_loading_background.py",
+         "--output", outdir / "obor_loading_background.h", "--allow-cache"])
     # engines/miniz are built one-section-per-function so the final link's
     # --gc-sections drops everything unreachable from the exported retro_*
     # API. ELF targets only: on PE the partial-link localize step breaks
@@ -613,7 +618,7 @@ def build_glue(target, spec, outdir):
         *gc_cflags,
         *glue_defs,
         "-ffile-prefix-map=" + str(HERE) + "=.",
-        "-I", SRC / "glue", "-I", third,
+        "-I", outdir, "-I", SRC / "glue", "-I", third,
         SRC / "glue" / "libretro.cpp",
         miniz_o,
         *compat_objs,

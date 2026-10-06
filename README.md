@@ -22,6 +22,12 @@ x86-64. A current Python release is recommended; 3.5 compatibility supports
 older libretro build images. Configure scripts are included; autoreconf is
 not required.
 
+Preparation artwork has one source PNG. Builds derive three native-size
+backgrounds with Lanczos3 on the host; install Pillow for that host's Python
+interpreter when changing the master image or its generator. Unchanged builds
+can use the included generated data after validating both input hashes, so
+Pillow is not a runtime dependency or required on older build images.
+
 ```sh
 NUMPROC=4 make                   # native Linux x86-64 or ARM64
 make platform=win64              # MinGW-w64 x86-64 cross toolchain

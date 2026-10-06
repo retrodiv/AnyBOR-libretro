@@ -491,6 +491,8 @@ static void video_cb(const void *data, unsigned width, unsigned height,
                      size_t pitch)
 {
     ++g_video_calls;
+    if (getenv("OBOR_VIDEO_TRACE") && (width != g_fw || height != g_fh))
+        printf("video=%ux%u frame=%d\n", width, height, g_frame);
     g_fw = width;
     g_fh = height;
     g_fpitch = pitch;

@@ -1683,15 +1683,6 @@ Source: src/engines/7123/openbor.c
  * at the source repository root. Original notices follow below.
  */
 
-Source: src/glue/obor_loading_background.h
-/* SPDX-License-Identifier: BSD-3-Clause
- * Copyright (c) 2003, Roel van Mastbergen & Senile Team
- * Copyright (c) 2004 - 2018, OpenBOR Team
- * OpenBOR logo design credited to Fightn' Words in upstream history.
- * Preparation layout adaptation: Copyright (c) 2026 retrodiv <retrodiv@proton.me>
- * Generated from assets/OpenBOR_Logo_320x240.png by
- * tools/embed_loading_background.py. See assets/README.md and assets/LICENSE. */
-
 Source: src/engines/6391/source/gamelib/borendian.h
 /* AnyBOR modification record: 2026-10-05.
  * Port maintained by retrodiv <retrodiv@proton.me>.
@@ -4217,7 +4208,7 @@ Source: src/engines/4086/source/gamelib/anigif.h
  * at the source repository root. Original notices follow below.
  */
 
-Source: src/engines/3400/version.h, src/engines/3842/version.h, src/engines/4086/version.h, src/engines/4432/version.h, src/engines/6391/version.h, src/engines/7123/version.h, src/engines/7142/version.h, src/engines/7533/version.h, src/engines/8023/version.h, src/port/libretro/obor_fault.c, src/port/libretro/obor_fault.h, src/port/libretro/obor_files.c, src/port/libretro/obor_loading.h, src/port/libretro/obor_random.h, src/port/libretro/obor_runtime.h, src/port/libretro/obor_script_compact.h, src/port/libretro/obor_snapshot_cache.h, src/port/libretro/obor_state_copy.h, src/port/libretro/obor_state_padding.h, src/port/libretro/obor_write_watch.c, src/port/libretro/obor_write_watch.h, src/glue/obor_content_scan.h, src/glue/obor_crt.h, src/glue/obor_detection_clock.h, src/glue/obor_engine_resources.h, src/glue/obor_error_screen.h, src/glue/obor_legacy_api.h, src/glue/obor_loading_screen.h, src/glue/obor_modern_api.h, src/glue/obor_packed_prepare.h, src/glue/obor_pak_repair.h, src/glue/obor_pak_validate.h, src/glue/obor_prepare_co.h, src/glue/obor_prepare_progress.h, src/glue/obor_rewind.h, src/glue/obor_runtime.h, src/glue/obor_state_padding.h, src/glue/obor_storage.h, src/glue/obor_transform.h, src/glue/obor_zip_path.h
+Source: src/engines/3400/version.h, src/engines/3842/version.h, src/engines/4086/version.h, src/engines/4432/version.h, src/engines/6391/version.h, src/engines/7123/version.h, src/engines/7142/version.h, src/engines/7533/version.h, src/engines/8023/version.h, src/port/libretro/obor_fault.c, src/port/libretro/obor_fault.h, src/port/libretro/obor_files.c, src/port/libretro/obor_loading.h, src/port/libretro/obor_random.h, src/port/libretro/obor_runtime.h, src/port/libretro/obor_script_compact.h, src/port/libretro/obor_snapshot_cache.h, src/port/libretro/obor_state_copy.h, src/port/libretro/obor_state_padding.h, src/port/libretro/obor_write_watch.c, src/port/libretro/obor_write_watch.h, src/glue/obor_content_scan.h, src/glue/obor_crt.h, src/glue/obor_detection_clock.h, src/glue/obor_engine_resources.h, src/glue/obor_error_screen.h, src/glue/obor_legacy_api.h, src/glue/obor_loading_screen.h, src/glue/obor_modern_api.h, src/glue/obor_packed_prepare.h, src/glue/obor_pak_repair.h, src/glue/obor_pak_validate.h, src/glue/obor_prepare_co.h, src/glue/obor_prepare_progress.h, src/glue/obor_rewind.h, src/glue/obor_runtime.h, src/glue/obor_state_padding.h, src/glue/obor_storage.h, src/glue/obor_transform.h, src/glue/obor_video_config.h, src/glue/obor_zip_path.h
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
 
@@ -4694,6 +4685,16 @@ Source: src/deps/libvpx/vp8/common/loongarch/sixtap_filter_lsx.c, src/deps/libvp
  * in the file PATENTS.  All contributing project authors may
  * be found in the AUTHORS file in the root of the source tree.
  */
+
+Source: src/glue/obor_loading_background.h
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2003, Roel van Mastbergen & Senile Team
+ * Copyright (c) 2004 - 2018, OpenBOR Team
+ * OpenBOR logo design credited to Fightn' Words in upstream history.
+ * Preparation layout adaptation: Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ * Generated from assets/OpenBOR_Logo_3200x1800.png with centred Lanczos3
+ * filtering by tools/embed_loading_background.py.
+ * See assets/README.md and assets/LICENSE. */
 
 Source: src/deps/libvorbis/lib/modes/psych_16.h, src/deps/libvorbis/lib/modes/setup_16.h
 /********************************************************************
