@@ -76,7 +76,7 @@
     "NOTICE.txt": "e64504252f87aad41d62a793895dd82dd5fa3555d86732b8e8b5c91c474465c0",
     "PROVENANCE.md": "a9fd40adf8b17ccf9ec0f92f43011733cc1ee7a6cc1e7bfedfe4bb415942ca01",
     "README.md": "433eca6525143c3fb2653e73f462a50bd15565b74cca055774d6409620577252",
-    "SBOM.spdx.json": "cf82944ce082e93a9669b62ab425a936cadc9a394275e43ce64158b6d498a4a6",
+    "SBOM.spdx.json": "ee1b40f930ef5609222f35f4afd6fffb4ceda1114b35645201fa8199ddf06a53",
     "SECURITY.md": "3aaf7f8f89ef7abc1cac8d4f25f358a5529410673fa04d97ddc123ae21f96f4b",
     "anybor_libretro.info": "081a8a07080b2d91922ec3219fd578f0053ca41426fe6c5f1327a96ace32ebb4",
     "docs/ANYBOR.md": "02c90c7116bdf799c5feb385c11b8078a86918ba03b87ef08275de02a422feea",
@@ -2387,7 +2387,7 @@
     "src/glue/obor_debug.h": "63f108163a3cd29a00c9d11229a3976fec8a00f537dbfe914bf22df075cc264a",
     "src/glue/obor_detection_clock.h": "bdfda28dfa97a6264000c62b589bfbc6f84c521b1744e548b2445f3fe059e9c0",
     "src/glue/obor_engine_resources.h": "8196f17ba5110e51c4b71388f005e3beb26c2cc72aaf0fb559a255c10842223b",
-    "src/glue/obor_engines.h": "6e6142c2a95a30f4ded96b7221463c3132918dc45dcc41fb93ea636c3b19883c",
+    "src/glue/obor_engines.h": "6450d2718d17d97e328c66b3e80683e10f337f19363df1065c80adbeb75b302a",
     "src/glue/obor_error_screen.h": "a894d32589e2d83710fb9c1d04db6b2e2f9c19dcd141fd1e87e971679e10f7ab",
     "src/glue/obor_hankaku.h": "639d8236cb4a82eaacafd1ec0f5f904ba734fdb6e8771db5b96ae03cb06e88ea",
     "src/glue/obor_legacy_api.h": "5d7d42e7e075256ea541b03fef09d35cb5c8bcc2e3952cd6bb7dcfd152a69c0a",
@@ -2410,7 +2410,7 @@
     "src/glue/obor_transform_vm.h": "396fad504dc8ab5c445b55f8b390375616fda90dc2d2b4d5ee2014e735a1d2f2",
     "src/glue/obor_zip.h": "d28204d296dcd42414e20ee4698dcf5e6bc14c3738020ee403c94f25e1224f45",
     "src/glue/obor_zip_path.h": "a4baeb127b0f493955a271cce0215750916c16feb5274a5323058511b13a7e7d",
-    "src/pin.json": "9240bd520574c79f4bc1a5850b9de8c78ac0364328ae1ceb85e53c2869f206d3",
+    "src/pin.json": "0be0c13b111b10c840ef8b357cd01653dc80a885896d09ef33cb9156057a6111",
     "src/port/libretro/control.c": "134f70a8e7ecac404a879c3b67b1a493d5407de50871dccdff5394689e52eded",
     "src/port/libretro/control.h": "c8707029d3d09b9e9fbf97363f54e317729da38ee33045843377cfeeb3399045",
     "src/port/libretro/dlmalloc.inc": "103602c3fcbe200d5e257cdd7353d84bcc033d887bea3b245321319bf5401f47",
@@ -2437,7 +2437,7 @@
     "src/port/libretro/obor_runtime.h": "8608d99abe99c930fbf963d0fd7d221fd16e63e6804455171d9fb5bf9c54d1b7",
     "src/port/libretro/obor_script_compact.h": "ca05149a8845169e563a611920ef1e5560f7c38161a2e29604f13c3534cbfbb3",
     "src/port/libretro/obor_snapshot_cache.h": "754016dac193ca40392f5101b0171cd22d91500f220193a94375b1d3aa75efd0",
-    "src/port/libretro/obor_state.c": "bd2f63bb61b11182dad612e66cb78733a284b41ad0383db94388455d5382a6dd",
+    "src/port/libretro/obor_state.c": "62f4c141adc77a3b83f35e8e434c317c259f0a5a2db50e1a1b5e31c0ddfd9ced",
     "src/port/libretro/obor_state_copy.h": "4f5871230b2122e5b2cd03d7dbdd51bb0019689dc81830aa15aabf3f76354d07",
     "src/port/libretro/obor_state_padding.h": "70e253f91d429e80600eb04527963499deee8c512fb039c899451009314c5885",
     "src/port/libretro/obor_threads.h": "4ca8ad4d51d8553257079751b3e339670bf82db85fc5d6a2ba976dfa881db09d",
@@ -2485,5 +2485,5 @@
     "tools/update_manifest.py": "48bd15f0658546d20cfc3ea456dfc34c5c20eed8d9632566ec7aab28e0ce5cd9"
   },
   "schema": 1,
-  "version": "0.1.16"
+  "version": "0.1.17"
 }

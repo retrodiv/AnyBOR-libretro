@@ -65,7 +65,6 @@ static int collect_segments(void);
  * on, so it must hug reality: only the live stack slice (not the 16 MB
  * region) and a measured-heap-based bound (no pak-size padding). */
 #define OBOR_STACK_BUDGET (4ULL << 20)
-#define OBOR_REWIND_COMPACT_CAP (160ULL << 20)
 #if defined(__aarch64__) || defined(__arm__)
 #define OBOR_STACK_HEAD (16ULL * 1024) /* cothread context page */
 #else
@@ -573,7 +572,6 @@ static uint32_t serialize_size_impl(void)
     uint64_t hn = obor_heap_sparse_size();
     if (!hn)
         return 0;
-    uint64_t previous_peak = g_size_bound ? 0 : peak_read();
     /* Boot now completes resource loading before exposing this API. Teach
      * the existing peak policy that measured footprint before its first
      * capacity decision, including when an older run left a bootstrap-only
@@ -593,8 +591,8 @@ static uint32_t serialize_size_impl(void)
         uint64_t peak = peak_read();
         uint64_t bound;
         if (peak) {
-            /* a previous session recorded this game's real high-water:
-             * trust it (plus margin) — much tighter than guessing */
+            /* Retain measured growth plus margin. A persisted peak may
+             * describe only menus, so it cannot replace the PACK reserve. */
             bound = peak + peak / 3;
             if (bound < hn + (8ULL << 20))
                 bound = hn + (8ULL << 20);
@@ -603,23 +601,17 @@ static uint32_t serialize_size_impl(void)
             if (bound < hn + (16ULL << 20))
                 bound = hn + (16ULL << 20);
         }
-        /* A bootstrap-only cache is not evidence of a completed session.
-         * Keep the existing cold PACK allowance until a trustworthy peak
-         * exists, even when the newly measured boot footprint was persisted. */
-        if (!previous_peak || previous_peak < hn) {
-            uint64_t packed = cold_pack_reserve() * 5 / 8;
-            /* Five eighths of the uncompressed PACK data is a useful upper
-             * estimate for the images/scripts cached by typical mods while
-             * discounting
-             * streamed music and video.  The inactive-engine subtraction
-             * below removes about 24 MiB from build 8023: cap the estimate at
-             * 216 MiB so a large first-run game still advertises the proven
-             * 223 MiB transport size, below a 256 MiB rewind ring. */
-            if (packed > (216ULL << 20))
-                packed = 216ULL << 20;
-            if (bound < packed)
-                bound = packed;
-        }
+        /* A menu-only session is not evidence of a later route's maximum.
+         * Keep the same PACK growth allowance on cold and cached launches.
+         * Five eighths estimates loaded images/scripts while discounting
+         * streamed music/video. Cap that estimate at 216 MiB; inactive-engine
+         * subtraction keeps the large-PACK transport reserve below a 256 MiB
+         * rewind ring on the current builds. Larger measured peaks still win. */
+        uint64_t packed = cold_pack_reserve() * 5 / 8;
+        if (packed > (216ULL << 20))
+            packed = 216ULL << 20;
+        if (bound < packed)
+            bound = packed;
         bound += fixed;
         bound = (bound + (8ULL << 20) - 1) & ~((8ULL << 20) - 1);
         /* Preserve the old policy's ENTIRE heap/stack growth allowance,
@@ -629,16 +621,11 @@ static uint32_t serialize_size_impl(void)
          * allowance on which an already-working larger level relied. */
         bound -= g_full_segment_bytes - segs_bytes();
         bound = (bound + (1ULL << 20) - 1) & ~((1ULL << 20) - 1);
-        /* RetroArch's fixed-size rewind ring can fail while restoring a
-         * large advertised state even when its live payload is much smaller.
-         * When the current state plus the normal growth allowance fits this
-         * compact capacity, avoid advertising the unused cold/peak reserve.
-         * The condition depends only on live state structure, never content
-         * identity. A later larger state still raises the reported bound for
-         * frontends that query it again. */
-        if (bound > OBOR_REWIND_COMPACT_CAP &&
-            required <= OBOR_REWIND_COMPACT_CAP)
-            bound = OBOR_REWIND_COMPACT_CAP;
+        /* Rewind frontends allocate once, before the player selects a route.
+         * Keep the complete cold/learned growth reserve. The initial live
+         * footprint cannot prove that later levels or routes will fit a
+         * smaller allocation; re-querying for manual saves cannot repair an
+         * already allocated rewind history. */
         g_size_bound = (uint32_t)bound;
     }
 
