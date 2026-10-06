@@ -9,7 +9,7 @@
       "upstream_sha256": "fc53280baa67ef58e507cea648f8838fad9abe675fa098a5dc99dfe4ecd0e75c"
     },
     "Makefile.libretro": {
-      "distributed_sha256": "6231be8266da93fd6fc41e1e16f87faf30495cb4987b8b0eb02f2d4c08f56266",
+      "distributed_sha256": "97b27b9dfe72562e867c8e9ea3d1104386c5bab62533a0ab953528e6c1323f07",
       "modified": true,
       "origin": "Project libretro build overlay",
       "summary": "Supply the shared libretro engine build and symbol-isolation rules.",
@@ -17,7 +17,7 @@
       "upstream_sha256": null
     },
     "openbor.c": {
-      "distributed_sha256": "57f2dbe8247d3f791107593f1a4c3b54974e6817cf6c7dddfa2f09953aa1ecd7",
+      "distributed_sha256": "a27d25e9f3cdb477d72095058f1c2690bccb971163580987f98d7d2038beee54",
       "modified": true,
       "summary": "Apply the port's engine corrections and select the PC video configuration on macOS. Leave multiplayer slots without a selected model available to join even if game scripts preassign lives to them. Let a missing basename-only PAK self-check read the active frontend content after it has been validated and prepared. Allocate each model's animation pointer table through the highest animation index that model uses, and bound cache, copy and cleanup paths to that capacity. Resize repeated weapon lists and detach borrowed lists before replacing their entries.",
       "topics": [
@@ -26,6 +26,7 @@
         "compiler-warning-cleanup",
         "darwin-platform-support",
         "empty-player-slot-safety",
+        "loading-screen-presentation",
         "record-dates-and-file-notices",
         "repeated-weapon-lists"
       ],

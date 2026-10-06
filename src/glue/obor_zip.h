@@ -21,6 +21,13 @@
 
 #include "obor_zip_path.h"
 
+static size_t obor_zip_write(void *context, mz_uint64 offset, const void *data, size_t size)
+{
+    (void)offset;
+    FILE *file = (FILE *)context;
+    return obor_prepare_checkpoint() ? fwrite(data, 1, size, file) : 0;
+}
+
 static void obor_zip_lower(const char *in, char *out, size_t cap)
 {
     size_t i = 0;
@@ -183,7 +190,10 @@ static int obor_zip_prepare(const char *zip_path, const char *save_dir,
             char dst[2200];
             snprintf(dst, sizeof(dst), "%s/%s", temp, rel);
             obor_zip_mkparents(dst);
-            if (!mz_zip_reader_extract_to_file(&za, i, dst, 0)) {
+            FILE *file = fopen(dst, "wb");
+            bool ok = file && mz_zip_reader_extract_to_callback(&za, i, obor_zip_write, file, 0);
+            if (file && fclose(file)) ok = false;
+            if (!ok) {
                 log_cb(RETRO_LOG_ERROR, "[OpenBOR] zip: extraction failed\n");
                 mz_zip_reader_end(&za);
                 return 0;

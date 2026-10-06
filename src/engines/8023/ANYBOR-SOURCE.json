@@ -9,7 +9,7 @@
       "upstream_sha256": "b8f3916944f0b5aee216ef7a494820d17ae658336a4680992dc244ebedecf3ea"
     },
     "Makefile.libretro": {
-      "distributed_sha256": "6231be8266da93fd6fc41e1e16f87faf30495cb4987b8b0eb02f2d4c08f56266",
+      "distributed_sha256": "97b27b9dfe72562e867c8e9ea3d1104386c5bab62533a0ab953528e6c1323f07",
       "modified": true,
       "origin": "Project libretro build overlay",
       "summary": "Supply the shared libretro engine build and symbol-isolation rules.",
@@ -17,7 +17,7 @@
       "upstream_sha256": null
     },
     "openbor.c": {
-      "distributed_sha256": "4ee8c4acb3f6e73e3d1e6d8578327bba86e25ad225d94b8561015dc550e0d1fd",
+      "distributed_sha256": "83fb415c7e8e3605202f7e53cbe297054ab9275f8a206b0a5f84fc18d8888feb",
       "modified": true,
       "summary": "Apply the port's engine corrections and select the PC video configuration on macOS. Leave multiplayer slots without a selected model available to join even if game scripts preassign lives to them. Let a missing basename-only PAK self-check read the active frontend content after it has been validated and prepared. Allocate each model's animation pointer table through the highest animation index that model uses, and bound cache, copy and cleanup paths to that capacity. Use four independent RetroPad devices and per-device mappings. Place player state in aligned storage for PE SIMD reads. Yield to the frontend and decoder workers while asynchronous movies are pending. Grow each collision collection's pointer table only through its highest author-facing slot.",
       "topics": [
@@ -27,6 +27,7 @@
         "darwin-platform-support",
         "empty-player-slot-safety",
         "four-player-controls",
+        "loading-screen-presentation",
         "platform-integration",
         "record-dates-and-file-notices",
         "webm-playback-lifecycle"

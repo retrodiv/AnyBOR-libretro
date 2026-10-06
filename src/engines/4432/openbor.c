@@ -16583,6 +16583,8 @@ void drawstatus()
 void update_loading(s_loadingbar *s,  int value, int max)
 {
     static unsigned int lasttick = 0;
+    static int last_percent = -1;
+    int progress_changed = obor_loading_progress_changed(value, max, &last_percent);
     static unsigned int soundtick = 0;
     static unsigned int keybtick = 0;
     int pos_x = s->bar_position.x + videomodes.hShift;
@@ -16607,7 +16609,7 @@ void update_loading(s_loadingbar *s,  int value, int max)
     }
 
 
-    if(ticks - lasttick > s->refreshMs || value < 0 || value == max)   // Negative value forces a repaint. used when only bg is drawn for the first time
+    if(ticks - lasttick > s->refreshMs || value < 0 || value == max || progress_changed)   // Negative value forces a repaint. used when only bg is drawn for the first time
     {
         spriteq_clear();
         execute_loading_script(value, max);

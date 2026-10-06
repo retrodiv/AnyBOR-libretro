@@ -4,6 +4,7 @@
 #define OBOR_PAK_REPAIR_H
 #include "obor_pak_validate.h"
 #include <ctype.h>
+#include "obor_prepare_progress.h"
 
 static int obor_pak_write_u32(FILE *fp, uint32_t value)
 {
@@ -72,7 +73,7 @@ static int obor_pak_repair_header(FILE *input, FILE *output)
     if (!obor_pak_header_repair_detect(input) || fseek(input, 4, SEEK_SET) ||
         fwrite("PACK", 1, 4, output) != 4) return 0;
     while ((n = fread(block, 1, sizeof(block), input)) != 0)
-        if (fwrite(block, 1, n, output) != n) return 0;
+        if (fwrite(block, 1, n, output) != n || !obor_prepare_checkpoint()) return 0;
     return !ferror(input) && fflush(output) == 0;
 }
 
@@ -159,6 +160,7 @@ static int obor_pak_repair_bias(FILE *input, FILE *output, int64_t expected)
         size_t n = remaining < sizeof(block) ? remaining : sizeof(block);
         if (fread(block, 1, n, input) != n || fwrite(block, 1, n, output) != n) return 0;
         remaining -= (uint32_t)n;
+        if (!obor_prepare_checkpoint()) return 0;
     }
     pos = directory;
     while (pos < (uint32_t)end - 4) {

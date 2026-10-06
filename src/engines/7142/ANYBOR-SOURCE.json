@@ -9,7 +9,7 @@
       "upstream_sha256": "adfc28feba4d32bb3933b29fe55fd0a6aa746084704c3ee71fc3f732706b9aa4"
     },
     "Makefile.libretro": {
-      "distributed_sha256": "6231be8266da93fd6fc41e1e16f87faf30495cb4987b8b0eb02f2d4c08f56266",
+      "distributed_sha256": "97b27b9dfe72562e867c8e9ea3d1104386c5bab62533a0ab953528e6c1323f07",
       "modified": true,
       "origin": "Project libretro build overlay",
       "summary": "Supply the shared libretro engine build and symbol-isolation rules.",
@@ -17,7 +17,7 @@
       "upstream_sha256": null
     },
     "openbor.c": {
-      "distributed_sha256": "50923ac7ad09e4b0d0ffd97b46d1993a5ecbd4416935a871b82f6795fe0ea76d",
+      "distributed_sha256": "ed1a0a5c191296401022e15fc74b9a07d7245271a6d4dbfb8e12d24c8494ad5a",
       "modified": true,
       "summary": "Apply the port's engine corrections and select the PC video configuration on macOS. Leave multiplayer slots without a selected model available to join even if game scripts preassign lives to them. Let a missing basename-only PAK self-check read the active frontend content after it has been validated and prepared. Allocate each model's animation pointer table through the highest animation index that model uses, and bound cache, copy and cleanup paths to that capacity. Initialize all four RetroPads and repair legacy unbound player profiles without replacing custom bindings.",
       "topics": [
@@ -26,6 +26,7 @@
         "darwin-platform-support",
         "empty-player-slot-safety",
         "four-player-controls",
+        "loading-screen-presentation",
         "record-dates-and-file-notices"
       ],
       "upstream_sha256": "71fd11c5f33bce214d0af7ef6ad521cc34440d460e4e2a45e99bf28ee9c03c69"

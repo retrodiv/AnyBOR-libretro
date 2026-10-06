@@ -44,8 +44,14 @@ static bool obor_packed_prepare(const char *source, const char *save_dir,
     obor_transform_buffers buffers;
     if (transform.program) {
         buffers.input = (unsigned char *)malloc(bytes ? (size_t)bytes : 1u);
-        bool ok = buffers.input && !fseek(input, 0, SEEK_SET) &&
-                  fread(buffers.input, 1, (size_t)bytes, input) == (size_t)bytes;
+        bool ok = buffers.input && !fseek(input, 0, SEEK_SET);
+        for (size_t offset = 0; ok && offset < (size_t)bytes;) {
+            size_t chunk = (size_t)bytes - offset;
+            if (chunk > 65536) chunk = 65536;
+            ok = fread(buffers.input + offset, 1, chunk, input) == chunk &&
+                 obor_prepare_checkpoint();
+            offset += chunk;
+        }
         if (ok) ok = obor_content_transform_execute(transform.program, transform.program_size,
             transform.parameters, transform.parameter_size, buffers.input, (size_t)bytes, NULL, 0, 0,
             &buffers.output, &buffers.size, error, sizeof(error)) != 0;
@@ -71,7 +77,13 @@ static bool obor_packed_prepare(const char *source, const char *save_dir,
         obor_sha256_ctx hash;
         unsigned char digest[32];
         obor_sha256_init(&hash);
-        obor_sha256_update(&hash, buffers.input, (size_t)bytes);
+        for (size_t offset = 0; offset < (size_t)bytes;) {
+            size_t chunk = (size_t)bytes - offset;
+            if (chunk > 65536) chunk = 65536;
+            obor_sha256_update(&hash, buffers.input + offset, chunk);
+            if (!obor_prepare_checkpoint()) { fclose(input); return false; }
+            offset += chunk;
+        }
         obor_sha256_final(&hash, digest);
         for (unsigned i = 0; i < 32; ++i) snprintf(source_hash + 2*i, 3, "%02x", digest[i]);
         free(buffers.input); buffers.input = NULL;
@@ -106,7 +118,14 @@ static bool obor_packed_prepare(const char *source, const char *save_dir,
     } else if (repair) {
         ok = obor_pak_repair_bias(input, output, bias) != 0;
     } else {
-        ok = fwrite(buffers.output, 1, buffers.size, output) == buffers.size;
+        ok = true;
+        for (size_t offset = 0; ok && offset < buffers.size;) {
+            size_t chunk = buffers.size - offset;
+            if (chunk > 65536) chunk = 65536;
+            ok = fwrite(buffers.output + offset, 1, chunk, output) == chunk &&
+                 obor_prepare_checkpoint();
+            offset += chunk;
+        }
     }
     fclose(input);
     if (fclose(output)) ok = false;

@@ -52,6 +52,7 @@
 #endif
 #endif
 #include <stdint.h>
+#include <stdarg.h>
 #include <stdio.h>
 #include <sys/stat.h>
 #include <stdlib.h>
@@ -172,6 +173,18 @@ static unsigned long long g_audio_energy;
 static int g_shutdown;
 static unsigned long g_video_calls;
 static int g_variable_states;
+static int g_startup_complete;
+
+static void host_log(enum retro_log_level level, const char *format, ...)
+{
+    (void)level;
+    if (!strcmp(format, "[OpenBOR] resource initialization complete\n"))
+        g_startup_complete = 1;
+    va_list args;
+    va_start(args, format);
+    vfprintf(stderr, format, args);
+    va_end(args);
+}
 
 /* input timeline */
 struct seg { int from, to, pad_id, port, device, value; int pulse; };
@@ -456,8 +469,8 @@ static bool env_cb(unsigned cmd, void *data)
         return true;
     case RETRO_ENVIRONMENT_GET_LOG_INTERFACE: {
         struct retro_log_callback *cb = (struct retro_log_callback *)data;
-        cb->log = (retro_log_printf_t)printf;
-        return false; /* let the core fall back; printf signature differs */
+        cb->log = host_log;
+        return true;
     }
     case RETRO_ENVIRONMENT_SHUTDOWN:
         g_shutdown = 1;
@@ -689,11 +702,31 @@ int main(int argc, char **argv)
                av.geometry.base_width, av.geometry.base_height, av.geometry.aspect_ratio);
     }
 
-    /* A regression route can require a measured resource footprint before
-     * the first retro_run, when a frontend allocates its rewind buffer. */
+    /* Gameplay timelines start after cooperative initialization. Freeze the
+     * frontend's capacity BEFORE those loading frames, then require the
+     * completed resource snapshot to fit that same allocation below. */
+    size_t initial_capacity = 0;
+    if (getenv("OBOR_SKIP_LOADING")) {
+        initial_capacity = p_retro_serialize_size();
+        if (!initial_capacity) return 1;
+        g_frame = -1;
+        int loading_frames = 0;
+        while (!g_startup_complete && loading_frames < 5000 && !g_shutdown) {
+            p_retro_run();
+            ++loading_frames;
+        }
+        if (!g_startup_complete || g_shutdown) {
+            fprintf(stderr, "cooperative initialization did not complete\n");
+            return 1;
+        }
+        g_frame = 0;
+        printf("loading_frames=%d initial_capacity=%zu\n", loading_frames, initial_capacity);
+    }
+
+    /* Require the fully initialized heap using the capacity fixed at boot. */
     if (getenv("OBOR_INITIAL_HEAP_MIN")) {
         uint64_t minimum = strtoull(getenv("OBOR_INITIAL_HEAP_MIN"), NULL, 10);
-        size_t size = p_retro_serialize_size();
+        size_t size = initial_capacity ? initial_capacity : p_retro_serialize_size();
         unsigned char *initial = size >= 80 ? malloc(size) : NULL;
         uint64_t heap = 0;
         if (!minimum || !initial || !p_retro_serialize(initial, size)) {
@@ -720,7 +753,7 @@ int main(int argc, char **argv)
     int contract_printed = 0;
     if (contract_every < 1 || contract_start < 0 || contract_start >= nframes) return 1;
     if (getenv("OBOR_STATE_CHECK")) {
-        contract_sz = p_retro_serialize_size(); /* before the first retro_run */
+        contract_sz = initial_capacity ? initial_capacity : p_retro_serialize_size();
         if (!contract_sz || contract_sz > UINT32_MAX) return 1;
         contract_buf = malloc(contract_sz + 16);
         if (!contract_buf) return 1;
@@ -790,7 +823,7 @@ int main(int argc, char **argv)
         if (rw_slots < rw_count || rw_slots > rw_count + 4) return 1;
         rw_ring = calloc(rw_slots, sizeof(*rw_ring));
         fwd_hash = calloc(rw_start + 2, sizeof(uint32_t));
-        rw_sz = p_retro_serialize_size(); /* frontend's cold fixed capacity */
+        rw_sz = initial_capacity ? initial_capacity : p_retro_serialize_size();
         if (!rw_ring || !fwd_hash || !rw_sz) return 1;
         printf("rewind_capacity=%zu\n", rw_sz);
         printf("rewind_buffers=%d\n", rw_slots);

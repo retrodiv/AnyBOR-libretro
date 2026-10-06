@@ -9,7 +9,7 @@
       "upstream_sha256": "88be43c97bbb0321122585c7c0e15a546819ffa420d8051e1153b343febd97a9"
     },
     "Makefile.libretro": {
-      "distributed_sha256": "6231be8266da93fd6fc41e1e16f87faf30495cb4987b8b0eb02f2d4c08f56266",
+      "distributed_sha256": "97b27b9dfe72562e867c8e9ea3d1104386c5bab62533a0ab953528e6c1323f07",
       "modified": true,
       "origin": "Project libretro build overlay",
       "summary": "Supply the shared libretro engine build and symbol-isolation rules.",
@@ -17,7 +17,7 @@
       "upstream_sha256": null
     },
     "openbor.c": {
-      "distributed_sha256": "e3d64f3c487a80c4d536ccb1ac0248cfa84905a8bc2c67d798e1b4c95971d9fb",
+      "distributed_sha256": "faf30978047986504ff5fd62fb56ff1dd7e4b5b67ede6e3ed5baad0c3ec9cc38",
       "modified": true,
       "summary": "Apply the port's engine corrections and select the PC video configuration on macOS. Select the 4453 profile's 32-bit screen and palette behavior, preserve the 4432 12-key native settings format while 4453 uses 13 keys, and disable the Exit mapping in the 4453 control menu. Bound the DOT loop and control-menu arrays to allocated storage. Leave multiplayer slots without a selected model available to join even if game scripts preassign lives to them. Let a missing basename-only PAK self-check read the active frontend content after it has been validated and prepared. Allocate each model's animation pointer table through the highest animation index that model uses, and bound cache, copy and cleanup paths to that capacity. Resize repeated weapon lists and detach borrowed lists before replacing their entries.",
       "topics": [
@@ -26,6 +26,7 @@
         "compiler-warning-cleanup",
         "darwin-platform-support",
         "empty-player-slot-safety",
+        "loading-screen-presentation",
         "logical-profile-compatibility",
         "record-dates-and-file-notices",
         "repeated-weapon-lists"

@@ -23,6 +23,7 @@ No endorsement by Senile Team, OpenBOR Team or libretro is claimed.
 | `src/engines/3400/` | Custom OpenBOR license, including its no-sale clauses; exact text in that directory's `LICENSE` and `LICENSES/OpenBOR-3400.txt`. Retrodiv's original AnyBOR modifications are BSD-3-Clause; the engine's conditions remain in force |
 | Other `src/engines/<build>/` directories | Each pinned engine's BSD-3-Clause license; retrodiv's original AnyBOR modifications are BSD-3-Clause, and embedded components below retain their own terms |
 | Original port and glue, compatibility helpers, build tools, tests, examples and project documentation | BSD-3-Clause, `LICENSE`; existing upstream authorship notices remain authoritative for adapted code |
+| `src/glue/assets/OpenBOR_Logo_320x240.png` and `src/glue/obor_loading_background.h` | Adapted OpenBOR engine artwork, BSD-3-Clause from build 7123; upstream notices in `src/glue/assets/LICENSE`, provenance and design credit in `src/glue/assets/README.md` |
 | `src/port/libretro/libco/` | ISC; `valgrind.h` has its separate permissive header license, reproduced in the notice dossier |
 | `src/port/libretro/dlmalloc.inc` | Doug Lea's public-domain dedication, with the CC0 waiver referenced in its header |
 | `src/third_party/libretro.h` | MIT, libretro API contributors |

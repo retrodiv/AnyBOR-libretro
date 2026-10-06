@@ -9,6 +9,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
+#include "obor_prepare_progress.h"
 
 typedef struct {
     uint32_t h[8];
@@ -119,6 +120,7 @@ static int obor_sha256_file(const char *path, char hex[65])
     for (;;) {
         size_t n = fread(buf, 1, sizeof(buf), f);
         if (n) obor_sha256_update(&c, buf, n);
+        if (!obor_prepare_checkpoint()) { fclose(f); return 0; }
         if (n != sizeof(buf)) {
             if (ferror(f)) { fclose(f); return 0; }
             break;

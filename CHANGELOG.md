@@ -2,8 +2,14 @@
 
 ## Unreleased
 
-- Size states after resource initialization and preserve the current session's
-  content and save paths when restoring a state from another session.
+- Show the credited OpenBOR artwork with an animated blue preparation bar
+  before packed-content I/O, then pass through the game's original loading
+  screen and progress bar.
+- Present the game's loading screens and real progress during cooperative
+  resource initialization, reserving state capacity from packed resources
+  and learned peaks before the frontend allocates its rewind buffers.
+- Preserve the current session's content and save paths when restoring a
+  state from another session.
 - Capture engine-owned random state so restored gameplay follows the same
   random sequence independently of frontend activity.
 - Add optional Linux ARM64 rewind captures with complete states, conservative

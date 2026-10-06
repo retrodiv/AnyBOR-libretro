@@ -9,7 +9,7 @@
       "upstream_sha256": "adfc28feba4d32bb3933b29fe55fd0a6aa746084704c3ee71fc3f732706b9aa4"
     },
     "Makefile.libretro": {
-      "distributed_sha256": "6231be8266da93fd6fc41e1e16f87faf30495cb4987b8b0eb02f2d4c08f56266",
+      "distributed_sha256": "97b27b9dfe72562e867c8e9ea3d1104386c5bab62533a0ab953528e6c1323f07",
       "modified": true,
       "origin": "Project libretro build overlay",
       "summary": "Supply the shared libretro engine build and symbol-isolation rules.",
@@ -17,7 +17,7 @@
       "upstream_sha256": null
     },
     "openbor.c": {
-      "distributed_sha256": "ad240e5404b7494bf217efc0a0881a837fe7ca479f7d65a2c8a0bda61118c327",
+      "distributed_sha256": "ae4966ad4f63ac079bb6aaeafaa3b5acddb80872f3d817f3e798ed22bb9ad8de",
       "modified": true,
       "summary": "Apply the port's engine corrections and select the PC video configuration on macOS. Select native 6330 boomerang, collision and settings behavior, 6412 frame-kill binding behavior, and 6510 binding, blocking and attack behavior. Leave multiplayer slots without a selected model available to join even if game scripts preassign lives to them. Let a missing basename-only PAK self-check read the active frontend content after it has been validated and prepared. Allocate each model's animation pointer table through the highest animation index that model uses, and bound cache, copy and cleanup paths to that capacity. Resize repeated weapon lists and detach borrowed lists before replacing their entries.",
       "topics": [
@@ -25,6 +25,7 @@
         "animation-memory-layout",
         "darwin-platform-support",
         "empty-player-slot-safety",
+        "loading-screen-presentation",
         "logical-profile-compatibility",
         "record-dates-and-file-notices",
         "repeated-weapon-lists"

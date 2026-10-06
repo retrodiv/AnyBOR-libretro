@@ -1,6 +1,6 @@
 # AnyBOR port modification record
 
-Record updated: **2026-09-30**. Port maintainer: **retrodiv**
+Record updated: **2026-10-06**. Port maintainer: **retrodiv**
 (<retrodiv@proton.me>).
 
 AnyBOR offers thirteen selectable OpenBOR engines with a shared libretro port.
@@ -83,6 +83,30 @@ Each engine gets a generated `version.h` with its pinned build number and a
 `Makefile.libretro` from the shared overlay. The version header reports `VERSION_MAJOR="4"` for v4.0 7533 and v4.0 8023-dev.
 The other headers preserve upstream version 3, including v4.0 7142-alpha;
 frontend labels describe its actual published alpha identity.
+
+## Loading screen presentation
+
+`28-loading-progress.patch` lets `update_loading` repaint when the actual
+model/level progress crosses an integer percentage. Resource loading can do
+substantial work without advancing the emulated frame clock; progress breaks
+that cycle while keeping scheduling deterministic. The original background,
+font, loading script and bar renderer remain responsible for the image.
+
+The shared coroutine returns its initial yield to the frontend and presents
+that pending frame through `retro_run`. Later loading frames also run through
+the ordinary video/audio callbacks. `obor_loading.h` supplies the progress
+comparison, and the internal engine ABI exposes resource initialization
+completion. State capacity reserves use packed resource sizes and learned
+peaks before frontend rewind allocation. Gameplay diagnostic timelines start
+after initialization.
+
+Packed-content preparation runs on a separate disposable libco stack, yielding
+between I/O and integrity-check blocks. A generic animated indicator appears
+before this work, then the engine boots on the frontend stack and supplies its
+native loading screen. Preparation has no game snapshot: the negotiated
+`MUST_INITIALIZE` quirk covers this interval, while a nonzero capacity estimate
+lets frontends reserve rewind. Cancellation resumes normal cleanup before
+destroying the preparation stack. No game identity or decoding recipe is added.
 
 ## Darwin platform support
 

@@ -9,7 +9,7 @@
       "upstream_sha256": "fc53280baa67ef58e507cea648f8838fad9abe675fa098a5dc99dfe4ecd0e75c"
     },
     "Makefile.libretro": {
-      "distributed_sha256": "6231be8266da93fd6fc41e1e16f87faf30495cb4987b8b0eb02f2d4c08f56266",
+      "distributed_sha256": "97b27b9dfe72562e867c8e9ea3d1104386c5bab62533a0ab953528e6c1323f07",
       "modified": true,
       "origin": "Project libretro build overlay",
       "summary": "Supply the shared libretro engine build and symbol-isolation rules.",
@@ -17,7 +17,7 @@
       "upstream_sha256": null
     },
     "openbor.c": {
-      "distributed_sha256": "4cca80457d53e7e0172819bb18c588c1273f1ef5b2656e56f73e8127503db2e7",
+      "distributed_sha256": "a567fed01a3b2e76d678f790ec027f5d7d5a98076d6d0cbcfac90aaa2fe044e5",
       "modified": true,
       "summary": "Apply the port's engine corrections and select the PC video configuration on macOS. Leave multiplayer slots without a selected model available to join even if game scripts preassign lives to them. Let a missing basename-only PAK self-check read the active frontend content after it has been validated and prepared. Allocate each model's animation pointer table through the highest animation index that model uses, and bound cache, copy and cleanup paths to that capacity. Resize repeated weapon lists and detach borrowed lists before replacing their entries. Guard an optional entity animation interpreter before reading its reset state. Share identical immutable animation-frame draw methods with reference-counted ownership.",
       "topics": [
@@ -28,6 +28,7 @@
         "compiler-warning-cleanup",
         "darwin-platform-support",
         "empty-player-slot-safety",
+        "loading-screen-presentation",
         "record-dates-and-file-notices",
         "repeated-weapon-lists"
       ],

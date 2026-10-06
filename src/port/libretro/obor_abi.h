@@ -27,7 +27,7 @@
 extern "C" {
 #endif
 
-#define OBOR_ABI_VERSION 6u
+#define OBOR_ABI_VERSION 7u
 
 #define OBOR_EXIT_MEMORY_FAULT (-2)
 enum { OBOR_RESOURCE_FILE_OPEN = 1, OBOR_RESOURCE_FILE_CLOSE,
@@ -117,6 +117,9 @@ OBOR_API int32_t obor_boot(const obor_boot_info *info);
 /* Advance exactly one video frame (1/60 s of emulated time).
  * Returns 1 while the engine is alive, 0 once it exited (user quit). */
 OBOR_API int32_t obor_run_frame(void);
+
+/* Resource initialization is cooperative and may span loading frames. */
+OBOR_API int32_t obor_startup_complete(void);
 
 /* -1 while running, 0 for a normal quit, positive for an engine-reported
  * failure, OBOR_EXIT_MEMORY_FAULT for a contained synchronous memory fault. */

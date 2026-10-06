@@ -74,6 +74,7 @@ void (*obor_resource_event)(uint32_t kind, uintptr_t handle);
 extern int obor_live_threads;
 void obor_co_restore_active(cothread_t frontend);
 static int frame_ready;
+static int boot_frame_pending;
 /* Every supported engine sets this after its fonts, scripts, cached models
  * and object tables have finished loading. Loading-screen and timer yields
  * can occur before that point; they are not a completed boot. */
@@ -614,19 +615,14 @@ capture_cwd:
     obor_clock_us = 0;
     boot_dbg("boot: entering engine");
 
-    /* Finish resource initialization before the frontend fixes its rewind
-     * allocation. A loading-screen/timer yield can otherwise leave only a
-     * tiny bootstrap heap in that first snapshot. Keep the existing yields
-     * and fault boundaries while completing boot, then stop at the first
-     * ordinary frame; menus and intros still run through retro_run. */
+    /* Return at the first yield. Resource loading presents real engine
+     * frames too; consuming them here leaves the frontend black throughout
+     * initialization. Keep that first frame pending for retro_run. State
+     * capacity uses the PACK growth reserve and learned peak from the outset. */
     frame_ready = 0;
     switch_to_engine();
-    while (engine_alive && !startup_done) {
-        obor_clock_us += FRAME_US;
-        frame_ready = 0;
-        switch_to_engine();
-    }
-    boot_dbg("boot: first frame reached");
+    boot_frame_pending = frame_ready;
+    boot_dbg("boot: first yield reached");
     if (engine_alive || (frame_ready && engine_exit_status == 0))
         return 1;
     if (engine_exit_status != OBOR_EXIT_MEMORY_FAULT) obor_shutdown();
@@ -647,6 +643,10 @@ int32_t obor_run_frame(void)
 {
     if (!engine_alive)
         return 0;
+    if (boot_frame_pending) {
+        boot_frame_pending = 0;
+        return 1;
+    }
     obor_clock_us += FRAME_US;
     frame_ready = 0;
     while (!frame_ready && engine_alive)
@@ -665,6 +665,11 @@ int32_t obor_run_frame(void)
 int32_t obor_get_exit_status(void)
 {
     return engine_exit_status;
+}
+
+int32_t obor_startup_complete(void)
+{
+    return startup_done != 0;
 }
 
 int32_t obor_get_fault_message(char *out, uint32_t capacity)

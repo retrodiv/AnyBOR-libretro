@@ -577,12 +577,13 @@ def build_glue(target, spec, outdir):
          "-c", third / "miniz.c", "-o", miniz_o])
 
     compat_objs = []
-    for name in ("obor_transform_vm", "obor_transform_source"):
+    for name in ("obor_transform_vm", "obor_transform_source", "obor_prepare_co"):
         obj = outdir / (name + ".o")
         run([spec["cc"], "-O2", "-std=c99", "-fPIC", "-fvisibility=hidden",
              *arch_flags(spec),
              "-fstack-protector-strong", *gc_cflags,
              "-ffile-prefix-map=" + str(HERE) + "=.",
+             "-I", SRC / "port/libretro",
              "-c", SRC / "glue" / (name + ".c"), "-o", obj])
         compat_objs.append(obj)
     compat_flags = []

@@ -572,10 +572,9 @@ static uint32_t serialize_size_impl(void)
     uint64_t hn = obor_heap_sparse_size();
     if (!hn)
         return 0;
-    /* Boot now completes resource loading before exposing this API. Teach
-     * the existing peak policy that measured footprint before its first
-     * capacity decision, including when an older run left a bootstrap-only
-     * peak. Retain larger peaks from later levels and the usual margin. */
+    /* Loading screens can precede the resource peak. Retain every measured
+     * footprint, while the PACK reserve below protects the first allocation
+     * from a bootstrap-only heap or an older menu-only peak. */
     if (!g_size_bound)
         peak_update(hn);
     uint64_t required = sizeof(obs_header) +
@@ -601,15 +600,19 @@ static uint32_t serialize_size_impl(void)
             if (bound < hn + (16ULL << 20))
                 bound = hn + (16ULL << 20);
         }
-        /* A menu-only session is not evidence of a later route's maximum.
-         * Keep the same PACK growth allowance on cold and cached launches.
-         * Five eighths estimates loaded images/scripts while discounting
-         * streamed music/video. Cap that estimate at 216 MiB; inactive-engine
-         * subtraction keeps the large-PACK transport reserve below a 256 MiB
-         * rewind ring on the current builds. Larger measured peaks still win. */
-        uint64_t packed = cold_pack_reserve() * 5 / 8;
-        if (packed > (216ULL << 20))
-            packed = 216ULL << 20;
+        /* A loading/menu-only heap is not evidence of the resource maximum.
+         * Reserve from the PACK footprint on cold and cached launches. Do
+         * not cap large archives below their initial resource load merely
+         * to fit a frontend's rewind ring. Smaller archives retain their
+         * full footprint as a preload allowance; large archives discount
+         * streamed music/video using the existing five-eighths estimate. */
+        uint64_t footprint = cold_pack_reserve();
+        uint64_t preload = footprint;
+        if (preload > (128ULL << 20))
+            preload = 128ULL << 20;
+        uint64_t packed = footprint * 5 / 8;
+        if (packed < preload)
+            packed = preload;
         if (bound < packed)
             bound = packed;
         bound += fixed;

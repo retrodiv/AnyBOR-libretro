@@ -15,6 +15,7 @@
 #include <string.h>
 #include "obor_abi.h"
 #include "obor_fault.h"
+#include "obor_loading.h"
 
 /* mingw ships a unistd.h too — include it before the usleep macro below so
  * later includes are guard-stopped and never see the macro as a prototype */

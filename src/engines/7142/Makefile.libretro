@@ -146,7 +146,7 @@ all: partial
 # inside OBJDIR: linux and windows builds share the tree — a common output
 # path would let concurrent/interleaved builds overwrite each other's partial
 PARTIAL     = $(OBJDIR)/obor_engine_$(BUILD_NUM).o
-ABI_SYMS    = obor_abi_version obor_boot obor_run_frame obor_get_exit_status obor_get_fault_message obor_abandon obor_get_video \
+ABI_SYMS    = obor_abi_version obor_boot obor_run_frame obor_startup_complete obor_get_exit_status obor_get_fault_message obor_abandon obor_get_video \
               obor_set_button obor_get_audio obor_serialize_size \
               obor_serialize obor_unserialize obor_shutdown \
               obor_get_rumble obor_get_arena obor_get_player_state \
