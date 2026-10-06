@@ -6,9 +6,10 @@
  * Apply the port's engine corrections and select the PC video configuration
  * on macOS. Select native 6330 boomerang, collision and settings behavior,
  * 6412 frame-kill binding behavior, and 6510 binding, blocking and attack
- * behavior. Leave multiplayer slots without a selected model available to
- * join even if game scripts preassign lives to them. Let a missing basename-
- * only PAK self-check read the active frontend content after it has been
+ * behavior. Preserve allocation handles used by inline animation-script
+ * guards. Leave multiplayer slots without a selected model available to join
+ * even if game scripts preassign lives to them. Let a missing basename-only
+ * PAK self-check read the active frontend content after it has been
  * validated and prepared. Allocate each model's animation pointer table
  * through the highest animation index that model uses, and bound cache, copy
  * and cleanup paths to that capacity. Resize repeated weapon lists and
@@ -1367,7 +1368,9 @@ void execute_animation_script(entity *ent)
         tempvar.lVal = (LONG)ent->animpos;
         Script_Set_Local_Variant(cs, "frame",   &tempvar);
         ScriptVariant_ChangeType(&tempvar, VT_INTEGER);
-        tempvar.lVal = obor_animation_to_native(ent->animation->index);
+        /* Inline script guards use this allocation handle verbatim.
+         * It is independent of the profile's animation selector IDs. */
+        tempvar.lVal = (LONG)ent->animation->index;
         Script_Set_Local_Variant(cs, "animhandle",   &tempvar);
         if(is1)
         {

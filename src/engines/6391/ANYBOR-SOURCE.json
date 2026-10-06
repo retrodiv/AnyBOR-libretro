@@ -17,9 +17,9 @@
       "upstream_sha256": null
     },
     "openbor.c": {
-      "distributed_sha256": "ae4966ad4f63ac079bb6aaeafaa3b5acddb80872f3d817f3e798ed22bb9ad8de",
+      "distributed_sha256": "54447069f117089af3ec0b34fb3b9a0f9137302e9d4f444d03527a7d9b1d38df",
       "modified": true,
-      "summary": "Apply the port's engine corrections and select the PC video configuration on macOS. Select native 6330 boomerang, collision and settings behavior, 6412 frame-kill binding behavior, and 6510 binding, blocking and attack behavior. Leave multiplayer slots without a selected model available to join even if game scripts preassign lives to them. Let a missing basename-only PAK self-check read the active frontend content after it has been validated and prepared. Allocate each model's animation pointer table through the highest animation index that model uses, and bound cache, copy and cleanup paths to that capacity. Resize repeated weapon lists and detach borrowed lists before replacing their entries.",
+      "summary": "Apply the port's engine corrections and select the PC video configuration on macOS. Select native 6330 boomerang, collision and settings behavior, 6412 frame-kill binding behavior, and 6510 binding, blocking and attack behavior. Preserve allocation handles used by inline animation-script guards. Leave multiplayer slots without a selected model available to join even if game scripts preassign lives to them. Let a missing basename-only PAK self-check read the active frontend content after it has been validated and prepared. Allocate each model's animation pointer table through the highest animation index that model uses, and bound cache, copy and cleanup paths to that capacity. Resize repeated weapon lists and detach borrowed lists before replacing their entries.",
       "topics": [
         "active-content-pak-aliases",
         "animation-memory-layout",
@@ -45,9 +45,9 @@
       "upstream_sha256": "5a69069cc1d8dfdec66dba09c2df2141d050ea2f564f2f8c0a199a7842ff8345"
     },
     "openborscript.c": {
-      "distributed_sha256": "322ba666d0dc20e25593b948ff629db0d94b49273d4de3b3f495a3078365899c",
+      "distributed_sha256": "ae5f01cfb335724a607a95364ec8039898c33ea742df25681e2e4f8d9ff9beb8",
       "modified": true,
-      "summary": "Keep the dormant constant-lowering diagnostic compatible with the single-value instruction layout. Supply native profile script APIs and translate numeric animation, attack, subtype and spawn IDs.",
+      "summary": "Keep the dormant constant-lowering diagnostic compatible with the single-value instruction layout. Supply native profile script APIs and translate numeric animation, attack, subtype and spawn IDs. Keep next-animation timestamps unchanged at the script boundary.",
       "topics": [
         "logical-profile-compatibility",
         "record-dates-and-file-notices",

@@ -27,7 +27,16 @@ python3 tools/regression.py --webm  # also requires host ffmpeg
 python3 tools/test_crt.py
 python3 tools/test_rewind.py
 python3 tools/test_multiplayer.py
+python3 tools/test_6330_6510.py --core anybor_libretro.so
+python3 tools/test_animation_scripts.py --core anybor_libretro.so
+python3 tools/test_script_timestamps.py
 ```
+
+Linux CI runs the shared-profile checks automatically. The inline-script
+fixture allocates 260 padding animations, then requires a countdown to finish
+and load the next level under 6330, 6391, 6412 and 6510. The timestamp check
+compiles the actual getter and setter branches and checks each against the
+engine field independently, so inverse conversion mistakes cannot cancel out.
 
 The smoke test generates a tiny diagnostic PAK from original scripts and
 geometric graphics in `tools/make_fixture.py`, under the project's BSD

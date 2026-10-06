@@ -5,7 +5,8 @@
  * Upstream code retains its original license and notices.
  * Keep the dormant constant-lowering diagnostic compatible with the single-
  * value instruction layout. Supply native profile script APIs and translate
- * numeric animation, attack, subtype and spawn IDs.
+ * numeric animation, attack, subtype and spawn IDs. Keep next-animation
+ * timestamps unchanged at the script boundary.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/6391.md
  * at the source repository root. Original notices follow below.
@@ -5224,7 +5225,7 @@ HRESULT openbor_getentityproperty(ScriptVariant **varlist , ScriptVariant **pret
     case _ep_nextanim:
     {
         ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
-        (*pretvar)->lVal = obor_animation_to_native(ent->nextanim);
+        (*pretvar)->lVal = (LONG)ent->nextanim;
         break;
     }
     case _ep_nextmove:
@@ -7148,7 +7149,7 @@ HRESULT openbor_changeentityproperty(ScriptVariant **varlist , ScriptVariant **p
     {
         if(SUCCEEDED(ScriptVariant_IntegerValue(varlist[2], &ltemp)))
         {
-            ent->nextanim = obor_animation_from_native(ltemp);
+            ent->nextanim = (LONG)ltemp;
         }
         break;
     }

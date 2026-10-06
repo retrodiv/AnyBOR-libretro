@@ -3034,6 +3034,21 @@ Source: src/deps/libpng/mips/filter_mmi_inline_assembly.c
  * and license in png.h
  */
 
+Source: src/engines/6391/openborscript.c
+/* AnyBOR modification record: 2026-10-05.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Keep the dormant constant-lowering diagnostic compatible with the single-
+ * value instruction layout. Supply native profile script APIs and translate
+ * numeric animation, attack, subtype and spawn IDs. Keep next-animation
+ * timestamps unchanged at the script boundary.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/6391.md
+ * at the source repository root. Original notices follow below.
+ */
+
 Source: src/engines/6391/source/scriptlib/ScriptVariant.c
 /* AnyBOR modification record: 2026-10-05.
  * Port maintained by retrodiv <retrodiv@proton.me>.
@@ -4889,6 +4904,28 @@ Source: src/engines/3842/source/scriptlib/Interpreter.h
  * retain it.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/3842.md
+ * at the source repository root. Original notices follow below.
+ */
+
+Source: src/engines/6391/openbor.c
+/* AnyBOR modification record: 2026-10-05.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Apply the port's engine corrections and select the PC video configuration
+ * on macOS. Select native 6330 boomerang, collision and settings behavior,
+ * 6412 frame-kill binding behavior, and 6510 binding, blocking and attack
+ * behavior. Preserve allocation handles used by inline animation-script
+ * guards. Leave multiplayer slots without a selected model available to join
+ * even if game scripts preassign lives to them. Let a missing basename-only
+ * PAK self-check read the active frontend content after it has been
+ * validated and prepared. Allocate each model's animation pointer table
+ * through the highest animation index that model uses, and bound cache, copy
+ * and cleanup paths to that capacity. Resize repeated weapon lists and
+ * detach borrowed lists before replacing their entries.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/6391.md
  * at the source repository root. Original notices follow below.
  */
 
@@ -6963,20 +7000,6 @@ Source: src/deps/zlib/gzlib.c
  * For conditions of distribution and use, see copyright notice in zlib.h
  */
 
-Source: src/engines/6391/openborscript.c
-/* AnyBOR modification record: 2026-10-05.
- * Port maintained by retrodiv <retrodiv@proton.me>.
- * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
- * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
- * Upstream code retains its original license and notices.
- * Keep the dormant constant-lowering diagnostic compatible with the single-
- * value instruction layout. Supply native profile script APIs and translate
- * numeric animation, attack, subtype and spawn IDs.
- * Existing changes recorded here; this is not their implementation date.
- * See MODIFICATIONS.md and docs/modifications/6391.md
- * at the source repository root. Original notices follow below.
- */
-
 Source: src/engines/6391/source/scriptlib/Interpreter.h
 /* AnyBOR modification record: 2026-10-05.
  * Port maintained by retrodiv <retrodiv@proton.me>.
@@ -7063,27 +7086,6 @@ Jutta Degener
 Carsten Bormann
 
 *********************************************************************/
-
-Source: src/engines/6391/openbor.c
-/* AnyBOR modification record: 2026-10-05.
- * Port maintained by retrodiv <retrodiv@proton.me>.
- * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
- * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
- * Upstream code retains its original license and notices.
- * Apply the port's engine corrections and select the PC video configuration
- * on macOS. Select native 6330 boomerang, collision and settings behavior,
- * 6412 frame-kill binding behavior, and 6510 binding, blocking and attack
- * behavior. Leave multiplayer slots without a selected model available to
- * join even if game scripts preassign lives to them. Let a missing basename-
- * only PAK self-check read the active frontend content after it has been
- * validated and prepared. Allocate each model's animation pointer table
- * through the highest animation index that model uses, and bound cache, copy
- * and cleanup paths to that capacity. Resize repeated weapon lists and
- * detach borrowed lists before replacing their entries.
- * Existing changes recorded here; this is not their implementation date.
- * See MODIFICATIONS.md and docs/modifications/6391.md
- * at the source repository root. Original notices follow below.
- */
 
 Source: src/deps/libpng/pngtrans.c
 /* pngtrans.c - transforms the data in a row (used by both readers and writers)

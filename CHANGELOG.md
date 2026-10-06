@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Preserve inline animation allocation handles and next-animation timestamps
+  across the shared 6330, 6391, 6412 and 6510 profiles, allowing scripted
+  cutscenes to finish and retaining exact animation scheduling.
 - Show the credited OpenBOR artwork with an animated blue preparation bar
   before packed-content I/O, then pass through the game's original loading
   screen and progress bar.
