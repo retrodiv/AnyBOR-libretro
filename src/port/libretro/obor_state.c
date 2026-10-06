@@ -36,6 +36,8 @@
 #include <string.h>
 #include <time.h>
 #include "obor_runtime.h"
+#include "obor_write_watch.h"
+#include "obor_snapshot_cache.h"
 
 #if defined(_WIN32)
 #include <windows.h>
@@ -81,6 +83,8 @@ size_t obor_arena_used(void);
 int obor_arena_grow_to(size_t used);
 void obor_arena_stats(size_t *live, size_t *free_bytes, size_t *top_free);
 uint64_t obor_heap_sparse_size(void);
+int obor_heap_owned_layout(uint64_t *prefix, uint64_t *suffix,
+                           uint64_t *suffix_length);
 uint64_t obor_heap_sparse_write(void *destination, uint64_t capacity);
 int obor_heap_sparse_validate(const void *source, uint64_t length,
                               uint64_t arena_used);
@@ -469,6 +473,66 @@ static uint64_t segs_bytes(void)
     return t;
 }
 
+static obor_snapshot_cache owned_cache OBOR_RUNTIME;
+static uint32_t owned_capacity OBOR_RUNTIME;
+
+/* Invalidation keeps the caller's registration but forgets both images.
+ * Epochs must never survive restarting a watcher (generation one again). */
+void obor_state_owned_forget(void)
+{
+    owned_cache.slot[0].epoch = owned_cache.slot[1].epoch = 0;
+    owned_cache.previous_epoch = 0;
+}
+
+void obor_state_owned_discard(void)
+{
+    memset(&owned_cache, 0, sizeof(owned_cache));
+    owned_capacity = 0;
+}
+
+static int owned_stop_images(void)
+{
+    if (!obor_write_watch_stop()) return 0;
+    obor_state_owned_forget();
+    return 1;
+}
+
+void obor_state_owned_suspend(void)
+{
+    if (!owned_stop_images()) obor_fault_abort(OBOR_FAULT_MEMORY, 0);
+}
+
+static void owned_full_range(obor_state_ranges *ranges, uint32_t size)
+{
+    ranges->count = 1;
+    ranges->ranges[0].offset = 0;
+    ranges->ranges[0].length = size;
+}
+
+#if OBOR_WRITE_WATCH_ENABLED
+typedef struct { obor_state_ranges *ranges; uint32_t size; } owned_range_context;
+static void owned_emit_range(void *context, size_t offset, size_t length)
+{
+    owned_range_context *r = context;
+    obor_state_ranges *out = r->ranges;
+    if (!length || (out->count == 1 && out->ranges[0].offset == 0 &&
+                    out->ranges[0].length == r->size)) return;
+    if (offset > r->size || length > r->size - offset ||
+        out->count == OBOR_STATE_RANGE_MAX) {
+        owned_full_range(out, r->size);
+        return;
+    }
+    if (out->count) {
+        obor_state_range *last = &out->ranges[out->count - 1];
+        if ((uint64_t)last->offset + last->length == offset) {
+            last->length += (uint32_t)length;
+            return;
+        }
+    }
+    out->ranges[out->count++] = (obor_state_range){(uint32_t)offset, (uint32_t)length};
+}
+#endif
+
 static int checked_add_u64(uint64_t *total, uint64_t add)
 {
     if (*total > UINT64_MAX - add)
@@ -509,6 +573,13 @@ static uint32_t serialize_size_impl(void)
     uint64_t hn = obor_heap_sparse_size();
     if (!hn)
         return 0;
+    uint64_t previous_peak = g_size_bound ? 0 : peak_read();
+    /* Boot now completes resource loading before exposing this API. Teach
+     * the existing peak policy that measured footprint before its first
+     * capacity decision, including when an older run left a bootstrap-only
+     * peak. Retain larger peaks from later levels and the usual margin. */
+    if (!g_size_bound)
+        peak_update(hn);
     uint64_t required = sizeof(obs_header) +
                         (uint64_t)g_nsegs * sizeof(seg_t) + segs_bytes() +
                         OBOR_STACK_HEAD + OBOR_STACK_BUDGET + hn +
@@ -531,6 +602,11 @@ static uint32_t serialize_size_impl(void)
             bound = hn * 2;
             if (bound < hn + (16ULL << 20))
                 bound = hn + (16ULL << 20);
+        }
+        /* A bootstrap-only cache is not evidence of a completed session.
+         * Keep the existing cold PACK allowance until a trustworthy peak
+         * exists, even when the newly measured boot footprint was persisted. */
+        if (!previous_peak || previous_peak < hn) {
             uint64_t packed = cold_pack_reserve() * 5 / 8;
             /* Five eighths of the uncompressed PACK data is a useful upper
              * estimate for the images/scripts cached by typical mods while
@@ -577,7 +653,7 @@ static uint32_t serialize_size_impl(void)
 
 /* -------------------------------------------------------- serialize ---- */
 
-static uint32_t serialize_impl(void *buf, uint32_t size)
+static uint32_t serialize_impl(void *buf, uint32_t size, obor_state_ranges *ranges)
 {
     static int profile_heap_reported;
     if (!collect_segments())
@@ -630,7 +706,52 @@ static uint32_t serialize_impl(void *buf, uint32_t size)
     /* A frontend may retain an earlier rewind allocation after the heap
      * grows. Do not partially overwrite its previous valid snapshot when
      * the new heap no longer fits. */
-    uint64_t heap_required = obor_heap_sparse_size();
+    int owned = 0;
+    unsigned owned_index = 0;
+    uint64_t owned_prefix = heap_high_water, owned_suffix = 0,
+             owned_suffix_length = 0, owned_heap_bytes = heap_high_water + 48;
+#if OBOR_WRITE_WATCH_ENABLED
+    if (ranges && size == owned_capacity) {
+        if (buf == owned_cache.slot[0].buffer) owned = 1;
+        else if (buf == owned_cache.slot[1].buffer) { owned = 1; owned_index = 1; }
+    }
+    if (owned) {
+        if (owned_heap_bytes > size - fixed) {
+            uint64_t prefix, suffix, suffix_length;
+            if (obor_heap_owned_layout(&prefix, &suffix, &suffix_length) &&
+                prefix <= heap_high_water && suffix >= prefix &&
+                suffix <= heap_high_water &&
+                suffix_length == heap_high_water - suffix &&
+                prefix + suffix_length + 64 <= size - fixed) {
+                owned_prefix = prefix;
+                owned_suffix = suffix;
+                owned_suffix_length = suffix_length;
+                owned_heap_bytes = prefix + suffix_length + 64;
+            }
+        }
+        size_t page = obor_write_watch_page_size();
+        if (!page) {
+            long actual_page = sysconf(_SC_PAGESIZE);
+            if (actual_page > 0) page = (size_t)actual_page;
+        }
+        uint64_t maximum = OBOR_ARENA_MAX_SZ - (heap_lo() - (uint64_t)(uintptr_t)obor_arena_base());
+        uint64_t rounded = page && heap_high_water <= UINT64_MAX - (page - 1) ?
+            (heap_high_water + page - 1) / page * page : 0;
+        if (!rounded || rounded > maximum || owned_heap_bytes > size - fixed ||
+            (!obor_write_watch_epoch() && !obor_write_watch_start(
+                (void *)(uintptr_t)heap_lo(), (size_t)rounded, (size_t)maximum)) ||
+            !obor_write_watch_extend((size_t)rounded)) {
+            if (!owned_stop_images()) obor_fault_abort(OBOR_FAULT_MEMORY, 0);
+            owned = 0;
+        }
+    }
+#endif
+    uint64_t heap_required = owned ? owned_heap_bytes : obor_heap_sparse_size();
+    /* Learn growth even when an older fixed frontend allocation cannot
+     * hold it. This check precedes sparse_write, so its failure path alone
+     * cannot update the next session's capacity. */
+    if (heap_required && !owned)
+        peak_update(heap_required);
     if (!heap_required || heap_required > size - fixed)
         return 0;
 
@@ -679,7 +800,51 @@ static uint32_t serialize_impl(void *buf, uint32_t size)
                         (ts1.tv_nsec - ts0.tv_nsec) / 1e6);
     }
 
-    uint64_t hlen = obor_heap_sparse_write(heap_blob, size - fixed);
+    uint64_t hlen = 0;
+#if OBOR_WRITE_WATCH_ENABLED
+    if (owned) {
+        /* Both layouts use ordinary OHS v2 spans. The split form omits only
+         * the unused top chunk, retaining its header and segment footer. */
+        struct { uint32_t magic, version, count, reserved;
+                 uint64_t arena_used, payload; } heap_header = {
+            0x3153484fU, 2, owned_suffix_length ? 2 : 1, 0,
+            h.arena_used, owned_prefix + owned_suffix_length};
+        uint64_t span[2] = {0, owned_prefix};
+        memcpy(heap_blob, &heap_header, sizeof(heap_header));
+        memcpy(heap_blob + sizeof(heap_header), span, sizeof(span));
+        hlen = owned_heap_bytes;
+        if (owned_suffix_length) {
+            uint64_t tail_span[2] = {owned_suffix, owned_suffix_length};
+            uint8_t *tail = heap_blob + 48 + owned_prefix;
+            memcpy(tail, tail_span, sizeof(tail_span));
+            memcpy(tail + sizeof(tail_span),
+                (void *)(uintptr_t)(heap_lo() + owned_suffix),
+                (size_t)owned_suffix_length);
+        }
+        memcpy(heap_blob + hlen, slice, (size_t)stack_len);
+        ranges->count = 0;
+        owned_range_context range_context = {ranges, size};
+        uint64_t epoch = obor_write_watch_epoch();
+        obor_snapshot_copy(&owned_cache, owned_index, (void *)(uintptr_t)heap_lo(),
+            (size_t)(heap_blob + 48 - (uint8_t *)buf), (size_t)owned_prefix,
+            (size_t)(fixed + hlen), size, obor_write_watch_page_size(), epoch,
+            obor_write_watch_page_epoch, owned_emit_range, &range_context);
+        size_t page = obor_write_watch_page_size();
+        size_t protected_length = ((size_t)heap_high_water + page - 1) / page * page;
+        int armed = obor_write_watch_arm(protected_length);
+        if (armed != 1) {
+            if (armed < 0 || !owned_stop_images()) obor_fault_abort(OBOR_FAULT_MEMORY, 0);
+            owned_full_range(ranges, size);
+        }
+    } else
+#endif
+    {
+        hlen = obor_heap_sparse_write(heap_blob, size - fixed);
+        if (ranges) {
+            if (!owned_stop_images()) obor_fault_abort(OBOR_FAULT_MEMORY, 0);
+            owned_full_range(ranges, size);
+        }
+    }
     if (!hlen) {
         /* A failed save must still teach the next session the real bound. */
         uint64_t required = obor_heap_sparse_size();
@@ -692,7 +857,7 @@ static uint32_t serialize_impl(void *buf, uint32_t size)
     }
     h.heap_len = hlen;
     memcpy(buf, &h, sizeof(h));
-    peak_update(hlen);
+    if (!owned) peak_update(hlen);
 
     memcpy(heap_blob + hlen, slice, (size_t)stack_len);
     return (uint32_t)(fixed + hlen);
@@ -853,6 +1018,8 @@ static int32_t unserialize_impl(const void *buf, uint32_t size, int *committed)
     uint32_t region_count_l = g_region_count;
     uint64_t full_segment_bytes_l = g_full_segment_bytes;
     void *frontend_context_l = obor_frontend_context();
+    obor_session_paths session_paths_l;
+    obor_session_paths_get(&session_paths_l);
     FILE *openbor_log_l = &openborLog ? openborLog : NULL;
     FILE *script_log_l = &scriptLog ? scriptLog : NULL;
     int pakfd_l = pakfd, cache_fd_l = real_pakfd;
@@ -939,10 +1106,8 @@ static int32_t unserialize_impl(const void *buf, uint32_t size, int *committed)
      * The snapshot's value belongs to the saving process and cannot be
      * rebased as a module pointer. */
     obor_frontend_context_restore(frontend_context_l);
+    obor_session_paths_restore(&session_paths_l);
     /* OS-handle fixups (bytes can't carry fds/FILEs across sessions) */
-    size_t copied = strnlen(pak_now, MAX_FILENAME_LEN - 1);
-    memcpy(packfile, pak_now, copied);
-    packfile[copied] = 0;
 #ifdef OBOR_HAS_MOVIE_PLAYBACK
     if (debug_restore)
         fprintf(stderr, "[obor] unserialize resuming movie state\n");
@@ -983,6 +1148,8 @@ typedef struct {
     void *buffer;
     uint32_t size, result;
     int operation, committed;
+    void *second;
+    obor_state_ranges *ranges;
 } state_call;
 
 static void execute_state(void *context)
@@ -991,37 +1158,90 @@ static void execute_state(void *context)
     if (call->operation == 0) {
         obor_test_fault_phase("size");
         call->result = serialize_size_impl();
-    } else if (call->operation == 1) {
+    } else if (call->operation == 1 || call->operation == 3) {
+        if (call->ranges) call->ranges->count = 0;
         obor_test_fault_phase("save");
-        call->result = serialize_impl(call->buffer, call->size);
-        if (call->result && call->result < call->size)
+        call->result = serialize_impl(call->buffer, call->size, call->ranges);
+        if (call->result && call->result < call->size &&
+            (!call->ranges || !owned_cache.previous_epoch))
         {
             obor_test_fault_phase("save-padding");
             obor_state_clear_padding((uint8_t *)call->buffer + call->result,
                                       call->size - call->result);
         }
-    } else {
+    } else if (call->operation == 2) {
+        if (!owned_stop_images())
+            obor_fault_abort(OBOR_FAULT_MEMORY, 0);
         obor_test_fault_phase("load");
         call->result = unserialize_impl(call->buffer, call->size, &call->committed);
         if (!call->result && call->committed)
             obor_fault_abort(OBOR_FAULT_STATE, 0);
+    } else if (call->operation == 4) {
+#if OBOR_WRITE_WATCH_ENABLED
+        if (!owned_capacity && !__atomic_load_n(&obor_live_threads, __ATOMIC_SEQ_CST)) {
+            owned_cache.slot[0].buffer = call->buffer;
+            owned_cache.slot[1].buffer = call->second;
+            owned_capacity = call->size;
+            obor_state_owned_forget();
+            call->result = 1;
+        }
+#endif
+    } else if (call->operation == 5) {
+        if (!owned_stop_images()) obor_fault_abort(OBOR_FAULT_MEMORY, 0);
+        obor_state_owned_discard();
+        call->result = 1;
     }
+}
+
+int32_t obor_owned_begin(void *first, void *second, uint32_t size)
+{
+    uintptr_t a = (uintptr_t)first, b = (uintptr_t)second;
+    uintptr_t arena = (uintptr_t)obor_arena_base();
+    if (!first || !second || !size || a > UINTPTR_MAX - size ||
+        b > UINTPTR_MAX - size || (a < b + size && b < a + size) ||
+        (a < arena + OBOR_ARENA_MAX_SZ && arena < a + size) ||
+        (b < arena + OBOR_ARENA_MAX_SZ && arena < b + size)) return 0;
+    state_call call = {first, size, 0, 4, 0, second, NULL};
+    return obor_protect_call(execute_state, &call, "owned state begin") ? (int32_t)call.result : 0;
+}
+
+uint32_t obor_owned_serialize(void *buffer, uint32_t size, obor_state_ranges *ranges)
+{
+    if (!ranges || size != owned_capacity || !size ||
+        (buffer != owned_cache.slot[0].buffer && buffer != owned_cache.slot[1].buffer)) return 0;
+    uintptr_t r = (uintptr_t)ranges;
+    uintptr_t a = (uintptr_t)owned_cache.slot[0].buffer;
+    uintptr_t b = (uintptr_t)owned_cache.slot[1].buffer;
+    uintptr_t arena = (uintptr_t)obor_arena_base();
+    if (r > UINTPTR_MAX - sizeof(*ranges) ||
+        (r < a + size && a < r + sizeof(*ranges)) ||
+        (r < b + size && b < r + sizeof(*ranges)) ||
+        (r < arena + OBOR_ARENA_MAX_SZ && arena < r + sizeof(*ranges))) return 0;
+    state_call call = {buffer, size, 0, 3, 0, NULL, ranges};
+    return obor_protect_call(execute_state, &call, "owned save state") ? call.result : 0;
+}
+
+int32_t obor_owned_end(void)
+{
+    if (!owned_capacity && !obor_write_watch_epoch()) return 1;
+    state_call call = {NULL, 0, 0, 5, 0, NULL, NULL};
+    return obor_protect_call(execute_state, &call, "owned state end") ? (int32_t)call.result : 0;
 }
 
 uint32_t obor_serialize_size(void)
 {
-    state_call call = {NULL, 0, 0, 0, 0};
+    state_call call = {NULL, 0, 0, 0, 0, NULL, NULL};
     return obor_protect_call(execute_state, &call, "state size") ? call.result : 0;
 }
 
 uint32_t obor_serialize(void *buffer, uint32_t size)
 {
-    state_call call = {buffer, size, 0, 1, 0};
+    state_call call = {buffer, size, 0, 1, 0, NULL, NULL};
     return obor_protect_call(execute_state, &call, "save state") ? call.result : 0;
 }
 
 int32_t obor_unserialize(const void *buffer, uint32_t size)
 {
-    state_call call = {(void *)buffer, size, 0, 2, 0};
+    state_call call = {(void *)buffer, size, 0, 2, 0, NULL, NULL};
     return obor_protect_call(execute_state, &call, "load state") ? (int32_t)call.result : 0;
 }

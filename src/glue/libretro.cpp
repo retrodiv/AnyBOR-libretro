@@ -32,6 +32,7 @@
 #include "obor_error_screen.h"
 #include "obor_state_padding.h"
 #include "obor_profile.h"
+#include "obor_rewind.h"
 #if defined(__APPLE__)
 /* Mach-O image introspection: writable snapshot ranges (pristine capture)
  * and the per-engine state sections of this same image. */
@@ -112,6 +113,9 @@ static bool g_fault_quarantined;
 #define p_get_rumble (g_vtbl->get_rumble)
 #define p_get_arena (g_vtbl->get_arena)
 #define p_get_player_state (g_vtbl->get_player_state)
+#define p_owned_begin (g_vtbl->owned_begin)
+#define p_owned_serialize (g_vtbl->owned_serialize)
+#define p_owned_end (g_vtbl->owned_end)
 
 static void decide_engine(void);
 static void glue_collect_segments(void);
@@ -2403,12 +2407,13 @@ size_t retro_serialize_size(void)
     return g_state_capacity;
 }
 
-bool retro_serialize(void *data, size_t size)
+static uint32_t serialize_capture(void *data, size_t size, obor_state_ranges *ranges)
 {
     obor_profile_init();
     uint64_t profile_begin = obor_profile_now();
     uint32_t written = g_booted && data && size <= UINT32_MAX ?
-                       p_serialize(data, (uint32_t)size) : 0;
+                       (ranges ? p_owned_serialize(data, (uint32_t)size, ranges) :
+                                 p_serialize(data, (uint32_t)size)) : 0;
     uint64_t profile_core_end = obor_profile_now();
     bool ok = written > 0 && written <= size;
     if (!written && g_booted && queue_state_fault()) ok = false;
@@ -2429,13 +2434,59 @@ bool retro_serialize(void *data, size_t size)
         fprintf(g_trace, "f=%ld ser ok=%d sz=%zu\n", g_frame_no, (int)ok, size);
         fflush(g_trace);
     }
-    return ok;
+    return ok ? written : 0;
+}
+
+bool retro_serialize(void *data, size_t size)
+{
+    return serialize_capture(data, size, NULL) != 0;
+}
+
+static int32_t rewind_owned_begin(void *first, void *second, uint32_t size, uint32_t flags)
+{
+    if (!g_booted || flags != OBOR_REWIND_EXCLUSIVE_BUFFERS_AND_MEMORY) return 0;
+    int32_t result = p_owned_begin(first, second, size);
+    if (!result) queue_state_fault();
+    return result;
+}
+
+static uint32_t rewind_owned_capture(void *data, uint32_t size, obor_state_ranges *ranges)
+{
+    if (!ranges) return 0;
+    return serialize_capture(data, size, ranges);
+}
+
+static int32_t rewind_owned_end(void)
+{
+    if (!g_booted || !g_vtbl) return 1;
+    int32_t result = p_owned_end();
+    if (!result) queue_state_fault();
+    return result;
+}
+
+const obor_rewind_interface *retro_anybor_rewind_interface(uint32_t version, uint32_t size)
+{
+#if defined(__linux__) && defined(__aarch64__) && !defined(__ANDROID__)
+    static const obor_rewind_interface api = {
+        rewind_owned_begin, rewind_owned_capture, rewind_owned_end};
+    if (version == OBOR_REWIND_INTERFACE_VERSION && size == sizeof(api)) return &api;
+#else
+    (void)version; (void)size;
+#endif
+    return NULL;
 }
 
 bool retro_unserialize(const void *data, size_t size)
 {
     obor_profile_init();
     uint64_t profile_begin = obor_profile_now();
+    /* Even a glue-level rejection invalidates caller ownership. A rewind pop
+     * modifies a registered buffer before loading it, so the frontend ends the
+     * session before the pop; this also covers direct ordinary load callers. */
+    if (g_booted && g_vtbl && !p_owned_end()) {
+        queue_state_fault();
+        return false;
+    }
     bool ok;
     {
         /* the snapshot spans this whole module's writable segments — the

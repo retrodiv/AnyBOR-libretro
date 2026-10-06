@@ -27,7 +27,7 @@
 extern "C" {
 #endif
 
-#define OBOR_ABI_VERSION 5u
+#define OBOR_ABI_VERSION 6u
 
 #define OBOR_EXIT_MEMORY_FAULT (-2)
 enum { OBOR_RESOURCE_FILE_OPEN = 1, OBOR_RESOURCE_FILE_CLOSE,
@@ -145,6 +145,23 @@ OBOR_API int32_t obor_get_audio(int16_t *out, int32_t max_frames);
 OBOR_API uint32_t obor_serialize_size(void);
 OBOR_API uint32_t obor_serialize(void *buf, uint32_t size);
 OBOR_API int32_t obor_unserialize(const void *buf, uint32_t size);
+
+/* Optional owned rewind transport. Caller guarantees no direct writes to
+ * engine memory and keeps both nonoverlapping buffers alive and immutable
+ * between captures. End the session BEFORE mutating/freeing either buffer or
+ * writing through a frontend memory map. Ordinary serialize stays independent.
+ * A load invalidates cached images; the next capture fully initializes them.
+ * Ranges conservatively cover changes against the preceding successful capture.
+ * They are offsets within the complete ordinary portable state, never deltas. */
+#define OBOR_STATE_RANGE_MAX 1024u
+typedef struct { uint32_t offset, length; } obor_state_range;
+typedef struct {
+    uint32_t count;
+    obor_state_range ranges[OBOR_STATE_RANGE_MAX];
+} obor_state_ranges;
+OBOR_API int32_t obor_owned_begin(void *first, void *second, uint32_t size);
+OBOR_API uint32_t obor_owned_serialize(void *buf, uint32_t size, obor_state_ranges *ranges);
+OBOR_API int32_t obor_owned_end(void);
 
 OBOR_API void obor_shutdown(void);
 

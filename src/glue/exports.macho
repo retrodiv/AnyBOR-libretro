@@ -31,3 +31,4 @@ _retro_set_input_state
 _retro_set_video_refresh
 _retro_unload_game
 _retro_unserialize
+_retro_anybor_rewind_interface

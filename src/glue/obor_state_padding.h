@@ -11,6 +11,9 @@
 #if defined(_WIN32) && defined(__SSE2__)
 #include <emmintrin.h>
 #endif
+#if defined(__aarch64__) && defined(__ARM_NEON)
+#include <arm_neon.h>
+#endif
 
 /* The transport tail must be deterministic, even for a dirty caller-owned
  * buffer or a shrinking heap. Avoid writing already-zero reserve pages:
@@ -35,6 +38,18 @@ static inline void obor_state_clear_padding_serial(void *data, size_t size)
         }
         int dirty = _mm_movemask_epi8(_mm_cmpeq_epi8(
             _mm_or_si128(a, b), _mm_setzero_si128())) != 0xffff;
+#elif defined(__aarch64__) && defined(__ARM_NEON)
+        /* Scan sixteen bytes per load with AArch64's baseline SIMD.
+         * GCC's conservative -O2 cost model
+         * otherwise leaves this reduction scalar. Unaligned loads stay
+         * within the complete block, including arbitrary caller buffers. */
+        uint8x16_t a = vdupq_n_u8(0), b = a;
+        size_t i;
+        for (i = 0; i < 512; i += 32) {
+            a = vorrq_u8(a, vld1q_u8(p + i));
+            b = vorrq_u8(b, vld1q_u8(p + i + 16));
+        }
+        int dirty = vmaxvq_u8(vorrq_u8(a, b)) != 0;
 #else
         uint64_t dirty = 0;
         size_t i;

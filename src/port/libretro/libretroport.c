@@ -18,6 +18,7 @@
 #include "utils.h"
 #include "libco/libco.h"
 #include "obor_fault.h"
+#include "obor_random.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -73,6 +74,10 @@ void (*obor_resource_event)(uint32_t kind, uintptr_t handle);
 extern int obor_live_threads;
 void obor_co_restore_active(cothread_t frontend);
 static int frame_ready;
+/* Every supported engine sets this after its fonts, scripts, cached models
+ * and object tables have finished loading. Loading-screen and timer yields
+ * can occur before that point; they are not a completed boot. */
+extern int startup_done;
 static unsigned long long us_since_yield; /* sleep accumulator */
 
 static const unsigned int *fb_px;
@@ -81,6 +86,28 @@ static int fb_w, fb_h, fb_pitch;
 static char boot_pak[MAX_FILENAME_LEN];
 static char content_alias_name[MAX_FILENAME_LEN];
 static char engine_cwd[4096];
+
+void obor_session_paths_get(obor_session_paths *paths)
+{
+    memcpy(paths->cwd, engine_cwd, sizeof(engine_cwd));
+    memcpy(paths->pak, packfile, sizeof(packfile));
+    memcpy(paths->boot_pak, boot_pak, sizeof(boot_pak));
+    memcpy(paths->paks, paksDir, sizeof(paksDir));
+    memcpy(paths->saves, savesDir, sizeof(savesDir));
+    memcpy(paths->logs, logsDir, sizeof(logsDir));
+    memcpy(paths->screenshots, screenShotsDir, sizeof(screenShotsDir));
+}
+
+void obor_session_paths_restore(const obor_session_paths *paths)
+{
+    memcpy(engine_cwd, paths->cwd, sizeof(engine_cwd));
+    memcpy(packfile, paths->pak, sizeof(packfile));
+    memcpy(boot_pak, paths->boot_pak, sizeof(boot_pak));
+    memcpy(paksDir, paths->paks, sizeof(paksDir));
+    memcpy(savesDir, paths->saves, sizeof(savesDir));
+    memcpy(logsDir, paths->logs, sizeof(logsDir));
+    memcpy(screenShotsDir, paths->screenshots, sizeof(screenShotsDir));
+}
 void obor_arena_release(void);
 void obor_arena_authorize(int owned);
 
@@ -587,9 +614,18 @@ capture_cwd:
     obor_clock_us = 0;
     boot_dbg("boot: entering engine");
 
-    /* Run the engine up to its first frame so boot failures surface here. */
+    /* Finish resource initialization before the frontend fixes its rewind
+     * allocation. A loading-screen/timer yield can otherwise leave only a
+     * tiny bootstrap heap in that first snapshot. Keep the existing yields
+     * and fault boundaries while completing boot, then stop at the first
+     * ordinary frame; menus and intros still run through retro_run. */
     frame_ready = 0;
     switch_to_engine();
+    while (engine_alive && !startup_done) {
+        obor_clock_us += FRAME_US;
+        frame_ready = 0;
+        switch_to_engine();
+    }
     boot_dbg("boot: first frame reached");
     if (engine_alive || (frame_ready && engine_exit_status == 0))
         return 1;
@@ -779,6 +815,12 @@ extern FILE *scriptLog;
 
 void obor_shutdown(void)
 {
+    /* Resource teardown may free arena-backed names outside a frame guard.
+     * End owned protection while the fault guard still owns this thread. */
+    if (!obor_owned_end()) {
+        (void)obor_abandon();
+        return;
+    }
     engine_alive = 0;
 #ifdef WEBM
     /* Playback workers own arena allocations and pak handles. Join them

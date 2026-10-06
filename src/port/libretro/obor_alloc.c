@@ -23,7 +23,9 @@
 
 #include "obor_abi.h" /* OBOR_ARENA_BASE_VA / OBOR_ARENA_MAX_SZ */
 #include "obor_fault.h"
-#if defined(__linux__) && defined(__x86_64__) && !defined(__ANDROID__)
+#include "obor_write_watch.h"
+void obor_state_owned_discard(void);
+#if defined(__linux__) && (defined(__x86_64__) || defined(__aarch64__)) && !defined(__ANDROID__)
 #define OBOR_BATCH_SPARSE_SPANS 1
 #include "obor_state_copy.h"
 #else
@@ -125,6 +127,9 @@ void obor_arena_release(void)
 {
     if (!arena_brk)
         return;
+    /* Stop monitoring before teardown. The replacement below also removes
+     * protection if a failed mprotect prevented normal watch cleanup. */
+    obor_write_watch_stop();
 #if defined(_WIN32)
     VirtualFree(OBOR_ARENA_BASE, OBOR_ARENA_MAX, MEM_DECOMMIT);
 #else
@@ -133,6 +138,8 @@ void obor_arena_release(void)
          MAP_PRIVATE | MAP_ANONYMOUS | MAP_NORESERVE | MAP_FIXED, -1, 0);
 #endif
     arena_brk = NULL;
+    obor_write_watch_abandon();
+    obor_state_owned_discard();
     arena_lim = NULL;
     arena_live_chunk_bytes = 0;
 }
@@ -831,6 +838,48 @@ uint64_t obor_heap_sparse_size(void)
         scan.payload > UINT64_MAX - sizeof(obor_heap_sparse_header) - table)
         return 0;
     return sizeof(obor_heap_sparse_header) + table + scan.payload;
+}
+
+/* A contiguous MORECORE arena can retain a large free top chunk after a
+ * temporary load. Its unused user bytes need not occupy an owned snapshot.
+ * Retain the entire prefix, the same top header as the sparse encoder, and
+ * the complete segment footer. These checks are dlmalloc's top invariant;
+ * unsupported/multiple segment layouts use the ordinary sparse fallback.
+ * No chunk walk is needed, and no live allocation is omitted. */
+int obor_heap_owned_layout(uint64_t *prefix, uint64_t *suffix,
+                           uint64_t *suffix_length)
+{
+    if (!prefix || !suffix || !suffix_length)
+        return 0;
+    *prefix = *suffix = *suffix_length = 0;
+    obor_fault_allocator_activity(1);
+    ensure_initialization();
+    mstate m = gm;
+    if (PREACTION(m)) {
+        obor_fault_allocator_activity(0);
+        return 0;
+    }
+    const char *origin = OBOR_ARENA_BASE + OBOR_STACK_RESERVE;
+    uint64_t extent = arena_brk && arena_brk >= origin ?
+        (uint64_t)(arena_brk - origin) : 0;
+    uintptr_t top = (uintptr_t)m->top, base = (uintptr_t)origin;
+    int valid = is_initialized(m) && !m->seg.next &&
+        m->seg.base == origin && m->seg.size == extent &&
+        extent >= TOP_FOOT_SIZE && top >= base &&
+        top - base <= extent - TOP_FOOT_SIZE &&
+        m->topsize == extent - TOP_FOOT_SIZE - (top - base) &&
+        m->topsize > sizeof(mchunk);
+    if (valid && ((m->top->head & ~INUSE_BITS) != m->topsize ||
+                  !pinuse(m->top) || cinuse(m->top)))
+        valid = 0;
+    if (valid) {
+        *prefix = top - base + sizeof(mchunk);
+        *suffix = extent - TOP_FOOT_SIZE;
+        *suffix_length = TOP_FOOT_SIZE;
+    }
+    POSTACTION(m);
+    obor_fault_allocator_activity(0);
+    return valid;
 }
 
 uint64_t obor_heap_sparse_write(void *destination, uint64_t capacity)

@@ -178,6 +178,7 @@ struct seg { int from, to, pad_id, port, device, value; int pulse; };
 static struct seg g_segs[320];
 static int g_nsegs;
 static int g_frame;
+static int g_input_frame_offset;
 
 /* OBS v3 contract, independent of the core's range collector. Test-only:
  * call with a deliberately dirty destination and verify the whole transport
@@ -241,9 +242,9 @@ static int check_state_blob(const unsigned char *data, size_t size, int report)
     for (size_t i = (size_t)used; i < size; ++i)
         if (data[i]) return 0;
     if (report)
-        printf("state_contract version=%u capacity=%zu logical=%llu segments=%zu heap=%llu stack=%llu tail_zero=1\n",
+        printf("state_contract version=%u capacity=%zu logical=%llu segments=%zu heap=%llu stack=%llu tail_zero=1 profile=%u physical=%u\n",
                head[1], size, (unsigned long long)used, segments,
-               (unsigned long long)fields[6], (unsigned long long)fields[5]);
+               (unsigned long long)fields[6], (unsigned long long)fields[5], head[2], head[3]);
     return 1;
 }
 
@@ -514,13 +515,14 @@ static int16_t input_state_cb(unsigned port, unsigned device, unsigned index,
 {
     if (port >= 4 || index != 0)
         return 0;
+    int frame = g_frame + g_input_frame_offset;
     for (int i = 0; i < g_nsegs; i++) {
-        if (g_frame >= g_segs[i].from && g_frame <= g_segs[i].to &&
+        if (frame >= g_segs[i].from && frame <= g_segs[i].to &&
             port == (unsigned)g_segs[i].port && device == (unsigned)g_segs[i].device &&
             (unsigned)g_segs[i].pad_id == id) {
             if (!g_segs[i].pulse)
                 return (int16_t)g_segs[i].value;
-            return ((g_frame - g_segs[i].from) % 30) < 4 ? (int16_t)g_segs[i].value : 0;
+            return ((frame - g_segs[i].from) % 30) < 4 ? (int16_t)g_segs[i].value : 0;
         }
     }
     return 0;
@@ -687,35 +689,72 @@ int main(int argc, char **argv)
                av.geometry.base_width, av.geometry.base_height, av.geometry.aspect_ratio);
     }
 
+    /* A regression route can require a measured resource footprint before
+     * the first retro_run, when a frontend allocates its rewind buffer. */
+    if (getenv("OBOR_INITIAL_HEAP_MIN")) {
+        uint64_t minimum = strtoull(getenv("OBOR_INITIAL_HEAP_MIN"), NULL, 10);
+        size_t size = p_retro_serialize_size();
+        unsigned char *initial = size >= 80 ? malloc(size) : NULL;
+        uint64_t heap = 0;
+        if (!minimum || !initial || !p_retro_serialize(initial, size)) {
+            free(initial);
+            fprintf(stderr, "initial resource snapshot failed\n");
+            return 1;
+        }
+        memcpy(&heap, initial + 72, sizeof(heap));
+        free(initial);
+        printf("initial_resource_heap=%llu minimum=%llu\n",
+               (unsigned long long)heap, (unsigned long long)minimum);
+        if (heap < minimum) {
+            fprintf(stderr, "initial snapshot captured incomplete resource loading\n");
+            return 1;
+        }
+    }
+
     size_t contract_sz = 0;
     unsigned char *contract_buf = NULL;
+    int contract_every = getenv("OBOR_STATE_CHECK_EVERY") ?
+                         atoi(getenv("OBOR_STATE_CHECK_EVERY")) : 1;
+    int contract_start = getenv("OBOR_STATE_CHECK_START") ?
+                         atoi(getenv("OBOR_STATE_CHECK_START")) : 0;
+    int contract_printed = 0;
+    if (contract_every < 1 || contract_start < 0 || contract_start >= nframes) return 1;
     if (getenv("OBOR_STATE_CHECK")) {
         contract_sz = p_retro_serialize_size(); /* before the first retro_run */
         if (!contract_sz || contract_sz > UINT32_MAX) return 1;
         contract_buf = malloc(contract_sz + 16);
         if (!contract_buf) return 1;
         memset(contract_buf, 0xa5, contract_sz + 16);
-        if (!p_retro_serialize(contract_buf + 8, contract_sz) ||
-            !check_state_blob(contract_buf + 8, contract_sz, 1)) {
-            fprintf(stderr, "initial state contract failed\n");
-            return 1;
+        /* Capacity is still frozen at boot. Real-game routes may defer
+         * snapshots past an explicitly unsupported threaded movie intro. */
+        if (!contract_start) {
+            if (!p_retro_serialize(contract_buf + 8, contract_sz) ||
+                !check_state_blob(contract_buf + 8, contract_sz, 1)) {
+                fprintf(stderr, "initial state contract failed\n");
+                return 1;
+            }
+            uint32_t invalid_version = 0, current_version = 3;
+            memcpy(contract_buf + 12, &invalid_version, 4);
+            if (p_retro_unserialize(contract_buf + 8, contract_sz)) return 1;
+            memcpy(contract_buf + 12, &current_version, 4);
+            if (p_retro_unserialize(contract_buf + 8, 72)) return 1;
+            puts("invalid_version_and_truncation_rejected=1");
+            contract_printed = 1;
         }
-        uint32_t invalid_version = 0, current_version = 3;
-        memcpy(contract_buf + 12, &invalid_version, 4);
-        if (p_retro_unserialize(contract_buf + 8, contract_sz)) return 1;
-        memcpy(contract_buf + 12, &current_version, 4);
-        if (p_retro_unserialize(contract_buf + 8, 72)) return 1;
-        puts("invalid_version_and_truncation_rejected=1");
     }
 
     int dump_every = 0;
     if (getenv("OBOR_DUMP_EVERY"))
         dump_every = atoi(getenv("OBOR_DUMP_EVERY"));
 
-    /* OBOR_REWIND_AT=N: serialize EVERY frame from N-60 (timing the cost a
-     * frontend rewind ring pays), snapshot once at N-60, restore it at N
-     * (same-session rewind) and keep running. */
+    /* OBOR_REWIND_AT=N: by default capture every frame from N-60, then
+     * restore the first snapshot at N. WINDOW and EVERY allow a sustained
+     * benchmark at the frontend's capture cadence without changing defaults. */
     int rewind_at = getenv("OBOR_REWIND_AT") ? atoi(getenv("OBOR_REWIND_AT")) : -1;
+    int rewind_window = getenv("OBOR_REWIND_WINDOW") ? atoi(getenv("OBOR_REWIND_WINDOW")) : 60;
+    int rewind_every = getenv("OBOR_REWIND_EVERY") ? atoi(getenv("OBOR_REWIND_EVERY")) : 1;
+    if (rewind_window < 60 || rewind_window > 1800 || rewind_every < 1 || rewind_every > 60 ||
+        (rewind_at > 0 && rewind_at < rewind_window)) return 1;
     unsigned char *rw_keep = NULL, *rw_scratch = NULL;
     size_t ring_sz = 0;
     double ser_ms_acc = 0;
@@ -736,17 +775,25 @@ int main(int argc, char **argv)
     int rw_start = -1, rw_count = 0;
     if (getenv("OBOR_RAREWIND"))
         sscanf(getenv("OBOR_RAREWIND"), "%d,%d", &rw_start, &rw_count);
+    int rw_capture_start = getenv("OBOR_RAREWIND_START") ?
+                           atoi(getenv("OBOR_RAREWIND_START")) : 0;
     unsigned char **rw_ring = NULL;
     uint32_t *fwd_hash = NULL;
     size_t rw_sz = 0;
     int rw_step = 0;
+    int rw_slots = rw_count + 4;
     if (rw_start > 0) {
-        if (rw_count < 2 || rw_count > 128 || rw_start <= rw_count) return 1;
-        rw_ring = calloc(rw_count + 4, sizeof(*rw_ring));
+        if (rw_count < 2 || rw_count > 128 || rw_start <= rw_count ||
+            rw_capture_start < 0 || rw_capture_start > rw_start - rw_count - 4) return 1;
+        if (getenv("OBOR_RAREWIND_BUFFERS"))
+            rw_slots = atoi(getenv("OBOR_RAREWIND_BUFFERS"));
+        if (rw_slots < rw_count || rw_slots > rw_count + 4) return 1;
+        rw_ring = calloc(rw_slots, sizeof(*rw_ring));
         fwd_hash = calloc(rw_start + 2, sizeof(uint32_t));
         rw_sz = p_retro_serialize_size(); /* frontend's cold fixed capacity */
         if (!rw_ring || !fwd_hash || !rw_sz) return 1;
         printf("rewind_capacity=%zu\n", rw_sz);
+        printf("rewind_buffers=%d\n", rw_slots);
     }
     int load_at = getenv("OBOR_LOAD_AT") ? atoi(getenv("OBOR_LOAD_AT")) : -1;
     int load_every = getenv("OBOR_LOAD_EVERY") ? atoi(getenv("OBOR_LOAD_EVERY")) : 0;
@@ -779,7 +826,7 @@ int main(int argc, char **argv)
         }
         int rw_popped = 0;
         if (rw_start > 0 && g_frame >= rw_start && rw_step < rw_count) {
-            int slot = (rw_start - 1 - rw_step) % (rw_count + 4);
+            int slot = (rw_start - 1 - rw_step) % rw_slots;
             if (!rw_ring[slot] || !p_retro_unserialize(rw_ring[slot], rw_sz)) {
                 fprintf(stderr, "rewind restore rejected at frame %d\n", g_frame);
                 return 1;
@@ -824,13 +871,16 @@ int main(int argc, char **argv)
             }
             printf("error_screen_recovered=1 frame=%d\n", g_frame);
         }
-        if (contract_buf) {
+        if (contract_buf && g_frame >= contract_start &&
+            (!contract_printed || g_frame % contract_every == 0 || g_frame == nframes - 1)) {
             memset(contract_buf, 0xa5, contract_sz + 16);
             if (!p_retro_serialize(contract_buf + 8, contract_sz) ||
-                !check_state_blob(contract_buf + 8, contract_sz, g_frame == nframes - 1)) {
+                !check_state_blob(contract_buf + 8, contract_sz,
+                                  !contract_printed || g_frame == nframes - 1)) {
                 fprintf(stderr, "state contract failed at frame %d\n", g_frame);
                 return 1;
             }
+            contract_printed = 1;
             for (unsigned i = 0; i < 8; ++i)
                 if (contract_buf[i] != 0xa5 || contract_buf[8 + contract_sz + i] != 0xa5)
                     return 1;
@@ -881,8 +931,8 @@ int main(int argc, char **argv)
                     dump_ppm(pfx, rw_step);
                 }
             }
-            if (g_frame < rw_start) {
-                int slot = g_frame % (rw_count + 4);
+            if (g_frame >= rw_capture_start && g_frame < rw_start) {
+                int slot = g_frame % rw_slots;
                 if (!rw_ring[slot])
                     rw_ring[slot] = malloc(rw_sz);
                 if (!rw_ring[slot] || !p_retro_serialize(rw_ring[slot], rw_sz)) {
@@ -894,7 +944,7 @@ int main(int argc, char **argv)
         if (ppm && dump_every && g_frame % dump_every == 0)
             dump_ppm(ppm, g_frame);
 
-        if (rewind_at > 0 && g_frame >= rewind_at - 60 && g_frame <= rewind_at) {
+        if (rewind_at > 0 && g_frame >= rewind_at - rewind_window && g_frame <= rewind_at) {
             struct timespec t0, t1;
             if (!ring_sz) {
                 ring_sz = p_retro_serialize_size();
@@ -902,15 +952,16 @@ int main(int argc, char **argv)
                 rw_scratch = malloc(ring_sz);
             }
             clock_gettime(CLOCK_MONOTONIC, &t0);
-            if (g_frame == rewind_at - 60) {
+            if (g_frame == rewind_at - rewind_window) {
                 if (!rw_keep || !rw_scratch || !p_retro_serialize(rw_keep, ring_sz)) return 1;
-            } else if (g_frame < rewind_at) {
+            } else if (g_frame < rewind_at &&
+                       (g_frame - (rewind_at - rewind_window)) % rewind_every == 0) {
                 if (!p_retro_serialize(rw_scratch, ring_sz)) return 1;
                 clock_gettime(CLOCK_MONOTONIC, &t1);
                 ser_ms_acc += (t1.tv_sec - t0.tv_sec) * 1e3 +
                               (t1.tv_nsec - t0.tv_nsec) / 1e6;
                 ser_n++;
-            } else {
+            } else if (g_frame == rewind_at) {
                 int ok = p_retro_unserialize(rw_keep, ring_sz);
                 if (!ok) return 1;
                 clock_gettime(CLOCK_MONOTONIC, &t1);
@@ -920,6 +971,8 @@ int main(int argc, char **argv)
                        (t1.tv_sec - t0.tv_sec) * 1e3 +
                            (t1.tv_nsec - t0.tv_nsec) / 1e6,
                        ring_sz);
+                printf("rewind_window=%d capture_every=%d snapshots=%d\n",
+                       rewind_window, rewind_every, ser_n + 1);
             }
         }
         /* OBOR_FASTCHECK=START,COUNT: serialize into the SAME buffer every
@@ -1024,8 +1077,12 @@ int main(int argc, char **argv)
                 if (fread(&sz, sizeof(sz), 1, f) == 1) {
                     void *buf = malloc(sz);
                     if (buf && fread(buf, 1, sz, f) == sz) {
-                        printf("load state at frame %d: %s\n", g_frame,
-                               p_retro_unserialize(buf, sz) ? "ok" : "FAILED");
+                        int ok = p_retro_unserialize(buf, sz);
+                        printf("load state at frame %d: %s\n", g_frame, ok ? "ok" : "FAILED");
+                        if (ok && getenv("OBOR_LOAD_SOURCE_FRAME")) {
+                            g_input_frame_offset = atoi(getenv("OBOR_LOAD_SOURCE_FRAME")) - g_frame;
+                            printf("restored_input_source_frame=%d\n", g_frame + g_input_frame_offset);
+                        }
                     }
                     free(buf);
                 }
@@ -1043,7 +1100,7 @@ int main(int argc, char **argv)
     free(rw_keep);
     free(rw_scratch);
     if (rw_ring) {
-        for (int i = 0; i < rw_count + 4; ++i) free(rw_ring[i]);
+        for (int i = 0; i < rw_slots; ++i) free(rw_ring[i]);
         free(rw_ring);
     }
     free(fwd_hash);

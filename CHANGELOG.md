@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- Size states after resource initialization and preserve the current session's
+  content and save paths when restoring a state from another session.
+- Capture engine-owned random state so restored gameplay follows the same
+  random sequence independently of frontend activity.
+- Add optional Linux ARM64 rewind captures with complete states, conservative
+  change ranges and explicit buffer ownership across load, reset and unload.
+- Avoid copying the allocator's unused top space while retaining live data
+  and allocator metadata, with ordinary serialization as the fallback.
 - Accept explicit Autoconf host and build triplets for external toolchains,
   with compiler-host and native-build detection available through `auto`.
 - Respect inclusive filename build intervals, including unknown endpoints,

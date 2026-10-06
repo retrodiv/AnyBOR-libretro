@@ -51,6 +51,23 @@ extern char savesDir[MAX_FILENAME_LEN];
 extern char logsDir[MAX_FILENAME_LEN];
 extern char screenShotsDir[MAX_FILENAME_LEN];
 
+/* These locations belong to the current frontend session, not to the
+ * serialized world. The saving session's temporary root may be gone. */
+typedef struct {
+    char cwd[4096];
+    char pak[MAX_FILENAME_LEN], boot_pak[MAX_FILENAME_LEN];
+    char paks[MAX_FILENAME_LEN], saves[MAX_FILENAME_LEN];
+    char logs[MAX_FILENAME_LEN], screenshots[MAX_FILENAME_LEN];
+} obor_session_paths;
+void obor_session_paths_get(obor_session_paths *paths);
+void obor_session_paths_restore(const obor_session_paths *paths);
+
+/* AI calls to libc rand must participate in save states and rewind. */
+int obor_rand(void);
+void obor_srand(unsigned int seed);
+#define rand obor_rand
+#define srand obor_srand
+
 /* ---- internal hooks between the libretro platform files ---- */
 /* Protected calls may run on the frontend stack (audio/state), as well as
  * inside the engine coroutine. A fault abandons the current world. */
@@ -97,6 +114,7 @@ extern int obor_live_threads;
 /* Bind snapshot bookkeeping to the frontend's absolute save directory. */
 int obor_state_set_save_dir(const char *dir, uint32_t profile_build);
 int obor_state_set_regions(const obor_boot_info *info);
+void obor_state_owned_discard(void);
 extern uint32_t obor_profile_build;
 
 /* Snapshot arena (obor_alloc.c). */

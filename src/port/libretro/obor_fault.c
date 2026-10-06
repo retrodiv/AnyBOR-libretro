@@ -5,6 +5,7 @@
 #endif
 #include "obor_fault.h"
 #include "obor_runtime.h"
+#include "obor_write_watch.h"
 #include <stddef.h>
 #include <string.h>
 #include <stdlib.h>
@@ -228,6 +229,8 @@ void obor_fault_abort(uint32_t kind, uintptr_t address)
 static void memory_signal(int signal, siginfo_t *info, void *context)
 {
     fault_guard *guard = current_guard();
+    if (guard && signal == SIGSEGV && info && info->si_code == SEGV_ACCERR &&
+        obor_write_watch_fault((uintptr_t)info->si_addr)) return;
     if (guard && info && info->si_code > 0) {
         ucontext_t *machine = (ucontext_t *)context;
         guard->code = signal;

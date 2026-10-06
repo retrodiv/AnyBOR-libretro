@@ -118,16 +118,34 @@ on an earlier snapshot.
 Save states use the OBS v3 format and identify the selected engine.
 Games may grow their heap substantially
 during play: the core records its observed peak for sizing the next session
-and retains a growth allowance. Before the first recorded peak, packed
-resource size also informs the initial reserve so menu-only allocations do
-not set an unnecessarily small gameplay budget. The resource hint adds at
-most 32 MiB before alignment, limiting the cost of large archives with mostly
-music. These are estimates, not a guarantee of every possible later
+and retains a growth allowance. Resource initialization completes before
+the frontend can fix its initial state capacity, and that loaded footprint
+updates the peak even if an older cache contains only startup allocations.
+Captures that outgrow a fixed frontend buffer also record the needed heap
+without overwriting the previous snapshot. If no measured peak can be read,
+packed resource size informs the initial reserve. These are estimates, not
+a guarantee of every possible later
 allocation. On a fixed-capacity frontend, if a game exceeds that allowance,
 restart the content to use the learned peak.
+Loading a state retains the current session's content and writable-directory
+paths. Engine random-number state is captured with the world so external
+frontend activity does not change the restored AI sequence.
 Saving, loading and rewind are unavailable during threaded video playback.
 Frontend rewind history length also depends on its buffer size and the
 amount of state that changes each frame.
+
+An optional AnyBOR frontend interface, declared in `src/glue/obor_rewind.h`,
+allows a cooperating Linux ARM64 frontend to register two immutable rewind
+buffers and obtain conservative change ranges. Captures remain complete OBS v3
+states at the ordinary advertised capacity. The first capture initializes every
+byte; subsequent captures copy heap pages changed since that destination was
+last used. Ordinary libretro serialization retains complete initialization.
+The frontend must end ownership before modifying either buffer or writing
+through a cheat/debugger memory map, and before reset or unload. Any load attempt
+ends ownership. Protection is suspended before engine workers start; threaded
+playback retains its existing capture exclusion. Frontends without this optional
+integration continue to use the ordinary serializer. This interface alone does
+not establish a game performance result.
 
 ## Licenses and redistribution
 

@@ -11,6 +11,7 @@
 /* Live engine-thread count: obor_state.c refuses to snapshot while any
  * webm thread might be mid-allocation. Defined even for threadless eras. */
 int obor_live_threads;
+void obor_state_owned_suspend(void);
 
 /* NB: probe the engine-relative path — a bare "threads.h" would match the
  * system C11 <threads.h> on modern glibc. */
@@ -54,6 +55,9 @@ static void *trampoline(void *arg)
 bor_thread *thread_create(int (*fn)(void *), const char *name, void *data)
 {
     (void)name;
+    /* A worker never inherits protected heap pages: its foreign thread does
+     * not own the engine's fault guard. Invalidate cached snapshots first. */
+    obor_state_owned_suspend();
     bor_thread *t = (bor_thread *)malloc(sizeof(*t));
     if (!t)
         return NULL;
@@ -186,6 +190,7 @@ static DWORD WINAPI trampoline(LPVOID arg)
 bor_thread *thread_create(int (*fn)(void *), const char *name, void *data)
 {
     (void)name;
+    obor_state_owned_suspend();
     bor_thread *t = (bor_thread *)malloc(sizeof(*t));
     if (!t)
         return NULL;

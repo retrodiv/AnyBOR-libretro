@@ -149,7 +149,8 @@ PARTIAL     = $(OBJDIR)/obor_engine_$(BUILD_NUM).o
 ABI_SYMS    = obor_abi_version obor_boot obor_run_frame obor_get_exit_status obor_get_fault_message obor_abandon obor_get_video \
               obor_set_button obor_get_audio obor_serialize_size \
               obor_serialize obor_unserialize obor_shutdown \
-              obor_get_rumble obor_get_arena obor_get_player_state
+              obor_get_rumble obor_get_arena obor_get_player_state \
+              obor_owned_begin obor_owned_serialize obor_owned_end
 LDR         = $(patsubst %gcc,%ld,$(CC))
 OBJCOPY     = $(patsubst %gcc,%objcopy,$(CC))
 # partial links need STATIC archives explicitly (a -lpng in `ld -r` would
@@ -172,6 +173,9 @@ ifeq ($(PLATFORM),windows)
 FILE_WRAPS += --wrap=_open --wrap=_close
 else
 FILE_WRAPS += --wrap=open64
+endif
+ifeq ($(PLATFORM),linux)
+FILE_WRAPS += --wrap=read --wrap=fread
 endif
 
 # NOTE (windows): mingw emits a COMDAT .rdata$.refptr.<sym> indirection

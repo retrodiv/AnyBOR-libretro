@@ -6,7 +6,7 @@
 #include <stddef.h>
 #include <string.h>
 
-#if defined(__linux__) && !defined(__ANDROID__)
+#if defined(__linux__) && defined(__x86_64__) && !defined(__ANDROID__)
 #include <pthread.h>
 #include <unistd.h>
 
@@ -25,13 +25,15 @@ static void *obor_state_copy_worker(void *context)
 #endif
 
 /* The engine is parked and the module/stack header has already been saved.
- * Large heaps benefit from bounded parallel copies on Linux. Jobs touch
+ * Large heaps benefit from bounded parallel copies on Linux x86-64. Jobs touch
  * disjoint byte ranges and join before returning. No persistent worker,
  * mutex, allocation, buffer identity or omitted bytes enter a snapshot.
+ * AArch64 uses serial memcpy: Pi 5 measurements found that workers contend
+ * for shared memory bandwidth and increase large-copy time.
  * Call only for non-overlapping buffers, exactly like memcpy. */
 static void obor_state_copy_heap(void *destination, const void *source, size_t size)
 {
-#if defined(__linux__) && !defined(__ANDROID__)
+#if defined(__linux__) && defined(__x86_64__) && !defined(__ANDROID__)
     if (size >= (64u << 20)) {
         long cpus = sysconf(_SC_NPROCESSORS_ONLN);
         unsigned count = cpus > 4 ? 4 : cpus > 1 ? (unsigned)cpus : 1;
