@@ -494,11 +494,11 @@ def build_engine(target, eng, spec, outdir, check_only=False):
     engine_flags = os.environ.get("CFLAGS", "")
     if uses_macho(spec):
         # Darwin has no fixed image address: dyld slides and rebases every
-        # loaded image, so save states take the rebasing path the Android
-        # target uses instead of the fixed-ELF/fixed-PE one.  The architecture
+        # loaded image, so save states take the rebasing path instead of the
+        # fixed-ELF/fixed-PE one. Android uses its own stable-address loader. The architecture
         # and deployment floor must reach the compiler and the partial link.
         engine_flags += " " + " ".join(arch_flags(spec))
-    elif uses_fixed_elf_image(spec):
+    elif uses_fixed_elf_image(spec) or spec.get("android"):
         engine_flags += " -DOBOR_FIXED_ELF_IMAGE=1"
     elif uses_fixed_pe_image(spec):
         engine_flags += " -DOBOR_FIXED_PE_IMAGE=1"
@@ -684,6 +684,8 @@ def build_glue(target, spec, outdir):
     run([spec["strip"], "-x" if uses_macho(spec) else "--strip-unneeded", out])
     if spec["plat"] == "windows":
         normalize_pe_metadata(out)
+    if spec.get("android"):
+        package_android_engine(spec, out, third)
     shutil.copy2(str(out), str(HERE / out.name))
     # Keep the unstripped artifact under .build only.  The repository root is
     # the normal release surface and must not acquire large debug artifacts as
@@ -691,6 +693,63 @@ def build_glue(target, spec, outdir):
     sym = HERE / (out.name + ".sym")
     if sym.exists():
         sym.unlink()
+
+
+def android_engine_span(path):
+    """Validate our embedded ELF and return its 16 KiB rounded mapping size."""
+    path = Path(path)
+    length = path.stat().st_size
+    with path.open('rb') as f:
+        header = f.read(64)
+        if len(header) != 64 or header[:7] != b'\x7fELF\x02\x01\x01':
+            raise ValueError('Android engine must be little-endian ELF64')
+        kind, machine = struct.unpack_from('<HH', header, 16)
+        phoff, = struct.unpack_from('<Q', header, 32)
+        phsize, count = struct.unpack_from('<HH', header, 54)
+        if kind != 3 or machine != 183 or phsize != 56 or not 0 < count <= 128 or phoff + count * phsize > length:
+            raise ValueError('Invalid Android engine program headers')
+        f.seek(phoff)
+        segments = [struct.unpack('<II6Q', f.read(phsize)) for _ in range(count)]
+    loads = [s for s in segments if s[0] == 1]
+    if not loads or min(s[3] for s in loads) != 0:
+        raise ValueError('Android engine must start at relative address zero')
+    for _, flags, offset, vaddr, _, filesz, memsz, align in loads:
+        if filesz > memsz or offset + filesz > length or align < 16384 or (offset - vaddr) % 16384:
+            raise ValueError('Invalid Android engine load segment')
+    end = max(s[3] + s[6] for s in loads)
+    span = (end + 16383) & ~16383
+    if not 0 < span <= 64 << 20:
+        raise ValueError('Android engine exceeds its stable image reservation')
+    return span
+
+
+def package_android_engine(spec, out, third):
+    """One installable .so: libretro loader + aligned original engine ELF."""
+    span = android_engine_span(out)
+    payload = out.parent / 'anybor-embedded-engine.so'
+    shutil.copy2(out, payload)
+    # A loadable read-only ELF section survives ordinary strip/objcopy steps.
+    # Both mappings use the same file pages; Android's linker maps the inner
+    # ELF at the stable address, with its own segment permissions.
+    assembly = out.parent / 'android-engine.S'
+    quoted_path = str(payload).replace('\\', '\\\\').replace('"', '\\"')
+    assembly.write_text('.section .rodata.anybor_engine,"a",%progbits\n'
+        '.balign 16384\n.global obor_android_engine_begin, obor_android_engine_end\n'
+        '.hidden obor_android_engine_begin, obor_android_engine_end\n'
+        'obor_android_engine_begin:\n.incbin "' + quoted_path + '"\n'
+        'obor_android_engine_end:\n.section .note.GNU-stack,"",%progbits\n')
+    loader = out.parent / 'android-loader.so'
+    run([spec['cxx'], '-O2', '-std=c++11', '-shared', '-fPIC',
+         '-fvisibility=hidden', '-fstack-protector-strong',
+         '-fno-exceptions', '-fno-rtti', '-fno-threadsafe-statics', '-nostdlib++',
+         '-DOBOR_ANDROID_ENGINE_SPAN=' + str(span),
+         '-ffile-prefix-map=' + str(HERE) + '=.', '-I', third,
+         SRC / 'glue/obor_android_loader.cpp', assembly, '-ldl',
+         '-Wl,-z,relro', '-Wl,-z,now', '-Wl,-z,max-page-size=16384',
+         '-Wl,-z,common-page-size=16384',
+         '-Wl,--version-script=' + str(SRC / 'glue/exports.map'), '-o', loader])
+    run([spec['strip'], '--strip-unneeded', loader])
+    shutil.copy2(loader, out)
 
 
 def checked_triplet(value, option):

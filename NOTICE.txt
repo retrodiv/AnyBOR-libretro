@@ -3764,6 +3764,18 @@ Source: src/deps/libvpx/vp8/common/mfqe.c, src/deps/libvpx/vp8/common/mips/dspr2
  *  be found in the AUTHORS file in the root of the source tree.
  */
 
+Source: src/glue/obor_android_loader.cpp
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ *
+ * Android's ordinary dlopen always chooses an ASLR address. Engine snapshots
+ * contain code/static-data pointers as well as opaque game bytes; guessing
+ * which words need relocation corrupts data. Keep the engine ELF in this
+ * same installed file, at a page-aligned file offset, and let Android's own
+ * linker load it into an exclusively reserved, stable address. No extraction,
+ * executable anonymous memory, frontend extension or custom linker is needed.
+ */
+
 Source: src/engines/8023/source/scriptlib/Instruction.h
 /* AnyBOR modification record: 2026-09-12.
  * Port maintained by retrodiv <retrodiv@proton.me>.

@@ -112,7 +112,14 @@ setup, external INI configuration and backup guidance.
 ## Save states and rewind
 
 For rewind in RetroArch, we recommend **Rewind Frames** set to **10** and
-**Rewind Buffer Size (MB)** set to **256**.
+**Rewind Buffer Size (MB)** set to **512**. On older RetroArch versions,
+keep the rewind buffer larger than twice the core's uncompressed state
+capacity: a large transition can otherwise overwrite a history link when
+the ring wraps. A 256 MB buffer is insufficient for a 243 MB state, even
+when its on-disk compressed save is much smaller. Larger buffers also retain
+more history, but keep this setting at or below 512 MB. If the state does
+not fit, rewind is unsupported for that state until its representation is
+improved; increasing the buffer is not the prescribed workaround.
 
 Snapshots retain the running engine's writable state, complete allocated
 game heap and live coroutine stack. The inactive engines' zero-initialized
@@ -123,6 +130,19 @@ size stays fixed until content unload, even across Reset. Unused transport
 bytes are deterministically zero, without rewriting reserve pages that are
 already zero. There is no per-frame general compression stage or dependency
 on an earlier snapshot.
+
+Contiguous snapshots omit the unused free top of the heap. Fragmented heaps
+use the allocator's free-block index to skip large holes while retaining all
+live bytes and allocator metadata. Highly fragmented or unsupported layouts
+fall back to the ordinary chunk walker. These choices depend on heap layout,
+not on the game or the current screen.
+
+The Android core remains one installable `.so`. It contains a small libretro
+loader and the engine ELF; Android's `android_dlopen_ext` loads the engine at
+a reserved, stable address. This preserves saved code/static-data pointers
+without scanning and modifying arbitrary game data after ASLR changes.
+An address collision fails safely. States from the older ASLR core are
+rejected before restoring engine memory; create new states with this build.
 
 Save states use the OBS v3 format and identify the selected engine.
 Games may grow their heap substantially

@@ -25,7 +25,7 @@
 #include "obor_fault.h"
 #include "obor_write_watch.h"
 void obor_state_owned_discard(void);
-#if defined(__linux__) && (defined(__x86_64__) || defined(__aarch64__)) && !defined(__ANDROID__)
+#if defined(__linux__) && (defined(__x86_64__) || defined(__aarch64__))
 #define OBOR_BATCH_SPARSE_SPANS 1
 #include "obor_state_copy.h"
 #else
@@ -828,14 +828,130 @@ static int sparse_scan_heap(obor_sparse_scan *scan)
     return !scan->failed;
 }
 
+int obor_heap_owned_layout(uint64_t *prefix, uint64_t *suffix,
+                           uint64_t *suffix_length);
+
+/* A large unused top chunk must not force a walk of millions of otherwise
+ * tightly packed live allocations. Use the same validated top layout as the
+ * owned encoder when copying internal holes costs at most 1/32 of the prefix
+ * and 8 MiB. The two ordinary OHS spans retain every live byte and allocator
+ * header; only unused top-chunk user bytes are omitted. */
+static int sparse_use_top_prefix(uint64_t *prefix, uint64_t *suffix,
+                                 uint64_t *suffix_length)
+{
+    if (!obor_heap_owned_layout(prefix, suffix, suffix_length))
+        return 0;
+    uint64_t holes = *prefix > arena_live_chunk_bytes ?
+                     *prefix - arena_live_chunk_bytes : 0;
+    return holes <= *prefix / 32 && holes <= (8ULL << 20);
+}
+
+typedef struct { uint64_t offset, length; } obor_free_hole;
+
+static int free_hole_order(const void *a, const void *b)
+{
+    uint64_t x = ((const obor_free_hole *)a)->offset;
+    uint64_t y = ((const obor_free_hole *)b)->offset;
+    return x < y ? -1 : x > y;
+}
+
+/* dlmalloc already indexes its free chunks. Walking that index avoids
+ * revisiting millions of live script allocations merely to skip a few large
+ * holes. Keep all small holes and every free-chunk header/link verbatim.
+ * Unsupported layouts or excessive fragmentation retain the linear walker.
+ * All scratch space is bounded and lives on the caller's stack, outside the
+ * engine arena. Validate the complete hole list before emitting any bytes. */
+static int sparse_scan_free_index(obor_sparse_scan *scan)
+{
+    uint64_t prefix, suffix, suffix_length;
+    if (!obor_heap_owned_layout(&prefix, &suffix, &suffix_length)) return 0;
+    obor_free_hole holes[2048];
+    tchunkptr pending[128];
+    unsigned count = 0, depth = 0, visited = 0;
+    uintptr_t base = (uintptr_t)(OBOR_ARENA_BASE + OBOR_STACK_RESERVE);
+    mstate m = gm;
+    obor_fault_allocator_activity(1);
+    if (PREACTION(m)) { obor_fault_allocator_activity(0); return 0; }
+    uintptr_t top = (uintptr_t)m->top;
+    int valid = 1;
+    for (unsigned bin = 0; bin < NTREEBINS; ++bin)
+        if (m->treebins[bin]) pending[depth++] = m->treebins[bin];
+    while (depth && valid) {
+        tchunkptr root = pending[--depth], node = root;
+        do {
+            uintptr_t at = (uintptr_t)node;
+            if (++visited > 8192 || at < base || at > top ||
+                top - at < sizeof(tchunk) || is_inuse((mchunkptr)node)) {
+                valid = 0; break;
+            }
+            size_t bytes = chunksize((mchunkptr)node);
+            if (bytes < sizeof(tchunk) || bytes > top - at) {
+                valid = 0; break;
+            }
+            if (bytes >= 4096) {
+                if (count == sizeof(holes) / sizeof(holes[0])) { valid = 0; break; }
+                holes[count++] = (obor_free_hole){at - base + sizeof(tchunk),
+                                                 bytes - sizeof(tchunk)};
+            }
+            if (node == root) {
+                for (unsigned i = 0; i < 2; ++i) if (node->child[i]) {
+                    if (depth == sizeof(pending) / sizeof(pending[0])) { valid = 0; break; }
+                    pending[depth++] = node->child[i];
+                }
+            }
+            node = node->fd;
+        } while (node != root && valid);
+    }
+    if (valid) {
+        qsort(holes, count, sizeof(holes[0]), free_hole_order);
+        uint64_t previous = 0;
+        for (unsigned i = 0; i < count; ++i) {
+            if (holes[i].offset < previous || holes[i].offset > prefix ||
+                holes[i].length > prefix - holes[i].offset) { valid = 0; break; }
+            previous = holes[i].offset + holes[i].length;
+        }
+    }
+    if (valid && scan->writing) {
+        uint64_t bytes = (count + 2) * sizeof(obor_heap_sparse_span) + prefix + suffix_length;
+        for (unsigned i = 0; i < count; ++i) bytes -= holes[i].length;
+        if (bytes > (uint64_t)(scan->limit - scan->cursor)) {
+            scan->failed = 1;
+            POSTACTION(m);
+            obor_fault_allocator_activity(0);
+            return -1;
+        }
+    }
+    if (valid) {
+        uint64_t previous = 0;
+        for (unsigned i = 0; i < count; ++i) {
+            sparse_emit(scan, (const void *)(base + previous),
+                         (size_t)(holes[i].offset - previous));
+            previous = holes[i].offset + holes[i].length;
+        }
+        sparse_emit(scan, (const void *)(base + previous), (size_t)(prefix - previous));
+        sparse_emit(scan, (const void *)(base + suffix), (size_t)suffix_length);
+#if OBOR_BATCH_SPARSE_SPANS
+        sparse_flush(scan);
+#endif
+    }
+    POSTACTION(m);
+    obor_fault_allocator_activity(0);
+    return valid ? (scan->failed ? -1 : 1) : 0;
+}
+
 uint64_t obor_heap_sparse_size(void)
 {
     uint64_t extent = 0;
     if (sparse_use_dense(&extent))
         return sizeof(obor_heap_sparse_header) +
                sizeof(obor_heap_sparse_span) + extent;
+    uint64_t prefix, suffix, suffix_length;
+    if (sparse_use_top_prefix(&prefix, &suffix, &suffix_length))
+        return sizeof(obor_heap_sparse_header) +
+               2 * sizeof(obor_heap_sparse_span) + prefix + suffix_length;
     obor_sparse_scan scan = {0};
-    if (!sparse_scan_heap(&scan))
+    int indexed = sparse_scan_free_index(&scan);
+    if (indexed < 0 || (!indexed && !sparse_scan_heap(&scan)))
         return 0;
     uint64_t table = scan.count * sizeof(obor_heap_sparse_span);
     if (table > UINT64_MAX - sizeof(obor_heap_sparse_header) ||
@@ -917,16 +1033,48 @@ static uint64_t heap_sparse_write(void *destination, uint64_t capacity,
                 padding, padding_size);
         else
             obor_state_copy_heap(cursor, OBOR_ARENA_BASE + OBOR_STACK_RESERVE, (size_t)extent);
+#elif defined(__ANDROID__) && OBOR_BATCH_SPARSE_SPANS
+        obor_state_copy_heap(cursor, OBOR_ARENA_BASE + OBOR_STACK_RESERVE, (size_t)extent);
 #else
         memcpy(cursor, OBOR_ARENA_BASE + OBOR_STACK_RESERVE, (size_t)extent);
 #endif
+        return needed;
+    }
+    uint64_t prefix, suffix, suffix_length;
+    if (sparse_use_top_prefix(&prefix, &suffix, &suffix_length)) {
+        uint64_t needed = sizeof(obor_heap_sparse_header) +
+                          2 * sizeof(obor_heap_sparse_span) + prefix + suffix_length;
+        if (needed > capacity)
+            return 0;
+        obor_heap_sparse_header header = {
+            OBOR_HEAP_SPARSE_MAGIC, OBOR_HEAP_SPARSE_VERSION, 2, 0,
+            obor_arena_used(), prefix + suffix_length
+        };
+        obor_heap_sparse_span first = {0, prefix}, last = {suffix, suffix_length};
+        unsigned char *cursor = (unsigned char *)destination;
+        memcpy(cursor, &header, sizeof(header));
+        cursor += sizeof(header);
+        memcpy(cursor, &first, sizeof(first));
+        cursor += sizeof(first);
+#if defined(OBOR_WINDOWS_STATE_COPY) || OBOR_BATCH_SPARSE_SPANS
+        obor_state_copy_heap(cursor, OBOR_ARENA_BASE + OBOR_STACK_RESERVE,
+                             (size_t)prefix);
+#else
+        memcpy(cursor, OBOR_ARENA_BASE + OBOR_STACK_RESERVE, (size_t)prefix);
+#endif
+        cursor += prefix;
+        memcpy(cursor, &last, sizeof(last));
+        cursor += sizeof(last);
+        memcpy(cursor, OBOR_ARENA_BASE + OBOR_STACK_RESERVE + suffix,
+               (size_t)suffix_length);
         return needed;
     }
     obor_sparse_scan write = {0};
     write.writing = 1;
     write.cursor = (unsigned char *)destination + sizeof(obor_heap_sparse_header);
     write.limit = (unsigned char *)destination + capacity;
-    if (!sparse_scan_heap(&write))
+    int indexed = sparse_scan_free_index(&write);
+    if (indexed < 0 || (!indexed && !sparse_scan_heap(&write)))
         return 0;
     obor_heap_sparse_header header = {
         OBOR_HEAP_SPARSE_MAGIC, OBOR_HEAP_SPARSE_VERSION,

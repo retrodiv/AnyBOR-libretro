@@ -8,6 +8,10 @@
 #if defined(_WIN32)
 #include <windows.h>
 #endif
+#if defined(__ANDROID__)
+#include <pthread.h>
+#include <unistd.h>
+#endif
 #if defined(_WIN32) && defined(__SSE2__)
 #include <emmintrin.h>
 #endif
@@ -86,8 +90,54 @@ static void CALLBACK obor_padding_worker(PTP_CALLBACK_INSTANCE instance,
 }
 #endif
 
+#if defined(__ANDROID__)
+typedef struct {
+    unsigned char *data;
+    size_t size;
+} obor_android_padding_job;
+
+static void *obor_android_padding_worker(void *context)
+{
+    obor_android_padding_job *job = (obor_android_padding_job *)context;
+    obor_state_clear_padding_serial(job->data, job->size);
+    return NULL;
+}
+#endif
+
 static inline void obor_state_clear_padding(void *data, size_t size)
 {
+#if defined(__ANDROID__)
+    /* Sparse menu heaps leave a large transport reserve. Checking it on one
+     * core can cost more than copying the heap itself. Split that check only
+     * after the snapshot is complete. Workers retain the same byte-by-byte
+     * contract for arbitrary caller buffers and all finish before return.
+     * No thread, pointer cache or synchronization object survives a call. */
+    if (size >= (64u << 20)) {
+        long cpus = sysconf(_SC_NPROCESSORS_ONLN);
+        unsigned count = cpus > 4 ? 4 : cpus > 1 ? (unsigned)cpus : 1;
+        if (count > 1) {
+            pthread_t threads[3];
+            int started[3];
+            obor_android_padding_job jobs[3];
+            size_t chunk = (size / count) & ~(size_t)511;
+            unsigned i;
+            for (i = 0; i + 1 < count; ++i) {
+                jobs[i].data = (unsigned char *)data + i * chunk;
+                jobs[i].size = chunk;
+                started[i] = pthread_create(&threads[i], NULL,
+                    obor_android_padding_worker, &jobs[i]) == 0;
+                if (!started[i])
+                    obor_android_padding_worker(&jobs[i]);
+            }
+            obor_state_clear_padding_serial((unsigned char *)data + i * chunk,
+                                            size - i * chunk);
+            for (i = 0; i + 1 < count; ++i)
+                if (started[i])
+                    pthread_join(threads[i], NULL);
+            return;
+        }
+    }
+#endif
 #if defined(_WIN32)
     /* Large Windows games retain tens of MiB of growth reserve. A serial
      * scan evicts the engine's working set and dominates write-watch saves.

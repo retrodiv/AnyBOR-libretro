@@ -647,10 +647,19 @@ static uint32_t serialize_size_impl(void)
 
 /* -------------------------------------------------------- serialize ---- */
 
+/* Opt-in phase timings for diagnosing capture cost on the actual frontend. */
+static uint64_t state_timing_now(void)
+{
+    struct timespec ts;
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+    return (uint64_t)ts.tv_sec * 1000000000ULL + (uint64_t)ts.tv_nsec;
+}
+
 static uint32_t serialize_impl(void *buf, uint32_t size, obor_state_ranges *ranges,
                                int *padding_done)
 {
     static int profile_heap_reported;
+    uint64_t timing_start = getenv("OBOR_STATE_TIMING") ? state_timing_now() : 0;
 #if !defined(_WIN32)
     (void)padding_done;
 #endif
@@ -745,6 +754,7 @@ static uint32_t serialize_impl(void *buf, uint32_t size, obor_state_ranges *rang
     }
 #endif
     uint64_t heap_required = owned ? owned_heap_bytes : obor_heap_sparse_size();
+    uint64_t timing_sized = timing_start ? state_timing_now() : 0;
     /* Learn growth even when an older fixed frontend allocation cannot
      * hold it. This check precedes sparse_write, so its failure path alone
      * cannot update the next session's capacity. */
@@ -798,6 +808,7 @@ static uint32_t serialize_impl(void *buf, uint32_t size, obor_state_ranges *rang
                         (ts1.tv_nsec - ts0.tv_nsec) / 1e6);
     }
 
+    uint64_t timing_segments = timing_start ? state_timing_now() : 0;
     uint64_t hlen = 0;
 #if OBOR_WRITE_WATCH_ENABLED
     if (owned) {
@@ -867,6 +878,13 @@ static uint32_t serialize_impl(void *buf, uint32_t size, obor_state_ranges *rang
     if (!owned) peak_update(hlen);
 
     memcpy(heap_blob + hlen, slice, (size_t)stack_len);
+    if (timing_start)
+        fprintf(stderr, "[obor-timing] prepare=%.3f segments=%.3f heap=%.3f heap_bytes=%llu extent=%llu fixed=%llu\n",
+                (timing_sized - timing_start) / 1e6,
+                (timing_segments - timing_sized) / 1e6,
+                (state_timing_now() - timing_segments) / 1e6,
+                (unsigned long long)hlen, (unsigned long long)heap_high_water,
+                (unsigned long long)fixed);
     return (uint32_t)(fixed + hlen);
 }
 
@@ -1170,6 +1188,7 @@ static void execute_state(void *context)
         obor_test_fault_phase("save");
         int padding_done = 0;
         call->result = serialize_impl(call->buffer, call->size, call->ranges, &padding_done);
+        uint64_t timing_padding = getenv("OBOR_STATE_TIMING") ? state_timing_now() : 0;
         if (!padding_done && call->result && call->result < call->size &&
             (!call->ranges || !owned_cache.previous_epoch))
         {
@@ -1177,6 +1196,10 @@ static void execute_state(void *context)
             obor_state_clear_padding((uint8_t *)call->buffer + call->result,
                                       call->size - call->result);
         }
+        if (timing_padding)
+            fprintf(stderr, "[obor-timing] padding=%.3f bytes=%u\n",
+                    (state_timing_now() - timing_padding) / 1e6,
+                    call->result ? call->size - call->result : 0);
     } else if (call->operation == 2) {
         if (!owned_stop_images())
             obor_fault_abort(OBOR_FAULT_MEMORY, 0);
