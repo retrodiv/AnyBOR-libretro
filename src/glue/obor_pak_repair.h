@@ -72,8 +72,12 @@ static int obor_pak_repair_header(FILE *input, FILE *output)
     size_t n;
     if (!obor_pak_header_repair_detect(input) || fseek(input, 4, SEEK_SET) ||
         fwrite("PACK", 1, 4, output) != 4) return 0;
-    while ((n = fread(block, 1, sizeof(block), input)) != 0)
-        if (fwrite(block, 1, n, output) != n || !obor_prepare_checkpoint()) return 0;
+    obor_prepare_advance(4);
+    while ((n = fread(block, 1, sizeof(block), input)) != 0) {
+        if (fwrite(block, 1, n, output) != n) return 0;
+        obor_prepare_advance(n);
+        if (!obor_prepare_checkpoint()) return 0;
+    }
     return !ferror(input) && fflush(output) == 0;
 }
 
@@ -160,6 +164,7 @@ static int obor_pak_repair_bias(FILE *input, FILE *output, int64_t expected)
         size_t n = remaining < sizeof(block) ? remaining : sizeof(block);
         if (fread(block, 1, n, input) != n || fwrite(block, 1, n, output) != n) return 0;
         remaining -= (uint32_t)n;
+        obor_prepare_advance(n);
         if (!obor_prepare_checkpoint()) return 0;
     }
     pos = directory;
@@ -176,6 +181,7 @@ static int obor_pak_repair_bias(FILE *input, FILE *output, int64_t expected)
             !obor_pak_write_u32(output, size) || fwrite(name, 1, length - 12, output) != length - 12)
             return 0;
         pos += length;
+        obor_prepare_advance(length);
     }
     return obor_pak_write_u32(output, directory) && fflush(output) == 0;
 }

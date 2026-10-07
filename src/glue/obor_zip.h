@@ -25,7 +25,9 @@ static size_t obor_zip_write(void *context, mz_uint64 offset, const void *data, 
 {
     (void)offset;
     FILE *file = (FILE *)context;
-    return obor_prepare_checkpoint() ? fwrite(data, 1, size, file) : 0;
+    size_t written = fwrite(data, 1, size, file);
+    obor_prepare_advance(written);
+    return obor_prepare_checkpoint() ? written : 0;
 }
 
 static void obor_zip_lower(const char *in, char *out, size_t cap)
@@ -73,6 +75,8 @@ static int obor_zip_marker_ok(const char *marker, const char *hash)
 static int obor_zip_prepare(const char *zip_path, const char *save_dir,
                             char *out, size_t out_cap)
 {
+    obor_prepare_range progress = obor_prepare_phase;
+    obor_prepare_stage(progress, 0, 250, 0);
     char hash[65];
     if (!obor_sha256_file(zip_path, hash)) {
         log_cb(RETRO_LOG_ERROR, "[OpenBOR] zip: cannot hash %s\n", zip_path);
@@ -165,6 +169,9 @@ static int obor_zip_prepare(const char *zip_path, const char *save_dir,
         mkdir_p(temp);
         if (!obor_storage_directory(temp)) { mz_zip_reader_end(&za); return 0; }
         int extracted = 0;
+        /* Walk the directory we already need. Skipped entries are resolved
+         * work; only bytes actually written advance an extracted entry. */
+        obor_prepare_stage(progress, 250, 1000, total_sz);
         for (unsigned i = 0; i < n; i++) {
             mz_zip_archive_file_stat st;
             char nm[512], low[512], rel[600] = "";
@@ -172,7 +179,10 @@ static int obor_zip_prepare(const char *zip_path, const char *save_dir,
                 continue;
             if (!obor_zip_safe_name(st.m_filename, nm, sizeof(nm))) goto unsafe;
             obor_zip_lower(nm, low, sizeof(low));
-            if (strstr(low, "__macosx/")) continue;
+            if (strstr(low, "__macosx/")) {
+                obor_prepare_advance(st.m_uncomp_size);
+                continue;
+            }
             if (npak) {
                 size_t ln = strlen(low);
                 if (ln > 4 && strcmp(low + ln - 4, ".pak") == 0) {
@@ -186,7 +196,10 @@ static int obor_zip_prepare(const char *zip_path, const char *save_dir,
             } else if (strncasecmp(nm, root, strlen(root)) == 0) {
                 snprintf(rel, sizeof(rel), "%s", nm + strlen(root));
             }
-            if (!rel[0] || !obor_zip_safe_name(rel, low, sizeof(low))) continue;
+            if (!rel[0] || !obor_zip_safe_name(rel, low, sizeof(low))) {
+                obor_prepare_advance(st.m_uncomp_size);
+                continue;
+            }
             char dst[2200];
             snprintf(dst, sizeof(dst), "%s/%s", temp, rel);
             obor_zip_mkparents(dst);

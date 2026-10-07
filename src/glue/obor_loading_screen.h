@@ -173,23 +173,21 @@ static uint32_t *obor_loading_create(int width, int height)
     return pixels;
 }
 
-/* Indeterminate progress follows the approved 320x240 proportions. Repaint
- * the track so the moving segment leaves no traces on the artwork. */
-static void obor_loading_render(uint32_t *pixels, int width, int height, unsigned tick)
+/* Fill from the left with measured preparation progress (thousandths).
+ * Retain the approved artwork and track proportions at every native raster. */
+static void obor_loading_render(uint32_t *pixels, int width, int height, unsigned progress)
 {
     int track = width * 3 / 4;
     if (track < 1) track = 1;
     int left = (width - track) / 2;
-    int thumb = track / 6;
-    if (thumb < 1) thumb = 1;
+    if (progress > 1000) progress = 1000;
+    int filled = (int)((uint64_t)track * progress / 1000);
     int top = height * 220 / 240, rows = height * 6 / 240;
     if (rows < 1) rows = 1;
     if (rows > height - top) rows = height - top;
-    unsigned phase = tick % 100;
-    int offset = (track - thumb) * (int)(phase <= 50 ? phase : 100 - phase) / 50;
     for (int y = top; y < top + rows; ++y)
         for (int x = 0; x < track; ++x)
             pixels[(size_t)y * width + left + x] =
-                x >= offset && x < offset + thumb ? 0x00407ac0u : 0x00303030u;
+                x < filled ? 0x00407ac0u : 0x00303030u;
 }
 #endif

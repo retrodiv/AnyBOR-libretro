@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Fill the preparation bar from completed I/O and verification work instead
+  of animating a moving segment. Keep progress monotonic across optional
+  phases and reserve a full bar for successful preparation and engine boot.
 - Validate macOS release exports against the linker symbol list, including the
   optional rewind interface. Wait for cooperative initialization before rewind
   regression captures and after Reset, retaining the original buffer capacity
@@ -13,7 +16,7 @@
 - Preserve inline animation allocation handles and next-animation timestamps
   across the shared 6330, 6391, 6412 and 6510 profiles, allowing scripted
   cutscenes to finish and retaining exact animation scheduling.
-- Show the credited OpenBOR artwork with an animated blue preparation bar
+- Show the credited OpenBOR artwork with a blue preparation bar
   before packed-content I/O, then pass through the game's original loading
   screen and progress bar.
 - Present the game's loading screens and real progress during cooperative

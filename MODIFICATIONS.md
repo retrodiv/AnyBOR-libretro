@@ -101,8 +101,16 @@ peaks before frontend rewind allocation. Gameplay diagnostic timelines start
 after initialization.
 
 Packed-content preparation runs on a separate disposable libco stack, yielding
-between I/O and integrity-check blocks. A generic animated indicator appears
-before this work, then the engine boots on the frontend stack and supplies its
+between I/O and integrity-check blocks. The startup artwork has a determinate
+bar: existing reads, writes and integrity checks report processed bytes within
+weighted preparation phases. This estimates total preparation work, not time
+remaining; optional extraction, repairs and external programs prevent an exact
+time percentage. Unmeasurable operations hold their position until they finish.
+The meter never advances just because another frame is drawn, never goes
+backwards between passes and reaches 100% only after successful preparation
+and engine boot. It adds no content scan, payload read, buffer allocation or
+extra coroutine yield; the existing 32 ms checkpoint interval is retained.
+The engine then supplies its
 native loading screen. Preparation has no game snapshot: the negotiated
 `MUST_INITIALIZE` quirk covers this interval, while a nonzero capacity estimate
 lets frontends reserve rewind. Cancellation resumes normal cleanup before

@@ -90,7 +90,6 @@ static bool g_loading, g_loading_done, g_loading_ok, g_loading_cancel;
 static bool g_loading_first, g_loading_retry;
 static void *g_loading_stack, *g_loading_context, *g_loading_frontend;
 static uint64_t g_loading_yield;
-static unsigned g_loading_tick;
 static uint32_t *g_loading_pixels; /* ephemeral presentation, never an engine state */
 static int g_loading_width, g_loading_height;
 static int g_width = 320, g_height = 240;
@@ -2233,6 +2232,8 @@ static bool finish_load_game(void);
 
 static bool load_game(const struct retro_game_info *info, bool retry, bool prepare_only = false)
 {
+    const obor_prepare_range total_progress = {0, 1000};
+    unsigned packed_start = 0;
     if (g_fault_quarantined) {
         error_reason("The previous engine still has live workers. Restart RetroArch.");
         return false;
@@ -2296,12 +2297,14 @@ static bool load_game(const struct retro_game_info *info, bool retry, bool prepa
         size_t n = strlen(g_pak_path);
         if (n > 4 && strcasecmp(g_pak_path + n - 4, ".zip") == 0) {
             char newpath[4096];
+            obor_prepare_stage(total_progress, 0, 400, 0);
             if (!obor_zip_prepare(g_pak_path, g_save_dir, newpath,
                                   sizeof(newpath))) {
                 error_reason("Could not extract a single OpenBOR game from the ZIP.");
                 return false;
             }
             strncpy(g_pak_path, newpath, sizeof(g_pak_path) - 1);
+            packed_start = 400;
             obor_dbg("load_game: zip -> %s", g_pak_path);
         }
     }
@@ -2353,6 +2356,7 @@ static bool load_game(const struct retro_game_info *info, bool retry, bool prepa
         char prepared[4096];
         const char *system = NULL;
         env_cb(RETRO_ENVIRONMENT_GET_SYSTEM_DIRECTORY, &system);
+        obor_prepare_stage(total_progress, packed_start, 950, 0);
         if (!obor_packed_prepare(g_pak_path, g_save_dir, system, prepared, sizeof(prepared))) {
             error_reason("Could not read or prepare the packed content.");
             return false;
@@ -2383,6 +2387,7 @@ static bool load_game(const struct retro_game_info *info, bool retry, bool prepa
         }
     }
 
+    obor_prepare_stage(total_progress, 950, 990, 0);
     /* opt-in diagnostics (env OBOR_DEBUG or obor_debug.enable by the pak) */
     obor_dbg_set_dir(g_pak_path);
     obor_dbg_install();
@@ -2650,7 +2655,7 @@ static bool loading_begin(const struct retro_game_info *info, bool retry)
     g_loading = g_loading_first = true;
     g_loading_done = g_loading_ok = g_loading_cancel = false;
     g_loading_retry = retry;
-    g_loading_tick = 0;
+    obor_prepare_reset();
     obor_prepare_progress = loading_checkpoint;
     return true;
 }
@@ -2688,7 +2693,8 @@ static void loading_run(void)
         }
     }
     if (g_loading_pixels)
-        obor_loading_render(g_loading_pixels, g_loading_width, g_loading_height, g_loading_tick++);
+        obor_loading_render(g_loading_pixels, g_loading_width, g_loading_height,
+                            g_loading_done ? 1000 : obor_prepare_value());
     present_video(g_loading_pixels, g_loading_width, g_loading_height, g_loading_width);
 }
 

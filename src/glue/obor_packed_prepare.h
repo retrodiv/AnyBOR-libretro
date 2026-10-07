@@ -19,6 +19,7 @@ struct obor_transform_buffers {
 static bool obor_packed_prepare(const char *source, const char *save_dir,
                                 const char *system_dir, char *out, size_t out_cap)
 {
+    obor_prepare_range progress = obor_prepare_phase;
     obor_input_transform transform;
     FILE *input = fopen(source, "rb");
     if (!input) return false;
@@ -43,15 +44,19 @@ static bool obor_packed_prepare(const char *source, const char *save_dir,
     if (bytes < 0 || (uint64_t)bytes > OBOR_TRANSFORM_MAX_INPUT_BYTES) { fclose(input); return false; }
     obor_transform_buffers buffers;
     if (transform.program) {
+        obor_prepare_stage(progress, 0, 100, bytes);
         buffers.input = (unsigned char *)malloc(bytes ? (size_t)bytes : 1u);
         bool ok = buffers.input && !fseek(input, 0, SEEK_SET);
         for (size_t offset = 0; ok && offset < (size_t)bytes;) {
             size_t chunk = (size_t)bytes - offset;
             if (chunk > 65536) chunk = 65536;
-            ok = fread(buffers.input + offset, 1, chunk, input) == chunk &&
-                 obor_prepare_checkpoint();
+            ok = fread(buffers.input + offset, 1, chunk, input) == chunk;
+            if (ok) { obor_prepare_advance(chunk); ok = obor_prepare_checkpoint(); }
             offset += chunk;
         }
+        /* The external program's running time is unknown: hold this phase
+         * until it returns instead of fabricating progress from its clock. */
+        obor_prepare_stage(progress, 100, 200, 0);
         if (ok) ok = obor_content_transform_execute(transform.program, transform.program_size,
             transform.parameters, transform.parameter_size, buffers.input, (size_t)bytes, NULL, 0, 0,
             &buffers.output, &buffers.size, error, sizeof(error)) != 0;
@@ -76,11 +81,13 @@ static bool obor_packed_prepare(const char *source, const char *save_dir,
          * before publishing a prepared result. */
         obor_sha256_ctx hash;
         unsigned char digest[32];
+        obor_prepare_stage(progress, 200, 350, bytes);
         obor_sha256_init(&hash);
         for (size_t offset = 0; offset < (size_t)bytes;) {
             size_t chunk = (size_t)bytes - offset;
             if (chunk > 65536) chunk = 65536;
             obor_sha256_update(&hash, buffers.input + offset, chunk);
+            obor_prepare_advance(chunk);
             if (!obor_prepare_checkpoint()) { fclose(input); return false; }
             offset += chunk;
         }
@@ -89,6 +96,7 @@ static bool obor_packed_prepare(const char *source, const char *save_dir,
         free(buffers.input); buffers.input = NULL;
         obor_transform_identity(transform, config_hash);
     } else {
+        obor_prepare_stage(progress, 0, 200, bytes);
         if (!obor_sha256_file(source, source_hash)) { fclose(input); return false; }
         snprintf(config_hash, sizeof(config_hash), "%s",
                  header_repair ? "pack-header-repair-v1" : "directory-rebase-v2");
@@ -113,6 +121,9 @@ static bool obor_packed_prepare(const char *source, const char *save_dir,
     FILE *output = fdopen(fd, "wb");
     if (!output) { close(fd); remove(temp); fclose(input); return false; }
     bool ok = false;
+    obor_prepare_stage(progress, transform.program ? 350 : 200,
+                       transform.program ? 500 : 400,
+                       (header_repair || repair) ? (uint64_t)bytes : buffers.size);
     if (header_repair) {
         ok = obor_pak_repair_header(input, output) != 0;
     } else if (repair) {
@@ -122,8 +133,8 @@ static bool obor_packed_prepare(const char *source, const char *save_dir,
         for (size_t offset = 0; ok && offset < buffers.size;) {
             size_t chunk = buffers.size - offset;
             if (chunk > 65536) chunk = 65536;
-            ok = fwrite(buffers.output + offset, 1, chunk, output) == chunk &&
-                 obor_prepare_checkpoint();
+            ok = fwrite(buffers.output + offset, 1, chunk, output) == chunk;
+            if (ok) { obor_prepare_advance(chunk); ok = obor_prepare_checkpoint(); }
             offset += chunk;
         }
     }
@@ -132,8 +143,15 @@ static bool obor_packed_prepare(const char *source, const char *save_dir,
     /* Selected transforms never bypass result validation or reuse an old
      * decoded file when their configuration is absent, changed or invalid. */
     if (ok && obor_pak_validate(temp)) ok = false;
-    if (ok) ok = obor_sha256_file(temp, result_hash) && obor_sha256_file(source, current_hash) &&
-                 !strcmp(source_hash, current_hash);
+    if (ok) {
+        obor_prepare_stage(progress, transform.program ? 500 : 400,
+                           transform.program ? 650 : 600, 0);
+        ok = obor_sha256_file(temp, result_hash) != 0;
+    }
+    if (ok) {
+        obor_prepare_stage(progress, transform.program ? 650 : 600, 800, 0);
+        ok = obor_sha256_file(source, current_hash) && !strcmp(source_hash, current_hash);
+    }
     if (!ok) {
         remove(temp);
         log_cb(RETRO_LOG_ERROR, "[OpenBOR] Content preparation failed: %s\n", error[0] ? error : "invalid PACK result or source changed");
@@ -166,6 +184,7 @@ static bool obor_packed_prepare(const char *source, const char *save_dir,
     if (!obor_storage_track(cache)) { remove(temp); return false; }
     mkdir_p(cache);
     if (!obor_storage_directory(cache)) { remove(temp); return false; }
+    obor_prepare_stage(progress, 800, 1000, 0);
     if (obor_sha256_file(out, current_hash) && !strcmp(current_hash, result_hash)) {
         remove(temp);
     } else {
