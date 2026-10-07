@@ -121,6 +121,18 @@ more history, but keep this setting at or below 512 MB. If the state does
 not fit, rewind is unsupported for that state until its representation is
 improved; increasing the buffer is not the prescribed workaround.
 
+On Raspberry Pi 5, stock Recalbox RetroArch can keep the average game rate
+near 60 FPS with threaded video and audio synchronization. Use a core-specific
+override with `video_threaded = "true"`, `video_vsync = "false"`,
+`video_frame_delay = "0"`, `video_frame_delay_auto = "false"`,
+`audio_sync = "true"`, `audio_latency = "128"` and
+`vrr_runloop_enable = "false"`. This lets the audio clock pace the game between
+snapshots. It does not remove capture stalls: a 60 FPS counter alone does not
+prove even presentation or working reverse playback. Check actual gameplay,
+rewind, and the frontend log; a buffer-capacity error means history was not
+recorded. These settings use the system's stock RetroArch; performance
+verification must not replace it with a private frontend build.
+
 Snapshots retain the running engine's writable state, complete allocated
 game heap and live coroutine stack. The inactive engines' zero-initialized
 data is excluded using linker-owned boundaries; shared data is retained.
@@ -160,7 +172,9 @@ restart the content to use the learned peak.
 Loading a state retains the current session's content and writable-directory
 paths. Engine random-number state is captured with the world so external
 frontend activity does not change the restored AI sequence.
-Saving, loading and rewind are unavailable during threaded video playback.
+Saving, loading and rewind are unavailable during the engine's internally
+threaded movie playback. RetroArch's separate threaded-video setting does not
+trigger this exclusion.
 Frontend rewind history length also depends on its buffer size and the
 amount of state that changes each frame.
 
