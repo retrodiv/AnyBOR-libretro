@@ -38,7 +38,12 @@ int main(void)
     for (uint64_t epoch = 1; epoch <= 800; ++epoch) {
         if (epoch == 8) extent = 6 * PAGE; /* growth */
         if (epoch == 25) extent += 7; /* growth within an existing page */
-        if (epoch == 60) extent = 4 * PAGE; /* conservative layout fallback */
+        if (epoch == 60) extent = 4 * PAGE; /* shrinking heap */
+        /* Growth exposes bytes whose write epoch predates the preceding
+         * snapshot, and shrinkage replaces old heap bytes with tail/padding. */
+        if (epoch >= 90 && epoch < 260)
+            extent = (epoch % PAGES + 1) * PAGE - epoch % 13;
+        size_t prefix = PREFIX + (epoch >= 300 && epoch < 350 ? 16 : 0);
         if (epoch == 400) { /* restore invalidates both slots and oracle */
             cache.slot[0].epoch = cache.slot[1].epoch = cache.previous_epoch = 0;
             memset(buffers, 0xb6, sizeof(buffers));
@@ -48,23 +53,27 @@ int main(void)
         size_t offset = page * PAGE;
         heap[offset] ^= (unsigned char)(epoch | 1);
         page_epochs[page] = epoch;
-        size_t used = PREFIX + extent + (size_t)(epoch % 17 + 1);
+        size_t used = prefix + extent + (size_t)(epoch % 17 + 1);
         memset(full, 0, sizeof(full));
-        memset(full, (unsigned char)epoch, PREFIX);
-        memcpy(full + PREFIX, heap, extent);
-        memset(full + PREFIX + extent, (unsigned char)(epoch + 9), used - PREFIX - extent);
-        memcpy(buffers[index], full, PREFIX);
-        memcpy(buffers[index] + PREFIX + extent, full + PREFIX + extent,
-               used - PREFIX - extent);
+        memset(full, (unsigned char)epoch, prefix);
+        memcpy(full + prefix, heap, extent);
+        memset(full + prefix + extent, (unsigned char)(epoch + 9), used - prefix - extent);
+        memcpy(buffers[index], full, prefix);
+        memcpy(buffers[index] + prefix + extent, full + prefix + extent,
+               used - prefix - extent);
         ranges r = {0, 0, buffers[index]};
         /* Save range events before copy to replay against a complete reference. */
         obor_snapshot_cache prior = cache;
-        obor_snapshot_copy(&cache, index, heap, PREFIX, extent, used, CAPACITY,
+        obor_snapshot_copy(&cache, index, heap, prefix, extent, used, CAPACITY,
                            PAGE, epoch, page_epoch, emit, &r);
         assert(memcmp(buffers[index], full, CAPACITY) == 0);
+        /* Changing only the extent must never turn unused state capacity
+         * into a full comparison. Offset changes still require fallback. */
+        if (prior.previous_epoch && prior.previous_heap_offset == prefix)
+            assert(r.end <= (used > prior.previous_used ? used : prior.previous_used));
         memcpy(hinted, previous, sizeof(hinted));
         r.end = r.count = 0;
-        obor_snapshot_copy(&prior, index, heap, PREFIX, extent, used, CAPACITY,
+        obor_snapshot_copy(&prior, index, heap, prefix, extent, used, CAPACITY,
                            PAGE, epoch, page_epoch, apply, &r);
         assert(memcmp(hinted, full, CAPACITY) == 0);
         memcpy(previous, full, CAPACITY);

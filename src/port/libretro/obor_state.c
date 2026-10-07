@@ -85,6 +85,10 @@ uint64_t obor_heap_sparse_size(void);
 int obor_heap_owned_layout(uint64_t *prefix, uint64_t *suffix,
                            uint64_t *suffix_length);
 uint64_t obor_heap_sparse_write(void *destination, uint64_t capacity);
+#if defined(_WIN32)
+uint64_t obor_heap_sparse_write_padded(void *destination, uint64_t capacity,
+                                      void *padding, size_t padding_size, int *padding_done);
+#endif
 int obor_heap_sparse_validate(const void *source, uint64_t length,
                               uint64_t arena_used);
 int obor_heap_sparse_restore(const void *source, uint64_t length,
@@ -643,9 +647,13 @@ static uint32_t serialize_size_impl(void)
 
 /* -------------------------------------------------------- serialize ---- */
 
-static uint32_t serialize_impl(void *buf, uint32_t size, obor_state_ranges *ranges)
+static uint32_t serialize_impl(void *buf, uint32_t size, obor_state_ranges *ranges,
+                               int *padding_done)
 {
     static int profile_heap_reported;
+#if !defined(_WIN32)
+    (void)padding_done;
+#endif
     if (!collect_segments())
         return 0;
     ensure_boot_id();
@@ -829,7 +837,16 @@ static uint32_t serialize_impl(void *buf, uint32_t size, obor_state_ranges *rang
     } else
 #endif
     {
+#if defined(_WIN32)
+        /* The capacity check above proves the final tail is disjoint from
+         * heap and stack. Fault injection must precede starting any workers. */
+        obor_test_fault_phase("save-padding");
+        hlen = obor_heap_sparse_write_padded(heap_blob, size - fixed,
+            (uint8_t *)buf + fixed + heap_required,
+            (size_t)(size - fixed - heap_required), padding_done);
+#else
         hlen = obor_heap_sparse_write(heap_blob, size - fixed);
+#endif
         if (ranges) {
             if (!owned_stop_images()) obor_fault_abort(OBOR_FAULT_MEMORY, 0);
             owned_full_range(ranges, size);
@@ -1151,8 +1168,9 @@ static void execute_state(void *context)
     } else if (call->operation == 1 || call->operation == 3) {
         if (call->ranges) call->ranges->count = 0;
         obor_test_fault_phase("save");
-        call->result = serialize_impl(call->buffer, call->size, call->ranges);
-        if (call->result && call->result < call->size &&
+        int padding_done = 0;
+        call->result = serialize_impl(call->buffer, call->size, call->ranges, &padding_done);
+        if (!padding_done && call->result && call->result < call->size &&
             (!call->ranges || !owned_cache.previous_epoch))
         {
             obor_test_fault_phase("save-padding");

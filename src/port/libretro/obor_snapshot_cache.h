@@ -36,8 +36,7 @@ static inline void obor_snapshot_copy(obor_snapshot_cache *cache, unsigned index
     obor_snapshot_slot *slot = &cache->slot[index];
     unsigned char *output = (unsigned char *)slot->buffer;
     int same_previous = cache->previous_epoch &&
-        cache->previous_heap_offset == heap_offset &&
-        cache->previous_heap_length == heap_length;
+        cache->previous_heap_offset == heap_offset;
     int same_slot = slot->epoch && slot->heap_offset == heap_offset;
     if (!same_previous) emit(context, 0, capacity);
     else {
@@ -50,7 +49,12 @@ static inline void obor_snapshot_copy(obor_snapshot_cache *cache, unsigned index
         if (!same_slot || offset + length > slot->heap_length || written > slot->epoch)
             memcpy(output + heap_offset + offset,
                    (const unsigned char *)heap + offset, length);
-        if (same_previous && written > cache->previous_epoch)
+        /* A growing heap exposes bytes previously occupied by the stack or
+         * padding, even if that page has an old write epoch. Its base offset
+         * still matches: compare only changed/added pages, not the entire
+         * advertised state. Shrinkage is covered by the tail range below. */
+        if (same_previous && (written > cache->previous_epoch ||
+                              offset + length > cache->previous_heap_length))
             emit(context, heap_offset + offset, length);
     }
     if (same_previous) {

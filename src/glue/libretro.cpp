@@ -2566,7 +2566,11 @@ static uint32_t loading_capacity(const char *path)
     uint64_t heap = footprint * 5 / 8;
     uint64_t preload = footprint < (128ULL << 20) ? footprint : (128ULL << 20);
     if (heap < preload) heap = preload;
-    if (heap < (16ULL << 20)) heap = 16ULL << 20;
+    /* A small compressed archive is not a bound on decoded resources. Keep
+     * the 16 MiB bootstrap minimum plus the engine's 16 MiB cold growth
+     * margin before the frontend fixes its allocation. Larger PACK/peak
+     * hints already provide this minimum. */
+    if (heap < (32ULL << 20)) heap = 32ULL << 20;
     if (heap < peak + peak / 3) heap = peak + peak / 3;
     uint64_t capacity = heap + full + (4ULL << 20) + 16384 + 512;
     capacity = (capacity + (8ULL << 20) - 1) & ~((8ULL << 20) - 1);

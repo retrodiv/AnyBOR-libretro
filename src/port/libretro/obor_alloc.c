@@ -34,6 +34,10 @@ void obor_state_owned_discard(void);
 
 #if defined(_WIN32)
 #include <windows.h>
+#include "obor_state_copy.h"
+/* dlmalloc below deliberately undefines _WIN32. Retain this decision for
+ * snapshot copies after its include instead of testing that macro again. */
+#define OBOR_WINDOWS_STATE_COPY 1
 #else
 #include <sys/mman.h>
 #include <fcntl.h>
@@ -882,8 +886,12 @@ int obor_heap_owned_layout(uint64_t *prefix, uint64_t *suffix,
     return valid;
 }
 
-uint64_t obor_heap_sparse_write(void *destination, uint64_t capacity)
+static uint64_t heap_sparse_write(void *destination, uint64_t capacity,
+                                  void *padding, size_t padding_size, int *padding_done)
 {
+#if !defined(OBOR_WINDOWS_STATE_COPY)
+    (void)padding; (void)padding_size; (void)padding_done;
+#endif
     if (!destination || capacity < sizeof(obor_heap_sparse_header))
         return 0;
     uint64_t extent = 0;
@@ -902,7 +910,16 @@ uint64_t obor_heap_sparse_write(void *destination, uint64_t capacity)
         cursor += sizeof(header);
         memcpy(cursor, &span, sizeof(span));
         cursor += sizeof(span);
+#if defined(OBOR_WINDOWS_STATE_COPY)
+        if (padding && padding_done)
+            *padding_done = obor_win_state_copy_and_pad(cursor,
+                OBOR_ARENA_BASE + OBOR_STACK_RESERVE, (size_t)extent,
+                padding, padding_size);
+        else
+            obor_state_copy_heap(cursor, OBOR_ARENA_BASE + OBOR_STACK_RESERVE, (size_t)extent);
+#else
         memcpy(cursor, OBOR_ARENA_BASE + OBOR_STACK_RESERVE, (size_t)extent);
+#endif
         return needed;
     }
     obor_sparse_scan write = {0};
@@ -918,6 +935,19 @@ uint64_t obor_heap_sparse_write(void *destination, uint64_t capacity)
     memcpy(destination, &header, sizeof(header));
     return (uint64_t)(write.cursor - (unsigned char *)destination);
 }
+
+uint64_t obor_heap_sparse_write(void *destination, uint64_t capacity)
+{
+    return heap_sparse_write(destination, capacity, NULL, 0, NULL);
+}
+
+#if defined(OBOR_WINDOWS_STATE_COPY)
+uint64_t obor_heap_sparse_write_padded(void *destination, uint64_t capacity,
+                                      void *padding, size_t padding_size, int *padding_done)
+{
+    return heap_sparse_write(destination, capacity, padding, padding_size, padding_done);
+}
+#endif
 
 int obor_heap_sparse_validate(const void *source, uint64_t length,
                               uint64_t arena_used)
