@@ -112,14 +112,16 @@ setup, external INI configuration and backup guidance.
 ## Save states and rewind
 
 For rewind in RetroArch, we recommend **Rewind Frames** set to **10** and
-**Rewind Buffer Size (MB)** set to **512**. On older RetroArch versions,
-keep the rewind buffer larger than twice the core's uncompressed state
-capacity: a large transition can otherwise overwrite a history link when
-the ring wraps. A 256 MB buffer is insufficient for a 243 MB state, even
-when its on-disk compressed save is much smaller. Larger buffers also retain
-more history, but keep this setting at or below 512 MB. If the state does
-not fit, rewind is unsupported for that state until its representation is
-improved; increasing the buffer is not the prescribed workaround.
+**Rewind Buffer Size (MB)** set to **256**. **256 MB is also the maximum**;
+do not increase it to work around capacity or performance problems.
+
+A state fitting in the buffer does not guarantee safe history. Older
+RetroArch versions can overwrite a history link during a large transition
+when the uncompressed state exceeds half the buffer. The compressed size
+of an on-disk save does not establish whether rewind will work. Validate
+actual reverse playback within the 256 MB limit. If history cannot be
+recorded and restored safely, rewind is unsupported for that state until
+its representation or handling is improved.
 
 On Raspberry Pi 5, stock Recalbox RetroArch can keep the average game rate
 near 60 FPS with threaded video and audio synchronization. Use a core-specific
