@@ -1,8 +1,8 @@
 # OpenBOR (AnyBOR)
 
 AnyBOR is an independent libretro core for OpenBOR games. Its thirteen selectable
-engines are v3.0 3400, v3.0 3842, v3.0 4086, v3.0 4432, v3.0 4453, v3.0 6330, v3.0 6391, v3.0 6412-dev, v3.0 6510-dev, v3.0 7123-dev, v4.0 7142-alpha, v4.0 7533 and v4.0 8023-dev. Auto uses
-available build tags and content clues; you can also select an engine manually.
+profiles are v3.0 3400, v3.0 3842, v3.0 4086, v3.0 4432, v3.0 4453, v3.0 6330, v3.0 6391, v3.0 6412-dev, v3.0 6510-dev, v3.0 7123-dev, v4.0 7142-alpha, v4.0 7533 and v4.0 8023-dev. These profiles share nine engine builds. Auto uses
+available build tags and content clues; you can also select a profile manually.
 OpenBOR and Beats of Rage originate with Senile Team and OpenBOR Team; the port
 is maintained by retrodiv. The combined core has multiple component licenses,
 including OpenBOR 3400's no-sale terms. See [LICENSES.md](../LICENSES.md).
@@ -234,10 +234,13 @@ longer used and are left untouched.
 RetroArch places save-state files in its configured **Save States** directory.
 Ordinary engine saves use their own files rather than a libretro save-RAM block.
 States may be large because they retain the running engine's memory and stack.
-A frontend that supports variable serialization sizes may receive a larger
-state while content is loaded. On fixed-capacity frontends, the state capacity
-stays fixed until content unload; a game that outgrows its allowance needs a
-restart to use its learned peak. See [README.md](../README.md#save-states-and-rewind).
+Windows x86-64 and Linux x86-64/ARM64 use a fixed 64 MiB compressed transport,
+including during loading and Reset. Each state is independently loadable;
+unchanged resources can be reconstructed from the loaded content. Android and
+macOS retain the existing writer, whose capacity can grow on supporting
+frontends or requires a restart to use a learned peak on fixed-capacity ones.
+See [README.md](../README.md#save-states-and-rewind) for the resource limits and
+the recommended 256 MiB rewind history at granularity 10.
 
 Optional developer diagnostics can write beside loaded content when explicitly
 enabled; see [DEBUGGING.md](DEBUGGING.md). They are off by default.

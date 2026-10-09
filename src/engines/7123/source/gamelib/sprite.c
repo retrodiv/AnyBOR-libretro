@@ -1,3 +1,15 @@
+/* AnyBOR modification record: 2026-10-08.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Declare initialized encoded sprite-body ranges and source crops for exact
+ * reconstruction proof, retaining headers, palettes and mutable changes.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/7123.md
+ * at the source repository root. Original notices follow below.
+ */
+
 /*
  * OpenBOR - http://www.chronocrash.com
  * -----------------------------------------------------------------------
@@ -13,6 +25,7 @@
 #include "types.h"
 #include "sprite.h"
 #include "transform.h"
+#include "obor_resources.h"
 /////////////////////////////////////////////////////////////////////////////
 
 
@@ -699,6 +712,7 @@ unsigned encodesprite(
 
     if(dest)
     {
+        obor_resources_forget_owner(dest);
         dest->magic = sprite_magic;
     }
 
@@ -832,6 +846,10 @@ unsigned encodesprite(
             dest->palette = NULL;
         }
     }
+    if(dest)
+        obor_resources_sprite_encoded(bitmap, dest, dest->data,
+            (size_t)(data - (unsigned char *)dest->data), bitmap->clipped_x_offset,
+            bitmap->clipped_y_offset, w, h);
     return ((size_t)data) - ((size_t)dest) + extrab + pb + ANYNUMBER;
 }
 

@@ -31,12 +31,16 @@ typedef int obor_no_threads_in_this_era;
 #include <stdint.h>
 
 #include "gamelib/threads.h"
+#include "obor_fault.h"
+#include "obor_write_watch.h"
+#include "obor_state_config.h"
 
 struct bor_thread {
     pthread_t th;
     int (*fn)(void *);
     void *data;
     int result;
+    int watch_lease;
 };
 struct bor_mutex {
     pthread_mutex_t mtx;
@@ -48,19 +52,34 @@ struct bor_cond {
 static void *trampoline(void *arg)
 {
     bor_thread *t = (bor_thread *)arg;
+    if (t->watch_lease) obor_fault_worker_enter();
     t->result = t->fn(t->data);
+    if (t->watch_lease) obor_fault_worker_leave();
     return NULL;
 }
 
 bor_thread *thread_create(int (*fn)(void *), const char *name, void *data)
 {
     (void)name;
-    /* A worker never inherits protected heap pages: its foreign thread does
-     * not own the engine's fault guard. Invalidate cached snapshots first. */
-    obor_state_owned_suspend();
+    int watch_lease = 0;
+#if OBOR_WRITE_WATCH_ENABLED && !defined(OBOR_HAS_MOVIE_PLAYBACK)
+    /* Classic decoders create/join their workers on the owner thread. The
+     * newer asynchronous movie layer also spawns nested/libvpx-owned workers;
+     * its ownership is not covered by this contract, so retain suspension.
+     * Existing workers keep the dispatch lease even if the environment changes. */
+    if (obor_fault_worker_leases() ||
+        (obor_write_watch_epoch() && obor_state_worker_watch_enabled())) {
+        watch_lease = obor_fault_worker_acquire();
+        if (!watch_lease) return NULL;
+    }
+#endif
+    if (!watch_lease) obor_state_owned_suspend();
     bor_thread *t = (bor_thread *)malloc(sizeof(*t));
-    if (!t)
+    if (!t) {
+        if (watch_lease) obor_fault_worker_release();
         return NULL;
+    }
+    t->watch_lease = watch_lease;
     t->fn = fn;
     t->data = data;
     /* Publish the worker before it can run. pthread_create() may schedule the
@@ -70,6 +89,7 @@ bor_thread *thread_create(int (*fn)(void *), const char *name, void *data)
     if (pthread_create(&t->th, NULL, trampoline, t) != 0) {
         __atomic_sub_fetch(&obor_live_threads, 1, __ATOMIC_SEQ_CST);
         free(t);
+        if (watch_lease) obor_fault_worker_release();
         return NULL;
     }
     return t;
@@ -79,9 +99,11 @@ void thread_join(bor_thread *thread)
 {
     if (!thread)
         return;
-    pthread_join(thread->th, NULL);
+    if (pthread_join(thread->th, NULL)) obor_fault_abort(OBOR_FAULT_STATE, 0);
+    int watch_lease = thread->watch_lease;
     free(thread);
     __atomic_sub_fetch(&obor_live_threads, 1, __ATOMIC_SEQ_CST);
+    if (watch_lease) obor_fault_worker_release();
 }
 
 bor_mutex *mutex_create(void)

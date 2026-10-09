@@ -9,7 +9,7 @@
       "upstream_sha256": "adfc28feba4d32bb3933b29fe55fd0a6aa746084704c3ee71fc3f732706b9aa4"
     },
     "Makefile.libretro": {
-      "distributed_sha256": "97b27b9dfe72562e867c8e9ea3d1104386c5bab62533a0ab953528e6c1323f07",
+      "distributed_sha256": "963d3cb23c1c6ee8ffe2771a5ebda4d8aca362e3091211777698e86474dec328",
       "modified": true,
       "origin": "Project libretro build overlay",
       "summary": "Supply the shared libretro engine build and symbol-isolation rules.",
@@ -148,9 +148,12 @@
       "upstream_sha256": "ddfa2f06adeed431eb4c9b558a596e1b2ed46927ba3c08db26ba9613b88233ce"
     },
     "source/gamelib/loadimg.c": {
-      "distributed_sha256": "1f62b52e99a0f264891b61caf16682a28fead1fa028f8df718acc2727388fcb3",
-      "modified": false,
-      "topics": [],
+      "distributed_sha256": "708debec9e71eb180644e0fc1a4ce3b250d25df1986385880ef7391d267ad42c",
+      "modified": true,
+      "summary": "Declare the resolved source member and original bitmap dimensions for independent sprite reconstruction proof.",
+      "topics": [
+        "reconstructible-resources"
+      ],
       "upstream_sha256": "1f62b52e99a0f264891b61caf16682a28fead1fa028f8df718acc2727388fcb3"
     },
     "source/gamelib/loadimg.h": {
@@ -231,9 +234,13 @@
       "upstream_sha256": "007f773be5f17eedda442b0be564c42d74d3b5780b869c88538e6fddd8505da7"
     },
     "source/gamelib/soundmix.c": {
-      "distributed_sha256": "463319224c0d6672d5d4180698101c8ade57b607f8504402214de4fb2409633d",
-      "modified": false,
-      "topics": [],
+      "distributed_sha256": "91efd2bff2c2e7115227b51a63446f2adcc00c9662cb56d284ea5cca466be79c",
+      "modified": true,
+      "summary": "Declare exact resident PCM content-member ranges for independently verified reconstruction; preserve allocation tails and mutable mixer state.",
+      "topics": [
+        "reconstructible-resources",
+        "record-dates-and-file-notices"
+      ],
       "upstream_sha256": "463319224c0d6672d5d4180698101c8ade57b607f8504402214de4fb2409633d"
     },
     "source/gamelib/soundmix.h": {
@@ -243,9 +250,12 @@
       "upstream_sha256": "4a3d304b118c4765ae2317706c359098996bb8a8a06d30e0d7f4dccdbdf1ba40"
     },
     "source/gamelib/sprite.c": {
-      "distributed_sha256": "8bc70ad8ad2c57d01eaec19119b298488889a950ebb77acdf6593f43a8ec7252",
-      "modified": false,
-      "topics": [],
+      "distributed_sha256": "654ac9363b0dd2c3fbb84f3df9ae26054ea63328e26397ca608977c61030a1fd",
+      "modified": true,
+      "summary": "Declare initialized encoded sprite-body ranges and source crops for exact reconstruction proof, retaining headers, palettes and mutable changes.",
+      "topics": [
+        "reconstructible-resources"
+      ],
       "upstream_sha256": "8bc70ad8ad2c57d01eaec19119b298488889a950ebb77acdf6593f43a8ec7252"
     },
     "source/gamelib/sprite.h": {

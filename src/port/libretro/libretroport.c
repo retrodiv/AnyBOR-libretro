@@ -22,6 +22,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include "obor_resources.h"
 #include <errno.h>
 #include <sys/stat.h>
 #ifdef _WIN32
@@ -99,8 +100,18 @@ void obor_session_paths_get(obor_session_paths *paths)
     memcpy(paths->screenshots, screenShotsDir, sizeof(screenShotsDir));
 }
 
-void obor_session_paths_restore(const obor_session_paths *paths)
+int obor_session_paths_restore(const obor_session_paths *paths)
 {
+    /* Modern streaming caches and direct PAK handles own copies of this
+     * session path. Engines enumerate those references before the common
+     * globals are replaced; a later cold save therefore carries no aliases
+     * to an earlier frontend's temporary content. */
+#if OBOR_ENGINE_BUILD == 8023
+    extern int obor_packfile_rebind_content(const char *, const char *);
+    extern int obor_sound_rebind_content(const char *, const char *);
+    if (!obor_packfile_rebind_content(packfile, paths->pak) ||
+        !obor_sound_rebind_content(packfile, paths->pak)) return 0;
+#endif
     memcpy(engine_cwd, paths->cwd, sizeof(engine_cwd));
     memcpy(packfile, paths->pak, sizeof(packfile));
     memcpy(boot_pak, paths->boot_pak, sizeof(boot_pak));
@@ -108,6 +119,7 @@ void obor_session_paths_restore(const obor_session_paths *paths)
     memcpy(savesDir, paths->saves, sizeof(savesDir));
     memcpy(logsDir, paths->logs, sizeof(logsDir));
     memcpy(screenShotsDir, paths->screenshots, sizeof(screenShotsDir));
+    return 1;
 }
 void obor_arena_release(void);
 void obor_arena_authorize(int owned);
@@ -585,6 +597,7 @@ capture_cwd:
      * (fixed VA, guard page below) — see obor_alloc.c. */
     if (!obor_arena_init())
         goto fail;
+    obor_resources_open(info->pak_path, info->raw_dir);
     boot_dbg("boot: arena ok");
     co_frontend = co_active();
     if (!obor_fault_stack_prepare(obor_stack_ptr(), obor_stack_size())) goto fail;
@@ -820,9 +833,10 @@ extern FILE *scriptLog;
 
 void obor_shutdown(void)
 {
-    /* Resource teardown may free arena-backed names outside a frame guard.
-     * End owned protection while the fault guard still owns this thread. */
-    if (!obor_owned_end()) {
+    /* Teardown can mutate arena resources outside a frame guard. Regular
+     * compressed captures also arm protection, even without caller-owned
+     * frontend buffers. End both forms under the fault guard before cleanup. */
+    if (!obor_state_tracking_end()) {
         (void)obor_abandon();
         return;
     }

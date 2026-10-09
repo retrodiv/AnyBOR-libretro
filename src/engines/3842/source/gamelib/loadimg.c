@@ -1,14 +1,18 @@
-/* AnyBOR modification record: 2026-09-12.
+/* AnyBOR modification record: 2026-10-08.
  * Port maintained by retrodiv <retrodiv@proton.me>.
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
  * Upstream code retains its original license and notices.
  * Validate legacy PCX headers, read uncompressed indexed PCX scanlines, and
  * represent RIFF/WAVE paths used as animation frames with an empty frame.
+ * Declare the resolved source member and original bitmap dimensions for
+ * independent sprite reconstruction proof.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/3842.md
  * at the source repository root. Original notices follow below.
  */
+
+#include "obor_resources.h"
 
 /*
  * OpenBOR - http://www.LavaLit.com
@@ -261,6 +265,7 @@ static int openpng(char *filename, char *packfilename)
 		row_pointers[y] = (png_byte*) malloc(png_get_rowbytes(png_ptr, info_ptr));
 
 	png_read_image(png_ptr, row_pointers);
+	obor_resources_image_opened(filename);
 	return 1;
 openpng_abort:
 	closepng();
@@ -519,6 +524,8 @@ static int opengif(char *filename, char *packfilename){
 
 	res[0] = gif_header.screenwidth;
 	res[1] = gif_header.screenheight;
+
+	obor_resources_image_opened(filename);
 
 	return 1;
 }
@@ -970,6 +977,7 @@ s_bitmap * loadbitmap(char *filename, char *packfile, int format){
 	s_bitmap * bitmap;
 	int maxwidth, maxheight;
 
+	obor_resources_image_begin();
 	if(!openimage(filename, packfile)){
 		if(!iswavefile(filename, packfile)) return NULL;
 		bitmap = allocbitmap(1, 1, format);
@@ -996,7 +1004,8 @@ s_bitmap * loadbitmap(char *filename, char *packfile, int format){
 		freebitmap(bitmap);
 		return NULL;
 	}
-	return bitmap;
+	obor_resources_bitmap_loaded(bitmap, maxwidth, maxheight);
+    return bitmap;
 }
 
 int loadimagepalette(char *filename, char *packfile, unsigned char* pal){

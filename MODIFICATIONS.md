@@ -1,9 +1,10 @@
 # AnyBOR port modification record
 
-Record updated: **2026-10-06**. Port maintainer: **retrodiv**
+Record updated: **2026-10-09**. Port maintainer: **retrodiv**
 (<retrodiv@proton.me>).
 
-AnyBOR offers thirteen selectable OpenBOR engines with a shared libretro port.
+AnyBOR offers thirteen selectable profiles backed by nine OpenBOR engines with
+a shared libretro port.
 The original engine work is credited to Senile Team, OpenBOR Team and the
 contributors named in the retained sources. The port's own notices identify
 its maintained code. Component terms remain as recorded in
@@ -475,7 +476,7 @@ in their respective files.
 
 ## Imported dependencies and verification
 
-The libretro API header, miniz, dlmalloc, retained libco files and the selected
+The libretro API header, miniz, LZ4, dlmalloc, retained libco files and the selected
 zlib/libpng/libogg/libvorbis/libvpx sources are pinned imports. They are not
 claimed as port-authored engine modifications. Their original notices and
 archive identities are retained. libco includes the AMD64 and AArch64 backends
@@ -524,7 +525,108 @@ position. State restoration closes current direct descriptors before
 replacing memory, then reopens the saved readers. Saved descriptor numbers
 are never used to close frontend resources. The legacy ADPCM replacement is
 compiled only for engines that retain that API.
+
+The modern engine explicitly enumerates owned copies of the content path in
+sample caches and direct handles. On a state load, the common layer rebinds
+exact references to the saving session's content to the current frontend's
+content path before reopening files. Unrelated packages and loose files retain
+their paths. This also covers new sound streams started after restoration and
+repeated saves across sessions whose prepared-content directories differ.
+Allocation failure rejects restoration; no previous session directory is kept
+alive to make a load work.
+
 ## Audio memory layout
 
 Large decoded sound effects use the modern engine's existing streamed-sample
 path so immutable PCM does not become part of every rewind checkpoint.
+
+## Reconstructible resources
+
+A preparation path observes successful capture intervals and updates
+the codec's existing current image before the presentation callback on a
+predicted capture frame. It finishes audio mixing first. Ordinary serialization
+still checks current bytes and writes a complete independent state, including
+changes made after preparation. The prediction schedules work only; it never
+changes the frontend's capture frequency. Missed predictions expire, loads and
+resets clear the schedule, and preparation retains no additional history.
+This path defaults on for Windows x86-64 and non-Android Linux x86-64/ARM64.
+`OBOR_STATE_PREPARE=0` disables preparation for diagnostic comparisons without
+changing the requested captures or their contents.
+
+Diagnostic input sequences can use the most recent successful load as their
+frame origin. This permits matched checkpoint comparisons when a frontend's
+load command arrives asynchronously. The option is disabled in ordinary use;
+it does not change state contents or the frontend's rewind history.
+
+The resource-state path receives explicit resolved image-member
+names, bitmap dimensions, crop coordinates and initialized sprite-body ranges
+from engines 3842, 4086, 4432, 6391, 7123, 7142, 7533 and 8023. Older engines
+also report physical bitmap compaction; consecutive crops compose within the
+original source rectangle and invalid provenance falls back to ordinary bytes.
+Engine 3400's different sprite encoding remains represented as ordinary state.
+Shared code independently reconstructs indexed PNG/GIF images
+and RLE8 bodies, requiring exact byte equality before replacing body bytes with
+logical zeros in the compressed state. Sprite headers, palettes, pointers,
+padding and modified bodies retain their ordinary mutable representation.
+
+All nine physical engines also declare exact resident PCM member offsets and
+byte counts after a successful sample read. The shared versioned recipe has an
+explicit member-slice kind, validates the source and compares the entire body
+before omitting bytes. Mixer positions, format parameters and allocation tails
+remain ordinary state. Modified samples fall back to raw state; shared and
+freed/reused samples obey the same catalog lifetime rules as images. A cold
+restore reconstructs from the state recipe and content, without engine handles
+or a later session's samples. Unsupported sources and oversized members retain
+their complete bytes. The existing bounded source-derived cache is shared by
+both kinds; no sample history is retained outside frontend states.
+
+An OBS5 state carries a complete versioned resource manifest in a fixed window,
+with a fixed stack window keeping heap and resource addresses independent of
+growth; the reader still accepts OBS4. The source reader
+uses the current ordinary PACK archive and never resolves a state-provided host
+path. A bounded 128 MiB cache contains only losslessly compressed source-derived
+resources and their recipe metadata; cache misses
+rebuild from the manifest and content. Free, successful realloc, reset and state
+restoration invalidate the appropriate current-object provenance. Restoration
+preflights resource reconstruction, heap ownership and logical zero ranges
+before replacing live bytes. Transient reconstruction staging is capped at
+256 MiB; additional resources remain ordinary state bytes.
+
+New resource-state blocks use the compact initial DEFLATE encoding on supported
+default targets; changed blocks use LZ4, within the same fixed image capacity.
+An optional `OBOR_STATE_RAW_MUTABLE=1` experiment
+keeps changed blocks in raw stable slots to measure frontend delta amplification.
+Neither format depends on a prior snapshot. Classic movie workers can be stopped
+after all target preflights pass, allowing an earlier non-threaded state to load
+from current playback; interior movie snapshots remain unsupported.
+
+Linux x86-64/ARM64 classic decoder workers explicitly register for write-watch
+dispatch. The owner pins dispatch before publishing each worker and releases it
+after join, so writes between frontend callbacks preserve exact page proofs.
+Owner fault recovery remains scoped to its callback; registered workers only
+handle protected-page writes, and real/foreign faults keep their prior handler.
+Concurrent faults on one page use lock-free epoch stores and idempotent page
+unprotection. Rearming, resizing or destroying the watcher requires joined
+workers. No watcher means no persistent dispatch. The asynchronous movie layer
+declares a different ownership model, including nested/third-party workers;
+it retains conservative suspension. `OBOR_STATE_WORKER_WATCH=0` provides a
+diagnostic control on the supported classic path, without changing history.
+
+Diagnostic image-capacity choices are shared by the initial frontend query and
+engine writer, fixed for the content session and bounded by the existing format
+maximum. A smaller budget rejects complete images that cannot fit; it never
+truncates them or changes the frontend's history allocation.
+
+The optional `OBOR_REVERSE_PRESENTATION=1` path checks the frontend's explicit
+libretro rewind throttle mode after a successful restore. It presents the
+already serialized framebuffer and current audio output without advancing the
+engine or mixer. This avoids restarting a movie while presenting older frames.
+The audio output replaces the existing static mixing buffer and belongs to the
+ordinary snapshot; no separate past-frame history is retained. Unsupported
+frontends and ordinary loads retain the forward execution path.
+
+Reverse presentation requires the resource and compressed-state paths to be
+enabled. It remains opt-in; ordinary rewind uses the normal engine presentation
+path. Resource and compressed states themselves default on for Windows x86-64
+and non-Android Linux x86-64/ARM64, as described in the README. Other targets
+retain their existing writer while equivalent acceptance is pending.

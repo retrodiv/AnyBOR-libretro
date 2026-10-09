@@ -25,6 +25,7 @@ No endorsement by Senile Team, OpenBOR Team or libretro is claimed.
 | Original port and glue, compatibility helpers, build tools, tests, examples and project documentation | BSD-3-Clause, `LICENSE`; existing upstream authorship notices remain authoritative for adapted code |
 | `src/glue/assets/OpenBOR_Logo_*.png` and `src/glue/obor_loading_background.h` | Adapted OpenBOR engine artwork, BSD-3-Clause from build 7123; upstream notices in `src/glue/assets/LICENSE`, provenance and design credit in `src/glue/assets/README.md` |
 | `src/port/libretro/libco/` | ISC; `valgrind.h` has its separate permissive header license, reproduced in the notice dossier |
+| `src/port/libretro/lz4.c`, `lz4.h` and `lz4/LICENSE` | BSD-2-Clause, Yann Collet; pinned LZ4 block codec, with source and binary notices retained |
 | `src/port/libretro/dlmalloc.inc` | Doug Lea's public-domain dedication, with the CC0 waiver referenced in its header |
 | `src/third_party/libretro.h` | MIT, libretro API contributors |
 | `src/third_party/miniz.c`, `miniz.h` | MIT; all amalgamated notices, including Rich Geldreich, RAD Game Tools and Martin Raiber, are retained |

@@ -61,7 +61,7 @@ typedef struct {
     char logs[MAX_FILENAME_LEN], screenshots[MAX_FILENAME_LEN];
 } obor_session_paths;
 void obor_session_paths_get(obor_session_paths *paths);
-void obor_session_paths_restore(const obor_session_paths *paths);
+int obor_session_paths_restore(const obor_session_paths *paths);
 
 /* AI calls to libc rand must participate in save states and rewind. */
 int obor_rand(void);
@@ -116,6 +116,8 @@ extern int obor_live_threads;
 int obor_state_set_save_dir(const char *dir, uint32_t profile_build);
 int obor_state_set_regions(const obor_boot_info *info);
 void obor_state_owned_discard(void);
+/* End all write protection before teardown, including ordinary coded states. */
+int32_t obor_state_tracking_end(void);
 extern uint32_t obor_profile_build;
 
 /* Snapshot arena (obor_alloc.c). */

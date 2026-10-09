@@ -266,6 +266,13 @@
     "source": "src/third_party/LICENSE"
   },
   {
+    "file": "LICENSES/lz4-BSD-2-Clause.txt",
+    "license": "BSD-2-Clause",
+    "scope": "source and binary",
+    "sha256": "8b58c446121a109ccf32edc094bba3010a3d85e4ee3702950db55e4d3e87736c",
+    "source": "src/port/libretro/lz4/LICENSE"
+  },
+  {
     "file": "LICENSES/Doug-Lea-dlmalloc.txt",
     "license": "CC0-1.0",
     "scope": "source and binary",
@@ -360,7 +367,7 @@
     "file": "LICENSES/Embedded-source-notices.txt",
     "license": "see each notice",
     "scope": "source and binary",
-    "sha256": "cfc2e721eb6614b20d93df6f02fa4e46d7b1a6e9b68942eb98cbe621135709b3",
+    "sha256": "391ddd43701c57f1e365ddc3f08d96b078f4970d02d9707a79dfb99c2e3e55e8",
     "source": "Individual source headers listed in this document"
   },
   {

@@ -35,6 +35,8 @@
 #include "obor_prepare_co.h"
 #include "obor_prepare_progress.h"
 #include "obor_state_padding.h"
+#include "../port/libretro/obor_block_state.h"
+#include "../port/libretro/obor_state_config.h"
 #include "obor_profile.h"
 #include "obor_rewind.h"
 #if defined(__APPLE__)
@@ -48,6 +50,7 @@ static void mkdir_p(const char *path);
 
 static bool g_arena_owned;
 #include "obor_engines.h"
+#include "obor_capture_cadence.h"
 #include "obor_debug.h"
 #include "obor_padmap.h"
 
@@ -107,6 +110,11 @@ static FILE *g_trace;
 static long g_frame_no;
 static long g_last_unser = -99;
 static bool g_fault_quarantined;
+static obor_capture_cadence g_capture_cadence OBOR_RUNTIME;
+/* Diagnostic input clocks belong to the current frontend process. */
+static bool g_input_after_load OBOR_RUNTIME;
+static bool g_input_has_origin OBOR_RUNTIME;
+static long g_input_origin OBOR_RUNTIME;
 
 #define p_abi_version (g_vtbl->abi_version)
 #define p_boot (g_vtbl->boot)
@@ -128,6 +136,7 @@ static bool g_fault_quarantined;
 #define p_owned_begin (g_vtbl->owned_begin)
 #define p_owned_serialize (g_vtbl->owned_serialize)
 #define p_owned_end (g_vtbl->owned_end)
+#define p_prepare_state (g_vtbl->prepare_state)
 
 static void decide_engine(void);
 static void glue_collect_segments(void);
@@ -805,6 +814,8 @@ static void content_stop(void)
         stop_faulted_engine();
     }
     obor_profile_close();
+    obor_capture_cadence_reset(&g_capture_cadence);
+    g_input_has_origin = false;
     g_state_capacity = 0;
     rumble_stop();
     g_pm_nchars = 0;
@@ -1267,6 +1278,10 @@ void retro_reset(void)
  * any button (e.g. 1800-6000:attack:20:4). OBOR_TRACE=/path logs every
  * run/serialize/unserialize call with the frame counter, to compare a real
  * frontend's rewind sequence against the reference harness.
+ * OBOR_GLUE_INPUT_AFTER_LOAD=1 makes these input frames relative to the last
+ * successful load (first subsequent run is frame1). It sends no synthetic
+ * input before that load. This makes checkpoint comparisons independent of
+ * asynchronous frontend load-command latency; ordinary test routes are unchanged.
  * (g_trace/g_frame_no/g_last_unser are declared with the top statics.) */
 
 /* OBOR_GLUE_DUMP=prefix: write a PPM of every frame presented within 2
@@ -1340,6 +1355,8 @@ static void ginput_init(void)
     if (g_ngsegs >= 0)
         return;
     g_ngsegs = 0;
+    const char *relative = getenv("OBOR_GLUE_INPUT_AFTER_LOAD");
+    g_input_after_load = relative && !strcmp(relative, "1");
     const char *s = getenv("OBOR_GLUE_INPUT");
     if (!s)
         return;
@@ -1378,11 +1395,13 @@ static void ginput_init(void)
 
 static int ginput_state(unsigned id)
 {
+    if (g_input_after_load && !g_input_has_origin) return 0;
+    const long frame = g_input_after_load ? g_frame_no - g_input_origin : g_frame_no;
     for (int i = 0; i < g_ngsegs; i++) {
-        if (g_frame_no >= g_gsegs[i].from && g_frame_no <= g_gsegs[i].to &&
+        if (frame >= g_gsegs[i].from && frame <= g_gsegs[i].to &&
             g_gsegs[i].id == id) {
             if (g_gsegs[i].period)
-                return ((g_frame_no - g_gsegs[i].from) % g_gsegs[i].period) < g_gsegs[i].held;
+                return ((frame - g_gsegs[i].from) % g_gsegs[i].period) < g_gsegs[i].held;
             return 1;
         }
     }
@@ -1405,8 +1424,33 @@ static const struct { unsigned retro; int obor; } kPadMap[] = {
     { RETRO_DEVICE_ID_JOYPAD_SELECT, OBOR_BTN_ESC },
 };
 
+static bool present_audio_frame(const int16_t *samples, int32_t frames,
+                                bool profile_callbacks)
+{
+    if (p_get_exit_status() == OBOR_EXIT_MEMORY_FAULT) {
+        char reason[sizeof(g_error_reason)];
+        p_get_fault_message(reason, sizeof(reason));
+        stop_faulted_engine();
+        error_screen(reason);
+        present_error_frame();
+        return false;
+    }
+    if (frames > 0) {
+        uint64_t begin = profile_callbacks ? obor_profile_now() : 0;
+        audio_batch_cb(samples, (size_t)frames);
+        if (profile_callbacks)
+            obor_profile_record("audio", g_frame_no, begin, obor_profile_now(),
+                                0, 0, 0, 1, 0);
+    }
+    return true;
+}
+
 void retro_run(void)
 {
+    /* Current delivered audio, captured with the ordinary module globals.
+     * This replaces the previous static mixing buffer, not a separate history.
+     * Explicit reverse presentation can replay it without advancing the mixer. */
+    static struct { int16_t samples[2048 * 2]; int32_t frames; } audio_frame;
     if (g_loading) {
         loading_run();
         return;
@@ -1455,6 +1499,14 @@ void retro_run(void)
      * off and let the historical input drive the replay. */
     bool rewind_replay = p_startup_complete() &&
                          (g_last_unser >= g_frame_no - 1);
+    bool present_restored = false;
+    const char *reverse_mode = rewind_replay ? getenv("OBOR_REVERSE_PRESENTATION") : NULL;
+    if (reverse_mode && !strcmp(reverse_mode, "1")) {
+        struct retro_throttle_state throttle = {};
+        present_restored = env_cb(RETRO_ENVIRONMENT_GET_THROTTLE_STATE, &throttle) &&
+                           throttle.mode == RETRO_THROTTLE_REWINDING &&
+                           audio_frame.frames >= 0 && audio_frame.frames <= 2048;
+    }
     if (!rewind_replay) {
         for (int pl = 0; pl < OBOR_MAX_PLAYERS; pl++) {
             /* an in-flight special-move macro owns this player's pad */
@@ -1494,7 +1546,11 @@ void retro_run(void)
     if (debug_restored_frame)
         fprintf(stderr, "[obor] entering first engine frame after restore frame=%ld\n",
                 g_frame_no);
-    int engine_running = p_run_frame();
+    /* A restored state already has its exact framebuffer. Running one forward
+     * tick while explicitly rewinding can close a restored menu or start a
+     * movie worker again. Ordinary loads and unsupported frontends retain the
+     * existing forward path; reverse mode must be reported by the frontend. */
+    int engine_running = present_restored ? 1 : p_run_frame();
     if (debug_restored_frame)
         fprintf(stderr, "[obor] first engine frame after restore returned ok=%d\n",
                 engine_running);
@@ -1533,24 +1589,51 @@ void retro_run(void)
     const uint32_t *px = NULL;
     int32_t w = 0, h = 0, pitch = 0;
     p_get_video(&px, &w, &h, &pitch);
-    if (!present_video(px, w, h, pitch)) return;
+    const char *callback_profile = getenv("OBOR_PROFILE_CALLBACKS");
+    bool profile_callbacks = g_profile.file && callback_profile &&
+                             !strcmp(callback_profile, "1");
+    /* Keep both complete payloads from this engine tick. The platform policy
+     * chooses which frontend callback may wait first. */
+    bool audio_first = obor_state_audio_first();
+    bool prepare = !rewind_replay && p_startup_complete() &&
+        obor_state_coded_enabled() &&
+        obor_state_option("OBOR_STATE_PREPARE", OBOR_STATE_DEFAULT_ENABLED) &&
+        obor_capture_cadence_due(&g_capture_cadence, (uint64_t)g_frame_no);
+    if (!present_restored && (prepare || audio_first))
+        audio_frame.frames = p_get_audio(audio_frame.samples, 2048);
+    if (prepare) {
+        /* Audio advances authoritative mixer state. Finish it before preparing
+         * the current image, then spend codec work before presentation waits.
+         * The requested serialize still revalidates every changed byte. */
+        if (p_get_exit_status() != OBOR_EXIT_MEMORY_FAULT) {
+            uint64_t begin = obor_profile_now();
+            uint32_t prepared = p_prepare_state();
+            obor_profile_record("prepare", g_frame_no, begin, obor_profile_now(),
+                                g_state_capacity, prepared, 0, prepared != 0, 0);
+            if (!prepared) obor_capture_cadence_reset(&g_capture_cadence);
+        }
+    }
+    if (audio_first && !present_audio_frame(audio_frame.samples, audio_frame.frames,
+                                           profile_callbacks)) return;
+    uint64_t video_begin = profile_callbacks ? obor_profile_now() : 0;
+    bool presented = present_video(px, w, h, pitch);
+    if (profile_callbacks)
+        obor_profile_record("video", g_frame_no, video_begin, obor_profile_now(),
+                            0, 0, 0, presented, 0);
+    if (!presented) return;
     if (px && w > 0 && h > 0) {
         free(g_loading_pixels);
         g_loading_pixels = NULL;
     }
 
-    static int16_t abuf[2048 * 2];
-    int32_t frames = p_get_audio(abuf, 2048);
-    if (p_get_exit_status() == OBOR_EXIT_MEMORY_FAULT) {
-        char reason[sizeof(g_error_reason)];
-        p_get_fault_message(reason, sizeof(reason));
-        stop_faulted_engine();
-        error_screen(reason);
-        present_error_frame();
-        return;
-    }
-    if (frames > 0)
-        audio_batch_cb(abuf, (size_t)frames);
+    if (!present_restored && !prepare && !audio_first)
+        audio_frame.frames = p_get_audio(audio_frame.samples, 2048);
+    int32_t frames = audio_frame.frames;
+    if (!audio_first && !present_audio_frame(audio_frame.samples, frames,
+                                            profile_callbacks)) return;
+    if (present_restored && getenv("OBOR_STATE_TIMING"))
+        fprintf(stderr, "[obor-reverse] frame=%ld present_snapshot=1 audio_frames=%d\n",
+                g_frame_no, frames);
     /* For run rows the final profile column is an active-player bitmask.
      * State rows continue to use it for RETRO_ENVIRONMENT_GET_SAVESTATE_CONTEXT.
      * This opt-in signal records whether a route reached a live player entity
@@ -1871,6 +1954,8 @@ static void pristine_restore(void)
 
 static bool select_engine_vtbl(const char *engine, char *err, int err_len)
 {
+    obor_capture_cadence_reset(&g_capture_cadence);
+    g_input_has_origin = false;
     g_vtbl = NULL;
     if (!*engine && *g_selection_error) {
         snprintf(err, (size_t)err_len, "%s", g_selection_error);
@@ -2511,6 +2596,11 @@ static void loading_dispose(void)
  * Archive sizes and saved peaks are allocation hints, never engine selectors. */
 static uint32_t loading_capacity(const char *path)
 {
+    /* The frontend freezes its rewind allocation before engine boot. Keep
+     * the complete-block transport's contract consistent with
+     * the engine writer from that first query, including loading screens. */
+    if (obor_state_coded_enabled())
+        return obor_block_state_requested_capacity(getenv("OBOR_TEST_CODED_CAPACITY_MIB"));
     uint64_t footprint = 0, peak = 0, full = 0, inactive = 0, largest = 0;
     FILE *fp = fopen(path, "rb");
     if (fp) {
@@ -2764,6 +2854,35 @@ size_t retro_serialize_size(void)
     return g_state_capacity;
 }
 
+static void profile_state_identity(const char *operation, const void *data, size_t size)
+{
+    /* Diagnostic correlation only: record the complete block index (including
+     * every block's integrity CRC), never payloads or a second rewind history.
+     * Disabled for performance acceptance because hashing has its own cost. */
+    if (!g_profile.file || g_profile.rows >= 200000 ||
+        !getenv("OBOR_PROFILE_STATE_IDENTITIES") || !data || size < 32) return;
+    uint32_t header[8];
+    memcpy(header, data, sizeof(header));
+    if (header[0] != OBOR_BLOCK_STATE_MAGIC || header[1] != 1 ||
+        header[2] != OBOR_BLOCK_STATE_BLOCK ||
+        header[3] > OBOR_BLOCK_STATE_MAX_RAW / OBOR_BLOCK_STATE_BLOCK ||
+        (uint64_t)header[3] * 24 > size - sizeof(header)) return;
+    obor_sha256_ctx hash;
+    unsigned char digest[32];
+    obor_sha256_init(&hash);
+    obor_sha256_update(&hash, data, sizeof(header) + (size_t)header[3] * 24);
+    obor_sha256_final(&hash, digest);
+    char hex[65];
+    for (unsigned i = 0; i < sizeof(digest); ++i)
+        snprintf(hex + 2 * i, 3, "%02x", digest[i]);
+    fprintf(stderr, "[obor-state-id] %s frame=%ld index=%s raw=%u used=%u\n",
+            operation, g_frame_no, hex, header[4], header[5]);
+    /* A held rewind must observe its target before more states are popped.
+     * In particular, redirected Windows stderr can otherwise retain a batch
+     * of identities. This diagnostic is disabled in cadence measurements. */
+    fflush(stderr);
+}
+
 static uint32_t serialize_capture(void *data, size_t size, obor_state_ranges *ranges)
 {
     obor_profile_init();
@@ -2791,6 +2910,10 @@ static uint32_t serialize_capture(void *data, size_t size, obor_state_ranges *ra
         fprintf(g_trace, "f=%ld ser ok=%d sz=%zu\n", g_frame_no, (int)ok, size);
         fflush(g_trace);
     }
+    if (ok) profile_state_identity("capture", data, written);
+    if (ok && !ranges)
+        obor_capture_cadence_observe(&g_capture_cadence, (uint64_t)g_frame_no);
+    else obor_capture_cadence_reset(&g_capture_cadence);
     return ok ? written : 0;
 }
 
@@ -2835,6 +2958,8 @@ const obor_rewind_interface *retro_anybor_rewind_interface(uint32_t version, uin
 
 bool retro_unserialize(const void *data, size_t size)
 {
+    ginput_init();
+    obor_capture_cadence_reset(&g_capture_cadence);
     obor_profile_init();
     uint64_t profile_begin = obor_profile_now();
     /* Even a glue-level rejection invalidates caller ownership. A rewind pop
@@ -2865,10 +2990,18 @@ bool retro_unserialize(const void *data, size_t size)
             fprintf(stderr, "[obor] glue state restored after unserialize\n");
     }
     if (!ok && g_booted) queue_state_fault();
-    if (ok)
+    if (ok) {
         g_last_unser = g_frame_no;
+        if (g_input_after_load) {
+            g_input_origin = g_frame_no;
+            g_input_has_origin = true;
+            fprintf(stderr, "[obor-input] successful load origin=%ld\n", g_input_origin);
+            fflush(stderr);
+        }
+    }
     obor_profile_record("unserialize", g_frame_no, profile_begin,
                         obor_profile_now(), size, 0, 0, ok, -1);
+    if (ok) profile_state_identity("restore", data, size);
     if (getenv("OBOR_DEBUG"))
         fprintf(stderr, "[obor] retro_unserialize returning ok=%d\n", ok);
     if (g_trace) {

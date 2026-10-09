@@ -159,6 +159,8 @@ typedef struct {
 #endif
 static struct {
     int busy;
+    int handlers_live;
+    unsigned worker_leases;
     struct sigaction previous[2];
 #if defined(OBOR_FAULT_PTHREAD_TLS)
     pthread_key_t slot;
@@ -206,6 +208,61 @@ static fault_guard *current_guard(void) { return active_guard; }
 static int set_guard(fault_guard *guard) { active_guard = guard; return 0; }
 #endif
 
+#if OBOR_WRITE_WATCH_ENABLED && !defined(OBOR_FAULT_PTHREAD_TLS)
+#define OBOR_FAULT_WORKER_WATCH 1
+static __thread int watch_worker;
+int obor_fault_worker_acquire(void)
+{
+    if (!current_guard() || runtime.handlers_live != 2 ||
+        runtime.worker_leases == UINT32_MAX) return 0;
+    ++runtime.worker_leases;
+    return 1;
+}
+void obor_fault_worker_release(void)
+{
+    /* A join establishes that no worker can still be in our signal handler. */
+    if (!current_guard() || !runtime.worker_leases) abort();
+    --runtime.worker_leases;
+}
+void obor_fault_worker_enter(void) { watch_worker = 1; }
+void obor_fault_worker_leave(void) { watch_worker = 0; }
+unsigned obor_fault_worker_leases(void) { return runtime.worker_leases; }
+#endif
+
+/* Accept only a CPU write fault. In particular, retrying a second worker's
+ * already-unprotected page must never turn a non-executable arena jump into
+ * an endless sequence of handled faults. Unknown contexts fail closed. */
+static int watch_write_fault(void *context)
+{
+#if OBOR_WRITE_WATCH_ENABLED && defined(__x86_64__)
+    ucontext_t *machine = context;
+    return (machine->uc_mcontext.gregs[REG_ERR] & 0x12) == 0x02;
+#elif OBOR_WRITE_WATCH_ENABLED && defined(__aarch64__)
+    ucontext_t *machine = context;
+    const unsigned char *records = machine->uc_mcontext.__reserved;
+    size_t available = sizeof(machine->uc_mcontext.__reserved);
+    /* Linux arm64 UAPI: bounded, 16-byte-aligned context records; ESR_MAGIC
+     * contains ESR_EL1. Data abort from EL0 (EC=0x24), WnR=1 means a write.
+     * The kernel places ESR in this fixed area, before any extra context. */
+    while (available >= 16) {
+        uint32_t magic, size;
+        memcpy(&magic, records, 4); memcpy(&size, records + 4, 4);
+        if (!magic || size < 16 || size > available || size % 16) return 0;
+        if (magic == UINT32_C(0x45535201)) {
+            uint64_t esr;
+            memcpy(&esr, records + 8, 8);
+            return ((esr >> 26) & 0x3f) == 0x24 &&
+                (esr & (UINT64_C(1) << 6)) && !(esr & (UINT64_C(1) << 8));
+        }
+        records += size; available -= size;
+    }
+    return 0;
+#else
+    (void)context;
+    return 0;
+#endif
+}
+
 void obor_fault_allocator_activity(int entering)
 {
     fault_guard *guard = current_guard();
@@ -229,7 +286,12 @@ void obor_fault_abort(uint32_t kind, uintptr_t address)
 static void memory_signal(int signal, siginfo_t *info, void *context)
 {
     fault_guard *guard = current_guard();
-    if (guard && signal == SIGSEGV && info && info->si_code == SEGV_ACCERR &&
+    int watch_owner = guard != NULL;
+#ifdef OBOR_FAULT_WORKER_WATCH
+    watch_owner |= watch_worker;
+#endif
+    if (watch_owner && signal == SIGSEGV && info && info->si_code == SEGV_ACCERR &&
+        watch_write_fault(context) &&
         obor_write_watch_fault((uintptr_t)info->si_addr)) return;
     if (guard && info && info->si_code > 0) {
         ucontext_t *machine = (ucontext_t *)context;
@@ -290,6 +352,7 @@ int obor_fault_run_stack(void (*execute)(void *), void *context,
     sigemptyset(&action.sa_mask);
     action.sa_sigaction = memory_signal;
     action.sa_flags = SA_SIGINFO | SA_ONSTACK;
+    installed = runtime.handlers_live;
     for (; installed < 2; ++installed)
         if (sigaction(memory_signals[installed], &action, &runtime.previous[installed]) != 0)
             break;
@@ -300,14 +363,20 @@ int obor_fault_run_stack(void (*execute)(void *), void *context,
         __atomic_store_n(&runtime.busy, 0, __ATOMIC_RELEASE);
         return -1;
     }
+    runtime.handlers_live = installed;
     returned = sigsetjmp(guard.resume, 1) == 0;
     if (returned) {
         if (set_guard(&guard) == 0) execute(context);
         else returned = -1;
     }
     set_guard(NULL);
-    for (installed = 0; installed < 2; ++installed)
-        sigaction(memory_signals[installed], &runtime.previous[installed], NULL);
+    /* Decoder workers also run between guarded callbacks. Keep only signal
+     * dispatch alive there; the owner's stack/recovery target never escapes. */
+    if (!runtime.worker_leases) {
+        for (installed = 0; installed < 2; ++installed)
+            sigaction(memory_signals[installed], &runtime.previous[installed], NULL);
+        runtime.handlers_live = 0;
+    }
     sigaltstack(&saved_stack, NULL);
     guard_thread_finish();
     __atomic_store_n(&runtime.busy, 0, __ATOMIC_RELEASE);
@@ -319,6 +388,14 @@ int obor_fault_run_stack(void (*execute)(void *), void *context,
     }
     return returned;
 }
+#endif
+
+#ifndef OBOR_FAULT_WORKER_WATCH
+int obor_fault_worker_acquire(void) { return 0; }
+void obor_fault_worker_release(void) {}
+void obor_fault_worker_enter(void) {}
+void obor_fault_worker_leave(void) {}
+unsigned obor_fault_worker_leases(void) { return 0; }
 #endif
 
 int obor_fault_run(void (*execute)(void *), void *context, obor_fault *fault)

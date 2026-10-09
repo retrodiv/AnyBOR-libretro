@@ -1,3 +1,16 @@
+/* AnyBOR modification record: 2026-10-08.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Declare exact resident PCM content-member ranges for independently
+ * verified reconstruction; preserve allocation tails and mutable mixer
+ * state.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/4432.md
+ * at the source repository root. Original notices follow below.
+ */
+
 /*
  * OpenBOR - http://www.chronocrash.com
  * -----------------------------------------------------------------------
@@ -36,6 +49,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "obor_resources.h"
 /*
 Caution: move vorbis headers here otherwise the structs will
  get poisoned by #pragma in other header files, i.e. list.h
@@ -164,6 +178,7 @@ static int loadwave(char *filename, char *packname, samplestruct *buf, unsigned 
 
     int handle;
     int mulbytes;
+    int obor_pcm_offset;
 
     if(buf == NULL)
     {
@@ -266,6 +281,7 @@ static int loadwave(char *filename, char *packname, samplestruct *buf, unsigned 
         memset(buf->sampleptr, 0x80, maxsize + 8);
     }
 
+    obor_pcm_offset = seekpackfile(handle, 0, SEEK_CUR);
     if( readpackfile(handle, buf->sampleptr, maxsize) != (int)maxsize)
     {
         if(buf->sampleptr != NULL)
@@ -276,6 +292,11 @@ static int loadwave(char *filename, char *packname, samplestruct *buf, unsigned 
         closepackfile(handle);
         return 0;
     }
+
+    /* Keep allocation tails and mixer state in the ordinary snapshot. */
+    if(obor_pcm_offset >= 0)
+        obor_resources_member_bytes_loaded(filename, (uint32_t)obor_pcm_offset,
+            buf->sampleptr, buf->sampleptr, (size_t)(maxsize));
 
     closepackfile(handle);
 

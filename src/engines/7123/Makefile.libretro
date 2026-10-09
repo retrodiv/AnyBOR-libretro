@@ -150,7 +150,7 @@ ABI_SYMS    = obor_abi_version obor_boot obor_run_frame obor_startup_complete ob
               obor_set_button obor_get_audio obor_serialize_size \
               obor_serialize obor_unserialize obor_shutdown \
               obor_get_rumble obor_get_arena obor_get_player_state \
-              obor_owned_begin obor_owned_serialize obor_owned_end
+              obor_owned_begin obor_owned_serialize obor_owned_end obor_prepare_state
 LDR         = $(patsubst %gcc,%ld,$(CC))
 OBJCOPY     = $(patsubst %gcc,%objcopy,$(CC))
 # partial links need STATIC archives explicitly (a -lpng in `ld -r` would

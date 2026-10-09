@@ -1,3 +1,17 @@
+/* AnyBOR modification record: 2026-10-08.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Declare the resolved source member and original bitmap dimensions for
+ * independent sprite reconstruction proof.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/8023.md
+ * at the source repository root. Original notices follow below.
+ */
+
+#include "obor_resources.h"
+
 /*
  * OpenBOR - http://www.chronocrash.com
  * -----------------------------------------------------------------------
@@ -207,6 +221,8 @@ static int openpng(const char *filename, const char *packfilename) {
         printf("\n\n Error: The image %s is interlaced. Use non-interlaced PNG images.\n", filename);
         goto openpng_abort;
     }
+
+    obor_resources_image_opened(filename);
 
     return 1;
 
@@ -898,6 +914,7 @@ s_bitmap *loadbitmap(char *filename, char *packfile, int format)
            format);
     #endif
 
+    obor_resources_image_begin();
     if(!openimage(filename, packfile))
     {
         #ifdef VERBOSE
@@ -955,6 +972,7 @@ s_bitmap *loadbitmap(char *filename, char *packfile, int format)
         printf("loadbitmap: readimage OK for '%s'\n", filename);
     #endif
 
+    obor_resources_bitmap_loaded(bitmap, maxwidth, maxheight);
     return bitmap;
 }
 

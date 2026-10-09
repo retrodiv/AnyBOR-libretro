@@ -9,7 +9,7 @@
       "upstream_sha256": "f3801b6b2e30b61eb1254d1fc98676dd28b21c124731833f78e853a47f09a9e0"
     },
     "Makefile.libretro": {
-      "distributed_sha256": "97b27b9dfe72562e867c8e9ea3d1104386c5bab62533a0ab953528e6c1323f07",
+      "distributed_sha256": "963d3cb23c1c6ee8ffe2771a5ebda4d8aca362e3091211777698e86474dec328",
       "modified": true,
       "origin": "Project libretro build overlay",
       "summary": "Supply the shared libretro engine build and symbol-isolation rules.",
@@ -271,11 +271,12 @@
       "upstream_sha256": "2e8af3b1a8968d29038a42d42b44a6e537d57a0653eac9967e1e3122d6b76ea1"
     },
     "source/gamelib/soundmix.c": {
-      "distributed_sha256": "76e6c43aec50efdccebc4a8e598508866d830408c0d92a928e46c76fd92d0f83",
+      "distributed_sha256": "decda1d7920efed511e9c5521d99392358cffb651c14a0743c99f964ae79753d",
       "modified": true,
-      "summary": "Stream large decoded samples instead of retaining immutable PCM in rewind state, and map stricmp on macOS.",
+      "summary": "Declare exact resident PCM content-member ranges for independently verified reconstruction; preserve allocation tails and mutable mixer state. Map stricmp on macOS.",
       "topics": [
         "darwin-platform-support",
+        "reconstructible-resources",
         "record-dates-and-file-notices"
       ],
       "upstream_sha256": "43619d5feae2cb5d6d85b00b9880164076a861bbfc6da81ae14552399ceb6428"

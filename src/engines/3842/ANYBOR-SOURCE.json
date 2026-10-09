@@ -9,7 +9,7 @@
       "upstream_sha256": "fc53280baa67ef58e507cea648f8838fad9abe675fa098a5dc99dfe4ecd0e75c"
     },
     "Makefile.libretro": {
-      "distributed_sha256": "97b27b9dfe72562e867c8e9ea3d1104386c5bab62533a0ab953528e6c1323f07",
+      "distributed_sha256": "963d3cb23c1c6ee8ffe2771a5ebda4d8aca362e3091211777698e86474dec328",
       "modified": true,
       "origin": "Project libretro build overlay",
       "summary": "Supply the shared libretro engine build and symbol-isolation rules.",
@@ -85,9 +85,12 @@
       "upstream_sha256": "899c3e1243e2ad77d1de157b43b2e5ac597aa348e265ef5e0fa396af43bbcdd6"
     },
     "source/gamelib/bitmap.c": {
-      "distributed_sha256": "3b85fa2711c1928e848477b0e616ffd232c0f0404921027436a5675d9c91d081",
-      "modified": false,
-      "topics": [],
+      "distributed_sha256": "2c11a7a5392f23d613a4a01edf02cc9829ebe077c88b0524fc9aff2e987938f0",
+      "modified": true,
+      "summary": "Declare physical bitmap crops so independent sprite reconstruction composes each source rectangle without discarding unproven or modified bytes.",
+      "topics": [
+        "reconstructible-resources"
+      ],
       "upstream_sha256": "3b85fa2711c1928e848477b0e616ffd232c0f0404921027436a5675d9c91d081"
     },
     "source/gamelib/bitmap.h": {
@@ -179,12 +182,12 @@
       "upstream_sha256": "1cd9bad27b7c481f5a84bcf5ad3e3d195e4785ea0f11937480aee273ad42758e"
     },
     "source/gamelib/loadimg.c": {
-      "distributed_sha256": "4d3df2b161be1b3a03360b96c91bcfb271221632bcbaefbd52f19ae668c82e9e",
+      "distributed_sha256": "6669d0628eea528b7f98e8722fd79c41a5c52dc9ce9bccdcc6efa69ea2bc6f94",
       "modified": true,
-      "summary": "Validate legacy PCX headers, read uncompressed indexed PCX scanlines, and represent RIFF/WAVE paths used as animation frames with an empty frame.",
+      "summary": "Validate legacy PCX headers, read uncompressed indexed PCX scanlines, and represent RIFF/WAVE paths used as animation frames with an empty frame. Declare the resolved source member and original bitmap dimensions for independent sprite reconstruction proof.",
       "topics": [
         "image-loader-safety",
-        "record-dates-and-file-notices"
+        "reconstructible-resources"
       ],
       "upstream_sha256": "1b54ac7b265ce7a4b3bf9c5ca1c849b6400ff5bb8d771d966878bedbb7669c0c"
     },
@@ -273,12 +276,13 @@
       "upstream_sha256": "aea628c1ab97d06ada78d87cffef625176fb8186190e5d601fc9a575e8f6d40e"
     },
     "source/gamelib/soundmix.c": {
-      "distributed_sha256": "2644f0a63156902c5a3b2786db5613c1330310c472ddcc1a344e0e948761a4a6",
+      "distributed_sha256": "c514b0b9ac117f3e045929e7a5fa0dcbf29ffb69444e8ade866334fa8d1dea3f",
       "modified": true,
-      "summary": "Stream large decoded samples instead of retaining immutable PCM in rewind state, and map stricmp on macOS.",
+      "summary": "Declare exact resident PCM content-member ranges for independently verified reconstruction; preserve allocation tails and mutable mixer state.",
       "topics": [
         "compiler-warning-cleanup",
         "darwin-platform-support",
+        "reconstructible-resources",
         "record-dates-and-file-notices"
       ],
       "upstream_sha256": "864c598fc63e27c1182aa62b47cdf50724018abf06b091f09a420b08dae5a7d2"
@@ -290,9 +294,12 @@
       "upstream_sha256": "5d83ba9c527e33bd98473934822543d3ff9f2f537368cc013b387cdd80f33e51"
     },
     "source/gamelib/sprite.c": {
-      "distributed_sha256": "82614bcf3814ac7606d7a13b34a8f00e74ff94bbf09d6893b2eaef06e49a3eb6",
-      "modified": false,
-      "topics": [],
+      "distributed_sha256": "69228bd4a5a4cc8845b7f5af364c6b383de33ab7c4caf991ea5e777344322949",
+      "modified": true,
+      "summary": "Declare initialized encoded sprite-body ranges and source crops for exact reconstruction proof, retaining headers, palettes and mutable changes.",
+      "topics": [
+        "reconstructible-resources"
+      ],
       "upstream_sha256": "82614bcf3814ac7606d7a13b34a8f00e74ff94bbf09d6893b2eaef06e49a3eb6"
     },
     "source/gamelib/sprite.h": {

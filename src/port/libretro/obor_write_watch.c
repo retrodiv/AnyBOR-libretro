@@ -19,7 +19,7 @@ typedef struct {
     size_t extent, protected_length, maximum, page_size, mapping_size;
     uint64_t epoch;
     volatile sig_atomic_t armed;
-    volatile uint64_t changed[];
+    uint64_t changed[];
 } write_watch;
 
 /* Neither this pointer nor its anonymous metadata mapping is a part of a
@@ -28,7 +28,9 @@ static write_watch *watch OBOR_RUNTIME;
 
 int obor_write_watch_start(void *base, size_t length, size_t maximum)
 {
-    if (watch) return 0;
+    if (watch || obor_fault_worker_leases()) return 0;
+    _Static_assert(__atomic_always_lock_free(sizeof(uint64_t), 0),
+                   "Signal write tracking requires lock-free page epochs");
     long page = sysconf(_SC_PAGESIZE);
     if (page <= 0 || ((size_t)page & ((size_t)page - 1)) || !length ||
         length > maximum || maximum > OBOR_ARENA_MAX_SZ - (16UL << 20) ||
@@ -57,12 +59,12 @@ int obor_write_watch_start(void *base, size_t length, size_t maximum)
 int obor_write_watch_extend(size_t length)
 {
     write_watch *w = watch;
-    if (!w || length < w->extent || length > w->maximum ||
+    if (!w || obor_fault_worker_leases() || length < w->extent || length > w->maximum ||
         length % w->page_size) return 0;
     /* Newly allocated pages were writable before the next protection pass.
      * Conservatively include all their bytes, even without a CPU fault. */
     for (size_t i = w->extent / w->page_size; i < length / w->page_size; ++i)
-        w->changed[i] = w->epoch;
+        __atomic_store_n(&w->changed[i], w->epoch, __ATOMIC_RELEASE);
     w->extent = length;
     return 1;
 }
@@ -91,6 +93,7 @@ int obor_write_watch_arm(size_t length)
 int obor_write_watch_stop(void)
 {
     write_watch *w = watch;
+    if (obor_fault_worker_leases()) return 0;
     if (!w) return 1;
     int saved_errno = errno;
     if (w->protected_length &&
@@ -111,17 +114,20 @@ int obor_write_watch_fault(uintptr_t address)
     if (!w || !w->armed || address < w->base ||
         address - w->base >= w->protected_length) return 0;
     size_t index = (address - w->base) / w->page_size;
-    if (w->changed[index] == w->epoch) return 0;
+    /* Two workers can fault on this page before either mprotect completes.
+     * Both may retry the write, even if the other already marked it. Calling
+     * mprotect again is safe and needs no signal-handler lock or spin loop. */
     int saved_errno = errno;
     int result = mprotect((void *)(w->base + index * w->page_size),
                           w->page_size, PROT_READ | PROT_WRITE);
-    if (!result) w->changed[index] = w->epoch;
+    if (!result) __atomic_store_n(&w->changed[index], w->epoch, __ATOMIC_RELEASE);
     errno = saved_errno;
     return result == 0;
 }
 
 void obor_write_watch_abandon(void)
 {
+    if (obor_fault_worker_leases()) obor_fault_abort(OBOR_FAULT_STATE, 0);
     write_watch *w = watch;
     if (!w) return;
     watch = NULL;
@@ -141,7 +147,7 @@ int obor_write_watch_prepare_io(void *buffer, size_t length)
     size_t first = (begin - w->base) / w->page_size;
     size_t last = (end - 1 - w->base) / w->page_size;
     for (size_t i = first; i <= last; ++i)
-        if (w->changed[i] != w->epoch &&
+        if (__atomic_load_n(&w->changed[i], __ATOMIC_ACQUIRE) != w->epoch &&
             !obor_write_watch_fault(w->base + i * w->page_size)) return 0;
     return 1;
 }
@@ -150,7 +156,7 @@ uint64_t obor_write_watch_epoch(void) { return watch ? watch->epoch : 0; }
 uint64_t obor_write_watch_page_epoch(size_t page)
 {
     return watch && page < watch->extent / watch->page_size ?
-        watch->changed[page] : UINT64_MAX;
+        __atomic_load_n(&watch->changed[page], __ATOMIC_ACQUIRE) : UINT64_MAX;
 }
 size_t obor_write_watch_page_size(void) { return watch ? watch->page_size : 0; }
 #endif

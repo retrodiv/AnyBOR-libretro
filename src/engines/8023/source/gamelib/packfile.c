@@ -1,11 +1,11 @@
-/* AnyBOR modification record: 2026-09-12.
+/* AnyBOR modification record: 2026-10-09.
  * Port maintained by retrodiv <retrodiv@proton.me>.
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
  * Upstream code retains its original license and notices.
- * Repair PAK handles after state loads, close resources on reset, prune
- * unused frontend APIs, and compile the case-insensitive loose-file search
- * on macOS.
+ * Repair PAK handles and rebind owned content paths after state loads, close
+ * resources on reset, prune unused frontend APIs, and compile loose-file
+ * search on macOS.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/8023.md
  * at the source repository root. Original notices follow below.
@@ -800,6 +800,18 @@ void obor_packfile_closeall(void)
         close(pakfd);
         pakfd = -1;
     }
+}
+
+/* AnyBOR: these are owned operating-system paths, not game state. */
+#include "obor_content_path.h"
+int obor_packfile_rebind_content(const char *saved, const char *current)
+{
+    for(size_t i = 0; i < packfile_handle_table.capacity; ++i) {
+        s_packfile_handle *h = &packfile_handle_table.handle[i];
+        if(h->type == PACKFILE_HANDLE_DIRECT &&
+           !obor_content_path_rebind(&h->source_path, saved, current)) return 0;
+    }
+    return 1;
 }
 
 int obor_packfile_fixup(const char *pakpath)

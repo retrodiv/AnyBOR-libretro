@@ -1,10 +1,12 @@
-/* AnyBOR modification record: 2026-09-12.
+/* AnyBOR modification record: 2026-10-09.
  * Port maintained by retrodiv <retrodiv@proton.me>.
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
  * Upstream code retains its original license and notices.
- * Stream large decoded samples instead of retaining immutable PCM in rewind
- * state, and map stricmp on macOS.
+ * Declare exact resident PCM content-member ranges for independent
+ * reconstruction, stream large samples, and rebind owned content paths after
+ * cold state loads. Stream large decoded samples through the engine's
+ * bounded streaming path.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/8023.md
  * at the source repository root. Original notices follow below.
@@ -50,6 +52,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "obor_resources.h"
 /*
 Caution: move vorbis headers here otherwise the structs will
  get poisoned by #pragma in other header files, i.e. list.h
@@ -116,6 +119,18 @@ s_audio_global audio_global =
 //static List samplelist;
 static s_soundcache *soundcache = NULL;
 static int sound_cached = 0;
+
+/* AnyBOR: resident samples can later reopen their source as streams. Their
+ * content identity survives a state load, the old session's path does not. */
+#include "obor_content_path.h"
+int obor_sound_rebind_content(const char *saved, const char *current)
+{
+    for(int i = 0; i < sound_cached; ++i) {
+        if(!obor_content_path_rebind(&soundcache[i].packfilename, saved, current))
+            return 0;
+    }
+    return 1;
+}
 int sample_play_id = 0;
 
 static s_sound_channel_pool sound_channel_pool;
@@ -490,6 +505,11 @@ static bool loadwave(char *filename, char *packname, samplestruct *sample, uint6
         closepackfile(packfile_handle);
         return false;
     }
+
+    /* Declare only resident PCM bytes, after the complete read succeeds. */
+    if((uint64_t)data_chunk_offset <= UINT32_MAX)
+        obor_resources_member_bytes_loaded(filename, (uint32_t)data_chunk_offset,
+            sample->sampleptr, sample->sampleptr, (size_t)sample_data_bytes);
 
     closepackfile(packfile_handle);
 

@@ -1,16 +1,19 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
  * Earlier incorporated material retains its original authorship notices. */
-/* Small streaming SHA-256 implementation used only to key extracted ZIPs.
+/* Small streaming SHA-256 implementation for content/cache integrity.
  * It has no allocation and no dependency on platform crypto libraries. */
 #ifndef OBOR_SHA256_H
 #define OBOR_SHA256_H
 
 #include <stdint.h>
-#include <stdio.h>
+#include <stddef.h>
 #include <string.h>
+#ifndef OBOR_SHA256_STREAM_ONLY
+#include <stdio.h>
 #include <sys/stat.h>
 #include "obor_prepare_progress.h"
+#endif
 
 typedef struct {
     uint32_t h[8];
@@ -111,6 +114,7 @@ static void obor_sha256_final(obor_sha256_ctx *c, uint8_t out[32])
     }
 }
 
+#ifndef OBOR_SHA256_STREAM_ONLY
 static int obor_sha256_file(const char *path, char hex[65])
 {
     FILE *f = fopen(path, "rb");
@@ -146,5 +150,5 @@ static int obor_sha256_file(const char *path, char hex[65])
     hex[64] = '\0';
     return 1;
 }
-
+#endif /* !OBOR_SHA256_STREAM_ONLY */
 #endif

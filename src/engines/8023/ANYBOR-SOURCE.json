@@ -9,7 +9,7 @@
       "upstream_sha256": "b8f3916944f0b5aee216ef7a494820d17ae658336a4680992dc244ebedecf3ea"
     },
     "Makefile.libretro": {
-      "distributed_sha256": "97b27b9dfe72562e867c8e9ea3d1104386c5bab62533a0ab953528e6c1323f07",
+      "distributed_sha256": "963d3cb23c1c6ee8ffe2771a5ebda4d8aca362e3091211777698e86474dec328",
       "modified": true,
       "origin": "Project libretro build overlay",
       "summary": "Supply the shared libretro engine build and symbol-isolation rules.",
@@ -158,9 +158,12 @@
       "upstream_sha256": "300070e53fa576bd550bc11c377e6328c90d1cd266e18e5fce7d275c79257fc0"
     },
     "source/gamelib/loadimg.c": {
-      "distributed_sha256": "9c6a61772c1ed714c16e7fa0c777c46f1c54c05861d1bf9e13c875f2b2801edc",
-      "modified": false,
-      "topics": [],
+      "distributed_sha256": "e1454507d699af56ddc87e9b07461a6d2ce251d4910ee875c4a30170fb3729f7",
+      "modified": true,
+      "summary": "Declare the resolved source member and original bitmap dimensions for independent sprite reconstruction proof.",
+      "topics": [
+        "reconstructible-resources"
+      ],
       "upstream_sha256": "9c6a61772c1ed714c16e7fa0c777c46f1c54c05861d1bf9e13c875f2b2801edc"
     },
     "source/gamelib/loadimg.h": {
@@ -182,9 +185,9 @@
       "upstream_sha256": "97bfca87a0eab276a7899153a0a0bdfa0e8e7ed32081df161eaba839fae3de78"
     },
     "source/gamelib/packfile.c": {
-      "distributed_sha256": "78579de50556e1f465a52a5e466584d25d9ec9f02a037e1b39d6230b554625ed",
+      "distributed_sha256": "50cec74e5a167ee79dd0cccfa1ed7f629baafd90edb280bd97fd67b0c9eccf65",
       "modified": true,
-      "summary": "Repair PAK handles after state loads, close resources on reset, prune unused frontend APIs, and compile the case-insensitive loose-file search on macOS.",
+      "summary": "Repair PAK handles and rebind owned content paths after state loads, close resources on reset, prune unused frontend APIs, and compile loose-file search on macOS.",
       "topics": [
         "darwin-platform-support",
         "packfile-state-and-resource-lifecycle",
@@ -285,11 +288,13 @@
       "upstream_sha256": "c1953b4ab90fbeee0f144486cb9f14d55dddb9f083138ab55b843fc1d154e370"
     },
     "source/gamelib/soundmix.c": {
-      "distributed_sha256": "8c9a1a15c511cde67db36568db4ba6cfc09c4c0363603675555e7c39d96eadde",
+      "distributed_sha256": "1c619a694c26533398178a128bdbdfacf43e2ed352bf57462ca1e881c90e5df4",
       "modified": true,
-      "summary": "Stream large decoded samples instead of retaining immutable PCM in rewind state, and map stricmp on macOS.",
+      "summary": "Declare exact resident PCM content-member ranges for independent reconstruction, stream large samples, and rebind owned content paths after cold state loads. Stream large decoded samples through the engine's bounded streaming path.",
       "topics": [
-        "audio-memory-layout"
+        "audio-memory-layout",
+        "packfile-state-and-resource-lifecycle",
+        "reconstructible-resources"
       ],
       "upstream_sha256": "4b070f8f9fcbdc0894c085f2b0513b0d473047a105e757d8e96819c61e640e60"
     },
@@ -300,9 +305,12 @@
       "upstream_sha256": "71995015fb3c03b972afd453d6fcfee20addda286c16ceba94b8b108a09168dd"
     },
     "source/gamelib/sprite.c": {
-      "distributed_sha256": "14a82dcaf9f0344e7a5be9519da527b9cccff36e431761d67db2821cae43415f",
-      "modified": false,
-      "topics": [],
+      "distributed_sha256": "069c9fe04ecdda5e088fe7c84b778a2ba3d9ee6173f1e66585fa76ce6ec5b1df",
+      "modified": true,
+      "summary": "Declare initialized encoded sprite-body ranges and source crops for exact reconstruction proof, retaining headers, palettes and mutable changes.",
+      "topics": [
+        "reconstructible-resources"
+      ],
       "upstream_sha256": "14a82dcaf9f0344e7a5be9519da527b9cccff36e431761d67db2821cae43415f"
     },
     "source/gamelib/sprite.h": {

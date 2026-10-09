@@ -1,3 +1,18 @@
+/* AnyBOR modification record: 2026-10-08.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Declare physical bitmap crops so independent sprite reconstruction
+ * composes each source rectangle without discarding unproven or modified
+ * bytes.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/4432.md
+ * at the source repository root. Original notices follow below.
+ */
+
+#include "obor_resources.h"
+
 /*
  * OpenBOR - http://www.chronocrash.com
  * -----------------------------------------------------------------------
@@ -383,6 +398,8 @@ void clipbitmap(s_bitmap *bitmap, int *clipl, int *clipr, int *clipt, int *clipb
     {
         *clipb = bclipmove;
     }
+    obor_resources_bitmap_cropped(bitmap, lclipmove, tclipmove,
+        bitmap->width, bitmap->height);
 }
 
 

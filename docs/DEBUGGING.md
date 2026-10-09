@@ -48,6 +48,12 @@ upload files. `OBOR_DEBUG=1` or a local `obor_debug.enable` file enables
 engine diagnostics. `OBOR_TRACE=/path/to/file` records frontend frame and
 save-state calls. `OBOR_GLUE_DUMP=/path/prefix` writes local frame captures
 around state restoration. `OBOR_GLUE_INPUT` supplies scripted test input.
+With `OBOR_GLUE_INPUT_AFTER_LOAD=1`, its frame ranges start at the most recent
+successful state load; the next run is frame 1 and no scripted input is sent
+before the load. This permits repeatable checkpoint comparisons despite
+frontend command latency. Failed loads do not move the origin; reset and
+content changes require a new successful load. Leave it unset for routes that
+use absolute frame numbers or traverse menus through real rewind.
 The game-log core option displays local engine log messages.
 
 Logs and captures may contain local paths, game names, game script text or

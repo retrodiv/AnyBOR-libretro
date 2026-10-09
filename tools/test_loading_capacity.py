@@ -4,6 +4,7 @@ SPDX-License-Identifier: BSD-3-Clause
 Copyright (c) 2026 retrodiv <retrodiv@proton.me>
 """
 import importlib.util
+import csv
 import os
 from pathlib import Path
 import re
@@ -49,20 +50,40 @@ class LoadingCapacityTests(unittest.TestCase):
             system.mkdir()
             env = {key: value for key, value in os.environ.items() if not key.startswith('OBOR_')}
             env.update(OBOR_ENGINE='6391', OBOR_SKIP_LOADING='1', OBOR_FIXED_STATE_FRONTEND='1',
-                       OBOR_STATE_CHECK='1', OBOR_STATE_CHECK_START='900', OBOR_STATE_CHECK_EVERY='60',
                        OBOR_INPUT='180-360:start,400-403:attack,600-603:start,900-903:attack',
                        OBOR_RAREWIND='1100,4', OBOR_RAREWIND_START='1092', OBOR_RAREWIND_BUFFERS='4')
-            result = subprocess.run([str(host), str(CORE), str(pak), str(system), '1200'],
-                                    env=env, capture_output=True, text=True, timeout=90)
-            log = result.stdout + result.stderr
-            self.assertEqual(result.returncode, 0, log)
-            heaps = [int(size) for size in re.findall(r'state_contract[^\n]* heap=(\d+)', log)]
-            self.assertTrue(heaps and max(heaps) > pak.stat().st_size, log)
-            print('Authored compressed resources: PACK=%d heap=%d' %
-                  (pak.stat().st_size, max(heaps)))
-            self.assertIn('frames=1200', log)
-            self.assertEqual(len(re.findall(r' MATCH\b', log)), 3, log)
-            self.assertIn('cwd_restored=1', log)
+            for legacy in (True, False):
+                with self.subTest(writer='legacy' if legacy else 'compiled-default'):
+                    settings = dict(env)
+                    if legacy:
+                        # The structural checker parses OBS3. Keep that legacy
+                        # contract regression separate from opaque OBC1 replay.
+                        settings.update(OBOR_COMPRESSED_STATES='0', OBOR_STATE_CHECK='1',
+                            OBOR_STATE_CHECK_START='900', OBOR_STATE_CHECK_EVERY='60')
+                    else:
+                        settings['OBOR_PROFILE'] = str(work / 'default-profile.csv')
+                    result = subprocess.run([str(host), str(CORE), str(pak), str(system), '1200'],
+                                            env=settings, capture_output=True, text=True, timeout=90)
+                    log = result.stdout + result.stderr
+                    self.assertEqual(result.returncode, 0, log)
+                    if legacy:
+                        heaps = [int(size) for size in re.findall(r'state_contract[^\n]* heap=(\d+)', log)]
+                        self.assertTrue(heaps and max(heaps) > pak.stat().st_size, log)
+                        print('Authored compressed resources: PACK=%d heap=%d' %
+                              (pak.stat().st_size, max(heaps)))
+                    else:
+                        # The frontend reserves before content initialization.
+                        # Four complete buffers now fit within 256 MiB even
+                        # after these heavily compressed resources expand.
+                        self.assertRegex(log, r'loading_frames=\d+ initial_capacity=67108864')
+                        with (work / 'default-profile.csv').open() as profile:
+                            captures = [r for r in csv.DictReader(profile) if r['event'] == 'serialize']
+                        self.assertTrue(captures)
+                        self.assertEqual({int(r['capacity']) for r in captures}, {64 << 20})
+                        self.assertTrue(all(r['ok'] == '1' for r in captures))
+                    self.assertIn('frames=1200', log)
+                    self.assertEqual(len(re.findall(r' MATCH\b', log)), 3, log)
+                    self.assertIn('cwd_restored=1', log)
 
 
 if __name__ == '__main__':

@@ -1,10 +1,11 @@
-/* AnyBOR modification record: 2026-09-12.
+/* AnyBOR modification record: 2026-10-08.
  * Port maintained by retrodiv <retrodiv@proton.me>.
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
  * Upstream code retains its original license and notices.
- * Stream large decoded samples instead of retaining immutable PCM in rewind
- * state, and map stricmp on macOS.
+ * Declare exact resident PCM content-member ranges for independently
+ * verified reconstruction; preserve allocation tails and mutable mixer
+ * state. Map stricmp on macOS.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/3400.md
  * at the source repository root. Original notices follow below.
@@ -47,6 +48,7 @@
 
 #include <stdio.h>
 #include <string.h>
+#include "obor_resources.h"
 #include <assert.h>
 #include "utils.h"
 #include "stristr.h"
@@ -203,6 +205,7 @@ static int loadwave(char *filename, char *packname, samplestruct *buf, unsigned 
 
 	int handle;
 	int mulbytes;
+	int obor_pcm_offset;
 
 
 	if(buf==NULL) return 0;
@@ -273,6 +276,7 @@ static int loadwave(char *filename, char *packname, samplestruct *buf, unsigned 
 	if(fmt.samplebits==8) memset(buf->sampleptr, 0x80, maxsize*mulbytes+8);
 	else memset(buf->sampleptr, 0, maxsize*mulbytes+8);
 
+	obor_pcm_offset = seekpackfile(handle, 0, SEEK_CUR);
 	if(readpackfile(handle, buf->sampleptr, maxsize*mulbytes) != (int)maxsize*mulbytes){
 		if(buf->sampleptr != NULL){
 			free(buf->sampleptr);
@@ -281,6 +285,11 @@ static int loadwave(char *filename, char *packname, samplestruct *buf, unsigned 
 		closepackfile(handle);
 		return 0;
 	}
+
+	/* Keep allocation tails and mixer state in the ordinary snapshot. */
+	if(obor_pcm_offset >= 0)
+	    obor_resources_member_bytes_loaded(filename, (uint32_t)obor_pcm_offset,
+	        buf->sampleptr, buf->sampleptr, (size_t)(maxsize*mulbytes));
 
 	closepackfile(handle);
 

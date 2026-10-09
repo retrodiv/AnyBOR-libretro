@@ -5,10 +5,11 @@
 #include <stddef.h>
 #include <stdint.h>
 
-/* The fault guard owns the current thread. Worker creation suspends protection
- * before publishing a worker; captures are refused while workers are alive. */
+/* The fault guard owns the current thread. Explicitly registered engine
+ * workers can retain protection with pinned dispatch; captures, rearming and
+ * destruction are refused until join. Other workers require suspension. */
 #if defined(__linux__) && !defined(__ANDROID__) && \
-    (defined(__aarch64__) || defined(OBOR_WRITE_WATCH_TEST))
+    (defined(__aarch64__) || defined(__x86_64__) || defined(OBOR_WRITE_WATCH_TEST))
 #define OBOR_WRITE_WATCH_ENABLED 1
 int obor_write_watch_start(void *base, size_t length, size_t maximum);
 int obor_write_watch_extend(size_t length);

@@ -15,6 +15,9 @@
  *   OBOR_DUMP_EVERY=N     dump a PPM every N frames (needs ppm_prefix)
  *   OBOR_SAVE_AT=N / OBOR_SAVE_STATE=file   serialize at frame N
  *   OBOR_LOAD_AT=N / OBOR_LOAD_STATE=file   unserialize at frame N
+ *   OBOR_LOAD_SOURCE_FRAME=N   align host pad inputs after a successful load
+ *   OBOR_REPLAY_TRACE=FIRST,LAST   video/audio digests indexed by input frame
+ *   OBOR_REPLAY_AUDIO=file   bounded PCM callback evidence for that trace range
  *   OBOR_GAMELOG=On|Off   set the Forward game log core option
  *   OBOR_CRT_TV=On|Off / OBOR_CRT_TOGGLE_AT=N   CRT option and live toggle
  *   OBOR_VIDEO_TRACE=1 / OBOR_OPTIONS_VERSION=0|2   video/option diagnostics
@@ -174,6 +177,8 @@ static int g_shutdown;
 static unsigned long g_video_calls;
 static int g_variable_states;
 static int g_startup_complete;
+static int g_reverse_presentation;
+static uint32_t g_frame_audio_hash;
 
 static void host_log(enum retro_log_level level, const char *format, ...)
 {
@@ -372,6 +377,12 @@ static bool env_cb(unsigned cmd, void *data)
         }
         return true;
     }
+    case RETRO_ENVIRONMENT_GET_THROTTLE_STATE:
+        if (!getenv("OBOR_HOST_THROTTLE")) return false;
+        ((struct retro_throttle_state *)data)->mode = g_reverse_presentation ?
+            RETRO_THROTTLE_REWINDING : RETRO_THROTTLE_UNBLOCKED;
+        ((struct retro_throttle_state *)data)->rate = 60.0f;
+        return true;
     case RETRO_ENVIRONMENT_SET_PIXEL_FORMAT:
         return *(enum retro_pixel_format *)data == RETRO_PIXEL_FORMAT_XRGB8888;
     case RETRO_ENVIRONMENT_GET_SYSTEM_DIRECTORY:
@@ -511,19 +522,83 @@ static void video_cb(const void *data, unsigned width, unsigned height,
         g_nonblack_max = nb;
 }
 
+static FILE *replay_audio_file;
+static size_t replay_audio_bytes;
+
+static int replay_source_frame(void)
+{
+    static int initialized, first = -1, last = -1;
+    if (!initialized) {
+        const char *range = getenv("OBOR_REPLAY_TRACE");
+        if (range && sscanf(range, "%d,%d", &first, &last) != 2)
+            first = last = -1;
+        initialized = 1;
+    }
+    int source = g_frame + g_input_frame_offset;
+    return first >= 0 && source >= first && source <= last ? source : -1;
+}
+
+/* Native-endian test records: source frame, stereo-frame count, PCM16.
+ * Evidence is bounded independently of the host's process-tree guard. */
+static void trace_replay_audio(const int16_t *data, size_t frames)
+{
+    static int initialized;
+    static const char *path;
+    if (!initialized) { path = getenv("OBOR_REPLAY_AUDIO"); initialized = 1; }
+    if (!path) return;
+    int source = replay_source_frame();
+    if (source < 0 || !frames) return;
+    if (frames > 32768 || replay_audio_bytes > (32u << 20) - 8 - frames * 4) {
+        fprintf(stderr, "replay audio evidence exceeds its32MiB bound\n");
+        exit(1);
+    }
+    if (!replay_audio_file) replay_audio_file = fopen(path, "wb");
+    uint32_t header[2] = {(uint32_t)source, (uint32_t)frames};
+    if (!replay_audio_file || fwrite(header, sizeof(header), 1, replay_audio_file) != 1 ||
+        fwrite(data, sizeof(*data) * 2, frames, replay_audio_file) != frames) {
+        fprintf(stderr, "cannot write replay audio evidence\n");
+        exit(1);
+    }
+    replay_audio_bytes += sizeof(header) + frames * 4;
+}
+
 static void audio_sample_cb(int16_t l, int16_t r)
 {
+    const int16_t pair[2] = {l, r};
+    trace_replay_audio(pair, 1);
+    g_frame_audio_hash = (g_frame_audio_hash ^ (uint16_t)l) * 16777619u;
+    g_frame_audio_hash = (g_frame_audio_hash ^ (uint16_t)r) * 16777619u;
     g_audio_energy += (l > 0 ? l : -l) + (r > 0 ? r : -r);
 }
 
 static size_t audio_batch_cb(const int16_t *data, size_t frames)
 {
-    for (size_t i = 0; i < frames * 2; i++)
+    trace_replay_audio(data, frames);
+    for (size_t i = 0; i < frames * 2; i++) {
+        g_frame_audio_hash = (g_frame_audio_hash ^ (uint16_t)data[i]) * 16777619u;
         g_audio_energy += (unsigned)(data[i] > 0 ? data[i] : -data[i]);
+    }
     return frames;
 }
 
 static void input_poll_cb(void) {}
+
+/* Opt-in output evidence for matching-input, new-process state replay. The
+ * source frame follows the host input offset after a successful manual load.
+ * This observes callbacks only and never alters the core's serialized state. */
+static void trace_replay_frame(void)
+{
+    int source = replay_source_frame();
+    if (source < 0) return;
+    uint32_t hash = 2166136261u;
+    for (unsigned y = 0; g_fb && y < g_fh; ++y) {
+        const uint32_t *row = (const uint32_t *)((const uint8_t *)g_fb + y * g_fpitch);
+        for (unsigned x = 0; x < g_fw; ++x)
+            hash = (hash ^ row[x]) * 16777619u;
+    }
+    printf("replay_frame source=%d width=%u height=%u video=%08x audio=%08x\n",
+           source, g_fw, g_fh, hash, g_frame_audio_hash);
+}
 
 static int16_t input_state_cb(unsigned port, unsigned device, unsigned index,
                               unsigned id)
@@ -796,6 +871,14 @@ int main(int argc, char **argv)
     int rewind_at = getenv("OBOR_REWIND_AT") ? atoi(getenv("OBOR_REWIND_AT")) : -1;
     int rewind_window = getenv("OBOR_REWIND_WINDOW") ? atoi(getenv("OBOR_REWIND_WINDOW")) : 60;
     int rewind_every = getenv("OBOR_REWIND_EVERY") ? atoi(getenv("OBOR_REWIND_EVERY")) : 1;
+    int capture_refusal_begin = -1, capture_refusal_end = -1;
+    const char *capture_refusal = getenv("OBOR_CAPTURE_REFUSAL_RANGE");
+    /* A declared movie interval may refuse scratch captures while workers
+     * are live. The retained reference, final save and all restores remain
+     * strict. Every refusal is printed; this never simulates a saved state. */
+    if (capture_refusal &&
+        (sscanf(capture_refusal, "%d,%d", &capture_refusal_begin, &capture_refusal_end) != 2 ||
+         capture_refusal_begin < 0 || capture_refusal_end < capture_refusal_begin)) return 1;
     if (rewind_window < 60 || rewind_window > 1800 || rewind_every < 1 || rewind_every > 60 ||
         (rewind_at > 0 && rewind_at < rewind_window)) return 1;
     unsigned char *rw_keep = NULL, *rw_scratch = NULL;
@@ -811,8 +894,9 @@ int main(int argc, char **argv)
     if (getenv("OBOR_SET_ENGINE_AT"))
         sscanf(getenv("OBOR_SET_ENGINE_AT"), "%d:%31s", &setopt_at, setopt_val);
 
-    /* OBOR_RAREWIND=START,COUNT: mimic RetroArch's rewind exactly — push a
-     * state every frame; from START, each iteration pops the previous state,
+    /* OBOR_RAREWIND=START,COUNT: exercise RetroArch's capture/restore contract.
+     * Push every OBOR_RAREWIND_EVERY frames (default 1); from START each iteration
+     * pops the previous captured state,
      * unserializes it and lets the normal retro_run of this iteration render
      * it. Prints per-step frame-hash comparison vs the forward run. */
     int rw_start = -1, rw_count = 0;
@@ -820,23 +904,33 @@ int main(int argc, char **argv)
         sscanf(getenv("OBOR_RAREWIND"), "%d,%d", &rw_start, &rw_count);
     int rw_capture_start = getenv("OBOR_RAREWIND_START") ?
                            atoi(getenv("OBOR_RAREWIND_START")) : 0;
+    int rw_every = getenv("OBOR_RAREWIND_EVERY") ?
+                   atoi(getenv("OBOR_RAREWIND_EVERY")) : 1;
     unsigned char **rw_ring = NULL;
+    int *rw_frames = NULL;
     uint32_t *fwd_hash = NULL;
+    uint32_t *fwd_audio_hash = NULL;
     size_t rw_sz = 0;
     int rw_step = 0;
+    int rw_pushes = 0;
     int rw_slots = rw_count + 4;
     if (rw_start > 0) {
         if (rw_count < 2 || rw_count > 128 || rw_start <= rw_count ||
-            rw_capture_start < 0 || rw_capture_start > rw_start - rw_count - 4) return 1;
+            rw_every < 1 || rw_every > 60 || rw_capture_start < 0 ||
+            rw_capture_start >= rw_start ||
+            1 + (rw_start - rw_capture_start - 1) / rw_every < rw_count) return 1;
         if (getenv("OBOR_RAREWIND_BUFFERS"))
             rw_slots = atoi(getenv("OBOR_RAREWIND_BUFFERS"));
         if (rw_slots < rw_count || rw_slots > rw_count + 4) return 1;
         rw_ring = calloc(rw_slots, sizeof(*rw_ring));
+        rw_frames = calloc(rw_slots, sizeof(*rw_frames));
         fwd_hash = calloc(rw_start + 2, sizeof(uint32_t));
+        fwd_audio_hash = calloc(rw_start + 2, sizeof(uint32_t));
         rw_sz = initial_capacity ? initial_capacity : p_retro_serialize_size();
-        if (!rw_ring || !fwd_hash || !rw_sz) return 1;
+        if (!rw_ring || !rw_frames || !fwd_hash || !fwd_audio_hash || !rw_sz) return 1;
         printf("rewind_capacity=%zu\n", rw_sz);
         printf("rewind_buffers=%d\n", rw_slots);
+        printf("rewind_granularity=%d\n", rw_every);
     }
     int load_at = getenv("OBOR_LOAD_AT") ? atoi(getenv("OBOR_LOAD_AT")) : -1;
     int load_every = getenv("OBOR_LOAD_EVERY") ? atoi(getenv("OBOR_LOAD_EVERY")) : 0;
@@ -868,17 +962,24 @@ int main(int argc, char **argv)
             g_var_dirty = 1;
         }
         int rw_popped = 0;
+        int rw_restored_frame = -1;
         if (rw_start > 0 && g_frame >= rw_start && rw_step < rw_count) {
-            int slot = (rw_start - 1 - rw_step) % rw_slots;
+            if (rw_pushes <= rw_step) return 1;
+            int slot = (rw_pushes - 1 - rw_step) % rw_slots;
             if (!rw_ring[slot] || !p_retro_unserialize(rw_ring[slot], rw_sz)) {
                 fprintf(stderr, "rewind restore rejected at frame %d\n", g_frame);
                 return 1;
             }
+            rw_restored_frame = rw_frames[slot];
             rw_step++;
             rw_popped = 1;
         }
         unsigned long video_calls_before = g_video_calls;
+        g_reverse_presentation = rw_popped && getenv("OBOR_HOST_THROTTLE") &&
+            strcmp(getenv("OBOR_HOST_THROTTLE"), "forward");
+        g_frame_audio_hash = 2166136261u;
         p_retro_run();
+        trace_replay_frame();
         if (getenv("OBOR_REQUIRE_VIDEO_EVERY_RUN") && !g_shutdown &&
             g_video_calls == video_calls_before) {
             fprintf(stderr, "video callback missing at frame %d\n", g_frame);
@@ -952,21 +1053,39 @@ int main(int argc, char **argv)
             }
             if (g_frame < rw_start) {
                 fwd_hash[g_frame] = hh;
+                fwd_audio_hash[g_frame] = g_frame_audio_hash;
             } else if (rw_popped) {
-                int shown = rw_start - rw_step + 1; /* expected forward frame */
-                /* step 1 shows frame rw_start itself, which the forward run
-                 * never hashed (rewind replaced it) — no reference exists */
+                int shown = rw_restored_frame +
+                            (getenv("OBOR_EXPECT_REVERSE_PRESENTATION") ? 0 : 1);
+                /* An ordinary run after restoring the last captured frame
+                 * may request rw_start itself, which rewind replaced. */
                 printf("rewind step %d: shows fwd frame %d %s\n", rw_step,
                        shown,
                        shown >= rw_start ? "NOREF"
                        : (shown >= 0 && fwd_hash[shown] == hh) ? "MATCH"
                                                                : "MISMATCH");
                 if (shown < rw_start && (shown < 0 || fwd_hash[shown] != hh)) return 1;
+                if (getenv("OBOR_EXPECT_AUDIO_REPLAY") && shown >= 0 && shown < rw_start) {
+                    printf("rewind audio step %d: %s\n", rw_step,
+                        fwd_audio_hash[shown] == g_frame_audio_hash ? "MATCH" : "MISMATCH");
+                    if (fwd_audio_hash[shown] != g_frame_audio_hash) return 1;
+                }
                 if (rw_step == rw_count) {
                     int changes = 0;
-                    for (int i = rw_start - rw_count + 2; i < rw_start; ++i)
-                        changes += fwd_hash[i] != fwd_hash[i - 1];
+                    int previous = -1;
+                    for (int step = 0; step < rw_count; ++step) {
+                        int slot = (rw_pushes - 1 - step) % rw_slots;
+                        int frame = rw_frames[slot] +
+                                    (getenv("OBOR_EXPECT_REVERSE_PRESENTATION") ? 0 : 1);
+                        if (frame >= rw_start) continue;
+                        if (previous >= 0) changes += fwd_hash[frame] != fwd_hash[previous];
+                        previous = frame;
+                    }
                     printf("rewind_reference_changes=%d\n", changes);
+                    if (getenv("OBOR_EXPECT_REVERSE_CHANGES") && !changes) {
+                        fprintf(stderr, "rewind references contain no distinct images\n");
+                        return 1;
+                    }
                 }
                 if (ppm) {
                     char pfx[1100];
@@ -974,14 +1093,17 @@ int main(int argc, char **argv)
                     dump_ppm(pfx, rw_step);
                 }
             }
-            if (g_frame >= rw_capture_start && g_frame < rw_start) {
-                int slot = g_frame % rw_slots;
+            if (g_frame >= rw_capture_start && g_frame < rw_start &&
+                (g_frame - rw_capture_start) % rw_every == 0) {
+                int slot = rw_pushes % rw_slots;
                 if (!rw_ring[slot])
                     rw_ring[slot] = malloc(rw_sz);
                 if (!rw_ring[slot] || !p_retro_serialize(rw_ring[slot], rw_sz)) {
                     fprintf(stderr, "rewind push rejected at frame %d\n", g_frame);
                     return 1;
                 }
+                rw_frames[slot] = g_frame;
+                ++rw_pushes;
             }
         }
         if (ppm && dump_every && g_frame % dump_every == 0)
@@ -999,11 +1121,17 @@ int main(int argc, char **argv)
                 if (!rw_keep || !rw_scratch || !p_retro_serialize(rw_keep, ring_sz)) return 1;
             } else if (g_frame < rewind_at &&
                        (g_frame - (rewind_at - rewind_window)) % rewind_every == 0) {
-                if (!p_retro_serialize(rw_scratch, ring_sz)) return 1;
+                int captured = p_retro_serialize(rw_scratch, ring_sz);
+                if (!captured) {
+                    fprintf(stderr, "scratch_capture_refused frame=%d\n", g_frame);
+                    if (g_frame < capture_refusal_begin || g_frame > capture_refusal_end) return 1;
+                }
                 clock_gettime(CLOCK_MONOTONIC, &t1);
-                ser_ms_acc += (t1.tv_sec - t0.tv_sec) * 1e3 +
-                              (t1.tv_nsec - t0.tv_nsec) / 1e6;
-                ser_n++;
+                if (captured) {
+                    ser_ms_acc += (t1.tv_sec - t0.tv_sec) * 1e3 +
+                                  (t1.tv_nsec - t0.tv_nsec) / 1e6;
+                    ser_n++;
+                }
             } else if (g_frame == rewind_at) {
                 int ok = p_retro_unserialize(rw_keep, ring_sz);
                 if (!ok) return 1;
@@ -1136,6 +1264,10 @@ int main(int argc, char **argv)
             }
         }
     }
+    if (replay_audio_file) {
+        if (fclose(replay_audio_file)) return 1;
+        replay_audio_file = NULL;
+    }
     if (ppm)
         dump_ppm(ppm, g_frame);
 
@@ -1150,7 +1282,25 @@ int main(int argc, char **argv)
         free(rw_ring);
     }
     free(fwd_hash);
+    free(fwd_audio_hash);
+    free(rw_frames);
+    if (getenv("OBOR_CAPTURE_BEFORE_UNLOAD")) {
+        /* Teardown must release protection even when no engine frame has
+         * dirtied/unprotected any page since the last ordinary snapshot. */
+        size_t size = p_retro_serialize_size();
+        void *last = size ? malloc(size) : NULL;
+        if (!last || !p_retro_serialize(last, size)) {
+            free(last);
+            fprintf(stderr, "capture immediately before unload failed\n");
+            return 1;
+        }
+        free(last);
+        printf("capture_before_unload=1 bytes=%zu\n", size);
+        fflush(stdout);
+    }
     p_retro_unload_game();
+    if (getenv("OBOR_CAPTURE_BEFORE_UNLOAD"))
+        printf("unload_after_capture=1\n");
     if (getenv("OBOR_POST_UNLOAD_MS")) {
         unsigned ms = (unsigned)atoi(getenv("OBOR_POST_UNLOAD_MS"));
 #ifdef _WIN32

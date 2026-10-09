@@ -24,7 +24,9 @@
 #include "obor_abi.h" /* OBOR_ARENA_BASE_VA / OBOR_ARENA_MAX_SZ */
 #include "obor_fault.h"
 #include "obor_write_watch.h"
+#include "obor_resources.h"
 void obor_state_owned_discard(void);
+void obor_state_coded_discard(void);
 #if defined(__linux__) && (defined(__x86_64__) || defined(__aarch64__))
 #define OBOR_BATCH_SPARSE_SPANS 1
 #include "obor_state_copy.h"
@@ -129,6 +131,7 @@ int obor_arena_init(void) { return arena_init(); }
  * grab it before the next boot. The next arena_init re-maps fresh + zeroed. */
 void obor_arena_release(void)
 {
+    obor_resources_close();
     if (!arena_brk)
         return;
     /* Stop monitoring before teardown. The replacement below also removes
@@ -144,6 +147,7 @@ void obor_arena_release(void)
     arena_brk = NULL;
     obor_write_watch_abandon();
     obor_state_owned_discard();
+    obor_state_coded_discard();
     arena_lim = NULL;
     arena_live_chunk_bytes = 0;
 }
@@ -1148,11 +1152,29 @@ int obor_heap_sparse_restore(const void *source, uint64_t length,
     return 1;
 }
 
+#include "obor_heap_resources.inc"
+
 /* ---- the --wrap surface ---- */
 
 static int in_arena(const void *p)
 {
     return (const char *)p >= OBOR_ARENA_BASE && (const char *)p < arena_lim;
+}
+
+/* Engine hooks pass the original allocation owner, never an interior pixel
+ * pointer. Bound the allocator metadata before using its usable-size query. */
+size_t obor_allocation_size(const void *p)
+{
+    uintptr_t address = (uintptr_t)p;
+    uintptr_t begin = (uintptr_t)OBOR_ARENA_BASE + OBOR_STACK_RESERVE;
+    uintptr_t end = (uintptr_t)arena_brk;
+    if (!arena_brk || address < begin + 2 * sizeof(size_t) || address >= end ||
+        (address & CHUNK_ALIGN_MASK)) return 0;
+    mchunkptr chunk = mem2chunk(p);
+    size_t bytes = chunksize(chunk);
+    if (!is_inuse(chunk) || bytes < MIN_CHUNK_SIZE || (bytes & CHUNK_ALIGN_MASK) ||
+        (uintptr_t)chunk > end || bytes > end - (uintptr_t)chunk) return 0;
+    return dlmalloc_usable_size((void *)p);
 }
 
 static void profile_large_alloc(const char *kind, size_t bytes, void *result,
@@ -1203,12 +1225,14 @@ void *__wrap_realloc(void *p, size_t n)
         void *result = dlrealloc(p, n);
         obor_fault_allocator_activity(0);
         if (result) {
+            obor_resources_forget_owner(p);
             profile_live_remove(p);
             arena_live_chunk_bytes -= old_chunk;
             arena_live_chunk_bytes += chunksize(mem2chunk(result));
             profile_live_add(result, n, __builtin_return_address(0));
         } else if (p && n == 0)
         {
+            obor_resources_forget_owner(p);
             profile_live_remove(p);
             arena_live_chunk_bytes -= old_chunk;
         }
@@ -1224,6 +1248,7 @@ void __wrap_free(void *p)
         return;
     if (in_arena(p))
     {
+        obor_resources_forget_owner(p);
         profile_live_remove(p);
         arena_live_chunk_bytes -= chunksize(mem2chunk(p));
         obor_fault_allocator_activity(1);

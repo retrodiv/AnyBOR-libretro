@@ -38,6 +38,8 @@
 #include "obor_runtime.h"
 #include "obor_write_watch.h"
 #include "obor_snapshot_cache.h"
+#include "obor_resources.h"
+#include "obor_state_layout.h"
 
 #if defined(_WIN32)
 #include <windows.h>
@@ -57,6 +59,9 @@ static int collect_segments(void);
 
 #define OBS_MAGIC 0x3153424FU /* "OBS1" */
 #define OBS_VERSION 3U
+#define OBS_RESOURCE_VERSION 4U
+#define OBS_STABLE_RESOURCE_VERSION 5U
+#define OBS_ALIGNED_RESOURCE_VERSION 6U
 
 /* Snapshots omit inactive engines' BSS. The heap precedes the variable-length
  * stack slice, keeping its offset stable for incremental dirty-page copies. */
@@ -64,7 +69,7 @@ static int collect_segments(void);
 /* serialize_size is a ceiling the frontend scans EVERY frame when rewind is
  * on, so it must hug reality: only the live stack slice (not the 16 MB
  * region) and a measured-heap-based bound (no pak-size padding). */
-#define OBOR_STACK_BUDGET (4ULL << 20)
+#define OBOR_STACK_BUDGET ((uint64_t)OBOR_STATE_STACK_WINDOW)
 #if defined(__aarch64__) || defined(__arm__)
 #define OBOR_STACK_HEAD (16ULL * 1024) /* cothread context page */
 #else
@@ -93,6 +98,10 @@ int obor_heap_sparse_validate(const void *source, uint64_t length,
                               uint64_t arena_used);
 int obor_heap_sparse_restore(const void *source, uint64_t length,
                              uint64_t arena_used);
+int obor_heap_resources_validate(const void *, uint64_t length, uint64_t arena_used,
+                                const obor_resource_restore *);
+int obor_heap_resources_restore(const void *, uint64_t length, uint64_t arena_used,
+                               const obor_resource_restore *);
 
 static uint64_t heap_lo(void)
 {
@@ -478,11 +487,13 @@ static uint64_t segs_bytes(void)
 
 static obor_snapshot_cache owned_cache OBOR_RUNTIME;
 static uint32_t owned_capacity OBOR_RUNTIME;
+void obor_state_coded_forget(void);
 
 /* Invalidation keeps the caller's registration but forgets both images.
  * Epochs must never survive restarting a watcher (generation one again). */
 void obor_state_owned_forget(void)
 {
+    obor_state_coded_forget();
     owned_cache.slot[0].epoch = owned_cache.slot[1].epoch = 0;
     owned_cache.previous_epoch = 0;
 }
@@ -888,6 +899,12 @@ static uint32_t serialize_impl(void *buf, uint32_t size, obor_state_ranges *rang
     return (uint32_t)(fixed + hlen);
 }
 
+#include "obor_state_blocks.inc"
+
+/* Kept outside snapshots so the protected-call epilogue can release staging
+ * even when fault recovery abandons a partially committed restore. */
+static obor_resource_restore *state_resource_plan OBOR_RUNTIME;
+
 /* ------------------------------------------------------ unserialize ---- */
 
 /* Shift every stored pointer that falls in the save-time module range by
@@ -922,11 +939,19 @@ static void rebase_range(void *region, size_t nbytes, uint64_t old_lo,
 
 static int32_t unserialize_impl(const void *buf, uint32_t size, int *committed)
 {
-    /* Restoring the arena while playback workers use it would destroy
-     * their queues and synchronization objects. As with serialization,
-     * leave playback intact and refuse the operation until it finishes. */
-    if (__atomic_load_n(&obor_live_threads, __ATOMIC_SEQ_CST) > 0)
+    /* A target snapshot has no active workers: capture forbids them. Current
+     * classic playback can be stopped after every target preflight passes,
+     * before overwriting its queues, coroutine and OS synchronization objects.
+     * Backwards execution can start a movie between two pops; that must not
+     * trap rewind in the movie merely because its current workers are alive. */
+    int worker_restore = __atomic_load_n(&obor_live_threads, __ATOMIC_SEQ_CST) > 0;
+#ifndef WEBM
+    if (worker_restore) {
+        if (getenv("OBOR_STATE_TIMING"))
+            fprintf(stderr, "[obor-resources] restore_refused=live_workers\n");
         return 0;
+    }
+#endif
     if (!buf || !collect_segments())
         return 0;
     ensure_boot_id();
@@ -936,7 +961,8 @@ static int32_t unserialize_impl(const void *buf, uint32_t size, int *committed)
         return 0;
     obs_header h;
     memcpy(&h, buf, sizeof(h));
-    if (h.magic != OBS_MAGIC || h.version != OBS_VERSION)
+    if (h.magic != OBS_MAGIC || (h.version != OBS_VERSION && h.version != OBS_RESOURCE_VERSION &&
+        h.version != OBS_STABLE_RESOURCE_VERSION && h.version != OBS_ALIGNED_RESOURCE_VERSION))
         return 0;
     if (h.profile_build != g_profile_build ||
         h.physical_build != (uint32_t)OBOR_ENGINE_BUILD) {
@@ -1010,19 +1036,86 @@ static int32_t unserialize_impl(const void *buf, uint32_t size, int *committed)
 #endif
     uint64_t total = prefix;
     if (!checked_add_u64(&total, segs_bytes()) ||
-        !checked_add_u64(&total, OBOR_STACK_HEAD) ||
-        !checked_add_u64(&total, h.heap_len) ||
-        !checked_add_u64(&total, h.stack_len) || total > size)
+        !checked_add_u64(&total, OBOR_STACK_HEAD) || total > size)
         return 0;
-    const uint8_t *heap_src = p + segs_bytes() + OBOR_STACK_HEAD;
+    const uint8_t *heap_src, *stack_src, *manifest_src = NULL;
+    uint32_t manifest_size = 0;
+    if (h.version == OBS_STABLE_RESOURCE_VERSION || h.version == OBS_ALIGNED_RESOURCE_VERSION) {
+        obor_state_resource_offsets offsets;
+        if (h.version == OBS_ALIGNED_RESOURCE_VERSION) {
+            if (!obor_state_resource_layout_aligned(total, h.stack_len, h.heap_len,
+                size, 1, &offsets)) return 0;
+            uint64_t gap = total + OBOR_STATE_STACK_WINDOW + OBOR_STATE_MANIFEST_WINDOW;
+            for (; gap < offsets.heap; ++gap)
+                if (((const uint8_t *)buf)[gap]) return 0;
+        } else if (!obor_state_resource_layout(total, h.stack_len, h.heap_len, size, &offsets)) return 0;
+        heap_src = (const uint8_t *)buf + offsets.heap;
+        stack_src = (const uint8_t *)buf + offsets.stack;
+        manifest_src = (const uint8_t *)buf + offsets.manifest;
+        manifest_size = obor_state_manifest_length(manifest_src, OBOR_STATE_MANIFEST_WINDOW);
+        if (!manifest_size) return 0;
+    } else {
+        uint64_t heap_offset = total;
+        if (!checked_add_u64(&total, h.heap_len) ||
+            !checked_add_u64(&total, h.stack_len) || total > size) return 0;
+        heap_src = (const uint8_t *)buf + heap_offset;
+        stack_src = heap_src + h.heap_len;
+        if (h.version == OBS_RESOURCE_VERSION) {
+            manifest_src = (const uint8_t *)buf + total;
+            manifest_size = (uint32_t)(size - total);
+        }
+    }
     if (!obor_heap_sparse_validate(heap_src, h.heap_len, h.arena_used))
         return 0;
-    if (!obor_arena_grow_to((size_t)h.arena_used))
-        return 0;
+    obor_resource_restore *resource_plan = NULL;
+    if (h.version == OBS_RESOURCE_VERSION || h.version == OBS_STABLE_RESOURCE_VERSION ||
+        h.version == OBS_ALIGNED_RESOURCE_VERSION) {
+        /* Resource bodies must not pass through the legacy heuristic module
+         * pointer rebaser. Current fixed-image targets have zero displacement;
+         * a displaced image needs an explicit mutable-pointer format first. */
+        if (delta != 0) return 0;
+        coded_source tracking;
+        if (worker_restore) memset(&tracking, 0, sizeof(tracking));
+        else coded_restore_tracking(&tracking);
+        /* Only explicit resource formats may omit derived bodies. The OBS5
+         * windows keep manifest, heap and stack addresses independent of growth;
+         * their unused padding has no live destination and is never restored.
+         * Stage all cold resources and validate owners/zero holes before the
+         * first live byte is replaced. Failure leaves the world unchanged. */
+        resource_plan = obor_resources_prepare_restore(manifest_src, manifest_size,
+            (uint32_t)h.arena_used, worker_restore ? NULL : coded_resource_unchanged, &tracking,
+            getenv("OBOR_TEST_EMPTY_RESOURCE_CACHE") != NULL);
+        state_resource_plan = resource_plan;
+        if (!resource_plan || !obor_heap_resources_validate(heap_src, h.heap_len,
+            h.arena_used, resource_plan)) {
+            obor_resource_restore_destroy(resource_plan);
+            state_resource_plan = NULL;
+            return 0;
+        }
+        if (getenv("OBOR_STATE_TIMING"))
+            fprintf(stderr, "[obor-resources] restore_staged=%llu ranges=%u empty_cache_test=%d\n",
+                (unsigned long long)obor_resource_restore_staged(resource_plan),
+                obor_resource_restore_count(resource_plan), getenv("OBOR_TEST_EMPTY_RESOURCE_CACHE") != NULL);
+    }
 
     if (debug_restore)
         fprintf(stderr, "[obor] unserialize validated heap=%llu delta pending\n",
                 (unsigned long long)h.heap_len);
+
+#ifdef WEBM
+    if (worker_restore) {
+        /* Every resource body is staged independently of the current workers.
+         * The preflight's native lock is released before joining: their free
+         * hooks may need it. From here failure abandons the interrupted world. */
+        extern void obor_webm_stop(void);
+        *committed = 1;
+        obor_webm_stop();
+        if (__atomic_load_n(&obor_live_threads, __ATOMIC_SEQ_CST))
+            obor_fault_abort(OBOR_FAULT_STATE, 0);
+        if (getenv("OBOR_STATE_TIMING"))
+            fprintf(stderr, "[obor-resources] restore_joined_current_movie=1\n");
+    }
+#endif
 
     int same_session = (h.boot_id == g_boot_id);
 
@@ -1060,6 +1153,14 @@ static int32_t unserialize_impl(const void *buf, uint32_t size, int *committed)
 
     uint8_t *stack_dst = (uint8_t *)obor_stack_ptr() + h.stack_off;
 
+    /* Growing also changes the allocator break. Delay it until all fallible
+     * resource preflights have passed so rejection retains the current heap. */
+    if (!owned_stop_images()) obor_fault_abort(OBOR_FAULT_MEMORY, 0);
+    if (!obor_arena_grow_to((size_t)h.arena_used)) {
+        obor_resource_restore_destroy(resource_plan);
+        state_resource_plan = NULL;
+        return 0;
+    }
     /* From here onwards a failed load cannot retain a coherent live world. */
     *committed = 1;
 
@@ -1081,13 +1182,18 @@ static int32_t unserialize_impl(const void *buf, uint32_t size, int *committed)
     __stack_chk_guard = stack_guard_l;
 #endif
     memcpy(obor_stack_ptr(), p, OBOR_STACK_HEAD);
-    p += OBOR_STACK_HEAD;
-    if (!obor_heap_sparse_restore(p, h.heap_len, h.arena_used))
+    int heap_ok = resource_plan ? obor_heap_resources_restore(heap_src, h.heap_len, h.arena_used, resource_plan) :
+        obor_heap_sparse_restore(heap_src, h.heap_len, h.arena_used);
+    if (!heap_ok) {
+        obor_resource_restore_destroy(resource_plan);
+        state_resource_plan = NULL;
         return 0;
+    }
+    obor_resources_adopt(resource_plan ? obor_resource_restore_commit(resource_plan) : NULL);
+    obor_resource_restore_destroy(resource_plan);
+    state_resource_plan = NULL;
     obor_test_fault_phase("load-heap");
-    p += h.heap_len;
-    memcpy(stack_dst, p, (size_t)h.stack_len);
-    p += h.stack_len;
+    memcpy(stack_dst, stack_src, (size_t)h.stack_len);
 
     if (!same_session && delta != 0) {
 #if !defined(OBOR_FIXED_ELF_IMAGE) && !defined(OBOR_FIXED_PE_IMAGE)
@@ -1131,7 +1237,7 @@ static int32_t unserialize_impl(const void *buf, uint32_t size, int *committed)
      * The snapshot's value belongs to the saving process and cannot be
      * rebased as a module pointer. */
     obor_frontend_context_restore(frontend_context_l);
-    obor_session_paths_restore(&session_paths_l);
+    if (!obor_session_paths_restore(&session_paths_l)) return 0;
     /* OS-handle fixups (bytes can't carry fds/FILEs across sessions) */
 #ifdef OBOR_HAS_MOVIE_PLAYBACK
     if (debug_restore)
@@ -1183,11 +1289,14 @@ static void execute_state(void *context)
     if (call->operation == 0) {
         obor_test_fault_phase("size");
         call->result = serialize_size_impl();
+        if (call->result && coded_requested()) call->result = coded_capacity();
     } else if (call->operation == 1 || call->operation == 3) {
         if (call->ranges) call->ranges->count = 0;
         obor_test_fault_phase("save");
         int padding_done = 0;
-        call->result = serialize_impl(call->buffer, call->size, call->ranges, &padding_done);
+        call->result = coded_requested() && call->operation == 1 ?
+            serialize_coded(call->buffer, call->size) :
+            serialize_impl(call->buffer, call->size, call->ranges, &padding_done);
         uint64_t timing_padding = getenv("OBOR_STATE_TIMING") ? state_timing_now() : 0;
         if (!padding_done && call->result && call->result < call->size &&
             (!call->ranges || !owned_cache.previous_epoch))
@@ -1201,10 +1310,18 @@ static void execute_state(void *context)
                     (state_timing_now() - timing_padding) / 1e6,
                     call->result ? call->size - call->result : 0);
     } else if (call->operation == 2) {
-        if (!owned_stop_images())
-            obor_fault_abort(OBOR_FAULT_MEMORY, 0);
         obor_test_fault_phase("load");
-        call->result = unserialize_impl(call->buffer, call->size, &call->committed);
+        uint32_t magic = 0;
+        if (call->buffer && call->size >= sizeof(magic)) memcpy(&magic, call->buffer, sizeof(magic));
+        if (magic == OBOR_BLOCK_STATE_MAGIC) {
+            if (coded_create() && obor_block_state_decode(coded_cache, call->buffer, call->size)) {
+                uint32_t raw_size;
+                const void *raw = obor_block_state_raw(coded_cache, &raw_size);
+                call->result = unserialize_impl(raw, raw_size, &call->committed);
+            }
+        } else call->result = unserialize_impl(call->buffer, call->size, &call->committed);
+        if (call->result) coded_watch_restored_resources();
+        else obor_state_coded_forget();
         if (!call->result && call->committed)
             obor_fault_abort(OBOR_FAULT_STATE, 0);
     } else if (call->operation == 4) {
@@ -1221,6 +1338,11 @@ static void execute_state(void *context)
         if (!owned_stop_images()) obor_fault_abort(OBOR_FAULT_MEMORY, 0);
         obor_state_owned_discard();
         call->result = 1;
+    } else if (call->operation == 6) {
+        /* Reuse only the current codec image, after ordinary captures have
+         * initialized it. Failure never changes the next requested capture. */
+        if (coded_requested() && coded_cache && !owned_capacity)
+            call->result = update_coded(NULL, coded_capacity(), 1);
     }
 }
 
@@ -1252,11 +1374,19 @@ uint32_t obor_owned_serialize(void *buffer, uint32_t size, obor_state_ranges *ra
     return obor_protect_call(execute_state, &call, "owned save state") ? call.result : 0;
 }
 
+int32_t obor_state_tracking_end(void)
+{
+    state_call call = {NULL, 0, 0, 5, 0, NULL, NULL};
+    return obor_protect_call(execute_state, &call, "state tracking end") ? (int32_t)call.result : 0;
+}
+
 int32_t obor_owned_end(void)
 {
-    if (!owned_capacity && !obor_write_watch_epoch()) return 1;
-    state_call call = {NULL, 0, 0, 5, 0, NULL, NULL};
-    return obor_protect_call(execute_state, &call, "owned state end") ? (int32_t)call.result : 0;
+    /* The glue ends a possible caller-owned session before every load. A
+     * regular compressed capture owns no frontend buffers; retain its private
+     * write proof until the resource restore preflight has consumed it. */
+    if (!owned_capacity) return 1;
+    return obor_state_tracking_end();
 }
 
 uint32_t obor_serialize_size(void)
@@ -1271,8 +1401,17 @@ uint32_t obor_serialize(void *buffer, uint32_t size)
     return obor_protect_call(execute_state, &call, "save state") ? call.result : 0;
 }
 
+uint32_t obor_prepare_state(void)
+{
+    state_call call = {NULL, 0, 0, 6, 0, NULL, NULL};
+    return obor_protect_call(execute_state, &call, "state preparation") ? call.result : 0;
+}
+
 int32_t obor_unserialize(const void *buffer, uint32_t size)
 {
     state_call call = {(void *)buffer, size, 0, 2, 0, NULL, NULL};
-    return obor_protect_call(execute_state, &call, "load state") ? (int32_t)call.result : 0;
+    int protected_ok = obor_protect_call(execute_state, &call, "load state");
+    obor_resource_restore_destroy(state_resource_plan);
+    state_resource_plan = NULL;
+    return protected_ok ? (int32_t)call.result : 0;
 }

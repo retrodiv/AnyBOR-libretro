@@ -27,7 +27,7 @@
 extern "C" {
 #endif
 
-#define OBOR_ABI_VERSION 7u
+#define OBOR_ABI_VERSION 8u
 
 #define OBOR_EXIT_MEMORY_FAULT (-2)
 enum { OBOR_RESOURCE_FILE_OPEN = 1, OBOR_RESOURCE_FILE_CLOSE,
@@ -165,6 +165,12 @@ typedef struct {
 OBOR_API int32_t obor_owned_begin(void *first, void *second, uint32_t size);
 OBOR_API uint32_t obor_owned_serialize(void *buf, uint32_t size, obor_state_ranges *ranges);
 OBOR_API int32_t obor_owned_end(void);
+
+/* Optional preparation of the existing current coded image. No frontend
+ * buffer or additional history is retained. A later serialize still checks
+ * current bytes and writes a complete independent state. Zero is a harmless
+ * inability to prepare, unless the engine reports a contained memory fault. */
+OBOR_API uint32_t obor_prepare_state(void);
 
 OBOR_API void obor_shutdown(void);
 

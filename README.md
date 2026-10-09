@@ -1,9 +1,9 @@
 # AnyBOR
 
 An independent libretro core for OpenBOR games, offering thirteen selectable
-engines in one library: v3.0 3400, v3.0 3842, v3.0 4086, v3.0 4432, v3.0 4453, v3.0 6330, v3.0 6391, v3.0 6412-dev, v3.0 6510-dev, v3.0 7123-dev, v4.0 7142-alpha, v4.0 7533 and v4.0 8023-dev.
+profiles backed by nine engines in one library: v3.0 3400, v3.0 3842, v3.0 4086, v3.0 4432, v3.0 4453, v3.0 6330, v3.0 6391, v3.0 6412-dev, v3.0 6510-dev, v3.0 7123-dev, v4.0 7142-alpha, v4.0 7533 and v4.0 8023-dev.
 Core Options also provides Auto, which uses build tags and content clues to
-choose an engine. You can select one manually when a game needs it.
+choose a profile. You can select one manually when a game needs it.
 Save states, rewind and four players are supported. OpenBOR, Senile Team and
 libretro credits identify upstream work; they do not imply endorsement of
 this port.
@@ -115,41 +115,54 @@ For rewind in RetroArch, we recommend **Rewind Frames** set to **10** and
 **Rewind Buffer Size (MB)** set to **256**. **256 MB is also the maximum**;
 do not increase it to work around capacity or performance problems.
 
-A state fitting in the buffer does not guarantee safe history. Older
-RetroArch versions can overwrite a history link during a large transition
-when the uncompressed state exceeds half the buffer. The compressed size
-of an on-disk save does not establish whether rewind will work. Validate
-actual reverse playback within the 256 MB limit. If history cannot be
-recorded and restored safely, rewind is unsupported for that state until
-its representation or handling is improved.
+Windows x86-64 and Linux x86-64/ARM64 use complete, independently loadable
+compressed states with a fixed 64 MiB libretro transport. This is the size of
+one serialized state, not additional rewind history. The frontend owns the
+history within its 256 MiB buffer. Its available duration depends on how much
+state changes: a large transition can shorten it substantially.
 
-On Raspberry Pi 5, stock Recalbox RetroArch can keep the average game rate
-near 60 FPS with threaded video and audio synchronization. Use a core-specific
-override with `video_threaded = "true"`, `video_vsync = "false"`,
-`video_frame_delay = "0"`, `video_frame_delay_auto = "false"`,
-`audio_sync = "true"`, `audio_latency = "128"` and
-`vrr_runloop_enable = "false"`. This lets the audio clock pace the game between
-snapshots. It does not remove capture stalls: a 60 FPS counter alone does not
-prove even presentation or working reverse playback. Check actual gameplay,
-rewind, and the frontend log; a buffer-capacity error means history was not
-recorded. These settings use the system's stock RetroArch; performance
-verification must not replace it with a private frontend build.
+The engines identify source-backed sample bytes; engines 3842 and later also
+identify reconstructible sprite bodies. Engine 3400 retains its sprite bytes
+in the mutable state. The common state layer verifies resource contents before
+replacing them with reconstruction recipes. Script-modified or unrecognized data stays in the
+mutable state. Headers, palettes, internal references, allocator metadata,
+engine globals, the live coroutine stack and audio playback state are retained.
+This selection depends on resource structure and lifetime, never game names
+or fingerprints.
 
-Snapshots retain the running engine's writable state, complete allocated
-game heap and live coroutine stack. The inactive engines' zero-initialized
-data is excluded using linker-owned boundaries; shared data is retained.
-A frontend that supports variable serialization sizes may receive a larger
-state while content is loaded. On fixed-capacity frontends, the advertised
-size stays fixed until content unload, even across Reset. Unused transport
-bytes are deterministically zero, without rewriting reserve pages that are
-already zero. There is no per-frame general compression stage or dependency
-on an earlier snapshot.
+Every snapshot contains the information needed to rebuild its resources from
+the loaded content, including in a new session with an empty cache. The resource
+cache is bounded to 128 MiB and holds only source-derived data. Restoration
+staging is bounded to 256 MiB; resources beyond that budget remain ordinary
+state bytes. The block codec caches only its current image. None of these
+caches stores additional rewind history. A failed reconstruction or a complete
+state that exceeds its transport budget is rejected; data is never truncated
+to make a capture fit.
 
-Contiguous snapshots omit the unused free top of the heap. Fragmented heaps
-use the allocator's free-block index to skip large holes while retaining all
-live bytes and allocator metadata. Highly fragmented or unsupported layouts
-fall back to the ordinary chunk walker. These choices depend on heap layout,
-not on the game or the current screen.
+The compressed transport uses OBC1 with independently encoded blocks and a
+resource manifest. Each image is complete and can be decoded without an earlier
+snapshot. New blocks use a compact initial encoding; changed blocks use a fast
+lossless codec. Bounded slot maintenance limits fragmentation. State preparation
+follows the frontend's observed capture interval and stops when captures stop;
+the requested capture still validates the current bytes. Unused transport
+bytes are deterministically zero. Fixed frontend capacity remains unchanged
+across loading, gameplay and Reset.
+
+On supported Linux targets, classic movie decoders retain write tracking while
+their engine-owned workers run, including between frontend calls. This avoids
+rechecking untouched resources after playback. Captures remain unavailable
+while workers are active. The asynchronous movie adapter has additional worker
+ownership and conservatively invalidates those proofs before playback instead.
+
+On Recalbox, a core-specific override can use `video_threaded = "true"`,
+`video_vsync = "true"`, `video_adaptive_vsync = "false"`,
+`video_swap_interval = "1"`, `video_frame_delay = "0"`,
+`video_frame_delay_auto = "false"`, `audio_sync = "true"`,
+`audio_latency = "64"` and `vrr_runloop_enable = "false"`.
+Check actual motion and reverse playback with the native FPS counter visible;
+a high average alone does not establish smooth presentation or captured history.
+Use the RetroArch supplied with the system. No frontend modification is needed
+by the state representation described here.
 
 The Android core remains one installable `.so`. It contains a small libretro
 loader and the engine ELF; Android's `android_dlopen_ext` loads the engine at
@@ -158,40 +171,19 @@ without scanning and modifying arbitrary game data after ASLR changes.
 An address collision fails safely. States from the older ASLR core are
 rejected before restoring engine memory; create new states with this build.
 
-Save states use the OBS v3 format and identify the selected engine.
-Games may grow their heap substantially
-during play: the core records its observed peak for sizing the next session
-and retains a growth allowance. Packed content reserves its initial state
-capacity before preparation, using archive size and learned peaks. Captures
-become available after resource initialization, which updates the measured
-peak even if an older cache contains only startup allocations.
-Captures that outgrow a fixed frontend buffer also record the needed heap
-without overwriting the previous snapshot. If no measured peak can be read,
-packed resource size informs the initial reserve. These are estimates, not
-a guarantee of every possible later
-allocation. On a fixed-capacity frontend, if a game exceeds that allowance,
-restart the content to use the learned peak.
+Android and macOS retain the existing OBS v3 writer while the new resource
+path is validated on those targets. That writer sizes its fixed capacity from
+packed content and measured heap peaks; content that outgrows its allowance
+requires a restart to use the learned peak. Save states should be made and
+loaded with the same core build and content.
+
 Loading a state retains the current session's content and writable-directory
 paths. Engine random-number state is captured with the world so external
-frontend activity does not change the restored AI sequence.
-Saving, loading and rewind are unavailable during the engine's internally
-threaded movie playback. RetroArch's separate threaded-video setting does not
-trigger this exclusion.
-Frontend rewind history length also depends on its buffer size and the
-amount of state that changes each frame.
-
-An optional AnyBOR frontend interface, declared in `src/glue/obor_rewind.h`,
-allows a cooperating Linux ARM64 frontend to register two immutable rewind
-buffers and obtain conservative change ranges. Captures remain complete OBS v3
-states at the ordinary advertised capacity. The first capture initializes every
-byte; subsequent captures copy heap pages changed since that destination was
-last used. Ordinary libretro serialization retains complete initialization.
-The frontend must end ownership before modifying either buffer or writing
-through a cheat/debugger memory map, and before reset or unload. Any load attempt
-ends ownership. Protection is suspended before engine workers start; threaded
-playback retains its existing capture exclusion. Frontends without this optional
-integration continue to use the ordinary serializer. This interface alone does
-not establish a game performance result.
+frontend activity does not change the restored AI sequence. Saving, loading
+and rewind are unavailable during internally threaded movie playback;
+RetroArch's separate threaded-video setting does not trigger this exclusion.
+Returning from gameplay to an earlier menu requires its state to remain
+within the finite history. Entering gameplay does not clear the history.
 
 ## Licenses and redistribution
 
@@ -213,8 +205,8 @@ with their downloads.
 The original diagnostic fixture generator and native smoke test are described
 in [docs/TESTING.md](docs/TESTING.md).
 
-See [MODIFICATIONS.md](MODIFICATIONS.md) for changes supporting the thirteen
-selectable OpenBOR engines, with file inventories and source references,
+See [MODIFICATIONS.md](MODIFICATIONS.md) for changes supporting the nine
+OpenBOR engines and thirteen selectable profiles, with file inventories and source references,
 [PROVENANCE.md](PROVENANCE.md) for source origins,
 [CONTRIBUTING.md](CONTRIBUTING.md) for development, and
 [SECURITY.md](SECURITY.md) for content trust and private reporting.

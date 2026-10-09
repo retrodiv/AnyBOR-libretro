@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+- Use complete, independently loadable compressed states on Windows x86-64
+  and Linux x86-64/ARM64, with a fixed 64 MiB transport and a recommended
+  maximum rewind history of 256 MiB at granularity 10.
+- Let engines declare reconstructible sprite bodies and resident PCM ranges.
+  Verify their bytes in the common state layer, retain modified resources as
+  mutable state, and reconstruct from content when loading with an empty cache.
+- Prepare state blocks around observed capture intervals and maintain their
+  slots within bounded work budgets, without changing capture frequency or
+  keeping additional rewind history.
+- Preserve write tracking for engine-owned classic movie workers on Linux;
+  retain conservative invalidation for the asynchronous movie adapter and
+  reject captures while decoder workers are active.
 - Fill the preparation bar from completed I/O and verification work instead
   of animating a moving segment. Keep progress monotonic across optional
   phases and reserve a full bar for successful preparation and engine boot.
