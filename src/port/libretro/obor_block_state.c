@@ -5,6 +5,27 @@
 #include "lz4.h"
 #include <string.h>
 #include <zlib.h>
+#if defined(__linux__) && !defined(__ANDROID__)
+#include <time.h>
+#endif
+
+/* Called only at capture/thread boundaries, not once per block. Failure is
+ * performance metadata, never a reason to omit or reject captured state. */
+static uint64_t block_cpu_now(void)
+{
+#if defined(__linux__) && !defined(__ANDROID__) && defined(CLOCK_THREAD_CPUTIME_ID)
+    struct timespec value;
+    if (!clock_gettime(CLOCK_THREAD_CPUTIME_ID, &value))
+        return (uint64_t)value.tv_sec * UINT64_C(1000000000) + (uint64_t)value.tv_nsec;
+#endif
+    return 0;
+}
+
+static uint64_t block_cpu_elapsed(uint64_t begin)
+{
+    uint64_t end = block_cpu_now();
+    return begin && end >= begin ? end - begin : 0;
+}
 
 #define BS_BLOCK OBOR_BLOCK_STATE_BLOCK
 #define BS_MAX_BLOCKS (OBOR_BLOCK_STATE_MAX_RAW / BS_BLOCK)
@@ -36,10 +57,15 @@ struct obor_block_state {
     obor_block_timing timing;
     uint32_t compact_cursor;
     int compact_enabled;
+    int worker_enabled;
+    void *worker_workspace;
 };
 
 void obor_block_state_set_compaction(obor_block_state *state, int enabled)
 { if (state) state->compact_enabled = enabled != 0; }
+
+void obor_block_state_set_worker(obor_block_state *state, int enabled)
+{ if (state) state->worker_enabled = enabled != 0; }
 
 void obor_block_state_set_clock(obor_block_state *state, uint64_t (*clock)(void))
 { if (state) state->clock = clock; }
@@ -121,6 +147,7 @@ void obor_block_state_destroy(obor_block_state *state)
     else allocator.free(state->raw);
     allocator.free(state->holes);
     allocator.free(state->occupied);
+    allocator.free(state->worker_workspace);
     allocator.free(state);
 }
 
@@ -300,10 +327,21 @@ static int block_deflate(obor_block_state *state, const void *raw, uint32_t size
     return (int)(capacity - stream->avail_out);
 }
 
+static int block_encode(obor_block_state *, const obor_block_source *,
+                        uint32_t, int, int, int);
+#include "obor_block_worker.inc"
+
 static int block_encode(obor_block_state *state, const obor_block_source *source,
                          uint32_t raw_size, int allow_repack, int initial_codec, int update_codec)
 {
     if (!state || !source || !source->read) return 0;
+#if defined(__linux__) && !defined(__ANDROID__)
+    if (allow_repack && state->worker_enabled && state->valid && !state->clock &&
+        raw_size >= BW_BATCH * BS_BLOCK) {
+        int result = block_encode_worker(state, source, raw_size, initial_codec, update_codec);
+        if (result >= 0) return result;
+    }
+#endif
     if (allow_repack) {
         memset(&state->work, 0, sizeof(state->work));
         memset(&state->timing, 0, sizeof(state->timing));
@@ -403,19 +441,28 @@ fail:
     return 0;
 }
 
+static int block_encode_measured(obor_block_state *state, const obor_block_source *source,
+                                  uint32_t raw_size, int initial_codec, int update_codec)
+{
+    uint64_t begin = block_cpu_now();
+    /* Bounded repacks recurse below this wrapper. Their CPU work and any
+     * joined helper belong to this one complete capture, without double count. */
+    int result = block_encode(state, source, raw_size, 1, initial_codec, update_codec);
+    if (state) state->work.owner_cpu_ns = result ? block_cpu_elapsed(begin) : 0;
+    return result;
+}
+
 int obor_block_state_encode(obor_block_state *state, const obor_block_source *source,
                             uint32_t raw_size)
-{
-    return block_encode(state, source, raw_size, 1, BS_DEFLATE, BS_LZ4);
-}
+{ return block_encode_measured(state, source, raw_size, BS_DEFLATE, BS_LZ4); }
 
 int obor_block_state_encode_fast(obor_block_state *state, const obor_block_source *source,
                                  uint32_t raw_size)
-{ return block_encode(state, source, raw_size, 1, BS_LZ4, BS_LZ4); }
+{ return block_encode_measured(state, source, raw_size, BS_LZ4, BS_LZ4); }
 
 int obor_block_state_encode_mutable(obor_block_state *state, const obor_block_source *source,
                                     uint32_t raw_size)
-{ return block_encode(state, source, raw_size, 1, BS_LZ4, BS_RAW); }
+{ return block_encode_measured(state, source, raw_size, BS_LZ4, BS_RAW); }
 
 void obor_block_state_changes(const obor_block_state *state, obor_block_changes *out)
 {
@@ -433,6 +480,19 @@ void obor_block_state_changes(const obor_block_state *state, obor_block_changes 
         }
     }
     out->pool_hole_bytes = state->high - BS_TABLE_END - out->total_slot_bytes;
+}
+
+uint32_t obor_block_state_workload(const obor_block_state *state)
+{
+    return state && state->valid ? state->work.read_blocks - state->work.equal_blocks : 0;
+}
+
+uint64_t obor_block_state_cpu_cost(const obor_block_state *state)
+{
+    if (!state || !state->valid || !state->work.owner_cpu_ns ||
+        (state->work.worker_threads && !state->work.helper_cpu_ns)) return 0;
+    if (state->work.owner_cpu_ns > UINT64_MAX - state->work.helper_cpu_ns) return 0;
+    return state->work.owner_cpu_ns + state->work.helper_cpu_ns;
 }
 
 const void *obor_block_state_image(const obor_block_state *state, uint32_t *used)

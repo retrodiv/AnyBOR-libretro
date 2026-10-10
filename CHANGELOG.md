@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Select a bounded, single-helper compression pipeline on Linux from observed
+  encoding CPU work and changed blocks. Preserve byte-identical complete states,
+  serial fallback and capture frequency without additional rewind history.
 - Use complete, independently loadable compressed states on Windows x86-64
   and Linux x86-64/ARM64, with a fixed 64 MiB transport and a recommended
   maximum rewind history of 256 MiB at granularity 10.

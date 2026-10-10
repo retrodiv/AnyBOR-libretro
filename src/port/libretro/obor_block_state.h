@@ -68,6 +68,11 @@ void obor_block_state_forget(obor_block_state *state);
  * earlier holes. No engine bytes or additional historical images are kept.
  * Disabled by default while cadence and frontend-delta costs are evaluated. */
 void obor_block_state_set_compaction(obor_block_state *, int enabled);
+/* Optional synchronous pipeline: at most one helper compresses bounded batches
+ * while the caller reads/proves other blocks. It joins before return; scratch
+ * never supplies restore data. Unsupported/small/single-CPU cases stay serial.
+ * Disabled by default. Detailed per-block clocks also retain the serial path. */
+void obor_block_state_set_worker(obor_block_state *, int enabled);
 /* No caller output is modified on failure. Capacity overflow is a failure,
  * never a truncated or history-dependent image. */
 int obor_block_state_encode(obor_block_state *state, const obor_block_source *source,
@@ -88,12 +93,22 @@ typedef struct {
     uint64_t read_bytes;
     uint64_t total_stored_bytes, total_slot_bytes, pool_hole_bytes;
     uint32_t compact_examined, compact_holes, compact_moved;
+    uint32_t worker_threads, worker_blocks;
+    uint64_t owner_cpu_ns, helper_cpu_ns;
     uint64_t compact_written, compact_reclaimed;
 } obor_block_changes;
 /* Changed blocks exclude released slots; total_* and pool_hole_bytes describe
  * the current complete image. Diagnostic encoding costs, not a measurement of
  * frontend delta-history consumption. */
 void obor_block_state_changes(const obor_block_state *, obor_block_changes *);
+/* Constant-time count of source blocks actually recompressed by the last
+ * successful encode. Unlike image statistics, this does not scan the index.
+ * Released slots are excluded; invalid caches report no usable estimate. */
+uint32_t obor_block_state_workload(const obor_block_state *);
+/* Sum of owner and sole helper CPU costs from the last successful encode.
+ * Constant time; zero if a clock is unavailable or the cache is invalid.
+ * Unlike elapsed time, scheduler waits do not enable the helper by themselves. */
+uint64_t obor_block_state_cpu_cost(const obor_block_state *);
 /* Optional diagnostic clock. It must not mutate captured memory. Measurements
  * include clock overhead and are not acceptance timings. NULL disables it. */
 typedef struct {

@@ -592,6 +592,32 @@ preflights resource reconstruction, heap ownership and logical zero ranges
 before replacing live bytes. Transient reconstruction staging is capped at
 256 MiB; additional resources remain ordinary state bytes.
 
+On non-Android Linux, updates to a valid coded image can use a bounded
+compression pipeline. The owner reads and copies source blocks; one helper
+encodes them and computes their checksums. Only the owner updates slots,
+metadata and the current decoded cache, in serial block order. Two batches
+use less than 2.1 MiB of scratch. The helper starts after a full batch of 32
+dirty blocks and is joined before capture returns, repacking, cache invalidation
+or further engine execution. Scratch counts are cleared and restoration never
+consults them. OBC1 bytes, slot order and capture frequency are unchanged.
+
+The automatic policy requires at least 64 changed 16 KiB blocks and 5 ms of
+codec CPU work in the preceding call of the same phase. Preparation and final
+serialization keep separate estimates, cleared on cache invalidation or restore.
+Owner and helper thread CPU times are added after joining; waits and preemption
+do not inflate this estimate, and a shorter parallel wall time does not by
+itself disable the next capture's helper. Missing clocks select the serial path.
+A changing workload can use the less efficient path once without changing the
+state contents. This is a workload policy, never a game identity selector.
+
+Single-CPU execution, allocation/thread failures and unsupported targets retain
+the serial path. Detailed per-block timing also uses serial encoding.
+`OBOR_STATE_COMPRESSION_WORKER=0` supplies a diagnostic serial control; leaving
+it unset uses the compiled platform policy. An explicit `1` bypasses the
+workload estimate, while retaining the bounded pipeline and serial fallbacks.
+This is compression within one capture, not asynchronous engine execution or
+an extra snapshot history.
+
 New resource-state blocks use the compact initial DEFLATE encoding on supported
 default targets; changed blocks use LZ4, within the same fixed image capacity.
 An optional `OBOR_STATE_RAW_MUTABLE=1` experiment

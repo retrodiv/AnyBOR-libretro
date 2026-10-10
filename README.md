@@ -148,6 +148,13 @@ the requested capture still validates the current bytes. Unused transport
 bytes are deterministically zero. Fixed frontend capacity remains unchanged
 across loading, gameplay and Reset.
 
+On Linux x86-64/ARM64, captures with enough observed encoding work can use
+one auxiliary compression thread. It finishes before capture returns; the
+engine never advances while it is working. Scratch space stays below 2.1 MiB
+and stores no rewind history. Lighter updates, unavailable CPU measurements
+or threads, and single-CPU systems retain serial compression. Both paths
+produce the same serialized bytes and preserve the capture frequency.
+
 On supported Linux targets, classic movie decoders retain write tracking while
 their engine-owned workers run, including between frontend calls. This avoids
 rechecking untouched resources after playback. Captures remain unavailable

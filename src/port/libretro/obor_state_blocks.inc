@@ -6,6 +6,7 @@
  * bytes with zeros. An explicit OBS5 manifest retains their complete recipes;
  * everything else is represented losslessly. */
 #include "obor_block_state.h"
+#include "obor_block_worker_policy.h"
 #include "obor_state_config.h"
 #include "obor_state_copy.h"
 #include "obor_state_stream.h"
@@ -28,6 +29,7 @@ typedef struct {
 
 static obor_block_state *coded_cache OBOR_RUNTIME;
 static uint32_t coded_image_capacity OBOR_RUNTIME;
+static obor_block_worker_policy coded_worker_policy OBOR_RUNTIME;
 static uint64_t coded_epoch OBOR_RUNTIME;
 static coded_part coded_previous_parts[MAX_SEGS + 16] OBOR_RUNTIME;
 static uint32_t coded_previous_count OBOR_RUNTIME;
@@ -58,6 +60,7 @@ static uint32_t coded_capacity(void)
 
 void obor_state_coded_forget(void)
 {
+    obor_block_worker_policy_reset(&coded_worker_policy);
     coded_epoch = 0;
     coded_previous_count = 0;
     coded_resource_generation = 0;
@@ -174,6 +177,7 @@ static void coded_restore_tracking(coded_source *source)
 
 static void coded_watch_restored_resources(void)
 {
+    obor_block_worker_policy_reset(&coded_worker_policy);
     if (!obor_resources_catalog() || __atomic_load_n(&obor_live_threads, __ATOMIC_SEQ_CST)) return;
 #if defined(_WIN32)
     coded_windows_tracking = obor_dirty_reset();
@@ -280,7 +284,7 @@ static uint32_t update_coded(void *buffer, uint32_t size, int preparation)
                                                             (size_t)rounded, (size_t)maximum)) &&
         obor_write_watch_extend((size_t)rounded)) source.tracking = coded_epoch != 0;
 #endif
-    uint64_t resource_begin = !preparation && getenv("OBOR_STATE_TIMING") ? state_timing_now() : 0;
+    uint64_t resource_begin = getenv("OBOR_STATE_TIMING") ? state_timing_now() : 0;
     source.catalog = obor_resources_catalog();
     if (source.catalog) {
         uint32_t manifest_size;
@@ -328,6 +332,15 @@ static uint32_t update_coded(void *buffer, uint32_t size, int preparation)
     int block_profile_enabled = !preparation && block_profile && !strcmp(block_profile, "1");
     obor_block_state_set_clock(coded_cache, block_profile_enabled ? state_timing_now : NULL);
     obor_block_state_set_compaction(coded_cache, !preparation && pool_compact);
+#if defined(__linux__) && !defined(__ANDROID__)
+    /* Keep explicit serial/helper overrides for attribution. The platform
+     * default uses work measured in the preceding call of the same phase;
+     * at most one helper joins before this call returns. */
+    obor_block_state_set_worker(coded_cache,
+        obor_state_option("OBOR_STATE_COMPRESSION_WORKER",
+            OBOR_STATE_DEFAULT_ENABLED &&
+            obor_block_worker_policy_due(&coded_worker_policy, preparation)));
+#endif
     /* Compact newly encountered blocks once, then use the fast codec for
      * mutable updates. Both choices preserve the complete engine bytes. */
     int encoded = source.catalog ?
@@ -342,6 +355,8 @@ static uint32_t update_coded(void *buffer, uint32_t size, int preparation)
         fprintf(stderr, "[obor] complete compressed state exceeds its format budget or cannot be allocated\n");
         return 0;
     }
+    obor_block_worker_policy_observe(&coded_worker_policy, preparation,
+        obor_block_state_workload(coded_cache), obor_block_state_cpu_cost(coded_cache));
     uint32_t used = 0;
     const void *image = obor_block_state_image(coded_cache, &used);
     if (!image || used > size) return 0;
@@ -359,7 +374,11 @@ static uint32_t update_coded(void *buffer, uint32_t size, int preparation)
     if (resource_begin) {
         obor_block_changes changed;
         obor_block_state_changes(coded_cache, &changed);
-        fprintf(stderr, "[obor-resources] prepare_ms=%.3f codec_ms=%.3f copy_ms=%.3f used=%u changed_blocks=%u changed_raw=%llu changed_slots=%llu read_blocks=%u read_bytes=%llu proven_blocks=%u equal_blocks=%u repacks=%u tracking=%d generation=%llu previous_generation=%llu logical_bytes=%u stored_bytes=%llu slot_bytes=%llu hole_bytes=%llu\n",
+        fprintf(stderr, "[obor-codec-cpu%s] owner_ms=%.3f helper_ms=%.3f total_ms=%.3f\n",
+            preparation ? "-prepare" : "", changed.owner_cpu_ns / 1e6,
+            changed.helper_cpu_ns / 1e6, obor_block_state_cpu_cost(coded_cache) / 1e6);
+        fprintf(stderr, "[obor-resources%s] prepare_ms=%.3f codec_ms=%.3f copy_ms=%.3f used=%u changed_blocks=%u changed_raw=%llu changed_slots=%llu read_blocks=%u read_bytes=%llu proven_blocks=%u equal_blocks=%u repacks=%u tracking=%d generation=%llu previous_generation=%llu logical_bytes=%u stored_bytes=%llu slot_bytes=%llu hole_bytes=%llu\n",
+            preparation ? "-prepare" : "",
             (resource_end - resource_begin) / 1e6, (codec_end - resource_end) / 1e6,
             (copy_end - codec_end) / 1e6, used, changed.blocks,
             (unsigned long long)changed.raw_bytes, (unsigned long long)changed.slot_bytes,
@@ -370,6 +389,9 @@ static uint32_t update_coded(void *buffer, uint32_t size, int preparation)
             (unsigned long long)changed.total_stored_bytes,
             (unsigned long long)changed.total_slot_bytes,
             (unsigned long long)changed.pool_hole_bytes);
+        if (changed.worker_threads)
+            fprintf(stderr, "[obor-block-worker%s] threads=%u blocks=%u\n",
+                preparation ? "-prepare" : "", changed.worker_threads, changed.worker_blocks);
         if (pool_compact)
             fprintf(stderr, "[obor-pool-maintenance] examined=%u holes=%u moved=%u written=%llu reclaimed=%llu\n",
                 changed.compact_examined, changed.compact_holes, changed.compact_moved,

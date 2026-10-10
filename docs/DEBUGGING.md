@@ -41,6 +41,22 @@ inside protected frontend-stack calls. Phases are `audio`, `audio-mix`, `size`,
 `load-heap`. The partial/copy/heap phases exercise an interrupted restore, not
 merely an invalid header. Both variables are inert when unset.
 
+## State compression comparisons
+
+On Linux x86-64/ARM64, `OBOR_STATE_COMPRESSION_WORKER=0` selects serial block
+compression for a local comparison. Leaving it unset selects the compiled
+policy, which considers the preceding same-phase codec CPU cost and changed
+block count. At most one helper completes within an eligible capture.
+An explicit `1` bypasses that work estimate; resource bounds and serial
+fallback still apply. Neither override changes state contents or history size.
+Remove overrides before validating compiled defaults.
+
+With state timing enabled, the `obor-codec-cpu` records report owner and helper
+thread CPU costs; preparation records have a `-prepare` suffix. They exclude
+scheduler waits and are distinct from elapsed capture time. These diagnostic
+logs do not establish presentation cadence. Detailed per-block timing uses
+the serial path and cannot measure the parallel pipeline.
+
 ## Diagnostic files
 
 Diagnostics are disabled by default. The core does not send telemetry or
