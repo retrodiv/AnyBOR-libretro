@@ -42,9 +42,9 @@
       "upstream_sha256": "55c858ddd81579bbbd9e9b5e117b07b93c93040bfb211c308848e624ffe9f964"
     },
     "openborscript.c": {
-      "distributed_sha256": "5917b52e3d3685568927def17c918b9e49780a32ef26318c5ab1bb1582bda7ae",
+      "distributed_sha256": "205d06b5a8c04a232e5829cadf81159f45f6ff29579839b2423377799fe6bd24",
       "modified": true,
-      "summary": "Keep the dormant constant-lowering diagnostic compatible with the single-value instruction layout.",
+      "summary": "Keep the dormant constant-lowering diagnostic compatible with the single-value instruction layout. Compact compiler-only instruction records after resolving value ownership, preserving branch and export anchors, all mutable values and exactly-once pool cleanup.",
       "topics": [
         "record-dates-and-file-notices",
         "script-memory-layout"
@@ -651,9 +651,9 @@
       "upstream_sha256": "7e833ce4fddf92a755f98381eabc738a6a0fe78739abc9a6daa75a6fb5a1423b"
     },
     "source/scriptlib/ImportCache.c": {
-      "distributed_sha256": "2539e9f6433b6ffc8a64ca8b0496ac18dfbf3aec77b200fdb120c21209f96edb",
+      "distributed_sha256": "ba9ac73ea5ee87de4fdc18bd6469b231250fd2244f6f89b279b8c670fbe6ad91",
       "modified": true,
-      "summary": "Guard parser-only import metadata after compilation. Read import metadata only while an interpreter still owns parser state.",
+      "summary": "Guard parser-only import metadata after compilation. Compact compiler-only instruction records after resolving value ownership, preserving branch and export anchors, all mutable values and exactly-once pool cleanup. Read import metadata only while an interpreter still owns parser state.",
       "topics": [
         "record-dates-and-file-notices",
         "script-memory-layout"
@@ -691,9 +691,9 @@
       "upstream_sha256": "c11f3c10c95e428253195f44b0c16249ce8099adcd5425a35d37b31536cdc478"
     },
     "source/scriptlib/Interpreter.c": {
-      "distributed_sha256": "ee68ba66a85c34ebb2f218e65ff9b2a54436c1d8fe117f61e4ab85c4fe4cb7d8",
+      "distributed_sha256": "5fd5078ecf5d3b6d9fcaf5a07b913e9ff768507dbbb58459642d4981c9e97e3e",
       "modified": true,
-      "summary": "Push canonical constants, release parser-only instruction data, and pack compiled instructions, values, and call references into exact contiguous storage. Allocate parser state only while compiling and release it once runtime instructions are ready.",
+      "summary": "Push canonical constants, release parser-only instruction data, and pack compiled instructions, values, and call references into exact contiguous storage. Compact compiler-only instruction records after resolving value ownership, preserving branch and export anchors, all mutable values and exactly-once pool cleanup. Allocate parser state only while compiling and release it once runtime instructions are ready.",
       "topics": [
         "record-dates-and-file-notices",
         "script-memory-layout"
@@ -701,9 +701,9 @@
       "upstream_sha256": "d548f115c4f107d5cd4d8f6ecda5f3059dd1d704b1f289d465524bd3439e68e7"
     },
     "source/scriptlib/Interpreter.h": {
-      "distributed_sha256": "d443d41d5b830b9b9ec5cad36ee42a21eb34eb779c512b549b76f9d739ac20e6",
+      "distributed_sha256": "1f33b862afacee86e1af1d7cd153b3d2350dea88e8caa1f629a9754a5acb4d29",
       "modified": true,
-      "summary": "Own the exact contiguous storage used by compiled instructions and their values. Store parser state indirectly so compiled interpreters do not retain it.",
+      "summary": "Own the exact contiguous storage used by compiled instructions and their values. Compact compiler-only instruction records after resolving value ownership, preserving branch and export anchors, all mutable values and exactly-once pool cleanup. Store parser state indirectly so compiled interpreters do not retain it.",
       "topics": [
         "record-dates-and-file-notices",
         "script-memory-layout"
@@ -905,9 +905,13 @@
       "upstream_sha256": "505ee8e018326f36bb4070f69c6eb3caa6079b8fb796cd53a8d1bb168337e5ae"
     },
     "source/webmlib/nestegg/nestegg.c": {
-      "distributed_sha256": "d9d9d90a552729bc440947dbfbd9a2513624f412606c2322aca818c46bf9c4f9",
-      "modified": false,
-      "topics": [],
+      "distributed_sha256": "546ea246b792c0a7296b4d1cc595ee1b4e9238cab6ed379162c1737eda8b2fd7",
+      "modified": true,
+      "summary": "Bound compressed blocks before allocation in the explicitly enabled reproducible-media diagnostic; preserve normal parser limits otherwise.",
+      "topics": [
+        "record-dates-and-file-notices",
+        "webm-playback-lifecycle"
+      ],
       "upstream_sha256": "d9d9d90a552729bc440947dbfbd9a2513624f412606c2322aca818c46bf9c4f9"
     },
     "source/webmlib/nestegg/nestegg.h": {
@@ -929,9 +933,9 @@
       "upstream_sha256": "3fd1c478b5c9bce2a44c4a1cee1001ed95069568cfcd4b23b02f6ad0e3205835"
     },
     "source/webmlib/vidplay.c": {
-      "distributed_sha256": "e2972b24311a3eaa7d6a36a664cf4887ac19cf0c856eaf430b489439c68b4162",
+      "distributed_sha256": "d0518afb72346151eace006f3116b500928d79b6e7dbe8279587cd53f80123e2",
       "modified": true,
-      "summary": "Coordinate WebM worker shutdown and yield while waiting for video frames.",
+      "summary": "Coordinate WebM worker shutdown and yield while waiting for video frames. Add an opt-in common media rendezvous with bounded active waits, packet queues and decoded-frame reserves; coordinate PCM and video without changing engine clocks or default scheduling.",
       "topics": [
         "record-dates-and-file-notices",
         "webm-playback-lifecycle"

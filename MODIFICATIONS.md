@@ -1,6 +1,6 @@
 # AnyBOR port modification record
 
-Record updated: **2026-10-09**. Port maintainer: **retrodiv**
+Record updated: **2026-10-10**. Port maintainer: **retrodiv**
 (<retrodiv@proton.me>).
 
 AnyBOR offers thirteen selectable profiles backed by nine OpenBOR engines with
@@ -170,6 +170,16 @@ the guarded behavior matches the later 4086, 4432, 6391, 7533 and 8023 engines.
 The correction is structural and applies to every build-3842 game.
 
 ## Script memory layout
+
+After compilation, the common executable-stream compactor removes instruction
+records used only by the compiler. Each engine supplies its instruction and
+export metadata before pointer resolution. Entry points, branch targets,
+exported functions, sentinel records and every owned mutable value remain
+valid. A separate value count governs exactly-once cleanup, including values
+whose compiler records have been removed. Legacy opcode behavior is retained;
+an unsupported representation or allocation failure keeps the original stream.
+This reduces the state that actually needs copying and compression, without
+omitting mutable script data or selecting behavior by game identity.
 
 Build 3842 now retains one `ScriptVariant` for each compiled constant instead
 of allocating a second identical value. The interpreter pushes that canonical
@@ -342,7 +352,7 @@ and the video-settings loader.
 
 ## WebM playback lifecycle
 
-Builds **4432, 6391 and 7533** change `source/webmlib/vidplay.c`:
+Builds **4432, 6391, 7123, 7142 and 7533** change `source/webmlib/vidplay.c`:
 
 - Worker-thread sleeps use the host OS sleep function; they must not advance
   the engine coroutine's emulated clock.
@@ -354,6 +364,16 @@ Builds **4432, 6391 and 7533** change `source/webmlib/vidplay.c`:
   progress, avoiding a blocking video wait with a full audio queue.
 
 Build **8023** uses upstream's asynchronous movie layer. Its worker sleeps and timeout clocks use wall time, SDL atomics and CPU queries use the native port, and reset joins the entire movie pool. Persistent native synchronization is rebuilt after a state restore.
+
+The explicitly enabled reproducible-media diagnostic uses a shared bounded
+readiness policy and engine adapters for the classic mixer and newer movie
+channels. Audio is ready before mixing and requested video is ready before
+consumption. Silent movies service background music on the owner thread.
+Normal scheduling remains the default. Diagnostic blocks are limited before
+allocation, compressed queues have byte and item bounds, and decoded image
+reserves are bounded. Readiness failures invalidate the diagnostic; no hidden
+guest frames, frozen clocks, additional rewind history or unbounded queues
+make a comparison appear reproducible. See [Local diagnostics](docs/DEBUGGING.md).
 
 The platform's [`threads.c`](src/port/libretro/threads.c) publishes each live
 worker before its entry point can run, and rolls the count back if native

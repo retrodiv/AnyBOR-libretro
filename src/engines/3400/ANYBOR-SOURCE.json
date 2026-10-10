@@ -44,9 +44,9 @@
       "upstream_sha256": "47e3db32c70d173e16edf0dca15207a185d113cc09cca46685e6589c318bad23"
     },
     "openborscript.c": {
-      "distributed_sha256": "1e687d0debe4f38f5cfd35cc25def9a2aad6d8a9227215f97dc788e4a39f7cc1",
+      "distributed_sha256": "9af52a95e4e42c5cb4c09f56bb8d46e971081cff7f5b7dda961c130e4903fe47",
       "modified": true,
-      "summary": "Keep the dormant constant-lowering diagnostic compatible with the single-value instruction layout and map string constants from direct contiguous instruction storage.",
+      "summary": "Keep the dormant constant-lowering diagnostic compatible with the single-value instruction layout and map string constants from direct contiguous instruction storage. Compact compiler-only instruction records after resolving value ownership, preserving branch and export anchors, all mutable values and exactly-once pool cleanup.",
       "topics": [
         "compiler-warning-cleanup",
         "record-dates-and-file-notices",
@@ -476,9 +476,13 @@
       "upstream_sha256": "14ac04b440c4a6532246feb1a8ac534ddf0024309ef71b31634d2220a84c4fea"
     },
     "source/scriptlib/ImportCache.c": {
-      "distributed_sha256": "0747de65374204accbc8311d554052482c97e207b868b2e80a395ce03e6f0157",
-      "modified": false,
-      "topics": [],
+      "distributed_sha256": "dbd9c8049ecc899aeb83918797cf65ef50dd1a43cdbaa1cc006721fc4e14ca9a",
+      "modified": true,
+      "summary": "Guard parser-only import metadata after compilation. Compact compiler-only instruction records after resolving value ownership, preserving branch and export anchors, all mutable values and exactly-once pool cleanup. Read import metadata only while an interpreter still owns parser state.",
+      "topics": [
+        "record-dates-and-file-notices",
+        "script-memory-layout"
+      ],
       "upstream_sha256": "0747de65374204accbc8311d554052482c97e207b868b2e80a395ce03e6f0157"
     },
     "source/scriptlib/ImportCache.h": {
@@ -508,9 +512,9 @@
       "upstream_sha256": "e8654f70a184ec07f0936619661c7217a06e1235c561b37ca5a2060fab8e6093"
     },
     "source/scriptlib/Interpreter.c": {
-      "distributed_sha256": "b377337b7a9c9f0093eacc32d2f3b6d6ba172f279765f610ec65dcaa4843642e",
+      "distributed_sha256": "069318f9696a28dcd28dd36fe0501498a24bc473740004b898cce0450ea5e4c2",
       "modified": true,
-      "summary": "Push canonical constants, release parser-only instruction data, and pack compiled instructions, values, and call references into exact contiguous storage. Allocate parser state only while compiling and release it once runtime instructions are ready.",
+      "summary": "Push canonical constants, release parser-only instruction data, and pack compiled instructions, values, and call references into exact contiguous storage. Compact compiler-only instruction records after resolving value ownership, preserving branch and export anchors, all mutable values and exactly-once pool cleanup. Allocate parser state only while compiling and release it once runtime instructions are ready.",
       "topics": [
         "record-dates-and-file-notices",
         "script-memory-layout"
@@ -518,9 +522,9 @@
       "upstream_sha256": "2e326ec9caba813eb9009564cd34f474ba0dc9a85ab4c613e818ca8f157add2f"
     },
     "source/scriptlib/Interpreter.h": {
-      "distributed_sha256": "48aaa4d87733db6dfe6591521f0c0ccd387472ae0bda9277acad07942b168c4d",
+      "distributed_sha256": "db7ecd334c56db0fe3a82c22e30d56996d16433d26e441ec574bba6f34053a0c",
       "modified": true,
-      "summary": "Own the exact contiguous storage used by compiled instructions and their values. Store parser state indirectly so compiled interpreters do not retain it.",
+      "summary": "Own the exact contiguous storage used by compiled instructions and their values. Compact compiler-only instruction records after resolving value ownership, preserving branch and export anchors, all mutable values and exactly-once pool cleanup. Store parser state indirectly so compiled interpreters do not retain it.",
       "topics": [
         "record-dates-and-file-notices",
         "script-memory-layout"

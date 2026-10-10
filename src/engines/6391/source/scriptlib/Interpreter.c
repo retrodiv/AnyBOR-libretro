@@ -1,12 +1,14 @@
-/* AnyBOR modification record: 2026-10-05.
+/* AnyBOR modification record: 2026-10-10.
  * Port maintained by retrodiv <retrodiv@proton.me>.
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
  * Upstream code retains its original license and notices.
  * Push canonical constants, release parser-only instruction data, and pack
  * compiled instructions, values, and call references into exact contiguous
- * storage. Allocate parser state only while compiling and release it once
- * runtime instructions are ready.
+ * storage. Compact compiler-only instruction records after resolving value
+ * ownership, preserving branch and export anchors, all mutable values and
+ * exactly-once pool cleanup. Allocate parser state only while compiling and
+ * release it once runtime instructions are ready.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/6391.md
  * at the source repository root. Original notices follow below.
@@ -27,6 +29,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "obor_script_compact.h"
+#include "obor_script_executable.h"
 
 static void Interpreter_CompactInstructionStorage(Interpreter *pinterpreter)
 {
@@ -128,7 +131,7 @@ void Interpreter_Clear(Interpreter *pinterpreter)
     List_Clear(&(pinterpreter->theLabelStack));
     List_Clear(&(pinterpreter->theInstructionList));
     free(pinterpreter->instructionStorage);
-    free(pinterpreter->valueStorage);
+    obor_script_release_value_pool(pinterpreter);
     List_Clear(&(pinterpreter->paramList));
     memset(pinterpreter, 0, sizeof(Interpreter));
 }
@@ -477,7 +480,7 @@ HRESULT Interpreter_EvaluateCall(Interpreter *pinterpreter)
 #define BINARYOP(x)  \
 	ScriptVariant_Copy(pInstruction->theVal, x(pInstruction->theRef, pInstruction->theRef2));
 
-HRESULT Interpreter_CompileInstructions(Interpreter *pinterpreter)
+HRESULT Interpreter_CompileInstructions(Interpreter *pinterpreter, List *exports)
 {
     int i, j, t, size;
     Instruction *pInstruction = NULL;
@@ -935,6 +938,9 @@ HRESULT Interpreter_CompileInstructions(Interpreter *pinterpreter)
     StackedSymbolTable_Clear(&(pinterpreter->theSymbolTable));
     List_Clear(&(pinterpreter->theDataStack));
     List_Clear(&(pinterpreter->theLabelStack));
+
+    if (SUCCEEDED(hr)) obor_script_compact_executable(pinterpreter, exports);
+    size = pinterpreter->theInstructionList.size;
 
     // convert mainEntryIndex (int) to a direct instruction pointer
     if(pinterpreter->mainEntryIndex >= 0)

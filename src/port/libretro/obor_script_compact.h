@@ -183,6 +183,7 @@ static void obor_script_compact_values(Interpreter *interpreter)
         free(moves[i].old_value);
     free(moves);
     interpreter->valueStorage = storage;
+    interpreter->compactValueCount = count;
 }
 
 static void obor_script_clear_compact_values(Interpreter *interpreter,
@@ -191,15 +192,24 @@ static void obor_script_clear_compact_values(Interpreter *interpreter,
     if (!interpreter->valueStorage)
         return;
     if (obor_script_instruction_owns_value(instruction) && instruction->theVal) {
-        ScriptVariant_Clear(instruction->theVal);
         instruction->theVal = NULL;
     }
 #if OBOR_ENGINE_BUILD == 3400
     if (instruction->theVal2) {
-        ScriptVariant_Clear(instruction->theVal2);
         instruction->theVal2 = NULL;
     }
 #endif
+}
+
+/* Values outlive discarded compiler-only instruction records. */
+static void obor_script_release_value_pool(Interpreter *interpreter)
+{
+    int i;
+    for (i = 0; i < interpreter->compactValueCount; ++i)
+        ScriptVariant_Clear(&interpreter->valueStorage[i]);
+    free(interpreter->valueStorage);
+    interpreter->valueStorage = NULL;
+    interpreter->compactValueCount = 0;
 }
 
 #endif

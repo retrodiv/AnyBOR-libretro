@@ -17,7 +17,7 @@
 typedef struct {
     uintptr_t base;
     size_t extent, protected_length, maximum, page_size, mapping_size;
-    uint64_t epoch;
+    uint64_t epoch, last_change;
     volatile sig_atomic_t armed;
     uint64_t changed[];
 } write_watch;
@@ -52,6 +52,7 @@ int obor_write_watch_start(void *base, size_t length, size_t maximum)
     created->page_size = (size_t)page;
     created->mapping_size = bytes;
     created->epoch = 1;
+    created->last_change = 1;
     watch = created;
     return 1;
 }
@@ -65,6 +66,8 @@ int obor_write_watch_extend(size_t length)
      * Conservatively include all their bytes, even without a CPU fault. */
     for (size_t i = w->extent / w->page_size; i < length / w->page_size; ++i)
         __atomic_store_n(&w->changed[i], w->epoch, __ATOMIC_RELEASE);
+    if (length > w->extent)
+        __atomic_store_n(&w->last_change, w->epoch, __ATOMIC_RELEASE);
     w->extent = length;
     return 1;
 }
@@ -120,7 +123,12 @@ int obor_write_watch_fault(uintptr_t address)
     int saved_errno = errno;
     int result = mprotect((void *)(w->base + index * w->page_size),
                           w->page_size, PROT_READ | PROT_WRITE);
-    if (!result) __atomic_store_n(&w->changed[index], w->epoch, __ATOMIC_RELEASE);
+    if (!result) {
+        __atomic_store_n(&w->changed[index], w->epoch, __ATOMIC_RELEASE);
+        /* All leased workers share this generation; captures and rearming
+         * are refused until they join. No signal-handler lock is needed. */
+        __atomic_store_n(&w->last_change, w->epoch, __ATOMIC_RELEASE);
+    }
     errno = saved_errno;
     return result == 0;
 }
@@ -157,6 +165,20 @@ uint64_t obor_write_watch_page_epoch(size_t page)
 {
     return watch && page < watch->extent / watch->page_size ?
         __atomic_load_n(&watch->changed[page], __ATOMIC_ACQUIRE) : UINT64_MAX;
+}
+int obor_write_watch_range_unchanged(uintptr_t begin, size_t length, uint64_t since)
+{
+    write_watch *w = watch;
+    if (!w || !w->armed || obor_fault_worker_leases() || !since ||
+        since >= w->epoch || !length || begin < w->base ||
+        begin - w->base >= w->extent || length > w->extent - (begin - w->base))
+        return 0;
+    if (__atomic_load_n(&w->last_change, __ATOMIC_ACQUIRE) <= since) return 1;
+    size_t first = (begin - w->base) / w->page_size;
+    size_t last = (begin - w->base + length - 1) / w->page_size;
+    for (size_t i = first; i <= last; ++i)
+        if (__atomic_load_n(&w->changed[i], __ATOMIC_ACQUIRE) > since) return 0;
+    return 1;
 }
 size_t obor_write_watch_page_size(void) { return watch ? watch->page_size : 0; }
 #endif

@@ -1,10 +1,12 @@
-/* AnyBOR modification record: 2026-10-06.
+/* AnyBOR modification record: 2026-10-10.
  * Port maintained by retrodiv <retrodiv@proton.me>.
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
  * Upstream code retains its original license and notices.
- * Guard parser-only import metadata after compilation. Read import metadata
- * only while an interpreter still owns parser state.
+ * Guard parser-only import metadata after compilation. Compact compiler-only
+ * instruction records after resolving value ownership, preserving branch and
+ * export anchors, all mutable values and exactly-once pool cleanup. Read
+ * import metadata only while an interpreter still owns parser state.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/7123.md
  * at the source repository root. Original notices follow below.
@@ -144,7 +146,7 @@ HRESULT ImportNode_Init(ImportNode *self, const char *path)
     }
 
     // finish compiling and convert indices to pointers to the function entry points
-    if(FAILED(Interpreter_CompileInstructions(&self->interpreter)))
+    if(FAILED(Interpreter_CompileInstructions(&self->interpreter, &self->functions)))
     {
         printf("Script error: failed to import '%s': failed to compile\n", path);
         goto error;

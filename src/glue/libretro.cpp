@@ -25,6 +25,7 @@
 
 #include "libretro.h"
 #include "obor_abi.h"
+#include "obor_build_identity.h"
 #include "obor_runtime.h"
 #include "obor_engine_resources.h"
 #include "obor_notices.h"
@@ -1178,6 +1179,10 @@ static bool boot_engine(void)
     obor_boot_info boot;
     memset(&boot, 0, sizeof(boot));
     boot.abi_version = OBOR_ABI_VERSION;
+    if (!obor_build_identity_read(boot.state_build_identity)) {
+        fprintf(stderr, "[AnyBOR] missing linked state identity; core build is incomplete\n");
+        return false;
+    }
     boot.pak_path = g_pak_path;
     boot.save_dir = g_game_dir[0] ? g_game_dir : NULL;
     boot.log_dir = NULL;

@@ -34,7 +34,8 @@ static const unsigned char expected[] = {
     1,2,5,6,1,1,7,255, 1,2,5,6,1,1,7,255, 1,2,5,6,1,1,7,255
 };
 static int unchanged(void *context, uint32_t offset, uint32_t length)
-{ (void)length; return !context || offset != *(uint32_t *)context; }
+{ return !context || *(uint32_t *)context < offset ||
+    *(uint32_t *)context - offset >= length; }
 static unsigned char *save_manifest(obor_resource_catalog *c, uint32_t *size)
 {
     const void *data = obor_resource_catalog_manifest(c, size); assert(data && *size);
@@ -148,6 +149,78 @@ static void test_current_mask(obor_resource_materializer *m, const obor_resource
     assert(obor_resource_catalog_manifest_unchanged(c, generation, first+record, record));
     obor_resource_catalog_destroy(c);
 }
+static unsigned proof_calls;
+static int counted_unchanged(void *context, uint32_t offset, uint32_t length)
+{ ++proof_calls; return unchanged(context, offset, length); }
+
+static void test_range_proofs(obor_resource_materializer *m, const obor_resource_recipe *recipe)
+{
+    unsigned char arena[4096]; memset(arena, 0, sizeof(arena));
+    memcpy(arena + 80, expected, sizeof(expected));
+    memcpy(arena + 272, expected, sizeof(expected));
+    obor_resource_catalog *c = obor_resource_catalog_create(m, &allocator, arena, sizeof(arena));
+    assert(c && obor_resource_catalog_add(c, 64, 128, 80, recipe));
+    assert(obor_resource_catalog_add(c, 256, 128, 272, recipe));
+    assert(obor_resource_catalog_prepare(c, sizeof(arena), NULL, NULL));
+    uint32_t size, repeat_size;
+    unsigned char *original = save_manifest(c, &size);
+    proof_calls = 0;
+    assert(obor_resource_catalog_prepare(c, sizeof(arena), counted_unchanged, NULL));
+    assert(proof_calls == 1); /* one actual range proof, never blind manifest reuse */
+    const void *repeat = obor_resource_catalog_manifest(c, &repeat_size);
+    assert(size == repeat_size && !memcmp(original, repeat, size));
+    assert(obor_resource_catalog_mask_count(c) == 2);
+
+    /* A byte within the far resource must invalidate an envelope whose start
+     * points at the other resource. Compare the result to the actual body. */
+    uint32_t dirty = 280;
+    arena[dirty] ^= 1;
+    assert(obor_resource_catalog_prepare(c, sizeof(arena), counted_unchanged, &dirty));
+    assert(obor_resource_catalog_mask_count(c) == 1);
+    unsigned char snapshot[4096]; memcpy(snapshot, arena, sizeof(snapshot));
+    obor_resource_catalog_zero(c, 0, snapshot, sizeof(snapshot));
+    assert(!memcmp(snapshot + 272, arena + 272, sizeof(expected)));
+    proof_calls = 0;
+    assert(obor_resource_catalog_prepare(c, sizeof(arena), counted_unchanged, NULL));
+    assert(proof_calls == 1 && obor_resource_catalog_mask_count(c) == 1);
+
+    /* Raw bodies belong to the envelope too: restoring the original bytes
+     * must make the resource reconstructible again. */
+    arena[dirty] ^= 1;
+    assert(obor_resource_catalog_prepare(c, sizeof(arena), counted_unchanged, &dirty));
+    assert(obor_resource_catalog_mask_count(c) == 2);
+    arena[90] ^= 1;
+    obor_resource_catalog_forget_proofs(c);
+    proof_calls = 0;
+    assert(obor_resource_catalog_prepare(c, sizeof(arena), counted_unchanged, NULL));
+    assert(proof_calls == 0 && obor_resource_catalog_mask_count(c) == 1);
+    arena[90] ^= 1;
+    assert(obor_resource_catalog_prepare(c, sizeof(arena), NULL, NULL));
+    assert(obor_resource_catalog_mask_count(c) == 2);
+
+    /* Extent and lifetime changes must validate before reusing any envelope. */
+    assert(!obor_resource_catalog_prepare(c, 300, counted_unchanged, NULL));
+    test_unprepared_read(c);
+    assert(obor_resource_catalog_prepare(c, sizeof(arena), counted_unchanged, NULL));
+    obor_resource_catalog_remove(c, 256);
+    assert(obor_resource_catalog_prepare(c, sizeof(arena), counted_unchanged, NULL));
+    assert(obor_resource_catalog_mask_count(c) == 1);
+    memset(arena + 272, 0xdd, sizeof(expected));
+    assert(!obor_resource_catalog_add(c, 256, 128, 272, recipe)); /* registration proves bytes */
+    memcpy(arena + 272, expected, sizeof(expected));
+    assert(obor_resource_catalog_add(c, 256, 128, 272, recipe));
+    arena[280] ^= 1; /* script mutation after successful registration */
+    assert(obor_resource_catalog_prepare(c, sizeof(arena), counted_unchanged, &dirty));
+    assert(obor_resource_catalog_mask_count(c) == 1);
+    obor_resource_catalog_remove(c, 64);
+    obor_resource_catalog_remove(c, 256);
+    assert(obor_resource_catalog_prepare(c, sizeof(arena), counted_unchanged, NULL));
+    assert(obor_resource_catalog_prepare(c, sizeof(arena), counted_unchanged, NULL));
+    assert(obor_resource_catalog_mask_count(c) == 0);
+    free(original); obor_resource_catalog_destroy(c);
+    puts("range_proofs_mutation_forget_lifetime=1");
+}
+
 static obor_resource_catalog *restore(obor_resource_catalog *c, const void *manifest, uint32_t size,
         const unsigned char *snapshot, obor_resource_unchanged proof, void *ctx, size_t expected_staging)
 {
@@ -180,6 +253,7 @@ int main(int argc, char **argv)
     obor_resource_recipe r;
     assert(obor_resource_recipe_prove(m, &r, "data/image.png", 14, 5,3,0,0,5,3,expected,sizeof(expected)));
     test_current_mask(m, &r);
+    test_range_proofs(m, &r);
     obor_resource_catalog *c = obor_resource_catalog_create(m, &allocator, arena, sizeof(arena)); assert(c);
     test_unprepared_read(NULL);
     test_unprepared_read(c);

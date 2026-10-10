@@ -27,7 +27,7 @@
 extern "C" {
 #endif
 
-#define OBOR_ABI_VERSION 8u
+#define OBOR_ABI_VERSION 9u
 
 #define OBOR_EXIT_MEMORY_FAULT (-2)
 enum { OBOR_RESOURCE_FILE_OPEN = 1, OBOR_RESOURCE_FILE_CLOSE,
@@ -87,6 +87,7 @@ typedef struct {
 } obor_engine_region;
 
 typedef struct {
+    uint8_t     state_build_identity[32];
     uint32_t    abi_version;   /* glue sets = OBOR_ABI_VERSION */
     const char *pak_path;      /* absolute path to the .pak — or, with
                                 * raw_dir, to the mod ROOT (the directory

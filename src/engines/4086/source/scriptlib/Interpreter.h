@@ -1,11 +1,13 @@
-/* AnyBOR modification record: 2026-09-12.
+/* AnyBOR modification record: 2026-10-10.
  * Port maintained by retrodiv <retrodiv@proton.me>.
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
  * Upstream code retains its original license and notices.
  * Own the exact contiguous storage used by compiled instructions and their
- * values. Store parser state indirectly so compiled interpreters do not
- * retain it.
+ * values. Compact compiler-only instruction records after resolving value
+ * ownership, preserving branch and export anchors, all mutable values and
+ * exactly-once pool cleanup. Store parser state indirectly so compiled
+ * interpreters do not retain it.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/4086.md
  * at the source repository root. Original notices follow below.
@@ -36,6 +38,7 @@ typedef struct Interpreter
     List theInstructionList;
     Instruction *instructionStorage;
     ScriptVariant *valueStorage;
+    int compactValueCount;
     List paramList;
     Stack theDataStack;
     Stack theLabelStack;
@@ -76,7 +79,7 @@ HRESULT Interpreter_GetValue(Interpreter *pinterpreter, LPCSTR variable, ScriptV
 HRESULT Interpreter_GetValueByRef(Interpreter *pinterpreter, LPCSTR variable, ScriptVariant **pValue);
 HRESULT Interpreter_EvaluateImmediate(Interpreter *pinterpreter);
 HRESULT Interpreter_EvaluateCall(Interpreter *pinterpreter);
-HRESULT Interpreter_CompileInstructions(Interpreter *pinterpreter);
+HRESULT Interpreter_CompileInstructions(Interpreter *pinterpreter, List *exports);
 inline HRESULT Interpreter_Call(Interpreter *pinterpreter);
 inline HRESULT Interpreter_EvalInstruction(Interpreter *pinterpreter);
 void Interpreter_OutputPCode(Interpreter *pinterpreter, LPCSTR fileName );

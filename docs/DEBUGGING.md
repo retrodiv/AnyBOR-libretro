@@ -1,5 +1,44 @@
 # Local diagnostics
 
+## Reproducible WebM scheduling
+
+`OBOR_DIAG_WEBM_REPRODUCIBLE=1` explicitly enables a development-only media
+scheduler. Unset, `0` and other values retain normal scheduling. Keep the value
+constant for the whole process and record it in test receipts. This is not a
+frontend option or a production performance setting.
+
+The common layer coordinates video readiness and PCM consumption with the
+engine's decoder. It uses host monotonic time for two-second active deadlines;
+it does not modify the engine clock, seed its RNG or insert emulated frames.
+Classic mixers use owner/producer handoffs. Newer movie channels wait for
+bounded preroll and owned PCM reserves, with deterministic look-ahead.
+Background music during a silent movie is serviced by the owner. A deliberately
+paused frontend may retain full queues; workers check cancellation at bounded
+condition waits and resume when consumption resumes.
+
+Per decoder, decoded image reservations are limited to64MiB. Each compressed
+queue has a16MiB payload bound and retains its fixed item-count limit; each
+container block is limited to2MiB before packet allocation. These are decoder
+buffers, not state history. Existing codec/track structures and authored movie
+source storage are separate. Over-budget media is refused in diagnostic mode.
+
+`[obor-media-diag] schema=1 enabled=1 ...` records the policy and bounds.
+Any `invalid=1` record fails the diagnostic run, even if playback later ends
+cleanly. Reproducibility means comparing two fresh executions of the same
+binary, content and inputs, including video records and all PCM samples.
+Repeat normal-policy ON/OFF rewind measurements with this variable absent.
+The diagnostic does not enable snapshots during active threaded playback.
+
+## Exact-build state compatibility
+
+Saved states contain internal addresses. The linked core is stamped with its
+exact module/layout identity, which is included in every state representation.
+A state from a different binary, or an older state without this identity, is
+rejected before modifying the running engine. A version number alone is not a
+layout guarantee. The build tool stamps the stripped module and matching debug
+image before platform packaging; bypassing this step produces an incomplete
+build. Ordinary in-game saves are unaffected by this state-format boundary.
+
 ## Engine memory faults
 
 Every engine uses the same protected execution path. A synchronous SIGSEGV or

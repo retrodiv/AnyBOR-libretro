@@ -143,6 +143,7 @@ int main(int argc, char **argv)
         assert(obor_write_watch_epoch() == epoch);
         assert(!pthread_barrier_init(&ready, NULL, WORKERS + 1));
         run(spawn);
+        assert(!obor_write_watch_range_unchanged((uintptr_t)memory, page, epoch - 1));
         assert(!obor_write_watch_arm(page * 4) && !obor_write_watch_stop() &&
                !obor_write_watch_extend(page * 4));
         /* Owner recovery expires each callback, but worker dispatch survives.
@@ -171,6 +172,9 @@ int main(int argc, char **argv)
         for (size_t i = 0; i < 3; ++i)
             assert(obor_write_watch_page_epoch(i) == epoch);
         assert(obor_write_watch_page_epoch(3) < epoch);
+        assert(!obor_write_watch_range_unchanged((uintptr_t)memory, page * 4, epoch - 1));
+        assert(!obor_write_watch_range_unchanged((uintptr_t)memory + page * 2, 16, epoch - 1));
+        assert(obor_write_watch_range_unchanged((uintptr_t)memory + page * 3, page, epoch - 1));
     }
     assert(!suspended);
     assert(obor_write_watch_stop());

@@ -1,9 +1,12 @@
-/* AnyBOR modification record: 2026-09-12.
+/* AnyBOR modification record: 2026-10-10.
  * Port maintained by retrodiv <retrodiv@proton.me>.
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
  * Upstream code retains its original license and notices.
  * Coordinate WebM worker shutdown and yield while waiting for video frames.
+ * Add an opt-in common media rendezvous with bounded active waits, packet
+ * queues and decoded-frame reserves; coordinate PCM and video without
+ * changing engine clocks or default scheduling.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/8023.md
  * at the source repository root. Original notices follow below.
@@ -41,6 +44,7 @@
 #include "globals.h"
 #ifdef LIBRETRO
 #include "obor_threads.h"
+#include "obor_media_diag.h"
 #undef usleep /* Worker waits use wall time, never the coroutine clock. */
 #endif
 #include "borendian.h"
@@ -83,6 +87,8 @@ typedef struct {
     int start;
     int size;
     int max_size;
+    int diag_packets;
+    size_t diag_bytes;
     uint64_t replacement_count;
     uint64_t resync_count;
     obor_atomic_int *quit;
@@ -165,6 +171,22 @@ struct webm_context {
 };
 
 static bor_mutex *webm_lifecycle_operation_mutex;
+
+/* Owner-thread registry, bounded by the engine channel limit. Registration
+ * follows READY; removal precedes asynchronous resource destruction. */
+static webm_context *obor_diag_contexts[SOUND_CHANNEL_COUNT_MAX];
+static int obor_diag_decoder_ready(void *context)
+{
+    e_webm_decoder_state state = webm_get_decoder_state(context);
+    if (state == WEBM_DECODER_STATE_READY) return 1;
+    return state == WEBM_DECODER_STATE_FAILED ||
+        state == WEBM_DECODER_STATE_CLOSING ||
+        state == WEBM_DECODER_STATE_CLOSED ? -1 : 0;
+}
+static int obor_diag_decoder_closed(void *context)
+{
+    return webm_get_decoder_state(context) == WEBM_DECODER_STATE_CLOSED;
+}
 
 /*
 * Caskey, Damon V.
@@ -380,7 +402,7 @@ static int64_t webm_io_tell(void *userdata)
     return seekpackfile64(io_ctx->packhandle, 0, SEEK_CUR);
 }
 
-static FixedSizeQueue *queue_init(int max_size, obor_atomic_int *quit)
+static FixedSizeQueue *queue_init(int max_size, obor_atomic_int *quit, int packets)
 {
     FixedSizeQueue *queue;
 
@@ -394,6 +416,8 @@ static FixedSizeQueue *queue_init(int max_size, obor_atomic_int *quit)
     queue->start = 0;
     queue->size = 0;
     queue->max_size = max_size;
+    queue->diag_packets = packets && obor_media_diag_enabled();
+    queue->diag_bytes = 0;
     queue->replacement_count = 0;
     queue->resync_count = 0;
     queue->quit = quit;
@@ -414,8 +438,59 @@ static FixedSizeQueue *queue_init(int max_size, obor_atomic_int *quit)
 
 // returns 0 on success; <0 means that the caller should clean up
 // and exit
+/* Count immutable packet payload; NULL is the terminal marker. */
+static size_t obor_diag_packet_bytes(nestegg_packet *packet)
+{
+    unsigned count, i;
+    size_t total = 0;
+    if (!packet) return 0;
+    if (nestegg_packet_count(packet, &count) < 0) return (size_t)-1;
+    for (i = 0; i < count; ++i) {
+        unsigned char *data;
+        size_t bytes;
+        if (nestegg_packet_data(packet, i, &data, &bytes) < 0 ||
+            bytes > OBOR_MEDIA_DIAG_PACKET_BYTES - total)
+            return (size_t)-1;
+        total += bytes;
+    }
+    return total;
+}
+
+static int obor_diag_packet_insert(FixedSizeQueue *queue, void *data)
+{
+    size_t bytes = obor_diag_packet_bytes(data);
+    if (bytes > OBOR_MEDIA_DIAG_PACKET_BYTES) {
+        obor_media_diag_failure("compressed-packet-budget");
+        webm_request_decoder_stop(queue->quit);
+        return -1;
+    }
+    mutex_lock(queue->mutex);
+    while (queue->size == queue->max_size ||
+           bytes > OBOR_MEDIA_DIAG_QUEUE_BYTES - queue->diag_bytes) {
+        /* A paused movie/frontend can retain full queues indefinitely. The
+         * owner bounds active readiness waits; workers remain cancellable
+         * every 10ms instead of expiring legitimate pauses. */
+        if (webm_stop_is_requested(queue->quit)) {
+            mutex_unlock(queue->mutex);
+            return -1;
+        }
+        cond_wait_timed(queue->not_full, queue->mutex, 10);
+    }
+    if (webm_stop_is_requested(queue->quit)) {
+        mutex_unlock(queue->mutex);
+        return -1;
+    }
+    queue->data[(queue->start + queue->size) % queue->max_size] = data;
+    ++queue->size;
+    queue->diag_bytes += bytes;
+    cond_signal(queue->not_empty);
+    mutex_unlock(queue->mutex);
+    return 0;
+}
+
 int queue_insert(FixedSizeQueue *queue, void *data)
 {
+    if (queue->diag_packets) return obor_diag_packet_insert(queue, data);
     mutex_lock(queue->mutex);
     //SPIT("size=%i\n", queue->size);
     if (queue->size == queue->max_size)
@@ -460,6 +535,7 @@ void *queue_get(FixedSizeQueue *queue)
     }
     assert(queue->size > 0);
     void *data = queue->data[queue->start];
+    if (queue->diag_packets) queue->diag_bytes -= obor_diag_packet_bytes(data);
     --queue->size;
     queue->start = (queue->start + 1) % queue->max_size;
     //SPIT("size=%i\n", queue->size);
@@ -488,6 +564,7 @@ static int queue_try_get(FixedSizeQueue *queue, void **data)
     }
 
     *data = queue->data[queue->start];
+    if (queue->diag_packets) queue->diag_bytes -= obor_diag_packet_bytes(*data);
     --queue->size;
     queue->start = (queue->start + 1) % queue->max_size;
     cond_signal(queue->not_full);
@@ -746,6 +823,8 @@ static int video_packet_queue_insert(
         return -1;
     }
 
+    if (obor_media_diag_enabled())
+        return queue_insert(queue, packet) == 0 ? 1 : -1;
     while(!webm_stop_is_requested(&ctx->quit)) {
         int index;
         int queue_full;
@@ -1224,6 +1303,11 @@ static void webm_wait_for_preroll(webm_context *ctx)
         now = obor_wall_uticks();
         if(now < start_time ||
            now - start_time >= WEBM_PREROLL_TIMEOUT_MICROSECONDS) {
+            if (obor_media_diag_enabled()) {
+                obor_media_diag_failure("modern-preroll");
+                webm_request_decoder_stop(&ctx->quit);
+                return;
+            }
             printf(
                 "\nWarning: WebM preroll timed out with video=%d/%d "
                 "decoded frames and audio=%u/%u PCM buffers.\n",
@@ -1298,7 +1382,7 @@ static int init_audio(
         ? seek_timestamp + audioParams.codec_delay
         : UINT64_MAX;
     audio_ctx->quit = quit;
-    audio_ctx->packet_queue = queue_init(AUDIO_PACKET_QUEUE_SIZE, quit);
+    audio_ctx->packet_queue = queue_init(AUDIO_PACKET_QUEUE_SIZE, quit, 1);
     if(!audio_ctx->packet_queue) {
         vorbis_destroy(&(audio_ctx->vorbis_ctx));
         return -1;
@@ -1580,7 +1664,10 @@ static int init_video(
         return -1;
     }
 
-    decoder_config.threads = video_decoder_thread_count(
+    if (obor_media_diag_enabled() && !obor_media_diag_dimensions(
+            video_params.width, video_params.height, FRAME_QUEUE_SIZE + 3))
+        return -1;
+    decoder_config.threads = obor_media_diag_enabled() ? 1 : video_decoder_thread_count(
         video_params.width,
         video_params.height
     );
@@ -1623,8 +1710,8 @@ static int init_video(
         decoder_config.threads == 1U ? "" : "s"
     );
     video_ctx->quit = quit;
-    video_ctx->packet_queue = queue_init(VIDEO_PACKET_QUEUE_SIZE, quit);
-    video_ctx->frame_queue = queue_init(FRAME_QUEUE_SIZE, quit);
+    video_ctx->packet_queue = queue_init(VIDEO_PACKET_QUEUE_SIZE, quit, 1);
+    video_ctx->frame_queue = queue_init(FRAME_QUEUE_SIZE, quit, 0);
     if(!video_ctx->packet_queue || !video_ctx->frame_queue) {
         printf("Error: Unable to allocate WebM video queues\n");
         if(video_ctx->packet_queue) queue_destroy(video_ctx->packet_queue);
@@ -2034,7 +2121,7 @@ static int webm_open_resources(webm_context *ctx)
             ctx->audio_track = -1;
         }
     }
-    else if(audio_track < 0 &&
+    else if(!obor_media_diag_enabled() && audio_track < 0 &&
             ctx->replace_all_audio &&
             sound_query_music(NULL, NULL)) {
         /* Service channel-zero music during silent fullscreen playback. */
@@ -2195,6 +2282,18 @@ webm_context *webm_start_playback_ex(
         free(ctx);
         return NULL;
     }
+    if (obor_media_diag_enabled()) {
+        if (!obor_media_diag_wait(obor_diag_decoder_ready, ctx, "modern-open")) {
+            webm_request_close(ctx);
+            /* The caller still owns this failed/closing context and uses the
+             * existing retirement path. Never free a worker-owned object. */
+        }
+        else {
+            obor_diag_contexts[sound_channel] = ctx;
+            obor_media_diag_announce("modern", FRAME_QUEUE_SIZE + 3,
+                ctx->audio_initialized ? SOUND_STREAM_BUFFER_COUNT * SOUND_STREAM_BUFFER_SIZE : 0);
+        }
+    }
     return ctx;
 }
 
@@ -2232,6 +2331,9 @@ void webm_request_close(webm_context *ctx)
         return;
     }
 
+    if (obor_media_diag_enabled() &&
+        obor_diag_contexts[ctx->sound_channel] == ctx)
+        obor_diag_contexts[ctx->sound_channel] = NULL;
     mutex_lock(ctx->lifecycle_mutex);
     if(ctx->decoder_state != WEBM_DECODER_STATE_CLOSED) {
         ctx->close_requested = 1;
@@ -2239,6 +2341,8 @@ void webm_request_close(webm_context *ctx)
         cond_broadcast(ctx->lifecycle_condition);
     }
     mutex_unlock(ctx->lifecycle_mutex);
+    if (obor_media_diag_enabled())
+        obor_media_diag_wait(obor_diag_decoder_closed, ctx, "modern-close");
 }
 
 /*
@@ -2410,6 +2514,41 @@ void webm_set_audio_speed(webm_context *ctx, double speed)
     }
 }
 
+static int obor_diag_modern_audio_ready(void *context)
+{
+    webm_context *ctx = context;
+    s_sound_pcm_stream_status status = { 0 };
+    if (webm_stop_is_requested(&ctx->quit)) return -1;
+    if (!ctx->audio_initialized || ctx->audio_ctx.output_paused) return 1;
+    if (!sound_get_channel_pcm_stream_status_owned(ctx->audio_ctx.channel,
+            ctx->audio_ctx.stream_play_id, &status)) return 1;
+    return status.ready_buffer_count >= 2 || status.producer_finished;
+}
+
+int obor_webm_diag_audio_prepare(void)
+{
+    unsigned channel;
+    if (!obor_media_diag_enabled()) return 1;
+    for (channel = 0; channel < SOUND_CHANNEL_COUNT_MAX; ++channel) {
+        webm_context *ctx = obor_diag_contexts[channel];
+        if (!ctx) continue;
+        if (!obor_media_diag_wait(obor_diag_modern_audio_ready, ctx, "modern-audio")) {
+            webm_request_decoder_stop(&ctx->quit);
+            return 0;
+        }
+        if (ctx->audio_track < 0 && ctx->replace_all_audio && sound_query_music(NULL, NULL))
+            sound_update_music();
+    }
+    return 1;
+}
+
+static int obor_diag_modern_video_ready(void *context)
+{
+    webm_context *ctx = context;
+    if (webm_stop_is_requested(&ctx->quit)) return -1;
+    return queue_get_status(ctx->video_ctx.frame_queue, NULL, NULL) > 0;
+}
+
 /*
 * Caskey, Damon V.
 * 2026-08-15
@@ -2425,6 +2564,9 @@ int webm_get_pending_frame_count(webm_context *ctx)
        webm_get_decoder_state(ctx) != WEBM_DECODER_STATE_READY) {
         return 0;
     }
+    /* Constant look-ahead budget removes worker-dependent dequeue counts.
+     * Each requested frame is still obtained from the bounded queue. */
+    if (obor_media_diag_enabled()) return FRAME_QUEUE_SIZE;
     count = queue_get_status(
         ctx->video_ctx.frame_queue,
         NULL,
@@ -2454,6 +2596,12 @@ int webm_try_get_next_frame(webm_context *ctx, yuv_frame **frame)
             state == WEBM_DECODER_STATE_CLOSED
             ? -1
             : 0;
+    }
+    if (obor_media_diag_enabled() &&
+        (!obor_webm_diag_audio_prepare() ||
+         !obor_media_diag_wait(obor_diag_modern_video_ready, ctx, "modern-video"))) {
+        webm_request_decoder_stop(&ctx->quit);
+        return -1;
     }
     if(!queue_try_get(ctx->video_ctx.frame_queue, &queued_frame)) {
         return webm_stop_is_requested(&ctx->quit) ? -1 : 0;

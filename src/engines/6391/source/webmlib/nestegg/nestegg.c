@@ -1,3 +1,15 @@
+/* AnyBOR modification record: 2026-10-10.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Bound compressed blocks before allocation in the explicitly enabled
+ * reproducible-media diagnostic; preserve normal parser limits otherwise.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/6391.md
+ * at the source repository root. Original notices follow below.
+ */
+
 /*
  * Copyright © 2010 Mozilla Foundation
  *
@@ -11,6 +23,7 @@
 #include "halloc/halloc.h"
 #include "nestegg/nestegg.h"
 #include "globals.h"
+#include "obor_media_diag.h"
 
 /* EBML Elements */
 #define ID_EBML                 0x1a45dfa3
@@ -1301,6 +1314,11 @@ ne_read_block(nestegg * ctx, uint64_t block_id, uint64_t block_size, nestegg_pac
 
   *data = NULL;
 
+  /* Reject before frame allocation, not after queuing a large packet. */
+  if (obor_media_diag_enabled() && block_size > OBOR_MEDIA_DIAG_PACKET_BYTES) {
+    obor_media_diag_failure("compressed-block-budget");
+    return -1;
+  }
   if (block_size > LIMIT_BLOCK)
     return -1;
 

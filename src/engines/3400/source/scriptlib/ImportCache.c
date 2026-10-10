@@ -1,3 +1,17 @@
+/* AnyBOR modification record: 2026-10-10.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Guard parser-only import metadata after compilation. Compact compiler-only
+ * instruction records after resolving value ownership, preserving branch and
+ * export anchors, all mutable values and exactly-once pool cleanup. Read
+ * import metadata only while an interpreter still owns parser state.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/3400.md
+ * at the source repository root. Original notices follow below.
+ */
+
 /*
  * OpenBOR - http://www.LavaLit.com
  * -----------------------------------------------------------------------
@@ -56,7 +70,7 @@ HRESULT ImportNode_Init(ImportNode* node, const char* path)
 	scriptText = readscript(path);
 	if(scriptText == NULL) goto error;
 	if(FAILED(Interpreter_ParseText(&node->interpreter, scriptText, 1, path))) goto error;
-	if(FAILED(Interpreter_CompileInstructions(&node->interpreter))) goto error;
+	if(FAILED(Interpreter_CompileInstructions(&node->interpreter, NULL))) goto error;
 	free(scriptText);
 	return S_OK;
 

@@ -4,6 +4,7 @@
 #include "obor_fault.h"
 #include "obor_abi.h"
 #include "obor_write_watch.h"
+#include <assert.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <pthread.h>
@@ -18,6 +19,9 @@
 static unsigned char *memory;
 static size_t page;
 static int operation;
+static uint64_t initial;
+static int clean(size_t offset, size_t length, uint64_t since)
+{ return obor_write_watch_range_unchanged((uintptr_t)memory + offset, length, since); }
 static void previous_signal(int signal) { (void)signal; _exit(73); }
 static void *foreign_write(void *unused)
 {
@@ -52,6 +56,12 @@ static void exercise(void *unused)
     } else if (operation == 7) {
         errno = 0;
         if (read(-1, memory, 8) != -1 || errno != EBADF) exit(13);
+    } else if (operation == 9) {
+        assert(obor_fault_worker_acquire());
+        assert(!clean(0, page, initial));
+        assert(!obor_write_watch_arm(page * 2));
+        obor_fault_worker_release();
+        assert(clean(0, page, initial));
     } else if (operation == 8) {
         pthread_t thread;
         if (pthread_create(&thread, NULL, foreign_write, NULL)) exit(14);
@@ -90,40 +100,66 @@ int main(int argc, char **argv)
         obor_write_watch_start(memory, page, SIZE_MAX) ||
         !obor_write_watch_start(memory, page * 2, page * 4) ||
         obor_write_watch_start(memory, page * 2, page * 4)) return 4;
-    uint64_t initial = obor_write_watch_epoch();
+    initial = obor_write_watch_epoch();
+    assert(!clean(0, page, initial)); /* not protected yet */
     errno = EDOM;
     if (!obor_write_watch_arm(page * 2) || errno != EDOM) return 5;
     uint64_t first = obor_write_watch_epoch();
     if (first <= initial || obor_write_watch_page_epoch(0) > initial) return 6;
+    assert(clean(0, page * 2, initial));
+    assert(clean(page - 1, 2, initial));
+    assert(!clean(0, 0, initial) && !clean(0, 1, 0));
+    assert(!clean(0, 1, first) && !clean(0, 1, UINT64_MAX));
+    assert(!clean(page * 2, 1, initial));
+    assert(!clean(page * 2 - 1, 2, initial));
+    assert(!clean(1, SIZE_MAX, initial));
+    assert(!obor_write_watch_range_unchanged((uintptr_t)memory - 1, 1, initial));
+    assert(!obor_write_watch_range_unchanged(UINTPTR_MAX, 1, initial));
     if (!strcmp(argv[1], "cpu")) {
         guarded(1, 1);
         if (memory[page-1] != 0x31 || memory[page] != 0x42 ||
             obor_write_watch_page_epoch(0) != first ||
             obor_write_watch_page_epoch(1) != first) return 7;
+        assert(!clean(0, page, initial) && !clean(page, page, initial));
+        assert(!clean(page - 1, 2, initial));
         if (!obor_write_watch_arm(page * 2)) return 8;
+        assert(clean(0, page * 2, first));
         guarded(4, 1);
         if (obor_write_watch_page_epoch(0) != obor_write_watch_epoch() ||
             obor_write_watch_page_epoch(1) != first) return 9;
+        assert(!clean(0, page, first));
+        assert(clean(page, page, first)); /* dirty outside queried range */
+        assert(!clean(page - 1, 2, first));
     } else if (!strcmp(argv[1], "read") || !strcmp(argv[1], "fread")) {
         guarded(!strcmp(argv[1], "read") ? 2 : 3, 1);
         for (size_t i=page-3; i<page+3; ++i) if (memory[i]) return 10;
         if (memory[page-4] != 0x77 || memory[page+3] != 0x77 ||
             obor_write_watch_page_epoch(0) != first ||
             obor_write_watch_page_epoch(1) != first) return 11;
+        assert(!clean(0, page * 2, initial));
+        assert(!clean(page - 3, 6, initial));
+        assert(!clean(page + 20, 1, initial)); /* conservative page proof */
     } else if (!strcmp(argv[1], "growth")) {
         guarded(5, 1);
         if (!obor_write_watch_extend(page * 4) ||
             obor_write_watch_page_epoch(2) != first ||
             obor_write_watch_page_epoch(3) != first ||
             obor_write_watch_extend(page) || obor_write_watch_arm(page * 5)) return 12;
+        assert(clean(0, page * 2, initial));
+        assert(!clean(page * 2, page * 2, initial));
         if (!obor_write_watch_arm(page * 4)) return 13;
+        assert(clean(0, page * 4, first));
         guarded(5, 1);
         if (obor_write_watch_page_epoch(3) != obor_write_watch_epoch()) return 14;
+        assert(clean(0, page * 3, first));
+        assert(!clean(page * 3, 1, first));
     } else if (!strcmp(argv[1], "fault")) {
         guarded(6, 0);
         guarded(1, 1); /* recovery must not poison the active monitor */
     } else if (!strcmp(argv[1], "errno")) {
         guarded(7, 1);
+    } else if (!strcmp(argv[1], "lease")) {
+        guarded(9, 1);
     } else if (!strcmp(argv[1], "worker")) {
         struct sigaction previous = {0};
         previous.sa_handler = previous_signal;
@@ -133,6 +169,7 @@ int main(int argc, char **argv)
     } else return 2;
     if (!obor_write_watch_stop() || !obor_write_watch_stop() ||
         obor_write_watch_epoch() || obor_write_watch_page_size()) return 15;
+    assert(!clean(0, page, initial));
     /* No stale signal handler, metadata or protection after shutdown. */
     memset(memory, 0x99, page * 4);
     if (!obor_write_watch_start(memory, page * 2, page * 4) ||

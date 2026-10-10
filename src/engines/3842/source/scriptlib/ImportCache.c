@@ -1,9 +1,12 @@
-/* AnyBOR modification record: 2026-09-12.
+/* AnyBOR modification record: 2026-10-10.
  * Port maintained by retrodiv <retrodiv@proton.me>.
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
  * Upstream code retains its original license and notices.
- * Retain imported entry points as direct instruction pointers.
+ * Retain imported entry points as direct instruction pointers. Compact
+ * compiler-only instruction records after resolving value ownership,
+ * preserving branch and export anchors, all mutable values and exactly-once
+ * pool cleanup.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/3842.md
  * at the source repository root. Original notices follow below.
@@ -108,7 +111,7 @@ HRESULT ImportNode_Init(ImportNode* self, const char* path)
 	}
 
 	// finish compiling and convert indices to pointers to the function entry points
-	if(FAILED(Interpreter_CompileInstructions(&self->interpreter))) goto error;
+	if(FAILED(Interpreter_CompileInstructions(&self->interpreter, &self->functions))) goto error;
 	assert(self->interpreter.instructionStorage != NULL);
 	List_Reset(&self->functions);
 	size = List_GetSize(&self->functions);

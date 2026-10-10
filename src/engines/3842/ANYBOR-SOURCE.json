@@ -46,9 +46,9 @@
       "upstream_sha256": "19888c33f34b9cb80222de1439a1745461b8353d99ef40dc0a8184f081b45ed9"
     },
     "openborscript.c": {
-      "distributed_sha256": "915f804dbf2f7d0f3fb0748807cca65ef1390683bc3a027d670345e81746213d",
+      "distributed_sha256": "fb743a7ae98f94835ebcb14e638e0b250654001b8adcbcc4d850fee57cf4466f",
       "modified": true,
-      "summary": "Keep the dormant constant-lowering diagnostic compatible with the single-value instruction layout and map string constants from direct contiguous instruction storage.",
+      "summary": "Keep the dormant constant-lowering diagnostic compatible with the single-value instruction layout and map string constants from direct contiguous instruction storage. Compact compiler-only instruction records after resolving value ownership, preserving branch and export anchors, all mutable values and exactly-once pool cleanup.",
       "topics": [
         "compiler-warning-cleanup",
         "record-dates-and-file-notices",
@@ -489,9 +489,9 @@
       "upstream_sha256": "b7ef11c9a212d277e8e0740c374be82e044eeb66326527a708ef2f7f14f98805"
     },
     "source/scriptlib/ImportCache.c": {
-      "distributed_sha256": "1e10dc2084d0eae6980e39bdc50c321de5c69fad6adf21b1b3d0d6ad04860078",
+      "distributed_sha256": "3083fa6ff677aa81736c384a7ef91c4eeae1addb4d199e6b89cc0255e485f648",
       "modified": true,
-      "summary": "Retain imported entry points as direct instruction pointers.",
+      "summary": "Retain imported entry points as direct instruction pointers. Compact compiler-only instruction records after resolving value ownership, preserving branch and export anchors, all mutable values and exactly-once pool cleanup.",
       "topics": [
         "compiler-warning-cleanup",
         "script-memory-layout"
@@ -528,9 +528,9 @@
       "upstream_sha256": "c4ef4c752ec66a5ec170842990d8dec82fa62437ff09fdab352c83a87e21ae56"
     },
     "source/scriptlib/Interpreter.c": {
-      "distributed_sha256": "c684278e15351c09019441f763ea343361990fc2b4d846432be68113faa7c8b3",
+      "distributed_sha256": "bc4b773acb3514fed53d2ac418f06e8bc3b8c043be5f70bdbc90baf293279794",
       "modified": true,
-      "summary": "Push canonical constants, release parser-only instruction data, and pack compiled instructions, values, and call references into exact contiguous storage. Allocate parser state only while compiling and release it once runtime instructions are ready.",
+      "summary": "Push canonical constants, release parser-only instruction data, and pack compiled instructions, values, and call references into exact contiguous storage. Compact compiler-only instruction records after resolving value ownership, preserving branch and export anchors, all mutable values and exactly-once pool cleanup. Allocate parser state only while compiling and release it once runtime instructions are ready.",
       "topics": [
         "record-dates-and-file-notices",
         "script-memory-layout"
@@ -538,9 +538,9 @@
       "upstream_sha256": "6d2b9d8d641491b379340431bfe932bb3f27b2b0f9840a30d054818f86db5017"
     },
     "source/scriptlib/Interpreter.h": {
-      "distributed_sha256": "3010faf3b4707549b336da2a25f1ad459c699969bd80c5c38f56cef4885d7d22",
+      "distributed_sha256": "0937f81c255d5d345bb5db5e03a7cb49d67306face2da0fd00b20262c927f6d4",
       "modified": true,
-      "summary": "Own the exact contiguous storage used by compiled instructions and their values. Store parser state indirectly so compiled interpreters do not retain it.",
+      "summary": "Own the exact contiguous storage used by compiled instructions and their values. Compact compiler-only instruction records after resolving value ownership, preserving branch and export anchors, all mutable values and exactly-once pool cleanup. Store parser state indirectly so compiled interpreters do not retain it.",
       "topics": [
         "record-dates-and-file-notices",
         "script-memory-layout"

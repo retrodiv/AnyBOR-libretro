@@ -1,11 +1,13 @@
-/* AnyBOR modification record: 2026-09-12.
+/* AnyBOR modification record: 2026-10-10.
  * Port maintained by retrodiv <retrodiv@proton.me>.
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
  * Upstream code retains its original license and notices.
  * Keep the dormant constant-lowering diagnostic compatible with the single-
  * value instruction layout and map string constants from direct contiguous
- * instruction storage.
+ * instruction storage. Compact compiler-only instruction records after
+ * resolving value ownership, preserving branch and export anchors, all
+ * mutable values and exactly-once pool cleanup.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/3842.md
  * at the source repository root. Original notices follow below.
@@ -952,7 +954,7 @@ int Script_Compile(Script* pscript)
 	int result;
 	if(!pscript || !pscript->pinterpreter) return 1;
 	//Interpreter_OutputPCode(pscript->pinterpreter, "code");
-	result = SUCCEEDED(Interpreter_CompileInstructions(pscript->pinterpreter));
+	result = SUCCEEDED(Interpreter_CompileInstructions(pscript->pinterpreter, NULL));
 	if(!result) {Script_Clear(pscript, 1);shutdown(1, "Can't compile script!\n");}
 	result = Script_MapStringConstants(pscript);
 	if(!result) {Script_Clear(pscript, 1);shutdown(1, "Can't compile script!\n");}

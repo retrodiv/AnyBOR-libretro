@@ -44,9 +44,9 @@
       "upstream_sha256": "3d54f4d40f76c0e51fc30617c5dedd968ab57168a063cd349dc104ae5fc8756b"
     },
     "openborscript.c": {
-      "distributed_sha256": "a68bc8caa855be4c80eb52bb296deaee8866f0666d8f3afa559e256c085f8d4c",
+      "distributed_sha256": "4d92d802a1284be46db0d2688d5ecffc2ace991b6ed9c58b7806af1c320f91d3",
       "modified": true,
-      "summary": "Keep the dormant constant-lowering diagnostic compatible with the single-value instruction layout.",
+      "summary": "Keep the dormant constant-lowering diagnostic compatible with the single-value instruction layout. Compact compiler-only instruction records after resolving value ownership, preserving branch and export anchors, all mutable values and exactly-once pool cleanup.",
       "topics": [
         "compiler-warning-cleanup",
         "record-dates-and-file-notices",
@@ -488,9 +488,9 @@
       "upstream_sha256": "a07de58fe3114e86282e178250f054c28fb6f7eea52657d917809b6895c02696"
     },
     "source/scriptlib/ImportCache.c": {
-      "distributed_sha256": "2ec13b8089d564d4fb68096d3042d5a86176bcc473072648f564562586d035e5",
+      "distributed_sha256": "a4a62f716193d7198cf15954274fdba2eef94c94f155e2c4680504e294ff95d3",
       "modified": true,
-      "summary": "Guard parser-only import metadata after compilation. Read import metadata only while an interpreter still owns parser state.",
+      "summary": "Guard parser-only import metadata after compilation. Compact compiler-only instruction records after resolving value ownership, preserving branch and export anchors, all mutable values and exactly-once pool cleanup. Read import metadata only while an interpreter still owns parser state.",
       "topics": [
         "compiler-warning-cleanup",
         "record-dates-and-file-notices",
@@ -528,9 +528,9 @@
       "upstream_sha256": "e283e23b1f8636ba4bf5a9a254c7a5897ad599dcb6c64d255552def5ac5ab60e"
     },
     "source/scriptlib/Interpreter.c": {
-      "distributed_sha256": "67c723edb262689960c4133ce6f85587c9e13f09aa9e6cb99e6d36a1015305b0",
+      "distributed_sha256": "6c6d6abb5ee5cc79db290031f9a7fce6559aaffe6ad4a8f23dd0e7a626a5c975",
       "modified": true,
-      "summary": "Push canonical constants, release parser-only instruction data, and pack compiled instructions, values, and call references into exact contiguous storage. Allocate parser state only while compiling and release it once runtime instructions are ready.",
+      "summary": "Push canonical constants, release parser-only instruction data, and pack compiled instructions, values, and call references into exact contiguous storage. Compact compiler-only instruction records after resolving value ownership, preserving branch and export anchors, all mutable values and exactly-once pool cleanup. Allocate parser state only while compiling and release it once runtime instructions are ready.",
       "topics": [
         "record-dates-and-file-notices",
         "script-memory-layout"
@@ -538,9 +538,9 @@
       "upstream_sha256": "9cc76b5b2d888c92ba3a3d75f0f5e08872a6dc14a748dd1e94f1c121efd8c1c2"
     },
     "source/scriptlib/Interpreter.h": {
-      "distributed_sha256": "7b4bc9e593d9378602074184138e898737343e889bbac5f2023fa4d4fe3009b7",
+      "distributed_sha256": "e4b43f2923e95451d4dd6507b2880d9993611c594a88e697da9a1dfe3dfd7341",
       "modified": true,
-      "summary": "Own the exact contiguous storage used by compiled instructions and their values. Store parser state indirectly so compiled interpreters do not retain it.",
+      "summary": "Own the exact contiguous storage used by compiled instructions and their values. Compact compiler-only instruction records after resolving value ownership, preserving branch and export anchors, all mutable values and exactly-once pool cleanup. Store parser state indirectly so compiled interpreters do not retain it.",
       "topics": [
         "record-dates-and-file-notices",
         "script-memory-layout"

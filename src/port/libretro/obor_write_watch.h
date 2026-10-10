@@ -21,6 +21,9 @@ int obor_write_watch_fault(uintptr_t address);
 int obor_write_watch_prepare_io(void *buffer, size_t length);
 uint64_t obor_write_watch_epoch(void);
 uint64_t obor_write_watch_page_epoch(size_t page);
+/* Call while tracked engine workers are parked, as for state capture. A
+ * missing/inactive watch, invalid range or unarmed generation is not proof. */
+int obor_write_watch_range_unchanged(uintptr_t begin, size_t length, uint64_t since);
 size_t obor_write_watch_page_size(void);
 #else
 #define OBOR_WRITE_WATCH_ENABLED 0
@@ -36,6 +39,8 @@ static inline int obor_write_watch_prepare_io(void *p, size_t n)
 static inline uint64_t obor_write_watch_epoch(void) { return 0; }
 static inline uint64_t obor_write_watch_page_epoch(size_t p)
 { (void)p; return UINT64_MAX; }
+static inline int obor_write_watch_range_unchanged(uintptr_t p, size_t n, uint64_t e)
+{ (void)p; (void)n; (void)e; return 0; }
 static inline size_t obor_write_watch_page_size(void) { return 0; }
 #endif
 #endif

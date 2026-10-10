@@ -25,6 +25,8 @@ struct obor_resource_catalog {
     uint32_t arena_size, capacity, slots, free_slot, active, tombstones;
     uint32_t range_count, manifest_size, manifest_capacity;
     uint64_t generation;
+    uint32_t proof_begin, proof_end;
+    int proofs_checked;
 };
 struct obor_resource_restore {
     obor_resource_catalog *target;
@@ -178,7 +180,10 @@ int obor_resource_catalog_manifest_unchanged(const obor_resource_catalog *c,
 }
 void obor_resource_catalog_forget_proofs(obor_resource_catalog *c)
 {
-    if (c) for (uint32_t i = 0; i < c->slots; ++i) c->entries[i].checked = 0;
+    if (c) {
+        c->proofs_checked = 0;
+        for (uint32_t i = 0; i < c->slots; ++i) c->entries[i].checked = 0;
+    }
 }
 
 static int catalog_order(const void *a, const void *b)
@@ -213,6 +218,17 @@ int obor_resource_catalog_prepare(obor_resource_catalog *c, uint32_t used,
         obor_resource_unchanged unchanged, void *context)
 {
     if (!c || used > c->arena_size) return 0;
+    /* Add/remove invalidate the manifest. Forget/reset invalidate checked
+     * proofs. With identical bounds and a write-tracking proof covering every
+     * active body, eligibility and the complete preceding manifest still
+     * hold. A dirty byte, absent proof or changed extent uses the full path. */
+    if (c->manifest_size && c->proofs_checked &&
+        used == catalog_u32(c->manifest + 16) &&
+        (!c->active || (unchanged && c->proof_end > c->proof_begin &&
+         unchanged(context, c->proof_begin, c->proof_end - c->proof_begin))))
+        return 1;
+    c->proofs_checked = 0;
+    uint32_t proof_begin = UINT32_MAX, proof_end = 0;
     uint64_t previous_generation = c->generation;
     uint32_t previous_manifest = c->manifest_size, previous_ranges = c->range_count;
     c->manifest_size = c->range_count = 0;
@@ -221,6 +237,8 @@ int obor_resource_catalog_prepare(obor_resource_catalog *c, uint32_t used,
         catalog_entry *e = c->entries + i;
         if (!(e->flags & CATALOG_ACTIVE)) continue;
         if (!catalog_bounds(c, e, used)) return 0;
+        if (e->body < proof_begin) proof_begin = e->body;
+        if (e->body + e->recipe.length > proof_end) proof_end = e->body + e->recipe.length;
         uint32_t old = e->flags;
         int eligible = (old & CATALOG_OMITTED) != 0;
         if (!e->checked || !unchanged || !unchanged(context, e->body, e->recipe.length)) {
@@ -233,6 +251,7 @@ int obor_resource_catalog_prepare(obor_resource_catalog *c, uint32_t used,
         e->checked = 1;
         if (old != e->flags) e->manifest_changed = ++c->generation;
     }
+    c->proof_begin = proof_begin; c->proof_end = proof_end; c->proofs_checked = 1;
     /* A valid preceding manifest already proved ordering, nonoverlap, path
      * encoding and stable-slot contents. Dirty proofs above still examine
      * every body; if neither ownership nor eligibility changed, only the

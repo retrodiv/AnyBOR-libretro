@@ -58,10 +58,10 @@ extern uintptr_t __stack_chk_guard;
 static int collect_segments(void);
 
 #define OBS_MAGIC 0x3153424FU /* "OBS1" */
-#define OBS_VERSION 3U
-#define OBS_RESOURCE_VERSION 4U
-#define OBS_STABLE_RESOURCE_VERSION 5U
-#define OBS_ALIGNED_RESOURCE_VERSION 6U
+#define OBS_VERSION 7U
+#define OBS_RESOURCE_VERSION 8U
+#define OBS_STABLE_RESOURCE_VERSION 9U
+#define OBS_ALIGNED_RESOURCE_VERSION 10U
 
 /* Snapshots omit inactive engines' BSS. The heap precedes the variable-length
  * stack slice, keeping its offset stable for incremental dirty-page copies. */
@@ -219,12 +219,14 @@ static obor_engine_region g_regions[OBOR_MAX_ENGINE_REGIONS];
 static uint32_t g_region_count;
 static int g_segments_failed;
 static uint64_t g_full_segment_bytes;
+static uint8_t g_state_build_identity[32] OBOR_RUNTIME;
 
 int obor_state_set_regions(const obor_boot_info *info)
 {
     if (!info->engine_regions || !info->engine_region_count ||
         info->engine_region_count > OBOR_MAX_ENGINE_REGIONS)
         return 0;
+    memcpy(g_state_build_identity, info->state_build_identity, sizeof(g_state_build_identity));
     uint64_t previous_end = 0;
     unsigned own = 0;
     for (uint32_t i = 0; i < info->engine_region_count; ++i) {
@@ -475,6 +477,7 @@ typedef struct {
     uint64_t stack_off;   /* saved slice offset within the stack region */
     uint64_t stack_len;
     uint64_t heap_len;    /* bytes of sparse dlmalloc heap image */
+    uint8_t build_identity[32]; /* Exact linked module/layout, not engine version. */
 } obs_header;
 
 static uint64_t segs_bytes(void)
@@ -779,6 +782,7 @@ static uint32_t serialize_impl(void *buf, uint32_t size, obor_state_ranges *rang
     memset(&h, 0, sizeof(h));
     h.magic = OBS_MAGIC;
     h.version = OBS_VERSION;
+    memcpy(h.build_identity, g_state_build_identity, sizeof(h.build_identity));
     h.profile_build = g_profile_build;
     h.physical_build = (uint32_t)OBOR_ENGINE_BUILD;
     h.nsegs = (uint32_t)g_nsegs;
@@ -964,6 +968,12 @@ static int32_t unserialize_impl(const void *buf, uint32_t size, int *committed)
     if (h.magic != OBS_MAGIC || (h.version != OBS_VERSION && h.version != OBS_RESOURCE_VERSION &&
         h.version != OBS_STABLE_RESOURCE_VERSION && h.version != OBS_ALIGNED_RESOURCE_VERSION))
         return 0;
+    /* This runs before resource staging or writing any live engine bytes.
+     * Older pointer-bearing formats have no identity and are rejected above. */
+    if (memcmp(h.build_identity, g_state_build_identity, sizeof(h.build_identity))) {
+        fprintf(stderr, "[obor] state belongs to a different core binary/layout — rejected\n");
+        return 0;
+    }
     if (h.profile_build != g_profile_build ||
         h.physical_build != (uint32_t)OBOR_ENGINE_BUILD) {
         fprintf(stderr, "[obor] state from profile %u / engine %u, running %u / %u — rejected\n",

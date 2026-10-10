@@ -17,6 +17,7 @@ import subprocess
 import sys
 from pathlib import Path
 from state_layout import write_bss_script
+from state_build_identity import stamp as stamp_state_identity
 
 HERE = Path(__file__).resolve().parent.parent
 SRC = HERE / "src"
@@ -684,6 +685,13 @@ def build_glue(target, spec, outdir):
     run([spec["strip"], "-x" if uses_macho(spec) else "--strip-unneeded", out])
     if spec["plat"] == "windows":
         normalize_pe_metadata(out)
+    identity = stamp_state_identity(out)
+    stamp_state_identity(out.with_suffix(out.suffix + ".sym"), identity)
+    if uses_macho(spec):
+        # Changing a loadable section invalidates the linker's ad-hoc signature.
+        # Sign after stamping; signatures are not part of saved pointer identity.
+        run(["codesign", "--force", "--sign", "-", out])
+        run(["codesign", "--force", "--sign", "-", out.with_suffix(out.suffix + ".sym")])
     if spec.get("android"):
         package_android_engine(spec, out, third)
     shutil.copy2(str(out), str(HERE / out.name))

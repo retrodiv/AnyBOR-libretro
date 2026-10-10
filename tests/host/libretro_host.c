@@ -24,6 +24,8 @@
  *   OBOR_STOP_WIDTH=N / OBOR_RESET_WIDTH=N / OBOR_LOAD_WIDTH=N
  *       act on the first frame of width N (synthetic WebM regression)
  *   OBOR_POST_UNLOAD_MS=N   keep the frontend alive after content unload
+ *   OBOR_HOST_PAUSE_AT=N / OBOR_HOST_PAUSE_MS=1..5000
+ *       pause frontend calls once while decoder workers continue (diagnostic)
  *   OBOR_RESET_EVERY=N / OBOR_LOAD_EVERY=N   repeat lifecycle operations
  *   OBOR_CHECK_FDS=1   require the POSIX descriptor count to return to baseline
  *   OBOR_FD_PADDING=N  keep N host files open to shift core descriptor numbers
@@ -941,6 +943,22 @@ int main(int argc, char **argv)
     int expect_recover_at = getenv("OBOR_EXPECT_RECOVER_AT") ? atoi(getenv("OBOR_EXPECT_RECOVER_AT")) : -1;
 
     for (g_frame = 0; g_frame < nframes && !g_shutdown; g_frame++) {
+        if (getenv("OBOR_HOST_PAUSE_AT") &&
+            g_frame == atoi(getenv("OBOR_HOST_PAUSE_AT"))) {
+            const char *delay = getenv("OBOR_HOST_PAUSE_MS");
+            int ms = delay ? atoi(delay) : 0;
+            if (ms < 1 || ms > 5000) {
+                fprintf(stderr, "host pause must be bounded to 1..5000ms\n");
+                return 1;
+            }
+            printf("host_pause frame=%d milliseconds=%d\n", g_frame, ms);
+            fflush(stdout);
+#ifdef _WIN32
+            Sleep((unsigned)ms);
+#else
+            usleep((unsigned)ms * 1000u);
+#endif
+        }
         size_t current_state_size = p_retro_serialize_size();
         if (contract_sz && current_state_size != contract_sz) {
             if (!g_variable_states || !current_state_size ||

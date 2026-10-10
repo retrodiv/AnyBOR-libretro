@@ -147,13 +147,7 @@ static int coded_resource_unchanged(void *opaque, uint32_t offset, uint32_t leng
         if (coded_dirty_pages[page / 8] & (1U << (page % 8))) return 0;
     return 1;
 #elif OBOR_WRITE_WATCH_ENABLED
-    size_t page_size = obor_write_watch_page_size();
-    if (!page_size || !coded_epoch) return 0;
-    size_t first = (begin - heap_lo()) / page_size;
-    size_t last = (begin + length - 1 - heap_lo()) / page_size;
-    for (size_t page = first; page <= last; ++page)
-        if (obor_write_watch_page_epoch(page) > coded_epoch) return 0;
-    return 1;
+    return obor_write_watch_range_unchanged(begin, length, coded_epoch);
 #else
     return 0;
 #endif
@@ -252,6 +246,7 @@ static uint32_t update_coded(void *buffer, uint32_t size, int preparation)
     memset(&header, 0, sizeof(header));
     header.magic = OBS_MAGIC;
     header.version = OBS_VERSION;
+    memcpy(header.build_identity, g_state_build_identity, sizeof(header.build_identity));
     header.profile_build = g_profile_build;
     header.physical_build = OBOR_ENGINE_BUILD;
     header.nsegs = (uint32_t)g_nsegs;

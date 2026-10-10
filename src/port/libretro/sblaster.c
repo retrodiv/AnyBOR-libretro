@@ -12,6 +12,7 @@
 #include "sblaster.h"
 #include "soundmix.h"
 #include "obor_abi.h"
+#include "obor_media_diag.h"
 
 #include <string.h>
 #ifdef OBOR_HAS_MOVIE_PLAYBACK
@@ -57,6 +58,12 @@ void SB_lock_audio(void) { SB_lock_audio_direct(); }
 void SB_unlock_audio(void) { SB_unlock_audio_direct(); }
 static void mix_samples(unsigned char *buffer, int bytes)
 {
+#ifdef WEBM
+    if (obor_media_diag_enabled() && !obor_webm_diag_audio_prepare()) {
+        memset(buffer, 0, (size_t)bytes);
+        return;
+    }
+#endif
     SB_lock_audio_direct();
     obor_test_fault_phase("audio-mix");
     update_sample(buffer, bytes);

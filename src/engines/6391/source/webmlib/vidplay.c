@@ -1,9 +1,12 @@
-/* AnyBOR modification record: 2026-10-05.
+/* AnyBOR modification record: 2026-10-10.
  * Port maintained by retrodiv <retrodiv@proton.me>.
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
  * Upstream code retains its original license and notices.
  * Coordinate WebM worker shutdown and yield while waiting for video frames.
+ * Add an opt-in common media rendezvous with bounded active waits, packet
+ * queues and decoded-frame reserves; coordinate PCM and video without
+ * changing engine clocks or default scheduling.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/6391.md
  * at the source repository root. Original notices follow below.
@@ -38,6 +41,8 @@
 #include "types.h"
 #include "globals.h"
 #include "soundmix.h"
+#include "obor_media_diag.h"
+#include "obor_threads.h"
 
 /* AnyBOR, 2026-09-08: these sleeps run on playback workers,
  * not on the engine coroutine. Keep the host OS sleep function. */
@@ -55,6 +60,8 @@ typedef struct {
     int start;
     int size;
     int max_size;
+    int diag_packets;
+    size_t diag_bytes;
     bor_mutex *mutex;
     bor_cond *not_full;
     bor_cond *not_empty;
@@ -67,6 +74,7 @@ typedef struct {
     int frequency;
     int avail_samples;
     int last_samples;
+    obor_media_diag_gate diag_gate;
 } audio_context;
 
 typedef struct {
@@ -119,13 +127,15 @@ int64_t webm_tell(void *userdata)
     return seekpackfile((int)(size_t)userdata, 0, SEEK_CUR);
 }
 
-FixedSizeQueue *queue_init(int max_size)
+FixedSizeQueue *queue_init(int max_size, int packets)
 {
     FixedSizeQueue *queue;
     queue = malloc(sizeof(*queue) - sizeof(queue->data) + (max_size * sizeof(void *)));
     queue->start = 0;
     queue->size = 0;
     queue->max_size = max_size;
+    queue->diag_packets = packets && obor_media_diag_enabled();
+    queue->diag_bytes = 0;
     queue->mutex = mutex_create();
     queue->not_full = cond_create();
     queue->not_empty = cond_create();
@@ -136,8 +146,59 @@ FixedSizeQueue *queue_init(int max_size)
 
 // returns 0 on success; <0 means that the caller should clean up
 // and exit
+/* Count immutable packet payload; NULL is the terminal marker. */
+static size_t obor_diag_packet_bytes(nestegg_packet *packet)
+{
+    unsigned count, i;
+    size_t total = 0;
+    if (!packet) return 0;
+    if (nestegg_packet_count(packet, &count) < 0) return (size_t)-1;
+    for (i = 0; i < count; ++i) {
+        unsigned char *data;
+        size_t bytes;
+        if (nestegg_packet_data(packet, i, &data, &bytes) < 0 ||
+            bytes > OBOR_MEDIA_DIAG_PACKET_BYTES - total)
+            return (size_t)-1;
+        total += bytes;
+    }
+    return total;
+}
+
+static int obor_diag_packet_insert(FixedSizeQueue *queue, void *data)
+{
+    size_t bytes = obor_diag_packet_bytes(data);
+    if (bytes > OBOR_MEDIA_DIAG_PACKET_BYTES) {
+        obor_media_diag_failure("compressed-packet-budget");
+        __atomic_store_n(&quit_video, 1, __ATOMIC_RELAXED);
+        return -1;
+    }
+    mutex_lock(queue->mutex);
+    while (queue->size == queue->max_size ||
+           bytes > OBOR_MEDIA_DIAG_QUEUE_BYTES - queue->diag_bytes) {
+        /* A paused movie/frontend can retain full queues indefinitely. The
+         * owner bounds active readiness waits; workers remain cancellable
+         * every 10ms instead of expiring legitimate pauses. */
+        if (__atomic_load_n(&quit_video, __ATOMIC_RELAXED)) {
+            mutex_unlock(queue->mutex);
+            return -1;
+        }
+        cond_wait_timed(queue->not_full, queue->mutex, 10);
+    }
+    if (__atomic_load_n(&quit_video, __ATOMIC_RELAXED)) {
+        mutex_unlock(queue->mutex);
+        return -1;
+    }
+    queue->data[(queue->start + queue->size) % queue->max_size] = data;
+    ++queue->size;
+    queue->diag_bytes += bytes;
+    cond_signal(queue->not_empty);
+    mutex_unlock(queue->mutex);
+    return 0;
+}
+
 int queue_insert(FixedSizeQueue *queue, void *data)
 {
+    if (queue->diag_packets) return obor_diag_packet_insert(queue, data);
     mutex_lock(queue->mutex);
     //SPIT("size=%i\n", queue->size);
     if (queue->size == queue->max_size)
@@ -182,6 +243,7 @@ void *queue_get(FixedSizeQueue *queue)
     }
     assert(queue->size > 0);
     void *data = queue->data[queue->start];
+    if (queue->diag_packets) queue->diag_bytes -= obor_diag_packet_bytes(data);
     --queue->size;
     queue->start = (queue->start + 1) % queue->max_size;
     //SPIT("size=%i\n", queue->size);
@@ -254,10 +316,16 @@ static int audio_thread(void *data)
     audio_context *audio_ctx = (audio_context *)data;
     int i, j;
 
+    const int diagnostic = obor_media_diag_enabled();
     while(!__atomic_load_n(&quit_video, __ATOMIC_RELAXED))
     {
+        if (diagnostic && !obor_media_diag_take(&audio_ctx->diag_gate)) {
+            usleep(1000);
+            continue;
+        }
         if(musicchannel.paused)
         {
+            if (diagnostic) obor_media_diag_complete(&audio_ctx->diag_gate, 0);
             continue;
         }
 
@@ -271,14 +339,19 @@ static int audio_thread(void *data)
         }
 
         // Need to update?
-        for(j = 0, i = musicchannel.playing_buffer + 1; j < MUSIC_NUM_BUFFERS; j++, i++)
+        /* Diagnostic consumption needs the current and next chunk, not
+         * a full-ring preroll which could block demux behind future video. */
+        for(j = 0, i = musicchannel.playing_buffer + (diagnostic ? 0 : 1);
+            j < (diagnostic ? 2 : MUSIC_NUM_BUFFERS); j++, i++)
         {
             i %= MUSIC_NUM_BUFFERS;
             if(musicchannel.fp_playto[i] == 0)
             {
                 // Buffer needs to be filled
-                if (audio_decode_frame(audio_ctx, (uint8_t*)musicchannel.buf[i], MUSIC_BUF_SIZE * sizeof(short)) < 0)
+                if (audio_decode_frame(audio_ctx, (uint8_t*)musicchannel.buf[i], MUSIC_BUF_SIZE * sizeof(short)) < 0) {
+                    if (diagnostic) obor_media_diag_complete(&audio_ctx->diag_gate, 1);
                     return 0;
+                }
                 musicchannel.fp_playto[i] = INT_TO_FIX(MUSIC_BUF_SIZE);
                 if(!musicchannel.active)
                 {
@@ -288,6 +361,7 @@ static int audio_thread(void *data)
             }
         }
 
+        if (diagnostic) obor_media_diag_complete(&audio_ctx->diag_gate, 0);
         // Sleep for 1 ms so that this thread doesn't waste CPU cycles busywaiting
         usleep(1000);
     }
@@ -317,7 +391,7 @@ static void init_audio(nestegg *ctx, int track, audio_context *audio_ctx, int vo
     audio_ctx->vorbis_ctx.channels = audioParams.channels;
     audio_ctx->frequency = (int)audioParams.rate;
     audio_ctx->avail_samples = audio_ctx->last_samples = 0;
-    audio_ctx->packet_queue = queue_init(PACKET_QUEUE_SIZE);
+    audio_ctx->packet_queue = queue_init(PACKET_QUEUE_SIZE, 1);
     printf("Audio track: %f Hz, %d channels, %d bits/sample\n",
             audioParams.rate, audioParams.channels, audioParams.depth / audioParams.channels);
     if(audio_ctx->frequency % 11025)
@@ -434,6 +508,9 @@ static int init_video(nestegg *nestegg_ctx, int track, video_context *video_ctx)
     nestegg_video_params video_params;
     nestegg_track_video_params(nestegg_ctx, track, &video_params);
     assert(video_params.stereo_mode == NESTEGG_VIDEO_MONO);
+    if (obor_media_diag_enabled() && !obor_media_diag_dimensions(
+            video_params.width, video_params.height, FRAME_QUEUE_SIZE + 2))
+        return -1;
 
     if (vpx_codec_dec_init(&(video_ctx->vpx_ctx), vpx_codec_vp8_dx(), NULL, 0))
     {
@@ -449,8 +526,8 @@ static int init_video(nestegg *nestegg_ctx, int track, video_context *video_ctx)
             video_params.width, video_params.height,
             video_params.display_width, video_params.display_height,
             1000000000.0 / video_ctx->frame_delay);
-    video_ctx->packet_queue = queue_init(PACKET_QUEUE_SIZE);
-    video_ctx->frame_queue = queue_init(FRAME_QUEUE_SIZE);
+    video_ctx->packet_queue = queue_init(PACKET_QUEUE_SIZE, 1);
+    video_ctx->frame_queue = queue_init(FRAME_QUEUE_SIZE, 0);
     return 0;
 }
 
@@ -505,6 +582,8 @@ static int demux_thread(void *data)
                 break;
             }
         }
+
+        else if (obor_media_diag_enabled()) nestegg_free_packet(pkt);
 
         if (__atomic_load_n(&quit_video, __ATOMIC_RELAXED)) break;
     }
@@ -570,7 +649,8 @@ webm_context *webm_start_playback(const char *path, int volume)
 
     // set up video
     ctx->video_track = video_track;
-    init_video(ctx->nestegg_ctx, ctx->video_track, &(ctx->video_ctx));
+    int video_result = init_video(ctx->nestegg_ctx, ctx->video_track, &(ctx->video_ctx));
+    if (obor_media_diag_enabled() && video_result < 0) goto error3;
     ctx->the_video_thread = thread_create(video_thread, "video", &(ctx->video_ctx));
     assert(ctx->the_video_thread);
 
@@ -583,7 +663,7 @@ webm_context *webm_start_playback(const char *path, int volume)
         ctx->the_audio_thread = thread_create(audio_thread, "audio", &(ctx->audio_ctx));
         assert(ctx->the_audio_thread);
     }
-    else if (sound_query_music(NULL, NULL))
+    else if (!obor_media_diag_enabled() && sound_query_music(NULL, NULL))
     {
         // continue to play the BGM that's already playing
         ctx->the_audio_thread = thread_create(bgm_update_thread, "bgm", NULL);
@@ -594,6 +674,8 @@ webm_context *webm_start_playback(const char *path, int volume)
     ctx->the_demux_thread = thread_create(demux_thread, "demux", ctx);
     assert(ctx->the_demux_thread);
     obor_webm_active = ctx;
+    obor_media_diag_announce("classic", FRAME_QUEUE_SIZE + 2,
+        audio_track >= 0 ? MUSIC_NUM_BUFFERS * MUSIC_BUF_SIZE * sizeof(short) : 0);
     return ctx;
 
 error3:
@@ -635,8 +717,54 @@ void webm_get_video_info(webm_context *ctx, yuv_video_mode *dims)
     dims->display_height = ctx->video_ctx.display_height;
 }
 
+/* Diagnostic owner/producer rendezvous. Workers never replenish the
+ * legacy mixer ring between requests. Every request completes before the
+ * owner consumes PCM; the existing fixed four-buffer ring is unchanged. */
+int obor_webm_diag_audio_prepare(void)
+{
+    webm_context *ctx = obor_webm_active;
+    if (!ctx || !obor_media_diag_enabled()) return 1;
+    if (__atomic_load_n(&quit_video, __ATOMIC_RELAXED)) return 0;
+    if (ctx->audio_track < 0) {
+        sound_update_music();
+        return 1;
+    }
+    if (musicchannel.paused) return 1;
+    if (!obor_media_diag_request(&ctx->audio_ctx.diag_gate)) {
+        obor_media_diag_failure("classic-audio-request");
+        __atomic_store_n(&quit_video, 1, __ATOMIC_RELAXED);
+        return 0;
+    }
+    if (!obor_media_diag_wait(obor_media_diag_gate_probe,
+             &ctx->audio_ctx.diag_gate, "classic-audio")) {
+        __atomic_store_n(&quit_video, 1, __ATOMIC_RELAXED);
+        return 0;
+    }
+    return 1;
+}
+
+static int obor_webm_diag_video_ready(void *context)
+{
+    webm_context *ctx = context;
+    FixedSizeQueue *queue = ctx->video_ctx.frame_queue;
+    int ready;
+    if (__atomic_load_n(&quit_video, __ATOMIC_RELAXED)) return -1;
+    mutex_lock(queue->mutex);
+    ready = queue->size != 0;
+    mutex_unlock(queue->mutex);
+    return ready;
+}
+
 yuv_frame *webm_get_next_frame(webm_context *ctx)
 {
+    if (obor_media_diag_enabled()) {
+        if (!obor_webm_diag_audio_prepare() ||
+            !obor_media_diag_wait(obor_webm_diag_video_ready, ctx, "classic-video")) {
+            __atomic_store_n(&quit_video, 1, __ATOMIC_RELAXED);
+            return NULL;
+        }
+        return (yuv_frame *)queue_get(ctx->video_ctx.frame_queue);
+    }
 #ifdef LIBRETRO
     /* Audio is pulled by the frontend between coroutine frames. A blocking
      * queue_get here can deadlock with demux waiting for audio queue space.
