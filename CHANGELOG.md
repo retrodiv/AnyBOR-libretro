@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Preserve Linux engine and frontend directory identities with bounded file
+  descriptors across coroutine switches. Avoid repeated pathname lookups on
+  userspace filesystems and release handles on load failure, reset and unload.
 - Select a bounded, single-helper compression pipeline on Linux from observed
   encoding CPU work and changed blocks. Preserve byte-identical complete states,
   serial fallback and capture frequency without additional rewind history.

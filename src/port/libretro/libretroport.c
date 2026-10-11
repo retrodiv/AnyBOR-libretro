@@ -12,7 +12,12 @@
  * Time is fully emulated: obor_clock_us advances 16667 us per yielded frame
  * plus whatever the engine explicitly sleeps — deterministic by construction.
  */
+#if defined(__linux__) && !defined(_GNU_SOURCE)
+#define _GNU_SOURCE 1
+#endif
 #include "libretroport.h"
+#include "obor_runtime.h"
+#include "obor_directory.h"
 #include "obor_abi.h"
 #include "packfile.h"
 #include "utils.h"
@@ -88,6 +93,17 @@ static int fb_w, fb_h, fb_pitch;
 static char boot_pak[MAX_FILENAME_LEN];
 static char content_alias_name[MAX_FILENAME_LEN];
 static char engine_cwd[4096];
+#if defined(__linux__)
+static obor_directory_cache engine_directory OBOR_RUNTIME;
+#endif
+
+static void clear_engine_directory(void)
+{
+#if defined(__linux__)
+    obor_directory_clear(&engine_directory);
+#endif
+}
+
 
 void obor_session_paths_get(obor_session_paths *paths)
 {
@@ -362,8 +378,19 @@ int obor_protect_call(void (*execute)(void *), void *context, const char *phase)
 
 static void switch_to_engine(void)
 {
-    char frontend_cwd[4096];
     int restore_cwd = engine_cwd[0] != '\0';
+#if defined(__linux__)
+    int previous = -1;
+    if (restore_cwd &&
+        !obor_directory_enter(&engine_directory, engine_cwd, &previous)) {
+        engine_alive = 0;
+        return;
+    }
+    obor_protect_call(execute_engine, NULL, "engine execution");
+    if (restore_cwd && !obor_directory_leave(previous))
+        engine_alive = 0;
+#else
+    char frontend_cwd[4096];
     if (restore_cwd &&
         (!obor_getcwd(frontend_cwd, sizeof(frontend_cwd)) ||
          chdir(engine_cwd) != 0)) {
@@ -373,6 +400,7 @@ static void switch_to_engine(void)
     obor_protect_call(execute_engine, NULL, "engine execution");
     if (restore_cwd)
         chdir(frontend_cwd);
+#endif
 }
 
 /* --------------------------------------------------------- port glue --- */
@@ -487,6 +515,7 @@ int32_t obor_boot(const obor_boot_info *info)
     char frontend_cwd[4096];
     if (!obor_getcwd(frontend_cwd, sizeof(frontend_cwd)))
         return 0;
+    clear_engine_directory();
     engine_cwd[0] = '\0';
     content_alias_name[0] = '\0';
 
@@ -646,6 +675,7 @@ fail:
     engine_alive = 0;
     co_engine = NULL;
     obor_arena_release();
+    clear_engine_directory();
     engine_cwd[0] = '\0';
     return 0;
 }
@@ -719,6 +749,7 @@ int32_t obor_abandon(void)
     }
 #endif
     obor_arena_release();
+    clear_engine_directory();
     engine_cwd[0] = '\0';
     obor_resource_event = NULL;
     return 1;
@@ -875,5 +906,6 @@ void obor_shutdown(void)
     }
 #endif
     obor_arena_release();
+    clear_engine_directory();
     engine_cwd[0] = '\0';
 }
