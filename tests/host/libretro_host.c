@@ -65,6 +65,13 @@
 
 #include "libretro.h"
 
+#ifdef OBOR_HOST_FILESYSTEM_PROBE
+/* Linked only by the standalone filesystem regression, never by a core or
+ * ordinary frontend. It measures calls strictly inside retro_run. */
+void obor_fs_probe_begin(unsigned frame);
+void obor_fs_probe_end(unsigned frame);
+#endif
+
 #ifndef _WIN32
 static int count_open_fds(void)
 {
@@ -996,7 +1003,13 @@ int main(int argc, char **argv)
         g_reverse_presentation = rw_popped && getenv("OBOR_HOST_THROTTLE") &&
             strcmp(getenv("OBOR_HOST_THROTTLE"), "forward");
         g_frame_audio_hash = 2166136261u;
+#ifdef OBOR_HOST_FILESYSTEM_PROBE
+        obor_fs_probe_begin((unsigned)g_frame);
+#endif
         p_retro_run();
+#ifdef OBOR_HOST_FILESYSTEM_PROBE
+        obor_fs_probe_end((unsigned)g_frame);
+#endif
         trace_replay_frame();
         if (getenv("OBOR_REQUIRE_VIDEO_EVERY_RUN") && !g_shutdown &&
             g_video_calls == video_calls_before) {

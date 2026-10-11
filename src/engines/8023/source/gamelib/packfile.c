@@ -1,11 +1,13 @@
-/* AnyBOR modification record: 2026-10-09.
+/* AnyBOR modification record: 2026-10-11.
  * Port maintained by retrodiv <retrodiv@proton.me>.
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
  * Upstream code retains its original license and notices.
  * Repair PAK handles and rebind owned content paths after state loads, close
  * resources on reset, prune unused frontend APIs, and compile loose-file
- * search on macOS.
+ * search on macOS. Skip a loose lookup only when the common bounded, watched
+ * directory index proves its first component absent; preserve script changes
+ * and case-insensitive overrides.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/8023.md
  * at the source repository root. Original notices follow below.
@@ -66,6 +68,7 @@
 #include "borendian.h"
 #include "stristr.h"
 #include "packfile.h"
+#include "obor_loose.h"
 #include "packfile_handle.h"
 #include "filecache.h"
 #include "soundmix.h"
@@ -905,6 +908,10 @@ static int openPackfileLoose(const char *filename) {
 #else
     disk_filename = slashfwd(filename);
 #endif
+
+    if(!obor_loose_may_exist(disk_filename)) {
+        return -1;
+    }
 
     real_handle = open(disk_filename, O_RDONLY | O_BINARY, file_permission);
 

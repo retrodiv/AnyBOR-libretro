@@ -17,8 +17,7 @@
 #endif
 #include "libretroport.h"
 #include "obor_runtime.h"
-#include "obor_directory.h"
-#include "obor_directory_windows.h"
+#include "obor_paths.h"
 #include "obor_abi.h"
 #include "packfile.h"
 #include "utils.h"
@@ -94,15 +93,9 @@ static int fb_w, fb_h, fb_pitch;
 static char boot_pak[MAX_FILENAME_LEN];
 static char content_alias_name[MAX_FILENAME_LEN];
 static char engine_cwd[4096];
-#if defined(__linux__)
-static obor_directory_cache engine_directory OBOR_RUNTIME;
-#endif
-
 static void clear_engine_directory(void)
 {
-#if defined(__linux__)
-    obor_directory_clear(&engine_directory);
-#endif
+    obor_paths_clear();
 }
 
 
@@ -129,6 +122,7 @@ int obor_session_paths_restore(const obor_session_paths *paths)
     if (!obor_packfile_rebind_content(packfile, paths->pak) ||
         !obor_sound_rebind_content(packfile, paths->pak)) return 0;
 #endif
+    if (!obor_paths_set_root(paths->cwd)) return 0;
     memcpy(engine_cwd, paths->cwd, sizeof(engine_cwd));
     memcpy(packfile, paths->pak, sizeof(packfile));
     memcpy(boot_pak, paths->boot_pak, sizeof(boot_pak));
@@ -379,39 +373,10 @@ int obor_protect_call(void (*execute)(void *), void *context, const char *phase)
 
 static void switch_to_engine(void)
 {
-    int restore_cwd = engine_cwd[0] != '\0';
-#if defined(__linux__)
-    int previous = -1;
-    if (restore_cwd &&
-        !obor_directory_enter(&engine_directory, engine_cwd, &previous)) {
-        engine_alive = 0;
-        return;
-    }
+    /* All engine I/O is relative to the live session root. Never change or
+     * query the process cwd here: even fchdir of an already open FUSE
+     * directory can block on unrelated writes for hundreds of milliseconds. */
     obor_protect_call(execute_engine, NULL, "engine execution");
-    if (restore_cwd && !obor_directory_leave(previous))
-        engine_alive = 0;
-#elif defined(_WIN32)
-    obor_windows_directory_scope directory_scope;
-    if (restore_cwd &&
-        !obor_windows_directory_enter(engine_cwd, &directory_scope)) {
-        engine_alive = 0;
-        return;
-    }
-    obor_protect_call(execute_engine, NULL, "engine execution");
-    if (restore_cwd && !obor_windows_directory_leave(&directory_scope))
-        engine_alive = 0;
-#else
-    char frontend_cwd[4096];
-    if (restore_cwd &&
-        (!obor_getcwd(frontend_cwd, sizeof(frontend_cwd)) ||
-         chdir(engine_cwd) != 0)) {
-        engine_alive = 0;
-        return;
-    }
-    obor_protect_call(execute_engine, NULL, "engine execution");
-    if (restore_cwd)
-        chdir(frontend_cwd);
-#endif
 }
 
 /* --------------------------------------------------------- port glue --- */
@@ -535,8 +500,8 @@ int32_t obor_boot(const obor_boot_info *info)
         return 0;
 
     if (info->raw_dir) {
-        /* Unpacked mod: cwd is the mod root only while the engine coroutine
-         * runs, so isRawData() can see data/. All mutable output is routed
+        /* Unpacked mod: relative engine I/O uses the mod root, so
+         * isRawData() can see data/. All mutable output is routed
          * to the frontend save directory, never into the content tree. */
         if (chdir(info->pak_path) != 0)
             goto fail;
@@ -632,6 +597,8 @@ capture_cwd:
     if (!obor_getcwd(engine_cwd, sizeof(engine_cwd)) ||
         chdir(frontend_cwd) != 0)
         goto fail;
+
+    if (!obor_paths_set_root(engine_cwd)) goto fail;
 
     /* The engine runs on a dedicated ~16 MB stack inside the snapshot arena
      * (fixed VA, guard page below) — see obor_alloc.c. */

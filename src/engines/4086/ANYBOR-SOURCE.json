@@ -9,7 +9,7 @@
       "upstream_sha256": "fc53280baa67ef58e507cea648f8838fad9abe675fa098a5dc99dfe4ecd0e75c"
     },
     "Makefile.libretro": {
-      "distributed_sha256": "963d3cb23c1c6ee8ffe2771a5ebda4d8aca362e3091211777698e86474dec328",
+      "distributed_sha256": "54cbacfa50fd508535b3c5a77853fb0007dda1be3548c8e596dcdf2d72a82df4",
       "modified": true,
       "origin": "Project libretro build overlay",
       "summary": "Supply the shared libretro engine build and symbol-isolation rules.",
@@ -207,14 +207,15 @@
       "upstream_sha256": "35621ea64c356f8f50e514ac848d090b077b16a8d7e52f5530acf8ff1a633307"
     },
     "source/gamelib/packfile.c": {
-      "distributed_sha256": "aedcde1ad4c6cf0c0c68e9ed56a46c599541228ab2047c84a7eacc8d6835ce69",
+      "distributed_sha256": "8e26674c58f64bd11d79ac129fd6f88760b34a4b58f94db14d3d55e2c555df94",
       "modified": true,
-      "summary": "Repair PAK handles after state loads, close resources on reset, prune unused frontend APIs, and compile the case-insensitive loose-file search on macOS.",
+      "summary": "Repair PAK handles after state loads, close resources on reset, prune unused frontend APIs, and compile the case-insensitive loose-file search on macOS. Skip a loose lookup only when the common bounded, watched directory index proves its first component absent; preserve script changes and case-insensitive overrides.",
       "topics": [
         "compiler-warning-cleanup",
         "darwin-platform-support",
         "packfile-state-and-resource-lifecycle",
         "record-dates-and-file-notices",
+        "session-relative-filesystem",
         "source-selection-and-pruning"
       ],
       "upstream_sha256": "8c43bade55c67a42b661b1a25653c0ec0f1bba2c3f12647ced8d7f1bef5ebbdc"

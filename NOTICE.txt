@@ -2379,6 +2379,22 @@ Source: src/engines/3842/openbor.c, src/engines/3842/source/globals.h, src/engin
 Source: src/glue/obor_engines.h
 /* SPDX-License-Identifier: BSD-3-Clause */
 
+Source: src/engines/3842/source/gamelib/packfile.c
+/* AnyBOR modification record: 2026-10-11.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Repair PAK handles after state loads, close resources on reset, prune
+ * unused frontend APIs, and compile the case-insensitive loose-file search
+ * on macOS. Skip a loose lookup only when the common bounded, watched
+ * directory index proves its first component absent; preserve script changes
+ * and case-insensitive overrides.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/3842.md
+ * at the source repository root. Original notices follow below.
+ */
+
 Source: src/deps/libvorbis/lib/vorbisenc.c
 /********************************************************************
  *                                                                  *
@@ -2495,20 +2511,6 @@ Source: src/engines/3400/source/scriptlib/Interpreter.c
  * release it once runtime instructions are ready.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/3400.md
- * at the source repository root. Original notices follow below.
- */
-
-Source: src/engines/4086/source/gamelib/packfile.c
-/* AnyBOR modification record: 2026-09-12.
- * Port maintained by retrodiv <retrodiv@proton.me>.
- * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
- * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
- * Upstream code retains its original license and notices.
- * Repair PAK handles after state loads, close resources on reset, prune
- * unused frontend APIs, and compile the case-insensitive loose-file search
- * on macOS.
- * Existing changes recorded here; this is not their implementation date.
- * See MODIFICATIONS.md and docs/modifications/4086.md
  * at the source repository root. Original notices follow below.
  */
 
@@ -3191,6 +3193,22 @@ Source: src/engines/7533/source/gamelib/transform.c, src/engines/7533/source/gam
  * Copyright (c)  OpenBOR Team
  */
 
+Source: src/engines/6391/source/gamelib/packfile.c
+/* AnyBOR modification record: 2026-10-11.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Repair PAK handles after state loads, close resources on reset, prune
+ * unused frontend APIs, and compile the case-insensitive loose-file search
+ * on macOS. Skip a loose lookup only when the common bounded, watched
+ * directory index proves its first component absent; preserve script changes
+ * and case-insensitive overrides.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/6391.md
+ * at the source repository root. Original notices follow below.
+ */
+
 Source: src/deps/libpng/mips/filter_mmi_inline_assembly.c
 /* filter_mmi_intrinsics.c - MMI optimized filter functions
  *
@@ -3489,20 +3507,6 @@ Source: src/engines/4432/source/globals.h
  * Include the libretro platform interface.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/4432.md
- * at the source repository root. Original notices follow below.
- */
-
-Source: src/engines/6391/source/gamelib/packfile.c
-/* AnyBOR modification record: 2026-10-05.
- * Port maintained by retrodiv <retrodiv@proton.me>.
- * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
- * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
- * Upstream code retains its original license and notices.
- * Repair PAK handles after state loads, close resources on reset, prune
- * unused frontend APIs, and compile the case-insensitive loose-file search
- * on macOS.
- * Existing changes recorded here; this is not their implementation date.
- * See MODIFICATIONS.md and docs/modifications/6391.md
  * at the source repository root. Original notices follow below.
  */
 
@@ -3876,20 +3880,6 @@ Source: src/deps/libpng/pngconf.h
  * and png_info.
  */
 
-Source: src/engines/3842/source/gamelib/packfile.c
-/* AnyBOR modification record: 2026-09-12.
- * Port maintained by retrodiv <retrodiv@proton.me>.
- * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
- * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
- * Upstream code retains its original license and notices.
- * Repair PAK handles after state loads, close resources on reset, prune
- * unused frontend APIs, and compile the case-insensitive loose-file search
- * on macOS.
- * Existing changes recorded here; this is not their implementation date.
- * See MODIFICATIONS.md and docs/modifications/3842.md
- * at the source repository root. Original notices follow below.
- */
-
 Source: src/deps/libpng/pngrutil.c
 /* pngrutil.c - utilities to read a PNG file
  *
@@ -3954,6 +3944,22 @@ Source: src/engines/8023/source/pnglib/savepng.c
  * at the source repository root. Original notices follow below.
  */
 
+Source: src/engines/3400/source/gamelib/packfile.c
+/* AnyBOR modification record: 2026-10-11.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Repair PAK handles after state loads, close resources on reset, prune
+ * unused frontend APIs, and compile the case-insensitive loose-file search
+ * on macOS. Skip a loose lookup only when the common bounded, watched
+ * directory index proves its first component absent; preserve script changes
+ * and case-insensitive overrides.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/3400.md
+ * at the source repository root. Original notices follow below.
+ */
+
 Source: src/deps/libvorbis/lib/floor1.c
 /********************************************************************
  *                                                                  *
@@ -3980,6 +3986,22 @@ Source: src/deps/libvpx/vp8/common/mfqe.c, src/deps/libvpx/vp8/common/mips/dspr2
  *  tree. An additional intellectual property rights grant can be found
  *  in the file PATENTS.  All contributing project authors may
  *  be found in the AUTHORS file in the root of the source tree.
+ */
+
+Source: src/engines/7123/source/gamelib/packfile.c
+/* AnyBOR modification record: 2026-10-11.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Repair PAK handles after state loads, close resources on reset, prune
+ * unused frontend APIs, and compile the case-insensitive loose-file search
+ * on macOS. Skip a loose lookup only when the common bounded, watched
+ * directory index proves its first component absent; preserve script changes
+ * and case-insensitive overrides.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/7123.md
+ * at the source repository root. Original notices follow below.
  */
 
 Source: src/glue/obor_android_loader.cpp
@@ -4063,6 +4085,21 @@ Source: src/engines/4432/source/gamelib/bitmap.c
  * bytes.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/4432.md
+ * at the source repository root. Original notices follow below.
+ */
+
+Source: src/engines/7533/source/gamelib/packfile.c
+/* AnyBOR modification record: 2026-10-11.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Repair PAK handles after state loads, close process descriptors on reset,
+ * and compile loose-file search on macOS. Skip a loose lookup only when the
+ * common bounded, watched directory index proves its first component absent;
+ * preserve script changes and case-insensitive overrides.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/7533.md
  * at the source repository root. Original notices follow below.
  */
 
@@ -4555,20 +4592,6 @@ Source: src/deps/libvorbis/lib/modes/setup_X.h
  function: catch-all toplevel settings for q modes only
 
  ********************************************************************/
-
-Source: src/engines/4432/source/gamelib/packfile.c
-/* AnyBOR modification record: 2026-09-30.
- * Port maintained by retrodiv <retrodiv@proton.me>.
- * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
- * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
- * Upstream code retains its original license and notices.
- * Repair PAK handles after state loads, close resources on reset, prune
- * unused frontend APIs, and compile the case-insensitive loose-file search
- * on macOS.
- * Existing changes recorded here; this is not their implementation date.
- * See MODIFICATIONS.md and docs/modifications/4432.md
- * at the source repository root. Original notices follow below.
- */
 
 Source: src/engines/8023/source/globals.h
 /* AnyBOR modification record: 2026-09-12.
@@ -5605,6 +5628,22 @@ Source: src/deps/libvorbis/lib/lpc.h
 
  ********************************************************************/
 
+Source: src/engines/7142/source/gamelib/packfile.c
+/* AnyBOR modification record: 2026-10-11.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Repair PAK handles after state loads, close resources on reset, prune
+ * unused frontend APIs, and compile the case-insensitive loose-file search
+ * on macOS. Skip a loose lookup only when the common bounded, watched
+ * directory index proves its first component absent; preserve script changes
+ * and case-insensitive overrides.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/7142.md
+ * at the source repository root. Original notices follow below.
+ */
+
 Source: src/deps/zlib/infback.c
 /* infback.c -- inflate using a call-back interface
  * Copyright (C) 1995-2026 Mark Adler
@@ -5663,20 +5702,6 @@ Source: src/deps/libvorbis/lib/modes/residue_44u.h
  function: toplevel residue templates for 32/44.1/48kHz uncoupled
 
  ********************************************************************/
-
-Source: src/engines/3400/source/gamelib/packfile.c
-/* AnyBOR modification record: 2026-09-12.
- * Port maintained by retrodiv <retrodiv@proton.me>.
- * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
- * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
- * Upstream code retains its original license and notices.
- * Repair PAK handles after state loads, close resources on reset, prune
- * unused frontend APIs, and compile the case-insensitive loose-file search
- * on macOS.
- * Existing changes recorded here; this is not their implementation date.
- * See MODIFICATIONS.md and docs/modifications/3400.md
- * at the source repository root. Original notices follow below.
- */
 
 Source: src/engines/3400/source/gamelib/commands.h, src/engines/3842/source/gamelib/commands.h, src/engines/4086/source/gamelib/commands.h, src/engines/4432/source/gamelib/commands.h, src/engines/6391/source/openborscript/commands.h, src/engines/7123/source/openborscript/commands.h, src/engines/7142/source/openborscript/commands.h
 /*
@@ -6576,7 +6601,7 @@ Source: src/engines/4086/source/gamelib/anigif.h
  * at the source repository root. Original notices follow below.
  */
 
-Source: src/engines/3400/version.h, src/engines/3842/version.h, src/engines/4086/version.h, src/engines/4432/version.h, src/engines/6391/version.h, src/engines/7123/version.h, src/engines/7142/version.h, src/engines/7533/version.h, src/engines/8023/version.h, src/port/libretro/obor_block_crc.h, src/port/libretro/obor_block_state.c, src/port/libretro/obor_block_state.h, src/port/libretro/obor_block_worker_policy.h, src/port/libretro/obor_content_path.h, src/port/libretro/obor_directory.h, src/port/libretro/obor_directory_windows.h, src/port/libretro/obor_fault.c, src/port/libretro/obor_fault.h, src/port/libretro/obor_files.c, src/port/libretro/obor_loading.h, src/port/libretro/obor_media_diag.c, src/port/libretro/obor_media_diag.h, src/port/libretro/obor_random.h, src/port/libretro/obor_resource_catalog.c, src/port/libretro/obor_resource_catalog.h, src/port/libretro/obor_resource_image.c, src/port/libretro/obor_resource_image.h, src/port/libretro/obor_resource_recipe.c, src/port/libretro/obor_resource_recipe.h, src/port/libretro/obor_resource_source.c, src/port/libretro/obor_resource_source.h, src/port/libretro/obor_resources.c, src/port/libretro/obor_resources.h, src/port/libretro/obor_runtime.h, src/port/libretro/obor_script_compact.h, src/port/libretro/obor_script_executable.h, src/port/libretro/obor_snapshot_cache.h, src/port/libretro/obor_state_cache_win.h, src/port/libretro/obor_state_config.h, src/port/libretro/obor_state_copy.h, src/port/libretro/obor_state_layout.h, src/port/libretro/obor_state_padding.h, src/port/libretro/obor_state_stream.h, src/port/libretro/obor_write_watch.c, src/port/libretro/obor_write_watch.h, src/glue/obor_build_identity.h, src/glue/obor_capture_cadence.h, src/glue/obor_content_scan.h, src/glue/obor_crt.h, src/glue/obor_detection_clock.h, src/glue/obor_engine_resources.h, src/glue/obor_error_screen.h, src/glue/obor_legacy_api.h, src/glue/obor_loading_screen.h, src/glue/obor_modern_api.h, src/glue/obor_packed_prepare.h, src/glue/obor_pak_repair.h, src/glue/obor_pak_validate.h, src/glue/obor_prepare_co.h, src/glue/obor_prepare_progress.h, src/glue/obor_rewind.h, src/glue/obor_runtime.h, src/glue/obor_state_padding.h, src/glue/obor_storage.h, src/glue/obor_transform.h, src/glue/obor_video_config.h, src/glue/obor_zip_path.h
+Source: src/engines/3400/version.h, src/engines/3842/version.h, src/engines/4086/version.h, src/engines/4432/version.h, src/engines/6391/version.h, src/engines/7123/version.h, src/engines/7142/version.h, src/engines/7533/version.h, src/engines/8023/version.h, src/port/libretro/obor_block_crc.h, src/port/libretro/obor_block_state.c, src/port/libretro/obor_block_state.h, src/port/libretro/obor_block_worker_policy.h, src/port/libretro/obor_content_path.h, src/port/libretro/obor_directory.h, src/port/libretro/obor_directory_windows.h, src/port/libretro/obor_fault.c, src/port/libretro/obor_fault.h, src/port/libretro/obor_files.c, src/port/libretro/obor_loading.h, src/port/libretro/obor_loose.c, src/port/libretro/obor_loose.h, src/port/libretro/obor_media_diag.c, src/port/libretro/obor_media_diag.h, src/port/libretro/obor_paths.c, src/port/libretro/obor_paths.h, src/port/libretro/obor_random.h, src/port/libretro/obor_resource_catalog.c, src/port/libretro/obor_resource_catalog.h, src/port/libretro/obor_resource_image.c, src/port/libretro/obor_resource_image.h, src/port/libretro/obor_resource_recipe.c, src/port/libretro/obor_resource_recipe.h, src/port/libretro/obor_resource_source.c, src/port/libretro/obor_resource_source.h, src/port/libretro/obor_resources.c, src/port/libretro/obor_resources.h, src/port/libretro/obor_runtime.h, src/port/libretro/obor_script_compact.h, src/port/libretro/obor_script_executable.h, src/port/libretro/obor_snapshot_cache.h, src/port/libretro/obor_state_cache_win.h, src/port/libretro/obor_state_config.h, src/port/libretro/obor_state_copy.h, src/port/libretro/obor_state_layout.h, src/port/libretro/obor_state_padding.h, src/port/libretro/obor_state_stream.h, src/port/libretro/obor_write_watch.c, src/port/libretro/obor_write_watch.h, src/glue/obor_build_identity.h, src/glue/obor_capture_cadence.h, src/glue/obor_content_scan.h, src/glue/obor_crt.h, src/glue/obor_detection_clock.h, src/glue/obor_engine_resources.h, src/glue/obor_error_screen.h, src/glue/obor_legacy_api.h, src/glue/obor_loading_screen.h, src/glue/obor_modern_api.h, src/glue/obor_packed_prepare.h, src/glue/obor_pak_repair.h, src/glue/obor_pak_validate.h, src/glue/obor_prepare_co.h, src/glue/obor_prepare_progress.h, src/glue/obor_rewind.h, src/glue/obor_runtime.h, src/glue/obor_state_padding.h, src/glue/obor_storage.h, src/glue/obor_transform.h, src/glue/obor_video_config.h, src/glue/obor_zip_path.h
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
 
@@ -6631,19 +6656,6 @@ Source: src/port/libretro/obor_endian.h
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
  * Fixed-width byte-order helpers for the OpenBOR interfaces. */
-
-Source: src/engines/7533/source/gamelib/packfile.c
-/* AnyBOR modification record: 2026-09-29.
- * Port maintained by retrodiv <retrodiv@proton.me>.
- * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
- * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
- * Upstream code retains its original license and notices.
- * Repair PAK handles after state loads, close process descriptors on reset,
- * and compile loose-file search on macOS.
- * Existing changes recorded here; this is not their implementation date.
- * See MODIFICATIONS.md and docs/modifications/7533.md
- * at the source repository root. Original notices follow below.
- */
 
 Source: src/deps/libvorbis/lib/modes/residue_16.h
 /********************************************************************
@@ -6843,6 +6855,22 @@ Source: src/engines/7123/source/ramlib/ram.c
  * at the source repository root. Original notices follow below.
  */
 
+Source: src/engines/4432/source/gamelib/packfile.c
+/* AnyBOR modification record: 2026-10-11.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Repair PAK handles after state loads, close resources on reset, prune
+ * unused frontend APIs, and compile the case-insensitive loose-file search
+ * on macOS. Skip a loose lookup only when the common bounded, watched
+ * directory index proves its first component absent; preserve script changes
+ * and case-insensitive overrides.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/4432.md
+ * at the source repository root. Original notices follow below.
+ */
+
 Source: src/deps/libvpx/vpx_dsp/arm/vpx_convolve8_avg_horiz_filter_type2_neon.asm, src/deps/libvpx/vpx_dsp/arm/vpx_convolve8_horiz_filter_type1_neon.asm, src/deps/libvpx/vpx_dsp/arm/vpx_convolve8_horiz_filter_type2_neon.asm
 ;
 ;  Copyright (c) 2018 The WebM project authors. All Rights Reserved.
@@ -7033,20 +7061,6 @@ Source: src/deps/zlib/zutil.c
  * For conditions of distribution and use, see copyright notice in zlib.h
  */
 
-Source: src/engines/8023/source/gamelib/packfile.c
-/* AnyBOR modification record: 2026-10-09.
- * Port maintained by retrodiv <retrodiv@proton.me>.
- * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
- * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
- * Upstream code retains its original license and notices.
- * Repair PAK handles and rebind owned content paths after state loads, close
- * resources on reset, prune unused frontend APIs, and compile loose-file
- * search on macOS.
- * Existing changes recorded here; this is not their implementation date.
- * See MODIFICATIONS.md and docs/modifications/8023.md
- * at the source repository root. Original notices follow below.
- */
-
 Source: src/deps/libvorbis/lib/modes/psych_8.h
 /********************************************************************
  *                                                                  *
@@ -7128,20 +7142,6 @@ Source: src/deps/libvorbis/lib/modes/psych_16.h, src/deps/libvorbis/lib/modes/se
  function: 16kHz settings
 
  ********************************************************************/
-
-Source: src/engines/7142/source/gamelib/packfile.c
-/* AnyBOR modification record: 2026-10-06.
- * Port maintained by retrodiv <retrodiv@proton.me>.
- * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
- * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
- * Upstream code retains its original license and notices.
- * Repair PAK handles after state loads, close resources on reset, prune
- * unused frontend APIs, and compile the case-insensitive loose-file search
- * on macOS.
- * Existing changes recorded here; this is not their implementation date.
- * See MODIFICATIONS.md and docs/modifications/7142.md
- * at the source repository root. Original notices follow below.
- */
 
 Source: src/engines/3400/source/gamelib/packfile.h
 /* AnyBOR modification record: 2026-09-12.
@@ -7460,6 +7460,22 @@ Source: src/engines/7142/source/scriptlib/Instruction.h
  * replacements.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/7142.md
+ * at the source repository root. Original notices follow below.
+ */
+
+Source: src/engines/4086/source/gamelib/packfile.c
+/* AnyBOR modification record: 2026-10-11.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Repair PAK handles after state loads, close resources on reset, prune
+ * unused frontend APIs, and compile the case-insensitive loose-file search
+ * on macOS. Skip a loose lookup only when the common bounded, watched
+ * directory index proves its first component absent; preserve script changes
+ * and case-insensitive overrides.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/4086.md
  * at the source repository root. Original notices follow below.
  */
 
@@ -8251,20 +8267,6 @@ Source: src/deps/libvpx/md5_utils.h
  * Still in the public domain.
  */
 
-Source: src/engines/7123/source/gamelib/packfile.c
-/* AnyBOR modification record: 2026-10-06.
- * Port maintained by retrodiv <retrodiv@proton.me>.
- * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
- * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
- * Upstream code retains its original license and notices.
- * Repair PAK handles after state loads, close resources on reset, prune
- * unused frontend APIs, and compile the case-insensitive loose-file search
- * on macOS.
- * Existing changes recorded here; this is not their implementation date.
- * See MODIFICATIONS.md and docs/modifications/7123.md
- * at the source repository root. Original notices follow below.
- */
-
 Source: src/deps/libvpx/vp9/encoder/arm/neon/vp9_highbd_error_neon.c, src/deps/libvpx/vp9/encoder/arm/neon/vp9_highbd_temporal_filter_neon.c, src/deps/libvpx/vp9/encoder/arm/neon/vp9_temporal_filter_neon.c, src/deps/libvpx/vp9/encoder/vp9_firstpass_stats.h, src/deps/libvpx/vp9/encoder/vp9_temporal_filter_constants.h, src/deps/libvpx/vp9/encoder/vp9_tpl_model.c, src/deps/libvpx/vp9/encoder/vp9_tpl_model.h, src/deps/libvpx/vpx/vpx_tpl.h, src/deps/libvpx/vpx_dsp/arm/highbd_avg_neon.c, src/deps/libvpx/vpx_dsp/arm/highbd_avg_pred_neon.c, src/deps/libvpx/vpx_dsp/arm/highbd_hadamard_neon.c, src/deps/libvpx/vpx_dsp/arm/highbd_sad4d_neon.c, src/deps/libvpx/vpx_dsp/arm/highbd_sse_neon.c, src/deps/libvpx/vpx_dsp/arm/highbd_subpel_variance_neon.c, src/deps/libvpx/vpx_dsp/arm/sse_neon.c, src/deps/libvpx/vpx_dsp/arm/sse_neon_dotprod.c, src/deps/libvpx/vpx_dsp/arm/vpx_convolve8_neon_i8mm.c, src/deps/libvpx/vpx_dsp/sse.c, src/deps/libvpx/vpx_dsp/x86/avg_pred_avx2.c, src/deps/libvpx/vpx_dsp/x86/inv_txfm_avx2.c, src/deps/libvpx/vpx_dsp/x86/sse_avx2.c, src/deps/libvpx/vpx_dsp/x86/sse_sse4.c, src/deps/libvpx/vpx_ports/aarch32_cpudetect.c, src/deps/libvpx/vpx_ports/aarch64_cpudetect.c, src/deps/libvpx/vpx_ports/arm_cpudetect.h
 /*
  *  Copyright (c) 2023 The WebM project authors. All Rights Reserved.
@@ -8890,6 +8892,22 @@ Source: src/engines/4086/source/scriptlib/ImportCache.c
 
 Source: src/deps/libpng/png.c
 #ifdef PNG_STRING_COPYRIGHT
+
+Source: src/engines/8023/source/gamelib/packfile.c
+/* AnyBOR modification record: 2026-10-11.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Repair PAK handles and rebind owned content paths after state loads, close
+ * resources on reset, prune unused frontend APIs, and compile loose-file
+ * search on macOS. Skip a loose lookup only when the common bounded, watched
+ * directory index proves its first component absent; preserve script changes
+ * and case-insensitive overrides.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/8023.md
+ * at the source repository root. Original notices follow below.
+ */
 
 Source: src/engines/7533/source/scriptlib/ImportCache.c
 /* AnyBOR modification record: 2026-10-10.

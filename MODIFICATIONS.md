@@ -676,3 +676,29 @@ enabled. It remains opt-in; ordinary rewind uses the normal engine presentation
 path. Resource and compressed states themselves default on for Windows x86-64
 and non-Android Linux x86-64/ARM64, as described in the README. Other targets
 retain their existing writer while equivalent acceptance is pending.
+
+## Session relative filesystem
+
+All engines resolve relative file operations against their own live session
+root. Entering a frame does not query or change the frontend process directory.
+Operating-system handles remain outside saved states and are rebound to the
+current session on a cold load. Genuine resource loads and script file access
+still use the filesystem.
+
+Reserved output directories use the same destination for directory creation,
+metadata queries, descriptor I/O and stream I/O. Unpacked content retains its
+own input root while script saves, logs and screenshots use the frontend's
+output location.
+
+Packed readers consult a bounded index of names in that root before attempting
+a loose override. Read-only stream and descriptor probes share that proof,
+including script filestream helpers that check loose input before the PAK.
+Each absence also needs a native lookup, so unlisted aliases
+such as filesystem short names are not discarded. At most 256 root names and
+64 exact-spelling absence proofs occupy 80 KiB of name storage per engine.
+An absence is usable only on a locally observable filesystem while change
+notifications remain valid; mutations invalidate the index. Existing entries retain the original
+case-insensitive lookup and override precedence. Unavailable notifications,
+unsupported names, enumeration errors or capacity overflow retain the original
+lookup instead of inventing an absence. This index contains no game bytes or
+rewind history.
