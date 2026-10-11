@@ -18,6 +18,7 @@
 #include "libretroport.h"
 #include "obor_runtime.h"
 #include "obor_directory.h"
+#include "obor_directory_windows.h"
 #include "obor_abi.h"
 #include "packfile.h"
 #include "utils.h"
@@ -388,6 +389,16 @@ static void switch_to_engine(void)
     }
     obor_protect_call(execute_engine, NULL, "engine execution");
     if (restore_cwd && !obor_directory_leave(previous))
+        engine_alive = 0;
+#elif defined(_WIN32)
+    obor_windows_directory_scope directory_scope;
+    if (restore_cwd &&
+        !obor_windows_directory_enter(engine_cwd, &directory_scope)) {
+        engine_alive = 0;
+        return;
+    }
+    obor_protect_call(execute_engine, NULL, "engine execution");
+    if (restore_cwd && !obor_windows_directory_leave(&directory_scope))
         engine_alive = 0;
 #else
     char frontend_cwd[4096];

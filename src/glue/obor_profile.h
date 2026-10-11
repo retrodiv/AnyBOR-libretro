@@ -37,6 +37,7 @@ static void obor_profile_init(void)
     if (g_profile.initialized)
         return;
     g_profile.initialized = 1;
+    obor_latency_init();
     const char *path = getenv("OBOR_PROFILE");
     if (!path || !*path)
         return;
@@ -70,6 +71,7 @@ static void obor_profile_record(const char *event, long frame, uint64_t begin,
     if (!g_profile.file)
         return;
     uint64_t end = obor_profile_now();
+    uint64_t write_begin = obor_latency_begin();
     /* At most 200000 short CSV rows (under 32 MiB). Never retain states. */
     if (g_profile.rows < 200000) {
         fprintf(g_profile.file, "%s,%ld,%llu,%llu,%llu,%zu,%zu,%llu,%d,%d\n",
@@ -84,6 +86,7 @@ static void obor_profile_record(const char *event, long frame, uint64_t begin,
         fclose(g_profile.file);
         g_profile.file = NULL;
     }
+    obor_latency_end(OBOR_LATENCY_PROFILE_WRITE, frame, write_begin);
 }
 
 static void obor_profile_close(void)

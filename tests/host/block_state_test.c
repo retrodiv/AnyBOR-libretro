@@ -70,7 +70,12 @@ static const void *read_source(void *opaque, uint32_t offset, uint32_t size, voi
     return source->bytes + offset;
 }
 static int unchanged_source(void *opaque, uint32_t offset, uint32_t size)
-{ (void)opaque; (void)size; return offset != 3 * OBOR_BLOCK_STATE_BLOCK; }
+{
+    (void)opaque;
+    uint32_t dirty = 3 * OBOR_BLOCK_STATE_BLOCK;
+    return offset >= dirty + OBOR_BLOCK_STATE_BLOCK ||
+           (offset < dirty && size <= dirty - offset);
+}
 static uint32_t random_word(uint32_t *state)
 { uint32_t v=*state;v^=v<<13;v^=v>>17;v^=v<<5;return *state=v; }
 static unsigned char *copy_image(obor_block_state *cache, uint32_t *size)

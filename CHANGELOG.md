@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- Group complete unchanged state blocks into bounded proof queries, preserving
+  per-block fallback, lossless contents and the existing rewind capacity.
+- Check the live working directory before Windows engine switches and restore
+  the frontend directory after each call. Skip redundant directory changes and
+  stop the engine if restoration fails.
+- Add opt-in, bounded latency records for video preparation, frontend video and
+  audio callbacks, profile output and the complete active frame scope.
 - Preserve Linux engine and frontend directory identities with bounded file
   descriptors across coroutine switches. Avoid repeated pathname lookups on
   userspace filesystems and release handles on load failure, reset and unload.

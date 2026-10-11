@@ -186,6 +186,8 @@ static int block_encode_worker(obor_block_state *state,
         block_mark_changed(state, i);
     }
     for (uint32_t i = 0; i < count; ++i) {
+        uint32_t proven_group = block_proven_group(state, source, i, raw_size);
+        if (proven_group) { i += proven_group - 1; continue; }
         uint32_t offset = i * BS_BLOCK, length = raw_size - offset;
         if (length > BS_BLOCK) length = BS_BLOCK;
         block_entry *entry = entries + i;

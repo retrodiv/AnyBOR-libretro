@@ -38,6 +38,7 @@
 #include "obor_state_padding.h"
 #include "../port/libretro/obor_block_state.h"
 #include "../port/libretro/obor_state_config.h"
+#include "obor_latency_boundaries.h"
 #include "obor_profile.h"
 #include "obor_rewind.h"
 #if defined(__APPLE__)
@@ -815,6 +816,8 @@ static void content_stop(void)
         stop_faulted_engine();
     }
     obor_profile_close();
+    if (!obor_latency_close())
+        log_cb(RETRO_LOG_WARN, "[OpenBOR] latency diagnostic output incomplete\n");
     obor_capture_cadence_reset(&g_capture_cadence);
     g_input_has_origin = false;
     g_state_capacity = 0;
@@ -1140,8 +1143,12 @@ static void video_geometry(int width, int height, bool notify)
 
 static bool present_video(const uint32_t *px, int width, int height, int pitch)
 {
+    uint64_t preparation_begin = obor_latency_begin();
     if (!px || width <= 0 || height <= 0) {
+        obor_latency_end(OBOR_LATENCY_VIDEO_PREPARE, g_frame_no, preparation_begin);
+        uint64_t callback_begin = obor_latency_begin();
         video_cb(NULL, (unsigned)g_width, (unsigned)g_height, 0);
+        obor_latency_end(OBOR_LATENCY_VIDEO_CALLBACK, g_frame_no, callback_begin);
         return true;
     }
     video_geometry(width, height, true);
@@ -1159,7 +1166,10 @@ static bool present_video(const uint32_t *px, int width, int height, int pitch)
         px = g_crt_pixels; width = out_w; height = out_h; pitch = out_w;
     }
     glue_dump_maybe(px, width, height, pitch);
+    obor_latency_end(OBOR_LATENCY_VIDEO_PREPARE, g_frame_no, preparation_begin);
+    uint64_t callback_begin = obor_latency_begin();
     video_cb(px, (unsigned)width, (unsigned)height, (size_t)pitch * sizeof(uint32_t));
+    obor_latency_end(OBOR_LATENCY_VIDEO_CALLBACK, g_frame_no, callback_begin);
     return true;
 }
 
@@ -1442,7 +1452,9 @@ static bool present_audio_frame(const int16_t *samples, int32_t frames,
     }
     if (frames > 0) {
         uint64_t begin = profile_callbacks ? obor_profile_now() : 0;
+        uint64_t callback_begin = obor_latency_begin();
         audio_batch_cb(samples, (size_t)frames);
+        obor_latency_end(OBOR_LATENCY_AUDIO_CALLBACK, g_frame_no, callback_begin);
         if (profile_callbacks)
             obor_profile_record("audio", g_frame_no, begin, obor_profile_now(),
                                 0, 0, 0, 1, 0);
@@ -1479,6 +1491,7 @@ void retro_run(void)
         return;
 
     obor_profile_init();
+    obor_latency_run_scope latency_scope(&g_frame_no);
     uint64_t profile_begin = obor_profile_now();
 
     bool upd = false;

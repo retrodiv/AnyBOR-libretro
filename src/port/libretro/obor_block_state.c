@@ -327,6 +327,30 @@ static int block_deflate(obor_block_state *state, const void *raw, uint32_t size
     return (int)(capacity - stream->avail_out);
 }
 
+/* Amortize mapping/epoch queries for a complete aligned group. The callback
+ * must prove the entire span, including its interior. Any missing proof or
+ * partial/grown/shrunk block retains the existing per-block path. No encoded
+ * bytes, slot positions, ownership or state capacity change. */
+#define BS_PROOF_GROUP 64U
+static uint32_t block_proven_group(obor_block_state *state,
+    const obor_block_source *source, uint32_t index, uint32_t raw_size)
+{
+    const uint32_t span = BS_PROOF_GROUP * BS_BLOCK;
+    uint32_t offset = index * BS_BLOCK;
+    if (!state->valid || !source->unchanged || index % BS_PROOF_GROUP ||
+        offset > raw_size || span > raw_size - offset ||
+        offset > state->raw_size || span > state->raw_size - offset) return 0;
+    const block_entry *entries = (const block_entry *)(state->image + sizeof(block_header));
+    for (uint32_t i = 0; i < BS_PROOF_GROUP; ++i)
+        if (entries[index+i].raw != BS_BLOCK) return 0;
+    uint64_t tick = block_tick(state);
+    int proven = source->unchanged(source->context, offset, span);
+    block_elapsed(state, tick, &state->timing.proof_ns);
+    if (!proven) return 0;
+    state->work.proven_blocks += BS_PROOF_GROUP;
+    return BS_PROOF_GROUP;
+}
+
 static int block_encode(obor_block_state *, const obor_block_source *,
                         uint32_t, int, int, int);
 #include "obor_block_worker.inc"
@@ -357,6 +381,8 @@ static int block_encode(obor_block_state *state, const obor_block_source *source
         block_mark_changed(state, i);
     }
     for (uint32_t i = 0; i < count; ++i) {
+        uint32_t proven_group = block_proven_group(state, source, i, raw_size);
+        if (proven_group) { i += proven_group - 1; continue; }
         uint32_t offset = i * BS_BLOCK, length = raw_size - offset;
         if (length > BS_BLOCK) length = BS_BLOCK;
         block_entry *entry = entries + i;

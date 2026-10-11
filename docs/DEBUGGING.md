@@ -115,3 +115,36 @@ Logs and captures may contain local paths, game names, game script text or
 game imagery. Review them before attaching them to a public issue. Disable
 diagnostic variables after reproducing an issue and remove the local marker
 file to restore the normal configuration.
+
+## Frame latency boundaries
+
+Set `OBOR_DIAG_LATENCY_BOUNDARIES` to a new, writable file path to record
+monotonic timestamps around active frame processing. This development
+instrumentation is disabled by default and is independent of `OBOR_PROFILE`.
+The output path is created exclusively: an existing file is never overwritten.
+Failure to create the file leaves the recorder inactive.
+
+The recorder keeps at most 65,536 events (2 MiB) in memory and writes them when
+content is unloaded. It stores event numbers, frontend frame numbers and
+monotonic nanoseconds, without video, audio or state payloads. It adds no worker
+thread and performs no per-event file writes. A full buffer stops retaining
+new events and counts drops; it never evicts an older event to make a trace
+look complete. The final `summary,count,dropped,0` row reports completeness.
+A missing footer or nonzero drop count makes the trace incomplete. A crash or
+forced termination may leave an empty file because unloading did not run.
+
+The CSV columns are `event,frame,begin_ns,end_ns`. Events are:
+
+| Event | Measured interval |
+| --- | --- |
+| 1 | Video preparation, including geometry and optional pixel processing |
+| 2 | The frontend video callback itself |
+| 3 | Writing an enabled `OBOR_PROFILE` record |
+| 4 | Active `retro_run` scope, including its final profile write and early returns |
+| 5 | The frontend batch audio callback itself |
+
+Intervals are nested; do not add them as independent CPU costs. A callback
+interval includes any wait performed by the frontend, and elapsed time can
+include thread descheduling. A gap between frame scopes alone does not identify
+which component caused it. Compare enabled and disabled controls from the same
+state and binary before using this observer to diagnose a presentation pause.

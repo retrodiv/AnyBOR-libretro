@@ -51,6 +51,7 @@ typedef struct {
      * the engine is parked; no allocation or mutation of captured memory. */
     const void *(*read)(void *, uint32_t offset, uint32_t length, void *scratch);
     /* Optional proof that the bytes still equal the cache's preceding image.
+     * May span multiple blocks: prove every byte, including the interior.
      * Return zero unless mapping, epoch and write coverage are all known. */
     int (*unchanged)(void *, uint32_t offset, uint32_t length);
 } obor_block_source;
