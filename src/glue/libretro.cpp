@@ -677,15 +677,18 @@ static void gamelog_frame(void)
             return;
     }
     char line[512];
-    int guard = 20; /* lines per frame cap */
+    int guard = 20; /* chunks per frame cap, including long lines */
     long pos = ftell(g_glog_fp);
     while (guard-- > 0 && fgets(line, sizeof(line), g_glog_fp)) {
         size_t n = strlen(line);
-        if (n && line[n - 1] != '\n') {
+        if (n && n < sizeof(line) - 1 && line[n - 1] != '\n') {
             /* partial line still being written — rewind and retry later */
             fseek(g_glog_fp, pos, SEEK_SET);
             break;
         }
+        /* A full buffer without a newline is a bounded chunk of a long
+         * line, not an unfinished write. Consume it so subsequent records
+         * cannot be permanently hidden behind a long content path. */
         while (n && (line[n - 1] == '\n' || line[n - 1] == '\r'))
             line[--n] = '\0';
         if (n)

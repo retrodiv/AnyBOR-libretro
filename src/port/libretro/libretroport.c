@@ -54,8 +54,8 @@ static void boot_dbg(const char *msg)
 }
 
 /* Engine-global path state (the SDL port defines these in sdlport.c). */
-char packfile[MAX_FILENAME_LEN] = { "bor.pak" };
-char paksDir[MAX_FILENAME_LEN] = { "Paks" };
+char packfile[OBOR_CONTENT_PATH_MAX] = { "bor.pak" };
+char paksDir[OBOR_CONTENT_PATH_MAX] = { "Paks" };
 char savesDir[MAX_FILENAME_LEN] = { "Saves" };
 char logsDir[MAX_FILENAME_LEN] = { "Logs" };
 char screenShotsDir[MAX_FILENAME_LEN] = { "ScreenShots" };
@@ -90,7 +90,7 @@ static unsigned long long us_since_yield; /* sleep accumulator */
 static const unsigned int *fb_px;
 static int fb_w, fb_h, fb_pitch;
 
-static char boot_pak[MAX_FILENAME_LEN];
+static char boot_pak[OBOR_CONTENT_PATH_MAX];
 static char content_alias_name[MAX_FILENAME_LEN];
 static char engine_cwd[4096];
 static void clear_engine_directory(void)
@@ -512,8 +512,9 @@ int32_t obor_boot(const obor_boot_info *info)
         if (!tail || (bs && bs > tail))
             tail = bs;
 #endif
-        snprintf(packfile, MAX_FILENAME_LEN, "%s.pak",
-                 tail && tail[1] ? tail + 1 : "rawgame");
+        int named = snprintf(packfile, sizeof(packfile), "%s.pak",
+                             tail && tail[1] ? tail + 1 : "rawgame");
+        if (named < 0 || (size_t)named >= sizeof(packfile)) goto fail;
         size_t copied = strnlen(packfile, sizeof(boot_pak) - 1);
         memcpy(boot_pak, packfile, copied);
         boot_pak[copied] = 0;
@@ -546,8 +547,10 @@ int32_t obor_boot(const obor_boot_info *info)
     }
 
     /* Split the pak path into paksDir + packfile (engine convention). */
-    strncpy(boot_pak, info->pak_path, sizeof(boot_pak) - 1);
-    strncpy(packfile, info->pak_path, sizeof(packfile) - 1);
+    size_t pak_length = strnlen(info->pak_path, sizeof(packfile));
+    if (pak_length >= sizeof(packfile)) goto fail;
+    memcpy(boot_pak, info->pak_path, pak_length + 1);
+    memcpy(packfile, info->pak_path, pak_length + 1);
     {
         const char *slash = strrchr(info->pak_path, '/');
 #ifdef _WIN32
@@ -557,8 +560,7 @@ int32_t obor_boot(const obor_boot_info *info)
 #endif
         if (slash) {
             size_t n = (size_t)(slash - info->pak_path);
-            if (n >= sizeof(paksDir))
-                n = sizeof(paksDir) - 1;
+            if (n >= sizeof(paksDir)) goto fail;
             memcpy(paksDir, info->pak_path, n);
             paksDir[n] = '\0';
         }

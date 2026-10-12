@@ -1,3 +1,16 @@
+/* AnyBOR modification record: 2026-10-12.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Declare the capacity of content-derived filename destinations. Derive
+ * output names from the content basename with explicit destination
+ * capacities, and reject overflowing output path joins.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/6391.md
+ * at the source repository root. Original notices follow below.
+ */
+
 /*
  * OpenBOR - http://www.chronocrash.com
  * -----------------------------------------------------------------------
@@ -50,7 +63,7 @@ void debug_printf(char *, ...);
 void *checkAlloc(void *ptr, size_t size, const char *func, const char *file, int line);
 void exitIfFalse(int value, const char *assertion, const char *func, const char *file, int line);
 void abortIfFalse(int value, const char *assertion, const char *func, const char *file, int line);
-void getPakName(char *name, int type);
+void getPakName(char *name, size_t capacity, int type);
 void screenshot(s_screen *vscreen, unsigned char *pal, int ingame);
 void getBasePath(char *newName, char *name, int type);
 unsigned readlsb32(const unsigned char *src);

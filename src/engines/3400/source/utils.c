@@ -1,11 +1,13 @@
-/* AnyBOR modification record: 2026-09-12.
+/* AnyBOR modification record: 2026-10-12.
  * Port maintained by retrodiv <retrodiv@proton.me>.
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
  * Upstream code retains its original license and notices.
  * Enable libretro platform and PNG helper declarations, the POSIX directory
  * and mkdir forms macOS also uses, and the standard allocation declarations
- * instead of the glibc-only <malloc.h>.
+ * instead of the glibc-only <malloc.h>. Derive output names from the content
+ * basename with explicit destination capacities, and reject overflowing
+ * output path joins.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/3400.md
  * at the source repository root. Original notices follow below.
@@ -279,60 +281,22 @@ void debug_printf(char *format, ...){
 	debug_time = 0xFFFFFFFF;
 }
 
-void getPakName(char name[256], int type){
-
-	int i,x,y;
-	char mod[256] = {""};
-
-	strncpy(mod,packfile,strlen(packfile)-4);
-
-	switch(type){
-		case 0:
-			strncat(mod,".sav",4);
-			break;
-		case 1:
-			strncat(mod,".hi",3);
-			break;
-		case 2:
-			strncat(mod,".scr",4);
-			break;
-		case 3:
-			strncat(mod,".inp",4);
-			break;
-		case 4:
-			strncat(mod,".cfg",4);
-			break;
-		default:
-			// Loose extension!
-			break;
-	}
-
-	x=0;
-	for(i=0; i<(int)strlen(mod); i++){
-		if((mod[i] == '/') || (mod[i] == '\\')) x = i;
-	}
-	y=0;
-	for(i=0; i<(int)strlen(mod); i++){
-		// For packfiles without '/'
-		if(x == 0){
-			name[y] = mod[i];
-			y++;
-		}
-		// For packfiles with '/'
-		if(x != 0 && i > x){
-			name[y] = mod[i];
-			y++;
-		}
-	}
+void getPakName(char *name, size_t capacity, int type)
+{
+    if(!obor_pak_name(name, capacity, packfile, type))
+    {
+        writeToLogFile("Content filename does not fit its output buffer.\n");
+        borExit(1);
+    }
 }
 
 void screenshot(s_screen *vscreen, unsigned char *pal, int ingame){
 #ifndef DC
 	int	 shotnum = 0;
-	char shotname[128] = {""};
+	char shotname[1024] = {""};
 	char modname[128]  = {""};
 
-	getPakName(modname,99);
+	getPakName(modname, sizeof(modname), 99);
 #ifdef PSP
 	if(dirExists("ms0:/PICTURE/", 1) && dirExists("ms0:/PICTURE/Beats Of Rage/", 1)){
 #endif

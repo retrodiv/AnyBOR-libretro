@@ -1,12 +1,14 @@
-/* AnyBOR modification record: 2026-10-10.
+/* AnyBOR modification record: 2026-10-12.
  * Port maintained by retrodiv <retrodiv@proton.me>.
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
  * Upstream code retains its original license and notices.
  * Dispatch native string mapping through explicitly tagged compiled call
- * targets. Compact compiler-only instruction records after resolving value
- * ownership, preserving branch and export anchors, all mutable values and
- * exactly-once pool cleanup.
+ * targets. Derive output names from the content basename with explicit
+ * destination capacities, and reject overflowing output path joins. Compact
+ * compiler-only instruction records after resolving value ownership,
+ * preserving branch and export anchors, all mutable values and exactly-once
+ * pool cleanup.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/8023.md
  * at the source repository root. Original notices follow below.
@@ -9337,7 +9339,7 @@ int getsyspropertybyindex(ScriptVariant *var, int index)
     case SYSTEM_PROPERTY_PAKNAME:
     {
         char tempstr[MAX_BUFFER_LEN];
-        getPakName(tempstr, -1);
+        getPakName(tempstr, sizeof(tempstr), -1);
         ScriptVariant_ChangeType(var, VT_STR);
         var->strVal = StrCache_CreateNewFrom(tempstr);
         break;
@@ -10664,7 +10666,7 @@ static bool filestream_get_external_path(char* const path, const size_t path_cap
     }
 
     getBasePath(path, "Saves", 0);
-    getPakName(module_name, -1);
+    getPakName(module_name, sizeof(module_name), -1);
 
     path_length = strlen(path);
 

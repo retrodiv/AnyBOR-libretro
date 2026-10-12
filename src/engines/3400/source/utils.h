@@ -1,3 +1,16 @@
+/* AnyBOR modification record: 2026-10-12.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Declare the capacity of content-derived filename destinations. Derive
+ * output names from the content basename with explicit destination
+ * capacities, and reject overflowing output path joins.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/3400.md
+ * at the source repository root. Original notices follow below.
+ */
+
 /*
  * OpenBOR - http://www.LavaLit.com
  * -----------------------------------------------------------------------
@@ -44,7 +57,7 @@ void lc(char* buf, size_t size);
 size_t getNewLineStart(char* buf);
 void debugBuf(unsigned char* buf, size_t size, int columns);
 void debug_printf(char *, ...);
-void getPakName(char name[256], int type);
+void getPakName(char *name, size_t capacity, int type);
 void screenshot(s_screen *vscreen, unsigned char *pal, int ingame);
 void getBasePath(char *newName, char *name, int type);
 unsigned readlsb32(const unsigned char *src);

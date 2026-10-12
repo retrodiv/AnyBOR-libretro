@@ -17,9 +17,9 @@
       "upstream_sha256": null
     },
     "openbor.c": {
-      "distributed_sha256": "83fb415c7e8e3605202f7e53cbe297054ab9275f8a206b0a5f84fc18d8888feb",
+      "distributed_sha256": "721ed2e169490c63267f285be987817eb87434608dd3790d9d68836adedd7ee2",
       "modified": true,
-      "summary": "Apply the port's engine corrections and select the PC video configuration on macOS. Leave multiplayer slots without a selected model available to join even if game scripts preassign lives to them. Let a missing basename-only PAK self-check read the active frontend content after it has been validated and prepared. Allocate each model's animation pointer table through the highest animation index that model uses, and bound cache, copy and cleanup paths to that capacity. Use four independent RetroPad devices and per-device mappings. Place player state in aligned storage for PE SIMD reads. Yield to the frontend and decoder workers while asynchronous movies are pending. Grow each collision collection's pointer table only through its highest author-facing slot.",
+      "summary": "Apply the port's engine corrections and select the PC video configuration on macOS. Derive output names from the content basename with explicit destination capacities, and reject overflowing output path joins. Leave multiplayer slots without a selected model available to join even if game scripts preassign lives to them. Let a missing basename-only PAK self-check read the active frontend content after it has been validated and prepared. Allocate each model's animation pointer table through the highest animation index that model uses, and bound cache, copy and cleanup paths to that capacity. Use four independent RetroPad devices and per-device mappings. Place player state in aligned storage for PE SIMD reads. Yield to the frontend and decoder workers while asynchronous movies are pending. Grow each collision collection's pointer table only through its highest author-facing slot.",
       "topics": [
         "active-content-pak-aliases",
         "animation-memory-layout",
@@ -30,6 +30,7 @@
         "loading-screen-presentation",
         "platform-integration",
         "record-dates-and-file-notices",
+        "session-relative-filesystem",
         "webm-playback-lifecycle"
       ],
       "upstream_sha256": "4b72fbaeea76155c2a78820a2f514921843735e908a20fe86399b197e06ace56"
@@ -46,12 +47,13 @@
       "upstream_sha256": "d615b34d570286ab2479d389f64f1acf967141559243d0b03e8e1928af945dfd"
     },
     "openborscript.c": {
-      "distributed_sha256": "faea160954530b5ab79741b831ec61f3ed4d709a7d9060ae73d651915421a594",
+      "distributed_sha256": "07f5aa0e83a618407730d2bfb372ec0e30c13df787606c204c3e50472728d626",
       "modified": true,
-      "summary": "Dispatch native string mapping through explicitly tagged compiled call targets. Compact compiler-only instruction records after resolving value ownership, preserving branch and export anchors, all mutable values and exactly-once pool cleanup.",
+      "summary": "Dispatch native string mapping through explicitly tagged compiled call targets. Derive output names from the content basename with explicit destination capacities, and reject overflowing output path joins. Compact compiler-only instruction records after resolving value ownership, preserving branch and export anchors, all mutable values and exactly-once pool cleanup.",
       "topics": [
         "record-dates-and-file-notices",
-        "script-memory-layout"
+        "script-memory-layout",
+        "session-relative-filesystem"
       ],
       "upstream_sha256": "cf468d270cd91f32f9beaf5269605d68f8d129967d28dcdaac09f53ab5909633"
     },
@@ -1059,20 +1061,25 @@
       "upstream_sha256": "d96196d834fe4a16fdf704a9f69658ff220c405f9da1a01be466e9548e5dcb06"
     },
     "source/utils.c": {
-      "distributed_sha256": "193bc5cbe35b6e33a0c54cbfb359ac4450feef3ca1d15f8945753fc06d855042",
+      "distributed_sha256": "67c9732cdf392f9e3a0e0ca983ecc04c801efb801438a552b0342a8daac87703",
       "modified": true,
-      "summary": "Enable libretro platform and PNG helper declarations, the POSIX directory and mkdir forms macOS also uses, and the standard allocation declarations instead of the glibc-only <malloc.h>.",
+      "summary": "Enable libretro platform and PNG helper declarations, the POSIX directory and mkdir forms macOS also uses, and the standard allocation declarations instead of the glibc-only <malloc.h>. Derive output names from the content basename with explicit destination capacities, and reject overflowing output path joins.",
       "topics": [
         "darwin-platform-support",
         "platform-integration",
-        "record-dates-and-file-notices"
+        "record-dates-and-file-notices",
+        "session-relative-filesystem"
       ],
       "upstream_sha256": "1d22b9399bb939b81814fbf7ac3da864ffa49c0eace2b5cda6047ba1c0d7a3e0"
     },
     "source/utils.h": {
-      "distributed_sha256": "60df1283bd1261ca53dbc968befc17cb90bdfb3b0b7bc7fd2b8d46c982d60931",
-      "modified": false,
-      "topics": [],
+      "distributed_sha256": "6980b15154d802e04e3e12a96d2a5061978704e6156b2c9bd53761dbcb6cfc69",
+      "modified": true,
+      "summary": "Declare the capacity of content-derived filename destinations. Derive output names from the content basename with explicit destination capacities, and reject overflowing output path joins.",
+      "topics": [
+        "record-dates-and-file-notices",
+        "session-relative-filesystem"
+      ],
       "upstream_sha256": "60df1283bd1261ca53dbc968befc17cb90bdfb3b0b7bc7fd2b8d46c982d60931"
     },
     "source/webmlib/halloc/LICENSE": {

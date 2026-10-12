@@ -1,19 +1,21 @@
-/* AnyBOR modification record: 2026-09-12.
+/* AnyBOR modification record: 2026-10-12.
  * Port maintained by retrodiv <retrodiv@proton.me>.
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
  * Upstream code retains its original license and notices.
  * Apply the port's engine corrections and select the PC video configuration
- * on macOS. Leave multiplayer slots without a selected model available to
- * join even if game scripts preassign lives to them. Let a missing basename-
- * only PAK self-check read the active frontend content after it has been
- * validated and prepared. Allocate each model's animation pointer table
- * through the highest animation index that model uses, and bound cache, copy
- * and cleanup paths to that capacity. Use four independent RetroPad devices
- * and per-device mappings. Place player state in aligned storage for PE SIMD
- * reads. Yield to the frontend and decoder workers while asynchronous movies
- * are pending. Grow each collision collection's pointer table only through
- * its highest author-facing slot.
+ * on macOS. Derive output names from the content basename with explicit
+ * destination capacities, and reject overflowing output path joins. Leave
+ * multiplayer slots without a selected model available to join even if game
+ * scripts preassign lives to them. Let a missing basename-only PAK self-
+ * check read the active frontend content after it has been validated and
+ * prepared. Allocate each model's animation pointer table through the
+ * highest animation index that model uses, and bound cache, copy and cleanup
+ * paths to that capacity. Use four independent RetroPad devices and per-
+ * device mappings. Place player state in aligned storage for PE SIMD reads.
+ * Yield to the frontend and decoder workers while asynchronous movies are
+ * pending. Grow each collision collection's pointer table only through its
+ * highest author-facing slot.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/8023.md
  * at the source repository root. Original notices follow below.
@@ -2864,8 +2866,8 @@ void savesettings()
     char path[MAX_BUFFER_LEN] = {""};
     char tmpname[MAX_BUFFER_LEN] = {""};
     getBasePath(path, "Saves", 0);
-    getPakName(tmpname, 4);
-    strcat(path, tmpname);
+    getPakName(tmpname, sizeof(tmpname), 4);
+    if(!obor_pak_path_append(path, sizeof(path), tmpname)) borExit(1);
     handle = fopen(path, "wb");
     if(handle == NULL)
     {
@@ -2876,8 +2878,8 @@ void savesettings()
 
     // save controls
     getBasePath(path, "Saves", 0);
-    getPakName(tmpname, 5);
-    strcat(path, tmpname);
+    getPakName(tmpname, sizeof(tmpname), 5);
+    if(!obor_pak_path_append(path, sizeof(path), tmpname)) borExit(1);
     if (!control_savemappings(path))
     {
         printf("Failed to save controls to %s\n", path);
@@ -2914,8 +2916,8 @@ void loadsettings()
     char path[MAX_BUFFER_LEN] = {""};
     char tmpname[MAX_BUFFER_LEN] = {""};
     getBasePath(path, "Saves", 0);
-    getPakName(tmpname, 4);
-    strcat(path, tmpname);
+    getPakName(tmpname, sizeof(tmpname), 4);
+    if(!obor_pak_path_append(path, sizeof(path), tmpname)) borExit(1);
     if(!(fileExists(path)))
     {
         loadfromdefault();
@@ -2936,8 +2938,8 @@ void loadsettings()
 
     // load controls
     getBasePath(path, "Saves", 0);
-    getPakName(tmpname, 5);
-    strcat(path, tmpname);
+    getPakName(tmpname, sizeof(tmpname), 5);
+    if(!obor_pak_path_append(path, sizeof(path), tmpname)) borExit(1);
     if (!control_loadmappings(path))
     {
         printf("Failed to load controls from %s\n", path);
@@ -3149,8 +3151,8 @@ int saveGameFile()
     char tmpname[MAX_BUFFER_LEN] = {""};
 
     getBasePath(path, "Saves", 0);
-    getPakName(tmpname, 0);
-    strcat(path, tmpname);
+    getPakName(tmpname, sizeof(tmpname), 0);
+    if(!obor_pak_path_append(path, sizeof(path), tmpname)) borExit(1);
     //if(!savelevel[saveslot].level) return;
     handle = fopen(path, "wb");
 
@@ -3194,8 +3196,8 @@ int loadGameFile()
     //size_t filesize = 0;
 
     getBasePath(path, "Saves", 0);
-    getPakName(tmpname, 0);
-    strcat(path, tmpname);
+    getPakName(tmpname, sizeof(tmpname), 0);
+    if(!obor_pak_path_append(path, sizeof(path), tmpname)) borExit(1);
     handle = fopen(path, "rb");
 
     if(handle == NULL)
@@ -3246,8 +3248,8 @@ int saveHighScoreFile()
     char path[MAX_BUFFER_LEN] = {""};
     char tmpname[MAX_BUFFER_LEN] = {""};
     getBasePath(path, "Saves", 0);
-    getPakName(tmpname, 1);
-    strcat(path, tmpname);
+    getPakName(tmpname, sizeof(tmpname), 1);
+    if(!obor_pak_path_append(path, sizeof(path), tmpname)) borExit(1);
     handle = fopen(path, "wb");
     if(handle == NULL)
     {
@@ -3265,8 +3267,8 @@ int loadHighScoreFile()
     char path[MAX_BUFFER_LEN] = {""};
     char tmpname[MAX_BUFFER_LEN] = {""};
     getBasePath(path, "Saves", 0);
-    getPakName(tmpname, 1);
-    strcat(path, tmpname);
+    getPakName(tmpname, sizeof(tmpname), 1);
+    if(!obor_pak_path_append(path, sizeof(path), tmpname)) borExit(1);
     clearHighScore();
     handle = fopen(path, "rb");
     if(handle == NULL)
@@ -3342,8 +3344,8 @@ int saveScriptFile()
     char path[MAX_BUFFER_LEN] = {""};
     char tmpvalue[MAX_BUFFER_LEN] = {""};
     getBasePath(path, "Saves", 0);
-    getPakName(tmpvalue, 2);//.scr
-    strcat(path, tmpvalue);
+    getPakName(tmpvalue, sizeof(tmpvalue), 2);//.scr
+    if(!obor_pak_path_append(path, sizeof(path), tmpvalue)) borExit(1);
     l = strlen(path); //s00, s01, s02 etc
     path[l - 2] = '0' + (current_set / 10);
     path[l - 1] = '0' + (current_set % 10);
@@ -3421,8 +3423,8 @@ int loadScriptFile()
     char path[MAX_BUFFER_LEN] = {""};
     char tmpname[MAX_BUFFER_LEN] = {""};
     getBasePath(path, "Saves", 0);
-    getPakName(tmpname, 2);//.scr
-    strcat(path, tmpname);
+    getPakName(tmpname, sizeof(tmpname), 2);//.scr
+    if(!obor_pak_path_append(path, sizeof(path), tmpname)) borExit(1);
     l = strlen(path); //s00, s01, s02 etc
     path[l - 2] = '0' + (current_set / 10);
     path[l - 1] = '0' + (current_set % 10);
@@ -54225,7 +54227,7 @@ int load_saved_game()
 
     if((savedStatus = loadGameFile()))
     {
-        getPakName(name, 0);
+        getPakName(name, sizeof(name), 0);
     }
     for(saveslot = 0; saveslot < num_difficulties; saveslot++) if(savelevel[saveslot].flag && savelevel[saveslot].level)
         {

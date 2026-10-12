@@ -17,9 +17,9 @@
       "upstream_sha256": null
     },
     "openbor.c": {
-      "distributed_sha256": "46eee620799dadb6aeccc841ca6b9642f9a94f162d8ba941d3954548e99ee519",
+      "distributed_sha256": "c165025994d7a582dcad31cf24cbf1da4601b8885d9d43d5bd8d7ba86ddae94b",
       "modified": true,
-      "summary": "Apply the port's engine corrections and select the PC video configuration on macOS. Leave multiplayer slots without a selected model available to join even if game scripts preassign lives to them. Let a missing basename-only PAK self-check read the active frontend content after it has been validated and prepared. Allocate each model's animation pointer table through the highest animation index that model uses, and bound cache, copy and cleanup paths to that capacity. Initialize all four RetroPads and repair legacy unbound player profiles without replacing custom bindings.",
+      "summary": "Apply the port's engine corrections and select the PC video configuration on macOS. Derive output names from the content basename with explicit destination capacities, and reject overflowing output path joins. Leave multiplayer slots without a selected model available to join even if game scripts preassign lives to them. Let a missing basename-only PAK self-check read the active frontend content after it has been validated and prepared. Allocate each model's animation pointer table through the highest animation index that model uses, and bound cache, copy and cleanup paths to that capacity. Initialize all four RetroPads and repair legacy unbound player profiles without replacing custom bindings.",
       "topics": [
         "active-content-pak-aliases",
         "animation-memory-layout",
@@ -27,7 +27,8 @@
         "empty-player-slot-safety",
         "four-player-controls",
         "loading-screen-presentation",
-        "record-dates-and-file-notices"
+        "record-dates-and-file-notices",
+        "session-relative-filesystem"
       ],
       "upstream_sha256": "cee8b05ccf51961ac3847f2b41e879f14aeb05d6d4030ca898ffcb3eb13b06bb"
     },
@@ -42,12 +43,13 @@
       "upstream_sha256": "af6be352e04112724da5aa2cd26be2f75169fd727ecdc5b03927ab80f41ec7df"
     },
     "openborscript.c": {
-      "distributed_sha256": "2eb14382609b7e692a76bb7cc5be675e273fd9ebacd47279ba34d406684ef727",
+      "distributed_sha256": "8182f1337f384025eb59743694857edc99817a11c98ce9f8eb43d0c210b956c6",
       "modified": true,
-      "summary": "Keep the dormant constant-lowering diagnostic compatible with the single-value instruction layout. Compact compiler-only instruction records after resolving value ownership, preserving branch and export anchors, all mutable values and exactly-once pool cleanup.",
+      "summary": "Keep the dormant constant-lowering diagnostic compatible with the single-value instruction layout. Derive output names from the content basename with explicit destination capacities, and reject overflowing output path joins. Compact compiler-only instruction records after resolving value ownership, preserving branch and export anchors, all mutable values and exactly-once pool cleanup.",
       "topics": [
         "record-dates-and-file-notices",
-        "script-memory-layout"
+        "script-memory-layout",
+        "session-relative-filesystem"
       ],
       "upstream_sha256": "355cb975806bcf03609cb7b32f0c57bcf7a1898e52ae9526200cf20e14164988"
     },
@@ -934,20 +936,25 @@
       "upstream_sha256": "d96196d834fe4a16fdf704a9f69658ff220c405f9da1a01be466e9548e5dcb06"
     },
     "source/utils.c": {
-      "distributed_sha256": "7776a35e2cd2a3b7c503bd7dff6d775139f559064a123162b1158d2b3d51d180",
+      "distributed_sha256": "eb9ad1fcf001178f47fd8c48bc8f113ad6c4808aa55bd8836bf497967ddc3974",
       "modified": true,
-      "summary": "Enable libretro platform and PNG helper declarations, the POSIX directory and mkdir forms macOS also uses, and the standard allocation declarations instead of the glibc-only <malloc.h>.",
+      "summary": "Enable libretro platform and PNG helper declarations, the POSIX directory and mkdir forms macOS also uses, and the standard allocation declarations instead of the glibc-only <malloc.h>. Derive output names from the content basename with explicit destination capacities, and reject overflowing output path joins.",
       "topics": [
         "darwin-platform-support",
         "platform-integration",
-        "record-dates-and-file-notices"
+        "record-dates-and-file-notices",
+        "session-relative-filesystem"
       ],
       "upstream_sha256": "c5ff3f12fb5bca4f26f5ffb0aab06ae38c95c463fb111dfe767047fb17dcdd38"
     },
     "source/utils.h": {
-      "distributed_sha256": "8c56d73fc7ca58323ef6dd42189185c3f97aae01431dd4df291408f343fd86b0",
-      "modified": false,
-      "topics": [],
+      "distributed_sha256": "dabfb08f9f55ede3e9874a3a3b5d02c6e7148bdb0627aa508c4021faac0fa65f",
+      "modified": true,
+      "summary": "Declare the capacity of content-derived filename destinations. Derive output names from the content basename with explicit destination capacities, and reject overflowing output path joins.",
+      "topics": [
+        "record-dates-and-file-notices",
+        "session-relative-filesystem"
+      ],
       "upstream_sha256": "8c56d73fc7ca58323ef6dd42189185c3f97aae01431dd4df291408f343fd86b0"
     },
     "source/webmlib/halloc/LICENSE": {

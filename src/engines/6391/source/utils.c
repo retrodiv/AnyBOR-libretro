@@ -1,4 +1,4 @@
-/* AnyBOR modification record: 2026-10-05.
+/* AnyBOR modification record: 2026-10-12.
  * Port maintained by retrodiv <retrodiv@proton.me>.
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
@@ -7,6 +7,8 @@
  * and mkdir forms macOS also uses, reach the standard allocation
  * declarations without the glibc-only <malloc.h>, and report memory usage at
  * exit on macOS through the port's own accounting instead of mallinfo().
+ * Derive output names from the content basename with explicit destination
+ * capacities, and reject overflowing output path joins.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/6391.md
  * at the source repository root. Original notices follow below.
@@ -360,61 +362,13 @@ void abortIfFalse(int value, const char *assertion, const char *func, const char
     }
 }
 
-void getPakName(char *name, int type)
+void getPakName(char *name, size_t capacity, int type)
 {
-
-    int i, x, y;
-    char mod[256] = {""};
-
-    memcpy(mod, packfile, strlen(packfile) - 4);
-
-    switch(type)
+    if(!obor_pak_name(name, capacity, packfile, type))
     {
-    case 0:
-        strcat(mod, ".sav");
-        break;
-    case 1:
-        strcat(mod, ".hi");
-        break;
-    case 2:
-        strcat(mod, ".scr");
-        break;
-    case 3:
-        strcat(mod, ".inp");
-        break;
-    case 4:
-        strcat(mod, ".cfg");
-        break;
-    default:
-        // Loose extension!
-        break;
+        writeToLogFile("Content filename does not fit its output buffer.\n");
+        borExit(1);
     }
-
-    x = 0;
-    for(i = 0; i < (int)strlen(mod); i++)
-    {
-        if((mod[i] == '/') || (mod[i] == '\\'))
-        {
-            x = i;
-        }
-    }
-    y = 0;
-    for(i = 0; i < (int)strlen(mod); i++)
-    {
-        // For packfiles without '/'
-        if(x == 0)
-        {
-            name[y] = mod[i];
-            y++;
-        }
-        // For packfiles with '/'
-        if(x != 0 && i > x)
-        {
-            name[y] = mod[i];
-            y++;
-        }
-    }
-    name[y] = 0;
 }
 
 void screenshot(s_screen *vscreen, unsigned char *pal, int ingame)
@@ -424,7 +378,7 @@ void screenshot(s_screen *vscreen, unsigned char *pal, int ingame)
     char shotname[1024] = {""};
     char modname[MAX_FILENAME_LEN]  = {""};
 
-    getPakName(modname, 99);
+    getPakName(modname, sizeof(modname), 99);
 #ifdef PSP
     if(dirExists("ms0:/PICTURE/", 1) && dirExists("ms0:/PICTURE/Beats Of Rage/", 1))
     {

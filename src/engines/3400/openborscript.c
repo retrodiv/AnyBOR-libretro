@@ -1,13 +1,15 @@
-/* AnyBOR modification record: 2026-10-10.
+/* AnyBOR modification record: 2026-10-12.
  * Port maintained by retrodiv <retrodiv@proton.me>.
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
  * Upstream code retains its original license and notices.
  * Keep the dormant constant-lowering diagnostic compatible with the single-
  * value instruction layout and map string constants from direct contiguous
- * instruction storage. Compact compiler-only instruction records after
- * resolving value ownership, preserving branch and export anchors, all
- * mutable values and exactly-once pool cleanup.
+ * instruction storage. Derive output names from the content basename with
+ * explicit destination capacities, and reject overflowing output path joins.
+ * Compact compiler-only instruction records after resolving value ownership,
+ * preserving branch and export anchors, all mutable values and exactly-once
+ * pool cleanup.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/3400.md
  * at the source repository root. Original notices follow below.

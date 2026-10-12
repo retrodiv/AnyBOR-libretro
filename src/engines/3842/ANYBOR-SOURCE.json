@@ -17,9 +17,9 @@
       "upstream_sha256": null
     },
     "openbor.c": {
-      "distributed_sha256": "a567fed01a3b2e76d678f790ec027f5d7d5a98076d6d0cbcfac90aaa2fe044e5",
+      "distributed_sha256": "d218f7770a43d7c635ac52d68d3673c8f3d8a453a8f14cf820af5cf2d4dbc9b1",
       "modified": true,
-      "summary": "Apply the port's engine corrections and select the PC video configuration on macOS. Leave multiplayer slots without a selected model available to join even if game scripts preassign lives to them. Let a missing basename-only PAK self-check read the active frontend content after it has been validated and prepared. Allocate each model's animation pointer table through the highest animation index that model uses, and bound cache, copy and cleanup paths to that capacity. Resize repeated weapon lists and detach borrowed lists before replacing their entries. Guard an optional entity animation interpreter before reading its reset state. Share identical immutable animation-frame draw methods with reference-counted ownership.",
+      "summary": "Apply the port's engine corrections and select the PC video configuration on macOS. Derive output names from the content basename with explicit destination capacities, and reject overflowing output path joins. Leave multiplayer slots without a selected model available to join even if game scripts preassign lives to them. Let a missing basename-only PAK self-check read the active frontend content after it has been validated and prepared. Allocate each model's animation pointer table through the highest animation index that model uses, and bound cache, copy and cleanup paths to that capacity. Resize repeated weapon lists and detach borrowed lists before replacing their entries. Guard an optional entity animation interpreter before reading its reset state. Share identical immutable animation-frame draw methods with reference-counted ownership.",
       "topics": [
         "active-content-pak-aliases",
         "animation-draw-method-storage",
@@ -30,7 +30,8 @@
         "empty-player-slot-safety",
         "loading-screen-presentation",
         "record-dates-and-file-notices",
-        "repeated-weapon-lists"
+        "repeated-weapon-lists",
+        "session-relative-filesystem"
       ],
       "upstream_sha256": "d2638ad5cf319be18bc22a07f1d9b9b999d17cbcd83830433a59b819a40339a9"
     },
@@ -46,13 +47,14 @@
       "upstream_sha256": "19888c33f34b9cb80222de1439a1745461b8353d99ef40dc0a8184f081b45ed9"
     },
     "openborscript.c": {
-      "distributed_sha256": "fb743a7ae98f94835ebcb14e638e0b250654001b8adcbcc4d850fee57cf4466f",
+      "distributed_sha256": "516c3e175d1634e9a001aa177f66e7a2ead7c7286fc295912c2ea9ccb106d6f8",
       "modified": true,
-      "summary": "Keep the dormant constant-lowering diagnostic compatible with the single-value instruction layout and map string constants from direct contiguous instruction storage. Compact compiler-only instruction records after resolving value ownership, preserving branch and export anchors, all mutable values and exactly-once pool cleanup.",
+      "summary": "Keep the dormant constant-lowering diagnostic compatible with the single-value instruction layout and map string constants from direct contiguous instruction storage. Derive output names from the content basename with explicit destination capacities, and reject overflowing output path joins. Compact compiler-only instruction records after resolving value ownership, preserving branch and export anchors, all mutable values and exactly-once pool cleanup.",
       "topics": [
         "compiler-warning-cleanup",
         "record-dates-and-file-notices",
-        "script-memory-layout"
+        "script-memory-layout",
+        "session-relative-filesystem"
       ],
       "upstream_sha256": "80fc85d07a86206647d4d4877a4f91b2cbe5e94598b6cd934ebf05d184bf719b"
     },
@@ -689,20 +691,25 @@
       "upstream_sha256": "afba2d9766d6b24437982791f9bbe1ed97be5adc8b81f9a5172170e639a3c3ba"
     },
     "source/utils.c": {
-      "distributed_sha256": "c8df29eb9a2872e2b7e608be282dac8507122a0ac5276d46d0d82414485e26a6",
+      "distributed_sha256": "4492fc288d4d3418b94617411e30d7948f356c4426633c25e8bc5e8fb1e1e386",
       "modified": true,
-      "summary": "Enable libretro platform and PNG helper declarations, the POSIX directory and mkdir forms macOS also uses, and the standard allocation declarations instead of the glibc-only <malloc.h>.",
+      "summary": "Enable libretro platform and PNG helper declarations, the POSIX directory and mkdir forms macOS also uses, and the standard allocation declarations instead of the glibc-only <malloc.h>. Derive output names from the content basename with explicit destination capacities, and reject overflowing output path joins.",
       "topics": [
         "darwin-platform-support",
         "platform-integration",
-        "record-dates-and-file-notices"
+        "record-dates-and-file-notices",
+        "session-relative-filesystem"
       ],
       "upstream_sha256": "32cf119a6dc6437d0bdfe21d0fcb1bc8a71573e6ad58f70feb925ba9bde41cbd"
     },
     "source/utils.h": {
-      "distributed_sha256": "8b8fa68124342488ca8311ea0dc3d341141ab567cad595b883712e666ca0ca21",
-      "modified": false,
-      "topics": [],
+      "distributed_sha256": "ba0a4adcd54d37695b4527d0374d83efe79db73c8d411bccd1bd4366650365da",
+      "modified": true,
+      "summary": "Declare the capacity of content-derived filename destinations. Derive output names from the content basename with explicit destination capacities, and reject overflowing output path joins.",
+      "topics": [
+        "record-dates-and-file-notices",
+        "session-relative-filesystem"
+      ],
       "upstream_sha256": "8b8fa68124342488ca8311ea0dc3d341141ab567cad595b883712e666ca0ca21"
     },
     "version.h": {

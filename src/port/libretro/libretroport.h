@@ -16,6 +16,7 @@
 #include "obor_abi.h"
 #include "obor_fault.h"
 #include "obor_loading.h"
+#include "obor_pak_name.h"
 
 /* mingw ships a unistd.h too — include it before the usleep macro below so
  * later includes are guard-stopped and never see the macro as a prototype */
@@ -46,8 +47,10 @@ void obor_port_sleep_us(unsigned long long us);
 void borExit(int reset);
 void openborMain(int argc, char **argv);
 
-extern char packfile[MAX_FILENAME_LEN];
-extern char paksDir[MAX_FILENAME_LEN];
+/* Host paths are independent of the engines' small logical filename fields. */
+#define OBOR_CONTENT_PATH_MAX 4096
+extern char packfile[OBOR_CONTENT_PATH_MAX];
+extern char paksDir[OBOR_CONTENT_PATH_MAX];
 extern char savesDir[MAX_FILENAME_LEN];
 extern char logsDir[MAX_FILENAME_LEN];
 extern char screenShotsDir[MAX_FILENAME_LEN];
@@ -56,8 +59,8 @@ extern char screenShotsDir[MAX_FILENAME_LEN];
  * serialized world. The saving session's temporary root may be gone. */
 typedef struct {
     char cwd[4096];
-    char pak[MAX_FILENAME_LEN], boot_pak[MAX_FILENAME_LEN];
-    char paks[MAX_FILENAME_LEN], saves[MAX_FILENAME_LEN];
+    char pak[OBOR_CONTENT_PATH_MAX], boot_pak[OBOR_CONTENT_PATH_MAX];
+    char paks[OBOR_CONTENT_PATH_MAX], saves[MAX_FILENAME_LEN];
     char logs[MAX_FILENAME_LEN], screenshots[MAX_FILENAME_LEN];
 } obor_session_paths;
 void obor_session_paths_get(obor_session_paths *paths);

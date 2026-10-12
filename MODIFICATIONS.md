@@ -690,6 +690,17 @@ metadata queries, descriptor I/O and stream I/O. Unpacked content retains its
 own input root while script saves, logs and screenshots use the frontend's
 output location.
 
+Output filenames are derived from the content basename before changing its
+extension. Long parent directories never pass through the engines' old
+256-byte filename temporary. Each caller supplies its destination capacity;
+unrepresentable names and output path joins fail without truncating a save
+filename or writing beyond the destination.
+Host content paths use a separate bounded 4096-byte representation, including
+the session values kept across restoration. They are not shortened to the
+engines' logical filename capacity. Oversized host paths fail before boot.
+The optional game-log mirror consumes long lines in bounded chunks, preserving
+its per-frame work cap without hiding subsequent records behind a long path.
+
 Packed readers consult a bounded index of names in that root before attempting
 a loose override. Read-only stream and descriptor probes share that proof,
 including script filestream helpers that check loose input before the PAK.

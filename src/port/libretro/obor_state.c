@@ -1157,9 +1157,8 @@ static int32_t unserialize_impl(const void *buf, uint32_t size, int *committed)
 
     /* keep the pak path of THIS load (the buffer's copy will overwrite the
      * global, which is fine — same game — but we need it for the fd fixup) */
-    char pak_now[MAX_FILENAME_LEN];
-    strncpy(pak_now, packfile, sizeof(pak_now) - 1);
-    pak_now[sizeof(pak_now) - 1] = '\0';
+    char pak_now[sizeof(packfile)];
+    memcpy(pak_now, packfile, sizeof(pak_now));
 
     uint8_t *stack_dst = (uint8_t *)obor_stack_ptr() + h.stack_off;
 

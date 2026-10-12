@@ -1,19 +1,20 @@
-/* AnyBOR modification record: 2026-09-12.
+/* AnyBOR modification record: 2026-10-12.
  * Port maintained by retrodiv <retrodiv@proton.me>.
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
  * Upstream code retains its original license and notices.
  * Apply the port's engine corrections and select the PC video configuration
- * on macOS. Leave multiplayer slots without a selected model available to
- * join even if game scripts preassign lives to them. Let a missing basename-
- * only PAK self-check read the active frontend content after it has been
- * validated and prepared. Allocate each model's animation pointer table
- * through the highest animation index that model uses, and bound cache, copy
- * and cleanup paths to that capacity. Resize repeated weapon lists and
- * detach borrowed lists before replacing their entries. Guard an optional
- * entity animation interpreter before reading its reset state. Share
- * identical immutable animation-frame draw methods with reference-counted
- * ownership.
+ * on macOS. Derive output names from the content basename with explicit
+ * destination capacities, and reject overflowing output path joins. Leave
+ * multiplayer slots without a selected model available to join even if game
+ * scripts preassign lives to them. Let a missing basename-only PAK self-
+ * check read the active frontend content after it has been validated and
+ * prepared. Allocate each model's animation pointer table through the
+ * highest animation index that model uses, and bound cache, copy and cleanup
+ * paths to that capacity. Resize repeated weapon lists and detach borrowed
+ * lists before replacing their entries. Guard an optional entity animation
+ * interpreter before reading its reset state. Share identical immutable
+ * animation-frame draw methods with reference-counted ownership.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/3842.md
  * at the source repository root. Original notices follow below.
@@ -1140,7 +1141,7 @@ int getsyspropertybyindex(ScriptVariant* var, int index)
 		break;
 	case _sv_pakname:
 		ScriptVariant_ChangeType(var, VT_STR);
-		getPakName(StrCache_Get(var->strVal), -1);
+		getPakName(StrCache_Get(var->strVal), MAX_STR_VAR_LEN + 1, -1);
 		break;
 	case _sv_maxentityvars:
 		ScriptVariant_ChangeType(var, VT_INTEGER);
@@ -2522,8 +2523,8 @@ void savesettings(){
 	char path[128] = {""};
 	char tmpname[128] = {""};
 	getBasePath(path, "Saves", 0);
-	getPakName(tmpname, 4);
-	strcat(path, tmpname);
+	getPakName(tmpname, sizeof(tmpname), 4);
+	if(!obor_pak_path_append(path, sizeof(path), tmpname)) borExit(1);
 	handle = fopen(path, "wb");
 	if(handle==NULL) return;
     fwrite(&savedata, 1, sizeof(savedata), handle);
@@ -2551,8 +2552,8 @@ void loadsettings(){
 	char path[128] = {""};
 	char tmpname[128] = {""};
 	getBasePath(path, "Saves", 0);
-	getPakName(tmpname, 4);
-	strcat(path, tmpname);
+	getPakName(tmpname, sizeof(tmpname), 4);
+	if(!obor_pak_path_append(path, sizeof(path), tmpname)) borExit(1);
 	if(!(fileExists(path)))
 	{
 		loadfromdefault();
@@ -2612,8 +2613,8 @@ int saveGameFile(){
 	char path[256] = {""};
 	char tmpname[256] = {""};
 	getBasePath(path, "Saves", 0);
-	getPakName(tmpname, 0);
-	strcat(path, tmpname);
+	getPakName(tmpname, sizeof(tmpname), 0);
+	if(!obor_pak_path_append(path, sizeof(path), tmpname)) borExit(1);
 	//if(!savelevel[saveslot].level) return;
 	handle = fopen(path, "wb");
 	if(handle == NULL) return 0;
@@ -2633,8 +2634,8 @@ int loadGameFile(){
 	char path[256] = {""};
 	char tmpname[256] = {""};
 	getBasePath(path, "Saves", 0);
-	getPakName(tmpname, 0);
-	strcat(path,tmpname);
+	getPakName(tmpname, sizeof(tmpname), 0);
+	if(!obor_pak_path_append(path, sizeof(path), tmpname)) borExit(1);
 	handle = fopen(path, "rb");
 	if(handle == NULL) return 0;
     if(fread(savelevel, sizeof(*savelevel), num_difficulties, handle)>=sizeof(*savelevel) && savelevel[0].compatibleversion!=CV_SAVED_GAME){ //TODO: check file length
@@ -2659,8 +2660,8 @@ int saveHighScoreFile(){
 	char path[256] = {""};
 	char tmpname[256] = {""};
 	getBasePath(path, "Saves", 0);
-	getPakName(tmpname, 1);
-	strcat(path, tmpname);
+	getPakName(tmpname, sizeof(tmpname), 1);
+	if(!obor_pak_path_append(path, sizeof(path), tmpname)) borExit(1);
 	handle = fopen(path, "wb");
 	if(handle == NULL) return 0;
     fwrite(&savescore, 1, sizeof(savescore), handle);
@@ -2678,8 +2679,8 @@ int loadHighScoreFile(){
 	char path[256] = {""};
 	char tmpname[256] = {""};
 	getBasePath(path, "Saves", 0);
-	getPakName(tmpname, 1);
-	strcat(path,tmpname);
+	getPakName(tmpname, sizeof(tmpname), 1);
+	if(!obor_pak_path_append(path, sizeof(path), tmpname)) borExit(1);
 	clearHighScore();
 	handle = fopen(path, "rb");
 	if(handle == NULL) return 0;
@@ -2753,8 +2754,8 @@ int saveScriptFile()
 	//named list
 	//if(max_global_vars<=0) return ;
 	getBasePath(path, "Saves", 0);
-	getPakName(tmpvalue, 2);//.scr
-	strcat(path, tmpvalue);
+	getPakName(tmpvalue, sizeof(tmpvalue), 2);//.scr
+	if(!obor_pak_path_append(path, sizeof(path), tmpvalue)) borExit(1);
 	l = strlen(path); //s00, s01, s02 etc
 	path[l-2] = '0'+(current_set/10);
 	path[l-1] = '0'+(current_set%10);
@@ -2831,8 +2832,8 @@ int loadScriptFile(){
 	//named list
 	//if(max_global_vars<=0) return ;
 	getBasePath(path, "Saves", 0);
-	getPakName(tmpname, 2);//.scr
-	strcat(path,tmpname);
+	getPakName(tmpname, sizeof(tmpname), 2);//.scr
+	if(!obor_pak_path_append(path, sizeof(path), tmpname)) borExit(1);
 	l = strlen(path); //s00, s01, s02 etc
 	path[l-2] = '0'+(current_set/10);
 	path[l-1] = '0'+(current_set%10);
@@ -20827,7 +20828,7 @@ void movie_openfile(int save)
 	if(!moviebuffer) return ;
 	memset(moviebuffer, 0, sizeof(*moviebuffer)*MOVIEBUF_LEN);
 	getBasePath(path, "Saves", 0);
-	getPakName(tmpname, 3);
+	getPakName(tmpname, sizeof(tmpname), 3);
 	strcat(path, tmpname);
 	if(save) moviefile = fopen(path, "wb");
 	else moviefile = fopen(path, "rb");
@@ -22823,7 +22824,7 @@ int load_saved_game()
 	loadgameMenu = 1;
 	bothnewkeys = 0;
 
-	if((savedStatus = loadGameFile())) getPakName(name,0);
+	if((savedStatus = loadGameFile())) getPakName(name, sizeof(name), 0);
 	for(saveslot=0; saveslot<num_difficulties; saveslot++) if(savelevel[saveslot].flag && savelevel[saveslot].level) break;
 
 	while(!quit)

@@ -1,20 +1,21 @@
-/* AnyBOR modification record: 2026-09-30.
+/* AnyBOR modification record: 2026-10-12.
  * Port maintained by retrodiv <retrodiv@proton.me>.
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
  * Upstream code retains its original license and notices.
  * Apply the port's engine corrections and select the PC video configuration
- * on macOS. Select the 4453 profile's 32-bit screen and palette behavior,
- * preserve the 4432 12-key native settings format while 4453 uses 13 keys,
- * and disable the Exit mapping in the 4453 control menu. Bound the DOT loop
- * and control-menu arrays to allocated storage. Leave multiplayer slots
- * without a selected model available to join even if game scripts preassign
- * lives to them. Let a missing basename-only PAK self-check read the active
- * frontend content after it has been validated and prepared. Allocate each
- * model's animation pointer table through the highest animation index that
- * model uses, and bound cache, copy and cleanup paths to that capacity.
- * Resize repeated weapon lists and detach borrowed lists before replacing
- * their entries.
+ * on macOS. Derive output names from the content basename with explicit
+ * destination capacities, and reject overflowing output path joins. Select
+ * the 4453 profile's 32-bit screen and palette behavior, preserve the 4432
+ * 12-key native settings format while 4453 uses 13 keys, and disable the
+ * Exit mapping in the 4453 control menu. Bound the DOT loop and control-menu
+ * arrays to allocated storage. Leave multiplayer slots without a selected
+ * model available to join even if game scripts preassign lives to them. Let
+ * a missing basename-only PAK self-check read the active frontend content
+ * after it has been validated and prepared. Allocate each model's animation
+ * pointer table through the highest animation index that model uses, and
+ * bound cache, copy and cleanup paths to that capacity. Resize repeated
+ * weapon lists and detach borrowed lists before replacing their entries.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/4432.md
  * at the source repository root. Original notices follow below.
@@ -1284,7 +1285,7 @@ int getsyspropertybyindex(ScriptVariant *var, int index)
         break;
     case _sv_pakname:
         ScriptVariant_ChangeType(var, VT_STR);
-        getPakName(StrCache_Get(var->strVal), -1);
+        getPakName(StrCache_Get(var->strVal), MAX_STR_VAR_LEN + 1, -1);
         break;
     case _sv_maxsoundchannels:
         ScriptVariant_ChangeType(var, VT_INTEGER);
@@ -3152,8 +3153,8 @@ void savesettings()
     char path[128] = {""};
     char tmpname[128] = {""};
     getBasePath(path, "Saves", 0);
-    getPakName(tmpname, 4);
-    strcat(path, tmpname);
+    getPakName(tmpname, sizeof(tmpname), 4);
+    if(!obor_pak_path_append(path, sizeof(path), tmpname)) borExit(1);
     handle = fopen(path, "wb");
     if(handle == NULL)
     {
@@ -3189,8 +3190,8 @@ void loadsettings()
     char path[128] = {""};
     char tmpname[128] = {""};
     getBasePath(path, "Saves", 0);
-    getPakName(tmpname, 4);
-    strcat(path, tmpname);
+    getPakName(tmpname, sizeof(tmpname), 4);
+    if(!obor_pak_path_append(path, sizeof(path), tmpname)) borExit(1);
     if(!(fileExists(path)))
     {
         loadfromdefault();
@@ -3268,8 +3269,8 @@ int saveGameFile()
     char tmpname[256] = {""};
 
     getBasePath(path, "Saves", 0);
-    getPakName(tmpname, 0);
-    strcat(path, tmpname);
+    getPakName(tmpname, sizeof(tmpname), 0);
+    if(!obor_pak_path_append(path, sizeof(path), tmpname)) borExit(1);
     //if(!savelevel[saveslot].level) return;
     handle = fopen(path, "wb");
 
@@ -3299,8 +3300,8 @@ int loadGameFile()
     //size_t filesize = 0;
 
     getBasePath(path, "Saves", 0);
-    getPakName(tmpname, 0);
-    strcat(path, tmpname);
+    getPakName(tmpname, sizeof(tmpname), 0);
+    if(!obor_pak_path_append(path, sizeof(path), tmpname)) borExit(1);
     handle = fopen(path, "rb");
 
     if(handle == NULL)
@@ -3344,8 +3345,8 @@ int saveHighScoreFile()
     char path[256] = {""};
     char tmpname[256] = {""};
     getBasePath(path, "Saves", 0);
-    getPakName(tmpname, 1);
-    strcat(path, tmpname);
+    getPakName(tmpname, sizeof(tmpname), 1);
+    if(!obor_pak_path_append(path, sizeof(path), tmpname)) borExit(1);
     handle = fopen(path, "wb");
     if(handle == NULL)
     {
@@ -3367,8 +3368,8 @@ int loadHighScoreFile()
     char path[256] = {""};
     char tmpname[256] = {""};
     getBasePath(path, "Saves", 0);
-    getPakName(tmpname, 1);
-    strcat(path, tmpname);
+    getPakName(tmpname, sizeof(tmpname), 1);
+    if(!obor_pak_path_append(path, sizeof(path), tmpname)) borExit(1);
     clearHighScore();
     handle = fopen(path, "rb");
     if(handle == NULL)
@@ -3453,8 +3454,8 @@ int saveScriptFile()
     char path[256] = {""};
     char tmpvalue[256] = {""};
     getBasePath(path, "Saves", 0);
-    getPakName(tmpvalue, 2);//.scr
-    strcat(path, tmpvalue);
+    getPakName(tmpvalue, sizeof(tmpvalue), 2);//.scr
+    if(!obor_pak_path_append(path, sizeof(path), tmpvalue)) borExit(1);
     l = strlen(path); //s00, s01, s02 etc
     path[l - 2] = '0' + (current_set / 10);
     path[l - 1] = '0' + (current_set % 10);
@@ -3536,8 +3537,8 @@ int loadScriptFile()
     char path[256] = {""};
     char tmpname[256] = {""};
     getBasePath(path, "Saves", 0);
-    getPakName(tmpname, 2);//.scr
-    strcat(path, tmpname);
+    getPakName(tmpname, sizeof(tmpname), 2);//.scr
+    if(!obor_pak_path_append(path, sizeof(path), tmpname)) borExit(1);
     l = strlen(path); //s00, s01, s02 etc
     path[l - 2] = '0' + (current_set / 10);
     path[l - 1] = '0' + (current_set % 10);
@@ -34158,7 +34159,7 @@ int load_saved_game()
 
     if((savedStatus = loadGameFile()))
     {
-        getPakName(name, 0);
+        getPakName(name, sizeof(name), 0);
     }
     for(saveslot = 0; saveslot < num_difficulties; saveslot++) if(savelevel[saveslot].flag && savelevel[saveslot].level)
         {

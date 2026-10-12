@@ -1,14 +1,16 @@
-/* AnyBOR modification record: 2026-10-10.
+/* AnyBOR modification record: 2026-10-12.
  * Port maintained by retrodiv <retrodiv@proton.me>.
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
  * Upstream code retains its original license and notices.
  * Keep the dormant constant-lowering diagnostic compatible with the single-
- * value instruction layout. Compact compiler-only instruction records after
- * resolving value ownership, preserving branch and export anchors, all
- * mutable values and exactly-once pool cleanup. Supply native profile script
- * APIs and translate numeric animation, attack, subtype and spawn IDs. Keep
- * next-animation timestamps unchanged at the script boundary.
+ * value instruction layout. Derive output names from the content basename
+ * with explicit destination capacities, and reject overflowing output path
+ * joins. Compact compiler-only instruction records after resolving value
+ * ownership, preserving branch and export anchors, all mutable values and
+ * exactly-once pool cleanup. Supply native profile script APIs and translate
+ * numeric animation, attack, subtype and spawn IDs. Keep next-animation
+ * timestamps unchanged at the script boundary.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/6391.md
  * at the source repository root. Original notices follow below.
@@ -9006,7 +9008,7 @@ int getsyspropertybyindex(ScriptVariant *var, int index)
     case _sv_pakname:
     {
         char tempstr[MAX_BUFFER_LEN];
-        getPakName(tempstr, -1);
+        getPakName(tempstr, sizeof(tempstr), -1);
         ScriptVariant_ChangeType(var, VT_STR);
         var->strVal = StrCache_CreateNewFrom(tempstr);
         break;
@@ -10068,10 +10070,10 @@ HRESULT openbor_openfilestream(ScriptVariant **varlist , ScriptVariant **pretvar
     if(location)
     {
         getBasePath(path, "Saves", 0);
-        getPakName(tmpname, -1);
-        strcat(path, tmpname);
-        strcat(path, "/");
-        strcat(path, filename);
+        getPakName(tmpname, sizeof(tmpname), -1);
+        if(!obor_pak_path_append(path, sizeof(path), tmpname)) return E_FAIL;
+        if(!obor_pak_path_append(path, sizeof(path), "/")) return E_FAIL;
+        if(!obor_pak_path_append(path, sizeof(path), filename)) return E_FAIL;
         //printf("open path: %s", path);
 #ifndef DC
         if(!(fileExists(path)))
@@ -10487,18 +10489,18 @@ HRESULT openbor_savefilestream(ScriptVariant **varlist , ScriptVariant **pretvar
     if ( paramCount <= 2 || patharg == NULL )
     {
         getBasePath(path, "Saves", 0);
-        getPakName(tmpname, -1);
-        strcat(path, tmpname);
+        getPakName(tmpname, sizeof(tmpname), -1);
+        if(!obor_pak_path_append(path, sizeof(path), tmpname)) return E_FAIL;
         // Add user's filename to path and write the filestream to it
-        strcat(path, "/");
+        if(!obor_pak_path_append(path, sizeof(path), "/")) return E_FAIL;
     } else // By White Dragon
     {
-        strcat(path, "./");
-        strcat(path, patharg);
+        if(!obor_pak_path_append(path, sizeof(path), "./")) return E_FAIL;
+        if(!obor_pak_path_append(path, sizeof(path), patharg)) return E_FAIL;
     }
     //printf("path:%s\n",path);
 
-    strcat(path, (char *)StrCache_Get(arg->strVal));
+    if(!obor_pak_path_append(path, sizeof(path), (char *)StrCache_Get(arg->strVal))) return E_FAIL;
 
     for(i = strlen(path) - 1; i >= 0; i--)
     {
