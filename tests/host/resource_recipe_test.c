@@ -59,6 +59,19 @@ static void member_slices(input_data *input)
     input->fail=0;
     assert(obor_resource_recipe_prove_bytes(m,&loaded,"data/sample.bin",15,44,sample,sizeof(sample)));
     assert(obor_resource_materializer_cached(m)==cached && obor_resource_recipe_equal(&recipe,&loaded));
+    /* A repeated engine allocation of identical source bytes must reuse the
+     * bounded independent proof, not reread the archive on every frame. */
+    reads=input->reads; input->fail=1;
+    for (unsigned repeat=0;repeat<100;++repeat) {
+        assert(obor_resource_recipe_prove_bytes(m,&loaded,"DATA/SAMPLE.BIN",15,44,sample,sizeof(sample)));
+        assert(obor_resource_recipe_equal(&recipe,&loaded));
+    }
+    assert(input->reads==reads && obor_resource_materializer_cached(m)==cached);
+    sample[63]^=1; loaded=recipe;
+    assert(!obor_resource_recipe_prove_bytes(m,&loaded,"data/sample.bin",15,44,sample,sizeof(sample)));
+    assert(obor_resource_recipe_equal(&recipe,&loaded)); sample[63]^=1;
+    assert(!obor_resource_recipe_prove_bytes(m,&loaded,"data/sample.bin",15,43,sample,sizeof(sample)));
+    input->fail=0;
     bad=recipe; bad.member_offset=UINT32_MAX; assert(!obor_resource_recipe_valid(&bad));
     bad=recipe; bad.source_width=1; assert(!obor_resource_recipe_valid(&bad));
     bad=recipe; bad.kind=3; assert(!obor_resource_recipe_valid(&bad));
@@ -158,6 +171,22 @@ int main(int argc, char **argv)
         assert(body && !memcmp(body,expanded,expanded_size));
     }
     assert(image_test_attempts()==warm_attempts && image_test_live()==warm_live && input.reads==reads);
+    /* Compressed proof reuse must compare all reconstructed bytes, including
+     * the end, and retain the complete recipe rather than a game fingerprint. */
+    for (unsigned repeat=0;repeat<100;++repeat) {
+        assert(obor_resource_recipe_prove(compact,&loaded,"DATA\\LARGE.PNG",14,
+            64,64,0,0,64,64,expanded,expanded_size));
+        assert(obor_resource_recipe_equal(&large,&loaded));
+    }
+    assert(image_test_attempts()==warm_attempts && image_test_live()==warm_live && input.reads==reads);
+    expanded[expanded_size-1]^=1; loaded=large;
+    assert(!obor_resource_recipe_prove(compact,&loaded,"data/large.png",14,
+        64,64,0,0,64,64,expanded,expanded_size));
+    assert(obor_resource_recipe_equal(&large,&loaded)); expanded[expanded_size-1]^=1;
+    assert(!obor_resource_recipe_prove(compact,&loaded,"data/large.png",14,
+        64,64,1,0,63,64,expanded,expanded_size));
+    loaded=large; loaded.digest[0]^=1;
+    assert(!obor_resource_recipe_body(compact,&loaded));
     obor_resource_materializer_clear(compact);
     assert(image_test_live()+expanded_size<=warm_live);
     assert(!obor_resource_recipe_body(compact,&large));

@@ -115,6 +115,12 @@ For rewind in RetroArch, we recommend **Rewind Frames** set to **10** and
 **Rewind Buffer Size (MB)** set to **256**. **256 MB is also the maximum**;
 do not increase it to work around capacity or performance problems.
 
+With rewind enabled, we recommend **Threaded Video = Off** on Windows x86-64
+and Linux under WSLg. Disabling this extra presentation queue improved frame
+pacing in those setups. On Recalbox for Raspberry Pi 5, keep **Threaded Video =
+On**; disabling it made playback less smooth. Use the same video setting when
+comparing rewind on and off.
+
 Windows x86-64 and Linux x86-64/ARM64 use complete, independently loadable
 compressed states with a fixed 64 MiB libretro transport. This is the size of
 one serialized state, not additional rewind history. The frontend owns the

@@ -81,13 +81,18 @@ int obor_resource_recipe_valid(const obor_resource_recipe *r)
         !memcmp(normalized, r->name, sizeof(normalized));
 }
 
-int obor_resource_recipe_equal(const obor_resource_recipe *a, const obor_resource_recipe *b)
+static int recipe_shape_equal(const obor_resource_recipe *a, const obor_resource_recipe *b)
 {
     return a && b && a->version == b->version && a->kind == b->kind &&
         a->member_offset == b->member_offset && a->source_width == b->source_width &&
         a->source_height == b->source_height && a->x == b->x && a->y == b->y &&
         a->width == b->width && a->height == b->height && a->length == b->length &&
-        !memcmp(a->digest, b->digest, sizeof(a->digest)) && !memcmp(a->name, b->name, sizeof(a->name));
+        !memcmp(a->name, b->name, sizeof(a->name));
+}
+
+int obor_resource_recipe_equal(const obor_resource_recipe *a, const obor_resource_recipe *b)
+{
+    return recipe_shape_equal(a, b) && !memcmp(a->digest, b->digest, sizeof(a->digest));
 }
 
 int obor_resource_recipe_write(const obor_resource_recipe *r, void *output, size_t size)
@@ -122,8 +127,13 @@ int obor_resource_recipe_read(obor_resource_recipe *r, const void *input, size_t
 
 static uint32_t recipe_bucket(const obor_resource_recipe *r)
 {
-    /* Distribution only; all hits require full key equality below. */
-    return (recipe_u32(r->digest) ^ r->x ^ (r->y << 5) ^ (r->width << 10) ^ r->height ^
+    /* Distribution only. Excluding the digest lets a new engine allocation
+     * find an already verified source/layout and compare its complete body.
+     * Restoration still requires the full key, including source integrity. */
+    uint32_t name = UINT32_C(2166136261);
+    for (size_t i = 0; i < sizeof(r->name) && r->name[i]; ++i)
+        name = (name ^ (unsigned char)r->name[i]) * UINT32_C(16777619);
+    return (name ^ r->source_width ^ r->source_height ^ r->x ^ (r->y << 5) ^ (r->width << 10) ^ r->height ^
         r->kind ^ r->member_offset ^ r->length) % RECIPE_BUCKETS;
 }
 
@@ -253,21 +263,22 @@ static const void *recipe_keep(obor_resource_materializer *m, const obor_resourc
     return compressed ? m->temporary : entry->body;
 }
 
+static const void *recipe_cached_body(obor_resource_materializer *m, const recipe_cache *entry)
+{
+    if (!entry->compressed) return entry->body;
+    if (!recipe_temporary(m, entry->recipe.length)) return NULL;
+    if (LZ4_decompress_safe((const char *)entry->body, (char *)m->temporary,
+        (int)entry->stored, (int)entry->recipe.length) != (int)entry->recipe.length) return NULL;
+    return m->temporary;
+}
+
 const void *obor_resource_recipe_body(obor_resource_materializer *m, const obor_resource_recipe *r)
 {
     if (!m || !obor_resource_recipe_valid(r)) return NULL;
     for (recipe_cache *entry = m->buckets[recipe_bucket(r)]; entry; entry = entry->bucket_next)
         if (obor_resource_recipe_equal(&entry->recipe, r)) {
             recipe_unlink(m, entry); recipe_recent(m, entry);
-            if (entry->compressed) {
-                if (!recipe_temporary(m, r->length)) return NULL;
-                if (LZ4_decompress_safe((const char *)entry->body, (char *)m->temporary,
-                    (int)entry->stored, (int)r->length) != (int)r->length) {
-                    return NULL;
-                }
-                return m->temporary;
-            }
-            return entry->body;
+            return recipe_cached_body(m, entry);
         }
     obor_resource_recipe work = *r;
     if (!recipe_load(m, &work, 0)) return NULL;
@@ -281,6 +292,18 @@ static int recipe_prove(obor_resource_materializer *m, obor_resource_recipe *out
     if (!m || !output || !body || !body_length || body_length > OBOR_RESOURCE_BODY_LIMIT) return 0;
     r.version = 2; r.length = (uint32_t)body_length;
     if (!recipe_name(r.name, name, name_length) || !obor_resource_recipe_valid(&r)) return 0;
+    for (recipe_cache *entry = m->buckets[recipe_bucket(&r)]; entry; entry = entry->bucket_next)
+        if (recipe_shape_equal(&entry->recipe, &r)) {
+            const void *known = recipe_cached_body(m, entry);
+            if (known && !memcmp(known, body, body_length)) {
+                /* Only immutable source-derived data is reused, never bytes
+                 * from another live allocation or a previous game state.
+                 * A changed body must still be proved against the source. */
+                *output = entry->recipe;
+                recipe_unlink(m, entry); recipe_recent(m, entry);
+                return 1;
+            }
+        }
     const unsigned char *candidate = recipe_load(m, &r, 1);
     if (!candidate || memcmp(candidate, body, body_length)) return 0;
     *output = r;

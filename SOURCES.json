@@ -82,8 +82,8 @@
     "Makefile": "0ba5ec84b10bdab6f5d421ba186339f31cf5a4e50bd5f34e5570bbdf565ef3e8",
     "NOTICE.txt": "123dfb9e75a7bfbdcb48c5b82de8b21591c2bef27385e7ada3c2a711f94a77ca",
     "PROVENANCE.md": "7214694a6bd28e9653782d692cb68b861736b21bddf2dc9b686262cba29a3c3e",
-    "README.md": "4cbb177647b476e184a58e0aa8978f9423d0df55b7a6be6fd3018da056a622e1",
-    "SBOM.spdx.json": "369cce5266c0f1b503dd91688d4f37b992810bb0a641279cf116bbaf6a03a6d1",
+    "README.md": "a2f2fa260275fc0709038fec4782bd4a0091fdaf8d4b02608d9ce46b487a514c",
+    "SBOM.spdx.json": "3f598d6e7dae8c57e0da7f42e65666c67bc93bb9f987456eb6dffdcd7fcc509d",
     "SECURITY.md": "3aaf7f8f89ef7abc1cac8d4f25f358a5529410673fa04d97ddc123ae21f96f4b",
     "anybor_libretro.info": "081a8a07080b2d91922ec3219fd578f0053ca41426fe6c5f1327a96ace32ebb4",
     "docs/ANYBOR.md": "cb14bf6e00bc3d4abcb2a6ea82e198f078c96c42b07a2845572c17d46eebec92",
@@ -2696,7 +2696,7 @@
     "src/glue/obor_debug.h": "63f108163a3cd29a00c9d11229a3976fec8a00f537dbfe914bf22df075cc264a",
     "src/glue/obor_detection_clock.h": "bdfda28dfa97a6264000c62b589bfbc6f84c521b1744e548b2445f3fe059e9c0",
     "src/glue/obor_engine_resources.h": "8196f17ba5110e51c4b71388f005e3beb26c2cc72aaf0fb559a255c10842223b",
-    "src/glue/obor_engines.h": "e30ba9122dda976987a12e50b13fffbc6794953e45c7907919fa5d67efebff18",
+    "src/glue/obor_engines.h": "2776eeed2252091bad81e261c22c2fbcb14289d43af1a08c639383636f8b17c1",
     "src/glue/obor_error_screen.h": "a894d32589e2d83710fb9c1d04db6b2e2f9c19dcd141fd1e87e971679e10f7ab",
     "src/glue/obor_hankaku.h": "639d8236cb4a82eaacafd1ec0f5f904ba734fdb6e8771db5b96ae03cb06e88ea",
     "src/glue/obor_latency_boundaries.h": "72ae823b69d27a2e36d748f0cb05befb6f10251361205d7927d1cad80381486c",
@@ -2727,7 +2727,7 @@
     "src/glue/obor_video_config.h": "f8f68051ccbc1466a6fb171c44a8d1c57c8ca19c57bb8c9ba9dfdf0cde46ed1d",
     "src/glue/obor_zip.h": "66c97a789fe097161994b42ca7c65f7b72c6057cf19dbd15f8a398df46823e91",
     "src/glue/obor_zip_path.h": "a4baeb127b0f493955a271cce0215750916c16feb5274a5323058511b13a7e7d",
-    "src/pin.json": "b6bd57c88b4775d306daeffe8e95db7a1d9b0d541b819a7516bb5bb51b1c04d0",
+    "src/pin.json": "26cd5420fcfa57df8185c9d41ee680700ac5a698ac68aa68f8aa32047e7221f9",
     "src/port/libretro/control.c": "134f70a8e7ecac404a879c3b67b1a493d5407de50871dccdff5394689e52eded",
     "src/port/libretro/control.h": "c8707029d3d09b9e9fbf97363f54e317729da38ee33045843377cfeeb3399045",
     "src/port/libretro/dlmalloc.inc": "103602c3fcbe200d5e257cdd7353d84bcc033d887bea3b245321319bf5401f47",
@@ -2775,7 +2775,7 @@
     "src/port/libretro/obor_resource_catalog.h": "c3399fa902467adef737b8dced17569819f371598aa14255c95a96cd16afcb62",
     "src/port/libretro/obor_resource_image.c": "a49f25f1f7905dc3a0d13c8074b8a823985b69bebf623c9a9199fa7a569aaa3d",
     "src/port/libretro/obor_resource_image.h": "0d8764210a74c35487302e814ad0de199a9d0fb2e3876f05723ab5fb57be14a2",
-    "src/port/libretro/obor_resource_recipe.c": "c1dca7f49859291d5ac738b671865537d37bc4d4d89b8ac6c77878a1850ee541",
+    "src/port/libretro/obor_resource_recipe.c": "6de87326f4d50187db02c29107b1b38745bb6fc68da40bb30efea862277d08bd",
     "src/port/libretro/obor_resource_recipe.h": "9e2a1cddcb69c2ca83fc297029006d37e4176862ce7f4014a657b3372286ec0e",
     "src/port/libretro/obor_resource_source.c": "f7f8df944fb64aa1b669faa3fae1ede732e84a48a5caff25f82113fe2713c47c",
     "src/port/libretro/obor_resource_source.h": "a2c1a6159b1712e8e1e12f91583e32b96deb430b5aed75b59903b1485a34b365",
@@ -2826,7 +2826,7 @@
     "tests/host/resource_heap_test.c": "2c4b287a12f894cad5d7fa3e04571774aa7a8ebdc6dce2287dc7890540651585",
     "tests/host/resource_image_mutation.c": "a976da28b36b39c5fa4223e98ab00546b70f01dc281ad877dcb8470ffea4391a",
     "tests/host/resource_image_test_support.c": "a73012a44d4ddb2071acc5349a165da16de0b908fde1ef187bb4e44bd7d766bd",
-    "tests/host/resource_recipe_test.c": "3efd7b79d79f2d9e95f221e5f64da8b0bb300083f04e549eee427f8055ce58cf",
+    "tests/host/resource_recipe_test.c": "b7e617738f773151afa22af7d451dc798026911c143dbb94b3d1395da315e540",
     "tests/host/resource_runtime_test.c": "6f70496c6cff81a4c88cc0c82579e84fd0a98eb74f7f60557ea53327a56f77a7",
     "tests/host/resource_source_mutation.c": "d28e058c5ecff397064b649e77419fff1f0b1169ac6e0f5b6731c812a9bc43a3",
     "tests/host/snapshot_cache_test.c": "efc32e2e72553ad83fc4dc1bf851c229f54be79299dff7422c529b6e18a33685",
@@ -2866,5 +2866,5 @@
     "tools/update_manifest.py": "48bd15f0658546d20cfc3ea456dfc34c5c20eed8d9632566ec7aab28e0ce5cd9"
   },
   "schema": 1,
-  "version": "0.1.35"
+  "version": "0.1.36"
 }
