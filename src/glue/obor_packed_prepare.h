@@ -6,6 +6,7 @@
 #include "obor_transform.h"
 #include <fcntl.h>
 #include "obor_storage.h"
+#include "obor_prepare_sync.h"
 
 struct obor_transform_buffers {
     unsigned char *input, *output;
@@ -139,6 +140,10 @@ static bool obor_packed_prepare(const char *source, const char *save_dir,
         }
     }
     fclose(input);
+    /* Finish the generated input's writeback before publishing it for engine
+     * streaming. The cooperative helper keeps the loading screen responsive
+     * and retains no worker or extra content cache after preparation. */
+    if (ok && !obor_prepare_sync_file(output)) ok = false;
     if (fclose(output)) ok = false;
     /* Selected transforms never bypass result validation or reuse an old
      * decoded file when their configuration is absent, changed or invalid. */

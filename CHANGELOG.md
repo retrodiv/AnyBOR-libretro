@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Finish writing newly prepared content before the engine reads it, keeping
+  loading progress responsive. This avoids moving delayed filesystem
+  writeback into gameplay.
 - Group complete unchanged state blocks into bounded proof queries, preserving
   per-block fallback, lossless contents and the existing rewind capacity.
 - Check the live working directory before Windows engine switches and restore
