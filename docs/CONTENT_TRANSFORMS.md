@@ -130,10 +130,13 @@ exhausting the instruction budget reject without producing a result.
 
 Configuration is limited to 512 KiB and 16 named functions. One source function
 is at most 64 KiB, compiled instructions at most 12 KiB, parameters at most 4 KiB,
-and input at most 1 GiB. Execution allows at most `1,000,000 + 128 * input_size`
+and input at most 1.5 GiB. Execution allows at most `1,000,000 + 128 * input_size`
 instructions; that is a resource bound, not a promise of short loading time.
 Work cannot grow beyond the input size. Peak memory includes input, work and
-scratch. The compiler uses no external C compiler at content-load time.
+scratch (up to 3 GiB plus 64 KiB for these buffers during preparation).
+The returned buffer reuses work or scratch; it is not another full input copy.
+Allocation failure rejects the input. The compiler uses no external C compiler
+at content-load time.
 
 Names are case-sensitive lowercase ASCII letters, digits, dots, underscores and
 hyphens, up to 63 bytes. Duplicate names or transform sections reject. Outside a

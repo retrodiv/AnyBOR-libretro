@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Accept inputs up to 1.5 GiB for configured buffer preparation, retaining
+  bounded 64-bit instruction budgets and allocation-failure rejection.
 - Finish writing newly prepared content before the engine reads it, keeping
   loading progress responsive. This avoids moving delayed filesystem
   writeback into gameplay.
