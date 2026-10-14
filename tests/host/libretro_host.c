@@ -23,6 +23,9 @@
  *   OBOR_VIDEO_TRACE=1 / OBOR_OPTIONS_VERSION=0|2   video/option diagnostics
  *   OBOR_STOP_WIDTH=N / OBOR_RESET_WIDTH=N / OBOR_LOAD_WIDTH=N
  *       act on the first frame of width N (synthetic WebM regression)
+ *   OBOR_LOAD_WIDTH_REPEAT=1..8   repeat that movie interruption
+ *   OBOR_STOP_AFTER_LOAD_FRAMES=1..2000   finish a bounded restored continuation
+ *   OBOR_CHECK_THREADS=1   Linux: require all native tasks joined on restore/unload
  *   OBOR_POST_UNLOAD_MS=N   keep the frontend alive after content unload
  *   OBOR_HOST_PAUSE_AT=N / OBOR_HOST_PAUSE_MS=1..5000
  *       pause frontend calls once while decoder workers continue (diagnostic)
@@ -64,6 +67,37 @@
 #include <string.h>
 
 #include "libretro.h"
+
+static int count_host_threads(void)
+{
+#if defined(__linux__)
+    DIR *dir = opendir("/proc/self/task");
+    if (!dir) return -1;
+    int count = 0;
+    struct dirent *entry;
+    while ((entry = readdir(dir))) if (entry->d_name[0] != '.') ++count;
+    closedir(dir);
+    return count;
+#else
+    return -1;
+#endif
+}
+
+static int check_host_threads(int expected, const char *phase, int before)
+{
+    if (expected < 0) return 1;
+    int count = count_host_threads();
+#if defined(__linux__)
+    /* pthread_join can precede the kernel removing its exiting task entry. */
+    for (int attempt = 0; count > expected && attempt < 50; ++attempt) {
+        usleep(1000);
+        count = count_host_threads();
+    }
+#endif
+    printf("native_threads phase=%s before=%d after=%d baseline=%d\n",
+           phase, before, count, expected);
+    return count == expected;
+}
 
 #ifdef OBOR_HOST_FILESYSTEM_PROBE
 /* Linked only by the standalone filesystem regression, never by a core or
@@ -207,23 +241,89 @@ static int g_nsegs;
 static int g_frame;
 static int g_input_frame_offset;
 
-/* OBS v3 contract, independent of the core's range collector. Test-only:
+static int zero_bytes(const unsigned char *data, size_t begin, size_t end)
+{
+    for (size_t i = begin; i < end; ++i) if (data[i]) return 0;
+    return 1;
+}
+
+struct host_block_span { uint32_t offset, stored, capacity; };
+static int compare_block_spans(const void *left, const void *right)
+{
+    uint32_t a = ((const struct host_block_span *)left)->offset;
+    uint32_t b = ((const struct host_block_span *)right)->offset;
+    return (a > b) - (a < b);
+}
+
+/* Independent transport checks. The core's decoder/round-trip tests validate
+ * payload codecs and checksums; here check all slots, unused table/pool bytes,
+ * overlap, capacity padding and guards without calling that decoder. */
+static int check_block_blob(const unsigned char *data, size_t size, int report)
+{
+    uint32_t head[8];
+    const uint32_t block = 16384, alignment = 256;
+    const size_t table_end = (32 + ((2u << 30) / 16384) * 24 + 255) / 256 * 256;
+    if (size < table_end) return 0;
+    memcpy(head, data, sizeof(head));
+    if (head[0] != 0x3143424f || head[1] != 1 || head[2] != block ||
+        !head[4] || head[4] > (2u << 30) ||
+        head[3] != (head[4] + block - 1) / block || head[6] || head[7] ||
+        head[5] < table_end || head[5] > size || head[5] % alignment)
+        return 0;
+    struct host_block_span *spans = calloc(head[3], sizeof(*spans));
+    if (!spans) return 0;
+    int ok = 0;
+    for (uint32_t i = 0; i < head[3]; ++i) {
+        uint32_t entry[6], raw = head[4] - i * block;
+        if (raw > block) raw = block;
+        memcpy(entry, data + 32 + i * 24, sizeof(entry));
+        if (entry[3] != raw || !entry[1] || entry[1] > block ||
+            entry[4] > 2 || entry[0] < table_end || entry[0] % alignment ||
+            !entry[2] || entry[2] > block || entry[2] % alignment ||
+            entry[1] > entry[2] || entry[0] > head[5] ||
+            entry[2] > head[5] - entry[0] ||
+            (!entry[4] && entry[1] != raw)) goto done;
+        spans[i] = (struct host_block_span){entry[0], entry[1], entry[2]};
+    }
+    if (!zero_bytes(data, 32 + head[3] * 24, table_end)) goto done;
+    qsort(spans, head[3], sizeof(*spans), compare_block_spans);
+    size_t cursor = table_end;
+    for (uint32_t i = 0; i < head[3]; ++i) {
+        struct host_block_span span = spans[i];
+        if (span.offset < cursor || !zero_bytes(data, cursor, span.offset) ||
+            !zero_bytes(data, span.offset + span.stored, span.offset + span.capacity))
+            goto done;
+        cursor = span.offset + span.capacity;
+    }
+    if (!zero_bytes(data, cursor, size)) goto done;
+    if (report)
+        printf("state_contract version=1 capacity=%zu logical=%u raw=%u blocks=%u tail_zero=1 format=OBC1\n",
+               size, head[5], head[4], head[3]);
+    ok = 1;
+done:
+    free(spans);
+    return ok;
+}
+
+/* OBS v7 contract, independent of the core's range collector. Test-only:
  * call with a deliberately dirty destination and verify the whole transport
  * buffer, including guard bytes and deterministic capacity padding. */
 static int check_state_blob(const unsigned char *data, size_t size, int report)
 {
     uint32_t head[5];
     uint64_t fields[7];
-    if (size < 80) return 0;
+    if (size < 112) return 0;
     memcpy(head, data, sizeof(head));
+    if (head[0] == 0x3143424f) return check_block_blob(data, size, report);
     memcpy(fields, data + 24, sizeof(fields));
-    if (head[0] != 0x3153424f || head[1] != 3 || !head[4] || head[4] > 16)
+    if (head[0] != 0x3153424f || head[1] != 7 || !head[4] || head[4] > 16 ||
+        zero_bytes(data, 80, 112))
         return 0;
-    size_t table = 80 + head[4] * 16, segments = 0;
+    size_t table = 112 + head[4] * 16, segments = 0;
     if (table > size) return 0;
     for (unsigned i = 0; i < head[4]; ++i) {
         uint64_t bytes;
-        memcpy(&bytes, data + 80 + i * 16 + 8, 8);
+        memcpy(&bytes, data + 112 + i * 16 + 8, 8);
         if (bytes > size - segments) return 0;
         segments += (size_t)bytes;
     }
@@ -731,6 +831,8 @@ int main(int argc, char **argv)
         return 2;
     }
 #endif
+    int threads_before = getenv("OBOR_CHECK_THREADS") ? count_host_threads() : -1;
+    if (getenv("OBOR_CHECK_THREADS") && threads_before < 1) return 2;
     void *h = dlopen(core_path, RTLD_NOW | RTLD_LOCAL);
     if (!h) {
         fprintf(stderr, "dlopen: %s\n", dlerror());
@@ -860,7 +962,8 @@ int main(int argc, char **argv)
                 fprintf(stderr, "initial state contract failed\n");
                 return 1;
             }
-            uint32_t invalid_version = 0, current_version = 3;
+            uint32_t invalid_version = 0, current_version;
+            memcpy(&current_version, contract_buf + 12, 4);
             memcpy(contract_buf + 12, &invalid_version, 4);
             if (p_retro_unserialize(contract_buf + 8, contract_sz)) return 1;
             memcpy(contract_buf + 12, &current_version, 4);
@@ -946,6 +1049,11 @@ int main(int argc, char **argv)
     int stop_width = getenv("OBOR_STOP_WIDTH") ? atoi(getenv("OBOR_STOP_WIDTH")) : 0;
     int reset_width = getenv("OBOR_RESET_WIDTH") ? atoi(getenv("OBOR_RESET_WIDTH")) : 0;
     int load_width = getenv("OBOR_LOAD_WIDTH") ? atoi(getenv("OBOR_LOAD_WIDTH")) : 0;
+    int load_width_repeat = getenv("OBOR_LOAD_WIDTH_REPEAT") ? atoi(getenv("OBOR_LOAD_WIDTH_REPEAT")) : 1;
+    if (load_width_repeat < 1 || load_width_repeat > 8) return 2;
+    int stop_after_load = getenv("OBOR_STOP_AFTER_LOAD_FRAMES") ? atoi(getenv("OBOR_STOP_AFTER_LOAD_FRAMES")) : 0;
+    int last_successful_load = -1;
+    if (stop_after_load < 0 || stop_after_load > 2000) return 2;
     int expect_error_at = getenv("OBOR_EXPECT_ERROR_AT") ? atoi(getenv("OBOR_EXPECT_ERROR_AT")) : -1;
     int expect_recover_at = getenv("OBOR_EXPECT_RECOVER_AT") ? atoi(getenv("OBOR_EXPECT_RECOVER_AT")) : -1;
 
@@ -1072,7 +1180,7 @@ int main(int argc, char **argv)
         if (load_width && g_fw == (unsigned)load_width) {
             printf("load_width=%u at frame %d\n", g_fw, g_frame);
             load_at = g_frame;
-            load_width = 0;
+            if (!--load_width_repeat) load_width = 0;
         }
         if (rw_start > 0) {
             uint32_t hh = 2166136261u;
@@ -1282,8 +1390,11 @@ int main(int argc, char **argv)
                 if (fread(&sz, sizeof(sz), 1, f) == 1) {
                     void *buf = malloc(sz);
                     if (buf && fread(buf, 1, sz, f) == sz) {
+                        int live_threads = threads_before >= 0 ? count_host_threads() : -1;
                         int ok = p_retro_unserialize(buf, sz);
+                        if (ok) last_successful_load = g_frame;
                         printf("load state at frame %d: %s\n", g_frame, ok ? "ok" : "FAILED");
+                        if (ok && !check_host_threads(threads_before, "restore", live_threads)) return 1;
                         if (ok && getenv("OBOR_LOAD_SOURCE_FRAME")) {
                             g_input_frame_offset = atoi(getenv("OBOR_LOAD_SOURCE_FRAME")) - g_frame;
                             printf("restored_input_source_frame=%d\n", g_frame + g_input_frame_offset);
@@ -1294,6 +1405,9 @@ int main(int argc, char **argv)
                 fclose(f);
             }
         }
+        if (stop_after_load && !load_width && last_successful_load >= 0 &&
+            g_frame - last_successful_load >= stop_after_load)
+            break;
     }
     if (replay_audio_file) {
         if (fclose(replay_audio_file)) return 1;
@@ -1330,6 +1444,7 @@ int main(int argc, char **argv)
         fflush(stdout);
     }
     p_retro_unload_game();
+    if (!check_host_threads(threads_before, "unload", -1)) return 1;
     if (getenv("OBOR_CAPTURE_BEFORE_UNLOAD"))
         printf("unload_after_capture=1\n");
     if (getenv("OBOR_POST_UNLOAD_MS")) {
@@ -1349,6 +1464,7 @@ int main(int argc, char **argv)
     }
     printf("cwd_restored=1\n");
     dlclose(h);
+    if (!check_host_threads(threads_before, "dlclose", -1)) return 1;
     for (int i = 0; i < padding; ++i) {
         char text[64];
         if (fseek(host_files[i], 0, SEEK_SET) != 0 ||

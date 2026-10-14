@@ -23,7 +23,8 @@ ifeq ($(PLATFORM),windows)
 PLAT_DEF    = -DWIN=1
 else ifeq ($(PLATFORM),darwin)
 # OpenBOR's own macOS branches (ram.c, openborscript.c) key off DARWIN.
-PLAT_DEF    = -DDARWIN=1
+# Keep Darwin extensions visible when a port opts into the POSIX namespace.
+PLAT_DEF    = -DDARWIN=1 -D_DARWIN_C_SOURCE=1
 else
 PLAT_DEF    = -DLINUX=1
 endif
@@ -173,7 +174,8 @@ FILE_WRAPS = --wrap=fopen --wrap=fclose --wrap=open --wrap=close \
              --wrap=unlink --wrap=rmdir
 ifeq ($(PLATFORM),windows)
 FILE_WRAPS += --wrap=_open --wrap=_close --wrap=stat32 --wrap=stat32i64 \
-              --wrap=stat64i32 --wrap=stat64
+              --wrap=stat64i32 --wrap=stat64 --wrap=_stat32 --wrap=_stat32i64 \
+              --wrap=_stat64i32 --wrap=_stat64
 else
 FILE_WRAPS += --wrap=open64 --wrap=stat --wrap=stat64 --wrap=chmod
 endif

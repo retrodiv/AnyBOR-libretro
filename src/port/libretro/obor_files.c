@@ -165,19 +165,26 @@ int __wrap_mkdir(const char *path)
 }
 /* MinGW's stat spellings depend on both time_t and _FILE_OFFSET_BITS in
  * each caller. Forward its buffer unchanged to the matching CRT ABI. */
-#define PATH_STAT(name) \
-    extern int __real_##name(const char *, void *); \
+#define PATH_STAT(name, native) \
+    extern int __real_##native(const char *, void *); \
     int __wrap_##name(const char *path, void *buf) { \
         char mapped[8192]; \
         path = obor_paths_resolve(path, mapped, sizeof(mapped)); \
-        return path ? __real_##name(path, buf) : -1; \
+        return path ? __real_##native(path, buf) : -1; \
     }
+/* The CRT exports underscore names on every supported MinGW version.
+ * Non-underscore aliases are not present in older import libraries. Both
+ * caller spellings must use the same native buffer ABI and path mapping. */
 #if !defined(_WIN64)
-PATH_STAT(stat32)
-PATH_STAT(stat32i64)
+PATH_STAT(stat32, _stat32)
+PATH_STAT(_stat32, _stat32)
+PATH_STAT(stat32i64, _stat32i64)
+PATH_STAT(_stat32i64, _stat32i64)
 #endif
-PATH_STAT(stat64i32)
-PATH_STAT(stat64)
+PATH_STAT(stat64i32, _stat64i32)
+PATH_STAT(_stat64i32, _stat64i32)
+PATH_STAT(stat64, _stat64)
+PATH_STAT(_stat64, _stat64)
 #else
 #define PATH_MODE(name) \
     extern int __real_##name(const char *, mode_t); \

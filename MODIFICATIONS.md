@@ -119,6 +119,10 @@ destroying the preparation stack. No game identity or decoding recipe is added.
 
 ## Darwin platform support
 
+Darwin compilations enable `_DARWIN_C_SOURCE` before any system header is read.
+This keeps `Dl_info` and `dladdr` visible even in port files that request a
+POSIX namespace. The setting applies to every engine and the shared glue.
+
 The macOS targets reuse OpenBOR's own `DARWIN` branches, which upstream kept
 in `source/ramlib/ram.c` (mach memory queries instead of `sysinfo`) and in the
 script-visible platform constant, but which the Linux-only conditionals around
@@ -642,9 +646,15 @@ New resource-state blocks use the compact initial DEFLATE encoding on supported
 default targets; changed blocks use LZ4, within the same fixed image capacity.
 An optional `OBOR_STATE_RAW_MUTABLE=1` experiment
 keeps changed blocks in raw stable slots to measure frontend delta amplification.
-Neither format depends on a prior snapshot. Classic movie workers can be stopped
+Neither format depends on a prior snapshot. Movie workers can be stopped
 after all target preflights pass, allowing an earlier non-threaded state to load
-from current playback; interior movie snapshots remain unsupported.
+from current playback; interior movie snapshots remain unsupported. This also
+applies to the asynchronous movie adapter: its shutdown joins active and retired
+decoder lifecycles, nested demux/video/audio workers and codec workers before
+target state is copied. The running-movie write-watch capture policy is separate
+from permission to restore an earlier state. Runtime tests compare repeated
+restored continuations and check native Linux tasks return to baseline, including
+a movie resolution that activates libvpx's own workers.
 
 Linux x86-64/ARM64 classic decoder workers explicitly register for write-watch
 dispatch. The owner pins dispatch before publishing each worker and releases it
@@ -678,6 +688,10 @@ and non-Android Linux x86-64/ARM64, as described in the README. Other targets
 retain their existing writer while equivalent acceptance is pending.
 
 ## Session relative filesystem
+
+Windows stat wrappers accept the caller's native time/file-size buffer ABI
+through both underscore and POSIX spellings. They forward to underscore CRT
+exports, which are present even when MinGW's optional POSIX aliases are absent.
 
 All engines resolve relative file operations against their own live session
 root. Entering a frame does not query or change the frontend process directory.

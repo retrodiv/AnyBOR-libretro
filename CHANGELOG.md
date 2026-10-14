@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Keep Darwin extension declarations visible in POSIX port files. Resolve
+  Windows path-stat wrappers through native CRT exports on older and newer MinGW.
+- Verify repeated movie restoration against original video and full PCM for
+  both decoder adapters, including nested-worker teardown.
+- Exercise fixed-capacity rewind and cold loads with both the current block
+  transport and the raw fallback, retaining independent layout/padding checks.
 - Sample live controls on the first frame after an ordinary state load in all
   engine profiles. Retain saved controls only while the frontend reports rewind.
 - Accept inputs up to 1.5 GiB for configured buffer preparation, retaining

@@ -605,6 +605,8 @@ def build_glue(target, spec, outdir):
                          "-Wl,--wrap=sqrtf"]
 
     glue_defs = ['-DOBOR_PLATFORM="{0}"'.format(target)]
+    if uses_macho(spec):
+        glue_defs += ["-D_DARWIN_C_SOURCE=1"]
     if spec.get("recalbox"):
         glue_defs += ["-DOBOR_NO_INPUT_DESCRIPTORS=1", "-DOBOR_NO_PADMAP=1",
                       "-DOBOR_NO_OSD_MESSAGES=1"]

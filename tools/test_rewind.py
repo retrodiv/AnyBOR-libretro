@@ -52,12 +52,15 @@ def main():
                 return subprocess.check_output(["wslpath", "-w", str(path)], universal_newlines=True).strip()
             return "Z:" + str(path).replace("/", "\\") if args.windows else str(path)
 
+        mode = "default"
         def run(engine, name, **options):
-            root = work / (engine + "-" + name)
+            root = work / (mode + "-" + engine + "-" + name)
             root.mkdir()
             env = {k: v for k, v in os.environ.items() if not k.startswith("OBOR_")}
             env.update(OBOR_ENGINE=engine, OBOR_STATE_CHECK="1",
                        OBOR_FIXED_STATE_FRONTEND="1", OBOR_SKIP_LOADING="1")
+            if mode == "raw":
+                env["OBOR_COMPRESSED_STATES"] = "0"
             if not windows:
                 env["OBOR_CHECK_FDS"] = "1"
             env.update({k: target_path(v) if isinstance(v, Path) else str(v)
@@ -71,9 +74,9 @@ def main():
                 str(host), target_path(core), target_path(pak), target_path(root),
                 "180", target_path(root / "frame")]
             result = subprocess.run(command, env=env, cwd=str(work),
-                                    stderr=subprocess.STDOUT, stdout=subprocess.PIPE,
+                                    stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                                     universal_newlines=True, timeout=90)
-            log = result.stdout
+            log = result.stdout + result.stderr
             if result.returncode:
                 raise RuntimeError("%s %s host exited %d:\n%s" %
                                    (engine, name, result.returncode, log))
@@ -84,30 +87,31 @@ def main():
             if not windows:
                 assert "file_descriptors_restored=1" in log, log
             assert "FAILED" not in log and "MISMATCH" not in log, log
-            sizes = re.findall(r"state_contract version=3 capacity=(\d+)", log)
+            version = 1 if mode == "default" and (windows or sys.platform == "linux") else 7
+            sizes = re.findall(r"state_contract version=" + str(version) + r" capacity=(\d+)", log)
             assert len(sizes) == 2 and sizes[0] == sizes[1] == initial.group(1), log
             if "OBOR_RAREWIND" in options:
                 assert log.count(" MATCH") == 7 and log.count(" NOREF") == 1, log
             if "OBOR_LOAD_AT" in options:
                 assert "load state at frame 120: ok" in log, log
-            print("PASS", engine, name, "capacity=" + sizes[0], flush=True)
+            print("PASS", mode, engine, name, "capacity=" + sizes[0], flush=True)
             return (root / "frame000180.ppm").read_bytes(), log
 
-        for entry in release.read_json(release.ROOT / "src/pin.json")["profiles"]:
-            engine = entry["build"]
-            state = work / (engine + ".state")
-            # An allocation is fixed before frame zero and then used for
-            # every snapshot, including after a geometry toggle or Reset.
-            run(engine, "reverse", OBOR_CRT_TV="On", OBOR_RAREWIND="150,8")
-            run(engine, "toggle-reset", OBOR_CRT_TOGGLE_AT=60, OBOR_RESET_AT=100)
-            image, _ = run(engine, "save", OBOR_CRT_TV="On", OBOR_SAVE_AT=120,
-                           OBOR_SAVE_STATE=state)
-            restored, _ = run(engine, "cross-session", OBOR_CRT_TV="On", OBOR_LOAD_AT=120,
-                              OBOR_LOAD_STATE=state)
-            assert image == restored, engine + " cross-session presentation diverged"
-        # Reset may also select another engine, but the frontend's capacity
-        # must not change. The new engine still gets its own BSS in the state.
-        run("6412", "engine-reset", OBOR_SET_ENGINE_AT="60:3400", OBOR_RESET_AT=60)
+        for mode in ("default", "raw"):
+            for entry in release.read_json(release.ROOT / "src/pin.json")["profiles"]:
+                engine = entry["build"]
+                state = work / (mode + "-" + engine + ".state")
+                # Both current transport and raw fallback retain all fixed
+                # capacity, reverse-playback, reset and independent-load checks.
+                run(engine, "reverse", OBOR_CRT_TV="On", OBOR_RAREWIND="150,8")
+                run(engine, "toggle-reset", OBOR_CRT_TOGGLE_AT=60, OBOR_RESET_AT=100)
+                image, _ = run(engine, "save", OBOR_CRT_TV="On", OBOR_SAVE_AT=120,
+                               OBOR_SAVE_STATE=state)
+                restored, _ = run(engine, "cross-session", OBOR_CRT_TV="On", OBOR_LOAD_AT=120,
+                                  OBOR_LOAD_STATE=state)
+                assert image == restored, engine + " cross-session presentation diverged"
+            # Reset may select another engine without changing capacity.
+            run("6412", "engine-reset", OBOR_SET_ENGINE_AT="60:3400", OBOR_RESET_AT=60)
     print("Fixed-capacity rewind contracts: OK", flush=True)
 
 
