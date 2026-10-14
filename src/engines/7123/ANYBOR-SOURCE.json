@@ -17,9 +17,9 @@
       "upstream_sha256": null
     },
     "openbor.c": {
-      "distributed_sha256": "5206727bbd2ad795958f0517f57627276dd52d9e37b160c438d3e02d833c4020",
+      "distributed_sha256": "f4ea778846afe4189993c55eb35e1b5a73421dbc459d73a383abaeb40e60668a",
       "modified": true,
-      "summary": "Apply the port's engine corrections and select the PC video configuration on macOS. Derive output names from the content basename with explicit destination capacities, and reject overflowing output path joins. Leave multiplayer slots without a selected model available to join even if game scripts preassign lives to them. Let a missing basename-only PAK self-check read the active frontend content after it has been validated and prepared. Allocate each model's animation pointer table through the highest animation index that model uses, and bound cache, copy and cleanup paths to that capacity. Initialize all four RetroPads and repair legacy unbound player profiles without replacing custom bindings.",
+      "summary": "Apply the port's engine corrections and select the PC video configuration on macOS. Derive output names from the content basename with explicit destination capacities, and reject overflowing output path joins. Leave multiplayer slots without a selected model available to join even if game scripts preassign lives to them. Let a missing basename-only PAK self-check read the active frontend content after it has been validated and prepared. Allocate each model's animation pointer table through the highest animation index that model uses, and bound cache, copy and cleanup paths to that capacity. Ignore optional defense and offense entries outside the configured attack-type range with a log warning before accessing their tables. Initialize all four RetroPads and repair legacy unbound player profiles without replacing custom bindings.",
       "topics": [
         "active-content-pak-aliases",
         "animation-memory-layout",
@@ -27,6 +27,7 @@
         "empty-player-slot-safety",
         "four-player-controls",
         "loading-screen-presentation",
+        "model-attack-type-bounds",
         "record-dates-and-file-notices",
         "session-relative-filesystem"
       ],

@@ -1,4 +1,4 @@
-/* AnyBOR modification record: 2026-10-12.
+/* AnyBOR modification record: 2026-10-14.
  * Port maintained by retrodiv <retrodiv@proton.me>.
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
@@ -14,7 +14,9 @@
  * check read the active frontend content after it has been validated and
  * prepared. Allocate each model's animation pointer table through the
  * highest animation index that model uses, and bound cache, copy and cleanup
- * paths to that capacity. Resize repeated weapon lists and detach borrowed
+ * paths to that capacity. Ignore optional defense and offense entries
+ * outside the configured attack-type range with a log warning before
+ * accessing their tables. Resize repeated weapon lists and detach borrowed
  * lists before replacing their entries.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/6391.md
@@ -9351,6 +9353,14 @@ s_model *load_cached_model(char *name, char *owner, char unload)
                                                                                                     else if(starts_with(value, "normal"))
                                                                                                     {
                                                                                                         get_tail_number(tempInt, value, "normal");
+                                                                                                        /* Invalid optional entries must not corrupt adjacent heap chunks. */
+                                                                                                        if(tempInt > max_attack_types - STA_ATKS)
+                                                                                                        {
+                                                                                                            writeToLogFile("Warning: Ignoring out-of-range attack type '%s' in %s "
+                                                                                                                           "(%s; maxattacktypes %d).\n",
+                                                                                                                           value, filename, command, max_attack_types - STA_ATKS);
+                                                                                                            break;
+                                                                                                        }
                                                                                                         newchar->defense[obor_attack_from_native(tempInt + obor_attack_to_native(MAX_ATKS) - 11)] = defense;
                                                                                                     }
                                                                                                     else if(stricmp(value, "ALL") == 0)
@@ -9404,6 +9414,14 @@ s_model *load_cached_model(char *name, char *owner, char unload)
                                                                                                     else if(starts_with(value, "normal"))
                                                                                                     {
                                                                                                         get_tail_number(tempInt, value, "normal");
+                                                                                                        /* Invalid optional entries must not corrupt adjacent heap chunks. */
+                                                                                                        if(tempInt > max_attack_types - STA_ATKS)
+                                                                                                        {
+                                                                                                            writeToLogFile("Warning: Ignoring out-of-range attack type '%s' in %s "
+                                                                                                                           "(%s; maxattacktypes %d).\n",
+                                                                                                                           value, filename, command, max_attack_types - STA_ATKS);
+                                                                                                            break;
+                                                                                                        }
                                                                                                         newchar->offense_factors[obor_attack_from_native(tempInt + obor_attack_to_native(MAX_ATKS) - 11)] = GET_FLOAT_ARG(2);
                                                                                                     }
                                                                                                     else if(stricmp(value, "ALL") == 0)

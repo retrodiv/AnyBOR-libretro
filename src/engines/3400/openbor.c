@@ -1,4 +1,4 @@
-/* AnyBOR modification record: 2026-10-12.
+/* AnyBOR modification record: 2026-10-14.
  * Port maintained by retrodiv <retrodiv@proton.me>.
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
@@ -11,7 +11,9 @@
  * check read the active frontend content after it has been validated and
  * prepared. Allocate each model's animation pointer table through the
  * highest animation index that model uses, and bound cache, copy and cleanup
- * paths to that capacity. Fall back when legacy content names missing model,
+ * paths to that capacity. Ignore optional defense and offense entries
+ * outside the configured attack-type range with a log warning before
+ * accessing their tables. Fall back when legacy content names missing model,
  * level, scene or background overrides.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/3400.md
@@ -5181,6 +5183,14 @@ s_model* load_cached_model(char * name, char * owner, char unload)
 						{
 							tempInt = atoi(value+6);
 							if(tempInt<11) tempInt = 11;
+							/* Invalid optional entries must not corrupt adjacent heap chunks. */
+							if(tempInt > max_attack_types - STA_ATKS)
+							{
+							    writeToLogFile("Warning: Ignoring out-of-range attack type '%s' in %s "
+							                   "(%s; maxattacktypes %d).\n",
+							                   value, filename, command, max_attack_types - STA_ATKS);
+							    break;
+							}
 							newchar->defense_factors[tempInt+STA_ATKS-1]        = GET_FLOAT_ARG(2);
 							newchar->defense_pain[tempInt+STA_ATKS-1]           = GET_FLOAT_ARG(3);
 							newchar->defense_knockdown[tempInt+STA_ATKS-1]      = GET_FLOAT_ARG(4);
@@ -5233,6 +5243,14 @@ s_model* load_cached_model(char * name, char * owner, char unload)
 						{
 							tempInt = atoi(value+6);
 							if(tempInt<11) tempInt = 11;
+							/* Invalid optional entries must not corrupt adjacent heap chunks. */
+							if(tempInt > max_attack_types - STA_ATKS)
+							{
+							    writeToLogFile("Warning: Ignoring out-of-range attack type '%s' in %s "
+							                   "(%s; maxattacktypes %d).\n",
+							                   value, filename, command, max_attack_types - STA_ATKS);
+							    break;
+							}
 							newchar->offense_factors[tempInt+STA_ATKS-1] = GET_FLOAT_ARG(2);
 						}
 						else if(stricmp(value, "ALL")==0)

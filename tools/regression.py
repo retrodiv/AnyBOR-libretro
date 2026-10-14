@@ -83,8 +83,8 @@ def main():
             path = str(path)
             return "Z:" + path.replace("/", "\\") if args.windows else path
 
-        def run(engine, content, label, frames=180, **options):
-            system = work / engine
+        def run(engine, content, label, frames=180, system_dir=None, **options):
+            system = system_dir if system_dir is not None else work / engine
             system.mkdir(exist_ok=True)
             env = {k: v for k, v in os.environ.items() if not k.startswith("OBOR_")}
             env.update(OBOR_ENGINE=engine, OBOR_POST_UNLOAD_MS="250")
@@ -150,6 +150,47 @@ def main():
             OBOR_SAVE_AT=120, OBOR_SAVE_STATE=work / "raw.state")
         if not (work / "6412/saves/AnyBOR/raw/6412/Saves/.obor_peak_sparse_v2_raw.pak.txt").is_file():
             raise RuntimeError("Unpacked mod peak is missing")
+
+        # Optional model entries must not index beyond the configured tables.
+        # Each case has fresh files so an earlier warning cannot satisfy it.
+        bounds_cases = (("defense", 11, None, True),
+                        ("defense", 12, None, True),
+                        ("offense", 11, None, True),
+                        ("defense", 13, 12, True),
+                        ("offense", 2147483647, None, True),
+                        ("defense", 10, None, False),
+                        ("defense", 12, 12, False),
+                        ("offense", 12, 12, False))
+        for index, (command, number, declared, warn) in enumerate(bounds_cases):
+            model_members = make_fixture.files()
+            if declared is not None:
+                model_members["data/models.txt"] = (
+                    "maxattacktypes {0}\n".format(declared).encode() +
+                    model_members["data/models.txt"])
+            directive = "{0} normal{1} 0 2000 1\n".format(command, number).encode()
+            model_members["data/chars/block.txt"] = model_members["data/chars/block.txt"].replace(
+                b"type player\n", b"type player\n" + directive)
+            model_pak = work / ("model-attack-{0}.pak".format(index))
+            make_fixture.write_pak(model_pak, model_members)
+            for profile in profiles:
+                engine = profile["build"]
+                system = work / ("model-attack-{0}-{1}".format(index, engine))
+                label = "model attack bounds {0} normal{1} max={2}".format(command, number, declared)
+                result = run(engine, model_pak, label, frames=1000, system_dir=system,
+                             OBOR_GAMELOG="On", OBOR_CRT_TV="Off")
+                for log in system.rglob("OpenBorLog.txt"):
+                    if log.stat().st_size > 1024 * 1024:
+                        raise RuntimeError("Excessive model warning log")
+                    result += log.read_text(errors="replace")
+                diagnostic = "Ignoring out-of-range attack type"
+                if ("resource initialization complete" not in result or
+                        (not args.windows and "arena_released=1" not in result) or
+                        "Allocator failed" in result or "invalid memory access" in result or
+                        (warn and (diagnostic not in result or "normal{0}".format(number) not in result)) or
+                        (not warn and diagnostic in result)):
+                    raise RuntimeError(label + ": " + result)
+        print("Model attack bounds: {0} conditions across {1} profiles: OK".format(
+            len(bounds_cases) * len(profiles), len(profiles)), flush=True)
 
         if args.webm:
             for audio, width, height in ((False, 160, 120), (True, 160, 120), (True, 800, 450)):

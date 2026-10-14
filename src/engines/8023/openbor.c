@@ -1,4 +1,4 @@
-/* AnyBOR modification record: 2026-10-12.
+/* AnyBOR modification record: 2026-10-14.
  * Port maintained by retrodiv <retrodiv@proton.me>.
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
@@ -11,7 +11,9 @@
  * check read the active frontend content after it has been validated and
  * prepared. Allocate each model's animation pointer table through the
  * highest animation index that model uses, and bound cache, copy and cleanup
- * paths to that capacity. Use four independent RetroPad devices and per-
+ * paths to that capacity. Ignore optional defense and offense entries
+ * outside the configured attack-type range with a log warning before
+ * accessing their tables. Use four independent RetroPad devices and per-
  * device mappings. Place player state in aligned storage for PE SIMD reads.
  * Yield to the frontend and decoder workers while asynchronous movies are
  * pending. Grow each collision collection's pointer table only through its
@@ -38645,6 +38647,14 @@ void defense_setup_from_arg(
     if (starts_with(value, "normal"))
     {
         get_tail_number(tempInt, value, "normal");
+        /* Invalid optional entries must not corrupt adjacent heap chunks. */
+        if(tempInt > max_attack_types - STA_ATKS)
+        {
+            writeToLogFile("Warning: Ignoring out-of-range attack type '%s' in %s "
+                           "(%s; maxattacktypes %d).\n",
+                           value, filename, command, max_attack_types - STA_ATKS);
+            return;
+        }
 
         defense_apply_setup_to_property(
             filename,
@@ -38800,6 +38810,14 @@ void offense_setup_from_arg(
     if (starts_with(value, "normal"))
     {
         get_tail_number(tempInt, value, "normal");
+        /* Invalid optional entries must not corrupt adjacent heap chunks. */
+        if(tempInt > max_attack_types - STA_ATKS)
+        {
+            writeToLogFile("Warning: Ignoring out-of-range attack type '%s' in %s "
+                           "(%s; maxattacktypes %d).\n",
+                           value, filename, command, max_attack_types - STA_ATKS);
+            return;
+        }
 
         offense_apply_setup_to_property(
             filename,

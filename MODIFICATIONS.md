@@ -687,6 +687,15 @@ path. Resource and compressed states themselves default on for Windows x86-64
 and non-Android Linux x86-64/ARM64, as described in the README. Other targets
 retain their existing writer while equivalent acceptance is pending.
 
+## Model attack type bounds
+
+Optional model `defense normalN` and `offense normalN` entries are checked
+against the configured `maxattacktypes` before computing their table index.
+An entry outside that range is ignored with a warning in the engine log,
+including its file, command and configured limit. Valid entries retain the
+engine's existing mapping and behavior. This prevents an invalid optional
+entry from overwriting adjacent heap storage in every engine profile.
+
 ## Session relative filesystem
 
 Windows stat wrappers accept the caller's native time/file-size buffer ABI

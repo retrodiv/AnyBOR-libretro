@@ -17,9 +17,9 @@
       "upstream_sha256": null
     },
     "openbor.c": {
-      "distributed_sha256": "d31cff2c06745f6f67b58424bbc7e525a28323a9955b985502bd67f54d08e7f4",
+      "distributed_sha256": "1e5185a9271962b9c9845f8a5568cb43b6d844e58e1c3745c39684cbf91c6ad0",
       "modified": true,
-      "summary": "Apply the port's engine corrections and select the PC video configuration on macOS. Derive output names from the content basename with explicit destination capacities, and reject overflowing output path joins. Leave multiplayer slots without a selected model available to join even if game scripts preassign lives to them. Let a missing basename-only PAK self-check read the active frontend content after it has been validated and prepared. Allocate each model's animation pointer table through the highest animation index that model uses, and bound cache, copy and cleanup paths to that capacity. Fall back when legacy content names missing model, level, scene or background overrides.",
+      "summary": "Apply the port's engine corrections and select the PC video configuration on macOS. Derive output names from the content basename with explicit destination capacities, and reject overflowing output path joins. Leave multiplayer slots without a selected model available to join even if game scripts preassign lives to them. Let a missing basename-only PAK self-check read the active frontend content after it has been validated and prepared. Allocate each model's animation pointer table through the highest animation index that model uses, and bound cache, copy and cleanup paths to that capacity. Ignore optional defense and offense entries outside the configured attack-type range with a log warning before accessing their tables. Fall back when legacy content names missing model, level, scene or background overrides.",
       "topics": [
         "active-content-pak-aliases",
         "animation-memory-layout",
@@ -28,6 +28,7 @@
         "empty-player-slot-safety",
         "legacy-content-fallbacks",
         "loading-screen-presentation",
+        "model-attack-type-bounds",
         "record-dates-and-file-notices",
         "session-relative-filesystem"
       ],

@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Ignore optional model defense and offense entries outside the configured attack
+  range with a log warning. Keep valid entries and prevent heap corruption in all
+  engine profiles.
 - Keep Darwin extension declarations visible in POSIX port files. Resolve
   Windows path-stat wrappers through native CRT exports on older and newer MinGW.
 - Verify repeated movie restoration against original video and full PCM for

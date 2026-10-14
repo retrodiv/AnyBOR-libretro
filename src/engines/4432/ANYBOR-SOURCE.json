@@ -17,9 +17,9 @@
       "upstream_sha256": null
     },
     "openbor.c": {
-      "distributed_sha256": "9993de210a73921f1dd59a6976720f14f3fea8406eacf35be742a1a80d7dfcb6",
+      "distributed_sha256": "49ac810dfd2f8a4450e35a2020507453715c223bebeb5700f4bf0204f7d403ac",
       "modified": true,
-      "summary": "Apply the port's engine corrections and select the PC video configuration on macOS. Derive output names from the content basename with explicit destination capacities, and reject overflowing output path joins. Select the 4453 profile's 32-bit screen and palette behavior, preserve the 4432 12-key native settings format while 4453 uses 13 keys, and disable the Exit mapping in the 4453 control menu. Bound the DOT loop and control-menu arrays to allocated storage. Leave multiplayer slots without a selected model available to join even if game scripts preassign lives to them. Let a missing basename-only PAK self-check read the active frontend content after it has been validated and prepared. Allocate each model's animation pointer table through the highest animation index that model uses, and bound cache, copy and cleanup paths to that capacity. Resize repeated weapon lists and detach borrowed lists before replacing their entries.",
+      "summary": "Apply the port's engine corrections and select the PC video configuration on macOS. Derive output names from the content basename with explicit destination capacities, and reject overflowing output path joins. Select the 4453 profile's 32-bit screen and palette behavior, preserve the 4432 12-key native settings format while 4453 uses 13 keys, and disable the Exit mapping in the 4453 control menu. Bound the DOT loop and control-menu arrays to allocated storage. Leave multiplayer slots without a selected model available to join even if game scripts preassign lives to them. Let a missing basename-only PAK self-check read the active frontend content after it has been validated and prepared. Allocate each model's animation pointer table through the highest animation index that model uses, and bound cache, copy and cleanup paths to that capacity. Ignore optional defense and offense entries outside the configured attack-type range with a log warning before accessing their tables. Resize repeated weapon lists and detach borrowed lists before replacing their entries.",
       "topics": [
         "active-content-pak-aliases",
         "animation-memory-layout",
@@ -28,6 +28,7 @@
         "empty-player-slot-safety",
         "loading-screen-presentation",
         "logical-profile-compatibility",
+        "model-attack-type-bounds",
         "record-dates-and-file-notices",
         "repeated-weapon-lists",
         "session-relative-filesystem"
