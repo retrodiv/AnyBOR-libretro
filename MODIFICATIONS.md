@@ -754,3 +754,34 @@ case-insensitive lookup and override precedence. Unavailable notifications,
 unsupported names, enumeration errors or capacity overflow retain the original
 lookup instead of inventing an absence. This index contains no game bytes or
 rewind history.
+
+
+### Process runtime storage and cold state loads
+
+Writable data from compiler startup objects and statically linked host runtimes
+is process-owned. The linker groups these inputs into the existing `obor_rt`
+region, excluded by both pristine-reset and engine-state collectors. This covers
+Winpthreads TLS keys/VEH registrations, MinGW CRT on-exit tables and locks,
+libgcc/libstdc++ exception bookkeeping and allocator pools, and equivalent static
+runtime inputs on ELF targets. Engine and codec data retain their ordinary state
+ownership. ELF RELRO inputs keep their original read-only protection. Windows
+loader/TLS template sections are also excluded; the previous positional guess
+that the first32 bytes of `.bss` belonged to the CRT is removed.
+Darwin excludes loader binding tables, constructor tables and TLS sections by
+their Mach-O ABI section types, preserving ordinary initialized data and BSS.
+
+Every final build audits allocated link-map inputs against the actual image
+ranges, refusing captured process runtime storage. Darwin targets use external
+libSystem and no static language runtime; the gate refuses an unexpected static
+runtime input until its ownership is established. It also verifies that Darwin's
+split ranges fit the existing fixed tables for every engine. The Windows headless host can
+dispatch a private handled exception after `FreeLibrary`, detecting stale
+exception callbacks even when the frontend would otherwise exit quietly. The
+rewind regression requires this check in fresh and cross-process loads for all
+thirteen profiles, in both compressed and raw modes. No game identity or runtime
+symbol address selects the exclusion.
+The bounded Windows test batch starts a dedicated Wine prefix with persistent
+services, avoiding a server/service restart between hosts. Its server and prefix
+are removed on completion or failure; no existing Wine prefix is managed.
+CI places this prefix and the large temporary state files on disk, rather than
+charging a host tmpfs against the runtime test's memory budget.

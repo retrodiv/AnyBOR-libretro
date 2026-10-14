@@ -16,7 +16,7 @@ import struct
 import subprocess
 import sys
 from pathlib import Path
-from state_layout import write_bss_script
+from state_layout import write_bss_script, audit_runtime_storage
 from state_build_identity import stamp as stamp_state_identity
 from native_io_bindings import audit_engine, verify_darwin_names
 
@@ -701,6 +701,8 @@ def build_glue(target, spec, outdir):
     cmd += shlex.split(os.environ.get("CXXFLAGS", ""))
     cmd += shlex.split(os.environ.get("LDFLAGS", ""))
     run(cmd)
+    audit = audit_runtime_storage(out, outdir / "link.map")
+    (outdir / "runtime-state-audit.json").write_text(json.dumps(audit, indent=2) + "\n")
     if spec.get("max_glibc"):
         enforce_glibc_ceiling(out, spec["max_glibc"])
     if spec.get("android"):

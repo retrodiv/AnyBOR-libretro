@@ -1840,22 +1840,12 @@ static void glue_collect_segments(void)
                          g_ngsegs2 < 16; i++) {
         if (!(sec[i].Characteristics & IMAGE_SCN_MEM_WRITE))
             continue;
-        if (memcmp(sec[i].Name, ".idata", 6) == 0)
+        if (memcmp(sec[i].Name, ".idata", 6) == 0 ||
+            memcmp(sec[i].Name, ".tls", 4) == 0 ||
+            memcmp(sec[i].Name, ".CRT", 4) == 0)
             continue;
         uintptr_t start = (uintptr_t)mod + sec[i].VirtualAddress;
         size_t bytes = sec[i].Misc.VirtualSize;
-        if (memcmp(sec[i].Name, ".bss", 4) == 0) {
-            /* MinGW's dllcrt2.o is linked first in .bss. Its first 32 bytes
-             * hold the DLL on-exit table and attachment flag, which belong to
-             * the current process, not to a game's savestate. Restoring that
-             * table from another process leaves an invalid callback pointer
-             * and crashes in _execute_onexit_table when RetroArch unloads us.
-             * Keep the game/glue statics following the CRT prefix. */
-            if (bytes <= 32)
-                continue;
-            start += 32;
-            bytes -= 32;
-        }
         glue_add_segment(start, start + bytes);
     }
 }
@@ -1878,8 +1868,8 @@ static void glue_collect_segments(void)
         return;
     const struct mach_header_64 *header =
         obor_macho_own_header((const void *)&glue_collect_segments);
-    if (header)
-        obor_macho_writable_segments(header, glue_macho_seg_cb, NULL);
+    if (!header || !obor_macho_writable_segments(header, glue_macho_seg_cb, NULL))
+        g_ngsegs2 = 0;
 }
 #else
 #include <link.h>

@@ -5,6 +5,7 @@ SPDX-License-Identifier: BSD-3-Clause
 Copyright (c) 2026 retrodiv <retrodiv@proton.me>
 """
 import argparse
+from contextlib import contextmanager
 import os
 import re
 import shlex
@@ -20,28 +21,56 @@ DEFAULT_CORE = release.ROOT / ("anybor_libretro.dylib" if sys.platform == "darwi
                                else "anybor_libretro.so")
 
 
+@contextmanager
+def dedicated_wine(enabled, parent=None):
+    """Keep one owned Wine server alive, with services outside host output pipes."""
+    if not enabled:
+        yield
+        return
+    previous = os.environ.get('WINEPREFIX')
+    with tempfile.TemporaryDirectory(prefix='anybor-rewind-wine-', dir=parent) as prefix:
+        os.environ['WINEPREFIX'] = prefix
+        try:
+            subprocess.run(['wineserver', '-p'], check=True, timeout=15)
+            subprocess.run(['wineboot', '--init'], check=True, timeout=60,
+                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            print('wine_server=dedicated_persistent', flush=True)
+            yield
+        finally:
+            try:
+                subprocess.run(['wineserver', '-k'], check=True, timeout=15)
+                subprocess.run(['wineserver', '-w'], check=True, timeout=15)
+            finally:
+                if previous is None:
+                    os.environ.pop('WINEPREFIX', None)
+                else:
+                    os.environ['WINEPREFIX'] = previous
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--core", default=str(DEFAULT_CORE))
     parser.add_argument("--host", help="use a precompiled test host")
     parser.add_argument("--runner", default="", help="optional emulator command")
     parser.add_argument("--windows", action="store_true", help="use Wine Z: paths")
+    parser.add_argument("--keep-wine-server", action="store_true",
+                        help="use a dedicated persistent Wine prefix for this bounded test batch")
     parser.add_argument("--windows-native", action="store_true",
                         help="run a Windows host natively (also supports WSL interop)")
     parser.add_argument("--work-parent", help="parent for temporary test files; use a Windows drive under WSL")
     args = parser.parse_args()
+    if args.keep_wine_server and (not args.windows or args.runner != 'wine' or not args.work_parent):
+        parser.error('--keep-wine-server requires --windows --runner wine and an explicit --work-parent')
     if args.windows_native and (args.windows or args.runner or not args.host):
         parser.error("--windows-native requires --host and cannot use --windows or --runner")
     windows = args.windows or args.windows_native
     core = Path(args.core).resolve()
-    with tempfile.TemporaryDirectory(prefix="anybor-rewind-", dir=args.work_parent) as temp:
+    with dedicated_wine(args.keep_wine_server, args.work_parent), tempfile.TemporaryDirectory(prefix="anybor-rewind-", dir=args.work_parent) as temp:
         work = Path(temp)
-        host = Path(args.host).resolve() if args.host else work / "host"
+        host = Path(args.host).resolve() if args.host else work / ("host.exe" if windows else "host")
         if not args.host:
-            subprocess.check_call(shlex.split(os.environ.get("HOST_CC", "cc")) + [
-                "-O2", "-I", str(release.ROOT / "src/third_party"),
-                "-I", str(release.ROOT / "src/glue"),
-                str(release.ROOT / "tests/host/libretro_host.c"), "-ldl", "-o", str(host)])
+            from smoke import compile_host
+            compile_host(release.ROOT, host, windows)
         members = make_fixture.files()
         members["data/video.txt"] = b"video 1\n"
         pak = work / "diagnostic.pak"
@@ -63,6 +92,10 @@ def main():
                 env["OBOR_COMPRESSED_STATES"] = "0"
             if not windows:
                 env["OBOR_CHECK_FDS"] = "1"
+            else:
+                env["OBOR_CHECK_UNLOAD_EXCEPTIONS"] = "1"
+                if "OBOR_LOAD_AT" in options:
+                    env["OBOR_PROCESS_RUNTIME_PADDING"] = "5"
             env.update({k: target_path(v) if isinstance(v, Path) else str(v)
                         for k, v in options.items()})
             if args.windows_native and os.name != "nt":
@@ -86,6 +119,10 @@ def main():
             assert initial, log
             if not windows:
                 assert "file_descriptors_restored=1" in log, log
+            else:
+                assert "post_unload_exception_safe=1" in log, log
+                if "OBOR_LOAD_AT" in options:
+                    assert "host_process_runtime_preserved=1" in log, log
             assert "FAILED" not in log and "MISMATCH" not in log, log
             version = 1 if mode == "default" and (windows or sys.platform == "linux") else 7
             sizes = re.findall(r"state_contract version=" + str(version) + r" capacity=(\d+)", log)

@@ -30,6 +30,7 @@
  *   OBOR_HOST_PAUSE_AT=N / OBOR_HOST_PAUSE_MS=1..5000
  *       pause frontend calls once while decoder workers continue (diagnostic)
  *   OBOR_RESET_EVERY=N / OBOR_LOAD_EVERY=N   repeat lifecycle operations
+ *   OBOR_CHECK_UNLOAD_EXCEPTIONS=1  Windows: dispatch a handled exception after FreeLibrary
  *   OBOR_CHECK_FDS=1   require the POSIX descriptor count to return to baseline
  *   OBOR_FD_PADDING=N  keep N host files open to shift core descriptor numbers
  *
@@ -67,6 +68,15 @@
 #include <string.h>
 
 #include "libretro.h"
+
+#ifdef _WIN32
+#define HOST_UNLOAD_EXCEPTION ((DWORD)0xe1422340)
+static LONG CALLBACK host_unload_exception(EXCEPTION_POINTERS *exception)
+{
+    return exception->ExceptionRecord->ExceptionCode == HOST_UNLOAD_EXCEPTION ?
+        EXCEPTION_CONTINUE_EXECUTION : EXCEPTION_CONTINUE_SEARCH;
+}
+#endif
 
 static int count_host_threads(void)
 {
@@ -833,6 +843,27 @@ int main(int argc, char **argv)
 #endif
     int threads_before = getenv("OBOR_CHECK_THREADS") ? count_host_threads() : -1;
     if (getenv("OBOR_CHECK_THREADS") && threads_before < 1) return 2;
+#ifdef _WIN32
+    void *unload_handler = NULL;
+    void *runtime_heap[8] = {0}, *runtime_handlers[8] = {0};
+    DWORD runtime_tls[8];
+    int runtime_padding = getenv("OBOR_PROCESS_RUNTIME_PADDING") ?
+        atoi(getenv("OBOR_PROCESS_RUNTIME_PADDING")) : 0;
+    if (runtime_padding < 0 || runtime_padding > 8) return 2;
+    for (int i = 0; i < runtime_padding; ++i) {
+        runtime_heap[i] = malloc(4096 + (size_t)i * 128);
+        runtime_handlers[i] = AddVectoredExceptionHandler(0, host_unload_exception);
+        runtime_tls[i] = TlsAlloc();
+        if (!runtime_heap[i] || !runtime_handlers[i] || runtime_tls[i] == TLS_OUT_OF_INDEXES ||
+            !TlsSetValue(runtime_tls[i], &runtime_tls[i])) return 2;
+    }
+    if (getenv("OBOR_CHECK_UNLOAD_EXCEPTIONS")) {
+        /* Install last, before loading the core. Any dangling core/runtime VEH
+         * executes first and makes the process fail after FreeLibrary. */
+        unload_handler = AddVectoredExceptionHandler(0, host_unload_exception);
+        if (!unload_handler) return 2;
+    }
+#endif
     void *h = dlopen(core_path, RTLD_NOW | RTLD_LOCAL);
     if (!h) {
         fprintf(stderr, "dlopen: %s\n", dlerror());
@@ -1464,6 +1495,19 @@ int main(int argc, char **argv)
     }
     printf("cwd_restored=1\n");
     dlclose(h);
+#ifdef _WIN32
+    if (unload_handler) {
+        RaiseException(HOST_UNLOAD_EXCEPTION, 0, 0, NULL);
+        if (!RemoveVectoredExceptionHandler(unload_handler)) return 1;
+        puts("post_unload_exception_safe=1");
+    }
+    for (int i = 0; i < runtime_padding; ++i) {
+        if (TlsGetValue(runtime_tls[i]) != &runtime_tls[i] || !TlsFree(runtime_tls[i]) ||
+            !RemoveVectoredExceptionHandler(runtime_handlers[i])) return 1;
+        free(runtime_heap[i]);
+    }
+    if (runtime_padding) puts("host_process_runtime_preserved=1");
+#endif
     if (!check_host_threads(threads_before, "dlclose", -1)) return 1;
     for (int i = 0; i < padding; ++i) {
         char text[64];

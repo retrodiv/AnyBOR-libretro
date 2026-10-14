@@ -316,19 +316,12 @@ static int collect_segments(void)
             continue;
         /* the IAT is rebound at every load — constant afterwards, and
          * restoring a stale one cross-session would wreck imports */
-        if (memcmp(sec[i].Name, ".idata", 6) == 0)
+        if (memcmp(sec[i].Name, ".idata", 6) == 0 ||
+            memcmp(sec[i].Name, ".tls", 4) == 0 ||
+            memcmp(sec[i].Name, ".CRT", 4) == 0)
             continue;
         uint64_t va = g_image_lo + sec[i].VirtualAddress;
         uint64_t sz = sec[i].Misc.VirtualSize;
-        if (memcmp(sec[i].Name, ".bss", 4) == 0) {
-            /* MinGW dllcrt2.o owns the first 32 bytes of .bss: its on-exit
-             * table and attachment flag. These point into the current
-             * process's CRT heap and must never enter a savestate. */
-            if (sz <= 32)
-                continue;
-            va += 32;
-            sz -= 32;
-        }
         push_seg(va, va + sz);
     }
     return g_nsegs > 0 && !g_segments_failed;
@@ -362,7 +355,11 @@ static int collect_segments(void)
         return 0;
     }
     obor_macho_image_range(header, &g_image_lo, &g_image_hi);
-    obor_macho_writable_segments(header, macho_seg_cb, NULL);
+    if (!obor_macho_writable_segments(header, macho_seg_cb, NULL)) {
+        g_nsegs = 0;
+        g_segments_failed = 1;
+        return 0;
+    }
     return g_nsegs > 0 && !g_segments_failed;
 }
 

@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Keep statically linked process runtime storage outside game states and pristine
+  reset images. Preserve thread/TLS registrations, exit handlers, locks and
+  exception bookkeeping across cold loads; audit final link ownership and
+  exercise handled Windows exceptions after unloading every engine profile.
+
 - Bind native file calls to the matching SDK/CRT ABI in every engine. Preserve
   session-relative paths with Windows function imports and Darwin's versioned
   stat, directory and stdio entry points; verify caller bindings during builds.
