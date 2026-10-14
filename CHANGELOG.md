@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Sample live controls on the first frame after an ordinary state load in all
+  engine profiles. Retain saved controls only while the frontend reports rewind.
 - Accept inputs up to 1.5 GiB for configured buffer preparation, retaining
   bounded 64-bit instruction budgets and allocation-failure rejection.
 - Finish writing newly prepared content before the engine reads it, keeping

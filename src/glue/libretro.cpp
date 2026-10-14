@@ -1516,17 +1516,19 @@ void retro_run(void)
      * EVERY tick, so live (neutral) input would snap the character to the
      * idle pose on every step — a frozen sprite sliding backwards. The
      * restored snapshot already carries the pad state of that moment, so
-     * while unserializes are streaming in (frontend rewinding), keep hands
-     * off and let the historical input drive the replay. */
+     * when the frontend explicitly reports rewinding, keep hands off and
+     * let the historical input drive the replay. An ordinary state load
+     * must sample live input immediately; a recent unserialize alone does
+     * not distinguish it from rewind. */
+    struct retro_throttle_state throttle = {};
     bool rewind_replay = p_startup_complete() &&
-                         (g_last_unser >= g_frame_no - 1);
+                         (g_last_unser >= g_frame_no - 1) &&
+                         env_cb(RETRO_ENVIRONMENT_GET_THROTTLE_STATE, &throttle) &&
+                         throttle.mode == RETRO_THROTTLE_REWINDING;
     bool present_restored = false;
     const char *reverse_mode = rewind_replay ? getenv("OBOR_REVERSE_PRESENTATION") : NULL;
     if (reverse_mode && !strcmp(reverse_mode, "1")) {
-        struct retro_throttle_state throttle = {};
-        present_restored = env_cb(RETRO_ENVIRONMENT_GET_THROTTLE_STATE, &throttle) &&
-                           throttle.mode == RETRO_THROTTLE_REWINDING &&
-                           audio_frame.frames >= 0 && audio_frame.frames <= 2048;
+        present_restored = audio_frame.frames >= 0 && audio_frame.frames <= 2048;
     }
     if (!rewind_replay) {
         for (int pl = 0; pl < OBOR_MAX_PLAYERS; pl++) {
