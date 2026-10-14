@@ -698,6 +698,24 @@ entry from overwriting adjacent heap storage in every engine profile.
 
 ## Session relative filesystem
 
+The native file interposers retain the ABI selected by the target's headers.
+Darwin lookups use SDK-provided symbol suffixes rather than an undecorated
+legacy entry point. Native lookups are checked against compiled SDK declarations
+and the actual forwarder object for both supported Darwin architectures.
+Windows function imports use ordinary function relocations so the engine's
+partial-link wrappers see them; imported data keeps its normal ABI. Explicit
+CRT spellings of directory, descriptor, permission and removal operations share
+the same live path resolver as the POSIX spellings.
+
+Builds inspect each engine caller and its static dependency archives against
+the actual interposer definitions and recorded partial-link wrapper arguments.
+Native forwarders and the glue still use the system library. Their legitimate
+imports do not establish whether an engine caller bypassed its session root.
+Linux regression controls exercise an existing save root with incompatible
+legacy/current status layouts, relative file/directory I/O and a preserved
+frontend working directory. The stock frontend smoke retains its fresh/existing
+save-directory checks.
+
 Windows stat wrappers accept the caller's native time/file-size buffer ABI
 through both underscore and POSIX spellings. They forward to underscore CRT
 exports, which are present even when MinGW's optional POSIX aliases are absent.

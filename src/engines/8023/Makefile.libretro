@@ -173,9 +173,10 @@ FILE_WRAPS = --wrap=fopen --wrap=fclose --wrap=open --wrap=close \
              --wrap=opendir --wrap=mkdir --wrap=remove --wrap=rename \
              --wrap=unlink --wrap=rmdir
 ifeq ($(PLATFORM),windows)
-FILE_WRAPS += --wrap=_open --wrap=_close --wrap=stat32 --wrap=stat32i64 \
+FILE_WRAPS += --wrap=_open --wrap=_close --wrap=stat --wrap=stat32 --wrap=stat32i64 \
               --wrap=stat64i32 --wrap=stat64 --wrap=_stat32 --wrap=_stat32i64 \
-              --wrap=_stat64i32 --wrap=_stat64
+              --wrap=_stat64i32 --wrap=_stat64 --wrap=_mkdir --wrap=_rmdir \
+              --wrap=_unlink --wrap=chmod --wrap=_chmod
 else
 FILE_WRAPS += --wrap=open64 --wrap=stat --wrap=stat64 --wrap=chmod
 endif
@@ -193,6 +194,7 @@ endif
 
 partial: $(OBJS)
 	printf '%s\n' $(ABI_SYMS) > $(OBJDIR)/keep.txt
+	printf '%s\n' $(FILE_WRAPS) > $(OBJDIR)/file-wraps.txt
 ifeq ($(PLATFORM),darwin)
 	# Mach-O: ld -r merges the engine's objects and its static libraries
 	# (the three -wrap groups below are replaced by the allocation

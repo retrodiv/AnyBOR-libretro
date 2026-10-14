@@ -18,6 +18,7 @@ import sys
 from pathlib import Path
 from state_layout import write_bss_script
 from state_build_identity import stamp as stamp_state_identity
+from native_io_bindings import audit_engine, verify_darwin_names
 
 HERE = Path(__file__).resolve().parent.parent
 SRC = HERE / "src"
@@ -46,6 +47,20 @@ def uses_fixed_pe_image(spec):
 def uses_macho(spec):
     """Return whether this target produces a Mach-O image."""
     return spec["plat"] == "darwin"
+
+
+def native_io_flags(spec):
+    """Keep native declarations compatible with the engine interposers."""
+    if spec["plat"] == "windows":
+        # GNU --wrap sees function relocations, not a dllimport IAT pointer.
+        # Keep data imports intact and let the final CRT import stubs handle
+        # native function calls after the engine's partial-link wrappers.
+        return ["-mnop-fun-dllimport"]
+    if uses_macho(spec):
+        # Dependencies and engine translation units must choose the same
+        # stdio/dirent ABI; the glue's calls remain outside engine namespaces.
+        return ["-D_DARWIN_C_SOURCE=1"]
+    return []
 
 
 def arch_flags(spec):
@@ -292,7 +307,8 @@ def deps_fingerprint(target):
         "host": spec.get("configure_host"),
         "build": spec.get("configure_build"),
         "assembler": tool_identity(os.environ.get("NASM", "nasm")) if spec["arch"] == "x86_64" else None,
-        "cflags": " ".join(["-O2", "-fPIC", "-fstack-protector-strong"] + arch_flags(spec)),
+        "cflags": " ".join(["-O2", "-fPIC", "-fstack-protector-strong"] +
+                           arch_flags(spec) + native_io_flags(spec)),
         "darwin_switches": list(rejected_darwin_switches(spec)) if uses_macho(spec) else [],
         "deps": {n: pin["deps"][n] for n in sorted(dep_names)},
         "sources": {str(p.relative_to(SRC)): sha256_file(p)
@@ -347,7 +363,10 @@ def build_dep(target, name, fingerprint):
     # compile and link: the checked-in dependency sources are shared between
     # the two Mach-O targets.
     darwin = " ".join(arch_flags(spec))
-    env["CFLAGS"] = "-O2 -fPIC -fstack-protector-strong " + darwin + " " + os.environ.get("CFLAGS", "")
+    io_flags = " ".join(native_io_flags(spec))
+    env["CFLAGS"] = "-O2 -fPIC -fstack-protector-strong " + darwin + " " + io_flags + " " + os.environ.get("CFLAGS", "")
+    if io_flags:
+        env["CXXFLAGS"] = os.environ.get("CXXFLAGS", "-g -O2") + " " + darwin + " " + io_flags
     if darwin:
         env["LDFLAGS"] = darwin + " " + os.environ.get("LDFLAGS", "")
     host = (["--host=" + spec["configure_host"]]
@@ -492,7 +511,7 @@ def build_engine(target, eng, spec, outdir, check_only=False):
     objdir = BUILD_ROOT / "objs" / target / build
     # Make's timestamps alone cannot detect compiler/flag changes or a source
     # regenerated with an older mtime. Fingerprint the actual local inputs.
-    engine_flags = os.environ.get("CFLAGS", "")
+    engine_flags = " ".join(native_io_flags(spec)) + " " + os.environ.get("CFLAGS", "")
     if uses_macho(spec):
         # Darwin has no fixed image address: dyld slides and rebases every
         # loaded image, so save states take the rebasing path instead of the
@@ -515,6 +534,10 @@ def build_engine(target, eng, spec, outdir, check_only=False):
     if check_only:
         if not stamp.exists() or stamp.read_text(encoding="utf-8") != fingerprint or not (outdir / ("obor_engine_" + build + ".o")).is_file():
             sys.exit("Engine inputs changed or objects are missing; run a full make before glue.")
+        binding = outdir / ('file-bindings-' + build + '.json')
+        if (not binding.is_file() or json.loads(binding.read_text()).get('checker_sha256') !=
+                sha256_file(HERE / 'tools/native_io_bindings.py')):
+            sys.exit('Engine file binding proof is missing or stale; run a full make before glue.')
         return
     if objdir.exists() and (not stamp.exists() or stamp.read_text(encoding="utf-8") != fingerprint):
         shutil.rmtree(str(objdir))
@@ -548,6 +571,13 @@ def build_engine(target, eng, spec, outdir, check_only=False):
         localize_android_engine(objdir, build, spec)
     if spec["plat"] == "windows":
         uniquify_refptr_sections(obj, build, spec)
+    archives = [dep / 'lib' / ('lib' + name + '.a')
+                for name in ('vorbisfile', 'vorbis', 'ogg')]
+    if (tree / 'source/webmlib/vidplay.c').is_file() or (tree / 'source/webmlib/movie_playback.c').is_file():
+        archives.append(dep / 'lib/libvpx.a')
+    if spec.get('static_pngz'):
+        archives += [dep / 'lib/libpng.a', dep / 'lib/libz.a']
+    audit_engine(spec, objdir, archives, outdir / ('file-bindings-' + build + '.json'))
     shutil.copy2(str(obj), str(outdir / obj.name))
     stamp.write_text(fingerprint, encoding="utf-8")
 
@@ -577,7 +607,7 @@ def build_glue(target, spec, outdir):
                   ["-Wl,-dead_strip"] if uses_macho(spec) else [])
     miniz_o = outdir / "miniz.o"
     run([spec["cc"], "-O2", "-fPIC", "-fvisibility=hidden",
-         *arch_flags(spec),
+         *arch_flags(spec), *native_io_flags(spec),
          "-fstack-protector-strong", *gc_cflags,
          "-ffile-prefix-map=" + str(HERE) + "=.",
          "-c", third / "miniz.c", "-o", miniz_o])
@@ -586,7 +616,7 @@ def build_glue(target, spec, outdir):
     for name in ("obor_transform_vm", "obor_transform_source", "obor_prepare_co"):
         obj = outdir / (name + ".o")
         run([spec["cc"], "-O2", "-std=c99", "-fPIC", "-fvisibility=hidden",
-             *arch_flags(spec),
+             *arch_flags(spec), *native_io_flags(spec),
              "-fstack-protector-strong", *gc_cflags,
              "-ffile-prefix-map=" + str(HERE) + "=.",
              "-I", SRC / "port/libretro",
@@ -604,9 +634,7 @@ def build_glue(target, spec, outdir):
         compat_flags += ["-Wl,--wrap=acosf", "-Wl,--wrap=asinf",
                          "-Wl,--wrap=sqrtf"]
 
-    glue_defs = ['-DOBOR_PLATFORM="{0}"'.format(target)]
-    if uses_macho(spec):
-        glue_defs += ["-D_DARWIN_C_SOURCE=1"]
+    glue_defs = ['-DOBOR_PLATFORM="{0}"'.format(target)] + native_io_flags(spec)
     if spec.get("recalbox"):
         glue_defs += ["-DOBOR_NO_INPUT_DESCRIPTORS=1", "-DOBOR_NO_PADMAP=1",
                       "-DOBOR_NO_OSD_MESSAGES=1"]
@@ -821,6 +849,9 @@ def configure_target(requested, build_platform, configure_host=None, configure_b
         if spec.get("android"):
             default = ndk + ("ld.lld" if key == "ld" else "llvm-" + executable)
         spec[key] = os.environ.get(key.upper(), default)
+    candidate_nm = spec['objcopy'].replace('objcopy', 'nm')
+    spec['nm'] = (os.environ.get('NM') or shutil.which(candidate_nm) or
+                  shutil.which(Path(candidate_nm).name) or candidate_nm)
     spec["arch"] = spec.get("arch") or (
         "aarch64" if "aarch64" in requested or spec.get("android") else "x86_64")
     if spec.get("android"):
@@ -862,6 +893,9 @@ def main():
         ap.error(str(exc))
     outdir = BUILD_ROOT / "dist" / args.target
     outdir.mkdir(parents=True, exist_ok=True)
+    if uses_macho(spec):
+        verify_darwin_names(spec['cc'], arch_flags(spec) + native_io_flags(spec),
+                            SRC / 'port/libretro', outdir / 'native-io-sdk')
     import release
     source_snapshot = release.source_files(strict=False)
     ensure_deps(args.target)

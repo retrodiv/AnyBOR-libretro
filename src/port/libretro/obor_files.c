@@ -131,17 +131,24 @@ DIR *__wrap_opendir(const char *path)
     return path ? __real_opendir(path) : NULL;
 }
 
-#define PATH_CALL_ONE(name) \
-    extern int __real_##name(const char *); \
+#define PATH_CALL_ONE(name, native) \
+    extern int __real_##native(const char *); \
     int __wrap_##name(const char *path) { \
         obor_loose_invalidate(); \
         char mapped[8192]; \
         path = obor_paths_resolve(path, mapped, sizeof(mapped)); \
-        return path ? __real_##name(path) : -1; \
+        return path ? __real_##native(path) : -1; \
     }
-PATH_CALL_ONE(remove)
-PATH_CALL_ONE(unlink)
-PATH_CALL_ONE(rmdir)
+PATH_CALL_ONE(remove, remove)
+#if defined(_WIN32)
+PATH_CALL_ONE(unlink, _unlink)
+PATH_CALL_ONE(_unlink, _unlink)
+PATH_CALL_ONE(rmdir, _rmdir)
+PATH_CALL_ONE(_rmdir, _rmdir)
+#else
+PATH_CALL_ONE(unlink, unlink)
+PATH_CALL_ONE(rmdir, rmdir)
+#endif
 
 extern int __real_rename(const char *, const char *);
 int __wrap_rename(const char *from, const char *to)
@@ -155,14 +162,24 @@ int __wrap_rename(const char *from, const char *to)
 }
 
 #if defined(_WIN32)
-extern int __real_mkdir(const char *);
+extern int __real__mkdir(const char *);
 int __wrap_mkdir(const char *path)
 {
     obor_loose_invalidate();
     char mapped[8192];
     path = obor_paths_resolve(path, mapped, sizeof(mapped));
-    return path ? __real_mkdir(path) : -1;
+    return path ? __real__mkdir(path) : -1;
 }
+int __wrap__mkdir(const char *path) { return __wrap_mkdir(path); }
+extern int __real__chmod(const char *, int);
+int __wrap_chmod(const char *path, int mode)
+{
+    obor_loose_invalidate();
+    char mapped[8192];
+    path = obor_paths_resolve(path, mapped, sizeof(mapped));
+    return path ? __real__chmod(path, mode) : -1;
+}
+int __wrap__chmod(const char *path, int mode) { return __wrap_chmod(path, mode); }
 /* MinGW's stat spellings depend on both time_t and _FILE_OFFSET_BITS in
  * each caller. Forward its buffer unchanged to the matching CRT ABI. */
 #define PATH_STAT(name, native) \
@@ -185,6 +202,12 @@ PATH_STAT(stat64i32, _stat64i32)
 PATH_STAT(_stat64i32, _stat64i32)
 PATH_STAT(stat64, _stat64)
 PATH_STAT(_stat64, _stat64)
+/* Older MinGW headers also emit plain stat for the default file-size ABI.
+ * Expand the SDK's default native spelling before token-pasting its name;
+ * a forward to plain stat is unavailable with newer import libraries. */
+#define PATH_DEFAULT_STAT(native) PATH_STAT(stat, native)
+PATH_DEFAULT_STAT(_stat)
+#undef PATH_DEFAULT_STAT
 #else
 #define PATH_MODE(name) \
     extern int __real_##name(const char *, mode_t); \
@@ -215,12 +238,13 @@ PATH_STAT(stat64, struct stat64)
  * engine's own calls while the glue keeps libSystem's. */
 #if defined(__APPLE__)
 #include <dlfcn.h>
+#include "obor_native_io.h"
 
 FILE *__real_fopen(const char *path, const char *mode)
 {
     static FILE *(*original)(const char *, const char *);
     if (!original) {
-        *(void **)(&original) = dlsym(RTLD_NEXT, "fopen");
+        *(void **)(&original) = dlsym(RTLD_NEXT, OBOR_NATIVE_IO_FOPEN);
         if (!original) {
             errno = ENOSYS;
             return NULL;
@@ -233,7 +257,7 @@ FILE *fopen(const char *path, const char *mode) { return __wrap_fopen(path, mode
 int __real_fclose(FILE *file)
 {
     static int (*original)(FILE *);
-    if (!original) *(void **)(&original) = dlsym(RTLD_NEXT, "fclose");
+    if (!original) *(void **)(&original) = dlsym(RTLD_NEXT, OBOR_NATIVE_IO_FCLOSE);
     return original ? original(file) : EOF;
 }
 int fclose(FILE *file) { return __wrap_fclose(file); }
@@ -242,7 +266,7 @@ int __real_open(const char *path, int flags, ...)
     static int (*original)(const char *, int, ...);
     va_list args; int mode;
     va_start(args, flags); mode = va_arg(args, int); va_end(args);
-    if (!original) *(void **)(&original) = dlsym(RTLD_NEXT, "open");
+    if (!original) *(void **)(&original) = dlsym(RTLD_NEXT, OBOR_NATIVE_IO_OPEN);
     return original ? original(path, flags, mode) : -1;
 }
 int open(const char *path, int flags, ...)
@@ -256,37 +280,37 @@ int open(const char *path, int flags, ...)
 int __real_close(int fd)
 {
     static int (*original)(int);
-    if (!original) *(void **)(&original) = dlsym(RTLD_NEXT, "close");
+    if (!original) *(void **)(&original) = dlsym(RTLD_NEXT, OBOR_NATIVE_IO_CLOSE);
     return original ? original(fd) : -1;
 }
 int close(int fd) { return __wrap_close(fd); }
-#define DARWIN_PATH_ONE(name) \
+#define DARWIN_PATH_ONE(name, native_name) \
     int __real_##name(const char *path) { \
         static int (*original)(const char *); \
-        if (!original) *(void **)(&original) = dlsym(RTLD_NEXT, #name); \
+        if (!original) *(void **)(&original) = dlsym(RTLD_NEXT, native_name); \
         if (!original) { errno = ENOSYS; return -1; } \
         return original(path); \
     } \
     int name(const char *path) { return __wrap_##name(path); }
-DARWIN_PATH_ONE(remove)
-DARWIN_PATH_ONE(unlink)
-DARWIN_PATH_ONE(rmdir)
-#define DARWIN_PATH_TWO(name, type) \
+DARWIN_PATH_ONE(remove, OBOR_NATIVE_IO_REMOVE)
+DARWIN_PATH_ONE(unlink, OBOR_NATIVE_IO_UNLINK)
+DARWIN_PATH_ONE(rmdir, OBOR_NATIVE_IO_RMDIR)
+#define DARWIN_PATH_TWO(name, type, native_name) \
     int __real_##name(const char *path, type value) { \
         static int (*original)(const char *, type); \
-        if (!original) *(void **)(&original) = dlsym(RTLD_NEXT, #name); \
+        if (!original) *(void **)(&original) = dlsym(RTLD_NEXT, native_name); \
         if (!original) { errno = ENOSYS; return -1; } \
         return original(path, value); \
     } \
     int name(const char *path, type value) { return __wrap_##name(path, value); }
-DARWIN_PATH_TWO(rename, const char *)
-DARWIN_PATH_TWO(mkdir, mode_t)
-DARWIN_PATH_TWO(chmod, mode_t)
-DARWIN_PATH_TWO(stat, struct stat *)
+DARWIN_PATH_TWO(rename, const char *, OBOR_NATIVE_IO_RENAME)
+DARWIN_PATH_TWO(mkdir, mode_t, OBOR_NATIVE_IO_MKDIR)
+DARWIN_PATH_TWO(chmod, mode_t, OBOR_NATIVE_IO_CHMOD)
+DARWIN_PATH_TWO(stat, struct stat *, OBOR_NATIVE_IO_STAT)
 DIR *__real_opendir(const char *path)
 {
     static DIR *(*original)(const char *);
-    if (!original) *(void **)(&original) = dlsym(RTLD_NEXT, "opendir");
+    if (!original) *(void **)(&original) = dlsym(RTLD_NEXT, OBOR_NATIVE_IO_OPENDIR);
     if (!original) { errno = ENOSYS; return NULL; }
     return original(path);
 }

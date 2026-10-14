@@ -71,6 +71,7 @@ jobs:
           python3 tools/run_guarded.py --memory-mib 2048 --seconds 300 -- python3 tools/test_6330_6510.py --core anybor_libretro.so
           python3 tools/run_guarded.py --memory-mib 2048 --seconds 180 -- python3 tools/test_animation_scripts.py --core anybor_libretro.so
           python3 tools/run_guarded.py --memory-mib 1024 --seconds 180 -- python3 tools/test_script_timestamps.py
+          python3 tools/run_guarded.py --memory-mib 1024 --seconds 180 -- python3 tools/test_native_io.py
       - name: Boot every Windows engine with fresh and existing saves
         if: matrix.target == 'windows-x86_64'
         env:

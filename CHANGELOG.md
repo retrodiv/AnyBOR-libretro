@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Bind native file calls to the matching SDK/CRT ABI in every engine. Preserve
+  session-relative paths with Windows function imports and Darwin's versioned
+  stat, directory and stdio entry points; verify caller bindings during builds.
 - Ignore optional model defense and offense entries outside the configured attack
   range with a log warning. Keep valid entries and prevent heap corruption in all
   engine profiles.
