@@ -145,4 +145,5 @@ int obor_buffer_content_alias(const char *requested, char **buffer,
  * point at files a template line invented (v2-era paks). */
 int obor_pak_has_prefix(const char *pakpath, const char *prefix);
 
+void obor_video_prepare_state(void);
 #endif /* LIBRETROPORT_H */

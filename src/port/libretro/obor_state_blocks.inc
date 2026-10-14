@@ -282,6 +282,7 @@ static uint32_t update_coded(void *buffer, uint32_t size, int preparation)
     uint64_t resource_begin = getenv("OBOR_STATE_TIMING") ? state_timing_now() : 0;
     source.catalog = obor_resources_catalog();
     if (source.catalog) {
+        obor_video_prepare_state();
         uint32_t manifest_size;
         if (!obor_resource_catalog_prepare(source.catalog, (uint32_t)obor_arena_used(),
             coded_resource_unchanged, &source)) {

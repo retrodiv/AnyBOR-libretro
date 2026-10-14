@@ -16,6 +16,10 @@ typedef struct obor_resource_restore obor_resource_restore;
  * allocation reuse. Return false whenever coverage or the epoch is uncertain.
  * Offsets are relative to the supplied arena, not the serialized stream. */
 typedef int (*obor_resource_unchanged)(void *context, uint32_t offset, uint32_t length);
+/* Returns a bounded view from the incoming snapshot, validating the recorded
+ * allocation owner. This must never read the current mutable engine heap. */
+typedef const void *(*obor_resource_snapshot_read)(void *context,
+        uint32_t owner, uint32_t allocation, uint32_t offset, uint32_t length);
 
 obor_resource_catalog *obor_resource_catalog_create(obor_resource_materializer *,
         const obor_resource_image_allocator *, void *arena, uint32_t arena_size);
@@ -25,6 +29,11 @@ void obor_resource_catalog_destroy(obor_resource_catalog *);
 void obor_resource_catalog_remove(obor_resource_catalog *, uint32_t owner);
 int obor_resource_catalog_add(obor_resource_catalog *, uint32_t owner, uint32_t allocation_size,
         uint32_t body, const obor_resource_recipe *);
+/* At most one output copy. NULL removes its prior declaration. Stable metadata
+ * does not invalidate masks; exact equality is still rechecked when either
+ * source or destination changed. The source must stay entirely raw. */
+int obor_resource_catalog_framebuffer(obor_resource_catalog *, uint32_t owner,
+        uint32_t allocation, uint32_t body, const obor_resource_recipe *);
 uint64_t obor_resource_catalog_generation(const obor_resource_catalog *);
 /* Native catalog writes explicitly stamp affected wire slots. This proves
  * unchanged entries since a successful capture of THIS catalog instance.
@@ -70,6 +79,9 @@ int obor_resource_catalog_mask_unchanged(const obor_resource_catalog *,
 obor_resource_restore *obor_resource_restore_prepare(obor_resource_catalog *,
         const void *manifest, uint32_t manifest_size, uint32_t arena_used,
         obor_resource_unchanged, void *context);
+obor_resource_restore *obor_resource_restore_prepare_snapshot(obor_resource_catalog *,
+        const void *manifest, uint32_t manifest_size, uint32_t arena_used,
+        obor_resource_unchanged, void *context, obor_resource_snapshot_read, void *snapshot);
 /* Copy ordinary heap spans while preserving body holes; then fill staged
  * bodies and adopt the target catalog. Only call after ALL state preflights.
  * The source's logical omitted ranges must be zero and covered by the ordinary

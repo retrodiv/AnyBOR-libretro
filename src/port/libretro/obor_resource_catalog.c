@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
 #include "obor_resource_catalog.h"
+#include "obor_framebuffer_state.h"
 #include <stdlib.h>
 #include <string.h>
 
@@ -23,7 +24,7 @@ struct obor_resource_catalog {
     uint32_t *buckets;
     catalog_range *ranges;
     uint32_t arena_size, capacity, slots, free_slot, active, tombstones;
-    uint32_t range_count, manifest_size, manifest_capacity;
+    uint32_t range_count, manifest_size, manifest_capacity, framebuffer_slot;
     uint64_t generation;
     uint32_t proof_begin, proof_end;
     int proofs_checked;
@@ -49,9 +50,31 @@ static uint32_t catalog_hash(uint32_t owner)
 
 static int catalog_bounds(const obor_resource_catalog *c, const catalog_entry *e, uint32_t used)
 {
-    return used <= c->arena_size && e->allocation && e->owner < used &&
+    if (!(used <= c->arena_size && e->allocation && e->owner < used &&
         e->allocation <= used - e->owner && e->body >= e->owner &&
-        e->body - e->owner < e->allocation && e->recipe.length <= e->allocation - (e->body - e->owner);
+        e->body - e->owner < e->allocation && e->recipe.length <= e->allocation - (e->body - e->owner))) return 0;
+    if (e->recipe.kind == OBOR_RESOURCE_ABGR32_FRAME) {
+        obor_framebuffer_source s;
+        if (!obor_resource_recipe_framebuffer_source(&e->recipe, &s) || s.owner == e->owner ||
+            s.owner >= used || s.allocation > used - s.owner || s.offset < s.owner ||
+            s.offset - s.owner > s.allocation || e->recipe.length > s.allocation - (s.offset - s.owner) ||
+            (s.offset < e->body + e->recipe.length && e->body < s.offset + e->recipe.length)) return 0;
+    }
+    return 1;
+}
+
+/* A frame can derive only from ordinary saved bytes. No resource dependency
+ * graph, mutable-body cache or reconstruction cycle is introduced. */
+static int catalog_frame_source_raw(const obor_resource_catalog *c, const catalog_entry *frame)
+{
+    obor_framebuffer_source source;
+    if (!obor_resource_recipe_framebuffer_source(&frame->recipe, &source)) return 0;
+    for (uint32_t i = 0; i < c->slots; ++i) {
+        const catalog_entry *e = c->entries + i;
+        if ((e->flags & CATALOG_OMITTED) && source.offset < e->body + e->recipe.length &&
+            e->body < source.offset + frame->recipe.length) return 0;
+    }
+    return 1;
 }
 
 static uint32_t catalog_find(const obor_resource_catalog *c, uint32_t owner, uint32_t *bucket)
@@ -92,7 +115,7 @@ obor_resource_catalog *obor_resource_catalog_create(obor_resource_materializer *
     if (!c) return NULL;
     memset(c, 0, sizeof(*c));
     c->allocator = *allocator; c->materializer = m; c->arena = arena; c->arena_size = arena_size;
-    c->free_slot = CATALOG_EMPTY; c->generation = 1;
+    c->free_slot = c->framebuffer_slot = CATALOG_EMPTY; c->generation = 1;
     c->buckets = allocator->allocate((size_t)CATALOG_BUCKETS * sizeof(*c->buckets));
     if (!c->buckets) { allocator->release(c); return NULL; }
     memset(c->buckets, 0, (size_t)CATALOG_BUCKETS * sizeof(*c->buckets));
@@ -122,6 +145,7 @@ void obor_resource_catalog_remove(obor_resource_catalog *c, uint32_t owner)
     if (!c) return;
     uint32_t at, slot = catalog_find(c, owner, &at);
     if (slot == CATALOG_EMPTY) return;
+    if (slot == c->framebuffer_slot) c->framebuffer_slot = CATALOG_EMPTY;
     c->buckets[at] = CATALOG_EMPTY; ++c->tombstones;
     memset(c->entries + slot, 0, sizeof(*c->entries));
     c->entries[slot].next_free = c->free_slot; c->free_slot = slot;
@@ -142,8 +166,12 @@ int obor_resource_catalog_add(obor_resource_catalog *c, uint32_t owner, uint32_t
     candidate.owner = owner; candidate.allocation = allocation; candidate.body = body;
     candidate.flags = CATALOG_ACTIVE; candidate.recipe = *recipe;
     if (!catalog_bounds(c, &candidate, c->arena_size)) return 0;
-    const void *derived = obor_resource_recipe_body(c->materializer, recipe);
-    if (!derived || memcmp(c->arena + body, derived, recipe->length)) return 0;
+    if (recipe->kind == OBOR_RESOURCE_ABGR32_FRAME) {
+        if (c->framebuffer_slot != CATALOG_EMPTY) return 0;
+    } else {
+        const void *derived = obor_resource_recipe_body(c->materializer, recipe);
+        if (!derived || memcmp(c->arena + body, derived, recipe->length)) return 0;
+    }
     uint32_t at, slot = catalog_find(c, owner, &at);
     if (slot != CATALOG_EMPTY || at == CATALOG_EMPTY) return 0;
     if (c->free_slot != CATALOG_EMPTY) {
@@ -154,10 +182,26 @@ int obor_resource_catalog_add(obor_resource_catalog *c, uint32_t owner, uint32_t
     }
     if (c->buckets[at] == CATALOG_EMPTY) --c->tombstones;
     c->buckets[at] = slot + 1; c->entries[slot] = candidate;
+    if (recipe->kind == OBOR_RESOURCE_ABGR32_FRAME) c->framebuffer_slot = slot;
     ++c->active;
     c->entries[slot].manifest_changed = ++c->generation;
     c->manifest_size = c->range_count = 0;
     return 1;
+}
+
+int obor_resource_catalog_framebuffer(obor_resource_catalog *c, uint32_t owner,
+        uint32_t allocation, uint32_t body, const obor_resource_recipe *recipe)
+{
+    if (!c) return 0;
+    if (c->framebuffer_slot != CATALOG_EMPTY) {
+        const catalog_entry *e = c->entries + c->framebuffer_slot;
+        if (recipe && e->owner == owner && e->allocation == allocation && e->body == body &&
+            obor_resource_recipe_equal(&e->recipe, recipe)) return 1;
+        obor_resource_catalog_remove(c, e->owner);
+    }
+    if (!recipe) return 1;
+    if (recipe->kind != OBOR_RESOURCE_ABGR32_FRAME) return 0;
+    return obor_resource_catalog_add(c, owner, allocation, body, recipe);
 }
 
 uint64_t obor_resource_catalog_generation(const obor_resource_catalog *c)
@@ -239,17 +283,37 @@ int obor_resource_catalog_prepare(obor_resource_catalog *c, uint32_t used,
         if (!catalog_bounds(c, e, used)) return 0;
         if (e->body < proof_begin) proof_begin = e->body;
         if (e->body + e->recipe.length > proof_end) proof_end = e->body + e->recipe.length;
+        obor_framebuffer_source frame_source;
+        int frame = e->recipe.kind == OBOR_RESOURCE_ABGR32_FRAME;
+        if (frame) {
+            if (!obor_resource_recipe_framebuffer_source(&e->recipe, &frame_source)) return 0;
+            if (frame_source.offset < proof_begin) proof_begin = frame_source.offset;
+            if (frame_source.offset + e->recipe.length > proof_end) proof_end = frame_source.offset + e->recipe.length;
+        }
         uint32_t old = e->flags;
         int eligible = (old & CATALOG_OMITTED) != 0;
-        if (!e->checked || !unchanged || !unchanged(context, e->body, e->recipe.length)) {
-            const void *candidate = obor_resource_recipe_body(c->materializer, &e->recipe);
-            eligible = candidate && !memcmp(candidate, c->arena + e->body, e->recipe.length);
+        if (!e->checked || !unchanged || !unchanged(context, e->body, e->recipe.length) ||
+            (frame && !unchanged(context, frame_source.offset, e->recipe.length))) {
+            if (frame) eligible = obor_framebuffer_matches(c->arena + frame_source.offset,
+                                                         c->arena + e->body, e->recipe.length);
+            else {
+                const void *candidate = obor_resource_recipe_body(c->materializer, &e->recipe);
+                eligible = candidate && !memcmp(candidate, c->arena + e->body, e->recipe.length);
+            }
         }
         if (eligible && e->recipe.length <= OBOR_RESOURCE_STAGE_LIMIT - omitted) {
             e->flags |= CATALOG_OMITTED; omitted += e->recipe.length;
         } else e->flags &= ~CATALOG_OMITTED;
         e->checked = 1;
         if (old != e->flags) e->manifest_changed = ++c->generation;
+    }
+    if (c->framebuffer_slot != CATALOG_EMPTY) {
+        catalog_entry *e = c->entries + c->framebuffer_slot;
+        if ((e->flags & CATALOG_OMITTED) && !catalog_frame_source_raw(c, e)) {
+            e->flags &= ~CATALOG_OMITTED; omitted -= e->recipe.length;
+            e->checked = 0;
+            e->manifest_changed = ++c->generation;
+        }
     }
     c->proof_begin = proof_begin; c->proof_end = proof_end; c->proofs_checked = 1;
     /* A valid preceding manifest already proved ordering, nonoverlap, path
@@ -411,6 +475,10 @@ static obor_resource_catalog *catalog_read(obor_resource_catalog *current, const
         e->body = catalog_u32(record + 8); e->flags = flags;
         if (!obor_resource_recipe_read(&e->recipe, record + 16, OBOR_RESOURCE_RECIPE_SIZE) ||
             !catalog_bounds(c, e, used)) goto fail;
+        if (e->recipe.kind == OBOR_RESOURCE_ABGR32_FRAME) {
+            if (c->framebuffer_slot != CATALOG_EMPTY) goto fail;
+            c->framebuffer_slot = i;
+        }
         if (flags & CATALOG_OMITTED) {
             if (e->recipe.length > OBOR_RESOURCE_STAGE_LIMIT - total) goto fail;
             total += e->recipe.length;
@@ -429,8 +497,9 @@ fail:
     obor_resource_catalog_destroy(c); return NULL;
 }
 
-obor_resource_restore *obor_resource_restore_prepare(obor_resource_catalog *current,
-        const void *manifest, uint32_t size, uint32_t used, obor_resource_unchanged unchanged, void *context)
+obor_resource_restore *obor_resource_restore_prepare_snapshot(obor_resource_catalog *current,
+        const void *manifest, uint32_t size, uint32_t used, obor_resource_unchanged unchanged,
+        void *context, obor_resource_snapshot_read snapshot_read, void *snapshot)
 {
     if (!current) return NULL;
     obor_resource_catalog *target = catalog_read(current, manifest, size, used);
@@ -446,7 +515,10 @@ obor_resource_restore *obor_resource_restore_prepare(obor_resource_catalog *curr
         const catalog_entry *e = target->entries + target->ranges[i].slot;
         uint32_t at, slot = catalog_find(current, e->owner, &at);
         int reusable = 0;
-        if (slot != CATALOG_EMPTY && unchanged) {
+        /* Mutable source bytes are absent from a frame recipe's identity.
+         * Always reconstruct from the INCOMING snapshot, even if its metadata
+         * and the current output copy are unchanged. */
+        if (e->recipe.kind != OBOR_RESOURCE_ABGR32_FRAME && slot != CATALOG_EMPTY && unchanged) {
             const catalog_entry *live = current->entries + slot;
             reusable = live->checked && (live->flags & CATALOG_OMITTED) && live->body == e->body &&
                 live->allocation == e->allocation && obor_resource_recipe_equal(&live->recipe, &e->recipe) &&
@@ -466,13 +538,31 @@ obor_resource_restore *obor_resource_restore_prepare(obor_resource_catalog *curr
     for (uint32_t i = 0; i < target->range_count; ++i) {
         if (plan->staged_offsets[i] == CATALOG_EMPTY) continue;
         const catalog_entry *e = target->entries + target->ranges[i].slot;
-        const void *body = obor_resource_recipe_body(target->materializer, &e->recipe);
-        if (!body) goto fail;
-        memcpy(plan->staging + plan->staged_offsets[i], body, e->recipe.length);
+        if (e->recipe.kind == OBOR_RESOURCE_ABGR32_FRAME) {
+            obor_framebuffer_source source;
+            if (!snapshot_read || !catalog_frame_source_raw(target, e) ||
+                !obor_resource_recipe_framebuffer_source(&e->recipe, &source)) goto fail;
+            const void *body = snapshot_read(snapshot, source.owner, source.allocation,
+                                             source.offset, e->recipe.length);
+            if (!body) goto fail;
+            obor_framebuffer_reconstruct(body, plan->staging + plan->staged_offsets[i], e->recipe.length);
+        } else {
+            const void *body = obor_resource_recipe_body(target->materializer, &e->recipe);
+            if (!body) goto fail;
+            memcpy(plan->staging + plan->staged_offsets[i], body, e->recipe.length);
+        }
     }
     return plan;
 fail:
     obor_resource_restore_destroy(plan); return NULL;
+}
+
+obor_resource_restore *obor_resource_restore_prepare(obor_resource_catalog *current,
+        const void *manifest, uint32_t size, uint32_t used,
+        obor_resource_unchanged unchanged, void *context)
+{
+    return obor_resource_restore_prepare_snapshot(current, manifest, size, used,
+                                                  unchanged, context, NULL, NULL);
 }
 
 void obor_resource_restore_copy(const obor_resource_restore *plan, uint32_t offset,

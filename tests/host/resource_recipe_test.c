@@ -89,7 +89,7 @@ static void member_slices(input_data *input)
     body=obor_resource_recipe_body(m,&loaded);
     assert(body && !memcmp(body,sample,sizeof(sample)) && !obor_resource_materializer_cached(m));
     input->fail=1; assert(!obor_resource_recipe_body(m,&loaded)); input->fail=0;
-    loaded.digest[0]^=1; assert(!obor_resource_recipe_body(m,&loaded)); loaded.digest[0]^=1;
+    loaded.origin.digest[0]^=1; assert(!obor_resource_recipe_body(m,&loaded)); loaded.origin.digest[0]^=1;
     loaded.member_offset=224; assert(!obor_resource_recipe_body(m,&loaded));
     obor_resource_materializer_destroy(m); obor_resource_source_destroy(source);
     assert(!image_test_live());
@@ -131,7 +131,7 @@ int main(int argc, char **argv)
     assert(!strcmp(png.name, "data/image.png"));
     size_t cached = obor_resource_materializer_cached(m); assert(cached && cached <= 1400);
     assert(prove(m, &gif, "data/second.gif", expected));
-    assert(memcmp(png.digest, gif.digest, 32));
+    assert(memcmp(png.origin.digest, gif.origin.digest, 32));
     assert(obor_resource_materializer_cached(m) <= 1400);
     assert(prove(m, &gif, "data/second.gif", expected));
     assert(obor_resource_materializer_cached(m) <= 1400);
@@ -185,7 +185,7 @@ int main(int argc, char **argv)
     assert(obor_resource_recipe_equal(&large,&loaded)); expanded[expanded_size-1]^=1;
     assert(!obor_resource_recipe_prove(compact,&loaded,"data/large.png",14,
         64,64,1,0,63,64,expanded,expanded_size));
-    loaded=large; loaded.digest[0]^=1;
+    loaded=large; loaded.origin.digest[0]^=1;
     assert(!obor_resource_recipe_body(compact,&loaded));
     obor_resource_materializer_clear(compact);
     assert(image_test_live()+expanded_size<=warm_live);
@@ -213,7 +213,7 @@ int main(int argc, char **argv)
     assert(body && !memcmp(body, expected, sizeof(expected)));
     assert(!obor_resource_materializer_cached(m));
     input.fail = 1; assert(!obor_resource_recipe_body(m, &loaded)); input.fail = 0;
-    loaded.digest[0] ^= 1; assert(!obor_resource_recipe_body(m, &loaded)); loaded.digest[0] ^= 1;
+    loaded.origin.digest[0] ^= 1; assert(!obor_resource_recipe_body(m, &loaded)); loaded.origin.digest[0] ^= 1;
     body = obor_resource_recipe_body(m, &loaded); assert(body && !memcmp(body, expected, sizeof(expected)));
     obor_resource_materializer_destroy(m);
     obor_resource_source_destroy(source); assert(!image_test_live());

@@ -26,6 +26,11 @@ void obor_resources_member_bytes_loaded(const char *member, uint32_t member_offs
         void *owner, void *body, size_t length);
 /* Invoke before free or after successful realloc, even at the same address. */
 void obor_resources_forget_owner(const void *owner);
+size_t obor_allocation_size(const void *owner);
+/* Called from the video backend immediately before capture. A missing or
+ * unsupported source removes only the conditional output-copy declaration. */
+void obor_resources_framebuffer(void *frame, const void *source_owner,
+        const void *source_pixels, uint32_t width, uint32_t height);
 
 obor_resource_catalog *obor_resources_catalog(void);
 /* Serialized-target preflight may run while current movie workers are alive.
@@ -35,6 +40,9 @@ obor_resource_catalog *obor_resources_catalog(void);
 obor_resource_restore *obor_resources_prepare_restore(const void *manifest,
         uint32_t size, uint32_t arena_used, obor_resource_unchanged unchanged,
         void *context, int empty_cache);
+obor_resource_restore *obor_resources_prepare_restore_snapshot(const void *manifest,
+        uint32_t size, uint32_t arena_used, obor_resource_unchanged unchanged,
+        void *context, int empty_cache, obor_resource_snapshot_read, void *snapshot);
 /* After a complete state restore: discard bitmap provenance from the future,
  * adopt the target catalog. Its checked bodies describe the committed target;
  * callers may use them only after establishing a new write-watch epoch.

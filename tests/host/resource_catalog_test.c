@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
 #include "obor_resource_catalog.h"
+#include "obor_framebuffer_state.h"
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -235,6 +236,113 @@ static obor_resource_catalog *restore(obor_resource_catalog *c, const void *mani
     return target;
 }
 
+typedef struct { const unsigned char *bytes; uint32_t size; int fail; } frame_snapshot;
+static const void *read_frame_snapshot(void *context, uint32_t owner, uint32_t allocation,
+        uint32_t offset, uint32_t length)
+{
+    frame_snapshot *s = context;
+    if (s->fail || owner != 64 || allocation != 128 || offset != 80 || length != 32 ||
+        offset > s->size || length > s->size-offset) return NULL;
+    return s->bytes + offset;
+}
+static void test_framebuffer(obor_resource_materializer *m, const obor_resource_recipe *sprite)
+{
+    unsigned char arena[4096], snapshot[4096], before[4096];
+    memset(arena, 0x72, sizeof(arena));
+    const uint32_t pixels[8] = {0,0xff0000ff,0x12345678,0xffffffff,0x01ab3421,7,0xff00,0x830000};
+    memcpy(arena+80, pixels, sizeof(pixels));
+    obor_framebuffer_reconstruct(arena+80, arena+528, sizeof(pixels));
+    assert(obor_framebuffer_matches(arena+80, arena+528, sizeof(pixels)));
+    assert(!obor_framebuffer_matches(NULL, arena+528, 32));
+    assert(!obor_framebuffer_matches(arena+80, arena+528, 31));
+    unsigned char unaligned[33]; memcpy(unaligned+1,arena+80,32);
+    assert(obor_framebuffer_matches(unaligned+1,arena+528,32));
+    for (unsigned i=0;i<32;++i) {
+        arena[528+i]^=1; assert(!obor_framebuffer_matches(arena+80,arena+528,32)); arena[528+i]^=1;
+    }
+    obor_framebuffer_source origin = {64,128,80,16}, decoded;
+    obor_resource_recipe recipe, loaded, bad;
+    assert(obor_resource_recipe_framebuffer(&recipe,&origin,4,2));
+    unsigned char wire[OBOR_RESOURCE_RECIPE_SIZE];
+    assert(obor_resource_recipe_write(&recipe,wire,sizeof(wire)));
+    assert(wire[0]==3 && wire[32]==OBOR_RESOURCE_ABGR32_FRAME && wire[40]==64 && wire[48]==80);
+    assert(obor_resource_recipe_read(&loaded,wire,sizeof(wire)));
+    assert(obor_resource_recipe_equal(&loaded,&recipe));
+    assert(obor_resource_recipe_framebuffer_source(&loaded,&decoded));
+    assert(!memcmp(&origin,&decoded,sizeof(origin)));
+    for(unsigned i=56;i<sizeof(wire);++i) {
+        wire[i]=1; assert(!obor_resource_recipe_read(&loaded,wire,sizeof(wire)));wire[i]=0;
+    }
+    bad=recipe;bad.version=2;assert(!obor_resource_recipe_valid(&bad));
+    bad=recipe;bad.width=0;assert(!obor_resource_recipe_valid(&bad));
+    bad=recipe;bad.length--;assert(!obor_resource_recipe_valid(&bad));
+    origin.stride=17;assert(!obor_resource_recipe_framebuffer(&loaded,&origin,4,2));origin.stride=16;
+    origin.allocation=32;assert(!obor_resource_recipe_framebuffer(&loaded,&origin,4,2));origin.allocation=128;
+    assert(!obor_resource_recipe_framebuffer(&loaded,&origin,UINT32_MAX,2));
+    assert(!obor_resource_recipe_body(m,&recipe)); /* no mutable source-body cache */
+    obor_resource_catalog *c=obor_resource_catalog_create(m,&allocator,arena,sizeof(arena)); assert(c);
+    assert(obor_resource_catalog_framebuffer(c,512,128,528,&recipe));
+    assert(obor_resource_catalog_prepare(c,sizeof(arena),NULL,NULL));
+    assert(obor_resource_catalog_mask_count(c)==1);
+    uint64_t generation=obor_resource_catalog_generation(c);
+    assert(obor_resource_catalog_framebuffer(c,512,128,528,&recipe));
+    assert(obor_resource_catalog_generation(c)==generation); /* no per-capture churn */
+    assert(obor_resource_catalog_prepare(c,sizeof(arena),unchanged,NULL));
+    assert(obor_resource_catalog_generation(c)==generation);
+    uint32_t dirty=81; arena[dirty]^=1; /* source changes, destination does not */
+    assert(obor_resource_catalog_prepare(c,sizeof(arena),unchanged,&dirty));
+    assert(!obor_resource_catalog_mask_count(c));
+    arena[dirty]^=1;
+    assert(obor_resource_catalog_prepare(c,sizeof(arena),unchanged,&dirty));
+    assert(obor_resource_catalog_mask_count(c)==1);
+    dirty=531;arena[dirty]^=1;
+    assert(obor_resource_catalog_prepare(c,sizeof(arena),unchanged,&dirty));
+    assert(!obor_resource_catalog_mask_count(c));arena[dirty]^=1;
+    assert(obor_resource_catalog_prepare(c,sizeof(arena),unchanged,&dirty));
+    assert(obor_resource_catalog_mask_count(c)==1);
+    uint32_t size;unsigned char *manifest=save_manifest(c,&size);
+    assert(obor_resource_catalog_read(c,0,snapshot,sizeof(snapshot)));
+    for(unsigned i=528;i<560;++i) assert(snapshot[i]==0);
+    frame_snapshot incoming={snapshot,sizeof(snapshot),0};
+    memcpy(before,arena,sizeof(arena));
+    assert(!obor_resource_restore_prepare(c,manifest,size,sizeof(arena),unchanged,NULL));
+    incoming.fail=1;
+    assert(!obor_resource_restore_prepare_snapshot(c,manifest,size,sizeof(arena),unchanged,NULL,read_frame_snapshot,&incoming));
+    assert(!memcmp(before,arena,sizeof(arena)));incoming.fail=0;
+    /* Same recipe, different current pixels, even a current unchanged proof:
+     * restoration MUST stage from incoming bytes, never reuse current output. */
+    arena[80]^=0x31;obor_framebuffer_reconstruct(arena+80,arena+528,32);
+    assert(obor_resource_catalog_prepare(c,sizeof(arena),NULL,NULL));
+    obor_resource_restore *plan=obor_resource_restore_prepare_snapshot(c,manifest,size,sizeof(arena),unchanged,NULL,read_frame_snapshot,&incoming);
+    assert(plan && obor_resource_restore_staged(plan)==32);
+    obor_resource_restore_copy(plan,0,snapshot,sizeof(snapshot));
+    obor_resource_catalog *restored=obor_resource_restore_commit(plan);assert(restored);
+    assert(!memcmp(before,arena,sizeof(arena)));
+    obor_resource_restore_destroy(plan);obor_resource_catalog_destroy(restored);free(manifest);
+    assert(obor_resource_catalog_framebuffer(c,0,0,0,NULL));
+    assert(obor_resource_catalog_prepare(c,sizeof(arena),NULL,NULL));
+    assert(!obor_resource_catalog_mask_count(c));
+    /* A source covered by a different resource must remain raw: there is no
+     * dependency graph. Once that omission is removed eligibility recovers. */
+    memcpy(arena+80,expected,sizeof(expected));
+    obor_framebuffer_reconstruct(arena+80,arena+528,32);
+    assert(obor_resource_catalog_add(c,64,128,80,sprite));
+    assert(obor_resource_catalog_framebuffer(c,512,128,528,&recipe));
+    assert(obor_resource_catalog_prepare(c,sizeof(arena),NULL,NULL));
+    assert(obor_resource_catalog_mask_count(c)==1);
+    obor_resource_mask_range range;
+    assert(obor_resource_catalog_copy_mask(c,&range,1) && range.offset==80);
+    obor_resource_catalog_remove(c,64);
+    assert(obor_resource_catalog_prepare(c,sizeof(arena),unchanged,NULL));
+    assert(obor_resource_catalog_mask_count(c)==1);
+    assert(obor_resource_catalog_copy_mask(c,&range,1) && range.offset==528);
+    obor_resource_catalog_remove(c,512);
+    assert(obor_resource_catalog_prepare(c,sizeof(arena),NULL,NULL));
+    assert(!obor_resource_catalog_mask_count(c));
+    obor_resource_catalog_destroy(c);
+    puts("frame_exact_fallback=1 source_dirty_proof=1 incoming_snapshot_only=1 no_resource_cycles=1");
+}
+
 int main(int argc, char **argv)
 {
     assert(argc == 2);
@@ -254,6 +362,7 @@ int main(int argc, char **argv)
     assert(obor_resource_recipe_prove(m, &r, "data/image.png", 14, 5,3,0,0,5,3,expected,sizeof(expected)));
     test_current_mask(m, &r);
     test_range_proofs(m, &r);
+    test_framebuffer(m, &r);
     obor_resource_catalog *c = obor_resource_catalog_create(m, &allocator, arena, sizeof(arena)); assert(c);
     test_unprepared_read(NULL);
     test_unprepared_read(c);

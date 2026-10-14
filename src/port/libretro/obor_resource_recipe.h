@@ -8,7 +8,19 @@
 #define OBOR_RESOURCE_RECIPE_SIZE (40U + 32U + OBOR_RESOURCE_RECIPE_PATH)
 #define OBOR_RESOURCE_BODY_LIMIT (16U << 20)
 #define OBOR_RESOURCE_CACHE_LIMIT (128U << 20)
-enum { OBOR_RESOURCE_RLE8 = 1, OBOR_RESOURCE_MEMBER_BYTES = 2 };
+enum { OBOR_RESOURCE_RLE8 = 1, OBOR_RESOURCE_MEMBER_BYTES = 2,
+       OBOR_RESOURCE_ABGR32_FRAME = 3 };
+
+typedef struct {
+    uint32_t owner, allocation, offset, stride;
+} obor_framebuffer_source;
+/* The tag selects these canonical wire bytes. File recipes keep their exact
+ * existing digest; frame recipes describe one fully captured live allocation.
+ * Mutable frame pixels never enter the source-member materializer/cache. */
+typedef union {
+    unsigned char digest[32];
+    unsigned char framebuffer[32];
+} obor_resource_origin;
 
 /* All identity is source/layout/integrity information. No game classification.
  * Header/palette/pointer bytes are intentionally absent from this recipe.
@@ -16,7 +28,7 @@ enum { OBOR_RESOURCE_RLE8 = 1, OBOR_RESOURCE_MEMBER_BYTES = 2 };
 typedef struct {
     uint32_t version, source_width, source_height, x, y, width, height, length;
     uint32_t kind, member_offset;
-    unsigned char digest[32];
+    obor_resource_origin origin;
     char name[OBOR_RESOURCE_RECIPE_PATH];
 } obor_resource_recipe;
 typedef struct obor_resource_materializer obor_resource_materializer;
@@ -54,4 +66,10 @@ int obor_resource_recipe_equal(const obor_resource_recipe *, const obor_resource
 /* Fixed-size, deterministic little-endian wire encoding. No padding leaks. */
 int obor_resource_recipe_write(const obor_resource_recipe *, void *, size_t);
 int obor_resource_recipe_read(obor_resource_recipe *, const void *, size_t);
+/* Version 3 only for this new kind; existing version-2 PAK wire bytes and the
+ * manifest record size remain unchanged. Structural registration is followed
+ * by exact per-capture proof in the catalog, with raw bytes on any mismatch. */
+int obor_resource_recipe_framebuffer(obor_resource_recipe *, const obor_framebuffer_source *,
+        uint32_t width, uint32_t height);
+int obor_resource_recipe_framebuffer_source(const obor_resource_recipe *, obor_framebuffer_source *);
 #endif

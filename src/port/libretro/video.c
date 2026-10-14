@@ -15,6 +15,8 @@
 #include "video.h"
 #include "vga.h"
 #include "screen.h"
+#include "obor_resources.h"
+#include <stddef.h>
 
 #include <stdlib.h>
 #include <string.h>
@@ -26,6 +28,7 @@ static s_videomodes mode;
 static unsigned *fb;
 static int fb_w, fb_h, fb_cap;
 static unsigned pal32[256];
+static const s_screen *state_source;
 
 #ifdef OBOR_HAS_YUV
 static yuv_video_mode yuv_mode_info;
@@ -131,7 +134,26 @@ static int convert_screen(s_screen *src)
         for (int i = 0; i < w * h; i++)
             d[i] = l[s[i]];
     }
+    state_source = src;
     return 1;
+}
+
+/* Only declare the last presented 32-bit source. Poll/sleep yields can retain
+ * older output pixels, so capture still proves every byte or keeps raw bytes. */
+void obor_video_prepare_state(void)
+{
+    extern void obor_get_video(const uint32_t **, int32_t *, int32_t *, int32_t *);
+    const uint32_t *presented = NULL;
+    int32_t width = 0, height = 0, pitch = 0;
+    obor_get_video(&presented, &width, &height, &pitch);
+    size_t size = obor_allocation_size(state_source);
+    if (fb && presented == fb && state_source && size >= offsetof(s_screen, data) &&
+        state_source->pixelformat == PIXEL_32 && width == fb_w && height == fb_h &&
+        pitch == width && width > 0 && width <= 4096 && height > 0 && height <= 4096 &&
+        state_source->width == width && state_source->height == height) {
+        obor_resources_framebuffer(fb, state_source, state_source->data,
+            (uint32_t)width, (uint32_t)height);
+    } else obor_resources_framebuffer(NULL, NULL, NULL, 0, 0);
 }
 
 int video_copy_screen(s_screen *src)

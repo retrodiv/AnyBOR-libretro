@@ -2,6 +2,7 @@
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
 #define _POSIX_C_SOURCE 200809L
 #include "obor_resources.h"
+#include "obor_framebuffer_state.h"
 #include "obor_state_config.h"
 #include <assert.h>
 #include <stdio.h>
@@ -164,6 +165,24 @@ static void exercise(const char *path)
     encode(); expect_catalog(0, 0);
     obor_resources_close(); assert(!image_test_live());
 }
+static void framebuffer_lifetime(const char *path)
+{
+    obor_resources_open(path,0);assert(obor_resources_catalog());
+    unsigned char *source=arena+1024,*frame=arena+1280;
+    for(unsigned i=0;i<32;++i)source[16+i]=(unsigned char)(i*11);
+    obor_framebuffer_reconstruct(source+16,frame,32);
+    obor_resources_framebuffer(frame,source,source+16,4,2);expect_catalog(1,32);
+    source[17]^=1;expect_catalog(1,0);source[17]^=1;expect_catalog(1,32);
+    frame[3]^=1;expect_catalog(1,0);frame[3]^=1;expect_catalog(1,32);
+    obor_resources_framebuffer(frame,source+1,source+16,4,2);expect_catalog(0,0);
+    obor_resources_framebuffer(frame,source,source+125,4,2);expect_catalog(0,0);
+    obor_resources_framebuffer(frame,source,source+16,4,2);expect_catalog(1,32);
+    obor_resources_forget_owner(frame);expect_catalog(0,0);
+    obor_resources_framebuffer(frame,source,source+16,4,2);expect_catalog(1,32);
+    obor_resources_framebuffer(NULL,NULL,NULL,0,0);expect_catalog(0,0);
+    obor_resources_close();assert(!image_test_live());
+}
+
 int main(int argc, char **argv)
 {
     assert(argc == 2); image_test_reset(0);
@@ -180,7 +199,7 @@ int main(int argc, char **argv)
     obor_resources_open(argv[1], 1); assert(!obor_resources_catalog());
     obor_resources_open("/nonexistent/anybor-resource-test", 0);
     assert(!obor_resources_catalog() && !image_test_live());
-    exercise(argv[1]); exercise(argv[1]);
+    exercise(argv[1]); exercise(argv[1]); framebuffer_lifetime(argv[1]);
     image_test_reset(0); obor_resources_open(argv[1], 0);
     size_t attempts = image_test_attempts(); obor_resources_close(); assert(!image_test_live());
     for (size_t failure = 1; failure <= attempts; ++failure) {

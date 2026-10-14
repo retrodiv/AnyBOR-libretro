@@ -103,6 +103,20 @@ int obor_heap_resources_validate(const void *, uint64_t length, uint64_t arena_u
 int obor_heap_resources_restore(const void *, uint64_t length, uint64_t arena_used,
                                const obor_resource_restore *);
 
+const void *obor_heap_resource_snapshot_read(const void *, uint64_t, uint64_t,
+        uint32_t, uint32_t, uint32_t, uint32_t);
+typedef struct resource_snapshot {
+    const void *heap;
+    uint64_t length, arena_used;
+} resource_snapshot;
+static const void *resource_snapshot_read(void *context, uint32_t owner,
+        uint32_t allocation, uint32_t offset, uint32_t bytes)
+{
+    const resource_snapshot *snapshot = context;
+    return obor_heap_resource_snapshot_read(snapshot->heap, snapshot->length,
+        snapshot->arena_used, owner, allocation, offset, bytes);
+}
+
 static uint64_t heap_lo(void)
 {
     return (uint64_t)(uintptr_t)(obor_stack_ptr() + obor_stack_size());
@@ -1089,9 +1103,10 @@ static int32_t unserialize_impl(const void *buf, uint32_t size, int *committed)
          * their unused padding has no live destination and is never restored.
          * Stage all cold resources and validate owners/zero holes before the
          * first live byte is replaced. Failure leaves the world unchanged. */
-        resource_plan = obor_resources_prepare_restore(manifest_src, manifest_size,
+        resource_snapshot snapshot = { heap_src, h.heap_len, h.arena_used };
+        resource_plan = obor_resources_prepare_restore_snapshot(manifest_src, manifest_size,
             (uint32_t)h.arena_used, worker_restore ? NULL : coded_resource_unchanged, &tracking,
-            getenv("OBOR_TEST_EMPTY_RESOURCE_CACHE") != NULL);
+            getenv("OBOR_TEST_EMPTY_RESOURCE_CACHE") != NULL, resource_snapshot_read, &snapshot);
         state_resource_plan = resource_plan;
         if (!resource_plan || !obor_heap_resources_validate(heap_src, h.heap_len,
             h.arena_used, resource_plan)) {

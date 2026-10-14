@@ -61,9 +61,52 @@ static int recipe_name(char *out, const char *name, size_t n)
     return 1;
 }
 
+int obor_resource_recipe_framebuffer_source(const obor_resource_recipe *r,
+        obor_framebuffer_source *out)
+{
+    if (!r || !out || r->version != 3 || r->kind != OBOR_RESOURCE_ABGR32_FRAME) return 0;
+    const unsigned char *p = r->origin.framebuffer;
+    for (unsigned i = 16; i < 32; ++i) if (p[i]) return 0;
+    *out = (obor_framebuffer_source){recipe_u32(p), recipe_u32(p + 4),
+                                   recipe_u32(p + 8), recipe_u32(p + 12)};
+    return 1;
+}
+
+int obor_resource_recipe_framebuffer(obor_resource_recipe *out,
+        const obor_framebuffer_source *source, uint32_t width, uint32_t height)
+{
+    if (!out || !source || !width || !height || width > 4096 || height > 4096 ||
+        (uint64_t)width * height * 4 > OBOR_RESOURCE_BODY_LIMIT) return 0;
+    obor_resource_recipe r;
+    memset(&r, 0, sizeof(r));
+    r.version = 3; r.kind = OBOR_RESOURCE_ABGR32_FRAME;
+    r.source_width = r.width = width; r.source_height = r.height = height;
+    r.length = width * height * 4;
+    recipe_put(r.origin.framebuffer, source->owner);
+    recipe_put(r.origin.framebuffer + 4, source->allocation);
+    recipe_put(r.origin.framebuffer + 8, source->offset);
+    recipe_put(r.origin.framebuffer + 12, source->stride);
+    if (!obor_resource_recipe_valid(&r)) return 0;
+    *out = r;
+    return 1;
+}
+
 int obor_resource_recipe_valid(const obor_resource_recipe *r)
 {
-    if (!r || r->version != 2 || !r->length || r->length > OBOR_RESOURCE_BODY_LIMIT) return 0;
+    if (!r || !r->length || r->length > OBOR_RESOURCE_BODY_LIMIT) return 0;
+    if (r->kind == OBOR_RESOURCE_ABGR32_FRAME) {
+        obor_framebuffer_source source;
+        if (!obor_resource_recipe_framebuffer_source(r, &source) || r->x || r->y || r->member_offset ||
+            !r->width || !r->height || r->width > 4096 || r->height > 4096 ||
+            r->source_width != r->width || r->source_height != r->height ||
+            (uint64_t)r->width * r->height * 4 != r->length || source.stride != r->width * 4 ||
+            !source.allocation || source.offset < source.owner ||
+            source.offset - source.owner > source.allocation ||
+            r->length > source.allocation - (source.offset - source.owner)) return 0;
+        for (unsigned i = 0; i < sizeof(r->name); ++i) if (r->name[i]) return 0;
+        return 1;
+    }
+    if (r->version != 2) return 0;
     if (r->kind == OBOR_RESOURCE_RLE8) {
         if (r->member_offset || !r->source_width || !r->source_height ||
             r->source_width > OBOR_RESOURCE_IMAGE_DIMENSION || r->source_height > OBOR_RESOURCE_IMAGE_DIMENSION ||
@@ -92,7 +135,7 @@ static int recipe_shape_equal(const obor_resource_recipe *a, const obor_resource
 
 int obor_resource_recipe_equal(const obor_resource_recipe *a, const obor_resource_recipe *b)
 {
-    return recipe_shape_equal(a, b) && !memcmp(a->digest, b->digest, sizeof(a->digest));
+    return recipe_shape_equal(a, b) && !memcmp(a->origin.digest, b->origin.digest, sizeof(a->origin.digest));
 }
 
 int obor_resource_recipe_write(const obor_resource_recipe *r, void *output, size_t size)
@@ -102,7 +145,7 @@ int obor_resource_recipe_write(const obor_resource_recipe *r, void *output, size
     const uint32_t fields[10] = {r->version, r->source_width, r->source_height,
         r->x, r->y, r->width, r->height, r->length, r->kind, r->member_offset};
     for (unsigned i = 0; i < 10; ++i) recipe_put(p + i * 4, fields[i]);
-    memcpy(p + 40, r->digest, 32);
+    memcpy(p + 40, r->origin.digest, 32);
     memcpy(p + 72, r->name, OBOR_RESOURCE_RECIPE_PATH);
     return 1;
 }
@@ -118,7 +161,7 @@ int obor_resource_recipe_read(obor_resource_recipe *r, const void *input, size_t
     candidate.y = recipe_u32(p + 16); candidate.width = recipe_u32(p + 20);
     candidate.height = recipe_u32(p + 24); candidate.length = recipe_u32(p + 28);
     candidate.kind = recipe_u32(p + 32); candidate.member_offset = recipe_u32(p + 36);
-    memcpy(candidate.digest, p + 40, 32);
+    memcpy(candidate.origin.digest, p + 40, 32);
     memcpy(candidate.name, p + 72, OBOR_RESOURCE_RECIPE_PATH);
     if (!obor_resource_recipe_valid(&candidate)) return 0;
     *r = candidate;
@@ -206,7 +249,7 @@ static const unsigned char *recipe_load(obor_resource_materializer *m, obor_reso
     if (valid) {
         obor_sha256_ctx hash;
         obor_sha256_init(&hash); obor_sha256_update(&hash, file, length); obor_sha256_final(&hash, digest);
-        if (!proving && memcmp(digest, r->digest, sizeof(digest))) valid = 0;
+        if (!proving && memcmp(digest, r->origin.digest, sizeof(digest))) valid = 0;
     }
     if (r->kind == OBOR_RESOURCE_MEMBER_BYTES) {
         valid = valid && r->member_offset <= length && r->length <= length - r->member_offset;
@@ -216,7 +259,7 @@ static const unsigned char *recipe_load(obor_resource_materializer *m, obor_reso
         }
         m->allocator.release(file);
         if (!valid) return NULL;
-        if (proving) memcpy(r->digest, digest, sizeof(digest));
+        if (proving) memcpy(r->origin.digest, digest, sizeof(digest));
         return m->temporary;
     }
     if (valid && !m->pixels) m->pixels = m->allocator.allocate(OBOR_RESOURCE_IMAGE_PIXELS);
@@ -232,7 +275,7 @@ static const unsigned char *recipe_load(obor_resource_materializer *m, obor_reso
     if (obor_resource_image_rle8(crop, r->width, r->height, width, m->temporary, bytes) != bytes) {
         return NULL;
     }
-    if (proving) memcpy(r->digest, digest, sizeof(digest));
+    if (proving) memcpy(r->origin.digest, digest, sizeof(digest));
     return m->temporary;
 }
 
@@ -274,7 +317,7 @@ static const void *recipe_cached_body(obor_resource_materializer *m, const recip
 
 const void *obor_resource_recipe_body(obor_resource_materializer *m, const obor_resource_recipe *r)
 {
-    if (!m || !obor_resource_recipe_valid(r)) return NULL;
+    if (!m || !obor_resource_recipe_valid(r) || r->kind == OBOR_RESOURCE_ABGR32_FRAME) return NULL;
     for (recipe_cache *entry = m->buckets[recipe_bucket(r)]; entry; entry = entry->bucket_next)
         if (obor_resource_recipe_equal(&entry->recipe, r)) {
             recipe_unlink(m, entry); recipe_recent(m, entry);

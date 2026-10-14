@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+const void *obor_heap_resource_snapshot_read(const void *, uint64_t, uint64_t, uint32_t, uint32_t, uint32_t, uint32_t);
 int obor_heap_resources_validate(const void *, uint64_t, uint64_t, const obor_resource_restore *);
 int obor_heap_resources_restore(const void *, uint64_t, uint64_t, const obor_resource_restore *);
 void image_test_reset(size_t);
@@ -49,6 +50,26 @@ int main(int argc, char **argv)
     obor_resource_restore *plan = obor_resource_restore_prepare(c, manifest, manifest_size, used, NULL, NULL);
     assert(plan && obor_heap_resources_validate(snapshot, sizeof(snapshot), used, plan));
     unsigned char saved[sizeof(snapshot)]; memcpy(saved, snapshot, sizeof(saved));
+    /* Incoming source view is independently bounded and must describe a real
+     * live allocation. This reader never consults the current arena. */
+    const unsigned char *view = obor_heap_resource_snapshot_read(snapshot,sizeof(snapshot),used,
+        base+256,136,base+272,16);
+    assert(view == snapshot+48+272);
+    assert(!obor_heap_resource_snapshot_read(snapshot,sizeof(snapshot),used,base+257,136,base+272,16));
+    assert(!obor_heap_resource_snapshot_read(snapshot,sizeof(snapshot),used,base+256,135,base+272,16));
+    assert(!obor_heap_resource_snapshot_read(snapshot,sizeof(snapshot),used,base+256,136,base+255,16));
+    assert(!obor_heap_resource_snapshot_read(snapshot,sizeof(snapshot),used,base+256,136,base+390,3));
+    assert(!obor_heap_resource_snapshot_read(snapshot,sizeof(snapshot),used,base+256,136,base+272,0));
+    assert(!obor_heap_resource_snapshot_read(snapshot,sizeof(snapshot),used,base+256,UINT32_MAX,base+272,16));
+    for (size_t length=0;length<sizeof(snapshot);length+=13)
+        assert(!obor_heap_resource_snapshot_read(snapshot,length,used,base+256,136,base+272,16));
+    put64(snapshot+48+248,144|1);
+    assert(!obor_heap_resource_snapshot_read(snapshot,sizeof(snapshot),used,base+256,136,base+272,16));
+    memcpy(snapshot,saved,sizeof(saved));
+    put64(snapshot+48+392,64);
+    assert(!obor_heap_resource_snapshot_read(snapshot,sizeof(snapshot),used,base+256,136,base+272,16));
+    memcpy(snapshot,saved,sizeof(saved));
+
     snapshot[48 + 280] = 3; assert(!obor_heap_resources_validate(snapshot, sizeof(snapshot), used, plan));
     memcpy(snapshot, saved, sizeof(saved));
     put64(snapshot + 48 + 248, 144 | 1); assert(!obor_heap_resources_validate(snapshot, sizeof(snapshot), used, plan));

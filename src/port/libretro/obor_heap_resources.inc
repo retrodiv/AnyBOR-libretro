@@ -19,6 +19,32 @@ static const unsigned char *heap_resource_bytes(const void *source, uint64_t off
     return NULL;
 }
 
+/* Read only from the incoming snapshot, never from the current mutable arena.
+ * Check the allocator metadata as well as the sparse span before exposing a
+ * source for deterministic output reconstruction. */
+const void *obor_heap_resource_snapshot_read(const void *source, uint64_t length,
+        uint64_t arena_used, uint32_t owner, uint32_t allocation,
+        uint32_t body, uint32_t bytes)
+{
+    if (!source || !bytes || owner < OBOR_STACK_RESERVE + 2 * sizeof(size_t) ||
+        (owner & CHUNK_ALIGN_MASK) || owner > arena_used ||
+        allocation > arena_used - owner || body < owner ||
+        body - owner > allocation || bytes > allocation - (body - owner) ||
+        !obor_heap_sparse_validate(source, length, arena_used)) return NULL;
+    uint64_t offset = owner - OBOR_STACK_RESERVE;
+    const unsigned char *head = heap_resource_bytes(source, offset - sizeof(size_t), sizeof(size_t));
+    if (!head || !heap_resource_bytes(source, offset, allocation)) return NULL;
+    size_t bits; memcpy(&bits, head, sizeof(bits));
+    size_t chunk_size = bits & ~FLAG_BITS;
+    if (!(bits & CINUSE_BIT) || chunk_size < MIN_CHUNK_SIZE ||
+        (chunk_size & CHUNK_ALIGN_MASK) || chunk_size - SIZE_T_SIZE != allocation) return NULL;
+    const unsigned char *next = heap_resource_bytes(source, offset + allocation, sizeof(size_t));
+    if (!next) return NULL;
+    memcpy(&bits, next, sizeof(bits));
+    if (!(bits & PINUSE_BIT)) return NULL;
+    return heap_resource_bytes(source, body - OBOR_STACK_RESERVE, bytes);
+}
+
 int obor_heap_resources_validate(const void *source, uint64_t length,
         uint64_t arena_used, const obor_resource_restore *plan)
 {

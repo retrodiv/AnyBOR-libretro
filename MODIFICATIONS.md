@@ -785,3 +785,24 @@ services, avoiding a server/service restart between hosts. Its server and prefix
 are removed on completion or failure; no existing Wine prefix is managed.
 CI places this prefix and the large temporary state files on disk, rather than
 charging a host tmpfs against the runtime test's memory budget.
+
+### Conditional reconstruction of the presented frame
+
+The 32-bit video backend records the source of its last converted output copy.
+At capture, the resource catalog may omit that copy only after proving exact
+byte equality with the deterministic ABGR-to-XRGB conversion of the source.
+The proof includes the unused output byte. An unchanged proof is reusable only
+when both source and output bytes are proven unchanged. The source screen,
+palette and logical engine state remain captured. Unsupported formats, stale
+sources, previous frames retained across a yield, or any pixel mismatch retain
+the ordinary output bytes unless equality is independently proven.
+
+The frame descriptor contains bounded allocation offsets, dimensions and stride;
+it never identifies content. Its source must be saved ordinary bytes, without
+dependencies on omitted resources. Restore validates the incoming snapshot's
+allocation ownership and sparse ranges, then stages conversion from that
+snapshot before changing live state. It never reuses mutable frame pixels from
+the current game merely because a descriptor matches. Output allocation tails
+remain ordinary bytes. Existing fixed state, resource-cache and staging limits
+are unchanged. Synthetic cases cover exact equality, modified pixels, source
+lifetime, incoming mutable data and atomic rejection of invalid descriptors.

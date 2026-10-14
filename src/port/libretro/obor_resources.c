@@ -240,9 +240,32 @@ done:
 
 obor_resource_catalog *obor_resources_catalog(void)
 { return resources ? resources->catalog : NULL; }
-obor_resource_restore *obor_resources_prepare_restore(const void *manifest,
+
+void obor_resources_framebuffer(void *frame, const void *source_owner,
+        const void *source_pixels, uint32_t width, uint32_t height)
+{
+    if (!resources) return;
+    resource_lock();
+    uint32_t destination, owner, pixels;
+    size_t allocation = frame ? obor_allocation_size(frame) : 0;
+    size_t source_allocation = source_owner ? obor_allocation_size(source_owner) : 0;
+    obor_resource_recipe recipe;
+    int valid = allocation && allocation <= UINT32_MAX && source_allocation &&
+        source_allocation <= UINT32_MAX && resource_offset(frame, &destination) &&
+        resource_offset(source_owner, &owner) && resource_offset(source_pixels, &pixels);
+    if (valid) {
+        obor_framebuffer_source source = {owner, (uint32_t)source_allocation, pixels, width * 4U};
+        valid = obor_resource_recipe_framebuffer(&recipe, &source, width, height);
+    }
+    if (!valid || !obor_resource_catalog_framebuffer(resources->catalog,
+        valid ? destination : 0, (uint32_t)allocation, valid ? destination : 0, valid ? &recipe : NULL))
+        (void)obor_resource_catalog_framebuffer(resources->catalog, 0, 0, 0, NULL);
+    resource_unlock();
+}
+
+obor_resource_restore *obor_resources_prepare_restore_snapshot(const void *manifest,
         uint32_t size, uint32_t used, obor_resource_unchanged unchanged,
-        void *context, int empty_cache)
+        void *context, int empty_cache, obor_resource_snapshot_read snapshot_read, void *snapshot)
 {
     if (!resources) return NULL;
     resource_lock();
@@ -251,10 +274,18 @@ obor_resource_restore *obor_resources_prepare_restore(const void *manifest,
         obor_resource_catalog_forget_proofs(resources->catalog);
         unchanged = NULL;
     }
-    obor_resource_restore *plan = obor_resource_restore_prepare(resources->catalog,
-        manifest, size, used, unchanged, context);
+    obor_resource_restore *plan = obor_resource_restore_prepare_snapshot(resources->catalog,
+        manifest, size, used, unchanged, context, snapshot_read, snapshot);
     resource_unlock();
     return plan;
+}
+
+obor_resource_restore *obor_resources_prepare_restore(const void *manifest,
+        uint32_t size, uint32_t used, obor_resource_unchanged unchanged,
+        void *context, int empty_cache)
+{
+    return obor_resources_prepare_restore_snapshot(manifest, size, used, unchanged,
+                                                  context, empty_cache, NULL, NULL);
 }
 void obor_resources_adopt(obor_resource_catalog *target)
 {
