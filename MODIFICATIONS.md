@@ -811,9 +811,10 @@ lifetime, incoming mutable data and atomic rejection of invalid descriptors.
 ### Load-time state content and compression options
 
 Two options in the existing System category independently select resource
-reconstruction (Smart / Full) and compression (On / Off). Platform defaults
-remain Smart + On for Windows x86-64 and non-Android Linux x86-64/ARM64, and
-Full + Off elsewhere. Off with Smart uses the existing raw-mutable encoder;
+reconstruction (Smart / Full) and compression (On / Off). The default is
+Smart + On on every platform, including Android and macOS. This writer default
+is independent of the existing platform policy for preparation, encoder
+maintenance, compression helpers and write tracking. Off with Smart uses the existing raw-mutable encoder;
 unchanged block proofs and reuse remain enabled. Full + Off uses the complete
 base writer with all common restoration and runtime-storage fixes.
 

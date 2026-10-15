@@ -217,7 +217,7 @@ def main():
             compile_host(release.ROOT, host, args.windows)
         pak = work / "diagnostic.pak"
         make_fixture.write_pak(pak, make_fixture.files())
-        default = MODES[0] if args.windows or sys.platform == "linux" else MODES[3]
+        default = MODES[0]
 
         def target(path):
             return "Z:" + str(path).replace("/", "\\") if args.windows else str(path)

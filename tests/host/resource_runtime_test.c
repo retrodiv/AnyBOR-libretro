@@ -204,7 +204,7 @@ int main(int argc, char **argv)
     assert(argc == 2); image_test_reset(0);
     unsetenv("OBOR_RESOURCE_STATES"); unsetenv("OBOR_COMPRESSED_STATES");
     obor_resources_open(argv[1], 0);
-    assert(!!obor_resources_catalog() == OBOR_STATE_DEFAULT_ENABLED);
+    assert(!!obor_resources_catalog() == OBOR_STATE_WRITER_DEFAULT_ENABLED);
     obor_resources_close(); assert(!image_test_live());
     assert(!setenv("OBOR_RESOURCE_STATES", "0", 1));
     obor_resources_open(argv[1], 0); assert(!obor_resources_catalog());

@@ -158,6 +158,11 @@ int main(int argc, char **argv)
 #ifdef OBOR_STATE_CONTENT_DEFAULT
     if (!strcmp(argv[1], "explicit")) {
         obor_state_session_settings.content = obor_state_session_settings.compression =
+            OBOR_STATE_SETTING_ON;
+    } else if (!strcmp(argv[1], "legacy")) {
+        /* Preserve the independent legacy writer oracle after the intentional
+         * default change. Optional encoder policies still use this old flag. */
+        obor_state_session_settings.content = obor_state_session_settings.compression =
             OBOR_STATE_DEFAULT_ENABLED ? OBOR_STATE_SETTING_ON : OBOR_STATE_SETTING_OFF;
     } else assert(!strcmp(argv[1], "default"));
 #else

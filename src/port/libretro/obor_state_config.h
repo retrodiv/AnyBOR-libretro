@@ -5,8 +5,9 @@
 #include <stdlib.h>
 #include <string.h>
 
-/* Share defaults between the frontend's pre-boot size query and every engine.
- * Core options may select another writer when content is loaded. */
+/* Optional runtime policies retain their existing platform scope. This flag
+ * controls preparation, encoder maintenance and helper policy, not which
+ * writer is selected by the frontend or the engine's default settings. */
 #if (defined(_WIN32) && (defined(__x86_64__) || defined(_M_X64))) || \
     (defined(__linux__) && !defined(__ANDROID__) && \
      (defined(__x86_64__) || defined(__aarch64__)))
@@ -15,19 +16,15 @@
 #define OBOR_STATE_DEFAULT_ENABLED 0
 #endif
 
-#if OBOR_STATE_DEFAULT_ENABLED
+/* Share writer defaults between the pre-boot size query and every engine.
+ * Core options may select another writer when content is loaded. */
+#define OBOR_STATE_WRITER_DEFAULT_ENABLED 1
 #define OBOR_STATE_CONTENT_DEFAULT "Smart"
 #define OBOR_STATE_COMPRESSION_DEFAULT "On"
 #define OBOR_STATE_CONTENT_VALUES "Smart|Full"
 #define OBOR_STATE_COMPRESSION_VALUES "On|Off"
-#else
-#define OBOR_STATE_CONTENT_DEFAULT "Full"
-#define OBOR_STATE_COMPRESSION_DEFAULT "Off"
-#define OBOR_STATE_CONTENT_VALUES "Full|Smart"
-#define OBOR_STATE_COMPRESSION_VALUES "Off|On"
-#endif
 
-/* Zero preserves the platform default for callers that do not provide core
+/* Zero preserves the writer default for callers that do not provide core
  * options. Each localized engine and the glue own a separate runtime copy;
  * loading a state must never change the current session's writer selection. */
 enum { OBOR_STATE_SETTING_DEFAULT, OBOR_STATE_SETTING_ON, OBOR_STATE_SETTING_OFF };
@@ -38,7 +35,7 @@ static inline int obor_state_setting_enabled(int setting)
 {
     if (setting == OBOR_STATE_SETTING_ON) return 1;
     if (setting == OBOR_STATE_SETTING_OFF) return 0;
-    return OBOR_STATE_DEFAULT_ENABLED;
+    return OBOR_STATE_WRITER_DEFAULT_ENABLED;
 }
 
 /* Overrides are for diagnosis, not game selection. Invalid values retain the

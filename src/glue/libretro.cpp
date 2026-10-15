@@ -1033,7 +1033,7 @@ void retro_set_environment(retro_environment_t cb)
             { "obor_state_content", "Save state content", "Save state content",
               "Smart reconstructs resources whose bytes can be reproduced exactly. "
               "Full stores complete engine memory. Changes apply when content is loaded. "
-              "The default depends on the platform. Full with compression Off may "
+              "Smart is the default on every platform. Full with compression Off may "
               "exceed the rewind buffer in large games.",
               NULL, "system",
               { { "Smart", NULL }, { "Full", NULL }, { NULL, NULL } },
@@ -1041,7 +1041,7 @@ void retro_set_environment(retro_environment_t cb)
             { "obor_state_compression", "Save state compression", "Save state compression",
               "On reduces state size. Off avoids compression work and can require "
               "more rewind memory; unchanged blocks remain reusable. Changes apply "
-              "when content is loaded. The default depends on the platform. Full "
+              "when content is loaded. On is the default on every platform. Full "
               "content with compression Off may exceed the rewind buffer in large games.",
               NULL, "system",
               { { "On", NULL }, { "Off", NULL }, { NULL, NULL } },

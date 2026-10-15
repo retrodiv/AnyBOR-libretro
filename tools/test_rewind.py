@@ -139,7 +139,7 @@ def main():
                 else:
                     assert "load state at frame 120: ok" in log, log
             assert "FAILED" not in checked_log and "MISMATCH" not in checked_log, log
-            version = 1 if mode == "default" and (windows or sys.platform == "linux") else 7
+            version = 1 if mode == "default" else 7
             sizes = re.findall(r"state_contract version=" + str(version) + r" capacity=(\d+)", log)
             assert len(sizes) == 2 and sizes[0] == sizes[1] == initial.group(1), log
             if "OBOR_RAREWIND" in options:

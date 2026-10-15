@@ -129,9 +129,9 @@ unchanged blocks. These options apply when content is loaded; changing them
 during a session, resetting or loading a state does not change that session's
 writer. Diagnostic environment overrides retain priority.
 
-Defaults depend on the platform: Windows x86-64 and Linux x86-64/ARM64 use
-**Smart + On**; Android, macOS and other targets use **Full + Off**. These
-defaults preserve the previous platform policy. **Full + Off may not fit the
+The default is **Smart + On on every platform**, including Android and macOS.
+This selects the writer without enabling additional platform-specific runtime
+optimizations. **Full + Off may not fit the
 256 MiB rewind buffer in large games.** The available duration and capture cost
 depend on the game, machine and selected combination.
 
@@ -211,8 +211,16 @@ If its address changes on any platform, loading is refused with a
 `state module address differs` log message before changing the live game.
 The core does not guess which memory words are pointers or silently change
 the selected writer. This is a temporary limitation of cross-process save
-states on macOS, where ASLR can move the dylib. Same-session rewind and
-restoration do not require relocation and remain available.
+states on macOS, where ASLR can move the dylib. After closing and reopening
+RetroArch on macOS, expect loads to be refused if the module address changed.
+That refusal is intentional; selecting Full does not bypass it. Same-session
+rewind and restoration do not require relocation and remain available.
+
+Within a compatible core build, loading a Full state in a Smart session
+preserves the game, but resources without reconstruction recipes remain stored
+as bytes. Capture cost and rewind duration may differ from a game started in
+Smart. Saving again as Smart does not recover missing recipes; starting the
+game afresh in Smart rebuilds them as resources load.
 
 Loading a state retains the current session's content and writable-directory
 paths. Engine random-number state is captured with the world so external

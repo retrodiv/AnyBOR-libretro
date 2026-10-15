@@ -82,15 +82,22 @@ The macros account for the active character's facing direction.
 | Clear all game caches on load | `obor_clear_all_caches` | **On**. In Development. Empties `AnyBOR-cache/` before each load and before generating new cache files; saved data is unaffected. |
 
 The state options share the existing System category. Their defaults are
-Smart + On on Windows x86-64 and non-Android Linux x86-64/ARM64, and Full + Off
-on all other platforms. Full + Off may exceed a 256 MiB rewind buffer in large
+**Smart + On on every platform**, including Android and macOS. Writer selection
+does not enable additional platform-specific runtime optimizations.
+Full + Off may exceed a 256 MiB rewind buffer in large
 games. All combinations can be selected on every platform; see the
 [state compatibility limits](../README.md#save-states-and-rewind), including
 clean refusal whenever the core module address has changed, for both Smart
 and Full on every platform. The log reports `state module address differs`
 without changing the current game. macOS ASLR can therefore prevent loading
-in a new process; this is a temporary limitation until exact relocation is
-available. Same-session rewind and restoration remain available.
+after closing and reopening RetroArch. This refusal is intentional and affects
+Full as well as Smart; choosing Full does not avoid it. This is a temporary
+limitation until exact relocation is available. Same-session rewind and
+restoration remain available. Loading a compatible Full state in Smart can
+also retain fewer reconstruction recipes and change capture cost or rewind
+duration. This is a performance limitation; saving again in Smart does not
+recover recipes that were absent. A fresh game in Smart catalogs resources
+as they load.
 
 Automatic selection uses filename version tags, nearby engine-version data
 and PAK content markers, with engine 6391 as the current fallback. An explicit

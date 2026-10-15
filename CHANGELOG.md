@@ -2,12 +2,18 @@
 
 ## Unreleased
 
+- Default to Smart save state content with compression On on every platform,
+  including Android and macOS, while retaining the existing platform scope of
+  runtime optimizations. Keep the intentional same-module-address requirement
+  for both Smart and Full, including after restarting RetroArch on macOS.
+  Document the performance limit when loading Full states in Smart sessions.
+
 - Exercise successful state loads within each CRT/profile test session, handle
   ASLR independently in cross-process tests, and prevent address-refusal probes
   from aliasing a real module base. Retain native CI failure diagnostics.
 
 - Add System options for save state content (Smart/Full) and compression (On/Off).
-  Apply selections at content load, retain platform defaults and diagnostic
+  Apply selections at content load, retain diagnostic
   overrides, and accept compatible states independently of the active writer.
   Refuse relocated Smart and Full states before changing the current game.
 
