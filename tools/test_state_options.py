@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Check load-time state options and independent restoration across writers.
 
-Only original geometric content is used. A relocated Smart image may be
-refused, but refusal must preserve the current video/PCM continuation.
+Only original geometric content is used. A relocated module image must be
+refused in every mode, preserving the current video/PCM continuation.
 SPDX-License-Identifier: BSD-3-Clause
 Copyright (c) 2026 retrodiv <retrodiv@proton.me>
 """
@@ -112,33 +112,38 @@ def state_head(path):
         return dict(version=version, image_lo=image_lo, image_hi=image_hi, capacity=capacity, codecs=codecs)
 
 
-def relocated_smart(source, destination):
+def relocated_state(source, destination):
     """Preserve a valid block envelope but move its declared module/segments.
 
     This specifically exercises the address preflight, not CRC rejection.
     The original checkpoint is never changed.
     """
     header = state_head(source)
-    if header["version"] != 9:
-        raise ValueError("expected Smart resource state")
+    if header["version"] not in (7, 9):
+        raise ValueError("expected Full or Smart state")
     shutil.copyfile(source, destination)
     with destination.open("r+b") as stream:
         stream.seek(8)
         head = bytearray(stream.read(56))
-        offset, stored, slot, raw, codec, crc = struct.unpack_from("<6I", head, 32)
-        stream.seek(8 + offset)
-        block = stream.read(stored)
-        if codec == 2:
-            inflater = zlib.decompressobj()
-            block = inflater.decompress(block, raw + 1)
-            if not inflater.eof or inflater.unconsumed_tail or inflater.unused_data:
-                raise ValueError("invalid relocation source block")
-        elif codec == 1:
-            block = lz4_block(block, raw)
-        elif codec != 0:
-            raise ValueError("invalid relocation source codec")
-        if len(block) != raw or zlib.crc32(block) != crc:
-            raise ValueError("invalid relocation source CRC")
+        compressed = head[:4] == b"OBC1"
+        if compressed:
+            offset, stored, slot, raw, codec, crc = struct.unpack_from("<6I", head, 32)
+            stream.seek(8 + offset)
+            block = stream.read(stored)
+            if codec == 2:
+                inflater = zlib.decompressobj()
+                block = inflater.decompress(block, raw + 1)
+                if not inflater.eof or inflater.unconsumed_tail or inflater.unused_data:
+                    raise ValueError("invalid relocation source block")
+            elif codec == 1:
+                block = lz4_block(block, raw)
+            elif codec != 0:
+                raise ValueError("invalid relocation source codec")
+            if len(block) != raw or zlib.crc32(block) != crc:
+                raise ValueError("invalid relocation source CRC")
+        else:
+            stream.seek(8)
+            block = stream.read(min(header["capacity"], 16384))
         block = bytearray(block)
         segments, = struct.unpack_from("<I", block, 16)
         if not 0 < segments <= 16 or 112 + segments * 16 > len(block):
@@ -146,6 +151,10 @@ def relocated_smart(source, destination):
         for field in (24, 32, *(112 + n * 16 for n in range(segments))):
             value, = struct.unpack_from("<Q", block, field)
             struct.pack_into("<Q", block, field, value + 0x10000)
+        if not compressed:
+            stream.seek(8)
+            stream.write(block)
+            return
         used, = struct.unpack_from("<I", head, 20)
         end = used + ((raw + 255) // 256) * 256
         if end > header["capacity"]:
@@ -161,7 +170,7 @@ def relocated_smart(source, destination):
         stream.write(head)
 
 
-def pcm_records(path):
+def pcm_records(path, repetitions=1):
     data = path.read_bytes()
     if not 0 < len(data) <= 32 << 20:
         raise ValueError("missing or excessive PCM")
@@ -175,7 +184,7 @@ def pcm_records(path):
             raise ValueError("invalid PCM record")
         records.append((frame, data[offset + 8:end]))
         offset = end
-    if [r[0] for r in records] != list(range(121, 321)):
+    if [r[0] for r in records] != list(range(121, 321)) * repetitions:
         raise ValueError("incomplete 200-frame PCM continuation")
     return records
 
@@ -205,7 +214,7 @@ def main():
         def target(path):
             return "Z:" + str(path).replace("/", "\\") if args.windows else str(path)
 
-        def run(profile, label, mode, **options):
+        def run(profile, label, mode, same_session=False, **options):
             root = work / (profile + "-" + label)
             root.mkdir()
             # Save a late snapshot too: restoration must not change the writer
@@ -224,11 +233,12 @@ def main():
             else:
                 env["OBOR_CHECK_FDS"] = "1"
             env.update({k: target(v) if isinstance(v, Path) else str(v) for k, v in options.items()})
+            nframes = 521 if same_session else 321
             result = subprocess.run(shlex.split(args.runner) + [str(host), target(core), target(pak),
-                target(root), "321"], env=env, cwd=work, text=True, stdout=subprocess.PIPE,
+                target(root), str(nframes)], env=env, cwd=work, text=True, stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE, timeout=90)
             log = result.stdout + result.stderr
-            if result.returncode or "frames=321 " not in log or "invalid_version_and_truncation_rejected=1" not in log:
+            if result.returncode or "frames=" + str(nframes) + " " not in log or "invalid_version_and_truncation_rejected=1" not in log:
                 raise RuntimeError(label + ": " + log)
             required = "post_unload_exception_safe=1" if args.windows else "file_descriptors_restored=1"
             if required not in log:
@@ -240,8 +250,12 @@ def main():
                 if marker not in log:
                     raise RuntimeError("state option metadata: " + log)
             frames = re.findall(r"^replay_frame source=.*$", result.stdout, re.M)
-            if len(frames) != 200:
+            repetitions = 2 if same_session else 1
+            if len(frames) != 200 * repetitions:
                 raise RuntimeError("incomplete video continuation: " + log)
+            pcm = pcm_records(root / "audio.pcm", repetitions)
+            if same_session and (frames[:200] != frames[200:] or pcm[:200] != pcm[200:]):
+                raise RuntimeError("same-session restoration changed video or complete PCM: " + label)
             saved = Path(options.get("OBOR_SAVE_STATE", output))
             header = state_head(saved)
             expected = mode or default
@@ -256,7 +270,7 @@ def main():
                 if not header['codecs'][codec]:
                     raise RuntimeError("mutable codec selection changed: " + label + " " + str(header))
             print("PASS", profile, label, "writer=" + str(header["version"]), flush=True)
-            return dict(frames=frames, pcm=pcm_records(root / "audio.pcm"), log=log,
+            return dict(frames=frames[-200:], pcm=pcm[-200:], log=log,
                         state=saved, header=header)
 
         def equal(left, right, label):
@@ -274,34 +288,47 @@ def main():
                 label = content + "-" + compression
                 state = work / (profile + "-" + label + ".state")
                 original = run(profile, label + "-save", mode, OBOR_SAVE_AT=120, OBOR_SAVE_STATE=state)
+                # Always exercise actual restoration in every writer, including
+                # ASLR hosts where independent-process loads may all be refused.
+                # Advance 200 frames before loading, then replay the same input
+                # timeline; a reader that merely returns success cannot pass.
+                session_state = work / (profile + "-" + label + "-same-session.state")
+                session = run(profile, label + "-same-session", mode, same_session=True,
+                              OBOR_SAVE_AT=120, OBOR_SAVE_STATE=session_state,
+                              OBOR_LOAD_AT=320, OBOR_LOAD_STATE=session_state,
+                              OBOR_LOAD_SOURCE_FRAME=120)
+                if "load state at frame 320: ok" not in session["log"] or not \
+                        re.search(r"saved state \(\d+ bytes\) at frame 120", session["log"]):
+                    raise RuntimeError("same-session load failed: " + session["log"])
+                equal(original, session, profile + " " + label + " same-session load")
+                session_state.unlink()
                 for reader in MODES:
                     restored = run(profile, label + "-to-" + "-".join(reader), reader,
                                    OBOR_LOAD_AT=120, OBOR_LOAD_STATE=state)
                     displaced = original["header"]["image_lo"] != restored["header"]["image_lo"]
-                    if content == "Smart" and displaced:
-                        # On a relocatable module, Smart is deliberately strict.
+                    if displaced:
+                        # Neither writer carries exact pointer relocation data.
                         # Do not relabel refusal as successful restoration.
                         if "load state at frame 120: FAILED" not in restored["log"] or \
-                                "resource state requires the original module address" not in restored["log"]:
-                            raise RuntimeError("unsafe relocated Smart restoration: " + restored["log"])
-                        equal(reference, restored, profile + " rejected Smart state changed playback")
-                        print("LIMIT", profile, label, "relocated Smart refused; current continuation intact", flush=True)
+                                "state module address differs" not in restored["log"]:
+                            raise RuntimeError("unsafe relocated restoration: " + restored["log"])
+                        equal(reference, restored, profile + " rejected state changed playback")
+                        print("LIMIT", profile, label, "relocated module refused; current continuation intact", flush=True)
                     else:
                         if "load state at frame 120: ok" not in restored["log"]:
                             raise RuntimeError("cross-writer load refused: " + restored["log"])
                         equal(original, restored, profile + " " + label + " cross-writer load")
                     restored["state"].unlink()
-                if mode == MODES[0]:
-                    rejected_state = work / (profile + "-displaced.state")
-                    relocated_smart(state, rejected_state)
-                    rejected = run(profile, "displaced-smart-rejected", mode,
-                                   OBOR_LOAD_AT=120, OBOR_LOAD_STATE=rejected_state)
-                    if "load state at frame 120: FAILED" not in rejected["log"] or \
-                            "resource state requires the original module address" not in rejected["log"]:
-                        raise RuntimeError("missing address refusal: " + rejected["log"])
-                    equal(reference, rejected, profile + " displaced Smart refusal changed playback")
-                    rejected_state.unlink()
-                    rejected["state"].unlink()
+                rejected_state = work / (profile + "-displaced.state")
+                relocated_state(state, rejected_state)
+                rejected = run(profile, label + "-displaced-rejected", mode,
+                               OBOR_LOAD_AT=120, OBOR_LOAD_STATE=rejected_state)
+                if "load state at frame 120: FAILED" not in rejected["log"] or \
+                        "state module address differs" not in rejected["log"]:
+                    raise RuntimeError("missing address refusal: " + rejected["log"])
+                equal(reference, rejected, profile + " displaced state refusal changed playback")
+                rejected_state.unlink()
+                rejected["state"].unlink()
                 if profile == "4432" and mode == MODES[3]:
                     padded = work / "full-larger-than-smart.state"
                     shutil.copyfile(state, padded)
@@ -311,9 +338,15 @@ def main():
                         stream.truncate(8 + capacity)
                     loaded = run(profile, "large-full-to-smart", MODES[0],
                                  OBOR_LOAD_AT=120, OBOR_LOAD_STATE=padded)
-                    if "load state at frame 120: ok" not in loaded["log"]:
-                        raise RuntimeError("writer capacity rejected a valid larger state: " + loaded["log"])
-                    equal(original, loaded, "large Full state into Smart")
+                    if original["header"]["image_lo"] != loaded["header"]["image_lo"]:
+                        if "load state at frame 120: FAILED" not in loaded["log"] or \
+                                "state module address differs" not in loaded["log"]:
+                            raise RuntimeError("unsafe relocated larger state: " + loaded["log"])
+                        equal(reference, loaded, "rejected large Full state changed playback")
+                    else:
+                        if "load state at frame 120: ok" not in loaded["log"]:
+                            raise RuntimeError("writer capacity rejected a valid larger state: " + loaded["log"])
+                        equal(original, loaded, "large Full state into Smart")
                     padded.unlink()
                     loaded["state"].unlink()
                 other = ("Full" if content == "Smart" else "Smart", "Off" if compression == "On" else "On")

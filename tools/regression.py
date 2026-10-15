@@ -15,6 +15,7 @@ import tempfile
 from pathlib import Path
 import make_fixture
 import release
+from test_state_options import state_head
 
 DEFAULT_CORE = release.ROOT / ("anybor_libretro.dylib" if sys.platform == "darwin"
                                else "anybor_libretro.so")
@@ -88,6 +89,11 @@ def main():
             system.mkdir(exist_ok=True)
             env = {k: v for k, v in os.environ.items() if not k.startswith("OBOR_")}
             env.update(OBOR_ENGINE=engine, OBOR_POST_UNLOAD_MS="250")
+            if "OBOR_LOAD_AT" in options and "OBOR_SAVE_AT" not in options:
+                # Independently record this process's module base before any
+                # load/reset, so only an actual address change permits refusal.
+                (work / "current.state").unlink(missing_ok=True)
+                env.update(OBOR_SAVE_AT="119", OBOR_SAVE_STATE=target_path(work / "current.state"))
             if not args.windows:
                 env["OBOR_CHECK_FDS"] = "1"
             for key, value in options.items():
@@ -114,6 +120,16 @@ def main():
             print("PASS " + engine + " " + label, flush=True)
             return result
 
+        def check_loads(result, state, expected):
+            saved, current = state_head(state), state_head(work / "current.state")
+            loads = re.findall(r"load state at frame \d+: (ok|FAILED)", result)
+            if saved["image_lo"] != current["image_lo"]:
+                if loads != ["FAILED"] * expected or result.count("state module address differs") != expected:
+                    raise RuntimeError("Displaced module was not refused cleanly: " + result)
+                print("LIMIT cross-process module displaced; all loads refused", flush=True)
+            elif loads != ["ok"] * expected:
+                raise RuntimeError("Same-base state did not load: " + result)
+
         for engine in [e["build"] for e in profiles]:
             state = work / (engine + ".state")
             result = run(engine, pak, "save with game log", OBOR_GAMELOG="On",
@@ -127,13 +143,22 @@ def main():
                 result = run(engine, pak, "cross-process load, game log " + option,
                              OBOR_GAMELOG=option, OBOR_LOAD_AT=120, OBOR_LOAD_STATE=state,
                              OBOR_RESET_AT=150)
-                if "load state at frame 120: ok" not in result:
-                    raise RuntimeError("State did not load: " + result)
+                check_loads(result, state, 1)
             result = run(engine, pak, "repeated state loads with shifted host descriptors",
                          OBOR_GAMELOG="On", OBOR_LOAD_AT=120, OBOR_LOAD_EVERY=10,
                          OBOR_LOAD_STATE=state, OBOR_FD_PADDING=12, OBOR_RESET_AT=150)
-            if result.count("load state at frame") != 6 or ": FAILED" in result:
-                raise RuntimeError("Repeated state loads did not complete: " + result)
+            check_loads(result, state, 6)
+            # This mandatory control still restores six times on ASLR hosts,
+            # even when the preceding independent-process loads were refused.
+            session_state = work / (engine + "-same-session.state")
+            session_state.unlink(missing_ok=True)
+            result = run(engine, pak, "same-session repeated loads with host descriptors",
+                         OBOR_GAMELOG="On", OBOR_SAVE_AT=120, OBOR_SAVE_STATE=session_state,
+                         OBOR_LOAD_AT=121, OBOR_LOAD_EVERY=10,
+                         OBOR_LOAD_STATE=session_state, OBOR_FD_PADDING=12, OBOR_RESET_AT=150)
+            if not re.search(r"saved state \(\d+ bytes\) at frame 120", result) or \
+                    re.findall(r"load state at frame \d+: (ok|FAILED)", result) != ["ok"] * 6:
+                raise RuntimeError("Same-session repeated state loads did not complete: " + result)
             result = run(engine, pak, "nine restarts release all files", frames=1000,
                          OBOR_RESET_EVERY=100)
             if result.count("reset at frame") != 9:

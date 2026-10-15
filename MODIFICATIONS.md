@@ -150,8 +150,9 @@ allocator; segment discovery, the snapshot arena claim and the crash reporter's
 module range use dyld through
 [`obor_macho.h`](src/port/libretro/obor_macho.h) instead of `dl_iterate_phdr`.
 The exported entry points are listed explicitly for `ld64` in
-[`exports.macho`](src/glue/exports.macho); dyld slides every image, so save
-states take the rebasing path rather than the fixed-image one.
+[`exports.macho`](src/glue/exports.macho). Because dyld can slide the image,
+cross-process states may be refused when its address changes; the unsafe
+pointer-guessing rebase path has been removed.
 
 ## Repeated weapon lists
 
@@ -824,8 +825,33 @@ validated by the reader's format and bounds, independently of the current
 writer's smaller capacity. Full sessions can open resource reconstruction
 services on demand to read a Smart state without changing their writer policy.
 
-All four combinations remain visible on every platform. A relocated Smart
-state is refused before modifying live engine memory; it is not automatically
-converted into a Full state. This limits cross-process Smart loads on macOS.
+All four combinations remain visible on every platform. A state whose module
+address changed is refused before modifying live engine memory, regardless of
+the writer. It is not automatically converted to another format. This
+temporarily limits cross-process Smart and Full loads on macOS.
 Authored runtime tests cover every profile and writer/reader combination,
 complete 200-frame image/PCM continuations and option latching through reset.
+
+### Refuse module relocation without exact pointer metadata
+
+The former Full-state rebase scanned aligned memory words for numbers inside
+the saved module range. Integer pairs can have the same representation as a
+pointer, so this cannot prove which values need relocation. Both Full and
+Smart now require the saved and current module bases to match on every
+platform, before resource staging, worker shutdown or live-memory writes.
+Same-base loads retain their existing checks and behavior. Tests shift the
+declared module and segment addresses in valid raw and compressed snapshots
+for all 13 profiles and four writers; rejection must leave 200 frames of
+image and complete PCM identical to uninterrupted playback. Cross-process
+tests distinguish an observed address change from any unexpected load failure.
+Every writer also restores within the same process after advancing 200 frames
+and must reproduce the original video and complete PCM, even on ASLR hosts.
+
+### Preserve non-UTF-8 bytes in linker maps
+
+Apple ld64 maps can contain literal bytes outside UTF-8. Runtime-storage
+auditing reads them with UTF-8 surrogate escapes, retaining every byte while
+parsing the ASCII object-origin records as before. Synthetic Mach-O maps
+include such bytes in symbols and paths, and still require rejection of
+forbidden static-runtime origins. These cases run in the builder preflight;
+SDK cross-links alone do not reproduce every native Apple linker behavior.

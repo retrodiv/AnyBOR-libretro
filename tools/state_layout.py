@@ -244,7 +244,10 @@ def audit_runtime_storage(binary, link_map):
     binary, link_map = Path(binary), Path(link_map)
     if link_map.stat().st_size > 64 << 20 or binary.stat().st_size > 256 << 20:
         raise ValueError('Runtime audit input exceeds its bound')
-    text = link_map.read_text()
+    # Apple ld64 may include literal __cstring bytes in its symbol listing.
+    # Preserve undecodable bytes, including those in object paths, without
+    # changing the ASCII [N] origin records used by the ownership audit.
+    text = link_map.read_text(encoding='utf-8', errors='surrogateescape')
     if text.startswith('# Path:'):
         origins = re.findall(r'^\[\s*\d+\]\s+(.+)$', text, re.M)
         linked = [name for name in origins if runtime_origin(name)]

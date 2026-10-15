@@ -26,11 +26,22 @@ python3 tools/regression.py
 python3 tools/regression.py --webm  # also requires host ffmpeg
 python3 tools/test_crt.py
 python3 tools/test_rewind.py
+python3 tools/test_state_options.py
 python3 tools/test_multiplayer.py
 python3 tools/test_6330_6510.py --core anybor_libretro.so
 python3 tools/test_animation_scripts.py --core anybor_libretro.so
 python3 tools/test_script_timestamps.py
 ```
+
+The state-option suite checks all 13 profiles, four writers and four readers,
+with 200-frame video and complete PCM comparisons. A valid snapshot whose
+declared module and segment addresses have moved must be refused in every
+mode without changing playback. Native cross-process tests read both snapshot
+headers: loads must succeed when the bases match and must explicitly refuse
+when they differ. This includes the temporary macOS ASLR limitation; an
+unexplained load failure never counts as success.
+Each writer must also restore successfully in the same process after 200
+frames of forward play and reproduce that continuation exactly.
 
 Linux CI runs the shared-profile checks automatically. The inline-script
 fixture allocates 260 padding animations, then requires a countdown to finish

@@ -86,7 +86,11 @@ Smart + On on Windows x86-64 and non-Android Linux x86-64/ARM64, and Full + Off
 on all other platforms. Full + Off may exceed a 256 MiB rewind buffer in large
 games. All combinations can be selected on every platform; see the
 [state compatibility limits](../README.md#save-states-and-rewind), including
-clean refusal of relocated Smart states on macOS.
+clean refusal whenever the core module address has changed, for both Smart
+and Full on every platform. The log reports `state module address differs`
+without changing the current game. macOS ASLR can therefore prevent loading
+in a new process; this is a temporary limitation until exact relocation is
+available. Same-session rewind and restoration remain available.
 
 Automatic selection uses filename version tags, nearby engine-version data
 and PAK content markers, with engine 6391 as the current fallback. An explicit

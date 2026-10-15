@@ -48,6 +48,7 @@ def dedicated_wine(enabled, parent=None):
 
 
 def main():
+    from test_state_options import state_head
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--core", default=str(DEFAULT_CORE))
     parser.add_argument("--host", help="use a precompiled test host")
@@ -87,7 +88,8 @@ def main():
             root.mkdir()
             env = {k: v for k, v in os.environ.items() if not k.startswith("OBOR_")}
             env.update(OBOR_ENGINE=engine, OBOR_STATE_CHECK="1",
-                       OBOR_FIXED_STATE_FRONTEND="1", OBOR_SKIP_LOADING="1")
+                       OBOR_FIXED_STATE_FRONTEND="1", OBOR_SKIP_LOADING="1",
+                       OBOR_SAVE_AT="179", OBOR_SAVE_STATE=target_path(root / "current.state"))
             if mode == "raw":
                 env["OBOR_COMPRESSED_STATES"] = "0"
             if not windows:
@@ -123,14 +125,25 @@ def main():
                 assert "post_unload_exception_safe=1" in log, log
                 if "OBOR_LOAD_AT" in options:
                     assert "host_process_runtime_preserved=1" in log, log
-            assert "FAILED" not in log and "MISMATCH" not in log, log
+            checked_log = log
+            if "OBOR_LOAD_AT" in options:
+                saved = state_head(options["OBOR_LOAD_STATE"])
+                current = state_head(root / "current.state")
+                if saved["image_lo"] != current["image_lo"]:
+                    # The current process must remain intact when ASLR moves
+                    # the module. Refusal is required for both state writers.
+                    marker = "load state at frame 120: FAILED"
+                    assert log.count(marker) == 1 and "state module address differs" in log, log
+                    checked_log = log.replace(marker, "expected displaced-module refusal")
+                    print("LIMIT", mode, engine, "cross-session module displaced; load refused", flush=True)
+                else:
+                    assert "load state at frame 120: ok" in log, log
+            assert "FAILED" not in checked_log and "MISMATCH" not in checked_log, log
             version = 1 if mode == "default" and (windows or sys.platform == "linux") else 7
             sizes = re.findall(r"state_contract version=" + str(version) + r" capacity=(\d+)", log)
             assert len(sizes) == 2 and sizes[0] == sizes[1] == initial.group(1), log
             if "OBOR_RAREWIND" in options:
                 assert log.count(" MATCH") == 7 and log.count(" NOREF") == 1, log
-            if "OBOR_LOAD_AT" in options:
-                assert "load state at frame 120: ok" in log, log
             print("PASS", mode, engine, name, "capacity=" + sizes[0], flush=True)
             return (root / "frame000180.ppm").read_bytes(), log
 

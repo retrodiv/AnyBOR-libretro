@@ -13,10 +13,9 @@
  *     to reconstruct the snapshot arena (obor_alloc.c)
  *
  * The arena lives at a fixed VA, so arena-internal pointers never relocate.
- * Pointers into the module image (function pointers, string literals) are
- * rebased on cross-session loads by scanning for values inside the saved
- * image span. The module image sits in high VA space, outside the range
- * used by integer values.
+ * Pointers into the module image require its original address. A numerical
+ * scan cannot distinguish pointers from scalar fields, so a displaced image
+ * is rejected before staging resources or modifying the current world.
  *
  * OS handles are the only things bytes can't capture:
  *   - pak file descriptors: obor_packfile_fixup() (patched into packfile.c
@@ -348,8 +347,7 @@ static int collect_segments(void)
  * mach_header_64 of the image that contains this code.  __DATA_CONST is
  * already read-only at that point (the Mach-O equivalent of PT_GNU_RELRO)
  * and is excluded by the segment permissions, exactly like the ELF path.
- * There is no fixed image address on Darwin: states are rebased on load by
- * rebase_range(), as on Android. */
+ * Darwin has no fixed image address; a changed base is refused on load. */
 static void macho_seg_cb(uint64_t lo, uint64_t hi, void *context)
 {
     (void)context;
@@ -922,36 +920,6 @@ static obor_resource_restore *state_resource_plan OBOR_RUNTIME;
 
 /* ------------------------------------------------------ unserialize ---- */
 
-/* Shift every stored pointer that falls in the save-time module range by
- * delta (cross-process load: the module lands at a new ASLR base).
- *
- * Scans at 4-BYTE granularity, not 8: the engine's script Instruction packs
- * its builtin-function pointer after 32-bit fields, so those pointers sit at
- * 4-byte-aligned-but-8-byte-misaligned offsets. A word-aligned scan skipped
- * them, leaving stale code pointers that crashed the interpreter on load for
- * script-heavy games (AoF Remix, Bad School Girls...). Unaligned access via
- * memcpy (safe on x86-64 and ARM64). After fixing a pointer we advance past
- * its 8 bytes so a straddling window can't re-shift it. */
-#if !defined(OBOR_FIXED_ELF_IMAGE) && !defined(OBOR_FIXED_PE_IMAGE)
-static void rebase_range(void *region, size_t nbytes, uint64_t old_lo,
-                         uint64_t old_hi, int64_t delta)
-{
-    uint8_t *b = (uint8_t *)region;
-    size_t i = 0;
-    while (i + 8 <= nbytes) {
-        uint64_t v;
-        memcpy(&v, b + i, 8);
-        if (v >= old_lo && v < old_hi) {
-            v = (uint64_t)((int64_t)v + delta);
-            memcpy(b + i, &v, 8);
-            i += 8;
-        } else {
-            i += 4;
-        }
-    }
-}
-#endif
-
 static int32_t unserialize_impl(const void *buf, uint32_t size, int *committed)
 {
     /* A target snapshot has no active workers: capture forbids them. Current
@@ -1022,17 +990,7 @@ static int32_t unserialize_impl(const void *buf, uint32_t size, int *committed)
     memcpy(saved, p, (size_t)h.nsegs * sizeof(seg_t));
     p += (size_t)h.nsegs * sizeof(seg_t);
 
-    /* layout must match modulo one common displacement */
-    int64_t delta;
-    if (g_image_lo >= h.image_lo) {
-        if (g_image_lo - h.image_lo > INT64_MAX)
-            return 0;
-        delta = (int64_t)(g_image_lo - h.image_lo);
-    } else {
-        if (h.image_lo - g_image_lo > INT64_MAX)
-            return 0;
-        delta = -(int64_t)(h.image_lo - g_image_lo);
-    }
+    /* Validate the saved relative layout before checking its absolute base. */
     for (int i = 0; i < g_nsegs; i++) {
         if (!saved[i].size ||
             saved[i].size > h.image_hi - h.image_lo ||
@@ -1043,26 +1001,14 @@ static int32_t unserialize_impl(const void *buf, uint32_t size, int *committed)
                 g_segs[i].vaddr - g_image_lo)
             return 0;
     }
-    /* Resource bodies cannot use the full writer's heuristic pointer rebase.
-     * Keep this preflight common to fixed and relocatable modules, before
-     * opening reconstruction resources or changing live engine memory. */
-    if (delta != 0 && (h.version == OBS_RESOURCE_VERSION ||
-        h.version == OBS_STABLE_RESOURCE_VERSION || h.version == OBS_ALIGNED_RESOURCE_VERSION)) {
-        fprintf(stderr, "[obor] resource state requires the original module address — rejected\n");
+    /* No snapshot carries a typed map of module pointers. Integer pairs can
+     * lie inside the same numerical range, so never infer pointers from bytes.
+     * This applies to every writer/platform, before staging or live mutation. */
+    if (h.image_lo != g_image_lo) {
+        fprintf(stderr, "[obor] state module address differs (saved=0x%llx current=0x%llx) — rejected\n",
+                (unsigned long long)h.image_lo, (unsigned long long)g_image_lo);
         return 0;
     }
-#if defined(OBOR_FIXED_ELF_IMAGE) || defined(OBOR_FIXED_PE_IMAGE)
-    /* This build deliberately has a stable PT_LOAD address so its stored
-     * code and static-data pointers need no inference.  A different address
-     * identifies a state made by an older ASLR build; reject it before
-     * touching live engine memory instead of heuristically rewriting every
-     * pointer-looking word in arbitrary game buffers. */
-    if (delta != 0) {
-        fprintf(stderr,
-                "[obor] state image base differs from fixed-address core — rejected\n");
-        return 0;
-    }
-#endif
     uint64_t total = prefix;
     if (!checked_add_u64(&total, segs_bytes()) ||
         !checked_add_u64(&total, OBOR_STACK_HEAD) || total > size)
@@ -1125,7 +1071,7 @@ static int32_t unserialize_impl(const void *buf, uint32_t size, int *committed)
     }
 
     if (debug_restore)
-        fprintf(stderr, "[obor] unserialize validated heap=%llu delta pending\n",
+        fprintf(stderr, "[obor] unserialize validated heap=%llu\n",
                 (unsigned long long)h.heap_len);
 
 #ifdef WEBM
@@ -1142,8 +1088,6 @@ static int32_t unserialize_impl(const void *buf, uint32_t size, int *committed)
             fprintf(stderr, "[obor-resources] restore_joined_current_movie=1\n");
     }
 #endif
-
-    int same_session = (h.boot_id == g_boot_id);
 
     /* Everything below runs while the module's own .data/.bss — including
      * this file's globals — is being overwritten with the saved image, so
@@ -1220,32 +1164,8 @@ static int32_t unserialize_impl(const void *buf, uint32_t size, int *committed)
     obor_test_fault_phase("load-heap");
     memcpy(stack_dst, stack_src, (size_t)h.stack_len);
 
-    if (!same_session && delta != 0) {
-#if !defined(OBOR_FIXED_ELF_IMAGE) && !defined(OBOR_FIXED_PE_IMAGE)
-        if (debug_restore)
-            fprintf(stderr, "[obor] unserialize rebasing segments and stacks delta=%lld\n",
-                    (long long)delta);
-        for (int i = 0; i < nsegs_l; i++)
-            rebase_range((void *)(uintptr_t)segs_l[i].vaddr,
-                         (size_t)segs_l[i].size, h.image_lo, h.image_hi, delta);
-        rebase_range(obor_stack_ptr(), OBOR_STACK_HEAD, h.image_lo,
-                     h.image_hi, delta);
-        rebase_range(stack_dst, (size_t)h.stack_len, h.image_lo, h.image_hi,
-                     delta);
-        if (debug_restore)
-            fprintf(stderr, "[obor] unserialize rebasing heap bytes=%llu\n",
-                    (unsigned long long)(h.arena_used - arena_pre));
-        rebase_range((void *)(uintptr_t)heap_lo(),
-                     (size_t)(h.arena_used - arena_pre),
-                     h.image_lo, h.image_hi, delta);
-        if (debug_restore)
-            fprintf(stderr, "[obor] unserialize heap rebase complete\n");
-#endif
-    }
-
-    /* repair this module's identity globals (they now hold save-time values;
-     * rebase already shifted the seg/image addresses, but boot id and size
-     * bound must reflect THIS session) */
+    /* Snapshot globals retain the saving process's identity. Keep the current
+     * session's boot id, segment table and capacity bookkeeping. */
     memcpy(g_segs, segs_l, sizeof(segs_l));
     g_nsegs = nsegs_l;
     g_image_lo = image_lo_l;

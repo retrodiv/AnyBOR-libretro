@@ -206,10 +206,13 @@ loaded with the same core build and content.
 
 The reader accepts states from all four combinations regardless of the current
 writer selection. The ordinary build, layout, content and resource checks still
-apply. Smart requires the module to be at its original address: on macOS, ASLR
-can therefore prevent a Smart state from loading in a different process.
-Such a state is rejected before changing the live game; Smart never silently
-switches to Full. Full states retain the existing module-rebasing path on macOS.
+apply. Both Smart and Full require the module to be at its original address.
+If its address changes on any platform, loading is refused with a
+`state module address differs` log message before changing the live game.
+The core does not guess which memory words are pointers or silently change
+the selected writer. This is a temporary limitation of cross-process save
+states on macOS, where ASLR can move the dylib. Same-session rewind and
+restoration do not require relocation and remain available.
 
 Loading a state retains the current session's content and writable-directory
 paths. Engine random-number state is captured with the world so external
