@@ -74,10 +74,19 @@ The macros account for the active character's facing direction.
 | Rumble | `obor_rumble` | **On**. Forwards game hit vibration. |
 | Special move macros (L2/R2/L3/R3) | `obor_macros` | **On**. Executes supported character move sequences. |
 | Engine build | `obor_engine` | **Auto**. Select an explicit compatibility profile when needed; changes apply on Restart. |
+| Save state content | `obor_state_content` | **Smart** reconstructs resources after an exact byte proof. **Full** retains complete engine memory. Applies when content is loaded. |
+| Save state compression | `obor_state_compression` | **On** compresses state blocks. **Off** leaves changed blocks uncompressed while retaining reuse of unchanged blocks. Applies when content is loaded. |
 | Forward game log | `obor_gamelog` | **Off**. Mirrors the engine log into the frontend log. |
 | Clear current game saved data on load | `obor_clear_local_data` | **Off**. In Development. Deletes the current game's entire `AnyBOR/<game>/` folder before loading, across all engine builds. |
 | Clear current game cache on unload | `obor_clear_game_cache` | **On**. In Development. Deletes the cache directories used by this game after unloading or closing the core. The next load rebuilds them; saved data is unaffected. |
 | Clear all game caches on load | `obor_clear_all_caches` | **On**. In Development. Empties `AnyBOR-cache/` before each load and before generating new cache files; saved data is unaffected. |
+
+The state options share the existing System category. Their defaults are
+Smart + On on Windows x86-64 and non-Android Linux x86-64/ARM64, and Full + Off
+on all other platforms. Full + Off may exceed a 256 MiB rewind buffer in large
+games. All combinations can be selected on every platform; see the
+[state compatibility limits](../README.md#save-states-and-rewind), including
+clean refusal of relocated Smart states on macOS.
 
 Automatic selection uses filename version tags, nearby engine-version data
 and PAK content markers, with engine 6391 as the current fallback. An explicit

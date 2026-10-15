@@ -5,9 +5,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-/* Share policy between the frontend's pre-boot size query and every engine.
- * Other targets retain their existing writer until equivalent reconstruction
- * and presentation checks have been completed there. */
+/* Share defaults between the frontend's pre-boot size query and every engine.
+ * Core options may select another writer when content is loaded. */
 #if (defined(_WIN32) && (defined(__x86_64__) || defined(_M_X64))) || \
     (defined(__linux__) && !defined(__ANDROID__) && \
      (defined(__x86_64__) || defined(__aarch64__)))
@@ -16,8 +15,34 @@
 #define OBOR_STATE_DEFAULT_ENABLED 0
 #endif
 
+#if OBOR_STATE_DEFAULT_ENABLED
+#define OBOR_STATE_CONTENT_DEFAULT "Smart"
+#define OBOR_STATE_COMPRESSION_DEFAULT "On"
+#define OBOR_STATE_CONTENT_VALUES "Smart|Full"
+#define OBOR_STATE_COMPRESSION_VALUES "On|Off"
+#else
+#define OBOR_STATE_CONTENT_DEFAULT "Full"
+#define OBOR_STATE_COMPRESSION_DEFAULT "Off"
+#define OBOR_STATE_CONTENT_VALUES "Full|Smart"
+#define OBOR_STATE_COMPRESSION_VALUES "Off|On"
+#endif
+
+/* Zero preserves the platform default for callers that do not provide core
+ * options. Each localized engine and the glue own a separate runtime copy;
+ * loading a state must never change the current session's writer selection. */
+enum { OBOR_STATE_SETTING_DEFAULT, OBOR_STATE_SETTING_ON, OBOR_STATE_SETTING_OFF };
+typedef struct { int content, compression; } obor_state_settings;
+extern obor_state_settings obor_state_session_settings;
+
+static inline int obor_state_setting_enabled(int setting)
+{
+    if (setting == OBOR_STATE_SETTING_ON) return 1;
+    if (setting == OBOR_STATE_SETTING_OFF) return 0;
+    return OBOR_STATE_DEFAULT_ENABLED;
+}
+
 /* Overrides are for diagnosis, not game selection. Invalid values retain the
- * platform policy. Explicit 0 permits unchanged-code ON/OFF comparisons. */
+ * selected policy. Explicit 0 permits unchanged-code ON/OFF comparisons. */
 static inline int obor_state_option(const char *name, int fallback)
 {
     const char *value = getenv(name);
@@ -28,13 +53,22 @@ static inline int obor_state_option(const char *name, int fallback)
 
 static inline int obor_state_coded_enabled(void)
 {
-    return obor_state_option("OBOR_COMPRESSED_STATES", OBOR_STATE_DEFAULT_ENABLED);
+    int content = obor_state_setting_enabled(obor_state_session_settings.content);
+    int compression = obor_state_setting_enabled(obor_state_session_settings.compression);
+    return obor_state_option("OBOR_COMPRESSED_STATES", content || compression);
 }
 
 static inline int obor_state_resources_enabled(void)
 {
     return obor_state_coded_enabled() &&
-        obor_state_option("OBOR_RESOURCE_STATES", OBOR_STATE_DEFAULT_ENABLED);
+        obor_state_option("OBOR_RESOURCE_STATES",
+            obor_state_setting_enabled(obor_state_session_settings.content));
+}
+
+static inline int obor_state_raw_mutable_enabled(void)
+{
+    return obor_state_option("OBOR_STATE_RAW_MUTABLE",
+        !obor_state_setting_enabled(obor_state_session_settings.compression));
 }
 
 static inline int obor_state_worker_watch_enabled(void)

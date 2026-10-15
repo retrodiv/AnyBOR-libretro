@@ -71,6 +71,8 @@ static retro_input_poll_t input_poll_cb;
 static retro_input_state_t input_state_cb;
 static retro_log_printf_t log_cb;
 
+obor_state_settings obor_state_session_settings OBOR_RUNTIME;
+
 static void fallback_log(enum retro_log_level level, const char *fmt, ...)
 {
     (void)level;
@@ -587,6 +589,22 @@ static bool opt_is_on(const char *key, bool defval)
     return defval;
 }
 
+static int state_option(const char *key, const char *on, const char *off)
+{
+    struct retro_variable var = { key, NULL };
+    if (env_cb && env_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value) {
+        if (!strcmp(var.value, on)) return OBOR_STATE_SETTING_ON;
+        if (!strcmp(var.value, off)) return OBOR_STATE_SETTING_OFF;
+    }
+    return OBOR_STATE_SETTING_DEFAULT;
+}
+
+static void load_state_options(void)
+{
+    obor_state_session_settings.content = state_option("obor_state_content", "Smart", "Full");
+    obor_state_session_settings.compression = state_option("obor_state_compression", "On", "Off");
+}
+
 /* Re-read the live-effect options (the engine option is only sampled at
  * load/reset by decide_engine). */
 static void refresh_options(void)
@@ -973,7 +991,7 @@ void retro_set_environment(retro_environment_t cb)
         static struct retro_core_option_v2_category cats[] = {
             { "video", "Video", "Video output." },
             { "input", "Input", "Controller behaviour." },
-            { "system", "System", "Engine selection." },
+            { "system", "System", "Engine and save state settings." },
             { "development", "Development", "Tools for exercising content." },
             { NULL, NULL, NULL },
         };
@@ -1012,6 +1030,22 @@ void retro_set_environment(retro_environment_t cb)
               ENGINE_OPT_INFO, NULL, "system",
               { { "Auto", "Auto (detect from pak)" }, { NULL, NULL } },
               "Auto" },
+            { "obor_state_content", "Save state content", "Save state content",
+              "Smart reconstructs resources whose bytes can be reproduced exactly. "
+              "Full stores complete engine memory. Changes apply when content is loaded. "
+              "The default depends on the platform. Full with compression Off may "
+              "exceed the rewind buffer in large games.",
+              NULL, "system",
+              { { "Smart", NULL }, { "Full", NULL }, { NULL, NULL } },
+              OBOR_STATE_CONTENT_DEFAULT },
+            { "obor_state_compression", "Save state compression", "Save state compression",
+              "On reduces state size. Off avoids compression work and can require "
+              "more rewind memory; unchanged blocks remain reusable. Changes apply "
+              "when content is loaded. The default depends on the platform. Full "
+              "content with compression Off may exceed the rewind buffer in large games.",
+              NULL, "system",
+              { { "On", NULL }, { "Off", NULL }, { NULL, NULL } },
+              OBOR_STATE_COMPRESSION_DEFAULT },
             { "obor_gamelog", "Forward game log",
               "Forward game log",
               "Mirror the game's OpenBorLog into the frontend log "
@@ -1068,6 +1102,8 @@ void retro_set_environment(retro_environment_t cb)
         { "obor_rumble", "Rumble; On|Off" },
         { "obor_macros", "Special move macros (L2/R2/L3/R3); On|Off" },
         { "obor_engine", values },
+        { "obor_state_content", "Save state content; " OBOR_STATE_CONTENT_VALUES },
+        { "obor_state_compression", "Save state compression; " OBOR_STATE_COMPRESSION_VALUES },
         { "obor_gamelog", "Forward game log; Off|On" },
         { "obor_clear_local_data", "Clear current game saved data on load; Off|On" },
         { "obor_clear_game_cache", "Clear current game cache on unload; On|Off" },
@@ -1204,6 +1240,8 @@ static bool boot_engine(void)
     boot.raw_dir = g_raw ? 1 : 0;
     boot.profile_build = (uint32_t)atoi(g_logical_engine);
     boot.resource_event = engine_resource_event;
+    boot.state_content = obor_state_session_settings.content;
+    boot.state_compression = obor_state_session_settings.compression;
     obor_engine_region regions[OBOR_MAX_ENGINE_REGIONS];
     const size_t n_eng = sizeof(kEngineDefs) / sizeof(kEngineDefs[0]);
     static_assert(sizeof(kEngineDefs) / sizeof(kEngineDefs[0]) <= OBOR_MAX_ENGINE_REGIONS,
@@ -2803,6 +2841,7 @@ static void loading_run(void)
 
 bool retro_load_game(const struct retro_game_info *info)
 {
+    load_state_options();
     g_error_active = false;
     g_error_reason[0] = '\0';
     g_error_path[0] = '\0';
@@ -2988,13 +3027,11 @@ bool retro_unserialize(const void *data, size_t size)
          * glue's own registers must survive the bulk restore */
         glue_regs r;
         glue_save(&r);
-        /* A fixed-capacity frontend can pass an older, larger manual state
-         * after the core has selected a smaller rewind-safe allocation.
-         * Reject it before restoring pointers from an incompatible module
-         * image. The frontend retains its current game on failure. */
+        /* The current writer's capacity is not a limit on readable states:
+         * a Full state can be larger than a Smart session's rewind transport.
+         * The engine validates binary identity, layout and every input range
+         * before writing live memory, independently of the selected writer. */
         ok = g_booted && size <= UINT32_MAX &&
-             (g_variable_state_size || !g_state_capacity ||
-              size <= g_state_capacity) &&
              p_unserialize(data, (uint32_t)size) == 1;
         if (getenv("OBOR_DEBUG"))
             fprintf(stderr, "[obor] engine unserialize returned ok=%d\n", ok);

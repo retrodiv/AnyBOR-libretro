@@ -280,7 +280,9 @@ static uint32_t update_coded(void *buffer, uint32_t size, int preparation)
         obor_write_watch_extend((size_t)rounded)) source.tracking = coded_epoch != 0;
 #endif
     uint64_t resource_begin = getenv("OBOR_STATE_TIMING") ? state_timing_now() : 0;
-    source.catalog = obor_resources_catalog();
+    /* A catalog opened to read a Smart state does not change a Full session's
+     * writer policy. Format selection follows the current load-time option. */
+    source.catalog = obor_state_resources_enabled() ? obor_resources_catalog() : NULL;
     if (source.catalog) {
         obor_video_prepare_state();
         uint32_t manifest_size;
@@ -321,7 +323,6 @@ static uint32_t update_coded(void *buffer, uint32_t size, int preparation)
     if (!source.catalog && !coded_add(&source, slice, stack_length, OBOR_STATE_BYTES)) return 0;
     uint64_t resource_end = resource_begin ? state_timing_now() : 0;
     const obor_block_source input = {&source, coded_read, coded_unchanged};
-    const char *raw_mutable = getenv("OBOR_STATE_RAW_MUTABLE");
     int initial_deflate = obor_state_option("OBOR_STATE_INITIAL_DEFLATE", OBOR_STATE_DEFAULT_ENABLED);
     const char *block_profile = getenv("OBOR_BLOCK_PROFILE");
     int pool_compact = obor_state_option("OBOR_STATE_POOL_COMPACT", OBOR_STATE_DEFAULT_ENABLED);
@@ -340,7 +341,7 @@ static uint32_t update_coded(void *buffer, uint32_t size, int preparation)
     /* Compact newly encountered blocks once, then use the fast codec for
      * mutable updates. Both choices preserve the complete engine bytes. */
     int encoded = source.catalog ?
-        (raw_mutable && !strcmp(raw_mutable, "1") ?
+        (obor_state_raw_mutable_enabled() ?
             obor_block_state_encode_mutable(coded_cache, &input, source.length) :
             initial_deflate ?
                 obor_block_state_encode(coded_cache, &input, source.length) :

@@ -27,7 +27,7 @@
 extern "C" {
 #endif
 
-#define OBOR_ABI_VERSION 9u
+#define OBOR_ABI_VERSION 10u
 
 #define OBOR_EXIT_MEMORY_FAULT (-2)
 enum { OBOR_RESOURCE_FILE_OPEN = 1, OBOR_RESOURCE_FILE_CLOSE,
@@ -105,6 +105,10 @@ typedef struct {
     uint32_t profile_build; /* logical identity; may share a physical engine */
     /* Frontend-owned resource ledger survives abandoning a damaged arena. */
     void (*resource_event)(uint32_t kind, uintptr_t handle);
+    /* Session writer options: 0 = platform default, 1 = Smart/On, 2 = Full/Off.
+     * Passed at boot; these frontend preferences are not part of a savestate. */
+    int32_t state_content;
+    int32_t state_compression;
 } obor_boot_info;
 
 /* Every function below is implemented by each linked engine object and wired

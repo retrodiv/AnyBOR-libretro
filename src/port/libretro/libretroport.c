@@ -17,6 +17,7 @@
 #endif
 #include "libretroport.h"
 #include "obor_runtime.h"
+#include "obor_state_config.h"
 #include "obor_paths.h"
 #include "obor_abi.h"
 #include "packfile.h"
@@ -39,6 +40,8 @@
 #endif
 
 #define FRAME_US 16667ULL
+
+obor_state_settings obor_state_session_settings OBOR_RUNTIME;
 
 /* Boot breadcrumbs to stderr, env-gated (the glue's obor_debug.log covers
  * everything OUTSIDE p_boot; these cover the inside). */
@@ -487,6 +490,8 @@ int32_t obor_boot(const obor_boot_info *info)
         !info->arena_reserved || !info->profile_build)
         return 0;
     obor_profile_build = info->profile_build;
+    obor_state_session_settings.content = info->state_content;
+    obor_state_session_settings.compression = info->state_compression;
     obor_arena_authorize(info->arena_reserved);
     char frontend_cwd[4096];
     if (!obor_getcwd(frontend_cwd, sizeof(frontend_cwd)))

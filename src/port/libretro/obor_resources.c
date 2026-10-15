@@ -56,6 +56,10 @@ typedef struct {
     char opened[OBOR_RESOURCE_RECIPE_PATH];
 } resource_context;
 static resource_context *resources OBOR_RUNTIME;
+/* Keep only the current content path when Full is selected. A Smart state
+ * may still need source materialization during a later load. This process
+ * context is deliberately outside both snapshot and pristine regions. */
+static char resource_path[4096] OBOR_RUNTIME; /* Same bound as the boot content path. */
 static const obor_resource_image_allocator resource_allocator = {__real_malloc, __real_free};
 
 /* Playback workers also free arena allocations. Protect their ownership
@@ -99,7 +103,7 @@ static int resource_read_at(void *opaque, uint64_t offset, void *out, size_t len
         resource_read(out, 1, length, file) == length;
 }
 
-void obor_resources_close(void)
+static void resource_context_close(void)
 {
     if (!resources) return;
     obor_resource_catalog_destroy(resources->catalog);
@@ -109,17 +113,24 @@ void obor_resources_close(void)
     if (resources->mutex_ready) pthread_mutex_destroy(&resources->mutex);
     __real_free(resources); resources = NULL;
 }
-void obor_resources_open(const char *path, int raw_directory)
+
+void obor_resources_close(void)
 {
-    obor_resources_close();
-    if (!path || raw_directory || !obor_state_resources_enabled()) return;
+    resource_context_close();
+    resource_path[0] = 0;
+}
+
+static int resource_context_open(void)
+{
+    if (resources) return 1;
+    if (!resource_path[0]) return 0;
     resources = __real_malloc(sizeof(*resources));
-    if (!resources) return;
+    if (!resources) return 0;
     memset(resources, 0, sizeof(*resources));
     if (pthread_mutex_init(&resources->mutex, NULL)) goto fail;
     resources->mutex_ready = 1;
     resource_clear_bitmaps();
-    resources->file = __real_fopen(path, "rb");
+    resources->file = __real_fopen(resource_path, "rb");
     if (!resources->file || resource_seek(resources->file, 0, SEEK_END)) goto fail;
     int64_t size = resource_tell(resources->file);
     if (size < 0) goto fail;
@@ -132,9 +143,20 @@ void obor_resources_open(const char *path, int raw_directory)
     resources->catalog = obor_resource_catalog_create(resources->materializer,
         &resource_allocator, obor_arena_base(), OBOR_ARENA_MAX_SZ);
     if (!resources->catalog) goto fail;
-    return;
+    return 1;
 fail:
+    resource_context_close();
+    return 0;
+}
+
+void obor_resources_open(const char *path, int raw_directory)
+{
     obor_resources_close();
+    if (!path || raw_directory) return;
+    size_t length = strnlen(path, sizeof(resource_path));
+    if (length >= sizeof(resource_path)) return;
+    memcpy(resource_path, path, length + 1);
+    if (obor_state_resources_enabled()) (void)resource_context_open();
 }
 void obor_resources_image_begin(void)
 { if (resources) { resource_lock(); resources->opened[0] = 0; resource_unlock(); } }
@@ -267,7 +289,7 @@ obor_resource_restore *obor_resources_prepare_restore_snapshot(const void *manif
         uint32_t size, uint32_t used, obor_resource_unchanged unchanged,
         void *context, int empty_cache, obor_resource_snapshot_read snapshot_read, void *snapshot)
 {
-    if (!resources) return NULL;
+    if (!resource_context_open()) return NULL;
     resource_lock();
     if (empty_cache) {
         obor_resource_materializer_clear(resources->materializer);

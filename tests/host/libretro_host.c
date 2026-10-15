@@ -21,6 +21,8 @@
  *   OBOR_GAMELOG=On|Off   set the Forward game log core option
  *   OBOR_CRT_TV=On|Off / OBOR_CRT_TOGGLE_AT=N   CRT option and live toggle
  *   OBOR_VIDEO_TRACE=1 / OBOR_OPTIONS_VERSION=0|2   video/option diagnostics
+ *   OBOR_HOST_STATE_CONTENT=Smart|Full / OBOR_HOST_STATE_COMPRESSION=On|Off
+ *   OBOR_SET_STATE_OPTIONS_AT=frame:Smart|Full:On|Off  frontend-only change
  *   OBOR_STOP_WIDTH=N / OBOR_RESET_WIDTH=N / OBOR_LOAD_WIDTH=N
  *       act on the first frame of width N (synthetic WebM regression)
  *   OBOR_LOAD_WIDTH_REPEAT=1..8   repeat that movie interruption
@@ -493,6 +495,12 @@ static bool env_cb(unsigned cmd, void *data)
                 if (!strcmp(def->key, "obor_crt_tv"))
                     printf("crt_option=%s category=%s default=%s\n",
                            def->desc, def->category_key, def->default_value);
+            for (def = opts->definitions; def->key; ++def)
+                if (!strcmp(def->key, "obor_state_content") ||
+                    !strcmp(def->key, "obor_state_compression"))
+                    printf("state_option=%s label=%s category=%s default=%s values=%s|%s\n",
+                           def->key, def->desc, def->category_key, def->default_value,
+                           def->values[0].value, def->values[1].value);
         }
         return true;
     }
@@ -520,6 +528,8 @@ static bool env_cb(unsigned cmd, void *data)
         if (!strcmp(storage_var->key, "obor_clear_local_data")) storage_env = "OBOR_CLEAR_LOCAL_DATA";
         if (!strcmp(storage_var->key, "obor_clear_game_cache")) storage_env = "OBOR_CLEAR_GAME_CACHE";
         if (!strcmp(storage_var->key, "obor_clear_all_caches")) storage_env = "OBOR_CLEAR_ALL_CACHES";
+        if (!strcmp(storage_var->key, "obor_state_content")) storage_env = "OBOR_HOST_STATE_CONTENT";
+        if (!strcmp(storage_var->key, "obor_state_compression")) storage_env = "OBOR_HOST_STATE_COMPRESSION";
         if (storage_env && getenv(storage_env)) {
             storage_var->value = getenv(storage_env);
             return true;
@@ -595,6 +605,10 @@ static bool env_cb(unsigned cmd, void *data)
             for (; var->key; ++var)
                 if (!strcmp(var->key, "obor_crt_tv"))
                     printf("crt_legacy=%s\n", var->value);
+            for (var = data; var->key; ++var)
+                if (!strcmp(var->key, "obor_state_content") ||
+                    !strcmp(var->key, "obor_state_compression"))
+                    printf("state_legacy=%s %s\n", var->key, var->value);
         }
         return true;
     case RETRO_ENVIRONMENT_GET_LOG_INTERFACE: {
@@ -1036,6 +1050,15 @@ int main(int argc, char **argv)
     int setopt_at = -1; char setopt_val[32] = "";
     if (getenv("OBOR_SET_ENGINE_AT"))
         sscanf(getenv("OBOR_SET_ENGINE_AT"), "%d:%31s", &setopt_at, setopt_val);
+    int stateopt_at = -1;
+    char state_content[16] = "", state_compression[16] = "";
+    if (getenv("OBOR_SET_STATE_OPTIONS_AT") &&
+        (sscanf(getenv("OBOR_SET_STATE_OPTIONS_AT"), "%d:%15[^:]:%15s",
+                &stateopt_at, state_content, state_compression) != 3 ||
+         stateopt_at < 0 ||
+         (strcmp(state_content, "Smart") && strcmp(state_content, "Full")) ||
+         (strcmp(state_compression, "On") && strcmp(state_compression, "Off"))))
+        return 2;
 
     /* OBOR_RAREWIND=START,COUNT: exercise RetroArch's capture/restore contract.
      * Push every OBOR_RAREWIND_EVERY frames (default 1); from START each iteration
@@ -1379,6 +1402,18 @@ int main(int argc, char **argv)
             g_var_dirty = 1;
             printf("core option obor_engine := %s at frame %d\n", setopt_val,
                    g_frame);
+        }
+        if (g_frame == stateopt_at) {
+#ifdef _WIN32
+            if (_putenv_s("OBOR_HOST_STATE_CONTENT", state_content) ||
+                _putenv_s("OBOR_HOST_STATE_COMPRESSION", state_compression)) return 1;
+#else
+            if (setenv("OBOR_HOST_STATE_CONTENT", state_content, 1) ||
+                setenv("OBOR_HOST_STATE_COMPRESSION", state_compression, 1)) return 1;
+#endif
+            g_var_dirty = 1;
+            printf("frontend_state_options=%s+%s frame=%d\n",
+                   state_content, state_compression, g_frame);
         }
         if (getenv("OBOR_CLEAR_TEST_FAULT_AT") &&
             g_frame == atoi(getenv("OBOR_CLEAR_TEST_FAULT_AT"))) {

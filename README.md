@@ -121,8 +121,22 @@ pacing in those setups. On Recalbox for Raspberry Pi 5, keep **Threaded Video =
 On**; disabling it made playback less smooth. Use the same video setting when
 comparing rewind on and off.
 
-Windows x86-64 and Linux x86-64/ARM64 use complete, independently loadable
-compressed states with a fixed 64 MiB libretro transport. This is the size of
+The **System** category offers **Save state content** (Smart / Full) and
+**Save state compression** (On / Off). Smart reconstructs resources only when
+their bytes can be reproduced exactly; Full retains complete engine memory.
+Compression Off leaves changed blocks uncompressed and keeps the reuse of
+unchanged blocks. These options apply when content is loaded; changing them
+during a session, resetting or loading a state does not change that session's
+writer. Diagnostic environment overrides retain priority.
+
+Defaults depend on the platform: Windows x86-64 and Linux x86-64/ARM64 use
+**Smart + On**; Android, macOS and other targets use **Full + Off**. These
+defaults preserve the previous platform policy. **Full + Off may not fit the
+256 MiB rewind buffer in large games.** The available duration and capture cost
+depend on the game, machine and selected combination.
+
+Smart, and Full with compression On, use complete, independently loadable
+states with a fixed 64 MiB libretro transport. This is the size of
 one serialized state, not additional rewind history. The frontend owns the
 history within its 256 MiB buffer. Its available duration depends on how much
 state changes: a large transition can shorten it substantially.
@@ -184,11 +198,18 @@ without scanning and modifying arbitrary game data after ASLR changes.
 An address collision fails safely. States from the older ASLR core are
 rejected before restoring engine memory; create new states with this build.
 
-Android and macOS retain the existing OBS v3 writer while the new resource
-path is validated on those targets. That writer sizes its fixed capacity from
+Full + Off uses the complete OBS writer, including the current binary-identity,
+runtime-storage and restoration fixes. It sizes its fixed capacity from
 packed content and measured heap peaks; content that outgrows its allowance
 requires a restart to use the learned peak. Save states should be made and
 loaded with the same core build and content.
+
+The reader accepts states from all four combinations regardless of the current
+writer selection. The ordinary build, layout, content and resource checks still
+apply. Smart requires the module to be at its original address: on macOS, ASLR
+can therefore prevent a Smart state from loading in a different process.
+Such a state is rejected before changing the live game; Smart never silently
+switches to Full. Full states retain the existing module-rebasing path on macOS.
 
 Loading a state retains the current session's content and writable-directory
 paths. Engine random-number state is captured with the world so external

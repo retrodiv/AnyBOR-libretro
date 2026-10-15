@@ -806,3 +806,26 @@ the current game merely because a descriptor matches. Output allocation tails
 remain ordinary bytes. Existing fixed state, resource-cache and staging limits
 are unchanged. Synthetic cases cover exact equality, modified pixels, source
 lifetime, incoming mutable data and atomic rejection of invalid descriptors.
+
+### Load-time state content and compression options
+
+Two options in the existing System category independently select resource
+reconstruction (Smart / Full) and compression (On / Off). Platform defaults
+remain Smart + On for Windows x86-64 and non-Android Linux x86-64/ARM64, and
+Full + Off elsewhere. Off with Smart uses the existing raw-mutable encoder;
+unchanged block proofs and reuse remain enabled. Full + Off uses the complete
+base writer with all common restoration and runtime-storage fixes.
+
+The glue samples both options only at content load and passes the selection
+through the engine boot ABI. The selection belongs to excluded session runtime
+storage, so reset and state restoration cannot overwrite it. Diagnostic
+environment variables retain their existing precedence. Incoming state size is
+validated by the reader's format and bounds, independently of the current
+writer's smaller capacity. Full sessions can open resource reconstruction
+services on demand to read a Smart state without changing their writer policy.
+
+All four combinations remain visible on every platform. A relocated Smart
+state is refused before modifying live engine memory; it is not automatically
+converted into a Full state. This limits cross-process Smart loads on macOS.
+Authored runtime tests cover every profile and writer/reader combination,
+complete 200-frame image/PCM continuations and option latching through reset.

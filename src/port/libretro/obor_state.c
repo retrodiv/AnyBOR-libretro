@@ -1043,6 +1043,14 @@ static int32_t unserialize_impl(const void *buf, uint32_t size, int *committed)
                 g_segs[i].vaddr - g_image_lo)
             return 0;
     }
+    /* Resource bodies cannot use the full writer's heuristic pointer rebase.
+     * Keep this preflight common to fixed and relocatable modules, before
+     * opening reconstruction resources or changing live engine memory. */
+    if (delta != 0 && (h.version == OBS_RESOURCE_VERSION ||
+        h.version == OBS_STABLE_RESOURCE_VERSION || h.version == OBS_ALIGNED_RESOURCE_VERSION)) {
+        fprintf(stderr, "[obor] resource state requires the original module address — rejected\n");
+        return 0;
+    }
 #if defined(OBOR_FIXED_ELF_IMAGE) || defined(OBOR_FIXED_PE_IMAGE)
     /* This build deliberately has a stable PT_LOAD address so its stored
      * code and static-data pointers need no inference.  A different address
@@ -1091,10 +1099,6 @@ static int32_t unserialize_impl(const void *buf, uint32_t size, int *committed)
     obor_resource_restore *resource_plan = NULL;
     if (h.version == OBS_RESOURCE_VERSION || h.version == OBS_STABLE_RESOURCE_VERSION ||
         h.version == OBS_ALIGNED_RESOURCE_VERSION) {
-        /* Resource bodies must not pass through the legacy heuristic module
-         * pointer rebaser. Current fixed-image targets have zero displacement;
-         * a displaced image needs an explicit mutable-pointer format first. */
-        if (delta != 0) return 0;
         coded_source tracking;
         if (worker_restore) memset(&tracking, 0, sizeof(tracking));
         else coded_restore_tracking(&tracking);

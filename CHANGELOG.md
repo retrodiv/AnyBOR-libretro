@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Add System options for save state content (Smart/Full) and compression (On/Off).
+  Apply selections at content load, retain platform defaults and diagnostic
+  overrides, and accept compatible states independently of the active writer.
+  Refuse relocated Smart states before changing the current game.
+
 - Keep statically linked process runtime storage outside game states and pristine
   reset images. Preserve thread/TLS registrations, exit handlers, locks and
   exception bookkeeping across cold loads; audit final link ownership and

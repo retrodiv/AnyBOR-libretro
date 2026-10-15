@@ -4,6 +4,7 @@
 #include "obor_resources.h"
 #include "obor_framebuffer_state.h"
 #include "obor_state_config.h"
+obor_state_settings obor_state_session_settings;
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -109,7 +110,7 @@ static void member_byte_provenance(void)
     obor_resources_member_bytes_loaded("data/sample.bin",44,arena+512,arena+512,64);
     obor_resources_clear_cache(); expect_catalog(3,sizeof(body)+128);
 }
-static void exercise(const char *path)
+static void exercise(const char *path, int full_reader)
 {
     obor_resources_open(path, 0); assert(obor_resources_catalog());
     memset(arena, 0x92, sizeof(arena)); memcpy(arena + 280, body, sizeof(body));
@@ -148,7 +149,14 @@ static void exercise(const char *path)
     /* Process teardown loses every catalog, origin and source-derived cache. */
     obor_resources_close(); assert(!image_test_live());
     memset(arena, 0x35, sizeof(arena));
-    obor_resources_open(path, 0); assert(obor_resources_catalog());
+    if (full_reader) {
+        unsetenv("OBOR_COMPRESSED_STATES"); unsetenv("OBOR_RESOURCE_STATES");
+        obor_state_session_settings.content = OBOR_STATE_SETTING_OFF;
+        obor_state_session_settings.compression = full_reader == 2 ?
+            OBOR_STATE_SETTING_ON : OBOR_STATE_SETTING_OFF;
+    }
+    obor_resources_open(path, 0);
+    assert(!!obor_resources_catalog() == !full_reader);
     obor_resource_restore *plan = obor_resources_prepare_restore(copy,
         length, sizeof(arena), NULL, NULL, 1); assert(plan);
     obor_resources_adopt(obor_resource_restore_commit(plan));
@@ -156,6 +164,14 @@ static void exercise(const char *path)
     assert(!memcmp(arena + 280, body, sizeof(body))); expect_catalog(3, sizeof(body)+128);
     for (unsigned i=0;i<64;++i) assert(arena[512+i]==44+i && arena[640+i]==44+i);
     assert(arena[576]==0x35 && arena[704]==0x35); /* Outside the resource body. */
+    if (full_reader) {
+        assert(!obor_state_resources_enabled());
+        assert(obor_state_coded_enabled() == (full_reader == 2));
+        assert(!setenv("OBOR_COMPRESSED_STATES", "1", 1));
+        assert(!setenv("OBOR_RESOURCE_STATES", "1", 1));
+        obor_state_session_settings.content = OBOR_STATE_SETTING_DEFAULT;
+        obor_state_session_settings.compression = OBOR_STATE_SETTING_DEFAULT;
+    }
     obor_resources_forget_owner(arena+512); obor_resources_forget_owner(arena+640);
     expect_catalog(1,sizeof(body));
     /* Origins from a later session must not survive a restore or reset. */
@@ -199,13 +215,14 @@ int main(int argc, char **argv)
     obor_resources_open(argv[1], 1); assert(!obor_resources_catalog());
     obor_resources_open("/nonexistent/anybor-resource-test", 0);
     assert(!obor_resources_catalog() && !image_test_live());
-    exercise(argv[1]); exercise(argv[1]); framebuffer_lifetime(argv[1]);
+    exercise(argv[1], 0); exercise(argv[1], 1); exercise(argv[1], 2);
+    framebuffer_lifetime(argv[1]);
     image_test_reset(0); obor_resources_open(argv[1], 0);
     size_t attempts = image_test_attempts(); obor_resources_close(); assert(!image_test_live());
     for (size_t failure = 1; failure <= attempts; ++failure) {
         image_test_reset(failure); obor_resources_open(argv[1], 0);
         obor_resources_close(); assert(!image_test_live());
     }
-    puts("engine_provenance=1 free_realloc_reuse=1 cold_source_restore=1 reset=1 allocation_failures=1");
+    puts("engine_provenance=1 free_realloc_reuse=1 cold_source_restore=1 reset=1 allocation_failures=1 full_reads_smart=1");
     return 0;
 }
