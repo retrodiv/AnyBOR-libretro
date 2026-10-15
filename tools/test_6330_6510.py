@@ -108,7 +108,11 @@ def main():
             state = work / (profile + '.state')
             log, _ = run(profile, pak, profile + '-save', OBOR_SAVE_AT=120, OBOR_SAVE_STATE=state)
             assert state.is_file() and 'saved state' in log, log
-            log, _ = run(profile, pak, profile + '-load', OBOR_LOAD_AT=120, OBOR_LOAD_STATE=state)
+            session_state = work / (profile + '-same-session.state')
+            log, _ = run(profile, pak, profile + '-load', OBOR_SAVE_AT=90,
+                         OBOR_SAVE_STATE=session_state, OBOR_LOAD_AT=120,
+                         OBOR_LOAD_STATE=session_state)
+            assert re.search(r'saved state \(\d+ bytes\) at frame 90\b', log), log
             assert 'load state at frame 120: ok' in log, log
             for other in PROFILES:
                 if other != profile:

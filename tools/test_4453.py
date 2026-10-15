@@ -103,7 +103,12 @@ def main():
         state = work / '4453.state'
         log, _ = run('4453', pak, '4453-save', OBOR_SAVE_AT=120, OBOR_SAVE_STATE=state)
         assert state.is_file() and 'saved state' in log, log
-        log, _ = run('4453', pak, '4453-load', OBOR_LOAD_AT=120, OBOR_LOAD_STATE=state)
+        # Require successful restoration even on ASLR hosts. Cross-profile
+        # refusal below still uses the original independently saved state.
+        session_state = work / '4453-same-session.state'
+        log, _ = run('4453', pak, '4453-load', OBOR_SAVE_AT=90, OBOR_SAVE_STATE=session_state,
+                     OBOR_LOAD_AT=120, OBOR_LOAD_STATE=session_state)
+        assert re.search(r'saved state \(\d+ bytes\) at frame 90\b', log), log
         assert 'load state at frame 120: ok' in log, log
         log, _ = run('4432', pak, '4432-reject-4453', OBOR_LOAD_AT=120, OBOR_LOAD_STATE=state)
         assert 'load state at frame 120: FAILED' in log, log

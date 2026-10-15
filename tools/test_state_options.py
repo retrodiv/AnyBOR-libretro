@@ -22,6 +22,7 @@ import make_fixture
 import release
 from smoke import compile_host
 from test_rewind import DEFAULT_CORE, dedicated_wine
+from runtime_evidence import record_process
 
 MODES = (("Smart", "On"), ("Smart", "Off"), ("Full", "On"), ("Full", "Off"))
 
@@ -113,14 +114,19 @@ def state_head(path):
 
 
 def relocated_state(source, destination):
-    """Preserve a valid block envelope but move its declared module/segments.
+    """Preserve a valid envelope but declare an impossible zero-based module.
 
     This specifically exercises the address preflight, not CRC rejection.
-    The original checkpoint is never changed.
+    A small displacement could coincide with a new process's ASLR base: its
+    unchanged pointers would then be accepted under a false module identity.
+    A running shared core cannot occupy address zero. Keep relative segment
+    offsets and the image extent valid, and never change the original file.
     """
     header = state_head(source)
     if header["version"] not in (7, 9):
         raise ValueError("expected Full or Smart state")
+    if not 0 < header["image_lo"] < header["image_hi"]:
+        raise ValueError("expected a nonzero source module")
     shutil.copyfile(source, destination)
     with destination.open("r+b") as stream:
         stream.seek(8)
@@ -150,7 +156,9 @@ def relocated_state(source, destination):
             raise ValueError("invalid relocation source table")
         for field in (24, 32, *(112 + n * 16 for n in range(segments))):
             value, = struct.unpack_from("<Q", block, field)
-            struct.pack_into("<Q", block, field, value + 0x10000)
+            if not header["image_lo"] <= value <= header["image_hi"]:
+                raise ValueError("invalid relocation source address")
+            struct.pack_into("<Q", block, field, value - header["image_lo"])
         if not compressed:
             stream.seek(8)
             stream.write(block)
@@ -234,9 +242,13 @@ def main():
                 env["OBOR_CHECK_FDS"] = "1"
             env.update({k: target(v) if isinstance(v, Path) else str(v) for k, v in options.items()})
             nframes = 521 if same_session else 321
+            source = options.get('OBOR_LOAD_STATE')
+            input_header = state_head(Path(source)) if source and Path(source).exists() else None
             result = subprocess.run(shlex.split(args.runner) + [str(host), target(core), target(pak),
                 target(root), str(nframes)], env=env, cwd=work, text=True, stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE, timeout=90)
+            record_process('state-options', profile + '-' + label, result,
+                           dict(mode=mode, input_header=input_header))
             log = result.stdout + result.stderr
             if result.returncode or "frames=" + str(nframes) + " " not in log or "invalid_version_and_truncation_rejected=1" not in log:
                 raise RuntimeError(label + ": " + log)

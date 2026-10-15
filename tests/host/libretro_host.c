@@ -35,9 +35,16 @@
  *   OBOR_CHECK_UNLOAD_EXCEPTIONS=1  Windows: dispatch a handled exception after FreeLibrary
  *   OBOR_CHECK_FDS=1   require the POSIX descriptor count to return to baseline
  *   OBOR_FD_PADDING=N  keep N host files open to shift core descriptor numbers
+ *   ANYBOR_TEST_RESERVE_MODULE_BASE=address  occupy a preferred image page safely
  *
  * Prints: frames=N last=WxH nonblack_max=N audio_energy=N
  */
+#ifndef _GNU_SOURCE
+#define _GNU_SOURCE 1
+#endif
+#ifndef _DARWIN_C_SOURCE
+#define _DARWIN_C_SOURCE 1
+#endif
 #ifdef _WIN32
 #include "dlfcn_win.h"
 #include <direct.h>
@@ -817,6 +824,20 @@ int main(int argc, char **argv)
     struct sigaction saved_signals[5];
     for (int i = 0; i < 5; ++i) sigaction(check_signals[i], NULL, &saved_signals[i]);
     unsigned char *occupied = NULL;
+    unsigned char *occupied_module = NULL;
+    const char *module_reservation = getenv("ANYBOR_TEST_RESERVE_MODULE_BASE");
+    if (module_reservation) {
+        char *end = NULL;
+        errno = 0;
+        unsigned long long address = strtoull(module_reservation, &end, 0);
+        if (errno || !end || *end || !address || address > UINTPTR_MAX ||
+            (address & 4095)) return 2;
+        occupied_module = reserve_host_range((void *)(uintptr_t)address, 4096,
+                                            PROT_READ | PROT_WRITE);
+        if (occupied_module != (void *)(uintptr_t)address) return 2;
+        memset(occupied_module, 0xa5, 4096);
+        printf("host_reserved_module_base=0x%llx\n", address);
+    }
     if (getenv("OBOR_OCCUPIED_ARENA")) {
         occupied = reserve_host_range((void *)OBOR_ARENA_BASE_VA, 4096,
                                       PROT_READ | PROT_WRITE);
@@ -906,6 +927,19 @@ int main(int argc, char **argv)
         fprintf(stderr, "core lacks retro_* symbols\n");
         return 1;
     }
+#ifdef _WIN32
+    HMODULE module_base = NULL;
+    if (!GetModuleHandleExA(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS |
+                           GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
+                           (LPCSTR)p_retro_run, &module_base) || !module_base) return 1;
+    fprintf(stderr, "host_core_module_base=0x%llx\n",
+            (unsigned long long)(uintptr_t)module_base);
+#else
+    Dl_info module_info;
+    if (!dladdr((const void *)p_retro_run, &module_info) || !module_info.dli_fbase) return 1;
+    fprintf(stderr, "host_core_module_base=0x%llx\n",
+            (unsigned long long)(uintptr_t)module_info.dli_fbase);
+#endif
     if (getenv("OBOR_DEBUG"))
         fprintf(stderr, "core retro_run=%p\n", (void *)p_retro_run);
 
@@ -1586,6 +1620,11 @@ int main(int argc, char **argv)
     }
     munmap(probe, OBOR_ARENA_MAX_SZ);
     puts("handlers_restored=1 arena_released=1");
+    if (occupied_module) {
+        for (int i = 0; i < 4096; ++i) if (occupied_module[i] != 0xa5) return 1;
+        if (munmap(occupied_module, 4096)) return 1;
+        puts("host_module_reservation_preserved=1");
+    }
     if (getenv("OBOR_LIFECYCLE")) {
         unsetenv("OBOR_LIFECYCLE");
         g_nonblack_max = 0; g_audio_energy = 0; g_shutdown = 0;

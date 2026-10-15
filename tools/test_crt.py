@@ -14,6 +14,8 @@ from pathlib import Path
 import make_fixture
 import release
 import crt_reference
+import re
+from runtime_evidence import record_process
 
 DEFAULT_CORE = release.ROOT / ("anybor_libretro.dylib" if sys.platform == "darwin"
                                else "anybor_libretro.so")
@@ -48,10 +50,15 @@ def main():
             env = {k: v for k, v in os.environ.items() if not k.startswith("OBOR_")}
             env.update(OBOR_ENGINE=engine, OBOR_VIDEO_TRACE="1", OBOR_CHECK_FDS="1")
             env.update({key: str(value) for key, value in options.items()})
-            result = subprocess.check_output([
+            if options.get("OBOR_SAVE_STATE"):
+                Path(options["OBOR_SAVE_STATE"]).unlink(missing_ok=True)
+            process = subprocess.run([
                 str(host), str(core), str(pak), str(system), "180", str(system / "frame")],
-                env=env, cwd=str(work), stderr=subprocess.STDOUT,
-                universal_newlines=True, timeout=60)
+                env=env, cwd=str(work), capture_output=True, text=True, timeout=60)
+            record_process('crt', engine + '-' + label, process)
+            result = process.stdout + process.stderr
+            if process.returncode:
+                raise RuntimeError(label + ': ' + result)
             for marker in ("frames=180 last=" + expected, "cwd_restored=1",
                            "file_descriptors_restored=1"):
                 assert marker in result, label + ": " + result
@@ -62,7 +69,8 @@ def main():
             if options.get("OBOR_LOAD_AT"):
                 assert "load state at frame 120: ok" in result, result
             if options.get("OBOR_SAVE_AT"):
-                assert "saved state" in result, result
+                assert re.search(r"saved state \(\d+ bytes\) at frame " +
+                                 str(options["OBOR_SAVE_AT"]) + r"\b", result), result
             if options.get("OBOR_OPTIONS_VERSION") == 2:
                 assert "category_order=Video|Input|System" in result, result
                 assert "video_category=Video" in result, result
@@ -94,11 +102,16 @@ def main():
             result, _ = run(engine, pak, "toggle-on", "640x480", OBOR_CRT_TOGGLE_AT=100,
                             OBOR_RESET_AT=140)
             assert "geometry=640x480 aspect=1.333333 frame=100" in result, result
+            # Restore a real earlier CRT-on state in this process. A new
+            # process may have a different module base and must refuse it;
+            # independent-process refusal is covered by the state suites.
             result, _ = run(engine, pak, "toggle-off-load-crt-state", "480x272",
                             OBOR_CRT_TV="On", OBOR_CRT_TOGGLE_AT=100,
+                            OBOR_SAVE_AT=90, OBOR_SAVE_STATE=state,
                             OBOR_LOAD_AT=120, OBOR_LOAD_STATE=state, OBOR_RESET_AT=140)
             assert "geometry=480x272 aspect=1.764706 frame=100" in result, result
             run(engine, pak, "load-crt-state", "640x480", OBOR_CRT_TV="On",
+                OBOR_SAVE_AT=90, OBOR_SAVE_STATE=state,
                 OBOR_LOAD_AT=120, OBOR_LOAD_STATE=state, OBOR_RESET_AT=140)
             members.pop("data/video.txt")
             make_fixture.write_pak(pak, members)
@@ -154,11 +167,13 @@ def main():
                 assert toggled == adapted
                 result, toggled = run("6412", pak, label + "-toggle-off-load", native_size,
                                       OBOR_CRT_TV="On", OBOR_CRT_TOGGLE_AT=100,
+                                      OBOR_SAVE_AT=90, OBOR_SAVE_STATE=state,
                                       OBOR_LOAD_AT=120, OBOR_LOAD_STATE=state, OBOR_RESET_AT=140)
                 assert "geometry=320x180 aspect=1.777778 frame=100" in result, result
                 assert toggled == native
                 _, restored = run("6412", pak, label + "-load", output_size,
-                                  OBOR_CRT_TV="On", OBOR_LOAD_AT=120, OBOR_LOAD_STATE=state)
+                                  OBOR_CRT_TV="On", OBOR_SAVE_AT=90, OBOR_SAVE_STATE=state,
+                                  OBOR_LOAD_AT=120, OBOR_LOAD_STATE=state)
                 assert restored == adapted
         # Explicit fitted rectangles exercise either size limit independently,
         # the exact boundary, and wide/square/portrait output without cropping.
