@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Preserve live process TLS indices when loading states built with emulated
+  thread-local storage. Exclude compiler-generated control descriptors even
+  when they are emitted inside an engine object, and audit the final layout.
+
 - Return to the frontend between newly completed models during model-list and
   level preparation, including nested loads. Defer save/load callbacks until
   preparation cleans up, and preserve ordinary scripted gameplay loads.

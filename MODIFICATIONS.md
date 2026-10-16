@@ -789,6 +789,15 @@ that the first32 bytes of `.bss` belonged to the CRT is removed.
 Darwin excludes loader binding tables, constructor tables and TLS sections by
 their Mach-O ABI section types, preserving ordinary initialized data and BSS.
 
+Compiler-generated emulated-TLS controls also belong to the current process,
+including those emitted alongside engine code rather than inside a runtime
+archive. The linker classifies their ABI input-section family into `obor_rt`;
+the final-image audit applies the same classification. Their slot indices must
+remain associated with the current runtime's per-thread allocations. A bounded
+two-process regression initializes TLS objects in opposite orders and verifies
+that restoring engine data preserves those associations. It exercises real
+GNU ld and LLD layouts while retaining ordinary game globals in the state.
+
 Every final build audits allocated link-map inputs against the actual image
 ranges, refusing captured process runtime storage. Darwin targets use external
 libSystem and no static language runtime; the gate refuses an unexpected static

@@ -34,7 +34,8 @@ def write_bss_script(path, engines, *, pe=False):
     # These archives/startup objects implement the host language/OS runtime,
     # not game logic. Their mutable pointers, handlers, TLS keys, exit tables,
     # locks and exception pools must survive reset and cross-process loads.
-    # Match object provenance, never individual symbol names or toolchain ABI.
+    # Classify linked runtime archives by object provenance. Compiler-emitted
+    # process metadata inside engine objects is handled separately below.
     runtime_archives, runtime_objects = RUNTIME_ARCHIVES, RUNTIME_OBJECTS
     alignment = '__section_alignment__' if pe else '64'
     lines += ['  obor_rt ALIGN(' + alignment + ') : {']
@@ -55,6 +56,14 @@ def write_bss_script(path, engines, *, pe=False):
     sections = ' '.join(data + ['.bss', '.bss.*', '.sdata', '.sdata.*',
                                  '.sbss', '.sbss.*'] +
                         (['.bss$*', '.sdata$*', '.sbss$*'] if pe else []) + ['COMMON'])
+    # Emulated-TLS controls are compiler process metadata, even when emitted
+    # alongside engine code. Their mutable TLS indexes are not game globals.
+    # Explicit input-file selectors retain precedence over the default .data.*
+    # rule in GNU ld; LLD honors the same rule. Match the ABI storage class,
+    # never an individual TLS variable or a numerical pointer value.
+    for obj in engines:
+        lines += ['    ' + json.dumps(str(obj), ensure_ascii=False) +
+                  '(' + ' '.join(EMULATED_TLS_INPUTS) + ')']
     for archive in runtime_archives:
         lines += ['    *' + archive + ':*(' + sections + ')']
     for obj in runtime_objects:
@@ -72,6 +81,12 @@ RUNTIME_ARCHIVES = ('libpthread.a', 'libwinpthread.a', 'libgcc.a', 'libgcc_eh.a'
     'libunwind.a', 'libclang_rt.*.a', 'libmingw32.a', 'libmingwex.a',
     'libmoldname.a', 'libmsvcrt.a', 'libucrt.a', 'libucrtbase.a')
 RUNTIME_OBJECTS = ('dllcrt2.o', 'crt2.o', 'crtbegin*.o', 'crtend*.o', 'crti.o', 'crtn.o')
+EMULATED_TLS_INPUTS = ('.data*__emutls_v.*', '.sdata*__emutls_v.*')
+
+
+def emulated_tls_input(section):
+    import fnmatch
+    return any(fnmatch.fnmatchcase(section, pattern) for pattern in EMULATED_TLS_INPUTS)
 
 
 def runtime_origin(origin):
@@ -261,7 +276,7 @@ def audit_runtime_storage(binary, link_map):
     for section, address, size, origin in gnu_map_inputs(text):
         overlaps = [(max(address, lo), min(address+size, hi)) for lo, hi in captured
                     if address < hi and lo < address+size]
-        if not runtime_origin(origin):
+        if not runtime_origin(origin) and not emulated_tls_input(section):
             if '.a(' in origin and overlaps:
                 raise ValueError('Unclassified mutable archive input enters the state: '+origin+' '+section)
             continue
