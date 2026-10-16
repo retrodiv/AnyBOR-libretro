@@ -9,10 +9,13 @@
 #include "obor_prepare_sync.h"
 
 struct obor_transform_buffers {
-    unsigned char *input, *output;
-    size_t size;
-    obor_transform_buffers() : input(NULL), output(NULL), size(0) {}
-    ~obor_transform_buffers() { free(input); free(output); }
+    unsigned char *input;
+    obor_transform_result result;
+    obor_transform_buffers() : input(NULL), result() {}
+    ~obor_transform_buffers() {
+        obor_content_transform_result_release(&result);
+        free(input);
+    }
 };
 
 /* Generic byte preparation followed by the ordinary PACK validator. No
@@ -58,16 +61,16 @@ static bool obor_packed_prepare(const char *source, const char *save_dir,
         /* The external program's running time is unknown: hold this phase
          * until it returns instead of fabricating progress from its clock. */
         obor_prepare_stage(progress, 100, 200, 0);
-        if (ok) ok = obor_content_transform_execute(transform.program, transform.program_size,
+        if (ok) ok = obor_content_transform_execute_view(transform.program, transform.program_size,
             transform.parameters, transform.parameter_size, buffers.input, (size_t)bytes, NULL, 0, 0,
-            &buffers.output, &buffers.size, error, sizeof(error)) != 0;
+            &buffers.result, error, sizeof(error)) != 0;
         if (!ok) {
             fclose(input);
             log_cb(RETRO_LOG_ERROR, "[OpenBOR] Content preparation failed: %s\n",
                    error[0] ? error : "cannot read transform input");
             return false;
         }
-        if (buffers.size == (size_t)bytes && !memcmp(buffers.input, buffers.output, buffers.size)) {
+        if (buffers.result.size == (size_t)bytes && !memcmp(buffers.input, buffers.result.data, buffers.result.size)) {
             repair = obor_pak_repair_detect(input, &bias) != 0;
             if (!repair) {
                 /* The transform declined this input. Keep the ordinary
@@ -94,7 +97,8 @@ static bool obor_packed_prepare(const char *source, const char *save_dir,
         }
         obor_sha256_final(&hash, digest);
         for (unsigned i = 0; i < 32; ++i) snprintf(source_hash + 2*i, 3, "%02x", digest[i]);
-        free(buffers.input); buffers.input = NULL;
+        /* An unchanged slice still borrows the input until publication. */
+        if (buffers.result.owned) { free(buffers.input); buffers.input = NULL; }
         obor_transform_identity(transform, config_hash);
     } else {
         obor_prepare_stage(progress, 0, 200, bytes);
@@ -124,17 +128,17 @@ static bool obor_packed_prepare(const char *source, const char *save_dir,
     bool ok = false;
     obor_prepare_stage(progress, transform.program ? 350 : 200,
                        transform.program ? 500 : 400,
-                       (header_repair || repair) ? (uint64_t)bytes : buffers.size);
+                       (header_repair || repair) ? (uint64_t)bytes : buffers.result.size);
     if (header_repair) {
         ok = obor_pak_repair_header(input, output) != 0;
     } else if (repair) {
         ok = obor_pak_repair_bias(input, output, bias) != 0;
     } else {
         ok = true;
-        for (size_t offset = 0; ok && offset < buffers.size;) {
-            size_t chunk = buffers.size - offset;
+        for (size_t offset = 0; ok && offset < buffers.result.size;) {
+            size_t chunk = buffers.result.size - offset;
             if (chunk > 65536) chunk = 65536;
-            ok = fwrite(buffers.output + offset, 1, chunk, output) == chunk;
+            ok = fwrite(buffers.result.data + offset, 1, chunk, output) == chunk;
             if (ok) { obor_prepare_advance(chunk); ok = obor_prepare_checkpoint(); }
             offset += chunk;
         }

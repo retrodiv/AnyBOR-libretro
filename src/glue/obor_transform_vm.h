@@ -40,6 +40,16 @@ enum {
 #ifdef __cplusplus
 extern "C" {
 #endif
+/* A view borrows unchanged input until release, or owns its allocation.
+ * The caller must keep input alive while a borrowed result is in use. */
+typedef struct obor_transform_result {
+  const uint8_t *data;
+  size_t size;
+  uint8_t *owned;
+} obor_transform_result;
+int obor_content_transform_execute_view(const void *,size_t,const void *,size_t,const void *,size_t,const void *,size_t,uint64_t,obor_transform_result *,char *,size_t);
+void obor_content_transform_result_release(obor_transform_result *);
+/* This compatibility API always returns independently owned output. */
 int obor_content_transform_execute(const void *,size_t,const void *,size_t,const void *,size_t,const void *,size_t,uint64_t,uint8_t **,size_t *,char *,size_t);
 int obor_content_transform_compile(const char *,size_t,size_t *,uint8_t **,size_t *,uint8_t **,size_t *,char *,size_t);
 #ifdef __cplusplus

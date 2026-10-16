@@ -41,26 +41,24 @@ static int valid_program(const uint8_t *code,size_t size){
   return 1;
 }
 
-int obor_content_transform_execute(const void *program,size_t program_size,
+int obor_content_transform_execute_view(const void *program,size_t program_size,
                                      const void *parameters,size_t parameter_size,
                                      const void *input,size_t input_size,
                                      const void *metadata,size_t metadata_size,uint64_t step_limit,
-                                     uint8_t **output,size_t *output_size,
+                                     obor_transform_result *output,
                                      char *error,size_t error_size){
   if(error && error_size) error[0]=0;
-  if(output) *output=NULL;
-  if(output_size) *output_size=0;
-  if(!output || !output_size || (input_size && !input) ||
+  if(output) memset(output,0,sizeof(*output));
+  if(!output || (input_size && !input) ||
      (parameter_size && !parameters) || input_size>OBOR_TRANSFORM_MAX_INPUT_BYTES ||
      (metadata_size && !metadata) || metadata_size>OBOR_TRANSFORM_MAX_METADATA_BYTES ||
      parameter_size>OBOR_TRANSFORM_MAX_PARAMETER_BYTES ||
      !valid_program((const uint8_t*)program,program_size))
     return fail(error,error_size,"invalid program or buffer");
-  uint8_t *work=(uint8_t*)malloc(input_size?input_size:1u);
+  uint8_t *work=NULL;
   uint8_t *scratch=(uint8_t*)calloc(OBOR_TRANSFORM_SCRATCH_BYTES,1u);
-  if(!work || !scratch){ free(work); free(scratch); return fail(error,error_size,"allocation failed"); }
-  if(input_size) memcpy(work,input,input_size);
-  const uint8_t *memory[5]={(const uint8_t*)input,work,(const uint8_t*)parameters,scratch,metadata};
+  if(!scratch) return fail(error,error_size,"allocation failed");
+  const uint8_t *memory[5]={(const uint8_t*)input,(const uint8_t*)input,(const uint8_t*)parameters,scratch,metadata};
   size_t lengths[5]={input_size,input_size,parameter_size,OBOR_TRANSFORM_SCRATCH_BYTES,metadata_size};
   uint64_t registers[32]={0};
   registers[0]=input_size; registers[1]=parameter_size;
@@ -77,11 +75,18 @@ int obor_content_transform_execute(const void *program,size_t program_size,
     uint64_t imm=read_le(p+4,8),left=registers[a],right=registers[b];
     switch(op){
       case OBOR_TRANSFORM_RETURN: {
-        uint8_t *result=d?scratch:work;
+        const uint8_t *result=d?scratch:memory[1];
         size_t capacity=d?OBOR_TRANSFORM_SCRATCH_BYTES:input_size;
         if(left>capacity || right>capacity-left){ reason="invalid result slice"; goto rejected; }
-        if(right) memmove(result,result+(size_t)left,(size_t)right);
-        free(d?work:scratch); *output=result; *output_size=(size_t)right; return 1;
+        output->owned=d?scratch:work;
+        if(output->owned){
+          if(right) memmove(output->owned,result+(size_t)left,(size_t)right);
+          output->data=output->owned;
+        } else {
+          output->data=left?result+(size_t)left:result;
+        }
+        output->size=(size_t)right;
+        free(d?work:scratch); return 1;
       }
       case OBOR_TRANSFORM_REJECT: reason="program rejected input"; goto rejected;
       case OBOR_TRANSFORM_CONSTANT: registers[d]=imm; break;
@@ -116,6 +121,12 @@ int obor_content_transform_execute(const void *program,size_t program_size,
         }
         if(op<=OBOR_TRANSFORM_LOAD64) registers[d]=read_le(memory[b]+(size_t)address,width);
         else {
+          if(b==1 && !work){
+            work=(uint8_t*)malloc(input_size?input_size:1u);
+            if(!work){ reason="allocation failed"; goto rejected; }
+            if(input_size) memcpy(work,input,input_size);
+            memory[1]=work;
+          }
           uint8_t *destination=b==1?work:scratch;
           for(unsigned i=0;i<width;i++) destination[(size_t)address+i]=(uint8_t)(registers[d]>>(8u*i));
         }
@@ -128,4 +139,33 @@ int obor_content_transform_execute(const void *program,size_t program_size,
   }
 rejected:
   free(work); free(scratch); return fail(error,error_size,reason);
+}
+
+void obor_content_transform_result_release(obor_transform_result *result){
+  if(result){ free(result->owned); memset(result,0,sizeof(*result)); }
+}
+
+int obor_content_transform_execute(const void *program,size_t program_size,
+                                     const void *parameters,size_t parameter_size,
+                                     const void *input,size_t input_size,
+                                     const void *metadata,size_t metadata_size,uint64_t step_limit,
+                                     uint8_t **output,size_t *output_size,
+                                     char *error,size_t error_size){
+  if(error && error_size) error[0]=0;
+  if(output) *output=NULL;
+  if(output_size) *output_size=0;
+  if(!output || !output_size) return fail(error,error_size,"invalid program or buffer");
+  obor_transform_result result;
+  if(!obor_content_transform_execute_view(program,program_size,parameters,parameter_size,
+      input,input_size,metadata,metadata_size,step_limit,&result,error,error_size)) return 0;
+  uint8_t *owned=result.owned;
+  if(!owned){
+    owned=(uint8_t*)malloc(result.size?result.size:1u);
+    if(!owned){ obor_content_transform_result_release(&result); return fail(error,error_size,"allocation failed"); }
+    if(result.size) memcpy(owned,result.data,result.size);
+  }
+  *output=owned; *output_size=result.size;
+  result.owned=NULL;
+  obor_content_transform_result_release(&result);
+  return 1;
 }

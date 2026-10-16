@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Copy the transform work buffer only when an external program writes to it.
+  Keep unchanged input slices alive through preparation without a second full
+  archive allocation, preserving the configured program's buffer semantics.
+
 - Enable supported macOS snapshot policies, including guarded dirty-page
   tracking, advance preparation, bounded pool maintenance and the synchronous
   encoder helper. Retain native Windows write tracking across classic decoder

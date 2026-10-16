@@ -116,7 +116,9 @@ initialized `uint64_t` variables, assignments, `if`/`else`, `while`, `for`, `bre
 Decimal/hexadecimal integers and character literals are supported, without C type
 suffixes. There are no pointers, native function calls or recursion.
 
-`input` is read-only. `work` starts as a private copy of it. `scratch` provides
+`input` is read-only. `work` initially has identical bytes and becomes a private
+copy on its first write. Reads and returned slices do not require that copy.
+`scratch` provides
 64 KiB initialized to zero. Optional first-statement `parameters("ABC");` supplies
 read-only parameter bytes. `input_size`, `parameter_size` and `metadata_size` are
 read-only builtin variables; this consumer supplies no metadata.
@@ -132,9 +134,12 @@ Configuration is limited to 512 KiB and 16 named functions. One source function
 is at most 64 KiB, compiled instructions at most 12 KiB, parameters at most 4 KiB,
 and input at most 1.5 GiB. Execution allows at most `1,000,000 + 128 * input_size`
 instructions; that is a resource bound, not a promise of short loading time.
-Work cannot grow beyond the input size. Peak memory includes input, work and
-scratch (up to 3 GiB plus 64 KiB for these buffers during preparation).
-The returned buffer reuses work or scratch; it is not another full input copy.
+Work cannot grow beyond the input size. Preparation retains only input and
+scratch until the program writes to work; such a write can require input, work
+and scratch together (up to 3 GiB plus 64 KiB for these buffers).
+The returned buffer borrows unchanged input or reuses work or scratch; it is not
+another full input copy. Borrowed input remains alive through validation and
+publication of the result.
 Allocation failure rejects the input. The compiler uses no external C compiler
 at content-load time.
 

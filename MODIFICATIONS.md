@@ -311,6 +311,15 @@ directory's `AnyBOR.ini`. A bounded buffer compiler and interpreter support
 custom headers, embedded archive ranges and byte-order conversion. The normal
 PACK validator checks every prepared result. See [content transforms](docs/CONTENT_TRANSFORMS.md).
 
+The interpreter materializes its private work copy on the first valid write,
+preserving the immutable input for subsequent reads. A result that still refers
+to unchanged input borrows its selected range through validation and cache
+publication. Work and scratch results reuse their own allocations; the existing
+owned-output API continues to return independent storage. Rejection and
+cancellation release all owned buffers. Read-only programs therefore avoid a
+second full archive allocation without bypassing the configured program or
+changing its instructions, resource limits or cache identity.
+
 Auto checks script API support before filename, adjacent EXE or vocabulary
 heuristics. A literal call to `getentityproperty(..., "attack", ...)` requires
 the legacy API available through pinned build 4086: 4432 and later reject this
