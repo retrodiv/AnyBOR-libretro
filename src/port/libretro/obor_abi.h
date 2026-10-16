@@ -46,7 +46,7 @@ enum { OBOR_RESOURCE_FILE_OPEN = 1, OBOR_RESOURCE_FILE_CLOSE,
  * nothing is mapped with a file behind it.  16 TiB is measured free on
  * the runner and inside the 47-bit space macOS allows. */
 #define OBOR_ARENA_BASE_VA 0x100000000000ULL  /* 16 TiB */
-#elif defined(__aarch64__) || defined(__arm__)
+#elif defined(__aarch64__) || defined(__arm__) || (defined(__riscv) && __riscv_xlen == 64)
 #define OBOR_ARENA_BASE_VA 0x2A00000000ULL    /* 168 GiB */
 #else
 #define OBOR_ARENA_BASE_VA 0x2A000000000ULL   /* ~2.6 TiB */

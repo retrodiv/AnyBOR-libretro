@@ -22,6 +22,8 @@
 #   define OBOR_GLIBC_MATH_VER "GLIBC_2.17"
 #  elif defined(__arm__)
 #   define OBOR_GLIBC_MATH_VER "GLIBC_2.4"
+#  elif defined(__riscv) && __riscv_xlen == 64
+#   define OBOR_GLIBC_MATH_VER "GLIBC_2.27"
 #  endif
 #  ifdef OBOR_GLIBC_MATH_VER
 extern float obor_glibc_acosf(float);

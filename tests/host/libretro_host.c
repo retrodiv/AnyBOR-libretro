@@ -20,7 +20,7 @@
  *   OBOR_REPLAY_TRACE=FIRST,LAST   video/audio digests indexed by input frame
  *   OBOR_REPLAY_AUDIO=file   bounded PCM callback evidence for that trace range
  *   OBOR_GAMELOG=On|Off   set the Forward game log core option
- *   OBOR_CRT_TV=On|Off / OBOR_CRT_TOGGLE_AT=N   CRT option and live toggle
+ *   OBOR_CRT_TV=On|Off / OBOR_CRT_TOGGLE_AT=N[,N...]   CRT option and live toggles
  *   OBOR_VIDEO_TRACE=1 / OBOR_OPTIONS_VERSION=0|2   video/option diagnostics
  *   OBOR_HOST_STATE_CONTENT=Smart|Full / OBOR_HOST_STATE_COMPRESSION=On|Off
  *   OBOR_SET_STATE_OPTIONS_AT=frame:Smart|Full:On|Off  frontend-only change
@@ -233,6 +233,8 @@ static const char *g_crt_opt;
 
 static const uint32_t *g_fb;
 static unsigned g_fw, g_fh;
+static struct retro_game_geometry g_geometry;
+static unsigned g_geometry_updates, g_av_updates;
 static size_t g_fpitch;
 static long g_nonblack_max;
 static unsigned long long g_audio_energy;
@@ -270,6 +272,18 @@ static struct seg g_segs[320];
 static int g_nsegs;
 static int g_frame;
 static int g_input_frame_offset;
+
+static int selected_frame(const char *list, int frame)
+{
+    while (list && *list) {
+        char *end;
+        long value = strtol(list, &end, 10);
+        if (end == list || (*end && *end != ',')) return 0;
+        if (value == frame) return 1;
+        list = *end ? end + 1 : end;
+    }
+    return 0;
+}
 
 static int zero_bytes(const unsigned char *data, size_t begin, size_t end)
 {
@@ -638,12 +652,27 @@ static bool env_cb(unsigned cmd, void *data)
         g_shutdown = 1;
         return true;
     case RETRO_ENVIRONMENT_SET_GEOMETRY:
+        g_geometry = *(const struct retro_game_geometry *)data;
+        ++g_geometry_updates;
         if (getenv("OBOR_VIDEO_TRACE")) {
             const struct retro_game_geometry *geo = data;
             printf("geometry=%ux%u aspect=%.6f frame=%d\n",
                    geo->base_width, geo->base_height, geo->aspect_ratio, g_frame);
         }
         return true;
+    case RETRO_ENVIRONMENT_SET_SYSTEM_AV_INFO: {
+        const struct retro_system_av_info *av = data;
+        if (getenv("OBOR_VIDEO_TRACE"))
+            printf("av_info=%ux%u max=%ux%u aspect=%.6f frame=%d accepted=%d\n",
+                   av->geometry.base_width, av->geometry.base_height,
+                   av->geometry.max_width, av->geometry.max_height,
+                   av->geometry.aspect_ratio, g_frame,
+                   !getenv("OBOR_HOST_REJECT_AV_INFO"));
+        ++g_av_updates;
+        if (getenv("OBOR_HOST_REJECT_AV_INFO")) return false;
+        g_geometry = av->geometry;
+        return true;
+    }
     default:
         return false;
     }
@@ -653,6 +682,14 @@ static void video_cb(const void *data, unsigned width, unsigned height,
                      size_t pitch)
 {
     ++g_video_calls;
+    if (getenv("OBOR_CHECK_GEOMETRY") &&
+        (width != g_geometry.base_width || height != g_geometry.base_height ||
+         width > g_geometry.max_width || height > g_geometry.max_height ||
+         g_geometry.aspect_ratio != (float)width / (float)height)) {
+        fprintf(stderr, "video geometry was not announced before frame %d: %ux%u\n",
+                g_frame, width, height);
+        exit(1);
+    }
     if (getenv("OBOR_VIDEO_TRACE") && (width != g_fw || height != g_fh))
         printf("video=%ux%u frame=%d\n", width, height, g_frame);
     g_fw = width;
@@ -993,11 +1030,13 @@ int main(int argc, char **argv)
         p_retro_deinit();
         return 1;
     }
-    if (getenv("OBOR_VIDEO_TRACE")) {
+    if (getenv("OBOR_VIDEO_TRACE") || getenv("OBOR_CHECK_GEOMETRY")) {
         struct retro_system_av_info av;
         p_retro_get_system_av_info(&av);
+        g_geometry = av.geometry;
         printf("initial_geometry=%ux%u aspect=%.6f\n",
                av.geometry.base_width, av.geometry.base_height, av.geometry.aspect_ratio);
+        printf("initial_maximum=%ux%u\n", av.geometry.max_width, av.geometry.max_height);
     }
 
     /* Gameplay timelines start after cooperative initialization. Freeze the
@@ -1193,8 +1232,7 @@ int main(int argc, char **argv)
             fprintf(stderr, "frontend rejected changed state capacity at frame %d\n", g_frame);
             return 1;
         }
-        if (getenv("OBOR_CRT_TOGGLE_AT") &&
-            g_frame == atoi(getenv("OBOR_CRT_TOGGLE_AT"))) {
+        if (selected_frame(getenv("OBOR_CRT_TOGGLE_AT"), g_frame)) {
             g_crt_opt = g_crt_opt && !strcmp(g_crt_opt, "On") ? "Off" : "On";
             g_var_dirty = 1;
         }
@@ -1693,5 +1731,8 @@ int main(int argc, char **argv)
         return main(argc, argv);
     }
 #endif
+    if (getenv("OBOR_CHECK_GEOMETRY"))
+        printf("geometry_updates=%u av_updates=%u final_maximum=%ux%u\n",
+               g_geometry_updates, g_av_updates, g_geometry.max_width, g_geometry.max_height);
     return 0;
 }

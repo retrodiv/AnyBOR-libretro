@@ -146,6 +146,29 @@ int main(int argc, char **argv)
     char *mapping = mmap(NULL, stack_size + page, PROT_READ | PROT_WRITE,
                         MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
     assert(mapping != MAP_FAILED && mprotect(mapping, page, PROT_NONE) == 0);
+#if defined(__linux__)
+    if (argc > 1 && !strcmp(argv[1], "upper-stack")) {
+#ifndef MAP_FIXED_NOREPLACE
+#define MAP_FIXED_NOREPLACE 0x100000
+#endif
+        assert(munmap(mapping, stack_size + page) == 0);
+        uintptr_t frame = (uintptr_t)__builtin_frame_address(0);
+        mapping = MAP_FAILED;
+        for (unsigned i = 1; i <= 4 && mapping == MAP_FAILED; ++i) {
+            uintptr_t hint = ((frame + page - 1) / page * page) + (uintptr_t)i * (4u << 20);
+            void *next = mmap((void *)hint, stack_size + page, PROT_READ | PROT_WRITE,
+                MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED_NOREPLACE, -1, 0);
+            if (next != MAP_FAILED && next != (void *)hint) {
+                assert(munmap(next, stack_size + page) == 0);
+                next = MAP_FAILED;
+            }
+            mapping = next;
+        }
+        assert(mapping != MAP_FAILED && (uintptr_t)mapping > frame);
+        assert(mprotect(mapping, page, PROT_NONE) == 0);
+    }
+#endif
+    printf("fault_stack=%p frontend_frame=%p\n", (void *)mapping, __builtin_frame_address(0));
     bad_address = (uintptr_t)mapping;
     user_signal = argc > 1 && !strcmp(argv[1], "user");
     signal(SIGSEGV, previous_handler);
@@ -169,7 +192,10 @@ int main(int argc, char **argv)
     engine_stack = mapping + page;
     frontend = co_active();
     const int operations = 6;
+    const int allocator_only = argc > 1 && !strcmp(argv[1], "allocator");
+    int tested = 0;
     for (operation = 0; operation < operations; ++operation) {
+        if (allocator_only && operation != 3 && operation != 5) continue;
         printf("testing operation=%d\n", operation);
         assert(obor_fault_stack_prepare(engine_stack, stack_size));
         engine = co_derive(engine_stack, stack_size, entry);
@@ -186,6 +212,7 @@ int main(int argc, char **argv)
         printf("captured operation=%d code=%x address=%llx pc=%llx\n", operation,
                fault.code, (unsigned long long)fault.address, (unsigned long long)fault.pc);
         assert(obor_fault_run(harmless, &value, &fault) == 1);
+        ++tested;
 #ifdef _WIN32
         /* Windows may commit an additional frontend stack page during a
          * library call. Its limit must still belong to the frontend stack. */
@@ -204,7 +231,7 @@ int main(int argc, char **argv)
             assert(sigismember(&mask_before, s) == sigismember(&mask_after, s));
 #endif
     }
-    assert(value == operations);
+    assert(value == tested);
 #if defined(OBOR_FAULT_PTHREAD_TLS) || defined(__APPLE__)
     if (argc > 1 && !strcmp(argv[1], "tls")) test_slots();
 #endif

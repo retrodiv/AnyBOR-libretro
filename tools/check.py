@@ -159,11 +159,15 @@ def check_binary(path, target=None):
         if len(head) < 64 or head[4:7] != b"\x02\x01\x01":
             raise RuntimeError("Expected a complete little-endian ELF64 header")
         kind, machine = struct.unpack_from("<HH", head, 16)
-        if kind != 3 or machine not in (62, 183):
-            raise RuntimeError("Expected an x86-64 or AArch64 ELF shared library")
+        architectures = {62: "x86_64", 183: "aarch64", 243: "riscv64"}
+        if kind != 3 or machine not in architectures:
+            raise RuntimeError("Expected a supported 64-bit ELF shared library")
         if target and (target.startswith(("macos-", "windows-")) or
-                       machine != (62 if target == "linux-x86_64" else 183)):
+                       architectures[machine] != ("riscv64" if target == "linux-riscv64" else
+                           "x86_64" if target == "linux-x86_64" else "aarch64")):
             raise RuntimeError("ELF architecture/format does not match " + target)
+        if machine == 243 and struct.unpack_from("<I", head, 48)[0] & 6 != 4:
+            raise RuntimeError("RISC-V core must use the LP64D floating-point ABI")
         names = elf_exports(path)
         require_exports(names, [n[1:] for n in expected])
         dynamic = inspect_tool("READELF", "readelf", ["--dynamic", "--wide", str(path)])
@@ -172,12 +176,12 @@ def check_binary(path, target=None):
                    if target == "android-arm64" else
                    {"libc.so.6", "libdl.so.2", "libm.so.6", "libmvec.so.1",
                     "libpthread.so.0", "librt.so.1", "libgcc_s.so.1", "libstdc++.so.6",
-                    "ld-linux-x86-64.so.2", "ld-linux-aarch64.so.1"})
+                    "ld-linux-x86-64.so.2", "ld-linux-aarch64.so.1", "ld-linux-riscv64-lp64d.so.1"})
         if target is None:
             allowed.update(("libc.so", "libdl.so", "libm.so", "liblog.so"))
         require_dependencies(dependencies, allowed)
         print("ELF core: arch=%s exports=%d deps=%s: OK" %
-              ("x86_64" if machine == 62 else "aarch64", len(names), ",".join(dependencies)))
+              (architectures[machine], len(names), ",".join(dependencies)))
         return
     if head[:2] == b"MZ":
         if target and target != "windows-x86_64":
@@ -248,7 +252,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--binary", type=str)
     parser.add_argument("--sources-only", action="store_true")
-    parser.add_argument("--target", choices=("linux-x86_64", "linux-aarch64", "recalbox-aarch64",
+    parser.add_argument("--target", choices=("linux-x86_64", "linux-aarch64", "linux-riscv64", "recalbox-aarch64",
                                              "windows-x86_64", "android-arm64", "macos-x86_64", "macos-arm64"))
     args = parser.parse_args()
     check_sources()

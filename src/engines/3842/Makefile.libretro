@@ -226,7 +226,7 @@ $(OBJDIR)/port/%.o: $(PORT_ROOT)/%.c
 	@mkdir -p $(dir $@)
 	$(CC) $(CFLAGS) -c $< -o $@
 
-$(PORT_LIBCO_OBJ): $(PORT_ROOT)/obor_libco.c $(PORT_ROOT)/libco/libco.c
+$(PORT_LIBCO_OBJ): $(PORT_ROOT)/obor_libco.c $(PORT_ROOT)/libco/libco.c $(PORT_ROOT)/obor_libco_riscv64.inc
 	@mkdir -p $(dir $@)
 	$(CC) $(CFLAGS) -c $< -o $@
 

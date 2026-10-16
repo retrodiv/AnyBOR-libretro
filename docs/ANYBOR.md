@@ -9,8 +9,9 @@ including OpenBOR 3400's no-sale terms. See [LICENSES.md](../LICENSES.md).
 
 ## Requirements and loading content
 
-Use a supported 64-bit frontend: Linux x86-64/ARM64, Windows x86-64 or Android
-ARM64 (API 24 or later). Configure a writable **Save Files** directory in
+Use a supported 64-bit frontend: Linux x86-64/ARM64/RISC-V64, Windows x86-64,
+macOS Intel/ARM64 or Android ARM64 (API 24 or later).
+Configure a writable **Save Files** directory in
 RetroArch. The core requires that directory even when a particular game does
 not use ordinary saves. No BIOS or firmware is required or included.
 
@@ -33,7 +34,7 @@ executable can be read as data for version detection; it is not executed.
 |---|---|
 | Restart | Reboots the game and applies a changed Engine build option. |
 | In-game saves/settings | Engine-managed files in the frontend save directory. |
-| Save states and rewind | Supported; states require the same core build and content. Unavailable during threaded video playback. |
+| Save states and rewind | Supported; states require the same core build and content. Unavailable during model preloading or threaded video playback. |
 | Netplay/runahead | The metadata advertises `serialized` state support; it makes no general deterministic/netplay/runahead compatibility claim. |
 | Players and remapping | Up to four RetroPads, subject to the game's player limit; frontend button remapping supported. |
 | Rumble | Optional forwarding of the game's hit vibration. |
@@ -257,6 +258,10 @@ longer used and are left untouched.
 
 RetroArch places save-state files in its configured **Save States** directory.
 Ordinary engine saves use their own files rather than a libretro save-RAM block.
+Save states and rewind are temporarily unavailable during model preloading.
+Some games do this briefly with the player already on screen, so a manual
+save or load can be refused and rewind history can contain gaps until preloading
+finishes.
 States may be large because they retain the running engine's memory and stack.
 Smart and Full with compression On use the fixed 64 MiB coded transport on
 every platform, including during loading and Reset. Each state is independently

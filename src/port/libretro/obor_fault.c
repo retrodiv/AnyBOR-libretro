@@ -1,5 +1,13 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+/* glibc's fortified longjmp assumes a single downward-growing stack. A valid
+ * recovery from a separately allocated coroutine can violate that ordering.
+ * Keep the ordinary libc jump implementation in this recovery translation
+ * unit; the caller's guarded lifetime and thread ownership remain checked. */
+#if defined(__linux__) && !defined(__ANDROID__)
+#undef _FORTIFY_SOURCE
+#define _FORTIFY_SOURCE 0
+#endif
 #ifndef _GNU_SOURCE
 #define _GNU_SOURCE
 #endif
@@ -360,6 +368,8 @@ static void memory_signal(int signal, siginfo_t *info, void *context)
         guard->pc = machine->uc_mcontext.gregs[REG_RIP];
 #elif defined(__aarch64__)
         guard->pc = machine->uc_mcontext.pc;
+#elif defined(__riscv) && __riscv_xlen == 64
+        guard->pc = machine->uc_mcontext.__gregs[REG_PC];
 #endif
         set_guard(NULL);
         /* Do not allocate, log, inspect the arena or run engine cleanup here. */

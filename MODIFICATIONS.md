@@ -25,6 +25,21 @@ and documentation alongside their existing notices and receipts.
 
 ## Record dates and file notices
 
+The 2026-10-16 port additions include an independently authored RISC-V LP64D
+coroutine backend, Linux RISC-V build selection and Sv39-compatible fixed
+module/arena addresses. Video allocation now follows native and CRT bounds,
+grows for larger runtime modes, and preserves its current reservation across
+state restoration. Focused tests cover register preservation, fault recovery,
+geometry changes, and exact restored output.
+The glibc recovery translation unit uses the ordinary nonlocal-jump entry
+point: its fortified counterpart assumes one stack and can reject valid jumps
+from a separately allocated coroutine. Thread ownership and guard lifetime
+checks remain in place, with allocator and memory-fault regression cases.
+This is confined to the Linux recovery file; other translation units retain
+their toolchain hardening. Android, Windows and macOS retain their existing
+jump implementation. The regression forces both relative stack positions
+with Fortify enabled in the caller.
+
 The 2026-09-11 review catalogued existing changes and added file notices and
 source references. It is not an implementation date for those earlier changes.
 The 6391 and 6412 compatibility changes were recorded on 2026-09-29.
@@ -102,6 +117,9 @@ existing scheduling. Save, load and prepared-state capture callbacks refuse the
 intermediate preparation context before touching state buffers or engine
 memory; state capacity stays available and normal states resume after cleanup.
 Reset and unload discard the context. No content identity selects this path.
+This is a save-state and rewind limitation: some games briefly preload models
+with the player already on screen. Manual state operations can be refused and
+rewind history can contain gaps until the enclosing preparation finishes.
 Loose content still completes initial startup synchronously inside
 `retro_load_game`; its boot waits do not return to the frontend between models.
 

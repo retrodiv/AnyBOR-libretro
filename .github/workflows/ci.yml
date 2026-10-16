@@ -25,7 +25,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        target: [linux-x86_64, linux-aarch64, windows-x86_64, android-arm64]
+        target: [linux-x86_64, linux-aarch64, linux-riscv64, windows-x86_64, android-arm64]
     steps:
       - uses: actions/checkout@v4
         with:
@@ -39,6 +39,11 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y build-essential nasm python3 gcc-aarch64-linux-gnu g++-aarch64-linux-gnu gcc-mingw-w64-x86-64 g++-mingw-w64-x86-64
+      - name: Install and exercise the RISC-V toolchain
+        if: matrix.target == 'linux-riscv64'
+        run: |
+          sudo apt-get install -y gcc-riscv64-linux-gnu g++-riscv64-linux-gnu qemu-user
+          python3 tools/run_guarded.py --memory-mib 1024 --seconds 180 -- python3 tools/test_riscv64.py
       - name: Install Android NDK
         if: matrix.target == 'android-arm64'
         run: |
@@ -69,12 +74,17 @@ jobs:
           python3 tools/run_guarded.py --memory-mib 2048 --seconds 900 -- python3 tools/test_state_options.py --work-parent /var/tmp
           python3 tools/run_guarded.py --memory-mib 2048 --seconds 900 -- python3 tools/test_multiplayer.py
           python3 tools/run_guarded.py --memory-mib 2048 --seconds 900 -- python3 tools/test_crt.py
+          python3 tools/run_guarded.py --memory-mib 2048 --seconds 300 -- python3 tools/test_geometry.py --core anybor_libretro.so
           python3 tools/run_guarded.py --memory-mib 2048 --seconds 300 -- python3 tools/test_4453.py --core anybor_libretro.so
           python3 tools/run_guarded.py --memory-mib 2048 --seconds 300 -- python3 tools/test_6330_6510.py --core anybor_libretro.so
           python3 tools/run_guarded.py --memory-mib 2048 --seconds 180 -- python3 tools/test_animation_scripts.py --core anybor_libretro.so
           python3 tools/run_guarded.py --memory-mib 1024 --seconds 180 -- python3 tools/test_script_timestamps.py
           python3 tools/run_guarded.py --memory-mib 1024 --seconds 180 -- python3 tools/test_native_io.py
           python3 tools/run_guarded.py --memory-mib 1024 --seconds 180 -- python3 tools/test_write_watch.py
+      - name: Exercise RISC-V fixed-base states under user emulation
+        if: matrix.target == 'linux-riscv64'
+        run: |
+          python3 tools/run_guarded.py --memory-mib 2048 --seconds 600 -- python3 tools/test_riscv64.py --core anybor_libretro.so
       - name: Boot every Windows engine with fresh and existing saves
         if: matrix.target == 'windows-x86_64'
         env:
@@ -86,6 +96,7 @@ jobs:
           python3 tools/run_guarded.py --memory-mib 2048 --seconds 900 -- python3 tools/smoke.py --core anybor_libretro.dll --windows --runner wine
           python3 tools/run_guarded.py --memory-mib 2048 --seconds 900 -- python3 tools/test_rewind.py --core anybor_libretro.dll --windows --runner wine --keep-wine-server --work-parent /var/tmp
           python3 tools/run_guarded.py --memory-mib 2048 --seconds 900 -- python3 tools/test_state_options.py --core anybor_libretro.dll --windows --runner wine --keep-wine-server --work-parent /var/tmp
+          python3 tools/run_guarded.py --memory-mib 2048 --seconds 300 -- python3 tools/test_geometry.py --core anybor_libretro.dll --windows --runner wine
       - uses: actions/upload-artifact@v4
         with:
           name: anybor-${{ matrix.target }}
@@ -149,6 +160,7 @@ jobs:
           python3 tools/test_state_options.py --core anybor_libretro.dylib --work-parent /var/tmp
           python3 tools/test_multiplayer.py --core anybor_libretro.dylib
           python3 tools/test_crt.py --core anybor_libretro.dylib
+          python3 tools/test_geometry.py --core anybor_libretro.dylib
           python3 tools/test_4453.py --core anybor_libretro.dylib
           python3 tools/test_6330_6510.py --core anybor_libretro.dylib
       - uses: actions/upload-artifact@v4

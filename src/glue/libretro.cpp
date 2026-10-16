@@ -100,6 +100,10 @@ static uint64_t g_loading_yield;
 static uint32_t *g_loading_pixels; /* ephemeral presentation, never an engine state */
 static int g_loading_width, g_loading_height;
 static int g_width = 320, g_height = 240;
+static unsigned g_max_width = 1920, g_max_height = 1080;
+static bool g_av_announced;
+static void output_geometry(int width, int height, bool notify,
+                            unsigned required_width = 0, unsigned required_height = 0);
 static uint32_t *g_crt_pixels; /* presentation scratch, outside engine states */
 static char g_engine[48];           /* physical engine actually loaded */
 static char g_logical_engine[48];   /* selected logical compatibility profile */
@@ -828,7 +832,7 @@ static void trace_close(void)
     }
 }
 
-static void content_stop(void)
+static void content_stop(bool preserve_geometry = false)
 {
     g_reverse_has_snapshot = false;
     loading_dispose();
@@ -866,8 +870,13 @@ static void content_stop(void)
     g_pak_path[0] = '\0';
     free(g_crt_pixels);
     g_crt_pixels = NULL;
-    g_width = 320;
-    g_height = 240;
+    if (!preserve_geometry) {
+        g_width = 320;
+        g_height = 240;
+        g_max_width = 1920;
+        g_max_height = 1080;
+        g_av_announced = false;
+    }
 }
 
 static void error_reason(const char *reason)
@@ -948,14 +957,12 @@ static void error_screen(const char *reason, bool deferred = false)
          * pixels alive until the next video callback or explicit unload/reset. */
         g_fault_pending = true;
         g_booted = false;
-    } else content_stop();
+    } else content_stop(true);
     snprintf(g_error_engine, sizeof(g_error_engine), "%s", engine);
     g_error_active = true;
     obor_error_render(g_error_pixels, g_error_path, g_error_engine,
                       g_error_reason);
-    struct retro_system_av_info av;
-    retro_get_system_av_info(&av);
-    if (!deferred) env_cb(RETRO_ENVIRONMENT_SET_GEOMETRY, &av.geometry);
+    if (!deferred) output_geometry(OBOR_ERROR_WIDTH, OBOR_ERROR_HEIGHT, true);
     if (log_cb) log_cb(RETRO_LOG_ERROR, "[OpenBOR] %s\n", g_error_reason);
 }
 
@@ -971,6 +978,7 @@ static bool queue_state_fault(void)
 
 static void present_error_frame(void)
 {
+    output_geometry(OBOR_ERROR_WIDTH, OBOR_ERROR_HEIGHT, true);
     video_cb(g_error_pixels, OBOR_ERROR_WIDTH, OBOR_ERROR_HEIGHT,
              OBOR_ERROR_WIDTH * sizeof(uint32_t));
 }
@@ -1155,16 +1163,49 @@ void retro_get_system_info(struct retro_system_info *info)
     info->block_extract = true;
 }
 
-void retro_get_system_av_info(struct retro_system_av_info *info)
+static void system_av_info(struct retro_system_av_info *info)
 {
     memset(info, 0, sizeof(*info));
     info->geometry.base_width = (unsigned)g_width;
     info->geometry.base_height = (unsigned)g_height;
-    info->geometry.max_width = 4096;
-    info->geometry.max_height = 4096;
+    info->geometry.max_width = g_max_width;
+    info->geometry.max_height = g_max_height;
     info->geometry.aspect_ratio = (float)g_width / (float)g_height;
     info->timing.fps = 60.0;
     info->timing.sample_rate = 44100.0;
+}
+
+void retro_get_system_av_info(struct retro_system_av_info *info)
+{
+    system_av_info(info);
+    g_av_announced = true;
+}
+
+/* Allocation bounds belong to the current frontend, not to a saved frame.
+ * Once announced they only grow, including while loading an older state. */
+static void output_geometry(int width, int height, bool notify,
+                            unsigned required_width, unsigned required_height)
+{
+    if (width <= 0 || height <= 0) return;
+    if ((unsigned)width > required_width) required_width = (unsigned)width;
+    if ((unsigned)height > required_height) required_height = (unsigned)height;
+    bool changed = width != g_width || height != g_height;
+    bool grow = required_width > g_max_width || required_height > g_max_height;
+    g_width = width; g_height = height;
+    if (!g_av_announced) {
+        g_max_width = required_width;
+        g_max_height = required_height;
+    } else {
+        if (required_width > g_max_width) g_max_width = required_width;
+        if (required_height > g_max_height) g_max_height = required_height;
+    }
+    if (notify && (changed || grow)) {
+        struct retro_system_av_info av;
+        system_av_info(&av);
+        if (!grow || !env_cb(RETRO_ENVIRONMENT_SET_SYSTEM_AV_INFO, &av))
+            env_cb(RETRO_ENVIRONMENT_SET_GEOMETRY, &av.geometry);
+    }
+    if (notify) g_av_announced = true;
 }
 
 /* One geometry and composition route for preparation, native loading and
@@ -1172,15 +1213,12 @@ void retro_get_system_av_info(struct retro_system_av_info *info)
  * subsequent option or native-mode changes notify the frontend as usual. */
 static void video_geometry(int width, int height, bool notify)
 {
-    int w = width, h = height;
-    if (g_crt_on) obor_crt_output_size(width, height, &w, &h);
-    if (w == g_width && h == g_height) return;
-    g_width = w; g_height = h;
-    if (notify) {
-        struct retro_system_av_info av;
-        retro_get_system_av_info(&av);
-        env_cb(RETRO_ENVIRONMENT_SET_GEOMETRY, &av.geometry);
-    }
+    int crt_width = width, crt_height = height;
+    obor_crt_output_size(width, height, &crt_width, &crt_height);
+    unsigned reserve_width = (unsigned)(width > crt_width ? width : crt_width);
+    unsigned reserve_height = (unsigned)(height > crt_height ? height : crt_height);
+    output_geometry(g_crt_on ? crt_width : width, g_crt_on ? crt_height : height,
+                    notify, reserve_width, reserve_height);
 }
 
 static bool present_video(const uint32_t *px, int width, int height, int pitch)
@@ -1744,6 +1782,8 @@ typedef struct {
     bool fault_pending;
     uint32_t state_capacity;
     int width, height;
+    unsigned max_width, max_height;
+    bool av_announced;
     uint32_t *crt_pixels;
     uint32_t *loading_pixels;
     int loading_width, loading_height;
@@ -1780,6 +1820,8 @@ static void glue_save(glue_regs *r)
     r->fault_pending = g_fault_pending;
     r->state_capacity = g_state_capacity;
     r->width = g_width; r->height = g_height;
+    r->max_width = g_max_width; r->max_height = g_max_height;
+    r->av_announced = g_av_announced;
     r->crt_pixels = g_crt_pixels;
     r->loading_pixels = g_loading_pixels;
     r->loading_width = g_loading_width; r->loading_height = g_loading_height;
@@ -1819,6 +1861,8 @@ static void glue_load(const glue_regs *r)
     g_fault_pending = r->fault_pending;
     g_state_capacity = r->state_capacity;
     g_width = r->width; g_height = r->height;
+    g_max_width = r->max_width; g_max_height = r->max_height;
+    g_av_announced = r->av_announced;
     g_crt_pixels = r->crt_pixels;
     g_loading_pixels = r->loading_pixels;
     g_loading_width = r->loading_width; g_loading_height = r->loading_height;
@@ -2574,6 +2618,14 @@ static bool finish_load_game(void)
         return false;
     }
 
+    if (!g_av_announced) {
+        const uint32_t *pixels;
+        int32_t width, height, pitch;
+        p_get_video(&pixels, &width, &height, &pitch);
+        if (pixels && width > 0 && height > 0)
+            video_geometry(width, height, false);
+    }
+
     /* per-game button labels for the frontend's Port Controls menu,
      * parsed from the pak's playable characters (obor_padmap.h).
      * Unpacked mods keep the generic labels for now. */
@@ -2758,9 +2810,7 @@ static bool loading_begin(const struct retro_game_info *info, bool retry)
     if (!info || !info->path) { error_reason("No content path was provided by the frontend."); return false; }
     char path[sizeof(g_error_path)];
     abspath(info->path, path, sizeof(path));
-    int previous_width = g_width, previous_height = g_height;
-    content_stop();
-    if (retry) { g_width = previous_width; g_height = previous_height; }
+    content_stop(retry);
     snprintf(g_error_path, sizeof(g_error_path), "%s", path);
     enum retro_pixel_format format = RETRO_PIXEL_FORMAT_XRGB8888;
     if (!env_cb(RETRO_ENVIRONMENT_SET_PIXEL_FORMAT, &format)) {

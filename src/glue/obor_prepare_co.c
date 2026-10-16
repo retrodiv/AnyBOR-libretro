@@ -8,4 +8,8 @@
 #define co_create obor_prepare_co_create
 #define co_delete obor_prepare_co_delete
 #define co_serializable obor_prepare_co_serializable
+#if defined(__riscv) && __riscv_xlen == 64
+#include "obor_libco_riscv64.inc"
+#else
 #include "libco/libco.c"
+#endif

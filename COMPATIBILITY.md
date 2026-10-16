@@ -26,6 +26,9 @@ Targets:
 
 - `linux-x86_64`: generic desktop Linux with bundled static image dependencies.
 - `linux-aarch64`: generic ARM64 Linux with static image dependencies.
+- `linux-riscv64`: GNU LP64D Linux with static image dependencies and a portable
+  VP8/VP9 decoder. Context switching, fixed-base states and fault recovery are
+  exercised under user emulation; no real-hardware validation is claimed.
 - `recalbox-aarch64`: ARM64 Recalbox profile, GLIBC imports capped at 2.38;
   dynamic input labels, PAK padmap/macros and OSD messages are disabled because
   of observed frontend crashes. Basic controls remain available.

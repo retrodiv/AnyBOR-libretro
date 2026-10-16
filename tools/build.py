@@ -28,6 +28,7 @@ BUILD_ROOT = Path(os.path.abspath(os.path.expanduser(
     os.environ.get("OBOR_BUILD_ROOT", str(HERE / ".build")))))
 JOBS = max(1, int(os.environ.get("NUMPROC", os.environ.get("JOBS", min(4, os.cpu_count() or 4)))))
 FIXED_ELF_IMAGE_BASE = "0x600000000000"
+FIXED_RISCV64_IMAGE_BASE = "0x3000000000"
 FIXED_PE_IMAGE_BASE = "0x240f10000"
 # Switches a dependency's own build script may inject but current Apple linkers
 # refuse: the bundled Xiph releases predate Xcode 15 and still carry the
@@ -38,6 +39,11 @@ DARWIN_LINKER_SWITCHES = ("-force_cpusubtype_ALL",)
 def uses_fixed_elf_image(spec):
     """Return whether this target can preserve module pointers verbatim."""
     return spec["plat"] == "linux" and not spec.get("android")
+
+
+def fixed_elf_image_base(spec):
+    """Keep both module and arena inside the Sv39 userspace window."""
+    return FIXED_RISCV64_IMAGE_BASE if spec.get("arch") == "riscv64" else FIXED_ELF_IMAGE_BASE
 
 
 def uses_fixed_pe_image(spec):
@@ -184,6 +190,18 @@ TARGETS = {
         "static_pngz": True,
         "dep_builds": ["zlib", "libpng", "libogg", "libvorbis", "libvpx"],
         "configure_host": "aarch64-linux-gnu",
+    },
+    "linux-riscv64": {
+        "cc": "riscv64-linux-gnu-gcc",
+        "cxx": "riscv64-linux-gnu-g++",
+        "strip": "riscv64-linux-gnu-strip",
+        "plat": "linux",
+        "arch": "riscv64",
+        "ext": ".so",
+        "glue_link": ["-shared", "-fPIC"],
+        "static_pngz": True,
+        "dep_builds": ["zlib", "libpng", "libogg", "libvorbis", "libvpx"],
+        "configure_host": "riscv64-linux-gnu",
     },
     "recalbox-aarch64": {
         "cc": "aarch64-linux-gnu-gcc",
@@ -412,6 +430,7 @@ def build_dep(target, name, fingerprint):
             # floor already supplied by arch_flags (unlike older targets).
             vpx_target = spec["arch"] + "-darwin20-gcc"
         elif spec["arch"] == "aarch64": vpx_target = "arm64-linux-gcc"
+        elif spec["arch"] == "riscv64": vpx_target = "generic-gnu"
         else: vpx_target = "x86_64-linux-gcc"
         cfg = ["sh", "./configure", "--prefix=" + str(prefix),
                "--target=" + vpx_target, "--enable-static", "--disable-shared",
@@ -687,7 +706,7 @@ def build_glue(target, spec, outdir):
             # pointers valid across frontend processes and avoids guessing
             # which 64-bit words in large game buffers happen to look like
             # pointers.  The arena lives separately at 0x2a00000000.
-            cmd += ["-Wl,-Ttext-segment=" + FIXED_ELF_IMAGE_BASE, "-lpthread"]
+            cmd += ["-Wl,-Ttext-segment=" + fixed_elf_image_base(spec), "-lpthread"]
         if not spec.get("static_pngz"):
             cmd += ["-lpng", "-lz"]
     elif spec["plat"] == "windows":
@@ -840,6 +859,8 @@ def configure_target(requested, build_platform, configure_host=None, configure_b
             requested = "android-arm64"
         elif build_platform in ("aarch64", "linux-aarch64"):
             requested = "linux-aarch64"
+        elif build_platform.startswith("riscv64") or build_platform == "linux-riscv64":
+            requested = "linux-riscv64"
         else:
             inferred_native = True
             command = shlex.split(os.environ.get("CC", "gcc"))
@@ -851,7 +872,8 @@ def configure_target(requested, build_platform, configure_host=None, configure_b
                 requested = ("macos-arm64" if machine.startswith(("aarch64", "arm64"))
                              else "macos-x86_64")
             else:
-                requested = "linux-aarch64" if machine.startswith(("aarch64", "arm64")) else "linux-x86_64"
+                requested = ("linux-riscv64" if machine.startswith("riscv64") else
+                             "linux-aarch64" if machine.startswith(("aarch64", "arm64")) else "linux-x86_64")
     spec = dict(TARGETS[requested])
     if spec.get("android") and not android_ndk_root():
         sys.exit("Set ANDROID_NDK or NDK_ROOT to an installed Android NDK.")

@@ -29,9 +29,10 @@ can use the included generated data after validating both input hashes, so
 Pillow is not a runtime dependency or required on older build images.
 
 ```sh
-NUMPROC=4 make                   # native Linux x86-64 or ARM64
+NUMPROC=4 make                   # native Linux x86-64, ARM64 or RISC-V64
 make platform=win64              # MinGW-w64 x86-64 cross toolchain
 make TARGET=linux-aarch64        # GNU ARM64 cross toolchain
+make TARGET=linux-riscv64        # GNU RISC-V64 LP64D cross toolchain
 make TARGET=recalbox-aarch64     # ARM64, GLIBC ceiling 2.38
 ANDROID_NDK=/path/to/ndk make platform=android
 make platform=osx                # native macOS, Intel or Apple Silicon
@@ -39,6 +40,18 @@ make check
 make release                    # ZIP and SHA-256 file under dist/
 make source-release             # optional source tar.gz; also included in each release ZIP
 ```
+
+The RISC-V target uses the GNU `riscv64-linux-gnu` toolchain and a portable
+VP8/VP9 decoder. Its fixed module and arena addresses fit the Sv39 userspace
+range. It is checked under user emulation; real hardware remains unverified.
+Dirty-page proofs currently fall back to content comparison on this target.
+
+Video allocation follows the known content size or starts at 1920x1080 when
+the mode is not yet known. Larger modes expand it on demand; smaller modes
+and CRT option changes reuse the existing allocation. Bounds cover both the
+native raster and its CRT output. Restored frames reannounce their geometry.
+Growing the allocation requires frontend support for AV-info changes;
+geometry-only updates remain the fallback when that request is refused.
 
 The libraries are named `anybor_libretro.so`, `anybor_libretro.dll`,
 `anybor_libretro_android.so` and `anybor_libretro.dylib`. `CC`, `CXX`, `AR`,
@@ -83,7 +96,7 @@ and `make source-release` require the checked source inventory. Keep temporary
 files under `.build/` or outside the checkout when running publication checks.
 For intentional source additions, see [CONTRIBUTING.md](CONTRIBUTING.md).
 
-Only 64-bit x86 and ARM targets are supported. Android uses ARM64 and API 24
+Only 64-bit x86, ARM and RISC-V targets are supported. Android uses ARM64 and API 24
 or later. macOS targets Intel (10.13 or newer) and Apple Silicon (11.0 or
 newer) and links only against `libSystem`. `jni/Android.mk` and
 `jni/Application.mk` provide the ndk-build entry point used by the libretro
@@ -237,6 +250,11 @@ preserves the game, but resources without reconstruction recipes remain stored
 as bytes. Capture cost and rewind duration may differ from a game started in
 Smart. Saving again as Smart does not recover missing recipes; starting the
 game afresh in Smart rebuilds them as resources load.
+
+Save states and rewind are temporarily unavailable while the engine preloads
+models. Some games also preload models briefly while the player is already on
+screen. A manual save or load can be refused during that interval, and rewind
+history can contain gaps. Normal operation resumes when preloading finishes.
 
 Loading a state retains the current session's content and writable-directory
 paths. Engine random-number state is captured with the world so external

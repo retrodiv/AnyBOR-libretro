@@ -25,6 +25,7 @@ python3 tools/smoke.py
 python3 tools/regression.py
 python3 tools/regression.py --webm  # also requires host ffmpeg
 python3 tools/test_crt.py
+python3 tools/test_geometry.py --core anybor_libretro.so
 python3 tools/test_rewind.py
 python3 tools/test_state_options.py
 python3 tools/test_multiplayer.py
@@ -80,16 +81,30 @@ consecutive restarts. Linux hosts check that all file descriptors are
 released after module unload; the frontend's own files must remain usable.
 It also checks the memory-peak files for packed and unpacked games. The WebM
 cases generate original solid-color VP8 video, with and without a sine tone,
-and exercise content unload, restart and a refused state load during threaded
-playback. The host remains alive after unload so abandoned workers cannot
-escape detection merely because the test process exits immediately.
-Saving and loading states are unavailable while threaded playback is active;
-a refused load leaves the current playback intact.
+and exercise content unload, restart and restoration of a valid pre-movie
+state during threaded playback. Every decoder worker must join before live
+memory is restored. The host remains alive after unload so abandoned workers
+cannot escape detection merely because the test process exits immediately.
+Capturing an active threaded movie remains unavailable. Invalid loads must
+leave the current playback intact.
 
 The native host in `tests/host/` can also load a user-supplied PAK. Its header
 documents scripted input, save-state and capture controls. Keep third-party
 games, captures and diagnostic output out of source commits. Inspect captures
 before sharing them, as described in `DEBUGGING.md`.
+
+The geometry suite uses original scripted 320x200 and 2048x1152 screens. It
+checks the union of native and CRT bounds before the first frame, one-time
+growth, smaller modes, live toggles, AV-info refusal with geometry fallback,
+uncropped pixels and exact video/PCM after load and reverse playback. A ZIP
+checks the 1920x1080 initial fallback before the raster is known.
+
+For the RISC-V GNU toolchain and user emulator, run the guarded
+`tools/test_riscv64.py` with an explicit `--runner` if its sysroot is elsewhere.
+Adding `--core anybor_libretro.so` also checks cold state loads at the fixed
+Sv39-compatible base and real reverse-frame output. The context fixture covers
+all preserved integer and floating-point registers, FCSR and a restored stack.
+These tests do not constitute validation on physical RISC-V hardware.
 
 The CRT suite checks the Video / Input / System category order, matching flat
 option order on legacy frontends, disabled default,

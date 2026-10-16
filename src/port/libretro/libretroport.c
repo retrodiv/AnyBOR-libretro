@@ -760,8 +760,8 @@ int32_t obor_abandon(void)
 
 void *obor_engine_sp(void)
 {
-    /* libco's amd64/aarch64 backends store the cothread's saved stack
-     * pointer in the first word of the handle. Valid while parked. */
+    /* Every selected context backend exposes the parked stack pointer in
+     * the handle's first word, for the snapshot stack-slice contract. */
     return co_engine ? *(void **)co_engine : NULL;
 }
 

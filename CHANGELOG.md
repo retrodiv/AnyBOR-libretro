@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- Add Linux RISC-V64 LP64D builds, preserved integer/floating-point coroutine
+  contexts, fault locations and fixed addresses compatible with Sv39.
+- Keep glibc fault recovery compatible with separately allocated coroutine
+  stacks when the toolchain enables fortified nonlocal jumps.
+- Declare content-sized video bounds, reserve both native and CRT output, and
+  grow allocation only when a larger runtime mode requires it. Preserve bounds
+  while loading states and report restored geometry before presenting frames.
+
 - Present the complete restored video and audio while the frontend reports
   rewind, including rejected history entries, without advancing into model
   preparation or restarting movie workers. Resume normal input and execution

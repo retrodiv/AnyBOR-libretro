@@ -23,7 +23,7 @@ source metadata. It is not a publication date.
 | Per-target binary, receipt and notices | `make TARGET=<target> release` creates a versioned ZIP and checksum under `dist/`. |
 | RetroArch core information | [anybor_libretro.info](../anybor_libretro.info). Keep this exact basename when submitting/installing it. |
 | Libretro hosted build jobs | [.gitlab-ci.yml](../.gitlab-ci.yml), [Makefile](../Makefile), [jni/Android.mk](../jni/Android.mk), [jni/Application.mk](../jni/Application.mk). |
-| Independent CI | [.github/workflows/ci.yml](../.github/workflows/ci.yml) builds/packages Linux x86-64/ARM64, Windows, Android and both macOS targets, then uploads each platform ZIP and checksum as workflow artifacts. |
+| Independent CI | [.github/workflows/ci.yml](../.github/workflows/ci.yml) builds/packages Linux x86-64/ARM64/RISC-V64, Windows, Android and both macOS targets, then uploads each platform ZIP and checksum as workflow artifacts. |
 | User documentation | [ANYBOR.md](ANYBOR.md), ready to adapt as `docs/library/anybor.md` in libretro's documentation repository. |
 | Attribution and distribution terms | [LICENSES.md](../LICENSES.md), [NOTICE.txt](../NOTICE.txt), [LICENSES/](../LICENSES), [PROVENANCE.md](../PROVENANCE.md). |
 | Modification evidence | [MODIFICATIONS.md](../MODIFICATIONS.md), its file inventories and source history. |
@@ -61,6 +61,7 @@ published binary and records its exact hash and embedded notices.
 | Linux x86-64 | `make platform=unix CC=gcc CXX=g++` | `anybor_libretro.so` | `.libretro-linux-x64-make-default` |
 | Linux ARM64 runner | `make platform=unix CC=gcc CXX=g++` on AArch64 | `anybor_libretro.so` | `.libretro-linux-aarch64-make-default` |
 | Linux ARM64 cross build | `make TARGET=linux-aarch64` | `anybor_libretro.so` | Local alternative to the native ARM64 runner. |
+| Linux RISC-V64 LP64D | `make TARGET=linux-riscv64` | `anybor_libretro.so` | Standalone CI uses the GNU cross toolchain and QEMU user emulation. |
 | Windows x86-64 | `make platform=win64` with the runner's MinGW compiler variables | `anybor_libretro.dll` | `.libretro-windows-x64-mingw-make-default` |
 | Android ARM64 | `"$NDK_ROOT/ndk-build" -C jni APP_ABI=arm64-v8a` | `libs/arm64-v8a/libretro.so` and `anybor_libretro_android.so` | `.libretro-android-jni-arm64-v8a` |
 | macOS x86-64 | `make platform=osx CC=clang CXX=clang++` on an Intel runner | `anybor_libretro.dylib` | `.libretro-osx-x64-make-default` |
@@ -74,7 +75,9 @@ the artifact does not need a separately distributed `libc++_shared.so`.
 The Windows template supplies the MXE `x86_64-w64-mingw32.static-*` tools via
 `CC`, `CXX`, `AR`, `AS` and `WINDRES`. The builder derives companion tool names
 from the selected compiler and also accepts explicit overrides. Linux's `unix`
-entry point detects the compiler's target triple, including native AArch64.
+entry point detects the compiler's target triple, including native AArch64 and
+RISC-V64 LP64D. An explicit `TARGET=linux-riscv64` selects the GNU cross tools.
+The RISC-V runtime checks use user emulation; hardware validation is separate.
 
 The macOS templates pass `platform=osx` with `clang`/`clang++`; the builder
 picks the Mach-O target from the compiler triple, so the Intel and Apple
