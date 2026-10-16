@@ -31,6 +31,10 @@ module/arena addresses. Video allocation now follows native and CRT bounds,
 grows for larger runtime modes, and preserves its current reservation across
 state restoration. Focused tests cover register preservation, fault recovery,
 geometry changes, and exact restored output.
+RISC-V protected-page tracking uses readable, non-executable data mappings
+and the saved instruction pointer to distinguish writes from execution
+faults without an access-kind register. It retains hot-page learning and
+registered-worker dispatch, with user-emulated regression coverage.
 The glibc recovery translation unit uses the ordinary nonlocal-jump entry
 point: its fortified counterpart assumes one stack and can reject valid jumps
 from a separately allocated coroutine. Thread ownership and guard lifetime

@@ -2,6 +2,7 @@
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
 #define _GNU_SOURCE
 #include "obor_fault.h"
+#include "obor_abi.h"
 #include "obor_write_watch.h"
 #include "gamelib/threads.h"
 #include <assert.h>
@@ -120,8 +121,15 @@ int main(int argc, char **argv)
     if (!strcmp(argv[1], "disabled")) assert(!setenv("OBOR_STATE_WORKER_WATCH", "0", 1));
     assert(!obor_fault_worker_acquire()); /* no dispatch outside a guard */
     page = (size_t)sysconf(_SC_PAGESIZE);
+#if defined(__riscv) && __riscv_xlen == 64 && !defined(OBOR_WRITE_WATCH_TEST)
+    void *wanted = (void *)(uintptr_t)(OBOR_ARENA_BASE_VA + (16UL << 20));
+    memory = mmap(wanted, page * 4, PROT_READ | PROT_WRITE,
+                  MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED_NOREPLACE, -1, 0);
+    assert(memory == wanted);
+#else
     memory = mmap(NULL, page * 4, PROT_READ | PROT_WRITE,
                   MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+#endif
     assert(memory != MAP_FAILED);
     memset(memory, 0x77, page * 4);
     if (fallback != 2) assert(obor_write_watch_start(memory, page * 4, page * 4));

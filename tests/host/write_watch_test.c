@@ -17,6 +17,7 @@
 #include <unistd.h>
 
 static unsigned char *memory;
+static unsigned char *mapping;
 static size_t page;
 static int operation;
 static uint64_t initial;
@@ -101,6 +102,10 @@ static void exercise(void *unused)
         assert(obor_fault_worker_leases() == 1);
         obor_fault_worker_release();
         assert(!obor_fault_worker_leases());
+    } else if (operation == 12) {
+        ((void (*)(void))(uintptr_t)memory)(); /* NX, not a write */
+    } else if (operation == 13) {
+        ((void (*)(void))(uintptr_t)(memory - 2))(); /* straddling fetch */
     }
 }
 
@@ -110,24 +115,42 @@ static void guarded(int op, int expect_success)
     obor_fault fault;
     int result = obor_fault_run(exercise, NULL, &fault);
     if ((result == 1) != expect_success) exit(20);
-    if (!expect_success && fault.address != 1) exit(21);
+    if (!expect_success) {
+        uintptr_t expected = op == 12 || op == 13 ? (uintptr_t)memory : 1;
+        if (fault.address != expected) exit(21);
+        assert(fault.kind == OBOR_FAULT_MEMORY);
+        if (op == 12 || op == 13)
+            assert(fault.pc == (uintptr_t)memory - (op == 13 ? 2 : 0));
+    }
 }
 
 int main(int argc, char **argv)
 {
     if (argc != 2) return 2;
     page = (size_t)sysconf(_SC_PAGESIZE);
-#if defined(__aarch64__) && !defined(OBOR_WRITE_WATCH_TEST)
-    void *wanted = (void *)(uintptr_t)(OBOR_ARENA_BASE_VA + (16UL << 20));
-    memory = mmap(wanted, page * 4, PROT_READ | PROT_WRITE,
+#if (defined(__aarch64__) || (defined(__riscv) && __riscv_xlen == 64)) && !defined(OBOR_WRITE_WATCH_TEST)
+    void *wanted = (void *)(uintptr_t)(OBOR_ARENA_BASE_VA + (16UL << 20) - page);
+    mapping = mmap(wanted, page * 5, PROT_READ | PROT_WRITE,
                   MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED_NOREPLACE, -1, 0);
-    if (memory != wanted) return 3;
+    if (mapping != wanted) return 3;
 #else
-    memory = mmap(NULL, page * 4, PROT_READ | PROT_WRITE,
+    mapping = mmap(NULL, page * 5, PROT_READ | PROT_WRITE,
                   MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
 #endif
-    if (memory == MAP_FAILED) return 3;
+    if (mapping == MAP_FAILED) return 3;
+    memory = mapping + page;
     memset(memory, 0x77, page * 4);
+    assert(!obor_write_watch_instruction_outside((uintptr_t)exercise));
+    if (!strcmp(argv[1], "execute-boundary")) {
+#if defined(__riscv) && __riscv_xlen == 64
+        /* A 32-bit ADDI spans an executable page and the NX tracked page. */
+        memory[-2] = 0x13; memory[-1] = memory[0] = memory[1] = 0;
+        __builtin___clear_cache((char *)memory - 2, (char *)memory + 2);
+        assert(!mprotect(mapping, page, PROT_READ | PROT_EXEC));
+#else
+        return 2;
+#endif
+    }
     if (obor_write_watch_start(memory + 1, page, page * 4) ||
         obor_write_watch_start(memory, page + 1, page * 4) ||
         obor_write_watch_start(memory, page * 5, page * 4) ||
@@ -141,6 +164,11 @@ int main(int argc, char **argv)
     uint64_t first = obor_write_watch_epoch();
     if (first <= initial || obor_write_watch_page_epoch(0) > initial) return 6;
     assert(clean(0, page * 2, initial));
+    assert(obor_write_watch_instruction_outside((uintptr_t)exercise));
+    assert(!obor_write_watch_instruction_outside(0));
+    assert(!obor_write_watch_instruction_outside((uintptr_t)memory));
+    assert(!obor_write_watch_instruction_outside((uintptr_t)memory + page * 2 - 1));
+    assert(!obor_write_watch_instruction_outside((uintptr_t)memory - 2));
     assert(clean(page - 1, 2, initial));
     assert(!clean(0, 0, initial) && !clean(0, 1, 0));
     assert(!clean(0, 1, first) && !clean(0, 1, UINT64_MAX));
@@ -190,6 +218,13 @@ int main(int argc, char **argv)
     } else if (!strcmp(argv[1], "fault")) {
         guarded(6, 0);
         guarded(1, 1); /* recovery must not poison the active monitor */
+    } else if (!strcmp(argv[1], "execute") || !strcmp(argv[1], "execute-boundary")) {
+        guarded(!strcmp(argv[1], "execute") ? 12 : 13, 0);
+        /* A fetch fault must not consume a dirty epoch or unprotect data. */
+        assert(obor_write_watch_page_epoch(0) <= initial);
+        assert(clean(0, page * 2, initial));
+        guarded(1, 1);
+        assert(obor_write_watch_page_epoch(0) == first);
     } else if (!strcmp(argv[1], "errno")) {
         guarded(7, 1);
     } else if (!strcmp(argv[1], "lease")) {
@@ -224,7 +259,7 @@ int main(int argc, char **argv)
     memset(memory, 0x99, page * 4);
     if (!obor_write_watch_start(memory, page * 2, page * 4) ||
         obor_write_watch_epoch() != 1 || !obor_write_watch_stop()) return 16;
-    munmap(memory, page * 4);
+    munmap(mapping, page * 5);
     puts("write_watch_passed=1");
     return 0;
 }

@@ -192,6 +192,19 @@ int obor_write_watch_stop(void)
     return 1;
 }
 
+int obor_write_watch_instruction_outside(uintptr_t pc)
+{
+    write_watch *w = watch;
+    if (!w || !w->armed || !pc) return 0;
+    /* The watched mapping is readable and never executable, including hot
+     * pages. Also exclude its preceding page: an instruction can start there
+     * and fault while fetching its remaining bytes from the watched mapping.
+     * Engine code is separate from these data pages. No instruction is read
+     * or decoded in the signal handler. */
+    uintptr_t first = w->base >= w->page_size ? w->base - w->page_size : 0;
+    return pc < first || pc >= w->base + w->protected_length;
+}
+
 int obor_write_watch_fault(uintptr_t address)
 {
     write_watch *w = watch;

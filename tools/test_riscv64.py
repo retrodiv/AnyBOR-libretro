@@ -37,7 +37,8 @@ def main():
             for case in cases:
                 result = subprocess.run(runner + [str(binary), *case],
                     capture_output=True, text=True, timeout=30)
-                expected = 73 if case in (('frontend',), ('worker',)) else 0
+                expected = 73 if case in (('frontend',), ('worker',), ('worker-fault',),
+                                         ('worker-execute',), ('foreign',)) else 0
                 if result.returncode != expected:
                     raise RuntimeError(name + ': ' + result.stdout + result.stderr)
                 print(result.stdout, end='', flush=True)
@@ -48,6 +49,25 @@ def main():
             port / 'obor_libco.c', port / 'obor_write_watch.c'],
             ['-U_FORTIFY_SOURCE', '-D_FORTIFY_SOURCE=2', '-Wl,--wrap=read', '-Wl,--wrap=fread'],
             cases=((), ('upper-stack',), ('frontend',), ('worker',), ('user',), ('sigbus',)))
+        # No test override enables the backend or bypasses its fixed arena.
+        compile_run('watch', [root / 'tests/host/write_watch_test.c', port / 'obor_fault.c',
+            port / 'obor_write_watch.c'], ['-Wl,--wrap=read', '-Wl,--wrap=fread'],
+            cases=tuple((name,) for name in ('cpu', 'read', 'fread', 'growth', 'fault',
+                'execute', 'execute-boundary', 'errno', 'lease', 'worker', 'registered')))
+        interface = work / 'gamelib'
+        interface.mkdir()
+        (interface / 'threads.h').write_text('''
+typedef struct bor_thread bor_thread;
+typedef struct bor_mutex bor_mutex;
+typedef struct bor_cond bor_cond;
+bor_thread *thread_create(int (*)(void *), const char *, void *);
+void thread_join(bor_thread *);
+''')
+        compile_run('worker-watch', [root / 'tests/host/worker_watch_test.c',
+            port / 'obor_fault.c', port / 'obor_write_watch.c', port / 'threads.c'],
+            ['-I', str(work), '-Wl,--wrap=read', '-Wl,--wrap=fread', '-Wl,--wrap=pthread_create'],
+            cases=tuple((name,) for name in ('default', 'user', 'worker-fault',
+                'worker-execute', 'foreign', 'frontend', 'disabled', 'inactive')))
         if args.core:
             core, host = Path(args.core).resolve(), work / 'host'
             subprocess.run(cc + ['-O2', '-I', str(root / 'src/glue'),

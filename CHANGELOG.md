@@ -3,7 +3,8 @@
 ## Unreleased
 
 - Add Linux RISC-V64 LP64D builds, preserved integer/floating-point coroutine
-  contexts, fault locations and fixed addresses compatible with Sv39.
+  contexts, protected-page and hot-page tracking, fault locations and fixed
+  addresses compatible with Sv39.
 - Keep glibc fault recovery compatible with separately allocated coroutine
   stacks when the toolchain enables fortified nonlocal jumps.
 - Declare content-sized video bounds, reserve both native and CRT output, and

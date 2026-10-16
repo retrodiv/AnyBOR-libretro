@@ -26,7 +26,7 @@ def main():
             str(release.ROOT / 'tests/host/write_watch_test.c'),
             str(port / 'obor_fault.c'), str(port / 'obor_write_watch.c'),
             *flags, '-o', str(executable)], check=True, timeout=45)
-        for mode in ('cpu', 'read', 'fread', 'growth', 'fault', 'errno', 'lease', 'worker', 'registered'):
+        for mode in ('cpu', 'read', 'fread', 'growth', 'fault', 'execute', 'errno', 'lease', 'worker', 'registered'):
             result = subprocess.run([str(executable), mode], capture_output=True,
                                     text=True, timeout=15)
             log = result.stdout + result.stderr

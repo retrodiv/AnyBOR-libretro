@@ -44,7 +44,8 @@ make source-release             # optional source tar.gz; also included in each 
 The RISC-V target uses the GNU `riscv64-linux-gnu` toolchain and a portable
 VP8/VP9 decoder. Its fixed module and arena addresses fit the Sv39 userspace
 range. It is checked under user emulation; real hardware remains unverified.
-Dirty-page proofs currently fall back to content comparison on this target.
+Protected-page tracking, hot-page handling and preparation use the same
+policies as the other Linux targets.
 
 Video allocation follows the known content size or starts at 1920x1080 when
 the mode is not yet known. Larger modes expand it on demand; smaller modes

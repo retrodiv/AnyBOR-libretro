@@ -104,6 +104,10 @@ For the RISC-V GNU toolchain and user emulator, run the guarded
 Adding `--core anybor_libretro.so` also checks cold state loads at the fixed
 Sv39-compatible base and real reverse-frame output. The context fixture covers
 all preserved integer and floating-point registers, FCSR and a restored stack.
+Protected-page fixtures use the production RISC-V enablement and fixed arena,
+cover CPU and kernel-I/O writes, unchanged-page proofs, registered workers,
+hot-page learning and foreign-signal forwarding. Execution faults, including
+an instruction straddling an executable/NX boundary, must not dirty the data.
 These tests do not constitute validation on physical RISC-V hardware.
 
 The CRT suite checks the Video / Input / System category order, matching flat

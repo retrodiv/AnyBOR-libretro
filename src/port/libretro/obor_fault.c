@@ -318,6 +318,12 @@ static int watch_write_fault(void *context)
         records += size; available -= size;
     }
     return 0;
+#elif OBOR_WRITE_WATCH_ENABLED && defined(__linux__) && defined(__riscv) && __riscv_xlen == 64
+    ucontext_t *machine = context;
+    /* Linux RISC-V saves no access-kind register. A permission fault in our
+     * PROT_READ arena cannot be a data read; exclude NX instruction fetches
+     * using the saved PC before the watcher validates the destination. */
+    return obor_write_watch_instruction_outside(machine->uc_mcontext.__gregs[REG_PC]);
 #else
     (void)context;
     return 0;
