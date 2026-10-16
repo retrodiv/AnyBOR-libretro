@@ -190,6 +190,9 @@ uint64_t obor_wall_uticks(void)
 
 #include "gamelib/threads.h"
 
+#include "obor_fault.h"
+#include "obor_state_config.h"
+
 struct bor_thread {
     HANDLE th;
     int (*fn)(void *);
@@ -212,7 +215,11 @@ static DWORD WINAPI trampoline(LPVOID arg)
 bor_thread *thread_create(int (*fn)(void *), const char *name, void *data)
 {
     (void)name;
-    obor_state_owned_suspend();
+    /* GetWriteWatch records writes from every native thread without page
+     * protection or a signal dispatcher. Preserve its history for classic
+     * workers, while captures remain forbidden until all workers are joined.
+     * The asynchronous adapter still invalidates proofs at worker creation. */
+    if (!obor_state_worker_watch_enabled()) obor_state_owned_suspend();
     bor_thread *t = (bor_thread *)malloc(sizeof(*t));
     if (!t)
         return NULL;
@@ -234,8 +241,8 @@ void thread_join(bor_thread *thread)
 {
     if (!thread)
         return;
-    WaitForSingleObject(thread->th, INFINITE);
-    CloseHandle(thread->th);
+    if (WaitForSingleObject(thread->th, INFINITE) != WAIT_OBJECT_0 ||
+        !CloseHandle(thread->th)) obor_fault_abort(OBOR_FAULT_STATE, 0);
     free(thread);
     __atomic_sub_fetch(&obor_live_threads, 1, __ATOMIC_SEQ_CST);
 }

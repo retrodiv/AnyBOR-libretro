@@ -26,7 +26,7 @@ int obor_fault_run_stack(void (*execute)(void *), void *context,
  * A worker/out-of-scope call retains the ordinary abort behaviour. */
 void obor_fault_abort(uint32_t kind, uintptr_t address) __attribute__((noreturn));
 void obor_fault_allocator_activity(int entering);
-/* Linux watcher workers have no recovery/longjmp target. The engine owner
+/* POSIX watcher workers have no recovery/longjmp target. The engine owner
  * pins signal dispatch before publishing a worker and releases it after join,
  * inside a guard. Each worker opts in before touching protected arena bytes.
  * Other platforms/backends return 0 and retain suspension at thread creation. */

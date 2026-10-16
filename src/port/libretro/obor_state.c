@@ -1301,6 +1301,16 @@ static void execute_state(void *context)
     }
 }
 
+static int protected_state_call(state_call *call, const char *phase)
+{
+    int returned = obor_protect_call(execute_state, call, phase);
+    /* A recovered source fault can bypass the encoder's ordinary epilogue.
+     * Drain its private helper on the owner before reuse or engine teardown,
+     * after leaving the signal/exception handler and restoring the coroutine. */
+    if (!returned) obor_state_coded_forget();
+    return returned;
+}
+
 int32_t obor_owned_begin(void *first, void *second, uint32_t size)
 {
     uintptr_t a = (uintptr_t)first, b = (uintptr_t)second;
@@ -1310,7 +1320,7 @@ int32_t obor_owned_begin(void *first, void *second, uint32_t size)
         (a < arena + OBOR_ARENA_MAX_SZ && arena < a + size) ||
         (b < arena + OBOR_ARENA_MAX_SZ && arena < b + size)) return 0;
     state_call call = {first, size, 0, 4, 0, second, NULL};
-    return obor_protect_call(execute_state, &call, "owned state begin") ? (int32_t)call.result : 0;
+    return protected_state_call(&call, "owned state begin") ? (int32_t)call.result : 0;
 }
 
 uint32_t obor_owned_serialize(void *buffer, uint32_t size, obor_state_ranges *ranges)
@@ -1326,13 +1336,13 @@ uint32_t obor_owned_serialize(void *buffer, uint32_t size, obor_state_ranges *ra
         (r < b + size && b < r + sizeof(*ranges)) ||
         (r < arena + OBOR_ARENA_MAX_SZ && arena < r + sizeof(*ranges))) return 0;
     state_call call = {buffer, size, 0, 3, 0, NULL, ranges};
-    return obor_protect_call(execute_state, &call, "owned save state") ? call.result : 0;
+    return protected_state_call(&call, "owned save state") ? call.result : 0;
 }
 
 int32_t obor_state_tracking_end(void)
 {
     state_call call = {NULL, 0, 0, 5, 0, NULL, NULL};
-    return obor_protect_call(execute_state, &call, "state tracking end") ? (int32_t)call.result : 0;
+    return protected_state_call(&call, "state tracking end") ? (int32_t)call.result : 0;
 }
 
 int32_t obor_owned_end(void)
@@ -1347,25 +1357,25 @@ int32_t obor_owned_end(void)
 uint32_t obor_serialize_size(void)
 {
     state_call call = {NULL, 0, 0, 0, 0, NULL, NULL};
-    return obor_protect_call(execute_state, &call, "state size") ? call.result : 0;
+    return protected_state_call(&call, "state size") ? call.result : 0;
 }
 
 uint32_t obor_serialize(void *buffer, uint32_t size)
 {
     state_call call = {buffer, size, 0, 1, 0, NULL, NULL};
-    return obor_protect_call(execute_state, &call, "save state") ? call.result : 0;
+    return protected_state_call(&call, "save state") ? call.result : 0;
 }
 
 uint32_t obor_prepare_state(void)
 {
     state_call call = {NULL, 0, 0, 6, 0, NULL, NULL};
-    return obor_protect_call(execute_state, &call, "state preparation") ? call.result : 0;
+    return protected_state_call(&call, "state preparation") ? call.result : 0;
 }
 
 int32_t obor_unserialize(const void *buffer, uint32_t size)
 {
     state_call call = {(void *)buffer, size, 0, 2, 0, NULL, NULL};
-    int protected_ok = obor_protect_call(execute_state, &call, "load state");
+    int protected_ok = protected_state_call(&call, "load state");
     obor_resource_restore_destroy(state_resource_plan);
     state_resource_plan = NULL;
     return protected_ok ? (int32_t)call.result : 0;

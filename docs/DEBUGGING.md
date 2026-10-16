@@ -82,7 +82,7 @@ merely an invalid header. Both variables are inert when unset.
 
 ## State compression comparisons
 
-On Linux x86-64/ARM64, `OBOR_STATE_COMPRESSION_WORKER=0` selects serial block
+On supported targets, `OBOR_STATE_COMPRESSION_WORKER=0` selects serial block
 compression for a local comparison. Leaving it unset selects the compiled
 policy, which considers the preceding same-phase codec CPU cost and changed
 block count. At most one helper completes within an eligible capture.
@@ -160,3 +160,14 @@ block unchanged. This override changes work allocation, not snapshot contents.
 `OBOR_STATE_COMPRESSION_WORKER=0` retain independent diagnostic controls for
 advance preparation, registered decoder tracking and the synchronous helper.
 The normal safety checks and complete fallback paths remain in effect.
+
+Darwin handles protected arena writes through the existing BSD signal guard,
+including the `SIGBUS` protection faults produced by XNU. It leaves Mach
+exception ports untouched and chains unrelated signals to their previous
+owner. Native platform tests exercise CPU writes, kernel I/O and foreign
+threads. Windows write tracking needs no protected-page signal handler.
+
+Diagnostic PPM prefixes, ranges and emission counts belong to the current
+process and survive a state load without being restored from that state.
+They never supply saved engine or presentation data. Native system-function
+lookup caches likewise remain outside captured engine memory.

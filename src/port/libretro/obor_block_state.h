@@ -63,6 +63,10 @@ obor_block_state *obor_block_state_create(const obor_block_allocator *allocator)
 obor_block_state *obor_block_state_create_sized(const obor_block_allocator *, uint32_t capacity);
 void obor_block_state_destroy(obor_block_state *state);
 void obor_block_state_forget(obor_block_state *state);
+/* Owner-only recovery after a protected call left through a nonlocal exit.
+ * Drain/join an interrupted helper and invalidate its partial image. Harmless
+ * without pending work; never call from a signal handler or another thread. */
+void obor_block_state_quiesce(obor_block_state *state);
 /* Optional bounded slot maintenance. Each capture examines at most 512
  * entries and 4096 hole candidates and writes at most 512 KiB of pool bytes.
  * It reclaims excess slot capacity and moves complete encoded blocks into

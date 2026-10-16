@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+- Enable supported macOS snapshot policies, including guarded dirty-page
+  tracking, advance preparation, bounded pool maintenance and the synchronous
+  encoder helper. Retain native Windows write tracking across classic decoder
+  workers and enable its native encoder helper and thread CPU clock.
+- Keep diagnostic frame prefixes, capture ranges and native function caches
+  outside saved engine state. Validate protected-page I/O bindings and native
+  signal chaining in the platform checks.
+- Drain any interrupted encoder helper after state-fault recovery, before
+  reusing its workspace or releasing the engine.
+
 - Keep managed build artifacts in separate target directories and verify their
   recorded identities before runtime checks, preserving ordinary make output.
 

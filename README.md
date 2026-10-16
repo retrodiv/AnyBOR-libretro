@@ -134,9 +134,10 @@ during a session, resetting or loading a state does not change that session's
 writer. Diagnostic environment overrides retain priority.
 
 The default is **Smart + On on every platform**, including Android and macOS.
-Writer selection is independent of the platform runtime policy. Supported
-Android targets also enable dirty-page tracking, advance state preparation,
-bounded encoder-pool maintenance and the synchronous compression helper. **Full + Off may not fit the
+Supported targets also enable dirty-page tracking, advance state preparation,
+bounded encoder-pool maintenance and the synchronous compression helper.
+Linux, Android and macOS use guarded page protection; Windows uses its native
+write-watch API. **Full + Off may not fit the
 256 MiB rewind buffer in large games.** The available duration and capture cost
 depend on the game, machine and selected combination.
 
@@ -173,7 +174,7 @@ the requested capture still validates the current bytes. Unused transport
 bytes are deterministically zero. Fixed frontend capacity remains unchanged
 across loading, gameplay and Reset.
 
-On Linux x86-64/ARM64, including supported Android targets, captures with
+On supported Windows, Linux, Android and macOS targets, captures with
 enough observed encoding work can use
 one auxiliary compression thread. It finishes before capture returns; the
 engine never advances while it is working. Scratch space stays below 2.1 MiB
@@ -181,7 +182,7 @@ and stores no rewind history. Lighter updates, unavailable CPU measurements
 or threads, and single-CPU systems retain serial compression. Both paths
 produce the same serialized bytes and preserve the capture frequency.
 
-On supported Linux and Android targets, classic movie decoders retain write tracking while
+On supported targets, classic movie decoders retain write tracking while
 their engine-owned workers run, including between frontend calls. This avoids
 rechecking untouched resources after playback. Captures remain unavailable
 while workers are active. The asynchronous movie adapter has additional worker

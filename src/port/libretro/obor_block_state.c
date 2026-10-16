@@ -5,7 +5,9 @@
 #include "lz4.h"
 #include <string.h>
 #include <zlib.h>
-#if defined(__linux__)
+#ifdef _WIN32
+#include <windows.h>
+#else
 #include <time.h>
 #endif
 
@@ -13,7 +15,16 @@
  * performance metadata, never a reason to omit or reject captured state. */
 static uint64_t block_cpu_now(void)
 {
-#if defined(__linux__) && defined(CLOCK_THREAD_CPUTIME_ID)
+#ifdef _WIN32
+    FILETIME created, exited, kernel, user;
+    if (GetThreadTimes(GetCurrentThread(), &created, &exited, &kernel, &user)) {
+        uint64_t k = (uint64_t)kernel.dwHighDateTime << 32 | kernel.dwLowDateTime;
+        uint64_t u = (uint64_t)user.dwHighDateTime << 32 | user.dwLowDateTime;
+        /* A freshly created Windows thread can have exactly zero CPU ticks.
+         * Keep zero reserved for API failure, as on the POSIX backend. */
+        return (k + u) * UINT64_C(100) + 1;
+    }
+#elif defined(CLOCK_THREAD_CPUTIME_ID)
     struct timespec value;
     if (!clock_gettime(CLOCK_THREAD_CPUTIME_ID, &value))
         return (uint64_t)value.tv_sec * UINT64_C(1000000000) + (uint64_t)value.tv_nsec;
@@ -138,6 +149,7 @@ obor_block_state *obor_block_state_create(const obor_block_allocator *allocator)
 void obor_block_state_destroy(obor_block_state *state)
 {
     if (!state) return;
+    obor_block_state_quiesce(state);
     obor_block_allocator allocator = state->allocator;
     if (state->deflater_ready) deflateEnd(&state->deflater);
     if (state->inflater_ready) inflateEnd(&state->inflater);
@@ -151,9 +163,8 @@ void obor_block_state_destroy(obor_block_state *state)
     allocator.free(state);
 }
 
-void obor_block_state_forget(obor_block_state *state)
+static void block_forget_image(obor_block_state *state)
 {
-    if (!state) return;
     state->valid = 0;
     state->raw_size = state->hole_count = 0;
     state->compact_cursor = 0;
@@ -162,6 +173,13 @@ void obor_block_state_forget(obor_block_state *state)
     memset(state->changed, 0xff, sizeof(state->changed));
     /* Bytes past high are not published. Future slots are initialized before
      * high advances, including their padding; discarded states do not leak. */
+}
+
+void obor_block_state_forget(obor_block_state *state)
+{
+    if (!state) return;
+    obor_block_state_quiesce(state);
+    block_forget_image(state);
 }
 
 static int block_reserve_raw(obor_block_state *state, uint32_t size)
@@ -358,8 +376,9 @@ static int block_encode(obor_block_state *, const obor_block_source *,
 static int block_encode(obor_block_state *state, const obor_block_source *source,
                          uint32_t raw_size, int allow_repack, int initial_codec, int update_codec)
 {
+    obor_block_state_quiesce(state);
     if (!state || !source || !source->read) return 0;
-#if defined(__linux__)
+#if defined(__linux__) || defined(__APPLE__) || defined(_WIN32)
     if (allow_repack && state->worker_enabled && state->valid && !state->clock &&
         raw_size >= BW_BATCH * BS_BLOCK) {
         int result = block_encode_worker(state, source, raw_size, initial_codec, update_codec);
@@ -563,6 +582,7 @@ static int block_inflate(obor_block_state *state, const void *source, uint32_t s
 
 int obor_block_state_decode(obor_block_state *state, const void *data, uint32_t size)
 {
+    obor_block_state_quiesce(state);
     if (!state || !data) return 0;
     const unsigned char *image = data;
     block_header header;

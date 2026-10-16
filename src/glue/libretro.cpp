@@ -1346,11 +1346,14 @@ void retro_reset(void)
  * OBOR_GLUE_DUMP_FROM=N with optional OBOR_GLUE_DUMP_TO=M captures a range. */
 static void glue_dump_maybe(const uint32_t *px, int w, int h, int pitch_px)
 {
-    static const char *pfx;
-    static long exact_frame = -1;
-    static long first_frame = -1;
-    static long last_frame = -1;
-    static int checked;
+    /* Diagnostic environment and counters belong to this process. Loading a
+     * state must neither recover another process's getenv pointer nor replace
+     * the current capture range with the saved process's disabled settings. */
+    static const char *pfx OBOR_RUNTIME;
+    static long exact_frame OBOR_RUNTIME = -1;
+    static long first_frame OBOR_RUNTIME = -1;
+    static long last_frame OBOR_RUNTIME = -1;
+    static int checked OBOR_RUNTIME;
     if (!checked) {
         checked = 1;
         pfx = getenv("OBOR_GLUE_DUMP");
@@ -1364,7 +1367,7 @@ static void glue_dump_maybe(const uint32_t *px, int w, int h, int pitch_px)
         if (value)
             last_frame = strtol(value, NULL, 10);
     }
-    static int dumped;
+    static int dumped OBOR_RUNTIME;
     if (!pfx || !px || dumped >= 400)
         return;
     if (exact_frame >= 0 ? g_frame_no != exact_frame :
@@ -1393,7 +1396,7 @@ static void glue_dump_maybe(const uint32_t *px, int w, int h, int pitch_px)
 
 static void trace_init(void)
 {
-    static int done;
+    static int done OBOR_RUNTIME;
     if (done)
         return;
     done = 1;

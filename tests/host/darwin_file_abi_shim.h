@@ -33,4 +33,8 @@ DIR *opendir(const char *) __asm__("opendir$INODE64");
 #define __DARWIN_SUF_UNIX03 ""
 #define __DARWIN_SUF_NON_CANCELABLE ""
 #define __DARWIN_SUF_EXTSN ""
+/* This fixture uses the ELF loader, so model process-local storage with its
+ * native section spelling. Actual Darwin sections are checked with the SDK. */
+#define OBOR_RUNTIME_H
+#define OBOR_RUNTIME __attribute__((section("obor_rt")))
 #endif

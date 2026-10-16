@@ -17,6 +17,8 @@
 #define OBOR_NATIVE_IO_FCLOSE "fclose"
 #define OBOR_NATIVE_IO_OPEN "open" __DARWIN_SUF_NON_CANCELABLE __DARWIN_SUF_UNIX03
 #define OBOR_NATIVE_IO_CLOSE "close" __DARWIN_SUF_NON_CANCELABLE __DARWIN_SUF_UNIX03
+#define OBOR_NATIVE_IO_READ "read" __DARWIN_SUF_NON_CANCELABLE __DARWIN_SUF_UNIX03
+#define OBOR_NATIVE_IO_FREAD "fread"
 #define OBOR_NATIVE_IO_STAT "stat" __DARWIN_SUF_64_BIT_INO_T
 #define OBOR_NATIVE_IO_OPENDIR "opendir" __DARWIN_SUF_64_BIT_INO_T __DARWIN_SUF_UNIX03
 #define OBOR_NATIVE_IO_REMOVE "remove"
@@ -25,6 +27,18 @@
 #define OBOR_NATIVE_IO_RENAME "rename"
 #define OBOR_NATIVE_IO_MKDIR "mkdir"
 #define OBOR_NATIVE_IO_CHMOD "chmod" __DARWIN_SUF_UNIX03
+
+/* Native code addresses belong to this process, not an engine snapshot.
+ * Workers may race their first lookup; publish only the complete pointer. */
+#define OBOR_DARWIN_NATIVE(symbol, lookup) \
+    static __typeof__(&symbol) original_storage OBOR_RUNTIME; \
+    __typeof__(&symbol) original = __atomic_load_n(&original_storage, __ATOMIC_ACQUIRE); \
+    if (!original) { \
+        void *resolved = dlsym(RTLD_NEXT, lookup); \
+        _Static_assert(sizeof(original) == sizeof(resolved), "Darwin function address width"); \
+        memcpy(&original, &resolved, sizeof(original)); \
+        if (original) __atomic_store_n(&original_storage, original, __ATOMIC_RELEASE); \
+    }
 #endif
 
 #endif

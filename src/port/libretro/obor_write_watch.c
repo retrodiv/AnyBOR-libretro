@@ -280,11 +280,30 @@ int obor_write_watch_range_unchanged(uintptr_t begin, size_t length, uint64_t si
 size_t obor_write_watch_page_size(void) { return watch ? watch->page_size : 0; }
 #endif
 
-#ifdef __linux__
+#if defined(__linux__) || (defined(__APPLE__) && OBOR_WRITE_WATCH_ENABLED)
 #include <stdio.h>
 #include <unistd.h>
+#if defined(__APPLE__)
+#include <dlfcn.h>
+#include "obor_native_io.h"
+/* These interposers are localized with their engine by the Mach-O rewriter.
+ * Forward through the actual SDK ABI; cache only process-local addresses. */
+ssize_t __real_read(int fd, void *buffer, size_t count)
+{
+    OBOR_DARWIN_NATIVE(__real_read, OBOR_NATIVE_IO_READ);
+    if (!original) { errno = ENOSYS; return -1; }
+    return original(fd, buffer, count);
+}
+size_t __real_fread(void *buffer, size_t size, size_t count, FILE *stream)
+{
+    OBOR_DARWIN_NATIVE(__real_fread, OBOR_NATIVE_IO_FREAD);
+    if (!original) { errno = ENOSYS; return 0; }
+    return original(buffer, size, count, stream);
+}
+#else
 extern ssize_t __real_read(int, void *, size_t);
 extern size_t __real_fread(void *, size_t, size_t, FILE *);
+#endif
 
 /* Kernel writes return EFAULT instead of invoking the CPU signal handler.
  * Pre-mark exactly the intersecting pages; preserve ordinary libc behavior. */
@@ -302,4 +321,10 @@ size_t __wrap_fread(void *buffer, size_t size, size_t count, FILE *stream)
         obor_fault_abort(OBOR_FAULT_MEMORY, (uintptr_t)buffer);
     return __real_fread(buffer, size, count, stream);
 }
+#if defined(__APPLE__)
+ssize_t read(int fd, void *buffer, size_t count)
+{ return __wrap_read(fd, buffer, count); }
+size_t fread(void *buffer, size_t size, size_t count, FILE *stream)
+{ return __wrap_fread(buffer, size, count, stream); }
+#endif
 #endif

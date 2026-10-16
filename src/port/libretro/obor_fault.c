@@ -137,6 +137,7 @@ int obor_fault_run_stack(void (*execute)(void *), void *context,
 #else
 #include <signal.h>
 #include <setjmp.h>
+#include "obor_fault_context.h"
 /* Darwin requires _XOPEN_SOURCE to expose the machine context. */
 #if defined(__APPLE__) && !defined(_XOPEN_SOURCE)
 #define _XOPEN_SOURCE 600
@@ -166,6 +167,8 @@ static struct {
     pthread_key_t slot;
     pthread_t owner;
     int slot_live;
+    pthread_key_t worker_slot;
+    int worker_slot_live;
 #endif
 } runtime OBOR_RUNTIME;
 static const int memory_signals[2] = {SIGSEGV, SIGBUS};
@@ -208,13 +211,31 @@ static fault_guard *current_guard(void) { return active_guard; }
 static int set_guard(fault_guard *guard) { active_guard = guard; return 0; }
 #endif
 
-#if OBOR_WRITE_WATCH_ENABLED && !defined(OBOR_FAULT_PTHREAD_TLS)
+#if OBOR_WRITE_WATCH_ENABLED
 #define OBOR_FAULT_WORKER_WATCH 1
+#if defined(OBOR_FAULT_PTHREAD_TLS)
+/* The worker key survives owner callbacks, but never its last joined worker.
+ * A unique marker also prevents a reused foreign TLS value being interpreted
+ * as a recovery target. No compiler TLS pins the Darwin module in dyld. */
+static int current_watch_worker(void)
+{
+    return __atomic_load_n(&runtime.worker_slot_live, __ATOMIC_ACQUIRE) &&
+        pthread_getspecific(runtime.worker_slot) == &runtime.worker_slot;
+}
+#else
 static __thread int watch_worker;
+static int current_watch_worker(void) { return watch_worker; }
+#endif
 int obor_fault_worker_acquire(void)
 {
     if (!current_guard() || runtime.handlers_live != 2 ||
         runtime.worker_leases == UINT32_MAX) return 0;
+#if defined(OBOR_FAULT_PTHREAD_TLS)
+    if (!runtime.worker_leases) {
+        if (pthread_key_create(&runtime.worker_slot, NULL)) return 0;
+        __atomic_store_n(&runtime.worker_slot_live, 1, __ATOMIC_RELEASE);
+    }
+#endif
     ++runtime.worker_leases;
     return 1;
 }
@@ -223,9 +244,30 @@ void obor_fault_worker_release(void)
     /* A join establishes that no worker can still be in our signal handler. */
     if (!current_guard() || !runtime.worker_leases) abort();
     --runtime.worker_leases;
+#if defined(OBOR_FAULT_PTHREAD_TLS)
+    if (!runtime.worker_leases) {
+        __atomic_store_n(&runtime.worker_slot_live, 0, __ATOMIC_RELEASE);
+        pthread_key_delete(runtime.worker_slot);
+    }
+#endif
 }
-void obor_fault_worker_enter(void) { watch_worker = 1; }
-void obor_fault_worker_leave(void) { watch_worker = 0; }
+void obor_fault_worker_enter(void)
+{
+#if defined(OBOR_FAULT_PTHREAD_TLS)
+    if (!__atomic_load_n(&runtime.worker_slot_live, __ATOMIC_ACQUIRE) ||
+        pthread_setspecific(runtime.worker_slot, &runtime.worker_slot)) abort();
+#else
+    watch_worker = 1;
+#endif
+}
+void obor_fault_worker_leave(void)
+{
+#if defined(OBOR_FAULT_PTHREAD_TLS)
+    if (pthread_setspecific(runtime.worker_slot, NULL)) abort();
+#else
+    watch_worker = 0;
+#endif
+}
 unsigned obor_fault_worker_leases(void) { return runtime.worker_leases; }
 #endif
 
@@ -234,7 +276,18 @@ unsigned obor_fault_worker_leases(void) { return runtime.worker_leases; }
  * an endless sequence of handled faults. Unknown contexts fail closed. */
 static int watch_write_fault(void *context)
 {
-#if OBOR_WRITE_WATCH_ENABLED && defined(__x86_64__)
+    if (!context) return 0;
+#if OBOR_WRITE_WATCH_ENABLED && defined(__APPLE__) && defined(__x86_64__)
+    ucontext_t *machine = context;
+    return machine->uc_mcontext->__es.__trapno == 14 &&
+        (machine->uc_mcontext->__es.__err & 0x12) == 0x02;
+#elif OBOR_WRITE_WATCH_ENABLED && defined(__APPLE__) && (defined(__aarch64__) || defined(__arm64__))
+    ucontext_t *machine = context;
+    uint32_t esr = machine->uc_mcontext->__es.__esr;
+    /* EL0 data abort, write, permission fault. Alignment, instruction fetch
+     * and unrelated Mach exceptions belong to the normal fault owner. */
+    return obor_fault_arm_permission_write(esr);
+#elif OBOR_WRITE_WATCH_ENABLED && defined(__x86_64__)
     ucontext_t *machine = context;
     return (machine->uc_mcontext.gregs[REG_ERR] & 0x12) == 0x02;
 #elif OBOR_WRITE_WATCH_ENABLED && defined(__aarch64__)
@@ -288,9 +341,10 @@ static void memory_signal(int signal, siginfo_t *info, void *context)
     fault_guard *guard = current_guard();
     int watch_owner = guard != NULL;
 #ifdef OBOR_FAULT_WORKER_WATCH
-    watch_owner |= watch_worker;
+    watch_owner |= current_watch_worker();
 #endif
-    if (watch_owner && signal == SIGSEGV && info && info->si_code == SEGV_ACCERR &&
+    int protected_write = info && obor_fault_protection_signal(signal, info->si_code);
+    if (watch_owner && protected_write &&
         watch_write_fault(context) &&
         obor_write_watch_cpu_fault((uintptr_t)info->si_addr)) return;
     if (guard && info && info->si_code > 0) {

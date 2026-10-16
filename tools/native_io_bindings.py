@@ -14,6 +14,7 @@ from macho_rewrite import MachOObject
 
 OPERATIONS = ('fopen', 'fclose', 'open', 'close', 'opendir', 'stat',
               'remove', 'unlink', 'rmdir', 'rename', 'mkdir', 'chmod')
+WATCH_OPERATIONS = ('read', 'fread')
 
 
 def symbol_sets(path, nm):
@@ -38,14 +39,14 @@ def symbol_sets(path, nm):
     return defined, undefined
 
 
-def path_operation(name, macho=False):
+def path_operation(name, macho=False, watch=False):
     """Classify API families, without guessing a versioned SDK symbol."""
     if macho and name.startswith('_'):
         name = name[1:]
     if name.startswith('__imp_'):
         name = name[len('__imp_'):]
     name = name.lstrip('_').split('$', 1)[0]
-    return (name in OPERATIONS or
+    return (name in OPERATIONS or (watch and name in WATCH_OPERATIONS) or
             re.match(r'^(stat|open|fopen)(32|64|32i64|64i32)$', name) is not None)
 
 
@@ -56,7 +57,7 @@ def verify_darwin_names(compiler, flags, port, output):
     source, obj = output / 'native-io-sdk.c', output / 'native-io-sdk.o'
     lines = ['#include <stdio.h>', '#include <sys/stat.h>', '#include <dirent.h>',
              '#include <unistd.h>', '#include <fcntl.h>', '#include "obor_native_io.h"']
-    for name in OPERATIONS:
+    for name in OPERATIONS + WATCH_OPERATIONS:
         lines += ['__typeof__(&{0}) obor_probe_{0} = &{0};'.format(name),
                   'const char obor_native_name_{0}[] = OBOR_NATIVE_IO_{1};'.format(name, name.upper())]
     source.write_text('\n'.join(lines) + '\n', encoding='utf-8')
@@ -67,7 +68,7 @@ def verify_darwin_names(compiler, flags, port, output):
     symbols = parsed.read_symbols()
     undefined = {entry.name for entry in symbols if not entry.defined and entry.name}
     names = {}
-    for name in OPERATIONS:
+    for name in OPERATIONS + WATCH_OPERATIONS:
         entry = next(s for s in symbols if s.name == '_obor_native_name_' + name)
         section = parsed.sections[entry.sect - 1]
         start = section.offset + entry.value - section.addr
@@ -89,20 +90,35 @@ def verify_darwin_names(compiler, flags, port, output):
     subprocess.check_call(shlex.split(str(compiler)) + list(flags) + [
         '-std=gnu99', '-Werror', '-I', str(port), '-c',
         str(Path(port) / 'obor_files.c'), '-o', str(implementation)])
-    native_object = MachOObject(implementation.read_bytes())
+    watch_implementation = output / 'native-watch-port.o'
+    subprocess.check_call(shlex.split(str(compiler)) + list(flags) + [
+        '-std=gnu99', '-Werror', '-I', str(port), '-c',
+        str(Path(port) / 'obor_write_watch.c'), '-o', str(watch_implementation)])
     strings = set()
-    for section in native_object.sections:
-        if section.sectname.rstrip(b'\0') != b'__cstring':
-            continue
-        if section.size > 1 << 20 or section.offset + section.size > len(native_object.data):
-            raise ValueError('Invalid native I/O forwarder string section')
-        strings.update(bytes(native_object.data[section.offset:section.offset + section.size]).split(b'\0'))
+    process_caches = 0
+    for path in (implementation, watch_implementation):
+        native_object = MachOObject(path.read_bytes())
+        for symbol in native_object.read_symbols():
+            if symbol.defined and symbol.sect and 'original' in symbol.name:
+                section = native_object.sections[symbol.sect - 1]
+                if section.sectname.rstrip(b'\0') != b'__obor_rt':
+                    raise ValueError('Native process pointer enters captured data: ' + symbol.name)
+                process_caches += 1
+        for section in native_object.sections:
+            if section.sectname.rstrip(b'\0') != b'__cstring':
+                continue
+            if section.size > 1 << 20 or section.offset + section.size > len(native_object.data):
+                raise ValueError('Invalid native I/O forwarder string section')
+            strings.update(bytes(native_object.data[section.offset:section.offset + section.size]).split(b'\0'))
     missing = [name for name in names.values() if name.encode('ascii') not in strings]
     if missing:
         raise ValueError('Native forwarders do not use the selected SDK ABI: ' + ', '.join(missing))
+    if process_caches < len(OPERATIONS) + len(WATCH_OPERATIONS):
+        raise ValueError('Missing audited native process-pointer caches')
     report = dict(operations=names, sdk_imports=sorted(undefined),
                   native_execution=False, all_sdk_lookups_match=True,
-                  actual_native_forwarder_object_checked=True)
+                  actual_native_forwarder_object_checked=True,
+                  process_pointer_caches_outside_state=process_caches)
     (output / 'native-io-sdk.json').write_text(json.dumps(report, indent=2) + '\n')
     return report
 
@@ -118,6 +134,10 @@ def audit_engine(spec, objects, archives, output):
     macho = spec['plat'] == 'darwin'
     nm = spec['nm']
     wrappers, unused = symbol_sets(objects / 'port/obor_files.o', nm)
+    watch = spec['plat'] in ('linux', 'darwin')
+    if watch:
+        watch_wrappers, unused = symbol_sets(objects / 'port/obor_write_watch.o', nm)
+        wrappers |= watch_wrappers
     if macho:
         bound = wrappers
     else:
@@ -128,14 +148,14 @@ def audit_engine(spec, objects, archives, output):
         # real linker option and a definition; an unused option needs neither.
         bound = {name for name in configured if '__wrap_' + name in wrappers}
     checked, bindings = 0, set()
-    excluded = {'obor_files.o', 'whole.o', 'kept.o', 'android-kept.o'}
+    excluded = {'obor_files.o', 'obor_write_watch.o', 'whole.o', 'kept.o', 'android-kept.o'}
     paths = [p for p in sorted(objects.rglob('*.o'))
              if p.name not in excluded and not p.name.startswith(('obor_engine_', 'linker-probe'))]
     paths += list(map(Path, archives))
     for path in paths:
         unused, imports = symbol_sets(path, nm)
         for name in imports:
-            if not path_operation(name, macho):
+            if not path_operation(name, macho, watch):
                 continue
             if name not in bound:
                 raise ValueError('File call escapes session wrapper: {0}: {1}'.format(path.name, name))

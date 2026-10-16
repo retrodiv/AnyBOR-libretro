@@ -83,10 +83,11 @@ The macros account for the active character's facing direction.
 
 The state options share the existing System category. Their defaults are
 **Smart + On on every platform**, including Android and macOS. Writer selection
-is independent of the platform runtime policy. Supported Android targets enable
+is independent of the platform runtime policy. Supported targets enable
 guarded dirty-page tracking, advance preparation and the synchronous compression
 helper, with bounded pool maintenance. Frequently written pages remain writable
-and always dirty for snapshot proofs. No policy changes the complete-state contract.
+and always dirty for snapshot proofs on the page-protection backends; Windows
+retains its native write-watch mechanism. No policy changes the complete-state contract.
 Full + Off may exceed a 256 MiB rewind buffer in large
 games. All combinations can be selected on every platform; see the
 [state compatibility limits](../README.md#save-states-and-rewind), including

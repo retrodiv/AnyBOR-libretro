@@ -60,6 +60,7 @@ static uint32_t coded_capacity(void)
 
 void obor_state_coded_forget(void)
 {
+    obor_block_state_quiesce(coded_cache);
     obor_block_worker_policy_reset(&coded_worker_policy);
     coded_epoch = 0;
     coded_previous_count = 0;
@@ -329,7 +330,6 @@ static uint32_t update_coded(void *buffer, uint32_t size, int preparation)
     int block_profile_enabled = !preparation && block_profile && !strcmp(block_profile, "1");
     obor_block_state_set_clock(coded_cache, block_profile_enabled ? state_timing_now : NULL);
     obor_block_state_set_compaction(coded_cache, !preparation && pool_compact);
-#if defined(__linux__) && !defined(__ANDROID__)
     /* Keep explicit serial/helper overrides for attribution. The platform
      * default uses work measured in the preceding call of the same phase;
      * at most one helper joins before this call returns. */
@@ -337,7 +337,6 @@ static uint32_t update_coded(void *buffer, uint32_t size, int preparation)
         obor_state_option("OBOR_STATE_COMPRESSION_WORKER",
             OBOR_STATE_DEFAULT_ENABLED &&
             obor_block_worker_policy_due(&coded_worker_policy, preparation)));
-#endif
     /* Compact newly encountered blocks once, then use the fast codec for
      * mutable updates. Both choices preserve the complete engine bytes. */
     int encoded = source.catalog ?

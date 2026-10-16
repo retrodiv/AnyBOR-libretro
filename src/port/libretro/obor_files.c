@@ -239,16 +239,14 @@ PATH_STAT(stat64, struct stat64)
 #if defined(__APPLE__)
 #include <dlfcn.h>
 #include "obor_native_io.h"
+#include "obor_runtime.h"
 
 FILE *__real_fopen(const char *path, const char *mode)
 {
-    static FILE *(*original)(const char *, const char *);
+    OBOR_DARWIN_NATIVE(__real_fopen, OBOR_NATIVE_IO_FOPEN);
     if (!original) {
-        *(void **)(&original) = dlsym(RTLD_NEXT, OBOR_NATIVE_IO_FOPEN);
-        if (!original) {
-            errno = ENOSYS;
-            return NULL;
-        }
+        errno = ENOSYS;
+        return NULL;
     }
     return original(path, mode);
 }
@@ -256,17 +254,15 @@ FILE *__real_fopen(const char *path, const char *mode)
 FILE *fopen(const char *path, const char *mode) { return __wrap_fopen(path, mode); }
 int __real_fclose(FILE *file)
 {
-    static int (*original)(FILE *);
-    if (!original) *(void **)(&original) = dlsym(RTLD_NEXT, OBOR_NATIVE_IO_FCLOSE);
+    OBOR_DARWIN_NATIVE(__real_fclose, OBOR_NATIVE_IO_FCLOSE);
     return original ? original(file) : EOF;
 }
 int fclose(FILE *file) { return __wrap_fclose(file); }
 int __real_open(const char *path, int flags, ...)
 {
-    static int (*original)(const char *, int, ...);
+    OBOR_DARWIN_NATIVE(__real_open, OBOR_NATIVE_IO_OPEN);
     va_list args; int mode;
     va_start(args, flags); mode = va_arg(args, int); va_end(args);
-    if (!original) *(void **)(&original) = dlsym(RTLD_NEXT, OBOR_NATIVE_IO_OPEN);
     return original ? original(path, flags, mode) : -1;
 }
 int open(const char *path, int flags, ...)
@@ -279,15 +275,13 @@ int open(const char *path, int flags, ...)
 }
 int __real_close(int fd)
 {
-    static int (*original)(int);
-    if (!original) *(void **)(&original) = dlsym(RTLD_NEXT, OBOR_NATIVE_IO_CLOSE);
+    OBOR_DARWIN_NATIVE(__real_close, OBOR_NATIVE_IO_CLOSE);
     return original ? original(fd) : -1;
 }
 int close(int fd) { return __wrap_close(fd); }
 #define DARWIN_PATH_ONE(name, native_name) \
     int __real_##name(const char *path) { \
-        static int (*original)(const char *); \
-        if (!original) *(void **)(&original) = dlsym(RTLD_NEXT, native_name); \
+        OBOR_DARWIN_NATIVE(__real_##name, native_name); \
         if (!original) { errno = ENOSYS; return -1; } \
         return original(path); \
     } \
@@ -297,8 +291,7 @@ DARWIN_PATH_ONE(unlink, OBOR_NATIVE_IO_UNLINK)
 DARWIN_PATH_ONE(rmdir, OBOR_NATIVE_IO_RMDIR)
 #define DARWIN_PATH_TWO(name, type, native_name) \
     int __real_##name(const char *path, type value) { \
-        static int (*original)(const char *, type); \
-        if (!original) *(void **)(&original) = dlsym(RTLD_NEXT, native_name); \
+        OBOR_DARWIN_NATIVE(__real_##name, native_name); \
         if (!original) { errno = ENOSYS; return -1; } \
         return original(path, value); \
     } \
@@ -309,8 +302,7 @@ DARWIN_PATH_TWO(chmod, mode_t, OBOR_NATIVE_IO_CHMOD)
 DARWIN_PATH_TWO(stat, struct stat *, OBOR_NATIVE_IO_STAT)
 DIR *__real_opendir(const char *path)
 {
-    static DIR *(*original)(const char *);
-    if (!original) *(void **)(&original) = dlsym(RTLD_NEXT, OBOR_NATIVE_IO_OPENDIR);
+    OBOR_DARWIN_NATIVE(__real_opendir, OBOR_NATIVE_IO_OPENDIR);
     if (!original) { errno = ENOSYS; return NULL; }
     return original(path);
 }

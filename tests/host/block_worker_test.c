@@ -4,7 +4,12 @@
 #include "obor_block_worker_policy.h"
 #include <assert.h>
 #include <errno.h>
+#include <setjmp.h>
+#ifdef _WIN32
+#include <windows.h>
+#else
 #include <pthread.h>
+#endif
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -12,6 +17,61 @@
 
 static int deny_thread, deny_alloc, created, joined, active, maximum_active;
 static int deny_cpu_clock;
+static jmp_buf interrupted_read;
+static int interrupt_read;
+#ifdef _WIN32
+/* Wrap the actual import-table references, not an alias that MinGW's
+ * dllimport calls can bypass. A deterministic clock also exercises a valid
+ * zero-CPU origin separately from the API-failure fallback. */
+extern HANDLE (WINAPI *__real___imp_CreateThread)(LPSECURITY_ATTRIBUTES, SIZE_T,
+    LPTHREAD_START_ROUTINE, LPVOID, DWORD, LPDWORD);
+extern DWORD (WINAPI *__real___imp_WaitForSingleObject)(HANDLE, DWORD);
+static LPTHREAD_START_ROUTINE thread_function;
+static void *thread_argument;
+static volatile LONG cpu_ticks = -1;
+static BOOL WINAPI test_thread_times(HANDLE thread, LPFILETIME created_time,
+    LPFILETIME exited, LPFILETIME kernel, LPFILETIME user)
+{
+    (void)thread;
+    if (deny_cpu_clock) { SetLastError(ERROR_INVALID_FUNCTION); return FALSE; }
+    memset(created_time, 0, sizeof(*created_time));
+    memset(exited, 0, sizeof(*exited));
+    memset(kernel, 0, sizeof(*kernel));
+    user->dwHighDateTime = 0;
+    user->dwLowDateTime = (DWORD)InterlockedIncrement(&cpu_ticks);
+    return TRUE;
+}
+static DWORD WINAPI observed_thread(void *unused)
+{
+    (void)unused;
+    int count = __atomic_add_fetch(&active, 1, __ATOMIC_SEQ_CST);
+    if (count > maximum_active) maximum_active = count;
+    DWORD result = thread_function(thread_argument);
+    __atomic_sub_fetch(&active, 1, __ATOMIC_SEQ_CST);
+    return result;
+}
+static HANDLE WINAPI test_create_thread(LPSECURITY_ATTRIBUTES attr, SIZE_T stack,
+    LPTHREAD_START_ROUTINE function, LPVOID argument, DWORD flags, LPDWORD id)
+{
+    assert(!__atomic_load_n(&active, __ATOMIC_SEQ_CST));
+    if (deny_thread) { SetLastError(ERROR_NOT_ENOUGH_MEMORY); return NULL; }
+    thread_function = function; thread_argument = argument;
+    HANDLE result = __real___imp_CreateThread(attr, stack, observed_thread, NULL, flags, id);
+    if (result) ++created;
+    return result;
+}
+static DWORD WINAPI test_join_thread(HANDLE thread, DWORD milliseconds)
+{
+    DWORD result = __real___imp_WaitForSingleObject(thread, milliseconds);
+    if (result == WAIT_OBJECT_0) ++joined;
+    return result;
+}
+HANDLE (WINAPI *__wrap___imp_CreateThread)(LPSECURITY_ATTRIBUTES, SIZE_T,
+    LPTHREAD_START_ROUTINE, LPVOID, DWORD, LPDWORD) = test_create_thread;
+DWORD (WINAPI *__wrap___imp_WaitForSingleObject)(HANDLE, DWORD) = test_join_thread;
+BOOL (WINAPI *__wrap___imp_GetThreadTimes)(HANDLE, LPFILETIME, LPFILETIME,
+    LPFILETIME, LPFILETIME) = test_thread_times;
+#else
 int __real_clock_gettime(clockid_t, struct timespec *);
 int __wrap_clock_gettime(clockid_t clock, struct timespec *value)
 {
@@ -47,6 +107,7 @@ int __wrap_pthread_join(pthread_t thread, void **result)
     if (!error) ++joined;
     return error;
 }
+#endif
 static void *alloc(size_t n, size_t s)
 { if (deny_alloc) { deny_alloc = 0; return NULL; } return calloc(n, s); }
 static obor_block_allocator allocator = {.calloc=alloc,.realloc=realloc,.free=free};
@@ -55,6 +116,12 @@ static const void *read_source(void *opaque, uint32_t offset, uint32_t size, voi
 {
     input *in = opaque;
     assert(offset <= in->length && size <= in->length - offset);
+    if (interrupt_read && offset == 32U * OBOR_BLOCK_STATE_BLOCK) {
+        /* The first batch has already created a real helper. It remains
+         * joinable even if it completed compression before this callback. */
+        assert(created == joined + 1);
+        longjmp(interrupted_read, 1);
+    }
     if (in->fail_at && offset >= in->fail_at) return NULL;
     if (in->scratch) { memcpy(scratch, in->data + offset, size); return scratch; }
     return in->data + offset;
@@ -72,6 +139,75 @@ static void equal_images(obor_block_state *a, obor_block_state *b, obor_block_st
 }
 static uint32_t random_word(uint32_t *s)
 { uint32_t x=*s;x^=x<<13;x^=x>>17;x^=x<<5;return *s=x; }
+/* A protected owner can leave the encoder with longjmp rather than a NULL
+ * source result. Exercise that actual nonlocal exit after the first batch,
+ * without timing assumptions or a replacement/mock helper. */
+static unsigned interrupted_captures(void)
+{
+    if (deny_thread) return 0;
+    input in = {malloc(96U * OBOR_BLOCK_STATE_BLOCK), 96U * OBOR_BLOCK_STATE_BLOCK, 0, 0};
+    assert(in.data);
+    obor_block_source source = {&in, read_source, NULL};
+    obor_block_state *cold = obor_block_state_create(&allocator); assert(cold);
+    for (unsigned action = 0; action < 5; ++action) {
+        memset(in.data, (int)action, in.length);
+        obor_block_state *volatile state = obor_block_state_create(&allocator); assert(state);
+        obor_block_state_set_worker(state, 1);
+        assert(obor_block_state_encode(state, &source, in.length));
+        uint32_t saved_size;
+        const void *image = obor_block_state_image(state, &saved_size);
+        unsigned char *saved = malloc(saved_size); assert(saved);
+        memcpy(saved, image, saved_size);
+        for (uint32_t block = 0; block < 96; ++block)
+            in.data[block * OBOR_BLOCK_STATE_BLOCK] ^= 0x7f;
+        interrupt_read = 1;
+        if (!setjmp(interrupted_read)) {
+            (void)obor_block_state_encode(state, &source, in.length);
+            assert(!"the source must leave through longjmp");
+        }
+        interrupt_read = 0;
+        assert(created == joined + 1);
+        switch (action) {
+        case 0: obor_block_state_forget(state); break;
+        case 1:
+#ifndef OBOR_BLOCK_TEST_NO_QUIESCE
+            obor_block_state_quiesce(state);
+            obor_block_state_quiesce(state); /* idempotent */
+#else
+            obor_block_state_forget(state);
+#endif
+            assert(!obor_block_state_image(state, NULL));
+            break;
+        case 2: assert(obor_block_state_encode(state, &source, in.length)); break;
+        case 3:
+            assert(obor_block_state_decode(state, saved, saved_size));
+            uint32_t decoded_size;
+            const unsigned char *decoded = obor_block_state_raw(state, &decoded_size);
+            assert(decoded && decoded_size == in.length);
+            for (uint32_t i = 0; i < decoded_size; ++i) assert(decoded[i] == action);
+            break;
+        default: obor_block_state_destroy(state); state = NULL; break;
+        }
+        assert(!__atomic_load_n(&active, __ATOMIC_SEQ_CST) && created == joined);
+        if (state) {
+            assert(obor_block_state_encode(state, &source, in.length));
+            image = obor_block_state_image(state, &saved_size);
+            assert(image && obor_block_state_decode(cold, image, saved_size));
+            uint32_t decoded_size;
+            const void *decoded = obor_block_state_raw(cold, &decoded_size);
+            assert(decoded && decoded_size == in.length && !memcmp(decoded, in.data, in.length));
+            obor_block_state_destroy(state);
+        }
+        free(saved);
+    }
+#ifndef OBOR_BLOCK_TEST_NO_QUIESCE
+    obor_block_state_quiesce(NULL);
+    obor_block_state_quiesce(cold); /* no workspace was ever initialized */
+#endif
+    obor_block_state_destroy(cold); free(in.data);
+    return 5;
+}
+
 static uint64_t clock_calls;
 static uint64_t test_clock(void) { return ++clock_calls; }
 
@@ -213,7 +349,10 @@ int main(int argc, char **argv)
     assert(!obor_block_state_cpu_cost(small));
     obor_block_state_destroy(small);
     obor_block_state_destroy(serial);obor_block_state_destroy(worker);obor_block_state_destroy(cold);
-    free(in.data); assert(maximum_active <= 1 && created==joined);
+    free(in.data);
+    unsigned unwind_drained = interrupted_captures();
+    assert(maximum_active <= 1 && created==joined);
+    printf("unwind_drained=%u\n", unwind_drained);
     printf("equivalent_images=39 cold_decodes=43 adaptive_phases=6 old_independent=4 overflow_drained=1 joined_helpers=%d maximum_active=%d failure_drained=1 denied=%d denied_clock=%d\n",created,maximum_active,deny_thread,deny_cpu_clock);
     return 0;
 }

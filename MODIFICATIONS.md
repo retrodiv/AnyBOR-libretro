@@ -939,3 +939,43 @@ omission mask. Loads, changed backing storage, failed preparation and invalid
 generations discard the corresponding reuse guarantee. The frontend capacity,
 state format, independent-state contract and exact resource comparisons do not
 change.
+
+### Native snapshot policies across supported targets
+
+Darwin enables advance preparation, bounded pool maintenance, compact initial
+encoding and the synchronous compression helper. The page watcher accepts
+only protected arena writes from the owner or registered classic decoder
+workers, checking the architecture's saved exception context. It handles
+XNU's protection-related SIGBUS, including the shared alignment code used by
+its ARM signal adapter, without installing or replacing Mach exception ports.
+The saved exception syndrome still rejects actual alignment faults. Pthread
+keys retain worker identity across owner callbacks and are
+released only after the corresponding workers are joined; compiler TLS does
+not pin the dylib. Read and stdio-read interposers prepare kernel destinations
+and use the SDK-selected native ABI. The binding audit checks callers,
+forwarders and process-local function caches against actual compiled objects.
+
+Windows retains kernel write-watch history while classic decoder workers
+execute; captures still refuse active workers, and the asynchronous adapter
+continues to invalidate proofs. Native critical sections, condition variables
+and a joined Windows thread implement the existing single-helper pipeline.
+Thread CPU measurements use GetThreadTimes, with zero reserved for unavailable
+measurements and the complete serial fallback. Failure to join an engine
+worker cannot release its memory or decrement the live-worker count.
+
+Encoder-helper activation is applied by the actual state consumer on each
+supported platform. State-fault recovery drains any interrupted helper outside
+the signal or exception handler before reusing its workspace or destroying the
+encoder. Partially encoded images are invalidated; successful captures retain
+their existing bytes and complete-state contract.
+Darwin x86-64 also uses the existing bounded POSIX heap-copy path. Other
+AArch64 targets retain their serial large-copy policy to avoid shared-memory
+bandwidth contention.
+
+PPM environment pointers, range configuration and emission counters stay in
+process runtime storage. Loads cannot restore an expired environment pointer
+or suppress the current process's requested diagnostic captures. Trace
+initialization and native function lookup caches are also process-local.
+The runtime layout remains outside both pristine resets and saved images.
+State format, fixed transport capacity, exact resource proofs and the clean
+module-address rejection contract remain unchanged.

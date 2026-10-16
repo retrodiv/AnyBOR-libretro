@@ -20,6 +20,10 @@ static unsigned char *memory;
 static size_t page;
 static int operation;
 static uint64_t initial;
+static pthread_t registered_thread;
+static pthread_mutex_t registered_mutex = PTHREAD_MUTEX_INITIALIZER;
+static pthread_cond_t registered_condition = PTHREAD_COND_INITIALIZER;
+static int registered_ready, registered_go, registered_done;
 static int clean(size_t offset, size_t length, uint64_t since)
 { return obor_write_watch_range_unchanged((uintptr_t)memory + offset, length, since); }
 static void previous_signal(int signal) { (void)signal; _exit(73); }
@@ -27,6 +31,24 @@ static void *foreign_write(void *unused)
 {
     (void)unused;
     *(volatile unsigned char *)memory = 1;
+    return NULL;
+}
+static void *registered_write(void *unused)
+{
+    (void)unused;
+    obor_fault_worker_enter();
+    assert(!pthread_mutex_lock(&registered_mutex));
+    registered_ready = 1;
+    assert(!pthread_cond_broadcast(&registered_condition));
+    while (!registered_go)
+        assert(!pthread_cond_wait(&registered_condition, &registered_mutex));
+    assert(!pthread_mutex_unlock(&registered_mutex));
+    *(volatile unsigned char *)memory = 0x5a;
+    obor_fault_worker_leave();
+    assert(!pthread_mutex_lock(&registered_mutex));
+    registered_done = 1;
+    assert(!pthread_cond_broadcast(&registered_condition));
+    assert(!pthread_mutex_unlock(&registered_mutex));
     return NULL;
 }
 static void exercise(void *unused)
@@ -67,6 +89,18 @@ static void exercise(void *unused)
         if (pthread_create(&thread, NULL, foreign_write, NULL)) exit(14);
         pthread_join(thread, NULL);
         exit(15); /* a foreign write must reach the previous signal owner */
+    } else if (operation == 10) {
+        assert(obor_fault_worker_acquire());
+        assert(!pthread_create(&registered_thread, NULL, registered_write, NULL));
+        assert(!pthread_mutex_lock(&registered_mutex));
+        while (!registered_ready)
+            assert(!pthread_cond_wait(&registered_condition, &registered_mutex));
+        assert(!pthread_mutex_unlock(&registered_mutex));
+    } else if (operation == 11) {
+        assert(!pthread_join(registered_thread, NULL));
+        assert(obor_fault_worker_leases() == 1);
+        obor_fault_worker_release();
+        assert(!obor_fault_worker_leases());
     }
 }
 
@@ -164,8 +198,24 @@ int main(int argc, char **argv)
         struct sigaction previous = {0};
         previous.sa_handler = previous_signal;
         sigemptyset(&previous.sa_mask);
-        if (sigaction(SIGSEGV, &previous, NULL)) return 17;
+        if (sigaction(SIGSEGV, &previous, NULL) ||
+            sigaction(SIGBUS, &previous, NULL)) return 17;
         guarded(8, 1);
+    } else if (!strcmp(argv[1], "registered")) {
+        /* Complete the write between owner calls, with no active owner guard.
+         * Only the worker lease and its own identity may handle this fault. */
+        guarded(10, 1);
+        assert(obor_fault_worker_leases() == 1);
+        assert(!pthread_mutex_lock(&registered_mutex));
+        registered_go = 1;
+        assert(!pthread_cond_broadcast(&registered_condition));
+        while (!registered_done)
+            assert(!pthread_cond_wait(&registered_condition, &registered_mutex));
+        assert(!pthread_mutex_unlock(&registered_mutex));
+        guarded(11, 1);
+        assert(memory[0] == 0x5a && obor_write_watch_page_epoch(0) == first);
+        assert(!clean(0, page, initial));
+        assert(clean(page, page, initial));
     } else return 2;
     if (!obor_write_watch_stop() || !obor_write_watch_stop() ||
         obor_write_watch_epoch() || obor_write_watch_page_size()) return 15;

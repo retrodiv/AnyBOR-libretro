@@ -1,9 +1,8 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
  * Private synchronous encoder pipeline; included after the serial helpers. */
-#if defined(__linux__)
-#include <pthread.h>
-#include <unistd.h>
+#if defined(__linux__) || defined(__APPLE__) || defined(_WIN32)
+#include "obor_block_threads.h"
 
 #define BW_BATCH 32U
 typedef struct {
@@ -16,12 +15,12 @@ typedef struct {
     block_worker_job jobs[BW_BATCH];
 } block_worker_batch;
 typedef struct {
-    pthread_mutex_t mutex;
-    pthread_cond_t condition;
-    pthread_t thread;
+    bw_mutex mutex;
+    bw_condition condition;
+    bw_thread thread;
     obor_block_state *state;
     block_worker_batch *pending;
-    int stop, active, attempted;
+    int stop, active, attempted, synchronization_live;
     uint64_t cpu_ns;
     block_worker_batch batches[2];
 } block_worker;
@@ -51,42 +50,51 @@ static void block_worker_compress(block_worker *worker, block_worker_batch *batc
     }
 }
 
+#ifdef _WIN32
+static DWORD WINAPI block_worker_main(void *opaque)
+#else
 static void *block_worker_main(void *opaque)
+#endif
 {
     block_worker *worker = opaque;
     uint64_t begin = block_cpu_now();
-    pthread_mutex_lock(&worker->mutex);
+    bw_mutex_lock(&worker->mutex);
     for (;;) {
         while (!worker->pending && !worker->stop)
-            pthread_cond_wait(&worker->condition, &worker->mutex);
+            bw_condition_wait(&worker->condition, &worker->mutex);
         if (worker->stop) break;
         block_worker_batch *batch = worker->pending;
-        pthread_mutex_unlock(&worker->mutex);
+        bw_mutex_unlock(&worker->mutex);
         block_worker_compress(worker, batch);
-        pthread_mutex_lock(&worker->mutex);
+        bw_mutex_lock(&worker->mutex);
         worker->pending = NULL;
-        pthread_cond_broadcast(&worker->condition);
+        bw_condition_signal(&worker->condition);
     }
-    pthread_mutex_unlock(&worker->mutex);
+    bw_mutex_unlock(&worker->mutex);
     worker->cpu_ns = block_cpu_elapsed(begin);
-    return NULL;
+    return 0;
 }
 
 static void block_worker_wait(block_worker *worker)
 {
     if (!worker->active) return;
-    pthread_mutex_lock(&worker->mutex);
+    bw_mutex_lock(&worker->mutex);
     while (worker->pending)
-        pthread_cond_wait(&worker->condition, &worker->mutex);
-    pthread_mutex_unlock(&worker->mutex);
+        bw_condition_wait(&worker->condition, &worker->mutex);
+    bw_mutex_unlock(&worker->mutex);
 }
 
 static void block_worker_submit(block_worker *worker, block_worker_batch *batch)
 {
     if (!worker->attempted && batch->count == BW_BATCH) {
         worker->attempted = 1;
+#ifdef _WIN32
+        worker->thread = CreateThread(NULL, 0, block_worker_main, worker, 0, NULL);
+        worker->active = worker->thread != NULL;
+#else
         worker->active = pthread_create(&worker->thread, NULL,
                                          block_worker_main, worker) == 0;
+#endif
         if (worker->active) ++worker->state->work.worker_threads;
     }
     if (!worker->active) {
@@ -94,29 +102,41 @@ static void block_worker_submit(block_worker *worker, block_worker_batch *batch)
         return;
     }
     /* The caller drained the previous batch before submitting this one. */
-    pthread_mutex_lock(&worker->mutex);
+    bw_mutex_lock(&worker->mutex);
     worker->pending = batch;
     worker->state->work.worker_blocks += batch->count;
-    pthread_cond_broadcast(&worker->condition);
-    pthread_mutex_unlock(&worker->mutex);
+    bw_condition_signal(&worker->condition);
+    bw_mutex_unlock(&worker->mutex);
 }
 
 static void block_worker_finish(block_worker *worker)
 {
     block_worker_wait(worker);
     if (worker->active) {
-        pthread_mutex_lock(&worker->mutex);
+        bw_mutex_lock(&worker->mutex);
         worker->stop = 1;
-        pthread_cond_broadcast(&worker->condition);
-        pthread_mutex_unlock(&worker->mutex);
-        pthread_join(worker->thread, NULL);
+        bw_condition_signal(&worker->condition);
+        bw_mutex_unlock(&worker->mutex);
+        bw_thread_join(worker->thread);
         worker->state->work.helper_cpu_ns = worker->cpu_ns;
     }
     worker->active = 0;
     worker->pending = NULL;
     worker->batches[0].count = worker->batches[1].count = 0;
-    pthread_cond_destroy(&worker->condition);
-    pthread_mutex_destroy(&worker->mutex);
+    bw_condition_destroy(&worker->condition);
+    bw_mutex_destroy(&worker->mutex);
+    worker->synchronization_live = 0;
+}
+
+void obor_block_state_quiesce(obor_block_state *state)
+{
+    block_worker *worker = state ? state->worker_workspace : NULL;
+    if (!worker || !worker->synchronization_live) return;
+    /* Called after the owner's recovery point, never from its signal handler.
+     * The helper owns only copied batches and its out-of-arena deflater; it
+     * cannot consult the abandoned source or owner's stack. */
+    block_worker_finish(worker);
+    block_forget_image(state);
 }
 
 /* Preserve serial block order, slot placement and bytes. Completion order can
@@ -156,7 +176,7 @@ static int block_worker_commit(obor_block_state *state, block_worker_batch *batc
 static int block_encode_worker(obor_block_state *state,
     const obor_block_source *source, uint32_t raw_size, int initial_codec, int update_codec)
 {
-    if (sysconf(_SC_NPROCESSORS_ONLN) < 2) return -1;
+    if (bw_cpu_count() < 2) return -1;
     if (!state->worker_workspace)
         state->worker_workspace = state->allocator.calloc(1, sizeof(block_worker));
     block_worker *worker = state->worker_workspace;
@@ -166,11 +186,12 @@ static int block_encode_worker(obor_block_state *state,
     worker->stop = worker->active = worker->attempted = 0;
     worker->cpu_ns = 0;
     worker->batches[0].count = worker->batches[1].count = 0;
-    if (pthread_mutex_init(&worker->mutex, NULL)) return -1;
-    if (pthread_cond_init(&worker->condition, NULL)) {
-        pthread_mutex_destroy(&worker->mutex);
+    if (bw_mutex_init(&worker->mutex)) return -1;
+    if (bw_condition_init(&worker->condition)) {
+        bw_mutex_destroy(&worker->mutex);
         return -1;
     }
+    worker->synchronization_live = 1;
     int result = 0, pending = -1;
     unsigned current = 0;
     memset(&state->work, 0, sizeof(state->work));
@@ -251,4 +272,6 @@ finish:
     }
     return 0;
 }
+#else
+void obor_block_state_quiesce(obor_block_state *state) { (void)state; }
 #endif

@@ -74,6 +74,7 @@ jobs:
           python3 tools/run_guarded.py --memory-mib 2048 --seconds 180 -- python3 tools/test_animation_scripts.py --core anybor_libretro.so
           python3 tools/run_guarded.py --memory-mib 1024 --seconds 180 -- python3 tools/test_script_timestamps.py
           python3 tools/run_guarded.py --memory-mib 1024 --seconds 180 -- python3 tools/test_native_io.py
+          python3 tools/run_guarded.py --memory-mib 1024 --seconds 180 -- python3 tools/test_write_watch.py
       - name: Boot every Windows engine with fresh and existing saves
         if: matrix.target == 'windows-x86_64'
         env:
@@ -81,6 +82,7 @@ jobs:
           WINEDEBUG: '-all'
         run: |
           sudo apt-get install -y wine64 wine
+          python3 tools/run_guarded.py --memory-mib 1024 --seconds 180 -- python3 tools/test_windows_workers.py
           python3 tools/run_guarded.py --memory-mib 2048 --seconds 900 -- python3 tools/smoke.py --core anybor_libretro.dll --windows --runner wine
           python3 tools/run_guarded.py --memory-mib 2048 --seconds 900 -- python3 tools/test_rewind.py --core anybor_libretro.dll --windows --runner wine --keep-wine-server --work-parent /var/tmp
           python3 tools/run_guarded.py --memory-mib 2048 --seconds 900 -- python3 tools/test_state_options.py --core anybor_libretro.dll --windows --runner wine --keep-wine-server --work-parent /var/tmp
@@ -140,6 +142,7 @@ jobs:
           fi
       - name: Exercise native runtime regressions
         run: |
+          python3 tools/test_write_watch.py
           python3 tools/smoke.py --core anybor_libretro.dylib
           python3 tools/regression.py --core anybor_libretro.dylib
           python3 tools/test_rewind.py --core anybor_libretro.dylib --work-parent /var/tmp
