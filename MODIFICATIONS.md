@@ -883,3 +883,32 @@ parsing the ASCII object-origin records as before. Synthetic Mach-O maps
 include such bytes in symbols and paths, and still require rejection of
 forbidden static-runtime origins. These cases run in the builder preflight;
 SDK cross-links alone do not reproduce every native Apple linker behavior.
+
+
+### Failed capture buffers and manifest storage
+
+The common libretro capture boundary invalidates the first four available
+output bytes on failure, for every engine and writer. A frontend that inserts a
+buffer despite a failed callback must not mistake an earlier valid capture for
+a new one. Raw and coded readers reject the invalid header before live engine
+mutation. Successful images keep their existing format and bytes. No accessible
+bytes exist to invalidate for a null or zero-length output buffer. This cannot
+cover a frontend rejecting a size before calling the core at all.
+
+The public state-options regression retains a valid buffer, requests an
+undersized capture, tries to load that same full allocation, and requires
+refusal. Two hundred subsequent video callbacks and complete PCM must match an
+uninterrupted reference before a valid load verifies recovery. All thirteen
+profiles and four writers run this probe. Nested model-preload regressions also
+exercise full-capacity refusals and reject their buffers after preparation ends.
+
+Resource manifests reserve storage with the catalogue's existing bounded
+geometric slot capacity during preparation and state adoption. The published
+manifest length remains exact, and only logical bytes are copied or stored.
+Allocation failure preserves the previous allocation until the ordinary refusal
+path handles it; restore preflights retain their atomic behavior. Synthetic
+checks cover retirement/reuse, nonzero allocator fill, growth and load failures,
+the slot limit and byte equality with the previous writer. No resource proof or
+serialized field is omitted by this allocation change.
+
+The complete manifest writer overwrites its 32-byte header and all 600 bytes of every active record. It clears only inactive records, avoiding a redundant full-manifest zero pass while retaining deterministic zero bytes for retired slots. Recipe validation, eligibility proofs, bounds and restore preflights are unchanged. The authored allocation-lifecycle fixture observes actual clear requests in the catalog translation unit, forwards every write to libc, checks A5-filled reserves and canonical streams, and covers retire/reuse/load and allocation failure. This does not infer immutability from an always-writable page.

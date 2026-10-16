@@ -10,7 +10,7 @@
 
 static long preload_log_offset;
 static unsigned preload_boot_checks, preload_level_checks, preload_load_checks;
-static unsigned preload_seen_models;
+static unsigned preload_seen_models, preload_stale_checks;
 static int preload_level_active, preload_level_finished;
 static int preload_level_end_frame = -1;
 static unsigned char *preload_reference;
@@ -98,10 +98,14 @@ static int preload_probe_after_run(size_t (*capacity)(void),
             preload_scratch_size = size;
         }
         unsigned char *probe = preload_scratch;
-        memset(probe, 0xa5, size);
+        int stale = preload_reference && preload_reference_size == size;
+        if (stale) memcpy(probe, preload_reference, size);
+        else memset(probe, 0xa5, size);
         int ok = !save(probe, size) && capacity() == size;
-        for (size_t i = 0; ok && i < size; ++i) ok = probe[i] == 0xa5;
-        if (!ok) { fprintf(stderr, "preload capture changed a refused buffer\n"); return 0; }
+        for (size_t i = 0; ok && i < size; ++i)
+            ok = probe[i] == (i < sizeof(uint32_t) ? 0 :
+                             stale ? preload_reference[i] : 0xa5);
+        if (!ok) { fprintf(stderr, "refused preload capture did not invalidate only its header\n"); return 0; }
         if (preload_reference) {
             if (load(preload_reference, preload_reference_size) || capacity() != size) {
                 fprintf(stderr, "preload accepted a previously valid state\n");
@@ -114,6 +118,11 @@ static int preload_probe_after_run(size_t (*capacity)(void),
     }
     if (ready && !preload_level_active &&
         (!preload_reference || preload_level_finished == 1)) {
+        if (preload_scratch && load(preload_scratch, preload_scratch_size)) {
+            fprintf(stderr, "refused capture loaded stale bytes after preload cleanup\n");
+            return 0;
+        }
+        if (preload_scratch) ++preload_stale_checks;
         size_t size = capacity();
         unsigned char *probe = size ? malloc(size) : NULL;
         if (!probe || !save(probe, size) || !load(probe, size)) {
@@ -132,9 +141,9 @@ static int preload_probe_after_run(size_t (*capacity)(void),
 static int preload_probe_finish(void)
 {
     if (!getenv("OBOR_PRELOAD_PROBE_LOG")) return 1;
-    printf("preload_probe boot=%u level=%u refused_load=%u recovered=%d level_end=%d\n",
+    printf("preload_probe boot=%u level=%u refused_load=%u recovered=%d level_end=%d stale_refused=%u\n",
            preload_boot_checks, preload_level_checks, preload_load_checks,
-           preload_level_finished == 2, preload_level_end_frame);
+           preload_level_finished == 2, preload_level_end_frame, preload_stale_checks);
     int trace_first = -1, trace_last = -1;
     const char *trace = getenv("OBOR_REPLAY_TRACE");
     if (trace && sscanf(trace, "%d,%d", &trace_first, &trace_last) != 2) return 0;
@@ -142,7 +151,7 @@ static int preload_probe_finish(void)
     int ok = preload_seen_models == 127 && preload_level_finished == 2 &&
              (trace_first < 0 || preload_level_end_frame < trace_first) && (control ||
              (preload_boot_checks >= 3 && preload_level_checks >= 3 &&
-              preload_load_checks >= 3));
+              preload_load_checks >= 3 && preload_stale_checks >= 2));
     preload_probe_restart();
     return ok;
 }

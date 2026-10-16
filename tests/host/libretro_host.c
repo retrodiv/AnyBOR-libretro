@@ -15,6 +15,7 @@
  *   OBOR_DUMP_EVERY=N     dump a PPM every N frames (needs ppm_prefix)
  *   OBOR_SAVE_AT=N / OBOR_SAVE_STATE=file   serialize at frame N
  *   OBOR_LOAD_AT=N / OBOR_LOAD_STATE=file   unserialize at frame N
+ *   OBOR_FAILED_CAPTURE_AT=N   reject stale failed buffer,200-frame continuation/recovery
  *   OBOR_LOAD_SOURCE_FRAME=N   align host pad inputs after a successful load
  *   OBOR_REPLAY_TRACE=FIRST,LAST   video/audio digests indexed by input frame
  *   OBOR_REPLAY_AUDIO=file   bounded PCM callback evidence for that trace range
@@ -791,6 +792,7 @@ static void dump_ppm(const char *prefix, int frame)
 }
 
 #include "preload_probe.h"
+#include "capture_failure_probe.h"
 
 static int complete_loading(void (*run)(void))
 {
@@ -1275,7 +1277,7 @@ int main(int argc, char **argv)
             if (p_retro_serialize(rejected, sizeof(rejected)) ||
                 p_retro_unserialize(rejected, sizeof(rejected))) return 1;
             for (size_t i = 0; i < sizeof(rejected); ++i)
-                if (rejected[i] != 0xa5) return 1;
+                if (rejected[i] != (i < sizeof(uint32_t) ? 0 : 0xa5)) return 1;
             printf("error_screen=320x240 black_white=1 state_rejected=1 frame=%d\n", g_frame);
         }
         if (g_frame == expect_recover_at) {
@@ -1549,6 +1551,8 @@ int main(int argc, char **argv)
                 fclose(f);
             }
         }
+        if (!capture_failure_after_frame(p_retro_serialize_size, p_retro_serialize,
+                                         p_retro_unserialize)) return 1;
         if (stop_after_load && !load_width && last_successful_load >= 0 &&
             g_frame - last_successful_load >= stop_after_load)
             break;
@@ -1561,7 +1565,7 @@ int main(int argc, char **argv)
         fprintf(stderr, "malformed model bypassed its fatal error path\n");
         return 1;
     }
-    if (!preload_probe_finish()) return 1;
+    if (!preload_probe_finish() || !capture_failure_finish()) return 1;
     if (ppm)
         dump_ppm(ppm, g_frame);
 

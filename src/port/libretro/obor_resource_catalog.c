@@ -107,6 +107,22 @@ static int catalog_grow(obor_resource_catalog *c, uint32_t needed)
     return 1;
 }
 
+static int catalog_manifest_reserve(obor_resource_catalog *c)
+{
+    /* Match the bounded geometric slot reserve, including after a load.
+     * Only manifest_size bytes are initialized and published. New owners must
+     * not allocate/free the complete manifest at every subsequent capture. */
+    if (c->slots > c->capacity || c->capacity > OBOR_RESOURCE_CATALOG_LIMIT ||
+        c->capacity > (UINT32_MAX - OBOR_RESOURCE_MANIFEST_HEADER) / OBOR_RESOURCE_MANIFEST_RECORD) return 0;
+    uint32_t bytes = OBOR_RESOURCE_MANIFEST_HEADER + c->capacity * OBOR_RESOURCE_MANIFEST_RECORD;
+    if (bytes <= c->manifest_capacity) return 1;
+    unsigned char *manifest = c->allocator.allocate(bytes);
+    if (!manifest) return 0;
+    c->allocator.release(c->manifest);
+    c->manifest = manifest; c->manifest_capacity = bytes;
+    return 1;
+}
+
 obor_resource_catalog *obor_resource_catalog_create(obor_resource_materializer *m,
         const obor_resource_image_allocator *allocator, void *arena, uint32_t arena_size)
 {
@@ -327,20 +343,18 @@ int obor_resource_catalog_prepare(obor_resource_catalog *c, uint32_t used,
         return 1;
     }
     if (!catalog_ranges(c, used)) return 0;
+    if (!catalog_manifest_reserve(c)) { c->range_count = 0; return 0; }
     uint32_t bytes = OBOR_RESOURCE_MANIFEST_HEADER + c->slots * OBOR_RESOURCE_MANIFEST_RECORD;
-    if (bytes > c->manifest_capacity) {
-        unsigned char *manifest = c->allocator.allocate(bytes);
-        if (!manifest) { c->range_count = 0; return 0; }
-        c->allocator.release(c->manifest); c->manifest = manifest; c->manifest_capacity = bytes;
-    }
-    memset(c->manifest, 0, bytes);
     uint32_t header[8] = {OBOR_RESOURCE_MANIFEST_MAGIC, 1, c->slots,
         OBOR_RESOURCE_MANIFEST_RECORD, used, omitted, c->active, 0};
     for (unsigned i = 0; i < 8; ++i) catalog_put(c->manifest + i * 4, header[i]);
     for (uint32_t i = 0; i < c->slots; ++i) {
         const catalog_entry *e = c->entries + i;
-        if (!(e->flags & CATALOG_ACTIVE)) continue;
         unsigned char *out = c->manifest + OBOR_RESOURCE_MANIFEST_HEADER + i * OBOR_RESOURCE_MANIFEST_RECORD;
+        if (!(e->flags & CATALOG_ACTIVE)) {
+            memset(out, 0, OBOR_RESOURCE_MANIFEST_RECORD);
+            continue;
+        }
         catalog_put(out, e->owner); catalog_put(out + 4, e->allocation);
         catalog_put(out + 8, e->body); catalog_put(out + 12, e->flags);
         if (!obor_resource_recipe_write(&e->recipe, out + 16, OBOR_RESOURCE_RECIPE_SIZE)) return 0;
@@ -488,9 +502,8 @@ static obor_resource_catalog *catalog_read(obor_resource_catalog *current, const
         c->buckets[at] = i + 1; ++c->active;
     }
     if (c->active != active || total != omitted || !catalog_ranges(c, used)) goto fail;
-    c->manifest = c->allocator.allocate(size);
-    if (!c->manifest) goto fail;
-    memcpy(c->manifest, input, size); c->manifest_size = c->manifest_capacity = size;
+    if (!catalog_manifest_reserve(c)) goto fail;
+    memcpy(c->manifest, input, size); c->manifest_size = size;
     c->generation = current->generation + 1;
     return c;
 fail:

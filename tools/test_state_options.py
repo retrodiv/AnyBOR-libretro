@@ -299,7 +299,12 @@ def main():
                 mode = (content, compression)
                 label = content + "-" + compression
                 state = work / (profile + "-" + label + ".state")
-                original = run(profile, label + "-save", mode, OBOR_SAVE_AT=120, OBOR_SAVE_STATE=state)
+                original = run(profile, label + "-save", mode, OBOR_SAVE_AT=120,
+                               OBOR_SAVE_STATE=state, OBOR_FAILED_CAPTURE_AT=120)
+                if "failed_capture_invalidated=1 stale_load_refused=1" not in original["log"] or \
+                        "failed_capture_valid_recovery=1 continuation_frames=200" not in original["log"]:
+                    raise RuntimeError("missing failed-capture safety/recovery: " + original["log"])
+                equal(reference, original, profile + " " + label + " failed capture changed playback")
                 # Always exercise actual restoration in every writer, including
                 # ASLR hosts where independent-process loads may all be refused.
                 # Advance 200 frames before loading, then replay the same input
@@ -371,7 +376,7 @@ def main():
                 state.unlink()
             reference["state"].unlink()
             explicit["state"].unlink()
-        print("State options:", len(profiles), "profiles, four writers, independent cross-mode video/PCM and load-time latch: OK", flush=True)
+        print("State options:", len(profiles), "profiles, four writers, failed-capture refusal/recovery, independent cross-mode video/PCM and load-time latch: OK", flush=True)
 
 
 if __name__ == "__main__":

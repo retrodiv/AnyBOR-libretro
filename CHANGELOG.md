@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- Avoid clearing complete resource manifests before overwriting active records; inactive records remain fully zeroed.
+- Invalidate refused capture headers so a frontend cannot silently load an older
+  state left in its buffer. Verify failed captures, intact continuation and
+  successful recovery across all profiles and state writers.
+- Reuse bounded geometric resource-manifest storage while the catalogue grows,
+  including after state loads, without changing serialized bytes or format.
+
 - Preserve live process TLS indices when loading states built with emulated
   thread-local storage. Exclude compiler-generated control descriptors even
   when they are emitted inside an engine object, and audit the final layout.

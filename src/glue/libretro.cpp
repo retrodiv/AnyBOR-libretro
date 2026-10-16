@@ -2945,6 +2945,12 @@ static uint32_t serialize_capture(void *data, size_t size, obor_state_ranges *ra
     uint64_t profile_core_end = obor_profile_now();
     bool ok = written > 0 && written <= size;
     if (!written && g_booted && queue_state_fault()) ok = false;
+    if (!ok && data && size) {
+        /* Stock rewind may enqueue this buffer despite the failed callback.
+         * Invalidate both raw OBS and coded OBC headers so an older complete
+         * capture left in the same allocation can never load silently. */
+        memset(data, 0, size < sizeof(uint32_t) ? size : sizeof(uint32_t));
+    }
     if (g_profile.file) {
         uint64_t heap = 0;
         uint32_t magic = 0;
