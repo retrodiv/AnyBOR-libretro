@@ -22,10 +22,13 @@ struct obor_resource_catalog {
     unsigned char *arena, *manifest;
     catalog_entry *entries;
     uint32_t *buckets;
-    catalog_range *ranges;
+    catalog_range *ranges, *ordered;
     uint32_t arena_size, capacity, slots, free_slot, active, tombstones;
     uint32_t range_count, manifest_size, manifest_capacity, framebuffer_slot;
-    uint64_t generation;
+    uint64_t generation, manifest_generation;
+    uint32_t manifest_slots;
+    uint32_t ordered_count;
+    uint64_t ordered_generation;
     uint32_t proof_begin, proof_end;
     int proofs_checked;
 };
@@ -98,12 +101,17 @@ static int catalog_grow(obor_resource_catalog *c, uint32_t needed)
     while (capacity < needed) capacity *= 2;
     catalog_entry *entries = c->allocator.allocate((size_t)capacity * sizeof(*entries));
     catalog_range *ranges = c->allocator.allocate((size_t)capacity * sizeof(*ranges));
-    if (!entries || !ranges) { c->allocator.release(entries); c->allocator.release(ranges); return 0; }
+    catalog_range *ordered = c->allocator.allocate((size_t)capacity * sizeof(*ordered));
+    if (!entries || !ranges || !ordered) {
+        c->allocator.release(entries); c->allocator.release(ranges); c->allocator.release(ordered);
+        return 0;
+    }
     memset(entries, 0, (size_t)capacity * sizeof(*entries));
     if (c->slots) memcpy(entries, c->entries, (size_t)c->slots * sizeof(*entries));
     if (c->range_count) memcpy(ranges, c->ranges, (size_t)c->range_count * sizeof(*ranges));
-    c->allocator.release(c->entries); c->allocator.release(c->ranges);
-    c->entries = entries; c->ranges = ranges; c->capacity = capacity;
+    c->allocator.release(c->entries); c->allocator.release(c->ranges); c->allocator.release(c->ordered);
+    c->entries = entries; c->ranges = ranges; c->ordered = ordered; c->capacity = capacity;
+    c->ordered_generation = 0; c->ordered_count = 0;
     return 1;
 }
 
@@ -142,7 +150,8 @@ void obor_resource_catalog_destroy(obor_resource_catalog *c)
 {
     if (!c) return;
     c->allocator.release(c->manifest); c->allocator.release(c->entries);
-    c->allocator.release(c->ranges); c->allocator.release(c->buckets); c->allocator.release(c);
+    c->allocator.release(c->ranges); c->allocator.release(c->ordered);
+    c->allocator.release(c->buckets); c->allocator.release(c);
 }
 
 static void catalog_reindex(obor_resource_catalog *c)
@@ -252,24 +261,66 @@ static int catalog_order(const void *a, const void *b)
     return (left > right) - (left < right);
 }
 
-static int catalog_ranges(obor_resource_catalog *c, uint32_t used)
+static int catalog_ranges(obor_resource_catalog *c, uint32_t used,
+        uint64_t previous_generation, uint32_t previous_count)
 {
-    uint32_t count = 0;
+    uint32_t count = 0, delta = 0;
+    int merge = previous_generation && previous_generation <= c->generation &&
+        previous_count <= c->capacity && previous_count <= c->slots &&
+        (!previous_count || c->ordered);
     for (uint32_t i = 0; i < c->slots; ++i) {
         const catalog_entry *e = c->entries + i;
         if (!(e->flags & CATALOG_ACTIVE)) continue;
         if (!catalog_bounds(c, e, used)) return 0;
-        c->ranges[count++] = (catalog_range){e->owner, e->allocation, i};
+        if (!merge || e->manifest_changed > previous_generation)
+            c->ranges[delta++] = (catalog_range){e->owner, e->allocation, i};
+        ++count;
     }
-    if (count) qsort(c->ranges, count, sizeof(*c->ranges), catalog_order);
+    if (count != c->active) return 0;
+    if (merge) {
+        uint32_t retained = 0;
+        for (uint32_t i = 0; i < previous_count; ++i) {
+            catalog_range range = c->ordered[i];
+            if (range.slot >= c->slots) { merge = 0; break; }
+            const catalog_entry *e = c->entries + range.slot;
+            if (!(e->flags & CATALOG_ACTIVE) || e->manifest_changed > previous_generation) continue;
+            if (range.offset != e->owner || range.length != e->allocation) { merge = 0; break; }
+            c->ordered[retained++] = range;
+        }
+        if (retained > count || delta != count - retained) merge = 0;
+        if (merge) {
+            if (delta) qsort(c->ranges, delta, sizeof(*c->ranges), catalog_order);
+            uint32_t old = retained, fresh = delta, out = count;
+            while (fresh) {
+                if (old && c->ordered[old - 1].offset > c->ranges[fresh - 1].offset)
+                    c->ordered[--out] = c->ordered[--old];
+                else c->ordered[--out] = c->ranges[--fresh];
+            }
+        }
+    }
+    if (!merge) {
+        if (delta != count) {
+            count = 0;
+            for (uint32_t i = 0; i < c->slots; ++i) if (c->entries[i].flags & CATALOG_ACTIVE) {
+                const catalog_entry *e = c->entries + i;
+                c->ranges[count++] = (catalog_range){e->owner, e->allocation, i};
+            }
+        }
+        if (count) qsort(c->ranges, count, sizeof(*c->ranges), catalog_order);
+        if (count) memcpy(c->ordered, c->ranges, (size_t)count * sizeof(*c->ordered));
+    }
+    /* Retain the complete allocation index, including raw resources. Every
+     * capture still checks every bound above and all adjacent intervals here;
+     * the output mask alone cannot prove allocation nonoverlap next time. */
     for (uint32_t i = 1; i < count; ++i)
-        if (c->ranges[i].offset < c->ranges[i - 1].offset + c->ranges[i - 1].length) return 0;
+        if (c->ordered[i].offset < c->ordered[i - 1].offset + c->ordered[i - 1].length) return 0;
     uint32_t retained = 0;
     for (uint32_t i = 0; i < count; ++i) {
-        const catalog_entry *e = c->entries + c->ranges[i].slot;
+        const catalog_entry *e = c->entries + c->ordered[i].slot;
         if (e->flags & CATALOG_OMITTED)
-            c->ranges[retained++] = (catalog_range){e->body, e->recipe.length, c->ranges[i].slot};
+            c->ranges[retained++] = (catalog_range){e->body, e->recipe.length, c->ordered[i].slot};
     }
+    c->ordered_count = count;
     c->range_count = retained;
     return 1;
 }
@@ -277,24 +328,57 @@ static int catalog_ranges(obor_resource_catalog *c, uint32_t used)
 int obor_resource_catalog_prepare(obor_resource_catalog *c, uint32_t used,
         obor_resource_unchanged unchanged, void *context)
 {
-    if (!c || used > c->arena_size) return 0;
+    if (!c) return 0;
+    /* Published views are invalidated by add/remove, while their last complete
+     * bytes remain usable for immutable recipe metadata. Never carry that
+     * guarantee through a failed preparation or a replacement allocation. */
+    uint64_t manifest_generation = c->manifest_generation;
+    uint32_t manifest_slots = c->manifest_slots;
+    uint32_t manifest_capacity = c->manifest_capacity;
+    uint64_t ordered_generation = c->ordered_generation;
+    uint32_t ordered_count = c->ordered_count;
+    int ordered_cached = ordered_generation && ordered_generation <= c->generation &&
+        ordered_count <= c->slots && ordered_count <= c->capacity &&
+        (!ordered_count || c->ordered);
+    int cached = c->manifest && manifest_generation && c->generation &&
+        manifest_generation <= c->generation && manifest_slots <= c->slots &&
+        manifest_slots <= OBOR_RESOURCE_CATALOG_LIMIT &&
+        (uint64_t)OBOR_RESOURCE_MANIFEST_HEADER +
+            (uint64_t)manifest_slots * OBOR_RESOURCE_MANIFEST_RECORD <= manifest_capacity &&
+        (!c->manifest_size || c->manifest_size == OBOR_RESOURCE_MANIFEST_HEADER +
+            manifest_slots * OBOR_RESOURCE_MANIFEST_RECORD) &&
+        catalog_u32(c->manifest) == OBOR_RESOURCE_MANIFEST_MAGIC &&
+        catalog_u32(c->manifest + 4) == 1 &&
+        catalog_u32(c->manifest + 12) == OBOR_RESOURCE_MANIFEST_RECORD &&
+        catalog_u32(c->manifest + 8) == manifest_slots;
+    c->manifest_generation = 0; c->manifest_slots = 0;
+    c->ordered_generation = 0; c->ordered_count = 0;
+    if (used > c->arena_size) {
+        c->manifest_size = c->range_count = 0; c->proofs_checked = 0;
+        return 0;
+    }
     /* Add/remove invalidate the manifest. Forget/reset invalidate checked
      * proofs. With identical bounds and a write-tracking proof covering every
      * active body, eligibility and the complete preceding manifest still
      * hold. A dirty byte, absent proof or changed extent uses the full path. */
-    if (c->manifest_size && c->proofs_checked &&
+    if (cached && ordered_cached && c->manifest_size && c->proofs_checked &&
         used == catalog_u32(c->manifest + 16) &&
         (!c->active || (unchanged && c->proof_end > c->proof_begin &&
-         unchanged(context, c->proof_begin, c->proof_end - c->proof_begin))))
+         unchanged(context, c->proof_begin, c->proof_end - c->proof_begin)))) {
+        c->manifest_generation = manifest_generation; c->manifest_slots = manifest_slots;
+        c->ordered_generation = ordered_generation; c->ordered_count = ordered_count;
         return 1;
+    }
     c->proofs_checked = 0;
     uint32_t proof_begin = UINT32_MAX, proof_end = 0;
     uint64_t previous_generation = c->generation;
     uint32_t previous_manifest = c->manifest_size, previous_ranges = c->range_count;
     c->manifest_size = c->range_count = 0;
+    int coherent = c->generation != 0;
     uint32_t omitted = 0;
     for (uint32_t i = 0; i < c->slots; ++i) {
         catalog_entry *e = c->entries + i;
+        if (e->manifest_changed > c->generation) coherent = 0;
         if (!(e->flags & CATALOG_ACTIVE)) continue;
         if (!catalog_bounds(c, e, used)) return 0;
         if (e->body < proof_begin) proof_begin = e->body;
@@ -337,13 +421,17 @@ int obor_resource_catalog_prepare(obor_resource_catalog *c, uint32_t used,
      * every body; if neither ownership nor eligibility changed, only the
      * current arena extent can differ. Avoid sorting and rewriting every
      * recipe on each capture merely to produce the identical bytes. */
-    if (previous_manifest && previous_generation == c->generation) {
+    coherent = coherent && c->generation && c->generation >= previous_generation;
+    if (cached && ordered_cached && coherent && previous_manifest && previous_generation == c->generation) {
         catalog_put(c->manifest + 16, used);
         c->manifest_size = previous_manifest; c->range_count = previous_ranges;
+        c->manifest_generation = c->generation; c->manifest_slots = c->slots;
+        c->ordered_generation = c->generation; c->ordered_count = ordered_count;
         return 1;
     }
-    if (!catalog_ranges(c, used)) return 0;
+    if (!catalog_ranges(c, used, coherent && ordered_cached ? ordered_generation : 0, ordered_count)) return 0;
     if (!catalog_manifest_reserve(c)) { c->range_count = 0; return 0; }
+    int reuse_recipes = cached && coherent && manifest_capacity == c->manifest_capacity;
     uint32_t bytes = OBOR_RESOURCE_MANIFEST_HEADER + c->slots * OBOR_RESOURCE_MANIFEST_RECORD;
     uint32_t header[8] = {OBOR_RESOURCE_MANIFEST_MAGIC, 1, c->slots,
         OBOR_RESOURCE_MANIFEST_RECORD, used, omitted, c->active, 0};
@@ -357,9 +445,14 @@ int obor_resource_catalog_prepare(obor_resource_catalog *c, uint32_t used,
         }
         catalog_put(out, e->owner); catalog_put(out + 4, e->allocation);
         catalog_put(out + 8, e->body); catalog_put(out + 12, e->flags);
-        if (!obor_resource_recipe_write(&e->recipe, out + 16, OBOR_RESOURCE_RECIPE_SIZE)) return 0;
+        if (!(reuse_recipes && i < manifest_slots && e->manifest_changed <= manifest_generation) &&
+            !obor_resource_recipe_write(&e->recipe, out + 16, OBOR_RESOURCE_RECIPE_SIZE)) return 0;
     }
     c->manifest_size = bytes;
+    if (coherent) {
+        c->manifest_generation = c->generation; c->manifest_slots = c->slots;
+        c->ordered_generation = c->generation;
+    }
     return 1;
 }
 
@@ -501,7 +594,7 @@ static obor_resource_catalog *catalog_read(obor_resource_catalog *current, const
         if (catalog_find(c, e->owner, &at) != CATALOG_EMPTY || at == CATALOG_EMPTY) goto fail;
         c->buckets[at] = i + 1; ++c->active;
     }
-    if (c->active != active || total != omitted || !catalog_ranges(c, used)) goto fail;
+    if (c->active != active || total != omitted || !catalog_ranges(c, used, 0, 0)) goto fail;
     if (!catalog_manifest_reserve(c)) goto fail;
     memcpy(c->manifest, input, size); c->manifest_size = size;
     c->generation = current->generation + 1;

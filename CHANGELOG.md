@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+- Keep managed build artifacts in separate target directories and verify their
+  recorded identities before runtime checks, preserving ordinary make output.
+
+- Enable guarded dirty-page tracking, registered decoder-worker tracking,
+  advance state preparation, bounded encoder-pool maintenance and the
+  synchronous compression helper on supported Android targets.
+- Learn frequently written pages within a bounded budget. These pages remain
+  writable and are always treated as dirty by snapshot proofs.
+- Reuse validated resource-recipe metadata and merge allocation-range changes
+  while preserving complete snapshots and global nonoverlap checks.
+
 - Avoid clearing complete resource manifests before overwriting active records; inactive records remain fully zeroed.
 - Invalidate refused capture headers so a frontend cannot silently load an older
   state left in its buffer. Verify failed captures, intact continuation and

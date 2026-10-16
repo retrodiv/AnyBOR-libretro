@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
  * Private synchronous encoder pipeline; included after the serial helpers. */
-#if defined(__linux__) && !defined(__ANDROID__)
+#if defined(__linux__)
 #include <pthread.h>
 #include <unistd.h>
 

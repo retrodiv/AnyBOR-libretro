@@ -5,11 +5,11 @@
 #include <stdlib.h>
 #include <string.h>
 
-/* Optional runtime policies retain their existing platform scope. This flag
+/* Runtime policies select their supported platform scope. This flag
  * controls preparation, encoder maintenance and helper policy, not which
  * writer is selected by the frontend or the engine's default settings. */
 #if (defined(_WIN32) && (defined(__x86_64__) || defined(_M_X64))) || \
-    (defined(__linux__) && !defined(__ANDROID__) && \
+    (defined(__linux__) && \
      (defined(__x86_64__) || defined(__aarch64__)))
 #define OBOR_STATE_DEFAULT_ENABLED 1
 #else
@@ -73,7 +73,7 @@ static inline int obor_state_worker_watch_enabled(void)
     /* The classic movie adapter publishes and joins every decoder worker on
      * the engine owner. The asynchronous movie layer has nested/third-party
      * workers outside that contract and must invalidate its page proofs. */
-#if defined(__linux__) && !defined(__ANDROID__) && \
+#if defined(__linux__) && \
     (defined(__x86_64__) || defined(__aarch64__)) && !defined(OBOR_HAS_MOVIE_PLAYBACK)
     return obor_state_option("OBOR_STATE_WORKER_WATCH", 1);
 #else

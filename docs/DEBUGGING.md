@@ -148,3 +148,15 @@ interval includes any wait performed by the frontend, and elapsed time can
 include thread descheduling. A gap between frame scopes alone does not identify
 which component caused it. Compare enabled and disabled controls from the same
 state and binary before using this observer to diagnose a presentation pause.
+
+## Dirty-page policy controls
+
+`OBOR_STATE_HOT_PAGES=0` disables bounded hot-page learning; `1` enables it on
+supported write-watch targets. The default is enabled wherever
+the page-protection watcher is supported. Hot pages remain writable and can never prove a resource or state
+block unchanged. This override changes work allocation, not snapshot contents.
+
+`OBOR_STATE_PREPARE=0`, `OBOR_STATE_WORKER_WATCH=0` and
+`OBOR_STATE_COMPRESSION_WORKER=0` retain independent diagnostic controls for
+advance preparation, registered decoder tracking and the synchronous helper.
+The normal safety checks and complete fallback paths remain in effect.

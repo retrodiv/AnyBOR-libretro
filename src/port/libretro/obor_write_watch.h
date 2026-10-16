@@ -8,7 +8,7 @@
 /* The fault guard owns the current thread. Explicitly registered engine
  * workers can retain protection with pinned dispatch; captures, rearming and
  * destruction are refused until join. Other workers require suspension. */
-#if defined(__linux__) && !defined(__ANDROID__) && \
+#if defined(__linux__) && \
     (defined(__aarch64__) || defined(__x86_64__) || defined(OBOR_WRITE_WATCH_TEST))
 #define OBOR_WRITE_WATCH_ENABLED 1
 int obor_write_watch_start(void *base, size_t length, size_t maximum);
@@ -18,6 +18,9 @@ int obor_write_watch_stop(void);
 /* Only after the allocator has replaced/released the complete arena map. */
 void obor_write_watch_abandon(void);
 int obor_write_watch_fault(uintptr_t address);
+/* Dispatcher-only entry: learning records actual CPU writes, never kernel-IO
+ * preparation or synthetic always-dirty pages. */
+int obor_write_watch_cpu_fault(uintptr_t address);
 int obor_write_watch_prepare_io(void *buffer, size_t length);
 uint64_t obor_write_watch_epoch(void);
 uint64_t obor_write_watch_page_epoch(size_t page);
@@ -34,6 +37,7 @@ static inline int obor_write_watch_arm(size_t n) { (void)n; return 0; }
 static inline int obor_write_watch_stop(void) { return 1; }
 static inline void obor_write_watch_abandon(void) {}
 static inline int obor_write_watch_fault(uintptr_t p) { (void)p; return 0; }
+static inline int obor_write_watch_cpu_fault(uintptr_t p) { (void)p; return 0; }
 static inline int obor_write_watch_prepare_io(void *p, size_t n)
 { (void)p; (void)n; return 1; }
 static inline uint64_t obor_write_watch_epoch(void) { return 0; }

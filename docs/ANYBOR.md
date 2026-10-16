@@ -83,7 +83,10 @@ The macros account for the active character's facing direction.
 
 The state options share the existing System category. Their defaults are
 **Smart + On on every platform**, including Android and macOS. Writer selection
-does not enable additional platform-specific runtime optimizations.
+is independent of the platform runtime policy. Supported Android targets enable
+guarded dirty-page tracking, advance preparation and the synchronous compression
+helper, with bounded pool maintenance. Frequently written pages remain writable
+and always dirty for snapshot proofs. No policy changes the complete-state contract.
 Full + Off may exceed a 256 MiB rewind buffer in large
 games. All combinations can be selected on every platform; see the
 [state compatibility limits](../README.md#save-states-and-rewind), including
@@ -254,11 +257,11 @@ longer used and are left untouched.
 RetroArch places save-state files in its configured **Save States** directory.
 Ordinary engine saves use their own files rather than a libretro save-RAM block.
 States may be large because they retain the running engine's memory and stack.
-Windows x86-64 and Linux x86-64/ARM64 use a fixed 64 MiB compressed transport,
-including during loading and Reset. Each state is independently loadable;
-unchanged resources can be reconstructed from the loaded content. Android and
-macOS retain the existing writer, whose capacity can grow on supporting
-frontends or requires a restart to use a learned peak on fixed-capacity ones.
+Smart and Full with compression On use the fixed 64 MiB coded transport on
+every platform, including during loading and Reset. Each state is independently
+loadable; Smart can reconstruct exactly reproducible resources from the loaded
+content. Full + Off uses the complete base writer and its content-sized
+allowance; content that outgrows it requires a restart to use the learned peak.
 See [README.md](../README.md#save-states-and-rewind) for the resource limits and
 the recommended 256 MiB rewind history at granularity 10.
 

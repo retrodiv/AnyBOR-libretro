@@ -5,7 +5,7 @@
 #include "lz4.h"
 #include <string.h>
 #include <zlib.h>
-#if defined(__linux__) && !defined(__ANDROID__)
+#if defined(__linux__)
 #include <time.h>
 #endif
 
@@ -13,7 +13,7 @@
  * performance metadata, never a reason to omit or reject captured state. */
 static uint64_t block_cpu_now(void)
 {
-#if defined(__linux__) && !defined(__ANDROID__) && defined(CLOCK_THREAD_CPUTIME_ID)
+#if defined(__linux__) && defined(CLOCK_THREAD_CPUTIME_ID)
     struct timespec value;
     if (!clock_gettime(CLOCK_THREAD_CPUTIME_ID, &value))
         return (uint64_t)value.tv_sec * UINT64_C(1000000000) + (uint64_t)value.tv_nsec;
@@ -359,7 +359,7 @@ static int block_encode(obor_block_state *state, const obor_block_source *source
                          uint32_t raw_size, int allow_repack, int initial_codec, int update_codec)
 {
     if (!state || !source || !source->read) return 0;
-#if defined(__linux__) && !defined(__ANDROID__)
+#if defined(__linux__)
     if (allow_repack && state->worker_enabled && state->valid && !state->clock &&
         raw_size >= BW_BATCH * BS_BLOCK) {
         int result = block_encode_worker(state, source, raw_size, initial_codec, update_codec);

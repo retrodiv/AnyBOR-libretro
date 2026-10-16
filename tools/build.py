@@ -23,6 +23,7 @@ from native_io_bindings import audit_engine, verify_darwin_names
 HERE = Path(__file__).resolve().parent.parent
 SRC = HERE / "src"
 CORE = "anybor_libretro"
+MANAGED_BUILD = "OBOR_BUILD_ROOT" in os.environ
 BUILD_ROOT = Path(os.path.abspath(os.path.expanduser(
     os.environ.get("OBOR_BUILD_ROOT", str(HERE / ".build")))))
 JOBS = max(1, int(os.environ.get("NUMPROC", os.environ.get("JOBS", min(4, os.cpu_count() or 4)))))
@@ -726,13 +727,30 @@ def build_glue(target, spec, outdir):
         run(["codesign", "--force", "--sign", "-", out.with_suffix(out.suffix + ".sym")])
     if spec.get("android"):
         package_android_engine(spec, out, third)
-    shutil.copy2(str(out), str(HERE / out.name))
-    # Keep the unstripped artifact under .build only.  The repository root is
-    # the normal release surface and must not acquire large debug artifacts as
-    # a side effect of an ordinary build.
-    sym = HERE / (out.name + ".sym")
-    if sym.exists():
-        sym.unlink()
+    publish_build_output(target, out)
+
+
+def publish_build_output(target, out):
+    """Keep managed target artifacts separate; preserve ordinary make output."""
+    out = Path(out)
+    folder = (BUILD_ROOT / "dist" / target).resolve()
+    if out.resolve().parent != folder:
+        raise RuntimeError("Built artifact is outside its target directory: " + str(out))
+    identity = sha256_file(out)
+    if not MANAGED_BUILD:
+        # Standard make/libretro buildbot expects a library in the checkout.
+        # Managed multi-target builds consume dist/TARGET instead and must not
+        # replace or delete another target's conventional output or symbols.
+        conventional = HERE / out.name
+        shutil.copy2(out, conventional)
+        if sha256_file(conventional) != identity:
+            raise RuntimeError("Conventional build output changed during delivery")
+        sym = HERE / (out.name + ".sym")
+        if sym.exists():
+            sym.unlink()
+    if sha256_file(out) != identity:
+        raise RuntimeError("Target build output changed during delivery")
+    return out
 
 
 def android_engine_span(path):

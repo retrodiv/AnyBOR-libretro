@@ -292,7 +292,7 @@ static void memory_signal(int signal, siginfo_t *info, void *context)
 #endif
     if (watch_owner && signal == SIGSEGV && info && info->si_code == SEGV_ACCERR &&
         watch_write_fault(context) &&
-        obor_write_watch_fault((uintptr_t)info->si_addr)) return;
+        obor_write_watch_cpu_fault((uintptr_t)info->si_addr)) return;
     if (guard && info && info->si_code > 0) {
         ucontext_t *machine = (ucontext_t *)context;
         guard->code = signal;

@@ -17,6 +17,9 @@
 #include <unistd.h>
 
 enum { WORKERS = 8 };
+#ifndef EXPECT_HOT_POLICY
+#define EXPECT_HOT_POLICY 1
+#endif
 static unsigned char *memory;
 static size_t page;
 static bor_thread *workers[WORKERS];
@@ -169,8 +172,15 @@ int main(int argc, char **argv)
         for (size_t i = 0; i < WORKERS; ++i)
             assert(memory[i] == cycle && memory[page + i] == cycle + 1);
         for (size_t i = 0; i < 16; ++i) assert(memory[page * 2 + i] == 0);
-        for (size_t i = 0; i < 3; ++i)
-            assert(obor_write_watch_page_epoch(i) == epoch);
+        for (size_t i = 0; i < 3; ++i) {
+            /* Only the two CPU-written pages train the hot policy. The I/O
+             * page must retain its ordinary epoch and the untouched page
+             * below must remain provably clean. */
+            if (EXPECT_HOT_POLICY && cycle > 16 && i < 2)
+                assert(obor_write_watch_page_epoch(i) == UINT64_MAX);
+            else
+                assert(obor_write_watch_page_epoch(i) == epoch);
+        }
         assert(obor_write_watch_page_epoch(3) < epoch);
         assert(!obor_write_watch_range_unchanged((uintptr_t)memory, page * 4, epoch - 1));
         assert(!obor_write_watch_range_unchanged((uintptr_t)memory + page * 2, 16, epoch - 1));

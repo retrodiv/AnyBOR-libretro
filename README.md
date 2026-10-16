@@ -47,8 +47,12 @@ an installed toolchain. On macOS the build selects `clang`/`clang++` and the
 system linker, and accepts the `LIBRETRO_APPLE_PLATFORM` and
 `LIBRETRO_APPLE_ISYSROOT` variables the libretro `osx-arm64` recipe exports.
 Set `NUMPROC` or `JOBS` to limit parallel compilation, and `OBOR_BUILD_ROOT`
-to move temporary outputs outside this directory. Dependencies are built
-from `src/deps/`; there is no download or prebuilt-library fallback.
+to move build outputs outside this directory. With `OBOR_BUILD_ROOT` set,
+consume the library and its `build.json` receipt only from
+`$OBOR_BUILD_ROOT/dist/<target>/`; managed builds do not overwrite a library
+in the source root. Ordinary `make` without this variable retains the
+conventional root library for frontend/buildbot compatibility. Dependencies
+are built from `src/deps/`; there is no download or prebuilt-library fallback.
 
 External toolchains can set `CONFIGURE_HOST` and `CONFIGURE_BUILD` to the
 Autoconf system triplets used by libpng, libogg and libvorbis. For a Buildroot
@@ -130,8 +134,9 @@ during a session, resetting or loading a state does not change that session's
 writer. Diagnostic environment overrides retain priority.
 
 The default is **Smart + On on every platform**, including Android and macOS.
-This selects the writer without enabling additional platform-specific runtime
-optimizations. **Full + Off may not fit the
+Writer selection is independent of the platform runtime policy. Supported
+Android targets also enable dirty-page tracking, advance state preparation,
+bounded encoder-pool maintenance and the synchronous compression helper. **Full + Off may not fit the
 256 MiB rewind buffer in large games.** The available duration and capture cost
 depend on the game, machine and selected combination.
 
@@ -168,18 +173,28 @@ the requested capture still validates the current bytes. Unused transport
 bytes are deterministically zero. Fixed frontend capacity remains unchanged
 across loading, gameplay and Reset.
 
-On Linux x86-64/ARM64, captures with enough observed encoding work can use
+On Linux x86-64/ARM64, including supported Android targets, captures with
+enough observed encoding work can use
 one auxiliary compression thread. It finishes before capture returns; the
 engine never advances while it is working. Scratch space stays below 2.1 MiB
 and stores no rewind history. Lighter updates, unavailable CPU measurements
 or threads, and single-CPU systems retain serial compression. Both paths
 produce the same serialized bytes and preserve the capture frequency.
 
-On supported Linux targets, classic movie decoders retain write tracking while
+On supported Linux and Android targets, classic movie decoders retain write tracking while
 their engine-owned workers run, including between frontend calls. This avoids
 rechecking untouched resources after playback. Captures remain unavailable
 while workers are active. The asynchronous movie adapter has additional worker
 ownership and conservatively invalidates those proofs before playback instead.
+
+On supported page-protection tracking targets, bounded learning identifies
+frequently written pages and leaves
+those pages writable. Every such page remains dirty for state validation,
+including repeated writes between captures. It never supplies an immutable
+resource or block proof. Resource recipe metadata and allocation ordering are
+reused only while their validity checks hold; all allocation bounds and global
+nonoverlap checks are retained. These policies do not omit mutable state or
+change the frontend's fixed state capacity.
 
 On Recalbox, a core-specific override can use `video_threaded = "true"`,
 `video_vsync = "true"`, `video_adaptive_vsync = "false"`,

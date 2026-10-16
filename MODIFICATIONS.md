@@ -592,7 +592,7 @@ still checks current bytes and writes a complete independent state, including
 changes made after preparation. The prediction schedules work only; it never
 changes the frontend's capture frequency. Missed predictions expire, loads and
 resets clear the schedule, and preparation retains no additional history.
-This path defaults on for Windows x86-64 and non-Android Linux x86-64/ARM64.
+This path defaults on for Windows x86-64 and Linux x86-64/ARM64, including supported Android targets.
 `OBOR_STATE_PREPARE=0` disables preparation for diagnostic comparisons without
 changing the requested captures or their contents.
 
@@ -635,7 +635,7 @@ preflights resource reconstruction, heap ownership and logical zero ranges
 before replacing live bytes. Transient reconstruction staging is capped at
 256 MiB; additional resources remain ordinary state bytes.
 
-On non-Android Linux, updates to a valid coded image can use a bounded
+On Linux, including supported Android targets, updates to a valid coded image can use a bounded
 compression pipeline. The owner reads and copies source blocks; one helper
 encodes them and computes their checksums. Only the owner updates slots,
 metadata and the current decoded cache, in serial block order. Two batches
@@ -703,7 +703,7 @@ frontends and ordinary loads retain the forward execution path.
 Reverse presentation requires the resource and compressed-state paths to be
 enabled. It remains opt-in; ordinary rewind uses the normal engine presentation
 path. Resource and compressed states themselves default on for Windows x86-64
-and non-Android Linux x86-64/ARM64, as described in the README. Other targets
+and Linux x86-64/ARM64, including supported Android targets, as described in the README. Other targets
 retain their existing writer while equivalent acceptance is pending.
 
 ## Model attack type bounds
@@ -912,3 +912,30 @@ the slot limit and byte equality with the previous writer. No resource proof or
 serialized field is omitted by this allocation change.
 
 The complete manifest writer overwrites its 32-byte header and all 600 bytes of every active record. It clears only inactive records, avoiding a redundant full-manifest zero pass while retaining deterministic zero bytes for retired slots. Recipe validation, eligibility proofs, bounds and restore preflights are unchanged. The authored allocation-lifecycle fixture observes actual clear requests in the catalog translation unit, forwards every write to libc, checks A5-filled reserves and canonical streams, and covers retire/reuse/load and allocation failure. This does not infer immutability from an always-writable page.
+
+### Android capture policies and reusable catalogue metadata
+
+Supported Android targets enable the existing guarded write watcher, classic
+registered-worker tracking, advance preparation, bounded pool maintenance,
+compact initial encoding and the synchronous compression helper. The helper's
+policy uses owner/helper thread CPU clocks, with the existing serial fallbacks.
+The asynchronous movie adapter still invalidates its page proofs; capturing
+with active engine workers remains unsupported.
+
+A bounded hot-page policy is enabled by default on supported page-protection
+tracking targets. Only real repeated
+CPU writes train it; kernel-I/O marks and empty protection epochs do not. Hot
+pages remain writable and return an unknown page epoch to every reuse proof,
+including multiple snapshots within the same protection epoch. Learning state
+lives outside captured engine memory. Windows retains its native write-watch
+backend without protected-page learning. The diagnostic override is generic
+and does not identify content.
+
+The resource catalogue retains validated immutable recipe bytes and rewrites
+changed owners, flags and inactive records completely. A complete allocation
+index merges newly ordered ranges with a validated preceding index, including
+raw allocations. Bounds and global nonoverlap are checked before filtering the
+omission mask. Loads, changed backing storage, failed preparation and invalid
+generations discard the corresponding reuse guarantee. The frontend capacity,
+state format, independent-state contract and exact resource comparisons do not
+change.
