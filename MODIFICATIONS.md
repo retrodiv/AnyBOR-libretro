@@ -93,6 +93,24 @@ substantial work without advancing the emulated frame clock; progress breaks
 that cycle while keeping scheduling deterministic. The original background,
 font, loading script and bar renderer remain responsible for the image.
 
+For packed content, `36-cooperative-model-preload.patch` returns control to the frontend after
+each newly completed model within explicit model-list or level preparation,
+including nested loads. It re-presents the last frame without repainting or
+calling loading scripts again. A single model still finishes synchronously.
+Ordinary scripted model loads outside those preparation phases retain their
+existing scheduling. Save, load and prepared-state capture callbacks refuse the
+intermediate preparation context before touching state buffers or engine
+memory; state capacity stays available and normal states resume after cleanup.
+Reset and unload discard the context. No content identity selects this path.
+Loose content still completes initial startup synchronously inside
+`retro_load_game`; its boot waits do not return to the frontend between models.
+
+A frontend that queues a rewind block despite a failed save callback may retain
+a previous or uninitialized block during preparation. Core refusal preserves
+the live engine; it does not guarantee the frontend discards that history entry.
+Stock validation must keep rewind enabled through startup and level loading,
+then check reverse playback and usable continuation after any rejected loads.
+
 The shared coroutine returns its initial yield to the frontend and presents
 that pending frame through `retro_run`. Later loading frames also run through
 the ordinary video/audio callbacks. `obor_loading.h` supplies the progress

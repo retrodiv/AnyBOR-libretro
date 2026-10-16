@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Return to the frontend between newly completed models during model-list and
+  level preparation, including nested loads. Defer save/load callbacks until
+  preparation cleans up, and preserve ordinary scripted gameplay loads.
+  Loose content still completes its initial load inside `retro_load_game`.
+
 - Default to Smart save state content with compression On on every platform,
   including Android and macOS, while retaining the existing platform scope of
   runtime optimizations. Keep the intentional same-module-address requirement

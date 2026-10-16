@@ -241,6 +241,7 @@ static int g_variable_states;
 static int g_startup_complete;
 static int g_reverse_presentation;
 static uint32_t g_frame_audio_hash;
+static int g_preload_fatal_message;
 
 static void host_log(enum retro_log_level level, const char *format, ...)
 {
@@ -249,6 +250,15 @@ static void host_log(enum retro_log_level level, const char *format, ...)
         g_startup_complete = 1;
     va_list args;
     va_start(args, format);
+    if (getenv("OBOR_PRELOAD_PROBE_FATAL_RECOVER") && level == RETRO_LOG_ERROR) {
+        char message[2048];
+        va_list copy;
+        va_copy(copy, args);
+        vsnprintf(message, sizeof(message), format, copy);
+        va_end(copy);
+        if (strstr(message, "Fatal Error in load_cached_model"))
+            g_preload_fatal_message = 1;
+    }
     vfprintf(stderr, format, args);
     va_end(args);
 }
@@ -780,6 +790,8 @@ static void dump_ppm(const char *prefix, int frame)
     fclose(f);
 }
 
+#include "preload_probe.h"
+
 static int complete_loading(void (*run)(void))
 {
     int frame = g_frame;
@@ -1078,6 +1090,8 @@ int main(int argc, char **argv)
     int ser_n = 0;
     int save_at = getenv("OBOR_SAVE_AT") ? atoi(getenv("OBOR_SAVE_AT")) : -1;
     int reset_at = getenv("OBOR_RESET_AT") ? atoi(getenv("OBOR_RESET_AT")) : -1;
+    int preload_interrupts = 0;
+    int preload_fatal_recovered = 0;
     int reset_every = getenv("OBOR_RESET_EVERY") ? atoi(getenv("OBOR_RESET_EVERY")) : 0;
     /* OBOR_SET_ENGINE_AT=frame:build — change the core option mid-run (the
      * glue re-reads it on retro_reset) */
@@ -1206,6 +1220,35 @@ int main(int argc, char **argv)
 #ifdef OBOR_HOST_FILESYSTEM_PROBE
         obor_fs_probe_end((unsigned)g_frame);
 #endif
+        if (g_preload_fatal_message && !preload_fatal_recovered) {
+            p_retro_unload_game();
+            preload_probe_restart();
+            g_shutdown = g_startup_complete = 0;
+            info.path = getenv("OBOR_PRELOAD_PROBE_FATAL_RECOVER");
+            if (!p_retro_load_game(&info)) return 1;
+            preload_fatal_recovered = 1;
+            printf("preload_fatal_recovery=1 frame=%d\n", g_frame);
+            continue;
+        }
+        if (!preload_probe_after_run(p_retro_serialize_size, p_retro_serialize,
+                                     p_retro_unserialize, g_startup_complete)) return 1;
+        if (getenv("OBOR_PRELOAD_PROBE_INTERRUPT") && preload_interrupts < 2 &&
+            preload_boot_checks >= 2u * ((unsigned)preload_interrupts + 1)) {
+            preload_probe_restart();
+            g_startup_complete = 0;
+            if (!preload_interrupts) p_retro_reset();
+            else {
+                p_retro_unload_game();
+                /* Only this authored fixture's closed log: packed reload can
+                 * return during preparation before the new engine opens it. */
+                const char *old_log = getenv("OBOR_PRELOAD_PROBE_LOG");
+                if (!old_log || remove(old_log)) return 1;
+                if (!p_retro_load_game(&info)) return 1;
+            }
+            printf("preload_interruption=%s frame=%d\n",
+                   preload_interrupts++ ? "unload_reload" : "reset", g_frame);
+            continue;
+        }
         trace_replay_frame();
         if (getenv("OBOR_REQUIRE_VIDEO_EVERY_RUN") && !g_shutdown &&
             g_video_calls == video_calls_before) {
@@ -1463,6 +1506,7 @@ int main(int argc, char **argv)
             (reset_every > 0 && g_frame > 0 && g_frame % reset_every == 0)) {
             printf("reset at frame %d\n", g_frame);
             g_startup_complete = 0;
+            preload_probe_restart();
             p_retro_reset();
             if (getenv("OBOR_SKIP_LOADING") && complete_loading(p_retro_run) < 0)
                 return 1;
@@ -1513,6 +1557,11 @@ int main(int argc, char **argv)
         if (fclose(replay_audio_file)) return 1;
         replay_audio_file = NULL;
     }
+    if (getenv("OBOR_PRELOAD_PROBE_FATAL_RECOVER") && !preload_fatal_recovered) {
+        fprintf(stderr, "malformed model bypassed its fatal error path\n");
+        return 1;
+    }
+    if (!preload_probe_finish()) return 1;
     if (ppm)
         dump_ppm(ppm, g_frame);
 

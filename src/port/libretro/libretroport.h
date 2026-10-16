@@ -90,6 +90,13 @@ void obor_yield_frame(void);
 void obor_wait_frame(void);
 void obor_worker_pause(void);
 
+/* Explicit model-list/level preparation may recurse through model loaders.
+ * Keep those intermediate parsers out of snapshots and yield only while this
+ * context is active, leaving ordinary scripted gameplay loads synchronous. */
+void obor_preload_begin(void);
+void obor_preload_end(void);
+int obor_preload_active(void);
+
 /* Liveness for input-poll loops: engines wait on button state in tight
  * loops without sleeping or rendering, but pad state only changes when the
  * frontend runs between frames. control.c calls this per poll; after many

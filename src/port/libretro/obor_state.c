@@ -1231,6 +1231,16 @@ typedef struct {
 static void execute_state(void *context)
 {
     state_call *call = (state_call *)context;
+    /* A completed child model can yield while its parent's parser, inline
+     * script or resource handles are still live. Defer snapshots and loads
+     * until the enclosing preparation has cleaned up. Keep the advertised
+     * capacity available so frontend rewind allocation remains stable. */
+    if (obor_preload_active() &&
+        (call->operation == 1 || call->operation == 2 ||
+         call->operation == 3 || call->operation == 6)) {
+        if (call->ranges) call->ranges->count = 0;
+        return;
+    }
     if (call->operation == 0) {
         obor_test_fault_phase("size");
         call->result = serialize_size_impl();

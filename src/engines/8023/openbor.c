@@ -1,4 +1,4 @@
-/* AnyBOR modification record: 2026-10-14.
+/* AnyBOR modification record: 2026-10-15.
  * Port maintained by retrodiv <retrodiv@proton.me>.
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
@@ -13,11 +13,13 @@
  * highest animation index that model uses, and bound cache, copy and cleanup
  * paths to that capacity. Ignore optional defense and offense entries
  * outside the configured attack-type range with a log warning before
- * accessing their tables. Use four independent RetroPad devices and per-
- * device mappings. Place player state in aligned storage for PE SIMD reads.
- * Yield to the frontend and decoder workers while asynchronous movies are
- * pending. Grow each collision collection's pointer table only through its
- * highest author-facing slot.
+ * accessing their tables. Yield after each newly completed model during
+ * explicit model-list or level preparation, and defer states until that
+ * preparation has cleaned up its intermediate parsers and handles. Use four
+ * independent RetroPad devices and per-device mappings. Place player state
+ * in aligned storage for PE SIMD reads. Yield to the frontend and decoder
+ * workers while asynchronous movies are pending. Grow each collision
+ * collection's pointer table only through its highest author-facing slot.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/8023.md
  * at the source repository root. Original notices follow below.
@@ -21318,6 +21320,7 @@ lCleanup:
         execute_model_load_scripts(newchar);
         model_cache[cacheindex].lifecycle = MODEL_LIFECYCLE_LOADED;
         printf(" ...done!\n");
+        if (obor_preload_active()) obor_wait_frame();
         return newchar;
     }
 
@@ -21915,6 +21918,7 @@ void load_model_constants()
 // Load / cache all models
 int load_models()
 {
+    obor_preload_begin();
     char filename[MAX_BUFFER_LEN] = "data/models.txt";
     int i;
     char *buf;
@@ -22223,6 +22227,7 @@ int load_models()
         free(buf);
     }
 
+    obor_preload_end();
     return 1;
 }
 
@@ -24117,6 +24122,7 @@ void load_level(char *filename)
     int exit_blocked = 0, exit_hole = 0;
     char maskPath[MAX_BUFFER_LEN] = {""};
 
+    obor_preload_begin();
     unload_level();
 
     printf("Level Loading:   '%s'\n", filename);
@@ -25416,6 +25422,7 @@ lCleanup:
     {
         borShutdown(1, "ERROR: load_level, file %s, line %d, message: %s", filename, line, errormessage);
     }
+    obor_preload_end();
 }
 
 

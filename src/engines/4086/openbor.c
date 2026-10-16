@@ -1,4 +1,4 @@
-/* AnyBOR modification record: 2026-10-14.
+/* AnyBOR modification record: 2026-10-15.
  * Port maintained by retrodiv <retrodiv@proton.me>.
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
@@ -13,8 +13,11 @@
  * highest animation index that model uses, and bound cache, copy and cleanup
  * paths to that capacity. Ignore optional defense and offense entries
  * outside the configured attack-type range with a log warning before
- * accessing their tables. Resize repeated weapon lists and detach borrowed
- * lists before replacing their entries.
+ * accessing their tables. Yield after each newly completed model during
+ * explicit model-list or level preparation, and defer states until that
+ * preparation has cleaned up its intermediate parsers and handles. Resize
+ * repeated weapon lists and detach borrowed lists before replacing their
+ * entries.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/4086.md
  * at the source repository root. Original notices follow below.
@@ -9903,6 +9906,7 @@ lCleanup:
 
     if(!shutdownmessage)
     {
+        if (obor_preload_active()) obor_wait_frame();
         return newchar;
     }
 
@@ -10307,6 +10311,7 @@ void load_model_constants()
 // Load / cache all models
 int load_models()
 {
+    obor_preload_begin();
     char filename[128] = "data/models.txt";
     int i;
     char *buf;
@@ -10525,6 +10530,7 @@ int load_models()
         free(buf);
     }
 
+    obor_preload_end();
     return 1;
 }
 
@@ -12209,6 +12215,7 @@ void load_level(char *filename)
     int panelcount = 0;
     int exit_blocked = 0, exit_hole = 0;
 
+    obor_preload_begin();
     unload_level();
 
     printf("Level Loading:   '%s'\n", filename);
@@ -13403,6 +13410,7 @@ lCleanup:
     {
         shutdown(1, "ERROR: load_level, file %s, line %d, message: %s", filename, line, errormessage);
     }
+    obor_preload_end();
 }
 
 

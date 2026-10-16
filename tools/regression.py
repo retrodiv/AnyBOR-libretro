@@ -144,9 +144,13 @@ def main():
                              OBOR_GAMELOG=option, OBOR_LOAD_AT=120, OBOR_LOAD_STATE=state,
                              OBOR_RESET_AT=150)
                 check_loads(result, state, 1)
+            # Reset between scheduled loads. The authored one-model fixture
+            # finishes its cooperative preload within the five runs before
+            # frame150; preserve three successful loads on each side of reset.
+            # Preload rejection itself is covered by test_model_preload_core.
             result = run(engine, pak, "repeated state loads with shifted host descriptors",
                          OBOR_GAMELOG="On", OBOR_LOAD_AT=120, OBOR_LOAD_EVERY=10,
-                         OBOR_LOAD_STATE=state, OBOR_FD_PADDING=12, OBOR_RESET_AT=150)
+                         OBOR_LOAD_STATE=state, OBOR_FD_PADDING=12, OBOR_RESET_AT=145)
             check_loads(result, state, 6)
             # This mandatory control still restores six times on ASLR hosts,
             # even when the preceding independent-process loads were refused.
@@ -155,7 +159,7 @@ def main():
             result = run(engine, pak, "same-session repeated loads with host descriptors",
                          OBOR_GAMELOG="On", OBOR_SAVE_AT=120, OBOR_SAVE_STATE=session_state,
                          OBOR_LOAD_AT=121, OBOR_LOAD_EVERY=10,
-                         OBOR_LOAD_STATE=session_state, OBOR_FD_PADDING=12, OBOR_RESET_AT=150)
+                         OBOR_LOAD_STATE=session_state, OBOR_FD_PADDING=12, OBOR_RESET_AT=145)
             if not re.search(r"saved state \(\d+ bytes\) at frame 120", result) or \
                     re.findall(r"load state at frame \d+: (ok|FAILED)", result) != ["ok"] * 6:
                 raise RuntimeError("Same-session repeated state loads did not complete: " + result)

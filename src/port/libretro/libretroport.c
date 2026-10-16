@@ -84,6 +84,7 @@ extern int obor_live_threads;
 void obor_co_restore_active(cothread_t frontend);
 static int frame_ready;
 static int boot_frame_pending;
+static unsigned preload_depth;
 /* Every supported engine sets this after its fonts, scripts, cached models
  * and object tables have finished loading. Loading-screen and timer yields
  * can occur before that point; they are not a completed boot. */
@@ -409,6 +410,21 @@ void obor_wait_frame(void)
     obor_yield_frame();
 }
 
+void obor_preload_begin(void)
+{
+    ++preload_depth;
+}
+
+void obor_preload_end(void)
+{
+    if (preload_depth) --preload_depth;
+}
+
+int obor_preload_active(void)
+{
+    return preload_depth != 0;
+}
+
 void obor_poll_tick(void)
 {
     if (++polls_since_yield >= 240) {
@@ -490,6 +506,7 @@ int32_t obor_boot(const obor_boot_info *info)
         !info->arena_reserved || !info->profile_build)
         return 0;
     obor_profile_build = info->profile_build;
+    preload_depth = 0;
     obor_state_session_settings.content = info->state_content;
     obor_state_session_settings.compression = info->state_compression;
     obor_arena_authorize(info->arena_reserved);
@@ -720,6 +737,7 @@ int32_t obor_abandon(void)
 {
     extern void obor_audio_fault_unlock(void);
     engine_alive = 0;
+    preload_depth = 0;
     co_engine = NULL;
     /* dlmalloc can fail while holding its lock. Workers must not enter a
      * corrupted allocator, and joining them here could wait on that lock. */
@@ -857,6 +875,7 @@ void obor_shutdown(void)
         return;
     }
     engine_alive = 0;
+    preload_depth = 0;
 #ifdef WEBM
     /* Playback workers own arena allocations and pak handles. Join them
      * while those resources still exist, before abandoning the coroutine. */
