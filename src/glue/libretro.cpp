@@ -115,6 +115,8 @@ static long g_frame_no;
 static long g_last_unser = -99;
 static bool g_fault_quarantined;
 static obor_capture_cadence g_capture_cadence OBOR_RUNTIME;
+/* Current frontend playback direction, never part of the restored world. */
+static bool g_reverse_has_snapshot OBOR_RUNTIME;
 /* Diagnostic input clocks belong to the current frontend process. */
 static bool g_input_after_load OBOR_RUNTIME;
 static bool g_input_has_origin OBOR_RUNTIME;
@@ -828,6 +830,7 @@ static void trace_close(void)
 
 static void content_stop(void)
 {
+    g_reverse_has_snapshot = false;
     loading_dispose();
     free(g_loading_pixels);
     g_loading_pixels = NULL;
@@ -1270,6 +1273,7 @@ static bool boot_engine(void)
 
 void retro_reset(void)
 {
+    g_reverse_has_snapshot = false;
     if (g_loading) {
         struct retro_game_info info = {};
         char path[sizeof(g_error_path)];
@@ -1552,25 +1556,23 @@ void retro_run(void)
 
     input_poll_cb();
 
-    /* Rewind replay: each displayed frame is a restored state advanced one
-     * engine frame. OpenBOR derives the PLAYER's animation from the pad
-     * EVERY tick, so live (neutral) input would snap the character to the
-     * idle pose on every step — a frozen sprite sliding backwards. The
-     * restored snapshot already carries the pad state of that moment, so
-     * when the frontend explicitly reports rewinding, keep hands off and
-     * let the historical input drive the replay. An ordinary state load
-     * must sample live input immediately; a recent unserialize alone does
-     * not distinguish it from rewind. */
+    /* After the first successful restore, an explicit rewind throttle
+     * presents the saved frame without advancing the engine. A forward tick
+     * could enter model preparation or restart a
+     * movie and then prevent the next otherwise valid restore. Hold the last
+     * complete frame across refused history entries too: the frontend may
+     * retain such entries after a failed capture. Ordinary state loads and
+     * frontends without throttle reporting keep the normal forward path.
+     * Before that first restore, allow an already active preload to finish:
+     * its safety guard may temporarily defer every restore callback. */
     struct retro_throttle_state throttle = {};
-    bool rewind_replay = p_startup_complete() &&
-                         (g_last_unser >= g_frame_no - 1) &&
+    bool frontend_rewind = p_startup_complete() &&
                          env_cb(RETRO_ENVIRONMENT_GET_THROTTLE_STATE, &throttle) &&
                          throttle.mode == RETRO_THROTTLE_REWINDING;
-    bool present_restored = false;
-    const char *reverse_mode = rewind_replay ? getenv("OBOR_REVERSE_PRESENTATION") : NULL;
-    if (reverse_mode && !strcmp(reverse_mode, "1")) {
-        present_restored = audio_frame.frames >= 0 && audio_frame.frames <= 2048;
-    }
+    if (!frontend_rewind) g_reverse_has_snapshot = false;
+    bool rewind_replay = frontend_rewind && g_reverse_has_snapshot;
+    bool present_restored = rewind_replay &&
+                           audio_frame.frames >= 0 && audio_frame.frames <= 2048;
     if (!rewind_replay) {
         for (int pl = 0; pl < OBOR_MAX_PLAYERS; pl++) {
             /* an in-flight special-move macro owns this player's pad */
@@ -3051,6 +3053,7 @@ bool retro_unserialize(const void *data, size_t size)
     if (!ok && g_booted) queue_state_fault();
     if (ok) {
         g_last_unser = g_frame_no;
+        g_reverse_has_snapshot = true;
         if (g_input_after_load) {
             g_input_origin = g_frame_no;
             g_input_has_origin = true;

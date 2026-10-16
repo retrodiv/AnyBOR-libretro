@@ -1214,6 +1214,13 @@ int main(int argc, char **argv)
         unsigned long video_calls_before = g_video_calls;
         g_reverse_presentation = rw_popped && getenv("OBOR_HOST_THROTTLE") &&
             strcmp(getenv("OBOR_HOST_THROTTLE"), "forward");
+        /* Press reverse while loading, before any successful restore. Its
+         * safety guard must be allowed to finish the active preparation. */
+        if (getenv("OBOR_PRELOAD_REWIND_PROBE") && preload_reverse_refused &&
+            !preload_level_finished) {
+            g_reverse_presentation = 1;
+            ++preload_reverse_wait_frames;
+        }
         g_frame_audio_hash = 2166136261u;
 #ifdef OBOR_HOST_FILESYSTEM_PROBE
         obor_fs_probe_begin((unsigned)g_frame);
@@ -1233,7 +1240,7 @@ int main(int argc, char **argv)
             continue;
         }
         if (!preload_probe_after_run(p_retro_serialize_size, p_retro_serialize,
-                                     p_retro_unserialize, g_startup_complete)) return 1;
+                                     p_retro_unserialize, p_retro_run, g_startup_complete)) return 1;
         if (getenv("OBOR_PRELOAD_PROBE_INTERRUPT") && preload_interrupts < 2 &&
             preload_boot_checks >= 2u * ((unsigned)preload_interrupts + 1)) {
             preload_probe_restart();

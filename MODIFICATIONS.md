@@ -701,19 +701,26 @@ engine writer, fixed for the content session and bounded by the existing format
 maximum. A smaller budget rejects complete images that cannot fit; it never
 truncates them or changes the frontend's history allocation.
 
-The optional `OBOR_REVERSE_PRESENTATION=1` path checks the frontend's explicit
-libretro rewind throttle mode after a successful restore. It presents the
-already serialized framebuffer and current audio output without advancing the
-engine or mixer. This avoids restarting a movie while presenting older frames.
+After the first successful restore, the frontend's explicit libretro rewind
+throttle mode presents the already serialized framebuffer and audio output
+without advancing the engine or mixer.
+It also holds that complete output across rejected history entries until a
+valid older state arrives or the frontend resumes forward playback. This avoids
+entering model preparation or restarting movie workers between restored frames.
 The audio output replaces the existing static mixing buffer and belongs to the
 ordinary snapshot; no separate past-frame history is retained. Unsupported
 frontends and ordinary loads retain the forward execution path.
 
-Reverse presentation requires the resource and compressed-state paths to be
-enabled. It remains opt-in; ordinary rewind uses the normal engine presentation
-path. Resource and compressed states themselves default on for Windows x86-64
-and Linux x86-64/ARM64, including supported Android targets, as described in the README. Other targets
-retain their existing writer while equivalent acceptance is pending.
+This presentation rule is shared by all engines and state writers. A throttle
+label remains authoritative through failed restore callbacks; an old successful
+load is not used as a timeout that can restart the engine during held rewind.
+Ordinary loads sample live input immediately. The historical
+`OBOR_REVERSE_PRESENTATION=1` diagnostic is no longer required to select this
+behavior. Smart content and compression On remain the defaults on every target.
+If rewind starts while model preparation still defers all restores, that
+preparation can finish before the first complete snapshot is restored. The
+playback-direction flag belongs to the current frontend session, is cleared on
+forward playback/reset/unload, and is never serialized into game history.
 
 ## Model attack type bounds
 

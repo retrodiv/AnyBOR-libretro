@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Present the complete restored video and audio while the frontend reports
+  rewind, including rejected history entries, without advancing into model
+  preparation or restarting movie workers. Resume normal input and execution
+  immediately when reverse playback ends.
+
 - Copy the transform work buffer only when an external program writes to it.
   Keep unchanged input slices alive through preparation without a second full
   archive allocation, preserving the configured program's buffer semantics.

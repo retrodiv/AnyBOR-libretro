@@ -50,6 +50,31 @@ def files():
     return result
 
 
+
+def preload_files():
+    """Original nested model fixture with parser-end witnesses for rewind."""
+    members = files()
+    model = members['data/chars/block.txt'].replace(b'type player\n', b'type enemy\n')
+    # This final optional entry is safely ignored by the existing bounds
+    # correction in every profile. Its flushed warning identifies the
+    # last parsed token without adding an observability hook to the core.
+    witness = b'offense normal2147483647 0\n'
+    members['data/chars/block.txt'] += witness
+    declarations = [members['data/models.txt']]
+    for phase in ('Boot', 'Level'):
+        parent, first, second = (phase + suffix for suffix in ('Parent', 'ChildOne', 'ChildTwo'))
+        declarations.append(f'{"load" if phase == "Boot" else "know"} {parent} data/chars/{parent}.txt\n'.encode())
+        for child in (first, second):
+            declarations.append(f'know {child} data/chars/{child}.txt\n'.encode())
+            members[f'data/chars/{child}.txt'] = model.replace(
+                b'name TestBlock\n', f'name {child}\n'.encode()) + witness
+        members[f'data/chars/{parent}.txt'] = model.replace(
+            b'name TestBlock\n', f'name {parent}\nload {first} 0\nload {second} 0\n'.encode()) + witness
+    members['data/models.txt'] = b''.join(declarations)
+    members['data/levels/room.txt'] = b'load LevelParent 0\n' + members['data/levels/room.txt']
+    members['data/video.txt'] = b'video 1\n'
+    return members
+
 def write_pak(path, members):
     data = bytearray(b"PACK\0\0\0\0")
     entries = []

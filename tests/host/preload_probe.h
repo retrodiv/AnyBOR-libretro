@@ -17,6 +17,106 @@ static unsigned char *preload_reference;
 static size_t preload_reference_size;
 static unsigned char *preload_scratch;
 static size_t preload_scratch_size;
+static unsigned char *preload_reverse_state[2];
+static uint32_t preload_reverse_video[2], preload_reverse_audio[2];
+static int preload_reverse_frame[2];
+static unsigned preload_reverse_pushes, preload_reverse_refused, preload_reverse_checks;
+static unsigned preload_reverse_wait_frames;
+
+static uint32_t preload_video_hash(void)
+{
+    uint32_t hash = 2166136261u;
+    for (unsigned y = 0; g_fb && y < g_fh; ++y) {
+        const uint32_t *row = (const uint32_t *)((const uint8_t *)g_fb + y * g_fpitch);
+        for (unsigned x = 0; x < g_fw; ++x) hash = (hash ^ row[x]) * 16777619u;
+    }
+    return hash;
+}
+
+/* Keep just the two latest complete snapshots before a real level preload.
+ * Once loading has finished, pop across its boundary with the frontend's
+ * rewind throttle, then restore the post-load world for the PCM control.
+ * Three buffers stay within the ordinary 256 MiB history budget. */
+static int preload_reverse_after_run(size_t (*capacity)(void),
+                                     bool (*save)(void *, size_t),
+                                     bool (*load)(const void *, size_t),
+                                     void (*run)(void), int ready)
+{
+    if (!ready || preload_reverse_checks) return 1;
+    size_t size = capacity();
+    if (!size || size > (256u << 20) / 3) return 0;
+    if (!preload_scratch) {
+        preload_scratch = malloc(size);
+        preload_scratch_size = size;
+        for (unsigned i = 0; i < 2; ++i) preload_reverse_state[i] = malloc(size);
+        if (!preload_scratch || !preload_reverse_state[0] || !preload_reverse_state[1]) return 0;
+    }
+    if (size != preload_scratch_size) return 0;
+    int captured = save(preload_scratch, size);
+    if (!captured) {
+        ++preload_reverse_refused;
+        return 1;
+    }
+    if (!preload_level_finished) {
+        unsigned slot = preload_reverse_pushes++ % 2;
+        memcpy(preload_reverse_state[slot], preload_scratch, size);
+        preload_reverse_video[slot] = preload_video_hash();
+        preload_reverse_audio[slot] = g_frame_audio_hash;
+        preload_reverse_frame[slot] = g_frame;
+        return 1;
+    }
+    if (preload_reverse_pushes < 2 || preload_reverse_refused < 3) return 0;
+    uint32_t post_video = preload_video_hash(), post_audio = g_frame_audio_hash;
+    int previous = g_frame;
+    for (unsigned step = 0; step < 2; ++step) {
+        unsigned slot = (preload_reverse_pushes - 1 - step) % 2;
+        if (preload_reverse_frame[slot] >= previous ||
+            !load(preload_reverse_state[slot], size)) {
+            fprintf(stderr, "preload rewind rejected complete snapshot step=%u frame=%d\n",
+                    step, preload_reverse_frame[slot]);
+            return 0;
+        }
+        previous = preload_reverse_frame[slot];
+        g_reverse_presentation = 1;
+        g_frame_audio_hash = 2166136261u;
+        run();
+        if (preload_video_hash() != preload_reverse_video[slot] ||
+            g_frame_audio_hash != preload_reverse_audio[slot]) {
+            fprintf(stderr, "preload rewind advanced complete snapshot step=%u frame=%d\n",
+                    step, previous);
+            return 0;
+        }
+        ++preload_reverse_checks;
+        printf("preload_reverse step=%u frame=%d video=MATCH audio=MATCH\n", step, previous);
+        if (!step) {
+            /* Stock rewind can pop failed-capture entries between two valid
+             * states. These refusals must not restart forward loading while
+             * the frontend still reports reverse playback. */
+            uint32_t magic;
+            memcpy(&magic, preload_reverse_state[slot], sizeof(magic));
+            memset(preload_reverse_state[slot], 0, sizeof(magic));
+            for (unsigned gap = 0; gap < 3; ++gap) {
+                if (load(preload_reverse_state[slot], size)) return 0;
+                g_frame_audio_hash = 2166136261u;
+                run();
+                if (preload_video_hash() != preload_reverse_video[slot] ||
+                    g_frame_audio_hash != preload_reverse_audio[slot]) {
+                    fprintf(stderr, "failed rewind entry advanced the engine gap=%u\n", gap);
+                    return 0;
+                }
+            }
+            memcpy(preload_reverse_state[slot], &magic, sizeof(magic));
+            puts("preload_reverse_failed_entries=3 unchanged=1");
+        }
+    }
+    if (!load(preload_scratch, size)) return 0;
+    g_frame_audio_hash = 2166136261u;
+    run();
+    g_reverse_presentation = 0;
+    if (preload_video_hash() != post_video || g_frame_audio_hash != post_audio) return 0;
+    preload_level_finished = 2;
+    return 1;
+}
 
 static void preload_probe_restart(void)
 {
@@ -30,11 +130,18 @@ static void preload_probe_restart(void)
     free(preload_scratch);
     preload_scratch = NULL;
     preload_scratch_size = 0;
+    for (unsigned i = 0; i < 2; ++i) {
+        free(preload_reverse_state[i]);
+        preload_reverse_state[i] = NULL;
+    }
+    preload_reverse_pushes = preload_reverse_refused = preload_reverse_checks = 0;
+    preload_reverse_wait_frames = 0;
 }
 
 static int preload_probe_after_run(size_t (*capacity)(void),
                                    bool (*save)(void *, size_t),
-                                   bool (*load)(const void *, size_t), int ready)
+                                   bool (*load)(const void *, size_t),
+                                   void (*run)(void), int ready)
 {
     const char *path = getenv("OBOR_PRELOAD_PROBE_LOG");
     if (!path) return 1;
@@ -87,6 +194,8 @@ static int preload_probe_after_run(size_t (*capacity)(void),
         fprintf(stderr, "multiple model parser-end witnesses without a frontend return: %u\n", completed);
         return 0;
     }
+    if (getenv("OBOR_PRELOAD_REWIND_PROBE"))
+        return preload_reverse_after_run(capacity, save, load, run, ready);
     if (completed && (!ready || preload_level_active) &&
         !getenv("OBOR_PRELOAD_PROBE_CONTROL")) {
         size_t size = capacity();
@@ -148,10 +257,16 @@ static int preload_probe_finish(void)
     const char *trace = getenv("OBOR_REPLAY_TRACE");
     if (trace && sscanf(trace, "%d,%d", &trace_first, &trace_last) != 2) return 0;
     int control = getenv("OBOR_PRELOAD_PROBE_CONTROL") != NULL;
+    int reverse = getenv("OBOR_PRELOAD_REWIND_PROBE") != NULL;
+    printf("preload_reverse_checks=%u refused_captures=%u\n",
+           preload_reverse_checks, preload_reverse_refused);
+    printf("preload_reverse_initial_wait_frames=%u\n", preload_reverse_wait_frames);
     int ok = preload_seen_models == 127 && preload_level_finished == 2 &&
-             (trace_first < 0 || preload_level_end_frame < trace_first) && (control ||
+             (trace_first < 0 || preload_level_end_frame < trace_first) &&
+             (reverse ? preload_reverse_checks == 2 && preload_reverse_refused >= 3 &&
+                        preload_reverse_wait_frames > 0 : (control ||
              (preload_boot_checks >= 3 && preload_level_checks >= 3 &&
-              preload_load_checks >= 3 && preload_stale_checks >= 2));
+              preload_load_checks >= 3 && preload_stale_checks >= 2)));
     preload_probe_restart();
     return ok;
 }

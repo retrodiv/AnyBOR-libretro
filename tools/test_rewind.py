@@ -162,6 +162,42 @@ def main():
                 assert image == restored, engine + " cross-session presentation diverged"
             # Reset may select another engine without changing capacity.
             run("6412", "engine-reset", OBOR_SET_ENGINE_AT="60:3400", OBOR_RESET_AT=60)
+
+        # Exercise the real frontend throttle across a nested loading boundary.
+        # The ordinary fixture above intentionally retains its no-throttle
+        # fallback contract. This original fixture also crosses three refused
+        # history entries and checks that none advances the live engine.
+        preload_pak = work / "nested.pak"
+        make_fixture.write_pak(preload_pak, make_fixture.preload_files())
+        for entry in release.read_json(release.ROOT / "src/pin.json")["profiles"]:
+            profile = entry["build"]
+            system = work / ("nested-" + profile)
+            system.mkdir()
+            env = {k: v for k, v in os.environ.items() if not k.startswith("OBOR_")}
+            env.update(OBOR_ENGINE=profile, OBOR_CRT_TV="Off", OBOR_GAMELOG="Off",
+                       OBOR_HOST_THROTTLE="rewind", OBOR_PRELOAD_REWIND_PROBE="1",
+                       OBOR_INPUT="180-360:start,400-403:attack,600-603:start,900-903:attack",
+                       OBOR_PRELOAD_PROBE_LOG=target_path(
+                           system / "saves/AnyBOR/nested" / profile / "Logs/OpenBorLog.txt"))
+            if not windows:
+                env["OBOR_CHECK_FDS"] = "1"
+            else:
+                env["OBOR_CHECK_UNLOAD_EXCEPTIONS"] = "1"
+            if args.windows_native and os.name != "nt":
+                env["WSLENV"] = ":".join(filter(None, [env.get("WSLENV", "")] +
+                                                 [k for k in env if k.startswith("OBOR_")]))
+            command = shlex.split(args.runner) + [str(host), target_path(core),
+                target_path(preload_pak), target_path(system), "1500"]
+            result = subprocess.run(command, env=env, cwd=str(work),
+                stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                universal_newlines=True, timeout=90)
+            log = result.stdout + result.stderr
+            assert result.returncode == 0, log
+            assert "preload_reverse_checks=2" in log, log
+            assert log.count("video=MATCH audio=MATCH") == 2, log
+            assert "preload_reverse_failed_entries=3 unchanged=1" in log, log
+            assert "MISMATCH" not in log and "FAILED" not in log, log
+            print("PASS", profile, "nested-preload-rewind", flush=True)
     print("Fixed-capacity rewind contracts: OK", flush=True)
 
 
