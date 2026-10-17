@@ -1,7 +1,7 @@
 {
   "core_name": "AnyBOR",
   "core_basename": "anybor_libretro",
-  "version": "0.1.57",
+  "version": "0.1.58",
   "fallback_build": "6391",
   "profiles": [
     {
@@ -9,6 +9,118 @@
       "engine": "3400",
       "covers": "<= 3400 including lost pre-3020 era (best effort)",
       "major": "v3.0"
+    },
+    {
+      "build": "3780",
+      "engine": "3842",
+      "covers": "Explicit historical core-option profile on physical Build 3842",
+      "automatic": false,
+      "major": "v3.0",
+      "tagged": false
+    },
+    {
+      "build": "3783",
+      "engine": "3842",
+      "covers": "Explicit historical core-option profile on physical Build 3842",
+      "automatic": false,
+      "major": "v3.0",
+      "tagged": false
+    },
+    {
+      "build": "3789",
+      "engine": "3842",
+      "covers": "Explicit historical core-option profile on physical Build 3842",
+      "automatic": false,
+      "major": "v3.0",
+      "tagged": false
+    },
+    {
+      "build": "3793",
+      "engine": "3842",
+      "covers": "Explicit historical core-option profile on physical Build 3842",
+      "automatic": false,
+      "major": "v3.0",
+      "tagged": false
+    },
+    {
+      "build": "3797",
+      "engine": "3842",
+      "covers": "Explicit historical core-option profile on physical Build 3842",
+      "automatic": false,
+      "major": "v3.0",
+      "tagged": false
+    },
+    {
+      "build": "3805",
+      "engine": "3842",
+      "covers": "Explicit historical core-option profile on physical Build 3842",
+      "automatic": false,
+      "major": "v3.0",
+      "tagged": false
+    },
+    {
+      "build": "3814",
+      "engine": "3842",
+      "covers": "Explicit historical core-option profile on physical Build 3842",
+      "automatic": false,
+      "major": "v3.0",
+      "tagged": false
+    },
+    {
+      "build": "3818",
+      "engine": "3842",
+      "covers": "Explicit historical core-option profile on physical Build 3842",
+      "automatic": false,
+      "major": "v3.0",
+      "tagged": false
+    },
+    {
+      "build": "3822",
+      "engine": "3842",
+      "covers": "Explicit historical core-option profile on physical Build 3842",
+      "automatic": false,
+      "major": "v3.0",
+      "tagged": false
+    },
+    {
+      "build": "3824",
+      "engine": "3842",
+      "covers": "Explicit historical core-option profile on physical Build 3842",
+      "automatic": false,
+      "major": "v3.0",
+      "tagged": false
+    },
+    {
+      "build": "3829",
+      "engine": "3842",
+      "covers": "Explicit historical core-option profile on physical Build 3842",
+      "automatic": false,
+      "major": "v3.0",
+      "tagged": false
+    },
+    {
+      "build": "3831",
+      "engine": "3842",
+      "covers": "Explicit historical core-option profile on physical Build 3842",
+      "automatic": false,
+      "major": "v3.0",
+      "tagged": false
+    },
+    {
+      "build": "3837",
+      "engine": "3842",
+      "covers": "Explicit historical core-option profile on physical Build 3842",
+      "automatic": false,
+      "major": "v3.0",
+      "tagged": false
+    },
+    {
+      "build": "3839",
+      "engine": "3842",
+      "covers": "Explicit historical core-option profile on physical Build 3842",
+      "automatic": false,
+      "major": "v3.0",
+      "tagged": false
     },
     {
       "build": "3842",

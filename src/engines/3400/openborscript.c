@@ -1,15 +1,16 @@
-/* AnyBOR modification record: 2026-10-12.
+/* AnyBOR modification record: 2026-10-17.
  * Port maintained by retrodiv <retrodiv@proton.me>.
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
  * Upstream code retains its original license and notices.
  * Keep the dormant constant-lowering diagnostic compatible with the single-
- * value instruction layout and map string constants from direct contiguous
- * instruction storage. Derive output names from the content basename with
- * explicit destination capacities, and reject overflowing output path joins.
- * Compact compiler-only instruction records after resolving value ownership,
- * preserving branch and export anchors, all mutable values and exactly-once
- * pool cleanup.
+ * value instruction layout, map string constants from direct contiguous
+ * instruction storage, and own complete dynamically allocated script
+ * variable names through slot reuse and shutdown. Derive output names from
+ * the content basename with explicit destination capacities, and reject
+ * overflowing output path joins. Compact compiler-only instruction records
+ * after resolving value ownership, preserving branch and export anchors, all
+ * mutable values and exactly-once pool cleanup.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/3400.md
  * at the source repository root. Original notices follow below.
@@ -172,6 +173,19 @@ void Script_Global_Init()
 	ImportCache_Init();
 }
 
+/* Each active or retired slot owns its complete name until reuse or exit. */
+static void obor_script_variable_names_clear(void)
+{
+    int i;
+    if(!global_var_list) return;
+    for(i = 0; i < max_global_vars; ++i)
+        if(global_var_list[i])
+        {
+            free(global_var_list[i]->key);
+            global_var_list[i]->key = NULL;
+        }
+}
+
 //this function should only be called when the engine is shutting down
 void Script_Global_Clear()
 {
@@ -197,6 +211,7 @@ void Script_Global_Clear()
 			}
 			//global_var_list[i] = NULL;
 		}
+        obor_script_variable_names_clear();
 		free(global_var_list);
 		global_var_list = NULL;
 	}
@@ -233,7 +248,7 @@ int _set_var(char* theName, ScriptVariant* var, Script* owner)
 {
 	int i;
 	s_variantnode* tempnode;
-	if(!theName[0] || !theName || (owner && !owner->initialized)) return 0;
+	if(!theName || !theName[0] || (owner && !owner->initialized)) return 0;
 	// search the name
 	for(i=0; i<=max_global_var_index; i++)
 	{
@@ -263,10 +278,15 @@ int _set_var(char* theName, ScriptVariant* var, Script* owner)
 	// so out of bounds, find another slot
 	else
 	{
+        size_t name_bytes = strlen(theName) + 1;
+        char *name = malloc(name_bytes);
+        if(!name) return 0;
+        memcpy(name, theName, name_bytes);
 		++max_global_var_index;
 		ScriptVariant_Copy(&(global_var_list[max_global_var_index]->value), var);
 		global_var_list[max_global_var_index]->owner = owner;
-		strcpy(global_var_list[max_global_var_index]->key, theName);
+        free(global_var_list[max_global_var_index]->key);
+        global_var_list[max_global_var_index]->key = name;
 		return 1;
 	}
 }// end of _set_var

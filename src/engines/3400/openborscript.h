@@ -1,3 +1,15 @@
+/* AnyBOR modification record: 2026-10-17.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Represent script variable names as owned pointers instead of fixed-size
+ * inline arrays.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/3400.md
+ * at the source repository root. Original notices follow below.
+ */
+
 /*
  * OpenBOR - http://www.LavaLit.com
  * -----------------------------------------------------------------------
@@ -13,12 +25,11 @@
 #include "pp_parser.h"
 
 #define MAX_GLOBAL_VAR 2048
-#define MAX_KEY_LEN    24
 
 typedef struct
 {
 	ScriptVariant value;
-	char          key[MAX_KEY_LEN];
+	char*         key;
 	struct Script* owner;
 }s_variantnode;
 

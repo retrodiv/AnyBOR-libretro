@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- Store complete script variable names safely in older engines, preserving
+  distinct names without truncation or a fixed name-length bound.
+- Add historical logical profiles on engine 3842. Select player-property
+  names, numeric IDs, AI-flag properties, setter results and rejected-value behavior at their
+  upstream revision boundaries while retaining safe error handling.
+- Preserve earlier player spawn coordinate limits and ordered, cached level
+  spawn scripts in the corresponding historical profiles.
 - Use generic GNU/Linux targets with an optional glibc requirement ceiling.
   Enable input labels, content-derived pad mappings and notifications on all
   targets without distribution-specific compile-time exclusions.

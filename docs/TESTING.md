@@ -34,7 +34,7 @@ python3 tools/test_animation_scripts.py --core anybor_libretro.so
 python3 tools/test_script_timestamps.py
 ```
 
-The state-option suite checks all 13 profiles, four writers and four readers,
+The state-option suite checks all published profiles, four writers and four readers,
 with 200-frame video and complete PCM comparisons. A valid snapshot whose
 declared module and segment addresses have moved must be refused in every
 mode without changing playback. Native cross-process tests read both snapshot
@@ -53,8 +53,8 @@ engine field independently, so inverse conversion mistakes cannot cancel out.
 The smoke test generates a tiny diagnostic PAK from original scripts and
 geometric graphics in `tools/make_fixture.py`, under the project's BSD
 license. The synthetic font consists of simple rectangular markers. No
-existing game or font artwork is copied. It loads the content with all thirteen
-engines and checks frame output, working-directory restoration and the
+existing game or font artwork is copied. It loads the content with all published
+profiles and checks frame output, working-directory restoration and the
 runtime license document, signal-handler restoration and arena release on
 module unload. This checks basic engine boot/rendering; it does
 not claim compatibility with every game.
@@ -153,7 +153,7 @@ exercise diagnostic cleanup across restarts. `OBOR_FASTCHECK=120,30` compares
 the incremental heap/stack payload against a fresh full snapshot. Module
 bookkeeping and unused buffer tails are intentionally outside that comparison.
 
-The rewind suite checks all thirteen profiles using a capacity obtained before
+The rewind suite checks all published profiles using a capacity obtained before
 the first frame. It compares complete frame hashes while stepping backwards,
 restores a state in a fresh process, toggles CRT adaptation, resets and
 switches engines through Reset. Capacity must remain constant and every
@@ -175,3 +175,13 @@ controls file. The host accepts independent `OBOR_INPUT_P1` through
 Optional `--host`, `--runner` and `--windows` arguments support the same
 checks under emulation or Wine. These tests inject virtual RetroPad inputs;
 physical controller pairing remains the frontend's responsibility.
+
+The native runtime regression also compiles authored historical player-property
+calls in every profile using engine 3842, on both sides of the rejected-value
+contract boundary. It separately checks complete script variable names across the former 24-byte
+boundary for every published profile. Names with the same prefix must remain
+distinct, and the script must continue with the exact values stored in each
+name across LOAD, reset and a fresh host process. Native unit tests also check
+allocation failure, slot reuse and cleanup. Ordered level spawn scripts use
+compiled fixtures on both sides of the 3805 boundary, checking declaration order
+and shared versus per-entry locals.

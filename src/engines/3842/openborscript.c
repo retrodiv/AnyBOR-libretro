@@ -1,15 +1,17 @@
-/* AnyBOR modification record: 2026-10-12.
+/* AnyBOR modification record: 2026-10-17.
  * Port maintained by retrodiv <retrodiv@proton.me>.
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
  * Upstream code retains its original license and notices.
  * Keep the dormant constant-lowering diagnostic compatible with the single-
- * value instruction layout and map string constants from direct contiguous
- * instruction storage. Derive output names from the content basename with
- * explicit destination capacities, and reject overflowing output path joins.
- * Compact compiler-only instruction records after resolving value ownership,
- * preserving branch and export anchors, all mutable values and exactly-once
- * pool cleanup.
+ * value instruction layout, map string constants from direct contiguous
+ * instruction storage, select historical player and AI-flag property
+ * contracts by logical build, and own complete dynamically allocated script
+ * variable names through slot reuse and shutdown. Derive output names from
+ * the content basename with explicit destination capacities, and reject
+ * overflowing output path joins. Compact compiler-only instruction records
+ * after resolving value ownership, preserving branch and export anchors, all
+ * mutable values and exactly-once pool cleanup.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/3842.md
  * at the source repository root. Original notices follow below.
@@ -181,6 +183,19 @@ void _freeheapnode(void* ptr){
 	free(ptr);
 }
 
+/* Each active or retired slot owns its complete name until reuse or exit. */
+static void obor_script_variable_names_clear(void)
+{
+    int i;
+    if(!global_var_list) return;
+    for(i = 0; i < max_global_vars; ++i)
+        if(global_var_list[i])
+        {
+            free(global_var_list[i]->key);
+            global_var_list[i]->key = NULL;
+        }
+}
+
 //this function should only be called when the engine is shutting down
 void Script_Global_Clear()
 {
@@ -206,6 +221,7 @@ void Script_Global_Clear()
 			}
 			//global_var_list[i] = NULL;
 		}
+        obor_script_variable_names_clear();
 		free(global_var_list);
 		global_var_list = NULL;
 	}
@@ -309,10 +325,15 @@ int _set_var(char* theName, ScriptVariant* var, Script* owner)
 	// so out of bounds, find another slot
 	else
 	{
+        size_t name_bytes = strlen(theName) + 1;
+        char *name = malloc(name_bytes);
+        if(!name) return 0;
+        memcpy(name, theName, name_bytes);
 		++max_global_var_index;
 		ScriptVariant_Copy(&(global_var_list[max_global_var_index]->value), var);
 		global_var_list[max_global_var_index]->owner = owner;
-		strcpy(global_var_list[max_global_var_index]->key, theName);
+        free(global_var_list[max_global_var_index]->key);
+        global_var_list[max_global_var_index]->key = name;
 		if(max_global_var_index >= max_global_vars-1) _gc_var();
 		return 1;
 	}
@@ -3088,6 +3109,43 @@ static const char* eplist_aiflag[] = {
 	"walkmode",
 };
 
+/* Logical selectors stay in their historical namespace until the call. */
+enum {
+    _obor_aiflag_freezetime = _ep_aiflag_the_end,
+    _obor_aiflag_pain_time,
+};
+
+static int obor_aiflag_property_native(int property)
+{
+    static const int before_expansion[] = {
+        _ep_aiflag_animating, _ep_aiflag_attacking, _ep_aiflag_autokill,
+        _ep_aiflag_blink, _ep_aiflag_blocking, _ep_aiflag_charging,
+        _ep_aiflag_dead, _ep_aiflag_drop, _ep_aiflag_falling,
+        _obor_aiflag_freezetime, _ep_aiflag_frozen, _ep_aiflag_getting,
+        _ep_aiflag_idling, _ep_aiflag_inpain, _ep_aiflag_invincible,
+        _ep_aiflag_jumpid, _ep_aiflag_jumping, _obor_aiflag_pain_time,
+        _ep_aiflag_projectile, _ep_aiflag_running, _ep_aiflag_toexplode,
+        _ep_aiflag_turning, _ep_aiflag_walking,
+    };
+    if(property < 0 || property >= _ep_aiflag_the_end) return -1;
+    return obor_profile_build < 3797 ? before_expansion[property] : property;
+}
+
+static void obor_map_aiflag_property(ScriptVariant *property)
+{
+    char *propname;
+    int prop;
+    static const char *before_expansion[] = {
+        "animating", "attacking", "autokill", "blink", "blocking",
+        "charging", "dead", "drop", "falling", "freezetime", "frozen",
+        "getting", "idling", "inpain", "invincible", "jumpid", "jumping",
+        "pain_time", "projectile", "running", "toexplode", "turning", "walking",
+    };
+    const char **names = obor_profile_build < 3797 ? before_expansion : eplist_aiflag;
+    MAPSTRINGS(property, names, _ep_aiflag_the_end,
+        "'%s' is not a known subproperty of 'aiflag'.\n");
+}
+
 enum gep_attack_enum {
 	_ep_attack_blast,
 	_ep_attack_blockflash,
@@ -3515,8 +3573,7 @@ void mapstrings_entityproperty(ScriptVariant** varlist, int paramCount)
 	// map subproperties of aiflag property
 	case _ep_aiflag:
 	{
-		MAPSTRINGS(varlist[2], eplist_aiflag, _ep_aiflag_the_end,
-			"'%s' is not a known subproperty of 'aiflag'.\n");
+		obor_map_aiflag_property(varlist[2]);
 		break;
 	}
 	// map subproperties of Attack
@@ -3719,7 +3776,7 @@ HRESULT openbor_getentityproperty(ScriptVariant** varlist , ScriptVariant** pret
 			printf("You must give a string name for aiflag.\n");
 			return E_FAIL;
 		}
-		ltemp = arg->lVal;
+		ltemp = obor_aiflag_property_native(arg->lVal);
 		
 		ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
 		switch(ltemp)
@@ -3790,7 +3847,14 @@ HRESULT openbor_getentityproperty(ScriptVariant** varlist , ScriptVariant** pret
 		case _ep_aiflag_walkmode:
 			 (*pretvar)->lVal = (LONG)ent->walkmode;
 			 break;
+        case _obor_aiflag_freezetime:
+            (*pretvar)->lVal = (LONG)ent->freezetime;
+            break;
+        case _obor_aiflag_pain_time:
+            (*pretvar)->lVal = (LONG)ent->pain_time;
+            break;
 		case _ep_aiflag_walking:
+            if(obor_profile_build < 3797) ScriptVariant_Clear(*pretvar);
 			break;
 		default:
 			ScriptVariant_Clear(*pretvar);
@@ -5776,9 +5840,14 @@ HRESULT openbor_changeentityproperty(ScriptVariant** varlist , ScriptVariant** p
 		}
 		if(paramCount<4) break;
 
+        int flag = obor_aiflag_property_native(varlist[2]->lVal);
+        if(obor_profile_build < 3797 &&
+           (flag < 0 || flag == _obor_aiflag_freezetime || flag == _obor_aiflag_pain_time))
+            goto changeentityproperty_error;
+
 		if(SUCCEEDED(ScriptVariant_IntegerValue(varlist[3], &ltemp)))
 		{
-			switch(varlist[2]->lVal)
+			switch(flag)
 			{
 			case _ep_aiflag_dead:
 				ent->dead = (int)ltemp;
@@ -7095,6 +7164,19 @@ enum playerproperty_enum {
 	_pp_the_end,
 };
 
+/* Before the player API expansion, numeric weapon selectors preceded the
+ * spawn properties. Keep compiled string arguments in their logical domain. */
+static int obor_player_property_native(int property)
+{
+    if(obor_profile_build < 3797 && property >= _pp_spawnhealth)
+    {
+        if(property == _pp_spawnhealth) return _pp_weapon;
+        if(property == _pp_spawnmp) return _pp_weapnum;
+        return _pp_the_end;
+    }
+    return property;
+}
+
 void mapstrings_playerproperty(ScriptVariant** varlist, int paramCount)
 {
 	char* propname;
@@ -7116,10 +7198,32 @@ void mapstrings_playerproperty(ScriptVariant** varlist, int paramCount)
 		"weapnum",
 	};
 
+    static const char* before_expansion[] = {
+        "colourmap", "credits", "ent", "entity", "keys", "lives",
+        "name", "playkeys", "score", "weapon", "weaponum",
+    };
+    static const char* before_rename[] = {
+        "colourmap", "credits", "ent", "entity", "keys", "lives",
+        "name", "playkeys", "score", "spawnhealth", "spawnmp", "weapon",
+        "weaponum",
+    };
+    const char **names = proplist;
+    int count = _pp_the_end;
+
+    if(obor_profile_build < 3797)
+    {
+        names = before_expansion;
+        count = sizeof(before_expansion) / sizeof(*before_expansion);
+    }
+    else if(obor_profile_build < 3821)
+    {
+        names = before_rename;
+    }
+
 	if(paramCount < 2) return;
 
 	// property name
-	MAPSTRINGS(varlist[1], proplist, _pp_the_end,
+	MAPSTRINGS(varlist[1], names, count,
 		"Player property name '%s' is not supported yet.\n");
 }
 
@@ -7158,7 +7262,7 @@ HRESULT openbor_getplayerproperty(ScriptVariant** varlist , ScriptVariant** pret
 		*pretvar = NULL;
 		return E_FAIL;
 	}
-	prop = arg->lVal;
+	prop = obor_player_property_native(arg->lVal);
 
 	switch(prop)
 	{
@@ -7252,15 +7356,22 @@ HRESULT openbor_changeplayerproperty(ScriptVariant** varlist , ScriptVariant** p
 	char* tempstr = NULL;
 	static char buffer[64];
 	ScriptVariant* arg = NULL;
+    const int legacy_result = obor_profile_build < 3797;
 
-	*pretvar = NULL;
+    if(!legacy_result) *pretvar = NULL;
 	if(paramCount < 3)
 	{
+        *pretvar = NULL;
 		printf("Function changeplayerproperty must have at least 3 arguments.\n");
 		return E_FAIL;
 	}
 
 	mapstrings_playerproperty(varlist, paramCount);
+    if(legacy_result)
+    {
+        ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
+        (*pretvar)->lVal = (LONG)1;
+    }
 	arg = varlist[0];
 
 	if(FAILED(ScriptVariant_IntegerValue(arg, &ltemp)))
@@ -7274,9 +7385,10 @@ HRESULT openbor_changeplayerproperty(ScriptVariant** varlist , ScriptVariant** p
 	{
 		if(varlist[1]->vt != VT_STR)
 			printf("You must give a string value for player property name.\n");
+		*pretvar = NULL;
 		return E_FAIL;
 	}
-	prop = varlist[1]->lVal;
+	prop = obor_player_property_native(varlist[1]->lVal);
 
 	arg = varlist[2];
 
@@ -7293,6 +7405,11 @@ HRESULT openbor_changeplayerproperty(ScriptVariant** varlist , ScriptVariant** p
 	}
 	case _pp_weapon:
 	{
+        if(!ent && legacy_result)
+        {
+            (*pretvar)->lVal = (LONG)0;
+            break;
+        }
 		if(ent){
 			if(SUCCEEDED(ScriptVariant_IntegerValue(arg,&ltemp))){
 				if(paramCount > 3)
@@ -7309,6 +7426,7 @@ HRESULT openbor_changeplayerproperty(ScriptVariant** varlist , ScriptVariant** p
 	}
 	case _pp_weapnum:
 	{
+        if(obor_profile_build < 3821) goto cppunknown;
 		if(SUCCEEDED(ScriptVariant_IntegerValue(arg,&ltemp)))
 			player[index].weapnum = (int)ltemp;
 		else goto cpperror;
@@ -7369,6 +7487,7 @@ HRESULT openbor_changeplayerproperty(ScriptVariant** varlist , ScriptVariant** p
 	}
 	case _pp_keys:
 	{
+        if(obor_profile_build < 3798) goto cppunknown;
 		if(SUCCEEDED(ScriptVariant_IntegerValue(arg,&ltemp)))
 			player[index].keys = (int)ltemp;
 		else goto cpperror; 
@@ -7385,12 +7504,23 @@ HRESULT openbor_changeplayerproperty(ScriptVariant** varlist , ScriptVariant** p
 		break;
 	}
 	default:
+cppunknown:
+        if(legacy_result) return S_OK;
 		printf("Invalid property name for function changeplayerproperty.\n");
 		return E_FAIL;
 	}
 
 	return S_OK;
 cpperror:
+    /* Rejected numeric values returned false before the API cleanup. Keep
+     * invalid names as errors and never call a mutator with an unconverted
+     * argument (the old optional weapon argument could be uninitialized). */
+    if(legacy_result && prop != _pp_name)
+    {
+        (*pretvar)->lVal = (LONG)0;
+        return S_OK;
+    }
+    *pretvar = NULL;
 	ScriptVariant_ToString(arg, buffer);
 	printf("Function changeplayerproperty receives an invalid value: %s.\n", buffer);
 	return E_FAIL;

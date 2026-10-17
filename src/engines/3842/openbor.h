@@ -1,11 +1,12 @@
-/* AnyBOR modification record: 2026-09-12.
+/* AnyBOR modification record: 2026-10-17.
  * Port maintained by retrodiv <retrodiv@proton.me>.
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
  * Upstream code retains its original license and notices.
  * Allocate collision pointer slots through the highest author-facing index
  * used by each collection. Track each model's allocated animation-table
- * capacity and reject lookups outside it.
+ * capacity and reject lookups outside it. Declare level-owned historical
+ * spawn-script resources and ordered call nodes.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/3842.md
  * at the source repository root. Original notices follow below.
@@ -1410,6 +1411,18 @@ typedef struct
 	int weapnum;
 }s_player;
 
+typedef struct obor_level_spawn_resource {
+    Script script;
+    char *path;
+    struct obor_level_spawn_resource *next;
+} obor_level_spawn_resource;
+
+typedef struct obor_level_spawn_call {
+    obor_level_spawn_resource *resource;
+    struct obor_level_spawn_call *next;
+    struct obor_level_spawn_call *owned_next;
+} obor_level_spawn_call;
+
 typedef struct
 {
 	int at;
@@ -1465,6 +1478,7 @@ typedef struct
 	char *weapon; // spawn with a weapon, since it should be in the model list, so the model must be loaded, just reference its name
 	s_model *weaponmodel;
 	Script spawnscript;
+    obor_level_spawn_call *historical_scripts, *historical_scripts_tail;
 }s_spawn_entry;
 
 typedef enum
@@ -1566,6 +1580,8 @@ typedef struct
 	char* name;
 	int numspawns;
 	s_spawn_entry* spawnpoints;
+    obor_level_spawn_resource *historical_script_cache;
+    obor_level_spawn_call *historical_script_calls;
 	int numlayers;
 	s_layer *layers;
 	int numlayersref;

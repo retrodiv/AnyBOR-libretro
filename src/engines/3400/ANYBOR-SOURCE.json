@@ -46,20 +46,25 @@
       "upstream_sha256": "47e3db32c70d173e16edf0dca15207a185d113cc09cca46685e6589c318bad23"
     },
     "openborscript.c": {
-      "distributed_sha256": "0bf642f00edb89216957e5fa839d7d415ba78f4a816b7a5cd4aaa2abf4504826",
+      "distributed_sha256": "8c8f31b91cb9d5726535fb4605d6510f35f0a263c16854515c2aeccd4d405e20",
       "modified": true,
-      "summary": "Keep the dormant constant-lowering diagnostic compatible with the single-value instruction layout and map string constants from direct contiguous instruction storage. Derive output names from the content basename with explicit destination capacities, and reject overflowing output path joins. Compact compiler-only instruction records after resolving value ownership, preserving branch and export anchors, all mutable values and exactly-once pool cleanup.",
+      "summary": "Keep the dormant constant-lowering diagnostic compatible with the single-value instruction layout, map string constants from direct contiguous instruction storage, and own complete dynamically allocated script variable names through slot reuse and shutdown. Derive output names from the content basename with explicit destination capacities, and reject overflowing output path joins. Compact compiler-only instruction records after resolving value ownership, preserving branch and export anchors, all mutable values and exactly-once pool cleanup.",
       "topics": [
         "compiler-warning-cleanup",
         "record-dates-and-file-notices",
-        "script-memory-layout"
+        "script-memory-layout",
+        "script-variable-names"
       ],
       "upstream_sha256": "c6ab6bbf79d7060c52350702f752c96d6227c75f4aea769e4b5149ee0f59510e"
     },
     "openborscript.h": {
-      "distributed_sha256": "fc260558b1951fc2c5493ead2ff8dcd991ed18eca87a809503b374d456eec71d",
-      "modified": false,
-      "topics": [],
+      "distributed_sha256": "2e94caaf9fefcacf3019da12b854e18255c1e88c0b77d64f5f99c816d94d551f",
+      "modified": true,
+      "summary": "Represent script variable names as owned pointers instead of fixed-size inline arrays.",
+      "topics": [
+        "record-dates-and-file-notices",
+        "script-variable-names"
+      ],
       "upstream_sha256": "fc260558b1951fc2c5493ead2ff8dcd991ed18eca87a809503b374d456eec71d"
     },
     "source/adpcmlib/adpcm.h": {

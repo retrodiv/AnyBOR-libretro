@@ -1,8 +1,14 @@
 # OpenBOR (AnyBOR)
 
-AnyBOR is an independent libretro core for OpenBOR games. Its thirteen selectable
+AnyBOR is an independent libretro core for OpenBOR games. Its main selectable
 profiles are v3.0 3400, v3.0 3842, v3.0 4086, v3.0 4432, v3.0 4453, v3.0 6330, v3.0 6391, v3.0 6412-dev, v3.0 6510-dev, v3.0 7123-dev, v4.0 7142-alpha, v4.0 7533 and v4.0 8023-dev. These profiles share nine engine builds. Auto uses
 available build tags and content clues; you can also select a profile manually.
+Historical profiles from 3780 through 3839 share engine 3842 and are selected
+manually. Their exact available revisions are listed in
+[the compatibility contract](../COMPATIBILITY.md). Auto keeps its existing
+engine-era routing; a historical profile is not selected from a game hash.
+See [manual profile selection and limits](HISTORICAL_PROFILES.md) for the exact
+menu steps and the contracts that remain shared.
 OpenBOR and Beats of Rage originate with Senile Team and OpenBOR Team; the port
 is maintained by retrodiv. The combined core has multiple component licenses,
 including OpenBOR 3400's no-sale terms. See [LICENSES.md](../LICENSES.md).
@@ -124,7 +130,7 @@ before the Build tag intersects the range: **v.3.0 Build 63XX-7762** becomes
 6300-7532, while **v.4.0 Build XXXX-7762** starts at 7142. A version in a
 separate bracket or in the title does not constrain the range.
 
-Auto selects the highest profile whose logical and physical builds both fit
+Auto selects the highest filename-eligible profile whose logical and physical builds both fit
 an explicit interval. If none fits, it uses the first available physical engine
 above the upper endpoint; 7369-7532 therefore uses 7533. If there is no later
 engine, loading reports an error. An explicit interval takes precedence over
@@ -143,7 +149,8 @@ select the first compatible intervening era up to v4.0 7533; requirements
 beyond that stable release select the latest compatible snapshot, currently
 v4.0 8023-dev. Explicit filename intervals retain their highest-profile /
 next-engine policy. Content inference offers only automatic profiles; 4453,
-6330, 6412 and 6510 remain explicit selections. Native rules ignore comments and quoted
+6330, 6412 and 6510 remain explicit selections. Historical profiles 3780–3839
+are manual-only and do not participate in filename-range selection. Native rules ignore comments and quoted
 prose. Preprocessor directives or a local declaration of a reviewed builtin
 make native evidence inconclusive; model evidence remains usable. This scan
 is a heuristic and does not certify a whole game or resolve dynamic arguments,

@@ -4715,6 +4715,25 @@ Source: src/deps/libvorbis/lib/smallft.h
 
  ********************************************************************/
 
+Source: src/engines/3400/openborscript.c
+/* AnyBOR modification record: 2026-10-17.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Keep the dormant constant-lowering diagnostic compatible with the single-
+ * value instruction layout, map string constants from direct contiguous
+ * instruction storage, and own complete dynamically allocated script
+ * variable names through slot reuse and shutdown. Derive output names from
+ * the content basename with explicit destination capacities, and reject
+ * overflowing output path joins. Compact compiler-only instruction records
+ * after resolving value ownership, preserving branch and export anchors, all
+ * mutable values and exactly-once pool cleanup.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/3400.md
+ * at the source repository root. Original notices follow below.
+ */
+
 Source: src/engines/4432/source/webmlib/halloc/align.h, src/engines/4432/source/webmlib/halloc/halloc.h, src/engines/4432/source/webmlib/halloc/hlist.h, src/engines/4432/source/webmlib/halloc/macros.h, src/engines/6391/source/webmlib/halloc/align.h, src/engines/6391/source/webmlib/halloc/halloc.h, src/engines/6391/source/webmlib/halloc/hlist.h, src/engines/6391/source/webmlib/halloc/macros.h, src/engines/7123/source/webmlib/halloc/align.h, src/engines/7123/source/webmlib/halloc/halloc.h, src/engines/7123/source/webmlib/halloc/hlist.h, src/engines/7123/source/webmlib/halloc/macros.h, src/engines/7142/source/webmlib/halloc/align.h, src/engines/7142/source/webmlib/halloc/halloc.h, src/engines/7142/source/webmlib/halloc/hlist.h, src/engines/7142/source/webmlib/halloc/macros.h, src/engines/7533/source/webmlib/halloc/align.h, src/engines/7533/source/webmlib/halloc/halloc.h, src/engines/7533/source/webmlib/halloc/hlist.h, src/engines/7533/source/webmlib/halloc/macros.h, src/engines/8023/source/webmlib/halloc/align.h, src/engines/8023/source/webmlib/halloc/halloc.h, src/engines/8023/source/webmlib/halloc/hlist.h, src/engines/8023/source/webmlib/halloc/macros.h, src/engines/4432/source/webmlib/halloc/align.h, src/engines/4432/source/webmlib/halloc/halloc.h, src/engines/4432/source/webmlib/halloc/hlist.h, src/engines/4432/source/webmlib/halloc/macros.h, src/engines/6391/source/webmlib/halloc/align.h, src/engines/6391/source/webmlib/halloc/halloc.h, src/engines/6391/source/webmlib/halloc/hlist.h, src/engines/6391/source/webmlib/halloc/macros.h, src/engines/7123/source/webmlib/halloc/align.h, src/engines/7123/source/webmlib/halloc/halloc.h, src/engines/7123/source/webmlib/halloc/hlist.h, src/engines/7123/source/webmlib/halloc/macros.h, src/engines/7142/source/webmlib/halloc/align.h, src/engines/7142/source/webmlib/halloc/halloc.h, src/engines/7142/source/webmlib/halloc/hlist.h, src/engines/7142/source/webmlib/halloc/macros.h, src/engines/7533/source/webmlib/halloc/align.h, src/engines/7533/source/webmlib/halloc/halloc.h, src/engines/7533/source/webmlib/halloc/hlist.h, src/engines/7533/source/webmlib/halloc/macros.h, src/engines/8023/source/webmlib/halloc/align.h, src/engines/8023/source/webmlib/halloc/halloc.h, src/engines/8023/source/webmlib/halloc/hlist.h, src/engines/8023/source/webmlib/halloc/macros.h
 /*
  *	Copyright (c) 2004-2010 Alex Pankratov. All rights reserved.
@@ -4875,6 +4894,21 @@ Source: src/deps/libpng/pngwio.c
  * use different output methods.  Note that you shouldn't change these
  * functions, but rather write replacement functions and then change
  * them at run time with png_set_write_fn(...).
+ */
+
+Source: src/engines/3842/openbor.h
+/* AnyBOR modification record: 2026-10-17.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Allocate collision pointer slots through the highest author-facing index
+ * used by each collection. Track each model's allocated animation-table
+ * capacity and reject lookups outside it. Declare level-owned historical
+ * spawn-script resources and ordered call nodes.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/3842.md
+ * at the source repository root. Original notices follow below.
  */
 
 Source: src/engines/3842/source/scriptlib/depends.h
@@ -5064,20 +5098,6 @@ Source: src/deps/libvorbis/include/vorbis/vorbisenc.h
  function: vorbis encode-engine setup
 
  ********************************************************************/
-
-Source: src/engines/3842/openbor.h
-/* AnyBOR modification record: 2026-09-12.
- * Port maintained by retrodiv <retrodiv@proton.me>.
- * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
- * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
- * Upstream code retains its original license and notices.
- * Allocate collision pointer slots through the highest author-facing index
- * used by each collection. Track each model's allocated animation-table
- * capacity and reject lookups outside it.
- * Existing changes recorded here; this is not their implementation date.
- * See MODIFICATIONS.md and docs/modifications/3842.md
- * at the source repository root. Original notices follow below.
- */
 
 Source: src/engines/7123/source/scriptlib/Instruction.c
 /* AnyBOR modification record: 2026-10-06.
@@ -5709,34 +5729,6 @@ Source: src/engines/3842/source/scriptlib/ImportCache.h
  * at the source repository root. Original notices follow below.
  */
 
-Source: src/engines/3842/openbor.c
-/* AnyBOR modification record: 2026-10-15.
- * Port maintained by retrodiv <retrodiv@proton.me>.
- * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
- * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
- * Upstream code retains its original license and notices.
- * Apply the port's engine corrections and select the PC video configuration
- * on macOS. Derive output names from the content basename with explicit
- * destination capacities, and reject overflowing output path joins. Leave
- * multiplayer slots without a selected model available to join even if game
- * scripts preassign lives to them. Let a missing basename-only PAK self-
- * check read the active frontend content after it has been validated and
- * prepared. Allocate each model's animation pointer table through the
- * highest animation index that model uses, and bound cache, copy and cleanup
- * paths to that capacity. Ignore optional defense and offense entries
- * outside the configured attack-type range with a log warning before
- * accessing their tables. Yield after each newly completed model during
- * explicit model-list or level preparation, and defer states until that
- * preparation has cleaned up its intermediate parsers and handles. Resize
- * repeated weapon lists and detach borrowed lists before replacing their
- * entries. Guard an optional entity animation interpreter before reading its
- * reset state. Share identical immutable animation-frame draw methods with
- * reference-counted ownership.
- * Existing changes recorded here; this is not their implementation date.
- * See MODIFICATIONS.md and docs/modifications/3842.md
- * at the source repository root. Original notices follow below.
- */
-
 Source: src/deps/libvpx/vp8/common/filter.h, src/deps/libvpx/vp8/common/rtcd.c, src/deps/libvpx/vp8/decoder/ec_types.h, src/deps/libvpx/vp8/decoder/error_concealment.c, src/deps/libvpx/vp8/decoder/error_concealment.h, src/deps/libvpx/vp8/encoder/lookahead.c, src/deps/libvpx/vp8/encoder/lookahead.h, src/deps/libvpx/vp9/common/vp9_filter.h, src/deps/libvpx/vp9/common/vp9_rtcd.c, src/deps/libvpx/vp9/encoder/vp9_lookahead.c, src/deps/libvpx/vp9/encoder/vp9_lookahead.h, src/deps/libvpx/vpx_scale/vpx_scale_rtcd.c
 /*
  *  Copyright (c) 2011 The WebM project authors. All Rights Reserved.
@@ -6039,6 +6031,19 @@ Source: src/deps/libvorbis/lib/modes/setup_44.h
  function: toplevel settings for 44.1/48kHz
 
  ********************************************************************/
+
+Source: src/engines/3842/openborscript.h
+/* AnyBOR modification record: 2026-10-17.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Represent script variable names as owned pointers instead of fixed-size
+ * inline arrays.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/3842.md
+ * at the source repository root. Original notices follow below.
+ */
 
 Source: src/engines/3842/source/gamelib/loadimg.c
 /* AnyBOR modification record: 2026-10-08.
@@ -6438,24 +6443,6 @@ Source: src/engines/6391/source/utils.h
  * capacities, and reject overflowing output path joins.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/6391.md
- * at the source repository root. Original notices follow below.
- */
-
-Source: src/engines/3842/openborscript.c
-/* AnyBOR modification record: 2026-10-12.
- * Port maintained by retrodiv <retrodiv@proton.me>.
- * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
- * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
- * Upstream code retains its original license and notices.
- * Keep the dormant constant-lowering diagnostic compatible with the single-
- * value instruction layout and map string constants from direct contiguous
- * instruction storage. Derive output names from the content basename with
- * explicit destination capacities, and reject overflowing output path joins.
- * Compact compiler-only instruction records after resolving value ownership,
- * preserving branch and export anchors, all mutable values and exactly-once
- * pool cleanup.
- * Existing changes recorded here; this is not their implementation date.
- * See MODIFICATIONS.md and docs/modifications/3842.md
  * at the source repository root. Original notices follow below.
  */
 
@@ -7309,6 +7296,36 @@ Source: src/deps/libvpx/vpx_dsp/arm/idct4x4_add_neon.asm, src/deps/libvpx/vpx_ds
 ;  in the file PATENTS.  All contributing project authors may
 ;  be found in the AUTHORS file in the root of the source tree.
 ;
+
+Source: src/engines/3842/openbor.c
+/* AnyBOR modification record: 2026-10-17.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Apply the port's engine corrections and select the PC video configuration
+ * on macOS. Derive output names from the content basename with explicit
+ * destination capacities, and reject overflowing output path joins. Leave
+ * multiplayer slots without a selected model available to join even if game
+ * scripts preassign lives to them. Let a missing basename-only PAK self-
+ * check read the active frontend content after it has been validated and
+ * prepared. Allocate each model's animation pointer table through the
+ * highest animation index that model uses, and bound cache, copy and cleanup
+ * paths to that capacity. Ignore optional defense and offense entries
+ * outside the configured attack-type range with a log warning before
+ * accessing their tables. Yield after each newly completed model during
+ * explicit model-list or level preparation, and defer states until that
+ * preparation has cleaned up its intermediate parsers and handles. Resize
+ * repeated weapon lists and detach borrowed lists before replacing their
+ * entries. Guard an optional entity animation interpreter before reading its
+ * reset state. Share identical immutable animation-frame draw methods with
+ * reference-counted ownership. Select the pre-3800 player spawn coordinate
+ * limit and pre-3805 ordered, cached spawn scripts by logical build, with
+ * explicit level ownership and cleanup.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/3842.md
+ * at the source repository root. Original notices follow below.
+ */
 
 Source: src/engines/7533/openbor.c
 /* AnyBOR modification record: 2026-10-15.
@@ -8538,24 +8555,6 @@ Source: src/engines/3400/source/gamelib/draw.c
  * at the source repository root. Original notices follow below.
  */
 
-Source: src/engines/3400/openborscript.c
-/* AnyBOR modification record: 2026-10-12.
- * Port maintained by retrodiv <retrodiv@proton.me>.
- * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
- * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
- * Upstream code retains its original license and notices.
- * Keep the dormant constant-lowering diagnostic compatible with the single-
- * value instruction layout and map string constants from direct contiguous
- * instruction storage. Derive output names from the content basename with
- * explicit destination capacities, and reject overflowing output path joins.
- * Compact compiler-only instruction records after resolving value ownership,
- * preserving branch and export anchors, all mutable values and exactly-once
- * pool cleanup.
- * Existing changes recorded here; this is not their implementation date.
- * See MODIFICATIONS.md and docs/modifications/3400.md
- * at the source repository root. Original notices follow below.
- */
-
 Source: src/deps/libvpx/vpx_dsp/arm/vpx_convolve8_avg_horiz_filter_type1_neon.asm
 ;
 ;  Copyright (c) 2018 The WebM project authors. All Rights Reserved.
@@ -8595,6 +8594,19 @@ Source: src/deps/libvpx/vpx_dsp/arm/highbd_variance_sve.c
  * tree. An additional intellectual property rights grant can be found
  * in the file PATENTS.  All contributing project authors may
  * be found in the AUTHORS file in the root of the source tree.
+ */
+
+Source: src/engines/3400/openborscript.h
+/* AnyBOR modification record: 2026-10-17.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Represent script variable names as owned pointers instead of fixed-size
+ * inline arrays.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/3400.md
+ * at the source repository root. Original notices follow below.
  */
 
 Source: src/engines/3842/source/preprocessorlib/pp_parser.c
@@ -9143,6 +9155,26 @@ Source: src/engines/7533/source/scriptlib/ImportCache.c
  * import metadata only while an interpreter still owns parser state.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/7533.md
+ * at the source repository root. Original notices follow below.
+ */
+
+Source: src/engines/3842/openborscript.c
+/* AnyBOR modification record: 2026-10-17.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Keep the dormant constant-lowering diagnostic compatible with the single-
+ * value instruction layout, map string constants from direct contiguous
+ * instruction storage, select historical player and AI-flag property
+ * contracts by logical build, and own complete dynamically allocated script
+ * variable names through slot reuse and shutdown. Derive output names from
+ * the content basename with explicit destination capacities, and reject
+ * overflowing output path joins. Compact compiler-only instruction records
+ * after resolving value ownership, preserving branch and export anchors, all
+ * mutable values and exactly-once pool cleanup.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/3842.md
  * at the source repository root. Original notices follow below.
  */
 

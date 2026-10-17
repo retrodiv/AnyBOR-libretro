@@ -1,4 +1,4 @@
-/* AnyBOR modification record: 2026-10-15.
+/* AnyBOR modification record: 2026-10-17.
  * Port maintained by retrodiv <retrodiv@proton.me>.
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
@@ -19,7 +19,9 @@
  * repeated weapon lists and detach borrowed lists before replacing their
  * entries. Guard an optional entity animation interpreter before reading its
  * reset state. Share identical immutable animation-frame draw methods with
- * reference-counted ownership.
+ * reference-counted ownership. Select the pre-3800 player spawn coordinate
+ * limit and pre-3805 ordered, cached spawn scripts by logical build, with
+ * explicit level ownership and cleanup.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/3842.md
  * at the source repository root. Original notices follow below.
@@ -2290,11 +2292,66 @@ void execute_entity_key_script(entity* ent)
 	}
 }
 
-void execute_spawn_script(s_spawn_entry* p, entity* e)
+/* The level owns resources and call nodes separately, including entries that
+ * a later parser command discards before placing them on the spawn queue. */
+static void obor_clear_historical_spawn_scripts(s_level *lv)
+{
+    obor_level_spawn_call *call;
+    obor_level_spawn_resource *resource;
+    while((call = lv->historical_script_calls) != NULL)
+    {
+        lv->historical_script_calls = call->owned_next;
+        free(call);
+    }
+    while((resource = lv->historical_script_cache) != NULL)
+    {
+        lv->historical_script_cache = resource->next;
+        Script_Clear(&resource->script, 2);
+        free(resource->path);
+        free(resource);
+    }
+}
+
+static int obor_load_historical_spawn_script(s_level *lv, s_spawn_entry *entry,
+                                            char *path)
+{
+    obor_level_spawn_resource **slot = &lv->historical_script_cache;
+    obor_level_spawn_resource *resource;
+    obor_level_spawn_call *call;
+    while(*slot && stricmp((*slot)->path, path)) slot = &(*slot)->next;
+    resource = *slot;
+    if(!resource)
+    {
+        size_t length = strlen(path);
+        resource = calloc(1, sizeof(*resource));
+        if(!resource) return 0;
+        resource->path = malloc(length + 1);
+        if(!resource->path) { free(resource); return 0; }
+        memcpy(resource->path, path, length + 1);
+        Script_Init(&resource->script, "Level spawn entry script", resource->path, 1);
+        if(!load_script(&resource->script, path) || !Script_Compile(&resource->script))
+        {
+            Script_Clear(&resource->script, 2);
+            free(resource->path);
+            free(resource);
+            return 0;
+        }
+        *slot = resource;
+    }
+    call = calloc(1, sizeof(*call));
+    if(!call) return 0;
+    call->resource = resource;
+    call->owned_next = lv->historical_script_calls;
+    lv->historical_script_calls = call;
+    if(entry->historical_scripts_tail) entry->historical_scripts_tail->next = call;
+    else entry->historical_scripts = call;
+    entry->historical_scripts_tail = call;
+    return 1;
+}
+
+static void obor_execute_spawn_script(Script *cs, entity *e)
 {
 	ScriptVariant tempvar;
-	Script* cs;
-	cs = &p->spawnscript;
 	if(Script_IsInitialized(cs))
 	{
 		if(e)
@@ -2312,6 +2369,15 @@ void execute_spawn_script(s_spawn_entry* p, entity* e)
 		}
 	}
 }
+void execute_spawn_script(s_spawn_entry *entry, entity *e)
+{
+    obor_level_spawn_call *call;
+    if(obor_profile_build < 3805)
+        for(call = entry->historical_scripts; call; call = call->next)
+            obor_execute_spawn_script(&call->resource->script, e);
+    obor_execute_spawn_script(&entry->spawnscript, e);
+}
+
 
 void execute_level_key_script(int player)
 {
@@ -9249,6 +9315,7 @@ void free_level(s_level* lv)
 
 	for(i=0; i<lv->numspawns; i++)
 		Script_Clear(&(lv->spawnpoints[i].spawnscript), 2);
+    obor_clear_historical_spawn_scripts(lv);
 
 	if(lv->spawnpoints) free(lv->spawnpoints);
 	if(lv->layers) free(lv->layers);
@@ -9714,7 +9781,9 @@ void load_level(char *filename){
 				level->spawn[i][1] = GET_INT_ARG(2);
 				level->spawn[i][2] = GET_INT_ARG(3);
 
-				//if(level->spawn[i][1] > 232 || level->spawn[i][1] < 0) level->spawn[i][1] = 232;
+                if(obor_profile_build < 3800 &&
+                   (level->spawn[i][1] > 232 || level->spawn[i][1] < 0))
+                    level->spawn[i][1] = 232;
 				if(level->spawn[i][2] < 0) level->spawn[i][2] = 300;
 				break;
 			case CMD_LEVEL_FRONTPANEL:
@@ -10113,6 +10182,15 @@ void load_level(char *filename){
 				next.a = GET_FLOAT_ARG(3);
 				break;
 			case CMD_LEVEL_SPAWNSCRIPT:
+                if(obor_profile_build < 3805)
+                {
+                    if(!obor_load_historical_spawn_script(level, &next, GET_ARG(1)))
+                    {
+                        errormessage = "Unable to load level spawn entry script.";
+                        goto lCleanup;
+                    }
+                    break;
+                }
 				if(!Script_IsInitialized(&next.spawnscript))
 					Script_Init(&next.spawnscript, "Level spawn entry script", GET_ARG(1), 0);
 				if(!load_script(&next.spawnscript, GET_ARG(1))) {

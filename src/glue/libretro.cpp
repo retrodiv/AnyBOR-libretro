@@ -249,7 +249,7 @@ static int profile_in_range(int lower, int upper, bool automatic_only)
     int best = 0;
     for (size_t i = 0; i < sizeof(kProfiles) / sizeof(kProfiles[0]); ++i) {
         const obor_profile_def *p = &kProfiles[i];
-        if ((!automatic_only || p->automatic) && p->build >= lower && p->build <= upper &&
+        if ((automatic_only ? p->automatic : p->tagged) && p->build >= lower && p->build <= upper &&
             p->engine_build >= lower && p->engine_build <= upper && p->build > best)
             best = p->build;
     }
@@ -265,7 +265,8 @@ static int profile_for_range(int lower, int upper, bool automatic_only)
     int next_engine = INT_MAX;
     for (size_t i = 0; i < sizeof(kProfiles) / sizeof(kProfiles[0]); ++i) {
         const obor_profile_def *p = &kProfiles[i];
-        if (p->automatic && p->engine_build > upper && p->engine_build >= lower &&
+        if (p->automatic && (automatic_only || p->tagged) &&
+            p->engine_build > upper && p->engine_build >= lower &&
             p->engine_build < next_engine) {
             best = p->build;
             next_engine = p->engine_build;
@@ -389,7 +390,7 @@ static int build_from_filename(const char *path, int *profile)
                         !isalnum((unsigned char)*q)) {
                         int best = 0;
                         for (size_t i = 0; i < sizeof(kProfiles) / sizeof(kProfiles[0]); ++i)
-                            if (kProfiles[i].build >= lower &&
+                            if (kProfiles[i].tagged && kProfiles[i].build >= lower &&
                                 kProfiles[i].build <= upper &&
                                 kProfiles[i].build > best)
                                 best = kProfiles[i].build;
@@ -1097,7 +1098,7 @@ void retro_set_environment(retro_environment_t cb)
     }
 
     /* legacy fallback: flat v0 variables */
-    static char values[320];
+    static char values[64 + 48 * (sizeof(kProfiles) / sizeof(kProfiles[0]))];
     if (!values[0]) {
         strcpy(values, "Engine build (needs restart); Auto");
         for (size_t i = 0; i < n_profiles; i++) {
@@ -2122,7 +2123,13 @@ static void decide_engine(void)
         build = filename_build;
         how = "filename interval";
     }
-    if (filename_build == 4453 || filename_build == 6330 || filename_build == 6412 || filename_build == 6510 || filename_build == 7123 || filename_build == 7142 || filename_build == 7533 || filename_build == 8023) {
+    bool filename_profile_enabled = false;
+    for (size_t i = 0; i < sizeof(kProfiles) / sizeof(kProfiles[0]); ++i)
+        if (kProfiles[i].build == filename_build && kProfiles[i].tagged &&
+            (!kProfiles[i].automatic || filename_build == 7123 ||
+             filename_build == 7142 || filename_build == 7533 || filename_build == 8023))
+            filename_profile_enabled = true;
+    if (filename_profile_enabled) {
         filename_profile = filename_build;
         if (!build) {
             build = filename_build;

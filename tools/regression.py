@@ -16,6 +16,9 @@ from pathlib import Path
 import make_fixture
 import release
 from test_state_options import state_head
+from test_historical_player import player_fixture, check_player_continuation
+from test_script_variable_keys import variable_key_fixture, check_variable_key_continuation
+from test_historical_level import level_fixture, check_level_continuation
 
 DEFAULT_CORE = release.ROOT / ("anybor_libretro.dylib" if sys.platform == "darwin"
                                else "anybor_libretro.so")
@@ -167,6 +170,41 @@ def main():
                          OBOR_RESET_EVERY=100)
             if result.count("reset at frame") != 9:
                 raise RuntimeError("Repeated restarts did not complete: " + result)
+            state.unlink()
+
+        # A rejected missing score was nonfatal before the player API cleanup.
+        # Exercise real compiled script calls, including the current3842 control.
+        historical_pak = work / "historical-player.pak"
+        make_fixture.write_pak(historical_pak, player_fixture(members))
+        for profile in profiles:
+            if profile['engine'] == '3842':
+                result = run(profile['build'], historical_pak,
+                             "historical player rejected-value contract", OBOR_GAMELOG="On")
+                check_player_continuation(result, profile['build'])
+                level_pak = work / "historical-level.pak"
+                make_fixture.write_pak(level_pak, level_fixture(members, profile['build']))
+                result = run(profile['build'], level_pak,
+                             "historical level spawn scripts", frames=1000,
+                             OBOR_GAMELOG="On", OBOR_INPUT="150-650:start:pulse")
+                check_level_continuation(result, profile['build'])
+
+        variable_pak = work / "variable-keys.pak"
+        make_fixture.write_pak(variable_pak, variable_key_fixture(members))
+        for profile in profiles:
+            state = work / (profile['build'] + '-complete-variable-names.state')
+            result = run(profile['build'], variable_pak,
+                         "complete script variable names across load and reset",
+                         OBOR_GAMELOG="On", OBOR_SAVE_AT=120, OBOR_SAVE_STATE=state,
+                         OBOR_LOAD_AT=121, OBOR_LOAD_STATE=state, OBOR_RESET_AT=140)
+            if not state.is_file() or \
+                    re.findall(r"load state at frame \d+: (ok|FAILED)", result) != ["ok"]:
+                raise RuntimeError("Complete variable names did not survive load: " + result)
+            check_variable_key_continuation(result, profile['engine'], restarts=1)
+            result = run(profile['build'], variable_pak,
+                         "complete script variable names across a fresh process",
+                         OBOR_GAMELOG="On", OBOR_LOAD_AT=120, OBOR_LOAD_STATE=state)
+            check_loads(result, state, 1)
+            check_variable_key_continuation(result, profile['engine'])
             state.unlink()
 
         peak = work / "6412/saves/AnyBOR/diagnostic/6412/Saves/.obor_peak_sparse_v2_diagnostic.pak.txt"

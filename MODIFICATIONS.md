@@ -3,7 +3,7 @@
 Record updated: **2026-10-10**. Port maintainer: **retrodiv**
 (<retrodiv@proton.me>).
 
-AnyBOR offers thirteen selectable profiles backed by nine OpenBOR engines with
+AnyBOR offers selectable profiles backed by nine OpenBOR engines with
 a shared libretro port.
 The original engine work is credited to Senile Team, OpenBOR Team and the
 contributors named in the retained sources. The port's own notices identify
@@ -290,7 +290,7 @@ for every animation frame whose collision collection uses only a few slots.
 
 ## Animation memory layout
 
-All thirteen selectable engines initially allocate each model's animation pointer table for
+All selectable profiles initially allocate each model's animation pointer table for
 the built-in animation range and grow it in bounded blocks only when authored
 content assigns a higher animation index. Lookup, sprite-cache, model-copy,
 normalization and cleanup paths use the model's recorded capacity. The global
@@ -300,7 +300,7 @@ largest table for every loaded model.
 
 ## Empty player slot safety
 
-All thirteen selectable engines now require both remaining lives and a selected model name
+All selectable profiles now require both remaining lives and a selected model name
 before automatically spawning a player at the start of a level. Game scripts
 may assign lives to an empty multiplayer slot before that player joins; the
 previous condition then tried to spawn an unnamed model and aborted the level.
@@ -308,7 +308,7 @@ The empty slot remains available through the engines' existing join path. Each e
 
 ## Active content PAK aliases
 
-All thirteen selectable engines treat a missing basename-only `Paks/*.pak` file read
+All selectable profiles treat a missing basename-only `Paks/*.pak` file read
 as a probe of the active, already validated content archive. Some mods check
 the archive name they were originally distributed with from a loading script;
 a frontend may legitimately rename that file when organizing a library. The
@@ -487,7 +487,39 @@ record-layout dumps to leave every type byte-identical:
   matching source file now declare ordinary functions (`ScriptVariant.h`,
   `source/gamelib/transform.h`).
 
+## Script variable names
+
+The two oldest engines store complete script variable names in owned allocations,
+matching the later upstream name-storage semantics. Distinct names remain
+distinct even when their first 24 bytes match. Reused slots release their former
+name, and shutdown releases every active or retired name. Allocation failure
+leaves the live table unchanged; null and empty names also fail cleanly. The
+later engines retain their existing allocated-name tables. This safety fix is
+enabled for every logical profile.
+
 ## Logical profile compatibility
+
+Historical profiles on engine 3842 select the player-property API by logical
+build. The pre-3797 contract preserves the integer result and nonfatal rejection
+of an unconvertible score or other numeric value without changing the stored
+value. The 3797 contract keeps its void success and script-error rejection.
+Property names and numeric IDs remain in the logical build's domain, including
+the 3797 spawn-property expansion, the 3798 keys setter and the 3821
+weapon-number spelling and setter. Invalid names remain safe errors, and no
+mutator receives an uninitialized optional argument. Safety and lifecycle
+corrections are retained for every profile.
+
+The same 3797 boundary selects native AI-flag names and numeric IDs. Older
+profiles retain the read-only nested `freezetime` and `pain_time` getters and
+the empty result of the deprecated `walking` getter. Newer profiles expose
+`idlemode` and `walkmode`; the shared entity layout remains unchanged.
+
+Player spawn Z coordinates retain the earlier 0..232 limit before 3800.
+Before 3805, level spawn scripts retain ordered calls and one cached interpreter
+per file, including shared script locals across spawn entries. The level owns
+both cached resources and call nodes, including nodes belonging to discarded
+parser entries. Cleanup preserves resource creation order and frees each
+interpreter once. Later profiles retain the combined per-entry script path.
 
 Patch `96-logical-4453-compat.patch` adapts the behavior of upstream
 [4453](https://github.com/DCurrent/openbor/commit/7906e2573fcd70e9eafcd30fbdcc680832c4ae42)
@@ -844,7 +876,7 @@ split ranges fit the existing fixed tables for every engine. The Windows headles
 dispatch a private handled exception after `FreeLibrary`, detecting stale
 exception callbacks even when the frontend would otherwise exit quietly. The
 rewind regression requires this check in fresh and cross-process loads for all
-thirteen profiles, in both compressed and raw modes. No game identity or runtime
+all published profiles, in both compressed and raw modes. No game identity or runtime
 symbol address selects the exclusion.
 The bounded Windows test batch starts a dedicated Wine prefix with persistent
 services, avoiding a server/service restart between hosts. Its server and prefix
@@ -907,7 +939,7 @@ Smart now require the saved and current module bases to match on every
 platform, before resource staging, worker shutdown or live-memory writes.
 Same-base loads retain their existing checks and behavior. Tests shift the
 declared module and segment addresses in valid raw and compressed snapshots
-for all 13 profiles and four writers; rejection must leave 200 frames of
+for all published profiles and four writers; rejection must leave 200 frames of
 image and complete PCM identical to uninterrupted playback. Cross-process
 tests distinguish an observed address change from any unexpected load failure.
 Every writer also restores within the same process after advancing 200 frames
@@ -936,7 +968,7 @@ cover a frontend rejecting a size before calling the core at all.
 The public state-options regression retains a valid buffer, requests an
 undersized capture, tries to load that same full allocation, and requires
 refusal. Two hundred subsequent video callbacks and complete PCM must match an
-uninterrupted reference before a valid load verifies recovery. All thirteen
+uninterrupted reference before a valid load verifies recovery. All published profiles
 profiles and four writers run this probe. Nested model-preload regressions also
 exercise full-capacity refusals and reject their buffers after preparation ends.
 

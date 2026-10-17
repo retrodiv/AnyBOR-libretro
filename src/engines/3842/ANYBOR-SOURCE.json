@@ -17,9 +17,9 @@
       "upstream_sha256": null
     },
     "openbor.c": {
-      "distributed_sha256": "fbca418c3c1181a178b97098a38494b1118b88e31d9558cc2bf89f8db6937cde",
+      "distributed_sha256": "337f1ad95bbadc518f0dda9f40f51be218b973bf235c95c6713e2217a3989d18",
       "modified": true,
-      "summary": "Apply the port's engine corrections and select the PC video configuration on macOS. Derive output names from the content basename with explicit destination capacities, and reject overflowing output path joins. Leave multiplayer slots without a selected model available to join even if game scripts preassign lives to them. Let a missing basename-only PAK self-check read the active frontend content after it has been validated and prepared. Allocate each model's animation pointer table through the highest animation index that model uses, and bound cache, copy and cleanup paths to that capacity. Ignore optional defense and offense entries outside the configured attack-type range with a log warning before accessing their tables. Yield after each newly completed model during explicit model-list or level preparation, and defer states until that preparation has cleaned up its intermediate parsers and handles. Resize repeated weapon lists and detach borrowed lists before replacing their entries. Guard an optional entity animation interpreter before reading its reset state. Share identical immutable animation-frame draw methods with reference-counted ownership.",
+      "summary": "Apply the port's engine corrections and select the PC video configuration on macOS. Derive output names from the content basename with explicit destination capacities, and reject overflowing output path joins. Leave multiplayer slots without a selected model available to join even if game scripts preassign lives to them. Let a missing basename-only PAK self-check read the active frontend content after it has been validated and prepared. Allocate each model's animation pointer table through the highest animation index that model uses, and bound cache, copy and cleanup paths to that capacity. Ignore optional defense and offense entries outside the configured attack-type range with a log warning before accessing their tables. Yield after each newly completed model during explicit model-list or level preparation, and defer states until that preparation has cleaned up its intermediate parsers and handles. Resize repeated weapon lists and detach borrowed lists before replacing their entries. Guard an optional entity animation interpreter before reading its reset state. Share identical immutable animation-frame draw methods with reference-counted ownership. Select the pre-3800 player spawn coordinate limit and pre-3805 ordered, cached spawn scripts by logical build, with explicit level ownership and cleanup.",
       "topics": [
         "active-content-pak-aliases",
         "animation-draw-method-storage",
@@ -29,6 +29,7 @@
         "darwin-platform-support",
         "empty-player-slot-safety",
         "loading-screen-presentation",
+        "logical-profile-compatibility",
         "model-attack-type-bounds",
         "record-dates-and-file-notices",
         "repeated-weapon-lists",
@@ -37,32 +38,39 @@
       "upstream_sha256": "d2638ad5cf319be18bc22a07f1d9b9b999d17cbcd83830433a59b819a40339a9"
     },
     "openbor.h": {
-      "distributed_sha256": "b7744a2e1222cd742ae6a9eda7aa299c3560f2dc4d9efe392c62acd3ab7b4460",
+      "distributed_sha256": "974e1802a191fb5b59bf52c41063fd6164c2b6b706cdf3be01b2d4ce61e69f76",
       "modified": true,
-      "summary": "Allocate collision pointer slots through the highest author-facing index used by each collection. Track each model's allocated animation-table capacity and reject lookups outside it.",
+      "summary": "Allocate collision pointer slots through the highest author-facing index used by each collection. Track each model's allocated animation-table capacity and reject lookups outside it. Declare level-owned historical spawn-script resources and ordered call nodes.",
       "topics": [
         "animation-memory-layout",
         "compiler-warning-cleanup",
+        "logical-profile-compatibility",
         "record-dates-and-file-notices"
       ],
       "upstream_sha256": "19888c33f34b9cb80222de1439a1745461b8353d99ef40dc0a8184f081b45ed9"
     },
     "openborscript.c": {
-      "distributed_sha256": "516c3e175d1634e9a001aa177f66e7a2ead7c7286fc295912c2ea9ccb106d6f8",
+      "distributed_sha256": "b17276468696b7718c5b38d56395c2ad57e1f214883a139b0d85c4658a16207a",
       "modified": true,
-      "summary": "Keep the dormant constant-lowering diagnostic compatible with the single-value instruction layout and map string constants from direct contiguous instruction storage. Derive output names from the content basename with explicit destination capacities, and reject overflowing output path joins. Compact compiler-only instruction records after resolving value ownership, preserving branch and export anchors, all mutable values and exactly-once pool cleanup.",
+      "summary": "Keep the dormant constant-lowering diagnostic compatible with the single-value instruction layout, map string constants from direct contiguous instruction storage, select historical player and AI-flag property contracts by logical build, and own complete dynamically allocated script variable names through slot reuse and shutdown. Derive output names from the content basename with explicit destination capacities, and reject overflowing output path joins. Compact compiler-only instruction records after resolving value ownership, preserving branch and export anchors, all mutable values and exactly-once pool cleanup.",
       "topics": [
         "compiler-warning-cleanup",
+        "logical-profile-compatibility",
         "record-dates-and-file-notices",
         "script-memory-layout",
+        "script-variable-names",
         "session-relative-filesystem"
       ],
       "upstream_sha256": "80fc85d07a86206647d4d4877a4f91b2cbe5e94598b6cd934ebf05d184bf719b"
     },
     "openborscript.h": {
-      "distributed_sha256": "890236dab4db0793937355350d4249503825317c40939ffb06968fd5afee54c0",
-      "modified": false,
-      "topics": [],
+      "distributed_sha256": "8d0171af31df7ccf85c0676f329d22bf55e5ff719d64e25f6b7d80f744312d2b",
+      "modified": true,
+      "summary": "Represent script variable names as owned pointers instead of fixed-size inline arrays.",
+      "topics": [
+        "record-dates-and-file-notices",
+        "script-variable-names"
+      ],
       "upstream_sha256": "890236dab4db0793937355350d4249503825317c40939ffb06968fd5afee54c0"
     },
     "source/adpcmlib/adpcm.h": {
