@@ -375,10 +375,6 @@ static void obor_padmap_apply(retro_environment_t env, const char *pak_path)
              info.solo_n[0], info.solo_n[1], info.solo_n[2],
              info.solo[0], info.solo[1], info.solo[2]);
 
-#if defined(OBOR_NO_INPUT_DESCRIPTORS)
-    return;
-#endif
-
     /* attack2/3/4 labels depend on what the game declares */
     static char lab[3][64];
     const char *base[3] = {"Attack 2", "Attack 3", "Attack 4"};

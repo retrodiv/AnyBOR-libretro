@@ -1363,10 +1363,8 @@ void retro_reset(void)
         return;
     }
     g_booted = true;
-#if !defined(OBOR_NO_PADMAP)
     if (!g_raw)
         obor_padmap_apply(env_cb, g_pak_path);
-#endif
 }
 
 /* ---- test-only instrumentation, env-gated, inert in normal use ----
@@ -2196,9 +2194,6 @@ static void decide_engine(void)
     else
         snprintf(msg, sizeof(msg), "AnyBOR %s (auto: %s, build %d)", disp,
                  how, build);
-#if defined(OBOR_NO_OSD_MESSAGES)
-    (void)msg;
-#else
     unsigned mv = 0;
     if (env_cb(RETRO_ENVIRONMENT_GET_MESSAGE_INTERFACE_VERSION, &mv) &&
         mv >= 1) {
@@ -2216,7 +2211,6 @@ static void decide_engine(void)
         struct retro_message m = { msg, 210 }; /* ~3.5 s at 60 fps */
         env_cb(RETRO_ENVIRONMENT_SET_MESSAGE, &m);
     }
-#endif
 }
 
 /* mkdir -p: frontends hand out save dirs they haven't created yet (e.g.
@@ -2629,10 +2623,8 @@ static bool finish_load_game(void)
     /* per-game button labels for the frontend's Port Controls menu,
      * parsed from the pak's playable characters (obor_padmap.h).
      * Unpacked mods keep the generic labels for now. */
-#if !defined(OBOR_NO_PADMAP)
     if (!g_raw)
         obor_padmap_apply(env_cb, g_pak_path);
-#endif
 
     write_license_documentation();
     obor_dbg("load_game: booted OK (%dx%d)", g_width, g_height);

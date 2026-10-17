@@ -18,8 +18,8 @@ repository into its infrastructure separately. The included metadata is
 ready for [libretro-super/dist/info](https://github.com/libretro/libretro-super/tree/master/dist/info).
 Build entry points follow the [core development documentation](https://docs.libretro.com/development/cores/developing-cores/)
 and the [CI templates](https://git.libretro.com/libretro-infrastructure/ci-templates).
-The supplied GitHub workflow builds release ZIPs on all four generic target
-families. Recalbox has an additional ARM64 profile with a GLIBC 2.38 ceiling.
+The supplied GitHub workflow builds release ZIPs for the generic target
+families. GNU/Linux builds accept an optional `GLIBC_MAX` ABI ceiling.
 See [PUBLISHING.md](PUBLISHING.md) for the complete infrastructure handoff,
 source packaging commands and the distinction between local verification and
 acceptance by the hosted buildbot. [ANYBOR.md](ANYBOR.md) provides the core's

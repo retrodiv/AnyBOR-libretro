@@ -206,6 +206,7 @@ def record_build(target, spec, outdir, expected_sources):
     receipt = {
         "schema": 1, "name": pin["core_name"], "version": pin["version"],
         "target": target, "binary": binary.name, "sha256": sha256(binary),
+        "glibc_max": spec.get("max_glibc"),
         "source_digest": source_digest(files), "source_files": files,
         "compiler": compiler, "linker": linker,
         "linker_archive_members": members, "linker_archive_sha256": archives,

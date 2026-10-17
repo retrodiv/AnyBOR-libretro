@@ -86,7 +86,7 @@ static inline int obor_state_audio_first(void)
 {
     /* Stock Windows frontend tests show less capture-correlated presentation
      * delay when its audio wait precedes video delivery. This benefit was not
-     * reproduced on Recalbox; retain the original order on other targets. */
+     * reproduced on ARM64 Linux; retain the original order on other targets. */
 #if defined(_WIN32) && (defined(__x86_64__) || defined(_M_X64))
     return obor_state_option("OBOR_AUDIO_BEFORE_VIDEO", 1);
 #else

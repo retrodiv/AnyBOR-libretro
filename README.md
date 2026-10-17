@@ -33,7 +33,7 @@ NUMPROC=4 make                   # native Linux x86-64, ARM64 or RISC-V64
 make platform=win64              # MinGW-w64 x86-64 cross toolchain
 make TARGET=linux-aarch64        # GNU ARM64 cross toolchain
 make TARGET=linux-riscv64        # GNU RISC-V64 LP64D cross toolchain
-make TARGET=recalbox-aarch64     # ARM64, GLIBC ceiling 2.38
+make TARGET=linux-aarch64 GLIBC_MAX=2.38  # optional GNU/Linux ABI ceiling
 ANDROID_NDK=/path/to/ndk make platform=android
 make platform=osx                # native macOS, Intel or Apple Silicon
 make check
@@ -135,8 +135,8 @@ do not increase it to work around capacity or performance problems.
 
 With rewind enabled, we recommend **Threaded Video = Off** on Windows x86-64
 and Linux under WSLg. Disabling this extra presentation queue improved frame
-pacing in those setups. On Recalbox for Raspberry Pi 5, keep **Threaded Video =
-On**; disabling it made playback less smooth. Use the same video setting when
+pacing in those setups. On ARM64 Linux, **Threaded Video = On** can improve
+presentation. Use the same video setting when
 comparing rewind on and off.
 
 The **System** category offers **Save state content** (Smart / Full) and
@@ -211,7 +211,7 @@ reused only while their validity checks hold; all allocation bounds and global
 nonoverlap checks are retained. These policies do not omit mutable state or
 change the frontend's fixed state capacity.
 
-On Recalbox, a core-specific override can use `video_threaded = "true"`,
+On ARM64 Linux, a core-specific override can use `video_threaded = "true"`,
 `video_vsync = "true"`, `video_adaptive_vsync = "false"`,
 `video_swap_interval = "1"`, `video_frame_delay = "0"`,
 `video_frame_delay_auto = "false"`, `audio_sync = "true"`,

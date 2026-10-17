@@ -63,7 +63,7 @@ void obor_state_coded_discard(void);
 #define OBOR_ARENA_BASE ((char *)OBOR_ARENA_BASE_VA)
 #define OBOR_ARENA_MAX OBOR_ARENA_MAX_SZ
 #if defined(__aarch64__) || defined(__arm__)
-/* Raspberry Pi/Recalbox builds commonly use 16K pages. mprotect rounds to
+/* AArch64 kernels can use 16K pages. mprotect rounds to
  * the host page size, so a 4K guard would also protect base+4K..base+16K
  * and make the libco stack fault immediately. */
 #define OBOR_GUARD_SZ (16ULL * 1024)

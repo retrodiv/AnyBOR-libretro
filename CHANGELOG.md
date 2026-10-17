@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Use generic GNU/Linux targets with an optional glibc requirement ceiling.
+  Enable input labels, content-derived pad mappings and notifications on all
+  targets without distribution-specific compile-time exclusions.
 - Add Linux RISC-V64 LP64D builds, preserved integer/floating-point coroutine
   contexts, protected-page and hot-page tracking, fault locations and fixed
   addresses compatible with Sv39.
@@ -258,7 +261,7 @@
   libretro runtime, build tools and source inventories.
 - Support PAKs, unpacked `data/models.txt` mods and single-game ZIPs.
 - Provide save states, rewind, four-player controls and frontend configuration.
-- Supply build profiles for Linux, Windows, ARM64, Android and Recalbox ARM64.
+- Supply build profiles for Linux, Windows, ARM64 and Android.
 - Include the portable circle, endian and ADPCM implementations, resource
   lifecycle corrections and script/audio/animation memory improvements.
 - Bundle pinned dependencies and their original notices for offline builds.

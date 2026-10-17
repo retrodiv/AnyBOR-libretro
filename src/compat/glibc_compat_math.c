@@ -3,9 +3,9 @@
  * Earlier incorporated material retains its original authorship notices. */
 /* Compatibility wrappers for Linux cores built on a newer glibc than the
    target frontend. glibc 2.41+ re-versioned selected float libm symbols;
-   The supported Recalbox baseline is glibc 2.38, so a core requiring a
-   newer version of acosf (for example GLIBC_2.43)
-   fails at dlopen before libretro starts.
+   References to a newer version of acosf (for example GLIBC_2.43) can
+   make dlopen fail on older hosts before libretro starts. The optional
+   build-time glibc ceiling checks the resulting binary's requirements.
 
    The build links this object into Linux cores together with --wrap flags.
    The wrappers deliberately call the base symbol version available on the

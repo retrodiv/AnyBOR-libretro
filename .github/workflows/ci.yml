@@ -52,6 +52,9 @@ jobs:
         run: python3 tools/run_guarded.py --memory-mib 1024 --seconds 180 -- make check
       - name: Build and package
         run: |
+          case "$TARGET" in
+            linux-*) export GLIBC_MAX=2.38 ;;
+          esac
           if [ "$TARGET" = android-arm64 ]; then
             export ANDROID_NDK="$ANDROID_HOME/ndk/26.3.11579264"
           fi

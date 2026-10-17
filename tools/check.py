@@ -252,7 +252,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--binary", type=str)
     parser.add_argument("--sources-only", action="store_true")
-    parser.add_argument("--target", choices=("linux-x86_64", "linux-aarch64", "linux-riscv64", "recalbox-aarch64",
+    parser.add_argument("--target", choices=("linux-x86_64", "linux-aarch64", "linux-riscv64",
                                              "windows-x86_64", "android-arm64", "macos-x86_64", "macos-arm64"))
     args = parser.parse_args()
     check_sources()

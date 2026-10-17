@@ -203,20 +203,6 @@ TARGETS = {
         "dep_builds": ["zlib", "libpng", "libogg", "libvorbis", "libvpx"],
         "configure_host": "riscv64-linux-gnu",
     },
-    "recalbox-aarch64": {
-        "cc": "aarch64-linux-gnu-gcc",
-        "cxx": "aarch64-linux-gnu-g++",
-        "strip": "aarch64-linux-gnu-strip",
-        "plat": "linux",
-        "ext": ".so",
-        "glue_link": ["-shared", "-fPIC"],
-        "static_pngz": True,
-        "deps_target": "linux-aarch64",
-        "recalbox": True,
-        "max_glibc": "2.38",
-        "dep_builds": ["zlib", "libpng", "libogg", "libvorbis", "libvpx"],
-        "configure_host": "aarch64-linux-gnu",
-    },
     "android-arm64": {
         "cc": NDK_BIN + "aarch64-linux-android24-clang",
         "cxx": NDK_BIN + "aarch64-linux-android24-clang++",
@@ -470,17 +456,39 @@ def ensure_deps(target):
         build_dep(target, name, fingerprint)
 
 
+def glibc_version(value):
+    if not isinstance(value, str) or not re.fullmatch(r"[0-9]+\.[0-9]+(?:\.[0-9]+)?", value):
+        raise ValueError("glibc ceiling must be MAJOR.MINOR[.PATCH] or none")
+    parts = tuple(int(p) for p in value.split("."))
+    return parts + (0,) * (3 - len(parts))
+
+
+def configure_glibc_ceiling(spec, value=None):
+    if value is None:
+        value = os.environ.get("GLIBC_MAX") or None
+    spec.pop("max_glibc", None)
+    if value is None or value == "none":
+        return
+    glibc_version(value)
+    if spec["plat"] != "linux" or spec.get("android"):
+        raise ValueError("A glibc ceiling applies only to GNU/Linux targets")
+    spec["max_glibc"] = value
+
+
 def enforce_glibc_ceiling(binary, ceiling):
-    import re
-    r = subprocess.run(["readelf", "--version-info", str(binary)],
-                       stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True, check=True)
-    versions = [(int(a), int(b))
-                for a, b in re.findall(r"GLIBC_(\d+)\.(\d+)", r.stdout)]
-    newest = max(versions, default=(0, 0))
-    limit = tuple(int(x) for x in ceiling.split(".", 1))
+    r = subprocess.run(["readelf", "--version-info", "--wide", str(binary)],
+                       stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True,
+                       env=dict(os.environ, LC_ALL="C"), check=True)
+    required = set(re.findall(r"\bName:\s+GLIBC_(\S+)", r.stdout))
+    unknown = sorted(v for v in required if not re.fullmatch(r"[0-9]+\.[0-9]+(?:\.[0-9]+)?", v))
+    if unknown:
+        sys.exit("Cannot establish a glibc ceiling for ABI requirements: " + ", ".join(unknown))
+    newest = max((glibc_version(v) for v in required), default=(0, 0, 0))
+    limit = glibc_version(ceiling)
+    actual = ".".join(str(p) for p in newest)
     if newest > limit:
-        sys.exit('{0}: needs GLIBC_{1}.{2}, but Recalbox permits at most GLIBC_{3}'.format(binary, newest[0], newest[1], ceiling))
-    print('Recalbox ABI gate: GLIBC_{0}.{1} <= GLIBC_{2}'.format(newest[0], newest[1], ceiling))
+        sys.exit('{0}: needs GLIBC_{1}, configured maximum is GLIBC_{2}'.format(binary, actual, ceiling))
+    print('GNU/Linux ABI gate: GLIBC_{0} <= GLIBC_{1}'.format(actual, ceiling))
 
 
 def uniquify_refptr_sections(obj, build, spec):
@@ -655,9 +663,6 @@ def build_glue(target, spec, outdir):
                          "-Wl,--wrap=sqrtf"]
 
     glue_defs = ['-DOBOR_PLATFORM="{0}"'.format(target)] + native_io_flags(spec)
-    if spec.get("recalbox"):
-        glue_defs += ["-DOBOR_NO_INPUT_DESCRIPTORS=1", "-DOBOR_NO_PADMAP=1",
-                      "-DOBOR_NO_OSD_MESSAGES=1"]
 
     out = outdir / '{0}{1}'.format(core, spec['ext'])
     bss_script = outdir / "state-bss.ld"
@@ -845,7 +850,8 @@ def probe_triplet(command, option, env=None):
     return checked_triplet(value, option)
 
 
-def configure_target(requested, build_platform, configure_host=None, configure_build=None):
+def configure_target(requested, build_platform, configure_host=None, configure_build=None,
+                     max_glibc=None):
     """Honor the tools supplied by libretro runners, including native ARM64."""
     if configure_host is None:
         configure_host = os.environ.get("CONFIGURE_HOST") or None
@@ -912,6 +918,7 @@ def configure_target(requested, build_platform, configure_host=None, configure_b
         env.pop("CC", None)
         spec["configure_build"] = probe_triplet(
             ["sh", str(SRC / "deps/libpng/config.guess")], "configure-build", env)
+    configure_glibc_ceiling(spec, max_glibc)
     TARGETS[requested] = spec
     return requested, spec
 
@@ -924,13 +931,15 @@ def main():
                     help="dependency Autoconf host (default: CONFIGURE_HOST or target policy)")
     ap.add_argument("--configure-build", metavar="TRIPLET|auto",
                     help="dependency Autoconf build (default: CONFIGURE_BUILD; guessed with explicit host)")
+    ap.add_argument("--glibc-max", metavar="VERSION|none",
+                    help="maximum GNU/Linux glibc requirement (default: GLIBC_MAX, otherwise unchecked)")
     ap.add_argument("--glue-only", action="store_true")
     args = ap.parse_args()
     epoch = load_pin()["source_date_epoch"]
     os.environ.setdefault("SOURCE_DATE_EPOCH", str(epoch))
     try:
         args.target, spec = configure_target(args.target, args.platform,
-                                             args.configure_host, args.configure_build)
+                                             args.configure_host, args.configure_build, args.glibc_max)
     except ValueError as exc:
         ap.error(str(exc))
     outdir = BUILD_ROOT / "dist" / args.target

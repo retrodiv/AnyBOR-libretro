@@ -96,9 +96,16 @@ configure scripts are used directly; builds do not need network access,
 Autotools regeneration or installed libpng/zlib/Vorbis/VPX development
 packages.
 
-Recalbox has a separate local `TARGET=recalbox-aarch64` profile with its
-documented frontend adjustments and GLIBC 2.38 ceiling. It is separate from the generic
-libretro jobs. The repository does not advertise 32-bit, iOS, console or
+GNU/Linux targets accept an optional `GLIBC_MAX=MAJOR.MINOR[.PATCH]`, also
+available as `tools/build.py --glibc-max VERSION`. The final linked core is
+rejected if its required glibc versions exceed that ceiling or an unclassified
+glibc ABI tag prevents validation. This check does not lower requirements:
+use an appropriate toolchain and sysroot when an older ABI is needed.
+`GLIBC_MAX=none` explicitly disables the ceiling; local builds have no ceiling
+unless configured. The GitHub workflow checks its GNU/Linux artifacts against
+2.38. Input labels, content-derived pad mappings and notifications are enabled
+for every target; the existing button-macro option remains available.
+The repository does not advertise 32-bit, iOS, console or
 static-core targets. The exact hosted images and tool versions are controlled
 by libretro's templates and may change independently of this repository.
 

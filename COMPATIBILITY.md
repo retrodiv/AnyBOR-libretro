@@ -29,9 +29,6 @@ Targets:
 - `linux-riscv64`: GNU LP64D Linux with static image dependencies and a portable
   VP8/VP9 decoder. Context switching, protected-page tracking, fixed-base states and fault recovery are
   exercised under user emulation; no real-hardware validation is claimed.
-- `recalbox-aarch64`: ARM64 Recalbox profile, GLIBC imports capped at 2.38;
-  dynamic input labels, PAK padmap/macros and OSD messages are disabled because
-  of observed frontend crashes. Basic controls remain available.
 - `windows-x86_64`: static MinGW runtime/dependencies.
 - `android-arm64`: Android API 24 ARM64; no `libc++_shared` dependency.
 - `macos-x86_64`: Intel macOS 10.13 or newer (`platform=osx` on an Intel
