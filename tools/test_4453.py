@@ -122,7 +122,8 @@ def main():
         assert depths(log)[0][:2] == (1, 4), log
         old_tagged = fixture('tagged [Build 4452]')
         log, _ = run('auto', old_tagged, '4452-routing')
-        assert 'profile 6391 -> engine 6391' in log, log
+        assert 'profile 4453 -> engine 4432' in log, log
+        assert depths(log)[0][:2] == (1, 4), log
         print('4432/4453 runtime checks: OK', flush=True)
 
 
