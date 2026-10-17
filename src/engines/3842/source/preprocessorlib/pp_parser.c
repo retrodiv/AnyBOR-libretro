@@ -1,10 +1,11 @@
-/* AnyBOR modification record: 2026-09-12.
+/* AnyBOR modification record: 2026-10-17.
  * Port maintained by retrodiv <retrodiv@proton.me>.
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
  * Upstream code retains its original license and notices.
  * Drop the glibc-only <malloc.h> and rely on the standard library
- * declarations the parser already includes.
+ * declarations the parser already includes. Preserve the pre-3802 user macro
+ * namespace, retaining lexical and parser safety.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/3842.md
  * at the source repository root. Original notices follow below.
@@ -36,6 +37,11 @@
 #include "pp_parser.h"
 #include "pp_expr.h"
 #include "borendian.h"
+
+#if PP_TEST
+#include <stdint.h>
+extern uint32_t obor_profile_build;
+#endif
 
 #if PP_TEST // using pp_test.c to test the preprocessor functionality; OpenBOR functionality is not available
 #undef printf
@@ -77,6 +83,7 @@ void pp_context_init(pp_context* self)
 	self->num_conditionals = 0;
 	
 	// initialize the builtin macros other than __FILE__ and __LINE__
+	if(obor_profile_build < 3802) return;
 	strcpy(buf, "\"");
 	strncat(buf, datetime+4, 7);
 	strncat(buf, datetime+20, 4);
@@ -291,6 +298,8 @@ HRESULT pp_parser_lex_token(pp_parser* self, bool skip_whitespace)
 			success = SUCCEEDED(pp_lexer_GetNextToken(&self->lexer, &self->token));
 
 		if(!success) return E_FAIL;
+        if(obor_profile_build < 3802 && self->token.theType == PP_TOKEN_DEFINED)
+            self->token.theType = PP_TOKEN_IDENTIFIER;
 
 		if(skip_whitespace && self->token.theType == PP_TOKEN_WHITESPACE) continue;
 		else break;
@@ -323,7 +332,8 @@ int pp_parser_peek_token(pp_parser* self)
 	}
 
 	memcpy(&self->lexer, &lexer, sizeof(pp_lexer));
-	return token.theType;
+	return obor_profile_build < 3802 && token.theType == PP_TOKEN_DEFINED
+        ? PP_TOKEN_IDENTIFIER : token.theType;
 }
 
 /**
@@ -523,7 +533,8 @@ pp_token* pp_parser_emit_token(pp_parser* self)
 				case PP_TOKEN_IDENTIFIER:
 					memcpy(&token2, &self->token, sizeof(pp_token));
 
-					if(!strcmp(self->token.theSource, "__FILE__") || !strcmp(self->token.theSource, "__LINE__"))
+					if(obor_profile_build >= 3802 &&
+                       (!strcmp(self->token.theSource, "__FILE__") || !strcmp(self->token.theSource, "__LINE__")))
 						pp_parser_insert_builtin_macro(self, token2.theSource);
 					else if(pp_parser_peek_token(self) == PP_TOKEN_LPAREN &&
 					        List_FindByName(&self->ctx->func_macros, token2.theSource))
@@ -836,7 +847,7 @@ HRESULT pp_parser_define(pp_parser* self, char* name)
 	List_Init(params);
 
 	// emit an error if the macro is already defined
-	if(!strcmp(name, "defined"))
+	if(obor_profile_build >= 3802 && !strcmp(name, "defined"))
 	{
 		pp_error(self, "'defined' can't be defined as a macro");
 		goto error;
@@ -1135,6 +1146,7 @@ HRESULT pp_parser_insert_function_macro(pp_parser* self, char* name)
  */
 bool pp_is_builtin_macro(const char* name)
 {
+    if(obor_profile_build < 3802) return false;
 	if(!strcmp(name, "__FILE__") || !strcmp(name, "__LINE__") ||
 	   !strcmp(name, "__DATE__") || !strcmp(name, "__TIME__"))
 		return true;

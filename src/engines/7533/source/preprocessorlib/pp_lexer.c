@@ -1,3 +1,15 @@
+/* AnyBOR modification record: 2026-10-17.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Reject incomplete or oversized fixed-size string tokens before consuming
+ * an invalid source or token byte.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/7533.md
+ * at the source repository root. Original notices follow below.
+ */
+
 /*
  * OpenBOR - http://www.chronocrash.com
  * -----------------------------------------------------------------------
@@ -657,29 +669,20 @@ HRESULT pp_lexer_GetTokenNumber(pp_lexer *plexer, pp_token *theNextToken)
 ******************************************************************************/
 HRESULT pp_lexer_GetTokenStringLiteral(pp_lexer *plexer, pp_token *theNextToken)
 {
-    //copy the source that makes up this token
-    //an identifier is a string of letters, digits and/or underscores
-    //consume that first quote mark
-    int esc = 0;
+    int escaped = 0;
+    /* Every consumed byte must leave space for the token terminator. */
     CONSUMECHARACTER;
-    while ( strncmp( plexer->pcurChar, "\"", 1))
+    for(;;)
     {
-        if(!strncmp( plexer->pcurChar, "\\", 1))
-        {
-            esc = 1;
-        }
+        const char value = *plexer->pcurChar;
+        if(!value || strlen(plexer->theTokenSource) + 1 >= sizeof(plexer->theTokenSource))
+            return E_FAIL;
         CONSUMECHARACTER;
-        if(esc)
-        {
-            CONSUMECHARACTER;
-            esc = 0;
-        }
+        if(!escaped && value == '"') break;
+        if(!escaped && value == '\\') escaped = 1;
+        else escaped = 0;
     }
-
-    //consume that last quote mark
-    CONSUMECHARACTER;
-
-    MAKETOKEN( PP_TOKEN_STRING_LITERAL );
+    MAKETOKEN(PP_TOKEN_STRING_LITERAL);
     return S_OK;
 }
 /******************************************************************************

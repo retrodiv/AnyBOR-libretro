@@ -34,20 +34,23 @@ Source: src/deps/libvpx/vpx_dsp/x86/bitdepth_conversion_sse2.asm
 ;  be found in the AUTHORS file in the root of the source tree.
 ;
 
-Source: src/engines/8023/openborscript.c
-/* AnyBOR modification record: 2026-10-12.
+Source: src/engines/6391/openborscript.c
+/* AnyBOR modification record: 2026-10-17.
  * Port maintained by retrodiv <retrodiv@proton.me>.
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
  * Upstream code retains its original license and notices.
- * Dispatch native string mapping through explicitly tagged compiled call
- * targets. Derive output names from the content basename with explicit
- * destination capacities, and reject overflowing output path joins. Compact
- * compiler-only instruction records after resolving value ownership,
- * preserving branch and export anchors, all mutable values and exactly-once
- * pool cleanup.
+ * Keep the dormant constant-lowering diagnostic compatible with the single-
+ * value instruction layout. Derive output names from the content basename
+ * with explicit destination capacities, and reject overflowing output path
+ * joins. Compact compiler-only instruction records after resolving value
+ * ownership, preserving branch and export anchors, all mutable values and
+ * exactly-once pool cleanup. Supply native profile script APIs and translate
+ * numeric animation, attack, subtype and spawn IDs. Keep next-animation
+ * timestamps unchanged at the script boundary. Resolve text-property names
+ * within the actual table bounds while preserving native numeric selectors.
  * Existing changes recorded here; this is not their implementation date.
- * See MODIFICATIONS.md and docs/modifications/8023.md
+ * See MODIFICATIONS.md and docs/modifications/6391.md
  * at the source repository root. Original notices follow below.
  */
 
@@ -511,6 +514,19 @@ Source: src/engines/8023/source/gamelib/threads.h
  * at the source repository root. Original notices follow below.
  */
 
+Source: src/engines/7123/source/preprocessorlib/pp_lexer.c
+/* AnyBOR modification record: 2026-10-17.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Reject incomplete or oversized fixed-size string tokens before consuming
+ * an invalid source or token byte.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/7123.md
+ * at the source repository root. Original notices follow below.
+ */
+
 Source: src/engines/4086/openbor.c
 /* AnyBOR modification record: 2026-10-15.
  * Port maintained by retrodiv <retrodiv@proton.me>.
@@ -534,6 +550,19 @@ Source: src/engines/4086/openbor.c
  * entries.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/4086.md
+ * at the source repository root. Original notices follow below.
+ */
+
+Source: src/engines/4432/source/preprocessorlib/pp_lexer.c
+/* AnyBOR modification record: 2026-10-17.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Reject incomplete or oversized fixed-size string tokens before consuming
+ * an invalid source or token byte.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/4432.md
  * at the source repository root. Original notices follow below.
  */
 
@@ -874,23 +903,6 @@ Source: src/deps/libpng/pngpriv.h
  * and license in png.h
  */
 
-Source: src/engines/4432/openborscript.c
-/* AnyBOR modification record: 2026-10-12.
- * Port maintained by retrodiv <retrodiv@proton.me>.
- * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
- * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
- * Upstream code retains its original license and notices.
- * Keep the dormant constant-lowering diagnostic compatible with the single-
- * value instruction layout. Derive output names from the content basename
- * with explicit destination capacities, and reject overflowing output path
- * joins. Compact compiler-only instruction records after resolving value
- * ownership, preserving branch and export anchors, all mutable values and
- * exactly-once pool cleanup.
- * Existing changes recorded here; this is not their implementation date.
- * See MODIFICATIONS.md and docs/modifications/4432.md
- * at the source repository root. Original notices follow below.
- */
-
 Source: src/engines/6391/source/openborscript/commands.c
 /* AnyBOR modification record: 2026-10-05.
  * Port maintained by retrodiv <retrodiv@proton.me>.
@@ -1117,6 +1129,24 @@ Source: src/deps/libpng/pngmem.c
  * functions for png_malloc() and png_free(), and to use
  * png_create_read_struct_2() and png_create_write_struct_2() to
  * identify the replacement functions.
+ */
+
+Source: src/engines/7533/openborscript.c
+/* AnyBOR modification record: 2026-10-17.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Keep the dormant constant-lowering diagnostic compatible with the single-
+ * value instruction layout. Derive output names from the content basename
+ * with explicit destination capacities, and reject overflowing output path
+ * joins. Compact compiler-only instruction records after resolving value
+ * ownership, preserving branch and export anchors, all mutable values and
+ * exactly-once pool cleanup. Resolve text-property names within the actual
+ * table bounds while preserving native numeric selectors.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/7533.md
+ * at the source repository root. Original notices follow below.
  */
 
 Source: src/engines/7533/source/gamelib/draw.c
@@ -2080,6 +2110,20 @@ Source: src/engines/7123/source/openborscript/animation.h, src/engines/7123/sour
  * Copyright (c) 2004 - 2019 OpenBOR Team
  */
 
+Source: src/engines/3842/source/preprocessorlib/pp_parser.c
+/* AnyBOR modification record: 2026-10-17.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Drop the glibc-only <malloc.h> and rely on the standard library
+ * declarations the parser already includes. Preserve the pre-3802 user macro
+ * namespace, retaining lexical and parser safety.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/3842.md
+ * at the source repository root. Original notices follow below.
+ */
+
 Source: src/engines/4432/source/gamelib/bitmap.c
 /* AnyBOR modification record: 2026-10-08.
  * Port maintained by retrodiv <retrodiv@proton.me>.
@@ -2746,25 +2790,6 @@ Source: src/deps/libvorbis/lib/smallft.h
 
  ********************************************************************/
 
-Source: src/engines/3400/openborscript.c
-/* AnyBOR modification record: 2026-10-17.
- * Port maintained by retrodiv <retrodiv@proton.me>.
- * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
- * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
- * Upstream code retains its original license and notices.
- * Keep the dormant constant-lowering diagnostic compatible with the single-
- * value instruction layout, map string constants from direct contiguous
- * instruction storage, and own complete dynamically allocated script
- * variable names through slot reuse and shutdown. Derive output names from
- * the content basename with explicit destination capacities, and reject
- * overflowing output path joins. Compact compiler-only instruction records
- * after resolving value ownership, preserving branch and export anchors, all
- * mutable values and exactly-once pool cleanup.
- * Existing changes recorded here; this is not their implementation date.
- * See MODIFICATIONS.md and docs/modifications/3400.md
- * at the source repository root. Original notices follow below.
- */
-
 Source: src/engines/4432/source/webmlib/halloc/align.h, src/engines/4432/source/webmlib/halloc/halloc.h, src/engines/4432/source/webmlib/halloc/hlist.h, src/engines/4432/source/webmlib/halloc/macros.h, src/engines/6391/source/webmlib/halloc/align.h, src/engines/6391/source/webmlib/halloc/halloc.h, src/engines/6391/source/webmlib/halloc/hlist.h, src/engines/6391/source/webmlib/halloc/macros.h, src/engines/7123/source/webmlib/halloc/align.h, src/engines/7123/source/webmlib/halloc/halloc.h, src/engines/7123/source/webmlib/halloc/hlist.h, src/engines/7123/source/webmlib/halloc/macros.h, src/engines/7142/source/webmlib/halloc/align.h, src/engines/7142/source/webmlib/halloc/halloc.h, src/engines/7142/source/webmlib/halloc/hlist.h, src/engines/7142/source/webmlib/halloc/macros.h, src/engines/7533/source/webmlib/halloc/align.h, src/engines/7533/source/webmlib/halloc/halloc.h, src/engines/7533/source/webmlib/halloc/hlist.h, src/engines/7533/source/webmlib/halloc/macros.h, src/engines/8023/source/webmlib/halloc/align.h, src/engines/8023/source/webmlib/halloc/halloc.h, src/engines/8023/source/webmlib/halloc/hlist.h, src/engines/8023/source/webmlib/halloc/macros.h, src/engines/4432/source/webmlib/halloc/align.h, src/engines/4432/source/webmlib/halloc/halloc.h, src/engines/4432/source/webmlib/halloc/hlist.h, src/engines/4432/source/webmlib/halloc/macros.h, src/engines/6391/source/webmlib/halloc/align.h, src/engines/6391/source/webmlib/halloc/halloc.h, src/engines/6391/source/webmlib/halloc/hlist.h, src/engines/6391/source/webmlib/halloc/macros.h, src/engines/7123/source/webmlib/halloc/align.h, src/engines/7123/source/webmlib/halloc/halloc.h, src/engines/7123/source/webmlib/halloc/hlist.h, src/engines/7123/source/webmlib/halloc/macros.h, src/engines/7142/source/webmlib/halloc/align.h, src/engines/7142/source/webmlib/halloc/halloc.h, src/engines/7142/source/webmlib/halloc/hlist.h, src/engines/7142/source/webmlib/halloc/macros.h, src/engines/7533/source/webmlib/halloc/align.h, src/engines/7533/source/webmlib/halloc/halloc.h, src/engines/7533/source/webmlib/halloc/hlist.h, src/engines/7533/source/webmlib/halloc/macros.h, src/engines/8023/source/webmlib/halloc/align.h, src/engines/8023/source/webmlib/halloc/halloc.h, src/engines/8023/source/webmlib/halloc/hlist.h, src/engines/8023/source/webmlib/halloc/macros.h
 /*
  *	Copyright (c) 2004-2010 Alex Pankratov. All rights reserved.
@@ -3096,6 +3121,24 @@ Source: src/engines/4086/openborscript.h, src/engines/4432/openborscript.h
  * Copyright (c) 2004 - 2014 OpenBOR Team
  */
 
+Source: src/engines/4086/openborscript.c
+/* AnyBOR modification record: 2026-10-17.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Keep the dormant constant-lowering diagnostic compatible with the single-
+ * value instruction layout. Derive output names from the content basename
+ * with explicit destination capacities, and reject overflowing output path
+ * joins. Compact compiler-only instruction records after resolving value
+ * ownership, preserving branch and export anchors, all mutable values and
+ * exactly-once pool cleanup. Resolve text-property names within the actual
+ * table bounds while preserving native numeric selectors.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/4086.md
+ * at the source repository root. Original notices follow below.
+ */
+
 Source: src/deps/libvorbis/lib/modes/psych_44.h
 /********************************************************************
  *                                                                  *
@@ -3144,20 +3187,16 @@ Source: src/engines/7123/source/scriptlib/Instruction.c
  * at the source repository root. Original notices follow below.
  */
 
-Source: src/engines/7142/openborscript.c
-/* AnyBOR modification record: 2026-10-12.
+Source: src/engines/6391/source/preprocessorlib/pp_lexer.c
+/* AnyBOR modification record: 2026-10-17.
  * Port maintained by retrodiv <retrodiv@proton.me>.
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
  * Upstream code retains its original license and notices.
- * Keep the dormant constant-lowering diagnostic compatible with the single-
- * value instruction layout. Derive output names from the content basename
- * with explicit destination capacities, and reject overflowing output path
- * joins. Compact compiler-only instruction records after resolving value
- * ownership, preserving branch and export anchors, all mutable values and
- * exactly-once pool cleanup.
+ * Reject incomplete or oversized fixed-size string tokens before consuming
+ * an invalid source or token byte.
  * Existing changes recorded here; this is not their implementation date.
- * See MODIFICATIONS.md and docs/modifications/7142.md
+ * See MODIFICATIONS.md and docs/modifications/6391.md
  * at the source repository root. Original notices follow below.
  */
 
@@ -3307,6 +3346,26 @@ Source: src/deps/libvorbis/lib/os.h
 
  ********************************************************************/
 
+Source: src/engines/3400/openborscript.c
+/* AnyBOR modification record: 2026-10-17.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Keep the dormant constant-lowering diagnostic compatible with the single-
+ * value instruction layout, map string constants from direct contiguous
+ * instruction storage, and own complete dynamically allocated script
+ * variable names through slot reuse and shutdown. Derive output names from
+ * the content basename with explicit destination capacities, and reject
+ * overflowing output path joins. Compact compiler-only instruction records
+ * after resolving value ownership, preserving branch and export anchors, all
+ * mutable values and exactly-once pool cleanup. Resolve text-property names
+ * within the actual table bounds while preserving native numeric selectors.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/3400.md
+ * at the source repository root. Original notices follow below.
+ */
+
 Source: src/deps/libvpx/vp9/encoder/arm/neon/vp9_highbd_temporal_filter_sve2.c, src/deps/libvpx/vp9/encoder/arm/neon/vp9_temporal_filter_neon_dotprod.c, src/deps/libvpx/vp9/encoder/arm/neon/vp9_temporal_filter_neon_i8mm.c, src/deps/libvpx/vpx_dsp/x86/sad_avx512.c
 /*
  *  Copyright (c) 2025 The WebM project authors. All Rights Reserved.
@@ -3438,25 +3497,6 @@ Source: src/engines/7142/source/gamelib/threads.h
  * Declare the libretro thread, mutex and condition types.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/7142.md
- * at the source repository root. Original notices follow below.
- */
-
-Source: src/engines/6391/openborscript.c
-/* AnyBOR modification record: 2026-10-12.
- * Port maintained by retrodiv <retrodiv@proton.me>.
- * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
- * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
- * Upstream code retains its original license and notices.
- * Keep the dormant constant-lowering diagnostic compatible with the single-
- * value instruction layout. Derive output names from the content basename
- * with explicit destination capacities, and reject overflowing output path
- * joins. Compact compiler-only instruction records after resolving value
- * ownership, preserving branch and export anchors, all mutable values and
- * exactly-once pool cleanup. Supply native profile script APIs and translate
- * numeric animation, attack, subtype and spawn IDs. Keep next-animation
- * timestamps unchanged at the script boundary.
- * Existing changes recorded here; this is not their implementation date.
- * See MODIFICATIONS.md and docs/modifications/6391.md
  * at the source repository root. Original notices follow below.
  */
 
@@ -3932,6 +3972,29 @@ Source: src/engines/7142/source/utils.c
  * at the source repository root. Original notices follow below.
  */
 
+Source: src/engines/3842/openborscript.c
+/* AnyBOR modification record: 2026-10-17.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Keep the dormant constant-lowering diagnostic compatible with the single-
+ * value instruction layout, map string constants from direct contiguous
+ * instruction storage, select historical player and AI-flag property
+ * contracts by logical build, and own complete dynamically allocated script
+ * variable names through slot reuse and shutdown. Derive output names from
+ * the content basename with explicit destination capacities, and reject
+ * overflowing output path joins. Compact compiler-only instruction records
+ * after resolving value ownership, preserving branch and export anchors, all
+ * mutable values and exactly-once pool cleanup. Resolve text-property names
+ * within the actual table bounds while preserving native numeric selectors.
+ * Select historical level/text setter tolerance and pre-3826 empty-success
+ * unknown textual constants without changing later strict contracts.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/3842.md
+ * at the source repository root. Original notices follow below.
+ */
+
 Source: src/engines/4432/source/savedata.h
 /* AnyBOR modification record: 2026-09-30.
  * Port maintained by retrodiv <retrodiv@proton.me>.
@@ -4107,6 +4170,19 @@ Source: src/deps/libvorbis/lib/books/coupled/res_books_51.h
  * function: static codebooks for 5.1 surround
  *
  ********************************************************************/
+
+Source: src/engines/4086/source/preprocessorlib/pp_lexer.c
+/* AnyBOR modification record: 2026-10-17.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Reject incomplete or oversized fixed-size string tokens before consuming
+ * an invalid source or token byte.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/4086.md
+ * at the source repository root. Original notices follow below.
+ */
 
 Source: src/deps/libvpx/vp9/vp9_iface_common.c
 /*
@@ -4398,6 +4474,19 @@ Source: src/engines/6391/source/scriptlib/Instruction.c
  * at the source repository root. Original notices follow below.
  */
 
+Source: src/engines/3400/source/preprocessorlib/pp_lexer.c
+/* AnyBOR modification record: 2026-10-17.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Reject incomplete or oversized fixed-size string tokens before consuming
+ * an invalid source or token byte.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/3400.md
+ * at the source repository root. Original notices follow below.
+ */
+
 Source: src/engines/7123/source/webmlib/nestegg/nestegg.c, src/engines/7123/source/webmlib/nestegg/nestegg.c
 /* AnyBOR modification record: 2026-10-10.
  * Port maintained by retrodiv <retrodiv@proton.me>.
@@ -4447,6 +4536,19 @@ Source: src/engines/7142/source/gamelib/filecache.c
  * -1.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/7142.md
+ * at the source repository root. Original notices follow below.
+ */
+
+Source: src/engines/7533/source/preprocessorlib/pp_lexer.c
+/* AnyBOR modification record: 2026-10-17.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Reject incomplete or oversized fixed-size string tokens before consuming
+ * an invalid source or token byte.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/7533.md
  * at the source repository root. Original notices follow below.
  */
 
@@ -4690,10 +4792,41 @@ Source: src/engines/3842/source/gamelib/anigif.h
  * at the source repository root. Original notices follow below.
  */
 
+Source: src/engines/7142/source/preprocessorlib/pp_lexer.c
+/* AnyBOR modification record: 2026-10-17.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Reject incomplete or oversized fixed-size string tokens before consuming
+ * an invalid source or token byte.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/7142.md
+ * at the source repository root. Original notices follow below.
+ */
+
 Source: src/port/libretro/obor_endian.h
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
  * Fixed-width byte-order helpers for the OpenBOR interfaces. */
+
+Source: src/engines/8023/openborscript.c
+/* AnyBOR modification record: 2026-10-17.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Dispatch native string mapping through explicitly tagged compiled call
+ * targets. Derive output names from the content basename with explicit
+ * destination capacities, and reject overflowing output path joins. Compact
+ * compiler-only instruction records after resolving value ownership,
+ * preserving branch and export anchors, all mutable values and exactly-once
+ * pool cleanup. Resolve text-property names within the actual table bounds
+ * while preserving native numeric selectors.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/8023.md
+ * at the source repository root. Original notices follow below.
+ */
 
 Source: src/deps/libvorbis/lib/modes/residue_16.h
 /********************************************************************
@@ -4711,6 +4844,24 @@ Source: src/deps/libvorbis/lib/modes/residue_16.h
  function: toplevel residue templates 16/22kHz
 
  ********************************************************************/
+
+Source: src/engines/7123/openborscript.c
+/* AnyBOR modification record: 2026-10-17.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Keep the dormant constant-lowering diagnostic compatible with the single-
+ * value instruction layout. Derive output names from the content basename
+ * with explicit destination capacities, and reject overflowing output path
+ * joins. Compact compiler-only instruction records after resolving value
+ * ownership, preserving branch and export anchors, all mutable values and
+ * exactly-once pool cleanup. Resolve text-property names within the actual
+ * table bounds while preserving native numeric selectors.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/7123.md
+ * at the source repository root. Original notices follow below.
+ */
 
 Source: src/deps/libvpx/vp9/common/x86/vp9_mfqe_sse2.asm, src/deps/libvpx/vpx_dsp/x86/fwd_txfm_ssse3_x86_64.asm, src/deps/libvpx/vpx_dsp/x86/inv_wht_sse2.asm, src/deps/libvpx/vpx_dsp/x86/vpx_subpixel_8t_ssse3.asm
 ;
@@ -5059,23 +5210,6 @@ Source: src/deps/libpng/png.h
  *   libpng versions 1.6.36, December 2018, through 1.6.58, April 2026:
  *     Cosmin Truta
  *   See also "Contributing Authors", below.
- */
-
-Source: src/engines/4086/openborscript.c
-/* AnyBOR modification record: 2026-10-12.
- * Port maintained by retrodiv <retrodiv@proton.me>.
- * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
- * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
- * Upstream code retains its original license and notices.
- * Keep the dormant constant-lowering diagnostic compatible with the single-
- * value instruction layout. Derive output names from the content basename
- * with explicit destination capacities, and reject overflowing output path
- * joins. Compact compiler-only instruction records after resolving value
- * ownership, preserving branch and export anchors, all mutable values and
- * exactly-once pool cleanup.
- * Existing changes recorded here; this is not their implementation date.
- * See MODIFICATIONS.md and docs/modifications/4086.md
- * at the source repository root. Original notices follow below.
  */
 
 Source: src/engines/4432/source/webmlib/nestegg/nestegg.c, src/engines/4432/source/webmlib/nestegg/nestegg.c
@@ -6042,23 +6176,6 @@ Source: src/engines/6391/source/preprocessorlib/pp_parser.c
  * at the source repository root. Original notices follow below.
  */
 
-Source: src/engines/7533/openborscript.c
-/* AnyBOR modification record: 2026-10-12.
- * Port maintained by retrodiv <retrodiv@proton.me>.
- * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
- * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
- * Upstream code retains its original license and notices.
- * Keep the dormant constant-lowering diagnostic compatible with the single-
- * value instruction layout. Derive output names from the content basename
- * with explicit destination capacities, and reject overflowing output path
- * joins. Compact compiler-only instruction records after resolving value
- * ownership, preserving branch and export anchors, all mutable values and
- * exactly-once pool cleanup.
- * Existing changes recorded here; this is not their implementation date.
- * See MODIFICATIONS.md and docs/modifications/7533.md
- * at the source repository root. Original notices follow below.
- */
-
 Source: src/engines/7123/source/scriptlib/ImportCache.h
 /* AnyBOR modification record: 2026-10-06.
  * Port maintained by retrodiv <retrodiv@proton.me>.
@@ -6245,23 +6362,6 @@ Source: src/engines/8023/openbor.c
  * collection's pointer table only through its highest author-facing slot.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/8023.md
- * at the source repository root. Original notices follow below.
- */
-
-Source: src/engines/7123/openborscript.c
-/* AnyBOR modification record: 2026-10-12.
- * Port maintained by retrodiv <retrodiv@proton.me>.
- * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
- * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
- * Upstream code retains its original license and notices.
- * Keep the dormant constant-lowering diagnostic compatible with the single-
- * value instruction layout. Derive output names from the content basename
- * with explicit destination capacities, and reject overflowing output path
- * joins. Compact compiler-only instruction records after resolving value
- * ownership, preserving branch and export anchors, all mutable values and
- * exactly-once pool cleanup.
- * Existing changes recorded here; this is not their implementation date.
- * See MODIFICATIONS.md and docs/modifications/7123.md
  * at the source repository root. Original notices follow below.
  */
 
@@ -6495,6 +6595,19 @@ Source: src/engines/8023/source/gamelib/packfile.c
 * Copyright (c)  OpenBOR Team
 */
 
+Source: src/engines/3842/source/preprocessorlib/pp_lexer.c
+/* AnyBOR modification record: 2026-10-17.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Reject incomplete or oversized fixed-size string tokens before consuming
+ * an invalid source or token byte.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/3842.md
+ * at the source repository root. Original notices follow below.
+ */
+
 Source: src/engines/6391/source/webmlib/vidplay.c, src/engines/6391/source/webmlib/vidplay.c
 /* AnyBOR modification record: 2026-10-10.
  * Port maintained by retrodiv <retrodiv@proton.me>.
@@ -6637,19 +6750,6 @@ Source: src/engines/3400/openborscript.h
  * inline arrays.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/3400.md
- * at the source repository root. Original notices follow below.
- */
-
-Source: src/engines/3842/source/preprocessorlib/pp_parser.c
-/* AnyBOR modification record: 2026-09-12.
- * Port maintained by retrodiv <retrodiv@proton.me>.
- * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
- * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
- * Upstream code retains its original license and notices.
- * Drop the glibc-only <malloc.h> and rely on the standard library
- * declarations the parser already includes.
- * Existing changes recorded here; this is not their implementation date.
- * See MODIFICATIONS.md and docs/modifications/3842.md
  * at the source repository root. Original notices follow below.
  */
 
@@ -6955,6 +7055,42 @@ Source: src/deps/libvorbis/include/vorbis/codec.h
 
  ********************************************************************/
 
+Source: src/engines/4432/openborscript.c
+/* AnyBOR modification record: 2026-10-17.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Keep the dormant constant-lowering diagnostic compatible with the single-
+ * value instruction layout. Derive output names from the content basename
+ * with explicit destination capacities, and reject overflowing output path
+ * joins. Compact compiler-only instruction records after resolving value
+ * ownership, preserving branch and export anchors, all mutable values and
+ * exactly-once pool cleanup. Resolve text-property names within the actual
+ * table bounds while preserving native numeric selectors.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/4432.md
+ * at the source repository root. Original notices follow below.
+ */
+
+Source: src/engines/7142/openborscript.c
+/* AnyBOR modification record: 2026-10-17.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Keep the dormant constant-lowering diagnostic compatible with the single-
+ * value instruction layout. Derive output names from the content basename
+ * with explicit destination capacities, and reject overflowing output path
+ * joins. Compact compiler-only instruction records after resolving value
+ * ownership, preserving branch and export anchors, all mutable values and
+ * exactly-once pool cleanup. Resolve text-property names within the actual
+ * table bounds while preserving native numeric selectors.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/7142.md
+ * at the source repository root. Original notices follow below.
+ */
+
 Source: src/engines/6391/source/openborscript/collision_attack.c
 /* AnyBOR modification record: 2026-10-05.
  * Port maintained by retrodiv <retrodiv@proton.me>.
@@ -7186,26 +7322,6 @@ Source: src/engines/7533/source/scriptlib/ImportCache.c
  * import metadata only while an interpreter still owns parser state.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/7533.md
- * at the source repository root. Original notices follow below.
- */
-
-Source: src/engines/3842/openborscript.c
-/* AnyBOR modification record: 2026-10-17.
- * Port maintained by retrodiv <retrodiv@proton.me>.
- * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
- * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
- * Upstream code retains its original license and notices.
- * Keep the dormant constant-lowering diagnostic compatible with the single-
- * value instruction layout, map string constants from direct contiguous
- * instruction storage, select historical player and AI-flag property
- * contracts by logical build, and own complete dynamically allocated script
- * variable names through slot reuse and shutdown. Derive output names from
- * the content basename with explicit destination capacities, and reject
- * overflowing output path joins. Compact compiler-only instruction records
- * after resolving value ownership, preserving branch and export anchors, all
- * mutable values and exactly-once pool cleanup.
- * Existing changes recorded here; this is not their implementation date.
- * See MODIFICATIONS.md and docs/modifications/3842.md
  * at the source repository root. Original notices follow below.
  */
 

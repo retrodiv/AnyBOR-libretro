@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- Preserve historical macro-name, level-setter, text-setter and unknown-constant
+  tolerance at each logical revision boundary, while retaining parser safety.
+- Bound text-property name lookups and reject incomplete or oversized legacy
+  preprocessor string tokens without reading outside their input or buffers.
+- Partition runtime profile checks into bounded CI groups without reducing
+  coverage, and verify Windows test-host arena release after core unload.
+
 - Store complete script variable names safely in older engines, preserving
   distinct names without truncation or a fixed name-length bound.
 - Add historical logical profiles on engine 3842. Select player-property

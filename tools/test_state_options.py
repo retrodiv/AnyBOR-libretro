@@ -20,6 +20,7 @@ import zlib
 
 import make_fixture
 import release
+from profile_groups import select_profile_group
 from smoke import compile_host
 from test_rewind import DEFAULT_CORE, dedicated_wine
 from runtime_evidence import record_process
@@ -205,6 +206,7 @@ def main():
     parser.add_argument("--runner", default="")
     parser.add_argument("--keep-wine-server", action="store_true")
     parser.add_argument("--work-parent")
+    parser.add_argument("--profile-group", help="one-based INDEX/COUNT partition; omitted runs every profile")
     args = parser.parse_args()
     if args.keep_wine_server and (not args.windows or args.runner != "wine" or not args.work_parent):
         parser.error("--keep-wine-server requires --windows --runner wine --work-parent")
@@ -289,7 +291,7 @@ def main():
             if left["frames"] != right["frames"] or left["pcm"] != right["pcm"]:
                 raise RuntimeError(label + ": video or complete PCM continuation differs")
 
-        profiles = release.read_json(release.ROOT / "src/pin.json")["profiles"]
+        profiles = select_profile_group(release.read_json(release.ROOT / "src/pin.json")["profiles"], args.profile_group)
         for entry in profiles:
             profile = entry["build"]
             reference = run(profile, "default", None)

@@ -1,4 +1,4 @@
-/* AnyBOR modification record: 2026-10-12.
+/* AnyBOR modification record: 2026-10-17.
  * Port maintained by retrodiv <retrodiv@proton.me>.
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
@@ -10,7 +10,8 @@
  * ownership, preserving branch and export anchors, all mutable values and
  * exactly-once pool cleanup. Supply native profile script APIs and translate
  * numeric animation, attack, subtype and spawn IDs. Keep next-animation
- * timestamps unchanged at the script boundary.
+ * timestamps unchanged at the script boundary. Resolve text-property names
+ * within the actual table bounds while preserving native numeric selectors.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/6391.md
  * at the source repository root. Original notices follow below.
@@ -12234,8 +12235,19 @@ int mapstrings_textobjproperty(ScriptVariant **varlist, int paramCount)
         return 1;
     }
 
-    MAPSTRINGS(varlist[1], proplist, _top_the_end,
-               "'%s' is not a valid textobj property.\n");
+    if(varlist[1]->vt == VT_STR)
+    {
+        propname = (char *)StrCache_Get(varlist[1]->strVal);
+        for(prop = 0; prop < (int)(sizeof(proplist) / sizeof(*proplist)); ++prop)
+        {
+            if(!stricmp(proplist[prop], propname))
+            {
+                ScriptVariant_ChangeType(varlist[1], VT_INTEGER);
+                varlist[1]->lVal = prop;
+                break;
+            }
+        }
+    }
 
     return 1;
 }

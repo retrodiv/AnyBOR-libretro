@@ -78,6 +78,7 @@
 #include <string.h>
 
 #include "libretro.h"
+#include "host_arena_probe.h"
 
 #ifdef _WIN32
 #define HOST_UNLOAD_EXCEPTION ((DWORD)0xe1422340)
@@ -1663,6 +1664,7 @@ int main(int argc, char **argv)
     printf("cwd_restored=1\n");
     dlclose(h);
 #ifdef _WIN32
+    if (!check_host_arena_released()) return 1;
     if (unload_handler) {
         RaiseException(HOST_UNLOAD_EXCEPTION, 0, 0, NULL);
         if (!RemoveVectoredExceptionHandler(unload_handler)) return 1;

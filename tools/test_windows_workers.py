@@ -27,6 +27,16 @@ def exercise(port, fixtures, exported, build):
             subprocess.run(['wineserver', '-p'], env=env, check=True, timeout=15)
             subprocess.run(['wineboot', '--init'], env=env, check=True, timeout=60,
                            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            executable = root / 'arena-probe.exe'
+            subprocess.run(['x86_64-w64-mingw32-gcc', '-O2', '-std=c99',
+                '-Wall', '-Wextra', '-Werror', '-static', '-I', str(fixtures),
+                '-I', str(exported), str(fixtures / 'arena_probe_test.c'),
+                '-o', str(executable)], check=True, timeout=60)
+            result = subprocess.run(['wine', str(executable)], env=env, cwd=root,
+                                    capture_output=True, text=True, timeout=30)
+            assert result.returncode == 0, result.stdout + result.stderr
+            assert 'arena_probe_occupied_refused=1 clear_released=1' in result.stdout
+            print('PASS Windows arena release probe: occupied refused, clear released', flush=True)
             executable = root / 'block-worker.exe'
             subprocess.run(['x86_64-w64-mingw32-gcc', '-O2', '-std=c99',
                 '-Wall', '-Wextra', '-Werror', '-static',

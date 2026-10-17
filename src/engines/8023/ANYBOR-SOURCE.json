@@ -48,12 +48,13 @@
       "upstream_sha256": "d615b34d570286ab2479d389f64f1acf967141559243d0b03e8e1928af945dfd"
     },
     "openborscript.c": {
-      "distributed_sha256": "07f5aa0e83a618407730d2bfb372ec0e30c13df787606c204c3e50472728d626",
+      "distributed_sha256": "03d08f8c1c678552c282274215168efd59d6044d58794c3becf707771dbe2b60",
       "modified": true,
-      "summary": "Dispatch native string mapping through explicitly tagged compiled call targets. Derive output names from the content basename with explicit destination capacities, and reject overflowing output path joins. Compact compiler-only instruction records after resolving value ownership, preserving branch and export anchors, all mutable values and exactly-once pool cleanup.",
+      "summary": "Dispatch native string mapping through explicitly tagged compiled call targets. Derive output names from the content basename with explicit destination capacities, and reject overflowing output path joins. Compact compiler-only instruction records after resolving value ownership, preserving branch and export anchors, all mutable values and exactly-once pool cleanup. Resolve text-property names within the actual table bounds while preserving native numeric selectors.",
       "topics": [
         "record-dates-and-file-notices",
         "script-memory-layout",
+        "script-property-names",
         "session-relative-filesystem"
       ],
       "upstream_sha256": "cf468d270cd91f32f9beaf5269605d68f8d129967d28dcdaac09f53ab5909633"

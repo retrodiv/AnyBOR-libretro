@@ -47,13 +47,14 @@
       "upstream_sha256": "5a69069cc1d8dfdec66dba09c2df2141d050ea2f564f2f8c0a199a7842ff8345"
     },
     "openborscript.c": {
-      "distributed_sha256": "c9549641eb203d6972afa8ebdce36f8a0028521eeba010419df20fcc0f29fec3",
+      "distributed_sha256": "f2c069fd759af5ada814bad29a856146205740a88752acaa63e636c5eac1823c",
       "modified": true,
-      "summary": "Keep the dormant constant-lowering diagnostic compatible with the single-value instruction layout. Derive output names from the content basename with explicit destination capacities, and reject overflowing output path joins. Compact compiler-only instruction records after resolving value ownership, preserving branch and export anchors, all mutable values and exactly-once pool cleanup. Supply native profile script APIs and translate numeric animation, attack, subtype and spawn IDs. Keep next-animation timestamps unchanged at the script boundary.",
+      "summary": "Keep the dormant constant-lowering diagnostic compatible with the single-value instruction layout. Derive output names from the content basename with explicit destination capacities, and reject overflowing output path joins. Compact compiler-only instruction records after resolving value ownership, preserving branch and export anchors, all mutable values and exactly-once pool cleanup. Supply native profile script APIs and translate numeric animation, attack, subtype and spawn IDs. Keep next-animation timestamps unchanged at the script boundary. Resolve text-property names within the actual table bounds while preserving native numeric selectors.",
       "topics": [
         "logical-profile-compatibility",
         "record-dates-and-file-notices",
         "script-memory-layout",
+        "script-property-names",
         "session-relative-filesystem"
       ],
       "upstream_sha256": "fdd3cf6cf3c0d51b6e14cca7de08809b570fd0697e22767812fc1d774630cbc1"
@@ -632,9 +633,13 @@
       "upstream_sha256": "7dea0de0f286d884fc5bc918d92ea9e44f55dfc72169b8051617ff1729b8bf2a"
     },
     "source/preprocessorlib/pp_lexer.c": {
-      "distributed_sha256": "38e9bba48616e173242d167a56a5bcf1cf46eeb045c245edeef41efb423c5ca4",
-      "modified": false,
-      "topics": [],
+      "distributed_sha256": "092e59fc5771b394c628a390cd7af3d6a255c3177b754ee806d8f990e3df017f",
+      "modified": true,
+      "summary": "Reject incomplete or oversized fixed-size string tokens before consuming an invalid source or token byte.",
+      "topics": [
+        "record-dates-and-file-notices",
+        "script-preprocessor-safety"
+      ],
       "upstream_sha256": "38e9bba48616e173242d167a56a5bcf1cf46eeb045c245edeef41efb423c5ca4"
     },
     "source/preprocessorlib/pp_lexer.h": {

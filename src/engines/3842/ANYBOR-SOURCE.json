@@ -50,14 +50,15 @@
       "upstream_sha256": "19888c33f34b9cb80222de1439a1745461b8353d99ef40dc0a8184f081b45ed9"
     },
     "openborscript.c": {
-      "distributed_sha256": "b17276468696b7718c5b38d56395c2ad57e1f214883a139b0d85c4658a16207a",
+      "distributed_sha256": "2e2af1bee2942eba673095f48a5b949e510c4eb140c97f1410f57183fcc63add",
       "modified": true,
-      "summary": "Keep the dormant constant-lowering diagnostic compatible with the single-value instruction layout, map string constants from direct contiguous instruction storage, select historical player and AI-flag property contracts by logical build, and own complete dynamically allocated script variable names through slot reuse and shutdown. Derive output names from the content basename with explicit destination capacities, and reject overflowing output path joins. Compact compiler-only instruction records after resolving value ownership, preserving branch and export anchors, all mutable values and exactly-once pool cleanup.",
+      "summary": "Keep the dormant constant-lowering diagnostic compatible with the single-value instruction layout, map string constants from direct contiguous instruction storage, select historical player and AI-flag property contracts by logical build, and own complete dynamically allocated script variable names through slot reuse and shutdown. Derive output names from the content basename with explicit destination capacities, and reject overflowing output path joins. Compact compiler-only instruction records after resolving value ownership, preserving branch and export anchors, all mutable values and exactly-once pool cleanup. Resolve text-property names within the actual table bounds while preserving native numeric selectors. Select historical level/text setter tolerance and pre-3826 empty-success unknown textual constants without changing later strict contracts.",
       "topics": [
         "compiler-warning-cleanup",
         "logical-profile-compatibility",
         "record-dates-and-file-notices",
         "script-memory-layout",
+        "script-property-names",
         "script-variable-names",
         "session-relative-filesystem"
       ],
@@ -439,9 +440,13 @@
       "upstream_sha256": "51ef14f45fc796e8e21f056dd025cee39c4937596d960d1dc1823cd3f61ec761"
     },
     "source/preprocessorlib/pp_lexer.c": {
-      "distributed_sha256": "33ff86a30fe0db3dd532120f51e386fb31263d9aef32e1cdf3a226f67fcfdd5c",
-      "modified": false,
-      "topics": [],
+      "distributed_sha256": "11e0feab1e5bc6d2d27b57831979ebf097bf93378fd0fd886c77fd11c089838c",
+      "modified": true,
+      "summary": "Reject incomplete or oversized fixed-size string tokens before consuming an invalid source or token byte.",
+      "topics": [
+        "record-dates-and-file-notices",
+        "script-preprocessor-safety"
+      ],
       "upstream_sha256": "33ff86a30fe0db3dd532120f51e386fb31263d9aef32e1cdf3a226f67fcfdd5c"
     },
     "source/preprocessorlib/pp_lexer.h": {
@@ -451,11 +456,12 @@
       "upstream_sha256": "f59ee5b54736b0e5a05d15743014ab7cdb359bfa18353934c7c8fc629f1e9da0"
     },
     "source/preprocessorlib/pp_parser.c": {
-      "distributed_sha256": "f7255b4ddc91b3e9904598ec2411416b2f38f22f047faa28bbadecfa5472844c",
+      "distributed_sha256": "16d3ca5b5c5c7c32d89316029d55f26b6e8e6d637e921ec0123bda7617c557c0",
       "modified": true,
-      "summary": "Drop the glibc-only <malloc.h> and rely on the standard library declarations the parser already includes.",
+      "summary": "Drop the glibc-only <malloc.h> and rely on the standard library declarations the parser already includes. Preserve the pre-3802 user macro namespace, retaining lexical and parser safety.",
       "topics": [
         "darwin-platform-support",
+        "logical-profile-compatibility",
         "record-dates-and-file-notices"
       ],
       "upstream_sha256": "66363e071d190097dedc943366750473a30b9f87c5ed6415a8d730158094cf4b"

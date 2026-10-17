@@ -1049,3 +1049,31 @@ initialization and native function lookup caches are also process-local.
 The runtime layout remains outside both pristine resets and saved images.
 State format, fixed transport capacity, exact resource proofs and the clean
 module-address rejection contract remain unchanged.
+
+### Historical rejection boundaries and shared parser safety
+
+Logical profiles on engine 3842 retain the earlier user-macro namespace before
+3802, nonfatal rejected level values before 3820, tolerant text setters before
+3821, and empty-success unknown textual constants before 3826. Later profiles
+retain their strict errors. Level selectors stay in their logical numeric
+namespace when compiled string arguments are cached. The corrected level name
+mapper and safe error/type checks remain enabled instead of restoring unsafe
+historical union reads or malformed-input behavior.
+
+## Script property names
+
+Text-property tables are searched within their actual bounds in every engine,
+without assuming alphabetical enumeration order. Two older tables separate
+previously concatenated time/x names; existing numeric selectors remain stable.
+
+## Script preprocessor safety
+
+Legacy preprocessor string scanners reject end-of-input, unfinished escapes and
+fixed token overflow before consuming an invalid byte. The dynamic-string engine
+keeps its existing complete-source-view implementation and receives the same
+malformed-input regression coverage.
+
+CI partitions rewind and state-option matrices into explicit profile groups,
+verified for complete and unique coverage in each platform path. The Windows
+test host verifies arena release with an actual reserve/release probe; a separate
+negative control proves an occupied arena is not reported as released.

@@ -47,12 +47,13 @@
       "upstream_sha256": "0f8ed97474bbdc9936f217247023cd04014cd226c18969493b7fbc7e6f527dd0"
     },
     "openborscript.c": {
-      "distributed_sha256": "cad95342f031ee670f5ca4cca4f741cafa1d399177ba6bad3bae7464db998554",
+      "distributed_sha256": "eb95b7b099c717f9579b6ae81ac055806ba37ec0be5bcba95f8c1e86989bbe57",
       "modified": true,
-      "summary": "Keep the dormant constant-lowering diagnostic compatible with the single-value instruction layout. Derive output names from the content basename with explicit destination capacities, and reject overflowing output path joins. Compact compiler-only instruction records after resolving value ownership, preserving branch and export anchors, all mutable values and exactly-once pool cleanup.",
+      "summary": "Keep the dormant constant-lowering diagnostic compatible with the single-value instruction layout. Derive output names from the content basename with explicit destination capacities, and reject overflowing output path joins. Compact compiler-only instruction records after resolving value ownership, preserving branch and export anchors, all mutable values and exactly-once pool cleanup. Resolve text-property names within the actual table bounds while preserving native numeric selectors.",
       "topics": [
         "record-dates-and-file-notices",
         "script-memory-layout",
+        "script-property-names",
         "session-relative-filesystem"
       ],
       "upstream_sha256": "b81919d0d3017fc933e5c23104de9266dde8fab15b1585e3ad48585d4b068bd1"
@@ -461,9 +462,13 @@
       "upstream_sha256": "7dea0de0f286d884fc5bc918d92ea9e44f55dfc72169b8051617ff1729b8bf2a"
     },
     "source/preprocessorlib/pp_lexer.c": {
-      "distributed_sha256": "38e9bba48616e173242d167a56a5bcf1cf46eeb045c245edeef41efb423c5ca4",
-      "modified": false,
-      "topics": [],
+      "distributed_sha256": "228b10d0885bdd86ece360864b6ab6e713c7f81010ffbbc8a52fdf1b435a0898",
+      "modified": true,
+      "summary": "Reject incomplete or oversized fixed-size string tokens before consuming an invalid source or token byte.",
+      "topics": [
+        "record-dates-and-file-notices",
+        "script-preprocessor-safety"
+      ],
       "upstream_sha256": "38e9bba48616e173242d167a56a5bcf1cf46eeb045c245edeef41efb423c5ca4"
     },
     "source/preprocessorlib/pp_lexer.h": {

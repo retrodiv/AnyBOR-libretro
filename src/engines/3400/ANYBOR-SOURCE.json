@@ -46,13 +46,14 @@
       "upstream_sha256": "47e3db32c70d173e16edf0dca15207a185d113cc09cca46685e6589c318bad23"
     },
     "openborscript.c": {
-      "distributed_sha256": "8c8f31b91cb9d5726535fb4605d6510f35f0a263c16854515c2aeccd4d405e20",
+      "distributed_sha256": "bd13e0ea6d60d2f6ed50dcaefcba5e9c4bd29d0434e7de6f2ef6648ed95b551f",
       "modified": true,
-      "summary": "Keep the dormant constant-lowering diagnostic compatible with the single-value instruction layout, map string constants from direct contiguous instruction storage, and own complete dynamically allocated script variable names through slot reuse and shutdown. Derive output names from the content basename with explicit destination capacities, and reject overflowing output path joins. Compact compiler-only instruction records after resolving value ownership, preserving branch and export anchors, all mutable values and exactly-once pool cleanup.",
+      "summary": "Keep the dormant constant-lowering diagnostic compatible with the single-value instruction layout, map string constants from direct contiguous instruction storage, and own complete dynamically allocated script variable names through slot reuse and shutdown. Derive output names from the content basename with explicit destination capacities, and reject overflowing output path joins. Compact compiler-only instruction records after resolving value ownership, preserving branch and export anchors, all mutable values and exactly-once pool cleanup. Resolve text-property names within the actual table bounds while preserving native numeric selectors.",
       "topics": [
         "compiler-warning-cleanup",
         "record-dates-and-file-notices",
         "script-memory-layout",
+        "script-property-names",
         "script-variable-names"
       ],
       "upstream_sha256": "c6ab6bbf79d7060c52350702f752c96d6227c75f4aea769e4b5149ee0f59510e"
@@ -422,9 +423,13 @@
       "upstream_sha256": "764c7f75bdb74f9beb3cc3df095b5be0065334ded4eab59de940ea62d37d32d3"
     },
     "source/preprocessorlib/pp_lexer.c": {
-      "distributed_sha256": "6bb6e4fcff70412cb3898a9290042188fc8c871106fe7a32c43500c4feaa2cf7",
-      "modified": false,
-      "topics": [],
+      "distributed_sha256": "45acae977fdf02bbeb3b200634ef12dd1702ff7dc6784fddee2f4d64ba767048",
+      "modified": true,
+      "summary": "Reject incomplete or oversized fixed-size string tokens before consuming an invalid source or token byte.",
+      "topics": [
+        "record-dates-and-file-notices",
+        "script-preprocessor-safety"
+      ],
       "upstream_sha256": "6bb6e4fcff70412cb3898a9290042188fc8c871106fe7a32c43500c4feaa2cf7"
     },
     "source/preprocessorlib/pp_lexer.h": {

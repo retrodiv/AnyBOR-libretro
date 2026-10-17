@@ -16,6 +16,7 @@ from pathlib import Path
 
 import make_fixture
 import release
+from profile_groups import select_profile_group
 
 DEFAULT_CORE = release.ROOT / ("anybor_libretro.dylib" if sys.platform == "darwin"
                                else "anybor_libretro.so")
@@ -59,7 +60,9 @@ def main():
     parser.add_argument("--windows-native", action="store_true",
                         help="run a Windows host natively (also supports WSL interop)")
     parser.add_argument("--work-parent", help="parent for temporary test files; use a Windows drive under WSL")
+    parser.add_argument("--profile-group", help="one-based INDEX/COUNT partition; omitted runs every profile")
     args = parser.parse_args()
+    profiles = select_profile_group(release.read_json(release.ROOT / "src/pin.json")["profiles"], args.profile_group)
     if args.keep_wine_server and (not args.windows or args.runner != 'wine' or not args.work_parent):
         parser.error('--keep-wine-server requires --windows --runner wine and an explicit --work-parent')
     if args.windows_native and (args.windows or args.runner or not args.host):
@@ -148,7 +151,7 @@ def main():
             return (root / "frame000180.ppm").read_bytes(), log
 
         for mode in ("default", "raw"):
-            for entry in release.read_json(release.ROOT / "src/pin.json")["profiles"]:
+            for entry in profiles:
                 engine = entry["build"]
                 state = work / (mode + "-" + engine + ".state")
                 # Both current transport and raw fallback retain all fixed
@@ -161,7 +164,8 @@ def main():
                                   OBOR_LOAD_STATE=state)
                 assert image == restored, engine + " cross-session presentation diverged"
             # Reset may select another engine without changing capacity.
-            run("6412", "engine-reset", OBOR_SET_ENGINE_AT="60:3400", OBOR_RESET_AT=60)
+            if any(p["build"] == "6412" for p in profiles):
+                run("6412", "engine-reset", OBOR_SET_ENGINE_AT="60:3400", OBOR_RESET_AT=60)
 
         # Exercise the real frontend throttle across a nested loading boundary.
         # The ordinary fixture above intentionally retains its no-throttle
@@ -169,7 +173,7 @@ def main():
         # history entries and checks that none advances the live engine.
         preload_pak = work / "nested.pak"
         make_fixture.write_pak(preload_pak, make_fixture.preload_files())
-        for entry in release.read_json(release.ROOT / "src/pin.json")["profiles"]:
+        for entry in profiles:
             profile = entry["build"]
             system = work / ("nested-" + profile)
             system.mkdir()

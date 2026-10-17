@@ -72,6 +72,8 @@ def check_sources():
     if (ROOT / "src/glue/obor_abi.h").read_bytes() != (ROOT / "src/port/libretro/obor_abi.h").read_bytes():
         raise RuntimeError("Glue and engine ABI headers differ")
     pin = release.read_json(ROOT / "src/pin.json")
+    from profile_groups import check_workflow_groups
+    check_workflow_groups((ROOT / ".github/workflows/ci.yml").read_text(), pin["profiles"])
     check_core_info(ROOT, pin)
     check_modifications(ROOT, pin)
     for eng in pin["engines"]:

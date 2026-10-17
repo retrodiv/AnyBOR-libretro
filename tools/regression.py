@@ -19,6 +19,8 @@ from test_state_options import state_head
 from test_historical_player import player_fixture, check_player_continuation
 from test_script_variable_keys import variable_key_fixture, check_variable_key_continuation
 from test_historical_level import level_fixture, check_level_continuation
+from test_historical_constants import constants_fixture, check_constants_continuation
+from test_historical_tolerance import tolerance_fixture, check_tolerance_continuation
 
 DEFAULT_CORE = release.ROOT / ("anybor_libretro.dylib" if sys.platform == "darwin"
                                else "anybor_libretro.so")
@@ -58,6 +60,7 @@ def main():
     parser.add_argument("--host", help="use a precompiled test host")
     parser.add_argument("--runner", default="", help="optional emulator command for the host")
     parser.add_argument("--windows", action="store_true", help="use Wine Z: paths with a Windows host")
+    parser.add_argument("--historical-only", action="store_true", help="run only historical compiled-script contracts")
     args = parser.parse_args()
     root = release.ROOT
     profiles = release.read_json(root / "src/pin.json")["profiles"]
@@ -133,7 +136,7 @@ def main():
             elif loads != ["ok"] * expected:
                 raise RuntimeError("Same-base state did not load: " + result)
 
-        for engine in [e["build"] for e in profiles]:
+        for engine in ([] if args.historical_only else [e["build"] for e in profiles]):
             state = work / (engine + ".state")
             result = run(engine, pak, "save with game log", OBOR_GAMELOG="On",
                          OBOR_SAVE_AT=120, OBOR_SAVE_STATE=state)
@@ -188,6 +191,27 @@ def main():
                              OBOR_GAMELOG="On", OBOR_INPUT="150-650:start:pulse")
                 check_level_continuation(result, profile['build'])
 
+        constants_pak = work / "historical-constants.pak"
+        make_fixture.write_pak(constants_pak, constants_fixture(members))
+        for profile in profiles:
+            if profile['engine'] != '3842':
+                continue
+            legacy = int(profile['build']) < 3826
+            state = work / (profile['build'] + '-unknown-constant.state')
+            options = dict(OBOR_GAMELOG="On")
+            if legacy:
+                options.update(OBOR_SAVE_AT=120, OBOR_SAVE_STATE=state,
+                               OBOR_LOAD_AT=121, OBOR_LOAD_STATE=state, OBOR_RESET_AT=140)
+            result = run(profile['build'], constants_pak,
+                         "historical unknown-constant continuation", **options)
+            check_constants_continuation(result, profile['build'], restarts=int(legacy))
+            if legacy:
+                if (not state.is_file() or
+                        re.findall(r"load state at frame 121: (ok|FAILED)", result) != ["ok"] or
+                        result.count("reset at frame 140") != 1):
+                    raise RuntimeError("Historical constant state/reset did not complete: " + result)
+                state.unlink()
+
         variable_pak = work / "variable-keys.pak"
         make_fixture.write_pak(variable_pak, variable_key_fixture(members))
         for profile in profiles:
@@ -217,6 +241,18 @@ def main():
             OBOR_SAVE_AT=120, OBOR_SAVE_STATE=work / "raw.state")
         if not (work / "6412/saves/AnyBOR/raw/6412/Saves/.obor_peak_sparse_v2_raw.pak.txt").is_file():
             raise RuntimeError("Unpacked mod peak is missing")
+
+        for kind in ('macro', 'level', 'text'):
+            contract_pak = work / ('historical-' + kind + '-tolerance.pak')
+            make_fixture.write_pak(contract_pak, tolerance_fixture(members, kind))
+            for profile in profiles:
+                if profile['engine'] != '3842': continue
+                result = run(profile['build'], contract_pak,
+                             'historical ' + kind + ' tolerance', frames=1000,
+                             OBOR_GAMELOG="On", OBOR_INPUT="150-650:start:pulse")
+                check_tolerance_continuation(result, profile['build'], kind)
+        if args.historical_only:
+            return
 
         # Optional model entries must not index beyond the configured tables.
         # Each case has fresh files so an earlier warning cannot satisfy it.

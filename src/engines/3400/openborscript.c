@@ -10,7 +10,8 @@
  * the content basename with explicit destination capacities, and reject
  * overflowing output path joins. Compact compiler-only instruction records
  * after resolving value ownership, preserving branch and export anchors, all
- * mutable values and exactly-once pool cleanup.
+ * mutable values and exactly-once pool cleanup. Resolve text-property names
+ * within the actual table bounds while preserving native numeric selectors.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/3400.md
  * at the source repository root. Original notices follow below.
@@ -9740,7 +9741,7 @@ void mapstrings_gettextobjproperty(ScriptVariant** varlist, int paramCount)
 	static const char* proplist[] = {
 		"font",
 		"text",
-		"time"
+		"time",
 		"x",
 		"y",
 		"z",
@@ -9748,8 +9749,19 @@ void mapstrings_gettextobjproperty(ScriptVariant** varlist, int paramCount)
 
 	if(paramCount < 2) return;
 
-	MAPSTRINGS(varlist[1], proplist, _gtop_the_end,
-		"Property name '%s' is not supported by function gettextobjproperty.\n");
+	if(varlist[1]->vt == VT_STR)
+    {
+        propname = (char *)StrCache_Get(varlist[1]->strVal);
+        for(prop = 0; prop < (int)(sizeof(proplist) / sizeof(*proplist)); ++prop)
+        {
+            if(!stricmp(proplist[prop], propname))
+            {
+                ScriptVariant_ChangeType(varlist[1], VT_INTEGER);
+                varlist[1]->lVal = prop;
+                break;
+            }
+        }
+    }
 }
 
 HRESULT openbor_gettextobjproperty(ScriptVariant** varlist , ScriptVariant** pretvar, int paramCount)
@@ -9863,8 +9875,19 @@ void mapstrings_changetextobjproperty(ScriptVariant** varlist, int paramCount)
 	};
 
 	if(paramCount < 2) return;
-	MAPSTRINGS(varlist[1], proplist, _ctop_the_end,
-		"Property name '%s' is not supported by function changetextobjproperty.\n");
+	if(varlist[1]->vt == VT_STR)
+    {
+        propname = (char *)StrCache_Get(varlist[1]->strVal);
+        for(prop = 0; prop < (int)(sizeof(proplist) / sizeof(*proplist)); ++prop)
+        {
+            if(!stricmp(proplist[prop], propname))
+            {
+                ScriptVariant_ChangeType(varlist[1], VT_INTEGER);
+                varlist[1]->lVal = prop;
+                break;
+            }
+        }
+    }
 }
 
 HRESULT openbor_changetextobjproperty(ScriptVariant** varlist , ScriptVariant** pretvar, int paramCount)

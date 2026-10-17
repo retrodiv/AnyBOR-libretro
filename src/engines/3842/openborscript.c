@@ -11,7 +11,10 @@
  * the content basename with explicit destination capacities, and reject
  * overflowing output path joins. Compact compiler-only instruction records
  * after resolving value ownership, preserving branch and export anchors, all
- * mutable values and exactly-once pool cleanup.
+ * mutable values and exactly-once pool cleanup. Resolve text-property names
+ * within the actual table bounds while preserving native numeric selectors.
+ * Select historical level/text setter tolerance and pre-3826 empty-success
+ * unknown textual constants without changing later strict contracts.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/3842.md
  * at the source repository root. Original notices follow below.
@@ -8982,6 +8985,11 @@ HRESULT openbor_transconst(ScriptVariant** varlist , ScriptVariant** pretvar, in
 		ScriptVariant_Copy((*pretvar), varlist[0]);
 		return S_OK;
 	} else {
+        if(obor_profile_build < 3826 && varlist[0]->vt == VT_STR)
+        {
+            ScriptVariant_Clear(*pretvar);
+            return S_OK;
+        }
 		ScriptVariant_ToString(varlist[0], buf);
 		printf("Can't translate constant %s\n", buf);
 	}
@@ -9499,7 +9507,7 @@ void mapstrings_textobjproperty(ScriptVariant** varlist, int paramCount)
 	static const char* proplist[] = {
 		"font",
 		"text",
-		"time"
+		"time",
 		"x",
 		"y",
 		"z",
@@ -9507,8 +9515,19 @@ void mapstrings_textobjproperty(ScriptVariant** varlist, int paramCount)
 
 	if(paramCount < 2) return;
 
-	MAPSTRINGS(varlist[1], proplist, _top_the_end,
-		"'%s' is not a valid textobj property.\n");
+	if(varlist[1]->vt == VT_STR)
+    {
+        propname = (char *)StrCache_Get(varlist[1]->strVal);
+        for(prop = 0; prop < (int)(sizeof(proplist) / sizeof(*proplist)); ++prop)
+        {
+            if(!stricmp(proplist[prop], propname))
+            {
+                ScriptVariant_ChangeType(varlist[1], VT_INTEGER);
+                varlist[1]->lVal = prop;
+                break;
+            }
+        }
+    }
 }
 
 HRESULT openbor_gettextobjproperty(ScriptVariant** varlist , ScriptVariant** pretvar, int paramCount)
@@ -9603,6 +9622,8 @@ HRESULT openbor_changetextobjproperty(ScriptVariant** varlist , ScriptVariant** 
 	LONG ltemp;
 	const char* ctotext = "changetextobjproperty(int index, \"property\", value)";
 
+    ScriptVariant *result = *pretvar;
+    const int legacy_result = obor_profile_build < 3821;
 	*pretvar = NULL;
 
 	if(paramCount < 3) {
@@ -9620,6 +9641,13 @@ HRESULT openbor_changetextobjproperty(ScriptVariant** varlist , ScriptVariant** 
 
 	if(ind<0)
 	{
+        if(legacy_result)
+        {
+            *pretvar = result;
+            ScriptVariant_ChangeType(result, VT_INTEGER);
+            result->lVal = 0;
+            return S_OK;
+        }
 		printf("Invalid textobj index, must be >= 0\n");
 		return E_FAIL;
 	}
@@ -9648,6 +9676,7 @@ HRESULT openbor_changetextobjproperty(ScriptVariant** varlist , ScriptVariant** 
 	}
 	case _top_text:
 	{
+        if(legacy_result && varlist[2]->vt != VT_STR) return E_FAIL;
 		ScriptVariant_ToString(varlist[2], buf);
 		level->textobjs[ind].text = malloc(MAX_STR_VAR_LEN);
 		strncpy(level->textobjs[ind].text, buf, MAX_STR_VAR_LEN);
@@ -9687,9 +9716,22 @@ HRESULT openbor_changetextobjproperty(ScriptVariant** varlist , ScriptVariant** 
 		break;
 	}
 
+    if(legacy_result)
+    {
+        *pretvar = result;
+        ScriptVariant_ChangeType(result, VT_INTEGER);
+        result->lVal = 1;
+    }
 	return S_OK;
 
 changetextobjproperty_error:
+    if(legacy_result)
+    {
+        *pretvar = result;
+        ScriptVariant_ChangeType(result, VT_INTEGER);
+        result->lVal = 0;
+        return S_OK;
+    }
 	ScriptVariant_ToString(varlist[2], buf);
 	printf("Invalid textobj value: %s\n", buf);
 	return E_FAIL;
@@ -9703,6 +9745,8 @@ HRESULT openbor_settextobj(ScriptVariant** varlist , ScriptVariant** pretvar, in
 	static char buf[MAX_STR_VAR_LEN];
 	const char* stotext = "settextobj(int index, int x, int y, int font, int z, char text, int time {optional})";
 
+    ScriptVariant *result = *pretvar;
+    const int legacy_result = obor_profile_build < 3821;
 	*pretvar = NULL;
 
 
@@ -9720,6 +9764,13 @@ HRESULT openbor_settextobj(ScriptVariant** varlist , ScriptVariant** pretvar, in
 
 	if(ind<0)
 	{
+        if(legacy_result)
+        {
+            *pretvar = result;
+            ScriptVariant_ChangeType(result, VT_INTEGER);
+            result->lVal = 0;
+            return S_OK;
+        }
 		printf("Invalid textobj index, must be >= 0\n");
 		return E_FAIL;
 	}
@@ -9728,12 +9779,33 @@ HRESULT openbor_settextobj(ScriptVariant** varlist , ScriptVariant** pretvar, in
 		level->numtextobjs = ind+1;
 	}
 
+    if(legacy_result)
+    {
+        LONG value;
+        X = level->textobjs[ind].x;
+        Y = level->textobjs[ind].y;
+        Z = level->textobjs[ind].z;
+        F = level->textobjs[ind].font;
+        T = level->textobjs[ind].t;
+        /* Rejected numeric fields retain their previous value independently. */
+        if(SUCCEEDED(ScriptVariant_IntegerValue(varlist[1], &value))) X = value;
+        if(SUCCEEDED(ScriptVariant_IntegerValue(varlist[2], &value))) Y = value;
+        if(SUCCEEDED(ScriptVariant_IntegerValue(varlist[3], &value))) F = value;
+        if(SUCCEEDED(ScriptVariant_IntegerValue(varlist[4], &value))) Z = value;
+        if(paramCount >= 7 && SUCCEEDED(ScriptVariant_IntegerValue(varlist[6], &value))) T = value;
+        if(varlist[5]->vt != VT_STR) goto settextobj_error;
+        ScriptVariant_ToString(varlist[5], buf);
+    }
+    else
+    {
 	if(FAILED(ScriptVariant_IntegerValue(varlist[1], &X))) goto settextobj_error;
 	if(FAILED(ScriptVariant_IntegerValue(varlist[2], &Y))) goto settextobj_error;
 	if(FAILED(ScriptVariant_IntegerValue(varlist[3], &F))) goto settextobj_error;
 	if(FAILED(ScriptVariant_IntegerValue(varlist[4], &Z))) goto settextobj_error;
 	ScriptVariant_ToString(varlist[5], buf);
 	if(paramCount >= 7 && FAILED(ScriptVariant_IntegerValue(varlist[6], &T))) goto settextobj_error;
+
+    }
 
 	level->textobjs[ind].t = (int)T;
 	level->textobjs[ind].x = (int)X;
@@ -9745,6 +9817,12 @@ HRESULT openbor_settextobj(ScriptVariant** varlist , ScriptVariant** pretvar, in
 		level->textobjs[ind].text = (char*)malloc(MAX_STR_VAR_LEN);
 	strncpy(level->textobjs[ind].text, buf, MAX_STR_VAR_LEN);
 
+    if(legacy_result)
+    {
+        *pretvar = result;
+        ScriptVariant_ChangeType(result, VT_INTEGER);
+        result->lVal = 1;
+    }
 	return S_OK;
 
 settextobj_error:
@@ -10259,6 +10337,13 @@ enum levelproperty_enum
 };
 
 
+static int obor_level_property_native(int property)
+{
+    if(obor_profile_build < 3820 && property >= _lp_type)
+        return property == _lp_type ? _lp_wall : _lp_the_end;
+    return property;
+}
+
 void mapstrings_levelproperty(ScriptVariant** varlist, int paramCount)
 {
 	char *propname = NULL;
@@ -10280,17 +10365,25 @@ void mapstrings_levelproperty(ScriptVariant** varlist, int paramCount)
 	};
 
 
+    static const char *before_type[] = {
+        "bgspeed", "cameraxoffset", "camerazoffset", "gravity", "hole",
+        "maxfallspeed", "maxtossspeed", "quake", "rocking", "scrollspeed", "wall"
+    };
+    const char **names = obor_profile_build < 3820 ? before_type : proplist;
+    int count = obor_profile_build < 3820 ? _lp_the_end - 1 : _lp_the_end;
 	if(paramCount < 1) return;
-	MAPSTRINGS(varlist[0], proplist, _lp_the_end,
+	MAPSTRINGS(varlist[0], names, count,
 		"Level property '%s' is not supported.\n");
 }
 
 HRESULT openbor_getlevelproperty(ScriptVariant** varlist , ScriptVariant** pretvar, int paramCount)
 {
 	LONG ltemp, ltemp2;
+    if(paramCount < 1) goto getlevelproperty_error;
 	mapstrings_levelproperty(varlist, paramCount);
+    if(varlist[0]->vt != VT_INTEGER) goto getlevelproperty_error;
 
-	switch(varlist[0]->lVal)
+	switch(obor_level_property_native(varlist[0]->lVal))
 	{
 	case _lp_bgspeed:
 	{
@@ -10390,6 +10483,8 @@ HRESULT openbor_changelevelproperty(ScriptVariant** varlist , ScriptVariant** pr
 	int i;
 	ScriptVariant* arg = NULL;
 
+    ScriptVariant *result = *pretvar;
+    const int legacy_result = obor_profile_build < 3820;
 	*pretvar = NULL;
 
 	if(paramCount < 2)
@@ -10400,9 +10495,10 @@ HRESULT openbor_changelevelproperty(ScriptVariant** varlist , ScriptVariant** pr
 
 	mapstrings_levelproperty(varlist, paramCount);
 
+    if(varlist[0]->vt != VT_INTEGER) return E_FAIL;
 	arg = varlist[1];
 
-	switch(varlist[0]->lVal)
+	switch(obor_level_property_native(varlist[0]->lVal))
 	{
 	case _lp_rocking:
 		if(SUCCEEDED(ScriptVariant_IntegerValue(arg, &ltemp)))
@@ -10517,8 +10613,15 @@ HRESULT openbor_changelevelproperty(ScriptVariant** varlist , ScriptVariant** pr
 		break;
 	}
 
+    if(legacy_result) *pretvar = result;
 	return S_OK;
 clperror:
+    if(legacy_result)
+    {
+        *pretvar = result;
+        result->lVal = 0;
+        return S_OK;
+    }
 	printf("Function changelevelproperty(prop, value) received invalid value(s). \n");
 	printf("Dumping values: ");
 	for(i=1; i<paramCount; i++) {
