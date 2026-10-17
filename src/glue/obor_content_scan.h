@@ -124,6 +124,18 @@ static const obor_content_rule kContentFunctions[] = {
 
 static int g_content_lower, g_content_upper;
 static bool g_content_range_seen, g_content_scan_complete;
+static bool g_content_triage;
+struct obor_content_evidence { char name[64]; int lower, upper; bool script; };
+static obor_content_evidence g_content_evidence[128];
+static size_t g_content_evidence_count;
+
+static void content_evidence(const char *name, int lower, int upper, bool script)
+{
+    if (!g_content_triage || !name || g_content_evidence_count == 128) return;
+    obor_content_evidence *row = &g_content_evidence[g_content_evidence_count++];
+    snprintf(row->name, sizeof(row->name), "%s", name);
+    row->lower = lower; row->upper = upper; row->script = script;
+}
 
 struct obor_content_scan {
     int lower, upper, script_lower, script_upper, hint_lower, hint_upper;
@@ -159,10 +171,12 @@ static const obor_content_rule *content_rule(const obor_content_rule (&rules)[N]
     return NULL;
 }
 
-static void content_bounds(obor_content_scan *s, int lower, int upper, bool script)
+static void content_bounds(obor_content_scan *s, int lower, int upper, bool script, const char *name = NULL)
 {
     int *lb = script ? &s->script_lower : &s->lower;
     int *ub = script ? &s->script_upper : &s->upper;
+    if (lower > *lb || upper < *ub || !(script ? s->script_seen : s->seen))
+        content_evidence(name, lower, upper, script);
     if (lower > *lb) *lb = lower;
     if (upper < *ub) *ub = upper;
     if (script) s->script_seen = true; else s->seen = true;
@@ -237,6 +251,8 @@ static char content_lex(obor_content_scan *s, const char *data, size_t n, size_t
     return kind;
 }
 
+#include "obor_content_contracts.h"
+
 static void content_script(obor_content_scan *s, const char *data, size_t n)
 {
     size_t pos = 0;
@@ -246,6 +262,7 @@ static void content_script(obor_content_scan *s, const char *data, size_t n)
          * declaration of this builtin anywhere in the sampled PAK also makes
          * all native constant evidence uncertain, irrespective of file order. */
         if (kind == '#') s->ambiguous_scripts = true;
+        if (kind == 'i') content_contract_script(s, token, previous_kind, previous, data, n, pos);
         const obor_content_rule *function = kind == 'i' ? content_rule(kContentFunctions, token) : NULL;
         if (function) {
             if (previous_kind == 'i' && strcmp(previous, "return")) s->ambiguous_scripts = true;
@@ -253,7 +270,7 @@ static void content_script(obor_content_scan *s, const char *data, size_t n)
                 size_t q = pos;
                 char next[64];
                 if (content_lex(s, data, n, &q, next) == '(')
-                    content_bounds(s, function->lower, function->upper, true);
+                    content_bounds(s, function->lower, function->upper, true, function->name);
             }
         }
         if (kind == 'i' && !strcmp(token, "openborconstant")) {
@@ -273,7 +290,7 @@ static void content_script(obor_content_scan *s, const char *data, size_t n)
                 }
                 char closing[64];
                 if (lower && content_lex(s, data, n, &q, closing) == ')')
-                    content_bounds(s, lower, upper, true);
+                    content_bounds(s, lower, upper, true, arg);
             }
         }
         /* Keep old function-name estimates, but do not read quoted prose or
@@ -294,6 +311,7 @@ static void content_text(obor_content_scan *s, const char *data, size_t n)
     for (size_t p = 0; p < n && s->complete;) {
         size_t end = p;
         while (end < n && data[end] != '\n') { ++end; if (!content_budget(s, 1)) break; }
+        if (!s->complete) break; /* A partial line is not a syntax fact. */
         size_t q = p;
         char command[64] = "", arg[64] = "";
         /* Model comments use #; script literals inside @script are lexed by
@@ -309,17 +327,19 @@ static void content_text(obor_content_scan *s, const char *data, size_t n)
             }
             out[k] = 0;
         }
+        if (!s->complete) break;
         if (!strcmp(command, "@end") && inline_start < n) {
             content_script(s, data + inline_start, p - inline_start);
             inline_start = n;
         } else if (!strcmp(command, "@script")) inline_start = end < n ? end + 1 : n;
         else if (inline_start == n && command[0] && arg[0] && strncmp(command, "//", 2)) {
+            content_contract_model(command, arg);
             const obor_content_rule *rule = content_rule(kContentCommands, command);
             if (!strcmp(command, "anim")) rule = content_rule(kContentAnimations, arg);
-            if (rule) content_bounds(s, rule->lower, rule->upper, false);
+            if (rule) content_bounds(s, rule->lower, rule->upper, false, rule->name);
             else content_hint(s, command);
             if ((!strcmp(command, "script") || !strcmp(command, "animationscript")) &&
-                !strcmp(arg, "@script")) content_bounds(s, 3880, INT_MAX, false);
+                !strcmp(arg, "@script")) content_bounds(s, 3880, INT_MAX, false, "inline-script");
         }
         p = end < n ? end + 1 : n;
     }
@@ -335,6 +355,8 @@ static unsigned content_u32(const unsigned char *p)
 
 static int build_from_content(const char *pak_path)
 {
+    content_contract_reset();
+    g_content_evidence_count = 0;
     g_content_lower = 1; g_content_upper = INT_MAX;
     g_content_range_seen = false; g_content_scan_complete = false;
     int modern = obor_modern_api_build(pak_path);
@@ -372,6 +394,12 @@ static int build_from_content(const char *pak_path)
         entries[count++] = {start, size, script};
         bytes += size;
     }
+    bool directory_complete = s.complete;
+    /* A bounded directory prefix can still prove the presence of model
+     * commands. Do not renew the deadline or exceed the collected file/byte
+     * limits, and keep unlabelled inference's existing all-or-nothing policy. */
+    if (!directory_complete && g_content_triage && !obor_detection_expired(s.started))
+        s.complete = true;
     char *buffer = s.complete ? (char *)malloc(MAX_FILE_BYTES) : NULL;
     if (!buffer) s.complete = false;
     for (unsigned i = 0; i < count && s.complete; ++i) {
@@ -382,17 +410,31 @@ static int build_from_content(const char *pak_path)
     }
     free(buffer);
     fclose(fp);
-    g_content_scan_complete = s.complete;
-    /* A truncated scan is inconclusive, never a complete compatibility range. */
-    if (!s.complete) {
+    bool complete = directory_complete && s.complete;
+    g_content_scan_complete = complete;
+    g_contract_valid = complete || g_content_triage;
+    /* An unread script may declare a sampled native name or preprocess it.
+     * Model commands have no such binding ambiguity and survive truncation. */
+    g_contract_scripts_ambiguous = s.ambiguous_scripts || !complete;
+    if (!complete) {
+        if (g_content_triage) {
+            if (modern) content_bounds(&s, modern, INT_MAX, false, "dependency-api");
+            if (s.seen) {
+                g_content_lower = s.lower; g_content_upper = s.upper;
+                g_content_range_seen = true;
+            }
+            return s.seen ? s.lower : 0;
+        }
+        g_content_evidence_count = 0;
         if (!modern) return 0;
         /* A completed dependency probe supplies a minimum even when the
          * broad historical scan cannot establish a full interval. */
         g_content_lower = modern;
         g_content_range_seen = g_content_scan_complete = true;
+        content_evidence("dependency-api", modern, INT_MAX, false);
         return modern;
     }
-    if (modern) content_bounds(&s, modern, INT_MAX, false);
+    if (modern) content_bounds(&s, modern, INT_MAX, false, "dependency-api");
     if (s.script_seen && !s.ambiguous_scripts) content_bounds(&s, s.script_lower, s.script_upper, false);
     if (s.seen) {
         g_content_lower = s.lower; g_content_upper = s.upper; g_content_range_seen = true;

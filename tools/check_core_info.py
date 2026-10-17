@@ -29,7 +29,7 @@ def check_core_info(root, pin):
     expected_fields = {"core_name", "core_basename", "version", "source_date_epoch",
                        "fallback_build", "engine_repo", "engines", "profiles", "deps", "transform_vm"}
     engine_fields = {"build", "commit", "date", "covers", "major", "stage", "version_major"}
-    profile_fields = {"build", "engine", "covers", "major", "stage", "auto_until", "automatic", "tagged"}
+    profile_fields = {"build", "engine", "covers", "major", "stage", "auto_until", "automatic", "tagged", "reconstruction"}
     if set(pin) != expected_fields or set(pin["engine_repo"]) != {"url"}:
         raise RuntimeError("Unexpected public source metadata fields")
     if type(pin["source_date_epoch"]) is not int or pin["source_date_epoch"] < 0:
@@ -55,6 +55,18 @@ def check_core_info(root, pin):
                 type(profile.get("tagged", True)) is not bool):
             raise RuntimeError("Invalid public logical profile metadata")
         logical.add(profile["build"])
+        if "reconstruction" in profile:
+            provenance = profile["reconstruction"]
+            if (not isinstance(provenance, dict) or
+                    set(provenance) != {"basis", "discussion", "source_commits"} or
+                    not isinstance(provenance["basis"], str) or not provenance["basis"].strip() or
+                    not isinstance(provenance["discussion"], str) or
+                    not provenance["discussion"].startswith(("https://", "http://")) or
+                    not isinstance(provenance["source_commits"], list) or
+                    not provenance["source_commits"] or
+                    any(not isinstance(commit, str) or not re.fullmatch(r"[0-9a-f]{40}", commit)
+                        for commit in provenance["source_commits"])):
+                raise RuntimeError("Invalid reconstructed profile provenance")
     if pin["fallback_build"] not in logical:
         raise RuntimeError("Fallback build has no logical profile")
     basename = pin["core_basename"]

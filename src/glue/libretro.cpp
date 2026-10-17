@@ -3,7 +3,7 @@
  * Earlier incorporated material retains its original authorship notices. */
 /* AnyBOR glue: the libretro scaffolding of the single-file core.
  *
- * Contains NO engine code. The seven engine eras are linked in as partial
+ * Contains NO engine code. Pinned engine revisions are linked in as partial
  * objects whose only visible symbols are their suffixed obor_* ABI (see
  * obor_engines.h, generated from pin.json). At retro_load_game — and again
  * at retro_reset — the glue detects which OpenBOR build the pak needs
@@ -269,7 +269,7 @@ static int profile_in_range(int lower, int upper, bool automatic_only)
     int best = 0;
     for (size_t i = 0; i < sizeof(kProfiles) / sizeof(kProfiles[0]); ++i) {
         const obor_profile_def *p = &kProfiles[i];
-        if ((automatic_only ? p->automatic : p->tagged) && p->build >= lower && p->build <= upper &&
+        if (p->automatic && (automatic_only || p->tagged) && p->build >= lower && p->build <= upper &&
             ((p->engine_build >= lower && p->engine_build <= upper) ||
              (p->automatic && p->build != p->engine_build)) && p->build > best)
             best = p->build;
@@ -301,7 +301,7 @@ static int profile_for_range(int lower, int upper, bool automatic_only)
  * use the first intervening era, then the latest post-release v4 snapshot. */
 static int content_profile_for_range(int lower, int upper)
 {
-    if (declared_build_has_variants(lower)) {
+    if (lower <= 3842 && declared_build_has_variants(lower)) {
         int anchor = pick_anchor(lower);
         if (anchor <= upper) return anchor;
         return profile_in_range(lower, upper, true);
@@ -416,7 +416,7 @@ static int build_from_filename(const char *path, int *profile)
                         !isalnum((unsigned char)*q)) {
                         int best = 0;
                         for (size_t i = 0; i < sizeof(kProfiles) / sizeof(kProfiles[0]); ++i)
-                            if (kProfiles[i].tagged && kProfiles[i].build >= lower &&
+                            if (kProfiles[i].automatic && kProfiles[i].tagged && kProfiles[i].build >= lower &&
                                 kProfiles[i].build <= upper &&
                                 kProfiles[i].build > best)
                                 best = kProfiles[i].build;
@@ -560,8 +560,9 @@ static int build_from_sidecar_dir(const char *dir)
 static int build_from_sidecar(const char *pak_path)
 {
     char dir[1024];
-    strncpy(dir, pak_path, sizeof(dir) - 1);
-    dir[sizeof(dir) - 1] = '\0';
+    size_t length = strlen(pak_path);
+    if (length >= sizeof(dir)) return 0;
+    memcpy(dir, pak_path, length + 1);
     char *slash = strrchr(dir, PATH_SEP);
     if (!slash)
         return 0;
@@ -596,6 +597,8 @@ static int pick_anchor(int build)
     }
     return best ? best->build : 0;
 }
+
+#include "obor_profile_triage.h"
 
 /* ------------------------------------------------------- core options --- */
 
@@ -2110,6 +2113,7 @@ static bool select_engine_vtbl(const char *engine, char *err, int err_len)
 
 static void decide_engine(void)
 {
+    g_content_triage = false;
     g_selection_error[0] = '\0';
     char opt[48];
     get_engine_option(opt, sizeof(opt));
@@ -2136,6 +2140,22 @@ static void decide_engine(void)
     bool has_interval = build_interval_from_filename(g_pak_path, &interval);
     char interval_text[28] = "";
     if (has_interval) format_build_interval(&interval, interval_text, sizeof(interval_text));
+    filename_build_interval triage_interval;
+    bool has_triage_interval = filename_triage_bounds(g_pak_path, &triage_interval);
+    int triage_profile = 0;
+    if (!build && has_triage_interval && !g_raw && filename_profile >= 0) {
+        g_content_triage = true;
+        build_from_content(g_pak_path);
+        int legacy_build = obor_legacy_api_build(g_pak_path);
+        triage_profile = profile_triage_select(&triage_interval, legacy_build);
+        g_content_triage = false;
+        if (triage_profile) {
+            build = triage_profile;
+            how = "filename content triage";
+        }
+        if (!g_content_scan_complete)
+            log_cb(RETRO_LOG_INFO, "[OpenBOR] content scan incomplete; retaining proved model facts only; script bindings inconclusive.\n");
+    }
     if (!build && has_interval) {
         if (filename_profile < 0) {
             g_engine[0] = '\0';
@@ -2151,14 +2171,20 @@ static void decide_engine(void)
     }
     int declared_anchor = filename_build > 0 && declared_build_has_variants(filename_build)
         ? pick_anchor(filename_build) : 0;
-    bool filename_profile_enabled = declared_anchor != 0;
+    /* An automatic alias must not change the legacy-API preflight priority
+     * of an ordinary later build declaration. Earlier contracts support it. */
+    bool filename_profile_enabled = declared_anchor != 0 && filename_build <= 4086;
+    int exact_tagged_profile = 0;
     for (size_t i = 0; i < sizeof(kProfiles) / sizeof(kProfiles[0]); ++i)
         if (kProfiles[i].build == filename_build && kProfiles[i].tagged &&
-            (!kProfiles[i].automatic || filename_build == 7123 ||
+            (!kProfiles[i].automatic || kProfiles[i].build != kProfiles[i].engine_build || filename_build == 7123 ||
              filename_build == 7142 || filename_build == 7533 || filename_build == 8023))
+        {
             filename_profile_enabled = true;
+            exact_tagged_profile = filename_build;
+        }
     if (filename_profile_enabled) {
-        filename_profile = declared_anchor ? declared_anchor : filename_build;
+        filename_profile = exact_tagged_profile ? exact_tagged_profile : declared_anchor;
         if (!build) {
             build = filename_build;
             how = "filename tag";
@@ -2196,7 +2222,7 @@ static void decide_engine(void)
     if (!build)
         build = OBOR_FALLBACK_BUILD;
 
-    int anchor = content_profile ? content_profile : strcmp(how, "core option") == 0 ? build :
+    int anchor = triage_profile ? triage_profile : content_profile ? content_profile : strcmp(how, "core option") == 0 ? build :
                  ((strcmp(how, "filename tag") == 0 ||
                    strcmp(how, "filename interval") == 0) && filename_profile) ?
                      filename_profile : pick_anchor(build);

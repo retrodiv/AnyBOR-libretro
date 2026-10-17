@@ -17,9 +17,9 @@
       "upstream_sha256": null
     },
     "openbor.c": {
-      "distributed_sha256": "8a9f42ea81135cc235ffc60f018ff57115d920d2dd491538e3dae9360cb791f8",
+      "distributed_sha256": "617a3d6d4e1ef7dcbd4ab7ba73088ff0ad7239a28a922a50c45a325052c31abf",
       "modified": true,
-      "summary": "Apply the port's engine corrections and select the PC video configuration on macOS. Derive output names from the content basename with explicit destination capacities, and reject overflowing output path joins. Select native 6330 boomerang, collision and settings behavior, 6412 frame-kill binding behavior, and 6510 binding, blocking and attack behavior. Preserve allocation handles used by inline animation-script guards. Leave multiplayer slots without a selected model available to join even if game scripts preassign lives to them. Let a missing basename-only PAK self-check read the active frontend content after it has been validated and prepared. Allocate each model's animation pointer table through the highest animation index that model uses, and bound cache, copy and cleanup paths to that capacity. Ignore optional defense and offense entries outside the configured attack-type range with a log warning before accessing their tables. Yield after each newly completed model during explicit model-list or level preparation, and defer states until that preparation has cleaned up its intermediate parsers and handles. Resize repeated weapon lists and detach borrowed lists before replacing their entries.",
+      "summary": "Apply the port's engine corrections and select the PC video configuration on macOS. Derive output names from the content basename with explicit destination capacities, and reject overflowing output path joins. Select native 6330 boomerang, collision and settings behavior, 6412 frame-kill binding behavior, and 6510 binding, blocking and attack behavior. Preserve allocation handles used by inline animation-script guards. Reconstruct the published 6392 test profile's four-ID attack history, native cheat toggle and selection-screen escape contract from the later upstream source changes. Leave multiplayer slots without a selected model available to join even if game scripts preassign lives to them. Let a missing basename-only PAK self-check read the active frontend content after it has been validated and prepared. Allocate each model's animation pointer table through the highest animation index that model uses, and bound cache, copy and cleanup paths to that capacity. Ignore optional defense and offense entries outside the configured attack-type range with a log warning before accessing their tables. Yield after each newly completed model during explicit model-list or level preparation, and defer states until that preparation has cleaned up its intermediate parsers and handles. Resize repeated weapon lists and detach borrowed lists before replacing their entries.",
       "topics": [
         "active-content-pak-aliases",
         "animation-memory-layout",
@@ -35,9 +35,9 @@
       "upstream_sha256": "09b28ba38c5c89ffe4ceba4aa1cbb5263319dda43c2251ce5a2b266a597cdfb5"
     },
     "openbor.h": {
-      "distributed_sha256": "cc6ca0855565f8998047833e7c50293d8fee1722cdf14d691a7ab72334c631fc",
+      "distributed_sha256": "3ff045fca24228ffb3bd7b9ba40912abbaab9bb495e1e0e9df6078f23239821b",
       "modified": true,
-      "summary": "Allocate collision pointer slots through the highest author-facing index used by each collection. Define shared selectors and layouts for native 6330, 6412 and 6510 behavior. Track each model's allocated animation-table capacity and reject lookups outside it.",
+      "summary": "Allocate collision pointer slots through the highest author-facing index used by each collection. Define shared selectors and layouts for native 6330, 6412 and 6510 behavior. Reconstruct the published 6392 test profile's four-ID attack history, native cheat toggle and selection-screen escape contract from the later upstream source changes. Track each model's allocated animation-table capacity and reject lookups outside it.",
       "topics": [
         "animation-memory-layout",
         "compiler-warning-cleanup",
@@ -47,14 +47,15 @@
       "upstream_sha256": "5a69069cc1d8dfdec66dba09c2df2141d050ea2f564f2f8c0a199a7842ff8345"
     },
     "openborscript.c": {
-      "distributed_sha256": "f2c069fd759af5ada814bad29a856146205740a88752acaa63e636c5eac1823c",
+      "distributed_sha256": "99f3f5540a0afd2ab9011a609ff3ef56f79d7b087dfd370e7a275ea0d268fbb7",
       "modified": true,
-      "summary": "Keep the dormant constant-lowering diagnostic compatible with the single-value instruction layout. Derive output names from the content basename with explicit destination capacities, and reject overflowing output path joins. Compact compiler-only instruction records after resolving value ownership, preserving branch and export anchors, all mutable values and exactly-once pool cleanup. Supply native profile script APIs and translate numeric animation, attack, subtype and spawn IDs. Keep next-animation timestamps unchanged at the script boundary. Resolve text-property names within the actual table bounds while preserving native numeric selectors.",
+      "summary": "Keep the dormant constant-lowering diagnostic compatible with the single-value instruction layout. Derive output names from the content basename with explicit destination capacities, and reject overflowing output path joins. Compact compiler-only instruction records after resolving value ownership, preserving branch and export anchors, all mutable values and exactly-once pool cleanup. Supply native profile script APIs and translate numeric animation, attack, subtype and spawn IDs. Keep next-animation timestamps unchanged at the script boundary. Expose the reconstructed 6392 test profile's earlier backtotitle alias only in that profile. Resolve text-property names within the actual table bounds while preserving native numeric selectors. Reuse each text object's owned buffer when replacing its contents.",
       "topics": [
         "logical-profile-compatibility",
         "record-dates-and-file-notices",
         "script-memory-layout",
         "script-property-names",
+        "script-text-object-ownership",
         "session-relative-filesystem"
       ],
       "upstream_sha256": "fdd3cf6cf3c0d51b6e14cca7de08809b570fd0697e22767812fc1d774630cbc1"
@@ -487,9 +488,9 @@
       "upstream_sha256": "582ec018581bded82ae599de2889dbfb0e23c75f6554af75fa4fada5b285d916"
     },
     "source/openborscript/config.h": {
-      "distributed_sha256": "47f5f45e91c6a52a6215979fc9caf973815ec9a488f5142d0e40de512c97aebb",
+      "distributed_sha256": "d25b29f1d86e0f852738ef20d47487fcbd220eca1f4485f6a41db464a29074cd",
       "modified": true,
-      "summary": "Declare the modern logical profiles' unload_model script entry point.",
+      "summary": "Declare the modern logical profiles' unload_model script entry point. Expose the reconstructed 6392 test profile's earlier backtotitle alias only in that profile.",
       "topics": [
         "logical-profile-compatibility",
         "record-dates-and-file-notices"
@@ -539,9 +540,9 @@
       "upstream_sha256": "94470a80ac5fdc76cd14444aeb54fc604b1b6db80ca49527febf5b2f51942a32"
     },
     "source/openborscript/index.c": {
-      "distributed_sha256": "6dba930516d78733e1d382fa6a86cbd3f829c1c6ff3be928cc71e2392d49c76c",
+      "distributed_sha256": "e4711bf426ef86690b237d115e946f3aebade563ab33058da2cb9c0f754db1ae",
       "modified": true,
-      "summary": "Register native functions according to each logical profile's upstream API.",
+      "summary": "Register native functions according to each logical profile's upstream API. Expose the reconstructed 6392 test profile's earlier backtotitle alias only in that profile.",
       "topics": [
         "logical-profile-compatibility",
         "record-dates-and-file-notices"
@@ -571,12 +572,11 @@
       "upstream_sha256": "bb7b74c3d04121233c5f27ac6923df3bcc713604646843fd4e0bf10e611c1535"
     },
     "source/openborscript/profile_ids.h": {
-      "distributed_sha256": "73478da3c70290b6df33aa4473b7b45591ba190f74f401e2c3472b91ea2f1a07",
+      "distributed_sha256": "bebcb97a19f837514b3555604f9fb33401f95d9aa144f413c84f2c7b464daee3",
       "modified": true,
       "summary": "Map native logical-profile animation, attack, subtype and spawn IDs to the shared engine selectors.",
       "topics": [
-        "logical-profile-compatibility",
-        "record-dates-and-file-notices"
+        "logical-profile-compatibility"
       ],
       "upstream_sha256": null
     },

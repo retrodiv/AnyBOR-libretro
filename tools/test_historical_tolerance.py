@@ -26,7 +26,7 @@ class HistoricalToleranceTests(unittest.TestCase):
         declarations=source[start:source.index('void mapstrings_levelproperty',start)]
         methods='\n'.join(function(source,n) for n in (
             'mapstrings_levelproperty','openbor_changelevelproperty','mapstrings_textobjproperty',
-            'openbor_changetextobjproperty','openbor_settextobj'))
+            'openbor_changetextobjproperty','openbor_settextobj','openbor_cleartextobj'))
         program=r'''
 #include <assert.h>
 #include <stdint.h>
@@ -124,6 +124,31 @@ static void exercise(unsigned profile) {
  a[1]=integer(31);out=&result;assert(openbor_settextobj(v,&out,6)==S_OK&&storage.textobjs[0].x==31);
  assert(storage.textobjs[0].t==(profile<3821?99:0));
  a[0]=(ScriptVariant){.vt=VT_EMPTY};out=&result;assert(openbor_settextobj(v,&out,6)==E_FAIL&&out==NULL);
+ /* Before3821, valid coordinates were committed even if the later text failed. */
+ a[0]=integer(0);a[1]=integer(47);a[2]=integer(48);a[3]=integer(9);a[4]=integer(49);
+ a[5]=(ScriptVariant){.vt=VT_EMPTY};a[6]=integer(111);out=&result;
+ int prior_time=storage.textobjs[0].t;
+ assert(openbor_settextobj(v,&out,7)==(profile<3821?E_FAIL:S_OK));
+ assert(storage.textobjs[0].x==47 && storage.textobjs[0].y==48);
+ assert(storage.textobjs[0].t==(profile<3821?prior_time:111));
+ assert(out==NULL);
+ /* Replacing the same text owns one buffer; old profiles still require text. */
+ a[1]=string("text");a[2]=string("replacement");out=&result;
+ assert(openbor_changetextobjproperty(v,&out,3)==S_OK);
+ char *owned=storage.textobjs[0].text;
+ a[1]=string("text");a[2]=string("again");out=&result;
+ assert(openbor_changetextobjproperty(v,&out,3)==S_OK && storage.textobjs[0].text==owned);
+ assert(!strcmp(owned,"again"));
+ a[1]=string("text");a[2]=integer(17);out=&result;
+ assert(openbor_changetextobjproperty(v,&out,3)==(profile<3821?E_FAIL:S_OK));
+ assert(profile<3821 ? !strcmp(owned,"again") : !strcmp(owned,"<invalid>"));
+ /* The older clear API returns an integer zero, including out-of-range indices. */
+ for(int index=-1;index<=1;++index) {
+   a[0]=integer(index);result=integer(77);out=&result;
+   assert(openbor_cleartextobj(v,&out,1)==S_OK);
+   assert(profile<3821 ? out==&result&&result.vt==VT_INTEGER&&result.lVal==0 : out==NULL);
+ }
+ assert(storage.textobjs[0].text==NULL && storage.textobjs[0].x==0);
  printf("tolerance_profile=%u level_boundary=3820 text_boundary=3821 passed\n",profile);
 }
 int main(void) {

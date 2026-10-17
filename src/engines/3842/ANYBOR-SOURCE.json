@@ -17,9 +17,9 @@
       "upstream_sha256": null
     },
     "openbor.c": {
-      "distributed_sha256": "337f1ad95bbadc518f0dda9f40f51be218b973bf235c95c6713e2217a3989d18",
+      "distributed_sha256": "5a80823f94c491f91a788244e85b53d754514b675cd6452f7d65d866d889717e",
       "modified": true,
-      "summary": "Apply the port's engine corrections and select the PC video configuration on macOS. Derive output names from the content basename with explicit destination capacities, and reject overflowing output path joins. Leave multiplayer slots without a selected model available to join even if game scripts preassign lives to them. Let a missing basename-only PAK self-check read the active frontend content after it has been validated and prepared. Allocate each model's animation pointer table through the highest animation index that model uses, and bound cache, copy and cleanup paths to that capacity. Ignore optional defense and offense entries outside the configured attack-type range with a log warning before accessing their tables. Yield after each newly completed model during explicit model-list or level preparation, and defer states until that preparation has cleaned up its intermediate parsers and handles. Resize repeated weapon lists and detach borrowed lists before replacing their entries. Guard an optional entity animation interpreter before reading its reset state. Share identical immutable animation-frame draw methods with reference-counted ownership. Select the pre-3800 player spawn coordinate limit and pre-3805 ordered, cached spawn scripts by logical build, with explicit level ownership and cleanup.",
+      "summary": "Apply the port's engine corrections and select the PC video configuration on macOS. Derive output names from the content basename with explicit destination capacities, and reject overflowing output path joins. Select historical attack domains, environmental damage, camera and scroll behavior, model-save loading, weapon and idle order, nested scripts and numeric script selectors. Retain bounded storage, safe ownership and the selected rejected-value contracts. Leave multiplayer slots without a selected model available to join even if game scripts preassign lives to them. Let a missing basename-only PAK self-check read the active frontend content after it has been validated and prepared. Allocate each model's animation pointer table through the highest animation index that model uses, and bound cache, copy and cleanup paths to that capacity. Ignore optional defense and offense entries outside the configured attack-type range with a log warning before accessing their tables. Yield after each newly completed model during explicit model-list or level preparation, and defer states until that preparation has cleaned up its intermediate parsers and handles. Resize repeated weapon lists and detach borrowed lists before replacing their entries. Guard an optional entity animation interpreter before reading its reset state. Share identical immutable animation-frame draw methods with reference-counted ownership. Select the pre-3800 player spawn coordinate limit and pre-3805 ordered, cached spawn scripts by logical build, with explicit level ownership and cleanup.",
       "topics": [
         "active-content-pak-aliases",
         "animation-draw-method-storage",
@@ -38,9 +38,9 @@
       "upstream_sha256": "d2638ad5cf319be18bc22a07f1d9b9b999d17cbcd83830433a59b819a40339a9"
     },
     "openbor.h": {
-      "distributed_sha256": "974e1802a191fb5b59bf52c41063fd6164c2b6b706cdf3be01b2d4ce61e69f76",
+      "distributed_sha256": "caff4d57e110777f300b24f2e241921b1602e6b727928091f1c58b9f7911c2ad",
       "modified": true,
-      "summary": "Allocate collision pointer slots through the highest author-facing index used by each collection. Track each model's allocated animation-table capacity and reject lookups outside it. Declare level-owned historical spawn-script resources and ordered call nodes.",
+      "summary": "Allocate collision pointer slots through the highest author-facing index used by each collection. Select historical attack domains, environmental damage, camera and scroll behavior, model-save loading, weapon and idle order, nested scripts and numeric script selectors. Retain bounded storage, safe ownership and the selected rejected-value contracts. Track each model's allocated animation-table capacity and reject lookups outside it. Declare level-owned historical spawn-script resources and ordered call nodes.",
       "topics": [
         "animation-memory-layout",
         "compiler-warning-cleanup",
@@ -50,9 +50,9 @@
       "upstream_sha256": "19888c33f34b9cb80222de1439a1745461b8353d99ef40dc0a8184f081b45ed9"
     },
     "openborscript.c": {
-      "distributed_sha256": "2e2af1bee2942eba673095f48a5b949e510c4eb140c97f1410f57183fcc63add",
+      "distributed_sha256": "16b07118319c6fe65f66a629e66b74806b15f87ed51b30a69317d8cdb7662eb4",
       "modified": true,
-      "summary": "Keep the dormant constant-lowering diagnostic compatible with the single-value instruction layout, map string constants from direct contiguous instruction storage, select historical player and AI-flag property contracts by logical build, and own complete dynamically allocated script variable names through slot reuse and shutdown. Derive output names from the content basename with explicit destination capacities, and reject overflowing output path joins. Compact compiler-only instruction records after resolving value ownership, preserving branch and export anchors, all mutable values and exactly-once pool cleanup. Resolve text-property names within the actual table bounds while preserving native numeric selectors. Select historical level/text setter tolerance and pre-3826 empty-success unknown textual constants without changing later strict contracts.",
+      "summary": "Keep the dormant constant-lowering diagnostic compatible with the single-value instruction layout, map string constants from direct contiguous instruction storage, select historical player and AI-flag property contracts by logical build, and own complete dynamically allocated script variable names through slot reuse and shutdown. Derive output names from the content basename with explicit destination capacities, and reject overflowing output path joins. Compact compiler-only instruction records after resolving value ownership, preserving branch and export anchors, all mutable values and exactly-once pool cleanup. Select historical attack domains, environmental damage, camera and scroll behavior, model-save loading, weapon and idle order, nested scripts and numeric script selectors. Retain bounded storage, safe ownership and the selected rejected-value contracts. Resolve text-property names within the actual table bounds while preserving native numeric selectors. Reuse each text object's owned buffer when replacing its contents. Select historical level/text setter tolerance and pre-3826 empty-success unknown textual constants without changing later strict contracts.",
       "topics": [
         "compiler-warning-cleanup",
         "logical-profile-compatibility",
@@ -620,9 +620,13 @@
       "upstream_sha256": "96d890ed04defc08dd0b5883ed0d43baefa55d69358b4931c11d8776ebd536c1"
     },
     "source/scriptlib/ScriptVariant.c": {
-      "distributed_sha256": "90f803017ad651853285f84e61c0c717abff041727e17d5a98655c714c6b37c7",
-      "modified": false,
-      "topics": [],
+      "distributed_sha256": "63f8fa3b4346ead54d397c90174a712a3e0ef5e3b1db03d7faf1b3ad4d4f271c",
+      "modified": true,
+      "summary": "Select the earlier unary operand contract with defined integer wrapping and owned-value cleanup.",
+      "topics": [
+        "logical-profile-compatibility",
+        "record-dates-and-file-notices"
+      ],
       "upstream_sha256": "90f803017ad651853285f84e61c0c717abff041727e17d5a98655c714c6b37c7"
     },
     "source/scriptlib/ScriptVariant.h": {

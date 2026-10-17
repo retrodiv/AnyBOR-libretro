@@ -1,3 +1,15 @@
+/* AnyBOR modification record: 2026-10-17.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Select the earlier unary operand contract with defined integer wrapping
+ * and owned-value cleanup.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/3842.md
+ * at the source repository root. Original notices follow below.
+ */
+
 /*
  * OpenBOR - http://www.LavaLit.com
  * -----------------------------------------------------------------------
@@ -7,6 +19,7 @@
  */
 
 #include "ScriptVariant.h"
+#include "libretroport.h"
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -799,6 +812,8 @@ ScriptVariant* ScriptVariant_Dec_Op2(ScriptVariant* svar )
 
 void ScriptVariant_Pos( ScriptVariant* svar)
 {
+    if(obor_profile_build < 3828 && svar->vt != VT_DECIMAL && svar->vt != VT_INTEGER)
+        ScriptVariant_Clear(svar);
 	/*
 	static ScriptVariant retvar = {{.ptrVal=NULL}, VT_EMPTY};
 	switch(svar->vt) 
@@ -815,9 +830,18 @@ void ScriptVariant_Pos( ScriptVariant* svar)
 
 void ScriptVariant_Neg( ScriptVariant* svar)
 {
+    if(obor_profile_build < 3828)
+    {
+        if(svar->vt == VT_DECIMAL) svar->dblVal = -svar->dblVal;
+        else if(svar->vt == VT_INTEGER)
+            svar->lVal = (LONG)(UINT64_C(0) - (uint64_t)svar->lVal);
+        else ScriptVariant_Clear(svar);
+        return;
+    }
 	switch(svar->vt) 
 	{
 	case VT_DECIMAL:svar->dblVal = -(svar->dblVal);
+        /* fall through */
 	case VT_INTEGER:svar->lVal = -(svar->lVal);
 	default:break;
 	}

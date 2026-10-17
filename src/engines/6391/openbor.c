@@ -1,4 +1,4 @@
-/* AnyBOR modification record: 2026-10-15.
+/* AnyBOR modification record: 2026-10-17.
  * Port maintained by retrodiv <retrodiv@proton.me>.
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
@@ -8,14 +8,16 @@
  * destination capacities, and reject overflowing output path joins. Select
  * native 6330 boomerang, collision and settings behavior, 6412 frame-kill
  * binding behavior, and 6510 binding, blocking and attack behavior. Preserve
- * allocation handles used by inline animation-script guards. Leave
- * multiplayer slots without a selected model available to join even if game
- * scripts preassign lives to them. Let a missing basename-only PAK self-
- * check read the active frontend content after it has been validated and
- * prepared. Allocate each model's animation pointer table through the
- * highest animation index that model uses, and bound cache, copy and cleanup
- * paths to that capacity. Ignore optional defense and offense entries
- * outside the configured attack-type range with a log warning before
+ * allocation handles used by inline animation-script guards. Reconstruct the
+ * published 6392 test profile's four-ID attack history, native cheat toggle
+ * and selection-screen escape contract from the later upstream source
+ * changes. Leave multiplayer slots without a selected model available to
+ * join even if game scripts preassign lives to them. Let a missing basename-
+ * only PAK self-check read the active frontend content after it has been
+ * validated and prepared. Allocate each model's animation pointer table
+ * through the highest animation index that model uses, and bound cache, copy
+ * and cleanup paths to that capacity. Ignore optional defense and offense
+ * entries outside the configured attack-type range with a log warning before
  * accessing their tables. Yield after each newly completed model during
  * explicit model-list or level preparation, and defer states until that
  * preparation has cleaned up its intermediate parsers and handles. Resize
@@ -576,6 +578,8 @@ int					loadingmusic        = 0;
 int                 unlockbg            = 0;         			// If set to 1, will look for a different background image after defeating the game
 int                 _pause              = 0;
 int                 goto_mainmenu_flag  = 0;
+int                 escape_flag = 0;
+int                 multihitcheat = 0;
 int					nofadeout			= 0;
 int					nosave				= 0;
 int                 nopause             = 0;                    // OX. If set to 1 , pausing the game will be disabled.
@@ -15955,9 +15959,32 @@ void bar(int x, int y, int value, int maxvalue, s_barstatus *pstatus)
     }
 }
 
+/* The reconstructed test profile keeps four incoming attack IDs. */
+static int obor_attack_seen(const entity *target, unsigned int id, int ignore)
+{
+    if(ignore) return 0;
+    if(target->attack_id_incoming == id) return 1;
+    return obor_profile_build == 6392 && !multihitcheat &&
+        (target->attack_id_incoming2 == id ||
+         target->attack_id_incoming3 == id ||
+         target->attack_id_incoming4 == id);
+}
+
+static void obor_remember_attack(entity *target, unsigned int id)
+{
+    if(obor_profile_build == 6392)
+    {
+        target->attack_id_incoming4 = target->attack_id_incoming3;
+        target->attack_id_incoming3 = target->attack_id_incoming2;
+        target->attack_id_incoming2 = target->attack_id_incoming;
+    }
+    target->attack_id_incoming = id;
+}
+
 void goto_mainmenu(int flag)
 {
-    goto_mainmenu_flag = 1|(flag<<1);
+    goto_mainmenu_flag = 1|((unsigned int)flag<<1);
+    if(obor_profile_build == 6392) escape_flag = flag;
 }
 
 void static backto_mainmenu()
@@ -20159,7 +20186,7 @@ void do_attack(entity *e)
         }
 
         // Attack IDs must be different.
-        if(target->attack_id_incoming == current_attack_id && !attack->ignore_attack_id)
+        if(obor_attack_seen(target, current_attack_id, attack->ignore_attack_id))
         {
             continue;
         }
@@ -20435,7 +20462,7 @@ void do_attack(entity *e)
                             self->modeldata.animation[current_follow_id]->attackone = self->animation->attackone;
                         }
                         ent_set_anim(self, current_follow_id, 0);
-                        self->attack_id_incoming = current_attack_id;
+                        obor_remember_attack(self, current_attack_id);
                     }
 
                     if(obor_profile_build == 6510)
@@ -20568,7 +20595,7 @@ void do_attack(entity *e)
                 //followed = 1; // quit loop, animation is changed
             }//end of if #055
 
-            self->attack_id_incoming = current_attack_id;
+            obor_remember_attack(self, current_attack_id);
             if(self == def)
             {
                 self->blocking = didblock;    // yeah, if get hit, stop blocking
@@ -37264,9 +37291,11 @@ int selectplayer(int *players, char *filename, int useSavedGame)
         }
         update(0, 0);
 
-        if(bothnewkeys & FLAG_ESC)
+        if((bothnewkeys & FLAG_ESC) ||
+           (obor_profile_build == 6392 && escape_flag == 9))
         {
             escape = 1;
+            if(obor_profile_build == 6392) escape_flag = 0;
         }
     }
 
@@ -39679,10 +39708,10 @@ void menu_options_video()
 
 void menu_options()
 {
-    #define TOT_CHEATS          3
+    #define TOT_CHEATS          (obor_profile_build == 6392 ? 4 : 3)
     #define OPT_Y_POS          -1
     #define OPT_X_POS          -7
-    #define CHEAT_PAUSE_POSY    3
+    #define CHEAT_PAUSE_POSY    TOT_CHEATS
 
     typedef enum {
         VIDEO_OPTION,
@@ -39693,13 +39722,15 @@ void menu_options()
         LIVES_CHEAT,
         CREDITS_CHEAT,
         HEALTH_CHEAT,
+        MULTIHIT_CHEAT,
 
         END_OPTION
     } e_selector;
 
     int quit = 0;
     int y_offset = OPT_Y_POS;
-    int BACK_OPTION = END_OPTION-TOT_CHEATS;
+    int end_option = END_OPTION - (obor_profile_build != 6392);
+    e_selector BACK_OPTION = end_option-TOT_CHEATS;
     int cheat_opt_offset = 0;
     e_selector selector = VIDEO_OPTION;
 
@@ -39728,6 +39759,8 @@ void menu_options()
             _menutext((selector == LIVES_CHEAT), OPT_X_POS, y_offset+cheat_opt_offset+LIVES_CHEAT, (livescheat)?Tr("Infinite Lives On"):Tr("Infinite Lives Off"));
             _menutext((selector == CREDITS_CHEAT), OPT_X_POS, y_offset+cheat_opt_offset+CREDITS_CHEAT, (creditscheat)?Tr("Infinite Credits On"):Tr("Infinite Credits Off"));    // Enemies fall/don't fall down when you respawn
             _menutext((selector == HEALTH_CHEAT), OPT_X_POS, y_offset+cheat_opt_offset+HEALTH_CHEAT, (healthcheat)?Tr("Infinite Health On"):Tr("Infinite Health Off"));    // Enemies fall/don't down when you respawn
+            if(obor_profile_build == 6392)
+                _menutext((selector == MULTIHIT_CHEAT), OPT_X_POS, y_offset+cheat_opt_offset+MULTIHIT_CHEAT, (multihitcheat)?Tr("Multihit Glitch On"):Tr("Multihit Glitch Off"));
         }
 
         _menutextm((selector == BACK_OPTION), y_offset+cheat_opt_offset+BACK_OPTION+2, 0, Tr("Back"));
@@ -39784,18 +39817,19 @@ void menu_options()
                     y_offset = OPT_Y_POS-TOT_CHEATS;
                     if(level != NULL && _pause > 0) y_offset += CHEAT_PAUSE_POSY;
                     cheat_opt_offset = 1;
-                    BACK_OPTION = END_OPTION-TOT_CHEATS+TOT_CHEATS;
+                    BACK_OPTION = end_option-TOT_CHEATS+TOT_CHEATS;
                 }
                 else
                 {
                     y_offset = OPT_Y_POS;
                     cheat_opt_offset = 0;
-                    BACK_OPTION = END_OPTION-TOT_CHEATS;
+                    BACK_OPTION = end_option-TOT_CHEATS;
                 }
            }
            else if(selector==LIVES_CHEAT) livescheat = !livescheat;
            else if(selector==CREDITS_CHEAT) creditscheat = !creditscheat;
            else if(selector==HEALTH_CHEAT) healthcheat = !healthcheat;
+           else if(obor_profile_build == 6392 && selector==MULTIHIT_CHEAT) multihitcheat = !multihitcheat;
            else quit = 1;
         }
     }

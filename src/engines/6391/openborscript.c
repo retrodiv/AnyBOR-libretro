@@ -10,8 +10,11 @@
  * ownership, preserving branch and export anchors, all mutable values and
  * exactly-once pool cleanup. Supply native profile script APIs and translate
  * numeric animation, attack, subtype and spawn IDs. Keep next-animation
- * timestamps unchanged at the script boundary. Resolve text-property names
- * within the actual table bounds while preserving native numeric selectors.
+ * timestamps unchanged at the script boundary. Expose the reconstructed 6392
+ * test profile's earlier backtotitle alias only in that profile. Resolve
+ * text-property names within the actual table bounds while preserving native
+ * numeric selectors. Reuse each text object's owned buffer when replacing
+ * its contents.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/6391.md
  * at the source repository root. Original notices follow below.
@@ -88,6 +91,7 @@ extern int  loadgameMenu;
 extern int  num_difficulties;
 extern u32  _time;
 extern int goto_mainmenu_flag;
+extern int escape_flag;
 extern int _pause;
 extern int timeleft;
 extern int gfx_x_offset;
@@ -12401,7 +12405,10 @@ HRESULT openbor_changetextobjproperty(ScriptVariant **varlist , ScriptVariant **
     case _top_text:
     {
         ScriptVariant_ToString(varlist[2], buf);
-        level->textobjs[ind].text = malloc(MAX_STR_VAR_LEN);
+        if(!level->textobjs[ind].text)
+        {
+            level->textobjs[ind].text = malloc(MAX_STR_VAR_LEN);
+        }
         strncpy(level->textobjs[ind].text, buf, MAX_STR_VAR_LEN);
         break;
     }
@@ -15767,6 +15774,17 @@ HRESULT openbor_gameover(ScriptVariant **varlist , ScriptVariant **pretvar, int 
 {
     *pretvar = NULL;
     level->force_gameover = 1;
+    return S_OK;
+}
+
+/* Compatibility alias from the earlier published test revision. */
+HRESULT openbor_backtotitle(ScriptVariant **varlist, ScriptVariant **pretvar, int paramCount)
+{
+    LONG enabled;
+    *pretvar = NULL;
+    if(obor_profile_build != 6392 || paramCount < 1 ||
+       FAILED(ScriptVariant_IntegerValue(varlist[0], &enabled))) return E_FAIL;
+    escape_flag = enabled ? 9 : 0;
     return S_OK;
 }
 

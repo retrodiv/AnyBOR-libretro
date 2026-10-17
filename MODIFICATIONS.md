@@ -351,8 +351,11 @@ compatibility condition. No game or script digest selects this correction.
 Manual engine selection still takes precedence.
 
 Filename build tags accept a numeric prefix followed by trailing `X` digits.
-The selector picks the highest available logical profile inside that interval,
-including explicit-only profiles, and preserves that profile directly. If
+The selector picks the highest automatic logical profile inside that interval
+and preserves that profile directly. Exact filename tags and manual choices retain direct selection. Imprecise
+tags additionally use syntax-scoped content evidence, preferring stable or
+automatic profiles. Ordinary sidecar and unlabelled inference use automatic
+profiles only. If
 there is no match, the interval's upper endpoint goes through ordinary
 automatic routing. Existing exact-build, manual and legacy-API priorities
 remain in effect.
@@ -565,7 +568,7 @@ in their respective files.
 
 | Capability or change | Behaviour and current implementation |
 |---|---|
-| Selectable engine profiles | Core Options offers v3.0 3400, v3.0 3780, v3.0 3783, v3.0 3789, v3.0 3793, v3.0 3797, v3.0 3805, v3.0 3814, v3.0 3818, v3.0 3822, v3.0 3824, v3.0 3829, v3.0 3831, v3.0 3837, v3.0 3839, v3.0 3842, v3.0 4086, v3.0 4432, v3.0 4453, v3.0 6330, v3.0 6391, v3.0 6412-dev, v3.0 6510-dev, v3.0 7123-dev, v4.0 7142-alpha, v4.0 7533 and v4.0 8023-dev. Auto uses build tags and content clues. Each profile retains its compatibility behavior and save directory. [`obor_abi.h`](src/glue/obor_abi.h), [`obor_engines.h`](src/glue/obor_engines.h), [`tools/build.py`](tools/build.py). |
+| Selectable engine profiles | Core Options offers v3.0 3400, v3.0 3780, v3.0 3783, v3.0 3789, v3.0 3793, v3.0 3797, v3.0 3805, v3.0 3814, v3.0 3818, v3.0 3822, v3.0 3824, v3.0 3829, v3.0 3831, v3.0 3837, v3.0 3839, v3.0 3842, v3.0 4086, v3.0 4432, v3.0 4453, v3.0 6330, v3.0 6391, v3.0 6392-dev, v3.0 6412-dev, v3.0 6510-dev, v3.0 7123-dev, v4.0 7142-alpha, v4.0 7533 and v4.0 8023-dev. Auto uses build tags and content clues. Each profile retains its compatibility behavior and save directory. [`obor_abi.h`](src/glue/obor_abi.h), [`obor_engines.h`](src/glue/obor_engines.h), [`tools/build.py`](tools/build.py). |
 | Automatic engine selection | An explicit core option takes precedence; otherwise inspect legacy script API requirements, filename tags, nearby executables as data, and PAK content tokens, then use the pinned fallback. Selection is rerun on Reset. [`libretro.cpp`](src/glue/libretro.cpp), `decide_engine`, `pick_anchor`, `build_from_content`; [`obor_markers.h`](src/glue/obor_markers.h). |
 | Frontend-owned frame delivery | Run the engine main loop on a libco coroutine, yield at video submission, and advance an emulated microsecond clock. Sleep/input-wait paths also yield so frontend input remains live. [`libretroport.c`](src/port/libretro/libretroport.c), [`libretroport.h`](src/port/libretro/libretroport.h), [`timer.c`](src/port/libretro/timer.c). |
 | Video and audio backends | Convert engine video to XRGB8888, publish geometry, and pull engine audio through the frontend. [`video.c`](src/port/libretro/video.c), [`video.h`](src/port/libretro/video.h), [`vga.h`](src/port/libretro/vga.h), [`sblaster.c`](src/port/libretro/sblaster.c), [`sblaster.h`](src/port/libretro/sblaster.h). |
@@ -1077,3 +1080,43 @@ CI partitions rewind and state-option matrices into explicit profile groups,
 verified for complete and unique coverage in each platform path. The Windows
 test host verifies arena release with an actual reserve/release probe; a separate
 negative control proves an occupied arena is not reported as released.
+
+
+### Historical runtime contracts
+
+The selected historical revision now controls coupled attack-type numbering,
+environmental damage, defense defaults, script numeric selectors, weapon update
+order, idle timing, shadow color conversion, native model-save loading,
+animation-command grouping, nested interpreter behavior, camera framing and
+sample-playback results. New function names follow their introduction boundaries.
+Additive grammar remains available, and memory-safety and lifecycle corrections
+remain active for every profile. The boundary table and limits are recorded in
+[choosing a profile](docs/HISTORICAL_PROFILES.md).
+
+### Reconstructed test profile
+
+v3.0 6392-dev reconstructs the author's published test behavior using the later
+upstream multihit changes: four incoming attack IDs, the native cheat-menu toggle
+(correction enabled by default), and selection-screen return-to-title requests.
+`gotomainmenu(9)` is supported, with `backtotitle(flag)` as the earlier test alias.
+This is not a recovered copy of the original test sources. Standalone controller
+and mod-menu changes do not apply to libretro. See
+[profile provenance](docs/HISTORICAL_PROFILES.md#reconstructed-test-profile).
+
+
+### Content evidence within declared intervals
+
+Official v3.0 4453 and v3.0 6330 releases participate in automatic routing.
+Imprecise filename declarations are intersected with bounded syntax evidence;
+stable or automatic candidates take priority. Temporary feature removal and
+divergent branches are represented explicitly. Conflicting content does not
+override the declaration, and the log records the applicable rules. Exact
+declarations and unlabelled inference retain their existing priority. See
+[source-backed rules](docs/AUTO_SELECTION_RULES.md).
+
+## Script text object ownership
+
+Replacing a text object's contents reuses its existing owned storage in the
+older fixed-buffer implementations. Repeated updates no longer abandon that
+allocation. The earlier reuse path and later exact-size replacement path keep
+their native behavior; tests check ownership across every retained profile.

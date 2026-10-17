@@ -3,7 +3,7 @@
 Selectable engine profiles: v3.0 3400, v3.0 3780, v3.0 3783, v3.0 3789, v3.0 3793, v3.0 3797,
 v3.0 3805, v3.0 3814, v3.0 3818, v3.0 3822, v3.0 3824, v3.0 3829, v3.0 3831,
 v3.0 3837, v3.0 3839, v3.0 3842, v3.0 4086, v3.0 4432, v3.0 4453, v3.0 6330,
-v3.0 6391, v3.0 6412-dev, v3.0 6510-dev, v3.0 7123-dev, v4.0 7142-alpha,
+v3.0 6391, v3.0 6392-dev, v3.0 6412-dev, v3.0 6510-dev, v3.0 7123-dev, v4.0 7142-alpha,
 v4.0 7533 and v4.0 8023-dev.
 
 Auto uses build tags and content clues to choose a profile. Manual selection
@@ -23,25 +23,26 @@ Player spawn coordinates use the earlier vertical limit before 3800. Before
 same per-file script locals across entries. Later profiles retain the engine's
 combined per-entry script behavior. See [manual selection and historical
 limits](docs/HISTORICAL_PROFILES.md).
-An explicit Build 4453 filename or the manual 4453 core option selects 4453.
-It uses 32-bit color, ignores `colourdepth` and follows the removal of legacy
-`remap` palette conversion. Select 4432 for games that need its older behavior.
-Profiles v3.0 6330 and v3.0 6510-dev retain their corresponding behavior,
-selected by an explicit Build tag or the manual core option.
-
-Automatic routing selects 6391 for builds 4433 through 6412; a PAK explicitly
-tagged Build 6412 or the manual 6412 core option selects 6412. Builds 6413
-through 7123 select v3.0 7123-dev; builds 7124 through 7142 select
+Automatic routing includes v3.0 4453 for declared builds 4433–4453 and
+v3.0 6330 for 4454–6330. Profile v3.0 6391 covers 6331–6412, except that an
+exact filename Build 6392 or Build 6412 tag selects the corresponding test
+profile. Manual selection remains available. Profile v3.0 4453 uses 32-bit
+color, ignores `colourdepth` and removes legacy `remap` palette conversion;
+content needing those features requires an earlier compatible profile.
+Builds 6413 through 7123 select v3.0 7123-dev; builds 7124 through 7142 select
 v4.0 7142-alpha; builds 7143 through 7533 select v4.0 7533. Builds 7534
 through 8023 and later builds select v4.0 8023-dev.
 Other routing combines filename/sidecar metadata with bounded content ranges
-and sparse marker estimates. Filename ranges select the highest available
+and sparse marker estimates. Filename ranges prefer the highest compatible stable or automatic
 profile within their effective bounds, or the next automatic revision above the
 upper bound when none fits. A range describes inclusive compatibility: Build 3792-3911 selects 3842, which lies inside it. Generation
 prefixes clip explicit ranges.
 See [Engine build rules](docs/ANYBOR.md#core-options) for the authoritative
-filename grammar, priorities, examples and processing limits. Filename tags and
-manual options can select the existing explicit-only anchor variants. Historical
+filename grammar, priorities, examples and processing limits. Exact filename Build tags and manual options select test variants directly.
+Imprecise filename declarations use content evidence and prefer stable or
+automatic candidates; nonautomatic candidates are considered only when no such
+candidate remains compatible. Ordinary sidecar and unlabelled inference use
+automatic profiles only. See [the source-backed rules](docs/AUTO_SELECTION_RULES.md). Historical
 profiles also participate in Auto declarations and bounded content evidence.
 The first available logical revision at or above a declared build is used;
 without a declaration or usable evidence the existing fallback is unchanged.
@@ -67,3 +68,10 @@ Targets:
 Release confidence requires a real redistributable fixture for each anchor.
 Where one is unavailable, metadata and code coverage do not substitute for a
 runtime compatibility claim.
+
+
+v3.0 6392-dev is a reconstruction of published test behavior, not its exact
+original sources. Its multihit correction defaults on, and its cheat menu can
+restore the former one-ID behavior. It accepts selection-screen title requests
+through `gotomainmenu(9)` and the earlier `backtotitle(flag)` alias. Standalone
+controller and mod-menu changes are outside the libretro interface.

@@ -1,12 +1,14 @@
-/* AnyBOR modification record: 2026-10-05.
+/* AnyBOR modification record: 2026-10-17.
  * Port maintained by retrodiv <retrodiv@proton.me>.
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
  * Upstream code retains its original license and notices.
  * Allocate collision pointer slots through the highest author-facing index
  * used by each collection. Define shared selectors and layouts for native
- * 6330, 6412 and 6510 behavior. Track each model's allocated animation-table
- * capacity and reject lookups outside it.
+ * 6330, 6412 and 6510 behavior. Reconstruct the published 6392 test
+ * profile's four-ID attack history, native cheat toggle and selection-screen
+ * escape contract from the later upstream source changes. Track each model's
+ * allocated animation-table capacity and reject lookups outside it.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/6391.md
  * at the source repository root. Original notices follow below.
@@ -2519,6 +2521,9 @@ typedef struct entity
     int (*takedamage)(struct entity *, s_collision_attack *, int);
     int (*trymove)(float, float);
     unsigned int attack_id_incoming;
+    unsigned int attack_id_incoming2;
+    unsigned int attack_id_incoming3;
+    unsigned int attack_id_incoming4;
     unsigned int attack_id_outgoing;
     int hitwall; // == 1 in the instant that hit the wall/platform/obstacle, else == 0
     unsigned char *colourmap;

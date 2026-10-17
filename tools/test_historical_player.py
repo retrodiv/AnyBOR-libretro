@@ -54,7 +54,8 @@ def check_player_continuation(log, profile):
 
 
 def function(source, name):
-    start = re.search(r'(?m)^(?:static )?[\w* ]+\b' + name + r'\([^;]*?\)\s*\{', source)
+    start = re.search(r'(?m)^(?:static )?[\w* ]+\b' + name +
+                      r'\([^;]*?\)\s*(?://[^\n]*\n\s*)?\{', source)
     if start is None:
         raise AssertionError('Missing native function ' + name)
     end, depth = start.end(), 1

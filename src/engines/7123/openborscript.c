@@ -9,7 +9,8 @@
  * joins. Compact compiler-only instruction records after resolving value
  * ownership, preserving branch and export anchors, all mutable values and
  * exactly-once pool cleanup. Resolve text-property names within the actual
- * table bounds while preserving native numeric selectors.
+ * table bounds while preserving native numeric selectors. Reuse each text
+ * object's owned buffer when replacing its contents.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/7123.md
  * at the source repository root. Original notices follow below.
@@ -11792,7 +11793,10 @@ HRESULT openbor_changetextobjproperty(ScriptVariant **varlist , ScriptVariant **
     case _top_text:
     {
         ScriptVariant_ToString(varlist[2], buf);
-        level->textobjs[ind].text = malloc(MAX_STR_VAR_LEN);
+        if(!level->textobjs[ind].text)
+        {
+            level->textobjs[ind].text = malloc(MAX_STR_VAR_LEN);
+        }
         strncpy(level->textobjs[ind].text, buf, MAX_STR_VAR_LEN);
         break;
     }

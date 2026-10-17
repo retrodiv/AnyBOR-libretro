@@ -44,13 +44,14 @@
       "upstream_sha256": "af6be352e04112724da5aa2cd26be2f75169fd727ecdc5b03927ab80f41ec7df"
     },
     "openborscript.c": {
-      "distributed_sha256": "cb2fd961f5d87985d7e579e1b6230622ebae06f11748054a48c2ec1073c48986",
+      "distributed_sha256": "ff29ca244ecc56ec4c46831e9a073f3e7746f33d6f9037527207ce4053ebbe75",
       "modified": true,
-      "summary": "Keep the dormant constant-lowering diagnostic compatible with the single-value instruction layout. Derive output names from the content basename with explicit destination capacities, and reject overflowing output path joins. Compact compiler-only instruction records after resolving value ownership, preserving branch and export anchors, all mutable values and exactly-once pool cleanup. Resolve text-property names within the actual table bounds while preserving native numeric selectors.",
+      "summary": "Keep the dormant constant-lowering diagnostic compatible with the single-value instruction layout. Derive output names from the content basename with explicit destination capacities, and reject overflowing output path joins. Compact compiler-only instruction records after resolving value ownership, preserving branch and export anchors, all mutable values and exactly-once pool cleanup. Resolve text-property names within the actual table bounds while preserving native numeric selectors. Reuse each text object's owned buffer when replacing its contents.",
       "topics": [
         "record-dates-and-file-notices",
         "script-memory-layout",
         "script-property-names",
+        "script-text-object-ownership",
         "session-relative-filesystem"
       ],
       "upstream_sha256": "355cb975806bcf03609cb7b32f0c57bcf7a1898e52ae9526200cf20e14164988"

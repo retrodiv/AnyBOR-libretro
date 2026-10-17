@@ -11,10 +11,15 @@
  * the content basename with explicit destination capacities, and reject
  * overflowing output path joins. Compact compiler-only instruction records
  * after resolving value ownership, preserving branch and export anchors, all
- * mutable values and exactly-once pool cleanup. Resolve text-property names
- * within the actual table bounds while preserving native numeric selectors.
- * Select historical level/text setter tolerance and pre-3826 empty-success
- * unknown textual constants without changing later strict contracts.
+ * mutable values and exactly-once pool cleanup. Select historical attack
+ * domains, environmental damage, camera and scroll behavior, model-save
+ * loading, weapon and idle order, nested scripts and numeric script
+ * selectors. Retain bounded storage, safe ownership and the selected
+ * rejected-value contracts. Resolve text-property names within the actual
+ * table bounds while preserving native numeric selectors. Reuse each text
+ * object's owned buffer when replacing its contents. Select historical
+ * level/text setter tolerance and pre-3826 empty-success unknown textual
+ * constants without changing later strict contracts.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/3842.md
  * at the source repository root. Original notices follow below.
@@ -1008,15 +1013,17 @@ int Script_Execute(Script* pscript)
 	Interpreter tinter, *pinter;
 	pcurrentscript = pscript; //used by local script functions
 	nested = pscript->pinterpreter->bReset;
-	if(no_nested_script && nested) result=1;
+	if(obor_profile_build >= 3806 && no_nested_script && nested) result=1;
 	else
 	{
 		pinter = pscript->pinterpreter;
-		if(nested && no_cmd_compatible) tinter = *pinter;
+		if(nested && ((obor_profile_build >= 3813 && obor_profile_build < 3836) ||
+                      (obor_profile_build >= 3836 && no_cmd_compatible))) tinter = *pinter;
 		Interpreter_Reset(pinter);
 		result = (int)SUCCEEDED(Interpreter_EvaluateImmediate(pinter));
-		if(nested && no_cmd_compatible) *pinter = tinter;
-		else if(nested) pinter->bReset = FALSE;
+		if(nested && ((obor_profile_build >= 3813 && obor_profile_build < 3836) ||
+                      (obor_profile_build >= 3836 && no_cmd_compatible))) *pinter = tinter;
+		else if(nested && obor_profile_build >= 3836) pinter->bReset = FALSE;
 	}
 	pcurrentscript = temp;
 	if(!result) shutdown(1, "There's an exception while executing script '%s' %s", pscript->pinterpreter->theSymbolTable.name, pscript->comment?pscript->comment:"");
@@ -1046,8 +1053,8 @@ void Script_LoadSystemFunctions()
 
 	List_InsertAfter(&theFunctionList,
 					  (void*)system_isempty, "isempty");
-	List_InsertAfter(&theFunctionList,
-					  (void*)system_exit, "exit");
+	if(obor_profile_build >= 3834)
+        List_InsertAfter(&theFunctionList, (void*)system_exit, "exit");
 	List_InsertAfter(&theFunctionList,
 					  (void*)system_NULL, "NULL");
 	List_InsertAfter(&theFunctionList,
@@ -1589,13 +1596,37 @@ static const char* svlist[] = {
 
 
 // ===== openborvariant =====
+static int obor_systemvariant_available(int property)
+{
+    if(obor_profile_build < 3783 &&
+       (property == _sv_scrollmaxx || property == _sv_scrollminx)) return 0;
+    if(obor_profile_build < 3838 && property == _sv_sample_play_id) return 0;
+    return 1;
+}
+
+static int obor_systemvariant_native(int property)
+{
+    if(property < 0 || property >= _sv_the_end) return _sv_the_end;
+    if(obor_profile_build < 3838 && property >= _sv_sample_play_id) ++property;
+    if(obor_profile_build < 3783 && property >= _sv_scrollmaxx) ++property;
+    if(obor_profile_build < 3783 && property >= _sv_scrollminx) ++property;
+    return property < _sv_the_end ? property : _sv_the_end;
+}
+
 void mapstrings_systemvariant(ScriptVariant** varlist, int paramCount)
 {
 	char* propname;
 	int prop;
 
 
-	MAPSTRINGS(varlist[0], svlist, _sv_the_end,
+    const char *names[_sv_the_end];
+    int i, count = 0;
+    if(paramCount < 1 || varlist[0]->vt != VT_STR) return;
+    for(i=0; i<_sv_the_end; ++i)
+    {
+        if(obor_systemvariant_available(i)) names[count++] = svlist[i];
+    }
+	MAPSTRINGS(varlist[0], names, count,
 		"openborvariant: System variable name not found: '%s'\n");
 }
 
@@ -1613,7 +1644,7 @@ HRESULT openbor_systemvariant(ScriptVariant** varlist , ScriptVariant** pretvar,
 	//the variant name should be here
 	//you can check the argument type if you like
 	if(varlist[0]->vt == VT_INTEGER)
-		variantindex = varlist[0]->lVal;
+		variantindex = obor_systemvariant_native(varlist[0]->lVal);
 	else  goto systemvariant_error;
 	///////these should be your get method, ///////
 	ScriptVariant_Clear(*pretvar);
@@ -1648,7 +1679,7 @@ HRESULT openbor_changesystemvariant(ScriptVariant** varlist , ScriptVariant** pr
 	//the variant name should be here
 	//you can check the argument type if you like
 	if(arg->vt == VT_INTEGER)
-		variantindex = arg->lVal;
+		variantindex = obor_systemvariant_native(arg->lVal);
 	else goto changesystemvariant_error;
 
 	if(changesyspropertybyindex(variantindex, varlist[1]))
@@ -6115,7 +6146,7 @@ HRESULT openbor_changeentityproperty(ScriptVariant** varlist , ScriptVariant** p
 		if((ltemp2 = 
 		  (paramCount >= 4 &&
 		   SUCCEEDED(ScriptVariant_IntegerValue(varlist[2], &ltemp)) &&
-		   ltemp < (LONG)MAX_ATKS && ltemp >= (LONG)0 &&
+		   ltemp < (LONG)OBOR_ATTACK_BASE && ltemp >= (LONG)0 &&
 			SUCCEEDED(ScriptVariant_DecimalValue(varlist[3], &dbltemp)))
 		))
 			ent->defense[(int)ltemp].factor = (float)dbltemp;
@@ -6613,7 +6644,7 @@ HRESULT openbor_changeentityproperty(ScriptVariant** varlist , ScriptVariant** p
 	{
 		if(paramCount >= 4 &&
 		   SUCCEEDED(ScriptVariant_IntegerValue(varlist[2], &ltemp)) &&
-		   ltemp < (LONG)MAX_ATKS && ltemp >= (LONG)0 &&
+		   ltemp < (LONG)OBOR_ATTACK_BASE && ltemp >= (LONG)0 &&
 			SUCCEEDED(ScriptVariant_DecimalValue(varlist[3], &dbltemp)))
 				ent->offense_factors[(int)ltemp] = (float)dbltemp;
 		break;
@@ -8609,7 +8640,7 @@ else if(strnicmp(constname, #x, sizeof(#x)-1)==0 && constname[sizeof(#x)-1] >= '
 #define ICMPSCONSTB(x, y) \
 else if(strnicmp(constname, #x, sizeof(#x)-1)==0 && constname[sizeof(#x)-1] >= '1' && constname[sizeof(#x)-1]<='9') \
 { \
-	v.lVal = (LONG)(y[atoi(constname+(sizeof(#x)-1))+STA_ATKS-1]);\
+	v.lVal = (LONG)(y[atoi(constname+(sizeof(#x)-1))+OBOR_ATTACK_SPECIAL-1]);\
 }
 
 
@@ -8760,10 +8791,10 @@ void mapstrings_transconst(ScriptVariant** varlist, int paramCount)
 		ICMPCONST(ATK_NORMAL9)
 		ICMPCONST(ATK_NORMAL10)
 		ICMPCONST(ATK_ITEM)
-		ICMPCONST(ATK_LAND)
-		ICMPCONST(ATK_PIT)
-		ICMPCONST(ATK_LIFESPAN)
-		ICMPCONST(ATK_TIMEOVER)
+		else if(obor_profile_build >= 3831 && stricmp("ATK_LAND", constname)==0) { v.lVal = (LONG)ATK_LAND; }
+		else if(obor_profile_build >= 3831 && stricmp("ATK_PIT", constname)==0) { v.lVal = (LONG)ATK_PIT; }
+		else if(obor_profile_build >= 3831 && stricmp("ATK_LIFESPAN", constname)==0) { v.lVal = (LONG)ATK_LIFESPAN; }
+		else if(obor_profile_build >= 3831 && stricmp("ATK_TIMEOVER", constname)==0) { v.lVal = (LONG)ATK_TIMEOVER; }
 		ICMPCONST(SCROLL_RIGHT)
 		ICMPCONST(SCROLL_DOWN)
 		ICMPCONST(SCROLL_LEFT)
@@ -9321,10 +9352,15 @@ HRESULT openbor_playsample(ScriptVariant** varlist , ScriptVariant** pretvar, in
 		if(FAILED(ScriptVariant_IntegerValue(varlist[i], value+i)))
 			goto playsample_error;
 	}
-	ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
+    if(obor_profile_build < 3838)
+    {
+        *pretvar = NULL;
+        if((int)value[0] < 0) return E_FAIL;
+    }
+    else ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
 	if((int)value[5]) result = sound_loop_sample((int)value[0], (unsigned int)value[1], (int)value[2], (int)value[3], (unsigned int)value[4]);
 	else result = sound_play_sample((int)value[0], (unsigned int)value[1], (int)value[2], (int)value[3], (unsigned int)value[4]);
-	(*pretvar)->lVal = (LONG)result;
+	if(obor_profile_build >= 3838) (*pretvar)->lVal = (LONG)result;
 	return S_OK;
 
 playsample_error:
@@ -9678,7 +9714,8 @@ HRESULT openbor_changetextobjproperty(ScriptVariant** varlist , ScriptVariant** 
 	{
         if(legacy_result && varlist[2]->vt != VT_STR) return E_FAIL;
 		ScriptVariant_ToString(varlist[2], buf);
-		level->textobjs[ind].text = malloc(MAX_STR_VAR_LEN);
+        if(!level->textobjs[ind].text)
+            level->textobjs[ind].text = malloc(MAX_STR_VAR_LEN);
 		strncpy(level->textobjs[ind].text, buf, MAX_STR_VAR_LEN);
 		break;
 	}
@@ -9792,8 +9829,13 @@ HRESULT openbor_settextobj(ScriptVariant** varlist , ScriptVariant** pretvar, in
         if(SUCCEEDED(ScriptVariant_IntegerValue(varlist[2], &value))) Y = value;
         if(SUCCEEDED(ScriptVariant_IntegerValue(varlist[3], &value))) F = value;
         if(SUCCEEDED(ScriptVariant_IntegerValue(varlist[4], &value))) Z = value;
-        if(paramCount >= 7 && SUCCEEDED(ScriptVariant_IntegerValue(varlist[6], &value))) T = value;
+        /* The earlier setter commits numeric fields before validating text. */
+        level->textobjs[ind].x = (int)X;
+        level->textobjs[ind].y = (int)Y;
+        level->textobjs[ind].z = (int)Z;
+        level->textobjs[ind].font = (int)F;
         if(varlist[5]->vt != VT_STR) goto settextobj_error;
+        if(paramCount >= 7 && SUCCEEDED(ScriptVariant_IntegerValue(varlist[6], &value))) T = value;
         ScriptVariant_ToString(varlist[5], buf);
     }
     else
@@ -9835,6 +9877,8 @@ HRESULT openbor_cleartextobj(ScriptVariant** varlist , ScriptVariant** pretvar, 
 	LONG ind;
 	const char* cltotext = "cleartextobj(int index)";
 
+    ScriptVariant *result = *pretvar;
+    const int legacy_result = obor_profile_build < 3821;
 	*pretvar = NULL;
 
 	if(paramCount < 1) {
@@ -9847,6 +9891,12 @@ HRESULT openbor_cleartextobj(ScriptVariant** varlist , ScriptVariant** pretvar, 
 		printf("Function's 1st argument must be a numeric value: %s\n", cltotext);
 		return E_FAIL;
 	}
+
+    if(legacy_result)
+    {
+        *pretvar = result;
+        ScriptVariant_ChangeType(result, VT_INTEGER);
+    }
 
 	if(ind<0 || ind >= level->numtextobjs)
 	{

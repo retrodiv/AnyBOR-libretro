@@ -1,9 +1,11 @@
-/* AnyBOR modification record: 2026-10-05.
+/* AnyBOR modification record: 2026-10-17.
  * Port maintained by retrodiv <retrodiv@proton.me>.
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
  * Upstream code retains its original license and notices.
  * Declare the modern logical profiles' unload_model script entry point.
+ * Expose the reconstructed 6392 test profile's earlier backtotitle alias
+ * only in that profile.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/6391.md
  * at the source repository root. Original notices follow below.
@@ -330,6 +332,7 @@ HRESULT openbor_executescript(ScriptVariant **varlist , ScriptVariant **pretvar,
 HRESULT openbor_loadgamefile(ScriptVariant **varlist , ScriptVariant **pretvar, int paramCount);
 HRESULT openbor_finishlevel(ScriptVariant **varlist , ScriptVariant **pretvar, int paramCount);
 HRESULT openbor_gameover(ScriptVariant **varlist , ScriptVariant **pretvar, int paramCount);
+HRESULT openbor_backtotitle(ScriptVariant **varlist, ScriptVariant **pretvar, int paramCount);
 HRESULT openbor_gotomainmenu(ScriptVariant **varlist , ScriptVariant **pretvar, int paramCount);
 HRESULT openbor_playgame(ScriptVariant **varlist , ScriptVariant **pretvar, int paramCount);
 HRESULT openbor_getrecordingstatus(ScriptVariant **varlist , ScriptVariant **pretvar, int paramCount);

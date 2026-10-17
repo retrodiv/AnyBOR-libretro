@@ -1,6 +1,6 @@
 # Source provenance
 
-This distribution offers selectable OpenBOR profiles from nine pinned source
+This distribution offers selectable OpenBOR profiles from pinned source
 snapshots with a shared libretro platform layer. `src/pin.json` records the
 upstream repository, full commit IDs and dependency archive SHA-256 hashes.
 Each engine has an `ANYBOR-SOURCE.json` manifest identifying the original and
@@ -85,3 +85,14 @@ the host build utilities listed in `README.md`; they do not download code.
 
 The generic buffer transform compiler/interpreter is original AnyBOR work.
 It provides only generic buffer execution and source compilation.
+
+
+The v3.0 6392-dev profile is an explicitly documented reconstruction. Its
+behavioral specification is the author's
+[published test-build discussion](https://www.chronocrash.com/forum/threads/openbor-test-build-6392.4936/).
+The multihit history and menu behavior were adapted from upstream
+[PR 229](https://github.com/DCurrent/openbor/pull/229), including commits
+`0824ff3e`, `e4f0605d`, `4462a156`, `46e2bbfb` and `e10dd3f1`.
+The source manifest records their complete identifiers. Existing OpenBOR
+copyrights and license terms continue to apply; the original unpublished test
+source tree is not asserted to have been recovered.

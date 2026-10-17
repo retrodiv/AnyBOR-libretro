@@ -4,7 +4,7 @@ AnyBOR is an independent libretro core for OpenBOR games, offering selectable
 engine profiles: v3.0 3400, v3.0 3780, v3.0 3783, v3.0 3789, v3.0 3793, v3.0 3797,
 v3.0 3805, v3.0 3814, v3.0 3818, v3.0 3822, v3.0 3824, v3.0 3829, v3.0 3831,
 v3.0 3837, v3.0 3839, v3.0 3842, v3.0 4086, v3.0 4432, v3.0 4453, v3.0 6330,
-v3.0 6391, v3.0 6412-dev, v3.0 6510-dev, v3.0 7123-dev, v4.0 7142-alpha,
+v3.0 6391, v3.0 6392-dev, v3.0 6412-dev, v3.0 6510-dev, v3.0 7123-dev, v4.0 7142-alpha,
 v4.0 7533 and v4.0 8023-dev.
 Auto uses build tags and content clues to choose a profile. You can select one
 manually when a game needs it. See [choosing a profile](HISTORICAL_PROFILES.md).
@@ -116,11 +116,14 @@ use the 3400 anchor on a best-effort basis; games newer than the latest anchor
 also have best-effort coverage. [COMPATIBILITY.md](../COMPATIBILITY.md) describes
 the supported engine ranges.
 
-Filename build tags may end in unknown digits: **Build 4XXX** selects the
-highest available profile from 4000 through 4999 (4453), and **Build 6XXX**
-selects the highest from 6000 through 6999 (6510). If no profile falls within
-the interval, Auto routes its upper endpoint normally: **Build 42XX** routes
-4299 to 4432, and **Build 405X** routes 4059 to 4086. Lowercase `x` also works.
+Filename build tags may end in unknown digits. Auto analyzes the content
+within that interval, then chooses the highest compatible stable or automatic
+profile. With no narrower evidence, **Build 4XXX** selects 4453 and **Build 6XXX**
+selects 6391. Palette conversion or 8/16-bit output excludes 4453; old boomerang
+commands can constrain the 63XX interval to 6330. A development profile is considered
+when no compatible stable or automatic profile remains in the interval.
+**Build 42XX** has no available profile inside 4200–4299 and routes above it to 4432.
+Lowercase `x` also works. See [content rules](AUTO_SELECTION_RULES.md).
 
 For inclusive bounds, use **Build 3800-4200**. Each endpoint accepts trailing
 unknown digits: **Build 63XX-7762** means 6300-7762, and **Build 6352-65XX**
@@ -129,8 +132,10 @@ before the Build tag intersects the range: **v.3.0 Build 63XX-7762** becomes
 6300-7532, while **v.4.0 Build XXXX-7762** starts at 7142. A version in a
 separate bracket or in the title does not constrain the range.
 
-Auto selects the highest eligible profile inside an inclusive explicit
-interval. For example, **Build 3780-3839** selects 3839 and
+Auto intersects an inclusive interval with content evidence and prefers the
+highest compatible stable or automatic profile inside it. If the evidence
+contradicts the interval, the interval wins and the nearest declared candidate
+is selected with a log message. For example, **Build 3780-3839** selects 3839 and
 **Build 3792-3911** selects 3842. Only if none fits, it uses the first automatic revision
 above the upper endpoint; 7369-7532 therefore uses 7533. If there is no later
 profile, loading reports an error. An explicit interval takes precedence over
@@ -147,8 +152,13 @@ and removals into an inclusive range, then keeps v3.0 6391 when it satisfies tha
 select the first compatible intervening era up to v4.0 7533; requirements
 beyond that stable release select the latest compatible snapshot, currently
 v4.0 8023-dev. Explicit filename intervals retain their highest-profile /
-next-revision policy. Content inference offers only automatic profiles; 4453,
-6330, 6412 and 6510 remain explicit selections. Historical profiles 3780–3839
+next-revision policy. Ordinary unlabelled inference offers only automatic
+profiles, including the official releases v3.0 4453 and v3.0 6330. Test profiles
+v3.0 6392-dev, v3.0 6412-dev and v3.0 6510-dev can be selected directly by an
+exact filename Build tag or a manual choice. Accompanying executables and
+ordinary unlabelled inference do not select these nonautomatic profiles.
+Imprecise filename tags can select them when no stable or automatic candidate
+remains compatible in the declared interval. Historical profiles 3780–3839
 participate in Auto: a declared build selects the first available revision at
 or above it, including declarations from an accompanying executable. Positive
 content bounds in this engine era use the same logical revisions. No declaration
@@ -170,14 +180,17 @@ source, 16 MiB total and 65536 directory entries, with its own 750 ms deadline.
 
 The content pass inspects at most 800 text files, 2 MiB per file, 16 MiB total,
 and 65536 directory entries, with a 750 ms processing deadline. An incomplete
-pass discards its full interval; without a completed modern dependency probe,
-it uses the v3.0 6391 fallback. Legacy API detection
+pass cannot establish a complete interval. For an imprecise filename tag,
+complete model-command facts already observed remain usable; unread script
+bindings and absent features establish no requirement. Ordinary unlabelled
+inference retains its existing fallback unless a modern dependency probe
+completed. Legacy API detection
 has its own 750 ms budget and bounded argument lookahead. Filesystem reads
 can still be delayed by the host storage. The older sparse token estimates
 remain a fallback when no exact syntax rule fires.
 
 Choose **v3.0 4453** explicitly or use a filename tagged **Build 4453** to select
-that engine. It uses 32-bit color and ignores `colourdepth`.
+that profile. It uses 32-bit color and ignores `colourdepth`.
 
 ### Video contract: Adjust for 4:3 CRT TV
 

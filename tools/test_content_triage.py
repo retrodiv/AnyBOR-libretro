@@ -1,0 +1,179 @@
+"""Verify syntax-scoped routing with complete authored PACK inputs.
+
+SPDX-License-Identifier: BSD-3-Clause
+Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+"""
+import os
+from pathlib import Path
+import re
+import struct
+import subprocess
+import tempfile
+import unittest
+from content_selection_probe import compile_probe
+
+ROOT = Path(os.environ.get('OBOR_TEST_SOURCE', Path(__file__).resolve().parents[1]))
+GLUE = Path(os.environ.get('OBOR_SELECTION_GLUE', ROOT / 'src/glue'))
+
+
+def pack(members):
+    content = bytearray(b'PACK\0\0\0\0')
+    entries = bytearray()
+    for name, body in members.items():
+        name = name.encode() + b'\0'
+        entries += struct.pack('<III', len(name) + 12, len(content), len(body)) + name
+        content += body
+    return content + entries + struct.pack('<I', len(content))
+
+
+class ContentTriageTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.temp = tempfile.TemporaryDirectory(prefix='anybor-content-triage-')
+        cls.root = Path(cls.temp.name)
+        cls.host = cls.root / 'selector'
+        compile_probe(GLUE / 'libretro.cpp', GLUE / 'obor_engines.h', GLUE,
+                      ROOT / 'src/third_party', cls.host, sanitizers=True)
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.temp.cleanup()
+
+    def select(self, tag, members=None):
+        path = self.root / ('authored' + (' [Build ' + tag + ']' if tag else '') + '.pak')
+        path.write_bytes(pack(members or {'data/models.txt': b'load hero data/chars/hero.txt\n',
+                                         'data/chars/hero.txt': b'name hero\n'}))
+        run = subprocess.run([str(self.host), str(path)], capture_output=True, text=True,
+                             check=True, timeout=8)
+        result = re.search(r'selection_profile=(\d+) selection_engine=(\d+)', run.stdout)
+        self.assertIsNotNone(result, run.stdout)
+        return int(result[1]), run.stdout
+
+    def script(self, tag, source):
+        return self.select(tag, {'data/scripts/update.c': source.encode()})
+
+    def test_exact_tags_never_run_triage(self):
+        for tag, expected in (('3780',3780),('6330',6330),('6392',6392),('6412',6412)):
+            profile, log = self.script(tag, 'void main(){ movie_load("x"); }')
+            self.assertEqual(profile, expected)
+            self.assertNotIn('filename triage', log)
+
+    def test_official_automatic_build_coverage(self):
+        for tag, expected in (('4433',4453),('4452',4453),('4453',4453),
+                              ('4454',6330),('6000',6330),('6330',6330),
+                              ('6331',6391),('6393',6391),('6411',6391)):
+            self.assertEqual(self.select(tag)[0], expected)
+
+    def test_palette_requirement_excludes_only_the_incompatible_revision(self):
+        for text in (b'colourdepth 8bit\n', b'colourdepth 16bit\n', b'remap a.gif b.gif\n'):
+            profile, log = self.select('44XX', {'data/chars/hero.txt': text})
+            self.assertEqual(profile,4432)
+            self.assertIn('content rule',log)
+            self.assertEqual(self.select('6XXX', {'data/chars/hero.txt': text})[0],6391)
+        self.assertEqual(self.select('44XX', {'data/video.txt': b'colourdepth 32bit\n'})[0],4453)
+
+    def test_model_and_binding_boundaries_choose_supported_stable_then_dev(self):
+        for text, expected in ((b'boomerang 1\n',6330),(b'ebox 1 2 3 4\n',6391),
+                               (b'on_bind_update_other_to_self_script data/scripts/hook.c\n',6510)):
+            self.assertEqual(self.select('6XXX', {'data/chars/hero.txt': text})[0],expected)
+        for script, expected in (( 'unload_model("hero");',6510),
+                                 ('openborconstant("BINDING_ANI_NONE");',6412),
+                                 ('openborconstant("BINDING_MATCHING_NONE");',6510)):
+            self.assertEqual(self.script('6XXX','void main(){'+script+'}')[0],expected)
+
+    def test_historical_property_and_constant_syntax(self):
+        for tag, source, expected in (
+                ('3780-3839','getplayerproperty(0,"weaponum");',3818),
+                ('3780-3839','getentityproperty(self,"aiflag","freezetime");',3793),
+                ('3780-3831','openborconstant("ATK_LAND");',3831),
+                ('3780-3839','exit(0);',3839),
+                ('3780-3839','openborvariant("sample_play_id");',3839),
+                ('3792-3911','getlevelproperty("type");',3842)):
+            profile,log=self.script(tag,'void main(){'+source+'}')
+            self.assertEqual(profile,expected,log)
+
+    def test_label_wins_a_contradiction_with_a_visible_reason(self):
+        profile,log=self.script('3780-3831','void main(){exit(0);}')
+        self.assertEqual(profile,3831)
+        self.assertIn('content contradicts tag',log)
+        self.assertIn('tag-conflict',log)
+
+    def test_legacy_api_intersects_the_declared_interval(self):
+        profile,log=self.script('4XXX','void main(){getentityproperty(self,"attack",0);}')
+        self.assertEqual(profile,4086)
+        self.assertIn('legacy-attack bounds=1-4166',log)
+
+    def test_comments_prose_dynamic_arguments_and_local_binding_are_inconclusive(self):
+        for source in ('// openborconstant("BINDING_ANI_NONE");\nvoid main(){}',
+                       '/* unload_model("x"); */ void main(){}',
+                       'void main(){log("unload_model and BINDING_ANI_NONE");}',
+                       'void main(){getplayerproperty(0,"weaponum" + suffix);}',
+                       'void unload_model(int x){} void main(){unload_model(0);}',
+                       '#define CUSTOM 1\nvoid main(){unload_model(0);}'):
+            self.assertEqual(self.script('6XXX',source)[0],6391,source)
+
+    def test_scan_limits_keep_positive_model_facts_without_changing_no_tag_policy(self):
+        members={'data/chars/first.txt':b'boomerang 1\n'}
+        members.update(('data/unused/%d.txt'%i,b'name unused\n') for i in range(805))
+        profile,log=self.select('6XXX',members)
+        self.assertEqual(profile,6330)
+        self.assertIn('scan incomplete',log)
+        self.assertIn('name=boomerang bounds=',log)
+        self.assertEqual(self.select('',members)[0],6391)
+        members['data/chars/first.txt']=b'remap first.gif second.gif\n'
+        self.assertEqual(self.select('44XX',members)[0],4432)
+
+    def test_incomplete_scan_cannot_prove_native_script_binding(self):
+        members={'data/scripts/first.c':b'void main(){unload_model(0);}\n'}
+        members.update(('data/unused/%d.txt'%i,b'name unused\n') for i in range(805))
+        members['data/scripts/last.c']=b'void unload_model(int value){}\n'
+        profile,log=self.select('6XXX',members)
+        self.assertEqual(profile,6391)
+        self.assertIn('scan incomplete',log)
+        self.assertNotIn('name=unload_model bounds=',log)
+
+    def test_oversized_later_file_does_not_erase_a_complete_model_fact(self):
+        members={'data/chars/first.txt':b'colourdepth 16bit\n',
+                 'data/oversized.txt':b' '*(2*1024*1024+1)}
+        profile,log=self.select('44XX',members)
+        self.assertEqual(profile,4432)
+        self.assertIn('scan incomplete',log)
+
+    def test_without_tag_retains_the_existing_content_scan(self):
+        # The extra property rule is used only to refine an imprecise tag.
+        self.assertEqual(self.script('', 'void main(){getplayerproperty(0,"weaponum");}')[0],6391)
+        self.assertEqual(self.script('', 'void main(){get_global_config_property(0);}')[0],7533)
+
+    def test_every_rule_has_a_syntactic_probe_and_checked_native_boundaries(self):
+        rules=subprocess.check_output([str(self.host),'--rules'],text=True,timeout=8).splitlines()
+        self.assertGreater(len(rules),30)
+        names=[row.split()[2] for row in rules]
+        self.assertEqual(names,sorted(names))
+        for row in rules:
+            ident,kind,name,lower,upper,flags=row.split()
+            kind,lower,upper,flags=map(int,(kind,lower,upper,flags))
+            for build in {max(1,lower-1),lower,min(99999,upper),min(99999,upper+1),4453,7086,7123,7142}:
+                for engine in {build,7142}:
+                    expected=(lower<=build<=upper and not(flags&1 and build==4453))
+                    if flags&2 and engine==7142 and build in (7086,7123):expected=True
+                    actual=subprocess.check_output([str(self.host),'--rule-probe',ident,str(build),str(engine)],
+                                                   text=True,timeout=8)
+                    self.assertEqual(int(actual),int(expected),(row,build,engine))
+            if kind==0: source='void main(){'+name+'();}'
+            elif kind==1: source='void main(){openborconstant("'+name+'");}'
+            elif kind==3: source='void main(){getplayerproperty(0,"'+name+'");}'
+            elif kind==4: source='void main(){changeplayerproperty(0,"'+name+'",0);}'
+            elif kind==5: source='void main(){getlevelproperty("'+name+'");}'
+            elif kind==6: source='void main(){openborvariant("'+name+'");}'
+            elif kind==7: source='void main(){getentityproperty(self,"aiflag","'+name+'");}'
+            else: source=None
+            if source is not None:
+                _,log=self.script('1000-99999',source)
+            else:
+                body=(name+' 1\n' if kind==2 else 'defense '+name+' 1\n' if kind==8 else 'colourdepth '+name+'\n')
+                _,log=self.select('1000-99999',{'data/chars/hero.txt':body.encode()})
+            self.assertIn('name='+name+' bounds=',log,row)
+
+
+if __name__ == '__main__':
+    unittest.main()

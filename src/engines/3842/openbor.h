@@ -4,9 +4,13 @@
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
  * Upstream code retains its original license and notices.
  * Allocate collision pointer slots through the highest author-facing index
- * used by each collection. Track each model's allocated animation-table
- * capacity and reject lookups outside it. Declare level-owned historical
- * spawn-script resources and ordered call nodes.
+ * used by each collection. Select historical attack domains, environmental
+ * damage, camera and scroll behavior, model-save loading, weapon and idle
+ * order, nested scripts and numeric script selectors. Retain bounded
+ * storage, safe ownership and the selected rejected-value contracts. Track
+ * each model's allocated animation-table capacity and reject lookups outside
+ * it. Declare level-owned historical spawn-script resources and ordered call
+ * nodes.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/3842.md
  * at the source repository root. Original notices follow below.
@@ -259,6 +263,13 @@
 
 #define     MAX_ATKS            20                // default max attack types
 #define     STA_ATKS            (MAX_ATKS-10)     // default special attack types than normal#
+/* Storage arrays retain their compile-time size; logical attack domains and
+ * dynamic animation IDs follow the selected historical contract. */
+int obor_attack_base(void);
+int obor_attack_special(void);
+#define OBOR_ATTACK_BASE (obor_attack_base())
+#define OBOR_ATTACK_SPECIAL (obor_attack_special())
+
 #define     MAX_DOTS            10                // Max active dot effects.
 
 #define		SCROLL_RIGHT		2

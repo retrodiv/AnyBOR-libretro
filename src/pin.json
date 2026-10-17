@@ -1,7 +1,7 @@
 {
   "core_name": "AnyBOR",
   "core_basename": "anybor_libretro",
-  "version": "0.1.58",
+  "version": "0.1.59",
   "fallback_build": "6391",
   "profiles": [
     {
@@ -157,23 +157,45 @@
     {
       "build": "4453",
       "engine": "4432",
-      "covers": "explicit Build 4453 filename or core option",
-      "automatic": false,
-      "major": "v3.0"
+      "covers": "4433-4453 automatically; exact filename tag or core option",
+      "automatic": true,
+      "major": "v3.0",
+      "auto_until": 4453
     },
     {
       "build": "6330",
       "engine": "6391",
-      "covers": "explicit Build 6330 filename or core option",
-      "automatic": false,
-      "major": "v3.0"
+      "covers": "4454-6330 automatically; exact filename tag or core option",
+      "automatic": true,
+      "major": "v3.0",
+      "auto_until": 6330
     },
     {
       "build": "6391",
       "engine": "6391",
-      "covers": "4433-6412 by automatic detection; default fallback",
+      "covers": "6331-6412 automatically; default fallback",
       "auto_until": "6412",
       "major": "v3.0"
+    },
+    {
+      "build": "6392",
+      "engine": "6391",
+      "major": "v3.0",
+      "stage": "dev",
+      "tagged": true,
+      "automatic": false,
+      "covers": "Reconstructed test revision; exact Build tag/manual or source-supported weak-tag triage",
+      "reconstruction": {
+        "basis": "Published author behavior and the subsequent source changes in upstream PR 229; exact original test sources unavailable",
+        "discussion": "https://www.chronocrash.com/forum/threads/openbor-test-build-6392.4936/",
+        "source_commits": [
+          "0824ff3e32513c403b97393eadeea44ff75d6a72",
+          "e4f0605db5f141dd9dd838a954672f5e7320579f",
+          "4462a156fa31d2f3f807bf6bdda16f68cce03bf1",
+          "46e2bbfb1e05cdddc8d2d409e63b7b7061f2b0d5",
+          "e10dd3f1b1c59daea7df3f618e6d68875d109a29"
+        ]
+      }
     },
     {
       "build": "6412",
@@ -310,14 +332,14 @@
       "build": "4432",
       "commit": "2566cbee6185025e6a69d2aa1823b15c7a154ff9",
       "date": "2017-01-25",
-      "covers": "4087-4432 automatically; explicit logical profile 4453",
+      "covers": "4087-4453 through profiles 4432 and 4453",
       "major": "v3.0"
     },
     {
       "build": "6391",
       "commit": "494708eb34e71d1afda237873907701c4ec3a569",
       "date": "2018-08-21",
-      "covers": "4433-6412 automatically; explicit logical profiles 6330, 6412 and 6510; default fallback",
+      "covers": "4454-6412 through profiles 6330 and 6391; explicit test profiles 6392, 6412 and 6510; default fallback",
       "major": "v3.0"
     },
     {

@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+- Preserve historical combat, camera, script, model-loading and audio-result
+  contracts at their revision boundaries while retaining safety corrections.
+- Add v3.0 6392-dev as a documented reconstruction of published test behavior,
+  with four-hit history, its native cheat toggle and return-to-title requests.
+- Reuse owned text-object storage when replacing text in older profiles.
+- Make the official v3.0 4453 and v3.0 6330 releases automatic anchors.
+- Refine imprecise build declarations with syntax-scoped content evidence,
+  preferring compatible stable or automatic profiles. Preserve exact tags and
+  log contradictions without overriding the declared interval.
+
 - Select historical logical profiles automatically from declared build tags,
   accompanying engine versions and existing bounded content evidence. Preserve
   the fallback without a declaration and select the highest available profile
@@ -16,7 +26,7 @@
 
 - Store complete script variable names safely in older engines, preserving
   distinct names without truncation or a fixed name-length bound.
-- Add historical logical profiles on engine 3842. Select player-property
+- Add historical selectable profiles. Select player-property
   names, numeric IDs, AI-flag properties, setter results and rejected-value behavior at their
   upstream revision boundaries while retaining safe error handling.
 - Preserve earlier player spawn coordinate limits and ordered, cached level

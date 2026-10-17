@@ -1,15 +1,17 @@
-/* AnyBOR modification record: 2026-10-05.
+/* AnyBOR modification record: 2026-10-17.
  * Port maintained by retrodiv <retrodiv@proton.me>.
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
  * Upstream code retains its original license and notices.
  * Register native functions according to each logical profile's upstream
- * API.
+ * API. Expose the reconstructed 6392 test profile's earlier backtotitle
+ * alias only in that profile.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/6391.md
  * at the source repository root. Original notices follow below.
  */
 
+#include "libretroport.h"
 /*
  * OpenBOR - http://www.chronocrash.com
  * -----------------------------------------------------------------------
@@ -847,6 +849,10 @@ const char *Script_GetFunctionName(void *functionRef)
     {
         return "gameover";
     }
+    else if (obor_profile_build == 6392 && functionRef == ((void *)openbor_backtotitle))
+    {
+        return "backtotitle";
+    }
     else if (functionRef == ((void *)openbor_gotomainmenu))
     {
         return "gotomainmenu";
@@ -1464,6 +1470,9 @@ void Script_LoadSystemFunctions()
                      (void *)openbor_gameover, "gameover");
     List_InsertAfter(&theFunctionList,
                      (void *)openbor_gotomainmenu, "gotomainmenu");
+    if(obor_profile_build == 6392)
+        List_InsertAfter(&theFunctionList,
+                         (void *)openbor_backtotitle, "backtotitle");
     List_InsertAfter(&theFunctionList,
                      (void *)openbor_playgame, "playgame");
     List_InsertAfter(&theFunctionList,

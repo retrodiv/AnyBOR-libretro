@@ -5,23 +5,26 @@
  * Upstream code retains its original license and notices.
  * Apply the port's engine corrections and select the PC video configuration
  * on macOS. Derive output names from the content basename with explicit
- * destination capacities, and reject overflowing output path joins. Leave
- * multiplayer slots without a selected model available to join even if game
- * scripts preassign lives to them. Let a missing basename-only PAK self-
- * check read the active frontend content after it has been validated and
- * prepared. Allocate each model's animation pointer table through the
- * highest animation index that model uses, and bound cache, copy and cleanup
- * paths to that capacity. Ignore optional defense and offense entries
- * outside the configured attack-type range with a log warning before
- * accessing their tables. Yield after each newly completed model during
- * explicit model-list or level preparation, and defer states until that
- * preparation has cleaned up its intermediate parsers and handles. Resize
- * repeated weapon lists and detach borrowed lists before replacing their
- * entries. Guard an optional entity animation interpreter before reading its
- * reset state. Share identical immutable animation-frame draw methods with
- * reference-counted ownership. Select the pre-3800 player spawn coordinate
- * limit and pre-3805 ordered, cached spawn scripts by logical build, with
- * explicit level ownership and cleanup.
+ * destination capacities, and reject overflowing output path joins. Select
+ * historical attack domains, environmental damage, camera and scroll
+ * behavior, model-save loading, weapon and idle order, nested scripts and
+ * numeric script selectors. Retain bounded storage, safe ownership and the
+ * selected rejected-value contracts. Leave multiplayer slots without a
+ * selected model available to join even if game scripts preassign lives to
+ * them. Let a missing basename-only PAK self-check read the active frontend
+ * content after it has been validated and prepared. Allocate each model's
+ * animation pointer table through the highest animation index that model
+ * uses, and bound cache, copy and cleanup paths to that capacity. Ignore
+ * optional defense and offense entries outside the configured attack-type
+ * range with a log warning before accessing their tables. Yield after each
+ * newly completed model during explicit model-list or level preparation, and
+ * defer states until that preparation has cleaned up its intermediate
+ * parsers and handles. Resize repeated weapon lists and detach borrowed
+ * lists before replacing their entries. Guard an optional entity animation
+ * interpreter before reading its reset state. Share identical immutable
+ * animation-frame draw methods with reference-counted ownership. Select the
+ * pre-3800 player spawn coordinate limit and pre-3805 ordered, cached spawn
+ * scripts by logical build, with explicit level ownership and cleanup.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/3842.md
  * at the source repository root. Original notices follow below.
@@ -65,6 +68,17 @@ s_set_entry *levelsets = NULL;
 int        num_difficulties;
 
 int no_cmd_compatible = 0;
+
+static int obor_animation_cmd_grouped(void)
+{
+    return obor_profile_build >= 3813 &&
+        (obor_profile_build < 3823 || no_cmd_compatible);
+}
+
+static int obor_animation_cmd_returns(void)
+{
+    return obor_profile_build < 3823 || no_cmd_compatible;
+}
 
 int		skiptoset = -1;
 //when there are more entities than this, those with lower priority will be erased
@@ -270,6 +284,25 @@ int                 max_backwalks       = MAX_BACKWALKS;
 int                 max_walks           = MAX_WALKS;
 int                 max_idles           = MAX_IDLES;
 int                 max_attack_types    = MAX_ATKS;
+
+int obor_attack_base(void)
+{
+    return obor_profile_build < 3830 ? 16 : MAX_ATKS;
+}
+
+int obor_attack_special(void)
+{
+    return obor_profile_build < 3831 ? 6 : STA_ATKS;
+}
+
+static int obor_attack_name_available(const char *name)
+{
+    return obor_profile_build >= 3831 ||
+        (strcmp(name, "NORMAL1") && strcmp(name, "ITEM") &&
+         strcmp(name, "LAND") && strcmp(name, "PIT") &&
+         strcmp(name, "LIFESPAN") && strcmp(name, "TIMEOVER"));
+}
+
 int                 max_freespecials    = MAX_SPECIALS;
 int                 max_follows         = MAX_FOLLOWS;
 int                 max_attacks         = MAX_ATTACKS;
@@ -1702,7 +1735,7 @@ void execute_animation_script(entity* ent)
 		/* A model can acquire its animation script before the entity-local
 		 * interpreter is created (for example during scripted map entities).
 		 * Newer OpenBOR builds already guard this optional interpreter. */
-		if(cs->pinterpreter && cs->pinterpreter->bReset)
+		if(obor_profile_build >= 3813 && cs->pinterpreter && cs->pinterpreter->bReset)
 			handle = Script_Save_Local_Variant(cs, namelist);
 		ScriptVariant_Init(&tempvar);
 		ScriptVariant_ChangeType(&tempvar, VT_PTR);
@@ -1725,7 +1758,7 @@ void execute_animation_script(entity* ent)
 			Script_Copy(cs, s2, 0);
 			Script_Execute(cs);
 		}
-		if(Script_IsInitialized(s1)){
+		if(obor_profile_build >= 3813 && Script_IsInitialized(s1)){
 			Script_Copy(cs, s1, 0);
 		}
 		//clear to save variant space
@@ -2863,18 +2896,17 @@ int saveScriptFile()
 	}
 	//allow select
 	for(i=0; i<models_cached; i++){
-		if(model_cache[i].selectable) {
+		if(obor_profile_build >= 3822 && model_cache[i].selectable) {
 			_writeconst("\tchangemodelproperty(\"")
 			_writestr(model_cache[i].name)
 			_writeconst("\",4,1);\n")
 		}
-		/*
-		if(model_cache[i].model) {
+		if(obor_profile_build >= 3822 && obor_profile_build < 3835 && model_cache[i].model) {
 			_writeconst("\tloadmodel(\"")
 			_writestr(model_cache[i].name)
 			sprintf(tmpvalue, "\",%d,%d);\n", model_cache[i].model->unload, model_cache[i].selectable);
 			_writetmp
-		}*/
+		}
 	}
 	_writeconst("}\n");
 
@@ -4759,8 +4791,8 @@ static int translate_ani_id(const char* value, s_model* newchar, s_anim* newanim
 			ani_id = ANI_PAIN10;
 		}
 		else{
-			if(tempInt<MAX_ATKS-STA_ATKS+1) tempInt = MAX_ATKS-STA_ATKS+1;
-			ani_id = animpains[tempInt+STA_ATKS-1];
+			if(tempInt<OBOR_ATTACK_BASE-OBOR_ATTACK_SPECIAL+1) tempInt = OBOR_ATTACK_BASE-OBOR_ATTACK_SPECIAL+1;
+			ani_id = animpains[tempInt+OBOR_ATTACK_SPECIAL-1];
 		}
 	}
 	else if(stricmp(value, "spain")==0){    // If shock attacks don't knock opponent down, play this
@@ -4802,8 +4834,8 @@ static int translate_ani_id(const char* value, s_model* newchar, s_anim* newanim
 			ani_id = ANI_FALL10;
 		}
 		else{
-			if(tempInt<MAX_ATKS-STA_ATKS+1) tempInt = MAX_ATKS-STA_ATKS+1;
-			ani_id = animfalls[tempInt+STA_ATKS-1];
+			if(tempInt<OBOR_ATTACK_BASE-OBOR_ATTACK_SPECIAL+1) tempInt = OBOR_ATTACK_BASE-OBOR_ATTACK_SPECIAL+1;
+			ani_id = animfalls[tempInt+OBOR_ATTACK_SPECIAL-1];
 		}
 		newanim->bounce = 4;
 	}
@@ -4848,8 +4880,8 @@ static int translate_ani_id(const char* value, s_model* newchar, s_anim* newanim
 			ani_id = ANI_DIE10;
 		}
 		else{
-			if(tempInt<MAX_ATKS-STA_ATKS+1) tempInt = MAX_ATKS-STA_ATKS+1;
-			ani_id = animdies[tempInt+STA_ATKS-1];
+			if(tempInt<OBOR_ATTACK_BASE-OBOR_ATTACK_SPECIAL+1) tempInt = OBOR_ATTACK_BASE-OBOR_ATTACK_SPECIAL+1;
+			ani_id = animdies[tempInt+OBOR_ATTACK_SPECIAL-1];
 		}
 	}
 	else if(stricmp(value, "sdie")==0){
@@ -4903,8 +4935,8 @@ static int translate_ani_id(const char* value, s_model* newchar, s_anim* newanim
 			ani_id = ANI_RISE10;
 		}
 		else{
-			if(tempInt<MAX_ATKS-STA_ATKS+1) tempInt = MAX_ATKS-STA_ATKS+1;
-			ani_id = animrises[tempInt+STA_ATKS-1];
+			if(tempInt<OBOR_ATTACK_BASE-OBOR_ATTACK_SPECIAL+1) tempInt = OBOR_ATTACK_BASE-OBOR_ATTACK_SPECIAL+1;
+			ani_id = animrises[tempInt+OBOR_ATTACK_SPECIAL-1];
 		}
 	}
 	else if(stricmp(value, "riseattackb")==0){
@@ -4946,8 +4978,8 @@ static int translate_ani_id(const char* value, s_model* newchar, s_anim* newanim
 			ani_id = ANI_RISEATTACK10;
 		}
 		else{
-			if(tempInt<MAX_ATKS-STA_ATKS+1) tempInt = MAX_ATKS-STA_ATKS+1;
-			ani_id = animriseattacks[tempInt+STA_ATKS-1];
+			if(tempInt<OBOR_ATTACK_BASE-OBOR_ATTACK_SPECIAL+1) tempInt = OBOR_ATTACK_BASE-OBOR_ATTACK_SPECIAL+1;
+			ani_id = animriseattacks[tempInt+OBOR_ATTACK_SPECIAL-1];
 		}
 	}
 	else if(stricmp(value, "select")==0){
@@ -5207,8 +5239,8 @@ static int translate_ani_id(const char* value, s_model* newchar, s_anim* newanim
 			ani_id = ANI_BLOCKPAIN10;
 		}
 		else{
-			if(tempInt<MAX_ATKS-STA_ATKS+1) tempInt = MAX_ATKS-STA_ATKS+1;
-			ani_id = animblkpains[tempInt+STA_ATKS-1];
+			if(tempInt<OBOR_ATTACK_BASE-OBOR_ATTACK_SPECIAL+1) tempInt = OBOR_ATTACK_BASE-OBOR_ATTACK_SPECIAL+1;
+			ani_id = animblkpains[tempInt+OBOR_ATTACK_SPECIAL-1];
 		}
 	}
 	else if(stricmp(value, "duckattack")==0){
@@ -6269,7 +6301,7 @@ s_model* load_cached_model(char * name, char * owner, char unload)
 					break;
 				case CMD_MODEL_DEFENSE:
 					#define tempdef(x, y) \
-					x(stricmp(value, #y)==0)\
+					x(obor_attack_name_available(#y) && stricmp(value, #y)==0)\
 					{\
 						newchar->defense[ATK_##y] = defense;\
 					}
@@ -6310,15 +6342,16 @@ s_model* load_cached_model(char * name, char * owner, char unload)
 						else if(starts_with(value, "normal"))
 						{
 							get_tail_number(tempInt, value, "normal");
+                            if(obor_profile_build < 3831 && tempInt < 11) tempInt = 11;
 							/* Invalid optional entries must not corrupt adjacent heap chunks. */
-							if(tempInt > max_attack_types - STA_ATKS)
+							if(tempInt > max_attack_types - OBOR_ATTACK_SPECIAL)
 							{
 							    writeToLogFile("Warning: Ignoring out-of-range attack type '%s' in %s "
 							                   "(%s; maxattacktypes %d).\n",
-							                   value, filename, command, max_attack_types - STA_ATKS);
+							                   value, filename, command, max_attack_types - OBOR_ATTACK_SPECIAL);
 							    break;
 							}
-							newchar->defense[tempInt+STA_ATKS-1] = defense;
+							newchar->defense[tempInt+OBOR_ATTACK_SPECIAL-1] = defense;
 						}
 						else if(stricmp(value, "ALL")==0)
 						{
@@ -6327,7 +6360,8 @@ s_model* load_cached_model(char * name, char * owner, char unload)
                                 /*
                                 Skip the pit, lifespan, and time over attack types as these are for engine use. Nothing stops an author from defining defense settings for them individually.
                                 */
-                                if(i != ATK_PIT && i != ATK_TIMEOVER && i != ATK_LIFESPAN)
+                                if(obor_profile_build < 3830 ||
+                                   (i != ATK_PIT && i != ATK_TIMEOVER && i != ATK_LIFESPAN))
                                     newchar->defense[i] = defense;
                             }
 						}
@@ -6336,7 +6370,7 @@ s_model* load_cached_model(char * name, char * owner, char unload)
 					break;
 				case CMD_MODEL_OFFENSE:
 					#define tempoff(x, y, z) \
-					x(stricmp(value, #y)==0)\
+					x(obor_attack_name_available(#y) && stricmp(value, #y)==0)\
 					{\
 					newchar->z[ATK_##y] = GET_FLOAT_ARG(2);\
 					/*newchar->z[ATK_##y] /= 100;*/\
@@ -6367,15 +6401,16 @@ s_model* load_cached_model(char * name, char * owner, char unload)
 						else if(starts_with(value, "normal"))
 						{
 							get_tail_number(tempInt, value, "normal");
+                            if(obor_profile_build < 3831 && tempInt < 11) tempInt = 11;
 							/* Invalid optional entries must not corrupt adjacent heap chunks. */
-							if(tempInt > max_attack_types - STA_ATKS)
+							if(tempInt > max_attack_types - OBOR_ATTACK_SPECIAL)
 							{
 							    writeToLogFile("Warning: Ignoring out-of-range attack type '%s' in %s "
 							                   "(%s; maxattacktypes %d).\n",
-							                   value, filename, command, max_attack_types - STA_ATKS);
+							                   value, filename, command, max_attack_types - OBOR_ATTACK_SPECIAL);
 							    break;
 							}
-							newchar->offense_factors[tempInt+STA_ATKS-1] = GET_FLOAT_ARG(2);
+							newchar->offense_factors[tempInt+OBOR_ATTACK_SPECIAL-1] = GET_FLOAT_ARG(2);
 						}
 						else if(stricmp(value, "ALL")==0)
 						{
@@ -6383,7 +6418,8 @@ s_model* load_cached_model(char * name, char * owner, char unload)
 							for(i=0;i<max_attack_types;i++)
 							{
 								//offense hardly need those, just in case
-                                if(i != ATK_PIT && i != ATK_TIMEOVER && i != ATK_LIFESPAN)
+                                if(obor_profile_build < 3831 ||
+                                   (i != ATK_PIT && i != ATK_TIMEOVER && i != ATK_LIFESPAN))
 									newchar->offense_factors[i] = tempFloat;
 							}
 						}
@@ -6861,6 +6897,7 @@ s_model* load_cached_model(char * name, char * owner, char unload)
 					lcmHandleCommandScripts(&arglist, newchar->scripts->onspawn_script, "onspawnscript", filename);
 					break;
 				case CMD_MODEL_ONMODELCOPYSCRIPT:
+                    if(obor_profile_build >= 3793)
 					lcmHandleCommandScripts(&arglist, newchar->scripts->onmodelcopy_script, "onmodelcopyscript", filename);
 					break;
 				case CMD_MODEL_ANIMATIONSCRIPT:
@@ -7413,9 +7450,9 @@ s_model* load_cached_model(char * name, char * owner, char unload)
 							break;
 						default:
 							tempInt = atoi(command+6);
-							if(tempInt<MAX_ATKS-STA_ATKS+1)
-								tempInt = MAX_ATKS-STA_ATKS+1;
-							attack.attack_type = tempInt+STA_ATKS-1;
+							if(tempInt<OBOR_ATTACK_BASE-OBOR_ATTACK_SPECIAL+1)
+								tempInt = OBOR_ATTACK_BASE-OBOR_ATTACK_SPECIAL+1;
+							attack.attack_type = tempInt+OBOR_ATTACK_SPECIAL-1;
 					}
 					break;
 				case CMD_MODEL_ATTACKZ: case CMD_MODEL_HITZ:
@@ -7842,7 +7879,7 @@ s_model* load_cached_model(char * name, char * owner, char unload)
 						 //       f();
 						 //    }
 						 */
-						if(!no_cmd_compatible || frm_id != curframe)
+						if(!obor_animation_cmd_grouped() || frm_id != curframe)
 						{
 							sprintf(namebuf, if_text, curframe);//only execute in current frame
 							buffer_append(&scriptbuf, namebuf, 0xffffff, &sbsize, &scriptlen);
@@ -7867,7 +7904,7 @@ s_model* load_cached_model(char * name, char * owner, char unload)
 						}while(value && value[0]);
 					}
 					buffer_append(&scriptbuf, endcall_text, 0xffffff, &sbsize, &scriptlen);
-					if(no_cmd_compatible) buffer_append(&scriptbuf, endif_return_text, 0xffffff, &sbsize, &scriptlen);//return
+					if(obor_animation_cmd_returns()) buffer_append(&scriptbuf, endif_return_text, 0xffffff, &sbsize, &scriptlen);//return
 					buffer_append(&scriptbuf, endif_text, 0xffffff, &sbsize, &scriptlen);//end of if
 					buffer_append(&scriptbuf, endifid_text, 0xffffff, &sbsize, &scriptlen); // put back last  chars
 					buffer_append(&scriptbuf, sur_text, 0xffffff, &sbsize, &scriptlen); // put back last  chars
@@ -8173,7 +8210,7 @@ void load_model_constants() {
 	max_ups          = MAX_UPS;
 	max_downs        = MAX_DOWNS;
 	max_backwalks    = MAX_BACKWALKS;
-	max_attack_types = MAX_ATKS;
+	max_attack_types = OBOR_ATTACK_BASE;
 	max_freespecials = MAX_SPECIALS;
 	max_follows      = MAX_FOLLOWS;
 	max_attacks      = MAX_ATTACKS;
@@ -8232,8 +8269,8 @@ void load_model_constants() {
 					break;
 				case CMD_MODELSTXT_MAXATTACKTYPES:
 					// max attacktype/pain/fall/die
-					max_attack_types = GET_INT_ARG(1) + STA_ATKS;
-					if(max_attack_types < MAX_ATKS) max_attack_types = MAX_ATKS;
+					max_attack_types = GET_INT_ARG(1) + OBOR_ATTACK_SPECIAL;
+					if(max_attack_types < OBOR_ATTACK_BASE) max_attack_types = OBOR_ATTACK_BASE;
 					break;
 				case CMD_MODELSTXT_MAXFOLLOWS:
 					// max follow-ups
@@ -8260,7 +8297,7 @@ void load_model_constants() {
 	}
 
 	// calculate max animations
-	max_animations += (max_attack_types - MAX_ATKS) * 6 +// multply by 5, for fall/die/pain/rise/blockpain/riseattack
+	max_animations += (max_attack_types - OBOR_ATTACK_BASE) * 6 +// multply by 5, for fall/die/pain/rise/blockpain/riseattack
 			(max_follows - MAX_FOLLOWS) +
 			(max_freespecials - MAX_SPECIALS) +
 			(max_attacks - MAX_ATTACKS) +
@@ -8303,18 +8340,24 @@ void load_model_constants() {
 	for(i=MAX_ATTACKS; i<max_attacks; i++) animattacks[i] = maxanim++;
 	memcpy(animfollows,  follows,        sizeof(*animfollows)*MAX_FOLLOWS);
 	for(i=MAX_FOLLOWS; i<max_follows; i++) animfollows[i] = maxanim++;
-	memcpy(animpains,    pains,          sizeof(*animpains)*MAX_ATKS);
-	for(i=MAX_ATKS; i<max_attack_types; i++) animpains[i] = maxanim++;
-	memcpy(animfalls,    falls,          sizeof(*animfalls)*MAX_ATKS);
-	for(i=MAX_ATKS; i<max_attack_types; i++) animfalls[i] = maxanim++;
-	memcpy(animrises,    rises,          sizeof(*animrises)*MAX_ATKS);
-	for(i=MAX_ATKS; i<max_attack_types; i++) animrises[i] = maxanim++;
-	memcpy(animriseattacks,    riseattacks,          sizeof(*animriseattacks)*MAX_ATKS);
-	for(i=MAX_ATKS; i<max_attack_types; i++) animriseattacks[i] = maxanim++;
-	memcpy(animblkpains,    blkpains,    sizeof(*animblkpains)*MAX_ATKS);
-	for(i=MAX_ATKS; i<max_attack_types; i++) animblkpains[i] = maxanim++;
-	memcpy(animdies,     deaths,         sizeof(*animdies)*MAX_ATKS);
-	for(i=MAX_ATKS; i<max_attack_types; i++) animdies[i] = maxanim++;
+	memcpy(animpains,    pains,          sizeof(*animpains)*OBOR_ATTACK_BASE);
+    if(obor_profile_build < 3831) memset(animpains+15, 0, sizeof(*animpains)*(OBOR_ATTACK_BASE-15));
+	for(i=OBOR_ATTACK_BASE; i<max_attack_types; i++) animpains[i] = maxanim++;
+	memcpy(animfalls,    falls,          sizeof(*animfalls)*OBOR_ATTACK_BASE);
+    if(obor_profile_build < 3831) memset(animfalls+15, 0, sizeof(*animfalls)*(OBOR_ATTACK_BASE-15));
+	for(i=OBOR_ATTACK_BASE; i<max_attack_types; i++) animfalls[i] = maxanim++;
+	memcpy(animrises,    rises,          sizeof(*animrises)*OBOR_ATTACK_BASE);
+    if(obor_profile_build < 3831) memset(animrises+15, 0, sizeof(*animrises)*(OBOR_ATTACK_BASE-15));
+	for(i=OBOR_ATTACK_BASE; i<max_attack_types; i++) animrises[i] = maxanim++;
+	memcpy(animriseattacks,    riseattacks,          sizeof(*animriseattacks)*OBOR_ATTACK_BASE);
+    if(obor_profile_build < 3831) memset(animriseattacks+15, 0, sizeof(*animriseattacks)*(OBOR_ATTACK_BASE-15));
+	for(i=OBOR_ATTACK_BASE; i<max_attack_types; i++) animriseattacks[i] = maxanim++;
+	memcpy(animblkpains,    blkpains,    sizeof(*animblkpains)*OBOR_ATTACK_BASE);
+    if(obor_profile_build < 3831) memset(animblkpains+15, 0, sizeof(*animblkpains)*(OBOR_ATTACK_BASE-15));
+	for(i=OBOR_ATTACK_BASE; i<max_attack_types; i++) animblkpains[i] = maxanim++;
+	memcpy(animdies,     deaths,         sizeof(*animdies)*OBOR_ATTACK_BASE);
+    if(obor_profile_build < 3831) memset(animdies+15, 0, sizeof(*animdies)*(OBOR_ATTACK_BASE-15));
+	for(i=OBOR_ATTACK_BASE; i<max_attack_types; i++) animdies[i] = maxanim++;
 
 	if(buf) free(buf);
 }
@@ -9992,7 +10035,7 @@ void load_level(char *filename){
 				break;
 			case CMD_LEVEL_SHADOWCOLOR:
 				memset(&next,0,sizeof(next));
-				next.shadowcolor = parsecolor(GET_ARG(1));
+				next.shadowcolor = obor_profile_build < 3819 ? GET_INT_ARG(1) : parsecolor(GET_ARG(1));
 				break;
 			case CMD_LEVEL_SHADOWALPHA:
 				memset(&next,0,sizeof(next));
@@ -10009,9 +10052,23 @@ void load_level(char *filename){
 				memset(&next,0,sizeof(next));
 				next.scrollminz = GET_INT_ARG(1);
 				next.scrollmaxz = GET_INT_ARG(2);
-				next.scrollminz |= 0x80000000;
+				if(obor_profile_build >= 3783) next.scrollminz |= 0x80000000;
+                else
+                {
+                    if(next.scrollminz <= 0) next.scrollminz = 0;
+                    if(next.scrollmaxz <= 0) next.scrollmaxz = 0;
+                }
 				break;
 			case CMD_LEVEL_SCROLLX:
+                if(obor_profile_build < 3783)
+                {
+                    memset(&next, 0, sizeof(next));
+                    next.scrollminz = GET_INT_ARG(1);
+                    next.scrollmaxz = GET_INT_ARG(2);
+                    if(next.scrollminz <= 0) next.scrollminz = 0;
+                    if(next.scrollmaxz <= 0) next.scrollmaxz = 0;
+                    break;
+                }
 				//shall we keep blockade?
 				memset(&next,0,sizeof(next));
 				next.scrollminx = GET_INT_ARG(1);
@@ -10383,7 +10440,7 @@ void load_level(char *filename){
 	if(level->width<videomodes.hRes) level->width = videomodes.hRes;
 
 	scrollmaxx = level->width-videomodes.hRes;
-	scrollmaxz = panel_height;
+	scrollmaxz = obor_profile_build < 3783 ? 0 : panel_height;
 
 	if(level->scrolldir&SCROLL_LEFT)
 		advancex = (float)(level->width-videomodes.hRes);
@@ -11217,7 +11274,7 @@ int common_idle_anim(entity* ent)
 
 	self = ent;
 
-	if(self->idling) self->idling |= 2;
+	if(obor_profile_build >= 3819 && self->idling) self->idling |= 2;
 
 	if (ent->model->subtype != SUBTYPE_BIKER && ent->model->type != TYPE_NONE) // biker fix by Plombo // type none being "idle" prevented contra locked and loaded from working correctly. fixed by anallyst
 		ent->xdir = ent->zdir = 0;                                                      //Stop movement.
@@ -11227,7 +11284,8 @@ int common_idle_anim(entity* ent)
 		ent_set_anim(ent, ANI_FAINT, 0);                                                //Set ANI_FAINT.
 		goto found;                                                                      //Return 1 and exit.
 	}
-	else if(validanim(ent,ANI_SLEEP) && time > ent->sleeptime)     //ANI_SLEEP, sleeptime up
+	else if(validanim(ent,ANI_SLEEP) && (obor_profile_build < 3825 ? time >= ent->sleeptime : time > ent->sleeptime) &&
+            (obor_profile_build >= 3824 || ent->animating))     //ANI_SLEEP, sleeptime up
 	{
 		ent_set_anim(ent, ANI_SLEEP, 0);                                                //Set sleep anim.
 		goto found;                                                                     //Return 1 and exit.
@@ -11268,7 +11326,7 @@ void ent_default_init(entity* e)
 	if((!selectScreen && !time) || e->modeldata.type != TYPE_PLAYER )
 	{
 		if( validanim(e,ANI_SPAWN)) ent_set_anim(e, ANI_SPAWN, 0); // use new playerselect spawn anim
-		else if( validanim(e,ANI_RESPAWN)) ent_set_anim(e, ANI_RESPAWN, 0);
+		else if(obor_profile_build >= 3787 && validanim(e,ANI_RESPAWN)) ent_set_anim(e, ANI_RESPAWN, 0);
 		//else set_idle(e);
 	}
 	else if(!selectScreen && time && e->modeldata.type == TYPE_PLAYER) // mid-level respawn
@@ -11370,7 +11428,7 @@ void ent_default_init(entity* e)
 
 			if(e->modeldata.subtype == SUBTYPE_NOTGRAB) e->nograb = 1;
 
-			if(validanim(e,ANI_SPAWN) || validanim(e,ANI_RESPAWN))
+			if(validanim(e,ANI_SPAWN) || (obor_profile_build >= 3787 && validanim(e,ANI_RESPAWN)))
 			{
 				e->takeaction = common_spawn;
 			}
@@ -11753,6 +11811,8 @@ void ent_set_anim(entity *ent, int aninum, int resetable)
 		ent->animation = ani;
 		ent->animpos=animpos;
 	}else{
+        if(obor_profile_build < 3819 && aninum != ANI_SLEEP)
+            ent->sleeptime = time + ent->modeldata.sleepwait;
 		ent->animation = ani;
 		ent->animnum = aninum;    // Stored for nocost usage
 		ent->animation->animhits = 0;
@@ -13084,13 +13144,14 @@ void check_gravity()
 					{
 						attack              = emptyattack;
 						attack.attack_force = self->damage_on_landing;
-						attack.attack_type  = ATK_LAND;
+						attack.attack_type  = obor_profile_build < 3830 ? self->damagetype : ATK_LAND;
 						self->takedamage(self, &attack);
 					}
 					else
 					{
 
-						self->health -= (self->damage_on_landing * self->defense[ATK_LAND].factor);
+						self->health -= (self->damage_on_landing *
+                            (obor_profile_build < 3830 ? 1.0f : self->defense[ATK_LAND].factor));
 						if(self->health <=0 ) kill(self);
 						self->damage_on_landing = 0;
 					}
@@ -13122,7 +13183,7 @@ void check_lost()
 	}
 
 	// fall into a pit
-	if(self->a < PIT_DEPTH)
+	if(self->a < PIT_DEPTH || (obor_profile_build < 3830 && self->lifespancountdown < 0))
 	{
 		if(!self->takedamage) kill(self);
 		else
@@ -13132,7 +13193,8 @@ void check_lost()
 			attack.dropv[1] = default_model_dropv[1];
 			attack.dropv[2] = default_model_dropv[2];
 			attack.attack_force = self->health;
-			attack.attack_type  = ATK_PIT;
+			attack.attack_type  = obor_profile_build < 3830 ? max_attack_types : ATK_PIT;
+            if(obor_profile_build < 3830) self->health = 0;
 			self->takedamage(self, &attack);
 		}
 		return;
@@ -13303,7 +13365,8 @@ void update_animation()
 		}
 	}
 
-	if(!(self->idling&2) || (self->animnum==ANI_SLEEP&&!self->animating))
+	if((obor_profile_build >= 3819 && obor_profile_build < 3824 && self->animnum != ANI_SLEEP && (self->idling&2)) ||
+       (obor_profile_build >= 3824 && (!(self->idling&2) || (self->animnum==ANI_SLEEP&&!self->animating))))
 		self->sleeptime = time + self->modeldata.sleepwait;
 
 	if(self->invincible && time >= self->invinctime)    // Invincible time has run out, turn off
@@ -14264,12 +14327,13 @@ int set_idle(entity* ent)
 	//int ani = ANI_IDLE;
 	//if(validanim(ent,ANI_FAINT) && ent->health <= ent->modeldata.health / 4) ani = ANI_FAINT;
 	//if(validanim(ent,ani)) ent_set_anim(ent, ani, 0);
+	if(obor_profile_build < 3819) common_idle_anim(ent);
 	ent->idling = 1;
 	ent->attacking = 0;
 	ent->inpain = 0;
 	ent->jumping = 0;
 	ent->blocking = 0;
-	common_idle_anim(ent);
+	if(obor_profile_build >= 3819) common_idle_anim(ent);
 	return 1;
 }
 
@@ -14506,9 +14570,17 @@ void set_model_ex(entity* ent, char* modelname, int index, s_model* newmodel, in
 	}
 }
 
+static void obor_apply_weapon_model(entity *ent, int wpnum, int anim_flag)
+{
+	if(ent->modeldata.weapon && wpnum > 0 && wpnum <= ent->modeldata.numweapons && ent->modeldata.weapon[wpnum-1])
+		set_model_ex(ent, NULL, ent->modeldata.weapon[wpnum-1], NULL, !anim_flag);
+	else set_model_ex(ent, NULL, -1, ent->defaultmodel, 1);
+}
+
 void set_weapon(entity* ent, int wpnum, int anim_flag) // anim_flag added for scripted midair weapon changing
 {
 	if(!ent) return;
+    if(obor_profile_build < 3793) obor_apply_weapon_model(ent, wpnum, anim_flag);
 //printf("setweapon: %d \n", wpnum);
 
 	if(ent->modeldata.type == TYPE_PLAYER) // save current weapon for player's weaploss 3
@@ -14517,9 +14589,7 @@ void set_weapon(entity* ent, int wpnum, int anim_flag) // anim_flag added for sc
 		else player[(int)ent->playerindex].weapnum = level->setweap;
 	}
 
-	if(ent->modeldata.weapon && wpnum > 0 && wpnum <= ent->modeldata.numweapons && ent->modeldata.weapon[wpnum-1])
-		set_model_ex(ent, NULL, ent->modeldata.weapon[wpnum-1], NULL, !anim_flag);
-	else set_model_ex(ent, NULL, -1, ent->defaultmodel, 1);
+    if(obor_profile_build >= 3793) obor_apply_weapon_model(ent, wpnum, anim_flag);
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -15226,10 +15296,10 @@ void common_get()
 void common_block()
 {
 	int hb1 = self->modeldata.holdblock && self->modeldata.type==TYPE_PLAYER &&
-		(!self->inpain || (self->modeldata.holdblock&2)); //inpain = blockpain
+		(!self->inpain || (obor_profile_build >= 3801 && (self->modeldata.holdblock&2))); //inpain = blockpain
 	int hb2 = ((player+self->playerindex)->keys&FLAG_SPECIAL) ;
 
-	if(self->inpain && (self->modeldata.holdblock&2) && !self->animating && validanim(self,ANI_BLOCK)){
+	if(obor_profile_build >= 3834 && self->inpain && (self->modeldata.holdblock&2) && !self->animating && validanim(self,ANI_BLOCK)){
 		self->inpain = 0;
 		ent_set_anim(self, ANI_BLOCK, 0);
 	}else if(
@@ -17282,8 +17352,8 @@ int common_try_wander(entity* target, int dox, int doz)
 	mindz = grabd/4;
 
 	mod = ((int)(time/(videomodes.hRes/self->modeldata.speed)) + self->sortid/100 + self->health/3 + self->pathblocked + self->modeldata.aggression/10) % 4;
-	if(mod<0) mod = -mod;
-	if ((self->sortid/100)%2)
+	if(obor_profile_build >= 3801 && mod<0) mod = -mod;
+	if(obor_profile_build >= 3801 && (self->sortid/100)%2)
 	{
 		mod = 3-mod;
 	}
@@ -20405,7 +20475,7 @@ void time_over()
 	s_attack attack;
 
 	attack = emptyattack;
-	attack.attack_type = ATK_TIMEOVER;
+	attack.attack_type = obor_profile_build < 3830 ? max_attack_types : ATK_TIMEOVER;
 	attack.dropv[0] = default_model_dropv[0];
 	attack.dropv[1] = default_model_dropv[1];
 	attack.dropv[2] = default_model_dropv[2];
@@ -20489,7 +20559,9 @@ void update_scroller(){
 				else if(level->spawnpoints[current_spawn].nojoin!=0){
 					nojoin = (level->spawnpoints[current_spawn].nojoin==1);
 				}
-				else if(level->spawnpoints[current_spawn].scrollminz&0x80000000){
+				else if(obor_profile_build < 3783 ?
+                    (level->spawnpoints[current_spawn].scrollminz || level->spawnpoints[current_spawn].scrollmaxz) :
+                    (level->spawnpoints[current_spawn].scrollminz&0x80000000)){
 						scrollminz = (float)(level->spawnpoints[current_spawn].scrollminz&0x7fffffff);
 						scrollmaxz = (float)level->spawnpoints[current_spawn].scrollmaxz;
 						if(!time) advancey = scrollminz; // reset y if spawn at very beginning
@@ -20556,11 +20628,20 @@ void update_scroller(){
 
 			againstend = (level->width<=videomodes.hRes);
 			
-			if(rm-lm>videomodes.hRes) to = advancex;
-			else to = (lm+rm)/2-videomodes.hRes/2+level->cameraxoffset;
+			if(obor_profile_build < 3837)
+            {
+                for(i=0, to=0; i<levelsets[current_set].maxplayers; i++)
+                    if(player[i].ent) to += (int)player[i].ent->x;
+                to = to/numplay - videomodes.hRes/2 + level->cameraxoffset;
+            }
+            else if(rm-lm>videomodes.hRes) to = advancex;
+            else to = (lm+rm)/2-videomodes.hRes/2+level->cameraxoffset;
 
-			if(to<scrollminx) to = scrollminx;
-			else if(to>scrollmaxx) to = scrollmaxx;
+			if(obor_profile_build >= 3783)
+            {
+                if(to<scrollminx) to = scrollminx;
+                else if(to>scrollmaxx) to = scrollmaxx;
+            }
 
 			if((level->scrolldir&SCROLL_BACK) && to < blockade) to = blockade;
 
@@ -20592,11 +20673,20 @@ void update_scroller(){
 
 			againstend = (level->width<=videomodes.hRes);
 
-			if(rm-lm>videomodes.hRes) to = advancex;
-			else to = (lm+rm)/2-videomodes.hRes/2+level->cameraxoffset;
+			if(obor_profile_build < 3837)
+            {
+                for(i=0, to=0; i<levelsets[current_set].maxplayers; i++)
+                    if(player[i].ent) to += (int)player[i].ent->x;
+                to = to/numplay - videomodes.hRes/2 + level->cameraxoffset;
+            }
+            else if(rm-lm>videomodes.hRes) to = advancex;
+            else to = (lm+rm)/2-videomodes.hRes/2+level->cameraxoffset;
 
-			if(to<scrollminx) to = scrollminx;
-			else if(to>scrollmaxx) to = scrollmaxx;
+			if(obor_profile_build >= 3783)
+            {
+                if(to<scrollminx) to = scrollminx;
+                else if(to>scrollmaxx) to = scrollmaxx;
+            }
 
 			if((level->scrolldir&SCROLL_BACK) && level->width- videomodes.hRes - to < blockade) to = level->width- videomodes.hRes - blockade;
 
@@ -20622,11 +20712,20 @@ void update_scroller(){
 		}
 		else if(level->scrolldir&SCROLL_OUTWARD){ // z scroll only
 
-			if(bm-tm>videomodes.vRes) to = advancey;
-			else to = (bm+tm)/2-videomodes.vRes/2+level->camerazoffset;
+			if(obor_profile_build < 3837)
+            {
+                for(i=0, to=0; i<levelsets[current_set].maxplayers; i++)
+                    if(player[i].ent) to += (int)player[i].ent->z;
+                to = to/numplay - videomodes.vRes/2 + level->cameraxoffset;
+            }
+            else if(bm-tm>videomodes.vRes) to = advancey;
+            else to = (bm+tm)/2-videomodes.vRes/2+level->camerazoffset;
 
-			if(to<scrollminz) to = scrollminz;
-			else if(to>scrollmaxz) to = scrollmaxz;
+			if(obor_profile_build >= 3783)
+            {
+                if(to<scrollminz) to = scrollminz;
+                else if(to>scrollmaxz) to = scrollmaxz;
+            }
 
 			if((level->scrolldir&SCROLL_BACK) && to < blockade) to = blockade;
 
@@ -20653,11 +20752,20 @@ void update_scroller(){
 			else level->pos = (int)advancey;
 		}
 		else if(level->scrolldir&SCROLL_INWARD){
-			if(bm-tm>videomodes.vRes) to = advancey;
-			else to = (bm+tm)/2-videomodes.vRes/2+level->camerazoffset;
+			if(obor_profile_build < 3837)
+            {
+                for(i=0, to=0; i<levelsets[current_set].maxplayers; i++)
+                    if(player[i].ent) to += (int)player[i].ent->z;
+                to = to/numplay - videomodes.vRes/2 + level->camerazoffset;
+            }
+            else if(bm-tm>videomodes.vRes) to = advancey;
+            else to = (bm+tm)/2-videomodes.vRes/2+level->camerazoffset;
 
-			if(to<scrollminz) to = scrollminz;
-			else if(to>scrollmaxz) to = scrollmaxz;
+			if(obor_profile_build >= 3783)
+            {
+                if(to<scrollminz) to = scrollminz;
+                else if(to>scrollmaxz) to = scrollmaxz;
+            }
 
 			if((level->scrolldir&SCROLL_BACK) && panel_height- videomodes.vRes - to < blockade) to = panel_height- videomodes.vRes - blockade;
 
@@ -20711,12 +20819,19 @@ void update_scroller(){
 				}
 			}
 		}
-		if(bm-tm>videomodes.vRes) to = advancey;
-		else to = (bm+tm)/2-videomodes.vRes/2+level->camerazoffset;
+		if(obor_profile_build < 3837)
+        {
+            for(i=0, to=0; i<levelsets[current_set].maxplayers; i++)
+                if(player[i].ent)
+                    to += (int)(player[i].ent->z - (cameratype==1 ? player[i].ent->a : 0));
+            to = to/numplay - videomodes.vRes/2 + level->camerazoffset;
+        }
+        else if(bm-tm>videomodes.vRes) to = advancey;
+        else to = (bm+tm)/2-videomodes.vRes/2+level->camerazoffset;
 
 		// new scroll limit
-		if(to > scrollmaxz) to = scrollmaxz;
-		if(to < scrollminz) to = scrollminz;
+		if((obor_profile_build >= 3783 || scrollmaxz) && to > scrollmaxz) to = scrollmaxz;
+		if((obor_profile_build >= 3783 || scrollminz) && to < scrollminz) to = scrollminz;
 
 		if(to > advancey){
 			if(to > advancey+level->scrollspeed) to = advancey+level->scrollspeed;
@@ -20734,12 +20849,20 @@ void update_scroller(){
 	// now x auto scroll
 	else if((level->scrolldir&SCROLL_INWARD) || (level->scrolldir&SCROLL_OUTWARD))
 	{
-		if(rm-lm>videomodes.hRes) to = advancex;
-		else to = (lm+rm)/2-videomodes.hRes/2+level->cameraxoffset;
+		if(obor_profile_build < 3837)
+        {
+            for(i=0, to=0; i<levelsets[current_set].maxplayers; i++)
+                if(player[i].ent) to += (int)player[i].ent->x;
+            to = to/numplay - videomodes.hRes/2 + level->cameraxoffset;
+        }
+        else if(rm-lm>videomodes.hRes) to = advancex;
+        else to = (lm+rm)/2-videomodes.hRes/2+level->cameraxoffset;
 
 		// new scroll limit
-		if(to > scrollmaxx) to = scrollmaxx;
-		if(to < scrollminx) to = scrollminx;
+		if(obor_profile_build < 3783) { if(scrollmaxz && to > scrollmaxz) to = scrollmaxz; }
+        else if(to > scrollmaxx) to = scrollmaxx;
+		if(obor_profile_build < 3783) { if(scrollminz && to < scrollminz) to = scrollminz; }
+        else if(to < scrollminx) to = scrollminx;
 
 		if(to > advancex){
 			if(to > advancex+level->scrollspeed) to = advancex+level->scrollspeed;
@@ -22732,7 +22855,7 @@ void playgame(int *players,  unsigned which_set, int useSavedGame)
 				strncpy(player[i].name, save->pName[i], MAX_NAME_LEN);
 			}
 			credits = save->credits;
-			//reset_playable_list(1); // add this because there's no select screen, temporary solution
+			if(obor_profile_build < 3822) reset_playable_list(1);
 			//TODO: change sav format to support custom allowselect list.
 		}
 	}
