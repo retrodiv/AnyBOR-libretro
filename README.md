@@ -135,8 +135,10 @@ setup, external INI configuration and backup guidance.
 ## Save states and rewind
 
 For rewind in RetroArch, we recommend **Rewind Frames** set to **10** and
-**Rewind Buffer Size (MB)** set to **256**. **256 MB is also the maximum**;
-do not increase it to work around capacity or performance problems.
+**Rewind Buffer Size (MB)** set to **256**. We only recommend enabling rewind
+on a Raspberry Pi 5 (quad-core Cortex-A76 at 2.4 GHz) or a device with an
+equivalent or faster CPU. **256 MB is also the maximum**; do not increase it
+to work around capacity or performance problems.
 
 With rewind enabled, we recommend **Threaded Video = Off** on Windows x86-64
 and Linux under WSLg. Disabling this extra presentation queue improved frame

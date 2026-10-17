@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Document that rewind is only recommended on a Raspberry Pi 5 (quad-core
+  Cortex-A76 at 2.4 GHz) or a device with an equivalent or faster CPU.
+
 - Add v3.0 7086-dev and reference v3.0 7123-dev to its 2021 revision,
   preserving divergent animation, combat, model, script and menu contracts.
 - Bound unknown-property diagnostics by their actual mapping table lengths.

@@ -292,6 +292,8 @@ content. Full + Off uses the complete base writer and its content-sized
 allowance; content that outgrows it requires a restart to use the learned peak.
 See [README.md](../README.md#save-states-and-rewind) for the resource limits and
 the recommended 256 MiB rewind history at granularity 10.
+We only recommend enabling rewind on a Raspberry Pi 5 (quad-core Cortex-A76
+at 2.4 GHz) or a device with an equivalent or faster CPU.
 
 Optional developer diagnostics can write beside loaded content when explicitly
 enabled; see [DEBUGGING.md](DEBUGGING.md). They are off by default.
