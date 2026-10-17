@@ -67,8 +67,7 @@ same cases under Wine using a MinGW-built host:
 python3 tools/smoke.py --core anybor_libretro.dll --windows --runner wine
 ```
 
-`--host` accepts a precompiled host. Native macOS CI runs on both Intel and Apple
-Silicon. On Linux, `tools/run_guarded.py --memory-mib 2048 --seconds 900 -- COMMAND`
+`--host` accepts a precompiled host. Native macOS CI runs on both x86-64 and ARM64. On Linux, `tools/run_guarded.py --memory-mib 2048 --seconds 900 -- COMMAND`
 bounds a runtime process tree using cgroup memory, with swap disabled. Use 1024 MiB
 for small regression suites and 6144 MiB / 1800 seconds with at most four compiler
 jobs for builds. The guard requires a working systemd user manager and refuses an

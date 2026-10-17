@@ -60,49 +60,22 @@ The notices are documentation; they do not change engine behavior.
 
 ## Baselines and complete file inventories
 
-| OpenBOR build | Pinned commit | File inventory |
-|---|---|---|
-| v3.0 3400 | `66fa1529897131ca51528967fbb21ee124e45775` | [v3.0 3400](docs/modifications/3400.md) |
-| v3.0 3842 | `1f702a991ace7fa31884262e458a85e351f62713` | [v3.0 3842](docs/modifications/3842.md) |
-| v3.0 4086 | `af23dc9c2316bb7853bb266ccf40986aa9765aeb` | [v3.0 4086](docs/modifications/4086.md) |
-| v3.0 4432 | `2566cbee6185025e6a69d2aa1823b15c7a154ff9` | [v3.0 4432](docs/modifications/4432.md) |
-| v3.0 6391 | `494708eb34e71d1afda237873907701c4ec3a569` | [v3.0 6391](docs/modifications/6391.md) |
-| v3.0 7086-dev | `7a45a2215a0cc12c1085d92e7b210a827ea552c2` | [Selected contracts](docs/HISTORICAL_PROFILES.md#divergent-test-profiles) |
-| v3.0 7123-dev | `f5261e7cb97786909276c0b87f8f9f63504d2844` | [Selected contracts](docs/HISTORICAL_PROFILES.md#divergent-test-profiles) |
-| v4.0 7142-alpha | `9dcd966d1dc8e93ff03c39edbd6bd262f4a2d7ab` | [v4.0 7142-alpha](docs/modifications/7142.md) |
-| v4.0 7533 | `5c8261444de6b61f8e2ce6e79e3d86a2949e55bd` | [v4.0 7533](docs/modifications/7533.md) |
-| v4.0 8023-dev | `16aae1a30b81063778f21977ae20b849bd1c76f9` | [v4.0 8023-dev](docs/modifications/8023.md) |
-
-Each inventory links every modified or added engine file to its explanation,
-original source at the pinned commit (where it existed). The accompanying `ANYBOR-SOURCE.json` also lists unchanged
-files, omitted files from the upstream `engine/` subtree, original/distributed
-SHA-256 hashes, and modification topics. Files elsewhere in the upstream repository,
-including its standalone tools and repository documentation, are outside this
-engine export. Pins and dependency archive hashes are in [src/pin.json](src/pin.json).
-
-The public engine imports include the portable circle and fixed-width endian
-adaptations. Their replaced historical implementations are absent from the
-distributed sources and documentation. The upstream baselines and original
-hashes remain recorded for comparison.
+See the [technical source baselines](docs/HISTORICAL_PROFILES.md#baselines-and-complete-file-inventories) for pinned revisions and complete per-file inventories.
 
 ## Platform integration
 
 All engine source trees include `libretroport.h` through `source/globals.h` and expose
-the platform/PNG helper declarations in `source/utils.c`. Engines v3.0 4432, v3.0 6391, v4.0 7142-alpha,
-v4.0 7533 and v4.0 8023-dev also declare libretro thread, mutex and condition types in
+the platform/PNG helper declarations in `source/utils.c`. Thread-capable source trees also declare libretro thread, mutex and condition types in
 `source/gamelib/threads.h`. Each inventory identifies the affected files.
 
-Engines v4.0 8023-dev place the player array in aligned storage. The PE linker otherwise
+The newest source tree places the player array in aligned storage. The PE linker otherwise
 allocates its tentative common symbol at a four-byte boundary even though
 compiled menu code reads it with a 16-byte SIMD operand.
 
 The platform implementation is shared under
 [`src/port/libretro/`](src/port/libretro). It replaces standalone host backends
 with frontend video, audio, controls and timing; its files are catalogued below.
-Each engine gets a generated `version.h` with its pinned build number and a
-`Makefile.libretro` from the shared overlay. The version header reports `VERSION_MAJOR="4"` for v4.0 7533 and v4.0 8023-dev.
-The other headers preserve upstream version 3, including v4.0 7142-alpha;
-frontend labels describe its actual published alpha identity.
+Generated version headers preserve upstream version identities; frontend labels follow their published revision names. Each source tree uses the common build overlay.
 
 ## Loading screen presentation
 
@@ -211,7 +184,7 @@ Build 3842 now checks that an entity-local animation interpreter exists before
 reading its reset flag. Some scripted map entities have an initialized model
 animation script before that optional local interpreter is allocated. The old
 code dereferenced a null pointer when the entity entered its animation frame;
-the guarded behavior matches the later 4086, 4432, 6391, 7533 and 8023 engines.
+the guarded behavior matches the later supported source revisions.
 The correction is structural and applies to every build-3842 game.
 
 ## Script memory layout
@@ -352,7 +325,7 @@ compatibility condition. No game or script digest selects this correction.
 Manual engine selection still takes precedence.
 
 Filename build tags accept a numeric prefix followed by trailing `X` digits.
-The selector picks the highest automatic logical profile inside that interval
+The selector picks the highest automatic profile inside that interval
 and preserves that profile directly. Exact filename tags and manual choices retain direct selection. Imprecise
 tags additionally use syntax-scoped content evidence, preferring stable or
 automatic profiles. Ordinary sidecar and unlabelled inference use automatic
@@ -500,66 +473,11 @@ distinct even when their first 24 bytes match. Reused slots release their former
 name, and shutdown releases every active or retired name. Allocation failure
 leaves the live table unchanged; null and empty names also fail cleanly. The
 later engines retain their existing allocated-name tables. This safety fix is
-enabled for every logical profile.
+enabled for every profile.
 
 ## Logical profile compatibility
 
-Historical profiles select the player-property API by the chosen build. The pre-3797 contract preserves the integer result and nonfatal rejection
-of an unconvertible score or other numeric value without changing the stored
-value. The 3797 contract keeps its void success and script-error rejection.
-Property names and numeric IDs remain in the logical build's domain, including
-the 3797 spawn-property expansion, the 3798 keys setter and the 3821
-weapon-number spelling and setter. Invalid names remain safe errors, and no
-mutator receives an uninitialized optional argument. Safety and lifecycle
-corrections are retained for every profile.
-
-The same 3797 boundary selects native AI-flag names and numeric IDs. Older
-profiles retain the read-only nested `freezetime` and `pain_time` getters and
-the empty result of the deprecated `walking` getter. Newer profiles expose
-`idlemode` and `walkmode`; the shared entity layout remains unchanged.
-
-Player spawn Z coordinates retain the earlier 0..232 limit before 3800.
-Before 3805, level spawn scripts retain ordered calls and one cached interpreter
-per file, including shared script locals across spawn entries. The level owns
-both cached resources and call nodes, including nodes belonging to discarded
-parser entries. Cleanup preserves resource creation order and frees each
-interpreter once. Later profiles retain the combined per-entry script path.
-
-Patch `96-logical-4453-compat.patch` adapts the behavior of upstream
-[4453](https://github.com/DCurrent/openbor/commit/7906e2573fcd70e9eafcd30fbdcc680832c4ae42)
-(2017-04-08). Profile 4453 forces 32-bit screens, keeps model-local indexed
-palettes, ignores `colourdepth` and skips the legacy `remap`-to-palette
-conversion removed in that revision. The earlier profile retains its video
-configuration and palette conversion. Native settings I/O packs and unpacks
-the original 4432 12-entry
-layout and uses the 4453 13-entry layout directly. Profile identity keeps
-their directories and save states separate. The later control menu disables
-Exit reassignment. Both profiles bound the DOT loop to its allocated slots
-and keep control-menu indexing within its arrays.
-
-
-Engine 6391 uses upstream commit
-[`494708eb34e71d1afda237873907701c4ec3a569`](https://github.com/DCurrent/openbor/commit/494708eb34e71d1afda237873907701c4ec3a569).
-Patch `96-logical-6412-compat.patch` adapts the later upstream 6412 script
-changes from commit
-[`d9bfceeb0d53cd43ed7cf5cfdfb0c60bba4df3f8`](https://github.com/DCurrent/openbor/commit/d9bfceeb0d53cd43ed7cf5cfdfb0c60bba4df3f8)
-for engine 6412. Engine 6391 retains its scalar binding properties
-and numeric property IDs. Engine 6412 exposes axis-handle binding
-properties, owner and opponent entity properties, binding animation flags,
-the corrected Y-axis setter, frame-kill binding behavior, and `unload_model`.
-Each profile has its own save directory.
-
-Patches `97-logical-6330-compat.patch` and `98-logical-6510-compat.patch`
-adapt the earlier [6330 source](https://github.com/DCurrent/openbor/commit/4b1705fa37457ab38bc5d0fcc561242019588e32)
-and later [6510 source](https://github.com/DCurrent/openbor/commit/ecce29b95700468aa3401915625dac2d56e4ca60)
-inside the same 6391 engine object. Runtime profile branches restore 6330's
-boomerang model commands, projectile movement and catching, earlier juggle
-condition and settings layout. The 6510 branches supply binding matching,
-positioning, tags, overrides and script events, revised blocking and flashes,
-and the distinct boss-death attack type. Native animation, attack, entity,
-subtype and spawn IDs are translated at script boundaries so adding shared
-selectors does not change the public numbering of older profiles. The earlier
-collision scripting entry points remain unavailable in profile 6330.
+Profile contracts and their implementation are documented in the [technical profile reference](docs/HISTORICAL_PROFILES.md#profile-implementation-details).
 
 ## Shared port and frontend
 
@@ -613,8 +531,7 @@ every retained change has an explanation, evidence and an applicable notice.
 
 The 7533 anchor is upstream release commit
 [`5c8261444de6b61f8e2ce6e79e3d86a2949e55bd`](https://github.com/DCurrent/openbor/commit/5c8261444de6b61f8e2ce6e79e3d86a2949e55bd)
-(2024-01-01). Its own patched source, engine object, logical profile and
-save directory are separate from 8023. The port includes PAK-handle
+(2024-01-01). Settings and save directories remain separate between selected revisions. The port includes PAK-handle
 repair for save states, resource cleanup on reset, bounded animation tables,
 compact script storage and the common WebM lifecycle correction.
 
@@ -1056,7 +973,7 @@ module-address rejection contract remain unchanged.
 
 ### Historical rejection boundaries and shared parser safety
 
-Logical profiles on engine 3842 retain the earlier user-macro namespace before
+Historical profiles retain the earlier user-macro namespace before
 3802, nonfatal rejected level values before 3820, tolerant text setters before
 3821, and empty-success unknown textual constants before 3826. Later profiles
 retain their strict errors. Level selectors stay in their logical numeric

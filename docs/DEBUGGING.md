@@ -66,7 +66,7 @@ failed coroutine is discarded; execution resumes on the frontend stack.
 
 Before discarding an arena, movie workers must be joined. If their cleanup
 itself faults, or an allocator failure could leave workers waiting on the
-allocator lock, the core retains the instance and requires restarting RetroArch;
+allocator lock, the core retains the instance and requires restarting the frontend;
 it must not reset or unload memory and code still in use by a worker.
 
 For tests only, `OBOR_TEST_FAULT=<engine>:<yield>:<read|write|null|context|allocator|stack>` injects

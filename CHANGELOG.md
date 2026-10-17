@@ -1,31 +1,37 @@
 # Changelog
 
-## Unreleased
+## 0.1.61 — documentation
 
-- Document that rewind is only recommended on a Raspberry Pi 5 (quad-core
-  Cortex-A76 at 2.4 GHz) or a device with an equivalent or faster CPU.
+- Generalize setup, compatibility and publishing guidance without product-specific examples.
+- Keep the complete ordered profile list together and document implementation details in the technical profile reference.
 
-- Add v3.0 7086-dev and reference v3.0 7123-dev to its 2021 revision,
+## Earlier changes
+
+- For Rewind Frames 10 and Rewind Buffer 256 MB: We only recommend enabling
+  rewind on a Raspberry Pi 5 (quad-core Cortex-A76 at 2.4 GHz) or a device with
+  an equivalent or faster CPU.
+
+- Add development compatibility revisions and update the later branch reference,
   preserving divergent animation, combat, model, script and menu contracts.
 - Bound unknown-property diagnostics by their actual mapping table lengths.
 
 - Preserve historical combat, camera, script, model-loading and audio-result
   contracts at their revision boundaries while retaining safety corrections.
-- Add v3.0 6392-dev as a documented reconstruction of published test behavior,
+- Add a documented reconstruction of published test-build behavior,
   with four-hit history, its native cheat toggle and return-to-title requests.
 - Reuse owned text-object storage when replacing text in older profiles.
-- Make the official v3.0 4453 and v3.0 6330 releases automatic anchors.
+- Make supported stable releases automatic selection candidates.
 - Refine imprecise build declarations with syntax-scoped content evidence,
   preferring compatible stable or automatic profiles. Preserve exact tags and
   log contradictions without overriding the declared interval.
 
-- Select historical logical profiles automatically from declared build tags,
+- Select historical profiles automatically from declared build tags,
   accompanying engine versions and existing bounded content evidence. Preserve
   the fallback without a declaration and select the highest available profile
   inside an inclusive filename build range.
 
 - Preserve historical macro-name, level-setter, text-setter and unknown-constant
-  tolerance at each logical revision boundary, while retaining parser safety.
+  tolerance at each revision boundary, while retaining parser safety.
 - Bound text-property name lookups and reject incomplete or oversized legacy
   preprocessor string tokens without reading outside their input or buffers.
 - Partition runtime profile checks into bounded CI groups without reducing
@@ -99,7 +105,7 @@
 - Default to Smart save state content with compression On on every platform,
   including Android and macOS, while retaining the existing platform scope of
   runtime optimizations. Keep the intentional same-module-address requirement
-  for both Smart and Full, including after restarting RetroArch on macOS.
+  for both Smart and Full, including after restarting the frontend on macOS.
   Document the performance limit when loading Full states in Smart sessions.
 
 - Exercise successful state loads within each CRT/profile test session, handle
@@ -224,7 +230,7 @@
 - Bound Linux build and test process trees with separate memory and time limits.
 - Keep release notes and generated source inventories synchronized.
 
-## 0.1.2 — the 8020 engine boots on Windows
+## 0.1.2 — Windows startup compatibility
 
 ### Recent changes
 
@@ -248,7 +254,7 @@
   and later define tentative definitions themselves and refuse the option, while
   older toolchains keep it.
 - Reserve the snapshot arena through macOS's native virtual-memory interface and
-  give Apple Silicon its own free base, so content loading no longer depends on
+  give ARM64 its own free base, so content loading no longer depends on
   the kernel granting an address hint.
 - Build every engine with the macOS SDK headers and satisfy the SDK's
   `ucontext` guard.
@@ -269,7 +275,7 @@
   `src/pin.json` and advances with each published state.
 - Ship a commit hook that refuses a published state whose version did not
   advance, and confine version literals to the version records.
-- Select desktop macOS toolchains for libvpx on Intel and Apple Silicon,
+- Select desktop macOS toolchains for libvpx on x86-64 and ARM64,
   preserving the configured minimum macOS version.
 - Drop the retired PowerPC-era cpusubtype switch from the bundled Xiph build
   scripts so dependency builds link with current Apple linkers.
@@ -283,7 +289,7 @@
 - Bound Mach-O export parsing, preserve section addresses when collecting
   engine state, and query the Apple linker version through its native interface.
 
-- Build the two Mach-O targets (Intel and Apple Silicon) with clang and
+- Build the two Mach-O targets (x86-64 and ARM64) with clang and
   Apple's linker, keeping save states, rewind and cross-process state loads.
 - Flatten and shorten prepared-content cache paths for filesystem compatibility.
 - Separate persistent game saves from disposable caches and manage cache cleanup.
@@ -293,8 +299,8 @@
 
 ### Core implementation
 
-- Include OpenBOR builds 3400, 3842, 4086, 4432, 6412 and 8020 with the shared
-  libretro runtime, build tools and source inventories.
+- Include the supported upstream revisions with the shared libretro runtime,
+  build tools and source inventories.
 - Support PAKs, unpacked `data/models.txt` mods and single-game ZIPs.
 - Provide save states, rewind, four-player controls and frontend configuration.
 - Supply build profiles for Linux, Windows, ARM64 and Android.

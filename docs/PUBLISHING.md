@@ -21,7 +21,7 @@ source metadata. It is not a publication date.
 |---|---|
 | Complete buildable sources | Every binary ZIP includes `anybor_libretro-<version>-source.tar.gz`. `make source-release` can also create this archive explicitly. |
 | Per-target binary, receipt and notices | `make TARGET=<target> release` creates a versioned ZIP and checksum under `dist/`. |
-| RetroArch core information | [anybor_libretro.info](../anybor_libretro.info). Keep this exact basename when submitting/installing it. |
+| Frontend core information | [anybor_libretro.info](../anybor_libretro.info). Keep this exact basename when submitting/installing it. |
 | Libretro hosted build jobs | [.gitlab-ci.yml](../.gitlab-ci.yml), [Makefile](../Makefile), [jni/Android.mk](../jni/Android.mk), [jni/Application.mk](../jni/Application.mk). |
 | Independent CI | [.github/workflows/ci.yml](../.github/workflows/ci.yml) builds/packages Linux x86-64/ARM64/RISC-V64, Windows, Android and both macOS targets, then uploads each platform ZIP and checksum as workflow artifacts. |
 | User documentation | [ANYBOR.md](ANYBOR.md), ready to adapt as `docs/library/anybor.md` in libretro's documentation repository. |
@@ -64,8 +64,8 @@ published binary and records its exact hash and embedded notices.
 | Linux RISC-V64 LP64D | `make TARGET=linux-riscv64` | `anybor_libretro.so` | Standalone CI uses the GNU cross toolchain and QEMU user emulation. |
 | Windows x86-64 | `make platform=win64` with the runner's MinGW compiler variables | `anybor_libretro.dll` | `.libretro-windows-x64-mingw-make-default` |
 | Android ARM64 | `"$NDK_ROOT/ndk-build" -C jni APP_ABI=arm64-v8a` | `libs/arm64-v8a/libretro.so` and `anybor_libretro_android.so` | `.libretro-android-jni-arm64-v8a` |
-| macOS x86-64 | `make platform=osx CC=clang CXX=clang++` on an Intel runner | `anybor_libretro.dylib` | `.libretro-osx-x64-make-default` |
-| macOS ARM64 | `make platform=osx CC=clang CXX=clang++` on Apple Silicon, or the template's cross variables | `anybor_libretro.dylib` | `.libretro-osx-arm64-make-default` |
+| macOS x86-64 | `make platform=osx CC=clang CXX=clang++` on an x86-64 runner | `anybor_libretro.dylib` | `.libretro-osx-x64-make-default` |
+| macOS ARM64 | `make platform=osx CC=clang CXX=clang++` on ARM64, or the template's cross variables | `anybor_libretro.dylib` | `.libretro-osx-arm64-make-default` |
 
 The Android template moves `libs/arm64-v8a/libretro.so` to
 `anybor_libretro_android.so`. `APP_PLATFORM=android-24`; ELF load segments are
@@ -80,8 +80,7 @@ RISC-V64 LP64D. An explicit `TARGET=linux-riscv64` selects the GNU cross tools.
 The RISC-V runtime checks use user emulation; hardware validation is separate.
 
 The macOS templates pass `platform=osx` with `clang`/`clang++`; the builder
-picks the Mach-O target from the compiler triple, so the Intel and Apple
-Silicon runners use the same command. The Apple Silicon recipe adds
+picks the Mach-O target from the compiler triple, so the x86-64 and ARM64 runners use the same command. The ARM64 recipe adds
 `LIBRETRO_APPLE_PLATFORM=arm64-apple-macos…` and
 `LIBRETRO_APPLE_ISYSROOT=$(xcodebuild -version -sdk macosx Path)`, which the
 build forwards to clang, and `MACOSX_DEPLOYMENT_TARGET`, which sets the
@@ -126,7 +125,7 @@ Repeat the build/package step for each advertised target with its installed
 toolchain. Exercise the public regression suites for changes to the runtime;
 their scope and commands are in [TESTING.md](TESTING.md). A source/package check
 does not substitute for a device test. In particular, an Android build and ELF
-inspection are distinct from running RetroArch on an Android device.
+inspection are distinct from running a libretro frontend on an Android device.
 
 The binary receipt records source hashes, compiler/linker, imports and selected
 static archive members. Packaging rejects changed sources, changed notices or
@@ -142,7 +141,7 @@ describe the separate steps for Core Downloader availability:
    details are not inferred or assigned by this source tree.
 2. Submit `anybor_libretro.info` to
    [libretro-super/dist/info](https://github.com/libretro/libretro-super/tree/master/dist/info).
-   For a local test, put it in RetroArch's configured **Core Info** directory,
+   For a local test, put it in the frontend's configured **Core Info** directory,
    load the matching core and inspect **Information > Core Information**.
 3. Request that libretro maintainers connect/import the source repository into
    their CI/CD infrastructure using the included `.gitlab-ci.yml`. Supply the
@@ -152,8 +151,7 @@ describe the separate steps for Core Downloader availability:
    and add its navigation entry following that repository's contribution rules.
 5. If adding automatic database-based playlists, submit the corresponding
    metadata to [libretro-database](https://github.com/libretro/libretro-database)
-   and suitable playlist/content icons to
-   [retroarch-assets](https://github.com/libretro/retroarch-assets).
+   and follow the target frontend's requirements for suitable playlist/content icons.
    Basic content loading and manually created playlists do not require those
    optional submissions. No third-party game collection is bundled here.
 

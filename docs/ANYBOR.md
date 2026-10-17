@@ -15,9 +15,9 @@ including OpenBOR 3400's no-sale terms. See [LICENSES.md](../LICENSES.md).
 ## Requirements and loading content
 
 Use a supported 64-bit frontend: Linux x86-64/ARM64/RISC-V64, Windows x86-64,
-macOS Intel/ARM64 or Android ARM64 (API 24 or later).
+macOS x86-64/ARM64 or Android ARM64 (API 24 or later).
 Configure a writable **Save Files** directory in
-RetroArch. The core requires that directory even when a particular game does
+the frontend. The core requires that directory even when a particular game does
 not use ordinary saves. No BIOS or firmware is required or included.
 
 Load one of these with **Load Content**, then select AnyBOR:
@@ -44,7 +44,7 @@ executable can be read as data for version detection; it is not executed.
 | Players and remapping | Up to four RetroPads, subject to the game's player limit; frontend button remapping supported. |
 | Rumble | Optional forwarding of the game's hit vibration. |
 | Core options | Version 2.0 categories, with a flat fallback for older frontends. |
-| RetroArch cheats | Not implemented. A game's own cheats/options remain game-specific. |
+| Frontend cheats | Not implemented. A game's own cheats/options remain game-specific. |
 | Achievements | No integration is provided by this project. |
 | Disk control, subsystems, hardware rendering | Not used. Video is software-rendered XRGB8888. |
 
@@ -100,7 +100,7 @@ games. All combinations can be selected on every platform; see the
 clean refusal whenever the core module address has changed, for both Smart
 and Full on every platform. The log reports `state module address differs`
 without changing the current game. macOS ASLR can therefore prevent loading
-after closing and reopening RetroArch. This refusal is intentional and affects
+after closing and reopening the frontend. This refusal is intentional and affects
 Full as well as Smart; choosing Full does not avoid it. This is a temporary
 limitation until exact relocation is available. Same-session rewind and
 restoration remain available. Loading a compatible Full state in Smart can
@@ -110,7 +110,7 @@ recover recipes that were absent. A fresh game in Smart catalogs resources
 as they load.
 
 Automatic selection uses filename version tags, nearby engine-version data
-and PAK content markers, with engine 6391 as the current fallback. An explicit
+and PAK content markers, with profile v3.0 6391 as the current fallback. An explicit
 engine choice takes precedence. Games predating the available source history
 use the 3400 anchor on a best-effort basis; games newer than the latest anchor
 also have best-effort coverage. [COMPATIBILITY.md](../COMPATIBILITY.md) describes
@@ -161,7 +161,7 @@ Imprecise filename tags can select them when no stable or automatic candidate
 remains compatible in the declared interval. Historical profiles 3780–3839
 participate in Auto: a declared build selects the first available revision at
 or above it, including declarations from an accompanying executable. Positive
-content bounds in this engine era use the same logical revisions. No declaration
+content bounds in this engine era use the same revisions. No declaration
 or usable evidence keeps the existing fallback. Native rules ignore comments and quoted
 prose. Preprocessor directives or a local declaration of a reviewed builtin
 make native evidence inconclusive; model evidence remains usable. This scan
@@ -266,8 +266,7 @@ made in the frontend menu immediately before closing content.
 Each game has its own folder named after the original PAK, SPK or ZIP without
 its extension, or the unpacked mod directory. The name stays stable when content
 is extracted or prepared. Identically named games share this namespace; give
-unrelated games different filenames. Inside it, engines stay separate
-because their settings layouts are incompatible.
+unrelated games different filenames. Inside it, profiles use separate directories because their settings layouts can differ.
 
 Saved-data cleanup removes that whole game folder, including settings, progress,
 script output, logs, screenshots and learned memory peaks for every profile.
@@ -278,7 +277,7 @@ This layout replaces the earlier `AnyBOR/<engine>/` layout without migration.
 Old saves and the old `AnyBOR/prepared-v1/` and `AnyBOR/zipcache/` caches are no
 longer used and are left untouched.
 
-RetroArch places save-state files in its configured **Save States** directory.
+The frontend places save-state files in its configured **Save States** directory.
 Ordinary engine saves use their own files rather than a libretro save-RAM block.
 Save states and rewind are temporarily unavailable during model preloading.
 Some games do this briefly with the player already on screen, so a manual

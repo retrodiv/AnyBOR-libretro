@@ -132,3 +132,127 @@ and unlabelled inference use automatic profiles; imprecise tags retain the
 content-evidence and stable-profile priority described in
 [content selection rules](AUTO_SELECTION_RULES.md). Existing states require
 the same core build and selected profile and are not converted.
+
+
+## Profile implementation details
+
+Profiles are compatibility selections. Several profiles use one physical source tree, with revision-specific behavior selected in code. Safety corrections and accepted additive extensions stay shared. This implementation reference is separate from the user-facing profile inventory.
+
+| Selectable profile | Source tree |
+|---|---|
+| v3.0 3400 | `3400` |
+| v3.0 3780 | `3842` |
+| v3.0 3783 | `3842` |
+| v3.0 3789 | `3842` |
+| v3.0 3793 | `3842` |
+| v3.0 3797 | `3842` |
+| v3.0 3805 | `3842` |
+| v3.0 3814 | `3842` |
+| v3.0 3818 | `3842` |
+| v3.0 3822 | `3842` |
+| v3.0 3824 | `3842` |
+| v3.0 3829 | `3842` |
+| v3.0 3831 | `3842` |
+| v3.0 3837 | `3842` |
+| v3.0 3839 | `3842` |
+| v3.0 3842 | `3842` |
+| v3.0 4086 | `4086` |
+| v3.0 4432 | `4432` |
+| v3.0 4453 | `4432` |
+| v3.0 6330 | `6391` |
+| v3.0 6391 | `6391` |
+| v3.0 6392-dev | `6391` |
+| v3.0 6412-dev | `6391` |
+| v3.0 6510-dev | `6391` |
+| v3.0 7086-dev | `7142` |
+| v3.0 7123-dev | `7142` |
+| v4.0 7142-alpha | `7142` |
+| v4.0 7533 | `7533` |
+| v4.0 8023-dev | `8023` |
+
+## Baselines and complete file inventories
+
+| OpenBOR build | Pinned commit | File inventory |
+|---|---|---|
+| v3.0 3400 | `66fa1529897131ca51528967fbb21ee124e45775` | [v3.0 3400](modifications/3400.md) |
+| v3.0 3842 | `1f702a991ace7fa31884262e458a85e351f62713` | [v3.0 3842](modifications/3842.md) |
+| v3.0 4086 | `af23dc9c2316bb7853bb266ccf40986aa9765aeb` | [v3.0 4086](modifications/4086.md) |
+| v3.0 4432 | `2566cbee6185025e6a69d2aa1823b15c7a154ff9` | [v3.0 4432](modifications/4432.md) |
+| v3.0 6391 | `494708eb34e71d1afda237873907701c4ec3a569` | [v3.0 6391](modifications/6391.md) |
+| v3.0 7086-dev | `7a45a2215a0cc12c1085d92e7b210a827ea552c2` | [Selected contracts](HISTORICAL_PROFILES.md#divergent-test-profiles) |
+| v3.0 7123-dev | `f5261e7cb97786909276c0b87f8f9f63504d2844` | [Selected contracts](HISTORICAL_PROFILES.md#divergent-test-profiles) |
+| v4.0 7142-alpha | `9dcd966d1dc8e93ff03c39edbd6bd262f4a2d7ab` | [v4.0 7142-alpha](modifications/7142.md) |
+| v4.0 7533 | `5c8261444de6b61f8e2ce6e79e3d86a2949e55bd` | [v4.0 7533](modifications/7533.md) |
+| v4.0 8023-dev | `16aae1a30b81063778f21977ae20b849bd1c76f9` | [v4.0 8023-dev](modifications/8023.md) |
+
+Each inventory links every modified or added engine file to its explanation,
+original source at the pinned commit (where it existed). The accompanying `ANYBOR-SOURCE.json` also lists unchanged
+files, omitted files from the upstream `engine/` subtree, original/distributed
+SHA-256 hashes, and modification topics. Files elsewhere in the upstream repository,
+including its standalone tools and repository documentation, are outside this
+engine export. Pins and dependency archive hashes are in [src/pin.json](../src/pin.json).
+
+The public engine imports include the portable circle and fixed-width endian
+adaptations. Their replaced historical implementations are absent from the
+distributed sources and documentation. The upstream baselines and original
+hashes remain recorded for comparison.
+
+
+### Revision contracts
+
+Historical profiles select the player-property API by the chosen build. The pre-3797 contract preserves the integer result and nonfatal rejection
+of an unconvertible score or other numeric value without changing the stored
+value. The 3797 contract keeps its void success and script-error rejection.
+Property names and numeric IDs remain in the logical build's domain, including
+the 3797 spawn-property expansion, the 3798 keys setter and the 3821
+weapon-number spelling and setter. Invalid names remain safe errors, and no
+mutator receives an uninitialized optional argument. Safety and lifecycle
+corrections are retained for every profile.
+
+The same 3797 boundary selects native AI-flag names and numeric IDs. Older
+profiles retain the read-only nested `freezetime` and `pain_time` getters and
+the empty result of the deprecated `walking` getter. Newer profiles expose
+`idlemode` and `walkmode`; the shared entity layout remains unchanged.
+
+Player spawn Z coordinates retain the earlier 0..232 limit before 3800.
+Before 3805, level spawn scripts retain ordered calls and one cached interpreter
+per file, including shared script locals across spawn entries. The level owns
+both cached resources and call nodes, including nodes belonging to discarded
+parser entries. Cleanup preserves resource creation order and frees each
+interpreter once. Later profiles retain the combined per-entry script path.
+
+Patch `96-logical-4453-compat.patch` adapts the behavior of upstream
+[4453](https://github.com/DCurrent/openbor/commit/7906e2573fcd70e9eafcd30fbdcc680832c4ae42)
+(2017-04-08). Profile 4453 forces 32-bit screens, keeps model-local indexed
+palettes, ignores `colourdepth` and skips the legacy `remap`-to-palette
+conversion removed in that revision. The earlier profile retains its video
+configuration and palette conversion. Native settings I/O packs and unpacks
+the original 4432 12-entry
+layout and uses the 4453 13-entry layout directly. Profile identity keeps
+their directories and save states separate. The later control menu disables
+Exit reassignment. Both profiles bound the DOT loop to its allocated slots
+and keep control-menu indexing within its arrays.
+
+
+Engine 6391 uses upstream commit
+[`494708eb34e71d1afda237873907701c4ec3a569`](https://github.com/DCurrent/openbor/commit/494708eb34e71d1afda237873907701c4ec3a569).
+Patch `96-logical-6412-compat.patch` adapts the later upstream 6412 script
+changes from commit
+[`d9bfceeb0d53cd43ed7cf5cfdfb0c60bba4df3f8`](https://github.com/DCurrent/openbor/commit/d9bfceeb0d53cd43ed7cf5cfdfb0c60bba4df3f8)
+for engine 6412. Engine 6391 retains its scalar binding properties
+and numeric property IDs. Engine 6412 exposes axis-handle binding
+properties, owner and opponent entity properties, binding animation flags,
+the corrected Y-axis setter, frame-kill binding behavior, and `unload_model`.
+Each profile has its own save directory.
+
+Patches `97-logical-6330-compat.patch` and `98-logical-6510-compat.patch`
+adapt the earlier [6330 source](https://github.com/DCurrent/openbor/commit/4b1705fa37457ab38bc5d0fcc561242019588e32)
+and later [6510 source](https://github.com/DCurrent/openbor/commit/ecce29b95700468aa3401915625dac2d56e4ca60)
+inside the same 6391 engine object. Runtime profile branches restore 6330's
+boomerang model commands, projectile movement and catching, earlier juggle
+condition and settings layout. The 6510 branches supply binding matching,
+positioning, tags, overrides and script events, revised blocking and flashes,
+and the distinct boss-death attack type. Native animation, attack, entity,
+subtype and spawn IDs are translated at script boundaries so adding shared
+selectors does not change the public numbering of older profiles. The earlier
+collision scripting entry points remain unavailable in profile 6330.

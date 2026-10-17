@@ -13,7 +13,7 @@ Save states, rewind and four players are supported. OpenBOR, Senile Team and
 libretro credits identify upstream work; they do not imply endorsement of
 this port.
 
-Original AnyBOR work by retrodiv is [BSD-3-Clause-licensed](LICENSE). Bundled engines and
+Original AnyBOR work by retrodiv is [BSD-3-Clause-licensed](LICENSE). Bundled components and
 dependencies retain their own licenses. The combined core includes OpenBOR 3400,
 whose license requires prior written permission for sale of the combined sources
 or binaries. See [licensing and redistribution](LICENSES.md) for the full scope.
@@ -40,7 +40,7 @@ make TARGET=linux-aarch64        # GNU ARM64 cross toolchain
 make TARGET=linux-riscv64        # GNU RISC-V64 LP64D cross toolchain
 make TARGET=linux-aarch64 GLIBC_MAX=2.38  # optional GNU/Linux ABI ceiling
 ANDROID_NDK=/path/to/ndk make platform=android
-make platform=osx                # native macOS, Intel or Apple Silicon
+make platform=osx                # native macOS, x86-64 or ARM64
 make check
 make release                    # ZIP and SHA-256 file under dist/
 make source-release             # optional source tar.gz; also included in each release ZIP
@@ -103,13 +103,12 @@ files under `.build/` or outside the checkout when running publication checks.
 For intentional source additions, see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 Only 64-bit x86, ARM and RISC-V targets are supported. Android uses ARM64 and API 24
-or later. macOS targets Intel (10.13 or newer) and Apple Silicon (11.0 or
+or later. macOS targets x86-64 (10.13 or newer) and ARM64 (11.0 or
 newer) and links only against `libSystem`. `jni/Android.mk` and
 `jni/Application.mk` provide the ndk-build entry point used by the libretro
 Android runner. `.gitlab-ci.yml` uses the libretro CI templates; GitHub Actions
-also compiles and packages the core, including native macOS Intel and Apple
-Silicon jobs.
-Availability in RetroArch's Core Updater is managed by the libretro project.
+also compiles and packages the core, including native macOS x86-64 and ARM64 jobs.
+Availability through core download services is managed by their maintainers.
 The required submission files, target commands and external registration steps
 are listed in [docs/PUBLISHING.md](docs/PUBLISHING.md). The core's frontend
 requirements, controls and core options are in [docs/ANYBOR.md](docs/ANYBOR.md).
@@ -134,7 +133,7 @@ setup, external INI configuration and backup guidance.
 
 ## Save states and rewind
 
-For rewind in RetroArch, we recommend **Rewind Frames** set to **10** and
+For rewind, we recommend **Rewind Frames** set to **10** and
 **Rewind Buffer Size (MB)** set to **256**. We only recommend enabling rewind
 on a Raspberry Pi 5 (quad-core Cortex-A76 at 2.4 GHz) or a device with an
 equivalent or faster CPU. **256 MB is also the maximum**; do not increase it
@@ -225,7 +224,7 @@ On ARM64 Linux, a core-specific override can use `video_threaded = "true"`,
 `audio_latency = "64"` and `vrr_runloop_enable = "false"`.
 Check actual motion and reverse playback with the native FPS counter visible;
 a high average alone does not establish smooth presentation or captured history.
-Use the RetroArch supplied with the system. No frontend modification is needed
+Use the frontend supplied with the system. No frontend modification is needed
 by the state representation described here.
 
 The Android core remains one installable `.so`. It contains a small libretro
@@ -249,7 +248,7 @@ If its address changes on any platform, loading is refused with a
 The core does not guess which memory words are pointers or silently change
 the selected writer. This is a temporary limitation of cross-process save
 states on macOS, where ASLR can move the dylib. After closing and reopening
-RetroArch on macOS, expect loads to be refused if the module address changed.
+the frontend on macOS, expect loads to be refused if the module address changed.
 That refusal is intentional; selecting Full does not bypass it. Same-session
 rewind and restoration do not require relocation and remain available.
 
@@ -268,7 +267,7 @@ Loading a state retains the current session's content and writable-directory
 paths. Engine random-number state is captured with the world so external
 frontend activity does not change the restored AI sequence. Saving, loading
 and rewind are unavailable during internally threaded movie playback;
-RetroArch's separate threaded-video setting does not trigger this exclusion.
+the frontend's separate threaded-video setting does not trigger this exclusion.
 Returning from gameplay to an earlier menu requires its state to remain
 within the finite history. Entering gameplay does not clear the history.
 

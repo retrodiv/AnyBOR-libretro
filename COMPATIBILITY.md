@@ -17,7 +17,7 @@ API expansion, the keys setter introduced in 3798 and the weapon-number
 rename and setter introduced in 3821. Invalid names and unsafe arguments do
 not regain historical undefined behavior. AI-flag names and numeric selectors
 also follow the 3797 boundary, including the older read-only nested timer
-properties. The engine memory layout and safety fixes remain shared.
+properties. Safety corrections remain enabled.
 Player spawn coordinates use the earlier vertical limit before 3800. Before
 3805, multiple `spawnscript` declarations execute in source order and reuse the
 same per-file script locals across entries. Later profiles retain the engine's
@@ -44,7 +44,7 @@ automatic candidates; nonautomatic candidates are considered only when no such
 candidate remains compatible. Ordinary sidecar and unlabelled inference use
 automatic profiles only. See [the source-backed rules](docs/AUTO_SELECTION_RULES.md). Historical
 profiles also participate in Auto declarations and bounded content evidence.
-The first available logical revision at or above a declared build is used;
+The first available revision at or above a declared build is used;
 without a declaration or usable evidence the existing fallback is unchanged.
 Builds newer than 8023 are best effort through the latest pinned v4 anchor;
 they are not claimed as universally compatible.
@@ -58,10 +58,10 @@ Targets:
   exercised under user emulation; no real-hardware validation is claimed.
 - `windows-x86_64`: static MinGW runtime/dependencies.
 - `android-arm64`: Android API 24 ARM64; no `libc++_shared` dependency.
-- `macos-x86_64`: Intel macOS 10.13 or newer (`platform=osx` on an Intel
+- `macos-x86_64`: x86-64 macOS 10.13 or newer (`platform=osx` on an x86-64
   runner); only `libSystem` is a dynamic dependency.
-- `macos-arm64`: Apple Silicon macOS 11.0 or newer (`platform=osx` on an
-  Apple Silicon runner, or the libretro `osx-arm64` recipe with
+- `macos-arm64`: ARM64 macOS 11.0 or newer (`platform=osx` on an
+  ARM64 runner, or the libretro `osx-arm64` recipe with
   `LIBRETRO_APPLE_PLATFORM`/`LIBRETRO_APPLE_ISYSROOT`); only `libSystem` is a
   dynamic dependency.
 
