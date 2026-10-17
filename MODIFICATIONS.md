@@ -3,8 +3,7 @@
 Record updated: **2026-10-10**. Port maintainer: **retrodiv**
 (<retrodiv@proton.me>).
 
-AnyBOR offers selectable profiles backed by nine OpenBOR engines with
-a shared libretro port.
+AnyBOR offers selectable engine profiles through its libretro port.
 The original engine work is credited to Senile Team, OpenBOR Team and the
 contributors named in the retained sources. The port's own notices identify
 its maintained code. Component terms remain as recorded in
@@ -342,7 +341,8 @@ cancellation release all owned buffers. Read-only programs therefore avoid a
 second full archive allocation without bypassing the configured program or
 changing its instructions, resource limits or cache identity.
 
-Auto checks script API support before filename, adjacent EXE or vocabulary
+Auto preserves manual choices and declared historical profiles. Otherwise it
+checks script API support before ordinary filename, adjacent EXE or vocabulary
 heuristics. A literal call to `getentityproperty(..., "attack", ...)` requires
 the legacy API available through pinned build 4086: 4432 and later reject this
 property during compilation. The bounded script scan ignores comments and
@@ -357,10 +357,11 @@ there is no match, the interval's upper endpoint goes through ordinary
 automatic routing. Existing exact-build, manual and legacy-API priorities
 remain in effect.
 Explicit inclusive intervals (`Build 3800-4200`, with `XXXX` allowed at either
-endpoint) constrain both the selected profile and its physical engine. Auto
-reports an unavailable engine if no candidate lies within those bounds;
-manual selection can override them. The bounds describe content evidence,
-independently of the engines included in a particular release.
+endpoint) select the highest eligible profile inside the interval, or the
+first automatic revision above it when none fits. Auto reports an unavailable
+profile if no later revision is available. Manual selection can override them.
+The bounds describe content evidence independently of the profiles available
+in a particular release.
 
 ## Image loader safety
 
@@ -499,8 +500,7 @@ enabled for every logical profile.
 
 ## Logical profile compatibility
 
-Historical profiles on engine 3842 select the player-property API by logical
-build. The pre-3797 contract preserves the integer result and nonfatal rejection
+Historical profiles select the player-property API by the chosen build. The pre-3797 contract preserves the integer result and nonfatal rejection
 of an unconvertible score or other numeric value without changing the stored
 value. The 3797 contract keeps its void success and script-error rejection.
 Property names and numeric IDs remain in the logical build's domain, including
@@ -565,7 +565,7 @@ in their respective files.
 
 | Capability or change | Behaviour and current implementation |
 |---|---|
-| Eleven selectable engines | Core Options offers 3400, 3842, 4086, 4432, 4453, 6330, 6391, 6412, 6510, 7533 and 8023, plus Auto. Each selection retains its own compatibility behavior and save directory. [`obor_abi.h`](src/glue/obor_abi.h), [`obor_engines.h`](src/glue/obor_engines.h), [`Makefile.libretro`](src/engines/6391/Makefile.libretro), [`tools/build.py`](tools/build.py). |
+| Selectable engine profiles | Core Options offers v3.0 3400, v3.0 3780, v3.0 3783, v3.0 3789, v3.0 3793, v3.0 3797, v3.0 3805, v3.0 3814, v3.0 3818, v3.0 3822, v3.0 3824, v3.0 3829, v3.0 3831, v3.0 3837, v3.0 3839, v3.0 3842, v3.0 4086, v3.0 4432, v3.0 4453, v3.0 6330, v3.0 6391, v3.0 6412-dev, v3.0 6510-dev, v3.0 7123-dev, v4.0 7142-alpha, v4.0 7533 and v4.0 8023-dev. Auto uses build tags and content clues. Each profile retains its compatibility behavior and save directory. [`obor_abi.h`](src/glue/obor_abi.h), [`obor_engines.h`](src/glue/obor_engines.h), [`tools/build.py`](tools/build.py). |
 | Automatic engine selection | An explicit core option takes precedence; otherwise inspect legacy script API requirements, filename tags, nearby executables as data, and PAK content tokens, then use the pinned fallback. Selection is rerun on Reset. [`libretro.cpp`](src/glue/libretro.cpp), `decide_engine`, `pick_anchor`, `build_from_content`; [`obor_markers.h`](src/glue/obor_markers.h). |
 | Frontend-owned frame delivery | Run the engine main loop on a libco coroutine, yield at video submission, and advance an emulated microsecond clock. Sleep/input-wait paths also yield so frontend input remains live. [`libretroport.c`](src/port/libretro/libretroport.c), [`libretroport.h`](src/port/libretro/libretroport.h), [`timer.c`](src/port/libretro/timer.c). |
 | Video and audio backends | Convert engine video to XRGB8888, publish geometry, and pull engine audio through the frontend. [`video.c`](src/port/libretro/video.c), [`video.h`](src/port/libretro/video.h), [`vga.h`](src/port/libretro/vga.h), [`sblaster.c`](src/port/libretro/sblaster.c), [`sblaster.h`](src/port/libretro/sblaster.h). |
@@ -675,7 +675,7 @@ and RLE8 bodies, requiring exact byte equality before replacing body bytes with
 logical zeros in the compressed state. Sprite headers, palettes, pointers,
 padding and modified bodies retain their ordinary mutable representation.
 
-All nine physical engines also declare exact resident PCM member offsets and
+All supported implementations also declare exact resident PCM member offsets and
 byte counts after a successful sample read. The shared versioned recipe has an
 explicit member-slice kind, validates the source and compares the entire body
 before omitting bytes. Mixer positions, format parameters and allocation tails

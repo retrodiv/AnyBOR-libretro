@@ -113,6 +113,13 @@ def main():
                                      stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                                      universal_newlines=True, timeout=60)
             result = process.stdout + process.stderr
+            if "engine boot failed" in result:
+                # Compile diagnostics are also written to the engine game log.
+                # Preserve that evidence for intentionally rejected scripts.
+                for log in system.rglob("OpenBorLog.txt"):
+                    if log.stat().st_size > 1 << 20:
+                        raise RuntimeError("Excessive compile diagnostic log")
+                    result += log.read_text(errors="replace")
             if process.returncode:
                 raise RuntimeError(label + ": " + result)
             if "cwd_restored=1" not in result or "nonblack_max=0" in result:
@@ -212,6 +219,18 @@ def main():
                     raise RuntimeError("Historical constant state/reset did not complete: " + result)
                 state.unlink()
 
+        for kind in ('macro', 'level', 'text'):
+            contract_pak = work / ('historical-' + kind + '-tolerance.pak')
+            make_fixture.write_pak(contract_pak, tolerance_fixture(members, kind))
+            for profile in profiles:
+                if profile['engine'] != '3842': continue
+                result = run(profile['build'], contract_pak,
+                             'historical ' + kind + ' tolerance', frames=1000,
+                             OBOR_GAMELOG="On", OBOR_INPUT="150-650:start:pulse")
+                check_tolerance_continuation(result, profile['build'], kind)
+        if args.historical_only:
+            return
+
         variable_pak = work / "variable-keys.pak"
         make_fixture.write_pak(variable_pak, variable_key_fixture(members))
         for profile in profiles:
@@ -242,17 +261,6 @@ def main():
         if not (work / "6412/saves/AnyBOR/raw/6412/Saves/.obor_peak_sparse_v2_raw.pak.txt").is_file():
             raise RuntimeError("Unpacked mod peak is missing")
 
-        for kind in ('macro', 'level', 'text'):
-            contract_pak = work / ('historical-' + kind + '-tolerance.pak')
-            make_fixture.write_pak(contract_pak, tolerance_fixture(members, kind))
-            for profile in profiles:
-                if profile['engine'] != '3842': continue
-                result = run(profile['build'], contract_pak,
-                             'historical ' + kind + ' tolerance', frames=1000,
-                             OBOR_GAMELOG="On", OBOR_INPUT="150-650:start:pulse")
-                check_tolerance_continuation(result, profile['build'], kind)
-        if args.historical_only:
-            return
 
         # Optional model entries must not index beyond the configured tables.
         # Each case has fresh files so an earlier warning cannot satisfy it.

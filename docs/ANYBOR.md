@@ -1,14 +1,13 @@
 # OpenBOR (AnyBOR)
 
-AnyBOR is an independent libretro core for OpenBOR games. Its main selectable
-profiles are v3.0 3400, v3.0 3842, v3.0 4086, v3.0 4432, v3.0 4453, v3.0 6330, v3.0 6391, v3.0 6412-dev, v3.0 6510-dev, v3.0 7123-dev, v4.0 7142-alpha, v4.0 7533 and v4.0 8023-dev. These profiles share nine engine builds. Auto uses
-available build tags and content clues; you can also select a profile manually.
-Historical profiles from 3780 through 3839 share engine 3842 and are selected
-manually. Their exact available revisions are listed in
-[the compatibility contract](../COMPATIBILITY.md). Auto keeps its existing
-engine-era routing; a historical profile is not selected from a game hash.
-See [manual profile selection and limits](HISTORICAL_PROFILES.md) for the exact
-menu steps and the contracts that remain shared.
+AnyBOR is an independent libretro core for OpenBOR games, offering selectable
+engine profiles: v3.0 3400, v3.0 3780, v3.0 3783, v3.0 3789, v3.0 3793, v3.0 3797,
+v3.0 3805, v3.0 3814, v3.0 3818, v3.0 3822, v3.0 3824, v3.0 3829, v3.0 3831,
+v3.0 3837, v3.0 3839, v3.0 3842, v3.0 4086, v3.0 4432, v3.0 4453, v3.0 6330,
+v3.0 6391, v3.0 6412-dev, v3.0 6510-dev, v3.0 7123-dev, v4.0 7142-alpha,
+v4.0 7533 and v4.0 8023-dev.
+Auto uses build tags and content clues to choose a profile. You can select one
+manually when a game needs it. See [choosing a profile](HISTORICAL_PROFILES.md).
 OpenBOR and Beats of Rage originate with Senile Team and OpenBOR Team; the port
 is maintained by retrodiv. The combined core has multiple component licenses,
 including OpenBOR 3400's no-sale terms. See [LICENSES.md](../LICENSES.md).
@@ -130,12 +129,12 @@ before the Build tag intersects the range: **v.3.0 Build 63XX-7762** becomes
 6300-7532, while **v.4.0 Build XXXX-7762** starts at 7142. A version in a
 separate bracket or in the title does not constrain the range.
 
-Auto selects the highest filename-eligible profile whose logical and physical builds both fit
-an explicit interval. If none fits, it uses the first available physical engine
+Auto selects the highest eligible profile inside an inclusive explicit
+interval. For example, **Build 3780-3839** selects 3839 and
+**Build 3792-3911** selects 3842. Only if none fits, it uses the first automatic revision
 above the upper endpoint; 7369-7532 therefore uses 7533. If there is no later
-engine, loading reports an error. An explicit interval takes precedence over
-other inferred requirements; manual selection overrides it. An alias cannot
-stand in for an engine outside the interval: profile 6412 uses engine 6391.
+profile, loading reports an error. An explicit interval takes precedence over
+other inferred requirements; manual selection overrides it.
 
 Build numbers and ranges require the word **Build**, followed by a space.
 Matching is case-insensitive and uses only the filename, not its parent path.
@@ -148,9 +147,12 @@ and removals into an inclusive range, then keeps v3.0 6391 when it satisfies tha
 select the first compatible intervening era up to v4.0 7533; requirements
 beyond that stable release select the latest compatible snapshot, currently
 v4.0 8023-dev. Explicit filename intervals retain their highest-profile /
-next-engine policy. Content inference offers only automatic profiles; 4453,
+next-revision policy. Content inference offers only automatic profiles; 4453,
 6330, 6412 and 6510 remain explicit selections. Historical profiles 3780–3839
-are manual-only and do not participate in filename-range selection. Native rules ignore comments and quoted
+participate in Auto: a declared build selects the first available revision at
+or above it, including declarations from an accompanying executable. Positive
+content bounds in this engine era use the same logical revisions. No declaration
+or usable evidence keeps the existing fallback. Native rules ignore comments and quoted
 prose. Preprocessor directives or a local declaration of a reviewed builtin
 make native evidence inconclusive; model evidence remains usable. This scan
 is a heuristic and does not certify a whole game or resolve dynamic arguments,

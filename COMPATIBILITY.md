@@ -1,11 +1,14 @@
 # Compatibility contract
 
-The main profiles are v3.0 3400, v3.0 3842, v3.0 4086, v3.0 4432, v3.0 4453, v3.0 6330, v3.0 6391, v3.0 6412-dev, v3.0 6510-dev, v3.0 7123-dev, v4.0 7142-alpha, v4.0 7533, v4.0 8023-dev.
-Historical v3.0 profiles 3780, 3783, 3789, 3793, 3797, 3805, 3814, 3818,
-3822, 3824, 3829, 3831, 3837 and 3839 use physical engine 3842 and require
-manual core-option selection. Auto does not infer an exact historical minor
-revision from the absence of newer script features. State identity includes
-the logical profile; states from a different profile are refused.
+Selectable engine profiles: v3.0 3400, v3.0 3780, v3.0 3783, v3.0 3789, v3.0 3793, v3.0 3797,
+v3.0 3805, v3.0 3814, v3.0 3818, v3.0 3822, v3.0 3824, v3.0 3829, v3.0 3831,
+v3.0 3837, v3.0 3839, v3.0 3842, v3.0 4086, v3.0 4432, v3.0 4453, v3.0 6330,
+v3.0 6391, v3.0 6412-dev, v3.0 6510-dev, v3.0 7123-dev, v4.0 7142-alpha,
+v4.0 7533 and v4.0 8023-dev.
+
+Auto uses build tags and content clues to choose a profile. Manual selection
+remains available. States require the same profile; states from another
+profile are refused.
 Before 3797, the player-property setter returns an integer success result and
 a rejected numeric value returns false without changing its destination.
 From 3797 it returns no value on success and rejects that value with a script
@@ -23,8 +26,8 @@ limits](docs/HISTORICAL_PROFILES.md).
 An explicit Build 4453 filename or the manual 4453 core option selects 4453.
 It uses 32-bit color, ignores `colourdepth` and follows the removal of legacy
 `remap` palette conversion. Select 4432 for games that need its older behavior.
-Profiles 6330 and 6510 also use the shared 6391 engine, with their original
-behavior selected by an explicit Build tag or the manual core option.
+Profiles v3.0 6330 and v3.0 6510-dev retain their corresponding behavior,
+selected by an explicit Build tag or the manual core option.
 
 Automatic routing selects 6391 for builds 4433 through 6412; a PAK explicitly
 tagged Build 6412 or the manual 6412 core option selects 6412. Builds 6413
@@ -33,12 +36,15 @@ v4.0 7142-alpha; builds 7143 through 7533 select v4.0 7533. Builds 7534
 through 8023 and later builds select v4.0 8023-dev.
 Other routing combines filename/sidecar metadata with bounded content ranges
 and sparse marker estimates. Filename ranges select the highest available
-profile within their effective bounds, or the next physical engine above the
-upper bound when none fits. Generation prefixes clip explicit ranges.
+profile within their effective bounds, or the next automatic revision above the
+upper bound when none fits. A range describes inclusive compatibility: Build 3792-3911 selects 3842, which lies inside it. Generation
+prefixes clip explicit ranges.
 See [Engine build rules](docs/ANYBOR.md#core-options) for the authoritative
 filename grammar, priorities, examples and processing limits. Filename tags and
 manual options can select the existing explicit-only anchor variants. Historical
-profiles require manual selection; content inference does not select them.
+profiles also participate in Auto declarations and bounded content evidence.
+The first available logical revision at or above a declared build is used;
+without a declaration or usable evidence the existing fallback is unchanged.
 Builds newer than 8023 are best effort through the latest pinned v4 anchor;
 they are not claimed as universally compatible.
 

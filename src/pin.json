@@ -13,114 +13,128 @@
     {
       "build": "3780",
       "engine": "3842",
-      "covers": "Explicit historical core-option profile on physical Build 3842",
-      "automatic": false,
+      "covers": "Historical automatic or explicit logical profile on physical Build 3842",
+      "automatic": true,
       "major": "v3.0",
-      "tagged": false
+      "tagged": true,
+      "auto_until": 3780
     },
     {
       "build": "3783",
       "engine": "3842",
-      "covers": "Explicit historical core-option profile on physical Build 3842",
-      "automatic": false,
+      "covers": "Historical automatic or explicit logical profile on physical Build 3842",
+      "automatic": true,
       "major": "v3.0",
-      "tagged": false
+      "tagged": true,
+      "auto_until": 3783
     },
     {
       "build": "3789",
       "engine": "3842",
-      "covers": "Explicit historical core-option profile on physical Build 3842",
-      "automatic": false,
+      "covers": "Historical automatic or explicit logical profile on physical Build 3842",
+      "automatic": true,
       "major": "v3.0",
-      "tagged": false
+      "tagged": true,
+      "auto_until": 3789
     },
     {
       "build": "3793",
       "engine": "3842",
-      "covers": "Explicit historical core-option profile on physical Build 3842",
-      "automatic": false,
+      "covers": "Historical automatic or explicit logical profile on physical Build 3842",
+      "automatic": true,
       "major": "v3.0",
-      "tagged": false
+      "tagged": true,
+      "auto_until": 3793
     },
     {
       "build": "3797",
       "engine": "3842",
-      "covers": "Explicit historical core-option profile on physical Build 3842",
-      "automatic": false,
+      "covers": "Historical automatic or explicit logical profile on physical Build 3842",
+      "automatic": true,
       "major": "v3.0",
-      "tagged": false
+      "tagged": true,
+      "auto_until": 3797
     },
     {
       "build": "3805",
       "engine": "3842",
-      "covers": "Explicit historical core-option profile on physical Build 3842",
-      "automatic": false,
+      "covers": "Historical automatic or explicit logical profile on physical Build 3842",
+      "automatic": true,
       "major": "v3.0",
-      "tagged": false
+      "tagged": true,
+      "auto_until": 3805
     },
     {
       "build": "3814",
       "engine": "3842",
-      "covers": "Explicit historical core-option profile on physical Build 3842",
-      "automatic": false,
+      "covers": "Historical automatic or explicit logical profile on physical Build 3842",
+      "automatic": true,
       "major": "v3.0",
-      "tagged": false
+      "tagged": true,
+      "auto_until": 3814
     },
     {
       "build": "3818",
       "engine": "3842",
-      "covers": "Explicit historical core-option profile on physical Build 3842",
-      "automatic": false,
+      "covers": "Historical automatic or explicit logical profile on physical Build 3842",
+      "automatic": true,
       "major": "v3.0",
-      "tagged": false
+      "tagged": true,
+      "auto_until": 3818
     },
     {
       "build": "3822",
       "engine": "3842",
-      "covers": "Explicit historical core-option profile on physical Build 3842",
-      "automatic": false,
+      "covers": "Historical automatic or explicit logical profile on physical Build 3842",
+      "automatic": true,
       "major": "v3.0",
-      "tagged": false
+      "tagged": true,
+      "auto_until": 3822
     },
     {
       "build": "3824",
       "engine": "3842",
-      "covers": "Explicit historical core-option profile on physical Build 3842",
-      "automatic": false,
+      "covers": "Historical automatic or explicit logical profile on physical Build 3842",
+      "automatic": true,
       "major": "v3.0",
-      "tagged": false
+      "tagged": true,
+      "auto_until": 3824
     },
     {
       "build": "3829",
       "engine": "3842",
-      "covers": "Explicit historical core-option profile on physical Build 3842",
-      "automatic": false,
+      "covers": "Historical automatic or explicit logical profile on physical Build 3842",
+      "automatic": true,
       "major": "v3.0",
-      "tagged": false
+      "tagged": true,
+      "auto_until": 3829
     },
     {
       "build": "3831",
       "engine": "3842",
-      "covers": "Explicit historical core-option profile on physical Build 3842",
-      "automatic": false,
+      "covers": "Historical automatic or explicit logical profile on physical Build 3842",
+      "automatic": true,
       "major": "v3.0",
-      "tagged": false
+      "tagged": true,
+      "auto_until": 3831
     },
     {
       "build": "3837",
       "engine": "3842",
-      "covers": "Explicit historical core-option profile on physical Build 3842",
-      "automatic": false,
+      "covers": "Historical automatic or explicit logical profile on physical Build 3842",
+      "automatic": true,
       "major": "v3.0",
-      "tagged": false
+      "tagged": true,
+      "auto_until": 3837
     },
     {
       "build": "3839",
       "engine": "3842",
-      "covers": "Explicit historical core-option profile on physical Build 3842",
-      "automatic": false,
+      "covers": "Historical automatic or explicit logical profile on physical Build 3842",
+      "automatic": true,
       "major": "v3.0",
-      "tagged": false
+      "tagged": true,
+      "auto_until": 3839
     },
     {
       "build": "3842",

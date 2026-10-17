@@ -244,32 +244,53 @@ static int build_tag_generation(const char *base, const char *build)
     return 0;
 }
 
+static int pick_anchor(int build);
+
+/* Automatic logical revisions refine an existing physical engine era. */
+static bool profile_has_automatic_variants(int engine_build)
+{
+    for (size_t i = 0; i < sizeof(kProfiles) / sizeof(kProfiles[0]); ++i)
+        if (kProfiles[i].automatic && kProfiles[i].engine_build == engine_build &&
+            kProfiles[i].build != engine_build) return true;
+    return false;
+}
+
+static bool declared_build_has_variants(int build)
+{
+    int anchor = pick_anchor(build);
+    for (size_t i = 0; i < sizeof(kProfiles) / sizeof(kProfiles[0]); ++i)
+        if (kProfiles[i].build == anchor)
+            return profile_has_automatic_variants(kProfiles[i].engine_build);
+    return false;
+}
+
 static int profile_in_range(int lower, int upper, bool automatic_only)
 {
     int best = 0;
     for (size_t i = 0; i < sizeof(kProfiles) / sizeof(kProfiles[0]); ++i) {
         const obor_profile_def *p = &kProfiles[i];
         if ((automatic_only ? p->automatic : p->tagged) && p->build >= lower && p->build <= upper &&
-            p->engine_build >= lower && p->engine_build <= upper && p->build > best)
+            ((p->engine_build >= lower && p->engine_build <= upper) ||
+             (p->automatic && p->build != p->engine_build)) && p->build > best)
             best = p->build;
     }
     return best;
 }
 
-/* An uncovered range uses the first physical engine beyond its upper bound.
+/* An uncovered range uses the first automatic revision beyond its upper bound.
  * Explicit-only aliases never masquerade as a newer physical engine. */
 static int profile_for_range(int lower, int upper, bool automatic_only)
 {
     int best = profile_in_range(lower, upper, automatic_only);
     if (best) return best;
-    int next_engine = INT_MAX;
+    int next_build = INT_MAX;
     for (size_t i = 0; i < sizeof(kProfiles) / sizeof(kProfiles[0]); ++i) {
         const obor_profile_def *p = &kProfiles[i];
         if (p->automatic && (automatic_only || p->tagged) &&
-            p->engine_build > upper && p->engine_build >= lower &&
-            p->engine_build < next_engine) {
+            p->build > upper && p->build >= lower &&
+            p->build < next_build) {
             best = p->build;
-            next_engine = p->engine_build;
+            next_build = p->build;
         }
     }
     return best;
@@ -280,6 +301,11 @@ static int profile_for_range(int lower, int upper, bool automatic_only)
  * use the first intervening era, then the latest post-release v4 snapshot. */
 static int content_profile_for_range(int lower, int upper)
 {
+    if (declared_build_has_variants(lower)) {
+        int anchor = pick_anchor(lower);
+        if (anchor <= upper) return anchor;
+        return profile_in_range(lower, upper, true);
+    }
     for (size_t i = 0; i < sizeof(kProfiles) / sizeof(kProfiles[0]); ++i) {
         const obor_profile_def *p = &kProfiles[i];
         if (p->build == OBOR_FALLBACK_BUILD && p->build >= lower && p->build <= upper &&
@@ -2123,14 +2149,16 @@ static void decide_engine(void)
         build = filename_build;
         how = "filename interval";
     }
-    bool filename_profile_enabled = false;
+    int declared_anchor = filename_build > 0 && declared_build_has_variants(filename_build)
+        ? pick_anchor(filename_build) : 0;
+    bool filename_profile_enabled = declared_anchor != 0;
     for (size_t i = 0; i < sizeof(kProfiles) / sizeof(kProfiles[0]); ++i)
         if (kProfiles[i].build == filename_build && kProfiles[i].tagged &&
             (!kProfiles[i].automatic || filename_build == 7123 ||
              filename_build == 7142 || filename_build == 7533 || filename_build == 8023))
             filename_profile_enabled = true;
     if (filename_profile_enabled) {
-        filename_profile = filename_build;
+        filename_profile = declared_anchor ? declared_anchor : filename_build;
         if (!build) {
             build = filename_build;
             how = "filename tag";

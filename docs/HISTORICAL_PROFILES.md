@@ -1,27 +1,29 @@
-# Historical engine profiles
+# Choosing a profile
 
-Historical profiles share engine 3842 while selecting specific earlier content
-contracts. They are compatibility variants, not complete copies of every
-intermediate upstream engine or its former defects. Safety and lifecycle
-corrections remain enabled.
+Selectable engine profiles: v3.0 3400, v3.0 3780, v3.0 3783, v3.0 3789, v3.0 3793, v3.0 3797,
+v3.0 3805, v3.0 3814, v3.0 3818, v3.0 3822, v3.0 3824, v3.0 3829, v3.0 3831,
+v3.0 3837, v3.0 3839, v3.0 3842, v3.0 4086, v3.0 4432, v3.0 4453, v3.0 6330,
+v3.0 6391, v3.0 6412-dev, v3.0 6510-dev, v3.0 7123-dev, v4.0 7142-alpha,
+v4.0 7533 and v4.0 8023-dev.
+
+Auto uses build tags and content clues to choose a profile. You can select one
+manually when a game needs it. Historical profiles preserve selected earlier
+content behavior while retaining safety and lifecycle corrections.
 
 ## Select a profile
 
+Manual selection overrides Auto when the metadata is missing or incorrect:
+
 1. Find the engine build specified by the content's author or original release.
-   A renamed archive is not reliable evidence of that build.
 2. Open **Quick Menu > Core Options > System > Engine build**. Frontends without
    categories display **Engine build** in the flat core-options list.
 3. Select the full value, such as **v3.0 3780**, and use **Restart** or reload
-   the content. The frontend log reports the selected profile and physical engine.
+   the content. The frontend log reports the selected profile.
 4. Keep that profile for the session. States require the same logical profile,
    core build and content; switching profiles does not convert existing states.
 
-The available historical revisions are 3780, 3783, 3789, 3793, 3797, 3805,
-3814, 3818, 3822, 3824, 3829, 3831, 3837 and 3839. Profile 3842 retains the
-corresponding later contracts. If the required revision is unknown, start with
-Auto and consult the content's release documentation before choosing manually.
-Auto retains its established engine-era routing; it does not infer these minor
-historical profiles from missing syntax, a renamed file or a content hash.
+If the required revision is unknown, start with Auto and consult the content
+release documentation before choosing manually.
 
 ## Selected contracts and shared behavior
 
@@ -43,7 +45,7 @@ regressions cover these selected contracts, including state restoration of
 complete global and local names.
 
 The following table records every reviewed contract-bearing revision. Shared
-rows deliberately retain engine 3842 behavior. They are explicit compatibility
+rows deliberately retain later behavior. They are explicit compatibility
 limits, not claims that the corresponding historical behavior is reproduced.
 Additive syntax and safety corrections are retained rather than manufacturing
 historical parser errors, crashes or invalid memory accesses.
@@ -88,5 +90,5 @@ historical parser errors, crashes or invalid memory accesses.
 |3842|shared|Retain compact font atlas with its glyph-width contract, clipping bounds and soundtoplay NULL guard. No original image difference requiring old per-glyph allocations is demonstrated; restoring unsafe clipping is excluded.|
 
 A failure that disappears in the original declared engine remains a compatibility
-issue to investigate, even when it also occurs in the shared engine. Selecting
+issue to investigate, even when it also occurs with another profile. Selecting
 an earlier profile does not promise exact emulation of an original executable.

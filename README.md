@@ -1,15 +1,14 @@
 # AnyBOR
 
 An independent libretro core for OpenBOR games, offering selectable engine
-profiles backed by nine engines in one library: v3.0 3400, v3.0 3842, v3.0 4086, v3.0 4432, v3.0 4453, v3.0 6330, v3.0 6391, v3.0 6412-dev, v3.0 6510-dev, v3.0 7123-dev, v4.0 7142-alpha, v4.0 7533 and v4.0 8023-dev.
+profiles: v3.0 3400, v3.0 3780, v3.0 3783, v3.0 3789, v3.0 3793, v3.0 3797,
+v3.0 3805, v3.0 3814, v3.0 3818, v3.0 3822, v3.0 3824, v3.0 3829, v3.0 3831,
+v3.0 3837, v3.0 3839, v3.0 3842, v3.0 4086, v3.0 4432, v3.0 4453, v3.0 6330,
+v3.0 6391, v3.0 6412-dev, v3.0 6510-dev, v3.0 7123-dev, v4.0 7142-alpha,
+v4.0 7533 and v4.0 8023-dev.
 Core Options also provides Auto, which uses build tags and content clues to
 choose a profile. You can select one manually when a game needs it.
-Historical profiles 3780, 3783, 3789, 3793, 3797, 3805, 3814, 3818,
-3822, 3824, 3829, 3831, 3837 and 3839 share engine 3842. Select these
-profiles manually; Auto retains its existing engine-era routing rather than
-guessing a historical minor revision from a filename or missing syntax.
-See [choosing a historical profile](docs/HISTORICAL_PROFILES.md) for the manual
-steps, selected contracts and remaining compatibility limits.
+See [choosing a profile](docs/HISTORICAL_PROFILES.md) for details.
 Save states, rewind and four players are supported. OpenBOR, Senile Team and
 libretro credits identify upstream work; they do not imply endorsement of
 this port.
@@ -291,8 +290,8 @@ with their downloads.
 The original diagnostic fixture generator and native smoke test are described
 in [docs/TESTING.md](docs/TESTING.md).
 
-See [MODIFICATIONS.md](MODIFICATIONS.md) for changes supporting the nine
-OpenBOR engines and their selectable profiles, with file inventories and source references,
+See [MODIFICATIONS.md](MODIFICATIONS.md) for changes to the selectable profiles,
+with file inventories and source references,
 [PROVENANCE.md](PROVENANCE.md) for source origins,
 [CONTRIBUTING.md](CONTRIBUTING.md) for development, and
 [SECURITY.md](SECURITY.md) for content trust and private reporting.

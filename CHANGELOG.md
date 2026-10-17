@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Select historical logical profiles automatically from declared build tags,
+  accompanying engine versions and existing bounded content evidence. Preserve
+  the fallback without a declaration and select the highest available profile
+  inside an inclusive filename build range.
+
 - Preserve historical macro-name, level-setter, text-setter and unknown-constant
   tolerance at each logical revision boundary, while retaining parser safety.
 - Bound text-property name lookups and reject incomplete or oversized legacy
@@ -169,21 +174,21 @@
 - Accept explicit Autoconf host and build triplets for external toolchains,
   with compiler-host and native-build detection available through `auto`.
 - Respect inclusive filename build intervals, including unknown endpoints,
-  and report when no available physical engine fits the bounds.
+  and report when no eligible profile can be selected.
 - Release the snapshot arena on macOS module unload by keeping fault guards
   in temporary pthread slots instead of compiler thread-local storage.
 - Reject macOS cores with compiler TLS during binary inspection and probe
   arena release with an exact, non-overwriting Mach reservation.
 - Resolve partial filename build tags to the highest available profile in
   their interval, or route the interval's upper endpoint when none exists.
-- Add engine 4453, selectable by its core option or an explicit Build 4453
+- Add profile v3.0 4453, selectable by its core option or an explicit Build 4453
   filename, with its original 32-bit color and palette behavior.
 - Preserve native settings and separate saved data for 4432 and 4453.
 
-## 0.1.6 — eight selectable engines
+## 0.1.6 — eight selectable profiles
 
-- Add the 7533 engine and replace the 8020 physical anchor with the public
-  8023 controller branch. Core Options offers eight engines plus Auto.
+- Add profile v4.0 7533 and replace v4.0 8020 with v4.0 8023-dev.
+  Core Options offers eight profiles plus Auto.
 - Bridge the controller branch to four RetroPads, including saved button
   mappings and in-game reassignment. Align player state so the Windows core
   can enter gameplay safely.
