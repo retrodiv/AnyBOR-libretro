@@ -12,7 +12,7 @@ import unittest
 
 ROOT=Path(__file__).resolve().parents[1]
 SOURCE=Path(os.environ.get('OBOR_TEST_SOURCE',ROOT))
-ENGINES=('3400','3842','4086','4432','6391','7123','7142','7533','8023')
+ENGINES=('3400','3842','4086','4432','6391','7142','7533','8023')
 
 class PreprocessorStringTests(unittest.TestCase):
     def test_real_lexers_across_every_physical_engine(self):

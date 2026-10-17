@@ -17,9 +17,9 @@
       "upstream_sha256": null
     },
     "openbor.c": {
-      "distributed_sha256": "1fd43a873f64466cdbdb1183c7adb6ca625f25459b2a172e3910e31195136064",
+      "distributed_sha256": "d83c453ca20074e8cacb127c822dde1d97d0a3702904d7ad7335ad63f4d11ca8",
       "modified": true,
-      "summary": "Apply the port's engine corrections and select the PC video configuration on macOS. Derive output names from the content basename with explicit destination capacities, and reject overflowing output path joins. Leave multiplayer slots without a selected model available to join even if game scripts preassign lives to them. Let a missing basename-only PAK self-check read the active frontend content after it has been validated and prepared. Allocate each model's animation pointer table through the highest animation index that model uses, and bound cache, copy and cleanup paths to that capacity. Ignore optional defense and offense entries outside the configured attack-type range with a log warning before accessing their tables. Yield after each newly completed model during explicit model-list or level preparation, and defer states until that preparation has cleaned up its intermediate parsers and handles. Initialize all four RetroPads and repair legacy unbound player profiles without replacing custom bindings.",
+      "summary": "Apply the port's engine corrections and select the PC video configuration on macOS. Derive output names from the content basename with explicit destination capacities, and reject overflowing output path joins. Leave multiplayer slots without a selected model available to join even if game scripts preassign lives to them. Let a missing basename-only PAK self-check read the active frontend content after it has been validated and prepared. Allocate each model's animation pointer table through the highest animation index that model uses, and bound cache, copy and cleanup paths to that capacity. Ignore optional defense and offense entries outside the configured attack-type range with a log warning before accessing their tables. Yield after each newly completed model during explicit model-list or level preparation, and defer states until that preparation has cleaned up its intermediate parsers and handles. Initialize all four RetroPads and repair legacy unbound player profiles without replacing custom bindings. Preserve divergent 7086 and 2021 7123 animation, combat, model, script-selector and menu contracts by logical profile, retaining safe storage and additive APIs.",
       "topics": [
         "active-content-pak-aliases",
         "animation-memory-layout",
@@ -27,6 +27,7 @@
         "empty-player-slot-safety",
         "four-player-controls",
         "loading-screen-presentation",
+        "logical-profile-compatibility",
         "model-attack-type-bounds",
         "record-dates-and-file-notices",
         "session-relative-filesystem"
@@ -34,20 +35,22 @@
       "upstream_sha256": "71fd11c5f33bce214d0af7ef6ad521cc34440d460e4e2a45e99bf28ee9c03c69"
     },
     "openbor.h": {
-      "distributed_sha256": "1b57dd5ec09a68be42ab927d04c2e86855e0ccf0229ede3ea7388f9670e7c6c8",
+      "distributed_sha256": "d08ba3eacef0f9c37dbcb2882d788cf892bf02aad42e3991dc4cdf1644ea34c5",
       "modified": true,
-      "summary": "Allocate collision pointer slots through the highest author-facing index used by each collection. Track each model's allocated animation-table capacity and reject lookups outside it.",
+      "summary": "Allocate collision pointer slots through the highest author-facing index used by each collection. Track each model's allocated animation-table capacity and reject lookups outside it. Preserve divergent 7086 and 2021 7123 animation, combat, model, script-selector and menu contracts by logical profile, retaining safe storage and additive APIs.",
       "topics": [
         "animation-memory-layout",
+        "logical-profile-compatibility",
         "record-dates-and-file-notices"
       ],
       "upstream_sha256": "06928e6765895d2d9f344a6bb9efd394c4fea0bef540f3fa061dee3da9c61f68"
     },
     "openborscript.c": {
-      "distributed_sha256": "9ecfcd4a4e51f5b923290f8e2dae57c8f9b63cea2e6fe18bcaf68b12c5c8ce94",
+      "distributed_sha256": "70d7fb94598c75df3abbf57b12dd789af36867d45fae79c5e9ee60722397be4b",
       "modified": true,
-      "summary": "Keep the dormant constant-lowering diagnostic compatible with the single-value instruction layout. Derive output names from the content basename with explicit destination capacities, and reject overflowing output path joins. Compact compiler-only instruction records after resolving value ownership, preserving branch and export anchors, all mutable values and exactly-once pool cleanup. Resolve text-property names within the actual table bounds while preserving native numeric selectors. Reuse each text object's owned buffer when replacing its contents.",
+      "summary": "Keep the dormant constant-lowering diagnostic compatible with the single-value instruction layout. Derive output names from the content basename with explicit destination capacities, and reject overflowing output path joins. Compact compiler-only instruction records after resolving value ownership, preserving branch and export anchors, all mutable values and exactly-once pool cleanup. Resolve text-property names within the actual table bounds while preserving native numeric selectors. Reuse each text object's owned buffer when replacing its contents. Preserve divergent 7086 and 2021 7123 animation, combat, model, script-selector and menu contracts by logical profile, retaining safe storage and additive APIs.",
       "topics": [
+        "logical-profile-compatibility",
         "record-dates-and-file-notices",
         "script-memory-layout",
         "script-property-names",
@@ -381,9 +384,13 @@
       "upstream_sha256": "053f95e573ed4643a449d3231a003db6808bc7b59d44b6a4a457cc2a2c44d912"
     },
     "source/openborscript/animation.c": {
-      "distributed_sha256": "c0f763d3b1138aa6b946d1c18b9d1f7e75e2c0c239a73b77af7c766b2f2a553a",
-      "modified": false,
-      "topics": [],
+      "distributed_sha256": "edc78696a6888ab912dd645844a20bf4c06b136f06e470bacb6a1980d8f949cd",
+      "modified": true,
+      "summary": "Translate native animation property IDs for the logical profile. Preserve divergent 7086 and 2021 7123 animation, combat, model, script-selector and menu contracts by logical profile, retaining safe storage and additive APIs.",
+      "topics": [
+        "logical-profile-compatibility",
+        "record-dates-and-file-notices"
+      ],
       "upstream_sha256": "c0f763d3b1138aa6b946d1c18b9d1f7e75e2c0c239a73b77af7c766b2f2a553a"
     },
     "source/openborscript/animation.h": {
@@ -417,9 +424,13 @@
       "upstream_sha256": "ad00c3c6c3772d8acca9cf3a811366b66be47e9003225b0585e7805bc9768771"
     },
     "source/openborscript/collision_attack.c": {
-      "distributed_sha256": "e68033e0dbbfd2d055e819f528c524dedbd45138decbe7bfde96c17f059fa4ad",
-      "modified": false,
-      "topics": [],
+      "distributed_sha256": "66fcdac4a7e41ea0868951857fe5b77335fcaa4c53bb4cf4569da968ed49060c",
+      "modified": true,
+      "summary": "Translate native attack-type IDs at the script API boundary.",
+      "topics": [
+        "logical-profile-compatibility",
+        "record-dates-and-file-notices"
+      ],
       "upstream_sha256": "e68033e0dbbfd2d055e819f528c524dedbd45138decbe7bfde96c17f059fa4ad"
     },
     "source/openborscript/collision_attack.h": {
@@ -447,9 +458,13 @@
       "upstream_sha256": "e1893bcaf3ae9937f57322d1b01ce923786b65f3bc7f32b3429a68212b4b7cc7"
     },
     "source/openborscript/commands.c": {
-      "distributed_sha256": "efd031279c404feda3666b980c1fe2f5620d958871f9ec522363253bc6b00f42",
-      "modified": false,
-      "topics": [],
+      "distributed_sha256": "f5fde81b763d8500de2ef4967ef738d82c5c101ebe48385e8a5ad816b92e1f25",
+      "modified": true,
+      "summary": "Convert the command-list lookup result to its command enumeration explicitly instead of through a plain pointer cast.",
+      "topics": [
+        "logical-profile-compatibility",
+        "record-dates-and-file-notices"
+      ],
       "upstream_sha256": "efd031279c404feda3666b980c1fe2f5620d958871f9ec522363253bc6b00f42"
     },
     "source/openborscript/commands.h": {
@@ -465,9 +480,13 @@
       "upstream_sha256": "00b20cfbeafeae622464b8ce62b68514dc5387ca758c2316f18888e4f5b9a2cc"
     },
     "source/openborscript/constants.c": {
-      "distributed_sha256": "22d47a40f364ceddd21e89d7e6f20290549e2a26455fff395190c628aaa47fff",
-      "modified": false,
-      "topics": [],
+      "distributed_sha256": "757e08940d117c4ca8ee71954f330bf6a4b5650a302357241ab2cb470911f5ef",
+      "modified": true,
+      "summary": "Expose each logical profile's native constants and translate shared selectors to native values. Preserve divergent 7086 and 2021 7123 animation, combat, model, script-selector and menu contracts by logical profile, retaining safe storage and additive APIs.",
+      "topics": [
+        "logical-profile-compatibility",
+        "record-dates-and-file-notices"
+      ],
       "upstream_sha256": "22d47a40f364ceddd21e89d7e6f20290549e2a26455fff395190c628aaa47fff"
     },
     "source/openborscript/drawmethod.c": {
@@ -483,9 +502,13 @@
       "upstream_sha256": "4545f9fa4487da09d92a09951f81b4fd8569032f90c062e74bddf368d3eb12cc"
     },
     "source/openborscript/entity.c": {
-      "distributed_sha256": "23b988759c89afdc6fcd8652868a8f61c80ac226b68316ecf48fb62a135ef64d",
-      "modified": false,
-      "topics": [],
+      "distributed_sha256": "5bd09b7feef001595bdca9933ef8cc5ced8e229bf80e9a613bd1efd025023b5f",
+      "modified": true,
+      "summary": "Translate native entity property names, numeric IDs and animation values for each logical profile.",
+      "topics": [
+        "logical-profile-compatibility",
+        "record-dates-and-file-notices"
+      ],
       "upstream_sha256": "23b988759c89afdc6fcd8652868a8f61c80ac226b68316ecf48fb62a135ef64d"
     },
     "source/openborscript/entity.h": {
@@ -518,10 +541,23 @@
       "topics": [],
       "upstream_sha256": "bb7b74c3d04121233c5f27ac6923df3bcc713604646843fd4e0bf10e611c1535"
     },
+    "source/openborscript/profile_ids.h": {
+      "distributed_sha256": "4b41e0918d8dc0bf1c848b0b59400487df61e25a6c98ab11abfc01056206109b",
+      "modified": true,
+      "summary": "Map native logical-profile animation, attack, subtype and spawn IDs to the shared engine selectors. Preserve divergent 7086 and 2021 7123 animation, combat, model, script-selector and menu contracts by logical profile, retaining safe storage and additive APIs.",
+      "topics": [
+        "logical-profile-compatibility"
+      ],
+      "upstream_sha256": null
+    },
     "source/openborscript/recursive_damage.c": {
-      "distributed_sha256": "503912e1fd5681098619980b54c249b2546cd3dcb28a5dcf27409dfd0f822556",
-      "modified": false,
-      "topics": [],
+      "distributed_sha256": "7c6d01e0c43c067ac10845f8bc8157990e089d191fd880993bbfcceeecc7bdc1",
+      "modified": true,
+      "summary": "Translate recursive attack-type selectors at the script boundary and reject indices outside the retained table.",
+      "topics": [
+        "logical-profile-compatibility",
+        "record-dates-and-file-notices"
+      ],
       "upstream_sha256": "503912e1fd5681098619980b54c249b2546cd3dcb28a5dcf27409dfd0f822556"
     },
     "source/openborscript/recursive_damage.h": {
@@ -531,9 +567,13 @@
       "upstream_sha256": "5a85c0ee6b73bf9862d456e481bb3a46897d1747b2a786107e5124ef6255404f"
     },
     "source/openborscript/scriptcommon.h": {
-      "distributed_sha256": "e6ad6f7bae70610c75e4ee9a8911b1b48e9af97afcd2a78145c794cfa712caa1",
-      "modified": false,
-      "topics": [],
+      "distributed_sha256": "9a9a9f3d3fd4180d834e8e0a25eb7005d4562c600fa14c7702d326eddf9db79f",
+      "modified": true,
+      "summary": "Keep rejected-property diagnostics within each mapping table's declared length. Bound rejected-property diagnostics by the actual mapping-table length.",
+      "topics": [
+        "record-dates-and-file-notices",
+        "script-property-error-bounds"
+      ],
       "upstream_sha256": "e6ad6f7bae70610c75e4ee9a8911b1b48e9af97afcd2a78145c794cfa712caa1"
     },
     "source/openborscript/string.c": {

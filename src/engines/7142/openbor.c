@@ -17,7 +17,9 @@
  * explicit model-list or level preparation, and defer states until that
  * preparation has cleaned up its intermediate parsers and handles.
  * Initialize all four RetroPads and repair legacy unbound player profiles
- * without replacing custom bindings.
+ * without replacing custom bindings. Preserve divergent 7086 and 2021 7123
+ * animation, combat, model, script-selector and menu contracts by logical
+ * profile, retaining safe storage and additive APIs.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/7142.md
  * at the source repository root. Original notices follow below.
@@ -582,6 +584,8 @@ int                 livescheat          = 0;
 int                 keyscriptrate       = 0;
 int                 creditscheat        = 0;
 int                 healthcheat         = 0;
+int                 multihitcheat       = 0;
+int                 escape_flag         = 0;
 int                 showtimeover        = 0;
 int                 sameplayer          = 0;            		// 7-1-2005  flag to determine if players can use the same character
 int                 PLAYER_LIVES        = 3;					// 7-1-2005  default setting for Lives
@@ -2609,7 +2613,7 @@ void clearsettings()
     savedata.uselog = 1;
     savedata.debuginfo = 0;
     savedata.fullscreen = 0;
-    savedata.vsync = 1;
+    savedata.vsync = obor_profile_build == 7123 ? 0 : 1;
 
 	#if WII
     savedata.stretch = 1;
@@ -7262,15 +7266,19 @@ static int translate_ani_id(const char *value, s_model *newchar, s_anim *newanim
     else if(stricmp(value, "special") == 0 || stricmp(value, "special1") == 0)
     {
         ani_id = ANI_SPECIAL;
-        newanim->energy_cost.cost = ENERGY_COST_DEFAULT_COST;       
+        if(!obor_profile_legacy_branch() || !newanim->obor_energy_present)
+            newanim->energy_cost.cost = ENERGY_COST_DEFAULT_COST;
+        newanim->obor_energy_present = 1;       
     }
     else if(stricmp(value, "special2") == 0)
     {
         ani_id = ANI_SPECIAL2;
+        newanim->obor_energy_present = 1;
     }
     else if(stricmp(value, "special3") == 0 || stricmp(value, "jumpspecial") == 0)
     {
         ani_id = ANI_JUMPSPECIAL;
+        newanim->obor_energy_present = 1;
     }
     else if(starts_with_num(value, "freespecial"))
     {
@@ -7967,7 +7975,12 @@ void lcmHandleCommandSmartbomb(ArgList *arglist, s_model *newchar, char *filenam
     }
 
     newchar->smartbomb->attack_force = atoi(GET_ARGP(1));			// Special force
-    newchar->smartbomb->attack_type = atoi(GET_ARGP(2));			// Special attack type
+    newchar->smartbomb->attack_type = obor_attack_from_native(atoi(GET_ARGP(2)));
+    if(!obor_attack_valid(newchar->smartbomb->attack_type))
+    {
+        writeToLogFile("Warning: Invalid smartbomb attack type in %s; using normal.\n", filename);
+        newchar->smartbomb->attack_type = ATK_NORMAL;
+    }			// Special attack type
     newchar->smartbomb->attack_drop = 1; //by default
     newchar->smartbomb->dropv.y = default_model_dropv.y;
 
@@ -8075,8 +8088,45 @@ e_entity_type find_entity_type_from_string(char* value)
 	return result;
 }
 
+static void obor_legacy_lcmHandleCommandHostile(ArgList *arglist, s_model *newchar)
+{
+    int i;
+    char *value;
+    newchar->hostile = 0;
+
+    for(i = 1; (value = GET_ARGP(i)) && value[0]; i++)
+    {
+        if(stricmp(value, "enemy") == 0)
+        {
+            newchar->hostile |= TYPE_ENEMY;
+        }
+        else if(stricmp(value, "player") == 0)
+        {
+            newchar->hostile |= TYPE_PLAYER;
+        }
+        else if(stricmp(value, "obstacle") == 0)
+        {
+            newchar->hostile |= TYPE_OBSTACLE;
+        }
+        else if(stricmp(value, "shot") == 0)
+        {
+            newchar->hostile |= TYPE_SHOT;
+        }
+        else if(stricmp(value, "npc") == 0)
+        {
+            newchar->hostile |= TYPE_NPC;
+        }
+        else
+        {
+            newchar->hostile |= atoi(value); //debug raw integer value
+        }
+    }
+}
+
 void lcmHandleCommandHostile(ArgList *arglist, s_model *newchar)
 {
+    if(obor_profile_legacy_branch()) { obor_legacy_lcmHandleCommandHostile(arglist, newchar); return; }
+
     int i;
     char *value;
     newchar->hostile = 0;
@@ -8087,8 +8137,49 @@ void lcmHandleCommandHostile(ArgList *arglist, s_model *newchar)
     }
 }
 
+static void obor_legacy_lcmHandleCommandCandamage(ArgList *arglist, s_model *newchar)
+{
+    int i;
+    char *value;
+    newchar->candamage = 0;
+
+    for(i = 1; (value = GET_ARGP(i)) && value[0]; i++)
+    {
+        if(stricmp(value, "enemy") == 0)
+        {
+            newchar->candamage |= TYPE_ENEMY;
+        }
+        else if(stricmp(value, "player") == 0)
+        {
+            newchar->candamage |= TYPE_PLAYER;
+        }
+        else if(stricmp(value, "obstacle") == 0)
+        {
+            newchar->candamage |= TYPE_OBSTACLE;
+        }
+        else if(stricmp(value, "shot") == 0)
+        {
+            newchar->candamage |= TYPE_SHOT;
+        }
+        else if(stricmp(value, "npc") == 0)
+        {
+            newchar->candamage |= TYPE_NPC;
+        }
+        else if(stricmp(value, "ground") == 0)  // not really needed, though
+        {
+            newchar->ground = 1;
+        }
+        else
+        {
+            newchar->candamage |= atoi(value); //debug raw integer value
+        }
+    }
+}
+
 void lcmHandleCommandCandamage(ArgList *arglist, s_model *newchar)
 {
+    if(obor_profile_legacy_branch()) { obor_legacy_lcmHandleCommandCandamage(arglist, newchar); return; }
+
     int i;
     char *value;
     newchar->candamage = 0;
@@ -8099,8 +8190,45 @@ void lcmHandleCommandCandamage(ArgList *arglist, s_model *newchar)
     }
 }
 
+static void obor_legacy_lcmHandleCommandProjectilehit(ArgList *arglist, s_model *newchar)
+{
+    int i;
+    char *value;
+    newchar->projectilehit = 0;
+
+    for(i = 1; (value = GET_ARGP(i)) && value[0]; i++)
+    {
+        if(stricmp(value, "enemy") == 0)
+        {
+            newchar->projectilehit |= TYPE_ENEMY;
+        }
+        else if(stricmp(value, "player") == 0)
+        {
+            newchar->projectilehit |= TYPE_PLAYER;
+        }
+        else if(stricmp(value, "obstacle") == 0)
+        {
+            newchar->projectilehit |= TYPE_OBSTACLE;
+        }
+        else if(stricmp(value, "shot") == 0)
+        {
+            newchar->projectilehit |= TYPE_SHOT;
+        }
+        else if(stricmp(value, "npc") == 0)
+        {
+            newchar->projectilehit |= TYPE_NPC;
+        }
+        else
+        {
+            newchar->projectilehit |= atoi(value); //debug raw integer value
+        }
+    }
+}
+
 void lcmHandleCommandProjectilehit(ArgList *arglist, s_model *newchar)
 {
+    if(obor_profile_legacy_branch()) { obor_legacy_lcmHandleCommandProjectilehit(arglist, newchar); return; }
+
     int i;
     char *value;
     newchar->projectilehit = 0;
@@ -10403,6 +10531,10 @@ s_model *load_cached_model(char *name, char *owner, char unload)
 				newanim->range.y.max			= (int)newchar->jumpheight * 20;			// Same logic as X. Good for attacks, but not terrian. Author better remember to add jump ranges.
                 newanim->range.base.min         = 0;									// Base min.				
 				newanim->range.base.max			= (int)newchar->jumpheight * 20;			// Just use same logic as range Y.
+                newanim->obor_counter_present = newanim->obor_drop_present = 0;
+                newanim->obor_jump_present = newanim->obor_land_present = 0;
+                newanim->obor_energy_present = 0;
+                newanim->obor_projectile_position_explicit = 0;
                 newanim->energy_cost.cost       = 0;
 				newanim->energy_cost.disable	= 0;
 				newanim->energy_cost.mponly		= COST_TYPE_MP_THEN_HP;
@@ -10411,7 +10543,7 @@ s_model *load_cached_model(char *name, char *owner, char unload)
                 newanim->projectile.throwframe  = FRAME_NONE;
                 newanim->projectile.tossframe   = FRAME_NONE;			// this get 1 of weapons numshots shots in the animation that you want(normaly the last)by tails
 				newanim->projectile.position.x	= 0;
-				newanim->projectile.position.y	= 70;
+				newanim->projectile.position.y	= obor_profile_legacy_branch() ? 0 : 70;
 				newanim->projectile.position.z	= 0;
                 newanim->flipframe              = FRAME_NONE;
                 newanim->attack_one             = 0;
@@ -10474,12 +10606,15 @@ s_model *load_cached_model(char *name, char *owner, char unload)
                 break;
             case CMD_MODEL_ENERGY_COST:
             case CMD_MODEL_MPCOST:
+                newanim->obor_energy_present = 1;
                
                 newanim->energy_cost.cost    = GET_INT_ARG(1);
                 newanim->energy_cost.mponly  = GET_INT_ARG(2);
 				newanim->energy_cost.disable = GET_INT_ARG(3);
 
-				// Caskey, Damon V.
+				if(!obor_profile_legacy_branch())
+                {
+// Caskey, Damon V.
 				// 2019-11-22
 				// 
 				// Convert the idiotic arbitrary numeric value in text into bitwise 
@@ -10506,8 +10641,10 @@ s_model *load_cached_model(char *name, char *owner, char unload)
 					break;
 				}
 
+                }
                 break;
             case CMD_MODEL_MPONLY:
+                newanim->obor_energy_present = 1;
                 newanim->energy_cost.mponly = GET_INT_ARG(1);
                 break;
             case CMD_MODEL_CHARGETIME:
@@ -10567,18 +10704,23 @@ s_model *load_cached_model(char *name, char *owner, char unload)
                 newanim->projectile.star = get_cached_model_index(GET_ARG(1));
                 break;
 			case CMD_MODEL_PROJECTILE_POSITION_X:
+                newanim->obor_projectile_position_explicit = 1;
 				newanim->projectile.position.x = GET_INT_ARG(1);
 				break;
 			case CMD_MODEL_PROJECTILE_POSITION_Y:
+                newanim->obor_projectile_position_explicit = 1;
 				newanim->projectile.position.y = GET_INT_ARG(1);
 				break;
 			case CMD_MODEL_PROJECTILE_POSITION_Z:
+                newanim->obor_projectile_position_explicit = 1;
 				newanim->projectile.position.z = GET_INT_ARG(1);
 				break;
 
 				// Legacy dive attacks. Turn off animation level subject_to_gravity
 				// and then use jumpframe to fly down at an angle.
             case CMD_MODEL_DIVE: 
+                newanim->obor_jump_present = 1;
+                if(obor_profile_legacy_branch()) memset(&newanim->jumpframe, 0, sizeof(newanim->jumpframe));
                 newanim->subject_to_gravity = 0;
 
                 // Use jumpframe it to set movement.
@@ -10590,6 +10732,8 @@ s_model *load_cached_model(char *name, char *owner, char unload)
                 newanim->jumpframe.ent = MODEL_INDEX_NONE;
                 break;
             case CMD_MODEL_DIVE1:
+                newanim->obor_jump_present = 1;
+                if(obor_profile_legacy_branch()) memset(&newanim->jumpframe, 0, sizeof(newanim->jumpframe));
                 newanim->subject_to_gravity = 0;
 
                 // Use jumpframe to set movement.
@@ -10600,6 +10744,8 @@ s_model *load_cached_model(char *name, char *owner, char unload)
                 newanim->jumpframe.ent = MODEL_INDEX_NONE;
                 break;
             case CMD_MODEL_DIVE2:
+                newanim->obor_jump_present = 1;
+                if(obor_profile_legacy_branch()) memset(&newanim->jumpframe, 0, sizeof(newanim->jumpframe));
                 newanim->subject_to_gravity = 0;
 
 				// Use jumpframe to set movement.
@@ -10610,6 +10756,8 @@ s_model *load_cached_model(char *name, char *owner, char unload)
 				newanim->jumpframe.ent = MODEL_INDEX_NONE; 
 				break;
             case CMD_MODEL_JUMPFRAME:
+                newanim->obor_jump_present = 1;
+                if(obor_profile_legacy_branch()) memset(&newanim->jumpframe, 0, sizeof(newanim->jumpframe));
             {
                 memset(&newanim->jumpframe.velocity, 0, sizeof(s_axis_principal_float));
 
@@ -10667,6 +10815,8 @@ s_model *load_cached_model(char *name, char *owner, char unload)
                 newanim->bounce_factor = GET_FLOAT_ARG(1);
                 break;
             case CMD_MODEL_LANDFRAME:				
+                newanim->obor_land_present = 1;
+                if(obor_profile_legacy_branch()) memset(&newanim->landframe, 0, sizeof(newanim->landframe));
                 // Landing frame.
                 newanim->landframe.frame = GET_FRAME_ARG(1);
 
@@ -10676,14 +10826,17 @@ s_model *load_cached_model(char *name, char *owner, char unload)
                 {
                     newanim->landframe.model_index = get_cached_model_index(value);
                 }
+                else if(obor_profile_legacy_branch()) newanim->landframe.model_index = -1;
 
                 break;
             case CMD_MODEL_DROPFRAME:
+                newanim->obor_drop_present = 1;
+                if(obor_profile_legacy_branch()) memset(&newanim->dropframe, 0, sizeof(newanim->dropframe));
 
                 newanim->dropframe.frame = GET_FRAME_ARG(1);
 
 				// Entity to spawn when drop frame triggers.
-				value = GET_ARG(2);
+				value = obor_profile_legacy_branch() ? "" : GET_ARG(2);
 				if (value[0])
 				{
 					newanim->dropframe.model_index = get_cached_model_index(value);
@@ -11116,7 +11269,13 @@ s_model *load_cached_model(char *name, char *owner, char unload)
 				}
 				else
 				{
-					attack.attack_type = GET_INT_ARG(1);
+					int physical = obor_attack_from_native(GET_INT_ARG(1));
+                    if(!obor_attack_valid(physical))
+                    {
+                        writeToLogFile("Warning: Ignoring out-of-range attack type in %s.\n", filename);
+                        break;
+                    }
+                    attack.attack_type = physical;
 				}
 
                 break;
@@ -11744,6 +11903,11 @@ s_model *load_cached_model(char *name, char *owner, char unload)
                 }
                 break;
             case CMD_MODEL_FOLLOWCOND:
+                if(obor_profile_legacy_branch())
+                {
+                    newanim->followup.condition = GET_INT_ARG(1);
+                    break;
+                }
 				
 				// 2019-11-24
 				// Caskey, Damon V.
@@ -11786,6 +11950,15 @@ s_model *load_cached_model(char *name, char *owner, char unload)
 				}				
                 
             case CMD_MODEL_COUNTERRANGE:
+                newanim->obor_counter_present = 1;
+                if(obor_profile_legacy_branch())
+                {
+                    newanim->counter_action.frame.min = GET_FRAME_ARG(1);
+                    newanim->counter_action.frame.max = GET_FRAME_ARG(2);
+                    newanim->counter_action.condition = GET_INT_ARG(3);
+                    newanim->counter_action.damaged = GET_INT_ARG(4);
+                    break;
+                }
                 newanim->counter_action.frame.min    = GET_FRAME_ARG(1);
                 newanim->counter_action.frame.max    = GET_FRAME_ARG(2);
 				
@@ -16199,7 +16372,8 @@ void bar(int x, int y, int value, int maxvalue, s_barstatus *pstatus)
 
 void goto_mainmenu(int flag)
 {
-    goto_mainmenu_flag = 1|(flag<<1);
+    goto_mainmenu_flag = (int)(1u | ((unsigned int)flag << 1));
+    if(obor_profile_build == 7123) escape_flag = flag;
 }
 
 void static backto_mainmenu()
@@ -18084,7 +18258,7 @@ bool check_jumpframe(entity *ent, unsigned int frame)
 	jump = &ent->animation->jumpframe;
 
     // Must have jump frame allocated.
-    if(jump->frame == FRAME_NONE)
+    if(obor_profile_legacy_branch() ? !ent->animation->obor_jump_present : jump->frame == FRAME_NONE)
     {
         return 0;
     }
@@ -18237,7 +18411,7 @@ void update_frame(entity *ent, unsigned int f)
             attack = emptyattack;
             attack.dropv = default_model_dropv;
             attack.attack_force = self->energy_state.health_current;
-            attack.attack_type = ATK_SUB_ENTITY_UNSUMMON;
+            attack.attack_type = obor_profile_legacy_branch() ? max_attack_types - 1 : ATK_SUB_ENTITY_UNSUMMON;
             if(self->takedamage)
             {
                 self->takedamage(self, &attack, 0);
@@ -18318,7 +18492,7 @@ void update_frame(entity *ent, unsigned int f)
 
     if(anim->projectile.shootframe == f)
     {
-        knife_spawn(NULL, -1, self->position.x + position_x, self->position.z + anim->projectile.position.z, self->position.y + anim->projectile.position.y, self->direction, 1, 0);
+        knife_spawn(NULL, -1, self->position.x + position_x, self->position.z + anim->projectile.position.z, self->position.y + (obor_profile_legacy_branch() && !anim->obor_projectile_position_explicit ? 0 : anim->projectile.position.y), self->direction, 1, 0);
         self->deduct_ammo = 1;
     }
 
@@ -18814,7 +18988,7 @@ void kill_entity(entity *victim)
     if(victim->modeldata.summonkill)
     {
         attack = emptyattack;
-        attack.attack_type = ATK_SUB_ENTITY_PARENT_KILL;
+        attack.attack_type = obor_profile_legacy_branch() ? max_attack_types - 1 : ATK_SUB_ENTITY_PARENT_KILL;
         attack.dropv = default_model_dropv;
     }
     // kill minions
@@ -19707,11 +19881,11 @@ int testmove(entity *ent, float sx, float sz, float x, float z)
     // screen checking
     if(ent->modeldata.subject_to_screen > 0)
     {
-        if(x < advancex + 10)
+        if(x < advancex + (obor_profile_build == 7123 ? 5 : 10))
         {
             return 0;
         }
-        else if(x > advancex + (videomodes.hRes - 10))
+        else if(x > advancex + (videomodes.hRes - (obor_profile_build == 7123 ? 5 : 10)))
         {
             return 0;
         }
@@ -20222,6 +20396,16 @@ entity *spawn_attack_flash(entity *ent, s_collision_attack *attack, int attack_f
 // pass, FALSE otherwise.
 int check_follow_up_condition(entity *ent, entity *target, s_anim *animation, bool blocked)
 {
+    if(obor_profile_legacy_branch())
+    {
+        e_follow_condition condition = (e_follow_condition)animation->followup.condition;
+        return animation->followup.animation && !animation->obor_counter_present &&
+            (condition < FOLLOW_CONDITION_HOSTILE || (target->modeldata.type & ent->modeldata.hostile)) &&
+            (condition < FOLLOW_CONDITION_HOSTILE_NOKILL_NOBLOCK || (target->energy_state.health_current > 0 && !blocked)) &&
+            (condition < FOLLOW_CONDITION_HOSTILE_NOKILL_NOBLOCK_NOGRAB || (target->energy_state.health_current > 0 && !blocked && cangrab(ent, target))) &&
+            (condition < FOLLOW_CONDITION_HOSTILE_NOKILL_BLOCK || (target->energy_state.health_current > 0 && blocked));
+    }
+
 	if (!animation->followup.animation)
 	{
 		return FALSE;
@@ -20338,7 +20522,7 @@ bool try_follow_up(entity *ent, entity *target, s_anim *animation, bool didblock
 	e_animations animation_id;
 
 	// If we don't have a follow action, get out.
-	if (!animation->followup.animation)
+	if (!animation->followup.animation || animation->followup.animation > max_follows)
 	{
 		return FALSE;
 	}
@@ -20354,7 +20538,9 @@ bool try_follow_up(entity *ent, entity *target, s_anim *animation, bool didblock
 	
 	if (validanim(ent, animation_id))
 	{		
-		ent_set_anim(ent, animation_id, 1); 
+		if(obor_profile_legacy_branch() && !ent->modeldata.animation[animation_id]->attack_one)
+            ent->modeldata.animation[animation_id]->attack_one = animation->attack_one;
+        ent_set_anim(ent, animation_id, 1); 
 
 		return TRUE;
 	}	
@@ -20368,6 +20554,22 @@ bool try_follow_up(entity *ent, entity *target, s_anim *animation, bool didblock
 // Verify an attack meets conditions to trigger a counter action.
 bool check_counter_condition(entity* target, entity* attacker, s_collision_attack* attack)
 {
+    if(obor_profile_legacy_branch())
+    {
+        s_counter_action *record = &target->animation->counter_action;
+        int condition = (int)record->condition;
+        int them = (attacker->projectile & BLAST_ATTACK) ? attacker->modeldata.projectilehit : attacker->modeldata.candamage;
+        int64_t remaining = (int64_t)target->energy_state.health_current - attack->attack_force;
+        return target->animation->obor_counter_present &&
+            target->animpos >= record->frame.min && target->animpos <= record->frame.max &&
+            !target->frozen &&
+            (remaining > 0 || (remaining <= 0 && condition == COUNTERACTION_CONDITION_ALWAYS_RAGE)) &&
+            (condition == COUNTERACTION_CONDITION_ALWAYS || condition == COUNTERACTION_CONDITION_ALWAYS_RAGE ||
+             (condition == COUNTERACTION_CONDITION_HOSTILE && (attacker->modeldata.type & them)) ||
+             (condition == COUNTERACTION_CONDITION_HOSTILE_FRONT_NOFREEZE && !attack->no_block &&
+              target->direction != attacker->direction && !attack->freeze));
+    }
+
 	s_counter_action* counter = NULL;
 
 	counter = &target->animation->counter_action;
@@ -20506,14 +20708,15 @@ bool check_counter_condition(entity* target, entity* attacker, s_collision_attac
 //
 // Attempt to perform counter action animation. If successful, sets entity animation to
 // appropriate counter and returns TRUE.
-bool try_counter_action(entity* target, entity* attacker, s_collision_attack* attack)
+int try_counter_action(entity* target, entity* attacker, s_collision_attack* attack)
 {
 	int force;
 	int current_follow_id;
+    int selected = 0;
 
 	// If we don't have a follow animation to use 
 	// for counter, get out.
-	if (!target->animation->followup.animation)
+	if (!target->animation->followup.animation || target->animation->followup.animation > max_follows)
 	{
 		return FALSE;
 	}
@@ -20528,16 +20731,17 @@ bool try_counter_action(entity* target, entity* attacker, s_collision_attack* at
 	if (target->animation->counter_action.damaged == COUNTER_ACTION_TAKE_DAMAGE_NORMAL)
 	{
 		// We need the real damage.
-		force = calculate_force_damage(target, attacker, attack);
+		force = obor_profile_legacy_branch() ? attack->attack_force : calculate_force_damage(target, attacker, attack);
 
 		// Revert lethal damage to 1.
-		if (target->energy_state.health_current - force <= 0)
+		if ((int64_t)target->energy_state.health_current - force <= 0)
 		{
 			target->energy_state.health_current = 1; // rage
 		}
 		else
 		{
-			target->energy_state.health_current -= force;
+			int64_t remaining = (int64_t)target->energy_state.health_current - force;
+            target->energy_state.health_current = remaining > INT_MAX ? INT_MAX : (int)remaining;
 		}
 	}
 
@@ -20550,12 +20754,34 @@ bool try_counter_action(entity* target, entity* attacker, s_collision_attack* at
 			target->modeldata.animation[current_follow_id]->attack_one = target->animation->attack_one;
 		}
 		ent_set_anim(target, current_follow_id, 0);
+        selected = 1;
 	}
 
 	// Flash spawn.
 	spawn_attack_flash(target, attack, attack->blockflash, target->modeldata.bflash);
 
-	return TRUE;
+	return obor_profile_legacy_branch() && selected ? 2 : TRUE;
+}
+
+static int obor_attack_seen(const entity *target, unsigned int id, int ignore)
+{
+    if(ignore) return 0;
+    if(target->attack_id_incoming == id) return 1;
+    return obor_profile_build == 7123 && !multihitcheat &&
+        (target->attack_id_incoming2 == id ||
+         target->attack_id_incoming3 == id ||
+         target->attack_id_incoming4 == id);
+}
+
+static void obor_remember_attack(entity *target, unsigned int id)
+{
+    if(obor_profile_build == 7123)
+    {
+        target->attack_id_incoming4 = target->attack_id_incoming3;
+        target->attack_id_incoming3 = target->attack_id_incoming2;
+        target->attack_id_incoming2 = target->attack_id_incoming;
+    }
+    target->attack_id_incoming = id;
 }
 
 void do_attack(entity *e)
@@ -20563,6 +20789,7 @@ void do_attack(entity *e)
     int them;
     int i, t;
     int force = 0;
+    int counter_result = 0;
     e_blocktype blocktype;
     entity *temp            = NULL;
     entity *def             = NULL;
@@ -20701,7 +20928,7 @@ void do_attack(entity *e)
         }
 
         // Attack IDs must be different.
-        if(target->attack_id_incoming == current_attack_id && !attack->ignore_attack_id)
+        if(obor_attack_seen(target, current_attack_id, attack->ignore_attack_id))
         {
             continue;
         }
@@ -20820,9 +21047,10 @@ void do_attack(entity *e)
                 do_passive_block(self, e, attack);
             }
             // Counter the attack? 
-           	else if(try_counter_action(self, e, attack))
+           	else if((counter_result = try_counter_action(self, e, attack)))
 			{				
-				self->attack_id_incoming = current_attack_id;
+				if(!obor_profile_legacy_branch() || counter_result == 2)
+                    obor_remember_attack(self, current_attack_id);
             }
             else if(self->takedamage(e, attack, 0))
             {
@@ -20881,7 +21109,7 @@ void do_attack(entity *e)
 			// Attacker executes a follow up animation if it can.
 			try_follow_up(e, self, e->animation, didblock);
 
-			self->attack_id_incoming = current_attack_id;
+			obor_remember_attack(self, current_attack_id);
             
 			// If hit, stop blocking.
 			if(self == def)
@@ -21106,7 +21334,7 @@ bool check_landframe(entity *ent)
 	land = &ent->animation->landframe;
 
     // Must have a landframe.
-    if(land->frame == FRAME_NONE)
+    if(obor_profile_legacy_branch() ? !ent->animation->obor_land_present : land->frame == FRAME_NONE)
     {
         return 0;
     }
@@ -21351,7 +21579,13 @@ void check_gravity(entity *e)
             }
 
 			// Evaluate and apply drop frame settings if we have them.
-			check_frame_set_drop(self);				
+			if(obor_profile_legacy_branch())
+            {
+                if(self->animation->obor_drop_present && self->velocity.y <= 0 &&
+                   self->animpos < self->animation->dropframe.frame)
+                    update_frame(self, self->animation->dropframe.frame);
+            }
+            else check_frame_set_drop(self);				
 
             if (self->velocity.y)
             {
@@ -22610,6 +22844,12 @@ e_direction direction_adjustment(e_direction direction_default, e_direction dire
 // bind target and match for the override argument.
 int check_bind_override(entity *ent, e_bind_override overriding)
 {
+    if(obor_profile_legacy_branch())
+    {
+        if(overriding == BIND_OVERRIDE_FRAME_SET_DROP) return FALSE;
+        if(overriding == BIND_OVERRIDE_FRAME_SET_LAND || overriding == BIND_OVERRIDE_SPECIAL_AI || overriding == BIND_OVERRIDE_SPECIAL_PLAYER)
+            overriding = (unsigned int)overriding >> 1;
+    }
     if(ent->binding.ent)
     {
         if(ent->binding.overriding & overriding)
@@ -24618,7 +24858,7 @@ void common_jump()
         self->velocity.z = self->velocity.x = 0;
 
         // check if jumpland animation exists and not using landframe
-        if(validanim(self, ANI_JUMPLAND) && self->animation->landframe.frame == FRAME_NONE)
+        if(validanim(self, ANI_JUMPLAND) && (obor_profile_legacy_branch() ? !self->animation->obor_land_present : self->animation->landframe.frame == FRAME_NONE))
         {
             self->takeaction = common_jumpland;
             ent_set_anim(self, ANI_JUMPLAND, 0);
@@ -24636,7 +24876,7 @@ void common_jump()
         }
         else
         {
-            if(self->modeldata.dust.jump_land >= 0 && self->animation->landframe.frame == FRAME_NONE)
+            if(self->modeldata.dust.jump_land >= 0 && (obor_profile_legacy_branch() ? !self->animation->obor_land_present : self->animation->landframe.frame == FRAME_NONE))
             {
                 dust = spawn(self->position.x, self->position.z, self->position.y, self->direction, NULL, self->modeldata.dust.jump_land, NULL);
                 if(dust)
@@ -24647,7 +24887,7 @@ void common_jump()
                     execute_onspawn_script(dust);
                 }
             }
-            if(self->animation->landframe.frame != FRAME_NONE && self->animating)
+            if((obor_profile_legacy_branch() ? self->animation->obor_land_present : self->animation->landframe.frame != FRAME_NONE) && self->animating)
             {
                 return;
             }
@@ -30377,7 +30617,12 @@ int check_energy(e_cost_check which, int ani)
         // many cases (weapons in particular) this can	help cut down the need for
         // superfluous models when differing abilities are desired for players,
         // enemies, or npcs.
-        if(!(energy_cost.disable & type))
+        if(obor_profile_legacy_branch() ?
+           !(energy_cost.disable == type || energy_cost.disable == -1 ||
+             (energy_cost.disable == -2 && (type & (TYPE_ENEMY | TYPE_NPC))) ||
+             (energy_cost.disable == -3 && (type & (TYPE_PLAYER | TYPE_NPC))) ||
+             (energy_cost.disable == -4 && (type & (TYPE_PLAYER | TYPE_ENEMY)))) :
+           !(energy_cost.disable & type))
         {
             // No seal or seal is less/same as energy cost?
             if(!self->seal || self->seal >= energy_cost.cost)
@@ -31494,7 +31739,7 @@ void player_jump_check()
 
             if(validanim(self, ANI_JUMPSPECIAL))
             {
-                if(check_energy(ENERGY_TYPE_MP, ANI_JUMPSPECIAL))
+                if((!obor_profile_legacy_branch() || self->modeldata.animation[ANI_JUMPSPECIAL]->obor_energy_present) && check_energy(ENERGY_TYPE_MP, ANI_JUMPSPECIAL))
                 {
                     if(!healthcheat)
                     {
@@ -31502,7 +31747,7 @@ void player_jump_check()
                     }
                     candospecial = 1;
                 }
-                else if(check_energy(ENERGY_TYPE_HP, ANI_JUMPSPECIAL))
+                else if((!obor_profile_legacy_branch() || self->modeldata.animation[ANI_JUMPSPECIAL]->obor_energy_present) && check_energy(ENERGY_TYPE_HP, ANI_JUMPSPECIAL))
                 {
                     if(!healthcheat)
                     {
@@ -37579,7 +37824,21 @@ int selectplayer(int *players, char *filename, int useSavedGame)
 						sound_play_sample(SAMPLE_BEEP, 0, savedata.effectvol, savedata.effectvol, 100);
 					}
 				}
-				else if (player[i].newkeys & (FLAG_MOVELEFT | FLAG_MOVERIGHT) && example[i])
+				else if (obor_profile_build == 7123 && (player[i].newkeys & FLAG_ANYBUTTON) && example[i])
+				{
+					if (SAMPLE_BEEP2 >= 0)
+					{
+						sound_play_sample(SAMPLE_BEEP2, 0, savedata.effectvol, savedata.effectvol, 100);
+					}
+					// yay you picked me!
+					if (validanim(example[i], ANI_PICK))
+					{
+						ent_set_anim(example[i], ANI_PICK, 0);
+					}
+					example[i]->stalltime = _time + GAME_SPEED * 2;
+					ready[i] = 1;
+				}
+                else if (player[i].newkeys & (FLAG_MOVELEFT | FLAG_MOVERIGHT) && example[i])
 				{
 					// Give player a feedback sound.
 					if (SAMPLE_BEEP >= 0)
@@ -37681,9 +37940,10 @@ int selectplayer(int *players, char *filename, int useSavedGame)
 		}
 		update(0, 0);
 
-		if (bothnewkeys & FLAG_ESC)
+		if ((bothnewkeys & FLAG_ESC) || (obor_profile_build == 7123 && escape_flag == 11))
 		{
 			escape = 1;
+            if(obor_profile_build == 7123) escape_flag = 0;
 		}
 	}
 
@@ -40076,10 +40336,10 @@ void menu_options_video()
 
 void menu_options()
 {
-    #define TOT_CHEATS          3
+    #define TOT_CHEATS          (obor_profile_build == 7123 ? 4 : 3)
     #define OPT_Y_POS          -1
     #define OPT_X_POS          -7
-    #define CHEAT_PAUSE_POSY    3
+    #define CHEAT_PAUSE_POSY    TOT_CHEATS
 
     typedef enum {
         VIDEO_OPTION,
@@ -40090,13 +40350,15 @@ void menu_options()
         LIVES_CHEAT,
         CREDITS_CHEAT,
         HEALTH_CHEAT,
+        MULTIHIT_CHEAT,
 
         END_OPTION
     } e_selector;
 
     int quit = 0;
     int y_offset = OPT_Y_POS;
-    int BACK_OPTION = END_OPTION-TOT_CHEATS;
+    int end_option = END_OPTION - (obor_profile_build != 7123);
+    e_selector BACK_OPTION = end_option-TOT_CHEATS;
     int cheat_opt_offset = 0;
     e_selector selector = VIDEO_OPTION;
 
@@ -40125,6 +40387,8 @@ void menu_options()
             _menutext((selector == LIVES_CHEAT), OPT_X_POS, y_offset+cheat_opt_offset+LIVES_CHEAT, (livescheat)?Tr("Infinite Lives On"):Tr("Infinite Lives Off"));
             _menutext((selector == CREDITS_CHEAT), OPT_X_POS, y_offset+cheat_opt_offset+CREDITS_CHEAT, (creditscheat)?Tr("Infinite Credits On"):Tr("Infinite Credits Off"));    // Enemies fall/don't fall down when you respawn
             _menutext((selector == HEALTH_CHEAT), OPT_X_POS, y_offset+cheat_opt_offset+HEALTH_CHEAT, (healthcheat)?Tr("Infinite Health On"):Tr("Infinite Health Off"));    // Enemies fall/don't down when you respawn
+            if(obor_profile_build == 7123)
+                _menutext((selector == MULTIHIT_CHEAT), OPT_X_POS, y_offset+cheat_opt_offset+MULTIHIT_CHEAT, (multihitcheat)?Tr("Multihit Glitch On"):Tr("Multihit Glitch Off"));
         }
 
         _menutextm((selector == BACK_OPTION), y_offset+cheat_opt_offset+BACK_OPTION+2, 0, Tr("Back"));
@@ -40181,18 +40445,19 @@ void menu_options()
                     y_offset = OPT_Y_POS-TOT_CHEATS;
                     if(level != NULL && _pause > 0) y_offset += CHEAT_PAUSE_POSY;
                     cheat_opt_offset = 1;
-                    BACK_OPTION = END_OPTION-TOT_CHEATS+TOT_CHEATS;
+                    BACK_OPTION = end_option-TOT_CHEATS+TOT_CHEATS;
                 }
                 else
                 {
                     y_offset = OPT_Y_POS;
                     cheat_opt_offset = 0;
-                    BACK_OPTION = END_OPTION-TOT_CHEATS;
+                    BACK_OPTION = end_option-TOT_CHEATS;
                 }
            }
            else if(selector==LIVES_CHEAT) livescheat = !livescheat;
            else if(selector==CREDITS_CHEAT) creditscheat = !creditscheat;
            else if(selector==HEALTH_CHEAT) healthcheat = !healthcheat;
+           else if(obor_profile_build == 7123 && selector==MULTIHIT_CHEAT) multihitcheat = !multihitcheat;
            else quit = 1;
         }
     }
@@ -40226,7 +40491,7 @@ void openborMain(int argc, char **argv)
     int i;
     int argl;
 
-    printf("OpenBoR %s, Compile Date: " __DATE__ "\n\n", VERSION);
+    printf("OpenBoR %s, Compile Date: " __DATE__ "\n\n", obor_profile_version_string());
 
     if(argc > 1)
     {
@@ -40478,7 +40743,7 @@ void openborMain(int argc, char **argv)
         }
         update(0, 0);
     }
-    borShutdown(0, DEFAULT_SHUTDOWN_MESSAGE);
+    borShutdown(0, "%s", obor_profile_shutdown_message());
 }
 
 int is_cheat_actived()

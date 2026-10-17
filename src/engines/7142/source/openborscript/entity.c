@@ -1,3 +1,15 @@
+/* AnyBOR modification record: 2026-10-06.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Translate native entity property names, numeric IDs and animation values
+ * for each logical profile.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/7142.md
+ * at the source repository root. Original notices follow below.
+ */
+
 /*
  * OpenBOR - http://www.chronocrash.com
  * -----------------------------------------------------------------------
@@ -1101,7 +1113,7 @@ HRESULT openbor_get_entity_property(ScriptVariant **varlist , ScriptVariant **pr
         case _ENTITY_SPAWN_TYPE:
 
             ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
-            (*pretvar)->lVal = (LONG)handle->spawntype;
+            (*pretvar)->lVal = (LONG)obor_spawn_type_to_native(handle->spawntype);
 
             break;
 
@@ -2304,7 +2316,7 @@ HRESULT openbor_set_entity_property(ScriptVariant **varlist, ScriptVariant **pre
 
             if(SUCCEEDED(ScriptVariant_IntegerValue(varlist[ARG_VALUE], &temp_int)))
             {
-                handle->spawntype = temp_int;
+                handle->spawntype = obor_spawn_type_from_native(temp_int);
             }
 
             break;

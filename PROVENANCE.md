@@ -96,3 +96,10 @@ The multihit history and menu behavior were adapted from upstream
 The source manifest records their complete identifiers. Existing OpenBOR
 copyrights and license terms continue to apply; the original unpublished test
 source tree is not asserted to have been recovered.
+
+The divergent v3.0 7086-dev and v3.0 7123-dev contracts are adapted from
+[revision 7a45a2215a0cc12c1085d92e7b210a827ea552c2](https://github.com/DCurrent/openbor/tree/7a45a2215a0cc12c1085d92e7b210a827ea552c2/engine)
+and [revision f5261e7cb97786909276c0b87f8f9f63504d2844](https://github.com/DCurrent/openbor/tree/f5261e7cb97786909276c0b87f8f9f63504d2844/engine).
+Their exact references are recorded with the selected profiles in `src/pin.json`.
+Retained OpenBOR implementations and adaptations keep their upstream copyright
+and BSD terms; added original helpers carry separate BSD-3-Clause notices.

@@ -581,9 +581,13 @@
       "upstream_sha256": null
     },
     "source/openborscript/scriptcommon.h": {
-      "distributed_sha256": "d46e41f3734f7a6efb11652e5c0babd4cecd2c253db4608b0e6d9c794e758aef",
-      "modified": false,
-      "topics": [],
+      "distributed_sha256": "798e3f43bb25a79286324fd878c274b7d2c13d6af673439305a5ebec2dc7e62d",
+      "modified": true,
+      "summary": "Keep rejected-property diagnostics within each mapping table's declared length. Bound rejected-property diagnostics by the actual mapping-table length.",
+      "topics": [
+        "record-dates-and-file-notices",
+        "script-property-error-bounds"
+      ],
       "upstream_sha256": "d46e41f3734f7a6efb11652e5c0babd4cecd2c253db4608b0e6d9c794e758aef"
     },
     "source/openborscript/string.c": {

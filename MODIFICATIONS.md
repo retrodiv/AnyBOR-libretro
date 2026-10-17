@@ -67,7 +67,8 @@ The notices are documentation; they do not change engine behavior.
 | v3.0 4086 | `af23dc9c2316bb7853bb266ccf40986aa9765aeb` | [v3.0 4086](docs/modifications/4086.md) |
 | v3.0 4432 | `2566cbee6185025e6a69d2aa1823b15c7a154ff9` | [v3.0 4432](docs/modifications/4432.md) |
 | v3.0 6391 | `494708eb34e71d1afda237873907701c4ec3a569` | [v3.0 6391](docs/modifications/6391.md) |
-| v3.0 7123-dev | `81049d95c50c4c26e2637cc89ab3056bfcc77d16` | [v3.0 7123-dev](docs/modifications/7123.md) |
+| v3.0 7086-dev | `7a45a2215a0cc12c1085d92e7b210a827ea552c2` | [Selected contracts](docs/HISTORICAL_PROFILES.md#divergent-test-profiles) |
+| v3.0 7123-dev | `f5261e7cb97786909276c0b87f8f9f63504d2844` | [Selected contracts](docs/HISTORICAL_PROFILES.md#divergent-test-profiles) |
 | v4.0 7142-alpha | `9dcd966d1dc8e93ff03c39edbd6bd262f4a2d7ab` | [v4.0 7142-alpha](docs/modifications/7142.md) |
 | v4.0 7533 | `5c8261444de6b61f8e2ce6e79e3d86a2949e55bd` | [v4.0 7533](docs/modifications/7533.md) |
 | v4.0 8023-dev | `16aae1a30b81063778f21977ae20b849bd1c76f9` | [v4.0 8023-dev](docs/modifications/8023.md) |
@@ -87,7 +88,7 @@ hashes remain recorded for comparison.
 ## Platform integration
 
 All engine source trees include `libretroport.h` through `source/globals.h` and expose
-the platform/PNG helper declarations in `source/utils.c`. Engines v3.0 4432, v3.0 6391, v3.0 7123-dev, v4.0 7142-alpha,
+the platform/PNG helper declarations in `source/utils.c`. Engines v3.0 4432, v3.0 6391, v4.0 7142-alpha,
 v4.0 7533 and v4.0 8023-dev also declare libretro thread, mutex and condition types in
 `source/gamelib/threads.h`. Each inventory identifies the affected files.
 
@@ -410,7 +411,7 @@ and the video-settings loader.
 
 ## WebM playback lifecycle
 
-Builds **4432, 6391, 7123, 7142 and 7533** change `source/webmlib/vidplay.c`:
+Builds **4432, 6391, 7142 and 7533** change `source/webmlib/vidplay.c`:
 
 - Worker-thread sleeps use the host OS sleep function; they must not advance
   the engine coroutine's emulated clock.
@@ -568,7 +569,7 @@ in their respective files.
 
 | Capability or change | Behaviour and current implementation |
 |---|---|
-| Selectable engine profiles | Core Options offers v3.0 3400, v3.0 3780, v3.0 3783, v3.0 3789, v3.0 3793, v3.0 3797, v3.0 3805, v3.0 3814, v3.0 3818, v3.0 3822, v3.0 3824, v3.0 3829, v3.0 3831, v3.0 3837, v3.0 3839, v3.0 3842, v3.0 4086, v3.0 4432, v3.0 4453, v3.0 6330, v3.0 6391, v3.0 6392-dev, v3.0 6412-dev, v3.0 6510-dev, v3.0 7123-dev, v4.0 7142-alpha, v4.0 7533 and v4.0 8023-dev. Auto uses build tags and content clues. Each profile retains its compatibility behavior and save directory. [`obor_abi.h`](src/glue/obor_abi.h), [`obor_engines.h`](src/glue/obor_engines.h), [`tools/build.py`](tools/build.py). |
+| Selectable engine profiles | Core Options offers v3.0 3400, v3.0 3780, v3.0 3783, v3.0 3789, v3.0 3793, v3.0 3797, v3.0 3805, v3.0 3814, v3.0 3818, v3.0 3822, v3.0 3824, v3.0 3829, v3.0 3831, v3.0 3837, v3.0 3839, v3.0 3842, v3.0 4086, v3.0 4432, v3.0 4453, v3.0 6330, v3.0 6391, v3.0 6392-dev, v3.0 6412-dev, v3.0 6510-dev, v3.0 7086-dev, v3.0 7123-dev, v4.0 7142-alpha, v4.0 7533 and v4.0 8023-dev. Auto uses build tags and content clues. Each profile retains its compatibility behavior and save directory. [`obor_abi.h`](src/glue/obor_abi.h), [`obor_engines.h`](src/glue/obor_engines.h), [`tools/build.py`](tools/build.py). |
 | Automatic engine selection | An explicit core option takes precedence; otherwise inspect legacy script API requirements, filename tags, nearby executables as data, and PAK content tokens, then use the pinned fallback. Selection is rerun on Reset. [`libretro.cpp`](src/glue/libretro.cpp), `decide_engine`, `pick_anchor`, `build_from_content`; [`obor_markers.h`](src/glue/obor_markers.h). |
 | Frontend-owned frame delivery | Run the engine main loop on a libco coroutine, yield at video submission, and advance an emulated microsecond clock. Sleep/input-wait paths also yield so frontend input remains live. [`libretroport.c`](src/port/libretro/libretroport.c), [`libretroport.h`](src/port/libretro/libretroport.h), [`timer.c`](src/port/libretro/timer.c). |
 | Video and audio backends | Convert engine video to XRGB8888, publish geometry, and pull engine audio through the frontend. [`video.c`](src/port/libretro/video.c), [`video.h`](src/port/libretro/video.h), [`vga.h`](src/port/libretro/vga.h), [`sblaster.c`](src/port/libretro/sblaster.c), [`sblaster.h`](src/port/libretro/sblaster.h). |
@@ -669,7 +670,7 @@ it does not change state contents or the frontend's rewind history.
 
 The resource-state path receives explicit resolved image-member
 names, bitmap dimensions, crop coordinates and initialized sprite-body ranges
-from engines 3842, 4086, 4432, 6391, 7123, 7142, 7533 and 8023. Older engines
+from engines 3842, 4086, 4432, 6391, 7142, 7533 and 8023. Older engines
 also report physical bitmap compaction; consecutive crops compose within the
 original source rectangle and invalid provenance falls back to ordinary bytes.
 Engine 3400's different sprite encoding remains represented as ordinary state.
@@ -1120,3 +1121,10 @@ Replacing a text object's contents reuses its existing owned storage in the
 older fixed-buffer implementations. Repeated updates no longer abandon that
 allocation. The earlier reuse path and later exact-size replacement path keep
 their native behavior; tests check ownership across every retained profile.
+
+## Script property error bounds
+
+Unknown-property diagnostics stop at the mapping table's declared length.
+A table does not need a trailing null sentinel; rejected names retain their
+normal return and error behavior without reading unrelated storage.
+Native sanitizer checks cover each affected script entry-point macro.

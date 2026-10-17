@@ -3,7 +3,7 @@
 Selectable engine profiles: v3.0 3400, v3.0 3780, v3.0 3783, v3.0 3789, v3.0 3793, v3.0 3797,
 v3.0 3805, v3.0 3814, v3.0 3818, v3.0 3822, v3.0 3824, v3.0 3829, v3.0 3831,
 v3.0 3837, v3.0 3839, v3.0 3842, v3.0 4086, v3.0 4432, v3.0 4453, v3.0 6330,
-v3.0 6391, v3.0 6392-dev, v3.0 6412-dev, v3.0 6510-dev, v3.0 7123-dev, v4.0 7142-alpha,
+v3.0 6391, v3.0 6392-dev, v3.0 6412-dev, v3.0 6510-dev, v3.0 7086-dev, v3.0 7123-dev, v4.0 7142-alpha,
 v4.0 7533 and v4.0 8023-dev.
 
 Auto uses build tags and content clues to choose a profile. Manual selection
@@ -29,8 +29,8 @@ exact filename Build 6392 or Build 6412 tag selects the corresponding test
 profile. Manual selection remains available. Profile v3.0 4453 uses 32-bit
 color, ignores `colourdepth` and removes legacy `remap` palette conversion;
 content needing those features requires an earlier compatible profile.
-Builds 6413 through 7123 select v3.0 7123-dev; builds 7124 through 7142 select
-v4.0 7142-alpha; builds 7143 through 7533 select v4.0 7533. Builds 7534
+Builds 6413 through 7142 select v4.0 7142-alpha, unless an exact test-build
+tag or a manual choice selects v3.0 7086-dev or v3.0 7123-dev; builds 7143 through 7533 select v4.0 7533. Builds 7534
 through 8023 and later builds select v4.0 8023-dev.
 Other routing combines filename/sidecar metadata with bounded content ranges
 and sparse marker estimates. Filename ranges prefer the highest compatible stable or automatic

@@ -1,3 +1,16 @@
+/* AnyBOR modification record: 2026-10-06.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Keep rejected-property diagnostics within each mapping table's declared
+ * length. Bound rejected-property diagnostics by the actual mapping-table
+ * length.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/7142.md
+ * at the source repository root. Original notices follow below.
+ */
+
 /*
  * OpenBOR - http://www.chronocrash.com
  * -----------------------------------------------------------------------
@@ -57,7 +70,7 @@
             printf(FAILMSG, propname, ##args);  \
             printf("\n Available properties:\n"); \
             \
-            for(proplist_cursor = 0; LIST[proplist_cursor] != NULL; proplist_cursor++){ \
+            for(proplist_cursor = 0; proplist_cursor < (MAXINDEX) && LIST[proplist_cursor] != NULL; proplist_cursor++){ \
                printf("\n\t%s", LIST[proplist_cursor]); \
             } \
             \

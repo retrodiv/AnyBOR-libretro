@@ -1,3 +1,15 @@
+/* AnyBOR modification record: 2026-10-06.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Translate recursive attack-type selectors at the script boundary and
+ * reject indices outside the retained table.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/7142.md
+ * at the source repository root. Original notices follow below.
+ */
+
 /*
  * OpenBOR - http://www.chronocrash.com
  * -----------------------------------------------------------------------
@@ -167,7 +179,7 @@ HRESULT openbor_get_recursive_damage_property(ScriptVariant **varlist, ScriptVar
 	case _RECURSIVE_DAMAGE_TYPE:
 
 		ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
-		(*pretvar)->lVal = (LONG)handle->type;
+		(*pretvar)->lVal = (LONG)obor_attack_to_native(handle->type);
 
 		break;
 		
@@ -314,7 +326,9 @@ HRESULT openbor_set_recursive_damage_property(ScriptVariant **varlist, ScriptVar
 
 		if (SUCCEEDED(ScriptVariant_IntegerValue(varlist[ARG_VALUE], &temp_int)))
 		{
-			handle->type = temp_int;
+			int physical = obor_attack_from_native(temp_int);
+            if(!obor_attack_valid(physical)) goto error_local;
+            handle->type = physical;
 		}
 
 		break;

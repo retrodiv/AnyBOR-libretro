@@ -14,7 +14,7 @@ from test_historical_player import function
 
 ROOT=Path(__file__).resolve().parents[1]
 SOURCE=Path(os.environ.get('OBOR_TEST_SOURCE',ROOT))
-ENGINES=('3400','3842','4086','4432','6391','7123','7142','7533','8023')
+ENGINES=('3400','3842','4086','4432','6391','7142','7533','8023')
 class TextPropertyNameTests(unittest.TestCase):
     def test_every_engine_names_numeric_ids_unknowns_and_repeated_lowering(self):
         for engine in ENGINES:

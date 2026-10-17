@@ -1,3 +1,17 @@
+/* AnyBOR modification record: 2026-10-06.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Translate native animation property IDs for the logical profile. Preserve
+ * divergent 7086 and 2021 7123 animation, combat, model, script-selector and
+ * menu contracts by logical profile, retaining safe storage and additive
+ * APIs.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/7142.md
+ * at the source repository root. Original notices follow below.
+ */
+
 /*
  * OpenBOR - http://www.chronocrash.com
  * -----------------------------------------------------------------------
@@ -13,6 +27,240 @@
 // Access animation properties.
 
 #include "scriptcommon.h"
+
+static HRESULT obor_legacy_get_animation_property(ScriptVariant **varlist, ScriptVariant **pretvar, int paramCount)
+{
+    #define SELF_NAME       "get_animation_property(void handle, int property)"
+    #define ARG_MINIMUM     2   // Minimum required arguments.
+    #define ARG_HANDLE      0   // Handle (pointer to property structure).
+    #define ARG_PROPERTY    1   // Property to access.
+
+    int                     result      = S_OK; // Success or error?
+    s_anim                  *handle     = NULL; // Property handle.
+    obor_legacy_animation_properties  property    = 0;    // Property argument.
+
+    // Clear pass by reference argument used to send
+    // property data back to calling script.     .
+    ScriptVariant_Clear(*pretvar);
+
+    // Verify incoming arguments. There should at least
+    // be a pointer for the property handle and an integer
+    // to determine which property is accessed.
+    if(paramCount < ARG_MINIMUM
+       || varlist[ARG_HANDLE]->vt != VT_PTR
+       || !varlist[ARG_HANDLE]->ptrVal
+       || varlist[ARG_PROPERTY]->vt != VT_INTEGER)
+    {
+        *pretvar = NULL;
+        goto error_local;
+    }
+    else
+    {
+        handle      = (s_anim *)varlist[ARG_HANDLE]->ptrVal;
+        property    = (LONG)varlist[ARG_PROPERTY]->lVal;
+    }
+
+    // Which property to get?
+    switch(property)
+    {
+        case ANI_PROP_ANIMHITS:
+
+            ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
+            (*pretvar)->lVal = (LONG)handle->hit_count;
+            break;
+
+        case ANI_PROP_ANTIGRAV:
+
+            ScriptVariant_ChangeType(*pretvar, VT_DECIMAL);
+            (*pretvar)->dblVal = (DOUBLE)!handle->subject_to_gravity;
+            break;
+
+        case ANI_PROP_ATTACK:
+
+            // Verify animation has attacks.
+            if(handle->collision_attack)
+            {
+                ScriptVariant_ChangeType(*pretvar, VT_PTR);
+                (*pretvar)->ptrVal = (VOID *)handle->collision_attack;
+            }
+
+            break;
+
+        case ANI_PROP_COLLISIONONE:
+
+            ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
+            (*pretvar)->lVal = (LONG)handle->attack_one;
+            break;
+
+        case ANI_PROP_BODY_COLLISION:
+
+            // Verify animation has any bbox.
+            if(handle->collision_body)
+            {
+                ScriptVariant_ChangeType(*pretvar, VT_PTR);
+                (*pretvar)->ptrVal = (VOID *)handle->collision_body;
+            }
+
+            break;
+
+        case ANI_PROP_ENTITY_COLLISION:
+
+            // Verify animation has any bbox.
+            if(handle->collision_entity)
+            {
+                ScriptVariant_ChangeType(*pretvar, VT_PTR);
+                (*pretvar)->ptrVal = (VOID *)handle->collision_entity;
+            }
+
+            break;
+
+        case ANI_PROP_BOUNCE:
+
+            ScriptVariant_ChangeType(*pretvar, VT_DECIMAL);
+            (*pretvar)->dblVal = (DOUBLE)handle->bounce_factor;
+
+            break;
+
+        case ANI_PROP_CANCEL:
+
+            ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
+            (*pretvar)->lVal = (LONG)(int)handle->cancel;
+            break;
+
+        case ANI_PROP_CHARGETIME:
+
+            ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
+            (*pretvar)->lVal = (LONG)handle->charge_time;
+            break;
+
+        case ANI_PROP_COUNTERRANGE:
+
+            // Verify animation has item.
+            if(handle->obor_counter_present)
+            {
+                ScriptVariant_ChangeType(*pretvar, VT_PTR);
+                (*pretvar)->ptrVal = (VOID *)&handle->counter_action;
+            }
+
+            break;
+
+        case ANI_PROP_NUMFRAMES:
+
+            ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
+            (*pretvar)->lVal = (LONG)handle->numframes;
+            break;
+
+        default:
+
+            printf("Unsupported property.\n");
+            goto error_local;
+            break;
+    }
+
+    return result;
+
+    // Error trapping.
+    error_local:
+
+    printf("You must provide a valid handle and property: " SELF_NAME "\n");
+
+    result = E_FAIL;
+    return result;
+
+    #undef SELF_NAME
+    #undef ARG_MINIMUM
+    #undef ARG_HANDLE
+    #undef ARG_PROPERTY
+}
+
+static HRESULT obor_legacy_set_animation_property(ScriptVariant **varlist, ScriptVariant **pretvar, int paramCount)
+{
+    #define SELF_NAME           "set_animation_property(void handle, int property, value)"
+    #define ARG_MINIMUM         3   // Minimum required arguments.
+    #define ARG_HANDLE          0   // Handle (pointer to property structure).
+    #define ARG_PROPERTY        1   // Property to access.
+    #define ARG_VALUE           2   // New value to apply.
+
+    int                     result      = S_OK; // Success or error?
+    s_anim                  *handle     = NULL; // Property handle.
+    obor_legacy_animation_properties  property    = 0;    // Property to access.
+
+    // Value carriers to apply on properties after
+    // taken from argument.
+    LONG     temp_int;
+    //DOUBLE  temp_float;
+
+    // Verify incoming arguments. There must be a
+    // pointer for the animation handle, an integer
+    // property, and a new value to apply.
+    if(paramCount < ARG_MINIMUM
+       || varlist[ARG_HANDLE]->vt != VT_PTR
+       || !varlist[ARG_HANDLE]->ptrVal
+       || varlist[ARG_PROPERTY]->vt != VT_INTEGER)
+    {
+        *pretvar = NULL;
+        goto error_local;
+    }
+    else
+    {
+        handle      = (s_anim *)varlist[ARG_HANDLE]->ptrVal;
+        property    = (LONG)varlist[ARG_PROPERTY]->lVal;
+    }
+
+    // Which property to modify?
+    switch(property)
+    {
+        case ANI_PROP_ANIMHITS:
+
+            if(SUCCEEDED(ScriptVariant_IntegerValue(varlist[ARG_VALUE], &temp_int)))
+            {
+                handle->hit_count = (int)temp_int;
+            }
+
+            break;
+
+        case ANI_PROP_ANTIGRAV:
+
+            if(SUCCEEDED(ScriptVariant_IntegerValue(varlist[ARG_VALUE], &temp_int)))
+            {
+                handle->subject_to_gravity = !(bool)temp_int;
+            }
+
+            break;
+
+        case ANI_PROP_NUMFRAMES:
+
+            if(SUCCEEDED(ScriptVariant_IntegerValue(varlist[ARG_VALUE], &temp_int)))
+            {
+                handle->numframes = (int)temp_int;
+            }
+
+            break;
+
+        default:
+
+            printf("Unsupported property.\n");
+            goto error_local;
+
+            break;
+    }
+
+    return result;
+
+    // Error trapping.
+    error_local:
+
+    printf("You must provide a valid handle and property: " SELF_NAME "\n");
+
+    result = E_FAIL;
+    return result;
+
+    #undef SELF_NAME
+    #undef ARG_MINIMUM
+    #undef ARG_HANDLE
+    #undef ARG_PROPERTY
+    #undef ARG_VALUE
+}
 
 // Use string property argument to find an
 // integer property constant and populate
@@ -87,12 +335,15 @@ int mapstrings_animation_property(ScriptVariant** varlist, int paramCount)
 		return 1;
 	}
 
+    int named = varlist[ARG_PROPERTY]->vt == VT_STR;
+
 	// See macro - will return 0 on fail.
 	MAPSTRINGS(varlist[ARG_PROPERTY], proplist, _ANIMATION_PROP_END,
 		"\n\n Error: '%s' is not a known animation property.\n");
 
 
 	// If we made it this far everything should be OK.
+    if(named && obor_profile_legacy_branch()) varlist[ARG_PROPERTY]->lVal += OBOR_ANIMATION_NAMED_BASE;
 	return 1;
 
 #undef ARG_MINIMUM
@@ -106,8 +357,9 @@ int mapstrings_animation_property(ScriptVariant** varlist, int paramCount)
 // Access animation property by handle (pointer).
 //
 // get_animation_property(void handle, int frame, int property)
-HRESULT openbor_get_animation_property(ScriptVariant **varlist, ScriptVariant **pretvar, int paramCount)
+static HRESULT obor_current_get_animation_property(ScriptVariant **varlist, ScriptVariant **pretvar, int paramCount)
 {
+
     #define SELF_NAME       "get_animation_property(void handle, int property)"
     #define ARG_MINIMUM     2   // Minimum required arguments.
     #define ARG_HANDLE      0   // Handle (pointer to property structure).
@@ -126,6 +378,7 @@ HRESULT openbor_get_animation_property(ScriptVariant **varlist, ScriptVariant **
     // to determine which property is accessed.
     if(paramCount < ARG_MINIMUM
        || varlist[ARG_HANDLE]->vt != VT_PTR
+       || !varlist[ARG_HANDLE]->ptrVal
        || varlist[ARG_PROPERTY]->vt != VT_INTEGER)
     {
         *pretvar = NULL;
@@ -405,8 +658,9 @@ HRESULT openbor_get_animation_property(ScriptVariant **varlist, ScriptVariant **
 // Access animation property by handle (pointer).
 //
 // set_animation_property(void handle, int property, value)
-HRESULT openbor_set_animation_property(ScriptVariant **varlist, ScriptVariant **pretvar, int paramCount)
+static HRESULT obor_current_set_animation_property(ScriptVariant **varlist, ScriptVariant **pretvar, int paramCount)
 {
+
     #define SELF_NAME           "set_animation_property(void handle, int property, value)"
     #define ARG_MINIMUM         3   // Minimum required arguments.
     #define ARG_HANDLE          0   // Handle (pointer to property structure).
@@ -427,6 +681,7 @@ HRESULT openbor_set_animation_property(ScriptVariant **varlist, ScriptVariant **
     // property, and a new value to apply.
     if(paramCount < ARG_MINIMUM
        || varlist[ARG_HANDLE]->vt != VT_PTR
+       || !varlist[ARG_HANDLE]->ptrVal
        || varlist[ARG_PROPERTY]->vt != VT_INTEGER)
     {
         *pretvar = NULL;
@@ -859,4 +1114,39 @@ int mapstrings_animation_frame_property(ScriptVariant** varlist, int paramCount)
 
 #undef ARG_MINIMUM
 #undef ARG_PROPERTY
+}
+HRESULT openbor_get_animation_property(ScriptVariant **varlist, ScriptVariant **pretvar, int paramCount)
+{
+    if(obor_profile_legacy_branch())
+    {
+        if(paramCount >= 2 && varlist[1]->vt == VT_INTEGER &&
+           varlist[1]->lVal >= OBOR_ANIMATION_NAMED_BASE &&
+           varlist[1]->lVal < OBOR_ANIMATION_NAMED_BASE + _ANIMATION_PROP_END)
+        {
+            ScriptVariant property = *varlist[1];
+            ScriptVariant *mapped[3] = {varlist[0], &property, paramCount >= 3 ? varlist[2] : NULL};
+            property.lVal -= OBOR_ANIMATION_NAMED_BASE;
+            return obor_current_get_animation_property(mapped, pretvar, paramCount);
+        }
+        return obor_legacy_get_animation_property(varlist, pretvar, paramCount);
+    }
+    return obor_current_get_animation_property(varlist, pretvar, paramCount);
+}
+
+HRESULT openbor_set_animation_property(ScriptVariant **varlist, ScriptVariant **pretvar, int paramCount)
+{
+    if(obor_profile_legacy_branch())
+    {
+        if(paramCount >= 2 && varlist[1]->vt == VT_INTEGER &&
+           varlist[1]->lVal >= OBOR_ANIMATION_NAMED_BASE &&
+           varlist[1]->lVal < OBOR_ANIMATION_NAMED_BASE + _ANIMATION_PROP_END)
+        {
+            ScriptVariant property = *varlist[1];
+            ScriptVariant *mapped[3] = {varlist[0], &property, paramCount >= 3 ? varlist[2] : NULL};
+            property.lVal -= OBOR_ANIMATION_NAMED_BASE;
+            return obor_current_set_animation_property(mapped, pretvar, paramCount);
+        }
+        return obor_legacy_set_animation_property(varlist, pretvar, paramCount);
+    }
+    return obor_current_set_animation_property(varlist, pretvar, paramCount);
 }

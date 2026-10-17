@@ -1,5 +1,18 @@
+/* AnyBOR modification record: 2026-10-06.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Convert the command-list lookup result to its command enumeration
+ * explicitly instead of through a plain pointer cast.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/7142.md
+ * at the source repository root. Original notices follow below.
+ */
+
 #include <string.h>
 #include "commands.h"
+#include "openbor.h"
 #include "globals.h"
 
 void freeCommandList(List *list)

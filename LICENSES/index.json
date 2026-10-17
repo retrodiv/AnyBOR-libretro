@@ -49,13 +49,6 @@
     "source": "src/engines/6391/LICENSE"
   },
   {
-    "file": "LICENSES/OpenBOR-7123.txt",
-    "license": "BSD-3-Clause",
-    "scope": "source and binary",
-    "sha256": "adfc28feba4d32bb3933b29fe55fd0a6aa746084704c3ee71fc3f732706b9aa4",
-    "source": "src/engines/7123/LICENSE"
-  },
-  {
     "file": "LICENSES/OpenBOR-7142.txt",
     "license": "BSD-3-Clause",
     "scope": "source and binary",
@@ -308,20 +301,6 @@
     "source": "src/engines/6391/source/webmlib/nestegg/LICENSE"
   },
   {
-    "file": "LICENSES/WebM-7123-halloc.txt",
-    "license": "see notice",
-    "scope": "source and binary",
-    "sha256": "ae4b9e1073a9579c0ac13d406d66c01c3a941ed072af7a70091dc153b8c903d5",
-    "source": "src/engines/7123/source/webmlib/halloc/LICENSE"
-  },
-  {
-    "file": "LICENSES/WebM-7123-nestegg.txt",
-    "license": "see notice",
-    "scope": "source and binary",
-    "sha256": "505ee8e018326f36bb4070f69c6eb3caa6079b8fb796cd53a8d1bb168337e5ae",
-    "source": "src/engines/7123/source/webmlib/nestegg/LICENSE"
-  },
-  {
     "file": "LICENSES/WebM-7142-halloc.txt",
     "license": "see notice",
     "scope": "source and binary",
@@ -367,7 +346,7 @@
     "file": "LICENSES/Embedded-source-notices.txt",
     "license": "see each notice",
     "scope": "source and binary",
-    "sha256": "dec0ceca4a9135f39ff3f84f25869369eaabc57d050f506713162385da1f3410",
+    "sha256": "70d0a6d9919784b23c7b890a5ebbee7370eecc40dbaf9d7cb2b47bf8a98faab6",
     "source": "Individual source headers listed in this document"
   },
   {

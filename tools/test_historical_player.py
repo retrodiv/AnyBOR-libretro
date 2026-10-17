@@ -54,18 +54,52 @@ def check_player_continuation(log, profile):
 
 
 def function(source, name):
-    start = re.search(r'(?m)^(?:static )?[\w* ]+\b' + name +
-                      r'\([^;]*?\)\s*(?://[^\n]*\n\s*)?\{', source)
+    start = re.search(r'(?m)^[ \t]*(?!(?:if|else|while|return|switch|case)\b)'
+                      r'[A-Za-z_]\w*(?:[ \t*]+[A-Za-z_]\w*)*[ \t*]+\b' + name +
+                      r'\([^;{}]*?\)\s*(?://[^\n]*\n\s*)?\{', source)
     if start is None:
         raise AssertionError('Missing native function ' + name)
-    end, depth = start.end(), 1
-    while depth:
-        depth += (source[end] == '{') - (source[end] == '}')
-        end += 1
-    return source[start.start():end] + '\n'
+    # Braces in comments, strings and character constants are data. In
+    # particular, model-loading code contains inline script delimiters.
+    tokens = re.compile(r'/\*.*?\*/|//(?:\\(?:\r?\n|[\s\S])|[^\n\\])*|'
+                        r'"(?:\\[\s\S]|[^"\\])*"|'
+                        r"'(?:\\[\s\S]|[^'\\])*'|[{}]", re.S)
+    depth = 1
+    for token in tokens.finditer(source, start.end()):
+        if token[0] == '{':
+            depth += 1
+        elif token[0] == '}':
+            depth -= 1
+            if depth == 0:
+                return source[start.start():token.end()] + '\n'
+    raise AssertionError('Unfinished native function ' + name)
 
 
 class HistoricalPlayerTests(unittest.TestCase):
+    def test_native_function_extraction_ignores_braces_in_data(self):
+        sample = r'''int sample(void) {
+    const char *text = "} quoted { \" }";
+    char brace = '}'; /* } } { */
+    // } followed by a continued comment \
+    } {
+    if(brace) { return text[0]; }
+    return 0;
+}
+'''
+        self.assertEqual(function(sample + 'int other(void) {return 7;}\n', 'sample'), sample)
+        calls = '''int caller(void) {
+    if(other() &&
+                 sample()) {
+        return sample();
+    }
+}
+'''
+        self.assertEqual(function(calls + sample, 'sample'), sample)
+        crlf = sample.replace('\n', '\r\n')
+        self.assertEqual(function(crlf, 'sample'), crlf.rstrip('\r\n') + '\n')
+        with self.assertRaisesRegex(AssertionError, 'Unfinished'):
+            function('int sample(void) { const char *text = "}";', 'sample')
+
     def test_runtime_check_requires_executed_continuation(self):
         legacy = '\n'.join('[OpenBOR] ' + marker for marker in (
             'HISTORICAL_RETURN_ONE', 'HISTORICAL_BEFORE_REJECT',

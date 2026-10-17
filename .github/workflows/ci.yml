@@ -53,6 +53,8 @@ jobs:
           python3 tools/run_guarded.py --memory-mib 1024 --seconds 180 -- make check
           python3 tools/run_guarded.py --memory-mib 1024 --seconds 180 -- python3 tools/test_historical_behavior.py
           python3 tools/run_guarded.py --memory-mib 1024 --seconds 180 -- python3 tools/test_6392_profile.py
+          python3 tools/run_guarded.py --memory-mib 1024 --seconds 180 -- python3 tools/test_branch_profiles.py
+          python3 tools/run_guarded.py --memory-mib 1024 --seconds 180 -- python3 tools/test_property_error_lists.py
           python3 tools/run_guarded.py --memory-mib 1024 --seconds 180 -- python3 tools/test_text_object_ownership.py
           python3 tools/run_guarded.py --memory-mib 1024 --seconds 180 -- python3 tools/test_content_triage.py
       - name: Build and package
@@ -175,6 +177,8 @@ jobs:
         run: |
           python3 tools/test_historical_behavior.py
           python3 tools/test_6392_profile.py
+          python3 tools/test_branch_profiles.py
+          python3 tools/test_property_error_lists.py
           python3 tools/test_text_object_ownership.py
           python3 tools/test_content_triage.py
           python3 tools/test_write_watch.py

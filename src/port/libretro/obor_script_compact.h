@@ -17,7 +17,7 @@ static int obor_script_instruction_owns_value(const Instruction *instruction)
 {
 #if OBOR_ENGINE_BUILD == 3842 || OBOR_ENGINE_BUILD == 4086 || \
     OBOR_ENGINE_BUILD == 4432 || OBOR_ENGINE_BUILD == 6391 || \
-    OBOR_ENGINE_BUILD == 7123 || OBOR_ENGINE_BUILD == 7142 || \
+    OBOR_ENGINE_BUILD == 7142 || \
     OBOR_ENGINE_BUILD == 7533 || \
     OBOR_ENGINE_BUILD == 8023
     return Instruction_OwnsValue(instruction);
@@ -30,7 +30,7 @@ static ScriptVariant **obor_script_first_reference(Instruction *instruction)
 {
 #if OBOR_ENGINE_BUILD == 3842 || OBOR_ENGINE_BUILD == 4086 || \
     OBOR_ENGINE_BUILD == 4432 || OBOR_ENGINE_BUILD == 6391 || \
-    OBOR_ENGINE_BUILD == 7123 || OBOR_ENGINE_BUILD == 7142 || \
+    OBOR_ENGINE_BUILD == 7142 || \
     OBOR_ENGINE_BUILD == 7533 || \
     OBOR_ENGINE_BUILD == 8023
     return Instruction_FirstReferenceAddress(instruction);
@@ -148,7 +148,7 @@ static void obor_script_compact_values(Interpreter *interpreter)
                 *reference = moved;
         }
 
-#if OBOR_ENGINE_BUILD == 3842 || OBOR_ENGINE_BUILD == 7123 || OBOR_ENGINE_BUILD == 7142 || \
+#if OBOR_ENGINE_BUILD == 3842 || OBOR_ENGINE_BUILD == 7142 || \
     OBOR_ENGINE_BUILD == 7533 || \
     OBOR_ENGINE_BUILD == 8023
         if (instruction->OpCode != CALL) {

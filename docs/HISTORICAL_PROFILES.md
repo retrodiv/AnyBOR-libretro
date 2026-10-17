@@ -3,7 +3,7 @@
 Selectable engine profiles: v3.0 3400, v3.0 3780, v3.0 3783, v3.0 3789, v3.0 3793, v3.0 3797,
 v3.0 3805, v3.0 3814, v3.0 3818, v3.0 3822, v3.0 3824, v3.0 3829, v3.0 3831,
 v3.0 3837, v3.0 3839, v3.0 3842, v3.0 4086, v3.0 4432, v3.0 4453, v3.0 6330,
-v3.0 6391, v3.0 6392-dev, v3.0 6412-dev, v3.0 6510-dev, v3.0 7123-dev, v4.0 7142-alpha,
+v3.0 6391, v3.0 6392-dev, v3.0 6412-dev, v3.0 6510-dev, v3.0 7086-dev, v3.0 7123-dev, v4.0 7142-alpha,
 v4.0 7533 and v4.0 8023-dev.
 
 Auto uses build tags and content clues to choose a profile. You can select one
@@ -110,3 +110,25 @@ revision directly. Imprecise tags are checked against content evidence, with
 stable or automatic profiles preferred. Ordinary unlabelled inference and
 accompanying executables do not select nonautomatic profiles.
 See [content selection rules](AUTO_SELECTION_RULES.md) for boundaries and limits.
+
+## Divergent test profiles
+
+**v3.0 7086-dev** follows revision
+`7a45a2215a0cc12c1085d92e7b210a827ea552c2`; **v3.0 7123-dev** follows
+`f5261e7cb97786909276c0b87f8f9f63504d2844`. These development branches retain
+earlier animation-property selectors, optional model records, follow/counter
+decisions, energy rules and attack/binding IDs. The latter profile also selects
+its incoming-attack history and cheat toggle, selection priority, return-to-title
+flag and drawing order. Memory and lifecycle corrections remain enabled.
+
+Later additive APIs and command names remain accepted without renumbering
+selectors or changing the meaning of content valid for the selected revision.
+Standalone device drivers and mod pickers are replaced by frontend facilities;
+in-game menus and script-visible timing remain covered by native regressions.
+
+Exact **Build 7086** and **Build 7123** filename tags select these profiles.
+Manual selection is available. Ordinary accompanying executable declarations
+and unlabelled inference use automatic profiles; imprecise tags retain the
+content-evidence and stable-profile priority described in
+[content selection rules](AUTO_SELECTION_RULES.md). Existing states require
+the same core build and selected profile and are not converted.

@@ -1,7 +1,7 @@
 {
   "core_name": "AnyBOR",
   "core_basename": "anybor_libretro",
-  "version": "0.1.59",
+  "version": "0.1.60",
   "fallback_build": "6391",
   "profiles": [
     {
@@ -214,16 +214,33 @@
       "stage": "dev"
     },
     {
-      "build": "7123",
-      "engine": "7123",
-      "covers": "6413-7123 by automatic detection",
+      "build": "7086",
+      "engine": "7142",
       "major": "v3.0",
-      "stage": "dev"
+      "stage": "dev",
+      "automatic": false,
+      "tagged": true,
+      "covers": "Exact Build 7086 tag/manual or source-supported weak-tag triage",
+      "upstream_commit": "7a45a2215a0cc12c1085d92e7b210a827ea552c2",
+      "upstream_date": "2020-03-09",
+      "upstream_branch": "PR 191 merge"
+    },
+    {
+      "build": "7123",
+      "engine": "7142",
+      "covers": "Exact Build 7123 tag/manual or source-supported weak-tag triage",
+      "major": "v3.0",
+      "stage": "dev",
+      "automatic": false,
+      "tagged": true,
+      "upstream_commit": "f5261e7cb97786909276c0b87f8f9f63504d2844",
+      "upstream_date": "2021-05-18",
+      "upstream_branch": "PR 229 revision"
     },
     {
       "build": "7142",
       "engine": "7142",
-      "covers": "7124-7142 by automatic detection",
+      "covers": "6413-7142 by automatic detection",
       "major": "v4.0",
       "stage": "alpha"
     },
@@ -343,18 +360,10 @@
       "major": "v3.0"
     },
     {
-      "build": "7123",
-      "commit": "81049d95c50c4c26e2637cc89ab3056bfcc77d16",
-      "date": "2019-11-25",
-      "covers": "6413-7123 by automatic detection",
-      "major": "v3.0",
-      "stage": "dev"
-    },
-    {
       "build": "7142",
       "commit": "9dcd966d1dc8e93ff03c39edbd6bd262f4a2d7ab",
       "date": "2019-12-08",
-      "covers": "7124-7142 by automatic detection",
+      "covers": "6413-7142 automatically; explicit divergent profiles 7086 and 7123",
       "major": "v4.0",
       "stage": "alpha"
     },

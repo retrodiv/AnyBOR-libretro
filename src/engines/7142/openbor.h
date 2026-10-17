@@ -5,7 +5,9 @@
  * Upstream code retains its original license and notices.
  * Allocate collision pointer slots through the highest author-facing index
  * used by each collection. Track each model's allocated animation-table
- * capacity and reject lookups outside it.
+ * capacity and reject lookups outside it. Preserve divergent 7086 and 2021
+ * 7123 animation, combat, model, script-selector and menu contracts by
+ * logical profile, retaining safe storage and additive APIs.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/7142.md
  * at the source repository root. Original notices follow below.
@@ -68,13 +70,14 @@
 
 /////////////////////////////////////////////////////////////////////////////
 
-#define		DEFAULT_SHUTDOWN_MESSAGE \
-			"OpenBOR " VERSION ", Compile Date: " __DATE__ "\n" \
+#define		OBOR_SHUTDOWN_MESSAGE_VERSION(version) \
+			"OpenBOR " version ", Compile Date: " __DATE__ "\n" \
 			"Presented by the OpenBOR Team.\n" \
 			"www.chronocrash.com\n"\
 			"OpenBOR is the open source continuation of Beats of Rage by Senile Team.\n" \
 			"\n" \
 			"Special thanks to SEGA and SNK.\n\n"
+#define DEFAULT_SHUTDOWN_MESSAGE OBOR_SHUTDOWN_MESSAGE_VERSION(VERSION)
 
 #define		COMPATIBLEVERSION	0x00033748
 #define		CV_SAVED_GAME		0x00033747
@@ -112,8 +115,8 @@ movement restirctions are here!
 #define		FRONTPANEL_Z		(PLAYER_MAX_Z+50)
 #define     HUD_Z               (FRONTPANEL_Z+10000)
 #define		HOLE_Z				(PLAYER_MIN_Z-46)
-#define		NEONPANEL_Z			(PLAYER_MIN_Z-47)
-#define		SHADOW_Z			(PLAYER_MIN_Z-48)
+#define		NEONPANEL_Z			(PLAYER_MIN_Z - (obor_profile_build == 7123 ? 48 : 47))
+#define		SHADOW_Z			(PLAYER_MIN_Z - (obor_profile_build == 7123 ? 47 : 48))
 #define		SCREENPANEL_Z		(PLAYER_MIN_Z-49)
 #define		PANEL_Z				(PLAYER_MIN_Z-50)
 #define		MIRROR_Z			(PLAYER_MIN_Z-5)
@@ -851,6 +854,102 @@ typedef enum //Animations
     ANI_LOSE,
     MAX_ANIS                // Maximum # of animations. This must always be last.
 } e_animations;
+
+
+/* The divergent revisions retain their original numeric animation selectors. */
+typedef enum
+{
+    ANI_PROP_ANIMHITS,     // Does the attack need to hit before cancel is allowed?
+    ANI_PROP_ANTIGRAV,     // UT: make dive a similar property as antigravity.
+    ANI_PROP_ATTACK,
+    ANI_PROP_COLLISIONONE,    // stick on the only one victim
+    ANI_PROP_BODY_COLLISION,
+    ANI_PROP_ENTITY_COLLISION,
+    ANI_PROP_BOUNCE,       //FLOAT -tossv/bounce = new tossv
+    ANI_PROP_CANCEL,       // Cancel anims with freespecial
+    ANI_PROP_CHARGETIME,   //INT charge time for an animation
+    ANI_PROP_COUNTERRANGE, //SUB Auto counter attack. 2011_04_01, DC: Moved to struct.
+    ANI_PROP_DELAY,
+    ANI_PROP_DRAWMETHODS,
+    ANI_PROP_DROPFRAME,    // SUB if tossv < 0, this frame will be set
+    ANI_PROP_DROPV,    // SUB if tossv < 0, this frame will be set
+    ANI_PROP_ENERGYCOST,   //SUB. 1-10-05 to adjust the amount of energy used for specials. 2011_03_31, DC: Moved to struct.
+    ANI_PROP_FLIPFRAME,    // Turns entities around on the desired frame
+    ANI_PROP_FOLLOWUP,     // use which FOLLOW anim?
+    ANI_PROP_IDLE,
+    ANI_PROP_IGNOREATTACKID,
+    ANI_PROP_INDEX,        //unique id
+    ANI_PROP_JUMPFRAME,    //SUB
+    ANI_PROP_LANDFRAME,    // SUB Landing behavior. 2011_04_01, DC: Moved to struct.
+    ANI_PROP_LOOP,         // Animation looping. 2011_03_31, DC: Moved to struct.
+    ANI_PROP_MODEL_INDEX,
+    ANI_PROP_MOVE,
+    ANI_PROP_NUMFRAMES,    //Framecount.
+    ANI_PROP_OFFSET,
+    ANI_PROP_PLATFORM,
+    ANI_PROP_PROJECTILE,
+    ANI_PROP_QUAKEFRAME,   // SUB Screen shake effect. 2011_04_01, DC; Moved to struct.
+    ANI_PROP_RANGE,        //SUB Verify distance to target, jump landings, etc.. 2011_04_01, DC: Moved to struct.
+    ANI_PROP_SHADOW,
+    ANI_PROP_SIZE,         // SUB entity's size (height) during animation
+    ANI_PROP_SOUNDTOPLAY,
+    ANI_PROP_SPAWNFRAME,   // SUB Spawn the subentity as its default type. {frame} {x} {z} {a} {relative?}
+    ANI_PROP_SPRITE,
+    ANI_PROP_SPRITEA,
+    ANI_PROP_SUBENTITY,    // Store the sub-entity's name for further use
+    ANI_PROP_SUMMONFRAME,  // SUB Summon the subentity as an ally, only one though {frame} {x} {z} {a} {relative?}
+    ANI_PROP_SYNC,         // sychronize frame to previous animation if they matches
+    ANI_PROP_UNSUMMONFRAME,// SUB Un-summon the entity
+    ANI_PROP_VULNERABLE,
+    ANI_PROP_WEAPONFRAME    // SUB Specify with a frame when to switch to a weapon model
+} obor_legacy_animation_properties;
+typedef enum
+{
+    /*
+    Follow up conditional enumerator.
+    Damon V. Caskey
+    2014-01-04
+    */
+
+    FOLLOW_CONDITION_DISABLED,                     //No followup (default).
+    FOLLOW_CONDITION_ALWAYS,                       //Always perform.
+    FOLLOW_CONDITION_HOSTILE,                      //Perform if target is hostile.
+    FOLLOW_CONDITION_HOSTILE_NOKILL_NOBLOCK,       //Perform if target is hostile, will not be killed and didn't block.
+    FOLLOW_CONDITION_HOSTILE_NOKILL_NOBLOCK_NOGRAB, //Perform if target is hostile, will not be killed, didn't block, and cannot be grabbed.
+    FOLLOW_CONDITION_HOSTILE_NOKILL_BLOCK,         //Perform if target is hostile, will not be killed and block.
+} e_follow_condition;
+
+typedef enum
+{
+    /*
+    Counter action conditionals.
+    2012-12-16
+    Damon V. Caskey
+    */
+
+    COUNTERACTION_CONDITION_NONE,                  //No counter.
+    COUNTERACTION_CONDITION_ALWAYS,                //Always perform coutner action.
+    COUNTERACTION_CONDITION_HOSTILE,               //Only if attacker is hostile entity.
+    COUNTERACTION_CONDITION_HOSTILE_FRONT_NOFREEZE, //Attacker is hostile, strikes from front, and uses non-freeze attack.
+    COUNTERACTION_CONDITION_ALWAYS_RAGE,           //Always perform coutner action and if health - attack_damage <= 0, set health to 1
+} e_counteraction_condition;
+
+typedef enum
+{
+    /*
+    Counteraction damage taking modes.
+    2012-12-16
+    Damon V. Caskey
+    */
+
+    COUNTERACTION_DAMAGE_NONE,  //No damage.
+    COUNTERACTION_DAMAGE_NORMAL //Normal damage.
+} e_counteraction_damage;
+
+static inline int obor_profile_legacy_branch(void)
+{
+    return obor_profile_build == 7086 || obor_profile_build == 7123;
+}
 
 typedef enum
 {
@@ -2137,7 +2236,16 @@ typedef struct
 	// Boolean flags.
 	bool						attack_one;             // Attack hits only one target. ~~
 	bool						subject_to_gravity;		// Ignore gravity (same as model level subject_to_gravity). ~~    
+    /* Optional-record presence is observable even when its values are zero. */
+    unsigned char obor_counter_present;
+    unsigned char obor_drop_present;
+    unsigned char obor_jump_present;
+    unsigned char obor_land_present;
+    unsigned char obor_energy_present;
+    unsigned char obor_projectile_position_explicit;
 } s_anim;
+
+#include "source/openborscript/profile_ids.h"
 
 struct animlist
 {
@@ -2631,7 +2739,10 @@ typedef struct entity
 	
 	// Unsigned integers
 	unsigned int			animpos;							// Current animation frame. ~~
-	unsigned int			attack_id_incoming;					// ~~
+	unsigned int			attack_id_incoming;
+    unsigned int attack_id_incoming2;
+    unsigned int attack_id_incoming3;
+    unsigned int attack_id_incoming4;					// ~~
 	unsigned int			attack_id_outgoing;					// ~~
 	unsigned int			animnum;							// Current animation id. ~~
 	unsigned int			animnum_previous;					// Previous animation id. ~~

@@ -10,7 +10,9 @@
  * ownership, preserving branch and export anchors, all mutable values and
  * exactly-once pool cleanup. Resolve text-property names within the actual
  * table bounds while preserving native numeric selectors. Reuse each text
- * object's owned buffer when replacing its contents.
+ * object's owned buffer when replacing its contents. Preserve divergent 7086
+ * and 2021 7123 animation, combat, model, script-selector and menu contracts
+ * by logical profile, retaining safe storage and additive APIs.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/7142.md
  * at the source repository root. Original notices follow below.
@@ -3071,6 +3073,13 @@ int mapstrings_entityproperty(ScriptVariant **varlist, int paramCount)
         return 1;
     }
 
+    if(obor_profile_legacy_branch() && varlist[1]->vt == VT_STR &&
+       !stricmp(StrCache_Get(varlist[1]->strVal), "energycost"))
+    {
+        ScriptVariant_ChangeType(varlist[1], VT_INTEGER);
+        varlist[1]->lVal = _ep_energy_cost;
+    }
+
     // map entity properties
     MAPSTRINGS(varlist[1], eplist, _ep_the_end,
                "Property name '%s' is not supported by function getentityproperty.\n");
@@ -3716,43 +3725,48 @@ HRESULT openbor_getentityproperty(ScriptVariant **varlist , ScriptVariant **pret
                 return E_FAIL;
             }
         }
+        if(obor_attack_from_native(ltemp) < 0 || obor_attack_from_native(ltemp) >= max_attack_types)
+        {
+            *pretvar = NULL;
+            return E_FAIL;
+        }
         ScriptVariant_ChangeType(*pretvar, VT_DECIMAL);
 
         switch(ltemp2)
         {
         case _ep_defense_factor:
         {
-            (*pretvar)->dblVal = (DOUBLE)ent->defense[(LONG)ltemp].factor;
+            (*pretvar)->dblVal = (DOUBLE)ent->defense[obor_attack_from_native(ltemp)].factor;
             break;
         }
         case _ep_defense_blockpower:
         {
-            (*pretvar)->dblVal = (DOUBLE)ent->defense[(LONG)ltemp].blockpower;
+            (*pretvar)->dblVal = (DOUBLE)ent->defense[obor_attack_from_native(ltemp)].blockpower;
             break;
         }
         case _ep_defense_blockratio:
         {
-            (*pretvar)->dblVal = (DOUBLE)ent->defense[(LONG)ltemp].blockratio;
+            (*pretvar)->dblVal = (DOUBLE)ent->defense[obor_attack_from_native(ltemp)].blockratio;
             break;
         }
         case _ep_defense_blockthreshold:
         {
-            (*pretvar)->dblVal = (DOUBLE)ent->defense[(LONG)ltemp].blockthreshold;
+            (*pretvar)->dblVal = (DOUBLE)ent->defense[obor_attack_from_native(ltemp)].blockthreshold;
             break;
         }
         case _ep_defense_blocktype:
         {
-            (*pretvar)->dblVal = (DOUBLE)ent->defense[(LONG)ltemp].blocktype;
+            (*pretvar)->dblVal = (DOUBLE)ent->defense[obor_attack_from_native(ltemp)].blocktype;
             break;
         }
         case _ep_defense_knockdown:
         {
-            (*pretvar)->dblVal = (DOUBLE)ent->defense[(LONG)ltemp].knockdown;
+            (*pretvar)->dblVal = (DOUBLE)ent->defense[obor_attack_from_native(ltemp)].knockdown;
             break;
         }
         case _ep_defense_pain:
         {
-            (*pretvar)->dblVal = (DOUBLE)ent->defense[(LONG)ltemp].pain;
+            (*pretvar)->dblVal = (DOUBLE)ent->defense[obor_attack_from_native(ltemp)].pain;
             break;
         }
         default:
@@ -3805,7 +3819,8 @@ HRESULT openbor_getentityproperty(ScriptVariant **varlist , ScriptVariant **pret
 
         ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
 		       
-        (*pretvar)->lVal = ent->modeldata.animation[ltemp]->dropframe.frame;       
+        if(!obor_profile_legacy_branch() || ent->modeldata.animation[ltemp]->obor_drop_present)
+            (*pretvar)->lVal = ent->modeldata.animation[ltemp]->dropframe.frame;       
 
         break;
     }
@@ -3930,6 +3945,7 @@ HRESULT openbor_getentityproperty(ScriptVariant **varlist , ScriptVariant **pret
         case _ep_energy_cost_cost:
             ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
            
+            if(!obor_profile_legacy_branch() || ent->modeldata.animation[i]->obor_energy_present)
             (*pretvar)->lVal = ent->modeldata.animation[i]->energy_cost.cost;
           
 
@@ -3937,13 +3953,15 @@ HRESULT openbor_getentityproperty(ScriptVariant **varlist , ScriptVariant **pret
         case _ep_energy_cost_disable:
             ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
             
+            if(!obor_profile_legacy_branch() || ent->modeldata.animation[i]->obor_energy_present)
             (*pretvar)->lVal = ent->modeldata.animation[i]->energy_cost.disable;
            
             break;
         case _ep_energy_cost_mponly:
             ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
             
-			(*pretvar)->lVal = ent->modeldata.animation[i]->energy_cost.mponly;
+			if(!obor_profile_legacy_branch() || ent->modeldata.animation[i]->obor_energy_present)
+            (*pretvar)->lVal = ent->modeldata.animation[i]->energy_cost.mponly;
             
             break;
         default:
@@ -4345,6 +4363,8 @@ HRESULT openbor_getentityproperty(ScriptVariant **varlist , ScriptVariant **pret
             break;
         }
 
+        if(obor_profile_legacy_branch() && !ent->modeldata.animation[i]->obor_land_present) break;
+
         switch(ltemp)
         {
         case _ep_landframe_ent:
@@ -4701,8 +4721,13 @@ HRESULT openbor_getentityproperty(ScriptVariant **varlist , ScriptVariant **pret
                 ltemp = (LONG)0;
             }
         }
+        if(obor_attack_from_native(ltemp) < 0 || obor_attack_from_native(ltemp) >= max_attack_types)
+        {
+            *pretvar = NULL;
+            return E_FAIL;
+        }
         ScriptVariant_ChangeType(*pretvar, VT_DECIMAL);
-        (*pretvar)->dblVal = (DOUBLE)ent->offense_factors[(LONG)ltemp];
+        (*pretvar)->dblVal = (DOUBLE)ent->offense_factors[obor_attack_from_native(ltemp)];
         break;
     }
     case _ep_offscreen_noatk_factor:
@@ -4947,7 +4972,7 @@ HRESULT openbor_getentityproperty(ScriptVariant **varlist , ScriptVariant **pret
     case _ep_spawntype:
     {
         ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
-        (*pretvar)->lVal = (LONG)ent->spawntype;
+        (*pretvar)->lVal = (LONG)obor_spawn_type_to_native(ent->spawntype);
         break;
     }
     case _ep_speed:
@@ -5754,36 +5779,36 @@ HRESULT openbor_changeentityproperty(ScriptVariant **varlist , ScriptVariant **p
         if((ltemp2 =
                     (paramCount >= 4 &&
                      SUCCEEDED(ScriptVariant_IntegerValue(varlist[2], &ltemp)) &&
-                     ltemp < (LONG)MAX_ATKS && ltemp >= (LONG)0 &&
+                     obor_attack_from_native(ltemp) < MAX_ATKS && obor_attack_from_native(ltemp) >= 0 &&
                      SUCCEEDED(ScriptVariant_DecimalValue(varlist[3], &dbltemp)))
            ))
         {
-            ent->defense[(LONG)ltemp].factor = (DOUBLE)dbltemp;
+            ent->defense[obor_attack_from_native(ltemp)].factor = (DOUBLE)dbltemp;
         }
 
         if(paramCount >= 5 && ltemp2 && (ltemp2 = SUCCEEDED(ScriptVariant_DecimalValue(varlist[4], &dbltemp))))
         {
-            ent->defense[(LONG)ltemp].pain = (DOUBLE)dbltemp;
+            ent->defense[obor_attack_from_native(ltemp)].pain = (DOUBLE)dbltemp;
         }
         if(paramCount >= 6 && ltemp2 && (ltemp2 = SUCCEEDED(ScriptVariant_DecimalValue(varlist[5], &dbltemp))))
         {
-            ent->defense[(LONG)ltemp].knockdown = (DOUBLE)dbltemp;
+            ent->defense[obor_attack_from_native(ltemp)].knockdown = (DOUBLE)dbltemp;
         }
         if(paramCount >= 7 && ltemp2 && (ltemp2 = SUCCEEDED(ScriptVariant_DecimalValue(varlist[6], &dbltemp))))
         {
-            ent->defense[(LONG)ltemp].blockpower = (DOUBLE)dbltemp;
+            ent->defense[obor_attack_from_native(ltemp)].blockpower = (DOUBLE)dbltemp;
         }
         if(paramCount >= 8 && ltemp2 && (ltemp2 = SUCCEEDED(ScriptVariant_DecimalValue(varlist[7], &dbltemp))))
         {
-            ent->defense[(LONG)ltemp].blockthreshold = (DOUBLE)dbltemp;
+            ent->defense[obor_attack_from_native(ltemp)].blockthreshold = (DOUBLE)dbltemp;
         }
         if(paramCount >= 9 && ltemp2 && (ltemp2 = SUCCEEDED(ScriptVariant_DecimalValue(varlist[8], &dbltemp))))
         {
-            ent->defense[(LONG)ltemp].blockratio = (DOUBLE)dbltemp;
+            ent->defense[obor_attack_from_native(ltemp)].blockratio = (DOUBLE)dbltemp;
         }
         if(paramCount >= 10 && ltemp2 && SUCCEEDED(ScriptVariant_DecimalValue(varlist[9], &dbltemp)))
         {
-            ent->defense[(LONG)ltemp].blocktype = dbltemp;
+            ent->defense[obor_attack_from_native(ltemp)].blocktype = dbltemp;
         }
 
         break;
@@ -5923,7 +5948,8 @@ HRESULT openbor_changeentityproperty(ScriptVariant **varlist , ScriptVariant **p
         {
             if(SUCCEEDED(ScriptVariant_IntegerValue(varlist[4], &ltemp)))
             {               
-                ent->modeldata.animation[i]->energy_cost.cost = ltemp;
+                if(!obor_profile_legacy_branch() || ent->modeldata.animation[i]->obor_energy_present)
+                    ent->modeldata.animation[i]->energy_cost.cost = ltemp;
             }
             break;
         }
@@ -5931,7 +5957,8 @@ HRESULT openbor_changeentityproperty(ScriptVariant **varlist , ScriptVariant **p
         {
             if(SUCCEEDED(ScriptVariant_IntegerValue(varlist[4], &ltemp)))
             {
-				ent->modeldata.animation[i]->energy_cost.disable = ltemp;
+				if(!obor_profile_legacy_branch() || ent->modeldata.animation[i]->obor_energy_present)
+                    ent->modeldata.animation[i]->energy_cost.disable = ltemp;
             }
             break;
         }
@@ -5939,7 +5966,8 @@ HRESULT openbor_changeentityproperty(ScriptVariant **varlist , ScriptVariant **p
         {
             if(SUCCEEDED(ScriptVariant_IntegerValue(varlist[4], &ltemp)))
             {
-				ent->modeldata.animation[i]->energy_cost.mponly = ltemp;
+				if(!obor_profile_legacy_branch() || ent->modeldata.animation[i]->obor_energy_present)
+                    ent->modeldata.animation[i]->energy_cost.mponly = ltemp;
             }
             break;
         }
@@ -6560,10 +6588,12 @@ HRESULT openbor_changeentityproperty(ScriptVariant **varlist , ScriptVariant **p
     {
         if(paramCount >= 4 &&
                 SUCCEEDED(ScriptVariant_IntegerValue(varlist[2], &ltemp)) &&
-                ltemp < (LONG)MAX_ATKS && ltemp >= (LONG)0 &&
+                obor_attack_from_native(ltemp) < MAX_ATKS && obor_attack_from_native(ltemp) >= 0 &&
                 SUCCEEDED(ScriptVariant_DecimalValue(varlist[3], &dbltemp)))
         {
-            ent->offense_factors[(LONG)ltemp] = (DOUBLE)dbltemp;
+            if(obor_attack_from_native(ltemp) < 0 || obor_attack_from_native(ltemp) >= max_attack_types)
+                goto changeentityproperty_error;
+            ent->offense_factors[obor_attack_from_native(ltemp)] = (DOUBLE)dbltemp;
         }
         break;
     }
@@ -8248,7 +8278,7 @@ int getsyspropertybyindex(ScriptVariant *var, int index)
 
         if(lasthit.attack)
         {
-            var->lVal = lasthit.attack->attack_type;
+            var->lVal = obor_attack_to_native(lasthit.attack->attack_type);
         }
 
         break;
@@ -8568,7 +8598,7 @@ int getsyspropertybyindex(ScriptVariant *var, int index)
         var->lVal = level ? level->waiting : 0;
     case _sv_maxattacktypes:
         ScriptVariant_ChangeType(var, VT_INTEGER);
-        var->lVal = max_attack_types;
+        var->lVal = obor_attack_to_native(max_attack_types);
         break;
     case _sv_maxanimations:
         ScriptVariant_ChangeType(var, VT_INTEGER);
@@ -8783,7 +8813,9 @@ int changesyspropertybyindex(int index, ScriptVariant *value)
     case _sv_lasthitt:
         if(SUCCEEDED(ScriptVariant_IntegerValue(value, &ltemp)))
         {
-            lasthit.attack->attack_type = (LONG)ltemp;
+            int physical = obor_attack_from_native(ltemp);
+            if(!lasthit.attack || !obor_attack_valid(physical)) return 0;
+            lasthit.attack->attack_type = physical;
         }
         break;
     case _sv_smartbomber:
@@ -9980,7 +10012,8 @@ HRESULT openbor_damageentity(ScriptVariant **varlist , ScriptVariant **pretvar, 
             atk.dropv.x = (float)DEFAULT_ATK_DROPV_X;
             atk.dropv.z = (float)DEFAULT_ATK_DROPV_Z;
         }
-        atk.attack_type = type;
+        atk.attack_type = obor_attack_from_native(type);
+        if(!obor_attack_valid(atk.attack_type)) goto de_error;
     }
     else
     {
@@ -10075,7 +10108,7 @@ HRESULT openbor_getcomputeddamage(ScriptVariant **varlist , ScriptVariant **pret
         atk.dropv.x = (float)DEFAULT_ATK_DROPV_X;
         atk.dropv.z = (float)DEFAULT_ATK_DROPV_Z;
     }
-    atk.attack_type = type;
+    atk.attack_type = obor_attack_from_native(type);
     
     (*pretvar)->lVal = (LONG)calculate_force_damage(defender, attacker, &atk);   
 

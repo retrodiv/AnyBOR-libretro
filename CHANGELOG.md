@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Add v3.0 7086-dev and reference v3.0 7123-dev to its 2021 revision,
+  preserving divergent animation, combat, model, script and menu contracts.
+- Bound unknown-property diagnostics by their actual mapping table lengths.
+
 - Preserve historical combat, camera, script, model-loading and audio-result
   contracts at their revision boundaries while retaining safety corrections.
 - Add v3.0 6392-dev as a documented reconstruction of published test behavior,
