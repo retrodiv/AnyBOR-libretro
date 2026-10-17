@@ -51,7 +51,7 @@ Changing the engine option and using Restart starts a fresh engine instance.
 Protection covers the coroutine during startup and frame execution, audio
 mixing, state-size calculation, serialization (including tail padding) and
 restoration. A state fault is displayed on the next retro_run; until then the
-previously submitted video pixels remain valid. Invalid/incompatible states
+last submitted video pixels remain valid. Invalid/incompatible states
 rejected before mutation leave the current game running. A failed restore after
 mutation abandons the world. Guard dispatch and the live resource ledger are
 excluded from both pristine and savestate copies.

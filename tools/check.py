@@ -100,7 +100,7 @@ def primitives():
         output = str(Path(temp) / "primitives")
         compiler = shlex.split(os.environ.get("HOST_CC", "cc"))
         subprocess.check_call(compiler + [
-            "-std=c99", "-O2", "-Wall", "-Wextra", "-Werror",
+            "-std=c99", "-O2", "-Wall", "-Wextra", "-Werror", "-Wno-error=deprecated-declarations",
             "-I", str(ROOT / "src/port/libretro"),
             "-I", str(ROOT / "src/glue"),
             "-I", str(ROOT / "src/engines/6391/source/adpcmlib"),

@@ -136,14 +136,7 @@ setup, external INI configuration and backup guidance.
 For rewind, we recommend **Rewind Frames** set to **10** and
 **Rewind Buffer Size (MB)** set to **256**. We only recommend enabling rewind
 on a Raspberry Pi 5 (quad-core Cortex-A76 at 2.4 GHz) or a device with an
-equivalent or faster CPU. **256 MB is also the maximum**; do not increase it
-to work around capacity or performance problems.
-
-With rewind enabled, we recommend **Threaded Video = Off** on Windows x86-64
-and Linux under WSLg. Disabling this extra presentation queue improved frame
-pacing in those setups. On ARM64 Linux, **Threaded Video = On** can improve
-presentation. Use the same video setting when
-comparing rewind on and off.
+equivalent or faster CPU.
 
 The **System** category offers **Save state content** (Smart / Full) and
 **Save state compression** (On / Off). Smart reconstructs resources only when
@@ -153,7 +146,7 @@ unchanged blocks. These options apply when content is loaded; changing them
 during a session, resetting or loading a state does not change that session's
 writer. Diagnostic environment overrides retain priority.
 
-The default is **Smart + On on every platform**, including Android and macOS.
+The default is **Smart + On**.
 Supported targets also enable dirty-page tracking, advance state preparation,
 bounded encoder-pool maintenance and the synchronous compression helper.
 Linux, Android and macOS use guarded page protection; Windows uses its native
@@ -217,25 +210,15 @@ reused only while their validity checks hold; all allocation bounds and global
 nonoverlap checks are retained. These policies do not omit mutable state or
 change the frontend's fixed state capacity.
 
-On ARM64 Linux, a core-specific override can use `video_threaded = "true"`,
-`video_vsync = "true"`, `video_adaptive_vsync = "false"`,
-`video_swap_interval = "1"`, `video_frame_delay = "0"`,
-`video_frame_delay_auto = "false"`, `audio_sync = "true"`,
-`audio_latency = "64"` and `vrr_runloop_enable = "false"`.
-Check actual motion and reverse playback with the native FPS counter visible;
-a high average alone does not establish smooth presentation or captured history.
-Use the frontend supplied with the system. No frontend modification is needed
-by the state representation described here.
-
-The Android core remains one installable `.so`. It contains a small libretro
+The Android core is one installable `.so`. It contains a small libretro
 loader and the engine ELF; Android's `android_dlopen_ext` loads the engine at
 a reserved, stable address. This preserves saved code/static-data pointers
 without scanning and modifying arbitrary game data after ASLR changes.
-An address collision fails safely. States from the older ASLR core are
-rejected before restoring engine memory; create new states with this build.
+An address collision fails safely. Incompatible states are rejected before
+restoring engine memory.
 
-Full + Off uses the complete OBS writer, including the current binary-identity,
-runtime-storage and restoration fixes. It sizes its fixed capacity from
+Full + Off uses the complete OBS writer with binary-identity and
+runtime-storage checks. It sizes its fixed capacity from
 packed content and measured heap peaks; content that outgrows its allowance
 requires a restart to use the learned peak. Save states should be made and
 loaded with the same core build and content.
@@ -246,10 +229,9 @@ apply. Both Smart and Full require the module to be at its original address.
 If its address changes on any platform, loading is refused with a
 `state module address differs` log message before changing the live game.
 The core does not guess which memory words are pointers or silently change
-the selected writer. This is a temporary limitation of cross-process save
-states on macOS, where ASLR can move the dylib. After closing and reopening
+the selected writer. This limits cross-process save states on macOS, where ASLR can move the dylib. After closing and reopening
 the frontend on macOS, expect loads to be refused if the module address changed.
-That refusal is intentional; selecting Full does not bypass it. Same-session
+Selecting Full does not bypass the address check. Same-session
 rewind and restoration do not require relocation and remain available.
 
 Within a compatible core build, loading a Full state in a Smart session

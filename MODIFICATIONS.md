@@ -16,17 +16,16 @@ source packaging. Adding a libretro feature does not imply that standalone
 OpenBOR had a defect. [CHANGELOG.md](CHANGELOG.md) records release history;
 this document records the resulting source delta.
 
-The 2026-09-11 publication review also adds explicit core-info capability and
-runtime notes, checked source-only ZIP packaging, and the infrastructure handoff
-and user guide in [PUBLISHING.md](docs/PUBLISHING.md) and
-[ANYBOR.md](docs/ANYBOR.md). Binary release ZIPs carry the modification record
+The repository includes core-info capability and runtime notes, checked
+source-only ZIP packaging, and publication and user guides in
+[PUBLISHING.md](docs/PUBLISHING.md) and [ANYBOR.md](docs/ANYBOR.md). Binary release ZIPs carry the modification record
 and documentation alongside their existing notices and receipts.
 
 ## Record dates and file notices
 
-The 2026-10-16 port additions include an independently authored RISC-V LP64D
+The port includes an independently authored RISC-V LP64D
 coroutine backend, Linux RISC-V build selection and Sv39-compatible fixed
-module/arena addresses. Video allocation now follows native and CRT bounds,
+module/arena addresses. Video allocation follows native and CRT bounds,
 grows for larger runtime modes, and preserves its current reservation across
 state restoration. Focused tests cover register preservation, fault recovery,
 geometry changes, and exact restored output.
@@ -171,20 +170,17 @@ pointer-guessing rebase path has been removed.
 
 The 8023 anchor already includes upstream's dynamically sized, ownership-aware weapon-list replacement; it requires no corresponding modification.
 
-Builds 3842, 4086, 4432 and 6391 now resize the model's weapon list
-when a later `weapons` command replaces an earlier one. Previously, a longer
-replacement wrote beyond the original allocation, corrupting the heap while
-loading the affected model. Borrowed lists are copied
+Builds 3842, 4086, 4432 and 6391 resize the model's weapon list
+to fit each replacement `weapons` declaration. Borrowed lists are copied
 into owned storage before replacement. Build 3400 uses a fixed-size array
 and does not need this change. The PAK itself is unchanged.
 
 ## Animation script safety
 
-Build 3842 now checks that an entity-local animation interpreter exists before
-reading its reset flag. Some scripted map entities have an initialized model
-animation script before that optional local interpreter is allocated. The old
-code dereferenced a null pointer when the entity entered its animation frame;
-the guarded behavior matches the later supported source revisions.
+Build 3842 checks that an entity-local animation interpreter exists before
+reading its reset flag. Scripted map entities can have an initialized model
+animation script while that optional local interpreter is absent; the guard
+permits this state without dereferencing a null pointer.
 The correction is structural and applies to every build-3842 game.
 
 ## Script memory layout
@@ -199,7 +195,7 @@ an unsupported representation or allocation failure keeps the original stream.
 This reduces the state that actually needs copying and compression, without
 omitting mutable script data or selecting behavior by game identity.
 
-Build 3842 now retains one `ScriptVariant` for each compiled constant instead
+Build 3842 retains one `ScriptVariant` for each compiled constant instead
 of allocating a second identical value. The interpreter pushes that canonical
 value directly, matching the representation used by later OpenBOR engines.
 The instruction opcode and its Boolean target-kind flag use their bounded
@@ -208,7 +204,7 @@ integer widths so each instruction occupies a smaller allocator class on
 without changing script values, execution order or the state restoration
 contract.
 
-Build 8023 now stores parser-only token and label pointers in the same slot as
+Build 8023 stores parser-only token and label pointers in the same slot as
 the compiled call or jump target, and stores the mutually exclusive second
 operand and call-parameter list in one slot. Its opcode and target kind also
 use their bounded widths. This reduces each compiled instruction from 76 to 40
@@ -236,7 +232,7 @@ allocation fails, the interpreter keeps the original values. Cleanup still
 clears each value exactly once, so strings and other owned data retain their
 normal lifetime while allocator overhead and serialized heap metadata shrink.
 
-The parser workspace is now allocated only while an interpreter is compiling.
+The parser workspace is allocated only while an interpreter is compiling.
 After labels, imports and entry points have been resolved, all engine builds
 release that workspace and keep only the compiled instruction representation.
 Import-cache diagnostics check that parser state is still present before
@@ -273,10 +269,9 @@ largest table for every loaded model.
 
 ## Empty player slot safety
 
-All selectable profiles now require both remaining lives and a selected model name
-before automatically spawning a player at the start of a level. Game scripts
-may assign lives to an empty multiplayer slot before that player joins; the
-previous condition then tried to spawn an unnamed model and aborted the level.
+All selectable profiles require both remaining lives and a selected model name
+before automatically spawning a player at the start of a level. Script-assigned
+lives in an empty multiplayer slot do not load a model until the player joins.
 The empty slot remains available through the engines' existing join path. Each engine inventory identifies the affected source.
 
 ## Active content PAK aliases
@@ -294,7 +289,7 @@ buffers. It reads the current prepared archive without creating a second PAK
 file. Each engine inventory identifies the affected source.
 
 The glue also checks a packed game's directory and asset bounds before boot.
-A malformed PAK now returns a diagnostic instead of feeding index bytes to
+A malformed PAK returns a diagnostic instead of feeding index bytes to
 an engine parser. A uniform stale directory base can be recovered structurally:
 all entries must describe contiguous data exactly filling the archive, and two
 image signatures must corroborate the corrected positions. Gaps, overlaps,
@@ -418,7 +413,7 @@ during threaded playback. This remains a limitation of save/load/rewind.
 | Scope | Current difference | Source and evidence |
 |---|---|---|
 | Circle drawing, all engines | Replace the inherited circle routine with the port's integer geometry rasterizer, keeping each engine's pixel-writing interface, clipping and alpha handling. | `source/gamelib/draw.c`, `circle` / `obor_circle_emit`; [`obor_circle.h`](src/port/libretro/obor_circle.h). |
-| Endian helpers, all engines | Replace the historical SDL-derived endian implementation with fixed-width types; a 64-bit Windows `long` assumption no longer determines the width of a 64-bit conversion. | `source/gamelib/borendian.h`; [`obor_endian.h`](src/port/libretro/obor_endian.h). |
+| Endian helpers, all engines | Replace the historical SDL-derived endian implementation with fixed-width types; 64-bit conversions use explicit widths independently of the Windows `long` type. | `source/gamelib/borendian.h`; [`obor_endian.h`](src/port/libretro/obor_endian.h). |
 | ADPCM, shared replacement | Compile the port's IMA ADPCM encoder/decoder for the existing OpenBOR audio API. The inherited `adpcm.c` implementation is omitted from the export; the required upstream interface header is retained. | [`obor_adpcm.c`](src/port/libretro/obor_adpcm.c); [`Makefile.libretro`](src/engines/6391/Makefile.libretro); [provenance](PROVENANCE.md). |
 | halloc terms, WebM engines | Add a local `source/webmlib/halloc/LICENSE` containing the terms referenced by the original headers. This is a notice addition. | The 4432, 6391, 7533 and 8023 inventories; [provenance](PROVENANCE.md). |
 
@@ -439,19 +434,16 @@ code removal is not represented as a source edit. See each engine's
 
 ## Compiler warning cleanup
 
-The engine is built with `-Wall` on clang, and the exported sources now compile
-free of warnings on every target. The cleanup only restores intended behaviour;
-no structure layout changes, and the pack-state edits were verified with
-record-layout dumps to leave every type byte-identical:
+The engine is built with `-Wall` on Clang. Its type and alignment declarations
+preserve the intended behavior and structure layouts; record-layout dumps
+verify that the pack-state declarations leave every type byte-identical:
 
-- Headers that set a `#pragma pack` alignment for their own declarations now
+- Headers that set a `#pragma pack` alignment for their own declarations
   bracket it with `push`/`pop` (`openbor.h`, `source/gamelib/anigif.h`,
-  `source/gamelib/depends.h`), so including them no longer leaves the caller's
-  alignment modified. The packed declarations themselves are unchanged.
+  `source/gamelib/depends.h`), preserving the caller's alignment. The packed declarations themselves are unchanged.
 - The draw-method one-bit flags are declared `unsigned`; the engine assigns
   them `1`, which a signed one-bit field stores as `-1`.
-- Entry points that were declared with empty parentheses while their
-  definitions take parameters now carry real prototypes (`standard_palette`,
+- Entry points with parameters use matching prototypes (`standard_palette`,
   `inputrefresh`, `cache_model_sprites`, `free_model`, `StrCache_Pop`).
 - Command-list lookups and stored indices convert through `intptr_t`/`uintptr_t`
   instead of plain pointer casts; the values themselves are unchanged.
@@ -462,7 +454,7 @@ record-layout dumps to leave every type byte-identical:
   statements (always-true array checks, a self-comparison, a self-assignment,
   an unused local typedef) were removed.
 - Headers that only declared `inline` helpers whose definitions live in the
-  matching source file now declare ordinary functions (`ScriptVariant.h`,
+  matching source file declare ordinary functions (`ScriptVariant.h`,
   `source/gamelib/transform.h`).
 
 ## Script variable names
@@ -689,9 +681,7 @@ frontends and ordinary loads retain the forward execution path.
 This presentation rule is shared by all engines and state writers. A throttle
 label remains authoritative through failed restore callbacks; an old successful
 load is not used as a timeout that can restart the engine during held rewind.
-Ordinary loads sample live input immediately. The historical
-`OBOR_REVERSE_PRESENTATION=1` diagnostic is no longer required to select this
-behavior. Smart content and compression On remain the defaults on every target.
+Ordinary loads sample live input immediately. Playback direction applies without a diagnostic override. Smart content and compression On remain the defaults on every target.
 If rewind starts while model preparation still defers all restores, that
 preparation can finish before the first complete snapshot is restored. The
 playback-direction flag belongs to the current frontend session, is cleared on
@@ -828,13 +818,13 @@ lifetime, incoming mutable data and atomic rejection of invalid descriptors.
 
 ### Load-time state content and compression options
 
-Two options in the existing System category independently select resource
+Two options in the System category independently select resource
 reconstruction (Smart / Full) and compression (On / Off). The default is
-Smart + On on every platform, including Android and macOS. This writer default
-is independent of the existing platform policy for preparation, encoder
-maintenance, compression helpers and write tracking. Off with Smart uses the existing raw-mutable encoder;
-unchanged block proofs and reuse remain enabled. Full + Off uses the complete
-base writer with all common restoration and runtime-storage fixes.
+Smart + On. Writer selection is independent of the platform policy for
+preparation, encoder maintenance, compression helpers and write tracking.
+Smart + Off uses the raw-mutable encoder with unchanged-block proofs and reuse.
+Full + Off uses the complete base writer with common restoration and
+runtime-storage checks.
 
 The glue samples both options only at content load and passes the selection
 through the engine boot ABI. The selection belongs to excluded session runtime
@@ -844,20 +834,18 @@ validated by the reader's format and bounds, independently of the current
 writer's smaller capacity. Full sessions can open resource reconstruction
 services on demand to read a Smart state without changing their writer policy.
 
-All four combinations remain visible on every platform. A state whose module
+All four combinations are available on every platform. A state whose module
 address changed is refused before modifying live engine memory, regardless of
 the writer. It is not automatically converted to another format. This
-temporarily limits cross-process Smart and Full loads on macOS.
+limits cross-process Smart and Full loads on macOS.
 Authored runtime tests cover every profile and writer/reader combination,
 complete 200-frame image/PCM continuations and option latching through reset.
 
 ### Refuse module relocation without exact pointer metadata
 
-The former Full-state rebase scanned aligned memory words for numbers inside
-the saved module range. Integer pairs can have the same representation as a
-pointer, so this cannot prove which values need relocation. Both Full and
-Smart now require the saved and current module bases to match on every
-platform, before resource staging, worker shutdown or live-memory writes.
+Both Full and Smart require the saved and current module bases to match on
+every platform, before resource staging, worker shutdown or live-memory writes.
+The reader does not infer pointer identity from aligned integer values.
 Same-base loads retain their existing checks and behavior. Tests shift the
 declared module and segment addresses in valid raw and compressed snapshots
 for all published profiles and four writers; rejection must leave 200 frames of
@@ -984,8 +972,8 @@ historical union reads or malformed-input behavior.
 ## Script property names
 
 Text-property tables are searched within their actual bounds in every engine,
-without assuming alphabetical enumeration order. Two older tables separate
-previously concatenated time/x names; existing numeric selectors remain stable.
+without assuming alphabetical enumeration order. The two older tables contain separate
+time/x names while preserving their numeric selectors.
 
 ## Script preprocessor safety
 
@@ -1002,7 +990,7 @@ negative control proves an occupied arena is not reported as released.
 
 ### Historical runtime contracts
 
-The selected historical revision now controls coupled attack-type numbering,
+The selected historical revision controls coupled attack-type numbering,
 environmental damage, defense defaults, script numeric selectors, weapon update
 order, idle timing, shadow color conversion, native model-save loading,
 animation-command grouping, nested interpreter behavior, camera framing and
@@ -1035,8 +1023,7 @@ declarations and unlabelled inference retain their existing priority. See
 ## Script text object ownership
 
 Replacing a text object's contents reuses its existing owned storage in the
-older fixed-buffer implementations. Repeated updates no longer abandon that
-allocation. The earlier reuse path and later exact-size replacement path keep
+older fixed-buffer implementations. Repeated updates retain that allocation. The earlier reuse path and later exact-size replacement path keep
 their native behavior; tests check ownership across every retained profile.
 
 ## Script property error bounds

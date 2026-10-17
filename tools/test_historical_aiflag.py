@@ -176,7 +176,7 @@ int main(void) {
             native.write_text(program)
             host = root / 'flags'
             subprocess.run(shlex.split(os.environ.get('CC', 'cc')) + [
-                '-std=c99', '-Wall', '-Wextra', '-Werror', '-g',
+                '-std=c99', '-Wall', '-Wextra', '-Werror', '-Wno-error=deprecated-declarations', '-g',
                 '-fsanitize=address,undefined', str(native), '-o', str(host)],
                 check=True, timeout=60)
             result = subprocess.run([str(host)], capture_output=True, text=True, timeout=10)

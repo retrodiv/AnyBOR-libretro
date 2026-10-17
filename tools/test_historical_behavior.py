@@ -22,7 +22,7 @@ def native(program):
         source = work / 'probe.c'
         source.write_text(program)
         subprocess.run(shlex.split(os.environ.get('HOST_CC', 'cc')) + [
-            '-std=c11', '-Wall', '-Wextra', '-Werror', '-g',
+            '-std=c11', '-Wall', '-Wextra', '-Werror', '-Wno-error=deprecated-declarations', '-g',
             '-fsanitize=address,undefined', str(source), '-o', str(work / 'probe')],
             check=True, timeout=60)
         subprocess.run([str(work / 'probe')], check=True, timeout=20, cwd=work,
@@ -30,6 +30,15 @@ def native(program):
 
 
 class HistoricalBehaviorTests(unittest.TestCase):
+    def test_upstream_sdk_deprecations_remain_visible_warnings(self):
+        native('int legacy(void) __attribute__((deprecated("SDK API")));\n'
+               'int legacy(void) { return 0; }\n'
+               'int main(void) { return legacy(); }\n')
+
+    def test_unrelated_probe_warnings_remain_errors(self):
+        with self.assertRaises(subprocess.CalledProcessError):
+            native('int main(void) { int unused; return 0; }\n')
+
     def test_unary_numeric_and_unsupported_value_boundary(self):
         source = (ENGINE / 'source/scriptlib/ScriptVariant.c').read_text()
         methods = '\n'.join(function(source, name) for name in ('ScriptVariant_Pos', 'ScriptVariant_Neg'))

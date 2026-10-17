@@ -45,7 +45,7 @@ candidate remains compatible. Ordinary sidecar and unlabelled inference use
 automatic profiles only. See [the source-backed rules](docs/AUTO_SELECTION_RULES.md). Historical
 profiles also participate in Auto declarations and bounded content evidence.
 The first available revision at or above a declared build is used;
-without a declaration or usable evidence the existing fallback is unchanged.
+without a declaration or usable evidence, Auto uses its fallback profile.
 Builds newer than 8023 are best effort through the latest pinned v4 anchor;
 they are not claimed as universally compatible.
 
@@ -72,6 +72,6 @@ runtime compatibility claim.
 
 v3.0 6392-dev is a reconstruction of published test behavior, not its exact
 original sources. Its multihit correction defaults on, and its cheat menu can
-restore the former one-ID behavior. It accepts selection-screen title requests
+select one-ID behavior. It accepts selection-screen title requests
 through `gotomainmenu(9)` and the earlier `backtotitle(flag)` alias. Standalone
 controller and mod-menu changes are outside the libretro interface.

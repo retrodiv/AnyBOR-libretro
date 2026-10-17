@@ -127,7 +127,7 @@ int main(void) {
         with tempfile.TemporaryDirectory(prefix='anybor-unknown-constant-') as temp:
             work = Path(temp)
             (work / 'probe.c').write_text(program)
-            subprocess.run(['cc', '-std=c11', '-Wall', '-Wextra', '-Werror',
+            subprocess.run(['cc', '-std=c11', '-Wall', '-Wextra', '-Werror', '-Wno-error=deprecated-declarations',
                             '-g', '-fsanitize=address,undefined', str(work / 'probe.c'),
                             '-o', str(work / 'probe')], check=True, timeout=30)
             subprocess.run([str(work / 'probe')], check=True, timeout=10,

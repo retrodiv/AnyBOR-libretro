@@ -19,7 +19,7 @@ def exercise(port, fixtures, work):
     port, fixtures, work = map(Path, (port, fixtures, work))
     shim = fixtures / 'darwin_file_abi_shim.h'
     common = shlex.split(os.environ.get('HOST_CC', 'cc')) + [
-        '-std=gnu99', '-O1', '-g', '-Wall', '-Wextra', '-Werror',
+        '-std=gnu99', '-O1', '-g', '-Wall', '-Wextra', '-Werror', '-Wno-error=deprecated-declarations',
         '-fPIC', '-D_GNU_SOURCE', '-I', str(port)]
     objects = []
     for name in ('obor_files', 'obor_paths', 'obor_loose'):

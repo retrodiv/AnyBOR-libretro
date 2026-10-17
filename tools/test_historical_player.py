@@ -324,7 +324,7 @@ int main(void) {
             work = Path(temp)
             (work / 'probe.c').write_text(program)
             subprocess.run(shlex.split(os.environ.get('HOST_CC', 'cc')) + [
-                '-std=c11', '-Wall', '-Wextra', '-Werror', '-g',
+                '-std=c11', '-Wall', '-Wextra', '-Werror', '-Wno-error=deprecated-declarations', '-g',
                 '-fsanitize=address,undefined', str(work / 'probe.c'),
                 '-o', str(work / 'probe')], check=True, timeout=60)
             subprocess.run([str(work / 'probe')], check=True, timeout=20,

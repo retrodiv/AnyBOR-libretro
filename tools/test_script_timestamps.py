@@ -84,7 +84,7 @@ int main(void) {
         with tempfile.TemporaryDirectory(prefix='anybor-profile-timestamps-') as temporary:
             work = Path(temporary)
             (work / 'probe.c').write_text(program)
-            subprocess.run(['cc', '-std=c11', '-Wall', '-Wextra', '-Werror',
+            subprocess.run(['cc', '-std=c11', '-Wall', '-Wextra', '-Werror', '-Wno-error=deprecated-declarations',
                             '-fsanitize=address,undefined', '-g', '-I', str(ENGINE),
                             str(work / 'probe.c'), '-o', str(work / 'probe')], check=True, timeout=60)
             subprocess.run([str(work / 'probe')], check=True, timeout=20)

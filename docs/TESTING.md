@@ -177,8 +177,8 @@ physical controller pairing remains the frontend's responsibility.
 
 The native runtime regression also compiles authored historical player-property
 calls in every profile using engine 3842, on both sides of the rejected-value
-contract boundary. It separately checks complete script variable names across the former 24-byte
-boundary for every published profile. Names with the same prefix must remain
+contract boundary. It separately checks complete script variable names across the 24-byte
+prefix boundary for every published profile. Names with the same prefix must remain
 distinct, and the script must continue with the exact values stored in each
 name across LOAD, reset and a fresh host process. Native unit tests also check
 allocation failure, slot reuse and cleanup. Ordered level spawn scripts use

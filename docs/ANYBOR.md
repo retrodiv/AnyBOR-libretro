@@ -87,8 +87,8 @@ The macros account for the active character's facing direction.
 | Clear current game cache on unload | `obor_clear_game_cache` | **On**. In Development. Deletes the cache directories used by this game after unloading or closing the core. The next load rebuilds them; saved data is unaffected. |
 | Clear all game caches on load | `obor_clear_all_caches` | **On**. In Development. Empties `AnyBOR-cache/` before each load and before generating new cache files; saved data is unaffected. |
 
-The state options share the existing System category. Their defaults are
-**Smart + On on every platform**, including Android and macOS. Writer selection
+The state options are in the System category. Their defaults are
+**Smart + On**. Writer selection
 is independent of the platform runtime policy. Supported targets enable
 guarded dirty-page tracking, advance preparation and the synchronous compression
 helper, with bounded pool maintenance. Frequently written pages remain writable
@@ -100,9 +100,7 @@ games. All combinations can be selected on every platform; see the
 clean refusal whenever the core module address has changed, for both Smart
 and Full on every platform. The log reports `state module address differs`
 without changing the current game. macOS ASLR can therefore prevent loading
-after closing and reopening the frontend. This refusal is intentional and affects
-Full as well as Smart; choosing Full does not avoid it. This is a temporary
-limitation until exact relocation is available. Same-session rewind and
+after closing and reopening the frontend. The address check applies to both Full and Smart. Same-session rewind and
 restoration remain available. Loading a compatible Full state in Smart can
 also retain fewer reconstruction recipes and change capture cost or rewind
 duration. This is a performance limitation; saving again in Smart does not
@@ -144,7 +142,7 @@ other inferred requirements; manual selection overrides it.
 Build numbers and ranges require the word **Build**, followed by a space.
 Matching is case-insensitive and uses only the filename, not its parent path.
 **Build_6391**, **ReBuild 6391**, and unrelated numbers do not supply a build.
-The historical **v.2.1933** filename form remains supported separately.
+The **v.2.1933** filename form is supported separately.
 
 When no higher-priority clue supplies a build, a bounded PAK text scan combines
 known command, animation, native-function and literal-constant introductions
@@ -161,8 +159,8 @@ Imprecise filename tags can select them when no stable or automatic candidate
 remains compatible in the declared interval. Historical profiles 3780–3839
 participate in Auto: a declared build selects the first available revision at
 or above it, including declarations from an accompanying executable. Positive
-content bounds in this engine era use the same revisions. No declaration
-or usable evidence keeps the existing fallback. Native rules ignore comments and quoted
+content bounds in this engine era use the same revisions. Auto uses its fallback when neither a declaration
+nor usable evidence supplies a requirement. Native rules ignore comments and quoted
 prose. Preprocessor directives or a local declaration of a reviewed builtin
 make native evidence inconclusive; model evidence remains usable. This scan
 is a heuristic and does not certify a whole game or resolve dynamic arguments,
@@ -186,8 +184,8 @@ bindings and absent features establish no requirement. Ordinary unlabelled
 inference retains its existing fallback unless a modern dependency probe
 completed. Legacy API detection
 has its own 750 ms budget and bounded argument lookahead. Filesystem reads
-can still be delayed by the host storage. The older sparse token estimates
-remain a fallback when no exact syntax rule fires.
+can still be delayed by the host storage. Sparse token estimates
+supply a fallback when no exact syntax rule fires.
 
 Choose **v3.0 4453** explicitly or use a filename tagged **Build 4453** to select
 that profile. It uses 32-bit color and ignores `colourdepth`.
@@ -257,8 +255,7 @@ Paths below are relative to the frontend's **Save Files** directory:
 | `AnyBOR-cache/input-<8-hex>/` | Prepared content derived from the source archive. |
 | `anybor-license-notices.txt` | The complete notice dossier embedded in the loaded core; attempted in this directory when content is loaded. |
 
-The three cleanup options are grouped in **Development**, including on frontends
-with categorized Core Options. Turn both cache options Off to retain and reuse
+The three cleanup options are grouped in **Development**. Turn both cache options Off to retain and reuse
 cache files across sessions. Restart keeps the currently loaded cache available;
 load cleanup runs when loading content. The unload option also honors a change
 made in the frontend menu immediately before closing content.
@@ -273,9 +270,8 @@ script output, logs, screenshots and learned memory peaks for every profile.
 Other games and frontend save states remain intact. Script output explicitly
 written outside the game's folder is outside this cleanup operation.
 
-This layout replaces the earlier `AnyBOR/<engine>/` layout without migration.
-Old saves and the old `AnyBOR/prepared-v1/` and `AnyBOR/zipcache/` caches are no
-longer used and are left untouched.
+Only the paths listed above are used for saves and caches. Other directories
+are left untouched.
 
 The frontend places save-state files in its configured **Save States** directory.
 Ordinary engine saves use their own files rather than a libretro save-RAM block.
@@ -300,8 +296,13 @@ enabled; see [DEBUGGING.md](DEBUGGING.md). They are off by default.
 ## Geometry and timing
 
 The frontend frame rate is **60 Hz** and the audio sample rate is **44,100 Hz**.
-Geometry follows the game, with a declared maximum of 4096x4096. The default
-aspect ratio follows the game framebuffer. The CRT option changes frontend
+Geometry follows the game. The declared maximum uses the known content
+resolution, or 1920x1080 while the mode is unknown, and covers both the native
+raster and its CRT output. Larger modes expand the maximum on demand; smaller
+modes and CRT option changes reuse the existing allocation. Growth requests
+frontend AV-info support, with geometry-only updates as the fallback. Restored
+frames reannounce their geometry. The default aspect ratio follows the game
+framebuffer. The CRT option changes frontend
 framing as documented above; the frontend controls the physical display mode
 and interlacing.
 

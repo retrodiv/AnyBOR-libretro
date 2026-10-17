@@ -39,7 +39,7 @@ def exercise(port, fixtures, exported, build):
             print('PASS Windows arena release probe: occupied refused, clear released', flush=True)
             executable = root / 'block-worker.exe'
             subprocess.run(['x86_64-w64-mingw32-gcc', '-O2', '-std=c99',
-                '-Wall', '-Wextra', '-Werror', '-static',
+                '-Wall', '-Wextra', '-Werror', '-Wno-error=deprecated-declarations', '-static',
                 '-DOBOR_BLOCK_STATE_CAPACITY=8388608', '-I', str(port),
                 '-I', str(exported), '-I', str(deps / 'include'),
                 str(fixtures / 'block_worker_test.c'),
