@@ -21448,6 +21448,8 @@ void load_level(char *filename)
         //panels, normal neon screen
         for(i = 0; i < level->numpanels; i++)
         {
+            /* An undeclared panel keeps its order slot without binding a layer. */
+            if(order[i] < 0 || order[i] >= panelcount) continue;
             for(j = 0; j < 3; j++)
             {
                 if(panels[order[i]][j])

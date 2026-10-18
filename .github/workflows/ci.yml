@@ -18,7 +18,7 @@ jobs:
   build:
     needs: sources
     runs-on: ubuntu-24.04
-    timeout-minutes: 45
+    timeout-minutes: 90
     env:
       TARGET: ${{ matrix.target }}
       NUMPROC: 4
@@ -52,6 +52,7 @@ jobs:
         run: |
           python3 tools/run_guarded.py --memory-mib 1024 --seconds 180 -- make check
           python3 tools/run_guarded.py --memory-mib 1024 --seconds 180 -- python3 tools/test_historical_behavior.py
+          python3 tools/run_guarded.py --memory-mib 1024 --seconds 180 -- python3 tools/test_panel_order.py
           python3 tools/run_guarded.py --memory-mib 1024 --seconds 180 -- python3 tools/test_6392_profile.py
           python3 tools/run_guarded.py --memory-mib 1024 --seconds 180 -- python3 tools/test_branch_profiles.py
           python3 tools/run_guarded.py --memory-mib 1024 --seconds 180 -- python3 tools/test_property_error_lists.py
@@ -129,7 +130,7 @@ jobs:
 
   macos:
     needs: sources
-    timeout-minutes: 45
+    timeout-minutes: 90
     # Native Intel and Apple Silicon builds.  Both labels are GitHub-hosted
     # runner images: macos-15-intel is the x64 image and macos-15 the arm64
     # one.  The build and inspection steps mirror what libretro's osx-x64 and
@@ -176,6 +177,7 @@ jobs:
       - name: Exercise native runtime regressions
         run: |
           python3 tools/test_historical_behavior.py
+          python3 tools/test_panel_order.py
           python3 tools/test_6392_profile.py
           python3 tools/test_branch_profiles.py
           python3 tools/test_property_error_lists.py

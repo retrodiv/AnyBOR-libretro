@@ -17,7 +17,7 @@
       "upstream_sha256": null
     },
     "openbor.c": {
-      "distributed_sha256": "d83c453ca20074e8cacb127c822dde1d97d0a3702904d7ad7335ad63f4d11ca8",
+      "distributed_sha256": "63d6956c47f9d4c65d4a33ee4b4774866e3e80f3c72ddc5cc430904ef0bbe3a0",
       "modified": true,
       "summary": "Apply the port's engine corrections and select the PC video configuration on macOS. Derive output names from the content basename with explicit destination capacities, and reject overflowing output path joins. Leave multiplayer slots without a selected model available to join even if game scripts preassign lives to them. Let a missing basename-only PAK self-check read the active frontend content after it has been validated and prepared. Allocate each model's animation pointer table through the highest animation index that model uses, and bound cache, copy and cleanup paths to that capacity. Ignore optional defense and offense entries outside the configured attack-type range with a log warning before accessing their tables. Yield after each newly completed model during explicit model-list or level preparation, and defer states until that preparation has cleaned up its intermediate parsers and handles. Initialize all four RetroPads and repair legacy unbound player profiles without replacing custom bindings. Preserve divergent 7086 and 2021 7123 animation, combat, model, script-selector and menu contracts by logical profile, retaining safe storage and additive APIs.",
       "topics": [
@@ -29,6 +29,7 @@
         "loading-screen-presentation",
         "logical-profile-compatibility",
         "model-attack-type-bounds",
+        "panel-order-bounds",
         "record-dates-and-file-notices",
         "session-relative-filesystem"
       ],

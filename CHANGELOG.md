@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.63 — panel-order safety
+
+- Skip undeclared panel layers while preserving their slots in the level order.
+- Bound shutdown of guarded process trees, including descendants that ignore termination.
+- Allow complete platform regression groups to finish within the CI job budget.
+
 ## 0.1.61 — documentation
 
 - Generalize setup, compatibility and publishing guidance without product-specific examples.

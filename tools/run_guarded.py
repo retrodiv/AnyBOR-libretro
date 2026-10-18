@@ -53,6 +53,7 @@ def main():
     invocation = ['systemd-run', '--user', '--scope', '--quiet', '--unit=' + unit,
                   '-p', 'MemoryMax=%dM' % args.memory_mib, '-p', 'MemorySwapMax=0',
                   '-p', 'OOMPolicy=kill', '-p', 'TasksMax=128',
+                  '-p', 'TimeoutStopSec=2s', '-p', 'SendSIGKILL=yes',
                   '-p', 'RuntimeMaxSec=%ds' % args.seconds,
                   sys.executable, str(Path(__file__).resolve()), '--child',
                   '--memory-mib', str(args.memory_mib), '--seconds', str(args.seconds),

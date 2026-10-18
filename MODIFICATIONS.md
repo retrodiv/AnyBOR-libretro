@@ -687,6 +687,14 @@ preparation can finish before the first complete snapshot is restored. The
 playback-direction flag belongs to the current frontend session, is cleared on
 forward playback/reset/unload, and is never serialized into game history.
 
+## Panel order bounds
+
+Dynamic panel tables are indexed only for panels declared by the level.
+An order slot without a loaded panel keeps its position and contributes no
+render layer. Loaded panels, optional layers and repeated entries retain
+their bindings and offsets. Sanitizer fixtures exercise these boundaries
+in every engine with a dynamic panel table.
+
 ## Model attack type bounds
 
 Optional model `defense normalN` and `offense normalN` entries are checked
