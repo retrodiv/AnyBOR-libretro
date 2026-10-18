@@ -3,6 +3,7 @@
 SPDX-License-Identifier: BSD-3-Clause
 Copyright (c) 2026 retrodiv <retrodiv@proton.me>
 """
+import json
 import re
 import shlex
 
@@ -23,12 +24,39 @@ def select_profile_group(profiles, value):
     return profiles[len(profiles) * (index - 1) // count:len(profiles) * index // count]
 
 
+def expand_workflow_profile_groups(workflow):
+    """Expand only each job's explicit JSON group matrix for static auditing.
+
+    The local preflight consumes the same commands serially. CI runs each
+    group on a separate runner; expanding a group never launches a process.
+    """
+    groups = None
+    result = []
+    expression = '${{ matrix.profile_group }}'
+    for line in workflow.splitlines():
+        if re.fullmatch(r'  [A-Za-z0-9_-]+:', line):
+            groups = None
+        match = re.fullmatch(r'        profile_group: (\[.*\])', line)
+        if match:
+            groups = json.loads(match[1])
+            if (not groups or not all(isinstance(group, str) for group in groups)
+                    or len(set(groups)) != len(groups)):
+                raise ValueError('Invalid explicit CI profile group matrix')
+        if expression in line:
+            if not groups or not line.strip().startswith('python3 '):
+                raise ValueError('Unbound CI profile group expression')
+            result.extend(line.replace(expression, group) for group in groups)
+        else:
+            result.append(line)
+    return '\n'.join(result) + '\n'
+
+
 def check_workflow_groups(workflow, profiles):
     """Require complete bounded coverage in each native/emulated CI path."""
     scripts = ('tools/test_rewind.py', 'tools/test_state_options.py')
     paths = {(script, platform): [] for script in scripts
              for platform in ('linux', 'windows', 'macos')}
-    for line in workflow.splitlines():
+    for line in expand_workflow_profile_groups(workflow).splitlines():
         if not line.strip().startswith('python3 '):
             continue
         words = shlex.split(line)

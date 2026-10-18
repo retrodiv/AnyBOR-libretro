@@ -18,7 +18,7 @@ jobs:
   build:
     needs: sources
     runs-on: ubuntu-24.04
-    timeout-minutes: 90
+    timeout-minutes: 30
     env:
       TARGET: ${{ matrix.target }}
       NUMPROC: 4
@@ -81,14 +81,6 @@ jobs:
           sudo apt-get install -y ffmpeg
           python3 tools/run_guarded.py --memory-mib 2048 --seconds 900 -- python3 tools/smoke.py
           python3 tools/run_guarded.py --memory-mib 2048 --seconds 900 -- python3 tools/regression.py --webm
-          python3 tools/run_guarded.py --memory-mib 2048 --seconds 900 -- python3 tools/test_rewind.py --work-parent /var/tmp --profile-group 1/4
-          python3 tools/run_guarded.py --memory-mib 2048 --seconds 900 -- python3 tools/test_rewind.py --work-parent /var/tmp --profile-group 2/4
-          python3 tools/run_guarded.py --memory-mib 2048 --seconds 900 -- python3 tools/test_rewind.py --work-parent /var/tmp --profile-group 3/4
-          python3 tools/run_guarded.py --memory-mib 2048 --seconds 900 -- python3 tools/test_rewind.py --work-parent /var/tmp --profile-group 4/4
-          python3 tools/run_guarded.py --memory-mib 2048 --seconds 900 -- python3 tools/test_state_options.py --work-parent /var/tmp --profile-group 1/4
-          python3 tools/run_guarded.py --memory-mib 2048 --seconds 900 -- python3 tools/test_state_options.py --work-parent /var/tmp --profile-group 2/4
-          python3 tools/run_guarded.py --memory-mib 2048 --seconds 900 -- python3 tools/test_state_options.py --work-parent /var/tmp --profile-group 3/4
-          python3 tools/run_guarded.py --memory-mib 2048 --seconds 900 -- python3 tools/test_state_options.py --work-parent /var/tmp --profile-group 4/4
           python3 tools/run_guarded.py --memory-mib 2048 --seconds 900 -- python3 tools/test_multiplayer.py
           python3 tools/run_guarded.py --memory-mib 2048 --seconds 900 -- python3 tools/test_crt.py
           python3 tools/run_guarded.py --memory-mib 2048 --seconds 300 -- python3 tools/test_geometry.py --core anybor_libretro.so
@@ -111,14 +103,6 @@ jobs:
           sudo apt-get install -y wine64 wine
           python3 tools/run_guarded.py --memory-mib 1024 --seconds 180 -- python3 tools/test_windows_workers.py
           python3 tools/run_guarded.py --memory-mib 2048 --seconds 900 -- python3 tools/smoke.py --core anybor_libretro.dll --windows --runner wine
-          python3 tools/run_guarded.py --memory-mib 2048 --seconds 900 -- python3 tools/test_rewind.py --core anybor_libretro.dll --windows --runner wine --keep-wine-server --work-parent /var/tmp --profile-group 1/4
-          python3 tools/run_guarded.py --memory-mib 2048 --seconds 900 -- python3 tools/test_rewind.py --core anybor_libretro.dll --windows --runner wine --keep-wine-server --work-parent /var/tmp --profile-group 2/4
-          python3 tools/run_guarded.py --memory-mib 2048 --seconds 900 -- python3 tools/test_rewind.py --core anybor_libretro.dll --windows --runner wine --keep-wine-server --work-parent /var/tmp --profile-group 3/4
-          python3 tools/run_guarded.py --memory-mib 2048 --seconds 900 -- python3 tools/test_rewind.py --core anybor_libretro.dll --windows --runner wine --keep-wine-server --work-parent /var/tmp --profile-group 4/4
-          python3 tools/run_guarded.py --memory-mib 2048 --seconds 900 -- python3 tools/test_state_options.py --core anybor_libretro.dll --windows --runner wine --keep-wine-server --work-parent /var/tmp --profile-group 1/4
-          python3 tools/run_guarded.py --memory-mib 2048 --seconds 900 -- python3 tools/test_state_options.py --core anybor_libretro.dll --windows --runner wine --keep-wine-server --work-parent /var/tmp --profile-group 2/4
-          python3 tools/run_guarded.py --memory-mib 2048 --seconds 900 -- python3 tools/test_state_options.py --core anybor_libretro.dll --windows --runner wine --keep-wine-server --work-parent /var/tmp --profile-group 3/4
-          python3 tools/run_guarded.py --memory-mib 2048 --seconds 900 -- python3 tools/test_state_options.py --core anybor_libretro.dll --windows --runner wine --keep-wine-server --work-parent /var/tmp --profile-group 4/4
           python3 tools/run_guarded.py --memory-mib 2048 --seconds 300 -- python3 tools/test_geometry.py --core anybor_libretro.dll --windows --runner wine
       - uses: actions/upload-artifact@v4
         with:
@@ -130,7 +114,7 @@ jobs:
 
   macos:
     needs: sources
-    timeout-minutes: 90
+    timeout-minutes: 30
     # Native Intel and Apple Silicon builds.  Both labels are GitHub-hosted
     # runner images: macos-15-intel is the x64 image and macos-15 the arm64
     # one.  The build and inspection steps mirror what libretro's osx-x64 and
@@ -186,14 +170,6 @@ jobs:
           python3 tools/test_write_watch.py
           python3 tools/smoke.py --core anybor_libretro.dylib
           python3 tools/regression.py --core anybor_libretro.dylib
-          python3 tools/test_rewind.py --core anybor_libretro.dylib --work-parent /var/tmp --profile-group 1/4
-          python3 tools/test_rewind.py --core anybor_libretro.dylib --work-parent /var/tmp --profile-group 2/4
-          python3 tools/test_rewind.py --core anybor_libretro.dylib --work-parent /var/tmp --profile-group 3/4
-          python3 tools/test_rewind.py --core anybor_libretro.dylib --work-parent /var/tmp --profile-group 4/4
-          python3 tools/test_state_options.py --core anybor_libretro.dylib --work-parent /var/tmp --profile-group 1/4
-          python3 tools/test_state_options.py --core anybor_libretro.dylib --work-parent /var/tmp --profile-group 2/4
-          python3 tools/test_state_options.py --core anybor_libretro.dylib --work-parent /var/tmp --profile-group 3/4
-          python3 tools/test_state_options.py --core anybor_libretro.dylib --work-parent /var/tmp --profile-group 4/4
           python3 tools/test_multiplayer.py --core anybor_libretro.dylib
           python3 tools/test_crt.py --core anybor_libretro.dylib
           python3 tools/test_geometry.py --core anybor_libretro.dylib
@@ -211,3 +187,106 @@ jobs:
             .build/dist/${{ matrix.target }}/link.map
           include-hidden-files: true
           if-no-files-found: error
+
+  state-linux:
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        profile_group: ["1/4", "2/4", "3/4", "4/4"]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@v4
+        with:
+          name: anybor-linux-x86_64
+          path: .build/ci-package
+      - name: Verify and unpack the exact built core
+        run: python3 tools/unpack_ci_core.py --target linux-x86_64
+      - name: Enable bounded test scopes
+        run: |
+          sudo systemctl start "user@$(id -u).service"
+          echo "XDG_RUNTIME_DIR=/run/user/$(id -u)" >> "$GITHUB_ENV"
+          echo "DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/$(id -u)/bus" >> "$GITHUB_ENV"
+      - name: Exercise grouped Linux rewind contracts
+        run: |
+          python3 tools/run_guarded.py --memory-mib 2048 --seconds 900 -- python3 tools/test_rewind.py --work-parent /var/tmp --profile-group '${{ matrix.profile_group }}'
+      - name: Exercise grouped Linux state options
+        run: |
+          python3 tools/run_guarded.py --memory-mib 2048 --seconds 900 -- python3 tools/test_state_options.py --work-parent /var/tmp --profile-group '${{ matrix.profile_group }}'
+
+  state-windows:
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        profile_group: ["1/4", "2/4", "3/4", "4/4"]
+    env:
+      WINEDEBUG: '-all'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@v4
+        with:
+          name: anybor-windows-x86_64
+          path: .build/ci-package
+      - name: Verify and unpack the exact built core
+        run: python3 tools/unpack_ci_core.py --target windows-x86_64
+      - name: Install Wine and test host compiler
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y wine64 wine gcc-mingw-w64-x86-64
+          sudo systemctl start "user@$(id -u).service"
+          echo "XDG_RUNTIME_DIR=/run/user/$(id -u)" >> "$GITHUB_ENV"
+          echo "DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/$(id -u)/bus" >> "$GITHUB_ENV"
+      - name: Exercise grouped Windows rewind contracts
+        run: |
+          python3 tools/run_guarded.py --memory-mib 2048 --seconds 900 -- python3 tools/test_rewind.py --core anybor_libretro.dll --windows --runner wine --keep-wine-server --work-parent /var/tmp --profile-group '${{ matrix.profile_group }}'
+      - name: Exercise grouped Windows state options
+        run: |
+          python3 tools/run_guarded.py --memory-mib 2048 --seconds 900 -- python3 tools/test_state_options.py --core anybor_libretro.dll --windows --runner wine --keep-wine-server --work-parent /var/tmp --profile-group '${{ matrix.profile_group }}'
+
+  state-macos:
+    needs: macos
+    runs-on: ${{ matrix.platform.runner }}
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        profile_group: ["1/4", "2/4", "3/4", "4/4"]
+        platform:
+          - runner: macos-15-intel
+            target: macos-x86_64
+          - runner: macos-15
+            target: macos-arm64
+    env:
+      ANYBOR_TEST_EVIDENCE_DIR: .build/native-test-evidence
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@v4
+        with:
+          name: anybor-${{ matrix.platform.target }}
+          path: .build/ci-package
+      - name: Verify and unpack the exact built core
+        run: python3 tools/unpack_ci_core.py --target "${{ matrix.platform.target }}"
+      - name: Exercise grouped macOS rewind contracts
+        run: |
+          python3 tools/test_rewind.py --core anybor_libretro.dylib --work-parent /var/tmp --profile-group '${{ matrix.profile_group }}'
+      - name: Exercise grouped macOS state options
+        run: |
+          python3 tools/test_state_options.py --core anybor_libretro.dylib --work-parent /var/tmp --profile-group '${{ matrix.profile_group }}'
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: anybor-state-evidence-${{ matrix.platform.target }}-${{ strategy.job-index }}
+          path: .build/native-test-evidence/
+          include-hidden-files: true
+          if-no-files-found: warn

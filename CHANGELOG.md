@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.64 — CI runtime scheduling
+
+- Run complete state-contract profile groups on independent runners using the
+  exact packaged core, with separate rewind and state-option timing steps.
+
 ## 0.1.63 — panel-order safety
 
 - Skip undeclared panel layers while preserving their slots in the level order.
