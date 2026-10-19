@@ -43,6 +43,32 @@ static uint32_t owned_stub(void *data,uint32_t size,obor_state_ranges *ranges)
 #include "capture_under_test.inc"
 static int accepts_old_state(const void *data,size_t size)
 { return size>=16 && !memcmp(data,"OBC1",4); }
+
+/* A frontend can alternate caller buffers even when captures fail. Their
+ * rejected contents must not depend on two different earlier snapshots. */
+static void alternating_refusals(int owned,int fail)
+{
+    enum { extent=65536, attempts=63 };
+    unsigned char slots[2][extent+32];
+    obor_state_ranges ranges={0};
+    for(int slot=0;slot<2;slot++) {
+        memset(slots[slot],0xa5,sizeof(slots[slot]));
+        memset(slots[slot]+16,slot?0x7f:0x31,extent);
+        memcpy(slots[slot]+16,"OBC1",4);
+    }
+    behavior=fail;g_booted=1;
+    for(int i=0;i<attempts;i++) {
+        unsigned char *data=slots[i%2]+16;
+        assert(!serialize_capture(data,extent,owned?&ranges:NULL));
+        assert(!accepts_old_state(data,extent));
+        for(size_t j=0;j<16;j++) {
+            assert(slots[i%2][j]==0xa5);
+            assert(slots[i%2][16+extent+j]==0xa5);
+        }
+        if(i)assert(!memcmp(slots[0]+16,slots[1]+16,extent));
+    }
+}
+
 int main(void)
 {
     unsigned char buf[96], before[96];real_buffer=buf+16;real_extent=64;
@@ -53,22 +79,28 @@ int main(void)
         behavior=fail;assert(!serialize_capture(real_buffer,real_extent,owned?&ranges:NULL));
         assert(!accepts_old_state(real_buffer,real_extent));
         for(size_t i=0;i<sizeof(buf);i++){
-            unsigned char want=i>=16&&i<20?0:before[i];
-            if(fail==2&&i>=20&&i<24)want=0x77;
+            unsigned char want=i>=16&&i<16+real_extent?0:before[i];
             assert(buf[i]==want);
         }
         behavior=0;assert(serialize_capture(real_buffer,real_extent,owned?&ranges:NULL)==64);
         assert(accepts_old_state(real_buffer,real_extent));
+        assert(!memcmp(buf,before,sizeof(buf)));
+        alternating_refusals(owned,fail);
     }
     for(size_t n=0;n<9;n++){
         memset(buf,0xa5,sizeof(buf));behavior=1;
         assert(!serialize_capture(buf+16,n,NULL));
-        for(size_t i=0;i<sizeof(buf);i++)assert(buf[i]==(i>=16&&i<16+(n<4?n:4)?0:0xa5));
+        for(size_t i=0;i<sizeof(buf);i++)assert(buf[i]==(i>=16&&i<16+n?0:0xa5));
     }
     behavior=1;assert(!serialize_capture(NULL,64,NULL));
     g_booted=0;memset(buf,0xa5,sizeof(buf));assert(!serialize_capture(buf+16,64,NULL));
-    assert(!memcmp(buf+16,"\0\0\0\0",4));
+    for(size_t i=0;i<sizeof(buf);i++)assert(buf[i]==(i>=16&&i<80?0:0xa5));
+#if SIZE_MAX > UINT32_MAX
+    g_booted=1;memset(buf,0xa5,sizeof(buf));
+    assert(!serialize_capture(buf+16,(size_t)UINT32_MAX+1,NULL));
+    for(size_t i=0;i<sizeof(buf);i++)assert(buf[i]==(i>=16&&i<20?0:0xa5));
+#endif
     assert(observed>0&&reset>0);
-    puts("PASS: refused, partial, oversized, owned, loading, NULL,0..8bounds and successful recovery");
+    puts("PASS: canonical alternating refusals, partial/oversized/owned/loading/NULL, bounds and unchanged successful recovery");
     return 0;
 }

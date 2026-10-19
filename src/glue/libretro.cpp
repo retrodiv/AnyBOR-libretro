@@ -3055,9 +3055,12 @@ static uint32_t serialize_capture(void *data, size_t size, obor_state_ranges *ra
     if (!written && g_booted && queue_state_fault()) ok = false;
     if (!ok && data && size) {
         /* Stock rewind may enqueue this buffer despite the failed callback.
-         * Invalidate both raw OBS and coded OBC headers so an older complete
-         * capture left in the same allocation can never load silently. */
-        memset(data, 0, size < sizeof(uint32_t) ? size : sizeof(uint32_t));
+         * Give supported buffers one invalid representation: alternating
+         * stale payloads would otherwise produce large deltas during loading.
+         * Requests outside the engine's uint32_t API retain header-only
+         * invalidation; their full extent cannot be passed to the engine. */
+        size_t clear_size = size <= UINT32_MAX ? size : sizeof(uint32_t);
+        memset(data, 0, clear_size);
     }
     if (g_profile.file) {
         uint64_t heap = 0;

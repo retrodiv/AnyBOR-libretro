@@ -158,6 +158,44 @@ jobs:
           if [ "$(lipo -info anybor_libretro.dylib | grep -c '${{ matrix.arch }}')" = 0 ]; then
             echo "wrong architecture in the built dylib"; exit 1
           fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: anybor-${{ matrix.target }}
+          path: |
+            dist/*.zip
+            dist/*.zip.sha256
+            .build/native-test-evidence/
+            .build/dist/${{ matrix.target }}/anybor_libretro.dylib.sym
+            .build/dist/${{ matrix.target }}/link.map
+          include-hidden-files: true
+          if-no-files-found: error
+
+  macos-regressions:
+    needs: macos
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-15-intel
+            target: macos-x86_64
+          - runner: macos-15
+            target: macos-arm64
+    runs-on: ${{ matrix.runner }}
+    env:
+      TARGET: ${{ matrix.target }}
+      ANYBOR_TEST_EVIDENCE_DIR: .build/native-test-evidence
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@v4
+        with:
+          name: anybor-${{ matrix.target }}
+          path: .build/ci-package
+      - name: Verify and unpack the exact built core
+        run: python3 tools/unpack_ci_core.py --target "$TARGET"
       - name: Exercise native runtime regressions
         run: |
           python3 tools/test_historical_behavior.py
@@ -178,15 +216,10 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: anybor-${{ matrix.target }}
-          path: |
-            dist/*.zip
-            dist/*.zip.sha256
-            .build/native-test-evidence/
-            .build/dist/${{ matrix.target }}/anybor_libretro.dylib.sym
-            .build/dist/${{ matrix.target }}/link.map
+          name: anybor-macos-regressions-evidence-${{ matrix.target }}
+          path: .build/native-test-evidence/
           include-hidden-files: true
-          if-no-files-found: error
+          if-no-files-found: warn
 
   state-linux:
     needs: build

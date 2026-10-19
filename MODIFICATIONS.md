@@ -874,19 +874,23 @@ SDK cross-links alone do not reproduce every native Apple linker behavior.
 
 ### Failed capture buffers and manifest storage
 
-The common libretro capture boundary invalidates the first four available
-output bytes on failure, for every engine and writer. A frontend that inserts a
-buffer despite a failed callback must not mistake an earlier valid capture for
-a new one. Raw and coded readers reject the invalid header before live engine
-mutation. Successful images keep their existing format and bytes. No accessible
-bytes exist to invalidate for a null or zero-length output buffer. This cannot
-cover a frontend rejecting a size before calling the core at all.
+The common libretro capture boundary clears the complete supported output
+buffer on failure, for every engine and writer. Alternating caller buffers
+therefore contain the same invalid representation, avoiding repeated large
+deltas from stale payloads in frontends that retain refused captures. Raw and
+coded readers reject the invalid header before live engine mutation.
+Successful images keep their existing format and bytes. Requests larger than
+the engine's 32-bit size API retain four-byte header invalidation. Null and
+zero-length output buffers provide no bytes to clear. A frontend that rejects
+a size without calling the core remains outside this boundary.
 
 The public state-options regression retains a valid buffer, requests an
 undersized capture, tries to load that same full allocation, and requires
 refusal. Two hundred subsequent video callbacks and complete PCM must match an
-uninterrupted reference before a valid load verifies recovery. All published profiles
-profiles and four writers run this probe. Nested model-preload regressions also
+uninterrupted reference before a valid load verifies recovery. All published
+profiles and four writers run this probe. Synthetic caller buffers cover early,
+partial and oversized refusals, repeated alternation, bounds and unchanged
+successful recovery. Nested model-preload regressions also
 exercise full-capacity refusals and reject their buffers after preparation ends.
 
 Resource manifests reserve storage with the catalogue's existing bounded

@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.65 — rewind history and native CI scheduling
+
+- Clear supported capture buffers when saving a state fails, keeping refused
+  captures stable for frontends that retain them in rewind history.
+- Publish native macOS test packages after build and inspection; run baseline
+  regressions and state-contract groups on workers using the verified package.
+
 ## 0.1.64 — CI runtime scheduling
 
 - Run complete state-contract profile groups on independent runners using the
