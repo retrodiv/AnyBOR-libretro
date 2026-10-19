@@ -1,16 +1,19 @@
-/* AnyBOR modification record: 2026-10-17.
+/* AnyBOR modification record: 2026-10-19.
  * Port maintained by retrodiv <retrodiv@proton.me>.
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
  * Upstream code retains its original license and notices.
  * Keep the dormant constant-lowering diagnostic compatible with the single-
- * value instruction layout. Derive output names from the content basename
- * with explicit destination capacities, and reject overflowing output path
- * joins. Compact compiler-only instruction records after resolving value
- * ownership, preserving branch and export anchors, all mutable values and
- * exactly-once pool cleanup. Resolve text-property names within the actual
- * table bounds while preserving native numeric selectors. Reuse each text
- * object's owned buffer when replacing its contents.
+ * value instruction layout. Map every early profile's native system-variable
+ * namespace and numeric IDs, attack staydown return type and shutdown
+ * message argument; bound cache access and reject formats requiring absent
+ * variadic arguments. Derive output names from the content basename with
+ * explicit destination capacities, and reject overflowing output path joins.
+ * Compact compiler-only instruction records after resolving value ownership,
+ * preserving branch and export anchors, all mutable values and exactly-once
+ * pool cleanup. Resolve text-property names within the actual table bounds
+ * while preserving native numeric selectors. Reuse each text object's owned
+ * buffer when replacing its contents.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/4086.md
  * at the source repository root. Original notices follow below.
@@ -47,6 +50,7 @@
 
 #include "openborscript.h"
 #include "openbor.h"
+#include "libretroport.h"
 #include "soundmix.h"
 #include "globals.h"
 #include "ImportCache.h"
@@ -1833,6 +1837,7 @@ static const char *svlist[] =
     "in_level",
     "in_load_game",
     "in_menuscreen",
+    "in_enginecreditsscreen",
     "in_new_game",
     "in_options",
     "in_selectscreen",
@@ -1909,16 +1914,41 @@ static const char *svlist[] =
 
 
 // ===== openborvariant =====
+static int obor_systemvariant_available(int property)
+{
+    return obor_profile_build >= 4095 || property != _sv_in_enginecreditsscreen;
+}
+
+static int obor_systemvariant_native(int property)
+{
+    if(property < 0 || property >= _sv_the_end) return _sv_the_end;
+    if(obor_profile_build < 4095 && property >= _sv_in_enginecreditsscreen)
+        ++property;
+    return property < _sv_the_end ? property : _sv_the_end;
+}
+
 int mapstrings_systemvariant(ScriptVariant **varlist, int paramCount)
 {
-    char *propname;
-    int prop;
-
-
-    MAPSTRINGS(varlist[0], svlist, _sv_the_end,
-               "openborvariant: System variable name not found: '%s'\n");
-
-    return 1;
+    int logical = 0;
+    if(paramCount < 1) return 0;
+    if(varlist[0]->vt != VT_STR) return 1;
+    char *name = StrCache_GetIfPresent(varlist[0]->strVal);
+    if(!name) return 0;
+    /* Walk only available names within the actual table, preserving their
+     * original numeric positions without an out-of-range search lookahead. */
+    for(int native = 0; native < _sv_the_end; ++native)
+    {
+        if(!obor_systemvariant_available(native)) continue;
+        if(!stricmp(svlist[native], name))
+        {
+            ScriptVariant_ChangeType(varlist[0], VT_INTEGER);
+            varlist[0]->lVal = logical;
+            return 1;
+        }
+        ++logical;
+    }
+    printf("openborvariant: System variable name not found: '%s'\n", name);
+    return 0;
 }
 
 //sample function, used for getting a system variant
@@ -1939,7 +1969,7 @@ HRESULT openbor_systemvariant(ScriptVariant **varlist , ScriptVariant **pretvar,
     //you can check the argument type if you like
     if(varlist[0]->vt == VT_INTEGER)
     {
-        variantindex = varlist[0]->lVal;
+        variantindex = obor_systemvariant_native(varlist[0]->lVal);
     }
     else
     {
@@ -1982,7 +2012,7 @@ HRESULT openbor_changesystemvariant(ScriptVariant **varlist , ScriptVariant **pr
     //you can check the argument type if you like
     if(arg->vt == VT_INTEGER)
     {
-        variantindex = arg->lVal;
+        variantindex = obor_systemvariant_native(arg->lVal);
     }
     else
     {
@@ -4988,8 +5018,16 @@ HRESULT openbor_getentityproperty(ScriptVariant **varlist , ScriptVariant **pret
             (*pretvar)->lVal = (LONG)attack->sealtime;
             break;
         case _ep_attack_staydown:
-            ScriptVariant_ChangeType(*pretvar, VT_PTR);
-            (*pretvar)->ptrVal = (VOID *)(uintptr_t)attack->staydown.rise;
+            if(obor_profile_build >= 4101)
+            {
+                ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
+                (*pretvar)->lVal = (LONG)attack->staydown.rise;
+            }
+            else
+            {
+                ScriptVariant_ChangeType(*pretvar, VT_PTR);
+                (*pretvar)->ptrVal = (VOID *)(uintptr_t)attack->staydown.rise;
+            }
             break;
         case _ep_attack_steal:
             ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
@@ -13160,6 +13198,7 @@ clperror:
 HRESULT openbor_shutdown(ScriptVariant **varlist , ScriptVariant **pretvar, int paramCount)
 {
     LONG ltemp = 0;
+    char *message = DEFAULT_SHUTDOWN_MESSAGE;
 
     *pretvar = NULL;
 
@@ -13172,7 +13211,23 @@ HRESULT openbor_shutdown(ScriptVariant **varlist , ScriptVariant **pretvar, int 
         goto shutdown_error;
     }
 
-    shutdown((int)ltemp,  paramCount > 1 ? StrCache_Get(varlist[0]->strVal) : (DEFAULT_SHUTDOWN_MESSAGE));
+    if(paramCount > 1)
+    {
+        int index = varlist[obor_profile_build >= 4100 ? 1 : 0]->strVal;
+        message = StrCache_GetIfPresent(index);
+        if(!message) goto shutdown_error;
+        /* Scripts provide no variadic arguments. Preserve defined %% escapes,
+         * and reject formats that would read arguments the caller never passed. */
+        for(const char *p = message; *p; ++p)
+        {
+            if(*p == '%')
+            {
+                if(p[1] != '%') goto shutdown_error;
+                ++p;
+            }
+        }
+    }
+    shutdown((int)ltemp, message);
 
     return S_OK;
 shutdown_error:

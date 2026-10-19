@@ -1,14 +1,15 @@
-/* AnyBOR modification record: 2026-10-10.
+/* AnyBOR modification record: 2026-10-19.
  * Port maintained by retrodiv <retrodiv@proton.me>.
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
  * Upstream code retains its original license and notices.
  * Push canonical constants, release parser-only instruction data, and pack
  * compiled instructions, values, and call references into exact contiguous
- * storage. Compact compiler-only instruction records after resolving value
- * ownership, preserving branch and export anchors, all mutable values and
- * exactly-once pool cleanup. Allocate parser state only while compiling and
- * release it once runtime instructions are ready.
+ * storage. Clear resolved compile-only import nodes without changing
+ * compiled call targets. Compact compiler-only instruction records after
+ * resolving value ownership, preserving branch and export anchors, all
+ * mutable values and exactly-once pool cleanup. Allocate parser state only
+ * while compiling and release it once runtime instructions are ready.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/4086.md
  * at the source repository root. Original notices follow below.
@@ -955,6 +956,7 @@ HRESULT Interpreter_CompileInstructions(Interpreter *pinterpreter, List *exports
     StackedSymbolTable_Clear(&(pinterpreter->theSymbolTable));
     List_Clear(&(pinterpreter->theDataStack));
     List_Clear(&(pinterpreter->theLabelStack));
+    List_Clear(&(pinterpreter->theImportList));
 
     if (SUCCEEDED(hr)) obor_script_compact_executable(pinterpreter, exports);
     size = pinterpreter->theInstructionList.size;

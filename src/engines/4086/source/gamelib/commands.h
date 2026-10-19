@@ -1,3 +1,15 @@
+/* AnyBOR modification record: 2026-10-19.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Declare the shared level alpha-mask command without changing the model
+ * command namespace.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/4086.md
+ * at the source repository root. Original notices follow below.
+ */
+
 /*
  * OpenBOR - http://www.LavaLit.com
  * -
@@ -135,6 +147,7 @@ typedef enum levelCommand
     CMD_LEVEL_LOADINGBG = 1,
     CMD_LEVEL_MUSICFADE,
     CMD_LEVEL_MUSIC,
+    CMD_LEVEL_ALPHAMASK,
     CMD_LEVEL_AT,
     CMD_LEVEL_AT_SCRIPT,
     CMD_LEVEL_ALLOWSELECT,

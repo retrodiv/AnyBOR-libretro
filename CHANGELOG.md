@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.1.68 — early profile fidelity
+
+- Add five source-backed early profiles and their native script, image, layer,
+  audio and menu contracts, with exact-only eligibility for the unofficial
+  development snapshot and automatic selection for official releases.
+- Preserve original system-variable numbering, native argument and result
+  contracts, palette refusals and media introduction boundaries per profile.
+- Bound cache, format, path and PNG access, retain strict sprite validation and
+  release temporary parser, layer and audio ownership safely.
+- Check each profile against independent observations from its own upstream
+  source and record the origin of imported media components.
+
 ## 0.1.67 — content checks for unavailable exact profiles
 
 - Check exact filename Build tags without their own profile against proved

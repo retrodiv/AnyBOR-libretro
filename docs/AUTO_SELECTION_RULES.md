@@ -11,6 +11,10 @@ the existing routing is retained; this does not establish compatibility.
 This check applies to prepared PACK content with a complete numeric Build tag,
 not to the separate legacy v2 filename form.
 
+Exact-only development profiles are available through their exact filename
+Build tag or a manual core option. They are excluded from imprecise-tag triage,
+replacement candidates and ordinary sidecar or unlabelled inference.
+
 An imprecise tag, such as Build 44XX or Build 3792-3911, is
 intersected with the supported content evidence. The highest stable or automatic
 profile inside the resulting compatible interval wins. Development profiles are

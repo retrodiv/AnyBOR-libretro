@@ -1,3 +1,15 @@
+/* AnyBOR modification record: 2026-10-19.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Decode true-color background PNG data with bounded reads, checked row
+ * sizes and owned error cleanup.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/4086.md
+ * at the source repository root. Original notices follow below.
+ */
+
 /*
  * OpenBOR - http://www.LavaLit.com
  * -----------------------------------------------------------------------
@@ -7,6 +19,8 @@
  */
 
 #include <png.h>
+#include <limits.h>
+#include <stdint.h>
 #include "types.h"
 #include "screen.h"
 #include <assert.h>
@@ -26,14 +40,16 @@ static void png_warning_fn(png_structp png_ptr, png_const_charp warning_msg)
 {
 }
 
+typedef struct { const unsigned char *data; size_t remaining; } obor_png_input;
 static void png_read_fn(png_structp pngp, png_bytep outp, png_size_t size)
 {
-    char **ptr = (char **)png_get_io_ptr(pngp);
-    memcpy(outp, *ptr, size);
-    *ptr += size;
+    obor_png_input *input = (obor_png_input *)png_get_io_ptr(pngp);
+    if(size > input->remaining) png_error(pngp, "Truncated PNG input.");
+    memcpy(outp, input->data, size);
+    input->data += size;
+    input->remaining -= size;
 }
-
-s_screen *pngToScreen(const void *data)
+s_screen *pngToScreenSized(const void *data, size_t size)
 {
     png_structp png_ptr;
     png_infop info_ptr;
@@ -41,7 +57,8 @@ s_screen *pngToScreen(const void *data)
     png_uint_32 width, height;
     int bit_depth, color_type, interlace_type, y;
     u32 *line;
-    s_screen *image;
+    s_screen * volatile image = NULL;
+    obor_png_input input = {(const unsigned char *)data, size};
 
     png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
     if(png_ptr == NULL)
@@ -59,10 +76,13 @@ s_screen *pngToScreen(const void *data)
         goto error2;
     }
 
-    png_set_read_fn(png_ptr, &data, png_read_fn);
+    png_set_read_fn(png_ptr, &input, png_read_fn);
     png_set_sig_bytes(png_ptr, sig_read);
     png_read_info(png_ptr, info_ptr);
     png_get_IHDR(png_ptr, info_ptr, &width, &height, &bit_depth, &color_type, &interlace_type, NULL, NULL);
+
+    if(!width || !height || width > INT_MAX || height > INT_MAX ||
+       (size_t)width > SIZE_MAX / 4 / height) goto error2;
 
     png_set_strip_16(png_ptr);
     png_set_packing(png_ptr);
@@ -74,6 +94,8 @@ s_screen *pngToScreen(const void *data)
     {
         png_set_expand_gray_1_2_4_to_8(png_ptr);
     }
+    if(color_type == PNG_COLOR_TYPE_GRAY || color_type == PNG_COLOR_TYPE_GRAY_ALPHA)
+        png_set_gray_to_rgb(png_ptr);
     if(png_get_valid(png_ptr, info_ptr, PNG_INFO_tRNS))
     {
         png_set_tRNS_to_alpha(png_ptr);
@@ -83,6 +105,9 @@ s_screen *pngToScreen(const void *data)
 #else
     png_set_filler(png_ptr, 0xff, PNG_FILLER_AFTER);
 #endif
+
+    png_read_update_info(png_ptr, info_ptr);
+    if(png_get_rowbytes(png_ptr, info_ptr) != (size_t)width * 4) goto error2;
 
     image = allocscreen(width, height, PIXEL_32);
     if(image == NULL)
@@ -101,10 +126,23 @@ s_screen *pngToScreen(const void *data)
     return image;
 
 error2:
-    png_destroy_read_struct(&png_ptr, NULL, NULL);
+    if(image)
+    {
+        s_screen *owned = image;
+        freescreen(&owned);
+    }
+    png_destroy_read_struct(&png_ptr, &info_ptr, NULL);
 error:
     return NULL;
 }
+
+/* Only the dormant standalone SDL adapter lacks a member length. */
+#ifndef LIBRETRO
+s_screen *pngToScreen(const void *data)
+{
+    return pngToScreenSized(data, SIZE_MAX);
+}
+#endif
 
 #ifdef SDL
 SDL_Surface *pngToSurface(const void *data)

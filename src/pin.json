@@ -1,7 +1,7 @@
 {
   "core_name": "AnyBOR",
   "core_basename": "anybor_libretro",
-  "version": "0.1.67",
+  "version": "0.1.68",
   "fallback_build": "6391",
   "profiles": [
     {
@@ -149,9 +149,66 @@
       "major": "v3.0"
     },
     {
+      "build": "4088",
+      "engine": "4086",
+      "major": "v3.0",
+      "automatic": false,
+      "tagged": true,
+      "stage": "dev",
+      "triage": false,
+      "upstream_commit": "d63250cc20d0da2b245a2944bc794738f671beb2",
+      "upstream_date": "2014-11-14",
+      "upstream_branch": "legacy trunk",
+      "covers": "Exact Build tag or core option only; excluded from weak-tag and content triage"
+    },
+    {
+      "build": "4107",
+      "engine": "4086",
+      "major": "v3.0",
+      "automatic": true,
+      "tagged": true,
+      "upstream_commit": "61e9cea92e0c1e48ca4002a79b9349d8fd9583ab",
+      "upstream_date": "2015-02-04",
+      "upstream_branch": "legacy trunk",
+      "covers": "4087-4107 automatically; exact filename tag or core option"
+    },
+    {
+      "build": "4111",
+      "engine": "4086",
+      "major": "v3.0",
+      "automatic": true,
+      "tagged": true,
+      "upstream_commit": "317aad23dd260044611cb4310950ffcfe0816a8c",
+      "upstream_date": "2015-03-17",
+      "upstream_branch": "legacy trunk",
+      "covers": "4108-4111 automatically; exact filename tag or core option"
+    },
+    {
+      "build": "4129",
+      "engine": "4086",
+      "major": "v3.0",
+      "automatic": true,
+      "tagged": true,
+      "upstream_commit": "4ba373691cac1ae12bc0dbdeec132b7abb2eadc2",
+      "upstream_date": "2015-03-24",
+      "upstream_branch": "legacy trunk",
+      "covers": "4112-4129 automatically; exact filename tag or core option"
+    },
+    {
+      "build": "4153",
+      "engine": "4086",
+      "major": "v3.0",
+      "automatic": true,
+      "tagged": true,
+      "upstream_commit": "4a276c8b81fe0fc96d0f98b0e535da802c7417f7",
+      "upstream_date": "2015-04-23",
+      "upstream_branch": "legacy trunk",
+      "covers": "4130-4153 automatically; exact filename tag or core option"
+    },
+    {
       "build": "4432",
       "engine": "4432",
-      "covers": "4087-4432",
+      "covers": "4154-4432",
       "major": "v3.0"
     },
     {

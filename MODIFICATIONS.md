@@ -310,14 +310,16 @@ cancellation release all owned buffers. Read-only programs therefore avoid a
 second full archive allocation without bypassing the configured program or
 changing its instructions, resource limits or cache identity.
 
-Auto preserves manual choices and declared historical profiles. Otherwise it
-checks script API support before ordinary filename, adjacent EXE or vocabulary
-heuristics. A literal call to `getentityproperty(..., "attack", ...)` requires
-the legacy API available through pinned build 4086: 4432 and later reject this
-property during compilation. The bounded script scan ignores comments and
-quoted prose, handles nested first arguments and selects 4086 for this generic
-compatibility condition. No game or script digest selects this correction.
-Manual engine selection still takes precedence.
+Manual choices and available exact filename profiles retain their existing
+priority. Imprecise declarations and unavailable exact profiles are checked
+against proved content requirements. A literal call to
+`getentityproperty(..., "attack", ...)` requires the native API through build
+4166; build 4167 and later reject it. The bounded scan ignores comments and
+quoted prose and handles nested first arguments. Triage intersects that
+requirement with the declaration; without a higher-priority declaration, the
+legacy preflight selects 4086. Exact-only development snapshots are excluded
+from triage alternatives and ordinary inference. No game or script digest
+selects a compatibility correction.
 
 Filename build tags accept a numeric prefix followed by trailing `X` digits.
 The selector picks the highest automatic profile inside that interval
@@ -486,7 +488,7 @@ in their respective files.
 
 | Capability or change | Behaviour and current implementation |
 |---|---|
-| Selectable engine profiles | Core Options offers v3.0 3400, v3.0 3780, v3.0 3783, v3.0 3789, v3.0 3793, v3.0 3797, v3.0 3805, v3.0 3814, v3.0 3818, v3.0 3822, v3.0 3824, v3.0 3829, v3.0 3831, v3.0 3837, v3.0 3839, v3.0 3842, v3.0 4086, v3.0 4432, v3.0 4453, v3.0 6330, v3.0 6391, v3.0 6392-dev, v3.0 6412-dev, v3.0 6510-dev, v3.0 7086-dev, v3.0 7123-dev, v4.0 7142-alpha, v4.0 7533 and v4.0 8023-dev. Auto uses build tags and content clues. Each profile retains its compatibility behavior and save directory. [`obor_abi.h`](src/glue/obor_abi.h), [`obor_engines.h`](src/glue/obor_engines.h), [`tools/build.py`](tools/build.py). |
+| Selectable engine profiles | Core Options offers v3.0 3400, v3.0 3780, v3.0 3783, v3.0 3789, v3.0 3793, v3.0 3797, v3.0 3805, v3.0 3814, v3.0 3818, v3.0 3822, v3.0 3824, v3.0 3829, v3.0 3831, v3.0 3837, v3.0 3839, v3.0 3842, v3.0 4086, v3.0 4088-dev, v3.0 4107, v3.0 4111, v3.0 4129, v3.0 4153, v3.0 4432, v3.0 4453, v3.0 6330, v3.0 6391, v3.0 6392-dev, v3.0 6412-dev, v3.0 6510-dev, v3.0 7086-dev, v3.0 7123-dev, v4.0 7142-alpha, v4.0 7533 and v4.0 8023-dev. Auto uses build tags and content clues. Each profile retains its compatibility behavior and save directory. [`obor_abi.h`](src/glue/obor_abi.h), [`obor_engines.h`](src/glue/obor_engines.h), [`tools/build.py`](tools/build.py). |
 | Automatic engine selection | An explicit core option takes precedence; otherwise inspect legacy script API requirements, filename tags, nearby executables as data, and PAK content tokens, then use the pinned fallback. Selection is rerun on Reset. [`libretro.cpp`](src/glue/libretro.cpp), `decide_engine`, `pick_anchor`, `build_from_content`; [`obor_markers.h`](src/glue/obor_markers.h). |
 | Frontend-owned frame delivery | Run the engine main loop on a libco coroutine, yield at video submission, and advance an emulated microsecond clock. Sleep/input-wait paths also yield so frontend input remains live. [`libretroport.c`](src/port/libretro/libretroport.c), [`libretroport.h`](src/port/libretro/libretroport.h), [`timer.c`](src/port/libretro/timer.c). |
 | Video and audio backends | Convert engine video to XRGB8888, publish geometry, and pull engine audio through the frontend. [`video.c`](src/port/libretro/video.c), [`video.h`](src/port/libretro/video.h), [`vga.h`](src/port/libretro/vga.h), [`sblaster.c`](src/port/libretro/sblaster.c), [`sblaster.h`](src/port/libretro/sblaster.h). |

@@ -192,6 +192,61 @@
       "basis": "Own pinned original getter source"
     },
     {
+      "profile": "4088",
+      "engine": "4086",
+      "supported": true,
+      "source_commit": "d63250cc20d0da2b245a2944bc794738f671beb2",
+      "source_path": "engine/openborscript.c",
+      "source_sha256": "4be42b223e003565531d785e6182127d75307e4e0625028b7e03e2ab124ffa45",
+      "reference": "https://github.com/DCurrent/openbor/blob/d63250cc20d0da2b245a2944bc794738f671beb2/engine/openborscript.c#L4728",
+      "exact_original": true,
+      "basis": "Own exact original getter source"
+    },
+    {
+      "profile": "4107",
+      "engine": "4086",
+      "supported": true,
+      "source_commit": "61e9cea92e0c1e48ca4002a79b9349d8fd9583ab",
+      "source_path": "engine/openborscript.c",
+      "source_sha256": "e5d9a0ead8eb12b03c586042ea5dcab290c8e414d8b8f456256340eed72f0306",
+      "reference": "https://github.com/DCurrent/openbor/blob/61e9cea92e0c1e48ca4002a79b9349d8fd9583ab/engine/openborscript.c#L4729",
+      "exact_original": true,
+      "basis": "Own exact original getter source"
+    },
+    {
+      "profile": "4111",
+      "engine": "4086",
+      "supported": true,
+      "source_commit": "317aad23dd260044611cb4310950ffcfe0816a8c",
+      "source_path": "engine/openborscript.c",
+      "source_sha256": "e5d9a0ead8eb12b03c586042ea5dcab290c8e414d8b8f456256340eed72f0306",
+      "reference": "https://github.com/DCurrent/openbor/blob/317aad23dd260044611cb4310950ffcfe0816a8c/engine/openborscript.c#L4729",
+      "exact_original": true,
+      "basis": "Own exact original getter source"
+    },
+    {
+      "profile": "4129",
+      "engine": "4086",
+      "supported": true,
+      "source_commit": "4ba373691cac1ae12bc0dbdeec132b7abb2eadc2",
+      "source_path": "engine/openborscript.c",
+      "source_sha256": "e5d9a0ead8eb12b03c586042ea5dcab290c8e414d8b8f456256340eed72f0306",
+      "reference": "https://github.com/DCurrent/openbor/blob/4ba373691cac1ae12bc0dbdeec132b7abb2eadc2/engine/openborscript.c#L4729",
+      "exact_original": true,
+      "basis": "Own exact original getter source"
+    },
+    {
+      "profile": "4153",
+      "engine": "4086",
+      "supported": true,
+      "source_commit": "4a276c8b81fe0fc96d0f98b0e535da802c7417f7",
+      "source_path": "engine/openborscript.c",
+      "source_sha256": "e5d9a0ead8eb12b03c586042ea5dcab290c8e414d8b8f456256340eed72f0306",
+      "reference": "https://github.com/DCurrent/openbor/blob/4a276c8b81fe0fc96d0f98b0e535da802c7417f7/engine/openborscript.c#L4729",
+      "exact_original": true,
+      "basis": "Own exact original getter source"
+    },
+    {
       "profile": "4432",
       "engine": "4432",
       "supported": false,

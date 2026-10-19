@@ -1,3 +1,14 @@
+/* AnyBOR modification record: 2026-10-19.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Expose the native media mixer layout to the cutscene decoder.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/4086.md
+ * at the source repository root. Original notices follow below.
+ */
+
 /*
  * OpenBOR - http://www.chronocrash.com
  * -----------------------------------------------------------------------
@@ -17,6 +28,35 @@
 **
 **	Also plays WAV files (unsigned, mono, both 8-bit and 16-bit).
 */
+
+// 20:12 fixed-point conversion macros.
+// The maximum size of a sound is linked directly
+// to the range of the fixed-point variables!
+#define		INT_TO_FIX(i)		((unsigned int)i<<12)
+#define		FIX_TO_INT(f)		((unsigned int)f>>12)
+#define		MAX_SOUND_LEN		0xFFFFF
+#define		CHANNEL_PLAYING		1
+#define		CHANNEL_LOOPING		2
+#define		MUSIC_NUM_BUFFERS	4
+#define		MUSIC_BUF_SIZE		(16*1024)	// In samples
+#define		SOUND_MONO			1
+#define		SOUND_STEREO		2
+
+typedef struct
+{
+    int            active;
+    int            paused;
+    short 		   *buf[MUSIC_NUM_BUFFERS];
+    unsigned int   fp_playto[MUSIC_NUM_BUFFERS];
+    unsigned int   fp_samplepos;  // Position (fixed-point)
+    unsigned int   fp_period;	  // Period (fixed-point)
+    int			   playing_buffer;
+    int            volume[2];
+    int            channels;
+} musicchannelstruct;
+
+extern musicchannelstruct musicchannel;
+extern int playfrequency;
 
 void sound_stop_playback();
 int sound_start_playback(int bits, int frequency);

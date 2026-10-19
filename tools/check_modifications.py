@@ -44,9 +44,19 @@ def check_modifications(root, pin):
             if changed != data["modified"]:
                 raise RuntimeError("Incorrect modification flag: " + rel)
             allowed = {"upstream_sha256", "distributed_sha256", "modified", "topics",
-                       "summary", "origin"}
+                       "summary", "origin", "source_import"}
             if set(data) - allowed:
                 raise RuntimeError("Unexpected file attribution fields: " + rel)
+            if "source_import" in data:
+                origin = data["source_import"]
+                if (not isinstance(origin, dict) or
+                        set(origin) != {"build", "commit", "sha256", "repository"} or
+                        data["upstream_sha256"] is not None or
+                        origin["repository"].removesuffix(".git") != manifest["repository"].removesuffix(".git") or
+                        not re.fullmatch(r"[0-9a-f]{64}", origin["sha256"]) or
+                        not any(p["build"] == origin["build"] and
+                                p.get("upstream_commit") == origin["commit"] for p in pin["profiles"])):
+                    raise RuntimeError("Invalid imported source provenance: " + rel)
             references = data.get("topics", [])
             if references != sorted(set(references)) or set(references) - topics:
                 raise RuntimeError("Unknown or duplicate modification topic: " + rel)

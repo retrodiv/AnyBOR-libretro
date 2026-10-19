@@ -84,7 +84,7 @@ LIB_SRCS    = $(wildcard source/*.c) \
 # backend uses it for cutscene frames (absent in pre-webm eras)
 YUV_SRCS    = $(wildcard source/webmlib/yuv.c)
 
-# webm cutscenes: eras that ship vidplay.c (>= 4432) get the full decoder
+# WebM cutscenes: selected trees that ship vidplay.c get the full decoder
 # stack — nestegg demuxer + halloc + the pinned static libvpx. The engine
 # gates all playback code on -DWEBM.
 WEBM_MAIN   = $(wildcard source/webmlib/vidplay.c)
@@ -143,7 +143,7 @@ all: partial
 # Everything this engine needs (its code, its libretro port layer, its
 # static libs) is partial-linked with the malloc wraps resolved inside,
 # then every symbol except the obor_* ABI is localized and the ABI gets a
-# per-build suffix. The glue links seven of these into one traditional core.
+# per-build suffix. The glue links these into one traditional core.
 # inside OBJDIR: linux and windows builds share the tree — a common output
 # path would let concurrent/interleaved builds overwrite each other's partial
 PARTIAL     = $(OBJDIR)/obor_engine_$(BUILD_NUM).o

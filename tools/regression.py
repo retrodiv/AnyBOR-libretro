@@ -319,7 +319,7 @@ def main():
                 video_pak = work / "video.pak"
                 make_fixture.write_pak(video_pak, video_members)
                 kind = ("WebM with audio" if audio else "WebM without audio") + " {0}x{1}".format(width, height)
-                for engine in ("4432", "6412", "8023"):
+                for engine in ("4153", "4432", "6412", "8023"):
                     physical = next(p["engine"] for p in profiles if p["build"] == engine)
                     movie_sources = root / "src/engines" / physical / "source/webmlib"
                     if not (movie_sources / "vidplay.c").is_file():

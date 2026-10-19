@@ -1,10 +1,10 @@
-/* AnyBOR modification record: 2026-09-12.
+/* AnyBOR modification record: 2026-10-19.
  * Port maintained by retrodiv <retrodiv@proton.me>.
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
  * Upstream code retains its original license and notices.
- * Declare the cache and variant helpers as ordinary functions; the header
- * only declared them inline and the definitions live in ScriptVariant.c.
+ * Declare the bounded string-cache lookup used by native script entry
+ * points.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/4086.md
  * at the source repository root. Original notices follow below.
@@ -51,6 +51,7 @@ void StrCache_Clear();
 void StrCache_Collect(int index);
 int StrCache_Pop();
 CHAR *StrCache_Get(int index);
+CHAR *StrCache_GetIfPresent(int index);
 void StrCache_Copy(int index, CHAR *str);
 void StrCache_NCopy(int index, CHAR *str, int n);
 void ScriptVariant_Clear(ScriptVariant *var);

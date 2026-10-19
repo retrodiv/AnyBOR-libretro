@@ -7,13 +7,16 @@
  * independent sprite reconstruction proof. Validate PCX sprite signatures
  * before using header dimensions. Preserve native palette-only filename
  * probing, three-plane refusals and final RGB table conversion without
- * interpreting palette bytes as sprite dimensions.
+ * interpreting palette bytes as sprite dimensions. Select the native
+ * indexed-image failure boundary and provide bounded true-color PNG
+ * background loading.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/4086.md
  * at the source repository root. Original notices follow below.
  */
 
 #include "obor_resources.h"
+#include "libretroport.h"
 
 /*
  * OpenBOR - http://www.chronocrash.com
@@ -1180,7 +1183,7 @@ int loadscreen(char *filename, char *packfile, unsigned char *pal, int format, s
         if((*screen) == NULL)
         {
             closeimage();
-            assert(0);
+            if(obor_profile_build < 4094) assert(0);
             return 0;
         }
     }
@@ -1197,11 +1200,55 @@ int loadscreen(char *filename, char *packfile, unsigned char *pal, int format, s
     if(!result)
     {
         freescreen(screen);
-        assert(0);
+        if(obor_profile_build < 4094) assert(0);
         return 0;
     }
     return 1;
 }
+
+int loadscreen32(char *filename, char *packfile, s_screen **screen)
+{
+    extern s_screen *pngToScreenSized(const void *, size_t);
+    void *data;
+    int handle, filesize;
+    char fnam[128];
+#ifdef VERBOSE
+    printf("loadscreen called packfile: %s, filename %s\n", packfile, filename);
+#endif
+    if((*screen))
+    {
+        freescreen(screen);
+    }
+
+    if((handle = openpackfile(filename, packfile)) == -1)
+    {
+        if(snprintf(fnam, sizeof(fnam), "%s.png", filename) >= (int)sizeof(fnam)) return 0;
+        if((handle = openpackfile(fnam, packfile)) == -1)
+        {
+            return 0;
+        }
+    }
+    filesize = seekpackfile(handle, 0, SEEK_END);
+    if(filesize <= 0 || seekpackfile(handle, 0, SEEK_SET) != 0)
+    {
+        closepackfile(handle);
+        return 0;
+    }
+    data = malloc(filesize);
+    if (!data || readpackfile(handle, data, filesize) != filesize)
+    {
+        closepackfile(handle);
+        free(data);
+        return 0;
+    }
+    closepackfile(handle);
+
+    (*screen) = pngToScreenSized(data, (size_t)filesize);
+    free(data);
+    if (!(*screen)) return 0;
+    return 1;
+}
+
 
 s_bitmap *loadbitmap(char *filename, char *packfile, int format)
 {

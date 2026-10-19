@@ -1,10 +1,11 @@
-/* AnyBOR modification record: 2026-09-12.
+/* AnyBOR modification record: 2026-10-19.
  * Port maintained by retrodiv <retrodiv@proton.me>.
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
  * Upstream code retains its original license and notices.
  * Allocate collision pointer slots through the highest author-facing index
- * used by each collection. Track each model's allocated animation-table
+ * used by each collection. Declare the native media decoder interface for
+ * the early profile family. Track each model's allocated animation-table
  * capacity and reject lookups outside it.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/4086.md
@@ -45,6 +46,10 @@
 #include	"rand32.h"
 #include	"sblaster.h"
 #include	"soundmix.h"
+
+#ifdef WEBM
+#include "vidplay.h"
+#endif
 #include	"control.h"
 #include	"draw.h"
 #include	"packfile.h"

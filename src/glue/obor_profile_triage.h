@@ -106,6 +106,7 @@ static int profile_triage_select(const filename_build_interval *interval, int le
     uint64_t best_distance = UINT64_MAX;
     for (size_t i = 0; i < sizeof(kProfiles) / sizeof(kProfiles[0]); ++i) {
         const obor_profile_def *p = &kProfiles[i];
+        if (!p->triage) continue;
         if (p->build < interval->lower || p->build > interval->upper) continue;
         uint64_t distance = profile_triage_distance(p, legacy);
         bool preferred = profile_triage_preferred(p);
@@ -136,6 +137,7 @@ static int profile_triage_exact_select(int declared, int legacy)
     uint64_t closest = UINT64_MAX;
     for (size_t i = 0; i < sizeof(kProfiles) / sizeof(kProfiles[0]); ++i) {
         const obor_profile_def *p = &kProfiles[i];
+        if (!p->triage) continue;
         if (profile_triage_distance(p, legacy)) continue;
         uint64_t distance = p->build < declared ? (uint64_t)declared - p->build :
                                                  (uint64_t)p->build - declared;

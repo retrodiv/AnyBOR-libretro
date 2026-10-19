@@ -60,9 +60,9 @@ class ContentTriageTests(unittest.TestCase):
             self.assertNotIn('filename triage', log)
 
     def test_missing_exact_profile_checks_literal_entity_animation_getter(self):
-        for tag in ('4153', '4300', '4444'):
+        for tag in ('4199', '4300', '4444'):
             profile, log = self.script(tag, 'void main(){getentityproperty(self,"animation");}')
-            self.assertEqual(profile, 4086, log)
+            self.assertEqual(profile, 4153, log)
             self.assertIn('name=animation bounds=1-4201', log)
 
     def test_missing_exact_profile_checks_proved_model_requirements(self):
@@ -83,7 +83,7 @@ class ContentTriageTests(unittest.TestCase):
         self.assertNotIn('candidate 4086 conflicts', log)
 
     def test_missing_exact_profile_requires_one_candidate_to_satisfy_all_facts(self):
-        profile, log = self.script('4153',
+        profile, log = self.script('4199',
             'void main(){getentityproperty(self,"animation");movie_load("x");}')
         self.assertEqual(profile, 4432, log)
         self.assertIn('no profile satisfies all proved requirements', log)
@@ -93,13 +93,13 @@ class ContentTriageTests(unittest.TestCase):
 
     def test_missing_exact_profile_keeps_the_existing_legacy_preflight(self):
         profile, log = self.script('4300', 'void main(){getentityproperty(self,"attack",0);}')
-        self.assertEqual(profile, 4086, log)
+        self.assertEqual(profile, 4153, log)
         self.assertIn('legacy-attack bounds=1-4166', log)
 
     def test_missing_exact_profile_tag_grammar_keeps_leading_zeroes(self):
         source = 'void main(){getentityproperty(self,"animation");}'
-        self.assertEqual(self.script('00004153', source)[0], 4086)
-        for tag in ('4153_extra', '4153extra', '4153-'):
+        self.assertEqual(self.script('00004199', source)[0], 4153)
+        for tag in ('4199_extra', '4199extra', '4199-'):
             _, log = self.script(tag, source)
             self.assertNotIn('filename exact triage', log, tag)
 
@@ -132,10 +132,10 @@ class ContentTriageTests(unittest.TestCase):
                 'void main(){getentityproperty(self,"animation" + suffix);}',
                 'void getentityproperty(int a,int b){} void main(){getentityproperty(0,"animation");}',
                 '#define ALIAS 1\nvoid main(){getentityproperty(self,"animation");}'):
-            self.assertEqual(self.script('4153', source)[0], 4432, source)
-        profile, log = self.script('4153',
+            self.assertEqual(self.script('4199', source)[0], 4432, source)
+        profile, log = self.script('4199',
             'void main(){getentityproperty(getlocalvar("self"),"animation");}')
-        self.assertEqual(profile, 4086, log)
+        self.assertEqual(profile, 4153, log)
 
     def test_animation_getter_contract_matches_each_profile_source_observation(self):
         fixture = json.loads((Path(__file__).parent / 'fixtures' /
@@ -153,10 +153,25 @@ class ContentTriageTests(unittest.TestCase):
             self.assertEqual(bool(int(actual)), row['supported'], row)
 
     def test_official_automatic_build_coverage(self):
-        for tag, expected in (('4433',4453),('4452',4453),('4453',4453),
+        for tag, expected in (('4087',4107),('4088',4088),('4089',4107),
+                              ('4107',4107),('4108',4111),('4111',4111),
+                              ('4112',4129),('4129',4129),('4130',4153),
+                              ('4153',4153),('4154',4432),
+                              ('4433',4453),('4452',4453),('4453',4453),
                               ('4454',6330),('6000',6330),('6330',6330),
                               ('6331',6391),('6393',6391),('6411',6391)):
             self.assertEqual(self.select(tag)[0], expected)
+
+    def test_early_compatible_alias_retains_filename_priority_over_legacy_preflight(self):
+        profile, log = self.script('4108',
+            'void main(){getentityproperty(self,"attack",0);}')
+        self.assertEqual(profile, 4111, log)
+        self.assertIn('(filename tag)', log)
+
+    def test_exact_only_profile_does_not_enter_weak_tag_triage(self):
+        self.assertEqual(self.select('4088')[0], 4088)
+        self.assertEqual(self.select('4088-4088')[0], 4107)
+        self.assertEqual(self.select('408X')[0], 4086)
 
     def test_palette_requirement_excludes_only_the_incompatible_revision(self):
         for text in (b'colourdepth 8bit\n', b'colourdepth 16bit\n', b'remap a.gif b.gif\n'):
@@ -194,7 +209,7 @@ class ContentTriageTests(unittest.TestCase):
 
     def test_legacy_api_intersects_the_declared_interval(self):
         profile,log=self.script('4XXX','void main(){getentityproperty(self,"attack",0);}')
-        self.assertEqual(profile,4086)
+        self.assertEqual(profile,4153)
         self.assertIn('legacy-attack bounds=1-4166',log)
 
     def test_comments_prose_dynamic_arguments_and_local_binding_are_inconclusive(self):

@@ -2189,9 +2189,10 @@ static void decide_engine(void)
     }
     int declared_anchor = filename_build > 0 && declared_build_has_variants(filename_build)
         ? pick_anchor(filename_build) : 0;
-    /* An automatic alias must not change the legacy-API preflight priority
-     * of an ordinary later build declaration. Earlier contracts support it. */
-    bool filename_profile_enabled = declared_anchor != 0 && filename_build <= 4086;
+    /* Early aliases retain the legacy API through its original upper bound.
+     * A later candidate must still pass the existing preflight priority. */
+    bool filename_profile_enabled = declared_anchor != 0 &&
+        filename_build <= 4166 && declared_anchor <= 4166;
     int exact_tagged_profile = 0;
     for (size_t i = 0; i < sizeof(kProfiles) / sizeof(kProfiles[0]); ++i)
         if (kProfiles[i].build == filename_build && kProfiles[i].tagged &&

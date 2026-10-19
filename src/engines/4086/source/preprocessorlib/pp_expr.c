@@ -1,3 +1,15 @@
+/* AnyBOR modification record: 2026-10-19.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Release the temporary preprocessor expression after obtaining its boolean
+ * result.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/4086.md
+ * at the source repository root. Original notices follow below.
+ */
+
 /*
  * OpenBOR - http://www.LavaLit.com
  * -----------------------------------------------------------------------
@@ -549,12 +561,15 @@ int pp_expr_eval(pp_expr *self)
  */
 int pp_expr_eval_expression(pp_parser *parser)
 {
+    int result;
     pp_expr *expression = pp_expr_parse(parser, false);
     if(expression == NULL)
     {
         return -1;
     }
     pp_expr_fix_precedence(expression);
-    return pp_expr_eval(expression) ? 1 : 0;
+    result = pp_expr_eval(expression) ? 1 : 0;
+    pp_expr_destroy(expression);
+    return result;
 }
 

@@ -1,11 +1,12 @@
 # OpenBOR (AnyBOR)
 
 AnyBOR is an independent libretro core for OpenBOR games, offering selectable
-engine profiles: v3.0 3400, v3.0 3780, v3.0 3783, v3.0 3789, v3.0 3793, v3.0 3797,
-v3.0 3805, v3.0 3814, v3.0 3818, v3.0 3822, v3.0 3824, v3.0 3829, v3.0 3831,
-v3.0 3837, v3.0 3839, v3.0 3842, v3.0 4086, v3.0 4432, v3.0 4453, v3.0 6330,
-v3.0 6391, v3.0 6392-dev, v3.0 6412-dev, v3.0 6510-dev, v3.0 7086-dev, v3.0 7123-dev, v4.0 7142-alpha,
-v4.0 7533 and v4.0 8023-dev.
+engine profiles: v3.0 3400, v3.0 3780, v3.0 3783, v3.0 3789, v3.0 3793, v3.0
+3797, v3.0 3805, v3.0 3814, v3.0 3818, v3.0 3822, v3.0 3824, v3.0 3829, v3.0
+3831, v3.0 3837, v3.0 3839, v3.0 3842, v3.0 4086, v3.0 4088-dev, v3.0 4107,
+v3.0 4111, v3.0 4129, v3.0 4153, v3.0 4432, v3.0 4453, v3.0 6330, v3.0 6391,
+v3.0 6392-dev, v3.0 6412-dev, v3.0 6510-dev, v3.0 7086-dev, v3.0 7123-dev,
+v4.0 7142-alpha, v4.0 7533 and v4.0 8023-dev.
 Auto uses build tags and content clues to choose a profile. You can select one
 manually when a game needs it. See [choosing a profile](HISTORICAL_PROFILES.md).
 OpenBOR and Beats of Rage originate with Senile Team and OpenBOR Team; the port
@@ -118,8 +119,10 @@ Filename build tags may end in unknown digits. Auto analyzes the content
 within that interval, then chooses the highest compatible stable or automatic
 profile. With no narrower evidence, **Build 4XXX** selects 4453 and **Build 6XXX**
 selects 6391. Palette conversion or 8/16-bit output excludes 4453; old boomerang
-commands can constrain the 63XX interval to 6330. A development profile is considered
-when no compatible stable or automatic profile remains in the interval.
+commands can constrain the 63XX interval to 6330. A triage-eligible development
+profile is considered when no compatible stable or automatic profile remains
+in the interval. Exact-only development profiles require their complete Build
+tag or a manual core option.
 **Build 42XX** has no available profile inside 4200–4299 and routes above it to 4432.
 Lowercase `x` also works. See [content rules](AUTO_SELECTION_RULES.md).
 

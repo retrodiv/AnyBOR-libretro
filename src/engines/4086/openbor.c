@@ -1,23 +1,26 @@
-/* AnyBOR modification record: 2026-10-15.
+/* AnyBOR modification record: 2026-10-19.
  * Port maintained by retrodiv <retrodiv@proton.me>.
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
  * Upstream code retains its original license and notices.
  * Apply the port's engine corrections and select the PC video configuration
- * on macOS. Derive output names from the content basename with explicit
- * destination capacities, and reject overflowing output path joins. Leave
- * multiplayer slots without a selected model available to join even if game
- * scripts preassign lives to them. Let a missing basename-only PAK self-
- * check read the active frontend content after it has been validated and
- * prepared. Allocate each model's animation pointer table through the
- * highest animation index that model uses, and bound cache, copy and cleanup
- * paths to that capacity. Ignore optional defense and offense entries
- * outside the configured attack-type range with a log warning before
- * accessing their tables. Yield after each newly completed model during
- * explicit model-list or level preparation, and defer states until that
- * preparation has cleaned up its intermediate parsers and handles. Resize
- * repeated weapon lists and detach borrowed lists before replacing their
- * entries.
+ * on macOS. Select native early system-selector values, credit rendering and
+ * active flags, true-color background and layer-mask admission, scene video
+ * commands, menu flags and controller-assignment key flush; bound diagnostic
+ * formatting and content paths and release owned layer masks. Derive output
+ * names from the content basename with explicit destination capacities, and
+ * reject overflowing output path joins. Leave multiplayer slots without a
+ * selected model available to join even if game scripts preassign lives to
+ * them. Let a missing basename-only PAK self-check read the active frontend
+ * content after it has been validated and prepared. Allocate each model's
+ * animation pointer table through the highest animation index that model
+ * uses, and bound cache, copy and cleanup paths to that capacity. Ignore
+ * optional defense and offense entries outside the configured attack-type
+ * range with a log warning before accessing their tables. Yield after each
+ * newly completed model during explicit model-list or level preparation, and
+ * defer states until that preparation has cleaned up its intermediate
+ * parsers and handles. Resize repeated weapon lists and detach borrowed
+ * lists before replacing their entries.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/4086.md
  * at the source repository root. Original notices follow below.
@@ -434,6 +437,7 @@ int					groupmax            = 0;
 int                 selectScreen        = 0;					// Flag to determine if at select screen (used for setting animations)
 int					titleScreen			= 0;
 int					menuScreen			= 0;
+int                 enginecreditsScreen = 0;
 int					hallOfFame			= 0;
 int					optionsMenu			= 0;
 int					newgameMenu			= 0;
@@ -956,7 +960,8 @@ int getsyspropertybyindex(ScriptVariant *var, int index)
         break;
     case _sv_in_menuscreen:
         ScriptVariant_ChangeType(var, VT_INTEGER);
-        if(selectScreen || titleScreen || hallOfFame || gameOver || showComplete || currentScene || level)
+        if(selectScreen || titleScreen || hallOfFame || gameOver || showComplete || currentScene || level ||
+           (obor_profile_build >= 4095 && enginecreditsScreen))
         {
             var->lVal = (LONG)0;
         }
@@ -964,6 +969,10 @@ int getsyspropertybyindex(ScriptVariant *var, int index)
         {
             var->lVal = (LONG)(menuScreen);
         }
+        break;
+    case _sv_in_enginecreditsscreen:
+        ScriptVariant_ChangeType(var, VT_INTEGER);
+        var->lVal = (LONG)enginecreditsScreen;
         break;
     case _sv_in_options:
         ScriptVariant_ChangeType(var, VT_INTEGER);
@@ -4001,10 +4010,18 @@ void load_background(char *filename, int createtables)
     {
         if(!loadscreen(filename, packfile, NULL, PIXEL_x8, &background))
         {
-            shutdown(1, "Error loading background (PIXEL_x8) file '%s'", filename);
+            if (obor_profile_build >= 4094 && screenformat == PIXEL_32)
+            {
+                if (loadscreen32(filename, packfile, &background)) printf("Loaded 32-bit background '%s'\n", filename);
+                else shutdown(1, "Error loading background (PIXEL_x8/PIXEL_32) file '%s'", filename);
+            }
+            else shutdown(1, "Error loading background (PIXEL_x8) file '%s'", filename);
         }
-        memcpy(pal, background->palette, PAL_BYTES);
-        memcpy(neontable, pal, PAL_BYTES);
+        if (background->pixelformat == PIXEL_x8)
+        {
+            memcpy(pal, background->palette, PAL_BYTES);
+            memcpy(neontable, pal, PAL_BYTES);
+        }
     }
     else
     {
@@ -4253,8 +4270,11 @@ void cache_all_backgrounds()
 }
 #endif
 
-void load_layer(char *filename, int index)
+void load_layer(char *filename, char *maskfilename, int index)
 {
+    char ignored_mask[1] = {0};
+    if(obor_profile_build < 4096 || !maskfilename) maskfilename = ignored_mask;
+
     if(!level)
     {
         return;
@@ -4262,11 +4282,15 @@ void load_layer(char *filename, int index)
 
     if(filename && level->layers[index].gfx.handle == NULL)
     {
-
-        if ((level->layers[index].drawmethod.alpha > 0 || level->layers[index].drawmethod.transbg) && !level->layers[index].drawmethod.water.watermode)
+        if(*maskfilename || ((level->layers[index].drawmethod.alpha > 0 || level->layers[index].drawmethod.transbg) && !level->layers[index].drawmethod.water.watermode))
         {
             // assume sprites are faster than screen when transparency or alpha are specified
             level->layers[index].gfx.sprite = loadsprite2(filename, &(level->layers[index].size.x), &(level->layers[index].size.y));
+            if (*maskfilename && level->layers[index].gfx.sprite)
+            {
+                level->layers[index].gfx.sprite->mask = loadsprite2(maskfilename, &(level->layers[index].size.x), &(level->layers[index].size.y));
+                *maskfilename = 0; // clear mask filename so mask is only used for this one sprite
+            }
         }
         else
         {
@@ -11969,6 +11993,14 @@ void free_level(s_level *lv)
     {
         if(lv->layers[i].gfx.handle && lv->layers[i].gfx.handle != background)
         {
+            int object_magic;
+            memcpy(&object_magic, lv->layers[i].gfx.handle, sizeof(object_magic));
+            if(object_magic == sprite_magic && lv->layers[i].gfx.sprite->mask)
+            {
+                s_sprite *mask = lv->layers[i].gfx.sprite->mask;
+                lv->layers[i].gfx.sprite->mask = NULL;
+                free(mask);
+            }
             free(lv->layers[i].gfx.handle);
             lv->layers[i].gfx.handle = NULL;
         }
@@ -12214,6 +12246,7 @@ void load_level(char *filename)
     int *order = NULL;
     int panelcount = 0;
     int exit_blocked = 0, exit_hole = 0;
+    char maskPath[128] = {0};
 
     obor_preload_begin();
     unload_level();
@@ -12384,6 +12417,15 @@ void load_level(char *filename)
                 update_model_loadflag(tempmodel, GET_INT_ARG(2));
             }
             break;
+        case CMD_LEVEL_ALPHAMASK:
+            if(obor_profile_build >= 4096)
+            {
+                size_t length = strlen(GET_ARG(1));
+                if(length >= sizeof(maskPath))
+                    shutdown(1, "Layer mask path exceeds its storage.");
+                memcpy(maskPath, GET_ARG(1), length + 1);
+            }
+            break;
         case CMD_LEVEL_BACKGROUND:
         case CMD_LEVEL_BGLAYER:
         case CMD_LEVEL_LAYER:
@@ -12490,7 +12532,7 @@ void load_level(char *filename)
 
             if(cmd != CMD_LEVEL_BACKGROUND)
             {
-                load_layer(GET_ARG(1), level->numlayers);
+                load_layer(GET_ARG(1), maskPath, level->numlayers);
             }
             level->numlayers++;
             break;
@@ -12525,7 +12567,7 @@ void load_level(char *filename)
                 dm->water.amplitude = 1;
             }
 
-            load_layer(GET_ARG(1), level->numlayers);
+            load_layer(GET_ARG(1), maskPath, level->numlayers);
             level->numlayers++;
             break;
         case CMD_LEVEL_DIRECTION:
@@ -12730,7 +12772,7 @@ void load_level(char *filename)
             bgl->enabled = 1; // enabled
             bgl->quake = 1; // accept quake and rock
 
-            load_layer(GET_ARG(1), level->numlayers);
+            load_layer(GET_ARG(1), maskPath, level->numlayers);
             level->numlayers++;
 
             if(stricmp(GET_ARG(2), "none") != 0 && GET_ARG(2)[0])
@@ -12743,7 +12785,7 @@ void load_level(char *filename)
                 bgl->z = NEONPANEL_Z;
                 bgl->neon = 1;
                 bgl->gfx.handle = NULL;
-                load_layer(GET_ARG(2), level->numlayers);
+                load_layer(GET_ARG(2), maskPath, level->numlayers);
                 level->numlayers++;
             }
 
@@ -12759,7 +12801,7 @@ void load_level(char *filename)
                 bgl->neon = 0;
                 dm->alpha = 1;
                 bgl->gfx.handle = NULL;
-                load_layer(GET_ARG(3), level->numlayers);
+                load_layer(GET_ARG(3), maskPath, level->numlayers);
                 level->numlayers++;
             }
             break;
@@ -13242,7 +13284,7 @@ void load_level(char *filename)
             default:
                 break;
             }
-            load_layer(NULL, i);
+            load_layer(NULL, NULL, i);
         }
 
         if(level->background)
@@ -28329,6 +28371,9 @@ void display_credits()
 {
     u32 finishtime = time + 10 * GAME_SPEED;
     int done = 0;
+    int wii_row = obor_profile_build >= 4146 ? 18 : 19;
+    int menu_row = obor_profile_build >= 4146 ? 20 : 21;
+    const char *port_label = obor_profile_build >= 4095 ? "Ports" : "Consoles";
     int s = videomodes.vShift / 2 + 3;
     int v = (videomodes.vRes - videomodes.vShift) / 23;
     int h = videomodes.hRes / 2;
@@ -28364,8 +28409,8 @@ void display_credits()
         font_printf(col1,  s + v * 11, 0, 0, "Plombo");
         font_printf(col2, s + v * 11, 0, 0, "Orochi_X");
 
-        font_printf(_strmidx(1, "Consoles"), s + v * 12,  1, 0, "Consoles");
-        font_printf(col1,  s + v * 13, 0, 0, "PSP/PS3/Linux/OSX");
+        font_printf(_strmidx(1, port_label), s + v * 12, 1, 0, port_label);
+        font_printf(col1,  s + v * 13, 0, 0, obor_profile_build >= 4146 ? "PSP/Linux/OSX" : "PSP/PS3/Linux/OSX");
         font_printf(col2, s + v * 13, 0, 0, "SX");
         font_printf(col1,  s + v * 14, 0, 0, "OpenDingux");
         font_printf(col2, s + v * 14, 0, 0, "Shin-NiL");
@@ -28375,14 +28420,21 @@ void display_credits()
         font_printf(col2, s + v * 16, 0, 0, "SX & Lemon");
         font_printf(col1,  s + v * 17, 0, 0, "DreamCast");
         font_printf(col2, s + v * 17, 0, 0, "SX & Neill Corlett");
-        font_printf(col1,  s + v * 18, 0, 0, "MS XBoX");
-        font_printf(col2, s + v * 18, 0, 0, "SX & XPort");
-        font_printf(col1,  s + v * 19, 0, 0, "Wii");
-        font_printf(col2, s + v * 19, 0, 0, "SX & Plombo");
-
-        font_printf(_strmidx(1, "Menu Design"), s + v * 21,  1, 0, "Menu Design");
-        font_printf(col1, s + v * 22,  0, 0, "SX");
-        font_printf(col2, s + v * 22, 0, 0, "Fightn Words");
+        if(obor_profile_build < 4146)
+        {
+            font_printf(col1, s + v * 18, 0, 0, "MS XBoX");
+            font_printf(col2, s + v * 18, 0, 0, "SX & XPort");
+        }
+        font_printf(col1, s + v * wii_row, 0, 0, "Wii");
+        font_printf(col2, s + v * wii_row, 0, 0, "SX & Plombo");
+        if(obor_profile_build >= 4095)
+        {
+            font_printf(col1, s + v * (wii_row + 1), 0, 0, "Android");
+            font_printf(col2, s + v * (wii_row + 1), 0, 0, "uTunnels & CRxTRDude");
+        }
+        font_printf(_strmidx(1, "Menu Design"), s + v * menu_row, 1, 0, "Menu Design");
+        font_printf(col1, s + v * (menu_row + 1), 0, 0, "SX");
+        font_printf(col2, s + v * (menu_row + 1), 0, 0, "Fightn Words");
 
         update(2, 0);
 
@@ -28412,7 +28464,7 @@ void shutdown(int status, char *msg, ...)
     //printf("savedata.logo %d\n", savedata.logo);
 
     va_start(arglist, msg);
-    vsprintf(buf, msg, arglist);
+    vsnprintf(buf, sizeof(buf), msg, arglist);
     va_end(arglist);
 
     if(!disablelog)
@@ -28438,12 +28490,14 @@ void shutdown(int status, char *msg, ...)
     getRamStatus(BYTES);
     savesettings();
 
+    if(obor_profile_build >= 4095) enginecreditsScreen = 1;
     if(status != 2)
     {
         display_credits();
     }
     if(startup_done)
     {
+        if(obor_profile_build >= 4095) enginecreditsScreen = 0;
         term_videomodes();
     }
 
@@ -28929,15 +28983,85 @@ playgif_end:
 
 
 
+#ifdef WEBM
+int playwebm(const char *path, int noskip)
+{
+    int retval = 1;
+    webm_context *ctx = NULL;
+    yuv_video_mode info;
+    s_screen *rgb_frame = NULL;
+
+    ctx = webm_start_playback(path, savedata.musicvol);
+    if(ctx == NULL) {retval=0; goto quit;}
+
+    // set video output to YUV mode
+    webm_get_video_info(ctx, &info);
+    int status = video_setup_yuv_overlay(&info);
+    if(!status) {retval=0; goto quit;}
+
+    // allocate s_screen for screenshot capture
+    yuv_init(2);
+    rgb_frame = allocscreen(info.width, info.height, PIXEL_16);
+    if(!rgb_frame) {retval=0; goto quit;}
+
+    u64 start_time = timer_uticks();
+    u64 next_frame_time = 0;
+    yuv_frame *frame = NULL;
+
+    while(1)
+    {
+        inputrefresh();
+        if(!noskip && (bothnewkeys & (FLAG_ESC | FLAG_ANYBUTTON)))
+        {
+            retval = -1;
+            yuv_frame_destroy(frame);
+            break;
+        }
+        else if(frame && !noscreenshot && (bothnewkeys & FLAG_SCREENSHOT))
+        {
+            yuv_to_rgb(frame, rgb_frame);
+            screenshot(rgb_frame, NULL, 0);
+        }
+
+        u64 time_passed = timer_uticks() - start_time;
+
+        if(next_frame_time <= time_passed)
+        {
+            // display the current frame
+            if(frame)
+            {
+                video_display_yuv_frame();
+                yuv_frame_destroy(frame);
+            }
+
+            // prepare the next frame for display
+            frame = webm_get_next_frame(ctx);
+            if(frame == NULL) break;
+            video_prepare_yuv_frame(frame);
+            next_frame_time = frame->timestamp / 1000;
+        }
+        else usleep(next_frame_time - time_passed);
+    }
+
+quit:
+    if(ctx) webm_close(ctx);
+    if(rgb_frame) freescreen(&rgb_frame);
+    yuv_clear();
+    video_set_mode(videomodes);
+    return retval;
+}
+
+#endif
+
 void playscene(char *filename)
 {
     char *buf;
     size_t size;
     int pos;
     char *command = NULL;
-    char giffile[256];
+    char videofile[256];
     int x = 0, y = 0, skipone = 0, noskip = 0, i;
-    int closing = 0;
+    int closing = 0, status;
 
     ArgList arglist;
     char argbuf[MAX_ARG_LEN + 1] = "";
@@ -28964,15 +29088,36 @@ void playscene(char *filename)
             }
             else if(!closing && stricmp(command, "animation") == 0)
             {
-                strcpy(giffile, GET_ARG(1));
+                if(snprintf(videofile, sizeof(videofile), "%s", GET_ARG(1)) >= (int)sizeof(videofile))
+                    shutdown(1, "Scene media path exceeds its storage.");
                 x = GET_INT_ARG(2);
                 y = GET_INT_ARG(3);
                 skipone = GET_INT_ARG(4);
                 noskip = GET_INT_ARG(5);
-                if(playgif(giffile, x, y, noskip) == -1 && !skipone)
+                if(playgif(videofile, x, y, noskip) == -1 && !skipone)
                 {
                     closing = 1;
                 }
+            }
+            else if(obor_profile_build >= 4137 && !closing && stricmp(command, "video") == 0)
+            {
+#ifdef WEBM
+                if(snprintf(videofile, sizeof(videofile), "%s", GET_ARG(1)) >= (int)sizeof(videofile))
+                    shutdown(1, "Scene media path exceeds its storage.");
+                skipone = GET_INT_ARG(2);
+                noskip = GET_INT_ARG(3);
+                status = playwebm(videofile, noskip);
+                if(status == -1 && !skipone)
+                {
+                    closing = 1;
+                }
+                else if(status == 0)
+                {
+                    printf("An error occurred when trying to play the video %s\n", videofile);
+                }
+#else
+                printf("Skipping video %s; WebM playback not supported on this platform\n");
+#endif
             }
             else if(stricmp(command, "silence") == 0)
             {
@@ -30812,6 +30957,8 @@ void keyboard_setup(int player)
                     savedata.keys[player][setting] = 0;
 #if DOS || SDL || PSP || WII
                     keyboard_getlastkey();
+#else
+                    if(obor_profile_build >= 4146) keyboard_getlastkey();
 #endif
                 }
             }
@@ -31096,6 +31243,7 @@ void sound_options()
     }
     savesettings();
     bothnewkeys = 0;
+    if(obor_profile_build >= 4141) soundoptionsMenu = 0;
 }
 
 void config_settings()     //  OX. Load from / save to default.cfg. Restore OpenBoR "factory" settings.
@@ -31221,7 +31369,7 @@ void config_settings()     //  OX. Load from / save to default.cfg. Restore Open
     }
     savesettings();
     bothnewkeys = 0;
-    soundoptionsMenu = 0;
+    if(obor_profile_build < 4141) soundoptionsMenu = 0;
 }
 
 

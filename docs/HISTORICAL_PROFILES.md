@@ -1,10 +1,11 @@
 # Choosing a profile
 
-Selectable engine profiles: v3.0 3400, v3.0 3780, v3.0 3783, v3.0 3789, v3.0 3793, v3.0 3797,
-v3.0 3805, v3.0 3814, v3.0 3818, v3.0 3822, v3.0 3824, v3.0 3829, v3.0 3831,
-v3.0 3837, v3.0 3839, v3.0 3842, v3.0 4086, v3.0 4432, v3.0 4453, v3.0 6330,
-v3.0 6391, v3.0 6392-dev, v3.0 6412-dev, v3.0 6510-dev, v3.0 7086-dev, v3.0 7123-dev, v4.0 7142-alpha,
-v4.0 7533 and v4.0 8023-dev.
+Selectable engine profiles: v3.0 3400, v3.0 3780, v3.0 3783, v3.0 3789, v3.0
+3793, v3.0 3797, v3.0 3805, v3.0 3814, v3.0 3818, v3.0 3822, v3.0 3824, v3.0
+3829, v3.0 3831, v3.0 3837, v3.0 3839, v3.0 3842, v3.0 4086, v3.0 4088-dev,
+v3.0 4107, v3.0 4111, v3.0 4129, v3.0 4153, v3.0 4432, v3.0 4453, v3.0 6330,
+v3.0 6391, v3.0 6392-dev, v3.0 6412-dev, v3.0 6510-dev, v3.0 7086-dev, v3.0
+7123-dev, v4.0 7142-alpha, v4.0 7533 and v4.0 8023-dev.
 
 Auto uses build tags and content clues to choose a profile. You can select one
 manually when a game needs it. Historical profiles preserve selected earlier
@@ -94,6 +95,33 @@ issue to investigate, even when it also occurs with another profile. Selecting
 an earlier profile does not promise exact emulation of an original executable.
 
 
+## Early profile contracts
+
+The early family uses the 4086 physical source with contracts taken from each
+profile's own upstream revision. The unofficial development snapshot is
+exact-tag/manual only. Official automatic profiles cover declared revisions
+through 4153. Source commits and dates are recorded in [src/pin.json](../src/pin.json).
+
+| Boundary | Native behavior |
+|---|---|
+| 4094 | True-color static PNG backgrounds can use the 32-bit background path. Earlier profiles retain their indexed-background requirement. |
+| 4095 | The engine-credit-screen system variable is present. String names and numeric system-variable IDs follow each profile's native namespace. |
+| 4096 | Level alpha masks apply to one sprite layer. Missing mask images retain the original accepted result; unsafe missing base images fail cleanly. |
+| 4100 | The optional shutdown message uses the second argument; earlier profiles preserve their defined first-argument cache selection. Invalid cache indices and formats requiring absent variadic arguments fail safely. |
+| 4101 | Attack staydown reads return an integer; earlier profiles retain the native pointer result type for defined values. |
+| 4134 | Positive playback frequencies are unrestricted by the earlier three-rate whitelist. |
+| 4137 | The scene `video` command uses the native WebM decoder. Earlier profiles ignore that scene command. |
+| 4141 | Sound-menu completion clears its own active flag; configuration-menu completion retains its native flag behavior. |
+| 4146 | Controller assignment consumes the pending key through the platform input adapter. |
+
+The six-integer hitbox layout retains the native field order, frame conversion,
+storage and collision results. Temporary parser expressions, resolved import
+nodes, Ogg buffers and layer masks have bounded ownership. PNG member reads and
+row sizes are checked independently of palette-only routing. Sprite validation
+remains strict for every profile. Native tests compare each profile with
+independent observations from its own original source; they do not establish
+complete executable equivalence.
+
 ## Reconstructed test profile
 
 **v3.0 6392-dev** reconstructs behavior published by the test-build author,
@@ -157,6 +185,11 @@ Profiles are compatibility selections. Several profiles use one physical source 
 | v3.0 3839 | `3842` |
 | v3.0 3842 | `3842` |
 | v3.0 4086 | `4086` |
+| v3.0 4088-dev | `4086` |
+| v3.0 4107 | `4086` |
+| v3.0 4111 | `4086` |
+| v3.0 4129 | `4086` |
+| v3.0 4153 | `4086` |
 | v3.0 4432 | `4432` |
 | v3.0 4453 | `4432` |
 | v3.0 6330 | `6391` |

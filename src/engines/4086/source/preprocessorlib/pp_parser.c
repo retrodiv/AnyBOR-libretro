@@ -1,10 +1,11 @@
-/* AnyBOR modification record: 2026-09-12.
+/* AnyBOR modification record: 2026-10-19.
  * Port maintained by retrodiv <retrodiv@proton.me>.
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
  * Upstream code retains its original license and notices.
  * Drop the glibc-only <malloc.h> and rely on the standard library
- * declarations the parser already includes.
+ * declarations the parser already includes. Release the owned function-macro
+ * parameter list after its final child token.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/4086.md
  * at the source repository root. Original notices follow below.
@@ -423,6 +424,7 @@ pp_token *pp_parser_emit_token(pp_parser *self)
                         List_Remove(self->child->params);
                     }
                     List_Clear(self->child->params);
+                    free(self->child->params);
                 }
 
                 // free the source code and filename if necessary

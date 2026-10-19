@@ -273,6 +273,20 @@
     "source": "src/port/libretro/dlmalloc.inc"
   },
   {
+    "file": "LICENSES/WebM-4086-halloc.txt",
+    "license": "see notice",
+    "scope": "source and binary",
+    "sha256": "ae4b9e1073a9579c0ac13d406d66c01c3a941ed072af7a70091dc153b8c903d5",
+    "source": "src/engines/4086/source/webmlib/halloc/LICENSE"
+  },
+  {
+    "file": "LICENSES/WebM-4086-nestegg.txt",
+    "license": "see notice",
+    "scope": "source and binary",
+    "sha256": "505ee8e018326f36bb4070f69c6eb3caa6079b8fb796cd53a8d1bb168337e5ae",
+    "source": "src/engines/4086/source/webmlib/nestegg/LICENSE"
+  },
+  {
     "file": "LICENSES/WebM-4432-halloc.txt",
     "license": "see notice",
     "scope": "source and binary",
@@ -346,7 +360,7 @@
     "file": "LICENSES/Embedded-source-notices.txt",
     "license": "see each notice",
     "scope": "source and binary",
-    "sha256": "b0f40ae7ce0ffd9832018fefec5fdd1b44c8ebb40c50fb9aa440b9f4b9751870",
+    "sha256": "d1cbe85c0576bcae7e227eb24f31a32368fc6d59bd3eed83dc2cd0031399cc8a",
     "source": "Individual source headers listed in this document"
   },
   {
@@ -354,14 +368,14 @@
     "license": "see notice",
     "scope": "runtime or build support as described in LICENSES.md",
     "sha256": "a2010f343487d3f7618affe54f789f5487602331c0a8d03f49e9a7c547cf0499",
-    "source": "Pinned licensing reference; see PROVENANCE.md"
+    "source": "https://raw.githubusercontent.com/spdx/license-list-data/main/text/CC0-1.0.txt"
   },
   {
     "file": "LICENSES/GCC-Runtime-Exception.txt",
     "license": "see notice",
     "scope": "runtime or build support as described in LICENSES.md",
     "sha256": "28e85c5aa4af9b4f1dfe6b4817aa3eefb3eaaee7fd735045016f29ccf50276a1",
-    "source": "Pinned licensing reference; see PROVENANCE.md"
+    "source": "https://raw.githubusercontent.com/gcc-mirror/gcc/releases/gcc-15.2.0/COPYING.RUNTIME"
   },
   {
     "file": "LICENSES/GCC-runtime-source-notices.txt",
@@ -375,69 +389,76 @@
     "license": "see notice",
     "scope": "runtime or build support as described in LICENSES.md",
     "sha256": "231f7edcc7352d7734a96eef0b8030f77982678c516876fcb81e25b32d68564c",
-    "source": "Pinned licensing reference; see PROVENANCE.md"
+    "source": "https://raw.githubusercontent.com/gcc-mirror/gcc/releases/gcc-15.2.0/COPYING"
   },
   {
     "file": "LICENSES/GPL-3.0.txt",
     "license": "see notice",
     "scope": "runtime or build support as described in LICENSES.md",
     "sha256": "8ceb4b9ee5adedde47b31e975c1d90c73ad27b6b165a1dcd80c7c545eb65b903",
-    "source": "Pinned licensing reference; see PROVENANCE.md"
+    "source": "https://raw.githubusercontent.com/gcc-mirror/gcc/releases/gcc-15.2.0/COPYING3"
   },
   {
     "file": "LICENSES/LLVM-compiler-rt.txt",
     "license": "see notice",
     "scope": "runtime or build support as described in LICENSES.md",
     "sha256": "1a8f1058753f1ba890de984e48f0242a3a5c29a6a8f2ed9fd813f36985387e8d",
-    "source": "Pinned licensing reference; see PROVENANCE.md"
+    "source": "https://raw.githubusercontent.com/llvm/llvm-project/llvmorg-17.0.2/compiler-rt/LICENSE.TXT"
   },
   {
     "file": "LICENSES/LLVM-libcxx.txt",
     "license": "see notice",
     "scope": "runtime or build support as described in LICENSES.md",
     "sha256": "539dd7aed86e8a4f12cbdd0e6c50c189c7d74847e4fecc64ce2c6ee3a01da38b",
-    "source": "Pinned licensing reference; see PROVENANCE.md"
+    "source": "https://raw.githubusercontent.com/llvm/llvm-project/llvmorg-17.0.2/libcxx/LICENSE.TXT"
   },
   {
     "file": "LICENSES/LLVM-libcxxabi.txt",
     "license": "see notice",
     "scope": "runtime or build support as described in LICENSES.md",
     "sha256": "e2b35be49f7284a45b7baca8fc7b3ab7440e7902392b2528a457816b5bb2a15c",
-    "source": "Pinned licensing reference; see PROVENANCE.md"
+    "source": "https://raw.githubusercontent.com/llvm/llvm-project/llvmorg-17.0.2/libcxxabi/LICENSE.TXT"
   },
   {
     "file": "LICENSES/LLVM-libunwind.txt",
     "license": "see notice",
     "scope": "runtime or build support as described in LICENSES.md",
     "sha256": "b5efebcaca80879234098e52d1725e6d9eb8fb96a19fce625d39184b705f7b6d",
-    "source": "Pinned licensing reference; see PROVENANCE.md"
+    "source": "https://raw.githubusercontent.com/llvm/llvm-project/llvmorg-17.0.2/libunwind/LICENSE.TXT"
   },
   {
     "file": "LICENSES/MinGW-runtime-source-notices.txt",
     "license": "see notice",
     "scope": "runtime or build support as described in LICENSES.md",
     "sha256": "a90742ec8591912df022143377f5ca4d83bfbde8008a89c50e5c94c06d05c010",
-    "source": "Pinned licensing reference; see PROVENANCE.md"
+    "source": "https://codeload.github.com/mingw-w64/mingw-w64/tar.gz/refs/tags/v13.0.0"
   },
   {
     "file": "LICENSES/MinGW-w64-AUTHORS.txt",
     "license": "see notice",
     "scope": "runtime or build support as described in LICENSES.md",
     "sha256": "8f308316e7a94b8410f871868bd3948f126526dc1775aeee97a0e365f9a0fd9f",
-    "source": "Pinned licensing reference; see PROVENANCE.md"
+    "source": "https://raw.githubusercontent.com/mingw-w64/mingw-w64/v13.0.0/AUTHORS"
   },
   {
     "file": "LICENSES/MinGW-w64-COPYING.txt",
     "license": "see notice",
     "scope": "runtime or build support as described in LICENSES.md",
     "sha256": "99a69660981156c21336fdb5661f89341b013c94e4bf9e1c7467b4745718397f",
-    "source": "Pinned licensing reference; see PROVENANCE.md"
+    "source": "https://raw.githubusercontent.com/mingw-w64/mingw-w64/v13.0.0/COPYING"
   },
   {
     "file": "LICENSES/MinGW-winpthreads.txt",
     "license": "see notice",
     "scope": "runtime or build support as described in LICENSES.md",
     "sha256": "63263614cdd29f2f93cba85e992f041b31f9fc7b4033692f31269489a8a1b177",
-    "source": "Pinned licensing reference; see PROVENANCE.md"
+    "source": "https://raw.githubusercontent.com/mingw-w64/mingw-w64/v13.0.0/mingw-w64-libraries/winpthreads/COPYING"
+  },
+  {
+    "file": "LICENSES/OpenBOR-profile-4153-BSD-3-Clause.txt",
+    "license": "BSD-3-Clause",
+    "scope": "Selected early profile source imports",
+    "sha256": "3f12a435af24fce556b67e4c97a45fa750bccb9d3a17ff25209311b865efe3fb",
+    "source": "https://raw.githubusercontent.com/DCurrent/openbor/4a276c8b81fe0fc96d0f98b0e535da802c7417f7/engine/LICENSE"
   }
 ]

@@ -1,10 +1,11 @@
-/* AnyBOR modification record: 2026-09-12.
+/* AnyBOR modification record: 2026-10-19.
  * Port maintained by retrodiv <retrodiv@proton.me>.
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
  * Upstream code retains its original license and notices.
  * Convert the command-list lookup result to its command enumeration
- * explicitly instead of through a plain pointer cast.
+ * explicitly instead of through a plain pointer cast. Admit the native level
+ * alpha-mask command only for profiles whose original build registered it.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/4086.md
  * at the source repository root. Original notices follow below.
@@ -12,6 +13,7 @@
 
 #include "commands.h"
 #include "openbor.h"
+#include "libretroport.h"
 
 
 void freeCommandList(List *list)
@@ -418,6 +420,7 @@ List *createLevelCommandList(void)
     LIST_ADD(CMD_LEVEL_LOADINGBG, "loadingbg");
     LIST_ADD(CMD_LEVEL_MUSICFADE, "musicfade");
     LIST_ADD(CMD_LEVEL_MUSIC, "music");
+    if(obor_profile_build >= 4096) LIST_ADD(CMD_LEVEL_ALPHAMASK, "alphamask");
     LIST_ADD(CMD_LEVEL_AT, "at");
     LIST_ADD(CMD_LEVEL_AT_SCRIPT, "@script");
     LIST_ADD(CMD_LEVEL_ALLOWSELECT, "allowselect");

@@ -9,7 +9,7 @@
       "upstream_sha256": "fc53280baa67ef58e507cea648f8838fad9abe675fa098a5dc99dfe4ecd0e75c"
     },
     "Makefile.libretro": {
-      "distributed_sha256": "7a5dd6eac2d8dab8ece27257f345be4e30e1a1f3f205b586935080f604323942",
+      "distributed_sha256": "1bb223e82afe8ca6351f07f4e081f2b686c6575e9adc6ab5f4e05c9acc501e5e",
       "modified": true,
       "origin": "Project libretro build overlay",
       "summary": "Supply the shared libretro engine build and symbol-isolation rules.",
@@ -17,9 +17,9 @@
       "upstream_sha256": null
     },
     "openbor.c": {
-      "distributed_sha256": "85b3217a89dd33f7499ae79125eb76271ac8bbf1d3a9b6638ca562d4c53aedbf",
+      "distributed_sha256": "759328333bf9236bc1c8e9314b84bb106b4a296a3eea660260ab7cc046a1ce39",
       "modified": true,
-      "summary": "Apply the port's engine corrections and select the PC video configuration on macOS. Derive output names from the content basename with explicit destination capacities, and reject overflowing output path joins. Leave multiplayer slots without a selected model available to join even if game scripts preassign lives to them. Let a missing basename-only PAK self-check read the active frontend content after it has been validated and prepared. Allocate each model's animation pointer table through the highest animation index that model uses, and bound cache, copy and cleanup paths to that capacity. Ignore optional defense and offense entries outside the configured attack-type range with a log warning before accessing their tables. Yield after each newly completed model during explicit model-list or level preparation, and defer states until that preparation has cleaned up its intermediate parsers and handles. Resize repeated weapon lists and detach borrowed lists before replacing their entries.",
+      "summary": "Apply the port's engine corrections and select the PC video configuration on macOS. Select native early system-selector values, credit rendering and active flags, true-color background and layer-mask admission, scene video commands, menu flags and controller-assignment key flush; bound diagnostic formatting and content paths and release owned layer masks. Derive output names from the content basename with explicit destination capacities, and reject overflowing output path joins. Leave multiplayer slots without a selected model available to join even if game scripts preassign lives to them. Let a missing basename-only PAK self-check read the active frontend content after it has been validated and prepared. Allocate each model's animation pointer table through the highest animation index that model uses, and bound cache, copy and cleanup paths to that capacity. Ignore optional defense and offense entries outside the configured attack-type range with a log warning before accessing their tables. Yield after each newly completed model during explicit model-list or level preparation, and defer states until that preparation has cleaned up its intermediate parsers and handles. Resize repeated weapon lists and detach borrowed lists before replacing their entries.",
       "topics": [
         "active-content-pak-aliases",
         "animation-memory-layout",
@@ -27,6 +27,7 @@
         "darwin-platform-support",
         "empty-player-slot-safety",
         "loading-screen-presentation",
+        "logical-profile-compatibility",
         "model-attack-type-bounds",
         "panel-order-bounds",
         "record-dates-and-file-notices",
@@ -36,22 +37,24 @@
       "upstream_sha256": "fa319b01a0cd47dea0921e31eaa3532f614716c72ae3a780c5e2675bdcb0703a"
     },
     "openbor.h": {
-      "distributed_sha256": "dfc0bef2fdd4a483f32c61c730a0944c2f9efaa3662405c18457d96d696e9069",
+      "distributed_sha256": "e060ea58e2a76c2e9e93d62d7af4047199ba08fbe8d22e425e018a4a31c048c6",
       "modified": true,
-      "summary": "Allocate collision pointer slots through the highest author-facing index used by each collection. Track each model's allocated animation-table capacity and reject lookups outside it.",
+      "summary": "Allocate collision pointer slots through the highest author-facing index used by each collection. Declare the native media decoder interface for the early profile family. Track each model's allocated animation-table capacity and reject lookups outside it.",
       "topics": [
         "animation-memory-layout",
         "compiler-warning-cleanup",
+        "logical-profile-compatibility",
         "record-dates-and-file-notices"
       ],
       "upstream_sha256": "3d54f4d40f76c0e51fc30617c5dedd968ab57168a063cd349dc104ae5fc8756b"
     },
     "openborscript.c": {
-      "distributed_sha256": "65ebcb6b5958d34884c01e8d80cbc7fdb8861a99d3d76a6a6ecb39bee1d9ab91",
+      "distributed_sha256": "c98d1410e0bed3667384013587448b5e4e1cec09dfbfcc3e613df4b3a920767c",
       "modified": true,
-      "summary": "Keep the dormant constant-lowering diagnostic compatible with the single-value instruction layout. Derive output names from the content basename with explicit destination capacities, and reject overflowing output path joins. Compact compiler-only instruction records after resolving value ownership, preserving branch and export anchors, all mutable values and exactly-once pool cleanup. Resolve text-property names within the actual table bounds while preserving native numeric selectors. Reuse each text object's owned buffer when replacing its contents.",
+      "summary": "Keep the dormant constant-lowering diagnostic compatible with the single-value instruction layout. Map every early profile's native system-variable namespace and numeric IDs, attack staydown return type and shutdown message argument; bound cache access and reject formats requiring absent variadic arguments. Derive output names from the content basename with explicit destination capacities, and reject overflowing output path joins. Compact compiler-only instruction records after resolving value ownership, preserving branch and export anchors, all mutable values and exactly-once pool cleanup. Resolve text-property names within the actual table bounds while preserving native numeric selectors. Reuse each text object's owned buffer when replacing its contents.",
       "topics": [
         "compiler-warning-cleanup",
+        "logical-profile-compatibility",
         "record-dates-and-file-notices",
         "script-memory-layout",
         "script-property-names",
@@ -61,9 +64,13 @@
       "upstream_sha256": "4be42b223e003565531d785e6182127d75307e4e0625028b7e03e2ab124ffa45"
     },
     "openborscript.h": {
-      "distributed_sha256": "eb01fe8362ef62a237c94de046da15f01285ea27e2922d90fbd44ef46dac5658",
-      "modified": false,
-      "topics": [],
+      "distributed_sha256": "8304cbfee835f4db45a6809e70d3698b3bfd6ad8599680d4464bd37b24f0301e",
+      "modified": true,
+      "summary": "Declare owned script-variable name storage. Declare the shared engine-credit-screen selector without exposing it to earlier native namespaces.",
+      "topics": [
+        "logical-profile-compatibility",
+        "record-dates-and-file-notices"
+      ],
       "upstream_sha256": "eb01fe8362ef62a237c94de046da15f01285ea27e2922d90fbd44ef46dac5658"
     },
     "source/adpcmlib/adpcm.h": {
@@ -79,7 +86,7 @@
       "upstream_sha256": "2020899c73cce34b91f5793396c67fc1815a551fdc0a3270e69b5824fd9c7ec3"
     },
     "source/gamelib/anigif.h": {
-      "distributed_sha256": "0b5ca07c7c383b12b88ac8746aaa7481335e8555ae89b4ef0d42f295108f3b71",
+      "distributed_sha256": "d4d5c1c67291b84ab90c1fdb1fa82684da7e1d2332a505e00a7e36e7a7f4a2b9",
       "modified": true,
       "summary": "Restore the header's pragma pack state so including it leaves the caller's alignment untouched.",
       "topics": [
@@ -104,7 +111,7 @@
       "upstream_sha256": "0fd839992c90f9f3d8557f2757adfee05848f4c0b8c3a30270ddf947907e0c4a"
     },
     "source/gamelib/borendian.h": {
-      "distributed_sha256": "5e14694d984b508ad7ea41ff94077e3acdc0cadac50db5c1d8ee987563f39e56",
+      "distributed_sha256": "c1ad32c15dae26ef7257ceb7509b5067119a568289fac6687d467483bff6b1e1",
       "modified": true,
       "summary": "Use the port's fixed-width endian conversions.",
       "topics": [
@@ -114,23 +121,28 @@
       "upstream_sha256": "54377e86b27c03f1b41abc4cad9bb0466a3ab870cd2f9bec70392715709e32f7"
     },
     "source/gamelib/commands.c": {
-      "distributed_sha256": "5a6f98a687492a2baf804671789c257b365e69f1e70f566292a225af109b9748",
+      "distributed_sha256": "96c6d2b6f483ef822741b88985085bab5dacb7c0df775b7767eb451618250346",
       "modified": true,
-      "summary": "Convert the command-list lookup result to its command enumeration explicitly instead of through a plain pointer cast.",
+      "summary": "Convert the command-list lookup result to its command enumeration explicitly instead of through a plain pointer cast. Admit the native level alpha-mask command only for profiles whose original build registered it.",
       "topics": [
         "compiler-warning-cleanup",
+        "logical-profile-compatibility",
         "record-dates-and-file-notices"
       ],
       "upstream_sha256": "06a482b84de6b363ad4af0f779293a2150b3ea9fa00af81795823264cfba5b95"
     },
     "source/gamelib/commands.h": {
-      "distributed_sha256": "bb02b8689e4487f79942e02a90d1d7251017b0bc173d32d98df047c691b65c6f",
-      "modified": false,
-      "topics": [],
+      "distributed_sha256": "1353630c3b5552854d789d556db02aee13cd21ce879e460ba922df2ec5d33347",
+      "modified": true,
+      "summary": "Declare the shared level alpha-mask command without changing the model command namespace.",
+      "topics": [
+        "logical-profile-compatibility",
+        "record-dates-and-file-notices"
+      ],
       "upstream_sha256": "bb02b8689e4487f79942e02a90d1d7251017b0bc173d32d98df047c691b65c6f"
     },
     "source/gamelib/draw.c": {
-      "distributed_sha256": "51281f5d784ccfe8f29239ff3e77977f94001cc505de4c7434ffade4c7936eca",
+      "distributed_sha256": "f1d5036bcab68eced1d92e5d7ec1c05b5ff36c2857888ff5921067c94d614052",
       "modified": true,
       "summary": "Route circle drawing through the port's integer rasterizer.",
       "topics": [
@@ -158,7 +170,7 @@
       "upstream_sha256": "2a2b4854ea77583f9af7e3cf005fb6a2820e1aa651ab531bca903b64ffb76007"
     },
     "source/gamelib/filecache.c": {
-      "distributed_sha256": "8011c7e36558aefa18653b8db5c2c8ad85a3f844478be7b2dd24f847bc6077a1",
+      "distributed_sha256": "2a7ba6dfcc89fc6801f0f020d6e1c84acf7d42890312efc144e6b0764f9fbc5a",
       "modified": true,
       "summary": "Expose the cache descriptor for resource restoration and initialize it to -1.",
       "topics": [
@@ -186,19 +198,24 @@
       "upstream_sha256": "7d47eacc7af5d118181c0fda97cd19cdf7c3410ee3c95077f453dbc60ac7ff8c"
     },
     "source/gamelib/loadimg.c": {
-      "distributed_sha256": "1323cdd2e3d73e21d5c82ea0e5bbd53526d444c7c94f8b767c0661425dd694b1",
+      "distributed_sha256": "ac955bda699d3440dd40dac823abb5d42d898bae4f356c65bdc5cb4aef74d9ea",
       "modified": true,
-      "summary": "Declare the resolved source member and original bitmap dimensions for independent sprite reconstruction proof. Validate PCX sprite signatures before using header dimensions. Preserve native palette-only filename probing, three-plane refusals and final RGB table conversion without interpreting palette bytes as sprite dimensions.",
+      "summary": "Declare the resolved source member and original bitmap dimensions for independent sprite reconstruction proof. Validate PCX sprite signatures before using header dimensions. Preserve native palette-only filename probing, three-plane refusals and final RGB table conversion without interpreting palette bytes as sprite dimensions. Select the native indexed-image failure boundary and provide bounded true-color PNG background loading.",
       "topics": [
         "image-loader-safety",
+        "logical-profile-compatibility",
         "reconstructible-resources"
       ],
       "upstream_sha256": "37c14132c336b03d82c46b327f2903eeb61150d0d4ede90c1998d417e4564eab"
     },
     "source/gamelib/loadimg.h": {
-      "distributed_sha256": "debcf192351b67af66413a4d7fbbbf2e3d557fb931040fc7a76df39d723f2da7",
-      "modified": false,
-      "topics": [],
+      "distributed_sha256": "1b10d5e23e88d6bcc051848c0763953f761c3d51b15f6ac7135cab597a867d07",
+      "modified": true,
+      "summary": "Declare the true-color background loading entry point.",
+      "topics": [
+        "logical-profile-compatibility",
+        "record-dates-and-file-notices"
+      ],
       "upstream_sha256": "debcf192351b67af66413a4d7fbbbf2e3d557fb931040fc7a76df39d723f2da7"
     },
     "source/gamelib/models.c": {
@@ -228,7 +245,7 @@
       "upstream_sha256": "8c43bade55c67a42b661b1a25653c0ec0f1bba2c3f12647ced8d7f1bef5ebbdc"
     },
     "source/gamelib/packfile.h": {
-      "distributed_sha256": "be867220454367ff33c976af8dce3b8773dc72c9e9f7beb3661238003370f313",
+      "distributed_sha256": "b2232b60af98f307f93778004c1c84778ecd147a19767ec399e64514c0f64874",
       "modified": true,
       "summary": "Remove declarations of unused standalone frontend APIs and define O_BINARY where macOS lacks it.",
       "topics": [
@@ -281,21 +298,26 @@
       "upstream_sha256": "007f773be5f17eedda442b0be564c42d74d3b5780b869c88538e6fddd8505da7"
     },
     "source/gamelib/soundmix.c": {
-      "distributed_sha256": "4a259ae84fe3983f4099377bcb44ae7fb741c2557c053bbefd99f5375e80f150",
+      "distributed_sha256": "a26e6601e174f10528f856bc8c090f666fed8328db8fb579e2480ef68e38c071",
       "modified": true,
-      "summary": "Declare exact resident PCM content-member ranges for independently verified reconstruction; preserve allocation tails and mutable mixer state.",
+      "summary": "Declare exact resident PCM content-member ranges for independently verified reconstruction; preserve allocation tails and mutable mixer state. Select native playback-rate admission, expose the unchanged music mixer layout to media workers and release owned Ogg decoder buffers.",
       "topics": [
         "compiler-warning-cleanup",
         "darwin-platform-support",
+        "logical-profile-compatibility",
         "reconstructible-resources",
         "record-dates-and-file-notices"
       ],
       "upstream_sha256": "362a92f4f69b9e50bde1bed25720afeb048eea75c883e9c9f8803baac2789617"
     },
     "source/gamelib/soundmix.h": {
-      "distributed_sha256": "6436fa848a7f92fd7191409e6d2800eb33db4513c30ee64ac0262e48c7784666",
-      "modified": false,
-      "topics": [],
+      "distributed_sha256": "b0d1636c8bb3f22d14557cccb0a20c7f0c8868c045d2b140751b5399abaef14b",
+      "modified": true,
+      "summary": "Expose the native media mixer layout to the cutscene decoder.",
+      "topics": [
+        "logical-profile-compatibility",
+        "record-dates-and-file-notices"
+      ],
       "upstream_sha256": "6436fa848a7f92fd7191409e6d2800eb33db4513c30ee64ac0262e48c7784666"
     },
     "source/gamelib/sprite.c": {
@@ -337,10 +359,30 @@
       "topics": [],
       "upstream_sha256": "9461fddcc732973c80aa1e01fb064edd131ac059f3e0371f37a854b19c3ef100"
     },
+    "source/gamelib/threads.h": {
+      "distributed_sha256": "a2f2a0e7b62683b89b438d1215e8f3d2e02295f29b9b50e8b3a365ab98059794",
+      "modified": true,
+      "source_import": {
+        "build": "4153",
+        "commit": "4a276c8b81fe0fc96d0f98b0e535da802c7417f7",
+        "repository": "https://github.com/DCurrent/openbor",
+        "sha256": "ce56878a72e32b5ef7ebe2fa942002154e4974596a02233fc2d98c5f258bac14"
+      },
+      "summary": "Declare the libretro thread, mutex and condition types.",
+      "topics": [
+        "logical-profile-compatibility",
+        "record-dates-and-file-notices"
+      ],
+      "upstream_sha256": null
+    },
     "source/gamelib/timer.h": {
-      "distributed_sha256": "4624981f1b2a45faad0a9781e4ced590e3d5041007e0a0acba8c9d463c2657a0",
-      "modified": false,
-      "topics": [],
+      "distributed_sha256": "42e0dd2621d9f51824bba1ad92caa9b5be606d76b1f285848106437de937a6bc",
+      "modified": true,
+      "summary": "Declare the shared platform microsecond clock used by native media playback.",
+      "topics": [
+        "logical-profile-compatibility",
+        "record-dates-and-file-notices"
+      ],
       "upstream_sha256": "4624981f1b2a45faad0a9781e4ced590e3d5041007e0a0acba8c9d463c2657a0"
     },
     "source/gamelib/transform.c": {
@@ -350,7 +392,7 @@
       "upstream_sha256": "9a9d994fe14a181ced3783f185f3f219689afed8461a0150b8a5d79e671b51a4"
     },
     "source/gamelib/transform.h": {
-      "distributed_sha256": "158d8de5fd960339dffd01b4ab0ba02d03c410f39366820636808107e2a99826",
+      "distributed_sha256": "50234f1d6c53ab91ee0c23f77d17216a77d9ab092463d54aac6c00241f4c8951",
       "modified": true,
       "summary": "Declare the raster helpers as ordinary functions; the header only declared them inline and the definitions live in transform.c.",
       "topics": [
@@ -390,7 +432,7 @@
       "upstream_sha256": "87581300442e16eae0ee96864cedb0f4f429be87ad2dcb68a4fd287486b3fb79"
     },
     "source/globals.h": {
-      "distributed_sha256": "5bb04dc2f1981b566877857fc564e6164b4a62dd26b9f57956f50fece4ed3089",
+      "distributed_sha256": "5cef0eefe63e3a03a786e2f18a55e1c9074af14d510221d32599da245ef898b4",
       "modified": true,
       "summary": "Include the libretro platform interface.",
       "topics": [
@@ -400,13 +442,17 @@
       "upstream_sha256": "3d00a02c63502e556c7f2dd3066af4456bb4d7e1449fce07388cf6e51306c573"
     },
     "source/pnglib/pngdec.c": {
-      "distributed_sha256": "f21913409b690b23f5034d325b481a4c08418a1108eb530876cb3c5366c8f465",
-      "modified": false,
-      "topics": [],
+      "distributed_sha256": "66ac89bfb193d50a97dfb4dfee3d66ded3106a50e534c4c96036bb9fc1166ea7",
+      "modified": true,
+      "summary": "Decode true-color background PNG data with bounded reads, checked row sizes and owned error cleanup.",
+      "topics": [
+        "logical-profile-compatibility",
+        "record-dates-and-file-notices"
+      ],
       "upstream_sha256": "f21913409b690b23f5034d325b481a4c08418a1108eb530876cb3c5366c8f465"
     },
     "source/pnglib/savepng.c": {
-      "distributed_sha256": "8320c4e145ed8d28f254b964b775a614a1d371570b59e1d10aca368cbea807d1",
+      "distributed_sha256": "c14474e867f7c51b22e184cfcc54d876b828dd949c38a6651cbfa40e2c60e601",
       "modified": true,
       "summary": "Include the standard library declarations instead of the glibc-only <malloc.h> when writing a screenshot.",
       "topics": [
@@ -422,9 +468,13 @@
       "upstream_sha256": "944dc9fc1d0e66f82c510a067ab5d6de9cd62b6519770cc2c94f32dce74a50ab"
     },
     "source/preprocessorlib/pp_expr.c": {
-      "distributed_sha256": "01845b3c134adf9f5298c4f1436060e324946a0d502ccb6b15b5f96025682630",
-      "modified": false,
-      "topics": [],
+      "distributed_sha256": "36612f2df6a2e32fe15b11f03d61e89e715b39341784dfd8d56f2dca93addc27",
+      "modified": true,
+      "summary": "Release the temporary preprocessor expression after obtaining its boolean result.",
+      "topics": [
+        "logical-profile-compatibility",
+        "record-dates-and-file-notices"
+      ],
       "upstream_sha256": "01845b3c134adf9f5298c4f1436060e324946a0d502ccb6b15b5f96025682630"
     },
     "source/preprocessorlib/pp_expr.h": {
@@ -450,11 +500,12 @@
       "upstream_sha256": "14ea9856cad63f1c9e17dd3ae1bf9116d2fc962b179b1de86d713c1e8db58e1b"
     },
     "source/preprocessorlib/pp_parser.c": {
-      "distributed_sha256": "3e563d9232834b84c33e0f5e35a4c2a33ac7ecd605f341d9f90732da2d55d686",
+      "distributed_sha256": "a52b471cedca8736c4917a8780c6d7f8a4dedd2f16852fa74bc74905a38f969b",
       "modified": true,
-      "summary": "Drop the glibc-only <malloc.h> and rely on the standard library declarations the parser already includes.",
+      "summary": "Drop the glibc-only <malloc.h> and rely on the standard library declarations the parser already includes. Release the owned function-macro parameter list after its final child token.",
       "topics": [
         "darwin-platform-support",
+        "logical-profile-compatibility",
         "record-dates-and-file-notices"
       ],
       "upstream_sha256": "6c7daca5100da62ac7155bfd79e6826b449581b22be2937ef00e629f8db481a9"
@@ -466,7 +517,7 @@
       "upstream_sha256": "bf743d291108ab411fc0e34ed891ad78f2d52f1bf20bdfb36d226f0df279155e"
     },
     "source/ramlib/ram.c": {
-      "distributed_sha256": "93a5b167990dcf44b8eca0f8a87d39cf36ecf2b3b2d649b4777714f5bb124d72",
+      "distributed_sha256": "12f25132677e1f4483274ca2914b7e3b19af24de43e705a886c286ee454f602d",
       "modified": true,
       "summary": "Read host memory statistics through mach on macOS instead of the glibc-only <malloc.h>.",
       "topics": [
@@ -511,7 +562,7 @@
       "upstream_sha256": "f857896653e9aecbae49fccb3a4734439284e91a3d992fcd0af5cfca68c0a607"
     },
     "source/scriptlib/ImportCache.h": {
-      "distributed_sha256": "8884f47721ee3e575a3cad48b2405e4a95c8a3f037e1e1321615ac55f9615891",
+      "distributed_sha256": "f7aaf49dda9b948f19d23c23e65b5cffb66c419cdf16f8467c88231c6a3aeafe",
       "modified": true,
       "summary": "Retain imported entry points as direct instruction pointers.",
       "topics": [
@@ -520,7 +571,7 @@
       "upstream_sha256": "61e7a9cb89e0ebb37f68f29c1c4cc90f6617d104bbaa4195072f785424a91e20"
     },
     "source/scriptlib/Instruction.c": {
-      "distributed_sha256": "5e8e8d00575dda42fa00ff2978b7978595cc4c49926a6c0365186db8e2c7824c",
+      "distributed_sha256": "bd67532c59d5cb29d062aef168657b40daa1f03e6a8a458e421aa80a9b45c5cf",
       "modified": true,
       "summary": "Store each compiled script constant once, compact call parameter references, and distinguish parser storage from compiled call and jump targets.",
       "topics": [
@@ -530,7 +581,7 @@
       "upstream_sha256": "73d3f7c89520bb752f14e891960f56d832e41b6f9c86489c9a41d05dbe4fcb1e"
     },
     "source/scriptlib/Instruction.h": {
-      "distributed_sha256": "26558178602ce94e39fba023e8654a2a33c5bdd13672489d2a53068c655abe87",
+      "distributed_sha256": "90254778e48707262caf6adf11121d9b545913338736157b68b82cefe937c4ed",
       "modified": true,
       "summary": "Remove redundant value storage, compact opcode and call-reference bookkeeping, and share parser-only fields with their compiled replacements.",
       "topics": [
@@ -540,10 +591,11 @@
       "upstream_sha256": "e283e23b1f8636ba4bf5a9a254c7a5897ad599dcb6c64d255552def5ac5ab60e"
     },
     "source/scriptlib/Interpreter.c": {
-      "distributed_sha256": "6c6d6abb5ee5cc79db290031f9a7fce6559aaffe6ad4a8f23dd0e7a626a5c975",
+      "distributed_sha256": "1ba31e4f135bd44b4e7bccca780771796ed0679d0ac8784e3a6c8d38d7f79114",
       "modified": true,
-      "summary": "Push canonical constants, release parser-only instruction data, and pack compiled instructions, values, and call references into exact contiguous storage. Compact compiler-only instruction records after resolving value ownership, preserving branch and export anchors, all mutable values and exactly-once pool cleanup. Allocate parser state only while compiling and release it once runtime instructions are ready.",
+      "summary": "Push canonical constants, release parser-only instruction data, and pack compiled instructions, values, and call references into exact contiguous storage. Clear resolved compile-only import nodes without changing compiled call targets. Compact compiler-only instruction records after resolving value ownership, preserving branch and export anchors, all mutable values and exactly-once pool cleanup. Allocate parser state only while compiling and release it once runtime instructions are ready.",
       "topics": [
+        "logical-profile-compatibility",
         "record-dates-and-file-notices",
         "script-memory-layout"
       ],
@@ -614,17 +666,22 @@
       "upstream_sha256": "7e273c8e8ebe5b031cf46393046256b6214617894fbe12a508ec382f72f5d76a"
     },
     "source/scriptlib/ScriptVariant.c": {
-      "distributed_sha256": "e086a602db4889a5755b5e201f714ccee7dcb1b16245b76464daff44011fb57f",
-      "modified": false,
-      "topics": [],
+      "distributed_sha256": "0d7ae82c26ce12e9c1c3990ad1a0465f70337b73900dcfd8587a720c06f121db",
+      "modified": true,
+      "summary": "Provide a bounded string-cache lookup that rejects missing or out-of-range entries.",
+      "topics": [
+        "logical-profile-compatibility",
+        "record-dates-and-file-notices"
+      ],
       "upstream_sha256": "e086a602db4889a5755b5e201f714ccee7dcb1b16245b76464daff44011fb57f"
     },
     "source/scriptlib/ScriptVariant.h": {
-      "distributed_sha256": "a8c874ad1437cdb418ca98db46de3e4791838b44c7b1951e3322c26f737c1808",
+      "distributed_sha256": "e48a1e146b5d2af05204281a9b11e74403dd2ce2cc9c38817f3f01f20f3891cc",
       "modified": true,
-      "summary": "Declare the cache and variant helpers as ordinary functions; the header only declared them inline and the definitions live in ScriptVariant.c.",
+      "summary": "Declare the bounded string-cache lookup used by native script entry points.",
       "topics": [
         "compiler-warning-cleanup",
+        "logical-profile-compatibility",
         "record-dates-and-file-notices"
       ],
       "upstream_sha256": "3559914f0ed49c4222cdb8d5b53aabea847fbcf2acefbe1154540a0473a2c273"
@@ -666,7 +723,7 @@
       "upstream_sha256": "7c93317f6e6e487d5ce6928fab0d8edf8cfaedf787ab6a0862e02d16e80f1d74"
     },
     "source/scriptlib/depends.h": {
-      "distributed_sha256": "1639f25b740cf08fecd5aff10fbef34209cdf6c5dc5d012a93747215f9151c85",
+      "distributed_sha256": "a1ba5b774d02c5271cf4472a6bf314bde1c2f600b023c84391713318df0995ec",
       "modified": true,
       "summary": "Restore the pragma pack state the script headers rely on instead of leaving it set for every includer.",
       "topics": [
@@ -720,6 +777,286 @@
         "session-relative-filesystem"
       ],
       "upstream_sha256": "9abe1dba0ae32fd957eee53b225265f93b01b5b838fb0bb3579be0b61f3153a4"
+    },
+    "source/webmlib/halloc/LICENSE": {
+      "distributed_sha256": "ae4b9e1073a9579c0ac13d406d66c01c3a941ed072af7a70091dc153b8c903d5",
+      "modified": true,
+      "summary": "Supply the BSD terms referenced by the original halloc headers.",
+      "topics": [
+        "logical-profile-compatibility"
+      ],
+      "upstream_sha256": null
+    },
+    "source/webmlib/halloc/align.h": {
+      "distributed_sha256": "615f54895122c4f2f0a8cbf4186c3d39220347de566666a22b354cec488b1396",
+      "modified": true,
+      "source_import": {
+        "build": "4153",
+        "commit": "4a276c8b81fe0fc96d0f98b0e535da802c7417f7",
+        "repository": "https://github.com/DCurrent/openbor",
+        "sha256": "7fad5abc6f50320e8dd19cc56c924e927e160af0100bede126ec0cbfa8cd111c"
+      },
+      "summary": "Import the native 4153 media component, retaining its upstream authorship and license notices.",
+      "topics": [
+        "logical-profile-compatibility",
+        "record-dates-and-file-notices"
+      ],
+      "upstream_sha256": null
+    },
+    "source/webmlib/halloc/halloc.c": {
+      "distributed_sha256": "e75ee35bbf40a14158b7a3e6a5094b0bf5b2a49034745b90f4df905df576793c",
+      "modified": true,
+      "source_import": {
+        "build": "4153",
+        "commit": "4a276c8b81fe0fc96d0f98b0e535da802c7417f7",
+        "repository": "https://github.com/DCurrent/openbor",
+        "sha256": "b4be0ed36b72f969076aed9a3415159bb0a87a5b9091a4e0f75f613410b4b0db"
+      },
+      "summary": "Import the native 4153 media component, retaining its upstream authorship and license notices.",
+      "topics": [
+        "logical-profile-compatibility",
+        "record-dates-and-file-notices"
+      ],
+      "upstream_sha256": null
+    },
+    "source/webmlib/halloc/halloc.h": {
+      "distributed_sha256": "e084828570ea9c1cfb4026a026103728791146735d5fdf3133daaaf8156ef629",
+      "modified": true,
+      "source_import": {
+        "build": "4153",
+        "commit": "4a276c8b81fe0fc96d0f98b0e535da802c7417f7",
+        "repository": "https://github.com/DCurrent/openbor",
+        "sha256": "fd4dde7cde0fc609a0c1598d58b2ba387158d9ed29fbe1f4e86b43301e4c257b"
+      },
+      "summary": "Import the native 4153 media component, retaining its upstream authorship and license notices.",
+      "topics": [
+        "logical-profile-compatibility",
+        "record-dates-and-file-notices"
+      ],
+      "upstream_sha256": null
+    },
+    "source/webmlib/halloc/hlist.h": {
+      "distributed_sha256": "56b6a29e901f0340ae73d24d831c94ff0cd61d84c3a3d6fcecbcf4340e1fffea",
+      "modified": true,
+      "source_import": {
+        "build": "4153",
+        "commit": "4a276c8b81fe0fc96d0f98b0e535da802c7417f7",
+        "repository": "https://github.com/DCurrent/openbor",
+        "sha256": "594971bf6cdc832ea51057417e89e11bb92c96ad830f84c021401b8454d28199"
+      },
+      "summary": "Import the native 4153 media component, retaining its upstream authorship and license notices.",
+      "topics": [
+        "logical-profile-compatibility",
+        "record-dates-and-file-notices"
+      ],
+      "upstream_sha256": null
+    },
+    "source/webmlib/halloc/macros.h": {
+      "distributed_sha256": "af0959ff854e208e2ad9249e83657f493913e24900e9b07a115c08257ca49fd8",
+      "modified": true,
+      "source_import": {
+        "build": "4153",
+        "commit": "4a276c8b81fe0fc96d0f98b0e535da802c7417f7",
+        "repository": "https://github.com/DCurrent/openbor",
+        "sha256": "c6eb0318f268aadf04aca4ba89482c7b0e83823206d994c46efa2431966399e2"
+      },
+      "summary": "Import the native 4153 media component, retaining its upstream authorship and license notices.",
+      "topics": [
+        "logical-profile-compatibility",
+        "record-dates-and-file-notices"
+      ],
+      "upstream_sha256": null
+    },
+    "source/webmlib/nestegg/LICENSE": {
+      "distributed_sha256": "505ee8e018326f36bb4070f69c6eb3caa6079b8fb796cd53a8d1bb168337e5ae",
+      "modified": true,
+      "source_import": {
+        "build": "4153",
+        "commit": "4a276c8b81fe0fc96d0f98b0e535da802c7417f7",
+        "repository": "https://github.com/DCurrent/openbor",
+        "sha256": "505ee8e018326f36bb4070f69c6eb3caa6079b8fb796cd53a8d1bb168337e5ae"
+      },
+      "summary": "Import the native 4153 media component, retaining its upstream authorship and license notices.",
+      "topics": [
+        "logical-profile-compatibility"
+      ],
+      "upstream_sha256": null
+    },
+    "source/webmlib/nestegg/nestegg.c": {
+      "distributed_sha256": "783d8d44c6efd8f79ec93bade10875203a7937c95f80a2316197eb9696a88a62",
+      "modified": true,
+      "source_import": {
+        "build": "4153",
+        "commit": "4a276c8b81fe0fc96d0f98b0e535da802c7417f7",
+        "repository": "https://github.com/DCurrent/openbor",
+        "sha256": "25605aafaded10580da9c22ca13066e33851e1e5f86740e0c8915491ef5545b3"
+      },
+      "summary": "Bound compressed blocks before allocation in the explicitly enabled reproducible-media diagnostic; preserve normal parser limits otherwise.",
+      "topics": [
+        "logical-profile-compatibility",
+        "record-dates-and-file-notices"
+      ],
+      "upstream_sha256": null
+    },
+    "source/webmlib/nestegg/nestegg.h": {
+      "distributed_sha256": "b889e114fff047beb593d2430ec7e4fd07fa386e78a391d7504c6a9e40b4eca3",
+      "modified": true,
+      "source_import": {
+        "build": "4153",
+        "commit": "4a276c8b81fe0fc96d0f98b0e535da802c7417f7",
+        "repository": "https://github.com/DCurrent/openbor",
+        "sha256": "a2de8d88affaafd3cfc4df36e1b267d531ff17e90d049b0e5e242f4a0afce659"
+      },
+      "summary": "Import the native 4153 media component, retaining its upstream authorship and license notices.",
+      "topics": [
+        "logical-profile-compatibility",
+        "record-dates-and-file-notices"
+      ],
+      "upstream_sha256": null
+    },
+    "source/webmlib/samplecvt.c": {
+      "distributed_sha256": "8c038112d13373c54b9a62f2d84837e85451d2ed3ebbccac11cc98aadba01abd",
+      "modified": true,
+      "source_import": {
+        "build": "4153",
+        "commit": "4a276c8b81fe0fc96d0f98b0e535da802c7417f7",
+        "repository": "https://github.com/DCurrent/openbor",
+        "sha256": "029805ff548dd6f5342001e3946226bc9328b8d6d86e06e79195a360e6de7d21"
+      },
+      "summary": "Import the native 4153 media component, retaining its upstream authorship and license notices.",
+      "topics": [
+        "logical-profile-compatibility",
+        "record-dates-and-file-notices"
+      ],
+      "upstream_sha256": null
+    },
+    "source/webmlib/samplecvt.h": {
+      "distributed_sha256": "648029b4bba8af5e84c6576864565c849db937d8c8502fef1334bfad2f1a5d7d",
+      "modified": true,
+      "source_import": {
+        "build": "4153",
+        "commit": "4a276c8b81fe0fc96d0f98b0e535da802c7417f7",
+        "repository": "https://github.com/DCurrent/openbor",
+        "sha256": "3fd1c478b5c9bce2a44c4a1cee1001ed95069568cfcd4b23b02f6ad0e3205835"
+      },
+      "summary": "Import the native 4153 media component, retaining its upstream authorship and license notices.",
+      "topics": [
+        "logical-profile-compatibility",
+        "record-dates-and-file-notices"
+      ],
+      "upstream_sha256": null
+    },
+    "source/webmlib/vidplay.c": {
+      "distributed_sha256": "96d269c071381754ad2eaf6fdfcf82f30bc8282a3c790cc4451cb3f74744c26b",
+      "modified": true,
+      "source_import": {
+        "build": "4153",
+        "commit": "4a276c8b81fe0fc96d0f98b0e535da802c7417f7",
+        "repository": "https://github.com/DCurrent/openbor",
+        "sha256": "2c2989562fef714e29cca88909d93c5e841c3151c03bf3c468d5f6d5fdacf8e0"
+      },
+      "summary": "Coordinate WebM worker shutdown and yield while waiting for video frames. Add an opt-in common media rendezvous with bounded active waits, packet queues and decoded-frame reserves; coordinate PCM and video without changing engine clocks or default scheduling.",
+      "topics": [
+        "logical-profile-compatibility",
+        "record-dates-and-file-notices"
+      ],
+      "upstream_sha256": null
+    },
+    "source/webmlib/vidplay.h": {
+      "distributed_sha256": "f17ecd0df15a119ac9723bdffe9eed0785a8fd2040ea1466b63ed7d4a300ad97",
+      "modified": true,
+      "source_import": {
+        "build": "4153",
+        "commit": "4a276c8b81fe0fc96d0f98b0e535da802c7417f7",
+        "repository": "https://github.com/DCurrent/openbor",
+        "sha256": "6fb3eafe0e70e3e815562e80d149e7c0e38e4a93969255daf2d4ff136c0ec04a"
+      },
+      "summary": "Import the native 4153 media component, retaining its upstream authorship and license notices.",
+      "topics": [
+        "logical-profile-compatibility",
+        "record-dates-and-file-notices"
+      ],
+      "upstream_sha256": null
+    },
+    "source/webmlib/vorbis.c": {
+      "distributed_sha256": "d996fb2688c188cbec64cf68ad0660a6d21dcf69c5a99fc08f4a67412087e7ae",
+      "modified": true,
+      "source_import": {
+        "build": "4153",
+        "commit": "4a276c8b81fe0fc96d0f98b0e535da802c7417f7",
+        "repository": "https://github.com/DCurrent/openbor",
+        "sha256": "95f261a1b507864b71a42a1a23de0c76c06b10a249639ecaefd4bc3e328d948b"
+      },
+      "summary": "Import the native 4153 media component, retaining its upstream authorship and license notices.",
+      "topics": [
+        "logical-profile-compatibility",
+        "record-dates-and-file-notices"
+      ],
+      "upstream_sha256": null
+    },
+    "source/webmlib/vorbis.h": {
+      "distributed_sha256": "061e19e36f5127b91d3d6799bfa92e322a82e90115d8741b36ce44c05e4ed687",
+      "modified": true,
+      "source_import": {
+        "build": "4153",
+        "commit": "4a276c8b81fe0fc96d0f98b0e535da802c7417f7",
+        "repository": "https://github.com/DCurrent/openbor",
+        "sha256": "61d18e307b5bde79b0d4241a46b81d9088cad5beb3a9a3654bb7cb925f119044"
+      },
+      "summary": "Import the native 4153 media component, retaining its upstream authorship and license notices.",
+      "topics": [
+        "logical-profile-compatibility",
+        "record-dates-and-file-notices"
+      ],
+      "upstream_sha256": null
+    },
+    "source/webmlib/vorbisfpu.h": {
+      "distributed_sha256": "bedf1638cd39dcc63c390047db8df41e7080d8a34da46ffab41e7c92fb184132",
+      "modified": true,
+      "source_import": {
+        "build": "4153",
+        "commit": "4a276c8b81fe0fc96d0f98b0e535da802c7417f7",
+        "repository": "https://github.com/DCurrent/openbor",
+        "sha256": "242c769e8c854ec2e2d7080db27571a9641a2224294d2e736e23dd3bae0afd0a"
+      },
+      "summary": "Import the native 4153 media component, retaining its upstream authorship and license notices.",
+      "topics": [
+        "logical-profile-compatibility",
+        "record-dates-and-file-notices"
+      ],
+      "upstream_sha256": null
+    },
+    "source/webmlib/yuv.c": {
+      "distributed_sha256": "e022afa3a9af60af6372282ab54ee349e8789e79c3e847b654f6cf887e627d5a",
+      "modified": true,
+      "source_import": {
+        "build": "4153",
+        "commit": "4a276c8b81fe0fc96d0f98b0e535da802c7417f7",
+        "repository": "https://github.com/DCurrent/openbor",
+        "sha256": "8207e345c0a709ce7e84232bb28f1bc5aac3c9431a7b9ed4fb119c3580113cd5"
+      },
+      "summary": "Import the native 4153 media component, retaining its upstream authorship and license notices.",
+      "topics": [
+        "logical-profile-compatibility",
+        "record-dates-and-file-notices"
+      ],
+      "upstream_sha256": null
+    },
+    "source/webmlib/yuv.h": {
+      "distributed_sha256": "fda0857a3ccf607c1f232209a1f9478f1a9a94e037133b81dc5fce93facd26d6",
+      "modified": true,
+      "source_import": {
+        "build": "4153",
+        "commit": "4a276c8b81fe0fc96d0f98b0e535da802c7417f7",
+        "repository": "https://github.com/DCurrent/openbor",
+        "sha256": "b57503634e9ecdad542335f2ba81a93cd5af4e4ffbd7f98093ad2abf6fa3e8a2"
+      },
+      "summary": "Import the native 4153 media component, retaining its upstream authorship and license notices.",
+      "topics": [
+        "logical-profile-compatibility",
+        "record-dates-and-file-notices"
+      ],
+      "upstream_sha256": null
     },
     "version.h": {
       "distributed_sha256": "fa91abe0b775b4e9b7d7dd184f5215cf94fb3969d8cbe3677c47b3c31306d94a",
@@ -1097,7 +1434,7 @@
     "xbox/video.h": "914e7b353daef650d39025fce339f3feed8a8664c889d7017e4b7fbae5e357c0",
     "xcode/mac/OpenBOR.xcodeproj/project.pbxproj": "0f4229c1f694e719e37438e24240ebf6a9ca85f4b8db0821e1e6f1a73a38d927"
   },
-  "record_date": "2026-09-12",
+  "record_date": "2026-10-19",
   "repository": "https://github.com/DCurrent/openbor.git",
   "schema": 3,
   "selection": "Libretro build dependency closure and original license notices; omitted paths are relative to the upstream engine/ subtree"

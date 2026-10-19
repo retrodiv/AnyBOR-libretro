@@ -8,6 +8,12 @@ distributed hash of every retained upstream file. This makes the port's modifica
 distinguishable from upstream code without importing upstream Git history.
 The shared port, frontend glue and build tooling are included as source.
 
+Files imported from a profile revision into another physical baseline have a
+`source_import` entry with their own upstream commit, repository and original
+SHA-256. The baseline hash remains separate. The imported media sources retain
+their original copyright blocks and the complete [profile license](LICENSES/OpenBOR-profile-4153-BSD-3-Clause.txt);
+the SBOM identifies the selected source revision and its embedded component terms.
+
 Engine imports in the public Git history include the portable circle and
 fixed-width endian adaptations from their first appearance. Their inventories
 retain the original upstream hashes separately from the distributed hashes;

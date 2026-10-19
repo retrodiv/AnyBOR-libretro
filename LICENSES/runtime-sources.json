@@ -72,5 +72,12 @@
     "sha256": "f48b32db0c4bf613869838a37e5285971caaa3965bdf396f3ec13c21f4498d46",
     "bytes": 2607,
     "selection": "Verbatim copyright and licensing comment blocks from GCC 13.3.0 runtime sources"
+  },
+  "OpenBOR-profile-4153-BSD-3-Clause.txt": {
+    "url": "https://raw.githubusercontent.com/DCurrent/openbor/4a276c8b81fe0fc96d0f98b0e535da802c7417f7/engine/LICENSE",
+    "sha256": "88be43c97bbb0321122585c7c0e15a546819ffa420d8051e1153b343febd97a9",
+    "bytes": 1543,
+    "license": "BSD-3-Clause",
+    "scope": "Selected early profile source imports"
   }
 }
