@@ -181,9 +181,9 @@
       "upstream_sha256": "be38caf09258969a0f9c68502c91e7ca46546f65d68f4aa5c169e1665838054a"
     },
     "source/gamelib/loadimg.c": {
-      "distributed_sha256": "dc6e89c15652e4cadeaaeddace24d0490c8f8439745fe7c21adb41ba0f75a8fd",
+      "distributed_sha256": "77bd197cc99ba0e68badc0164a7587ae47368bb8903a4bc0254aeb4d7294b3fd",
       "modified": true,
-      "summary": "Validate legacy PCX headers, read uncompressed indexed PCX scanlines, and represent RIFF/WAVE paths used as animation frames with an empty frame.",
+      "summary": "Validate legacy PCX sprite headers, read uncompressed indexed PCX scanlines, and represent RIFF/WAVE paths used as animation frames with an empty frame. Preserve native palette-only filename probing, three-plane refusals and final RGB table conversion without interpreting palette bytes as sprite dimensions.",
       "topics": [
         "image-loader-safety",
         "record-dates-and-file-notices"

@@ -195,9 +195,9 @@
       "upstream_sha256": "1cd9bad27b7c481f5a84bcf5ad3e3d195e4785ea0f11937480aee273ad42758e"
     },
     "source/gamelib/loadimg.c": {
-      "distributed_sha256": "6669d0628eea528b7f98e8722fd79c41a5c52dc9ce9bccdcc6efa69ea2bc6f94",
+      "distributed_sha256": "8ef6f4663c88a1db164cebe429bb117b7625640929199260ca3e61c8df0ddc75",
       "modified": true,
-      "summary": "Validate legacy PCX headers, read uncompressed indexed PCX scanlines, and represent RIFF/WAVE paths used as animation frames with an empty frame. Declare the resolved source member and original bitmap dimensions for independent sprite reconstruction proof.",
+      "summary": "Validate legacy PCX sprite headers, read uncompressed indexed PCX scanlines, and represent RIFF/WAVE paths used as animation frames with an empty frame. Declare the resolved source member and original bitmap dimensions for independent sprite reconstruction proof. Preserve native palette-only filename probing, three-plane refusals and final RGB table conversion without interpreting palette bytes as sprite dimensions.",
       "topics": [
         "image-loader-safety",
         "reconstructible-resources"

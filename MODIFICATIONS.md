@@ -342,6 +342,13 @@ bytes as dimensions. If authored animation data points a frame at a RIFF/WAVE
 asset, the engine preserves that animation slot as an empty transparent frame
 instead of decoding audio bytes as pixels or allocating a bogus bitmap.
 
+Palette-only requests preserve each profile's native filename routing and
+acceptance rules. The PCX palette path reads the final 256 RGB colours into a
+bounded buffer, retains its native three-plane refusal and converts the table
+to the active palette format. Sprite requests validate image headers before
+using dimensions. Direct raw-palette readers retain their native in-range
+layout and cannot write beyond the declared palette allocation.
+
 ## Four player controls
 
 All engines receive four independent RetroPads through the shared port.

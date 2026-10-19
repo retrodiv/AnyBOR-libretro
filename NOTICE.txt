@@ -2148,6 +2148,22 @@ Source: src/engines/3842/source/gamelib/sprite.c
  * at the source repository root. Original notices follow below.
  */
 
+Source: src/engines/3400/source/gamelib/loadimg.c
+/* AnyBOR modification record: 2026-10-19.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Validate legacy PCX sprite headers, read uncompressed indexed PCX
+ * scanlines, and represent RIFF/WAVE paths used as animation frames with an
+ * empty frame. Preserve native palette-only filename probing, three-plane
+ * refusals and final RGB table conversion without interpreting palette bytes
+ * as sprite dimensions.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/3400.md
+ * at the source repository root. Original notices follow below.
+ */
+
 Source: src/deps/libpng/arm/palette_neon_intrinsics.c
 /* palette_neon_intrinsics.c - NEON optimised palette expansion functions
  *
@@ -4755,19 +4771,6 @@ Source: src/engines/7533/source/gamelib/models.c, src/engines/7533/source/pnglib
  * Copyright (c)  OpenBOR Team
  */
 
-Source: src/engines/6391/source/gamelib/loadimg.c
-/* AnyBOR modification record: 2026-10-08.
- * Port maintained by retrodiv <retrodiv@proton.me>.
- * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
- * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
- * Upstream code retains its original license and notices.
- * Declare the resolved source member and original bitmap dimensions for
- * independent sprite reconstruction proof.
- * Existing changes recorded here; this is not their implementation date.
- * See MODIFICATIONS.md and docs/modifications/6391.md
- * at the source repository root. Original notices follow below.
- */
-
 Source: src/engines/3400/source/gamelib/borendian.h
 /* AnyBOR modification record: 2026-09-12.
  * Port maintained by retrodiv <retrodiv@proton.me>.
@@ -4960,6 +4963,36 @@ Source: src/engines/6391/source/pnglib/savepng.c
  * <malloc.h> when writing a screenshot.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/6391.md
+ * at the source repository root. Original notices follow below.
+ */
+
+Source: src/engines/8023/openbor.c
+/* AnyBOR modification record: 2026-10-19.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Apply the port's engine corrections and select the PC video configuration
+ * on macOS. Derive output names from the content basename with explicit
+ * destination capacities, and reject overflowing output path joins. Bound
+ * raw palette stores to the declared allocation while retaining its native
+ * in-range layout and complete input reads. Leave multiplayer slots without
+ * a selected model available to join even if game scripts preassign lives to
+ * them. Let a missing basename-only PAK self-check read the active frontend
+ * content after it has been validated and prepared. Allocate each model's
+ * animation pointer table through the highest animation index that model
+ * uses, and bound cache, copy and cleanup paths to that capacity. Ignore
+ * optional defense and offense entries outside the configured attack-type
+ * range with a log warning before accessing their tables. Yield after each
+ * newly completed model during explicit model-list or level preparation, and
+ * defer states until that preparation has cleaned up its intermediate
+ * parsers and handles. Use four independent RetroPad devices and per-device
+ * mappings. Place player state in aligned storage for PE SIMD reads. Yield
+ * to the frontend and decoder workers while asynchronous movies are pending.
+ * Grow each collision collection's pointer table only through its highest
+ * author-facing slot.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/8023.md
  * at the source repository root. Original notices follow below.
  */
 
@@ -5340,6 +5373,22 @@ Source: src/engines/4086/openbor.c, src/engines/4086/source/globals.h, src/engin
  * Copyright (c) 2004 - 2013 OpenBOR Team
  */
 
+Source: src/engines/6391/source/gamelib/loadimg.c
+/* AnyBOR modification record: 2026-10-19.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Declare the resolved source member and original bitmap dimensions for
+ * independent sprite reconstruction proof. Validate PCX sprite signatures
+ * before using header dimensions. Preserve native palette-only filename
+ * probing, three-plane refusals and final RGB table conversion without
+ * interpreting palette bytes as sprite dimensions.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/6391.md
+ * at the source repository root. Original notices follow below.
+ */
+
 Source: src/engines/4086/source/scriptlib/depends.h
 /* AnyBOR modification record: 2026-09-12.
  * Port maintained by retrodiv <retrodiv@proton.me>.
@@ -5389,6 +5438,22 @@ Source: src/engines/7142/source/gamelib/threads.h
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
  * Upstream code retains its original license and notices.
  * Declare the libretro thread, mutex and condition types.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/7142.md
+ * at the source repository root. Original notices follow below.
+ */
+
+Source: src/engines/7142/source/gamelib/loadimg.c
+/* AnyBOR modification record: 2026-10-19.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Declare the resolved source member and original bitmap dimensions for
+ * independent sprite reconstruction proof. Validate PCX sprite signatures
+ * before using header dimensions. Preserve native palette-only filename
+ * probing, three-plane refusals and final RGB table conversion without
+ * interpreting palette bytes as sprite dimensions.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/7142.md
  * at the source repository root. Original notices follow below.
@@ -5626,19 +5691,6 @@ Source: src/deps/libvorbis/lib/mdct.h
 
  ********************************************************************/
 
-Source: src/engines/3400/source/gamelib/loadimg.c
-/* AnyBOR modification record: 2026-09-12.
- * Port maintained by retrodiv <retrodiv@proton.me>.
- * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
- * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
- * Upstream code retains its original license and notices.
- * Validate legacy PCX headers, read uncompressed indexed PCX scanlines, and
- * represent RIFF/WAVE paths used as animation frames with an empty frame.
- * Existing changes recorded here; this is not their implementation date.
- * See MODIFICATIONS.md and docs/modifications/3400.md
- * at the source repository root. Original notices follow below.
- */
-
 Source: src/deps/libvorbis/lib/modes/residue_44u.h
 /********************************************************************
  *                                                                  *
@@ -5841,19 +5893,6 @@ Source: src/deps/zlib/deflate.h
  * For conditions of distribution and use, see copyright notice in zlib.h
  */
 
-Source: src/engines/7142/source/gamelib/loadimg.c
-/* AnyBOR modification record: 2026-10-08.
- * Port maintained by retrodiv <retrodiv@proton.me>.
- * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
- * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
- * Upstream code retains its original license and notices.
- * Declare the resolved source member and original bitmap dimensions for
- * independent sprite reconstruction proof.
- * Existing changes recorded here; this is not their implementation date.
- * See MODIFICATIONS.md and docs/modifications/7142.md
- * at the source repository root. Original notices follow below.
- */
-
 Source: src/deps/libpng/pngpread.c
 /* pngpread.c - read a png file in push mode
  *
@@ -6027,21 +6066,6 @@ Source: src/engines/3842/openborscript.h
  * at the source repository root. Original notices follow below.
  */
 
-Source: src/engines/3842/source/gamelib/loadimg.c
-/* AnyBOR modification record: 2026-10-08.
- * Port maintained by retrodiv <retrodiv@proton.me>.
- * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
- * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
- * Upstream code retains its original license and notices.
- * Validate legacy PCX headers, read uncompressed indexed PCX scanlines, and
- * represent RIFF/WAVE paths used as animation frames with an empty frame.
- * Declare the resolved source member and original bitmap dimensions for
- * independent sprite reconstruction proof.
- * Existing changes recorded here; this is not their implementation date.
- * See MODIFICATIONS.md and docs/modifications/3842.md
- * at the source repository root. Original notices follow below.
- */
-
 Source: src/deps/libvorbis/lib/books/coupled/res_books_51.h
 /********************************************************************
  *                                                                  *
@@ -6058,6 +6082,22 @@ Source: src/deps/libvorbis/lib/books/coupled/res_books_51.h
  * function: static codebooks for 5.1 surround
  *
  ********************************************************************/
+
+Source: src/engines/4432/source/gamelib/loadimg.c
+/* AnyBOR modification record: 2026-10-19.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Declare the resolved source member and original bitmap dimensions for
+ * independent sprite reconstruction proof. Validate PCX sprite signatures
+ * before using header dimensions. Preserve native palette-only filename
+ * probing, three-plane refusals and final RGB table conversion without
+ * interpreting palette bytes as sprite dimensions.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/4432.md
+ * at the source repository root. Original notices follow below.
+ */
 
 Source: src/engines/4086/source/preprocessorlib/pp_lexer.c
 /* AnyBOR modification record: 2026-10-17.
@@ -6249,6 +6289,22 @@ Source: src/engines/8023/source/gamelib/loadimg.c
  * independent sprite reconstruction proof.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/8023.md
+ * at the source repository root. Original notices follow below.
+ */
+
+Source: src/engines/7533/source/gamelib/loadimg.c
+/* AnyBOR modification record: 2026-10-19.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Declare the resolved source member and original bitmap dimensions for
+ * independent sprite reconstruction proof. Validate PCX sprite signatures
+ * before using header dimensions. Preserve native palette-only filename
+ * probing, three-plane refusals and final RGB table conversion without
+ * interpreting palette bytes as sprite dimensions.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/7533.md
  * at the source repository root. Original notices follow below.
  */
 
@@ -7054,19 +7110,6 @@ Source: src/engines/4086/source/ramlib/ram.c
  * at the source repository root. Original notices follow below.
  */
 
-Source: src/engines/4086/source/gamelib/loadimg.c
-/* AnyBOR modification record: 2026-10-08.
- * Port maintained by retrodiv <retrodiv@proton.me>.
- * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
- * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
- * Upstream code retains its original license and notices.
- * Declare the resolved source member and original bitmap dimensions for
- * independent sprite reconstruction proof.
- * Existing changes recorded here; this is not their implementation date.
- * See MODIFICATIONS.md and docs/modifications/4086.md
- * at the source repository root. Original notices follow below.
- */
-
 Source: src/deps/libvorbis/lib/modes/residue_44.h
 /********************************************************************
  *                                                                  *
@@ -7119,6 +7162,23 @@ Source: src/deps/libvorbis/lib/modes/psych_8.h
  function: 8kHz psychoacoustic settings
 
  ********************************************************************/
+
+Source: src/engines/3842/source/gamelib/loadimg.c
+/* AnyBOR modification record: 2026-10-19.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Validate legacy PCX sprite headers, read uncompressed indexed PCX
+ * scanlines, and represent RIFF/WAVE paths used as animation frames with an
+ * empty frame. Declare the resolved source member and original bitmap
+ * dimensions for independent sprite reconstruction proof. Preserve native
+ * palette-only filename probing, three-plane refusals and final RGB table
+ * conversion without interpreting palette bytes as sprite dimensions.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/3842.md
+ * at the source repository root. Original notices follow below.
+ */
 
 Source: src/engines/7533/source/utils.h
 /* AnyBOR modification record: 2026-10-12.
@@ -7386,19 +7446,6 @@ Source: src/engines/4086/source/scriptlib/ScriptVariant.h
  * only declared them inline and the definitions live in ScriptVariant.c.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/4086.md
- * at the source repository root. Original notices follow below.
- */
-
-Source: src/engines/4432/source/gamelib/loadimg.c
-/* AnyBOR modification record: 2026-10-08.
- * Port maintained by retrodiv <retrodiv@proton.me>.
- * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
- * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
- * Upstream code retains its original license and notices.
- * Declare the resolved source member and original bitmap dimensions for
- * independent sprite reconstruction proof.
- * Existing changes recorded here; this is not their implementation date.
- * See MODIFICATIONS.md and docs/modifications/4432.md
  * at the source repository root. Original notices follow below.
  */
 
@@ -8031,34 +8078,6 @@ Source: src/deps/zlib/crc32.c
  * Kadatch and Jenkins (2010). See doc/crc-doc.1.0.pdf in this distribution.
  */
 
-Source: src/engines/8023/openbor.c
-/* AnyBOR modification record: 2026-10-15.
- * Port maintained by retrodiv <retrodiv@proton.me>.
- * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
- * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
- * Upstream code retains its original license and notices.
- * Apply the port's engine corrections and select the PC video configuration
- * on macOS. Derive output names from the content basename with explicit
- * destination capacities, and reject overflowing output path joins. Leave
- * multiplayer slots without a selected model available to join even if game
- * scripts preassign lives to them. Let a missing basename-only PAK self-
- * check read the active frontend content after it has been validated and
- * prepared. Allocate each model's animation pointer table through the
- * highest animation index that model uses, and bound cache, copy and cleanup
- * paths to that capacity. Ignore optional defense and offense entries
- * outside the configured attack-type range with a log warning before
- * accessing their tables. Yield after each newly completed model during
- * explicit model-list or level preparation, and defer states until that
- * preparation has cleaned up its intermediate parsers and handles. Use four
- * independent RetroPad devices and per-device mappings. Place player state
- * in aligned storage for PE SIMD reads. Yield to the frontend and decoder
- * workers while asynchronous movies are pending. Grow each collision
- * collection's pointer table only through its highest author-facing slot.
- * Existing changes recorded here; this is not their implementation date.
- * See MODIFICATIONS.md and docs/modifications/8023.md
- * at the source repository root. Original notices follow below.
- */
-
 Source: src/engines/3842/source/gamelib/packfile.h
 /* AnyBOR modification record: 2026-09-12.
  * Port maintained by retrodiv <retrodiv@proton.me>.
@@ -8165,6 +8184,22 @@ Source: src/deps/libvorbis/lib/envelope.h
 
  ********************************************************************/
 
+Source: src/engines/4086/source/gamelib/loadimg.c
+/* AnyBOR modification record: 2026-10-19.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Declare the resolved source member and original bitmap dimensions for
+ * independent sprite reconstruction proof. Validate PCX sprite signatures
+ * before using header dimensions. Preserve native palette-only filename
+ * probing, three-plane refusals and final RGB table conversion without
+ * interpreting palette bytes as sprite dimensions.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/4086.md
+ * at the source repository root. Original notices follow below.
+ */
+
 Source: src/deps/zlib/inffast.c
 /* inffast.c -- fast decoding
  * Copyright (C) 1995-2026 Mark Adler
@@ -8233,19 +8268,6 @@ Source: src/engines/4432/source/scriptlib/Interpreter.c
  * release it once runtime instructions are ready.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/4432.md
- * at the source repository root. Original notices follow below.
- */
-
-Source: src/engines/7533/source/gamelib/loadimg.c
-/* AnyBOR modification record: 2026-10-08.
- * Port maintained by retrodiv <retrodiv@proton.me>.
- * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
- * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
- * Upstream code retains its original license and notices.
- * Declare the resolved source member and original bitmap dimensions for
- * independent sprite reconstruction proof.
- * Existing changes recorded here; this is not their implementation date.
- * See MODIFICATIONS.md and docs/modifications/7533.md
  * at the source repository root. Original notices follow below.
  */
 

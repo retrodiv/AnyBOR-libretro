@@ -1,10 +1,13 @@
-/* AnyBOR modification record: 2026-10-08.
+/* AnyBOR modification record: 2026-10-19.
  * Port maintained by retrodiv <retrodiv@proton.me>.
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
  * Upstream code retains its original license and notices.
  * Declare the resolved source member and original bitmap dimensions for
- * independent sprite reconstruction proof.
+ * independent sprite reconstruction proof. Validate PCX sprite signatures
+ * before using header dimensions. Preserve native palette-only filename
+ * probing, three-plane refusals and final RGB table conversion without
+ * interpreting palette bytes as sprite dimensions.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/7533.md
  * at the source repository root. Original notices follow below.
@@ -1066,7 +1069,7 @@ typedef struct
 
 static s_pcxheader pcx_header;
 
-static int openpcx(char *filename, char *packname)
+static int openpcx_mode(char *filename, char *packname, int palette_only)
 {
     if((handle = openpackfile(filename, packname)) == -1)
     {
@@ -1075,6 +1078,7 @@ static int openpcx(char *filename, char *packname)
     if(readpackfile(handle, &pcx_header, 128) != 128)
     {
         closepackfile(handle);
+        handle = -1;
         return 0;
     }
 
@@ -1087,9 +1091,29 @@ static int openpcx(char *filename, char *packname)
     pcx_header.bytesperline = SwapLSB16(pcx_header.bytesperline);
     pcx_header.paltype = SwapLSB16(pcx_header.paltype);
 
-    if(pcx_header.colorplanes == 3)
+    /* Preserve this build's permissive palette-only PCX route and its
+     * three-plane refusal. Image dimensions are irrelevant to this request. */
+    if(palette_only)
+    {
+        if(pcx_header.colorplanes == 3 || seekpackfile(handle, 0, SEEK_END) < 768)
+        {
+            closepackfile(handle);
+            handle = -1;
+            return 0;
+        }
+        res[0] = res[1] = 0;
+        return 2;
+    }
+
+    /* Validate sprite headers independently of palette-only reads. */
+    if((unsigned char)pcx_header.manufacturer != 0x0A ||
+       (unsigned char)pcx_header.encoding > 1 ||
+       (unsigned char)pcx_header.bitspp != 8 ||
+       (unsigned char)pcx_header.colorplanes != 1 ||
+       pcx_header.xmax < pcx_header.xmin || pcx_header.ymax < pcx_header.ymin)
     {
         closepackfile(handle);
+        handle = -1;
         return 0;
     }
 
@@ -1097,6 +1121,11 @@ static int openpcx(char *filename, char *packname)
     res[1] = pcx_header.ymax;
 
     return 1;
+}
+
+static int openpcx(char *filename, char *packname)
+{
+    return openpcx_mode(filename, packname, 0);
 }
 
 static int readpcx(unsigned char *buf, unsigned char *pal, int maxwidth, int maxheight)
@@ -1241,11 +1270,13 @@ static int readpcx(unsigned char *buf, unsigned char *pal, int maxwidth, int max
 #define OT_BMP 2
 #define OT_PCX 3
 #define OT_PNG 4
+#define OT_RAW_PALETTE 5
 
 static int open_type = 0;
 
-static int openimage(char *filename, char *packfile)
+static int openimage_mode(char *filename, char *packfile, int palette_only)
 {
+    int pcx_result;
     char fnam[128];
     int len = strlen(filename);
     char *ext = filename + len - 4;
@@ -1261,9 +1292,9 @@ static int openimage(char *filename, char *packfile)
         open_type = OT_GIF;
         return 1;
     }
-    else if(0 == stricmp(ext, ".pcx") && openpcx(filename, packfile))
+    else if(0 == stricmp(ext, ".pcx") && (pcx_result = palette_only ? openpcx_mode(filename, packfile, 1) : openpcx(filename, packfile)))
     {
-        open_type = OT_PCX;
+        open_type = pcx_result == 2 ? OT_RAW_PALETTE : OT_PCX;
         return 1;
     }
     else if(0 == stricmp(ext, ".bmp") && openbmp(filename, packfile))
@@ -1287,9 +1318,9 @@ static int openimage(char *filename, char *packfile)
     }
 
     sprintf(fnam, "%s.pcx", filename);
-    if(openpcx(fnam, packfile))
+    if((pcx_result = palette_only ? openpcx_mode(fnam, packfile, 1) : openpcx(fnam, packfile)))
     {
-        open_type = OT_PCX;
+        open_type = pcx_result == 2 ? OT_RAW_PALETTE : OT_PCX;
         return 1;
     }
 
@@ -1302,11 +1333,43 @@ static int openimage(char *filename, char *packfile)
     return 0;
 }
 
+static int openimage(char *filename, char *packfile)
+{
+    return openimage_mode(filename, packfile, 0);
+}
+
+/* A palette request reads only the native final 256 RGB triples.  It must
+ * never turn those bytes into sprite dimensions or write a partial result. */
+static int readrawpalette(unsigned char *pal)
+{
+    unsigned char rgb[768];
+    int i, bytes = PAL_BYTES;
+    if(!pal || (bytes != 512 && bytes != 768 && bytes != 1024)) return 0;
+    if(seekpackfile(handle, -768, SEEK_END) < 0 ||
+       readpackfile(handle, rgb, sizeof(rgb)) != (int)sizeof(rgb)) return 0;
+    if(bytes == 512)
+    {
+        for(i = 0; i < 256; ++i)
+            ((unsigned short *)pal)[i] = colour16(rgb[i*3], rgb[i*3+1], rgb[i*3+2]);
+    }
+    else if(bytes == 768) memcpy(pal, rgb, sizeof(rgb));
+    else
+    {
+        for(i = 0; i < 256; ++i)
+            ((unsigned *)pal)[i] = colour32(rgb[i*3], rgb[i*3+1], rgb[i*3+2]);
+    }
+    memset(pal, 0, bytes >> 8);
+    return 1;
+}
+
+
 static int readimage(unsigned char *buf, unsigned char *pal, int maxwidth, int maxheight)
 {
     int result = 0;
     switch(open_type)
     {
+        case OT_RAW_PALETTE:
+            return buf ? 0 : readrawpalette(pal);
     case OT_GIF:
         result = readgif(buf, pal, maxwidth, maxheight);
 #ifdef VERBOSE
@@ -1347,7 +1410,7 @@ static void closeimage()
     }
     else
     {
-        if(handle > 0)
+        if(handle >= 0)
         {
             closepackfile(handle);
         }
@@ -1477,7 +1540,7 @@ int loadimagepalette(char *filename, char *packfile, unsigned char *pal)
 {
     int result;
 
-    if(!openimage(filename, packfile))
+    if(!pal || !openimage_mode(filename, packfile, 1))
     {
         return 0;
     }

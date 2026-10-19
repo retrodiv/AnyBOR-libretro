@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.1.66 — profile palette fidelity
+
+- Preserve each profile's native raw RGB palette routing, conversions and refusals
+  while keeping PCX sprite header validation separate.
+- Bound raw palette writes to the declared allocation without changing its
+  native in-range layout.
+- Check palette contracts against the original source for every selectable profile,
+  with the published-source basis stated for the reconstructed test profile.
+
 ## 0.1.65 — rewind history and native CI scheduling
 
 - Clear supported capture buffers when saving a state fails, keeping refused

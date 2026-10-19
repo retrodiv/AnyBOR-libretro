@@ -1,0 +1,3872 @@
+{
+  "description": "Observed original model-palette dispatch and bytes for authored768-byte RGB files. Expected output is inside the declared palette allocation; original out-of-bounds writes are evidence, never required behavior. Reconstructed6392 has no exact test-source identity.",
+  "input_generation": "byte[i]=(i*17+11)&255; byte0=0; byte65=case parameter",
+  "profiles": [
+    {
+      "profile": "3400",
+      "engine": "3400",
+      "original_commit": "66fa1529897131ca51528967fbb21ee124e45775",
+      "original_image_source_sha256": "767927558bbcb1ee3317f8d021c1d689c6f27cce8a2aef1e63d096984ee0a9ba",
+      "original_model_source_sha256": "8d70c8b55eba868e6dfe09d3f1139104195506c83beedf889f3544cabbb48ed8",
+      "basis": "Exact pinned original source",
+      "image_reference": "https://github.com/DCurrent/openbor/blob/66fa1529897131ca51528967fbb21ee124e45775/engine/source/gamelib/loadimg.c#L932",
+      "model_reference": "https://github.com/DCurrent/openbor/blob/66fa1529897131ca51528967fbb21ee124e45775/engine/openbor.c#L5574",
+      "cases": [
+        {
+          "bytes": 512,
+          "loaded": 1,
+          "filename": "authored.act",
+          "authored_byte65": 0,
+          "palette_sha256": "140a8680925fbaf14af12e8986d7934c00fef8288d59e721e8cf33b408ddc9f5",
+          "original_sprite_probe": 1,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 512,
+          "loaded": 0,
+          "filename": "authored.act",
+          "authored_byte65": 3,
+          "palette_sha256": "2ea16988ca9a3b973ff11693e6de4bd078775655cd6715c5a06a120f71b3e827",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 512,
+          "loaded": 1,
+          "filename": "authored.pcx",
+          "authored_byte65": 0,
+          "palette_sha256": "140a8680925fbaf14af12e8986d7934c00fef8288d59e721e8cf33b408ddc9f5",
+          "original_sprite_probe": 1,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 512,
+          "loaded": 0,
+          "filename": "authored.pcx",
+          "authored_byte65": 3,
+          "palette_sha256": "2ea16988ca9a3b973ff11693e6de4bd078775655cd6715c5a06a120f71b3e827",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 512,
+          "loaded": 1,
+          "filename": "authored-palette",
+          "authored_byte65": 0,
+          "palette_sha256": "140a8680925fbaf14af12e8986d7934c00fef8288d59e721e8cf33b408ddc9f5",
+          "original_sprite_probe": 1,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 512,
+          "loaded": 0,
+          "filename": "authored-palette",
+          "authored_byte65": 3,
+          "palette_sha256": "2ea16988ca9a3b973ff11693e6de4bd078775655cd6715c5a06a120f71b3e827",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 768,
+          "loaded": 1,
+          "filename": "authored.act",
+          "authored_byte65": 0,
+          "palette_sha256": "109818336adf2485c2317a64b93cc3a5eef8494bd6b48f5598392cfe36157919",
+          "original_sprite_probe": 1,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 768,
+          "loaded": 0,
+          "filename": "authored.act",
+          "authored_byte65": 3,
+          "palette_sha256": "9517c315e3de0d864d0f9ff719a358a8c7baa39c407c50bef85bb583c0bf2344",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 768,
+          "loaded": 1,
+          "filename": "authored.pcx",
+          "authored_byte65": 0,
+          "palette_sha256": "109818336adf2485c2317a64b93cc3a5eef8494bd6b48f5598392cfe36157919",
+          "original_sprite_probe": 1,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 768,
+          "loaded": 0,
+          "filename": "authored.pcx",
+          "authored_byte65": 3,
+          "palette_sha256": "9517c315e3de0d864d0f9ff719a358a8c7baa39c407c50bef85bb583c0bf2344",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 768,
+          "loaded": 1,
+          "filename": "authored-palette",
+          "authored_byte65": 0,
+          "palette_sha256": "109818336adf2485c2317a64b93cc3a5eef8494bd6b48f5598392cfe36157919",
+          "original_sprite_probe": 1,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 768,
+          "loaded": 0,
+          "filename": "authored-palette",
+          "authored_byte65": 3,
+          "palette_sha256": "9517c315e3de0d864d0f9ff719a358a8c7baa39c407c50bef85bb583c0bf2344",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 1024,
+          "loaded": 1,
+          "filename": "authored.act",
+          "authored_byte65": 0,
+          "palette_sha256": "1786de003146e394579b7e424a995cdaca9f71f916ec840bafb2a7799bf02f3f",
+          "original_sprite_probe": 1,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 1024,
+          "loaded": 0,
+          "filename": "authored.act",
+          "authored_byte65": 3,
+          "palette_sha256": "e75809e0d15667ce44e6aa5c64689a4917b245eb0920094ff0b017dc0612a17a",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 1024,
+          "loaded": 1,
+          "filename": "authored.pcx",
+          "authored_byte65": 0,
+          "palette_sha256": "1786de003146e394579b7e424a995cdaca9f71f916ec840bafb2a7799bf02f3f",
+          "original_sprite_probe": 1,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 1024,
+          "loaded": 0,
+          "filename": "authored.pcx",
+          "authored_byte65": 3,
+          "palette_sha256": "e75809e0d15667ce44e6aa5c64689a4917b245eb0920094ff0b017dc0612a17a",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 1024,
+          "loaded": 1,
+          "filename": "authored-palette",
+          "authored_byte65": 0,
+          "palette_sha256": "1786de003146e394579b7e424a995cdaca9f71f916ec840bafb2a7799bf02f3f",
+          "original_sprite_probe": 1,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 1024,
+          "loaded": 0,
+          "filename": "authored-palette",
+          "authored_byte65": 3,
+          "palette_sha256": "e75809e0d15667ce44e6aa5c64689a4917b245eb0920094ff0b017dc0612a17a",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        }
+      ]
+    },
+    {
+      "profile": "3780",
+      "engine": "3842",
+      "original_commit": "760cb0e6fdbda9d8a4c426f00c84623349ca5b17",
+      "original_image_source_sha256": "1b54ac7b265ce7a4b3bf9c5ca1c849b6400ff5bb8d771d966878bedbb7669c0c",
+      "original_model_source_sha256": "10e23d2c3150e106ede7b6b79fba6a6ecec67499c821c6552248860212a99dda",
+      "basis": "Exact pinned original source",
+      "image_reference": "https://github.com/DCurrent/openbor/blob/760cb0e6fdbda9d8a4c426f00c84623349ca5b17/engine/source/gamelib/loadimg.c#L932",
+      "model_reference": "https://github.com/DCurrent/openbor/blob/760cb0e6fdbda9d8a4c426f00c84623349ca5b17/engine/openbor.c#L5908",
+      "cases": [
+        {
+          "bytes": 512,
+          "loaded": 1,
+          "filename": "authored.act",
+          "authored_byte65": 0,
+          "palette_sha256": "140a8680925fbaf14af12e8986d7934c00fef8288d59e721e8cf33b408ddc9f5",
+          "original_sprite_probe": 1,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 512,
+          "loaded": 0,
+          "filename": "authored.act",
+          "authored_byte65": 3,
+          "palette_sha256": "2ea16988ca9a3b973ff11693e6de4bd078775655cd6715c5a06a120f71b3e827",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 512,
+          "loaded": 1,
+          "filename": "authored.pcx",
+          "authored_byte65": 0,
+          "palette_sha256": "140a8680925fbaf14af12e8986d7934c00fef8288d59e721e8cf33b408ddc9f5",
+          "original_sprite_probe": 1,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 512,
+          "loaded": 0,
+          "filename": "authored.pcx",
+          "authored_byte65": 3,
+          "palette_sha256": "2ea16988ca9a3b973ff11693e6de4bd078775655cd6715c5a06a120f71b3e827",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 512,
+          "loaded": 1,
+          "filename": "authored-palette",
+          "authored_byte65": 0,
+          "palette_sha256": "140a8680925fbaf14af12e8986d7934c00fef8288d59e721e8cf33b408ddc9f5",
+          "original_sprite_probe": 1,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 512,
+          "loaded": 0,
+          "filename": "authored-palette",
+          "authored_byte65": 3,
+          "palette_sha256": "2ea16988ca9a3b973ff11693e6de4bd078775655cd6715c5a06a120f71b3e827",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 768,
+          "loaded": 1,
+          "filename": "authored.act",
+          "authored_byte65": 0,
+          "palette_sha256": "109818336adf2485c2317a64b93cc3a5eef8494bd6b48f5598392cfe36157919",
+          "original_sprite_probe": 1,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 768,
+          "loaded": 0,
+          "filename": "authored.act",
+          "authored_byte65": 3,
+          "palette_sha256": "9517c315e3de0d864d0f9ff719a358a8c7baa39c407c50bef85bb583c0bf2344",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 768,
+          "loaded": 1,
+          "filename": "authored.pcx",
+          "authored_byte65": 0,
+          "palette_sha256": "109818336adf2485c2317a64b93cc3a5eef8494bd6b48f5598392cfe36157919",
+          "original_sprite_probe": 1,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 768,
+          "loaded": 0,
+          "filename": "authored.pcx",
+          "authored_byte65": 3,
+          "palette_sha256": "9517c315e3de0d864d0f9ff719a358a8c7baa39c407c50bef85bb583c0bf2344",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 768,
+          "loaded": 1,
+          "filename": "authored-palette",
+          "authored_byte65": 0,
+          "palette_sha256": "109818336adf2485c2317a64b93cc3a5eef8494bd6b48f5598392cfe36157919",
+          "original_sprite_probe": 1,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 768,
+          "loaded": 0,
+          "filename": "authored-palette",
+          "authored_byte65": 3,
+          "palette_sha256": "9517c315e3de0d864d0f9ff719a358a8c7baa39c407c50bef85bb583c0bf2344",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 1024,
+          "loaded": 1,
+          "filename": "authored.act",
+          "authored_byte65": 0,
+          "palette_sha256": "1786de003146e394579b7e424a995cdaca9f71f916ec840bafb2a7799bf02f3f",
+          "original_sprite_probe": 1,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 1024,
+          "loaded": 0,
+          "filename": "authored.act",
+          "authored_byte65": 3,
+          "palette_sha256": "e75809e0d15667ce44e6aa5c64689a4917b245eb0920094ff0b017dc0612a17a",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 1024,
+          "loaded": 1,
+          "filename": "authored.pcx",
+          "authored_byte65": 0,
+          "palette_sha256": "1786de003146e394579b7e424a995cdaca9f71f916ec840bafb2a7799bf02f3f",
+          "original_sprite_probe": 1,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 1024,
+          "loaded": 0,
+          "filename": "authored.pcx",
+          "authored_byte65": 3,
+          "palette_sha256": "e75809e0d15667ce44e6aa5c64689a4917b245eb0920094ff0b017dc0612a17a",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 1024,
+          "loaded": 1,
+          "filename": "authored-palette",
+          "authored_byte65": 0,
+          "palette_sha256": "1786de003146e394579b7e424a995cdaca9f71f916ec840bafb2a7799bf02f3f",
+          "original_sprite_probe": 1,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 1024,
+          "loaded": 0,
+          "filename": "authored-palette",
+          "authored_byte65": 3,
+          "palette_sha256": "e75809e0d15667ce44e6aa5c64689a4917b245eb0920094ff0b017dc0612a17a",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        }
+      ]
+    },
+    {
+      "profile": "3783",
+      "engine": "3842",
+      "original_commit": "5da3e255b2783079872a57247b020090e307df0d",
+      "original_image_source_sha256": "1b54ac7b265ce7a4b3bf9c5ca1c849b6400ff5bb8d771d966878bedbb7669c0c",
+      "original_model_source_sha256": "ff0bddc2838e0c658465a28c352bad3f74211914d151a0d4be2221d65a007614",
+      "basis": "Exact pinned original source",
+      "image_reference": "https://github.com/DCurrent/openbor/blob/5da3e255b2783079872a57247b020090e307df0d/engine/source/gamelib/loadimg.c#L932",
+      "model_reference": "https://github.com/DCurrent/openbor/blob/5da3e255b2783079872a57247b020090e307df0d/engine/openbor.c#L5938",
+      "cases": [
+        {
+          "bytes": 512,
+          "loaded": 1,
+          "filename": "authored.act",
+          "authored_byte65": 0,
+          "palette_sha256": "140a8680925fbaf14af12e8986d7934c00fef8288d59e721e8cf33b408ddc9f5",
+          "original_sprite_probe": 1,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 512,
+          "loaded": 0,
+          "filename": "authored.act",
+          "authored_byte65": 3,
+          "palette_sha256": "2ea16988ca9a3b973ff11693e6de4bd078775655cd6715c5a06a120f71b3e827",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 512,
+          "loaded": 1,
+          "filename": "authored.pcx",
+          "authored_byte65": 0,
+          "palette_sha256": "140a8680925fbaf14af12e8986d7934c00fef8288d59e721e8cf33b408ddc9f5",
+          "original_sprite_probe": 1,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 512,
+          "loaded": 0,
+          "filename": "authored.pcx",
+          "authored_byte65": 3,
+          "palette_sha256": "2ea16988ca9a3b973ff11693e6de4bd078775655cd6715c5a06a120f71b3e827",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 512,
+          "loaded": 1,
+          "filename": "authored-palette",
+          "authored_byte65": 0,
+          "palette_sha256": "140a8680925fbaf14af12e8986d7934c00fef8288d59e721e8cf33b408ddc9f5",
+          "original_sprite_probe": 1,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 512,
+          "loaded": 0,
+          "filename": "authored-palette",
+          "authored_byte65": 3,
+          "palette_sha256": "2ea16988ca9a3b973ff11693e6de4bd078775655cd6715c5a06a120f71b3e827",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 768,
+          "loaded": 1,
+          "filename": "authored.act",
+          "authored_byte65": 0,
+          "palette_sha256": "109818336adf2485c2317a64b93cc3a5eef8494bd6b48f5598392cfe36157919",
+          "original_sprite_probe": 1,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 768,
+          "loaded": 0,
+          "filename": "authored.act",
+          "authored_byte65": 3,
+          "palette_sha256": "9517c315e3de0d864d0f9ff719a358a8c7baa39c407c50bef85bb583c0bf2344",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 768,
+          "loaded": 1,
+          "filename": "authored.pcx",
+          "authored_byte65": 0,
+          "palette_sha256": "109818336adf2485c2317a64b93cc3a5eef8494bd6b48f5598392cfe36157919",
+          "original_sprite_probe": 1,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 768,
+          "loaded": 0,
+          "filename": "authored.pcx",
+          "authored_byte65": 3,
+          "palette_sha256": "9517c315e3de0d864d0f9ff719a358a8c7baa39c407c50bef85bb583c0bf2344",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 768,
+          "loaded": 1,
+          "filename": "authored-palette",
+          "authored_byte65": 0,
+          "palette_sha256": "109818336adf2485c2317a64b93cc3a5eef8494bd6b48f5598392cfe36157919",
+          "original_sprite_probe": 1,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 768,
+          "loaded": 0,
+          "filename": "authored-palette",
+          "authored_byte65": 3,
+          "palette_sha256": "9517c315e3de0d864d0f9ff719a358a8c7baa39c407c50bef85bb583c0bf2344",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 1024,
+          "loaded": 1,
+          "filename": "authored.act",
+          "authored_byte65": 0,
+          "palette_sha256": "1786de003146e394579b7e424a995cdaca9f71f916ec840bafb2a7799bf02f3f",
+          "original_sprite_probe": 1,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 1024,
+          "loaded": 0,
+          "filename": "authored.act",
+          "authored_byte65": 3,
+          "palette_sha256": "e75809e0d15667ce44e6aa5c64689a4917b245eb0920094ff0b017dc0612a17a",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 1024,
+          "loaded": 1,
+          "filename": "authored.pcx",
+          "authored_byte65": 0,
+          "palette_sha256": "1786de003146e394579b7e424a995cdaca9f71f916ec840bafb2a7799bf02f3f",
+          "original_sprite_probe": 1,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 1024,
+          "loaded": 0,
+          "filename": "authored.pcx",
+          "authored_byte65": 3,
+          "palette_sha256": "e75809e0d15667ce44e6aa5c64689a4917b245eb0920094ff0b017dc0612a17a",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 1024,
+          "loaded": 1,
+          "filename": "authored-palette",
+          "authored_byte65": 0,
+          "palette_sha256": "1786de003146e394579b7e424a995cdaca9f71f916ec840bafb2a7799bf02f3f",
+          "original_sprite_probe": 1,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 1024,
+          "loaded": 0,
+          "filename": "authored-palette",
+          "authored_byte65": 3,
+          "palette_sha256": "e75809e0d15667ce44e6aa5c64689a4917b245eb0920094ff0b017dc0612a17a",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        }
+      ]
+    },
+    {
+      "profile": "3789",
+      "engine": "3842",
+      "original_commit": "cc5166a117318987f638b4b6c6d1034384409372",
+      "original_image_source_sha256": "1b54ac7b265ce7a4b3bf9c5ca1c849b6400ff5bb8d771d966878bedbb7669c0c",
+      "original_model_source_sha256": "6ad6d3164279862ea05232e97a8202d32cc61b3c8600cc6b65144e502254e830",
+      "basis": "Exact pinned original source",
+      "image_reference": "https://github.com/DCurrent/openbor/blob/cc5166a117318987f638b4b6c6d1034384409372/engine/source/gamelib/loadimg.c#L932",
+      "model_reference": "https://github.com/DCurrent/openbor/blob/cc5166a117318987f638b4b6c6d1034384409372/engine/openbor.c#L5920",
+      "cases": [
+        {
+          "bytes": 512,
+          "loaded": 1,
+          "filename": "authored.act",
+          "authored_byte65": 0,
+          "palette_sha256": "140a8680925fbaf14af12e8986d7934c00fef8288d59e721e8cf33b408ddc9f5",
+          "original_sprite_probe": 1,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 512,
+          "loaded": 0,
+          "filename": "authored.act",
+          "authored_byte65": 3,
+          "palette_sha256": "2ea16988ca9a3b973ff11693e6de4bd078775655cd6715c5a06a120f71b3e827",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 512,
+          "loaded": 1,
+          "filename": "authored.pcx",
+          "authored_byte65": 0,
+          "palette_sha256": "140a8680925fbaf14af12e8986d7934c00fef8288d59e721e8cf33b408ddc9f5",
+          "original_sprite_probe": 1,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 512,
+          "loaded": 0,
+          "filename": "authored.pcx",
+          "authored_byte65": 3,
+          "palette_sha256": "2ea16988ca9a3b973ff11693e6de4bd078775655cd6715c5a06a120f71b3e827",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 512,
+          "loaded": 1,
+          "filename": "authored-palette",
+          "authored_byte65": 0,
+          "palette_sha256": "140a8680925fbaf14af12e8986d7934c00fef8288d59e721e8cf33b408ddc9f5",
+          "original_sprite_probe": 1,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 512,
+          "loaded": 0,
+          "filename": "authored-palette",
+          "authored_byte65": 3,
+          "palette_sha256": "2ea16988ca9a3b973ff11693e6de4bd078775655cd6715c5a06a120f71b3e827",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 768,
+          "loaded": 1,
+          "filename": "authored.act",
+          "authored_byte65": 0,
+          "palette_sha256": "109818336adf2485c2317a64b93cc3a5eef8494bd6b48f5598392cfe36157919",
+          "original_sprite_probe": 1,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 768,
+          "loaded": 0,
+          "filename": "authored.act",
+          "authored_byte65": 3,
+          "palette_sha256": "9517c315e3de0d864d0f9ff719a358a8c7baa39c407c50bef85bb583c0bf2344",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 768,
+          "loaded": 1,
+          "filename": "authored.pcx",
+          "authored_byte65": 0,
+          "palette_sha256": "109818336adf2485c2317a64b93cc3a5eef8494bd6b48f5598392cfe36157919",
+          "original_sprite_probe": 1,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 768,
+          "loaded": 0,
+          "filename": "authored.pcx",
+          "authored_byte65": 3,
+          "palette_sha256": "9517c315e3de0d864d0f9ff719a358a8c7baa39c407c50bef85bb583c0bf2344",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 768,
+          "loaded": 1,
+          "filename": "authored-palette",
+          "authored_byte65": 0,
+          "palette_sha256": "109818336adf2485c2317a64b93cc3a5eef8494bd6b48f5598392cfe36157919",
+          "original_sprite_probe": 1,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 768,
+          "loaded": 0,
+          "filename": "authored-palette",
+          "authored_byte65": 3,
+          "palette_sha256": "9517c315e3de0d864d0f9ff719a358a8c7baa39c407c50bef85bb583c0bf2344",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 1024,
+          "loaded": 1,
+          "filename": "authored.act",
+          "authored_byte65": 0,
+          "palette_sha256": "1786de003146e394579b7e424a995cdaca9f71f916ec840bafb2a7799bf02f3f",
+          "original_sprite_probe": 1,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 1024,
+          "loaded": 0,
+          "filename": "authored.act",
+          "authored_byte65": 3,
+          "palette_sha256": "e75809e0d15667ce44e6aa5c64689a4917b245eb0920094ff0b017dc0612a17a",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 1024,
+          "loaded": 1,
+          "filename": "authored.pcx",
+          "authored_byte65": 0,
+          "palette_sha256": "1786de003146e394579b7e424a995cdaca9f71f916ec840bafb2a7799bf02f3f",
+          "original_sprite_probe": 1,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 1024,
+          "loaded": 0,
+          "filename": "authored.pcx",
+          "authored_byte65": 3,
+          "palette_sha256": "e75809e0d15667ce44e6aa5c64689a4917b245eb0920094ff0b017dc0612a17a",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 1024,
+          "loaded": 1,
+          "filename": "authored-palette",
+          "authored_byte65": 0,
+          "palette_sha256": "1786de003146e394579b7e424a995cdaca9f71f916ec840bafb2a7799bf02f3f",
+          "original_sprite_probe": 1,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 1024,
+          "loaded": 0,
+          "filename": "authored-palette",
+          "authored_byte65": 3,
+          "palette_sha256": "e75809e0d15667ce44e6aa5c64689a4917b245eb0920094ff0b017dc0612a17a",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        }
+      ]
+    },
+    {
+      "profile": "3793",
+      "engine": "3842",
+      "original_commit": "edf234656cae88b078718661a2bd0c42090f0687",
+      "original_image_source_sha256": "1b54ac7b265ce7a4b3bf9c5ca1c849b6400ff5bb8d771d966878bedbb7669c0c",
+      "original_model_source_sha256": "4833133e133b9fc298039b90dacf1c8ded874848e09ec6b3f03ff9e24053a7fb",
+      "basis": "Exact pinned original source",
+      "image_reference": "https://github.com/DCurrent/openbor/blob/edf234656cae88b078718661a2bd0c42090f0687/engine/source/gamelib/loadimg.c#L932",
+      "model_reference": "https://github.com/DCurrent/openbor/blob/edf234656cae88b078718661a2bd0c42090f0687/engine/openbor.c#L5940",
+      "cases": [
+        {
+          "bytes": 512,
+          "loaded": 1,
+          "filename": "authored.act",
+          "authored_byte65": 0,
+          "palette_sha256": "140a8680925fbaf14af12e8986d7934c00fef8288d59e721e8cf33b408ddc9f5",
+          "original_sprite_probe": 1,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 512,
+          "loaded": 0,
+          "filename": "authored.act",
+          "authored_byte65": 3,
+          "palette_sha256": "2ea16988ca9a3b973ff11693e6de4bd078775655cd6715c5a06a120f71b3e827",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 512,
+          "loaded": 1,
+          "filename": "authored.pcx",
+          "authored_byte65": 0,
+          "palette_sha256": "140a8680925fbaf14af12e8986d7934c00fef8288d59e721e8cf33b408ddc9f5",
+          "original_sprite_probe": 1,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 512,
+          "loaded": 0,
+          "filename": "authored.pcx",
+          "authored_byte65": 3,
+          "palette_sha256": "2ea16988ca9a3b973ff11693e6de4bd078775655cd6715c5a06a120f71b3e827",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 512,
+          "loaded": 1,
+          "filename": "authored-palette",
+          "authored_byte65": 0,
+          "palette_sha256": "140a8680925fbaf14af12e8986d7934c00fef8288d59e721e8cf33b408ddc9f5",
+          "original_sprite_probe": 1,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 512,
+          "loaded": 0,
+          "filename": "authored-palette",
+          "authored_byte65": 3,
+          "palette_sha256": "2ea16988ca9a3b973ff11693e6de4bd078775655cd6715c5a06a120f71b3e827",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 768,
+          "loaded": 1,
+          "filename": "authored.act",
+          "authored_byte65": 0,
+          "palette_sha256": "109818336adf2485c2317a64b93cc3a5eef8494bd6b48f5598392cfe36157919",
+          "original_sprite_probe": 1,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 768,
+          "loaded": 0,
+          "filename": "authored.act",
+          "authored_byte65": 3,
+          "palette_sha256": "9517c315e3de0d864d0f9ff719a358a8c7baa39c407c50bef85bb583c0bf2344",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 768,
+          "loaded": 1,
+          "filename": "authored.pcx",
+          "authored_byte65": 0,
+          "palette_sha256": "109818336adf2485c2317a64b93cc3a5eef8494bd6b48f5598392cfe36157919",
+          "original_sprite_probe": 1,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 768,
+          "loaded": 0,
+          "filename": "authored.pcx",
+          "authored_byte65": 3,
+          "palette_sha256": "9517c315e3de0d864d0f9ff719a358a8c7baa39c407c50bef85bb583c0bf2344",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 768,
+          "loaded": 1,
+          "filename": "authored-palette",
+          "authored_byte65": 0,
+          "palette_sha256": "109818336adf2485c2317a64b93cc3a5eef8494bd6b48f5598392cfe36157919",
+          "original_sprite_probe": 1,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 768,
+          "loaded": 0,
+          "filename": "authored-palette",
+          "authored_byte65": 3,
+          "palette_sha256": "9517c315e3de0d864d0f9ff719a358a8c7baa39c407c50bef85bb583c0bf2344",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 1024,
+          "loaded": 1,
+          "filename": "authored.act",
+          "authored_byte65": 0,
+          "palette_sha256": "1786de003146e394579b7e424a995cdaca9f71f916ec840bafb2a7799bf02f3f",
+          "original_sprite_probe": 1,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 1024,
+          "loaded": 0,
+          "filename": "authored.act",
+          "authored_byte65": 3,
+          "palette_sha256": "e75809e0d15667ce44e6aa5c64689a4917b245eb0920094ff0b017dc0612a17a",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 1024,
+          "loaded": 1,
+          "filename": "authored.pcx",
+          "authored_byte65": 0,
+          "palette_sha256": "1786de003146e394579b7e424a995cdaca9f71f916ec840bafb2a7799bf02f3f",
+          "original_sprite_probe": 1,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 1024,
+          "loaded": 0,
+          "filename": "authored.pcx",
+          "authored_byte65": 3,
+          "palette_sha256": "e75809e0d15667ce44e6aa5c64689a4917b245eb0920094ff0b017dc0612a17a",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 1024,
+          "loaded": 1,
+          "filename": "authored-palette",
+          "authored_byte65": 0,
+          "palette_sha256": "1786de003146e394579b7e424a995cdaca9f71f916ec840bafb2a7799bf02f3f",
+          "original_sprite_probe": 1,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 1024,
+          "loaded": 0,
+          "filename": "authored-palette",
+          "authored_byte65": 3,
+          "palette_sha256": "e75809e0d15667ce44e6aa5c64689a4917b245eb0920094ff0b017dc0612a17a",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        }
+      ]
+    },
+    {
+      "profile": "3797",
+      "engine": "3842",
+      "original_commit": "4490ee5d18ffcc7604e95cd4910dadf6191e694a",
+      "original_image_source_sha256": "1b54ac7b265ce7a4b3bf9c5ca1c849b6400ff5bb8d771d966878bedbb7669c0c",
+      "original_model_source_sha256": "3f6befee3394171d00bc427c7385e963c2789e3b957aecd706c417c6536e5a68",
+      "basis": "Exact pinned original source",
+      "image_reference": "https://github.com/DCurrent/openbor/blob/4490ee5d18ffcc7604e95cd4910dadf6191e694a/engine/source/gamelib/loadimg.c#L932",
+      "model_reference": "https://github.com/DCurrent/openbor/blob/4490ee5d18ffcc7604e95cd4910dadf6191e694a/engine/openbor.c#L5940",
+      "cases": [
+        {
+          "bytes": 512,
+          "loaded": 1,
+          "filename": "authored.act",
+          "authored_byte65": 0,
+          "palette_sha256": "140a8680925fbaf14af12e8986d7934c00fef8288d59e721e8cf33b408ddc9f5",
+          "original_sprite_probe": 1,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 512,
+          "loaded": 0,
+          "filename": "authored.act",
+          "authored_byte65": 3,
+          "palette_sha256": "2ea16988ca9a3b973ff11693e6de4bd078775655cd6715c5a06a120f71b3e827",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 512,
+          "loaded": 1,
+          "filename": "authored.pcx",
+          "authored_byte65": 0,
+          "palette_sha256": "140a8680925fbaf14af12e8986d7934c00fef8288d59e721e8cf33b408ddc9f5",
+          "original_sprite_probe": 1,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 512,
+          "loaded": 0,
+          "filename": "authored.pcx",
+          "authored_byte65": 3,
+          "palette_sha256": "2ea16988ca9a3b973ff11693e6de4bd078775655cd6715c5a06a120f71b3e827",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 512,
+          "loaded": 1,
+          "filename": "authored-palette",
+          "authored_byte65": 0,
+          "palette_sha256": "140a8680925fbaf14af12e8986d7934c00fef8288d59e721e8cf33b408ddc9f5",
+          "original_sprite_probe": 1,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 512,
+          "loaded": 0,
+          "filename": "authored-palette",
+          "authored_byte65": 3,
+          "palette_sha256": "2ea16988ca9a3b973ff11693e6de4bd078775655cd6715c5a06a120f71b3e827",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 768,
+          "loaded": 1,
+          "filename": "authored.act",
+          "authored_byte65": 0,
+          "palette_sha256": "109818336adf2485c2317a64b93cc3a5eef8494bd6b48f5598392cfe36157919",
+          "original_sprite_probe": 1,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 768,
+          "loaded": 0,
+          "filename": "authored.act",
+          "authored_byte65": 3,
+          "palette_sha256": "9517c315e3de0d864d0f9ff719a358a8c7baa39c407c50bef85bb583c0bf2344",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 768,
+          "loaded": 1,
+          "filename": "authored.pcx",
+          "authored_byte65": 0,
+          "palette_sha256": "109818336adf2485c2317a64b93cc3a5eef8494bd6b48f5598392cfe36157919",
+          "original_sprite_probe": 1,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 768,
+          "loaded": 0,
+          "filename": "authored.pcx",
+          "authored_byte65": 3,
+          "palette_sha256": "9517c315e3de0d864d0f9ff719a358a8c7baa39c407c50bef85bb583c0bf2344",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 768,
+          "loaded": 1,
+          "filename": "authored-palette",
+          "authored_byte65": 0,
+          "palette_sha256": "109818336adf2485c2317a64b93cc3a5eef8494bd6b48f5598392cfe36157919",
+          "original_sprite_probe": 1,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 768,
+          "loaded": 0,
+          "filename": "authored-palette",
+          "authored_byte65": 3,
+          "palette_sha256": "9517c315e3de0d864d0f9ff719a358a8c7baa39c407c50bef85bb583c0bf2344",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 1024,
+          "loaded": 1,
+          "filename": "authored.act",
+          "authored_byte65": 0,
+          "palette_sha256": "1786de003146e394579b7e424a995cdaca9f71f916ec840bafb2a7799bf02f3f",
+          "original_sprite_probe": 1,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 1024,
+          "loaded": 0,
+          "filename": "authored.act",
+          "authored_byte65": 3,
+          "palette_sha256": "e75809e0d15667ce44e6aa5c64689a4917b245eb0920094ff0b017dc0612a17a",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 1024,
+          "loaded": 1,
+          "filename": "authored.pcx",
+          "authored_byte65": 0,
+          "palette_sha256": "1786de003146e394579b7e424a995cdaca9f71f916ec840bafb2a7799bf02f3f",
+          "original_sprite_probe": 1,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 1024,
+          "loaded": 0,
+          "filename": "authored.pcx",
+          "authored_byte65": 3,
+          "palette_sha256": "e75809e0d15667ce44e6aa5c64689a4917b245eb0920094ff0b017dc0612a17a",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 1024,
+          "loaded": 1,
+          "filename": "authored-palette",
+          "authored_byte65": 0,
+          "palette_sha256": "1786de003146e394579b7e424a995cdaca9f71f916ec840bafb2a7799bf02f3f",
+          "original_sprite_probe": 1,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 1024,
+          "loaded": 0,
+          "filename": "authored-palette",
+          "authored_byte65": 3,
+          "palette_sha256": "e75809e0d15667ce44e6aa5c64689a4917b245eb0920094ff0b017dc0612a17a",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        }
+      ]
+    },
+    {
+      "profile": "3805",
+      "engine": "3842",
+      "original_commit": "2abee79303b17b269e88cd986ab78dda2bd526d6",
+      "original_image_source_sha256": "1b54ac7b265ce7a4b3bf9c5ca1c849b6400ff5bb8d771d966878bedbb7669c0c",
+      "original_model_source_sha256": "1837973925d4940428cb244742a5dadca6f0b779757a3388f02e54208f05c855",
+      "basis": "Exact pinned original source",
+      "image_reference": "https://github.com/DCurrent/openbor/blob/2abee79303b17b269e88cd986ab78dda2bd526d6/engine/source/gamelib/loadimg.c#L932",
+      "model_reference": "https://github.com/DCurrent/openbor/blob/2abee79303b17b269e88cd986ab78dda2bd526d6/engine/openbor.c#L5938",
+      "cases": [
+        {
+          "bytes": 512,
+          "loaded": 1,
+          "filename": "authored.act",
+          "authored_byte65": 0,
+          "palette_sha256": "140a8680925fbaf14af12e8986d7934c00fef8288d59e721e8cf33b408ddc9f5",
+          "original_sprite_probe": 1,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 512,
+          "loaded": 0,
+          "filename": "authored.act",
+          "authored_byte65": 3,
+          "palette_sha256": "2ea16988ca9a3b973ff11693e6de4bd078775655cd6715c5a06a120f71b3e827",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 512,
+          "loaded": 1,
+          "filename": "authored.pcx",
+          "authored_byte65": 0,
+          "palette_sha256": "140a8680925fbaf14af12e8986d7934c00fef8288d59e721e8cf33b408ddc9f5",
+          "original_sprite_probe": 1,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 512,
+          "loaded": 0,
+          "filename": "authored.pcx",
+          "authored_byte65": 3,
+          "palette_sha256": "2ea16988ca9a3b973ff11693e6de4bd078775655cd6715c5a06a120f71b3e827",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 512,
+          "loaded": 1,
+          "filename": "authored-palette",
+          "authored_byte65": 0,
+          "palette_sha256": "140a8680925fbaf14af12e8986d7934c00fef8288d59e721e8cf33b408ddc9f5",
+          "original_sprite_probe": 1,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 512,
+          "loaded": 0,
+          "filename": "authored-palette",
+          "authored_byte65": 3,
+          "palette_sha256": "2ea16988ca9a3b973ff11693e6de4bd078775655cd6715c5a06a120f71b3e827",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 768,
+          "loaded": 1,
+          "filename": "authored.act",
+          "authored_byte65": 0,
+          "palette_sha256": "109818336adf2485c2317a64b93cc3a5eef8494bd6b48f5598392cfe36157919",
+          "original_sprite_probe": 1,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 768,
+          "loaded": 0,
+          "filename": "authored.act",
+          "authored_byte65": 3,
+          "palette_sha256": "9517c315e3de0d864d0f9ff719a358a8c7baa39c407c50bef85bb583c0bf2344",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 768,
+          "loaded": 1,
+          "filename": "authored.pcx",
+          "authored_byte65": 0,
+          "palette_sha256": "109818336adf2485c2317a64b93cc3a5eef8494bd6b48f5598392cfe36157919",
+          "original_sprite_probe": 1,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 768,
+          "loaded": 0,
+          "filename": "authored.pcx",
+          "authored_byte65": 3,
+          "palette_sha256": "9517c315e3de0d864d0f9ff719a358a8c7baa39c407c50bef85bb583c0bf2344",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 768,
+          "loaded": 1,
+          "filename": "authored-palette",
+          "authored_byte65": 0,
+          "palette_sha256": "109818336adf2485c2317a64b93cc3a5eef8494bd6b48f5598392cfe36157919",
+          "original_sprite_probe": 1,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 768,
+          "loaded": 0,
+          "filename": "authored-palette",
+          "authored_byte65": 3,
+          "palette_sha256": "9517c315e3de0d864d0f9ff719a358a8c7baa39c407c50bef85bb583c0bf2344",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 1024,
+          "loaded": 1,
+          "filename": "authored.act",
+          "authored_byte65": 0,
+          "palette_sha256": "1786de003146e394579b7e424a995cdaca9f71f916ec840bafb2a7799bf02f3f",
+          "original_sprite_probe": 1,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 1024,
+          "loaded": 0,
+          "filename": "authored.act",
+          "authored_byte65": 3,
+          "palette_sha256": "e75809e0d15667ce44e6aa5c64689a4917b245eb0920094ff0b017dc0612a17a",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 1024,
+          "loaded": 1,
+          "filename": "authored.pcx",
+          "authored_byte65": 0,
+          "palette_sha256": "1786de003146e394579b7e424a995cdaca9f71f916ec840bafb2a7799bf02f3f",
+          "original_sprite_probe": 1,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 1024,
+          "loaded": 0,
+          "filename": "authored.pcx",
+          "authored_byte65": 3,
+          "palette_sha256": "e75809e0d15667ce44e6aa5c64689a4917b245eb0920094ff0b017dc0612a17a",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 1024,
+          "loaded": 1,
+          "filename": "authored-palette",
+          "authored_byte65": 0,
+          "palette_sha256": "1786de003146e394579b7e424a995cdaca9f71f916ec840bafb2a7799bf02f3f",
+          "original_sprite_probe": 1,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 1024,
+          "loaded": 0,
+          "filename": "authored-palette",
+          "authored_byte65": 3,
+          "palette_sha256": "e75809e0d15667ce44e6aa5c64689a4917b245eb0920094ff0b017dc0612a17a",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        }
+      ]
+    },
+    {
+      "profile": "3814",
+      "engine": "3842",
+      "original_commit": "46d398cfb2e75a142c7bf6dc38cc2f9603b57ecf",
+      "original_image_source_sha256": "1b54ac7b265ce7a4b3bf9c5ca1c849b6400ff5bb8d771d966878bedbb7669c0c",
+      "original_model_source_sha256": "4f6c0d38ca9c3b589b025625313952f06fa5cf3dd12ddf71d8ba06b1af5d7887",
+      "basis": "Exact pinned original source",
+      "image_reference": "https://github.com/DCurrent/openbor/blob/46d398cfb2e75a142c7bf6dc38cc2f9603b57ecf/engine/source/gamelib/loadimg.c#L932",
+      "model_reference": "https://github.com/DCurrent/openbor/blob/46d398cfb2e75a142c7bf6dc38cc2f9603b57ecf/engine/openbor.c#L5947",
+      "cases": [
+        {
+          "bytes": 512,
+          "loaded": 1,
+          "filename": "authored.act",
+          "authored_byte65": 0,
+          "palette_sha256": "140a8680925fbaf14af12e8986d7934c00fef8288d59e721e8cf33b408ddc9f5",
+          "original_sprite_probe": 1,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 512,
+          "loaded": 0,
+          "filename": "authored.act",
+          "authored_byte65": 3,
+          "palette_sha256": "2ea16988ca9a3b973ff11693e6de4bd078775655cd6715c5a06a120f71b3e827",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 512,
+          "loaded": 1,
+          "filename": "authored.pcx",
+          "authored_byte65": 0,
+          "palette_sha256": "140a8680925fbaf14af12e8986d7934c00fef8288d59e721e8cf33b408ddc9f5",
+          "original_sprite_probe": 1,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 512,
+          "loaded": 0,
+          "filename": "authored.pcx",
+          "authored_byte65": 3,
+          "palette_sha256": "2ea16988ca9a3b973ff11693e6de4bd078775655cd6715c5a06a120f71b3e827",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 512,
+          "loaded": 1,
+          "filename": "authored-palette",
+          "authored_byte65": 0,
+          "palette_sha256": "140a8680925fbaf14af12e8986d7934c00fef8288d59e721e8cf33b408ddc9f5",
+          "original_sprite_probe": 1,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 512,
+          "loaded": 0,
+          "filename": "authored-palette",
+          "authored_byte65": 3,
+          "palette_sha256": "2ea16988ca9a3b973ff11693e6de4bd078775655cd6715c5a06a120f71b3e827",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 768,
+          "loaded": 1,
+          "filename": "authored.act",
+          "authored_byte65": 0,
+          "palette_sha256": "109818336adf2485c2317a64b93cc3a5eef8494bd6b48f5598392cfe36157919",
+          "original_sprite_probe": 1,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 768,
+          "loaded": 0,
+          "filename": "authored.act",
+          "authored_byte65": 3,
+          "palette_sha256": "9517c315e3de0d864d0f9ff719a358a8c7baa39c407c50bef85bb583c0bf2344",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 768,
+          "loaded": 1,
+          "filename": "authored.pcx",
+          "authored_byte65": 0,
+          "palette_sha256": "109818336adf2485c2317a64b93cc3a5eef8494bd6b48f5598392cfe36157919",
+          "original_sprite_probe": 1,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 768,
+          "loaded": 0,
+          "filename": "authored.pcx",
+          "authored_byte65": 3,
+          "palette_sha256": "9517c315e3de0d864d0f9ff719a358a8c7baa39c407c50bef85bb583c0bf2344",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 768,
+          "loaded": 1,
+          "filename": "authored-palette",
+          "authored_byte65": 0,
+          "palette_sha256": "109818336adf2485c2317a64b93cc3a5eef8494bd6b48f5598392cfe36157919",
+          "original_sprite_probe": 1,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 768,
+          "loaded": 0,
+          "filename": "authored-palette",
+          "authored_byte65": 3,
+          "palette_sha256": "9517c315e3de0d864d0f9ff719a358a8c7baa39c407c50bef85bb583c0bf2344",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 1024,
+          "loaded": 1,
+          "filename": "authored.act",
+          "authored_byte65": 0,
+          "palette_sha256": "1786de003146e394579b7e424a995cdaca9f71f916ec840bafb2a7799bf02f3f",
+          "original_sprite_probe": 1,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 1024,
+          "loaded": 0,
+          "filename": "authored.act",
+          "authored_byte65": 3,
+          "palette_sha256": "e75809e0d15667ce44e6aa5c64689a4917b245eb0920094ff0b017dc0612a17a",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 1024,
+          "loaded": 1,
+          "filename": "authored.pcx",
+          "authored_byte65": 0,
+          "palette_sha256": "1786de003146e394579b7e424a995cdaca9f71f916ec840bafb2a7799bf02f3f",
+          "original_sprite_probe": 1,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 1024,
+          "loaded": 0,
+          "filename": "authored.pcx",
+          "authored_byte65": 3,
+          "palette_sha256": "e75809e0d15667ce44e6aa5c64689a4917b245eb0920094ff0b017dc0612a17a",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 1024,
+          "loaded": 1,
+          "filename": "authored-palette",
+          "authored_byte65": 0,
+          "palette_sha256": "1786de003146e394579b7e424a995cdaca9f71f916ec840bafb2a7799bf02f3f",
+          "original_sprite_probe": 1,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 1024,
+          "loaded": 0,
+          "filename": "authored-palette",
+          "authored_byte65": 3,
+          "palette_sha256": "e75809e0d15667ce44e6aa5c64689a4917b245eb0920094ff0b017dc0612a17a",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        }
+      ]
+    },
+    {
+      "profile": "3818",
+      "engine": "3842",
+      "original_commit": "cae686392d0b5e52563e9dd191801193796cd4a5",
+      "original_image_source_sha256": "1b54ac7b265ce7a4b3bf9c5ca1c849b6400ff5bb8d771d966878bedbb7669c0c",
+      "original_model_source_sha256": "4f6c0d38ca9c3b589b025625313952f06fa5cf3dd12ddf71d8ba06b1af5d7887",
+      "basis": "Exact pinned original source",
+      "image_reference": "https://github.com/DCurrent/openbor/blob/cae686392d0b5e52563e9dd191801193796cd4a5/engine/source/gamelib/loadimg.c#L932",
+      "model_reference": "https://github.com/DCurrent/openbor/blob/cae686392d0b5e52563e9dd191801193796cd4a5/engine/openbor.c#L5947",
+      "cases": [
+        {
+          "bytes": 512,
+          "loaded": 1,
+          "filename": "authored.act",
+          "authored_byte65": 0,
+          "palette_sha256": "140a8680925fbaf14af12e8986d7934c00fef8288d59e721e8cf33b408ddc9f5",
+          "original_sprite_probe": 1,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 512,
+          "loaded": 0,
+          "filename": "authored.act",
+          "authored_byte65": 3,
+          "palette_sha256": "2ea16988ca9a3b973ff11693e6de4bd078775655cd6715c5a06a120f71b3e827",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 512,
+          "loaded": 1,
+          "filename": "authored.pcx",
+          "authored_byte65": 0,
+          "palette_sha256": "140a8680925fbaf14af12e8986d7934c00fef8288d59e721e8cf33b408ddc9f5",
+          "original_sprite_probe": 1,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 512,
+          "loaded": 0,
+          "filename": "authored.pcx",
+          "authored_byte65": 3,
+          "palette_sha256": "2ea16988ca9a3b973ff11693e6de4bd078775655cd6715c5a06a120f71b3e827",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 512,
+          "loaded": 1,
+          "filename": "authored-palette",
+          "authored_byte65": 0,
+          "palette_sha256": "140a8680925fbaf14af12e8986d7934c00fef8288d59e721e8cf33b408ddc9f5",
+          "original_sprite_probe": 1,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 512,
+          "loaded": 0,
+          "filename": "authored-palette",
+          "authored_byte65": 3,
+          "palette_sha256": "2ea16988ca9a3b973ff11693e6de4bd078775655cd6715c5a06a120f71b3e827",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 768,
+          "loaded": 1,
+          "filename": "authored.act",
+          "authored_byte65": 0,
+          "palette_sha256": "109818336adf2485c2317a64b93cc3a5eef8494bd6b48f5598392cfe36157919",
+          "original_sprite_probe": 1,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 768,
+          "loaded": 0,
+          "filename": "authored.act",
+          "authored_byte65": 3,
+          "palette_sha256": "9517c315e3de0d864d0f9ff719a358a8c7baa39c407c50bef85bb583c0bf2344",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 768,
+          "loaded": 1,
+          "filename": "authored.pcx",
+          "authored_byte65": 0,
+          "palette_sha256": "109818336adf2485c2317a64b93cc3a5eef8494bd6b48f5598392cfe36157919",
+          "original_sprite_probe": 1,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 768,
+          "loaded": 0,
+          "filename": "authored.pcx",
+          "authored_byte65": 3,
+          "palette_sha256": "9517c315e3de0d864d0f9ff719a358a8c7baa39c407c50bef85bb583c0bf2344",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 768,
+          "loaded": 1,
+          "filename": "authored-palette",
+          "authored_byte65": 0,
+          "palette_sha256": "109818336adf2485c2317a64b93cc3a5eef8494bd6b48f5598392cfe36157919",
+          "original_sprite_probe": 1,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 768,
+          "loaded": 0,
+          "filename": "authored-palette",
+          "authored_byte65": 3,
+          "palette_sha256": "9517c315e3de0d864d0f9ff719a358a8c7baa39c407c50bef85bb583c0bf2344",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 1024,
+          "loaded": 1,
+          "filename": "authored.act",
+          "authored_byte65": 0,
+          "palette_sha256": "1786de003146e394579b7e424a995cdaca9f71f916ec840bafb2a7799bf02f3f",
+          "original_sprite_probe": 1,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 1024,
+          "loaded": 0,
+          "filename": "authored.act",
+          "authored_byte65": 3,
+          "palette_sha256": "e75809e0d15667ce44e6aa5c64689a4917b245eb0920094ff0b017dc0612a17a",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 1024,
+          "loaded": 1,
+          "filename": "authored.pcx",
+          "authored_byte65": 0,
+          "palette_sha256": "1786de003146e394579b7e424a995cdaca9f71f916ec840bafb2a7799bf02f3f",
+          "original_sprite_probe": 1,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 1024,
+          "loaded": 0,
+          "filename": "authored.pcx",
+          "authored_byte65": 3,
+          "palette_sha256": "e75809e0d15667ce44e6aa5c64689a4917b245eb0920094ff0b017dc0612a17a",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 1024,
+          "loaded": 1,
+          "filename": "authored-palette",
+          "authored_byte65": 0,
+          "palette_sha256": "1786de003146e394579b7e424a995cdaca9f71f916ec840bafb2a7799bf02f3f",
+          "original_sprite_probe": 1,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 1024,
+          "loaded": 0,
+          "filename": "authored-palette",
+          "authored_byte65": 3,
+          "palette_sha256": "e75809e0d15667ce44e6aa5c64689a4917b245eb0920094ff0b017dc0612a17a",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        }
+      ]
+    },
+    {
+      "profile": "3822",
+      "engine": "3842",
+      "original_commit": "7ddd15b4981ea7b55f1851db926bc86276632b8c",
+      "original_image_source_sha256": "1b54ac7b265ce7a4b3bf9c5ca1c849b6400ff5bb8d771d966878bedbb7669c0c",
+      "original_model_source_sha256": "71ee929158b3c9a5a97c543bfedace9c1c4156f70a8a186aaec8eacaa7ef3e13",
+      "basis": "Exact pinned original source",
+      "image_reference": "https://github.com/DCurrent/openbor/blob/7ddd15b4981ea7b55f1851db926bc86276632b8c/engine/source/gamelib/loadimg.c#L932",
+      "model_reference": "https://github.com/DCurrent/openbor/blob/7ddd15b4981ea7b55f1851db926bc86276632b8c/engine/openbor.c#L5964",
+      "cases": [
+        {
+          "bytes": 512,
+          "loaded": 1,
+          "filename": "authored.act",
+          "authored_byte65": 0,
+          "palette_sha256": "140a8680925fbaf14af12e8986d7934c00fef8288d59e721e8cf33b408ddc9f5",
+          "original_sprite_probe": 1,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 512,
+          "loaded": 0,
+          "filename": "authored.act",
+          "authored_byte65": 3,
+          "palette_sha256": "2ea16988ca9a3b973ff11693e6de4bd078775655cd6715c5a06a120f71b3e827",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 512,
+          "loaded": 1,
+          "filename": "authored.pcx",
+          "authored_byte65": 0,
+          "palette_sha256": "140a8680925fbaf14af12e8986d7934c00fef8288d59e721e8cf33b408ddc9f5",
+          "original_sprite_probe": 1,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 512,
+          "loaded": 0,
+          "filename": "authored.pcx",
+          "authored_byte65": 3,
+          "palette_sha256": "2ea16988ca9a3b973ff11693e6de4bd078775655cd6715c5a06a120f71b3e827",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 512,
+          "loaded": 1,
+          "filename": "authored-palette",
+          "authored_byte65": 0,
+          "palette_sha256": "140a8680925fbaf14af12e8986d7934c00fef8288d59e721e8cf33b408ddc9f5",
+          "original_sprite_probe": 1,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 512,
+          "loaded": 0,
+          "filename": "authored-palette",
+          "authored_byte65": 3,
+          "palette_sha256": "2ea16988ca9a3b973ff11693e6de4bd078775655cd6715c5a06a120f71b3e827",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 768,
+          "loaded": 1,
+          "filename": "authored.act",
+          "authored_byte65": 0,
+          "palette_sha256": "109818336adf2485c2317a64b93cc3a5eef8494bd6b48f5598392cfe36157919",
+          "original_sprite_probe": 1,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 768,
+          "loaded": 0,
+          "filename": "authored.act",
+          "authored_byte65": 3,
+          "palette_sha256": "9517c315e3de0d864d0f9ff719a358a8c7baa39c407c50bef85bb583c0bf2344",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 768,
+          "loaded": 1,
+          "filename": "authored.pcx",
+          "authored_byte65": 0,
+          "palette_sha256": "109818336adf2485c2317a64b93cc3a5eef8494bd6b48f5598392cfe36157919",
+          "original_sprite_probe": 1,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 768,
+          "loaded": 0,
+          "filename": "authored.pcx",
+          "authored_byte65": 3,
+          "palette_sha256": "9517c315e3de0d864d0f9ff719a358a8c7baa39c407c50bef85bb583c0bf2344",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 768,
+          "loaded": 1,
+          "filename": "authored-palette",
+          "authored_byte65": 0,
+          "palette_sha256": "109818336adf2485c2317a64b93cc3a5eef8494bd6b48f5598392cfe36157919",
+          "original_sprite_probe": 1,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 768,
+          "loaded": 0,
+          "filename": "authored-palette",
+          "authored_byte65": 3,
+          "palette_sha256": "9517c315e3de0d864d0f9ff719a358a8c7baa39c407c50bef85bb583c0bf2344",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 1024,
+          "loaded": 1,
+          "filename": "authored.act",
+          "authored_byte65": 0,
+          "palette_sha256": "1786de003146e394579b7e424a995cdaca9f71f916ec840bafb2a7799bf02f3f",
+          "original_sprite_probe": 1,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 1024,
+          "loaded": 0,
+          "filename": "authored.act",
+          "authored_byte65": 3,
+          "palette_sha256": "e75809e0d15667ce44e6aa5c64689a4917b245eb0920094ff0b017dc0612a17a",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 1024,
+          "loaded": 1,
+          "filename": "authored.pcx",
+          "authored_byte65": 0,
+          "palette_sha256": "1786de003146e394579b7e424a995cdaca9f71f916ec840bafb2a7799bf02f3f",
+          "original_sprite_probe": 1,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 1024,
+          "loaded": 0,
+          "filename": "authored.pcx",
+          "authored_byte65": 3,
+          "palette_sha256": "e75809e0d15667ce44e6aa5c64689a4917b245eb0920094ff0b017dc0612a17a",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 1024,
+          "loaded": 1,
+          "filename": "authored-palette",
+          "authored_byte65": 0,
+          "palette_sha256": "1786de003146e394579b7e424a995cdaca9f71f916ec840bafb2a7799bf02f3f",
+          "original_sprite_probe": 1,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 1024,
+          "loaded": 0,
+          "filename": "authored-palette",
+          "authored_byte65": 3,
+          "palette_sha256": "e75809e0d15667ce44e6aa5c64689a4917b245eb0920094ff0b017dc0612a17a",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        }
+      ]
+    },
+    {
+      "profile": "3824",
+      "engine": "3842",
+      "original_commit": "e260635df5095577fb729555cd5c08ecce37316d",
+      "original_image_source_sha256": "1b54ac7b265ce7a4b3bf9c5ca1c849b6400ff5bb8d771d966878bedbb7669c0c",
+      "original_model_source_sha256": "02b8a2f6e31e8b183f9268bab9a229ad5cfdb5c67b2879d7c51249658490a713",
+      "basis": "Exact pinned original source",
+      "image_reference": "https://github.com/DCurrent/openbor/blob/e260635df5095577fb729555cd5c08ecce37316d/engine/source/gamelib/loadimg.c#L932",
+      "model_reference": "https://github.com/DCurrent/openbor/blob/e260635df5095577fb729555cd5c08ecce37316d/engine/openbor.c#L5968",
+      "cases": [
+        {
+          "bytes": 512,
+          "loaded": 1,
+          "filename": "authored.act",
+          "authored_byte65": 0,
+          "palette_sha256": "140a8680925fbaf14af12e8986d7934c00fef8288d59e721e8cf33b408ddc9f5",
+          "original_sprite_probe": 1,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 512,
+          "loaded": 0,
+          "filename": "authored.act",
+          "authored_byte65": 3,
+          "palette_sha256": "2ea16988ca9a3b973ff11693e6de4bd078775655cd6715c5a06a120f71b3e827",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 512,
+          "loaded": 1,
+          "filename": "authored.pcx",
+          "authored_byte65": 0,
+          "palette_sha256": "140a8680925fbaf14af12e8986d7934c00fef8288d59e721e8cf33b408ddc9f5",
+          "original_sprite_probe": 1,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 512,
+          "loaded": 0,
+          "filename": "authored.pcx",
+          "authored_byte65": 3,
+          "palette_sha256": "2ea16988ca9a3b973ff11693e6de4bd078775655cd6715c5a06a120f71b3e827",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 512,
+          "loaded": 1,
+          "filename": "authored-palette",
+          "authored_byte65": 0,
+          "palette_sha256": "140a8680925fbaf14af12e8986d7934c00fef8288d59e721e8cf33b408ddc9f5",
+          "original_sprite_probe": 1,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 512,
+          "loaded": 0,
+          "filename": "authored-palette",
+          "authored_byte65": 3,
+          "palette_sha256": "2ea16988ca9a3b973ff11693e6de4bd078775655cd6715c5a06a120f71b3e827",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 768,
+          "loaded": 1,
+          "filename": "authored.act",
+          "authored_byte65": 0,
+          "palette_sha256": "109818336adf2485c2317a64b93cc3a5eef8494bd6b48f5598392cfe36157919",
+          "original_sprite_probe": 1,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 768,
+          "loaded": 0,
+          "filename": "authored.act",
+          "authored_byte65": 3,
+          "palette_sha256": "9517c315e3de0d864d0f9ff719a358a8c7baa39c407c50bef85bb583c0bf2344",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 768,
+          "loaded": 1,
+          "filename": "authored.pcx",
+          "authored_byte65": 0,
+          "palette_sha256": "109818336adf2485c2317a64b93cc3a5eef8494bd6b48f5598392cfe36157919",
+          "original_sprite_probe": 1,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 768,
+          "loaded": 0,
+          "filename": "authored.pcx",
+          "authored_byte65": 3,
+          "palette_sha256": "9517c315e3de0d864d0f9ff719a358a8c7baa39c407c50bef85bb583c0bf2344",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 768,
+          "loaded": 1,
+          "filename": "authored-palette",
+          "authored_byte65": 0,
+          "palette_sha256": "109818336adf2485c2317a64b93cc3a5eef8494bd6b48f5598392cfe36157919",
+          "original_sprite_probe": 1,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 768,
+          "loaded": 0,
+          "filename": "authored-palette",
+          "authored_byte65": 3,
+          "palette_sha256": "9517c315e3de0d864d0f9ff719a358a8c7baa39c407c50bef85bb583c0bf2344",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 1024,
+          "loaded": 1,
+          "filename": "authored.act",
+          "authored_byte65": 0,
+          "palette_sha256": "1786de003146e394579b7e424a995cdaca9f71f916ec840bafb2a7799bf02f3f",
+          "original_sprite_probe": 1,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 1024,
+          "loaded": 0,
+          "filename": "authored.act",
+          "authored_byte65": 3,
+          "palette_sha256": "e75809e0d15667ce44e6aa5c64689a4917b245eb0920094ff0b017dc0612a17a",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 1024,
+          "loaded": 1,
+          "filename": "authored.pcx",
+          "authored_byte65": 0,
+          "palette_sha256": "1786de003146e394579b7e424a995cdaca9f71f916ec840bafb2a7799bf02f3f",
+          "original_sprite_probe": 1,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 1024,
+          "loaded": 0,
+          "filename": "authored.pcx",
+          "authored_byte65": 3,
+          "palette_sha256": "e75809e0d15667ce44e6aa5c64689a4917b245eb0920094ff0b017dc0612a17a",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 1024,
+          "loaded": 1,
+          "filename": "authored-palette",
+          "authored_byte65": 0,
+          "palette_sha256": "1786de003146e394579b7e424a995cdaca9f71f916ec840bafb2a7799bf02f3f",
+          "original_sprite_probe": 1,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 1024,
+          "loaded": 0,
+          "filename": "authored-palette",
+          "authored_byte65": 3,
+          "palette_sha256": "e75809e0d15667ce44e6aa5c64689a4917b245eb0920094ff0b017dc0612a17a",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        }
+      ]
+    },
+    {
+      "profile": "3829",
+      "engine": "3842",
+      "original_commit": "8223091e0ae85bd621572094c3465783d6f73429",
+      "original_image_source_sha256": "1b54ac7b265ce7a4b3bf9c5ca1c849b6400ff5bb8d771d966878bedbb7669c0c",
+      "original_model_source_sha256": "34090f58e52330be5768b412ea52a73008f21af286dd0d6b1007cf07dd70a4ed",
+      "basis": "Exact pinned original source",
+      "image_reference": "https://github.com/DCurrent/openbor/blob/8223091e0ae85bd621572094c3465783d6f73429/engine/source/gamelib/loadimg.c#L932",
+      "model_reference": "https://github.com/DCurrent/openbor/blob/8223091e0ae85bd621572094c3465783d6f73429/engine/openbor.c#L5968",
+      "cases": [
+        {
+          "bytes": 512,
+          "loaded": 1,
+          "filename": "authored.act",
+          "authored_byte65": 0,
+          "palette_sha256": "140a8680925fbaf14af12e8986d7934c00fef8288d59e721e8cf33b408ddc9f5",
+          "original_sprite_probe": 1,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 512,
+          "loaded": 0,
+          "filename": "authored.act",
+          "authored_byte65": 3,
+          "palette_sha256": "2ea16988ca9a3b973ff11693e6de4bd078775655cd6715c5a06a120f71b3e827",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 512,
+          "loaded": 1,
+          "filename": "authored.pcx",
+          "authored_byte65": 0,
+          "palette_sha256": "140a8680925fbaf14af12e8986d7934c00fef8288d59e721e8cf33b408ddc9f5",
+          "original_sprite_probe": 1,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 512,
+          "loaded": 0,
+          "filename": "authored.pcx",
+          "authored_byte65": 3,
+          "palette_sha256": "2ea16988ca9a3b973ff11693e6de4bd078775655cd6715c5a06a120f71b3e827",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 512,
+          "loaded": 1,
+          "filename": "authored-palette",
+          "authored_byte65": 0,
+          "palette_sha256": "140a8680925fbaf14af12e8986d7934c00fef8288d59e721e8cf33b408ddc9f5",
+          "original_sprite_probe": 1,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 512,
+          "loaded": 0,
+          "filename": "authored-palette",
+          "authored_byte65": 3,
+          "palette_sha256": "2ea16988ca9a3b973ff11693e6de4bd078775655cd6715c5a06a120f71b3e827",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 768,
+          "loaded": 1,
+          "filename": "authored.act",
+          "authored_byte65": 0,
+          "palette_sha256": "109818336adf2485c2317a64b93cc3a5eef8494bd6b48f5598392cfe36157919",
+          "original_sprite_probe": 1,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 768,
+          "loaded": 0,
+          "filename": "authored.act",
+          "authored_byte65": 3,
+          "palette_sha256": "9517c315e3de0d864d0f9ff719a358a8c7baa39c407c50bef85bb583c0bf2344",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 768,
+          "loaded": 1,
+          "filename": "authored.pcx",
+          "authored_byte65": 0,
+          "palette_sha256": "109818336adf2485c2317a64b93cc3a5eef8494bd6b48f5598392cfe36157919",
+          "original_sprite_probe": 1,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 768,
+          "loaded": 0,
+          "filename": "authored.pcx",
+          "authored_byte65": 3,
+          "palette_sha256": "9517c315e3de0d864d0f9ff719a358a8c7baa39c407c50bef85bb583c0bf2344",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 768,
+          "loaded": 1,
+          "filename": "authored-palette",
+          "authored_byte65": 0,
+          "palette_sha256": "109818336adf2485c2317a64b93cc3a5eef8494bd6b48f5598392cfe36157919",
+          "original_sprite_probe": 1,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 768,
+          "loaded": 0,
+          "filename": "authored-palette",
+          "authored_byte65": 3,
+          "palette_sha256": "9517c315e3de0d864d0f9ff719a358a8c7baa39c407c50bef85bb583c0bf2344",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 1024,
+          "loaded": 1,
+          "filename": "authored.act",
+          "authored_byte65": 0,
+          "palette_sha256": "1786de003146e394579b7e424a995cdaca9f71f916ec840bafb2a7799bf02f3f",
+          "original_sprite_probe": 1,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 1024,
+          "loaded": 0,
+          "filename": "authored.act",
+          "authored_byte65": 3,
+          "palette_sha256": "e75809e0d15667ce44e6aa5c64689a4917b245eb0920094ff0b017dc0612a17a",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 1024,
+          "loaded": 1,
+          "filename": "authored.pcx",
+          "authored_byte65": 0,
+          "palette_sha256": "1786de003146e394579b7e424a995cdaca9f71f916ec840bafb2a7799bf02f3f",
+          "original_sprite_probe": 1,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 1024,
+          "loaded": 0,
+          "filename": "authored.pcx",
+          "authored_byte65": 3,
+          "palette_sha256": "e75809e0d15667ce44e6aa5c64689a4917b245eb0920094ff0b017dc0612a17a",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 1024,
+          "loaded": 1,
+          "filename": "authored-palette",
+          "authored_byte65": 0,
+          "palette_sha256": "1786de003146e394579b7e424a995cdaca9f71f916ec840bafb2a7799bf02f3f",
+          "original_sprite_probe": 1,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 1024,
+          "loaded": 0,
+          "filename": "authored-palette",
+          "authored_byte65": 3,
+          "palette_sha256": "e75809e0d15667ce44e6aa5c64689a4917b245eb0920094ff0b017dc0612a17a",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        }
+      ]
+    },
+    {
+      "profile": "3831",
+      "engine": "3842",
+      "original_commit": "c61f02b3fbb155dd416a7750eb9cb645d7785266",
+      "original_image_source_sha256": "1b54ac7b265ce7a4b3bf9c5ca1c849b6400ff5bb8d771d966878bedbb7669c0c",
+      "original_model_source_sha256": "eab507994a0d2daf24dd46fc052d6bc3e893dc7428c3009fc87c72a0857bdeab",
+      "basis": "Exact pinned original source",
+      "image_reference": "https://github.com/DCurrent/openbor/blob/c61f02b3fbb155dd416a7750eb9cb645d7785266/engine/source/gamelib/loadimg.c#L932",
+      "model_reference": "https://github.com/DCurrent/openbor/blob/c61f02b3fbb155dd416a7750eb9cb645d7785266/engine/openbor.c#L5994",
+      "cases": [
+        {
+          "bytes": 512,
+          "loaded": 1,
+          "filename": "authored.act",
+          "authored_byte65": 0,
+          "palette_sha256": "140a8680925fbaf14af12e8986d7934c00fef8288d59e721e8cf33b408ddc9f5",
+          "original_sprite_probe": 1,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 512,
+          "loaded": 0,
+          "filename": "authored.act",
+          "authored_byte65": 3,
+          "palette_sha256": "2ea16988ca9a3b973ff11693e6de4bd078775655cd6715c5a06a120f71b3e827",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 512,
+          "loaded": 1,
+          "filename": "authored.pcx",
+          "authored_byte65": 0,
+          "palette_sha256": "140a8680925fbaf14af12e8986d7934c00fef8288d59e721e8cf33b408ddc9f5",
+          "original_sprite_probe": 1,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 512,
+          "loaded": 0,
+          "filename": "authored.pcx",
+          "authored_byte65": 3,
+          "palette_sha256": "2ea16988ca9a3b973ff11693e6de4bd078775655cd6715c5a06a120f71b3e827",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 512,
+          "loaded": 1,
+          "filename": "authored-palette",
+          "authored_byte65": 0,
+          "palette_sha256": "140a8680925fbaf14af12e8986d7934c00fef8288d59e721e8cf33b408ddc9f5",
+          "original_sprite_probe": 1,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 512,
+          "loaded": 0,
+          "filename": "authored-palette",
+          "authored_byte65": 3,
+          "palette_sha256": "2ea16988ca9a3b973ff11693e6de4bd078775655cd6715c5a06a120f71b3e827",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 768,
+          "loaded": 1,
+          "filename": "authored.act",
+          "authored_byte65": 0,
+          "palette_sha256": "109818336adf2485c2317a64b93cc3a5eef8494bd6b48f5598392cfe36157919",
+          "original_sprite_probe": 1,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 768,
+          "loaded": 0,
+          "filename": "authored.act",
+          "authored_byte65": 3,
+          "palette_sha256": "9517c315e3de0d864d0f9ff719a358a8c7baa39c407c50bef85bb583c0bf2344",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 768,
+          "loaded": 1,
+          "filename": "authored.pcx",
+          "authored_byte65": 0,
+          "palette_sha256": "109818336adf2485c2317a64b93cc3a5eef8494bd6b48f5598392cfe36157919",
+          "original_sprite_probe": 1,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 768,
+          "loaded": 0,
+          "filename": "authored.pcx",
+          "authored_byte65": 3,
+          "palette_sha256": "9517c315e3de0d864d0f9ff719a358a8c7baa39c407c50bef85bb583c0bf2344",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 768,
+          "loaded": 1,
+          "filename": "authored-palette",
+          "authored_byte65": 0,
+          "palette_sha256": "109818336adf2485c2317a64b93cc3a5eef8494bd6b48f5598392cfe36157919",
+          "original_sprite_probe": 1,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 768,
+          "loaded": 0,
+          "filename": "authored-palette",
+          "authored_byte65": 3,
+          "palette_sha256": "9517c315e3de0d864d0f9ff719a358a8c7baa39c407c50bef85bb583c0bf2344",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 1024,
+          "loaded": 1,
+          "filename": "authored.act",
+          "authored_byte65": 0,
+          "palette_sha256": "1786de003146e394579b7e424a995cdaca9f71f916ec840bafb2a7799bf02f3f",
+          "original_sprite_probe": 1,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 1024,
+          "loaded": 0,
+          "filename": "authored.act",
+          "authored_byte65": 3,
+          "palette_sha256": "e75809e0d15667ce44e6aa5c64689a4917b245eb0920094ff0b017dc0612a17a",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 1024,
+          "loaded": 1,
+          "filename": "authored.pcx",
+          "authored_byte65": 0,
+          "palette_sha256": "1786de003146e394579b7e424a995cdaca9f71f916ec840bafb2a7799bf02f3f",
+          "original_sprite_probe": 1,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 1024,
+          "loaded": 0,
+          "filename": "authored.pcx",
+          "authored_byte65": 3,
+          "palette_sha256": "e75809e0d15667ce44e6aa5c64689a4917b245eb0920094ff0b017dc0612a17a",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 1024,
+          "loaded": 1,
+          "filename": "authored-palette",
+          "authored_byte65": 0,
+          "palette_sha256": "1786de003146e394579b7e424a995cdaca9f71f916ec840bafb2a7799bf02f3f",
+          "original_sprite_probe": 1,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 1024,
+          "loaded": 0,
+          "filename": "authored-palette",
+          "authored_byte65": 3,
+          "palette_sha256": "e75809e0d15667ce44e6aa5c64689a4917b245eb0920094ff0b017dc0612a17a",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        }
+      ]
+    },
+    {
+      "profile": "3837",
+      "engine": "3842",
+      "original_commit": "f2b4258428af00b3748ef7713d36201d4d0678ac",
+      "original_image_source_sha256": "1b54ac7b265ce7a4b3bf9c5ca1c849b6400ff5bb8d771d966878bedbb7669c0c",
+      "original_model_source_sha256": "2df0e70317d8622ff2013ad88f0c787033e4f0a342cd0b9229045568f4a8c44f",
+      "basis": "Exact pinned original source",
+      "image_reference": "https://github.com/DCurrent/openbor/blob/f2b4258428af00b3748ef7713d36201d4d0678ac/engine/source/gamelib/loadimg.c#L932",
+      "model_reference": "https://github.com/DCurrent/openbor/blob/f2b4258428af00b3748ef7713d36201d4d0678ac/engine/openbor.c#L5994",
+      "cases": [
+        {
+          "bytes": 512,
+          "loaded": 1,
+          "filename": "authored.act",
+          "authored_byte65": 0,
+          "palette_sha256": "140a8680925fbaf14af12e8986d7934c00fef8288d59e721e8cf33b408ddc9f5",
+          "original_sprite_probe": 1,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 512,
+          "loaded": 0,
+          "filename": "authored.act",
+          "authored_byte65": 3,
+          "palette_sha256": "2ea16988ca9a3b973ff11693e6de4bd078775655cd6715c5a06a120f71b3e827",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 512,
+          "loaded": 1,
+          "filename": "authored.pcx",
+          "authored_byte65": 0,
+          "palette_sha256": "140a8680925fbaf14af12e8986d7934c00fef8288d59e721e8cf33b408ddc9f5",
+          "original_sprite_probe": 1,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 512,
+          "loaded": 0,
+          "filename": "authored.pcx",
+          "authored_byte65": 3,
+          "palette_sha256": "2ea16988ca9a3b973ff11693e6de4bd078775655cd6715c5a06a120f71b3e827",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 512,
+          "loaded": 1,
+          "filename": "authored-palette",
+          "authored_byte65": 0,
+          "palette_sha256": "140a8680925fbaf14af12e8986d7934c00fef8288d59e721e8cf33b408ddc9f5",
+          "original_sprite_probe": 1,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 512,
+          "loaded": 0,
+          "filename": "authored-palette",
+          "authored_byte65": 3,
+          "palette_sha256": "2ea16988ca9a3b973ff11693e6de4bd078775655cd6715c5a06a120f71b3e827",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 768,
+          "loaded": 1,
+          "filename": "authored.act",
+          "authored_byte65": 0,
+          "palette_sha256": "109818336adf2485c2317a64b93cc3a5eef8494bd6b48f5598392cfe36157919",
+          "original_sprite_probe": 1,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 768,
+          "loaded": 0,
+          "filename": "authored.act",
+          "authored_byte65": 3,
+          "palette_sha256": "9517c315e3de0d864d0f9ff719a358a8c7baa39c407c50bef85bb583c0bf2344",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 768,
+          "loaded": 1,
+          "filename": "authored.pcx",
+          "authored_byte65": 0,
+          "palette_sha256": "109818336adf2485c2317a64b93cc3a5eef8494bd6b48f5598392cfe36157919",
+          "original_sprite_probe": 1,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 768,
+          "loaded": 0,
+          "filename": "authored.pcx",
+          "authored_byte65": 3,
+          "palette_sha256": "9517c315e3de0d864d0f9ff719a358a8c7baa39c407c50bef85bb583c0bf2344",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 768,
+          "loaded": 1,
+          "filename": "authored-palette",
+          "authored_byte65": 0,
+          "palette_sha256": "109818336adf2485c2317a64b93cc3a5eef8494bd6b48f5598392cfe36157919",
+          "original_sprite_probe": 1,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 768,
+          "loaded": 0,
+          "filename": "authored-palette",
+          "authored_byte65": 3,
+          "palette_sha256": "9517c315e3de0d864d0f9ff719a358a8c7baa39c407c50bef85bb583c0bf2344",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 1024,
+          "loaded": 1,
+          "filename": "authored.act",
+          "authored_byte65": 0,
+          "palette_sha256": "1786de003146e394579b7e424a995cdaca9f71f916ec840bafb2a7799bf02f3f",
+          "original_sprite_probe": 1,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 1024,
+          "loaded": 0,
+          "filename": "authored.act",
+          "authored_byte65": 3,
+          "palette_sha256": "e75809e0d15667ce44e6aa5c64689a4917b245eb0920094ff0b017dc0612a17a",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 1024,
+          "loaded": 1,
+          "filename": "authored.pcx",
+          "authored_byte65": 0,
+          "palette_sha256": "1786de003146e394579b7e424a995cdaca9f71f916ec840bafb2a7799bf02f3f",
+          "original_sprite_probe": 1,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 1024,
+          "loaded": 0,
+          "filename": "authored.pcx",
+          "authored_byte65": 3,
+          "palette_sha256": "e75809e0d15667ce44e6aa5c64689a4917b245eb0920094ff0b017dc0612a17a",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 1024,
+          "loaded": 1,
+          "filename": "authored-palette",
+          "authored_byte65": 0,
+          "palette_sha256": "1786de003146e394579b7e424a995cdaca9f71f916ec840bafb2a7799bf02f3f",
+          "original_sprite_probe": 1,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 1024,
+          "loaded": 0,
+          "filename": "authored-palette",
+          "authored_byte65": 3,
+          "palette_sha256": "e75809e0d15667ce44e6aa5c64689a4917b245eb0920094ff0b017dc0612a17a",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        }
+      ]
+    },
+    {
+      "profile": "3839",
+      "engine": "3842",
+      "original_commit": "b6712f11af263c3ad438d87241cec38f18570046",
+      "original_image_source_sha256": "1b54ac7b265ce7a4b3bf9c5ca1c849b6400ff5bb8d771d966878bedbb7669c0c",
+      "original_model_source_sha256": "05da6ee5344e99dad15be7c2c803947d30138df3abab0369c0839442ed106614",
+      "basis": "Exact pinned original source",
+      "image_reference": "https://github.com/DCurrent/openbor/blob/b6712f11af263c3ad438d87241cec38f18570046/engine/source/gamelib/loadimg.c#L932",
+      "model_reference": "https://github.com/DCurrent/openbor/blob/b6712f11af263c3ad438d87241cec38f18570046/engine/openbor.c#L6009",
+      "cases": [
+        {
+          "bytes": 512,
+          "loaded": 1,
+          "filename": "authored.act",
+          "authored_byte65": 0,
+          "palette_sha256": "140a8680925fbaf14af12e8986d7934c00fef8288d59e721e8cf33b408ddc9f5",
+          "original_sprite_probe": 1,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 512,
+          "loaded": 0,
+          "filename": "authored.act",
+          "authored_byte65": 3,
+          "palette_sha256": "2ea16988ca9a3b973ff11693e6de4bd078775655cd6715c5a06a120f71b3e827",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 512,
+          "loaded": 1,
+          "filename": "authored.pcx",
+          "authored_byte65": 0,
+          "palette_sha256": "140a8680925fbaf14af12e8986d7934c00fef8288d59e721e8cf33b408ddc9f5",
+          "original_sprite_probe": 1,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 512,
+          "loaded": 0,
+          "filename": "authored.pcx",
+          "authored_byte65": 3,
+          "palette_sha256": "2ea16988ca9a3b973ff11693e6de4bd078775655cd6715c5a06a120f71b3e827",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 512,
+          "loaded": 1,
+          "filename": "authored-palette",
+          "authored_byte65": 0,
+          "palette_sha256": "140a8680925fbaf14af12e8986d7934c00fef8288d59e721e8cf33b408ddc9f5",
+          "original_sprite_probe": 1,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 512,
+          "loaded": 0,
+          "filename": "authored-palette",
+          "authored_byte65": 3,
+          "palette_sha256": "2ea16988ca9a3b973ff11693e6de4bd078775655cd6715c5a06a120f71b3e827",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 768,
+          "loaded": 1,
+          "filename": "authored.act",
+          "authored_byte65": 0,
+          "palette_sha256": "109818336adf2485c2317a64b93cc3a5eef8494bd6b48f5598392cfe36157919",
+          "original_sprite_probe": 1,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 768,
+          "loaded": 0,
+          "filename": "authored.act",
+          "authored_byte65": 3,
+          "palette_sha256": "9517c315e3de0d864d0f9ff719a358a8c7baa39c407c50bef85bb583c0bf2344",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 768,
+          "loaded": 1,
+          "filename": "authored.pcx",
+          "authored_byte65": 0,
+          "palette_sha256": "109818336adf2485c2317a64b93cc3a5eef8494bd6b48f5598392cfe36157919",
+          "original_sprite_probe": 1,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 768,
+          "loaded": 0,
+          "filename": "authored.pcx",
+          "authored_byte65": 3,
+          "palette_sha256": "9517c315e3de0d864d0f9ff719a358a8c7baa39c407c50bef85bb583c0bf2344",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 768,
+          "loaded": 1,
+          "filename": "authored-palette",
+          "authored_byte65": 0,
+          "palette_sha256": "109818336adf2485c2317a64b93cc3a5eef8494bd6b48f5598392cfe36157919",
+          "original_sprite_probe": 1,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 768,
+          "loaded": 0,
+          "filename": "authored-palette",
+          "authored_byte65": 3,
+          "palette_sha256": "9517c315e3de0d864d0f9ff719a358a8c7baa39c407c50bef85bb583c0bf2344",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 1024,
+          "loaded": 1,
+          "filename": "authored.act",
+          "authored_byte65": 0,
+          "palette_sha256": "1786de003146e394579b7e424a995cdaca9f71f916ec840bafb2a7799bf02f3f",
+          "original_sprite_probe": 1,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 1024,
+          "loaded": 0,
+          "filename": "authored.act",
+          "authored_byte65": 3,
+          "palette_sha256": "e75809e0d15667ce44e6aa5c64689a4917b245eb0920094ff0b017dc0612a17a",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 1024,
+          "loaded": 1,
+          "filename": "authored.pcx",
+          "authored_byte65": 0,
+          "palette_sha256": "1786de003146e394579b7e424a995cdaca9f71f916ec840bafb2a7799bf02f3f",
+          "original_sprite_probe": 1,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 1024,
+          "loaded": 0,
+          "filename": "authored.pcx",
+          "authored_byte65": 3,
+          "palette_sha256": "e75809e0d15667ce44e6aa5c64689a4917b245eb0920094ff0b017dc0612a17a",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 1024,
+          "loaded": 1,
+          "filename": "authored-palette",
+          "authored_byte65": 0,
+          "palette_sha256": "1786de003146e394579b7e424a995cdaca9f71f916ec840bafb2a7799bf02f3f",
+          "original_sprite_probe": 1,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 1024,
+          "loaded": 0,
+          "filename": "authored-palette",
+          "authored_byte65": 3,
+          "palette_sha256": "e75809e0d15667ce44e6aa5c64689a4917b245eb0920094ff0b017dc0612a17a",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        }
+      ]
+    },
+    {
+      "profile": "3842",
+      "engine": "3842",
+      "original_commit": "1f702a991ace7fa31884262e458a85e351f62713",
+      "original_image_source_sha256": "1b54ac7b265ce7a4b3bf9c5ca1c849b6400ff5bb8d771d966878bedbb7669c0c",
+      "original_model_source_sha256": "d2638ad5cf319be18bc22a07f1d9b9b999d17cbcd83830433a59b819a40339a9",
+      "basis": "Exact pinned original source",
+      "image_reference": "https://github.com/DCurrent/openbor/blob/1f702a991ace7fa31884262e458a85e351f62713/engine/source/gamelib/loadimg.c#L932",
+      "model_reference": "https://github.com/DCurrent/openbor/blob/1f702a991ace7fa31884262e458a85e351f62713/engine/openbor.c#L6562",
+      "cases": [
+        {
+          "bytes": 512,
+          "loaded": 1,
+          "filename": "authored.act",
+          "authored_byte65": 0,
+          "palette_sha256": "140a8680925fbaf14af12e8986d7934c00fef8288d59e721e8cf33b408ddc9f5",
+          "original_sprite_probe": 1,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 512,
+          "loaded": 0,
+          "filename": "authored.act",
+          "authored_byte65": 3,
+          "palette_sha256": "2ea16988ca9a3b973ff11693e6de4bd078775655cd6715c5a06a120f71b3e827",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 512,
+          "loaded": 1,
+          "filename": "authored.pcx",
+          "authored_byte65": 0,
+          "palette_sha256": "140a8680925fbaf14af12e8986d7934c00fef8288d59e721e8cf33b408ddc9f5",
+          "original_sprite_probe": 1,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 512,
+          "loaded": 0,
+          "filename": "authored.pcx",
+          "authored_byte65": 3,
+          "palette_sha256": "2ea16988ca9a3b973ff11693e6de4bd078775655cd6715c5a06a120f71b3e827",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 512,
+          "loaded": 1,
+          "filename": "authored-palette",
+          "authored_byte65": 0,
+          "palette_sha256": "140a8680925fbaf14af12e8986d7934c00fef8288d59e721e8cf33b408ddc9f5",
+          "original_sprite_probe": 1,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 512,
+          "loaded": 0,
+          "filename": "authored-palette",
+          "authored_byte65": 3,
+          "palette_sha256": "2ea16988ca9a3b973ff11693e6de4bd078775655cd6715c5a06a120f71b3e827",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 768,
+          "loaded": 1,
+          "filename": "authored.act",
+          "authored_byte65": 0,
+          "palette_sha256": "109818336adf2485c2317a64b93cc3a5eef8494bd6b48f5598392cfe36157919",
+          "original_sprite_probe": 1,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 768,
+          "loaded": 0,
+          "filename": "authored.act",
+          "authored_byte65": 3,
+          "palette_sha256": "9517c315e3de0d864d0f9ff719a358a8c7baa39c407c50bef85bb583c0bf2344",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 768,
+          "loaded": 1,
+          "filename": "authored.pcx",
+          "authored_byte65": 0,
+          "palette_sha256": "109818336adf2485c2317a64b93cc3a5eef8494bd6b48f5598392cfe36157919",
+          "original_sprite_probe": 1,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 768,
+          "loaded": 0,
+          "filename": "authored.pcx",
+          "authored_byte65": 3,
+          "palette_sha256": "9517c315e3de0d864d0f9ff719a358a8c7baa39c407c50bef85bb583c0bf2344",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 768,
+          "loaded": 1,
+          "filename": "authored-palette",
+          "authored_byte65": 0,
+          "palette_sha256": "109818336adf2485c2317a64b93cc3a5eef8494bd6b48f5598392cfe36157919",
+          "original_sprite_probe": 1,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 768,
+          "loaded": 0,
+          "filename": "authored-palette",
+          "authored_byte65": 3,
+          "palette_sha256": "9517c315e3de0d864d0f9ff719a358a8c7baa39c407c50bef85bb583c0bf2344",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 1024,
+          "loaded": 1,
+          "filename": "authored.act",
+          "authored_byte65": 0,
+          "palette_sha256": "1786de003146e394579b7e424a995cdaca9f71f916ec840bafb2a7799bf02f3f",
+          "original_sprite_probe": 1,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 1024,
+          "loaded": 0,
+          "filename": "authored.act",
+          "authored_byte65": 3,
+          "palette_sha256": "e75809e0d15667ce44e6aa5c64689a4917b245eb0920094ff0b017dc0612a17a",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 1024,
+          "loaded": 1,
+          "filename": "authored.pcx",
+          "authored_byte65": 0,
+          "palette_sha256": "1786de003146e394579b7e424a995cdaca9f71f916ec840bafb2a7799bf02f3f",
+          "original_sprite_probe": 1,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 1024,
+          "loaded": 0,
+          "filename": "authored.pcx",
+          "authored_byte65": 3,
+          "palette_sha256": "e75809e0d15667ce44e6aa5c64689a4917b245eb0920094ff0b017dc0612a17a",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 1024,
+          "loaded": 1,
+          "filename": "authored-palette",
+          "authored_byte65": 0,
+          "palette_sha256": "1786de003146e394579b7e424a995cdaca9f71f916ec840bafb2a7799bf02f3f",
+          "original_sprite_probe": 1,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 1024,
+          "loaded": 0,
+          "filename": "authored-palette",
+          "authored_byte65": 3,
+          "palette_sha256": "e75809e0d15667ce44e6aa5c64689a4917b245eb0920094ff0b017dc0612a17a",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        }
+      ]
+    },
+    {
+      "profile": "4086",
+      "engine": "4086",
+      "original_commit": "af23dc9c2316bb7853bb266ccf40986aa9765aeb",
+      "original_image_source_sha256": "37c14132c336b03d82c46b327f2903eeb61150d0d4ede90c1998d417e4564eab",
+      "original_model_source_sha256": "fa319b01a0cd47dea0921e31eaa3532f614716c72ae3a780c5e2675bdcb0703a",
+      "basis": "Exact pinned original source",
+      "image_reference": "https://github.com/DCurrent/openbor/blob/af23dc9c2316bb7853bb266ccf40986aa9765aeb/engine/source/gamelib/loadimg.c#L1158",
+      "model_reference": "https://github.com/DCurrent/openbor/blob/af23dc9c2316bb7853bb266ccf40986aa9765aeb/engine/openbor.c#L8306",
+      "cases": [
+        {
+          "bytes": 512,
+          "loaded": 0,
+          "filename": "authored.act",
+          "authored_byte65": 0,
+          "palette_sha256": "2ea16988ca9a3b973ff11693e6de4bd078775655cd6715c5a06a120f71b3e827",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 512,
+          "loaded": 0,
+          "filename": "authored.act",
+          "authored_byte65": 3,
+          "palette_sha256": "2ea16988ca9a3b973ff11693e6de4bd078775655cd6715c5a06a120f71b3e827",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 512,
+          "loaded": 1,
+          "filename": "authored.pcx",
+          "authored_byte65": 0,
+          "palette_sha256": "140a8680925fbaf14af12e8986d7934c00fef8288d59e721e8cf33b408ddc9f5",
+          "original_sprite_probe": 1,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 512,
+          "loaded": 0,
+          "filename": "authored.pcx",
+          "authored_byte65": 3,
+          "palette_sha256": "2ea16988ca9a3b973ff11693e6de4bd078775655cd6715c5a06a120f71b3e827",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 512,
+          "loaded": 0,
+          "filename": "authored-palette",
+          "authored_byte65": 0,
+          "palette_sha256": "2ea16988ca9a3b973ff11693e6de4bd078775655cd6715c5a06a120f71b3e827",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 512,
+          "loaded": 0,
+          "filename": "authored-palette",
+          "authored_byte65": 3,
+          "palette_sha256": "2ea16988ca9a3b973ff11693e6de4bd078775655cd6715c5a06a120f71b3e827",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 768,
+          "loaded": 0,
+          "filename": "authored.act",
+          "authored_byte65": 0,
+          "palette_sha256": "9517c315e3de0d864d0f9ff719a358a8c7baa39c407c50bef85bb583c0bf2344",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 768,
+          "loaded": 0,
+          "filename": "authored.act",
+          "authored_byte65": 3,
+          "palette_sha256": "9517c315e3de0d864d0f9ff719a358a8c7baa39c407c50bef85bb583c0bf2344",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 768,
+          "loaded": 1,
+          "filename": "authored.pcx",
+          "authored_byte65": 0,
+          "palette_sha256": "109818336adf2485c2317a64b93cc3a5eef8494bd6b48f5598392cfe36157919",
+          "original_sprite_probe": 1,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 768,
+          "loaded": 0,
+          "filename": "authored.pcx",
+          "authored_byte65": 3,
+          "palette_sha256": "9517c315e3de0d864d0f9ff719a358a8c7baa39c407c50bef85bb583c0bf2344",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 768,
+          "loaded": 0,
+          "filename": "authored-palette",
+          "authored_byte65": 0,
+          "palette_sha256": "9517c315e3de0d864d0f9ff719a358a8c7baa39c407c50bef85bb583c0bf2344",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 768,
+          "loaded": 0,
+          "filename": "authored-palette",
+          "authored_byte65": 3,
+          "palette_sha256": "9517c315e3de0d864d0f9ff719a358a8c7baa39c407c50bef85bb583c0bf2344",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 1024,
+          "loaded": 0,
+          "filename": "authored.act",
+          "authored_byte65": 0,
+          "palette_sha256": "e75809e0d15667ce44e6aa5c64689a4917b245eb0920094ff0b017dc0612a17a",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 1024,
+          "loaded": 0,
+          "filename": "authored.act",
+          "authored_byte65": 3,
+          "palette_sha256": "e75809e0d15667ce44e6aa5c64689a4917b245eb0920094ff0b017dc0612a17a",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 1024,
+          "loaded": 1,
+          "filename": "authored.pcx",
+          "authored_byte65": 0,
+          "palette_sha256": "1786de003146e394579b7e424a995cdaca9f71f916ec840bafb2a7799bf02f3f",
+          "original_sprite_probe": 1,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 1024,
+          "loaded": 0,
+          "filename": "authored.pcx",
+          "authored_byte65": 3,
+          "palette_sha256": "e75809e0d15667ce44e6aa5c64689a4917b245eb0920094ff0b017dc0612a17a",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 1024,
+          "loaded": 0,
+          "filename": "authored-palette",
+          "authored_byte65": 0,
+          "palette_sha256": "e75809e0d15667ce44e6aa5c64689a4917b245eb0920094ff0b017dc0612a17a",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 1024,
+          "loaded": 0,
+          "filename": "authored-palette",
+          "authored_byte65": 3,
+          "palette_sha256": "e75809e0d15667ce44e6aa5c64689a4917b245eb0920094ff0b017dc0612a17a",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        }
+      ]
+    },
+    {
+      "profile": "4432",
+      "engine": "4432",
+      "original_commit": "2566cbee6185025e6a69d2aa1823b15c7a154ff9",
+      "original_image_source_sha256": "4a8d334ad3c887ce65b4a9d56169bf52108f908e7a8c83155c452383a06ec977",
+      "original_model_source_sha256": "16bc3699253b5738707ac89e5422d6dde467b0a518928ad7e3c4eae1dd22329b",
+      "basis": "Exact pinned original source",
+      "image_reference": "https://github.com/DCurrent/openbor/blob/2566cbee6185025e6a69d2aa1823b15c7a154ff9/engine/source/gamelib/loadimg.c#L1197",
+      "model_reference": "https://github.com/DCurrent/openbor/blob/2566cbee6185025e6a69d2aa1823b15c7a154ff9/engine/openbor.c#L9659",
+      "cases": [
+        {
+          "bytes": 512,
+          "loaded": 0,
+          "filename": "authored.act",
+          "authored_byte65": 0,
+          "palette_sha256": "2ea16988ca9a3b973ff11693e6de4bd078775655cd6715c5a06a120f71b3e827",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 512,
+          "loaded": 0,
+          "filename": "authored.act",
+          "authored_byte65": 3,
+          "palette_sha256": "2ea16988ca9a3b973ff11693e6de4bd078775655cd6715c5a06a120f71b3e827",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 512,
+          "loaded": 1,
+          "filename": "authored.pcx",
+          "authored_byte65": 0,
+          "palette_sha256": "140a8680925fbaf14af12e8986d7934c00fef8288d59e721e8cf33b408ddc9f5",
+          "original_sprite_probe": 1,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 512,
+          "loaded": 0,
+          "filename": "authored.pcx",
+          "authored_byte65": 3,
+          "palette_sha256": "2ea16988ca9a3b973ff11693e6de4bd078775655cd6715c5a06a120f71b3e827",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 512,
+          "loaded": 0,
+          "filename": "authored-palette",
+          "authored_byte65": 0,
+          "palette_sha256": "2ea16988ca9a3b973ff11693e6de4bd078775655cd6715c5a06a120f71b3e827",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 512,
+          "loaded": 0,
+          "filename": "authored-palette",
+          "authored_byte65": 3,
+          "palette_sha256": "2ea16988ca9a3b973ff11693e6de4bd078775655cd6715c5a06a120f71b3e827",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 768,
+          "loaded": 0,
+          "filename": "authored.act",
+          "authored_byte65": 0,
+          "palette_sha256": "9517c315e3de0d864d0f9ff719a358a8c7baa39c407c50bef85bb583c0bf2344",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 768,
+          "loaded": 0,
+          "filename": "authored.act",
+          "authored_byte65": 3,
+          "palette_sha256": "9517c315e3de0d864d0f9ff719a358a8c7baa39c407c50bef85bb583c0bf2344",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 768,
+          "loaded": 1,
+          "filename": "authored.pcx",
+          "authored_byte65": 0,
+          "palette_sha256": "109818336adf2485c2317a64b93cc3a5eef8494bd6b48f5598392cfe36157919",
+          "original_sprite_probe": 1,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 768,
+          "loaded": 0,
+          "filename": "authored.pcx",
+          "authored_byte65": 3,
+          "palette_sha256": "9517c315e3de0d864d0f9ff719a358a8c7baa39c407c50bef85bb583c0bf2344",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 768,
+          "loaded": 0,
+          "filename": "authored-palette",
+          "authored_byte65": 0,
+          "palette_sha256": "9517c315e3de0d864d0f9ff719a358a8c7baa39c407c50bef85bb583c0bf2344",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 768,
+          "loaded": 0,
+          "filename": "authored-palette",
+          "authored_byte65": 3,
+          "palette_sha256": "9517c315e3de0d864d0f9ff719a358a8c7baa39c407c50bef85bb583c0bf2344",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 1024,
+          "loaded": 0,
+          "filename": "authored.act",
+          "authored_byte65": 0,
+          "palette_sha256": "e75809e0d15667ce44e6aa5c64689a4917b245eb0920094ff0b017dc0612a17a",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 1024,
+          "loaded": 0,
+          "filename": "authored.act",
+          "authored_byte65": 3,
+          "palette_sha256": "e75809e0d15667ce44e6aa5c64689a4917b245eb0920094ff0b017dc0612a17a",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 1024,
+          "loaded": 1,
+          "filename": "authored.pcx",
+          "authored_byte65": 0,
+          "palette_sha256": "1786de003146e394579b7e424a995cdaca9f71f916ec840bafb2a7799bf02f3f",
+          "original_sprite_probe": 1,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 1024,
+          "loaded": 0,
+          "filename": "authored.pcx",
+          "authored_byte65": 3,
+          "palette_sha256": "e75809e0d15667ce44e6aa5c64689a4917b245eb0920094ff0b017dc0612a17a",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 1024,
+          "loaded": 0,
+          "filename": "authored-palette",
+          "authored_byte65": 0,
+          "palette_sha256": "e75809e0d15667ce44e6aa5c64689a4917b245eb0920094ff0b017dc0612a17a",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 1024,
+          "loaded": 0,
+          "filename": "authored-palette",
+          "authored_byte65": 3,
+          "palette_sha256": "e75809e0d15667ce44e6aa5c64689a4917b245eb0920094ff0b017dc0612a17a",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        }
+      ]
+    },
+    {
+      "profile": "4453",
+      "engine": "4432",
+      "original_commit": "7906e2573fcd70e9eafcd30fbdcc680832c4ae42",
+      "original_image_source_sha256": "4a8d334ad3c887ce65b4a9d56169bf52108f908e7a8c83155c452383a06ec977",
+      "original_model_source_sha256": "de4f14ebe5f1cf281cb5653b5fd855bc87d02f9c1418f54d2061b1160a7d1e20",
+      "basis": "Exact4453 source referenced by maintained logical-profile contract; generic historical counter is not substituted for this explicit reference",
+      "image_reference": "https://github.com/DCurrent/openbor/blob/7906e2573fcd70e9eafcd30fbdcc680832c4ae42/engine/source/gamelib/loadimg.c#L1197",
+      "model_reference": "https://github.com/DCurrent/openbor/blob/7906e2573fcd70e9eafcd30fbdcc680832c4ae42/engine/openbor.c#L9533",
+      "cases": [
+        {
+          "bytes": 1024,
+          "loaded": 0,
+          "filename": "authored.act",
+          "authored_byte65": 0,
+          "palette_sha256": "e75809e0d15667ce44e6aa5c64689a4917b245eb0920094ff0b017dc0612a17a",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 1024,
+          "loaded": 0,
+          "filename": "authored.act",
+          "authored_byte65": 3,
+          "palette_sha256": "e75809e0d15667ce44e6aa5c64689a4917b245eb0920094ff0b017dc0612a17a",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 1024,
+          "loaded": 1,
+          "filename": "authored.pcx",
+          "authored_byte65": 0,
+          "palette_sha256": "1786de003146e394579b7e424a995cdaca9f71f916ec840bafb2a7799bf02f3f",
+          "original_sprite_probe": 1,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 1024,
+          "loaded": 0,
+          "filename": "authored.pcx",
+          "authored_byte65": 3,
+          "palette_sha256": "e75809e0d15667ce44e6aa5c64689a4917b245eb0920094ff0b017dc0612a17a",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 1024,
+          "loaded": 0,
+          "filename": "authored-palette",
+          "authored_byte65": 0,
+          "palette_sha256": "e75809e0d15667ce44e6aa5c64689a4917b245eb0920094ff0b017dc0612a17a",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 1024,
+          "loaded": 0,
+          "filename": "authored-palette",
+          "authored_byte65": 3,
+          "palette_sha256": "e75809e0d15667ce44e6aa5c64689a4917b245eb0920094ff0b017dc0612a17a",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        }
+      ]
+    },
+    {
+      "profile": "6330",
+      "engine": "6391",
+      "original_commit": "4b1705fa37457ab38bc5d0fcc561242019588e32",
+      "original_image_source_sha256": "4a8d334ad3c887ce65b4a9d56169bf52108f908e7a8c83155c452383a06ec977",
+      "original_model_source_sha256": "47fe0220ff7ec625a405ede5845ae36d1d9d4cce1d7ffd282f54f45e151b7e06",
+      "basis": "Exact pinned original source",
+      "image_reference": "https://github.com/DCurrent/openbor/blob/4b1705fa37457ab38bc5d0fcc561242019588e32/engine/source/gamelib/loadimg.c#L1197",
+      "model_reference": "https://github.com/DCurrent/openbor/blob/4b1705fa37457ab38bc5d0fcc561242019588e32/engine/openbor.c#L9662",
+      "cases": [
+        {
+          "bytes": 1024,
+          "loaded": 1,
+          "filename": "authored.act",
+          "authored_byte65": 0,
+          "palette_sha256": "1786de003146e394579b7e424a995cdaca9f71f916ec840bafb2a7799bf02f3f",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 1024,
+          "loaded": 1,
+          "filename": "authored.act",
+          "authored_byte65": 3,
+          "palette_sha256": "ea2d5a68d12c244fa915284e6ba5ab096118b6f3f7a3f934c8dbc821b624ac33",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 1024,
+          "loaded": 1,
+          "filename": "authored.pcx",
+          "authored_byte65": 0,
+          "palette_sha256": "1786de003146e394579b7e424a995cdaca9f71f916ec840bafb2a7799bf02f3f",
+          "original_sprite_probe": 1,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 1024,
+          "loaded": 0,
+          "filename": "authored.pcx",
+          "authored_byte65": 3,
+          "palette_sha256": "e75809e0d15667ce44e6aa5c64689a4917b245eb0920094ff0b017dc0612a17a",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 1024,
+          "loaded": 0,
+          "filename": "authored-palette",
+          "authored_byte65": 0,
+          "palette_sha256": "e75809e0d15667ce44e6aa5c64689a4917b245eb0920094ff0b017dc0612a17a",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 1024,
+          "loaded": 0,
+          "filename": "authored-palette",
+          "authored_byte65": 3,
+          "palette_sha256": "e75809e0d15667ce44e6aa5c64689a4917b245eb0920094ff0b017dc0612a17a",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        }
+      ]
+    },
+    {
+      "profile": "6391",
+      "engine": "6391",
+      "original_commit": "494708eb34e71d1afda237873907701c4ec3a569",
+      "original_image_source_sha256": "4a8d334ad3c887ce65b4a9d56169bf52108f908e7a8c83155c452383a06ec977",
+      "original_model_source_sha256": "09b28ba38c5c89ffe4ceba4aa1cbb5263319dda43c2251ce5a2b266a597cdfb5",
+      "basis": "Exact pinned original source",
+      "image_reference": "https://github.com/DCurrent/openbor/blob/494708eb34e71d1afda237873907701c4ec3a569/engine/source/gamelib/loadimg.c#L1197",
+      "model_reference": "https://github.com/DCurrent/openbor/blob/494708eb34e71d1afda237873907701c4ec3a569/engine/openbor.c#L9780",
+      "cases": [
+        {
+          "bytes": 1024,
+          "loaded": 1,
+          "filename": "authored.act",
+          "authored_byte65": 0,
+          "palette_sha256": "1786de003146e394579b7e424a995cdaca9f71f916ec840bafb2a7799bf02f3f",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 1024,
+          "loaded": 1,
+          "filename": "authored.act",
+          "authored_byte65": 3,
+          "palette_sha256": "ea2d5a68d12c244fa915284e6ba5ab096118b6f3f7a3f934c8dbc821b624ac33",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 1024,
+          "loaded": 1,
+          "filename": "authored.pcx",
+          "authored_byte65": 0,
+          "palette_sha256": "1786de003146e394579b7e424a995cdaca9f71f916ec840bafb2a7799bf02f3f",
+          "original_sprite_probe": 1,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 1024,
+          "loaded": 0,
+          "filename": "authored.pcx",
+          "authored_byte65": 3,
+          "palette_sha256": "e75809e0d15667ce44e6aa5c64689a4917b245eb0920094ff0b017dc0612a17a",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 1024,
+          "loaded": 0,
+          "filename": "authored-palette",
+          "authored_byte65": 0,
+          "palette_sha256": "e75809e0d15667ce44e6aa5c64689a4917b245eb0920094ff0b017dc0612a17a",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 1024,
+          "loaded": 0,
+          "filename": "authored-palette",
+          "authored_byte65": 3,
+          "palette_sha256": "e75809e0d15667ce44e6aa5c64689a4917b245eb0920094ff0b017dc0612a17a",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        }
+      ]
+    },
+    {
+      "profile": "6392",
+      "engine": "6391",
+      "original_commit": "494708eb34e71d1afda237873907701c4ec3a569",
+      "original_image_source_sha256": "4a8d334ad3c887ce65b4a9d56169bf52108f908e7a8c83155c452383a06ec977",
+      "original_model_source_sha256": "09b28ba38c5c89ffe4ceba4aa1cbb5263319dda43c2251ce5a2b266a597cdfb5",
+      "basis": "Exact original6392 test source unavailable; current explicitly reconstructed profile basis6391 plus published PR229 commits; must verify affected loader unchanged, do not claim exact6392original",
+      "image_reference": "https://github.com/DCurrent/openbor/blob/494708eb34e71d1afda237873907701c4ec3a569/engine/source/gamelib/loadimg.c#L1197",
+      "model_reference": "https://github.com/DCurrent/openbor/blob/494708eb34e71d1afda237873907701c4ec3a569/engine/openbor.c#L9780",
+      "cases": [
+        {
+          "bytes": 1024,
+          "loaded": 1,
+          "filename": "authored.act",
+          "authored_byte65": 0,
+          "palette_sha256": "1786de003146e394579b7e424a995cdaca9f71f916ec840bafb2a7799bf02f3f",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 1024,
+          "loaded": 1,
+          "filename": "authored.act",
+          "authored_byte65": 3,
+          "palette_sha256": "ea2d5a68d12c244fa915284e6ba5ab096118b6f3f7a3f934c8dbc821b624ac33",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 1024,
+          "loaded": 1,
+          "filename": "authored.pcx",
+          "authored_byte65": 0,
+          "palette_sha256": "1786de003146e394579b7e424a995cdaca9f71f916ec840bafb2a7799bf02f3f",
+          "original_sprite_probe": 1,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 1024,
+          "loaded": 0,
+          "filename": "authored.pcx",
+          "authored_byte65": 3,
+          "palette_sha256": "e75809e0d15667ce44e6aa5c64689a4917b245eb0920094ff0b017dc0612a17a",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 1024,
+          "loaded": 0,
+          "filename": "authored-palette",
+          "authored_byte65": 0,
+          "palette_sha256": "e75809e0d15667ce44e6aa5c64689a4917b245eb0920094ff0b017dc0612a17a",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 1024,
+          "loaded": 0,
+          "filename": "authored-palette",
+          "authored_byte65": 3,
+          "palette_sha256": "e75809e0d15667ce44e6aa5c64689a4917b245eb0920094ff0b017dc0612a17a",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        }
+      ],
+      "reconstruction_validation": "All five published reconstruction source points match these six palette cases; exact test-build source unavailable.",
+      "reconstruction_commits": [
+        "0824ff3e32513c403b97393eadeea44ff75d6a72",
+        "e4f0605db5f141dd9dd838a954672f5e7320579f",
+        "4462a156fa31d2f3f807bf6bdda16f68cce03bf1",
+        "46e2bbfb1e05cdddc8d2d409e63b7b7061f2b0d5",
+        "e10dd3f1b1c59daea7df3f618e6d68875d109a29"
+      ]
+    },
+    {
+      "profile": "6412",
+      "engine": "6391",
+      "original_commit": "d9bfceeb0d53cd43ed7cf5cfdfb0c60bba4df3f8",
+      "original_image_source_sha256": "4a8d334ad3c887ce65b4a9d56169bf52108f908e7a8c83155c452383a06ec977",
+      "original_model_source_sha256": "0cd98321fd3e6276bc60075eb8a4143ddf2b95ff779de02c1ca8d4ec95654264",
+      "basis": "Exact pinned original source",
+      "image_reference": "https://github.com/DCurrent/openbor/blob/d9bfceeb0d53cd43ed7cf5cfdfb0c60bba4df3f8/engine/source/gamelib/loadimg.c#L1197",
+      "model_reference": "https://github.com/DCurrent/openbor/blob/d9bfceeb0d53cd43ed7cf5cfdfb0c60bba4df3f8/engine/openbor.c#L9780",
+      "cases": [
+        {
+          "bytes": 1024,
+          "loaded": 1,
+          "filename": "authored.act",
+          "authored_byte65": 0,
+          "palette_sha256": "1786de003146e394579b7e424a995cdaca9f71f916ec840bafb2a7799bf02f3f",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 1024,
+          "loaded": 1,
+          "filename": "authored.act",
+          "authored_byte65": 3,
+          "palette_sha256": "ea2d5a68d12c244fa915284e6ba5ab096118b6f3f7a3f934c8dbc821b624ac33",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 1024,
+          "loaded": 1,
+          "filename": "authored.pcx",
+          "authored_byte65": 0,
+          "palette_sha256": "1786de003146e394579b7e424a995cdaca9f71f916ec840bafb2a7799bf02f3f",
+          "original_sprite_probe": 1,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 1024,
+          "loaded": 0,
+          "filename": "authored.pcx",
+          "authored_byte65": 3,
+          "palette_sha256": "e75809e0d15667ce44e6aa5c64689a4917b245eb0920094ff0b017dc0612a17a",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 1024,
+          "loaded": 0,
+          "filename": "authored-palette",
+          "authored_byte65": 0,
+          "palette_sha256": "e75809e0d15667ce44e6aa5c64689a4917b245eb0920094ff0b017dc0612a17a",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 1024,
+          "loaded": 0,
+          "filename": "authored-palette",
+          "authored_byte65": 3,
+          "palette_sha256": "e75809e0d15667ce44e6aa5c64689a4917b245eb0920094ff0b017dc0612a17a",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        }
+      ]
+    },
+    {
+      "profile": "6510",
+      "engine": "6391",
+      "original_commit": "ecce29b95700468aa3401915625dac2d56e4ca60",
+      "original_image_source_sha256": "4a8d334ad3c887ce65b4a9d56169bf52108f908e7a8c83155c452383a06ec977",
+      "original_model_source_sha256": "e6f62117bc819cbf7d24e88502fa99e3dca110dd1d75412070f2beb7c3fcd27f",
+      "basis": "Exact pinned original source",
+      "image_reference": "https://github.com/DCurrent/openbor/blob/ecce29b95700468aa3401915625dac2d56e4ca60/engine/source/gamelib/loadimg.c#L1197",
+      "model_reference": "https://github.com/DCurrent/openbor/blob/ecce29b95700468aa3401915625dac2d56e4ca60/engine/openbor.c#L9872",
+      "cases": [
+        {
+          "bytes": 1024,
+          "loaded": 1,
+          "filename": "authored.act",
+          "authored_byte65": 0,
+          "palette_sha256": "1786de003146e394579b7e424a995cdaca9f71f916ec840bafb2a7799bf02f3f",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 1024,
+          "loaded": 1,
+          "filename": "authored.act",
+          "authored_byte65": 3,
+          "palette_sha256": "ea2d5a68d12c244fa915284e6ba5ab096118b6f3f7a3f934c8dbc821b624ac33",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 1024,
+          "loaded": 1,
+          "filename": "authored.pcx",
+          "authored_byte65": 0,
+          "palette_sha256": "1786de003146e394579b7e424a995cdaca9f71f916ec840bafb2a7799bf02f3f",
+          "original_sprite_probe": 1,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 1024,
+          "loaded": 0,
+          "filename": "authored.pcx",
+          "authored_byte65": 3,
+          "palette_sha256": "e75809e0d15667ce44e6aa5c64689a4917b245eb0920094ff0b017dc0612a17a",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 1024,
+          "loaded": 0,
+          "filename": "authored-palette",
+          "authored_byte65": 0,
+          "palette_sha256": "e75809e0d15667ce44e6aa5c64689a4917b245eb0920094ff0b017dc0612a17a",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 1024,
+          "loaded": 0,
+          "filename": "authored-palette",
+          "authored_byte65": 3,
+          "palette_sha256": "e75809e0d15667ce44e6aa5c64689a4917b245eb0920094ff0b017dc0612a17a",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        }
+      ]
+    },
+    {
+      "profile": "7086",
+      "engine": "7142",
+      "original_commit": "7a45a2215a0cc12c1085d92e7b210a827ea552c2",
+      "original_image_source_sha256": "1f62b52e99a0f264891b61caf16682a28fead1fa028f8df718acc2727388fcb3",
+      "original_model_source_sha256": "98a38a108b6699ab9c686f753c62e3c55ab1b56bb56312d6f1bcc0344ea07e55",
+      "basis": "Exact pinned original source",
+      "image_reference": "https://github.com/DCurrent/openbor/blob/7a45a2215a0cc12c1085d92e7b210a827ea552c2/engine/source/gamelib/loadimg.c#L1456",
+      "model_reference": "https://github.com/DCurrent/openbor/blob/7a45a2215a0cc12c1085d92e7b210a827ea552c2/engine/openbor.c#L10119",
+      "cases": [
+        {
+          "bytes": 1024,
+          "loaded": 1,
+          "filename": "authored.act",
+          "authored_byte65": 0,
+          "palette_sha256": "1786de003146e394579b7e424a995cdaca9f71f916ec840bafb2a7799bf02f3f",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 1024,
+          "loaded": 1,
+          "filename": "authored.act",
+          "authored_byte65": 3,
+          "palette_sha256": "ea2d5a68d12c244fa915284e6ba5ab096118b6f3f7a3f934c8dbc821b624ac33",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 1024,
+          "loaded": 1,
+          "filename": "authored.pcx",
+          "authored_byte65": 0,
+          "palette_sha256": "1786de003146e394579b7e424a995cdaca9f71f916ec840bafb2a7799bf02f3f",
+          "original_sprite_probe": 1,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 1024,
+          "loaded": 0,
+          "filename": "authored.pcx",
+          "authored_byte65": 3,
+          "palette_sha256": "e75809e0d15667ce44e6aa5c64689a4917b245eb0920094ff0b017dc0612a17a",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 1024,
+          "loaded": 0,
+          "filename": "authored-palette",
+          "authored_byte65": 0,
+          "palette_sha256": "e75809e0d15667ce44e6aa5c64689a4917b245eb0920094ff0b017dc0612a17a",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 1024,
+          "loaded": 0,
+          "filename": "authored-palette",
+          "authored_byte65": 3,
+          "palette_sha256": "e75809e0d15667ce44e6aa5c64689a4917b245eb0920094ff0b017dc0612a17a",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        }
+      ]
+    },
+    {
+      "profile": "7123",
+      "engine": "7142",
+      "original_commit": "f5261e7cb97786909276c0b87f8f9f63504d2844",
+      "original_image_source_sha256": "1f62b52e99a0f264891b61caf16682a28fead1fa028f8df718acc2727388fcb3",
+      "original_model_source_sha256": "394e3f4a46f63c3a700412e93c6e58fa965f10b627d494754309d25a6db5fa0e",
+      "basis": "Exact pinned original source",
+      "image_reference": "https://github.com/DCurrent/openbor/blob/f5261e7cb97786909276c0b87f8f9f63504d2844/engine/source/gamelib/loadimg.c#L1456",
+      "model_reference": "https://github.com/DCurrent/openbor/blob/f5261e7cb97786909276c0b87f8f9f63504d2844/engine/openbor.c#L10123",
+      "cases": [
+        {
+          "bytes": 1024,
+          "loaded": 1,
+          "filename": "authored.act",
+          "authored_byte65": 0,
+          "palette_sha256": "1786de003146e394579b7e424a995cdaca9f71f916ec840bafb2a7799bf02f3f",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 1024,
+          "loaded": 1,
+          "filename": "authored.act",
+          "authored_byte65": 3,
+          "palette_sha256": "ea2d5a68d12c244fa915284e6ba5ab096118b6f3f7a3f934c8dbc821b624ac33",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 1024,
+          "loaded": 1,
+          "filename": "authored.pcx",
+          "authored_byte65": 0,
+          "palette_sha256": "1786de003146e394579b7e424a995cdaca9f71f916ec840bafb2a7799bf02f3f",
+          "original_sprite_probe": 1,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 1024,
+          "loaded": 0,
+          "filename": "authored.pcx",
+          "authored_byte65": 3,
+          "palette_sha256": "e75809e0d15667ce44e6aa5c64689a4917b245eb0920094ff0b017dc0612a17a",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 1024,
+          "loaded": 0,
+          "filename": "authored-palette",
+          "authored_byte65": 0,
+          "palette_sha256": "e75809e0d15667ce44e6aa5c64689a4917b245eb0920094ff0b017dc0612a17a",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 1024,
+          "loaded": 0,
+          "filename": "authored-palette",
+          "authored_byte65": 3,
+          "palette_sha256": "e75809e0d15667ce44e6aa5c64689a4917b245eb0920094ff0b017dc0612a17a",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        }
+      ]
+    },
+    {
+      "profile": "7142",
+      "engine": "7142",
+      "original_commit": "9dcd966d1dc8e93ff03c39edbd6bd262f4a2d7ab",
+      "original_image_source_sha256": "1f62b52e99a0f264891b61caf16682a28fead1fa028f8df718acc2727388fcb3",
+      "original_model_source_sha256": "71fd11c5f33bce214d0af7ef6ad521cc34440d460e4e2a45e99bf28ee9c03c69",
+      "basis": "Exact pinned original source",
+      "image_reference": "https://github.com/DCurrent/openbor/blob/9dcd966d1dc8e93ff03c39edbd6bd262f4a2d7ab/engine/source/gamelib/loadimg.c#L1456",
+      "model_reference": "https://github.com/DCurrent/openbor/blob/9dcd966d1dc8e93ff03c39edbd6bd262f4a2d7ab/engine/openbor.c#L10076",
+      "cases": [
+        {
+          "bytes": 1024,
+          "loaded": 1,
+          "filename": "authored.act",
+          "authored_byte65": 0,
+          "palette_sha256": "1786de003146e394579b7e424a995cdaca9f71f916ec840bafb2a7799bf02f3f",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 1024,
+          "loaded": 1,
+          "filename": "authored.act",
+          "authored_byte65": 3,
+          "palette_sha256": "ea2d5a68d12c244fa915284e6ba5ab096118b6f3f7a3f934c8dbc821b624ac33",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 1024,
+          "loaded": 1,
+          "filename": "authored.pcx",
+          "authored_byte65": 0,
+          "palette_sha256": "1786de003146e394579b7e424a995cdaca9f71f916ec840bafb2a7799bf02f3f",
+          "original_sprite_probe": 1,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 1024,
+          "loaded": 0,
+          "filename": "authored.pcx",
+          "authored_byte65": 3,
+          "palette_sha256": "e75809e0d15667ce44e6aa5c64689a4917b245eb0920094ff0b017dc0612a17a",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 1024,
+          "loaded": 0,
+          "filename": "authored-palette",
+          "authored_byte65": 0,
+          "palette_sha256": "e75809e0d15667ce44e6aa5c64689a4917b245eb0920094ff0b017dc0612a17a",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 1024,
+          "loaded": 0,
+          "filename": "authored-palette",
+          "authored_byte65": 3,
+          "palette_sha256": "e75809e0d15667ce44e6aa5c64689a4917b245eb0920094ff0b017dc0612a17a",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        }
+      ]
+    },
+    {
+      "profile": "7533",
+      "engine": "7533",
+      "original_commit": "5c8261444de6b61f8e2ce6e79e3d86a2949e55bd",
+      "original_image_source_sha256": "02e925f5cccb817a94f2db2c62b87a16f6ed00d170b8e72582edb9426caa8800",
+      "original_model_source_sha256": "cee8b05ccf51961ac3847f2b41e879f14aeb05d6d4030ca898ffcb3eb13b06bb",
+      "basis": "Exact pinned original source",
+      "image_reference": "https://github.com/DCurrent/openbor/blob/5c8261444de6b61f8e2ce6e79e3d86a2949e55bd/engine/source/gamelib/loadimg.c#L1456",
+      "model_reference": "https://github.com/DCurrent/openbor/blob/5c8261444de6b61f8e2ce6e79e3d86a2949e55bd/engine/openbor.c#L14480",
+      "cases": [
+        {
+          "bytes": 1024,
+          "loaded": 1,
+          "filename": "authored.act",
+          "authored_byte65": 0,
+          "palette_sha256": "1786de003146e394579b7e424a995cdaca9f71f916ec840bafb2a7799bf02f3f",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 1024,
+          "loaded": 1,
+          "filename": "authored.act",
+          "authored_byte65": 3,
+          "palette_sha256": "ea2d5a68d12c244fa915284e6ba5ab096118b6f3f7a3f934c8dbc821b624ac33",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 1024,
+          "loaded": 1,
+          "filename": "authored.pcx",
+          "authored_byte65": 0,
+          "palette_sha256": "1786de003146e394579b7e424a995cdaca9f71f916ec840bafb2a7799bf02f3f",
+          "original_sprite_probe": 1,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 1024,
+          "loaded": 0,
+          "filename": "authored.pcx",
+          "authored_byte65": 3,
+          "palette_sha256": "e75809e0d15667ce44e6aa5c64689a4917b245eb0920094ff0b017dc0612a17a",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 1024,
+          "loaded": 0,
+          "filename": "authored-palette",
+          "authored_byte65": 0,
+          "palette_sha256": "e75809e0d15667ce44e6aa5c64689a4917b245eb0920094ff0b017dc0612a17a",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 1024,
+          "loaded": 0,
+          "filename": "authored-palette",
+          "authored_byte65": 3,
+          "palette_sha256": "e75809e0d15667ce44e6aa5c64689a4917b245eb0920094ff0b017dc0612a17a",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        }
+      ]
+    },
+    {
+      "profile": "8023",
+      "engine": "8023",
+      "original_commit": "16aae1a30b81063778f21977ae20b849bd1c76f9",
+      "original_image_source_sha256": "9c6a61772c1ed714c16e7fa0c777c46f1c54c05861d1bf9e13c875f2b2801edc",
+      "original_model_source_sha256": "4b72fbaeea76155c2a78820a2f514921843735e908a20fe86399b197e06ace56",
+      "basis": "Exact pinned original source",
+      "image_reference": "https://github.com/DCurrent/openbor/blob/16aae1a30b81063778f21977ae20b849bd1c76f9/engine/source/gamelib/loadimg.c#L961",
+      "model_reference": "https://github.com/DCurrent/openbor/blob/16aae1a30b81063778f21977ae20b849bd1c76f9/engine/openbor.c#L17406",
+      "cases": [
+        {
+          "bytes": 1024,
+          "loaded": 1,
+          "filename": "authored.act",
+          "authored_byte65": 0,
+          "palette_sha256": "cdec14bad2b9c0020b5c822ec1ad580b3d182e39666ebbf73e1534d5693cdf93",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 1022
+        },
+        {
+          "bytes": 1024,
+          "loaded": 1,
+          "filename": "authored.act",
+          "authored_byte65": 3,
+          "palette_sha256": "79ed9958bc2884c3fd01a07923eb05a5a2e34ee9847dacefd670be1c8a48e283",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 1022
+        },
+        {
+          "bytes": 1024,
+          "loaded": 0,
+          "filename": "authored.pcx",
+          "authored_byte65": 0,
+          "palette_sha256": "e75809e0d15667ce44e6aa5c64689a4917b245eb0920094ff0b017dc0612a17a",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 1024,
+          "loaded": 0,
+          "filename": "authored.pcx",
+          "authored_byte65": 3,
+          "palette_sha256": "e75809e0d15667ce44e6aa5c64689a4917b245eb0920094ff0b017dc0612a17a",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 1024,
+          "loaded": 0,
+          "filename": "authored-palette",
+          "authored_byte65": 0,
+          "palette_sha256": "e75809e0d15667ce44e6aa5c64689a4917b245eb0920094ff0b017dc0612a17a",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 1024,
+          "loaded": 0,
+          "filename": "authored-palette",
+          "authored_byte65": 3,
+          "palette_sha256": "e75809e0d15667ce44e6aa5c64689a4917b245eb0920094ff0b017dc0612a17a",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        }
+      ]
+    }
+  ]
+}

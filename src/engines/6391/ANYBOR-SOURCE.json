@@ -161,10 +161,11 @@
       "upstream_sha256": "9ca3470f0a34b7d46ffde9407aa098e666850c2e60e46fa3d8f1c19a117e2029"
     },
     "source/gamelib/loadimg.c": {
-      "distributed_sha256": "1c6464f486220d3091c651a109782a95a8407390814fe32352fec45811294443",
+      "distributed_sha256": "ad4c5bde365fe403d5dabf2bbfe0728439a61b1a4b41a15df6dcdcc583cfb7f4",
       "modified": true,
-      "summary": "Declare the resolved source member and original bitmap dimensions for independent sprite reconstruction proof.",
+      "summary": "Declare the resolved source member and original bitmap dimensions for independent sprite reconstruction proof. Validate PCX sprite signatures before using header dimensions. Preserve native palette-only filename probing, three-plane refusals and final RGB table conversion without interpreting palette bytes as sprite dimensions.",
       "topics": [
+        "image-loader-safety",
         "reconstructible-resources"
       ],
       "upstream_sha256": "4a8d334ad3c887ce65b4a9d56169bf52108f908e7a8c83155c452383a06ec977"

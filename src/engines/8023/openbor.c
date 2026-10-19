@@ -1,25 +1,27 @@
-/* AnyBOR modification record: 2026-10-15.
+/* AnyBOR modification record: 2026-10-19.
  * Port maintained by retrodiv <retrodiv@proton.me>.
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
  * Upstream code retains its original license and notices.
  * Apply the port's engine corrections and select the PC video configuration
  * on macOS. Derive output names from the content basename with explicit
- * destination capacities, and reject overflowing output path joins. Leave
- * multiplayer slots without a selected model available to join even if game
- * scripts preassign lives to them. Let a missing basename-only PAK self-
- * check read the active frontend content after it has been validated and
- * prepared. Allocate each model's animation pointer table through the
- * highest animation index that model uses, and bound cache, copy and cleanup
- * paths to that capacity. Ignore optional defense and offense entries
- * outside the configured attack-type range with a log warning before
- * accessing their tables. Yield after each newly completed model during
- * explicit model-list or level preparation, and defer states until that
- * preparation has cleaned up its intermediate parsers and handles. Use four
- * independent RetroPad devices and per-device mappings. Place player state
- * in aligned storage for PE SIMD reads. Yield to the frontend and decoder
- * workers while asynchronous movies are pending. Grow each collision
- * collection's pointer table only through its highest author-facing slot.
+ * destination capacities, and reject overflowing output path joins. Bound
+ * raw palette stores to the declared allocation while retaining its native
+ * in-range layout and complete input reads. Leave multiplayer slots without
+ * a selected model available to join even if game scripts preassign lives to
+ * them. Let a missing basename-only PAK self-check read the active frontend
+ * content after it has been validated and prepared. Allocate each model's
+ * animation pointer table through the highest animation index that model
+ * uses, and bound cache, copy and cleanup paths to that capacity. Ignore
+ * optional defense and offense entries outside the configured attack-type
+ * range with a log warning before accessing their tables. Yield after each
+ * newly completed model during explicit model-list or level preparation, and
+ * defer states until that preparation has cleaned up its intermediate
+ * parsers and handles. Use four independent RetroPad devices and per-device
+ * mappings. Place player state in aligned storage for PE SIMD reads. Yield
+ * to the frontend and decoder workers while asynchronous movies are pending.
+ * Grow each collision collection's pointer table only through its highest
+ * author-facing slot.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/8023.md
  * at the source repository root. Original notices follow below.
@@ -5567,7 +5569,12 @@ int load_palette(unsigned char *palette, char *filename)
             //printf("\n\t pal[COLOR_COMPONENT_RED]: %d, pal[RGB_GREEN]: %d, pal[RGB_BLUE]: %d", rgb_temp[COLOR_COMPONENT_RED], rgb_temp[COLOR_COMPONENT_GREEN], rgb_temp[COLOR_COMPONENT_BLUE]);
             //printf("\n\t colour32: %d", colour32(rgb_temp[COLOR_COMPONENT_RED], rgb_temp[COLOR_COMPONENT_GREEN], rgb_temp[COLOR_COMPONENT_BLUE]));
             
-            acting_palette[i] = colour32(rgb_temp[COLOR_COMPONENT_RED], rgb_temp[COLOR_COMPONENT_GREEN], rgb_temp[COLOR_COMPONENT_BLUE]);
+            /* Retain the native palette layout without writing beyond its
+             * declared allocation. All source RGB triples are still consumed. */
+            if(i < MAX_PAL_SIZE / (int)sizeof(*acting_palette))
+            {
+                acting_palette[i] = colour32(rgb_temp[COLOR_COMPONENT_RED], rgb_temp[COLOR_COMPONENT_GREEN], rgb_temp[COLOR_COMPONENT_BLUE]);
+            }
             
             //printf("\n\t acting_palette[%d]: %d", i, acting_palette[i]);
         }                
