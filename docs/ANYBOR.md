@@ -156,7 +156,14 @@ v3.0 6392-dev, v3.0 6412-dev and v3.0 6510-dev can be selected directly by an
 exact filename Build tag or a manual choice. Accompanying executables and
 ordinary unlabelled inference do not select these nonautomatic profiles.
 Imprecise filename tags can select them when no stable or automatic candidate
-remains compatible in the declared interval. Historical profiles 3780–3839
+remains compatible in the declared interval. A complete numeric Build tag
+without its own selectable profile checks its ordinary automatic candidate
+against proved content requirements. If that candidate is incompatible, Auto
+chooses the closest profile satisfying every requirement; if none exists,
+it logs the conflict and retains the existing routing. Exact tags with their
+own profile keep their existing priority. See the
+[content rules](AUTO_SELECTION_RULES.md) for syntax boundaries and tie-breaking.
+Historical profiles 3780–3839
 participate in Auto: a declared build selects the first available revision at
 or above it, including declarations from an accompanying executable. Positive
 content bounds in this engine era use the same revisions. Auto uses its fallback when neither a declaration
@@ -178,7 +185,8 @@ source, 16 MiB total and 65536 directory entries, with its own 750 ms deadline.
 
 The content pass inspects at most 800 text files, 2 MiB per file, 16 MiB total,
 and 65536 directory entries, with a 750 ms processing deadline. An incomplete
-pass cannot establish a complete interval. For an imprecise filename tag,
+pass cannot establish a complete interval. For an imprecise filename tag or
+an exact Build tag without its own profile,
 complete model-command facts already observed remain usable; unread script
 bindings and absent features establish no requirement. Ordinary unlabelled
 inference retains its existing fallback unless a modern dependency probe

@@ -40,6 +40,28 @@ static bool profile_triage_preferred(const obor_profile_def *profile)
         (!strstr(profile->disp, "-dev") && !strstr(profile->disp, "-alpha"));
 }
 
+static bool filename_missing_exact_profile(const char *path, int declared)
+{
+    if (declared <= 0) return false;
+    for (size_t i = 0; i < sizeof(kProfiles) / sizeof(kProfiles[0]); ++i)
+        if (kProfiles[i].build == declared) return false;
+    const char *base = strrchr(path, PATH_SEP);
+    base = base ? base + 1 : path;
+    for (const char *p = base; *p; ++p) {
+        if ((p != base && (isalnum((unsigned char)p[-1]) || p[-1] == '_')) ||
+            strncasecmp(p, "build ", 6)) continue;
+        const char *first = p + 6;
+        while (*first == ' ') ++first;
+        if (!isdigit((unsigned char)*first)) continue;
+        char *end;
+        long value = strtol(first, &end, 10);
+        if (value < 1000 || value > 99999 || isalnum((unsigned char)*end) ||
+            *end == '_' || *end == '-') continue;
+        return value == declared;
+    }
+    return false;
+}
+
 static uint64_t profile_triage_distance(const obor_profile_def *profile, int legacy)
 {
     uint64_t result = content_contract_distance(profile->build, profile->engine_build);
@@ -56,6 +78,26 @@ static uint64_t profile_triage_distance(const obor_profile_def *profile, int leg
         if (gap > result) result = gap;
     }
     return result;
+}
+
+static void profile_triage_log_rules(const obor_profile_def *best, int legacy)
+{
+    for (size_t i = 0; i < sizeof(kContentContracts) / sizeof(kContentContracts[0]); ++i) {
+        if (!content_contract_active(i)) continue;
+        const obor_contract_rule *rule = &kContentContracts[i];
+        log_cb(RETRO_LOG_INFO, "[OpenBOR] content rule kind=%d name=%s bounds=%d-%d flags=%u selected=%s\n",
+               (int)rule->kind, rule->name, rule->lower, rule->upper, rule->flags,
+               content_contract_allows(rule, best->build, best->engine_build) ? "supported" : "tag-conflict");
+    }
+    if (legacy && g_contract_valid && !g_contract_scripts_ambiguous)
+        log_cb(RETRO_LOG_INFO, "[OpenBOR] content rule legacy-attack bounds=1-4166 selected=%s\n",
+               best->build < 4167 ? "supported" : "tag-conflict");
+    for (size_t i = 0; i < g_content_evidence_count; ++i) {
+        const obor_content_evidence *row = &g_content_evidence[i];
+        if (row->script && g_contract_scripts_ambiguous) continue;
+        log_cb(RETRO_LOG_INFO, "[OpenBOR] existing content rule name=%s bounds=%d-%d\n",
+               row->name, row->lower, row->upper);
+    }
 }
 
 static int profile_triage_select(const filename_build_interval *interval, int legacy)
@@ -80,22 +122,41 @@ static int profile_triage_select(const filename_build_interval *interval, int le
            g_content_range_seen ? g_content_lower : 1,
            g_content_range_seen ? g_content_upper : INT_MAX, best->build,
            best_distance ? "; content contradicts tag, keeping closest declared profile" : "");
-    for (size_t i = 0; i < sizeof(kContentContracts) / sizeof(kContentContracts[0]); ++i) {
-        if (!content_contract_active(i)) continue;
-        const obor_contract_rule *rule = &kContentContracts[i];
-        log_cb(RETRO_LOG_INFO, "[OpenBOR] content rule kind=%d name=%s bounds=%d-%d flags=%u selected=%s\n",
-               (int)rule->kind, rule->name, rule->lower, rule->upper, rule->flags,
-               content_contract_allows(rule, best->build, best->engine_build) ? "supported" : "tag-conflict");
+    profile_triage_log_rules(best, legacy);
+    return best->build;
+}
+
+static int profile_triage_exact_select(int declared, int legacy)
+{
+    int anchor = pick_anchor(declared);
+    const obor_profile_def *candidate = NULL, *best = NULL;
+    for (size_t i = 0; i < sizeof(kProfiles) / sizeof(kProfiles[0]); ++i)
+        if (kProfiles[i].build == anchor) candidate = &kProfiles[i];
+    if (!candidate || !profile_triage_distance(candidate, legacy)) return 0;
+    uint64_t closest = UINT64_MAX;
+    for (size_t i = 0; i < sizeof(kProfiles) / sizeof(kProfiles[0]); ++i) {
+        const obor_profile_def *p = &kProfiles[i];
+        if (profile_triage_distance(p, legacy)) continue;
+        uint64_t distance = p->build < declared ? (uint64_t)declared - p->build :
+                                                 (uint64_t)p->build - declared;
+        bool preferred = profile_triage_preferred(p);
+        if (!best || distance < closest ||
+            (distance == closest && preferred && !profile_triage_preferred(best)) ||
+            (distance == closest && preferred == profile_triage_preferred(best) && p->build > best->build)) {
+            best = p; closest = distance;
+        }
     }
-    if (legacy && g_contract_valid && !g_contract_scripts_ambiguous)
-        log_cb(RETRO_LOG_INFO, "[OpenBOR] content rule legacy-attack bounds=1-4166 selected=%s\n",
-               best->build < 4167 ? "supported" : "tag-conflict");
-    for (size_t i = 0; i < g_content_evidence_count; ++i) {
-        const obor_content_evidence *row = &g_content_evidence[i];
-        if (row->script && g_contract_scripts_ambiguous) continue;
-        log_cb(RETRO_LOG_INFO, "[OpenBOR] existing content rule name=%s bounds=%d-%d\n",
-               row->name, row->lower, row->upper);
+    if (!best) {
+        log_cb(RETRO_LOG_WARN,
+               "[OpenBOR] exact tag triage %d; candidate %d; no profile satisfies all proved requirements; retaining existing routing\n",
+               declared, candidate->build);
+        profile_triage_log_rules(candidate, legacy);
+        return 0;
     }
+    log_cb(RETRO_LOG_INFO,
+           "[OpenBOR] exact tag triage %d; candidate %d conflicts with proved content; closest compatible profile %d\n",
+           declared, candidate->build, best->build);
+    profile_triage_log_rules(best, legacy);
     return best->build;
 }
 #endif

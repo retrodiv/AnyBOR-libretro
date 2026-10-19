@@ -4,6 +4,7 @@ SPDX-License-Identifier: BSD-3-Clause
 Copyright (c) 2026 retrodiv <retrodiv@proton.me>
 """
 import os
+import json
 from pathlib import Path
 import re
 import struct
@@ -57,6 +58,99 @@ class ContentTriageTests(unittest.TestCase):
             profile, log = self.script(tag, 'void main(){ movie_load("x"); }')
             self.assertEqual(profile, expected)
             self.assertNotIn('filename triage', log)
+
+    def test_missing_exact_profile_checks_literal_entity_animation_getter(self):
+        for tag in ('4153', '4300', '4444'):
+            profile, log = self.script(tag, 'void main(){getentityproperty(self,"animation");}')
+            self.assertEqual(profile, 4086, log)
+            self.assertIn('name=animation bounds=1-4201', log)
+
+    def test_missing_exact_profile_checks_proved_model_requirements(self):
+        profile, log = self.select('4444', {'data/chars/hero.txt': b'colourdepth 16bit\n'})
+        self.assertEqual(profile, 4432, log)
+        self.assertIn('name=16bit bounds=', log)
+
+    def test_missing_exact_historical_tag_checks_content_before_alias_priority(self):
+        profile, log = self.script('3810', 'void main(){getlevelproperty("type");}')
+        self.assertEqual(profile, 3822, log)
+        self.assertIn('candidate 3814 conflicts', log)
+        self.assertIn('name=type bounds=3820-', log)
+
+    def test_missing_exact_profile_keeps_a_compatible_candidate(self):
+        profile, log = self.script('4054', 'void main(){getentityproperty(self,"animation");}')
+        self.assertEqual(profile, 4086, log)
+        self.assertNotIn('filename exact triage', log)
+        self.assertNotIn('candidate 4086 conflicts', log)
+
+    def test_missing_exact_profile_requires_one_candidate_to_satisfy_all_facts(self):
+        profile, log = self.script('4153',
+            'void main(){getentityproperty(self,"animation");movie_load("x");}')
+        self.assertEqual(profile, 4432, log)
+        self.assertIn('no profile satisfies all proved requirements', log)
+        self.assertIn('name=animation bounds=1-4201', log)
+        self.assertIn('name=movie_load bounds=', log)
+        self.assertNotIn('closest compatible profile', log)
+
+    def test_missing_exact_profile_keeps_the_existing_legacy_preflight(self):
+        profile, log = self.script('4300', 'void main(){getentityproperty(self,"attack",0);}')
+        self.assertEqual(profile, 4086, log)
+        self.assertIn('legacy-attack bounds=1-4166', log)
+
+    def test_missing_exact_profile_tag_grammar_keeps_leading_zeroes(self):
+        source = 'void main(){getentityproperty(self,"animation");}'
+        self.assertEqual(self.script('00004153', source)[0], 4086)
+        for tag in ('4153_extra', '4153extra', '4153-'):
+            _, log = self.script(tag, source)
+            self.assertNotIn('filename exact triage', log, tag)
+
+    def test_missing_exact_profile_incomplete_scan_retains_only_proved_facts(self):
+        members = {'data/chars/first.txt': b'colourdepth 16bit\n',
+                   'data/scripts/first.c': b'void main(){getentityproperty(self,"animation");}'}
+        members.update(('data/unused/%d.txt' % i, b'name unused\n') for i in range(805))
+        profile, log = self.select('4444', members)
+        self.assertEqual(profile, 4432, log)
+        self.assertIn('scan incomplete', log)
+        self.assertIn('name=16bit bounds=', log)
+        self.assertNotIn('name=animation bounds=', log)
+
+    def test_available_exact_profiles_keep_their_existing_selection(self):
+        pins = json.loads((ROOT / 'src/pin.json').read_text())
+        for row in pins['profiles']:
+            tag = str(row['build'])
+            control, _ = self.select(tag)
+            actual, log = self.script(tag, 'void main(){getentityproperty(self,"animation");}')
+            self.assertEqual(actual, control, (tag, log))
+            self.assertNotIn('filename triage', log)
+
+    def test_entity_animation_requirement_needs_the_complete_native_getter_argument(self):
+        for source in (
+                '// getentityproperty(self,"animation");\nvoid main(){}',
+                'void main(){log("getentityproperty(self, animation)");}',
+                'void main(){changeentityproperty(self,"animation",0);}',
+                'void main(){getentityproperty(self,"animationid");}',
+                'void main(){getentityproperty(self,8);}',
+                'void main(){getentityproperty(self,"animation" + suffix);}',
+                'void getentityproperty(int a,int b){} void main(){getentityproperty(0,"animation");}',
+                '#define ALIAS 1\nvoid main(){getentityproperty(self,"animation");}'):
+            self.assertEqual(self.script('4153', source)[0], 4432, source)
+        profile, log = self.script('4153',
+            'void main(){getentityproperty(getlocalvar("self"),"animation");}')
+        self.assertEqual(profile, 4086, log)
+
+    def test_animation_getter_contract_matches_each_profile_source_observation(self):
+        fixture = json.loads((Path(__file__).parent / 'fixtures' /
+                              'profile-entity-animation-contracts.json').read_text())
+        pins = json.loads((ROOT / 'src/pin.json').read_text())
+        self.assertEqual({str(p['build']) for p in pins['profiles']},
+                         {p['profile'] for p in fixture['profiles']})
+        rules = subprocess.check_output([str(self.host), '--rules'], text=True, timeout=8)
+        rule = next(row.split() for row in rules.splitlines()
+                    if row.split()[1:3] == ['10', 'animation'])
+        for row in fixture['profiles']:
+            actual = subprocess.check_output([str(self.host), '--rule-probe', rule[0],
+                                             row['profile'], row['engine']],
+                                            text=True, timeout=8)
+            self.assertEqual(bool(int(actual)), row['supported'], row)
 
     def test_official_automatic_build_coverage(self):
         for tag, expected in (('4433',4453),('4452',4453),('4453',4453),
@@ -166,6 +260,7 @@ class ContentTriageTests(unittest.TestCase):
             elif kind==5: source='void main(){getlevelproperty("'+name+'");}'
             elif kind==6: source='void main(){openborvariant("'+name+'");}'
             elif kind==7: source='void main(){getentityproperty(self,"aiflag","'+name+'");}'
+            elif kind==10: source='void main(){getentityproperty(self,"'+name+'");}'
             else: source=None
             if source is not None:
                 _,log=self.script('1000-99999',source)

@@ -2143,10 +2143,13 @@ static void decide_engine(void)
     filename_build_interval triage_interval;
     bool has_triage_interval = filename_triage_bounds(g_pak_path, &triage_interval);
     int triage_profile = 0;
+    int legacy_build = 0;
+    bool legacy_probed = false;
     if (!build && has_triage_interval && !g_raw && filename_profile >= 0) {
         g_content_triage = true;
         build_from_content(g_pak_path);
-        int legacy_build = obor_legacy_api_build(g_pak_path);
+        legacy_build = obor_legacy_api_build(g_pak_path);
+        legacy_probed = true;
         triage_profile = profile_triage_select(&triage_interval, legacy_build);
         g_content_triage = false;
         if (triage_profile) {
@@ -2169,6 +2172,21 @@ static void decide_engine(void)
         build = filename_build;
         how = "filename interval";
     }
+    if (!build && !g_raw && !has_interval && !has_triage_interval &&
+        filename_missing_exact_profile(g_pak_path, filename_build)) {
+        g_content_triage = true;
+        build_from_content(g_pak_path);
+        legacy_build = obor_legacy_api_build(g_pak_path);
+        legacy_probed = true;
+        triage_profile = profile_triage_exact_select(filename_build, legacy_build);
+        g_content_triage = false;
+        if (triage_profile) {
+            build = filename_build;
+            how = "filename exact triage";
+        }
+        if (!g_content_scan_complete)
+            log_cb(RETRO_LOG_INFO, "[OpenBOR] content scan incomplete; retaining proved model facts only; script bindings inconclusive.\n");
+    }
     int declared_anchor = filename_build > 0 && declared_build_has_variants(filename_build)
         ? pick_anchor(filename_build) : 0;
     /* An automatic alias must not change the legacy-API preflight priority
@@ -2190,8 +2208,10 @@ static void decide_engine(void)
             how = "filename tag";
         }
     }
-    if (!build && !g_raw && (build = obor_legacy_api_build(g_pak_path)) != 0)
-        how = "legacy script API";
+    if (!build && !g_raw) {
+        if (!legacy_probed) legacy_build = obor_legacy_api_build(g_pak_path);
+        if ((build = legacy_build) != 0) how = "legacy script API";
+    }
     if (!build && (build = filename_build) != 0)
         how = "filename tag";
     if (!build && g_raw && (build = build_from_sidecar_dir(g_pak_path)) != 0)

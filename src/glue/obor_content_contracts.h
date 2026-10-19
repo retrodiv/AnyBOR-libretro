@@ -2,14 +2,14 @@
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
 #ifndef OBOR_CONTENT_CONTRACTS_H
 #define OBOR_CONTENT_CONTRACTS_H
-/* Syntax facts for refining an imprecise declaration. The source boundaries
+/* Syntax facts for refining imprecise or unavailable exact declarations. The source boundaries
  * and branch exceptions are documented in docs/AUTO_SELECTION_RULES.md.
  * This header follows content_lex; no source is executed during detection. */
 enum obor_contract_kind {
     OBOR_CT_FUNCTION, OBOR_CT_CONSTANT, OBOR_CT_COMMAND,
     OBOR_CT_PLAYER, OBOR_CT_PLAYER_WRITE, OBOR_CT_LEVEL,
     OBOR_CT_SYSTEM, OBOR_CT_AIFLAG_READ, OBOR_CT_ATTACK_NAME,
-    OBOR_CT_PALETTE
+    OBOR_CT_PALETTE, OBOR_CT_ENTITY
 };
 enum { OBOR_CT_NO_4453 = 1, OBOR_CT_OLD_ANIMATION_BRANCH = 2 };
 struct obor_contract_rule {
@@ -24,6 +24,7 @@ static const obor_contract_rule kContentContracts[] = {
     { "allocate_palette", OBOR_CT_FUNCTION, 7582, INT_MAX, 0 },
     { "ani_prop_animhits", OBOR_CT_CONSTANT, 4232, 7083, OBOR_CT_OLD_ANIMATION_BRANCH },
     { "ani_prop_numframes", OBOR_CT_CONSTANT, 4232, 7083, OBOR_CT_OLD_ANIMATION_BRANCH },
+    { "animation", OBOR_CT_ENTITY, 1, 4201, 0 },
     { "atk_land", OBOR_CT_CONSTANT, 3831, INT_MAX, 0 },
     { "atk_lifespan", OBOR_CT_CONSTANT, 3831, INT_MAX, 0 },
     { "atk_pit", OBOR_CT_CONSTANT, 3831, INT_MAX, 0 },
@@ -190,9 +191,11 @@ static void content_contract_script(obor_content_scan *s, const char *name,
         content_contract_observe(OBOR_CT_LEVEL, arg);
     if (system && content_contract_argument(s, data, n, pos, 0, arg))
         content_contract_observe(OBOR_CT_SYSTEM, arg);
-    if (entity && content_contract_argument(s, data, n, pos, 1, arg) && !strcmp(arg, "aiflag") &&
-        content_contract_argument(s, data, n, pos, 2, arg))
-        content_contract_observe(OBOR_CT_AIFLAG_READ, arg);
+    if (entity && content_contract_argument(s, data, n, pos, 1, arg)) {
+        content_contract_observe(OBOR_CT_ENTITY, arg);
+        if (!strcmp(arg, "aiflag") && content_contract_argument(s, data, n, pos, 2, arg))
+            content_contract_observe(OBOR_CT_AIFLAG_READ, arg);
+    }
 }
 
 static void content_contract_model(const char *command, const char *argument)

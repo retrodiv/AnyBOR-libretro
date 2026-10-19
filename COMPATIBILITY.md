@@ -42,7 +42,12 @@ filename grammar, priorities, examples and processing limits. Exact filename Bui
 Imprecise filename declarations use content evidence and prefer stable or
 automatic candidates; nonautomatic candidates are considered only when no such
 candidate remains compatible. Ordinary sidecar and unlabelled inference use
-automatic profiles only. See [the source-backed rules](docs/AUTO_SELECTION_RULES.md). Historical
+automatic profiles only. Exact Build tags without their own selectable profile
+check the ordinary automatic candidate against proved content requirements;
+a conflicting candidate is replaced by the nearest profile satisfying all
+requirements. If none exists, the conflict is logged and existing routing is
+retained. Exact tags with their own profile keep their existing priority.
+See [the source-backed rules](docs/AUTO_SELECTION_RULES.md). Historical
 profiles also participate in Auto declarations and bounded content evidence.
 The first available revision at or above a declared build is used;
 without a declaration or usable evidence, Auto uses its fallback profile.

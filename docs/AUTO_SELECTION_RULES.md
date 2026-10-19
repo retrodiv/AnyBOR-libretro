@@ -1,7 +1,17 @@
-# Content evidence for imprecise build tags
+# Content evidence for build tags
 
-Exact filename Build tags retain their existing priority. Manual selection is
-authoritative. An imprecise tag, such as Build 44XX or Build 3792-3911, is
+Manual selection is authoritative. An exact filename Build tag with its own
+selectable profile retains its existing routing and priority. An exact Build
+tag without its own profile first uses the ordinary automatic candidate. If
+proved content requirements exclude that candidate, Auto chooses the profile
+nearest to the declared build that satisfies all those requirements. Equal
+distances prefer a stable or automatic profile, then the higher build. If no
+profile satisfies every requirement, the log records the contradiction and
+the existing routing is retained; this does not establish compatibility.
+This check applies to prepared PACK content with a complete numeric Build tag,
+not to the separate legacy v2 filename form.
+
+An imprecise tag, such as Build 44XX or Build 3792-3911, is
 intersected with the supported content evidence. The highest stable or automatic
 profile inside the resulting compatible interval wins. Development profiles are
 considered when no stable or automatic profile remains compatible there.
@@ -32,6 +42,7 @@ namespace support, rather than an assumption that build numbers form one line.
 |function|`allocate_palette`|from 7582|[`34342f6f`](https://github.com/DCurrent/openbor/commit/34342f6f606cf8421945dd69b7453dc754462907)|
 |constant|`ani_prop_animhits`|4232–7083; corresponding divergent test-branch exception|[`869df0ce`](https://github.com/DCurrent/openbor/commit/869df0ce4aeeca5ab3c41ca48928e902a327fe4b), [`d7a21970`](https://github.com/DCurrent/openbor/commit/d7a21970717d7af9c291d1d9d0481a240c4c16a7), [`7a45a221`](https://github.com/DCurrent/openbor/commit/7a45a2215a0cc12c1085d92e7b210a827ea552c2), [`f5261e7c`](https://github.com/DCurrent/openbor/commit/f5261e7cb97786909276c0b87f8f9f63504d2844)|
 |constant|`ani_prop_numframes`|4232–7083; corresponding divergent test-branch exception|[`869df0ce`](https://github.com/DCurrent/openbor/commit/869df0ce4aeeca5ab3c41ca48928e902a327fe4b), [`d7a21970`](https://github.com/DCurrent/openbor/commit/d7a21970717d7af9c291d1d9d0481a240c4c16a7), [`7a45a221`](https://github.com/DCurrent/openbor/commit/7a45a2215a0cc12c1085d92e7b210a827ea552c2), [`f5261e7c`](https://github.com/DCurrent/openbor/commit/f5261e7cb97786909276c0b87f8f9f63504d2844)|
+|entity getter|`animation` as the complete second argument of `getentityproperty`|through 4201; unavailable from 4202|[`f48b54be`](https://github.com/DCurrent/openbor/commit/f48b54be09eed68c39612d6d358573eba65d6b89)|
 |constant|`atk_land`|from 3831|[`c61f02b3`](https://github.com/DCurrent/openbor/commit/c61f02b3fbb155dd416a7750eb9cb645d7785266)|
 |constant|`atk_lifespan`|from 3831|[`c61f02b3`](https://github.com/DCurrent/openbor/commit/c61f02b3fbb155dd416a7750eb9cb645d7785266)|
 |constant|`atk_pit`|from 3831|[`c61f02b3`](https://github.com/DCurrent/openbor/commit/c61f02b3fbb155dd416a7750eb9cb645d7785266)|

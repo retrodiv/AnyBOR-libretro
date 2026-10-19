@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.1.67 — content checks for unavailable exact profiles
+
+- Check exact filename Build tags without their own profile against proved
+  content requirements and choose the nearest compatible profile when needed.
+- Preserve existing routing for available exact profiles and manual choices;
+  report conflicting requirements when no compatible profile exists.
+- Bound the native entity `animation` getter contract to builds through 4201,
+  with source-backed observations for every selectable profile.
+
 ## 0.1.66 — profile palette fidelity
 
 - Preserve each profile's native raw RGB palette routing, conversions and refusals
