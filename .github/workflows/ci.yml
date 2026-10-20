@@ -52,6 +52,10 @@ jobs:
         run: |
           python3 tools/run_guarded.py --memory-mib 1024 --seconds 180 -- make check
           python3 tools/run_guarded.py --memory-mib 1024 --seconds 180 -- python3 tools/test_historical_behavior.py
+          python3 tools/run_guarded.py --memory-mib 512 --seconds 60 -- python3 tools/test_historical_level_runtime.py
+          python3 tools/run_guarded.py --memory-mib 512 --seconds 60 -- python3 tools/test_historical_save_bonus.py
+          python3 tools/run_guarded.py --memory-mib 512 --seconds 60 -- python3 tools/test_sprite_encoding.py
+          python3 tools/run_guarded.py --memory-mib 512 --seconds 90 -- python3 tools/test_font_raster.py
           python3 tools/run_guarded.py --memory-mib 1024 --seconds 180 -- python3 tools/test_panel_order.py
           python3 tools/run_guarded.py --memory-mib 1024 --seconds 180 -- python3 tools/test_6392_profile.py
           python3 tools/run_guarded.py --memory-mib 1024 --seconds 180 -- python3 tools/test_branch_profiles.py
@@ -201,6 +205,10 @@ jobs:
       - name: Exercise native runtime regressions
         run: |
           python3 tools/test_historical_behavior.py
+          python3 tools/test_historical_level_runtime.py
+          python3 tools/test_historical_save_bonus.py
+          python3 tools/test_sprite_encoding.py
+          python3 tools/test_font_raster.py
           python3 tools/test_panel_order.py
           python3 tools/test_6392_profile.py
           python3 tools/test_branch_profiles.py

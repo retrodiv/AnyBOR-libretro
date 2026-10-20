@@ -17,9 +17,9 @@
       "upstream_sha256": null
     },
     "openbor.c": {
-      "distributed_sha256": "546d56f791263f29ce21a62be909ef027d4ec96b5f91647e4896896ca7b7823b",
+      "distributed_sha256": "d10648b440eef5f53d27d2f8da9f6dc889ceabf095bfa5b6d31ffad9e8bac264",
       "modified": true,
-      "summary": "Apply the port's engine corrections and select the PC video configuration on macOS. Derive output names from the content basename with explicit destination capacities, and reject overflowing output path joins. Select historical attack domains, environmental damage, camera and scroll behavior, model-save loading, weapon and idle order, nested scripts and numeric script selectors. Retain bounded storage, safe ownership and the selected rejected-value contracts. Leave multiplayer slots without a selected model available to join even if game scripts preassign lives to them. Let a missing basename-only PAK self-check read the active frontend content after it has been validated and prepared. Allocate each model's animation pointer table through the highest animation index that model uses, and bound cache, copy and cleanup paths to that capacity. Ignore optional defense and offense entries outside the configured attack-type range with a log warning before accessing their tables. Yield after each newly completed model during explicit model-list or level preparation, and defer states until that preparation has cleaned up its intermediate parsers and handles. Resize repeated weapon lists and detach borrowed lists before replacing their entries. Guard an optional entity animation interpreter before reading its reset state. Share identical immutable animation-frame draw methods with reference-counted ownership. Select the pre-3800 player spawn coordinate limit and pre-3805 ordered, cached spawn scripts by logical build, with explicit level ownership and cleanup.",
+      "summary": "Apply the port's engine corrections and select the PC video configuration on macOS. Derive output names from the content basename with explicit destination capacities, and reject overflowing output path joins. Select historical attack domains, environmental damage, camera and scroll behavior, model-save loading, weapon and idle order, nested scripts and numeric script selectors. Retain bounded storage, safe ownership and the selected rejected-value contracts. Leave multiplayer slots without a selected model available to join even if game scripts preassign lives to them. Let a missing basename-only PAK self-check read the active frontend content after it has been validated and prepared. Allocate each model's animation pointer table through the highest animation index that model uses, and bound cache, copy and cleanup paths to that capacity. Ignore optional defense and offense entries outside the configured attack-type range with a log warning before accessing their tables. Yield after each newly completed model during explicit model-list or level preparation, and defer states until that preparation has cleaned up its intermediate parsers and handles. Resize repeated weapon lists and detach borrowed lists before replacing their entries. Guard an optional entity animation interpreter before reading its reset state. Share identical immutable animation-frame draw methods with reference-counted ownership. Select the pre-3800 player spawn coordinate limit and pre-3805 ordered, cached spawn scripts by logical build, with explicit level ownership and cleanup. Keep model clip coordinates absolute before 3842 and relative to frame offsets and projected entity positions from 3842, with bounded integer coordinate arithmetic. Recalculate completed-game bonuses at the original successful menu callers before 3820 and in the loader from 3820, preserving the other saved-game routes and failure behavior.",
       "topics": [
         "active-content-pak-aliases",
         "animation-draw-method-storage",
@@ -51,9 +51,9 @@
       "upstream_sha256": "19888c33f34b9cb80222de1439a1745461b8353d99ef40dc0a8184f081b45ed9"
     },
     "openborscript.c": {
-      "distributed_sha256": "16b07118319c6fe65f66a629e66b74806b15f87ed51b30a69317d8cdb7662eb4",
+      "distributed_sha256": "d2487a6bf2ef13ff86cbb43016fb6e40bad4f7d033a2b521c87a46e7bf0e5d83",
       "modified": true,
-      "summary": "Keep the dormant constant-lowering diagnostic compatible with the single-value instruction layout, map string constants from direct contiguous instruction storage, select historical player and AI-flag property contracts by logical build, and own complete dynamically allocated script variable names through slot reuse and shutdown. Derive output names from the content basename with explicit destination capacities, and reject overflowing output path joins. Compact compiler-only instruction records after resolving value ownership, preserving branch and export anchors, all mutable values and exactly-once pool cleanup. Select historical attack domains, environmental damage, camera and scroll behavior, model-save loading, weapon and idle order, nested scripts and numeric script selectors. Retain bounded storage, safe ownership and the selected rejected-value contracts. Resolve text-property names within the actual table bounds while preserving native numeric selectors. Reuse each text object's owned buffer when replacing its contents. Select historical level/text setter tolerance and pre-3826 empty-success unknown textual constants without changing later strict contracts.",
+      "summary": "Keep the dormant constant-lowering diagnostic compatible with the single-value instruction layout, map string constants from direct contiguous instruction storage, select historical player and AI-flag property contracts by logical build, and own complete dynamically allocated script variable names through slot reuse and shutdown. Derive output names from the content basename with explicit destination capacities, and reject overflowing output path joins. Compact compiler-only instruction records after resolving value ownership, preserving branch and export anchors, all mutable values and exactly-once pool cleanup. Select historical attack domains, environmental damage, camera and scroll behavior, model-save loading, weapon and idle order, nested scripts and numeric script selectors. Retain bounded storage, safe ownership and the selected rejected-value contracts. Resolve text-property names within the actual table bounds while preserving native numeric selectors. Reuse each text object's owned buffer when replacing its contents. Select historical level/text setter tolerance and pre-3826 empty-success unknown textual constants without changing later strict contracts. Select the original level runtime mapper before the getter repair in 3820 and setter repair in 3821, preserving literal preconversion, second-argument mutation and bounded dispatch through the variant's native integer union member.",
       "topics": [
         "compiler-warning-cleanup",
         "logical-profile-compatibility",
@@ -183,9 +183,12 @@
       "upstream_sha256": "53b0638535bc6ed2efeea34bd8fea1532bef57085a95be374f6a87e5831de021"
     },
     "source/gamelib/font.c": {
-      "distributed_sha256": "ed96eed42235bfee1800c4759fd7e724fd32819138944cbdb6d0f9781939ad01",
-      "modified": false,
-      "topics": [],
+      "distributed_sha256": "fb4e871cc703440e822565a5e917f6c5ed2c41ef180988c75925e1fe435d5ac7",
+      "modified": true,
+      "summary": "Reject missing or undersized indexed font palettes before copying their true-color entries; retain atlas raster output for valid fonts.",
+      "topics": [
+        "encoded-sprite-safety"
+      ],
       "upstream_sha256": "ed96eed42235bfee1800c4759fd7e724fd32819138944cbdb6d0f9781939ad01"
     },
     "source/gamelib/font.h": {
@@ -260,9 +263,12 @@
       "upstream_sha256": "e4b104120b927aa50e200f37729fc55d251dd9120c0962033ca1a00cdbe5d525"
     },
     "source/gamelib/pixelformat.c": {
-      "distributed_sha256": "e1a8a45eec419058dcbc5ae73681410bb80f73abca6341285e0ba3dd1622ad20",
-      "modified": false,
-      "topics": [],
+      "distributed_sha256": "ce190eeec7c56a871555dee4efa3896bff1b93e55f8cb667baa01a365fcf8ee5",
+      "modified": true,
+      "summary": "Bound clip endpoints without signed overflow while retaining native color and draw-method initialization.",
+      "topics": [
+        "encoded-sprite-safety"
+      ],
       "upstream_sha256": "e1a8a45eec419058dcbc5ae73681410bb80f73abca6341285e0ba3dd1622ad20"
     },
     "source/gamelib/screen.c": {
@@ -308,10 +314,11 @@
       "upstream_sha256": "5d83ba9c527e33bd98473934822543d3ff9f2f537368cc013b387cdd80f33e51"
     },
     "source/gamelib/sprite.c": {
-      "distributed_sha256": "69228bd4a5a4cc8845b7f5af364c6b383de33ab7c4caf991ea5e777344322949",
+      "distributed_sha256": "0ab9a56167c9d4f36fa9c0784b4a9bccf027b6a9c04a8859a95fd1867d468806",
       "modified": true,
-      "summary": "Declare initialized encoded sprite-body ranges and source crops for exact reconstruction proof, retaining headers, palettes and mutable changes.",
+      "summary": "Declare initialized encoded sprite-body ranges and source crops for exact reconstruction proof, retaining headers, palettes and mutable changes. Count encoded sprite bytes without forming addresses from a null sizing destination, retaining the encoded format, allocation sizes and resource notifications. Reject empty intersections between sprite clips and the output viewport before raster access.",
       "topics": [
+        "encoded-sprite-safety",
         "reconstructible-resources"
       ],
       "upstream_sha256": "82614bcf3814ac7606d7a13b34a8f00e74ff94bbf09d6893b2eaef06e49a3eb6"

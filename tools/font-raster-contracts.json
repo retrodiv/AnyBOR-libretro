@@ -1,0 +1,302 @@
+{
+  "schema": 1,
+  "byte_order": "little",
+  "scope": "Authored font raster equivalence. All 255 non-NUL byte values, mono/proportional, single/multibyte, 8/16/32-bit output, six edge positions, direct and actual queued drawing, tile sizes 1x1/8x8/17x11. Glyph zero is nonempty to retain the original palette-owner precondition.",
+  "original_oracle_safety": "Original sizing uses a null-member offset: only null instrumentation excluded there; actual generated-code tests retain full ASan/UBSan.",
+  "profiles": [
+    {
+      "profile": "3780",
+      "engine": "3842",
+      "observations": 221112,
+      "matrix_sha256": "5f2df90dc2d8bccbbb93bd7aae0dbeab6282fd02ad9bd291853c6007c4bdd9e8",
+      "source_reference": "https://github.com/DCurrent/openbor/blob/760cb0e6fdbda9d8a4c426f00c84623349ca5b17/engine/source/gamelib/font.c",
+      "source_commit": "760cb0e6fdbda9d8a4c426f00c84623349ca5b17",
+      "source_files_sha256": {
+        "source/gamelib/bitmap.c": "3b85fa2711c1928e848477b0e616ffd232c0f0404921027436a5675d9c91d081",
+        "source/gamelib/sprite.c": "e9cd34f72ad7a536ba93319ab9ed449554dfd9ea5a3e01ed2fd50652b5dd9013",
+        "source/gamelib/spritex8p16.c": "3ec21a32e45e76a615db7e31adf64efca1b7163053e17fb69bcbeb04ea23141c",
+        "source/gamelib/spritex8p32.c": "4be72035d7e1885c8c9482e46e18b476677bf9615a681a3eec1f396b8eef12d5",
+        "source/gamelib/pixelformat.c": "e1a8a45eec419058dcbc5ae73681410bb80f73abca6341285e0ba3dd1622ad20",
+        "source/gamelib/spriteq.c": "bed8373f0376107367f0bd7d3c41e3aabe2e3492bf0ed8d09c5aebe5888020ad",
+        "source/gamelib/screen.c": "1e79ad4df7b5db84c963331e59f659acddde97fcf35ad12f65ebfce84cf77fb6",
+        "source/gamelib/font.c": "b3560f53d7534234b1c40bf3427b14eb6473c71e46d459b147540b7f857ecdce",
+        "source/gamelib/font.h": "95a23ea831bf158538c56b8f3f630c933191a29744f12aa493a98fb437fe7a94",
+        "openbor.c": "10e23d2c3150e106ede7b6b79fba6a6ecec67499c821c6552248860212a99dda"
+      },
+      "original_program_sha256": "24505e4459b1ee59074cc633487b0bd448877281a4f989ca86a1145d3fb135da"
+    },
+    {
+      "profile": "3783",
+      "engine": "3842",
+      "observations": 221112,
+      "matrix_sha256": "5f2df90dc2d8bccbbb93bd7aae0dbeab6282fd02ad9bd291853c6007c4bdd9e8",
+      "source_reference": "https://github.com/DCurrent/openbor/blob/5da3e255b2783079872a57247b020090e307df0d/engine/source/gamelib/font.c",
+      "source_commit": "5da3e255b2783079872a57247b020090e307df0d",
+      "source_files_sha256": {
+        "source/gamelib/bitmap.c": "3b85fa2711c1928e848477b0e616ffd232c0f0404921027436a5675d9c91d081",
+        "source/gamelib/sprite.c": "e9cd34f72ad7a536ba93319ab9ed449554dfd9ea5a3e01ed2fd50652b5dd9013",
+        "source/gamelib/spritex8p16.c": "3ec21a32e45e76a615db7e31adf64efca1b7163053e17fb69bcbeb04ea23141c",
+        "source/gamelib/spritex8p32.c": "4be72035d7e1885c8c9482e46e18b476677bf9615a681a3eec1f396b8eef12d5",
+        "source/gamelib/pixelformat.c": "e1a8a45eec419058dcbc5ae73681410bb80f73abca6341285e0ba3dd1622ad20",
+        "source/gamelib/spriteq.c": "bed8373f0376107367f0bd7d3c41e3aabe2e3492bf0ed8d09c5aebe5888020ad",
+        "source/gamelib/screen.c": "1e79ad4df7b5db84c963331e59f659acddde97fcf35ad12f65ebfce84cf77fb6",
+        "source/gamelib/font.c": "b3560f53d7534234b1c40bf3427b14eb6473c71e46d459b147540b7f857ecdce",
+        "source/gamelib/font.h": "95a23ea831bf158538c56b8f3f630c933191a29744f12aa493a98fb437fe7a94",
+        "openbor.c": "ff0bddc2838e0c658465a28c352bad3f74211914d151a0d4be2221d65a007614"
+      },
+      "original_program_sha256": "24505e4459b1ee59074cc633487b0bd448877281a4f989ca86a1145d3fb135da"
+    },
+    {
+      "profile": "3789",
+      "engine": "3842",
+      "observations": 221112,
+      "matrix_sha256": "5f2df90dc2d8bccbbb93bd7aae0dbeab6282fd02ad9bd291853c6007c4bdd9e8",
+      "source_reference": "https://github.com/DCurrent/openbor/blob/cc5166a117318987f638b4b6c6d1034384409372/engine/source/gamelib/font.c",
+      "source_commit": "cc5166a117318987f638b4b6c6d1034384409372",
+      "source_files_sha256": {
+        "source/gamelib/bitmap.c": "3b85fa2711c1928e848477b0e616ffd232c0f0404921027436a5675d9c91d081",
+        "source/gamelib/sprite.c": "e9cd34f72ad7a536ba93319ab9ed449554dfd9ea5a3e01ed2fd50652b5dd9013",
+        "source/gamelib/spritex8p16.c": "3ec21a32e45e76a615db7e31adf64efca1b7163053e17fb69bcbeb04ea23141c",
+        "source/gamelib/spritex8p32.c": "4be72035d7e1885c8c9482e46e18b476677bf9615a681a3eec1f396b8eef12d5",
+        "source/gamelib/pixelformat.c": "e1a8a45eec419058dcbc5ae73681410bb80f73abca6341285e0ba3dd1622ad20",
+        "source/gamelib/spriteq.c": "bed8373f0376107367f0bd7d3c41e3aabe2e3492bf0ed8d09c5aebe5888020ad",
+        "source/gamelib/screen.c": "1e79ad4df7b5db84c963331e59f659acddde97fcf35ad12f65ebfce84cf77fb6",
+        "source/gamelib/font.c": "b3560f53d7534234b1c40bf3427b14eb6473c71e46d459b147540b7f857ecdce",
+        "source/gamelib/font.h": "95a23ea831bf158538c56b8f3f630c933191a29744f12aa493a98fb437fe7a94",
+        "openbor.c": "6ad6d3164279862ea05232e97a8202d32cc61b3c8600cc6b65144e502254e830"
+      },
+      "original_program_sha256": "24505e4459b1ee59074cc633487b0bd448877281a4f989ca86a1145d3fb135da"
+    },
+    {
+      "profile": "3793",
+      "engine": "3842",
+      "observations": 221112,
+      "matrix_sha256": "5f2df90dc2d8bccbbb93bd7aae0dbeab6282fd02ad9bd291853c6007c4bdd9e8",
+      "source_reference": "https://github.com/DCurrent/openbor/blob/edf234656cae88b078718661a2bd0c42090f0687/engine/source/gamelib/font.c",
+      "source_commit": "edf234656cae88b078718661a2bd0c42090f0687",
+      "source_files_sha256": {
+        "source/gamelib/bitmap.c": "3b85fa2711c1928e848477b0e616ffd232c0f0404921027436a5675d9c91d081",
+        "source/gamelib/sprite.c": "e9cd34f72ad7a536ba93319ab9ed449554dfd9ea5a3e01ed2fd50652b5dd9013",
+        "source/gamelib/spritex8p16.c": "3ec21a32e45e76a615db7e31adf64efca1b7163053e17fb69bcbeb04ea23141c",
+        "source/gamelib/spritex8p32.c": "4be72035d7e1885c8c9482e46e18b476677bf9615a681a3eec1f396b8eef12d5",
+        "source/gamelib/pixelformat.c": "e1a8a45eec419058dcbc5ae73681410bb80f73abca6341285e0ba3dd1622ad20",
+        "source/gamelib/spriteq.c": "bed8373f0376107367f0bd7d3c41e3aabe2e3492bf0ed8d09c5aebe5888020ad",
+        "source/gamelib/screen.c": "1e79ad4df7b5db84c963331e59f659acddde97fcf35ad12f65ebfce84cf77fb6",
+        "source/gamelib/font.c": "b3560f53d7534234b1c40bf3427b14eb6473c71e46d459b147540b7f857ecdce",
+        "source/gamelib/font.h": "95a23ea831bf158538c56b8f3f630c933191a29744f12aa493a98fb437fe7a94",
+        "openbor.c": "4833133e133b9fc298039b90dacf1c8ded874848e09ec6b3f03ff9e24053a7fb"
+      },
+      "original_program_sha256": "24505e4459b1ee59074cc633487b0bd448877281a4f989ca86a1145d3fb135da"
+    },
+    {
+      "profile": "3797",
+      "engine": "3842",
+      "observations": 221112,
+      "matrix_sha256": "5f2df90dc2d8bccbbb93bd7aae0dbeab6282fd02ad9bd291853c6007c4bdd9e8",
+      "source_reference": "https://github.com/DCurrent/openbor/blob/4490ee5d18ffcc7604e95cd4910dadf6191e694a/engine/source/gamelib/font.c",
+      "source_commit": "4490ee5d18ffcc7604e95cd4910dadf6191e694a",
+      "source_files_sha256": {
+        "source/gamelib/bitmap.c": "3b85fa2711c1928e848477b0e616ffd232c0f0404921027436a5675d9c91d081",
+        "source/gamelib/sprite.c": "e9cd34f72ad7a536ba93319ab9ed449554dfd9ea5a3e01ed2fd50652b5dd9013",
+        "source/gamelib/spritex8p16.c": "3ec21a32e45e76a615db7e31adf64efca1b7163053e17fb69bcbeb04ea23141c",
+        "source/gamelib/spritex8p32.c": "4be72035d7e1885c8c9482e46e18b476677bf9615a681a3eec1f396b8eef12d5",
+        "source/gamelib/pixelformat.c": "e1a8a45eec419058dcbc5ae73681410bb80f73abca6341285e0ba3dd1622ad20",
+        "source/gamelib/spriteq.c": "bed8373f0376107367f0bd7d3c41e3aabe2e3492bf0ed8d09c5aebe5888020ad",
+        "source/gamelib/screen.c": "1e79ad4df7b5db84c963331e59f659acddde97fcf35ad12f65ebfce84cf77fb6",
+        "source/gamelib/font.c": "b3560f53d7534234b1c40bf3427b14eb6473c71e46d459b147540b7f857ecdce",
+        "source/gamelib/font.h": "95a23ea831bf158538c56b8f3f630c933191a29744f12aa493a98fb437fe7a94",
+        "openbor.c": "3f6befee3394171d00bc427c7385e963c2789e3b957aecd706c417c6536e5a68"
+      },
+      "original_program_sha256": "24505e4459b1ee59074cc633487b0bd448877281a4f989ca86a1145d3fb135da"
+    },
+    {
+      "profile": "3805",
+      "engine": "3842",
+      "observations": 221112,
+      "matrix_sha256": "5f2df90dc2d8bccbbb93bd7aae0dbeab6282fd02ad9bd291853c6007c4bdd9e8",
+      "source_reference": "https://github.com/DCurrent/openbor/blob/2abee79303b17b269e88cd986ab78dda2bd526d6/engine/source/gamelib/font.c",
+      "source_commit": "2abee79303b17b269e88cd986ab78dda2bd526d6",
+      "source_files_sha256": {
+        "source/gamelib/bitmap.c": "3b85fa2711c1928e848477b0e616ffd232c0f0404921027436a5675d9c91d081",
+        "source/gamelib/sprite.c": "e9cd34f72ad7a536ba93319ab9ed449554dfd9ea5a3e01ed2fd50652b5dd9013",
+        "source/gamelib/spritex8p16.c": "3ec21a32e45e76a615db7e31adf64efca1b7163053e17fb69bcbeb04ea23141c",
+        "source/gamelib/spritex8p32.c": "4be72035d7e1885c8c9482e46e18b476677bf9615a681a3eec1f396b8eef12d5",
+        "source/gamelib/pixelformat.c": "e1a8a45eec419058dcbc5ae73681410bb80f73abca6341285e0ba3dd1622ad20",
+        "source/gamelib/spriteq.c": "bed8373f0376107367f0bd7d3c41e3aabe2e3492bf0ed8d09c5aebe5888020ad",
+        "source/gamelib/screen.c": "1e79ad4df7b5db84c963331e59f659acddde97fcf35ad12f65ebfce84cf77fb6",
+        "source/gamelib/font.c": "b3560f53d7534234b1c40bf3427b14eb6473c71e46d459b147540b7f857ecdce",
+        "source/gamelib/font.h": "95a23ea831bf158538c56b8f3f630c933191a29744f12aa493a98fb437fe7a94",
+        "openbor.c": "1837973925d4940428cb244742a5dadca6f0b779757a3388f02e54208f05c855"
+      },
+      "original_program_sha256": "24505e4459b1ee59074cc633487b0bd448877281a4f989ca86a1145d3fb135da"
+    },
+    {
+      "profile": "3814",
+      "engine": "3842",
+      "observations": 221112,
+      "matrix_sha256": "5f2df90dc2d8bccbbb93bd7aae0dbeab6282fd02ad9bd291853c6007c4bdd9e8",
+      "source_reference": "https://github.com/DCurrent/openbor/blob/46d398cfb2e75a142c7bf6dc38cc2f9603b57ecf/engine/source/gamelib/font.c",
+      "source_commit": "46d398cfb2e75a142c7bf6dc38cc2f9603b57ecf",
+      "source_files_sha256": {
+        "source/gamelib/bitmap.c": "3b85fa2711c1928e848477b0e616ffd232c0f0404921027436a5675d9c91d081",
+        "source/gamelib/sprite.c": "e9cd34f72ad7a536ba93319ab9ed449554dfd9ea5a3e01ed2fd50652b5dd9013",
+        "source/gamelib/spritex8p16.c": "3ec21a32e45e76a615db7e31adf64efca1b7163053e17fb69bcbeb04ea23141c",
+        "source/gamelib/spritex8p32.c": "4be72035d7e1885c8c9482e46e18b476677bf9615a681a3eec1f396b8eef12d5",
+        "source/gamelib/pixelformat.c": "e1a8a45eec419058dcbc5ae73681410bb80f73abca6341285e0ba3dd1622ad20",
+        "source/gamelib/spriteq.c": "bed8373f0376107367f0bd7d3c41e3aabe2e3492bf0ed8d09c5aebe5888020ad",
+        "source/gamelib/screen.c": "1e79ad4df7b5db84c963331e59f659acddde97fcf35ad12f65ebfce84cf77fb6",
+        "source/gamelib/font.c": "b3560f53d7534234b1c40bf3427b14eb6473c71e46d459b147540b7f857ecdce",
+        "source/gamelib/font.h": "95a23ea831bf158538c56b8f3f630c933191a29744f12aa493a98fb437fe7a94",
+        "openbor.c": "4f6c0d38ca9c3b589b025625313952f06fa5cf3dd12ddf71d8ba06b1af5d7887"
+      },
+      "original_program_sha256": "24505e4459b1ee59074cc633487b0bd448877281a4f989ca86a1145d3fb135da"
+    },
+    {
+      "profile": "3818",
+      "engine": "3842",
+      "observations": 221112,
+      "matrix_sha256": "5f2df90dc2d8bccbbb93bd7aae0dbeab6282fd02ad9bd291853c6007c4bdd9e8",
+      "source_reference": "https://github.com/DCurrent/openbor/blob/cae686392d0b5e52563e9dd191801193796cd4a5/engine/source/gamelib/font.c",
+      "source_commit": "cae686392d0b5e52563e9dd191801193796cd4a5",
+      "source_files_sha256": {
+        "source/gamelib/bitmap.c": "3b85fa2711c1928e848477b0e616ffd232c0f0404921027436a5675d9c91d081",
+        "source/gamelib/sprite.c": "e9cd34f72ad7a536ba93319ab9ed449554dfd9ea5a3e01ed2fd50652b5dd9013",
+        "source/gamelib/spritex8p16.c": "3ec21a32e45e76a615db7e31adf64efca1b7163053e17fb69bcbeb04ea23141c",
+        "source/gamelib/spritex8p32.c": "4be72035d7e1885c8c9482e46e18b476677bf9615a681a3eec1f396b8eef12d5",
+        "source/gamelib/pixelformat.c": "e1a8a45eec419058dcbc5ae73681410bb80f73abca6341285e0ba3dd1622ad20",
+        "source/gamelib/spriteq.c": "bed8373f0376107367f0bd7d3c41e3aabe2e3492bf0ed8d09c5aebe5888020ad",
+        "source/gamelib/screen.c": "1e79ad4df7b5db84c963331e59f659acddde97fcf35ad12f65ebfce84cf77fb6",
+        "source/gamelib/font.c": "b3560f53d7534234b1c40bf3427b14eb6473c71e46d459b147540b7f857ecdce",
+        "source/gamelib/font.h": "95a23ea831bf158538c56b8f3f630c933191a29744f12aa493a98fb437fe7a94",
+        "openbor.c": "4f6c0d38ca9c3b589b025625313952f06fa5cf3dd12ddf71d8ba06b1af5d7887"
+      },
+      "original_program_sha256": "24505e4459b1ee59074cc633487b0bd448877281a4f989ca86a1145d3fb135da"
+    },
+    {
+      "profile": "3822",
+      "engine": "3842",
+      "observations": 221112,
+      "matrix_sha256": "5f2df90dc2d8bccbbb93bd7aae0dbeab6282fd02ad9bd291853c6007c4bdd9e8",
+      "source_reference": "https://github.com/DCurrent/openbor/blob/7ddd15b4981ea7b55f1851db926bc86276632b8c/engine/source/gamelib/font.c",
+      "source_commit": "7ddd15b4981ea7b55f1851db926bc86276632b8c",
+      "source_files_sha256": {
+        "source/gamelib/bitmap.c": "3b85fa2711c1928e848477b0e616ffd232c0f0404921027436a5675d9c91d081",
+        "source/gamelib/sprite.c": "e9cd34f72ad7a536ba93319ab9ed449554dfd9ea5a3e01ed2fd50652b5dd9013",
+        "source/gamelib/spritex8p16.c": "3ec21a32e45e76a615db7e31adf64efca1b7163053e17fb69bcbeb04ea23141c",
+        "source/gamelib/spritex8p32.c": "4be72035d7e1885c8c9482e46e18b476677bf9615a681a3eec1f396b8eef12d5",
+        "source/gamelib/pixelformat.c": "e1a8a45eec419058dcbc5ae73681410bb80f73abca6341285e0ba3dd1622ad20",
+        "source/gamelib/spriteq.c": "bed8373f0376107367f0bd7d3c41e3aabe2e3492bf0ed8d09c5aebe5888020ad",
+        "source/gamelib/screen.c": "1e79ad4df7b5db84c963331e59f659acddde97fcf35ad12f65ebfce84cf77fb6",
+        "source/gamelib/font.c": "b3560f53d7534234b1c40bf3427b14eb6473c71e46d459b147540b7f857ecdce",
+        "source/gamelib/font.h": "95a23ea831bf158538c56b8f3f630c933191a29744f12aa493a98fb437fe7a94",
+        "openbor.c": "71ee929158b3c9a5a97c543bfedace9c1c4156f70a8a186aaec8eacaa7ef3e13"
+      },
+      "original_program_sha256": "24505e4459b1ee59074cc633487b0bd448877281a4f989ca86a1145d3fb135da"
+    },
+    {
+      "profile": "3824",
+      "engine": "3842",
+      "observations": 221112,
+      "matrix_sha256": "5f2df90dc2d8bccbbb93bd7aae0dbeab6282fd02ad9bd291853c6007c4bdd9e8",
+      "source_reference": "https://github.com/DCurrent/openbor/blob/e260635df5095577fb729555cd5c08ecce37316d/engine/source/gamelib/font.c",
+      "source_commit": "e260635df5095577fb729555cd5c08ecce37316d",
+      "source_files_sha256": {
+        "source/gamelib/bitmap.c": "3b85fa2711c1928e848477b0e616ffd232c0f0404921027436a5675d9c91d081",
+        "source/gamelib/sprite.c": "e9cd34f72ad7a536ba93319ab9ed449554dfd9ea5a3e01ed2fd50652b5dd9013",
+        "source/gamelib/spritex8p16.c": "3ec21a32e45e76a615db7e31adf64efca1b7163053e17fb69bcbeb04ea23141c",
+        "source/gamelib/spritex8p32.c": "4be72035d7e1885c8c9482e46e18b476677bf9615a681a3eec1f396b8eef12d5",
+        "source/gamelib/pixelformat.c": "e1a8a45eec419058dcbc5ae73681410bb80f73abca6341285e0ba3dd1622ad20",
+        "source/gamelib/spriteq.c": "bed8373f0376107367f0bd7d3c41e3aabe2e3492bf0ed8d09c5aebe5888020ad",
+        "source/gamelib/screen.c": "1e79ad4df7b5db84c963331e59f659acddde97fcf35ad12f65ebfce84cf77fb6",
+        "source/gamelib/font.c": "b3560f53d7534234b1c40bf3427b14eb6473c71e46d459b147540b7f857ecdce",
+        "source/gamelib/font.h": "95a23ea831bf158538c56b8f3f630c933191a29744f12aa493a98fb437fe7a94",
+        "openbor.c": "02b8a2f6e31e8b183f9268bab9a229ad5cfdb5c67b2879d7c51249658490a713"
+      },
+      "original_program_sha256": "24505e4459b1ee59074cc633487b0bd448877281a4f989ca86a1145d3fb135da"
+    },
+    {
+      "profile": "3829",
+      "engine": "3842",
+      "observations": 221112,
+      "matrix_sha256": "5f2df90dc2d8bccbbb93bd7aae0dbeab6282fd02ad9bd291853c6007c4bdd9e8",
+      "source_reference": "https://github.com/DCurrent/openbor/blob/8223091e0ae85bd621572094c3465783d6f73429/engine/source/gamelib/font.c",
+      "source_commit": "8223091e0ae85bd621572094c3465783d6f73429",
+      "source_files_sha256": {
+        "source/gamelib/bitmap.c": "3b85fa2711c1928e848477b0e616ffd232c0f0404921027436a5675d9c91d081",
+        "source/gamelib/sprite.c": "e9cd34f72ad7a536ba93319ab9ed449554dfd9ea5a3e01ed2fd50652b5dd9013",
+        "source/gamelib/spritex8p16.c": "3ec21a32e45e76a615db7e31adf64efca1b7163053e17fb69bcbeb04ea23141c",
+        "source/gamelib/spritex8p32.c": "4be72035d7e1885c8c9482e46e18b476677bf9615a681a3eec1f396b8eef12d5",
+        "source/gamelib/pixelformat.c": "e1a8a45eec419058dcbc5ae73681410bb80f73abca6341285e0ba3dd1622ad20",
+        "source/gamelib/spriteq.c": "bed8373f0376107367f0bd7d3c41e3aabe2e3492bf0ed8d09c5aebe5888020ad",
+        "source/gamelib/screen.c": "1e79ad4df7b5db84c963331e59f659acddde97fcf35ad12f65ebfce84cf77fb6",
+        "source/gamelib/font.c": "b3560f53d7534234b1c40bf3427b14eb6473c71e46d459b147540b7f857ecdce",
+        "source/gamelib/font.h": "95a23ea831bf158538c56b8f3f630c933191a29744f12aa493a98fb437fe7a94",
+        "openbor.c": "34090f58e52330be5768b412ea52a73008f21af286dd0d6b1007cf07dd70a4ed"
+      },
+      "original_program_sha256": "24505e4459b1ee59074cc633487b0bd448877281a4f989ca86a1145d3fb135da"
+    },
+    {
+      "profile": "3831",
+      "engine": "3842",
+      "observations": 221112,
+      "matrix_sha256": "5f2df90dc2d8bccbbb93bd7aae0dbeab6282fd02ad9bd291853c6007c4bdd9e8",
+      "source_reference": "https://github.com/DCurrent/openbor/blob/c61f02b3fbb155dd416a7750eb9cb645d7785266/engine/source/gamelib/font.c",
+      "source_commit": "c61f02b3fbb155dd416a7750eb9cb645d7785266",
+      "source_files_sha256": {
+        "source/gamelib/bitmap.c": "3b85fa2711c1928e848477b0e616ffd232c0f0404921027436a5675d9c91d081",
+        "source/gamelib/sprite.c": "e9cd34f72ad7a536ba93319ab9ed449554dfd9ea5a3e01ed2fd50652b5dd9013",
+        "source/gamelib/spritex8p16.c": "3ec21a32e45e76a615db7e31adf64efca1b7163053e17fb69bcbeb04ea23141c",
+        "source/gamelib/spritex8p32.c": "4be72035d7e1885c8c9482e46e18b476677bf9615a681a3eec1f396b8eef12d5",
+        "source/gamelib/pixelformat.c": "e1a8a45eec419058dcbc5ae73681410bb80f73abca6341285e0ba3dd1622ad20",
+        "source/gamelib/spriteq.c": "bed8373f0376107367f0bd7d3c41e3aabe2e3492bf0ed8d09c5aebe5888020ad",
+        "source/gamelib/screen.c": "1e79ad4df7b5db84c963331e59f659acddde97fcf35ad12f65ebfce84cf77fb6",
+        "source/gamelib/font.c": "b3560f53d7534234b1c40bf3427b14eb6473c71e46d459b147540b7f857ecdce",
+        "source/gamelib/font.h": "95a23ea831bf158538c56b8f3f630c933191a29744f12aa493a98fb437fe7a94",
+        "openbor.c": "eab507994a0d2daf24dd46fc052d6bc3e893dc7428c3009fc87c72a0857bdeab"
+      },
+      "original_program_sha256": "24505e4459b1ee59074cc633487b0bd448877281a4f989ca86a1145d3fb135da"
+    },
+    {
+      "profile": "3837",
+      "engine": "3842",
+      "observations": 221112,
+      "matrix_sha256": "5f2df90dc2d8bccbbb93bd7aae0dbeab6282fd02ad9bd291853c6007c4bdd9e8",
+      "source_reference": "https://github.com/DCurrent/openbor/blob/f2b4258428af00b3748ef7713d36201d4d0678ac/engine/source/gamelib/font.c",
+      "source_commit": "f2b4258428af00b3748ef7713d36201d4d0678ac",
+      "source_files_sha256": {
+        "source/gamelib/bitmap.c": "3b85fa2711c1928e848477b0e616ffd232c0f0404921027436a5675d9c91d081",
+        "source/gamelib/sprite.c": "e9cd34f72ad7a536ba93319ab9ed449554dfd9ea5a3e01ed2fd50652b5dd9013",
+        "source/gamelib/spritex8p16.c": "3ec21a32e45e76a615db7e31adf64efca1b7163053e17fb69bcbeb04ea23141c",
+        "source/gamelib/spritex8p32.c": "4be72035d7e1885c8c9482e46e18b476677bf9615a681a3eec1f396b8eef12d5",
+        "source/gamelib/pixelformat.c": "e1a8a45eec419058dcbc5ae73681410bb80f73abca6341285e0ba3dd1622ad20",
+        "source/gamelib/spriteq.c": "bed8373f0376107367f0bd7d3c41e3aabe2e3492bf0ed8d09c5aebe5888020ad",
+        "source/gamelib/screen.c": "1e79ad4df7b5db84c963331e59f659acddde97fcf35ad12f65ebfce84cf77fb6",
+        "source/gamelib/font.c": "b3560f53d7534234b1c40bf3427b14eb6473c71e46d459b147540b7f857ecdce",
+        "source/gamelib/font.h": "95a23ea831bf158538c56b8f3f630c933191a29744f12aa493a98fb437fe7a94",
+        "openbor.c": "2df0e70317d8622ff2013ad88f0c787033e4f0a342cd0b9229045568f4a8c44f"
+      },
+      "original_program_sha256": "24505e4459b1ee59074cc633487b0bd448877281a4f989ca86a1145d3fb135da"
+    },
+    {
+      "profile": "3839",
+      "engine": "3842",
+      "observations": 221112,
+      "matrix_sha256": "5f2df90dc2d8bccbbb93bd7aae0dbeab6282fd02ad9bd291853c6007c4bdd9e8",
+      "source_reference": "https://github.com/DCurrent/openbor/blob/b6712f11af263c3ad438d87241cec38f18570046/engine/source/gamelib/font.c",
+      "source_commit": "b6712f11af263c3ad438d87241cec38f18570046",
+      "source_files_sha256": {
+        "source/gamelib/bitmap.c": "3b85fa2711c1928e848477b0e616ffd232c0f0404921027436a5675d9c91d081",
+        "source/gamelib/sprite.c": "e9cd34f72ad7a536ba93319ab9ed449554dfd9ea5a3e01ed2fd50652b5dd9013",
+        "source/gamelib/spritex8p16.c": "3ec21a32e45e76a615db7e31adf64efca1b7163053e17fb69bcbeb04ea23141c",
+        "source/gamelib/spritex8p32.c": "4be72035d7e1885c8c9482e46e18b476677bf9615a681a3eec1f396b8eef12d5",
+        "source/gamelib/pixelformat.c": "e1a8a45eec419058dcbc5ae73681410bb80f73abca6341285e0ba3dd1622ad20",
+        "source/gamelib/spriteq.c": "bed8373f0376107367f0bd7d3c41e3aabe2e3492bf0ed8d09c5aebe5888020ad",
+        "source/gamelib/screen.c": "1e79ad4df7b5db84c963331e59f659acddde97fcf35ad12f65ebfce84cf77fb6",
+        "source/gamelib/font.c": "b3560f53d7534234b1c40bf3427b14eb6473c71e46d459b147540b7f857ecdce",
+        "source/gamelib/font.h": "95a23ea831bf158538c56b8f3f630c933191a29744f12aa493a98fb437fe7a94",
+        "openbor.c": "05da6ee5344e99dad15be7c2c803947d30138df3abab0369c0839442ed106614"
+      },
+      "original_program_sha256": "24505e4459b1ee59074cc633487b0bd448877281a4f989ca86a1145d3fb135da"
+    }
+  ]
+}

@@ -1,4 +1,4 @@
-/* AnyBOR modification record: 2026-10-17.
+/* AnyBOR modification record: 2026-10-20.
  * Port maintained by retrodiv <retrodiv@proton.me>.
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
@@ -24,7 +24,12 @@
  * interpreter before reading its reset state. Share identical immutable
  * animation-frame draw methods with reference-counted ownership. Select the
  * pre-3800 player spawn coordinate limit and pre-3805 ordered, cached spawn
- * scripts by logical build, with explicit level ownership and cleanup.
+ * scripts by logical build, with explicit level ownership and cleanup. Keep
+ * model clip coordinates absolute before 3842 and relative to frame offsets
+ * and projected entity positions from 3842, with bounded integer coordinate
+ * arithmetic. Recalculate completed-game bonuses at the original successful
+ * menu callers before 3820 and in the loader from 3820, preserving the other
+ * saved-game routes and failure behavior.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/3842.md
  * at the source repository root. Original notices follow below.
@@ -46,8 +51,37 @@
 #include "openbor.h"
 #include "commands.h"
 #include "models.h"
+#include <limits.h>
+#include <stdint.h>
 
 #define NaN 0xAAAAAAAA
+
+/* Model clips are absolute before 3842; later builds offset them per frame. */
+static int obor_model_clip_coordinate(int coordinate, int delta, int subtract)
+{
+    int64_t result = (int64_t)coordinate + (subtract ? -(int64_t)delta : (int64_t)delta);
+    if(result < INT_MIN) return INT_MIN;
+    if(result > INT_MAX) return INT_MAX;
+    return (int)result;
+}
+
+static void obor_model_clip_frame(s_drawmethod *method, const int offset[2])
+{
+    if(obor_profile_build >= 3842 && method->clipw)
+    {
+        method->clipx = obor_model_clip_coordinate(method->clipx, offset[0], 1);
+        method->clipy = obor_model_clip_coordinate(method->clipy, offset[1], 1);
+    }
+}
+
+static void obor_model_clip_screen(s_drawmethod *method, int x, int y)
+{
+    if(obor_profile_build >= 3842 && method->clipw)
+    {
+        method->clipx = obor_model_clip_coordinate(method->clipx, x, 0);
+        method->clipy = obor_model_clip_coordinate(method->clipy, y, 0);
+    }
+}
 
 static const char* E_OUT_OF_MEMORY = "Error: Could not allocate sufficient memory.\n";
 static int DEFAULT_OFFSCREEN_KILL = 3000;
@@ -2745,7 +2779,7 @@ int loadGameFile(){
     if(fread(savelevel, sizeof(*savelevel), num_difficulties, handle)>=sizeof(*savelevel) && savelevel[0].compatibleversion!=CV_SAVED_GAME){ //TODO: check file length
 		clearSavedGame();
 		result = 0;
-	} else {
+	} else if(obor_profile_build >= 3820) {
 		bonus = 0;
 		for(i=0; i<num_difficulties; i++) if(savelevel[i].times_completed > 0) bonus += savelevel[i].times_completed;
 	}
@@ -7708,10 +7742,7 @@ s_model* load_cached_model(char * name, char * owner, char unload)
 						
 						if(drawmethod.flag) {
 							dm = drawmethod;
-							if(dm.clipw) {
-								dm.clipx -= offset[0];
-								dm.clipy -= offset[1];
-							}
+							obor_model_clip_frame(&dm, offset);
 						} else dm.flag = 0;
 
 						curframe = addframe(newanim, index, framecount, delay, idle,
@@ -14043,11 +14074,8 @@ void display_ents()
 					if(!use_mirror || z > MIRROR_Z) // don't display if behind the mirror
 					{
 						//just a simple check, doesn't work with mirror nor gfxshadow
-						if(drawmethod->clipw)
-						{
-							drawmethod->clipx += (int)(e->x - scrx);
-							drawmethod->clipy += (int)(e->z-e->a - scry);
-						}
+						obor_model_clip_screen(drawmethod, (int)(e->x - scrx),
+						                       (int)(e->z-e->a - scry));
 						spriteq_add_sprite((int)(e->x - scrx), (int)(e->z-e->a - scry), z, f, drawmethod, sortid);
 					}
 
@@ -22506,7 +22534,12 @@ int selectplayer(int *players, char* filename)
 	kill_all();
 	reset_playable_list(1);
 
-	loadGameFile();
+	if(loadGameFile() && obor_profile_build < 3820)
+	{
+		bonus = 0;
+		if(savelevel)
+		for(i=0; i<num_difficulties; i++) if(savelevel[i].times_completed > 0) bonus += savelevel[i].times_completed;
+	}
 
 	if(filename && filename[0])
 	{
@@ -22964,7 +22997,11 @@ int choose_difficulty()
 	newgameMenu = 1;
 	bothnewkeys = 0;
 
-	loadGameFile();
+	if(loadGameFile() && obor_profile_build < 3820)
+	{
+		bonus = 0;
+		for(i=0; i<num_difficulties; i++) if(savelevel[i].times_completed > 0) bonus += savelevel[i].times_completed;
+	}
 
 	while(!quit)
 	{

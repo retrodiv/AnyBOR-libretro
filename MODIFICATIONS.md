@@ -1,6 +1,6 @@
 # AnyBOR port modification record
 
-Record updated: **2026-10-10**. Port maintainer: **retrodiv**
+Record updated: **2026-10-20**. Port maintainer: **retrodiv**
 (<retrodiv@proton.me>).
 
 AnyBOR offers selectable engine profiles through its libretro port.
@@ -1053,3 +1053,14 @@ Unknown-property diagnostics stop at the mapping table's declared length.
 A table does not need a trailing null sentinel; rejected names retain their
 normal return and error behavior without reading unrelated storage.
 Native sanitizer checks cover each affected script entry-point macro.
+
+## Encoded sprite safety
+
+The modified sprite encoder measures storage with byte counters without forming
+addresses from a null destination. Encoded bytes, allocation sizes and resource notifications
+retain their native representation. Clip endpoints use bounded arithmetic;
+empty intersections with the output viewport return before raster access.
+Indexed font sheets must provide an owned palette with enough entries for the
+active output format before their colors are copied. Valid font pixels remain
+unchanged. Encoded sprite validation remains strict.
+

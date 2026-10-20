@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.1.69 — historical runtime and raster fidelity
+
+- Preserve absolute model clips in earlier profiles and the native level-property
+  runtime mapper boundaries, including literal and computed arguments.
+- Recalculate completed-game bonuses at each profile's original loader or menu
+  call sites, retaining failed and partial-load behavior.
+- Preserve historical font pixels and reject missing or undersized true-color
+  font palettes before copying their entries.
+- Measure encoded sprite storage without null-pointer arithmetic, bound clip
+  endpoints and reject empty viewport intersections before raster access.
+
 ## 0.1.68 — early profile fidelity
 
 - Add five source-backed early profiles and their native script, image, layer,

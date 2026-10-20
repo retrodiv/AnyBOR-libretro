@@ -1,16 +1,21 @@
-/* AnyBOR modification record: 2026-10-08.
+/* AnyBOR modification record: 2026-10-20.
  * Port maintained by retrodiv <retrodiv@proton.me>.
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
  * Upstream code retains its original license and notices.
  * Declare initialized encoded sprite-body ranges and source crops for exact
  * reconstruction proof, retaining headers, palettes and mutable changes.
+ * Count encoded sprite bytes without forming addresses from a null sizing
+ * destination, retaining the encoded format, allocation sizes and resource
+ * notifications. Reject empty intersections between sprite clips and the
+ * output viewport before raster access.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/3842.md
  * at the source repository root. Original notices follow below.
  */
 
 #include "obor_resources.h"
+#include <stddef.h>
 
 /*
  * OpenBOR - http://www.LavaLit.com
@@ -353,6 +358,13 @@ void putsprite(int x, int y, s_sprite* sprite, s_screen* screen, s_drawmethod* d
 	int xrepeat, yrepeat, xspan, yspan, i, j, dx,dy;
 
 	drawmethod_global_init(drawmethod);
+	if(useclip && (clipx1 >= screen->width || clipx2 <= 0 ||
+	               clipy1 >= screen->height || clipy2 <= 0 ||
+	               clipx1 >= clipx2 || clipy1 >= clipy2))
+	{
+		return;
+	}
+
 
 	if(drawmethod && drawmethod->flag){
 		xrepeat = drawmethod->xrepeat;
@@ -387,6 +399,7 @@ unsigned encodesprite(
   int *linetab;
   unsigned char *src = bitmap->data;
   int pb = PAL_BYTES, extrab;
+  size_t encoded_size;
 
   if(dest) obor_resources_forget_owner(dest);
     if(dest) dest->magic = sprite_magic;
@@ -418,8 +431,9 @@ unsigned encodesprite(
 	dest->pixelformat = bitmap->pixelformat;
 	dest->mask = NULL;
   }
-  linetab = (int*)(dest->data);
-  data = (unsigned char*)(linetab+h);
+  linetab = dest ? dest->data : NULL;
+  data = dest ? (unsigned char*)(linetab+h) : NULL;
+  encoded_size = offsetof(s_sprite, data) + (size_t)h * sizeof(*linetab);
 
   for(y = 0; y < h; y++, src += w) {
 	if(dest) { linetab[y] = ((size_t)data)-((size_t)(linetab+y)); }
@@ -429,11 +443,12 @@ unsigned encodesprite(
 	  x0 = x;
 	  for(; (x < w) && ((x-x0)<0xFE); x++) { if(src[x]) break; }
 	  // handle EOL
-	  if(x >= w) { if(dest) { *data = 0xFF; } data++; break; }
+	  if(x >= w) { if(dest) *data++ = 0xFF; ++encoded_size; break; }
 	  // encode clearcount
-	  if(dest) { *data = x-x0; } data++;
+	  if(dest) *data++ = x-x0;
+	  ++encoded_size;
 	  // if we're still not visible, encode a null visible count and continue
-	  if(!src[x]) { if(dest) { *data = 0; } data++; continue; }
+	  if(!src[x]) { if(dest) *data++ = 0; ++encoded_size; continue; }
 	  // search for the first invisible pixel
 	  x0 = x;
 	  for(; (x < w) && ((x-x0)<0xFF); x++) { if(!src[x]) break; }
@@ -442,16 +457,15 @@ unsigned encodesprite(
 		*data++ = x-x0;
 		memcpy(data, src+x0, x-x0);
 		data += x-x0;
-	  } else {
-		data += 1+(x-x0);
 	  }
+	  encoded_size += 1+(x-x0);
 	}
   }
 
   if(!bitmap->palette) pb = extrab = 0;
   else
   {
-	 extrab = ((size_t)data)-((size_t)dest);
+	 extrab = encoded_size;
 	 extrab %=4;
 	 extrab = 4 - extrab;
 	 extrab %=4;
@@ -471,7 +485,7 @@ unsigned encodesprite(
         obor_resources_sprite_encoded(bitmap, dest, dest->data,
             (size_t)(data - (unsigned char *)dest->data),
             0, 0, w, h);
-    return ((size_t)data)-((size_t)dest)+ extrab + pb+ANYNUMBER;
+    return encoded_size + extrab + pb + ANYNUMBER;
 }
 
 /////////////////////////////////////////////////////////////////////////////

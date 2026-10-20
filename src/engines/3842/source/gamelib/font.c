@@ -1,3 +1,19 @@
+/* AnyBOR modification record: 2026-10-20.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Reject missing or undersized indexed font palettes before copying their
+ * true-color entries; retain atlas raster output for valid fonts.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/3842.md
+ * at the source repository root. Original notices follow below.
+ */
+
+#include <stdint.h>
+#include <stddef.h>
+#include "obor_resources.h"
+
 /*
  * OpenBOR - http://www.LavaLit.com
  * -----------------------------------------------------------------------
@@ -48,6 +64,21 @@ void font_unload(int which){
 
 
 
+static int obor_font_palette_valid(const s_screen *screen)
+{
+    size_t bytes, offset;
+    uintptr_t owner, palette;
+    if(!screen) return 0;
+    if(screen->pixelformat != PIXEL_x8) return 1;
+    if(!screen->palette) return 0;
+    bytes = obor_allocation_size(screen);
+    owner = (uintptr_t)screen;
+    palette = (uintptr_t)screen->palette;
+    if(palette < owner || palette - owner < offsetof(s_screen, data)) return 0;
+    offset = palette - owner;
+    return offset <= bytes && (size_t)PAL_BYTES <= bytes - offset;
+}
+
 int _font_load(s_font* font, char *filename, char *packfile){
 	int x, y;
 	int index = 0;
@@ -59,6 +90,7 @@ int _font_load(s_font* font, char *filename, char *packfile){
 	int tw, th;
 
 	if(!loadscreen(filename, packfile, NULL, pixelformat, &screen)) goto err;
+	if(!obor_font_palette_valid(screen)) goto err;
 	font->width = tw = screen->width/16;
 	font->height = th = screen->height/16;
 	if(!(bitmap = allocbitmap(tw,th,pixelformat))) goto err;

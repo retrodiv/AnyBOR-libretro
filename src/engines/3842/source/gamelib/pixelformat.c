@@ -1,3 +1,18 @@
+/* AnyBOR modification record: 2026-10-20.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Bound clip endpoints without signed overflow while retaining native color
+ * and draw-method initialization.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/3842.md
+ * at the source repository root. Original notices follow below.
+ */
+
+#include <limits.h>
+#include <stdint.h>
+
 /*
  * OpenBOR - http://www.LavaLit.com
  * -----------------------------------------------------------------------
@@ -56,6 +71,14 @@ int useclip;
 int clipx1,clipy1,clipx2,clipy2;
 
 //may be used many time so make a function
+static int obor_clip_endpoint(int origin, int extent)
+{
+    int64_t endpoint = (int64_t)origin + (int64_t)extent;
+    if(endpoint > INT_MAX) return INT_MAX;
+    if(endpoint < INT_MIN) return INT_MIN;
+    return (int)endpoint;
+}
+
 void drawmethod_global_init(s_drawmethod* drawmethod)
 {
 	if(screenformat!=PIXEL_8) 
@@ -79,8 +102,8 @@ void drawmethod_global_init(s_drawmethod* drawmethod)
 	{
 		clipx1 = drawmethod->clipx;
 		clipy1 = drawmethod->clipy;
-		clipx2 = clipx1 + drawmethod->clipw;
-		clipy2 = clipy1 + drawmethod->cliph;
+		clipx2 = obor_clip_endpoint(clipx1, drawmethod->clipw);
+		clipy2 = obor_clip_endpoint(clipy1, drawmethod->cliph);
 	}
 }
 

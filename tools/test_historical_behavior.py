@@ -30,6 +30,108 @@ def native(program):
 
 
 class HistoricalBehaviorTests(unittest.TestCase):
+    def test_model_clip_frame_and_submission_coordinate_boundary(self):
+        source = (ENGINE / 'openbor.c').read_text()
+        types = (ENGINE / 'source/gamelib/types.h').read_text()
+        records = []
+        for name in ('water_transform', 's_drawmethod'):
+            end = types.index('}' + name + ';') + len(name) + 2
+            start = types.rfind('typedef struct', 0, end)
+            records.append(types[start:end])
+        helpers = '\n'.join(function(source, name) for name in (
+            'obor_model_clip_coordinate', 'obor_model_clip_frame', 'obor_model_clip_screen'))
+        start = source.index('if(drawmethod.flag)')
+        stop = source.index('else dm.flag = 0;', start) + len('else dm.flag = 0;')
+        frame_code = source[start:stop]
+        start = source.index('obor_model_clip_screen(drawmethod,', source.index('void display_ents()'))
+        stop = source.index('spriteq_add_sprite(', start)
+        submission = source[start:source.index(';', stop)+1]
+        self.assertEqual(source.count('obor_model_clip_frame(&dm, offset);'), 1)
+        self.assertEqual(source.count('obor_model_clip_screen(drawmethod,'), 1)
+        native(r'''
+#include <assert.h>
+#include <stdint.h>
+#include <limits.h>
+TYPES
+static uint32_t obor_profile_build;
+HELPERS
+static int submitted_x,submitted_y,submissions;
+static s_drawmethod submitted_method;
+static void spriteq_add_sprite(int x,int y,int z,int f,s_drawmethod *method,int sortid) {
+    assert(z==13 && f==17 && sortid==19);
+    submitted_x=x;submitted_y=y;submitted_method=*method;++submissions;
+}
+static s_drawmethod frame(s_drawmethod drawmethod,int x,int y) {
+    int offset[2]={x,y};s_drawmethod dm={0};
+    FRAME
+    return dm;
+}
+typedef struct { float x,z,a; } entity;
+static void submit(s_drawmethod *drawmethod,entity *e,float scrx,float scry) {
+    int z=13,f=17,sortid=19;
+    SUBMISSION
+}
+int main(void) {
+    const int clips[2][2]={{75,-20},{-20,40}};
+    const int offsets[2][2]={{11,-7},{-3,4}};
+    const int frame_expected[2][2]={{64,-13},{-17,36}};
+    const int screen_expected[2][2]={{79,10},{-24,35}};
+    entity positions[2]={{18.75f,30.5f,2.25f},{-2.75f,-1.25f,3.0f}};
+    const float cameras[2][2]={{3.5f,4.75f},{5.0f,-2.5f}};
+    const int projected[2][2]={{15,23},{-7,-1}};
+    const int widths[3]={0,23,-5};
+    /* Every requested logical build and every existing pre-3842 profile is
+       exercised; this does not register profiles or admit pre-3746 clip syntax. */
+    for(uint32_t profile=3666;profile<=3842;++profile) {
+        obor_profile_build=profile;
+        for(int test=0;test<2;++test) for(unsigned w=0;w<3;++w) {
+            s_drawmethod input={0};input.flag=1;input.alpha=3;input.rotate=45;
+            input.clipx=clips[test][0];input.clipy=clips[test][1];
+            input.clipw=widths[w];input.cliph=31;
+            s_drawmethod method=frame(input,offsets[test][0],offsets[test][1]);
+            const int *expected=(profile>=3842 && input.clipw)?frame_expected[test]:clips[test];
+            assert(method.clipx==expected[0] && method.clipy==expected[1]);
+            submissions=0;submit(&method,&positions[test],cameras[test][0],cameras[test][1]);
+            expected=(profile>=3842 && input.clipw)?screen_expected[test]:clips[test];
+            assert(submissions==1 && submitted_x==projected[test][0] && submitted_y==projected[test][1]);
+            assert(submitted_method.clipx==expected[0] && submitted_method.clipy==expected[1]);
+            assert(submitted_method.flag==1 && submitted_method.alpha==3 && submitted_method.rotate==45);
+            assert(submitted_method.clipw==input.clipw && submitted_method.cliph==31);
+        }
+        s_drawmethod disabled={0};disabled.clipw=23;
+        assert(frame(disabled,11,-7).flag==0);
+    }
+}
+'''.replace('TYPES', '\n'.join(records)).replace('HELPERS', helpers)
+   .replace('FRAME', frame_code).replace('SUBMISSION', submission))
+
+    def test_model_clip_integer_extremes_remain_bounded(self):
+        source = (ENGINE / 'openbor.c').read_text()
+        helpers = '\n'.join(function(source, name) for name in (
+            'obor_model_clip_coordinate', 'obor_model_clip_frame', 'obor_model_clip_screen'))
+        native(r'''
+#include <assert.h>
+#include <stdint.h>
+#include <limits.h>
+typedef struct { int clipx,clipy,clipw; } s_drawmethod;
+static uint32_t obor_profile_build;
+HELPERS
+int main(void) {
+    assert(obor_model_clip_coordinate(INT_MIN,1,1)==INT_MIN);
+    assert(obor_model_clip_coordinate(INT_MAX,1,0)==INT_MAX);
+    assert(obor_model_clip_coordinate(0,INT_MIN,1)==INT_MAX);
+    assert(obor_model_clip_coordinate(0,INT_MIN,0)==INT_MIN);
+    assert(obor_model_clip_coordinate(0,INT_MAX,1)==-INT_MAX);
+    for(uint32_t profile=3666;profile<=3842;++profile) {
+        obor_profile_build=profile;
+        s_drawmethod method={INT_MAX,INT_MIN,23};int offset[2]={-1,1};
+        obor_model_clip_frame(&method,offset);
+        obor_model_clip_screen(&method,1,-1);
+        assert(method.clipx==INT_MAX && method.clipy==INT_MIN && method.clipw==23);
+    }
+}
+'''.replace('HELPERS', helpers))
+
     def test_upstream_sdk_deprecations_remain_visible_warnings(self):
         native('int legacy(void) __attribute__((deprecated("SDK API")));\n'
                'int legacy(void) { return 0; }\n'

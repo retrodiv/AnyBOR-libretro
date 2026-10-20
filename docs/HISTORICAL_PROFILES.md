@@ -70,8 +70,8 @@ corrections. An earlier profile never requests unsafe memory behavior.
 |3813|conditional|Animation-command grouping, early return and nested-interpreter snapshots follow 3813, 3823 and 3836 boundaries.|
 |3816|shared|Ternary operators are additive grammar and introduce no reserved identifiers.|
 |3819|conditional|Raw versus format-aware shadowcolor conversion, idle entry order and sleep timing follow this boundary.|
-|3820|conditional|Level selector numbering, successful results and nonfatal rejection preserve the earlier contract.|
-|3821|conditional|Text numeric/string conversion, result values, partial field updates and weapon-number spelling follow this boundary. Text ownership remains bounded.|
+|3820|conditional|Level selector numbering, successful results and nonfatal rejection preserve the earlier contract. The level getter uses the drawmethod runtime mapper earlier and the level mapper from this boundary; compiler literals use the level mapper in both. Completed-game bonuses are recalculated by successful character/difficulty menu loads earlier and by the saved-game loader from this boundary; other callers retain their native side effects.|
+|3821|conditional|The level setter changes from the drawmethod runtime mapper to the level mapper. Unconverted property strings preserve their native cache-index dispatch. Text numeric/string conversion, result values, partial field updates and weapon-number spelling follow this boundary. Text ownership remains bounded.|
 |3822|conditional|Native saves begin recording selectable/model state here; eager cached-model loading ends at 3835. Model-name lookup remains additive.|
 |3823|conditional|Animation commands use the original default grouping and early-return policy, with nocmdcompatible controlling the later contract.|
 |3824|conditional|The idle/sleep timer guard and finished-animation behavior follow this boundary.|
@@ -88,7 +88,7 @@ corrections. An earlier profile never requests unsafe memory behavior.
 |3838|conditional|playsample result type, negative sample handling and system-property numbering follow this boundary. Dynamic sample ownership and channel safety remain shared.|
 |3839|shared|Bitwise operators are additive grammar and introduce no reserved words.|
 |3841|shared|Extracted animation statements are semantically unchanged; sync syntax is additive.|
-|3842|shared|Font storage retains glyph-width behavior; clipping and NULL checks remain safe.|
+|3842|conditional|Model clips use absolute screen coordinates earlier; later profiles subtract frame offsets and add the projected entity position. Coordinate arithmetic and sprite bounds remain safe. Font atlas storage preserves earlier glyph widths, palettes and raster output, checked against each profile's own source. Font palettes must fit their owning allocation before use. Sprite sizing uses defined byte counts; empty viewport intersections return without raster access.|
 
 A failure that disappears in the original declared engine remains a compatibility
 issue to investigate, even when it also occurs with another profile. Selecting

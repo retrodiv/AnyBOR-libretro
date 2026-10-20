@@ -150,34 +150,6 @@ Source: src/deps/libvorbis/lib/highlevel.h
 
  ********************************************************************/
 
-Source: src/engines/3842/openborscript.c
-/* AnyBOR modification record: 2026-10-17.
- * Port maintained by retrodiv <retrodiv@proton.me>.
- * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
- * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
- * Upstream code retains its original license and notices.
- * Keep the dormant constant-lowering diagnostic compatible with the single-
- * value instruction layout, map string constants from direct contiguous
- * instruction storage, select historical player and AI-flag property
- * contracts by logical build, and own complete dynamically allocated script
- * variable names through slot reuse and shutdown. Derive output names from
- * the content basename with explicit destination capacities, and reject
- * overflowing output path joins. Compact compiler-only instruction records
- * after resolving value ownership, preserving branch and export anchors, all
- * mutable values and exactly-once pool cleanup. Select historical attack
- * domains, environmental damage, camera and scroll behavior, model-save
- * loading, weapon and idle order, nested scripts and numeric script
- * selectors. Retain bounded storage, safe ownership and the selected
- * rejected-value contracts. Resolve text-property names within the actual
- * table bounds while preserving native numeric selectors. Reuse each text
- * object's owned buffer when replacing its contents. Select historical
- * level/text setter tolerance and pre-3826 empty-success unknown textual
- * constants without changing later strict contracts.
- * Existing changes recorded here; this is not their implementation date.
- * See MODIFICATIONS.md and docs/modifications/3842.md
- * at the source repository root. Original notices follow below.
- */
-
 Source: src/engines/3400/source/scriptlib/ImportCache.c
 /* AnyBOR modification record: 2026-10-10.
  * Port maintained by retrodiv <retrodiv@proton.me>.
@@ -210,19 +182,6 @@ Source: src/deps/libvorbis/lib/backends.h
            static mode headers
 
  ********************************************************************/
-
-Source: src/engines/3842/source/gamelib/sprite.c
-/* AnyBOR modification record: 2026-10-08.
- * Port maintained by retrodiv <retrodiv@proton.me>.
- * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
- * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
- * Upstream code retains its original license and notices.
- * Declare initialized encoded sprite-body ranges and source crops for exact
- * reconstruction proof, retaining headers, palettes and mutable changes.
- * Existing changes recorded here; this is not their implementation date.
- * See MODIFICATIONS.md and docs/modifications/3842.md
- * at the source repository root. Original notices follow below.
- */
 
 Source: src/engines/3400/source/gamelib/loadimg.c
 /* AnyBOR modification record: 2026-10-19.
@@ -632,6 +591,23 @@ Source: src/deps/libvpx/vp8/common/arm/loopfilter_arm.h, src/deps/libvpx/vp9/enc
  *  tree. An additional intellectual property rights grant can be found
  *  in the file PATENTS.  All contributing project authors may
  *  be found in the AUTHORS file in the root of the source tree.
+ */
+
+Source: src/engines/3842/source/gamelib/sprite.c
+/* AnyBOR modification record: 2026-10-20.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Declare initialized encoded sprite-body ranges and source crops for exact
+ * reconstruction proof, retaining headers, palettes and mutable changes.
+ * Count encoded sprite bytes without forming addresses from a null sizing
+ * destination, retaining the encoded format, allocation sizes and resource
+ * notifications. Reject empty intersections between sprite clips and the
+ * output viewport before raster access.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/3842.md
+ * at the source repository root. Original notices follow below.
  */
 
 Source: src/deps/libvorbis/lib/modes/setup_44u.h
@@ -1644,39 +1620,6 @@ Source: src/engines/4086/source/webmlib/nestegg/nestegg.c, src/engines/4086/sour
  * reproducible-media diagnostic; preserve normal parser limits otherwise.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/4086.md
- * at the source repository root. Original notices follow below.
- */
-
-Source: src/engines/3842/openbor.c
-/* AnyBOR modification record: 2026-10-17.
- * Port maintained by retrodiv <retrodiv@proton.me>.
- * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
- * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
- * Upstream code retains its original license and notices.
- * Apply the port's engine corrections and select the PC video configuration
- * on macOS. Derive output names from the content basename with explicit
- * destination capacities, and reject overflowing output path joins. Select
- * historical attack domains, environmental damage, camera and scroll
- * behavior, model-save loading, weapon and idle order, nested scripts and
- * numeric script selectors. Retain bounded storage, safe ownership and the
- * selected rejected-value contracts. Leave multiplayer slots without a
- * selected model available to join even if game scripts preassign lives to
- * them. Let a missing basename-only PAK self-check read the active frontend
- * content after it has been validated and prepared. Allocate each model's
- * animation pointer table through the highest animation index that model
- * uses, and bound cache, copy and cleanup paths to that capacity. Ignore
- * optional defense and offense entries outside the configured attack-type
- * range with a log warning before accessing their tables. Yield after each
- * newly completed model during explicit model-list or level preparation, and
- * defer states until that preparation has cleaned up its intermediate
- * parsers and handles. Resize repeated weapon lists and detach borrowed
- * lists before replacing their entries. Guard an optional entity animation
- * interpreter before reading its reset state. Share identical immutable
- * animation-frame draw methods with reference-counted ownership. Select the
- * pre-3800 player spawn coordinate limit and pre-3805 ordered, cached spawn
- * scripts by logical build, with explicit level ownership and cleanup.
- * Existing changes recorded here; this is not their implementation date.
- * See MODIFICATIONS.md and docs/modifications/3842.md
  * at the source repository root. Original notices follow below.
  */
 
@@ -3440,6 +3383,19 @@ Source: src/deps/libvpx/vp8/common/loongarch/loopfilter_filters_lsx.c
  * be found in the AUTHORS file in the root of the source tree.
  */
 
+Source: src/engines/3842/source/gamelib/font.c
+/* AnyBOR modification record: 2026-10-20.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Reject missing or undersized indexed font palettes before copying their
+ * true-color entries; retain atlas raster output for valid fonts.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/3842.md
+ * at the source repository root. Original notices follow below.
+ */
+
 Source: src/deps/libvpx/vp9/encoder/vp9_ext_ratectrl.c, src/deps/libvpx/vp9/encoder/vp9_ext_ratectrl.h, src/deps/libvpx/vp9/ratectrl_rtc.cc, src/deps/libvpx/vp9/ratectrl_rtc.h, src/deps/libvpx/vpx/vpx_ext_ratectrl.h, src/deps/libvpx/vpx_ports/compiler_attributes.h, src/deps/libvpx/vpx_ports/mips.h, src/deps/libvpx/vpx_ports/mips_cpudetect.c, src/deps/libvpx/vpx_ports/static_assert.h
 /*
  *  Copyright (c) 2020 The WebM project authors. All Rights Reserved.
@@ -3449,6 +3405,44 @@ Source: src/deps/libvpx/vp9/encoder/vp9_ext_ratectrl.c, src/deps/libvpx/vp9/enco
  *  tree. An additional intellectual property rights grant can be found
  *  in the file PATENTS.  All contributing project authors may
  *  be found in the AUTHORS file in the root of the source tree.
+ */
+
+Source: src/engines/3842/openbor.c
+/* AnyBOR modification record: 2026-10-20.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Apply the port's engine corrections and select the PC video configuration
+ * on macOS. Derive output names from the content basename with explicit
+ * destination capacities, and reject overflowing output path joins. Select
+ * historical attack domains, environmental damage, camera and scroll
+ * behavior, model-save loading, weapon and idle order, nested scripts and
+ * numeric script selectors. Retain bounded storage, safe ownership and the
+ * selected rejected-value contracts. Leave multiplayer slots without a
+ * selected model available to join even if game scripts preassign lives to
+ * them. Let a missing basename-only PAK self-check read the active frontend
+ * content after it has been validated and prepared. Allocate each model's
+ * animation pointer table through the highest animation index that model
+ * uses, and bound cache, copy and cleanup paths to that capacity. Ignore
+ * optional defense and offense entries outside the configured attack-type
+ * range with a log warning before accessing their tables. Yield after each
+ * newly completed model during explicit model-list or level preparation, and
+ * defer states until that preparation has cleaned up its intermediate
+ * parsers and handles. Resize repeated weapon lists and detach borrowed
+ * lists before replacing their entries. Guard an optional entity animation
+ * interpreter before reading its reset state. Share identical immutable
+ * animation-frame draw methods with reference-counted ownership. Select the
+ * pre-3800 player spawn coordinate limit and pre-3805 ordered, cached spawn
+ * scripts by logical build, with explicit level ownership and cleanup. Keep
+ * model clip coordinates absolute before 3842 and relative to frame offsets
+ * and projected entity positions from 3842, with bounded integer coordinate
+ * arithmetic. Recalculate completed-game bonuses at the original successful
+ * menu callers before 3820 and in the loader from 3820, preserving the other
+ * saved-game routes and failure behavior.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/3842.md
+ * at the source repository root. Original notices follow below.
  */
 
 Source: src/engines/3842/source/utils.h
@@ -3639,6 +3633,37 @@ Source: src/deps/libvpx/vpx_util/endian_inl.h
 // -----------------------------------------------------------------------------
 //
 // Endian related functions.
+
+Source: src/engines/3842/openborscript.c
+/* AnyBOR modification record: 2026-10-20.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Keep the dormant constant-lowering diagnostic compatible with the single-
+ * value instruction layout, map string constants from direct contiguous
+ * instruction storage, select historical player and AI-flag property
+ * contracts by logical build, and own complete dynamically allocated script
+ * variable names through slot reuse and shutdown. Derive output names from
+ * the content basename with explicit destination capacities, and reject
+ * overflowing output path joins. Compact compiler-only instruction records
+ * after resolving value ownership, preserving branch and export anchors, all
+ * mutable values and exactly-once pool cleanup. Select historical attack
+ * domains, environmental damage, camera and scroll behavior, model-save
+ * loading, weapon and idle order, nested scripts and numeric script
+ * selectors. Retain bounded storage, safe ownership and the selected
+ * rejected-value contracts. Resolve text-property names within the actual
+ * table bounds while preserving native numeric selectors. Reuse each text
+ * object's owned buffer when replacing its contents. Select historical
+ * level/text setter tolerance and pre-3826 empty-success unknown textual
+ * constants without changing later strict contracts. Select the original
+ * level runtime mapper before the getter repair in 3820 and setter repair in
+ * 3821, preserving literal preconversion, second-argument mutation and
+ * bounded dispatch through the variant's native integer union member.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/3842.md
+ * at the source repository root. Original notices follow below.
+ */
 
 Source: src/deps/libvorbis/lib/window.h
 /********************************************************************
@@ -6309,6 +6334,19 @@ Source: src/deps/zlib/crc32.c
  * This interleaved implementation of a CRC makes use of pipelined multiple
  * arithmetic-logic units, commonly found in modern CPU cores. It is due to
  * Kadatch and Jenkins (2010). See doc/crc-doc.1.0.pdf in this distribution.
+ */
+
+Source: src/engines/3842/source/gamelib/pixelformat.c
+/* AnyBOR modification record: 2026-10-20.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Bound clip endpoints without signed overflow while retaining native color
+ * and draw-method initialization.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/3842.md
+ * at the source repository root. Original notices follow below.
  */
 
 Source: src/engines/3842/source/gamelib/packfile.h

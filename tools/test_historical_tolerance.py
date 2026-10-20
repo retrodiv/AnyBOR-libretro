@@ -24,8 +24,11 @@ class HistoricalToleranceTests(unittest.TestCase):
         source = native('openborscript.c')
         start=source.index('enum levelproperty_enum')
         declarations=source[start:source.index('void mapstrings_levelproperty',start)]
+        start=source.index('enum drawmethod_enum')
+        declarations+=source[start:source.index('};',start)+2]
         methods='\n'.join(function(source,n) for n in (
-            'mapstrings_levelproperty','openbor_changelevelproperty','mapstrings_textobjproperty',
+            'mapstrings_levelproperty','mapstrings_drawmethodproperty',
+            'openbor_changelevelproperty','mapstrings_textobjproperty',
             'openbor_changetextobjproperty','openbor_settextobj','openbor_cleartextobj'))
         program=r'''
 #include <assert.h>
@@ -79,6 +82,10 @@ enum {_top_font,_top_text,_top_time,_top_x,_top_y,_top_z,_top_the_end};
 '''+declarations+methods+r'''
 static ScriptVariant integer(LONG v) {return (ScriptVariant){.vt=VT_INTEGER,.lVal=v};}
 static ScriptVariant string(const char *v) {return (ScriptVariant){.vt=VT_STR,.strVal=v};}
+static ScriptVariant literal_level(const char *text) {
+ ScriptVariant value=string(text),*args[]={&value};
+ mapstrings_levelproperty(args,1);return value;
+}
 static void reset(void) {
  for(int i=0;i<storage.numtextobjs;i++) free(storage.textobjs[i].text);
  free(storage.textobjs);free(storage.holes);free(storage.walls);memset(&storage,0,sizeof(storage));
@@ -89,20 +96,21 @@ static void exercise(unsigned profile) {
  obor_profile_build=profile;reset();
  ScriptVariant a[10],result,*out,*v[10];for(int i=0;i<10;i++){a[i]=integer(0);v[i]=a+i;}
  /* The pre3820 implementation preserved the caller's return type, setting lVal=0 on rejection. */
- a[0]=string("quake");a[1]=(ScriptVariant){.vt=VT_EMPTY};result=(ScriptVariant){.vt=VT_EMPTY};out=&result;
+ a[0]=literal_level("quake");a[1]=(ScriptVariant){.vt=VT_EMPTY};result=(ScriptVariant){.vt=VT_EMPTY};out=&result;
  assert(openbor_changelevelproperty(v,&out,2)==(profile<3820?S_OK:E_FAIL));
  assert(storage.quake==5);assert(profile<3820 ? out==&result&&result.vt==VT_EMPTY&&result.lVal==0 : out==NULL);
- a[0]=string("quake");a[1]=integer(17);result=(ScriptVariant){.vt=VT_EMPTY};out=&result;
+ a[0]=literal_level("quake");a[1]=integer(17);result=(ScriptVariant){.vt=VT_EMPTY};out=&result;
  assert(openbor_changelevelproperty(v,&out,2)==S_OK&&storage.quake==17);
  assert(profile<3820?out==&result&&result.vt==VT_EMPTY:out==NULL);
- a[0]=string("unknown");out=&result;assert(openbor_changelevelproperty(v,&out,2)==E_FAIL&&out==NULL);
+ /* Real union/cache-index behavior of computed strings has its own probe. */
+ a[0]=integer(999);out=&result;assert(openbor_changelevelproperty(v,&out,2)==E_FAIL&&out==NULL);
  /* Numeric and compiled textual wall selectors agree across the inserted type property. */
- a[0]=string("wall");a[1]=integer(0);a[2]=integer(2);a[3]=integer(77);out=&result;
+ a[0]=literal_level("wall");a[1]=integer(0);a[2]=integer(2);a[3]=integer(77);out=&result;
  assert(openbor_changelevelproperty(v,&out,4)==S_OK&&storage.walls[0][2]==77);
  LONG wall=profile<3820?10:11;assert(a[0].lVal==wall);
  a[0]=integer(wall);a[3]=integer(88);out=&result;
  assert(openbor_changelevelproperty(v,&out,4)==S_OK&&storage.walls[0][2]==88);
- a[0]=string("hole");a[1]=integer(0);a[2]=integer(1);a[3]=(ScriptVariant){.vt=VT_EMPTY};out=&result;
+ a[0]=literal_level("hole");a[1]=integer(0);a[2]=integer(1);a[3]=(ScriptVariant){.vt=VT_EMPTY};out=&result;
  assert(openbor_changelevelproperty(v,&out,4)==(profile<3820?S_OK:E_FAIL));assert(storage.holes[0][1]==0);
  a[0]=integer(0);out=&result;assert(openbor_changelevelproperty(v,&out,1)==E_FAIL&&out==NULL);
  /* Negative text indices are harmless zero-success only before3821. */

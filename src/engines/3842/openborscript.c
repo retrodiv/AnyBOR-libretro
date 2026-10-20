@@ -1,4 +1,4 @@
-/* AnyBOR modification record: 2026-10-17.
+/* AnyBOR modification record: 2026-10-20.
  * Port maintained by retrodiv <retrodiv@proton.me>.
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
@@ -19,7 +19,10 @@
  * table bounds while preserving native numeric selectors. Reuse each text
  * object's owned buffer when replacing its contents. Select historical
  * level/text setter tolerance and pre-3826 empty-success unknown textual
- * constants without changing later strict contracts.
+ * constants without changing later strict contracts. Select the original
+ * level runtime mapper before the getter repair in 3820 and setter repair in
+ * 3821, preserving literal preconversion, second-argument mutation and
+ * bounded dispatch through the variant's native integer union member.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/3842.md
  * at the source repository root. Original notices follow below.
@@ -10430,8 +10433,14 @@ HRESULT openbor_getlevelproperty(ScriptVariant** varlist , ScriptVariant** pretv
 {
 	LONG ltemp, ltemp2;
     if(paramCount < 1) goto getlevelproperty_error;
-	mapstrings_levelproperty(varlist, paramCount);
-    if(varlist[0]->vt != VT_INTEGER) goto getlevelproperty_error;
+    /* Literal properties are pre-mapped by the compiler. The older runtime
+       mapper instead processes drawmethod argument one. */
+    if(obor_profile_build < 3820)
+        mapstrings_drawmethodproperty(varlist, paramCount);
+    else
+        mapstrings_levelproperty(varlist, paramCount);
+    /* Unmapped strings retain their cache index in the LONG union member,
+       as in the original API. The property switch bounds dispatch. */
 
 	switch(obor_level_property_native(varlist[0]->lVal))
 	{
@@ -10543,9 +10552,15 @@ HRESULT openbor_changelevelproperty(ScriptVariant** varlist , ScriptVariant** pr
 		return E_FAIL;
 	}
 
-	mapstrings_levelproperty(varlist, paramCount);
+    /* Literal properties are pre-mapped by the compiler. The older runtime
+       mapper instead processes drawmethod argument one. */
+    if(obor_profile_build < 3821)
+        mapstrings_drawmethodproperty(varlist, paramCount);
+    else
+        mapstrings_levelproperty(varlist, paramCount);
 
-    if(varlist[0]->vt != VT_INTEGER) return E_FAIL;
+    /* Unmapped strings retain their cache index in the LONG union member,
+       as in the original API. The property switch bounds dispatch. */
 	arg = varlist[1];
 
 	switch(obor_level_property_native(varlist[0]->lVal))
