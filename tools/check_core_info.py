@@ -7,6 +7,7 @@ Copyright (c) 2026 retrodiv <retrodiv@proton.me>
 import json
 import re
 from datetime import date
+from profile_manifest import profile_revision, profile_stage, profile_display, validate_profile
 
 
 def read_info(path):
@@ -31,7 +32,7 @@ def check_core_info(root, pin):
                        "fallback_build", "engine_repo", "engines", "profiles", "deps", "transform_vm"}
     engine_fields = {"build", "commit", "date", "covers", "major", "stage", "version_major"}
     revision_fields = {"upstream_commit", "upstream_date", "upstream_branch"}
-    profile_fields = {"build", "engine", "covers", "major", "stage", "auto_until", "automatic", "tagged", "triage", "reconstruction"} | revision_fields
+    profile_fields = {"build", "revision", "features", "engine", "covers", "major", "stage", "auto_until", "automatic", "tagged", "triage", "reconstruction"} | revision_fields
     if set(pin) != expected_fields or set(pin["engine_repo"]) != {"url"}:
         raise RuntimeError("Unexpected public source metadata fields")
     if type(pin["source_date_epoch"]) is not int or pin["source_date_epoch"] < 0:
@@ -44,19 +45,25 @@ def check_core_info(root, pin):
         if set(engine) - engine_fields or not {"build", "commit", "date", "major"} <= set(engine):
             raise RuntimeError("Unexpected public engine metadata fields")
     for item in pin["engines"] + pin["profiles"]:
-        if item.get("stage", "") not in ("", "dev", "alpha"):
-            raise RuntimeError("Invalid engine release stage")
+        profile_stage(item)
     physical = {engine["build"] for engine in pin["engines"]}
     logical = set()
+    variants = set()
     for profile in pin["profiles"]:
         if (set(profile) - profile_fields or
                 not {"build", "engine", "covers", "major"} <= set(profile) or
                 profile["engine"] not in physical or profile["build"] in logical or
-                int(profile.get("auto_until", profile["build"])) < int(profile["build"]) or
                 type(profile.get("automatic", True)) is not bool or
                 type(profile.get("tagged", True)) is not bool or
                 type(profile.get("triage", True)) is not bool):
             raise RuntimeError("Invalid public logical profile metadata")
+        validate_profile(profile, next(e for e in pin['engines'] if e['build'] == profile['engine']))
+        physical_engine = next(e for e in pin['engines'] if e['build'] == profile['engine'])
+        route = (profile_revision(profile), profile_stage(profile, physical_engine))
+        if route in variants:
+            raise RuntimeError('Duplicate logical profile revision and variant')
+        variants.add(route)
+        profile_display(profile, physical_engine)
         logical.add(profile["build"])
         if revision_fields & set(profile):
             if (not revision_fields <= set(profile) or

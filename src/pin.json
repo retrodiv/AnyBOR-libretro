@@ -1,7 +1,7 @@
 {
   "core_name": "AnyBOR",
   "core_basename": "anybor_libretro",
-  "version": "0.1.69",
+  "version": "0.1.70",
   "fallback_build": "6391",
   "profiles": [
     {
@@ -235,6 +235,31 @@
       "major": "v3.0"
     },
     {
+      "build": "6391-mod",
+      "revision": "6391",
+      "engine": "6391",
+      "major": "v3.0",
+      "stage": "mod",
+      "covers": "Explicit experimental variant with four incoming attack identifiers and selection-menu escape.",
+      "automatic": false,
+      "tagged": true,
+      "triage": false,
+      "features": [
+        "attack_history_four",
+        "selection_escape_9"
+      ],
+      "reconstruction": {
+        "basis": "Reconstruction from published descriptions and official code; unavailable unpublished sources were not used.",
+        "discussion": "https://www.chronocrash.com/forum/threads/npc-walking-backwards-how-to-solve-it.6933/",
+        "source_commits": [
+          "0824ff3e32513c403b97393eadeea44ff75d6a72",
+          "e4f0605db5f141dd9dd838a954672f5e7320579f",
+          "46e2bbfb1e05cdddc8d2d409e63b7b7061f2b0d5",
+          "e10dd3f1b1c59daea7df3f618e6d68875d109a29"
+        ]
+      }
+    },
+    {
       "build": "6392",
       "engine": "6391",
       "major": "v3.0",
@@ -252,7 +277,11 @@
           "46e2bbfb1e05cdddc8d2d409e63b7b7061f2b0d5",
           "e10dd3f1b1c59daea7df3f618e6d68875d109a29"
         ]
-      }
+      },
+      "features": [
+        "attack_history_four",
+        "selection_escape_9"
+      ]
     },
     {
       "build": "6412",

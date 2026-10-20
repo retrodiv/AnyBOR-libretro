@@ -4168,37 +4168,6 @@ Source: src/deps/libvorbis/lib/block.c
 
  ********************************************************************/
 
-Source: src/engines/6391/openbor.c
-/* AnyBOR modification record: 2026-10-17.
- * Port maintained by retrodiv <retrodiv@proton.me>.
- * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
- * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
- * Upstream code retains its original license and notices.
- * Apply the port's engine corrections and select the PC video configuration
- * on macOS. Derive output names from the content basename with explicit
- * destination capacities, and reject overflowing output path joins. Select
- * native 6330 boomerang, collision and settings behavior, 6412 frame-kill
- * binding behavior, and 6510 binding, blocking and attack behavior. Preserve
- * allocation handles used by inline animation-script guards. Reconstruct the
- * published 6392 test profile's four-ID attack history, native cheat toggle
- * and selection-screen escape contract from the later upstream source
- * changes. Leave multiplayer slots without a selected model available to
- * join even if game scripts preassign lives to them. Let a missing basename-
- * only PAK self-check read the active frontend content after it has been
- * validated and prepared. Allocate each model's animation pointer table
- * through the highest animation index that model uses, and bound cache, copy
- * and cleanup paths to that capacity. Ignore optional defense and offense
- * entries outside the configured attack-type range with a log warning before
- * accessing their tables. Yield after each newly completed model during
- * explicit model-list or level preparation, and defer states until that
- * preparation has cleaned up its intermediate parsers and handles. Resize
- * repeated weapon lists and detach borrowed lists before replacing their
- * entries.
- * Existing changes recorded here; this is not their implementation date.
- * See MODIFICATIONS.md and docs/modifications/6391.md
- * at the source repository root. Original notices follow below.
- */
-
 Source: src/engines/7142/source/scriptlib/ImportCache.h
 /* AnyBOR modification record: 2026-10-06.
  * Port maintained by retrodiv <retrodiv@proton.me>.
@@ -5122,6 +5091,37 @@ Source: src/deps/zlib/inftrees.h
 /* inftrees.h -- header to use inftrees.c
  * Copyright (C) 1995-2026 Mark Adler
  * For conditions of distribution and use, see copyright notice in zlib.h
+ */
+
+Source: src/engines/6391/openbor.c
+/* AnyBOR modification record: 2026-10-17.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Apply the port's engine corrections and select the PC video configuration
+ * on macOS. Derive output names from the content basename with explicit
+ * destination capacities, and reject overflowing output path joins. Select
+ * native 6330 boomerang, collision and settings behavior, 6412 frame-kill
+ * binding behavior, and 6510 binding, blocking and attack behavior. Preserve
+ * allocation handles used by inline animation-script guards. Reconstruct the
+ * 6391-mod and 6392 test contracts for four-ID attack history, native cheat
+ * toggles and selection-screen escape using explicit profile feature flags
+ * and published upstream code. Leave multiplayer slots without a selected
+ * model available to join even if game scripts preassign lives to them. Let
+ * a missing basename-only PAK self-check read the active frontend content
+ * after it has been validated and prepared. Allocate each model's animation
+ * pointer table through the highest animation index that model uses, and
+ * bound cache, copy and cleanup paths to that capacity. Ignore optional
+ * defense and offense entries outside the configured attack-type range with
+ * a log warning before accessing their tables. Yield after each newly
+ * completed model during explicit model-list or level preparation, and defer
+ * states until that preparation has cleaned up its intermediate parsers and
+ * handles. Resize repeated weapon lists and detach borrowed lists before
+ * replacing their entries.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/6391.md
+ * at the source repository root. Original notices follow below.
  */
 
 Source: src/engines/6391/source/ramlib/ram.c
@@ -6449,6 +6449,24 @@ Source: src/deps/libvorbis/lib/codebook.c
 
  ********************************************************************/
 
+Source: src/engines/6391/openbor.h
+/* AnyBOR modification record: 2026-10-17.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Allocate collision pointer slots through the highest author-facing index
+ * used by each collection. Define shared selectors and layouts for native
+ * 6330, 6412 and 6510 behavior. Reconstruct the 6391-mod and 6392 test
+ * contracts for four-ID attack history, native cheat toggles and selection-
+ * screen escape using explicit profile feature flags and published upstream
+ * code. Track each model's allocated animation-table capacity and reject
+ * lookups outside it.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/6391.md
+ * at the source repository root. Original notices follow below.
+ */
+
 Source: src/engines/8023/source/gamelib/loadimg.c
 /* AnyBOR modification record: 2026-10-08.
  * Port maintained by retrodiv <retrodiv@proton.me>.
@@ -6803,7 +6821,7 @@ Source: src/engines/8023/source/webmlib/movie_playback.c, src/engines/8023/sourc
  * at the source repository root. Original notices follow below.
  */
 
-Source: src/engines/3400/version.h, src/engines/3842/version.h, src/engines/4086/version.h, src/engines/4432/version.h, src/engines/6391/version.h, src/engines/7142/version.h, src/engines/7533/version.h, src/engines/8023/version.h, src/port/libretro/obor_block_crc.h, src/port/libretro/obor_block_state.c, src/port/libretro/obor_block_state.h, src/port/libretro/obor_block_threads.h, src/port/libretro/obor_block_worker_policy.h, src/port/libretro/obor_content_path.h, src/port/libretro/obor_directory.h, src/port/libretro/obor_directory_windows.h, src/port/libretro/obor_fault.c, src/port/libretro/obor_fault.h, src/port/libretro/obor_fault_context.h, src/port/libretro/obor_files.c, src/port/libretro/obor_framebuffer_state.h, src/port/libretro/obor_loading.h, src/port/libretro/obor_loose.c, src/port/libretro/obor_loose.h, src/port/libretro/obor_media_diag.c, src/port/libretro/obor_media_diag.h, src/port/libretro/obor_native_io.h, src/port/libretro/obor_pak_name.h, src/port/libretro/obor_paths.c, src/port/libretro/obor_paths.h, src/port/libretro/obor_random.h, src/port/libretro/obor_resource_catalog.c, src/port/libretro/obor_resource_catalog.h, src/port/libretro/obor_resource_image.c, src/port/libretro/obor_resource_image.h, src/port/libretro/obor_resource_recipe.c, src/port/libretro/obor_resource_recipe.h, src/port/libretro/obor_resource_source.c, src/port/libretro/obor_resource_source.h, src/port/libretro/obor_resources.c, src/port/libretro/obor_resources.h, src/port/libretro/obor_runtime.h, src/port/libretro/obor_script_compact.h, src/port/libretro/obor_script_executable.h, src/port/libretro/obor_snapshot_cache.h, src/port/libretro/obor_state_cache_win.h, src/port/libretro/obor_state_config.h, src/port/libretro/obor_state_copy.h, src/port/libretro/obor_state_layout.h, src/port/libretro/obor_state_padding.h, src/port/libretro/obor_state_stream.h, src/port/libretro/obor_write_watch.c, src/port/libretro/obor_write_watch.h, src/glue/obor_build_identity.h, src/glue/obor_capture_cadence.h, src/glue/obor_content_contracts.h, src/glue/obor_content_scan.h, src/glue/obor_crt.h, src/glue/obor_detection_clock.h, src/glue/obor_engine_resources.h, src/glue/obor_error_screen.h, src/glue/obor_legacy_api.h, src/glue/obor_loading_screen.h, src/glue/obor_modern_api.h, src/glue/obor_packed_prepare.h, src/glue/obor_pak_repair.h, src/glue/obor_pak_validate.h, src/glue/obor_prepare_co.h, src/glue/obor_prepare_progress.h, src/glue/obor_prepare_sync.h, src/glue/obor_profile_triage.h, src/glue/obor_rewind.h, src/glue/obor_runtime.h, src/glue/obor_state_padding.h, src/glue/obor_storage.h, src/glue/obor_transform.h, src/glue/obor_video_config.h, src/glue/obor_zip_path.h
+Source: src/engines/3400/version.h, src/engines/3842/version.h, src/engines/4086/version.h, src/engines/4432/version.h, src/engines/6391/version.h, src/engines/7142/version.h, src/engines/7533/version.h, src/engines/8023/version.h, src/port/libretro/obor_block_crc.h, src/port/libretro/obor_block_state.c, src/port/libretro/obor_block_state.h, src/port/libretro/obor_block_threads.h, src/port/libretro/obor_block_worker_policy.h, src/port/libretro/obor_content_path.h, src/port/libretro/obor_directory.h, src/port/libretro/obor_directory_windows.h, src/port/libretro/obor_fault.c, src/port/libretro/obor_fault.h, src/port/libretro/obor_fault_context.h, src/port/libretro/obor_files.c, src/port/libretro/obor_framebuffer_state.h, src/port/libretro/obor_loading.h, src/port/libretro/obor_loose.c, src/port/libretro/obor_loose.h, src/port/libretro/obor_media_diag.c, src/port/libretro/obor_media_diag.h, src/port/libretro/obor_native_io.h, src/port/libretro/obor_pak_name.h, src/port/libretro/obor_paths.c, src/port/libretro/obor_paths.h, src/port/libretro/obor_profile_identity.h, src/port/libretro/obor_random.h, src/port/libretro/obor_resource_catalog.c, src/port/libretro/obor_resource_catalog.h, src/port/libretro/obor_resource_image.c, src/port/libretro/obor_resource_image.h, src/port/libretro/obor_resource_recipe.c, src/port/libretro/obor_resource_recipe.h, src/port/libretro/obor_resource_source.c, src/port/libretro/obor_resource_source.h, src/port/libretro/obor_resources.c, src/port/libretro/obor_resources.h, src/port/libretro/obor_runtime.h, src/port/libretro/obor_script_compact.h, src/port/libretro/obor_script_executable.h, src/port/libretro/obor_snapshot_cache.h, src/port/libretro/obor_state_cache_win.h, src/port/libretro/obor_state_config.h, src/port/libretro/obor_state_copy.h, src/port/libretro/obor_state_layout.h, src/port/libretro/obor_state_padding.h, src/port/libretro/obor_state_stream.h, src/port/libretro/obor_write_watch.c, src/port/libretro/obor_write_watch.h, src/glue/obor_build_identity.h, src/glue/obor_capture_cadence.h, src/glue/obor_content_contracts.h, src/glue/obor_content_scan.h, src/glue/obor_crt.h, src/glue/obor_detection_clock.h, src/glue/obor_engine_resources.h, src/glue/obor_error_screen.h, src/glue/obor_legacy_api.h, src/glue/obor_loading_screen.h, src/glue/obor_modern_api.h, src/glue/obor_packed_prepare.h, src/glue/obor_pak_repair.h, src/glue/obor_pak_validate.h, src/glue/obor_prepare_co.h, src/glue/obor_prepare_progress.h, src/glue/obor_prepare_sync.h, src/glue/obor_profile_triage.h, src/glue/obor_rewind.h, src/glue/obor_runtime.h, src/glue/obor_state_padding.h, src/glue/obor_storage.h, src/glue/obor_transform.h, src/glue/obor_video_config.h, src/glue/obor_zip_path.h
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
 
@@ -8950,23 +8968,6 @@ Source: src/engines/7142/source/ramlib/ram.c
  * only <malloc.h>.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/7142.md
- * at the source repository root. Original notices follow below.
- */
-
-Source: src/engines/6391/openbor.h
-/* AnyBOR modification record: 2026-10-17.
- * Port maintained by retrodiv <retrodiv@proton.me>.
- * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
- * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
- * Upstream code retains its original license and notices.
- * Allocate collision pointer slots through the highest author-facing index
- * used by each collection. Define shared selectors and layouts for native
- * 6330, 6412 and 6510 behavior. Reconstruct the published 6392 test
- * profile's four-ID attack history, native cheat toggle and selection-screen
- * escape contract from the later upstream source changes. Track each model's
- * allocated animation-table capacity and reject lookups outside it.
- * Existing changes recorded here; this is not their implementation date.
- * See MODIFICATIONS.md and docs/modifications/6391.md
  * at the source repository root. Original notices follow below.
  */
 

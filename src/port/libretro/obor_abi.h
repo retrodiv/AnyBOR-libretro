@@ -27,9 +27,11 @@
 extern "C" {
 #endif
 
-#define OBOR_ABI_VERSION 10u
+#define OBOR_ABI_VERSION 11u
 
 #define OBOR_EXIT_MEMORY_FAULT (-2)
+#define OBOR_PROFILE_ATTACK_HISTORY_FOUR (1u << 0)
+#define OBOR_PROFILE_SELECTION_ESCAPE_9 (1u << 1)
 enum { OBOR_RESOURCE_FILE_OPEN = 1, OBOR_RESOURCE_FILE_CLOSE,
        OBOR_RESOURCE_FD_OPEN, OBOR_RESOURCE_FD_CLOSE };
 
@@ -92,7 +94,7 @@ typedef struct {
     const char *pak_path;      /* absolute path to the .pak — or, with
                                 * raw_dir, to the mod ROOT (the directory
                                 * that contains data/) */
-    const char *save_dir;      /* required per-game writable root; engine appends <build>/ */
+    const char *save_dir;      /* required per-game writable root; engine appends <profile_key>/ */
     const char *log_dir;       /* writable dir for Logs/  (may be NULL -> save_dir) */
     int32_t     arena_reserved; /* 1 only if this loaded core owns the entire range */
     int32_t     sample_rate;   /* requested mixer rate (44100) */
@@ -102,7 +104,9 @@ typedef struct {
                                 * save directory */
     const obor_engine_region *engine_regions; /* copied during boot */
     uint32_t engine_region_count;
-    uint32_t profile_build; /* logical identity; may share a physical engine */
+    uint32_t profile_build; /* upstream revision for historical boundaries */
+    const char *profile_key; /* unique bounded storage and selection identity */
+    uint32_t profile_features; /* behavior flags from the generated profile table */
     /* Frontend-owned resource ledger survives abandoning a damaged arena. */
     void (*resource_event)(uint32_t kind, uintptr_t handle);
     /* Session writer options: 0 = platform default, 1 = Smart/On, 2 = Full/Off.

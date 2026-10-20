@@ -166,8 +166,8 @@ static void glue_dump_maybe(const uint32_t *px, int w, int h, int pitch_px);
 
 /* Sparse (commit date -> build) milestones, generated from upstream git
  * history (build number == upstream commit count). Used to translate
- * a sidecar exe's "Compile Date" into a build when the exe's own build
- * string is empty (builds compiled without SVN/git metadata print none). */
+ * a sidecar exe's "Compile Date" into a build when no Build label exists.
+ * A Build label with a missing number is inconclusive, regardless of date. */
 struct date_build { int yyyymm; int build; };
 static const struct date_build kDateMap[] = {
     { 200607, 1 },    { 200701, 451 },  { 200801, 1279 }, { 200901, 2200 },
@@ -192,6 +192,27 @@ static int date_to_build(int year, int month)
 }
 
 struct filename_build_interval { int lower, upper; bool lower_known, upper_known; };
+
+static bool profile_is_revision(const obor_profile_def *profile)
+{
+    char revision[12];
+    snprintf(revision, sizeof(revision), "%d", profile->build);
+    return !strcmp(profile->name, revision);
+}
+
+static bool build_variant_separator(char c)
+{
+    return c == ' ' || c == '-' || c == '_';
+}
+
+/* A word following a separator may name a table-defined variant. Unknown
+ * words retain ordinary numeric routing; numeric ranges stay ranges. */
+static bool build_variant_suffix(const char *p)
+{
+    if (!build_variant_separator(*p)) return false;
+    while (build_variant_separator(*p)) ++p;
+    return isalpha((unsigned char)*p) != 0;
+}
 
 static bool build_interval_endpoint(const char **cursor, int unknown, int *value)
 {
@@ -242,6 +263,52 @@ static int build_tag_generation(const char *base, const char *build)
         if (q == build) return generation;
     }
     return 0;
+}
+
+/* Only an explicit whole variant word can select a nonautomatic variant.
+ * Variant vocabulary and behavior come from kProfiles, never content or a
+ * fixed list of suffixes. Partial/range tags intersect the same table. */
+static const obor_profile_def *profile_variant_from_filename(const char *path)
+{
+    const char *base = strrchr(path, PATH_SEP);
+    base = base ? base + 1 : path;
+    for (const char *p = base; *p; ++p) {
+        if ((p != base && (isalnum((unsigned char)p[-1]) || p[-1] == '_')) ||
+            strncasecmp(p, "build ", 6)) continue;
+        const char *first = p + 6;
+        while (*first == ' ') ++first;
+        const char *q = first, *high_end = first;
+        int lower, upper;
+        if (!build_interval_endpoint(&q, 0, &lower) ||
+            !build_interval_endpoint(&high_end, INT_MAX, &upper)) continue;
+        bool ranged = false, partial = false;
+        for (const char *digit = first; digit < q; ++digit)
+            if (*digit == 'X' || *digit == 'x') partial = true;
+        if (*q == '-' && (isdigit((unsigned char)q[1]) || q[1] == 'X' || q[1] == 'x')) {
+            const char *end = q + 1;
+            if (!build_interval_endpoint(&end, INT_MAX, &upper)) continue;
+            q = end;
+            ranged = true;
+        } else if (!isdigit((unsigned char)*first)) continue;
+        if (!ranged && (lower < 1000 || upper > 99999)) continue;
+        if (!ranged && !partial && (*q == '-' || *q == '_') && !build_variant_suffix(q)) continue;
+        if (lower > upper || isalnum((unsigned char)*q)) continue;
+        if (!build_variant_suffix(q)) return NULL;
+        while (build_variant_separator(*q)) ++q;
+        int generation = build_tag_generation(base, p);
+        const obor_profile_def *best = NULL;
+        for (size_t i = 0; i < sizeof(kProfiles) / sizeof(kProfiles[0]); ++i) {
+            const obor_profile_def *profile = &kProfiles[i];
+            size_t length = strlen(profile->variant);
+            if (!length || !profile->tagged || profile->build < lower || profile->build > upper ||
+                strncasecmp(q, profile->variant, length) || isalnum((unsigned char)q[length])) continue;
+            if ((generation == 3 && strncmp(profile->disp, "v3.0 ", 5)) ||
+                (generation == 4 && strncmp(profile->disp, "v4.0 ", 5))) continue;
+            if (!best || profile->build > best->build) best = profile;
+        }
+        return best;
+    }
+    return NULL;
 }
 
 static int pick_anchor(int build);
@@ -365,7 +432,7 @@ static void format_build_interval(const filename_build_interval *interval,
 
 /* Parse complete builds or a numeric prefix followed by trailing X digits.
  * A partial tag selects the highest available profile in its interval,
- * including explicit-only profiles. With no match, its upper endpoint goes
+ * using automatic profiles. With no match, its upper endpoint goes
  * through normal automatic routing. profile is zero for that fallback and
  * for complete tags, whose existing special-profile handling stays below. */
 static int build_from_filename(const char *path, int *profile)
@@ -394,7 +461,8 @@ static int build_from_filename(const char *path, int *profile)
                     ++q;
                 }
                 /* Keep complete-tag parsing, including leading zeroes. */
-                if (!isalnum((unsigned char)*q) && *q != '_' && *q != '-') {
+                if ((!isalnum((unsigned char)*q) && *q != '_' && *q != '-') ||
+                    build_variant_suffix(q)) {
                     const char *start = q - digits;
                     while (start < q && *start == '0') ++start;
                     if (q - start <= 5) {
@@ -469,14 +537,17 @@ static int build_from_exe(const char *exe_path)
     buf[got] = '\0';
 
     int build = 0, year = 0, month = 0;
+    bool build_banner_seen = false;
+    for (size_t i = 0; i + 6 <= got; ++i) {
+        if (memcmp(buf + i, "Build ", 6)) continue;
+        build_banner_seen = true;
+        const unsigned char *q = (const unsigned char *)buf + i + 6;
+        unsigned value = 0;
+        while (isdigit(*q) && value <= 99999) value = value * 10 + (*q++ - '0');
+        if (!build && value >= 1000 && value <= 99999) build = (int)value;
+    }
     static const char *months = "JanFebMarAprMayJunJulAugSepOctNovDec";
     for (size_t i = 0; i + 16 < got; i++) {
-        if (build == 0 && memcmp(buf + i, "Build ", 6) == 0 &&
-            isdigit((unsigned char)buf[i + 6])) {
-            int v = atoi(buf + i + 6);
-            if (v >= 1000 && v <= 99999)
-                build = v;
-        }
         if (year == 0 && memcmp(buf + i, "Compile Date: ", 14) == 0) {
             const char *d = buf + i + 14;              /* "Aug 29 2018" */
             for (int m = 0; m < 12; m++) {
@@ -492,7 +563,10 @@ static int build_from_exe(const char *exe_path)
                 y++; /* skip day */
             while (*y && !isdigit((unsigned char)*y))
                 y++;
-            year = atoi(y);
+            if (buf + got - y >= 4 && isdigit((unsigned char)y[0]) &&
+                isdigit((unsigned char)y[1]) && isdigit((unsigned char)y[2]) &&
+                isdigit((unsigned char)y[3]) && !isdigit((unsigned char)y[4]))
+                year = (y[0]-'0')*1000 + (y[1]-'0')*100 + (y[2]-'0')*10 + y[3]-'0';
         }
         if (build && year)
             break;
@@ -500,7 +574,7 @@ static int build_from_exe(const char *exe_path)
     free(buf);
     if (build)
         return build;
-    if (year >= 2006 && year <= 2099 && month >= 1 && month <= 12)
+    if (!build_banner_seen && year >= 2006 && year <= 2099 && month >= 1 && month <= 12)
         return date_to_build(year, month);
     return 0;
 }
@@ -1309,7 +1383,13 @@ static bool boot_engine(void)
     boot.arena_reserved = g_arena_owned ? 1 : 0;
     boot.sample_rate = 44100;
     boot.raw_dir = g_raw ? 1 : 0;
-    boot.profile_build = (uint32_t)atoi(g_logical_engine);
+    const obor_profile_def *selected_profile = NULL;
+    for (const auto &profile : kProfiles)
+        if (!strcmp(profile.name, g_logical_engine)) selected_profile = &profile;
+    if (!selected_profile) return false;
+    boot.profile_build = (uint32_t)selected_profile->build;
+    boot.profile_key = selected_profile->name;
+    boot.profile_features = selected_profile->features;
     boot.resource_event = engine_resource_event;
     boot.state_content = obor_state_session_settings.content;
     boot.state_compression = obor_state_session_settings.compression;
@@ -2121,6 +2201,7 @@ static void decide_engine(void)
     int n_avail = (int)(sizeof(kProfiles) / sizeof(kProfiles[0]));
 
     int build = 0;
+    const obor_profile_def *explicit_profile = NULL;
     const char *how = "fallback";
     if (strcasecmp(opt, "auto") != 0) {
         /* Preserve saved options using the old v3/v4 display strings. */
@@ -2128,14 +2209,23 @@ static void decide_engine(void)
             char previous[48];
             snprintf(previous, sizeof(previous), "%.2s %s", kProfiles[i].disp, kProfiles[i].name);
             if (strcmp(opt, kProfiles[i].disp) == 0 ||
-                strcmp(opt, kProfiles[i].name) == 0 || strcmp(opt, previous) == 0)
+                strcmp(opt, kProfiles[i].name) == 0 || strcmp(opt, previous) == 0) {
                 build = kProfiles[i].build;
+                explicit_profile = &kProfiles[i];
+            }
         }
         if (build)
             how = "core option";
     }
     int filename_profile = 0;
     int filename_build = build_from_filename(g_pak_path, &filename_profile);
+    if (!build) {
+        explicit_profile = profile_variant_from_filename(g_pak_path);
+        if (explicit_profile) {
+            build = explicit_profile->build;
+            how = "filename variant tag";
+        }
+    }
     filename_build_interval interval;
     bool has_interval = build_interval_from_filename(g_pak_path, &interval);
     char interval_text[28] = "";
@@ -2195,7 +2285,7 @@ static void decide_engine(void)
         filename_build <= 4166 && declared_anchor <= 4166;
     int exact_tagged_profile = 0;
     for (size_t i = 0; i < sizeof(kProfiles) / sizeof(kProfiles[0]); ++i)
-        if (kProfiles[i].build == filename_build && kProfiles[i].tagged &&
+        if (kProfiles[i].build == filename_build && profile_is_revision(&kProfiles[i]) && kProfiles[i].tagged &&
             (!kProfiles[i].automatic || kProfiles[i].build != kProfiles[i].engine_build || filename_build == 7123 ||
              filename_build == 7142 || filename_build == 7533 || filename_build == 8023))
         {
@@ -2247,16 +2337,16 @@ static void decide_engine(void)
                  ((strcmp(how, "filename tag") == 0 ||
                    strcmp(how, "filename interval") == 0) && filename_profile) ?
                      filename_profile : pick_anchor(build);
-    const obor_profile_def *selected = NULL;
+    const obor_profile_def *selected = explicit_profile;
     for (int i = 0; i < n_avail; i++)
-        if (kProfiles[i].build == anchor)
+        if (!selected && kProfiles[i].build == anchor && profile_is_revision(&kProfiles[i]))
             selected = &kProfiles[i];
     if (!selected) {
         g_engine[0] = '\0';
         g_logical_engine[0] = '\0';
         return;
     }
-    snprintf(g_logical_engine, sizeof(g_logical_engine), "%d", anchor);
+    snprintf(g_logical_engine, sizeof(g_logical_engine), "%s", selected->name);
     snprintf(g_engine, sizeof(g_engine), "%d", selected->engine_build);
     if (strcmp(how, "filename interval") == 0)
         log_cb(RETRO_LOG_INFO,
@@ -2821,8 +2911,8 @@ static uint32_t loading_capacity(const char *path)
     for (const char *p = path; *p; ++p) if (*p == '/' || *p == '\\') base = p + 1;
     for (size_t i = 0; i < sizeof(kProfiles) / sizeof(kProfiles[0]); ++i) {
         char cache[4096];
-        int n = snprintf(cache, sizeof(cache), "%s/%d/Saves/.obor_peak_sparse_v2_%s.txt",
-                         g_game_dir, kProfiles[i].build, base);
+        int n = snprintf(cache, sizeof(cache), "%s/%s/Saves/.obor_peak_sparse_v2_%s.txt",
+                         g_game_dir, kProfiles[i].name, base);
         if (n < 0 || (size_t)n >= sizeof(cache)) continue;
         FILE *file = fopen(cache, "rt");
         unsigned long long bytes = 0;

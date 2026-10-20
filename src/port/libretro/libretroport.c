@@ -25,6 +25,8 @@
 #include "libco/libco.h"
 #include "obor_fault.h"
 #include "obor_random.h"
+#define OBOR_SHA256_STREAM_ONLY
+#include "obor_profile_identity.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -69,6 +71,7 @@ unsigned long long obor_clock_us;
 unsigned char obor_pad[4][16];
 int obor_snd_bits = 16, obor_snd_rate = 44100, obor_snd_started;
 uint32_t obor_profile_build;
+uint32_t obor_profile_features;
 
 static cothread_t co_frontend;
 static cothread_t co_engine;
@@ -503,9 +506,11 @@ uint32_t obor_abi_version(void)
 int32_t obor_boot(const obor_boot_info *info)
 {
     if (!info || info->abi_version != OBOR_ABI_VERSION ||
-        !info->arena_reserved || !info->profile_build)
+        !info->arena_reserved || !info->profile_build ||
+        !obor_profile_key_length(info->profile_key))
         return 0;
     obor_profile_build = info->profile_build;
+    obor_profile_features = info->profile_features;
     preload_depth = 0;
     obor_state_session_settings.content = info->state_content;
     obor_state_session_settings.compression = info->state_compression;
@@ -517,7 +522,7 @@ int32_t obor_boot(const obor_boot_info *info)
     engine_cwd[0] = '\0';
     content_alias_name[0] = '\0';
 
-    if (!obor_state_set_save_dir(info->save_dir, obor_profile_build) ||
+    if (!obor_state_set_save_dir(info->save_dir, obor_profile_build, info->profile_key) ||
         !obor_state_set_regions(info))
         return 0;
 
@@ -545,8 +550,8 @@ int32_t obor_boot(const obor_boot_info *info)
             goto fail;
         char base[MAX_FILENAME_LEN], root[MAX_FILENAME_LEN];
         int bn = snprintf(base, sizeof(base), "%s", info->save_dir);
-        int rn = snprintf(root, sizeof(root), "%s/%d",
-                          info->save_dir, (int)obor_profile_build);
+        int rn = snprintf(root, sizeof(root), "%s/%s",
+                          info->save_dir, info->profile_key);
         if (bn < 0 || (size_t)bn >= sizeof(base) ||
             rn < 0 || (size_t)rn >= sizeof(root))
             goto fail;
@@ -590,15 +595,16 @@ int32_t obor_boot(const obor_boot_info *info)
     /* Old eras hardcode "./Logs", "./Saves", ... relative to the CWD, and
      * newer ones default their *Dir globals to the same names — so chdir to
      * a writable root and let every era use its native layout. The frontend supplies a per-game root. Its subdirectory is
-     * per engine build: a settings .cfg written by one build read by another
+     * per logical profile: a settings .cfg written by one build read by another
      * (different savedata layout) yields garbage — e.g. soundrate 0 and a
      * division-by-zero crash at game start. */
     if (info->save_dir && info->save_dir[0]) {
         char root[4096];
-        snprintf(root, sizeof(root), "%s", info->save_dir);
+        int n = snprintf(root, sizeof(root), "%s", info->save_dir);
+        if (n < 0 || (size_t)n >= sizeof(root)) goto fail;
         if (!obor_make_dir(root)) goto fail;
-        snprintf(root, sizeof(root), "%s/%d", info->save_dir,
-                 (int)obor_profile_build);
+        n = snprintf(root, sizeof(root), "%s/%s", info->save_dir, info->profile_key);
+        if (n < 0 || (size_t)n >= sizeof(root)) goto fail;
         if (!obor_make_dir(root)) goto fail;
         if (chdir(root) != 0)
             goto fail;

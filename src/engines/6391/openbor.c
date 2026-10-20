@@ -9,20 +9,20 @@
  * native 6330 boomerang, collision and settings behavior, 6412 frame-kill
  * binding behavior, and 6510 binding, blocking and attack behavior. Preserve
  * allocation handles used by inline animation-script guards. Reconstruct the
- * published 6392 test profile's four-ID attack history, native cheat toggle
- * and selection-screen escape contract from the later upstream source
- * changes. Leave multiplayer slots without a selected model available to
- * join even if game scripts preassign lives to them. Let a missing basename-
- * only PAK self-check read the active frontend content after it has been
- * validated and prepared. Allocate each model's animation pointer table
- * through the highest animation index that model uses, and bound cache, copy
- * and cleanup paths to that capacity. Ignore optional defense and offense
- * entries outside the configured attack-type range with a log warning before
- * accessing their tables. Yield after each newly completed model during
- * explicit model-list or level preparation, and defer states until that
- * preparation has cleaned up its intermediate parsers and handles. Resize
- * repeated weapon lists and detach borrowed lists before replacing their
- * entries.
+ * 6391-mod and 6392 test contracts for four-ID attack history, native cheat
+ * toggles and selection-screen escape using explicit profile feature flags
+ * and published upstream code. Leave multiplayer slots without a selected
+ * model available to join even if game scripts preassign lives to them. Let
+ * a missing basename-only PAK self-check read the active frontend content
+ * after it has been validated and prepared. Allocate each model's animation
+ * pointer table through the highest animation index that model uses, and
+ * bound cache, copy and cleanup paths to that capacity. Ignore optional
+ * defense and offense entries outside the configured attack-type range with
+ * a log warning before accessing their tables. Yield after each newly
+ * completed model during explicit model-list or level preparation, and defer
+ * states until that preparation has cleaned up its intermediate parsers and
+ * handles. Resize repeated weapon lists and detach borrowed lists before
+ * replacing their entries.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/6391.md
  * at the source repository root. Original notices follow below.
@@ -15966,7 +15966,7 @@ static int obor_attack_seen(const entity *target, unsigned int id, int ignore)
 {
     if(ignore) return 0;
     if(target->attack_id_incoming == id) return 1;
-    return obor_profile_build == 6392 && !multihitcheat &&
+    return (obor_profile_features & OBOR_PROFILE_ATTACK_HISTORY_FOUR) && !multihitcheat &&
         (target->attack_id_incoming2 == id ||
          target->attack_id_incoming3 == id ||
          target->attack_id_incoming4 == id);
@@ -15974,7 +15974,7 @@ static int obor_attack_seen(const entity *target, unsigned int id, int ignore)
 
 static void obor_remember_attack(entity *target, unsigned int id)
 {
-    if(obor_profile_build == 6392)
+    if((obor_profile_features & OBOR_PROFILE_ATTACK_HISTORY_FOUR))
     {
         target->attack_id_incoming4 = target->attack_id_incoming3;
         target->attack_id_incoming3 = target->attack_id_incoming2;
@@ -15986,7 +15986,7 @@ static void obor_remember_attack(entity *target, unsigned int id)
 void goto_mainmenu(int flag)
 {
     goto_mainmenu_flag = 1|((unsigned int)flag<<1);
-    if(obor_profile_build == 6392) escape_flag = flag;
+    if(obor_profile_features & OBOR_PROFILE_SELECTION_ESCAPE_9) escape_flag = flag;
 }
 
 void static backto_mainmenu()
@@ -37294,10 +37294,10 @@ int selectplayer(int *players, char *filename, int useSavedGame)
         update(0, 0);
 
         if((bothnewkeys & FLAG_ESC) ||
-           (obor_profile_build == 6392 && escape_flag == 9))
+           ((obor_profile_features & OBOR_PROFILE_SELECTION_ESCAPE_9) && escape_flag == 9))
         {
             escape = 1;
-            if(obor_profile_build == 6392) escape_flag = 0;
+            if(obor_profile_features & OBOR_PROFILE_SELECTION_ESCAPE_9) escape_flag = 0;
         }
     }
 
@@ -39710,7 +39710,7 @@ void menu_options_video()
 
 void menu_options()
 {
-    #define TOT_CHEATS          (obor_profile_build == 6392 ? 4 : 3)
+    #define TOT_CHEATS          ((obor_profile_features & OBOR_PROFILE_ATTACK_HISTORY_FOUR) ? 4 : 3)
     #define OPT_Y_POS          -1
     #define OPT_X_POS          -7
     #define CHEAT_PAUSE_POSY    TOT_CHEATS
@@ -39731,7 +39731,7 @@ void menu_options()
 
     int quit = 0;
     int y_offset = OPT_Y_POS;
-    int end_option = END_OPTION - (obor_profile_build != 6392);
+    int end_option = END_OPTION - (!(obor_profile_features & OBOR_PROFILE_ATTACK_HISTORY_FOUR));
     e_selector BACK_OPTION = end_option-TOT_CHEATS;
     int cheat_opt_offset = 0;
     e_selector selector = VIDEO_OPTION;
@@ -39761,7 +39761,7 @@ void menu_options()
             _menutext((selector == LIVES_CHEAT), OPT_X_POS, y_offset+cheat_opt_offset+LIVES_CHEAT, (livescheat)?Tr("Infinite Lives On"):Tr("Infinite Lives Off"));
             _menutext((selector == CREDITS_CHEAT), OPT_X_POS, y_offset+cheat_opt_offset+CREDITS_CHEAT, (creditscheat)?Tr("Infinite Credits On"):Tr("Infinite Credits Off"));    // Enemies fall/don't fall down when you respawn
             _menutext((selector == HEALTH_CHEAT), OPT_X_POS, y_offset+cheat_opt_offset+HEALTH_CHEAT, (healthcheat)?Tr("Infinite Health On"):Tr("Infinite Health Off"));    // Enemies fall/don't down when you respawn
-            if(obor_profile_build == 6392)
+            if((obor_profile_features & OBOR_PROFILE_ATTACK_HISTORY_FOUR))
                 _menutext((selector == MULTIHIT_CHEAT), OPT_X_POS, y_offset+cheat_opt_offset+MULTIHIT_CHEAT, (multihitcheat)?Tr("Multihit Glitch On"):Tr("Multihit Glitch Off"));
         }
 
@@ -39831,7 +39831,7 @@ void menu_options()
            else if(selector==LIVES_CHEAT) livescheat = !livescheat;
            else if(selector==CREDITS_CHEAT) creditscheat = !creditscheat;
            else if(selector==HEALTH_CHEAT) healthcheat = !healthcheat;
-           else if(obor_profile_build == 6392 && selector==MULTIHIT_CHEAT) multihitcheat = !multihitcheat;
+           else if((obor_profile_features & OBOR_PROFILE_ATTACK_HISTORY_FOUR) && selector==MULTIHIT_CHEAT) multihitcheat = !multihitcheat;
            else quit = 1;
         }
     }

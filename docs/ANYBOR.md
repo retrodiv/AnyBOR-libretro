@@ -4,7 +4,7 @@ AnyBOR is an independent libretro core for OpenBOR games, offering selectable
 engine profiles: v3.0 3400, v3.0 3780, v3.0 3783, v3.0 3789, v3.0 3793, v3.0
 3797, v3.0 3805, v3.0 3814, v3.0 3818, v3.0 3822, v3.0 3824, v3.0 3829, v3.0
 3831, v3.0 3837, v3.0 3839, v3.0 3842, v3.0 4086, v3.0 4088-dev, v3.0 4107,
-v3.0 4111, v3.0 4129, v3.0 4153, v3.0 4432, v3.0 4453, v3.0 6330, v3.0 6391,
+v3.0 4111, v3.0 4129, v3.0 4153, v3.0 4432, v3.0 4453, v3.0 6330, v3.0 6391, v3.0 6391-mod,
 v3.0 6392-dev, v3.0 6412-dev, v3.0 6510-dev, v3.0 7086-dev, v3.0 7123-dev,
 v4.0 7142-alpha, v4.0 7533 and v4.0 8023-dev.
 Auto uses build tags and content clues to choose a profile. You can select one
@@ -146,6 +146,17 @@ Build numbers and ranges require the word **Build**, followed by a space.
 Matching is case-insensitive and uses only the filename, not its parent path.
 **Build_6391**, **ReBuild 6391**, and unrelated numbers do not supply a build.
 The **v.2.1933** filename form is supported separately.
+
+An explicit variant after the number uses the profile table: **Build 6391 Mod**,
+**Build 6391-mod** and **Build 6391_MOD** select v3.0 6391-mod. Case is ignored;
+the variant must be a complete word, so **Modern** does not mean **mod**.
+The same rule applies to declared **dev** and **alpha** variants. An unknown
+variant retains ordinary numeric routing. With a partial or range declaration,
+such as **Build 63XX Mod**, Auto chooses the highest matching variant inside
+the bounds; without a matching variant, normal range routing applies. A bare
+numeric tag does not select a distinct variant with the same revision.
+An accompanying executable's **Build** label without a number is inconclusive;
+its compile date does not supply a build.
 
 When no higher-priority clue supplies a build, a bounded PAK text scan combines
 known command, animation, native-function and literal-constant introductions

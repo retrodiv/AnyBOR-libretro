@@ -39,6 +39,8 @@
 #include "obor_snapshot_cache.h"
 #include "obor_resources.h"
 #include "obor_state_layout.h"
+#define OBOR_SHA256_STREAM_ONLY
+#include "obor_profile_identity.h"
 
 #if defined(_WIN32)
 #include <windows.h>
@@ -138,13 +140,12 @@ static char g_peak_dir[4096];
 static uint64_t g_peak_written;
 static uint32_t g_profile_build;
 
-int obor_state_set_save_dir(const char *dir, uint32_t profile_build)
+int obor_state_set_save_dir(const char *dir, uint32_t profile_build, const char *profile_key)
 {
-    if (!dir || !dir[0] || !profile_build)
+    if (!dir || !dir[0] || !profile_build || !obor_profile_key_length(profile_key))
         return 0;
     g_profile_build = profile_build;
-    int n = snprintf(g_peak_dir, sizeof(g_peak_dir), "%s/%d/Saves",
-                     dir, (int)g_profile_build);
+    int n = snprintf(g_peak_dir, sizeof(g_peak_dir), "%s/%s/Saves", dir, profile_key);
     g_peak_written = 0;
     return n >= 0 && (size_t)n < sizeof(g_peak_dir);
 }
@@ -236,10 +237,13 @@ static uint8_t g_state_build_identity[32] OBOR_RUNTIME;
 
 int obor_state_set_regions(const obor_boot_info *info)
 {
-    if (!info->engine_regions || !info->engine_region_count ||
+    if (!info || !info->engine_regions || !info->engine_region_count ||
         info->engine_region_count > OBOR_MAX_ENGINE_REGIONS)
         return 0;
-    memcpy(g_state_build_identity, info->state_build_identity, sizeof(g_state_build_identity));
+    uint8_t identity[32];
+    if (!obor_profile_state_identity(info->state_build_identity, info->profile_build,
+            info->profile_features, info->profile_key, identity))
+        return 0;
     uint64_t previous_end = 0;
     unsigned own = 0;
     for (uint32_t i = 0; i < info->engine_region_count; ++i) {
@@ -252,6 +256,7 @@ int obor_state_set_regions(const obor_boot_info *info)
     }
     if (own != 1)
         return 0;
+    memcpy(g_state_build_identity, identity, sizeof(identity));
     memcpy(g_regions, info->engine_regions,
            info->engine_region_count * sizeof(g_regions[0]));
     g_region_count = info->engine_region_count;
@@ -950,7 +955,7 @@ static int32_t unserialize_impl(const void *buf, uint32_t size, int *committed)
     /* This runs before resource staging or writing any live engine bytes.
      * Older pointer-bearing formats have no identity and are rejected above. */
     if (memcmp(h.build_identity, g_state_build_identity, sizeof(h.build_identity))) {
-        fprintf(stderr, "[obor] state belongs to a different core binary/layout — rejected\n");
+        fprintf(stderr, "[obor] state belongs to a different core binary/layout/profile — rejected\n");
         return 0;
     }
     if (h.profile_build != g_profile_build ||

@@ -93,6 +93,18 @@ The generic buffer transform compiler/interpreter is original AnyBOR work.
 It provides only generic buffer execution and source compilation.
 
 
+The v3.0 6391-mod profile reconstructs Kratus's experimental build described
+in the [published discussion](https://www.chronocrash.com/forum/threads/npc-walking-backwards-how-to-solve-it.6933/).
+Its implementation is based on published descriptions and official code;
+the unpublished build's sources were unavailable and were not used. The
+four-ID history and selection-menu escape adapt official commits
+`0824ff3e`, `e4f0605d`, `46e2bbfb` and `e10dd3f1`, whose complete identifiers
+are recorded in `src/pin.json`. Its contract excludes the `backtotitle` alias.
+OpenBOR's existing copyrights and license terms apply. Attribution identifies
+the experimental build's author; it does not imply endorsement or complete
+binary equivalence. The source/profile mapping and platform limits are in
+[HISTORICAL_PROFILES](docs/HISTORICAL_PROFILES.md).
+
 The v3.0 6392-dev profile is an explicitly documented reconstruction. Its
 behavioral specification is the author's
 [published test-build discussion](https://www.chronocrash.com/forum/threads/openbor-test-build-6392.4936/).

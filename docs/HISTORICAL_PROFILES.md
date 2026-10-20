@@ -4,7 +4,7 @@ Selectable engine profiles: v3.0 3400, v3.0 3780, v3.0 3783, v3.0 3789, v3.0
 3793, v3.0 3797, v3.0 3805, v3.0 3814, v3.0 3818, v3.0 3822, v3.0 3824, v3.0
 3829, v3.0 3831, v3.0 3837, v3.0 3839, v3.0 3842, v3.0 4086, v3.0 4088-dev,
 v3.0 4107, v3.0 4111, v3.0 4129, v3.0 4153, v3.0 4432, v3.0 4453, v3.0 6330,
-v3.0 6391, v3.0 6392-dev, v3.0 6412-dev, v3.0 6510-dev, v3.0 7086-dev, v3.0
+v3.0 6391, v3.0 6391-mod, v3.0 6392-dev, v3.0 6412-dev, v3.0 6510-dev, v3.0 7086-dev, v3.0
 7123-dev, v4.0 7142-alpha, v4.0 7533 and v4.0 8023-dev.
 
 Auto uses build tags and content clues to choose a profile. You can select one
@@ -122,7 +122,26 @@ remains strict for every profile. Native tests compare each profile with
 independent observations from its own original source; they do not establish
 complete executable equivalence.
 
-## Reconstructed test profile
+## Reconstructed variants
+
+**v3.0 6391-mod** reconstructs the experimental build by Kratus described in
+the [published discussion](https://www.chronocrash.com/forum/threads/npc-walking-backwards-how-to-solve-it.6933/).
+It is based on published descriptions and official code; the unpublished build's
+sources were unavailable and were not used. Its contract retains four incoming
+attack IDs, enables the multihit correction by default and provides its native
+cheat-menu toggle. `gotomainmenu(9)` exits character selection. Its script API
+has no `backtotitle` alias. Airborne collisions reject attacks whose juggle cost
+exceeds the target's current juggle points, as in the official 6391 source.
+Standalone platform controls and menus use frontend facilities; container
+validation remains strict. This is a reconstruction, with no claim of complete
+binary equivalence or endorsement by the experimental build's author.
+
+A manual choice or an explicit filename variant selects this profile:
+**Build 6391 Mod**, **Build 6391-mod** and **Build 6391_MOD** are equivalent.
+**Build 63XX Mod** selects it within that interval. A bare **Build 6391** tag,
+ordinary content evidence and accompanying executables retain numeric routing.
+Settings, logs and state identity use the separate `6391-mod` profile key.
+See [provenance](../PROVENANCE.md) for the official source commits.
 
 **v3.0 6392-dev** reconstructs behavior published by the test-build author,
 using the subsequent upstream source changes. Exact sources of that test build
@@ -194,6 +213,7 @@ Profiles are compatibility selections. Several profiles use one physical source 
 | v3.0 4453 | `4432` |
 | v3.0 6330 | `6391` |
 | v3.0 6391 | `6391` |
+| v3.0 6391-mod | `6391` |
 | v3.0 6392-dev | `6391` |
 | v3.0 6412-dev | `6391` |
 | v3.0 6510-dev | `6391` |

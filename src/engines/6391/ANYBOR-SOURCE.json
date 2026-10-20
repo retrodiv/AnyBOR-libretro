@@ -17,9 +17,9 @@
       "upstream_sha256": null
     },
     "openbor.c": {
-      "distributed_sha256": "a8019261526558730badf98d3fc213d7d5e715fc9519ed448fe2d2af08375787",
+      "distributed_sha256": "d99a2e4e31ab56705a43e6d2f098b993ecac5c2c40509be5d29df543d33b004e",
       "modified": true,
-      "summary": "Apply the port's engine corrections and select the PC video configuration on macOS. Derive output names from the content basename with explicit destination capacities, and reject overflowing output path joins. Select native 6330 boomerang, collision and settings behavior, 6412 frame-kill binding behavior, and 6510 binding, blocking and attack behavior. Preserve allocation handles used by inline animation-script guards. Reconstruct the published 6392 test profile's four-ID attack history, native cheat toggle and selection-screen escape contract from the later upstream source changes. Leave multiplayer slots without a selected model available to join even if game scripts preassign lives to them. Let a missing basename-only PAK self-check read the active frontend content after it has been validated and prepared. Allocate each model's animation pointer table through the highest animation index that model uses, and bound cache, copy and cleanup paths to that capacity. Ignore optional defense and offense entries outside the configured attack-type range with a log warning before accessing their tables. Yield after each newly completed model during explicit model-list or level preparation, and defer states until that preparation has cleaned up its intermediate parsers and handles. Resize repeated weapon lists and detach borrowed lists before replacing their entries.",
+      "summary": "Apply the port's engine corrections and select the PC video configuration on macOS. Derive output names from the content basename with explicit destination capacities, and reject overflowing output path joins. Select native 6330 boomerang, collision and settings behavior, 6412 frame-kill binding behavior, and 6510 binding, blocking and attack behavior. Preserve allocation handles used by inline animation-script guards. Reconstruct the 6391-mod and 6392 test contracts for four-ID attack history, native cheat toggles and selection-screen escape using explicit profile feature flags and published upstream code. Leave multiplayer slots without a selected model available to join even if game scripts preassign lives to them. Let a missing basename-only PAK self-check read the active frontend content after it has been validated and prepared. Allocate each model's animation pointer table through the highest animation index that model uses, and bound cache, copy and cleanup paths to that capacity. Ignore optional defense and offense entries outside the configured attack-type range with a log warning before accessing their tables. Yield after each newly completed model during explicit model-list or level preparation, and defer states until that preparation has cleaned up its intermediate parsers and handles. Resize repeated weapon lists and detach borrowed lists before replacing their entries.",
       "topics": [
         "active-content-pak-aliases",
         "animation-memory-layout",
@@ -36,9 +36,9 @@
       "upstream_sha256": "09b28ba38c5c89ffe4ceba4aa1cbb5263319dda43c2251ce5a2b266a597cdfb5"
     },
     "openbor.h": {
-      "distributed_sha256": "3ff045fca24228ffb3bd7b9ba40912abbaab9bb495e1e0e9df6078f23239821b",
+      "distributed_sha256": "8c52800ca07309c197b845264ecdf049663e64e6cb071c8e05273ed6ebcd545d",
       "modified": true,
-      "summary": "Allocate collision pointer slots through the highest author-facing index used by each collection. Define shared selectors and layouts for native 6330, 6412 and 6510 behavior. Reconstruct the published 6392 test profile's four-ID attack history, native cheat toggle and selection-screen escape contract from the later upstream source changes. Track each model's allocated animation-table capacity and reject lookups outside it.",
+      "summary": "Allocate collision pointer slots through the highest author-facing index used by each collection. Define shared selectors and layouts for native 6330, 6412 and 6510 behavior. Reconstruct the 6391-mod and 6392 test contracts for four-ID attack history, native cheat toggles and selection-screen escape using explicit profile feature flags and published upstream code. Track each model's allocated animation-table capacity and reject lookups outside it.",
       "topics": [
         "animation-memory-layout",
         "compiler-warning-cleanup",

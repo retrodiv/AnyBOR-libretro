@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.1.70 — explicit historical variants
+
+- Add v3.0 6391-mod with its four-attack history, default multihit correction
+  and character-selection exit behavior.
+- Resolve explicit variant words from the profile table, including partial
+  and range labels, without changing ordinary numeric or content selection.
+- Keep variant settings and state identities separate and reject mismatched
+  states before restoring engine memory.
+- Treat executable build labels with no number as inconclusive.
+
 ## 0.1.69 — historical runtime and raster fidelity
 
 - Preserve absolute model clips in earlier profiles and the native level-property

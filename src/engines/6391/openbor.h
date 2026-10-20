@@ -5,10 +5,11 @@
  * Upstream code retains its original license and notices.
  * Allocate collision pointer slots through the highest author-facing index
  * used by each collection. Define shared selectors and layouts for native
- * 6330, 6412 and 6510 behavior. Reconstruct the published 6392 test
- * profile's four-ID attack history, native cheat toggle and selection-screen
- * escape contract from the later upstream source changes. Track each model's
- * allocated animation-table capacity and reject lookups outside it.
+ * 6330, 6412 and 6510 behavior. Reconstruct the 6391-mod and 6392 test
+ * contracts for four-ID attack history, native cheat toggles and selection-
+ * screen escape using explicit profile feature flags and published upstream
+ * code. Track each model's allocated animation-table capacity and reject
+ * lookups outside it.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/6391.md
  * at the source repository root. Original notices follow below.

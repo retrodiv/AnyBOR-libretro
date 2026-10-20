@@ -17,7 +17,7 @@ static bool filename_triage_bounds(const char *path, filename_build_interval *ou
         int lower, upper;
         if (!build_interval_endpoint(&q, 0, &lower) ||
             !build_interval_endpoint(&upper_end, INT_MAX, &upper)) continue;
-        if (isalnum((unsigned char)*q) || *q == '-') continue;
+        if (isalnum((unsigned char)*q) || (*q == '-' && !build_variant_suffix(q))) continue;
         bool partial = false;
         for (const char *x = first; x < q; ++x)
             if (*x == 'X' || *x == 'x') partial = true;
@@ -44,7 +44,7 @@ static bool filename_missing_exact_profile(const char *path, int declared)
 {
     if (declared <= 0) return false;
     for (size_t i = 0; i < sizeof(kProfiles) / sizeof(kProfiles[0]); ++i)
-        if (kProfiles[i].build == declared) return false;
+        if (kProfiles[i].build == declared && profile_is_revision(&kProfiles[i])) return false;
     const char *base = strrchr(path, PATH_SEP);
     base = base ? base + 1 : path;
     for (const char *p = base; *p; ++p) {
@@ -56,7 +56,7 @@ static bool filename_missing_exact_profile(const char *path, int declared)
         char *end;
         long value = strtol(first, &end, 10);
         if (value < 1000 || value > 99999 || isalnum((unsigned char)*end) ||
-            *end == '_' || *end == '-') continue;
+            ((*end == '_' || *end == '-') && !build_variant_suffix(end))) continue;
         return value == declared;
     }
     return false;
@@ -132,7 +132,7 @@ static int profile_triage_exact_select(int declared, int legacy)
     int anchor = pick_anchor(declared);
     const obor_profile_def *candidate = NULL, *best = NULL;
     for (size_t i = 0; i < sizeof(kProfiles) / sizeof(kProfiles[0]); ++i)
-        if (kProfiles[i].build == anchor) candidate = &kProfiles[i];
+        if (kProfiles[i].build == anchor && profile_is_revision(&kProfiles[i])) candidate = &kProfiles[i];
     if (!candidate || !profile_triage_distance(candidate, legacy)) return 0;
     uint64_t closest = UINT64_MAX;
     for (size_t i = 0; i < sizeof(kProfiles) / sizeof(kProfiles[0]); ++i) {

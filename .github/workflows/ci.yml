@@ -58,6 +58,8 @@ jobs:
           python3 tools/run_guarded.py --memory-mib 512 --seconds 90 -- python3 tools/test_font_raster.py
           python3 tools/run_guarded.py --memory-mib 1024 --seconds 180 -- python3 tools/test_panel_order.py
           python3 tools/run_guarded.py --memory-mib 1024 --seconds 180 -- python3 tools/test_6392_profile.py
+          python3 tools/run_guarded.py --memory-mib 512 --seconds 90 -- python3 tools/test_profile_identity.py
+          python3 tools/run_guarded.py --memory-mib 512 --seconds 60 -- python3 tools/test_executable_build_tag.py
           python3 tools/run_guarded.py --memory-mib 1024 --seconds 180 -- python3 tools/test_branch_profiles.py
           python3 tools/run_guarded.py --memory-mib 1024 --seconds 180 -- python3 tools/test_profile_palettes.py
           python3 tools/run_guarded.py --memory-mib 1024 --seconds 180 -- python3 tools/test_early_v3_profiles.py
@@ -211,6 +213,8 @@ jobs:
           python3 tools/test_font_raster.py
           python3 tools/test_panel_order.py
           python3 tools/test_6392_profile.py
+          python3 tools/test_profile_identity.py
+          python3 tools/test_executable_build_tag.py
           python3 tools/test_branch_profiles.py
           python3 tools/test_profile_palettes.py
           python3 tools/test_early_v3_profiles.py

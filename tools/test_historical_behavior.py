@@ -16,12 +16,13 @@ ROOT = Path(os.environ.get('OBOR_TEST_SOURCE', Path(__file__).resolve().parents[
 ENGINE = Path(os.environ.get('OBOR_HISTORICAL_ENGINE', ROOT / 'src/engines/3842'))
 
 
-def native(program):
+def native(program, include_dirs=()):
     with tempfile.TemporaryDirectory(prefix='anybor-historical-behavior-') as temp:
         work = Path(temp)
         source = work / 'probe.c'
         source.write_text(program)
-        subprocess.run(shlex.split(os.environ.get('HOST_CC', 'cc')) + [
+        includes = [item for directory in include_dirs for item in ('-I', str(directory))]
+        subprocess.run(shlex.split(os.environ.get('HOST_CC', 'cc')) + includes + [
             '-std=c11', '-Wall', '-Wextra', '-Werror', '-Wno-error=deprecated-declarations', '-g',
             '-fsanitize=address,undefined', str(source), '-o', str(work / 'probe')],
             check=True, timeout=60)
