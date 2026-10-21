@@ -4,32 +4,34 @@
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
  * Upstream code retains its original license and notices.
  * Apply the port's engine corrections and select the PC video configuration
- * on macOS. Derive output names from the content basename with explicit
- * destination capacities, and reject overflowing output path joins. Select
- * historical attack domains, environmental damage, camera and scroll
- * behavior, model-save loading, weapon and idle order, nested scripts and
- * numeric script selectors. Retain bounded storage, safe ownership and the
- * selected rejected-value contracts. Leave multiplayer slots without a
- * selected model available to join even if game scripts preassign lives to
- * them. Let a missing basename-only PAK self-check read the active frontend
- * content after it has been validated and prepared. Allocate each model's
- * animation pointer table through the highest animation index that model
- * uses, and bound cache, copy and cleanup paths to that capacity. Ignore
- * optional defense and offense entries outside the configured attack-type
- * range with a log warning before accessing their tables. Yield after each
- * newly completed model during explicit model-list or level preparation, and
- * defer states until that preparation has cleaned up its intermediate
- * parsers and handles. Resize repeated weapon lists and detach borrowed
- * lists before replacing their entries. Guard an optional entity animation
- * interpreter before reading its reset state. Share identical immutable
- * animation-frame draw methods with reference-counted ownership. Select the
- * pre-3800 player spawn coordinate limit and pre-3805 ordered, cached spawn
- * scripts by logical build, with explicit level ownership and cleanup. Keep
- * model clip coordinates absolute before 3842 and relative to frame offsets
- * and projected entity positions from 3842, with bounded integer coordinate
- * arithmetic. Recalculate completed-game bonuses at the original successful
- * menu callers before 3820 and in the loader from 3820, preserving the other
- * saved-game routes and failure behavior.
+ * on macOS. Keep damage-over-time updates within the native effect arrays
+ * while retaining valid-slot tick and expiration calculations. Derive output
+ * names from the content basename with explicit destination capacities, and
+ * reject overflowing output path joins. Select historical attack domains,
+ * environmental damage, camera and scroll behavior, model-save loading,
+ * weapon and idle order, nested scripts and numeric script selectors. Retain
+ * bounded storage, safe ownership and the selected rejected-value contracts.
+ * Leave multiplayer slots without a selected model available to join even if
+ * game scripts preassign lives to them. Let a missing basename-only PAK
+ * self-check read the active frontend content after it has been validated
+ * and prepared. Allocate each model's animation pointer table through the
+ * highest animation index that model uses, and bound cache, copy and cleanup
+ * paths to that capacity. Ignore optional defense and offense entries
+ * outside the configured attack-type range with a log warning before
+ * accessing their tables. Yield after each newly completed model during
+ * explicit model-list or level preparation, and defer states until that
+ * preparation has cleaned up its intermediate parsers and handles. Resize
+ * repeated weapon lists and detach borrowed lists before replacing their
+ * entries. Guard an optional entity animation interpreter before reading its
+ * reset state. Share identical immutable animation-frame draw methods with
+ * reference-counted ownership. Select the pre-3800 player spawn coordinate
+ * limit and pre-3805 ordered, cached spawn scripts by logical build, with
+ * explicit level ownership and cleanup. Keep model clip coordinates absolute
+ * before 3842 and relative to frame offsets and projected entity positions
+ * from 3842, with bounded integer coordinate arithmetic. Recalculate
+ * completed-game bonuses at the original successful menu callers before 3820
+ * and in the loader from 3820, preserving the other saved-game routes and
+ * failure behavior.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/3842.md
  * at the source repository root. Original notices follow below.
@@ -13721,7 +13723,7 @@ void common_dot()
 	entity*     eOpp;       //Owner of dot effect.
 	s_attack    attack;     //Attack struct.
 
-	for(iIndex=0; iIndex<=MAX_DOTS; iIndex++)                                                   //Loop through all DOT indexes.
+	for(iIndex=0; iIndex<MAX_DOTS; iIndex++)                                                   //Loop through all DOT indexes.
 	{
 		iDot_time   =   self->dot_time[iIndex];                                                 //Get expire time.
 		iDot_cnt    =   self->dot_cnt[iIndex];                                                  //Get next tick time.

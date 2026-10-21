@@ -3,6 +3,7 @@
 SPDX-License-Identifier: BSD-3-Clause
 Copyright (c) 2026 retrodiv <retrodiv@proton.me>
 """
+import json
 import os
 from pathlib import Path
 import re
@@ -16,14 +17,14 @@ ROOT = Path(os.environ.get('OBOR_TEST_SOURCE', Path(__file__).resolve().parents[
 ENGINE = Path(os.environ.get('OBOR_HISTORICAL_ENGINE', ROOT / 'src/engines/3842'))
 
 
-def native(program, include_dirs=()):
+def native(program, include_dirs=(), extra_flags=()):
     with tempfile.TemporaryDirectory(prefix='anybor-historical-behavior-') as temp:
         work = Path(temp)
         source = work / 'probe.c'
         source.write_text(program)
         includes = [item for directory in include_dirs for item in ('-I', str(directory))]
         subprocess.run(shlex.split(os.environ.get('HOST_CC', 'cc')) + includes + [
-            '-std=c11', '-Wall', '-Wextra', '-Werror', '-Wno-error=deprecated-declarations', '-g',
+            '-std=c11', '-Wall', '-Wextra', '-Werror', '-Wno-error=deprecated-declarations', '-g', *extra_flags,
             '-fsanitize=address,undefined', str(source), '-o', str(work / 'probe')],
             check=True, timeout=60)
         subprocess.run([str(work / 'probe')], check=True, timeout=20, cwd=work,
@@ -31,6 +32,95 @@ def native(program, include_dirs=()):
 
 
 class HistoricalBehaviorTests(unittest.TestCase):
+    def test_historical_filter_requests_preserve_unfiltered_pixels(self):
+        video = (ROOT / 'src/port/libretro/video.c').read_text()
+        declarations = re.search(
+            r'^static s_videomodes mode;[\s\S]*?(?=\n#ifdef OBOR_HAS_YUV)', video, re.M)
+        self.assertIsNotNone(declarations)
+        methods = '\n'.join(function(video, name) for name in (
+            'ensure_fb', 'vga_setpalette', 'video_set_mode', 'video_restore_mode',
+            'convert_screen', 'video_copy_screen'))
+        pin = json.loads((ROOT / 'src/pin.json').read_text())
+        profiles = [int(p.get('revision', p['build'])) for p in pin['profiles']
+                    if p['engine'] == ENGINE.name]
+        # A private source campaign may supply pending logical builds before
+        # registration. This does not prove that those profiles are selectable.
+        extra = json.loads(os.environ.get('OBOR_TEST_PROFILE_BUILDS', '[]'))
+        self.assertIsInstance(extra, list)
+        self.assertLessEqual(len(extra), 512)
+        self.assertTrue(all(type(p) is int and 0 < p <= 0xffffffff for p in extra))
+        profiles += sorted(set(extra) - set(profiles))
+        self.assertTrue(profiles)
+        native(r'''
+#include <assert.h>
+#include <stdint.h>
+#include <stdlib.h>
+#include <string.h>
+#include "types.h"
+DECLARATIONS
+static int yuv_mode;
+static const unsigned expected[4]={0xff0000,0x00ff00,0x0000ff,0xffffff};
+static unsigned submitted,yielded;
+static uint32_t obor_profile_build;
+static void obor_port_submit_frame(const unsigned *pixels,int w,int h,int pitch) {
+    assert(obor_profile_build && w==2 && h==2 && pitch==2);
+    assert(!memcmp(pixels,expected,sizeof(expected)));
+    ++submitted;
+}
+static void obor_yield_frame(void) { ++yielded; }
+METHODS
+int main(void) {
+    static const uint32_t profiles[]={PROFILES};
+    unsigned char palette[768]={0};
+    palette[3]=255;palette[7]=255;palette[11]=255;
+    palette[12]=palette[13]=palette[14]=255;
+    vga_setpalette(palette);
+    s_screen *screen=calloc(1,sizeof(*screen)+16);
+    assert(screen);
+    screen->width=2;screen->height=2;
+    const unsigned pixels32[4]={0x0000ff,0x00ff00,0xff0000,0xffffff};
+    const unsigned short pixels16[4]={0x001f,0x07e0,0xf800,0xffff};
+    const unsigned char pixels8[4]={1,2,3,4};
+    for(unsigned p=0;p<sizeof(profiles)/sizeof(*profiles);++p) {
+        obor_profile_build=profiles[p];
+        for(int filter=-128;filter<=127;++filter) {
+            for(int display=0;display<3;++display) {
+                s_videomodes requested={0};
+                requested.hRes=2;requested.vRes=2;
+                requested.filter=(char)filter;requested.mode=(char)display;
+                assert(video_set_mode(requested)==1);
+                assert(video_restore_mode()==1);
+                assert(!yuv_mode && mode.filter==(char)filter);
+                for(int format=0;format<4;++format) {
+                    screen->palette=0;
+                    if(format==0) {
+                        screen->pixelformat=PIXEL_32;
+                        memcpy(screen->data,pixels32,sizeof(pixels32));
+                    } else if(format==1) {
+                        screen->pixelformat=PIXEL_16;
+                        memcpy(screen->data,pixels16,sizeof(pixels16));
+                    } else {
+                        screen->pixelformat=PIXEL_8;
+                        memcpy(screen->data,pixels8,sizeof(pixels8));
+                        if(format==2)screen->palette=palette;
+                    }
+                    unsigned old_submitted=submitted,old_yielded=yielded;
+                    assert(video_copy_screen(screen)==1);
+                    assert(state_source==screen);
+                    assert(submitted==old_submitted+1 && yielded==old_yielded+1);
+                }
+            }
+        }
+    }
+    free(screen);free(fb);
+    return 0;
+}
+'''.replace('DECLARATIONS', declarations[0]).replace('METHODS', methods).replace(
+            'PROFILES', ','.join(map(str, profiles))),
+            include_dirs=(ENGINE / 'source/gamelib',), extra_flags=('-fsigned-char',))
+
+
+
     def test_model_clip_frame_and_submission_coordinate_boundary(self):
         source = (ENGINE / 'openbor.c').read_text()
         types = (ENGINE / 'source/gamelib/types.h').read_text()

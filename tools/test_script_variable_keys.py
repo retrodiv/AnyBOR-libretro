@@ -87,7 +87,7 @@ class ScriptVariableKeyTests(unittest.TestCase):
             with self.subTest(log=log), self.assertRaises(RuntimeError):
                 check_variable_key_continuation(log, '3842')
 
-    def test_old_tables_own_full_names_without_truncation_or_aliases(self):
+    def check_old_table(self, source, header, *, has_gc, explicit_owner):
         program = r'''
 #include <assert.h>
 #include <stddef.h>
@@ -170,36 +170,40 @@ int main(void) {
     return 0;
 }
 '''
-        for build in ('3400', '3842'):
-            with self.subTest(build=build), tempfile.TemporaryDirectory(prefix='anybor-script-key-') as temporary:
+        with tempfile.TemporaryDirectory(prefix='anybor-script-key-') as temporary:
+            end = header.index('}s_variantnode;') + len('}s_variantnode;')
+            node = header[header.rfind('typedef struct', 0, end):end]
+            self.assertRegex(node, r'char\s*\*\s*key\s*;')
+            self.assertIn('obor_script_variable_names_clear();', function(source, 'Script_Global_Clear'))
+            gc = function(source, '_gc_var') if has_gc else ''
+            methods = '\n'.join(function(source, name) for name in (
+                'obor_script_variable_names_clear', 'Script_Get_Global_Variant',
+                'Script_Get_Local_Variant', '_set_var'))
+            local = ('static ScriptVariant *read_local(Script *owner,char *name) { '
+                     'return Script_Get_Local_Variant(owner,name); }') if explicit_owner else (
+                     'static ScriptVariant *read_local(Script *owner,char *name) { '
+                     'pcurrentscript=owner;return Script_Get_Local_Variant(name); }')
+            native = Path(temporary) / 'keys.c'
+            body = program
+            for key, value in (('NODE', node), ('GC', gc), ('METHODS', methods), ('LOCAL_WRAPPER', local)):
+                body = body.replace(key, value)
+            native.write_text(body)
+            host = Path(temporary) / 'keys'
+            subprocess.run(shlex.split(os.environ.get('HOST_CC', os.environ.get('CC', 'cc'))) + [
+                '-std=c99', '-Wall', '-Wextra', '-Werror', '-Wno-error=deprecated-declarations', '-g',
+                '-fsanitize=address,undefined', str(native), '-o', str(host)],
+                check=True, timeout=60)
+            result = subprocess.run([str(host)], capture_output=True, text=True, timeout=10)
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            self.assertIn('complete script variable names: OK', result.stdout)
+
+    def test_old_tables_own_full_names_without_truncation_or_aliases(self):
+        for build in ('3400', '3741', '3842'):
+            with self.subTest(build=build):
                 engine = SOURCE / 'src/engines' / build
-                source = (engine / 'openborscript.c').read_text()
-                header = (engine / 'openborscript.h').read_text()
-                end = header.index('}s_variantnode;') + len('}s_variantnode;')
-                node = header[header.rfind('typedef struct', 0, end):end]
-                self.assertRegex(node, r'char\s*\*\s*key\s*;')
-                self.assertIn('obor_script_variable_names_clear();', function(source, 'Script_Global_Clear'))
-                gc = function(source, '_gc_var') if build == '3842' else ''
-                methods = '\n'.join(function(source, name) for name in (
-                    'obor_script_variable_names_clear', 'Script_Get_Global_Variant',
-                    'Script_Get_Local_Variant', '_set_var'))
-                local = ('static ScriptVariant *read_local(Script *owner,char *name) { '
-                         'pcurrentscript=owner;return Script_Get_Local_Variant(name); }') if build == '3400' else (
-                         'static ScriptVariant *read_local(Script *owner,char *name) { '
-                         'return Script_Get_Local_Variant(owner,name); }')
-                native = Path(temporary) / 'keys.c'
-                body = program
-                for key, value in (('NODE', node), ('GC', gc), ('METHODS', methods), ('LOCAL_WRAPPER', local)):
-                    body = body.replace(key, value)
-                native.write_text(body)
-                host = Path(temporary) / 'keys'
-                subprocess.run(shlex.split(os.environ.get('CC', 'cc')) + [
-                    '-std=c99', '-Wall', '-Wextra', '-Werror', '-Wno-error=deprecated-declarations', '-g',
-                    '-fsanitize=address,undefined', str(native), '-o', str(host)],
-                    check=True, timeout=60)
-                result = subprocess.run([str(host)], capture_output=True, text=True, timeout=10)
-                self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-                self.assertIn('complete script variable names: OK', result.stdout)
+                self.check_old_table((engine / 'openborscript.c').read_text(),
+                                     (engine / 'openborscript.h').read_text(),
+                                     has_gc=build == '3842', explicit_owner=build != '3400')
 
 
 if __name__ == '__main__':

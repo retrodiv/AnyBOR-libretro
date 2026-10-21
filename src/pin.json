@@ -1,7 +1,7 @@
 {
   "core_name": "AnyBOR",
   "core_basename": "anybor_libretro",
-  "version": "0.1.72",
+  "version": "0.1.73",
   "fallback_build": "6391",
   "profiles": [
     {
@@ -9,6 +9,15 @@
       "engine": "3400",
       "covers": "<= 3400 including lost pre-3020 era (best effort)",
       "major": "v3.0"
+    },
+    {
+      "build": "3741",
+      "engine": "3741",
+      "covers": "Native historical build3741",
+      "automatic": true,
+      "tagged": true,
+      "major": "v3.0",
+      "auto_until": 3741
     },
     {
       "build": "3780",
@@ -415,6 +424,13 @@
       "commit": "66fa1529897131ca51528967fbb21ee124e45775",
       "date": "2011-08-31",
       "covers": "<= 3400 including lost pre-3020 era (best effort)",
+      "major": "v3.0"
+    },
+    {
+      "build": "3741",
+      "commit": "00bcc4947748e8af10d030a82b60520bbd402e30",
+      "date": "2012-12-02",
+      "covers": "3401-3741 through native3741 profile; earlier content best effort",
       "major": "v3.0"
     },
     {

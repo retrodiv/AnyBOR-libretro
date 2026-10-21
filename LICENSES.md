@@ -10,17 +10,18 @@ their AnyBOR modification notices apply BSD-3-Clause only to retrodiv's contribu
 
 AnyBOR contains OpenBOR / Open Beats of Rage, originally by Senile Team
 and subsequently developed by the OpenBOR Team. The full core combines
-several licenses. Its inclusion of OpenBOR build 3400 restricts sale: **do
+several licenses. Its inclusion of OpenBOR builds 3400 and 3741 restricts sale: **do
 not sell this combined source distribution or its binaries without the
-specific prior written permission required by that engine's license.**
+specific prior written permission required by those engines' licenses.**
 Free redistribution with the supplied notices is permitted by those terms.
 This restriction also applies when distributing a modified combined core.
-The upstream name and attribution are retained as that license requires.
+The upstream name and attribution are retained as those licenses require.
 No endorsement by Senile Team, OpenBOR Team or libretro is claimed.
 
 | Component / source path | Terms and attribution |
 |---|---|
 | `src/engines/3400/` | Custom OpenBOR license, including its no-sale clauses; exact text in that directory's `LICENSE` and `LICENSES/OpenBOR-3400.txt`. Retrodiv's original AnyBOR modifications are BSD-3-Clause; the engine's conditions remain in force |
+| `src/engines/3741/` | Custom OpenBOR license, including its no-sale clauses; exact text in that directory's `LICENSE` and `LICENSES/OpenBOR-3741.txt`. Retrodiv's original AnyBOR modifications are BSD-3-Clause; the engine's conditions remain in force |
 | Other `src/engines/<build>/` directories | Each pinned engine's BSD-3-Clause license; retrodiv's original AnyBOR modifications are BSD-3-Clause, and embedded components below retain their own terms |
 | Imported early profile source | BSD-3-Clause; the complete source revision's copyright and conditions are retained in [the profile license](LICENSES/OpenBOR-profile-4153-BSD-3-Clause.txt). Embedded media components retain the separate terms below |
 | Original port and glue, compatibility helpers, build tools, tests, examples and project documentation | BSD-3-Clause, `LICENSE`; existing upstream authorship notices remain authoritative for adapted code |
@@ -46,9 +47,9 @@ replace the BSD-3-Clause grant for the current original AnyBOR work.
 
 The combined DLL/SO must be redistributed under all applicable component terms;
 it is not an exclusively BSD-3-Clause-licensed binary. Keep all applicable notices,
-the other component notices and the OpenBOR 3400 conditions with the distribution.
+the other component notices and the OpenBOR 3400 and 3741 conditions with the distribution.
 Licensing the original port under BSD-3-Clause does not grant permission to sell the
-combined core containing that engine.
+combined core containing either engine.
 
 Every supported binary statically includes the five libraries in `src/deps/`.
 Decoder-only libvpx builds are used. The source distribution also retains

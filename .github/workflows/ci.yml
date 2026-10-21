@@ -60,6 +60,7 @@ jobs:
           python3 tools/run_guarded.py --memory-mib 512 --seconds 60 -- python3 tools/test_sprite_encoding.py
           python3 tools/run_guarded.py --memory-mib 512 --seconds 90 -- python3 tools/test_font_raster.py
           python3 tools/run_guarded.py --memory-mib 1024 --seconds 180 -- python3 tools/test_panel_order.py
+          python3 tools/run_guarded.py --memory-mib 512 --seconds 90 -- python3 tools/test_dot_bounds.py
           python3 tools/run_guarded.py --memory-mib 1024 --seconds 180 -- python3 tools/test_6392_profile.py
           python3 tools/run_guarded.py --memory-mib 512 --seconds 90 -- python3 tools/test_profile_identity.py
           python3 tools/run_guarded.py --memory-mib 512 --seconds 60 -- python3 tools/test_executable_build_tag.py
@@ -228,6 +229,7 @@ jobs:
           run_check python3 tools/test_sprite_encoding.py
           run_check python3 tools/test_font_raster.py
           run_check python3 tools/test_panel_order.py
+          run_check python3 tools/test_dot_bounds.py
           run_check python3 tools/test_6392_profile.py
           run_check python3 tools/test_profile_identity.py
           run_check python3 tools/test_executable_build_tag.py

@@ -1,6 +1,6 @@
 # Choosing a profile
 
-Selectable engine profiles: v3.0 3400, v3.0 3780, v3.0 3783, v3.0 3789, v3.0
+Selectable engine profiles: v3.0 3400, v3.0 3741, v3.0 3780, v3.0 3783, v3.0 3789, v3.0
 3793, v3.0 3797, v3.0 3805, v3.0 3814, v3.0 3818, v3.0 3822, v3.0 3824, v3.0
 3829, v3.0 3831, v3.0 3837, v3.0 3839, v3.0 3842, v3.0 4086, v3.0 4088-dev,
 v3.0 4107, v3.0 4111, v3.0 4129, v3.0 4153, v3.0 4432, v3.0 4453, v3.0 6330,
@@ -16,8 +16,8 @@ content behavior while retaining safety and lifecycle corrections.
 Manual selection overrides Auto when the metadata is missing or incorrect:
 
 1. Find the engine build specified by the content's author or original release.
-2. Open **Quick Menu > Core Options > System > Engine build**. Frontends without
-   categories display **Engine build** in the flat core-options list.
+2. Open **Engine build** in the core-options list, under **System** when
+   categories are available.
 3. Select the full value, such as **v3.0 3780**, and use **Restart** or reload
    the content. The frontend log reports the selected profile.
 4. Keep that profile for the session. States require the same logical profile,
@@ -27,6 +27,10 @@ If the required revision is unknown, start with Auto and consult the content
 release documentation before choosing manually.
 
 ## Selected contracts and shared behavior
+
+Historical scaling filters are omitted. Display-mode requests containing a
+filter selection use the unfiltered image; the selection does not change the
+output dimensions or pixel conversion. This is a limit of visual fidelity.
 
 | Boundary | Selected earlier contract |
 |---|---|
@@ -188,6 +192,7 @@ Profiles are compatibility selections. Several profiles use one physical source 
 | Selectable profile | Source tree |
 |---|---|
 | v3.0 3400 | `3400` |
+| v3.0 3741 | `3741` |
 | v3.0 3780 | `3842` |
 | v3.0 3783 | `3842` |
 | v3.0 3789 | `3842` |
@@ -228,6 +233,7 @@ Profiles are compatibility selections. Several profiles use one physical source 
 | OpenBOR build | Pinned commit | File inventory |
 |---|---|---|
 | v3.0 3400 | `66fa1529897131ca51528967fbb21ee124e45775` | [v3.0 3400](modifications/3400.md) |
+| v3.0 3741 | `00bcc4947748e8af10d030a82b60520bbd402e30` | [v3.0 3741](modifications/3741.md) |
 | v3.0 3842 | `1f702a991ace7fa31884262e458a85e351f62713` | [v3.0 3842](modifications/3842.md) |
 | v3.0 4086 | `af23dc9c2316bb7853bb266ccf40986aa9765aeb` | [v3.0 4086](modifications/4086.md) |
 | v3.0 4432 | `2566cbee6185025e6a69d2aa1823b15c7a154ff9` | [v3.0 4432](modifications/4432.md) |
@@ -274,7 +280,7 @@ both cached resources and call nodes, including nodes belonging to discarded
 parser entries. Cleanup preserves resource creation order and frees each
 interpreter once. Later profiles retain the combined per-entry script path.
 
-Patch `96-logical-4453-compat.patch` adapts the behavior of upstream
+Patch `70-profile-4453.patch` adapts the behavior of upstream
 [4453](https://github.com/DCurrent/openbor/commit/7906e2573fcd70e9eafcd30fbdcc680832c4ae42)
 (2017-04-08). Profile 4453 forces 32-bit screens, keeps model-local indexed
 palettes, ignores `colourdepth` and skips the legacy `remap`-to-palette
@@ -289,7 +295,7 @@ and keep control-menu indexing within its arrays.
 
 Engine 6391 uses upstream commit
 [`494708eb34e71d1afda237873907701c4ec3a569`](https://github.com/DCurrent/openbor/commit/494708eb34e71d1afda237873907701c4ec3a569).
-Patch `96-logical-6412-compat.patch` adapts the later upstream 6412 script
+Patch `71-profile-6412.patch` adapts the later upstream 6412 script
 changes from commit
 [`d9bfceeb0d53cd43ed7cf5cfdfb0c60bba4df3f8`](https://github.com/DCurrent/openbor/commit/d9bfceeb0d53cd43ed7cf5cfdfb0c60bba4df3f8)
 for engine 6412. Engine 6391 retains its scalar binding properties
@@ -298,7 +304,7 @@ properties, owner and opponent entity properties, binding animation flags,
 the corrected Y-axis setter, frame-kill binding behavior, and `unload_model`.
 Each profile has its own save directory.
 
-Patches `97-logical-6330-compat.patch` and `98-logical-6510-compat.patch`
+Patches `72-profile-6330.patch` and `73-profile-6510.patch`
 adapt the earlier [6330 source](https://github.com/DCurrent/openbor/commit/4b1705fa37457ab38bc5d0fcc561242019588e32)
 and later [6510 source](https://github.com/DCurrent/openbor/commit/ecce29b95700468aa3401915625dac2d56e4ca60)
 inside the same 6391 engine object. Runtime profile branches restore 6330's

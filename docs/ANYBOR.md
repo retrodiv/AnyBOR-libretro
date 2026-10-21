@@ -1,7 +1,7 @@
 # OpenBOR (AnyBOR)
 
 AnyBOR is an independent libretro core for OpenBOR games, offering selectable
-engine profiles: v3.0 3400, v3.0 3780, v3.0 3783, v3.0 3789, v3.0 3793, v3.0
+engine profiles: v3.0 3400, v3.0 3741, v3.0 3780, v3.0 3783, v3.0 3789, v3.0 3793, v3.0
 3797, v3.0 3805, v3.0 3814, v3.0 3818, v3.0 3822, v3.0 3824, v3.0 3829, v3.0
 3831, v3.0 3837, v3.0 3839, v3.0 3842, v3.0 4086, v3.0 4088-dev, v3.0 4107,
 v3.0 4111, v3.0 4129, v3.0 4153, v3.0 4432, v3.0 4453, v3.0 6330, v3.0 6391, v3.0 6391-mod,

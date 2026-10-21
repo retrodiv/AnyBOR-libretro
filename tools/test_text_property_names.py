@@ -15,19 +15,19 @@ from native_sanitizers import sanitizer_environment
 
 ROOT=Path(__file__).resolve().parents[1]
 SOURCE=Path(os.environ.get('OBOR_TEST_SOURCE',ROOT))
-ENGINES=('3400','3842','4086','4432','6391','7142','7533','8023')
+ENGINES=('3400','3741','3842','4086','4432','6391','7142','7533','8023')
 class TextPropertyNameTests(unittest.TestCase):
     def test_every_engine_names_numeric_ids_unknowns_and_repeated_lowering(self):
         for engine in ENGINES:
             with self.subTest(engine=engine),tempfile.TemporaryDirectory(prefix='text-property-names-') as name:
                 source=SOURCE/f'src/engines/{engine}/openborscript.c'
                 if 'OBOR_TOLERANCE_DRAFT'in os.environ:source=Path(os.environ['OBOR_TOLERANCE_DRAFT'])/'text-maps'/engine/'openborscript.c'
-                text=source.read_text();methods=['mapstrings_gettextobjproperty','mapstrings_changetextobjproperty']if engine=='3400'else['mapstrings_textobjproperty']
+                text=source.read_text();methods=['mapstrings_gettextobjproperty','mapstrings_changetextobjproperty']if engine in ('3400','3741')else['mapstrings_textobjproperty']
                 enums='\n'.join(re.findall(r'enum (?:g|c)top_enum\s*\{.*?\};',text,re.S));assert enums,engine
                 body='';checks=[]
                 for method in methods:
                     body+=function(text,method)
-                    prefix='_ctop_'if 'changetext'in method else '_top_'if engine!='3400'else'_gtop_'
+                    prefix='_ctop_'if 'changetext'in method else '_top_'if engine not in ('3400','3741')else'_gtop_'
                     # Extract enum member spelling rather than assume modern ordering.
                     enum=next(e for e in re.findall(r'enum.*?\{.*?\};',enums,re.S)if prefix+'font'in e)
                     properties=[n for n in re.findall(r'\b'+prefix+r'([a-z]+)\b',enum)if n not in ('the','end')]

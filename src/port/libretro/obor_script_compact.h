@@ -7,6 +7,7 @@
 
 #include <stdint.h>
 #include <stdlib.h>
+#include <string.h>
 
 typedef struct obor_script_value_move {
     ScriptVariant *old_value;
@@ -15,7 +16,8 @@ typedef struct obor_script_value_move {
 
 static int obor_script_instruction_owns_value(const Instruction *instruction)
 {
-#if OBOR_ENGINE_BUILD == 3842 || OBOR_ENGINE_BUILD == 4086 || \
+#if OBOR_ENGINE_BUILD == 3741 || OBOR_ENGINE_BUILD == 3842 || \
+    OBOR_ENGINE_BUILD == 4086 || \
     OBOR_ENGINE_BUILD == 4432 || OBOR_ENGINE_BUILD == 6391 || \
     OBOR_ENGINE_BUILD == 7142 || \
     OBOR_ENGINE_BUILD == 7533 || \
@@ -28,7 +30,8 @@ static int obor_script_instruction_owns_value(const Instruction *instruction)
 
 static ScriptVariant **obor_script_first_reference(Instruction *instruction)
 {
-#if OBOR_ENGINE_BUILD == 3842 || OBOR_ENGINE_BUILD == 4086 || \
+#if OBOR_ENGINE_BUILD == 3741 || OBOR_ENGINE_BUILD == 3842 || \
+    OBOR_ENGINE_BUILD == 4086 || \
     OBOR_ENGINE_BUILD == 4432 || OBOR_ENGINE_BUILD == 6391 || \
     OBOR_ENGINE_BUILD == 7142 || \
     OBOR_ENGINE_BUILD == 7533 || \
@@ -82,7 +85,7 @@ static void obor_script_compact_values(Interpreter *interpreter)
             (Instruction *)interpreter->theInstructionList.solidlist[i];
         if (obor_script_instruction_owns_value(instruction) && instruction->theVal)
             count++;
-#if OBOR_ENGINE_BUILD == 3400
+#if OBOR_ENGINE_BUILD == 3400 || OBOR_ENGINE_BUILD == 3741
         if (instruction->theVal2)
             count++;
 #endif
@@ -104,7 +107,7 @@ static void obor_script_compact_values(Interpreter *interpreter)
             (Instruction *)interpreter->theInstructionList.solidlist[i];
         if (obor_script_instruction_owns_value(instruction) && instruction->theVal)
             moves[count++].old_value = instruction->theVal;
-#if OBOR_ENGINE_BUILD == 3400
+#if OBOR_ENGINE_BUILD == 3400 || OBOR_ENGINE_BUILD == 3741
         if (instruction->theVal2)
             moves[count++].old_value = instruction->theVal2;
 #endif
@@ -132,7 +135,7 @@ static void obor_script_compact_values(Interpreter *interpreter)
             instruction->theVal =
                 obor_script_find_moved_value(moves, count,
                                              instruction->theVal);
-#if OBOR_ENGINE_BUILD == 3400
+#if OBOR_ENGINE_BUILD == 3400 || OBOR_ENGINE_BUILD == 3741
         if (instruction->theVal2)
             instruction->theVal2 =
                 obor_script_find_moved_value(moves, count,
@@ -141,14 +144,20 @@ static void obor_script_compact_values(Interpreter *interpreter)
         {
             ScriptVariant **reference =
                 obor_script_first_reference(instruction);
+            ScriptVariant *value = NULL;
+            /* Historical instructions can pack pointer fields to four-byte
+             * alignment. Do not dereference their address as an ordinary
+             * pointer-to-pointer on a 64-bit host. */
+            if (reference)
+                memcpy(&value, reference, sizeof(value));
             moved = reference
-                ? obor_script_find_moved_value(moves, count, *reference)
-                : NULL;
+                ? obor_script_find_moved_value(moves, count, value) : NULL;
             if (moved)
-                *reference = moved;
+                memcpy(reference, &moved, sizeof(moved));
         }
 
-#if OBOR_ENGINE_BUILD == 3842 || OBOR_ENGINE_BUILD == 7142 || \
+#if OBOR_ENGINE_BUILD == 3741 || OBOR_ENGINE_BUILD == 3842 || \
+    OBOR_ENGINE_BUILD == 7142 || \
     OBOR_ENGINE_BUILD == 7533 || \
     OBOR_ENGINE_BUILD == 8023
         if (instruction->OpCode != CALL) {
@@ -194,7 +203,7 @@ static void obor_script_clear_compact_values(Interpreter *interpreter,
     if (obor_script_instruction_owns_value(instruction) && instruction->theVal) {
         instruction->theVal = NULL;
     }
-#if OBOR_ENGINE_BUILD == 3400
+#if OBOR_ENGINE_BUILD == 3400 || OBOR_ENGINE_BUILD == 3741
     if (instruction->theVal2) {
         instruction->theVal2 = NULL;
     }

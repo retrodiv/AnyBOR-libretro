@@ -29,9 +29,9 @@ unchanged files are identified without modification claims. These records are
 documentation; the included sources build directly.
 
 The source snapshots originate from the [OpenBOR repository](https://github.com/DCurrent/openbor).
-The 2011 engine's original no-sale license remains in force for that included
-snapshot. Later engine licenses are preserved separately. No later license
-change is applied retroactively to the older engine.
+The 3400 and 3741 source snapshots retain their original no-sale licenses.
+Each included snapshot keeps its own license; later license grants do not
+replace the terms of earlier source.
 
 The circle rasterizer in `src/port/libretro/obor_circle.h` is a new integer
 geometry implementation for this port. It enumerates symmetric integer

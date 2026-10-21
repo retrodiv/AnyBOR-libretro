@@ -54,7 +54,8 @@ class ContentTriageTests(unittest.TestCase):
         return self.select(tag, {'data/scripts/update.c': source.encode()})
 
     def test_exact_tags_never_run_triage(self):
-        for tag, expected in (('3780',3780),('6330',6330),('6392',6392),('6412',6412)):
+        for tag, expected in (('3741',3741),('3780',3780),('6330',6330),
+                              ('6392',6392),('6412',6412)):
             profile, log = self.script(tag, 'void main(){ movie_load("x"); }')
             self.assertEqual(profile, expected)
             self.assertNotIn('filename triage', log)
@@ -157,7 +158,8 @@ class ContentTriageTests(unittest.TestCase):
             self.assertEqual(bool(int(actual)), row['supported'], row)
 
     def test_official_automatic_build_coverage(self):
-        for tag, expected in (('4087',4107),('4088',4088),('4089',4107),
+        for tag, expected in (('3401',3741),('3740',3741),('3741',3741),
+                              ('3742',3780),('4087',4107),('4088',4088),('4089',4107),
                               ('4107',4107),('4108',4111),('4111',4111),
                               ('4112',4129),('4129',4129),('4130',4153),
                               ('4153',4153),('4154',4432),

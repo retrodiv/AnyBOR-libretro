@@ -12,9 +12,17 @@ static int obor_script_compile_only(unsigned opcode)
 {
     switch (opcode) {
     case DATA: case CLEAN: case NOOP: case PUSH: case POP:
-    case CONSTINT: case CONSTDBL: case CONSTSTR:
         return 1;
-#if OBOR_ENGINE_BUILD != 3400 && OBOR_ENGINE_BUILD != 3842
+    case CONSTINT: case CONSTDBL: case CONSTSTR:
+#if OBOR_ENGINE_BUILD == 3741
+        /* Paired historical constants restore their working value on each
+         * execution. Retain that operation and the mapper's source record. */
+        return 0;
+#else
+        return 1;
+#endif
+#if OBOR_ENGINE_BUILD != 3400 && OBOR_ENGINE_BUILD != 3741 && \
+    OBOR_ENGINE_BUILD != 3842
     /* These old engines still enforce CHECKARG at runtime. */
     case CHECKARG:
         return 1;
@@ -63,7 +71,7 @@ static int obor_script_compact_executable(Interpreter *p, List *exports)
         if (storage_type != INSTRUCTION_COMPILED ||
             (obor_script_instruction_owns_value(ins) &&
              !obor_script_value_in_pool(p, ins->theVal))) goto unchanged;
-#if OBOR_ENGINE_BUILD == 3400
+#if OBOR_ENGINE_BUILD == 3400 || OBOR_ENGINE_BUILD == 3741
         if (!obor_script_value_in_pool(p, ins->theVal2)) goto unchanged;
 #endif
         if (ins->jumpTargetType == INSTRUCTION_TARGET_INDEX) {
@@ -87,7 +95,9 @@ static int obor_script_compact_executable(Interpreter *p, List *exports)
     OBOR_KEEP_ENTRY(mainEntryIndex);
 #if OBOR_ENGINE_BUILD != 3400
     OBOR_KEEP_ENTRY(clearEntryIndex);
+#if OBOR_ENGINE_BUILD != 3741
     OBOR_KEEP_ENTRY(initEntryIndex);
+#endif
 #endif
 #undef OBOR_KEEP_ENTRY
     if (exports) {
@@ -126,7 +136,9 @@ static int obor_script_compact_executable(Interpreter *p, List *exports)
     if (p->mainEntryIndex >= 0) p->mainEntryIndex = map[p->mainEntryIndex];
 #if OBOR_ENGINE_BUILD != 3400
     if (p->clearEntryIndex >= 0) p->clearEntryIndex = map[p->clearEntryIndex];
+#if OBOR_ENGINE_BUILD != 3741
     if (p->initEntryIndex >= 0) p->initEntryIndex = map[p->initEntryIndex];
+#endif
 #endif
     for (i = 0; i < size; ++i)
         p->theInstructionList.solidlist[i] = i < count ? &storage[i] : NULL;

@@ -21,6 +21,13 @@
     "source": "src/engines/3400/LICENSE"
   },
   {
+    "file": "LICENSES/OpenBOR-3741.txt",
+    "license": "LicenseRef-OpenBOR-NoSale",
+    "scope": "source and binary",
+    "sha256": "0854d130894ce6dafecc0b067b30eb26b8661bdcfca246f96c0677fd7d7c1e2a",
+    "source": "src/engines/3741/LICENSE"
+  },
+  {
     "file": "LICENSES/OpenBOR-3842.txt",
     "license": "BSD-3-Clause",
     "scope": "source and binary",
@@ -360,7 +367,7 @@
     "file": "LICENSES/Embedded-source-notices.txt",
     "license": "see each notice",
     "scope": "source and binary",
-    "sha256": "86f846810c698aee836affb92cddf6a6d3dbe91be623520e1b2c086b1af29c60",
+    "sha256": "01bd807cf8d946fb2aeed07f70ad93c4b04530a31fa9d896afb5249b2ac0d77b",
     "source": "Individual source headers listed in this document"
   },
   {

@@ -177,6 +177,180 @@
       ]
     },
     {
+      "profile": "3741",
+      "engine": "3741",
+      "original_commit": "00bcc4947748e8af10d030a82b60520bbd402e30",
+      "original_image_source_sha256": "1b54ac7b265ce7a4b3bf9c5ca1c849b6400ff5bb8d771d966878bedbb7669c0c",
+      "original_model_source_sha256": "35efd515ce696e9b0e93157bda9ecb3b3759a613f714bad0c5a6d371e6ea6480",
+      "basis": "Own exact original3741 palette/model probe bytes identical to reviewed original3842 probe; expected cases retained without inference from later engine behavior",
+      "image_reference": "https://github.com/DCurrent/openbor/blob/00bcc4947748e8af10d030a82b60520bbd402e30/engine/source/gamelib/loadimg.c",
+      "model_reference": "https://github.com/DCurrent/openbor/blob/00bcc4947748e8af10d030a82b60520bbd402e30/engine/openbor.c",
+      "cases": [
+        {
+          "bytes": 512,
+          "loaded": 1,
+          "filename": "authored.act",
+          "authored_byte65": 0,
+          "palette_sha256": "140a8680925fbaf14af12e8986d7934c00fef8288d59e721e8cf33b408ddc9f5",
+          "original_sprite_probe": 1,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 512,
+          "loaded": 0,
+          "filename": "authored.act",
+          "authored_byte65": 3,
+          "palette_sha256": "2ea16988ca9a3b973ff11693e6de4bd078775655cd6715c5a06a120f71b3e827",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 512,
+          "loaded": 1,
+          "filename": "authored.pcx",
+          "authored_byte65": 0,
+          "palette_sha256": "140a8680925fbaf14af12e8986d7934c00fef8288d59e721e8cf33b408ddc9f5",
+          "original_sprite_probe": 1,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 512,
+          "loaded": 0,
+          "filename": "authored.pcx",
+          "authored_byte65": 3,
+          "palette_sha256": "2ea16988ca9a3b973ff11693e6de4bd078775655cd6715c5a06a120f71b3e827",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 512,
+          "loaded": 1,
+          "filename": "authored-palette",
+          "authored_byte65": 0,
+          "palette_sha256": "140a8680925fbaf14af12e8986d7934c00fef8288d59e721e8cf33b408ddc9f5",
+          "original_sprite_probe": 1,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 512,
+          "loaded": 0,
+          "filename": "authored-palette",
+          "authored_byte65": 3,
+          "palette_sha256": "2ea16988ca9a3b973ff11693e6de4bd078775655cd6715c5a06a120f71b3e827",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 768,
+          "loaded": 1,
+          "filename": "authored.act",
+          "authored_byte65": 0,
+          "palette_sha256": "109818336adf2485c2317a64b93cc3a5eef8494bd6b48f5598392cfe36157919",
+          "original_sprite_probe": 1,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 768,
+          "loaded": 0,
+          "filename": "authored.act",
+          "authored_byte65": 3,
+          "palette_sha256": "9517c315e3de0d864d0f9ff719a358a8c7baa39c407c50bef85bb583c0bf2344",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 768,
+          "loaded": 1,
+          "filename": "authored.pcx",
+          "authored_byte65": 0,
+          "palette_sha256": "109818336adf2485c2317a64b93cc3a5eef8494bd6b48f5598392cfe36157919",
+          "original_sprite_probe": 1,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 768,
+          "loaded": 0,
+          "filename": "authored.pcx",
+          "authored_byte65": 3,
+          "palette_sha256": "9517c315e3de0d864d0f9ff719a358a8c7baa39c407c50bef85bb583c0bf2344",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 768,
+          "loaded": 1,
+          "filename": "authored-palette",
+          "authored_byte65": 0,
+          "palette_sha256": "109818336adf2485c2317a64b93cc3a5eef8494bd6b48f5598392cfe36157919",
+          "original_sprite_probe": 1,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 768,
+          "loaded": 0,
+          "filename": "authored-palette",
+          "authored_byte65": 3,
+          "palette_sha256": "9517c315e3de0d864d0f9ff719a358a8c7baa39c407c50bef85bb583c0bf2344",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 1024,
+          "loaded": 1,
+          "filename": "authored.act",
+          "authored_byte65": 0,
+          "palette_sha256": "1786de003146e394579b7e424a995cdaca9f71f916ec840bafb2a7799bf02f3f",
+          "original_sprite_probe": 1,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 1024,
+          "loaded": 0,
+          "filename": "authored.act",
+          "authored_byte65": 3,
+          "palette_sha256": "e75809e0d15667ce44e6aa5c64689a4917b245eb0920094ff0b017dc0612a17a",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 1024,
+          "loaded": 1,
+          "filename": "authored.pcx",
+          "authored_byte65": 0,
+          "palette_sha256": "1786de003146e394579b7e424a995cdaca9f71f916ec840bafb2a7799bf02f3f",
+          "original_sprite_probe": 1,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 1024,
+          "loaded": 0,
+          "filename": "authored.pcx",
+          "authored_byte65": 3,
+          "palette_sha256": "e75809e0d15667ce44e6aa5c64689a4917b245eb0920094ff0b017dc0612a17a",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 1024,
+          "loaded": 1,
+          "filename": "authored-palette",
+          "authored_byte65": 0,
+          "palette_sha256": "1786de003146e394579b7e424a995cdaca9f71f916ec840bafb2a7799bf02f3f",
+          "original_sprite_probe": 1,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 1024,
+          "loaded": 0,
+          "filename": "authored-palette",
+          "authored_byte65": 3,
+          "palette_sha256": "e75809e0d15667ce44e6aa5c64689a4917b245eb0920094ff0b017dc0612a17a",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        }
+      ]
+    },
+    {
       "profile": "3780",
       "engine": "3842",
       "original_commit": "760cb0e6fdbda9d8a4c426f00c84623349ca5b17",

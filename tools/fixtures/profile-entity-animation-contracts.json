@@ -16,6 +16,17 @@
       "basis": "Own pinned original getter source"
     },
     {
+      "profile": "3741",
+      "engine": "3741",
+      "supported": true,
+      "source_commit": "00bcc4947748e8af10d030a82b60520bbd402e30",
+      "source_path": "engine/openborscript.c",
+      "source_sha256": "3b508bbd7e5397d030ce1de864ae02af41ebd3d98326b546715980611a3588fb",
+      "reference": "https://github.com/DCurrent/openbor/blob/00bcc4947748e8af10d030a82b60520bbd402e30/engine/openborscript.c#L3602",
+      "exact_original": true,
+      "basis": "Own pinned original getter source"
+    },
+    {
       "profile": "3780",
       "engine": "3842",
       "supported": true,

@@ -14,18 +14,21 @@ ROOT = Path(os.environ.get('OBOR_TEST_SOURCE', Path(__file__).resolve().parents[
 
 class PanelOrderTests(unittest.TestCase):
     def test_absent_panels_preserve_slots_and_loaded_layer_bindings(self):
-        for engine in ('3842', '4086', '4432', '6391', '7142', '7533', '8023'):
+        for engine in ('3741', '3842', '4086', '4432', '6391', '7142', '7533', '8023'):
             with self.subTest(engine=engine):
-                source = (ROOT / 'src/engines' / engine / 'openbor.c').read_text()
-                start = source.index('for', source.index('//panels, normal neon screen'))
-                opening = source.index('{', start)
-                depth = 1
-                end = opening + 1
-                while depth:
-                    depth += (source[end] == '{') - (source[end] == '}')
-                    end += 1
-                block = source[start:end]
-                native(r'''
+                self.check_source((ROOT / 'src/engines' / engine / 'openbor.c').read_text(),
+                                  legacy_xoffset=engine in ('3741', '3842'))
+
+    def check_source(self, source, *, legacy_xoffset):
+        start = source.index('for', source.index('//panels, normal neon screen'))
+        opening = source.index('{', start)
+        depth = 1
+        end = opening + 1
+        while depth:
+            depth += (source[end] == '{') - (source[end] == '}')
+            end += 1
+        block = source[start:end]
+        native(r'''
 #include <assert.h>
 #include <limits.h>
 #include <stdint.h>
@@ -47,7 +50,7 @@ static int panel_width = 320;
     memset((p) + (n), 0, sizeof(*(p))); \
 } while (0)
 static void bind_panels(s_level *level, int (*panels)[3],
-                        const int *order, int panelcount) {
+                const int *order, int panelcount) {
     int i, j;
     s_layer *bgl;
     (void)panelcount;
@@ -109,8 +112,8 @@ int main(void) {
     return 0;
 }
 '''.replace('BLOCK', block).replace(
-                    '#include <assert.h>', '#define XOFFSET(v) ((v).' +
-                    ('xoffset' if engine == '3842' else 'offset.x') + ')\n#include <assert.h>'))
+            '#include <assert.h>', '#define XOFFSET(v) ((v).' +
+            ('xoffset' if legacy_xoffset else 'offset.x') + ')\n#include <assert.h>'))
 
 
 if __name__ == '__main__':

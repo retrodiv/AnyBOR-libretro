@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.73 — native historical profile
+
+- Add the native v3.0 3741 profile with its script, font, audio and save formats.
+- Keep periodic damage updates inside the declared effect slots.
+- Validate startup, resource reconstruction, state continuation and shutdown ownership.
+
 ## 0.1.72 — optional sprite-mask safety
 
 - Keep absent sprite masks safe during clipping and transformed drawing without changing pixels.
