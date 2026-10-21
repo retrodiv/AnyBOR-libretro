@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.71 — portable development checks
+
+- Cover explicit profile variants in palette, text-ownership and selection regression checks.
+- Use supported native sanitizer features on each host.
+
 ## 0.1.70 — explicit historical variants
 
 - Add v3.0 6391-mod with its four-attack history, default multihit correction

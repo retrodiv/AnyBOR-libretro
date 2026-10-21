@@ -12,6 +12,7 @@ import subprocess
 import sys
 import tempfile
 from test_historical_player import function
+from native_sanitizers import sanitizer_environment
 
 UNITS = ('bitmap.c', 'sprite.c', 'spritex8p16.c',
          'spritex8p32.c', 'pixelformat.c', 'spriteq.c')
@@ -264,8 +265,7 @@ def run(engine, port_include, *, cc=None, sanitizers=True, null_offset_control=F
         rows = {}
         with (work/'errors').open('w') as errors:
             process = subprocess.Popen([str(work/'probe')], stdout=subprocess.PIPE, stderr=errors,
-                                       text=True, env=dict(os.environ, ASAN_OPTIONS='detect_leaks=1:halt_on_error=1',
-                                                          UBSAN_OPTIONS='halt_on_error=1:print_stacktrace=1'))
+                                       text=True, env=sanitizer_environment())
             try:
                 for line in process.stdout:
                     kind, _, value = line.rstrip().rpartition(' ')

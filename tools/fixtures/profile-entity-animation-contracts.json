@@ -291,6 +291,18 @@
       "basis": "Own pinned original getter source"
     },
     {
+      "profile": "6391-mod",
+      "engine": "6391",
+      "supported": false,
+      "source_commit": "494708eb34e71d1afda237873907701c4ec3a569",
+      "source_path": "engine/openborscript.c",
+      "source_sha256": "fdd3cf6cf3c0d51b6e14cca7de08809b570fd0697e22767812fc1d774630cbc1",
+      "reference": "https://github.com/DCurrent/openbor/blob/494708eb34e71d1afda237873907701c4ec3a569/engine/openborscript.c#L3268",
+      "exact_original": false,
+      "basis": "The reconstructed variant retains the official 6391 getter contract. Variant changes concern juggle collision and attack history; the referenced common getter source is not an exact original variant source.",
+      "revision": 6391
+    },
+    {
       "profile": "6392",
       "engine": "6391",
       "supported": false,

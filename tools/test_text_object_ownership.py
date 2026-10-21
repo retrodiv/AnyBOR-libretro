@@ -13,6 +13,7 @@ import sys
 import tempfile
 import unittest
 from test_historical_player import function
+from native_sanitizers import sanitizer_environment
 
 ROOT = Path(os.environ.get('OBOR_TEST_SOURCE', Path(__file__).resolve().parents[1]))
 
@@ -36,7 +37,7 @@ class TextObjectOwnershipTests(unittest.TestCase):
                     branch = setter[match.end():match.end() + end.start()]
                     helper = (function(source, 'openbor_textobj_set_text')
                               if 'openbor_textobj_set_text(' in branch else '')
-                    profiles = [p['build'] for p in pin['profiles']
+                    profiles = [int(p.get('revision', p['build'])) for p in pin['profiles']
                                 if p['engine'] == build]
                     program = r'''
 #include <assert.h>
@@ -104,12 +105,7 @@ int main(void) {
                     self.assertEqual(compile_run.returncode, 0,
                                      compile_run.stdout + compile_run.stderr)
                     run = subprocess.run([str(exe)], capture_output=True, text=True,
-                        timeout=10, env=dict(os.environ,
-                            # Apple ASan lacks LeakSanitizer; the allocation
-                            # counter above enforces the same ownership check.
-                            ASAN_OPTIONS=('detect_leaks=' + ('0' if sys.platform == 'darwin' else '1')
-                                          + ':halt_on_error=1'),
-                            UBSAN_OPTIONS='halt_on_error=1:print_stacktrace=1'))
+                        timeout=10, env=sanitizer_environment())
                     self.assertEqual(run.returncode, 0, run.stdout + run.stderr)
 
 

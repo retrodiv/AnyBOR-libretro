@@ -11,6 +11,7 @@ import subprocess
 import tempfile
 import unittest
 from test_historical_player import function
+from native_sanitizers import sanitizer_environment
 
 ROOT=Path(__file__).resolve().parents[1]
 SOURCE=Path(os.environ.get('OBOR_TEST_SOURCE',ROOT))
@@ -58,5 +59,5 @@ int main(void){
                 work=Path(name);src=work/'test.c';src.write_text(program);binary=work/'test'
                 cmd=shlex.split(os.environ.get('CC','cc'))+['-std=gnu99','-O1','-g','-fsanitize=address,undefined','-fno-omit-frame-pointer',str(src),'-o',str(binary)]
                 p=subprocess.run(cmd,text=True,capture_output=True,timeout=30);self.assertEqual(p.returncode,0,p.stdout+p.stderr)
-                p=subprocess.run([str(binary)],text=True,capture_output=True,timeout=10,env=dict(os.environ,ASAN_OPTIONS='detect_leaks=1:halt_on_error=1',UBSAN_OPTIONS='halt_on_error=1:print_stacktrace=1'));self.assertEqual(p.returncode,0,p.stdout+p.stderr);print(engine,p.stdout.strip(),flush=True)
+                p=subprocess.run([str(binary)],text=True,capture_output=True,timeout=10,env=sanitizer_environment());self.assertEqual(p.returncode,0,p.stdout+p.stderr);print(engine,p.stdout.strip(),flush=True)
 if __name__=='__main__':unittest.main()

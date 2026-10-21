@@ -9,6 +9,7 @@ import shlex
 import subprocess
 import tempfile
 import unittest
+from native_sanitizers import sanitizer_environment
 
 ROOT=Path(__file__).resolve().parents[1]
 SOURCE=Path(os.environ.get('OBOR_TEST_SOURCE',ROOT))
@@ -54,7 +55,7 @@ int main(void) {
                 if 'OBOR_TOLERANCE_DRAFT'in os.environ and engine!='8023':lexer=Path(os.environ['OBOR_TOLERANCE_DRAFT'])/'lexers'/engine/'pp_lexer.c'
                 command=shlex.split(os.environ.get('CC','cc'))+['-std=gnu99','-O1','-g','-fcommon','-ffunction-sections','-fdata-sections','-fsanitize=address,undefined','-fno-omit-frame-pointer','-DPP_TEST=1','-DSAFEALLOC_H=1',f'-DOBOR_ENGINE_BUILD={engine}','-Dstricmp=strcasecmp','-Dstrnicmp=strncasecmp','-I',str(pp),'-I',str(script),'-I',str(e/'source'),'-I',str(e/'source/gamelib'),'-I',str(SOURCE/'src/port/libretro'),str(src),str(lexer),'-Wl,--gc-sections','-o',str(binary)]
                 build=subprocess.run(command,text=True,capture_output=True,timeout=45);self.assertEqual(build.returncode,0,build.stdout+build.stderr)
-                run=subprocess.run([str(binary)],text=True,capture_output=True,timeout=10,env=dict(os.environ,ASAN_OPTIONS='detect_leaks=1:halt_on_error=1',UBSAN_OPTIONS='halt_on_error=1:print_stacktrace=1'));self.assertEqual(run.returncode,0,run.stdout+run.stderr)
+                run=subprocess.run([str(binary)],text=True,capture_output=True,timeout=10,env=sanitizer_environment());self.assertEqual(run.returncode,0,run.stdout+run.stderr)
                 self.assertIn('string_bounds=1',run.stdout);print(engine,run.stdout.strip(),flush=True)
 
 if __name__=='__main__':unittest.main()

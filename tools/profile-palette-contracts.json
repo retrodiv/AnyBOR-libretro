@@ -4203,6 +4203,73 @@
       ]
     },
     {
+      "profile": "6391-mod",
+      "engine": "6391",
+      "original_commit": "494708eb34e71d1afda237873907701c4ec3a569",
+      "original_image_source_sha256": "4a8d334ad3c887ce65b4a9d56169bf52108f908e7a8c83155c452383a06ec977",
+      "original_model_source_sha256": "09b28ba38c5c89ffe4ceba4aa1cbb5263319dda43c2251ce5a2b266a597cdfb5",
+      "basis": "The explicit reconstructed variant retains the official6391palette dispatch and capacity contract; its behavior flags affect juggles and multihit, not palettes. Original source references identify that common palette code, not an exact variant source revision.",
+      "image_reference": "https://github.com/DCurrent/openbor/blob/494708eb34e71d1afda237873907701c4ec3a569/engine/source/gamelib/loadimg.c#L1197",
+      "model_reference": "https://github.com/DCurrent/openbor/blob/494708eb34e71d1afda237873907701c4ec3a569/engine/openbor.c#L9780",
+      "cases": [
+        {
+          "bytes": 1024,
+          "loaded": 1,
+          "filename": "authored.act",
+          "authored_byte65": 0,
+          "palette_sha256": "1786de003146e394579b7e424a995cdaca9f71f916ec840bafb2a7799bf02f3f",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 1024,
+          "loaded": 1,
+          "filename": "authored.act",
+          "authored_byte65": 3,
+          "palette_sha256": "ea2d5a68d12c244fa915284e6ba5ab096118b6f3f7a3f934c8dbc821b624ac33",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 1024,
+          "loaded": 1,
+          "filename": "authored.pcx",
+          "authored_byte65": 0,
+          "palette_sha256": "1786de003146e394579b7e424a995cdaca9f71f916ec840bafb2a7799bf02f3f",
+          "original_sprite_probe": 1,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 1024,
+          "loaded": 0,
+          "filename": "authored.pcx",
+          "authored_byte65": 3,
+          "palette_sha256": "e75809e0d15667ce44e6aa5c64689a4917b245eb0920094ff0b017dc0612a17a",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 1024,
+          "loaded": 0,
+          "filename": "authored-palette",
+          "authored_byte65": 0,
+          "palette_sha256": "e75809e0d15667ce44e6aa5c64689a4917b245eb0920094ff0b017dc0612a17a",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        },
+        {
+          "bytes": 1024,
+          "loaded": 0,
+          "filename": "authored-palette",
+          "authored_byte65": 3,
+          "palette_sha256": "e75809e0d15667ce44e6aa5c64689a4917b245eb0920094ff0b017dc0612a17a",
+          "original_sprite_probe": 0,
+          "original_outside_bytes_changed": 0
+        }
+      ],
+      "revision": 6391
+    },
+    {
       "profile": "6392",
       "engine": "6391",
       "original_commit": "494708eb34e71d1afda237873907701c4ec3a569",

@@ -24,6 +24,7 @@ else:
     DEFAULT_SOURCE = HERE.parents[2] / 'AnyBOR-libretro'
     FIXTURE = HERE / 'fixtures/profile-palette-contracts.json'
 from palette_probe import program
+from native_sanitizers import sanitizer_environment
 
 SOURCE = Path(os.environ.get('OBOR_TEST_SOURCE', DEFAULT_SOURCE))
 CONTRACTS = json.loads(FIXTURE.read_text())['profiles']
@@ -45,8 +46,10 @@ class ProfilePaletteTests(unittest.TestCase):
 
     def test_profile_registry_is_complete(self):
         profiles = json.loads((SOURCE / 'src/pin.json').read_text())['profiles']
-        self.assertEqual([(p['build'], p['engine']) for p in profiles],
-                         [(p['profile'], p['engine']) for p in CONTRACTS])
+        self.assertEqual([(p['build'], p['engine'], int(p.get('revision', p['build'])))
+                          for p in profiles],
+                         [(p['profile'], p['engine'], int(p.get('revision', p['profile'])))
+                          for p in CONTRACTS])
         for contract in CONTRACTS:
             self.assertGreaterEqual(len(contract['cases']), 6, contract['profile'])
 
@@ -80,15 +83,17 @@ class ProfilePaletteTests(unittest.TestCase):
 def profile_test(contract):
     def check(self):
         executable = self.executable(contract)
+        revision = int(contract.get('revision', contract['profile']))
         for expected in contract['cases']:
             with self.subTest(palette_bytes=expected['bytes'], filename=expected['filename'],
                               authored_byte65=expected['authored_byte65']):
-                completed = subprocess.run([str(executable), contract['profile'], str(expected['bytes']),
+                completed = subprocess.run([str(executable), str(revision), str(expected['bytes']),
                                             expected['filename'], str(expected['authored_byte65'])],
-                                           capture_output=True, text=True, timeout=10)
+                                           capture_output=True, text=True, timeout=10,
+                                           env=sanitizer_environment())
                 self.assertEqual(completed.returncode, 0, completed.stderr)
                 actual = json.loads(completed.stdout.strip().splitlines()[-1])
-                self.assertEqual(actual['profile'], int(contract['profile']))
+                self.assertEqual(actual['profile'], revision)
                 self.assertEqual(actual['loaded'], expected['loaded'], contract['model_reference'])
                 self.assertEqual(hashlib.sha256(bytes.fromhex(actual['palette'])).hexdigest(),
                                  expected['palette_sha256'], contract['model_reference'])

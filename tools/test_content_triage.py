@@ -46,9 +46,9 @@ class ContentTriageTests(unittest.TestCase):
                                          'data/chars/hero.txt': b'name hero\n'}))
         run = subprocess.run([str(self.host), str(path)], capture_output=True, text=True,
                              check=True, timeout=8)
-        result = re.search(r'selection_profile=(\d+) selection_engine=(\d+)', run.stdout)
+        result = re.search(r'selection_profile=([A-Za-z0-9_-]+) selection_engine=(\d+)', run.stdout)
         self.assertIsNotNone(result, run.stdout)
-        return int(result[1]), run.stdout
+        return int(result[1]) if result[1].isdigit() else result[1], run.stdout
 
     def script(self, tag, source):
         return self.select(tag, {'data/scripts/update.c': source.encode()})
@@ -99,7 +99,9 @@ class ContentTriageTests(unittest.TestCase):
     def test_missing_exact_profile_tag_grammar_keeps_leading_zeroes(self):
         source = 'void main(){getentityproperty(self,"animation");}'
         self.assertEqual(self.script('00004199', source)[0], 4153)
-        for tag in ('4199_extra', '4199extra', '4199-'):
+        # Separated unknown variants retain their normal numeric tag contract.
+        self.assertEqual(self.script('4199_extra', source)[0], 4153)
+        for tag in ('4199extra', '4199-'):
             _, log = self.script(tag, source)
             self.assertNotIn('filename exact triage', log, tag)
 
@@ -141,14 +143,16 @@ class ContentTriageTests(unittest.TestCase):
         fixture = json.loads((Path(__file__).parent / 'fixtures' /
                               'profile-entity-animation-contracts.json').read_text())
         pins = json.loads((ROOT / 'src/pin.json').read_text())
-        self.assertEqual({str(p['build']) for p in pins['profiles']},
-                         {p['profile'] for p in fixture['profiles']})
+        self.assertEqual({(str(p['build']), p['engine'], int(p.get('revision', p['build'])))
+                          for p in pins['profiles']},
+                         {(p['profile'], p['engine'], int(p.get('revision', p['profile'])))
+                          for p in fixture['profiles']})
         rules = subprocess.check_output([str(self.host), '--rules'], text=True, timeout=8)
         rule = next(row.split() for row in rules.splitlines()
                     if row.split()[1:3] == ['10', 'animation'])
         for row in fixture['profiles']:
             actual = subprocess.check_output([str(self.host), '--rule-probe', rule[0],
-                                             row['profile'], row['engine']],
+                                             str(row.get('revision', row['profile'])), row['engine']],
                                             text=True, timeout=8)
             self.assertEqual(bool(int(actual)), row['supported'], row)
 

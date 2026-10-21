@@ -11,6 +11,7 @@ import subprocess
 import tempfile
 import unittest
 from test_historical_player import function
+from native_sanitizers import sanitizer_environment
 
 ROOT = Path(os.environ.get('OBOR_TEST_SOURCE', Path(__file__).resolve().parents[1]))
 ENGINE = Path(os.environ.get('OBOR_HISTORICAL_ENGINE', ROOT / 'src/engines/3842'))
@@ -205,8 +206,7 @@ class HistoricalLevelRuntimeTests(unittest.TestCase):
                 check=True, timeout=45)
             subprocess.run([str(work/'probe')], check=True, timeout=20,
                            stdout=subprocess.DEVNULL,
-                           env=dict(os.environ, ASAN_OPTIONS='detect_leaks=1:halt_on_error=1',
-                                    UBSAN_OPTIONS='halt_on_error=1'))
+                           env=sanitizer_environment())
 
 
 if __name__ == '__main__':

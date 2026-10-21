@@ -51,6 +51,7 @@ jobs:
       - name: Check distribution and focused regression tests
         run: |
           python3 tools/run_guarded.py --memory-mib 1024 --seconds 180 -- make check
+          python3 tools/run_guarded.py --memory-mib 512 --seconds 60 -- python3 tools/test_native_sanitizers.py
           python3 tools/run_guarded.py --memory-mib 1024 --seconds 180 -- python3 tools/test_historical_behavior.py
           python3 tools/run_guarded.py --memory-mib 512 --seconds 60 -- python3 tools/test_historical_level_runtime.py
           python3 tools/run_guarded.py --memory-mib 512 --seconds 60 -- python3 tools/test_historical_save_bonus.py
@@ -206,6 +207,7 @@ jobs:
         run: python3 tools/unpack_ci_core.py --target "$TARGET"
       - name: Exercise native runtime regressions
         run: |
+          python3 tools/test_native_sanitizers.py
           python3 tools/test_historical_behavior.py
           python3 tools/test_historical_level_runtime.py
           python3 tools/test_historical_save_bonus.py

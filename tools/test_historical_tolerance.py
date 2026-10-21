@@ -10,6 +10,7 @@ import subprocess
 import tempfile
 import unittest
 from test_historical_player import function
+from native_sanitizers import sanitizer_environment
 
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE = Path(os.environ.get('OBOR_TEST_SOURCE', ROOT))
@@ -173,7 +174,7 @@ int main(void) {
             command=shlex.split(os.environ.get('CC','cc'))+['-std=gnu99','-O1','-g','-fcommon','-ffunction-sections','-fdata-sections','-fsanitize=address,undefined','-fno-omit-frame-pointer',str(src),*extra,'-Wl,--gc-sections','-o',str(binary)]
             result=subprocess.run(command,text=True,capture_output=True,timeout=45)
             self.assertEqual(result.returncode,0,result.stdout+result.stderr)
-            result=subprocess.run([str(binary)],text=True,capture_output=True,timeout=20,env=dict(os.environ,ASAN_OPTIONS='detect_leaks=1:halt_on_error=1',UBSAN_OPTIONS='halt_on_error=1:print_stacktrace=1'))
+            result=subprocess.run([str(binary)],text=True,capture_output=True,timeout=20,env=sanitizer_environment())
             self.assertEqual(result.returncode,0,result.stdout+result.stderr)
             print(result.stdout,flush=True)
 
