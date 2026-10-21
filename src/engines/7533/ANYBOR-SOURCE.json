@@ -285,15 +285,21 @@
       "upstream_sha256": "4e6de6747c35d64825881edb6ad9665fae0d932b967984e748d9b32d4c32e9d5"
     },
     "source/gamelib/spritex8p16.c": {
-      "distributed_sha256": "88fd82093e63859c84b5962ee09715416682e4d63b5371ed795f6fef3725a2d1",
-      "modified": false,
-      "topics": [],
+      "distributed_sha256": "eddab15f0c3b13736753abc6216a68189458df53230fd8dcd13cbe4d9649ceb2",
+      "modified": true,
+      "summary": "Advance optional mask rows during top clipping only when a mask exists, preserving indexed sprite pixels.",
+      "topics": [
+        "encoded-sprite-safety"
+      ],
       "upstream_sha256": "88fd82093e63859c84b5962ee09715416682e4d63b5371ed795f6fef3725a2d1"
     },
     "source/gamelib/spritex8p32.c": {
-      "distributed_sha256": "c6a0f34c3cfc6041417a6db16021ca31b627a6fae8e4a41af07ccab0b5592dc1",
-      "modified": false,
-      "topics": [],
+      "distributed_sha256": "d9348a4905d2f1aa12d2fa608200b2f6e83418aae88797ac2db2e80cab2fff31",
+      "modified": true,
+      "summary": "Advance optional mask rows during top clipping only when a mask exists, preserving indexed sprite pixels.",
+      "topics": [
+        "encoded-sprite-safety"
+      ],
       "upstream_sha256": "c6a0f34c3cfc6041417a6db16021ca31b627a6fae8e4a41af07ccab0b5592dc1"
     },
     "source/gamelib/threads.h": {
@@ -313,9 +319,12 @@
       "upstream_sha256": "cc774c998f9a8cebf7b769910045f47a9c52bbb2380ad4f82668b1bd10178e6a"
     },
     "source/gamelib/transform.c": {
-      "distributed_sha256": "a9e34c67d1be58e2a3fe3e14f3497353d0a102a60f57e54605824c5087c9559e",
-      "modified": false,
-      "topics": [],
+      "distributed_sha256": "183335b8c2d8c376887c982a4e3c1d248802aee8a3167b00256ba0110a5f5fdf",
+      "modified": true,
+      "summary": "Keep absent transform masks null during sprite seeks and traversal; retain native masked cursor positioning.",
+      "topics": [
+        "encoded-sprite-safety"
+      ],
       "upstream_sha256": "a9e34c67d1be58e2a3fe3e14f3497353d0a102a60f57e54605824c5087c9559e"
     },
     "source/gamelib/transform.h": {

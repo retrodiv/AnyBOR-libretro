@@ -250,7 +250,7 @@ def run(engine, port_include, *, cc=None, sanitizers=True, null_offset_control=F
                  '-I', str(engine/'source'), '-I', str(engine/'source/gamelib'),
                  '-I', str(Path(port_include).resolve())]
         if sanitizers:
-            flags += ['-fsanitize=address,undefined']
+            flags += ['-fsanitize=address,undefined,pointer-overflow']
             if null_offset_control:
                 # Unmodified upstream encoders form a member address from a
                 # null destination in their sizing pass. Keep this explicitly
@@ -290,6 +290,7 @@ def run(engine, port_include, *, cc=None, sanitizers=True, null_offset_control=F
                 if process.poll() is None:
                     process.kill()
                     process.wait()
+                process.stdout.close()
             if returncode:
                 raise RuntimeError('Font raster probe failed:\n' + (work/'errors').read_text()[-12000:])
             if not rows:

@@ -1,3 +1,15 @@
+/* AnyBOR modification record: 2026-10-21.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Keep absent transform masks null during sprite seeks and traversal; retain
+ * native masked cursor positioning.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/7142.md
+ * at the source repository root. Original notices follow below.
+ */
+
 /*
  * OpenBOR - http://www.LavaLit.com
  * -----------------------------------------------------------------------
@@ -525,7 +537,7 @@ void _sprite_seek(int x, int y)
         if(lx + count > x)
         {
             cur_src = data + x - lx;
-            cur_src_mask = mask_data + x - lx;
+            cur_src_mask = mask_data ? mask_data + x - lx : NULL;
             goto quit;
         }
         lx += count;
@@ -602,7 +614,7 @@ void src_inc()
         if(cur_src != dummyptrs && cur_spr + *cur_spr > cur_src)
         {
             cur_src++;
-            cur_src_mask++;
+            if(cur_src_mask) cur_src_mask++;
         }
         else
         {
@@ -629,7 +641,7 @@ void src_dec()
         if(cur_src != dummyptrs && cur_spr + 1 < cur_src)
         {
             cur_src--;
-            cur_src_mask--;
+            if(cur_src_mask) cur_src_mask--;
         }
         else
         {

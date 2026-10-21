@@ -51,10 +51,12 @@ jobs:
       - name: Check distribution and focused regression tests
         run: |
           python3 tools/run_guarded.py --memory-mib 1024 --seconds 180 -- make check
+          python3 tools/run_guarded.py --memory-mib 512 --seconds 60 -- python3 tools/test_ci_regressions.py
           python3 tools/run_guarded.py --memory-mib 512 --seconds 60 -- python3 tools/test_native_sanitizers.py
           python3 tools/run_guarded.py --memory-mib 1024 --seconds 180 -- python3 tools/test_historical_behavior.py
           python3 tools/run_guarded.py --memory-mib 512 --seconds 60 -- python3 tools/test_historical_level_runtime.py
           python3 tools/run_guarded.py --memory-mib 512 --seconds 60 -- python3 tools/test_historical_save_bonus.py
+          python3 tools/run_guarded.py --memory-mib 512 --seconds 60 -- python3 tools/test_sprite_masks.py
           python3 tools/run_guarded.py --memory-mib 512 --seconds 60 -- python3 tools/test_sprite_encoding.py
           python3 tools/run_guarded.py --memory-mib 512 --seconds 90 -- python3 tools/test_font_raster.py
           python3 tools/run_guarded.py --memory-mib 1024 --seconds 180 -- python3 tools/test_panel_order.py
@@ -206,31 +208,48 @@ jobs:
       - name: Verify and unpack the exact built core
         run: python3 tools/unpack_ci_core.py --target "$TARGET"
       - name: Exercise native runtime regressions
+        shell: bash
         run: |
-          python3 tools/test_native_sanitizers.py
-          python3 tools/test_historical_behavior.py
-          python3 tools/test_historical_level_runtime.py
-          python3 tools/test_historical_save_bonus.py
-          python3 tools/test_sprite_encoding.py
-          python3 tools/test_font_raster.py
-          python3 tools/test_panel_order.py
-          python3 tools/test_6392_profile.py
-          python3 tools/test_profile_identity.py
-          python3 tools/test_executable_build_tag.py
-          python3 tools/test_branch_profiles.py
-          python3 tools/test_profile_palettes.py
-          python3 tools/test_early_v3_profiles.py
-          python3 tools/test_property_error_lists.py
-          python3 tools/test_text_object_ownership.py
-          python3 tools/test_content_triage.py
-          python3 tools/test_write_watch.py
-          python3 tools/smoke.py --core anybor_libretro.dylib
-          python3 tools/regression.py --core anybor_libretro.dylib
-          python3 tools/test_multiplayer.py --core anybor_libretro.dylib
-          python3 tools/test_crt.py --core anybor_libretro.dylib
-          python3 tools/test_geometry.py --core anybor_libretro.dylib
-          python3 tools/test_4453.py --core anybor_libretro.dylib
-          python3 tools/test_6330_6510.py --core anybor_libretro.dylib
+          failures=()
+          run_check() {
+            if "$@"; then
+              return 0
+            else
+              code=$?
+              failures+=("$* (exit $code)")
+              printf "::error::%s exited %s\n" "$*" "$code"
+            fi
+          }
+          run_check python3 tools/test_native_sanitizers.py
+          run_check python3 tools/test_historical_behavior.py
+          run_check python3 tools/test_historical_level_runtime.py
+          run_check python3 tools/test_historical_save_bonus.py
+          run_check python3 tools/test_sprite_masks.py
+          run_check python3 tools/test_sprite_encoding.py
+          run_check python3 tools/test_font_raster.py
+          run_check python3 tools/test_panel_order.py
+          run_check python3 tools/test_6392_profile.py
+          run_check python3 tools/test_profile_identity.py
+          run_check python3 tools/test_executable_build_tag.py
+          run_check python3 tools/test_branch_profiles.py
+          run_check python3 tools/test_profile_palettes.py
+          run_check python3 tools/test_early_v3_profiles.py
+          run_check python3 tools/test_property_error_lists.py
+          run_check python3 tools/test_text_object_ownership.py
+          run_check python3 tools/test_content_triage.py
+          run_check python3 tools/test_write_watch.py
+          run_check python3 tools/smoke.py --core anybor_libretro.dylib
+          run_check python3 tools/regression.py --core anybor_libretro.dylib
+          run_check python3 tools/test_multiplayer.py --core anybor_libretro.dylib
+          run_check python3 tools/test_crt.py --core anybor_libretro.dylib
+          run_check python3 tools/test_geometry.py --core anybor_libretro.dylib
+          run_check python3 tools/test_4453.py --core anybor_libretro.dylib
+          run_check python3 tools/test_6330_6510.py --core anybor_libretro.dylib
+          if (( ${#failures[@]} )); then
+            printf "Failed regression commands (%s):\n" "${#failures[@]}"
+            printf "  %s\n" "${failures[@]}"
+            exit 1
+          fi
       - uses: actions/upload-artifact@v4
         if: always()
         with:

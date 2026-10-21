@@ -195,6 +195,11 @@ class HistoricalLevelRuntimeTests(unittest.TestCase):
             (ENGINE/'source/scriptlib/ScriptVariant.h').read_text(),
             (ENGINE/'source/scriptlib/ScriptVariant.c').read_text(),
             (ENGINE/'source/utils.c').read_text(), PROFILES)
+        # Imported historical bodies mix tabs and spaces. Normalize only
+        # leading indentation so compiler diagnostics see the same columns;
+        # retain every C token and all warning checks.
+        program = re.sub(r'^[ \t]+', lambda m: m.group(0).expandtabs(4),
+                         program, flags=re.MULTILINE)
         with tempfile.TemporaryDirectory(prefix='historical-level-runtime-') as temp:
             work = Path(temp)
             source = work/'probe.c'

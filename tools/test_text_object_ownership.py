@@ -98,7 +98,7 @@ int main(void) {
                     src = work / (build + '.c')
                     exe = work / build
                     src.write_text(program)
-                    cc = shlex.split(os.environ.get('CC', 'cc'))
+                    cc = shlex.split(os.environ.get('HOST_CC', os.environ.get('CC', 'cc')))
                     compile_run = subprocess.run(cc + ['-std=gnu99', '-O1', '-g',
                         '-fsanitize=address,undefined', '-fno-omit-frame-pointer',
                         str(src), '-o', str(exe)], capture_output=True, text=True, timeout=30)

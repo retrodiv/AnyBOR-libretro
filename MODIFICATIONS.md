@@ -1069,5 +1069,8 @@ retain their native representation. Clip endpoints use bounded arithmetic;
 empty intersections with the output viewport return before raster access.
 Indexed font sheets must provide an owned palette with enough entries for the
 active output format before their colors are copied. Valid font pixels remain
-unchanged. Encoded sprite validation remains strict.
+unchanged. Top clipping advances an optional sprite mask only when it exists;
+unmasked indexed sprites retain the same pixels without null-pointer arithmetic.
+Transform seeks and cursor steps keep absent mask pointers null.
+Encoded sprite validation remains strict.
 

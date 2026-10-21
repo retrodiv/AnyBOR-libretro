@@ -348,15 +348,21 @@
       "upstream_sha256": "9ea9a6e08b0dde47dd22908e2ba5fad3307c106550c8a7741d1c86c85fdc85f0"
     },
     "source/gamelib/spritex8p16.c": {
-      "distributed_sha256": "2a3cf17d56f92f122ee229cb288fd45676cb72af5442626cb8a8d399e862aee8",
-      "modified": false,
-      "topics": [],
+      "distributed_sha256": "651a6f93acf34b984c001ae59a9ef6b5e18a71ce3b9eecd8e548a9e812313c36",
+      "modified": true,
+      "summary": "Advance optional mask rows during top clipping only when a mask exists, preserving indexed sprite pixels.",
+      "topics": [
+        "encoded-sprite-safety"
+      ],
       "upstream_sha256": "2a3cf17d56f92f122ee229cb288fd45676cb72af5442626cb8a8d399e862aee8"
     },
     "source/gamelib/spritex8p32.c": {
-      "distributed_sha256": "9461fddcc732973c80aa1e01fb064edd131ac059f3e0371f37a854b19c3ef100",
-      "modified": false,
-      "topics": [],
+      "distributed_sha256": "da938b59b619b3559dc44c7fd85fc948a4e5c9b01caa9301fa5ec59b49c127de",
+      "modified": true,
+      "summary": "Advance optional mask rows during top clipping only when a mask exists, preserving indexed sprite pixels.",
+      "topics": [
+        "encoded-sprite-safety"
+      ],
       "upstream_sha256": "9461fddcc732973c80aa1e01fb064edd131ac059f3e0371f37a854b19c3ef100"
     },
     "source/gamelib/threads.h": {

@@ -1,3 +1,15 @@
+/* AnyBOR modification record: 2026-10-21.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Advance optional mask rows during top clipping only when a mask exists,
+ * preserving indexed sprite pixels.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/4086.md
+ * at the source repository root. Original notices follow below.
+ */
+
 /*
  * OpenBOR - http://www.chronocrash.com
  * -----------------------------------------------------------------------
@@ -424,7 +436,7 @@ void putsprite_x8p16(
         int diff = y - ymin;
         h += diff; // subtract from height
         linetab -= diff; // add to linetab
-        masklinetab -= diff;
+        if(masklinetab) masklinetab -= diff;
         y = ymin; // add to y
     }
     // clip bottom

@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.72 — optional sprite-mask safety
+
+- Keep absent sprite masks safe during clipping and transformed drawing without changing pixels.
+- Collect all macOS regression failures and close font-probe output streams.
+
 ## 0.1.71 — portable development checks
 
 - Cover explicit profile variants in palette, text-ownership and selection regression checks.

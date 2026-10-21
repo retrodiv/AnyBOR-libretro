@@ -109,6 +109,19 @@ Source: src/engines/7533/source/preprocessorlib/pp_parser.c
  * at the source repository root. Original notices follow below.
  */
 
+Source: src/engines/3842/source/gamelib/spritex8p16.c, src/engines/3842/source/gamelib/spritex8p32.c
+/* AnyBOR modification record: 2026-10-21.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Advance optional mask rows during top clipping only when a mask exists,
+ * preserving indexed sprite pixels.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/3842.md
+ * at the source repository root. Original notices follow below.
+ */
+
 Source: src/engines/4432/openbor.h
 /* AnyBOR modification record: 2026-09-30.
  * Port maintained by retrodiv <retrodiv@proton.me>.
@@ -222,6 +235,19 @@ Source: src/engines/7533/source/utils.c
  * instead of the glibc-only <malloc.h>. Derive output names from the content
  * basename with explicit destination capacities, and reject overflowing
  * output path joins.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/7533.md
+ * at the source repository root. Original notices follow below.
+ */
+
+Source: src/engines/7533/source/gamelib/transform.c
+/* AnyBOR modification record: 2026-10-21.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Keep absent transform masks null during sprite seeks and traversal; retain
+ * native masked cursor positioning.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/7533.md
  * at the source repository root. Original notices follow below.
@@ -455,6 +481,19 @@ Source: src/deps/libvpx/vp9/encoder/vp9_encoder.c
  *  tree. An additional intellectual property rights grant can be found
  *  in the file PATENTS.  All contributing project authors may
  *  be found in the AUTHORS file in the root of the source tree.
+ */
+
+Source: src/engines/7142/source/gamelib/spritex8p16.c, src/engines/7142/source/gamelib/spritex8p32.c
+/* AnyBOR modification record: 2026-10-21.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Advance optional mask rows during top clipping only when a mask exists,
+ * preserving indexed sprite pixels.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/7142.md
+ * at the source repository root. Original notices follow below.
  */
 
 Source: src/deps/libvorbis/lib/psy.c
@@ -1351,6 +1390,19 @@ Source: src/engines/4432/source/gamelib/soundmix.c
  * at the source repository root. Original notices follow below.
  */
 
+Source: src/engines/6391/source/gamelib/spritex8p16.c, src/engines/6391/source/gamelib/spritex8p32.c
+/* AnyBOR modification record: 2026-10-21.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Advance optional mask rows during top clipping only when a mask exists,
+ * preserving indexed sprite pixels.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/6391.md
+ * at the source repository root. Original notices follow below.
+ */
+
 Source: src/deps/libogg/include/ogg/ogg.h
 /********************************************************************
  *                                                                  *
@@ -1530,6 +1582,19 @@ Source: src/engines/8023/source/scriptlib/ImportCache.c
  * import metadata only while an interpreter still owns parser state.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/8023.md
+ * at the source repository root. Original notices follow below.
+ */
+
+Source: src/engines/7142/source/gamelib/transform.c
+/* AnyBOR modification record: 2026-10-21.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Keep absent transform masks null during sprite seeks and traversal; retain
+ * native masked cursor positioning.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/7142.md
  * at the source repository root. Original notices follow below.
  */
 
@@ -2324,6 +2389,19 @@ Source: src/engines/7533/source/gamelib/threads.h
  * Declare the libretro thread, mutex and condition types.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/7533.md
+ * at the source repository root. Original notices follow below.
+ */
+
+Source: src/engines/8023/source/gamelib/spritex8p16.c, src/engines/8023/source/gamelib/spritex8p32.c
+/* AnyBOR modification record: 2026-10-21.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Advance optional mask rows during top clipping only when a mask exists,
+ * preserving indexed sprite pixels.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/8023.md
  * at the source repository root. Original notices follow below.
  */
 
@@ -4542,6 +4620,19 @@ Source: src/engines/7533/source/gamelib/loadimg.c
  * at the source repository root. Original notices follow below.
  */
 
+Source: src/engines/4432/source/gamelib/spritex8p16.c, src/engines/4432/source/gamelib/spritex8p32.c
+/* AnyBOR modification record: 2026-10-21.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Advance optional mask rows during top clipping only when a mask exists,
+ * preserving indexed sprite pixels.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/4432.md
+ * at the source repository root. Original notices follow below.
+ */
+
 Source: src/deps/libpng/intel/filter_sse2_intrinsics.c
 /* filter_sse2_intrinsics.c - SSE2 optimized filter functions
  *
@@ -4804,6 +4895,19 @@ Source: src/engines/3400/openbor.h, src/engines/3842/openbor.h
  * Copyright (c) 2004 - 2011 OpenBOR Team
  */
 
+Source: src/engines/7533/source/gamelib/spritex8p16.c, src/engines/7533/source/gamelib/spritex8p32.c
+/* AnyBOR modification record: 2026-10-21.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Advance optional mask rows during top clipping only when a mask exists,
+ * preserving indexed sprite pixels.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/7533.md
+ * at the source repository root. Original notices follow below.
+ */
+
 Source: src/deps/libvorbis/lib/psy.h
 /********************************************************************
  *                                                                  *
@@ -4902,6 +5006,19 @@ Source: src/engines/3842/source/scriptlib/Interpreter.c
  * release it once runtime instructions are ready.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/3842.md
+ * at the source repository root. Original notices follow below.
+ */
+
+Source: src/engines/4086/source/gamelib/spritex8p16.c, src/engines/4086/source/gamelib/spritex8p32.c
+/* AnyBOR modification record: 2026-10-21.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Advance optional mask rows during top clipping only when a mask exists,
+ * preserving indexed sprite pixels.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/4086.md
  * at the source repository root. Original notices follow below.
  */
 
@@ -7433,6 +7550,19 @@ Source: src/deps/libvpx/vp9/encoder/x86/vp9_dct_sse2.asm, src/deps/libvpx/vpx_ds
 ;  in the file PATENTS.  All contributing project authors may
 ;  be found in the AUTHORS file in the root of the source tree.
 ;
+
+Source: src/engines/8023/source/gamelib/transform.c
+/* AnyBOR modification record: 2026-10-21.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Keep absent transform masks null during sprite seeks and traversal; retain
+ * native masked cursor positioning.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/8023.md
+ * at the source repository root. Original notices follow below.
+ */
 
 Source: src/deps/libpng/intel/intel_init.c
 /* intel_init.c - SSE2 optimized filter functions
