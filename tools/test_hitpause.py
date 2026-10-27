@@ -5,6 +5,7 @@ profile and declared original context runs separately with independent values.
 SPDX-License-Identifier: BSD-3-Clause
 Copyright (c) 2026 retrodiv <retrodiv@proton.me>
 """
+from contract_fixtures import load_contract_fixture, contract_profiles
 import json
 import os
 from pathlib import Path
@@ -47,7 +48,7 @@ def program(engine,layout,mode,cases):
 class HitpauseTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.fixture=json.loads(FIXTURE.read_text());cls.layouts=cls.fixture['layouts']
+        cls.fixture=load_contract_fixture(FIXTURE);cls.layouts=cls.fixture['layouts']
         cls.contexts={}
         for row in cls.fixture['contexts']:
             key=(row['engine'],row['revision'])
@@ -89,7 +90,7 @@ class HitpauseTests(unittest.TestCase):
         self.assertEqual(json.loads(observed),dict(status='PASS',cases=len(self.fixture['cases'][row['mode']])))
 
     def test_every_affected_profile_has_an_original_contract(self):
-        for profile in self.pin['profiles']:
+        for profile in contract_profiles(self.fixture, self.pin['profiles']):
             if profile['engine'] in self.layouts:
                 self.assertIn((profile['engine'],int(profile.get('revision',profile['build']))),self.contexts)
         for row in self.contexts.values():
@@ -100,7 +101,7 @@ class HitpauseTests(unittest.TestCase):
             self.assertRegex(row['source_fragment_sha256'],r'^[0-9a-f]{64}$')
 
     def test_each_registered_profile_preserves_pause_values(self):
-        for profile in self.pin['profiles']:
+        for profile in contract_profiles(self.fixture, self.pin['profiles']):
             if profile['engine'] in self.layouts:
                 key=(profile['engine'],int(profile.get('revision',profile['build'])))
                 with self.subTest(profile=profile['build']):self.check_context(self.contexts[key])

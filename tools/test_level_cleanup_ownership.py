@@ -4,6 +4,7 @@ Script disposal is observed separately from ownership of level allocations.
 SPDX-License-Identifier: BSD-3-Clause
 Copyright (c) 2026 retrodiv <retrodiv@proton.me>
 """
+from contract_fixtures import load_contract_fixture, contract_profiles
 import json
 import os
 from pathlib import Path
@@ -24,7 +25,7 @@ CONTRACTS = Path(__file__).parent / 'fixtures/level-cleanup-layouts.json'
 
 class LevelCleanupOwnershipTests(unittest.TestCase):
     def test_base_text_release_and_pointer_reset_per_profile(self):
-        fixture = json.loads(CONTRACTS.with_name('text-release-contracts.json').read_text())
+        fixture = load_contract_fixture(CONTRACTS.with_name('text-release-contracts.json'))
         pin = json.loads((SOURCE / 'src/pin.json').read_text())
         self.assertEqual(fixture['schema'], 1)
         compiler = shlex.split(os.environ.get('HOST_CC', 'cc'))
@@ -35,7 +36,7 @@ class LevelCleanupOwnershipTests(unittest.TestCase):
         link = ['-Wl,-dead_strip'] if sys.platform == 'darwin' else ['-no-pie', '-Wl,--gc-sections']
         for row in fixture['models']:
             with self.subTest(engine=row['engine']), tempfile.TemporaryDirectory(prefix='native-text-release-') as folder:
-                required = {int(p.get('revision', p['build'])) for p in pin['profiles']
+                required = {int(p.get('revision', p['build'])) for p in contract_profiles(fixture, pin['profiles'])
                             if p['engine'] == row['engine']}
                 self.assertTrue(required and required <= set(row['revisions']))
                 self.assertEqual(row['revisions'], [s['revision'] for s in row['original_sources']])
@@ -69,7 +70,7 @@ class LevelCleanupOwnershipTests(unittest.TestCase):
 
     def test_owned_level_resources_are_released_once_per_profile(self):
         pin = json.loads((SOURCE / 'src/pin.json').read_text())
-        layouts = json.loads(CONTRACTS.read_text())['engines']
+        layouts = load_contract_fixture(CONTRACTS)['engines']
         engines = {row['build'] for row in pin['engines']}
         self.assertEqual(len(layouts), len({row['engine'] for row in layouts}))
         compiler = shlex.split(os.environ.get('HOST_CC', 'cc'))
@@ -89,9 +90,12 @@ class LevelCleanupOwnershipTests(unittest.TestCase):
                     root = SOURCE / 'src/engines' / engine
                     source = (root / 'openbor.c').read_bytes().decode('utf-8', 'surrogateescape')
                     stream_options={}
-                    facts = json.loads(CONTRACTS.with_name('profile-level-table-cleanup.json').read_text())
+                    facts = load_contract_fixture(CONTRACTS.with_name('profile-level-table-cleanup.json'))
                     if engine == '3741':
-                        revisions = sorted(set(revisions) | set(facts['boundary_controls']))
+                        retained = {int(row.get('revision', row['build']))
+                                    for row in contract_profiles(facts, pin['profiles'])
+                                    if row['engine'] == engine}
+                        revisions = sorted(retained | set(facts['boundary_controls']))
                         own = {row['revision']: row for row in facts['sources']}
                         self.assertTrue(set(revisions) <= set(own))
                         stream_options['release_extents'] = {

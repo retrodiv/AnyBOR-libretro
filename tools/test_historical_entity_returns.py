@@ -7,6 +7,7 @@ engine actions are stubs. This is not a full interpreter or gameplay test.
 SPDX-License-Identifier: BSD-3-Clause
 Copyright (c) 2026 retrodiv <retrodiv@proton.me>
 """
+from contract_fixtures import load_contract_fixture, contract_profiles
 import json
 import os
 from pathlib import Path
@@ -23,8 +24,8 @@ from historical_position_setters import render_position_setters
 
 ROOT=Path(__file__).resolve().parents[1]
 SOURCE=Path(os.environ.get('OBOR_TEST_SOURCE',ROOT))
-CONTRACTS=json.loads((Path(__file__).parent/
-    'fixtures/profile-entity-return-contracts.json').read_text())
+CONTRACTS=load_contract_fixture(Path(__file__).parent/
+    'fixtures/profile-entity-return-contracts.json')
 
 
 def scalar_entry(source,properties,name='openbor_changeentityproperty'):
@@ -175,7 +176,7 @@ int main(int argc,char **argv) {
 
 class EntityReturnTests(unittest.TestCase):
     def test_position_setter_availability_and_independent_coordinates(self):
-        fixture=json.loads((Path(__file__).parent/'fixtures/profile-position-setter-contracts.json').read_text())
+        fixture=load_contract_fixture(Path(__file__).parent/'fixtures/profile-position-setter-contracts.json')
         pin=json.loads((SOURCE/'src/pin.json').read_text())
         self.assertEqual(fixture['schema'],1)
         compiler=shlex.split(os.environ.get('HOST_CC','cc'))
@@ -187,7 +188,7 @@ class EntityReturnTests(unittest.TestCase):
         for row in fixture['models']:
             with self.subTest(engine=row['engine']),tempfile.TemporaryDirectory(prefix='native-position-')as folder:
                 revisions=[c['revision']for c in row['contracts']]
-                required={int(p.get('revision',p['build']))for p in pin['profiles']if p['engine']==row['engine']}
+                required={int(p.get('revision',p['build']))for p in contract_profiles(fixture, pin['profiles'])if p['engine']==row['engine']}
                 self.assertTrue(required and required<=set(revisions))
                 self.assertEqual(revisions,[s['revision']for s in row['original_sources']])
                 for ref in row['original_sources']:
@@ -227,7 +228,7 @@ class EntityReturnTests(unittest.TestCase):
         self.assertEqual(len(revisions),len(set(revisions)))
         properties={row['property'] for row in CONTRACTS['scalar_fields']}
         pin=json.loads((SOURCE/'src/pin.json').read_text())
-        for profile in pin['profiles']:
+        for profile in contract_profiles(Path(__file__).parent / 'fixtures/profile-entity-return-contracts.json', pin['profiles']):
             if profile['engine']=='3741':
                 self.assertIn(int(profile.get('revision',profile['build'])),revisions)
         for row in rows:

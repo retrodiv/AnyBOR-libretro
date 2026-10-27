@@ -3,6 +3,7 @@
 SPDX-License-Identifier: BSD-3-Clause
 Copyright (c) 2026 retrodiv <retrodiv@proton.me>
 """
+from contract_fixtures import load_contract_fixture, contract_profiles
 import json
 import os
 from pathlib import Path
@@ -23,7 +24,7 @@ SOURCE=Path(os.environ.get('OBOR_TEST_SOURCE',Path(__file__).resolve().parents[1
 
 class NativeTextMapperTests(unittest.TestCase):
     def test_each_published_profile_native_names_numbers_and_returns(self):
-        fixture=json.loads(Path(__file__).with_name('fixtures').joinpath('native-text-mapper-contracts.json').read_text())
+        fixture=load_contract_fixture(Path(__file__).with_name('fixtures').joinpath('native-text-mapper-contracts.json'))
         pin=json.loads((SOURCE/'src/pin.json').read_text())
         cc=shlex.split(os.environ.get('HOST_CC',os.environ.get('CC','cc')))
         version=subprocess.check_output(cc+['--version'],text=True,timeout=10)
@@ -33,7 +34,7 @@ class NativeTextMapperTests(unittest.TestCase):
         for model in fixture['models']:
             with self.subTest(model=model['id']),tempfile.TemporaryDirectory(prefix='native-text-mapper-') as temporary:
                 engine=model['engine'];root=SOURCE/'src/engines'/engine
-                required={int(p.get('revision',p['build'])) for p in pin['profiles'] if p['engine']==engine}
+                required={int(p.get('revision',p['build'])) for p in contract_profiles(fixture, pin['profiles']) if p['engine']==engine}
                 covered={n for m in fixture['models'] if m['engine']==engine for n in m['revisions']}
                 self.assertTrue(required<=covered)
                 script=(root/'openborscript.c').read_text()

@@ -3,6 +3,7 @@
 SPDX-License-Identifier: BSD-3-Clause
 Copyright (c) 2026 retrodiv <retrodiv@proton.me>
 """
+from contract_fixtures import load_contract_fixture, contract_profiles
 import hashlib
 import json
 import os
@@ -35,8 +36,8 @@ def program(engine, expected_path, queries):
 class PaletteLutTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.fixture = json.loads((FIXTURES / 'palette-lut-contracts.json').read_text())
-        cls.queries = json.loads((FIXTURES / 'palette-lut-queries.json').read_text())
+        cls.fixture = load_contract_fixture(FIXTURES / 'palette-lut-contracts.json')
+        cls.queries = load_contract_fixture(FIXTURES / 'palette-lut-queries.json')
         expected = FIXTURES / 'palette-luts.bin'
         raw = expected.read_bytes()
         if (len(raw) != cls.fixture['reference_bytes'] or
@@ -88,7 +89,7 @@ class PaletteLutTests(unittest.TestCase):
         self.assertEqual(observed, dict(status='PASS', bytes=self.fixture['table_bytes'], queries=len(self.queries)))
 
     def test_every_affected_profile_has_own_source_contract(self):
-        for profile in self.pin['profiles']:
+        for profile in contract_profiles(self.fixture, self.pin['profiles']):
             if self.affected(profile):
                 self.assertIn((profile['engine'], int(profile.get('revision', profile['build']))), self.contexts)
         for row in self.contexts.values():
@@ -99,7 +100,7 @@ class PaletteLutTests(unittest.TestCase):
                 self.assertRegex(digest, r'^[0-9a-f]{64}$')
 
     def test_each_registered_profile_preserves_indexed_tables_and_queries(self):
-        for profile in self.pin['profiles']:
+        for profile in contract_profiles(self.fixture, self.pin['profiles']):
             if self.affected(profile):
                 with self.subTest(profile=profile['build']):
                     self.check_context(self.contexts[profile['engine'], int(profile.get('revision', profile['build']))])

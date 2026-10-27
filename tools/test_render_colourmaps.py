@@ -3,6 +3,7 @@
 SPDX-License-Identifier: BSD-3-Clause
 Copyright (c) 2026 retrodiv <retrodiv@proton.me>
 """
+from contract_fixtures import load_contract_fixture, contract_profiles
 import json
 import os
 from pathlib import Path
@@ -34,7 +35,7 @@ def profile_program(code):
 class RenderColourmapTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.fixture=json.loads(FIXTURE.read_text());cls.rows=cls.fixture['sources']
+        cls.fixture=load_contract_fixture(FIXTURE);cls.rows=cls.fixture['sources']
         cls.pin=json.loads((SOURCE/'src/pin.json').read_text());cls.contexts={row['revision']:row for row in cls.rows}
         engine=SOURCE/'src/engines/3741';text=(engine/'openbor.c').read_text()
         parts=extract_render_colourmaps({name:function(text,name)for name in
@@ -67,7 +68,7 @@ class RenderColourmapTests(unittest.TestCase):
 
     def test_fixture_and_registered_sources_have_explicit_contexts(self):
         self.assertEqual(len(self.rows),len(self.contexts))
-        for profile in self.pin['profiles']:
+        for profile in contract_profiles(self.fixture, self.pin['profiles']):
             if profile['engine']=='3741':self.assertIn(int(profile.get('revision',profile['build'])),self.contexts)
         for row in self.rows:
             self.assertRegex(row['source_commit'],r'^[0-9a-f]{40}$')
@@ -80,7 +81,7 @@ class RenderColourmapTests(unittest.TestCase):
             with self.subTest(profile=row['revision']):self.check_context(row['revision'])
 
     def test_every_registered_context_preserves_selection_and_bounded_results(self):
-        for profile in self.pin['profiles']:
+        for profile in contract_profiles(self.fixture, self.pin['profiles']):
             if profile['engine']=='3741':
                 with self.subTest(profile=profile['build']):
                     self.check_context(int(profile.get('revision',profile['build'])))

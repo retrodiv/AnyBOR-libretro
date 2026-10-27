@@ -6,6 +6,7 @@ tracking retains the engine arena's final retirement boundary explicitly.
 SPDX-License-Identifier: BSD-3-Clause
 Copyright (c) 2026 retrodiv <retrodiv@proton.me>
 """
+from contract_fixtures import load_contract_fixture, contract_profiles, contract_revisions
 import json
 import hashlib
 import os
@@ -27,7 +28,7 @@ TOOLS = Path(__file__).parent
 class ImportTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.fixture = json.loads((TOOLS / 'fixtures/profile-import-contracts.json').read_text())
+        cls.fixture = load_contract_fixture(TOOLS / 'fixtures/profile-import-contracts.json')
         temporary = tempfile.TemporaryDirectory(prefix='anybor-native-imports-')
         cls.addClassCleanup(temporary.cleanup)
         work = Path(temporary.name)
@@ -99,12 +100,12 @@ class ImportTests(unittest.TestCase):
                 json.dumps(receipt, indent=2)+'\n')
 
     def grammar_contracts(self):
-        fixture = json.loads((TOOLS / 'fixtures/profile-grammar-contracts.json').read_text())
+        fixture = load_contract_fixture(TOOLS / 'fixtures/profile-grammar-contracts.json')
         rows = fixture['sources']
         revisions = {row['revision'] for row in rows}
         self.assertEqual(len(rows), len(revisions))
-        self.assertTrue({3761, 3769, 3773, *fixture['boundary_controls']} <= revisions)
-        for profile in json.loads((SOURCE / 'src/pin.json').read_text())['profiles']:
+        self.assertTrue(contract_revisions(fixture, {3761, 3769, 3773, *fixture['boundary_controls']}) <= revisions)
+        for profile in contract_profiles(fixture, json.loads((SOURCE / 'src/pin.json').read_text())['profiles']):
             if profile['engine'] == '3842':
                 self.assertIn(int(profile.get('revision', profile['build'])), revisions)
         for row in rows:
@@ -171,8 +172,8 @@ class ImportTests(unittest.TestCase):
         rows = self.fixture['sources']
         revisions = {row['revision'] for row in rows}
         self.assertEqual(len(rows), len(revisions))
-        self.assertTrue({3761, 3769, 3773, 3778, 3779} <= revisions)
-        for profile in json.loads((SOURCE / 'src/pin.json').read_text())['profiles']:
+        self.assertTrue(set(self.fixture['boundary_controls']) <= revisions)
+        for profile in contract_profiles(self.fixture, json.loads((SOURCE / 'src/pin.json').read_text())['profiles']):
             if profile['engine'] == '3842':
                 self.assertIn(int(profile.get('revision', profile['build'])), revisions)
         for row in rows:
@@ -183,12 +184,12 @@ class ImportTests(unittest.TestCase):
                 self.assertRegex(digest, r'^[0-9a-f]{64}$')
 
     def test_native_call_completion_reset_reentry_and_refusal_per_profile(self):
-        fixture = json.loads((TOOLS / 'fixtures/profile-call-completion-contracts.json').read_text())
+        fixture = load_contract_fixture(TOOLS / 'fixtures/profile-call-completion-contracts.json')
         rows = fixture['sources']
         revisions = {row['revision'] for row in rows}
         self.assertEqual(len(rows), len(revisions))
-        self.assertTrue({3761, 3769, 3773, *fixture['boundary_controls']} <= revisions)
-        for profile in json.loads((SOURCE / 'src/pin.json').read_text())['profiles']:
+        self.assertTrue(contract_revisions(fixture, {3761, 3769, 3773, *fixture['boundary_controls']}) <= revisions)
+        for profile in contract_profiles(fixture, json.loads((SOURCE / 'src/pin.json').read_text())['profiles']):
             if profile['engine'] == '3842':
                 self.assertIn(int(profile.get('revision', profile['build'])), revisions)
         observations = []
@@ -210,12 +211,12 @@ class ImportTests(unittest.TestCase):
             Path(os.environ['OBOR_CALL_OBSERVATIONS']).write_text(json.dumps(observations, indent=2)+'\n')
 
     def test_native_mapper_argument_admission_per_profile(self):
-        fixture = json.loads((TOOLS / 'fixtures/profile-mapper-argument-contracts.json').read_text())
+        fixture = load_contract_fixture(TOOLS / 'fixtures/profile-mapper-argument-contracts.json')
         rows = fixture['sources']
         revisions = {row['revision'] for row in rows}
         self.assertEqual(len(rows), len(revisions))
-        self.assertTrue({3761, 3769, 3773, *fixture['boundary_controls']} <= revisions)
-        for profile in json.loads((SOURCE / 'src/pin.json').read_text())['profiles']:
+        self.assertTrue(contract_revisions(fixture, {3761, 3769, 3773, *fixture['boundary_controls']}) <= revisions)
+        for profile in contract_profiles(fixture, json.loads((SOURCE / 'src/pin.json').read_text())['profiles']):
             if profile['engine'] == '3842':
                 self.assertIn(int(profile.get('revision', profile['build'])), revisions)
         observations = []
@@ -244,12 +245,12 @@ class ImportTests(unittest.TestCase):
             Path(os.environ['OBOR_MAPPER_OBSERVATIONS']).write_text(json.dumps(observations, indent=2)+'\n')
 
     def test_native_compiled_mapper_aliases_per_profile(self):
-        fixture = json.loads((TOOLS / 'fixtures/profile-vm-alias-contracts.json').read_text())
+        fixture = load_contract_fixture(TOOLS / 'fixtures/profile-vm-alias-contracts.json')
         rows = fixture['sources']
         revisions = {row['revision'] for row in rows}
         self.assertEqual(len(rows), len(revisions))
-        self.assertTrue({3761, 3769, 3773, *fixture['boundary_controls']} <= revisions)
-        for profile in json.loads((SOURCE / 'src/pin.json').read_text())['profiles']:
+        self.assertTrue(contract_revisions(fixture, {3761, 3769, 3773, *fixture['boundary_controls']}) <= revisions)
+        for profile in contract_profiles(fixture, json.loads((SOURCE / 'src/pin.json').read_text())['profiles']):
             if profile['engine'] == '3842':
                 self.assertIn(int(profile.get('revision', profile['build'])), revisions)
         observations = []
@@ -300,12 +301,12 @@ class ImportTests(unittest.TestCase):
                 json.dumps(observations, indent=2)+'\n')
 
     def test_native_runtime_error_diagnostics_per_profile(self):
-        fixture = json.loads((TOOLS / 'fixtures/profile-vm-step-contracts.json').read_text())
+        fixture = load_contract_fixture(TOOLS / 'fixtures/profile-vm-step-contracts.json')
         rows = fixture['sources']
         revisions = {row['revision'] for row in rows}
         self.assertEqual(len(rows), len(revisions))
-        self.assertTrue({3761, 3769, 3773, *fixture['boundary_controls']} <= revisions)
-        for profile in json.loads((SOURCE / 'src/pin.json').read_text())['profiles']:
+        self.assertTrue(contract_revisions(fixture, {3761, 3769, 3773, *fixture['boundary_controls']}) <= revisions)
+        for profile in contract_profiles(fixture, json.loads((SOURCE / 'src/pin.json').read_text())['profiles']):
             if profile['engine'] == '3842':
                 self.assertIn(int(profile.get('revision', profile['build'])), revisions)
         observations = []
@@ -329,7 +330,7 @@ class ImportTests(unittest.TestCase):
             Path(os.environ['OBOR_DIAGNOSTIC_OBSERVATIONS']).write_text(json.dumps(observations, indent=2)+'\n')
 
     def test_native_opcode_display_numbers_per_profile(self):
-        fixture = json.loads((TOOLS / 'fixtures/profile-vm-step-contracts.json').read_text())
+        fixture = load_contract_fixture(TOOLS / 'fixtures/profile-vm-step-contracts.json')
         header = (SOURCE / 'src/engines/3842/source/scriptlib/Instruction.h').read_text()
         enum = re.search(r'typedef enum OpCode\{(.*?)\}OpCode;', header, re.S)[1]
         names = [part.strip() for part in enum.replace('\n', ' ').split(',')]
@@ -350,7 +351,7 @@ class ImportTests(unittest.TestCase):
             Path(os.environ['OBOR_OPCODE_OBSERVATIONS']).write_text(json.dumps(observations, indent=2)+'\n')
 
     def test_native_repeated_constants_per_profile(self):
-        fixture = json.loads((TOOLS / 'fixtures/profile-vm-step-contracts.json').read_text())
+        fixture = load_contract_fixture(TOOLS / 'fixtures/profile-vm-step-contracts.json')
         observations = []
         for row in fixture['sources']:
             with self.subTest(revision=row['revision']):

@@ -15,7 +15,39 @@ jobs:
           python3 tools/check_revision.py HEAD
           python3 tools/check.py --sources-only
 
-  build:
+  focused:
+    needs: sources
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        suite_group: ["1/4", "2/4", "3/4", "4/4"]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Enable bounded test scopes
+        run: |
+          sudo systemctl start "user@$(id -u).service"
+          echo "XDG_RUNTIME_DIR=/run/user/$(id -u)" >> "$GITHUB_ENV"
+          echo "DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/$(id -u)/bus" >> "$GITHUB_ENV"
+      - name: Install focused test tools
+        timeout-minutes: 10
+        run: |
+          python3 tools/run_guarded.py --memory-mib 1024 --seconds 540 -- python3 tools/ci_packages.py --role focused --install
+      - name: Check distribution and focused regression tests
+        run: |
+          python3 tools/ci_focused.py --group '${{ matrix.suite_group }}' --output .build/ci-focused
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: anybor-focused-evidence-${{ strategy.job-index }}
+          path: .build/ci-focused/
+          include-hidden-files: true
+          if-no-files-found: warn
+
+  build-linux:
     needs: sources
     runs-on: ubuntu-24.04
     timeout-minutes: 30
@@ -25,8 +57,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        target: [linux-x86_64, linux-aarch64, linux-riscv64, windows-x86_64, android-arm64]
-    steps:
+        target: ["linux-x86_64"]
+    steps: &ubuntu-build-steps
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
@@ -35,132 +67,21 @@ jobs:
           sudo systemctl start "user@$(id -u).service"
           echo "XDG_RUNTIME_DIR=/run/user/$(id -u)" >> "$GITHUB_ENV"
           echo "DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/$(id -u)/bus" >> "$GITHUB_ENV"
-      - name: Install host build tools
+      - name: Install target build tools
+        timeout-minutes: 10
         run: |
-          sudo apt-get update
-          sudo apt-get install -y build-essential nasm python3 pkg-config libpng-dev gcc-aarch64-linux-gnu g++-aarch64-linux-gnu gcc-mingw-w64-x86-64 g++-mingw-w64-x86-64
+          python3 tools/run_guarded.py --memory-mib 1024 --seconds 540 -- python3 tools/ci_packages.py --role "$TARGET" --install
       - name: Install and exercise the RISC-V toolchain
         if: matrix.target == 'linux-riscv64'
         run: |
-          sudo apt-get install -y gcc-riscv64-linux-gnu g++-riscv64-linux-gnu qemu-user
           python3 tools/run_guarded.py --memory-mib 1024 --seconds 180 -- python3 tools/test_riscv64.py
       - name: Install Android NDK
         if: matrix.target == 'android-arm64'
+        timeout-minutes: 10
         run: |
-          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" 'ndk;26.3.11579264'
-      - name: Check distribution and focused regression tests
-        run: |
-          python3 tools/run_guarded.py --memory-mib 1024 --seconds 180 -- make check
-          python3 tools/run_guarded.py --memory-mib 512 --seconds 60 -- python3 tools/test_ci_regressions.py
-          python3 tools/run_guarded.py --memory-mib 512 --seconds 60 -- python3 tools/test_native_sanitizers.py
-          python3 tools/run_guarded.py --memory-mib 1024 --seconds 180 -- python3 tools/test_historical_behavior.py
-          python3 tools/run_guarded.py --memory-mib 512 --seconds 120 -- python3 tools/test_historical_player_domains.py
-          python3 tools/run_guarded.py --memory-mib 512 --seconds 120 -- python3 tools/test_historical_entity_colourmaps.py
-          python3 tools/run_guarded.py --memory-mib 512 --seconds 120 -- python3 tools/test_historical_entity_factors.py
-          python3 tools/run_guarded.py --memory-mib 512 --seconds 120 -- python3 tools/test_historical_entity_returns.py
-          python3 tools/run_guarded.py --memory-mib 512 --seconds 120 -- python3 tools/test_historical_entity_complex.py
-          python3 tools/run_guarded.py --memory-mib 512 --seconds 120 -- python3 tools/test_historical_entity_domains.py
-          python3 tools/run_guarded.py --memory-mib 512 --seconds 120 -- python3 tools/test_historical_entity_mapper_split.py
-          python3 tools/run_guarded.py --memory-mib 512 --seconds 120 -- python3 tools/test_historical_entity_factor_reads.py
-          python3 tools/run_guarded.py --memory-mib 512 --seconds 120 -- python3 tools/test_historical_sprite_stats_reads.py
-          python3 tools/run_guarded.py --memory-mib 512 --seconds 120 -- python3 tools/test_historical_stats_writes.py
-          python3 tools/run_guarded.py --memory-mib 512 --seconds 120 -- python3 tools/test_historical_script_ownership.py
-          python3 tools/run_guarded.py --memory-mib 512 --seconds 120 -- python3 tools/test_historical_script_callbacks.py
-          python3 tools/run_guarded.py --memory-mib 512 --seconds 180 -- python3 tools/test_historical_imports.py
-          python3 tools/run_guarded.py --memory-mib 512 --seconds 120 -- python3 tools/test_historical_wave_loader.py
-          python3 tools/run_guarded.py --memory-mib 512 --seconds 120 -- python3 tools/test_historical_line_arguments.py
-          python3 tools/run_guarded.py --memory-mib 512 --seconds 120 -- python3 tools/test_historical_collision_coordinates.py
-          python3 tools/run_guarded.py --memory-mib 512 --seconds 120 -- python3 tools/test_historical_coordinate_reads.py
-          python3 tools/run_guarded.py --memory-mib 512 --seconds 120 -- python3 tools/test_historical_frame_storage.py
-          python3 tools/run_guarded.py --memory-mib 512 --seconds 120 -- python3 tools/test_historical_combat_factors.py
-          python3 tools/run_guarded.py --memory-mib 512 --seconds 120 -- python3 tools/test_historical_model_defense.py
-          python3 tools/run_guarded.py --memory-mib 512 --seconds 120 -- python3 tools/test_historical_model_initialization.py
-          python3 tools/run_guarded.py --memory-mib 512 --seconds 120 -- python3 tools/test_historical_model_cleanup.py
-          python3 tools/run_guarded.py --memory-mib 512 --seconds 120 -- python3 tools/test_historical_attack_probability.py
-          python3 tools/run_guarded.py --memory-mib 512 --seconds 120 -- python3 tools/test_historical_attack_dispatch.py
-          python3 tools/run_guarded.py --memory-mib 512 --seconds 120 -- python3 tools/test_historical_normal_attack.py
-          python3 tools/run_guarded.py --memory-mib 512 --seconds 120 -- python3 tools/test_historical_jump_attack.py
-          python3 tools/run_guarded.py --memory-mib 512 --seconds 120 -- python3 tools/test_historical_scene_counters.py
-          python3 tools/run_guarded.py --memory-mib 512 --seconds 120 -- python3 tools/test_historical_entity_spawn.py
-          python3 tools/run_guarded.py --memory-mib 512 --seconds 120 -- python3 tools/test_historical_spawn_lookup.py
-          python3 tools/run_guarded.py --memory-mib 512 --seconds 120 -- python3 tools/test_script_container_alignment.py
-          python3 tools/run_guarded.py --memory-mib 512 --seconds 120 -- python3 tools/test_hitpause.py
-          python3 tools/run_guarded.py --memory-mib 512 --seconds 120 -- python3 tools/test_animation_callers.py
-          python3 tools/run_guarded.py --memory-mib 512 --seconds 120 -- python3 tools/test_frame_events.py
-          python3 tools/run_guarded.py --memory-mib 512 --seconds 120 -- python3 tools/test_script_allocation.py
-          python3 tools/run_guarded.py --memory-mib 512 --seconds 120 -- python3 tools/test_attack_events.py
-          python3 tools/run_guarded.py --memory-mib 512 --seconds 120 -- python3 tools/test_attack_sound.py
-          python3 tools/run_guarded.py --memory-mib 512 --seconds 120 -- python3 tools/test_primitive_api.py
-          python3 tools/run_guarded.py --memory-mib 512 --seconds 120 -- python3 tools/test_drawscreen_api.py
-          python3 tools/run_guarded.py --memory-mib 512 --seconds 180 -- python3 tools/test_screen_raster.py
-          python3 tools/run_guarded.py --memory-mib 512 --seconds 180 -- python3 tools/test_blend_selectors.py
-          python3 tools/run_guarded.py --memory-mib 512 --seconds 180 -- python3 tools/test_screen_dispatch.py
-          python3 tools/run_guarded.py --memory-mib 512 --seconds 180 -- python3 tools/test_transform_indexed.py
-          python3 tools/run_guarded.py --memory-mib 512 --seconds 180 -- python3 tools/test_transform_geometry.py
-          python3 tools/run_guarded.py --memory-mib 512 --seconds 180 -- python3 tools/test_sprite_raster.py
-          python3 tools/run_guarded.py --memory-mib 512 --seconds 180 -- python3 tools/test_sprite_composition.py
-          python3 tools/run_guarded.py --memory-mib 512 --seconds 180 -- python3 tools/test_sprite_effects.py
-          python3 tools/run_guarded.py --memory-mib 512 --seconds 180 -- python3 tools/test_sprite_mask_pixels.py
-          python3 tools/run_guarded.py --memory-mib 512 --seconds 180 -- python3 tools/test_sprite_repeats.py
-          python3 tools/run_guarded.py --memory-mib 512 --seconds 180 -- python3 tools/test_sprite_queue.py
-          python3 tools/run_guarded.py --memory-mib 512 --seconds 180 -- python3 tools/test_sprite_queue_loading.py
-          python3 tools/run_guarded.py --memory-mib 1024 --seconds 180 -- python3 tools/test_bitmap_dimensions.py
-          python3 tools/run_guarded.py --memory-mib 1024 --seconds 180 -- python3 tools/test_image_rows.py
-          python3 tools/run_guarded.py --memory-mib 1024 --seconds 180 -- python3 tools/test_sprite_loading.py
-          python3 tools/run_guarded.py --memory-mib 512 --seconds 180 -- python3 tools/test_sprite_cleanup.py
-          python3 tools/run_guarded.py --memory-mib 512 --seconds 180 -- python3 tools/test_sprite_map_growth.py
-          python3 tools/run_guarded.py --memory-mib 512 --seconds 180 -- python3 tools/test_sprite_nodes.py
-          python3 tools/run_guarded.py --memory-mib 1024 --seconds 240 -- python3 tools/test_color_blends.py
-          python3 tools/run_guarded.py --memory-mib 512 --seconds 180 -- python3 tools/test_drawmethod.py
-          python3 tools/run_guarded.py --memory-mib 512 --seconds 180 -- python3 tools/test_drawmethod_alignment.py
-          python3 tools/run_guarded.py --memory-mib 512 --seconds 180 -- python3 tools/test_blend_tables.py
-          python3 tools/run_guarded.py --memory-mib 1024 --seconds 240 -- python3 tools/test_blend_luts.py
-          python3 tools/run_guarded.py --memory-mib 1024 --seconds 360 -- python3 tools/test_palette_luts.py
-          python3 tools/run_guarded.py --memory-mib 1024 --seconds 180 -- python3 tools/test_draw_initialization.py
-          python3 tools/run_guarded.py --memory-mib 1024 --seconds 240 -- python3 tools/test_primitive_raster.py
-          python3 tools/run_guarded.py --memory-mib 1024 --seconds 240 -- python3 tools/test_primitive_queue.py
-          python3 tools/run_guarded.py --memory-mib 1024 --seconds 360 -- python3 tools/test_point_bounds.py
-          python3 tools/run_guarded.py --memory-mib 512 --seconds 120 -- python3 tools/test_historical_ai_movement.py
-          python3 tools/run_guarded.py --memory-mib 512 --seconds 120 -- python3 tools/test_historical_aiattack_command.py
-          python3 tools/run_guarded.py --memory-mib 512 --seconds 90 -- python3 tools/test_level_cleanup_ownership.py
-          python3 tools/run_guarded.py --memory-mib 512 --seconds 120 -- python3 tools/test_script_parser_tables.py
-          python3 tools/run_guarded.py --memory-mib 512 --seconds 120 -- python3 tools/test_historical_colourtable_reads.py
-          python3 tools/run_guarded.py --memory-mib 512 --seconds 120 -- python3 tools/test_colourtable_bounds.py
-          python3 tools/run_guarded.py --memory-mib 512 --seconds 180 -- python3 tools/test_render_colourmaps.py
-          python3 tools/run_guarded.py --memory-mib 512 --seconds 180 -- python3 tools/test_historical_filestreams.py
-          python3 tools/run_guarded.py --memory-mib 512 --seconds 180 -- python3 tools/test_filestream_transfer.py
-          python3 tools/run_guarded.py --memory-mib 512 --seconds 180 -- python3 tools/test_stream_shutdown.py
-          python3 tools/run_guarded.py --memory-mib 512 --seconds 180 -- python3 tools/test_stream_filesystem.py
-          python3 tools/run_guarded.py --memory-mib 512 --seconds 180 -- python3 tools/test_stream_text.py
-          python3 tools/run_guarded.py --memory-mib 512 --seconds 180 -- python3 tools/test_integer_value.py
-          python3 tools/run_guarded.py --memory-mib 512 --seconds 180 -- python3 tools/test_string_cache_queries.py
-          python3 tools/run_guarded.py --memory-mib 512 --seconds 180 -- python3 tools/test_font_selection.py
-          python3 tools/run_guarded.py --memory-mib 512 --seconds 180 -- python3 tools/test_native_text_mapper.py
-          python3 tools/run_guarded.py --memory-mib 512 --seconds 180 -- python3 tools/test_text_collection_properties.py
-          python3 tools/run_guarded.py --memory-mib 512 --seconds 120 -- python3 tools/test_historical_palette_loading.py
-          python3 tools/run_guarded.py --memory-mib 512 --seconds 120 -- python3 tools/test_historical_palette_commands.py
-          python3 tools/run_guarded.py --memory-mib 512 --seconds 120 -- python3 tools/test_historical_palette_io.py
-          python3 tools/run_guarded.py --memory-mib 512 --seconds 120 -- python3 tools/test_palette_conversion.py
-          python3 tools/run_guarded.py --memory-mib 512 --seconds 120 -- python3 tools/test_historical_palette_finish.py
-          python3 tools/run_guarded.py --memory-mib 512 --seconds 120 -- python3 tools/test_historical_colourmap_ownership.py
-          python3 tools/run_guarded.py --memory-mib 512 --seconds 60 -- python3 tools/test_script_list_bounds.py
-          python3 tools/run_guarded.py --memory-mib 512 --seconds 60 -- python3 tools/test_historical_level_runtime.py
-          python3 tools/run_guarded.py --memory-mib 512 --seconds 60 -- python3 tools/test_historical_save_bonus.py
-          python3 tools/run_guarded.py --memory-mib 512 --seconds 60 -- python3 tools/test_sprite_masks.py
-          python3 tools/run_guarded.py --memory-mib 512 --seconds 60 -- python3 tools/test_sprite_encoding.py
-          python3 tools/run_guarded.py --memory-mib 512 --seconds 90 -- python3 tools/test_font_raster.py
-          python3 tools/run_guarded.py --memory-mib 1024 --seconds 180 -- python3 tools/test_panel_order.py
-          python3 tools/run_guarded.py --memory-mib 512 --seconds 90 -- python3 tools/test_dot_bounds.py
-          python3 tools/run_guarded.py --memory-mib 1024 --seconds 180 -- python3 tools/test_6392_profile.py
-          python3 tools/run_guarded.py --memory-mib 512 --seconds 90 -- python3 tools/test_profile_identity.py
-          python3 tools/run_guarded.py --memory-mib 512 --seconds 60 -- python3 tools/test_executable_build_tag.py
-          python3 tools/run_guarded.py --memory-mib 1024 --seconds 180 -- python3 tools/test_branch_profiles.py
-          python3 tools/run_guarded.py --memory-mib 1024 --seconds 180 -- python3 tools/test_profile_palettes.py
-          python3 tools/run_guarded.py --memory-mib 1024 --seconds 180 -- python3 tools/test_core_options.py
-          python3 tools/run_guarded.py --memory-mib 1024 --seconds 180 -- python3 tools/test_early_v3_profiles.py
-          python3 tools/run_guarded.py --memory-mib 1024 --seconds 180 -- python3 tools/test_property_error_lists.py
-          python3 tools/run_guarded.py --memory-mib 1024 --seconds 180 -- python3 tools/test_text_object_ownership.py
-          python3 tools/run_guarded.py --memory-mib 1024 --seconds 180 -- python3 tools/test_content_triage.py
+          if [ ! -d "$ANDROID_HOME/ndk/26.3.11579264" ]; then
+            "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" 'ndk;26.3.11579264'
+          fi
       - name: Build and package
         run: |
           case "$TARGET" in
@@ -201,7 +122,6 @@ jobs:
           WINEPREFIX: ${{ runner.temp }}/anybor-wine
           WINEDEBUG: '-all'
         run: |
-          sudo apt-get install -y wine64 wine
           python3 tools/run_guarded.py --memory-mib 1024 --seconds 180 -- python3 tools/test_windows_workers.py
           python3 tools/run_guarded.py --memory-mib 2048 --seconds 900 -- python3 tools/smoke.py --core anybor_libretro.dll --windows --runner wine
           python3 tools/run_guarded.py --memory-mib 2048 --seconds 300 -- python3 tools/test_geometry.py --core anybor_libretro.dll --windows --runner wine
@@ -212,6 +132,32 @@ jobs:
             dist/*.zip
             dist/*.zip.sha256
           if-no-files-found: error
+
+  build-windows:
+    needs: sources
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      TARGET: ${{ matrix.target }}
+      NUMPROC: 4
+    strategy:
+      fail-fast: false
+      matrix:
+        target: ["windows-x86_64"]
+    steps: *ubuntu-build-steps
+
+  build-cross:
+    needs: sources
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      TARGET: ${{ matrix.target }}
+      NUMPROC: 4
+    strategy:
+      fail-fast: false
+      matrix:
+        target: ["linux-aarch64", "linux-riscv64", "android-arm64"]
+    steps: *ubuntu-build-steps
 
   macos:
     needs: sources
@@ -228,15 +174,12 @@ jobs:
           - runner: macos-15-intel
             target: macos-x86_64
             arch: x86_64
-          - runner: macos-15
-            target: macos-arm64
-            arch: arm64
     runs-on: ${{ matrix.runner }}
     env:
       TARGET: ${{ matrix.target }}
       NUMPROC: 4
       ANYBOR_TEST_EVIDENCE_DIR: .build/native-test-evidence
-    steps:
+    steps: &native-macos-build-steps
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
@@ -272,46 +215,92 @@ jobs:
           include-hidden-files: true
           if-no-files-found: error
 
+  macos-arm64:
+    needs: sources
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-15
+            target: macos-arm64
+            arch: arm64
+    runs-on: ${{ matrix.runner }}
+    env:
+      TARGET: ${{ matrix.target }}
+      NUMPROC: 4
+      ANYBOR_TEST_EVIDENCE_DIR: .build/native-test-evidence
+    steps: *native-macos-build-steps
+
   macos-regressions:
     needs: macos
     timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
-        include:
+        suite_group: ["1/4", "2/4", "3/4", "4/4"]
+        platform:
           - runner: macos-15-intel
             target: macos-x86_64
-          - runner: macos-15
-            target: macos-arm64
-    runs-on: ${{ matrix.runner }}
+    runs-on: ${{ matrix.platform.runner }}
     env:
-      TARGET: ${{ matrix.target }}
+      ANYBOR_CI_SUITE_GROUP: ${{ matrix.suite_group }}
+      TARGET: ${{ matrix.platform.target }}
       ANYBOR_TEST_EVIDENCE_DIR: .build/native-test-evidence
-    steps:
+    steps: &native-macos-regression-steps
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
       - name: Install image regression library
+        timeout-minutes: 10
         run: brew list --versions libpng >/dev/null 2>&1 || brew install libpng
       - uses: actions/download-artifact@v4
         with:
-          name: anybor-${{ matrix.target }}
+          name: anybor-${{ matrix.platform.target }}
           path: .build/ci-package
       - name: Verify and unpack the exact built core
         run: python3 tools/unpack_ci_core.py --target "$TARGET"
       - name: Exercise native runtime regressions
         shell: bash
         run: |
+          suite_group="${ANYBOR_CI_SUITE_GROUP:-1/1}"
+          if [[ ! "$suite_group" =~ ^([1-9][0-9]{0,2})/([1-9][0-9]{0,2})$ ]]; then
+            echo "Invalid native suite group" >&2
+            exit 2
+          fi
+          suite_index="${BASH_REMATCH[1]}"
+          suite_count="${BASH_REMATCH[2]}"
+          if (( suite_index > suite_count || suite_count > 128 )); then
+            echo "Native suite group out of range" >&2
+            exit 2
+          fi
+          suite_cursor=0
           failures=()
           run_check() {
-            if "$@"; then
+            local current=$suite_cursor
+            suite_cursor=$((suite_cursor + 1))
+            if (( current % suite_count != suite_index - 1 )); then
               return 0
+            fi
+            local started=$SECONDS
+            local code=0
+            if "$@"; then
+              code=0
             else
               code=$?
               failures+=("$* (exit $code)")
               printf "::error::%s exited %s\n" "$*" "$code"
             fi
+            printf "RESULT exit=%s seconds=%s command=%s\n" "$code" "$((SECONDS - started))" "$*"
           }
+          run_check python3 tools/test_ci_regressions.py
+          run_check python3 tools/test_host_ppm.py
+          run_check python3 tools/test_historical_aiflag.py
+          run_check python3 tools/test_historical_constants.py
+          run_check python3 tools/test_historical_level.py
+          run_check python3 tools/test_historical_tolerance.py
+          run_check python3 tools/test_preprocessor_strings.py
+          run_check python3 tools/test_text_property_names.py
           run_check python3 tools/test_native_sanitizers.py
           run_check python3 tools/test_historical_behavior.py
           run_check python3 tools/test_historical_player_domains.py
@@ -435,13 +424,30 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: anybor-macos-regressions-evidence-${{ matrix.target }}
+          name: anybor-macos-regressions-evidence-${{ matrix.platform.target }}-${{ strategy.job-index }}
           path: .build/native-test-evidence/
           include-hidden-files: true
           if-no-files-found: warn
 
+  macos-arm64-regressions:
+    needs: macos-arm64
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        suite_group: ["1/4", "2/4", "3/4", "4/4"]
+        platform:
+          - runner: macos-15
+            target: macos-arm64
+    runs-on: ${{ matrix.platform.runner }}
+    env:
+      ANYBOR_CI_SUITE_GROUP: ${{ matrix.suite_group }}
+      TARGET: ${{ matrix.platform.target }}
+      ANYBOR_TEST_EVIDENCE_DIR: .build/native-test-evidence
+    steps: *native-macos-regression-steps
+
   state-linux:
-    needs: build
+    needs: build-linux
     runs-on: ubuntu-24.04
     timeout-minutes: 25
     strategy:
@@ -464,7 +470,9 @@ jobs:
           echo "XDG_RUNTIME_DIR=/run/user/$(id -u)" >> "$GITHUB_ENV"
           echo "DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/$(id -u)/bus" >> "$GITHUB_ENV"
       - name: Install movie fixture encoder
-        run: sudo apt-get update && sudo apt-get install -y ffmpeg
+        timeout-minutes: 10
+        run: |
+          python3 tools/run_guarded.py --memory-mib 1024 --seconds 540 -- python3 tools/ci_packages.py --role state-linux --install
       - name: Exercise grouped Linux runtime regressions
         run: |
           python3 tools/run_guarded.py --memory-mib 2048 --seconds 900 -- python3 tools/regression.py --webm --profile-group '${{ matrix.profile_group }}'
@@ -476,7 +484,7 @@ jobs:
           python3 tools/run_guarded.py --memory-mib 2048 --seconds 900 -- python3 tools/test_state_options.py --work-parent /var/tmp --profile-group '${{ matrix.profile_group }}'
 
   state-windows:
-    needs: build
+    needs: build-windows
     runs-on: ubuntu-24.04
     timeout-minutes: 25
     strategy:
@@ -495,13 +503,15 @@ jobs:
           path: .build/ci-package
       - name: Verify and unpack the exact built core
         run: python3 tools/unpack_ci_core.py --target windows-x86_64
-      - name: Install Wine and test host compiler
+      - name: Enable bounded Windows test scopes
         run: |
-          sudo apt-get update
-          sudo apt-get install -y wine64 wine gcc-mingw-w64-x86-64
           sudo systemctl start "user@$(id -u).service"
           echo "XDG_RUNTIME_DIR=/run/user/$(id -u)" >> "$GITHUB_ENV"
           echo "DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/$(id -u)/bus" >> "$GITHUB_ENV"
+      - name: Install Wine and test host compiler
+        timeout-minutes: 10
+        run: |
+          python3 tools/run_guarded.py --memory-mib 1024 --seconds 540 -- python3 tools/ci_packages.py --role state-windows --install
       - name: Exercise grouped Windows rewind contracts
         run: |
           python3 tools/run_guarded.py --memory-mib 2048 --seconds 900 -- python3 tools/test_rewind.py --core anybor_libretro.dll --windows --runner wine --keep-wine-server --work-parent /var/tmp --profile-group '${{ matrix.profile_group }}'
@@ -520,11 +530,9 @@ jobs:
         platform:
           - runner: macos-15-intel
             target: macos-x86_64
-          - runner: macos-15
-            target: macos-arm64
     env:
       ANYBOR_TEST_EVIDENCE_DIR: .build/native-test-evidence
-    steps:
+    steps: &native-macos-state-steps
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
@@ -550,3 +558,18 @@ jobs:
           path: .build/native-test-evidence/
           include-hidden-files: true
           if-no-files-found: warn
+
+  state-macos-arm64:
+    needs: macos-arm64
+    runs-on: ${{ matrix.platform.runner }}
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        profile_group: ["1/11", "2/11", "3/11", "4/11", "5/11", "6/11", "7/11", "8/11", "9/11", "10/11", "11/11"]
+        platform:
+          - runner: macos-15
+            target: macos-arm64
+    env:
+      ANYBOR_TEST_EVIDENCE_DIR: .build/native-test-evidence
+    steps: *native-macos-state-steps

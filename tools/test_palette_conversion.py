@@ -6,6 +6,7 @@ results, not complete loaders, subclass ownership or rendering.
 SPDX-License-Identifier: BSD-3-Clause
 Copyright (c) 2026 retrodiv <retrodiv@proton.me>
 """
+from contract_fixtures import load_contract_fixture, contract_profiles
 import json
 import os
 from pathlib import Path
@@ -21,8 +22,8 @@ from test_historical_palette_loading import colourmap_storage_support
 
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE = Path(os.environ.get('OBOR_TEST_SOURCE', ROOT))
-CONTRACTS = json.loads((Path(__file__).parent /
-    'fixtures/palette-conversion-contracts.json').read_text())
+CONTRACTS = load_contract_fixture(Path(__file__).parent /
+    'fixtures/palette-conversion-contracts.json')
 
 
 def conversion_program(engine, body=None, row=None, *, original=False, source_rows=None):
@@ -207,7 +208,7 @@ class PaletteConversionTests(unittest.TestCase):
             self.assertRegex(row['function_sha256'], r'^[0-9a-f]{64}$')
             self.assertIn(row['counter'], ('char8', 'int8', 'int'))
         revisions = {x['revision'] for x in CONTRACTS['sources']}
-        for profile in pin['profiles']:
+        for profile in contract_profiles(Path(__file__).parent / 'fixtures/palette-conversion-contracts.json', pin['profiles']):
             if profile['engine'] == '3741':
                 self.assertIn(int(profile.get('revision', profile['build'])), revisions)
 
@@ -223,7 +224,7 @@ class PaletteConversionTests(unittest.TestCase):
                         '-std=c11', '-Wall', '-Wextra', '-Werror', '-Wno-error=deprecated-declarations',
                         '-Wno-unused-variable', '-Wno-unused-function', '-Wno-sign-compare', '-fsigned-char',
                         '-g', '-fsanitize=address,undefined', str(source), '-o', str(exe)], check=True, timeout=60)
-                    cases = {x['build']: int(x.get('revision', x['build'])) for x in pin['profiles']
+                    cases = {x['build']: int(x.get('revision', x['build'])) for x in contract_profiles(Path(__file__).parent / 'fixtures/palette-conversion-contracts.json', pin['profiles'])
                              if x['engine'] == engine}
                     for row in CONTRACTS['sources']:
                         if row['engine'] == engine and str(row['revision']) not in cases:

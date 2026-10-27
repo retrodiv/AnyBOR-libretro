@@ -6,6 +6,7 @@ callback mapping, native model layout, bitmap loading or gameplay acceptance.
 SPDX-License-Identifier: BSD-3-Clause
 Copyright (c) 2026 retrodiv <retrodiv@proton.me>
 """
+from contract_fixtures import load_contract_fixture, contract_profiles
 import json
 import os
 from pathlib import Path
@@ -20,7 +21,7 @@ from test_historical_player import function, switch_cases
 
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE = Path(os.environ.get('OBOR_TEST_SOURCE', ROOT))
-FIXTURE = json.loads((Path(__file__).parent / 'fixtures/colourtable-engine-contracts.json').read_text())
+FIXTURE = load_contract_fixture(Path(__file__).parent / 'fixtures/colourtable-engine-contracts.json')
 
 
 def read_source(path):
@@ -148,7 +149,7 @@ class ColourtableBoundsTests(unittest.TestCase):
 
     def test_valid_results_and_defined_bounds_for_each_registered_profile(self):
         pin=json.loads((SOURCE/'src/pin.json').read_text())
-        historical=json.loads((Path(__file__).parent/'fixtures/profile-colourtable-read-contracts.json').read_text())
+        historical=load_contract_fixture(Path(__file__).parent/'fixtures/profile-colourtable-read-contracts.json')
         modes={x['revision']:{'fixed_table':0,'dynamic_table':1,'helper':2}[x['getter_mode']]
                for x in historical['sources']}
         executed=[]
@@ -162,13 +163,13 @@ class ColourtableBoundsTests(unittest.TestCase):
                         '-std=c11','-Wall','-Wextra','-Werror','-Wno-error=deprecated-declarations',
                         '-Wno-unused-variable','-Wno-unused-function','-Wno-sign-compare','-fsigned-char',
                         '-g','-fsanitize=address,undefined',str(source),'-o',str(exe)],check=True,timeout=60)
-                    for profile in pin['profiles']:
+                    for profile in contract_profiles(historical, pin['profiles']):
                         if profile['engine']!=engine:continue
                         revision=int(profile.get('revision',profile['build']))
                         mode=0 if engine=='3400' else modes[revision] if engine=='3741' else 2
                         subprocess.run([str(exe),str(revision),str(mode)],check=True,
                             timeout=20,env=sanitizer_environment());executed.append(profile['build'])
-        self.assertCountEqual(executed,[x['build'] for x in pin['profiles']])
+        self.assertCountEqual(executed,[x['build'] for x in contract_profiles(historical, pin['profiles'])])
         print(json.dumps({'executed_profiles':executed,'scope':'Actual colourtable case/helper; reduced numeric fixture'}))
 
 

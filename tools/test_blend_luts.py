@@ -3,6 +3,7 @@
 SPDX-License-Identifier: BSD-3-Clause
 Copyright (c) 2026 retrodiv <retrodiv@proton.me>
 """
+from contract_fixtures import load_contract_fixture, contract_profiles
 import hashlib
 import json
 import os
@@ -34,8 +35,8 @@ def program(engine,expected_path,cases):
 class BlendLutTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.fixture=json.loads((FIXTURES/'blend-lut-contracts.json').read_text())
-        cls.cases=json.loads((FIXTURES/'blend-lut-colors.json').read_text())
+        cls.fixture=load_contract_fixture(FIXTURES/'blend-lut-contracts.json')
+        cls.cases=load_contract_fixture(FIXTURES/'blend-lut-colors.json')
         expected=FIXTURES/'blend-luts.bin';raw=expected.read_bytes()
         if len(raw)!=cls.fixture['expected_bytes'] or hashlib.sha256(raw).hexdigest()!=cls.fixture['expected_sha256']:
             raise ValueError('Independent LUT reference identity differs')
@@ -77,7 +78,7 @@ class BlendLutTests(unittest.TestCase):
         self.assertEqual(observed,dict(status='PASS',bytes=self.fixture['expected_bytes'],cases=len(self.cases)))
 
     def test_every_affected_profile_has_own_source_contract(self):
-        for profile in self.pin['profiles']:
+        for profile in contract_profiles(self.fixture, self.pin['profiles']):
             if self.affected(profile):
                 self.assertIn((profile['engine'],int(profile.get('revision',profile['build']))),self.contexts)
         for row in self.contexts.values():
@@ -85,7 +86,7 @@ class BlendLutTests(unittest.TestCase):
                 self.assertRegex(row[field],r'^[0-9a-f]{40}$')
 
     def test_each_registered_profile_preserves_lut_bytes_and_colors(self):
-        for profile in self.pin['profiles']:
+        for profile in contract_profiles(self.fixture, self.pin['profiles']):
             if self.affected(profile):
                 with self.subTest(profile=profile['build']):
                     self.check_context(self.contexts[profile['engine'],int(profile.get('revision',profile['build']))])

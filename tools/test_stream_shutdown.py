@@ -5,6 +5,7 @@ interpreter have separate contracts.
 SPDX-License-Identifier: BSD-3-Clause
 Copyright (c) 2026 retrodiv <retrodiv@proton.me>
 """
+from contract_fixtures import load_contract_fixture, contract_profiles
 import json
 import os
 from pathlib import Path
@@ -27,7 +28,7 @@ FIXTURE=Path(__file__).parent/'fixtures/stream-shutdown-contracts.json'
 class StreamShutdownTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.rows=json.loads(FIXTURE.read_text())['sources']
+        cls.rows=load_contract_fixture(FIXTURE)['sources']
         cls.pin=json.loads((SOURCE/'src/pin.json').read_text())
         temporary=tempfile.TemporaryDirectory(prefix='anybor-stream-shutdown-')
         cls.addClassCleanup(temporary.cleanup);work=Path(temporary.name);cls.executables={}
@@ -63,7 +64,7 @@ class StreamShutdownTests(unittest.TestCase):
             with self.subTest(profile=row['revision']):self.check_context(row['engine'],row['revision'])
 
     def test_registered_affected_profiles_retain_bounded_shutdown(self):
-        for profile in self.pin['profiles']:
+        for profile in contract_profiles(Path(__file__).parent / 'fixtures/stream-shutdown-contracts.json', self.pin['profiles']):
             if profile['engine']in self.executables:
                 with self.subTest(profile=profile['build']):
                     self.check_context(profile['engine'],int(profile.get('revision',profile['build'])))

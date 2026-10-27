@@ -3,6 +3,7 @@
 SPDX-License-Identifier: BSD-3-Clause
 Copyright (c) 2026 retrodiv <retrodiv@proton.me>
 """
+from contract_fixtures import load_contract_fixture, contract_profiles
 import json
 import os
 from pathlib import Path
@@ -23,7 +24,7 @@ SOURCE=Path(os.environ.get('OBOR_TEST_SOURCE',Path(__file__).resolve().parents[1
 
 class TextCollectionPropertyTests(unittest.TestCase):
     def test_native_results_owner_selection_and_missing_entries(self):
-        fixture=json.loads(Path(__file__).with_name('fixtures').joinpath('text-collection-contracts.json').read_text())
+        fixture=load_contract_fixture(Path(__file__).with_name('fixtures').joinpath('text-collection-contracts.json'))
         pin=json.loads((SOURCE/'src/pin.json').read_text())
         cc=shlex.split(os.environ.get('HOST_CC',os.environ.get('CC','cc')))
         version=subprocess.check_output(cc+['--version'],text=True,timeout=10)
@@ -34,7 +35,7 @@ class TextCollectionPropertyTests(unittest.TestCase):
             with self.subTest(model=model['id']),tempfile.TemporaryDirectory(prefix='text-collection-') as temporary:
                 engine=model['engine'];root=SOURCE/'src/engines'/engine
                 covered={row['profile']for row in model['original_sources']}
-                self.assertTrue({p['build']for p in pin['profiles']if p['engine']==engine}<=covered)
+                self.assertTrue({p['build']for p in contract_profiles(fixture, pin['profiles'])if p['engine']==engine}<=covered)
                 self.assertEqual(model['revisions'],sorted({r['revision']for r in model['original_sources']}))
                 original=model['original_case_indices'];candidate=model['candidate_only_case_indices']
                 self.assertFalse(set(original)&set(candidate))

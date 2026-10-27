@@ -3,6 +3,7 @@
 SPDX-License-Identifier: BSD-3-Clause
 Copyright (c) 2026 retrodiv <retrodiv@proton.me>
 """
+from contract_fixtures import load_contract_fixture, contract_profiles, contract_revisions
 import json
 import os
 from pathlib import Path
@@ -50,13 +51,13 @@ class UnknownConstantsTests(unittest.TestCase):
         from native_sanitizers import sanitizer_environment
         from unittest.mock import patch
         root = Path(os.environ.get('OBOR_TEST_SOURCE', Path(__file__).resolve().parents[1]))
-        fixture = json.loads((Path(__file__).parent /
-            'fixtures/profile-constant-mapper-contracts.json').read_text())
+        fixture = load_contract_fixture(Path(__file__).parent /
+            'fixtures/profile-constant-mapper-contracts.json')
         rows = fixture['sources']
         revisions = {row['revision'] for row in rows}
         self.assertEqual(len(rows), len(revisions))
-        self.assertTrue({3761, 3769, 3773, *fixture['boundary_controls']} <= revisions)
-        for profile in json.loads((root / 'src/pin.json').read_text())['profiles']:
+        self.assertTrue(contract_revisions(fixture, {3761, 3769, 3773, *fixture['boundary_controls']}) <= revisions)
+        for profile in contract_profiles(fixture, json.loads((root / 'src/pin.json').read_text())['profiles']):
             if profile['engine'] == '3842':
                 self.assertIn(int(profile.get('revision', profile['build'])), revisions)
         for row in rows:

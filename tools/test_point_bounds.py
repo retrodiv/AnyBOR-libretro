@@ -3,6 +3,7 @@
 SPDX-License-Identifier: BSD-3-Clause
 Copyright (c) 2026 retrodiv <retrodiv@proton.me>
 """
+from contract_fixtures import load_contract_fixture, contract_profiles
 import json
 import os
 from pathlib import Path
@@ -34,7 +35,7 @@ def program(engine, entries, cases):
 class PointBoundsTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.fixture = json.loads(FIXTURE.read_text())
+        cls.fixture = load_contract_fixture(FIXTURE)
         cls.pin = json.loads((SOURCE / 'src/pin.json').read_text())
         compiler = shlex.split(os.environ.get('HOST_CC', 'cc'))
         version = subprocess.check_output(compiler + ['--version'], text=True, timeout=10)
@@ -78,7 +79,7 @@ class PointBoundsTests(unittest.TestCase):
             self.assertEqual(row['commit'], self.fixture['engines'][row['build']]['source_commit'])
 
     def test_every_registered_profile_preserves_points(self):
-        for row in self.pin['profiles']:
+        for row in contract_profiles(self.fixture, self.pin['profiles']):
             with self.subTest(profile=row['build']):
                 self.check_context(row['engine'], int(row.get('revision', row['build'])))
 

@@ -3,6 +3,7 @@
 SPDX-License-Identifier: BSD-3-Clause
 Copyright (c) 2026 retrodiv <retrodiv@proton.me>
 """
+from contract_fixtures import load_contract_fixture, contract_profiles
 import json
 import os
 from pathlib import Path
@@ -24,7 +25,7 @@ FIXTURE=Path(__file__).parent/'fixtures/integer-value-contracts.json'
 class IntegerValueTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.fixture=json.loads(FIXTURE.read_text())
+        cls.fixture=load_contract_fixture(FIXTURE)
         cls.pin=json.loads((SOURCE/'src/pin.json').read_text())
         temporary=tempfile.TemporaryDirectory(prefix='ab-integer-')
         cls.addClassCleanup(temporary.cleanup);work=Path(temporary.name);cls.executables={}
@@ -58,7 +59,7 @@ class IntegerValueTests(unittest.TestCase):
                                                 checks=len(self.fixture['cases'])))
 
     def test_every_registered_profile_preserves_conversion(self):
-        for profile in self.pin['profiles']:
+        for profile in contract_profiles(self.fixture, self.pin['profiles']):
             with self.subTest(profile=profile['build']):
                 self.check_context(profile['engine'],int(profile.get('revision',profile['build'])))
 

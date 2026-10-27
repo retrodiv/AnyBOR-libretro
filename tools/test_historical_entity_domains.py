@@ -6,6 +6,7 @@ variant conversion and string lookup. They do not execute a full interpreter.
 SPDX-License-Identifier: BSD-3-Clause
 Copyright (c) 2026 retrodiv <retrodiv@proton.me>
 """
+from contract_fixtures import load_contract_fixture, contract_profiles
 import hashlib
 import json
 import os
@@ -21,8 +22,8 @@ from test_historical_player import function, rename_identifiers, switch_cases
 
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE = Path(os.environ.get('OBOR_TEST_SOURCE', ROOT))
-CONTRACTS = json.loads((Path(__file__).parent /
-    'fixtures/profile-entity-domain-contracts.json').read_text())
+CONTRACTS = load_contract_fixture(Path(__file__).parent /
+    'fixtures/profile-entity-domain-contracts.json')
 
 
 def routing_entry(source, name):
@@ -315,7 +316,7 @@ class EntityDomainTests(unittest.TestCase):
                 for digest in row[mapping].values():
                     self.assertRegex(digest, r'^[0-9a-f]{64}$')
         pin = json.loads((SOURCE / 'src/pin.json').read_text())
-        for profile in pin['profiles']:
+        for profile in contract_profiles(Path(__file__).parent / 'fixtures/profile-entity-domain-contracts.json', pin['profiles']):
             if profile['engine'] == '3741':
                 self.assertIn(int(profile.get('revision', profile['build'])), revisions)
 

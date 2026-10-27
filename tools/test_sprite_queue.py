@@ -3,6 +3,7 @@
 SPDX-License-Identifier: BSD-3-Clause
 Copyright (c) 2026 retrodiv <retrodiv@proton.me>
 """
+from contract_fixtures import load_contract_fixture, contract_profiles
 import hashlib
 import json
 import os
@@ -27,7 +28,7 @@ _SHARED_TEMP = None
 
 def program(engine, cases, *, native_modes, mapped=False, fixture=None):
     if fixture is None:
-        fixture = json.loads((MAP_FIXTURE if mapped else FIXTURE).read_text())
+        fixture = load_contract_fixture(MAP_FIXTURE if mapped else FIXTURE)
     context = fixture['engines'][engine]
     render = render_sprite_map_queue if mapped else render_sprite_queue
     code = render(queue_source=str(SOURCE / 'src/engines' / engine / 'source/gamelib/spriteq.c'),
@@ -144,7 +145,7 @@ class SpriteQueueTests(unittest.TestCase):
         self.assertEqual(observed, dict(status='PASS', cases=len(self.fixture['contracts'][row['contract']])))
 
     def test_every_affected_profile_has_own_source_contract(self):
-        for profile in self.pin['profiles']:
+        for profile in contract_profiles(self.fixture, self.pin['profiles']):
             if self.affected(profile):
                 self.assertIn((profile['engine'], int(profile.get('revision', profile['build']))), self.contexts)
         for row in self.contexts.values():
@@ -155,7 +156,7 @@ class SpriteQueueTests(unittest.TestCase):
                 self.assertRegex(digest, r'^[0-9a-f]{40}$')
 
     def test_each_registered_profile_preserves_sprite_queue_pixels(self):
-        for profile in self.pin['profiles']:
+        for profile in contract_profiles(self.fixture, self.pin['profiles']):
             if self.affected(profile):
                 with self.subTest(profile=profile['build']):
                     self.check_context(self.contexts[profile['engine'], int(profile.get('revision', profile['build']))])

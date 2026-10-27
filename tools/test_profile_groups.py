@@ -67,6 +67,20 @@ class ProfileGroupsTests(unittest.TestCase):
         check_workflow_groups((root / '.github/workflows/ci.yml').read_text(),
                               json.loads((root / 'src/pin.json').read_text())['profiles'])
 
+    def test_whole_suite_partitions_cannot_stay_fixed_as_profiles_grow(self):
+        import json
+        root = Path(os.environ.get('OBOR_TEST_SOURCE', Path(__file__).resolve().parents[1]))
+        workflow = (root / '.github/workflows/ci.yml').read_text()
+        profiles = json.loads((root / 'src/pin.json').read_text())['profiles']
+        import re
+        for name in ('focused', 'macos-regressions', 'macos-arm64-regressions'):
+            marker = '\n  ' + name + ':\n'
+            before, job = workflow.split(marker, 1)
+            job = re.sub(r'^        suite_group: \[.*\]$',
+                         '        suite_group: ["1/1"]', job, count=1, flags=re.M)
+            with self.subTest(job=name), self.assertRaisesRegex(ValueError, '24 profiles'):
+                check_workflow_groups(before + marker + job, profiles)
+
 
 if __name__ == '__main__':
     unittest.main()

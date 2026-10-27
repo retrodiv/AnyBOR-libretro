@@ -5,6 +5,7 @@ directories stand in for frontend naming; archives and game execution are absent
 SPDX-License-Identifier: BSD-3-Clause
 Copyright (c) 2026 retrodiv <retrodiv@proton.me>
 """
+from contract_fixtures import load_contract_fixture, contract_profiles
 import json
 from historical_filestreams import extract_storage_helpers
 import os
@@ -28,7 +29,7 @@ FIXTURE=Path(__file__).parent/'fixtures/stream-filesystem-contracts.json'
 class StreamFilesystemTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.fixture=json.loads(FIXTURE.read_text());cls.rows=cls.fixture['sources']
+        cls.fixture=load_contract_fixture(FIXTURE);cls.rows=cls.fixture['sources']
         cls.pin=json.loads((SOURCE/'src/pin.json').read_text())
         temporary=tempfile.TemporaryDirectory(prefix='abfs-')
         cls.addClassCleanup(temporary.cleanup);cls.work=Path(temporary.name);cls.executables={}
@@ -72,7 +73,7 @@ class StreamFilesystemTests(unittest.TestCase):
             with self.subTest(profile=row['revision']):self.check_context(row['engine'],row['revision'])
 
     def test_every_registered_affected_profile_closes_its_owned_files(self):
-        for profile in self.pin['profiles']:
+        for profile in contract_profiles(self.fixture, self.pin['profiles']):
             if profile['engine']in self.executables:
                 with self.subTest(profile=profile['build']):
                     self.check_context(profile['engine'],int(profile.get('revision',profile['build'])))

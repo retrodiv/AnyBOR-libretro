@@ -3,6 +3,7 @@
 SPDX-License-Identifier: BSD-3-Clause
 Copyright (c) 2026 retrodiv <retrodiv@proton.me>
 """
+from contract_fixtures import load_contract_fixture, contract_profiles, contract_revisions
 import json
 import os
 from pathlib import Path
@@ -16,14 +17,14 @@ ENGINE = Path(os.environ.get('OBOR_HISTORICAL_ENGINE', ROOT/'src/engines/3842'))
 
 
 def saved_bonus_model_rows():
-    fixture = json.loads((Path(__file__).parent /
-        'fixtures/profile-saved-bonus-model-contracts.json').read_text())
+    fixture = load_contract_fixture(Path(__file__).parent /
+        'fixtures/profile-saved-bonus-model-contracts.json')
     rows = fixture['sources']
     revisions = {row['revision'] for row in rows}
     if len(rows) != len(revisions) or not (
-            {3761, 3769, 3773, *fixture['boundary_controls']} <= revisions):
+            contract_revisions(fixture, {3761, 3769, 3773, *fixture['boundary_controls']}) <= revisions):
         raise ValueError('Own saved-bonus/model profiles and boundary controls required')
-    for profile in json.loads((ROOT / 'src/pin.json').read_text())['profiles']:
+    for profile in contract_profiles(fixture, json.loads((ROOT / 'src/pin.json').read_text())['profiles']):
         if profile['engine'] == '3842' and int(profile.get('revision', profile['build'])) not in revisions:
             raise ValueError('Registered profile lacks its own saved-bonus/model source')
     for row in rows:
@@ -181,12 +182,12 @@ int main(void) {
 class HistoricalSaveBonusTests(unittest.TestCase):
     def test_game_loader_result_matches_each_source_profile(self):
         from test_historical_behavior import native
-        fixture = json.loads((Path(__file__).parent /
-            'fixtures/profile-save-load-contracts.json').read_text())
+        fixture = load_contract_fixture(Path(__file__).parent /
+            'fixtures/profile-save-load-contracts.json')
         rows = fixture['sources']
         self.assertEqual(len(rows), len({r['revision'] for r in rows}))
         self.assertTrue(set(fixture['boundary_controls']) <= {r['revision'] for r in rows})
-        for profile in json.loads((ROOT / 'src/pin.json').read_text())['profiles']:
+        for profile in contract_profiles(fixture, json.loads((ROOT / 'src/pin.json').read_text())['profiles']):
             revision = int(profile.get('revision', profile['build']))
             if any(s['engine'] == profile['engine'] and s['first'] <= revision <= s['last']
                    for s in fixture['coverage']):
@@ -218,8 +219,8 @@ int main(void) {@CHECKS@free(savelevel);remove("probe.save");return 0;}
 
     def test_script_save_route_and_caller_match_each_source_profile(self):
         from test_historical_behavior import native
-        fixture = json.loads((Path(__file__).parent /
-            'fixtures/profile-save-load-contracts.json').read_text())
+        fixture = load_contract_fixture(Path(__file__).parent /
+            'fixtures/profile-save-load-contracts.json')
         rows = fixture['sources']
         for engine in sorted({r['engine'] for r in rows}):
             with self.subTest(engine=engine):

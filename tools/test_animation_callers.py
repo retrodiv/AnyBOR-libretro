@@ -6,6 +6,7 @@ selection and frame services remain explicit observations.
 SPDX-License-Identifier: BSD-3-Clause
 Copyright (c) 2026 retrodiv <retrodiv@proton.me>
 """
+from contract_fixtures import load_contract_fixture, contract_profiles
 import json
 import os
 from pathlib import Path
@@ -48,7 +49,7 @@ def program(engine, family, options):
 class AnimationCallerTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.fixture = json.loads(FIXTURE.read_text())
+        cls.fixture = load_contract_fixture(FIXTURE)
         cls.contexts = {}
         for row in cls.fixture['contexts']:
             key = (row['engine'], row['revision'])
@@ -113,7 +114,7 @@ class AnimationCallerTests(unittest.TestCase):
                 cases=len(self.fixture['options'][family][mode]['cases'])))
 
     def test_every_affected_profile_has_own_source_contracts(self):
-        for profile in self.pin['profiles']:
+        for profile in contract_profiles(self.fixture, self.pin['profiles']):
             if self.affected(profile):
                 self.assertIn((profile['engine'], int(profile.get('revision', profile['build']))),
                               self.contexts)
@@ -125,7 +126,7 @@ class AnimationCallerTests(unittest.TestCase):
                 self.assertRegex(row['source_fragments'][family], r'^[0-9a-f]{64}$')
 
     def test_each_registered_profile_preserves_caller_behavior(self):
-        for profile in self.pin['profiles']:
+        for profile in contract_profiles(self.fixture, self.pin['profiles']):
             if self.affected(profile):
                 key = (profile['engine'], int(profile.get('revision', profile['build'])))
                 with self.subTest(profile=profile['build']):

@@ -3,6 +3,7 @@
 SPDX-License-Identifier: BSD-3-Clause
 Copyright (c) 2026 retrodiv <retrodiv@proton.me>
 """
+from contract_fixtures import load_contract_fixture, contract_profiles
 import os
 import json
 from pathlib import Path
@@ -239,8 +240,8 @@ int main(void) {
             self.compile_run(program,extra)
 
     def test_actual_preprocessor_conditionals_and_function_macros(self):
-        fixture=json.loads((Path(__file__).parent /
-            'fixtures/profile-preprocessor-contracts.json').read_text())
+        fixture=load_contract_fixture(Path(__file__).parent /
+            'fixtures/profile-preprocessor-contracts.json')
         rows=fixture['sources']
         revisions={row['revision'] for row in rows}
         self.assertEqual(len(rows),len(revisions))
@@ -323,7 +324,7 @@ class NativeTextReturnTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         fixture=Path(__file__).with_name('fixtures')/cls.fixture_name
-        cls.fixture=json.loads(fixture.read_text())
+        cls.fixture=load_contract_fixture(fixture)
         cls.pin=json.loads((SOURCE/'src/pin.json').read_text())
         temporary=tempfile.TemporaryDirectory(prefix='native-text-returns-')
         cls.addClassCleanup(temporary.cleanup)
@@ -392,7 +393,7 @@ class NativeTextReturnTests(unittest.TestCase):
 
     def test_registered_profiles_in_declared_scope_have_own_contracts(self):
         declared={revision:row['engine']for row in self.fixture['models']for revision in row['revisions']}
-        for profile in self.pin['profiles']:
+        for profile in contract_profiles(self.fixture, self.pin['profiles']):
             revision=int(profile.get('revision',profile['build']))
             for scope in self.fixture['coverage']:
                 if profile['engine']==scope['engine']and scope['first']<=revision<=scope['last']:
@@ -437,7 +438,7 @@ class NativeModernTextArgumentTests(NativeTextReturnTests):
         for row in self.fixture['models']:
             with self.subTest(model=row['id']):
                 covered={v['profile']for v in row['original_sources']+row['reconstructed_profile_aliases']}
-                required={p['build']for p in self.pin['profiles']if p['engine']==row['engine']}
+                required={p['build']for p in contract_profiles(self.fixture, self.pin['profiles'])if p['engine']==row['engine']}
                 self.assertTrue(required<=covered)
                 original=row['original_case_indices'];candidate=row['candidate_only_case_indices']
                 self.assertFalse(set(original)&set(candidate))

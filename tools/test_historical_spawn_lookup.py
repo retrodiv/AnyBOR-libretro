@@ -5,6 +5,7 @@ Actual allocators, scripts, colourmap ownership and AI initialization remain sep
 SPDX-License-Identifier: BSD-3-Clause
 Copyright (c) 2026 retrodiv <retrodiv@proton.me>
 """
+from contract_fixtures import load_contract_fixture, contract_profiles
 import json
 import os
 from pathlib import Path
@@ -64,7 +65,7 @@ def program(engine, rows, contracts):
 class SpawnLookupTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        fixture = json.loads(CONTRACT_PATH.read_text())
+        fixture = load_contract_fixture(CONTRACT_PATH)
         cls.rows, cls.contracts = fixture['sources'], fixture['contracts']
         cls.coverage = fixture['covered_profile_ranges']
         cls.groups, cls.executables = {}, {}
@@ -107,7 +108,7 @@ class SpawnLookupTests(unittest.TestCase):
         by_revision = {row['revision']: row for row in self.rows}
         self.assertEqual(len(by_revision), len(self.rows))
         pin = json.loads((SOURCE / 'src/pin.json').read_text())
-        for profile in pin['profiles']:
+        for profile in contract_profiles(Path(__file__).parent / 'fixtures/profile-spawn-lookup-contracts.json', pin['profiles']):
             revision = int(profile.get('revision', profile['build']))
             if any(profile['engine'] == span['engine'] and span['first'] <= revision <= span['last']
                    for span in self.coverage):

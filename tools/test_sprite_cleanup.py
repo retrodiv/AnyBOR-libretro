@@ -3,6 +3,7 @@
 SPDX-License-Identifier: BSD-3-Clause
 Copyright (c) 2026 retrodiv <retrodiv@proton.me>
 """
+from contract_fixtures import load_contract_fixture, contract_profiles
 import json
 import os
 from pathlib import Path
@@ -33,7 +34,7 @@ def profile_program(code):
 class SpriteCleanupTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.fixture=json.loads(FIXTURE.read_text())
+        cls.fixture=load_contract_fixture(FIXTURE)
         cls.pin=json.loads((SOURCE/'src/pin.json').read_text())
         cls.contexts={(row['engine'],row['revision']):row for row in cls.fixture['contexts']}
         compiler=shlex.split(os.environ.get('HOST_CC','cc'))
@@ -68,14 +69,14 @@ class SpriteCleanupTests(unittest.TestCase):
 
     def test_all_profiles_and_historical_contexts_have_explicit_layouts(self):
         self.assertEqual(len(self.contexts),len(self.fixture['contexts']))
-        for profile in self.pin['profiles']:self.assertIn(profile['engine'],self.fixture['engines'])
+        for profile in contract_profiles(self.fixture, self.pin['profiles']):self.assertIn(profile['engine'],self.fixture['engines'])
         for row in self.fixture['contexts']:
             self.assertIn(row['engine'],self.fixture['engines'])
             self.assertRegex(row['source_commit'],r'^[0-9a-f]{40}$')
             self.assertRegex(row['source_function_sha256'],r'^[0-9a-f]{64}$')
 
     def test_each_registered_profile_releases_owned_data_once(self):
-        for profile in self.pin['profiles']:
+        for profile in contract_profiles(self.fixture, self.pin['profiles']):
             with self.subTest(profile=profile['build']):
                 self.check_context(profile['engine'],int(profile.get('revision',profile['build'])))
 

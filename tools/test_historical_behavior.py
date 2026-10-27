@@ -3,6 +3,7 @@
 SPDX-License-Identifier: BSD-3-Clause
 Copyright (c) 2026 retrodiv <retrodiv@proton.me>
 """
+from contract_fixtures import load_contract_fixture, contract_profiles, contract_revisions
 import hashlib
 import json
 import os
@@ -20,14 +21,14 @@ ENGINE = Path(os.environ.get('OBOR_HISTORICAL_ENGINE', ROOT / 'src/engines/3842'
 
 
 def attack_domain_revisions():
-    fixture = json.loads((Path(__file__).parent /
-        'fixtures/profile-attack-domain-contracts.json').read_text())
+    fixture = load_contract_fixture(Path(__file__).parent /
+        'fixtures/profile-attack-domain-contracts.json')
     rows = fixture['sources']
     revisions = [row['revision'] for row in rows]
     if len(revisions) != len(set(revisions)) or not (
-            {3761, 3769, 3773, *fixture['boundary_controls']} <= set(revisions)):
+            contract_revisions(fixture, {3761, 3769, 3773, *fixture['boundary_controls']}) <= set(revisions)):
         raise ValueError('Own attack-domain profiles and boundary controls required')
-    for profile in json.loads((ROOT / 'src/pin.json').read_text())['profiles']:
+    for profile in contract_profiles(fixture, json.loads((ROOT / 'src/pin.json').read_text())['profiles']):
         if profile['engine'] == '3842' and int(profile.get('revision', profile['build'])) not in revisions:
             raise ValueError('Registered profile missing its own attack-domain source')
     for row in rows:
@@ -61,8 +62,8 @@ class HistoricalBehaviorTests(unittest.TestCase):
         from historical_assertions import render_late_assertions
         from native_sanitizers import sanitizer_environment
         from unittest.mock import patch
-        fixture = json.loads((Path(__file__).parent /
-            'fixtures/profile-assertion-contracts.json').read_text())
+        fixture = load_contract_fixture(Path(__file__).parent /
+            'fixtures/profile-assertion-contracts.json')
         port = ROOT / 'src/port/libretro'
         with patch.dict(os.environ, sanitizer_environment()):
             for enabled in (True, False):
@@ -81,14 +82,14 @@ class HistoricalBehaviorTests(unittest.TestCase):
         from historical_assertions import render_assertions
         from native_sanitizers import sanitizer_environment
         from unittest.mock import patch
-        fixture = json.loads((Path(__file__).parent /
-            'fixtures/profile-assertion-contracts.json').read_text())
+        fixture = load_contract_fixture(Path(__file__).parent /
+            'fixtures/profile-assertion-contracts.json')
         rows = fixture['sources']
         revisions = {row['revision'] for row in rows}
         self.assertEqual(len(rows), len(revisions))
         self.assertTrue(fixture['safe_engine_termination'])
-        self.assertTrue({3400, 3741, 3761, 3769, 3773, *fixture['boundary_controls']} <= revisions)
-        for profile in json.loads((ROOT / 'src/pin.json').read_text())['profiles']:
+        self.assertTrue(contract_revisions(fixture, {3400, 3741, 3761, 3769, 3773, *fixture['boundary_controls']}) <= revisions)
+        for profile in contract_profiles(fixture, json.loads((ROOT / 'src/pin.json').read_text())['profiles']):
             if profile['engine'] in ('3400', '3741', '3842'):
                 self.assertIn(int(profile.get('revision', profile['build'])), revisions)
         for row in rows:
@@ -106,13 +107,13 @@ class HistoricalBehaviorTests(unittest.TestCase):
         from historical_fade import render_fade
         from native_sanitizers import sanitizer_environment
         from unittest.mock import patch
-        fixture = json.loads((Path(__file__).parent /
-            'fixtures/profile-fade-pixel-contracts.json').read_text())
+        fixture = load_contract_fixture(Path(__file__).parent /
+            'fixtures/profile-fade-pixel-contracts.json')
         rows = fixture['sources']
         revisions = {row['revision'] for row in rows}
         self.assertEqual(len(rows), len(revisions))
-        self.assertTrue({3761, 3769, 3773, *fixture['boundary_controls']} <= revisions)
-        for profile in json.loads((ROOT / 'src/pin.json').read_text())['profiles']:
+        self.assertTrue(contract_revisions(fixture, {3761, 3769, 3773, *fixture['boundary_controls']}) <= revisions)
+        for profile in contract_profiles(fixture, json.loads((ROOT / 'src/pin.json').read_text())['profiles']):
             if profile['engine'] == '3842':
                 self.assertIn(int(profile.get('revision', profile['build'])), revisions)
         for row in rows:
@@ -134,13 +135,13 @@ class HistoricalBehaviorTests(unittest.TestCase):
         from historical_model_callbacks import render_modelcopy_callback
         from native_sanitizers import sanitizer_environment
         from unittest.mock import patch
-        fixture = json.loads((Path(__file__).parent /
-            'fixtures/profile-modelcopy-callback-contracts.json').read_text())
+        fixture = load_contract_fixture(Path(__file__).parent /
+            'fixtures/profile-modelcopy-callback-contracts.json')
         rows = fixture['sources']
         revisions = {row['revision'] for row in rows}
         self.assertEqual(len(rows), len(revisions))
-        self.assertTrue({3761, 3769, 3773, *fixture['boundary_controls']} <= revisions)
-        for profile in json.loads((ROOT / 'src/pin.json').read_text())['profiles']:
+        self.assertTrue(contract_revisions(fixture, {3761, 3769, 3773, *fixture['boundary_controls']}) <= revisions)
+        for profile in contract_profiles(fixture, json.loads((ROOT / 'src/pin.json').read_text())['profiles']):
             if profile['engine'] == '3842':
                 self.assertIn(int(profile.get('revision', profile['build'])), revisions)
         for row in rows:
@@ -156,13 +157,13 @@ class HistoricalBehaviorTests(unittest.TestCase):
         from historical_script_callbacks import render_callback_storage
         from native_sanitizers import sanitizer_environment
         from unittest.mock import patch
-        fixture = json.loads((Path(__file__).parent /
-            'fixtures/profile-callback-storage-contracts.json').read_text())
+        fixture = load_contract_fixture(Path(__file__).parent /
+            'fixtures/profile-callback-storage-contracts.json')
         rows = fixture['sources']
         revisions = {row['revision'] for row in rows}
         self.assertEqual(len(rows), len(revisions))
-        self.assertTrue({3761, 3769, 3773, *fixture['boundary_controls']} <= revisions)
-        for profile in json.loads((ROOT / 'src/pin.json').read_text())['profiles']:
+        self.assertTrue(contract_revisions(fixture, {3761, 3769, 3773, *fixture['boundary_controls']}) <= revisions)
+        for profile in contract_profiles(fixture, json.loads((ROOT / 'src/pin.json').read_text())['profiles']):
             if profile['engine'] == '3842':
                 self.assertIn(int(profile.get('revision', profile['build'])), revisions)
         for row in rows:
@@ -179,16 +180,16 @@ class HistoricalBehaviorTests(unittest.TestCase):
         from historical_video_modes import render_video_spawn
         from native_sanitizers import sanitizer_environment
         from unittest.mock import patch
-        fixture = json.loads((Path(__file__).parent /
-            'fixtures/profile-video-spawn-contracts.json').read_text())
+        fixture = load_contract_fixture(Path(__file__).parent /
+            'fixtures/profile-video-spawn-contracts.json')
         rows = fixture['sources']
         revisions = {row['revision'] for row in rows}
         self.assertEqual(len(rows), len(revisions))
-        self.assertTrue({3761, 3769, 3773, *fixture['boundary_controls']} <= revisions)
+        self.assertTrue(contract_revisions(fixture, {3761, 3769, 3773, *fixture['boundary_controls']}) <= revisions)
         self.assertTrue(fixture['standard_blocks_identical'])
         self.assertEqual(len(fixture['standard_modes']), 7)
         self.assertTrue(all(len(row) == 10 for row in fixture['standard_modes']))
-        for profile in json.loads((ROOT / 'src/pin.json').read_text())['profiles']:
+        for profile in contract_profiles(fixture, json.loads((ROOT / 'src/pin.json').read_text())['profiles']):
             if profile['engine'] == '3842':
                 self.assertIn(int(profile.get('revision', profile['build'])), revisions)
         for row in rows:
@@ -205,13 +206,13 @@ class HistoricalBehaviorTests(unittest.TestCase):
         from historical_keyboard_names import render_keyboard_names
         from native_sanitizers import sanitizer_environment
         from unittest.mock import patch
-        fixture = json.loads((Path(__file__).parent /
-            'fixtures/profile-keyboard-names-contracts.json').read_text())
+        fixture = load_contract_fixture(Path(__file__).parent /
+            'fixtures/profile-keyboard-names-contracts.json')
         rows = fixture['sources']
         revisions = {row['revision'] for row in rows}
         self.assertEqual(len(rows), len(revisions))
-        self.assertTrue({3761, 3769, 3773, *fixture['boundary_controls']} <= revisions)
-        for profile in json.loads((ROOT / 'src/pin.json').read_text())['profiles']:
+        self.assertTrue(contract_revisions(fixture, {3761, 3769, 3773, *fixture['boundary_controls']}) <= revisions)
+        for profile in contract_profiles(fixture, json.loads((ROOT / 'src/pin.json').read_text())['profiles']):
             if profile['engine'] == '3842':
                 self.assertIn(int(profile.get('revision', profile['build'])), revisions)
         for row in rows:
@@ -227,13 +228,13 @@ class HistoricalBehaviorTests(unittest.TestCase):
         from historical_hud_icons import render_selection_icon
         from native_sanitizers import sanitizer_environment
         from unittest.mock import patch
-        fixture = json.loads((Path(__file__).parent /
-            'fixtures/profile-selection-icon-contracts.json').read_text())
+        fixture = load_contract_fixture(Path(__file__).parent /
+            'fixtures/profile-selection-icon-contracts.json')
         rows = fixture['sources']
         revisions = {row['revision'] for row in rows}
         self.assertEqual(len(rows), len(revisions))
         self.assertTrue(set(fixture['boundary_controls']) <= revisions)
-        for profile in json.loads((ROOT / 'src/pin.json').read_text())['profiles']:
+        for profile in contract_profiles(fixture, json.loads((ROOT / 'src/pin.json').read_text())['profiles']):
             if profile['engine'] == '3741':
                 self.assertIn(int(profile.get('revision', profile['build'])), revisions)
         for row in rows:
@@ -247,13 +248,13 @@ class HistoricalBehaviorTests(unittest.TestCase):
         from historical_selection_runtime import render_selection_runtime
         from native_sanitizers import sanitizer_environment
         from unittest.mock import patch
-        fixture = json.loads((Path(__file__).parent /
-            'fixtures/profile-selection-runtime-contracts.json').read_text())
+        fixture = load_contract_fixture(Path(__file__).parent /
+            'fixtures/profile-selection-runtime-contracts.json')
         rows = fixture['sources']
         revisions = {row['revision'] for row in rows}
         self.assertEqual(len(rows), len(revisions))
-        self.assertTrue({3761, 3769, 3773, *fixture['boundary_controls']} <= revisions)
-        for profile in json.loads((ROOT / 'src/pin.json').read_text())['profiles']:
+        self.assertTrue(contract_revisions(fixture, {3761, 3769, 3773, *fixture['boundary_controls']}) <= revisions)
+        for profile in contract_profiles(fixture, json.loads((ROOT / 'src/pin.json').read_text())['profiles']):
             if profile['engine'] == '3842':
                 self.assertIn(int(profile.get('revision', profile['build'])), revisions)
         for row in rows:
@@ -268,13 +269,13 @@ class HistoricalBehaviorTests(unittest.TestCase):
         from historical_model_selectors import render_playable_reset
         from native_sanitizers import sanitizer_environment
         from unittest.mock import patch
-        fixture = json.loads((Path(__file__).parent /
-            'fixtures/profile-playable-reset-contracts.json').read_text())
+        fixture = load_contract_fixture(Path(__file__).parent /
+            'fixtures/profile-playable-reset-contracts.json')
         rows = fixture['sources']
         revisions = {row['revision'] for row in rows}
         self.assertEqual(len(rows), len(revisions))
-        self.assertTrue({3761, 3769, 3773, *fixture['boundary_controls']} <= revisions)
-        for profile in json.loads((ROOT / 'src/pin.json').read_text())['profiles']:
+        self.assertTrue(contract_revisions(fixture, {3761, 3769, 3773, *fixture['boundary_controls']}) <= revisions)
+        for profile in contract_profiles(fixture, json.loads((ROOT / 'src/pin.json').read_text())['profiles']):
             if profile['engine'] == '3842':
                 self.assertIn(int(profile.get('revision', profile['build'])), revisions)
         for row in rows:
@@ -288,13 +289,13 @@ class HistoricalBehaviorTests(unittest.TestCase):
         from historical_unsigned_scalars import render_unsigned_scalars
         from native_sanitizers import sanitizer_environment
         from unittest.mock import patch
-        fixture = json.loads((Path(__file__).parent /
-            'fixtures/profile-unsigned-scalar-contracts.json').read_text())
+        fixture = load_contract_fixture(Path(__file__).parent /
+            'fixtures/profile-unsigned-scalar-contracts.json')
         rows = fixture['sources']
         revisions = {row['revision'] for row in rows}
         self.assertEqual(len(rows), len(revisions))
-        self.assertTrue({3761, 3769, 3773, *fixture['boundary_controls']} <= revisions)
-        for profile in json.loads((ROOT / 'src/pin.json').read_text())['profiles']:
+        self.assertTrue(contract_revisions(fixture, {3761, 3769, 3773, *fixture['boundary_controls']}) <= revisions)
+        for profile in contract_profiles(fixture, json.loads((ROOT / 'src/pin.json').read_text())['profiles']):
             if profile['engine'] == '3842':
                 self.assertIn(int(profile.get('revision', profile['build'])), revisions)
         for row in rows:
@@ -312,13 +313,13 @@ class HistoricalBehaviorTests(unittest.TestCase):
         from historical_player_extent import render_player_extent
         from native_sanitizers import sanitizer_environment
         from unittest.mock import patch
-        fixture = json.loads((Path(__file__).parent /
-            'fixtures/profile-player-extent-contracts.json').read_text())
+        fixture = load_contract_fixture(Path(__file__).parent /
+            'fixtures/profile-player-extent-contracts.json')
         rows = fixture['sources']
         revisions = {row['revision'] for row in rows}
         self.assertEqual(len(rows), len(revisions))
         self.assertTrue(set(fixture['boundary_controls']) <= revisions)
-        for profile in json.loads((ROOT / 'src/pin.json').read_text())['profiles']:
+        for profile in contract_profiles(fixture, json.loads((ROOT / 'src/pin.json').read_text())['profiles']):
             if profile['engine'] == '3741':
                 self.assertIn(int(profile.get('revision', profile['build'])), revisions)
         for row in rows:
@@ -334,13 +335,13 @@ class HistoricalBehaviorTests(unittest.TestCase):
         from historical_file_precedence import render_file_precedence
         from native_sanitizers import sanitizer_environment
         from unittest.mock import patch
-        fixture = json.loads((Path(__file__).parent /
-            'fixtures/profile-external-file-contracts.json').read_text())
+        fixture = load_contract_fixture(Path(__file__).parent /
+            'fixtures/profile-external-file-contracts.json')
         rows = fixture['sources']
         revisions = {row['revision'] for row in rows}
         self.assertEqual(len(rows), len(revisions))
-        self.assertTrue({3761, 3769, 3773, *fixture['boundary_controls']} <= revisions)
-        for profile in json.loads((ROOT / 'src/pin.json').read_text())['profiles']:
+        self.assertTrue(contract_revisions(fixture, {3761, 3769, 3773, *fixture['boundary_controls']}) <= revisions)
+        for profile in contract_profiles(fixture, json.loads((ROOT / 'src/pin.json').read_text())['profiles']):
             if profile['engine'] == '3842':
                 self.assertIn(int(profile.get('revision', profile['build'])), revisions)
         for row in rows:
@@ -356,13 +357,13 @@ class HistoricalBehaviorTests(unittest.TestCase):
         from historical_model_selectors import render_model_selectors
         from native_sanitizers import sanitizer_environment
         from unittest.mock import patch
-        fixture = json.loads((Path(__file__).parent /
-            'fixtures/profile-model-selector-contracts.json').read_text())
+        fixture = load_contract_fixture(Path(__file__).parent /
+            'fixtures/profile-model-selector-contracts.json')
         rows = fixture['sources']
         revisions = {row['revision'] for row in rows}
         self.assertEqual(len(rows), len(revisions))
-        self.assertTrue({3761, 3769, 3773, *fixture['boundary_controls']} <= revisions)
-        for profile in json.loads((ROOT / 'src/pin.json').read_text())['profiles']:
+        self.assertTrue(contract_revisions(fixture, {3761, 3769, 3773, *fixture['boundary_controls']}) <= revisions)
+        for profile in contract_profiles(fixture, json.loads((ROOT / 'src/pin.json').read_text())['profiles']):
             if profile['engine'] == '3842':
                 self.assertIn(int(profile.get('revision', profile['build'])), revisions)
         for row in rows:
@@ -381,13 +382,13 @@ class HistoricalBehaviorTests(unittest.TestCase):
         from historical_animation_locals import render_animation_locals
         from native_sanitizers import sanitizer_environment
         from unittest.mock import patch
-        fixture = json.loads((Path(__file__).parent /
-            'fixtures/profile-animation-local-contracts.json').read_text())
+        fixture = load_contract_fixture(Path(__file__).parent /
+            'fixtures/profile-animation-local-contracts.json')
         rows = fixture['sources']
         revisions = {row['revision'] for row in rows}
         self.assertEqual(len(rows), len(revisions))
-        self.assertTrue({3761, 3769, 3773, *fixture['boundary_controls']} <= revisions)
-        for profile in json.loads((ROOT / 'src/pin.json').read_text())['profiles']:
+        self.assertTrue(contract_revisions(fixture, {3761, 3769, 3773, *fixture['boundary_controls']}) <= revisions)
+        for profile in contract_profiles(fixture, json.loads((ROOT / 'src/pin.json').read_text())['profiles']):
             if profile['engine'] == '3842':
                 self.assertIn(int(profile.get('revision', profile['build'])), revisions)
         for row in rows:
@@ -411,16 +412,16 @@ class HistoricalBehaviorTests(unittest.TestCase):
         from historical_model_load_phase import render_model_load_phase
         from native_sanitizers import sanitizer_environment
         from unittest.mock import patch
-        fixture = json.loads((Path(__file__).parent /
-            'fixtures/profile-model-load-phase-contracts.json').read_text())
+        fixture = load_contract_fixture(Path(__file__).parent /
+            'fixtures/profile-model-load-phase-contracts.json')
         rows = fixture['sources']
         revisions = {row['revision'] for row in rows}
         self.assertEqual(len(rows), len(revisions))
-        self.assertTrue({3761, 3769, 3773, *fixture['boundary_controls']} <= revisions)
+        self.assertTrue(contract_revisions(fixture, {3761, 3769, 3773, *fixture['boundary_controls']}) <= revisions)
         header = (ROOT / 'src/engines/3842/openbor.h').read_text()
         constants = {name: int(value) for name, value in re.findall(
             r'^#define\s+(MAX_\w+)\s+(\d+)\b', header, re.M)}
-        for profile in json.loads((ROOT / 'src/pin.json').read_text())['profiles']:
+        for profile in contract_profiles(fixture, json.loads((ROOT / 'src/pin.json').read_text())['profiles']):
             if profile['engine'] == '3842':
                 self.assertIn(int(profile.get('revision', profile['build'])), revisions)
         for row in rows:
@@ -441,12 +442,12 @@ class HistoricalBehaviorTests(unittest.TestCase):
         from historical_gif_layout import render_gif_record_layout
         from native_sanitizers import sanitizer_environment
         from unittest.mock import patch
-        fixture = json.loads((Path(__file__).parent /
-            'fixtures/profile-gif-record-layout-contracts.json').read_text())
+        fixture = load_contract_fixture(Path(__file__).parent /
+            'fixtures/profile-gif-record-layout-contracts.json')
         revisions = {row['revision'] for row in fixture['sources']}
         self.assertEqual(len(revisions), len(fixture['sources']))
-        self.assertTrue({3666, 3726, 3727, 3728, 3741} <= revisions)
-        for profile in json.loads((ROOT / 'src/pin.json').read_text())['profiles']:
+        self.assertTrue(contract_revisions(fixture, {3666, 3726, 3727, 3728, 3741}) <= revisions)
+        for profile in contract_profiles(fixture, json.loads((ROOT / 'src/pin.json').read_text())['profiles']):
             revision = int(profile.get('revision', profile['build']))
             if profile['engine'] == '3741' and revision <= 3728:
                 self.assertIn(revision, revisions)
@@ -473,12 +474,12 @@ class HistoricalBehaviorTests(unittest.TestCase):
         from native_sanitizers import sanitizer_environment
         from unittest.mock import patch
         fixtures = Path(__file__).parent / 'fixtures'
-        animation = json.loads((fixtures / 'profile-animation-name-contracts.json').read_text())
-        sync = json.loads((fixtures / 'profile-model-sync-contracts.json').read_text())
+        animation = load_contract_fixture(fixtures / 'profile-animation-name-contracts.json')
+        sync = load_contract_fixture(fixtures / 'profile-model-sync-contracts.json')
         revisions = {row['revision'] for row in sync['sources']}
         self.assertEqual(len(sync['sources']), len(revisions))
-        self.assertTrue({3761, 3769, 3773, *sync['boundary_controls']} <= revisions)
-        for profile in json.loads((ROOT / 'src/pin.json').read_text())['profiles']:
+        self.assertTrue(contract_revisions(sync, {3761, 3769, 3773, *sync['boundary_controls']}) <= revisions)
+        for profile in contract_profiles(sync, json.loads((ROOT / 'src/pin.json').read_text())['profiles']):
             if profile['engine'] == '3842':
                 self.assertIn(int(profile.get('revision', profile['build'])), revisions)
         engine = ROOT / 'src/engines/3842'
@@ -500,13 +501,13 @@ class HistoricalBehaviorTests(unittest.TestCase):
         from historical_animation_names import render_animation_names
         from native_sanitizers import sanitizer_environment
         from unittest.mock import patch
-        fixture = json.loads((Path(__file__).parent /
-            'fixtures/profile-animation-name-contracts.json').read_text())
+        fixture = load_contract_fixture(Path(__file__).parent /
+            'fixtures/profile-animation-name-contracts.json')
         rows = fixture['sources']
         revisions = {row['revision'] for row in rows}
         self.assertEqual(len(rows), len(revisions))
-        self.assertTrue({3761, 3769, 3773, *fixture['boundary_controls']} <= revisions)
-        for profile in json.loads((ROOT / 'src/pin.json').read_text())['profiles']:
+        self.assertTrue(contract_revisions(fixture, {3761, 3769, 3773, *fixture['boundary_controls']}) <= revisions)
+        for profile in contract_profiles(fixture, json.loads((ROOT / 'src/pin.json').read_text())['profiles']):
             if profile['engine'] == '3842':
                 self.assertIn(int(profile.get('revision', profile['build'])), revisions)
         engine = ROOT / 'src/engines/3842'
@@ -533,13 +534,13 @@ class HistoricalBehaviorTests(unittest.TestCase):
         from historical_hud_icons import render_hud_icons
         from native_sanitizers import sanitizer_environment
         from unittest.mock import patch
-        fixture = json.loads((Path(__file__).parent /
-            'fixtures/profile-hud-icon-contracts.json').read_text())
+        fixture = load_contract_fixture(Path(__file__).parent /
+            'fixtures/profile-hud-icon-contracts.json')
         rows = fixture['sources']
         revisions = {row['revision'] for row in rows}
         self.assertEqual(len(rows), len(revisions))
-        self.assertTrue({3761, 3769, 3773, *fixture['boundary_controls']} <= revisions)
-        for profile in json.loads((ROOT / 'src/pin.json').read_text())['profiles']:
+        self.assertTrue(contract_revisions(fixture, {3761, 3769, 3773, *fixture['boundary_controls']}) <= revisions)
+        for profile in contract_profiles(fixture, json.loads((ROOT / 'src/pin.json').read_text())['profiles']):
             if profile['engine'] == '3842':
                 self.assertIn(int(profile.get('revision', profile['build'])), revisions)
         for row in rows:
@@ -555,13 +556,13 @@ class HistoricalBehaviorTests(unittest.TestCase):
         from historical_camera import render_camera
         from native_sanitizers import sanitizer_environment
         from unittest.mock import patch
-        fixture = json.loads((Path(__file__).parent / 'fixtures/profile-camera-contracts.json').read_text())
+        fixture = load_contract_fixture(Path(__file__).parent / 'fixtures/profile-camera-contracts.json')
         rows = fixture['sources']
         revisions = {row['revision'] for row in rows}
         self.assertEqual(len(rows), len(revisions))
         self.assertTrue(set(fixture['boundary_controls']) <= revisions)
-        self.assertTrue({3761, 3769, 3773} <= revisions)
-        for profile in json.loads((ROOT / 'src/pin.json').read_text())['profiles']:
+        self.assertTrue(contract_revisions(fixture, {3761, 3769, 3773}) <= revisions)
+        for profile in contract_profiles(fixture, json.loads((ROOT / 'src/pin.json').read_text())['profiles']):
             if profile['engine'] == '3842':
                 self.assertIn(int(profile.get('revision', profile['build'])), revisions)
         for row in rows:
@@ -574,8 +575,8 @@ class HistoricalBehaviorTests(unittest.TestCase):
     def test_attack_drop_defaults_match_each_source_profile(self):
         from native_sanitizers import sanitizer_environment
         from unittest.mock import patch
-        fixture = json.loads((Path(__file__).parent /
-            'fixtures/profile-attack-drop-contracts.json').read_text())
+        fixture = load_contract_fixture(Path(__file__).parent /
+            'fixtures/profile-attack-drop-contracts.json')
         rows = fixture['sources']
         revisions = {row['revision'] for row in rows}
         self.assertEqual(len(rows), len(revisions))
@@ -610,7 +611,7 @@ class HistoricalBehaviorTests(unittest.TestCase):
             definitions.append(function(source, 'lcmHandleCommandSmartbomb').replace(
                 'lcmHandleCommandSmartbomb', 'smartbomb_'+engine, 1))
         self.assertEqual(constant_sets[0], constant_sets[1])
-        for profile in json.loads((ROOT / 'src/pin.json').read_text())['profiles']:
+        for profile in contract_profiles(fixture, json.loads((ROOT / 'src/pin.json').read_text())['profiles']):
             if profile['engine'] == '3741':
                 self.assertIn(int(profile.get('revision', profile['build'])), revisions)
         contexts = []
@@ -681,13 +682,13 @@ int main(void) {
         from historical_difficulty_menu import render_difficulty_menu
         from native_sanitizers import sanitizer_environment
         from unittest.mock import patch
-        fixture = json.loads((Path(__file__).parent /
-            'fixtures/profile-difficulty-menu-contracts.json').read_text())
+        fixture = load_contract_fixture(Path(__file__).parent /
+            'fixtures/profile-difficulty-menu-contracts.json')
         rows = fixture['sources']
         revisions = {row['revision'] for row in rows}
         self.assertEqual(len(rows), len(revisions))
         self.assertTrue(set(fixture['boundary_controls']) <= revisions)
-        for profile in json.loads((ROOT / 'src/pin.json').read_text())['profiles']:
+        for profile in contract_profiles(fixture, json.loads((ROOT / 'src/pin.json').read_text())['profiles']):
             if profile['engine'] == '3741':
                 self.assertIn(int(profile.get('revision', profile['build'])), revisions)
         for row in rows:
@@ -700,13 +701,13 @@ int main(void) {
                     [row for row in rows if row['engine'] == engine]))
 
     def test_level_table_and_stream_cleanup_match_each_source_profile(self):
-        fixture = json.loads((Path(__file__).parent /
-            'fixtures/profile-level-table-cleanup.json').read_text())
+        fixture = load_contract_fixture(Path(__file__).parent /
+            'fixtures/profile-level-table-cleanup.json')
         rows = fixture['sources']
         revisions = {row['revision'] for row in rows}
         self.assertEqual(len(rows), len(revisions))
         self.assertTrue(set(fixture['boundary_controls']) <= revisions)
-        for profile in json.loads((ROOT / 'src/pin.json').read_text())['profiles']:
+        for profile in contract_profiles(fixture, json.loads((ROOT / 'src/pin.json').read_text())['profiles']):
             if profile['engine'] == '3741':
                 self.assertIn(int(profile.get('revision', profile['build'])), revisions)
         root = ROOT / 'src/engines/3741'
@@ -899,13 +900,13 @@ int main(void) {@CHECKS@assert(test_case==@CASE_COUNT@);return 0;}
            .replace('@CASE_COUNT@', str(sum(53 if row['legacy_fixed_tables'] else 61 for row in rows))), includes, flags)
 
     def test_layer_reference_routing_and_absence_match_each_source_profile(self):
-        fixture = json.loads((Path(__file__).parent /
-            'fixtures/profile-layer-reference-contracts.json').read_text())
+        fixture = load_contract_fixture(Path(__file__).parent /
+            'fixtures/profile-layer-reference-contracts.json')
         rows = fixture['sources']
         revisions = {row['revision'] for row in rows}
         self.assertEqual(len(rows), len(revisions))
         self.assertTrue(set(fixture['boundary_controls']) <= revisions)
-        for profile in json.loads((ROOT / 'src/pin.json').read_text())['profiles']:
+        for profile in contract_profiles(fixture, json.loads((ROOT / 'src/pin.json').read_text())['profiles']):
             if profile['engine'] == '3741':
                 self.assertIn(int(profile.get('revision', profile['build'])), revisions)
         root = ROOT / 'src/engines/3741'
@@ -1072,13 +1073,13 @@ int main(void) {@CHECKS@assert(test_case==@CASE_COUNT@);return 0;}
            .replace('@CASE_COUNT@', str(len(rows)*192)), includes, flags)
 
     def test_level_loading_caps_match_each_source_profile(self):
-        fixture = json.loads((Path(__file__).parent /
-            'fixtures/profile-level-loading-caps.json').read_text())
+        fixture = load_contract_fixture(Path(__file__).parent /
+            'fixtures/profile-level-loading-caps.json')
         rows = fixture['sources']
         revisions = {row['revision'] for row in rows}
         self.assertEqual(len(rows), len(revisions))
         self.assertTrue(set(fixture['boundary_controls']) <= revisions)
-        for profile in json.loads((ROOT / 'src/pin.json').read_text())['profiles']:
+        for profile in contract_profiles(fixture, json.loads((ROOT / 'src/pin.json').read_text())['profiles']):
             if profile['engine'] == '3741':
                 self.assertIn(int(profile.get('revision', profile['build'])), revisions)
         root = ROOT / 'src/engines/3741'
@@ -1313,13 +1314,13 @@ int main(void) {@CHECKS@assert(test_case==@CASE_COUNT@);return 0;}
            .replace('@CHECKS@', '\n'.join(checks)).replace('@CASE_COUNT@', str(len(rows)*122)), includes, flags)
 
     def test_takedamage_pain_threshold_uses_each_profiles_factor_owner(self):
-        fixture = json.loads((Path(__file__).parent /
-            'fixtures/profile-pain-threshold-contracts.json').read_text())
+        fixture = load_contract_fixture(Path(__file__).parent /
+            'fixtures/profile-pain-threshold-contracts.json')
         rows = fixture['sources']
         revisions = {row['revision'] for row in rows}
         self.assertEqual(len(rows), len(revisions))
         self.assertTrue(set(fixture['boundary_controls']) <= revisions)
-        for profile in json.loads((ROOT / 'src/pin.json').read_text())['profiles']:
+        for profile in contract_profiles(fixture, json.loads((ROOT / 'src/pin.json').read_text())['profiles']):
             if profile['engine'] == '3741':
                 self.assertIn(int(profile.get('revision', profile['build'])), revisions)
         root = ROOT / 'src/engines/3741'
@@ -1431,13 +1432,13 @@ int main(void) {@CHECKS@return 0;}
            .replace('@CHECKS@', '\n'.join(checks)), includes, flags)
 
     def _block_pain_inputs(self):
-        fixture = json.loads((Path(__file__).parent /
-            'fixtures/profile-block-pain-contracts.json').read_text())
+        fixture = load_contract_fixture(Path(__file__).parent /
+            'fixtures/profile-block-pain-contracts.json')
         rows = fixture['sources']
         revisions = {row['revision'] for row in rows}
         self.assertEqual(len(rows), len(revisions))
         self.assertTrue(set(fixture['boundary_controls']) <= revisions)
-        for profile in json.loads((ROOT / 'src/pin.json').read_text())['profiles']:
+        for profile in contract_profiles(fixture, json.loads((ROOT / 'src/pin.json').read_text())['profiles']):
             if profile['engine'] == '3842':
                 self.assertIn(int(profile.get('revision', profile['build'])), revisions)
         for row in rows:
@@ -1812,8 +1813,8 @@ int main(void) {
 
 
     def test_projected_shadow_queue_palette_matches_each_source_profile(self):
-        fixture=json.loads((Path(__file__).parent /
-            'fixtures/profile-shadow-palette-contracts.json').read_text())
+        fixture=load_contract_fixture(Path(__file__).parent /
+            'fixtures/profile-shadow-palette-contracts.json')
         rows=fixture['sources'];revisions={row['revision'] for row in rows}
         self.assertEqual(len(rows),len(revisions))
         self.assertTrue(set(fixture['boundary_controls'])<=revisions)
@@ -2017,13 +2018,13 @@ int main(void) {
             native('int main(void) { int unused; return 0; }\n')
 
     def test_unary_numeric_and_unsupported_value_boundary(self):
-        fixture = json.loads((Path(__file__).parent /
-            'fixtures/profile-unary-contracts.json').read_text())
+        fixture = load_contract_fixture(Path(__file__).parent /
+            'fixtures/profile-unary-contracts.json')
         rows = fixture['sources']
         revisions = {row['revision'] for row in rows}
         self.assertEqual(len(rows), len(revisions))
-        self.assertTrue({3761, 3769, 3773, 3827, 3828} <= revisions)
-        for profile in json.loads((ROOT / 'src/pin.json').read_text())['profiles']:
+        self.assertTrue(contract_revisions(fixture, {3761, 3769, 3773, 3827, 3828}) <= revisions)
+        for profile in contract_profiles(fixture, json.loads((ROOT / 'src/pin.json').read_text())['profiles']):
             if profile['engine'] == '3842':
                 self.assertIn(int(profile.get('revision', profile['build'])), revisions)
         for row in rows:
@@ -2073,12 +2074,12 @@ int main(void) {
 '''.replace('METHODS', methods).replace('PROFILES', ','.join(str(row['revision']) for row in rows)))
 
     def test_model_switch_matches_each_source_profile(self):
-        fixture = json.loads((Path(__file__).parent /
-            'fixtures/profile-model-switch-contracts.json').read_text())
+        fixture = load_contract_fixture(Path(__file__).parent /
+            'fixtures/profile-model-switch-contracts.json')
         rows = fixture['sources']
         self.assertEqual(len(rows), len({r['revision'] for r in rows}))
         self.assertTrue(set(fixture['boundary_controls']) <= {r['revision'] for r in rows})
-        for profile in json.loads((ROOT / 'src/pin.json').read_text())['profiles']:
+        for profile in contract_profiles(fixture, json.loads((ROOT / 'src/pin.json').read_text())['profiles']):
             revision = int(profile.get('revision', profile['build']))
             if any(s['engine'] == profile['engine'] and s['first'] <= revision <= s['last']
                    for s in fixture['coverage']):
@@ -2272,12 +2273,12 @@ int main(void) {@CHECKS@assert(cases==@TOTAL@);return 0;}
                     '-Wno-error=misleading-indentation'))
 
     def test_campaign_and_selection_match_each_source_profile(self):
-        fixture = json.loads((Path(__file__).parent /
-            'fixtures/profile-campaign-contracts.json').read_text())
+        fixture = load_contract_fixture(Path(__file__).parent /
+            'fixtures/profile-campaign-contracts.json')
         rows = fixture['sources']
         self.assertEqual(len(rows), len({r['revision'] for r in rows}))
         self.assertTrue(set(fixture['boundary_controls']) <= {r['revision'] for r in rows})
-        for profile in json.loads((ROOT / 'src/pin.json').read_text())['profiles']:
+        for profile in contract_profiles(fixture, json.loads((ROOT / 'src/pin.json').read_text())['profiles']):
             revision = int(profile.get('revision', profile['build']))
             if any(s['engine'] == profile['engine'] and s['first'] <= revision <= s['last']
                    for s in fixture['coverage']):
@@ -2490,8 +2491,8 @@ int main(void) {@CHECKS@assert(cases==@TOTAL@);return 0;}
                 native(program)
 
     def test_animation_script_append_matches_each_source_profile(self):
-        fixture = json.loads((Path(__file__).parent /
-            'fixtures/profile-animation-script-append.json').read_text())
+        fixture = load_contract_fixture(Path(__file__).parent /
+            'fixtures/profile-animation-script-append.json')
         rows = fixture['sources']
         self.assertEqual(len(rows), len({r['revision'] for r in rows}))
         self.assertTrue(set(fixture['boundary_controls']) <= {r['revision'] for r in rows})
@@ -2571,12 +2572,12 @@ int main(void) {@CHECKS@return 0;}
                 native(program, extra_flags=('-Wno-unused-const-variable', '-Wno-unused-variable'))
 
     def test_text_inclusion_matches_each_source_profile(self):
-        fixture = json.loads((Path(__file__).parent /
-            'fixtures/profile-text-inclusion-contracts.json').read_text())
+        fixture = load_contract_fixture(Path(__file__).parent /
+            'fixtures/profile-text-inclusion-contracts.json')
         rows = fixture['sources']
         self.assertEqual(len(rows), len({r['revision'] for r in rows}))
         self.assertTrue(set(fixture['boundary_controls']) <= {r['revision'] for r in rows})
-        for profile in json.loads((ROOT / 'src/pin.json').read_text())['profiles']:
+        for profile in contract_profiles(fixture, json.loads((ROOT / 'src/pin.json').read_text())['profiles']):
             revision = int(profile.get('revision', profile['build']))
             if any(s['engine'] == profile['engine'] and s['first'] <= revision <= s['last']
                    for s in fixture['coverage']):
@@ -2679,11 +2680,11 @@ int main(void) {@CHECKS@return 0;}
                 native(program, extra_flags=('-Wno-unused-variable', '-Wno-unused-parameter'))
 
     def test_own_system_property_domains_and_native_effects(self):
-        fixture = json.loads((Path(__file__).parent /
-            'fixtures/profile-system-property-contracts.json').read_text())
+        fixture = load_contract_fixture(Path(__file__).parent /
+            'fixtures/profile-system-property-contracts.json')
         rows = fixture['sources']
         self.assertEqual(len(rows), len({r['revision'] for r in rows}))
-        for profile in json.loads((ROOT / 'src/pin.json').read_text())['profiles']:
+        for profile in contract_profiles(fixture, json.loads((ROOT / 'src/pin.json').read_text())['profiles']):
             revision = int(profile.get('revision', profile['build']))
             if any(s['engine'] == profile['engine'] and s['first'] <= revision <= s['last']
                    for s in fixture['coverage']):
@@ -2947,8 +2948,8 @@ int main(void) {
 '''.replace('ENUM', enum).replace('NAMES', names).replace('METHODS', methods))
 
     def test_entity_weapon_block_orbit_and_sleep_boundaries(self):
-        fixture = json.loads((Path(__file__).parent /
-            'fixtures/profile-entity-state-boundaries.json').read_text())
+        fixture = load_contract_fixture(Path(__file__).parent /
+            'fixtures/profile-entity-state-boundaries.json')
         extra = []
         for row in fixture['sources']:
             self.assertEqual(row['engine'], '3842')
@@ -2958,7 +2959,10 @@ int main(void) {
             for digest in row['source_sha256'].values():
                 self.assertRegex(digest, r'^[0-9a-f]{64}$')
             extra.append(row['revision'])
-        self.assertEqual(set(extra), {3761, 3769, 3773})
+        boundary = fixture.get('_contract_boundaries')
+        required = ({revision for engine, revision in boundary['profiles'] if engine == '3842'}
+                    if boundary is not None else {3761, 3769, 3773})
+        self.assertEqual(set(extra), required)
         profiles = sorted(set(extra) | set(range(3780, 3843)))
         source = (ENGINE / 'openbor.c').read_text()
         methods = '\n'.join(function(source, name) for name in (
@@ -3431,14 +3435,14 @@ int main(void) {
 '''.replace('CONSTANTS', constants).replace('HELPERS', helpers).replace('CASES', cases).replace('PROFILES', ','.join(map(str, attack_domain_revisions()))))
 
     def test_model_frame_argument_readers_keep_native_types_and_source_values(self):
-        fixture = json.loads((Path(__file__).parent /
-            'fixtures/profile-model-frame-argument-contracts.json').read_text())
+        fixture = load_contract_fixture(Path(__file__).parent /
+            'fixtures/profile-model-frame-argument-contracts.json')
         rows, commands = fixture['sources'], fixture['commands']
         by_revision = {row['revision']: row for row in rows}
         self.assertEqual(len(rows), len(by_revision))
         self.assertIn(3680, by_revision)
         self.assertIn(3681, by_revision)
-        for profile in json.loads((ROOT / 'src/pin.json').read_text())['profiles']:
+        for profile in contract_profiles(fixture, json.loads((ROOT / 'src/pin.json').read_text())['profiles']):
             if profile['engine'] == '3741':
                 self.assertIn(int(profile.get('revision', profile['build'])), by_revision)
         root = ROOT / 'src/engines/3741'
@@ -3567,13 +3571,13 @@ int main(void) {@CHECKS@ return 0;}
            .replace('@CHECKS@', '\n'.join(checks)), includes, flags)
 
     def test_projectile_terminal_health_matches_each_source_profile(self):
-        fixture = json.loads((Path(__file__).parent /
-            'fixtures/profile-projectile-health-contracts.json').read_text())
+        fixture = load_contract_fixture(Path(__file__).parent /
+            'fixtures/profile-projectile-health-contracts.json')
         rows = fixture['sources']
         revisions = {row['revision'] for row in rows}
         self.assertEqual(len(rows), len(revisions))
         self.assertTrue(set(fixture['boundary_controls']) <= revisions)
-        for profile in json.loads((ROOT / 'src/pin.json').read_text())['profiles']:
+        for profile in contract_profiles(fixture, json.loads((ROOT / 'src/pin.json').read_text())['profiles']):
             if profile['engine'] == '3741':
                 self.assertIn(int(profile.get('revision', profile['build'])), revisions)
         root = ROOT / 'src/engines/3741'
@@ -3675,13 +3679,13 @@ int main(void) {@CHECKS@return 0;}
            .replace('@CHECKS@', '\n'.join(checks)), includes, flags)
 
     def test_pickup_script_order_matches_each_source_profile(self):
-        fixture = json.loads((Path(__file__).parent /
-            'fixtures/profile-pickup-order-contracts.json').read_text())
+        fixture = load_contract_fixture(Path(__file__).parent /
+            'fixtures/profile-pickup-order-contracts.json')
         rows = fixture['sources']
         revisions = {row['revision'] for row in rows}
         self.assertEqual(len(rows), len(revisions))
         self.assertTrue(set(fixture['boundary_controls']) <= revisions)
-        for profile in json.loads((ROOT / 'src/pin.json').read_text())['profiles']:
+        for profile in contract_profiles(fixture, json.loads((ROOT / 'src/pin.json').read_text())['profiles']):
             if profile['engine'] == '3741':
                 self.assertIn(int(profile.get('revision', profile['build'])), revisions)
         root = ROOT / 'src/engines/3741'
@@ -3833,13 +3837,13 @@ int main(void) {@CHECKS@return 0;}
            .replace('@PLAYER_BLOCK@', block).replace('@CHECKS@', '\n'.join(checks)), includes, flags)
 
     def test_jump_combo_action_matches_each_source_profile(self):
-        fixture = json.loads((Path(__file__).parent /
-            'fixtures/profile-jump-combo-action-contracts.json').read_text())
+        fixture = load_contract_fixture(Path(__file__).parent /
+            'fixtures/profile-jump-combo-action-contracts.json')
         rows = fixture['sources']
         revisions = {row['revision'] for row in rows}
         self.assertEqual(len(rows), len(revisions))
         self.assertTrue(set(fixture['boundary_controls']) <= revisions)
-        for profile in json.loads((ROOT / 'src/pin.json').read_text())['profiles']:
+        for profile in contract_profiles(fixture, json.loads((ROOT / 'src/pin.json').read_text())['profiles']):
             if profile['engine'] == '3741':
                 self.assertIn(int(profile.get('revision', profile['build'])), revisions)
         root = ROOT / 'src/engines/3741'
@@ -3934,13 +3938,13 @@ int main(void) {@CHECKS@return 0;}
            .replace('@CHECKS@', '\n'.join(checks)), includes, flags)
 
     def test_player_running_policy_matches_each_source_profile(self):
-        fixture = json.loads((Path(__file__).parent /
-            'fixtures/profile-player-running-contracts.json').read_text())
+        fixture = load_contract_fixture(Path(__file__).parent /
+            'fixtures/profile-player-running-contracts.json')
         rows = fixture['sources']
         revisions = {row['revision'] for row in rows}
         self.assertEqual(len(rows), len(revisions))
         self.assertTrue(set(fixture['boundary_controls']) <= revisions)
-        for profile in json.loads((ROOT / 'src/pin.json').read_text())['profiles']:
+        for profile in contract_profiles(fixture, json.loads((ROOT / 'src/pin.json').read_text())['profiles']):
             if profile['engine'] == '3741':
                 self.assertIn(int(profile.get('revision', profile['build'])), revisions)
         root = ROOT / 'src/engines/3741'
@@ -4038,13 +4042,13 @@ int main(void) {@CHECKS@return 0;}
            .replace('@CHECKS@', '\n'.join(checks)), includes, flags)
 
     def test_turn_animation_velocity_matches_each_source_profile(self):
-        fixture = json.loads((Path(__file__).parent /
-            'fixtures/profile-turn-velocity-contracts.json').read_text())
+        fixture = load_contract_fixture(Path(__file__).parent /
+            'fixtures/profile-turn-velocity-contracts.json')
         rows = fixture['sources']
         revisions = {row['revision'] for row in rows}
         self.assertEqual(len(rows), len(revisions))
         self.assertTrue(set(fixture['boundary_controls']) <= revisions)
-        for profile in json.loads((ROOT / 'src/pin.json').read_text())['profiles']:
+        for profile in contract_profiles(fixture, json.loads((ROOT / 'src/pin.json').read_text())['profiles']):
             if profile['engine'] == '3741':
                 self.assertIn(int(profile.get('revision', profile['build'])), revisions)
         root = ROOT / 'src/engines/3741'
@@ -4113,13 +4117,13 @@ int main(void) {@CHECKS@return 0;}
 '''.replace('@BRANCHES@', wrappers).replace('@CHECKS@', '\n'.join(checks)), includes, flags)
 
     def test_jump_special_callback_order_matches_each_source_profile(self):
-        fixture = json.loads((Path(__file__).parent /
-            'fixtures/profile-jump-special-order-contracts.json').read_text())
+        fixture = load_contract_fixture(Path(__file__).parent /
+            'fixtures/profile-jump-special-order-contracts.json')
         rows = fixture['sources']
         revisions = {row['revision'] for row in rows}
         self.assertEqual(len(rows), len(revisions))
         self.assertTrue(set(fixture['boundary_controls']) <= revisions)
-        for profile in json.loads((ROOT / 'src/pin.json').read_text())['profiles']:
+        for profile in contract_profiles(fixture, json.loads((ROOT / 'src/pin.json').read_text())['profiles']):
             if profile['engine'] == '3741':
                 self.assertIn(int(profile.get('revision', profile['build'])), revisions)
         root = ROOT / 'src/engines/3741'
@@ -4216,13 +4220,13 @@ int main(void) {@CHECKS@return 0;}
            .replace('@CHECKS@', '\n'.join(checks)), includes, flags)
 
     def test_gif_footer_palette_and_errors_match_each_source_profile(self):
-        fixture = json.loads((Path(__file__).parent /
-            'fixtures/profile-gif-palette-contracts.json').read_text())
+        fixture = load_contract_fixture(Path(__file__).parent /
+            'fixtures/profile-gif-palette-contracts.json')
         rows = fixture['sources']
         revisions = {row['revision'] for row in rows}
         self.assertEqual(len(rows), len(revisions))
         self.assertTrue(set(fixture['boundary_controls']) <= revisions)
-        for profile in json.loads((ROOT / 'src/pin.json').read_text())['profiles']:
+        for profile in contract_profiles(fixture, json.loads((ROOT / 'src/pin.json').read_text())['profiles']):
             if profile['engine'] == '3741':
                 self.assertIn(int(profile.get('revision', profile['build'])), revisions)
         root = ROOT / 'src/engines/3741'
@@ -4330,13 +4334,13 @@ int main(void) {@CHECKS@return 0;}
            ['-DLIBRETRO=1'])
 
     def test_biker_defense_extent_matches_each_source_profile(self):
-        fixture = json.loads((Path(__file__).parent /
-            'fixtures/profile-biker-defense-contracts.json').read_text())
+        fixture = load_contract_fixture(Path(__file__).parent /
+            'fixtures/profile-biker-defense-contracts.json')
         rows = fixture['sources']
         revisions = {row['revision'] for row in rows}
         self.assertEqual(len(rows), len(revisions))
         self.assertTrue(set(fixture['boundary_controls']) <= revisions)
-        for profile in json.loads((ROOT / 'src/pin.json').read_text())['profiles']:
+        for profile in contract_profiles(fixture, json.loads((ROOT / 'src/pin.json').read_text())['profiles']):
             if profile['engine'] == '3741':
                 self.assertIn(int(profile.get('revision', profile['build'])), revisions)
         root = ROOT / 'src/engines/3741'
@@ -4401,13 +4405,13 @@ int main(void) {@CHECKS@return 0;}
            .replace('@CHECKS@', '\n'.join(checks)), includes, flags)
 
     def test_global_command_availability_and_values_follow_own_source(self):
-        fixture = json.loads((Path(__file__).parent /
-            'fixtures/profile-global-command-contracts.json').read_text())
+        fixture = load_contract_fixture(Path(__file__).parent /
+            'fixtures/profile-global-command-contracts.json')
         rows, commands = fixture['sources'], fixture['commands']
         revisions = {row['revision'] for row in rows}
         self.assertEqual(len(rows), len(revisions))
         self.assertTrue(set(fixture['boundary_controls']) <= revisions)
-        for profile in json.loads((ROOT / 'src/pin.json').read_text())['profiles']:
+        for profile in contract_profiles(fixture, json.loads((ROOT / 'src/pin.json').read_text())['profiles']):
             if profile['engine'] == '3741':
                 self.assertIn(int(profile.get('revision', profile['build'])), revisions)
         root = ROOT / 'src/engines/3741'
@@ -4575,13 +4579,13 @@ int main(void) {@CHECKS@return 0;}
            .replace('@CONSTRUCTOR@', '\n'.join(constructor)).replace('@CHECKS@', '\n'.join(checks)), includes, flags)
 
     def test_model_drawmethod_arguments_match_each_source_profile(self):
-        fixture = json.loads((Path(__file__).parent /
-            'fixtures/profile-model-drawmethod-contracts.json').read_text())
+        fixture = load_contract_fixture(Path(__file__).parent /
+            'fixtures/profile-model-drawmethod-contracts.json')
         rows = fixture['sources']
         revisions = {row['revision'] for row in rows}
         self.assertEqual(len(rows), len(revisions))
-        self.assertTrue({3729, 3730, 3731, 3770, 3771} <= revisions)
-        for profile in json.loads((ROOT / 'src/pin.json').read_text())['profiles']:
+        self.assertTrue(contract_revisions(fixture, {3729, 3730, 3731, 3770, 3771}) <= revisions)
+        for profile in contract_profiles(fixture, json.loads((ROOT / 'src/pin.json').read_text())['profiles']):
             revision = int(profile.get('revision', profile['build']))
             if profile['engine'] in ('3741', '3842') and 3666 <= revision <= 3773:
                 self.assertIn(revision, revisions)
@@ -4712,14 +4716,14 @@ int main(void) {@CHECKS@return 0;}
                .replace('@CHECKS@', '\n'.join(checks)), includes, flags)
 
     def test_aiattack_constants_follow_each_source_namespace_and_value(self):
-        fixture = json.loads((Path(__file__).parent /
-            'fixtures/profile-aiattack-constant-contracts.json').read_text())
+        fixture = load_contract_fixture(Path(__file__).parent /
+            'fixtures/profile-aiattack-constant-contracts.json')
         rows = fixture['sources']
         revisions = {row['revision']: row for row in rows}
         self.assertEqual(len(rows), len(revisions))
         self.assertIsNone(revisions[3675]['constants']['AIATTACK1_ALWAYS'])
         self.assertEqual(revisions[3676]['constants']['AIATTACK1_ALWAYS'], 8)
-        for profile in json.loads((ROOT / 'src/pin.json').read_text())['profiles']:
+        for profile in contract_profiles(fixture, json.loads((ROOT / 'src/pin.json').read_text())['profiles']):
             if profile['engine'] == '3741':
                 self.assertIn(int(profile.get('revision', profile['build'])), revisions)
         root = ROOT / 'src/engines/3741'
@@ -4796,8 +4800,8 @@ int main(void) {CHECKS return 0;}
            extra_flags=('-Wno-unused-variable',))
 
     def test_sample_arguments_defaults_payload_and_result_per_source_profile(self):
-        fixture = json.loads((Path(__file__).parent /
-            'fixtures/profile-sample-call-contracts.json').read_text())
+        fixture = load_contract_fixture(Path(__file__).parent /
+            'fixtures/profile-sample-call-contracts.json')
         rows = fixture['sources']
         by_revision = {row['revision']: row for row in rows}
         self.assertEqual(len(rows), len(by_revision))
@@ -4805,7 +4809,7 @@ int main(void) {CHECKS return 0;}
         self.assertFalse(by_revision[3706]['exact_six_arguments'])
         self.assertFalse(by_revision[3837]['returns_channel'])
         self.assertTrue(by_revision[3838]['returns_channel'])
-        for profile in json.loads((ROOT / 'src/pin.json').read_text())['profiles']:
+        for profile in contract_profiles(fixture, json.loads((ROOT / 'src/pin.json').read_text())['profiles']):
             if profile['engine'] in ('3741', '3842'):
                 revision = int(profile.get('revision', profile['build']))
                 self.assertEqual(by_revision[revision]['engine'], profile['engine'])
@@ -4934,13 +4938,13 @@ int main(void) {
 '''.replace('METHOD', function(source, 'openbor_playsample')))
 
     def test_native_script_function_namespace_and_valid_results(self):
-        fixture = json.loads((Path(__file__).parent /
-            'fixtures/profile-script-function-contracts.json').read_text())
+        fixture = load_contract_fixture(Path(__file__).parent /
+            'fixtures/profile-script-function-contracts.json')
         rows = [dict(row, **fixture['contracts'][row['contract']])
                 for row in fixture['sources']]
         by_revision = {row['revision']: row for row in rows}
         self.assertEqual(len(rows), len(by_revision))
-        for profile in json.loads((ROOT / 'src/pin.json').read_text())['profiles']:
+        for profile in contract_profiles(fixture, json.loads((ROOT / 'src/pin.json').read_text())['profiles']):
             if profile['engine'] in ('3741', '3842'):
                 revision = int(profile.get('revision', profile['build']))
                 self.assertEqual(by_revision[revision]['engine'], profile['engine'])
@@ -5078,13 +5082,13 @@ int main(void) { CHECKS return 0; }
                             '-Wno-misleading-indentation'))
 
     def test_animation_cmd_text_matches_each_source_profile(self):
-        fixture = json.loads((Path(__file__).parent /
-            'fixtures/profile-animation-cmd-contracts.json').read_text())
+        fixture = load_contract_fixture(Path(__file__).parent /
+            'fixtures/profile-animation-cmd-contracts.json')
         rows = fixture['sources']
         self.assertEqual(len(rows), len({(r['revision'], r['flag']) for r in rows}))
         covered = {r['revision'] for r in rows}
-        self.assertTrue({3761, 3769, 3773, 3812, 3813, 3820, 3821, 3822, 3823} <= covered)
-        for profile in json.loads((ROOT / 'src/pin.json').read_text())['profiles']:
+        self.assertTrue(contract_revisions(fixture, {3761, 3769, 3773, 3812, 3813, 3820, 3821, 3822, 3823}) <= covered)
+        for profile in contract_profiles(fixture, json.loads((ROOT / 'src/pin.json').read_text())['profiles']):
             if profile['engine'] == '3842':
                 self.assertIn(int(profile.get('revision', profile['build'])), covered)
         source = (ENGINE / 'openbor.c').read_text()
@@ -5148,13 +5152,14 @@ int main(void) { CHECKS return 0; }
            extra_flags=('-Wno-unused-const-variable',))
 
     def test_nested_interpreter_and_exit_registration_boundaries(self):
-        rows = json.loads((Path(__file__).parent /
-            'fixtures/profile-nested-execution-contracts.json').read_text())['sources']
+        fixture = load_contract_fixture(Path(__file__).parent /
+            'fixtures/profile-nested-execution-contracts.json')
+        rows = fixture['sources']
         revisions = {row['revision'] for row in rows}
         self.assertEqual(len(rows), len(revisions))
-        self.assertTrue({3761, 3769, 3773, 3805, 3806, 3812, 3813,
-                         3833, 3834, 3835, 3836} <= revisions)
-        for profile in json.loads((ROOT / 'src/pin.json').read_text())['profiles']:
+        self.assertTrue(contract_revisions(fixture, {3761, 3769, 3773, 3805, 3806, 3812, 3813,
+                         3833, 3834, 3835, 3836}) <= revisions)
+        for profile in contract_profiles(Path(__file__).parent / 'fixtures/profile-nested-execution-contracts.json', json.loads((ROOT / 'src/pin.json').read_text())['profiles']):
             if profile['engine'] == '3842':
                 self.assertIn(int(profile.get('revision', profile['build'])), revisions)
         for row in rows:

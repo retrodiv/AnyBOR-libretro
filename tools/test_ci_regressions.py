@@ -15,7 +15,7 @@ ROOT = Path(os.environ.get('OBOR_TEST_SOURCE', Path(__file__).resolve().parents[
 
 
 class RegressionCollectionTests(unittest.TestCase):
-    def run_block(self, failed):
+    def run_block(self, failed, group='1/1'):
         workflow = (ROOT/'.github/workflows/ci.yml').read_text()
         job = workflow.split('\n  macos-regressions:\n', 1)[1]
         block = job.split('      - name: Exercise native runtime regressions\n', 1)[1].split('      - ', 1)[0]
@@ -30,10 +30,27 @@ class RegressionCollectionTests(unittest.TestCase):
             code = 'print("observed %d"); raise SystemExit(%d)' % (number, 1 if number in failed else 0)
             lines[index] = 'run_check ' + shlex.join([sys.executable, '-c', code])
         result = subprocess.run(['bash', '-e', '-o', 'pipefail', '-c', '\n'.join(lines)],
-                                capture_output=True, text=True, timeout=20)
+                                capture_output=True, text=True, timeout=20,
+                                env=dict(os.environ, ANYBOR_CI_SUITE_GROUP=group))
+        index, count = map(int, group.split('/'))
         for number in range(len(commands)):
-            self.assertIn('observed %d\n' % number, result.stdout)
+            if number % count == index - 1:
+                self.assertIn('observed %d\n' % number, result.stdout)
+                self.assertIn('seconds=', result.stdout)
+            else:
+                self.assertNotIn('observed %d\n' % number, result.stdout)
         return result
+
+    @unittest.skipUnless(shutil.which('bash'), 'Needs the workflow Bash interpreter')
+    def test_partitions_execute_every_command_once_and_keep_failures_visible(self):
+        results = [self.run_block({0, 2}, '%d/4' % group) for group in range(1, 5)]
+        self.assertEqual([r.returncode for r in results], [1, 0, 1, 0])
+        import re
+        observed = [int(n) for r in results for n in re.findall(r'^observed (\d+)$', r.stdout, re.M)]
+        baseline = self.run_block(set())
+        expected = [int(n) for n in re.findall(r'^observed (\d+)$', baseline.stdout, re.M)]
+        self.assertEqual(sorted(observed), expected)
+        self.assertEqual(len(observed), len(set(observed)))
 
     @unittest.skipUnless(shutil.which('bash'), 'Needs the workflow Bash interpreter')
     def test_collects_multiple_failures_and_finishes_unsuccessfully(self):

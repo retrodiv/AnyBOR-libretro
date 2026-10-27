@@ -6,6 +6,7 @@ contracts. Invalid queries are checked only against the bounded core.
 SPDX-License-Identifier: BSD-3-Clause
 Copyright (c) 2026 retrodiv <retrodiv@proton.me>
 """
+from contract_fixtures import load_contract_fixture, contract_profiles
 import json
 import os
 from pathlib import Path
@@ -32,7 +33,7 @@ def reader_entry(source):
 
 
 def reader_program(components=None, common=None, contracts=None, *, original=False):
-    rows = json.loads(CONTRACT_PATH.read_text())['sources'] if contracts is None else contracts
+    rows = load_contract_fixture(CONTRACT_PATH)['sources'] if contracts is None else contracts
     if components is None:
         source = (SOURCE / 'src/engines/3741/openborscript.c').read_text()
         components = {'entries': reader_entry(source),
@@ -268,11 +269,11 @@ int main(int argc,char **argv) {
 
 class SpriteStatsReadTests(unittest.TestCase):
     def test_registry_covers_registered_profiles_and_source_identities(self):
-        rows = json.loads(CONTRACT_PATH.read_text())['sources']
+        rows = load_contract_fixture(CONTRACT_PATH)['sources']
         revisions = [row['revision'] for row in rows]
         self.assertEqual(len(revisions), len(set(revisions)))
         pin = json.loads((SOURCE / 'src/pin.json').read_text())
-        for profile in pin['profiles']:
+        for profile in contract_profiles(Path(__file__).parent / 'fixtures/profile-sprite-stats-read-contracts.json', pin['profiles']):
             if profile['engine'] == '3741':
                 self.assertIn(int(profile.get('revision', profile['build'])), revisions)
         for row in rows:
@@ -282,7 +283,7 @@ class SpriteStatsReadTests(unittest.TestCase):
                 self.assertRegex(digest, r'^[0-9a-f]{64}$')
 
     def test_valid_original_results_and_bounded_queries_per_profile(self):
-        rows = json.loads(CONTRACT_PATH.read_text())['sources']
+        rows = load_contract_fixture(CONTRACT_PATH)['sources']
         with tempfile.TemporaryDirectory(prefix='anybor-sprite-stats-read-') as temporary:
             work = Path(temporary); source = work / 'probe.c'; executable = work / 'probe'
             source.write_text(reader_program())

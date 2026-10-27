@@ -3,6 +3,7 @@
 SPDX-License-Identifier: BSD-3-Clause
 Copyright (c) 2026 retrodiv <retrodiv@proton.me>
 """
+from contract_fixtures import load_contract_fixture, contract_profiles
 import os
 import json
 from pathlib import Path
@@ -141,17 +142,17 @@ class ContentTriageTests(unittest.TestCase):
         self.assertEqual(profile, 4153, log)
 
     def test_animation_getter_contract_matches_each_profile_source_observation(self):
-        fixture = json.loads((Path(__file__).parent / 'fixtures' /
-                              'profile-entity-animation-contracts.json').read_text())
+        fixture = load_contract_fixture(Path(__file__).parent / 'fixtures' /
+                              'profile-entity-animation-contracts.json')
         pins = json.loads((ROOT / 'src/pin.json').read_text())
         self.assertEqual({(str(p['build']), p['engine'], int(p.get('revision', p['build'])))
-                          for p in pins['profiles']},
+                          for p in contract_profiles(fixture, pins['profiles'])},
                          {(p['profile'], p['engine'], int(p.get('revision', p['profile'])))
-                          for p in fixture['profiles']})
+                          for p in contract_profiles(fixture, fixture['profiles'])})
         rules = subprocess.check_output([str(self.host), '--rules'], text=True, timeout=8)
         rule = next(row.split() for row in rules.splitlines()
                     if row.split()[1:3] == ['10', 'animation'])
-        for row in fixture['profiles']:
+        for row in contract_profiles(fixture, fixture['profiles']):
             actual = subprocess.check_output([str(self.host), '--rule-probe', rule[0],
                                              str(row.get('revision', row['profile'])), row['engine']],
                                             text=True, timeout=8)

@@ -6,6 +6,7 @@ interpreter execution, model loading or gameplay.
 SPDX-License-Identifier: BSD-3-Clause
 Copyright (c) 2026 retrodiv <retrodiv@proton.me>
 """
+from contract_fixtures import load_contract_fixture, contract_profiles
 import json
 import os
 from pathlib import Path
@@ -60,7 +61,7 @@ def program(owned):
     if text.count(marker_magic)!=1:
         raise ValueError('One allocation-magic assertion required')
     text=text.replace(marker_magic,'owner->magic==(fixture_expected_magic?script_magic:0)')
-    rows = json.loads(CONTRACT_PATH.read_text())['sources']
+    rows = load_contract_fixture(CONTRACT_PATH)['sources']
     # Profile selection belongs to the test main, outside every extracted body.
     # Shared storage is unconditional across this physical engine's profiles.
     marker = 'int main(void) {'
@@ -85,8 +86,8 @@ int main(int argc,char **argv) {
 
 class LoadingScriptCleanupTests(unittest.TestCase):
     def test_global_cleanup_callback_order_matches_each_source_profile(self):
-        fixture=json.loads((Path(__file__).parent /
-            'fixtures/profile-loading-script-clear-contracts.json').read_text())
+        fixture=load_contract_fixture(Path(__file__).parent /
+            'fixtures/profile-loading-script-clear-contracts.json')
         rows=fixture['sources'];revisions={row['revision'] for row in rows}
         self.assertEqual(len(rows),len(revisions))
         self.assertTrue(set(fixture['boundary_controls'])<=revisions)
@@ -192,7 +193,7 @@ class ScriptOwnershipTests(unittest.TestCase):
         temporary = tempfile.TemporaryDirectory(prefix='anybor-script-ownership-')
         cls.addClassCleanup(temporary.cleanup)
         cls.work = Path(temporary.name)
-        cls.rows = json.loads(CONTRACT_PATH.read_text())['sources']
+        cls.rows = load_contract_fixture(CONTRACT_PATH)['sources']
         cls.executables = {}
         for mode, owned in (('valid', False), ('owned', True)):
             source = cls.work / (mode+'.c')
@@ -209,7 +210,7 @@ class ScriptOwnershipTests(unittest.TestCase):
         revisions = [row['revision'] for row in self.rows]
         self.assertEqual(len(revisions), len(set(revisions)))
         pin = json.loads((SOURCE / 'src/pin.json').read_text())
-        for profile in pin['profiles']:
+        for profile in contract_profiles(CONTRACT_PATH, pin['profiles']):
             if profile['engine'] == '3741':
                 self.assertIn(int(profile.get('revision', profile['build'])), revisions)
         for row in self.rows:

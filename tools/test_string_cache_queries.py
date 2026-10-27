@@ -3,6 +3,7 @@
 SPDX-License-Identifier: BSD-3-Clause
 Copyright (c) 2026 retrodiv <retrodiv@proton.me>
 """
+from contract_fixtures import load_contract_fixture, contract_profiles
 import json
 import os
 from pathlib import Path
@@ -21,7 +22,7 @@ SOURCE = Path(os.environ.get('OBOR_TEST_SOURCE', Path(__file__).resolve().parent
 
 class StringCacheQueryTests(unittest.TestCase):
     def test_each_profile_valid_boundaries_growth_release_and_clear(self):
-        fixture = json.loads(Path(__file__).with_name('fixtures').joinpath('string-cache-contracts.json').read_text())
+        fixture = load_contract_fixture(Path(__file__).with_name('fixtures').joinpath('string-cache-contracts.json'))
         pin = json.loads((SOURCE / 'src/pin.json').read_text())
         self.assertEqual(set(fixture['engines']), {e['build'] for e in pin['engines']})
         cc = shlex.split(os.environ.get('HOST_CC', os.environ.get('CC', 'cc')))
@@ -31,7 +32,7 @@ class StringCacheQueryTests(unittest.TestCase):
         link = ['-Wl,-dead_strip'] if sys.platform == 'darwin' else ['-no-pie', '-Wl,--gc-sections']
         for engine, options in fixture['engines'].items():
             with self.subTest(engine=engine), tempfile.TemporaryDirectory(prefix='native-string-cache-') as folder:
-                required = {int(p.get('revision', p['build'])) for p in pin['profiles'] if p['engine'] == engine}
+                required = {int(p.get('revision', p['build'])) for p in contract_profiles(fixture, pin['profiles']) if p['engine'] == engine}
                 self.assertTrue(required <= set(options['revisions']))
                 root = SOURCE / 'src/engines' / engine
                 work = Path(folder)

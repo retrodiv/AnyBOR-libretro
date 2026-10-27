@@ -5,6 +5,7 @@ paths, VM dispatch and gameplay.
 SPDX-License-Identifier: BSD-3-Clause
 Copyright (c) 2026 retrodiv <retrodiv@proton.me>
 """
+from contract_fixtures import load_contract_fixture, contract_profiles
 import json
 from historical_filestreams import extract_storage_helpers
 import os
@@ -39,9 +40,9 @@ def runtime_profile(code):
 class FilestreamTransferTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.layouts=json.loads((FIXTURES/'filestream-transfer-layouts.json').read_text())['engines']
+        cls.layouts=load_contract_fixture(FIXTURES/'filestream-transfer-layouts.json')['engines']
         cls.pin=json.loads((SOURCE/'src/pin.json').read_text())
-        cls.own=json.loads((FIXTURES/'filestream-contracts.json').read_text())['sources']
+        cls.own=load_contract_fixture(FIXTURES/'filestream-contracts.json')['sources']
         temporary=tempfile.TemporaryDirectory(prefix='anybor-stream-transfer-')
         cls.addClassCleanup(temporary.cleanup);work=Path(temporary.name);cls.executables={}
         compiler=shlex.split(os.environ.get('HOST_CC','cc'))
@@ -76,7 +77,7 @@ class FilestreamTransferTests(unittest.TestCase):
             **{key:layout[key]for key in ['record_bytes','buffer_offset','size_offset']}))
 
     def test_every_registered_profile_preserves_native_transfer(self):
-        for profile in self.pin['profiles']:
+        for profile in contract_profiles(Path(__file__).parent / 'fixtures/filestream-contracts.json', self.pin['profiles']):
             with self.subTest(profile=profile['build']):
                 self.check_context(profile['engine'],int(profile.get('revision',profile['build'])))
 

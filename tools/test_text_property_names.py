@@ -3,6 +3,7 @@
 SPDX-License-Identifier: BSD-3-Clause
 Copyright (c) 2026 retrodiv <retrodiv@proton.me>
 """
+from contract_fixtures import load_contract_fixture, contract_profiles
 import os
 import json
 from pathlib import Path
@@ -20,7 +21,7 @@ SOURCE=Path(os.environ.get('OBOR_TEST_SOURCE',ROOT))
 class TextPropertyNameTests(unittest.TestCase):
     def test_every_engine_names_numeric_ids_unknowns_and_repeated_lowering(self):
         pin=json.loads((SOURCE/'src/pin.json').read_text())
-        fixture=json.loads(Path(__file__).with_name('fixtures').joinpath('text-property-contracts.json').read_text())
+        fixture=load_contract_fixture(Path(__file__).with_name('fixtures').joinpath('text-property-contracts.json'))
         self.assertEqual(fixture['schema'],1)
         for engine_spec in pin['engines']:
             engine=engine_spec['build']
@@ -41,7 +42,7 @@ class TextPropertyNameTests(unittest.TestCase):
                     declared=dict(extra_contexts=[],rules=[dict(first=0,last=2147483647,
                         methods={methods[0]:{name:'_top_'+name for name in properties}},
                         get=methods[0],change=methods[0])])
-                contexts=sorted({int(p.get('revision',p['build']))for p in pin['profiles']if p['engine']==engine}|
+                contexts=sorted({int(p.get('revision',p['build']))for p in contract_profiles(fixture, pin['profiles'])if p['engine']==engine}|
                                 set(declared['extra_contexts']))
                 checks += ['const uint32_t contexts[]={'+','.join(str(n)+'u'for n in contexts)+'};',
                            'unsigned checked=0;',

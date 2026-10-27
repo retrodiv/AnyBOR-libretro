@@ -3,6 +3,7 @@
 SPDX-License-Identifier: BSD-3-Clause
 Copyright (c) 2026 retrodiv <retrodiv@proton.me>
 """
+from contract_fixtures import load_contract_fixture
 import json
 import os
 from pathlib import Path
@@ -33,8 +34,8 @@ class HistoricalAiflagTests(unittest.TestCase):
         declarations = source[start:stop]
         macro = source[source.index('#define MAPSTRINGS('):]
         macro = macro[:macro.index('\n\n')]
-        fixture = json.loads((Path(__file__).parent /
-            'fixtures/profile-aiflag-contracts.json').read_text())
+        fixture = load_contract_fixture(Path(__file__).parent /
+            'fixtures/profile-aiflag-contracts.json')
         rows = fixture['sources']
         revisions = [row['revision'] for row in rows]
         self.assertEqual(len(revisions), len(set(revisions)))

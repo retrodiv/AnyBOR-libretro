@@ -4,6 +4,7 @@ Typed queue observations do not establish pixel or game behavior.
 SPDX-License-Identifier: BSD-3-Clause
 Copyright (c) 2026 retrodiv <retrodiv@proton.me>
 """
+from contract_fixtures import load_contract_fixture, contract_profiles
 import json
 import os
 from pathlib import Path
@@ -38,7 +39,7 @@ def program(engine, layout, cases):
 class DrawscreenAPITests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.fixture = json.loads(FIXTURE.read_text()); cls.contexts = {}
+        cls.fixture = load_contract_fixture(FIXTURE); cls.contexts = {}
         for row in cls.fixture['contexts']:
             key = (row['engine'], row['revision'])
             if key in cls.contexts:
@@ -86,7 +87,7 @@ class DrawscreenAPITests(unittest.TestCase):
         self.assertEqual(json.loads(observed), dict(status='PASS', cases=len(self.fixture['cases'][row['contract']])))
 
     def test_every_affected_profile_has_own_native_contract(self):
-        for profile in self.pin['profiles']:
+        for profile in contract_profiles(self.fixture, self.pin['profiles']):
             if self.affected(profile):
                 self.assertIn((profile['engine'], int(profile.get('revision', profile['build']))), self.contexts)
         for row in self.contexts.values():
@@ -97,7 +98,7 @@ class DrawscreenAPITests(unittest.TestCase):
                 self.assertRegex(row[key], r'^[0-9a-f]{64}$')
 
     def test_each_registered_profile_preserves_screen_calls(self):
-        for profile in self.pin['profiles']:
+        for profile in contract_profiles(self.fixture, self.pin['profiles']):
             if self.affected(profile):
                 with self.subTest(profile=profile['build']):
                     self.check_context(self.contexts[profile['engine'], int(profile.get('revision', profile['build']))])

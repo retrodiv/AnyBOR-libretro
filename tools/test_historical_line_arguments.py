@@ -3,6 +3,7 @@
 SPDX-License-Identifier: BSD-3-Clause
 Copyright (c) 2026 retrodiv <retrodiv@proton.me>
 """
+from contract_fixtures import load_contract_fixture, contract_profiles
 import json
 import os
 from pathlib import Path
@@ -125,7 +126,7 @@ def contracts(rows):
 class LineArgumentTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.rows = json.loads(CONTRACT_PATH.read_text())['sources']
+        cls.rows = load_contract_fixture(CONTRACT_PATH)['sources']
         cls.groups = {}
         for row in cls.rows:
             cls.groups.setdefault(row['engine'], []).append(row)
@@ -139,7 +140,7 @@ class LineArgumentTests(unittest.TestCase):
         self.assertEqual(by_revision[3818]['line_capacity'],512)
         self.assertEqual(by_revision[3822]['line_capacity'],511)
         pin = json.loads((SOURCE / 'src/pin.json').read_text())
-        for profile in pin['profiles']:
+        for profile in contract_profiles(CONTRACT_PATH, pin['profiles']):
             if profile['engine'] in self.groups:
                 row = by_revision[int(profile.get('revision',profile['build']))]
                 self.assertEqual(row['engine'],profile['engine'])
@@ -187,7 +188,7 @@ class LineArgumentTests(unittest.TestCase):
                     .replace('CONTRACTS',contracts(rows)))
 
     def test_findarg_comments_signed_indices_and_retained_bytes_per_profile(self):
-        fixture=json.loads((CONTRACT_PATH.parent/'findarg-contracts.json').read_text())
+        fixture=load_contract_fixture(CONTRACT_PATH.parent/'findarg-contracts.json')
         groups={}
         for row in fixture['sources']:
             groups.setdefault((row['engine'],row['comment_prefix']),[]).append(row['revision'])
@@ -201,12 +202,12 @@ class LineArgumentTests(unittest.TestCase):
                     cases=fixture['cases']['prefix'if prefix else'whole_suffix']))
 
     def test_findarg_own_sources_cover_registered_profiles_and_both_boundary_sides(self):
-        fixture=json.loads((CONTRACT_PATH.parent/'findarg-contracts.json').read_text())
+        fixture=load_contract_fixture(CONTRACT_PATH.parent/'findarg-contracts.json')
         rows={r['revision']:r for r in fixture['sources']}
         self.assertEqual(len(rows),len(fixture['sources']))
         self.assertTrue(rows[3830]['comment_prefix']);self.assertFalse(rows[3831]['comment_prefix'])
         pin=json.loads((SOURCE/'src/pin.json').read_text())
-        for profile in pin['profiles']:
+        for profile in contract_profiles(fixture, pin['profiles']):
             if profile['engine']in {'3400','3741','3842'}:
                 self.assertEqual(rows[int(profile.get('revision',profile['build']))]['engine'],profile['engine'])
         for row in rows.values():

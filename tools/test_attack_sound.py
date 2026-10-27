@@ -5,6 +5,7 @@ separate contracts. Each native record/expectation view compiles once.
 SPDX-License-Identifier: BSD-3-Clause
 Copyright (c) 2026 retrodiv <retrodiv@proton.me>
 """
+from contract_fixtures import load_contract_fixture, contract_profiles
 import json
 import os
 from pathlib import Path
@@ -62,7 +63,7 @@ def program(engine,cases,sample_log=0):
 class AttackSoundTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.fixture=json.loads(FIXTURE.read_text());cls.contexts={}
+        cls.fixture=load_contract_fixture(FIXTURE);cls.contexts={}
         for row in cls.fixture['contexts']:
             key=(row['engine'],row['revision'])
             if key in cls.contexts:raise ValueError('Duplicate original attack sound context')
@@ -105,7 +106,7 @@ class AttackSoundTests(unittest.TestCase):
         self.assertEqual(json.loads(observed),dict(status='PASS',cases=len(self.fixture['cases'][row['mode']])))
 
     def test_every_affected_profile_has_own_native_contract(self):
-        for profile in self.pin['profiles']:
+        for profile in contract_profiles(self.fixture, self.pin['profiles']):
             if self.affected(profile):
                 self.assertIn((profile['engine'],int(profile.get('revision',profile['build']))),self.contexts)
         for row in self.contexts.values():
@@ -117,7 +118,7 @@ class AttackSoundTests(unittest.TestCase):
                 self.assertRegex(row['source_fragments'][name],r'^[0-9a-f]{64}$')
 
     def test_each_registered_profile_preserves_attack_sound_loading(self):
-        for profile in self.pin['profiles']:
+        for profile in contract_profiles(self.fixture, self.pin['profiles']):
             if self.affected(profile):
                 with self.subTest(profile=profile['build']):
                     self.check_context(self.contexts[profile['engine'],int(profile.get('revision',profile['build']))])

@@ -3,6 +3,7 @@
 SPDX-License-Identifier: BSD-3-Clause
 Copyright (c) 2026 retrodiv <retrodiv@proton.me>
 """
+from contract_fixtures import load_contract_fixture, contract_profiles
 import json
 import os
 from pathlib import Path
@@ -83,7 +84,7 @@ int main(void){
 class DrawmethodAlignmentTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.fixture=json.loads(FIXTURE.read_text());cls.pin=json.loads((SOURCE/'src/pin.json').read_text())
+        cls.fixture=load_contract_fixture(FIXTURE);cls.pin=json.loads((SOURCE/'src/pin.json').read_text())
         compiler=shlex.split(os.environ.get('HOST_CC','cc'))
         version=subprocess.check_output(compiler+['--version'],text=True,timeout=10)
         warnings=['-Wno-error=pragma-pack'] if 'clang' in version.lower() else []
@@ -119,7 +120,7 @@ class DrawmethodAlignmentTests(unittest.TestCase):
             with self.subTest(engine=row['build']):self.check_engine(row['build'])
 
     def test_each_registered_profile_uses_safe_drawing_records(self):
-        for profile in self.pin['profiles']:
+        for profile in contract_profiles(self.fixture, self.pin['profiles']):
             with self.subTest(profile=profile['build']):self.check_engine(profile['engine'])
 
 

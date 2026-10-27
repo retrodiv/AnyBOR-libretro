@@ -3,6 +3,7 @@
 SPDX-License-Identifier: BSD-3-Clause
 Copyright (c) 2026 retrodiv <retrodiv@proton.me>
 """
+from contract_fixtures import load_contract_fixture, contract_profiles, contract_revisions
 import os
 import json
 from pathlib import Path
@@ -73,8 +74,8 @@ class HistoricalLevelTests(unittest.TestCase):
         from test_historical_behavior import native
         from native_sanitizers import sanitizer_environment
         from unittest.mock import patch
-        rows = json.loads((Path(__file__).parent /
-            'fixtures/profile-level-spawn-contracts.json').read_text())['sources']
+        rows = load_contract_fixture(Path(__file__).parent /
+            'fixtures/profile-level-spawn-contracts.json')['sources']
         source = function((ENGINE / 'openbor.c').read_text(), 'load_level')
         start = source.index('cmd = getLevelCommand(levelcmdlist, command);')
         mapping = source[start:source.index('switch(cmd)', start)]
@@ -155,13 +156,13 @@ int main(void) {
             native(program)
 
     def test_order_shared_locals_cleanup_failures_and_coordinate_boundary(self):
-        fixture = json.loads((Path(__file__).parent /
-            'fixtures/profile-level-spawn-contracts.json').read_text())
+        fixture = load_contract_fixture(Path(__file__).parent /
+            'fixtures/profile-level-spawn-contracts.json')
         rows = fixture['sources']
         revisions = {row['revision'] for row in rows}
         self.assertEqual(len(rows), len(revisions))
-        self.assertTrue({3761, 3769, 3773, *fixture['boundary_controls']} <= revisions)
-        for profile in json.loads((SOURCE / 'src/pin.json').read_text())['profiles']:
+        self.assertTrue(contract_revisions(fixture, {3761, 3769, 3773, *fixture['boundary_controls']}) <= revisions)
+        for profile in contract_profiles(fixture, json.loads((SOURCE / 'src/pin.json').read_text())['profiles']):
             if profile['engine'] == '3842':
                 self.assertIn(int(profile.get('revision', profile['build'])), revisions)
         for row in rows:

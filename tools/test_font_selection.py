@@ -3,6 +3,7 @@
 SPDX-License-Identifier: BSD-3-Clause
 Copyright (c) 2026 retrodiv <retrodiv@proton.me>
 """
+from contract_fixtures import load_contract_fixture, contract_profiles
 import json
 import os
 from pathlib import Path
@@ -24,7 +25,7 @@ SOURCE = Path(os.environ.get('OBOR_TEST_SOURCE', Path(__file__).resolve().parent
 
 class FontSelectionTests(unittest.TestCase):
     def test_native_text_display_glyphs_and_expiry(self):
-        fixture=json.loads(Path(__file__).with_name('fixtures').joinpath('text-display-contracts.json').read_text())
+        fixture=load_contract_fixture(Path(__file__).with_name('fixtures').joinpath('text-display-contracts.json'))
         pin=json.loads((SOURCE/'src/pin.json').read_text())
         self.assertEqual(fixture['schema'],1)
         cc=shlex.split(os.environ.get('HOST_CC',os.environ.get('CC','cc')))
@@ -35,7 +36,7 @@ class FontSelectionTests(unittest.TestCase):
         link=['-Wl,-dead_strip']if sys.platform=='darwin'else['-no-pie','-Wl,--gc-sections']
         for row in fixture['models']:
             with self.subTest(engine=row['engine']),tempfile.TemporaryDirectory(prefix='native-text-display-')as folder:
-                required={int(p.get('revision',p['build']))for p in pin['profiles']if p['engine']==row['engine']}
+                required={int(p.get('revision',p['build']))for p in contract_profiles(fixture, pin['profiles'])if p['engine']==row['engine']}
                 self.assertTrue(required<=set(row['revisions']))
                 self.assertEqual(row['revisions'],[v['revision']for v in row['original_sources']])
                 for ref in row['original_sources']:
@@ -64,7 +65,7 @@ class FontSelectionTests(unittest.TestCase):
                     checks=len(row['revisions'])*len(row['cases'])))
 
     def test_each_profile_native_width_dimensions_and_release(self):
-        fixture = json.loads(Path(__file__).with_name('fixtures').joinpath('font-selection-contracts.json').read_text())
+        fixture = load_contract_fixture(Path(__file__).with_name('fixtures').joinpath('font-selection-contracts.json'))
         pin = json.loads((SOURCE/'src/pin.json').read_text())
         self.assertEqual(set(fixture['engines']), {e['build'] for e in pin['engines']})
         for contract in fixture['original_contracts']:
@@ -77,7 +78,7 @@ class FontSelectionTests(unittest.TestCase):
         link = ['-Wl,-dead_strip'] if sys.platform == 'darwin' else ['-no-pie', '-Wl,--gc-sections']
         for engine, options in fixture['engines'].items():
             with self.subTest(engine=engine), tempfile.TemporaryDirectory(prefix='native-font-selection-') as folder:
-                required = {int(p.get('revision', p['build'])) for p in pin['profiles'] if p['engine']==engine}
+                required = {int(p.get('revision', p['build'])) for p in contract_profiles(fixture, pin['profiles']) if p['engine']==engine}
                 self.assertTrue(required <= set(options['revisions']))
                 root = SOURCE/'src/engines'/engine
                 work = Path(folder)

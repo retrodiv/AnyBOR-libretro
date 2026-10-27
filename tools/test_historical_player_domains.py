@@ -5,6 +5,7 @@ it does not establish full historical player layout or game acceptance.
 SPDX-License-Identifier: BSD-3-Clause
 Copyright (c) 2026 retrodiv <retrodiv@proton.me>
 """
+from contract_fixtures import load_contract_fixture, contract_profiles
 import json
 import os
 from pathlib import Path
@@ -19,7 +20,7 @@ from test_historical_player import function
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE = Path(os.environ.get('OBOR_TEST_SOURCE', ROOT))
 ENGINE = SOURCE / 'src/engines/3842'
-CONTRACTS = json.loads((Path(__file__).parent / 'fixtures/profile-player-domain-contracts.json').read_text())
+CONTRACTS = load_contract_fixture(Path(__file__).parent / 'fixtures/profile-player-domain-contracts.json')
 
 
 def player_api_program(main, components=None, engine=None):
@@ -355,7 +356,7 @@ class PlayerDomainTests(unittest.TestCase):
         pin = json.loads((SOURCE / 'src/pin.json').read_text())
         keys = [row['revision'] for row in CONTRACTS['sources']]
         self.assertEqual(len(keys), len(set(keys)))
-        for profile in pin['profiles']:
+        for profile in contract_profiles(Path(__file__).parent / 'fixtures/profile-player-domain-contracts.json', pin['profiles']):
             if profile['engine'] not in ('3741', '3842'):
                 continue
             revision = int(profile.get('revision', profile['build']))

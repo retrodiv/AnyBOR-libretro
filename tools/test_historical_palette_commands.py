@@ -6,6 +6,7 @@ source fixture. Subclass ownership, conversion and full parsing are separate.
 SPDX-License-Identifier: BSD-3-Clause
 Copyright (c) 2026 retrodiv <retrodiv@proton.me>
 """
+from contract_fixtures import load_contract_fixture
 import json
 import os
 from pathlib import Path
@@ -213,8 +214,8 @@ static int quiet_printf(const char *format,...) {(void)format;return 0;}
 
 class HistoricalPaletteCommandTests(unittest.TestCase):
     def test_remap_refusal_and_warning_match_each_source_profile(self):
-        fixture=json.loads((Path(__file__).parent /
-            'fixtures/profile-remap-error-contracts.json').read_text())
+        fixture=load_contract_fixture(Path(__file__).parent /
+            'fixtures/profile-remap-error-contracts.json')
         rows=fixture['sources'];revisions={row['revision'] for row in rows}
         self.assertEqual(len(rows),len(revisions))
         self.assertTrue(set(fixture['boundary_controls'])<=revisions)

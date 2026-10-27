@@ -817,15 +817,27 @@ static void dump_ppm(const char *prefix, int frame)
     if (!f)
         return;
     fprintf(f, "P6\n%u %u\n255\n", g_fw, g_fh);
+    size_t row_bytes = (size_t)g_fw * 3;
+    if (g_fw && row_bytes / 3 != g_fw) {
+        fclose(f);
+        return;
+    }
+    uint8_t *rgb_row = (uint8_t *)malloc(row_bytes ? row_bytes : 1);
+    if (!rgb_row) {
+        fclose(f);
+        return;
+    }
     const uint8_t *rows = (const uint8_t *)g_fb;
     for (unsigned y = 0; y < g_fh; y++) {
         const uint32_t *px = (const uint32_t *)(rows + y * g_fpitch);
         for (unsigned x = 0; x < g_fw; x++) {
-            uint8_t rgb[3] = { (uint8_t)(px[x] >> 16), (uint8_t)(px[x] >> 8),
-                               (uint8_t)px[x] };
-            fwrite(rgb, 1, 3, f);
+            rgb_row[(size_t)x * 3] = (uint8_t)(px[x] >> 16);
+            rgb_row[(size_t)x * 3 + 1] = (uint8_t)(px[x] >> 8);
+            rgb_row[(size_t)x * 3 + 2] = (uint8_t)px[x];
         }
+        fwrite(rgb_row, 1, row_bytes, f);
     }
+    free(rgb_row);
     fclose(f);
 }
 

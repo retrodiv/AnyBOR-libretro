@@ -3,6 +3,7 @@
 SPDX-License-Identifier: BSD-3-Clause
 Copyright (c) 2026 retrodiv <retrodiv@proton.me>
 """
+from contract_fixtures import load_contract_fixture, contract_profiles
 import json
 import os
 from pathlib import Path
@@ -22,7 +23,7 @@ FIXTURE = Path(__file__).parent / 'fixtures/sprite-loading-contracts.json'
 class SpriteLoadingTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.fixture = json.loads(FIXTURE.read_text())
+        cls.fixture = load_contract_fixture(FIXTURE)
         cls.pin = json.loads((SOURCE/'src/pin.json').read_text())
         cls.contexts = {(row['engine'], row['revision']): row for row in cls.fixture['contexts']}
         temporary = tempfile.TemporaryDirectory(prefix='anybor-sprite-loading-')
@@ -81,12 +82,12 @@ class SpriteLoadingTests(unittest.TestCase):
         for row in self.fixture['contexts']:
             self.assertRegex(row['source_commit'],r'^[0-9a-f]{40}$')
             self.assertRegex(row['source_function_sha256'],r'^[0-9a-f]{64}$')
-        for profile in self.pin['profiles']:
+        for profile in contract_profiles(self.fixture, self.pin['profiles']):
             if profile['engine'] in self.fixture['engines']:
                 self.assertIn((profile['engine'],int(profile.get('revision',profile['build']))),self.contexts)
 
     def test_each_registered_historical_profile(self):
-        for profile in self.pin['profiles']:
+        for profile in contract_profiles(self.fixture, self.pin['profiles']):
             if profile['engine'] in self.fixture['engines']:
                 with self.subTest(profile=profile['build']):
                     self.check_context(profile['engine'],int(profile.get('revision',profile['build'])))

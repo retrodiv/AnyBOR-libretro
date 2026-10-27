@@ -1,0 +1,1215 @@
+{
+  "schema": 1,
+  "suites": [
+    {
+      "id": "make-check",
+      "memory_mib": 1024,
+      "seconds": 180,
+      "command": [
+        "make",
+        "check"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_ci_packages",
+      "memory_mib": 512,
+      "seconds": 90,
+      "command": [
+        "python3",
+        "tools/test_ci_packages.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_ci_focused",
+      "memory_mib": 512,
+      "seconds": 90,
+      "command": [
+        "python3",
+        "tools/test_ci_focused.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_host_ppm",
+      "memory_mib": 512,
+      "seconds": 120,
+      "command": [
+        "python3",
+        "tools/test_host_ppm.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_contract_fixtures",
+      "memory_mib": 512,
+      "seconds": 180,
+      "command": [
+        "python3",
+        "tools/test_contract_fixtures.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_historical_aiflag",
+      "memory_mib": 512,
+      "seconds": 180,
+      "command": [
+        "python3",
+        "tools/test_historical_aiflag.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_historical_constants",
+      "memory_mib": 512,
+      "seconds": 180,
+      "command": [
+        "python3",
+        "tools/test_historical_constants.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_historical_level",
+      "memory_mib": 512,
+      "seconds": 180,
+      "command": [
+        "python3",
+        "tools/test_historical_level.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_historical_tolerance",
+      "memory_mib": 512,
+      "seconds": 180,
+      "command": [
+        "python3",
+        "tools/test_historical_tolerance.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_preprocessor_strings",
+      "memory_mib": 512,
+      "seconds": 180,
+      "command": [
+        "python3",
+        "tools/test_preprocessor_strings.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_text_property_names",
+      "memory_mib": 512,
+      "seconds": 180,
+      "command": [
+        "python3",
+        "tools/test_text_property_names.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_ci_regressions",
+      "memory_mib": 512,
+      "seconds": 60,
+      "command": [
+        "python3",
+        "tools/test_ci_regressions.py"
+      ],
+      "ci": "native-macos"
+    },
+    {
+      "id": "test_native_sanitizers",
+      "memory_mib": 512,
+      "seconds": 60,
+      "command": [
+        "python3",
+        "tools/test_native_sanitizers.py"
+      ],
+      "ci": "native-macos"
+    },
+    {
+      "id": "test_historical_behavior",
+      "memory_mib": 1024,
+      "seconds": 180,
+      "command": [
+        "python3",
+        "tools/test_historical_behavior.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_historical_player_domains",
+      "memory_mib": 512,
+      "seconds": 120,
+      "command": [
+        "python3",
+        "tools/test_historical_player_domains.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_historical_entity_colourmaps",
+      "memory_mib": 512,
+      "seconds": 120,
+      "command": [
+        "python3",
+        "tools/test_historical_entity_colourmaps.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_historical_entity_factors",
+      "memory_mib": 512,
+      "seconds": 120,
+      "command": [
+        "python3",
+        "tools/test_historical_entity_factors.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_historical_entity_returns",
+      "memory_mib": 512,
+      "seconds": 120,
+      "command": [
+        "python3",
+        "tools/test_historical_entity_returns.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_historical_entity_complex",
+      "memory_mib": 512,
+      "seconds": 120,
+      "command": [
+        "python3",
+        "tools/test_historical_entity_complex.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_historical_entity_domains",
+      "memory_mib": 512,
+      "seconds": 120,
+      "command": [
+        "python3",
+        "tools/test_historical_entity_domains.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_historical_entity_mapper_split",
+      "memory_mib": 512,
+      "seconds": 120,
+      "command": [
+        "python3",
+        "tools/test_historical_entity_mapper_split.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_historical_entity_factor_reads",
+      "memory_mib": 512,
+      "seconds": 120,
+      "command": [
+        "python3",
+        "tools/test_historical_entity_factor_reads.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_historical_sprite_stats_reads",
+      "memory_mib": 512,
+      "seconds": 120,
+      "command": [
+        "python3",
+        "tools/test_historical_sprite_stats_reads.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_historical_stats_writes",
+      "memory_mib": 512,
+      "seconds": 120,
+      "command": [
+        "python3",
+        "tools/test_historical_stats_writes.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_historical_script_ownership",
+      "memory_mib": 512,
+      "seconds": 120,
+      "command": [
+        "python3",
+        "tools/test_historical_script_ownership.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_historical_script_callbacks",
+      "memory_mib": 512,
+      "seconds": 120,
+      "command": [
+        "python3",
+        "tools/test_historical_script_callbacks.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_historical_imports",
+      "memory_mib": 512,
+      "seconds": 180,
+      "command": [
+        "python3",
+        "tools/test_historical_imports.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_historical_wave_loader",
+      "memory_mib": 512,
+      "seconds": 120,
+      "command": [
+        "python3",
+        "tools/test_historical_wave_loader.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_historical_line_arguments",
+      "memory_mib": 512,
+      "seconds": 120,
+      "command": [
+        "python3",
+        "tools/test_historical_line_arguments.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_historical_collision_coordinates",
+      "memory_mib": 512,
+      "seconds": 120,
+      "command": [
+        "python3",
+        "tools/test_historical_collision_coordinates.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_historical_coordinate_reads",
+      "memory_mib": 512,
+      "seconds": 120,
+      "command": [
+        "python3",
+        "tools/test_historical_coordinate_reads.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_historical_frame_storage",
+      "memory_mib": 512,
+      "seconds": 120,
+      "command": [
+        "python3",
+        "tools/test_historical_frame_storage.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_historical_combat_factors",
+      "memory_mib": 512,
+      "seconds": 120,
+      "command": [
+        "python3",
+        "tools/test_historical_combat_factors.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_historical_model_defense",
+      "memory_mib": 512,
+      "seconds": 120,
+      "command": [
+        "python3",
+        "tools/test_historical_model_defense.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_historical_model_initialization",
+      "memory_mib": 512,
+      "seconds": 120,
+      "command": [
+        "python3",
+        "tools/test_historical_model_initialization.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_historical_model_cleanup",
+      "memory_mib": 512,
+      "seconds": 120,
+      "command": [
+        "python3",
+        "tools/test_historical_model_cleanup.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_historical_attack_probability",
+      "memory_mib": 512,
+      "seconds": 120,
+      "command": [
+        "python3",
+        "tools/test_historical_attack_probability.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_historical_attack_dispatch",
+      "memory_mib": 512,
+      "seconds": 120,
+      "command": [
+        "python3",
+        "tools/test_historical_attack_dispatch.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_historical_normal_attack",
+      "memory_mib": 512,
+      "seconds": 120,
+      "command": [
+        "python3",
+        "tools/test_historical_normal_attack.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_historical_jump_attack",
+      "memory_mib": 512,
+      "seconds": 120,
+      "command": [
+        "python3",
+        "tools/test_historical_jump_attack.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_historical_scene_counters",
+      "memory_mib": 512,
+      "seconds": 120,
+      "command": [
+        "python3",
+        "tools/test_historical_scene_counters.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_historical_entity_spawn",
+      "memory_mib": 512,
+      "seconds": 120,
+      "command": [
+        "python3",
+        "tools/test_historical_entity_spawn.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_historical_spawn_lookup",
+      "memory_mib": 512,
+      "seconds": 120,
+      "command": [
+        "python3",
+        "tools/test_historical_spawn_lookup.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_script_container_alignment",
+      "memory_mib": 512,
+      "seconds": 120,
+      "command": [
+        "python3",
+        "tools/test_script_container_alignment.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_hitpause",
+      "memory_mib": 512,
+      "seconds": 120,
+      "command": [
+        "python3",
+        "tools/test_hitpause.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_animation_callers",
+      "memory_mib": 512,
+      "seconds": 120,
+      "command": [
+        "python3",
+        "tools/test_animation_callers.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_frame_events",
+      "memory_mib": 512,
+      "seconds": 120,
+      "command": [
+        "python3",
+        "tools/test_frame_events.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_script_allocation",
+      "memory_mib": 512,
+      "seconds": 120,
+      "command": [
+        "python3",
+        "tools/test_script_allocation.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_attack_events",
+      "memory_mib": 512,
+      "seconds": 120,
+      "command": [
+        "python3",
+        "tools/test_attack_events.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_attack_sound",
+      "memory_mib": 512,
+      "seconds": 120,
+      "command": [
+        "python3",
+        "tools/test_attack_sound.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_primitive_api",
+      "memory_mib": 512,
+      "seconds": 120,
+      "command": [
+        "python3",
+        "tools/test_primitive_api.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_drawscreen_api",
+      "memory_mib": 512,
+      "seconds": 120,
+      "command": [
+        "python3",
+        "tools/test_drawscreen_api.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_screen_raster",
+      "memory_mib": 512,
+      "seconds": 180,
+      "command": [
+        "python3",
+        "tools/test_screen_raster.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_blend_selectors",
+      "memory_mib": 512,
+      "seconds": 180,
+      "command": [
+        "python3",
+        "tools/test_blend_selectors.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_screen_dispatch",
+      "memory_mib": 512,
+      "seconds": 180,
+      "command": [
+        "python3",
+        "tools/test_screen_dispatch.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_transform_indexed",
+      "memory_mib": 512,
+      "seconds": 180,
+      "command": [
+        "python3",
+        "tools/test_transform_indexed.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_transform_geometry",
+      "memory_mib": 512,
+      "seconds": 180,
+      "command": [
+        "python3",
+        "tools/test_transform_geometry.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_sprite_raster",
+      "memory_mib": 512,
+      "seconds": 180,
+      "command": [
+        "python3",
+        "tools/test_sprite_raster.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_sprite_composition",
+      "memory_mib": 512,
+      "seconds": 180,
+      "command": [
+        "python3",
+        "tools/test_sprite_composition.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_sprite_effects",
+      "memory_mib": 512,
+      "seconds": 180,
+      "command": [
+        "python3",
+        "tools/test_sprite_effects.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_sprite_mask_pixels",
+      "memory_mib": 512,
+      "seconds": 180,
+      "command": [
+        "python3",
+        "tools/test_sprite_mask_pixels.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_sprite_repeats",
+      "memory_mib": 512,
+      "seconds": 180,
+      "command": [
+        "python3",
+        "tools/test_sprite_repeats.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_sprite_queue",
+      "memory_mib": 512,
+      "seconds": 180,
+      "command": [
+        "python3",
+        "tools/test_sprite_queue.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_sprite_queue_loading",
+      "memory_mib": 512,
+      "seconds": 180,
+      "command": [
+        "python3",
+        "tools/test_sprite_queue_loading.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_bitmap_dimensions",
+      "memory_mib": 1024,
+      "seconds": 180,
+      "command": [
+        "python3",
+        "tools/test_bitmap_dimensions.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_image_rows",
+      "memory_mib": 1024,
+      "seconds": 180,
+      "command": [
+        "python3",
+        "tools/test_image_rows.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_sprite_loading",
+      "memory_mib": 1024,
+      "seconds": 180,
+      "command": [
+        "python3",
+        "tools/test_sprite_loading.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_sprite_cleanup",
+      "memory_mib": 512,
+      "seconds": 180,
+      "command": [
+        "python3",
+        "tools/test_sprite_cleanup.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_sprite_map_growth",
+      "memory_mib": 512,
+      "seconds": 180,
+      "command": [
+        "python3",
+        "tools/test_sprite_map_growth.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_sprite_nodes",
+      "memory_mib": 512,
+      "seconds": 180,
+      "command": [
+        "python3",
+        "tools/test_sprite_nodes.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_color_blends",
+      "memory_mib": 1024,
+      "seconds": 240,
+      "command": [
+        "python3",
+        "tools/test_color_blends.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_drawmethod",
+      "memory_mib": 512,
+      "seconds": 180,
+      "command": [
+        "python3",
+        "tools/test_drawmethod.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_drawmethod_alignment",
+      "memory_mib": 512,
+      "seconds": 180,
+      "command": [
+        "python3",
+        "tools/test_drawmethod_alignment.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_blend_tables",
+      "memory_mib": 512,
+      "seconds": 180,
+      "command": [
+        "python3",
+        "tools/test_blend_tables.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_blend_luts",
+      "memory_mib": 1024,
+      "seconds": 240,
+      "command": [
+        "python3",
+        "tools/test_blend_luts.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_palette_luts",
+      "memory_mib": 1024,
+      "seconds": 360,
+      "command": [
+        "python3",
+        "tools/test_palette_luts.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_draw_initialization",
+      "memory_mib": 1024,
+      "seconds": 180,
+      "command": [
+        "python3",
+        "tools/test_draw_initialization.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_primitive_raster",
+      "memory_mib": 1024,
+      "seconds": 240,
+      "command": [
+        "python3",
+        "tools/test_primitive_raster.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_primitive_queue",
+      "memory_mib": 1024,
+      "seconds": 240,
+      "command": [
+        "python3",
+        "tools/test_primitive_queue.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_point_bounds",
+      "memory_mib": 1024,
+      "seconds": 360,
+      "command": [
+        "python3",
+        "tools/test_point_bounds.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_historical_ai_movement",
+      "memory_mib": 512,
+      "seconds": 120,
+      "command": [
+        "python3",
+        "tools/test_historical_ai_movement.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_historical_aiattack_command",
+      "memory_mib": 512,
+      "seconds": 120,
+      "command": [
+        "python3",
+        "tools/test_historical_aiattack_command.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_level_cleanup_ownership",
+      "memory_mib": 512,
+      "seconds": 90,
+      "command": [
+        "python3",
+        "tools/test_level_cleanup_ownership.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_script_parser_tables",
+      "memory_mib": 512,
+      "seconds": 120,
+      "command": [
+        "python3",
+        "tools/test_script_parser_tables.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_historical_colourtable_reads",
+      "memory_mib": 512,
+      "seconds": 120,
+      "command": [
+        "python3",
+        "tools/test_historical_colourtable_reads.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_colourtable_bounds",
+      "memory_mib": 512,
+      "seconds": 120,
+      "command": [
+        "python3",
+        "tools/test_colourtable_bounds.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_render_colourmaps",
+      "memory_mib": 512,
+      "seconds": 180,
+      "command": [
+        "python3",
+        "tools/test_render_colourmaps.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_historical_filestreams",
+      "memory_mib": 512,
+      "seconds": 180,
+      "command": [
+        "python3",
+        "tools/test_historical_filestreams.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_filestream_transfer",
+      "memory_mib": 512,
+      "seconds": 180,
+      "command": [
+        "python3",
+        "tools/test_filestream_transfer.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_stream_shutdown",
+      "memory_mib": 512,
+      "seconds": 180,
+      "command": [
+        "python3",
+        "tools/test_stream_shutdown.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_stream_filesystem",
+      "memory_mib": 512,
+      "seconds": 180,
+      "command": [
+        "python3",
+        "tools/test_stream_filesystem.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_stream_text",
+      "memory_mib": 512,
+      "seconds": 180,
+      "command": [
+        "python3",
+        "tools/test_stream_text.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_integer_value",
+      "memory_mib": 512,
+      "seconds": 180,
+      "command": [
+        "python3",
+        "tools/test_integer_value.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_string_cache_queries",
+      "memory_mib": 512,
+      "seconds": 180,
+      "command": [
+        "python3",
+        "tools/test_string_cache_queries.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_font_selection",
+      "memory_mib": 512,
+      "seconds": 180,
+      "command": [
+        "python3",
+        "tools/test_font_selection.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_native_text_mapper",
+      "memory_mib": 512,
+      "seconds": 180,
+      "command": [
+        "python3",
+        "tools/test_native_text_mapper.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_text_collection_properties",
+      "memory_mib": 512,
+      "seconds": 180,
+      "command": [
+        "python3",
+        "tools/test_text_collection_properties.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_historical_palette_loading",
+      "memory_mib": 512,
+      "seconds": 120,
+      "command": [
+        "python3",
+        "tools/test_historical_palette_loading.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_historical_palette_commands",
+      "memory_mib": 512,
+      "seconds": 120,
+      "command": [
+        "python3",
+        "tools/test_historical_palette_commands.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_historical_palette_io",
+      "memory_mib": 512,
+      "seconds": 120,
+      "command": [
+        "python3",
+        "tools/test_historical_palette_io.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_palette_conversion",
+      "memory_mib": 512,
+      "seconds": 120,
+      "command": [
+        "python3",
+        "tools/test_palette_conversion.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_historical_palette_finish",
+      "memory_mib": 512,
+      "seconds": 120,
+      "command": [
+        "python3",
+        "tools/test_historical_palette_finish.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_historical_colourmap_ownership",
+      "memory_mib": 512,
+      "seconds": 120,
+      "command": [
+        "python3",
+        "tools/test_historical_colourmap_ownership.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_script_list_bounds",
+      "memory_mib": 512,
+      "seconds": 60,
+      "command": [
+        "python3",
+        "tools/test_script_list_bounds.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_historical_level_runtime",
+      "memory_mib": 512,
+      "seconds": 60,
+      "command": [
+        "python3",
+        "tools/test_historical_level_runtime.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_historical_save_bonus",
+      "memory_mib": 512,
+      "seconds": 60,
+      "command": [
+        "python3",
+        "tools/test_historical_save_bonus.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_sprite_masks",
+      "memory_mib": 512,
+      "seconds": 60,
+      "command": [
+        "python3",
+        "tools/test_sprite_masks.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_sprite_encoding",
+      "memory_mib": 512,
+      "seconds": 60,
+      "command": [
+        "python3",
+        "tools/test_sprite_encoding.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_font_raster",
+      "memory_mib": 512,
+      "seconds": 90,
+      "command": [
+        "python3",
+        "tools/test_font_raster.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_panel_order",
+      "memory_mib": 1024,
+      "seconds": 180,
+      "command": [
+        "python3",
+        "tools/test_panel_order.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_dot_bounds",
+      "memory_mib": 512,
+      "seconds": 90,
+      "command": [
+        "python3",
+        "tools/test_dot_bounds.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_6392_profile",
+      "memory_mib": 1024,
+      "seconds": 180,
+      "command": [
+        "python3",
+        "tools/test_6392_profile.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_profile_identity",
+      "memory_mib": 512,
+      "seconds": 90,
+      "command": [
+        "python3",
+        "tools/test_profile_identity.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_executable_build_tag",
+      "memory_mib": 512,
+      "seconds": 60,
+      "command": [
+        "python3",
+        "tools/test_executable_build_tag.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_branch_profiles",
+      "memory_mib": 1024,
+      "seconds": 180,
+      "command": [
+        "python3",
+        "tools/test_branch_profiles.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_profile_palettes",
+      "memory_mib": 1024,
+      "seconds": 180,
+      "command": [
+        "python3",
+        "tools/test_profile_palettes.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_core_options",
+      "memory_mib": 1024,
+      "seconds": 180,
+      "command": [
+        "python3",
+        "tools/test_core_options.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_early_v3_profiles",
+      "memory_mib": 1024,
+      "seconds": 180,
+      "command": [
+        "python3",
+        "tools/test_early_v3_profiles.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_property_error_lists",
+      "memory_mib": 1024,
+      "seconds": 180,
+      "command": [
+        "python3",
+        "tools/test_property_error_lists.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_text_object_ownership",
+      "memory_mib": 1024,
+      "seconds": 180,
+      "command": [
+        "python3",
+        "tools/test_text_object_ownership.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_content_triage",
+      "memory_mib": 1024,
+      "seconds": 180,
+      "command": [
+        "python3",
+        "tools/test_content_triage.py"
+      ],
+      "ci": "shared"
+    }
+  ]
+}

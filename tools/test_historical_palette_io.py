@@ -7,6 +7,7 @@ This does not establish container decoding, model ownership or game rendering.
 SPDX-License-Identifier: BSD-3-Clause
 Copyright (c) 2026 retrodiv <retrodiv@proton.me>
 """
+from contract_fixtures import load_contract_fixture, contract_profiles
 import json
 import os
 from pathlib import Path
@@ -19,8 +20,8 @@ from native_sanitizers import sanitizer_environment
 from test_historical_palette_loading import SOURCE
 from test_historical_player import function
 
-CONTRACTS = json.loads((Path(__file__).parent /
-    'fixtures/profile-palette-io-contracts.json').read_text())
+CONTRACTS = load_contract_fixture(Path(__file__).parent /
+    'fixtures/profile-palette-io-contracts.json')
 FUNCTIONS = ('colour16', 'colour32', '_load_palette16', '_load_palette32', 'load_palette')
 
 
@@ -141,7 +142,7 @@ class HistoricalPaletteIOTests(unittest.TestCase):
         for name in FUNCTIONS:
             self.assertEqual(len({x['function_hashes'][name] for x in rows}), 1)
         revisions = {x['revision'] for x in rows}
-        for profile in json.loads((SOURCE / 'src/pin.json').read_text())['profiles']:
+        for profile in contract_profiles(Path(__file__).parent / 'fixtures/profile-palette-io-contracts.json', json.loads((SOURCE / 'src/pin.json').read_text())['profiles']):
             if profile['engine'] == '3741':
                 self.assertIn(int(profile.get('revision', profile['build'])), revisions)
 

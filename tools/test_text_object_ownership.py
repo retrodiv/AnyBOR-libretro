@@ -3,6 +3,7 @@
 SPDX-License-Identifier: BSD-3-Clause
 Copyright (c) 2026 retrodiv <retrodiv@proton.me>
 """
+from contract_fixtures import load_contract_fixture, contract_profiles
 import json
 import os
 from pathlib import Path
@@ -27,7 +28,7 @@ class NativeTextOwnershipTests(_text_contracts.NativeTextReturnTests):
 class TextObjectOwnershipTests(unittest.TestCase):
     def test_repeated_replacement_keeps_one_owned_allocation(self):
         pin = json.loads((ROOT / 'src/pin.json').read_text())
-        fixture=json.loads(Path(__file__).with_name('fixtures').joinpath('text-object-ownership-contracts.json').read_text())
+        fixture=load_contract_fixture(Path(__file__).with_name('fixtures').joinpath('text-object-ownership-contracts.json'))
         native_engines={row['engine']for row in fixture['models']}
         with tempfile.TemporaryDirectory(prefix='text-object-ownership-') as folder:
             work = Path(folder)
@@ -50,7 +51,7 @@ class TextObjectOwnershipTests(unittest.TestCase):
                     if 'obor_textobj_format(' in branch:
                         helper += function(source, 'obor_textobj_store')
                         helper += function(source, 'obor_textobj_format')
-                    profiles = [int(p.get('revision', p['build'])) for p in pin['profiles']
+                    profiles = [int(p.get('revision', p['build'])) for p in contract_profiles(fixture, pin['profiles'])
                                 if p['engine'] == build]
                     program = r'''
 #include <assert.h>

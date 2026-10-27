@@ -3,6 +3,7 @@
 SPDX-License-Identifier: BSD-3-Clause
 Copyright (c) 2026 retrodiv <retrodiv@proton.me>
 """
+from contract_fixtures import load_contract_fixture
 import json
 import os
 from pathlib import Path
@@ -20,8 +21,8 @@ SOURCE = Path(os.environ.get('OBOR_TEST_SOURCE', Path(__file__).resolve().parent
 
 class ModelCleanupTests(unittest.TestCase):
     def test_owned_and_borrowed_records_match_each_source_profile(self):
-        fixture = json.loads((Path(__file__).parent /
-            'fixtures/profile-model-cleanup-contracts.json').read_text())
+        fixture = load_contract_fixture(Path(__file__).parent /
+            'fixtures/profile-model-cleanup-contracts.json')
         rows = fixture['sources']
         revisions = {row['revision'] for row in rows}
         self.assertEqual(len(rows), len(revisions))

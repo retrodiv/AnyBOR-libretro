@@ -3,6 +3,7 @@
 SPDX-License-Identifier: BSD-3-Clause
 Copyright (c) 2026 retrodiv <retrodiv@proton.me>
 """
+from contract_fixtures import load_contract_fixture, contract_profiles
 import json
 import os
 from pathlib import Path
@@ -195,8 +196,8 @@ int main(void) {
 class HistoricalLevelRuntimeTests(unittest.TestCase):
     def test_each_own_source_level_property_domain_and_runtime(self):
         from test_historical_behavior import native
-        fixture = json.loads((Path(__file__).parent /
-            'fixtures/profile-level-property-contracts.json').read_text())
+        fixture = load_contract_fixture(Path(__file__).parent /
+            'fixtures/profile-level-property-contracts.json')
         rows = fixture['sources']
         revisions = {row['revision'] for row in rows}
         self.assertEqual(len(rows), len(revisions))
@@ -205,7 +206,7 @@ class HistoricalLevelRuntimeTests(unittest.TestCase):
             self.assertEqual(control['revision'], 3739)
             self.assertTrue({'hole', 'wall'} <= set(control['property_names']))
             self.assertRegex(control['commit'], r'^[0-9a-f]{40}$')
-        for profile in json.loads((ROOT / 'src/pin.json').read_text())['profiles']:
+        for profile in contract_profiles(fixture, json.loads((ROOT / 'src/pin.json').read_text())['profiles']):
             revision = int(profile.get('revision', profile['build']))
             if any(span['engine'] == profile['engine'] and span['first'] <= revision <= span['last']
                    for span in fixture['coverage']):
@@ -442,13 +443,13 @@ int main(void) {@CHECKS@assert(cases==@TOTAL@);return 0;}
                        '-Wno-unused-parameter', '-Wno-unused-local-typedefs', '-Wno-implicit-fallthrough'))
 
     def test_initial_level_physics_matches_each_source_profile(self):
-        fixture = json.loads((Path(__file__).parent / 'fixtures' /
-            'profile-level-initial-physics-contracts.json').read_text())
+        fixture = load_contract_fixture(Path(__file__).parent / 'fixtures' /
+            'profile-level-initial-physics-contracts.json')
         rows, cases = fixture['sources'], fixture['cases']
         self.assertEqual(len({row['revision'] for row in rows}), len(rows))
         known = {row['revision']: row for row in rows}
         pin = json.loads((ROOT / 'src/pin.json').read_text())
-        for profile in pin['profiles']:
+        for profile in contract_profiles(fixture, pin['profiles']):
             revision = int(profile.get('revision', profile['build']))
             for span in fixture['coverage']:
                 if profile['engine'] == span['engine'] and span['first'] <= revision <= span['last']:

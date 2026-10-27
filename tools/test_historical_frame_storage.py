@@ -5,6 +5,7 @@ tracked and bounded; model parsing, raster, state and gameplay are separate.
 SPDX-License-Identifier: BSD-3-Clause
 Copyright (c) 2026 retrodiv <retrodiv@proton.me>
 """
+from contract_fixtures import load_contract_fixture, contract_profiles
 import json
 import os
 from pathlib import Path
@@ -57,7 +58,7 @@ def program(engine,rows):
 class FrameStorageTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.rows=json.loads(CONTRACT_PATH.read_text())['sources']
+        cls.rows=load_contract_fixture(CONTRACT_PATH)['sources']
         temporary=tempfile.TemporaryDirectory(prefix='anybor-frame-storage-')
         cls.addClassCleanup(temporary.cleanup);cls.work=Path(temporary.name)
         compiler=shlex.split(os.environ.get('HOST_CC','cc'))
@@ -94,7 +95,7 @@ class FrameStorageTests(unittest.TestCase):
         self.assertEqual(by_revision[3748]['coordinate_scalar_type'],'int')
         engines={row['engine'] for row in self.rows}
         pin=json.loads((SOURCE/'src/pin.json').read_text())
-        for profile in pin['profiles']:
+        for profile in contract_profiles(Path(__file__).parent / 'fixtures/profile-frame-storage-contracts.json', pin['profiles']):
             if profile['engine'] in engines:
                 row=by_revision[int(profile.get('revision',profile['build']))]
                 self.assertEqual(row['engine'],profile['engine'])

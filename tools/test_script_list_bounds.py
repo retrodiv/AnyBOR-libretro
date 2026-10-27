@@ -5,6 +5,7 @@ accidental result. These queries must have a defined bounded result in the core.
 SPDX-License-Identifier: BSD-3-Clause
 Copyright (c) 2026 retrodiv <retrodiv@proton.me>
 """
+from contract_fixtures import load_contract_fixture
 import json
 import os
 from pathlib import Path
@@ -160,7 +161,7 @@ int main(void) {
 
 class ScriptListTests(unittest.TestCase):
     def test_actual_landframe_and_staydown_mappers_remain_in_their_tables(self):
-        fixture = json.loads(FIXTURE.read_text())
+        fixture = load_contract_fixture(FIXTURE)
         with tempfile.TemporaryDirectory(prefix='anybor-script-mapper-') as temporary:
             work = Path(temporary)
             for engine in fixture['engines']:
@@ -179,7 +180,7 @@ class ScriptListTests(unittest.TestCase):
                                    env=sanitizer_environment())
 
     def test_defined_original_results_and_bounded_missing_queries(self):
-        fixture = json.loads(FIXTURE.read_text())
+        fixture = load_contract_fixture(FIXTURE)
         functions = {}
         for engine in fixture['engines']:
             source = SOURCE / 'src/engines' / engine / 'source/utils.c'

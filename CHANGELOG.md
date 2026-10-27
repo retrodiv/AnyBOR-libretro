@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.1.75 — bounded CI jobs
+
+- Install host tools by target with bounded download retries and step deadlines.
+- Run shared source checks once and partition native regression coverage.
+- Let each state job depend on its own platform's build artifact.
+- Record individual suite timings and grow runner partitions with the profile list.
+- Retain source-bound behavior transitions in the public regression fixtures.
+- Write captured images by row while preserving their exact pixel bytes.
+
 ## 0.1.74 — historical profile fidelity
 
 - Add the remaining source-defined profiles from 3666 through 3773, with 3742-dev

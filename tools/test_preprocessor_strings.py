@@ -3,6 +3,7 @@
 SPDX-License-Identifier: BSD-3-Clause
 Copyright (c) 2026 retrodiv <retrodiv@proton.me>
 """
+from contract_fixtures import load_contract_fixture
 import json
 import os
 from pathlib import Path
@@ -64,8 +65,8 @@ int main(void) {
                 self.assertIn('string_bounds=1',run.stdout);print(engine,run.stdout.strip(),flush=True)
 
     def test_integer_suffixes_match_each_source_profile(self):
-        fixture=json.loads((Path(__file__).parent /
-            'fixtures/profile-preprocessor-numeric-contracts.json').read_text())
+        fixture=load_contract_fixture(Path(__file__).parent /
+            'fixtures/profile-preprocessor-numeric-contracts.json')
         revisions={row['revision'] for row in fixture['sources']}
         self.assertEqual(len(revisions),len(fixture['sources']))
         self.assertTrue(set(fixture['boundary_controls']) <= revisions)

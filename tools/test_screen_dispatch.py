@@ -3,6 +3,7 @@
 SPDX-License-Identifier: BSD-3-Clause
 Copyright (c) 2026 retrodiv <retrodiv@proton.me>
 """
+from contract_fixtures import load_contract_fixture, contract_profiles
 import json
 import os
 from pathlib import Path
@@ -37,7 +38,7 @@ def program(engine, layout, cases):
 class ScreenDispatchTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.fixture = json.loads(FIXTURE.read_text())
+        cls.fixture = load_contract_fixture(FIXTURE)
         cls.pin = json.loads((SOURCE / 'src/pin.json').read_text())
         cls.contexts = {}
         for row in cls.fixture['contexts']:
@@ -92,7 +93,7 @@ class ScreenDispatchTests(unittest.TestCase):
             self.assertRegex(row['source_commit'], r'^[0-9a-f]{40}$')
 
     def test_every_registered_profile_preserves_dispatch_results(self):
-        for row in self.pin['profiles']:
+        for row in contract_profiles(self.fixture, self.pin['profiles']):
             if row['engine'] not in self.fixture['engines']: continue
             revision = int(row.get('revision', row['build']))
             contract = self.contexts.get((row['engine'], revision), {}).get(

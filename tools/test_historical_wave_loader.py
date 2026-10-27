@@ -5,6 +5,7 @@ These checks do not execute the mixer or establish audible/gameplay acceptance.
 SPDX-License-Identifier: BSD-3-Clause
 Copyright (c) 2026 retrodiv <retrodiv@proton.me>
 """
+from contract_fixtures import load_contract_fixture, contract_profiles, contract_revisions
 import json
 import os
 from pathlib import Path
@@ -68,7 +69,7 @@ int main(int argc,char **argv) {
 class WaveLoaderTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.rows = json.loads(CONTRACT_PATH.read_text())['sources']
+        cls.rows = load_contract_fixture(CONTRACT_PATH)['sources']
         temporary = tempfile.TemporaryDirectory(prefix='anybor-wave-loader-')
         cls.addClassCleanup(temporary.cleanup)
         cls.work = Path(temporary.name)
@@ -97,7 +98,7 @@ class WaveLoaderTests(unittest.TestCase):
         self.assertIs(by_revision[3792]['legacy16'],False)
         pin = json.loads((SOURCE / 'src/pin.json').read_text())
         engines = {row['engine'] for row in self.rows}
-        for profile in pin['profiles']:
+        for profile in contract_profiles(CONTRACT_PATH, pin['profiles']):
             if profile['engine'] in engines:
                 row = by_revision[int(profile.get('revision',profile['build']))]
                 self.assertEqual(row['engine'],profile['engine'])
@@ -124,14 +125,14 @@ class SoundCacheTests(unittest.TestCase):
     def test_sample_slots_lifetime_playback_and_model_cache_per_profile(self):
         from historical_sound_cache import render_sound_cache
         from test_historical_behavior import native
-        fixture = json.loads((Path(__file__).parent /
-            'fixtures/profile-sound-cache-contracts.json').read_text())
+        fixture = load_contract_fixture(Path(__file__).parent /
+            'fixtures/profile-sound-cache-contracts.json')
         rows = fixture['sources']
         revisions = {row['revision'] for row in rows}
         self.assertEqual(len(rows), len(revisions))
         self.assertTrue(set(fixture['boundary_controls']) <= revisions)
-        self.assertTrue({3761, 3769, 3773} <= revisions)
-        for profile in json.loads((SOURCE / 'src/pin.json').read_text())['profiles']:
+        self.assertTrue(contract_revisions(fixture, {3761, 3769, 3773}) <= revisions)
+        for profile in contract_profiles(fixture, json.loads((SOURCE / 'src/pin.json').read_text())['profiles']):
             if profile['engine'] == '3842':
                 self.assertIn(int(profile.get('revision', profile['build'])), revisions)
         for row in rows:

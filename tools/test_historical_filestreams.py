@@ -3,6 +3,7 @@
 SPDX-License-Identifier: BSD-3-Clause
 Copyright (c) 2026 retrodiv <retrodiv@proton.me>
 """
+from contract_fixtures import load_contract_fixture, contract_profiles
 import json
 import os
 from pathlib import Path
@@ -39,7 +40,7 @@ def runtime_profile(code):
 class HistoricalFilestreamTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.rows=json.loads(FIXTURE.read_text())['sources']
+        cls.rows=load_contract_fixture(FIXTURE)['sources']
         cls.pin=json.loads((SOURCE/'src/pin.json').read_text())
         cls.contexts={row['revision']:row for row in cls.rows}
         temporary=tempfile.TemporaryDirectory(prefix='anybor-filestreams-')
@@ -82,7 +83,7 @@ class HistoricalFilestreamTests(unittest.TestCase):
             with self.subTest(profile=row['revision']):self.check_context(row['revision'])
 
     def test_registered_affected_profiles_have_own_contracts(self):
-        for profile in self.pin['profiles']:
+        for profile in contract_profiles(Path(__file__).parent / 'fixtures/filestream-contracts.json', self.pin['profiles']):
             if profile['engine']in {'3741','3842'}:
                 revision=int(profile.get('revision',profile['build']))
                 if profile['engine']!='3741'and revision not in self.contexts:continue
@@ -105,7 +106,7 @@ class LevelOwnedStreamTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         fixture=Path(__file__).parent/'fixtures/level-stream-contracts.json'
-        cls.rows=json.loads(fixture.read_text())['backends']
+        cls.rows=load_contract_fixture(fixture)['backends']
         cls.pin=json.loads((SOURCE/'src/pin.json').read_text())
         temporary=tempfile.TemporaryDirectory(prefix='anybor-level-streams-')
         cls.addClassCleanup(temporary.cleanup);work=Path(temporary.name);cls.executables={}
@@ -151,7 +152,7 @@ class LevelOwnedStreamTests(unittest.TestCase):
             self.assertEqual(set(row['source_sha256']),{'openbor_createfilestream','free_level'})
             for digest in row['source_sha256'].values():self.assertRegex(digest,r'^[0-9a-f]{64}$')
             self.assertTrue(any(p['engine']==row['engine']and
-                int(p.get('revision',p['build']))in row['revisions']for p in self.pin['profiles']))
+                int(p.get('revision',p['build']))in row['revisions']for p in contract_profiles(Path(__file__).parent / 'fixtures/filestream-contracts.json', self.pin['profiles'])))
 
 
 if __name__=='__main__':unittest.main()

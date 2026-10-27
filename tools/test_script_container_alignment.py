@@ -5,6 +5,7 @@ Script callbacks are observed; linked actor/script units have separate checks.
 SPDX-License-Identifier: BSD-3-Clause
 Copyright (c) 2026 retrodiv <retrodiv@proton.me>
 """
+from contract_fixtures import load_contract_fixture, contract_profiles
 import json
 import os
 from pathlib import Path
@@ -47,7 +48,7 @@ def program(engine,layout):
 class ScriptContainerAlignmentTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        fixture=json.loads(LAYOUTS.read_text());cls.layouts={row['engine']:row for row in fixture['engines']}
+        fixture=load_contract_fixture(LAYOUTS);cls.layouts={row['engine']:row for row in fixture['engines']}
         cls.contexts=fixture['contexts']
         if len(cls.layouts)!=len(fixture['engines']):
             raise ValueError('Duplicate native container layout')
@@ -81,7 +82,7 @@ class ScriptContainerAlignmentTests(unittest.TestCase):
 
     def test_all_engines_and_profiles_have_source_layouts(self):
         self.assertEqual(set(self.layouts),{row['build'] for row in self.pin['engines']})
-        for profile in self.pin['profiles']:
+        for profile in contract_profiles(Path(__file__).parent / 'fixtures/script-container-layouts.json', self.pin['profiles']):
             self.assertIn(profile['engine'],self.layouts)
         for row in self.layouts.values():
             self.assertRegex(row['source_commit'],r'^[0-9a-f]{40}$')
@@ -96,7 +97,7 @@ class ScriptContainerAlignmentTests(unittest.TestCase):
             self.assertRegex(row['source_commit'],r'^[0-9a-f]{40}$')
 
     def test_each_registered_profile_preserves_slots_callbacks_and_cleanup(self):
-        for profile in self.pin['profiles']:
+        for profile in contract_profiles(Path(__file__).parent / 'fixtures/script-container-layouts.json', self.pin['profiles']):
             revision=int(profile.get('revision',profile['build']))
             with self.subTest(profile=profile['build'],revision=revision):
                 observed=subprocess.check_output([str(self.executables[profile['engine']]),str(revision)],

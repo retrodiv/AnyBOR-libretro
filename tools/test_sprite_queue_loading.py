@@ -3,6 +3,7 @@
 SPDX-License-Identifier: BSD-3-Clause
 Copyright (c) 2026 retrodiv <retrodiv@proton.me>
 """
+from contract_fixtures import load_contract_fixture, contract_profiles
 import json
 import os
 from pathlib import Path
@@ -34,7 +35,7 @@ def program(engine,context):
 class SpriteQueueLoadingTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.fixture=json.loads(FIXTURE.read_text());cls.pin=json.loads((SOURCE/'src/pin.json').read_text())
+        cls.fixture=load_contract_fixture(FIXTURE);cls.pin=json.loads((SOURCE/'src/pin.json').read_text())
         compiler=shlex.split(os.environ.get('HOST_CC','cc'))
         version=subprocess.check_output(compiler+['--version'],text=True,timeout=10)
         warnings=['-Wno-error=pragma-pack']if'clang'in version.lower()else[]
@@ -62,13 +63,13 @@ class SpriteQueueLoadingTests(unittest.TestCase):
             cold_ready=node,cold_requests=node,full_missing_requests=node))
 
     def test_every_registered_profile_has_an_explicit_queue_layout(self):
-        for profile in self.pin['profiles']:self.assertIn(profile['engine'],self.fixture['engines'])
+        for profile in contract_profiles(self.fixture, self.pin['profiles']):self.assertIn(profile['engine'],self.fixture['engines'])
         for row in self.fixture['contexts']:
             self.assertIn(row['engine'],self.fixture['engines'])
             self.assertRegex(row['source_commit'],r'^[0-9a-f]{40}$')
 
     def test_each_registered_profile_handles_available_and_unavailable_images(self):
-        for profile in self.pin['profiles']:
+        for profile in contract_profiles(self.fixture, self.pin['profiles']):
             with self.subTest(profile=profile['build']):
                 self.check_context(profile['engine'],int(profile.get('revision',profile['build'])))
 
