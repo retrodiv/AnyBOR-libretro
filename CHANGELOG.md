@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.76 — native CI corrections
+
+- Keep script allocation and cleanup stable for packed pointer records.
+- Preserve native regression checks across host compiler and sanitizer differences.
+- Retry bounded package acquisition through an alternate official mirror.
+- Group native checks using measured costs while retaining every profile.
+
 ## 0.1.75 — bounded CI jobs
 
 - Install host tools by target with bounded download retries and step deadlines.

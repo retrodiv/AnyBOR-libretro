@@ -3,6 +3,7 @@
 SPDX-License-Identifier: BSD-3-Clause
 Copyright (c) 2026 retrodiv <retrodiv@proton.me>
 """
+from historical_blend_luts import lut_factory_adapters
 
 
 def render_sprite_raster(*, revision, clipping, resource_hooks, assert_refusal,
@@ -217,10 +218,12 @@ void *obor_calloc(size_t count,size_t size){assert(!size || count<=(1u<<20)/size
 void *obor_realloc(void *ptr,size_t size){assert(size<=1u<<20);return realloc(ptr,size);}
 void obor_free(void *ptr){free(ptr);}
 typedef unsigned char *(*native_factory)(void);
+@FACTORY_ADAPTERS@
 static native_factory true_factories[2][6]={
- {create_screen16_tbl,create_multiply16_tbl,create_overlay16_tbl,create_hardlight16_tbl,create_dodge16_tbl,create_half16_tbl},
- {create_screen32_tbl,create_multiply32_tbl,create_overlay32_tbl,create_hardlight32_tbl,create_dodge32_tbl,create_half32_tbl}};
+ {native_screen16,native_multiply16,native_overlay16,native_hardlight16,native_dodge16,native_half16},
+ {native_screen32,native_multiply32,native_overlay32,native_hardlight32,native_dodge32,native_half32}};
 '''
+    declarations=declarations.replace('@FACTORY_ADAPTERS@',lut_factory_adapters())
     code=code.replace('struct sprite_case {',declarations+'struct sprite_case {')
     marker=' for(active_case=0;active_case<sizeof(tests)/sizeof(*tests);++active_case){'
     if code.count(marker)!=1:raise ValueError('One native sprite case loop required')

@@ -33,9 +33,9 @@ jobs:
           echo "XDG_RUNTIME_DIR=/run/user/$(id -u)" >> "$GITHUB_ENV"
           echo "DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/$(id -u)/bus" >> "$GITHUB_ENV"
       - name: Install focused test tools
-        timeout-minutes: 10
+        timeout-minutes: 16
         run: |
-          python3 tools/run_guarded.py --memory-mib 1024 --seconds 540 -- python3 tools/ci_packages.py --role focused --install
+          python3 tools/run_guarded.py --memory-mib 1024 --seconds 900 -- python3 tools/ci_packages.py --role focused --install
       - name: Check distribution and focused regression tests
         run: |
           python3 tools/ci_focused.py --group '${{ matrix.suite_group }}' --output .build/ci-focused
@@ -68,9 +68,9 @@ jobs:
           echo "XDG_RUNTIME_DIR=/run/user/$(id -u)" >> "$GITHUB_ENV"
           echo "DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/$(id -u)/bus" >> "$GITHUB_ENV"
       - name: Install target build tools
-        timeout-minutes: 10
+        timeout-minutes: 16
         run: |
-          python3 tools/run_guarded.py --memory-mib 1024 --seconds 540 -- python3 tools/ci_packages.py --role "$TARGET" --install
+          python3 tools/run_guarded.py --memory-mib 1024 --seconds 900 -- python3 tools/ci_packages.py --role "$TARGET" --install
       - name: Install and exercise the RISC-V toolchain
         if: matrix.target == 'linux-riscv64'
         run: |
@@ -238,7 +238,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        suite_group: ["1/4", "2/4", "3/4", "4/4"]
+        suite_group: ["1/2", "2/2"]
         platform:
           - runner: macos-15-intel
             target: macos-x86_64
@@ -435,7 +435,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        suite_group: ["1/4", "2/4", "3/4", "4/4"]
+        suite_group: ["1/2", "2/2"]
         platform:
           - runner: macos-15
             target: macos-arm64
@@ -470,9 +470,9 @@ jobs:
           echo "XDG_RUNTIME_DIR=/run/user/$(id -u)" >> "$GITHUB_ENV"
           echo "DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/$(id -u)/bus" >> "$GITHUB_ENV"
       - name: Install movie fixture encoder
-        timeout-minutes: 10
+        timeout-minutes: 16
         run: |
-          python3 tools/run_guarded.py --memory-mib 1024 --seconds 540 -- python3 tools/ci_packages.py --role state-linux --install
+          python3 tools/run_guarded.py --memory-mib 1024 --seconds 900 -- python3 tools/ci_packages.py --role state-linux --install
       - name: Exercise grouped Linux runtime regressions
         run: |
           python3 tools/run_guarded.py --memory-mib 2048 --seconds 900 -- python3 tools/regression.py --webm --profile-group '${{ matrix.profile_group }}'
@@ -486,7 +486,7 @@ jobs:
   state-windows:
     needs: build-windows
     runs-on: ubuntu-24.04
-    timeout-minutes: 25
+    timeout-minutes: 35
     strategy:
       fail-fast: false
       matrix:
@@ -509,9 +509,9 @@ jobs:
           echo "XDG_RUNTIME_DIR=/run/user/$(id -u)" >> "$GITHUB_ENV"
           echo "DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/$(id -u)/bus" >> "$GITHUB_ENV"
       - name: Install Wine and test host compiler
-        timeout-minutes: 10
+        timeout-minutes: 16
         run: |
-          python3 tools/run_guarded.py --memory-mib 1024 --seconds 540 -- python3 tools/ci_packages.py --role state-windows --install
+          python3 tools/run_guarded.py --memory-mib 1024 --seconds 900 -- python3 tools/ci_packages.py --role state-windows --install
       - name: Exercise grouped Windows rewind contracts
         run: |
           python3 tools/run_guarded.py --memory-mib 2048 --seconds 900 -- python3 tools/test_rewind.py --core anybor_libretro.dll --windows --runner wine --keep-wine-server --work-parent /var/tmp --profile-group '${{ matrix.profile_group }}'
@@ -522,11 +522,11 @@ jobs:
   state-macos:
     needs: macos
     runs-on: ${{ matrix.platform.runner }}
-    timeout-minutes: 25
+    timeout-minutes: 90
     strategy:
       fail-fast: false
       matrix:
-        profile_group: ["1/11", "2/11", "3/11", "4/11", "5/11", "6/11", "7/11", "8/11", "9/11", "10/11", "11/11"]
+        profile_group: ["1/4", "2/4", "3/4", "4/4"]
         platform:
           - runner: macos-15-intel
             target: macos-x86_64
@@ -562,11 +562,11 @@ jobs:
   state-macos-arm64:
     needs: macos-arm64
     runs-on: ${{ matrix.platform.runner }}
-    timeout-minutes: 25
+    timeout-minutes: 90
     strategy:
       fail-fast: false
       matrix:
-        profile_group: ["1/11", "2/11", "3/11", "4/11", "5/11", "6/11", "7/11", "8/11", "9/11", "10/11", "11/11"]
+        profile_group: ["1/4", "2/4", "3/4", "4/4"]
         platform:
           - runner: macos-15
             target: macos-arm64

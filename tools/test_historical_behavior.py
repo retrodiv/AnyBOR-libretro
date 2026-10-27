@@ -1862,7 +1862,8 @@ static void project(s_drawmethod *drawmethod,int use_mirror) {
 static void check(int takes_entity,int base_map,int actor_map,int colour,int alpha,
                   int vertical_light,int scale,int flips,int rotation,int mirror,int altitude) {
  memset(&plainmethod,0,sizeof(plainmethod));plainmethod.table=base_map?base_palette:NULL;
- plainmethod.centerx=17;plainmethod.centery=13;plainmethod.flag=1;
+ /* All-bits-set is true for both signed one-bit and full-width flags. */
+ plainmethod.centerx=17;plainmethod.centery=13;plainmethod.flag=-1;
  s_drawmethod actor;memset(&actor,0,sizeof(actor));actor.table=actor_map?entity_palette:NULL;
  actor.scalex=384;actor.scaley=scale;actor.flipx=!!(flips&1);actor.flipy=!!(flips&2);
  actor.rotate=rotation;actor.shiftx=11;actor.centerx=99;

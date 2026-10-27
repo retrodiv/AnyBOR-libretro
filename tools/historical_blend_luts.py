@@ -8,6 +8,19 @@ Copyright (c) 2026 retrodiv <retrodiv@proton.me>
 import json
 
 
+def lut_factory_adapters():
+    """Give isolated callbacks prototypes without changing upstream C units.
+
+    Older definitions use empty parameter lists. A direct call through each
+    adapter preserves that declaration while its callback has an exact type.
+    """
+    return '\n'.join(
+        'static unsigned char *native_%s%d(void){return create_%s%d_tbl();}' %
+        (name, bits, name, bits)
+        for bits in (16, 32)
+        for name in ('screen', 'multiply', 'overlay', 'hardlight', 'dodge', 'half'))
+
+
 def render_blend_luts(*,revision,expected_path,cases,perturb_output=False):
     if (type(revision) is not int or not 0<revision<=0xffffffff or
             not isinstance(expected_path,str) or not expected_path or len(expected_path)>4096 or
@@ -27,7 +40,7 @@ def render_blend_luts(*,revision,expected_path,cases,perturb_output=False):
     factories=[]
     for bits in (16,32):
         for mode,name in enumerate(('screen','multiply','overlay','hardlight','dodge','half'),1):
-            factories.append('{'+str(bits)+','+str(mode)+',create_'+name+str(bits)+'_tbl,'+str(5120 if bits==16 else 65536)+'}')
+            factories.append('{'+str(bits)+','+str(mode)+',native_'+name+str(bits)+','+str(5120 if bits==16 else 65536)+'}')
     return r'''
 #include <stdint.h>
 #include <stdio.h>
@@ -49,6 +62,7 @@ void *obor_calloc(size_t count,size_t size){assert(!size || count<=(1u<<20)/size
 void *obor_realloc(void *p,size_t size){assert(size<=1u<<20);return realloc(p,size);}
 void obor_free(void *p){free(p);}
 struct lut_factory {int bits,mode;unsigned char *(*create)(void);size_t bytes;};
+@ADAPTERS@
 static const struct lut_factory factories[]={@FACTORIES@};
 struct color_case {int bits,mode;unsigned source,destination,expected;};
 static const struct color_case cases[]={@CASES@};
@@ -77,5 +91,5 @@ int main(void){
  assert(fgetc(expected)==EOF && !ferror(expected));assert(fclose(expected)==0);
  printf("{\"status\":\"PASS\",\"bytes\":%u,\"cases\":%u}\n",compared,observations);return 0;
 }
-'''.replace('@REVISION@',str(revision)+'u').replace('@EXPECTED_PATH@',json.dumps(expected_path)).replace(
+'''.replace('@ADAPTERS@',lut_factory_adapters()).replace('@REVISION@',str(revision)+'u').replace('@EXPECTED_PATH@',json.dumps(expected_path)).replace(
         '@FACTORIES@',',\n'.join(factories)).replace('@CASES@',',\n'.join(rows)).replace('@PERTURB@',str(int(perturb_output)))

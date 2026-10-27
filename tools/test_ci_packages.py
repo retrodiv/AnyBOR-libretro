@@ -9,7 +9,7 @@ import sys
 import unittest
 from unittest.mock import patch
 
-from ci_packages import PACKAGES, apt_commands, main
+from ci_packages import PACKAGES, apt_commands, bounded_command, install_packages, main
 
 
 class CIPackagesTests(unittest.TestCase):
@@ -49,14 +49,42 @@ class CIPackagesTests(unittest.TestCase):
             main()
             execute.assert_not_called()
 
-    def test_explicit_install_preserves_failure_and_does_not_run_later_commands(self):
+    def test_slow_download_recovers_once_before_offline_install(self):
         import subprocess
-        with patch.object(sys, 'argv', ['ci_packages.py', '--role', 'focused', '--install']), \
-                patch('ci_packages.subprocess.run', side_effect=subprocess.CalledProcessError(100, 'apt-get')) as execute, \
+        failure = subprocess.CalledProcessError(124, 'apt-get')
+        with patch('ci_packages.subprocess.run', side_effect=[None, failure, None, None, None]) as execute, \
+                patch('ci_packages.platform.freedesktop_os_release', return_value={'ID':'ubuntu','VERSION_CODENAME':'noble'}), \
                 contextlib.redirect_stdout(io.StringIO()):
-            with self.assertRaises(subprocess.CalledProcessError):
-                main()
-            self.assertEqual(execute.call_count, 1)
+            install_packages('state-windows')
+        commands = [call.args[0] for call in execute.call_args_list]
+        self.assertEqual(len(commands), 5)
+        self.assertIn('--download-only', commands[1])
+        self.assertIn('--download-only', commands[3])
+        self.assertIn('--no-download', commands[4])
+        self.assertTrue(any(option.startswith('Dir::Etc::sourcelist=') for option in commands[2]))
+        self.assertFalse(any(option.startswith('Dir::Etc::sourcelist=') for option in commands[0]))
+        self.assertIn('180', commands[1]);self.assertIn('240', commands[3])
+
+    def test_install_failure_is_not_retried_or_disguised_as_a_mirror_failure(self):
+        import subprocess
+        with patch('ci_packages.subprocess.run', side_effect=[None, None, subprocess.CalledProcessError(100,'dpkg')]) as execute:
+            with self.assertRaises(subprocess.CalledProcessError):install_packages('focused')
+        self.assertEqual(execute.call_count, 3)
+
+    def test_two_acquisition_failures_stop_without_an_install(self):
+        import subprocess
+        with patch('ci_packages.subprocess.run', side_effect=subprocess.CalledProcessError(124,'apt-get')) as execute, \
+                patch('ci_packages.platform.freedesktop_os_release', return_value={'ID':'ubuntu','VERSION_CODENAME':'noble'}), \
+                contextlib.redirect_stdout(io.StringIO()):
+            with self.assertRaises(subprocess.CalledProcessError):install_packages('focused')
+        self.assertEqual(execute.call_count, 2)
+        self.assertTrue(all('install' not in call.args[0] for call in execute.call_args_list))
+
+    def test_root_timeout_encloses_the_package_manager(self):
+        self.assertEqual(bounded_command(['sudo','apt-get','update'],60),
+                         ['sudo','timeout','--kill-after=5s','60','apt-get','update'])
+        self.assertEqual(bounded_command(['apt-get','update'],60),
+                         ['timeout','--kill-after=5s','60','apt-get','update'])
 
 
 if __name__ == '__main__':

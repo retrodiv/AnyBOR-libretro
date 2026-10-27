@@ -8,7 +8,7 @@ from test_historical_player import function
 
 def render_difficulty_menu(engines, rows):
     bodies = '\n'.join(function((root / 'openbor.c').read_text(), 'choose_difficulty').replace(
-        'choose_difficulty()', 'choose_difficulty_'+engine+'()', 1)
+        'choose_difficulty()', 'choose_difficulty_'+engine+'(void)', 1)
         for engine, root in engines.items())
     modes = {'two_pages': 0, 'selector_page': 1, 'back_on_previous_page': 2}
     contexts = ','.join('{%d,%d,%d,choose_difficulty_%s}' % (

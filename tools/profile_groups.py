@@ -54,8 +54,8 @@ def expand_workflow_profile_groups(workflow):
 def check_workflow_groups(workflow, profiles):
     """Require complete bounded coverage in each native/emulated CI path."""
     if 'python3 tools/ci_focused.py' in workflow:
-        # Whole-suite probes scale with the registry even when they compile
-        # shared source only once. Grow their runner partitions with profiles.
+        # Suite cost is measured per command. A profile count alone is not a
+        # reason to multiply runner setup or scarce native runner queues.
         from ci_focused import workflow_job
         for name in ('focused', 'macos-regressions', 'macos-arm64-regressions'):
             job = workflow_job(workflow, name)
@@ -64,9 +64,9 @@ def check_workflow_groups(workflow, profiles):
                 raise ValueError('Missing scalable suite matrix: ' + name)
             groups = json.loads(matrices[0])
             count = len(groups) if isinstance(groups, list) else 0
-            if (count < (len(profiles) + 23) // 24 or count > 128 or
+            if (not 1 <= count <= 128 or
                     groups != [str(n) + '/' + str(count) for n in range(1, count + 1)]):
-                raise ValueError('Suite partitions require at least one runner per 24 profiles: ' + name)
+                raise ValueError('Suite partitions require a complete one-based matrix: ' + name)
     scripts = ('tools/test_rewind.py', 'tools/test_state_options.py', 'tools/regression.py')
     paths = {(script, platform): [] for script in scripts
              for platform in ('linux', 'windows', 'macos')
@@ -95,8 +95,9 @@ def check_workflow_groups(workflow, profiles):
     names = [entry['build'] for entry in profiles]
     for (script, platform), selectors in paths.items():
         groups = [select_profile_group(profiles, value) for value in selectors]
-        if not groups or any(len(group) > 8 for group in groups):
-            raise ValueError('CI profile groups must contain at most eight profiles')
+        limit = 24 if platform == 'macos' else 8
+        if not groups or any(len(group) > limit for group in groups):
+            raise ValueError('CI profile group exceeds platform budget: ' + platform)
         if [entry['build'] for group in groups for entry in group] != names:
             raise ValueError('Incomplete or duplicate CI profile coverage: ' + script + ' / ' + platform)
     # The ARM native job reuses the same steps but has its own matrix and
@@ -115,6 +116,6 @@ def check_workflow_groups(workflow, profiles):
         if not isinstance(selectors, list) or not selectors or not all(isinstance(x, str) for x in selectors):
             raise ValueError('Invalid native ARM state matrix')
         groups = [select_profile_group(profiles, value) for value in selectors]
-        if (not groups or any(len(group) > 8 for group in groups) or
+        if (not groups or any(len(group) > 24 for group in groups) or
                 [entry['build'] for group in groups for entry in group] != names):
             raise ValueError('Incomplete or oversized native ARM state coverage')

@@ -1,6 +1,6 @@
 # AnyBOR port modification record
 
-Record updated: **2026-10-24**. Port maintainer: **retrodiv**
+Record updated: **2026-10-27**. Port maintainer: **retrodiv**
 (<retrodiv@proton.me>).
 
 AnyBOR offers selectable engine profiles through its libretro port.
@@ -1286,6 +1286,8 @@ iteration beyond the effect arrays.
 Script containers retain their pointer values and native copy and cleanup order
 when embedded records have narrower alignment than host pointers. Access uses
 byte copies without changing the record layout. Missing containers are ignored.
+Allocation and release accept byte storage for packed pointer fields, using
+aligned local pointer values before accessing or releasing scripts.
 
 Binding-script destruction callbacks follow their profile's source declaration
 order while the shared record layout remains unchanged.

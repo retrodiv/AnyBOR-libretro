@@ -27,7 +27,7 @@ def render_script_containers(parts, *, revision, pointer_container, members,
             any(type(v) is not int or v not in (0,1) for v in offsets) or
             offsets!=sorted(set(offsets))):
         raise ValueError('Unique explicit aligned/byte-offset storage cases required')
-    pointer_signature=bool(re.search(r'alloc_all_scripts\s*\(\s*s_scripts\s*\*\s*\*',
+    pointer_signature=bool(re.search(r'alloc_all_scripts\s*\(\s*(?:s_scripts\s*\*\s*\*|void\s*\*)',
                                      parts['alloc_all_scripts']))
     if pointer_signature!=pointer_container:
         raise ValueError('Declared script container representation differs')
@@ -184,8 +184,8 @@ int main(void){
 '''
     code=code.replace('scripts_membercount','expected_member_count')
     if pointer_container:
-        allocate=('alloc_all_scripts((s_scripts**)a);alloc_all_scripts((s_scripts**)b);'
-                  'unsigned before=allocated;alloc_all_scripts((s_scripts**)a);assert(allocated==before);')
+        allocate=('alloc_all_scripts(a);alloc_all_scripts(b);'
+                  'unsigned before=allocated;alloc_all_scripts(a);assert(allocated==before);')
         parent='NULL';child='NULL'
         # Explicit reference loads use character copies rather than the native
         # table walk; declaration offsets independently check every member.
@@ -193,7 +193,7 @@ int main(void){
                           'void *parent=NULL,*child=NULL;memcpy(&parent,a,sizeof(parent));memcpy(&child,b,sizeof(child));')
         tables='tables[0]=(uintptr_t)parent;tables[1]=(uintptr_t)child;table_live[0]=table_live[1]=1;'
         empty='void *p=(void*)1;memcpy(&p,storage,sizeof(p));assert(!p);'
-        free_a='free_all_scripts((s_scripts**)a);';free_b='free_all_scripts((s_scripts**)b);'
+        free_a='free_all_scripts(a);';free_b='free_all_scripts(b);'
     else:
         allocate='alloc_all_scripts((s_scripts*)a);alloc_all_scripts((s_scripts*)b);'
         parent='a';child='b';tables=''

@@ -28,7 +28,7 @@ def render(parts, *, pointer_container, allocation_magic, cleanup_safe, labels,
             or any(not isinstance(x, str) or not re.fullmatch(r'[A-Za-z0-9_-]{1,127}', x)
                    for x in labels) or len(set(labels)) != len(labels)):
         raise ValueError('Unique bounded source identifiers required')
-    if bool(re.search(r'alloc_all_scripts\s*\(\s*s_scripts\s*\*\s*\*',
+    if bool(re.search(r'alloc_all_scripts\s*\(\s*(?:s_scripts\s*\*\s*\*|void\s*\*)',
                       parts['alloc_all_scripts'])) != pointer_container:
         raise ValueError('Source container representation differs')
     if bool(re.search(r'pscript->magic\s*=\s*script_magic', parts['alloc_script'])) != allocation_magic:

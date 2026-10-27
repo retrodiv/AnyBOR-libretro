@@ -67,7 +67,7 @@ class ProfileGroupsTests(unittest.TestCase):
         check_workflow_groups((root / '.github/workflows/ci.yml').read_text(),
                               json.loads((root / 'src/pin.json').read_text())['profiles'])
 
-    def test_whole_suite_partitions_cannot_stay_fixed_as_profiles_grow(self):
+    def test_suite_matrices_are_complete_without_a_profile_count_multiplier(self):
         import json
         root = Path(os.environ.get('OBOR_TEST_SOURCE', Path(__file__).resolve().parents[1]))
         workflow = (root / '.github/workflows/ci.yml').read_text()
@@ -76,10 +76,20 @@ class ProfileGroupsTests(unittest.TestCase):
         for name in ('focused', 'macos-regressions', 'macos-arm64-regressions'):
             marker = '\n  ' + name + ':\n'
             before, job = workflow.split(marker, 1)
+            single = re.sub(r'^        suite_group: \[.*\]$',
+                            '        suite_group: ["1/1"]', job, count=1, flags=re.M)
+            check_workflow_groups(before + marker + single, profiles)
             job = re.sub(r'^        suite_group: \[.*\]$',
-                         '        suite_group: ["1/1"]', job, count=1, flags=re.M)
-            with self.subTest(job=name), self.assertRaisesRegex(ValueError, '24 profiles'):
+                         '        suite_group: ["1/2"]', job, count=1, flags=re.M)
+            with self.subTest(job=name), self.assertRaisesRegex(ValueError, 'complete one-based matrix'):
                 check_workflow_groups(before + marker + job, profiles)
+
+    def test_growth_still_requires_complete_bounded_runtime_coverage(self):
+        import json
+        root = Path(os.environ.get('OBOR_TEST_SOURCE', Path(__file__).resolve().parents[1]))
+        workflow = (root / '.github/workflows/ci.yml').read_text()
+        with self.assertRaisesRegex(ValueError, 'platform budget'):
+            check_workflow_groups(workflow, [dict(build=str(n)) for n in range(248)])
 
 
 if __name__ == '__main__':

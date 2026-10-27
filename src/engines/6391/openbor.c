@@ -1,4 +1,4 @@
-/* AnyBOR modification record: 2026-10-24.
+/* AnyBOR modification record: 2026-10-27.
  * Port maintained by retrodiv <retrodiv@proton.me>.
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
@@ -29,15 +29,16 @@
  * destination animation capacity when retaining an animation across model
  * changes, preserving the native fallback and timing. Access script-
  * container pointer slots with byte copies, preserving record layout,
- * pointer values and native copy/cleanup order. Traverse binding script
- * callbacks in their native profile order without moving shared fields.
- * Release each sprite owner once and complete cleanup independently of alias
- * counts. Preserve native sprite-map capacity policies, check allocation
- * extents and retain existing storage and capacity when growth is
- * unavailable. Validate sprite-node allocations and release partial
- * resources without changing existing owners. Check cached sprite
- * availability before reading metadata and ignore cache requests for absent
- * nodes.
+ * pointer values and native copy/cleanup order. Pointer-slot allocation and
+ * release accept byte storage without imposing pointer alignment on a packed
+ * field. Traverse binding script callbacks in their native profile order
+ * without moving shared fields. Release each sprite owner once and complete
+ * cleanup independently of alias counts. Preserve native sprite-map capacity
+ * policies, check allocation extents and retain existing storage and
+ * capacity when growth is unavailable. Validate sprite-node allocations and
+ * release partial resources without changing existing owners. Check cached
+ * sprite availability before reading metadata and ignore cache requests for
+ * absent nodes.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/6391.md
  * at the source repository root. Original notices follow below.
@@ -1355,7 +1356,7 @@ static size_t obor_profile_script_container_offset(size_t index)
     return index * sizeof(Script*);
 }
 
-void alloc_all_scripts(s_scripts** s)
+void alloc_all_scripts(void* s)
 {
     s_scripts *scripts = NULL;
     size_t i;
@@ -1382,7 +1383,7 @@ void clear_all_scripts(s_scripts* s, int method)
         if(script) Script_Clear(script, method);
     }
 }
-void free_all_scripts(s_scripts** s)
+void free_all_scripts(void* s)
 {
     s_scripts *scripts = NULL;
     size_t i;
