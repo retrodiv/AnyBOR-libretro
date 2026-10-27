@@ -1,0 +1,96 @@
+{
+  "schema": 1,
+  "scope": "Preserve full parent/method sizes and embedded offsets while permitting methods in their packed owning records. Every registered profile uses its physical record layout.",
+  "shapes": {
+    "3400": {
+      "entity_size": 2304,
+      "entity_alignment": 4,
+      "method_size": 48,
+      "method_alignment": 4,
+      "entity_method_offset": 2088,
+      "layer_size": 0,
+      "layer_method_offset": 0,
+      "entity_embedded": true
+    },
+    "3741": {
+      "entity_size": 1744,
+      "entity_alignment": 4,
+      "method_size": 88,
+      "method_alignment": 4,
+      "entity_method_offset": 1648,
+      "layer_size": 156,
+      "layer_method_offset": 48,
+      "entity_embedded": true
+    },
+    "3842": {
+      "entity_size": 2404,
+      "entity_alignment": 4,
+      "method_size": 144,
+      "method_alignment": 4,
+      "entity_method_offset": 2252,
+      "layer_size": 212,
+      "layer_method_offset": 48,
+      "entity_embedded": true
+    },
+    "4086": {
+      "entity_size": 2448,
+      "entity_alignment": 4,
+      "method_size": 144,
+      "method_alignment": 4,
+      "entity_method_offset": 2296,
+      "layer_size": 232,
+      "layer_method_offset": 68,
+      "entity_embedded": true
+    },
+    "4432": {
+      "entity_size": 2552,
+      "entity_alignment": 4,
+      "method_size": 144,
+      "method_alignment": 4,
+      "entity_method_offset": 2400,
+      "layer_size": 232,
+      "layer_method_offset": 68,
+      "entity_embedded": true
+    },
+    "6391": {
+      "entity_size": 2388,
+      "entity_alignment": 4,
+      "method_size": 144,
+      "method_alignment": 4,
+      "entity_method_offset": 2236,
+      "layer_size": 212,
+      "layer_method_offset": 48,
+      "entity_embedded": true
+    },
+    "7142": {
+      "entity_size": 1836,
+      "entity_alignment": 4,
+      "method_size": 136,
+      "method_alignment": 4,
+      "entity_method_offset": 1148,
+      "layer_size": 204,
+      "layer_method_offset": 48,
+      "entity_embedded": false
+    },
+    "7533": {
+      "entity_size": 2020,
+      "entity_alignment": 4,
+      "method_size": 136,
+      "method_alignment": 4,
+      "entity_method_offset": 1136,
+      "layer_size": 216,
+      "layer_method_offset": 48,
+      "entity_embedded": false
+    },
+    "8023": {
+      "entity_size": 2664,
+      "entity_alignment": 8,
+      "method_size": 120,
+      "method_alignment": 8,
+      "entity_method_offset": 1280,
+      "layer_size": 208,
+      "layer_method_offset": 48,
+      "entity_embedded": false
+    }
+  }
+}

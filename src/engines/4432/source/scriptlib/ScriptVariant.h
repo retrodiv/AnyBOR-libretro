@@ -51,6 +51,7 @@ void StrCache_Clear();
 void StrCache_Collect(int index);
 int StrCache_Pop();
 CHAR *StrCache_Get(int index);
+CHAR *StrCache_GetIfPresent(int index);
 void StrCache_Copy(int index, CHAR *str);
 void StrCache_NCopy(int index, CHAR *str, int n);
 void ScriptVariant_Clear(ScriptVariant *var);

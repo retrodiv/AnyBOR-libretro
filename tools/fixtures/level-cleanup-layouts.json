@@ -1,0 +1,18 @@
+{
+  "schema": 1,
+  "engines": [
+    {
+      "engine": "3741",
+      "release_fields": [
+        "spawnpoints", "layersref", "panels", "frontpanels", "bglayers",
+        "fglayers", "genericlayers", "waters", "holes", "walls", "palettes", "blendings"
+      ],
+      "script_fields": [
+        "update_script", "updated_script", "key_script", "level_script", "endlevel_script"
+      ],
+      "spawn_scripts": true,
+      "stream_release_before": 3739,
+      "stream_slots": 50
+    }
+  ]
+}

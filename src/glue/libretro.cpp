@@ -1102,7 +1102,9 @@ void retro_set_environment(retro_environment_t cb)
     unsigned cov = 0;
     if (!cb(RETRO_ENVIRONMENT_GET_CORE_OPTIONS_VERSION, &cov))
         cov = 0;
-    if (cov >= 2) {
+    /* The v2 ABI fixes the value array size. Reserve Auto and the terminator;
+     * larger profile lists use the complete legacy string below. */
+    if (cov >= 2 && n_profiles <= RETRO_NUM_CORE_OPTION_VALUES_MAX - 2) {
         static struct retro_core_option_v2_category cats[] = {
             { "video", "Video", "Video output." },
             { "input", "Input", "Controller behaviour." },
@@ -1187,7 +1189,7 @@ void retro_set_environment(retro_environment_t cb)
         for (struct retro_core_option_v2_definition *def = defs; def->key; ++def) {
             if (strcmp(def->key, "obor_engine"))
                 continue;
-            for (size_t i = 0; i < n_profiles && i + 2 < 128; i++) {
+            for (size_t i = 0; i < n_profiles; i++) {
                 def->values[i + 1].value = kProfiles[i].disp;
                 def->values[i + 1].label = NULL;
             }

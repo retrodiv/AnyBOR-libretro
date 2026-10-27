@@ -1,3 +1,14 @@
+/* AnyBOR modification record: 2026-10-23.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Validate point coordinates before writing native 32-bit pixels.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/4432.md
+ * at the source repository root. Original notices follow below.
+ */
+
 /*
  * OpenBOR - http://www.chronocrash.com
  * -----------------------------------------------------------------------
@@ -277,7 +288,7 @@ void _putpixel32(unsigned x, unsigned y, unsigned colour, s_screen *screen, int 
     int pixind;
     unsigned *data ;
     unsigned(*blendfp)(unsigned, unsigned);
-    if(x > screen->width || y > screen->height)
+    if((unsigned)x >= (unsigned)screen->width || (unsigned)y >= (unsigned)screen->height)
     {
         return;
     }

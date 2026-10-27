@@ -1,9 +1,13 @@
-/* AnyBOR modification record: 2026-10-21.
+/* AnyBOR modification record: 2026-10-22.
  * Port maintained by retrodiv <retrodiv@proton.me>.
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
  * Upstream code retains its original license and notices.
- * Declare owned script-variable name storage.
+ * Declare owned script-variable name storage. Preserve separate historical
+ * player getter/setter numeric domains and compiler mappers, the table
+ * before colourmap, and early empty-player success while retaining native
+ * setter returns. Declare the profile-aware stream cleanup hook for level
+ * release.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/3741.md
  * at the source repository root. Original notices follow below.
@@ -35,6 +39,8 @@ typedef struct
 //osc
 #define script_magic ((int)0x73636f)
 
+#include "obor_script_storage.h"
+
 typedef struct Script
 {
 	int magic;
@@ -43,6 +49,8 @@ typedef struct Script
 	ScriptVariant* vars;
 	int initialized;        //flag
 	int interpreterowner;   //flag
+    obor_script_reference *obor_interpreter;
+    obor_script_reference *obor_comment;
 }Script;
 
 extern s_variantnode** global_var_list;
@@ -58,6 +66,7 @@ extern int global_var_count;
 //these functions can be used by openbor.c
 void Script_Global_Init();
 void Script_Global_Clear();
+void obor_filestream_level_clear(void);
 ScriptVariant* Script_Get_Global_Variant(char* theName);
 int Script_Set_Global_Variant(char* theName, ScriptVariant* var);
 ScriptVariant* Script_Get_Local_Variant(Script* cs, char* theName);
@@ -228,6 +237,8 @@ void mapstrings_systemvariant(ScriptVariant** varlist, int paramCount);
 void mapstrings_getentityproperty(ScriptVariant** varlist, int paramCount);
 void mapstrings_changeentityproperty(ScriptVariant** varlist, int paramCount);
 void mapstrings_playerproperty(ScriptVariant** varlist, int paramCount);
+void mapstrings_getplayerproperty(ScriptVariant** varlist, int paramCount);
+void mapstrings_changeplayerproperty(ScriptVariant** varlist, int paramCount);
 void mapstrings_setspawnentry(ScriptVariant** varlist, int paramCount);
 void mapstrings_transconst(ScriptVariant** varlist, int paramCount);
 void mapstrings_playerkeys(ScriptVariant** varlist, int paramCount);

@@ -1,0 +1,4814 @@
+{
+  "schema": 1,
+  "scope": "Complete native constructor defaults,allocation extents and zeroed storage. Script allocation and model-cache lookup observed;VM,disposal,loading and AI remain separate. Paired initial special-allocation response follows each original;valid configuration uses24attack types,8specials and210animations from the native loader formula.",
+  "sources": [
+    {
+      "revision": 3666,
+      "engine": "3741",
+      "contract": "defaults-1",
+      "commit": "d91a968db18ecb4a738cf008ea0483883929a674",
+      "source_parts_sha256": {
+        "init_model": "5def035a7af34983e2ebeaf8da38140ee94037b1378e0cf1c59e955a21e040e7",
+        "default_defense": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "native_layout": {
+        "representation": "parallel",
+        "scripts_pointer": false
+      },
+      "native_special_allocation": {
+        "ordinal": 9,
+        "failure_shutdown": true,
+        "minimum": 8
+      }
+    },
+    {
+      "revision": 3667,
+      "engine": "3741",
+      "contract": "defaults-1",
+      "commit": "b9be93bb004d151b7280a4dd2d41a952d3160afc",
+      "source_parts_sha256": {
+        "init_model": "5def035a7af34983e2ebeaf8da38140ee94037b1378e0cf1c59e955a21e040e7",
+        "default_defense": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "native_layout": {
+        "representation": "parallel",
+        "scripts_pointer": false
+      },
+      "native_special_allocation": {
+        "ordinal": 9,
+        "failure_shutdown": true,
+        "minimum": 8
+      }
+    },
+    {
+      "revision": 3669,
+      "engine": "3741",
+      "contract": "defaults-1",
+      "commit": "7c099902d5149d9e696ad1274c0d1964aa1f2323",
+      "source_parts_sha256": {
+        "init_model": "5def035a7af34983e2ebeaf8da38140ee94037b1378e0cf1c59e955a21e040e7",
+        "default_defense": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "native_layout": {
+        "representation": "parallel",
+        "scripts_pointer": false
+      },
+      "native_special_allocation": {
+        "ordinal": 9,
+        "failure_shutdown": true,
+        "minimum": 8
+      }
+    },
+    {
+      "revision": 3670,
+      "engine": "3741",
+      "contract": "defaults-1",
+      "commit": "5d6118ae7dc11b04bb370da0faa0c6f42ffab50e",
+      "source_parts_sha256": {
+        "init_model": "5def035a7af34983e2ebeaf8da38140ee94037b1378e0cf1c59e955a21e040e7",
+        "default_defense": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "native_layout": {
+        "representation": "parallel",
+        "scripts_pointer": false
+      },
+      "native_special_allocation": {
+        "ordinal": 9,
+        "failure_shutdown": true,
+        "minimum": 8
+      }
+    },
+    {
+      "revision": 3671,
+      "engine": "3741",
+      "contract": "defaults-1",
+      "commit": "7fba7445c056b5aeff03046dd79ae929fcf68f15",
+      "source_parts_sha256": {
+        "init_model": "5def035a7af34983e2ebeaf8da38140ee94037b1378e0cf1c59e955a21e040e7",
+        "default_defense": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "native_layout": {
+        "representation": "parallel",
+        "scripts_pointer": false
+      },
+      "native_special_allocation": {
+        "ordinal": 9,
+        "failure_shutdown": true,
+        "minimum": 8
+      }
+    },
+    {
+      "revision": 3672,
+      "engine": "3741",
+      "contract": "defaults-1",
+      "commit": "8c4687b4ef831986a04e2fcb3d4dcd7e96bbd0cf",
+      "source_parts_sha256": {
+        "init_model": "5def035a7af34983e2ebeaf8da38140ee94037b1378e0cf1c59e955a21e040e7",
+        "default_defense": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "native_layout": {
+        "representation": "parallel",
+        "scripts_pointer": false
+      },
+      "native_special_allocation": {
+        "ordinal": 9,
+        "failure_shutdown": true,
+        "minimum": 8
+      }
+    },
+    {
+      "revision": 3673,
+      "engine": "3741",
+      "contract": "defaults-1",
+      "commit": "88b9c2829ea471579d90e186215d23a8bf669bcb",
+      "source_parts_sha256": {
+        "init_model": "5def035a7af34983e2ebeaf8da38140ee94037b1378e0cf1c59e955a21e040e7",
+        "default_defense": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "native_layout": {
+        "representation": "parallel",
+        "scripts_pointer": false
+      },
+      "native_special_allocation": {
+        "ordinal": 9,
+        "failure_shutdown": true,
+        "minimum": 8
+      }
+    },
+    {
+      "revision": 3674,
+      "engine": "3741",
+      "contract": "defaults-1",
+      "commit": "5e9213f7de65df1cc13d01e3e695d4ac62091267",
+      "source_parts_sha256": {
+        "init_model": "5def035a7af34983e2ebeaf8da38140ee94037b1378e0cf1c59e955a21e040e7",
+        "default_defense": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "native_layout": {
+        "representation": "parallel",
+        "scripts_pointer": false
+      },
+      "native_special_allocation": {
+        "ordinal": 9,
+        "failure_shutdown": true,
+        "minimum": 8
+      }
+    },
+    {
+      "revision": 3675,
+      "engine": "3741",
+      "contract": "defaults-1",
+      "commit": "a4b46362047dc2bb04e350b8a434cb65cad3b9af",
+      "source_parts_sha256": {
+        "init_model": "5def035a7af34983e2ebeaf8da38140ee94037b1378e0cf1c59e955a21e040e7",
+        "default_defense": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "native_layout": {
+        "representation": "parallel",
+        "scripts_pointer": false
+      },
+      "native_special_allocation": {
+        "ordinal": 9,
+        "failure_shutdown": true,
+        "minimum": 8
+      }
+    },
+    {
+      "revision": 3677,
+      "engine": "3741",
+      "contract": "defaults-1",
+      "commit": "0cc873941f3ee1dc687c7c0d303d043c931f8e5f",
+      "source_parts_sha256": {
+        "init_model": "5def035a7af34983e2ebeaf8da38140ee94037b1378e0cf1c59e955a21e040e7",
+        "default_defense": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "native_layout": {
+        "representation": "parallel",
+        "scripts_pointer": false
+      },
+      "native_special_allocation": {
+        "ordinal": 9,
+        "failure_shutdown": true,
+        "minimum": 8
+      }
+    },
+    {
+      "revision": 3678,
+      "engine": "3741",
+      "contract": "defaults-1",
+      "commit": "9db2ed7db699e47513d3ea3144b7f235304eb72a",
+      "source_parts_sha256": {
+        "init_model": "5def035a7af34983e2ebeaf8da38140ee94037b1378e0cf1c59e955a21e040e7",
+        "default_defense": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "native_layout": {
+        "representation": "parallel",
+        "scripts_pointer": false
+      },
+      "native_special_allocation": {
+        "ordinal": 9,
+        "failure_shutdown": true,
+        "minimum": 8
+      }
+    },
+    {
+      "revision": 3679,
+      "engine": "3741",
+      "contract": "defaults-1",
+      "commit": "1e4032e0c03f5580f4092fc8c2fecf2a5a96aa7f",
+      "source_parts_sha256": {
+        "init_model": "5def035a7af34983e2ebeaf8da38140ee94037b1378e0cf1c59e955a21e040e7",
+        "default_defense": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "native_layout": {
+        "representation": "parallel",
+        "scripts_pointer": false
+      },
+      "native_special_allocation": {
+        "ordinal": 9,
+        "failure_shutdown": true,
+        "minimum": 8
+      }
+    },
+    {
+      "revision": 3680,
+      "engine": "3741",
+      "contract": "defaults-1",
+      "commit": "cbacfd01002925ec9016f03bbf45dc576e135f1a",
+      "source_parts_sha256": {
+        "init_model": "5def035a7af34983e2ebeaf8da38140ee94037b1378e0cf1c59e955a21e040e7",
+        "default_defense": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "native_layout": {
+        "representation": "parallel",
+        "scripts_pointer": false
+      },
+      "native_special_allocation": {
+        "ordinal": 9,
+        "failure_shutdown": true,
+        "minimum": 8
+      }
+    },
+    {
+      "revision": 3682,
+      "engine": "3741",
+      "contract": "defaults-2",
+      "commit": "a41ea87ba402b98c6b5397c6a402834a802e1801",
+      "source_parts_sha256": {
+        "init_model": "916df4cff17de8557b3cf29e7eb22b0ce3c878a142c83220b02970503e18b0ab",
+        "default_defense": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "native_layout": {
+        "representation": "parallel",
+        "scripts_pointer": false
+      },
+      "native_special_allocation": {
+        "ordinal": 9,
+        "failure_shutdown": true,
+        "minimum": 8
+      }
+    },
+    {
+      "revision": 3685,
+      "engine": "3741",
+      "contract": "defaults-3",
+      "commit": "8e0f3d0bd64e99244598ddf636c5203c2a6b0f2e",
+      "source_parts_sha256": {
+        "init_model": "cdeeae2fcb9a9436843229963e3c0f42be908ed82b945c21cb822bfbe6886015",
+        "default_defense": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "native_layout": {
+        "representation": "parallel",
+        "scripts_pointer": false
+      },
+      "native_special_allocation": {
+        "ordinal": 9,
+        "failure_shutdown": true,
+        "minimum": 8
+      }
+    },
+    {
+      "revision": 3686,
+      "engine": "3741",
+      "contract": "defaults-3",
+      "commit": "d37cca26d57bba5a4f5c190f80562f768785901d",
+      "source_parts_sha256": {
+        "init_model": "cdeeae2fcb9a9436843229963e3c0f42be908ed82b945c21cb822bfbe6886015",
+        "default_defense": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "native_layout": {
+        "representation": "parallel",
+        "scripts_pointer": false
+      },
+      "native_special_allocation": {
+        "ordinal": 9,
+        "failure_shutdown": true,
+        "minimum": 8
+      }
+    },
+    {
+      "revision": 3689,
+      "engine": "3741",
+      "contract": "defaults-3",
+      "commit": "953da13e27e3a72fc61ff9fe71c272968e9e7270",
+      "source_parts_sha256": {
+        "init_model": "cdeeae2fcb9a9436843229963e3c0f42be908ed82b945c21cb822bfbe6886015",
+        "default_defense": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "native_layout": {
+        "representation": "parallel",
+        "scripts_pointer": false
+      },
+      "native_special_allocation": {
+        "ordinal": 9,
+        "failure_shutdown": true,
+        "minimum": 8
+      }
+    },
+    {
+      "revision": 3690,
+      "engine": "3741",
+      "contract": "defaults-3",
+      "commit": "e4cf90c8a3784263df7809672a2b4998bb000831",
+      "source_parts_sha256": {
+        "init_model": "cdeeae2fcb9a9436843229963e3c0f42be908ed82b945c21cb822bfbe6886015",
+        "default_defense": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "native_layout": {
+        "representation": "parallel",
+        "scripts_pointer": false
+      },
+      "native_special_allocation": {
+        "ordinal": 9,
+        "failure_shutdown": true,
+        "minimum": 8
+      }
+    },
+    {
+      "revision": 3691,
+      "engine": "3741",
+      "contract": "defaults-3",
+      "commit": "42bc05f6630514c0a21e14faa7c4e671329a91ae",
+      "source_parts_sha256": {
+        "init_model": "cdeeae2fcb9a9436843229963e3c0f42be908ed82b945c21cb822bfbe6886015",
+        "default_defense": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "native_layout": {
+        "representation": "parallel",
+        "scripts_pointer": false
+      },
+      "native_special_allocation": {
+        "ordinal": 9,
+        "failure_shutdown": true,
+        "minimum": 8
+      }
+    },
+    {
+      "revision": 3692,
+      "engine": "3741",
+      "contract": "defaults-3",
+      "commit": "5c31bc7f06580725f11d436855533a2485dfb757",
+      "source_parts_sha256": {
+        "init_model": "cdeeae2fcb9a9436843229963e3c0f42be908ed82b945c21cb822bfbe6886015",
+        "default_defense": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "native_layout": {
+        "representation": "parallel",
+        "scripts_pointer": false
+      },
+      "native_special_allocation": {
+        "ordinal": 9,
+        "failure_shutdown": true,
+        "minimum": 8
+      }
+    },
+    {
+      "revision": 3693,
+      "engine": "3741",
+      "contract": "defaults-3",
+      "commit": "ec0e28efea5a3a63a28ccd9abe2fb3fb88513416",
+      "source_parts_sha256": {
+        "init_model": "cdeeae2fcb9a9436843229963e3c0f42be908ed82b945c21cb822bfbe6886015",
+        "default_defense": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "native_layout": {
+        "representation": "parallel",
+        "scripts_pointer": false
+      },
+      "native_special_allocation": {
+        "ordinal": 9,
+        "failure_shutdown": true,
+        "minimum": 8
+      }
+    },
+    {
+      "revision": 3694,
+      "engine": "3741",
+      "contract": "defaults-3",
+      "commit": "aaae13d3487ebedd9a3ef121d6296b5a3afd0cd9",
+      "source_parts_sha256": {
+        "init_model": "cdeeae2fcb9a9436843229963e3c0f42be908ed82b945c21cb822bfbe6886015",
+        "default_defense": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "native_layout": {
+        "representation": "parallel",
+        "scripts_pointer": false
+      },
+      "native_special_allocation": {
+        "ordinal": 9,
+        "failure_shutdown": true,
+        "minimum": 8
+      }
+    },
+    {
+      "revision": 3697,
+      "engine": "3741",
+      "contract": "defaults-3",
+      "commit": "142e0957159aab6b4698a94723ea282cb54a3c70",
+      "source_parts_sha256": {
+        "init_model": "cdeeae2fcb9a9436843229963e3c0f42be908ed82b945c21cb822bfbe6886015",
+        "default_defense": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "native_layout": {
+        "representation": "parallel",
+        "scripts_pointer": false
+      },
+      "native_special_allocation": {
+        "ordinal": 9,
+        "failure_shutdown": true,
+        "minimum": 8
+      }
+    },
+    {
+      "revision": 3699,
+      "engine": "3741",
+      "contract": "defaults-3",
+      "commit": "f632ac4fe81ea6c6b3cd9d74a1cd7538471579bb",
+      "source_parts_sha256": {
+        "init_model": "cdeeae2fcb9a9436843229963e3c0f42be908ed82b945c21cb822bfbe6886015",
+        "default_defense": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "native_layout": {
+        "representation": "parallel",
+        "scripts_pointer": false
+      },
+      "native_special_allocation": {
+        "ordinal": 9,
+        "failure_shutdown": true,
+        "minimum": 8
+      }
+    },
+    {
+      "revision": 3701,
+      "engine": "3741",
+      "contract": "defaults-3",
+      "commit": "7644ed068259c3edbfaed1cd85828b4a28213997",
+      "source_parts_sha256": {
+        "init_model": "cdeeae2fcb9a9436843229963e3c0f42be908ed82b945c21cb822bfbe6886015",
+        "default_defense": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "native_layout": {
+        "representation": "parallel",
+        "scripts_pointer": false
+      },
+      "native_special_allocation": {
+        "ordinal": 9,
+        "failure_shutdown": true,
+        "minimum": 8
+      }
+    },
+    {
+      "revision": 3703,
+      "engine": "3741",
+      "contract": "defaults-3",
+      "commit": "bb82f79d47f02649e3a79e22455911f98cc900cb",
+      "source_parts_sha256": {
+        "init_model": "cdeeae2fcb9a9436843229963e3c0f42be908ed82b945c21cb822bfbe6886015",
+        "default_defense": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "native_layout": {
+        "representation": "parallel",
+        "scripts_pointer": false
+      },
+      "native_special_allocation": {
+        "ordinal": 9,
+        "failure_shutdown": true,
+        "minimum": 8
+      }
+    },
+    {
+      "revision": 3704,
+      "engine": "3741",
+      "contract": "defaults-3",
+      "commit": "b1bf3dd56ebfcd11eafe265120ceedf0b44ed2f4",
+      "source_parts_sha256": {
+        "init_model": "cdeeae2fcb9a9436843229963e3c0f42be908ed82b945c21cb822bfbe6886015",
+        "default_defense": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "native_layout": {
+        "representation": "parallel",
+        "scripts_pointer": false
+      },
+      "native_special_allocation": {
+        "ordinal": 9,
+        "failure_shutdown": true,
+        "minimum": 8
+      }
+    },
+    {
+      "revision": 3707,
+      "engine": "3741",
+      "contract": "defaults-3",
+      "commit": "3e8913af8d0090f1082b5c2a7e624d050c4960fc",
+      "source_parts_sha256": {
+        "init_model": "cdeeae2fcb9a9436843229963e3c0f42be908ed82b945c21cb822bfbe6886015",
+        "default_defense": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "native_layout": {
+        "representation": "parallel",
+        "scripts_pointer": false
+      },
+      "native_special_allocation": {
+        "ordinal": 9,
+        "failure_shutdown": true,
+        "minimum": 8
+      }
+    },
+    {
+      "revision": 3708,
+      "engine": "3741",
+      "contract": "defaults-3",
+      "commit": "987fbc31c5be3002732e735a0bdd905eedd7c2b1",
+      "source_parts_sha256": {
+        "init_model": "cdeeae2fcb9a9436843229963e3c0f42be908ed82b945c21cb822bfbe6886015",
+        "default_defense": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "native_layout": {
+        "representation": "parallel",
+        "scripts_pointer": false
+      },
+      "native_special_allocation": {
+        "ordinal": 9,
+        "failure_shutdown": true,
+        "minimum": 8
+      }
+    },
+    {
+      "revision": 3709,
+      "engine": "3741",
+      "contract": "defaults-3",
+      "commit": "25db4c7a58a555fd8cf1f6e7931ad2ce4cc6e6d9",
+      "source_parts_sha256": {
+        "init_model": "cdeeae2fcb9a9436843229963e3c0f42be908ed82b945c21cb822bfbe6886015",
+        "default_defense": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "native_layout": {
+        "representation": "parallel",
+        "scripts_pointer": false
+      },
+      "native_special_allocation": {
+        "ordinal": 9,
+        "failure_shutdown": true,
+        "minimum": 8
+      }
+    },
+    {
+      "revision": 3710,
+      "engine": "3741",
+      "contract": "defaults-3",
+      "commit": "9622e606e8039fb860ae06d33c119e980f779598",
+      "source_parts_sha256": {
+        "init_model": "26f2bc2769dad429254a99b4c73a04e74d9386082f65ec1e0234eecaf501932e",
+        "default_defense": "3a3322a7d56c3b133ab636af1cd19a97b9bd49282a05c9ebf2c6e2d70a44883e"
+      },
+      "native_layout": {
+        "representation": "record",
+        "scripts_pointer": true
+      },
+      "native_special_allocation": {
+        "ordinal": 3,
+        "failure_shutdown": true,
+        "minimum": 8
+      }
+    },
+    {
+      "revision": 3711,
+      "engine": "3741",
+      "contract": "defaults-4",
+      "commit": "6ec17fa411b237f789c910e1234a33a618ab236d",
+      "source_parts_sha256": {
+        "init_model": "7b7afd91d4ff7196320ccae366eb76f2b25ae6de5c0e1d412af023915f93869b",
+        "default_defense": "3a3322a7d56c3b133ab636af1cd19a97b9bd49282a05c9ebf2c6e2d70a44883e"
+      },
+      "native_layout": {
+        "representation": "record",
+        "scripts_pointer": true
+      },
+      "native_special_allocation": {
+        "ordinal": 3,
+        "failure_shutdown": false,
+        "minimum": 8
+      }
+    },
+    {
+      "revision": 3713,
+      "engine": "3741",
+      "contract": "defaults-4",
+      "commit": "1ed3bec13248887af44a132b4a8a4fa0fe501dc3",
+      "source_parts_sha256": {
+        "init_model": "7b7afd91d4ff7196320ccae366eb76f2b25ae6de5c0e1d412af023915f93869b",
+        "default_defense": "3a3322a7d56c3b133ab636af1cd19a97b9bd49282a05c9ebf2c6e2d70a44883e"
+      },
+      "native_layout": {
+        "representation": "record",
+        "scripts_pointer": true
+      },
+      "native_special_allocation": {
+        "ordinal": 3,
+        "failure_shutdown": false,
+        "minimum": 8
+      }
+    },
+    {
+      "revision": 3714,
+      "engine": "3741",
+      "contract": "defaults-4",
+      "commit": "0e365b7c55cb92faaca8a5c3a1b9a91597815bb9",
+      "source_parts_sha256": {
+        "init_model": "7b7afd91d4ff7196320ccae366eb76f2b25ae6de5c0e1d412af023915f93869b",
+        "default_defense": "3a3322a7d56c3b133ab636af1cd19a97b9bd49282a05c9ebf2c6e2d70a44883e"
+      },
+      "native_layout": {
+        "representation": "record",
+        "scripts_pointer": true
+      },
+      "native_special_allocation": {
+        "ordinal": 3,
+        "failure_shutdown": false,
+        "minimum": 8
+      }
+    },
+    {
+      "revision": 3715,
+      "engine": "3741",
+      "contract": "defaults-4",
+      "commit": "8ccd518139e35ff47f5d415b418c6f3c2e310d6f",
+      "source_parts_sha256": {
+        "init_model": "7b7afd91d4ff7196320ccae366eb76f2b25ae6de5c0e1d412af023915f93869b",
+        "default_defense": "3a3322a7d56c3b133ab636af1cd19a97b9bd49282a05c9ebf2c6e2d70a44883e"
+      },
+      "native_layout": {
+        "representation": "record",
+        "scripts_pointer": true
+      },
+      "native_special_allocation": {
+        "ordinal": 3,
+        "failure_shutdown": false,
+        "minimum": 8
+      }
+    },
+    {
+      "revision": 3716,
+      "engine": "3741",
+      "contract": "defaults-4",
+      "commit": "b5a9f8a224277fc88eae2c7c34eebe2dc0825684",
+      "source_parts_sha256": {
+        "init_model": "7b7afd91d4ff7196320ccae366eb76f2b25ae6de5c0e1d412af023915f93869b",
+        "default_defense": "3a3322a7d56c3b133ab636af1cd19a97b9bd49282a05c9ebf2c6e2d70a44883e"
+      },
+      "native_layout": {
+        "representation": "record",
+        "scripts_pointer": true
+      },
+      "native_special_allocation": {
+        "ordinal": 3,
+        "failure_shutdown": false,
+        "minimum": 8
+      }
+    },
+    {
+      "revision": 3722,
+      "engine": "3741",
+      "contract": "defaults-4",
+      "commit": "1cd80da2e10a4c5e619422ad94f7c1abc42c2226",
+      "source_parts_sha256": {
+        "init_model": "7b7afd91d4ff7196320ccae366eb76f2b25ae6de5c0e1d412af023915f93869b",
+        "default_defense": "3a3322a7d56c3b133ab636af1cd19a97b9bd49282a05c9ebf2c6e2d70a44883e"
+      },
+      "native_layout": {
+        "representation": "record",
+        "scripts_pointer": true
+      },
+      "native_special_allocation": {
+        "ordinal": 3,
+        "failure_shutdown": false,
+        "minimum": 8
+      }
+    },
+    {
+      "revision": 3725,
+      "engine": "3741",
+      "contract": "defaults-4",
+      "commit": "58dab1fbcae12a508bd69fd2f79d48d74bfc4202",
+      "source_parts_sha256": {
+        "init_model": "7b7afd91d4ff7196320ccae366eb76f2b25ae6de5c0e1d412af023915f93869b",
+        "default_defense": "3a3322a7d56c3b133ab636af1cd19a97b9bd49282a05c9ebf2c6e2d70a44883e"
+      },
+      "native_layout": {
+        "representation": "record",
+        "scripts_pointer": true
+      },
+      "native_special_allocation": {
+        "ordinal": 3,
+        "failure_shutdown": false,
+        "minimum": 8
+      }
+    },
+    {
+      "revision": 3726,
+      "engine": "3741",
+      "contract": "defaults-4",
+      "commit": "4a94293d2f916b1ba05ac4a6f9635abbb394a8a9",
+      "source_parts_sha256": {
+        "init_model": "7b7afd91d4ff7196320ccae366eb76f2b25ae6de5c0e1d412af023915f93869b",
+        "default_defense": "3a3322a7d56c3b133ab636af1cd19a97b9bd49282a05c9ebf2c6e2d70a44883e"
+      },
+      "native_layout": {
+        "representation": "record",
+        "scripts_pointer": true
+      },
+      "native_special_allocation": {
+        "ordinal": 3,
+        "failure_shutdown": false,
+        "minimum": 8
+      }
+    },
+    {
+      "revision": 3727,
+      "engine": "3741",
+      "contract": "defaults-4",
+      "commit": "ad3f59f9325e89b68f82e4daf162d0f0510af8d3",
+      "source_parts_sha256": {
+        "init_model": "7b7afd91d4ff7196320ccae366eb76f2b25ae6de5c0e1d412af023915f93869b",
+        "default_defense": "3a3322a7d56c3b133ab636af1cd19a97b9bd49282a05c9ebf2c6e2d70a44883e"
+      },
+      "native_layout": {
+        "representation": "record",
+        "scripts_pointer": true
+      },
+      "native_special_allocation": {
+        "ordinal": 3,
+        "failure_shutdown": false,
+        "minimum": 8
+      }
+    },
+    {
+      "revision": 3728,
+      "engine": "3741",
+      "contract": "defaults-4",
+      "commit": "9f4ad7f785557d87829acd19972b8cc0704fc8c1",
+      "source_parts_sha256": {
+        "init_model": "7b7afd91d4ff7196320ccae366eb76f2b25ae6de5c0e1d412af023915f93869b",
+        "default_defense": "3a3322a7d56c3b133ab636af1cd19a97b9bd49282a05c9ebf2c6e2d70a44883e"
+      },
+      "native_layout": {
+        "representation": "record",
+        "scripts_pointer": true
+      },
+      "native_special_allocation": {
+        "ordinal": 3,
+        "failure_shutdown": false,
+        "minimum": 8
+      }
+    },
+    {
+      "revision": 3729,
+      "engine": "3741",
+      "contract": "defaults-4",
+      "commit": "b3dc9a4a79d1f6a1b96b573e060ef97067f1176c",
+      "source_parts_sha256": {
+        "init_model": "7b7afd91d4ff7196320ccae366eb76f2b25ae6de5c0e1d412af023915f93869b",
+        "default_defense": "3a3322a7d56c3b133ab636af1cd19a97b9bd49282a05c9ebf2c6e2d70a44883e"
+      },
+      "native_layout": {
+        "representation": "record",
+        "scripts_pointer": true
+      },
+      "native_special_allocation": {
+        "ordinal": 3,
+        "failure_shutdown": false,
+        "minimum": 8
+      }
+    },
+    {
+      "revision": 3730,
+      "engine": "3741",
+      "contract": "defaults-4",
+      "commit": "40441f127f7ad7b7cfda0eebb489e8feffd1f806",
+      "source_parts_sha256": {
+        "init_model": "7b7afd91d4ff7196320ccae366eb76f2b25ae6de5c0e1d412af023915f93869b",
+        "default_defense": "3a3322a7d56c3b133ab636af1cd19a97b9bd49282a05c9ebf2c6e2d70a44883e"
+      },
+      "native_layout": {
+        "representation": "record",
+        "scripts_pointer": true
+      },
+      "native_special_allocation": {
+        "ordinal": 3,
+        "failure_shutdown": false,
+        "minimum": 8
+      }
+    },
+    {
+      "revision": 3732,
+      "engine": "3741",
+      "contract": "defaults-4",
+      "commit": "0b2d8300b819cdee94817194b2db7489d25d45d3",
+      "source_parts_sha256": {
+        "init_model": "7b7afd91d4ff7196320ccae366eb76f2b25ae6de5c0e1d412af023915f93869b",
+        "default_defense": "3a3322a7d56c3b133ab636af1cd19a97b9bd49282a05c9ebf2c6e2d70a44883e"
+      },
+      "native_layout": {
+        "representation": "record",
+        "scripts_pointer": true
+      },
+      "native_special_allocation": {
+        "ordinal": 3,
+        "failure_shutdown": false,
+        "minimum": 8
+      }
+    },
+    {
+      "revision": 3738,
+      "engine": "3741",
+      "contract": "defaults-4",
+      "commit": "e0e03912cd594ffe04ca8bf7b462f1e97df6f6fe",
+      "source_parts_sha256": {
+        "init_model": "7b7afd91d4ff7196320ccae366eb76f2b25ae6de5c0e1d412af023915f93869b",
+        "default_defense": "3a3322a7d56c3b133ab636af1cd19a97b9bd49282a05c9ebf2c6e2d70a44883e"
+      },
+      "native_layout": {
+        "representation": "record",
+        "scripts_pointer": true
+      },
+      "native_special_allocation": {
+        "ordinal": 3,
+        "failure_shutdown": false,
+        "minimum": 8
+      }
+    },
+    {
+      "revision": 3740,
+      "engine": "3741",
+      "contract": "defaults-4",
+      "commit": "cf83dc7f4472e6a51aa84cfa37b47e5d3f42d986",
+      "source_parts_sha256": {
+        "init_model": "7b7afd91d4ff7196320ccae366eb76f2b25ae6de5c0e1d412af023915f93869b",
+        "default_defense": "3a3322a7d56c3b133ab636af1cd19a97b9bd49282a05c9ebf2c6e2d70a44883e"
+      },
+      "native_layout": {
+        "representation": "record",
+        "scripts_pointer": true
+      },
+      "native_special_allocation": {
+        "ordinal": 3,
+        "failure_shutdown": false,
+        "minimum": 8
+      }
+    },
+    {
+      "revision": 3741,
+      "engine": "3741",
+      "contract": "defaults-4",
+      "commit": "00bcc4947748e8af10d030a82b60520bbd402e30",
+      "source_parts_sha256": {
+        "init_model": "7b7afd91d4ff7196320ccae366eb76f2b25ae6de5c0e1d412af023915f93869b",
+        "default_defense": "3a3322a7d56c3b133ab636af1cd19a97b9bd49282a05c9ebf2c6e2d70a44883e"
+      },
+      "native_layout": {
+        "representation": "record",
+        "scripts_pointer": true
+      },
+      "native_special_allocation": {
+        "ordinal": 3,
+        "failure_shutdown": false,
+        "minimum": 8
+      }
+    },
+    {
+      "revision": 3742,
+      "engine": "3741",
+      "contract": "defaults-4",
+      "commit": "0d20390cfe982136259ea3fa4bb8078801be9269",
+      "source_parts_sha256": {
+        "init_model": "7b7afd91d4ff7196320ccae366eb76f2b25ae6de5c0e1d412af023915f93869b",
+        "default_defense": "3a3322a7d56c3b133ab636af1cd19a97b9bd49282a05c9ebf2c6e2d70a44883e"
+      },
+      "native_layout": {
+        "representation": "record",
+        "scripts_pointer": true
+      },
+      "native_special_allocation": {
+        "ordinal": 3,
+        "failure_shutdown": false,
+        "minimum": 8
+      }
+    },
+    {
+      "revision": 3761,
+      "engine": "3842",
+      "contract": "defaults-5",
+      "commit": "16814fdf39fdcdd78cb59f3d70748f1dc023a24f",
+      "source_parts_sha256": {
+        "init_model": "e4eade0088df5532853dcce60a432f85e94ec91c340bc19d154cdee6cee58595",
+        "default_defense": "3a3322a7d56c3b133ab636af1cd19a97b9bd49282a05c9ebf2c6e2d70a44883e"
+      },
+      "native_layout": {
+        "representation": "record",
+        "scripts_pointer": true
+      },
+      "native_special_allocation": {
+        "ordinal": 3,
+        "failure_shutdown": false,
+        "minimum": 8
+      }
+    },
+    {
+      "revision": 3769,
+      "engine": "3842",
+      "contract": "defaults-5",
+      "commit": "14ac619f7d9f21bf1ac331932308c3ced4a65615",
+      "source_parts_sha256": {
+        "init_model": "e4eade0088df5532853dcce60a432f85e94ec91c340bc19d154cdee6cee58595",
+        "default_defense": "3a3322a7d56c3b133ab636af1cd19a97b9bd49282a05c9ebf2c6e2d70a44883e"
+      },
+      "native_layout": {
+        "representation": "record",
+        "scripts_pointer": true
+      },
+      "native_special_allocation": {
+        "ordinal": 3,
+        "failure_shutdown": false,
+        "minimum": 8
+      }
+    },
+    {
+      "revision": 3773,
+      "engine": "3842",
+      "contract": "defaults-5",
+      "commit": "e39bfa21d708f2f7a586085d8689bff94440a104",
+      "source_parts_sha256": {
+        "init_model": "e4eade0088df5532853dcce60a432f85e94ec91c340bc19d154cdee6cee58595",
+        "default_defense": "3a3322a7d56c3b133ab636af1cd19a97b9bd49282a05c9ebf2c6e2d70a44883e"
+      },
+      "native_layout": {
+        "representation": "record",
+        "scripts_pointer": true
+      },
+      "native_special_allocation": {
+        "ordinal": 3,
+        "failure_shutdown": false,
+        "minimum": 8
+      }
+    }
+  ],
+  "contracts": {
+    "defaults-1": {
+      "attack_types": 24,
+      "animation_count": 210,
+      "freespecial_count": 8,
+      "special_elements": 8,
+      "cases": [
+        {
+          "cacheindex": 0,
+          "unload": 0,
+          "magic_type": 0,
+          "jumpheight": 8,
+          "jumpspeed": 3,
+          "grabdistance": 48,
+          "noatk_duration": 2,
+          "fields": [
+            {
+              "field": "grabflip",
+              "kind": "integer",
+              "value": 3
+            },
+            {
+              "field": "throwdamage",
+              "kind": "integer",
+              "value": 21
+            },
+            {
+              "field": "diesound",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "nolife",
+              "kind": "integer",
+              "value": 0
+            },
+            {
+              "field": "remove",
+              "kind": "integer",
+              "value": 1
+            },
+            {
+              "field": "counter",
+              "kind": "integer",
+              "value": 3
+            },
+            {
+              "field": "aimove",
+              "kind": "integer",
+              "value": 4294967295
+            },
+            {
+              "field": "aiattack",
+              "kind": "integer",
+              "value": 4294967295
+            },
+            {
+              "field": "throwframewait",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "chainlength",
+              "kind": "integer",
+              "value": 1
+            },
+            {
+              "field": "chargerate",
+              "kind": "integer",
+              "value": 2
+            },
+            {
+              "field": "guardrate",
+              "kind": "integer",
+              "value": 2
+            },
+            {
+              "field": "risetime[0]",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "risetime[1]",
+              "kind": "integer",
+              "value": 0
+            },
+            {
+              "field": "sleepwait",
+              "kind": "integer",
+              "value": 1000
+            },
+            {
+              "field": "jugglepoints.current",
+              "kind": "integer",
+              "value": 0
+            },
+            {
+              "field": "jugglepoints.maximum",
+              "kind": "integer",
+              "value": 0
+            },
+            {
+              "field": "guardpoints.current",
+              "kind": "integer",
+              "value": 0
+            },
+            {
+              "field": "guardpoints.maximum",
+              "kind": "integer",
+              "value": 0
+            },
+            {
+              "field": "mpswitch",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "weaploss[0]",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "weaploss[1]",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "summonkill",
+              "kind": "integer",
+              "value": 1
+            },
+            {
+              "field": "candamage",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "hostile",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "projectilehit",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "no_adjust_base",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "pshotno",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "project",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "bomb",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "star",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "knife",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "stealth.hide",
+              "kind": "integer",
+              "value": 0
+            },
+            {
+              "field": "stealth.detect",
+              "kind": "integer",
+              "value": 0
+            },
+            {
+              "field": "rider",
+              "kind": "integer",
+              "value": 17
+            },
+            {
+              "field": "flash",
+              "kind": "integer",
+              "value": 23
+            },
+            {
+              "field": "bflash",
+              "kind": "integer",
+              "value": 23
+            },
+            {
+              "field": "specials_loaded",
+              "kind": "integer",
+              "value": 0
+            },
+            {
+              "field": "icon.def",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "icon.die",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "icon.pain",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "icon.get",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "icon.weapon",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "icon.mphigh",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "icon.mplow",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "icon.mpmed",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "subject_to_wall",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "subject_to_platform",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "subject_to_obstacle",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "subject_to_hole",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "subject_to_gravity",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "subject_to_screen",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "subject_to_minz",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "subject_to_maxz",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "dust[0]",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "dust[1]",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "dust[2]",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "sight.amin",
+              "kind": "integer",
+              "value": -9999
+            },
+            {
+              "field": "sight.amax",
+              "kind": "integer",
+              "value": 9999
+            },
+            {
+              "field": "sight.xmin",
+              "kind": "integer",
+              "value": -9999
+            },
+            {
+              "field": "sight.xmax",
+              "kind": "integer",
+              "value": 9999
+            },
+            {
+              "field": "sight.zmin",
+              "kind": "integer",
+              "value": -9999
+            },
+            {
+              "field": "sight.zmax",
+              "kind": "integer",
+              "value": 9999
+            },
+            {
+              "field": "runjumpdist",
+              "kind": "float",
+              "value": 1
+            },
+            {
+              "field": "lifespan",
+              "kind": "float",
+              "value": 4294967295
+            },
+            {
+              "field": "jumpspeed",
+              "kind": "float",
+              "value": -1
+            },
+            {
+              "field": "jumpheight",
+              "kind": "float",
+              "value": 4
+            },
+            {
+              "field": "runjumpheight",
+              "kind": "float",
+              "value": 4
+            },
+            {
+              "field": "grabdistance",
+              "kind": "float",
+              "value": 36
+            },
+            {
+              "field": "throwdist",
+              "kind": "float",
+              "value": 2.5
+            },
+            {
+              "field": "mprate",
+              "kind": "integer",
+              "value": 2
+            }
+          ]
+        },
+        {
+          "cacheindex": 1,
+          "unload": 1,
+          "magic_type": 1,
+          "jumpheight": 6,
+          "jumpspeed": 2.5,
+          "grabdistance": 72,
+          "noatk_duration": 0.5,
+          "fields": [
+            {
+              "field": "grabflip",
+              "kind": "integer",
+              "value": 3
+            },
+            {
+              "field": "throwdamage",
+              "kind": "integer",
+              "value": 21
+            },
+            {
+              "field": "diesound",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "nolife",
+              "kind": "integer",
+              "value": 0
+            },
+            {
+              "field": "remove",
+              "kind": "integer",
+              "value": 1
+            },
+            {
+              "field": "counter",
+              "kind": "integer",
+              "value": 3
+            },
+            {
+              "field": "aimove",
+              "kind": "integer",
+              "value": 4294967295
+            },
+            {
+              "field": "aiattack",
+              "kind": "integer",
+              "value": 4294967295
+            },
+            {
+              "field": "throwframewait",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "chainlength",
+              "kind": "integer",
+              "value": 1
+            },
+            {
+              "field": "chargerate",
+              "kind": "integer",
+              "value": 2
+            },
+            {
+              "field": "guardrate",
+              "kind": "integer",
+              "value": 2
+            },
+            {
+              "field": "risetime[0]",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "risetime[1]",
+              "kind": "integer",
+              "value": 0
+            },
+            {
+              "field": "sleepwait",
+              "kind": "integer",
+              "value": 1000
+            },
+            {
+              "field": "jugglepoints.current",
+              "kind": "integer",
+              "value": 0
+            },
+            {
+              "field": "jugglepoints.maximum",
+              "kind": "integer",
+              "value": 0
+            },
+            {
+              "field": "guardpoints.current",
+              "kind": "integer",
+              "value": 0
+            },
+            {
+              "field": "guardpoints.maximum",
+              "kind": "integer",
+              "value": 0
+            },
+            {
+              "field": "mpswitch",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "weaploss[0]",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "weaploss[1]",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "summonkill",
+              "kind": "integer",
+              "value": 1
+            },
+            {
+              "field": "candamage",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "hostile",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "projectilehit",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "no_adjust_base",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "pshotno",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "project",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "bomb",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "star",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "knife",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "stealth.hide",
+              "kind": "integer",
+              "value": 0
+            },
+            {
+              "field": "stealth.detect",
+              "kind": "integer",
+              "value": 0
+            },
+            {
+              "field": "rider",
+              "kind": "integer",
+              "value": 17
+            },
+            {
+              "field": "flash",
+              "kind": "integer",
+              "value": 23
+            },
+            {
+              "field": "bflash",
+              "kind": "integer",
+              "value": 23
+            },
+            {
+              "field": "specials_loaded",
+              "kind": "integer",
+              "value": 0
+            },
+            {
+              "field": "icon.def",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "icon.die",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "icon.pain",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "icon.get",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "icon.weapon",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "icon.mphigh",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "icon.mplow",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "icon.mpmed",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "subject_to_wall",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "subject_to_platform",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "subject_to_obstacle",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "subject_to_hole",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "subject_to_gravity",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "subject_to_screen",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "subject_to_minz",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "subject_to_maxz",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "dust[0]",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "dust[1]",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "dust[2]",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "sight.amin",
+              "kind": "integer",
+              "value": -9999
+            },
+            {
+              "field": "sight.amax",
+              "kind": "integer",
+              "value": 9999
+            },
+            {
+              "field": "sight.xmin",
+              "kind": "integer",
+              "value": -9999
+            },
+            {
+              "field": "sight.xmax",
+              "kind": "integer",
+              "value": 9999
+            },
+            {
+              "field": "sight.zmin",
+              "kind": "integer",
+              "value": -9999
+            },
+            {
+              "field": "sight.zmax",
+              "kind": "integer",
+              "value": 9999
+            },
+            {
+              "field": "runjumpdist",
+              "kind": "float",
+              "value": 1
+            },
+            {
+              "field": "lifespan",
+              "kind": "float",
+              "value": 4294967295
+            },
+            {
+              "field": "jumpspeed",
+              "kind": "float",
+              "value": -1
+            },
+            {
+              "field": "jumpheight",
+              "kind": "float",
+              "value": 4
+            },
+            {
+              "field": "runjumpheight",
+              "kind": "float",
+              "value": 4
+            },
+            {
+              "field": "grabdistance",
+              "kind": "float",
+              "value": 36
+            },
+            {
+              "field": "throwdist",
+              "kind": "float",
+              "value": 2.5
+            },
+            {
+              "field": "mprate",
+              "kind": "integer",
+              "value": 1
+            }
+          ]
+        }
+      ],
+      "lookup": [
+        {
+          "name": "K'",
+          "result": 17
+        },
+        {
+          "name": "flash",
+          "result": 23
+        }
+      ],
+      "special_failure_shutdown": true
+    },
+    "defaults-2": {
+      "attack_types": 24,
+      "animation_count": 210,
+      "freespecial_count": 8,
+      "special_elements": 8,
+      "cases": [
+        {
+          "cacheindex": 0,
+          "unload": 0,
+          "magic_type": 0,
+          "jumpheight": 8,
+          "jumpspeed": 3,
+          "grabdistance": 48,
+          "noatk_duration": 2,
+          "fields": [
+            {
+              "field": "grabflip",
+              "kind": "integer",
+              "value": 3
+            },
+            {
+              "field": "throwdamage",
+              "kind": "integer",
+              "value": 21
+            },
+            {
+              "field": "diesound",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "nolife",
+              "kind": "integer",
+              "value": 0
+            },
+            {
+              "field": "remove",
+              "kind": "integer",
+              "value": 1
+            },
+            {
+              "field": "counter",
+              "kind": "integer",
+              "value": 3
+            },
+            {
+              "field": "aimove",
+              "kind": "integer",
+              "value": 4294967295
+            },
+            {
+              "field": "aiattack",
+              "kind": "integer",
+              "value": 4294967295
+            },
+            {
+              "field": "throwframewait",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "chainlength",
+              "kind": "integer",
+              "value": 1
+            },
+            {
+              "field": "chargerate",
+              "kind": "integer",
+              "value": 2
+            },
+            {
+              "field": "guardrate",
+              "kind": "integer",
+              "value": 2
+            },
+            {
+              "field": "risetime[0]",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "risetime[1]",
+              "kind": "integer",
+              "value": 0
+            },
+            {
+              "field": "sleepwait",
+              "kind": "integer",
+              "value": 1000
+            },
+            {
+              "field": "jugglepoints.current",
+              "kind": "integer",
+              "value": 0
+            },
+            {
+              "field": "jugglepoints.maximum",
+              "kind": "integer",
+              "value": 0
+            },
+            {
+              "field": "guardpoints.current",
+              "kind": "integer",
+              "value": 0
+            },
+            {
+              "field": "guardpoints.maximum",
+              "kind": "integer",
+              "value": 0
+            },
+            {
+              "field": "mpswitch",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "weaploss[0]",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "weaploss[1]",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "summonkill",
+              "kind": "integer",
+              "value": 1
+            },
+            {
+              "field": "candamage",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "hostile",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "projectilehit",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "no_adjust_base",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "pshotno",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "project",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "bomb",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "star",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "knife",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "stealth.hide",
+              "kind": "integer",
+              "value": 0
+            },
+            {
+              "field": "stealth.detect",
+              "kind": "integer",
+              "value": 0
+            },
+            {
+              "field": "rider",
+              "kind": "integer",
+              "value": 17
+            },
+            {
+              "field": "flash",
+              "kind": "integer",
+              "value": 23
+            },
+            {
+              "field": "bflash",
+              "kind": "integer",
+              "value": 23
+            },
+            {
+              "field": "specials_loaded",
+              "kind": "integer",
+              "value": 0
+            },
+            {
+              "field": "icon.def",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "icon.die",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "icon.pain",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "icon.get",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "icon.weapon",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "icon.mphigh",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "icon.mplow",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "icon.mpmed",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "subject_to_wall",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "subject_to_platform",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "subject_to_obstacle",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "subject_to_hole",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "subject_to_gravity",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "subject_to_screen",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "subject_to_minz",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "subject_to_maxz",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "dust[0]",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "dust[1]",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "dust[2]",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "sight.amin",
+              "kind": "integer",
+              "value": -9999
+            },
+            {
+              "field": "sight.amax",
+              "kind": "integer",
+              "value": 9999
+            },
+            {
+              "field": "sight.xmin",
+              "kind": "integer",
+              "value": -9999
+            },
+            {
+              "field": "sight.xmax",
+              "kind": "integer",
+              "value": 9999
+            },
+            {
+              "field": "sight.zmin",
+              "kind": "integer",
+              "value": -9999
+            },
+            {
+              "field": "sight.zmax",
+              "kind": "integer",
+              "value": 9999
+            },
+            {
+              "field": "runjumpdist",
+              "kind": "float",
+              "value": 1
+            },
+            {
+              "field": "lifespan",
+              "kind": "float",
+              "value": 4294967295
+            },
+            {
+              "field": "jumpspeed",
+              "kind": "float",
+              "value": 3
+            },
+            {
+              "field": "jumpheight",
+              "kind": "float",
+              "value": 8
+            },
+            {
+              "field": "runjumpheight",
+              "kind": "float",
+              "value": 8
+            },
+            {
+              "field": "grabdistance",
+              "kind": "float",
+              "value": 48
+            },
+            {
+              "field": "throwdist",
+              "kind": "float",
+              "value": 5.0
+            },
+            {
+              "field": "mprate",
+              "kind": "integer",
+              "value": 2
+            }
+          ]
+        },
+        {
+          "cacheindex": 1,
+          "unload": 1,
+          "magic_type": 1,
+          "jumpheight": 6,
+          "jumpspeed": 2.5,
+          "grabdistance": 72,
+          "noatk_duration": 0.5,
+          "fields": [
+            {
+              "field": "grabflip",
+              "kind": "integer",
+              "value": 3
+            },
+            {
+              "field": "throwdamage",
+              "kind": "integer",
+              "value": 21
+            },
+            {
+              "field": "diesound",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "nolife",
+              "kind": "integer",
+              "value": 0
+            },
+            {
+              "field": "remove",
+              "kind": "integer",
+              "value": 1
+            },
+            {
+              "field": "counter",
+              "kind": "integer",
+              "value": 3
+            },
+            {
+              "field": "aimove",
+              "kind": "integer",
+              "value": 4294967295
+            },
+            {
+              "field": "aiattack",
+              "kind": "integer",
+              "value": 4294967295
+            },
+            {
+              "field": "throwframewait",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "chainlength",
+              "kind": "integer",
+              "value": 1
+            },
+            {
+              "field": "chargerate",
+              "kind": "integer",
+              "value": 2
+            },
+            {
+              "field": "guardrate",
+              "kind": "integer",
+              "value": 2
+            },
+            {
+              "field": "risetime[0]",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "risetime[1]",
+              "kind": "integer",
+              "value": 0
+            },
+            {
+              "field": "sleepwait",
+              "kind": "integer",
+              "value": 1000
+            },
+            {
+              "field": "jugglepoints.current",
+              "kind": "integer",
+              "value": 0
+            },
+            {
+              "field": "jugglepoints.maximum",
+              "kind": "integer",
+              "value": 0
+            },
+            {
+              "field": "guardpoints.current",
+              "kind": "integer",
+              "value": 0
+            },
+            {
+              "field": "guardpoints.maximum",
+              "kind": "integer",
+              "value": 0
+            },
+            {
+              "field": "mpswitch",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "weaploss[0]",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "weaploss[1]",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "summonkill",
+              "kind": "integer",
+              "value": 1
+            },
+            {
+              "field": "candamage",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "hostile",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "projectilehit",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "no_adjust_base",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "pshotno",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "project",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "bomb",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "star",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "knife",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "stealth.hide",
+              "kind": "integer",
+              "value": 0
+            },
+            {
+              "field": "stealth.detect",
+              "kind": "integer",
+              "value": 0
+            },
+            {
+              "field": "rider",
+              "kind": "integer",
+              "value": 17
+            },
+            {
+              "field": "flash",
+              "kind": "integer",
+              "value": 23
+            },
+            {
+              "field": "bflash",
+              "kind": "integer",
+              "value": 23
+            },
+            {
+              "field": "specials_loaded",
+              "kind": "integer",
+              "value": 0
+            },
+            {
+              "field": "icon.def",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "icon.die",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "icon.pain",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "icon.get",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "icon.weapon",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "icon.mphigh",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "icon.mplow",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "icon.mpmed",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "subject_to_wall",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "subject_to_platform",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "subject_to_obstacle",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "subject_to_hole",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "subject_to_gravity",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "subject_to_screen",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "subject_to_minz",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "subject_to_maxz",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "dust[0]",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "dust[1]",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "dust[2]",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "sight.amin",
+              "kind": "integer",
+              "value": -9999
+            },
+            {
+              "field": "sight.amax",
+              "kind": "integer",
+              "value": 9999
+            },
+            {
+              "field": "sight.xmin",
+              "kind": "integer",
+              "value": -9999
+            },
+            {
+              "field": "sight.xmax",
+              "kind": "integer",
+              "value": 9999
+            },
+            {
+              "field": "sight.zmin",
+              "kind": "integer",
+              "value": -9999
+            },
+            {
+              "field": "sight.zmax",
+              "kind": "integer",
+              "value": 9999
+            },
+            {
+              "field": "runjumpdist",
+              "kind": "float",
+              "value": 1
+            },
+            {
+              "field": "lifespan",
+              "kind": "float",
+              "value": 4294967295
+            },
+            {
+              "field": "jumpspeed",
+              "kind": "float",
+              "value": 2.5
+            },
+            {
+              "field": "jumpheight",
+              "kind": "float",
+              "value": 6
+            },
+            {
+              "field": "runjumpheight",
+              "kind": "float",
+              "value": 6
+            },
+            {
+              "field": "grabdistance",
+              "kind": "float",
+              "value": 72
+            },
+            {
+              "field": "throwdist",
+              "kind": "float",
+              "value": 3.75
+            },
+            {
+              "field": "mprate",
+              "kind": "integer",
+              "value": 1
+            }
+          ]
+        }
+      ],
+      "lookup": [
+        {
+          "name": "K'",
+          "result": 17
+        },
+        {
+          "name": "flash",
+          "result": 23
+        }
+      ],
+      "special_failure_shutdown": true
+    },
+    "defaults-3": {
+      "attack_types": 24,
+      "animation_count": 210,
+      "freespecial_count": 8,
+      "special_elements": 8,
+      "cases": [
+        {
+          "cacheindex": 0,
+          "unload": 0,
+          "magic_type": 0,
+          "jumpheight": 8,
+          "jumpspeed": 3,
+          "grabdistance": 48,
+          "noatk_duration": 2,
+          "fields": [
+            {
+              "field": "grabflip",
+              "kind": "integer",
+              "value": 3
+            },
+            {
+              "field": "throwdamage",
+              "kind": "integer",
+              "value": 21
+            },
+            {
+              "field": "diesound",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "nolife",
+              "kind": "integer",
+              "value": 0
+            },
+            {
+              "field": "remove",
+              "kind": "integer",
+              "value": 1
+            },
+            {
+              "field": "counter",
+              "kind": "integer",
+              "value": 3
+            },
+            {
+              "field": "aimove",
+              "kind": "integer",
+              "value": 4294967295
+            },
+            {
+              "field": "aiattack",
+              "kind": "integer",
+              "value": 4294967295
+            },
+            {
+              "field": "throwframewait",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "chainlength",
+              "kind": "integer",
+              "value": 1
+            },
+            {
+              "field": "chargerate",
+              "kind": "integer",
+              "value": 2
+            },
+            {
+              "field": "guardrate",
+              "kind": "integer",
+              "value": 2
+            },
+            {
+              "field": "risetime[0]",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "risetime[1]",
+              "kind": "integer",
+              "value": 0
+            },
+            {
+              "field": "sleepwait",
+              "kind": "integer",
+              "value": 1000
+            },
+            {
+              "field": "jugglepoints.current",
+              "kind": "integer",
+              "value": 0
+            },
+            {
+              "field": "jugglepoints.maximum",
+              "kind": "integer",
+              "value": 0
+            },
+            {
+              "field": "guardpoints.current",
+              "kind": "integer",
+              "value": 0
+            },
+            {
+              "field": "guardpoints.maximum",
+              "kind": "integer",
+              "value": 0
+            },
+            {
+              "field": "mpswitch",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "weaploss[0]",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "weaploss[1]",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "summonkill",
+              "kind": "integer",
+              "value": 1
+            },
+            {
+              "field": "candamage",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "hostile",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "projectilehit",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "no_adjust_base",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "pshotno",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "project",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "bomb",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "star",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "knife",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "stealth.hide",
+              "kind": "integer",
+              "value": 0
+            },
+            {
+              "field": "stealth.detect",
+              "kind": "integer",
+              "value": 0
+            },
+            {
+              "field": "rider",
+              "kind": "integer",
+              "value": 17
+            },
+            {
+              "field": "flash",
+              "kind": "integer",
+              "value": 23
+            },
+            {
+              "field": "bflash",
+              "kind": "integer",
+              "value": 23
+            },
+            {
+              "field": "specials_loaded",
+              "kind": "integer",
+              "value": 0
+            },
+            {
+              "field": "icon.def",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "icon.die",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "icon.pain",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "icon.get",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "icon.weapon",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "icon.mphigh",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "icon.mplow",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "icon.mpmed",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "subject_to_wall",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "subject_to_platform",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "subject_to_obstacle",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "subject_to_hole",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "subject_to_gravity",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "subject_to_screen",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "subject_to_minz",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "subject_to_maxz",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "dust[0]",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "dust[1]",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "dust[2]",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "sight.amin",
+              "kind": "integer",
+              "value": -9999
+            },
+            {
+              "field": "sight.amax",
+              "kind": "integer",
+              "value": 9999
+            },
+            {
+              "field": "sight.xmin",
+              "kind": "integer",
+              "value": -9999
+            },
+            {
+              "field": "sight.xmax",
+              "kind": "integer",
+              "value": 9999
+            },
+            {
+              "field": "sight.zmin",
+              "kind": "integer",
+              "value": -9999
+            },
+            {
+              "field": "sight.zmax",
+              "kind": "integer",
+              "value": 9999
+            },
+            {
+              "field": "runjumpdist",
+              "kind": "float",
+              "value": 1
+            },
+            {
+              "field": "lifespan",
+              "kind": "float",
+              "value": 4294967295
+            },
+            {
+              "field": "jumpspeed",
+              "kind": "float",
+              "value": 3
+            },
+            {
+              "field": "jumpheight",
+              "kind": "float",
+              "value": 8
+            },
+            {
+              "field": "runjumpheight",
+              "kind": "float",
+              "value": 8
+            },
+            {
+              "field": "grabdistance",
+              "kind": "float",
+              "value": 48
+            },
+            {
+              "field": "throwdist",
+              "kind": "float",
+              "value": 5.0
+            },
+            {
+              "field": "mprate",
+              "kind": "integer",
+              "value": 2
+            },
+            {
+              "field": "attackthrottle",
+              "kind": "float",
+              "value": 0
+            },
+            {
+              "field": "attackthrottletime",
+              "kind": "float",
+              "value": 400
+            }
+          ]
+        },
+        {
+          "cacheindex": 1,
+          "unload": 1,
+          "magic_type": 1,
+          "jumpheight": 6,
+          "jumpspeed": 2.5,
+          "grabdistance": 72,
+          "noatk_duration": 0.5,
+          "fields": [
+            {
+              "field": "grabflip",
+              "kind": "integer",
+              "value": 3
+            },
+            {
+              "field": "throwdamage",
+              "kind": "integer",
+              "value": 21
+            },
+            {
+              "field": "diesound",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "nolife",
+              "kind": "integer",
+              "value": 0
+            },
+            {
+              "field": "remove",
+              "kind": "integer",
+              "value": 1
+            },
+            {
+              "field": "counter",
+              "kind": "integer",
+              "value": 3
+            },
+            {
+              "field": "aimove",
+              "kind": "integer",
+              "value": 4294967295
+            },
+            {
+              "field": "aiattack",
+              "kind": "integer",
+              "value": 4294967295
+            },
+            {
+              "field": "throwframewait",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "chainlength",
+              "kind": "integer",
+              "value": 1
+            },
+            {
+              "field": "chargerate",
+              "kind": "integer",
+              "value": 2
+            },
+            {
+              "field": "guardrate",
+              "kind": "integer",
+              "value": 2
+            },
+            {
+              "field": "risetime[0]",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "risetime[1]",
+              "kind": "integer",
+              "value": 0
+            },
+            {
+              "field": "sleepwait",
+              "kind": "integer",
+              "value": 1000
+            },
+            {
+              "field": "jugglepoints.current",
+              "kind": "integer",
+              "value": 0
+            },
+            {
+              "field": "jugglepoints.maximum",
+              "kind": "integer",
+              "value": 0
+            },
+            {
+              "field": "guardpoints.current",
+              "kind": "integer",
+              "value": 0
+            },
+            {
+              "field": "guardpoints.maximum",
+              "kind": "integer",
+              "value": 0
+            },
+            {
+              "field": "mpswitch",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "weaploss[0]",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "weaploss[1]",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "summonkill",
+              "kind": "integer",
+              "value": 1
+            },
+            {
+              "field": "candamage",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "hostile",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "projectilehit",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "no_adjust_base",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "pshotno",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "project",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "bomb",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "star",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "knife",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "stealth.hide",
+              "kind": "integer",
+              "value": 0
+            },
+            {
+              "field": "stealth.detect",
+              "kind": "integer",
+              "value": 0
+            },
+            {
+              "field": "rider",
+              "kind": "integer",
+              "value": 17
+            },
+            {
+              "field": "flash",
+              "kind": "integer",
+              "value": 23
+            },
+            {
+              "field": "bflash",
+              "kind": "integer",
+              "value": 23
+            },
+            {
+              "field": "specials_loaded",
+              "kind": "integer",
+              "value": 0
+            },
+            {
+              "field": "icon.def",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "icon.die",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "icon.pain",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "icon.get",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "icon.weapon",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "icon.mphigh",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "icon.mplow",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "icon.mpmed",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "subject_to_wall",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "subject_to_platform",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "subject_to_obstacle",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "subject_to_hole",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "subject_to_gravity",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "subject_to_screen",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "subject_to_minz",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "subject_to_maxz",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "dust[0]",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "dust[1]",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "dust[2]",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "sight.amin",
+              "kind": "integer",
+              "value": -9999
+            },
+            {
+              "field": "sight.amax",
+              "kind": "integer",
+              "value": 9999
+            },
+            {
+              "field": "sight.xmin",
+              "kind": "integer",
+              "value": -9999
+            },
+            {
+              "field": "sight.xmax",
+              "kind": "integer",
+              "value": 9999
+            },
+            {
+              "field": "sight.zmin",
+              "kind": "integer",
+              "value": -9999
+            },
+            {
+              "field": "sight.zmax",
+              "kind": "integer",
+              "value": 9999
+            },
+            {
+              "field": "runjumpdist",
+              "kind": "float",
+              "value": 1
+            },
+            {
+              "field": "lifespan",
+              "kind": "float",
+              "value": 4294967295
+            },
+            {
+              "field": "jumpspeed",
+              "kind": "float",
+              "value": 2.5
+            },
+            {
+              "field": "jumpheight",
+              "kind": "float",
+              "value": 6
+            },
+            {
+              "field": "runjumpheight",
+              "kind": "float",
+              "value": 6
+            },
+            {
+              "field": "grabdistance",
+              "kind": "float",
+              "value": 72
+            },
+            {
+              "field": "throwdist",
+              "kind": "float",
+              "value": 3.75
+            },
+            {
+              "field": "mprate",
+              "kind": "integer",
+              "value": 1
+            },
+            {
+              "field": "attackthrottle",
+              "kind": "float",
+              "value": 0
+            },
+            {
+              "field": "attackthrottletime",
+              "kind": "float",
+              "value": 100
+            }
+          ]
+        }
+      ],
+      "lookup": [
+        {
+          "name": "K'",
+          "result": 17
+        },
+        {
+          "name": "flash",
+          "result": 23
+        }
+      ],
+      "special_failure_shutdown": true
+    },
+    "defaults-4": {
+      "attack_types": 24,
+      "animation_count": 210,
+      "freespecial_count": 8,
+      "special_elements": 1,
+      "cases": [
+        {
+          "cacheindex": 0,
+          "unload": 0,
+          "magic_type": 0,
+          "jumpheight": 8,
+          "jumpspeed": 3,
+          "grabdistance": 48,
+          "noatk_duration": 2,
+          "fields": [
+            {
+              "field": "grabflip",
+              "kind": "integer",
+              "value": 3
+            },
+            {
+              "field": "throwdamage",
+              "kind": "integer",
+              "value": 21
+            },
+            {
+              "field": "diesound",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "nolife",
+              "kind": "integer",
+              "value": 0
+            },
+            {
+              "field": "remove",
+              "kind": "integer",
+              "value": 1
+            },
+            {
+              "field": "counter",
+              "kind": "integer",
+              "value": 3
+            },
+            {
+              "field": "aimove",
+              "kind": "integer",
+              "value": 4294967295
+            },
+            {
+              "field": "aiattack",
+              "kind": "integer",
+              "value": 4294967295
+            },
+            {
+              "field": "throwframewait",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "chainlength",
+              "kind": "integer",
+              "value": 1
+            },
+            {
+              "field": "chargerate",
+              "kind": "integer",
+              "value": 2
+            },
+            {
+              "field": "guardrate",
+              "kind": "integer",
+              "value": 2
+            },
+            {
+              "field": "risetime[0]",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "risetime[1]",
+              "kind": "integer",
+              "value": 0
+            },
+            {
+              "field": "sleepwait",
+              "kind": "integer",
+              "value": 1000
+            },
+            {
+              "field": "jugglepoints.current",
+              "kind": "integer",
+              "value": 0
+            },
+            {
+              "field": "jugglepoints.maximum",
+              "kind": "integer",
+              "value": 0
+            },
+            {
+              "field": "guardpoints.current",
+              "kind": "integer",
+              "value": 0
+            },
+            {
+              "field": "guardpoints.maximum",
+              "kind": "integer",
+              "value": 0
+            },
+            {
+              "field": "mpswitch",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "weaploss[0]",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "weaploss[1]",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "summonkill",
+              "kind": "integer",
+              "value": 1
+            },
+            {
+              "field": "candamage",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "hostile",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "projectilehit",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "no_adjust_base",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "pshotno",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "project",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "bomb",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "star",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "knife",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "stealth.hide",
+              "kind": "integer",
+              "value": 0
+            },
+            {
+              "field": "stealth.detect",
+              "kind": "integer",
+              "value": 0
+            },
+            {
+              "field": "rider",
+              "kind": "integer",
+              "value": 17
+            },
+            {
+              "field": "flash",
+              "kind": "integer",
+              "value": 23
+            },
+            {
+              "field": "bflash",
+              "kind": "integer",
+              "value": 23
+            },
+            {
+              "field": "specials_loaded",
+              "kind": "integer",
+              "value": 0
+            },
+            {
+              "field": "icon.def",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "icon.die",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "icon.pain",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "icon.get",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "icon.weapon",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "icon.mphigh",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "icon.mplow",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "icon.mpmed",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "subject_to_wall",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "subject_to_platform",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "subject_to_obstacle",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "subject_to_hole",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "subject_to_gravity",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "subject_to_screen",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "subject_to_minz",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "subject_to_maxz",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "dust[0]",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "dust[1]",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "dust[2]",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "sight.amin",
+              "kind": "integer",
+              "value": -9999
+            },
+            {
+              "field": "sight.amax",
+              "kind": "integer",
+              "value": 9999
+            },
+            {
+              "field": "sight.xmin",
+              "kind": "integer",
+              "value": -9999
+            },
+            {
+              "field": "sight.xmax",
+              "kind": "integer",
+              "value": 9999
+            },
+            {
+              "field": "sight.zmin",
+              "kind": "integer",
+              "value": -9999
+            },
+            {
+              "field": "sight.zmax",
+              "kind": "integer",
+              "value": 9999
+            },
+            {
+              "field": "runjumpdist",
+              "kind": "float",
+              "value": 1
+            },
+            {
+              "field": "lifespan",
+              "kind": "float",
+              "value": 4294967295
+            },
+            {
+              "field": "jumpspeed",
+              "kind": "float",
+              "value": 3
+            },
+            {
+              "field": "jumpheight",
+              "kind": "float",
+              "value": 8
+            },
+            {
+              "field": "runjumpheight",
+              "kind": "float",
+              "value": 8
+            },
+            {
+              "field": "grabdistance",
+              "kind": "float",
+              "value": 48
+            },
+            {
+              "field": "throwdist",
+              "kind": "float",
+              "value": 5.0
+            },
+            {
+              "field": "mprate",
+              "kind": "integer",
+              "value": 2
+            },
+            {
+              "field": "attackthrottle",
+              "kind": "float",
+              "value": 0
+            },
+            {
+              "field": "attackthrottletime",
+              "kind": "float",
+              "value": 400
+            }
+          ]
+        },
+        {
+          "cacheindex": 1,
+          "unload": 1,
+          "magic_type": 1,
+          "jumpheight": 6,
+          "jumpspeed": 2.5,
+          "grabdistance": 72,
+          "noatk_duration": 0.5,
+          "fields": [
+            {
+              "field": "grabflip",
+              "kind": "integer",
+              "value": 3
+            },
+            {
+              "field": "throwdamage",
+              "kind": "integer",
+              "value": 21
+            },
+            {
+              "field": "diesound",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "nolife",
+              "kind": "integer",
+              "value": 0
+            },
+            {
+              "field": "remove",
+              "kind": "integer",
+              "value": 1
+            },
+            {
+              "field": "counter",
+              "kind": "integer",
+              "value": 3
+            },
+            {
+              "field": "aimove",
+              "kind": "integer",
+              "value": 4294967295
+            },
+            {
+              "field": "aiattack",
+              "kind": "integer",
+              "value": 4294967295
+            },
+            {
+              "field": "throwframewait",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "chainlength",
+              "kind": "integer",
+              "value": 1
+            },
+            {
+              "field": "chargerate",
+              "kind": "integer",
+              "value": 2
+            },
+            {
+              "field": "guardrate",
+              "kind": "integer",
+              "value": 2
+            },
+            {
+              "field": "risetime[0]",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "risetime[1]",
+              "kind": "integer",
+              "value": 0
+            },
+            {
+              "field": "sleepwait",
+              "kind": "integer",
+              "value": 1000
+            },
+            {
+              "field": "jugglepoints.current",
+              "kind": "integer",
+              "value": 0
+            },
+            {
+              "field": "jugglepoints.maximum",
+              "kind": "integer",
+              "value": 0
+            },
+            {
+              "field": "guardpoints.current",
+              "kind": "integer",
+              "value": 0
+            },
+            {
+              "field": "guardpoints.maximum",
+              "kind": "integer",
+              "value": 0
+            },
+            {
+              "field": "mpswitch",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "weaploss[0]",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "weaploss[1]",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "summonkill",
+              "kind": "integer",
+              "value": 1
+            },
+            {
+              "field": "candamage",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "hostile",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "projectilehit",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "no_adjust_base",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "pshotno",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "project",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "bomb",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "star",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "knife",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "stealth.hide",
+              "kind": "integer",
+              "value": 0
+            },
+            {
+              "field": "stealth.detect",
+              "kind": "integer",
+              "value": 0
+            },
+            {
+              "field": "rider",
+              "kind": "integer",
+              "value": 17
+            },
+            {
+              "field": "flash",
+              "kind": "integer",
+              "value": 23
+            },
+            {
+              "field": "bflash",
+              "kind": "integer",
+              "value": 23
+            },
+            {
+              "field": "specials_loaded",
+              "kind": "integer",
+              "value": 0
+            },
+            {
+              "field": "icon.def",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "icon.die",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "icon.pain",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "icon.get",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "icon.weapon",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "icon.mphigh",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "icon.mplow",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "icon.mpmed",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "subject_to_wall",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "subject_to_platform",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "subject_to_obstacle",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "subject_to_hole",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "subject_to_gravity",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "subject_to_screen",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "subject_to_minz",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "subject_to_maxz",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "dust[0]",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "dust[1]",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "dust[2]",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "sight.amin",
+              "kind": "integer",
+              "value": -9999
+            },
+            {
+              "field": "sight.amax",
+              "kind": "integer",
+              "value": 9999
+            },
+            {
+              "field": "sight.xmin",
+              "kind": "integer",
+              "value": -9999
+            },
+            {
+              "field": "sight.xmax",
+              "kind": "integer",
+              "value": 9999
+            },
+            {
+              "field": "sight.zmin",
+              "kind": "integer",
+              "value": -9999
+            },
+            {
+              "field": "sight.zmax",
+              "kind": "integer",
+              "value": 9999
+            },
+            {
+              "field": "runjumpdist",
+              "kind": "float",
+              "value": 1
+            },
+            {
+              "field": "lifespan",
+              "kind": "float",
+              "value": 4294967295
+            },
+            {
+              "field": "jumpspeed",
+              "kind": "float",
+              "value": 2.5
+            },
+            {
+              "field": "jumpheight",
+              "kind": "float",
+              "value": 6
+            },
+            {
+              "field": "runjumpheight",
+              "kind": "float",
+              "value": 6
+            },
+            {
+              "field": "grabdistance",
+              "kind": "float",
+              "value": 72
+            },
+            {
+              "field": "throwdist",
+              "kind": "float",
+              "value": 3.75
+            },
+            {
+              "field": "mprate",
+              "kind": "integer",
+              "value": 1
+            },
+            {
+              "field": "attackthrottle",
+              "kind": "float",
+              "value": 0
+            },
+            {
+              "field": "attackthrottletime",
+              "kind": "float",
+              "value": 100
+            }
+          ]
+        }
+      ],
+      "lookup": [
+        {
+          "name": "K'",
+          "result": 17
+        },
+        {
+          "name": "flash",
+          "result": 23
+        }
+      ],
+      "special_failure_shutdown": false
+    },
+    "defaults-5": {
+      "attack_types": 24,
+      "animation_count": 210,
+      "freespecial_count": 8,
+      "special_elements": 1,
+      "cases": [
+        {
+          "cacheindex": 0,
+          "unload": 0,
+          "magic_type": 0,
+          "jumpheight": 8,
+          "jumpspeed": 3,
+          "grabdistance": 48,
+          "noatk_duration": 2,
+          "fields": [
+            {
+              "field": "grabflip",
+              "kind": "integer",
+              "value": 3
+            },
+            {
+              "field": "throwdamage",
+              "kind": "integer",
+              "value": 21
+            },
+            {
+              "field": "diesound",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "nolife",
+              "kind": "integer",
+              "value": 0
+            },
+            {
+              "field": "remove",
+              "kind": "integer",
+              "value": 1
+            },
+            {
+              "field": "counter",
+              "kind": "integer",
+              "value": 3
+            },
+            {
+              "field": "aimove",
+              "kind": "integer",
+              "value": 4294967295
+            },
+            {
+              "field": "aiattack",
+              "kind": "integer",
+              "value": 4294967295
+            },
+            {
+              "field": "throwframewait",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "chainlength",
+              "kind": "integer",
+              "value": 1
+            },
+            {
+              "field": "chargerate",
+              "kind": "integer",
+              "value": 2
+            },
+            {
+              "field": "guardrate",
+              "kind": "integer",
+              "value": 2
+            },
+            {
+              "field": "risetime[0]",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "risetime[1]",
+              "kind": "integer",
+              "value": 0
+            },
+            {
+              "field": "sleepwait",
+              "kind": "integer",
+              "value": 1000
+            },
+            {
+              "field": "jugglepoints.current",
+              "kind": "integer",
+              "value": 0
+            },
+            {
+              "field": "jugglepoints.maximum",
+              "kind": "integer",
+              "value": 0
+            },
+            {
+              "field": "guardpoints.current",
+              "kind": "integer",
+              "value": 0
+            },
+            {
+              "field": "guardpoints.maximum",
+              "kind": "integer",
+              "value": 0
+            },
+            {
+              "field": "mpswitch",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "weaploss[0]",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "weaploss[1]",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "summonkill",
+              "kind": "integer",
+              "value": 1
+            },
+            {
+              "field": "candamage",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "hostile",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "projectilehit",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "no_adjust_base",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "pshotno",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "project",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "bomb",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "star",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "knife",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "stealth.hide",
+              "kind": "integer",
+              "value": 0
+            },
+            {
+              "field": "stealth.detect",
+              "kind": "integer",
+              "value": 0
+            },
+            {
+              "field": "rider",
+              "kind": "integer",
+              "value": 17
+            },
+            {
+              "field": "flash",
+              "kind": "integer",
+              "value": 23
+            },
+            {
+              "field": "bflash",
+              "kind": "integer",
+              "value": 23
+            },
+            {
+              "field": "specials_loaded",
+              "kind": "integer",
+              "value": 0
+            },
+            {
+              "field": "icon.def",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "icon.die",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "icon.pain",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "icon.get",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "icon.weapon",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "icon.mphigh",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "icon.mplow",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "icon.mpmed",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "subject_to_wall",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "subject_to_platform",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "subject_to_obstacle",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "subject_to_hole",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "subject_to_gravity",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "subject_to_screen",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "subject_to_minz",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "subject_to_maxz",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "dust[0]",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "dust[1]",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "dust[2]",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "sight.amin",
+              "kind": "integer",
+              "value": -9999
+            },
+            {
+              "field": "sight.amax",
+              "kind": "integer",
+              "value": 9999
+            },
+            {
+              "field": "sight.xmin",
+              "kind": "integer",
+              "value": -9999
+            },
+            {
+              "field": "sight.xmax",
+              "kind": "integer",
+              "value": 9999
+            },
+            {
+              "field": "sight.zmin",
+              "kind": "integer",
+              "value": -9999
+            },
+            {
+              "field": "sight.zmax",
+              "kind": "integer",
+              "value": 9999
+            },
+            {
+              "field": "runjumpdist",
+              "kind": "float",
+              "value": 1
+            },
+            {
+              "field": "lifespan",
+              "kind": "float",
+              "value": 4294967295
+            },
+            {
+              "field": "jumpspeed",
+              "kind": "float",
+              "value": 3
+            },
+            {
+              "field": "jumpheight",
+              "kind": "float",
+              "value": 8
+            },
+            {
+              "field": "runjumpheight",
+              "kind": "float",
+              "value": 8
+            },
+            {
+              "field": "grabdistance",
+              "kind": "float",
+              "value": 48
+            },
+            {
+              "field": "throwdist",
+              "kind": "float",
+              "value": 5.0
+            },
+            {
+              "field": "mprate",
+              "kind": "integer",
+              "value": 2
+            },
+            {
+              "field": "attackthrottle",
+              "kind": "float",
+              "value": 0
+            },
+            {
+              "field": "attackthrottletime",
+              "kind": "float",
+              "value": 400
+            },
+            {
+              "field": "priority",
+              "kind": "integer",
+              "value": 1
+            }
+          ]
+        },
+        {
+          "cacheindex": 1,
+          "unload": 1,
+          "magic_type": 1,
+          "jumpheight": 6,
+          "jumpspeed": 2.5,
+          "grabdistance": 72,
+          "noatk_duration": 0.5,
+          "fields": [
+            {
+              "field": "grabflip",
+              "kind": "integer",
+              "value": 3
+            },
+            {
+              "field": "throwdamage",
+              "kind": "integer",
+              "value": 21
+            },
+            {
+              "field": "diesound",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "nolife",
+              "kind": "integer",
+              "value": 0
+            },
+            {
+              "field": "remove",
+              "kind": "integer",
+              "value": 1
+            },
+            {
+              "field": "counter",
+              "kind": "integer",
+              "value": 3
+            },
+            {
+              "field": "aimove",
+              "kind": "integer",
+              "value": 4294967295
+            },
+            {
+              "field": "aiattack",
+              "kind": "integer",
+              "value": 4294967295
+            },
+            {
+              "field": "throwframewait",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "chainlength",
+              "kind": "integer",
+              "value": 1
+            },
+            {
+              "field": "chargerate",
+              "kind": "integer",
+              "value": 2
+            },
+            {
+              "field": "guardrate",
+              "kind": "integer",
+              "value": 2
+            },
+            {
+              "field": "risetime[0]",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "risetime[1]",
+              "kind": "integer",
+              "value": 0
+            },
+            {
+              "field": "sleepwait",
+              "kind": "integer",
+              "value": 1000
+            },
+            {
+              "field": "jugglepoints.current",
+              "kind": "integer",
+              "value": 0
+            },
+            {
+              "field": "jugglepoints.maximum",
+              "kind": "integer",
+              "value": 0
+            },
+            {
+              "field": "guardpoints.current",
+              "kind": "integer",
+              "value": 0
+            },
+            {
+              "field": "guardpoints.maximum",
+              "kind": "integer",
+              "value": 0
+            },
+            {
+              "field": "mpswitch",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "weaploss[0]",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "weaploss[1]",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "summonkill",
+              "kind": "integer",
+              "value": 1
+            },
+            {
+              "field": "candamage",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "hostile",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "projectilehit",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "no_adjust_base",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "pshotno",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "project",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "bomb",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "star",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "knife",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "stealth.hide",
+              "kind": "integer",
+              "value": 0
+            },
+            {
+              "field": "stealth.detect",
+              "kind": "integer",
+              "value": 0
+            },
+            {
+              "field": "rider",
+              "kind": "integer",
+              "value": 17
+            },
+            {
+              "field": "flash",
+              "kind": "integer",
+              "value": 23
+            },
+            {
+              "field": "bflash",
+              "kind": "integer",
+              "value": 23
+            },
+            {
+              "field": "specials_loaded",
+              "kind": "integer",
+              "value": 0
+            },
+            {
+              "field": "icon.def",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "icon.die",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "icon.pain",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "icon.get",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "icon.weapon",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "icon.mphigh",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "icon.mplow",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "icon.mpmed",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "subject_to_wall",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "subject_to_platform",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "subject_to_obstacle",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "subject_to_hole",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "subject_to_gravity",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "subject_to_screen",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "subject_to_minz",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "subject_to_maxz",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "dust[0]",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "dust[1]",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "dust[2]",
+              "kind": "integer",
+              "value": -1
+            },
+            {
+              "field": "sight.amin",
+              "kind": "integer",
+              "value": -9999
+            },
+            {
+              "field": "sight.amax",
+              "kind": "integer",
+              "value": 9999
+            },
+            {
+              "field": "sight.xmin",
+              "kind": "integer",
+              "value": -9999
+            },
+            {
+              "field": "sight.xmax",
+              "kind": "integer",
+              "value": 9999
+            },
+            {
+              "field": "sight.zmin",
+              "kind": "integer",
+              "value": -9999
+            },
+            {
+              "field": "sight.zmax",
+              "kind": "integer",
+              "value": 9999
+            },
+            {
+              "field": "runjumpdist",
+              "kind": "float",
+              "value": 1
+            },
+            {
+              "field": "lifespan",
+              "kind": "float",
+              "value": 4294967295
+            },
+            {
+              "field": "jumpspeed",
+              "kind": "float",
+              "value": 2.5
+            },
+            {
+              "field": "jumpheight",
+              "kind": "float",
+              "value": 6
+            },
+            {
+              "field": "runjumpheight",
+              "kind": "float",
+              "value": 6
+            },
+            {
+              "field": "grabdistance",
+              "kind": "float",
+              "value": 72
+            },
+            {
+              "field": "throwdist",
+              "kind": "float",
+              "value": 3.75
+            },
+            {
+              "field": "mprate",
+              "kind": "integer",
+              "value": 1
+            },
+            {
+              "field": "attackthrottle",
+              "kind": "float",
+              "value": 0
+            },
+            {
+              "field": "attackthrottletime",
+              "kind": "float",
+              "value": 100
+            },
+            {
+              "field": "priority",
+              "kind": "integer",
+              "value": 1
+            }
+          ]
+        }
+      ],
+      "lookup": [
+        {
+          "name": "K'",
+          "result": 17
+        },
+        {
+          "name": "flash",
+          "result": 23
+        }
+      ],
+      "special_failure_shutdown": false
+    }
+  },
+  "covered_profile_ranges": [
+    {
+      "engine": "3741",
+      "first": 3666,
+      "last": 3742
+    },
+    {
+      "engine": "3842",
+      "first": 3761,
+      "last": 3773
+    }
+  ]
+}

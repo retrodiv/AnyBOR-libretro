@@ -23,6 +23,22 @@ def png(width, height, sample):
             chunk(b"PLTE", palette) + chunk(b"IDAT", zlib.compress(rows)) + chunk(b"IEND", b""))
 
 
+def indexed_bmp(width, height, sample):
+    """Create a small standards-aligned indexed bitmap for native controls."""
+    if (type(width) is not int or type(height) is not int or
+            not 0 < width <= 8192 or not 0 < height <= 8192 or width * height > 65536):
+        raise ValueError('Small positive bitmap dimensions required')
+    rgb = bytes([0, 0, 0, 80, 230, 140, 240, 240, 240, 25, 45, 80]) + bytes(252 * 3)
+    palette = b''.join(bytes((rgb[i+2], rgb[i+1], rgb[i], 0)) for i in range(0, 768, 3))
+    stride = (width + 3) & ~3
+    rows = b''.join(bytes(sample(x, y) for x in range(width)) + bytes(stride-width)
+                    for y in range(height-1, -1, -1))
+    offset = 14 + 40 + len(palette)
+    header = struct.pack('<2sIHHI', b'BM', offset+len(rows), 0, 0, offset)
+    info = struct.pack('<IiiHHIIiiII', 40, width, height, 1, 8, 0, len(rows), 0, 0, 256, 0)
+    return header + info + palette + rows
+
+
 def files():
     result = {
         "data/models.txt": b"load TestBlock data/chars/block.txt\n",

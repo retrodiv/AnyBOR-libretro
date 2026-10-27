@@ -1,0 +1,48 @@
+{
+  "schema": 1,
+  "scope": "New3842logicalprofiles supplement the previously tested3780\u20133842boundary range. Own-source conditions only;test uses structural service records.",
+  "sources": [
+    {
+      "profile": "3761",
+      "revision": 3761,
+      "engine": "3842",
+      "commit": "16814fdf39fdcdd78cb59f3d70748f1dc023a24f",
+      "source_sha256": {
+        "ent_default_init": "858179e88cae8d7c0ff870b57c0e8135a90720aa6cf9e5addee3f79a93efc871",
+        "ent_set_anim": "1d9ef6cc8a415ead93a731271ce1ba31736f49b818fe76f30a32477a427b4012",
+        "update_animation": "2e9cfaad4e5884718118f6439913681e3682afab846eb48a4ccf4ca92a063971",
+        "set_idle": "61f016f5e52494f1fefde859814de886f25398f2da72a067b306b1739aefd42a",
+        "set_weapon": "79810feefc557bb64bfec50f37884c651166c17d20907d69230a7a8a1e834914",
+        "common_idle_anim": "ad5c07ace89b4505aec5abd492b13c9da8766594a51f406ae16b090c160243e2"
+      }
+    },
+    {
+      "profile": "3769",
+      "revision": 3769,
+      "engine": "3842",
+      "commit": "14ac619f7d9f21bf1ac331932308c3ced4a65615",
+      "source_sha256": {
+        "ent_default_init": "858179e88cae8d7c0ff870b57c0e8135a90720aa6cf9e5addee3f79a93efc871",
+        "ent_set_anim": "1d9ef6cc8a415ead93a731271ce1ba31736f49b818fe76f30a32477a427b4012",
+        "update_animation": "2e9cfaad4e5884718118f6439913681e3682afab846eb48a4ccf4ca92a063971",
+        "set_idle": "61f016f5e52494f1fefde859814de886f25398f2da72a067b306b1739aefd42a",
+        "set_weapon": "79810feefc557bb64bfec50f37884c651166c17d20907d69230a7a8a1e834914",
+        "common_idle_anim": "ad5c07ace89b4505aec5abd492b13c9da8766594a51f406ae16b090c160243e2"
+      }
+    },
+    {
+      "profile": "3773",
+      "revision": 3773,
+      "engine": "3842",
+      "commit": "e39bfa21d708f2f7a586085d8689bff94440a104",
+      "source_sha256": {
+        "ent_default_init": "858179e88cae8d7c0ff870b57c0e8135a90720aa6cf9e5addee3f79a93efc871",
+        "ent_set_anim": "1d9ef6cc8a415ead93a731271ce1ba31736f49b818fe76f30a32477a427b4012",
+        "update_animation": "2e9cfaad4e5884718118f6439913681e3682afab846eb48a4ccf4ca92a063971",
+        "set_idle": "61f016f5e52494f1fefde859814de886f25398f2da72a067b306b1739aefd42a",
+        "set_weapon": "79810feefc557bb64bfec50f37884c651166c17d20907d69230a7a8a1e834914",
+        "common_idle_anim": "ad5c07ace89b4505aec5abd492b13c9da8766594a51f406ae16b090c160243e2"
+      }
+    }
+  ]
+}

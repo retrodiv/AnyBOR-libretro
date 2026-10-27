@@ -1,3 +1,15 @@
+/* AnyBOR modification record: 2026-10-26.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Select native syntax, assignment results, unary folding and diagnostics;
+ * refuse unresolved control targets before recording instructions.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/3842.md
+ * at the source repository root. Original notices follow below.
+ */
+
 /*
  * OpenBOR - http://www.LavaLit.com
  * -----------------------------------------------------------------------
@@ -7,6 +19,8 @@
  */
 
 #include "Parser.h"
+#include <stdint.h>
+extern uint32_t obor_profile_build;
 
 Parser* pcurParser = NULL;
 
@@ -155,6 +169,11 @@ void Parser_AddInstructionViaToken(Parser* pparser, OpCode pCode, Token* pToken,
 ******************************************************************************/
 void Parser_AddInstructionViaLabel(Parser* pparser, OpCode pCode, Label instrLabel, Label listLabel )
 {
+    if(!instrLabel)
+    {
+        pparser->errorFound = TRUE;
+        return;
+    }
 	Instruction* pInstruction = NULL;
 	pInstruction = (Instruction*)malloc(sizeof(Instruction));
 	Instruction_InitViaLabel(pInstruction, pCode, instrLabel);
@@ -245,7 +264,8 @@ void Parser_External_decl2(Parser* pparser, BOOL variableonly )
 	//ignore the type of this declaration
 	if(!Parser_Check(pparser, TOKEN_IDENTIFIER ))
 	{
-		printf("Identifier expected before '%s'.\n", token.theSource);
+		if(obor_profile_build < 3810) printf("Identifier expected '%s'.\n", token.theSource);
+        else printf("Identifier expected before '%s'.\n", token.theSource);
 		Parser_Error(pparser, external_decl );
 	}
 	Parser_Match(pparser);
@@ -366,7 +386,8 @@ void Parser_Decl2(Parser* pparser )
 	Token token = pparser->theNextToken;
 	if(Parser_Check(pparser, TOKEN_IDENTIFIER )==FALSE)
 	{
-		printf("Identifier expected before '%s'.\n", token.theSource);
+		if(obor_profile_build < 3810) printf("Identifier expected '%s'.\n", token.theSource);
+        else printf("Identifier expected before '%s'.\n", token.theSource);
 		Parser_Error(pparser, decl );
 	}
 	Parser_Match(pparser);
@@ -583,7 +604,8 @@ void Parser_Expr_stmt(Parser* pparser )
 	Instruction* pInstruction;
 	if (ParserSet_First(&(pparser->theParserSet), expr, pparser->theNextToken.theType )){
 		Parser_Expr(pparser );
-		if((pInstruction=(Instruction*)List_Retrieve(pparser->pIList))->OpCode==LOAD) {
+		if(obor_profile_build >= 3831 &&
+           (pInstruction=(Instruction*)List_Retrieve(pparser->pIList))->OpCode==LOAD) {
 			Instruction_Clear(pInstruction);
 			free(pInstruction);
 			List_Remove(pparser->pIList);
@@ -674,7 +696,7 @@ void Parser_Select_stmt(Parser* pparser )
 		free(falseLabel);
 		free(endLabel);
 	}
-	else if (Parser_Check(pparser, TOKEN_SWITCH )) {
+	else if (obor_profile_build >= 3810 && Parser_Check(pparser, TOKEN_SWITCH )) {
 		List* pMainList, bodyInsts, cases;
 		int size, i; //for FOREACH
 
@@ -793,7 +815,7 @@ void Parser_Case_label(Parser* pparser, List* pCases )
 		label = Parser_CreateLabel(pparser );
 		Parser_Match(pparser);
 		if(!Parser_Check(pparser, TOKEN_INTCONSTANT ) &&
-		   !Parser_Check(pparser, TOKEN_STRING_LITERAL ))
+		   (obor_profile_build < 3812 || !Parser_Check(pparser, TOKEN_STRING_LITERAL )))
 			Parser_Error(pparser, case_label );
 		token = malloc(sizeof(Token));
 		memcpy(token, &pparser->theNextToken, sizeof(Token));
@@ -1059,8 +1081,10 @@ OpCode Parser_Assignment_op(Parser* pparser )
 
 void Parser_Assignment_expr(Parser* pparser )
 {
-	if (ParserSet_First(&(pparser->theParserSet), cond_expr, pparser->theNextToken.theType )){//= /= += Operator, or a comma and the like (the reputation of a variable)
-		Parser_Cond_expr(pparser );
+	if (ParserSet_First(&(pparser->theParserSet),
+            obor_profile_build < 3816 ? log_or_expr : cond_expr, pparser->theNextToken.theType )){//= /= += Operator, or a comma and the like (the reputation of a variable)
+		if(obor_profile_build < 3816) Parser_Log_or_expr(pparser );
+        else Parser_Cond_expr(pparser );
 		Parser_Assignment_expr2(pparser );
 	}
 	else Parser_Error(pparser, assignment_expr );
@@ -1077,9 +1101,10 @@ void Parser_Assignment_expr2(Parser* pparser )
 		pparser->theFieldToken.theType = END_OF_TOKENS;
 
 		code = Parser_Assignment_op(pparser );
-		if (code == NOOP) List_Remove(pparser->pIList);
-		Parser_Cond_expr(pparser );
-		if (code != NOOP) Parser_AddInstructionViaToken(pparser, code, (Token*)NULL, NULL );
+		if (code == NOOP && obor_profile_build >= 3818) List_Remove(pparser->pIList);
+		if(obor_profile_build < 3816) Parser_Log_or_expr(pparser );
+        else Parser_Cond_expr(pparser );
+		if (code != NOOP || obor_profile_build < 3818) Parser_AddInstructionViaToken(pparser, code, (Token*)NULL, NULL );
 
 		if (token.theType != END_OF_TOKENS){
 			Parser_AddInstructionViaToken(pparser, LOAD, &token, NULL );
@@ -1087,8 +1112,9 @@ void Parser_Assignment_expr2(Parser* pparser )
 		}
 
 		Parser_AddInstructionViaToken(pparser, SAVE, pInstruction->theToken, NULL );
-		Parser_AddInstructionViaToken(pparser, LOAD, pInstruction->theToken, NULL );
-		if (code == NOOP) {Instruction_Clear(pInstruction); free(pInstruction);}
+		if(obor_profile_build >= 3818)
+            Parser_AddInstructionViaToken(pparser, LOAD, pInstruction->theToken, NULL );
+		if (code == NOOP && obor_profile_build >= 3818) {Instruction_Clear(pInstruction); free(pInstruction);}
 		Parser_Assignment_expr2(pparser );
 	}
 	else if (ParserSet_Follow(&(pparser->theParserSet), assignment_expr2, pparser->theNextToken.theType ))
@@ -1172,8 +1198,9 @@ void Parser_Log_or_expr2(Parser* pparser )
 
 void Parser_Log_and_expr(Parser* pparser )
 {
-	if (ParserSet_First(&(pparser->theParserSet), bit_or_expr, pparser->theNextToken.theType )){
-		Parser_Bit_or_expr(pparser );
+	if (ParserSet_First(&(pparser->theParserSet), obor_profile_build < 3839 ? equal_expr : bit_or_expr, pparser->theNextToken.theType )){
+		if(obor_profile_build < 3839) Parser_Equal_expr(pparser );
+        else Parser_Bit_or_expr(pparser );
 		Parser_Log_and_expr2(pparser );
 	}
 	else Parser_Error(pparser, log_and_expr );
@@ -1183,7 +1210,8 @@ void Parser_Log_and_expr2(Parser* pparser )
 {
 	if (Parser_Check(pparser, TOKEN_AND_OP )){
 		Parser_Match(pparser);
-		Parser_Bit_or_expr(pparser );
+		if(obor_profile_build < 3839) Parser_Equal_expr(pparser );
+        else Parser_Bit_or_expr(pparser );
 		Parser_AddInstructionViaToken(pparser, AND, (Token*)NULL, NULL );
 		Parser_Log_and_expr2( pparser);
 	}
@@ -1316,8 +1344,9 @@ OpCode Parser_Rel_op(Parser* pparser )
 
 void Parser_Rel_expr(Parser* pparser )
 {
-	if (ParserSet_First(&(pparser->theParserSet), shift_expr, pparser->theNextToken.theType )){
-		Parser_Shift_expr(pparser );
+	if (ParserSet_First(&(pparser->theParserSet), obor_profile_build < 3833 ? add_expr : shift_expr, pparser->theNextToken.theType )){
+		if(obor_profile_build < 3833) Parser_Add_expr(pparser );
+        else Parser_Shift_expr(pparser );
 		Parser_Rel_expr2(pparser );
 	}
 	else Parser_Error(pparser, rel_expr );
@@ -1328,7 +1357,8 @@ void Parser_Rel_expr2(Parser* pparser )
 	OpCode code;
 	if (ParserSet_First(&(pparser->theParserSet), rel_op, pparser->theNextToken.theType )){
 		code = Parser_Rel_op(pparser );
-		Parser_Shift_expr(pparser );
+		if(obor_profile_build < 3833) Parser_Add_expr(pparser );
+        else Parser_Shift_expr(pparser );
 		Parser_AddInstructionViaToken(pparser, code, (Token*)NULL, NULL );
 		Parser_Rel_expr2(pparser );
 	}
@@ -1485,6 +1515,11 @@ void Parser_Unary_expr(Parser* pparser )
 	else if (Parser_Check(pparser, TOKEN_SUB )){
 		Parser_Match(pparser);
 		Parser_Unary_expr(pparser );
+        if(obor_profile_build < 3831)
+        {
+            Parser_AddInstructionViaToken(pparser, NEG, (Token*)NULL, NULL );
+            return;
+        }
 		pInstruction = (Instruction*)List_Retrieve(pparser->pIList);
 		if(pInstruction->OpCode==CONSTINT || 
 			pInstruction->OpCode==CONSTDBL )
@@ -1501,6 +1536,11 @@ void Parser_Unary_expr(Parser* pparser )
 	else if (Parser_Check(pparser, TOKEN_BOOLEAN_NOT )){
 		Parser_Match(pparser);
 		Parser_Unary_expr(pparser );
+        if(obor_profile_build < 3831)
+        {
+            Parser_AddInstructionViaToken(pparser, NOT, (Token*)NULL, NULL );
+            return;
+        }
 		pInstruction = (Instruction*)List_Retrieve(pparser->pIList);
 		if(pInstruction->OpCode==CONSTINT || 
 			pInstruction->OpCode==CONSTDBL ||
@@ -1704,9 +1744,16 @@ void Parser_Error2(Parser* pparser, PRODUCTION offender, const char* offenderStr
 {
 	//Report the offending token to the error handler, along with the production
 	//it offended in.
-	if (offender != error)
-		pp_error(&(pparser->theLexer.preprocessor), "%s '%s' (in production '%s')",
-				_production_error_message(pparser, offender), pparser->theNextToken.theSource, offenderStr);
+    if (offender != error)
+    {
+        if(obor_profile_build < 3810)
+            pp_error(&(pparser->theLexer.preprocessor), "%s '%s' (in production %u)",
+                _production_error_message(pparser, offender), pparser->theNextToken.theSource,
+                (unsigned)obor_parser_production_number(offender));
+        else
+            pp_error(&(pparser->theLexer.preprocessor), "%s '%s' (in production '%s')",
+                _production_error_message(pparser, offender), pparser->theNextToken.theSource, offenderStr);
+    }
 	
 	pparser->errorFound = TRUE;
 

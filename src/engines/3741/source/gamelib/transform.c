@@ -1,10 +1,14 @@
-/* AnyBOR modification record: 2026-10-21.
+/* AnyBOR modification record: 2026-10-23.
  * Port maintained by retrodiv <retrodiv@proton.me>.
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
  * Upstream code retains its original license and notices.
  * Provide ordinary external C linkage for the native transform helpers and
- * remove discarded comma reads without changing raster calculations.
+ * remove discarded comma reads without changing raster calculations. Resolve
+ * palette blend tables within the selected profile's native domain,
+ * retaining missing-table fallback. Preserve each profile's indexed remap,
+ * fill and blend precedence. Test source transparency before fill
+ * replacement.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/3741.md
  * at the source repository root. Original notices follow below.
@@ -521,9 +525,15 @@ void init_gfx_global_draw_stuff(s_screen* dest, gfx_entry* src, s_drawmethod* dr
 		table = NULL;
 		remaptable = NULL;
 
-		if(drawmethod->alpha>0)
+		if(obor_profile_build<3719 && drawmethod->table &&
+		   (obor_profile_build<3718 || fillcolor==TRANSPARENT_IDX))
 		{
-			table = blendtables[drawmethod->alpha-1];
+			table = remaptable = drawmethod->table;
+			pfp = remapcolor;
+		}
+		else if(drawmethod->alpha>0)
+		{
+			table = obor_blend_table(drawmethod->alpha);
 			remaptable = drawmethod->table;
 			pfp = (fillcolor==TRANSPARENT_IDX?blendcolor:blendfillcolor);
 		}

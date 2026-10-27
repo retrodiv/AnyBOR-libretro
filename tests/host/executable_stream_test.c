@@ -9,6 +9,10 @@
 #undef printf
 #include <assert.h>
 
+#if OBOR_ENGINE_BUILD == 3842
+uint32_t obor_profile_build = OBOR_ENGINE_BUILD;
+#endif
+
 static int fail_allocation, allocations, cleared;
 static ScriptVariant *clear_base;
 static size_t clear_count;
@@ -194,6 +198,17 @@ static void failure(int scenario)
 int main(void)
 {
     int i;
+#if OBOR_ENGINE_BUILD == 3842
+    obor_profile_build = 3830;
+    assert(!obor_script_compile_only(CONSTINT));
+    assert(!obor_script_compile_only(CONSTDBL));
+    assert(!obor_script_compile_only(CONSTSTR));
+    obor_profile_build = 3831;
+    assert(obor_script_compile_only(CONSTINT));
+    assert(obor_script_compile_only(CONSTDBL));
+    assert(obor_script_compile_only(CONSTSTR));
+    obor_profile_build = OBOR_ENGINE_BUILD;
+#endif
     success();
     for (i = 1; i <= 7; ++i) failure(i);
     printf("engine=%d compact_aliases_exports_anchors_values=1 failures_atomic=7\n", OBOR_ENGINE_BUILD);

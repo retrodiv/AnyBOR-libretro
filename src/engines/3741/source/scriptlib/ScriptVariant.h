@@ -1,3 +1,15 @@
+/* AnyBOR modification record: 2026-10-21.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Declare the cache and variant helpers as ordinary functions; the header
+ * only declared them inline and the definitions live in ScriptVariant.c.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/3741.md
+ * at the source repository root. Original notices follow below.
+ */
+
 /*
  * OpenBOR - http://www.LavaLit.com
  * -----------------------------------------------------------------------
@@ -44,6 +56,7 @@ void StrCache_Clear();
 void StrCache_Collect(int index);
 int StrCache_Pop();
 CHAR* StrCache_Get(int index);
+CHAR *StrCache_GetIfPresent(int index);
 void ScriptVariant_Clear(ScriptVariant* var);
 
 void ScriptVariant_Init(ScriptVariant* var);

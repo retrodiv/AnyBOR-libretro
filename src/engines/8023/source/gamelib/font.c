@@ -1,3 +1,15 @@
+/* AnyBOR modification record: 2026-09-12.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Reject missing or undersized indexed font palettes before copying their
+ * true-color entries; retain atlas raster output for valid fonts.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/8023.md
+ * at the source repository root. Original notices follow below.
+ */
+
 /*
  * OpenBOR - http://www.chronocrash.com
  * -----------------------------------------------------------------------
@@ -135,6 +147,7 @@ void font_unload(int which)
     s_font **sets, *font;
 
     which %= MAX_FONTS;
+    if(which < 0) return;
 
     sets = fonts[which];
 
@@ -319,6 +332,7 @@ int font_load(int which, char *filename, char *packfile, int flags)
     int i, max;
 
     which %= MAX_FONTS;
+    if(which < 0) return 0;
 
     font_unload(which);
 
@@ -372,6 +386,7 @@ int font_loadmask(int which, char *filename, char *packfile, int flags)
     int i, max, ret = 0;
 
     which %= MAX_FONTS;
+    if(which < 0) return 0;
     sets = fonts[which];
     if(!sets)
     {
@@ -418,6 +433,7 @@ int fontmonowidth(int which)
 
     s_font **sets;
     which %= MAX_FONTS;
+    if(which < 0) return 0;
 
     sets = fonts[which];
 
@@ -433,6 +449,7 @@ int fontheight(int which)
 {
     s_font **sets;
     which %= MAX_FONTS;
+    if(which < 0) return 0;
 
     sets = fonts[which];
 
@@ -462,6 +479,7 @@ int font_string_width_length(int which, const char *text, size_t length)
     size_t position = 0;
 
     which %= MAX_FONTS;
+    if(which < 0) return 0;
 
     sets = fonts[which];
 
@@ -608,6 +626,7 @@ void font_print_length(
     size_t position = 0;
 
     which %= MAX_FONTS;
+    if(which < 0) return;
 
     sets = fonts[which];
 
@@ -707,6 +726,7 @@ void screen_print_length(
     size_t position = 0;
 
     which %= MAX_FONTS;
+    if(which < 0) return;
 
     sets = fonts[which];
 

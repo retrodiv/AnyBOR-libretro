@@ -1,4 +1,4 @@
-/* AnyBOR modification record: 2026-10-17.
+/* AnyBOR modification record: 2026-10-22.
  * Port maintained by retrodiv <retrodiv@proton.me>.
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
@@ -33,12 +33,15 @@ typedef struct
 	struct Script* owner;
 }s_variantnode;
 
+#include "obor_script_storage.h"
+
 typedef struct Script
 {
 	Interpreter* pinterpreter;
 	ScriptVariant* vars;
 	int initialized;        //flag
 	int interpreterowner;   //flag
+    obor_script_reference *obor_interpreter;
 }Script;
 
 extern s_variantnode** global_var_list;

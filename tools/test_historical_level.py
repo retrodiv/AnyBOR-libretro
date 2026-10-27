@@ -4,6 +4,7 @@ SPDX-License-Identifier: BSD-3-Clause
 Copyright (c) 2026 retrodiv <retrodiv@proton.me>
 """
 import os
+import json
 from pathlib import Path
 import re
 import shlex
@@ -68,7 +69,107 @@ class HistoricalLevelTests(unittest.TestCase):
             with self.subTest(profile=profile), self.assertRaises(RuntimeError):
                 check_level_continuation(log, profile)
 
+    def test_inline_spawn_command_keeps_original_line_continuation(self):
+        from test_historical_behavior import native
+        from native_sanitizers import sanitizer_environment
+        from unittest.mock import patch
+        rows = json.loads((Path(__file__).parent /
+            'fixtures/profile-level-spawn-contracts.json').read_text())['sources']
+        source = function((ENGINE / 'openbor.c').read_text(), 'load_level')
+        start = source.index('cmd = getLevelCommand(levelcmdlist, command);')
+        mapping = source[start:source.index('switch(cmd)', start)]
+        start = source.index('case CMD_LEVEL_AT_SCRIPT:')
+        inline = source[start:source.index('case CMD_LEVEL_AT:', start)]
+        start = source.index('default:', source.index('case CMD_LEVEL_AT:'))
+        unknown = source[start:source.index('\n\t\t}', start)]
+        program = r'''
+#include <assert.h>
+#include <stdint.h>
+#include <stdlib.h>
+#include <string.h>
+#include <stdarg.h>
+static uint32_t obor_profile_build;
+typedef enum { CMD_UNKNOWN=0,CMD_LEVEL_AT_SCRIPT=7 } levelCommands;
+typedef struct { int initialized; } Script;
+static int initialized,appended,warnings,includes;
+static int Script_IsInitialized(Script *s) { return s->initialized; }
+static void Script_Init(Script *s,const char *name,const char *comment,int first) {
+    assert(!strcmp(name,"Level spawn entry script") && !strcmp(comment,"level.txt") && !first);
+    s->initialized=1;++initialized;
+}
+static int Script_AppendText(Script *s,const char *text,const char *filename) {
+    assert(s->initialized && !strcmp(text,"\nspawn_probe\n") && !strcmp(filename,"level.txt"));
+    ++appended;return 1;
+}
+static levelCommands getLevelCommand(void *list,const char *command) {
+    (void)list;return !strcmp(command,"@script")?CMD_LEVEL_AT_SCRIPT:CMD_UNKNOWN;
+}
+static int handle_txt_include(const char *command,void *arglist,void *filename,
+                             void *fnbuf,void *buf,void *pos,void *size) {
+    (void)command;(void)arglist;(void)filename;(void)fnbuf;(void)buf;(void)pos;(void)size;
+    ++includes;return 0;
+}
+static int warning(const char *format,...) {
+    assert(!strcmp(format,"Command '%s' not understood in file '%s'!\n"));++warnings;return 0;
+}
+#define printf warning
+static int run(int existing) {
+    char text[]="@script\nspawn_probe\n@end_script\nafter\n";
+    char *buf=text,*filename="level.txt",*scriptbuf=NULL,*errormessage=NULL;
+    void *levelcmdlist=NULL,*arglist=NULL;char fnbuf[32],command_buffer[64];
+    char *command;int pos=0,size=(int)strlen(text),sblen=0,after=0;
+    struct { Script spawnscript; } next={{existing}};
+    while(pos<size) {
+        int length=0;while(buf[pos+length] && buf[pos+length]!='\n')++length;
+        memcpy(command_buffer,buf+pos,(size_t)length);command_buffer[length]=0;command=command_buffer;
+        if(!strcmp(command,"after")){++after;pos+=length+1;continue;}
+        levelCommands cmd;
+        MAPPING
+        switch(cmd) {
+            INLINE
+            @@UNKNOWN@@
+        }
+        while(buf[pos] && buf[pos]!='\n')++pos;
+        if(buf[pos])++pos;
+    }
+    assert(after==1 && !errormessage && !scriptbuf);
+    return 1;
+lCleanup:
+    free(scriptbuf);return 0;
+}
+int main(void) {
+    const unsigned profiles[]={PROFILES};
+    for(unsigned i=0;i<sizeof(profiles)/sizeof(*profiles);++i)for(int existing=0;existing<2;++existing) {
+        obor_profile_build=profiles[i];initialized=appended=warnings=includes=0;
+        assert(run(existing));
+        assert(initialized==(profiles[i]>=3805 && !existing));
+        assert(appended==(profiles[i]>=3805));
+        assert(warnings==(profiles[i]<3805?3:0) && includes==warnings);
+    }
+}
+'''
+        for key, value in (('MAPPING', mapping), ('INLINE', inline), ('@@UNKNOWN@@', unknown),
+                           ('PROFILES', ','.join(str(row['revision']) for row in rows))):
+            program = program.replace(key, value)
+        with patch.dict(os.environ, sanitizer_environment()):
+            native(program)
+
     def test_order_shared_locals_cleanup_failures_and_coordinate_boundary(self):
+        fixture = json.loads((Path(__file__).parent /
+            'fixtures/profile-level-spawn-contracts.json').read_text())
+        rows = fixture['sources']
+        revisions = {row['revision'] for row in rows}
+        self.assertEqual(len(rows), len(revisions))
+        self.assertTrue({3761, 3769, 3773, *fixture['boundary_controls']} <= revisions)
+        for profile in json.loads((SOURCE / 'src/pin.json').read_text())['profiles']:
+            if profile['engine'] == '3842':
+                self.assertIn(int(profile.get('revision', profile['build'])), revisions)
+        for row in rows:
+            self.assertEqual(row['ordered_shared_scripts'], row['revision'] < 3805)
+            self.assertEqual(row['inline_script'], row['revision'] >= 3805)
+            self.assertRegex(row['commit'], r'^[0-9a-f]{40}$')
+            for digest in row['source_sha256'].values():
+                self.assertRegex(digest, r'^[0-9a-f]{64}$')
         source = (ENGINE / 'openbor.c').read_text()
         header = (ENGINE / 'openbor.h').read_text()
         start = header.index('typedef struct obor_level_spawn_resource {')
@@ -104,7 +205,7 @@ static void *test_calloc(size_t n,size_t size) {
 }
 static void test_free(void *p) { if(p) { assert(active>0);--active;free(p); } }
 static void Script_Init(Script *s,char *name,char *comment,int first) {
-    assert(name && comment && first==1); memset(s,0,sizeof(*s));
+    assert(!strcmp(name,"spawnscript") && !comment && first==1); memset(s,0,sizeof(*s));
     s->initialized=1;++initialized;
 }
 static int load_script(Script *s,char *path) {
@@ -153,8 +254,7 @@ static void reset_counts(void) {
     fail_at=-1;memset(ids,0,sizeof(ids));memset(locals,0,sizeof(locals));
 }
 int main(void) {
-    const int builds[]={3780,3783,3789,3793,3797,3799,3800,3805,3814,3818,
-                        3822,3824,3829,3831,3837,3839,3842};
+    const int builds[]={PROFILES};
     for(unsigned b=0;b<sizeof(builds)/sizeof(*builds);++b) {
         obor_profile_build=builds[b];
         const int z[]={-2147483647,-1,0,1,231,232,233,300,2147483647};
@@ -168,7 +268,16 @@ int main(void) {
                 assert(lv.spawn[other][0]==0 && lv.spawn[other][1]==0 && lv.spawn[other][2]==0);
         }
     }
-    obor_profile_build=3780;reset_counts();
+    for(unsigned context=0;context<sizeof(builds)/sizeof(*builds);++context) {
+    if(builds[context]>=3805) {
+        reset_counts();obor_profile_build=builds[context];
+        s_spawn_entry modern={0};entity subject={17};
+        modern.spawnscript.initialized=1;modern.spawnscript.id=99;
+        execute_spawn_script(&modern,&subject);
+        assert(executions==1 && ids[0]==99 && subjects[0]==&subject);
+        assert(!modern.spawnscript.self);continue;
+    }
+    obor_profile_build=builds[context];reset_counts();
     s_level lv={0};s_spawn_entry first={0},second={0};entity subject={17};
     assert(obor_load_historical_spawn_script(&lv,&first,"a.c"));
     assert(obor_load_historical_spawn_script(&lv,&first,"b.c"));
@@ -205,12 +314,14 @@ int main(void) {
         assert(!first.historical_scripts && !lv.historical_script_cache);
         obor_clear_historical_spawn_scripts(&lv);assert(active==0 && cleared==1);
     }
+    }
     puts("historical level native contracts: OK");
     return 0;
 }
 '''
         for key, value in (('DECLARATIONS', declarations), ('METHODS', methods),
-                           ('SPAWN_CASE', spawn)):
+                           ('SPAWN_CASE', spawn),
+                           ('PROFILES', ','.join(str(row['revision']) for row in rows))):
             program = program.replace(key, value)
         with tempfile.TemporaryDirectory(prefix='anybor-historical-level-') as temporary:
             root = Path(temporary)

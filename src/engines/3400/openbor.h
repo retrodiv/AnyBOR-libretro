@@ -1,11 +1,13 @@
-/* AnyBOR modification record: 2026-09-12.
+/* AnyBOR modification record: 2026-10-24.
  * Port maintained by retrodiv <retrodiv@proton.me>.
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
  * Upstream code retains its original license and notices.
  * Allocate collision pointer slots through the highest author-facing index
  * used by each collection. Track each model's allocated animation-table
- * capacity and reject lookups outside it.
+ * capacity and reject lookups outside it. Track initialized owned stream
+ * bytes independently of native size, bound cursor reads and preserve
+ * buffer-base append/save behavior and native slot policy.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/3400.md
  * at the source repository root. Original notices follow below.
@@ -1543,6 +1545,7 @@ typedef struct
 	int pos;
 	char *buf;
 	size_t size;
+    size_t obor_capacity; /* Exact initialized owned bytes, independent of native size. */
 }s_filestream;
 
 typedef struct

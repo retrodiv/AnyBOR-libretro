@@ -22,12 +22,15 @@ NATIVE_ENGINES = {'3400', '3741', '3842', '4086', '4432'}
 CONTRACT = Path(__file__).with_name('dot_bounds_contract.c')
 
 
-def run_contract(engine):
+def run_contract(engine, revisions):
     """Run actual native types/body; HP damage and full combat are out of scope."""
     engine = Path(engine)
-    body = function((engine / 'openbor.c').read_text(), 'common_dot')
-    if re.search(r'\bobor_(?:profile\w*|active_profile\w*)\b', body):
-        raise AssertionError('Profile-aware DOT body requires separate profile executions')
+    source = (engine / 'openbor.c').read_text()
+    body = function(source, 'common_dot')
+    helpers = ''
+    for name in ('obor_combat_defense', 'obor_combat_offense'):
+        if name + '(' in body:
+            helpers += function(source, name)
     header = (engine / 'openbor.h').read_text()
     if not re.search(r'^#define\s+MAX_DOTS\s+10\b', header, re.M):
         raise AssertionError('Review changed native effect capacity before reusing this contract')
@@ -44,13 +47,15 @@ def run_contract(engine):
     if not attack_type or not callback or callback[1].count(',') not in (8, 9):
         raise AssertionError('Review native attack type and damage-script signature')
     features = ['-DDOT_ATTACK_TYPE=' + attack_type[1]]
+    if helpers:
+        features.append('-DDOT_HAS_PROFILE_COMBAT=1')
     if callback[1].count(',') == 9:
         if not re.search(r'\bint\s+tag\s*$', callback[1]):
             raise AssertionError('Unrecognized additional damage-script parameter')
         features.append('-DDOT_SCRIPT_HAS_TAG=1')
     with tempfile.TemporaryDirectory(prefix='anybor-dot-bounds-') as temporary:
         work = Path(temporary)
-        (work / 'common_dot.inc').write_text(body + '\n')
+        (work / 'common_dot.inc').write_text(helpers + body + '\n')
         command = shlex.split(os.environ.get('HOST_CC', 'cc')) + [
             '-std=gnu11', '-O1', '-g', '-DLIBRETRO=1', '-fsigned-char',
             '-fcommon', '-fno-strict-aliasing',
@@ -65,24 +70,29 @@ def run_contract(engine):
         command += [str(CONTRACT), '-Wl,-dead_strip' if sys.platform == 'darwin'
                     else '-Wl,--gc-sections', '-o', str(work / 'probe')]
         subprocess.run(command, check=True, timeout=45)
-        result = subprocess.run([str(work / 'probe')], check=True, timeout=15,
-                                capture_output=True, text=True,
-                                env=sanitizer_environment())
-        return json.loads(result.stdout)
+        results = {}
+        for revision in revisions:
+            result = subprocess.run([str(work / 'probe'), str(revision)],
+                                    check=True, timeout=15, capture_output=True,
+                                    text=True, env=sanitizer_environment())
+            results[revision] = json.loads(result.stdout)
+        return results
 
 
 class DotBoundsTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.results = {row['build']: run_contract(ROOT / 'src/engines' / row['build'])
+        cls.results = {row['build']: run_contract(ROOT / 'src/engines' / row['build'],
+                           sorted({int(p.get('revision', p['build'])) for p in PIN['profiles']
+                                   if p['engine'] == row['build']}))
                        for row in PIN['engines'] if row['build'] in NATIVE_ENGINES}
 
 
 def profile_test(profile):
     def check(self):
-        # The shared body is explicitly checked above for profile dependencies;
-        # this binds every selectable profile to the tested physical layout.
-        self.assertEqual(self.results[profile['engine']], {'status': 'PASS', 'contracts': 4})
+        revision = int(profile.get('revision', profile['build']))
+        self.assertEqual(self.results[profile['engine']][revision],
+                         {'status': 'PASS', 'contracts': 4})
     return check
 
 

@@ -1,0 +1,422 @@
+{
+  "schema": 1,
+  "boundary_controls": [
+    3801,
+    3802
+  ],
+  "sources": [
+    {
+      "revision": 3761,
+      "commit": "16814fdf39fdcdd78cb59f3d70748f1dc023a24f",
+      "files": {
+        "pp_parser.c": {
+          "bytes": 28026,
+          "sha256": "32b6fb41ac505fb55ab7661855ef1aa10208b70f7c7ebc809a1607095bad02c3"
+        },
+        "pp_parser.h": {
+          "bytes": 3331,
+          "sha256": "de99a8599d43c877a27e33e0f7572b6444be63004305d513c2fd56c3eaecce0f"
+        },
+        "pp_lexer.c": {
+          "bytes": 28199,
+          "sha256": "6bb6e4fcff70412cb3898a9290042188fc8c871106fe7a32c43500c4feaa2cf7"
+        },
+        "pp_lexer.h": {
+          "bytes": 4948,
+          "sha256": "96e752389fab92900232e9602385dd98944d0b1c1ff20107e81f463fc3b11ace"
+        }
+      },
+      "functions": {
+        "pp_context_init": "75dfc51408d6489110de92f2c02561cd93a6e4f8375c960588911ba6e8d744fa",
+        "pp_parser_init": "e98407888bdd0659dce0e60a4cf21343613d3826dd2034109dcacd7d5a482a78",
+        "pp_parser_emit_token": "5a9cfaafa1c5993b3922dfc673aa22114d13353e700f978017de04e6520f9a76",
+        "pp_parser_parse_directive": "a958b9896d9b75fb68bc514080bd8e220c96aaef762945c6ada0526740d1f1b2",
+        "pp_parser_define": "caa83ea816a66063a9256b611ddb0132f0fead771618303a47995dd28606181d",
+        "pp_parser_conditional": "4613179a9e5ab37d724bf1f88837759e1e1177dfb503b862a330a4bf40b1c0f5",
+        "pp_parser_eval_conditional": "f9927e88b290cbf483aa812501f2ca15b6ad79b324ec266ea266fbdc32ea1437",
+        "pp_parser_insert_function_macro": "c221444711a61ded4a22af05613b1cb0d3994a4746277a85e99efec644e11f24",
+        "pp_parser_readline": "6897a8649e8b15be167656add4ea6a4c756044033d184a053296cacaafb44860"
+      },
+      "legacy": true
+    },
+    {
+      "revision": 3769,
+      "commit": "14ac619f7d9f21bf1ac331932308c3ced4a65615",
+      "files": {
+        "pp_parser.c": {
+          "bytes": 28026,
+          "sha256": "32b6fb41ac505fb55ab7661855ef1aa10208b70f7c7ebc809a1607095bad02c3"
+        },
+        "pp_parser.h": {
+          "bytes": 3331,
+          "sha256": "de99a8599d43c877a27e33e0f7572b6444be63004305d513c2fd56c3eaecce0f"
+        },
+        "pp_lexer.c": {
+          "bytes": 28199,
+          "sha256": "6bb6e4fcff70412cb3898a9290042188fc8c871106fe7a32c43500c4feaa2cf7"
+        },
+        "pp_lexer.h": {
+          "bytes": 4948,
+          "sha256": "96e752389fab92900232e9602385dd98944d0b1c1ff20107e81f463fc3b11ace"
+        }
+      },
+      "functions": {
+        "pp_context_init": "75dfc51408d6489110de92f2c02561cd93a6e4f8375c960588911ba6e8d744fa",
+        "pp_parser_init": "e98407888bdd0659dce0e60a4cf21343613d3826dd2034109dcacd7d5a482a78",
+        "pp_parser_emit_token": "5a9cfaafa1c5993b3922dfc673aa22114d13353e700f978017de04e6520f9a76",
+        "pp_parser_parse_directive": "a958b9896d9b75fb68bc514080bd8e220c96aaef762945c6ada0526740d1f1b2",
+        "pp_parser_define": "caa83ea816a66063a9256b611ddb0132f0fead771618303a47995dd28606181d",
+        "pp_parser_conditional": "4613179a9e5ab37d724bf1f88837759e1e1177dfb503b862a330a4bf40b1c0f5",
+        "pp_parser_eval_conditional": "f9927e88b290cbf483aa812501f2ca15b6ad79b324ec266ea266fbdc32ea1437",
+        "pp_parser_insert_function_macro": "c221444711a61ded4a22af05613b1cb0d3994a4746277a85e99efec644e11f24",
+        "pp_parser_readline": "6897a8649e8b15be167656add4ea6a4c756044033d184a053296cacaafb44860"
+      },
+      "legacy": true
+    },
+    {
+      "revision": 3773,
+      "commit": "e39bfa21d708f2f7a586085d8689bff94440a104",
+      "files": {
+        "pp_parser.c": {
+          "bytes": 28026,
+          "sha256": "32b6fb41ac505fb55ab7661855ef1aa10208b70f7c7ebc809a1607095bad02c3"
+        },
+        "pp_parser.h": {
+          "bytes": 3331,
+          "sha256": "de99a8599d43c877a27e33e0f7572b6444be63004305d513c2fd56c3eaecce0f"
+        },
+        "pp_lexer.c": {
+          "bytes": 28199,
+          "sha256": "6bb6e4fcff70412cb3898a9290042188fc8c871106fe7a32c43500c4feaa2cf7"
+        },
+        "pp_lexer.h": {
+          "bytes": 4948,
+          "sha256": "96e752389fab92900232e9602385dd98944d0b1c1ff20107e81f463fc3b11ace"
+        }
+      },
+      "functions": {
+        "pp_context_init": "75dfc51408d6489110de92f2c02561cd93a6e4f8375c960588911ba6e8d744fa",
+        "pp_parser_init": "e98407888bdd0659dce0e60a4cf21343613d3826dd2034109dcacd7d5a482a78",
+        "pp_parser_emit_token": "5a9cfaafa1c5993b3922dfc673aa22114d13353e700f978017de04e6520f9a76",
+        "pp_parser_parse_directive": "a958b9896d9b75fb68bc514080bd8e220c96aaef762945c6ada0526740d1f1b2",
+        "pp_parser_define": "caa83ea816a66063a9256b611ddb0132f0fead771618303a47995dd28606181d",
+        "pp_parser_conditional": "4613179a9e5ab37d724bf1f88837759e1e1177dfb503b862a330a4bf40b1c0f5",
+        "pp_parser_eval_conditional": "f9927e88b290cbf483aa812501f2ca15b6ad79b324ec266ea266fbdc32ea1437",
+        "pp_parser_insert_function_macro": "c221444711a61ded4a22af05613b1cb0d3994a4746277a85e99efec644e11f24",
+        "pp_parser_readline": "6897a8649e8b15be167656add4ea6a4c756044033d184a053296cacaafb44860"
+      },
+      "legacy": true
+    },
+    {
+      "revision": 3801,
+      "commit": "00d501f1dd4754475cbe508c2e8a4a4c40bd89af",
+      "files": {
+        "pp_parser.c": {
+          "bytes": 28026,
+          "sha256": "32b6fb41ac505fb55ab7661855ef1aa10208b70f7c7ebc809a1607095bad02c3"
+        },
+        "pp_parser.h": {
+          "bytes": 3331,
+          "sha256": "de99a8599d43c877a27e33e0f7572b6444be63004305d513c2fd56c3eaecce0f"
+        },
+        "pp_lexer.c": {
+          "bytes": 28199,
+          "sha256": "6bb6e4fcff70412cb3898a9290042188fc8c871106fe7a32c43500c4feaa2cf7"
+        },
+        "pp_lexer.h": {
+          "bytes": 4948,
+          "sha256": "96e752389fab92900232e9602385dd98944d0b1c1ff20107e81f463fc3b11ace"
+        }
+      },
+      "functions": {
+        "pp_context_init": "75dfc51408d6489110de92f2c02561cd93a6e4f8375c960588911ba6e8d744fa",
+        "pp_parser_init": "e98407888bdd0659dce0e60a4cf21343613d3826dd2034109dcacd7d5a482a78",
+        "pp_parser_emit_token": "5a9cfaafa1c5993b3922dfc673aa22114d13353e700f978017de04e6520f9a76",
+        "pp_parser_parse_directive": "a958b9896d9b75fb68bc514080bd8e220c96aaef762945c6ada0526740d1f1b2",
+        "pp_parser_define": "caa83ea816a66063a9256b611ddb0132f0fead771618303a47995dd28606181d",
+        "pp_parser_conditional": "4613179a9e5ab37d724bf1f88837759e1e1177dfb503b862a330a4bf40b1c0f5",
+        "pp_parser_eval_conditional": "f9927e88b290cbf483aa812501f2ca15b6ad79b324ec266ea266fbdc32ea1437",
+        "pp_parser_insert_function_macro": "c221444711a61ded4a22af05613b1cb0d3994a4746277a85e99efec644e11f24",
+        "pp_parser_readline": "6897a8649e8b15be167656add4ea6a4c756044033d184a053296cacaafb44860"
+      },
+      "legacy": true
+    },
+    {
+      "revision": 3802,
+      "commit": "76fc4703514f8b188fb3b9bf1783c83978f4993d",
+      "files": {
+        "pp_parser.c": {
+          "bytes": 33882,
+          "sha256": "66363e071d190097dedc943366750473a30b9f87c5ed6415a8d730158094cf4b"
+        },
+        "pp_parser.h": {
+          "bytes": 3618,
+          "sha256": "13907a32a8a5cca5e08e9cdada2ad33cc5217a979350b82cc8a62ae9196d5e0f"
+        },
+        "pp_lexer.c": {
+          "bytes": 28526,
+          "sha256": "33ff86a30fe0db3dd532120f51e386fb31263d9aef32e1cdf3a226f67fcfdd5c"
+        },
+        "pp_lexer.h": {
+          "bytes": 4969,
+          "sha256": "f59ee5b54736b0e5a05d15743014ab7cdb359bfa18353934c7c8fc629f1e9da0"
+        }
+      },
+      "functions": {
+        "pp_context_init": "0d6a0a910f26387a46c996160598a14ec7e90f85745eb7e3d5422b39f6100484",
+        "pp_parser_init": "5bbdfb28b92b74112bd29c624dd4e1ef7846c2426b76c06165071a5bd7c41ac6",
+        "pp_parser_emit_token": "c2db42ae04382380d04b920d4c4772253bff0504afd79a664b6194feaf9ef288",
+        "pp_parser_parse_directive": "c99fbcc1a5eca0d2ff6b1be37762df4fb463fcf21316d9967059ad856a63b1be",
+        "pp_parser_define": "0185c9ba8bebfe3e7301ec3ccf1a6d9be510afbd1b97db4fff1ce3eac64646b3",
+        "pp_parser_conditional": "494fb3af66927bed469ac13c9c85eb81ac2f199f13b5bc857457ca2c2d51b1e8",
+        "pp_parser_eval_conditional": "b618ace34b26ef7f342deba3024f22a5291d53a511240a0dec2f8dbe5096af35",
+        "pp_parser_insert_function_macro": "fab2f89a6ec503d8d3353c7d1f086c9c371d77302df56408372f9f434f140d21",
+        "pp_parser_readline": "fcd2ab574b47c9c4c2df33d92464453e65cf0778b68e42e99882d4d07edbbfc5"
+      },
+      "legacy": false
+    }
+  ],
+  "scenarios": [
+    {
+      "name": "if_expression",
+      "source": "#if 1\nP\n#endif\n",
+      "legacy": {
+        "accepted": 0,
+        "tokens": "",
+        "diagnostic": "#if directive not supported",
+        "newlines": -1
+      },
+      "modern": {
+        "accepted": 1,
+        "tokens": "P",
+        "diagnostic": "",
+        "newlines": -1
+      }
+    },
+    {
+      "name": "elif_expression",
+      "source": "#ifdef ABSENT\nA\n#elif 1\nB\n#endif\n",
+      "legacy": {
+        "accepted": 0,
+        "tokens": "",
+        "diagnostic": "#elif directive not supported",
+        "newlines": -1
+      },
+      "modern": {
+        "accepted": 1,
+        "tokens": "B",
+        "diagnostic": "",
+        "newlines": -1
+      }
+    },
+    {
+      "name": "nested_false",
+      "source": "#ifdef ABSENT\n#ifdef OTHER\nA\n#else\nB\n#endif\n#else\nC\n#endif\n",
+      "legacy": {
+        "accepted": 0,
+        "tokens": "B",
+        "diagnostic": "stray #else",
+        "newlines": -1
+      },
+      "modern": {
+        "accepted": 1,
+        "tokens": "C",
+        "diagnostic": "",
+        "newlines": -1
+      }
+    },
+    {
+      "name": "ordinary_function",
+      "source": "#define F(x) x\nF(17)\n",
+      "legacy": {
+        "accepted": 1,
+        "tokens": "17",
+        "diagnostic": "",
+        "newlines": -1
+      },
+      "modern": {
+        "accepted": 1,
+        "tokens": "17",
+        "diagnostic": "",
+        "newlines": -1
+      }
+    },
+    {
+      "name": "space_before_call",
+      "source": "#define F(x) x\nF (17)\n",
+      "legacy": {
+        "accepted": 1,
+        "tokens": "F(17)",
+        "diagnostic": "",
+        "newlines": -1
+      },
+      "modern": {
+        "accepted": 1,
+        "tokens": "17",
+        "diagnostic": "",
+        "newlines": -1
+      }
+    },
+    {
+      "name": "parenthesized_comma",
+      "source": "#define PAIR(a,b) a+b\nPAIR((1,2),3)\n",
+      "legacy": {
+        "accepted": 1,
+        "tokens": "(1+2,3)",
+        "diagnostic": "",
+        "newlines": -1
+      },
+      "modern": {
+        "accepted": 1,
+        "tokens": "(1,2)+3",
+        "diagnostic": "",
+        "newlines": -1
+      }
+    },
+    {
+      "name": "empty_argument",
+      "source": "#define F(x) x\nF()\n",
+      "legacy": {
+        "accepted": 0,
+        "tokens": "",
+        "diagnostic": "not enough parameters to function 'F'",
+        "newlines": -1
+      },
+      "modern": {
+        "accepted": 1,
+        "tokens": "",
+        "diagnostic": "",
+        "newlines": -1
+      }
+    },
+    {
+      "name": "concatenation",
+      "source": "#define CAT(a,b) a##b\nCAT(foo,bar)\n",
+      "legacy": {
+        "accepted": 1,
+        "tokens": "foobar",
+        "diagnostic": "",
+        "newlines": -1
+      },
+      "modern": {
+        "accepted": 1,
+        "tokens": "foobar",
+        "diagnostic": "",
+        "newlines": -1
+      }
+    },
+    {
+      "name": "macro_lookahead",
+      "source": "#define X 17\nX + X\n",
+      "legacy": {
+        "accepted": 1,
+        "tokens": "17+17",
+        "diagnostic": "",
+        "newlines": -1
+      },
+      "modern": {
+        "accepted": 1,
+        "tokens": "17+17",
+        "diagnostic": "",
+        "newlines": -1
+      }
+    },
+    {
+      "name": "newline_emission",
+      "source": "\n\nT\n\n\n",
+      "legacy": {
+        "accepted": 1,
+        "tokens": "T",
+        "diagnostic": "",
+        "newlines": 5
+      },
+      "modern": {
+        "accepted": 1,
+        "tokens": "T",
+        "diagnostic": "",
+        "newlines": 0
+      }
+    },
+    {
+      "name": "redefinition",
+      "source": "#define X 1\n#define X 2\nX\n",
+      "legacy": {
+        "accepted": 1,
+        "tokens": "2",
+        "diagnostic": "'X' redefined\n",
+        "newlines": -1
+      },
+      "modern": {
+        "accepted": 1,
+        "tokens": "2",
+        "diagnostic": "'X' redefined (previously",
+        "newlines": -1
+      }
+    },
+    {
+      "name": "depth_16",
+      "source": "#define ON 1\n#ifdef ON\n#ifdef ON\n#ifdef ON\n#ifdef ON\n#ifdef ON\n#ifdef ON\n#ifdef ON\n#ifdef ON\n#ifdef ON\n#ifdef ON\n#ifdef ON\n#ifdef ON\n#ifdef ON\n#ifdef ON\n#ifdef ON\n#ifdef ON\nP\n#endif\n#endif\n#endif\n#endif\n#endif\n#endif\n#endif\n#endif\n#endif\n#endif\n#endif\n#endif\n#endif\n#endif\n#endif\n#endif\n",
+      "legacy": {
+        "accepted": 1,
+        "tokens": "P",
+        "diagnostic": "",
+        "newlines": -1
+      },
+      "modern": {
+        "accepted": 1,
+        "tokens": "P",
+        "diagnostic": "",
+        "newlines": -1
+      }
+    },
+    {
+      "name": "depth_17",
+      "source": "#define ON 1\n#ifdef ON\n#ifdef ON\n#ifdef ON\n#ifdef ON\n#ifdef ON\n#ifdef ON\n#ifdef ON\n#ifdef ON\n#ifdef ON\n#ifdef ON\n#ifdef ON\n#ifdef ON\n#ifdef ON\n#ifdef ON\n#ifdef ON\n#ifdef ON\n#ifdef ON\nP\n#endif\n#endif\n#endif\n#endif\n#endif\n#endif\n#endif\n#endif\n#endif\n#endif\n#endif\n#endif\n#endif\n#endif\n#endif\n#endif\n#endif\n",
+      "legacy": {
+        "accepted": 0,
+        "tokens": "",
+        "diagnostic": "too many levels of nested conditional directives",
+        "newlines": -1
+      },
+      "modern": {
+        "accepted": 1,
+        "tokens": "P",
+        "diagnostic": "",
+        "newlines": -1
+      }
+    },
+    {
+      "name": "stringification",
+      "source": "#define STR(x) #x\nSTR(foo bar)\n",
+      "legacy": {
+        "accepted": 1,
+        "tokens": "\"foo bar\"",
+        "diagnostic": "",
+        "newlines": -1
+      },
+      "modern": {
+        "accepted": 1,
+        "tokens": "\"foo bar\"",
+        "diagnostic": "",
+        "newlines": -1
+      }
+    },
+    {
+      "name": "parent_macro_concatenation",
+      "source": "#define CAT(a,b) a##b\n#define WRAP(x) CAT(x,bar)\nWRAP(foo)\n",
+      "legacy": {
+        "accepted": 1,
+        "tokens": "xbar",
+        "diagnostic": "",
+        "newlines": -1
+      },
+      "modern": {
+        "accepted": 1,
+        "tokens": "foobar",
+        "diagnostic": "",
+        "newlines": -1
+      }
+    }
+  ],
+  "scope": "Own-sourcevalidtokenstreamanddiagnostics;wholepreparedlexer/parser/expression/List,standaloneIOservices. Excesshistoricalstackdepthboundeddefinedrefusal;notanoriginalUBoracle."
+}

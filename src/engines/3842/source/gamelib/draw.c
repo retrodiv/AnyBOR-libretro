@@ -1,9 +1,10 @@
-/* AnyBOR modification record: 2026-09-12.
+/* AnyBOR modification record: 2026-10-23.
  * Port maintained by retrodiv <retrodiv@proton.me>.
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
  * Upstream code retains its original license and notices.
- * Route circle drawing through the port's integer rasterizer.
+ * Route circle drawing through the port's integer rasterizer. Ignore point
+ * coordinates outside screen bounds while preserving valid pixels.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/3842.md
  * at the source repository root. Original notices follow below.
@@ -193,7 +194,7 @@ void drawbox(int x, int y, int width, int height, int colour, s_screen *screen, 
 void _putpixel(int x, int y, int colour, s_screen *screen, int alpha){
 	int pixind;
 	unsigned char *lut;
-	if((unsigned)x>screen->width || (unsigned)y>screen->height) return;
+	if((unsigned)x >= (unsigned)screen->width || (unsigned)y >= (unsigned)screen->height) return;
 	pixind = x+y*screen->width;
 	lut = alpha>0?blendtables[alpha-1]:NULL;
 	if(lut) lut += (colour<<8);

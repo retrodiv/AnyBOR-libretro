@@ -153,15 +153,22 @@ int main(int argc,char **argv) {
 
 
 def cache_program(source):
+    record = re.search(r'typedef\s+struct\s*\{[^}]*\}\s*Varstr\s*;', source)
+    if record is None:
+        raise AssertionError('Native cache record declaration required')
     return r'''
+#include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 typedef char CHAR;
-typedef struct { char *str; } Varstr;
-static Varstr entries[]={{"zero"},{"one"},{NULL},{"outside capacity"}};
+''' + record.group() + r'''
+static Varstr entries[]={
+ {.str="zero",.len=4,.ref=1}, {.str="one",.len=3,.ref=1},
+ {.str=NULL,.len=0,.ref=0}, {.str="outside capacity",.len=16,.ref=1}};
 static Varstr *strcache=entries;
 static int strcache_size=3;
-''' + function(source, 'StrCache_GetIfPresent') + r'''
+''' + function(source, 'StrCache_Get') + function(source, 'StrCache_GetIfPresent') + r'''
 int main(int argc,char **argv) {
     if(argc!=4)return 2;
     if(atoi(argv[3]))strcache=NULL;

@@ -75,7 +75,118 @@ def function(source, name):
     raise AssertionError('Unfinished native function ' + name)
 
 
+def rename_identifiers(source, replacements):
+    """Namespace source-probe symbols without changing comments or literals."""
+    if not isinstance(replacements, dict) or any(
+            not isinstance(value, str) or not re.fullmatch(r'[A-Za-z_]\w*', value)
+            for pair in replacements.items() for value in pair):
+        raise ValueError('C identifier replacements required')
+    if len(set(replacements.values())) != len(replacements):
+        raise ValueError('Distinct target identifiers required')
+    tokens = re.compile(r'/\*.*?\*/|//(?:\\(?:\r?\n|[\s\S])|[^\n\\])*|'
+                        r'"(?:\\[\s\S]|[^"\\])*"|'
+                        r"'(?:\\[\s\S]|[^'\\])*'|[A-Za-z_]\w*", re.S)
+    return tokens.sub(lambda match: replacements.get(match[0], match[0]), source)
+
+
+def switch_cases(source, name, selector):
+    """Extract direct named cases of one native switch, retaining exact bytes.
+
+    Nested switches and braces in comments/literals cannot become sibling
+    cases. Ambiguous selectors, computed labels and unfinished blocks refuse.
+    Offsets are relative to the extracted function, not the translation unit.
+    """
+    if not re.fullmatch(r'[A-Za-z_]\w*', selector):
+        raise AssertionError('A named native switch selector is required')
+    method = function(source, name)
+    tokens = re.compile(r'/\*.*?\*/|//(?:\\(?:\r?\n|[\s\S])|[^\n\\])*|'
+                        r'"(?:\\[\s\S]|[^"\\])*"|'
+                        r"'(?:\\[\s\S]|[^'\\])*'", re.S)
+    masked = tokens.sub(lambda m: re.sub(r'[^\r\n]', ' ', m[0]), method)
+    matches = list(re.finditer(r'\bswitch\s*\(\s*' + re.escape(selector) +
+                               r'\s*\)\s*\{', masked))
+    if len(matches) != 1:
+        raise AssertionError('One unambiguous native switch is required')
+    start, depth, end, labels = matches[0].end(), 1, None, []
+    for token in re.finditer(r'[{}]|\bcase\s+[^:{}]+:|\bdefault\s*:', masked[start:]):
+        first, last = start + token.start(), start + token.end()
+        if token[0] == '{':
+            depth += 1
+        elif token[0] == '}':
+            depth -= 1
+            if depth == 0:
+                end = first
+                break
+        elif depth == 1:
+            label = token[0].partition(':')[0].strip()
+            label = 'default' if label == 'default' else label[4:].strip()
+            if not re.fullmatch(r'[A-Za-z_]\w*|-?[0-9]+', label):
+                raise AssertionError('A simple native case label is required')
+            labels.append((label, first, last))
+    if end is None or not labels or len({row[0] for row in labels}) != len(labels):
+        raise AssertionError('Complete unique native switch cases required')
+    result = {}
+    for index, (label, first, last) in enumerate(labels):
+        stop = labels[index + 1][1] if index + 1 < len(labels) else end
+        result[label] = {'label_start': first, 'body_start': last, 'end': stop,
+                         'body': method[last:stop]}
+    return method, result
+
+
 class HistoricalPlayerTests(unittest.TestCase):
+    def test_source_namespaces_leave_comments_and_literals_intact(self):
+        source = '''#define MAP(value) _ep_a + value
+int select(void) { // select _ep_a MAP
+ const char *text="select _ep_a MAP"; /* _ep_a */
+ char character='a'; return MAP(_ep_a_more); }
+'''
+        renamed = rename_identifiers(source,
+            {'MAP': 'probe_MAP', '_ep_a': 'probe_a', 'select': 'probe_select'})
+        self.assertIn('#define probe_MAP(value) probe_a + value', renamed)
+        self.assertIn('int probe_select(void)', renamed)
+        self.assertIn('return probe_MAP(_ep_a_more)', renamed)
+        self.assertIn('// select _ep_a MAP', renamed)
+        self.assertIn('"select _ep_a MAP"; /* _ep_a */', renamed)
+        self.assertIn("char character='a'", renamed)
+        for invalid in ({'bad-name': 'good'}, {'good': 'bad-name'},
+                        {'one': 'same', 'two': 'same'}):
+            with self.subTest(invalid=invalid), self.assertRaises(ValueError):
+                rename_identifiers(source, invalid)
+
+    def test_native_switch_cases_preserve_nesting_and_literal_data(self):
+        sample = '''int sample(int property) {
+ switch(property) {
+ case FIRST: { const char *s="case FAKE: }"; /* case OTHER: { */
+   switch(inner) {case NESTED: break; default: break;} (void)s; break; }
+ case SECOND: { // case COMMENT: }\\
+ case CONTINUED: { }
+   break; }
+ default: return -1;
+ }
+ return 0;
+}
+'''
+        method, cases = switch_cases(sample,'sample','property')
+        self.assertEqual(list(cases),['FIRST','SECOND','default'])
+        for row in cases.values():
+            self.assertEqual(row['body'],method[row['body_start']:row['end']])
+        self.assertIn('case NESTED:',cases['FIRST']['body'])
+        self.assertIn('case CONTINUED:',cases['SECOND']['body'])
+        with self.assertRaisesRegex(AssertionError,'simple native case'):
+            switch_cases(sample.replace('case FIRST:','case FIRST + 1:'),'sample','property')
+        with self.assertRaisesRegex(AssertionError,'unique native switch'):
+            switch_cases(sample.replace('case SECOND:','case FIRST:'),'sample','property')
+        with self.assertRaisesRegex(AssertionError,'unambiguous'):
+            switch_cases(sample.replace('return 0;','switch(property) {default: break;} return 0;'),
+                         'sample','property')
+        branching='''int selected(void) {
+ switch(property) {case FIRST: if(legacy) { early();break; }
+ else { later();break; } default:break;}
+}'''
+        _, branches=switch_cases(branching,'selected','property')
+        self.assertEqual(branches['FIRST']['body'].strip(),
+            'if(legacy) { early();break; }\n else { later();break; }')
+
     def test_native_function_extraction_ignores_braces_in_data(self):
         sample = r'''int sample(void) {
     const char *text = "} quoted { \" }";

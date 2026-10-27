@@ -1,4 +1,4 @@
-/* AnyBOR modification record: 2026-10-21.
+/* AnyBOR modification record: 2026-10-24.
  * Port maintained by retrodiv <retrodiv@proton.me>.
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
@@ -7,18 +7,82 @@
  * on macOS. Keep damage-over-time updates within the native effect arrays
  * while retaining valid-slot tick and expiration calculations. Derive output
  * names from the content basename with explicit destination capacities, and
- * reject overflowing output path joins. Leave multiplayer slots without a
- * selected model available to join even if game scripts preassign lives to
- * them. Let a missing basename-only PAK self-check read the active frontend
- * content after it has been validated and prepared. Allocate each model's
- * animation pointer table through the highest animation index that model
- * uses, and bound cache, copy and cleanup paths to that capacity. Ignore
- * optional defense and offense entries outside the configured attack-type
- * range with a log warning before accessing their tables. Yield after each
- * newly completed model during explicit model-list or level preparation, and
- * defer states until that preparation has cleaned up its intermediate
- * parsers and handles. Resize repeated weapon lists and detach borrowed
- * lists before replacing their entries.
+ * reject overflowing output path joins. Preserve each profile's authored
+ * collision extents, frame conversion order, default Z tolerance and hit
+ * positions. Preserve source-defined argument counts, line capacities and
+ * script constants for each historical profile. Leave multiplayer slots
+ * without a selected model available to join even if game scripts preassign
+ * lives to them. Let a missing basename-only PAK self-check read the active
+ * frontend content after it has been validated and prepared. Allocate each
+ * model's animation pointer table through the highest animation index that
+ * model uses, and bound cache, copy and cleanup paths to that capacity.
+ * Ignore optional defense and offense entries outside the allocated model
+ * attack-type range with a log warning before accessing their tables. Yield
+ * after each newly completed model during explicit model-list or level
+ * preparation, and defer states until that preparation has cleaned up its
+ * intermediate parsers and handles. Resize repeated weapon lists and detach
+ * borrowed lists before replacing their entries. Keep selected palette-
+ * conversion reads bounded and reject missing maps or flags, while
+ * preserving unselected slots and native allocation failure callbacks.
+ * Record initialized colourmap pointer capacity separately from the
+ * historical narrow counter, and retain it through growth, model copies and
+ * owned cleanup. Release the level text array once during cleanup, retaining
+ * text and spawn-script ownership. Select historical model or entity combat
+ * factors with bounded indices, and retain periodic-damage drop defaults.
+ * Preserve early partial defense-command updates and the allocated extra
+ * model slot. Preserve fixed-table slot selection, limits and load failures
+ * in early profiles, and dynamic append/count side effects in later
+ * profiles. Preserve fixed-table alternate palette limits and persistent
+ * remap flags, and reject flag or palette allocation failures without losing
+ * prior flags. Materialize historical zero flags without palette commands,
+ * and stop model loading when selected map data cannot be converted.
+ * Preserve independent historical palette slots and shared dynamic tables,
+ * retaining borrowed maps through model and entity copies and releasing them
+ * after their last owner. Preserve the fixed colourmap selector limit in
+ * early logical profiles and the loaded-map limit in later profiles without
+ * reading missing dynamic table entries. Check destination animation
+ * capacity when retaining an animation across model changes, preserving the
+ * native fallback and timing. Preserve historical model-change reset and
+ * direct-copy routes, attacking state, preserved entity factors and
+ * synchronization frame callbacks, with owned colourmap copies and bounded
+ * animation lookup. Preserve fixed or configured model jump, grab and throw
+ * defaults, initial special-move allocation extent and the historical load-
+ * stop response when that allocation fails. Preserve native distance and
+ * group attack probabilities, always-attack availability, offscreen
+ * suppression and model throttling. Preserve native attack priority, think
+ * intervals and cooldown responses to target actions. Preserve normal-attack
+ * wait checks, probability arguments, callback order and clock arithmetic.
+ * Preserve native AI attack command arguments, switch state and load
+ * diagnostics. Preserve native jump-attack wait order, probabilities,
+ * cooldown arithmetic, movement and spawn callback order. Preserve
+ * historical platform and obstacle counter updates, resets and collision
+ * gates, with defined integer arithmetic. Preserve native zero or copied
+ * entity combat factors on spawn, and treat a missing prior model as an
+ * empty platform source. Preserve native wandering thresholds and
+ * destination arithmetic, profile-defined negative grab distances, and
+ * movement grab types, query positions and action order. Preserve native
+ * absent-model lookup diagnostics and unchanged entity state. Access script-
+ * container pointer slots with byte copies, preserving record layout,
+ * pointer values and native copy/cleanup order. Preserve the native sprite-
+ * palette selection for zero-map joining icons before its profile boundary.
+ * Preserve fixed or inherited level-set player defaults and the native
+ * regular-input port extent, retaining bounded player traversal. Preserve
+ * native frame-based or timer-based hit-pause accumulation and animation
+ * reset behavior. Preserve native animation refusal diagnostics and idle
+ * target-query context, with a stable fallback when that context is absent.
+ * Preserve frame spawn/removal order and removal drop defaults, attack
+ * follow masks, counterattack deadlines, hit-sound defaults and item
+ * callback order. Retain native attack sound initialization and literal-path
+ * versus silent hitfx handling. Reserve bounded blend-table storage for each
+ * profile's native six- or seven-mode domain. Release each sprite owner once
+ * and complete cleanup independently of alias counts. Preserve native
+ * sprite-map capacity policies, check allocation extents and retain existing
+ * storage and capacity when growth is unavailable. Validate sprite-node
+ * allocations and release partial resources without changing existing
+ * owners. Check cached sprite availability before reading metadata and
+ * ignore cache requests for absent nodes. Preserve each profile's drawing
+ * colourmap selection and palette fallback. Preserve native level-release
+ * timing for script stream buffers.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/3741.md
  * at the source repository root. Original notices follow below.
@@ -40,6 +104,9 @@
 #include "openbor.h"
 #include "commands.h"
 #include "models.h"
+#include "obor_colourmap_storage.h"
+#include <limits.h>
+#include <stdint.h>
 
 #define GET_ARG(z) (arglist.count > z ? arglist.args[z] : "")
 #define GET_ARG_LEN(z) (arglist.count > z ? arglist.arglen[z] : 0)
@@ -50,7 +117,7 @@
 #define GET_INT_ARGP(z) getValidInt(GET_ARGP(z), filename, command)
 #define GET_FLOAT_ARGP(z) getValidFloat(GET_ARGP(z), filename, command)
 
-#define GET_FRAME_ARG(z) (stricmp(GET_ARG(z), "this")==0?newanim->numframes:GET_INT_ARG(z))
+#define GET_FRAME_ARG(z) (obor_profile_build >= 3681 && stricmp(GET_ARG(z), "this")==0?newanim->numframes:GET_INT_ARG(z))
 
 #define NaN 0xAAAAAAAA
 
@@ -200,17 +267,17 @@ char				skipselect[MAX_PLAYERS][MAX_NAME_LEN];
 char                branch_name[MAX_NAME_LEN+1];    // Used for branches
 int					useSave = 0;
 unsigned char       pal[MAX_PAL_SIZE] = {""};
-int                 blendfx[MAX_BLENDINGS] = {0,1,0,0,0,0};
+int                 blendfx[OBOR_BLEND_STORAGE] = {0,1,0,0,0,0};
 char                blendfx_is_set = 0;
 int                 fontmonospace[MAX_FONTS] = {0,0,0,0,0,0,0,0};
 int                 fontmbs[MAX_FONTS] = {0,0,0,0,0,0,0,0};
 
 // move all blending effects here
-unsigned char*      blendings[MAX_BLENDINGS] = {NULL, NULL, NULL, NULL, NULL, NULL} ;
+unsigned char*      blendings[OBOR_BLEND_STORAGE] = {NULL, NULL, NULL, NULL, NULL, NULL} ;
 // function pointers to create the tables
-palette_table_function blending_table_functions[MAX_BLENDINGS] = {palette_table_screen, palette_table_multiply, palette_table_overlay,palette_table_hardlight, palette_table_dodge, palette_table_half};
-blend_table_function blending_table_functions16[MAX_BLENDINGS] = {create_screen16_tbl,create_multiply16_tbl,create_overlay16_tbl,create_hardlight16_tbl,create_dodge16_tbl,create_half16_tbl};
-blend_table_function blending_table_functions32[MAX_BLENDINGS] = {create_screen32_tbl,create_multiply32_tbl,create_overlay32_tbl,create_hardlight32_tbl,create_dodge32_tbl,create_half32_tbl};
+palette_table_function blending_table_functions[OBOR_BLEND_STORAGE] = {palette_table_screen, palette_table_multiply, palette_table_overlay,palette_table_hardlight, palette_table_dodge, palette_table_half, palette_table_half};
+blend_table_function blending_table_functions16[OBOR_BLEND_STORAGE] = {create_screen16_tbl,create_multiply16_tbl,create_overlay16_tbl,create_hardlight16_tbl,create_dodge16_tbl,create_half16_tbl, NULL};
+blend_table_function blending_table_functions32[OBOR_BLEND_STORAGE] = {create_screen32_tbl,create_multiply32_tbl,create_overlay32_tbl,create_hardlight32_tbl,create_dodge32_tbl,create_half32_tbl, NULL};
 
 int                 current_set = 0;
 int                 current_level = 0;
@@ -401,6 +468,19 @@ int                 cansave_flag[MAX_DIFFICULTIES];             // 0, no save, 1
 int                 same[MAX_DIFFICULTIES];						// ltb 1-13-05   sameplayer
 */
 int                 cameratype          = 0;
+
+/* Historical scene counts deliberately retain native update-site semantics. */
+static int numPlatforms, numObstacles;
+static int obor_scene_counters_active(void)
+{
+    return obor_profile_build >= 3691 && obor_profile_build < 3710;
+}
+static void obor_scene_counter_adjust(int *counter, int delta)
+{
+    int64_t value = (int64_t)*counter + delta;
+    *counter = value > INT_MAX ? INT_MAX : value < INT_MIN ? INT_MIN : (int)value;
+}
+
 int					defaultmaxplayers	= 2;
 
 u32                 go_time             = 0;
@@ -855,6 +935,7 @@ int handle_txt_include(char* command, ArgList *arglist, char** fn, char* namebuf
 {
 	char* incfile, *filename=*fn, *buf2, *endstr="\r\n@end";
 	size_t size, t;
+    if(obor_profile_build < 3695) return 0;
 	if(stricmp(command, "@include")==0){
 		incfile = GET_ARGP(1);
 		buffer_pakfile(incfile, &buf2, &size) ;
@@ -876,7 +957,8 @@ int handle_txt_include(char* command, ArgList *arglist, char** fn, char* namebuf
 			//printf(*buf);
 			return 1;
 		}
-		shutdown(1, "Can't find file '%s' to include.\n", incfile);
+		if(obor_profile_build >= 3700)
+            shutdown(1, "Can't find file '%s' to include.\n", incfile);
 	}else if(stricmp(command, "@jump")==0){
 		*pos = GET_INT_ARGP(1);
 		return 2;
@@ -898,7 +980,14 @@ int getsyspropertybyindex(ScriptVariant* var, int index)
 {
 	if(!var) return 0;
 
-	switch(index)
+	if(obor_profile_build < 3673 && index == _sv_current_branch) goto obor_unknown_system_property;
+    if(obor_profile_build < 3700 &&
+       (index == _sv_skiptoset || index == _sv_usesave)) goto obor_unknown_system_property;
+    if(obor_profile_build < 3701 &&
+       (index == _sv_nopause || index == _sv_nosave || index == _sv_noscreenshot)) goto obor_unknown_system_property;
+    if(obor_profile_build < 3702 && index == _sv_nofadeout) goto obor_unknown_system_property;
+    if(obor_profile_build < 3709 && index == _sv_ticks) goto obor_unknown_system_property;
+    switch(index)
 	{
 	case _sv_count_enemies:
 		ScriptVariant_ChangeType(var, VT_INTEGER);
@@ -1243,6 +1332,7 @@ int getsyspropertybyindex(ScriptVariant* var, int index)
 		var->lVal = (LONG)timer_gettick();
 		break;
 	default:
+obor_unknown_system_property:
 		// We use indices now, but players/modders don't need to be exposed
 		// to that implementation detail, so we write "name" and not "index".
 		printf("Unknown system property name.\n");
@@ -1258,7 +1348,15 @@ int changesyspropertybyindex(int index, ScriptVariant* value)
 	LONG ltemp;
 	//DOUBLE dbltemp;
 
-	switch(index)
+	if(obor_profile_build < 3704 &&
+       (index == _sv_current_stage || index == _sv_current_set || index == _sv_current_level)) return 0;
+    if(obor_profile_build < 3700 &&
+       (index == _sv_shadowcolor || index == _sv_shadowalpha || index == _sv_skiptoset ||
+        index == _sv_usesave)) return 0;
+    if(obor_profile_build < 3701 &&
+       (index == _sv_nopause || index == _sv_nosave || index == _sv_noscreenshot)) return 0;
+    if(obor_profile_build < 3702 && index == _sv_nofadeout) return 0;
+    switch(index)
 	{
 	case _sv_elapsed_time:
 		if(SUCCEEDED(ScriptVariant_IntegerValue(value, &ltemp)))
@@ -1310,7 +1408,10 @@ int changesyspropertybyindex(int index, ScriptVariant* value)
 		break;
 	case _sv_blockade:
 		if(SUCCEEDED(ScriptVariant_IntegerValue(value, &ltemp)))
-			shadowalpha = (float)ltemp;
+			{
+                if(obor_profile_build < 3700) blockade = (float)ltemp;
+                else shadowalpha = (float)ltemp;
+            }
 		break;
 	case _sv_shadowcolor:
 		if(SUCCEEDED(ScriptVariant_IntegerValue(value, &ltemp)))
@@ -1508,7 +1609,7 @@ void clear_scripts()
 	Script_Clear(&endlevel_script,  2);
 	Script_Clear(&key_script_all,   2);
 	Script_Clear(&timetick_script,  2);
-	Script_Clear(&loading_script,   2);
+	if(obor_profile_build >= 3727) Script_Clear(&loading_script, 2);
 	for(i=0; i<4; i++)
 		Script_Clear(&score_script[i],      2);
 	for(i=0; i<4; i++)
@@ -1524,49 +1625,69 @@ void clear_scripts()
 
 #define scripts_membercount (sizeof(s_scripts) / sizeof(Script*))
 
-void alloc_all_scripts(s_scripts** s) {
-	size_t i;
-
-	if(!(*s))
-	{
-		*s = (s_scripts*)malloc(sizeof(s_scripts));
-		for (i = 0; i < scripts_membercount; i++) {
-			(((Script**) (*s))[i]) = alloc_script();
-		}
-	}
+void alloc_all_scripts(s_scripts** s)
+{
+    s_scripts *scripts = NULL;
+    size_t i;
+    if(!s) return;
+    memcpy(&scripts, s, sizeof(scripts));
+    if(scripts) return;
+    scripts = malloc(sizeof(*scripts));
+    memcpy(s, &scripts, sizeof(scripts));
+    if(!scripts) return;
+    for(i = 0; i < scripts_membercount; ++i)
+    {
+        Script *script = alloc_script();
+        memcpy((unsigned char*)scripts + i * sizeof(script), &script, sizeof(script));
+    }
 }
 
-void clear_all_scripts(s_scripts* s, int method) {
-	size_t i;
-	Script** ps = (Script**) s;
-
-	for (i = 0; i < scripts_membercount; i++) {
-		Script_Clear(ps[i],   method);
-	}
+void clear_all_scripts(s_scripts* s, int method)
+{
+    size_t i;
+    if(!s) return;
+    for(i = 0; i < scripts_membercount; ++i)
+    {
+        Script *script = NULL;
+        memcpy(&script, (const unsigned char*)s + i * sizeof(script), sizeof(script));
+        if(script) Script_Clear(script, method);
+    }
 }
 
-void free_all_scripts(s_scripts** s) {
-	size_t i;
-	Script** ps = (Script**) (*s);
-
-	for (i = 0; i < scripts_membercount; i++) {
-		if (ps[i]) {
-			free(ps[i]);
-			ps[i] = NULL;
-		}
-	}
-	free(*s);
-	*s = NULL;
+void free_all_scripts(s_scripts** s)
+{
+    s_scripts *scripts = NULL;
+    size_t i;
+    if(!s) return;
+    memcpy(&scripts, s, sizeof(scripts));
+    if(!scripts) return;
+    for(i = 0; i < scripts_membercount; ++i)
+    {
+        Script *script = NULL;
+        memcpy(&script, (const unsigned char*)scripts + i * sizeof(script), sizeof(script));
+        if(script)
+        {
+            free(script);
+            script = NULL;
+            memcpy((unsigned char*)scripts + i * sizeof(script), &script, sizeof(script));
+        }
+    }
+    free(scripts);
+    scripts = NULL;
+    memcpy(s, &scripts, sizeof(scripts));
 }
 
-void copy_all_scripts(s_scripts* src, s_scripts* dest, int method) {
-	size_t i;
-	Script** ps = (Script**) src;
-	Script** pd = (Script**) dest;
-
-	for (i = 0; i < scripts_membercount; i++) {
-			Script_Copy(pd[i], ps[i], method);
-	}
+void copy_all_scripts(s_scripts* src, s_scripts* dest, int method)
+{
+    size_t i;
+    if(!src || !dest) return;
+    for(i = 0; i < scripts_membercount; ++i)
+    {
+        Script *source = NULL, *destination = NULL;
+        memcpy(&source, (const unsigned char*)src + i * sizeof(source), sizeof(source));
+        memcpy(&destination, (const unsigned char*)dest + i * sizeof(destination), sizeof(destination));
+        if(source && destination) Script_Copy(destination, source, method);
+    }
 }
 
 void execute_animation_script(entity* ent)
@@ -2498,7 +2619,7 @@ int loadGameFile(){
 	if(handle == NULL) return 0;
     if(fread(savelevel, sizeof(s_savelevel), num_difficulties, handle)>=sizeof(s_savelevel) && savelevel[0].compatibleversion!=CV_SAVED_GAME){ //TODO: check file length
 		clearSavedGame();
-		result = 0;
+		if(obor_profile_build >= 3708) result = 0;
 	}
 	fclose(handle);
 	return result;
@@ -2678,6 +2799,16 @@ int loadScriptFile(){
 	path[l-2] = '0'+(current_set/10);
 	path[l-1] = '0'+(current_set%10);
 
+    if(obor_profile_build < 3708)
+    {
+        Script_Init(&script, "loadScriptFile", NULL, 1);
+        if(!load_script(&script, path)) Script_Clear(&script, 2);
+        Script_Compile(&script);
+        if(Script_IsInitialized(&script)) Script_Execute(&script);
+        Script_Clear(&script, 2);
+        return 1; /* The original void result is ignored by the legacy caller. */
+    }
+
 	handle = fopen(path, "rb");
 	if(handle == NULL) return 0;
 
@@ -2805,7 +2936,8 @@ size_t ParseArgs(ArgList* list, char* input, char* output) {
 	int space = 0;
 	//int makelower = 0;
 
-	while(pos < MAX_ARG_LEN-1 && item < MAX_ARG_COUNT) {
+	const size_t argument_limit = obor_profile_build < 3670 ? 18u : MAX_ARG_COUNT;
+	while(pos < MAX_ARG_LEN-1 && item < argument_limit) {
 		switch(input[pos]) {
 			case '\r': case '\n': case '#': case '\0':
 				done = 1;
@@ -2915,6 +3047,75 @@ float randf(float max){
 
 
 // Creates a remapping table from two images
+/* Allocation extent is independent of the historical narrow counter. */
+static int obor_colourmap_reserve(s_model *model, unsigned int count)
+{
+    obor_colourmap_owner *owner;
+    int created = 0;
+    if(!model) return 0;
+    owner = obor_colourmap_owner_find(model);
+    if(!owner)
+    {
+        owner = obor_colourmap_owner_new(model);
+        if(!owner) return 0;
+        created = 1;
+    }
+    else if(owner->table != model->colourmap) return 0;
+    if(!obor_colourmap_table_reserve(&model->colourmap,
+        &model->colourmap_capacity, count))
+    {
+        if(created) obor_colourmap_owner_release(model);
+        return 0;
+    }
+    owner->table = model->colourmap;
+    return 1;
+}
+
+/* Only model-cache and entity owners use this operation. Temporary structure
+ * snapshots borrow their references and do not release them. */
+static int obor_model_copy(s_model *destination, const s_model *source)
+{
+    unsigned char **copy = NULL, **old = NULL;
+    obor_colourmap_owner *owner;
+    if(!destination || !source) return 0;
+    if(destination == source) return 1;
+    if(!obor_colourmap_copy(source->colourmap, source->colourmap_capacity,
+        obor_profile_build < 3739, &copy)) return 0;
+    owner = obor_colourmap_owner_find(destination);
+    if(owner) old = owner->table;
+    else if(copy)
+    {
+        owner = obor_colourmap_owner_new(destination);
+        if(!owner)
+        {
+            obor_colourmap_release(copy);
+            return 0;
+        }
+    }
+    if(owner) owner->table = copy;
+    *destination = *source;
+    destination->colourmap = copy;
+    obor_colourmap_release(old);
+    if(!copy && owner) obor_colourmap_owner_release(destination);
+    return 1;
+}
+
+/* Preserve initialized flags without discarding the old allocation on refusal. */
+static int obor_mapflag_reserve(unsigned char **flags, unsigned int *capacity,
+    unsigned int count)
+{
+    unsigned char *replacement;
+    if(!flags || !capacity) return 0;
+    if(!*flags) *capacity = 0;
+    if(count <= *capacity) return 1;
+    replacement = realloc(*flags, count);
+    if(!replacement) return 0;
+    memset(replacement + *capacity, 0, count - *capacity);
+    *flags = replacement;
+    *capacity = count;
+    return 1;
+}
+
 int load_colourmap(s_model * model, char *image1, char *image2)
 {
 	int i, j, k;
@@ -2925,8 +3126,20 @@ int load_colourmap(s_model * model, char *image1, char *image2)
 	// Can't use same image twice!
 	if(stricmp(image1,image2)==0) return 0;
 
-	__realloc(model->colourmap, model->maps_loaded);
-	k = model->maps_loaded++;
+    if(!model) return -2;
+    if(obor_profile_build < 3739)
+    {
+        for(k = 0; k < MAX_COLOUR_MAPS && model->colourmap &&
+            (unsigned)k < model->colourmap_capacity && model->colourmap[k]; ++k);
+        if(k >= MAX_COLOUR_MAPS) return -1;
+        if(!obor_colourmap_reserve(model, (unsigned)k + 1u)) return -2;
+    }
+    else
+    {
+        if(model->maps_loaded < 0 ||
+            !obor_colourmap_reserve(model, (unsigned)model->maps_loaded + 1u)) return -2;
+        k = model->maps_loaded++;
+    }
 
 	if((map = malloc(MAX_PAL_SIZE/4)) == NULL)
 	{
@@ -2959,7 +3172,12 @@ int load_colourmap(s_model * model, char *image1, char *image2)
 	freebitmap(bitmap1);
 	freebitmap(bitmap2);
 
-	model->colourmap[k] = map;
+    if(!obor_colourmap_replace(model->colourmap, (unsigned)k, map))
+    {
+        free(map);
+        return -2;
+    }
+    if(obor_profile_build < 3739) model->maps_loaded = k + 1;
 	return 1;
 }
 
@@ -2974,14 +3192,18 @@ int convert_map_to_palette(s_model* model, unsigned char mapflag[])
 	int i, c;
 	unsigned char *newmap, *oldmap;
 	unsigned char *p1, *p2;
+    if(!model || screenformat < 0 || (unsigned)screenformat >= sizeof(pixelbytes)/sizeof(pixelbytes[0])) return 0;
 	unsigned pb = pixelbytes[(int)screenformat];
 	if(model->palette==NULL) return 0;
 	for(c=0; c<model->maps_loaded; c++)
 	{
+        if(!mapflag) return 0;
 		if(mapflag[c]==0) continue;
+        if(!model->colourmap || (unsigned)c >= model->colourmap_capacity || !model->colourmap[c]) return 0;
 		if((newmap = malloc(PAL_BYTES)) == NULL)
 		{
 			shutdown(1, "Error convert_map_to_palette for model: %s\n", model->name);
+            return 0;
 		}
 		// Create new colour map
 		memcpy(newmap, model->palette, PAL_BYTES);
@@ -2993,8 +3215,20 @@ int convert_map_to_palette(s_model* model, unsigned char mapflag[])
 			p2 = model->palette + oldmap[i]*pb;
 			memcpy(p1, p2, pb);
 		}
-		model->colourmap[c] = newmap;
-		free(oldmap); oldmap = NULL;
+        if(obor_colourmap_find(model->colourmap))
+        {
+            if(!obor_colourmap_replace(model->colourmap, (unsigned)c, newmap))
+            {
+                free(newmap);
+                return 0;
+            }
+        }
+        else
+        {
+            model->colourmap[c] = newmap;
+            free(oldmap);
+        }
+        oldmap = NULL;
 	}
 	return 1;
 }
@@ -3075,8 +3309,8 @@ int create_blending_tables(unsigned char* palette, unsigned char* tables[], int 
 	if(pixelformat!=PIXEL_8) return 1;
 	if(!palette || !tables) return 0;
 
-	memset(tables, 0, MAX_BLENDINGS*sizeof(unsigned char*));
-	for(i=0; i<MAX_BLENDINGS; i++)
+	memset(tables, 0, OBOR_BLEND_STORAGE*sizeof(unsigned char*));
+	for(i=0; i<OBOR_BLEND_COUNT; i++)
 	{
 		if(!usemap || usemap[i])
 		{
@@ -3090,7 +3324,7 @@ int create_blending_tables(unsigned char* palette, unsigned char* tables[], int 
 
 void create_blend_tables_x8(unsigned char* tables[]){
 	int i;
-	for(i=0; i<MAX_BLENDINGS; i++){
+	for(i=0; i<OBOR_BLEND_COUNT; i++){
 		switch(screenformat){
 		case PIXEL_16:
 			tables[i] = blending_table_functions16[i]?(blending_table_functions16[i])():NULL;
@@ -3148,7 +3382,7 @@ void standard_palette(int immediate){
 void unload_background(){
 	int i;
 	if (background)	clearscreen(background);
-	for(i=0; i<MAX_BLENDINGS; i++)
+	for(i=0; i<OBOR_BLEND_COUNT; i++)
 	{
 		if(blendings[i]) free(blendings[i]);
 		blendings[i] = NULL;
@@ -3558,45 +3792,60 @@ void resourceCleanUp(){
 
 void freesprites()
 {
-	unsigned short i;
-	s_sprite_list *head;
-	for(i=0; i<=sprites_loaded; i++)
-	{
-		if(sprite_list != NULL)
-		{
-			free(sprite_list->sprite);
-			sprite_list->sprite = NULL;
-			free(sprite_list->filename);
-			sprite_list->filename = NULL;
-			head = sprite_list->next;
-			free(sprite_list);
-			sprite_list = head;
-		}
-	}
-	if(sprite_map != NULL)
-	{
-		free(sprite_map);
-		sprite_map = NULL;
-	}
-	sprites_loaded = 0;
+    s_sprite_list *head;
+    while(sprite_list != NULL)
+    {
+        free(sprite_list->sprite);
+        sprite_list->sprite = NULL;
+        free(sprite_list->filename);
+        sprite_list->filename = NULL;
+        head = sprite_list->next;
+        free(sprite_list);
+        sprite_list = head;
+    }
+    if(sprite_map != NULL)
+    {
+        free(sprite_map);
+        sprite_map = NULL;
+    }
+    sprites_loaded = 0;
 }
 
 // allocate enough members for sprite_map
 void prepare_sprite_map(size_t size)
 {
-	if(sprite_map == NULL || size + 1 > sprite_map_max_items )
-	{
+    size_t new_capacity;
+    s_sprite_map *resized;
+    if(size >= (size_t)INT_MAX || sprite_map_max_items < 0)
+    {
+        shutdown(1, "Out Of Memory!  Failed to create a new sprite_map\n");
+        return;
+    }
+    if(sprite_map != NULL && size + 1 <= (size_t)sprite_map_max_items)
+    {
+        return;
+    }
 #ifdef VERBOSE
-		printf("%s %p\n", "prepare_sprite_map was", sprite_map);
+    printf("%s %p\n", "prepare_sprite_map was", sprite_map);
 #endif
-		sprite_map_max_items = (((size+1)>>8)+1)<<8;
-		sprite_map = realloc(sprite_map, sizeof(s_sprite_map) * sprite_map_max_items);
-		if(sprite_map == NULL) shutdown(1, "Out Of Memory!  Failed to create a new sprite_map\n");
-	}
+    new_capacity = (((size + 1) >> 8) + 1) << 8;
+    if(new_capacity > (size_t)INT_MAX || new_capacity > SIZE_MAX / sizeof(*sprite_map))
+    {
+        shutdown(1, "Out Of Memory!  Failed to create a new sprite_map\n");
+        return;
+    }
+    resized = realloc(sprite_map, sizeof(*sprite_map) * new_capacity);
+    if(resized == NULL)
+    {
+        shutdown(1, "Out Of Memory!  Failed to create a new sprite_map\n");
+        return;
+    }
+    sprite_map = resized;
+    sprite_map_max_items = (int)new_capacity;
 }
 
 void cachesprite(int index, int load){
-	if(sprite_map && index>=0 && index<sprites_loaded){
+	if(sprite_map && index>=0 && index<sprites_loaded && sprite_map[index].node){
 		if(!load && sprite_map[index].node->sprite){
 			free(sprite_map[index].node->sprite);
 			sprite_map[index].node->sprite = NULL;
@@ -3627,6 +3876,11 @@ int loadsprite(char *filename, int ofsx, int ofsy, int bmpformat)
 			if(stricmp(sprite_map[i].node->filename, filename) == 0) {
 				if(!sprite_map[i].node->sprite){
 					sprite_map[i].node->sprite = loadsprite2(filename, NULL, NULL);
+                    if(!sprite_map[i].node->sprite)
+                    {
+                        shutdown(1, "Unable to load file '%s'\n", filename);
+                        return -1;
+                    }
 				}
 				if(sprite_map[i].centerx+sprite_map[i].node->sprite->offsetx == ofsx && 
 					sprite_map[i].centery+sprite_map[i].node->sprite->offsety == ofsy) {
@@ -3655,12 +3909,23 @@ int loadsprite(char *filename, int ofsx, int ofsy, int bmpformat)
 	len = strlen(filename);
 	size = fakey_encodesprite(bitmap);
 	curr = malloc(sizeof(s_sprite_list));
+    if(curr == NULL)
+    {
+        freebitmap(bitmap);
+        shutdown(1, "loadsprite() Out of memory!\n");
+        return -1;
+    }
 	curr->sprite = malloc(size);
 	curr->filename = malloc(len + 1);
-	if(curr == NULL || curr->sprite == NULL || curr->filename == NULL){
-		freebitmap(bitmap);
-		shutdown(1, "loadsprite() Out of memory!\n");
-	}
+	if(curr->sprite == NULL || curr->filename == NULL)
+    {
+        free(curr->sprite);
+        free(curr->filename);
+        free(curr);
+        freebitmap(bitmap);
+        shutdown(1, "loadsprite() Out of memory!\n");
+        return -1;
+    }
 	memcpy(curr->filename, filename,len);
 	curr->filename[len] = 0;
 	encodesprite(ofsx-clipl, ofsy-clipt, bitmap, curr->sprite);
@@ -4060,9 +4325,17 @@ int free_model(s_model* model)
 
 	printf(".");
 
+    if(obor_colourmap_owner_find(model))
+    {
+        obor_colourmap_owner_release(model);
+        model->colourmap = NULL;
+        model->maps_loaded = 0;
+        model->colourmap_capacity = 0;
+    }
+    else
 	if(hasFreetype(model, MF_COLOURMAP))
 	{
-		for(i=0; i<model->maps_loaded; i++)
+		for(i=0; (unsigned)i<model->colourmap_capacity; i++)
 		{
 			if(model->colourmap[i] != NULL)
 			{
@@ -4073,6 +4346,7 @@ int free_model(s_model* model)
 		if(model->colourmap) free(model->colourmap);
 		model->colourmap = NULL;
 		model->maps_loaded = 0;
+        model->colourmap_capacity = 0;
 	}
 
 	printf(".");
@@ -4553,7 +4827,7 @@ void lcmHandleCommandSubtype(ArgList* arglist, s_model* newchar, char* filename)
 		if(newchar->aimove==-1) newchar->aimove                 = 0;
 		newchar->aimove |= AIMOVE1_BIKER;
 		if(!newchar->offscreenkill) newchar->offscreenkill = 300;
-		for(i=0; i<max_attack_types; i++)
+		for(i=0; i<(obor_profile_build < 3710 ? MAX_ATKS : max_attack_types); i++)
 			newchar->defense[i].factor = 2.f;
 		newchar->subject_to_hole                                = 1;
 		newchar->subject_to_gravity                             = 1;
@@ -4622,13 +4896,13 @@ void lcmHandleCommandSmartbomb(ArgList* arglist, s_model* newchar, char* filenam
 	newchar->smartbomb->attack_force = atoi(GET_ARGP(1));			// Special force
 	newchar->smartbomb->attack_type = atoi(GET_ARGP(2));			// Special attack type
 	newchar->smartbomb->attack_drop = 1; //by default
-	newchar->smartbomb->dropv[0] = default_model_dropv[0];
+	newchar->smartbomb->dropv[0] = (obor_profile_build < 3681 ? 3.0f : default_model_dropv[0]);
 
 	if(newchar->smartbomb->attack_type==ATK_BLAST) {
 		newchar->smartbomb->blast = 1;
-		newchar->smartbomb->dropv[1] = default_model_dropv[1]*2.083f;
+		newchar->smartbomb->dropv[1] = (obor_profile_build < 3681 ? 2.5f : default_model_dropv[1]*2.083f);
 	} else {
-		newchar->smartbomb->dropv[1] = default_model_dropv[1];
+		newchar->smartbomb->dropv[1] = (obor_profile_build < 3681 ? 1.2f : default_model_dropv[1]);
 	}
 
 	if(newchar->smartbomb->attack_type==ATK_FREEZE) {
@@ -4789,6 +5063,12 @@ void lcmHandleCommandAimove(ArgList* arglist, s_model* newchar, int* aimoveset, 
 	}
 }
 void lcmHandleCommandAiattack(ArgList* arglist, s_model* newchar, int* aiattackset, char* filename) {
+	if(obor_profile_build < 3676)
+	{
+		if(newchar->aiattack==-1) newchar->aiattack = 0;
+		return;
+	}
+
 	char* value = GET_ARGP(1);
 	if(!*aiattackset)
 	{
@@ -4808,6 +5088,10 @@ void lcmHandleCommandAiattack(ArgList* arglist, s_model* newchar, int* aiattacks
 		else if(stricmp(value, "noattack")==0){
 			newchar->aiattack |= AIATTACK1_NOATTACK;
 		}
+		else if(obor_profile_build < 3678)
+			shutdown(1, "Model '%s' has invalid A.I. attack switch: '%s'", filename, value);
+		else if(obor_profile_build < 3681)
+			printf("Model '%s' has invalid A.I. attack switch: '%s'", filename, value);
 		else printf("Model '%s' has invalid A.I. attack switch: '%s'\n", filename, value);
 	}
 	/*
@@ -4870,16 +5154,18 @@ s_model* init_model(int cacheindex, int unload) {
 	newchar->defense		        = (s_defense*)calloc(max_attack_types + 1, sizeof(s_defense));
 	newchar->offense_factors        = (float*)calloc(max_attack_types + 1, sizeof(float));
 
-	newchar->special                = (s_com*)calloc(1, sizeof(s_com));
+	newchar->special                = (s_com*)calloc(obor_profile_build < 3711 ? max_freespecials : 1, sizeof(s_com));
+	if(obor_profile_build < 3711 && !newchar->special)
+		shutdown(1, (char*)E_OUT_OF_MEMORY);
 
 	alloc_all_scripts(&newchar->scripts);
 
 	newchar->unload             = unload;
-	newchar->jumpspeed          = default_model_jumpspeed;
-	newchar->jumpheight         = default_model_jumpheight; // 28-12-2004   Set default jump height to 4, if not specified
-	newchar->runjumpheight      = default_model_jumpheight; // Default jump height if a player is running
+	newchar->jumpspeed          = obor_profile_build < 3681 ? -1 : default_model_jumpspeed;
+	newchar->jumpheight         = obor_profile_build < 3681 ? 4 : default_model_jumpheight; // 28-12-2004   Set default jump height to 4, if not specified
+	newchar->runjumpheight      = obor_profile_build < 3681 ? 4 : default_model_jumpheight; // Default jump height if a player is running
 	newchar->runjumpdist        = 1; // Default jump distane if a player is running
-	newchar->grabdistance       = default_model_grabdistance; //  30-12-2004 Default grabdistance is same as originally set
+	newchar->grabdistance       = obor_profile_build < 3681 ? 36 : default_model_grabdistance; //  30-12-2004 Default grabdistance is same as originally set
 	newchar->grabflip		    = 3;
 	newchar->throwdamage        = 21; // default throw damage
 	newchar->icon.def			= -1;
@@ -4890,7 +5176,7 @@ s_model* init_model(int cacheindex, int unload) {
 	newchar->diesound           = -1;
 	newchar->nolife             = 0;			    // default show life = 1 (yes)
 	newchar->remove             = 1;			    // Flag set to weapons are removed upon hitting an opponent
-	newchar->throwdist          = default_model_jumpheight*0.625f;
+	newchar->throwdist          = obor_profile_build < 3681 ? 2.5f : default_model_jumpheight*0.625f;
 	newchar->counter            = 3;			    // Default 3 times to drop a weapon / projectile
 	newchar->aimove             = -1;
 	newchar->aiattack           = -1;
@@ -4988,6 +5274,23 @@ void update_model_loadflag(s_model* model, char unload) {
 	model->unload = unload;
 }
 
+/* Early commands update only the fields reached by their native count guards. */
+static void obor_model_defense_legacy(s_model *model, int index, ArgList arglist,
+                                     char *filename, char *command)
+{
+    s_defense *factors;
+    if(!model || !model->defense || index < 0 || max_attack_types <= 0 ||
+       (size_t)index > (size_t)max_attack_types) return;
+    factors = model->defense + index;
+    if(arglist.count >= 2) factors->factor = GET_FLOAT_ARG(2);
+    if(arglist.count >= 3) factors->pain = GET_FLOAT_ARG(3);
+    if(arglist.count >= 4) factors->knockdown = GET_FLOAT_ARG(4);
+    if(arglist.count >= 5) factors->blockpower = GET_FLOAT_ARG(5);
+    if(arglist.count >= 6) factors->blockthreshold = GET_FLOAT_ARG(6);
+    if(arglist.count >= 7) factors->blockratio = GET_FLOAT_ARG(7);
+    if(arglist.count >= 8) factors->blocktype = GET_FLOAT_ARG(8);
+}
+
 s_model* load_cached_model(char * name, char * owner, char unload)
 {
 	s_model *newchar = NULL,
@@ -5062,7 +5365,8 @@ s_model* load_cached_model(char * name, char * owner, char unload)
 
 	s_drawmethod drawmethod;
 
-	unsigned char* mapflag = NULL; // in 24bit mode, we need to know whether a colourmap is a common map or a palette
+	unsigned char* mapflag = NULL;
+    unsigned int mapflag_capacity = 0; // in 24bit mode, we need to know whether a colourmap is a common map or a palette
 
 	static const char* pre_text =  // this is the skeleton of frame function
 		"void main()\n"
@@ -5123,6 +5427,12 @@ s_model* load_cached_model(char * name, char * owner, char unload)
 	if(buffer_pakfile(filename, &buf, &size)!=1) shutdown(1, "Unable to open file '%s'\n\n", filename);
 	
 	sbsize = size+1;
+    if(obor_profile_build < 3681)
+    {
+        if(size > (SIZE_MAX - 1) / 2)
+            shutdown(1, "Unable to create script buffer for file '%s'", filename);
+        sbsize = size * 2 + 1;
+    }
 	scriptbuf = (char*)malloc(sbsize);
 
 	if(scriptbuf==NULL){
@@ -5164,7 +5474,11 @@ s_model* load_cached_model(char * name, char * owner, char unload)
 						goto lCleanup;
 					}
 					tempscripts = newchar->scripts;
-					*newchar = *tempmodel;
+                    if(!obor_model_copy(newchar, tempmodel))
+                    {
+                        shutdownmessage = "Could not copy inherited colourmaps.";
+                        goto lCleanup;
+                    }
 					newchar->scripts = tempscripts;
 					copy_all_scripts(tempmodel->scripts, newchar->scripts, 1);
 					newchar->isSubclassed = 1;
@@ -5443,13 +5757,16 @@ s_model* load_cached_model(char * name, char * owner, char unload)
 					#define tempdef(x, y) \
 					x(stricmp(value, #y)==0)\
 					{\
-						newchar->defense[ATK_##y] = defense;\
+						if(obor_profile_build < 3710)\
+							obor_model_defense_legacy(newchar, ATK_##y, arglist, filename, command);\
+						else newchar->defense[ATK_##y] = defense;\
 					}
 					{
 						value = GET_ARG(1);
 						defense = default_defense;
 						if(newchar->subtype==SUBTYPE_BIKER) defense.factor=2.f;
 
+						if(obor_profile_build >= 3710) {
 						if(arglist.count>=2) defense.factor = GET_FLOAT_ARG(2);
 						if(arglist.count>=3) defense.pain = GET_FLOAT_ARG(3);
 						if(arglist.count>=4) defense.knockdown = GET_FLOAT_ARG(4);
@@ -5457,6 +5774,8 @@ s_model* load_cached_model(char * name, char * owner, char unload)
 						if(arglist.count>=6) defense.blockthreshold = GET_FLOAT_ARG(6);
 						if(arglist.count>=7) defense.blockratio = GET_FLOAT_ARG(7);
 						if(arglist.count>=8) defense.blocktype = GET_FLOAT_ARG(8);
+						}
+
 
 						tempdef(if, NORMAL)
 						tempdef(else if, NORMAL2)
@@ -5477,19 +5796,25 @@ s_model* load_cached_model(char * name, char * owner, char unload)
 						{
 							tempInt = atoi(value+6);
 							if(tempInt<11) tempInt = 11;
-							/* Invalid optional entries must not corrupt adjacent heap chunks. */
-							if(tempInt > max_attack_types - STA_ATKS)
+							/* The model allocation includes one additional initialized slot. */
+							if(tempInt > max_attack_types - STA_ATKS + 1)
 							{
 							    writeToLogFile("Warning: Ignoring out-of-range attack type '%s' in %s "
 							                   "(%s; maxattacktypes %d).\n",
-							                   value, filename, command, max_attack_types - STA_ATKS);
+							                   value, filename, command, max_attack_types - STA_ATKS + 1);
 							    break;
 							}
-							newchar->defense[tempInt+STA_ATKS-1] = defense;
+							if(obor_profile_build < 3710)
+								obor_model_defense_legacy(newchar, tempInt+STA_ATKS-1, arglist, filename, command);
+							else newchar->defense[tempInt+STA_ATKS-1] = defense;
 						}
 						else if(stricmp(value, "ALL")==0)
 						{
-							for(i=0;i<max_attack_types;i++) newchar->defense[i] = defense;
+							for(i=0;i<max_attack_types;i++) {
+								if(obor_profile_build < 3710)
+									obor_model_defense_legacy(newchar, i, arglist, filename, command);
+								else newchar->defense[i] = defense;
+							}
 						}
 					}
 					#undef tempdef
@@ -5522,12 +5847,12 @@ s_model* load_cached_model(char * name, char * owner, char unload)
 						{
 							tempInt = atoi(value+6);
 							if(tempInt<11) tempInt = 11;
-							/* Invalid optional entries must not corrupt adjacent heap chunks. */
-							if(tempInt > max_attack_types - STA_ATKS)
+							/* The model allocation includes one additional initialized slot. */
+							if(tempInt > max_attack_types - STA_ATKS + 1)
 							{
 							    writeToLogFile("Warning: Ignoring out-of-range attack type '%s' in %s "
 							                   "(%s; maxattacktypes %d).\n",
-							                   value, filename, command, max_attack_types - STA_ATKS);
+							                   value, filename, command, max_attack_types - STA_ATKS + 1);
 							    break;
 							}
 							newchar->offense_factors[tempInt+STA_ATKS-1] = GET_FLOAT_ARG(2);
@@ -5874,17 +6199,32 @@ s_model* load_cached_model(char * name, char * owner, char unload)
 						// This command should not be used under 24bit mode, but for old mods, just give it a default palette
 						value = GET_ARG(1);
 						value2 = GET_ARG(2);
-						__realloc(mapflag, newchar->maps_loaded);
+                        if(newchar->maps_loaded < 0)
+                        {
+                            shutdownmessage = "Colourmap counter exceeds its native range.";
+                            goto lCleanup;
+                        }
+						if(!obor_mapflag_reserve(&mapflag, &mapflag_capacity,
+                            obor_profile_build < 3739 ? MAX_COLOUR_MAPS :
+                            (unsigned)newchar->maps_loaded + 1u))
+                        {
+                            shutdownmessage = "Failed to allocate colourmap flags.";
+                            goto lCleanup;
+                        }
 						errorVal = load_colourmap(newchar, value, value2);
 						if(pixelformat==PIXEL_x8 && newchar->palette==NULL)
 						{
 							newchar->palette = malloc(PAL_BYTES);
-							if(loadimagepalette(value, packfile, newchar->palette)==0) {
+							if(!newchar->palette || loadimagepalette(value, packfile, newchar->palette)==0) {
 								shutdownmessage = "Failed to load palette!";
 								goto lCleanup;
 							}
 						}
-						mapflag[newchar->maps_loaded-1] = 1;
+                        {
+                            unsigned int count = (unsigned char)newchar->maps_loaded;
+                            if(count > 0 && count <= newchar->colourmap_capacity)
+                                mapflag[count - 1] = 1;
+                        }
 						if(!errorVal){
 							switch(errorVal){
 								case 0: // uhm wait, we just tested for !errorVal...
@@ -5931,12 +6271,34 @@ s_model* load_cached_model(char * name, char * owner, char unload)
 				case CMD_MODEL_ALTERNATEPAL:
 					// remap for the entity under 24bit mode, this method can replace remap command
 					if(pixelformat!=PIXEL_x8) printf("Warning: command '%s' is not available under 8bit mode\n", command);
-					else {
-						__realloc(mapflag, newchar->maps_loaded);
-						__realloc(newchar->colourmap, newchar->maps_loaded);
+					else if(obor_profile_build >= 3739 || newchar->maps_loaded < MAX_COLOUR_MAPS) {
+                        if(newchar->maps_loaded < 0)
+                        {
+                            shutdownmessage = "Colourmap counter exceeds its native range.";
+                            goto lCleanup;
+                        }
+						if(!obor_mapflag_reserve(&mapflag, &mapflag_capacity,
+                            obor_profile_build < 3739 ? MAX_COLOUR_MAPS :
+                            (unsigned)newchar->maps_loaded + 1u))
+                        {
+                            shutdownmessage = "Failed to allocate colourmap flags.";
+                            goto lCleanup;
+                        }
+                        if(!obor_colourmap_reserve(newchar, (unsigned)newchar->maps_loaded + 1u))
+                        {
+                            shutdownmessage = "Failed to allocate colourmap table.";
+                            goto lCleanup;
+                        }
 						value = GET_ARG(1);
-						newchar->colourmap[newchar->maps_loaded] = malloc(PAL_BYTES);
-						if(loadimagepalette(value, packfile, newchar->colourmap[newchar->maps_loaded])==0) {
+                        unsigned char *palette_map = malloc(PAL_BYTES);
+                        if(palette_map && !obor_colourmap_replace(newchar->colourmap,
+                            (unsigned)newchar->maps_loaded, palette_map))
+                        {
+                            free(palette_map);
+                            palette_map = NULL;
+                        }
+                        if(!palette_map ||
+                            loadimagepalette(value, packfile, newchar->colourmap[newchar->maps_loaded])==0) {
 							shutdownmessage = "Failed to load palette!";
 							goto lCleanup;
 						}
@@ -6045,7 +6407,7 @@ s_model* load_cached_model(char * name, char * owner, char unload)
 						memset(platform, 0, sizeof(platform));
 						shadow_set = 0;
 						attack = emptyattack;
-						attack.hitsound = SAMPLE_BEAT;
+						attack.hitsound = obor_profile_build < 3686 ? -1 : SAMPLE_BEAT;
 						attack.hitflash = -1;
 						attack.blockflash = -1;
 						attack.blocksound = -1;
@@ -6884,7 +7246,7 @@ s_model* load_cached_model(char * name, char * owner, char unload)
 					soundtoplay = sound_load_sample(GET_ARG(1), packfile, 0);
 					break;
 				case CMD_MODEL_HITFX:
-					if(stricmp(GET_ARG(1),"none")==0) attack.hitsound=-1;
+					if(obor_profile_build >= 3686 && stricmp(GET_ARG(1),"none")==0) attack.hitsound=-1;
 					else attack.hitsound = sound_load_sample(GET_ARG(1), packfile, 0);
 					break;
 				case CMD_MODEL_HITFLASH:
@@ -6910,11 +7272,11 @@ s_model* load_cached_model(char * name, char * owner, char unload)
 					bbox[2] = GET_INT_ARG(3);
 					bbox[3] = GET_INT_ARG(4);
 					bbox[4] = GET_INT_ARG(5);
-					bbox[5] = GET_INT_ARG(6);
+					bbox[5] = obor_profile_build >= 3729 ? GET_INT_ARG(6) : 0;
 					break;
 				case CMD_MODEL_BBOXZ:
 					bbox[4] = GET_INT_ARG(1);
-					bbox[5] = GET_INT_ARG(2);
+					bbox[5] = obor_profile_build >= 3729 ? GET_INT_ARG(2) : 0;
 					break;
 				case CMD_MODEL_PLATFORM:
 					newchar->hasPlatforms=1;
@@ -6929,7 +7291,7 @@ s_model* load_cached_model(char * name, char * owner, char unload)
 					break;
 				case CMD_MODEL_DRAWMETHOD:
 					value = GET_ARG(1);
-					if(isNumeric(value))
+					if(obor_profile_build < 3730 || isNumeric(value))
 					{
 						// special effects
 						drawmethod.scalex = GET_INT_ARG(1);
@@ -7002,11 +7364,11 @@ s_model* load_cached_model(char * name, char * owner, char unload)
 					{
 						drawmethod.channelb = GET_FLOAT_ARG(2)*255;
 					}
-					else if (0==stricmp(value, "tintmode"))
+					else if (obor_profile_build >= 3731 && 0==stricmp(value, "tintmode"))
 					{
 						drawmethod.tintmode = GET_INT_ARG(2);
 					}
-					else if (0==stricmp(value, "tintcolor"))
+					else if (obor_profile_build >= 3731 && 0==stricmp(value, "tintcolor"))
 					{
 						drawmethod.tintcolor = parsecolor(GET_ARG(2));
 					}
@@ -7022,7 +7384,7 @@ s_model* load_cached_model(char * name, char * owner, char unload)
 					}
 					if(!blendfx_is_set)
 					{
-						if(drawmethod.alpha>0 && drawmethod.alpha<=MAX_BLENDINGS)
+						if(drawmethod.alpha>0 && drawmethod.alpha<=OBOR_BLEND_COUNT)
 						{
 							blendfx[drawmethod.alpha-1] = 1;
 						}
@@ -7042,9 +7404,9 @@ s_model* load_cached_model(char * name, char * owner, char unload)
 					abox[1] = GET_INT_ARG(2);
 					abox[2] = GET_INT_ARG(3);
 					abox[3] = GET_INT_ARG(4);
-					attack.dropv[0] = default_model_dropv[0];
-					attack.dropv[1] = default_model_dropv[1];
-					attack.dropv[2] = default_model_dropv[2];
+					attack.dropv[0] = (obor_profile_build < 3681 ? 3.0f : default_model_dropv[0]);
+					attack.dropv[1] = (obor_profile_build < 3681 ? 1.2f : default_model_dropv[1]);
+					attack.dropv[2] = (obor_profile_build < 3681 ? 0.0f : default_model_dropv[2]);
 					attack.attack_force = GET_INT_ARG(5);
 
 					attack.attack_drop = GET_INT_ARG(6);
@@ -7114,15 +7476,15 @@ s_model* load_cached_model(char * name, char * owner, char unload)
 					break;
 				case CMD_MODEL_ATTACKZ: case CMD_MODEL_HITZ:
 					attack.attack_coords[4] = GET_INT_ARG(1);
-					attack.attack_coords[5] = GET_INT_ARG(2);
+					attack.attack_coords[5] = obor_profile_build >= 3729 ? GET_INT_ARG(2) : 0;
 					break;
 				case CMD_MODEL_BLAST:
 					abox[0] = GET_INT_ARG(1);
 					abox[1] = GET_INT_ARG(2);
 					abox[2] = GET_INT_ARG(3);
 					abox[3] = GET_INT_ARG(4);
-					attack.dropv[0] = default_model_dropv[0];
-					attack.dropv[1] = default_model_dropv[1]*2.083f;
+					attack.dropv[0] = (obor_profile_build < 3681 ? 3.0f : default_model_dropv[0]);
+					attack.dropv[1] = (obor_profile_build < 3681 ? 2.5f : default_model_dropv[1]*2.083f);
 					attack.dropv[2] = 0;
 					attack.attack_force = GET_INT_ARG(5);
 					attack.no_block = GET_INT_ARG(6);
@@ -7315,8 +7677,8 @@ s_model* load_cached_model(char * name, char * owner, char unload)
 						bbox_con[2] = bbox[2] + bbox_con[0];
 						bbox_con[3] = bbox[3] + bbox_con[1];
 						bbox_con[4] = bbox[4];
-						bbox_con[5] = bbox[5];
-						if(bbox[5]>bbox[4])
+						bbox_con[5] = obor_profile_build >= 3729 ? bbox[5] : 0;
+						if(obor_profile_build >= 3729 && bbox[5]>bbox[4])
 						{
 							bbox[4] -= offset[1];
 							bbox[5] -= offset[1];
@@ -7325,7 +7687,7 @@ s_model* load_cached_model(char * name, char * owner, char unload)
 						attack.attack_coords[1] = abox[1] - offset[1];
 						attack.attack_coords[2] = abox[2] + attack.attack_coords[0];
 						attack.attack_coords[3] = abox[3] + attack.attack_coords[1];
-						if(attack.attack_coords[5]>attack.attack_coords[4])
+						if(obor_profile_build >= 3729 && attack.attack_coords[5]>attack.attack_coords[4])
 						{
 							attack.attack_coords[4] -= offset[1];
 							attack.attack_coords[5] -= offset[1];
@@ -7399,7 +7761,7 @@ s_model* load_cached_model(char * name, char * owner, char unload)
 					break;
 				case CMD_MODEL_COUNTERFRAME:
 					newanim->counterrange.framestart    = GET_FRAME_ARG(1);
-					newanim->counterrange.frameend	    = newanim->counterrange.framestart;
+					newanim->counterrange.frameend = obor_profile_build < 3681 ? GET_INT_ARG(1) : newanim->counterrange.framestart;
 					newanim->counterrange.condition	    = GET_INT_ARG(2);
 					newanim->counterrange.damaged	    = GET_INT_ARG(3);
 					break;
@@ -7428,7 +7790,7 @@ s_model* load_cached_model(char * name, char * owner, char unload)
 				case CMD_MODEL_SPAWNFRAME:
 					newanim->spawnframe    = malloc(5 * sizeof(newanim->spawnframe));
 					memset(newanim->spawnframe, 0, 5 * sizeof(newanim->spawnframe));
-					newanim->spawnframe[0] = GET_FRAME_ARG(1);
+					newanim->spawnframe[0] = obor_profile_build < 3681 ? GET_FLOAT_ARG(1) : GET_FRAME_ARG(1);
 					newanim->spawnframe[1] = GET_FLOAT_ARG(2);
 					newanim->spawnframe[2] = GET_FLOAT_ARG(3);
 					newanim->spawnframe[3] = GET_FLOAT_ARG(4);
@@ -7437,7 +7799,7 @@ s_model* load_cached_model(char * name, char * owner, char unload)
 				case CMD_MODEL_SUMMONFRAME:
 					newanim->summonframe    = malloc(5 * sizeof(newanim->summonframe));
 					memset(newanim->summonframe, 0, 5 * sizeof(newanim->summonframe));
-					newanim->summonframe[0] = GET_FRAME_ARG(1);
+					newanim->summonframe[0] = obor_profile_build < 3681 ? GET_FLOAT_ARG(1) : GET_FRAME_ARG(1);
 					newanim->summonframe[1] = GET_FLOAT_ARG(2);
 					newanim->summonframe[2] = GET_FLOAT_ARG(3);
 					newanim->summonframe[3] = GET_FLOAT_ARG(4);
@@ -7470,7 +7832,16 @@ s_model* load_cached_model(char * name, char * owner, char unload)
 					while(strncmp(buf+pos, "@end_script", 11)){
 						len++; pos++;
 					}
-					buffer_append(&scriptbuf, buf+pos-len, len, &sbsize, &scriptlen);
+					if(obor_profile_build < 3681)
+                    {
+                        size_t offset;
+                        for(offset = 0; offset < (size_t)len; ++offset)
+                        {
+                            char text[2] = { buf[pos-len+offset], 0 };
+                            buffer_append(&scriptbuf, text, 1, &sbsize, &scriptlen);
+                        }
+                    }
+                    else buffer_append(&scriptbuf, buf+pos-len, len, &sbsize, &scriptlen);
 					pos += 11;
 					
 					if(ani_id>=0)
@@ -7520,7 +7891,9 @@ s_model* load_cached_model(char * name, char * owner, char unload)
 					break;
 				default:
 					if(command && command[0]) {
-						if(!handle_txt_include(command, &arglist, &filename, fnbuf, &buf, &pos, &size))
+						if(obor_profile_build < 3695)
+                            printf("Command '%s' not understood in file '%s'!", command, filename);
+                        else if(!handle_txt_include(command, &arglist, &filename, fnbuf, &buf, &pos, &size))
 							printf("Command '%s' not understood in file '%s'!\n", command, filename);
 					}
 			}
@@ -7689,7 +8062,22 @@ s_model* load_cached_model(char * name, char * owner, char unload)
 	// we need to convert 8bit colourmap into 24bit palette
 	if(pixelformat==PIXEL_x8)
 	{
-		convert_map_to_palette(newchar, mapflag);
+		if(newchar->maps_loaded > 0)
+        {
+            unsigned int count = (unsigned)newchar->maps_loaded;
+            unsigned int required = obor_profile_build < 3739 ? MAX_COLOUR_MAPS : count;
+            if(count > required ||
+                !obor_mapflag_reserve(&mapflag, &mapflag_capacity, required))
+            {
+                shutdownmessage = "Failed to prepare colourmap flags.";
+                goto lCleanup;
+            }
+        }
+        if(!convert_map_to_palette(newchar, mapflag) && newchar->palette)
+        {
+            shutdownmessage = "Failed to convert colourmaps.";
+            goto lCleanup;
+        }
 	}
 
 	printf("Loading '%s' from %s\n", newchar->name, filename);
@@ -8248,7 +8636,7 @@ s_set_entry* add_set(){
 	else levelsets = calloc(1, sizeof(s_set_entry));
 	set = levelsets+num_difficulties-1;
 	memset(set, 0, sizeof(s_set_entry));
-	set->maxplayers = defaultmaxplayers;
+	set->maxplayers = obor_profile_build < 3667 ? 2 : defaultmaxplayers;
 	return set;
 }
 
@@ -8359,7 +8747,7 @@ void load_levelorder()
 		cmd = getLevelOrderCommand(levelordercmdlist, command);
 		switch(cmd) {
 			case CMD_LEVELORDER_BLENDFX:
-				for(i=0; i<MAX_BLENDINGS; i++)
+				for(i=0; i<OBOR_BLEND_COUNT; i++)
 				{
 					if(GET_INT_ARG(i+1)) blendfx[i] = 1;
 					else blendfx[i] = 0;
@@ -8380,7 +8768,7 @@ void load_levelorder()
 				break;
 			case CMD_LEVELORDER_SKIPSELECT:
 				CHKDEF;
-				if(arglist.count==1)
+				if(arglist.count==1 && obor_profile_build >= 3698)
 				{
 					set->noselect = 1;
 				}
@@ -8742,13 +9130,13 @@ void load_levelorder()
 			case CMD_LEVELORDER_SINGLE:
 				if(set) 
 					set->maxplayers = 1;
-				else
+				else if(obor_profile_build >= 3667)
 					defaultmaxplayers = 1;
 				break;
 			case CMD_LEVELORDER_MAXPLAYERS:
 				if(set) 
 					set->maxplayers = GET_INT_ARG(1);
-				else
+				else if(obor_profile_build >= 3667)
 					defaultmaxplayers = GET_INT_ARG(1);
 				break;
 			case CMD_LEVELORDER_NOSAME:
@@ -8873,9 +9261,9 @@ void free_level(s_level* lv)
 	s_spawn_script_cache_node* tempnode2;
 	if(!lv) return;
 	//offload blending tables
-	for(i=0; i<lv->numpalettes; i++)
+	for(i=0; lv->blendings && i<(obor_profile_build < 3739 ? 40 : lv->numpalettes); i++)
 	{
-		for(j=0; j<MAX_BLENDINGS; j++)
+		for(j=0; j<OBOR_BLEND_COUNT; j++)
 		{
 			if(lv->blendings[i][j]) free(lv->blendings[i][j]);
 			lv->blendings[i][j] = NULL;
@@ -8900,6 +9288,8 @@ void free_level(s_level* lv)
 		}
 	}
 
+    obor_filestream_level_clear();
+
 	//offload scripts
 	Script_Clear(&(lv->update_script), 2);
 	Script_Clear(&(lv->updated_script), 2);
@@ -8907,7 +9297,7 @@ void free_level(s_level* lv)
 	Script_Clear(&(lv->level_script), 2);
 	Script_Clear(&(lv->endlevel_script), 2);
 
-	for(i=0; i<lv->numspawns; i++)
+	for(i=0; lv->spawnpoints && i<(obor_profile_build < 3739 ? 600 : lv->numspawns); i++)
 	{
 		if(lv->spawnpoints[i].spawn_script_list_head)
 		{
@@ -8953,7 +9343,6 @@ void free_level(s_level* lv)
 	if(lv->walls) free(lv->walls);
 	if(lv->palettes) free(lv->palettes);
 	if(lv->blendings) free(lv->blendings);
-	if(lv->textobjs) free(lv->textobjs);
 
 	free(lv);
 	lv = NULL;
@@ -9015,6 +9404,12 @@ void unload_level(){
 	debug_time = 0;
 	neon_time = 0;
 	time = 0;
+    if(obor_scene_counters_active())
+    {
+        numPlatforms = 0;
+        numObstacles = 0;
+    }
+
 	cameratype = 0;
 	light[0] = 128;
 	light[1] = 64;
@@ -9093,6 +9488,52 @@ char* llHandleCommandSpawnscript(ArgList* arglist, s_spawn_entry* next) {
 }
 
 
+static int obor_textobjs_initialize(s_level *lv)
+{
+    s_textobj *objects;
+    if(!lv || lv->numtextobjs < 0 ||
+        (lv->numtextobjs && !lv->textobjs)) return 0;
+    if(obor_profile_build >= 3739) return 1;
+    if(lv->numtextobjs || lv->textobjs)
+        return lv->numtextobjs == LEVEL_MAX_TEXTOBJS && lv->textobjs != NULL;
+    objects = calloc(LEVEL_MAX_TEXTOBJS, sizeof(*objects));
+    if(!objects) return 0;
+    lv->textobjs = objects;
+    lv->numtextobjs = LEVEL_MAX_TEXTOBJS;
+    return 1;
+}
+
+static int obor_level_fixed_tables_initialize(s_level *lv)
+{
+    if(!lv) return 0;
+    if(obor_profile_build >= 3739) return 1;
+    if(lv->palettes || lv->blendings || lv->spawnpoints)
+        return lv->palettes && lv->blendings && lv->spawnpoints;
+    lv->palettes = calloc(40, sizeof(*lv->palettes));
+    if(!lv->palettes) return 0;
+    lv->blendings = calloc(40, sizeof(*lv->blendings));
+    if(!lv->blendings) return 0;
+    lv->spawnpoints = calloc(600, sizeof(*lv->spawnpoints));
+    return lv->spawnpoints != NULL;
+}
+
+/* Layer references are indices only while the loader builds its vectors.
+ * A separate token preserves a missing reference and a real first layer. */
+static s_layer *obor_layer_encode(int index)
+{
+    return (s_layer *)(uintptr_t)((size_t)index + 1u);
+}
+
+static s_layer *obor_layer_decode(s_level *lv, s_layer *token)
+{
+    size_t index = (size_t)(uintptr_t)token;
+    if(!lv || !lv->layersref || lv->numlayersref <= 0) return NULL;
+    if(index) --index;
+    else if(obor_profile_build < 3739) return NULL;
+    if(index >= (size_t)lv->numlayersref) return NULL;
+    return lv->layersref + index;
+}
+
 void load_level(char *filename){
 	char *buf = NULL;
 	size_t size, len;
@@ -9104,7 +9545,7 @@ void load_level(char *filename){
 	s_model *tempmodel, *cached_model;
 
 	int i = 0, j = 0, crlf = 0;
-	int usemap[MAX_BLENDINGS];
+	int usemap[OBOR_BLEND_STORAGE];
 	char bgPath[128] = {""}, fnbuf[128];
 	s_loadingbar bgPosi = {0, 0, 0, 0, 0, 0, 0};
 	char musicPath[128] = {""};
@@ -9164,6 +9605,10 @@ void load_level(char *filename){
 		errormessage = "load_level() #1 FATAL: Out of memory!";
 		goto lCleanup;
 	}
+	if(!obor_textobjs_initialize(level) || !obor_level_fixed_tables_initialize(level)) {
+		errormessage = "load_level() #1 FATAL: Out of memory!";
+		goto lCleanup;
+	}
 	len = strlen(filename);
 	level->name = malloc(len + 1);
 
@@ -9184,9 +9629,9 @@ void load_level(char *filename){
 	level->nohit = 0;    // Default able to hit the other player
 	level->spawn[0][2] = level->spawn[1][2] = level->spawn[2][2] = level->spawn[3][2] = 300;    // Set the default spawn a to 300
 	level->setweap = 0;
-	level->maxtossspeed = default_level_maxtossspeed;
-	level->maxfallspeed = default_level_maxfallspeed;
-	level->gravity = default_level_gravity;
+	level->maxtossspeed = obor_profile_build < 3681 ? 100 : default_level_maxtossspeed;
+	level->maxfallspeed = obor_profile_build < 3681 ? -6 : default_level_maxfallspeed;
+	level->gravity = obor_profile_build < 3681 ? (float)-0.1 : default_level_gravity;
 	level->scrolldir = SCROLL_RIGHT;
 	level->scrollspeed = 1;
 	level->cameraxoffset = 0;
@@ -9197,6 +9642,12 @@ void load_level(char *filename){
 	traveltime = 0;
 	texttime = 0;
 	nopause = 0;
+    if(obor_scene_counters_active())
+    {
+        numPlatforms = 0;
+        numObstacles = 0;
+    }
+
 	nofadeout = 0;
 	noscreenshot = 0;
 	panel_width = panel_height = frontpanels_loaded = 0;
@@ -9271,6 +9722,10 @@ void load_level(char *filename){
 			case CMD_LEVEL_BGLAYER:
 			case CMD_LEVEL_LAYER:
 			case CMD_LEVEL_FGLAYER:
+                if(obor_profile_build < 3739 && level->numlayers >= 100) {
+                    errormessage = "Too many layers in level (check LEVEL_MAX_LAYERS)!";
+                    goto lCleanup;
+                }
 				__realloc(level->layers, level->numlayers);
 				bgl = &(level->layers[level->numlayers]);
 
@@ -9336,6 +9791,10 @@ void load_level(char *filename){
 				level->numlayers++;
 				break;
 			case CMD_LEVEL_WATER:
+                if(obor_profile_build < 3739 && level->numlayers >= 100) {
+                    errormessage = "Too many layers in level (check LEVEL_MAX_LAYERS)!";
+                    goto lCleanup;
+                }
 				__realloc(level->layers, level->numlayers);
 				bgl = &(level->layers[level->numlayers]);
 				dm = &(bgl->drawmethod);
@@ -9478,6 +9937,10 @@ void load_level(char *filename){
 				break;
 			case CMD_LEVEL_FRONTPANEL:
 			case CMD_LEVEL_PANEL:
+                if(obor_profile_build < 3739 && level->numlayers >= 100) {
+                    errormessage = "Too many layers in level (check LEVEL_MAX_LAYERS)!";
+                    goto lCleanup;
+                }
 				if(level->numlayers==0) {
 					__realloc(level->layers,level->numlayers);
 					level->numlayers = 1; // reserve for background
@@ -9518,6 +9981,10 @@ void load_level(char *filename){
 
 				if(stricmp(GET_ARG(2), "none")!=0 && GET_ARG(2)[0])
 				{
+                if(obor_profile_build < 3739 && level->numlayers >= 100) {
+                    errormessage = "Too many layers in level (check LEVEL_MAX_LAYERS)!";
+                    goto lCleanup;
+                }
 				__realloc(level->layers,level->numlayers);
 				bgl = &(level->layers[level->numlayers]);
 				*bgl = *(bgl-1);
@@ -9532,6 +9999,10 @@ void load_level(char *filename){
 
 				if(stricmp(GET_ARG(3), "none")!=0 && GET_ARG(3)[0])
 				{
+                if(obor_profile_build < 3739 && level->numlayers >= 100) {
+                    errormessage = "Too many layers in level (check LEVEL_MAX_LAYERS)!";
+                    goto lCleanup;
+                }
 				__realloc(level->layers,level->numlayers);
 				bgl = &(level->layers[level->numlayers]);
 				*bgl = *(bgl-1);
@@ -9553,7 +10024,7 @@ void load_level(char *filename){
 				// Append to order
 				value = GET_ARG(1);
 				i = 0;
-				while(value[i] ){
+				while(value[i] && (obor_profile_build >= 3739 || level->numpanels < 100)){
 					j = value[i];
 					// WTF ?
 					if(j>='A' && j<='Z') j-='A';
@@ -9577,6 +10048,10 @@ void load_level(char *filename){
 					else holesprite = loadsprite("data/sprites/hole",0,0,pixelformat);    // ltb 1-18-05  no new sprite load the default
 				}
 
+                if(obor_profile_build < 3739 && level->numholes >= 40) {
+                    errormessage = "Too many holes in level (check LEVEL_MAX_HOLES)!";
+                    goto lCleanup;
+                }
 				__realloc(level->holes, level->numholes);
 				level->holes[level->numholes][0] = GET_FLOAT_ARG(1);
 				level->holes[level->numholes][1] = GET_FLOAT_ARG(2);
@@ -9595,6 +10070,10 @@ void load_level(char *filename){
 				level->numholes++;
 				break;
 			case CMD_LEVEL_WALL:
+                if(obor_profile_build < 3739 && level->numwalls >= 40) {
+                    errormessage = "Too many walls in level (check LEVEL_MAX_WALLS)!";
+                    goto lCleanup;
+                }
 				__realloc(level->walls, level->numwalls);
 				level->walls[level->numwalls][0] = GET_FLOAT_ARG(1);
 				level->walls[level->numwalls][1] = GET_FLOAT_ARG(2);
@@ -9607,9 +10086,15 @@ void load_level(char *filename){
 				level->numwalls++;
 				break;
 			case CMD_LEVEL_PALETTE:
+                if(obor_profile_build < 3739 && level->numpalettes >= 40) {
+                    errormessage = "Too many palettes in level (check LEVEL_MAX_PALETTES)!";
+                    goto lCleanup;
+                }
+                if(obor_profile_build >= 3739) {
 				__realloc(level->palettes, level->numpalettes);
 				__realloc(level->blendings, level->numpalettes);
-				for(i=0; i<MAX_BLENDINGS; i++)
+                }
+				for(i=0; i<OBOR_BLEND_COUNT; i++)
 					usemap[i] = GET_INT_ARG(i+2);
 				if(!load_palette(level->palettes[level->numpalettes], GET_ARG(1)) ||
 				!create_blending_tables(level->palettes[level->numpalettes], level->blendings[level->numpalettes], usemap))
@@ -9872,7 +10357,13 @@ void load_level(char *filename){
 				// Place entry on queue
 				next.at = GET_INT_ARG(1);
 
+                if(obor_profile_build < 3739 && level->numspawns >= 600) {
+                    errormessage = "too many spawn entries (see LEVEL_MAX_SPAWNS)";
+                    goto lCleanup;
+                }
+                if(obor_profile_build >= 3739) {
 				__realloc(level->spawnpoints, level->numspawns);
+                }
 				memcpy(&level->spawnpoints[level->numspawns], &next, sizeof(s_spawn_entry));
 				level->numspawns++;
 
@@ -9881,7 +10372,9 @@ void load_level(char *filename){
 				break;
 			default:
 				if(command && command[0]){
-					if(!handle_txt_include(command, &arglist, &filename, fnbuf, &buf, &pos, &size))
+					if(obor_profile_build < 3696)
+                            printf("Command '%s' not understood!", command);
+                        else if(!handle_txt_include(command, &arglist, &filename, fnbuf, &buf, &pos, &size))
 						printf("Command '%s' not understood in file '%s'!\n", command, filename);
 				}
 		}
@@ -9944,11 +10437,22 @@ void load_level(char *filename){
 			load_layer(NULL, i);
 		}
 
+        if(obor_profile_build < 3739)
+        {
+            level->bglayers = calloc(100, sizeof(*level->bglayers));
+            level->frontpanels = calloc(100, sizeof(*level->frontpanels));
+            if(!level->bglayers || !level->frontpanels)
+            {
+                errormessage = (char *)E_OUT_OF_MEMORY;
+                goto lCleanup;
+            }
+        }
+
 		if(level->background)
 		{
 			__realloc(level->layersref,level->numlayersref);
 			level->layersref[level->numlayersref] = *(level->background);
-			level->background = (s_layer*)(intptr_t)level->numlayersref++;
+			level->background = obor_layer_encode(level->numlayersref++);
 		}
 
 
@@ -9961,26 +10465,33 @@ void load_level(char *filename){
 				bgl = &(level->layersref[level->numlayersref]);
 				switch(bgl->oldtype){
 				case bgt_bglayer:
+                    if(obor_profile_build >= 3739) {
 					__realloc(level->bglayers,level->numbglayers);
-					level->bglayers[level->numbglayers++] = (s_layer*)(intptr_t)level->numlayersref;
+                    }
+					level->bglayers[level->numbglayers++] = obor_layer_encode(level->numlayersref);
 					break;
 				case bgt_fglayer:
 					__realloc(level->fglayers,level->numfglayers);
-					level->fglayers[level->numfglayers++] = (s_layer*)(intptr_t)level->numlayersref;
+					level->fglayers[level->numfglayers++] = obor_layer_encode(level->numlayersref);
 					break;
 				case bgt_water:
 					__realloc(level->waters,level->numwaters);
-					level->waters[level->numwaters++] = (s_layer*)(intptr_t)level->numlayersref;
+					level->waters[level->numwaters++] = obor_layer_encode(level->numlayersref);
 					break;
 				case bgt_generic:
 					__realloc(level->genericlayers,level->numgenericlayers);
-					level->genericlayers[level->numgenericlayers++] = (s_layer*)(intptr_t)level->numlayersref;
+					level->genericlayers[level->numgenericlayers++] = obor_layer_encode(level->numlayersref);
 					break;
 				case bgt_frontpanel:
 					bgl->xoffset = level->numfrontpanels*bgl->width;
 					bgl->xspacing = (frontpanels_loaded-1)*bgl->width;
-					__realloc(level->frontpanels,level->numfrontpanels);
-					level->frontpanels[level->numfrontpanels++] = (s_layer*)(intptr_t)level->numlayersref;
+                    if(obor_profile_build < 3739)
+                        level->bglayers[level->numfrontpanels++] = obor_layer_encode(level->numlayersref);
+                    else
+                    {
+                        __realloc(level->frontpanels,level->numfrontpanels);
+                        level->frontpanels[level->numfrontpanels++] = obor_layer_encode(level->numlayersref);
+                    }
 					break;
 				default:
 					break;
@@ -9999,27 +10510,26 @@ void load_level(char *filename){
 					level->layersref[level->numlayersref] = level->layers[panels[order[i]][j]];
 					bgl = &(level->layersref[level->numlayersref]);
 					bgl->xoffset = panel_width*i;
-					level->panels[i][j] = (s_layer*)(intptr_t)level->numlayersref;
+					level->panels[i][j] = obor_layer_encode(level->numlayersref);
 					level->numlayersref++;
 				}
 			}
 		}
 
-		//fix realloc junk pointers
-		bgl = level->layersref;
-		level->background = bgl + (size_t)level->background;
+		// Resolve loader indices; historical absent references retain their own meaning.
+		level->background = obor_layer_decode(level, level->background);
 		for(i=0; i<level->numpanels; i++)
-			for(j=0; j<3; j++) level->panels[i][j] = bgl + (size_t)level->panels[i][j];
+			for(j=0; j<3; j++) level->panels[i][j] = obor_layer_decode(level, level->panels[i][j]);
 		for(i=0; i<level->numfrontpanels; i++)
-			level->frontpanels[i] = bgl + (size_t)level->frontpanels[i];
-		for(i=0; i<level->numbglayers; i++)
-			level->bglayers[i] = bgl + (size_t)level->bglayers[i];
+			level->frontpanels[i] = obor_layer_decode(level, level->frontpanels[i]);
+		for(i=0; i<(obor_profile_build < 3739 && level->numfrontpanels > level->numbglayers ? level->numfrontpanels : level->numbglayers); i++)
+			level->bglayers[i] = obor_layer_decode(level, level->bglayers[i]);
 		for(i=0; i<level->numfglayers; i++)
-			level->fglayers[i] = bgl + (size_t)level->fglayers[i];
+			level->fglayers[i] = obor_layer_decode(level, level->fglayers[i]);
 		for(i=0; i<level->numgenericlayers; i++)
-			level->genericlayers[i] = bgl + (size_t)level->genericlayers[i];
+			level->genericlayers[i] = obor_layer_decode(level, level->genericlayers[i]);
 		for(i=0; i<level->numwaters; i++)
-			level->waters[i] = bgl + (size_t)level->waters[i];
+			level->waters[i] = obor_layer_decode(level, level->waters[i]);
 
 	}
 
@@ -10232,7 +10742,7 @@ void updatestatus(){
 		else if(player[i].joining && player[i].name[0])
 		{
 			model = findmodel(player[i].name);
-			if((player[i].playkeys & FLAG_ANYBUTTON || skipselect[i][0]) && !freezeall && !nojoin)    // Can't join while animations are frozen
+			if((player[i].playkeys & FLAG_ANYBUTTON || (obor_profile_build < 3698 ? set->skipselect[i] != NULL : skipselect[i][0] != 0)) && !freezeall && !nojoin)    // Can't join while animations are frozen
 			{
 				// reports error if players try to use the same character and sameplay mode is off
 				if(sameplayer){
@@ -10344,7 +10854,9 @@ void updatestatus(){
 			if(player[i].playkeys & FLAG_START)
 			{
 				player[i].lives = 0;
-				model = skipselect[i][0]?findmodel(skipselect[i]):nextplayermodel(NULL);
+				model = obor_profile_build < 3698 ?
+                    (set->skipselect[i] ? findmodel(set->skipselect[i]) : nextplayermodel(NULL)) :
+                    (skipselect[i][0] ? findmodel(skipselect[i]) : nextplayermodel(NULL));
 				strncpy(player[i].name, model->name, MAX_NAME_LEN);
 				player[i].colourmap = i;
 				 // Keep looping until a non-hmap is found
@@ -10524,7 +11036,11 @@ void predrawstatus(){
 			else font_printf(videomodes.shiftpos[i]+pnameJ[i][2], savedata.windowpos+pnameJ[i][3], pnameJ[i][6], 0, "Select Hero");
 			icon = model->icon.def;
 
-			if(icon>=0)
+			if(icon>=0 && obor_profile_build < 3673 && !player[i].colourmap)
+            {
+                spriteq_add_sprite(videomodes.shiftpos[i]+picon[i][0],picon[i][1],10000, icon, NULL, 0);
+            }
+            else if(icon>=0)
 			{
 				drawmethod.table = model_get_colourmap(model, player[i].colourmap);
 				spriteq_add_sprite(videomodes.shiftpos[i]+picon[i][0],picon[i][1], 10000, icon, &drawmethod, 0);
@@ -10756,8 +11272,9 @@ void free_ent(entity* e)
 		}
 		free(e->entvars); e->entvars = NULL;
 	}
-	free(e);
-	e = NULL;
+    obor_colourmap_owner_release(&e->modeldata);
+    free(e);
+    e = NULL;
 }
 
 void free_ents()
@@ -11083,11 +11600,42 @@ void ent_summon_ent(entity* ent){
 }
 
 // move here to prevent some duplicated code in ent_sent_anim and update_ents
+static void obor_profile_frame_unsummon(entity *ent, s_anim *anim, int f)
+{
+	s_attack attack;
+	if(anim->unsummonframe == f)
+	{
+		if(self->subentity)
+		{
+			self = self->subentity;
+			attack = emptyattack;
+			if(obor_profile_build < 3681)
+			{
+				attack.dropv[0] = 3.0f;
+				attack.dropv[1] = 1.2f;
+				attack.dropv[2] = 0.0f;
+			}
+			else
+			{
+				attack.dropv[0] = default_model_dropv[0];
+				attack.dropv[1] = default_model_dropv[1];
+				attack.dropv[2] = default_model_dropv[2];
+			}
+			attack.attack_force = self->health;
+			attack.attack_type = max_attack_types;
+			if(self->takedamage) self->takedamage(self, &attack);
+			else kill(self);
+			self = ent; // lol ...
+			self->subentity = NULL;
+		}
+	}
+
+}
+
 void update_frame(entity* ent, int f)
 {
 	entity* tempself;
 	entity* dust;
-	s_attack attack;
 	float move, movez, movea;
 	int iDelay, iED_Mode, iED_Capmin, iED_CapMax, iED_RangeMin, iED_RangeMax;
 	float fED_Factor;
@@ -11129,7 +11677,7 @@ void update_frame(entity* ent, int f)
 		}
 
 		self->nextanim = time + iDelay;
-		self->pausetime = 0;
+		if(obor_profile_build >= 3680) self->pausetime = 0;
 		execute_animation_script(self);
 	}
 
@@ -11184,24 +11732,8 @@ void update_frame(entity* ent, int f)
 		else anim->quakeframe.cnt = 0;
 	}
 
-	if(anim->unsummonframe == f)
-	{
-		if(self->subentity)
-		{
-			self = self->subentity;
-			attack = emptyattack;
-			attack.dropv[0] = default_model_dropv[0]; 
-			attack.dropv[1] = default_model_dropv[1]; 
-			attack.dropv[2] = default_model_dropv[2];
-			attack.attack_force = self->health;
-			attack.attack_type = max_attack_types;
-			if(self->takedamage) self->takedamage(self, &attack);
-			else kill(self);
-			self = ent; // lol ...
-			self->subentity = NULL;
-		}
-	}
-
+	if(obor_profile_build >= 3689)
+		obor_profile_frame_unsummon(ent, anim, f);
 	//spawn / summon /unsummon features
 	if(anim->spawnframe && anim->spawnframe[0] == f && anim->subentity) ent_spawn_ent(self);
 
@@ -11210,6 +11742,9 @@ void update_frame(entity* ent, int f)
 		//subentity is dead
 		if(!self->subentity || self->subentity->dead) ent_summon_ent(self);
 	}
+
+	if(obor_profile_build < 3689)
+		obor_profile_frame_unsummon(ent, anim, f);
 
 	if(anim->soundtoplay && anim->soundtoplay[f] >= 0)
 		sound_play_sample(anim->soundtoplay[f], 0, savedata.effectvol,savedata.effectvol, 100);
@@ -11279,17 +11814,17 @@ void ent_set_anim(entity *ent, int aninum, int resetable)
 	int animpos;
 
 	if(!ent) {
-		//printf("FATAL: tried to set animation with invalid address (no such object)");
+		if(obor_profile_build < 3694) printf("FATAL: tried to set animation with invalid address (no such object)");
 		return;
 	}
 
 	if(aninum<0 || aninum>=max_animations) {
-		//printf("FATAL: tried to set animation with invalid index (%s, %i)", ent->name, aninum);
+		if(obor_profile_build < 3694) printf("FATAL: tried to set animation with invalid index (%s, %i)", ent->name, aninum);
 		return;
 	}
 
 	if(!validanim(ent, aninum)) {
-		//printf("FATAL: tried to set animation with invalid address (%s, %i)", ent->name, aninum);
+		if(obor_profile_build < 3694) printf("FATAL: tried to set animation with invalid address (%s, %i)", ent->name, aninum);
 		return;
 	}
 
@@ -11315,6 +11850,9 @@ void ent_set_anim(entity *ent, int aninum, int resetable)
 		ent->animnum = aninum;    // Stored for nocost usage
 		ent->animation->animhits = 0;
 
+		if(obor_profile_build < 3680 && !resetable)
+			ent->obor_legacy_lastanimpos = -1;
+
 		ent->animating = 1;
 		ent->lasthit = ent->grabbing;
 		ent->altbase = 0;
@@ -11325,20 +11863,45 @@ void ent_set_anim(entity *ent, int aninum, int resetable)
 
 unsigned char* model_get_colourmap(s_model* model, unsigned which)
 {
+    if(!model) return NULL;
+    if(obor_profile_build < 3741 && which > 0)
+    {
+        if((obor_profile_build < 3739 && which > MAX_COLOUR_MAPS) ||
+            !model->colourmap || which > model->colourmap_capacity)
+            return NULL;
+        return model->colourmap[which - 1];
+    }
 	if(which<=0 || which>model->maps_loaded)
 		return model->palette;
-	else
-		return model->colourmap[which-1];
+    else if(!model->colourmap || which > model->colourmap_capacity)
+        return NULL;
+    else
+        return model->colourmap[which - 1];
 }
 
 // 0 = none, 1+ = alternative
 void ent_set_colourmap(entity *ent, unsigned int which)
 {
+    if(!ent) return;
+    if(obor_profile_build < 3739)
+    {
+        if(which > MAX_COLOUR_MAPS) which = 0;
+        if(which == 0)
+            ent->colourmap = ent->modeldata.palette;
+        else
+            ent->colourmap = ent->modeldata.colourmap &&
+                which <= ent->modeldata.colourmap_capacity ?
+                ent->modeldata.colourmap[which - 1] : NULL;
+        ent->map = which;
+        return;
+    }
 	if(which>ent->modeldata.maps_loaded) which = 0;
 	if(which<=0)
 		ent->colourmap = ent->modeldata.palette;
 	else
-		ent->colourmap = ent->modeldata.colourmap[which-1];
+        ent->colourmap = ent->modeldata.colourmap &&
+            which <= ent->modeldata.colourmap_capacity ?
+            ent->modeldata.colourmap[which - 1] : NULL;
 	ent->map = which;
 }
 
@@ -11405,19 +11968,26 @@ void ent_set_model(entity * ent, char * modelname, int syncAnim)
 	m = findmodel(modelname);
 	if(m==NULL) shutdown(1, "Model not found: '%s'", modelname);
 	oldmodel = ent->modeldata;
+    if(obor_scene_counters_active())
+        obor_scene_counter_adjust(&numPlatforms, (!ent->model || !ent->model->hasPlatforms) && m->hasPlatforms);
 	ent->model = m;
-	ent->modeldata = *m;
+	if(!obor_model_copy(&ent->modeldata, m))
+	{
+		shutdown(1, "Could not copy entity colourmaps.");
+	}
 	ent_copy_uninit(ent, &oldmodel);
 	ent_set_colourmap(ent, ent->map);
 
-	if(syncAnim && m->animation[ent->animnum])
+	if(obor_profile_build >= 3710 && syncAnim && m->animation && m->animation_capacity > 0 &&
+	   (size_t)ent->animnum < (size_t)m->animation_capacity &&
+	   (obor_profile_build < 3729 || m->animation[ent->animnum]))
 	{
 		ent->animation = m->animation[ent->animnum];
-		update_frame(ent, ent->animpos);
+		if(obor_profile_build >= 3739) update_frame(ent, ent->animpos);
 	}
 	else
 	{
-		ent->attacking = 0;
+		if(obor_profile_build >= 3710) ent->attacking = 0;
 
 		if((!selectScreen && !time) || ent->modeldata.type != TYPE_PLAYER)
 		{
@@ -11465,11 +12035,13 @@ entity * spawn(float x, float z, float a, int direction, char * name, int index,
 	// Be a bit more tolerant...
 	if(model==NULL)
 	{
-		/*
-		if(index>=0)
-			printf("FATAL: attempt to spawn object with invalid model cache id (%d)!\n", index);
-		else if(name)
-			printf("FATAL: attempt to spawn object with invalid model name (%s)!\n", name);*/
+		if(obor_profile_build < 3694)
+		{
+			if(index>=0)
+				printf("FATAL: attempt to spawn object with invalid model cache id (%d)!\n", index);
+			else if(name)
+				printf("FATAL: attempt to spawn object with invalid model name (%s)!\n", name);
+		}
 		return NULL;
 	}
 
@@ -11487,14 +12059,23 @@ entity * spawn(float x, float z, float a, int direction, char * name, int index,
 			vars    = e->entvars;
 			for(j=0; j<max_entity_vars; j++)
 				ScriptVariant_Clear(&vars[j]);
+            if(obor_profile_build < 3710)
+            {
+                memset(dfs, 0, sizeof(s_defense)*max_attack_types);
+                memset(ofs, 0, sizeof(float)*max_attack_types);
+            }
+            else
+            {
 			memcpy(dfs, model->defense, sizeof(s_defense)*max_attack_types);
 			memcpy(ofs, model->offense_factors, sizeof(float)*max_attack_types);
+            }
 			// clear up
 			clear_all_scripts(e->scripts, 1);
 			if(e->waypoints) free(e->waypoints);
 
-			scripts = e->scripts;
-			memset(e, 0, sizeof(entity));
+            scripts = e->scripts;
+            obor_colourmap_owner_release(&e->modeldata);
+            memset(e, 0, sizeof(entity));
 			e->drawmethod = plainmethod;
 			e->drawmethod.flag = 0;
 
@@ -11502,9 +12083,16 @@ entity * spawn(float x, float z, float a, int direction, char * name, int index,
 			e->exists = 1;
 			ent_count++;
 
-			e->modeldata = *model; // copy the entir model data here
+            if(!obor_model_copy(&e->modeldata, model))
+                shutdown(1, "Could not copy entity colourmaps.");
 			e->model = model;
 			e->defaultmodel = model;
+            if(obor_scene_counters_active())
+            {
+                if(e->modeldata.hasPlatforms) obor_scene_counter_adjust(&numPlatforms, 1);
+                if(e->modeldata.type & (TYPE_OBSTACLE | TYPE_TRAP))
+                    obor_scene_counter_adjust(&numObstacles, 1);
+            }
 
 			e->scripts = scripts;
 			// copy from model a fresh script
@@ -11587,6 +12175,12 @@ void kill(entity *victim)
 	victim->health = 0;
 	victim->exists = 0;
 	ent_count--;
+    if(obor_scene_counters_active())
+    {
+        obor_scene_counter_adjust(&numPlatforms, -victim->modeldata.hasPlatforms);
+        obor_scene_counter_adjust(&numObstacles,
+            -((victim->modeldata.type & (TYPE_OBSTACLE | TYPE_TRAP)) != 0));
+    }
 
 	clear_all_scripts(victim->scripts, 1);
 
@@ -11596,9 +12190,9 @@ void kill(entity *victim)
 	{
 		attack = emptyattack;
 		attack.attack_type = max_attack_types;
-		attack.dropv[0] = default_model_dropv[0]; 
-		attack.dropv[1] = default_model_dropv[1]; 
-		attack.dropv[2] = default_model_dropv[2];
+		attack.dropv[0] = (obor_profile_build < 3681 ? 3.0f : default_model_dropv[0]); 
+		attack.dropv[1] = (obor_profile_build < 3681 ? 1.2f : default_model_dropv[1]); 
+		attack.dropv[2] = (obor_profile_build < 3681 ? 0.0f : default_model_dropv[2]);
 	}
 	// kill minions
 	if(victim->modeldata.summonkill == 1 && victim->subentity)
@@ -11701,7 +12295,7 @@ int checkhit(entity *attacker, entity *target, int counter)
 		coords2 = target->animation->attacks[target->animpos]->attack_coords;
 	else return 0;
 
-	if(coords1[5] > coords1[4])
+	if(obor_profile_build >= 3729 && coords1[5] > coords1[4])
 	{
 		z1 += coords1[4] + (coords1[5]-coords1[4])/2;
 		zdist += (coords1[5]-coords1[4])/2;
@@ -11709,8 +12303,8 @@ int checkhit(entity *attacker, entity *target, int counter)
 	else if(coords1[4])
 		zdist += coords1[4];
 	else
-		zdist += attacker->modeldata.grabdistance/3+1;//temporay fix for integer to float conversion
-	if(coords2[5] > coords2[4])
+		zdist += attacker->modeldata.grabdistance/3 + (obor_profile_build >= 3685 ? 1 : 0);
+	if(obor_profile_build >= 3729 && coords2[5] > coords2[4])
 	{
 		z2 += coords2[4] + (coords2[5]-coords2[4])/2;
 		zdist += (coords2[5]-coords2[4])/2;
@@ -11942,7 +12536,7 @@ entity * check_platform_between(float x, float z, float amin, float amax, entity
 	entity *plat = NULL;
 	int i;
 
-	if(level==NULL) return NULL;
+	if(level==NULL || (obor_scene_counters_active() && numPlatforms<=0)) return NULL;
 
 	for(i=0; i<ent_max; i++)
 	{
@@ -11965,7 +12559,7 @@ entity * check_platform_above(float x, float z, float a, entity* exclude)
 	entity *plat = NULL;
 	int i, ind;
 
-	if(level==NULL) return NULL;
+	if(level==NULL || (obor_scene_counters_active() && numPlatforms<=0)) return NULL;
 
 	mina = 9999999;
 	ind = -1;
@@ -11991,7 +12585,7 @@ entity * check_platform_below(float x, float z, float a, entity* exclude)
 	entity *plat = NULL;
 	int i, ind;
 
-	if(level==NULL) return NULL;
+	if(level==NULL || (obor_scene_counters_active() && numPlatforms<=0)) return NULL;
 
 	maxa = MIN_INT;
 	ind = -1;
@@ -12015,7 +12609,7 @@ entity * check_platform_below(float x, float z, float a, entity* exclude)
 entity * check_platform(float x, float z, entity* exclude)
 {
 	int i;
-	if(level==NULL) return NULL;
+	if(level==NULL || (obor_scene_counters_active() && numPlatforms<=0)) return NULL;
 
 	for(i=0; i<ent_max; i++)
 	{
@@ -12075,7 +12669,7 @@ int testmove(entity* ent, float sx, float sz, float x, float z){
 	//-----------end of hole checking---------------
 
 	//--------------obstacle checking ------------------
-	if(ent->modeldata.subject_to_obstacle>0)
+	if(ent->modeldata.subject_to_obstacle>0 && (!obor_scene_counters_active() || numObstacles>0))
 	{
 		if((other = find_ent_here(ent, x, z, (TYPE_OBSTACLE | TYPE_TRAP), NULL)) &&
 		   (!other->animation->platform||!other->animation->platform[other->animpos][7]))
@@ -12131,6 +12725,28 @@ void set_opponent(entity* ent, entity* other)
 }
 
 
+/* Early profiles keep combat factors in the shared model record.
+ * Model buffers include the original extra sentinel slot; entity buffers do not. */
+static const s_defense *obor_combat_defense(const entity *ent, int index)
+{
+    const s_defense *factors;
+    size_t extent;
+    if(!ent || index < 0 || max_attack_types <= 0) return &default_defense;
+    factors = obor_profile_build < 3710 ? ent->modeldata.defense : ent->defense;
+    extent = (size_t)max_attack_types + (obor_profile_build < 3710 ? 1u : 0u);
+    return factors && (size_t)index < extent ? factors + index : &default_defense;
+}
+
+static float obor_combat_offense(const entity *ent, int index)
+{
+    const float *factors;
+    size_t extent;
+    if(!ent || index < 0 || max_attack_types <= 0) return 1.0f;
+    factors = obor_profile_build < 3710 ? ent->modeldata.offense_factors : ent->offense_factors;
+    extent = (size_t)max_attack_types + (obor_profile_build < 3710 ? 1u : 0u);
+    return factors && (size_t)index < extent ? factors[index] : 1.0f;
+}
+
 void do_attack(entity *e)
 {
 	int them;
@@ -12149,7 +12765,7 @@ void do_attack(entity *e)
 	s_anim* current_anim;
 	s_attack* attack = e->animation->attacks[e->animpos];
 	static unsigned int new_attack_id = 1;
-	int fdefense_blockthreshold = (int)self->defense[(short)attack->attack_type].blockthreshold; //Maximum damage that can be blocked for attack type.
+	int fdefense_blockthreshold = (int)obor_combat_defense(self, (short)attack->attack_type)->blockthreshold; //Maximum damage that can be blocked for attack type.
 
 	// Can't get hit after this
 	if(level_completed || !attack) return;
@@ -12218,8 +12834,9 @@ void do_attack(entity *e)
 			if(didhit)
 			{
 				if(attack->attack_type == ATK_ITEM){
+					 if(obor_profile_build < 3710) didfind_item(e);
 					 execute_didhit_script(e, self, force, attack->attack_drop, self->modeldata.subtype, attack->no_block, attack->guardcost, attack->jugglecost, attack->pause_add, 1);
-					 didfind_item(e);
+					 if(obor_profile_build >= 3710) didfind_item(e);
 					 return;
 				}
 				//if #051
@@ -12238,7 +12855,7 @@ void do_attack(entity *e)
 					self->frozen ||
 					(self->direction == e->direction && self->modeldata.blockback < 1) ||                       // Can't block an attack that is from behind unless blockback flag is enabled
 					(!self->idling && self->attacking>=0)) &&                                                   // Can't block if busy, attack <0 means the character is preparing to attack, he can block during this time
-					attack->no_block <= self->defense[attack->attack_type].blockpower &&       // If unblockable, will automatically hit
+					attack->no_block <= obor_combat_defense(self, attack->attack_type)->blockpower &&       // If unblockable, will automatically hit
 					(rand32()&self->modeldata.blockodds) == 1 &&                                                // Randomly blocks depending on blockodds (1 : blockodds ratio)
 					(!self->modeldata.thold || (self->modeldata.thold > 0 && self->modeldata.thold > force))&&
 					(!fdefense_blockthreshold ||                                                                //Specific attack type threshold.
@@ -12273,12 +12890,12 @@ void do_attack(entity *e)
 					self->blocking &&  // of course he must be blocking
 					((self->modeldata.guardpoints.maximum == 0) || (self->modeldata.guardpoints.maximum > 0 && self->modeldata.guardpoints.current > 0)) &&
 					!((self->direction == e->direction && self->modeldata.blockback < 1)|| self->frozen) &&    // Can't block if facing the wrong direction (unless blockback flag is enabled) or frozen in the block animation or opponent is a projectile
-					attack->no_block <= self->defense[(short)attack->attack_type].blockpower &&    // Make sure you are actually blocking and that the attack is blockable
+					attack->no_block <= obor_combat_defense(self, (short)attack->attack_type)->blockpower &&    // Make sure you are actually blocking and that the attack is blockable
 					(!self->modeldata.thold ||
 					(self->modeldata.thold > 0 &&
 					self->modeldata.thold > force))&&
-					(!self->defense[(short)attack->attack_type].blockthreshold ||                   //Specific attack type threshold.
-					(self->defense[(short)attack->attack_type].blockthreshold > force)))
+					(!obor_combat_defense(self, (short)attack->attack_type)->blockthreshold ||                   //Specific attack type threshold.
+					(obor_combat_defense(self, (short)attack->attack_type)->blockthreshold > force)))
 				{    // Only block if the attack is less than the players threshold
 					//execute the didhit script
 					execute_didhit_script(e, self, force, attack->attack_drop, attack->attack_type, attack->no_block, attack->guardcost, attack->jugglecost, attack->pause_add, 1);
@@ -12357,12 +12974,26 @@ void do_attack(entity *e)
 					}
 					topowner->combotime = time + combodelay; // well, add to its owner's combo
 
+					if(obor_profile_build < 3680)
+					{
+					if(e->animpos != e->obor_legacy_lastanimpos || (inair(e) && !equalairpause))          // if equalairpause is set, inair(e) is nolonger a condition for extra pausetime
+					{    // Adds pause to the current animation
+						e->toss_time += attack->pause_add;      // So jump height pauses in midair
+						e->nextanim += attack->pause_add;       //Pause animation for a bit
+						e->nextthink += attack->pause_add;      // So anything that auto moves will pause
+					}
+
+					e->obor_legacy_lastanimpos = e->animpos;
+					}
+					else
+					{
 					if(e->pausetime<time || (inair(e) && !equalairpause))          // if equalairpause is set, inair(e) is nolonger a condition for extra pausetime
 					{    // Adds pause to the current animation
 						e->toss_time += attack->pause_add;      // So jump height pauses in midair
 						e->nextanim += attack->pause_add;       //Pause animation for a bit
 						e->nextthink += attack->pause_add;      // So anything that auto moves will pause
 						e->pausetime = time + attack->pause_add ; //UT: temporary solution
+					}
 					}
 
 					self->toss_time += attack->pause_add;       // So jump height pauses in midair
@@ -12391,7 +13022,7 @@ void do_attack(entity *e)
 				//if #055
 				if((e->animation->followanim) &&                                        // follow up?
 					(e->animation->counterrange.framestart == -1) &&                                // This isn't suppossed to be a counter, right?
-					((e->animation->followcond < 2) || (self->modeldata.type & e->modeldata.hostile)) &&    // Does type matter?
+					((e->animation->followcond < 2) || (self->modeldata.type & (obor_profile_build < 3675 ? them : e->modeldata.hostile))) &&    // Does type matter?
 					((e->animation->followcond < 3) || ((self->health > 0) &&
 					!didblock)) &&                   // check if health or blocking matters
 					((e->animation->followcond < 4) || cangrab(e,self))  )// check if nograb matters
@@ -12412,7 +13043,7 @@ void do_attack(entity *e)
 				//2011/11/24 UT: move the pain_time logic here, 
 				// because block needs this as well otherwise blockratio causes instant death
 				self->pain_time = time + (attack->pain_time?attack->pain_time:(GAME_SPEED / 5));
-				self->nextattack = 0; // reset this, make it easier to fight back
+				if(obor_profile_build >= 3683) self->nextattack = 0; // reset this, make it easier to fight back
 			}//end of if #05
 			self = temp;
 		}//end of if #0
@@ -12445,15 +13076,15 @@ void do_attack(entity *e)
 		//04/27/2008 Damon Caskey: Added checks for defense property specfic blockratio and type. Could probably use some cleaning.
 		if(didblock)
 		{
-			if(blockratio || def->defense[(short)attack->attack_type].blockratio) // Is damage reduced?
+			if(blockratio || obor_combat_defense(def, (short)attack->attack_type)->blockratio) // Is damage reduced?
 			{
-				if (def->defense[(short)attack->attack_type].blockratio){                      //Typed blockratio?
-					force = (int)(force * def->defense[(short)attack->attack_type].blockratio);
+				if (obor_combat_defense(def, (short)attack->attack_type)->blockratio){                      //Typed blockratio?
+					force = (int)(force * obor_combat_defense(def, (short)attack->attack_type)->blockratio);
 				}else{                                                                            //No typed. Use static block ratio.
 					force = force / 4;
 				}
 
-				if(mpblock && !def->defense[(short)attack->attack_type].blocktype){                                                                                 // Drain MP bar first?
+				if(mpblock && !obor_combat_defense(def, (short)attack->attack_type)->blocktype){                                                                                 // Drain MP bar first?
 					def->mp -= force;
 					if(def->mp < 0)
 					{
@@ -12461,16 +13092,16 @@ void do_attack(entity *e)
 						def->mp = 0;
 					}
 					else force = 0;                                                               // Damage removed from MP!
-				}else if(def->defense[(short)attack->attack_type].blocktype==1){                //Damage from MP only for this attack type.
+				}else if(obor_combat_defense(def, (short)attack->attack_type)->blocktype==1){                //Damage from MP only for this attack type.
 					def->mp -= force;
 					if(def->mp < 0){
 						force = -def->mp;
 						def->mp = 0;
 					}
 					else force = 0;                                                               // Damage removed from MP!
-				}else if(def->defense[(short)attack->attack_type].blocktype==2){              //Damage from both HP and MP at once.
+				}else if(obor_combat_defense(def, (short)attack->attack_type)->blocktype==2){              //Damage from both HP and MP at once.
 					def->mp -= force;
-				}else if(def->defense[(short)attack->attack_type].blocktype==-1){             //Health only?
+				}else if(obor_combat_defense(def, (short)attack->attack_type)->blocktype==-1){             //Health only?
 					//Do nothing. This is so modders can overidde energycost.mponly 1 with health only.
 				}
 
@@ -12506,10 +13137,12 @@ void do_attack(entity *e)
 			if(noslowfx)
 			{
 				if(attack->hitsound >= 0) sound_play_sample(attack->hitsound, 0, savedata.effectvol,savedata.effectvol, 100);
+				else if(obor_profile_build < 3686 && SAMPLE_BEAT >= 0) sound_play_sample(SAMPLE_BEAT, 0, savedata.effectvol,savedata.effectvol, 100);
 			}
 			else
 			{
 				if(attack->hitsound >= 0) sound_play_sample(attack->hitsound, 0, savedata.effectvol,savedata.effectvol, 105 - force);
+				else if(obor_profile_build < 3686 && SAMPLE_BEAT >= 0) sound_play_sample(SAMPLE_BEAT, 0, savedata.effectvol,savedata.effectvol, 105 - force);
 			}
 		}
 
@@ -12679,9 +13312,9 @@ void check_lost()
 		else
 		{
 			attack              = emptyattack;
-			attack.dropv[0] = default_model_dropv[0];
-			attack.dropv[1] = default_model_dropv[1];
-			attack.dropv[2] = default_model_dropv[2];
+			attack.dropv[0] = (obor_profile_build < 3681 ? 3.0f : default_model_dropv[0]);
+			attack.dropv[1] = (obor_profile_build < 3681 ? 1.2f : default_model_dropv[1]);
+			attack.dropv[2] = (obor_profile_build < 3681 ? 0.0f : default_model_dropv[2]);
 			attack.attack_force = self->health;
 			attack.attack_type  = max_attack_types;
 			self->health = 0;
@@ -13187,8 +13820,8 @@ void common_dot()
 					eOpp        = self->dot_owner[iIndex];                                      //Get dot effect owner.
 					iType       = self->dot_atk[iIndex];                                        //Get attack type.
 					iFForce     = iForce;                                                       //Initialize final force.
-					fOffense    = eOpp->offense_factors[iType];                       //Get owner's offense.
-					fDefense    = self->defense[iType].factor;                       //Get Self defense.
+					fOffense    = obor_combat_offense(eOpp, iType);                       //Get owner's offense.
+					fDefense    = obor_combat_defense(self, iType)->factor;                       //Get Self defense.
 
 					if (fOffense){  iFForce = (int)(iForce  * fOffense);    }                   //Apply offense factors.
 					if (fDefense){  iFForce = (int)(iFForce * fDefense);    }                   //Apply defense factors.
@@ -13198,9 +13831,9 @@ void common_dot()
 						attack              = emptyattack;                                      //Clear struct.
 						attack.attack_type  = iType;                                            //Set type.
 						attack.attack_force = iForce;                                           //Set force. Use unmodified force here; takedamage applys damage mitigation.
-						attack.dropv[0]     = default_model_dropv[0];                           //Apply drop Y.
-						attack.dropv[1]     = default_model_dropv[1];                           //Apply drop X
-						attack.dropv[2]     = default_model_dropv[2];                           //Apply drop Z
+						attack.dropv[0]     = (obor_profile_build < 3682 ? 3.0f : default_model_dropv[0]);                           //Apply drop Y.
+						attack.dropv[1]     = (obor_profile_build < 3682 ? 1.2f : default_model_dropv[1]);                           //Apply drop X
+						attack.dropv[2]     = (obor_profile_build < 3682 ? 0.0f : default_model_dropv[2]);                           //Apply drop Z
 
 						if(self->takedamage)                                                    //Defender uses takedamage()?
 						{
@@ -13462,7 +14095,7 @@ void display_ents()
 						commonmethod = *drawmethod;
 					drawmethod = &commonmethod;
 
-					if(e->modeldata.alpha >=1 && e->modeldata.alpha <= MAX_BLENDINGS)
+					if(e->modeldata.alpha >=1 && e->modeldata.alpha <= OBOR_BLEND_COUNT)
 					{
 						if(drawmethod->alpha<0)
 						{
@@ -13580,7 +14213,7 @@ void display_ents()
 							shadowmethod = plainmethod;
 							shadowmethod.fillcolor = (shadowcolor>0?shadowcolor:0);
 							shadowmethod.alpha = shadowalpha;
-							shadowmethod.table = drawmethod->table;
+							if(obor_profile_build >= 3716) shadowmethod.table = drawmethod->table;
 							shadowmethod.scalex = drawmethod->scalex;
 							shadowmethod.flipx = drawmethod->flipx;
 							shadowmethod.scaley = light[1]*drawmethod->scaley/256;
@@ -13993,7 +14626,36 @@ void set_model_ex(entity* ent, char* modelname, int index, s_model* newmodel, in
 		}
 	}
 
-	ent_set_model(ent, newmodel->name, anim_flag);
+	if(obor_profile_build < 3710)
+	{
+		if(anim_flag)
+		{
+			ent->attacking = 0;
+			ent_set_model(ent, newmodel->name, 0);
+		}
+		else if(newmodel->animation && newmodel->animation_capacity > 0 &&
+		        (size_t)ent->animnum < (size_t)newmodel->animation_capacity)
+		{
+			s_model oldmodel = ent->modeldata;
+			ent->model = newmodel;
+			if(!obor_model_copy(&ent->modeldata, newmodel))
+			{
+				shutdown(1, "Could not copy entity colourmaps.");
+			}
+			ent->animation = newmodel->animation[ent->animnum];
+			ent_copy_uninit(ent, &oldmodel);
+            if(obor_scene_counters_active())
+                obor_scene_counter_adjust(&numPlatforms,
+                    !model->hasPlatforms && newmodel->hasPlatforms);
+		}
+		else
+		{
+			/* An absent historical table has no usable animation.
+			   Keep a defined native fallback within the allocated table. */
+			ent_set_model(ent, newmodel->name, 0);
+		}
+	}
+	else ent_set_model(ent, newmodel->name, anim_flag);
 
 	ent->modeldata.type = type;
 
@@ -14001,8 +14663,11 @@ void set_model_ex(entity* ent, char* modelname, int index, s_model* newmodel, in
 		clear_all_scripts(ent->scripts, 0);
 
 	copy_all_scripts(newmodel->scripts, ent->scripts, 0);
-	memcpy(ent->defense, ent->modeldata.defense, sizeof(s_defense)*max_attack_types);
-	memcpy(ent->offense_factors, ent->modeldata.offense_factors, sizeof(float)*max_attack_types);
+	if(obor_profile_build >= 3710)
+	{
+		memcpy(ent->defense, ent->modeldata.defense, sizeof(s_defense)*max_attack_types);
+		memcpy(ent->offense_factors, ent->modeldata.offense_factors, sizeof(float)*max_attack_types);
+	}
 
 	ent_set_colourmap(ent, ent->map);
 }
@@ -14844,7 +15509,7 @@ void checkdeath()
 
 void checkdamageflip(entity* other, s_attack* attack)
 {
-	if(other == NULL || other==self || (!self->drop && (attack->no_pain || self->modeldata.nopain || (self->defense[(short)attack->attack_type].pain && attack->attack_force < self->defense[(short)attack->attack_type].pain)))) return;
+	if(other == NULL || other==self || (!self->drop && (attack->no_pain || self->modeldata.nopain || (obor_combat_defense(self, (short)attack->attack_type)->pain && attack->attack_force < obor_combat_defense(self, (short)attack->attack_type)->pain)))) return;
 
 	if(!self->frozen && !self->modeldata.noflip)// && !inair(self))
 	{
@@ -14969,7 +15634,7 @@ void checkdamageeffects(s_attack* attack)
 void checkdamagedrop(s_attack* attack)
 {
 	int attackdrop = attack->attack_drop;
-	float fdefense_knockdown = self->defense[(short)attack->attack_type].knockdown;
+	float fdefense_knockdown = obor_combat_defense(self, (short)attack->attack_type)->knockdown;
 	if(self->modeldata.animal) self->drop = 1;
 	if(self->modeldata.guardpoints.maximum > 0 && self->modeldata.guardpoints.current <= 0) attackdrop = 0; //guardbreak does not knock down.
 	if(self->drop || attack->no_pain) return; // just in case, if we already fall, dont check fall again
@@ -15018,8 +15683,8 @@ void checkdamage(entity* other, s_attack* attack)
 	if(self->modeldata.guardpoints.maximum > 0 && self->modeldata.guardpoints.current <= 0) force = 0; //guardbreak does not deal damage.
 	if(!(self->damage_on_landing && self == other) && !other->projectile && type >= 0 && type<max_attack_types)
 	{
-		force = (int)(force * other->offense_factors[type]);
-		force = (int)(force * self->defense[type].factor);
+		force = (int)(force * obor_combat_offense(other, type));
+		force = (int)(force * obor_combat_defense(self, type)->factor);
 	}
 
 	self->health -= force; //Apply damage.
@@ -15173,7 +15838,7 @@ int common_takedamage(entity *other, s_attack* attack)
 		set_pain(self, self->damagetype, 0);
 	}
 	// Don't change to pain animation if frozen
-	else if(!self->frozen && !self->modeldata.nopain && !attack->no_pain && !(self->defense[(short)attack->attack_type].pain && attack->attack_force < self->defense[(short)attack->attack_type].pain))
+	else if(!self->frozen && !self->modeldata.nopain && !attack->no_pain && !(obor_combat_defense(self, (short)attack->attack_type)->pain && attack->attack_force < obor_combat_defense(self, (short)attack->attack_type)->pain))
 	{
 		self->takeaction = common_pain;
 		set_pain(self, self->damagetype, 1);
@@ -15309,6 +15974,25 @@ int check_attack_chance(entity* target, float min, float max){
 	
 	float chance, chance1, chance2;//, aggfix;
 
+	if(obor_profile_build < 3683)
+	{
+		if(obor_profile_build >= 3676 &&
+		   (self->modeldata.aiattack&AIATTACK1_ALWAYS)) return 1;
+
+		if(self->x<screenx-10 || self->x>screenx+videomodes.hRes+10)
+		{
+			if(obor_profile_build < 3682) chance = MAX(0.9,max);
+			else chance = MAX(0.75,max);
+		}
+		else
+		{
+			chance = (diff(self->x, self->destx)+diff(self->z, self->destz))/(videomodes.hRes+videomodes.vRes)*3;
+			if(chance>max) chance = max;
+			else if(chance<min) chance = min;
+		}
+		return (randf(1)>=chance);
+	}
+
 	if(self->modeldata.aiattack&AIATTACK1_ALWAYS) return 1;
 
 	chance1 = MIN(1.0f,(diff(self->x, self->destx)+diff(self->z, self->destz))/(videomodes.hRes+videomodes.vRes)*move_noatk_factor);
@@ -15319,7 +16003,8 @@ int check_attack_chance(entity* target, float min, float max){
 	if(chance>max) chance = max;
 	else if(chance<min) chance = min;
 
-	chance *= (1.0-self->modeldata.attackthrottle);
+	if(obor_profile_build >= 3685)
+		chance *= (1.0-self->modeldata.attackthrottle);
 
 	if(self->x<screenx-10 || self->x>screenx+videomodes.hRes+10){
 		chance *= (1.0-offscreen_noatk_factor);
@@ -15332,6 +16017,12 @@ int check_attack_chance(entity* target, float min, float max){
 //give it a chance to reset current noattack timer
 u32 recheck_nextattack(entity* target)
 {
+	if(obor_profile_build < 3685)
+	{
+		if(target->running || target->attacking) self->nextattack = 0;
+		return self->nextattack;
+	}
+
 	if(target->blocking) self->nextattack = 0;
 	else if(target->attacking && self->nextattack>4) self->nextattack-=4;
 	else if(target->jumping && self->nextattack>16) self->nextattack-=16;
@@ -15341,13 +16032,18 @@ u32 recheck_nextattack(entity* target)
 
 int common_try_normalattack(entity* target)
 {
+	int ec, attack_now;
 	target = normal_find_target(-1, 0);
+
+	if(obor_profile_build < 3683 && self->nextattack>time) return 0;
 
 	if(!target) return 0;
 
-	recheck_nextattack(target);
-
-	if(recheck_nextattack(target)>time) return 0;
+	if(obor_profile_build >= 3683)
+	{
+		recheck_nextattack(target);
+		if(recheck_nextattack(target)>time) return 0;
+	}
 
 	if(!target->animation->vulnerable[target->animpos] && (target->drop || target->attacking || target->takeaction==common_rise)) 
 		return 0;
@@ -15356,8 +16052,23 @@ int common_try_normalattack(entity* target)
 		if(self->combostep[0] && self->combotime>time) self->stalltime = time+1;
 		else 
 		{
-			if(!check_attack_chance(target, 1.0f-min_noatk_chance, 1.0f-min_noatk_chance)) {
-				self->nextattack = time + randf(self->modeldata.attackthrottletime);
+			if(obor_profile_build < 3683)
+			{
+				ec = count_ents(self->modeldata.type)-1;
+				attack_now = check_attack_chance(target, MIN(ec/10.0, 0.5), MIN(ec/10.0, 0.5)+0.4);
+			}
+			else if(obor_profile_build < 3684)
+				attack_now = check_attack_chance(target, min_noatk_chance, max_noatk_chance);
+			else
+				attack_now = check_attack_chance(target, 1.0f-min_noatk_chance, 1.0f-min_noatk_chance);
+
+			if(!attack_now) {
+				if(obor_profile_build < 3683)
+					self->nextattack = time + (int)randf(GAME_SPEED*3/4);
+				else if(obor_profile_build < 3685)
+					self->nextattack = time + (int)randf(GAME_SPEED*noatk_duration);
+				else
+					self->nextattack = time + randf(self->modeldata.attackthrottletime);
 				return 0;
 			} else
 				self->stalltime = time + (int)randf((float)MAX(1,GAME_SPEED*3/4 - self->modeldata.aggression));
@@ -15377,6 +16088,7 @@ int common_try_jumpattack(entity* target)
 {
 	entity* dust;
 	int rnum, ani = 0;
+	if(obor_profile_build < 3683 && self->nextattack>time) return 0;
 	if((validanim(self,ANI_JUMPATTACK) || validanim(self,ANI_JUMPATTACK2)))
 	{
 		if(!validanim(self,ANI_JUMPATTACK)) rnum = 1;
@@ -15387,13 +16099,18 @@ int common_try_jumpattack(entity* target)
 			// do a jumpattack
 			(target || (target = normal_find_target(ANI_JUMPATTACK,0))) )
 		{
-			if(recheck_nextattack(target)>time) return 0;
+			if(obor_profile_build >= 3683 && recheck_nextattack(target)>time) return 0;
 
 			if(!target->animation->vulnerable[target->animpos] && (target->drop || target->attacking))
 				rnum = -1;
 			else{
-				if(!check_attack_chance(target,0.05f,0.4f)) {
-					self->nextattack = time + randf(self->modeldata.attackthrottletime);
+				if(!check_attack_chance(target, obor_profile_build < 3684 ? 0.6f : 0.05f, obor_profile_build < 3684 ? 0.95f : 0.4f)) {
+					if(obor_profile_build < 3683)
+						self->nextattack = time + GAME_SPEED/2;
+					else if(obor_profile_build < 3685)
+						self->nextattack = time + (int)randf(GAME_SPEED*noatk_duration);
+					else
+						self->nextattack = time + randf(self->modeldata.attackthrottletime);
 					return 0;
 				}
 				//ent_set_anim(self, ANI_JUMPATTACK, 0);
@@ -15407,13 +16124,18 @@ int common_try_jumpattack(entity* target)
 			// do a jumpattack2
 			(target || (target = normal_find_target(ANI_JUMPATTACK2,0))) )
 		{
-			if(recheck_nextattack(target)>time) return 0;
+			if(obor_profile_build >= 3683 && recheck_nextattack(target)>time) return 0;
 
 			if(!target->animation->vulnerable[target->animpos] && (target->drop || target->attacking))
 				rnum = -1;
 			else{
-				if(!check_attack_chance(target,0.05f,0.5f)) {
-					self->nextattack = time + randf(self->modeldata.attackthrottletime);
+				if(!check_attack_chance(target, obor_profile_build < 3684 ? 0.5f : 0.05f, obor_profile_build < 3684 ? 0.95f : 0.5f)) {
+					if(obor_profile_build < 3683)
+						self->nextattack = time + GAME_SPEED/2;
+					else if(obor_profile_build < 3685)
+						self->nextattack = time + (int)randf(GAME_SPEED*noatk_duration);
+					else
+						self->nextattack = time + randf(self->modeldata.attackthrottletime);
 					return 0;
 				}
 				//ent_set_anim(self, ANI_JUMPATTACK2, 0);
@@ -15473,7 +16195,7 @@ int normal_attack()
 	//int rnum;
 
 	//rnum = rand32()&7;
-	if( common_try_grab(NULL) ||
+	if( (obor_profile_build >= 3685 && common_try_grab(NULL)) ||
 		common_try_upper(NULL) ||
 		common_try_block(NULL) ||
 		common_try_runattack(NULL) ||
@@ -15586,6 +16308,7 @@ int adjust_grabposition(entity* ent, entity* other, float dist, int grabin)
 
 	if(ent->a!=other->a) return 0;
 	if(ent->base!=other->base) return 0;
+	if((obor_profile_build == 3685 || obor_profile_build == 3686) && dist<0) return 0;
 
 	if(grabin==1)
 	{
@@ -15744,7 +16467,7 @@ int common_trymove(float xdir, float zdir)
 	//-----------end of hole checking---------------
 
 	//--------------obstacle checking ------------------
-	if(self->modeldata.subject_to_obstacle>0 /*&& !inair(self)*/)
+	if(self->modeldata.subject_to_obstacle>0 && (!obor_scene_counters_active() || numObstacles>0) /*&& !inair(self)*/)
 	{
 		if((other = find_ent_here(self, x, self->z, (TYPE_OBSTACLE | TYPE_TRAP), NULL)) &&
 		   (xdir>0 ? other->x > self->x: other->x < self->x) &&
@@ -15813,11 +16536,13 @@ int common_trymove(float xdir, float zdir)
 	//----------------end of wall checking--------------
 
 	//------------------ grab/throw checking------------------
-	if(self->modeldata.type==TYPE_PLAYER &&
+	if((obor_profile_build < 3685 || self->modeldata.type==TYPE_PLAYER) &&
 		(rand()&7)==0 &&
 		(validanim(self,ANI_THROW) ||
 		 validanim(self,ANI_GRAB)) && self->idling &&
-		(other = find_ent_here(self, self->x, self->z, self->modeldata.hostile, NULL)))
+		(other = find_ent_here(self,
+			obor_profile_build < 3685 ? x : self->x,
+			obor_profile_build < 3685 ? z : self->z, self->modeldata.hostile, NULL)))
 	{
 		if(trygrab(other)) return 0;
 	}
@@ -15978,7 +16703,7 @@ int common_attack()
 
 	//if(stalker==self) return 0;
 
-	if(time/THINK_SPEED%4==0) return 0; 
+	if(obor_profile_build >= 3685 && time/THINK_SPEED%4==0) return 0; 
 
 	if(self->modeldata.aiattack==-1) return 0;
 
@@ -16755,8 +17480,16 @@ int common_try_wander(entity* target, int dox, int doz)
 		returndx = videomodes.hRes/4;
 		returndz = videomodes.vRes/8;
 	}else{ // only chase when too far away
-		returndx = videomodes.hRes*0.6;
-		returndz = videomodes.vRes*0.4;
+		if(obor_profile_build < 3684)
+		{
+			returndx = videomodes.hRes/2;
+			returndz = videomodes.vRes/3;
+		}
+		else
+		{
+			returndx = videomodes.hRes*0.6;
+			returndz = videomodes.vRes*0.4;
+		}
 	}
 	if(rnum>7){
 		borderdx = videomodes.hRes/8;
@@ -16796,10 +17529,24 @@ int common_try_wander(entity* target, int dox, int doz)
 				self->destx = target->x - grabd;
 				break;
 			case 1:
-				self->destx = target->x + videomodes.hRes*0.4 + (self->health/3%20);
+				if(obor_profile_build < 3684)
+				{
+					self->destx = target->x + videomodes.hRes/3 + (self->health/3%20);
+				}
+				else
+				{
+					self->destx = target->x + videomodes.hRes*0.4 + (self->health/3%20);
+				}
 				break;
 			case 3:
-				self->destx = target->x - videomodes.hRes*0.4 - (self->health/3%20);;
+				if(obor_profile_build < 3684)
+				{
+					self->destx = target->x - videomodes.hRes/3 - (self->health/3%20);;
+				}
+				else
+				{
+					self->destx = target->x - videomodes.hRes*0.4 - (self->health/3%20);;
+				}
 				break;
 			}
 			self->xdir = self->x>self->destx?-self->modeldata.speed:self->modeldata.speed;
@@ -16831,10 +17578,24 @@ int common_try_wander(entity* target, int dox, int doz)
 				self->destz = target->z - grabd/2;
 				break;
 			case 2:
-				self->destz = target->z + MIN((PLAYER_MAX_Z-PLAYER_MIN_Z), videomodes.vRes)*0.25+(self->health/3%5);
+				if(obor_profile_build < 3684)
+				{
+					self->destz = target->z + MIN((PLAYER_MAX_Z-PLAYER_MIN_Z), videomodes.vRes)/4+(self->health/3%5);
+				}
+				else
+				{
+					self->destz = target->z + MIN((PLAYER_MAX_Z-PLAYER_MIN_Z), videomodes.vRes)*0.25+(self->health/3%5);
+				}
 				break;
 			case 0:
-				self->destz = target->z - MIN((PLAYER_MAX_Z-PLAYER_MIN_Z), videomodes.vRes)*0.25-(self->health/3%5);
+				if(obor_profile_build < 3684)
+				{
+					self->destz = target->z - MIN((PLAYER_MAX_Z-PLAYER_MIN_Z), videomodes.vRes)/4-(self->health/3%5);
+				}
+				else
+				{
+					self->destz = target->z - MIN((PLAYER_MAX_Z-PLAYER_MIN_Z), videomodes.vRes)*0.25-(self->health/3%5);
+				}
 				break;
 			}
 			self->zdir = self->z>self->destz?-self->modeldata.speed/2:self->modeldata.speed/2;
@@ -16905,8 +17666,9 @@ void common_pickupitem(entity* other){
 	// hide it
 	if(pickup)
 	{
+		if(obor_profile_build < 3710) other->z = 100000;
 		execute_didhit_script(other, self, 0, 0, other->modeldata.subtype, 0, 0, 0, 0, 0); //Execute didhit script as if item "hit" collecter to allow easy item scripting.
-		other->z = 100000;
+		if(obor_profile_build >= 3710) other->z = 100000;
 	}
 }
 
@@ -17062,7 +17824,8 @@ int star_move(){
 		{
 			self->takeaction = common_fall;
 			self->attacking = 0;
-			self->health = 0;
+			self->health = obor_profile_build < 3710 ?
+                (self->health < INT_MIN + 100000 ? INT_MIN : self->health - 100000) : 0;
 			self->projectile = 0;
 			self->xdir = (self->direction)?(-1.2):1.2;
 			self->damage_on_landing = 0;
@@ -17074,7 +17837,8 @@ int star_move(){
 	if(self->landed_on_platform || self->base <= 0)
 	{
 		self->takeaction = common_lie;
-		self->health = 0;
+		self->health = obor_profile_build < 3710 ?
+                (self->health < INT_MIN + 100000 ? INT_MIN : self->health - 100000) : 0;
 		if(self->modeldata.nodieblink == 2) self->animating = 0;
 	}
 
@@ -18288,10 +19052,11 @@ void player_jump_check()
 				if(candospecial)
 				{
 					player[self->playerindex].playkeys -= FLAG_SPECIAL;
+					if(obor_profile_build < 3722) ent_set_anim(self, ANI_JUMPSPECIAL, 0);
 					self->attacking = 1;
 					self->xdir = self->zdir = 0;                         // Kill movement when the special starts
 					self->tossv = 0;
-					ent_set_anim(self, ANI_JUMPSPECIAL, 0);
+					if(obor_profile_build >= 3722) ent_set_anim(self, ANI_JUMPSPECIAL, 0);
 				}
 			}
 		}//end of jumpspecial
@@ -18404,7 +19169,7 @@ int check_costmove(int s, int fs, int jumphack)
 	   (check_energy(0, s) ||
 		check_energy(1, s))  )
 	{
-		if(!jumphack) self->takeaction = common_attack_proc;
+		if(obor_profile_build < 3672 || !jumphack) self->takeaction = common_attack_proc;
 		if(!nocost && !healthcheat)
 		{
 			if(check_energy(1, s)) self->mp -= self->modeldata.animation[s]->energycost.cost;
@@ -18590,7 +19355,7 @@ void player_think()
 	if(pl->playkeys & FLAG_MOVEUP)
 	{
 		t = (notinair&&match_combo(uu, pl, 2));
-		if(t && (self->modeldata.runupdown&2) && validanim(self,ANI_RUN)){
+		if(obor_profile_build >= 3690 && t && (self->modeldata.runupdown&2) && validanim(self,ANI_RUN)){
 			pl->playkeys &= ~FLAG_MOVEUP;
 			pl->combostep = (pl->combostep-1+MAX_SPECIAL_INPUTS)%MAX_SPECIAL_INPUTS;
 			self->running = 1;    // Player begins to run
@@ -18622,7 +19387,7 @@ void player_think()
 	if(pl->playkeys & FLAG_MOVEDOWN)
 	{
 		t = (notinair&&match_combo(dd, pl, 2));
-		if(t && (self->modeldata.runupdown&2) && validanim(self,ANI_RUN)){
+		if(obor_profile_build >= 3690 && t && (self->modeldata.runupdown&2) && validanim(self,ANI_RUN)){
 			pl->playkeys &= ~FLAG_MOVEDOWN;
 			pl->combostep = (pl->combostep-1+MAX_SPECIAL_INPUTS)%MAX_SPECIAL_INPUTS;
 			self->running = 1;    // Player begins to run
@@ -18795,12 +19560,13 @@ void player_think()
 
 		if( validanim(self,ANI_GET) && (other = find_ent_here(self, self->x, self->z, TYPE_ITEM, player_test_pickable)) )
 		{
+			if(obor_profile_build < 3710) didfind_item(other);
 			self->xdir = self->zdir = 0;
 			set_getting(self);
 			self->takeaction = common_get;
 			ent_set_anim(self, ANI_GET, 0);
 			execute_didhit_script(other, self, 0, 0, other->modeldata.subtype, 0, 0, 0, 0, 0); //Execute didhit script as if item "hit" collecter to allow easy item scripting.
-			didfind_item(other);
+			if(obor_profile_build >= 3710) didfind_item(other);
 			goto endthinkcheck;
 		}
 
@@ -18904,7 +19670,7 @@ void player_think()
 	}
 
 	//dang long run checking logic
-	if(self->running){
+	if(obor_profile_build >= 3690 && self->running){
 		runx=runz=movex=movez=0;
 		if(pl->keys & FLAG_MOVEUP) movez--;
 		if(pl->keys & FLAG_MOVEDOWN) movez++;
@@ -18938,7 +19704,7 @@ void player_think()
 	{    // More of a platform feel
 		if(pl->keys & FLAG_MOVEUP)
 		{
-			//if(!self->modeldata.runupdown ) self->running = 0;    // Quits running if player presses up (or the up animation exists
+			if(obor_profile_build < 3690 && !self->modeldata.runupdown) self->running = 0;    // Quits running if player presses up (or the up animation exists
 
 			if(validanim(self,ANI_UP) && !self->running)
 			{
@@ -18958,7 +19724,7 @@ void player_think()
 		}
 		else if(pl->keys & FLAG_MOVEDOWN)
 		{
-			//if(!self->modeldata.runupdown ) self->running = 0;    // Quits running if player presses down (or the down animation exists
+			if(obor_profile_build < 3690 && !self->modeldata.runupdown) self->running = 0;    // Quits running if player presses down (or the down animation exists
 
 			if(validanim(self,ANI_DOWN) && !self->running )
 			{
@@ -18990,7 +19756,7 @@ void player_think()
 	{
 		if(self->direction)
 		{
-			//self->running = 0;    // Quits running if player changes direction
+			if(obor_profile_build < 3690) self->running = 0;    // Quits running if player changes direction
 			if(self->modeldata.turndelay && !self->turntime)
 				self->turntime = time + self->modeldata.turndelay;
 			else if(self->turntime && time >= self->turntime)
@@ -19000,7 +19766,7 @@ void player_think()
 				{
 					self->takeaction = common_turn;
 					set_turning(self);
-					self->xdir=self->zdir=0;
+					if(obor_profile_build >= 3679) self->xdir=self->zdir=0;
 					ent_set_anim(self, ANI_TURN, 0);
 					goto endthinkcheck;
 				}
@@ -19010,7 +19776,7 @@ void player_think()
 			{
 				self->takeaction = common_turn;
 				set_turning(self);
-				self->xdir=self->zdir=0;
+				if(obor_profile_build >= 3679) self->xdir=self->zdir=0;
 				ent_set_anim(self, ANI_TURN, 0);
 				goto endthinkcheck;
 			}
@@ -19037,7 +19803,7 @@ void player_think()
 	{
 		if(!self->direction)
 		{
-			//self->running = 0;    // Quits running if player changes direction
+			if(obor_profile_build < 3690) self->running = 0;    // Quits running if player changes direction
 			if(self->modeldata.turndelay && !self->turntime)
 				self->turntime = time + self->modeldata.turndelay;
 			else if(self->turntime && time >= self->turntime)
@@ -19047,7 +19813,7 @@ void player_think()
 				{
 					self->takeaction = common_turn;
 					set_turning(self);
-					self->xdir=self->zdir=0;
+					if(obor_profile_build >= 3679) self->xdir=self->zdir=0;
 					ent_set_anim(self, ANI_TURN, 0);
 					goto endthinkcheck;
 				}
@@ -19057,7 +19823,7 @@ void player_think()
 			{
 				self->takeaction = common_turn;
 				set_turning(self);
-				self->xdir=self->zdir=0;
+				if(obor_profile_build >= 3679) self->xdir=self->zdir=0;
 				ent_set_anim(self, ANI_TURN, 0);
 				goto endthinkcheck;
 			}
@@ -19083,7 +19849,7 @@ void player_think()
 	else if(!((pl->keys & FLAG_MOVELEFT) ||
 		(pl->keys & FLAG_MOVERIGHT)) )
 	{
-		//self->running = 0;    // Player let go of left/right and so quits running
+		if(obor_profile_build < 3690) self->running = 0;    // Player let go of left/right and so quits running
 		self->xdir = 0;
 		self->turntime = 0;
 	}
@@ -19152,7 +19918,7 @@ int common_idle_anim(entity* ent)
 	int iAni;                                                                           //Animation.
 	entity* tempself = self;
 
-	self = ent;
+	if(obor_profile_build >= 3680) self = ent;
 
 	if (ent->model->subtype != SUBTYPE_BIKER && ent->model->type != TYPE_NONE) // biker fix by Plombo // type none being "idle" prevented contra locked and loaded from working correctly. fixed by anallyst
 		ent->xdir = ent->zdir = 0;                                                      //Stop movement.
@@ -19175,9 +19941,12 @@ int common_idle_anim(entity* ent)
 
 			if (validanim(ent, iAni) && iAni != ANI_IDLE)                               //Valid and not ANI_IDLE?
 			{
-				tempself = self;
-				self = ent;
-				if (normal_find_target(iAni,0))                                           //Opponent in range of current animation?
+				if(obor_profile_build >= 3680)
+				{
+					tempself = self;
+					self = ent;
+				}
+				if (self && normal_find_target(iAni,0))                                           //Opponent in range of current animation?
 				{
 					ent_set_anim(ent, iAni, 0);                                         //Set animation.
 					goto found;                                                          //Return 1 and exit.
@@ -19192,10 +19961,10 @@ int common_idle_anim(entity* ent)
 		}
 	}
 
-	self = tempself;
+	if(obor_profile_build >= 3680) self = tempself;
 	return 0;
 found:
-	self = tempself;
+	if(obor_profile_build >= 3680) self = tempself;
 	return 1;
 }
 
@@ -19480,9 +20249,9 @@ void kill_all_enemies()
 
 	attack = emptyattack;
 	attack.attack_type = max_attack_types;
-	attack.dropv[0] = default_model_dropv[0]; 
-	attack.dropv[1] = default_model_dropv[1];
-	attack.dropv[2] = default_model_dropv[2];
+	attack.dropv[0] = (obor_profile_build < 3681 ? 3.0f : default_model_dropv[0]); 
+	attack.dropv[1] = (obor_profile_build < 3681 ? 1.2f : default_model_dropv[1]);
+	attack.dropv[2] = (obor_profile_build < 3681 ? 0.0f : default_model_dropv[2]);
 
 	tmpself = self;
 	for(i=0; i<ent_max; i++)
@@ -20111,9 +20880,9 @@ void time_over()
 
 	attack = emptyattack;
 	attack.attack_type = max_attack_types;
-	attack.dropv[0] = default_model_dropv[0]; 
-	attack.dropv[1] = default_model_dropv[1]; 
-	attack.dropv[2] = default_model_dropv[2];
+	attack.dropv[0] = (obor_profile_build < 3681 ? 3.0f : default_model_dropv[0]); 
+	attack.dropv[1] = (obor_profile_build < 3681 ? 1.2f : default_model_dropv[1]); 
+	attack.dropv[2] = (obor_profile_build < 3681 ? 0.0f : default_model_dropv[2]);
 	if(level->type == 1) level_completed = 1;        //    Feb 25, 2005 - Used for bonus levels so a life isn't taken away if time expires.level->type == 1 means bonus level, else regular
 	else if(!level_completed)
 	{
@@ -20164,7 +20933,9 @@ void update_scroller(){
 	if(current_spawn>=level->numspawns && !findent(TYPE_ENEMY) &&
 	((player[0].ent && !player[0].ent->dead) || (player[1].ent && !player[1].ent->dead) || (player[2].ent && !player[2].ent->dead) || (player[3].ent && !player[3].ent->dead))
 	){
-		if(!findent(TYPE_ENDLEVEL) && ((!findent(TYPE_ITEM|TYPE_OBSTACLE) && level->type==1) || level->type == 0)){    // Feb 25, 2005 - Added so obstacles
+		if(!findent(TYPE_ENDLEVEL) && ((!findent(TYPE_ITEM|TYPE_OBSTACLE) &&
+            (obor_profile_build < 3698 ? level->type != 0 : level->type == 1)) ||
+            (obor_profile_build < 3698 ? level->type != 1 : level->type == 0))){    // Feb 25, 2005 - Added so obstacles
 			level_completed = 1;                                                // can be used for bonus levels
 		}
 	}
@@ -20762,6 +21533,9 @@ void movie_save(s_playercontrols ** pctrls)
 void inputrefresh()
 {
 	int p;
+    int player_count = obor_profile_build < 3668 ? levelsets[current_set].maxplayers : MAX_PLAYERS;
+    if(player_count < 0) player_count = 0;
+    if(player_count > MAX_PLAYERS) player_count = MAX_PLAYERS;
 	s_player* pl;
 	u32 k;
 
@@ -20791,7 +21565,7 @@ void inputrefresh()
 	else
 	{
 #endif
-		 control_update(playercontrolpointers, MAX_PLAYERS);
+		 control_update(playercontrolpointers, player_count);
 		 interval = timer_getinterval(GAME_SPEED); // so interval can be logged into movie
 		 if(interval > GAME_SPEED) interval = GAME_SPEED/GAME_SPEED;
 		 if(interval > GAME_SPEED/4) interval = GAME_SPEED/4;
@@ -20808,7 +21582,7 @@ void inputrefresh()
 	bothkeys = 0;
 	bothnewkeys = 0;
 
-	for(p=0; p<MAX_PLAYERS; p++)
+	for(p=0; p<player_count; p++)
 	{
 		pl = player + p;
 		pl->releasekeys = (playercontrolpointers[p]->keyflags|pl->keys) - playercontrolpointers[p]->keyflags;
@@ -20953,7 +21727,7 @@ void update(int ingame, int usevwait)
 				update_scroller();
 				if(!freezeall)
 				{
-					if(level->settime > 0 || (level->type!=2 && !player[0].ent && !player[1].ent && !player[2].ent && !player[3].ent))
+					if(level->settime > 0 || ((obor_profile_build < 3698 || level->type!=2) && !player[0].ent && !player[1].ent && !player[2].ent && !player[3].ent))
 					{
 						if(timeleft>0) --timeleft;
 						else if((level->settime > 0 && !player[0].joining && !player[1].joining && !player[2].joining && !player[3].joining) ||
@@ -20979,11 +21753,11 @@ void update(int ingame, int usevwait)
 	if(ingame == 1 && !pause)
 	{
 		update_scrolled_bg();
-		if(level->type!=2) updatestatus();
+		if(obor_profile_build < 3698 || level->type!=2) updatestatus();
 
 		draw_scrolled_bg();
-		if(level->type!=2) predrawstatus();
-		if(level->type!=2) drawstatus();
+		if(obor_profile_build < 3698 || level->type!=2) predrawstatus();
+		if(obor_profile_build < 3698 || level->type!=2) drawstatus();
 		draw_textobjs();
 	}
 	
@@ -21315,7 +22089,7 @@ void shutdown(int status, char *msg, ...)
 	if(!disablelog) printf("Release graphics data");
 	if(!disablelog) printf("..");
 	if(startup_done) freescreen(&vscreen); // allocated by init_videomodes
-	if(startup_done && pixelformat==PIXEL_x8) for(i=0; i<MAX_BLENDINGS; i++) free(blendtables[i]);
+	if(startup_done && pixelformat==PIXEL_x8) for(i=0; i<OBOR_BLEND_COUNT; i++) free(blendtables[i]);
 	if(!disablelog) printf("..");
 	if(startup_done) freescreen(&background);
 	if(!disablelog) printf("..");
@@ -21672,7 +22446,7 @@ int playgif(char *filename, int x, int y, int noskip){
 	if(gifbuffer[1]) freescreen(&(gifbuffer[1]));
 	if(gifbuffer[2]) freescreen(&(gifbuffer[2]));
 	background = tempbg;
-	standard_palette(1);
+	if(obor_profile_build >= 3688) standard_palette(1);
 	if(bothnewkeys & (FLAG_ESC | FLAG_ANYBUTTON)) return -1;
 	return 1;
 
@@ -21685,8 +22459,11 @@ playgif_error:
 	if(gifbuffer[1]) freescreen(&(gifbuffer[1]));
 	if(gifbuffer[2]) freescreen(&(gifbuffer[2]));
 	background = tempbg;
-	standard_palette(1);
+	if(obor_profile_build >= 3688) standard_palette(1);
+	if(obor_profile_build >= 3718)
 	printf("\nWarning, an error occurred while playing animated gif file '%s'.\n", filename);
+	else if(obor_profile_build >= 3714)
+		printf("\nWarning, an error occurred while playing animated gif file.\n");
 	return 0;
 }
 
@@ -22023,12 +22800,29 @@ void savelevelinfo()
 
 
 
+static int obor_profile_new_game;
+
 int playlevel(char *filename)
 {
 	int i, type;
 
 	kill_all();
 	
+    if(obor_profile_build < 3702)
+    {
+        if(!(obor_profile_build < 3701 ? obor_profile_new_game : nosave))
+        {
+            savelevelinfo();
+            saveGameFile();
+            saveHighScoreFile();
+            saveScriptFile();
+        }
+        if(obor_profile_build < 3701) obor_profile_new_game = 0;
+        else nosave = 0;
+        load_level(filename);
+    }
+    else
+    {
 	savelevelinfo(); // just in case we lose them after level is freed
 
 	load_level(filename);
@@ -22040,6 +22834,7 @@ int playlevel(char *filename)
 		saveScriptFile();
 	}
 	nosave = 0;
+    }
 
 	time = 0;
 	nextplan = 0;
@@ -22073,7 +22868,7 @@ int playlevel(char *filename)
 	//execute a script when level finished
 	if(Script_IsInitialized(&endlevel_script)) Script_Execute(&endlevel_script);
 	if(Script_IsInitialized(&(level->endlevel_script))) Script_Execute(&(level->endlevel_script));
-	if(!nofadeout) fade_out(0, 0);
+	if(obor_profile_build < 3702 || !nofadeout) fade_out(0, 0);
 
 	for(i=0; i<levelsets[current_set].maxplayers; i++)
 	{
@@ -22091,7 +22886,7 @@ int playlevel(char *filename)
 	kill_all();
 	unload_level();
 
-	return type==2 || (player[0].lives > 0 || player[1].lives > 0 || player[2].lives > 0|| player[3].lives > 0); //4player
+	return (obor_profile_build >= 3698 && type==2) || (player[0].lives > 0 || player[1].lives > 0 || player[2].lives > 0|| player[3].lives > 0); //4player
 }
 
 
@@ -22182,14 +22977,18 @@ int selectplayer(int *players, char* filename)
 	}
 	else // without select.txt
 	{
-		if(skipselect[0][0] || set->noselect)
+		if(obor_profile_build < 3698 ? set->skipselect[0] != NULL : (skipselect[0][0] || set->noselect))
 		{
 			for(i=0; i<set->maxplayers; i++)
 			{
 				memset(&player[i], 0, sizeof(s_player));
 				if(!players[i]) continue;
 
-				strncpy(player[i].name, skipselect[i], MAX_NAME_LEN);
+				if(obor_profile_build < 3698)
+                {
+                    if(set->skipselect[i]) strncpy(player[i].name, set->skipselect[i], MAX_NAME_LEN);
+                }
+                else strncpy(player[i].name, skipselect[i], MAX_NAME_LEN);
 				//else continue;
 				if(!noshare) credits = CONTINUES;
 				else
@@ -22452,15 +23251,17 @@ void playgame(int *players,  unsigned which_set, int useSavedGame)
 
 	memset(player, 0, sizeof(s_player)*4);
 
-	for(i=0; i<MAX_PLAYERS; i++)
+	if(obor_profile_build >= 3698)
+    for(i=0; i<MAX_PLAYERS; i++)
 	{
 		if(set->skipselect[i]) strcpy(skipselect[i], set->skipselect[i]);
 		else skipselect[i][0] = 0;
 	}
 
-	if(useSavedGame && save->flag)
+	if(useSavedGame && (obor_profile_build < 3700 || save->flag))
 	{
-		if(!loadScriptFile()) printf("Warning, failed to load script save!\n");
+		if(obor_profile_build < 3708) loadScriptFile();
+        else if(!loadScriptFile()) printf("Warning, failed to load script save!\n");
 		current_level = save->level;
 		current_stage = save->stage;
 		if(save->flag == 2) // don't check 1 or 0 becuase if we use saved game the flag must be >0
@@ -22481,7 +23282,12 @@ void playgame(int *players,  unsigned which_set, int useSavedGame)
 		}
 	}
 	
-	nosave = 1;
+    if(obor_profile_build >= 3702) nosave = 1;
+    else if(!(useSavedGame && (obor_profile_build < 3700 || save->flag)))
+    {
+        if(obor_profile_build < 3701) obor_profile_new_game = 1;
+        else nosave = 1;
+    }
 
 	if((useSavedGame && save->flag == 2) || selectplayer(players, NULL)) // if save flag is 2 don't select player
 	{
@@ -22548,15 +23354,15 @@ void playgame(int *players,  unsigned which_set, int useSavedGame)
 			{
 				current_level = set->numlevels;
 			}
-			if(useSave) goto endgame; //quick exit without saving, for script load game logic
+			if(obor_profile_build >= 3700 && useSave) goto endgame; //quick exit without saving, for script load game logic
 		}//while
 
 		if(current_level >= set->numlevels)
 		{
 			bonus += save->times_completed++;
 			saveGameFile();
-			if(!nofadeout) fade_out(0, 0);
-			if(!set->noshowhof) hallfame(1);
+			if(obor_profile_build < 3702 || !nofadeout) fade_out(0, 0);
+			if(obor_profile_build < 3700 || !set->noshowhof) hallfame(1);
 		}
 	}
 
@@ -22594,7 +23400,9 @@ int choose_difficulty()
 		{
 			_menutextm(2, -2, 0, "Game Mode");
 			t = selector/maxdisplay*maxdisplay;
-			for(j=0,i=t; i<maxdisplay+t && i<num_difficulties; j++,i++)
+			if(obor_profile_build < 3722)
+                t = num_difficulties <= maxdisplay ? 0 : (selector >= maxdisplay ? maxdisplay : 0);
+			for(j=0,i=t; (obor_profile_build < 3722 || i<maxdisplay+t) && i<num_difficulties; j++,i++)
 			{
 				if(j < maxdisplay)
 				{
@@ -24537,8 +25345,8 @@ void openborMain(int argc, char** argv)
 		}
 		else if(skiptoset>=0)
 		{
-			loadGameFile();
-			playgame(players, skiptoset, useSave);
+			if(obor_profile_build >= 3700) loadGameFile();
+			playgame(players, skiptoset, obor_profile_build >= 3700 ? useSave : 0);
 		}
 		else
 		{

@@ -1,0 +1,2070 @@
+{
+  "schema": 1,
+  "scope": "Own-source text drawing and actual native font formatting;glyph queue and expiry ownership observations,not raster pixels or complete level/VM acceptance.",
+  "models": [
+    {
+      "revisions": [
+        3400
+      ],
+      "physical_fixed": true,
+      "slots": 50,
+      "font_tokens": "inline",
+      "cases": [
+        {
+          "level_present": false,
+          "objects": [],
+          "ticks": [
+            {
+              "now": 20,
+              "glyphs": [],
+              "released": [],
+              "objects": []
+            }
+          ]
+        },
+        {
+          "level_present": true,
+          "objects": [],
+          "ticks": [
+            {
+              "now": 20,
+              "glyphs": [],
+              "released": [],
+              "objects": []
+            }
+          ]
+        },
+        {
+          "level_present": true,
+          "objects": [
+            {
+              "index": 0,
+              "fields": {
+                "x": 10,
+                "y": 20,
+                "z": 7,
+                "font": 0,
+                "t": 0
+              },
+              "text": [
+                65,
+                37,
+                37,
+                66
+              ]
+            },
+            {
+              "index": 1,
+              "fields": {
+                "x": 40,
+                "y": 30,
+                "z": 8,
+                "font": 1,
+                "t": 21
+              },
+              "text": [
+                66
+              ]
+            }
+          ],
+          "ticks": [
+            {
+              "now": 20,
+              "glyphs": [
+                [
+                  10,
+                  20,
+                  7,
+                  0,
+                  65
+                ],
+                [
+                  13,
+                  20,
+                  7,
+                  0,
+                  37
+                ],
+                [
+                  16,
+                  20,
+                  7,
+                  0,
+                  66
+                ],
+                [
+                  40,
+                  30,
+                  8,
+                  1,
+                  66
+                ]
+              ],
+              "released": [],
+              "objects": [
+                {
+                  "index": 0,
+                  "fields": {
+                    "x": 10,
+                    "y": 20,
+                    "z": 7,
+                    "font": 0,
+                    "t": 0
+                  },
+                  "text": [
+                    65,
+                    37,
+                    37,
+                    66
+                  ]
+                },
+                {
+                  "index": 1,
+                  "fields": {
+                    "x": 40,
+                    "y": 30,
+                    "z": 8,
+                    "font": 1,
+                    "t": 21
+                  },
+                  "text": [
+                    66
+                  ]
+                }
+              ]
+            },
+            {
+              "now": 21,
+              "glyphs": [
+                [
+                  10,
+                  20,
+                  7,
+                  0,
+                  65
+                ],
+                [
+                  13,
+                  20,
+                  7,
+                  0,
+                  37
+                ],
+                [
+                  16,
+                  20,
+                  7,
+                  0,
+                  66
+                ]
+              ],
+              "released": [
+                1
+              ],
+              "objects": [
+                {
+                  "index": 0,
+                  "fields": {
+                    "x": 10,
+                    "y": 20,
+                    "z": 7,
+                    "font": 0,
+                    "t": 0
+                  },
+                  "text": [
+                    65,
+                    37,
+                    37,
+                    66
+                  ]
+                },
+                {
+                  "index": 1,
+                  "fields": {
+                    "x": 0,
+                    "y": 0,
+                    "z": 0,
+                    "font": 0,
+                    "t": 0
+                  },
+                  "text": null
+                }
+              ]
+            },
+            {
+              "now": 22,
+              "glyphs": [
+                [
+                  10,
+                  20,
+                  7,
+                  0,
+                  65
+                ],
+                [
+                  13,
+                  20,
+                  7,
+                  0,
+                  37
+                ],
+                [
+                  16,
+                  20,
+                  7,
+                  0,
+                  66
+                ]
+              ],
+              "released": [
+                1
+              ],
+              "objects": [
+                {
+                  "index": 0,
+                  "fields": {
+                    "x": 10,
+                    "y": 20,
+                    "z": 7,
+                    "font": 0,
+                    "t": 0
+                  },
+                  "text": [
+                    65,
+                    37,
+                    37,
+                    66
+                  ]
+                },
+                {
+                  "index": 1,
+                  "fields": {
+                    "x": 0,
+                    "y": 0,
+                    "z": 0,
+                    "font": 0,
+                    "t": 0
+                  },
+                  "text": null
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "level_present": true,
+          "objects": [
+            {
+              "index": 0,
+              "fields": {
+                "x": 1,
+                "y": 2,
+                "z": 3,
+                "font": 0,
+                "t": 20
+              },
+              "text": [
+                65
+              ]
+            },
+            {
+              "index": 1,
+              "fields": {
+                "x": 4,
+                "y": 5,
+                "z": 6,
+                "font": 1,
+                "t": 19
+              },
+              "text": [
+                66
+              ]
+            },
+            {
+              "index": 2,
+              "fields": {
+                "x": 7,
+                "y": 8,
+                "z": 9,
+                "font": 0,
+                "t": 21
+              },
+              "text": [
+                67
+              ]
+            },
+            {
+              "index": 3,
+              "fields": {
+                "x": 2,
+                "y": 3,
+                "z": 4,
+                "font": 1,
+                "t": 20
+              },
+              "text": null
+            }
+          ],
+          "ticks": [
+            {
+              "now": 20,
+              "glyphs": [
+                [
+                  7,
+                  8,
+                  9,
+                  0,
+                  67
+                ]
+              ],
+              "released": [
+                0,
+                1
+              ],
+              "objects": [
+                {
+                  "index": 0,
+                  "fields": {
+                    "x": 0,
+                    "y": 0,
+                    "z": 0,
+                    "font": 0,
+                    "t": 0
+                  },
+                  "text": null
+                },
+                {
+                  "index": 1,
+                  "fields": {
+                    "x": 0,
+                    "y": 0,
+                    "z": 0,
+                    "font": 0,
+                    "t": 0
+                  },
+                  "text": null
+                },
+                {
+                  "index": 2,
+                  "fields": {
+                    "x": 7,
+                    "y": 8,
+                    "z": 9,
+                    "font": 0,
+                    "t": 21
+                  },
+                  "text": [
+                    67
+                  ]
+                },
+                {
+                  "index": 3,
+                  "fields": {
+                    "x": 0,
+                    "y": 0,
+                    "z": 0,
+                    "font": 0,
+                    "t": 0
+                  },
+                  "text": null
+                }
+              ]
+            },
+            {
+              "now": 21,
+              "glyphs": [],
+              "released": [
+                0,
+                1,
+                2
+              ],
+              "objects": [
+                {
+                  "index": 2,
+                  "fields": {
+                    "x": 0,
+                    "y": 0,
+                    "z": 0,
+                    "font": 0,
+                    "t": 0
+                  },
+                  "text": null
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "level_present": true,
+          "objects": [
+            {
+              "index": 0,
+              "fields": {
+                "x": 10,
+                "y": 20,
+                "z": 1,
+                "font": 0,
+                "t": 0
+              },
+              "text": [
+                65,
+                10,
+                66
+              ]
+            }
+          ],
+          "ticks": [
+            {
+              "now": 20,
+              "glyphs": [
+                [
+                  10,
+                  20,
+                  1,
+                  0,
+                  65
+                ],
+                [
+                  13,
+                  20,
+                  1,
+                  0,
+                  10
+                ],
+                [
+                  16,
+                  29,
+                  1,
+                  0,
+                  66
+                ]
+              ],
+              "released": [],
+              "objects": [
+                {
+                  "index": 0,
+                  "fields": {
+                    "x": 10,
+                    "y": 20,
+                    "z": 1,
+                    "font": 0,
+                    "t": 0
+                  },
+                  "text": [
+                    65,
+                    10,
+                    66
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "level_present": true,
+          "objects": [
+            {
+              "index": 0,
+              "fields": {
+                "x": 5,
+                "y": 6,
+                "z": 7,
+                "font": 1,
+                "t": 0
+              },
+              "text": []
+            }
+          ],
+          "ticks": [
+            {
+              "now": 20,
+              "glyphs": [],
+              "released": [],
+              "objects": [
+                {
+                  "index": 0,
+                  "fields": {
+                    "x": 5,
+                    "y": 6,
+                    "z": 7,
+                    "font": 1,
+                    "t": 0
+                  },
+                  "text": []
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "engine": "3400",
+      "original_sources": [
+        {
+          "revision": 3400,
+          "commit": "66fa1529897131ca51528967fbb21ee124e45775",
+          "used_contract": "fe80c244bcbef1d1f690da69c76f0991b2b177b9250d2f9581b3e2c14cae7fdc",
+          "draw": "cb0ce4f94daaab37bbaf811c24874da40d7a1cc92b0ced284d0ed9bcf38dbc61",
+          "font_printf": "5fd018864938dd809b7934ea2110b37318ad76d40aeef9302b1089df5964b495"
+        }
+      ]
+    },
+    {
+      "revisions": [
+        3666,
+        3667,
+        3669,
+        3670,
+        3671,
+        3672,
+        3673,
+        3674,
+        3675,
+        3677,
+        3678,
+        3679,
+        3680,
+        3681,
+        3682,
+        3683,
+        3685,
+        3686,
+        3689,
+        3690,
+        3691,
+        3692,
+        3693,
+        3694,
+        3697,
+        3699,
+        3701,
+        3703,
+        3704,
+        3707,
+        3708,
+        3709,
+        3710,
+        3711,
+        3713,
+        3714,
+        3715,
+        3716,
+        3722,
+        3725,
+        3726,
+        3727,
+        3728,
+        3729,
+        3730,
+        3732,
+        3738,
+        3739,
+        3740,
+        3741,
+        3742
+      ],
+      "physical_fixed": false,
+      "slots": 50,
+      "font_tokens": "indexed",
+      "cases": [
+        {
+          "level_present": false,
+          "objects": [],
+          "ticks": [
+            {
+              "now": 20,
+              "glyphs": [],
+              "released": [],
+              "objects": []
+            }
+          ]
+        },
+        {
+          "level_present": true,
+          "objects": [],
+          "ticks": [
+            {
+              "now": 20,
+              "glyphs": [],
+              "released": [],
+              "objects": []
+            }
+          ]
+        },
+        {
+          "level_present": true,
+          "objects": [
+            {
+              "index": 0,
+              "fields": {
+                "x": 10,
+                "y": 20,
+                "z": 7,
+                "font": 0,
+                "t": 0
+              },
+              "text": [
+                65,
+                37,
+                37,
+                66
+              ]
+            },
+            {
+              "index": 1,
+              "fields": {
+                "x": 40,
+                "y": 30,
+                "z": 8,
+                "font": 1,
+                "t": 21
+              },
+              "text": [
+                66
+              ]
+            }
+          ],
+          "ticks": [
+            {
+              "now": 20,
+              "glyphs": [
+                [
+                  10,
+                  20,
+                  7,
+                  0,
+                  65
+                ],
+                [
+                  13,
+                  20,
+                  7,
+                  0,
+                  37
+                ],
+                [
+                  16,
+                  20,
+                  7,
+                  0,
+                  66
+                ],
+                [
+                  40,
+                  30,
+                  8,
+                  1,
+                  66
+                ]
+              ],
+              "released": [],
+              "objects": [
+                {
+                  "index": 0,
+                  "fields": {
+                    "x": 10,
+                    "y": 20,
+                    "z": 7,
+                    "font": 0,
+                    "t": 0
+                  },
+                  "text": [
+                    65,
+                    37,
+                    37,
+                    66
+                  ]
+                },
+                {
+                  "index": 1,
+                  "fields": {
+                    "x": 40,
+                    "y": 30,
+                    "z": 8,
+                    "font": 1,
+                    "t": 21
+                  },
+                  "text": [
+                    66
+                  ]
+                }
+              ]
+            },
+            {
+              "now": 21,
+              "glyphs": [
+                [
+                  10,
+                  20,
+                  7,
+                  0,
+                  65
+                ],
+                [
+                  13,
+                  20,
+                  7,
+                  0,
+                  37
+                ],
+                [
+                  16,
+                  20,
+                  7,
+                  0,
+                  66
+                ]
+              ],
+              "released": [
+                1
+              ],
+              "objects": [
+                {
+                  "index": 0,
+                  "fields": {
+                    "x": 10,
+                    "y": 20,
+                    "z": 7,
+                    "font": 0,
+                    "t": 0
+                  },
+                  "text": [
+                    65,
+                    37,
+                    37,
+                    66
+                  ]
+                },
+                {
+                  "index": 1,
+                  "fields": {
+                    "x": 0,
+                    "y": 0,
+                    "z": 0,
+                    "font": 0,
+                    "t": 0
+                  },
+                  "text": null
+                }
+              ]
+            },
+            {
+              "now": 22,
+              "glyphs": [
+                [
+                  10,
+                  20,
+                  7,
+                  0,
+                  65
+                ],
+                [
+                  13,
+                  20,
+                  7,
+                  0,
+                  37
+                ],
+                [
+                  16,
+                  20,
+                  7,
+                  0,
+                  66
+                ]
+              ],
+              "released": [
+                1
+              ],
+              "objects": [
+                {
+                  "index": 0,
+                  "fields": {
+                    "x": 10,
+                    "y": 20,
+                    "z": 7,
+                    "font": 0,
+                    "t": 0
+                  },
+                  "text": [
+                    65,
+                    37,
+                    37,
+                    66
+                  ]
+                },
+                {
+                  "index": 1,
+                  "fields": {
+                    "x": 0,
+                    "y": 0,
+                    "z": 0,
+                    "font": 0,
+                    "t": 0
+                  },
+                  "text": null
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "level_present": true,
+          "objects": [
+            {
+              "index": 0,
+              "fields": {
+                "x": 1,
+                "y": 2,
+                "z": 3,
+                "font": 0,
+                "t": 20
+              },
+              "text": [
+                65
+              ]
+            },
+            {
+              "index": 1,
+              "fields": {
+                "x": 4,
+                "y": 5,
+                "z": 6,
+                "font": 1,
+                "t": 19
+              },
+              "text": [
+                66
+              ]
+            },
+            {
+              "index": 2,
+              "fields": {
+                "x": 7,
+                "y": 8,
+                "z": 9,
+                "font": 0,
+                "t": 21
+              },
+              "text": [
+                67
+              ]
+            },
+            {
+              "index": 3,
+              "fields": {
+                "x": 2,
+                "y": 3,
+                "z": 4,
+                "font": 1,
+                "t": 20
+              },
+              "text": null
+            }
+          ],
+          "ticks": [
+            {
+              "now": 20,
+              "glyphs": [
+                [
+                  7,
+                  8,
+                  9,
+                  0,
+                  67
+                ]
+              ],
+              "released": [
+                0,
+                1
+              ],
+              "objects": [
+                {
+                  "index": 0,
+                  "fields": {
+                    "x": 0,
+                    "y": 0,
+                    "z": 0,
+                    "font": 0,
+                    "t": 0
+                  },
+                  "text": null
+                },
+                {
+                  "index": 1,
+                  "fields": {
+                    "x": 0,
+                    "y": 0,
+                    "z": 0,
+                    "font": 0,
+                    "t": 0
+                  },
+                  "text": null
+                },
+                {
+                  "index": 2,
+                  "fields": {
+                    "x": 7,
+                    "y": 8,
+                    "z": 9,
+                    "font": 0,
+                    "t": 21
+                  },
+                  "text": [
+                    67
+                  ]
+                },
+                {
+                  "index": 3,
+                  "fields": {
+                    "x": 0,
+                    "y": 0,
+                    "z": 0,
+                    "font": 0,
+                    "t": 0
+                  },
+                  "text": null
+                }
+              ]
+            },
+            {
+              "now": 21,
+              "glyphs": [],
+              "released": [
+                0,
+                1,
+                2
+              ],
+              "objects": [
+                {
+                  "index": 2,
+                  "fields": {
+                    "x": 0,
+                    "y": 0,
+                    "z": 0,
+                    "font": 0,
+                    "t": 0
+                  },
+                  "text": null
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "level_present": true,
+          "objects": [
+            {
+              "index": 0,
+              "fields": {
+                "x": 10,
+                "y": 20,
+                "z": 1,
+                "font": 0,
+                "t": 0
+              },
+              "text": [
+                65,
+                10,
+                66
+              ]
+            }
+          ],
+          "ticks": [
+            {
+              "now": 20,
+              "glyphs": [
+                [
+                  10,
+                  20,
+                  1,
+                  0,
+                  65
+                ],
+                [
+                  10,
+                  29,
+                  1,
+                  0,
+                  66
+                ]
+              ],
+              "released": [],
+              "objects": [
+                {
+                  "index": 0,
+                  "fields": {
+                    "x": 10,
+                    "y": 20,
+                    "z": 1,
+                    "font": 0,
+                    "t": 0
+                  },
+                  "text": [
+                    65,
+                    10,
+                    66
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "level_present": true,
+          "objects": [
+            {
+              "index": 0,
+              "fields": {
+                "x": 5,
+                "y": 6,
+                "z": 7,
+                "font": 1,
+                "t": 0
+              },
+              "text": []
+            }
+          ],
+          "ticks": [
+            {
+              "now": 20,
+              "glyphs": [],
+              "released": [],
+              "objects": [
+                {
+                  "index": 0,
+                  "fields": {
+                    "x": 5,
+                    "y": 6,
+                    "z": 7,
+                    "font": 1,
+                    "t": 0
+                  },
+                  "text": []
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "engine": "3741",
+      "original_sources": [
+        {
+          "revision": 3666,
+          "commit": "d91a968db18ecb4a738cf008ea0483883929a674",
+          "used_contract": "fa0f2e80c41b7b259aad4d8be0e90a1b6bd522847ca1923c651e5c68d4992b88",
+          "draw": "cb0ce4f94daaab37bbaf811c24874da40d7a1cc92b0ced284d0ed9bcf38dbc61",
+          "font_printf": "8629212aae93d8ed250a7298f15c38ff0593ba36df6d4180cc0e473c4c50ce78"
+        },
+        {
+          "revision": 3667,
+          "commit": "b9be93bb004d151b7280a4dd2d41a952d3160afc",
+          "used_contract": "fa0f2e80c41b7b259aad4d8be0e90a1b6bd522847ca1923c651e5c68d4992b88",
+          "draw": "cb0ce4f94daaab37bbaf811c24874da40d7a1cc92b0ced284d0ed9bcf38dbc61",
+          "font_printf": "8629212aae93d8ed250a7298f15c38ff0593ba36df6d4180cc0e473c4c50ce78"
+        },
+        {
+          "revision": 3669,
+          "commit": "7c099902d5149d9e696ad1274c0d1964aa1f2323",
+          "used_contract": "fa0f2e80c41b7b259aad4d8be0e90a1b6bd522847ca1923c651e5c68d4992b88",
+          "draw": "cb0ce4f94daaab37bbaf811c24874da40d7a1cc92b0ced284d0ed9bcf38dbc61",
+          "font_printf": "8629212aae93d8ed250a7298f15c38ff0593ba36df6d4180cc0e473c4c50ce78"
+        },
+        {
+          "revision": 3670,
+          "commit": "5d6118ae7dc11b04bb370da0faa0c6f42ffab50e",
+          "used_contract": "fa0f2e80c41b7b259aad4d8be0e90a1b6bd522847ca1923c651e5c68d4992b88",
+          "draw": "cb0ce4f94daaab37bbaf811c24874da40d7a1cc92b0ced284d0ed9bcf38dbc61",
+          "font_printf": "8629212aae93d8ed250a7298f15c38ff0593ba36df6d4180cc0e473c4c50ce78"
+        },
+        {
+          "revision": 3671,
+          "commit": "7fba7445c056b5aeff03046dd79ae929fcf68f15",
+          "used_contract": "fa0f2e80c41b7b259aad4d8be0e90a1b6bd522847ca1923c651e5c68d4992b88",
+          "draw": "cb0ce4f94daaab37bbaf811c24874da40d7a1cc92b0ced284d0ed9bcf38dbc61",
+          "font_printf": "8629212aae93d8ed250a7298f15c38ff0593ba36df6d4180cc0e473c4c50ce78"
+        },
+        {
+          "revision": 3672,
+          "commit": "8c4687b4ef831986a04e2fcb3d4dcd7e96bbd0cf",
+          "used_contract": "fa0f2e80c41b7b259aad4d8be0e90a1b6bd522847ca1923c651e5c68d4992b88",
+          "draw": "cb0ce4f94daaab37bbaf811c24874da40d7a1cc92b0ced284d0ed9bcf38dbc61",
+          "font_printf": "8629212aae93d8ed250a7298f15c38ff0593ba36df6d4180cc0e473c4c50ce78"
+        },
+        {
+          "revision": 3673,
+          "commit": "88b9c2829ea471579d90e186215d23a8bf669bcb",
+          "used_contract": "fa0f2e80c41b7b259aad4d8be0e90a1b6bd522847ca1923c651e5c68d4992b88",
+          "draw": "cb0ce4f94daaab37bbaf811c24874da40d7a1cc92b0ced284d0ed9bcf38dbc61",
+          "font_printf": "8629212aae93d8ed250a7298f15c38ff0593ba36df6d4180cc0e473c4c50ce78"
+        },
+        {
+          "revision": 3674,
+          "commit": "5e9213f7de65df1cc13d01e3e695d4ac62091267",
+          "used_contract": "fa0f2e80c41b7b259aad4d8be0e90a1b6bd522847ca1923c651e5c68d4992b88",
+          "draw": "cb0ce4f94daaab37bbaf811c24874da40d7a1cc92b0ced284d0ed9bcf38dbc61",
+          "font_printf": "8629212aae93d8ed250a7298f15c38ff0593ba36df6d4180cc0e473c4c50ce78"
+        },
+        {
+          "revision": 3675,
+          "commit": "a4b46362047dc2bb04e350b8a434cb65cad3b9af",
+          "used_contract": "fa0f2e80c41b7b259aad4d8be0e90a1b6bd522847ca1923c651e5c68d4992b88",
+          "draw": "cb0ce4f94daaab37bbaf811c24874da40d7a1cc92b0ced284d0ed9bcf38dbc61",
+          "font_printf": "8629212aae93d8ed250a7298f15c38ff0593ba36df6d4180cc0e473c4c50ce78"
+        },
+        {
+          "revision": 3677,
+          "commit": "0cc873941f3ee1dc687c7c0d303d043c931f8e5f",
+          "used_contract": "fa0f2e80c41b7b259aad4d8be0e90a1b6bd522847ca1923c651e5c68d4992b88",
+          "draw": "cb0ce4f94daaab37bbaf811c24874da40d7a1cc92b0ced284d0ed9bcf38dbc61",
+          "font_printf": "8629212aae93d8ed250a7298f15c38ff0593ba36df6d4180cc0e473c4c50ce78"
+        },
+        {
+          "revision": 3678,
+          "commit": "9db2ed7db699e47513d3ea3144b7f235304eb72a",
+          "used_contract": "fa0f2e80c41b7b259aad4d8be0e90a1b6bd522847ca1923c651e5c68d4992b88",
+          "draw": "cb0ce4f94daaab37bbaf811c24874da40d7a1cc92b0ced284d0ed9bcf38dbc61",
+          "font_printf": "8629212aae93d8ed250a7298f15c38ff0593ba36df6d4180cc0e473c4c50ce78"
+        },
+        {
+          "revision": 3679,
+          "commit": "1e4032e0c03f5580f4092fc8c2fecf2a5a96aa7f",
+          "used_contract": "fa0f2e80c41b7b259aad4d8be0e90a1b6bd522847ca1923c651e5c68d4992b88",
+          "draw": "cb0ce4f94daaab37bbaf811c24874da40d7a1cc92b0ced284d0ed9bcf38dbc61",
+          "font_printf": "8629212aae93d8ed250a7298f15c38ff0593ba36df6d4180cc0e473c4c50ce78"
+        },
+        {
+          "revision": 3680,
+          "commit": "cbacfd01002925ec9016f03bbf45dc576e135f1a",
+          "used_contract": "fa0f2e80c41b7b259aad4d8be0e90a1b6bd522847ca1923c651e5c68d4992b88",
+          "draw": "cb0ce4f94daaab37bbaf811c24874da40d7a1cc92b0ced284d0ed9bcf38dbc61",
+          "font_printf": "8629212aae93d8ed250a7298f15c38ff0593ba36df6d4180cc0e473c4c50ce78"
+        },
+        {
+          "revision": 3681,
+          "commit": "e86a5c32f6303ab0d8432dfe2575b17dc2af5baf",
+          "used_contract": "fa0f2e80c41b7b259aad4d8be0e90a1b6bd522847ca1923c651e5c68d4992b88",
+          "draw": "cb0ce4f94daaab37bbaf811c24874da40d7a1cc92b0ced284d0ed9bcf38dbc61",
+          "font_printf": "8629212aae93d8ed250a7298f15c38ff0593ba36df6d4180cc0e473c4c50ce78"
+        },
+        {
+          "revision": 3682,
+          "commit": "a41ea87ba402b98c6b5397c6a402834a802e1801",
+          "used_contract": "fa0f2e80c41b7b259aad4d8be0e90a1b6bd522847ca1923c651e5c68d4992b88",
+          "draw": "cb0ce4f94daaab37bbaf811c24874da40d7a1cc92b0ced284d0ed9bcf38dbc61",
+          "font_printf": "8629212aae93d8ed250a7298f15c38ff0593ba36df6d4180cc0e473c4c50ce78"
+        },
+        {
+          "revision": 3683,
+          "commit": "b79ec28e381f0b94f811c9e989759e92f5d02e51",
+          "used_contract": "fa0f2e80c41b7b259aad4d8be0e90a1b6bd522847ca1923c651e5c68d4992b88",
+          "draw": "cb0ce4f94daaab37bbaf811c24874da40d7a1cc92b0ced284d0ed9bcf38dbc61",
+          "font_printf": "8629212aae93d8ed250a7298f15c38ff0593ba36df6d4180cc0e473c4c50ce78"
+        },
+        {
+          "revision": 3685,
+          "commit": "8e0f3d0bd64e99244598ddf636c5203c2a6b0f2e",
+          "used_contract": "fa0f2e80c41b7b259aad4d8be0e90a1b6bd522847ca1923c651e5c68d4992b88",
+          "draw": "cb0ce4f94daaab37bbaf811c24874da40d7a1cc92b0ced284d0ed9bcf38dbc61",
+          "font_printf": "8629212aae93d8ed250a7298f15c38ff0593ba36df6d4180cc0e473c4c50ce78"
+        },
+        {
+          "revision": 3686,
+          "commit": "d37cca26d57bba5a4f5c190f80562f768785901d",
+          "used_contract": "fa0f2e80c41b7b259aad4d8be0e90a1b6bd522847ca1923c651e5c68d4992b88",
+          "draw": "cb0ce4f94daaab37bbaf811c24874da40d7a1cc92b0ced284d0ed9bcf38dbc61",
+          "font_printf": "8629212aae93d8ed250a7298f15c38ff0593ba36df6d4180cc0e473c4c50ce78"
+        },
+        {
+          "revision": 3689,
+          "commit": "953da13e27e3a72fc61ff9fe71c272968e9e7270",
+          "used_contract": "fa0f2e80c41b7b259aad4d8be0e90a1b6bd522847ca1923c651e5c68d4992b88",
+          "draw": "cb0ce4f94daaab37bbaf811c24874da40d7a1cc92b0ced284d0ed9bcf38dbc61",
+          "font_printf": "8629212aae93d8ed250a7298f15c38ff0593ba36df6d4180cc0e473c4c50ce78"
+        },
+        {
+          "revision": 3690,
+          "commit": "e4cf90c8a3784263df7809672a2b4998bb000831",
+          "used_contract": "fa0f2e80c41b7b259aad4d8be0e90a1b6bd522847ca1923c651e5c68d4992b88",
+          "draw": "cb0ce4f94daaab37bbaf811c24874da40d7a1cc92b0ced284d0ed9bcf38dbc61",
+          "font_printf": "8629212aae93d8ed250a7298f15c38ff0593ba36df6d4180cc0e473c4c50ce78"
+        },
+        {
+          "revision": 3691,
+          "commit": "42bc05f6630514c0a21e14faa7c4e671329a91ae",
+          "used_contract": "fa0f2e80c41b7b259aad4d8be0e90a1b6bd522847ca1923c651e5c68d4992b88",
+          "draw": "cb0ce4f94daaab37bbaf811c24874da40d7a1cc92b0ced284d0ed9bcf38dbc61",
+          "font_printf": "8629212aae93d8ed250a7298f15c38ff0593ba36df6d4180cc0e473c4c50ce78"
+        },
+        {
+          "revision": 3692,
+          "commit": "5c31bc7f06580725f11d436855533a2485dfb757",
+          "used_contract": "fa0f2e80c41b7b259aad4d8be0e90a1b6bd522847ca1923c651e5c68d4992b88",
+          "draw": "cb0ce4f94daaab37bbaf811c24874da40d7a1cc92b0ced284d0ed9bcf38dbc61",
+          "font_printf": "8629212aae93d8ed250a7298f15c38ff0593ba36df6d4180cc0e473c4c50ce78"
+        },
+        {
+          "revision": 3693,
+          "commit": "ec0e28efea5a3a63a28ccd9abe2fb3fb88513416",
+          "used_contract": "fa0f2e80c41b7b259aad4d8be0e90a1b6bd522847ca1923c651e5c68d4992b88",
+          "draw": "cb0ce4f94daaab37bbaf811c24874da40d7a1cc92b0ced284d0ed9bcf38dbc61",
+          "font_printf": "8629212aae93d8ed250a7298f15c38ff0593ba36df6d4180cc0e473c4c50ce78"
+        },
+        {
+          "revision": 3694,
+          "commit": "aaae13d3487ebedd9a3ef121d6296b5a3afd0cd9",
+          "used_contract": "fa0f2e80c41b7b259aad4d8be0e90a1b6bd522847ca1923c651e5c68d4992b88",
+          "draw": "cb0ce4f94daaab37bbaf811c24874da40d7a1cc92b0ced284d0ed9bcf38dbc61",
+          "font_printf": "8629212aae93d8ed250a7298f15c38ff0593ba36df6d4180cc0e473c4c50ce78"
+        },
+        {
+          "revision": 3697,
+          "commit": "142e0957159aab6b4698a94723ea282cb54a3c70",
+          "used_contract": "fa0f2e80c41b7b259aad4d8be0e90a1b6bd522847ca1923c651e5c68d4992b88",
+          "draw": "cb0ce4f94daaab37bbaf811c24874da40d7a1cc92b0ced284d0ed9bcf38dbc61",
+          "font_printf": "8629212aae93d8ed250a7298f15c38ff0593ba36df6d4180cc0e473c4c50ce78"
+        },
+        {
+          "revision": 3699,
+          "commit": "f632ac4fe81ea6c6b3cd9d74a1cd7538471579bb",
+          "used_contract": "fa0f2e80c41b7b259aad4d8be0e90a1b6bd522847ca1923c651e5c68d4992b88",
+          "draw": "cb0ce4f94daaab37bbaf811c24874da40d7a1cc92b0ced284d0ed9bcf38dbc61",
+          "font_printf": "8629212aae93d8ed250a7298f15c38ff0593ba36df6d4180cc0e473c4c50ce78"
+        },
+        {
+          "revision": 3701,
+          "commit": "7644ed068259c3edbfaed1cd85828b4a28213997",
+          "used_contract": "fa0f2e80c41b7b259aad4d8be0e90a1b6bd522847ca1923c651e5c68d4992b88",
+          "draw": "cb0ce4f94daaab37bbaf811c24874da40d7a1cc92b0ced284d0ed9bcf38dbc61",
+          "font_printf": "8629212aae93d8ed250a7298f15c38ff0593ba36df6d4180cc0e473c4c50ce78"
+        },
+        {
+          "revision": 3703,
+          "commit": "bb82f79d47f02649e3a79e22455911f98cc900cb",
+          "used_contract": "fa0f2e80c41b7b259aad4d8be0e90a1b6bd522847ca1923c651e5c68d4992b88",
+          "draw": "cb0ce4f94daaab37bbaf811c24874da40d7a1cc92b0ced284d0ed9bcf38dbc61",
+          "font_printf": "8629212aae93d8ed250a7298f15c38ff0593ba36df6d4180cc0e473c4c50ce78"
+        },
+        {
+          "revision": 3704,
+          "commit": "b1bf3dd56ebfcd11eafe265120ceedf0b44ed2f4",
+          "used_contract": "fa0f2e80c41b7b259aad4d8be0e90a1b6bd522847ca1923c651e5c68d4992b88",
+          "draw": "cb0ce4f94daaab37bbaf811c24874da40d7a1cc92b0ced284d0ed9bcf38dbc61",
+          "font_printf": "8629212aae93d8ed250a7298f15c38ff0593ba36df6d4180cc0e473c4c50ce78"
+        },
+        {
+          "revision": 3707,
+          "commit": "3e8913af8d0090f1082b5c2a7e624d050c4960fc",
+          "used_contract": "fa0f2e80c41b7b259aad4d8be0e90a1b6bd522847ca1923c651e5c68d4992b88",
+          "draw": "cb0ce4f94daaab37bbaf811c24874da40d7a1cc92b0ced284d0ed9bcf38dbc61",
+          "font_printf": "8629212aae93d8ed250a7298f15c38ff0593ba36df6d4180cc0e473c4c50ce78"
+        },
+        {
+          "revision": 3708,
+          "commit": "987fbc31c5be3002732e735a0bdd905eedd7c2b1",
+          "used_contract": "fa0f2e80c41b7b259aad4d8be0e90a1b6bd522847ca1923c651e5c68d4992b88",
+          "draw": "cb0ce4f94daaab37bbaf811c24874da40d7a1cc92b0ced284d0ed9bcf38dbc61",
+          "font_printf": "8629212aae93d8ed250a7298f15c38ff0593ba36df6d4180cc0e473c4c50ce78"
+        },
+        {
+          "revision": 3709,
+          "commit": "25db4c7a58a555fd8cf1f6e7931ad2ce4cc6e6d9",
+          "used_contract": "fa0f2e80c41b7b259aad4d8be0e90a1b6bd522847ca1923c651e5c68d4992b88",
+          "draw": "cb0ce4f94daaab37bbaf811c24874da40d7a1cc92b0ced284d0ed9bcf38dbc61",
+          "font_printf": "8629212aae93d8ed250a7298f15c38ff0593ba36df6d4180cc0e473c4c50ce78"
+        },
+        {
+          "revision": 3710,
+          "commit": "9622e606e8039fb860ae06d33c119e980f779598",
+          "used_contract": "fa0f2e80c41b7b259aad4d8be0e90a1b6bd522847ca1923c651e5c68d4992b88",
+          "draw": "cb0ce4f94daaab37bbaf811c24874da40d7a1cc92b0ced284d0ed9bcf38dbc61",
+          "font_printf": "8629212aae93d8ed250a7298f15c38ff0593ba36df6d4180cc0e473c4c50ce78"
+        },
+        {
+          "revision": 3711,
+          "commit": "6ec17fa411b237f789c910e1234a33a618ab236d",
+          "used_contract": "fa0f2e80c41b7b259aad4d8be0e90a1b6bd522847ca1923c651e5c68d4992b88",
+          "draw": "cb0ce4f94daaab37bbaf811c24874da40d7a1cc92b0ced284d0ed9bcf38dbc61",
+          "font_printf": "8629212aae93d8ed250a7298f15c38ff0593ba36df6d4180cc0e473c4c50ce78"
+        },
+        {
+          "revision": 3713,
+          "commit": "1ed3bec13248887af44a132b4a8a4fa0fe501dc3",
+          "used_contract": "fa0f2e80c41b7b259aad4d8be0e90a1b6bd522847ca1923c651e5c68d4992b88",
+          "draw": "cb0ce4f94daaab37bbaf811c24874da40d7a1cc92b0ced284d0ed9bcf38dbc61",
+          "font_printf": "8629212aae93d8ed250a7298f15c38ff0593ba36df6d4180cc0e473c4c50ce78"
+        },
+        {
+          "revision": 3714,
+          "commit": "0e365b7c55cb92faaca8a5c3a1b9a91597815bb9",
+          "used_contract": "fa0f2e80c41b7b259aad4d8be0e90a1b6bd522847ca1923c651e5c68d4992b88",
+          "draw": "cb0ce4f94daaab37bbaf811c24874da40d7a1cc92b0ced284d0ed9bcf38dbc61",
+          "font_printf": "8629212aae93d8ed250a7298f15c38ff0593ba36df6d4180cc0e473c4c50ce78"
+        },
+        {
+          "revision": 3715,
+          "commit": "8ccd518139e35ff47f5d415b418c6f3c2e310d6f",
+          "used_contract": "fa0f2e80c41b7b259aad4d8be0e90a1b6bd522847ca1923c651e5c68d4992b88",
+          "draw": "cb0ce4f94daaab37bbaf811c24874da40d7a1cc92b0ced284d0ed9bcf38dbc61",
+          "font_printf": "8629212aae93d8ed250a7298f15c38ff0593ba36df6d4180cc0e473c4c50ce78"
+        },
+        {
+          "revision": 3716,
+          "commit": "b5a9f8a224277fc88eae2c7c34eebe2dc0825684",
+          "used_contract": "fa0f2e80c41b7b259aad4d8be0e90a1b6bd522847ca1923c651e5c68d4992b88",
+          "draw": "cb0ce4f94daaab37bbaf811c24874da40d7a1cc92b0ced284d0ed9bcf38dbc61",
+          "font_printf": "8629212aae93d8ed250a7298f15c38ff0593ba36df6d4180cc0e473c4c50ce78"
+        },
+        {
+          "revision": 3722,
+          "commit": "1cd80da2e10a4c5e619422ad94f7c1abc42c2226",
+          "used_contract": "fa0f2e80c41b7b259aad4d8be0e90a1b6bd522847ca1923c651e5c68d4992b88",
+          "draw": "cb0ce4f94daaab37bbaf811c24874da40d7a1cc92b0ced284d0ed9bcf38dbc61",
+          "font_printf": "8629212aae93d8ed250a7298f15c38ff0593ba36df6d4180cc0e473c4c50ce78"
+        },
+        {
+          "revision": 3725,
+          "commit": "58dab1fbcae12a508bd69fd2f79d48d74bfc4202",
+          "used_contract": "fa0f2e80c41b7b259aad4d8be0e90a1b6bd522847ca1923c651e5c68d4992b88",
+          "draw": "cb0ce4f94daaab37bbaf811c24874da40d7a1cc92b0ced284d0ed9bcf38dbc61",
+          "font_printf": "8629212aae93d8ed250a7298f15c38ff0593ba36df6d4180cc0e473c4c50ce78"
+        },
+        {
+          "revision": 3726,
+          "commit": "4a94293d2f916b1ba05ac4a6f9635abbb394a8a9",
+          "used_contract": "fa0f2e80c41b7b259aad4d8be0e90a1b6bd522847ca1923c651e5c68d4992b88",
+          "draw": "cb0ce4f94daaab37bbaf811c24874da40d7a1cc92b0ced284d0ed9bcf38dbc61",
+          "font_printf": "8629212aae93d8ed250a7298f15c38ff0593ba36df6d4180cc0e473c4c50ce78"
+        },
+        {
+          "revision": 3727,
+          "commit": "ad3f59f9325e89b68f82e4daf162d0f0510af8d3",
+          "used_contract": "fa0f2e80c41b7b259aad4d8be0e90a1b6bd522847ca1923c651e5c68d4992b88",
+          "draw": "cb0ce4f94daaab37bbaf811c24874da40d7a1cc92b0ced284d0ed9bcf38dbc61",
+          "font_printf": "8629212aae93d8ed250a7298f15c38ff0593ba36df6d4180cc0e473c4c50ce78"
+        },
+        {
+          "revision": 3728,
+          "commit": "9f4ad7f785557d87829acd19972b8cc0704fc8c1",
+          "used_contract": "fa0f2e80c41b7b259aad4d8be0e90a1b6bd522847ca1923c651e5c68d4992b88",
+          "draw": "cb0ce4f94daaab37bbaf811c24874da40d7a1cc92b0ced284d0ed9bcf38dbc61",
+          "font_printf": "8629212aae93d8ed250a7298f15c38ff0593ba36df6d4180cc0e473c4c50ce78"
+        },
+        {
+          "revision": 3729,
+          "commit": "b3dc9a4a79d1f6a1b96b573e060ef97067f1176c",
+          "used_contract": "fa0f2e80c41b7b259aad4d8be0e90a1b6bd522847ca1923c651e5c68d4992b88",
+          "draw": "cb0ce4f94daaab37bbaf811c24874da40d7a1cc92b0ced284d0ed9bcf38dbc61",
+          "font_printf": "8629212aae93d8ed250a7298f15c38ff0593ba36df6d4180cc0e473c4c50ce78"
+        },
+        {
+          "revision": 3730,
+          "commit": "40441f127f7ad7b7cfda0eebb489e8feffd1f806",
+          "used_contract": "fa0f2e80c41b7b259aad4d8be0e90a1b6bd522847ca1923c651e5c68d4992b88",
+          "draw": "cb0ce4f94daaab37bbaf811c24874da40d7a1cc92b0ced284d0ed9bcf38dbc61",
+          "font_printf": "8629212aae93d8ed250a7298f15c38ff0593ba36df6d4180cc0e473c4c50ce78"
+        },
+        {
+          "revision": 3732,
+          "commit": "0b2d8300b819cdee94817194b2db7489d25d45d3",
+          "used_contract": "fa0f2e80c41b7b259aad4d8be0e90a1b6bd522847ca1923c651e5c68d4992b88",
+          "draw": "cb0ce4f94daaab37bbaf811c24874da40d7a1cc92b0ced284d0ed9bcf38dbc61",
+          "font_printf": "8629212aae93d8ed250a7298f15c38ff0593ba36df6d4180cc0e473c4c50ce78"
+        },
+        {
+          "revision": 3738,
+          "commit": "e0e03912cd594ffe04ca8bf7b462f1e97df6f6fe",
+          "used_contract": "fa0f2e80c41b7b259aad4d8be0e90a1b6bd522847ca1923c651e5c68d4992b88",
+          "draw": "cb0ce4f94daaab37bbaf811c24874da40d7a1cc92b0ced284d0ed9bcf38dbc61",
+          "font_printf": "8629212aae93d8ed250a7298f15c38ff0593ba36df6d4180cc0e473c4c50ce78"
+        },
+        {
+          "revision": 3739,
+          "commit": "c790b4bc7fcba47efb912d31b4611f5df63d4807",
+          "used_contract": "5afd743d4d5834491bd90059af609e8b978507ec71b3ea9229db90de8effba4f",
+          "draw": "6e503ce2c2ddaab0bf6b3845c7081b62d7304de3b415c2a30e80454562fd6a23",
+          "font_printf": "8629212aae93d8ed250a7298f15c38ff0593ba36df6d4180cc0e473c4c50ce78"
+        },
+        {
+          "revision": 3740,
+          "commit": "cf83dc7f4472e6a51aa84cfa37b47e5d3f42d986",
+          "used_contract": "5afd743d4d5834491bd90059af609e8b978507ec71b3ea9229db90de8effba4f",
+          "draw": "6e503ce2c2ddaab0bf6b3845c7081b62d7304de3b415c2a30e80454562fd6a23",
+          "font_printf": "8629212aae93d8ed250a7298f15c38ff0593ba36df6d4180cc0e473c4c50ce78"
+        },
+        {
+          "revision": 3741,
+          "commit": "00bcc4947748e8af10d030a82b60520bbd402e30",
+          "used_contract": "5afd743d4d5834491bd90059af609e8b978507ec71b3ea9229db90de8effba4f",
+          "draw": "6e503ce2c2ddaab0bf6b3845c7081b62d7304de3b415c2a30e80454562fd6a23",
+          "font_printf": "8629212aae93d8ed250a7298f15c38ff0593ba36df6d4180cc0e473c4c50ce78"
+        },
+        {
+          "revision": 3742,
+          "commit": "0d20390cfe982136259ea3fa4bb8078801be9269",
+          "used_contract": "5afd743d4d5834491bd90059af609e8b978507ec71b3ea9229db90de8effba4f",
+          "draw": "6e503ce2c2ddaab0bf6b3845c7081b62d7304de3b415c2a30e80454562fd6a23",
+          "font_printf": "8629212aae93d8ed250a7298f15c38ff0593ba36df6d4180cc0e473c4c50ce78"
+        }
+      ]
+    },
+    {
+      "revisions": [
+        3761,
+        3769,
+        3773,
+        3780,
+        3783,
+        3789,
+        3793,
+        3797,
+        3805,
+        3814,
+        3818,
+        3820,
+        3821,
+        3822,
+        3824,
+        3829,
+        3830,
+        3831,
+        3837,
+        3839,
+        3842
+      ],
+      "physical_fixed": false,
+      "slots": 50,
+      "font_tokens": "atlas",
+      "cases": [
+        {
+          "level_present": false,
+          "objects": [],
+          "ticks": [
+            {
+              "now": 20,
+              "glyphs": [],
+              "released": [],
+              "objects": []
+            }
+          ]
+        },
+        {
+          "level_present": true,
+          "objects": [],
+          "ticks": [
+            {
+              "now": 20,
+              "glyphs": [],
+              "released": [],
+              "objects": []
+            }
+          ]
+        },
+        {
+          "level_present": true,
+          "objects": [
+            {
+              "index": 0,
+              "fields": {
+                "x": 10,
+                "y": 20,
+                "z": 7,
+                "font": 0,
+                "t": 0
+              },
+              "text": [
+                65,
+                37,
+                37,
+                66
+              ]
+            },
+            {
+              "index": 1,
+              "fields": {
+                "x": 40,
+                "y": 30,
+                "z": 8,
+                "font": 1,
+                "t": 21
+              },
+              "text": [
+                66
+              ]
+            }
+          ],
+          "ticks": [
+            {
+              "now": 20,
+              "glyphs": [
+                [
+                  10,
+                  20,
+                  7,
+                  0,
+                  65
+                ],
+                [
+                  13,
+                  20,
+                  7,
+                  0,
+                  37
+                ],
+                [
+                  16,
+                  20,
+                  7,
+                  0,
+                  66
+                ],
+                [
+                  40,
+                  30,
+                  8,
+                  1,
+                  66
+                ]
+              ],
+              "released": [],
+              "objects": [
+                {
+                  "index": 0,
+                  "fields": {
+                    "x": 10,
+                    "y": 20,
+                    "z": 7,
+                    "font": 0,
+                    "t": 0
+                  },
+                  "text": [
+                    65,
+                    37,
+                    37,
+                    66
+                  ]
+                },
+                {
+                  "index": 1,
+                  "fields": {
+                    "x": 40,
+                    "y": 30,
+                    "z": 8,
+                    "font": 1,
+                    "t": 21
+                  },
+                  "text": [
+                    66
+                  ]
+                }
+              ]
+            },
+            {
+              "now": 21,
+              "glyphs": [
+                [
+                  10,
+                  20,
+                  7,
+                  0,
+                  65
+                ],
+                [
+                  13,
+                  20,
+                  7,
+                  0,
+                  37
+                ],
+                [
+                  16,
+                  20,
+                  7,
+                  0,
+                  66
+                ]
+              ],
+              "released": [
+                1
+              ],
+              "objects": [
+                {
+                  "index": 0,
+                  "fields": {
+                    "x": 10,
+                    "y": 20,
+                    "z": 7,
+                    "font": 0,
+                    "t": 0
+                  },
+                  "text": [
+                    65,
+                    37,
+                    37,
+                    66
+                  ]
+                },
+                {
+                  "index": 1,
+                  "fields": {
+                    "x": 0,
+                    "y": 0,
+                    "z": 0,
+                    "font": 0,
+                    "t": 0
+                  },
+                  "text": null
+                }
+              ]
+            },
+            {
+              "now": 22,
+              "glyphs": [
+                [
+                  10,
+                  20,
+                  7,
+                  0,
+                  65
+                ],
+                [
+                  13,
+                  20,
+                  7,
+                  0,
+                  37
+                ],
+                [
+                  16,
+                  20,
+                  7,
+                  0,
+                  66
+                ]
+              ],
+              "released": [
+                1
+              ],
+              "objects": [
+                {
+                  "index": 0,
+                  "fields": {
+                    "x": 10,
+                    "y": 20,
+                    "z": 7,
+                    "font": 0,
+                    "t": 0
+                  },
+                  "text": [
+                    65,
+                    37,
+                    37,
+                    66
+                  ]
+                },
+                {
+                  "index": 1,
+                  "fields": {
+                    "x": 0,
+                    "y": 0,
+                    "z": 0,
+                    "font": 0,
+                    "t": 0
+                  },
+                  "text": null
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "level_present": true,
+          "objects": [
+            {
+              "index": 0,
+              "fields": {
+                "x": 1,
+                "y": 2,
+                "z": 3,
+                "font": 0,
+                "t": 20
+              },
+              "text": [
+                65
+              ]
+            },
+            {
+              "index": 1,
+              "fields": {
+                "x": 4,
+                "y": 5,
+                "z": 6,
+                "font": 1,
+                "t": 19
+              },
+              "text": [
+                66
+              ]
+            },
+            {
+              "index": 2,
+              "fields": {
+                "x": 7,
+                "y": 8,
+                "z": 9,
+                "font": 0,
+                "t": 21
+              },
+              "text": [
+                67
+              ]
+            },
+            {
+              "index": 3,
+              "fields": {
+                "x": 2,
+                "y": 3,
+                "z": 4,
+                "font": 1,
+                "t": 20
+              },
+              "text": null
+            }
+          ],
+          "ticks": [
+            {
+              "now": 20,
+              "glyphs": [
+                [
+                  7,
+                  8,
+                  9,
+                  0,
+                  67
+                ]
+              ],
+              "released": [
+                0,
+                1
+              ],
+              "objects": [
+                {
+                  "index": 0,
+                  "fields": {
+                    "x": 0,
+                    "y": 0,
+                    "z": 0,
+                    "font": 0,
+                    "t": 0
+                  },
+                  "text": null
+                },
+                {
+                  "index": 1,
+                  "fields": {
+                    "x": 0,
+                    "y": 0,
+                    "z": 0,
+                    "font": 0,
+                    "t": 0
+                  },
+                  "text": null
+                },
+                {
+                  "index": 2,
+                  "fields": {
+                    "x": 7,
+                    "y": 8,
+                    "z": 9,
+                    "font": 0,
+                    "t": 21
+                  },
+                  "text": [
+                    67
+                  ]
+                },
+                {
+                  "index": 3,
+                  "fields": {
+                    "x": 0,
+                    "y": 0,
+                    "z": 0,
+                    "font": 0,
+                    "t": 0
+                  },
+                  "text": null
+                }
+              ]
+            },
+            {
+              "now": 21,
+              "glyphs": [],
+              "released": [
+                0,
+                1,
+                2
+              ],
+              "objects": [
+                {
+                  "index": 2,
+                  "fields": {
+                    "x": 0,
+                    "y": 0,
+                    "z": 0,
+                    "font": 0,
+                    "t": 0
+                  },
+                  "text": null
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "level_present": true,
+          "objects": [
+            {
+              "index": 0,
+              "fields": {
+                "x": 10,
+                "y": 20,
+                "z": 1,
+                "font": 0,
+                "t": 0
+              },
+              "text": [
+                65,
+                10,
+                66
+              ]
+            }
+          ],
+          "ticks": [
+            {
+              "now": 20,
+              "glyphs": [
+                [
+                  10,
+                  20,
+                  1,
+                  0,
+                  65
+                ],
+                [
+                  10,
+                  29,
+                  1,
+                  0,
+                  66
+                ]
+              ],
+              "released": [],
+              "objects": [
+                {
+                  "index": 0,
+                  "fields": {
+                    "x": 10,
+                    "y": 20,
+                    "z": 1,
+                    "font": 0,
+                    "t": 0
+                  },
+                  "text": [
+                    65,
+                    10,
+                    66
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "level_present": true,
+          "objects": [
+            {
+              "index": 0,
+              "fields": {
+                "x": 5,
+                "y": 6,
+                "z": 7,
+                "font": 1,
+                "t": 0
+              },
+              "text": []
+            }
+          ],
+          "ticks": [
+            {
+              "now": 20,
+              "glyphs": [],
+              "released": [],
+              "objects": [
+                {
+                  "index": 0,
+                  "fields": {
+                    "x": 5,
+                    "y": 6,
+                    "z": 7,
+                    "font": 1,
+                    "t": 0
+                  },
+                  "text": []
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "engine": "3842",
+      "original_sources": [
+        {
+          "revision": 3761,
+          "commit": "16814fdf39fdcdd78cb59f3d70748f1dc023a24f",
+          "used_contract": "5afd743d4d5834491bd90059af609e8b978507ec71b3ea9229db90de8effba4f",
+          "draw": "6e503ce2c2ddaab0bf6b3845c7081b62d7304de3b415c2a30e80454562fd6a23",
+          "font_printf": "8629212aae93d8ed250a7298f15c38ff0593ba36df6d4180cc0e473c4c50ce78"
+        },
+        {
+          "revision": 3769,
+          "commit": "14ac619f7d9f21bf1ac331932308c3ced4a65615",
+          "used_contract": "5afd743d4d5834491bd90059af609e8b978507ec71b3ea9229db90de8effba4f",
+          "draw": "6e503ce2c2ddaab0bf6b3845c7081b62d7304de3b415c2a30e80454562fd6a23",
+          "font_printf": "8629212aae93d8ed250a7298f15c38ff0593ba36df6d4180cc0e473c4c50ce78"
+        },
+        {
+          "revision": 3773,
+          "commit": "e39bfa21d708f2f7a586085d8689bff94440a104",
+          "used_contract": "5afd743d4d5834491bd90059af609e8b978507ec71b3ea9229db90de8effba4f",
+          "draw": "6e503ce2c2ddaab0bf6b3845c7081b62d7304de3b415c2a30e80454562fd6a23",
+          "font_printf": "8629212aae93d8ed250a7298f15c38ff0593ba36df6d4180cc0e473c4c50ce78"
+        },
+        {
+          "revision": 3780,
+          "commit": "760cb0e6fdbda9d8a4c426f00c84623349ca5b17",
+          "used_contract": "5afd743d4d5834491bd90059af609e8b978507ec71b3ea9229db90de8effba4f",
+          "draw": "6e503ce2c2ddaab0bf6b3845c7081b62d7304de3b415c2a30e80454562fd6a23",
+          "font_printf": "8629212aae93d8ed250a7298f15c38ff0593ba36df6d4180cc0e473c4c50ce78"
+        },
+        {
+          "revision": 3783,
+          "commit": "5da3e255b2783079872a57247b020090e307df0d",
+          "used_contract": "5afd743d4d5834491bd90059af609e8b978507ec71b3ea9229db90de8effba4f",
+          "draw": "6e503ce2c2ddaab0bf6b3845c7081b62d7304de3b415c2a30e80454562fd6a23",
+          "font_printf": "8629212aae93d8ed250a7298f15c38ff0593ba36df6d4180cc0e473c4c50ce78"
+        },
+        {
+          "revision": 3789,
+          "commit": "cc5166a117318987f638b4b6c6d1034384409372",
+          "used_contract": "5afd743d4d5834491bd90059af609e8b978507ec71b3ea9229db90de8effba4f",
+          "draw": "6e503ce2c2ddaab0bf6b3845c7081b62d7304de3b415c2a30e80454562fd6a23",
+          "font_printf": "8629212aae93d8ed250a7298f15c38ff0593ba36df6d4180cc0e473c4c50ce78"
+        },
+        {
+          "revision": 3793,
+          "commit": "edf234656cae88b078718661a2bd0c42090f0687",
+          "used_contract": "5afd743d4d5834491bd90059af609e8b978507ec71b3ea9229db90de8effba4f",
+          "draw": "6e503ce2c2ddaab0bf6b3845c7081b62d7304de3b415c2a30e80454562fd6a23",
+          "font_printf": "8629212aae93d8ed250a7298f15c38ff0593ba36df6d4180cc0e473c4c50ce78"
+        },
+        {
+          "revision": 3797,
+          "commit": "4490ee5d18ffcc7604e95cd4910dadf6191e694a",
+          "used_contract": "5afd743d4d5834491bd90059af609e8b978507ec71b3ea9229db90de8effba4f",
+          "draw": "6e503ce2c2ddaab0bf6b3845c7081b62d7304de3b415c2a30e80454562fd6a23",
+          "font_printf": "8629212aae93d8ed250a7298f15c38ff0593ba36df6d4180cc0e473c4c50ce78"
+        },
+        {
+          "revision": 3805,
+          "commit": "2abee79303b17b269e88cd986ab78dda2bd526d6",
+          "used_contract": "5afd743d4d5834491bd90059af609e8b978507ec71b3ea9229db90de8effba4f",
+          "draw": "6e503ce2c2ddaab0bf6b3845c7081b62d7304de3b415c2a30e80454562fd6a23",
+          "font_printf": "8629212aae93d8ed250a7298f15c38ff0593ba36df6d4180cc0e473c4c50ce78"
+        },
+        {
+          "revision": 3814,
+          "commit": "46d398cfb2e75a142c7bf6dc38cc2f9603b57ecf",
+          "used_contract": "5afd743d4d5834491bd90059af609e8b978507ec71b3ea9229db90de8effba4f",
+          "draw": "6e503ce2c2ddaab0bf6b3845c7081b62d7304de3b415c2a30e80454562fd6a23",
+          "font_printf": "8629212aae93d8ed250a7298f15c38ff0593ba36df6d4180cc0e473c4c50ce78"
+        },
+        {
+          "revision": 3818,
+          "commit": "cae686392d0b5e52563e9dd191801193796cd4a5",
+          "used_contract": "5afd743d4d5834491bd90059af609e8b978507ec71b3ea9229db90de8effba4f",
+          "draw": "6e503ce2c2ddaab0bf6b3845c7081b62d7304de3b415c2a30e80454562fd6a23",
+          "font_printf": "8629212aae93d8ed250a7298f15c38ff0593ba36df6d4180cc0e473c4c50ce78"
+        },
+        {
+          "revision": 3820,
+          "commit": "ee9b34fd1f52d7edb3c4604b39dc4efe2bb1b6ab",
+          "used_contract": "5afd743d4d5834491bd90059af609e8b978507ec71b3ea9229db90de8effba4f",
+          "draw": "6e503ce2c2ddaab0bf6b3845c7081b62d7304de3b415c2a30e80454562fd6a23",
+          "font_printf": "8629212aae93d8ed250a7298f15c38ff0593ba36df6d4180cc0e473c4c50ce78"
+        },
+        {
+          "revision": 3821,
+          "commit": "651c34ffec57b78a8df7ae24898d8e369978d398",
+          "used_contract": "5afd743d4d5834491bd90059af609e8b978507ec71b3ea9229db90de8effba4f",
+          "draw": "6e503ce2c2ddaab0bf6b3845c7081b62d7304de3b415c2a30e80454562fd6a23",
+          "font_printf": "8629212aae93d8ed250a7298f15c38ff0593ba36df6d4180cc0e473c4c50ce78"
+        },
+        {
+          "revision": 3822,
+          "commit": "7ddd15b4981ea7b55f1851db926bc86276632b8c",
+          "used_contract": "5afd743d4d5834491bd90059af609e8b978507ec71b3ea9229db90de8effba4f",
+          "draw": "6e503ce2c2ddaab0bf6b3845c7081b62d7304de3b415c2a30e80454562fd6a23",
+          "font_printf": "8629212aae93d8ed250a7298f15c38ff0593ba36df6d4180cc0e473c4c50ce78"
+        },
+        {
+          "revision": 3824,
+          "commit": "e260635df5095577fb729555cd5c08ecce37316d",
+          "used_contract": "5afd743d4d5834491bd90059af609e8b978507ec71b3ea9229db90de8effba4f",
+          "draw": "6e503ce2c2ddaab0bf6b3845c7081b62d7304de3b415c2a30e80454562fd6a23",
+          "font_printf": "8629212aae93d8ed250a7298f15c38ff0593ba36df6d4180cc0e473c4c50ce78"
+        },
+        {
+          "revision": 3829,
+          "commit": "8223091e0ae85bd621572094c3465783d6f73429",
+          "used_contract": "5afd743d4d5834491bd90059af609e8b978507ec71b3ea9229db90de8effba4f",
+          "draw": "6e503ce2c2ddaab0bf6b3845c7081b62d7304de3b415c2a30e80454562fd6a23",
+          "font_printf": "8629212aae93d8ed250a7298f15c38ff0593ba36df6d4180cc0e473c4c50ce78"
+        },
+        {
+          "revision": 3830,
+          "commit": "1248ca60d338c911ef81a0b1ade0ef05ff0fa6cc",
+          "used_contract": "5afd743d4d5834491bd90059af609e8b978507ec71b3ea9229db90de8effba4f",
+          "draw": "6e503ce2c2ddaab0bf6b3845c7081b62d7304de3b415c2a30e80454562fd6a23",
+          "font_printf": "8629212aae93d8ed250a7298f15c38ff0593ba36df6d4180cc0e473c4c50ce78"
+        },
+        {
+          "revision": 3831,
+          "commit": "c61f02b3fbb155dd416a7750eb9cb645d7785266",
+          "used_contract": "5afd743d4d5834491bd90059af609e8b978507ec71b3ea9229db90de8effba4f",
+          "draw": "6e503ce2c2ddaab0bf6b3845c7081b62d7304de3b415c2a30e80454562fd6a23",
+          "font_printf": "8629212aae93d8ed250a7298f15c38ff0593ba36df6d4180cc0e473c4c50ce78"
+        },
+        {
+          "revision": 3837,
+          "commit": "f2b4258428af00b3748ef7713d36201d4d0678ac",
+          "used_contract": "5afd743d4d5834491bd90059af609e8b978507ec71b3ea9229db90de8effba4f",
+          "draw": "6e503ce2c2ddaab0bf6b3845c7081b62d7304de3b415c2a30e80454562fd6a23",
+          "font_printf": "8629212aae93d8ed250a7298f15c38ff0593ba36df6d4180cc0e473c4c50ce78"
+        },
+        {
+          "revision": 3839,
+          "commit": "b6712f11af263c3ad438d87241cec38f18570046",
+          "used_contract": "5afd743d4d5834491bd90059af609e8b978507ec71b3ea9229db90de8effba4f",
+          "draw": "6e503ce2c2ddaab0bf6b3845c7081b62d7304de3b415c2a30e80454562fd6a23",
+          "font_printf": "8629212aae93d8ed250a7298f15c38ff0593ba36df6d4180cc0e473c4c50ce78"
+        },
+        {
+          "revision": 3842,
+          "commit": "1f702a991ace7fa31884262e458a85e351f62713",
+          "used_contract": "69ee099f37003d6e818ed13d2a3dc4b6bee731a6873fe34c575c90d821a4557f",
+          "draw": "6e503ce2c2ddaab0bf6b3845c7081b62d7304de3b415c2a30e80454562fd6a23",
+          "font_printf": "b285756d9c4a778c681755b1871a2b5e64d399ddf4f9fc20d1a50ce267a1b969"
+        }
+      ]
+    }
+  ]
+}

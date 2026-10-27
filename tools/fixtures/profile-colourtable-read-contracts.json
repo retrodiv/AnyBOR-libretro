@@ -1,0 +1,907 @@
+{
+  "schema": 1,
+  "scope": "Actual getter entry/exit with source conversions and helper. Reduced layouts/numeric mapping; allocation extents and source counter width modeled, full loader/lifecycle separate.",
+  "sources": [
+    {
+      "revision": 3666,
+      "commit": "d91a968db18ecb4a738cf008ea0483883929a674",
+      "getter_mode": "fixed_table",
+      "counter_bits": 8,
+      "source_hashes": {
+        "model_map_fields": "c03ae9503e4a13d32663de56d099e32c35c7ed934d46f027b3d979f36c1f2409",
+        "fixed_map_limit": "b62b3472a1890c3da83f774463c20d4d0d6c834e1c89203d72528a4024f83066",
+        "map_reallocation_macro": null,
+        "load_colourmap": "330a5678b29a4b3f7eb9c6df162353f754dd70ed5cbd4c9304487cbd7bedaa40",
+        "model_get_colourmap": null,
+        "model_zero_initialization": "62563d96e4a332d2517d82ff200db05a1e20380606fc8b91b928b0a95d4b599f",
+        "getter_case": "7b5113ca6e1cd41a134431c0925bf197ff003445e0e71fd98c90e92ef3d2a621",
+        "getter_function": "84fec5a61e6b45efd1430991d9798edcfe225b79f8af8e4d75596ead2485ae23"
+      },
+      "undefined_original_queries": "Index outside allocated table for raw reads; signed LONG increment at INT32_MAX; helper selectors that pass the original count comparison but leave the table. Original probes exclude these, core probes require defined bounds."
+    },
+    {
+      "revision": 3667,
+      "commit": "b9be93bb004d151b7280a4dd2d41a952d3160afc",
+      "getter_mode": "fixed_table",
+      "counter_bits": 8,
+      "source_hashes": {
+        "model_map_fields": "c03ae9503e4a13d32663de56d099e32c35c7ed934d46f027b3d979f36c1f2409",
+        "fixed_map_limit": "b62b3472a1890c3da83f774463c20d4d0d6c834e1c89203d72528a4024f83066",
+        "map_reallocation_macro": null,
+        "load_colourmap": "330a5678b29a4b3f7eb9c6df162353f754dd70ed5cbd4c9304487cbd7bedaa40",
+        "model_get_colourmap": null,
+        "model_zero_initialization": "62563d96e4a332d2517d82ff200db05a1e20380606fc8b91b928b0a95d4b599f",
+        "getter_case": "7b5113ca6e1cd41a134431c0925bf197ff003445e0e71fd98c90e92ef3d2a621",
+        "getter_function": "84fec5a61e6b45efd1430991d9798edcfe225b79f8af8e4d75596ead2485ae23"
+      },
+      "undefined_original_queries": "Index outside allocated table for raw reads; signed LONG increment at INT32_MAX; helper selectors that pass the original count comparison but leave the table. Original probes exclude these, core probes require defined bounds."
+    },
+    {
+      "revision": 3669,
+      "commit": "7c099902d5149d9e696ad1274c0d1964aa1f2323",
+      "getter_mode": "fixed_table",
+      "counter_bits": 8,
+      "source_hashes": {
+        "model_map_fields": "c03ae9503e4a13d32663de56d099e32c35c7ed934d46f027b3d979f36c1f2409",
+        "fixed_map_limit": "b62b3472a1890c3da83f774463c20d4d0d6c834e1c89203d72528a4024f83066",
+        "map_reallocation_macro": null,
+        "load_colourmap": "330a5678b29a4b3f7eb9c6df162353f754dd70ed5cbd4c9304487cbd7bedaa40",
+        "model_get_colourmap": null,
+        "model_zero_initialization": "62563d96e4a332d2517d82ff200db05a1e20380606fc8b91b928b0a95d4b599f",
+        "getter_case": "7b5113ca6e1cd41a134431c0925bf197ff003445e0e71fd98c90e92ef3d2a621",
+        "getter_function": "84fec5a61e6b45efd1430991d9798edcfe225b79f8af8e4d75596ead2485ae23"
+      },
+      "undefined_original_queries": "Index outside allocated table for raw reads; signed LONG increment at INT32_MAX; helper selectors that pass the original count comparison but leave the table. Original probes exclude these, core probes require defined bounds."
+    },
+    {
+      "revision": 3670,
+      "commit": "5d6118ae7dc11b04bb370da0faa0c6f42ffab50e",
+      "getter_mode": "fixed_table",
+      "counter_bits": 8,
+      "source_hashes": {
+        "model_map_fields": "c03ae9503e4a13d32663de56d099e32c35c7ed934d46f027b3d979f36c1f2409",
+        "fixed_map_limit": "b62b3472a1890c3da83f774463c20d4d0d6c834e1c89203d72528a4024f83066",
+        "map_reallocation_macro": null,
+        "load_colourmap": "330a5678b29a4b3f7eb9c6df162353f754dd70ed5cbd4c9304487cbd7bedaa40",
+        "model_get_colourmap": null,
+        "model_zero_initialization": "62563d96e4a332d2517d82ff200db05a1e20380606fc8b91b928b0a95d4b599f",
+        "getter_case": "7b5113ca6e1cd41a134431c0925bf197ff003445e0e71fd98c90e92ef3d2a621",
+        "getter_function": "84fec5a61e6b45efd1430991d9798edcfe225b79f8af8e4d75596ead2485ae23"
+      },
+      "undefined_original_queries": "Index outside allocated table for raw reads; signed LONG increment at INT32_MAX; helper selectors that pass the original count comparison but leave the table. Original probes exclude these, core probes require defined bounds."
+    },
+    {
+      "revision": 3671,
+      "commit": "7fba7445c056b5aeff03046dd79ae929fcf68f15",
+      "getter_mode": "fixed_table",
+      "counter_bits": 8,
+      "source_hashes": {
+        "model_map_fields": "c03ae9503e4a13d32663de56d099e32c35c7ed934d46f027b3d979f36c1f2409",
+        "fixed_map_limit": "b62b3472a1890c3da83f774463c20d4d0d6c834e1c89203d72528a4024f83066",
+        "map_reallocation_macro": null,
+        "load_colourmap": "330a5678b29a4b3f7eb9c6df162353f754dd70ed5cbd4c9304487cbd7bedaa40",
+        "model_get_colourmap": null,
+        "model_zero_initialization": "62563d96e4a332d2517d82ff200db05a1e20380606fc8b91b928b0a95d4b599f",
+        "getter_case": "7b5113ca6e1cd41a134431c0925bf197ff003445e0e71fd98c90e92ef3d2a621",
+        "getter_function": "84fec5a61e6b45efd1430991d9798edcfe225b79f8af8e4d75596ead2485ae23"
+      },
+      "undefined_original_queries": "Index outside allocated table for raw reads; signed LONG increment at INT32_MAX; helper selectors that pass the original count comparison but leave the table. Original probes exclude these, core probes require defined bounds."
+    },
+    {
+      "revision": 3672,
+      "commit": "8c4687b4ef831986a04e2fcb3d4dcd7e96bbd0cf",
+      "getter_mode": "fixed_table",
+      "counter_bits": 8,
+      "source_hashes": {
+        "model_map_fields": "c03ae9503e4a13d32663de56d099e32c35c7ed934d46f027b3d979f36c1f2409",
+        "fixed_map_limit": "b62b3472a1890c3da83f774463c20d4d0d6c834e1c89203d72528a4024f83066",
+        "map_reallocation_macro": null,
+        "load_colourmap": "330a5678b29a4b3f7eb9c6df162353f754dd70ed5cbd4c9304487cbd7bedaa40",
+        "model_get_colourmap": null,
+        "model_zero_initialization": "62563d96e4a332d2517d82ff200db05a1e20380606fc8b91b928b0a95d4b599f",
+        "getter_case": "7b5113ca6e1cd41a134431c0925bf197ff003445e0e71fd98c90e92ef3d2a621",
+        "getter_function": "84fec5a61e6b45efd1430991d9798edcfe225b79f8af8e4d75596ead2485ae23"
+      },
+      "undefined_original_queries": "Index outside allocated table for raw reads; signed LONG increment at INT32_MAX; helper selectors that pass the original count comparison but leave the table. Original probes exclude these, core probes require defined bounds."
+    },
+    {
+      "revision": 3673,
+      "commit": "88b9c2829ea471579d90e186215d23a8bf669bcb",
+      "getter_mode": "fixed_table",
+      "counter_bits": 8,
+      "source_hashes": {
+        "model_map_fields": "c03ae9503e4a13d32663de56d099e32c35c7ed934d46f027b3d979f36c1f2409",
+        "fixed_map_limit": "b62b3472a1890c3da83f774463c20d4d0d6c834e1c89203d72528a4024f83066",
+        "map_reallocation_macro": null,
+        "load_colourmap": "330a5678b29a4b3f7eb9c6df162353f754dd70ed5cbd4c9304487cbd7bedaa40",
+        "model_get_colourmap": null,
+        "model_zero_initialization": "62563d96e4a332d2517d82ff200db05a1e20380606fc8b91b928b0a95d4b599f",
+        "getter_case": "7b5113ca6e1cd41a134431c0925bf197ff003445e0e71fd98c90e92ef3d2a621",
+        "getter_function": "84fec5a61e6b45efd1430991d9798edcfe225b79f8af8e4d75596ead2485ae23"
+      },
+      "undefined_original_queries": "Index outside allocated table for raw reads; signed LONG increment at INT32_MAX; helper selectors that pass the original count comparison but leave the table. Original probes exclude these, core probes require defined bounds."
+    },
+    {
+      "revision": 3674,
+      "commit": "5e9213f7de65df1cc13d01e3e695d4ac62091267",
+      "getter_mode": "fixed_table",
+      "counter_bits": 8,
+      "source_hashes": {
+        "model_map_fields": "c03ae9503e4a13d32663de56d099e32c35c7ed934d46f027b3d979f36c1f2409",
+        "fixed_map_limit": "b62b3472a1890c3da83f774463c20d4d0d6c834e1c89203d72528a4024f83066",
+        "map_reallocation_macro": null,
+        "load_colourmap": "330a5678b29a4b3f7eb9c6df162353f754dd70ed5cbd4c9304487cbd7bedaa40",
+        "model_get_colourmap": null,
+        "model_zero_initialization": "62563d96e4a332d2517d82ff200db05a1e20380606fc8b91b928b0a95d4b599f",
+        "getter_case": "7b5113ca6e1cd41a134431c0925bf197ff003445e0e71fd98c90e92ef3d2a621",
+        "getter_function": "84fec5a61e6b45efd1430991d9798edcfe225b79f8af8e4d75596ead2485ae23"
+      },
+      "undefined_original_queries": "Index outside allocated table for raw reads; signed LONG increment at INT32_MAX; helper selectors that pass the original count comparison but leave the table. Original probes exclude these, core probes require defined bounds."
+    },
+    {
+      "revision": 3675,
+      "commit": "a4b46362047dc2bb04e350b8a434cb65cad3b9af",
+      "getter_mode": "fixed_table",
+      "counter_bits": 8,
+      "source_hashes": {
+        "model_map_fields": "c03ae9503e4a13d32663de56d099e32c35c7ed934d46f027b3d979f36c1f2409",
+        "fixed_map_limit": "b62b3472a1890c3da83f774463c20d4d0d6c834e1c89203d72528a4024f83066",
+        "map_reallocation_macro": null,
+        "load_colourmap": "330a5678b29a4b3f7eb9c6df162353f754dd70ed5cbd4c9304487cbd7bedaa40",
+        "model_get_colourmap": null,
+        "model_zero_initialization": "62563d96e4a332d2517d82ff200db05a1e20380606fc8b91b928b0a95d4b599f",
+        "getter_case": "7b5113ca6e1cd41a134431c0925bf197ff003445e0e71fd98c90e92ef3d2a621",
+        "getter_function": "84fec5a61e6b45efd1430991d9798edcfe225b79f8af8e4d75596ead2485ae23"
+      },
+      "undefined_original_queries": "Index outside allocated table for raw reads; signed LONG increment at INT32_MAX; helper selectors that pass the original count comparison but leave the table. Original probes exclude these, core probes require defined bounds."
+    },
+    {
+      "revision": 3676,
+      "commit": "102aa8043a5a1af7c42892d98f266d12a5a9563f",
+      "getter_mode": "fixed_table",
+      "counter_bits": 8,
+      "source_hashes": {
+        "model_map_fields": "c03ae9503e4a13d32663de56d099e32c35c7ed934d46f027b3d979f36c1f2409",
+        "fixed_map_limit": "b62b3472a1890c3da83f774463c20d4d0d6c834e1c89203d72528a4024f83066",
+        "map_reallocation_macro": null,
+        "load_colourmap": "330a5678b29a4b3f7eb9c6df162353f754dd70ed5cbd4c9304487cbd7bedaa40",
+        "model_get_colourmap": null,
+        "model_zero_initialization": "62563d96e4a332d2517d82ff200db05a1e20380606fc8b91b928b0a95d4b599f",
+        "getter_case": "7b5113ca6e1cd41a134431c0925bf197ff003445e0e71fd98c90e92ef3d2a621",
+        "getter_function": "84fec5a61e6b45efd1430991d9798edcfe225b79f8af8e4d75596ead2485ae23"
+      },
+      "undefined_original_queries": "Index outside allocated table for raw reads; signed LONG increment at INT32_MAX; helper selectors that pass the original count comparison but leave the table. Original probes exclude these, core probes require defined bounds."
+    },
+    {
+      "revision": 3677,
+      "commit": "0cc873941f3ee1dc687c7c0d303d043c931f8e5f",
+      "getter_mode": "fixed_table",
+      "counter_bits": 8,
+      "source_hashes": {
+        "model_map_fields": "c03ae9503e4a13d32663de56d099e32c35c7ed934d46f027b3d979f36c1f2409",
+        "fixed_map_limit": "b62b3472a1890c3da83f774463c20d4d0d6c834e1c89203d72528a4024f83066",
+        "map_reallocation_macro": null,
+        "load_colourmap": "330a5678b29a4b3f7eb9c6df162353f754dd70ed5cbd4c9304487cbd7bedaa40",
+        "model_get_colourmap": null,
+        "model_zero_initialization": "62563d96e4a332d2517d82ff200db05a1e20380606fc8b91b928b0a95d4b599f",
+        "getter_case": "7b5113ca6e1cd41a134431c0925bf197ff003445e0e71fd98c90e92ef3d2a621",
+        "getter_function": "f3e540dd7e2cc6a3e959bbd6a46b7f03e41e43c2d1c943d61d98613c95ffa0e7"
+      },
+      "undefined_original_queries": "Index outside allocated table for raw reads; signed LONG increment at INT32_MAX; helper selectors that pass the original count comparison but leave the table. Original probes exclude these, core probes require defined bounds."
+    },
+    {
+      "revision": 3678,
+      "commit": "9db2ed7db699e47513d3ea3144b7f235304eb72a",
+      "getter_mode": "fixed_table",
+      "counter_bits": 8,
+      "source_hashes": {
+        "model_map_fields": "c03ae9503e4a13d32663de56d099e32c35c7ed934d46f027b3d979f36c1f2409",
+        "fixed_map_limit": "b62b3472a1890c3da83f774463c20d4d0d6c834e1c89203d72528a4024f83066",
+        "map_reallocation_macro": null,
+        "load_colourmap": "330a5678b29a4b3f7eb9c6df162353f754dd70ed5cbd4c9304487cbd7bedaa40",
+        "model_get_colourmap": null,
+        "model_zero_initialization": "62563d96e4a332d2517d82ff200db05a1e20380606fc8b91b928b0a95d4b599f",
+        "getter_case": "7b5113ca6e1cd41a134431c0925bf197ff003445e0e71fd98c90e92ef3d2a621",
+        "getter_function": "f3e540dd7e2cc6a3e959bbd6a46b7f03e41e43c2d1c943d61d98613c95ffa0e7"
+      },
+      "undefined_original_queries": "Index outside allocated table for raw reads; signed LONG increment at INT32_MAX; helper selectors that pass the original count comparison but leave the table. Original probes exclude these, core probes require defined bounds."
+    },
+    {
+      "revision": 3679,
+      "commit": "1e4032e0c03f5580f4092fc8c2fecf2a5a96aa7f",
+      "getter_mode": "fixed_table",
+      "counter_bits": 8,
+      "source_hashes": {
+        "model_map_fields": "c03ae9503e4a13d32663de56d099e32c35c7ed934d46f027b3d979f36c1f2409",
+        "fixed_map_limit": "b62b3472a1890c3da83f774463c20d4d0d6c834e1c89203d72528a4024f83066",
+        "map_reallocation_macro": null,
+        "load_colourmap": "330a5678b29a4b3f7eb9c6df162353f754dd70ed5cbd4c9304487cbd7bedaa40",
+        "model_get_colourmap": null,
+        "model_zero_initialization": "62563d96e4a332d2517d82ff200db05a1e20380606fc8b91b928b0a95d4b599f",
+        "getter_case": "7b5113ca6e1cd41a134431c0925bf197ff003445e0e71fd98c90e92ef3d2a621",
+        "getter_function": "f3e540dd7e2cc6a3e959bbd6a46b7f03e41e43c2d1c943d61d98613c95ffa0e7"
+      },
+      "undefined_original_queries": "Index outside allocated table for raw reads; signed LONG increment at INT32_MAX; helper selectors that pass the original count comparison but leave the table. Original probes exclude these, core probes require defined bounds."
+    },
+    {
+      "revision": 3680,
+      "commit": "cbacfd01002925ec9016f03bbf45dc576e135f1a",
+      "getter_mode": "fixed_table",
+      "counter_bits": 8,
+      "source_hashes": {
+        "model_map_fields": "c03ae9503e4a13d32663de56d099e32c35c7ed934d46f027b3d979f36c1f2409",
+        "fixed_map_limit": "b62b3472a1890c3da83f774463c20d4d0d6c834e1c89203d72528a4024f83066",
+        "map_reallocation_macro": null,
+        "load_colourmap": "330a5678b29a4b3f7eb9c6df162353f754dd70ed5cbd4c9304487cbd7bedaa40",
+        "model_get_colourmap": null,
+        "model_zero_initialization": "62563d96e4a332d2517d82ff200db05a1e20380606fc8b91b928b0a95d4b599f",
+        "getter_case": "7b5113ca6e1cd41a134431c0925bf197ff003445e0e71fd98c90e92ef3d2a621",
+        "getter_function": "f3e540dd7e2cc6a3e959bbd6a46b7f03e41e43c2d1c943d61d98613c95ffa0e7"
+      },
+      "undefined_original_queries": "Index outside allocated table for raw reads; signed LONG increment at INT32_MAX; helper selectors that pass the original count comparison but leave the table. Original probes exclude these, core probes require defined bounds."
+    },
+    {
+      "revision": 3681,
+      "commit": "e86a5c32f6303ab0d8432dfe2575b17dc2af5baf",
+      "getter_mode": "fixed_table",
+      "counter_bits": 8,
+      "source_hashes": {
+        "model_map_fields": "c03ae9503e4a13d32663de56d099e32c35c7ed934d46f027b3d979f36c1f2409",
+        "fixed_map_limit": "b62b3472a1890c3da83f774463c20d4d0d6c834e1c89203d72528a4024f83066",
+        "map_reallocation_macro": null,
+        "load_colourmap": "330a5678b29a4b3f7eb9c6df162353f754dd70ed5cbd4c9304487cbd7bedaa40",
+        "model_get_colourmap": null,
+        "model_zero_initialization": "62563d96e4a332d2517d82ff200db05a1e20380606fc8b91b928b0a95d4b599f",
+        "getter_case": "7b5113ca6e1cd41a134431c0925bf197ff003445e0e71fd98c90e92ef3d2a621",
+        "getter_function": "f3e540dd7e2cc6a3e959bbd6a46b7f03e41e43c2d1c943d61d98613c95ffa0e7"
+      },
+      "undefined_original_queries": "Index outside allocated table for raw reads; signed LONG increment at INT32_MAX; helper selectors that pass the original count comparison but leave the table. Original probes exclude these, core probes require defined bounds."
+    },
+    {
+      "revision": 3682,
+      "commit": "a41ea87ba402b98c6b5397c6a402834a802e1801",
+      "getter_mode": "fixed_table",
+      "counter_bits": 8,
+      "source_hashes": {
+        "model_map_fields": "c03ae9503e4a13d32663de56d099e32c35c7ed934d46f027b3d979f36c1f2409",
+        "fixed_map_limit": "b62b3472a1890c3da83f774463c20d4d0d6c834e1c89203d72528a4024f83066",
+        "map_reallocation_macro": null,
+        "load_colourmap": "330a5678b29a4b3f7eb9c6df162353f754dd70ed5cbd4c9304487cbd7bedaa40",
+        "model_get_colourmap": null,
+        "model_zero_initialization": "62563d96e4a332d2517d82ff200db05a1e20380606fc8b91b928b0a95d4b599f",
+        "getter_case": "7b5113ca6e1cd41a134431c0925bf197ff003445e0e71fd98c90e92ef3d2a621",
+        "getter_function": "f3e540dd7e2cc6a3e959bbd6a46b7f03e41e43c2d1c943d61d98613c95ffa0e7"
+      },
+      "undefined_original_queries": "Index outside allocated table for raw reads; signed LONG increment at INT32_MAX; helper selectors that pass the original count comparison but leave the table. Original probes exclude these, core probes require defined bounds."
+    },
+    {
+      "revision": 3683,
+      "commit": "b79ec28e381f0b94f811c9e989759e92f5d02e51",
+      "getter_mode": "fixed_table",
+      "counter_bits": 8,
+      "source_hashes": {
+        "model_map_fields": "c03ae9503e4a13d32663de56d099e32c35c7ed934d46f027b3d979f36c1f2409",
+        "fixed_map_limit": "b62b3472a1890c3da83f774463c20d4d0d6c834e1c89203d72528a4024f83066",
+        "map_reallocation_macro": null,
+        "load_colourmap": "330a5678b29a4b3f7eb9c6df162353f754dd70ed5cbd4c9304487cbd7bedaa40",
+        "model_get_colourmap": null,
+        "model_zero_initialization": "62563d96e4a332d2517d82ff200db05a1e20380606fc8b91b928b0a95d4b599f",
+        "getter_case": "7b5113ca6e1cd41a134431c0925bf197ff003445e0e71fd98c90e92ef3d2a621",
+        "getter_function": "f3e540dd7e2cc6a3e959bbd6a46b7f03e41e43c2d1c943d61d98613c95ffa0e7"
+      },
+      "undefined_original_queries": "Index outside allocated table for raw reads; signed LONG increment at INT32_MAX; helper selectors that pass the original count comparison but leave the table. Original probes exclude these, core probes require defined bounds."
+    },
+    {
+      "revision": 3684,
+      "commit": "8b83a04c18b64a32b2b230861999cd655894e02b",
+      "getter_mode": "fixed_table",
+      "counter_bits": 8,
+      "source_hashes": {
+        "model_map_fields": "c03ae9503e4a13d32663de56d099e32c35c7ed934d46f027b3d979f36c1f2409",
+        "fixed_map_limit": "b62b3472a1890c3da83f774463c20d4d0d6c834e1c89203d72528a4024f83066",
+        "map_reallocation_macro": null,
+        "load_colourmap": "330a5678b29a4b3f7eb9c6df162353f754dd70ed5cbd4c9304487cbd7bedaa40",
+        "model_get_colourmap": null,
+        "model_zero_initialization": "62563d96e4a332d2517d82ff200db05a1e20380606fc8b91b928b0a95d4b599f",
+        "getter_case": "7b5113ca6e1cd41a134431c0925bf197ff003445e0e71fd98c90e92ef3d2a621",
+        "getter_function": "f3e540dd7e2cc6a3e959bbd6a46b7f03e41e43c2d1c943d61d98613c95ffa0e7"
+      },
+      "undefined_original_queries": "Index outside allocated table for raw reads; signed LONG increment at INT32_MAX; helper selectors that pass the original count comparison but leave the table. Original probes exclude these, core probes require defined bounds."
+    },
+    {
+      "revision": 3685,
+      "commit": "8e0f3d0bd64e99244598ddf636c5203c2a6b0f2e",
+      "getter_mode": "fixed_table",
+      "counter_bits": 8,
+      "source_hashes": {
+        "model_map_fields": "c03ae9503e4a13d32663de56d099e32c35c7ed934d46f027b3d979f36c1f2409",
+        "fixed_map_limit": "b62b3472a1890c3da83f774463c20d4d0d6c834e1c89203d72528a4024f83066",
+        "map_reallocation_macro": null,
+        "load_colourmap": "330a5678b29a4b3f7eb9c6df162353f754dd70ed5cbd4c9304487cbd7bedaa40",
+        "model_get_colourmap": null,
+        "model_zero_initialization": "62563d96e4a332d2517d82ff200db05a1e20380606fc8b91b928b0a95d4b599f",
+        "getter_case": "7b5113ca6e1cd41a134431c0925bf197ff003445e0e71fd98c90e92ef3d2a621",
+        "getter_function": "440383de29f550e4955f08096d9037949b80f86900165ed3454494722127db32"
+      },
+      "undefined_original_queries": "Index outside allocated table for raw reads; signed LONG increment at INT32_MAX; helper selectors that pass the original count comparison but leave the table. Original probes exclude these, core probes require defined bounds."
+    },
+    {
+      "revision": 3686,
+      "commit": "d37cca26d57bba5a4f5c190f80562f768785901d",
+      "getter_mode": "fixed_table",
+      "counter_bits": 8,
+      "source_hashes": {
+        "model_map_fields": "c03ae9503e4a13d32663de56d099e32c35c7ed934d46f027b3d979f36c1f2409",
+        "fixed_map_limit": "b62b3472a1890c3da83f774463c20d4d0d6c834e1c89203d72528a4024f83066",
+        "map_reallocation_macro": null,
+        "load_colourmap": "330a5678b29a4b3f7eb9c6df162353f754dd70ed5cbd4c9304487cbd7bedaa40",
+        "model_get_colourmap": null,
+        "model_zero_initialization": "62563d96e4a332d2517d82ff200db05a1e20380606fc8b91b928b0a95d4b599f",
+        "getter_case": "7b5113ca6e1cd41a134431c0925bf197ff003445e0e71fd98c90e92ef3d2a621",
+        "getter_function": "440383de29f550e4955f08096d9037949b80f86900165ed3454494722127db32"
+      },
+      "undefined_original_queries": "Index outside allocated table for raw reads; signed LONG increment at INT32_MAX; helper selectors that pass the original count comparison but leave the table. Original probes exclude these, core probes require defined bounds."
+    },
+    {
+      "revision": 3689,
+      "commit": "953da13e27e3a72fc61ff9fe71c272968e9e7270",
+      "getter_mode": "fixed_table",
+      "counter_bits": 8,
+      "source_hashes": {
+        "model_map_fields": "c03ae9503e4a13d32663de56d099e32c35c7ed934d46f027b3d979f36c1f2409",
+        "fixed_map_limit": "b62b3472a1890c3da83f774463c20d4d0d6c834e1c89203d72528a4024f83066",
+        "map_reallocation_macro": null,
+        "load_colourmap": "330a5678b29a4b3f7eb9c6df162353f754dd70ed5cbd4c9304487cbd7bedaa40",
+        "model_get_colourmap": null,
+        "model_zero_initialization": "62563d96e4a332d2517d82ff200db05a1e20380606fc8b91b928b0a95d4b599f",
+        "getter_case": "7b5113ca6e1cd41a134431c0925bf197ff003445e0e71fd98c90e92ef3d2a621",
+        "getter_function": "440383de29f550e4955f08096d9037949b80f86900165ed3454494722127db32"
+      },
+      "undefined_original_queries": "Index outside allocated table for raw reads; signed LONG increment at INT32_MAX; helper selectors that pass the original count comparison but leave the table. Original probes exclude these, core probes require defined bounds."
+    },
+    {
+      "revision": 3690,
+      "commit": "e4cf90c8a3784263df7809672a2b4998bb000831",
+      "getter_mode": "fixed_table",
+      "counter_bits": 8,
+      "source_hashes": {
+        "model_map_fields": "c03ae9503e4a13d32663de56d099e32c35c7ed934d46f027b3d979f36c1f2409",
+        "fixed_map_limit": "b62b3472a1890c3da83f774463c20d4d0d6c834e1c89203d72528a4024f83066",
+        "map_reallocation_macro": null,
+        "load_colourmap": "330a5678b29a4b3f7eb9c6df162353f754dd70ed5cbd4c9304487cbd7bedaa40",
+        "model_get_colourmap": null,
+        "model_zero_initialization": "62563d96e4a332d2517d82ff200db05a1e20380606fc8b91b928b0a95d4b599f",
+        "getter_case": "7b5113ca6e1cd41a134431c0925bf197ff003445e0e71fd98c90e92ef3d2a621",
+        "getter_function": "440383de29f550e4955f08096d9037949b80f86900165ed3454494722127db32"
+      },
+      "undefined_original_queries": "Index outside allocated table for raw reads; signed LONG increment at INT32_MAX; helper selectors that pass the original count comparison but leave the table. Original probes exclude these, core probes require defined bounds."
+    },
+    {
+      "revision": 3691,
+      "commit": "42bc05f6630514c0a21e14faa7c4e671329a91ae",
+      "getter_mode": "fixed_table",
+      "counter_bits": 8,
+      "source_hashes": {
+        "model_map_fields": "c03ae9503e4a13d32663de56d099e32c35c7ed934d46f027b3d979f36c1f2409",
+        "fixed_map_limit": "b62b3472a1890c3da83f774463c20d4d0d6c834e1c89203d72528a4024f83066",
+        "map_reallocation_macro": null,
+        "load_colourmap": "330a5678b29a4b3f7eb9c6df162353f754dd70ed5cbd4c9304487cbd7bedaa40",
+        "model_get_colourmap": null,
+        "model_zero_initialization": "62563d96e4a332d2517d82ff200db05a1e20380606fc8b91b928b0a95d4b599f",
+        "getter_case": "7b5113ca6e1cd41a134431c0925bf197ff003445e0e71fd98c90e92ef3d2a621",
+        "getter_function": "440383de29f550e4955f08096d9037949b80f86900165ed3454494722127db32"
+      },
+      "undefined_original_queries": "Index outside allocated table for raw reads; signed LONG increment at INT32_MAX; helper selectors that pass the original count comparison but leave the table. Original probes exclude these, core probes require defined bounds."
+    },
+    {
+      "revision": 3692,
+      "commit": "5c31bc7f06580725f11d436855533a2485dfb757",
+      "getter_mode": "fixed_table",
+      "counter_bits": 8,
+      "source_hashes": {
+        "model_map_fields": "c03ae9503e4a13d32663de56d099e32c35c7ed934d46f027b3d979f36c1f2409",
+        "fixed_map_limit": "b62b3472a1890c3da83f774463c20d4d0d6c834e1c89203d72528a4024f83066",
+        "map_reallocation_macro": null,
+        "load_colourmap": "330a5678b29a4b3f7eb9c6df162353f754dd70ed5cbd4c9304487cbd7bedaa40",
+        "model_get_colourmap": null,
+        "model_zero_initialization": "62563d96e4a332d2517d82ff200db05a1e20380606fc8b91b928b0a95d4b599f",
+        "getter_case": "7b5113ca6e1cd41a134431c0925bf197ff003445e0e71fd98c90e92ef3d2a621",
+        "getter_function": "440383de29f550e4955f08096d9037949b80f86900165ed3454494722127db32"
+      },
+      "undefined_original_queries": "Index outside allocated table for raw reads; signed LONG increment at INT32_MAX; helper selectors that pass the original count comparison but leave the table. Original probes exclude these, core probes require defined bounds."
+    },
+    {
+      "revision": 3693,
+      "commit": "ec0e28efea5a3a63a28ccd9abe2fb3fb88513416",
+      "getter_mode": "fixed_table",
+      "counter_bits": 8,
+      "source_hashes": {
+        "model_map_fields": "c03ae9503e4a13d32663de56d099e32c35c7ed934d46f027b3d979f36c1f2409",
+        "fixed_map_limit": "b62b3472a1890c3da83f774463c20d4d0d6c834e1c89203d72528a4024f83066",
+        "map_reallocation_macro": null,
+        "load_colourmap": "330a5678b29a4b3f7eb9c6df162353f754dd70ed5cbd4c9304487cbd7bedaa40",
+        "model_get_colourmap": null,
+        "model_zero_initialization": "62563d96e4a332d2517d82ff200db05a1e20380606fc8b91b928b0a95d4b599f",
+        "getter_case": "7b5113ca6e1cd41a134431c0925bf197ff003445e0e71fd98c90e92ef3d2a621",
+        "getter_function": "440383de29f550e4955f08096d9037949b80f86900165ed3454494722127db32"
+      },
+      "undefined_original_queries": "Index outside allocated table for raw reads; signed LONG increment at INT32_MAX; helper selectors that pass the original count comparison but leave the table. Original probes exclude these, core probes require defined bounds."
+    },
+    {
+      "revision": 3694,
+      "commit": "aaae13d3487ebedd9a3ef121d6296b5a3afd0cd9",
+      "getter_mode": "fixed_table",
+      "counter_bits": 8,
+      "source_hashes": {
+        "model_map_fields": "c03ae9503e4a13d32663de56d099e32c35c7ed934d46f027b3d979f36c1f2409",
+        "fixed_map_limit": "b62b3472a1890c3da83f774463c20d4d0d6c834e1c89203d72528a4024f83066",
+        "map_reallocation_macro": null,
+        "load_colourmap": "330a5678b29a4b3f7eb9c6df162353f754dd70ed5cbd4c9304487cbd7bedaa40",
+        "model_get_colourmap": null,
+        "model_zero_initialization": "62563d96e4a332d2517d82ff200db05a1e20380606fc8b91b928b0a95d4b599f",
+        "getter_case": "7b5113ca6e1cd41a134431c0925bf197ff003445e0e71fd98c90e92ef3d2a621",
+        "getter_function": "440383de29f550e4955f08096d9037949b80f86900165ed3454494722127db32"
+      },
+      "undefined_original_queries": "Index outside allocated table for raw reads; signed LONG increment at INT32_MAX; helper selectors that pass the original count comparison but leave the table. Original probes exclude these, core probes require defined bounds."
+    },
+    {
+      "revision": 3697,
+      "commit": "142e0957159aab6b4698a94723ea282cb54a3c70",
+      "getter_mode": "fixed_table",
+      "counter_bits": 8,
+      "source_hashes": {
+        "model_map_fields": "c03ae9503e4a13d32663de56d099e32c35c7ed934d46f027b3d979f36c1f2409",
+        "fixed_map_limit": "b62b3472a1890c3da83f774463c20d4d0d6c834e1c89203d72528a4024f83066",
+        "map_reallocation_macro": null,
+        "load_colourmap": "330a5678b29a4b3f7eb9c6df162353f754dd70ed5cbd4c9304487cbd7bedaa40",
+        "model_get_colourmap": null,
+        "model_zero_initialization": "62563d96e4a332d2517d82ff200db05a1e20380606fc8b91b928b0a95d4b599f",
+        "getter_case": "7b5113ca6e1cd41a134431c0925bf197ff003445e0e71fd98c90e92ef3d2a621",
+        "getter_function": "440383de29f550e4955f08096d9037949b80f86900165ed3454494722127db32"
+      },
+      "undefined_original_queries": "Index outside allocated table for raw reads; signed LONG increment at INT32_MAX; helper selectors that pass the original count comparison but leave the table. Original probes exclude these, core probes require defined bounds."
+    },
+    {
+      "revision": 3699,
+      "commit": "f632ac4fe81ea6c6b3cd9d74a1cd7538471579bb",
+      "getter_mode": "fixed_table",
+      "counter_bits": 8,
+      "source_hashes": {
+        "model_map_fields": "c03ae9503e4a13d32663de56d099e32c35c7ed934d46f027b3d979f36c1f2409",
+        "fixed_map_limit": "b62b3472a1890c3da83f774463c20d4d0d6c834e1c89203d72528a4024f83066",
+        "map_reallocation_macro": null,
+        "load_colourmap": "330a5678b29a4b3f7eb9c6df162353f754dd70ed5cbd4c9304487cbd7bedaa40",
+        "model_get_colourmap": null,
+        "model_zero_initialization": "62563d96e4a332d2517d82ff200db05a1e20380606fc8b91b928b0a95d4b599f",
+        "getter_case": "7b5113ca6e1cd41a134431c0925bf197ff003445e0e71fd98c90e92ef3d2a621",
+        "getter_function": "440383de29f550e4955f08096d9037949b80f86900165ed3454494722127db32"
+      },
+      "undefined_original_queries": "Index outside allocated table for raw reads; signed LONG increment at INT32_MAX; helper selectors that pass the original count comparison but leave the table. Original probes exclude these, core probes require defined bounds."
+    },
+    {
+      "revision": 3701,
+      "commit": "7644ed068259c3edbfaed1cd85828b4a28213997",
+      "getter_mode": "fixed_table",
+      "counter_bits": 8,
+      "source_hashes": {
+        "model_map_fields": "c03ae9503e4a13d32663de56d099e32c35c7ed934d46f027b3d979f36c1f2409",
+        "fixed_map_limit": "b62b3472a1890c3da83f774463c20d4d0d6c834e1c89203d72528a4024f83066",
+        "map_reallocation_macro": null,
+        "load_colourmap": "330a5678b29a4b3f7eb9c6df162353f754dd70ed5cbd4c9304487cbd7bedaa40",
+        "model_get_colourmap": null,
+        "model_zero_initialization": "62563d96e4a332d2517d82ff200db05a1e20380606fc8b91b928b0a95d4b599f",
+        "getter_case": "7b5113ca6e1cd41a134431c0925bf197ff003445e0e71fd98c90e92ef3d2a621",
+        "getter_function": "440383de29f550e4955f08096d9037949b80f86900165ed3454494722127db32"
+      },
+      "undefined_original_queries": "Index outside allocated table for raw reads; signed LONG increment at INT32_MAX; helper selectors that pass the original count comparison but leave the table. Original probes exclude these, core probes require defined bounds."
+    },
+    {
+      "revision": 3703,
+      "commit": "bb82f79d47f02649e3a79e22455911f98cc900cb",
+      "getter_mode": "fixed_table",
+      "counter_bits": 8,
+      "source_hashes": {
+        "model_map_fields": "c03ae9503e4a13d32663de56d099e32c35c7ed934d46f027b3d979f36c1f2409",
+        "fixed_map_limit": "b62b3472a1890c3da83f774463c20d4d0d6c834e1c89203d72528a4024f83066",
+        "map_reallocation_macro": null,
+        "load_colourmap": "330a5678b29a4b3f7eb9c6df162353f754dd70ed5cbd4c9304487cbd7bedaa40",
+        "model_get_colourmap": null,
+        "model_zero_initialization": "62563d96e4a332d2517d82ff200db05a1e20380606fc8b91b928b0a95d4b599f",
+        "getter_case": "7b5113ca6e1cd41a134431c0925bf197ff003445e0e71fd98c90e92ef3d2a621",
+        "getter_function": "440383de29f550e4955f08096d9037949b80f86900165ed3454494722127db32"
+      },
+      "undefined_original_queries": "Index outside allocated table for raw reads; signed LONG increment at INT32_MAX; helper selectors that pass the original count comparison but leave the table. Original probes exclude these, core probes require defined bounds."
+    },
+    {
+      "revision": 3704,
+      "commit": "b1bf3dd56ebfcd11eafe265120ceedf0b44ed2f4",
+      "getter_mode": "fixed_table",
+      "counter_bits": 8,
+      "source_hashes": {
+        "model_map_fields": "c03ae9503e4a13d32663de56d099e32c35c7ed934d46f027b3d979f36c1f2409",
+        "fixed_map_limit": "b62b3472a1890c3da83f774463c20d4d0d6c834e1c89203d72528a4024f83066",
+        "map_reallocation_macro": null,
+        "load_colourmap": "330a5678b29a4b3f7eb9c6df162353f754dd70ed5cbd4c9304487cbd7bedaa40",
+        "model_get_colourmap": null,
+        "model_zero_initialization": "62563d96e4a332d2517d82ff200db05a1e20380606fc8b91b928b0a95d4b599f",
+        "getter_case": "7b5113ca6e1cd41a134431c0925bf197ff003445e0e71fd98c90e92ef3d2a621",
+        "getter_function": "440383de29f550e4955f08096d9037949b80f86900165ed3454494722127db32"
+      },
+      "undefined_original_queries": "Index outside allocated table for raw reads; signed LONG increment at INT32_MAX; helper selectors that pass the original count comparison but leave the table. Original probes exclude these, core probes require defined bounds."
+    },
+    {
+      "revision": 3707,
+      "commit": "3e8913af8d0090f1082b5c2a7e624d050c4960fc",
+      "getter_mode": "fixed_table",
+      "counter_bits": 8,
+      "source_hashes": {
+        "model_map_fields": "c03ae9503e4a13d32663de56d099e32c35c7ed934d46f027b3d979f36c1f2409",
+        "fixed_map_limit": "b62b3472a1890c3da83f774463c20d4d0d6c834e1c89203d72528a4024f83066",
+        "map_reallocation_macro": null,
+        "load_colourmap": "330a5678b29a4b3f7eb9c6df162353f754dd70ed5cbd4c9304487cbd7bedaa40",
+        "model_get_colourmap": null,
+        "model_zero_initialization": "62563d96e4a332d2517d82ff200db05a1e20380606fc8b91b928b0a95d4b599f",
+        "getter_case": "7b5113ca6e1cd41a134431c0925bf197ff003445e0e71fd98c90e92ef3d2a621",
+        "getter_function": "440383de29f550e4955f08096d9037949b80f86900165ed3454494722127db32"
+      },
+      "undefined_original_queries": "Index outside allocated table for raw reads; signed LONG increment at INT32_MAX; helper selectors that pass the original count comparison but leave the table. Original probes exclude these, core probes require defined bounds."
+    },
+    {
+      "revision": 3708,
+      "commit": "987fbc31c5be3002732e735a0bdd905eedd7c2b1",
+      "getter_mode": "fixed_table",
+      "counter_bits": 8,
+      "source_hashes": {
+        "model_map_fields": "c03ae9503e4a13d32663de56d099e32c35c7ed934d46f027b3d979f36c1f2409",
+        "fixed_map_limit": "b62b3472a1890c3da83f774463c20d4d0d6c834e1c89203d72528a4024f83066",
+        "map_reallocation_macro": null,
+        "load_colourmap": "330a5678b29a4b3f7eb9c6df162353f754dd70ed5cbd4c9304487cbd7bedaa40",
+        "model_get_colourmap": null,
+        "model_zero_initialization": "62563d96e4a332d2517d82ff200db05a1e20380606fc8b91b928b0a95d4b599f",
+        "getter_case": "7b5113ca6e1cd41a134431c0925bf197ff003445e0e71fd98c90e92ef3d2a621",
+        "getter_function": "440383de29f550e4955f08096d9037949b80f86900165ed3454494722127db32"
+      },
+      "undefined_original_queries": "Index outside allocated table for raw reads; signed LONG increment at INT32_MAX; helper selectors that pass the original count comparison but leave the table. Original probes exclude these, core probes require defined bounds."
+    },
+    {
+      "revision": 3709,
+      "commit": "25db4c7a58a555fd8cf1f6e7931ad2ce4cc6e6d9",
+      "getter_mode": "fixed_table",
+      "counter_bits": 8,
+      "source_hashes": {
+        "model_map_fields": "c03ae9503e4a13d32663de56d099e32c35c7ed934d46f027b3d979f36c1f2409",
+        "fixed_map_limit": "b62b3472a1890c3da83f774463c20d4d0d6c834e1c89203d72528a4024f83066",
+        "map_reallocation_macro": null,
+        "load_colourmap": "330a5678b29a4b3f7eb9c6df162353f754dd70ed5cbd4c9304487cbd7bedaa40",
+        "model_get_colourmap": null,
+        "model_zero_initialization": "62563d96e4a332d2517d82ff200db05a1e20380606fc8b91b928b0a95d4b599f",
+        "getter_case": "7b5113ca6e1cd41a134431c0925bf197ff003445e0e71fd98c90e92ef3d2a621",
+        "getter_function": "440383de29f550e4955f08096d9037949b80f86900165ed3454494722127db32"
+      },
+      "undefined_original_queries": "Index outside allocated table for raw reads; signed LONG increment at INT32_MAX; helper selectors that pass the original count comparison but leave the table. Original probes exclude these, core probes require defined bounds."
+    },
+    {
+      "revision": 3710,
+      "commit": "9622e606e8039fb860ae06d33c119e980f779598",
+      "getter_mode": "fixed_table",
+      "counter_bits": 8,
+      "source_hashes": {
+        "model_map_fields": "c03ae9503e4a13d32663de56d099e32c35c7ed934d46f027b3d979f36c1f2409",
+        "fixed_map_limit": "b62b3472a1890c3da83f774463c20d4d0d6c834e1c89203d72528a4024f83066",
+        "map_reallocation_macro": null,
+        "load_colourmap": "330a5678b29a4b3f7eb9c6df162353f754dd70ed5cbd4c9304487cbd7bedaa40",
+        "model_get_colourmap": null,
+        "model_zero_initialization": "62563d96e4a332d2517d82ff200db05a1e20380606fc8b91b928b0a95d4b599f",
+        "getter_case": "7b5113ca6e1cd41a134431c0925bf197ff003445e0e71fd98c90e92ef3d2a621",
+        "getter_function": "b6cefb634bb43b2bfcf2b8c972355de87c2c502968483a7cbe5372c2b35ee837"
+      },
+      "undefined_original_queries": "Index outside allocated table for raw reads; signed LONG increment at INT32_MAX; helper selectors that pass the original count comparison but leave the table. Original probes exclude these, core probes require defined bounds."
+    },
+    {
+      "revision": 3711,
+      "commit": "6ec17fa411b237f789c910e1234a33a618ab236d",
+      "getter_mode": "fixed_table",
+      "counter_bits": 8,
+      "source_hashes": {
+        "model_map_fields": "c03ae9503e4a13d32663de56d099e32c35c7ed934d46f027b3d979f36c1f2409",
+        "fixed_map_limit": "b62b3472a1890c3da83f774463c20d4d0d6c834e1c89203d72528a4024f83066",
+        "map_reallocation_macro": null,
+        "load_colourmap": "330a5678b29a4b3f7eb9c6df162353f754dd70ed5cbd4c9304487cbd7bedaa40",
+        "model_get_colourmap": null,
+        "model_zero_initialization": "62563d96e4a332d2517d82ff200db05a1e20380606fc8b91b928b0a95d4b599f",
+        "getter_case": "7b5113ca6e1cd41a134431c0925bf197ff003445e0e71fd98c90e92ef3d2a621",
+        "getter_function": "b6cefb634bb43b2bfcf2b8c972355de87c2c502968483a7cbe5372c2b35ee837"
+      },
+      "undefined_original_queries": "Index outside allocated table for raw reads; signed LONG increment at INT32_MAX; helper selectors that pass the original count comparison but leave the table. Original probes exclude these, core probes require defined bounds."
+    },
+    {
+      "revision": 3713,
+      "commit": "1ed3bec13248887af44a132b4a8a4fa0fe501dc3",
+      "getter_mode": "fixed_table",
+      "counter_bits": 8,
+      "source_hashes": {
+        "model_map_fields": "c03ae9503e4a13d32663de56d099e32c35c7ed934d46f027b3d979f36c1f2409",
+        "fixed_map_limit": "b62b3472a1890c3da83f774463c20d4d0d6c834e1c89203d72528a4024f83066",
+        "map_reallocation_macro": null,
+        "load_colourmap": "330a5678b29a4b3f7eb9c6df162353f754dd70ed5cbd4c9304487cbd7bedaa40",
+        "model_get_colourmap": null,
+        "model_zero_initialization": "62563d96e4a332d2517d82ff200db05a1e20380606fc8b91b928b0a95d4b599f",
+        "getter_case": "7b5113ca6e1cd41a134431c0925bf197ff003445e0e71fd98c90e92ef3d2a621",
+        "getter_function": "b6cefb634bb43b2bfcf2b8c972355de87c2c502968483a7cbe5372c2b35ee837"
+      },
+      "undefined_original_queries": "Index outside allocated table for raw reads; signed LONG increment at INT32_MAX; helper selectors that pass the original count comparison but leave the table. Original probes exclude these, core probes require defined bounds."
+    },
+    {
+      "revision": 3714,
+      "commit": "0e365b7c55cb92faaca8a5c3a1b9a91597815bb9",
+      "getter_mode": "fixed_table",
+      "counter_bits": 8,
+      "source_hashes": {
+        "model_map_fields": "c03ae9503e4a13d32663de56d099e32c35c7ed934d46f027b3d979f36c1f2409",
+        "fixed_map_limit": "b62b3472a1890c3da83f774463c20d4d0d6c834e1c89203d72528a4024f83066",
+        "map_reallocation_macro": null,
+        "load_colourmap": "330a5678b29a4b3f7eb9c6df162353f754dd70ed5cbd4c9304487cbd7bedaa40",
+        "model_get_colourmap": null,
+        "model_zero_initialization": "62563d96e4a332d2517d82ff200db05a1e20380606fc8b91b928b0a95d4b599f",
+        "getter_case": "7b5113ca6e1cd41a134431c0925bf197ff003445e0e71fd98c90e92ef3d2a621",
+        "getter_function": "b6cefb634bb43b2bfcf2b8c972355de87c2c502968483a7cbe5372c2b35ee837"
+      },
+      "undefined_original_queries": "Index outside allocated table for raw reads; signed LONG increment at INT32_MAX; helper selectors that pass the original count comparison but leave the table. Original probes exclude these, core probes require defined bounds."
+    },
+    {
+      "revision": 3715,
+      "commit": "8ccd518139e35ff47f5d415b418c6f3c2e310d6f",
+      "getter_mode": "fixed_table",
+      "counter_bits": 8,
+      "source_hashes": {
+        "model_map_fields": "c03ae9503e4a13d32663de56d099e32c35c7ed934d46f027b3d979f36c1f2409",
+        "fixed_map_limit": "b62b3472a1890c3da83f774463c20d4d0d6c834e1c89203d72528a4024f83066",
+        "map_reallocation_macro": null,
+        "load_colourmap": "330a5678b29a4b3f7eb9c6df162353f754dd70ed5cbd4c9304487cbd7bedaa40",
+        "model_get_colourmap": null,
+        "model_zero_initialization": "62563d96e4a332d2517d82ff200db05a1e20380606fc8b91b928b0a95d4b599f",
+        "getter_case": "7b5113ca6e1cd41a134431c0925bf197ff003445e0e71fd98c90e92ef3d2a621",
+        "getter_function": "702d0774657ae6f9dab10500dcd0bfdb09948760320c4d8f977411c786845889"
+      },
+      "undefined_original_queries": "Index outside allocated table for raw reads; signed LONG increment at INT32_MAX; helper selectors that pass the original count comparison but leave the table. Original probes exclude these, core probes require defined bounds."
+    },
+    {
+      "revision": 3716,
+      "commit": "b5a9f8a224277fc88eae2c7c34eebe2dc0825684",
+      "getter_mode": "fixed_table",
+      "counter_bits": 8,
+      "source_hashes": {
+        "model_map_fields": "c03ae9503e4a13d32663de56d099e32c35c7ed934d46f027b3d979f36c1f2409",
+        "fixed_map_limit": "b62b3472a1890c3da83f774463c20d4d0d6c834e1c89203d72528a4024f83066",
+        "map_reallocation_macro": null,
+        "load_colourmap": "330a5678b29a4b3f7eb9c6df162353f754dd70ed5cbd4c9304487cbd7bedaa40",
+        "model_get_colourmap": null,
+        "model_zero_initialization": "62563d96e4a332d2517d82ff200db05a1e20380606fc8b91b928b0a95d4b599f",
+        "getter_case": "7b5113ca6e1cd41a134431c0925bf197ff003445e0e71fd98c90e92ef3d2a621",
+        "getter_function": "702d0774657ae6f9dab10500dcd0bfdb09948760320c4d8f977411c786845889"
+      },
+      "undefined_original_queries": "Index outside allocated table for raw reads; signed LONG increment at INT32_MAX; helper selectors that pass the original count comparison but leave the table. Original probes exclude these, core probes require defined bounds."
+    },
+    {
+      "revision": 3722,
+      "commit": "1cd80da2e10a4c5e619422ad94f7c1abc42c2226",
+      "getter_mode": "fixed_table",
+      "counter_bits": 8,
+      "source_hashes": {
+        "model_map_fields": "c03ae9503e4a13d32663de56d099e32c35c7ed934d46f027b3d979f36c1f2409",
+        "fixed_map_limit": "b62b3472a1890c3da83f774463c20d4d0d6c834e1c89203d72528a4024f83066",
+        "map_reallocation_macro": null,
+        "load_colourmap": "330a5678b29a4b3f7eb9c6df162353f754dd70ed5cbd4c9304487cbd7bedaa40",
+        "model_get_colourmap": null,
+        "model_zero_initialization": "62563d96e4a332d2517d82ff200db05a1e20380606fc8b91b928b0a95d4b599f",
+        "getter_case": "7b5113ca6e1cd41a134431c0925bf197ff003445e0e71fd98c90e92ef3d2a621",
+        "getter_function": "702d0774657ae6f9dab10500dcd0bfdb09948760320c4d8f977411c786845889"
+      },
+      "undefined_original_queries": "Index outside allocated table for raw reads; signed LONG increment at INT32_MAX; helper selectors that pass the original count comparison but leave the table. Original probes exclude these, core probes require defined bounds."
+    },
+    {
+      "revision": 3725,
+      "commit": "58dab1fbcae12a508bd69fd2f79d48d74bfc4202",
+      "getter_mode": "fixed_table",
+      "counter_bits": 8,
+      "source_hashes": {
+        "model_map_fields": "c03ae9503e4a13d32663de56d099e32c35c7ed934d46f027b3d979f36c1f2409",
+        "fixed_map_limit": "b62b3472a1890c3da83f774463c20d4d0d6c834e1c89203d72528a4024f83066",
+        "map_reallocation_macro": null,
+        "load_colourmap": "330a5678b29a4b3f7eb9c6df162353f754dd70ed5cbd4c9304487cbd7bedaa40",
+        "model_get_colourmap": null,
+        "model_zero_initialization": "62563d96e4a332d2517d82ff200db05a1e20380606fc8b91b928b0a95d4b599f",
+        "getter_case": "7b5113ca6e1cd41a134431c0925bf197ff003445e0e71fd98c90e92ef3d2a621",
+        "getter_function": "702d0774657ae6f9dab10500dcd0bfdb09948760320c4d8f977411c786845889"
+      },
+      "undefined_original_queries": "Index outside allocated table for raw reads; signed LONG increment at INT32_MAX; helper selectors that pass the original count comparison but leave the table. Original probes exclude these, core probes require defined bounds."
+    },
+    {
+      "revision": 3726,
+      "commit": "4a94293d2f916b1ba05ac4a6f9635abbb394a8a9",
+      "getter_mode": "fixed_table",
+      "counter_bits": 8,
+      "source_hashes": {
+        "model_map_fields": "c03ae9503e4a13d32663de56d099e32c35c7ed934d46f027b3d979f36c1f2409",
+        "fixed_map_limit": "b62b3472a1890c3da83f774463c20d4d0d6c834e1c89203d72528a4024f83066",
+        "map_reallocation_macro": null,
+        "load_colourmap": "330a5678b29a4b3f7eb9c6df162353f754dd70ed5cbd4c9304487cbd7bedaa40",
+        "model_get_colourmap": null,
+        "model_zero_initialization": "62563d96e4a332d2517d82ff200db05a1e20380606fc8b91b928b0a95d4b599f",
+        "getter_case": "7b5113ca6e1cd41a134431c0925bf197ff003445e0e71fd98c90e92ef3d2a621",
+        "getter_function": "702d0774657ae6f9dab10500dcd0bfdb09948760320c4d8f977411c786845889"
+      },
+      "undefined_original_queries": "Index outside allocated table for raw reads; signed LONG increment at INT32_MAX; helper selectors that pass the original count comparison but leave the table. Original probes exclude these, core probes require defined bounds."
+    },
+    {
+      "revision": 3727,
+      "commit": "ad3f59f9325e89b68f82e4daf162d0f0510af8d3",
+      "getter_mode": "fixed_table",
+      "counter_bits": 8,
+      "source_hashes": {
+        "model_map_fields": "c03ae9503e4a13d32663de56d099e32c35c7ed934d46f027b3d979f36c1f2409",
+        "fixed_map_limit": "b62b3472a1890c3da83f774463c20d4d0d6c834e1c89203d72528a4024f83066",
+        "map_reallocation_macro": null,
+        "load_colourmap": "330a5678b29a4b3f7eb9c6df162353f754dd70ed5cbd4c9304487cbd7bedaa40",
+        "model_get_colourmap": null,
+        "model_zero_initialization": "62563d96e4a332d2517d82ff200db05a1e20380606fc8b91b928b0a95d4b599f",
+        "getter_case": "7b5113ca6e1cd41a134431c0925bf197ff003445e0e71fd98c90e92ef3d2a621",
+        "getter_function": "3029d2dbc0568f89947cfd2e8d5aae4aeebbd326d8656d2197a33dab41f37fd8"
+      },
+      "undefined_original_queries": "Index outside allocated table for raw reads; signed LONG increment at INT32_MAX; helper selectors that pass the original count comparison but leave the table. Original probes exclude these, core probes require defined bounds."
+    },
+    {
+      "revision": 3728,
+      "commit": "9f4ad7f785557d87829acd19972b8cc0704fc8c1",
+      "getter_mode": "fixed_table",
+      "counter_bits": 8,
+      "source_hashes": {
+        "model_map_fields": "c03ae9503e4a13d32663de56d099e32c35c7ed934d46f027b3d979f36c1f2409",
+        "fixed_map_limit": "b62b3472a1890c3da83f774463c20d4d0d6c834e1c89203d72528a4024f83066",
+        "map_reallocation_macro": null,
+        "load_colourmap": "330a5678b29a4b3f7eb9c6df162353f754dd70ed5cbd4c9304487cbd7bedaa40",
+        "model_get_colourmap": null,
+        "model_zero_initialization": "62563d96e4a332d2517d82ff200db05a1e20380606fc8b91b928b0a95d4b599f",
+        "getter_case": "7b5113ca6e1cd41a134431c0925bf197ff003445e0e71fd98c90e92ef3d2a621",
+        "getter_function": "720977906404cf56c5dc6d624d8a211fca1e197184ab17283a83dd0cec80fa2f"
+      },
+      "undefined_original_queries": "Index outside allocated table for raw reads; signed LONG increment at INT32_MAX; helper selectors that pass the original count comparison but leave the table. Original probes exclude these, core probes require defined bounds."
+    },
+    {
+      "revision": 3729,
+      "commit": "b3dc9a4a79d1f6a1b96b573e060ef97067f1176c",
+      "getter_mode": "fixed_table",
+      "counter_bits": 8,
+      "source_hashes": {
+        "model_map_fields": "c03ae9503e4a13d32663de56d099e32c35c7ed934d46f027b3d979f36c1f2409",
+        "fixed_map_limit": "b62b3472a1890c3da83f774463c20d4d0d6c834e1c89203d72528a4024f83066",
+        "map_reallocation_macro": null,
+        "load_colourmap": "330a5678b29a4b3f7eb9c6df162353f754dd70ed5cbd4c9304487cbd7bedaa40",
+        "model_get_colourmap": null,
+        "model_zero_initialization": "62563d96e4a332d2517d82ff200db05a1e20380606fc8b91b928b0a95d4b599f",
+        "getter_case": "7b5113ca6e1cd41a134431c0925bf197ff003445e0e71fd98c90e92ef3d2a621",
+        "getter_function": "720977906404cf56c5dc6d624d8a211fca1e197184ab17283a83dd0cec80fa2f"
+      },
+      "undefined_original_queries": "Index outside allocated table for raw reads; signed LONG increment at INT32_MAX; helper selectors that pass the original count comparison but leave the table. Original probes exclude these, core probes require defined bounds."
+    },
+    {
+      "revision": 3730,
+      "commit": "40441f127f7ad7b7cfda0eebb489e8feffd1f806",
+      "getter_mode": "fixed_table",
+      "counter_bits": 8,
+      "source_hashes": {
+        "model_map_fields": "c03ae9503e4a13d32663de56d099e32c35c7ed934d46f027b3d979f36c1f2409",
+        "fixed_map_limit": "b62b3472a1890c3da83f774463c20d4d0d6c834e1c89203d72528a4024f83066",
+        "map_reallocation_macro": null,
+        "load_colourmap": "330a5678b29a4b3f7eb9c6df162353f754dd70ed5cbd4c9304487cbd7bedaa40",
+        "model_get_colourmap": null,
+        "model_zero_initialization": "62563d96e4a332d2517d82ff200db05a1e20380606fc8b91b928b0a95d4b599f",
+        "getter_case": "7b5113ca6e1cd41a134431c0925bf197ff003445e0e71fd98c90e92ef3d2a621",
+        "getter_function": "720977906404cf56c5dc6d624d8a211fca1e197184ab17283a83dd0cec80fa2f"
+      },
+      "undefined_original_queries": "Index outside allocated table for raw reads; signed LONG increment at INT32_MAX; helper selectors that pass the original count comparison but leave the table. Original probes exclude these, core probes require defined bounds."
+    },
+    {
+      "revision": 3732,
+      "commit": "0b2d8300b819cdee94817194b2db7489d25d45d3",
+      "getter_mode": "fixed_table",
+      "counter_bits": 8,
+      "source_hashes": {
+        "model_map_fields": "c03ae9503e4a13d32663de56d099e32c35c7ed934d46f027b3d979f36c1f2409",
+        "fixed_map_limit": "b62b3472a1890c3da83f774463c20d4d0d6c834e1c89203d72528a4024f83066",
+        "map_reallocation_macro": null,
+        "load_colourmap": "330a5678b29a4b3f7eb9c6df162353f754dd70ed5cbd4c9304487cbd7bedaa40",
+        "model_get_colourmap": null,
+        "model_zero_initialization": "62563d96e4a332d2517d82ff200db05a1e20380606fc8b91b928b0a95d4b599f",
+        "getter_case": "7b5113ca6e1cd41a134431c0925bf197ff003445e0e71fd98c90e92ef3d2a621",
+        "getter_function": "720977906404cf56c5dc6d624d8a211fca1e197184ab17283a83dd0cec80fa2f"
+      },
+      "undefined_original_queries": "Index outside allocated table for raw reads; signed LONG increment at INT32_MAX; helper selectors that pass the original count comparison but leave the table. Original probes exclude these, core probes require defined bounds."
+    },
+    {
+      "revision": 3738,
+      "commit": "e0e03912cd594ffe04ca8bf7b462f1e97df6f6fe",
+      "getter_mode": "fixed_table",
+      "counter_bits": 8,
+      "source_hashes": {
+        "model_map_fields": "c03ae9503e4a13d32663de56d099e32c35c7ed934d46f027b3d979f36c1f2409",
+        "fixed_map_limit": "b62b3472a1890c3da83f774463c20d4d0d6c834e1c89203d72528a4024f83066",
+        "map_reallocation_macro": null,
+        "load_colourmap": "330a5678b29a4b3f7eb9c6df162353f754dd70ed5cbd4c9304487cbd7bedaa40",
+        "model_get_colourmap": null,
+        "model_zero_initialization": "62563d96e4a332d2517d82ff200db05a1e20380606fc8b91b928b0a95d4b599f",
+        "getter_case": "7b5113ca6e1cd41a134431c0925bf197ff003445e0e71fd98c90e92ef3d2a621",
+        "getter_function": "720977906404cf56c5dc6d624d8a211fca1e197184ab17283a83dd0cec80fa2f"
+      },
+      "undefined_original_queries": "Index outside allocated table for raw reads; signed LONG increment at INT32_MAX; helper selectors that pass the original count comparison but leave the table. Original probes exclude these, core probes require defined bounds."
+    },
+    {
+      "revision": 3739,
+      "commit": "c790b4bc7fcba47efb912d31b4611f5df63d4807",
+      "getter_mode": "dynamic_table",
+      "counter_bits": 8,
+      "source_hashes": {
+        "model_map_fields": "415bab1610d5a7e59cd9c86a2b3d24d971c9e28fa86a7980ebb319664d66176e",
+        "fixed_map_limit": "8f70ca087ee7792d1d42d80db2161291260e139733276e68d3340f10ebdd5b80",
+        "map_reallocation_macro": "7359a5f17b24dd4ac47693e477b79ce2027c07e302856bb59cd270d9956448b0",
+        "load_colourmap": "9a670691c5586eb4209793ce844d5667928deab4df45d573c554565ae669d8ba",
+        "model_get_colourmap": null,
+        "model_zero_initialization": "62563d96e4a332d2517d82ff200db05a1e20380606fc8b91b928b0a95d4b599f",
+        "getter_case": "7b5113ca6e1cd41a134431c0925bf197ff003445e0e71fd98c90e92ef3d2a621",
+        "getter_function": "720977906404cf56c5dc6d624d8a211fca1e197184ab17283a83dd0cec80fa2f"
+      },
+      "undefined_original_queries": "Index outside allocated table for raw reads; signed LONG increment at INT32_MAX; helper selectors that pass the original count comparison but leave the table. Original probes exclude these, core probes require defined bounds."
+    },
+    {
+      "revision": 3740,
+      "commit": "cf83dc7f4472e6a51aa84cfa37b47e5d3f42d986",
+      "getter_mode": "dynamic_table",
+      "counter_bits": 8,
+      "source_hashes": {
+        "model_map_fields": "415bab1610d5a7e59cd9c86a2b3d24d971c9e28fa86a7980ebb319664d66176e",
+        "fixed_map_limit": "8f70ca087ee7792d1d42d80db2161291260e139733276e68d3340f10ebdd5b80",
+        "map_reallocation_macro": "7359a5f17b24dd4ac47693e477b79ce2027c07e302856bb59cd270d9956448b0",
+        "load_colourmap": "9a670691c5586eb4209793ce844d5667928deab4df45d573c554565ae669d8ba",
+        "model_get_colourmap": null,
+        "model_zero_initialization": "62563d96e4a332d2517d82ff200db05a1e20380606fc8b91b928b0a95d4b599f",
+        "getter_case": "7b5113ca6e1cd41a134431c0925bf197ff003445e0e71fd98c90e92ef3d2a621",
+        "getter_function": "720977906404cf56c5dc6d624d8a211fca1e197184ab17283a83dd0cec80fa2f"
+      },
+      "undefined_original_queries": "Index outside allocated table for raw reads; signed LONG increment at INT32_MAX; helper selectors that pass the original count comparison but leave the table. Original probes exclude these, core probes require defined bounds."
+    },
+    {
+      "revision": 3741,
+      "commit": "00bcc4947748e8af10d030a82b60520bbd402e30",
+      "getter_mode": "helper",
+      "counter_bits": 8,
+      "source_hashes": {
+        "model_map_fields": "415bab1610d5a7e59cd9c86a2b3d24d971c9e28fa86a7980ebb319664d66176e",
+        "fixed_map_limit": "8f70ca087ee7792d1d42d80db2161291260e139733276e68d3340f10ebdd5b80",
+        "map_reallocation_macro": "7359a5f17b24dd4ac47693e477b79ce2027c07e302856bb59cd270d9956448b0",
+        "load_colourmap": "9a670691c5586eb4209793ce844d5667928deab4df45d573c554565ae669d8ba",
+        "model_get_colourmap": "ec1bef0e974228ab39ac746997d87e2d77771a466d23df23e42b740252e08bd4",
+        "model_zero_initialization": "62563d96e4a332d2517d82ff200db05a1e20380606fc8b91b928b0a95d4b599f",
+        "getter_case": "f21b33a856b8f1ebb6d0566c0e9aac509e0f73aa57620092df35918c4d1ce8e3",
+        "getter_function": "afee8b1ec48778405452343e912bcfee71f6e2322345c05252e1204f4ceaecf7"
+      },
+      "undefined_original_queries": "Index outside allocated table for raw reads; signed LONG increment at INT32_MAX; helper selectors that pass the original count comparison but leave the table. Original probes exclude these, core probes require defined bounds."
+    },
+    {
+      "revision": 3742,
+      "commit": "0d20390cfe982136259ea3fa4bb8078801be9269",
+      "getter_mode": "helper",
+      "counter_bits": 8,
+      "source_hashes": {
+        "model_map_fields": "415bab1610d5a7e59cd9c86a2b3d24d971c9e28fa86a7980ebb319664d66176e",
+        "fixed_map_limit": "8f70ca087ee7792d1d42d80db2161291260e139733276e68d3340f10ebdd5b80",
+        "map_reallocation_macro": "7359a5f17b24dd4ac47693e477b79ce2027c07e302856bb59cd270d9956448b0",
+        "load_colourmap": "9a670691c5586eb4209793ce844d5667928deab4df45d573c554565ae669d8ba",
+        "model_get_colourmap": "ec1bef0e974228ab39ac746997d87e2d77771a466d23df23e42b740252e08bd4",
+        "model_zero_initialization": "62563d96e4a332d2517d82ff200db05a1e20380606fc8b91b928b0a95d4b599f",
+        "getter_case": "f21b33a856b8f1ebb6d0566c0e9aac509e0f73aa57620092df35918c4d1ce8e3",
+        "getter_function": "afee8b1ec48778405452343e912bcfee71f6e2322345c05252e1204f4ceaecf7"
+      },
+      "undefined_original_queries": "Index outside allocated table for raw reads; signed LONG increment at INT32_MAX; helper selectors that pass the original count comparison but leave the table. Original probes exclude these, core probes require defined bounds."
+    }
+  ]
+}

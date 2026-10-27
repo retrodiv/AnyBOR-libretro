@@ -371,6 +371,191 @@ HRESULT pp_parser_lex_token_essential(pp_parser* self, bool skip_whitespace)
  */
 pp_token* pp_parser_emit_token(pp_parser* self)
 {
+    if(obor_profile_build < 3802)
+    {
+	bool emitme = false;
+	bool success = true;
+	pp_token token2, token3;
+	pp_token* child_token;
+	int i;
+	char* param1, *param2;
+
+	while(success && !emitme)
+	{
+		// get token from subparser ("child") if one exists
+		if(self->child)
+		{
+			child_token = pp_parser_emit_token(self->child);
+
+			if(child_token == NULL || child_token->theType == PP_TOKEN_EOF)
+			{
+				// free the parameters of function macros
+				List_Reset(&self->ctx->macros);
+				for(i=0; i<self->child->numParams; i++)
+				{
+					// the string is allocated by strdup(), so use free() instead of free()
+					free(List_Retrieve(&self->ctx->macros));
+					List_Remove(&self->ctx->macros);
+				}
+
+				// free the source code and filename if necessary
+				if(self->child->freeFilename) free((void*)self->child->filename);
+				if(self->child->freeSourceCode) free(self->child->sourceCode);
+
+				free(self->child);
+				self->child = NULL;
+
+				if(child_token == NULL) return NULL;
+				else continue;
+			}
+			else
+			{
+				memcpy(&self->token, child_token, sizeof(pp_token));
+				emitme = true;
+			}
+		}
+
+		if(emitme) // re-process tokens emitted by the subparser
+			emitme = false;
+		else // lex the next token if no token is obtained from the subparser
+			if(FAILED(pp_parser_lex_token(self, false))) break;
+
+		if(self->token.theType == PP_TOKEN_DIRECTIVE ||
+		   !(self->ctx->conditionals.top == cs_false || self->ctx->conditionals.top == cs_done))
+		{
+			// handle token concatenation
+			if(self->type == PP_FUNCTION_MACRO || self->type == PP_NORMAL_MACRO)
+			{
+				bool whitespace = false;
+
+				memcpy(&token2, &self->token, sizeof(pp_token));
+				success = SUCCEEDED(pp_parser_lex_token(self, false));
+				while(success && self->token.theType == PP_TOKEN_WHITESPACE)
+				{
+					whitespace = true;
+					memcpy(&token3, &self->token, sizeof(pp_token));
+					success = SUCCEEDED(pp_parser_lex_token(self, false));
+				}
+				if(!success) break;
+
+				if(self->token.theType == PP_TOKEN_CONCATENATE)
+				{
+					memcpy(&token3, &self->token, sizeof(pp_token));
+					success = SUCCEEDED(pp_parser_lex_token(self, true));
+					if(!success) break;
+
+					if(self->token.theType == PP_TOKEN_EOF)
+					{
+						pp_error(self, "'##' at end of macro expansion");
+						return NULL;
+					}
+
+					if(List_FindByName(&self->ctx->macros, token2.theSource) &&
+						(List_GetIndex(&self->ctx->macros) < self->numParams))
+					{
+						param1 = (char*)List_Retrieve(&self->ctx->macros);
+					}
+					else
+						param1 = token2.theSource;
+
+					if(List_FindByName(&self->ctx->macros, self->token.theSource) &&
+						(List_GetIndex(&self->ctx->macros) < self->numParams))
+					{
+						param2 = (char*)List_Retrieve(&self->ctx->macros);
+					}
+					else
+						param2 = self->token.theSource;
+
+					pp_parser_concatenate(self, param1, param2);
+					emitme = false;
+					continue;
+				}
+				else // oops, the next token is not a ##
+				{
+					if(whitespace && token2.theType != PP_TOKEN_DIRECTIVE)
+					{
+						// this is a silly and convoluted way to do this, but it works...
+						pp_parser_concatenate(self, token2.theSource, token3.theSource);
+						self->overread = true;
+						continue;
+					}
+					else
+					{
+						memcpy(&self->token, &token2, sizeof(pp_token));
+						self->overread = true;
+					}
+				}
+			}
+
+			switch(self->token.theType)
+			{
+				case PP_TOKEN_DIRECTIVE:
+					if(self->type == PP_FUNCTION_MACRO)
+					{
+						success = SUCCEEDED(pp_parser_lex_token(self, true));
+						if(!success) break;
+
+						if(self->token.theType == PP_TOKEN_IDENTIFIER &&
+							List_FindByName(&self->ctx->macros, self->token.theSource))
+						{
+							if(FAILED(pp_parser_stringify(self))) return NULL;
+							emitme = true;
+							break;
+						}
+						else
+							self->overread = true;
+					}
+					else if(self->newline)
+					{ /* only parse the "#" symbol when it's at the beginning of a
+					   * line (ignoring whitespace) */
+						if(FAILED(pp_parser_parse_directive(self))) return NULL;
+						break;
+					}
+
+					// if none of the above cases are true, emit the token
+					emitme = true;
+					break;
+				case PP_TOKEN_NEWLINE:
+					emitme = true;
+					self->newline = true;
+					break;
+				case PP_TOKEN_WHITESPACE:
+					emitme = true;
+					// whitespace doesn't affect the newline property
+					break;
+				case PP_TOKEN_IDENTIFIER:
+					memcpy(&token2, &self->token, sizeof(pp_token));
+					success = SUCCEEDED(pp_parser_lex_token(self, false));
+					if(!success) break;
+
+					if(self->token.theType == PP_TOKEN_LPAREN && List_FindByName(&self->ctx->func_macros, token2.theSource))
+					{
+						if(FAILED(pp_parser_insert_function_macro(self, token2.theSource))) return NULL;
+						self->overread = false;
+					}
+					else if(List_FindByName(&self->ctx->macros, token2.theSource))
+					{
+						pp_parser_insert_macro(self, token2.theSource);
+						self->overread = true;
+					}
+					else
+					{
+						memcpy(&self->token, &token2, sizeof(pp_token));
+						emitme = true;
+						self->overread = true;
+					}
+					break;
+				default: // now includes EOF
+					emitme = true;
+					self->newline = false;
+			}
+		}
+	}
+
+	return success ? &self->token : NULL;
+
+    }
+
 	bool emitme = false;
 	bool success = true;
 	pp_token token2;
@@ -655,6 +840,115 @@ void pp_parser_concatenate(pp_parser* self, const char* token1, const char* toke
  */
 HRESULT pp_parser_parse_directive(pp_parser* self)
 {
+    if(obor_profile_build < 3802)
+    {
+	if(FAILED(pp_parser_lex_token(self, true))) return E_FAIL;
+
+	// most directives shouldn't be parsed if we're in the middle of a conditional false
+	if(self->ctx->conditionals.top == cs_false || self->ctx->conditionals.top == cs_done)
+	{
+		if(self->token.theType != PP_TOKEN_ELIF &&
+		   self->token.theType != PP_TOKEN_ELSE &&
+		   self->token.theType != PP_TOKEN_ENDIF)
+		{
+			return S_OK;
+		}
+	}
+
+	switch(self->token.theType)
+	{
+		case PP_TOKEN_INCLUDE:
+		case PP_TOKEN_IMPORT:
+		{
+			char* filename;
+			int type = self->token.theType;
+
+			if(FAILED(pp_parser_lex_token(self, true))) return E_FAIL;
+
+			if(self->token.theType != PP_TOKEN_STRING_LITERAL)
+				return pp_error(self, "#include not followed by a path string");
+
+			filename = self->token.theSource + 1; // trim first " mark
+			filename[strlen(filename)-1] = '\0'; // trim last " mark
+
+
+			if(type == PP_TOKEN_INCLUDE)
+				return pp_parser_include(self, filename);
+			else // PP_TOKEN_IMPORT
+			{
+				List_InsertAfter(&self->ctx->imports, NULL, filename);
+				return S_OK;
+			}
+		}
+		case PP_TOKEN_DEFINE:
+		{
+			char name[MAX_TOKEN_LENGTH];
+
+			if(FAILED(pp_parser_lex_token(self, true))) return E_FAIL;
+			if(self->token.theType != PP_TOKEN_IDENTIFIER)
+			{
+				// Macro must have at least a name
+				return pp_error(self, "no macro name given in #define directive");
+			}
+
+			// Parse macro name and contents
+			strcpy(name, self->token.theSource);
+			return pp_parser_define(self, name);
+		}
+		case PP_TOKEN_UNDEF:
+			if(FAILED(pp_parser_lex_token(self, true))) return E_FAIL;
+			if(List_FindByName(&self->ctx->macros, self->token.theSource))
+			{
+				free(List_Retrieve(&self->ctx->macros));
+				List_Remove(&self->ctx->macros);
+			}
+			if(List_FindByName(&self->ctx->func_macros, self->token.theSource))
+			{
+				List* params = List_Retrieve(&self->ctx->func_macros);
+				while(params->size > 0)
+				{
+					free(List_Retrieve(params));
+					List_Remove(params);
+				}
+				List_Clear(params);
+				free(params);
+				List_Remove(&self->ctx->func_macros);
+			}
+
+			break;
+		case PP_TOKEN_IF:
+		case PP_TOKEN_IFDEF:
+		case PP_TOKEN_IFNDEF:
+		case PP_TOKEN_ELIF:
+		case PP_TOKEN_ELSE:
+		case PP_TOKEN_ENDIF:
+			return pp_parser_conditional(self, self->token.theType);
+		case PP_TOKEN_WARNING:
+		case PP_TOKEN_ERROR_TEXT:
+		{
+			char text[256] = {""};
+
+			// "self->token" is about to be clobbered, so save whether this is a warning or error
+			PP_TOKEN_TYPE msgType = self->token.theType;
+			if(FAILED(pp_parser_readline(self, text, sizeof(text)))) return E_FAIL;
+
+			if(msgType == PP_TOKEN_WARNING)
+				pp_warning(self, "#warning %s", text);
+			else
+				return pp_error(self, "#error %s", text);
+			break;
+		}
+		case PP_TOKEN_NEWLINE:
+			// null directive - do nothing
+			return S_OK;
+		default:
+			return pp_error(self, "unknown directive '#%s'", self->token.theSource);
+	}
+
+	return S_OK;
+
+    }
+
 	if(FAILED(pp_parser_lex_token(self, true))) return E_FAIL;
 
 	// most directives shouldn't be parsed if we're in the middle of a conditional false
@@ -840,6 +1134,101 @@ HRESULT pp_parser_include(pp_parser* self, char* filename)
  */
 HRESULT pp_parser_define(pp_parser* self, char* name)
 {
+    if(obor_profile_build < 3802)
+    {
+	char* contents = NULL;
+	bool is_function = false; // true if this is a function-style #define; false otherwise
+	List* params = malloc(sizeof(List));
+
+	List_Init(params);
+
+	// emit a warning if the macro is already defined
+	// note: this won't mess with function macro parameters since #define can't be used from inside a macro
+
+	if(List_FindByName(&self->ctx->macros, name))
+	{
+		pp_warning(self, "'%s' redefined", name);
+		free(List_Retrieve(&self->ctx->macros));
+		List_Remove(&self->ctx->macros);
+	}
+	if(List_FindByName(&self->ctx->func_macros, name))
+	{
+		List* params = List_Retrieve(&self->ctx->func_macros);
+		pp_warning(self, "'%s' redefined", name);
+		while(params->size > 0)
+		{
+			free(List_Retrieve(params));
+			List_Remove(params);
+		}
+		List_Clear(params);
+		free(params);
+		List_Remove(&self->ctx->func_macros);
+	}
+
+	// do NOT skip whitespace here - the '(' must come immediately after the name!
+	if(FAILED(pp_parser_lex_token(self, false))) goto obor_profile_define_error;
+
+	if(self->token.theType == PP_TOKEN_LPAREN) // function-style #define
+	{
+		is_function = true;
+		if(FAILED(pp_parser_lex_token(self, true))) goto obor_profile_define_error;
+		while(self->token.theType != PP_TOKEN_RPAREN)
+		{
+			switch(self->token.theType)
+			{
+				// All of the below types are technically valid macro names
+				case PP_TOKEN_IDENTIFIER:
+				case PP_TOKEN_INCLUDE:
+				case PP_TOKEN_DEFINE:
+				case PP_TOKEN_UNDEF:
+				case PP_TOKEN_IFDEF:
+				case PP_TOKEN_IFNDEF:
+				case PP_TOKEN_ELIF:
+				case PP_TOKEN_ENDIF:
+				case PP_TOKEN_PRAGMA:
+				case PP_TOKEN_WARNING:
+				case PP_TOKEN_ERROR_TEXT:
+					List_InsertAfter(params, NULL, self->token.theSource);
+					if(FAILED(pp_parser_lex_token(self, true))) goto obor_profile_define_error;
+					if(self->token.theType == PP_TOKEN_COMMA || self->token.theType == PP_TOKEN_RPAREN) break;
+				default:
+					return pp_error(self, "unexpected token '%s' in #define parameter list", self->token.theSource);
+			}
+
+			if(self->token.theType != PP_TOKEN_RPAREN) pp_parser_lex_token(self, true);
+		}
+		self->overread = false;
+	}
+	else self->overread = true;
+
+	// Read macro contents
+	contents = malloc(MACRO_CONTENTS_SIZE);
+	contents[0] = '\0';
+	if(FAILED(pp_parser_readline(self, contents, MACRO_CONTENTS_SIZE))) goto obor_profile_define_error;
+
+	// Add macro to the correct list, either macros or func_macros
+	if(is_function)
+	{
+		List_InsertAfter(params, contents, NULL);
+		List_InsertAfter(&self->ctx->func_macros, params, name);
+	}
+	else
+	{
+		free(params);
+		List_InsertAfter(&self->ctx->macros, contents, name);
+	}
+
+	return S_OK;
+
+obor_profile_define_error:
+	List_Reset(params);
+	while(List_GetSize(params)) List_Remove(params);
+	free(params);
+	if(contents) free(contents);
+	return E_FAIL;
+
+    }
+
 	char* contents = NULL;
 	bool is_function = false; // true if this is a function-style #define; false otherwise
 	List* params = malloc(sizeof(List));
@@ -948,8 +1337,65 @@ error:
  * Handles conditional directives.
  * @param directive the type of conditional directive
  */
+static int obor_profile_eval_conditional(pp_parser* self, PP_TOKEN_TYPE directive)
+{
+	// all directives have whitespace between the directive and the contents
+	if(FAILED(pp_parser_lex_token(self, true))) return -1; // lexical rejection must propagate to the caller
+
+	switch(directive)
+	{
+		case PP_TOKEN_IFDEF:
+			return List_FindByName(&self->ctx->macros, self->token.theSource);
+		case PP_TOKEN_IFNDEF:
+			return !List_FindByName(&self->ctx->macros, self->token.theSource);
+		default:
+			pp_warning(self, "unknown conditional directive (this is a bug; please report it)");
+			return false;
+	}
+}
+
+
 HRESULT pp_parser_conditional(pp_parser* self, PP_TOKEN_TYPE directive)
 {
+    if(obor_profile_build < 3802)
+    {
+	switch(directive)
+	{
+		case PP_TOKEN_IF:
+			return pp_error(self, "#if directive not supported");
+		case PP_TOKEN_IFDEF:
+		case PP_TOKEN_IFNDEF:
+			if(self->ctx->num_conditionals++ >= 16) return pp_error(self, "too many levels of nested conditional directives");
+			self->ctx->conditionals.all = (u32)(self->ctx->conditionals.all << 2); // push a new conditional state onto the stack
+			int condition = obor_profile_eval_conditional(self, directive);
+            if(condition < 0) return E_FAIL;
+            self->ctx->conditionals.top = condition ? cs_true : cs_false;
+			break;
+		case PP_TOKEN_ELIF:
+			return pp_error(self, "#elif directive not supported");
+#if 0
+			if(self->ctx->conditionals.top == cs_done || self->ctx->conditionals.top == cs_true)
+				self->ctx->conditionals.top = cs_done;
+			else
+				self->ctx->conditionals.top = obor_profile_eval_conditional(self, directive) ? cs_true : cs_false;
+			break;
+#endif
+		case PP_TOKEN_ELSE:
+			if(self->ctx->conditionals.top == cs_none) return pp_error(self, "stray #else");
+			self->ctx->conditionals.top = (self->ctx->conditionals.top == cs_false) ? cs_true : cs_done;
+			break;
+		case PP_TOKEN_ENDIF:
+			if(self->ctx->conditionals.top == cs_none || self->ctx->num_conditionals-- < 0) return pp_error(self, "stray #endif");
+			self->ctx->conditionals.all >>= 2; // pop a conditional state from the stack
+			break;
+		default:
+			return pp_error(self, "unknown conditional directive type (ID=%d)", directive);
+	}
+
+	return S_OK;
+
+    }
+
 	int result;
 	switch(directive)
 	{
@@ -1046,6 +1492,83 @@ void pp_parser_insert_macro(pp_parser* self, char* name)
  */
 HRESULT pp_parser_insert_function_macro(pp_parser* self, char* name)
 {
+    if(obor_profile_build < 3802)
+    {
+	int numParams, paramCount = 0, paramMacros = 0;
+	List* params;
+	char paramBuffer[1024] = "", *tail;
+
+	// find macro and get number of parameters
+	if(strcmp((char*)List_Retrieve(&self->ctx->func_macros), name))
+		List_FindByName(&self->ctx->func_macros, name);
+	params = List_Retrieve(&self->ctx->func_macros);
+	numParams = List_GetSize(params) - 1;
+
+	// read the parameter list and temporarily define a "simple" macro for each parameter
+	List_Reset(params);
+	List_Reset(&self->ctx->macros);
+	do
+	{
+		if(FAILED(pp_parser_lex_token_essential(self, false))) return E_FAIL;
+
+		switch(self->token.theType)
+		{
+			case PP_TOKEN_NEWLINE:
+				if(paramBuffer[0] != '\0')
+					return pp_error(self, "unexpected newline in parameter list for function '%s'", name);
+			case PP_TOKEN_EOF:
+				return pp_error(self, "unexpected end of file in parameter list for function '%s'", name);
+			case PP_TOKEN_RPAREN:
+			case PP_TOKEN_COMMA:
+				if(!paramCount) break;
+
+				// remove trailing whitespace
+				tail = strchr(paramBuffer, '\0');
+				while(--tail >= paramBuffer)
+				{
+					if(*tail == ' ' || *tail == '\t' || *tail == '\n')
+						*tail = '\0';
+					else break;
+				}
+
+				if(paramCount > numParams)
+					return pp_error(self, "too many parameters to function '%s'", name);
+
+				// no need to create a macro if passed variable name is the same as the parameter name
+				if(strncmp(paramBuffer, List_GetName(params), sizeof(paramBuffer)) != 0)
+				{
+					// add the new macro to the beginning of the macro list
+					paramMacros++;
+					List_InsertBefore(&self->ctx->macros, strdup(paramBuffer), List_GetName(params));
+				}
+
+				List_GotoNext(params);
+				paramBuffer[0] = '\0';
+				break;
+			case PP_TOKEN_WHITESPACE:
+				if(paramBuffer[0] == '\0') break;
+			default:
+				if(paramBuffer[0] == '\0')
+					paramCount++;
+
+				if((strlen(paramBuffer) + strlen(self->token.theSource) + 1) > sizeof(paramBuffer))
+					return pp_error(self, "parameter %d of function '%s' exceeds max length of %d characters", paramCount, name, (int)sizeof(paramBuffer)-1);
+
+				strcat(paramBuffer, self->token.theSource);
+		}
+	} while(self->token.theType != PP_TOKEN_RPAREN);
+
+	if(paramCount < numParams)
+		return pp_error(self, "not enough parameters to function '%s'", name);
+
+	// do the actual parsing
+	List_GotoLast(params);
+	pp_parser_alloc_macro(self, List_Retrieve(params), paramMacros, PP_FUNCTION_MACRO);
+
+	return S_OK;
+
+    }
+
 	int numParams, paramCount = 0, paramMacros = 0, parenLevel = 0, type;
 	List* params;
 	char paramBuffer[1024] = "", *tail;

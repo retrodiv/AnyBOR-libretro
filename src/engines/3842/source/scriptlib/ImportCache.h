@@ -26,6 +26,7 @@ typedef struct ImportNode ImportNode;
 void ImportCache_Init();
 ImportNode* ImportCache_ImportFile(const char* path);
 void ImportCache_Clear();
+void ImportCache_Release(ImportNode* node);
 Instruction* ImportList_GetFunctionPointer(List* list, const char* name);
 
 #endif

@@ -1,0 +1,3207 @@
+{
+  "schema": 1,
+  "boundary_controls": [
+    3738,
+    3739
+  ],
+  "scope": "Selected native load_level case handlers,with controlled argument/image/layer/palette services. Tests enforce each own-source count/diagnostic and silent panelorderstop;not wholeloader,renderer or gameplay. Native reference binding/getlayer and alias semantics are checked separately within the same profile contexts.",
+  "sources": [
+    {
+      "revision": 3666,
+      "engine": "3741",
+      "commit": "d91a968db18ecb4a738cf008ea0483883929a674",
+      "legacy_fixed_caps": true,
+      "declared_limit_constants": {
+        "SPAWNS": 600,
+        "PANELS": 100,
+        "HOLES": 40,
+        "WALLS": 40,
+        "LAYERS": 100,
+        "PALETTES": 40
+      },
+      "guards": [
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numholes",
+          "constant": "LEVEL_MAX_HOLES",
+          "diagnostic": "Too many holes in level (check LEVEL_MAX_HOLES)!"
+        },
+        {
+          "count": "numwalls",
+          "constant": "LEVEL_MAX_WALLS",
+          "diagnostic": "Too many walls in level (check LEVEL_MAX_WALLS)!"
+        },
+        {
+          "count": "numpalettes",
+          "constant": "LEVEL_MAX_PALETTES",
+          "diagnostic": "Too many palettes in level (check LEVEL_MAX_PALETTES)!"
+        },
+        {
+          "count": "numspawns",
+          "constant": "LEVEL_MAX_SPAWNS",
+          "diagnostic": "too many spawn entries (see LEVEL_MAX_SPAWNS)"
+        }
+      ],
+      "order_loop": "while(value[i] && level->numpanels < LEVEL_MAX_PANELS){",
+      "load_level_normalized_sha256": "cbf4354a92b89a089ea59e97a099eb49859029773e146ef9e22330ab72a902f9",
+      "header_normalized_sha256": "a044c8b0f22c54a38e6c4931d6db09b0a60e85c05267bf91afd9538a9f0534e5",
+      "legacy_frontpanel_destination": true,
+      "preserve_absent_layers": true,
+      "zero_init": "level = calloc(1,sizeof(s_level))",
+      "layer_lookup_normalized_sha256": "c6c1e6054701056fb10ddefb56209aa5bddb8b96aa417b2fd3c1b58386a6360e",
+      "layer_enum_normalized_sha256": "d3975fb85a4655569487adb991669ccacc3fc8058185bb77deacad383e96e743"
+    },
+    {
+      "revision": 3667,
+      "engine": "3741",
+      "commit": "b9be93bb004d151b7280a4dd2d41a952d3160afc",
+      "legacy_fixed_caps": true,
+      "declared_limit_constants": {
+        "SPAWNS": 600,
+        "PANELS": 100,
+        "HOLES": 40,
+        "WALLS": 40,
+        "LAYERS": 100,
+        "PALETTES": 40
+      },
+      "guards": [
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numholes",
+          "constant": "LEVEL_MAX_HOLES",
+          "diagnostic": "Too many holes in level (check LEVEL_MAX_HOLES)!"
+        },
+        {
+          "count": "numwalls",
+          "constant": "LEVEL_MAX_WALLS",
+          "diagnostic": "Too many walls in level (check LEVEL_MAX_WALLS)!"
+        },
+        {
+          "count": "numpalettes",
+          "constant": "LEVEL_MAX_PALETTES",
+          "diagnostic": "Too many palettes in level (check LEVEL_MAX_PALETTES)!"
+        },
+        {
+          "count": "numspawns",
+          "constant": "LEVEL_MAX_SPAWNS",
+          "diagnostic": "too many spawn entries (see LEVEL_MAX_SPAWNS)"
+        }
+      ],
+      "order_loop": "while(value[i] && level->numpanels < LEVEL_MAX_PANELS){",
+      "load_level_normalized_sha256": "cbf4354a92b89a089ea59e97a099eb49859029773e146ef9e22330ab72a902f9",
+      "header_normalized_sha256": "a044c8b0f22c54a38e6c4931d6db09b0a60e85c05267bf91afd9538a9f0534e5",
+      "legacy_frontpanel_destination": true,
+      "preserve_absent_layers": true,
+      "zero_init": "level = calloc(1,sizeof(s_level))",
+      "layer_lookup_normalized_sha256": "c6c1e6054701056fb10ddefb56209aa5bddb8b96aa417b2fd3c1b58386a6360e",
+      "layer_enum_normalized_sha256": "d3975fb85a4655569487adb991669ccacc3fc8058185bb77deacad383e96e743"
+    },
+    {
+      "revision": 3669,
+      "engine": "3741",
+      "commit": "7c099902d5149d9e696ad1274c0d1964aa1f2323",
+      "legacy_fixed_caps": true,
+      "declared_limit_constants": {
+        "SPAWNS": 600,
+        "PANELS": 100,
+        "HOLES": 40,
+        "WALLS": 40,
+        "LAYERS": 100,
+        "PALETTES": 40
+      },
+      "guards": [
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numholes",
+          "constant": "LEVEL_MAX_HOLES",
+          "diagnostic": "Too many holes in level (check LEVEL_MAX_HOLES)!"
+        },
+        {
+          "count": "numwalls",
+          "constant": "LEVEL_MAX_WALLS",
+          "diagnostic": "Too many walls in level (check LEVEL_MAX_WALLS)!"
+        },
+        {
+          "count": "numpalettes",
+          "constant": "LEVEL_MAX_PALETTES",
+          "diagnostic": "Too many palettes in level (check LEVEL_MAX_PALETTES)!"
+        },
+        {
+          "count": "numspawns",
+          "constant": "LEVEL_MAX_SPAWNS",
+          "diagnostic": "too many spawn entries (see LEVEL_MAX_SPAWNS)"
+        }
+      ],
+      "order_loop": "while(value[i] && level->numpanels < LEVEL_MAX_PANELS){",
+      "load_level_normalized_sha256": "cbf4354a92b89a089ea59e97a099eb49859029773e146ef9e22330ab72a902f9",
+      "header_normalized_sha256": "a044c8b0f22c54a38e6c4931d6db09b0a60e85c05267bf91afd9538a9f0534e5",
+      "legacy_frontpanel_destination": true,
+      "preserve_absent_layers": true,
+      "zero_init": "level = calloc(1,sizeof(s_level))",
+      "layer_lookup_normalized_sha256": "c6c1e6054701056fb10ddefb56209aa5bddb8b96aa417b2fd3c1b58386a6360e",
+      "layer_enum_normalized_sha256": "d3975fb85a4655569487adb991669ccacc3fc8058185bb77deacad383e96e743"
+    },
+    {
+      "revision": 3670,
+      "engine": "3741",
+      "commit": "5d6118ae7dc11b04bb370da0faa0c6f42ffab50e",
+      "legacy_fixed_caps": true,
+      "declared_limit_constants": {
+        "SPAWNS": 600,
+        "PANELS": 100,
+        "HOLES": 40,
+        "WALLS": 40,
+        "LAYERS": 100,
+        "PALETTES": 40
+      },
+      "guards": [
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numholes",
+          "constant": "LEVEL_MAX_HOLES",
+          "diagnostic": "Too many holes in level (check LEVEL_MAX_HOLES)!"
+        },
+        {
+          "count": "numwalls",
+          "constant": "LEVEL_MAX_WALLS",
+          "diagnostic": "Too many walls in level (check LEVEL_MAX_WALLS)!"
+        },
+        {
+          "count": "numpalettes",
+          "constant": "LEVEL_MAX_PALETTES",
+          "diagnostic": "Too many palettes in level (check LEVEL_MAX_PALETTES)!"
+        },
+        {
+          "count": "numspawns",
+          "constant": "LEVEL_MAX_SPAWNS",
+          "diagnostic": "too many spawn entries (see LEVEL_MAX_SPAWNS)"
+        }
+      ],
+      "order_loop": "while(value[i] && level->numpanels < LEVEL_MAX_PANELS){",
+      "load_level_normalized_sha256": "cbf4354a92b89a089ea59e97a099eb49859029773e146ef9e22330ab72a902f9",
+      "header_normalized_sha256": "f909b86967cce14c80b392ee0f8c76629d1b1d7cf0a064bb8e051d3e33ef0430",
+      "legacy_frontpanel_destination": true,
+      "preserve_absent_layers": true,
+      "zero_init": "level = calloc(1,sizeof(s_level))",
+      "layer_lookup_normalized_sha256": "c6c1e6054701056fb10ddefb56209aa5bddb8b96aa417b2fd3c1b58386a6360e",
+      "layer_enum_normalized_sha256": "d3975fb85a4655569487adb991669ccacc3fc8058185bb77deacad383e96e743"
+    },
+    {
+      "revision": 3671,
+      "engine": "3741",
+      "commit": "7fba7445c056b5aeff03046dd79ae929fcf68f15",
+      "legacy_fixed_caps": true,
+      "declared_limit_constants": {
+        "SPAWNS": 600,
+        "PANELS": 100,
+        "HOLES": 40,
+        "WALLS": 40,
+        "LAYERS": 100,
+        "PALETTES": 40
+      },
+      "guards": [
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numholes",
+          "constant": "LEVEL_MAX_HOLES",
+          "diagnostic": "Too many holes in level (check LEVEL_MAX_HOLES)!"
+        },
+        {
+          "count": "numwalls",
+          "constant": "LEVEL_MAX_WALLS",
+          "diagnostic": "Too many walls in level (check LEVEL_MAX_WALLS)!"
+        },
+        {
+          "count": "numpalettes",
+          "constant": "LEVEL_MAX_PALETTES",
+          "diagnostic": "Too many palettes in level (check LEVEL_MAX_PALETTES)!"
+        },
+        {
+          "count": "numspawns",
+          "constant": "LEVEL_MAX_SPAWNS",
+          "diagnostic": "too many spawn entries (see LEVEL_MAX_SPAWNS)"
+        }
+      ],
+      "order_loop": "while(value[i] && level->numpanels < LEVEL_MAX_PANELS){",
+      "load_level_normalized_sha256": "cbf4354a92b89a089ea59e97a099eb49859029773e146ef9e22330ab72a902f9",
+      "header_normalized_sha256": "f909b86967cce14c80b392ee0f8c76629d1b1d7cf0a064bb8e051d3e33ef0430",
+      "legacy_frontpanel_destination": true,
+      "preserve_absent_layers": true,
+      "zero_init": "level = calloc(1,sizeof(s_level))",
+      "layer_lookup_normalized_sha256": "c6c1e6054701056fb10ddefb56209aa5bddb8b96aa417b2fd3c1b58386a6360e",
+      "layer_enum_normalized_sha256": "d3975fb85a4655569487adb991669ccacc3fc8058185bb77deacad383e96e743"
+    },
+    {
+      "revision": 3672,
+      "engine": "3741",
+      "commit": "8c4687b4ef831986a04e2fcb3d4dcd7e96bbd0cf",
+      "legacy_fixed_caps": true,
+      "declared_limit_constants": {
+        "SPAWNS": 600,
+        "PANELS": 100,
+        "HOLES": 40,
+        "WALLS": 40,
+        "LAYERS": 100,
+        "PALETTES": 40
+      },
+      "guards": [
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numholes",
+          "constant": "LEVEL_MAX_HOLES",
+          "diagnostic": "Too many holes in level (check LEVEL_MAX_HOLES)!"
+        },
+        {
+          "count": "numwalls",
+          "constant": "LEVEL_MAX_WALLS",
+          "diagnostic": "Too many walls in level (check LEVEL_MAX_WALLS)!"
+        },
+        {
+          "count": "numpalettes",
+          "constant": "LEVEL_MAX_PALETTES",
+          "diagnostic": "Too many palettes in level (check LEVEL_MAX_PALETTES)!"
+        },
+        {
+          "count": "numspawns",
+          "constant": "LEVEL_MAX_SPAWNS",
+          "diagnostic": "too many spawn entries (see LEVEL_MAX_SPAWNS)"
+        }
+      ],
+      "order_loop": "while(value[i] && level->numpanels < LEVEL_MAX_PANELS){",
+      "load_level_normalized_sha256": "cbf4354a92b89a089ea59e97a099eb49859029773e146ef9e22330ab72a902f9",
+      "header_normalized_sha256": "07bd94c9d2b2aa93b1e3fd96bf4bb94fa774a41e97ca1b74373e9334248abe55",
+      "legacy_frontpanel_destination": true,
+      "preserve_absent_layers": true,
+      "zero_init": "level = calloc(1,sizeof(s_level))",
+      "layer_lookup_normalized_sha256": "c6c1e6054701056fb10ddefb56209aa5bddb8b96aa417b2fd3c1b58386a6360e",
+      "layer_enum_normalized_sha256": "d3975fb85a4655569487adb991669ccacc3fc8058185bb77deacad383e96e743"
+    },
+    {
+      "revision": 3673,
+      "engine": "3741",
+      "commit": "88b9c2829ea471579d90e186215d23a8bf669bcb",
+      "legacy_fixed_caps": true,
+      "declared_limit_constants": {
+        "SPAWNS": 600,
+        "PANELS": 100,
+        "HOLES": 40,
+        "WALLS": 40,
+        "LAYERS": 100,
+        "PALETTES": 40
+      },
+      "guards": [
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numholes",
+          "constant": "LEVEL_MAX_HOLES",
+          "diagnostic": "Too many holes in level (check LEVEL_MAX_HOLES)!"
+        },
+        {
+          "count": "numwalls",
+          "constant": "LEVEL_MAX_WALLS",
+          "diagnostic": "Too many walls in level (check LEVEL_MAX_WALLS)!"
+        },
+        {
+          "count": "numpalettes",
+          "constant": "LEVEL_MAX_PALETTES",
+          "diagnostic": "Too many palettes in level (check LEVEL_MAX_PALETTES)!"
+        },
+        {
+          "count": "numspawns",
+          "constant": "LEVEL_MAX_SPAWNS",
+          "diagnostic": "too many spawn entries (see LEVEL_MAX_SPAWNS)"
+        }
+      ],
+      "order_loop": "while(value[i] && level->numpanels < LEVEL_MAX_PANELS){",
+      "load_level_normalized_sha256": "cbf4354a92b89a089ea59e97a099eb49859029773e146ef9e22330ab72a902f9",
+      "header_normalized_sha256": "07bd94c9d2b2aa93b1e3fd96bf4bb94fa774a41e97ca1b74373e9334248abe55",
+      "legacy_frontpanel_destination": true,
+      "preserve_absent_layers": true,
+      "zero_init": "level = calloc(1,sizeof(s_level))",
+      "layer_lookup_normalized_sha256": "c6c1e6054701056fb10ddefb56209aa5bddb8b96aa417b2fd3c1b58386a6360e",
+      "layer_enum_normalized_sha256": "d3975fb85a4655569487adb991669ccacc3fc8058185bb77deacad383e96e743"
+    },
+    {
+      "revision": 3674,
+      "engine": "3741",
+      "commit": "5e9213f7de65df1cc13d01e3e695d4ac62091267",
+      "legacy_fixed_caps": true,
+      "declared_limit_constants": {
+        "SPAWNS": 600,
+        "PANELS": 100,
+        "HOLES": 40,
+        "WALLS": 40,
+        "LAYERS": 100,
+        "PALETTES": 40
+      },
+      "guards": [
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numholes",
+          "constant": "LEVEL_MAX_HOLES",
+          "diagnostic": "Too many holes in level (check LEVEL_MAX_HOLES)!"
+        },
+        {
+          "count": "numwalls",
+          "constant": "LEVEL_MAX_WALLS",
+          "diagnostic": "Too many walls in level (check LEVEL_MAX_WALLS)!"
+        },
+        {
+          "count": "numpalettes",
+          "constant": "LEVEL_MAX_PALETTES",
+          "diagnostic": "Too many palettes in level (check LEVEL_MAX_PALETTES)!"
+        },
+        {
+          "count": "numspawns",
+          "constant": "LEVEL_MAX_SPAWNS",
+          "diagnostic": "too many spawn entries (see LEVEL_MAX_SPAWNS)"
+        }
+      ],
+      "order_loop": "while(value[i] && level->numpanels < LEVEL_MAX_PANELS){",
+      "load_level_normalized_sha256": "cbf4354a92b89a089ea59e97a099eb49859029773e146ef9e22330ab72a902f9",
+      "header_normalized_sha256": "07bd94c9d2b2aa93b1e3fd96bf4bb94fa774a41e97ca1b74373e9334248abe55",
+      "legacy_frontpanel_destination": true,
+      "preserve_absent_layers": true,
+      "zero_init": "level = calloc(1,sizeof(s_level))",
+      "layer_lookup_normalized_sha256": "c6c1e6054701056fb10ddefb56209aa5bddb8b96aa417b2fd3c1b58386a6360e",
+      "layer_enum_normalized_sha256": "d3975fb85a4655569487adb991669ccacc3fc8058185bb77deacad383e96e743"
+    },
+    {
+      "revision": 3675,
+      "engine": "3741",
+      "commit": "a4b46362047dc2bb04e350b8a434cb65cad3b9af",
+      "legacy_fixed_caps": true,
+      "declared_limit_constants": {
+        "SPAWNS": 600,
+        "PANELS": 100,
+        "HOLES": 40,
+        "WALLS": 40,
+        "LAYERS": 100,
+        "PALETTES": 40
+      },
+      "guards": [
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numholes",
+          "constant": "LEVEL_MAX_HOLES",
+          "diagnostic": "Too many holes in level (check LEVEL_MAX_HOLES)!"
+        },
+        {
+          "count": "numwalls",
+          "constant": "LEVEL_MAX_WALLS",
+          "diagnostic": "Too many walls in level (check LEVEL_MAX_WALLS)!"
+        },
+        {
+          "count": "numpalettes",
+          "constant": "LEVEL_MAX_PALETTES",
+          "diagnostic": "Too many palettes in level (check LEVEL_MAX_PALETTES)!"
+        },
+        {
+          "count": "numspawns",
+          "constant": "LEVEL_MAX_SPAWNS",
+          "diagnostic": "too many spawn entries (see LEVEL_MAX_SPAWNS)"
+        }
+      ],
+      "order_loop": "while(value[i] && level->numpanels < LEVEL_MAX_PANELS){",
+      "load_level_normalized_sha256": "cbf4354a92b89a089ea59e97a099eb49859029773e146ef9e22330ab72a902f9",
+      "header_normalized_sha256": "07bd94c9d2b2aa93b1e3fd96bf4bb94fa774a41e97ca1b74373e9334248abe55",
+      "legacy_frontpanel_destination": true,
+      "preserve_absent_layers": true,
+      "zero_init": "level = calloc(1,sizeof(s_level))",
+      "layer_lookup_normalized_sha256": "c6c1e6054701056fb10ddefb56209aa5bddb8b96aa417b2fd3c1b58386a6360e",
+      "layer_enum_normalized_sha256": "d3975fb85a4655569487adb991669ccacc3fc8058185bb77deacad383e96e743"
+    },
+    {
+      "revision": 3677,
+      "engine": "3741",
+      "commit": "0cc873941f3ee1dc687c7c0d303d043c931f8e5f",
+      "legacy_fixed_caps": true,
+      "declared_limit_constants": {
+        "SPAWNS": 600,
+        "PANELS": 100,
+        "HOLES": 40,
+        "WALLS": 40,
+        "LAYERS": 100,
+        "PALETTES": 40
+      },
+      "guards": [
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numholes",
+          "constant": "LEVEL_MAX_HOLES",
+          "diagnostic": "Too many holes in level (check LEVEL_MAX_HOLES)!"
+        },
+        {
+          "count": "numwalls",
+          "constant": "LEVEL_MAX_WALLS",
+          "diagnostic": "Too many walls in level (check LEVEL_MAX_WALLS)!"
+        },
+        {
+          "count": "numpalettes",
+          "constant": "LEVEL_MAX_PALETTES",
+          "diagnostic": "Too many palettes in level (check LEVEL_MAX_PALETTES)!"
+        },
+        {
+          "count": "numspawns",
+          "constant": "LEVEL_MAX_SPAWNS",
+          "diagnostic": "too many spawn entries (see LEVEL_MAX_SPAWNS)"
+        }
+      ],
+      "order_loop": "while(value[i] && level->numpanels < LEVEL_MAX_PANELS){",
+      "load_level_normalized_sha256": "cbf4354a92b89a089ea59e97a099eb49859029773e146ef9e22330ab72a902f9",
+      "header_normalized_sha256": "d5b4eefbdad51a69a36edadc6cf660dacc2ad6195b15f8d927e17d8ea3fe9c49",
+      "legacy_frontpanel_destination": true,
+      "preserve_absent_layers": true,
+      "zero_init": "level = calloc(1,sizeof(s_level))",
+      "layer_lookup_normalized_sha256": "c6c1e6054701056fb10ddefb56209aa5bddb8b96aa417b2fd3c1b58386a6360e",
+      "layer_enum_normalized_sha256": "d3975fb85a4655569487adb991669ccacc3fc8058185bb77deacad383e96e743"
+    },
+    {
+      "revision": 3678,
+      "engine": "3741",
+      "commit": "9db2ed7db699e47513d3ea3144b7f235304eb72a",
+      "legacy_fixed_caps": true,
+      "declared_limit_constants": {
+        "SPAWNS": 600,
+        "PANELS": 100,
+        "HOLES": 40,
+        "WALLS": 40,
+        "LAYERS": 100,
+        "PALETTES": 40
+      },
+      "guards": [
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numholes",
+          "constant": "LEVEL_MAX_HOLES",
+          "diagnostic": "Too many holes in level (check LEVEL_MAX_HOLES)!"
+        },
+        {
+          "count": "numwalls",
+          "constant": "LEVEL_MAX_WALLS",
+          "diagnostic": "Too many walls in level (check LEVEL_MAX_WALLS)!"
+        },
+        {
+          "count": "numpalettes",
+          "constant": "LEVEL_MAX_PALETTES",
+          "diagnostic": "Too many palettes in level (check LEVEL_MAX_PALETTES)!"
+        },
+        {
+          "count": "numspawns",
+          "constant": "LEVEL_MAX_SPAWNS",
+          "diagnostic": "too many spawn entries (see LEVEL_MAX_SPAWNS)"
+        }
+      ],
+      "order_loop": "while(value[i] && level->numpanels < LEVEL_MAX_PANELS){",
+      "load_level_normalized_sha256": "cbf4354a92b89a089ea59e97a099eb49859029773e146ef9e22330ab72a902f9",
+      "header_normalized_sha256": "d5b4eefbdad51a69a36edadc6cf660dacc2ad6195b15f8d927e17d8ea3fe9c49",
+      "legacy_frontpanel_destination": true,
+      "preserve_absent_layers": true,
+      "zero_init": "level = calloc(1,sizeof(s_level))",
+      "layer_lookup_normalized_sha256": "c6c1e6054701056fb10ddefb56209aa5bddb8b96aa417b2fd3c1b58386a6360e",
+      "layer_enum_normalized_sha256": "d3975fb85a4655569487adb991669ccacc3fc8058185bb77deacad383e96e743"
+    },
+    {
+      "revision": 3679,
+      "engine": "3741",
+      "commit": "1e4032e0c03f5580f4092fc8c2fecf2a5a96aa7f",
+      "legacy_fixed_caps": true,
+      "declared_limit_constants": {
+        "SPAWNS": 600,
+        "PANELS": 100,
+        "HOLES": 40,
+        "WALLS": 40,
+        "LAYERS": 100,
+        "PALETTES": 40
+      },
+      "guards": [
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numholes",
+          "constant": "LEVEL_MAX_HOLES",
+          "diagnostic": "Too many holes in level (check LEVEL_MAX_HOLES)!"
+        },
+        {
+          "count": "numwalls",
+          "constant": "LEVEL_MAX_WALLS",
+          "diagnostic": "Too many walls in level (check LEVEL_MAX_WALLS)!"
+        },
+        {
+          "count": "numpalettes",
+          "constant": "LEVEL_MAX_PALETTES",
+          "diagnostic": "Too many palettes in level (check LEVEL_MAX_PALETTES)!"
+        },
+        {
+          "count": "numspawns",
+          "constant": "LEVEL_MAX_SPAWNS",
+          "diagnostic": "too many spawn entries (see LEVEL_MAX_SPAWNS)"
+        }
+      ],
+      "order_loop": "while(value[i] && level->numpanels < LEVEL_MAX_PANELS){",
+      "load_level_normalized_sha256": "cbf4354a92b89a089ea59e97a099eb49859029773e146ef9e22330ab72a902f9",
+      "header_normalized_sha256": "d5b4eefbdad51a69a36edadc6cf660dacc2ad6195b15f8d927e17d8ea3fe9c49",
+      "legacy_frontpanel_destination": true,
+      "preserve_absent_layers": true,
+      "zero_init": "level = calloc(1,sizeof(s_level))",
+      "layer_lookup_normalized_sha256": "c6c1e6054701056fb10ddefb56209aa5bddb8b96aa417b2fd3c1b58386a6360e",
+      "layer_enum_normalized_sha256": "d3975fb85a4655569487adb991669ccacc3fc8058185bb77deacad383e96e743"
+    },
+    {
+      "revision": 3680,
+      "engine": "3741",
+      "commit": "cbacfd01002925ec9016f03bbf45dc576e135f1a",
+      "legacy_fixed_caps": true,
+      "declared_limit_constants": {
+        "SPAWNS": 600,
+        "PANELS": 100,
+        "HOLES": 40,
+        "WALLS": 40,
+        "LAYERS": 100,
+        "PALETTES": 40
+      },
+      "guards": [
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numholes",
+          "constant": "LEVEL_MAX_HOLES",
+          "diagnostic": "Too many holes in level (check LEVEL_MAX_HOLES)!"
+        },
+        {
+          "count": "numwalls",
+          "constant": "LEVEL_MAX_WALLS",
+          "diagnostic": "Too many walls in level (check LEVEL_MAX_WALLS)!"
+        },
+        {
+          "count": "numpalettes",
+          "constant": "LEVEL_MAX_PALETTES",
+          "diagnostic": "Too many palettes in level (check LEVEL_MAX_PALETTES)!"
+        },
+        {
+          "count": "numspawns",
+          "constant": "LEVEL_MAX_SPAWNS",
+          "diagnostic": "too many spawn entries (see LEVEL_MAX_SPAWNS)"
+        }
+      ],
+      "order_loop": "while(value[i] && level->numpanels < LEVEL_MAX_PANELS){",
+      "load_level_normalized_sha256": "cbf4354a92b89a089ea59e97a099eb49859029773e146ef9e22330ab72a902f9",
+      "header_normalized_sha256": "788f304d0beadb9d52a382f6c0f8cc00576e522c9cf71f2217c66372e6e15ada",
+      "legacy_frontpanel_destination": true,
+      "preserve_absent_layers": true,
+      "zero_init": "level = calloc(1,sizeof(s_level))",
+      "layer_lookup_normalized_sha256": "c6c1e6054701056fb10ddefb56209aa5bddb8b96aa417b2fd3c1b58386a6360e",
+      "layer_enum_normalized_sha256": "d3975fb85a4655569487adb991669ccacc3fc8058185bb77deacad383e96e743"
+    },
+    {
+      "revision": 3682,
+      "engine": "3741",
+      "commit": "a41ea87ba402b98c6b5397c6a402834a802e1801",
+      "legacy_fixed_caps": true,
+      "declared_limit_constants": {
+        "SPAWNS": 600,
+        "PANELS": 100,
+        "HOLES": 40,
+        "WALLS": 40,
+        "LAYERS": 100,
+        "PALETTES": 40
+      },
+      "guards": [
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numholes",
+          "constant": "LEVEL_MAX_HOLES",
+          "diagnostic": "Too many holes in level (check LEVEL_MAX_HOLES)!"
+        },
+        {
+          "count": "numwalls",
+          "constant": "LEVEL_MAX_WALLS",
+          "diagnostic": "Too many walls in level (check LEVEL_MAX_WALLS)!"
+        },
+        {
+          "count": "numpalettes",
+          "constant": "LEVEL_MAX_PALETTES",
+          "diagnostic": "Too many palettes in level (check LEVEL_MAX_PALETTES)!"
+        },
+        {
+          "count": "numspawns",
+          "constant": "LEVEL_MAX_SPAWNS",
+          "diagnostic": "too many spawn entries (see LEVEL_MAX_SPAWNS)"
+        }
+      ],
+      "order_loop": "while(value[i] && level->numpanels < LEVEL_MAX_PANELS){",
+      "load_level_normalized_sha256": "388f7b794dd2380eaab3dd1148bb1220edced59cadbc1e6b69db779757db8293",
+      "header_normalized_sha256": "788f304d0beadb9d52a382f6c0f8cc00576e522c9cf71f2217c66372e6e15ada",
+      "legacy_frontpanel_destination": true,
+      "preserve_absent_layers": true,
+      "zero_init": "level = calloc(1,sizeof(s_level))",
+      "layer_lookup_normalized_sha256": "c6c1e6054701056fb10ddefb56209aa5bddb8b96aa417b2fd3c1b58386a6360e",
+      "layer_enum_normalized_sha256": "d3975fb85a4655569487adb991669ccacc3fc8058185bb77deacad383e96e743"
+    },
+    {
+      "revision": 3685,
+      "engine": "3741",
+      "commit": "8e0f3d0bd64e99244598ddf636c5203c2a6b0f2e",
+      "legacy_fixed_caps": true,
+      "declared_limit_constants": {
+        "SPAWNS": 600,
+        "PANELS": 100,
+        "HOLES": 40,
+        "WALLS": 40,
+        "LAYERS": 100,
+        "PALETTES": 40
+      },
+      "guards": [
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numholes",
+          "constant": "LEVEL_MAX_HOLES",
+          "diagnostic": "Too many holes in level (check LEVEL_MAX_HOLES)!"
+        },
+        {
+          "count": "numwalls",
+          "constant": "LEVEL_MAX_WALLS",
+          "diagnostic": "Too many walls in level (check LEVEL_MAX_WALLS)!"
+        },
+        {
+          "count": "numpalettes",
+          "constant": "LEVEL_MAX_PALETTES",
+          "diagnostic": "Too many palettes in level (check LEVEL_MAX_PALETTES)!"
+        },
+        {
+          "count": "numspawns",
+          "constant": "LEVEL_MAX_SPAWNS",
+          "diagnostic": "too many spawn entries (see LEVEL_MAX_SPAWNS)"
+        }
+      ],
+      "order_loop": "while(value[i] && level->numpanels < LEVEL_MAX_PANELS){",
+      "load_level_normalized_sha256": "388f7b794dd2380eaab3dd1148bb1220edced59cadbc1e6b69db779757db8293",
+      "header_normalized_sha256": "637a997c9397651005ee5dbe5d80a6d42347e4db25de89c32097486826f95c8e",
+      "legacy_frontpanel_destination": true,
+      "preserve_absent_layers": true,
+      "zero_init": "level = calloc(1,sizeof(s_level))",
+      "layer_lookup_normalized_sha256": "c6c1e6054701056fb10ddefb56209aa5bddb8b96aa417b2fd3c1b58386a6360e",
+      "layer_enum_normalized_sha256": "d3975fb85a4655569487adb991669ccacc3fc8058185bb77deacad383e96e743"
+    },
+    {
+      "revision": 3686,
+      "engine": "3741",
+      "commit": "d37cca26d57bba5a4f5c190f80562f768785901d",
+      "legacy_fixed_caps": true,
+      "declared_limit_constants": {
+        "SPAWNS": 600,
+        "PANELS": 100,
+        "HOLES": 40,
+        "WALLS": 40,
+        "LAYERS": 100,
+        "PALETTES": 40
+      },
+      "guards": [
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numholes",
+          "constant": "LEVEL_MAX_HOLES",
+          "diagnostic": "Too many holes in level (check LEVEL_MAX_HOLES)!"
+        },
+        {
+          "count": "numwalls",
+          "constant": "LEVEL_MAX_WALLS",
+          "diagnostic": "Too many walls in level (check LEVEL_MAX_WALLS)!"
+        },
+        {
+          "count": "numpalettes",
+          "constant": "LEVEL_MAX_PALETTES",
+          "diagnostic": "Too many palettes in level (check LEVEL_MAX_PALETTES)!"
+        },
+        {
+          "count": "numspawns",
+          "constant": "LEVEL_MAX_SPAWNS",
+          "diagnostic": "too many spawn entries (see LEVEL_MAX_SPAWNS)"
+        }
+      ],
+      "order_loop": "while(value[i] && level->numpanels < LEVEL_MAX_PANELS){",
+      "load_level_normalized_sha256": "388f7b794dd2380eaab3dd1148bb1220edced59cadbc1e6b69db779757db8293",
+      "header_normalized_sha256": "637a997c9397651005ee5dbe5d80a6d42347e4db25de89c32097486826f95c8e",
+      "legacy_frontpanel_destination": true,
+      "preserve_absent_layers": true,
+      "zero_init": "level = calloc(1,sizeof(s_level))",
+      "layer_lookup_normalized_sha256": "c6c1e6054701056fb10ddefb56209aa5bddb8b96aa417b2fd3c1b58386a6360e",
+      "layer_enum_normalized_sha256": "d3975fb85a4655569487adb991669ccacc3fc8058185bb77deacad383e96e743"
+    },
+    {
+      "revision": 3689,
+      "engine": "3741",
+      "commit": "953da13e27e3a72fc61ff9fe71c272968e9e7270",
+      "legacy_fixed_caps": true,
+      "declared_limit_constants": {
+        "SPAWNS": 600,
+        "PANELS": 100,
+        "HOLES": 40,
+        "WALLS": 40,
+        "LAYERS": 100,
+        "PALETTES": 40
+      },
+      "guards": [
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numholes",
+          "constant": "LEVEL_MAX_HOLES",
+          "diagnostic": "Too many holes in level (check LEVEL_MAX_HOLES)!"
+        },
+        {
+          "count": "numwalls",
+          "constant": "LEVEL_MAX_WALLS",
+          "diagnostic": "Too many walls in level (check LEVEL_MAX_WALLS)!"
+        },
+        {
+          "count": "numpalettes",
+          "constant": "LEVEL_MAX_PALETTES",
+          "diagnostic": "Too many palettes in level (check LEVEL_MAX_PALETTES)!"
+        },
+        {
+          "count": "numspawns",
+          "constant": "LEVEL_MAX_SPAWNS",
+          "diagnostic": "too many spawn entries (see LEVEL_MAX_SPAWNS)"
+        }
+      ],
+      "order_loop": "while(value[i] && level->numpanels < LEVEL_MAX_PANELS){",
+      "load_level_normalized_sha256": "388f7b794dd2380eaab3dd1148bb1220edced59cadbc1e6b69db779757db8293",
+      "header_normalized_sha256": "637a997c9397651005ee5dbe5d80a6d42347e4db25de89c32097486826f95c8e",
+      "legacy_frontpanel_destination": true,
+      "preserve_absent_layers": true,
+      "zero_init": "level = calloc(1,sizeof(s_level))",
+      "layer_lookup_normalized_sha256": "c6c1e6054701056fb10ddefb56209aa5bddb8b96aa417b2fd3c1b58386a6360e",
+      "layer_enum_normalized_sha256": "d3975fb85a4655569487adb991669ccacc3fc8058185bb77deacad383e96e743"
+    },
+    {
+      "revision": 3690,
+      "engine": "3741",
+      "commit": "e4cf90c8a3784263df7809672a2b4998bb000831",
+      "legacy_fixed_caps": true,
+      "declared_limit_constants": {
+        "SPAWNS": 600,
+        "PANELS": 100,
+        "HOLES": 40,
+        "WALLS": 40,
+        "LAYERS": 100,
+        "PALETTES": 40
+      },
+      "guards": [
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numholes",
+          "constant": "LEVEL_MAX_HOLES",
+          "diagnostic": "Too many holes in level (check LEVEL_MAX_HOLES)!"
+        },
+        {
+          "count": "numwalls",
+          "constant": "LEVEL_MAX_WALLS",
+          "diagnostic": "Too many walls in level (check LEVEL_MAX_WALLS)!"
+        },
+        {
+          "count": "numpalettes",
+          "constant": "LEVEL_MAX_PALETTES",
+          "diagnostic": "Too many palettes in level (check LEVEL_MAX_PALETTES)!"
+        },
+        {
+          "count": "numspawns",
+          "constant": "LEVEL_MAX_SPAWNS",
+          "diagnostic": "too many spawn entries (see LEVEL_MAX_SPAWNS)"
+        }
+      ],
+      "order_loop": "while(value[i] && level->numpanels < LEVEL_MAX_PANELS){",
+      "load_level_normalized_sha256": "388f7b794dd2380eaab3dd1148bb1220edced59cadbc1e6b69db779757db8293",
+      "header_normalized_sha256": "637a997c9397651005ee5dbe5d80a6d42347e4db25de89c32097486826f95c8e",
+      "legacy_frontpanel_destination": true,
+      "preserve_absent_layers": true,
+      "zero_init": "level = calloc(1,sizeof(s_level))",
+      "layer_lookup_normalized_sha256": "c6c1e6054701056fb10ddefb56209aa5bddb8b96aa417b2fd3c1b58386a6360e",
+      "layer_enum_normalized_sha256": "d3975fb85a4655569487adb991669ccacc3fc8058185bb77deacad383e96e743"
+    },
+    {
+      "revision": 3691,
+      "engine": "3741",
+      "commit": "42bc05f6630514c0a21e14faa7c4e671329a91ae",
+      "legacy_fixed_caps": true,
+      "declared_limit_constants": {
+        "SPAWNS": 600,
+        "PANELS": 100,
+        "HOLES": 40,
+        "WALLS": 40,
+        "LAYERS": 100,
+        "PALETTES": 40
+      },
+      "guards": [
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numholes",
+          "constant": "LEVEL_MAX_HOLES",
+          "diagnostic": "Too many holes in level (check LEVEL_MAX_HOLES)!"
+        },
+        {
+          "count": "numwalls",
+          "constant": "LEVEL_MAX_WALLS",
+          "diagnostic": "Too many walls in level (check LEVEL_MAX_WALLS)!"
+        },
+        {
+          "count": "numpalettes",
+          "constant": "LEVEL_MAX_PALETTES",
+          "diagnostic": "Too many palettes in level (check LEVEL_MAX_PALETTES)!"
+        },
+        {
+          "count": "numspawns",
+          "constant": "LEVEL_MAX_SPAWNS",
+          "diagnostic": "too many spawn entries (see LEVEL_MAX_SPAWNS)"
+        }
+      ],
+      "order_loop": "while(value[i] && level->numpanels < LEVEL_MAX_PANELS){",
+      "load_level_normalized_sha256": "e4fdbcfe8bda40f9ae4336c922ef65a3ddd83031c58ea25e2f9616e59352205c",
+      "header_normalized_sha256": "8d2e5086cb8dbbef13f1d49e84593293f11e5073f2716648d685937aaacd68e3",
+      "legacy_frontpanel_destination": true,
+      "preserve_absent_layers": true,
+      "zero_init": "level = calloc(1,sizeof(s_level))",
+      "layer_lookup_normalized_sha256": "c6c1e6054701056fb10ddefb56209aa5bddb8b96aa417b2fd3c1b58386a6360e",
+      "layer_enum_normalized_sha256": "d3975fb85a4655569487adb991669ccacc3fc8058185bb77deacad383e96e743"
+    },
+    {
+      "revision": 3692,
+      "engine": "3741",
+      "commit": "5c31bc7f06580725f11d436855533a2485dfb757",
+      "legacy_fixed_caps": true,
+      "declared_limit_constants": {
+        "SPAWNS": 600,
+        "PANELS": 100,
+        "HOLES": 40,
+        "WALLS": 40,
+        "LAYERS": 100,
+        "PALETTES": 40
+      },
+      "guards": [
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numholes",
+          "constant": "LEVEL_MAX_HOLES",
+          "diagnostic": "Too many holes in level (check LEVEL_MAX_HOLES)!"
+        },
+        {
+          "count": "numwalls",
+          "constant": "LEVEL_MAX_WALLS",
+          "diagnostic": "Too many walls in level (check LEVEL_MAX_WALLS)!"
+        },
+        {
+          "count": "numpalettes",
+          "constant": "LEVEL_MAX_PALETTES",
+          "diagnostic": "Too many palettes in level (check LEVEL_MAX_PALETTES)!"
+        },
+        {
+          "count": "numspawns",
+          "constant": "LEVEL_MAX_SPAWNS",
+          "diagnostic": "too many spawn entries (see LEVEL_MAX_SPAWNS)"
+        }
+      ],
+      "order_loop": "while(value[i] && level->numpanels < LEVEL_MAX_PANELS){",
+      "load_level_normalized_sha256": "e4fdbcfe8bda40f9ae4336c922ef65a3ddd83031c58ea25e2f9616e59352205c",
+      "header_normalized_sha256": "8d2e5086cb8dbbef13f1d49e84593293f11e5073f2716648d685937aaacd68e3",
+      "legacy_frontpanel_destination": true,
+      "preserve_absent_layers": true,
+      "zero_init": "level = calloc(1,sizeof(s_level))",
+      "layer_lookup_normalized_sha256": "c6c1e6054701056fb10ddefb56209aa5bddb8b96aa417b2fd3c1b58386a6360e",
+      "layer_enum_normalized_sha256": "d3975fb85a4655569487adb991669ccacc3fc8058185bb77deacad383e96e743"
+    },
+    {
+      "revision": 3693,
+      "engine": "3741",
+      "commit": "ec0e28efea5a3a63a28ccd9abe2fb3fb88513416",
+      "legacy_fixed_caps": true,
+      "declared_limit_constants": {
+        "SPAWNS": 600,
+        "PANELS": 100,
+        "HOLES": 40,
+        "WALLS": 40,
+        "LAYERS": 100,
+        "PALETTES": 40
+      },
+      "guards": [
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numholes",
+          "constant": "LEVEL_MAX_HOLES",
+          "diagnostic": "Too many holes in level (check LEVEL_MAX_HOLES)!"
+        },
+        {
+          "count": "numwalls",
+          "constant": "LEVEL_MAX_WALLS",
+          "diagnostic": "Too many walls in level (check LEVEL_MAX_WALLS)!"
+        },
+        {
+          "count": "numpalettes",
+          "constant": "LEVEL_MAX_PALETTES",
+          "diagnostic": "Too many palettes in level (check LEVEL_MAX_PALETTES)!"
+        },
+        {
+          "count": "numspawns",
+          "constant": "LEVEL_MAX_SPAWNS",
+          "diagnostic": "too many spawn entries (see LEVEL_MAX_SPAWNS)"
+        }
+      ],
+      "order_loop": "while(value[i] && level->numpanels < LEVEL_MAX_PANELS){",
+      "load_level_normalized_sha256": "e4fdbcfe8bda40f9ae4336c922ef65a3ddd83031c58ea25e2f9616e59352205c",
+      "header_normalized_sha256": "8d2e5086cb8dbbef13f1d49e84593293f11e5073f2716648d685937aaacd68e3",
+      "legacy_frontpanel_destination": true,
+      "preserve_absent_layers": true,
+      "zero_init": "level = calloc(1,sizeof(s_level))",
+      "layer_lookup_normalized_sha256": "c6c1e6054701056fb10ddefb56209aa5bddb8b96aa417b2fd3c1b58386a6360e",
+      "layer_enum_normalized_sha256": "d3975fb85a4655569487adb991669ccacc3fc8058185bb77deacad383e96e743"
+    },
+    {
+      "revision": 3694,
+      "engine": "3741",
+      "commit": "aaae13d3487ebedd9a3ef121d6296b5a3afd0cd9",
+      "legacy_fixed_caps": true,
+      "declared_limit_constants": {
+        "SPAWNS": 600,
+        "PANELS": 100,
+        "HOLES": 40,
+        "WALLS": 40,
+        "LAYERS": 100,
+        "PALETTES": 40
+      },
+      "guards": [
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numholes",
+          "constant": "LEVEL_MAX_HOLES",
+          "diagnostic": "Too many holes in level (check LEVEL_MAX_HOLES)!"
+        },
+        {
+          "count": "numwalls",
+          "constant": "LEVEL_MAX_WALLS",
+          "diagnostic": "Too many walls in level (check LEVEL_MAX_WALLS)!"
+        },
+        {
+          "count": "numpalettes",
+          "constant": "LEVEL_MAX_PALETTES",
+          "diagnostic": "Too many palettes in level (check LEVEL_MAX_PALETTES)!"
+        },
+        {
+          "count": "numspawns",
+          "constant": "LEVEL_MAX_SPAWNS",
+          "diagnostic": "too many spawn entries (see LEVEL_MAX_SPAWNS)"
+        }
+      ],
+      "order_loop": "while(value[i] && level->numpanels < LEVEL_MAX_PANELS){",
+      "load_level_normalized_sha256": "e4fdbcfe8bda40f9ae4336c922ef65a3ddd83031c58ea25e2f9616e59352205c",
+      "header_normalized_sha256": "8d2e5086cb8dbbef13f1d49e84593293f11e5073f2716648d685937aaacd68e3",
+      "legacy_frontpanel_destination": true,
+      "preserve_absent_layers": true,
+      "zero_init": "level = calloc(1,sizeof(s_level))",
+      "layer_lookup_normalized_sha256": "c6c1e6054701056fb10ddefb56209aa5bddb8b96aa417b2fd3c1b58386a6360e",
+      "layer_enum_normalized_sha256": "d3975fb85a4655569487adb991669ccacc3fc8058185bb77deacad383e96e743"
+    },
+    {
+      "revision": 3697,
+      "engine": "3741",
+      "commit": "142e0957159aab6b4698a94723ea282cb54a3c70",
+      "legacy_fixed_caps": true,
+      "declared_limit_constants": {
+        "SPAWNS": 600,
+        "PANELS": 100,
+        "HOLES": 40,
+        "WALLS": 40,
+        "LAYERS": 100,
+        "PALETTES": 40
+      },
+      "guards": [
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numholes",
+          "constant": "LEVEL_MAX_HOLES",
+          "diagnostic": "Too many holes in level (check LEVEL_MAX_HOLES)!"
+        },
+        {
+          "count": "numwalls",
+          "constant": "LEVEL_MAX_WALLS",
+          "diagnostic": "Too many walls in level (check LEVEL_MAX_WALLS)!"
+        },
+        {
+          "count": "numpalettes",
+          "constant": "LEVEL_MAX_PALETTES",
+          "diagnostic": "Too many palettes in level (check LEVEL_MAX_PALETTES)!"
+        },
+        {
+          "count": "numspawns",
+          "constant": "LEVEL_MAX_SPAWNS",
+          "diagnostic": "too many spawn entries (see LEVEL_MAX_SPAWNS)"
+        }
+      ],
+      "order_loop": "while(value[i] && level->numpanels < LEVEL_MAX_PANELS){",
+      "load_level_normalized_sha256": "c5437bc79b81ab1744b8c11cb50062bafe8a6717a9c27cb497fb269d2a8e4dfb",
+      "header_normalized_sha256": "8d2e5086cb8dbbef13f1d49e84593293f11e5073f2716648d685937aaacd68e3",
+      "legacy_frontpanel_destination": true,
+      "preserve_absent_layers": true,
+      "zero_init": "level = calloc(1,sizeof(s_level))",
+      "layer_lookup_normalized_sha256": "c6c1e6054701056fb10ddefb56209aa5bddb8b96aa417b2fd3c1b58386a6360e",
+      "layer_enum_normalized_sha256": "d3975fb85a4655569487adb991669ccacc3fc8058185bb77deacad383e96e743"
+    },
+    {
+      "revision": 3699,
+      "engine": "3741",
+      "commit": "f632ac4fe81ea6c6b3cd9d74a1cd7538471579bb",
+      "legacy_fixed_caps": true,
+      "declared_limit_constants": {
+        "SPAWNS": 600,
+        "PANELS": 100,
+        "HOLES": 40,
+        "WALLS": 40,
+        "LAYERS": 100,
+        "PALETTES": 40
+      },
+      "guards": [
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numholes",
+          "constant": "LEVEL_MAX_HOLES",
+          "diagnostic": "Too many holes in level (check LEVEL_MAX_HOLES)!"
+        },
+        {
+          "count": "numwalls",
+          "constant": "LEVEL_MAX_WALLS",
+          "diagnostic": "Too many walls in level (check LEVEL_MAX_WALLS)!"
+        },
+        {
+          "count": "numpalettes",
+          "constant": "LEVEL_MAX_PALETTES",
+          "diagnostic": "Too many palettes in level (check LEVEL_MAX_PALETTES)!"
+        },
+        {
+          "count": "numspawns",
+          "constant": "LEVEL_MAX_SPAWNS",
+          "diagnostic": "too many spawn entries (see LEVEL_MAX_SPAWNS)"
+        }
+      ],
+      "order_loop": "while(value[i] && level->numpanels < LEVEL_MAX_PANELS){",
+      "load_level_normalized_sha256": "c5437bc79b81ab1744b8c11cb50062bafe8a6717a9c27cb497fb269d2a8e4dfb",
+      "header_normalized_sha256": "0581efa4a34909437b0d3d80d89c5195e677bc0adba3c0b8413bfcf7a14b00c3",
+      "legacy_frontpanel_destination": true,
+      "preserve_absent_layers": true,
+      "zero_init": "level = calloc(1,sizeof(s_level))",
+      "layer_lookup_normalized_sha256": "c6c1e6054701056fb10ddefb56209aa5bddb8b96aa417b2fd3c1b58386a6360e",
+      "layer_enum_normalized_sha256": "d3975fb85a4655569487adb991669ccacc3fc8058185bb77deacad383e96e743"
+    },
+    {
+      "revision": 3701,
+      "engine": "3741",
+      "commit": "7644ed068259c3edbfaed1cd85828b4a28213997",
+      "legacy_fixed_caps": true,
+      "declared_limit_constants": {
+        "SPAWNS": 600,
+        "PANELS": 100,
+        "HOLES": 40,
+        "WALLS": 40,
+        "LAYERS": 100,
+        "PALETTES": 40
+      },
+      "guards": [
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numholes",
+          "constant": "LEVEL_MAX_HOLES",
+          "diagnostic": "Too many holes in level (check LEVEL_MAX_HOLES)!"
+        },
+        {
+          "count": "numwalls",
+          "constant": "LEVEL_MAX_WALLS",
+          "diagnostic": "Too many walls in level (check LEVEL_MAX_WALLS)!"
+        },
+        {
+          "count": "numpalettes",
+          "constant": "LEVEL_MAX_PALETTES",
+          "diagnostic": "Too many palettes in level (check LEVEL_MAX_PALETTES)!"
+        },
+        {
+          "count": "numspawns",
+          "constant": "LEVEL_MAX_SPAWNS",
+          "diagnostic": "too many spawn entries (see LEVEL_MAX_SPAWNS)"
+        }
+      ],
+      "order_loop": "while(value[i] && level->numpanels < LEVEL_MAX_PANELS){",
+      "load_level_normalized_sha256": "c5437bc79b81ab1744b8c11cb50062bafe8a6717a9c27cb497fb269d2a8e4dfb",
+      "header_normalized_sha256": "6ed53a9d12a953227cf6902d007e68b656a691d17360853c41ae3666841f6964",
+      "legacy_frontpanel_destination": true,
+      "preserve_absent_layers": true,
+      "zero_init": "level = calloc(1,sizeof(s_level))",
+      "layer_lookup_normalized_sha256": "c6c1e6054701056fb10ddefb56209aa5bddb8b96aa417b2fd3c1b58386a6360e",
+      "layer_enum_normalized_sha256": "d3975fb85a4655569487adb991669ccacc3fc8058185bb77deacad383e96e743"
+    },
+    {
+      "revision": 3703,
+      "engine": "3741",
+      "commit": "bb82f79d47f02649e3a79e22455911f98cc900cb",
+      "legacy_fixed_caps": true,
+      "declared_limit_constants": {
+        "SPAWNS": 600,
+        "PANELS": 100,
+        "HOLES": 40,
+        "WALLS": 40,
+        "LAYERS": 100,
+        "PALETTES": 40
+      },
+      "guards": [
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numholes",
+          "constant": "LEVEL_MAX_HOLES",
+          "diagnostic": "Too many holes in level (check LEVEL_MAX_HOLES)!"
+        },
+        {
+          "count": "numwalls",
+          "constant": "LEVEL_MAX_WALLS",
+          "diagnostic": "Too many walls in level (check LEVEL_MAX_WALLS)!"
+        },
+        {
+          "count": "numpalettes",
+          "constant": "LEVEL_MAX_PALETTES",
+          "diagnostic": "Too many palettes in level (check LEVEL_MAX_PALETTES)!"
+        },
+        {
+          "count": "numspawns",
+          "constant": "LEVEL_MAX_SPAWNS",
+          "diagnostic": "too many spawn entries (see LEVEL_MAX_SPAWNS)"
+        }
+      ],
+      "order_loop": "while(value[i] && level->numpanels < LEVEL_MAX_PANELS){",
+      "load_level_normalized_sha256": "6339bf5e0f5a9484ba0f17aa11eb0b2dc5be806db7e7b2c1c0d35edab6c83b26",
+      "header_normalized_sha256": "6ed53a9d12a953227cf6902d007e68b656a691d17360853c41ae3666841f6964",
+      "legacy_frontpanel_destination": true,
+      "preserve_absent_layers": true,
+      "zero_init": "level = calloc(1,sizeof(s_level))",
+      "layer_lookup_normalized_sha256": "c6c1e6054701056fb10ddefb56209aa5bddb8b96aa417b2fd3c1b58386a6360e",
+      "layer_enum_normalized_sha256": "d3975fb85a4655569487adb991669ccacc3fc8058185bb77deacad383e96e743"
+    },
+    {
+      "revision": 3704,
+      "engine": "3741",
+      "commit": "b1bf3dd56ebfcd11eafe265120ceedf0b44ed2f4",
+      "legacy_fixed_caps": true,
+      "declared_limit_constants": {
+        "SPAWNS": 600,
+        "PANELS": 100,
+        "HOLES": 40,
+        "WALLS": 40,
+        "LAYERS": 100,
+        "PALETTES": 40
+      },
+      "guards": [
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numholes",
+          "constant": "LEVEL_MAX_HOLES",
+          "diagnostic": "Too many holes in level (check LEVEL_MAX_HOLES)!"
+        },
+        {
+          "count": "numwalls",
+          "constant": "LEVEL_MAX_WALLS",
+          "diagnostic": "Too many walls in level (check LEVEL_MAX_WALLS)!"
+        },
+        {
+          "count": "numpalettes",
+          "constant": "LEVEL_MAX_PALETTES",
+          "diagnostic": "Too many palettes in level (check LEVEL_MAX_PALETTES)!"
+        },
+        {
+          "count": "numspawns",
+          "constant": "LEVEL_MAX_SPAWNS",
+          "diagnostic": "too many spawn entries (see LEVEL_MAX_SPAWNS)"
+        }
+      ],
+      "order_loop": "while(value[i] && level->numpanels < LEVEL_MAX_PANELS){",
+      "load_level_normalized_sha256": "6339bf5e0f5a9484ba0f17aa11eb0b2dc5be806db7e7b2c1c0d35edab6c83b26",
+      "header_normalized_sha256": "6ed53a9d12a953227cf6902d007e68b656a691d17360853c41ae3666841f6964",
+      "legacy_frontpanel_destination": true,
+      "preserve_absent_layers": true,
+      "zero_init": "level = calloc(1,sizeof(s_level))",
+      "layer_lookup_normalized_sha256": "c6c1e6054701056fb10ddefb56209aa5bddb8b96aa417b2fd3c1b58386a6360e",
+      "layer_enum_normalized_sha256": "d3975fb85a4655569487adb991669ccacc3fc8058185bb77deacad383e96e743"
+    },
+    {
+      "revision": 3707,
+      "engine": "3741",
+      "commit": "3e8913af8d0090f1082b5c2a7e624d050c4960fc",
+      "legacy_fixed_caps": true,
+      "declared_limit_constants": {
+        "SPAWNS": 600,
+        "PANELS": 100,
+        "HOLES": 40,
+        "WALLS": 40,
+        "LAYERS": 100,
+        "PALETTES": 40
+      },
+      "guards": [
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numholes",
+          "constant": "LEVEL_MAX_HOLES",
+          "diagnostic": "Too many holes in level (check LEVEL_MAX_HOLES)!"
+        },
+        {
+          "count": "numwalls",
+          "constant": "LEVEL_MAX_WALLS",
+          "diagnostic": "Too many walls in level (check LEVEL_MAX_WALLS)!"
+        },
+        {
+          "count": "numpalettes",
+          "constant": "LEVEL_MAX_PALETTES",
+          "diagnostic": "Too many palettes in level (check LEVEL_MAX_PALETTES)!"
+        },
+        {
+          "count": "numspawns",
+          "constant": "LEVEL_MAX_SPAWNS",
+          "diagnostic": "too many spawn entries (see LEVEL_MAX_SPAWNS)"
+        }
+      ],
+      "order_loop": "while(value[i] && level->numpanels < LEVEL_MAX_PANELS){",
+      "load_level_normalized_sha256": "7e4453f3557da59e849003dac038fb5198e80bb19dfb32faf2a98809191abce8",
+      "header_normalized_sha256": "6ed53a9d12a953227cf6902d007e68b656a691d17360853c41ae3666841f6964",
+      "legacy_frontpanel_destination": true,
+      "preserve_absent_layers": true,
+      "zero_init": "level = calloc(1,sizeof(s_level))",
+      "layer_lookup_normalized_sha256": "c6c1e6054701056fb10ddefb56209aa5bddb8b96aa417b2fd3c1b58386a6360e",
+      "layer_enum_normalized_sha256": "d3975fb85a4655569487adb991669ccacc3fc8058185bb77deacad383e96e743"
+    },
+    {
+      "revision": 3708,
+      "engine": "3741",
+      "commit": "987fbc31c5be3002732e735a0bdd905eedd7c2b1",
+      "legacy_fixed_caps": true,
+      "declared_limit_constants": {
+        "SPAWNS": 600,
+        "PANELS": 100,
+        "HOLES": 40,
+        "WALLS": 40,
+        "LAYERS": 100,
+        "PALETTES": 40
+      },
+      "guards": [
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numholes",
+          "constant": "LEVEL_MAX_HOLES",
+          "diagnostic": "Too many holes in level (check LEVEL_MAX_HOLES)!"
+        },
+        {
+          "count": "numwalls",
+          "constant": "LEVEL_MAX_WALLS",
+          "diagnostic": "Too many walls in level (check LEVEL_MAX_WALLS)!"
+        },
+        {
+          "count": "numpalettes",
+          "constant": "LEVEL_MAX_PALETTES",
+          "diagnostic": "Too many palettes in level (check LEVEL_MAX_PALETTES)!"
+        },
+        {
+          "count": "numspawns",
+          "constant": "LEVEL_MAX_SPAWNS",
+          "diagnostic": "too many spawn entries (see LEVEL_MAX_SPAWNS)"
+        }
+      ],
+      "order_loop": "while(value[i] && level->numpanels < LEVEL_MAX_PANELS){",
+      "load_level_normalized_sha256": "7e4453f3557da59e849003dac038fb5198e80bb19dfb32faf2a98809191abce8",
+      "header_normalized_sha256": "bd4dd98e5cca7e3b7d2f40a6b17b10f97b6c1a997d4ab842cfd75f4c5fc26676",
+      "legacy_frontpanel_destination": true,
+      "preserve_absent_layers": true,
+      "zero_init": "level = calloc(1,sizeof(s_level))",
+      "layer_lookup_normalized_sha256": "c6c1e6054701056fb10ddefb56209aa5bddb8b96aa417b2fd3c1b58386a6360e",
+      "layer_enum_normalized_sha256": "d3975fb85a4655569487adb991669ccacc3fc8058185bb77deacad383e96e743"
+    },
+    {
+      "revision": 3709,
+      "engine": "3741",
+      "commit": "25db4c7a58a555fd8cf1f6e7931ad2ce4cc6e6d9",
+      "legacy_fixed_caps": true,
+      "declared_limit_constants": {
+        "SPAWNS": 600,
+        "PANELS": 100,
+        "HOLES": 40,
+        "WALLS": 40,
+        "LAYERS": 100,
+        "PALETTES": 40
+      },
+      "guards": [
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numholes",
+          "constant": "LEVEL_MAX_HOLES",
+          "diagnostic": "Too many holes in level (check LEVEL_MAX_HOLES)!"
+        },
+        {
+          "count": "numwalls",
+          "constant": "LEVEL_MAX_WALLS",
+          "diagnostic": "Too many walls in level (check LEVEL_MAX_WALLS)!"
+        },
+        {
+          "count": "numpalettes",
+          "constant": "LEVEL_MAX_PALETTES",
+          "diagnostic": "Too many palettes in level (check LEVEL_MAX_PALETTES)!"
+        },
+        {
+          "count": "numspawns",
+          "constant": "LEVEL_MAX_SPAWNS",
+          "diagnostic": "too many spawn entries (see LEVEL_MAX_SPAWNS)"
+        }
+      ],
+      "order_loop": "while(value[i] && level->numpanels < LEVEL_MAX_PANELS){",
+      "load_level_normalized_sha256": "7e4453f3557da59e849003dac038fb5198e80bb19dfb32faf2a98809191abce8",
+      "header_normalized_sha256": "bd4dd98e5cca7e3b7d2f40a6b17b10f97b6c1a997d4ab842cfd75f4c5fc26676",
+      "legacy_frontpanel_destination": true,
+      "preserve_absent_layers": true,
+      "zero_init": "level = calloc(1,sizeof(s_level))",
+      "layer_lookup_normalized_sha256": "c6c1e6054701056fb10ddefb56209aa5bddb8b96aa417b2fd3c1b58386a6360e",
+      "layer_enum_normalized_sha256": "d3975fb85a4655569487adb991669ccacc3fc8058185bb77deacad383e96e743"
+    },
+    {
+      "revision": 3710,
+      "engine": "3741",
+      "commit": "9622e606e8039fb860ae06d33c119e980f779598",
+      "legacy_fixed_caps": true,
+      "declared_limit_constants": {
+        "SPAWNS": 600,
+        "PANELS": 100,
+        "HOLES": 40,
+        "WALLS": 40,
+        "LAYERS": 100,
+        "PALETTES": 40
+      },
+      "guards": [
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numholes",
+          "constant": "LEVEL_MAX_HOLES",
+          "diagnostic": "Too many holes in level (check LEVEL_MAX_HOLES)!"
+        },
+        {
+          "count": "numwalls",
+          "constant": "LEVEL_MAX_WALLS",
+          "diagnostic": "Too many walls in level (check LEVEL_MAX_WALLS)!"
+        },
+        {
+          "count": "numpalettes",
+          "constant": "LEVEL_MAX_PALETTES",
+          "diagnostic": "Too many palettes in level (check LEVEL_MAX_PALETTES)!"
+        },
+        {
+          "count": "numspawns",
+          "constant": "LEVEL_MAX_SPAWNS",
+          "diagnostic": "too many spawn entries (see LEVEL_MAX_SPAWNS)"
+        }
+      ],
+      "order_loop": "while(value[i] && level->numpanels < LEVEL_MAX_PANELS){",
+      "load_level_normalized_sha256": "1bd7da1bf191e2b7659e13453bf81940bd6e7916bf37a973fa2547091aa8d7af",
+      "header_normalized_sha256": "ebf1ebe79d6a2a5e0faf13ecfaf49a9b65a013d5295c551cd984c91e0ee4de32",
+      "legacy_frontpanel_destination": true,
+      "preserve_absent_layers": true,
+      "zero_init": "level = calloc(1,sizeof(s_level))",
+      "layer_lookup_normalized_sha256": "c6c1e6054701056fb10ddefb56209aa5bddb8b96aa417b2fd3c1b58386a6360e",
+      "layer_enum_normalized_sha256": "d3975fb85a4655569487adb991669ccacc3fc8058185bb77deacad383e96e743"
+    },
+    {
+      "revision": 3711,
+      "engine": "3741",
+      "commit": "6ec17fa411b237f789c910e1234a33a618ab236d",
+      "legacy_fixed_caps": true,
+      "declared_limit_constants": {
+        "SPAWNS": 600,
+        "PANELS": 100,
+        "HOLES": 40,
+        "WALLS": 40,
+        "LAYERS": 100,
+        "PALETTES": 40
+      },
+      "guards": [
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numholes",
+          "constant": "LEVEL_MAX_HOLES",
+          "diagnostic": "Too many holes in level (check LEVEL_MAX_HOLES)!"
+        },
+        {
+          "count": "numwalls",
+          "constant": "LEVEL_MAX_WALLS",
+          "diagnostic": "Too many walls in level (check LEVEL_MAX_WALLS)!"
+        },
+        {
+          "count": "numpalettes",
+          "constant": "LEVEL_MAX_PALETTES",
+          "diagnostic": "Too many palettes in level (check LEVEL_MAX_PALETTES)!"
+        },
+        {
+          "count": "numspawns",
+          "constant": "LEVEL_MAX_SPAWNS",
+          "diagnostic": "too many spawn entries (see LEVEL_MAX_SPAWNS)"
+        }
+      ],
+      "order_loop": "while(value[i] && level->numpanels < LEVEL_MAX_PANELS){",
+      "load_level_normalized_sha256": "1bd7da1bf191e2b7659e13453bf81940bd6e7916bf37a973fa2547091aa8d7af",
+      "header_normalized_sha256": "ebf1ebe79d6a2a5e0faf13ecfaf49a9b65a013d5295c551cd984c91e0ee4de32",
+      "legacy_frontpanel_destination": true,
+      "preserve_absent_layers": true,
+      "zero_init": "level = calloc(1,sizeof(s_level))",
+      "layer_lookup_normalized_sha256": "c6c1e6054701056fb10ddefb56209aa5bddb8b96aa417b2fd3c1b58386a6360e",
+      "layer_enum_normalized_sha256": "d3975fb85a4655569487adb991669ccacc3fc8058185bb77deacad383e96e743"
+    },
+    {
+      "revision": 3713,
+      "engine": "3741",
+      "commit": "1ed3bec13248887af44a132b4a8a4fa0fe501dc3",
+      "legacy_fixed_caps": true,
+      "declared_limit_constants": {
+        "SPAWNS": 600,
+        "PANELS": 100,
+        "HOLES": 40,
+        "WALLS": 40,
+        "LAYERS": 100,
+        "PALETTES": 40
+      },
+      "guards": [
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numholes",
+          "constant": "LEVEL_MAX_HOLES",
+          "diagnostic": "Too many holes in level (check LEVEL_MAX_HOLES)!"
+        },
+        {
+          "count": "numwalls",
+          "constant": "LEVEL_MAX_WALLS",
+          "diagnostic": "Too many walls in level (check LEVEL_MAX_WALLS)!"
+        },
+        {
+          "count": "numpalettes",
+          "constant": "LEVEL_MAX_PALETTES",
+          "diagnostic": "Too many palettes in level (check LEVEL_MAX_PALETTES)!"
+        },
+        {
+          "count": "numspawns",
+          "constant": "LEVEL_MAX_SPAWNS",
+          "diagnostic": "too many spawn entries (see LEVEL_MAX_SPAWNS)"
+        }
+      ],
+      "order_loop": "while(value[i] && level->numpanels < LEVEL_MAX_PANELS){",
+      "load_level_normalized_sha256": "1bd7da1bf191e2b7659e13453bf81940bd6e7916bf37a973fa2547091aa8d7af",
+      "header_normalized_sha256": "ebf1ebe79d6a2a5e0faf13ecfaf49a9b65a013d5295c551cd984c91e0ee4de32",
+      "legacy_frontpanel_destination": true,
+      "preserve_absent_layers": true,
+      "zero_init": "level = calloc(1,sizeof(s_level))",
+      "layer_lookup_normalized_sha256": "c6c1e6054701056fb10ddefb56209aa5bddb8b96aa417b2fd3c1b58386a6360e",
+      "layer_enum_normalized_sha256": "d3975fb85a4655569487adb991669ccacc3fc8058185bb77deacad383e96e743"
+    },
+    {
+      "revision": 3714,
+      "engine": "3741",
+      "commit": "0e365b7c55cb92faaca8a5c3a1b9a91597815bb9",
+      "legacy_fixed_caps": true,
+      "declared_limit_constants": {
+        "SPAWNS": 600,
+        "PANELS": 100,
+        "HOLES": 40,
+        "WALLS": 40,
+        "LAYERS": 100,
+        "PALETTES": 40
+      },
+      "guards": [
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numholes",
+          "constant": "LEVEL_MAX_HOLES",
+          "diagnostic": "Too many holes in level (check LEVEL_MAX_HOLES)!"
+        },
+        {
+          "count": "numwalls",
+          "constant": "LEVEL_MAX_WALLS",
+          "diagnostic": "Too many walls in level (check LEVEL_MAX_WALLS)!"
+        },
+        {
+          "count": "numpalettes",
+          "constant": "LEVEL_MAX_PALETTES",
+          "diagnostic": "Too many palettes in level (check LEVEL_MAX_PALETTES)!"
+        },
+        {
+          "count": "numspawns",
+          "constant": "LEVEL_MAX_SPAWNS",
+          "diagnostic": "too many spawn entries (see LEVEL_MAX_SPAWNS)"
+        }
+      ],
+      "order_loop": "while(value[i] && level->numpanels < LEVEL_MAX_PANELS){",
+      "load_level_normalized_sha256": "1bd7da1bf191e2b7659e13453bf81940bd6e7916bf37a973fa2547091aa8d7af",
+      "header_normalized_sha256": "ebf1ebe79d6a2a5e0faf13ecfaf49a9b65a013d5295c551cd984c91e0ee4de32",
+      "legacy_frontpanel_destination": true,
+      "preserve_absent_layers": true,
+      "zero_init": "level = calloc(1,sizeof(s_level))",
+      "layer_lookup_normalized_sha256": "c6c1e6054701056fb10ddefb56209aa5bddb8b96aa417b2fd3c1b58386a6360e",
+      "layer_enum_normalized_sha256": "d3975fb85a4655569487adb991669ccacc3fc8058185bb77deacad383e96e743"
+    },
+    {
+      "revision": 3715,
+      "engine": "3741",
+      "commit": "8ccd518139e35ff47f5d415b418c6f3c2e310d6f",
+      "legacy_fixed_caps": true,
+      "declared_limit_constants": {
+        "SPAWNS": 600,
+        "PANELS": 100,
+        "HOLES": 40,
+        "WALLS": 40,
+        "LAYERS": 100,
+        "PALETTES": 40
+      },
+      "guards": [
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numholes",
+          "constant": "LEVEL_MAX_HOLES",
+          "diagnostic": "Too many holes in level (check LEVEL_MAX_HOLES)!"
+        },
+        {
+          "count": "numwalls",
+          "constant": "LEVEL_MAX_WALLS",
+          "diagnostic": "Too many walls in level (check LEVEL_MAX_WALLS)!"
+        },
+        {
+          "count": "numpalettes",
+          "constant": "LEVEL_MAX_PALETTES",
+          "diagnostic": "Too many palettes in level (check LEVEL_MAX_PALETTES)!"
+        },
+        {
+          "count": "numspawns",
+          "constant": "LEVEL_MAX_SPAWNS",
+          "diagnostic": "too many spawn entries (see LEVEL_MAX_SPAWNS)"
+        }
+      ],
+      "order_loop": "while(value[i] && level->numpanels < LEVEL_MAX_PANELS){",
+      "load_level_normalized_sha256": "1bd7da1bf191e2b7659e13453bf81940bd6e7916bf37a973fa2547091aa8d7af",
+      "header_normalized_sha256": "ebf1ebe79d6a2a5e0faf13ecfaf49a9b65a013d5295c551cd984c91e0ee4de32",
+      "legacy_frontpanel_destination": true,
+      "preserve_absent_layers": true,
+      "zero_init": "level = calloc(1,sizeof(s_level))",
+      "layer_lookup_normalized_sha256": "c6c1e6054701056fb10ddefb56209aa5bddb8b96aa417b2fd3c1b58386a6360e",
+      "layer_enum_normalized_sha256": "d3975fb85a4655569487adb991669ccacc3fc8058185bb77deacad383e96e743"
+    },
+    {
+      "revision": 3716,
+      "engine": "3741",
+      "commit": "b5a9f8a224277fc88eae2c7c34eebe2dc0825684",
+      "legacy_fixed_caps": true,
+      "declared_limit_constants": {
+        "SPAWNS": 600,
+        "PANELS": 100,
+        "HOLES": 40,
+        "WALLS": 40,
+        "LAYERS": 100,
+        "PALETTES": 40
+      },
+      "guards": [
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numholes",
+          "constant": "LEVEL_MAX_HOLES",
+          "diagnostic": "Too many holes in level (check LEVEL_MAX_HOLES)!"
+        },
+        {
+          "count": "numwalls",
+          "constant": "LEVEL_MAX_WALLS",
+          "diagnostic": "Too many walls in level (check LEVEL_MAX_WALLS)!"
+        },
+        {
+          "count": "numpalettes",
+          "constant": "LEVEL_MAX_PALETTES",
+          "diagnostic": "Too many palettes in level (check LEVEL_MAX_PALETTES)!"
+        },
+        {
+          "count": "numspawns",
+          "constant": "LEVEL_MAX_SPAWNS",
+          "diagnostic": "too many spawn entries (see LEVEL_MAX_SPAWNS)"
+        }
+      ],
+      "order_loop": "while(value[i] && level->numpanels < LEVEL_MAX_PANELS){",
+      "load_level_normalized_sha256": "1bd7da1bf191e2b7659e13453bf81940bd6e7916bf37a973fa2547091aa8d7af",
+      "header_normalized_sha256": "f1f79a70dbcb988c07675866a2f68e6b0e88a892af60c915b72bc353065864cf",
+      "legacy_frontpanel_destination": true,
+      "preserve_absent_layers": true,
+      "zero_init": "level = calloc(1,sizeof(s_level))",
+      "layer_lookup_normalized_sha256": "c6c1e6054701056fb10ddefb56209aa5bddb8b96aa417b2fd3c1b58386a6360e",
+      "layer_enum_normalized_sha256": "d3975fb85a4655569487adb991669ccacc3fc8058185bb77deacad383e96e743"
+    },
+    {
+      "revision": 3722,
+      "engine": "3741",
+      "commit": "1cd80da2e10a4c5e619422ad94f7c1abc42c2226",
+      "legacy_fixed_caps": true,
+      "declared_limit_constants": {
+        "SPAWNS": 600,
+        "PANELS": 100,
+        "HOLES": 40,
+        "WALLS": 40,
+        "LAYERS": 100,
+        "PALETTES": 40
+      },
+      "guards": [
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numholes",
+          "constant": "LEVEL_MAX_HOLES",
+          "diagnostic": "Too many holes in level (check LEVEL_MAX_HOLES)!"
+        },
+        {
+          "count": "numwalls",
+          "constant": "LEVEL_MAX_WALLS",
+          "diagnostic": "Too many walls in level (check LEVEL_MAX_WALLS)!"
+        },
+        {
+          "count": "numpalettes",
+          "constant": "LEVEL_MAX_PALETTES",
+          "diagnostic": "Too many palettes in level (check LEVEL_MAX_PALETTES)!"
+        },
+        {
+          "count": "numspawns",
+          "constant": "LEVEL_MAX_SPAWNS",
+          "diagnostic": "too many spawn entries (see LEVEL_MAX_SPAWNS)"
+        }
+      ],
+      "order_loop": "while(value[i] && level->numpanels < LEVEL_MAX_PANELS){",
+      "load_level_normalized_sha256": "1bd7da1bf191e2b7659e13453bf81940bd6e7916bf37a973fa2547091aa8d7af",
+      "header_normalized_sha256": "f1f79a70dbcb988c07675866a2f68e6b0e88a892af60c915b72bc353065864cf",
+      "legacy_frontpanel_destination": true,
+      "preserve_absent_layers": true,
+      "zero_init": "level = calloc(1,sizeof(s_level))",
+      "layer_lookup_normalized_sha256": "c6c1e6054701056fb10ddefb56209aa5bddb8b96aa417b2fd3c1b58386a6360e",
+      "layer_enum_normalized_sha256": "d3975fb85a4655569487adb991669ccacc3fc8058185bb77deacad383e96e743"
+    },
+    {
+      "revision": 3725,
+      "engine": "3741",
+      "commit": "58dab1fbcae12a508bd69fd2f79d48d74bfc4202",
+      "legacy_fixed_caps": true,
+      "declared_limit_constants": {
+        "SPAWNS": 600,
+        "PANELS": 100,
+        "HOLES": 40,
+        "WALLS": 40,
+        "LAYERS": 100,
+        "PALETTES": 40
+      },
+      "guards": [
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numholes",
+          "constant": "LEVEL_MAX_HOLES",
+          "diagnostic": "Too many holes in level (check LEVEL_MAX_HOLES)!"
+        },
+        {
+          "count": "numwalls",
+          "constant": "LEVEL_MAX_WALLS",
+          "diagnostic": "Too many walls in level (check LEVEL_MAX_WALLS)!"
+        },
+        {
+          "count": "numpalettes",
+          "constant": "LEVEL_MAX_PALETTES",
+          "diagnostic": "Too many palettes in level (check LEVEL_MAX_PALETTES)!"
+        },
+        {
+          "count": "numspawns",
+          "constant": "LEVEL_MAX_SPAWNS",
+          "diagnostic": "too many spawn entries (see LEVEL_MAX_SPAWNS)"
+        }
+      ],
+      "order_loop": "while(value[i] && level->numpanels < LEVEL_MAX_PANELS){",
+      "load_level_normalized_sha256": "1bd7da1bf191e2b7659e13453bf81940bd6e7916bf37a973fa2547091aa8d7af",
+      "header_normalized_sha256": "f1f79a70dbcb988c07675866a2f68e6b0e88a892af60c915b72bc353065864cf",
+      "legacy_frontpanel_destination": true,
+      "preserve_absent_layers": true,
+      "zero_init": "level = calloc(1,sizeof(s_level))",
+      "layer_lookup_normalized_sha256": "c6c1e6054701056fb10ddefb56209aa5bddb8b96aa417b2fd3c1b58386a6360e",
+      "layer_enum_normalized_sha256": "d3975fb85a4655569487adb991669ccacc3fc8058185bb77deacad383e96e743"
+    },
+    {
+      "revision": 3726,
+      "engine": "3741",
+      "commit": "4a94293d2f916b1ba05ac4a6f9635abbb394a8a9",
+      "legacy_fixed_caps": true,
+      "declared_limit_constants": {
+        "SPAWNS": 600,
+        "PANELS": 100,
+        "HOLES": 40,
+        "WALLS": 40,
+        "LAYERS": 100,
+        "PALETTES": 40
+      },
+      "guards": [
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numholes",
+          "constant": "LEVEL_MAX_HOLES",
+          "diagnostic": "Too many holes in level (check LEVEL_MAX_HOLES)!"
+        },
+        {
+          "count": "numwalls",
+          "constant": "LEVEL_MAX_WALLS",
+          "diagnostic": "Too many walls in level (check LEVEL_MAX_WALLS)!"
+        },
+        {
+          "count": "numpalettes",
+          "constant": "LEVEL_MAX_PALETTES",
+          "diagnostic": "Too many palettes in level (check LEVEL_MAX_PALETTES)!"
+        },
+        {
+          "count": "numspawns",
+          "constant": "LEVEL_MAX_SPAWNS",
+          "diagnostic": "too many spawn entries (see LEVEL_MAX_SPAWNS)"
+        }
+      ],
+      "order_loop": "while(value[i] && level->numpanels < LEVEL_MAX_PANELS){",
+      "load_level_normalized_sha256": "1bd7da1bf191e2b7659e13453bf81940bd6e7916bf37a973fa2547091aa8d7af",
+      "header_normalized_sha256": "f1f79a70dbcb988c07675866a2f68e6b0e88a892af60c915b72bc353065864cf",
+      "legacy_frontpanel_destination": true,
+      "preserve_absent_layers": true,
+      "zero_init": "level = calloc(1,sizeof(s_level))",
+      "layer_lookup_normalized_sha256": "c6c1e6054701056fb10ddefb56209aa5bddb8b96aa417b2fd3c1b58386a6360e",
+      "layer_enum_normalized_sha256": "d3975fb85a4655569487adb991669ccacc3fc8058185bb77deacad383e96e743"
+    },
+    {
+      "revision": 3727,
+      "engine": "3741",
+      "commit": "ad3f59f9325e89b68f82e4daf162d0f0510af8d3",
+      "legacy_fixed_caps": true,
+      "declared_limit_constants": {
+        "SPAWNS": 600,
+        "PANELS": 100,
+        "HOLES": 40,
+        "WALLS": 40,
+        "LAYERS": 100,
+        "PALETTES": 40
+      },
+      "guards": [
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numholes",
+          "constant": "LEVEL_MAX_HOLES",
+          "diagnostic": "Too many holes in level (check LEVEL_MAX_HOLES)!"
+        },
+        {
+          "count": "numwalls",
+          "constant": "LEVEL_MAX_WALLS",
+          "diagnostic": "Too many walls in level (check LEVEL_MAX_WALLS)!"
+        },
+        {
+          "count": "numpalettes",
+          "constant": "LEVEL_MAX_PALETTES",
+          "diagnostic": "Too many palettes in level (check LEVEL_MAX_PALETTES)!"
+        },
+        {
+          "count": "numspawns",
+          "constant": "LEVEL_MAX_SPAWNS",
+          "diagnostic": "too many spawn entries (see LEVEL_MAX_SPAWNS)"
+        }
+      ],
+      "order_loop": "while(value[i] && level->numpanels < LEVEL_MAX_PANELS){",
+      "load_level_normalized_sha256": "1bd7da1bf191e2b7659e13453bf81940bd6e7916bf37a973fa2547091aa8d7af",
+      "header_normalized_sha256": "f1f79a70dbcb988c07675866a2f68e6b0e88a892af60c915b72bc353065864cf",
+      "legacy_frontpanel_destination": true,
+      "preserve_absent_layers": true,
+      "zero_init": "level = calloc(1,sizeof(s_level))",
+      "layer_lookup_normalized_sha256": "c6c1e6054701056fb10ddefb56209aa5bddb8b96aa417b2fd3c1b58386a6360e",
+      "layer_enum_normalized_sha256": "d3975fb85a4655569487adb991669ccacc3fc8058185bb77deacad383e96e743"
+    },
+    {
+      "revision": 3728,
+      "engine": "3741",
+      "commit": "9f4ad7f785557d87829acd19972b8cc0704fc8c1",
+      "legacy_fixed_caps": true,
+      "declared_limit_constants": {
+        "SPAWNS": 600,
+        "PANELS": 100,
+        "HOLES": 40,
+        "WALLS": 40,
+        "LAYERS": 100,
+        "PALETTES": 40
+      },
+      "guards": [
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numholes",
+          "constant": "LEVEL_MAX_HOLES",
+          "diagnostic": "Too many holes in level (check LEVEL_MAX_HOLES)!"
+        },
+        {
+          "count": "numwalls",
+          "constant": "LEVEL_MAX_WALLS",
+          "diagnostic": "Too many walls in level (check LEVEL_MAX_WALLS)!"
+        },
+        {
+          "count": "numpalettes",
+          "constant": "LEVEL_MAX_PALETTES",
+          "diagnostic": "Too many palettes in level (check LEVEL_MAX_PALETTES)!"
+        },
+        {
+          "count": "numspawns",
+          "constant": "LEVEL_MAX_SPAWNS",
+          "diagnostic": "too many spawn entries (see LEVEL_MAX_SPAWNS)"
+        }
+      ],
+      "order_loop": "while(value[i] && level->numpanels < LEVEL_MAX_PANELS){",
+      "load_level_normalized_sha256": "1bd7da1bf191e2b7659e13453bf81940bd6e7916bf37a973fa2547091aa8d7af",
+      "header_normalized_sha256": "f1f79a70dbcb988c07675866a2f68e6b0e88a892af60c915b72bc353065864cf",
+      "legacy_frontpanel_destination": true,
+      "preserve_absent_layers": true,
+      "zero_init": "level = calloc(1,sizeof(s_level))",
+      "layer_lookup_normalized_sha256": "c6c1e6054701056fb10ddefb56209aa5bddb8b96aa417b2fd3c1b58386a6360e",
+      "layer_enum_normalized_sha256": "d3975fb85a4655569487adb991669ccacc3fc8058185bb77deacad383e96e743"
+    },
+    {
+      "revision": 3729,
+      "engine": "3741",
+      "commit": "b3dc9a4a79d1f6a1b96b573e060ef97067f1176c",
+      "legacy_fixed_caps": true,
+      "declared_limit_constants": {
+        "SPAWNS": 600,
+        "PANELS": 100,
+        "HOLES": 40,
+        "WALLS": 40,
+        "LAYERS": 100,
+        "PALETTES": 40
+      },
+      "guards": [
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numholes",
+          "constant": "LEVEL_MAX_HOLES",
+          "diagnostic": "Too many holes in level (check LEVEL_MAX_HOLES)!"
+        },
+        {
+          "count": "numwalls",
+          "constant": "LEVEL_MAX_WALLS",
+          "diagnostic": "Too many walls in level (check LEVEL_MAX_WALLS)!"
+        },
+        {
+          "count": "numpalettes",
+          "constant": "LEVEL_MAX_PALETTES",
+          "diagnostic": "Too many palettes in level (check LEVEL_MAX_PALETTES)!"
+        },
+        {
+          "count": "numspawns",
+          "constant": "LEVEL_MAX_SPAWNS",
+          "diagnostic": "too many spawn entries (see LEVEL_MAX_SPAWNS)"
+        }
+      ],
+      "order_loop": "while(value[i] && level->numpanels < LEVEL_MAX_PANELS){",
+      "load_level_normalized_sha256": "1bd7da1bf191e2b7659e13453bf81940bd6e7916bf37a973fa2547091aa8d7af",
+      "header_normalized_sha256": "6e7f43e481400f59abf78147d4253784a969334c39c9469f266b6bc691d84c7a",
+      "legacy_frontpanel_destination": true,
+      "preserve_absent_layers": true,
+      "zero_init": "level = calloc(1,sizeof(s_level))",
+      "layer_lookup_normalized_sha256": "c6c1e6054701056fb10ddefb56209aa5bddb8b96aa417b2fd3c1b58386a6360e",
+      "layer_enum_normalized_sha256": "d3975fb85a4655569487adb991669ccacc3fc8058185bb77deacad383e96e743"
+    },
+    {
+      "revision": 3730,
+      "engine": "3741",
+      "commit": "40441f127f7ad7b7cfda0eebb489e8feffd1f806",
+      "legacy_fixed_caps": true,
+      "declared_limit_constants": {
+        "SPAWNS": 600,
+        "PANELS": 100,
+        "HOLES": 40,
+        "WALLS": 40,
+        "LAYERS": 100,
+        "PALETTES": 40
+      },
+      "guards": [
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numholes",
+          "constant": "LEVEL_MAX_HOLES",
+          "diagnostic": "Too many holes in level (check LEVEL_MAX_HOLES)!"
+        },
+        {
+          "count": "numwalls",
+          "constant": "LEVEL_MAX_WALLS",
+          "diagnostic": "Too many walls in level (check LEVEL_MAX_WALLS)!"
+        },
+        {
+          "count": "numpalettes",
+          "constant": "LEVEL_MAX_PALETTES",
+          "diagnostic": "Too many palettes in level (check LEVEL_MAX_PALETTES)!"
+        },
+        {
+          "count": "numspawns",
+          "constant": "LEVEL_MAX_SPAWNS",
+          "diagnostic": "too many spawn entries (see LEVEL_MAX_SPAWNS)"
+        }
+      ],
+      "order_loop": "while(value[i] && level->numpanels < LEVEL_MAX_PANELS){",
+      "load_level_normalized_sha256": "1bd7da1bf191e2b7659e13453bf81940bd6e7916bf37a973fa2547091aa8d7af",
+      "header_normalized_sha256": "6e7f43e481400f59abf78147d4253784a969334c39c9469f266b6bc691d84c7a",
+      "legacy_frontpanel_destination": true,
+      "preserve_absent_layers": true,
+      "zero_init": "level = calloc(1,sizeof(s_level))",
+      "layer_lookup_normalized_sha256": "c6c1e6054701056fb10ddefb56209aa5bddb8b96aa417b2fd3c1b58386a6360e",
+      "layer_enum_normalized_sha256": "d3975fb85a4655569487adb991669ccacc3fc8058185bb77deacad383e96e743"
+    },
+    {
+      "revision": 3732,
+      "engine": "3741",
+      "commit": "0b2d8300b819cdee94817194b2db7489d25d45d3",
+      "legacy_fixed_caps": true,
+      "declared_limit_constants": {
+        "SPAWNS": 600,
+        "PANELS": 100,
+        "HOLES": 40,
+        "WALLS": 40,
+        "LAYERS": 100,
+        "PALETTES": 40
+      },
+      "guards": [
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numholes",
+          "constant": "LEVEL_MAX_HOLES",
+          "diagnostic": "Too many holes in level (check LEVEL_MAX_HOLES)!"
+        },
+        {
+          "count": "numwalls",
+          "constant": "LEVEL_MAX_WALLS",
+          "diagnostic": "Too many walls in level (check LEVEL_MAX_WALLS)!"
+        },
+        {
+          "count": "numpalettes",
+          "constant": "LEVEL_MAX_PALETTES",
+          "diagnostic": "Too many palettes in level (check LEVEL_MAX_PALETTES)!"
+        },
+        {
+          "count": "numspawns",
+          "constant": "LEVEL_MAX_SPAWNS",
+          "diagnostic": "too many spawn entries (see LEVEL_MAX_SPAWNS)"
+        }
+      ],
+      "order_loop": "while(value[i] && level->numpanels < LEVEL_MAX_PANELS){",
+      "load_level_normalized_sha256": "1bd7da1bf191e2b7659e13453bf81940bd6e7916bf37a973fa2547091aa8d7af",
+      "header_normalized_sha256": "6e7f43e481400f59abf78147d4253784a969334c39c9469f266b6bc691d84c7a",
+      "legacy_frontpanel_destination": true,
+      "preserve_absent_layers": true,
+      "zero_init": "level = calloc(1,sizeof(s_level))",
+      "layer_lookup_normalized_sha256": "c6c1e6054701056fb10ddefb56209aa5bddb8b96aa417b2fd3c1b58386a6360e",
+      "layer_enum_normalized_sha256": "d3975fb85a4655569487adb991669ccacc3fc8058185bb77deacad383e96e743"
+    },
+    {
+      "revision": 3738,
+      "engine": "3741",
+      "commit": "e0e03912cd594ffe04ca8bf7b462f1e97df6f6fe",
+      "legacy_fixed_caps": true,
+      "declared_limit_constants": {
+        "SPAWNS": 600,
+        "PANELS": 100,
+        "HOLES": 40,
+        "WALLS": 40,
+        "LAYERS": 100,
+        "PALETTES": 40
+      },
+      "guards": [
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numlayers",
+          "constant": "LEVEL_MAX_LAYERS",
+          "diagnostic": "Too many layers in level (check LEVEL_MAX_LAYERS)!"
+        },
+        {
+          "count": "numholes",
+          "constant": "LEVEL_MAX_HOLES",
+          "diagnostic": "Too many holes in level (check LEVEL_MAX_HOLES)!"
+        },
+        {
+          "count": "numwalls",
+          "constant": "LEVEL_MAX_WALLS",
+          "diagnostic": "Too many walls in level (check LEVEL_MAX_WALLS)!"
+        },
+        {
+          "count": "numpalettes",
+          "constant": "LEVEL_MAX_PALETTES",
+          "diagnostic": "Too many palettes in level (check LEVEL_MAX_PALETTES)!"
+        },
+        {
+          "count": "numspawns",
+          "constant": "LEVEL_MAX_SPAWNS",
+          "diagnostic": "too many spawn entries (see LEVEL_MAX_SPAWNS)"
+        }
+      ],
+      "order_loop": "while(value[i] && level->numpanels < LEVEL_MAX_PANELS){",
+      "load_level_normalized_sha256": "1bd7da1bf191e2b7659e13453bf81940bd6e7916bf37a973fa2547091aa8d7af",
+      "header_normalized_sha256": "6e7f43e481400f59abf78147d4253784a969334c39c9469f266b6bc691d84c7a",
+      "legacy_frontpanel_destination": true,
+      "preserve_absent_layers": true,
+      "zero_init": "level = calloc(1,sizeof(s_level))",
+      "layer_lookup_normalized_sha256": "c6c1e6054701056fb10ddefb56209aa5bddb8b96aa417b2fd3c1b58386a6360e",
+      "layer_enum_normalized_sha256": "d3975fb85a4655569487adb991669ccacc3fc8058185bb77deacad383e96e743"
+    },
+    {
+      "engine": "3741",
+      "revision": 3739,
+      "commit": "c790b4bc7fcba47efb912d31b4611f5df63d4807",
+      "legacy_fixed_caps": false,
+      "declared_limit_constants": {
+        "SPAWNS": 600,
+        "PANELS": 100,
+        "HOLES": 40,
+        "WALLS": 40,
+        "LAYERS": 100,
+        "PALETTES": 40
+      },
+      "guards": [],
+      "order_loop": "while(value[i] ){",
+      "load_level_normalized_sha256": "dd41a5d93d1408ba12315cf50406d899ebd93345090ee35eab1f4feef08965dc",
+      "header_normalized_sha256": "39bd9a41ae7e115f52a266a904f27eb7730a8a25001e6c7229d64d92f606a054",
+      "legacy_frontpanel_destination": false,
+      "preserve_absent_layers": false,
+      "zero_init": "level = calloc(1,sizeof(s_level))",
+      "layer_lookup_normalized_sha256": "c6c1e6054701056fb10ddefb56209aa5bddb8b96aa417b2fd3c1b58386a6360e",
+      "layer_enum_normalized_sha256": "d3975fb85a4655569487adb991669ccacc3fc8058185bb77deacad383e96e743"
+    },
+    {
+      "revision": 3740,
+      "engine": "3741",
+      "commit": "cf83dc7f4472e6a51aa84cfa37b47e5d3f42d986",
+      "legacy_fixed_caps": false,
+      "declared_limit_constants": {
+        "SPAWNS": 600,
+        "PANELS": 100,
+        "HOLES": 40,
+        "WALLS": 40,
+        "LAYERS": 100,
+        "PALETTES": 40
+      },
+      "guards": [],
+      "order_loop": "while(value[i] ){",
+      "load_level_normalized_sha256": "dd41a5d93d1408ba12315cf50406d899ebd93345090ee35eab1f4feef08965dc",
+      "header_normalized_sha256": "39bd9a41ae7e115f52a266a904f27eb7730a8a25001e6c7229d64d92f606a054",
+      "legacy_frontpanel_destination": false,
+      "preserve_absent_layers": false,
+      "zero_init": "level = calloc(1,sizeof(s_level))",
+      "layer_lookup_normalized_sha256": "c6c1e6054701056fb10ddefb56209aa5bddb8b96aa417b2fd3c1b58386a6360e",
+      "layer_enum_normalized_sha256": "d3975fb85a4655569487adb991669ccacc3fc8058185bb77deacad383e96e743"
+    },
+    {
+      "revision": 3741,
+      "engine": "3741",
+      "commit": "00bcc4947748e8af10d030a82b60520bbd402e30",
+      "legacy_fixed_caps": false,
+      "declared_limit_constants": {
+        "SPAWNS": 600,
+        "PANELS": 100,
+        "HOLES": 40,
+        "WALLS": 40,
+        "LAYERS": 100,
+        "PALETTES": 40
+      },
+      "guards": [],
+      "order_loop": "while(value[i] ){",
+      "load_level_normalized_sha256": "dd41a5d93d1408ba12315cf50406d899ebd93345090ee35eab1f4feef08965dc",
+      "header_normalized_sha256": "18070d6a017655eee5dec513c7b393c7ebca89e28fd60e2a9ec91ef0d5330de0",
+      "legacy_frontpanel_destination": false,
+      "preserve_absent_layers": false,
+      "zero_init": "level = calloc(1,sizeof(s_level))",
+      "layer_lookup_normalized_sha256": "c6c1e6054701056fb10ddefb56209aa5bddb8b96aa417b2fd3c1b58386a6360e",
+      "layer_enum_normalized_sha256": "d3975fb85a4655569487adb991669ccacc3fc8058185bb77deacad383e96e743"
+    },
+    {
+      "revision": 3742,
+      "engine": "3741",
+      "commit": "0d20390cfe982136259ea3fa4bb8078801be9269",
+      "legacy_fixed_caps": false,
+      "declared_limit_constants": {
+        "SPAWNS": 600,
+        "PANELS": 100,
+        "HOLES": 40,
+        "WALLS": 40,
+        "LAYERS": 100,
+        "PALETTES": 40
+      },
+      "guards": [],
+      "order_loop": "while(value[i] ){",
+      "load_level_normalized_sha256": "dd41a5d93d1408ba12315cf50406d899ebd93345090ee35eab1f4feef08965dc",
+      "header_normalized_sha256": "18070d6a017655eee5dec513c7b393c7ebca89e28fd60e2a9ec91ef0d5330de0",
+      "legacy_frontpanel_destination": false,
+      "preserve_absent_layers": false,
+      "zero_init": "level = calloc(1,sizeof(s_level))",
+      "layer_lookup_normalized_sha256": "c6c1e6054701056fb10ddefb56209aa5bddb8b96aa417b2fd3c1b58386a6360e",
+      "layer_enum_normalized_sha256": "d3975fb85a4655569487adb991669ccacc3fc8058185bb77deacad383e96e743"
+    }
+  ]
+}

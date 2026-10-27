@@ -1,11 +1,12 @@
-/* AnyBOR modification record: 2026-10-08.
+/* AnyBOR modification record: 2026-10-22.
  * Port maintained by retrodiv <retrodiv@proton.me>.
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
  * Upstream code retains its original license and notices.
  * Declare exact resident PCM content-member ranges for independently
  * verified reconstruction; preserve allocation tails and mutable mixer
- * state.
+ * state. Preserve each profile's WAV byte counts, sample lengths and 16-bit
+ * padding with checked allocation and read sizes.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/3842.md
  * at the source repository root. Original notices follow below.
@@ -48,6 +49,10 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <limits.h>
+#include <stdint.h>
+
+extern uint32_t obor_profile_build;
 #include "obor_resources.h"
 /*
 Caution: move vorbis headers here otherwise the structs will
@@ -140,6 +145,10 @@ typedef struct{
 }musicchannelstruct;
 
 
+#define OBOR_LEGACY_MAX_SAMPLES 1024
+static samplestruct obor_legacy_sampledata[OBOR_LEGACY_MAX_SAMPLES];
+static struct {int index; char *filename;} obor_legacy_soundcache[OBOR_LEGACY_MAX_SAMPLES];
+
 static List samplelist;
 static s_soundcache *soundcache = NULL;
 static int sound_cached = 0;
@@ -211,6 +220,8 @@ static int loadwave(char *filename, char *packname, samplestruct *buf, unsigned 
 	int handle;
 	int mulbytes;
 	int obor_pcm_offset;
+	int obor_legacy_wave = obor_profile_build < 3792;
+	size_t obor_wave_factor, obor_wave_bytes;
 
 	if(buf==NULL) return 0;
 
@@ -273,15 +284,23 @@ static int loadwave(char *filename, char *packname, samplestruct *buf, unsigned 
 	}
 
 	if(rifftag.size<maxsize) maxsize = rifftag.size;
-	if((buf->sampleptr = malloc(maxsize+8))==NULL){
+    obor_wave_factor = obor_legacy_wave ? (size_t)mulbytes : 1;
+    if((size_t)maxsize > (SIZE_MAX - 8) / obor_wave_factor ||
+       (size_t)maxsize > (size_t)INT_MAX / obor_wave_factor)
+    {
+        closepackfile(handle);
+        return 0;
+    }
+    obor_wave_bytes = (size_t)maxsize * obor_wave_factor;
+	if((buf->sampleptr = malloc(obor_wave_bytes+8))==NULL){
 		closepackfile(handle);
 		return 0;
 	}
-	if(fmt.samplebits==8) memset(buf->sampleptr, 0x80, maxsize+8);
-	else memset(buf->sampleptr, 0x80, maxsize+8);
+	if(fmt.samplebits==8) memset(buf->sampleptr, 0x80, obor_wave_bytes+8);
+	else memset(buf->sampleptr, obor_legacy_wave ? 0 : 0x80, obor_wave_bytes+8);
 
 	obor_pcm_offset = seekpackfile(handle, 0, SEEK_CUR);
-	if( readpackfile(handle, buf->sampleptr, maxsize) != (int)maxsize){
+	if( readpackfile(handle, buf->sampleptr, (int)obor_wave_bytes) != (int)obor_wave_bytes){
 		if(buf->sampleptr != NULL){
 			free(buf->sampleptr);
 			buf->sampleptr = NULL;
@@ -293,11 +312,11 @@ static int loadwave(char *filename, char *packname, samplestruct *buf, unsigned 
 	/* Keep allocation tails and mixer state in the ordinary snapshot. */
 	if(obor_pcm_offset >= 0)
 	    obor_resources_member_bytes_loaded(filename, (uint32_t)obor_pcm_offset,
-	        buf->sampleptr, buf->sampleptr, (size_t)(maxsize));
+	        buf->sampleptr, buf->sampleptr, obor_wave_bytes);
 
 	closepackfile(handle);
 
-	buf->soundlen = maxsize/mulbytes;
+	buf->soundlen = obor_legacy_wave ? maxsize : maxsize/mulbytes;
 	buf->bits = fmt.samplebits;
 	buf->frequency = fmt.samplerate;
 	buf->channels = fmt.channels;
@@ -305,7 +324,79 @@ static int loadwave(char *filename, char *packname, samplestruct *buf, unsigned 
 	return maxsize;
 }
 
+static void obor_legacy_sound_free_sample(int which){
+	if(!mixing_inited) return;
+	if(which<0 || which>=OBOR_LEGACY_MAX_SAMPLES) return;
+	if(obor_legacy_sampledata[which].sampleptr != NULL){
+		free(obor_legacy_sampledata[which].sampleptr);
+		obor_legacy_sampledata[which].sampleptr = NULL;
+		memset(&obor_legacy_sampledata[which], 0, sizeof(samplestruct));
+	}
+}
+
+
+static int obor_legacy_sound_alloc_sample(char *filename, char *packfilename){
+	int i;
+	if(!mixing_inited) return -1;
+	// Search for available slot to store sample data
+	for(i=0; i<OBOR_LEGACY_MAX_SAMPLES; i++) if(obor_legacy_sampledata[i].sampleptr==NULL) break;
+	if(i>=OBOR_LEGACY_MAX_SAMPLES) return -1;
+	memset(&obor_legacy_sampledata[i], 0, sizeof(samplestruct));
+	if(!loadwave(filename, packfilename, &obor_legacy_sampledata[i], MAX_SOUND_LEN)) return -1;
+	return i;
+}
+
+
+static int obor_legacy_sound_load_sample(char *filename, char *packfilename, int iLog){
+	int i, len;
+	for(i=0; i<=OBOR_LEGACY_MAX_SAMPLES; i++){
+		if(i == OBOR_LEGACY_MAX_SAMPLES) return -1;
+		if(obor_legacy_soundcache[i].filename == NULL) break;
+		if(stricmp(filename, obor_legacy_soundcache[i].filename)==0) return obor_legacy_soundcache[i].index;
+	}
+	obor_legacy_soundcache[i].index = obor_legacy_sound_alloc_sample(filename, packfilename);
+	if(obor_legacy_soundcache[i].index == -1){
+		if(!iLog)
+		{
+			writeToLogFile("\nsound_load_sample: Failed to load: %s\n", filename);
+		}
+		return -1;
+	}
+	len = strlen(filename);
+	obor_legacy_soundcache[i].filename = malloc(len + 1);
+	if(!obor_legacy_soundcache[i].filename) {
+		obor_legacy_sound_free_sample(obor_legacy_soundcache[i].index);
+		obor_legacy_soundcache[i].index = -1;
+		return -1;
+	}
+	strcpy(obor_legacy_soundcache[i].filename, filename);
+	obor_legacy_soundcache[i].filename[len] = 0;
+	return obor_legacy_soundcache[i].index;
+}
+
+
+static void obor_legacy_sound_unload_sample(int index){
+	if(index<0 || index>=OBOR_LEGACY_MAX_SAMPLES) return;
+	if(obor_legacy_soundcache[index].filename != NULL){
+		obor_legacy_soundcache[index].index = -1;
+		free(obor_legacy_soundcache[index].filename);
+		obor_legacy_soundcache[index].filename = NULL;
+	}
+	obor_legacy_sound_free_sample(index);
+}
+
+
+static samplestruct *obor_sample_data(int index) {
+    if(obor_profile_build < 3838) {
+        if(index < 0 || index >= OBOR_LEGACY_MAX_SAMPLES) return NULL;
+        return &obor_legacy_sampledata[index];
+    }
+    if(index < 0 || index >= sound_cached) return NULL;
+    return &soundcache[index].sample;
+}
+
 int sound_reload_sample(int index) {
+	if(obor_profile_build < 3838) return 0;
 	if(!mixing_inited) return 0;
 	if(index<0 || index>=sound_cached) return 0;
 	if(!soundcache[index].sample.sampleptr) {
@@ -321,6 +412,7 @@ int sound_load_sample(char *filename, char *packfilename, int iLog){
 	s_soundcache* cache;
 	samplestruct sample;
 	static char convcache[256];
+	if(obor_profile_build < 3838) return obor_legacy_sound_load_sample(filename, packfilename, iLog);
 	if(!mixing_inited) return -1;
 	/////////////////////////////
 	strcpy(convcache, filename);
@@ -355,6 +447,7 @@ int sound_load_sample(char *filename, char *packfilename, int iLog){
 
 // Changed to conserve memory: added this function
 void sound_unload_sample(int index){
+	if(obor_profile_build < 3838) {obor_legacy_sound_unload_sample(index);return;}
 	if(!mixing_inited) return;
 	if(index<0 || index>=sound_cached) return;
 	if(soundcache[index].sample.sampleptr != NULL){
@@ -366,6 +459,10 @@ void sound_unload_sample(int index){
 
 void sound_unload_all_samples(){
 	int i;
+	if(obor_profile_build < 3838) {
+		for(i=0;i<OBOR_LEGACY_MAX_SAMPLES;i++) obor_legacy_sound_unload_sample(i);
+		return;
+	}
 	if(!soundcache) return;
 	for(i=0;i<sound_cached;i++){
 		sound_unload_sample(i);
@@ -506,21 +603,23 @@ static void mixaudio(unsigned int todo){
 	for(chan=0; chan<max_channels; chan++){
 		if(vchannel[chan].active && !vchannel[chan].paused){
 			unsigned modlen;
+			samplestruct *sample;
 			snum = vchannel[chan].samplenum;
-			if(!soundcache[snum].sample.sampleptr) {
+			sample = obor_sample_data(snum);
+			if(!sample || (obor_profile_build >= 3838 && !sample->sampleptr)) {
 				vchannel[chan].active = 0;
 				continue;
 			}
-			modlen = soundcache[snum].sample.soundlen;
-			fp_len = INT_TO_FIX(soundcache[snum].sample.soundlen);
+			modlen = sample->soundlen;
+			fp_len = INT_TO_FIX(sample->soundlen);
 			fp_pos = vchannel[chan].fp_samplepos;
 			fp_period = vchannel[chan].fp_period;
 			lvolume = vchannel[chan].volume[0];
 			rvolume = vchannel[chan].volume[1];
 			if(fp_len < 1) fp_len = 1;
 			if(modlen < 1) modlen = 1;
-			if(soundcache[snum].sample.bits==8){
-				sptr8 = soundcache[snum].sample.sampleptr;
+			if(sample->bits==8){
+				sptr8 = sample->sampleptr;
 				for(i=0; i<(int)todo;){
 					lmusic = rmusic = sptr8[FIX_TO_INT(fp_pos)];
 					mixbuf[i++] += ((lmusic<<8) * lvolume / MAXVOLUME) - 0x8000;
@@ -539,8 +638,8 @@ static void mixaudio(unsigned int todo){
 					}
 				}
 			}
-			else if(soundcache[snum].sample.bits==16){
-				sptr16 = soundcache[snum].sample.sampleptr;
+			else if(sample->bits==16){
+				sptr16 = sample->sampleptr;
 				for(i=0; i<(int)todo;){
 					lmusic = rmusic = sptr16[FIX_TO_INT(fp_pos)];
 					mixbuf[i++] += (lmusic * lvolume / MAXVOLUME);
@@ -625,12 +724,14 @@ int sound_play_sample(int samplenum, unsigned int priority, int lvolume, int rvo
 	int i;
 	unsigned int prio_low;
 	int channel;
+	samplestruct *sample;
 
 	if(!mixing_inited) return -1;
-	if(samplenum<0 || samplenum>=sound_cached) return -1;
+	sample = obor_sample_data(samplenum);
+	if(!sample) return -1;
 	if(speed<1) speed = 100;
-	if(!soundcache[samplenum].sample.sampleptr && 
-	   !sound_reload_sample(samplenum)) return -1;
+	if(!sample->sampleptr &&
+	   (obor_profile_build < 3838 || !sound_reload_sample(samplenum))) return -1;
 
 	// Try to find unused SFX channel
 	channel = -1;
@@ -656,15 +757,15 @@ int sound_play_sample(int samplenum, unsigned int priority, int lvolume, int rvo
 
 	vchannel[channel].samplenum = samplenum;
 	// Prevent samples from being played at EXACT same point
-	vchannel[channel].fp_samplepos = INT_TO_FIX((channel*4)%soundcache[samplenum].sample.soundlen);
-	vchannel[channel].fp_period = (INT_TO_FIX(1) * speed / 100) * soundcache[samplenum].sample.frequency / playfrequency;
+	vchannel[channel].fp_samplepos = INT_TO_FIX((channel*4)%sample->soundlen);
+	vchannel[channel].fp_period = (INT_TO_FIX(1) * speed / 100) * sample->frequency / playfrequency;
 	vchannel[channel].volume[0] = lvolume;
 	vchannel[channel].volume[1] = rvolume;
 	vchannel[channel].priority = priority;
-	vchannel[channel].channels = soundcache[samplenum].sample.channels;
+	vchannel[channel].channels = sample->channels;
 	vchannel[channel].active = CHANNEL_PLAYING;
 	vchannel[channel].paused = 0;
-	vchannel[channel].playid = ++sample_play_id;
+	if(obor_profile_build >= 3838) vchannel[channel].playid = ++sample_play_id;
 
 	return channel;
 }
@@ -1377,7 +1478,10 @@ int sound_init(int channels){
 
 	mixing_active = 0;
 	mixing_inited = 1;
-	List_Init(&samplelist);
+	if(obor_profile_build < 3838) {
+		for(i=0;i<OBOR_LEGACY_MAX_SAMPLES;i++) obor_legacy_sampledata[i].sampleptr = NULL;
+	}
+	else List_Init(&samplelist);
 
 	return 1;
 }

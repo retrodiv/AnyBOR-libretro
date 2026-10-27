@@ -3,6 +3,7 @@
 SPDX-License-Identifier: BSD-3-Clause
 Copyright (c) 2026 retrodiv <retrodiv@proton.me>
 """
+import json
 import os
 from pathlib import Path
 import shlex
@@ -11,6 +12,7 @@ import tempfile
 import unittest
 
 from test_historical_player import function
+from native_sanitizers import sanitizer_environment
 
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE = Path(os.environ.get('OBOR_TEST_SOURCE', ROOT))
@@ -31,30 +33,52 @@ class HistoricalAiflagTests(unittest.TestCase):
         declarations = source[start:stop]
         macro = source[source.index('#define MAPSTRINGS('):]
         macro = macro[:macro.index('\n\n')]
+        fixture = json.loads((Path(__file__).parent /
+            'fixtures/profile-aiflag-contracts.json').read_text())
+        rows = fixture['sources']
+        revisions = [row['revision'] for row in rows]
+        self.assertEqual(len(revisions), len(set(revisions)))
+        self.assertTrue(set(fixture['boundary_controls']) <= set(revisions))
+        old_names = fixture['old_names']
+        new_names = fixture['new_names']
+        for row in rows:
+            self.assertRegex(row['commit'], r'^[0-9a-f]{40}$')
+            self.assertEqual(row['names'], old_names if row['legacy'] else new_names)
+            self.assertEqual(row['readonly'], ['freezetime', 'pain_time', 'walking']
+                             if row['legacy'] else ['walking'])
+            for digest in row['source_sha256'].values():
+                self.assertRegex(digest, r'^[0-9a-f]{64}$')
+        conversion = function((ENGINE / 'source/scriptlib/ScriptVariant.c').read_text(),
+                              'ScriptVariant_IntegerValue')
         program = r'''
 #include <assert.h>
 #include <stdint.h>
+#include <stdarg.h>
 #include <stdio.h>
 #include <string.h>
 #include <strings.h>
 typedef int LONG, HRESULT;
-typedef struct { int lVal; int vt; int strVal; } ScriptVariant;
-enum { VT_EMPTY, VT_INTEGER, VT_STR };
+typedef struct { int lVal; int vt; int strVal; double dblVal; } ScriptVariant;
+enum { VT_EMPTY, VT_INTEGER, VT_STR, VT_DECIMAL };
 enum { _ep_aiflag=1 };
 #define E_FAIL (-1)
 #define S_OK 0
 #define SUCCEEDED(x) ((x)>=0)
 static uint32_t obor_profile_build;
+static char diagnostic[1024];
+static int report(const char *format,...) {
+    va_list args;va_start(args,format);
+    int count=vsnprintf(diagnostic,sizeof(diagnostic),format,args);
+    va_end(args);assert(count>=0 && count<(int)sizeof(diagnostic));return count;
+}
+#define printf report
 static char strings[2][32];
 static char *StrCache_Get(int index) { assert(index>=0 && index<2); return strings[index]; }
 static void ScriptVariant_Clear(ScriptVariant *v) { memset(v,0,sizeof(*v)); }
 static void ScriptVariant_ChangeType(ScriptVariant *v,int type) {
     ScriptVariant_Clear(v); v->vt=type;
 }
-static int ScriptVariant_IntegerValue(ScriptVariant *v,int *out) {
-    if(v->vt!=VT_INTEGER) return E_FAIL;
-    *out=v->lVal; return S_OK;
-}
+CONVERSION
 static int searchList(const char **names,const char *name,int count) {
     for(int i=0;i<count;++i) if(!strcasecmp(names[i],name)) return i;
     return -1;
@@ -101,18 +125,18 @@ static struct expected new_names[]={
     FIELD(invincible),FIELD(jumpid),FIELD(jumping),FIELD(projectile),
     FIELD(running),FIELD(toexplode),FIELD(turning),{"walking",NULL,1},FIELD(walkmode),
 };
-static ScriptVariant integer(int value) { ScriptVariant v={value,VT_INTEGER,0};return v; }
+static ScriptVariant integer(int value) { ScriptVariant v={.lVal=value,.vt=VT_INTEGER};return v; }
 static ScriptVariant text(const char *name) {
-    ScriptVariant v={0,VT_STR,0}; assert(strlen(name)<sizeof(strings[0]));
+    ScriptVariant v={.vt=VT_STR}; assert(strlen(name)<sizeof(strings[0]));
     strcpy(strings[0],name); return v;
 }
 int main(void) {
-    const int builds[]={3780,3783,3789,3793,3796,3797,3805,3814,3818,
-                        3822,3824,3829,3831,3837,3839,3842};
+    const int builds[]={BUILDS};
+    const int legacy_contracts[]={LEGACY};
     assert(sizeof(old_names)==sizeof(new_names));
     for(unsigned b=0;b<sizeof(builds)/sizeof(*builds);++b) {
         obor_profile_build=builds[b];
-        int legacy=builds[b]<3797;
+        int legacy=legacy_contracts[b];
         struct expected *expected=legacy?old_names:new_names;
         for(int i=0;i<23;++i) for(int named=0;named<2;++named) {
             memset(&subject,0,sizeof(subject));
@@ -128,14 +152,27 @@ int main(void) {
             else assert(result.vt==(legacy?VT_EMPTY:VT_INTEGER) && result.lVal==0);
             entity before=subject;
             ScriptVariant value=integer(211);
+            diagnostic[0]=0;
             int status=write_flag(&property,&value,4);
             int rejected=legacy && expected[i].readonly && expected[i].field;
             assert(status==(rejected?E_FAIL:S_OK));
+            assert(!strcmp(diagnostic,rejected?"Unknown AI flag.\n":""));
             if(!expected[i].readonly) assert(*expected[i].field==211);
             else assert(!memcmp(&subject,&before,sizeof(subject)));
             before=subject; value.vt=VT_EMPTY;
+            diagnostic[0]=0;
             assert(write_flag(&property,&value,4)==(rejected?E_FAIL:S_OK));
+            assert(!strcmp(diagnostic,rejected?"Unknown AI flag.\n":""));
             assert(!memcmp(&subject,&before,sizeof(subject)));
+            const double decimals[]={211.75,-211.75};
+            for(unsigned d=0;d<sizeof(decimals)/sizeof(*decimals);++d) {
+                before=subject;value.vt=VT_DECIMAL;value.dblVal=decimals[d];
+                diagnostic[0]=0;
+                assert(write_flag(&property,&value,4)==(rejected?E_FAIL:S_OK));
+                assert(!strcmp(diagnostic,rejected?"Unknown AI flag.\n":""));
+                if(!expected[i].readonly) assert(*expected[i].field==(int)decimals[d]);
+                else assert(!memcmp(&subject,&before,sizeof(subject)));
+            }
         }
         const char *absent_old[]={"idlemode","walkmode"};
         const char *absent_new[]={"freezetime","pain_time"};
@@ -151,9 +188,13 @@ int main(void) {
             ScriptVariant property=integer(invalid[i]),result=integer(999),value=integer(211);
             entity before=subject;
             assert(read_flag(&property,&result,3)==E_FAIL && result.vt==VT_EMPTY);
+            diagnostic[0]=0;
             assert(write_flag(&property,&value,4)==E_FAIL);
+            assert(!strcmp(diagnostic,"Unknown AI flag.\n"));
             value.vt=VT_EMPTY;
+            diagnostic[0]=0;
             assert(write_flag(&property,&value,4)==(legacy?E_FAIL:S_OK));
+            assert(!strcmp(diagnostic,legacy?"Unknown AI flag.\n":""));
             assert(!memcmp(&subject,&before,sizeof(subject)));
         }
         ScriptVariant property=integer(0),result=integer(999),value=integer(211);
@@ -167,6 +208,9 @@ int main(void) {
 }
 '''
         for key, value in (('MACRO', macro), ('DECLARATIONS', declarations),
+                           ('CONVERSION', conversion),
+                           ('BUILDS', ','.join(str(row['revision']) for row in rows)),
+                           ('LEGACY', ','.join(str(int(row['legacy'])) for row in rows)),
                            ('GET_CASE', aiflag_case(source, 'openbor_getentityproperty')),
                            ('SET_CASE', aiflag_case(source, 'openbor_changeentityproperty'))):
             program = program.replace(key, value)
@@ -179,7 +223,8 @@ int main(void) {
                 '-std=c99', '-Wall', '-Wextra', '-Werror', '-Wno-error=deprecated-declarations', '-g',
                 '-fsanitize=address,undefined', str(native), '-o', str(host)],
                 check=True, timeout=60)
-            result = subprocess.run([str(host)], capture_output=True, text=True, timeout=10)
+            result = subprocess.run([str(host)], capture_output=True, text=True, timeout=10,
+                                    env=sanitizer_environment())
             self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
             self.assertIn('historical AI flag native contracts: OK', result.stdout)
 

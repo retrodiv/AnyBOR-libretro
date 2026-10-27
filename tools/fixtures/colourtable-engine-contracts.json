@@ -1,0 +1,105 @@
+{
+  "schema": 1,
+  "engines": {
+    "3400": {
+      "fixed_storage": true,
+      "selector": "propind",
+      "case": "_gep_colourtable",
+      "original_case_sha256": "7b5113ca6e1cd41a134431c0925bf197ff003445e0e71fd98c90e92ef3d2a621",
+      "original_helper_sha256": null,
+      "counter_declaration": "char\t\t\tmaps_loaded:8;\t\t\t\t\t// Used for player colourmap selecting",
+      "integer_bits": 32,
+      "original_case_source": "src/engines/3400/openborscript.c",
+      "scope": "Native body/helper interfaces, not complete profile API or lifecycle"
+    },
+    "3741": {
+      "fixed_storage": false,
+      "selector": "propind",
+      "case": "_ep_colourtable",
+      "original_case_sha256": "f21b33a856b8f1ebb6d0566c0e9aac509e0f73aa57620092df35918c4d1ce8e3",
+      "original_helper_sha256": "7a8f9ed6be2863e60ce19d30de885068f0413db173c7977b5280f6deb7fe9559",
+      "counter_declaration": "int\t\t\tmaps_loaded:8;\t\t\t\t\t// Used for player colourmap selecting",
+      "integer_bits": 32,
+      "original_case_source": "src/engines/3741/openborscript.c",
+      "scope": "Native body/helper interfaces, not complete profile API or lifecycle"
+    },
+    "3842": {
+      "fixed_storage": false,
+      "selector": "propind",
+      "case": "_ep_colourtable",
+      "original_case_sha256": "f21b33a856b8f1ebb6d0566c0e9aac509e0f73aa57620092df35918c4d1ce8e3",
+      "original_helper_sha256": "7a8f9ed6be2863e60ce19d30de885068f0413db173c7977b5280f6deb7fe9559",
+      "counter_declaration": "int maps_loaded; // Used for player colourmap selecting",
+      "integer_bits": 32,
+      "original_case_source": "src/engines/3842/openborscript.c",
+      "scope": "Native body/helper interfaces, not complete profile API or lifecycle"
+    },
+    "4086": {
+      "fixed_storage": false,
+      "selector": "propind",
+      "case": "_ep_colourtable",
+      "original_case_sha256": "71b68cfdded31728331a0d30c162d2718b558314bc445ef7181a45e056a79a68",
+      "original_helper_sha256": "3198cd6a0b4e1435dcb3c20d86112a45ee3d7c5a7afd7ca3edfda1c14309b2cc",
+      "counter_declaration": "int maps_loaded; // Used for player colourmap selecting",
+      "integer_bits": 32,
+      "original_case_source": "src/engines/4086/openborscript.c",
+      "scope": "Native body/helper interfaces, not complete profile API or lifecycle"
+    },
+    "4432": {
+      "fixed_storage": false,
+      "selector": "propind",
+      "case": "_ep_colourtable",
+      "original_case_sha256": "71b68cfdded31728331a0d30c162d2718b558314bc445ef7181a45e056a79a68",
+      "original_helper_sha256": "3198cd6a0b4e1435dcb3c20d86112a45ee3d7c5a7afd7ca3edfda1c14309b2cc",
+      "counter_declaration": "int maps_loaded; // Used for player colourmap selecting",
+      "integer_bits": 32,
+      "original_case_source": "src/engines/4432/openborscript.c",
+      "scope": "Native body/helper interfaces, not complete profile API or lifecycle"
+    },
+    "6391": {
+      "fixed_storage": false,
+      "selector": "propind",
+      "case": "_ep_colourtable",
+      "original_case_sha256": "71b68cfdded31728331a0d30c162d2718b558314bc445ef7181a45e056a79a68",
+      "original_helper_sha256": "3198cd6a0b4e1435dcb3c20d86112a45ee3d7c5a7afd7ca3edfda1c14309b2cc",
+      "counter_declaration": "int maps_loaded; // Used for player colourmap selecting",
+      "integer_bits": 32,
+      "original_case_source": "src/engines/6391/openborscript.c",
+      "scope": "Native body/helper interfaces, not complete profile API or lifecycle"
+    },
+    "7142": {
+      "fixed_storage": false,
+      "selector": "propind",
+      "case": "_ep_colourtable",
+      "original_case_sha256": "71b68cfdded31728331a0d30c162d2718b558314bc445ef7181a45e056a79a68",
+      "original_helper_sha256": "3198cd6a0b4e1435dcb3c20d86112a45ee3d7c5a7afd7ca3edfda1c14309b2cc",
+      "counter_declaration": "int maps_loaded; // Used for player colourmap selecting",
+      "integer_bits": 32,
+      "original_case_source": "src/engines/7142/openborscript.c",
+      "scope": "Native body/helper interfaces, not complete profile API or lifecycle"
+    },
+    "7533": {
+      "fixed_storage": false,
+      "selector": "propind",
+      "case": "_ep_colourtable",
+      "original_case_sha256": "71b68cfdded31728331a0d30c162d2718b558314bc445ef7181a45e056a79a68",
+      "original_helper_sha256": "3198cd6a0b4e1435dcb3c20d86112a45ee3d7c5a7afd7ca3edfda1c14309b2cc",
+      "counter_declaration": "int maps_loaded; // Used for player colourmap selecting",
+      "integer_bits": 32,
+      "original_case_source": "src/engines/7533/openborscript.c",
+      "scope": "Native body/helper interfaces, not complete profile API or lifecycle"
+    },
+    "8023": {
+      "fixed_storage": false,
+      "selector": "propind",
+      "case": "_ep_colourtable",
+      "original_case_sha256": "71b68cfdded31728331a0d30c162d2718b558314bc445ef7181a45e056a79a68",
+      "original_helper_sha256": "3198cd6a0b4e1435dcb3c20d86112a45ee3d7c5a7afd7ca3edfda1c14309b2cc",
+      "counter_declaration": "int maps_loaded; // Used for player colourmap selecting",
+      "integer_bits": 32,
+      "original_case_source": "src/engines/8023/openborscript.c",
+      "scope": "Native body/helper interfaces, not complete profile API or lifecycle"
+    }
+  },
+  "scope": "Every registered physical engine and each registered logical profile exercises the same interface guard. Historical3741getter epochs have additional own-source tests."
+}

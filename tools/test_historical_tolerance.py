@@ -4,13 +4,19 @@ SPDX-License-Identifier: BSD-3-Clause
 Copyright (c) 2026 retrodiv <retrodiv@proton.me>
 """
 import os
+import json
 from pathlib import Path
+import re
 import shlex
 import subprocess
+import sys
 import tempfile
 import unittest
 from test_historical_player import function
 from native_sanitizers import sanitizer_environment
+from historical_text_objects import CALLBACKS, render_text_objects
+from historical_stringmap_dispatch import render_dispatch
+from test_color_blends import compile_checked
 
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE = Path(os.environ.get('OBOR_TEST_SOURCE', ROOT))
@@ -30,9 +36,12 @@ class HistoricalToleranceTests(unittest.TestCase):
         methods='\n'.join(function(source,n) for n in (
             'mapstrings_levelproperty','mapstrings_drawmethodproperty',
             'openbor_changelevelproperty','mapstrings_textobjproperty',
+            'mapstrings_changetextobjproperty',
+            'obor_textobj_index','obor_textobj_store','obor_textobj_format',
             'openbor_changetextobjproperty','openbor_settextobj','openbor_cleartextobj'))
         program=r'''
 #include <assert.h>
+#include <limits.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -48,7 +57,7 @@ typedef double DOUBLE;
 #define FAILED(x) ((x)<0)
 #define MAX_STR_VAR_LEN 63
 enum {VT_EMPTY,VT_INTEGER,VT_DECIMAL,VT_STR,VT_PTR};
-typedef struct {int vt; LONG lVal; DOUBLE dblVal; const char *strVal;} ScriptVariant;
+typedef struct {int vt; LONG lVal; DOUBLE dblVal; const char *strVal; void *ptrVal;} ScriptVariant;
 static uint32_t obor_profile_build;
 static int ScriptVariant_IntegerValue(ScriptVariant *v,LONG *r) {
     if(v->vt==VT_INTEGER) {*r=v->lVal;return S_OK;}
@@ -60,11 +69,14 @@ static int ScriptVariant_DecimalValue(ScriptVariant *v,DOUBLE *r) {
     if(v->vt==VT_INTEGER) {*r=v->lVal;return S_OK;}
     return E_FAIL;
 }
-static void ScriptVariant_ChangeType(ScriptVariant *v,int type) {v->vt=type;v->lVal=0;}
+static void ScriptVariant_ChangeType(ScriptVariant *v,int type) {
+    if(v->vt!=type){v->vt=type;v->lVal=0;}
+}
 static void ScriptVariant_ToString(ScriptVariant *v,char *b) {
     if(v->vt==VT_STR) strcpy(b,v->strVal);else strcpy(b,"<invalid>");
 }
 #define StrCache_Get(x) (x)
+#define StrCache_GetIfPresent(x) (x)
 #define MAPSTRINGS(VAR,LIST,COUNT,MESSAGE) do { \
  if((VAR)->vt==VT_STR) {for(prop=0;prop<(COUNT);prop++) \
  if(!strcmp((VAR)->strVal,(LIST)[prop])) break; \
@@ -74,6 +86,7 @@ static void ScriptVariant_ToString(ScriptVariant *v,char *b) {
  (P)=realloc((P),(N)*sizeof(*(P)));assert(P); \
  memset((P)+(OLD),0,((N)-(OLD))*sizeof(*(P)));} while(0)
 typedef struct {int font,t,x,y,z;char *text;} Text;
+typedef Text s_textobj;
 typedef struct {int rocking,type,cameraxoffset,camerazoffset,quake;
  float bgspeed,scrollspeed,gravity,maxfallspeed,maxtossspeed;
  int numholes,numwalls,numtextobjs;float (*holes)[7],(*walls)[8];Text *textobjs;} Level;
@@ -118,9 +131,9 @@ static void exercise(unsigned profile) {
  a[0]=integer(-1);a[1]=integer(_top_x);a[2]=integer(21);out=&result;
  assert(openbor_changetextobjproperty(v,&out,3)==(profile<3821?S_OK:E_FAIL));
  assert(profile<3821?out==&result&&result.vt==VT_INTEGER&&result.lVal==0:out==NULL);
- a[0]=integer(0);a[1]=string("x");a[2]=(ScriptVariant){.vt=VT_EMPTY};out=&result;
+ a[0]=integer(0);a[1]=integer(_top_x);a[2]=(ScriptVariant){.vt=VT_EMPTY};result=integer(77);out=&result;
  assert(openbor_changetextobjproperty(v,&out,3)==(profile<3821?S_OK:E_FAIL));assert(storage.textobjs[0].x==11);
- assert(profile<3821?out==&result&&result.lVal==0:out==NULL);
+ assert(profile<3821?out==&result&&result.lVal==77:out==NULL);
  a[2]=integer(21);out=&result;assert(openbor_changetextobjproperty(v,&out,3)==S_OK&&storage.textobjs[0].x==21);
  assert(profile<3821?out==&result&&result.lVal==1:out==NULL);
  a[1]=integer(1234);out=&result;assert(openbor_changetextobjproperty(v,&out,3)==E_FAIL&&out==NULL);
@@ -141,6 +154,7 @@ static void exercise(unsigned profile) {
  assert(storage.textobjs[0].x==47 && storage.textobjs[0].y==48);
  assert(storage.textobjs[0].t==(profile<3821?prior_time:111));
  assert(out==NULL);
+ if(profile<3821)assert(result.vt==VT_INTEGER&&result.lVal==1);
  /* Replacing the same text owns one buffer; old profiles still require text. */
  a[1]=string("text");a[2]=string("replacement");out=&result;
  assert(openbor_changetextobjproperty(v,&out,3)==S_OK);
@@ -150,12 +164,12 @@ static void exercise(unsigned profile) {
  assert(!strcmp(owned,"again"));
  a[1]=string("text");a[2]=integer(17);out=&result;
  assert(openbor_changetextobjproperty(v,&out,3)==(profile<3821?E_FAIL:S_OK));
- assert(profile<3821 ? !strcmp(owned,"again") : !strcmp(owned,"<invalid>"));
- /* The older clear API returns an integer zero, including out-of-range indices. */
+ assert(profile<3821 ? !strcmp(owned,"again") : !strcmp(owned,"17"));
+ /* A valid older clear preserves an existing integer; outside indices return zero. */
  for(int index=-1;index<=1;++index) {
    a[0]=integer(index);result=integer(77);out=&result;
    assert(openbor_cleartextobj(v,&out,1)==S_OK);
-   assert(profile<3821 ? out==&result&&result.vt==VT_INTEGER&&result.lVal==0 : out==NULL);
+   assert(profile<3821 ? out==&result&&result.vt==VT_INTEGER&&result.lVal==(index==0?77:0) : out==NULL);
  }
  assert(storage.textobjs[0].text==NULL && storage.textobjs[0].x==0);
  printf("tolerance_profile=%u level_boundary=3820 text_boundary=3821 passed\n",profile);
@@ -171,7 +185,8 @@ int main(void) {
     def compile_run(self, program, extra):
         with tempfile.TemporaryDirectory(prefix='historical-tolerance-') as name:
             work=Path(name);src=work/'test.c';src.write_text(program);binary=work/'test'
-            command=shlex.split(os.environ.get('CC','cc'))+['-std=gnu99','-O1','-g','-fcommon','-ffunction-sections','-fdata-sections','-fsanitize=address,undefined','-fno-omit-frame-pointer',str(src),*extra,'-Wl,--gc-sections','-o',str(binary)]
+            link=['-Wl,-dead_strip']if sys.platform=='darwin'else['-no-pie','-Wl,--gc-sections']
+            command=shlex.split(os.environ.get('HOST_CC',os.environ.get('CC','cc')))+['-std=gnu99','-O1','-g','-fcommon','-ffunction-sections','-fdata-sections','-fsanitize=address,undefined,pointer-overflow','-fno-sanitize-recover=all','-fno-omit-frame-pointer',str(src),*extra,*link,'-o',str(binary)]
             result=subprocess.run(command,text=True,capture_output=True,timeout=45)
             self.assertEqual(result.returncode,0,result.stdout+result.stderr)
             result=subprocess.run([str(binary)],text=True,capture_output=True,timeout=20,env=sanitizer_environment())
@@ -206,7 +221,7 @@ static void check(unsigned profile,char *source,int accepted,const char *wanted)
  pp_context_destroy(&context);
 }
 int main(void) {
- const unsigned profiles[]={3780,3783,3789,3793,3797,3801,3802,3805,3814,3818,3822,3824,3829,3831,3837,3839,3842};
+ const unsigned profiles[]={3761,3769,3773,3780,3783,3789,3793,3797,3801,3802,3805,3814,3818,3822,3824,3829,3831,3837,3839,3842};
  for(unsigned i=0;i<sizeof(profiles)/sizeof(*profiles);i++) {
   unsigned p=profiles[i];
   check(p,"#define __LINE__ 77\n__LINE__\n",p<3802,p<3802?"77":NULL);
@@ -223,6 +238,251 @@ int main(void) {
             extra=['-DPP_TEST=1','-DSAFEALLOC_H=1','-Dstricmp=strcasecmp','-Dstrnicmp=strncasecmp','-I',str(script),'-I',str(pp),'-I',str(ENGINE/'source'),'-I',str(ENGINE/'source/gamelib'),'-I',str(SOURCE/'src/port/libretro'),str(parser),str(DRAFT/'lexers/3842/pp_lexer.c' if DRAFT else pp/'pp_lexer.c'),str(pp/'pp_expr.c'),str(script/'List.c')]
             self.compile_run(program,extra)
 
+    def test_actual_preprocessor_conditionals_and_function_macros(self):
+        fixture=json.loads((Path(__file__).parent /
+            'fixtures/profile-preprocessor-contracts.json').read_text())
+        rows=fixture['sources']
+        revisions={row['revision'] for row in rows}
+        self.assertEqual(len(rows),len(revisions))
+        self.assertTrue(set(fixture['boundary_controls']) <= revisions)
+        checks=[]
+        for row in rows:
+            self.assertRegex(row['commit'],r'^[0-9a-f]{40}$')
+            for digest in row['functions'].values():
+                self.assertRegex(digest,r'^[0-9a-f]{64}$')
+            for index,case in enumerate(fixture['scenarios']):
+                expected=case['legacy' if row['legacy'] else 'modern']
+                checks.append('check(%d,%d,%s,%d,%s,%s,%d);' % (
+                    row['revision'],index,json.dumps(case['source']),expected['accepted'],
+                    json.dumps(expected['tokens']),json.dumps(expected['diagnostic']),
+                    expected['newlines']))
+        program=r'''
+#include <assert.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include "pp_parser.h"
+uint32_t obor_profile_build;
+char *get_full_path(char *filename) {return filename;}
+void exitIfFalse(int value,const char *assertion,const char *func,const char *file,int line) {
+ (void)assertion;(void)func;(void)file;(void)line;if(!value)abort();
+}
+static unsigned scenario;
+#undef assert
+#define assert(c) do {if(!(c)){fprintf(stderr,"Preprocessor revision=%u case=%u line=%d\n",obor_profile_build,scenario,__LINE__);abort();}}while(0)
+static void check(unsigned profile,unsigned which,const char *input,int accepted,
+                  const char *wanted,const char *diagnostic,int wanted_lines) {
+ obor_profile_build=profile;scenario=which;
+ pp_context context;pp_parser parser;pp_token *token;TEXTPOS start={1,0};
+ char *source=strdup(input);assert(source);
+ FILE *messages=tmpfile();assert(messages);fflush(stderr);
+ int saved=dup(STDERR_FILENO);assert(saved>=0);assert(dup2(fileno(messages),STDERR_FILENO)>=0);
+ pp_context_init(&context);pp_parser_init(&parser,&context,"fixture.c",source,start);
+ int eof=0,lines=0,steps=0;char output[2048]={0};
+ while((token=pp_parser_emit_token(&parser))) {
+  assert(++steps<4096);
+  if(token->theType==PP_TOKEN_EOF){eof=1;break;}
+  if(token->theType==PP_TOKEN_NEWLINE){++lines;continue;}
+  if(token->theType==PP_TOKEN_WHITESPACE)continue;
+  assert(strlen(output)+strlen(token->theSource)<sizeof(output));strcat(output,token->theSource);
+ }
+ /* The fixture also owns parsers left active after an expected rejection. */
+ while(parser.child) {
+  pp_parser *parent=&parser;while(parent->child->child)parent=parent->child;
+  pp_parser *child=parent->child;
+  if(child->freeFilename)free((void*)child->filename);
+  if(child->freeSourceCode)free(child->sourceCode);
+  free(child->macroName);free(child);parent->child=NULL;
+ }
+ pp_context_destroy(&context);free(source);fflush(stderr);
+ assert(dup2(saved,STDERR_FILENO)>=0);close(saved);
+ rewind(messages);char errors[4096]={0};size_t length=fread(errors,1,sizeof(errors)-1,messages);
+ assert(!ferror(messages) && length<sizeof(errors)-1);fclose(messages);
+ if(eof!=accepted || strcmp(output,wanted) ||
+    (diagnostic[0] && !strstr(errors,diagnostic)) || (wanted_lines>=0 && lines!=wanted_lines)) {
+  fprintf(stderr,"Expected accepted=%d tokens=[%s] lines=%d diagnostic=[%s]; got accepted=%d tokens=[%s] lines=%d errors=[%s]\n",accepted,wanted,wanted_lines,diagnostic,eof,output,lines,errors);assert(0);
+ }
+}
+int main(void) { CHECKS return 0; }
+'''.replace('CHECKS','\n'.join(checks))
+        script=ENGINE/'source/scriptlib';pp=ENGINE/'source/preprocessorlib'
+        extra=['-DPP_TEST=1','-DSAFEALLOC_H=1','-Dstricmp=strcasecmp','-Dstrnicmp=strncasecmp',
+               '-I',str(script),'-I',str(pp),'-I',str(ENGINE/'source'),
+               '-I',str(ENGINE/'source/gamelib'),'-I',str(SOURCE/'src/port/libretro'),
+               str(pp/'pp_parser.c'),str(pp/'pp_lexer.c'),str(pp/'pp_expr.c'),str(script/'List.c')]
+        self.compile_run(program,extra)
+
+
+
+class NativeTextReturnTests(unittest.TestCase):
+    """Available-storage contracts with actual callbacks and native variants."""
+    fixture_name="text-object-return-contracts.json"
+    scope_marker="no capacity"
+    @classmethod
+    def setUpClass(cls):
+        fixture=Path(__file__).with_name('fixtures')/cls.fixture_name
+        cls.fixture=json.loads(fixture.read_text())
+        cls.pin=json.loads((SOURCE/'src/pin.json').read_text())
+        temporary=tempfile.TemporaryDirectory(prefix='native-text-returns-')
+        cls.addClassCleanup(temporary.cleanup)
+        work=Path(temporary.name)
+        cls.executables={}
+        compiler=shlex.split(os.environ.get('HOST_CC',os.environ.get('CC','cc')))
+        version=subprocess.check_output(compiler+['--version'],text=True,timeout=10)
+        warnings=['-Wno-error=pragma-pack','-Wno-error=deprecated-non-prototype']if'clang'in version.lower()else[]
+        host=[]if sys.platform=='darwin'else['-DLINUX=1']
+        link=['-Wl,-dead_strip']if sys.platform=='darwin'else['-no-pie','-Wl,--gc-sections']
+        for row in cls.fixture['models']:
+            root=SOURCE/'src/engines'/row['engine']
+            script=(root/'openborscript.c').read_text()
+            enums='\n'.join(re.findall(r'enum (?:gtop|ctop)_enum\s*\{[^}]*\};',script))
+            if not enums:raise ValueError('Complete native text-property enums required')
+            names=[];mappers=[]
+            for name in ['mapstrings_gettextobjproperty','mapstrings_textobjproperty','mapstrings_changetextobjproperty']:
+                if re.search(r'(?m)^(?:void|int)\s+'+name+r'\s*\(',script):
+                    names.append(name);mappers.append(function(script,name))
+            if any(re.search(r'\bsearchList\s*\(',method) for method in mappers):
+                mappers.insert(0,function((root/'source/utils.c').read_text(),'searchList'))
+            dispatcher=(root/row['dispatcher_file']).read_text()
+            helpers=render_dispatch(function(dispatcher,'Script_GetStringMapFunction'),
+                retained_references=[CALLBACKS['get'],CALLBACKS['change'],*names])
+            options={key:row[key]for key in ['physical_fixed','seed_slots','slots','header_includes','cases']}
+            if 'field_paths' in row:
+                options['field_paths']=row['field_paths']
+            for key in ['create_strings','string_limit']:
+                if key in row:options[key]=row[key]
+            for helper in ['obor_textobj_index','obor_textobj_store','obor_textobj_format',
+                           'openbor_textobj_set_text']:
+                if re.search(r'(?m)^static (?:int|HRESULT) '+helper+r'\s*\(',script):
+                    helpers+='\n'+function(script,helper)
+            engine=(root/'openbor.c').read_text()
+            if re.search(r'(?m)^static int obor_textobjs_initialize\s*\(',engine):
+                helpers+='\n'+function(engine,'obor_textobjs_initialize')
+                options.update(seed_slots=0,initializer='obor_textobjs_initialize')
+            code=render_text_objects(revisions=row['revisions'],
+                callbacks={key:function(script,name)for key,name in CALLBACKS.items()},
+                mapping=enums+'\n'+'\n'.join(mappers),helpers=helpers,**options)
+            source=work/(row['id']+'.c');source.write_text(code);binary=source.with_suffix('')
+            includes=[root/'source/scriptlib',root,SOURCE/'src/port/libretro',root/'source',
+                      *sorted(p for p in(root/'source').iterdir()if p.is_dir())]
+            compile_checked(compiler+['-std=gnu11','-fgnu89-inline','-Wall','-Wextra','-Werror',
+                '-Wno-error=deprecated-declarations','-Wno-error=misleading-indentation',
+                '-Wno-error=sign-compare','-Wno-unused-variable','-Wno-unused-function',
+                '-Wno-unused-parameter','-Wno-unused-but-set-variable','-Wno-implicit-fallthrough',
+                '-O0','-g','-fsigned-char','-fcommon','-ffunction-sections','-fdata-sections',
+                '-DLIBRETRO=1','-DOBOR_ENGINE_BUILD='+row['engine'],*host,*warnings,
+                '-fsanitize=address,undefined,pointer-overflow','-fno-sanitize-recover=all',
+                *['-I'+str(p)for p in includes],str(source),
+                str(root/'source/scriptlib/ScriptVariant.c'),*link,'-lm','-o',str(binary)])
+            if row['id']in cls.executables:raise ValueError('Duplicate native return model')
+            cls.executables[row['id']]=binary
+
+    def test_each_own_source_return_and_update_contract(self):
+        for row in self.fixture['models']:
+            with self.subTest(model=row['id']):
+                observed=subprocess.run([str(self.executables[row['id']])],
+                    text=True,capture_output=True,timeout=15,env=sanitizer_environment())
+                self.assertEqual(observed.returncode,0,observed.stdout+observed.stderr)
+                self.assertEqual(json.loads(observed.stdout),dict(status='PASS',
+                    contexts=len(row['revisions']),
+                    checks=sum(step.get('repeat',1)for case in row['cases']for step in case['steps'])*len(row['revisions']),
+                    original_orphans=0))
+
+    def test_registered_profiles_in_declared_scope_have_own_contracts(self):
+        declared={revision:row['engine']for row in self.fixture['models']for revision in row['revisions']}
+        for profile in self.pin['profiles']:
+            revision=int(profile.get('revision',profile['build']))
+            for scope in self.fixture['coverage']:
+                if profile['engine']==scope['engine']and scope['first']<=revision<=scope['last']:
+                    self.assertIn(revision,declared)
+                    self.assertEqual(profile['engine'],declared[revision])
+
+    def test_original_sources_and_available_storage_scope_are_explicit(self):
+        self.assertEqual(self.fixture['schema'],1)
+        seen=set()
+        for row in self.fixture['models']:
+            self.assertEqual(row['revisions'],sorted(set(row['revisions'])))
+            self.assertFalse(seen.intersection(row['revisions']))
+            seen.update(row['revisions'])
+            self.assertEqual(row['revisions'],[v['revision']for v in row['original_sources']])
+            for original in row['original_sources']:
+                self.assertRegex(original['commit'],r'^[0-9a-f]{40}$')
+                self.assertEqual(set(original['callbacks']),set(CALLBACKS.values()))
+                for value in original['callbacks'].values():self.assertRegex(value,r'^[0-9a-f]{64}$')
+            self.assertTrue(row['cases'])
+            self.assertTrue(all(case['orphan_allocations']==0 for case in row['cases']))
+            self.assertIn(self.scope_marker,row['scope'])
+
+
+
+class NativeTextArgumentTests(NativeTextReturnTests):
+    fixture_name='text-object-argument-contracts.json'
+    scope_marker='input validation'
+
+
+class NativeLaterClassicTextTests(NativeTextReturnTests):
+    """Native positioned text, bounded storage and unavailable table growth."""
+    fixture_name='text-object-later-classic-contracts.json'
+    scope_marker='later text storage'
+
+
+class NativeModernTextArgumentTests(NativeTextReturnTests):
+    """Native positioned text calls with complete argument and result entries."""
+    fixture_name='text-object-modern-argument-contracts.json'
+    scope_marker='modern input validation'
+
+    def test_profile_labels_and_candidate_only_cases_are_explicit(self):
+        for row in self.fixture['models']:
+            with self.subTest(model=row['id']):
+                covered={v['profile']for v in row['original_sources']+row['reconstructed_profile_aliases']}
+                required={p['build']for p in self.pin['profiles']if p['engine']==row['engine']}
+                self.assertTrue(required<=covered)
+                original=row['original_case_indices'];candidate=row['candidate_only_case_indices']
+                self.assertFalse(set(original)&set(candidate))
+                self.assertEqual(sorted(original+candidate),list(range(len(row['cases']))))
+                self.assertTrue(row['create_strings'])
+
+
+class NativeTextCapacityTests(NativeTextReturnTests):
+    """Own fixed/dynamic limits, cold native tables and unavailable growth."""
+    fixture_name="text-object-capacity-contracts.json"
+    scope_marker="capacity"
+
+
+
+class NativeTextStringTests(NativeTextReturnTests):
+    """Native string limits, owned buffer reuse and unavailable storage."""
+    fixture_name="text-object-string-contracts.json"
+    scope_marker="text strings"
+
+
+    def test_original_and_candidate_only_string_cases_are_distinct(self):
+        for row in self.fixture['models']:
+            with self.subTest(model=row['id']):
+                original=row['original_case_indices']
+                candidate=row['candidate_only_case_indices']
+                self.assertTrue(original)
+                self.assertTrue(candidate)
+                self.assertFalse(set(original).intersection(candidate))
+                self.assertEqual(sorted(original+candidate),list(range(len(row['cases']))))
+                dependency=SOURCE/'src/engines'/row['engine']/'source/scriptlib/depends.h'
+                definitions=re.findall(r'^\s*#define\s+MAX_STR_VAR_LEN\s+(\d+)\s*$',dependency.read_text(),re.M)
+                self.assertEqual(len(definitions),1)
+                limit=int(definitions[0])
+                full_cache=False
+                for index,case in enumerate(row['cases']):
+                    if index in original:
+                        self.assertTrue(case.get('level_present',True))
+                    for step in case['steps']:
+                        if index in original:
+                            self.assertNotIn('refuse',step)
+                        for argument in step['arguments']:
+                            if argument['kind']=='string':
+                                if index in original:self.assertLess(len(argument['value']),limit)
+                                elif len(argument['value'])==limit:full_cache=True
+                self.assertTrue(full_cache)
 
 
 def tolerance_fixture(members, kind):
@@ -239,11 +499,11 @@ def tolerance_fixture(members, kind):
     void value = changelevelproperty("quake", NULL());
     if(value != NULL() || getlevelproperty("quake") != 5) { log("TOLERANCE_BAD\\n"); return; }
 ''',
-        'text': '''    void value = changetextobjproperty(-1, "x", 17);
+        'text': '''    void value = changetextobjproperty(-1, 3, 17);
     if(value != 0) { log("TOLERANCE_BAD\\n"); return; }
-    changetextobjproperty(0, "x", 17);
-    value = changetextobjproperty(0, "x", NULL());
-    if(value != 0) { log("TOLERANCE_BAD\\n"); return; }
+    changetextobjproperty(0, 3, 17);
+    changetextobjproperty(0, 3, NULL());
+    if(gettextobjproperty(0, 3) != 17) { log("TOLERANCE_BAD\\n"); return; }
     value = settextobj(0, NULL(), 12, 0, 10, "fixture");
     if(value != 1) { log("TOLERANCE_BAD\\n"); return; }
 ''',

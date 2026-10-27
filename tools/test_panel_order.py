@@ -4,22 +4,27 @@ SPDX-License-Identifier: BSD-3-Clause
 Copyright (c) 2026 retrodiv <retrodiv@proton.me>
 """
 import os
+import json
 from pathlib import Path
 import unittest
 
 from test_historical_behavior import native
+from test_historical_player import function
 
 ROOT = Path(os.environ.get('OBOR_TEST_SOURCE', Path(__file__).resolve().parents[1]))
 
 
 class PanelOrderTests(unittest.TestCase):
     def test_absent_panels_preserve_slots_and_loaded_layer_bindings(self):
+        profiles = json.loads((ROOT / 'src/pin.json').read_text())['profiles']
         for engine in ('3741', '3842', '4086', '4432', '6391', '7142', '7533', '8023'):
             with self.subTest(engine=engine):
                 self.check_source((ROOT / 'src/engines' / engine / 'openbor.c').read_text(),
-                                  legacy_xoffset=engine in ('3741', '3842'))
+                                  legacy_xoffset=engine in ('3741', '3842'),
+                                  revisions=[int(p.get('revision', p['build']))
+                                             for p in profiles if p['engine'] == engine])
 
-    def check_source(self, source, *, legacy_xoffset):
+    def check_source(self, source, *, legacy_xoffset, revisions):
         start = source.index('for', source.index('//panels, normal neon screen'))
         opening = source.index('{', start)
         depth = 1
@@ -28,6 +33,12 @@ class PanelOrderTests(unittest.TestCase):
             depth += (source[end] == '{') - (source[end] == '}')
             end += 1
         block = source[start:end]
+        helpers = ''
+        if 'obor_layer_encode(' in block:
+            helpers = function(source, 'obor_layer_encode') + function(source, 'obor_layer_decode')
+            decoder = 'obor_layer_decode(level, token)'
+        else:
+            decoder = 'token ? level->layersref + (size_t)(uintptr_t)token : NULL'
         native(r'''
 #include <assert.h>
 #include <limits.h>
@@ -44,6 +55,12 @@ typedef struct {
     s_layer *(*panels)[3];
 } s_level;
 static int panel_width = 320;
+static uint32_t obor_profile_build;
+HELPERS
+static s_layer *panel_layer(s_level *level, int panel, int slot) {
+    s_layer *token = level->panels[panel][slot];
+    return DECODER;
+}
 #define __realloc(p, n) do { \
     void *replacement = realloc((p), ((size_t)(n) + 1) * sizeof(*(p))); \
     assert(replacement); (p) = replacement; \
@@ -72,6 +89,9 @@ static void clear(s_level *level) {
     free(level->layers); free(level->layersref); free(level->panels);
 }
 int main(void) {
+    const uint32_t revisions[]={REVISIONS};
+    for(unsigned profile=0;profile<sizeof(revisions)/sizeof(*revisions);++profile) {
+    obor_profile_build=revisions[profile];
     s_level level;
     int (*panels)[3]=calloc(2,sizeof(*panels));
     assert(panels);
@@ -84,10 +104,10 @@ int main(void) {
     assert(level.numpanels==3 && level.numlayersref==7);
     for(int n=0;n<7;++n) assert(level.layersref[n].token==tokens[n]);
     for(int n=1;n<7;++n) assert(XOFFSET(level.layersref[n])==320*((n-1)/2));
-    assert((intptr_t)level.panels[0][0]==1 && !level.panels[0][1]);
-    assert((intptr_t)level.panels[0][2]==2);
-    assert((intptr_t)level.panels[1][0]==3 && (intptr_t)level.panels[1][1]==4);
-    assert((intptr_t)level.panels[2][0]==5 && (intptr_t)level.panels[2][2]==6);
+    assert(panel_layer(&level,0,0)==level.layersref+1 && !level.panels[0][1]);
+    assert(panel_layer(&level,0,2)==level.layersref+2);
+    assert(panel_layer(&level,1,0)==level.layersref+3 && panel_layer(&level,1,1)==level.layersref+4);
+    assert(panel_layer(&level,2,0)==level.layersref+5 && panel_layer(&level,2,2)==level.layersref+6);
     clear(&level);free(panels);
 
     /* One loaded panel followed by absent slots must not read beyond it. */
@@ -99,7 +119,7 @@ int main(void) {
     assert(level.layersref[1].token==101 && level.layersref[2].token==101);
     assert(XOFFSET(level.layersref[1])==0 && XOFFSET(level.layersref[2])==1280);
     for(int n=1;n<4;++n) for(int j=0;j<3;++j) assert(!level.panels[n][j]);
-    assert((intptr_t)level.panels[0][0]==1 && (intptr_t)level.panels[4][0]==2);
+    assert(panel_layer(&level,0,0)==level.layersref+1 && panel_layer(&level,4,0)==level.layersref+2);
     clear(&level);free(panels);
 
     int absent[]={0,25};
@@ -109,9 +129,11 @@ int main(void) {
     assert(level.layersref[0].token==999);
     for(int n=0;n<2;++n) for(int j=0;j<3;++j) assert(!level.panels[n][j]);
     clear(&level);
+    }
     return 0;
 }
-'''.replace('BLOCK', block).replace(
+'''.replace('BLOCK', block).replace('HELPERS', helpers).replace('DECODER', decoder)
+           .replace('REVISIONS', ','.join(map(str, revisions))).replace(
             '#include <assert.h>', '#define XOFFSET(v) ((v).' +
             ('xoffset' if legacy_xoffset else 'offset.x') + ')\n#include <assert.h>'))
 

@@ -1,0 +1,1175 @@
+{
+  "schema": 1,
+  "sources": [
+    {
+      "revision": 3666,
+      "commit": "d91a968db18ecb4a738cf008ea0483883929a674",
+      "engine": "3741",
+      "coordinate_components": 5,
+      "coordinate_scalar_type": "short",
+      "selected_entry_sha256": "3310b7b66eac0de34a911d189e6a46bc6c84d0b0d580064d87dabcb604c21608",
+      "source_sha256": {
+        "getter": "84fec5a61e6b45efd1430991d9798edcfe225b79f8af8e4d75596ead2485ae23",
+        "attack-coordinates": "eee1e15a6b21d00ed111d233d6020f204243b8faf7c9e0b7d20b4caa3da64f34",
+        "bbox-coordinates": "f01e2eda4fee8946678fa76eff9b6b83cc851ed4f34a95aec4270c6147ac678c",
+        "ScriptVariant_Clear": "8aef746d78a88ec49716d9c9640d67aee0c03063298049d7d9e92fdf26862ad1",
+        "ScriptVariant_ChangeType": "73e62eb5f603422e667435567c887d4c08dd32da61443e964dd5fdb4d7c2a8fa"
+      }
+    },
+    {
+      "revision": 3667,
+      "commit": "b9be93bb004d151b7280a4dd2d41a952d3160afc",
+      "engine": "3741",
+      "coordinate_components": 5,
+      "coordinate_scalar_type": "short",
+      "selected_entry_sha256": "3310b7b66eac0de34a911d189e6a46bc6c84d0b0d580064d87dabcb604c21608",
+      "source_sha256": {
+        "getter": "84fec5a61e6b45efd1430991d9798edcfe225b79f8af8e4d75596ead2485ae23",
+        "attack-coordinates": "eee1e15a6b21d00ed111d233d6020f204243b8faf7c9e0b7d20b4caa3da64f34",
+        "bbox-coordinates": "f01e2eda4fee8946678fa76eff9b6b83cc851ed4f34a95aec4270c6147ac678c",
+        "ScriptVariant_Clear": "8aef746d78a88ec49716d9c9640d67aee0c03063298049d7d9e92fdf26862ad1",
+        "ScriptVariant_ChangeType": "73e62eb5f603422e667435567c887d4c08dd32da61443e964dd5fdb4d7c2a8fa"
+      }
+    },
+    {
+      "revision": 3669,
+      "commit": "7c099902d5149d9e696ad1274c0d1964aa1f2323",
+      "engine": "3741",
+      "coordinate_components": 5,
+      "coordinate_scalar_type": "short",
+      "selected_entry_sha256": "3310b7b66eac0de34a911d189e6a46bc6c84d0b0d580064d87dabcb604c21608",
+      "source_sha256": {
+        "getter": "84fec5a61e6b45efd1430991d9798edcfe225b79f8af8e4d75596ead2485ae23",
+        "attack-coordinates": "eee1e15a6b21d00ed111d233d6020f204243b8faf7c9e0b7d20b4caa3da64f34",
+        "bbox-coordinates": "f01e2eda4fee8946678fa76eff9b6b83cc851ed4f34a95aec4270c6147ac678c",
+        "ScriptVariant_Clear": "8aef746d78a88ec49716d9c9640d67aee0c03063298049d7d9e92fdf26862ad1",
+        "ScriptVariant_ChangeType": "73e62eb5f603422e667435567c887d4c08dd32da61443e964dd5fdb4d7c2a8fa"
+      }
+    },
+    {
+      "revision": 3670,
+      "commit": "5d6118ae7dc11b04bb370da0faa0c6f42ffab50e",
+      "engine": "3741",
+      "coordinate_components": 5,
+      "coordinate_scalar_type": "short",
+      "selected_entry_sha256": "3310b7b66eac0de34a911d189e6a46bc6c84d0b0d580064d87dabcb604c21608",
+      "source_sha256": {
+        "getter": "84fec5a61e6b45efd1430991d9798edcfe225b79f8af8e4d75596ead2485ae23",
+        "attack-coordinates": "eee1e15a6b21d00ed111d233d6020f204243b8faf7c9e0b7d20b4caa3da64f34",
+        "bbox-coordinates": "f01e2eda4fee8946678fa76eff9b6b83cc851ed4f34a95aec4270c6147ac678c",
+        "ScriptVariant_Clear": "8aef746d78a88ec49716d9c9640d67aee0c03063298049d7d9e92fdf26862ad1",
+        "ScriptVariant_ChangeType": "73e62eb5f603422e667435567c887d4c08dd32da61443e964dd5fdb4d7c2a8fa"
+      }
+    },
+    {
+      "revision": 3671,
+      "commit": "7fba7445c056b5aeff03046dd79ae929fcf68f15",
+      "engine": "3741",
+      "coordinate_components": 5,
+      "coordinate_scalar_type": "short",
+      "selected_entry_sha256": "3310b7b66eac0de34a911d189e6a46bc6c84d0b0d580064d87dabcb604c21608",
+      "source_sha256": {
+        "getter": "84fec5a61e6b45efd1430991d9798edcfe225b79f8af8e4d75596ead2485ae23",
+        "attack-coordinates": "eee1e15a6b21d00ed111d233d6020f204243b8faf7c9e0b7d20b4caa3da64f34",
+        "bbox-coordinates": "f01e2eda4fee8946678fa76eff9b6b83cc851ed4f34a95aec4270c6147ac678c",
+        "ScriptVariant_Clear": "8aef746d78a88ec49716d9c9640d67aee0c03063298049d7d9e92fdf26862ad1",
+        "ScriptVariant_ChangeType": "73e62eb5f603422e667435567c887d4c08dd32da61443e964dd5fdb4d7c2a8fa"
+      }
+    },
+    {
+      "revision": 3672,
+      "commit": "8c4687b4ef831986a04e2fcb3d4dcd7e96bbd0cf",
+      "engine": "3741",
+      "coordinate_components": 5,
+      "coordinate_scalar_type": "short",
+      "selected_entry_sha256": "3310b7b66eac0de34a911d189e6a46bc6c84d0b0d580064d87dabcb604c21608",
+      "source_sha256": {
+        "getter": "84fec5a61e6b45efd1430991d9798edcfe225b79f8af8e4d75596ead2485ae23",
+        "attack-coordinates": "eee1e15a6b21d00ed111d233d6020f204243b8faf7c9e0b7d20b4caa3da64f34",
+        "bbox-coordinates": "f01e2eda4fee8946678fa76eff9b6b83cc851ed4f34a95aec4270c6147ac678c",
+        "ScriptVariant_Clear": "8aef746d78a88ec49716d9c9640d67aee0c03063298049d7d9e92fdf26862ad1",
+        "ScriptVariant_ChangeType": "73e62eb5f603422e667435567c887d4c08dd32da61443e964dd5fdb4d7c2a8fa"
+      }
+    },
+    {
+      "revision": 3673,
+      "commit": "88b9c2829ea471579d90e186215d23a8bf669bcb",
+      "engine": "3741",
+      "coordinate_components": 5,
+      "coordinate_scalar_type": "short",
+      "selected_entry_sha256": "3310b7b66eac0de34a911d189e6a46bc6c84d0b0d580064d87dabcb604c21608",
+      "source_sha256": {
+        "getter": "84fec5a61e6b45efd1430991d9798edcfe225b79f8af8e4d75596ead2485ae23",
+        "attack-coordinates": "eee1e15a6b21d00ed111d233d6020f204243b8faf7c9e0b7d20b4caa3da64f34",
+        "bbox-coordinates": "f01e2eda4fee8946678fa76eff9b6b83cc851ed4f34a95aec4270c6147ac678c",
+        "ScriptVariant_Clear": "8aef746d78a88ec49716d9c9640d67aee0c03063298049d7d9e92fdf26862ad1",
+        "ScriptVariant_ChangeType": "73e62eb5f603422e667435567c887d4c08dd32da61443e964dd5fdb4d7c2a8fa"
+      }
+    },
+    {
+      "revision": 3674,
+      "commit": "5e9213f7de65df1cc13d01e3e695d4ac62091267",
+      "engine": "3741",
+      "coordinate_components": 5,
+      "coordinate_scalar_type": "short",
+      "selected_entry_sha256": "3310b7b66eac0de34a911d189e6a46bc6c84d0b0d580064d87dabcb604c21608",
+      "source_sha256": {
+        "getter": "84fec5a61e6b45efd1430991d9798edcfe225b79f8af8e4d75596ead2485ae23",
+        "attack-coordinates": "eee1e15a6b21d00ed111d233d6020f204243b8faf7c9e0b7d20b4caa3da64f34",
+        "bbox-coordinates": "f01e2eda4fee8946678fa76eff9b6b83cc851ed4f34a95aec4270c6147ac678c",
+        "ScriptVariant_Clear": "8aef746d78a88ec49716d9c9640d67aee0c03063298049d7d9e92fdf26862ad1",
+        "ScriptVariant_ChangeType": "73e62eb5f603422e667435567c887d4c08dd32da61443e964dd5fdb4d7c2a8fa"
+      }
+    },
+    {
+      "revision": 3675,
+      "commit": "a4b46362047dc2bb04e350b8a434cb65cad3b9af",
+      "engine": "3741",
+      "coordinate_components": 5,
+      "coordinate_scalar_type": "short",
+      "selected_entry_sha256": "3310b7b66eac0de34a911d189e6a46bc6c84d0b0d580064d87dabcb604c21608",
+      "source_sha256": {
+        "getter": "84fec5a61e6b45efd1430991d9798edcfe225b79f8af8e4d75596ead2485ae23",
+        "attack-coordinates": "eee1e15a6b21d00ed111d233d6020f204243b8faf7c9e0b7d20b4caa3da64f34",
+        "bbox-coordinates": "f01e2eda4fee8946678fa76eff9b6b83cc851ed4f34a95aec4270c6147ac678c",
+        "ScriptVariant_Clear": "8aef746d78a88ec49716d9c9640d67aee0c03063298049d7d9e92fdf26862ad1",
+        "ScriptVariant_ChangeType": "73e62eb5f603422e667435567c887d4c08dd32da61443e964dd5fdb4d7c2a8fa"
+      }
+    },
+    {
+      "revision": 3676,
+      "commit": "102aa8043a5a1af7c42892d98f266d12a5a9563f",
+      "engine": "3741",
+      "coordinate_components": 5,
+      "coordinate_scalar_type": "short",
+      "selected_entry_sha256": "3310b7b66eac0de34a911d189e6a46bc6c84d0b0d580064d87dabcb604c21608",
+      "source_sha256": {
+        "getter": "84fec5a61e6b45efd1430991d9798edcfe225b79f8af8e4d75596ead2485ae23",
+        "attack-coordinates": "eee1e15a6b21d00ed111d233d6020f204243b8faf7c9e0b7d20b4caa3da64f34",
+        "bbox-coordinates": "f01e2eda4fee8946678fa76eff9b6b83cc851ed4f34a95aec4270c6147ac678c",
+        "ScriptVariant_Clear": "8aef746d78a88ec49716d9c9640d67aee0c03063298049d7d9e92fdf26862ad1",
+        "ScriptVariant_ChangeType": "73e62eb5f603422e667435567c887d4c08dd32da61443e964dd5fdb4d7c2a8fa"
+      }
+    },
+    {
+      "revision": 3677,
+      "commit": "0cc873941f3ee1dc687c7c0d303d043c931f8e5f",
+      "engine": "3741",
+      "coordinate_components": 5,
+      "coordinate_scalar_type": "short",
+      "selected_entry_sha256": "3310b7b66eac0de34a911d189e6a46bc6c84d0b0d580064d87dabcb604c21608",
+      "source_sha256": {
+        "getter": "f3e540dd7e2cc6a3e959bbd6a46b7f03e41e43c2d1c943d61d98613c95ffa0e7",
+        "attack-coordinates": "eee1e15a6b21d00ed111d233d6020f204243b8faf7c9e0b7d20b4caa3da64f34",
+        "bbox-coordinates": "f01e2eda4fee8946678fa76eff9b6b83cc851ed4f34a95aec4270c6147ac678c",
+        "ScriptVariant_Clear": "8aef746d78a88ec49716d9c9640d67aee0c03063298049d7d9e92fdf26862ad1",
+        "ScriptVariant_ChangeType": "73e62eb5f603422e667435567c887d4c08dd32da61443e964dd5fdb4d7c2a8fa"
+      }
+    },
+    {
+      "revision": 3678,
+      "commit": "9db2ed7db699e47513d3ea3144b7f235304eb72a",
+      "engine": "3741",
+      "coordinate_components": 5,
+      "coordinate_scalar_type": "short",
+      "selected_entry_sha256": "3310b7b66eac0de34a911d189e6a46bc6c84d0b0d580064d87dabcb604c21608",
+      "source_sha256": {
+        "getter": "f3e540dd7e2cc6a3e959bbd6a46b7f03e41e43c2d1c943d61d98613c95ffa0e7",
+        "attack-coordinates": "eee1e15a6b21d00ed111d233d6020f204243b8faf7c9e0b7d20b4caa3da64f34",
+        "bbox-coordinates": "f01e2eda4fee8946678fa76eff9b6b83cc851ed4f34a95aec4270c6147ac678c",
+        "ScriptVariant_Clear": "8aef746d78a88ec49716d9c9640d67aee0c03063298049d7d9e92fdf26862ad1",
+        "ScriptVariant_ChangeType": "73e62eb5f603422e667435567c887d4c08dd32da61443e964dd5fdb4d7c2a8fa"
+      }
+    },
+    {
+      "revision": 3679,
+      "commit": "1e4032e0c03f5580f4092fc8c2fecf2a5a96aa7f",
+      "engine": "3741",
+      "coordinate_components": 5,
+      "coordinate_scalar_type": "short",
+      "selected_entry_sha256": "3310b7b66eac0de34a911d189e6a46bc6c84d0b0d580064d87dabcb604c21608",
+      "source_sha256": {
+        "getter": "f3e540dd7e2cc6a3e959bbd6a46b7f03e41e43c2d1c943d61d98613c95ffa0e7",
+        "attack-coordinates": "eee1e15a6b21d00ed111d233d6020f204243b8faf7c9e0b7d20b4caa3da64f34",
+        "bbox-coordinates": "f01e2eda4fee8946678fa76eff9b6b83cc851ed4f34a95aec4270c6147ac678c",
+        "ScriptVariant_Clear": "8aef746d78a88ec49716d9c9640d67aee0c03063298049d7d9e92fdf26862ad1",
+        "ScriptVariant_ChangeType": "73e62eb5f603422e667435567c887d4c08dd32da61443e964dd5fdb4d7c2a8fa"
+      }
+    },
+    {
+      "revision": 3680,
+      "commit": "cbacfd01002925ec9016f03bbf45dc576e135f1a",
+      "engine": "3741",
+      "coordinate_components": 5,
+      "coordinate_scalar_type": "short",
+      "selected_entry_sha256": "3310b7b66eac0de34a911d189e6a46bc6c84d0b0d580064d87dabcb604c21608",
+      "source_sha256": {
+        "getter": "f3e540dd7e2cc6a3e959bbd6a46b7f03e41e43c2d1c943d61d98613c95ffa0e7",
+        "attack-coordinates": "eee1e15a6b21d00ed111d233d6020f204243b8faf7c9e0b7d20b4caa3da64f34",
+        "bbox-coordinates": "f01e2eda4fee8946678fa76eff9b6b83cc851ed4f34a95aec4270c6147ac678c",
+        "ScriptVariant_Clear": "8aef746d78a88ec49716d9c9640d67aee0c03063298049d7d9e92fdf26862ad1",
+        "ScriptVariant_ChangeType": "73e62eb5f603422e667435567c887d4c08dd32da61443e964dd5fdb4d7c2a8fa"
+      }
+    },
+    {
+      "revision": 3681,
+      "commit": "e86a5c32f6303ab0d8432dfe2575b17dc2af5baf",
+      "engine": "3741",
+      "coordinate_components": 5,
+      "coordinate_scalar_type": "short",
+      "selected_entry_sha256": "3310b7b66eac0de34a911d189e6a46bc6c84d0b0d580064d87dabcb604c21608",
+      "source_sha256": {
+        "getter": "f3e540dd7e2cc6a3e959bbd6a46b7f03e41e43c2d1c943d61d98613c95ffa0e7",
+        "attack-coordinates": "eee1e15a6b21d00ed111d233d6020f204243b8faf7c9e0b7d20b4caa3da64f34",
+        "bbox-coordinates": "f01e2eda4fee8946678fa76eff9b6b83cc851ed4f34a95aec4270c6147ac678c",
+        "ScriptVariant_Clear": "8aef746d78a88ec49716d9c9640d67aee0c03063298049d7d9e92fdf26862ad1",
+        "ScriptVariant_ChangeType": "73e62eb5f603422e667435567c887d4c08dd32da61443e964dd5fdb4d7c2a8fa"
+      }
+    },
+    {
+      "revision": 3682,
+      "commit": "a41ea87ba402b98c6b5397c6a402834a802e1801",
+      "engine": "3741",
+      "coordinate_components": 5,
+      "coordinate_scalar_type": "short",
+      "selected_entry_sha256": "3310b7b66eac0de34a911d189e6a46bc6c84d0b0d580064d87dabcb604c21608",
+      "source_sha256": {
+        "getter": "f3e540dd7e2cc6a3e959bbd6a46b7f03e41e43c2d1c943d61d98613c95ffa0e7",
+        "attack-coordinates": "eee1e15a6b21d00ed111d233d6020f204243b8faf7c9e0b7d20b4caa3da64f34",
+        "bbox-coordinates": "f01e2eda4fee8946678fa76eff9b6b83cc851ed4f34a95aec4270c6147ac678c",
+        "ScriptVariant_Clear": "8aef746d78a88ec49716d9c9640d67aee0c03063298049d7d9e92fdf26862ad1",
+        "ScriptVariant_ChangeType": "73e62eb5f603422e667435567c887d4c08dd32da61443e964dd5fdb4d7c2a8fa"
+      }
+    },
+    {
+      "revision": 3683,
+      "commit": "b79ec28e381f0b94f811c9e989759e92f5d02e51",
+      "engine": "3741",
+      "coordinate_components": 5,
+      "coordinate_scalar_type": "short",
+      "selected_entry_sha256": "3310b7b66eac0de34a911d189e6a46bc6c84d0b0d580064d87dabcb604c21608",
+      "source_sha256": {
+        "getter": "f3e540dd7e2cc6a3e959bbd6a46b7f03e41e43c2d1c943d61d98613c95ffa0e7",
+        "attack-coordinates": "eee1e15a6b21d00ed111d233d6020f204243b8faf7c9e0b7d20b4caa3da64f34",
+        "bbox-coordinates": "f01e2eda4fee8946678fa76eff9b6b83cc851ed4f34a95aec4270c6147ac678c",
+        "ScriptVariant_Clear": "8aef746d78a88ec49716d9c9640d67aee0c03063298049d7d9e92fdf26862ad1",
+        "ScriptVariant_ChangeType": "73e62eb5f603422e667435567c887d4c08dd32da61443e964dd5fdb4d7c2a8fa"
+      }
+    },
+    {
+      "revision": 3684,
+      "commit": "8b83a04c18b64a32b2b230861999cd655894e02b",
+      "engine": "3741",
+      "coordinate_components": 5,
+      "coordinate_scalar_type": "short",
+      "selected_entry_sha256": "3310b7b66eac0de34a911d189e6a46bc6c84d0b0d580064d87dabcb604c21608",
+      "source_sha256": {
+        "getter": "f3e540dd7e2cc6a3e959bbd6a46b7f03e41e43c2d1c943d61d98613c95ffa0e7",
+        "attack-coordinates": "eee1e15a6b21d00ed111d233d6020f204243b8faf7c9e0b7d20b4caa3da64f34",
+        "bbox-coordinates": "f01e2eda4fee8946678fa76eff9b6b83cc851ed4f34a95aec4270c6147ac678c",
+        "ScriptVariant_Clear": "8aef746d78a88ec49716d9c9640d67aee0c03063298049d7d9e92fdf26862ad1",
+        "ScriptVariant_ChangeType": "73e62eb5f603422e667435567c887d4c08dd32da61443e964dd5fdb4d7c2a8fa"
+      }
+    },
+    {
+      "revision": 3685,
+      "commit": "8e0f3d0bd64e99244598ddf636c5203c2a6b0f2e",
+      "engine": "3741",
+      "coordinate_components": 5,
+      "coordinate_scalar_type": "short",
+      "selected_entry_sha256": "3310b7b66eac0de34a911d189e6a46bc6c84d0b0d580064d87dabcb604c21608",
+      "source_sha256": {
+        "getter": "440383de29f550e4955f08096d9037949b80f86900165ed3454494722127db32",
+        "attack-coordinates": "eee1e15a6b21d00ed111d233d6020f204243b8faf7c9e0b7d20b4caa3da64f34",
+        "bbox-coordinates": "f01e2eda4fee8946678fa76eff9b6b83cc851ed4f34a95aec4270c6147ac678c",
+        "ScriptVariant_Clear": "8aef746d78a88ec49716d9c9640d67aee0c03063298049d7d9e92fdf26862ad1",
+        "ScriptVariant_ChangeType": "73e62eb5f603422e667435567c887d4c08dd32da61443e964dd5fdb4d7c2a8fa"
+      }
+    },
+    {
+      "revision": 3686,
+      "commit": "d37cca26d57bba5a4f5c190f80562f768785901d",
+      "engine": "3741",
+      "coordinate_components": 5,
+      "coordinate_scalar_type": "short",
+      "selected_entry_sha256": "3310b7b66eac0de34a911d189e6a46bc6c84d0b0d580064d87dabcb604c21608",
+      "source_sha256": {
+        "getter": "440383de29f550e4955f08096d9037949b80f86900165ed3454494722127db32",
+        "attack-coordinates": "eee1e15a6b21d00ed111d233d6020f204243b8faf7c9e0b7d20b4caa3da64f34",
+        "bbox-coordinates": "f01e2eda4fee8946678fa76eff9b6b83cc851ed4f34a95aec4270c6147ac678c",
+        "ScriptVariant_Clear": "8aef746d78a88ec49716d9c9640d67aee0c03063298049d7d9e92fdf26862ad1",
+        "ScriptVariant_ChangeType": "73e62eb5f603422e667435567c887d4c08dd32da61443e964dd5fdb4d7c2a8fa"
+      }
+    },
+    {
+      "revision": 3689,
+      "commit": "953da13e27e3a72fc61ff9fe71c272968e9e7270",
+      "engine": "3741",
+      "coordinate_components": 5,
+      "coordinate_scalar_type": "short",
+      "selected_entry_sha256": "3310b7b66eac0de34a911d189e6a46bc6c84d0b0d580064d87dabcb604c21608",
+      "source_sha256": {
+        "getter": "440383de29f550e4955f08096d9037949b80f86900165ed3454494722127db32",
+        "attack-coordinates": "eee1e15a6b21d00ed111d233d6020f204243b8faf7c9e0b7d20b4caa3da64f34",
+        "bbox-coordinates": "f01e2eda4fee8946678fa76eff9b6b83cc851ed4f34a95aec4270c6147ac678c",
+        "ScriptVariant_Clear": "8aef746d78a88ec49716d9c9640d67aee0c03063298049d7d9e92fdf26862ad1",
+        "ScriptVariant_ChangeType": "73e62eb5f603422e667435567c887d4c08dd32da61443e964dd5fdb4d7c2a8fa"
+      }
+    },
+    {
+      "revision": 3690,
+      "commit": "e4cf90c8a3784263df7809672a2b4998bb000831",
+      "engine": "3741",
+      "coordinate_components": 5,
+      "coordinate_scalar_type": "short",
+      "selected_entry_sha256": "3310b7b66eac0de34a911d189e6a46bc6c84d0b0d580064d87dabcb604c21608",
+      "source_sha256": {
+        "getter": "440383de29f550e4955f08096d9037949b80f86900165ed3454494722127db32",
+        "attack-coordinates": "eee1e15a6b21d00ed111d233d6020f204243b8faf7c9e0b7d20b4caa3da64f34",
+        "bbox-coordinates": "f01e2eda4fee8946678fa76eff9b6b83cc851ed4f34a95aec4270c6147ac678c",
+        "ScriptVariant_Clear": "8aef746d78a88ec49716d9c9640d67aee0c03063298049d7d9e92fdf26862ad1",
+        "ScriptVariant_ChangeType": "73e62eb5f603422e667435567c887d4c08dd32da61443e964dd5fdb4d7c2a8fa"
+      }
+    },
+    {
+      "revision": 3691,
+      "commit": "42bc05f6630514c0a21e14faa7c4e671329a91ae",
+      "engine": "3741",
+      "coordinate_components": 5,
+      "coordinate_scalar_type": "short",
+      "selected_entry_sha256": "3310b7b66eac0de34a911d189e6a46bc6c84d0b0d580064d87dabcb604c21608",
+      "source_sha256": {
+        "getter": "440383de29f550e4955f08096d9037949b80f86900165ed3454494722127db32",
+        "attack-coordinates": "eee1e15a6b21d00ed111d233d6020f204243b8faf7c9e0b7d20b4caa3da64f34",
+        "bbox-coordinates": "f01e2eda4fee8946678fa76eff9b6b83cc851ed4f34a95aec4270c6147ac678c",
+        "ScriptVariant_Clear": "8aef746d78a88ec49716d9c9640d67aee0c03063298049d7d9e92fdf26862ad1",
+        "ScriptVariant_ChangeType": "73e62eb5f603422e667435567c887d4c08dd32da61443e964dd5fdb4d7c2a8fa"
+      }
+    },
+    {
+      "revision": 3692,
+      "commit": "5c31bc7f06580725f11d436855533a2485dfb757",
+      "engine": "3741",
+      "coordinate_components": 5,
+      "coordinate_scalar_type": "short",
+      "selected_entry_sha256": "3310b7b66eac0de34a911d189e6a46bc6c84d0b0d580064d87dabcb604c21608",
+      "source_sha256": {
+        "getter": "440383de29f550e4955f08096d9037949b80f86900165ed3454494722127db32",
+        "attack-coordinates": "eee1e15a6b21d00ed111d233d6020f204243b8faf7c9e0b7d20b4caa3da64f34",
+        "bbox-coordinates": "f01e2eda4fee8946678fa76eff9b6b83cc851ed4f34a95aec4270c6147ac678c",
+        "ScriptVariant_Clear": "8aef746d78a88ec49716d9c9640d67aee0c03063298049d7d9e92fdf26862ad1",
+        "ScriptVariant_ChangeType": "73e62eb5f603422e667435567c887d4c08dd32da61443e964dd5fdb4d7c2a8fa"
+      }
+    },
+    {
+      "revision": 3693,
+      "commit": "ec0e28efea5a3a63a28ccd9abe2fb3fb88513416",
+      "engine": "3741",
+      "coordinate_components": 5,
+      "coordinate_scalar_type": "short",
+      "selected_entry_sha256": "3310b7b66eac0de34a911d189e6a46bc6c84d0b0d580064d87dabcb604c21608",
+      "source_sha256": {
+        "getter": "440383de29f550e4955f08096d9037949b80f86900165ed3454494722127db32",
+        "attack-coordinates": "eee1e15a6b21d00ed111d233d6020f204243b8faf7c9e0b7d20b4caa3da64f34",
+        "bbox-coordinates": "f01e2eda4fee8946678fa76eff9b6b83cc851ed4f34a95aec4270c6147ac678c",
+        "ScriptVariant_Clear": "8aef746d78a88ec49716d9c9640d67aee0c03063298049d7d9e92fdf26862ad1",
+        "ScriptVariant_ChangeType": "73e62eb5f603422e667435567c887d4c08dd32da61443e964dd5fdb4d7c2a8fa"
+      }
+    },
+    {
+      "revision": 3694,
+      "commit": "aaae13d3487ebedd9a3ef121d6296b5a3afd0cd9",
+      "engine": "3741",
+      "coordinate_components": 5,
+      "coordinate_scalar_type": "short",
+      "selected_entry_sha256": "3310b7b66eac0de34a911d189e6a46bc6c84d0b0d580064d87dabcb604c21608",
+      "source_sha256": {
+        "getter": "440383de29f550e4955f08096d9037949b80f86900165ed3454494722127db32",
+        "attack-coordinates": "eee1e15a6b21d00ed111d233d6020f204243b8faf7c9e0b7d20b4caa3da64f34",
+        "bbox-coordinates": "f01e2eda4fee8946678fa76eff9b6b83cc851ed4f34a95aec4270c6147ac678c",
+        "ScriptVariant_Clear": "8aef746d78a88ec49716d9c9640d67aee0c03063298049d7d9e92fdf26862ad1",
+        "ScriptVariant_ChangeType": "73e62eb5f603422e667435567c887d4c08dd32da61443e964dd5fdb4d7c2a8fa"
+      }
+    },
+    {
+      "revision": 3697,
+      "commit": "142e0957159aab6b4698a94723ea282cb54a3c70",
+      "engine": "3741",
+      "coordinate_components": 5,
+      "coordinate_scalar_type": "short",
+      "selected_entry_sha256": "3310b7b66eac0de34a911d189e6a46bc6c84d0b0d580064d87dabcb604c21608",
+      "source_sha256": {
+        "getter": "440383de29f550e4955f08096d9037949b80f86900165ed3454494722127db32",
+        "attack-coordinates": "eee1e15a6b21d00ed111d233d6020f204243b8faf7c9e0b7d20b4caa3da64f34",
+        "bbox-coordinates": "f01e2eda4fee8946678fa76eff9b6b83cc851ed4f34a95aec4270c6147ac678c",
+        "ScriptVariant_Clear": "8aef746d78a88ec49716d9c9640d67aee0c03063298049d7d9e92fdf26862ad1",
+        "ScriptVariant_ChangeType": "73e62eb5f603422e667435567c887d4c08dd32da61443e964dd5fdb4d7c2a8fa"
+      }
+    },
+    {
+      "revision": 3699,
+      "commit": "f632ac4fe81ea6c6b3cd9d74a1cd7538471579bb",
+      "engine": "3741",
+      "coordinate_components": 5,
+      "coordinate_scalar_type": "short",
+      "selected_entry_sha256": "3310b7b66eac0de34a911d189e6a46bc6c84d0b0d580064d87dabcb604c21608",
+      "source_sha256": {
+        "getter": "440383de29f550e4955f08096d9037949b80f86900165ed3454494722127db32",
+        "attack-coordinates": "eee1e15a6b21d00ed111d233d6020f204243b8faf7c9e0b7d20b4caa3da64f34",
+        "bbox-coordinates": "f01e2eda4fee8946678fa76eff9b6b83cc851ed4f34a95aec4270c6147ac678c",
+        "ScriptVariant_Clear": "8aef746d78a88ec49716d9c9640d67aee0c03063298049d7d9e92fdf26862ad1",
+        "ScriptVariant_ChangeType": "73e62eb5f603422e667435567c887d4c08dd32da61443e964dd5fdb4d7c2a8fa"
+      }
+    },
+    {
+      "revision": 3701,
+      "commit": "7644ed068259c3edbfaed1cd85828b4a28213997",
+      "engine": "3741",
+      "coordinate_components": 5,
+      "coordinate_scalar_type": "short",
+      "selected_entry_sha256": "3310b7b66eac0de34a911d189e6a46bc6c84d0b0d580064d87dabcb604c21608",
+      "source_sha256": {
+        "getter": "440383de29f550e4955f08096d9037949b80f86900165ed3454494722127db32",
+        "attack-coordinates": "eee1e15a6b21d00ed111d233d6020f204243b8faf7c9e0b7d20b4caa3da64f34",
+        "bbox-coordinates": "f01e2eda4fee8946678fa76eff9b6b83cc851ed4f34a95aec4270c6147ac678c",
+        "ScriptVariant_Clear": "8aef746d78a88ec49716d9c9640d67aee0c03063298049d7d9e92fdf26862ad1",
+        "ScriptVariant_ChangeType": "73e62eb5f603422e667435567c887d4c08dd32da61443e964dd5fdb4d7c2a8fa"
+      }
+    },
+    {
+      "revision": 3703,
+      "commit": "bb82f79d47f02649e3a79e22455911f98cc900cb",
+      "engine": "3741",
+      "coordinate_components": 5,
+      "coordinate_scalar_type": "short",
+      "selected_entry_sha256": "3310b7b66eac0de34a911d189e6a46bc6c84d0b0d580064d87dabcb604c21608",
+      "source_sha256": {
+        "getter": "440383de29f550e4955f08096d9037949b80f86900165ed3454494722127db32",
+        "attack-coordinates": "eee1e15a6b21d00ed111d233d6020f204243b8faf7c9e0b7d20b4caa3da64f34",
+        "bbox-coordinates": "f01e2eda4fee8946678fa76eff9b6b83cc851ed4f34a95aec4270c6147ac678c",
+        "ScriptVariant_Clear": "8aef746d78a88ec49716d9c9640d67aee0c03063298049d7d9e92fdf26862ad1",
+        "ScriptVariant_ChangeType": "73e62eb5f603422e667435567c887d4c08dd32da61443e964dd5fdb4d7c2a8fa"
+      }
+    },
+    {
+      "revision": 3704,
+      "commit": "b1bf3dd56ebfcd11eafe265120ceedf0b44ed2f4",
+      "engine": "3741",
+      "coordinate_components": 5,
+      "coordinate_scalar_type": "short",
+      "selected_entry_sha256": "3310b7b66eac0de34a911d189e6a46bc6c84d0b0d580064d87dabcb604c21608",
+      "source_sha256": {
+        "getter": "440383de29f550e4955f08096d9037949b80f86900165ed3454494722127db32",
+        "attack-coordinates": "eee1e15a6b21d00ed111d233d6020f204243b8faf7c9e0b7d20b4caa3da64f34",
+        "bbox-coordinates": "f01e2eda4fee8946678fa76eff9b6b83cc851ed4f34a95aec4270c6147ac678c",
+        "ScriptVariant_Clear": "8aef746d78a88ec49716d9c9640d67aee0c03063298049d7d9e92fdf26862ad1",
+        "ScriptVariant_ChangeType": "73e62eb5f603422e667435567c887d4c08dd32da61443e964dd5fdb4d7c2a8fa"
+      }
+    },
+    {
+      "revision": 3707,
+      "commit": "3e8913af8d0090f1082b5c2a7e624d050c4960fc",
+      "engine": "3741",
+      "coordinate_components": 5,
+      "coordinate_scalar_type": "short",
+      "selected_entry_sha256": "3310b7b66eac0de34a911d189e6a46bc6c84d0b0d580064d87dabcb604c21608",
+      "source_sha256": {
+        "getter": "440383de29f550e4955f08096d9037949b80f86900165ed3454494722127db32",
+        "attack-coordinates": "eee1e15a6b21d00ed111d233d6020f204243b8faf7c9e0b7d20b4caa3da64f34",
+        "bbox-coordinates": "f01e2eda4fee8946678fa76eff9b6b83cc851ed4f34a95aec4270c6147ac678c",
+        "ScriptVariant_Clear": "8aef746d78a88ec49716d9c9640d67aee0c03063298049d7d9e92fdf26862ad1",
+        "ScriptVariant_ChangeType": "73e62eb5f603422e667435567c887d4c08dd32da61443e964dd5fdb4d7c2a8fa"
+      }
+    },
+    {
+      "revision": 3708,
+      "commit": "987fbc31c5be3002732e735a0bdd905eedd7c2b1",
+      "engine": "3741",
+      "coordinate_components": 5,
+      "coordinate_scalar_type": "short",
+      "selected_entry_sha256": "3310b7b66eac0de34a911d189e6a46bc6c84d0b0d580064d87dabcb604c21608",
+      "source_sha256": {
+        "getter": "440383de29f550e4955f08096d9037949b80f86900165ed3454494722127db32",
+        "attack-coordinates": "eee1e15a6b21d00ed111d233d6020f204243b8faf7c9e0b7d20b4caa3da64f34",
+        "bbox-coordinates": "f01e2eda4fee8946678fa76eff9b6b83cc851ed4f34a95aec4270c6147ac678c",
+        "ScriptVariant_Clear": "8aef746d78a88ec49716d9c9640d67aee0c03063298049d7d9e92fdf26862ad1",
+        "ScriptVariant_ChangeType": "73e62eb5f603422e667435567c887d4c08dd32da61443e964dd5fdb4d7c2a8fa"
+      }
+    },
+    {
+      "revision": 3709,
+      "commit": "25db4c7a58a555fd8cf1f6e7931ad2ce4cc6e6d9",
+      "engine": "3741",
+      "coordinate_components": 5,
+      "coordinate_scalar_type": "short",
+      "selected_entry_sha256": "3310b7b66eac0de34a911d189e6a46bc6c84d0b0d580064d87dabcb604c21608",
+      "source_sha256": {
+        "getter": "440383de29f550e4955f08096d9037949b80f86900165ed3454494722127db32",
+        "attack-coordinates": "eee1e15a6b21d00ed111d233d6020f204243b8faf7c9e0b7d20b4caa3da64f34",
+        "bbox-coordinates": "f01e2eda4fee8946678fa76eff9b6b83cc851ed4f34a95aec4270c6147ac678c",
+        "ScriptVariant_Clear": "8aef746d78a88ec49716d9c9640d67aee0c03063298049d7d9e92fdf26862ad1",
+        "ScriptVariant_ChangeType": "73e62eb5f603422e667435567c887d4c08dd32da61443e964dd5fdb4d7c2a8fa"
+      }
+    },
+    {
+      "revision": 3710,
+      "commit": "9622e606e8039fb860ae06d33c119e980f779598",
+      "engine": "3741",
+      "coordinate_components": 5,
+      "coordinate_scalar_type": "short",
+      "selected_entry_sha256": "3310b7b66eac0de34a911d189e6a46bc6c84d0b0d580064d87dabcb604c21608",
+      "source_sha256": {
+        "getter": "b6cefb634bb43b2bfcf2b8c972355de87c2c502968483a7cbe5372c2b35ee837",
+        "attack-coordinates": "eee1e15a6b21d00ed111d233d6020f204243b8faf7c9e0b7d20b4caa3da64f34",
+        "bbox-coordinates": "f01e2eda4fee8946678fa76eff9b6b83cc851ed4f34a95aec4270c6147ac678c",
+        "ScriptVariant_Clear": "8aef746d78a88ec49716d9c9640d67aee0c03063298049d7d9e92fdf26862ad1",
+        "ScriptVariant_ChangeType": "73e62eb5f603422e667435567c887d4c08dd32da61443e964dd5fdb4d7c2a8fa"
+      }
+    },
+    {
+      "revision": 3711,
+      "commit": "6ec17fa411b237f789c910e1234a33a618ab236d",
+      "engine": "3741",
+      "coordinate_components": 5,
+      "coordinate_scalar_type": "short",
+      "selected_entry_sha256": "3310b7b66eac0de34a911d189e6a46bc6c84d0b0d580064d87dabcb604c21608",
+      "source_sha256": {
+        "getter": "b6cefb634bb43b2bfcf2b8c972355de87c2c502968483a7cbe5372c2b35ee837",
+        "attack-coordinates": "eee1e15a6b21d00ed111d233d6020f204243b8faf7c9e0b7d20b4caa3da64f34",
+        "bbox-coordinates": "f01e2eda4fee8946678fa76eff9b6b83cc851ed4f34a95aec4270c6147ac678c",
+        "ScriptVariant_Clear": "8aef746d78a88ec49716d9c9640d67aee0c03063298049d7d9e92fdf26862ad1",
+        "ScriptVariant_ChangeType": "73e62eb5f603422e667435567c887d4c08dd32da61443e964dd5fdb4d7c2a8fa"
+      }
+    },
+    {
+      "revision": 3713,
+      "commit": "1ed3bec13248887af44a132b4a8a4fa0fe501dc3",
+      "engine": "3741",
+      "coordinate_components": 5,
+      "coordinate_scalar_type": "short",
+      "selected_entry_sha256": "3310b7b66eac0de34a911d189e6a46bc6c84d0b0d580064d87dabcb604c21608",
+      "source_sha256": {
+        "getter": "b6cefb634bb43b2bfcf2b8c972355de87c2c502968483a7cbe5372c2b35ee837",
+        "attack-coordinates": "eee1e15a6b21d00ed111d233d6020f204243b8faf7c9e0b7d20b4caa3da64f34",
+        "bbox-coordinates": "f01e2eda4fee8946678fa76eff9b6b83cc851ed4f34a95aec4270c6147ac678c",
+        "ScriptVariant_Clear": "8aef746d78a88ec49716d9c9640d67aee0c03063298049d7d9e92fdf26862ad1",
+        "ScriptVariant_ChangeType": "73e62eb5f603422e667435567c887d4c08dd32da61443e964dd5fdb4d7c2a8fa"
+      }
+    },
+    {
+      "revision": 3714,
+      "commit": "0e365b7c55cb92faaca8a5c3a1b9a91597815bb9",
+      "engine": "3741",
+      "coordinate_components": 5,
+      "coordinate_scalar_type": "short",
+      "selected_entry_sha256": "3310b7b66eac0de34a911d189e6a46bc6c84d0b0d580064d87dabcb604c21608",
+      "source_sha256": {
+        "getter": "b6cefb634bb43b2bfcf2b8c972355de87c2c502968483a7cbe5372c2b35ee837",
+        "attack-coordinates": "eee1e15a6b21d00ed111d233d6020f204243b8faf7c9e0b7d20b4caa3da64f34",
+        "bbox-coordinates": "f01e2eda4fee8946678fa76eff9b6b83cc851ed4f34a95aec4270c6147ac678c",
+        "ScriptVariant_Clear": "8aef746d78a88ec49716d9c9640d67aee0c03063298049d7d9e92fdf26862ad1",
+        "ScriptVariant_ChangeType": "73e62eb5f603422e667435567c887d4c08dd32da61443e964dd5fdb4d7c2a8fa"
+      }
+    },
+    {
+      "revision": 3715,
+      "commit": "8ccd518139e35ff47f5d415b418c6f3c2e310d6f",
+      "engine": "3741",
+      "coordinate_components": 5,
+      "coordinate_scalar_type": "short",
+      "selected_entry_sha256": "3310b7b66eac0de34a911d189e6a46bc6c84d0b0d580064d87dabcb604c21608",
+      "source_sha256": {
+        "getter": "702d0774657ae6f9dab10500dcd0bfdb09948760320c4d8f977411c786845889",
+        "attack-coordinates": "eee1e15a6b21d00ed111d233d6020f204243b8faf7c9e0b7d20b4caa3da64f34",
+        "bbox-coordinates": "f01e2eda4fee8946678fa76eff9b6b83cc851ed4f34a95aec4270c6147ac678c",
+        "ScriptVariant_Clear": "8aef746d78a88ec49716d9c9640d67aee0c03063298049d7d9e92fdf26862ad1",
+        "ScriptVariant_ChangeType": "73e62eb5f603422e667435567c887d4c08dd32da61443e964dd5fdb4d7c2a8fa"
+      }
+    },
+    {
+      "revision": 3716,
+      "commit": "b5a9f8a224277fc88eae2c7c34eebe2dc0825684",
+      "engine": "3741",
+      "coordinate_components": 5,
+      "coordinate_scalar_type": "short",
+      "selected_entry_sha256": "3310b7b66eac0de34a911d189e6a46bc6c84d0b0d580064d87dabcb604c21608",
+      "source_sha256": {
+        "getter": "702d0774657ae6f9dab10500dcd0bfdb09948760320c4d8f977411c786845889",
+        "attack-coordinates": "eee1e15a6b21d00ed111d233d6020f204243b8faf7c9e0b7d20b4caa3da64f34",
+        "bbox-coordinates": "f01e2eda4fee8946678fa76eff9b6b83cc851ed4f34a95aec4270c6147ac678c",
+        "ScriptVariant_Clear": "8aef746d78a88ec49716d9c9640d67aee0c03063298049d7d9e92fdf26862ad1",
+        "ScriptVariant_ChangeType": "73e62eb5f603422e667435567c887d4c08dd32da61443e964dd5fdb4d7c2a8fa"
+      }
+    },
+    {
+      "revision": 3722,
+      "commit": "1cd80da2e10a4c5e619422ad94f7c1abc42c2226",
+      "engine": "3741",
+      "coordinate_components": 5,
+      "coordinate_scalar_type": "short",
+      "selected_entry_sha256": "3310b7b66eac0de34a911d189e6a46bc6c84d0b0d580064d87dabcb604c21608",
+      "source_sha256": {
+        "getter": "702d0774657ae6f9dab10500dcd0bfdb09948760320c4d8f977411c786845889",
+        "attack-coordinates": "eee1e15a6b21d00ed111d233d6020f204243b8faf7c9e0b7d20b4caa3da64f34",
+        "bbox-coordinates": "f01e2eda4fee8946678fa76eff9b6b83cc851ed4f34a95aec4270c6147ac678c",
+        "ScriptVariant_Clear": "8aef746d78a88ec49716d9c9640d67aee0c03063298049d7d9e92fdf26862ad1",
+        "ScriptVariant_ChangeType": "73e62eb5f603422e667435567c887d4c08dd32da61443e964dd5fdb4d7c2a8fa"
+      }
+    },
+    {
+      "revision": 3725,
+      "commit": "58dab1fbcae12a508bd69fd2f79d48d74bfc4202",
+      "engine": "3741",
+      "coordinate_components": 5,
+      "coordinate_scalar_type": "short",
+      "selected_entry_sha256": "3310b7b66eac0de34a911d189e6a46bc6c84d0b0d580064d87dabcb604c21608",
+      "source_sha256": {
+        "getter": "702d0774657ae6f9dab10500dcd0bfdb09948760320c4d8f977411c786845889",
+        "attack-coordinates": "eee1e15a6b21d00ed111d233d6020f204243b8faf7c9e0b7d20b4caa3da64f34",
+        "bbox-coordinates": "f01e2eda4fee8946678fa76eff9b6b83cc851ed4f34a95aec4270c6147ac678c",
+        "ScriptVariant_Clear": "8aef746d78a88ec49716d9c9640d67aee0c03063298049d7d9e92fdf26862ad1",
+        "ScriptVariant_ChangeType": "73e62eb5f603422e667435567c887d4c08dd32da61443e964dd5fdb4d7c2a8fa"
+      }
+    },
+    {
+      "revision": 3726,
+      "commit": "4a94293d2f916b1ba05ac4a6f9635abbb394a8a9",
+      "engine": "3741",
+      "coordinate_components": 5,
+      "coordinate_scalar_type": "short",
+      "selected_entry_sha256": "3310b7b66eac0de34a911d189e6a46bc6c84d0b0d580064d87dabcb604c21608",
+      "source_sha256": {
+        "getter": "702d0774657ae6f9dab10500dcd0bfdb09948760320c4d8f977411c786845889",
+        "attack-coordinates": "eee1e15a6b21d00ed111d233d6020f204243b8faf7c9e0b7d20b4caa3da64f34",
+        "bbox-coordinates": "f01e2eda4fee8946678fa76eff9b6b83cc851ed4f34a95aec4270c6147ac678c",
+        "ScriptVariant_Clear": "8aef746d78a88ec49716d9c9640d67aee0c03063298049d7d9e92fdf26862ad1",
+        "ScriptVariant_ChangeType": "73e62eb5f603422e667435567c887d4c08dd32da61443e964dd5fdb4d7c2a8fa"
+      }
+    },
+    {
+      "revision": 3727,
+      "commit": "ad3f59f9325e89b68f82e4daf162d0f0510af8d3",
+      "engine": "3741",
+      "coordinate_components": 5,
+      "coordinate_scalar_type": "short",
+      "selected_entry_sha256": "3310b7b66eac0de34a911d189e6a46bc6c84d0b0d580064d87dabcb604c21608",
+      "source_sha256": {
+        "getter": "3029d2dbc0568f89947cfd2e8d5aae4aeebbd326d8656d2197a33dab41f37fd8",
+        "attack-coordinates": "eee1e15a6b21d00ed111d233d6020f204243b8faf7c9e0b7d20b4caa3da64f34",
+        "bbox-coordinates": "f01e2eda4fee8946678fa76eff9b6b83cc851ed4f34a95aec4270c6147ac678c",
+        "ScriptVariant_Clear": "8aef746d78a88ec49716d9c9640d67aee0c03063298049d7d9e92fdf26862ad1",
+        "ScriptVariant_ChangeType": "73e62eb5f603422e667435567c887d4c08dd32da61443e964dd5fdb4d7c2a8fa"
+      }
+    },
+    {
+      "revision": 3728,
+      "commit": "9f4ad7f785557d87829acd19972b8cc0704fc8c1",
+      "engine": "3741",
+      "coordinate_components": 5,
+      "coordinate_scalar_type": "short",
+      "selected_entry_sha256": "3310b7b66eac0de34a911d189e6a46bc6c84d0b0d580064d87dabcb604c21608",
+      "source_sha256": {
+        "getter": "720977906404cf56c5dc6d624d8a211fca1e197184ab17283a83dd0cec80fa2f",
+        "attack-coordinates": "eee1e15a6b21d00ed111d233d6020f204243b8faf7c9e0b7d20b4caa3da64f34",
+        "bbox-coordinates": "f01e2eda4fee8946678fa76eff9b6b83cc851ed4f34a95aec4270c6147ac678c",
+        "ScriptVariant_Clear": "8aef746d78a88ec49716d9c9640d67aee0c03063298049d7d9e92fdf26862ad1",
+        "ScriptVariant_ChangeType": "73e62eb5f603422e667435567c887d4c08dd32da61443e964dd5fdb4d7c2a8fa"
+      }
+    },
+    {
+      "revision": 3729,
+      "commit": "b3dc9a4a79d1f6a1b96b573e060ef97067f1176c",
+      "engine": "3741",
+      "coordinate_components": 6,
+      "coordinate_scalar_type": "short",
+      "selected_entry_sha256": "3310b7b66eac0de34a911d189e6a46bc6c84d0b0d580064d87dabcb604c21608",
+      "source_sha256": {
+        "getter": "720977906404cf56c5dc6d624d8a211fca1e197184ab17283a83dd0cec80fa2f",
+        "attack-coordinates": "8fec2e177bdd859daf644b34ce4b168b6c0a5e7a176a2ef7816a4074500c5cce",
+        "bbox-coordinates": "7e15afb93367a9b5a54d7d956c90551293cbac810973c2495cd863e8c4174c7c",
+        "ScriptVariant_Clear": "8aef746d78a88ec49716d9c9640d67aee0c03063298049d7d9e92fdf26862ad1",
+        "ScriptVariant_ChangeType": "73e62eb5f603422e667435567c887d4c08dd32da61443e964dd5fdb4d7c2a8fa"
+      }
+    },
+    {
+      "revision": 3730,
+      "commit": "40441f127f7ad7b7cfda0eebb489e8feffd1f806",
+      "engine": "3741",
+      "coordinate_components": 6,
+      "coordinate_scalar_type": "short",
+      "selected_entry_sha256": "3310b7b66eac0de34a911d189e6a46bc6c84d0b0d580064d87dabcb604c21608",
+      "source_sha256": {
+        "getter": "720977906404cf56c5dc6d624d8a211fca1e197184ab17283a83dd0cec80fa2f",
+        "attack-coordinates": "8fec2e177bdd859daf644b34ce4b168b6c0a5e7a176a2ef7816a4074500c5cce",
+        "bbox-coordinates": "7e15afb93367a9b5a54d7d956c90551293cbac810973c2495cd863e8c4174c7c",
+        "ScriptVariant_Clear": "8aef746d78a88ec49716d9c9640d67aee0c03063298049d7d9e92fdf26862ad1",
+        "ScriptVariant_ChangeType": "73e62eb5f603422e667435567c887d4c08dd32da61443e964dd5fdb4d7c2a8fa"
+      }
+    },
+    {
+      "revision": 3732,
+      "commit": "0b2d8300b819cdee94817194b2db7489d25d45d3",
+      "engine": "3741",
+      "coordinate_components": 6,
+      "coordinate_scalar_type": "short",
+      "selected_entry_sha256": "3310b7b66eac0de34a911d189e6a46bc6c84d0b0d580064d87dabcb604c21608",
+      "source_sha256": {
+        "getter": "720977906404cf56c5dc6d624d8a211fca1e197184ab17283a83dd0cec80fa2f",
+        "attack-coordinates": "8fec2e177bdd859daf644b34ce4b168b6c0a5e7a176a2ef7816a4074500c5cce",
+        "bbox-coordinates": "7e15afb93367a9b5a54d7d956c90551293cbac810973c2495cd863e8c4174c7c",
+        "ScriptVariant_Clear": "8aef746d78a88ec49716d9c9640d67aee0c03063298049d7d9e92fdf26862ad1",
+        "ScriptVariant_ChangeType": "73e62eb5f603422e667435567c887d4c08dd32da61443e964dd5fdb4d7c2a8fa"
+      }
+    },
+    {
+      "revision": 3738,
+      "commit": "e0e03912cd594ffe04ca8bf7b462f1e97df6f6fe",
+      "engine": "3741",
+      "coordinate_components": 6,
+      "coordinate_scalar_type": "short",
+      "selected_entry_sha256": "3310b7b66eac0de34a911d189e6a46bc6c84d0b0d580064d87dabcb604c21608",
+      "source_sha256": {
+        "getter": "720977906404cf56c5dc6d624d8a211fca1e197184ab17283a83dd0cec80fa2f",
+        "attack-coordinates": "8fec2e177bdd859daf644b34ce4b168b6c0a5e7a176a2ef7816a4074500c5cce",
+        "bbox-coordinates": "7e15afb93367a9b5a54d7d956c90551293cbac810973c2495cd863e8c4174c7c",
+        "ScriptVariant_Clear": "8aef746d78a88ec49716d9c9640d67aee0c03063298049d7d9e92fdf26862ad1",
+        "ScriptVariant_ChangeType": "73e62eb5f603422e667435567c887d4c08dd32da61443e964dd5fdb4d7c2a8fa"
+      }
+    },
+    {
+      "revision": 3739,
+      "commit": "c790b4bc7fcba47efb912d31b4611f5df63d4807",
+      "engine": "3741",
+      "coordinate_components": 6,
+      "coordinate_scalar_type": "short",
+      "selected_entry_sha256": "3310b7b66eac0de34a911d189e6a46bc6c84d0b0d580064d87dabcb604c21608",
+      "source_sha256": {
+        "getter": "720977906404cf56c5dc6d624d8a211fca1e197184ab17283a83dd0cec80fa2f",
+        "attack-coordinates": "8fec2e177bdd859daf644b34ce4b168b6c0a5e7a176a2ef7816a4074500c5cce",
+        "bbox-coordinates": "7e15afb93367a9b5a54d7d956c90551293cbac810973c2495cd863e8c4174c7c",
+        "ScriptVariant_Clear": "8aef746d78a88ec49716d9c9640d67aee0c03063298049d7d9e92fdf26862ad1",
+        "ScriptVariant_ChangeType": "73e62eb5f603422e667435567c887d4c08dd32da61443e964dd5fdb4d7c2a8fa"
+      }
+    },
+    {
+      "revision": 3740,
+      "commit": "cf83dc7f4472e6a51aa84cfa37b47e5d3f42d986",
+      "engine": "3741",
+      "coordinate_components": 6,
+      "coordinate_scalar_type": "short",
+      "selected_entry_sha256": "3310b7b66eac0de34a911d189e6a46bc6c84d0b0d580064d87dabcb604c21608",
+      "source_sha256": {
+        "getter": "720977906404cf56c5dc6d624d8a211fca1e197184ab17283a83dd0cec80fa2f",
+        "attack-coordinates": "8fec2e177bdd859daf644b34ce4b168b6c0a5e7a176a2ef7816a4074500c5cce",
+        "bbox-coordinates": "7e15afb93367a9b5a54d7d956c90551293cbac810973c2495cd863e8c4174c7c",
+        "ScriptVariant_Clear": "8aef746d78a88ec49716d9c9640d67aee0c03063298049d7d9e92fdf26862ad1",
+        "ScriptVariant_ChangeType": "73e62eb5f603422e667435567c887d4c08dd32da61443e964dd5fdb4d7c2a8fa"
+      }
+    },
+    {
+      "revision": 3741,
+      "commit": "00bcc4947748e8af10d030a82b60520bbd402e30",
+      "engine": "3741",
+      "coordinate_components": 6,
+      "coordinate_scalar_type": "short",
+      "selected_entry_sha256": "3310b7b66eac0de34a911d189e6a46bc6c84d0b0d580064d87dabcb604c21608",
+      "source_sha256": {
+        "getter": "afee8b1ec48778405452343e912bcfee71f6e2322345c05252e1204f4ceaecf7",
+        "attack-coordinates": "8fec2e177bdd859daf644b34ce4b168b6c0a5e7a176a2ef7816a4074500c5cce",
+        "bbox-coordinates": "7e15afb93367a9b5a54d7d956c90551293cbac810973c2495cd863e8c4174c7c",
+        "ScriptVariant_Clear": "8aef746d78a88ec49716d9c9640d67aee0c03063298049d7d9e92fdf26862ad1",
+        "ScriptVariant_ChangeType": "73e62eb5f603422e667435567c887d4c08dd32da61443e964dd5fdb4d7c2a8fa"
+      }
+    },
+    {
+      "revision": 3742,
+      "commit": "0d20390cfe982136259ea3fa4bb8078801be9269",
+      "engine": "3741",
+      "coordinate_components": 6,
+      "coordinate_scalar_type": "short",
+      "selected_entry_sha256": "3310b7b66eac0de34a911d189e6a46bc6c84d0b0d580064d87dabcb604c21608",
+      "source_sha256": {
+        "getter": "afee8b1ec48778405452343e912bcfee71f6e2322345c05252e1204f4ceaecf7",
+        "attack-coordinates": "8fec2e177bdd859daf644b34ce4b168b6c0a5e7a176a2ef7816a4074500c5cce",
+        "bbox-coordinates": "7e15afb93367a9b5a54d7d956c90551293cbac810973c2495cd863e8c4174c7c",
+        "ScriptVariant_Clear": "8aef746d78a88ec49716d9c9640d67aee0c03063298049d7d9e92fdf26862ad1",
+        "ScriptVariant_ChangeType": "73e62eb5f603422e667435567c887d4c08dd32da61443e964dd5fdb4d7c2a8fa"
+      }
+    },
+    {
+      "revision": 3761,
+      "commit": "16814fdf39fdcdd78cb59f3d70748f1dc023a24f",
+      "engine": "3842",
+      "coordinate_components": 6,
+      "coordinate_scalar_type": "int",
+      "selected_entry_sha256": "53a4d1a79c4872260d22d40604155fd119a2c97828ebce64267c7a0ae19384b3",
+      "source_sha256": {
+        "getter": "fbd02ef22e5b619c35c8f3d0de7499cf94f24331b8e441febe5a96b7269c4856",
+        "attack-coordinates": "7ae833843ffc5ce5473ba361f12f91666349e7bd8158c9eff28f5a7daf1fa6ee",
+        "bbox-coordinates": "af16cdbe98257a02f43a41b7d1a66cf4f99cc563fcbf0599934da7e528ac70e3",
+        "ScriptVariant_Clear": "8aef746d78a88ec49716d9c9640d67aee0c03063298049d7d9e92fdf26862ad1",
+        "ScriptVariant_ChangeType": "73e62eb5f603422e667435567c887d4c08dd32da61443e964dd5fdb4d7c2a8fa"
+      }
+    },
+    {
+      "revision": 3762,
+      "commit": "75c8af299eb7b2b2d08b12783928305b9acb3e2a",
+      "engine": "3842",
+      "coordinate_components": 6,
+      "coordinate_scalar_type": "int",
+      "selected_entry_sha256": "53a4d1a79c4872260d22d40604155fd119a2c97828ebce64267c7a0ae19384b3",
+      "source_sha256": {
+        "getter": "fbd02ef22e5b619c35c8f3d0de7499cf94f24331b8e441febe5a96b7269c4856",
+        "attack-coordinates": "7ae833843ffc5ce5473ba361f12f91666349e7bd8158c9eff28f5a7daf1fa6ee",
+        "bbox-coordinates": "af16cdbe98257a02f43a41b7d1a66cf4f99cc563fcbf0599934da7e528ac70e3",
+        "ScriptVariant_Clear": "8aef746d78a88ec49716d9c9640d67aee0c03063298049d7d9e92fdf26862ad1",
+        "ScriptVariant_ChangeType": "73e62eb5f603422e667435567c887d4c08dd32da61443e964dd5fdb4d7c2a8fa"
+      }
+    },
+    {
+      "revision": 3766,
+      "commit": "fdfe164693e6036f058dff16486d4bf55f2c2d6a",
+      "engine": "3842",
+      "coordinate_components": 6,
+      "coordinate_scalar_type": "int",
+      "selected_entry_sha256": "53a4d1a79c4872260d22d40604155fd119a2c97828ebce64267c7a0ae19384b3",
+      "source_sha256": {
+        "getter": "fbd02ef22e5b619c35c8f3d0de7499cf94f24331b8e441febe5a96b7269c4856",
+        "attack-coordinates": "7ae833843ffc5ce5473ba361f12f91666349e7bd8158c9eff28f5a7daf1fa6ee",
+        "bbox-coordinates": "af16cdbe98257a02f43a41b7d1a66cf4f99cc563fcbf0599934da7e528ac70e3",
+        "ScriptVariant_Clear": "8aef746d78a88ec49716d9c9640d67aee0c03063298049d7d9e92fdf26862ad1",
+        "ScriptVariant_ChangeType": "73e62eb5f603422e667435567c887d4c08dd32da61443e964dd5fdb4d7c2a8fa"
+      }
+    },
+    {
+      "revision": 3767,
+      "commit": "e36101c89bd3b613b65f56d9a948a6282b41552e",
+      "engine": "3842",
+      "coordinate_components": 6,
+      "coordinate_scalar_type": "int",
+      "selected_entry_sha256": "53a4d1a79c4872260d22d40604155fd119a2c97828ebce64267c7a0ae19384b3",
+      "source_sha256": {
+        "getter": "fbd02ef22e5b619c35c8f3d0de7499cf94f24331b8e441febe5a96b7269c4856",
+        "attack-coordinates": "7ae833843ffc5ce5473ba361f12f91666349e7bd8158c9eff28f5a7daf1fa6ee",
+        "bbox-coordinates": "af16cdbe98257a02f43a41b7d1a66cf4f99cc563fcbf0599934da7e528ac70e3",
+        "ScriptVariant_Clear": "8aef746d78a88ec49716d9c9640d67aee0c03063298049d7d9e92fdf26862ad1",
+        "ScriptVariant_ChangeType": "73e62eb5f603422e667435567c887d4c08dd32da61443e964dd5fdb4d7c2a8fa"
+      }
+    },
+    {
+      "revision": 3769,
+      "commit": "14ac619f7d9f21bf1ac331932308c3ced4a65615",
+      "engine": "3842",
+      "coordinate_components": 6,
+      "coordinate_scalar_type": "int",
+      "selected_entry_sha256": "53a4d1a79c4872260d22d40604155fd119a2c97828ebce64267c7a0ae19384b3",
+      "source_sha256": {
+        "getter": "fbd02ef22e5b619c35c8f3d0de7499cf94f24331b8e441febe5a96b7269c4856",
+        "attack-coordinates": "7ae833843ffc5ce5473ba361f12f91666349e7bd8158c9eff28f5a7daf1fa6ee",
+        "bbox-coordinates": "af16cdbe98257a02f43a41b7d1a66cf4f99cc563fcbf0599934da7e528ac70e3",
+        "ScriptVariant_Clear": "8aef746d78a88ec49716d9c9640d67aee0c03063298049d7d9e92fdf26862ad1",
+        "ScriptVariant_ChangeType": "73e62eb5f603422e667435567c887d4c08dd32da61443e964dd5fdb4d7c2a8fa"
+      }
+    },
+    {
+      "revision": 3773,
+      "commit": "e39bfa21d708f2f7a586085d8689bff94440a104",
+      "engine": "3842",
+      "coordinate_components": 6,
+      "coordinate_scalar_type": "int",
+      "selected_entry_sha256": "53a4d1a79c4872260d22d40604155fd119a2c97828ebce64267c7a0ae19384b3",
+      "source_sha256": {
+        "getter": "fbd02ef22e5b619c35c8f3d0de7499cf94f24331b8e441febe5a96b7269c4856",
+        "attack-coordinates": "7ae833843ffc5ce5473ba361f12f91666349e7bd8158c9eff28f5a7daf1fa6ee",
+        "bbox-coordinates": "af16cdbe98257a02f43a41b7d1a66cf4f99cc563fcbf0599934da7e528ac70e3",
+        "ScriptVariant_Clear": "8aef746d78a88ec49716d9c9640d67aee0c03063298049d7d9e92fdf26862ad1",
+        "ScriptVariant_ChangeType": "73e62eb5f603422e667435567c887d4c08dd32da61443e964dd5fdb4d7c2a8fa"
+      }
+    },
+    {
+      "revision": 3780,
+      "commit": "760cb0e6fdbda9d8a4c426f00c84623349ca5b17",
+      "engine": "3842",
+      "coordinate_components": 6,
+      "coordinate_scalar_type": "int",
+      "selected_entry_sha256": "53a4d1a79c4872260d22d40604155fd119a2c97828ebce64267c7a0ae19384b3",
+      "source_sha256": {
+        "getter": "fbd02ef22e5b619c35c8f3d0de7499cf94f24331b8e441febe5a96b7269c4856",
+        "attack-coordinates": "7ae833843ffc5ce5473ba361f12f91666349e7bd8158c9eff28f5a7daf1fa6ee",
+        "bbox-coordinates": "af16cdbe98257a02f43a41b7d1a66cf4f99cc563fcbf0599934da7e528ac70e3",
+        "ScriptVariant_Clear": "8aef746d78a88ec49716d9c9640d67aee0c03063298049d7d9e92fdf26862ad1",
+        "ScriptVariant_ChangeType": "73e62eb5f603422e667435567c887d4c08dd32da61443e964dd5fdb4d7c2a8fa"
+      }
+    },
+    {
+      "revision": 3783,
+      "commit": "5da3e255b2783079872a57247b020090e307df0d",
+      "engine": "3842",
+      "coordinate_components": 6,
+      "coordinate_scalar_type": "int",
+      "selected_entry_sha256": "53a4d1a79c4872260d22d40604155fd119a2c97828ebce64267c7a0ae19384b3",
+      "source_sha256": {
+        "getter": "fbd02ef22e5b619c35c8f3d0de7499cf94f24331b8e441febe5a96b7269c4856",
+        "attack-coordinates": "7ae833843ffc5ce5473ba361f12f91666349e7bd8158c9eff28f5a7daf1fa6ee",
+        "bbox-coordinates": "af16cdbe98257a02f43a41b7d1a66cf4f99cc563fcbf0599934da7e528ac70e3",
+        "ScriptVariant_Clear": "8aef746d78a88ec49716d9c9640d67aee0c03063298049d7d9e92fdf26862ad1",
+        "ScriptVariant_ChangeType": "73e62eb5f603422e667435567c887d4c08dd32da61443e964dd5fdb4d7c2a8fa"
+      }
+    },
+    {
+      "revision": 3789,
+      "commit": "cc5166a117318987f638b4b6c6d1034384409372",
+      "engine": "3842",
+      "coordinate_components": 6,
+      "coordinate_scalar_type": "int",
+      "selected_entry_sha256": "53a4d1a79c4872260d22d40604155fd119a2c97828ebce64267c7a0ae19384b3",
+      "source_sha256": {
+        "getter": "fbd02ef22e5b619c35c8f3d0de7499cf94f24331b8e441febe5a96b7269c4856",
+        "attack-coordinates": "7ae833843ffc5ce5473ba361f12f91666349e7bd8158c9eff28f5a7daf1fa6ee",
+        "bbox-coordinates": "af16cdbe98257a02f43a41b7d1a66cf4f99cc563fcbf0599934da7e528ac70e3",
+        "ScriptVariant_Clear": "8aef746d78a88ec49716d9c9640d67aee0c03063298049d7d9e92fdf26862ad1",
+        "ScriptVariant_ChangeType": "73e62eb5f603422e667435567c887d4c08dd32da61443e964dd5fdb4d7c2a8fa"
+      }
+    },
+    {
+      "revision": 3791,
+      "commit": "1bb4425ca5e1e499f7d0663638e66f0552242f6e",
+      "engine": "3842",
+      "coordinate_components": 6,
+      "coordinate_scalar_type": "int",
+      "selected_entry_sha256": "53a4d1a79c4872260d22d40604155fd119a2c97828ebce64267c7a0ae19384b3",
+      "source_sha256": {
+        "getter": "fbd02ef22e5b619c35c8f3d0de7499cf94f24331b8e441febe5a96b7269c4856",
+        "attack-coordinates": "7ae833843ffc5ce5473ba361f12f91666349e7bd8158c9eff28f5a7daf1fa6ee",
+        "bbox-coordinates": "af16cdbe98257a02f43a41b7d1a66cf4f99cc563fcbf0599934da7e528ac70e3",
+        "ScriptVariant_Clear": "8aef746d78a88ec49716d9c9640d67aee0c03063298049d7d9e92fdf26862ad1",
+        "ScriptVariant_ChangeType": "73e62eb5f603422e667435567c887d4c08dd32da61443e964dd5fdb4d7c2a8fa"
+      }
+    },
+    {
+      "revision": 3792,
+      "commit": "9cbf94bbba71839b647b223fa3cb03b90a88fb2e",
+      "engine": "3842",
+      "coordinate_components": 6,
+      "coordinate_scalar_type": "int",
+      "selected_entry_sha256": "53a4d1a79c4872260d22d40604155fd119a2c97828ebce64267c7a0ae19384b3",
+      "source_sha256": {
+        "getter": "fbd02ef22e5b619c35c8f3d0de7499cf94f24331b8e441febe5a96b7269c4856",
+        "attack-coordinates": "7ae833843ffc5ce5473ba361f12f91666349e7bd8158c9eff28f5a7daf1fa6ee",
+        "bbox-coordinates": "af16cdbe98257a02f43a41b7d1a66cf4f99cc563fcbf0599934da7e528ac70e3",
+        "ScriptVariant_Clear": "8aef746d78a88ec49716d9c9640d67aee0c03063298049d7d9e92fdf26862ad1",
+        "ScriptVariant_ChangeType": "73e62eb5f603422e667435567c887d4c08dd32da61443e964dd5fdb4d7c2a8fa"
+      }
+    },
+    {
+      "revision": 3793,
+      "commit": "edf234656cae88b078718661a2bd0c42090f0687",
+      "engine": "3842",
+      "coordinate_components": 6,
+      "coordinate_scalar_type": "int",
+      "selected_entry_sha256": "53a4d1a79c4872260d22d40604155fd119a2c97828ebce64267c7a0ae19384b3",
+      "source_sha256": {
+        "getter": "fbd02ef22e5b619c35c8f3d0de7499cf94f24331b8e441febe5a96b7269c4856",
+        "attack-coordinates": "7ae833843ffc5ce5473ba361f12f91666349e7bd8158c9eff28f5a7daf1fa6ee",
+        "bbox-coordinates": "af16cdbe98257a02f43a41b7d1a66cf4f99cc563fcbf0599934da7e528ac70e3",
+        "ScriptVariant_Clear": "8aef746d78a88ec49716d9c9640d67aee0c03063298049d7d9e92fdf26862ad1",
+        "ScriptVariant_ChangeType": "73e62eb5f603422e667435567c887d4c08dd32da61443e964dd5fdb4d7c2a8fa"
+      }
+    },
+    {
+      "revision": 3797,
+      "commit": "4490ee5d18ffcc7604e95cd4910dadf6191e694a",
+      "engine": "3842",
+      "coordinate_components": 6,
+      "coordinate_scalar_type": "int",
+      "selected_entry_sha256": "53a4d1a79c4872260d22d40604155fd119a2c97828ebce64267c7a0ae19384b3",
+      "source_sha256": {
+        "getter": "90477910d4ce7fa8226c3d255df5b1e5a05cda414c62f74aa72ad5e653031753",
+        "attack-coordinates": "7ae833843ffc5ce5473ba361f12f91666349e7bd8158c9eff28f5a7daf1fa6ee",
+        "bbox-coordinates": "af16cdbe98257a02f43a41b7d1a66cf4f99cc563fcbf0599934da7e528ac70e3",
+        "ScriptVariant_Clear": "8aef746d78a88ec49716d9c9640d67aee0c03063298049d7d9e92fdf26862ad1",
+        "ScriptVariant_ChangeType": "73e62eb5f603422e667435567c887d4c08dd32da61443e964dd5fdb4d7c2a8fa"
+      }
+    },
+    {
+      "revision": 3805,
+      "commit": "2abee79303b17b269e88cd986ab78dda2bd526d6",
+      "engine": "3842",
+      "coordinate_components": 6,
+      "coordinate_scalar_type": "int",
+      "selected_entry_sha256": "53a4d1a79c4872260d22d40604155fd119a2c97828ebce64267c7a0ae19384b3",
+      "source_sha256": {
+        "getter": "90477910d4ce7fa8226c3d255df5b1e5a05cda414c62f74aa72ad5e653031753",
+        "attack-coordinates": "7ae833843ffc5ce5473ba361f12f91666349e7bd8158c9eff28f5a7daf1fa6ee",
+        "bbox-coordinates": "af16cdbe98257a02f43a41b7d1a66cf4f99cc563fcbf0599934da7e528ac70e3",
+        "ScriptVariant_Clear": "8aef746d78a88ec49716d9c9640d67aee0c03063298049d7d9e92fdf26862ad1",
+        "ScriptVariant_ChangeType": "73e62eb5f603422e667435567c887d4c08dd32da61443e964dd5fdb4d7c2a8fa"
+      }
+    },
+    {
+      "revision": 3807,
+      "commit": "b4c7c49dc4c4a0c6b0a7c7a524a4cfc760423572",
+      "engine": "3842",
+      "coordinate_components": 6,
+      "coordinate_scalar_type": "int",
+      "selected_entry_sha256": "53a4d1a79c4872260d22d40604155fd119a2c97828ebce64267c7a0ae19384b3",
+      "source_sha256": {
+        "getter": "90477910d4ce7fa8226c3d255df5b1e5a05cda414c62f74aa72ad5e653031753",
+        "attack-coordinates": "7ae833843ffc5ce5473ba361f12f91666349e7bd8158c9eff28f5a7daf1fa6ee",
+        "bbox-coordinates": "af16cdbe98257a02f43a41b7d1a66cf4f99cc563fcbf0599934da7e528ac70e3",
+        "ScriptVariant_Clear": "8aef746d78a88ec49716d9c9640d67aee0c03063298049d7d9e92fdf26862ad1",
+        "ScriptVariant_ChangeType": "73e62eb5f603422e667435567c887d4c08dd32da61443e964dd5fdb4d7c2a8fa"
+      }
+    },
+    {
+      "revision": 3808,
+      "commit": "5e60ca57af888738126b5772d28c4b18e41ac99f",
+      "engine": "3842",
+      "coordinate_components": 6,
+      "coordinate_scalar_type": "int",
+      "selected_entry_sha256": "53a4d1a79c4872260d22d40604155fd119a2c97828ebce64267c7a0ae19384b3",
+      "source_sha256": {
+        "getter": "90477910d4ce7fa8226c3d255df5b1e5a05cda414c62f74aa72ad5e653031753",
+        "attack-coordinates": "7ae833843ffc5ce5473ba361f12f91666349e7bd8158c9eff28f5a7daf1fa6ee",
+        "bbox-coordinates": "af16cdbe98257a02f43a41b7d1a66cf4f99cc563fcbf0599934da7e528ac70e3",
+        "ScriptVariant_Clear": "8aef746d78a88ec49716d9c9640d67aee0c03063298049d7d9e92fdf26862ad1",
+        "ScriptVariant_ChangeType": "73e62eb5f603422e667435567c887d4c08dd32da61443e964dd5fdb4d7c2a8fa"
+      }
+    },
+    {
+      "revision": 3814,
+      "commit": "46d398cfb2e75a142c7bf6dc38cc2f9603b57ecf",
+      "engine": "3842",
+      "coordinate_components": 6,
+      "coordinate_scalar_type": "int",
+      "selected_entry_sha256": "53a4d1a79c4872260d22d40604155fd119a2c97828ebce64267c7a0ae19384b3",
+      "source_sha256": {
+        "getter": "90477910d4ce7fa8226c3d255df5b1e5a05cda414c62f74aa72ad5e653031753",
+        "attack-coordinates": "7ae833843ffc5ce5473ba361f12f91666349e7bd8158c9eff28f5a7daf1fa6ee",
+        "bbox-coordinates": "af16cdbe98257a02f43a41b7d1a66cf4f99cc563fcbf0599934da7e528ac70e3",
+        "ScriptVariant_Clear": "8aef746d78a88ec49716d9c9640d67aee0c03063298049d7d9e92fdf26862ad1",
+        "ScriptVariant_ChangeType": "73e62eb5f603422e667435567c887d4c08dd32da61443e964dd5fdb4d7c2a8fa"
+      }
+    },
+    {
+      "revision": 3818,
+      "commit": "cae686392d0b5e52563e9dd191801193796cd4a5",
+      "engine": "3842",
+      "coordinate_components": 6,
+      "coordinate_scalar_type": "int",
+      "selected_entry_sha256": "53a4d1a79c4872260d22d40604155fd119a2c97828ebce64267c7a0ae19384b3",
+      "source_sha256": {
+        "getter": "90477910d4ce7fa8226c3d255df5b1e5a05cda414c62f74aa72ad5e653031753",
+        "attack-coordinates": "7ae833843ffc5ce5473ba361f12f91666349e7bd8158c9eff28f5a7daf1fa6ee",
+        "bbox-coordinates": "af16cdbe98257a02f43a41b7d1a66cf4f99cc563fcbf0599934da7e528ac70e3",
+        "ScriptVariant_Clear": "8aef746d78a88ec49716d9c9640d67aee0c03063298049d7d9e92fdf26862ad1",
+        "ScriptVariant_ChangeType": "73e62eb5f603422e667435567c887d4c08dd32da61443e964dd5fdb4d7c2a8fa"
+      }
+    },
+    {
+      "revision": 3822,
+      "commit": "7ddd15b4981ea7b55f1851db926bc86276632b8c",
+      "engine": "3842",
+      "coordinate_components": 6,
+      "coordinate_scalar_type": "int",
+      "selected_entry_sha256": "53a4d1a79c4872260d22d40604155fd119a2c97828ebce64267c7a0ae19384b3",
+      "source_sha256": {
+        "getter": "90477910d4ce7fa8226c3d255df5b1e5a05cda414c62f74aa72ad5e653031753",
+        "attack-coordinates": "7ae833843ffc5ce5473ba361f12f91666349e7bd8158c9eff28f5a7daf1fa6ee",
+        "bbox-coordinates": "af16cdbe98257a02f43a41b7d1a66cf4f99cc563fcbf0599934da7e528ac70e3",
+        "ScriptVariant_Clear": "8aef746d78a88ec49716d9c9640d67aee0c03063298049d7d9e92fdf26862ad1",
+        "ScriptVariant_ChangeType": "73e62eb5f603422e667435567c887d4c08dd32da61443e964dd5fdb4d7c2a8fa"
+      }
+    },
+    {
+      "revision": 3824,
+      "commit": "e260635df5095577fb729555cd5c08ecce37316d",
+      "engine": "3842",
+      "coordinate_components": 6,
+      "coordinate_scalar_type": "int",
+      "selected_entry_sha256": "53a4d1a79c4872260d22d40604155fd119a2c97828ebce64267c7a0ae19384b3",
+      "source_sha256": {
+        "getter": "90477910d4ce7fa8226c3d255df5b1e5a05cda414c62f74aa72ad5e653031753",
+        "attack-coordinates": "7ae833843ffc5ce5473ba361f12f91666349e7bd8158c9eff28f5a7daf1fa6ee",
+        "bbox-coordinates": "af16cdbe98257a02f43a41b7d1a66cf4f99cc563fcbf0599934da7e528ac70e3",
+        "ScriptVariant_Clear": "8aef746d78a88ec49716d9c9640d67aee0c03063298049d7d9e92fdf26862ad1",
+        "ScriptVariant_ChangeType": "73e62eb5f603422e667435567c887d4c08dd32da61443e964dd5fdb4d7c2a8fa"
+      }
+    },
+    {
+      "revision": 3829,
+      "commit": "8223091e0ae85bd621572094c3465783d6f73429",
+      "engine": "3842",
+      "coordinate_components": 6,
+      "coordinate_scalar_type": "int",
+      "selected_entry_sha256": "4697e12aaf00ad5b30de583c600acd79f0b2a66035fae1fa388290581c8eaca4",
+      "source_sha256": {
+        "getter": "706d097482240e57ffa405d40036d663cb35b894eca5c22d84123ffcc8678307",
+        "attack-coordinates": "7ae833843ffc5ce5473ba361f12f91666349e7bd8158c9eff28f5a7daf1fa6ee",
+        "bbox-coordinates": "af16cdbe98257a02f43a41b7d1a66cf4f99cc563fcbf0599934da7e528ac70e3",
+        "ScriptVariant_Clear": "8aef746d78a88ec49716d9c9640d67aee0c03063298049d7d9e92fdf26862ad1",
+        "ScriptVariant_ChangeType": "73e62eb5f603422e667435567c887d4c08dd32da61443e964dd5fdb4d7c2a8fa"
+      }
+    },
+    {
+      "revision": 3831,
+      "commit": "c61f02b3fbb155dd416a7750eb9cb645d7785266",
+      "engine": "3842",
+      "coordinate_components": 6,
+      "coordinate_scalar_type": "int",
+      "selected_entry_sha256": "4697e12aaf00ad5b30de583c600acd79f0b2a66035fae1fa388290581c8eaca4",
+      "source_sha256": {
+        "getter": "706d097482240e57ffa405d40036d663cb35b894eca5c22d84123ffcc8678307",
+        "attack-coordinates": "7ae833843ffc5ce5473ba361f12f91666349e7bd8158c9eff28f5a7daf1fa6ee",
+        "bbox-coordinates": "af16cdbe98257a02f43a41b7d1a66cf4f99cc563fcbf0599934da7e528ac70e3",
+        "ScriptVariant_Clear": "8aef746d78a88ec49716d9c9640d67aee0c03063298049d7d9e92fdf26862ad1",
+        "ScriptVariant_ChangeType": "73e62eb5f603422e667435567c887d4c08dd32da61443e964dd5fdb4d7c2a8fa"
+      }
+    },
+    {
+      "revision": 3837,
+      "commit": "f2b4258428af00b3748ef7713d36201d4d0678ac",
+      "engine": "3842",
+      "coordinate_components": 6,
+      "coordinate_scalar_type": "int",
+      "selected_entry_sha256": "4697e12aaf00ad5b30de583c600acd79f0b2a66035fae1fa388290581c8eaca4",
+      "source_sha256": {
+        "getter": "706d097482240e57ffa405d40036d663cb35b894eca5c22d84123ffcc8678307",
+        "attack-coordinates": "7ae833843ffc5ce5473ba361f12f91666349e7bd8158c9eff28f5a7daf1fa6ee",
+        "bbox-coordinates": "af16cdbe98257a02f43a41b7d1a66cf4f99cc563fcbf0599934da7e528ac70e3",
+        "ScriptVariant_Clear": "8aef746d78a88ec49716d9c9640d67aee0c03063298049d7d9e92fdf26862ad1",
+        "ScriptVariant_ChangeType": "73e62eb5f603422e667435567c887d4c08dd32da61443e964dd5fdb4d7c2a8fa"
+      }
+    },
+    {
+      "revision": 3839,
+      "commit": "b6712f11af263c3ad438d87241cec38f18570046",
+      "engine": "3842",
+      "coordinate_components": 6,
+      "coordinate_scalar_type": "int",
+      "selected_entry_sha256": "4697e12aaf00ad5b30de583c600acd79f0b2a66035fae1fa388290581c8eaca4",
+      "source_sha256": {
+        "getter": "706d097482240e57ffa405d40036d663cb35b894eca5c22d84123ffcc8678307",
+        "attack-coordinates": "7ae833843ffc5ce5473ba361f12f91666349e7bd8158c9eff28f5a7daf1fa6ee",
+        "bbox-coordinates": "af16cdbe98257a02f43a41b7d1a66cf4f99cc563fcbf0599934da7e528ac70e3",
+        "ScriptVariant_Clear": "8aef746d78a88ec49716d9c9640d67aee0c03063298049d7d9e92fdf26862ad1",
+        "ScriptVariant_ChangeType": "73e62eb5f603422e667435567c887d4c08dd32da61443e964dd5fdb4d7c2a8fa"
+      }
+    },
+    {
+      "revision": 3842,
+      "commit": "1f702a991ace7fa31884262e458a85e351f62713",
+      "engine": "3842",
+      "coordinate_components": 6,
+      "coordinate_scalar_type": "int",
+      "selected_entry_sha256": "4697e12aaf00ad5b30de583c600acd79f0b2a66035fae1fa388290581c8eaca4",
+      "source_sha256": {
+        "getter": "706d097482240e57ffa405d40036d663cb35b894eca5c22d84123ffcc8678307",
+        "attack-coordinates": "7ae833843ffc5ce5473ba361f12f91666349e7bd8158c9eff28f5a7daf1fa6ee",
+        "bbox-coordinates": "af16cdbe98257a02f43a41b7d1a66cf4f99cc563fcbf0599934da7e528ac70e3",
+        "ScriptVariant_Clear": "8aef746d78a88ec49716d9c9640d67aee0c03063298049d7d9e92fdf26862ad1",
+        "ScriptVariant_ChangeType": "73e62eb5f603422e667435567c887d4c08dd32da61443e964dd5fdb4d7c2a8fa"
+      }
+    }
+  ]
+}

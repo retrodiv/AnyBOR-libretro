@@ -1,0 +1,916 @@
+{
+  "schema": 1,
+  "boundary_controls": [
+    3805,
+    3806,
+    3812,
+    3813,
+    3814,
+    3815,
+    3822,
+    3823
+  ],
+  "sources": [
+    {
+      "revision": 3761,
+      "commit": "16814fdf39fdcdd78cb59f3d70748f1dc023a24f",
+      "source_sha256": {
+        "openbor.c": "3f58eebdff4c6f9e3ac1f4f752d931b3ea709f457a065692e9fbce2fe5db06f3",
+        "openborscript.c": "8be379b6f2f8522f6efff03c820f0e58af6aef39942c2347c52d34515381543e"
+      },
+      "animation_saves_local_context": false,
+      "animation_rebinds_current_model": false,
+      "setter_requires_initialized_owner": true,
+      "setter_collects_at_capacity": false,
+      "collector_exists": false,
+      "setter_unused_emp_declaration": false,
+      "nested_option_registered": false,
+      "cmd_option_registered": false,
+      "function_sha256": {
+        "execute_animation_script": "ea047c964a534d362eabc1a696d03f9d9060ca1033e9b3bcdc1b1b012c07d810",
+        "_set_var": "077127997eb9fa6df2ed5b5a6faff8bd38e607c8c18209d3bf3366b3f79a5140",
+        "_gc_var": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "load_script_setting": "6c9ca46423f3c19a4b615be5c1488fc480b0ec78aea4d91403913e8ae0a320ef"
+      },
+      "getter_requires_initialized_owner": true,
+      "copy_initializes_destination": true,
+      "copy_clear_preserves_locals_when_zero": true,
+      "additional_function_sha256": {
+        "Script_Get_Local_Variant": "efaa9ef1c94e9545375b3460e57e7cae721c92e1d98a2a4798ead648d38c110f",
+        "Script_Copy": "c4ccc2932ef7a6983f0ac05e1592fa4f73e8b336b954a004a0c89b97a2c03ceb",
+        "Script_Clear": "0045a6cb543a4ca678be2f7e6dc5d3366390bc5ba6b7c8f682ee02555d687456"
+      }
+    },
+    {
+      "revision": 3769,
+      "commit": "14ac619f7d9f21bf1ac331932308c3ced4a65615",
+      "source_sha256": {
+        "openbor.c": "5284b752da688930f8ba595344a14aefcd3e158dc5f3e19f241b46d1a81d33c1",
+        "openborscript.c": "1809deb5a0c88f58797e6b4d518725ead7b1da59f61a1380f39290b7ed7f0a66"
+      },
+      "animation_saves_local_context": false,
+      "animation_rebinds_current_model": false,
+      "setter_requires_initialized_owner": true,
+      "setter_collects_at_capacity": false,
+      "collector_exists": false,
+      "setter_unused_emp_declaration": false,
+      "nested_option_registered": false,
+      "cmd_option_registered": false,
+      "function_sha256": {
+        "execute_animation_script": "ea047c964a534d362eabc1a696d03f9d9060ca1033e9b3bcdc1b1b012c07d810",
+        "_set_var": "077127997eb9fa6df2ed5b5a6faff8bd38e607c8c18209d3bf3366b3f79a5140",
+        "_gc_var": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "load_script_setting": "6c9ca46423f3c19a4b615be5c1488fc480b0ec78aea4d91403913e8ae0a320ef"
+      },
+      "getter_requires_initialized_owner": true,
+      "copy_initializes_destination": true,
+      "copy_clear_preserves_locals_when_zero": true,
+      "additional_function_sha256": {
+        "Script_Get_Local_Variant": "efaa9ef1c94e9545375b3460e57e7cae721c92e1d98a2a4798ead648d38c110f",
+        "Script_Copy": "8fb77654ff3aa6814bf7fb6c96b62739fc0f43680af3294937e16c908c7505eb",
+        "Script_Clear": "0045a6cb543a4ca678be2f7e6dc5d3366390bc5ba6b7c8f682ee02555d687456"
+      }
+    },
+    {
+      "revision": 3773,
+      "commit": "e39bfa21d708f2f7a586085d8689bff94440a104",
+      "source_sha256": {
+        "openbor.c": "61880615e2367cdd934a6f351f1b273b7237824d5c966233f48010d5b1357ee6",
+        "openborscript.c": "1809deb5a0c88f58797e6b4d518725ead7b1da59f61a1380f39290b7ed7f0a66"
+      },
+      "animation_saves_local_context": false,
+      "animation_rebinds_current_model": false,
+      "setter_requires_initialized_owner": true,
+      "setter_collects_at_capacity": false,
+      "collector_exists": false,
+      "setter_unused_emp_declaration": false,
+      "nested_option_registered": false,
+      "cmd_option_registered": false,
+      "function_sha256": {
+        "execute_animation_script": "ea047c964a534d362eabc1a696d03f9d9060ca1033e9b3bcdc1b1b012c07d810",
+        "_set_var": "077127997eb9fa6df2ed5b5a6faff8bd38e607c8c18209d3bf3366b3f79a5140",
+        "_gc_var": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "load_script_setting": "6c9ca46423f3c19a4b615be5c1488fc480b0ec78aea4d91403913e8ae0a320ef"
+      },
+      "getter_requires_initialized_owner": true,
+      "copy_initializes_destination": true,
+      "copy_clear_preserves_locals_when_zero": true,
+      "additional_function_sha256": {
+        "Script_Get_Local_Variant": "efaa9ef1c94e9545375b3460e57e7cae721c92e1d98a2a4798ead648d38c110f",
+        "Script_Copy": "8fb77654ff3aa6814bf7fb6c96b62739fc0f43680af3294937e16c908c7505eb",
+        "Script_Clear": "0045a6cb543a4ca678be2f7e6dc5d3366390bc5ba6b7c8f682ee02555d687456"
+      }
+    },
+    {
+      "revision": 3780,
+      "commit": "760cb0e6fdbda9d8a4c426f00c84623349ca5b17",
+      "source_sha256": {
+        "openbor.c": "10e23d2c3150e106ede7b6b79fba6a6ecec67499c821c6552248860212a99dda",
+        "openborscript.c": "1809deb5a0c88f58797e6b4d518725ead7b1da59f61a1380f39290b7ed7f0a66"
+      },
+      "animation_saves_local_context": false,
+      "animation_rebinds_current_model": false,
+      "setter_requires_initialized_owner": true,
+      "setter_collects_at_capacity": false,
+      "collector_exists": false,
+      "setter_unused_emp_declaration": false,
+      "nested_option_registered": false,
+      "cmd_option_registered": false,
+      "function_sha256": {
+        "execute_animation_script": "ea047c964a534d362eabc1a696d03f9d9060ca1033e9b3bcdc1b1b012c07d810",
+        "_set_var": "077127997eb9fa6df2ed5b5a6faff8bd38e607c8c18209d3bf3366b3f79a5140",
+        "_gc_var": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "load_script_setting": "6c9ca46423f3c19a4b615be5c1488fc480b0ec78aea4d91403913e8ae0a320ef"
+      },
+      "getter_requires_initialized_owner": true,
+      "copy_initializes_destination": true,
+      "copy_clear_preserves_locals_when_zero": true,
+      "additional_function_sha256": {
+        "Script_Get_Local_Variant": "efaa9ef1c94e9545375b3460e57e7cae721c92e1d98a2a4798ead648d38c110f",
+        "Script_Copy": "8fb77654ff3aa6814bf7fb6c96b62739fc0f43680af3294937e16c908c7505eb",
+        "Script_Clear": "0045a6cb543a4ca678be2f7e6dc5d3366390bc5ba6b7c8f682ee02555d687456"
+      }
+    },
+    {
+      "revision": 3783,
+      "commit": "5da3e255b2783079872a57247b020090e307df0d",
+      "source_sha256": {
+        "openbor.c": "ff0bddc2838e0c658465a28c352bad3f74211914d151a0d4be2221d65a007614",
+        "openborscript.c": "60cbc7a3936d6e1914198357bac269e2bebe68d50b61b6f1d1edd5e2fc8942cc"
+      },
+      "animation_saves_local_context": false,
+      "animation_rebinds_current_model": false,
+      "setter_requires_initialized_owner": true,
+      "setter_collects_at_capacity": false,
+      "collector_exists": false,
+      "setter_unused_emp_declaration": false,
+      "nested_option_registered": false,
+      "cmd_option_registered": false,
+      "function_sha256": {
+        "execute_animation_script": "ea047c964a534d362eabc1a696d03f9d9060ca1033e9b3bcdc1b1b012c07d810",
+        "_set_var": "077127997eb9fa6df2ed5b5a6faff8bd38e607c8c18209d3bf3366b3f79a5140",
+        "_gc_var": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "load_script_setting": "6c9ca46423f3c19a4b615be5c1488fc480b0ec78aea4d91403913e8ae0a320ef"
+      },
+      "getter_requires_initialized_owner": true,
+      "copy_initializes_destination": true,
+      "copy_clear_preserves_locals_when_zero": true,
+      "additional_function_sha256": {
+        "Script_Get_Local_Variant": "efaa9ef1c94e9545375b3460e57e7cae721c92e1d98a2a4798ead648d38c110f",
+        "Script_Copy": "8fb77654ff3aa6814bf7fb6c96b62739fc0f43680af3294937e16c908c7505eb",
+        "Script_Clear": "0045a6cb543a4ca678be2f7e6dc5d3366390bc5ba6b7c8f682ee02555d687456"
+      }
+    },
+    {
+      "revision": 3789,
+      "commit": "cc5166a117318987f638b4b6c6d1034384409372",
+      "source_sha256": {
+        "openbor.c": "6ad6d3164279862ea05232e97a8202d32cc61b3c8600cc6b65144e502254e830",
+        "openborscript.c": "b74c8f932133d4552d7fb521118a7a4c85649ae9974b6112cee66b8dc4f73338"
+      },
+      "animation_saves_local_context": false,
+      "animation_rebinds_current_model": false,
+      "setter_requires_initialized_owner": true,
+      "setter_collects_at_capacity": false,
+      "collector_exists": false,
+      "setter_unused_emp_declaration": false,
+      "nested_option_registered": false,
+      "cmd_option_registered": false,
+      "function_sha256": {
+        "execute_animation_script": "ea047c964a534d362eabc1a696d03f9d9060ca1033e9b3bcdc1b1b012c07d810",
+        "_set_var": "077127997eb9fa6df2ed5b5a6faff8bd38e607c8c18209d3bf3366b3f79a5140",
+        "_gc_var": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "load_script_setting": "6c9ca46423f3c19a4b615be5c1488fc480b0ec78aea4d91403913e8ae0a320ef"
+      },
+      "getter_requires_initialized_owner": true,
+      "copy_initializes_destination": true,
+      "copy_clear_preserves_locals_when_zero": true,
+      "additional_function_sha256": {
+        "Script_Get_Local_Variant": "efaa9ef1c94e9545375b3460e57e7cae721c92e1d98a2a4798ead648d38c110f",
+        "Script_Copy": "8fb77654ff3aa6814bf7fb6c96b62739fc0f43680af3294937e16c908c7505eb",
+        "Script_Clear": "0045a6cb543a4ca678be2f7e6dc5d3366390bc5ba6b7c8f682ee02555d687456"
+      }
+    },
+    {
+      "revision": 3793,
+      "commit": "edf234656cae88b078718661a2bd0c42090f0687",
+      "source_sha256": {
+        "openbor.c": "4833133e133b9fc298039b90dacf1c8ded874848e09ec6b3f03ff9e24053a7fb",
+        "openborscript.c": "b74c8f932133d4552d7fb521118a7a4c85649ae9974b6112cee66b8dc4f73338"
+      },
+      "animation_saves_local_context": false,
+      "animation_rebinds_current_model": false,
+      "setter_requires_initialized_owner": true,
+      "setter_collects_at_capacity": false,
+      "collector_exists": false,
+      "setter_unused_emp_declaration": false,
+      "nested_option_registered": false,
+      "cmd_option_registered": false,
+      "function_sha256": {
+        "execute_animation_script": "ea047c964a534d362eabc1a696d03f9d9060ca1033e9b3bcdc1b1b012c07d810",
+        "_set_var": "077127997eb9fa6df2ed5b5a6faff8bd38e607c8c18209d3bf3366b3f79a5140",
+        "_gc_var": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "load_script_setting": "6c9ca46423f3c19a4b615be5c1488fc480b0ec78aea4d91403913e8ae0a320ef"
+      },
+      "getter_requires_initialized_owner": true,
+      "copy_initializes_destination": true,
+      "copy_clear_preserves_locals_when_zero": true,
+      "additional_function_sha256": {
+        "Script_Get_Local_Variant": "efaa9ef1c94e9545375b3460e57e7cae721c92e1d98a2a4798ead648d38c110f",
+        "Script_Copy": "8fb77654ff3aa6814bf7fb6c96b62739fc0f43680af3294937e16c908c7505eb",
+        "Script_Clear": "0045a6cb543a4ca678be2f7e6dc5d3366390bc5ba6b7c8f682ee02555d687456"
+      }
+    },
+    {
+      "revision": 3797,
+      "commit": "4490ee5d18ffcc7604e95cd4910dadf6191e694a",
+      "source_sha256": {
+        "openbor.c": "3f6befee3394171d00bc427c7385e963c2789e3b957aecd706c417c6536e5a68",
+        "openborscript.c": "80fd3a60f746fb3f68fade96931bcb1611aa7c39dd7afa72e0832c9f9082baf8"
+      },
+      "animation_saves_local_context": false,
+      "animation_rebinds_current_model": false,
+      "setter_requires_initialized_owner": true,
+      "setter_collects_at_capacity": false,
+      "collector_exists": false,
+      "setter_unused_emp_declaration": false,
+      "nested_option_registered": false,
+      "cmd_option_registered": false,
+      "function_sha256": {
+        "execute_animation_script": "ea047c964a534d362eabc1a696d03f9d9060ca1033e9b3bcdc1b1b012c07d810",
+        "_set_var": "077127997eb9fa6df2ed5b5a6faff8bd38e607c8c18209d3bf3366b3f79a5140",
+        "_gc_var": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "load_script_setting": "6c9ca46423f3c19a4b615be5c1488fc480b0ec78aea4d91403913e8ae0a320ef"
+      },
+      "getter_requires_initialized_owner": true,
+      "copy_initializes_destination": true,
+      "copy_clear_preserves_locals_when_zero": true,
+      "additional_function_sha256": {
+        "Script_Get_Local_Variant": "efaa9ef1c94e9545375b3460e57e7cae721c92e1d98a2a4798ead648d38c110f",
+        "Script_Copy": "8fb77654ff3aa6814bf7fb6c96b62739fc0f43680af3294937e16c908c7505eb",
+        "Script_Clear": "0045a6cb543a4ca678be2f7e6dc5d3366390bc5ba6b7c8f682ee02555d687456"
+      }
+    },
+    {
+      "revision": 3805,
+      "commit": "2abee79303b17b269e88cd986ab78dda2bd526d6",
+      "source_sha256": {
+        "openbor.c": "1837973925d4940428cb244742a5dadca6f0b779757a3388f02e54208f05c855",
+        "openborscript.c": "bd53484a809e9100a5e40a74a5f91d9d50207fa7befc9c35679c1582035030bd"
+      },
+      "animation_saves_local_context": false,
+      "animation_rebinds_current_model": false,
+      "setter_requires_initialized_owner": true,
+      "setter_collects_at_capacity": false,
+      "collector_exists": false,
+      "setter_unused_emp_declaration": false,
+      "nested_option_registered": false,
+      "cmd_option_registered": false,
+      "function_sha256": {
+        "execute_animation_script": "ea047c964a534d362eabc1a696d03f9d9060ca1033e9b3bcdc1b1b012c07d810",
+        "_set_var": "077127997eb9fa6df2ed5b5a6faff8bd38e607c8c18209d3bf3366b3f79a5140",
+        "_gc_var": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "load_script_setting": "6c9ca46423f3c19a4b615be5c1488fc480b0ec78aea4d91403913e8ae0a320ef"
+      },
+      "getter_requires_initialized_owner": true,
+      "copy_initializes_destination": true,
+      "copy_clear_preserves_locals_when_zero": true,
+      "additional_function_sha256": {
+        "Script_Get_Local_Variant": "efaa9ef1c94e9545375b3460e57e7cae721c92e1d98a2a4798ead648d38c110f",
+        "Script_Copy": "8fb77654ff3aa6814bf7fb6c96b62739fc0f43680af3294937e16c908c7505eb",
+        "Script_Clear": "0045a6cb543a4ca678be2f7e6dc5d3366390bc5ba6b7c8f682ee02555d687456"
+      }
+    },
+    {
+      "revision": 3806,
+      "commit": "06921ca8e1b3ef7392f39534b2584edbb8732454",
+      "source_sha256": {
+        "openbor.c": "ac888292f368e165f0bd5b5a864921b5c1b14a9f7d84e4e853569a74fc93f869",
+        "openborscript.c": "f2a31f402a63b186bd0044235b6ecf234e45da7ffbfd83560e0d8220c8e56871"
+      },
+      "animation_saves_local_context": false,
+      "animation_rebinds_current_model": false,
+      "setter_requires_initialized_owner": true,
+      "setter_collects_at_capacity": false,
+      "collector_exists": false,
+      "setter_unused_emp_declaration": false,
+      "nested_option_registered": true,
+      "cmd_option_registered": false,
+      "getter_requires_initialized_owner": true,
+      "copy_initializes_destination": true,
+      "copy_clear_preserves_locals_when_zero": true,
+      "function_sha256": {
+        "execute_animation_script": "ea047c964a534d362eabc1a696d03f9d9060ca1033e9b3bcdc1b1b012c07d810",
+        "_set_var": "077127997eb9fa6df2ed5b5a6faff8bd38e607c8c18209d3bf3366b3f79a5140",
+        "_gc_var": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "load_script_setting": "9ddcf043d39e3de90ae924af54e601a718ef94eda1255be4974be6fe85a306a5"
+      },
+      "additional_function_sha256": {
+        "Script_Get_Local_Variant": "efaa9ef1c94e9545375b3460e57e7cae721c92e1d98a2a4798ead648d38c110f",
+        "Script_Copy": "8fb77654ff3aa6814bf7fb6c96b62739fc0f43680af3294937e16c908c7505eb",
+        "Script_Clear": "0045a6cb543a4ca678be2f7e6dc5d3366390bc5ba6b7c8f682ee02555d687456"
+      }
+    },
+    {
+      "revision": 3812,
+      "commit": "47644bfb79de4b5e304f21578d4e065a379720f0",
+      "source_sha256": {
+        "openbor.c": "1cb23f31e670b9425a3ea541030291d16ee641d131e1ba01da655d75aeac7272",
+        "openborscript.c": "61093f840768e1ef8eb6013f294276d4dfe96e2a001d38b33eb4a4bf8315471a"
+      },
+      "animation_saves_local_context": false,
+      "animation_rebinds_current_model": false,
+      "setter_requires_initialized_owner": true,
+      "setter_collects_at_capacity": false,
+      "collector_exists": false,
+      "setter_unused_emp_declaration": false,
+      "nested_option_registered": true,
+      "cmd_option_registered": false,
+      "function_sha256": {
+        "execute_animation_script": "ea047c964a534d362eabc1a696d03f9d9060ca1033e9b3bcdc1b1b012c07d810",
+        "_set_var": "077127997eb9fa6df2ed5b5a6faff8bd38e607c8c18209d3bf3366b3f79a5140",
+        "_gc_var": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "load_script_setting": "9ddcf043d39e3de90ae924af54e601a718ef94eda1255be4974be6fe85a306a5"
+      },
+      "getter_requires_initialized_owner": true,
+      "copy_initializes_destination": true,
+      "copy_clear_preserves_locals_when_zero": true,
+      "additional_function_sha256": {
+        "Script_Get_Local_Variant": "efaa9ef1c94e9545375b3460e57e7cae721c92e1d98a2a4798ead648d38c110f",
+        "Script_Copy": "8fb77654ff3aa6814bf7fb6c96b62739fc0f43680af3294937e16c908c7505eb",
+        "Script_Clear": "0045a6cb543a4ca678be2f7e6dc5d3366390bc5ba6b7c8f682ee02555d687456"
+      }
+    },
+    {
+      "revision": 3813,
+      "commit": "a7252885dfb67a52ec1e6b6cc9e636b7a05976d6",
+      "source_sha256": {
+        "openbor.c": "4f6c0d38ca9c3b589b025625313952f06fa5cf3dd12ddf71d8ba06b1af5d7887",
+        "openborscript.c": "bfd1199710a0985778700ed58e4d3de444e39a912704374074d20319ccb371e5"
+      },
+      "animation_saves_local_context": true,
+      "animation_rebinds_current_model": true,
+      "setter_requires_initialized_owner": true,
+      "setter_collects_at_capacity": false,
+      "collector_exists": false,
+      "setter_unused_emp_declaration": false,
+      "nested_option_registered": true,
+      "cmd_option_registered": false,
+      "function_sha256": {
+        "execute_animation_script": "7a1cad1e409c6808c6e18c8d2dfb7a65f189d9942d66d9b55c767e581734926f",
+        "_set_var": "077127997eb9fa6df2ed5b5a6faff8bd38e607c8c18209d3bf3366b3f79a5140",
+        "_gc_var": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "load_script_setting": "9ddcf043d39e3de90ae924af54e601a718ef94eda1255be4974be6fe85a306a5"
+      },
+      "getter_requires_initialized_owner": true,
+      "copy_initializes_destination": true,
+      "copy_clear_preserves_locals_when_zero": true,
+      "additional_function_sha256": {
+        "Script_Get_Local_Variant": "efaa9ef1c94e9545375b3460e57e7cae721c92e1d98a2a4798ead648d38c110f",
+        "Script_Copy": "8fb77654ff3aa6814bf7fb6c96b62739fc0f43680af3294937e16c908c7505eb",
+        "Script_Clear": "0045a6cb543a4ca678be2f7e6dc5d3366390bc5ba6b7c8f682ee02555d687456"
+      }
+    },
+    {
+      "revision": 3814,
+      "commit": "46d398cfb2e75a142c7bf6dc38cc2f9603b57ecf",
+      "source_sha256": {
+        "openbor.c": "4f6c0d38ca9c3b589b025625313952f06fa5cf3dd12ddf71d8ba06b1af5d7887",
+        "openborscript.c": "aa67d0e49c11433ccba590b80090ead8c1c88b8d2471aefbdfbedb32a9d9ee77"
+      },
+      "animation_saves_local_context": true,
+      "animation_rebinds_current_model": true,
+      "setter_requires_initialized_owner": false,
+      "setter_collects_at_capacity": false,
+      "collector_exists": false,
+      "setter_unused_emp_declaration": false,
+      "nested_option_registered": true,
+      "cmd_option_registered": false,
+      "function_sha256": {
+        "execute_animation_script": "7a1cad1e409c6808c6e18c8d2dfb7a65f189d9942d66d9b55c767e581734926f",
+        "_set_var": "11518e2491b7faf2e38d8e0b279dff5023bb7769215eddca87364f0caf4de5be",
+        "_gc_var": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "load_script_setting": "9ddcf043d39e3de90ae924af54e601a718ef94eda1255be4974be6fe85a306a5"
+      },
+      "getter_requires_initialized_owner": true,
+      "copy_initializes_destination": true,
+      "copy_clear_preserves_locals_when_zero": true,
+      "additional_function_sha256": {
+        "Script_Get_Local_Variant": "efaa9ef1c94e9545375b3460e57e7cae721c92e1d98a2a4798ead648d38c110f",
+        "Script_Copy": "8fb77654ff3aa6814bf7fb6c96b62739fc0f43680af3294937e16c908c7505eb",
+        "Script_Clear": "0045a6cb543a4ca678be2f7e6dc5d3366390bc5ba6b7c8f682ee02555d687456"
+      }
+    },
+    {
+      "revision": 3815,
+      "commit": "b506825d312503980fe064235535c713b7454b38",
+      "source_sha256": {
+        "openbor.c": "4f6c0d38ca9c3b589b025625313952f06fa5cf3dd12ddf71d8ba06b1af5d7887",
+        "openborscript.c": "99de040e59497e479975ddcd6387540a9115d9a304c69ef8ef9a968598e770a1"
+      },
+      "animation_saves_local_context": true,
+      "animation_rebinds_current_model": true,
+      "setter_requires_initialized_owner": false,
+      "setter_collects_at_capacity": true,
+      "collector_exists": true,
+      "setter_unused_emp_declaration": true,
+      "nested_option_registered": true,
+      "cmd_option_registered": false,
+      "function_sha256": {
+        "execute_animation_script": "7a1cad1e409c6808c6e18c8d2dfb7a65f189d9942d66d9b55c767e581734926f",
+        "_set_var": "f08c2d9fda70a49acc55766c0b48e8561ca2f9d977b3f51dcc3066b9bff12bcc",
+        "_gc_var": "7c7f7583510593afec5059c18cd461ccf421bde8c22e4416b59d2af0ebbaf330",
+        "load_script_setting": "9ddcf043d39e3de90ae924af54e601a718ef94eda1255be4974be6fe85a306a5"
+      },
+      "getter_requires_initialized_owner": true,
+      "copy_initializes_destination": true,
+      "copy_clear_preserves_locals_when_zero": true,
+      "additional_function_sha256": {
+        "Script_Get_Local_Variant": "efaa9ef1c94e9545375b3460e57e7cae721c92e1d98a2a4798ead648d38c110f",
+        "Script_Copy": "8fb77654ff3aa6814bf7fb6c96b62739fc0f43680af3294937e16c908c7505eb",
+        "Script_Clear": "0045a6cb543a4ca678be2f7e6dc5d3366390bc5ba6b7c8f682ee02555d687456"
+      }
+    },
+    {
+      "revision": 3818,
+      "commit": "cae686392d0b5e52563e9dd191801193796cd4a5",
+      "source_sha256": {
+        "openbor.c": "4f6c0d38ca9c3b589b025625313952f06fa5cf3dd12ddf71d8ba06b1af5d7887",
+        "openborscript.c": "0cd1427fe582d5cc61b7e00de205d86dd458e3e1b1eb7a77a497fdb8932d3591"
+      },
+      "animation_saves_local_context": true,
+      "animation_rebinds_current_model": true,
+      "setter_requires_initialized_owner": false,
+      "setter_collects_at_capacity": true,
+      "collector_exists": true,
+      "setter_unused_emp_declaration": false,
+      "nested_option_registered": true,
+      "cmd_option_registered": false,
+      "function_sha256": {
+        "execute_animation_script": "7a1cad1e409c6808c6e18c8d2dfb7a65f189d9942d66d9b55c767e581734926f",
+        "_set_var": "05919057ed833d0a72a81a8b9a6faa92ad83e2dfb42bcca29d3f1a92fe851a90",
+        "_gc_var": "7c7f7583510593afec5059c18cd461ccf421bde8c22e4416b59d2af0ebbaf330",
+        "load_script_setting": "9ddcf043d39e3de90ae924af54e601a718ef94eda1255be4974be6fe85a306a5"
+      },
+      "getter_requires_initialized_owner": true,
+      "copy_initializes_destination": true,
+      "copy_clear_preserves_locals_when_zero": true,
+      "additional_function_sha256": {
+        "Script_Get_Local_Variant": "efaa9ef1c94e9545375b3460e57e7cae721c92e1d98a2a4798ead648d38c110f",
+        "Script_Copy": "8fb77654ff3aa6814bf7fb6c96b62739fc0f43680af3294937e16c908c7505eb",
+        "Script_Clear": "0045a6cb543a4ca678be2f7e6dc5d3366390bc5ba6b7c8f682ee02555d687456"
+      }
+    },
+    {
+      "revision": 3822,
+      "commit": "7ddd15b4981ea7b55f1851db926bc86276632b8c",
+      "source_sha256": {
+        "openbor.c": "71ee929158b3c9a5a97c543bfedace9c1c4156f70a8a186aaec8eacaa7ef3e13",
+        "openborscript.c": "df077cee68fa6491c8835b1dd86326179ca1f36112b0dc73d55b41300cb3a722"
+      },
+      "animation_saves_local_context": true,
+      "animation_rebinds_current_model": true,
+      "setter_requires_initialized_owner": false,
+      "setter_collects_at_capacity": true,
+      "collector_exists": true,
+      "setter_unused_emp_declaration": false,
+      "nested_option_registered": true,
+      "cmd_option_registered": false,
+      "function_sha256": {
+        "execute_animation_script": "7a1cad1e409c6808c6e18c8d2dfb7a65f189d9942d66d9b55c767e581734926f",
+        "_set_var": "05919057ed833d0a72a81a8b9a6faa92ad83e2dfb42bcca29d3f1a92fe851a90",
+        "_gc_var": "7c7f7583510593afec5059c18cd461ccf421bde8c22e4416b59d2af0ebbaf330",
+        "load_script_setting": "9ddcf043d39e3de90ae924af54e601a718ef94eda1255be4974be6fe85a306a5"
+      },
+      "getter_requires_initialized_owner": true,
+      "copy_initializes_destination": true,
+      "copy_clear_preserves_locals_when_zero": true,
+      "additional_function_sha256": {
+        "Script_Get_Local_Variant": "efaa9ef1c94e9545375b3460e57e7cae721c92e1d98a2a4798ead648d38c110f",
+        "Script_Copy": "8fb77654ff3aa6814bf7fb6c96b62739fc0f43680af3294937e16c908c7505eb",
+        "Script_Clear": "0045a6cb543a4ca678be2f7e6dc5d3366390bc5ba6b7c8f682ee02555d687456"
+      }
+    },
+    {
+      "revision": 3823,
+      "commit": "825e094e7417162e7787be0bdb77512d82e30fdd",
+      "source_sha256": {
+        "openbor.c": "648ee799721d5f8e77ef199d005c6aae70f366726297aaa39569512c71f565b2",
+        "openborscript.c": "df077cee68fa6491c8835b1dd86326179ca1f36112b0dc73d55b41300cb3a722"
+      },
+      "animation_saves_local_context": true,
+      "animation_rebinds_current_model": true,
+      "setter_requires_initialized_owner": false,
+      "setter_collects_at_capacity": true,
+      "collector_exists": true,
+      "setter_unused_emp_declaration": false,
+      "nested_option_registered": true,
+      "cmd_option_registered": true,
+      "getter_requires_initialized_owner": true,
+      "copy_initializes_destination": true,
+      "copy_clear_preserves_locals_when_zero": true,
+      "function_sha256": {
+        "execute_animation_script": "7a1cad1e409c6808c6e18c8d2dfb7a65f189d9942d66d9b55c767e581734926f",
+        "_set_var": "05919057ed833d0a72a81a8b9a6faa92ad83e2dfb42bcca29d3f1a92fe851a90",
+        "_gc_var": "7c7f7583510593afec5059c18cd461ccf421bde8c22e4416b59d2af0ebbaf330",
+        "load_script_setting": "7285c0b5399d5008432701c58f77b7fbceb2fb3995f3752ef557b3955518a294"
+      },
+      "additional_function_sha256": {
+        "Script_Get_Local_Variant": "efaa9ef1c94e9545375b3460e57e7cae721c92e1d98a2a4798ead648d38c110f",
+        "Script_Copy": "8fb77654ff3aa6814bf7fb6c96b62739fc0f43680af3294937e16c908c7505eb",
+        "Script_Clear": "0045a6cb543a4ca678be2f7e6dc5d3366390bc5ba6b7c8f682ee02555d687456"
+      }
+    },
+    {
+      "revision": 3824,
+      "commit": "e260635df5095577fb729555cd5c08ecce37316d",
+      "source_sha256": {
+        "openbor.c": "02b8a2f6e31e8b183f9268bab9a229ad5cfdb5c67b2879d7c51249658490a713",
+        "openborscript.c": "df077cee68fa6491c8835b1dd86326179ca1f36112b0dc73d55b41300cb3a722"
+      },
+      "animation_saves_local_context": true,
+      "animation_rebinds_current_model": true,
+      "setter_requires_initialized_owner": false,
+      "setter_collects_at_capacity": true,
+      "collector_exists": true,
+      "setter_unused_emp_declaration": false,
+      "nested_option_registered": true,
+      "cmd_option_registered": true,
+      "function_sha256": {
+        "execute_animation_script": "7a1cad1e409c6808c6e18c8d2dfb7a65f189d9942d66d9b55c767e581734926f",
+        "_set_var": "05919057ed833d0a72a81a8b9a6faa92ad83e2dfb42bcca29d3f1a92fe851a90",
+        "_gc_var": "7c7f7583510593afec5059c18cd461ccf421bde8c22e4416b59d2af0ebbaf330",
+        "load_script_setting": "7285c0b5399d5008432701c58f77b7fbceb2fb3995f3752ef557b3955518a294"
+      },
+      "getter_requires_initialized_owner": true,
+      "copy_initializes_destination": true,
+      "copy_clear_preserves_locals_when_zero": true,
+      "additional_function_sha256": {
+        "Script_Get_Local_Variant": "efaa9ef1c94e9545375b3460e57e7cae721c92e1d98a2a4798ead648d38c110f",
+        "Script_Copy": "8fb77654ff3aa6814bf7fb6c96b62739fc0f43680af3294937e16c908c7505eb",
+        "Script_Clear": "0045a6cb543a4ca678be2f7e6dc5d3366390bc5ba6b7c8f682ee02555d687456"
+      }
+    },
+    {
+      "revision": 3825,
+      "commit": "1f5678eca72888f834c27f9887b4bc2d81412ffc",
+      "source_sha256": {
+        "openbor.c": "952432ed33df133c780008e6acd082b67f237153af2713c7413da42873f5ed72",
+        "openborscript.c": "df077cee68fa6491c8835b1dd86326179ca1f36112b0dc73d55b41300cb3a722"
+      },
+      "animation_saves_local_context": true,
+      "animation_rebinds_current_model": true,
+      "setter_requires_initialized_owner": false,
+      "setter_collects_at_capacity": true,
+      "collector_exists": true,
+      "setter_unused_emp_declaration": false,
+      "nested_option_registered": true,
+      "cmd_option_registered": true,
+      "function_sha256": {
+        "execute_animation_script": "7a1cad1e409c6808c6e18c8d2dfb7a65f189d9942d66d9b55c767e581734926f",
+        "_set_var": "05919057ed833d0a72a81a8b9a6faa92ad83e2dfb42bcca29d3f1a92fe851a90",
+        "_gc_var": "7c7f7583510593afec5059c18cd461ccf421bde8c22e4416b59d2af0ebbaf330",
+        "load_script_setting": "7285c0b5399d5008432701c58f77b7fbceb2fb3995f3752ef557b3955518a294"
+      },
+      "getter_requires_initialized_owner": true,
+      "copy_initializes_destination": true,
+      "copy_clear_preserves_locals_when_zero": true,
+      "additional_function_sha256": {
+        "Script_Get_Local_Variant": "efaa9ef1c94e9545375b3460e57e7cae721c92e1d98a2a4798ead648d38c110f",
+        "Script_Copy": "8fb77654ff3aa6814bf7fb6c96b62739fc0f43680af3294937e16c908c7505eb",
+        "Script_Clear": "0045a6cb543a4ca678be2f7e6dc5d3366390bc5ba6b7c8f682ee02555d687456"
+      }
+    },
+    {
+      "revision": 3826,
+      "commit": "7f8db3e494b600125795cae3406bce3b0bda3216",
+      "source_sha256": {
+        "openbor.c": "952432ed33df133c780008e6acd082b67f237153af2713c7413da42873f5ed72",
+        "openborscript.c": "c08bfdf3b4910c7ed9aedbdac515554b7dab62eb054574eee0ed5cc06948f4e1"
+      },
+      "animation_saves_local_context": true,
+      "animation_rebinds_current_model": true,
+      "setter_requires_initialized_owner": false,
+      "setter_collects_at_capacity": true,
+      "collector_exists": true,
+      "setter_unused_emp_declaration": false,
+      "nested_option_registered": true,
+      "cmd_option_registered": true,
+      "function_sha256": {
+        "execute_animation_script": "7a1cad1e409c6808c6e18c8d2dfb7a65f189d9942d66d9b55c767e581734926f",
+        "_set_var": "05919057ed833d0a72a81a8b9a6faa92ad83e2dfb42bcca29d3f1a92fe851a90",
+        "_gc_var": "7c7f7583510593afec5059c18cd461ccf421bde8c22e4416b59d2af0ebbaf330",
+        "load_script_setting": "7285c0b5399d5008432701c58f77b7fbceb2fb3995f3752ef557b3955518a294"
+      },
+      "getter_requires_initialized_owner": true,
+      "copy_initializes_destination": true,
+      "copy_clear_preserves_locals_when_zero": true,
+      "additional_function_sha256": {
+        "Script_Get_Local_Variant": "efaa9ef1c94e9545375b3460e57e7cae721c92e1d98a2a4798ead648d38c110f",
+        "Script_Copy": "8fb77654ff3aa6814bf7fb6c96b62739fc0f43680af3294937e16c908c7505eb",
+        "Script_Clear": "0045a6cb543a4ca678be2f7e6dc5d3366390bc5ba6b7c8f682ee02555d687456"
+      }
+    },
+    {
+      "revision": 3827,
+      "commit": "e5776ed5795181f64f0ca89529e78c221d8e62ca",
+      "source_sha256": {
+        "openbor.c": "952432ed33df133c780008e6acd082b67f237153af2713c7413da42873f5ed72",
+        "openborscript.c": "79d71e4b5bc22cfefb45dd916ec38bb67880974934bcd29ce6ac8c1db6a2567d"
+      },
+      "animation_saves_local_context": true,
+      "animation_rebinds_current_model": true,
+      "setter_requires_initialized_owner": false,
+      "setter_collects_at_capacity": true,
+      "collector_exists": true,
+      "setter_unused_emp_declaration": false,
+      "nested_option_registered": true,
+      "cmd_option_registered": true,
+      "function_sha256": {
+        "execute_animation_script": "7a1cad1e409c6808c6e18c8d2dfb7a65f189d9942d66d9b55c767e581734926f",
+        "_set_var": "05919057ed833d0a72a81a8b9a6faa92ad83e2dfb42bcca29d3f1a92fe851a90",
+        "_gc_var": "7c7f7583510593afec5059c18cd461ccf421bde8c22e4416b59d2af0ebbaf330",
+        "load_script_setting": "7285c0b5399d5008432701c58f77b7fbceb2fb3995f3752ef557b3955518a294"
+      },
+      "getter_requires_initialized_owner": true,
+      "copy_initializes_destination": true,
+      "copy_clear_preserves_locals_when_zero": true,
+      "additional_function_sha256": {
+        "Script_Get_Local_Variant": "efaa9ef1c94e9545375b3460e57e7cae721c92e1d98a2a4798ead648d38c110f",
+        "Script_Copy": "8fb77654ff3aa6814bf7fb6c96b62739fc0f43680af3294937e16c908c7505eb",
+        "Script_Clear": "0045a6cb543a4ca678be2f7e6dc5d3366390bc5ba6b7c8f682ee02555d687456"
+      }
+    },
+    {
+      "revision": 3828,
+      "commit": "68441a1a32951cb03c1fda2f237076c338dd6128",
+      "source_sha256": {
+        "openbor.c": "34090f58e52330be5768b412ea52a73008f21af286dd0d6b1007cf07dd70a4ed",
+        "openborscript.c": "e85a2fe43a463834acfa8477e8b1d797d74b2f8af4d46368d12c50c58b90cd17"
+      },
+      "animation_saves_local_context": true,
+      "animation_rebinds_current_model": true,
+      "setter_requires_initialized_owner": false,
+      "setter_collects_at_capacity": true,
+      "collector_exists": true,
+      "setter_unused_emp_declaration": false,
+      "nested_option_registered": true,
+      "cmd_option_registered": true,
+      "function_sha256": {
+        "execute_animation_script": "7a1cad1e409c6808c6e18c8d2dfb7a65f189d9942d66d9b55c767e581734926f",
+        "_set_var": "05919057ed833d0a72a81a8b9a6faa92ad83e2dfb42bcca29d3f1a92fe851a90",
+        "_gc_var": "7c7f7583510593afec5059c18cd461ccf421bde8c22e4416b59d2af0ebbaf330",
+        "load_script_setting": "7285c0b5399d5008432701c58f77b7fbceb2fb3995f3752ef557b3955518a294"
+      },
+      "getter_requires_initialized_owner": true,
+      "copy_initializes_destination": true,
+      "copy_clear_preserves_locals_when_zero": true,
+      "additional_function_sha256": {
+        "Script_Get_Local_Variant": "efaa9ef1c94e9545375b3460e57e7cae721c92e1d98a2a4798ead648d38c110f",
+        "Script_Copy": "8fb77654ff3aa6814bf7fb6c96b62739fc0f43680af3294937e16c908c7505eb",
+        "Script_Clear": "0045a6cb543a4ca678be2f7e6dc5d3366390bc5ba6b7c8f682ee02555d687456"
+      }
+    },
+    {
+      "revision": 3829,
+      "commit": "8223091e0ae85bd621572094c3465783d6f73429",
+      "source_sha256": {
+        "openbor.c": "34090f58e52330be5768b412ea52a73008f21af286dd0d6b1007cf07dd70a4ed",
+        "openborscript.c": "e85a2fe43a463834acfa8477e8b1d797d74b2f8af4d46368d12c50c58b90cd17"
+      },
+      "animation_saves_local_context": true,
+      "animation_rebinds_current_model": true,
+      "setter_requires_initialized_owner": false,
+      "setter_collects_at_capacity": true,
+      "collector_exists": true,
+      "setter_unused_emp_declaration": false,
+      "nested_option_registered": true,
+      "cmd_option_registered": true,
+      "function_sha256": {
+        "execute_animation_script": "7a1cad1e409c6808c6e18c8d2dfb7a65f189d9942d66d9b55c767e581734926f",
+        "_set_var": "05919057ed833d0a72a81a8b9a6faa92ad83e2dfb42bcca29d3f1a92fe851a90",
+        "_gc_var": "7c7f7583510593afec5059c18cd461ccf421bde8c22e4416b59d2af0ebbaf330",
+        "load_script_setting": "7285c0b5399d5008432701c58f77b7fbceb2fb3995f3752ef557b3955518a294"
+      },
+      "getter_requires_initialized_owner": true,
+      "copy_initializes_destination": true,
+      "copy_clear_preserves_locals_when_zero": true,
+      "additional_function_sha256": {
+        "Script_Get_Local_Variant": "efaa9ef1c94e9545375b3460e57e7cae721c92e1d98a2a4798ead648d38c110f",
+        "Script_Copy": "8fb77654ff3aa6814bf7fb6c96b62739fc0f43680af3294937e16c908c7505eb",
+        "Script_Clear": "0045a6cb543a4ca678be2f7e6dc5d3366390bc5ba6b7c8f682ee02555d687456"
+      }
+    },
+    {
+      "revision": 3830,
+      "commit": "1248ca60d338c911ef81a0b1ade0ef05ff0fa6cc",
+      "source_sha256": {
+        "openbor.c": "82616c7821e3f92027a83a27104febaf7e8974791ae1728b3b61632515e9e3a5",
+        "openborscript.c": "e85a2fe43a463834acfa8477e8b1d797d74b2f8af4d46368d12c50c58b90cd17"
+      },
+      "animation_saves_local_context": true,
+      "animation_rebinds_current_model": true,
+      "setter_requires_initialized_owner": false,
+      "setter_collects_at_capacity": true,
+      "collector_exists": true,
+      "setter_unused_emp_declaration": false,
+      "nested_option_registered": true,
+      "cmd_option_registered": true,
+      "function_sha256": {
+        "execute_animation_script": "7a1cad1e409c6808c6e18c8d2dfb7a65f189d9942d66d9b55c767e581734926f",
+        "_set_var": "05919057ed833d0a72a81a8b9a6faa92ad83e2dfb42bcca29d3f1a92fe851a90",
+        "_gc_var": "7c7f7583510593afec5059c18cd461ccf421bde8c22e4416b59d2af0ebbaf330",
+        "load_script_setting": "7285c0b5399d5008432701c58f77b7fbceb2fb3995f3752ef557b3955518a294"
+      },
+      "getter_requires_initialized_owner": true,
+      "copy_initializes_destination": true,
+      "copy_clear_preserves_locals_when_zero": true,
+      "additional_function_sha256": {
+        "Script_Get_Local_Variant": "efaa9ef1c94e9545375b3460e57e7cae721c92e1d98a2a4798ead648d38c110f",
+        "Script_Copy": "8fb77654ff3aa6814bf7fb6c96b62739fc0f43680af3294937e16c908c7505eb",
+        "Script_Clear": "0045a6cb543a4ca678be2f7e6dc5d3366390bc5ba6b7c8f682ee02555d687456"
+      }
+    },
+    {
+      "revision": 3831,
+      "commit": "c61f02b3fbb155dd416a7750eb9cb645d7785266",
+      "source_sha256": {
+        "openbor.c": "eab507994a0d2daf24dd46fc052d6bc3e893dc7428c3009fc87c72a0857bdeab",
+        "openborscript.c": "8ef46af0205fb5b86eb268cfbac4464e57c2a9687a52912cd6dea3acb1f26f43"
+      },
+      "animation_saves_local_context": true,
+      "animation_rebinds_current_model": true,
+      "setter_requires_initialized_owner": false,
+      "setter_collects_at_capacity": true,
+      "collector_exists": true,
+      "setter_unused_emp_declaration": false,
+      "nested_option_registered": true,
+      "cmd_option_registered": true,
+      "function_sha256": {
+        "execute_animation_script": "7a1cad1e409c6808c6e18c8d2dfb7a65f189d9942d66d9b55c767e581734926f",
+        "_set_var": "05919057ed833d0a72a81a8b9a6faa92ad83e2dfb42bcca29d3f1a92fe851a90",
+        "_gc_var": "7c7f7583510593afec5059c18cd461ccf421bde8c22e4416b59d2af0ebbaf330",
+        "load_script_setting": "7285c0b5399d5008432701c58f77b7fbceb2fb3995f3752ef557b3955518a294"
+      },
+      "getter_requires_initialized_owner": true,
+      "copy_initializes_destination": true,
+      "copy_clear_preserves_locals_when_zero": true,
+      "additional_function_sha256": {
+        "Script_Get_Local_Variant": "efaa9ef1c94e9545375b3460e57e7cae721c92e1d98a2a4798ead648d38c110f",
+        "Script_Copy": "8fb77654ff3aa6814bf7fb6c96b62739fc0f43680af3294937e16c908c7505eb",
+        "Script_Clear": "0045a6cb543a4ca678be2f7e6dc5d3366390bc5ba6b7c8f682ee02555d687456"
+      }
+    },
+    {
+      "revision": 3837,
+      "commit": "f2b4258428af00b3748ef7713d36201d4d0678ac",
+      "source_sha256": {
+        "openbor.c": "2df0e70317d8622ff2013ad88f0c787033e4f0a342cd0b9229045568f4a8c44f",
+        "openborscript.c": "0df49d7758964678ad1bf733d3024f524d3147d6247e5a3e40e83dbad75d57dd"
+      },
+      "animation_saves_local_context": true,
+      "animation_rebinds_current_model": true,
+      "setter_requires_initialized_owner": false,
+      "setter_collects_at_capacity": true,
+      "collector_exists": true,
+      "setter_unused_emp_declaration": false,
+      "nested_option_registered": true,
+      "cmd_option_registered": true,
+      "function_sha256": {
+        "execute_animation_script": "7a1cad1e409c6808c6e18c8d2dfb7a65f189d9942d66d9b55c767e581734926f",
+        "_set_var": "05919057ed833d0a72a81a8b9a6faa92ad83e2dfb42bcca29d3f1a92fe851a90",
+        "_gc_var": "7c7f7583510593afec5059c18cd461ccf421bde8c22e4416b59d2af0ebbaf330",
+        "load_script_setting": "7285c0b5399d5008432701c58f77b7fbceb2fb3995f3752ef557b3955518a294"
+      },
+      "getter_requires_initialized_owner": true,
+      "copy_initializes_destination": true,
+      "copy_clear_preserves_locals_when_zero": true,
+      "additional_function_sha256": {
+        "Script_Get_Local_Variant": "efaa9ef1c94e9545375b3460e57e7cae721c92e1d98a2a4798ead648d38c110f",
+        "Script_Copy": "8fb77654ff3aa6814bf7fb6c96b62739fc0f43680af3294937e16c908c7505eb",
+        "Script_Clear": "0045a6cb543a4ca678be2f7e6dc5d3366390bc5ba6b7c8f682ee02555d687456"
+      }
+    },
+    {
+      "revision": 3839,
+      "commit": "b6712f11af263c3ad438d87241cec38f18570046",
+      "source_sha256": {
+        "openbor.c": "05da6ee5344e99dad15be7c2c803947d30138df3abab0369c0839442ed106614",
+        "openborscript.c": "b884c3b74c15b693708c8863e6c4137facfe1de3d250cc8e3efa6d90e5375e1b"
+      },
+      "animation_saves_local_context": true,
+      "animation_rebinds_current_model": true,
+      "setter_requires_initialized_owner": false,
+      "setter_collects_at_capacity": true,
+      "collector_exists": true,
+      "setter_unused_emp_declaration": false,
+      "nested_option_registered": true,
+      "cmd_option_registered": true,
+      "function_sha256": {
+        "execute_animation_script": "7a1cad1e409c6808c6e18c8d2dfb7a65f189d9942d66d9b55c767e581734926f",
+        "_set_var": "05919057ed833d0a72a81a8b9a6faa92ad83e2dfb42bcca29d3f1a92fe851a90",
+        "_gc_var": "7c7f7583510593afec5059c18cd461ccf421bde8c22e4416b59d2af0ebbaf330",
+        "load_script_setting": "7285c0b5399d5008432701c58f77b7fbceb2fb3995f3752ef557b3955518a294"
+      },
+      "getter_requires_initialized_owner": true,
+      "copy_initializes_destination": true,
+      "copy_clear_preserves_locals_when_zero": true,
+      "additional_function_sha256": {
+        "Script_Get_Local_Variant": "efaa9ef1c94e9545375b3460e57e7cae721c92e1d98a2a4798ead648d38c110f",
+        "Script_Copy": "8fb77654ff3aa6814bf7fb6c96b62739fc0f43680af3294937e16c908c7505eb",
+        "Script_Clear": "0045a6cb543a4ca678be2f7e6dc5d3366390bc5ba6b7c8f682ee02555d687456"
+      }
+    },
+    {
+      "revision": 3840,
+      "commit": "0970c306de4f128fe223a544478226d5a64a1844",
+      "source_sha256": {
+        "openbor.c": "05da6ee5344e99dad15be7c2c803947d30138df3abab0369c0839442ed106614",
+        "openborscript.c": "b884c3b74c15b693708c8863e6c4137facfe1de3d250cc8e3efa6d90e5375e1b"
+      },
+      "animation_saves_local_context": true,
+      "animation_rebinds_current_model": true,
+      "setter_requires_initialized_owner": false,
+      "setter_collects_at_capacity": true,
+      "collector_exists": true,
+      "setter_unused_emp_declaration": false,
+      "nested_option_registered": true,
+      "cmd_option_registered": true,
+      "function_sha256": {
+        "execute_animation_script": "7a1cad1e409c6808c6e18c8d2dfb7a65f189d9942d66d9b55c767e581734926f",
+        "_set_var": "05919057ed833d0a72a81a8b9a6faa92ad83e2dfb42bcca29d3f1a92fe851a90",
+        "_gc_var": "7c7f7583510593afec5059c18cd461ccf421bde8c22e4416b59d2af0ebbaf330",
+        "load_script_setting": "7285c0b5399d5008432701c58f77b7fbceb2fb3995f3752ef557b3955518a294"
+      },
+      "getter_requires_initialized_owner": true,
+      "copy_initializes_destination": true,
+      "copy_clear_preserves_locals_when_zero": true,
+      "additional_function_sha256": {
+        "Script_Get_Local_Variant": "efaa9ef1c94e9545375b3460e57e7cae721c92e1d98a2a4798ead648d38c110f",
+        "Script_Copy": "8fb77654ff3aa6814bf7fb6c96b62739fc0f43680af3294937e16c908c7505eb",
+        "Script_Clear": "0045a6cb543a4ca678be2f7e6dc5d3366390bc5ba6b7c8f682ee02555d687456"
+      }
+    },
+    {
+      "revision": 3841,
+      "commit": "4c79b2e9ff9ad14115e695fc82e4c0ca10c0d822",
+      "source_sha256": {
+        "openbor.c": "47cea0e9dea15a60b8d06f3618e8e23dc1356622d49cdcc814c4bcfc6fd8f7f4",
+        "openborscript.c": "b884c3b74c15b693708c8863e6c4137facfe1de3d250cc8e3efa6d90e5375e1b"
+      },
+      "animation_saves_local_context": true,
+      "animation_rebinds_current_model": true,
+      "setter_requires_initialized_owner": false,
+      "setter_collects_at_capacity": true,
+      "collector_exists": true,
+      "setter_unused_emp_declaration": false,
+      "nested_option_registered": true,
+      "cmd_option_registered": true,
+      "function_sha256": {
+        "execute_animation_script": "7a1cad1e409c6808c6e18c8d2dfb7a65f189d9942d66d9b55c767e581734926f",
+        "_set_var": "05919057ed833d0a72a81a8b9a6faa92ad83e2dfb42bcca29d3f1a92fe851a90",
+        "_gc_var": "7c7f7583510593afec5059c18cd461ccf421bde8c22e4416b59d2af0ebbaf330",
+        "load_script_setting": "7285c0b5399d5008432701c58f77b7fbceb2fb3995f3752ef557b3955518a294"
+      },
+      "getter_requires_initialized_owner": true,
+      "copy_initializes_destination": true,
+      "copy_clear_preserves_locals_when_zero": true,
+      "additional_function_sha256": {
+        "Script_Get_Local_Variant": "efaa9ef1c94e9545375b3460e57e7cae721c92e1d98a2a4798ead648d38c110f",
+        "Script_Copy": "8fb77654ff3aa6814bf7fb6c96b62739fc0f43680af3294937e16c908c7505eb",
+        "Script_Clear": "0045a6cb543a4ca678be2f7e6dc5d3366390bc5ba6b7c8f682ee02555d687456"
+      }
+    },
+    {
+      "revision": 3842,
+      "commit": "1f702a991ace7fa31884262e458a85e351f62713",
+      "source_sha256": {
+        "openbor.c": "d2638ad5cf319be18bc22a07f1d9b9b999d17cbcd83830433a59b819a40339a9",
+        "openborscript.c": "80fc85d07a86206647d4d4877a4f91b2cbe5e94598b6cd934ebf05d184bf719b"
+      },
+      "animation_saves_local_context": true,
+      "animation_rebinds_current_model": true,
+      "setter_requires_initialized_owner": false,
+      "setter_collects_at_capacity": true,
+      "collector_exists": true,
+      "setter_unused_emp_declaration": false,
+      "nested_option_registered": true,
+      "cmd_option_registered": true,
+      "function_sha256": {
+        "execute_animation_script": "7a1cad1e409c6808c6e18c8d2dfb7a65f189d9942d66d9b55c767e581734926f",
+        "_set_var": "05919057ed833d0a72a81a8b9a6faa92ad83e2dfb42bcca29d3f1a92fe851a90",
+        "_gc_var": "7c7f7583510593afec5059c18cd461ccf421bde8c22e4416b59d2af0ebbaf330",
+        "load_script_setting": "7285c0b5399d5008432701c58f77b7fbceb2fb3995f3752ef557b3955518a294"
+      },
+      "getter_requires_initialized_owner": true,
+      "copy_initializes_destination": true,
+      "copy_clear_preserves_locals_when_zero": true,
+      "additional_function_sha256": {
+        "Script_Get_Local_Variant": "efaa9ef1c94e9545375b3460e57e7cae721c92e1d98a2a4798ead648d38c110f",
+        "Script_Copy": "8fb77654ff3aa6814bf7fb6c96b62739fc0f43680af3294937e16c908c7505eb",
+        "Script_Clear": "0045a6cb543a4ca678be2f7e6dc5d3366390bc5ba6b7c8f682ee02555d687456"
+      }
+    }
+  ],
+  "scope": "Actual complete animation callback and scalar local-variable store/context helper bodies with controlled Copy/Execute and scalar variant providers. Source boundaries preserve realowner acceptance, snapshot/rebind and capacity collection; no full interpreter or non-scalar lifetime acceptance. Selected complete nonestedscript/nocmdcompatible setting branches check source availability and argument reads, including silently ignored older settings."
+}

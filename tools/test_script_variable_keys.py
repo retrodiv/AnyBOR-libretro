@@ -87,16 +87,18 @@ class ScriptVariableKeyTests(unittest.TestCase):
             with self.subTest(log=log), self.assertRaises(RuntimeError):
                 check_variable_key_continuation(log, '3842')
 
-    def check_old_table(self, source, header, *, has_gc, explicit_owner):
+    def check_old_table(self, source, header, *, has_gc, explicit_owner, revision):
         program = r'''
 #include <assert.h>
 #include <stddef.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 typedef struct Script { int initialized; } Script;
 typedef struct { int vt,value; } ScriptVariant;
 enum { VT_EMPTY,VT_INTEGER };
+enum { obor_profile_build=PROFILE_REVISION };
 NODE
 static s_variantnode nodes[8],*slots[8];
 static s_variantnode **global_var_list=slots;
@@ -185,7 +187,8 @@ int main(void) {
                      'pcurrentscript=owner;return Script_Get_Local_Variant(name); }')
             native = Path(temporary) / 'keys.c'
             body = program
-            for key, value in (('NODE', node), ('GC', gc), ('METHODS', methods), ('LOCAL_WRAPPER', local)):
+            for key, value in (('NODE', node), ('GC', gc), ('METHODS', methods),
+                               ('LOCAL_WRAPPER', local), ('PROFILE_REVISION', str(revision))):
                 body = body.replace(key, value)
             native.write_text(body)
             host = Path(temporary) / 'keys'
@@ -203,7 +206,8 @@ int main(void) {
                 engine = SOURCE / 'src/engines' / build
                 self.check_old_table((engine / 'openborscript.c').read_text(),
                                      (engine / 'openborscript.h').read_text(),
-                                     has_gc=build == '3842', explicit_owner=build != '3400')
+                                     has_gc=build == '3842', explicit_owner=build != '3400',
+                                     revision=int(build))
 
 
 if __name__ == '__main__':

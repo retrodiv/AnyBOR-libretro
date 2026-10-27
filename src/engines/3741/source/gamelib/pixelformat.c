@@ -1,3 +1,17 @@
+/* AnyBOR modification record: 2026-10-23.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Bound clip endpoints without signed overflow while retaining native color
+ * and draw-method initialization. Preserve native colour-channel, tint and
+ * base-colour ordering across historical blend domains. Bound selected table
+ * and tint indices.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/3741.md
+ * at the source repository root. Original notices follow below.
+ */
+
 /*
  * OpenBOR - http://www.LavaLit.com
  * -----------------------------------------------------------------------
@@ -17,6 +31,17 @@
 #define NULL (void*)0
 #endif
 
+int obor_profile_blend_count(void)
+{
+    return obor_profile_build == 3730 ? MAX_BLENDINGS + 1 : MAX_BLENDINGS;
+}
+
+unsigned char *obor_blend_table(int alpha)
+{
+    if(alpha <= 0 || alpha > OBOR_BLEND_COUNT) return NULL;
+    return blendtables[alpha - 1];
+}
+
 int pixelformat = PIXEL_8;
 int screenformat = PIXEL_8;
 int pixelbytes[(int)5] = {1, 1, 2, 3, 4};
@@ -29,6 +54,19 @@ int usechannel;
 //may be used many time so make a function
 void drawmethod_global_init(s_drawmethod* drawmethod)
 {
+    if(obor_profile_build < 3730) return;
+    if(obor_profile_build == 3730)
+    {
+        if(drawmethod && drawmethod->flag)
+        {
+            channelr = drawmethod->channelr;
+            channelg = drawmethod->channelg;
+            channelb = drawmethod->channelb;
+            usechannel = (channelr < 255) || (channelg < 255) || (channelb < 255);
+        }
+        else usechannel = 0;
+        return;
+    }
 	if(screenformat!=PIXEL_8) 
 	{
 		if(drawmethod && drawmethod->flag)
@@ -83,6 +121,13 @@ unsigned colour32(unsigned char r, unsigned char g, unsigned char b)
 #define _dodge(c1,c2) (((c2)<<8)/(256-(c1)))
 #define _channel(src,dest,alpha) (((src*alpha)+(dest*(255-alpha)))>>8)
 #define _color(r,g,b) (((b)<<16)|((g)<<8)|(r))
+
+static unsigned obor_pack_base32(unsigned first, unsigned green, unsigned last)
+{
+    if(obor_profile_build < 3730) return (first << 16) | (green << 8) | last;
+    return (last << 16) | (green << 8) | first;
+}
+
 
 
 // common blend function
@@ -139,7 +184,7 @@ unsigned blend_multiply32(register unsigned color1, register unsigned color2)
 	if((tbl=blendtables[BLEND_MULTIPLY])){
 		return _color(tbl[ri], tbl[gi], tbl[bi]);
 	}
-	return _color(_multiply(color1>>16,color2>>16),
+	return obor_pack_base32(_multiply(color1>>16,color2>>16),
 				  _multiply((color1&0xFF00)>>8,(color2&0xFF00)>>8),
 				  _multiply(color1&0xFF,color2&0xFF));
 }
@@ -160,7 +205,7 @@ unsigned blend_screen32(register unsigned color1, register unsigned color2)
 	if((tbl=blendtables[BLEND_SCREEN])){
 		return _color(tbl[ri], tbl[gi], tbl[bi]);
 	}
-	return _color(_screen(color1>>16,color2>>16),
+	return obor_pack_base32(_screen(color1>>16,color2>>16),
 				  _screen((color1&0xFF00)>>8,(color2&0xFF00)>>8),
 				  _screen(color1&0xFF,color2&0xFF));
 }
@@ -254,7 +299,7 @@ unsigned blend_half32(register unsigned color1, register unsigned color2)
 	if((tbl=blendtables[BLEND_HALF])){
 		return _color(tbl[ri], tbl[gi], tbl[bi]);
 	}
-	return _color(((color1>>16)+(color2>>16))>>1,
+	return obor_pack_base32(((color1>>16)+(color2>>16))>>1,
 				  (((color1&0xFF00)>>8) + ((color2&0xFF00)>>8))>>1,
 				  ((color1&0xFF) + (color2&0xFF))>>1);
 }
@@ -474,10 +519,10 @@ unsigned short blend_channel16(unsigned short color1, unsigned short color2, reg
 	return _color16(_channel16(_r1,_r2,a),_channel16(_g1,_g2,a),_channel16(_b1,_b2,a));
 }
 
-unsigned char* blendtables[MAX_BLENDINGS] = {NULL,NULL,NULL,NULL,NULL,NULL};
-blend16fp blendfunctions16[MAX_BLENDINGS] = {blend_screen16, blend_multiply16, blend_overlay16, blend_hardlight16, blend_dodge16, blend_half16};
-blend32fp blendfunctions[MAX_BLENDINGS] = {blend_screen, blend_multiply, blend_overlay, blend_hardlight, blend_dodge, blend_half};
-blend32fp blendfunctions32[MAX_BLENDINGS] = {blend_screen32, blend_multiply32, blend_overlay32, blend_hardlight32, blend_dodge32, blend_half32};
+unsigned char* blendtables[OBOR_BLEND_STORAGE] = {NULL,NULL,NULL,NULL,NULL,NULL};
+blend16fp blendfunctions16[OBOR_BLEND_STORAGE] = {blend_screen16, blend_multiply16, blend_overlay16, blend_hardlight16, blend_dodge16, blend_half16, blend_rgbchannel16};
+blend32fp blendfunctions[OBOR_BLEND_STORAGE] = {blend_screen, blend_multiply, blend_overlay, blend_hardlight, blend_dodge, blend_half, blend_half};
+blend32fp blendfunctions32[OBOR_BLEND_STORAGE] = {blend_screen32, blend_multiply32, blend_overlay32, blend_hardlight32, blend_dodge32, blend_half32, blend_rgbchannel32};
 
 // This method set blending tables for 8bit mode
 // Need a list of blending table handles which
@@ -485,13 +530,41 @@ blend32fp blendfunctions32[MAX_BLENDINGS] = {blend_screen32, blend_multiply32, b
 void set_blendtables(unsigned char* tables[])
 {
 	int i;
-	for(i=0; i<MAX_BLENDINGS; i++)
-		blendtables[i] = tables[i];
+	for(i=0; i<OBOR_BLEND_STORAGE; i++)
+		blendtables[i] = i < OBOR_BLEND_COUNT ? tables[i] : NULL;
+}
+
+static unsigned short obor_blend_dye16(unsigned short source, unsigned short unused)
+{
+    unsigned red = ((source & 31u) * channelr) >> 8;
+    unsigned green = (((source >> 5) & 63u) * channelg) >> 8;
+    unsigned blue = ((source >> 11) * channelb) >> 8;
+    (void)unused;
+    if(red > 31u) red = 31u;
+    if(green > 63u) green = 63u;
+    if(blue > 31u) blue = 31u;
+    return (unsigned short)((blue << 11) | (green << 5) | red);
+}
+
+static unsigned obor_blend_dye32(unsigned source, unsigned unused)
+{
+    unsigned red = ((source & 255u) * channelr) >> 8;
+    unsigned green = (((source >> 8) & 255u) * channelg) >> 8;
+    unsigned blue = ((source >> 16) * channelb) >> 8;
+    (void)unused;
+    return (blue << 16) | (green << 8) | red;
 }
 
 //getting too long so make 2 functions
 blend16fp getblendfunction16(int alpha)
 {
+    if(alpha > OBOR_BLEND_COUNT) return NULL;
+    if(obor_profile_build < 3731)
+    {
+        if(alpha > 0) return blendfunctions16[alpha - 1];
+        return obor_profile_build == 3730 && usechannel ? obor_blend_dye16 : NULL;
+    }
+    if(tintmode > (unsigned)OBOR_BLEND_COUNT) return NULL;
 	blend16fp fp = (alpha>0)?blendfunctions16[alpha-1]:NULL;
 	//tint mode means tint the sprite with color
 	if(tintmode>0)
@@ -511,6 +584,13 @@ blend16fp getblendfunction16(int alpha)
 
 blend32fp getblendfunction32(int alpha)
 {
+    if(alpha > OBOR_BLEND_COUNT) return NULL;
+    if(obor_profile_build < 3731)
+    {
+        if(alpha > 0) return blendfunctions32[alpha - 1];
+        return obor_profile_build == 3730 && usechannel ? obor_blend_dye32 : NULL;
+    }
+    if(tintmode > (unsigned)OBOR_BLEND_COUNT) return NULL;
 	blend32fp fp = (alpha>0)?blendfunctions32[alpha-1]:NULL;
 	if(tintmode>0)
 	{

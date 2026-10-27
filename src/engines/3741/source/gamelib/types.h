@@ -1,3 +1,16 @@
+/* AnyBOR modification record: 2026-10-23.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Match drawing-method typedef alignment to packed owning records without
+ * changing fields, offsets or sizes. Reserve bounded blend-table storage for
+ * each profile's native six- or seven-mode domain.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/3741.md
+ * at the source repository root. Original notices follow below.
+ */
+
 /*
  * OpenBOR - http://www.LavaLit.com
  * -----------------------------------------------------------------------
@@ -35,6 +48,10 @@
 #define BLEND_HALF       5
 
 #define MAX_BLENDINGS    6
+#define OBOR_BLEND_STORAGE (MAX_BLENDINGS + 1)
+int obor_profile_blend_count(void);
+#define OBOR_BLEND_COUNT (obor_profile_blend_count())
+unsigned char *obor_blend_table(int alpha);
 /*
 #define _copy24bitp(pd, ps) (pd)[0] = (ps)[0]; (pd)[1] = (ps)[1]; (pd)[2] = (ps)[2];
 #define _copy24bit(pd, v) (pd)[0] = ((unsigned char*)(&(v)))[0]; (pd)[1] = ((unsigned char*)(&(v)))[1]; (pd)[2] = ((unsigned char*)(&(v)))[2];
@@ -168,9 +185,9 @@ typedef unsigned (*blend32fp)(unsigned, unsigned);
 blend16fp getblendfunction16(int alpha);
 blend32fp getblendfunction32(int alpha);
 
-extern blend16fp blendfunctions16[MAX_BLENDINGS];
-extern blend32fp blendfunctions32[MAX_BLENDINGS];
-extern unsigned char* blendtables[MAX_BLENDINGS];
+extern blend16fp blendfunctions16[OBOR_BLEND_STORAGE];
+extern blend32fp blendfunctions32[OBOR_BLEND_STORAGE];
+extern unsigned char* blendtables[OBOR_BLEND_STORAGE];
 extern unsigned channelr,channelg,channelb,tintmode,tintcolor;
 extern int usechannel;
 extern blend16fp tint16fp1, tint16fp2;
@@ -237,7 +254,12 @@ typedef struct
 	unsigned char tintmode; //tint the sprite with color 
 	unsigned tintcolor;
 	water_transform water;
-}s_drawmethod;
+} s_drawmethod
+#ifdef LIBRETRO
+    /* Match packed owning records without changing fields or their offsets. */
+    __attribute__((aligned(4)))
+#endif
+;
 void drawmethod_global_init(s_drawmethod* drawmethod);
 
 typedef enum 

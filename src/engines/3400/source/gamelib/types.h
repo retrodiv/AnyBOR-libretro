@@ -1,10 +1,10 @@
-/* AnyBOR modification record: 2026-09-12.
+/* AnyBOR modification record: 2026-10-23.
  * Port maintained by retrodiv <retrodiv@proton.me>.
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
  * Upstream code retains its original license and notices.
- * Declare the draw-method one-bit flags unsigned so the constant assignments
- * the engine already writes store the intended value.
+ * Match drawing-method typedef alignment to packed owning records without
+ * changing fields, offsets or sizes.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/3400.md
  * at the source repository root. Original notices follow below.
@@ -193,7 +193,12 @@ typedef struct
 	int shiftx;
 	int centerx;   // shift centerx
 	int centery;   //shift centery
-}s_drawmethod;
+} s_drawmethod
+#ifdef LIBRETRO
+    /* Match packed owning records without changing fields or their offsets. */
+    __attribute__((aligned(4)))
+#endif
+;
 
 typedef enum 
 {

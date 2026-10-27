@@ -1,3 +1,17 @@
+/* AnyBOR modification record: 2026-10-24.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Select the native 6330 decimal negation fallthrough. Preserve native
+ * signed32 integer conversion and truncated decimal results; refuse
+ * unavailable arguments and non-representable decimal results before
+ * conversion without changing result storage.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/7533.md
+ * at the source repository root. Original notices follow below.
+ */
+
 /*
  * OpenBOR - http://www.chronocrash.com
  * -----------------------------------------------------------------------
@@ -169,6 +183,19 @@ CHAR *StrCache_Get(int index)
     return strcache[index].str;
 }
 
+CHAR *StrCache_GetIfPresent(int index)
+{
+    CHAR *text;
+    size_t capacity;
+    if(index < 0 || index >= strcache_size || !strcache)
+        return NULL;
+    text = StrCache_Get(index);
+    if(!text) return NULL;
+    if(strcache[index].len < 0) return NULL;
+    capacity = (size_t)strcache[index].len + 1;
+    return memchr(text, 0, capacity) ? text : NULL;
+}
+
 int StrCache_Len(int index)
 {
     assert(index >= 0);
@@ -238,12 +265,16 @@ void ScriptVariant_ParseStringConstant(ScriptVariant *var, CHAR *str)
 
 HRESULT ScriptVariant_IntegerValue(ScriptVariant *var, LONG *pVal)
 {
+    if(!var || !pVal) return E_FAIL;
+
     if(var->vt == VT_INTEGER)
     {
         *pVal = var->lVal;
     }
     else if(var->vt == VT_DECIMAL)
     {
+        /* Preserve truncation only when the native signed32 result is representable. */
+        if(!(var->dblVal > -2147483649.0 && var->dblVal < 2147483648.0)) return E_FAIL;
         *pVal = (LONG)var->dblVal;
     }
     else

@@ -1,3 +1,15 @@
+/* AnyBOR modification record: 2026-10-22.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Keep terminal grammar-table writes within the declared production count
+ * while retaining every valid native entry.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/7533.md
+ * at the source repository root. Original notices follow below.
+ */
+
 /*
  * OpenBOR - http://www.chronocrash.com
  * -----------------------------------------------------------------------
@@ -23,7 +35,7 @@ void ParserSet_Buildup(ParserSet *pset)
         if((*ptr) == END_OF_TOKENS)
         {
             i++;
-            pset->FirstSet[i] = ++ptr;
+            if(i < NUMPRODUCTIONS) pset->FirstSet[i] = ++ptr;
         }
     }
     while(i < NUMPRODUCTIONS);
@@ -36,7 +48,7 @@ void ParserSet_Buildup(ParserSet *pset)
         if((*ptr) == END_OF_TOKENS)
         {
             i++;
-            pset->FollowSet[i] = ++ptr;
+            if(i < NUMPRODUCTIONS) pset->FollowSet[i] = ++ptr;
         }
     }
     while(i < NUMPRODUCTIONS);

@@ -1,13 +1,15 @@
-/* AnyBOR modification record: 2026-10-10.
+/* AnyBOR modification record: 2026-10-26.
  * Port maintained by retrodiv <retrodiv@proton.me>.
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
  * Upstream code retains its original license and notices.
- * Push canonical constants, release parser-only instruction data, and pack
- * compiled instructions, values, and call references into exact contiguous
- * storage. Compact compiler-only instruction records after resolving value
- * ownership, preserving branch and export anchors, all mutable values and
- * exactly-once pool cleanup. Allocate parser state only while compiling and
+ * Select native literal refresh, execution-failure diagnostics and opcode
+ * numbering; compact compiled instructions and working values while
+ * retaining historical constant operations. Compact compiler-only
+ * instruction records after resolving value ownership, preserving branch and
+ * export anchors, all mutable values and exactly-once pool cleanup. Select
+ * each profile's native callback names, creation dispatch and post-
+ * compilation reset state. Allocate parser state only while compiling and
  * release it once runtime instructions are ready.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/3842.md
@@ -27,6 +29,9 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
+
+extern uint32_t obor_profile_build;
 #include "obor_script_compact.h"
 #include "obor_script_executable.h"
 
@@ -73,12 +78,25 @@ void Interpreter_Init(Interpreter* pinterpreter, LPCSTR name, List* pflist)
 	pp_context_init(&(pinterpreter->theContext));
 }
 
+void Interpreter_ClearImports(Interpreter* pinterpreter)
+{
+    List_Reset(&pinterpreter->theImportList);
+    while(List_GetSize(&pinterpreter->theImportList))
+    {
+        ImportNode* node = (ImportNode*)List_Retrieve(&pinterpreter->theImportList);
+        if(obor_profile_build < 3779) ImportCache_Release(node);
+        List_Remove(&pinterpreter->theImportList);
+    }
+    List_Clear(&pinterpreter->theImportList);
+}
+
 void Interpreter_Clear(Interpreter* pinterpreter)
 {
 	int i, size;
 	Instruction* pinstruction = NULL;
 	ScriptVariant* pvariant = NULL;
 
+	if(obor_profile_build < 3779) Interpreter_ClearImports(pinterpreter);
 	pp_context_destroy(&(pinterpreter->theContext));
 
 	StackedSymbolTable_Clear(&(pinterpreter->theSymbolTable));
@@ -291,7 +309,7 @@ HRESULT Interpreter_Call(Interpreter* pinterpreter)
 
 endcall:
 	//Reset the m_bCallCompleted flag back to false
-	pinterpreter->bCallCompleted = !pinterpreter->bReset;
+	pinterpreter->bCallCompleted = obor_profile_build < 3834 ? FALSE : !pinterpreter->bReset;
 
 	return hr;
 }
@@ -460,10 +478,13 @@ HRESULT Interpreter_CompileInstructions(Interpreter* pinterpreter, List *exports
 	if(List_FindByName(&(pinterpreter->theInstructionList), "main"))
 		pinterpreter->mainEntryIndex = List_GetIndex(&(pinterpreter->theInstructionList));
 	else pinterpreter->mainEntryIndex = -1;
-	if(List_FindByName(&(pinterpreter->theInstructionList), "ondestroy"))
+	if(List_FindByName(&(pinterpreter->theInstructionList),
+                       obor_profile_build < 3767 ? "clear" : "ondestroy"))
 		pinterpreter->clearEntryIndex = List_GetIndex(&(pinterpreter->theInstructionList));
 	else pinterpreter->clearEntryIndex = -1;
-	if(List_FindByName(&(pinterpreter->theInstructionList), "oncreate"))
+	if(obor_profile_build >= 3762 &&
+       List_FindByName(&(pinterpreter->theInstructionList),
+                       obor_profile_build < 3767 ? "init" : "oncreate"))
 		pinterpreter->initEntryIndex = List_GetIndex(&(pinterpreter->theInstructionList));
 	else pinterpreter->initEntryIndex = -1;
 	List_Reset(&(pinterpreter->theInstructionList));
@@ -584,7 +605,7 @@ HRESULT Interpreter_CompileInstructions(Interpreter* pinterpreter, List *exports
 				pInstruction->theJumpTargetIndex = List_GetIndex(&(pinterpreter->theInstructionList));
 				pInstruction->jumpTargetType = INSTRUCTION_TARGET_INDEX;
 				List_FindByName(&(pinterpreter->theInstructionList), pLabel); //hop back
-			} else if(ImportList_GetFunctionPointer(&(pinterpreter->theImportList), pToken->theSource)){
+			} else if(obor_profile_build >= 3779 && ImportList_GetFunctionPointer(&(pinterpreter->theImportList), pToken->theSource)){
 				pInstruction->ptheJumpTarget = ImportList_GetFunctionPointer(&(pinterpreter->theImportList), pToken->theSource);
 				pInstruction->jumpTargetType = INSTRUCTION_TARGET_JUMP;
 				assert((size_t)pInstruction->ptheJumpTarget >= (size_t)size); // should be true in any sane environments
@@ -856,7 +877,10 @@ HRESULT Interpreter_CompileInstructions(Interpreter* pinterpreter, List *exports
 		if(i<size-1 && pInstruction->jumpTargetType == INSTRUCTION_TARGET_NONE && !pInstruction->theJumpTargetIndex) {
 			for(j=i; j<size-1; j++) {
 				switch(pinterpreter->instructionStorage[j+1].OpCode){
-				case DATA:case CLEAN:case NOOP:case FUNCDECL:case PUSH:case POP:case CONSTINT:case CONSTDBL:case CONSTSTR:
+				case CONSTINT:case CONSTDBL:case CONSTSTR:
+                    if(obor_profile_build < 3831) {j=size;break;}
+                    /* fall through */
+                case DATA:case CLEAN:case NOOP:case FUNCDECL:case PUSH:case POP:
 					pInstruction->step++;
 					break;
 				default:
@@ -872,7 +896,10 @@ HRESULT Interpreter_CompileInstructions(Interpreter* pinterpreter, List *exports
 			//jump targets are always placeholders, so skip those opcode that does nothing
 			for(j=t; j<size-1; j++) {
 				switch(pInstruction->ptheJumpTarget[1].OpCode) {
-				case DATA:case CLEAN:case NOOP:case FUNCDECL:case PUSH:case POP:case CONSTINT:case CONSTDBL:case CONSTSTR:
+				case CONSTINT:case CONSTDBL:case CONSTSTR:
+                    if(obor_profile_build < 3831) {j=size;break;}
+                    /* fall through */
+                case DATA:case CLEAN:case NOOP:case FUNCDECL:case PUSH:case POP:
 					pInstruction->ptheJumpTarget++;
 					break;
 				default:
@@ -903,6 +930,34 @@ HRESULT Interpreter_CompileInstructions(Interpreter* pinterpreter, List *exports
 *  Returns: S_OK
 *           E_FAIL
 ******************************************************************************/
+static HRESULT obor_refresh_constant(Instruction *instruction)
+{
+    if(!instruction->theRef2)
+    {
+        ScriptVariant *baseline = malloc(sizeof(*baseline));
+        if(!baseline) return E_FAIL;
+        ScriptVariant_Init(baseline);
+        ScriptVariant_Copy(baseline, instruction->theVal);
+        instruction->theRef2 = baseline;
+    }
+    else ScriptVariant_Copy(instruction->theVal, instruction->theRef2);
+    return S_OK;
+}
+
+static int obor_profile_opcode(OpCode code)
+{
+    int value = (int)code;
+    if(value < 0 || value > OPCODE_END) return -1;
+    if(obor_profile_build < 3810 && (code == PJUMP || code == Branch_EQUAL)) return -1;
+    if(obor_profile_build < 3833 && (code == SHL || code == SHR)) return -1;
+    if(obor_profile_build < 3839 && (code == BIT_OR || code == XOR || code == BIT_AND)) return -1;
+    if(obor_profile_build < 3810 && code > PJUMP) --value;
+    if(obor_profile_build < 3810 && code > Branch_EQUAL) --value;
+    if(obor_profile_build < 3833 && code > SHR) value -= 2;
+    if(obor_profile_build < 3839 && code > BIT_AND) value -= 3;
+    return value;
+}
+
 HRESULT Interpreter_EvalInstruction(Interpreter* pinterpreter)
 {
 	HRESULT hr = S_OK;
@@ -921,7 +976,7 @@ HRESULT Interpreter_EvalInstruction(Interpreter* pinterpreter)
 		case CONSTDBL:
 			//Push a constant integer
 		case CONSTINT:
-			//ScriptVariant_Copy(pInstruction->theVal2, pInstruction->theVal);
+			if(obor_profile_build < 3831) hr = obor_refresh_constant(pInstruction);
 			break;
 
 		   //Load a value into the data stack
@@ -1170,13 +1225,16 @@ HRESULT Interpreter_EvalInstruction(Interpreter* pinterpreter)
 
 		 //If we hit the default, then we got an unrecognized instruction
 		default:
-			printf("\nUn-handled OpCode: %d\n", pInstruction->OpCode);
+			if(obor_profile_build >= 3831)
+                printf("\nUn-handled OpCode: %d\n", obor_profile_opcode((OpCode)pInstruction->OpCode));
 			hr = E_FAIL;
 
 			//Report an error
 			//HandleRuntimeError( pInstruction, INVALID_INSTRUCTION, this );
 			break;
 		}
+		if(hr == E_FAIL && obor_profile_build < 3831)
+            printf("\nOpCode: %d\n", obor_profile_opcode((OpCode)pInstruction->OpCode));
 	    //Increment the instruction list
 		pinterpreter->pCurrentInstruction+=pInstruction->step;
 	}

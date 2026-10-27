@@ -27,6 +27,10 @@
  */
 
 #include <stdio.h>
+#include <stdint.h>
+#include <limits.h>
+
+extern uint32_t obor_profile_build;
 #include "openborscript.h"
 #include "Interpreter.h"
 #include "List.h"
@@ -37,6 +41,7 @@
 //#define IC_DEBUG 1
 
 struct ImportNode {
+    int numRefs;
 	Interpreter interpreter;
 	List functions; // values are Instruction*; names are function names
 };
@@ -85,8 +90,9 @@ HRESULT ImportNode_Init(ImportNode* self, const char* path)
 	int i, size;
 	List* list; // more readable than "&self->interpreter.theInstructionList"
 
+	self->numRefs = 0;
 	List_Init(&self->functions);
-	Interpreter_Init(&self->interpreter, path, &theFunctionList);
+	Interpreter_Init(&self->interpreter, obor_profile_build < 3779 ? "#import" : path, &theFunctionList);
 	scriptText = readscript(path);
 	if(scriptText == NULL) goto error;
 	if(FAILED(Interpreter_ParseText(&self->interpreter, scriptText, 1, path))) goto error;
@@ -199,17 +205,33 @@ ImportNode* ImportCache_ImportFile(const char* path)
 	char path2[256];
 	ImportNode* node;
 	
-	// first convert the path to standard form, lowercase with forward slashes
-	assert(strlen(path) <= 255);
-	for(i=strlen(path); i>=0; i--)
-	{
-		if(path[i] == '\\')
-			path2[i] = '/';
-		else if(path[i] >= 'A' && path[i] <= 'Z')
-			path2[i] = path[i] + ('a'-'A');
-		else
-			path2[i] = path[i];
-	}
+    if(!path) return NULL;
+    if(obor_profile_build < 3779)
+    {
+        if(List_FindByName(&imports, path))
+        {
+            node = (ImportNode*)List_Retrieve(&imports);
+            if(node->numRefs == INT_MAX) return NULL;
+            ++node->numRefs;
+            return node;
+        }
+        node = malloc(sizeof(*node));
+        if(!node) return NULL;
+        if(FAILED(ImportNode_Init(node, path))) {free(node);return NULL;}
+        node->numRefs = 1;
+        List_GotoLast(&imports);
+        List_InsertAfter(&imports, node, path);
+        return node;
+    }
+
+    // Later profiles canonicalize names and retain entries until cache clear.
+    assert(strlen(path) <= 255);
+    for(i=(int)strlen(path); i>=0; i--)
+    {
+        if(path[i] == '\\') path2[i] = '/';
+        else if(path[i] >= 'A' && path[i] <= 'Z') path2[i] = path[i] + ('a'-'A');
+        else path2[i] = path[i];
+    }
 #ifdef IC_DEBUG
 	fprintf(stderr, "ImportCache_ImportFile: '%s' -> '%s'\n", path, path2);
 #endif
@@ -220,6 +242,7 @@ ImportNode* ImportCache_ImportFile(const char* path)
 
 	// otherwise, create a new node for this file, add it to the cache, and return it
 	node = malloc(sizeof(ImportNode));
+	if(!node) return NULL;
 	if(FAILED(ImportNode_Init(node, path2))) { free(node); return NULL; }
 	List_GotoLast(&imports);
 	List_InsertAfter(&imports, node, path2);
@@ -230,8 +253,36 @@ ImportNode* ImportCache_ImportFile(const char* path)
  * Frees all of the imported scripts. Called when shutting down the script
  * engine.
  */
+void ImportCache_Release(ImportNode* node)
+{
+    if(obor_profile_build >= 3779 || !node) return;
+    /* A cache clear can already have retired an imported dependency. */
+    if(!List_Includes(&imports, node)) return;
+    if(node->numRefs <= 0) return;
+    if(--node->numRefs == 0)
+    {
+        ImportNode_Clear(node);
+        if(List_Includes(&imports, node)) List_Remove(&imports);
+        free(node);
+    }
+}
+
 void ImportCache_Clear()
 {
+    if(obor_profile_build < 3779)
+    {
+        List_Reset(&imports);
+        while(List_GetSize(&imports))
+        {
+            ImportNode* node = (ImportNode*)List_Retrieve(&imports);
+            int references = node->numRefs;
+            printf("Warning: imported script '%s' not freed (%d unreleased references)\n", List_GetName(&imports), references);
+            if(references <= 0) {node->numRefs = references = 1;}
+            for(int i=0; i<references; ++i) ImportCache_Release(node);
+        }
+        List_Clear(&imports);
+        return;
+    }
 	List_Reset(&imports);
 	while(List_GetSize(&imports))
 	{

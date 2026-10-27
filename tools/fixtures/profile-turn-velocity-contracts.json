@@ -1,0 +1,699 @@
+{
+  "schema": 1,
+  "scope": "Four entered turn animation blocks from actual player_think;native entity fields and macro,callback observation/mutation and goto exit. Outer movement/delay/animation eligibility and other player_think behavior are separate.",
+  "sources": [
+    {
+      "revision": 3666,
+      "commit": "d91a968db18ecb4a738cf008ea0483883929a674",
+      "player_think_sha256": "5b360fd67f62f18529c48978ac83a664ce67c2df288a082d337aa1eee7f7a27a",
+      "clear_velocity": false,
+      "branch_sha256": [
+        "9378b90521af86d5da1abf49cdd0ab3e1d5e06df9e9a6eb88955e8f0b2b7036b",
+        "ee186ba0a5ce1351ef4484d8c1f629c5adfcd56d71a7e81b01df52f60a11561e",
+        "9378b90521af86d5da1abf49cdd0ab3e1d5e06df9e9a6eb88955e8f0b2b7036b",
+        "ee186ba0a5ce1351ef4484d8c1f629c5adfcd56d71a7e81b01df52f60a11561e"
+      ],
+      "set_turning_sha256": "486467c5d743f65d20e78e64e609c38a4ff7300efc5275a0adb4206c41eb88be"
+    },
+    {
+      "revision": 3667,
+      "commit": "b9be93bb004d151b7280a4dd2d41a952d3160afc",
+      "player_think_sha256": "5b360fd67f62f18529c48978ac83a664ce67c2df288a082d337aa1eee7f7a27a",
+      "clear_velocity": false,
+      "branch_sha256": [
+        "9378b90521af86d5da1abf49cdd0ab3e1d5e06df9e9a6eb88955e8f0b2b7036b",
+        "ee186ba0a5ce1351ef4484d8c1f629c5adfcd56d71a7e81b01df52f60a11561e",
+        "9378b90521af86d5da1abf49cdd0ab3e1d5e06df9e9a6eb88955e8f0b2b7036b",
+        "ee186ba0a5ce1351ef4484d8c1f629c5adfcd56d71a7e81b01df52f60a11561e"
+      ],
+      "set_turning_sha256": "486467c5d743f65d20e78e64e609c38a4ff7300efc5275a0adb4206c41eb88be"
+    },
+    {
+      "revision": 3669,
+      "commit": "7c099902d5149d9e696ad1274c0d1964aa1f2323",
+      "player_think_sha256": "5b360fd67f62f18529c48978ac83a664ce67c2df288a082d337aa1eee7f7a27a",
+      "clear_velocity": false,
+      "branch_sha256": [
+        "9378b90521af86d5da1abf49cdd0ab3e1d5e06df9e9a6eb88955e8f0b2b7036b",
+        "ee186ba0a5ce1351ef4484d8c1f629c5adfcd56d71a7e81b01df52f60a11561e",
+        "9378b90521af86d5da1abf49cdd0ab3e1d5e06df9e9a6eb88955e8f0b2b7036b",
+        "ee186ba0a5ce1351ef4484d8c1f629c5adfcd56d71a7e81b01df52f60a11561e"
+      ],
+      "set_turning_sha256": "486467c5d743f65d20e78e64e609c38a4ff7300efc5275a0adb4206c41eb88be"
+    },
+    {
+      "revision": 3670,
+      "commit": "5d6118ae7dc11b04bb370da0faa0c6f42ffab50e",
+      "player_think_sha256": "5b360fd67f62f18529c48978ac83a664ce67c2df288a082d337aa1eee7f7a27a",
+      "clear_velocity": false,
+      "branch_sha256": [
+        "9378b90521af86d5da1abf49cdd0ab3e1d5e06df9e9a6eb88955e8f0b2b7036b",
+        "ee186ba0a5ce1351ef4484d8c1f629c5adfcd56d71a7e81b01df52f60a11561e",
+        "9378b90521af86d5da1abf49cdd0ab3e1d5e06df9e9a6eb88955e8f0b2b7036b",
+        "ee186ba0a5ce1351ef4484d8c1f629c5adfcd56d71a7e81b01df52f60a11561e"
+      ],
+      "set_turning_sha256": "486467c5d743f65d20e78e64e609c38a4ff7300efc5275a0adb4206c41eb88be"
+    },
+    {
+      "revision": 3671,
+      "commit": "7fba7445c056b5aeff03046dd79ae929fcf68f15",
+      "player_think_sha256": "5b360fd67f62f18529c48978ac83a664ce67c2df288a082d337aa1eee7f7a27a",
+      "clear_velocity": false,
+      "branch_sha256": [
+        "9378b90521af86d5da1abf49cdd0ab3e1d5e06df9e9a6eb88955e8f0b2b7036b",
+        "ee186ba0a5ce1351ef4484d8c1f629c5adfcd56d71a7e81b01df52f60a11561e",
+        "9378b90521af86d5da1abf49cdd0ab3e1d5e06df9e9a6eb88955e8f0b2b7036b",
+        "ee186ba0a5ce1351ef4484d8c1f629c5adfcd56d71a7e81b01df52f60a11561e"
+      ],
+      "set_turning_sha256": "486467c5d743f65d20e78e64e609c38a4ff7300efc5275a0adb4206c41eb88be"
+    },
+    {
+      "revision": 3672,
+      "commit": "8c4687b4ef831986a04e2fcb3d4dcd7e96bbd0cf",
+      "player_think_sha256": "176fbdf7ac72f0bc314cb7d395ab4ed80acc36de36fe186d8fe965c611d3999b",
+      "clear_velocity": false,
+      "branch_sha256": [
+        "9378b90521af86d5da1abf49cdd0ab3e1d5e06df9e9a6eb88955e8f0b2b7036b",
+        "ee186ba0a5ce1351ef4484d8c1f629c5adfcd56d71a7e81b01df52f60a11561e",
+        "9378b90521af86d5da1abf49cdd0ab3e1d5e06df9e9a6eb88955e8f0b2b7036b",
+        "ee186ba0a5ce1351ef4484d8c1f629c5adfcd56d71a7e81b01df52f60a11561e"
+      ],
+      "set_turning_sha256": "486467c5d743f65d20e78e64e609c38a4ff7300efc5275a0adb4206c41eb88be"
+    },
+    {
+      "revision": 3673,
+      "commit": "88b9c2829ea471579d90e186215d23a8bf669bcb",
+      "player_think_sha256": "176fbdf7ac72f0bc314cb7d395ab4ed80acc36de36fe186d8fe965c611d3999b",
+      "clear_velocity": false,
+      "branch_sha256": [
+        "9378b90521af86d5da1abf49cdd0ab3e1d5e06df9e9a6eb88955e8f0b2b7036b",
+        "ee186ba0a5ce1351ef4484d8c1f629c5adfcd56d71a7e81b01df52f60a11561e",
+        "9378b90521af86d5da1abf49cdd0ab3e1d5e06df9e9a6eb88955e8f0b2b7036b",
+        "ee186ba0a5ce1351ef4484d8c1f629c5adfcd56d71a7e81b01df52f60a11561e"
+      ],
+      "set_turning_sha256": "486467c5d743f65d20e78e64e609c38a4ff7300efc5275a0adb4206c41eb88be"
+    },
+    {
+      "revision": 3674,
+      "commit": "5e9213f7de65df1cc13d01e3e695d4ac62091267",
+      "player_think_sha256": "176fbdf7ac72f0bc314cb7d395ab4ed80acc36de36fe186d8fe965c611d3999b",
+      "clear_velocity": false,
+      "branch_sha256": [
+        "9378b90521af86d5da1abf49cdd0ab3e1d5e06df9e9a6eb88955e8f0b2b7036b",
+        "ee186ba0a5ce1351ef4484d8c1f629c5adfcd56d71a7e81b01df52f60a11561e",
+        "9378b90521af86d5da1abf49cdd0ab3e1d5e06df9e9a6eb88955e8f0b2b7036b",
+        "ee186ba0a5ce1351ef4484d8c1f629c5adfcd56d71a7e81b01df52f60a11561e"
+      ],
+      "set_turning_sha256": "486467c5d743f65d20e78e64e609c38a4ff7300efc5275a0adb4206c41eb88be"
+    },
+    {
+      "revision": 3675,
+      "commit": "a4b46362047dc2bb04e350b8a434cb65cad3b9af",
+      "player_think_sha256": "176fbdf7ac72f0bc314cb7d395ab4ed80acc36de36fe186d8fe965c611d3999b",
+      "clear_velocity": false,
+      "branch_sha256": [
+        "9378b90521af86d5da1abf49cdd0ab3e1d5e06df9e9a6eb88955e8f0b2b7036b",
+        "ee186ba0a5ce1351ef4484d8c1f629c5adfcd56d71a7e81b01df52f60a11561e",
+        "9378b90521af86d5da1abf49cdd0ab3e1d5e06df9e9a6eb88955e8f0b2b7036b",
+        "ee186ba0a5ce1351ef4484d8c1f629c5adfcd56d71a7e81b01df52f60a11561e"
+      ],
+      "set_turning_sha256": "486467c5d743f65d20e78e64e609c38a4ff7300efc5275a0adb4206c41eb88be"
+    },
+    {
+      "revision": 3677,
+      "commit": "0cc873941f3ee1dc687c7c0d303d043c931f8e5f",
+      "player_think_sha256": "176fbdf7ac72f0bc314cb7d395ab4ed80acc36de36fe186d8fe965c611d3999b",
+      "clear_velocity": false,
+      "branch_sha256": [
+        "9378b90521af86d5da1abf49cdd0ab3e1d5e06df9e9a6eb88955e8f0b2b7036b",
+        "ee186ba0a5ce1351ef4484d8c1f629c5adfcd56d71a7e81b01df52f60a11561e",
+        "9378b90521af86d5da1abf49cdd0ab3e1d5e06df9e9a6eb88955e8f0b2b7036b",
+        "ee186ba0a5ce1351ef4484d8c1f629c5adfcd56d71a7e81b01df52f60a11561e"
+      ],
+      "set_turning_sha256": "486467c5d743f65d20e78e64e609c38a4ff7300efc5275a0adb4206c41eb88be"
+    },
+    {
+      "revision": 3678,
+      "commit": "9db2ed7db699e47513d3ea3144b7f235304eb72a",
+      "player_think_sha256": "176fbdf7ac72f0bc314cb7d395ab4ed80acc36de36fe186d8fe965c611d3999b",
+      "clear_velocity": false,
+      "branch_sha256": [
+        "9378b90521af86d5da1abf49cdd0ab3e1d5e06df9e9a6eb88955e8f0b2b7036b",
+        "ee186ba0a5ce1351ef4484d8c1f629c5adfcd56d71a7e81b01df52f60a11561e",
+        "9378b90521af86d5da1abf49cdd0ab3e1d5e06df9e9a6eb88955e8f0b2b7036b",
+        "ee186ba0a5ce1351ef4484d8c1f629c5adfcd56d71a7e81b01df52f60a11561e"
+      ],
+      "set_turning_sha256": "486467c5d743f65d20e78e64e609c38a4ff7300efc5275a0adb4206c41eb88be"
+    },
+    {
+      "revision": 3679,
+      "commit": "1e4032e0c03f5580f4092fc8c2fecf2a5a96aa7f",
+      "player_think_sha256": "f646df196a378319d8b18493d49ba982fddd878547efe489fcf7b0d259ac17a9",
+      "clear_velocity": true,
+      "branch_sha256": [
+        "ab97de915b3c7e2ea3e131f82b2aad462e3baaa469e7f0679c93739b18473745",
+        "c9abaad8c13df868c580e5517f8632a650df71d2766494bf2ac47a20a26e9a83",
+        "ab97de915b3c7e2ea3e131f82b2aad462e3baaa469e7f0679c93739b18473745",
+        "c9abaad8c13df868c580e5517f8632a650df71d2766494bf2ac47a20a26e9a83"
+      ],
+      "set_turning_sha256": "486467c5d743f65d20e78e64e609c38a4ff7300efc5275a0adb4206c41eb88be"
+    },
+    {
+      "revision": 3680,
+      "commit": "cbacfd01002925ec9016f03bbf45dc576e135f1a",
+      "player_think_sha256": "f646df196a378319d8b18493d49ba982fddd878547efe489fcf7b0d259ac17a9",
+      "clear_velocity": true,
+      "branch_sha256": [
+        "ab97de915b3c7e2ea3e131f82b2aad462e3baaa469e7f0679c93739b18473745",
+        "c9abaad8c13df868c580e5517f8632a650df71d2766494bf2ac47a20a26e9a83",
+        "ab97de915b3c7e2ea3e131f82b2aad462e3baaa469e7f0679c93739b18473745",
+        "c9abaad8c13df868c580e5517f8632a650df71d2766494bf2ac47a20a26e9a83"
+      ],
+      "set_turning_sha256": "486467c5d743f65d20e78e64e609c38a4ff7300efc5275a0adb4206c41eb88be"
+    },
+    {
+      "revision": 3681,
+      "commit": "e86a5c32f6303ab0d8432dfe2575b17dc2af5baf",
+      "player_think_sha256": "f646df196a378319d8b18493d49ba982fddd878547efe489fcf7b0d259ac17a9",
+      "clear_velocity": true,
+      "branch_sha256": [
+        "ab97de915b3c7e2ea3e131f82b2aad462e3baaa469e7f0679c93739b18473745",
+        "c9abaad8c13df868c580e5517f8632a650df71d2766494bf2ac47a20a26e9a83",
+        "ab97de915b3c7e2ea3e131f82b2aad462e3baaa469e7f0679c93739b18473745",
+        "c9abaad8c13df868c580e5517f8632a650df71d2766494bf2ac47a20a26e9a83"
+      ],
+      "set_turning_sha256": "486467c5d743f65d20e78e64e609c38a4ff7300efc5275a0adb4206c41eb88be"
+    },
+    {
+      "revision": 3682,
+      "commit": "a41ea87ba402b98c6b5397c6a402834a802e1801",
+      "player_think_sha256": "f646df196a378319d8b18493d49ba982fddd878547efe489fcf7b0d259ac17a9",
+      "clear_velocity": true,
+      "branch_sha256": [
+        "ab97de915b3c7e2ea3e131f82b2aad462e3baaa469e7f0679c93739b18473745",
+        "c9abaad8c13df868c580e5517f8632a650df71d2766494bf2ac47a20a26e9a83",
+        "ab97de915b3c7e2ea3e131f82b2aad462e3baaa469e7f0679c93739b18473745",
+        "c9abaad8c13df868c580e5517f8632a650df71d2766494bf2ac47a20a26e9a83"
+      ],
+      "set_turning_sha256": "486467c5d743f65d20e78e64e609c38a4ff7300efc5275a0adb4206c41eb88be"
+    },
+    {
+      "revision": 3683,
+      "commit": "b79ec28e381f0b94f811c9e989759e92f5d02e51",
+      "player_think_sha256": "f646df196a378319d8b18493d49ba982fddd878547efe489fcf7b0d259ac17a9",
+      "clear_velocity": true,
+      "branch_sha256": [
+        "ab97de915b3c7e2ea3e131f82b2aad462e3baaa469e7f0679c93739b18473745",
+        "c9abaad8c13df868c580e5517f8632a650df71d2766494bf2ac47a20a26e9a83",
+        "ab97de915b3c7e2ea3e131f82b2aad462e3baaa469e7f0679c93739b18473745",
+        "c9abaad8c13df868c580e5517f8632a650df71d2766494bf2ac47a20a26e9a83"
+      ],
+      "set_turning_sha256": "486467c5d743f65d20e78e64e609c38a4ff7300efc5275a0adb4206c41eb88be"
+    },
+    {
+      "revision": 3684,
+      "commit": "8b83a04c18b64a32b2b230861999cd655894e02b",
+      "player_think_sha256": "f646df196a378319d8b18493d49ba982fddd878547efe489fcf7b0d259ac17a9",
+      "clear_velocity": true,
+      "branch_sha256": [
+        "ab97de915b3c7e2ea3e131f82b2aad462e3baaa469e7f0679c93739b18473745",
+        "c9abaad8c13df868c580e5517f8632a650df71d2766494bf2ac47a20a26e9a83",
+        "ab97de915b3c7e2ea3e131f82b2aad462e3baaa469e7f0679c93739b18473745",
+        "c9abaad8c13df868c580e5517f8632a650df71d2766494bf2ac47a20a26e9a83"
+      ],
+      "set_turning_sha256": "486467c5d743f65d20e78e64e609c38a4ff7300efc5275a0adb4206c41eb88be"
+    },
+    {
+      "revision": 3685,
+      "commit": "8e0f3d0bd64e99244598ddf636c5203c2a6b0f2e",
+      "player_think_sha256": "f646df196a378319d8b18493d49ba982fddd878547efe489fcf7b0d259ac17a9",
+      "clear_velocity": true,
+      "branch_sha256": [
+        "ab97de915b3c7e2ea3e131f82b2aad462e3baaa469e7f0679c93739b18473745",
+        "c9abaad8c13df868c580e5517f8632a650df71d2766494bf2ac47a20a26e9a83",
+        "ab97de915b3c7e2ea3e131f82b2aad462e3baaa469e7f0679c93739b18473745",
+        "c9abaad8c13df868c580e5517f8632a650df71d2766494bf2ac47a20a26e9a83"
+      ],
+      "set_turning_sha256": "486467c5d743f65d20e78e64e609c38a4ff7300efc5275a0adb4206c41eb88be"
+    },
+    {
+      "revision": 3686,
+      "commit": "d37cca26d57bba5a4f5c190f80562f768785901d",
+      "player_think_sha256": "f646df196a378319d8b18493d49ba982fddd878547efe489fcf7b0d259ac17a9",
+      "clear_velocity": true,
+      "branch_sha256": [
+        "ab97de915b3c7e2ea3e131f82b2aad462e3baaa469e7f0679c93739b18473745",
+        "c9abaad8c13df868c580e5517f8632a650df71d2766494bf2ac47a20a26e9a83",
+        "ab97de915b3c7e2ea3e131f82b2aad462e3baaa469e7f0679c93739b18473745",
+        "c9abaad8c13df868c580e5517f8632a650df71d2766494bf2ac47a20a26e9a83"
+      ],
+      "set_turning_sha256": "486467c5d743f65d20e78e64e609c38a4ff7300efc5275a0adb4206c41eb88be"
+    },
+    {
+      "revision": 3689,
+      "commit": "953da13e27e3a72fc61ff9fe71c272968e9e7270",
+      "player_think_sha256": "f646df196a378319d8b18493d49ba982fddd878547efe489fcf7b0d259ac17a9",
+      "clear_velocity": true,
+      "branch_sha256": [
+        "ab97de915b3c7e2ea3e131f82b2aad462e3baaa469e7f0679c93739b18473745",
+        "c9abaad8c13df868c580e5517f8632a650df71d2766494bf2ac47a20a26e9a83",
+        "ab97de915b3c7e2ea3e131f82b2aad462e3baaa469e7f0679c93739b18473745",
+        "c9abaad8c13df868c580e5517f8632a650df71d2766494bf2ac47a20a26e9a83"
+      ],
+      "set_turning_sha256": "486467c5d743f65d20e78e64e609c38a4ff7300efc5275a0adb4206c41eb88be"
+    },
+    {
+      "revision": 3690,
+      "commit": "e4cf90c8a3784263df7809672a2b4998bb000831",
+      "player_think_sha256": "63282040b3addb9d8c78677ec350ad2766bc84bbbab812bd8ec0235f2aac6ef6",
+      "clear_velocity": true,
+      "branch_sha256": [
+        "ab97de915b3c7e2ea3e131f82b2aad462e3baaa469e7f0679c93739b18473745",
+        "c9abaad8c13df868c580e5517f8632a650df71d2766494bf2ac47a20a26e9a83",
+        "ab97de915b3c7e2ea3e131f82b2aad462e3baaa469e7f0679c93739b18473745",
+        "c9abaad8c13df868c580e5517f8632a650df71d2766494bf2ac47a20a26e9a83"
+      ],
+      "set_turning_sha256": "486467c5d743f65d20e78e64e609c38a4ff7300efc5275a0adb4206c41eb88be"
+    },
+    {
+      "revision": 3691,
+      "commit": "42bc05f6630514c0a21e14faa7c4e671329a91ae",
+      "player_think_sha256": "63282040b3addb9d8c78677ec350ad2766bc84bbbab812bd8ec0235f2aac6ef6",
+      "clear_velocity": true,
+      "branch_sha256": [
+        "ab97de915b3c7e2ea3e131f82b2aad462e3baaa469e7f0679c93739b18473745",
+        "c9abaad8c13df868c580e5517f8632a650df71d2766494bf2ac47a20a26e9a83",
+        "ab97de915b3c7e2ea3e131f82b2aad462e3baaa469e7f0679c93739b18473745",
+        "c9abaad8c13df868c580e5517f8632a650df71d2766494bf2ac47a20a26e9a83"
+      ],
+      "set_turning_sha256": "486467c5d743f65d20e78e64e609c38a4ff7300efc5275a0adb4206c41eb88be"
+    },
+    {
+      "revision": 3692,
+      "commit": "5c31bc7f06580725f11d436855533a2485dfb757",
+      "player_think_sha256": "63282040b3addb9d8c78677ec350ad2766bc84bbbab812bd8ec0235f2aac6ef6",
+      "clear_velocity": true,
+      "branch_sha256": [
+        "ab97de915b3c7e2ea3e131f82b2aad462e3baaa469e7f0679c93739b18473745",
+        "c9abaad8c13df868c580e5517f8632a650df71d2766494bf2ac47a20a26e9a83",
+        "ab97de915b3c7e2ea3e131f82b2aad462e3baaa469e7f0679c93739b18473745",
+        "c9abaad8c13df868c580e5517f8632a650df71d2766494bf2ac47a20a26e9a83"
+      ],
+      "set_turning_sha256": "486467c5d743f65d20e78e64e609c38a4ff7300efc5275a0adb4206c41eb88be"
+    },
+    {
+      "revision": 3693,
+      "commit": "ec0e28efea5a3a63a28ccd9abe2fb3fb88513416",
+      "player_think_sha256": "63282040b3addb9d8c78677ec350ad2766bc84bbbab812bd8ec0235f2aac6ef6",
+      "clear_velocity": true,
+      "branch_sha256": [
+        "ab97de915b3c7e2ea3e131f82b2aad462e3baaa469e7f0679c93739b18473745",
+        "c9abaad8c13df868c580e5517f8632a650df71d2766494bf2ac47a20a26e9a83",
+        "ab97de915b3c7e2ea3e131f82b2aad462e3baaa469e7f0679c93739b18473745",
+        "c9abaad8c13df868c580e5517f8632a650df71d2766494bf2ac47a20a26e9a83"
+      ],
+      "set_turning_sha256": "486467c5d743f65d20e78e64e609c38a4ff7300efc5275a0adb4206c41eb88be"
+    },
+    {
+      "revision": 3694,
+      "commit": "aaae13d3487ebedd9a3ef121d6296b5a3afd0cd9",
+      "player_think_sha256": "63282040b3addb9d8c78677ec350ad2766bc84bbbab812bd8ec0235f2aac6ef6",
+      "clear_velocity": true,
+      "branch_sha256": [
+        "ab97de915b3c7e2ea3e131f82b2aad462e3baaa469e7f0679c93739b18473745",
+        "c9abaad8c13df868c580e5517f8632a650df71d2766494bf2ac47a20a26e9a83",
+        "ab97de915b3c7e2ea3e131f82b2aad462e3baaa469e7f0679c93739b18473745",
+        "c9abaad8c13df868c580e5517f8632a650df71d2766494bf2ac47a20a26e9a83"
+      ],
+      "set_turning_sha256": "486467c5d743f65d20e78e64e609c38a4ff7300efc5275a0adb4206c41eb88be"
+    },
+    {
+      "revision": 3697,
+      "commit": "142e0957159aab6b4698a94723ea282cb54a3c70",
+      "player_think_sha256": "63282040b3addb9d8c78677ec350ad2766bc84bbbab812bd8ec0235f2aac6ef6",
+      "clear_velocity": true,
+      "branch_sha256": [
+        "ab97de915b3c7e2ea3e131f82b2aad462e3baaa469e7f0679c93739b18473745",
+        "c9abaad8c13df868c580e5517f8632a650df71d2766494bf2ac47a20a26e9a83",
+        "ab97de915b3c7e2ea3e131f82b2aad462e3baaa469e7f0679c93739b18473745",
+        "c9abaad8c13df868c580e5517f8632a650df71d2766494bf2ac47a20a26e9a83"
+      ],
+      "set_turning_sha256": "486467c5d743f65d20e78e64e609c38a4ff7300efc5275a0adb4206c41eb88be"
+    },
+    {
+      "revision": 3698,
+      "commit": "2b93fb207a059914ce03dfd31b6af24f147c87ed",
+      "player_think_sha256": "63282040b3addb9d8c78677ec350ad2766bc84bbbab812bd8ec0235f2aac6ef6",
+      "clear_velocity": true,
+      "branch_sha256": [
+        "ab97de915b3c7e2ea3e131f82b2aad462e3baaa469e7f0679c93739b18473745",
+        "c9abaad8c13df868c580e5517f8632a650df71d2766494bf2ac47a20a26e9a83",
+        "ab97de915b3c7e2ea3e131f82b2aad462e3baaa469e7f0679c93739b18473745",
+        "c9abaad8c13df868c580e5517f8632a650df71d2766494bf2ac47a20a26e9a83"
+      ],
+      "set_turning_sha256": "486467c5d743f65d20e78e64e609c38a4ff7300efc5275a0adb4206c41eb88be"
+    },
+    {
+      "revision": 3699,
+      "commit": "f632ac4fe81ea6c6b3cd9d74a1cd7538471579bb",
+      "player_think_sha256": "63282040b3addb9d8c78677ec350ad2766bc84bbbab812bd8ec0235f2aac6ef6",
+      "clear_velocity": true,
+      "branch_sha256": [
+        "ab97de915b3c7e2ea3e131f82b2aad462e3baaa469e7f0679c93739b18473745",
+        "c9abaad8c13df868c580e5517f8632a650df71d2766494bf2ac47a20a26e9a83",
+        "ab97de915b3c7e2ea3e131f82b2aad462e3baaa469e7f0679c93739b18473745",
+        "c9abaad8c13df868c580e5517f8632a650df71d2766494bf2ac47a20a26e9a83"
+      ],
+      "set_turning_sha256": "486467c5d743f65d20e78e64e609c38a4ff7300efc5275a0adb4206c41eb88be"
+    },
+    {
+      "revision": 3701,
+      "commit": "7644ed068259c3edbfaed1cd85828b4a28213997",
+      "player_think_sha256": "63282040b3addb9d8c78677ec350ad2766bc84bbbab812bd8ec0235f2aac6ef6",
+      "clear_velocity": true,
+      "branch_sha256": [
+        "ab97de915b3c7e2ea3e131f82b2aad462e3baaa469e7f0679c93739b18473745",
+        "c9abaad8c13df868c580e5517f8632a650df71d2766494bf2ac47a20a26e9a83",
+        "ab97de915b3c7e2ea3e131f82b2aad462e3baaa469e7f0679c93739b18473745",
+        "c9abaad8c13df868c580e5517f8632a650df71d2766494bf2ac47a20a26e9a83"
+      ],
+      "set_turning_sha256": "486467c5d743f65d20e78e64e609c38a4ff7300efc5275a0adb4206c41eb88be"
+    },
+    {
+      "revision": 3703,
+      "commit": "bb82f79d47f02649e3a79e22455911f98cc900cb",
+      "player_think_sha256": "63282040b3addb9d8c78677ec350ad2766bc84bbbab812bd8ec0235f2aac6ef6",
+      "clear_velocity": true,
+      "branch_sha256": [
+        "ab97de915b3c7e2ea3e131f82b2aad462e3baaa469e7f0679c93739b18473745",
+        "c9abaad8c13df868c580e5517f8632a650df71d2766494bf2ac47a20a26e9a83",
+        "ab97de915b3c7e2ea3e131f82b2aad462e3baaa469e7f0679c93739b18473745",
+        "c9abaad8c13df868c580e5517f8632a650df71d2766494bf2ac47a20a26e9a83"
+      ],
+      "set_turning_sha256": "486467c5d743f65d20e78e64e609c38a4ff7300efc5275a0adb4206c41eb88be"
+    },
+    {
+      "revision": 3704,
+      "commit": "b1bf3dd56ebfcd11eafe265120ceedf0b44ed2f4",
+      "player_think_sha256": "63282040b3addb9d8c78677ec350ad2766bc84bbbab812bd8ec0235f2aac6ef6",
+      "clear_velocity": true,
+      "branch_sha256": [
+        "ab97de915b3c7e2ea3e131f82b2aad462e3baaa469e7f0679c93739b18473745",
+        "c9abaad8c13df868c580e5517f8632a650df71d2766494bf2ac47a20a26e9a83",
+        "ab97de915b3c7e2ea3e131f82b2aad462e3baaa469e7f0679c93739b18473745",
+        "c9abaad8c13df868c580e5517f8632a650df71d2766494bf2ac47a20a26e9a83"
+      ],
+      "set_turning_sha256": "486467c5d743f65d20e78e64e609c38a4ff7300efc5275a0adb4206c41eb88be"
+    },
+    {
+      "revision": 3707,
+      "commit": "3e8913af8d0090f1082b5c2a7e624d050c4960fc",
+      "player_think_sha256": "63282040b3addb9d8c78677ec350ad2766bc84bbbab812bd8ec0235f2aac6ef6",
+      "clear_velocity": true,
+      "branch_sha256": [
+        "ab97de915b3c7e2ea3e131f82b2aad462e3baaa469e7f0679c93739b18473745",
+        "c9abaad8c13df868c580e5517f8632a650df71d2766494bf2ac47a20a26e9a83",
+        "ab97de915b3c7e2ea3e131f82b2aad462e3baaa469e7f0679c93739b18473745",
+        "c9abaad8c13df868c580e5517f8632a650df71d2766494bf2ac47a20a26e9a83"
+      ],
+      "set_turning_sha256": "486467c5d743f65d20e78e64e609c38a4ff7300efc5275a0adb4206c41eb88be"
+    },
+    {
+      "revision": 3708,
+      "commit": "987fbc31c5be3002732e735a0bdd905eedd7c2b1",
+      "player_think_sha256": "63282040b3addb9d8c78677ec350ad2766bc84bbbab812bd8ec0235f2aac6ef6",
+      "clear_velocity": true,
+      "branch_sha256": [
+        "ab97de915b3c7e2ea3e131f82b2aad462e3baaa469e7f0679c93739b18473745",
+        "c9abaad8c13df868c580e5517f8632a650df71d2766494bf2ac47a20a26e9a83",
+        "ab97de915b3c7e2ea3e131f82b2aad462e3baaa469e7f0679c93739b18473745",
+        "c9abaad8c13df868c580e5517f8632a650df71d2766494bf2ac47a20a26e9a83"
+      ],
+      "set_turning_sha256": "486467c5d743f65d20e78e64e609c38a4ff7300efc5275a0adb4206c41eb88be"
+    },
+    {
+      "revision": 3709,
+      "commit": "25db4c7a58a555fd8cf1f6e7931ad2ce4cc6e6d9",
+      "player_think_sha256": "63282040b3addb9d8c78677ec350ad2766bc84bbbab812bd8ec0235f2aac6ef6",
+      "clear_velocity": true,
+      "branch_sha256": [
+        "ab97de915b3c7e2ea3e131f82b2aad462e3baaa469e7f0679c93739b18473745",
+        "c9abaad8c13df868c580e5517f8632a650df71d2766494bf2ac47a20a26e9a83",
+        "ab97de915b3c7e2ea3e131f82b2aad462e3baaa469e7f0679c93739b18473745",
+        "c9abaad8c13df868c580e5517f8632a650df71d2766494bf2ac47a20a26e9a83"
+      ],
+      "set_turning_sha256": "486467c5d743f65d20e78e64e609c38a4ff7300efc5275a0adb4206c41eb88be"
+    },
+    {
+      "revision": 3710,
+      "commit": "9622e606e8039fb860ae06d33c119e980f779598",
+      "player_think_sha256": "5200e7107710910c7c5d557fb52bdf7465a6ab87abdd6a96a6155aa95a45eae5",
+      "clear_velocity": true,
+      "branch_sha256": [
+        "ab97de915b3c7e2ea3e131f82b2aad462e3baaa469e7f0679c93739b18473745",
+        "c9abaad8c13df868c580e5517f8632a650df71d2766494bf2ac47a20a26e9a83",
+        "ab97de915b3c7e2ea3e131f82b2aad462e3baaa469e7f0679c93739b18473745",
+        "c9abaad8c13df868c580e5517f8632a650df71d2766494bf2ac47a20a26e9a83"
+      ],
+      "set_turning_sha256": "486467c5d743f65d20e78e64e609c38a4ff7300efc5275a0adb4206c41eb88be"
+    },
+    {
+      "revision": 3711,
+      "commit": "6ec17fa411b237f789c910e1234a33a618ab236d",
+      "player_think_sha256": "5200e7107710910c7c5d557fb52bdf7465a6ab87abdd6a96a6155aa95a45eae5",
+      "clear_velocity": true,
+      "branch_sha256": [
+        "ab97de915b3c7e2ea3e131f82b2aad462e3baaa469e7f0679c93739b18473745",
+        "c9abaad8c13df868c580e5517f8632a650df71d2766494bf2ac47a20a26e9a83",
+        "ab97de915b3c7e2ea3e131f82b2aad462e3baaa469e7f0679c93739b18473745",
+        "c9abaad8c13df868c580e5517f8632a650df71d2766494bf2ac47a20a26e9a83"
+      ],
+      "set_turning_sha256": "486467c5d743f65d20e78e64e609c38a4ff7300efc5275a0adb4206c41eb88be"
+    },
+    {
+      "revision": 3713,
+      "commit": "1ed3bec13248887af44a132b4a8a4fa0fe501dc3",
+      "player_think_sha256": "5200e7107710910c7c5d557fb52bdf7465a6ab87abdd6a96a6155aa95a45eae5",
+      "clear_velocity": true,
+      "branch_sha256": [
+        "ab97de915b3c7e2ea3e131f82b2aad462e3baaa469e7f0679c93739b18473745",
+        "c9abaad8c13df868c580e5517f8632a650df71d2766494bf2ac47a20a26e9a83",
+        "ab97de915b3c7e2ea3e131f82b2aad462e3baaa469e7f0679c93739b18473745",
+        "c9abaad8c13df868c580e5517f8632a650df71d2766494bf2ac47a20a26e9a83"
+      ],
+      "set_turning_sha256": "486467c5d743f65d20e78e64e609c38a4ff7300efc5275a0adb4206c41eb88be"
+    },
+    {
+      "revision": 3714,
+      "commit": "0e365b7c55cb92faaca8a5c3a1b9a91597815bb9",
+      "player_think_sha256": "5200e7107710910c7c5d557fb52bdf7465a6ab87abdd6a96a6155aa95a45eae5",
+      "clear_velocity": true,
+      "branch_sha256": [
+        "ab97de915b3c7e2ea3e131f82b2aad462e3baaa469e7f0679c93739b18473745",
+        "c9abaad8c13df868c580e5517f8632a650df71d2766494bf2ac47a20a26e9a83",
+        "ab97de915b3c7e2ea3e131f82b2aad462e3baaa469e7f0679c93739b18473745",
+        "c9abaad8c13df868c580e5517f8632a650df71d2766494bf2ac47a20a26e9a83"
+      ],
+      "set_turning_sha256": "486467c5d743f65d20e78e64e609c38a4ff7300efc5275a0adb4206c41eb88be"
+    },
+    {
+      "revision": 3715,
+      "commit": "8ccd518139e35ff47f5d415b418c6f3c2e310d6f",
+      "player_think_sha256": "5200e7107710910c7c5d557fb52bdf7465a6ab87abdd6a96a6155aa95a45eae5",
+      "clear_velocity": true,
+      "branch_sha256": [
+        "ab97de915b3c7e2ea3e131f82b2aad462e3baaa469e7f0679c93739b18473745",
+        "c9abaad8c13df868c580e5517f8632a650df71d2766494bf2ac47a20a26e9a83",
+        "ab97de915b3c7e2ea3e131f82b2aad462e3baaa469e7f0679c93739b18473745",
+        "c9abaad8c13df868c580e5517f8632a650df71d2766494bf2ac47a20a26e9a83"
+      ],
+      "set_turning_sha256": "486467c5d743f65d20e78e64e609c38a4ff7300efc5275a0adb4206c41eb88be"
+    },
+    {
+      "revision": 3716,
+      "commit": "b5a9f8a224277fc88eae2c7c34eebe2dc0825684",
+      "player_think_sha256": "5200e7107710910c7c5d557fb52bdf7465a6ab87abdd6a96a6155aa95a45eae5",
+      "clear_velocity": true,
+      "branch_sha256": [
+        "ab97de915b3c7e2ea3e131f82b2aad462e3baaa469e7f0679c93739b18473745",
+        "c9abaad8c13df868c580e5517f8632a650df71d2766494bf2ac47a20a26e9a83",
+        "ab97de915b3c7e2ea3e131f82b2aad462e3baaa469e7f0679c93739b18473745",
+        "c9abaad8c13df868c580e5517f8632a650df71d2766494bf2ac47a20a26e9a83"
+      ],
+      "set_turning_sha256": "486467c5d743f65d20e78e64e609c38a4ff7300efc5275a0adb4206c41eb88be"
+    },
+    {
+      "revision": 3721,
+      "commit": "ce216cdb1b063f2da5b002fe3d3d7dcab6ea2e31",
+      "player_think_sha256": "5200e7107710910c7c5d557fb52bdf7465a6ab87abdd6a96a6155aa95a45eae5",
+      "clear_velocity": true,
+      "branch_sha256": [
+        "ab97de915b3c7e2ea3e131f82b2aad462e3baaa469e7f0679c93739b18473745",
+        "c9abaad8c13df868c580e5517f8632a650df71d2766494bf2ac47a20a26e9a83",
+        "ab97de915b3c7e2ea3e131f82b2aad462e3baaa469e7f0679c93739b18473745",
+        "c9abaad8c13df868c580e5517f8632a650df71d2766494bf2ac47a20a26e9a83"
+      ],
+      "set_turning_sha256": "486467c5d743f65d20e78e64e609c38a4ff7300efc5275a0adb4206c41eb88be"
+    },
+    {
+      "revision": 3722,
+      "commit": "1cd80da2e10a4c5e619422ad94f7c1abc42c2226",
+      "player_think_sha256": "5200e7107710910c7c5d557fb52bdf7465a6ab87abdd6a96a6155aa95a45eae5",
+      "clear_velocity": true,
+      "branch_sha256": [
+        "ab97de915b3c7e2ea3e131f82b2aad462e3baaa469e7f0679c93739b18473745",
+        "c9abaad8c13df868c580e5517f8632a650df71d2766494bf2ac47a20a26e9a83",
+        "ab97de915b3c7e2ea3e131f82b2aad462e3baaa469e7f0679c93739b18473745",
+        "c9abaad8c13df868c580e5517f8632a650df71d2766494bf2ac47a20a26e9a83"
+      ],
+      "set_turning_sha256": "486467c5d743f65d20e78e64e609c38a4ff7300efc5275a0adb4206c41eb88be"
+    },
+    {
+      "revision": 3725,
+      "commit": "58dab1fbcae12a508bd69fd2f79d48d74bfc4202",
+      "player_think_sha256": "5200e7107710910c7c5d557fb52bdf7465a6ab87abdd6a96a6155aa95a45eae5",
+      "clear_velocity": true,
+      "branch_sha256": [
+        "ab97de915b3c7e2ea3e131f82b2aad462e3baaa469e7f0679c93739b18473745",
+        "c9abaad8c13df868c580e5517f8632a650df71d2766494bf2ac47a20a26e9a83",
+        "ab97de915b3c7e2ea3e131f82b2aad462e3baaa469e7f0679c93739b18473745",
+        "c9abaad8c13df868c580e5517f8632a650df71d2766494bf2ac47a20a26e9a83"
+      ],
+      "set_turning_sha256": "486467c5d743f65d20e78e64e609c38a4ff7300efc5275a0adb4206c41eb88be"
+    },
+    {
+      "revision": 3726,
+      "commit": "4a94293d2f916b1ba05ac4a6f9635abbb394a8a9",
+      "player_think_sha256": "5200e7107710910c7c5d557fb52bdf7465a6ab87abdd6a96a6155aa95a45eae5",
+      "clear_velocity": true,
+      "branch_sha256": [
+        "ab97de915b3c7e2ea3e131f82b2aad462e3baaa469e7f0679c93739b18473745",
+        "c9abaad8c13df868c580e5517f8632a650df71d2766494bf2ac47a20a26e9a83",
+        "ab97de915b3c7e2ea3e131f82b2aad462e3baaa469e7f0679c93739b18473745",
+        "c9abaad8c13df868c580e5517f8632a650df71d2766494bf2ac47a20a26e9a83"
+      ],
+      "set_turning_sha256": "486467c5d743f65d20e78e64e609c38a4ff7300efc5275a0adb4206c41eb88be"
+    },
+    {
+      "revision": 3727,
+      "commit": "ad3f59f9325e89b68f82e4daf162d0f0510af8d3",
+      "player_think_sha256": "5200e7107710910c7c5d557fb52bdf7465a6ab87abdd6a96a6155aa95a45eae5",
+      "clear_velocity": true,
+      "branch_sha256": [
+        "ab97de915b3c7e2ea3e131f82b2aad462e3baaa469e7f0679c93739b18473745",
+        "c9abaad8c13df868c580e5517f8632a650df71d2766494bf2ac47a20a26e9a83",
+        "ab97de915b3c7e2ea3e131f82b2aad462e3baaa469e7f0679c93739b18473745",
+        "c9abaad8c13df868c580e5517f8632a650df71d2766494bf2ac47a20a26e9a83"
+      ],
+      "set_turning_sha256": "486467c5d743f65d20e78e64e609c38a4ff7300efc5275a0adb4206c41eb88be"
+    },
+    {
+      "revision": 3728,
+      "commit": "9f4ad7f785557d87829acd19972b8cc0704fc8c1",
+      "player_think_sha256": "5200e7107710910c7c5d557fb52bdf7465a6ab87abdd6a96a6155aa95a45eae5",
+      "clear_velocity": true,
+      "branch_sha256": [
+        "ab97de915b3c7e2ea3e131f82b2aad462e3baaa469e7f0679c93739b18473745",
+        "c9abaad8c13df868c580e5517f8632a650df71d2766494bf2ac47a20a26e9a83",
+        "ab97de915b3c7e2ea3e131f82b2aad462e3baaa469e7f0679c93739b18473745",
+        "c9abaad8c13df868c580e5517f8632a650df71d2766494bf2ac47a20a26e9a83"
+      ],
+      "set_turning_sha256": "486467c5d743f65d20e78e64e609c38a4ff7300efc5275a0adb4206c41eb88be"
+    },
+    {
+      "revision": 3729,
+      "commit": "b3dc9a4a79d1f6a1b96b573e060ef97067f1176c",
+      "player_think_sha256": "5200e7107710910c7c5d557fb52bdf7465a6ab87abdd6a96a6155aa95a45eae5",
+      "clear_velocity": true,
+      "branch_sha256": [
+        "ab97de915b3c7e2ea3e131f82b2aad462e3baaa469e7f0679c93739b18473745",
+        "c9abaad8c13df868c580e5517f8632a650df71d2766494bf2ac47a20a26e9a83",
+        "ab97de915b3c7e2ea3e131f82b2aad462e3baaa469e7f0679c93739b18473745",
+        "c9abaad8c13df868c580e5517f8632a650df71d2766494bf2ac47a20a26e9a83"
+      ],
+      "set_turning_sha256": "486467c5d743f65d20e78e64e609c38a4ff7300efc5275a0adb4206c41eb88be"
+    },
+    {
+      "revision": 3730,
+      "commit": "40441f127f7ad7b7cfda0eebb489e8feffd1f806",
+      "player_think_sha256": "5200e7107710910c7c5d557fb52bdf7465a6ab87abdd6a96a6155aa95a45eae5",
+      "clear_velocity": true,
+      "branch_sha256": [
+        "ab97de915b3c7e2ea3e131f82b2aad462e3baaa469e7f0679c93739b18473745",
+        "c9abaad8c13df868c580e5517f8632a650df71d2766494bf2ac47a20a26e9a83",
+        "ab97de915b3c7e2ea3e131f82b2aad462e3baaa469e7f0679c93739b18473745",
+        "c9abaad8c13df868c580e5517f8632a650df71d2766494bf2ac47a20a26e9a83"
+      ],
+      "set_turning_sha256": "486467c5d743f65d20e78e64e609c38a4ff7300efc5275a0adb4206c41eb88be"
+    },
+    {
+      "revision": 3732,
+      "commit": "0b2d8300b819cdee94817194b2db7489d25d45d3",
+      "player_think_sha256": "5200e7107710910c7c5d557fb52bdf7465a6ab87abdd6a96a6155aa95a45eae5",
+      "clear_velocity": true,
+      "branch_sha256": [
+        "ab97de915b3c7e2ea3e131f82b2aad462e3baaa469e7f0679c93739b18473745",
+        "c9abaad8c13df868c580e5517f8632a650df71d2766494bf2ac47a20a26e9a83",
+        "ab97de915b3c7e2ea3e131f82b2aad462e3baaa469e7f0679c93739b18473745",
+        "c9abaad8c13df868c580e5517f8632a650df71d2766494bf2ac47a20a26e9a83"
+      ],
+      "set_turning_sha256": "486467c5d743f65d20e78e64e609c38a4ff7300efc5275a0adb4206c41eb88be"
+    },
+    {
+      "revision": 3738,
+      "commit": "e0e03912cd594ffe04ca8bf7b462f1e97df6f6fe",
+      "player_think_sha256": "5200e7107710910c7c5d557fb52bdf7465a6ab87abdd6a96a6155aa95a45eae5",
+      "clear_velocity": true,
+      "branch_sha256": [
+        "ab97de915b3c7e2ea3e131f82b2aad462e3baaa469e7f0679c93739b18473745",
+        "c9abaad8c13df868c580e5517f8632a650df71d2766494bf2ac47a20a26e9a83",
+        "ab97de915b3c7e2ea3e131f82b2aad462e3baaa469e7f0679c93739b18473745",
+        "c9abaad8c13df868c580e5517f8632a650df71d2766494bf2ac47a20a26e9a83"
+      ],
+      "set_turning_sha256": "486467c5d743f65d20e78e64e609c38a4ff7300efc5275a0adb4206c41eb88be"
+    },
+    {
+      "revision": 3740,
+      "commit": "cf83dc7f4472e6a51aa84cfa37b47e5d3f42d986",
+      "player_think_sha256": "5200e7107710910c7c5d557fb52bdf7465a6ab87abdd6a96a6155aa95a45eae5",
+      "clear_velocity": true,
+      "branch_sha256": [
+        "ab97de915b3c7e2ea3e131f82b2aad462e3baaa469e7f0679c93739b18473745",
+        "c9abaad8c13df868c580e5517f8632a650df71d2766494bf2ac47a20a26e9a83",
+        "ab97de915b3c7e2ea3e131f82b2aad462e3baaa469e7f0679c93739b18473745",
+        "c9abaad8c13df868c580e5517f8632a650df71d2766494bf2ac47a20a26e9a83"
+      ],
+      "set_turning_sha256": "486467c5d743f65d20e78e64e609c38a4ff7300efc5275a0adb4206c41eb88be"
+    },
+    {
+      "revision": 3741,
+      "commit": "00bcc4947748e8af10d030a82b60520bbd402e30",
+      "player_think_sha256": "5200e7107710910c7c5d557fb52bdf7465a6ab87abdd6a96a6155aa95a45eae5",
+      "clear_velocity": true,
+      "branch_sha256": [
+        "ab97de915b3c7e2ea3e131f82b2aad462e3baaa469e7f0679c93739b18473745",
+        "c9abaad8c13df868c580e5517f8632a650df71d2766494bf2ac47a20a26e9a83",
+        "ab97de915b3c7e2ea3e131f82b2aad462e3baaa469e7f0679c93739b18473745",
+        "c9abaad8c13df868c580e5517f8632a650df71d2766494bf2ac47a20a26e9a83"
+      ],
+      "set_turning_sha256": "486467c5d743f65d20e78e64e609c38a4ff7300efc5275a0adb4206c41eb88be"
+    },
+    {
+      "revision": 3742,
+      "commit": "0d20390cfe982136259ea3fa4bb8078801be9269",
+      "player_think_sha256": "5200e7107710910c7c5d557fb52bdf7465a6ab87abdd6a96a6155aa95a45eae5",
+      "clear_velocity": true,
+      "branch_sha256": [
+        "ab97de915b3c7e2ea3e131f82b2aad462e3baaa469e7f0679c93739b18473745",
+        "c9abaad8c13df868c580e5517f8632a650df71d2766494bf2ac47a20a26e9a83",
+        "ab97de915b3c7e2ea3e131f82b2aad462e3baaa469e7f0679c93739b18473745",
+        "c9abaad8c13df868c580e5517f8632a650df71d2766494bf2ac47a20a26e9a83"
+      ],
+      "set_turning_sha256": "486467c5d743f65d20e78e64e609c38a4ff7300efc5275a0adb4206c41eb88be"
+    }
+  ],
+  "boundary_controls": [
+    3678,
+    3679
+  ]
+}

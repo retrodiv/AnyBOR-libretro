@@ -1,4 +1,4 @@
-/* AnyBOR modification record: 2026-10-20.
+/* AnyBOR modification record: 2026-10-27.
  * Port maintained by retrodiv <retrodiv@proton.me>.
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
@@ -11,27 +11,62 @@
  * environmental damage, camera and scroll behavior, model-save loading,
  * weapon and idle order, nested scripts and numeric script selectors. Retain
  * bounded storage, safe ownership and the selected rejected-value contracts.
- * Leave multiplayer slots without a selected model available to join even if
- * game scripts preassign lives to them. Let a missing basename-only PAK
- * self-check read the active frontend content after it has been validated
- * and prepared. Allocate each model's animation pointer table through the
- * highest animation index that model uses, and bound cache, copy and cleanup
- * paths to that capacity. Ignore optional defense and offense entries
- * outside the configured attack-type range with a log warning before
- * accessing their tables. Yield after each newly completed model during
- * explicit model-list or level preparation, and defer states until that
- * preparation has cleaned up its intermediate parsers and handles. Resize
- * repeated weapon lists and detach borrowed lists before replacing their
- * entries. Guard an optional entity animation interpreter before reading its
- * reset state. Share identical immutable animation-frame draw methods with
- * reference-counted ownership. Select the pre-3800 player spawn coordinate
- * limit and pre-3805 ordered, cached spawn scripts by logical build, with
- * explicit level ownership and cleanup. Keep model clip coordinates absolute
- * before 3842 and relative to frame offsets and projected entity positions
- * from 3842, with bounded integer coordinate arithmetic. Recalculate
- * completed-game bonuses at the original successful menu callers before 3820
- * and in the loader from 3820, preserving the other saved-game routes and
- * failure behavior.
+ * Preserve source-defined argument counts, line capacities and script
+ * constants for each historical profile. Select explicit animation-sync
+ * command availability while preserving native unknown-command diagnostics
+ * and implicit animation sync. Preserve each profile's model-constant load
+ * phase, selected model-list limits and vector reconstruction during reload.
+ * Keep script-setting writes within each profile's source availability.
+ * Preserve each profile's fade pixel arithmetic, channel correction and
+ * frame count. Leave multiplayer slots without a selected model available to
+ * join even if game scripts preassign lives to them. Let a missing basename-
+ * only PAK self-check read the active frontend content after it has been
+ * validated and prepared. Allocate each model's animation pointer table
+ * through the highest animation index that model uses, and bound cache, copy
+ * and cleanup paths to that capacity. Ignore optional defense and offense
+ * entries outside the allocated model attack-type range with a log warning
+ * before accessing their tables. Yield after each newly completed model
+ * during explicit model-list or level preparation, and defer states until
+ * that preparation has cleaned up its intermediate parsers and handles.
+ * Resize repeated weapon lists and detach borrowed lists before replacing
+ * their entries. Guard an optional entity animation interpreter before
+ * reading its reset state. Share identical immutable animation-frame draw
+ * methods with reference-counted ownership. Select the pre-3800 player spawn
+ * coordinate limit and pre-3805 ordered, cached spawn scripts by logical
+ * build, with explicit level ownership and cleanup. Keep model clip
+ * coordinates absolute before 3842 and relative to frame offsets and
+ * projected entity positions from 3842, with bounded integer coordinate
+ * arithmetic. Recalculate completed-game bonuses at the original successful
+ * menu callers before 3820 and in the loader from 3820, preserving the other
+ * saved-game routes and failure behavior. Return a defined null result for
+ * absent colourmap models or tables while retaining valid palette fallback.
+ * Keep selected palette-conversion reads bounded and reject missing maps or
+ * flags, while preserving unselected slots and native allocation failure
+ * callbacks. Check destination animation capacity when retaining an
+ * animation across model changes, preserving the native fallback and timing.
+ * Query and execute model-copy callbacks only in profiles whose original
+ * build provides them. Preserve the historical projectile and landing damage
+ * factor exemptions before the attack-type contract change. Preserve native
+ * unknown-command handling for unavailable model-copy scripts before their
+ * source boundary, retaining later loading and callback cleanup. Preserve
+ * native menu key-name availability, unchanged numeric indices and unknown-
+ * command diagnostics by profile. Preserve native duplicate-player name
+ * comparisons and final-player countdown predicates by profile. Preserve
+ * native unsigned spawn-score and model-AI sentinel semantics and signed
+ * multiplier clamping by profile. Apply direct external-file buffering from
+ * its native profile boundary, retaining older selected packreader behavior
+ * and active-content aliases. Access script-container pointer slots with
+ * byte copies, preserving record layout, pointer values and native
+ * copy/cleanup order. Preserve pre-series alternate idle query order and
+ * native context restoration. Retain source-defined missing-sample
+ * diagnostics for model sound commands. Release each sprite owner once and
+ * complete cleanup independently of alias counts. Preserve native sprite-map
+ * capacity policies, check allocation extents and retain existing storage
+ * and capacity when growth is unavailable. Validate sprite-node allocations
+ * and release partial resources without changing existing owners. Check
+ * cached sprite availability before reading metadata and ignore cache
+ * requests for absent nodes. Preserve each profile's native argument-finder
+ * comment recognition and retained parser bytes.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/3842.md
  * at the source repository root. Original notices follow below.
@@ -113,7 +148,8 @@ static int obor_animation_cmd_grouped(void)
 
 static int obor_animation_cmd_returns(void)
 {
-    return obor_profile_build < 3823 || no_cmd_compatible;
+    return obor_profile_build >= 3821 &&
+        (obor_profile_build < 3823 || no_cmd_compatible);
 }
 
 int		skiptoset = -1;
@@ -908,7 +944,7 @@ int buffer_pakfile(char* filename, char** pbuffer, size_t* psize)
 	*psize = 0;
 	*pbuffer = NULL;
 
-	if(buffer_file(filename, pbuffer, psize)==1) return 1;
+	if(obor_profile_build >= 3777 && buffer_file(filename, pbuffer, psize)==1) return 1;
 #ifdef LIBRETRO
 	if(obor_buffer_content_alias(filename, pbuffer, psize)) return 1;
 #endif
@@ -1012,7 +1048,14 @@ int getsyspropertybyindex(ScriptVariant* var, int index)
 {
 	if(!var) return 0;
 
-	switch(index)
+	if(obor_profile_build < 3783 &&
+       (index == _sv_scrollminx || index == _sv_scrollmaxx ||
+        index == _sv_scrollminz || index == _sv_scrollmaxz || index == _sv_blockade))
+    {
+        printf("Unknown system property name.\n");
+        return 0;
+    }
+    switch(index)
 	{
 	case _sv_count_enemies:
 		ScriptVariant_ChangeType(var, VT_INTEGER);
@@ -1713,49 +1756,69 @@ void clear_scripts()
 
 #define scripts_membercount (sizeof(s_scripts) / sizeof(Script*))
 
-void alloc_all_scripts(s_scripts** s) {
-	size_t i;
-
-	if(!(*s))
-	{
-		*s = (s_scripts*)malloc(sizeof(s_scripts));
-		for (i = 0; i < scripts_membercount; i++) {
-			(((Script**) (*s))[i]) = alloc_script();
-		}
-	}
+void alloc_all_scripts(s_scripts** s)
+{
+    s_scripts *scripts = NULL;
+    size_t i;
+    if(!s) return;
+    memcpy(&scripts, s, sizeof(scripts));
+    if(scripts) return;
+    scripts = malloc(sizeof(*scripts));
+    memcpy(s, &scripts, sizeof(scripts));
+    if(!scripts) return;
+    for(i = 0; i < scripts_membercount; ++i)
+    {
+        Script *script = alloc_script();
+        memcpy((unsigned char*)scripts + i * sizeof(script), &script, sizeof(script));
+    }
 }
 
-void clear_all_scripts(s_scripts* s, int method) {
-	size_t i;
-	Script** ps = (Script**) s;
-
-	for (i = 0; i < scripts_membercount; i++) {
-		Script_Clear(ps[i],   method);
-	}
+void clear_all_scripts(s_scripts* s, int method)
+{
+    size_t i;
+    if(!s) return;
+    for(i = 0; i < scripts_membercount; ++i)
+    {
+        Script *script = NULL;
+        memcpy(&script, (const unsigned char*)s + i * sizeof(script), sizeof(script));
+        if(script) Script_Clear(script, method);
+    }
 }
 
-void free_all_scripts(s_scripts** s) {
-	size_t i;
-	Script** ps = (Script**) (*s);
-
-	for (i = 0; i < scripts_membercount; i++) {
-		if (ps[i]) {
-			free(ps[i]);
-			ps[i] = NULL;
-		}
-	}
-	free(*s);
-	*s = NULL;
+void free_all_scripts(s_scripts** s)
+{
+    s_scripts *scripts = NULL;
+    size_t i;
+    if(!s) return;
+    memcpy(&scripts, s, sizeof(scripts));
+    if(!scripts) return;
+    for(i = 0; i < scripts_membercount; ++i)
+    {
+        Script *script = NULL;
+        memcpy(&script, (const unsigned char*)scripts + i * sizeof(script), sizeof(script));
+        if(script)
+        {
+            free(script);
+            script = NULL;
+            memcpy((unsigned char*)scripts + i * sizeof(script), &script, sizeof(script));
+        }
+    }
+    free(scripts);
+    scripts = NULL;
+    memcpy(s, &scripts, sizeof(scripts));
 }
 
-void copy_all_scripts(s_scripts* src, s_scripts* dest, int method) {
-	size_t i;
-	Script** ps = (Script**) src;
-	Script** pd = (Script**) dest;
-
-	for (i = 0; i < scripts_membercount; i++) {
-			Script_Copy(pd[i], ps[i], method);
-	}
+void copy_all_scripts(s_scripts* src, s_scripts* dest, int method)
+{
+    size_t i;
+    if(!src || !dest) return;
+    for(i = 0; i < scripts_membercount; ++i)
+    {
+        Script *source = NULL, *destination = NULL;
+        memcpy(&source, (const unsigned char*)src + i * sizeof(source), sizeof(source));
+        memcpy(&destination, (const unsigned char*)dest + i * sizeof(destination), sizeof(destination));
+        if(source && destination) Script_Copy(destination, source, method);
+    }
 }
 
 void execute_animation_script(entity* ent)
@@ -2397,7 +2460,7 @@ static int obor_load_historical_spawn_script(s_level *lv, s_spawn_entry *entry,
         resource->path = malloc(length + 1);
         if(!resource->path) { free(resource); return 0; }
         memcpy(resource->path, path, length + 1);
-        Script_Init(&resource->script, "Level spawn entry script", resource->path, 1);
+        Script_Init(&resource->script, "spawnscript", NULL, 1);
         if(!load_script(&resource->script, path) || !Script_Compile(&resource->script))
         {
             Script_Clear(&resource->script, 2);
@@ -3104,7 +3167,9 @@ size_t ParseArgs(ArgList* list, char* input, char* output) {
 	int space = 0;
 	//int makelower = 0;
 
-	while(pos < MAX_ARG_LEN-1 && item < MAX_ARG_COUNT) {
+	const size_t argument_limit = obor_profile_build < 3670 ? 18u : MAX_ARG_COUNT;
+	const size_t line_limit = obor_profile_build < 3822 ? 512u : 511u;
+	while(pos < line_limit-1 && item < argument_limit) {
 		switch(input[pos]) {
 			case '\r': case '\n': case '#': case '\0':
 				done = 1;
@@ -3145,6 +3210,7 @@ char *findarg(char *command, int which){
 	int inarg;
 	int argstart;
 	static char arg[MAX_ARG_LEN];
+	const int line_limit = obor_profile_build < 3822 ? 512 : 511;
 
 
 	// Copy the command line, replacing spaces by zeroes,
@@ -3153,8 +3219,9 @@ char *findarg(char *command, int which){
 	inarg = 0;
 	argstart = 0;
 	argc = -1;
+	arg[line_limit-1] = 0;
 
-	while(d<MAX_ARG_LEN-1 && command[d]){
+	while(d<line_limit-1 && command[d]){
 		// Zero out whitespace
 		if(command[d]==' ' || command[d]=='\t'){
 			arg[d] = 0;
@@ -3162,7 +3229,9 @@ char *findarg(char *command, int which){
 			if(argc == which) return arg + argstart;
 		}
 		else if(command[d]==0 || command[d]=='\n' || command[d]=='\r' ||
-			strcmp(command+d, comment_mark)==0){
+			(obor_profile_build < 3831 ?
+                 strncmp(command+d, comment_mark, strlen(comment_mark))==0 :
+                 strcmp(command+d, comment_mark)==0)){
 				// End of line
 				arg[d] = 0;
 				if(argc == which) return arg + argstart;
@@ -3273,14 +3342,18 @@ int convert_map_to_palette(s_model* model, unsigned mapflag[])
 	int i, c;
 	unsigned char *newmap, *oldmap;
 	unsigned char *p1, *p2;
+    if(!model || screenformat < 0 || (unsigned)screenformat >= sizeof(pixelbytes)/sizeof(pixelbytes[0])) return 0;
 	unsigned pb = pixelbytes[(int)screenformat];
 	if(model->palette==NULL) return 0;
 	for(c=0; c<model->maps_loaded; c++)
 	{
+        if(!mapflag) return 0;
 		if(mapflag[c]==0) continue;
+        if(!model->colourmap || !model->colourmap[c]) return 0;
 		if((newmap = malloc(PAL_BYTES)) == NULL)
 		{
 			shutdown(1, "Error convert_map_to_palette for model: %s\n", model->name);
+            return 0;
 		}
 		// Create new colour map
 		memcpy(newmap, model->palette, PAL_BYTES);
@@ -3857,51 +3930,67 @@ void resourceCleanUp(){
 
 void freesprites()
 {
-	unsigned i;
-	s_sprite_list *head;
-	for(i=0; i<=sprites_loaded; i++)
-	{
-		if(sprite_list != NULL)
-		{
-			free(sprite_list->sprite);
-			sprite_list->sprite = NULL;
-			free(sprite_list->filename);
-			sprite_list->filename = NULL;
-			head = sprite_list->next;
-			free(sprite_list);
-			sprite_list = head;
-		}
-	}
-	if(sprite_map != NULL)
-	{
-		free(sprite_map);
-		sprite_map = NULL;
-	}
-	sprites_loaded = 0;
+    s_sprite_list *head;
+    while(sprite_list != NULL)
+    {
+        free(sprite_list->sprite);
+        sprite_list->sprite = NULL;
+        free(sprite_list->filename);
+        sprite_list->filename = NULL;
+        head = sprite_list->next;
+        free(sprite_list);
+        sprite_list = head;
+    }
+    if(sprite_map != NULL)
+    {
+        free(sprite_map);
+        sprite_map = NULL;
+    }
+    sprites_loaded = 0;
 }
 
 // allocate enough members for sprite_map
 void prepare_sprite_map(size_t size)
 {
-	if(sprite_map == NULL || size + 1 > sprite_map_max_items )
-	{
+    size_t new_capacity;
+    s_sprite_map *resized;
+    if(size >= (size_t)INT_MAX || sprite_map_max_items < 0)
+    {
+        shutdown(1, "Out Of Memory!  Failed to create a new sprite_map\n");
+        return;
+    }
+    if(sprite_map != NULL && size + 1 <= (size_t)sprite_map_max_items)
+    {
+        return;
+    }
 #ifdef VERBOSE
-		printf("%s %p\n", "prepare_sprite_map was", sprite_map);
+    printf("%s %p\n", "prepare_sprite_map was", sprite_map);
 #endif
-		sprite_map_max_items = (((size+1)>>8)+1)<<8;
-		sprite_map = realloc(sprite_map, sizeof(*sprite_map) * sprite_map_max_items);
-		if(sprite_map == NULL) shutdown(1, "Out Of Memory!  Failed to create a new sprite_map\n");
-	}
+    new_capacity = (((size + 1) >> 8) + 1) << 8;
+    if(new_capacity > (size_t)INT_MAX || new_capacity > SIZE_MAX / sizeof(*sprite_map))
+    {
+        shutdown(1, "Out Of Memory!  Failed to create a new sprite_map\n");
+        return;
+    }
+    resized = realloc(sprite_map, sizeof(*sprite_map) * new_capacity);
+    if(resized == NULL)
+    {
+        shutdown(1, "Out Of Memory!  Failed to create a new sprite_map\n");
+        return;
+    }
+    sprite_map = resized;
+    sprite_map_max_items = (int)new_capacity;
 }
 
 void cachesound(int index, int load) {
+	if(obor_profile_build < 3838) return;
 	if(index<0) return;
 	if(load) sound_reload_sample(index);
 	else sound_unload_sample(index);
 }
 
 void cachesprite(int index, int load){
-	if(sprite_map && index>=0 && index<sprites_loaded){
+	if(sprite_map && index>=0 && index<sprites_loaded && sprite_map[index].node){
 		if(!load && sprite_map[index].node->sprite){
 			free(sprite_map[index].node->sprite);
 			sprite_map[index].node->sprite = NULL;
@@ -3932,6 +4021,11 @@ int loadsprite(char *filename, int ofsx, int ofsy, int bmpformat)
 			if(stricmp(sprite_map[i].node->filename, filename) == 0) {
 				if(!sprite_map[i].node->sprite){
 					sprite_map[i].node->sprite = loadsprite2(filename, NULL, NULL);
+                    if(!sprite_map[i].node->sprite)
+                    {
+                        shutdown(1, "Unable to load file '%s'\n", filename);
+                        return -1;
+                    }
 				}
 				if(sprite_map[i].centerx+sprite_map[i].node->sprite->offsetx == ofsx &&
 					sprite_map[i].centery+sprite_map[i].node->sprite->offsety == ofsy) {
@@ -3960,12 +4054,23 @@ int loadsprite(char *filename, int ofsx, int ofsy, int bmpformat)
 	len = strlen(filename);
 	size = fakey_encodesprite(bitmap);
 	curr = malloc(sizeof(*curr));
+    if(curr == NULL)
+    {
+        freebitmap(bitmap);
+        shutdown(1, "loadsprite() Out of memory!\n");
+        return -1;
+    }
 	curr->sprite = malloc(size);
 	curr->filename = malloc(len + 1);
-	if(curr == NULL || curr->sprite == NULL || curr->filename == NULL){
-		freebitmap(bitmap);
-		shutdown(1, "loadsprite() Out of memory!\n");
-	}
+	if(curr->sprite == NULL || curr->filename == NULL)
+    {
+        free(curr->sprite);
+        free(curr->filename);
+        free(curr);
+        freebitmap(bitmap);
+        shutdown(1, "loadsprite() Out of memory!\n");
+        return -1;
+    }
 	memcpy(curr->filename, filename,len);
 	curr->filename[len] = 0;
 	encodesprite(ofsx-clipl, ofsy-clipt, bitmap, curr->sprite);
@@ -4056,7 +4161,7 @@ int translate_SDID(char* value)
 		return SDID_START;
 	else if(stricmp(value, "screenshot") == 0)
 		return SDID_SCREENSHOT;
-	else if(stricmp(value, "esc") == 0)
+	else if(obor_profile_build >= 3777 && stricmp(value, "esc") == 0)
 		return SDID_ESC;
 
 	return -1;
@@ -6046,6 +6151,10 @@ s_model* load_cached_model(char * name, char * owner, char unload)
 		if(ParseArgs(&arglist,buf+pos,argbuf)){
 			command = GET_ARG(0);
 			cmd = getModelCommand(modelcmdlist, command);
+            if(obor_profile_build < 3793 && cmd == CMD_MODEL_ONMODELCOPYSCRIPT)
+                cmd = (modelCommands)0;
+            if(obor_profile_build < 3841 && cmd == CMD_MODEL_SYNC)
+                cmd = (modelCommands)0;
 
 			switch(cmd) {
 				case CMD_MODEL_SUBCLASS:
@@ -6379,12 +6488,12 @@ s_model* load_cached_model(char * name, char * owner, char unload)
 						{
 							get_tail_number(tempInt, value, "normal");
                             if(obor_profile_build < 3831 && tempInt < 11) tempInt = 11;
-							/* Invalid optional entries must not corrupt adjacent heap chunks. */
-							if(tempInt > max_attack_types - OBOR_ATTACK_SPECIAL)
+							/* The model allocation includes one additional initialized slot. */
+							if(tempInt > max_attack_types - OBOR_ATTACK_SPECIAL + 1)
 							{
 							    writeToLogFile("Warning: Ignoring out-of-range attack type '%s' in %s "
 							                   "(%s; maxattacktypes %d).\n",
-							                   value, filename, command, max_attack_types - OBOR_ATTACK_SPECIAL);
+							                   value, filename, command, max_attack_types - OBOR_ATTACK_SPECIAL + 1);
 							    break;
 							}
 							newchar->defense[tempInt+OBOR_ATTACK_SPECIAL-1] = defense;
@@ -6438,12 +6547,12 @@ s_model* load_cached_model(char * name, char * owner, char unload)
 						{
 							get_tail_number(tempInt, value, "normal");
                             if(obor_profile_build < 3831 && tempInt < 11) tempInt = 11;
-							/* Invalid optional entries must not corrupt adjacent heap chunks. */
-							if(tempInt > max_attack_types - OBOR_ATTACK_SPECIAL)
+							/* The model allocation includes one additional initialized slot. */
+							if(tempInt > max_attack_types - OBOR_ATTACK_SPECIAL + 1)
 							{
 							    writeToLogFile("Warning: Ignoring out-of-range attack type '%s' in %s "
 							                   "(%s; maxattacktypes %d).\n",
-							                   value, filename, command, max_attack_types - OBOR_ATTACK_SPECIAL);
+							                   value, filename, command, max_attack_types - OBOR_ATTACK_SPECIAL + 1);
 							    break;
 							}
 							newchar->offense_factors[tempInt+OBOR_ATTACK_SPECIAL-1] = GET_FLOAT_ARG(2);
@@ -6582,7 +6691,7 @@ s_model* load_cached_model(char * name, char * owner, char unload)
 					newchar->throwframewait = GET_INT_ARG(1);
 					break;
 				case CMD_MODEL_DIESOUND:
-					newchar->diesound = sound_load_sample(GET_ARG(1), packfile, 1);
+					newchar->diesound = sound_load_sample(GET_ARG(1), packfile, obor_profile_build >= 3838);
 					break;
 				case CMD_MODEL_ICON:
 					value = GET_ARG(1);
@@ -6594,7 +6703,7 @@ s_model* load_cached_model(char * name, char * owner, char unload)
 					newchar->icon.pain = newchar->icon.def;
 					newchar->icon.die = newchar->icon.def;
 					newchar->icon.get = newchar->icon.def;
-					newchar->icon.usemap = GET_INT_ARG(2); //be more friendly to some old mods which don't care about icon remap
+					if(obor_profile_build >= 3776) newchar->icon.usemap = GET_INT_ARG(2); //be more friendly to some old mods which don't care about icon remap
 					break;
 				case CMD_MODEL_ICONPAIN:
 					value = GET_ARG(1);
@@ -6790,6 +6899,57 @@ s_model* load_cached_model(char * name, char * owner, char unload)
 					// End section for custom freespecials
 					break;
 				case CMD_MODEL_REMAP:
+                    if(obor_profile_build < 3787)
+                    {
+
+					{
+						// This command should not be used under 24bit mode, but for old mods, just give it a default palette
+						value = GET_ARG(1);
+						value2 = GET_ARG(2);
+						__realloc(mapflag, newchar->maps_loaded);
+						errorVal = load_colourmap(newchar, value, value2);
+
+						if(0>=errorVal){
+							switch(errorVal){
+								case 0: // uhm wait, we just tested for !errorVal...
+									shutdownmessage = "Failed to create colourmap. Image Used Twice!";
+									goto lCleanup;
+									break;
+								case -1: //should not happen now
+									shutdownmessage = "Failed to create colourmap. MAX_COLOUR_MAPS full!";
+									goto lCleanup;
+									break;
+								case -2:
+									shutdownmessage = "Failed to create colourmap. Failed to allocate memory!";
+									goto lCleanup;
+									break;
+								case -3:
+									shutdownmessage = "Failed to create colourmap. Failed to load file 1";
+									goto lCleanup;
+									break;
+								case -4:
+									shutdownmessage = "Failed to create colourmap. Failed to load file 2";
+									goto lCleanup;
+									break;
+							}
+						}
+
+						if(pixelformat==PIXEL_x8 && newchar->palette==NULL)
+						{
+							newchar->palette = malloc(PAL_BYTES);
+							if(loadimagepalette(value, packfile, newchar->palette)==0) {
+								shutdownmessage = "Failed to load palette!";
+								goto lCleanup;
+							}
+						}
+						mapflag[newchar->maps_loaded-1] = 1;
+					}
+					break;
+				
+                    }
+                    else
+                    {
+
 					{
 						// This command should not be used under 24bit mode, but for old mods, just give it a default palette
 						value = GET_ARG(1);
@@ -6831,7 +6991,9 @@ s_model* load_cached_model(char * name, char * owner, char unload)
 						}
 					}
 					break;
-				case CMD_MODEL_PALETTE:
+				
+                    }
+case CMD_MODEL_PALETTE:
 					// main palette for the entity under 24bit mode
 					if(pixelformat!=PIXEL_x8) printf("Warning: command '%s' is not available under 8bit mode\n", command);
 					else if(newchar->palette==NULL)
@@ -7237,11 +7399,11 @@ s_model* load_cached_model(char * name, char * owner, char unload)
 					}
 					break;
 				case CMD_MODEL_SOUND:
-					soundtoplay = sound_load_sample(GET_ARG(1), packfile, 1);
+					soundtoplay = sound_load_sample(GET_ARG(1), packfile, obor_profile_build >= 3838);
 					break;
 				case CMD_MODEL_HITFX:
 					if(stricmp(GET_ARG(1),"none")==0) attack.hitsound=-1;
-					else attack.hitsound = sound_load_sample(GET_ARG(1), packfile, 1);
+					else attack.hitsound = sound_load_sample(GET_ARG(1), packfile, obor_profile_build >= 3838);
 					break;
 				case CMD_MODEL_HITFLASH:
 					value = GET_ARG(1);
@@ -7254,7 +7416,7 @@ s_model* load_cached_model(char * name, char * owner, char unload)
 					else attack.blockflash = get_cached_model_index(value);
 					break;
 				case CMD_MODEL_BLOCKFX:
-					attack.blocksound = sound_load_sample(GET_ARG(1), packfile, 1);
+					attack.blocksound = sound_load_sample(GET_ARG(1), packfile, obor_profile_build >= 3838);
 					break;
 				case CMD_MODEL_FASTATTACK:
 					if(GET_INT_ARG(1))
@@ -7312,19 +7474,19 @@ s_model* load_cached_model(char * name, char * owner, char unload)
 					{
 						drawmethod.scaley = GET_FLOAT_ARG(2)*256;
 					}
-					else if (0==stricmp(value, "xrepeat"))
+					else if (obor_profile_build >= 3771 && 0==stricmp(value, "xrepeat"))
 					{
 						drawmethod.xrepeat = GET_INT_ARG(2);
 					}
-					else if (0==stricmp(value, "yrepeat"))
+					else if (obor_profile_build >= 3771 && 0==stricmp(value, "yrepeat"))
 					{
 						drawmethod.yrepeat = GET_INT_ARG(2);
 					}
-					else if (0==stricmp(value, "xspan"))
+					else if (obor_profile_build >= 3771 && 0==stricmp(value, "xspan"))
 					{
 						drawmethod.xspan = GET_INT_ARG(2);
 					}
-					else if (0==stricmp(value, "yspan"))
+					else if (obor_profile_build >= 3771 && 0==stricmp(value, "yspan"))
 					{
 						drawmethod.yspan = GET_INT_ARG(2);
 					}
@@ -7922,8 +8084,11 @@ s_model* load_cached_model(char * name, char * owner, char unload)
 						{
 							scriptbuf[scriptlen - strclen(endif_text)] = 0; // cut last chars
 							scriptlen = strlen(scriptbuf);
+                            if(obor_animation_cmd_returns())
+                            {
 							scriptbuf[scriptlen - strclen(endif_return_text)] = 0; // cut last chars
 							scriptlen = strlen(scriptbuf);
+                            }
 						}
 						sprintf(namebuf, call_text, value);
 						buffer_append(&scriptbuf, namebuf, 0xffffff, &sbsize, &scriptlen);
@@ -8113,7 +8278,11 @@ s_model* load_cached_model(char * name, char * owner, char unload)
 	// we need to convert 8bit colourmap into 24bit palette
 	if(pixelformat==PIXEL_x8)
 	{
-		convert_map_to_palette(newchar, mapflag);
+		if(!convert_map_to_palette(newchar, mapflag) && newchar->palette)
+        {
+            shutdownmessage = "Failed to convert colourmaps.";
+            goto lCleanup;
+        }
 	}
 
 	printf("Loading '%s' from %s\n", newchar->name, filename);
@@ -8204,11 +8373,11 @@ int load_script_setting()
 				}
 				else if(stricmp(command, "nonestedscript")==0) // don't call a script if it is being executed
 				{
-					no_nested_script = GET_INT_ARG(1);
+					if(obor_profile_build >= 3806) no_nested_script = GET_INT_ARG(1);
 				}
 				else if(stricmp(command, "nocmdcompatible")==0) // don't call a script if it is being executed
 				{
-					no_cmd_compatible = GET_INT_ARG(1);
+					if(obor_profile_build >= 3823) no_cmd_compatible = GET_INT_ARG(1);
 				}
 			}
 		}
@@ -8224,19 +8393,8 @@ int load_script_setting()
 	return 1;
 }
 
-void load_model_constants() {
-	char filename[128] = "data/models.txt";
-	int i;
-	char *buf;
-	size_t size;
-	ptrdiff_t pos;
-	char * command;
-	int line = 0;
-	int maxanim = MAX_ANIS; // temporary counter
-	ArgList arglist;
-	char argbuf[MAX_ARG_LEN+1] = "";
-	modelstxtCommands cmd;
-
+static void obor_reset_model_constants(void)
+{
 	// reload default values
 	max_idles        = MAX_IDLES;
 	max_walks        = MAX_WALKS;
@@ -8264,6 +8422,90 @@ void load_model_constants() {
 	if(animidles){free(animidles);     animidles = NULL;}
 	if(animups){free(animups);     animups = NULL;}
 	if(animdowns){free(animdowns);     animdowns = NULL;}
+
+}
+
+static void obor_build_model_constants(void)
+{
+	int i;
+	int maxanim = MAX_ANIS;
+	// calculate max animations
+	max_animations += (max_attack_types - OBOR_ATTACK_BASE) * 6 +// multply by 5, for fall/die/pain/rise/blockpain/riseattack
+			(max_follows - MAX_FOLLOWS) +
+			(max_freespecials - MAX_SPECIALS) +
+			(max_attacks - MAX_ATTACKS) +
+			(max_idles - MAX_IDLES)+
+			(max_walks - MAX_WALKS)+
+			(max_ups - MAX_UPS)+
+			(max_downs - MAX_DOWNS)+
+			(max_backwalks - MAX_BACKWALKS);
+
+	// alloc indexed animation ids
+	animdowns = malloc(sizeof(*animdowns)*max_downs);
+	animups = malloc(sizeof(*animups)*max_ups);
+	animbackwalks = malloc(sizeof(*animbackwalks)*max_backwalks);
+	animwalks = malloc(sizeof(*animwalks)*max_walks);
+	animidles = malloc(sizeof(*animidles)*max_idles);
+	animpains = malloc(sizeof(*animpains)*max_attack_types);
+	animdies = malloc(sizeof(*animdies)*max_attack_types);
+	animfalls = malloc(sizeof(*animfalls)*max_attack_types);
+	animrises = malloc(sizeof(*animrises)*max_attack_types);
+	animriseattacks = malloc(sizeof(*animriseattacks)*max_attack_types);
+	animblkpains = malloc(sizeof(*animblkpains)*max_attack_types);
+	animattacks = malloc(sizeof(*animattacks)*max_attacks);
+	animfollows = malloc(sizeof(*animfollows)*max_follows);
+	animspecials = malloc(sizeof(*animspecials)*max_freespecials);
+
+	// copy default values and new animation ids
+	memcpy(animdowns, downs, sizeof(*animdowns)*MAX_DOWNS);
+	for(i=MAX_DOWNS; i<max_downs; i++) animdowns[i] = maxanim++;
+	memcpy(animups, ups, sizeof(*animups)*MAX_UPS);
+	for(i=MAX_UPS; i<max_ups; i++) animups[i] = maxanim++;
+	memcpy(animbackwalks, backwalks, sizeof(*animbackwalks)*MAX_BACKWALKS);
+	for(i=MAX_BACKWALKS; i<max_backwalks; i++) animbackwalks[i] = maxanim++;
+	memcpy(animwalks, walks, sizeof(*animwalks)*MAX_WALKS);
+	for(i=MAX_WALKS; i<max_walks; i++) animwalks[i] = maxanim++;
+	memcpy(animidles, idles, sizeof(*animidles)*MAX_IDLES);
+	for(i=MAX_IDLES; i<max_idles; i++) animidles[i] = maxanim++;
+	memcpy(animspecials, freespecials,   sizeof(*animspecials)*MAX_SPECIALS);
+	for(i=MAX_SPECIALS; i<max_freespecials; i++) animspecials[i] = maxanim++;
+	memcpy(animattacks,  normal_attacks, sizeof(*animattacks)*MAX_ATTACKS);
+	for(i=MAX_ATTACKS; i<max_attacks; i++) animattacks[i] = maxanim++;
+	memcpy(animfollows,  follows,        sizeof(*animfollows)*MAX_FOLLOWS);
+	for(i=MAX_FOLLOWS; i<max_follows; i++) animfollows[i] = maxanim++;
+	memcpy(animpains,    pains,          sizeof(*animpains)*OBOR_ATTACK_BASE);
+    if(obor_profile_build < 3831) memset(animpains+15, 0, sizeof(*animpains)*(OBOR_ATTACK_BASE-15));
+	for(i=OBOR_ATTACK_BASE; i<max_attack_types; i++) animpains[i] = maxanim++;
+	memcpy(animfalls,    falls,          sizeof(*animfalls)*OBOR_ATTACK_BASE);
+    if(obor_profile_build < 3831) memset(animfalls+15, 0, sizeof(*animfalls)*(OBOR_ATTACK_BASE-15));
+	for(i=OBOR_ATTACK_BASE; i<max_attack_types; i++) animfalls[i] = maxanim++;
+	memcpy(animrises,    rises,          sizeof(*animrises)*OBOR_ATTACK_BASE);
+    if(obor_profile_build < 3831) memset(animrises+15, 0, sizeof(*animrises)*(OBOR_ATTACK_BASE-15));
+	for(i=OBOR_ATTACK_BASE; i<max_attack_types; i++) animrises[i] = maxanim++;
+	memcpy(animriseattacks,    riseattacks,          sizeof(*animriseattacks)*OBOR_ATTACK_BASE);
+    if(obor_profile_build < 3831) memset(animriseattacks+15, 0, sizeof(*animriseattacks)*(OBOR_ATTACK_BASE-15));
+	for(i=OBOR_ATTACK_BASE; i<max_attack_types; i++) animriseattacks[i] = maxanim++;
+	memcpy(animblkpains,    blkpains,    sizeof(*animblkpains)*OBOR_ATTACK_BASE);
+    if(obor_profile_build < 3831) memset(animblkpains+15, 0, sizeof(*animblkpains)*(OBOR_ATTACK_BASE-15));
+	for(i=OBOR_ATTACK_BASE; i<max_attack_types; i++) animblkpains[i] = maxanim++;
+	memcpy(animdies,     deaths,         sizeof(*animdies)*OBOR_ATTACK_BASE);
+    if(obor_profile_build < 3831) memset(animdies+15, 0, sizeof(*animdies)*(OBOR_ATTACK_BASE-15));
+	for(i=OBOR_ATTACK_BASE; i<max_attack_types; i++) animdies[i] = maxanim++;
+
+}
+
+void load_model_constants() {
+	char filename[128] = "data/models.txt";
+	char *buf;
+	size_t size;
+	ptrdiff_t pos;
+	char * command;
+	int line = 0;
+	ArgList arglist;
+	char argbuf[MAX_ARG_LEN+1] = "";
+	modelstxtCommands cmd;
+
+	obor_reset_model_constants();
 
 	// Read file
 	if(buffer_pakfile(filename, &buf, &size)!=1) shutdown(1, "Error loading model list from %s", filename);
@@ -8329,68 +8571,7 @@ void load_model_constants() {
 		pos += getNewLineStart(buf + pos);
 	}
 
-	// calculate max animations
-	max_animations += (max_attack_types - OBOR_ATTACK_BASE) * 6 +// multply by 5, for fall/die/pain/rise/blockpain/riseattack
-			(max_follows - MAX_FOLLOWS) +
-			(max_freespecials - MAX_SPECIALS) +
-			(max_attacks - MAX_ATTACKS) +
-			(max_idles - MAX_IDLES)+
-			(max_walks - MAX_WALKS)+
-			(max_ups - MAX_UPS)+
-			(max_downs - MAX_DOWNS)+
-			(max_backwalks - MAX_BACKWALKS);
-
-	// alloc indexed animation ids
-	animdowns = malloc(sizeof(*animdowns)*max_downs);
-	animups = malloc(sizeof(*animups)*max_ups);
-	animbackwalks = malloc(sizeof(*animbackwalks)*max_backwalks);
-	animwalks = malloc(sizeof(*animwalks)*max_walks);
-	animidles = malloc(sizeof(*animidles)*max_idles);
-	animpains = malloc(sizeof(*animpains)*max_attack_types);
-	animdies = malloc(sizeof(*animdies)*max_attack_types);
-	animfalls = malloc(sizeof(*animfalls)*max_attack_types);
-	animrises = malloc(sizeof(*animrises)*max_attack_types);
-	animriseattacks = malloc(sizeof(*animriseattacks)*max_attack_types);
-	animblkpains = malloc(sizeof(*animblkpains)*max_attack_types);
-	animattacks = malloc(sizeof(*animattacks)*max_attacks);
-	animfollows = malloc(sizeof(*animfollows)*max_follows);
-	animspecials = malloc(sizeof(*animspecials)*max_freespecials);
-
-	// copy default values and new animation ids
-	memcpy(animdowns, downs, sizeof(*animdowns)*MAX_DOWNS);
-	for(i=MAX_DOWNS; i<max_downs; i++) animdowns[i] = maxanim++;
-	memcpy(animups, ups, sizeof(*animups)*MAX_UPS);
-	for(i=MAX_UPS; i<max_ups; i++) animups[i] = maxanim++;
-	memcpy(animbackwalks, backwalks, sizeof(*animbackwalks)*MAX_BACKWALKS);
-	for(i=MAX_BACKWALKS; i<max_backwalks; i++) animbackwalks[i] = maxanim++;
-	memcpy(animwalks, walks, sizeof(*animwalks)*MAX_WALKS);
-	for(i=MAX_WALKS; i<max_walks; i++) animwalks[i] = maxanim++;
-	memcpy(animidles, idles, sizeof(*animidles)*MAX_IDLES);
-	for(i=MAX_IDLES; i<max_idles; i++) animidles[i] = maxanim++;
-	memcpy(animspecials, freespecials,   sizeof(*animspecials)*MAX_SPECIALS);
-	for(i=MAX_SPECIALS; i<max_freespecials; i++) animspecials[i] = maxanim++;
-	memcpy(animattacks,  normal_attacks, sizeof(*animattacks)*MAX_ATTACKS);
-	for(i=MAX_ATTACKS; i<max_attacks; i++) animattacks[i] = maxanim++;
-	memcpy(animfollows,  follows,        sizeof(*animfollows)*MAX_FOLLOWS);
-	for(i=MAX_FOLLOWS; i<max_follows; i++) animfollows[i] = maxanim++;
-	memcpy(animpains,    pains,          sizeof(*animpains)*OBOR_ATTACK_BASE);
-    if(obor_profile_build < 3831) memset(animpains+15, 0, sizeof(*animpains)*(OBOR_ATTACK_BASE-15));
-	for(i=OBOR_ATTACK_BASE; i<max_attack_types; i++) animpains[i] = maxanim++;
-	memcpy(animfalls,    falls,          sizeof(*animfalls)*OBOR_ATTACK_BASE);
-    if(obor_profile_build < 3831) memset(animfalls+15, 0, sizeof(*animfalls)*(OBOR_ATTACK_BASE-15));
-	for(i=OBOR_ATTACK_BASE; i<max_attack_types; i++) animfalls[i] = maxanim++;
-	memcpy(animrises,    rises,          sizeof(*animrises)*OBOR_ATTACK_BASE);
-    if(obor_profile_build < 3831) memset(animrises+15, 0, sizeof(*animrises)*(OBOR_ATTACK_BASE-15));
-	for(i=OBOR_ATTACK_BASE; i<max_attack_types; i++) animrises[i] = maxanim++;
-	memcpy(animriseattacks,    riseattacks,          sizeof(*animriseattacks)*OBOR_ATTACK_BASE);
-    if(obor_profile_build < 3831) memset(animriseattacks+15, 0, sizeof(*animriseattacks)*(OBOR_ATTACK_BASE-15));
-	for(i=OBOR_ATTACK_BASE; i<max_attack_types; i++) animriseattacks[i] = maxanim++;
-	memcpy(animblkpains,    blkpains,    sizeof(*animblkpains)*OBOR_ATTACK_BASE);
-    if(obor_profile_build < 3831) memset(animblkpains+15, 0, sizeof(*animblkpains)*(OBOR_ATTACK_BASE-15));
-	for(i=OBOR_ATTACK_BASE; i<max_attack_types; i++) animblkpains[i] = maxanim++;
-	memcpy(animdies,     deaths,         sizeof(*animdies)*OBOR_ATTACK_BASE);
-    if(obor_profile_build < 3831) memset(animdies+15, 0, sizeof(*animdies)*(OBOR_ATTACK_BASE-15));
-	for(i=OBOR_ATTACK_BASE; i<max_attack_types; i++) animdies[i] = maxanim++;
+	obor_build_model_constants();
 
 	if(buf) free(buf);
 }
@@ -8433,6 +8614,7 @@ int load_models()
 	}
 
 	update_loading(&loadingbg[0], -1, 1); // initialize the update screen
+	if(obor_profile_build < 3828) obor_reset_model_constants();
 
 	if(custModels != NULL)
 	{
@@ -8451,6 +8633,58 @@ int load_models()
 			command = GET_ARG(0);
 			cmd = (modelstxtCommands)getModelCommand(modelstxtcmdlist, command);
 			switch(cmd) {
+				case CMD_MODELSTXT_MAXIDLES:
+					if(obor_profile_build >= 3828) break;
+					// max idle stances
+					max_idles = GET_INT_ARG(1);
+					if(max_idles < MAX_IDLES) max_idles = MAX_IDLES;
+					break;
+				case CMD_MODELSTXT_MAXWALKS:
+					if(obor_profile_build >= 3828) break;
+					max_walks = GET_INT_ARG(1);
+					if(max_walks < MAX_WALKS) max_walks = MAX_WALKS;
+					break;
+				case CMD_MODELSTXT_MAXBACKWALKS:
+					if(obor_profile_build >= 3828) break;
+					// max backward walks
+					max_backwalks = GET_INT_ARG(1);
+					if(max_backwalks < MAX_BACKWALKS) max_backwalks = MAX_BACKWALKS;
+					break;
+				case CMD_MODELSTXT_MAXUPS:
+					if(obor_profile_build >= 3828) break;
+					// max up walks
+					max_ups = GET_INT_ARG(1);
+					if(max_ups < MAX_UPS) max_ups = MAX_UPS;
+					break;
+				case CMD_MODELSTXT_MAXDOWNS:
+					if(obor_profile_build >= 3828) break;
+					// max down walks
+					max_downs = GET_INT_ARG(1);
+					if(max_downs < MAX_DOWNS) max_downs = MAX_DOWNS;
+					break;
+				case CMD_MODELSTXT_MAXATTACKTYPES:
+					if(obor_profile_build >= 3828) break;
+					// max attacktype/pain/fall/die
+					max_attack_types = GET_INT_ARG(1) + OBOR_ATTACK_SPECIAL;
+					if(max_attack_types < OBOR_ATTACK_BASE) max_attack_types = OBOR_ATTACK_BASE;
+					break;
+				case CMD_MODELSTXT_MAXFOLLOWS:
+					if(obor_profile_build >= 3828) break;
+					// max follow-ups
+					max_follows = GET_INT_ARG(1);
+					if(max_follows<MAX_FOLLOWS) max_follows = MAX_FOLLOWS;
+					break;
+				case CMD_MODELSTXT_MAXFREESPECIALS:
+					if(obor_profile_build >= 3828) break;
+					// max freespecials
+					max_freespecials = GET_INT_ARG(1);
+					if(max_freespecials<MAX_SPECIALS) max_freespecials = MAX_SPECIALS;
+					break;
+				case CMD_MODELSTXT_MAXATTACKS:
+					if(obor_profile_build >= 3828) break;
+					max_attacks = GET_INT_ARG(1);
+					if(max_attacks<MAX_ATTACKS) max_attacks = MAX_ATTACKS;
+					break;
 				case CMD_MODELSTXT_COMBODELAY:
 					combodelay = GET_INT_ARG(1);
 					break;
@@ -8576,6 +8810,8 @@ int load_models()
 		// Go to next line
 		pos += getNewLineStart(buf + pos);
 	}
+
+	if(obor_profile_build < 3828) obor_build_model_constants();
 
 	// Defer load_cached_model, so you can define models after their nested model.
 	printf("\n");
@@ -9594,6 +9830,8 @@ void load_level(char *filename){
 		ParseArgs(&arglist,buf+pos,argbuf);
 		command = GET_ARG(0);
 		cmd = getLevelCommand(levelcmdlist, command);
+        if(obor_profile_build < 3805 && cmd == CMD_LEVEL_AT_SCRIPT)
+            cmd = (levelCommands)0;
 		switch(cmd) {
 			case CMD_LEVEL_LOADINGBG:
 				load_background(GET_ARG(1), 0);
@@ -10189,9 +10427,9 @@ void load_level(char *filename){
 			case CMD_LEVEL_SCORE:
 				// So score can be overriden in the levels .txt file
 				next.score = GET_INT_ARG(1);
-				if(next.score == -1) next.score = 0;    // So negative values cannot be added
+				if(obor_profile_build >= 3791 && next.score == -1) next.score = 0;    // So negative values cannot be added
 				next.multiple = GET_INT_ARG(2);
-				if(next.multiple == -1) next.multiple = 0;    // So negative values cannot be added
+				if(obor_profile_build < 3791 ? next.multiple < 0 : next.multiple == -1) next.multiple = 0;    // So negative values cannot be added
 				break;
 			case CMD_LEVEL_NOLIFE:
 				// Flag to determine if entity life is shown when hit
@@ -10276,7 +10514,7 @@ void load_level(char *filename){
                 {
                     if(!obor_load_historical_spawn_script(level, &next, GET_ARG(1)))
                     {
-                        errormessage = "Unable to load level spawn entry script.";
+                        errormessage = "Failed loading spawn entry script!";
                         goto lCleanup;
                     }
                     break;
@@ -10684,7 +10922,9 @@ void updatestatus(){
 				// reports error if players try to use the same character and sameplay mode is off
 				if(sameplayer){
 					for(x=0; x<set->maxplayers; x++){
-						if(stricmp(player[i].name,player[x].name) == 0 && i != x){
+						if((obor_profile_build < 3831 ?
+                            strncmp(player[i].name,player[x].name,strlen(player[i].name)) == 0 :
+                            stricmp(player[i].name,player[x].name) == 0) && i != x){
 							tperror = i+1;
 							break;
 						}
@@ -10892,7 +11132,7 @@ void predrawstatus(){
 
 			if(icon>=0)
 			{
-				drawmethod.table = player[i].ent->modeldata.icon.usemap?player[i].ent->colourmap:NULL;
+				drawmethod.table = (obor_profile_build < 3776 || player[i].ent->modeldata.icon.usemap)?player[i].ent->colourmap:NULL;
 				spriteq_add_sprite(videomodes.shiftpos[i]+picon[i][0],savedata.windowpos+picon[i][1],10000, icon, &drawmethod, 0);
 			}
 
@@ -10900,7 +11140,7 @@ void predrawstatus(){
 			{
 				if(player[i].ent->weapent->modeldata.icon.weapon >= 0)
 				{
-					drawmethod.table = player[i].ent->weapent->modeldata.icon.usemap?player[i].ent->weapent->colourmap:NULL;
+					drawmethod.table = (obor_profile_build < 3776 || player[i].ent->weapent->modeldata.icon.usemap)?player[i].ent->weapent->colourmap:NULL;
 					spriteq_add_sprite(videomodes.shiftpos[i]+piconw[i][0],savedata.windowpos+piconw[i][1],10000, player[i].ent->weapent->modeldata.icon.weapon, &drawmethod, 0);
 				}
 
@@ -10910,7 +11150,7 @@ void predrawstatus(){
 
 			if(player[i].ent->modeldata.mp)
 			{
-				drawmethod.table = player[i].ent->modeldata.icon.usemap?player[i].ent->colourmap:NULL;
+				drawmethod.table = (obor_profile_build < 3776 || player[i].ent->modeldata.icon.usemap)?player[i].ent->colourmap:NULL;
 				if(player[i].ent->modeldata.icon.mphigh > 0 && (player[i].ent->oldmp >= (player[i].ent->modeldata.mp * .66))){
 					spriteq_add_sprite(videomodes.shiftpos[i]+mpicon[i][0],savedata.windowpos+mpicon[i][1],10000, player[i].ent->modeldata.icon.mphigh, &drawmethod, 0);
 				}
@@ -10955,7 +11195,7 @@ void predrawstatus(){
 
 				if(icon>=0)
 				{
-					drawmethod.table = player[i].ent->opponent->modeldata.icon.usemap?player[i].ent->opponent->colourmap:NULL;
+					drawmethod.table = (obor_profile_build < 3776 || player[i].ent->opponent->modeldata.icon.usemap)?player[i].ent->opponent->colourmap:NULL;
 					spriteq_add_sprite(videomodes.shiftpos[i]+eicon[i][0],savedata.windowpos+eicon[i][1],10000, icon, &drawmethod, 0);    // Feb 26, 2005 - Changed to opponent->map so icons don't pallete swap with die animation
 				}
 			}
@@ -10970,7 +11210,7 @@ void predrawstatus(){
 
 			if(icon>=0)
 			{
-				drawmethod.table = model->icon.usemap?model_get_colourmap(model, player[i].colourmap):NULL;
+				drawmethod.table = (obor_profile_build < 3776 || model->icon.usemap)?model_get_colourmap(model, player[i].colourmap):NULL;
 				spriteq_add_sprite(videomodes.shiftpos[i]+picon[i][0],picon[i][1], 10000, icon, &drawmethod, 0);
 			}
 		}
@@ -11324,6 +11564,29 @@ int common_idle_anim(entity* ent)
 	{
 		ent_set_anim(ent, ANI_SLEEP, 0);                                                //Set sleep anim.
 		goto found;                                                                     //Return 1 and exit.
+	}
+	else if(obor_profile_build < 3797)
+	{
+		int i, iAni;
+		for(i = 0; i < max_idles; ++i)
+		{
+			iAni = animidles[i];
+			if(validanim(ent, iAni) && iAni != ANI_IDLE)
+			{
+				tempself = self;
+				self = ent;
+				if(normal_find_target(iAni, 0))
+				{
+					ent_set_anim(ent, iAni, 0);
+					goto found;
+				}
+			}
+		}
+		if(validanim(ent, ANI_IDLE))
+		{
+			ent_set_anim(ent, ANI_IDLE, 0);
+			goto found;
+		}
 	}
 	else if(common_anim_series(ent, animidles, max_idles, ent->idlemode, ANI_IDLE))
 		goto found;
@@ -11862,10 +12125,11 @@ void ent_set_anim(entity *ent, int aninum, int resetable)
 
 unsigned char* model_get_colourmap(s_model* model, unsigned which)
 {
-	if(which<=0 || which>model->maps_loaded)
-		return model->palette;
-	else
-		return model->colourmap[which-1];
+    if(!model) return NULL;
+    if(which <= 0 || which > model->maps_loaded)
+        return model->palette;
+    if(!model->colourmap) return NULL;
+    return model->colourmap[which - 1];
 }
 
 // 0 = none, 1+ = alternative
@@ -11902,9 +12166,9 @@ void ent_copy_uninit(entity* ent, s_model* oldmodel)
 		ent->modeldata.subject_to_maxz      = oldmodel->subject_to_maxz;
 	if(ent->modeldata.no_adjust_base<0)
 		ent->modeldata.no_adjust_base       = oldmodel->no_adjust_base;
-	if(ent->modeldata.aimove==-1)
+	if(obor_profile_build >= 3791 && ent->modeldata.aimove==-1)
 		ent->modeldata.aimove               = oldmodel->aimove;
-	if(ent->modeldata.aiattack==-1)
+	if(obor_profile_build >= 3791 && ent->modeldata.aiattack==-1)
 		ent->modeldata.aiattack             = oldmodel->aiattack;
 	if(ent->modeldata.hostile<0)
 		ent->modeldata.hostile              = oldmodel->hostile;
@@ -11947,7 +12211,9 @@ void ent_set_model(entity * ent, char * modelname, int syncAnim)
 	ent_copy_uninit(ent, &oldmodel);
 	ent_set_colourmap(ent, ent->map);
 
-	if(syncAnim && m->animation[ent->animnum])
+	if(syncAnim && m->animation && m->animation_capacity > 0 &&
+	   (size_t)ent->animnum < (size_t)m->animation_capacity &&
+	   m->animation[ent->animnum])
 	{
 		ent->animation = m->animation[ent->animnum];
 		if(ent->animpos>=ent->animation->numframes)
@@ -14465,12 +14731,25 @@ int set_riseattack(entity *iRiseattack, int type, int reset)
 
 int set_blockpain(entity *iBlkpain, int type, int reset)
 {
+    if(obor_profile_build < 3798 && !validanim(iBlkpain, ANI_BLOCKPAIN))
+    {
+        iBlkpain->takeaction = common_pain;
+        return 1;
+    }
 	if(type < 0 || type >= max_attack_types || !validanim(iBlkpain,animblkpains[type])) type = 0;
 	if(validanim(iBlkpain,animblkpains[type]))
 	{
-		iBlkpain->takeaction = common_block;
-		set_blocking(self);
-		iBlkpain->inpain = 1;
+		if(obor_profile_build == 3798)
+        {
+            iBlkpain->takeaction = common_pain;
+            painflags(iBlkpain);
+        }
+        else
+        {
+            iBlkpain->takeaction = common_block;
+            if(obor_profile_build < 3798) { set_attacking(iBlkpain); }
+            else { set_blocking(self); iBlkpain->inpain = 1; }
+        }
 		ent_set_anim(iBlkpain, animblkpains[type], reset);
 		return 1;
 	}
@@ -14484,7 +14763,7 @@ int set_pain(entity *iPain, int type, int reset)
 	iPain->xdir = iPain->zdir = iPain->tossv = 0; // stop the target
 	if(iPain->modeldata.guardpoints.maximum > 0 && iPain->modeldata.guardpoints.current <= 0){
 		pain = ANI_GUARDBREAK;
-		iPain->modeldata.guardpoints.current = iPain->modeldata.guardpoints.maximum;
+		if(obor_profile_build >= 3798) iPain->modeldata.guardpoints.current = iPain->modeldata.guardpoints.maximum;
 	}
 	else if(type == -1 || type >= max_attack_types) pain = ANI_GRABBED;
 	else pain = animpains[type];
@@ -14493,9 +14772,21 @@ int set_pain(entity *iPain, int type, int reset)
 	else if(validanim(iPain,ANI_IDLE))     ent_set_anim(iPain, ANI_IDLE, reset);
 	else return 0;
 
-	painflags(iPain);
-
-	if(pain == ANI_GRABBED) iPain->inpain = 0;
+    if(obor_profile_build < 3798)
+    {
+        iPain->inpain = pain != ANI_GRABBED;
+        iPain->idling = iPain->falling = iPain->projectile = iPain->drop = 0;
+        iPain->attacking = iPain->getting = iPain->charging = 0;
+        iPain->jumping = iPain->blocking = 0;
+        if(iPain->modeldata.guardpoints.maximum > 0 && iPain->modeldata.guardpoints.current <= 0)
+            iPain->modeldata.guardpoints.current = iPain->modeldata.guardpoints.maximum;
+        if(iPain->frozen) unfrozen(iPain);
+    }
+    else
+    {
+        painflags(iPain);
+        if(pain == ANI_GRABBED) iPain->inpain = 0;
+    }
 
 	execute_onpain_script(iPain, type, reset);
 	return 1;
@@ -14572,7 +14863,7 @@ void set_model_ex(entity* ent, char* modelname, int index, s_model* newmodel, in
 	//Make a shallow copy of old entity values, not safe but easy.
 	//Also copy offense and defense because they are more likely be used by weapons,
 	//other references are left alone for now
-	if(Script_IsInitialized(newmodel->scripts->onmodelcopy_script))
+	if(obor_profile_build >= 3793 && Script_IsInitialized(newmodel->scripts->onmodelcopy_script))
 	{
 		tempe = *ent;
 		dfs = malloc(sizeof(*dfs)*max_attack_types);
@@ -14595,7 +14886,7 @@ void set_model_ex(entity* ent, char* modelname, int index, s_model* newmodel, in
 	memcpy(ent->offense_factors, ent->modeldata.offense_factors, sizeof(*ent->offense_factors)*max_attack_types);
 
 	ent_set_colourmap(ent, ent->map);
-	if(Script_IsInitialized(ent->scripts->onmodelcopy_script))
+	if(obor_profile_build >= 3793 && Script_IsInitialized(ent->scripts->onmodelcopy_script))
 	{
 		execute_onmodelcopy_script(ent, &tempe);
 		if(ofs) free(ofs); if(dfs) free(dfs);
@@ -15327,9 +15618,18 @@ void common_get()
 // A.I. characters do the block
 void common_block()
 {
+    if(obor_profile_build < 3798)
+    {
+        if(self->animating) return;
+        self->blocking = 0;
+        self->takeaction = NULL;
+        set_idle(self);
+        return;
+    }
 	int hb1 = self->modeldata.holdblock && self->modeldata.type==TYPE_PLAYER &&
-		(!self->inpain || (obor_profile_build >= 3801 && (self->modeldata.holdblock&2))); //inpain = blockpain
-	int hb2 = ((player+self->playerindex)->keys&FLAG_SPECIAL) ;
+		(obor_profile_build < 3799 || !self->inpain || (obor_profile_build >= 3801 && (self->modeldata.holdblock&2))); //inpain = blockpain
+	int hb2 = hb1 && (unsigned int)self->playerindex < MAX_PLAYERS &&
+        (player[(unsigned int)self->playerindex].keys & FLAG_SPECIAL);
 
 	if(obor_profile_build >= 3834 && self->inpain && (self->modeldata.holdblock&2) && !self->animating && validanim(self,ANI_BLOCK)){
 		self->inpain = 0;
@@ -15627,7 +15927,9 @@ void checkdamage(entity* other, s_attack* attack)
 	int force = attack->attack_force;
 	int type = attack->attack_type;
 	if(self->modeldata.guardpoints.maximum > 0 && self->modeldata.guardpoints.current <= 0) force = 0; //guardbreak does not deal damage.
-	if(type >= 0 && type<max_attack_types)
+	if((obor_profile_build >= 3831 ||
+	    (!(self->damage_on_landing && self == other) && !other->projectile)) &&
+	   type >= 0 && type<max_attack_types)
 	{
 		force = (int)(force * other->offense_factors[type]);
 		force = (int)(force * self->defense[type].factor);
@@ -18196,7 +18498,8 @@ void player_die()
 		if(!player[0].ent && !player[1].ent && !player[2].ent && !player[3].ent)
 		{
 			timeleft = 10 * COUNTER_SPEED;
-			if(!player[0].joining && !player[1].joining && !player[0].joining && !player[0].joining &&
+			if((obor_profile_build < 3820 ||
+                (!player[0].joining && !player[1].joining && !player[0].joining && !player[0].joining)) &&
 			   ((!noshare && credits < 1) || (noshare && player[0].credits < 1 && player[1].credits < 1 && player[2].credits <1 && player[3].credits <1)) )
 				timeleft = COUNTER_SPEED/2;
 		}
@@ -19333,7 +19636,7 @@ void player_think()
 			}
 		}
 
-		if(validanim(self,ANI_BLOCK) && notinair)    // New block code for players
+		if(validanim(self,ANI_BLOCK) && (obor_profile_build >= 3798 || !self->modeldata.holdblock) && notinair)    // New block code for players
 		{
 			pl->playkeys &= ~FLAG_SPECIAL;
 			self->takeaction = common_block;
@@ -19504,6 +19807,22 @@ void player_think()
 		}
 		return;
 	}
+
+    if(obor_profile_build < 3798)
+    {
+        if(validanim(self, ANI_BLOCK) && self->modeldata.holdblock &&
+           (pl->keys & FLAG_SPECIAL) && notinair)
+        {
+            if(!self->blocking)
+            {
+                self->blocking = 1;
+                self->xdir = self->zdir = 0;
+                ent_set_anim(self, ANI_BLOCK, 0);
+            }
+            goto endthinkcheck;
+        }
+        else self->blocking = 0;
+    }
 
 	//dang long run checking logic
 	if(self->running){
@@ -20594,7 +20913,7 @@ void update_scroller(){
 				else if(obor_profile_build < 3783 ?
                     (level->spawnpoints[current_spawn].scrollminz || level->spawnpoints[current_spawn].scrollmaxz) :
                     (level->spawnpoints[current_spawn].scrollminz&0x80000000)){
-						scrollminz = (float)(level->spawnpoints[current_spawn].scrollminz&0x7fffffff);
+						scrollminz = (float)(obor_profile_build < 3783 ? level->spawnpoints[current_spawn].scrollminz : (level->spawnpoints[current_spawn].scrollminz&0x7fffffff));
 						scrollmaxz = (float)level->spawnpoints[current_spawn].scrollmaxz;
 						if(!time) advancey = scrollminz; // reset y if spawn at very beginning
 					}
@@ -20691,7 +21010,7 @@ void update_scroller(){
 			}
 
 			if(advancex < 0) advancex = 0;
-			if(advancex >= level->width-videomodes.hRes) {
+			if(obor_profile_build < 3783 ? advancex > level->width-videomodes.hRes : advancex >= level->width-videomodes.hRes) {
 				advancex = (float)level->width-videomodes.hRes;
 				againstend = 1;
 			}
@@ -20720,10 +21039,13 @@ void update_scroller(){
                 else if(to>scrollmaxx) to = scrollmaxx;
             }
 
-			if((level->scrolldir&SCROLL_BACK) && level->width- videomodes.hRes - to < blockade) to = level->width- videomodes.hRes - blockade;
+			if(obor_profile_build >= 3784 && (level->scrolldir&SCROLL_BACK) && level->width- videomodes.hRes - to < blockade) to = level->width- videomodes.hRes - blockade;
 
 			if(to < advancex){
-				if(to < advancex-level->scrollspeed) to = advancex-level->scrollspeed;
+				if(to < advancex-level->scrollspeed) {
+                    to = advancex-level->scrollspeed;
+                    if(obor_profile_build < 3783) againstend = 1;
+                }
 				advancex = (float)to;
 			}
 			if(level->scrolldir&SCROLL_BACK){    // Can't go back to the beginning
@@ -20734,9 +21056,10 @@ void update_scroller(){
 				}
 			}
 			if(advancex > level->width-videomodes.hRes) advancex = (float)level->width-videomodes.hRes;
-			if(advancex <= 0) {
+			if(obor_profile_build < 3784 && (level->scrolldir&SCROLL_BACK) && level->width-videomodes.hRes - advancex < blockade) advancex = level->width-videomodes.hRes - blockade;
+			if(obor_profile_build < 3783 ? advancex < 0 : advancex <= 0) {
 				advancex = 0;
-				againstend = 1;
+				if(obor_profile_build >= 3783) againstend = 1;
 			}
 
 			if(againstend) level->pos++;
@@ -20759,7 +21082,7 @@ void update_scroller(){
                 else if(to>scrollmaxz) to = scrollmaxz;
             }
 
-			if((level->scrolldir&SCROLL_BACK) && to < blockade) to = blockade;
+			if(obor_profile_build >= 3784 && (level->scrolldir&SCROLL_BACK) && to < blockade) to = blockade;
 
 			if(to > advancey){
 				if(to > advancey+level->scrollspeed) to = advancey+level->scrollspeed;
@@ -20778,6 +21101,7 @@ void update_scroller(){
 				advancey = (float)panel_height-videomodes.vRes;
 				againstend = 1;
 			}
+			if(obor_profile_build < 3784 && (level->scrolldir&SCROLL_BACK) && advancey < blockade) advancey = blockade;
 			if(advancey < 0) advancey = 0;
 
 			if(againstend) level->pos++;
@@ -20799,10 +21123,13 @@ void update_scroller(){
                 else if(to>scrollmaxz) to = scrollmaxz;
             }
 
-			if((level->scrolldir&SCROLL_BACK) && panel_height- videomodes.vRes - to < blockade) to = panel_height- videomodes.vRes - blockade;
+			if(obor_profile_build >= 3784 && (level->scrolldir&SCROLL_BACK) && panel_height- videomodes.vRes - to < blockade) to = panel_height- videomodes.vRes - blockade;
 
 			if(to < advancey){
-				if(to < advancey-level->scrollspeed) to = advancey-level->scrollspeed;
+				if(to < advancey-level->scrollspeed) {
+                    to = advancey-level->scrollspeed;
+                    if(obor_profile_build < 3783) againstend = 1;
+                }
 				advancey = (float)to;
 			}
 			if(level->scrolldir&SCROLL_BACK){    // Can't go back to the beginning
@@ -20813,9 +21140,10 @@ void update_scroller(){
 				}
 			}
 			if(advancey > panel_height-videomodes.vRes) advancey = (float)panel_height-videomodes.vRes;
-			if(advancey <= 0) {
+			if(obor_profile_build < 3784 && (level->scrolldir&SCROLL_BACK) && panel_height-videomodes.vRes - advancey < blockade) advancey = panel_height-videomodes.vRes - blockade;
+			if(obor_profile_build < 3783 ? advancey < 0 : advancey <= 0) {
 				advancey = 0;
-				againstend = 1;
+				if(obor_profile_build >= 3783) againstend = 1;
 			}
 
 			if(againstend) level->pos++;
@@ -21517,10 +21845,47 @@ int set_color_correction(int gm, int br)
 }
 
 // Simple palette fade / vscreen fade
+static void _fade_screen(s_screen* screen, int gr, int gg, int gb, int br, int bg, int bb)
+{
+	int i, len = screen->width*screen->height;
+	int pb = pixelbytes[(int)screenformat];
+	unsigned c, r, g, b;
+
+
+	if(gr<-255) gr = -255;
+	else if(gr>255) gr = 255;
+	if(gg<-255) gg = -255;
+	else if(gg>255) gg = 255;
+	if(gb<-255) gb = -255;
+	else if(gb>255) gb = 255;
+
+	if(br<-255) br = -255;
+	else if(br>255) br = 255;
+	if(bg<-255) bg = -255;
+	else if(bg>255) bg = 255;
+	if(bb<-255) bb = -255;
+	else if(bb>255) bb = 255;
+
+	if(pb==2) for(i=0; i<len; i++)
+	{
+		c = ((unsigned short*)screen->data)[i];
+		b = (c>>11)*0xFF/0x1F;
+		g = ((c&0x7E0)>>5)*0xFF/0x3F;
+		r = (c&0x1F)*0xFF/0x1F;
+		((unsigned short*)screen->data)[i] = colour16(gbcorrect(r, gr, br), gbcorrect(g, gg, bg), gbcorrect(b, gb, bb));
+	}
+	else for(i=0; i<len; i++){
+		screen->data[i*pb] =   gbcorrect(screen->data[i*pb],   gr, br);
+		screen->data[i*pb+1] = gbcorrect(screen->data[i*pb+1], gg, bg);
+		screen->data[i*pb+2] = gbcorrect(screen->data[i*pb+2], gb, bb);
+	}
+}
+
 void fade_out(int type, int speed)
 {
 	int i, j = 0;
 	int b, g = 0;
+	int delta = 0;
 	u32 interval = 0;
 	int current = speed ? speed : fade;
 	s_screen* fbuffer = NULL;
@@ -21529,7 +21894,7 @@ void fade_out(int type, int speed)
 
 	for(i=0, j=0; j<64; )
 	{
-		while(j<=i && j<64)
+		while(j<=i && (obor_profile_build < 3777 || j<64))
 		{
 			if(!type || type == 1)
 			{
@@ -21537,14 +21902,21 @@ void fade_out(int type, int speed)
 				g = 256 - ((savedata.gamma+256) * (64-j) / 64);
 				vga_vwait();
 				if(!set_color_correction(g, b)) {
+					if(obor_profile_build < 3775) {
+						int other_gamma = obor_profile_build < 3774 ? savedata.gamma : g;
+						_fade_screen(vscreen, g,other_gamma,other_gamma, b,b,b);
+					} else {
 					if(!fbuffer) {
 						fbuffer = allocscreen(vscreen->width, vscreen->height, vscreen->pixelformat);
 						copyscreen(fbuffer, vscreen);
 					}
 					//255 + alpha 6 is actually half blend, so use 254 instead
-					dm.channelr = dm.channelg = dm.channelb = 254 * (64-j) / 64;
+					if(obor_profile_build < 3777) delta += 256/64;
+					dm.channelr = dm.channelg = dm.channelb = obor_profile_build < 3777 ?
+						256-delta : 254 * (64-j) / 64;
 					clearscreen(vscreen);
 					putscreen(vscreen,fbuffer,0,0,&dm);
+					}
 				}
 			}
 			j++;
@@ -21778,7 +22150,8 @@ void shutdown(int status, char *msg, ...)
 
 	if(!disablelog) printf("%s", buf);
 	#ifdef DEBUG
-	sysassert(status == 0); // this way we can get a backtrace.
+	if(obor_profile_build < 3811) assert(status == 0);
+	else sysassert(status == 0); // this way we can get a backtrace.
 	#endif
 
 	shuttingdown = 0;
@@ -21866,9 +22239,11 @@ void startup(){
 	load_levelorder();
 	printf("Done!\n");
 
-	printf("Loading model constants......\t");
-	load_model_constants();
-	printf("Done!\n");
+	if(obor_profile_build >= 3828) {
+		printf("Loading model constants......\t");
+		load_model_constants();
+		printf("Done!\n");
+	}
 
 	printf("Loading script settings......\t");
 	load_script_setting();
@@ -22791,7 +23166,9 @@ int selectplayer(int *players, char* filename)
 					{
 						for(x=0; x<set->maxplayers; x++)
 						{
-							if(stricmp(player[i].name,player[x].name) == 0 && i != x)
+							if((obor_profile_build < 3831 ?
+                            strncmp(player[i].name,player[x].name,strlen(player[i].name)) == 0 :
+                            stricmp(player[i].name,player[x].name) == 0) && i != x)
 							{
 								tperror = i+1;
 								break;
@@ -23010,7 +23387,7 @@ int choose_difficulty()
 		if(num_difficulties > 1)
 		{
 			_menutextm(2, -2, 0, "Game Mode");
-			t = (selector-(selector==num_difficulties))/maxdisplay*maxdisplay;
+			t = (selector-(obor_profile_build >= 3773 && selector==num_difficulties))/maxdisplay*maxdisplay;
 			for(j=0,i=t; i<maxdisplay+t && i<num_difficulties; j++,i++)
 			{
 				if(j < maxdisplay)
@@ -23019,7 +23396,7 @@ int choose_difficulty()
 					else
 					{
 						if(levelsets[i].ifcomplete>1) _menutextm((selector==i), j, 0, "%s - Finish Game %i Times To UnLock", levelsets[i].name, levelsets[i].ifcomplete);
-						else _menutextm((selector==i), j, 0, "%s - Finish Game To UnLock", levelsets[i].name);
+						else _menutextm((selector==i), j + (obor_profile_build < 3773 ? 2 : 0), 0, "%s - Finish Game To UnLock", levelsets[i].name);
 					}
 				}
 				else break;
@@ -23324,7 +23701,7 @@ readfile:
 		if(command && command[0]){
 			if(stricmp(command, "video")==0){
 				value = GET_ARG(1);
-				if((value2=strchr(value, 'x')))
+				if(obor_profile_build >= 3784 && (value2=strchr(value, 'x')))
 				{
 					videomodes.hRes = atoi(value);
 					videomodes.vRes = atoi(value2+1);
@@ -23517,10 +23894,12 @@ VIDEOMODES:
 			break;
 
 		case 255:
-			videomodes.dOffset = videomodes.vRes*0.9625;
+            if(obor_profile_build < 3784) goto obor_invalid_video_mode;
+			if(obor_profile_build >= 3785) videomodes.dOffset = videomodes.vRes*0.9625;
 			printf("\nUsing debug video mode: %d x %d\n", videomodes.hRes, videomodes.vRes);
 			break;
 		default:
+obor_invalid_video_mode:
 			shutdown(1, "Invalid video mode: %d in 'data/video.txt', supported modes:\n"
 				        "0 - 320x240\n"
 						"1 - 480x272\n"
@@ -23608,6 +23987,13 @@ void keyboard_setup(int player){
 					if(sdid>=0)
 						strncpy(buttonnames[sdid], GET_ARG(2), 16);
 				}
+                else if(obor_profile_build < 3766 &&
+                    (stricmp(command, "fontmonospace")==0 || stricmp(command, "fontmbs")==0))
+                {
+                    /* Native ignored menu font options. */
+                }
+                else if(obor_profile_build < 3766 && command && command[0])
+                    printf("Command '%s' not understood in file '%s'!", command, filename);
 
 			}
 			// Go to next line

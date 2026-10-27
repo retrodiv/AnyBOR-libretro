@@ -45,6 +45,18 @@ void obor_port_sleep_us(unsigned long long us);
 #define usleep(us) obor_port_sleep_us((unsigned long long)(us))
 
 void borExit(int reset);
+/* A failed historical invariant stops this engine, never its frontend. */
+void obor_port_assert(int value, const char *assertion, const char *func,
+                      const char *file, int line);
+#if defined(OBOR_ENGINE_BUILD) && OBOR_ENGINE_BUILD < 3811 && defined(OBOR_CONTROLLED_ASSERTIONS) && OBOR_CONTROLLED_ASSERTIONS
+#undef assert
+#ifdef NDEBUG
+#define assert(x) ((void)0)
+#else
+#define assert(x) obor_port_assert((x) ? 1 : 0, #x, __func__, __FILE__, __LINE__)
+#endif
+#endif
+
 void openborMain(int argc, char **argv);
 
 /* Host paths are independent of the engines' small logical filename fields. */

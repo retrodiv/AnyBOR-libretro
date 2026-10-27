@@ -87,17 +87,17 @@ List* createModelstxtCommandList(void) {
 	LIST_ADD(CMD_MODELSTXT_CREDSCORE, "credscore");
 	LIST_ADD(CMD_MODELSTXT_VERSUSDAMAGE, "versusdamage");
 	LIST_ADD(CMD_MODELSTXT_COMBODELAY, "combodelay");
-	LIST_ADD(CMD_MODELSTXT_DROPV, "dropv");
-	LIST_ADD(CMD_MODELSTXT_JUMPSPEED, "jumpspeed");
-	LIST_ADD(CMD_MODELSTXT_JUMPHEIGHT, "jumpheight");
-	LIST_ADD(CMD_MODELSTXT_GRABDISTANCE, "grabdistance");
-	LIST_ADD(CMD_MODELSTXT_DEBUG_MNAF, "move_noatk_factor");
-	LIST_ADD(CMD_MODELSTXT_DEBUG_GNAF, "group_noatk_factor");
-	LIST_ADD(CMD_MODELSTXT_DEBUG_ANAF, "agg_noatk_factor");
-	LIST_ADD(CMD_MODELSTXT_DEBUG_MINNA, "min_noatk_chance");
-	LIST_ADD(CMD_MODELSTXT_DEBUG_MAXNA, "max_noatk_chance");
-	LIST_ADD(CMD_MODELSTXT_DEBUG_OSNAF, "offscreen_noatk_factor");
-	LIST_ADD(CMD_MODELSTXT_DEBUG_NAD, "noatk_duration");
+	if(obor_profile_build >= 3681) LIST_ADD(CMD_MODELSTXT_DROPV, "dropv");
+	if(obor_profile_build >= 3681) LIST_ADD(CMD_MODELSTXT_JUMPSPEED, "jumpspeed");
+	if(obor_profile_build >= 3681) LIST_ADD(CMD_MODELSTXT_JUMPHEIGHT, "jumpheight");
+	if(obor_profile_build >= 3681) LIST_ADD(CMD_MODELSTXT_GRABDISTANCE, "grabdistance");
+	if(obor_profile_build >= 3683) LIST_ADD(CMD_MODELSTXT_DEBUG_MNAF, "move_noatk_factor");
+	if(obor_profile_build >= 3683) LIST_ADD(CMD_MODELSTXT_DEBUG_GNAF, "group_noatk_factor");
+	if(obor_profile_build >= 3683) LIST_ADD(CMD_MODELSTXT_DEBUG_ANAF, "agg_noatk_factor");
+	if(obor_profile_build >= 3683) LIST_ADD(CMD_MODELSTXT_DEBUG_MINNA, "min_noatk_chance");
+	if(obor_profile_build >= 3683) LIST_ADD(CMD_MODELSTXT_DEBUG_MAXNA, "max_noatk_chance");
+	if(obor_profile_build >= 3683) LIST_ADD(CMD_MODELSTXT_DEBUG_OSNAF, "offscreen_noatk_factor");
+	if(obor_profile_build >= 3683) LIST_ADD(CMD_MODELSTXT_DEBUG_NAD, "noatk_duration");
 	#undef LIST_ADD
 	return result;
 }
@@ -385,7 +385,7 @@ List* createModelCommandList(void) {
 	LIST_ADD(CMD_MODEL_AT_SCRIPT, "@script");
 	LIST_ADD(CMD_MODEL_AT_CMD, "@cmd");
 	LIST_ADD(CMD_MODEL_MPCOST, "mpcost");
-	LIST_ADD(CMD_MODEL_ATTACKTHROTTLE, "attackthrottle");
+	if(obor_profile_build >= 3685) LIST_ADD(CMD_MODEL_ATTACKTHROTTLE, "attackthrottle");
 	LIST_ADD(CMD_MODEL_SUBCLASS, "subclass");
 
 	#undef LIST_ADD
@@ -414,8 +414,8 @@ List* createLevelCommandList(void) {
 	LIST_ADD(CMD_LEVEL_SCROLLSPEED, "scrollspeed");
 	LIST_ADD(CMD_LEVEL_MIRROR, "mirror");
 	LIST_ADD(CMD_LEVEL_BOSSMUSIC, "bossmusic");
-	LIST_ADD(CMD_LEVEL_NOFADEOUT, "nofadeout");
-	LIST_ADD(CMD_LEVEL_NOSAVE, "nosave");
+	if(obor_profile_build >= 3702) LIST_ADD(CMD_LEVEL_NOFADEOUT, "nofadeout");
+	if(obor_profile_build >= 3702) LIST_ADD(CMD_LEVEL_NOSAVE, "nosave");
 	LIST_ADD(CMD_LEVEL_NOPAUSE, "nopause");
 	LIST_ADD(CMD_LEVEL_NOSCREENSHOT, "noscreenshot");
 	LIST_ADD(CMD_LEVEL_SETTIME, "settime");
@@ -608,8 +608,8 @@ List* createLevelOrderCommandList(void) {
 	LIST_ADD(CMD_LEVELORDER_RUSH, "rush");
 	LIST_ADD(CMD_LEVELORDER_MAXWALLHEIGHT, "maxwallheight");
 	LIST_ADD(CMD_LEVELORDER_SCOREFORMAT, "scoreformat");
-	LIST_ADD(CMD_LEVELORDER_GRAVITY, "gravity");
-	LIST_ADD(CMD_LEVELORDER_SKIPTOSET, "skiptoset");
+	if(obor_profile_build >= 3681) LIST_ADD(CMD_LEVELORDER_GRAVITY, "gravity");
+	if(obor_profile_build >= 3698) LIST_ADD(CMD_LEVELORDER_SKIPTOSET, "skiptoset");
 
 	#undef LIST_ADD
 	return result;

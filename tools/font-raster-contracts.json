@@ -5,6 +5,90 @@
   "original_oracle_safety": "Original sizing uses a null-member offset: only null instrumentation excluded there; actual generated-code tests retain full ASan/UBSan.",
   "profiles": [
     {
+      "profile": "3761",
+      "engine": "3842",
+      "observations": 221112,
+      "matrix_sha256": "5f2df90dc2d8bccbbb93bd7aae0dbeab6282fd02ad9bd291853c6007c4bdd9e8",
+      "source_reference": "https://github.com/DCurrent/openbor/blob/16814fdf39fdcdd78cb59f3d70748f1dc023a24f/engine/source/gamelib/font.c",
+      "source_commit": "16814fdf39fdcdd78cb59f3d70748f1dc023a24f",
+      "source_files_sha256": {
+        "source/gamelib/font.c": "b3560f53d7534234b1c40bf3427b14eb6473c71e46d459b147540b7f857ecdce",
+        "source/gamelib/font.h": "95a23ea831bf158538c56b8f3f630c933191a29744f12aa493a98fb437fe7a94",
+        "source/gamelib/bitmap.c": "3b85fa2711c1928e848477b0e616ffd232c0f0404921027436a5675d9c91d081",
+        "source/gamelib/sprite.c": "e9cd34f72ad7a536ba93319ab9ed449554dfd9ea5a3e01ed2fd50652b5dd9013",
+        "source/gamelib/spritex8p16.c": "3ec21a32e45e76a615db7e31adf64efca1b7163053e17fb69bcbeb04ea23141c",
+        "source/gamelib/spritex8p32.c": "4be72035d7e1885c8c9482e46e18b476677bf9615a681a3eec1f396b8eef12d5",
+        "source/gamelib/pixelformat.c": "e1a8a45eec419058dcbc5ae73681410bb80f73abca6341285e0ba3dd1622ad20",
+        "source/gamelib/spriteq.c": "bed8373f0376107367f0bd7d3c41e3aabe2e3492bf0ed8d09c5aebe5888020ad",
+        "source/gamelib/screen.c": "1e79ad4df7b5db84c963331e59f659acddde97fcf35ad12f65ebfce84cf77fb6",
+        "openbor.c": "3f58eebdff4c6f9e3ac1f4f752d931b3ea709f457a065692e9fbce2fe5db06f3"
+      },
+      "original_program_sha256": "89612bf1b545fe1cae4632ea70b1e7e58395b38d4f717db5fe306790f0103a17",
+      "oracle_execution": "Reused measured3839oracleafterownsourceequivalencereview;thisownprogramwasgenerated,notcompiled.",
+      "oracle_source_equivalence": {
+        "anchor_profile": "3839",
+        "measured_original_program_sha256": "24505e4459b1ee59074cc633487b0bd448877281a4f989ca86a1145d3fb135da",
+        "current_generated_program_sha256": "89612bf1b545fe1cae4632ea70b1e7e58395b38d4f717db5fe306790f0103a17",
+        "evidence": "Ownrawrasterunitsidenticalto3839;usedrecorddeclarationsidenticalapartfromcomment;otherheaderchangesunusedorunchangeddeclarationinlining."
+      }
+    },
+    {
+      "profile": "3769",
+      "engine": "3842",
+      "observations": 221112,
+      "matrix_sha256": "5f2df90dc2d8bccbbb93bd7aae0dbeab6282fd02ad9bd291853c6007c4bdd9e8",
+      "source_reference": "https://github.com/DCurrent/openbor/blob/14ac619f7d9f21bf1ac331932308c3ced4a65615/engine/source/gamelib/font.c",
+      "source_commit": "14ac619f7d9f21bf1ac331932308c3ced4a65615",
+      "source_files_sha256": {
+        "source/gamelib/font.c": "b3560f53d7534234b1c40bf3427b14eb6473c71e46d459b147540b7f857ecdce",
+        "source/gamelib/font.h": "95a23ea831bf158538c56b8f3f630c933191a29744f12aa493a98fb437fe7a94",
+        "source/gamelib/bitmap.c": "3b85fa2711c1928e848477b0e616ffd232c0f0404921027436a5675d9c91d081",
+        "source/gamelib/sprite.c": "e9cd34f72ad7a536ba93319ab9ed449554dfd9ea5a3e01ed2fd50652b5dd9013",
+        "source/gamelib/spritex8p16.c": "3ec21a32e45e76a615db7e31adf64efca1b7163053e17fb69bcbeb04ea23141c",
+        "source/gamelib/spritex8p32.c": "4be72035d7e1885c8c9482e46e18b476677bf9615a681a3eec1f396b8eef12d5",
+        "source/gamelib/pixelformat.c": "e1a8a45eec419058dcbc5ae73681410bb80f73abca6341285e0ba3dd1622ad20",
+        "source/gamelib/spriteq.c": "bed8373f0376107367f0bd7d3c41e3aabe2e3492bf0ed8d09c5aebe5888020ad",
+        "source/gamelib/screen.c": "1e79ad4df7b5db84c963331e59f659acddde97fcf35ad12f65ebfce84cf77fb6",
+        "openbor.c": "5284b752da688930f8ba595344a14aefcd3e158dc5f3e19f241b46d1a81d33c1"
+      },
+      "original_program_sha256": "89612bf1b545fe1cae4632ea70b1e7e58395b38d4f717db5fe306790f0103a17",
+      "oracle_execution": "Reused measured3839oracleafterownsourceequivalencereview;thisownprogramwasgenerated,notcompiled.",
+      "oracle_source_equivalence": {
+        "anchor_profile": "3839",
+        "measured_original_program_sha256": "24505e4459b1ee59074cc633487b0bd448877281a4f989ca86a1145d3fb135da",
+        "current_generated_program_sha256": "89612bf1b545fe1cae4632ea70b1e7e58395b38d4f717db5fe306790f0103a17",
+        "evidence": "Ownrawrasterunitsidenticalto3839;usedrecorddeclarationsidenticalapartfromcomment;otherheaderchangesunusedorunchangeddeclarationinlining."
+      }
+    },
+    {
+      "profile": "3773",
+      "engine": "3842",
+      "observations": 221112,
+      "matrix_sha256": "5f2df90dc2d8bccbbb93bd7aae0dbeab6282fd02ad9bd291853c6007c4bdd9e8",
+      "source_reference": "https://github.com/DCurrent/openbor/blob/e39bfa21d708f2f7a586085d8689bff94440a104/engine/source/gamelib/font.c",
+      "source_commit": "e39bfa21d708f2f7a586085d8689bff94440a104",
+      "source_files_sha256": {
+        "source/gamelib/font.c": "b3560f53d7534234b1c40bf3427b14eb6473c71e46d459b147540b7f857ecdce",
+        "source/gamelib/font.h": "95a23ea831bf158538c56b8f3f630c933191a29744f12aa493a98fb437fe7a94",
+        "source/gamelib/bitmap.c": "3b85fa2711c1928e848477b0e616ffd232c0f0404921027436a5675d9c91d081",
+        "source/gamelib/sprite.c": "e9cd34f72ad7a536ba93319ab9ed449554dfd9ea5a3e01ed2fd50652b5dd9013",
+        "source/gamelib/spritex8p16.c": "3ec21a32e45e76a615db7e31adf64efca1b7163053e17fb69bcbeb04ea23141c",
+        "source/gamelib/spritex8p32.c": "4be72035d7e1885c8c9482e46e18b476677bf9615a681a3eec1f396b8eef12d5",
+        "source/gamelib/pixelformat.c": "e1a8a45eec419058dcbc5ae73681410bb80f73abca6341285e0ba3dd1622ad20",
+        "source/gamelib/spriteq.c": "bed8373f0376107367f0bd7d3c41e3aabe2e3492bf0ed8d09c5aebe5888020ad",
+        "source/gamelib/screen.c": "1e79ad4df7b5db84c963331e59f659acddde97fcf35ad12f65ebfce84cf77fb6",
+        "openbor.c": "61880615e2367cdd934a6f351f1b273b7237824d5c966233f48010d5b1357ee6"
+      },
+      "original_program_sha256": "89612bf1b545fe1cae4632ea70b1e7e58395b38d4f717db5fe306790f0103a17",
+      "oracle_execution": "Reused measured3839oracleafterownsourceequivalencereview;thisownprogramwasgenerated,notcompiled.",
+      "oracle_source_equivalence": {
+        "anchor_profile": "3839",
+        "measured_original_program_sha256": "24505e4459b1ee59074cc633487b0bd448877281a4f989ca86a1145d3fb135da",
+        "current_generated_program_sha256": "89612bf1b545fe1cae4632ea70b1e7e58395b38d4f717db5fe306790f0103a17",
+        "evidence": "Ownrawrasterunitsidenticalto3839;usedrecorddeclarationsidenticalapartfromcomment;otherheaderchangesunusedorunchangeddeclarationinlining."
+      }
+    },
+    {
       "profile": "3780",
       "engine": "3842",
       "observations": 221112,

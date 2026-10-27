@@ -1,11 +1,17 @@
-/* AnyBOR modification record: 2026-10-21.
+/* AnyBOR modification record: 2026-10-23.
  * Port maintained by retrodiv <retrodiv@proton.me>.
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
  * Upstream code retains its original license and notices.
  * Allocate collision pointer slots through the highest author-facing index
- * used by each collection. Track each model's allocated animation-table
- * capacity and reject lookups outside it.
+ * used by each collection. Preserve source-defined argument counts, line
+ * capacities and script constants for each historical profile. Track each
+ * model's allocated animation-table capacity and reject lookups outside it.
+ * Track initialized colourmap allocation capacity independently of the
+ * native map counter. Reserve bounded blend-table storage for each profile's
+ * native six- or seven-mode domain. Retain source-defined frame and timer
+ * pause state within shared entity storage. Track owned script stream buffer
+ * extents.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/3741.md
  * at the source repository root. Original notices follow below.
@@ -1120,6 +1126,7 @@ typedef struct
 	int			throwdamage:16;					// 1-14-05  adjust throw damage
 	unsigned char*  palette;                        // original palette for 32/16bit mode
 	unsigned char**	colourmap;
+    unsigned int colourmap_capacity; /* Initialized physical pointer slots. */
 	int			maps_loaded:8;					// Used for player colourmap selecting
 	int			unload:8; 						// Unload model after level completed?
 	int			falldie:8; 						// Play die animation?
@@ -1284,7 +1291,11 @@ typedef struct entity
 	u32 nextthink;
 	u32 nextattack;
 	u32 pain_time;
+	union
+	{
 	u32 pausetime;						// 2012/4/30 UT: Remove lastanimpos and add this. Otherwise hit pause is always bound to frame and attack box.
+		int obor_legacy_lastanimpos:16;
+	};
 	u32 mpchargetime;					// For the CHARGE animation
 	u32 sleeptime;						// For the SLEEP animation
 	u32 rushtime;						// rush combo timer
@@ -1556,6 +1567,7 @@ typedef struct
 	int pos;
 	char *buf;
 	size_t size;
+    size_t obor_capacity;
 }s_filestream;
 
 typedef struct
@@ -1606,7 +1618,7 @@ typedef struct
 	unsigned int bossmusic_offset;
 	int numpalettes;
 	unsigned char (*palettes)[1024];//dynamic palettes
-	unsigned char* (*blendings)[MAX_BLENDINGS];//blending tables
+	unsigned char* (*blendings)[OBOR_BLEND_STORAGE];//blending tables
 	int settime;						// Set time limit per level
 	int notime;							// Used to specify if the time is displayed 1 = no, else yes
 	int noreset;						// If set, clock will not reset when players spawn/die

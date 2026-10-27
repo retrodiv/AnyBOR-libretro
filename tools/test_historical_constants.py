@@ -3,6 +3,7 @@
 SPDX-License-Identifier: BSD-3-Clause
 Copyright (c) 2026 retrodiv <retrodiv@proton.me>
 """
+import json
 import os
 from pathlib import Path
 import re
@@ -43,6 +44,31 @@ def check_constants_continuation(log, profile, restarts=0):
 
 
 class UnknownConstantsTests(unittest.TestCase):
+    def test_mapper_names_values_and_mapping_phase_per_profile(self):
+        from historical_constant_mapper import render_constant_mapper
+        from test_historical_behavior import native
+        from native_sanitizers import sanitizer_environment
+        from unittest.mock import patch
+        root = Path(os.environ.get('OBOR_TEST_SOURCE', Path(__file__).resolve().parents[1]))
+        fixture = json.loads((Path(__file__).parent /
+            'fixtures/profile-constant-mapper-contracts.json').read_text())
+        rows = fixture['sources']
+        revisions = {row['revision'] for row in rows}
+        self.assertEqual(len(rows), len(revisions))
+        self.assertTrue({3761, 3769, 3773, *fixture['boundary_controls']} <= revisions)
+        for profile in json.loads((root / 'src/pin.json').read_text())['profiles']:
+            if profile['engine'] == '3842':
+                self.assertIn(int(profile.get('revision', profile['build'])), revisions)
+        for row in rows:
+            self.assertEqual(row['suffix_in_mapper'], row['revision'] >= 3826)
+            self.assertEqual(row['unknown_empty_success'], row['revision'] < 3826)
+            self.assertRegex(row['commit'], r'^[0-9a-f]{40}$')
+            for digest in [row['header_sha256'], *row['source_sha256'].values()]:
+                self.assertRegex(digest, r'^[0-9a-f]{64}$')
+        with patch.dict(os.environ, sanitizer_environment()):
+            native(render_constant_mapper(root / 'src/engines/3842', fixture),
+                   extra_flags=('-fsanitize=pointer-overflow', '-fno-sanitize-recover=all'))
+
     def test_compiled_continuation_requires_executed_markers(self):
         legacy = "[game] CONSTANT_CONTRACT_BEFORE_UNKNOWN\n[game] CONSTANT_CONTRACT_EMPTY_CONTINUATION\n"
         modern = ("[OpenBOR] CONSTANT_CONTRACT_BEFORE_UNKNOWN\n"
@@ -64,9 +90,22 @@ class UnknownConstantsTests(unittest.TestCase):
 #include <assert.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
+#include <strings.h>
+typedef long LONG;
+#define strnicmp strncasecmp
+#define OBOR_ATTACK_BASE 16
+#define OBOR_ATTACK_SPECIAL 6
+static int *animdowns,*animups,*animbackwalks,*animwalks,*animidles;
+static int *animfalls,*animrises,*animriseattacks,*animpains,*animdies;
+static int *animattacks,*animfollows,*animspecials;
+int max_downs,max_ups,max_backwalks,max_walks,max_idles,max_attack_types;
+int max_attacks,max_follows,max_freespecials;
 enum { VT_EMPTY, VT_INTEGER, VT_DECIMAL, VT_PTR, VT_STR };
 typedef struct { int vt; long lVal; const char *text; } ScriptVariant;
+#define strVal text
+static const char *StrCache_Get(const char *text) { return text; }
 typedef int HRESULT;
 #define S_OK 0
 #define E_FAIL (-1)
@@ -74,6 +113,9 @@ static uint32_t obor_profile_build;
 static unsigned cleared;
 static void ScriptVariant_Clear(ScriptVariant *value) {
     ++cleared; memset(value,0,sizeof(*value));
+}
+static void ScriptVariant_ChangeType(ScriptVariant *value,int type) {
+    memset(value,0,sizeof(*value));value->vt=type;
 }
 static void ScriptVariant_Copy(ScriptVariant *to,const ScriptVariant *from) { *to=*from; }
 static void ScriptVariant_ToString(const ScriptVariant *value,char *text) {

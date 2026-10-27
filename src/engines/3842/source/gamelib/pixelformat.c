@@ -4,7 +4,8 @@
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
  * Upstream code retains its original license and notices.
  * Bound clip endpoints without signed overflow while retaining native color
- * and draw-method initialization.
+ * and draw-method initialization. Bound blend and tint function selection
+ * while preserving valid native operations.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/3842.md
  * at the source repository root. Original notices follow below.
@@ -561,6 +562,7 @@ void set_blendtables(unsigned char* tables[])
 //getting too long so make 2 functions
 blend16fp getblendfunction16(int alpha)
 {
+    if(alpha > MAX_BLENDINGS || tintmode > (unsigned)MAX_BLENDINGS) return NULL;
 	blend16fp fp = (alpha>0)?blendfunctions16[alpha-1]:NULL;
 	//tint mode means tint the sprite with color
 	if(tintmode>0)
@@ -580,6 +582,7 @@ blend16fp getblendfunction16(int alpha)
 
 blend32fp getblendfunction32(int alpha)
 {
+    if(alpha > MAX_BLENDINGS || tintmode > (unsigned)MAX_BLENDINGS) return NULL;
 	blend32fp fp = (alpha>0)?blendfunctions32[alpha-1]:NULL;
 	if(tintmode>0)
 	{

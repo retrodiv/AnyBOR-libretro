@@ -1,0 +1,706 @@
+{
+  "schema": 1,
+  "scope": "Own original three initial level-physics assignments and float declarations. Test actual prepared assignments only; configurable input values vary independently. Source reading is unambiguous; no original C execution or complete loader/game acceptance.",
+  "boundary": {
+    "revision": 3681,
+    "commit": "e86a5c32f6303ab0d8432dfe2575b17dc2af5baf",
+    "before": 3680
+  },
+  "coverage": [
+    {
+      "engine": "3741",
+      "first": 3666,
+      "last": 3742
+    },
+    {
+      "engine": "3842",
+      "first": 3761,
+      "last": 3773
+    }
+  ],
+  "sources": [
+    {
+      "revision": 3666,
+      "engine": "3741",
+      "contract": "fixed",
+      "commit": "d91a968db18ecb4a738cf008ea0483883929a674",
+      "assignments_sha256": "359e3bcfb72dc5cfcbe807925194428f11ec163c97e21724a8c4934cc09fe4d5",
+      "field_types": {
+        "maxtossspeed": "float",
+        "maxfallspeed": "float",
+        "gravity": "float"
+      }
+    },
+    {
+      "revision": 3667,
+      "engine": "3741",
+      "contract": "fixed",
+      "commit": "b9be93bb004d151b7280a4dd2d41a952d3160afc",
+      "assignments_sha256": "359e3bcfb72dc5cfcbe807925194428f11ec163c97e21724a8c4934cc09fe4d5",
+      "field_types": {
+        "maxtossspeed": "float",
+        "maxfallspeed": "float",
+        "gravity": "float"
+      }
+    },
+    {
+      "revision": 3669,
+      "engine": "3741",
+      "contract": "fixed",
+      "commit": "7c099902d5149d9e696ad1274c0d1964aa1f2323",
+      "assignments_sha256": "359e3bcfb72dc5cfcbe807925194428f11ec163c97e21724a8c4934cc09fe4d5",
+      "field_types": {
+        "maxtossspeed": "float",
+        "maxfallspeed": "float",
+        "gravity": "float"
+      }
+    },
+    {
+      "revision": 3670,
+      "engine": "3741",
+      "contract": "fixed",
+      "commit": "5d6118ae7dc11b04bb370da0faa0c6f42ffab50e",
+      "assignments_sha256": "359e3bcfb72dc5cfcbe807925194428f11ec163c97e21724a8c4934cc09fe4d5",
+      "field_types": {
+        "maxtossspeed": "float",
+        "maxfallspeed": "float",
+        "gravity": "float"
+      }
+    },
+    {
+      "revision": 3671,
+      "engine": "3741",
+      "contract": "fixed",
+      "commit": "7fba7445c056b5aeff03046dd79ae929fcf68f15",
+      "assignments_sha256": "359e3bcfb72dc5cfcbe807925194428f11ec163c97e21724a8c4934cc09fe4d5",
+      "field_types": {
+        "maxtossspeed": "float",
+        "maxfallspeed": "float",
+        "gravity": "float"
+      }
+    },
+    {
+      "revision": 3672,
+      "engine": "3741",
+      "contract": "fixed",
+      "commit": "8c4687b4ef831986a04e2fcb3d4dcd7e96bbd0cf",
+      "assignments_sha256": "359e3bcfb72dc5cfcbe807925194428f11ec163c97e21724a8c4934cc09fe4d5",
+      "field_types": {
+        "maxtossspeed": "float",
+        "maxfallspeed": "float",
+        "gravity": "float"
+      }
+    },
+    {
+      "revision": 3673,
+      "engine": "3741",
+      "contract": "fixed",
+      "commit": "88b9c2829ea471579d90e186215d23a8bf669bcb",
+      "assignments_sha256": "359e3bcfb72dc5cfcbe807925194428f11ec163c97e21724a8c4934cc09fe4d5",
+      "field_types": {
+        "maxtossspeed": "float",
+        "maxfallspeed": "float",
+        "gravity": "float"
+      }
+    },
+    {
+      "revision": 3674,
+      "engine": "3741",
+      "contract": "fixed",
+      "commit": "5e9213f7de65df1cc13d01e3e695d4ac62091267",
+      "assignments_sha256": "359e3bcfb72dc5cfcbe807925194428f11ec163c97e21724a8c4934cc09fe4d5",
+      "field_types": {
+        "maxtossspeed": "float",
+        "maxfallspeed": "float",
+        "gravity": "float"
+      }
+    },
+    {
+      "revision": 3675,
+      "engine": "3741",
+      "contract": "fixed",
+      "commit": "a4b46362047dc2bb04e350b8a434cb65cad3b9af",
+      "assignments_sha256": "359e3bcfb72dc5cfcbe807925194428f11ec163c97e21724a8c4934cc09fe4d5",
+      "field_types": {
+        "maxtossspeed": "float",
+        "maxfallspeed": "float",
+        "gravity": "float"
+      }
+    },
+    {
+      "revision": 3677,
+      "engine": "3741",
+      "contract": "fixed",
+      "commit": "0cc873941f3ee1dc687c7c0d303d043c931f8e5f",
+      "assignments_sha256": "359e3bcfb72dc5cfcbe807925194428f11ec163c97e21724a8c4934cc09fe4d5",
+      "field_types": {
+        "maxtossspeed": "float",
+        "maxfallspeed": "float",
+        "gravity": "float"
+      }
+    },
+    {
+      "revision": 3678,
+      "engine": "3741",
+      "contract": "fixed",
+      "commit": "9db2ed7db699e47513d3ea3144b7f235304eb72a",
+      "assignments_sha256": "359e3bcfb72dc5cfcbe807925194428f11ec163c97e21724a8c4934cc09fe4d5",
+      "field_types": {
+        "maxtossspeed": "float",
+        "maxfallspeed": "float",
+        "gravity": "float"
+      }
+    },
+    {
+      "revision": 3679,
+      "engine": "3741",
+      "contract": "fixed",
+      "commit": "1e4032e0c03f5580f4092fc8c2fecf2a5a96aa7f",
+      "assignments_sha256": "359e3bcfb72dc5cfcbe807925194428f11ec163c97e21724a8c4934cc09fe4d5",
+      "field_types": {
+        "maxtossspeed": "float",
+        "maxfallspeed": "float",
+        "gravity": "float"
+      }
+    },
+    {
+      "revision": 3680,
+      "engine": "3741",
+      "contract": "fixed",
+      "commit": "cbacfd01002925ec9016f03bbf45dc576e135f1a",
+      "assignments_sha256": "359e3bcfb72dc5cfcbe807925194428f11ec163c97e21724a8c4934cc09fe4d5",
+      "field_types": {
+        "maxtossspeed": "float",
+        "maxfallspeed": "float",
+        "gravity": "float"
+      }
+    },
+    {
+      "revision": 3681,
+      "engine": "3741",
+      "contract": "configured",
+      "commit": "e86a5c32f6303ab0d8432dfe2575b17dc2af5baf",
+      "assignments_sha256": "81b53cc0a81461cdda90110246fdf0ccb3d6924db48f8f5e566eefb4e5d6bf26",
+      "field_types": {
+        "maxtossspeed": "float",
+        "maxfallspeed": "float",
+        "gravity": "float"
+      }
+    },
+    {
+      "revision": 3682,
+      "engine": "3741",
+      "contract": "configured",
+      "commit": "a41ea87ba402b98c6b5397c6a402834a802e1801",
+      "assignments_sha256": "81b53cc0a81461cdda90110246fdf0ccb3d6924db48f8f5e566eefb4e5d6bf26",
+      "field_types": {
+        "maxtossspeed": "float",
+        "maxfallspeed": "float",
+        "gravity": "float"
+      }
+    },
+    {
+      "revision": 3685,
+      "engine": "3741",
+      "contract": "configured",
+      "commit": "8e0f3d0bd64e99244598ddf636c5203c2a6b0f2e",
+      "assignments_sha256": "81b53cc0a81461cdda90110246fdf0ccb3d6924db48f8f5e566eefb4e5d6bf26",
+      "field_types": {
+        "maxtossspeed": "float",
+        "maxfallspeed": "float",
+        "gravity": "float"
+      }
+    },
+    {
+      "revision": 3686,
+      "engine": "3741",
+      "contract": "configured",
+      "commit": "d37cca26d57bba5a4f5c190f80562f768785901d",
+      "assignments_sha256": "81b53cc0a81461cdda90110246fdf0ccb3d6924db48f8f5e566eefb4e5d6bf26",
+      "field_types": {
+        "maxtossspeed": "float",
+        "maxfallspeed": "float",
+        "gravity": "float"
+      }
+    },
+    {
+      "revision": 3689,
+      "engine": "3741",
+      "contract": "configured",
+      "commit": "953da13e27e3a72fc61ff9fe71c272968e9e7270",
+      "assignments_sha256": "81b53cc0a81461cdda90110246fdf0ccb3d6924db48f8f5e566eefb4e5d6bf26",
+      "field_types": {
+        "maxtossspeed": "float",
+        "maxfallspeed": "float",
+        "gravity": "float"
+      }
+    },
+    {
+      "revision": 3690,
+      "engine": "3741",
+      "contract": "configured",
+      "commit": "e4cf90c8a3784263df7809672a2b4998bb000831",
+      "assignments_sha256": "81b53cc0a81461cdda90110246fdf0ccb3d6924db48f8f5e566eefb4e5d6bf26",
+      "field_types": {
+        "maxtossspeed": "float",
+        "maxfallspeed": "float",
+        "gravity": "float"
+      }
+    },
+    {
+      "revision": 3691,
+      "engine": "3741",
+      "contract": "configured",
+      "commit": "42bc05f6630514c0a21e14faa7c4e671329a91ae",
+      "assignments_sha256": "81b53cc0a81461cdda90110246fdf0ccb3d6924db48f8f5e566eefb4e5d6bf26",
+      "field_types": {
+        "maxtossspeed": "float",
+        "maxfallspeed": "float",
+        "gravity": "float"
+      }
+    },
+    {
+      "revision": 3692,
+      "engine": "3741",
+      "contract": "configured",
+      "commit": "5c31bc7f06580725f11d436855533a2485dfb757",
+      "assignments_sha256": "81b53cc0a81461cdda90110246fdf0ccb3d6924db48f8f5e566eefb4e5d6bf26",
+      "field_types": {
+        "maxtossspeed": "float",
+        "maxfallspeed": "float",
+        "gravity": "float"
+      }
+    },
+    {
+      "revision": 3693,
+      "engine": "3741",
+      "contract": "configured",
+      "commit": "ec0e28efea5a3a63a28ccd9abe2fb3fb88513416",
+      "assignments_sha256": "81b53cc0a81461cdda90110246fdf0ccb3d6924db48f8f5e566eefb4e5d6bf26",
+      "field_types": {
+        "maxtossspeed": "float",
+        "maxfallspeed": "float",
+        "gravity": "float"
+      }
+    },
+    {
+      "revision": 3694,
+      "engine": "3741",
+      "contract": "configured",
+      "commit": "aaae13d3487ebedd9a3ef121d6296b5a3afd0cd9",
+      "assignments_sha256": "81b53cc0a81461cdda90110246fdf0ccb3d6924db48f8f5e566eefb4e5d6bf26",
+      "field_types": {
+        "maxtossspeed": "float",
+        "maxfallspeed": "float",
+        "gravity": "float"
+      }
+    },
+    {
+      "revision": 3697,
+      "engine": "3741",
+      "contract": "configured",
+      "commit": "142e0957159aab6b4698a94723ea282cb54a3c70",
+      "assignments_sha256": "81b53cc0a81461cdda90110246fdf0ccb3d6924db48f8f5e566eefb4e5d6bf26",
+      "field_types": {
+        "maxtossspeed": "float",
+        "maxfallspeed": "float",
+        "gravity": "float"
+      }
+    },
+    {
+      "revision": 3699,
+      "engine": "3741",
+      "contract": "configured",
+      "commit": "f632ac4fe81ea6c6b3cd9d74a1cd7538471579bb",
+      "assignments_sha256": "81b53cc0a81461cdda90110246fdf0ccb3d6924db48f8f5e566eefb4e5d6bf26",
+      "field_types": {
+        "maxtossspeed": "float",
+        "maxfallspeed": "float",
+        "gravity": "float"
+      }
+    },
+    {
+      "revision": 3701,
+      "engine": "3741",
+      "contract": "configured",
+      "commit": "7644ed068259c3edbfaed1cd85828b4a28213997",
+      "assignments_sha256": "81b53cc0a81461cdda90110246fdf0ccb3d6924db48f8f5e566eefb4e5d6bf26",
+      "field_types": {
+        "maxtossspeed": "float",
+        "maxfallspeed": "float",
+        "gravity": "float"
+      }
+    },
+    {
+      "revision": 3703,
+      "engine": "3741",
+      "contract": "configured",
+      "commit": "bb82f79d47f02649e3a79e22455911f98cc900cb",
+      "assignments_sha256": "81b53cc0a81461cdda90110246fdf0ccb3d6924db48f8f5e566eefb4e5d6bf26",
+      "field_types": {
+        "maxtossspeed": "float",
+        "maxfallspeed": "float",
+        "gravity": "float"
+      }
+    },
+    {
+      "revision": 3704,
+      "engine": "3741",
+      "contract": "configured",
+      "commit": "b1bf3dd56ebfcd11eafe265120ceedf0b44ed2f4",
+      "assignments_sha256": "81b53cc0a81461cdda90110246fdf0ccb3d6924db48f8f5e566eefb4e5d6bf26",
+      "field_types": {
+        "maxtossspeed": "float",
+        "maxfallspeed": "float",
+        "gravity": "float"
+      }
+    },
+    {
+      "revision": 3707,
+      "engine": "3741",
+      "contract": "configured",
+      "commit": "3e8913af8d0090f1082b5c2a7e624d050c4960fc",
+      "assignments_sha256": "81b53cc0a81461cdda90110246fdf0ccb3d6924db48f8f5e566eefb4e5d6bf26",
+      "field_types": {
+        "maxtossspeed": "float",
+        "maxfallspeed": "float",
+        "gravity": "float"
+      }
+    },
+    {
+      "revision": 3708,
+      "engine": "3741",
+      "contract": "configured",
+      "commit": "987fbc31c5be3002732e735a0bdd905eedd7c2b1",
+      "assignments_sha256": "81b53cc0a81461cdda90110246fdf0ccb3d6924db48f8f5e566eefb4e5d6bf26",
+      "field_types": {
+        "maxtossspeed": "float",
+        "maxfallspeed": "float",
+        "gravity": "float"
+      }
+    },
+    {
+      "revision": 3709,
+      "engine": "3741",
+      "contract": "configured",
+      "commit": "25db4c7a58a555fd8cf1f6e7931ad2ce4cc6e6d9",
+      "assignments_sha256": "81b53cc0a81461cdda90110246fdf0ccb3d6924db48f8f5e566eefb4e5d6bf26",
+      "field_types": {
+        "maxtossspeed": "float",
+        "maxfallspeed": "float",
+        "gravity": "float"
+      }
+    },
+    {
+      "revision": 3710,
+      "engine": "3741",
+      "contract": "configured",
+      "commit": "9622e606e8039fb860ae06d33c119e980f779598",
+      "assignments_sha256": "81b53cc0a81461cdda90110246fdf0ccb3d6924db48f8f5e566eefb4e5d6bf26",
+      "field_types": {
+        "maxtossspeed": "float",
+        "maxfallspeed": "float",
+        "gravity": "float"
+      }
+    },
+    {
+      "revision": 3711,
+      "engine": "3741",
+      "contract": "configured",
+      "commit": "6ec17fa411b237f789c910e1234a33a618ab236d",
+      "assignments_sha256": "81b53cc0a81461cdda90110246fdf0ccb3d6924db48f8f5e566eefb4e5d6bf26",
+      "field_types": {
+        "maxtossspeed": "float",
+        "maxfallspeed": "float",
+        "gravity": "float"
+      }
+    },
+    {
+      "revision": 3713,
+      "engine": "3741",
+      "contract": "configured",
+      "commit": "1ed3bec13248887af44a132b4a8a4fa0fe501dc3",
+      "assignments_sha256": "81b53cc0a81461cdda90110246fdf0ccb3d6924db48f8f5e566eefb4e5d6bf26",
+      "field_types": {
+        "maxtossspeed": "float",
+        "maxfallspeed": "float",
+        "gravity": "float"
+      }
+    },
+    {
+      "revision": 3714,
+      "engine": "3741",
+      "contract": "configured",
+      "commit": "0e365b7c55cb92faaca8a5c3a1b9a91597815bb9",
+      "assignments_sha256": "81b53cc0a81461cdda90110246fdf0ccb3d6924db48f8f5e566eefb4e5d6bf26",
+      "field_types": {
+        "maxtossspeed": "float",
+        "maxfallspeed": "float",
+        "gravity": "float"
+      }
+    },
+    {
+      "revision": 3715,
+      "engine": "3741",
+      "contract": "configured",
+      "commit": "8ccd518139e35ff47f5d415b418c6f3c2e310d6f",
+      "assignments_sha256": "81b53cc0a81461cdda90110246fdf0ccb3d6924db48f8f5e566eefb4e5d6bf26",
+      "field_types": {
+        "maxtossspeed": "float",
+        "maxfallspeed": "float",
+        "gravity": "float"
+      }
+    },
+    {
+      "revision": 3716,
+      "engine": "3741",
+      "contract": "configured",
+      "commit": "b5a9f8a224277fc88eae2c7c34eebe2dc0825684",
+      "assignments_sha256": "81b53cc0a81461cdda90110246fdf0ccb3d6924db48f8f5e566eefb4e5d6bf26",
+      "field_types": {
+        "maxtossspeed": "float",
+        "maxfallspeed": "float",
+        "gravity": "float"
+      }
+    },
+    {
+      "revision": 3722,
+      "engine": "3741",
+      "contract": "configured",
+      "commit": "1cd80da2e10a4c5e619422ad94f7c1abc42c2226",
+      "assignments_sha256": "81b53cc0a81461cdda90110246fdf0ccb3d6924db48f8f5e566eefb4e5d6bf26",
+      "field_types": {
+        "maxtossspeed": "float",
+        "maxfallspeed": "float",
+        "gravity": "float"
+      }
+    },
+    {
+      "revision": 3725,
+      "engine": "3741",
+      "contract": "configured",
+      "commit": "58dab1fbcae12a508bd69fd2f79d48d74bfc4202",
+      "assignments_sha256": "81b53cc0a81461cdda90110246fdf0ccb3d6924db48f8f5e566eefb4e5d6bf26",
+      "field_types": {
+        "maxtossspeed": "float",
+        "maxfallspeed": "float",
+        "gravity": "float"
+      }
+    },
+    {
+      "revision": 3726,
+      "engine": "3741",
+      "contract": "configured",
+      "commit": "4a94293d2f916b1ba05ac4a6f9635abbb394a8a9",
+      "assignments_sha256": "81b53cc0a81461cdda90110246fdf0ccb3d6924db48f8f5e566eefb4e5d6bf26",
+      "field_types": {
+        "maxtossspeed": "float",
+        "maxfallspeed": "float",
+        "gravity": "float"
+      }
+    },
+    {
+      "revision": 3727,
+      "engine": "3741",
+      "contract": "configured",
+      "commit": "ad3f59f9325e89b68f82e4daf162d0f0510af8d3",
+      "assignments_sha256": "81b53cc0a81461cdda90110246fdf0ccb3d6924db48f8f5e566eefb4e5d6bf26",
+      "field_types": {
+        "maxtossspeed": "float",
+        "maxfallspeed": "float",
+        "gravity": "float"
+      }
+    },
+    {
+      "revision": 3728,
+      "engine": "3741",
+      "contract": "configured",
+      "commit": "9f4ad7f785557d87829acd19972b8cc0704fc8c1",
+      "assignments_sha256": "81b53cc0a81461cdda90110246fdf0ccb3d6924db48f8f5e566eefb4e5d6bf26",
+      "field_types": {
+        "maxtossspeed": "float",
+        "maxfallspeed": "float",
+        "gravity": "float"
+      }
+    },
+    {
+      "revision": 3729,
+      "engine": "3741",
+      "contract": "configured",
+      "commit": "b3dc9a4a79d1f6a1b96b573e060ef97067f1176c",
+      "assignments_sha256": "81b53cc0a81461cdda90110246fdf0ccb3d6924db48f8f5e566eefb4e5d6bf26",
+      "field_types": {
+        "maxtossspeed": "float",
+        "maxfallspeed": "float",
+        "gravity": "float"
+      }
+    },
+    {
+      "revision": 3730,
+      "engine": "3741",
+      "contract": "configured",
+      "commit": "40441f127f7ad7b7cfda0eebb489e8feffd1f806",
+      "assignments_sha256": "81b53cc0a81461cdda90110246fdf0ccb3d6924db48f8f5e566eefb4e5d6bf26",
+      "field_types": {
+        "maxtossspeed": "float",
+        "maxfallspeed": "float",
+        "gravity": "float"
+      }
+    },
+    {
+      "revision": 3732,
+      "engine": "3741",
+      "contract": "configured",
+      "commit": "0b2d8300b819cdee94817194b2db7489d25d45d3",
+      "assignments_sha256": "81b53cc0a81461cdda90110246fdf0ccb3d6924db48f8f5e566eefb4e5d6bf26",
+      "field_types": {
+        "maxtossspeed": "float",
+        "maxfallspeed": "float",
+        "gravity": "float"
+      }
+    },
+    {
+      "revision": 3738,
+      "engine": "3741",
+      "contract": "configured",
+      "commit": "e0e03912cd594ffe04ca8bf7b462f1e97df6f6fe",
+      "assignments_sha256": "81b53cc0a81461cdda90110246fdf0ccb3d6924db48f8f5e566eefb4e5d6bf26",
+      "field_types": {
+        "maxtossspeed": "float",
+        "maxfallspeed": "float",
+        "gravity": "float"
+      }
+    },
+    {
+      "revision": 3740,
+      "engine": "3741",
+      "contract": "configured",
+      "commit": "cf83dc7f4472e6a51aa84cfa37b47e5d3f42d986",
+      "assignments_sha256": "81b53cc0a81461cdda90110246fdf0ccb3d6924db48f8f5e566eefb4e5d6bf26",
+      "field_types": {
+        "maxtossspeed": "float",
+        "maxfallspeed": "float",
+        "gravity": "float"
+      }
+    },
+    {
+      "revision": 3741,
+      "engine": "3741",
+      "contract": "configured",
+      "commit": "00bcc4947748e8af10d030a82b60520bbd402e30",
+      "assignments_sha256": "81b53cc0a81461cdda90110246fdf0ccb3d6924db48f8f5e566eefb4e5d6bf26",
+      "field_types": {
+        "maxtossspeed": "float",
+        "maxfallspeed": "float",
+        "gravity": "float"
+      }
+    },
+    {
+      "revision": 3742,
+      "engine": "3741",
+      "contract": "configured",
+      "commit": "0d20390cfe982136259ea3fa4bb8078801be9269",
+      "assignments_sha256": "81b53cc0a81461cdda90110246fdf0ccb3d6924db48f8f5e566eefb4e5d6bf26",
+      "field_types": {
+        "maxtossspeed": "float",
+        "maxfallspeed": "float",
+        "gravity": "float"
+      }
+    },
+    {
+      "revision": 3761,
+      "engine": "3842",
+      "contract": "configured",
+      "commit": "16814fdf39fdcdd78cb59f3d70748f1dc023a24f",
+      "assignments_sha256": "81b53cc0a81461cdda90110246fdf0ccb3d6924db48f8f5e566eefb4e5d6bf26",
+      "field_types": {
+        "maxtossspeed": "float",
+        "maxfallspeed": "float",
+        "gravity": "float"
+      }
+    },
+    {
+      "revision": 3769,
+      "engine": "3842",
+      "contract": "configured",
+      "commit": "14ac619f7d9f21bf1ac331932308c3ced4a65615",
+      "assignments_sha256": "81b53cc0a81461cdda90110246fdf0ccb3d6924db48f8f5e566eefb4e5d6bf26",
+      "field_types": {
+        "maxtossspeed": "float",
+        "maxfallspeed": "float",
+        "gravity": "float"
+      }
+    },
+    {
+      "revision": 3773,
+      "engine": "3842",
+      "contract": "configured",
+      "commit": "e39bfa21d708f2f7a586085d8689bff94440a104",
+      "assignments_sha256": "81b53cc0a81461cdda90110246fdf0ccb3d6924db48f8f5e566eefb4e5d6bf26",
+      "field_types": {
+        "maxtossspeed": "float",
+        "maxfallspeed": "float",
+        "gravity": "float"
+      }
+    }
+  ],
+  "cases": [
+    {
+      "configured_values": [
+        100,
+        -6,
+        -0.1
+      ],
+      "expected": {
+        "fixed": [
+          100,
+          -6,
+          -0.1
+        ],
+        "configured": [
+          100,
+          -6,
+          -0.1
+        ]
+      }
+    },
+    {
+      "configured_values": [
+        17,
+        -12,
+        -0.25
+      ],
+      "expected": {
+        "fixed": [
+          100,
+          -6,
+          -0.1
+        ],
+        "configured": [
+          17,
+          -12,
+          -0.25
+        ]
+      }
+    },
+    {
+      "configured_values": [
+        321,
+        -7.5,
+        -0.125
+      ],
+      "expected": {
+        "fixed": [
+          100,
+          -6,
+          -0.1
+        ],
+        "configured": [
+          321,
+          -7.5,
+          -0.125
+        ]
+      }
+    }
+  ]
+}

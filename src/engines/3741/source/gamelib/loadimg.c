@@ -1,11 +1,12 @@
-/* AnyBOR modification record: 2026-10-21.
+/* AnyBOR modification record: 2026-10-24.
  * Port maintained by retrodiv <retrodiv@proton.me>.
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
  * Upstream code retains its original license and notices.
  * Validate legacy PCX sprite headers, read uncompressed indexed PCX
  * scanlines, and represent RIFF/WAVE paths used as animation frames with an
- * empty frame.
+ * empty frame. Keep bitmap row reads within the requested output width.
+ * Select the native image dimensions for each profile.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/3741.md
  * at the source repository root. Original notices follow below.
@@ -36,6 +37,8 @@
 #include "screen.h"
 #include "packfile.h"
 #include "png.h"
+
+extern uint32_t obor_profile_build;
 
 #ifndef DC
 #pragma pack (1)
@@ -146,11 +149,13 @@ static int readbmp(unsigned char *buf, unsigned char *pal, int maxwidth, int max
 	int pb = PAL_BYTES;
 
 	if(buf){
+		const int readwidth = maxwidth < bmp_header.xsize ? maxwidth : bmp_header.xsize;
+		if(readwidth <= 0 || maxheight <= 0) return 0;
 		y = 0;
 		while(y<maxheight && y<bmp_header.ysize){
 			linebuffer = buf + y*maxwidth;
 			seekpackfile(handle,bmp_header.picstart+((bmp_header.ysize-y-1)*bmp_header.xsize),SEEK_SET);
-			readpackfile(handle,linebuffer,bmp_header.xsize);
+			readpackfile(handle,linebuffer,readwidth);
 			++y;
 		}
 	}
@@ -1043,8 +1048,11 @@ s_bitmap * loadbitmap(char *filename, char *packfile, int format){
 
 	maxwidth = res[0];
 	maxheight = res[1];
-	//if(maxwidth > 4096) maxwidth = 4096;
-	//if(maxheight > 4096) maxheight = 4096;
+	if(obor_profile_build < 3693)
+	{
+		if(maxwidth > 4096) maxwidth = 4096;
+		if(maxheight > 4096) maxheight = 4096;
+	}
 	bitmap = allocbitmap(maxwidth, maxheight, format);
 	if(!bitmap){
 		closeimage();

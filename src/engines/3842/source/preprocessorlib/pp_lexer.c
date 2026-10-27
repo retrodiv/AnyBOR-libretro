@@ -37,6 +37,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdint.h>
+
+extern uint32_t obor_profile_build;
 
 #ifdef PP_TEST
 #undef printf
@@ -536,8 +539,8 @@ HRESULT pp_lexer_GetTokenNumber(pp_lexer* plexer, pp_token* theNextToken)
 
 	  }
 	  else{
-	     if (( !strncmp( plexer->pcurChar, "u", 1)) || ( !strncmp( plexer->pcurChar, "U", 1)) ||
-		    ( !strncmp( plexer->pcurChar, "l", 1)) || ( !strncmp( plexer->pcurChar, "L", 1)))
+	     if (obor_profile_build >= 3802 && (( !strncmp( plexer->pcurChar, "u", 1)) || ( !strncmp( plexer->pcurChar, "U", 1)) ||
+		    ( !strncmp( plexer->pcurChar, "l", 1)) || ( !strncmp( plexer->pcurChar, "L", 1))))
          {
             CONSUMECHARACTER;
          }

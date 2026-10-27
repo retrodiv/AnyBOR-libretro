@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.1.74 — historical profile fidelity
+
+- Add the remaining source-defined profiles from 3666 through 3773, with 3742-dev
+  and 3761-dev available by exact tag or manual selection.
+- Preserve each profile's script results, combat, palette, font, audio and save
+  behavior, with bounded input handling and data ownership.
+- Retain assertion diagnostics and stop the active engine safely on failure.
+- Keep every profile available in the core-option list.
+
 ## 0.1.73 — native historical profile
 
 - Add the native v3.0 3741 profile with its script, font, audio and save formats.

@@ -1,4 +1,4 @@
-/* AnyBOR modification record: 2026-10-17.
+/* AnyBOR modification record: 2026-10-24.
  * Port maintained by retrodiv <retrodiv@proton.me>.
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
@@ -7,10 +7,14 @@
  * used by each collection. Select historical attack domains, environmental
  * damage, camera and scroll behavior, model-save loading, weapon and idle
  * order, nested scripts and numeric script selectors. Retain bounded
- * storage, safe ownership and the selected rejected-value contracts. Track
- * each model's allocated animation-table capacity and reject lookups outside
- * it. Declare level-owned historical spawn-script resources and ordered call
- * nodes.
+ * storage, safe ownership and the selected rejected-value contracts.
+ * Preserve source-defined argument counts, line capacities and script
+ * constants for each historical profile. Track each model's allocated
+ * animation-table capacity and reject lookups outside it. Declare level-
+ * owned historical spawn-script resources and ordered call nodes. Track
+ * initialized owned stream bytes independently of native size, bound cursor
+ * reads and preserve buffer-base append/save behavior and native slot
+ * policy.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/3842.md
  * at the source repository root. Original notices follow below.
@@ -112,7 +116,7 @@
 #define		MAX_ATTACKS			4					// Total number of attacks players have
 #define     MAX_FOLLOWS         4					// For followup animations
 #define     MAX_PLAYERS         4
-#define		MAX_ARG_LEN			511
+#define		MAX_ARG_LEN			512
 #define		MAX_PAL_SIZE		1024
 #define		MAX_CACHED_BACKGROUNDS 9
 
@@ -1584,6 +1588,7 @@ typedef struct
 	int pos;
 	char *buf;
 	size_t size;
+    size_t obor_capacity; /* Exact initialized owned bytes, independent of native size. */
 }s_filestream;
 
 typedef struct

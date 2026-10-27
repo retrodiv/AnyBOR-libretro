@@ -6,6 +6,7 @@ Copyright (c) 2026 retrodiv <retrodiv@proton.me>
 """
 import argparse
 import ast
+import hashlib
 import json
 import os
 import re
@@ -46,6 +47,46 @@ def check_version_records(root, files):
     print("Version literals confined to the version records: OK")
 
 
+def reviewed_binary_fixtures(root):
+    """Validate the declared native LUT references before skipping text decoding."""
+    reviewed = set()
+    specifications = (
+        ('palette-luts.bin', 'palette-lut-contracts.json', 'reference_bytes', 'reference_sha256'),
+        ('blend-luts.bin', 'blend-lut-contracts.json', 'expected_bytes', 'expected_sha256'))
+    for name, contract, size_key, hash_key in specifications:
+        relative = 'tools/fixtures/' + name
+        path = root / relative
+        metadata = root / 'tools/fixtures' / contract
+        if not path.exists() and not metadata.exists():
+            continue
+        if not path.is_file() or not metadata.is_file():
+            raise RuntimeError('Missing native LUT fixture or contract: ' + relative)
+        declaration = release.read_json(metadata)
+        size, digest = declaration.get(size_key), declaration.get(hash_key)
+        if (type(size) is not int or not 0 < size <= 2 * 1024 * 1024 or
+                not isinstance(digest, str) or not re.fullmatch(r'[0-9a-f]{64}', digest) or
+                path.stat().st_size != size or hashlib.sha256(path.read_bytes()).hexdigest() != digest):
+            raise RuntimeError('Native LUT fixture identity differs: ' + relative)
+        reviewed.add(relative)
+    return reviewed
+
+
+def check_operational_files(root):
+    reviewed = reviewed_binary_fixtures(root)
+    for directory in ('tools', 'docs'):
+        for path in (root / directory).rglob('*'):
+            if not path.is_file() or '__pycache__' in path.parts:
+                continue
+            if path.relative_to(root).as_posix() in reviewed:
+                continue
+            try:
+                text = path.read_text(encoding='utf-8')
+            except UnicodeDecodeError as error:
+                raise RuntimeError('Unreviewed non-text operational file: ' + str(path)) from error
+            if re.search(r"[\"']/(?:home|Users|mnt)/[A-Za-z0-9]", text):
+                raise RuntimeError('Private workspace reference: ' + str(path))
+
+
 def check_sources():
     expected = release.read_json(ROOT / "SOURCES.json")["files"]
     current = release.source_files()
@@ -61,12 +102,7 @@ def check_sources():
             raise RuntimeError("History or symlink in source inventory: " + name)
     check_version_records(ROOT, current)
     # Operational project files must stay free of local filesystem paths.
-    for directory in ("tools", "docs"):
-        for path in (ROOT / directory).rglob("*"):
-            if path.is_file() and "__pycache__" not in path.parts:
-                text = path.read_text(encoding="utf-8")
-                if re.search(r"[\"']/(?:home|Users|mnt)/[A-Za-z0-9]", text):
-                    raise RuntimeError("Private workspace reference: " + str(path))
+    check_operational_files(ROOT)
     for path in (ROOT / "tools").glob("*.py"):
         ast.parse(path.read_text(encoding="utf-8"))
     if (ROOT / "src/glue/obor_abi.h").read_bytes() != (ROOT / "src/port/libretro/obor_abi.h").read_bytes():

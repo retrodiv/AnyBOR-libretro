@@ -1,4 +1,4 @@
-/* AnyBOR modification record: 2026-10-17.
+/* AnyBOR modification record: 2026-10-22.
  * Port maintained by retrodiv <retrodiv@proton.me>.
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
@@ -8,9 +8,16 @@
  * with explicit destination capacities, and reject overflowing output path
  * joins. Compact compiler-only instruction records after resolving value
  * ownership, preserving branch and export anchors, all mutable values and
- * exactly-once pool cleanup. Resolve text-property names within the actual
+ * exactly-once pool cleanup. Retain shared interpreters through the last
+ * script reference while preserving independent variables, replacement and
+ * native callbacks. Track diagnostic comments independently so interpreter
+ * replacement can retain them. Resolve text-property names within the actual
  * table bounds while preserving native numeric selectors. Reuse each text
- * object's owned buffer when replacing its contents.
+ * object's owned buffer when replacing its contents. Reject missing
+ * colourtable indices and keep selector arithmetic and table reads defined.
+ * Transfer loaded stream buffers through aligned local outputs while
+ * preserving native record layout and results. Close owned input files after
+ * stream loading and on buffer allocation failure.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/4432.md
  * at the source repository root. Original notices follow below.
@@ -45,6 +52,7 @@
 
 */
 
+#include <limits.h>
 #include "openborscript.h"
 #include "openbor.h"
 #include "soundmix.h"
@@ -447,6 +455,84 @@ Script *alloc_script()
     return pscript;
 }
 
+
+static void obor_script_destroy_interpreter(void *value)
+{
+    Interpreter_Clear((Interpreter *)value);
+    free(value);
+}
+
+static int obor_script_replace_interpreter(Script *script, char *name)
+{
+    Interpreter *replacement = malloc(sizeof(*replacement));
+    obor_script_reference *reference;
+    if(!replacement) return 0;
+    Interpreter_Init(replacement, name, &theFunctionList);
+    reference = obor_script_reference_new(replacement, obor_script_destroy_interpreter);
+    if(!reference)
+    {
+        obor_script_destroy_interpreter(replacement);
+        return 0;
+    }
+    if(!obor_script_reference_release(&script->obor_interpreter))
+    {
+        obor_script_reference_release(&reference);
+        return 0;
+    }
+    script->obor_interpreter = reference;
+    script->pinterpreter = replacement;
+    return 1;
+}
+
+static void obor_script_destroy_comment(void *value)
+{
+    free(value);
+}
+
+static int obor_script_replace_comment(Script *script, const char *comment)
+{
+    char *replacement;
+    obor_script_reference *reference;
+    size_t length = strlen(comment);
+    if(length == SIZE_MAX) return 0;
+    replacement = malloc(length + 1);
+    if(!replacement) return 0;
+    memcpy(replacement, comment, length + 1);
+    reference = obor_script_reference_new(replacement, obor_script_destroy_comment);
+    if(!reference)
+    {
+        free(replacement);
+        return 0;
+    }
+    if(!obor_script_reference_release(&script->obor_comment))
+    {
+        obor_script_reference_release(&reference);
+        return 0;
+    }
+    script->obor_comment = reference;
+    script->comment = replacement;
+    return 1;
+}
+
+static int obor_script_share_references(Script *destination, Script *source)
+{
+    if(!source->obor_interpreter ||
+       source->obor_interpreter->value != source->pinterpreter ||
+       !obor_script_reference_retain(source->obor_interpreter)) return 0;
+    if(source->obor_comment &&
+       (source->obor_comment->value != source->comment ||
+        !obor_script_reference_retain(source->obor_comment)))
+    {
+        obor_script_reference *rollback = source->obor_interpreter;
+        obor_script_reference_release(&rollback);
+        return 0;
+    }
+
+    destination->obor_interpreter = source->obor_interpreter;
+    destination->obor_comment = source->obor_comment;
+    return 1;
+}
+
 void Script_Init(Script *pscript, char *theName, char *comment, int first)
 {
     if(first)
@@ -461,14 +547,17 @@ void Script_Init(Script *pscript, char *theName, char *comment, int first)
         return;    // if no name specified, only alloc the variants
     }
 
-    pscript->pinterpreter = malloc(sizeof(*pscript->pinterpreter));
-    Interpreter_Init(pscript->pinterpreter, theName, &theFunctionList);
+    if(!obor_script_replace_interpreter(pscript, theName))
+    {
+        shutdown(1, "Unable to allocate script interpreter.");
+        return;
+    }
     pscript->interpreterowner = 1; // this is the owner, important
     pscript->initialized = 1;
-    if(comment)
+    if(comment && !obor_script_replace_comment(pscript, comment))
     {
-        pscript->comment = malloc(sizeof(*pscript->comment) * (strlen(comment) + 1));
-        strcpy(pscript->comment, comment);
+        shutdown(1, "Unable to allocate script comment.");
+        return;
     }
 }
 
@@ -505,6 +594,7 @@ static void execute_init_method(Script *pdest, int iscopy, int localclear)
 //safe copy method
 void Script_Copy(Script *pdest, Script *psrc, int localclear)
 {
+    if(!pdest || !psrc || pdest == psrc) return;
     if(!psrc->initialized)
     {
         return;
@@ -512,6 +602,11 @@ void Script_Copy(Script *pdest, Script *psrc, int localclear)
     if(pdest->initialized)
     {
         Script_Clear(pdest, localclear);
+    }
+    if(!obor_script_share_references(pdest, psrc))
+    {
+        shutdown(1, "Unable to retain script interpreter.");
+        return;
     }
     pdest->pinterpreter = psrc->pinterpreter;
     pdest->comment = psrc->comment;
@@ -566,18 +661,11 @@ void Script_Clear(Script *pscript, int localclear)
         return;
     }
 
-    //if it is the owner, free the interpreter
-    if(pscript->pinterpreter && pscript->interpreterowner)
-    {
-        Interpreter_Clear(pscript->pinterpreter);
-        free(pscript->pinterpreter);
-        pscript->pinterpreter = NULL;
-        if(pscript->comment)
-        {
-            free(pscript->comment);
-        }
-        pscript->comment = NULL;
-    }
+    /* Shared values survive until their final script reference ends. */
+    obor_script_reference_release(&pscript->obor_interpreter);
+    pscript->pinterpreter = NULL;
+    obor_script_reference_release(&pscript->obor_comment);
+    pscript->comment = NULL;
     pvars = pscript->varlist; // in game clear(localclear!=2) just keep this value
     memset(pscript, 0, sizeof(*pscript));
     pscript->varlist = pvars; // copy it back
@@ -6656,8 +6744,10 @@ HRESULT openbor_getentityproperty(ScriptVariant **varlist , ScriptVariant **pret
     }
     case _ep_colourtable:
     {
+        if(paramCount < 3) break;
         ScriptVariant_ChangeType(*pretvar, VT_PTR);
-        (*pretvar)->ptrVal = (VOID *)model_get_colourmap(&(ent->modeldata), varlist[2]->lVal + 1);
+        (*pretvar)->ptrVal = (VOID*)model_get_colourmap(&ent->modeldata,
+            (unsigned)varlist[2]->lVal + 1u);
         break;
     }
     case _ep_damage_on_landing:
@@ -11545,18 +11635,30 @@ HRESULT openbor_openfilestream(ScriptVariant **varlist , ScriptVariant **pretvar
         filestreams[fsindex].buf = malloc(sizeof(*filestreams[fsindex].buf) * (size + 1));
         if(filestreams[fsindex].buf == NULL)
         {
+            fclose(handle);
             (*pretvar)->lVal = -1;
             return S_OK;
         }
         fread(filestreams[fsindex].buf, 1, size, handle);
+        fclose(handle);
         filestreams[fsindex].buf[size] = 0;
         filestreams[fsindex].size = size;
     }
-    else if(buffer_pakfile(filename, &filestreams[fsindex].buf, &filestreams[fsindex].size) != 1)
+    else
     {
-        printf("Invalid filename used in openfilestream.\n");
-        (*pretvar)->lVal = -1;
-        return S_OK;
+        s_filestream *obor_stream_slot = &(filestreams[fsindex]);
+        char *obor_stream_buffer = obor_stream_slot->buf;
+        size_t obor_stream_size = obor_stream_slot->size;
+        int obor_stream_loaded = buffer_pakfile(filename,
+            &obor_stream_buffer, &obor_stream_size);
+        obor_stream_slot->buf = obor_stream_buffer;
+        obor_stream_slot->size = obor_stream_size;
+        if(obor_stream_loaded != 1)
+        {
+            printf("Invalid filename used in openfilestream.\n");
+            (*pretvar)->lVal = -1;
+            return S_OK;
+        }
     }
 
     (*pretvar)->lVal = (LONG)fsindex;
@@ -14164,27 +14266,116 @@ int mapstrings_textobjproperty(ScriptVariant **varlist, int paramCount)
         return 1;
     }
 
+    if(!varlist || !varlist[1]) return 1;
     if(varlist[1]->vt == VT_STR)
     {
-        propname = (char *)StrCache_Get(varlist[1]->strVal);
-        for(prop = 0; prop < (int)(sizeof(proplist) / sizeof(*proplist)); ++prop)
+        propname = (char *)StrCache_GetIfPresent(varlist[1]->strVal);
+        if(!propname) return 1;
+        prop = searchList(proplist, propname,
+                          (int)(sizeof(proplist) / sizeof(*proplist)));
+        if(prop >= 0)
         {
-            if(!stricmp(proplist[prop], propname))
-            {
-                ScriptVariant_ChangeType(varlist[1], VT_INTEGER);
-                varlist[1]->lVal = prop;
-                break;
-            }
+            ScriptVariant_ChangeType(varlist[1], VT_INTEGER);
+            varlist[1]->lVal = prop;
+        }
+        else
+        {
+            printf("'%s' is not a valid textobj property.\n", propname);
+            return 0;
         }
     }
 
     return 1;
 }
 
+static int obor_textobj_index(int index, int grow)
+{
+    s_textobj *grown;
+    int count;
+    if(index < 0) return 0;
+    if(!level) return -1;
+    if(!grow && index >= level->numtextobjs) return 0;
+    if(level->numtextobjs < 0 ||
+        (level->numtextobjs && !level->textobjs)) return -1;
+    count = level->numtextobjs;
+    if(index < count) return 1;
+    if(!grow) return 0;
+    if(index == INT_MAX ||
+        (size_t)(index + 1) > (size_t)-1 / sizeof(*grown)) return -1;
+    grown = realloc(level->textobjs, (size_t)(index + 1) * sizeof(*grown));
+    if(!grown) return -1;
+    memset(grown + count, 0, (size_t)(index + 1 - count) * sizeof(*grown));
+    level->textobjs = grown;
+    level->numtextobjs = index + 1;
+    return 1;
+}
+
+static int obor_textobj_store(s_textobj *object, const char *text)
+{
+    const char *end;
+    char *stored;
+    size_t length;
+    if(!object || !text) return 0;
+    end = memchr(text, 0, MAX_STR_VAR_LEN + 1);
+    if(!end) return 0;
+    length = (size_t)(end - text);
+    stored = object->text;
+    if(!stored)
+    {
+        stored = malloc(MAX_STR_VAR_LEN + 1);
+        if(!stored) return 0;
+    }
+    memmove(stored, text, length);
+    memset(stored + length, 0, MAX_STR_VAR_LEN + 1 - length);
+    object->text = stored;
+    return 1;
+}
+
+static int obor_textobj_format(ScriptVariant *value, char *buffer)
+{
+    int written;
+    const char *text;
+    if(!buffer) return 0;
+    buffer[0] = 0;
+    if(!value) return 0;
+    switch(value->vt)
+    {
+    case VT_EMPTY:
+        written = snprintf(buffer, MAX_STR_VAR_LEN + 1, "<VT_EMPTY>   Unitialized");
+        break;
+    case VT_INTEGER:
+        written = snprintf(buffer, MAX_STR_VAR_LEN + 1, "%d", (int)value->lVal);
+        break;
+    case VT_DECIMAL:
+        written = snprintf(buffer, MAX_STR_VAR_LEN + 1, "%lf", value->dblVal);
+        break;
+    case VT_PTR:
+        written = snprintf(buffer, MAX_STR_VAR_LEN + 1, "#%ld", (long)value->ptrVal);
+        break;
+    case VT_STR:
+        text = StrCache_GetIfPresent(value->strVal);
+        if(!text || !memchr(text, 0, MAX_STR_VAR_LEN + 1)) return 0;
+        written = snprintf(buffer, MAX_STR_VAR_LEN + 1, "%s", text);
+        break;
+    default:
+        written = snprintf(buffer, MAX_STR_VAR_LEN + 1, "<Unprintable VARIANT type.>");
+        break;
+    }
+    if(written < 0 || written > MAX_STR_VAR_LEN)
+    {
+        buffer[0] = 0;
+        return 0;
+    }
+    return 1;
+}
+
 HRESULT openbor_gettextobjproperty(ScriptVariant **varlist , ScriptVariant **pretvar, int paramCount)
 {
+    if(!pretvar || !*pretvar) return E_FAIL;
+
     LONG ind;
     int propind;
+    int obor_index;
 
     if(paramCount < 2)
     {
@@ -14192,6 +14383,7 @@ HRESULT openbor_gettextobjproperty(ScriptVariant **varlist , ScriptVariant **pre
     }
 
 
+    if(!varlist) { *pretvar = NULL; return E_FAIL; }
     if(FAILED(ScriptVariant_IntegerValue(varlist[0], &ind)))
     {
         printf("Function's 1st argument must be a numeric value: gettextproperty(int index, \"property\")\n");
@@ -14201,12 +14393,15 @@ HRESULT openbor_gettextobjproperty(ScriptVariant **varlist , ScriptVariant **pre
     ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
     mapstrings_textobjproperty(varlist, paramCount);
 
-    if(ind < 0 || ind >= level->numtextobjs)
+    obor_index = obor_textobj_index(ind, 0);
+    if(obor_index < 0) goto gettextobjproperty_error;
+    if(!obor_index)
     {
         (*pretvar)->lVal = 0;
         return S_OK;
     }
 
+    if(!varlist[1]) goto gettextobjproperty_error;
     if(varlist[1]->vt != VT_INTEGER)
     {
         if(varlist[1]->vt != VT_STR)
@@ -14228,6 +14423,9 @@ HRESULT openbor_gettextobjproperty(ScriptVariant **varlist , ScriptVariant **pre
     }
     case _top_text:
     {
+        if(!level->textobjs[ind].text ||
+            !memchr(level->textobjs[ind].text, 0, MAX_STR_VAR_LEN + 1))
+            goto gettextobjproperty_error;
         ScriptVariant_ChangeType(*pretvar, VT_STR);
         StrCache_Copy((*pretvar)->strVal, level->textobjs[ind].text);
         break;
@@ -14272,9 +14470,11 @@ gettextobjproperty_error:
 
 HRESULT openbor_changetextobjproperty(ScriptVariant **varlist , ScriptVariant **pretvar, int paramCount)
 {
+    if(!pretvar) return E_FAIL;
+
     LONG ind;
     int propind;
-    static char buf[MAX_STR_VAR_LEN];
+    static char buf[MAX_STR_VAR_LEN + 1];
     LONG ltemp;
     const char *ctotext = "changetextobjproperty(int index, \"property\", value)";
 
@@ -14286,6 +14486,7 @@ HRESULT openbor_changetextobjproperty(ScriptVariant **varlist , ScriptVariant **
         return E_FAIL;
     }
 
+    if(!varlist) return E_FAIL;
     if(FAILED(ScriptVariant_IntegerValue(varlist[0], &ind)))
     {
         printf("Function's 1st argument must be a numeric value: %s\n", ctotext);
@@ -14299,12 +14500,12 @@ HRESULT openbor_changetextobjproperty(ScriptVariant **varlist , ScriptVariant **
         printf("Invalid textobj index, must be >= 0\n");
         return E_FAIL;
     }
-    else if (ind >= level->numtextobjs)
+    else
     {
-        __reallocto(level->textobjs, level->numtextobjs, ind + 1);
-        level->numtextobjs = ind + 1;
+        if(obor_textobj_index(ind, 1) < 0) return E_FAIL;
     }
 
+    if(!varlist[1]) return E_FAIL;
     if(varlist[1]->vt != VT_INTEGER)
     {
         printf("Invalid property type for changetextobjproperty.\n");
@@ -14329,12 +14530,9 @@ HRESULT openbor_changetextobjproperty(ScriptVariant **varlist , ScriptVariant **
     }
     case _top_text:
     {
-        ScriptVariant_ToString(varlist[2], buf);
-        if(!level->textobjs[ind].text)
-        {
-            level->textobjs[ind].text = malloc(MAX_STR_VAR_LEN);
-        }
-        strncpy(level->textobjs[ind].text, buf, MAX_STR_VAR_LEN);
+        if(!obor_textobj_format(varlist[2], buf) ||
+            !obor_textobj_store(&level->textobjs[ind], buf))
+            goto changetextobjproperty_error;
         break;
     }
     case _top_time:
@@ -14395,7 +14593,7 @@ HRESULT openbor_changetextobjproperty(ScriptVariant **varlist , ScriptVariant **
     return S_OK;
 
 changetextobjproperty_error:
-    ScriptVariant_ToString(varlist[2], buf);
+    if(!obor_textobj_format(varlist[2], buf)) buf[0] = 0;
     printf("Invalid textobj value: %s\n", buf);
     return E_FAIL;
 }
@@ -14403,9 +14601,11 @@ changetextobjproperty_error:
 // settextobj(int index, int x, int y, int font, int z, char text, int time {optional})
 HRESULT openbor_settextobj(ScriptVariant **varlist , ScriptVariant **pretvar, int paramCount)
 {
+    if(!pretvar) return E_FAIL;
+
     LONG ind;
     LONG X, Y, Z, F, T = 0;
-    static char buf[MAX_STR_VAR_LEN];
+    static char buf[MAX_STR_VAR_LEN + 1];
     const char *stotext = "settextobj(int index, int x, int y, int font, int z, char text, int time {optional})";
 
     *pretvar = NULL;
@@ -14417,6 +14617,7 @@ HRESULT openbor_settextobj(ScriptVariant **varlist , ScriptVariant **pretvar, in
         return E_FAIL;
     }
 
+    if(!varlist) return E_FAIL;
     if(FAILED(ScriptVariant_IntegerValue(varlist[0], &ind)))
     {
         printf("Function's 1st argument must be a numeric value: %s\n", stotext);
@@ -14428,10 +14629,9 @@ HRESULT openbor_settextobj(ScriptVariant **varlist , ScriptVariant **pretvar, in
         printf("Invalid textobj index, must be >= 0\n");
         return E_FAIL;
     }
-    else if(ind >= level->numtextobjs)
+    else
     {
-        __reallocto(level->textobjs, level->numtextobjs, ind + 1);
-        level->numtextobjs = ind + 1;
+        if(obor_textobj_index(ind, 1) < 0) return E_FAIL;
     }
 
     if(FAILED(ScriptVariant_IntegerValue(varlist[1], &X)))
@@ -14450,7 +14650,7 @@ HRESULT openbor_settextobj(ScriptVariant **varlist , ScriptVariant **pretvar, in
     {
         goto settextobj_error;
     }
-    ScriptVariant_ToString(varlist[5], buf);
+    if(!obor_textobj_format(varlist[5], buf)) goto settextobj_error;
     if(paramCount >= 7 && FAILED(ScriptVariant_IntegerValue(varlist[6], &T)))
     {
         goto settextobj_error;
@@ -14462,11 +14662,7 @@ HRESULT openbor_settextobj(ScriptVariant **varlist , ScriptVariant **pretvar, in
     level->textobjs[ind].position.z = (int)Z;
     level->textobjs[ind].font = (int)F;
 
-    if(!level->textobjs[ind].text)
-    {
-        level->textobjs[ind].text = (char *)malloc(MAX_STR_VAR_LEN);
-    }
-    strncpy(level->textobjs[ind].text, buf, MAX_STR_VAR_LEN);
+    if(!obor_textobj_store(&level->textobjs[ind], buf)) goto settextobj_error;
 
     return S_OK;
 
@@ -14477,7 +14673,10 @@ settextobj_error:
 
 HRESULT openbor_cleartextobj(ScriptVariant **varlist , ScriptVariant **pretvar, int paramCount)
 {
+    if(!pretvar) return E_FAIL;
+
     LONG ind;
+    int obor_index;
     const char *cltotext = "cleartextobj(int index)";
 
     *pretvar = NULL;
@@ -14488,13 +14687,16 @@ HRESULT openbor_cleartextobj(ScriptVariant **varlist , ScriptVariant **pretvar, 
         return E_FAIL;
     }
 
+    if(!varlist) return E_FAIL;
     if(FAILED(ScriptVariant_IntegerValue(varlist[0], &ind)))
     {
         printf("Function's 1st argument must be a numeric value: %s\n", cltotext);
         return E_FAIL;
     }
 
-    if(ind < 0 || ind >= level->numtextobjs)
+    obor_index = obor_textobj_index(ind, 0);
+    if(obor_index < 0) return E_FAIL;
+    if(!obor_index)
     {
         return S_OK;
     }

@@ -9,7 +9,7 @@
       "upstream_sha256": "b8f3916944f0b5aee216ef7a494820d17ae658336a4680992dc244ebedecf3ea"
     },
     "Makefile.libretro": {
-      "distributed_sha256": "1bb223e82afe8ca6351f07f4e081f2b686c6575e9adc6ab5f4e05c9acc501e5e",
+      "distributed_sha256": "aa38bea7d4709d4496bc15a6a447c17d10efb5c868847ae8e0c4bda99d70e26e",
       "modified": true,
       "origin": "Project libretro build overlay",
       "summary": "Supply the shared libretro engine build and symbol-isolation rules.",
@@ -17,23 +17,29 @@
       "upstream_sha256": null
     },
     "openbor.c": {
-      "distributed_sha256": "59d60be6c3822b79eb5b2aab5f874450fdb33cb19072ce1c9fc6ed9825fddf74",
+      "distributed_sha256": "57f3bbd5c07cd2afe384f39b88702ca2b3e6342d8e4a7c26a21a84079f0353f2",
       "modified": true,
-      "summary": "Apply the port's engine corrections and select the PC video configuration on macOS. Derive output names from the content basename with explicit destination capacities, and reject overflowing output path joins. Bound raw palette stores to the declared allocation while retaining its native in-range layout and complete input reads. Leave multiplayer slots without a selected model available to join even if game scripts preassign lives to them. Let a missing basename-only PAK self-check read the active frontend content after it has been validated and prepared. Allocate each model's animation pointer table through the highest animation index that model uses, and bound cache, copy and cleanup paths to that capacity. Ignore optional defense and offense entries outside the configured attack-type range with a log warning before accessing their tables. Yield after each newly completed model during explicit model-list or level preparation, and defer states until that preparation has cleaned up its intermediate parsers and handles. Use four independent RetroPad devices and per-device mappings. Place player state in aligned storage for PE SIMD reads. Yield to the frontend and decoder workers while asynchronous movies are pending. Grow each collision collection's pointer table only through its highest author-facing slot.",
+      "summary": "Apply the port's engine corrections and select the PC video configuration on macOS. Derive output names from the content basename with explicit destination capacities, and reject overflowing output path joins. Bound raw palette stores to the declared allocation while retaining its native in-range layout and complete input reads. Leave multiplayer slots without a selected model available to join even if game scripts preassign lives to them. Let a missing basename-only PAK self-check read the active frontend content after it has been validated and prepared. Allocate each model's animation pointer table through the highest animation index that model uses, and bound cache, copy and cleanup paths to that capacity. Ignore optional defense and offense entries outside the configured attack-type range with a log warning before accessing their tables. Yield after each newly completed model during explicit model-list or level preparation, and defer states until that preparation has cleaned up its intermediate parsers and handles. Use four independent RetroPad devices and per-device mappings. Place player state in aligned storage for PE SIMD reads. Yield to the frontend and decoder workers while asynchronous movies are pending. Grow each collision collection's pointer table only through its highest author-facing slot. Return a defined null result for absent colourmap models or tables while retaining valid palette fallback. Keep selected palette-conversion reads bounded and reject missing maps or flags, while preserving unselected slots and native allocation failure callbacks. Check destination animation capacity when retaining an animation across model changes, preserving the native fallback and timing. Access script-container pointer slots with byte copies, preserving record layout, pointer values and native copy/cleanup order. Release each sprite owner once and complete cleanup independently of alias counts. Preserve native sprite-map capacity policies, check allocation extents and retain existing storage and capacity when growth is unavailable. Validate sprite-node allocations and release partial resources without changing existing owners. Check cached sprite availability before reading metadata and ignore cache requests for absent nodes.",
       "topics": [
         "active-content-pak-aliases",
         "animation-memory-layout",
         "collision-memory-layout",
+        "colourtable-selector-bounds",
         "darwin-platform-support",
         "empty-player-slot-safety",
         "four-player-controls",
         "image-loader-safety",
         "loading-screen-presentation",
         "model-attack-type-bounds",
+        "palette-conversion-safety",
         "panel-order-bounds",
         "platform-integration",
         "record-dates-and-file-notices",
+        "script-container-alignment",
         "session-relative-filesystem",
+        "sprite-map-growth",
+        "sprite-node-loading",
+        "sprite-ownership-cleanup",
         "webm-playback-lifecycle"
       ],
       "upstream_sha256": "4b72fbaeea76155c2a78820a2f514921843735e908a20fe86399b197e06ace56"
@@ -50,13 +56,16 @@
       "upstream_sha256": "d615b34d570286ab2479d389f64f1acf967141559243d0b03e8e1928af945dfd"
     },
     "openborscript.c": {
-      "distributed_sha256": "03d08f8c1c678552c282274215168efd59d6044d58794c3becf707771dbe2b60",
+      "distributed_sha256": "c61f8764e056b0bc8d7e0e01bc1bdd1395cf4074970c397c71468e8db4762c66",
       "modified": true,
-      "summary": "Dispatch native string mapping through explicitly tagged compiled call targets. Derive output names from the content basename with explicit destination capacities, and reject overflowing output path joins. Compact compiler-only instruction records after resolving value ownership, preserving branch and export anchors, all mutable values and exactly-once pool cleanup. Resolve text-property names within the actual table bounds while preserving native numeric selectors.",
+      "summary": "Dispatch native string mapping through explicitly tagged compiled call targets. Derive output names from the content basename with explicit destination capacities, and reject overflowing output path joins. Compact compiler-only instruction records after resolving value ownership, preserving branch and export anchors, all mutable values and exactly-once pool cleanup. Retain shared interpreters through the last script reference while preserving independent variables, replacement and native callbacks. Track diagnostic comments independently so interpreter replacement can retain them. Resolve text-property names within the actual table bounds while preserving native numeric selectors. Reject missing colourtable indices and keep selector arithmetic and table reads defined.",
       "topics": [
+        "colourtable-selector-bounds",
         "record-dates-and-file-notices",
         "script-memory-layout",
         "script-property-names",
+        "script-shared-storage",
+        "script-text-object-ownership",
         "session-relative-filesystem"
       ],
       "upstream_sha256": "cf468d270cd91f32f9beaf5269605d68f8d129967d28dcdaac09f53ab5909633"
@@ -152,9 +161,13 @@
       "upstream_sha256": "78d6646031e59ddc71ee45c965380f3edd1d6f2362dba8639169051d3990dbfc"
     },
     "source/gamelib/font.c": {
-      "distributed_sha256": "74944769b719009836cb98571823536234bbc63d95f6b28dcd7ae1af0ff98f1a",
-      "modified": false,
-      "topics": [],
+      "distributed_sha256": "f6489024c25dc69d33493cf0c6b81f567a8767983483923cce641e860a8d328b",
+      "modified": true,
+      "summary": "Reject missing or undersized indexed font palettes before copying their true-color entries; retain atlas raster output for valid fonts.",
+      "topics": [
+        "record-dates-and-file-notices",
+        "script-text-object-ownership"
+      ],
       "upstream_sha256": "74944769b719009836cb98571823536234bbc63d95f6b28dcd7ae1af0ff98f1a"
     },
     "source/gamelib/font.h": {
@@ -241,15 +254,23 @@
       "upstream_sha256": "0a3ed9b87f66d2cd51810d86d79cc1beec83ca477172fb033f2851404da143b8"
     },
     "source/gamelib/pixelformat.c": {
-      "distributed_sha256": "5e08195d171f7baf370c3e2937fd7232e36492d6c30e55d6a0d5ce30b521e474",
-      "modified": false,
-      "topics": [],
+      "distributed_sha256": "6098d9bbfb915b395f621a5ac1b0fa51169edf4eb2335b913a95b7397357583d",
+      "modified": true,
+      "summary": "Bound clip endpoints without signed overflow while retaining native color and draw-method initialization. Bound blend and tint function selection while preserving valid native operations.",
+      "topics": [
+        "record-dates-and-file-notices",
+        "screen-blend-bounds"
+      ],
       "upstream_sha256": "5e08195d171f7baf370c3e2937fd7232e36492d6c30e55d6a0d5ce30b521e474"
     },
     "source/gamelib/screen.c": {
-      "distributed_sha256": "26fbe12d0b37aee37299f5d8834d7f2b99cf7ca143df8cd00399fbad18955f8a",
-      "modified": false,
-      "topics": [],
+      "distributed_sha256": "94928db82d17f5519ab19ff629363440b15ed10d77dfff69e847badc6a8583a7",
+      "modified": true,
+      "summary": "Remove a guard whose only statement assigned the counter to itself. Bound screen blend selectors and use transparent copy when an indexed table is unavailable.",
+      "topics": [
+        "record-dates-and-file-notices",
+        "screen-blend-bounds"
+      ],
       "upstream_sha256": "26fbe12d0b37aee37299f5d8834d7f2b99cf7ca143df8cd00399fbad18955f8a"
     },
     "source/gamelib/screen.h": {
@@ -327,9 +348,13 @@
       "upstream_sha256": "160dc24d8b7db9726c29fca911d506dd36c1462eb2b40fc6251a8b381f53d74e"
     },
     "source/gamelib/spriteq.c": {
-      "distributed_sha256": "a94c17b1a6788c0348f3f7e5626f31250e2566bec8ef92a7e8ef1738adec1602",
-      "modified": false,
-      "topics": [],
+      "distributed_sha256": "b60c8f9ad89bffaf2cbbf73e16d5a66def44d7c7b38c0276f36d7bbc53cd5a64",
+      "modified": true,
+      "summary": "Keep unavailable sprite images out of the drawing queue while retaining native requests, ordering and copied draw methods.",
+      "topics": [
+        "record-dates-and-file-notices",
+        "unavailable-sprite-images"
+      ],
       "upstream_sha256": "a94c17b1a6788c0348f3f7e5626f31250e2566bec8ef92a7e8ef1738adec1602"
     },
     "source/gamelib/spriteq.h": {
@@ -564,9 +589,13 @@
       "upstream_sha256": "442139566fac12ff9f1189221724c96dc7ea7bbc588071279fd635c25ffddf4a"
     },
     "source/openborscript/config.h": {
-      "distributed_sha256": "fcf14e9d6fbb0cbbb5867afef575bfb50db99e1e5a8bf3ccfe356517e143a8bc",
-      "modified": false,
-      "topics": [],
+      "distributed_sha256": "b12e6d71653a683de289747c285b6589d96f35b15c930899b6efd6c173feb973",
+      "modified": true,
+      "summary": "Declare the modern logical profiles' unload_model script entry point.",
+      "topics": [
+        "record-dates-and-file-notices",
+        "script-shared-storage"
+      ],
       "upstream_sha256": "fcf14e9d6fbb0cbbb5867afef575bfb50db99e1e5a8bf3ccfe356517e143a8bc"
     },
     "source/openborscript/constants.c": {
@@ -672,9 +701,13 @@
       "upstream_sha256": "7ff27e41939d64ad60b49891bd00956eebd97355aeec1f0d1e0783ae08b50509"
     },
     "source/openborscript/level.c": {
-      "distributed_sha256": "c4183f2e58d234b72e06e20d5961d8b6a0f6498112845e912b1d8fa6c13069da",
-      "modified": false,
-      "topics": [],
+      "distributed_sha256": "ca672f1c7ae68ba2c27f6b53cb181e9288cf59ae75eed14c81216e868590f033",
+      "modified": true,
+      "summary": "Select the native 6330 background-speed return representation.",
+      "topics": [
+        "record-dates-and-file-notices",
+        "script-text-object-ownership"
+      ],
       "upstream_sha256": "c4183f2e58d234b72e06e20d5961d8b6a0f6498112845e912b1d8fa6c13069da"
     },
     "source/openborscript/math.c": {
@@ -970,9 +1003,13 @@
       "upstream_sha256": "db345b0fabe204add4bef6196b4a984aabcfcfe3d19325b8440419e0b33330fb"
     },
     "source/scriptlib/ParserSet.c": {
-      "distributed_sha256": "2b05f5e6dd94813cdaa6bf6e89d8d6c68375d157978e4a4e38401e78aabf06d3",
-      "modified": false,
-      "topics": [],
+      "distributed_sha256": "b352c418c3f00fb6162445972a68a33e817761b00201ef768e5b11ddb81bea67",
+      "modified": true,
+      "summary": "Keep terminal grammar-table writes within the declared production count while retaining every valid native entry.",
+      "topics": [
+        "record-dates-and-file-notices",
+        "script-parser-table-safety"
+      ],
       "upstream_sha256": "2b05f5e6dd94813cdaa6bf6e89d8d6c68375d157978e4a4e38401e78aabf06d3"
     },
     "source/scriptlib/ParserSet.h": {
@@ -988,15 +1025,24 @@
       "upstream_sha256": "e00dba361933bea5cca030f5ee8c9adbbe312b94ef6bc98ae6d0b78c3c91d923"
     },
     "source/scriptlib/ScriptVariant.c": {
-      "distributed_sha256": "9b306921bba8c136757757b4e392459bd1c70329ae567e3ee4d68fcaea459f6e",
-      "modified": false,
-      "topics": [],
+      "distributed_sha256": "ff137b0e708cc180b0b6ffe4475ad874d2ffcf1d0796047ea13b9d1aa95be044",
+      "modified": true,
+      "summary": "Select the native 6330 decimal negation fallthrough. Preserve native signed32 integer conversion and truncated decimal results; refuse unavailable arguments and non-representable decimal results before conversion without changing result storage.",
+      "topics": [
+        "record-dates-and-file-notices",
+        "script-integer-conversion",
+        "script-text-object-ownership"
+      ],
       "upstream_sha256": "9b306921bba8c136757757b4e392459bd1c70329ae567e3ee4d68fcaea459f6e"
     },
     "source/scriptlib/ScriptVariant.h": {
-      "distributed_sha256": "b5e02bf4a3c9701d2d54a50744aa0f3002f90cbafa6329dcf445708e189c7c20",
-      "modified": false,
-      "topics": [],
+      "distributed_sha256": "69687862ad7fe8d48ef9c6188ecc201eb7a62a4d8502d3613965e7c9d49b5d91",
+      "modified": true,
+      "summary": "Declare the cache and variant helpers as ordinary functions; the header only declared them inline and the definitions live in ScriptVariant.c.",
+      "topics": [
+        "record-dates-and-file-notices",
+        "script-text-object-ownership"
+      ],
       "upstream_sha256": "b5e02bf4a3c9701d2d54a50744aa0f3002f90cbafa6329dcf445708e189c7c20"
     },
     "source/scriptlib/ScriptVariantInteger.c": {

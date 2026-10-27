@@ -9,7 +9,7 @@
       "upstream_sha256": "f3801b6b2e30b61eb1254d1fc98676dd28b21c124731833f78e853a47f09a9e0"
     },
     "Makefile.libretro": {
-      "distributed_sha256": "1bb223e82afe8ca6351f07f4e081f2b686c6575e9adc6ab5f4e05c9acc501e5e",
+      "distributed_sha256": "aa38bea7d4709d4496bc15a6a447c17d10efb5c868847ae8e0c4bda99d70e26e",
       "modified": true,
       "origin": "Project libretro build overlay",
       "summary": "Supply the shared libretro engine build and symbol-isolation rules.",
@@ -17,9 +17,9 @@
       "upstream_sha256": null
     },
     "openbor.c": {
-      "distributed_sha256": "7eb677e75af0b3715f44a9f5a3b6060c00543627c9950dff1aafefa12c8a4e0f",
+      "distributed_sha256": "cf626cfe41013c3d96f8bdb69f93f386cb32d1fe0f9597d1862c6ba73bb4fcfd",
       "modified": true,
-      "summary": "Apply the port's engine corrections and select the PC video configuration on macOS. Keep damage-over-time updates within the native effect arrays while retaining valid-slot tick and expiration calculations. Derive output names from the content basename with explicit destination capacities, and reject overflowing output path joins. Leave multiplayer slots without a selected model available to join even if game scripts preassign lives to them. Let a missing basename-only PAK self-check read the active frontend content after it has been validated and prepared. Allocate each model's animation pointer table through the highest animation index that model uses, and bound cache, copy and cleanup paths to that capacity. Ignore optional defense and offense entries outside the configured attack-type range with a log warning before accessing their tables. Yield after each newly completed model during explicit model-list or level preparation, and defer states until that preparation has cleaned up its intermediate parsers and handles. Resize repeated weapon lists and detach borrowed lists before replacing their entries.",
+      "summary": "Apply the port's engine corrections and select the PC video configuration on macOS. Keep damage-over-time updates within the native effect arrays while retaining valid-slot tick and expiration calculations. Derive output names from the content basename with explicit destination capacities, and reject overflowing output path joins. Preserve each profile's authored collision extents, frame conversion order, default Z tolerance and hit positions. Preserve source-defined argument counts, line capacities and script constants for each historical profile. Leave multiplayer slots without a selected model available to join even if game scripts preassign lives to them. Let a missing basename-only PAK self-check read the active frontend content after it has been validated and prepared. Allocate each model's animation pointer table through the highest animation index that model uses, and bound cache, copy and cleanup paths to that capacity. Ignore optional defense and offense entries outside the allocated model attack-type range with a log warning before accessing their tables. Yield after each newly completed model during explicit model-list or level preparation, and defer states until that preparation has cleaned up its intermediate parsers and handles. Resize repeated weapon lists and detach borrowed lists before replacing their entries. Keep selected palette-conversion reads bounded and reject missing maps or flags, while preserving unselected slots and native allocation failure callbacks. Record initialized colourmap pointer capacity separately from the historical narrow counter, and retain it through growth, model copies and owned cleanup. Release the level text array once during cleanup, retaining text and spawn-script ownership. Select historical model or entity combat factors with bounded indices, and retain periodic-damage drop defaults. Preserve early partial defense-command updates and the allocated extra model slot. Preserve fixed-table slot selection, limits and load failures in early profiles, and dynamic append/count side effects in later profiles. Preserve fixed-table alternate palette limits and persistent remap flags, and reject flag or palette allocation failures without losing prior flags. Materialize historical zero flags without palette commands, and stop model loading when selected map data cannot be converted. Preserve independent historical palette slots and shared dynamic tables, retaining borrowed maps through model and entity copies and releasing them after their last owner. Preserve the fixed colourmap selector limit in early logical profiles and the loaded-map limit in later profiles without reading missing dynamic table entries. Check destination animation capacity when retaining an animation across model changes, preserving the native fallback and timing. Preserve historical model-change reset and direct-copy routes, attacking state, preserved entity factors and synchronization frame callbacks, with owned colourmap copies and bounded animation lookup. Preserve fixed or configured model jump, grab and throw defaults, initial special-move allocation extent and the historical load-stop response when that allocation fails. Preserve native distance and group attack probabilities, always-attack availability, offscreen suppression and model throttling. Preserve native attack priority, think intervals and cooldown responses to target actions. Preserve normal-attack wait checks, probability arguments, callback order and clock arithmetic. Preserve native AI attack command arguments, switch state and load diagnostics. Preserve native jump-attack wait order, probabilities, cooldown arithmetic, movement and spawn callback order. Preserve historical platform and obstacle counter updates, resets and collision gates, with defined integer arithmetic. Preserve native zero or copied entity combat factors on spawn, and treat a missing prior model as an empty platform source. Preserve native wandering thresholds and destination arithmetic, profile-defined negative grab distances, and movement grab types, query positions and action order. Preserve native absent-model lookup diagnostics and unchanged entity state. Access script-container pointer slots with byte copies, preserving record layout, pointer values and native copy/cleanup order. Preserve the native sprite-palette selection for zero-map joining icons before its profile boundary. Preserve fixed or inherited level-set player defaults and the native regular-input port extent, retaining bounded player traversal. Preserve native frame-based or timer-based hit-pause accumulation and animation reset behavior. Preserve native animation refusal diagnostics and idle target-query context, with a stable fallback when that context is absent. Preserve frame spawn/removal order and removal drop defaults, attack follow masks, counterattack deadlines, hit-sound defaults and item callback order. Retain native attack sound initialization and literal-path versus silent hitfx handling. Reserve bounded blend-table storage for each profile's native six- or seven-mode domain. Release each sprite owner once and complete cleanup independently of alias counts. Preserve native sprite-map capacity policies, check allocation extents and retain existing storage and capacity when growth is unavailable. Validate sprite-node allocations and release partial resources without changing existing owners. Check cached sprite availability before reading metadata and ignore cache requests for absent nodes. Preserve each profile's drawing colourmap selection and palette fallback. Preserve native level-release timing for script stream buffers.",
       "topics": [
         "active-content-pak-aliases",
         "animation-draw-method-storage",
@@ -29,44 +29,59 @@
         "darwin-platform-support",
         "empty-player-slot-safety",
         "loading-screen-presentation",
+        "logical-profile-compatibility",
         "model-attack-type-bounds",
+        "packfile-state-and-resource-lifecycle",
+        "palette-conversion-safety",
         "panel-order-bounds",
         "record-dates-and-file-notices",
         "repeated-weapon-lists",
-        "session-relative-filesystem"
+        "script-container-alignment",
+        "session-relative-filesystem",
+        "sprite-map-growth",
+        "sprite-node-loading",
+        "sprite-ownership-cleanup"
       ],
       "upstream_sha256": "35efd515ce696e9b0e93157bda9ecb3b3759a613f714bad0c5a6d371e6ea6480"
     },
     "openbor.h": {
-      "distributed_sha256": "9d635ce79a3aaa9f42b3bba663f6ab04c3f5ec5c475be6e7b96049c7a8b7a5fc",
+      "distributed_sha256": "d15afb9e6e8b2a6a05a7e7f3a0005497f200ce6dfd076e569bebc1ea5f3ad5b4",
       "modified": true,
-      "summary": "Allocate collision pointer slots through the highest author-facing index used by each collection. Track each model's allocated animation-table capacity and reject lookups outside it.",
+      "summary": "Allocate collision pointer slots through the highest author-facing index used by each collection. Preserve source-defined argument counts, line capacities and script constants for each historical profile. Track each model's allocated animation-table capacity and reject lookups outside it. Track initialized colourmap allocation capacity independently of the native map counter. Reserve bounded blend-table storage for each profile's native six- or seven-mode domain. Retain source-defined frame and timer pause state within shared entity storage. Track owned script stream buffer extents.",
       "topics": [
         "animation-memory-layout",
         "compiler-warning-cleanup",
+        "logical-profile-compatibility",
         "record-dates-and-file-notices"
       ],
       "upstream_sha256": "5a2ec870ce3dc0b90af4eaa04f6f5e62a6caf7a6a78ce6d03d743a65a2fb10b9"
     },
     "openborscript.c": {
-      "distributed_sha256": "b7a5a98d45182b5a1956be133acff02e45230441051da05142af4235696560ad",
+      "distributed_sha256": "579d7bdb2631074e074645928dd0a8b3b3287db5917a88f4a818f12783072403",
       "modified": true,
-      "summary": "Keep the dormant constant-lowering diagnostic compatible with the single-value instruction layout. Derive output names from the content basename with explicit destination capacities, and reject overflowing output path joins. Compact compiler-only instruction records after resolving value ownership, preserving branch and export anchors, all mutable values and exactly-once pool cleanup. Resolve text-property names within the actual table bounds while preserving native numeric selectors.",
+      "summary": "Keep the dormant constant-lowering diagnostic compatible with the single-value instruction layout. Derive output names from the content basename with explicit destination capacities, and reject overflowing output path joins. Compact compiler-only instruction records after resolving value ownership, preserving branch and export anchors, all mutable values and exactly-once pool cleanup. Validate coordinate query arguments and animation/frame indices; retain each profile's native coordinate extent and defined empty results outside it. Preserve source-defined argument counts, line capacities and script constants for each historical profile. Retain shared interpreters through the last script reference while preserving independent variables, replacement and native callbacks. Track diagnostic comments independently so interpreter replacement can retain them. Resolve text-property names within the actual table bounds while preserving native numeric selectors. Preserve separate historical player getter/setter numeric domains and compiler mappers, the table before colourmap, and early empty-player success while retaining native setter returns. Preserve fixed-slot, dynamic-table and helper colourtable getter results with bounded allocation extents and unsigned selector arithmetic. Keep each logical entity property domain in compiled constants and runtime mapping, translate callback selectors once, and preserve getter/setter case availability. Preserve the historical colourmap target, pointer and map-index mutations, including empty fixed-table slots, with bounded accesses. Preserve historical shared-model and entity-private defense/offense reader and setter targets, bounding reader indices and missing buffers. Preserve each profile's unknown-string and empty action acceptance. Preserve early entity setter result values and conversion-dependent partial updates, with bounded scalar-name, input-array and effect-array accesses. Own replacement sprite filenames and reject missing sprite arguments, invalid frames, absent current animations and uninitialized optional weapon values. Preserve native sprite and icon getter centers and model/entity statistics values while bounding read arguments, animation frames, sprite slots and filename results. Preserve historical statistics setter targets and returns, including fractional index conversion, while rejecting missing or out-of-range arguments. Validate coordinate query arguments and animation/frame indices; retain each profile's native coordinate extent and defined empty results outside it. Use the declared staydown name-table length for lookup. Preserve each profile's fresh-script validity marker and native empty variable state. Preserve alpha-only primitive calls before draw-method inheritance and the historical blend-selector domain. Preserve each profile's draw-method property names and numeric selectors. Preserve native script stream capacity, slot reuse and buffer lifetime. Validate callback arguments, owned extents and allocation results. Transfer loaded stream buffers through aligned local outputs while preserving native record layout and results. Terminate fixed-cache stream line and argument results and preserve appended bytes with checked conversion and output allocation. Preserve native conversion, type/count-error returns, result clearing and diagnostics before admitting stream storage.",
       "topics": [
+        "logical-profile-compatibility",
         "record-dates-and-file-notices",
+        "script-list-bounds",
         "script-memory-layout",
         "script-property-names",
+        "script-shared-storage",
+        "script-streams",
+        "script-text-object-ownership",
         "script-variable-names",
         "session-relative-filesystem"
       ],
       "upstream_sha256": "3b508bbd7e5397d030ce1de864ae02af41ebd3d98326b546715980611a3588fb"
     },
     "openborscript.h": {
-      "distributed_sha256": "0ac32eab27ee0747e2f7d68c744411664ca3d176362ffd32a66f6e1e8f237e81",
+      "distributed_sha256": "7cb9592e2355e326a6ef028fa16a5aeb3716ee41598c4c43bf4b278d34294f17",
       "modified": true,
-      "summary": "Declare owned script-variable name storage.",
+      "summary": "Declare owned script-variable name storage. Preserve separate historical player getter/setter numeric domains and compiler mappers, the table before colourmap, and early empty-player success while retaining native setter returns. Declare the profile-aware stream cleanup hook for level release.",
       "topics": [
+        "logical-profile-compatibility",
         "record-dates-and-file-notices",
+        "script-shared-storage",
         "script-variable-names"
       ],
       "upstream_sha256": "bd91366909225006635bcf5500a0f5a257447254d5a053da3829a53e8c3cc6df"
@@ -120,11 +135,12 @@
       "upstream_sha256": "654557656bc299e94e0fe149175052d9721608ccd4c051a1aeff100f9448e0c6"
     },
     "source/gamelib/commands.c": {
-      "distributed_sha256": "ecaeea6344701c4256a3e2835fa085c1b535b0dfef5cc3b2a5c64166cd71ec73",
+      "distributed_sha256": "054f5ad010d52cd2b81a18e503e48668a75fd4c988ff3f39280dbdab8340b336",
       "modified": true,
       "summary": "Convert the command-list lookup result to its command enumeration explicitly instead of through a plain pointer cast.",
       "topics": [
         "compiler-warning-cleanup",
+        "logical-profile-compatibility",
         "record-dates-and-file-notices"
       ],
       "upstream_sha256": "82c68250e118f083a84396fd8c9cae51b6ef1f517820bd109d35d528c9a11c51"
@@ -136,10 +152,12 @@
       "upstream_sha256": "faca1c26375a5a5c0b6769b843aaf64eecf8c498792b06c4e7d052076fe8fb1d"
     },
     "source/gamelib/draw.c": {
-      "distributed_sha256": "5dcb7f2650d93a739f37d23f9b23128c8371d295ae8fed7dd8e40d31db27267c",
+      "distributed_sha256": "8dee147fad77759a3c14b904896e16a2445c52d8fceb73c9a602d9ffb5e5de5c",
       "modified": true,
-      "summary": "Route circle drawing through the port's integer rasterizer.",
+      "summary": "Route circle drawing through the port's integer rasterizer. Resolve palette blend tables within the selected profile's native domain, retaining missing-table fallback. Ignore point coordinates outside screen bounds while preserving valid pixels.",
       "topics": [
+        "logical-profile-compatibility",
+        "primitive-coordinate-bounds",
         "record-dates-and-file-notices",
         "replacement-implementations-and-attribution"
       ],
@@ -152,15 +170,23 @@
       "upstream_sha256": "b9bfe54e0350a25e0fe535883c903859656f1a14fbeffde964b536d6d080987b"
     },
     "source/gamelib/draw16.c": {
-      "distributed_sha256": "6783eddcd5898dd2f9ce698ece6e70a83af7dfb5144611d57a5e206c4d6730e9",
-      "modified": false,
-      "topics": [],
+      "distributed_sha256": "d6b39eb109e82165d129c1ffd309d17abbd3a92a517e4662dcc7b4784f95a285",
+      "modified": true,
+      "summary": "Validate point coordinates before writing native 16-bit pixels.",
+      "topics": [
+        "primitive-coordinate-bounds",
+        "record-dates-and-file-notices"
+      ],
       "upstream_sha256": "6783eddcd5898dd2f9ce698ece6e70a83af7dfb5144611d57a5e206c4d6730e9"
     },
     "source/gamelib/draw32.c": {
-      "distributed_sha256": "efa6bdf208fdfb481c4fb8d3715e4a6964d6cc301d0a69d45ce38b13bae7a04f",
-      "modified": false,
-      "topics": [],
+      "distributed_sha256": "f7f03ee2a5955e8a77f7dbe62b07247f3ed1439dc27905ab0babbd459aa08d59",
+      "modified": true,
+      "summary": "Validate point coordinates before writing native 32-bit pixels.",
+      "topics": [
+        "primitive-coordinate-bounds",
+        "record-dates-and-file-notices"
+      ],
       "upstream_sha256": "efa6bdf208fdfb481c4fb8d3715e4a6964d6cc301d0a69d45ce38b13bae7a04f"
     },
     "source/gamelib/filecache.c": {
@@ -180,12 +206,13 @@
       "upstream_sha256": "53b0638535bc6ed2efeea34bd8fea1532bef57085a95be374f6a87e5831de021"
     },
     "source/gamelib/font.c": {
-      "distributed_sha256": "e6652a7f4aa91f5dd7445d05f6cf61ffcb6ab0a80df862759fdddda899d01625",
+      "distributed_sha256": "fe281734fd2c15d5348aff6d64c708936f16a4ec69c1d4a2cd6cfa9c5e22a7b8",
       "modified": true,
       "summary": "Validate indexed palette ownership and capacity, and retain the first glyph's shared palette when it is empty; preserve native per-glyph raster output.",
       "topics": [
         "encoded-sprite-safety",
-        "record-dates-and-file-notices"
+        "record-dates-and-file-notices",
+        "script-text-object-ownership"
       ],
       "upstream_sha256": "b3560f53d7534234b1c40bf3427b14eb6473c71e46d459b147540b7f857ecdce"
     },
@@ -196,11 +223,13 @@
       "upstream_sha256": "95a23ea831bf158538c56b8f3f630c933191a29744f12aa493a98fb437fe7a94"
     },
     "source/gamelib/loadimg.c": {
-      "distributed_sha256": "655135fe34b5bb91ddfff510324bd4c168d447efb6fccc3a73832efd6fba97c1",
+      "distributed_sha256": "b59f1e227199867fc8800ec66eed537a1e0c9eaace4dafd38a67fb529e8882a9",
       "modified": true,
-      "summary": "Validate legacy PCX sprite headers, read uncompressed indexed PCX scanlines, and represent RIFF/WAVE paths used as animation frames with an empty frame.",
+      "summary": "Validate legacy PCX sprite headers, read uncompressed indexed PCX scanlines, and represent RIFF/WAVE paths used as animation frames with an empty frame. Keep bitmap row reads within the requested output width. Select the native image dimensions for each profile.",
       "topics": [
+        "bitmap-row-bounds",
         "image-loader-safety",
+        "logical-profile-compatibility",
         "reconstructible-resources",
         "record-dates-and-file-notices"
       ],
@@ -262,15 +291,24 @@
       "upstream_sha256": "e4b104120b927aa50e200f37729fc55d251dd9120c0962033ca1a00cdbe5d525"
     },
     "source/gamelib/pixelformat.c": {
-      "distributed_sha256": "43f47de33cf9654fc68987c6420f2cf2c48c3ab7fd3af7c37f40c0336d562a90",
-      "modified": false,
-      "topics": [],
+      "distributed_sha256": "e486b1c0bbcf6a328e27f081769ff1f05dec255a37f2461d854de92305677427",
+      "modified": true,
+      "summary": "Bound clip endpoints without signed overflow while retaining native color and draw-method initialization. Preserve native colour-channel, tint and base-colour ordering across historical blend domains. Bound selected table and tint indices.",
+      "topics": [
+        "logical-profile-compatibility",
+        "record-dates-and-file-notices"
+      ],
       "upstream_sha256": "43f47de33cf9654fc68987c6420f2cf2c48c3ab7fd3af7c37f40c0336d562a90"
     },
     "source/gamelib/screen.c": {
-      "distributed_sha256": "351591a70204fc18f2093791ef0ffb1800bcee4d7723ab61f128f6b77320c558",
-      "modified": false,
-      "topics": [],
+      "distributed_sha256": "53786f82f8475ea3215215ce980b594a17b7d2de5958a901814d0b29177bb5b3",
+      "modified": true,
+      "summary": "Match each profile's native screen centering and preserve existing compiler cleanup. Bound screen blend selectors and use transparent copy when an indexed table is unavailable.",
+      "topics": [
+        "logical-profile-compatibility",
+        "record-dates-and-file-notices",
+        "screen-blend-bounds"
+      ],
       "upstream_sha256": "351591a70204fc18f2093791ef0ffb1800bcee4d7723ab61f128f6b77320c558"
     },
     "source/gamelib/screen.h": {
@@ -286,9 +324,13 @@
       "upstream_sha256": "3634f5c8c74cfd85742aad4f993c724d22ce139fd36eb3604577287459e8cbde"
     },
     "source/gamelib/screen32.c": {
-      "distributed_sha256": "df9f61e8380be5a7dbb1fa00781ea5470557653ae80f8aa29feeae532173ef09",
-      "modified": false,
-      "topics": [],
+      "distributed_sha256": "2f557713509c1d24c738861c6820b4adf22755db61eb25a0d5a4e464033946c9",
+      "modified": true,
+      "summary": "Match each profile's native transparency when blending an indexed screen into 32-bit pixels.",
+      "topics": [
+        "logical-profile-compatibility",
+        "record-dates-and-file-notices"
+      ],
       "upstream_sha256": "df9f61e8380be5a7dbb1fa00781ea5470557653ae80f8aa29feeae532173ef09"
     },
     "source/gamelib/soundmix.c": {
@@ -309,11 +351,12 @@
       "upstream_sha256": "088583c2888f252a58eee6b93737df23c2898dcc52f5e1657e3ffbb3f0397b1a"
     },
     "source/gamelib/sprite.c": {
-      "distributed_sha256": "b9f63203e2cf5e03d98ad7d3471ab400f7d44cdb54c65e2ee15237bf34424bff",
+      "distributed_sha256": "a2db336e604082b27b64797a8435aa5750faa06615ffe9cb84a77cbbdaa53fbc",
       "modified": true,
-      "summary": "Declare initialized encoded sprite-body ranges and source crops for exact reconstruction proof, retaining headers, palettes and mutable changes.",
+      "summary": "Declare initialized encoded sprite-body ranges and source crops for exact reconstruction proof, retaining headers, palettes and mutable changes. Resolve palette blend tables within the selected profile's native domain, retaining missing-table fallback. Preserve each profile's centered-sprite drawing route and native remap/blend ordering.",
       "topics": [
         "encoded-sprite-safety",
+        "logical-profile-compatibility",
         "reconstructible-resources",
         "record-dates-and-file-notices"
       ],
@@ -326,9 +369,13 @@
       "upstream_sha256": "112ff89177d2c328e654443c3eb77d7e83b8c1d9f22fb48fac1face09e776562"
     },
     "source/gamelib/spriteq.c": {
-      "distributed_sha256": "bed8373f0376107367f0bd7d3c41e3aabe2e3492bf0ed8d09c5aebe5888020ad",
-      "modified": false,
-      "topics": [],
+      "distributed_sha256": "a4452c7ec3e485c042ea763786357ec686cb438af724fe253dd746b542765913",
+      "modified": true,
+      "summary": "Keep unavailable sprite images out of the drawing queue while retaining native requests, ordering and copied draw methods.",
+      "topics": [
+        "record-dates-and-file-notices",
+        "unavailable-sprite-images"
+      ],
       "upstream_sha256": "bed8373f0376107367f0bd7d3c41e3aabe2e3492bf0ed8d09c5aebe5888020ad"
     },
     "source/gamelib/spriteq.h": {
@@ -356,11 +403,12 @@
       "upstream_sha256": "3d6178293aaec327311528ab0ada0b8cad4443d4c703803a05b189105c86e861"
     },
     "source/gamelib/transform.c": {
-      "distributed_sha256": "164a7cdec776e8782dfe2bb1ef822006ce0c91fb74e4718412202957ce493949",
+      "distributed_sha256": "52f2973f433eb08e1caaa9883c1c03b489bcc305d6756472704a5694d47aecd7",
       "modified": true,
-      "summary": "Provide ordinary external C linkage for the native transform helpers and remove discarded comma reads without changing raster calculations.",
+      "summary": "Provide ordinary external C linkage for the native transform helpers and remove discarded comma reads without changing raster calculations. Resolve palette blend tables within the selected profile's native domain, retaining missing-table fallback. Preserve each profile's indexed remap, fill and blend precedence. Test source transparency before fill replacement.",
       "topics": [
         "compiler-warning-cleanup",
+        "logical-profile-compatibility",
         "record-dates-and-file-notices"
       ],
       "upstream_sha256": "938dfdc3e9729bd56192e4bb9303cb8cdfef5373ce9111ef9bad62a1f25bc1d0"
@@ -384,9 +432,14 @@
       "upstream_sha256": "1edaa8fe5251e08c9a435e095b0c204e3c1aee1a26d9b55e82625f5a40c6c5a3"
     },
     "source/gamelib/types.h": {
-      "distributed_sha256": "d709eaa4185e5240517be135e2ca313b92f6e7589a456bb204d00aa48ff0d9a1",
-      "modified": false,
-      "topics": [],
+      "distributed_sha256": "56e851acfdb9db7535f91db1fc1172658ed9b0d6a0cc5755886079738e32137e",
+      "modified": true,
+      "summary": "Match drawing-method typedef alignment to packed owning records without changing fields, offsets or sizes. Reserve bounded blend-table storage for each profile's native six- or seven-mode domain.",
+      "topics": [
+        "drawing-record-alignment",
+        "logical-profile-compatibility",
+        "record-dates-and-file-notices"
+      ],
       "upstream_sha256": "d709eaa4185e5240517be135e2ca313b92f6e7589a456bb204d00aa48ff0d9a1"
     },
     "source/gfxlib/gfxtypes.h": {
@@ -608,15 +661,24 @@
       "upstream_sha256": "a0c803233d6104fe010a331b3f673ae7411405cb9d060f1b48594ed4a1117c18"
     },
     "source/scriptlib/ScriptVariant.c": {
-      "distributed_sha256": "4f156c2c3735776367a8633a33eb0c33109ce64ec159e931c0965b636ad9601f",
-      "modified": false,
-      "topics": [],
+      "distributed_sha256": "639e3db5cf161c3b0ec8f72c5a6a87e80d3e6ba684026b2442329636a1b9b017",
+      "modified": true,
+      "summary": "Select the native 6330 decimal negation fallthrough. Preserve native signed32 integer conversion and truncated decimal results; refuse unavailable arguments and non-representable decimal results before conversion without changing result storage.",
+      "topics": [
+        "record-dates-and-file-notices",
+        "script-integer-conversion",
+        "script-text-object-ownership"
+      ],
       "upstream_sha256": "4f156c2c3735776367a8633a33eb0c33109ce64ec159e931c0965b636ad9601f"
     },
     "source/scriptlib/ScriptVariant.h": {
-      "distributed_sha256": "34c9f30dcfeb3b206fe9cfbe8ee331ff8280bc5e9f83a9d21be1587bea396d18",
-      "modified": false,
-      "topics": [],
+      "distributed_sha256": "cac561f6580bfc5abb6054f807d90f47f8bcda27fd8a99e5a712580200232d99",
+      "modified": true,
+      "summary": "Declare the cache and variant helpers as ordinary functions; the header only declared them inline and the definitions live in ScriptVariant.c.",
+      "topics": [
+        "record-dates-and-file-notices",
+        "script-text-object-ownership"
+      ],
       "upstream_sha256": "34c9f30dcfeb3b206fe9cfbe8ee331ff8280bc5e9f83a9d21be1587bea396d18"
     },
     "source/scriptlib/Stack.c": {
@@ -690,13 +752,14 @@
       "upstream_sha256": "afba2d9766d6b24437982791f9bbe1ed97be5adc8b81f9a5172170e639a3c3ba"
     },
     "source/utils.c": {
-      "distributed_sha256": "69fcdbe9d92aa0288af23b05d48f8232a7d896502ec827f93e143493cda2dc79",
+      "distributed_sha256": "684f86d1e01401d5816262827f98ec4abbd10f41c38ae312e73ffa28fca88745",
       "modified": true,
-      "summary": "Enable libretro platform and PNG helper declarations, the POSIX directory and mkdir forms macOS also uses, and the standard allocation declarations instead of the glibc-only <malloc.h>. Derive output names from the content basename with explicit destination capacities, and reject overflowing output path joins.",
+      "summary": "Enable libretro platform and PNG helper declarations, the POSIX directory and mkdir forms macOS also uses, and the standard allocation declarations instead of the glibc-only <malloc.h>. Derive output names from the content basename with explicit destination capacities, and reject overflowing output path joins. Bound adjacent string-table reads while preserving the original search order and duplicate preference.",
       "topics": [
         "darwin-platform-support",
         "platform-integration",
         "record-dates-and-file-notices",
+        "script-list-bounds",
         "session-relative-filesystem"
       ],
       "upstream_sha256": "a06479c240d38796be466530f652d91356d6c35d967b130b54e6b4a4f97cdf02"

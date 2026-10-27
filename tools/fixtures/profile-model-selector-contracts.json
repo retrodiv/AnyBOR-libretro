@@ -1,0 +1,852 @@
+{
+  "schema": 1,
+  "boundary_controls": [
+    3821,
+    3822
+  ],
+  "sources": [
+    {
+      "revision": 3761,
+      "commit": "16814fdf39fdcdd78cb59f3d70748f1dc023a24f",
+      "script_source_sha256": "8be379b6f2f8522f6efff03c820f0e58af6aef39942c2347c52d34515381543e",
+      "variant_header_sha256": "34c9f30dcfeb3b206fe9cfbe8ee331ff8280bc5e9f83a9d21be1587bea396d18",
+      "name_lookup_selector": false,
+      "selector_expression": "varlist[0]->lVal",
+      "source_has_index_bounds": false,
+      "getter_case1_falls_into_name": true,
+      "setter_cases0to3_fall_into_selectable": true,
+      "getter_minimum_arguments": 2,
+      "setter_minimum_check_in_source": 2,
+      "function_sha256": {
+        "getter": "26b2174fc80800a007d3fd95ae41994168a17da1f9d259248c2e1afd260cfb16",
+        "setter": "859493f9004680a79845b5591691408f702c94c7d9ba8eb491aa4817bf87651e"
+      }
+    },
+    {
+      "revision": 3769,
+      "commit": "14ac619f7d9f21bf1ac331932308c3ced4a65615",
+      "script_source_sha256": "1809deb5a0c88f58797e6b4d518725ead7b1da59f61a1380f39290b7ed7f0a66",
+      "variant_header_sha256": "34c9f30dcfeb3b206fe9cfbe8ee331ff8280bc5e9f83a9d21be1587bea396d18",
+      "name_lookup_selector": false,
+      "selector_expression": "varlist[0]->lVal",
+      "source_has_index_bounds": false,
+      "getter_case1_falls_into_name": true,
+      "setter_cases0to3_fall_into_selectable": true,
+      "getter_minimum_arguments": 2,
+      "setter_minimum_check_in_source": 2,
+      "function_sha256": {
+        "getter": "26b2174fc80800a007d3fd95ae41994168a17da1f9d259248c2e1afd260cfb16",
+        "setter": "859493f9004680a79845b5591691408f702c94c7d9ba8eb491aa4817bf87651e"
+      }
+    },
+    {
+      "revision": 3773,
+      "commit": "e39bfa21d708f2f7a586085d8689bff94440a104",
+      "script_source_sha256": "1809deb5a0c88f58797e6b4d518725ead7b1da59f61a1380f39290b7ed7f0a66",
+      "variant_header_sha256": "34c9f30dcfeb3b206fe9cfbe8ee331ff8280bc5e9f83a9d21be1587bea396d18",
+      "name_lookup_selector": false,
+      "selector_expression": "varlist[0]->lVal",
+      "source_has_index_bounds": false,
+      "getter_case1_falls_into_name": true,
+      "setter_cases0to3_fall_into_selectable": true,
+      "getter_minimum_arguments": 2,
+      "setter_minimum_check_in_source": 2,
+      "function_sha256": {
+        "getter": "26b2174fc80800a007d3fd95ae41994168a17da1f9d259248c2e1afd260cfb16",
+        "setter": "859493f9004680a79845b5591691408f702c94c7d9ba8eb491aa4817bf87651e"
+      }
+    },
+    {
+      "revision": 3780,
+      "commit": "760cb0e6fdbda9d8a4c426f00c84623349ca5b17",
+      "script_source_sha256": "1809deb5a0c88f58797e6b4d518725ead7b1da59f61a1380f39290b7ed7f0a66",
+      "variant_header_sha256": "34c9f30dcfeb3b206fe9cfbe8ee331ff8280bc5e9f83a9d21be1587bea396d18",
+      "name_lookup_selector": false,
+      "selector_expression": "varlist[0]->lVal",
+      "source_has_index_bounds": false,
+      "getter_case1_falls_into_name": true,
+      "setter_cases0to3_fall_into_selectable": true,
+      "getter_minimum_arguments": 2,
+      "setter_minimum_check_in_source": 2,
+      "function_sha256": {
+        "getter": "26b2174fc80800a007d3fd95ae41994168a17da1f9d259248c2e1afd260cfb16",
+        "setter": "859493f9004680a79845b5591691408f702c94c7d9ba8eb491aa4817bf87651e"
+      }
+    },
+    {
+      "revision": 3783,
+      "commit": "5da3e255b2783079872a57247b020090e307df0d",
+      "script_source_sha256": "60cbc7a3936d6e1914198357bac269e2bebe68d50b61b6f1d1edd5e2fc8942cc",
+      "variant_header_sha256": "34c9f30dcfeb3b206fe9cfbe8ee331ff8280bc5e9f83a9d21be1587bea396d18",
+      "name_lookup_selector": false,
+      "selector_expression": "varlist[0]->lVal",
+      "source_has_index_bounds": false,
+      "getter_case1_falls_into_name": true,
+      "setter_cases0to3_fall_into_selectable": true,
+      "getter_minimum_arguments": 2,
+      "setter_minimum_check_in_source": 2,
+      "function_sha256": {
+        "getter": "26b2174fc80800a007d3fd95ae41994168a17da1f9d259248c2e1afd260cfb16",
+        "setter": "859493f9004680a79845b5591691408f702c94c7d9ba8eb491aa4817bf87651e"
+      }
+    },
+    {
+      "revision": 3789,
+      "commit": "cc5166a117318987f638b4b6c6d1034384409372",
+      "script_source_sha256": "b74c8f932133d4552d7fb521118a7a4c85649ae9974b6112cee66b8dc4f73338",
+      "variant_header_sha256": "34c9f30dcfeb3b206fe9cfbe8ee331ff8280bc5e9f83a9d21be1587bea396d18",
+      "name_lookup_selector": false,
+      "selector_expression": "varlist[0]->lVal",
+      "source_has_index_bounds": false,
+      "getter_case1_falls_into_name": true,
+      "setter_cases0to3_fall_into_selectable": true,
+      "getter_minimum_arguments": 2,
+      "setter_minimum_check_in_source": 2,
+      "function_sha256": {
+        "getter": "26b2174fc80800a007d3fd95ae41994168a17da1f9d259248c2e1afd260cfb16",
+        "setter": "859493f9004680a79845b5591691408f702c94c7d9ba8eb491aa4817bf87651e"
+      }
+    },
+    {
+      "revision": 3793,
+      "commit": "edf234656cae88b078718661a2bd0c42090f0687",
+      "script_source_sha256": "b74c8f932133d4552d7fb521118a7a4c85649ae9974b6112cee66b8dc4f73338",
+      "variant_header_sha256": "34c9f30dcfeb3b206fe9cfbe8ee331ff8280bc5e9f83a9d21be1587bea396d18",
+      "name_lookup_selector": false,
+      "selector_expression": "varlist[0]->lVal",
+      "source_has_index_bounds": false,
+      "getter_case1_falls_into_name": true,
+      "setter_cases0to3_fall_into_selectable": true,
+      "getter_minimum_arguments": 2,
+      "setter_minimum_check_in_source": 2,
+      "function_sha256": {
+        "getter": "26b2174fc80800a007d3fd95ae41994168a17da1f9d259248c2e1afd260cfb16",
+        "setter": "859493f9004680a79845b5591691408f702c94c7d9ba8eb491aa4817bf87651e"
+      }
+    },
+    {
+      "revision": 3797,
+      "commit": "4490ee5d18ffcc7604e95cd4910dadf6191e694a",
+      "script_source_sha256": "80fd3a60f746fb3f68fade96931bcb1611aa7c39dd7afa72e0832c9f9082baf8",
+      "variant_header_sha256": "34c9f30dcfeb3b206fe9cfbe8ee331ff8280bc5e9f83a9d21be1587bea396d18",
+      "name_lookup_selector": false,
+      "selector_expression": "varlist[0]->lVal",
+      "source_has_index_bounds": false,
+      "getter_case1_falls_into_name": true,
+      "setter_cases0to3_fall_into_selectable": true,
+      "getter_minimum_arguments": 2,
+      "setter_minimum_check_in_source": 2,
+      "function_sha256": {
+        "getter": "26b2174fc80800a007d3fd95ae41994168a17da1f9d259248c2e1afd260cfb16",
+        "setter": "859493f9004680a79845b5591691408f702c94c7d9ba8eb491aa4817bf87651e"
+      }
+    },
+    {
+      "revision": 3805,
+      "commit": "2abee79303b17b269e88cd986ab78dda2bd526d6",
+      "script_source_sha256": "bd53484a809e9100a5e40a74a5f91d9d50207fa7befc9c35679c1582035030bd",
+      "variant_header_sha256": "34c9f30dcfeb3b206fe9cfbe8ee331ff8280bc5e9f83a9d21be1587bea396d18",
+      "name_lookup_selector": false,
+      "selector_expression": "varlist[0]->lVal",
+      "source_has_index_bounds": false,
+      "getter_case1_falls_into_name": true,
+      "setter_cases0to3_fall_into_selectable": true,
+      "getter_minimum_arguments": 2,
+      "setter_minimum_check_in_source": 2,
+      "function_sha256": {
+        "getter": "26b2174fc80800a007d3fd95ae41994168a17da1f9d259248c2e1afd260cfb16",
+        "setter": "859493f9004680a79845b5591691408f702c94c7d9ba8eb491aa4817bf87651e"
+      }
+    },
+    {
+      "revision": 3806,
+      "commit": "06921ca8e1b3ef7392f39534b2584edbb8732454",
+      "script_source_sha256": "f2a31f402a63b186bd0044235b6ecf234e45da7ffbfd83560e0d8220c8e56871",
+      "variant_header_sha256": "34c9f30dcfeb3b206fe9cfbe8ee331ff8280bc5e9f83a9d21be1587bea396d18",
+      "name_lookup_selector": false,
+      "selector_expression": "varlist[0]->lVal",
+      "source_has_index_bounds": false,
+      "getter_case1_falls_into_name": true,
+      "setter_cases0to3_fall_into_selectable": true,
+      "getter_minimum_arguments": 2,
+      "setter_minimum_check_in_source": 2,
+      "function_sha256": {
+        "getter": "26b2174fc80800a007d3fd95ae41994168a17da1f9d259248c2e1afd260cfb16",
+        "setter": "859493f9004680a79845b5591691408f702c94c7d9ba8eb491aa4817bf87651e"
+      }
+    },
+    {
+      "revision": 3812,
+      "commit": "47644bfb79de4b5e304f21578d4e065a379720f0",
+      "script_source_sha256": "61093f840768e1ef8eb6013f294276d4dfe96e2a001d38b33eb4a4bf8315471a",
+      "variant_header_sha256": "34c9f30dcfeb3b206fe9cfbe8ee331ff8280bc5e9f83a9d21be1587bea396d18",
+      "name_lookup_selector": false,
+      "selector_expression": "varlist[0]->lVal",
+      "source_has_index_bounds": false,
+      "getter_case1_falls_into_name": true,
+      "setter_cases0to3_fall_into_selectable": true,
+      "getter_minimum_arguments": 2,
+      "setter_minimum_check_in_source": 2,
+      "function_sha256": {
+        "getter": "26b2174fc80800a007d3fd95ae41994168a17da1f9d259248c2e1afd260cfb16",
+        "setter": "859493f9004680a79845b5591691408f702c94c7d9ba8eb491aa4817bf87651e"
+      }
+    },
+    {
+      "revision": 3813,
+      "commit": "a7252885dfb67a52ec1e6b6cc9e636b7a05976d6",
+      "script_source_sha256": "bfd1199710a0985778700ed58e4d3de444e39a912704374074d20319ccb371e5",
+      "variant_header_sha256": "34c9f30dcfeb3b206fe9cfbe8ee331ff8280bc5e9f83a9d21be1587bea396d18",
+      "name_lookup_selector": false,
+      "selector_expression": "varlist[0]->lVal",
+      "source_has_index_bounds": false,
+      "getter_case1_falls_into_name": true,
+      "setter_cases0to3_fall_into_selectable": true,
+      "getter_minimum_arguments": 2,
+      "setter_minimum_check_in_source": 2,
+      "function_sha256": {
+        "getter": "26b2174fc80800a007d3fd95ae41994168a17da1f9d259248c2e1afd260cfb16",
+        "setter": "859493f9004680a79845b5591691408f702c94c7d9ba8eb491aa4817bf87651e"
+      }
+    },
+    {
+      "revision": 3814,
+      "commit": "46d398cfb2e75a142c7bf6dc38cc2f9603b57ecf",
+      "script_source_sha256": "aa67d0e49c11433ccba590b80090ead8c1c88b8d2471aefbdfbedb32a9d9ee77",
+      "variant_header_sha256": "34c9f30dcfeb3b206fe9cfbe8ee331ff8280bc5e9f83a9d21be1587bea396d18",
+      "name_lookup_selector": false,
+      "selector_expression": "varlist[0]->lVal",
+      "source_has_index_bounds": false,
+      "getter_case1_falls_into_name": true,
+      "setter_cases0to3_fall_into_selectable": true,
+      "getter_minimum_arguments": 2,
+      "setter_minimum_check_in_source": 2,
+      "function_sha256": {
+        "getter": "26b2174fc80800a007d3fd95ae41994168a17da1f9d259248c2e1afd260cfb16",
+        "setter": "859493f9004680a79845b5591691408f702c94c7d9ba8eb491aa4817bf87651e"
+      }
+    },
+    {
+      "revision": 3815,
+      "commit": "b506825d312503980fe064235535c713b7454b38",
+      "script_source_sha256": "99de040e59497e479975ddcd6387540a9115d9a304c69ef8ef9a968598e770a1",
+      "variant_header_sha256": "34c9f30dcfeb3b206fe9cfbe8ee331ff8280bc5e9f83a9d21be1587bea396d18",
+      "name_lookup_selector": false,
+      "selector_expression": "varlist[0]->lVal",
+      "source_has_index_bounds": false,
+      "getter_case1_falls_into_name": true,
+      "setter_cases0to3_fall_into_selectable": true,
+      "getter_minimum_arguments": 2,
+      "setter_minimum_check_in_source": 2,
+      "function_sha256": {
+        "getter": "26b2174fc80800a007d3fd95ae41994168a17da1f9d259248c2e1afd260cfb16",
+        "setter": "859493f9004680a79845b5591691408f702c94c7d9ba8eb491aa4817bf87651e"
+      }
+    },
+    {
+      "revision": 3818,
+      "commit": "cae686392d0b5e52563e9dd191801193796cd4a5",
+      "script_source_sha256": "0cd1427fe582d5cc61b7e00de205d86dd458e3e1b1eb7a77a497fdb8932d3591",
+      "variant_header_sha256": "34c9f30dcfeb3b206fe9cfbe8ee331ff8280bc5e9f83a9d21be1587bea396d18",
+      "name_lookup_selector": false,
+      "selector_expression": "varlist[0]->lVal",
+      "source_has_index_bounds": false,
+      "getter_case1_falls_into_name": true,
+      "setter_cases0to3_fall_into_selectable": true,
+      "getter_minimum_arguments": 2,
+      "setter_minimum_check_in_source": 2,
+      "function_sha256": {
+        "getter": "26b2174fc80800a007d3fd95ae41994168a17da1f9d259248c2e1afd260cfb16",
+        "setter": "859493f9004680a79845b5591691408f702c94c7d9ba8eb491aa4817bf87651e"
+      }
+    },
+    {
+      "revision": 3819,
+      "commit": "c04aefaaf07dc6de6c00d88d847a7dd1fca78384",
+      "script_source_sha256": "0cd1427fe582d5cc61b7e00de205d86dd458e3e1b1eb7a77a497fdb8932d3591",
+      "variant_header_sha256": "34c9f30dcfeb3b206fe9cfbe8ee331ff8280bc5e9f83a9d21be1587bea396d18",
+      "name_lookup_selector": false,
+      "selector_expression": "varlist[0]->lVal",
+      "source_has_index_bounds": false,
+      "getter_case1_falls_into_name": true,
+      "setter_cases0to3_fall_into_selectable": true,
+      "getter_minimum_arguments": 2,
+      "setter_minimum_check_in_source": 2,
+      "function_sha256": {
+        "getter": "26b2174fc80800a007d3fd95ae41994168a17da1f9d259248c2e1afd260cfb16",
+        "setter": "859493f9004680a79845b5591691408f702c94c7d9ba8eb491aa4817bf87651e"
+      }
+    },
+    {
+      "revision": 3820,
+      "commit": "ee9b34fd1f52d7edb3c4604b39dc4efe2bb1b6ab",
+      "script_source_sha256": "5b330cdc7547a1014d11355fd904add5738c49ae3abb31160947d718d92f60c8",
+      "variant_header_sha256": "34c9f30dcfeb3b206fe9cfbe8ee331ff8280bc5e9f83a9d21be1587bea396d18",
+      "name_lookup_selector": false,
+      "selector_expression": "varlist[0]->lVal",
+      "source_has_index_bounds": false,
+      "getter_case1_falls_into_name": true,
+      "setter_cases0to3_fall_into_selectable": true,
+      "getter_minimum_arguments": 2,
+      "setter_minimum_check_in_source": 2,
+      "function_sha256": {
+        "getter": "26b2174fc80800a007d3fd95ae41994168a17da1f9d259248c2e1afd260cfb16",
+        "setter": "859493f9004680a79845b5591691408f702c94c7d9ba8eb491aa4817bf87651e"
+      }
+    },
+    {
+      "revision": 3821,
+      "commit": "651c34ffec57b78a8df7ae24898d8e369978d398",
+      "script_source_sha256": "e606b3cd0070c6e95be3384aa73c70214b52bf0db292a66887f581bfb0cd5990",
+      "variant_header_sha256": "34c9f30dcfeb3b206fe9cfbe8ee331ff8280bc5e9f83a9d21be1587bea396d18",
+      "name_lookup_selector": false,
+      "selector_expression": "varlist[0]->lVal",
+      "source_has_index_bounds": false,
+      "getter_case1_falls_into_name": true,
+      "setter_cases0to3_fall_into_selectable": true,
+      "getter_minimum_arguments": 2,
+      "setter_minimum_check_in_source": 2,
+      "function_sha256": {
+        "getter": "26b2174fc80800a007d3fd95ae41994168a17da1f9d259248c2e1afd260cfb16",
+        "setter": "859493f9004680a79845b5591691408f702c94c7d9ba8eb491aa4817bf87651e"
+      }
+    },
+    {
+      "revision": 3822,
+      "commit": "7ddd15b4981ea7b55f1851db926bc86276632b8c",
+      "script_source_sha256": "df077cee68fa6491c8835b1dd86326179ca1f36112b0dc73d55b41300cb3a722",
+      "variant_header_sha256": "34c9f30dcfeb3b206fe9cfbe8ee331ff8280bc5e9f83a9d21be1587bea396d18",
+      "name_lookup_selector": true,
+      "selector_expression": "varlist[0]->vt==VT_INTEGER?varlist[0]->lVal:get_cached_model_index(StrCache_Get(varlist[0]->strVal))",
+      "source_has_index_bounds": true,
+      "getter_case1_falls_into_name": true,
+      "setter_cases0to3_fall_into_selectable": true,
+      "getter_minimum_arguments": 2,
+      "setter_minimum_check_in_source": 2,
+      "function_sha256": {
+        "getter": "869efdc5d2c153651697c8d7714ade020926b247fef70e3853a382de3748e800",
+        "setter": "db98044634eecaea79e7b2c856fe02b53bb12983046bbc16b21d791b4ec95e00"
+      }
+    },
+    {
+      "revision": 3823,
+      "commit": "825e094e7417162e7787be0bdb77512d82e30fdd",
+      "script_source_sha256": "df077cee68fa6491c8835b1dd86326179ca1f36112b0dc73d55b41300cb3a722",
+      "variant_header_sha256": "34c9f30dcfeb3b206fe9cfbe8ee331ff8280bc5e9f83a9d21be1587bea396d18",
+      "name_lookup_selector": true,
+      "selector_expression": "varlist[0]->vt==VT_INTEGER?varlist[0]->lVal:get_cached_model_index(StrCache_Get(varlist[0]->strVal))",
+      "source_has_index_bounds": true,
+      "getter_case1_falls_into_name": true,
+      "setter_cases0to3_fall_into_selectable": true,
+      "getter_minimum_arguments": 2,
+      "setter_minimum_check_in_source": 2,
+      "function_sha256": {
+        "getter": "869efdc5d2c153651697c8d7714ade020926b247fef70e3853a382de3748e800",
+        "setter": "db98044634eecaea79e7b2c856fe02b53bb12983046bbc16b21d791b4ec95e00"
+      }
+    },
+    {
+      "revision": 3824,
+      "commit": "e260635df5095577fb729555cd5c08ecce37316d",
+      "script_source_sha256": "df077cee68fa6491c8835b1dd86326179ca1f36112b0dc73d55b41300cb3a722",
+      "variant_header_sha256": "34c9f30dcfeb3b206fe9cfbe8ee331ff8280bc5e9f83a9d21be1587bea396d18",
+      "name_lookup_selector": true,
+      "selector_expression": "varlist[0]->vt==VT_INTEGER?varlist[0]->lVal:get_cached_model_index(StrCache_Get(varlist[0]->strVal))",
+      "source_has_index_bounds": true,
+      "getter_case1_falls_into_name": true,
+      "setter_cases0to3_fall_into_selectable": true,
+      "getter_minimum_arguments": 2,
+      "setter_minimum_check_in_source": 2,
+      "function_sha256": {
+        "getter": "869efdc5d2c153651697c8d7714ade020926b247fef70e3853a382de3748e800",
+        "setter": "db98044634eecaea79e7b2c856fe02b53bb12983046bbc16b21d791b4ec95e00"
+      }
+    },
+    {
+      "revision": 3825,
+      "commit": "1f5678eca72888f834c27f9887b4bc2d81412ffc",
+      "script_source_sha256": "df077cee68fa6491c8835b1dd86326179ca1f36112b0dc73d55b41300cb3a722",
+      "variant_header_sha256": "34c9f30dcfeb3b206fe9cfbe8ee331ff8280bc5e9f83a9d21be1587bea396d18",
+      "name_lookup_selector": true,
+      "selector_expression": "varlist[0]->vt==VT_INTEGER?varlist[0]->lVal:get_cached_model_index(StrCache_Get(varlist[0]->strVal))",
+      "source_has_index_bounds": true,
+      "getter_case1_falls_into_name": true,
+      "setter_cases0to3_fall_into_selectable": true,
+      "getter_minimum_arguments": 2,
+      "setter_minimum_check_in_source": 2,
+      "function_sha256": {
+        "getter": "869efdc5d2c153651697c8d7714ade020926b247fef70e3853a382de3748e800",
+        "setter": "db98044634eecaea79e7b2c856fe02b53bb12983046bbc16b21d791b4ec95e00"
+      }
+    },
+    {
+      "revision": 3826,
+      "commit": "7f8db3e494b600125795cae3406bce3b0bda3216",
+      "script_source_sha256": "c08bfdf3b4910c7ed9aedbdac515554b7dab62eb054574eee0ed5cc06948f4e1",
+      "variant_header_sha256": "34c9f30dcfeb3b206fe9cfbe8ee331ff8280bc5e9f83a9d21be1587bea396d18",
+      "name_lookup_selector": true,
+      "selector_expression": "varlist[0]->vt==VT_INTEGER?varlist[0]->lVal:get_cached_model_index(StrCache_Get(varlist[0]->strVal))",
+      "source_has_index_bounds": true,
+      "getter_case1_falls_into_name": true,
+      "setter_cases0to3_fall_into_selectable": true,
+      "getter_minimum_arguments": 2,
+      "setter_minimum_check_in_source": 2,
+      "function_sha256": {
+        "getter": "869efdc5d2c153651697c8d7714ade020926b247fef70e3853a382de3748e800",
+        "setter": "db98044634eecaea79e7b2c856fe02b53bb12983046bbc16b21d791b4ec95e00"
+      }
+    },
+    {
+      "revision": 3827,
+      "commit": "e5776ed5795181f64f0ca89529e78c221d8e62ca",
+      "script_source_sha256": "79d71e4b5bc22cfefb45dd916ec38bb67880974934bcd29ce6ac8c1db6a2567d",
+      "variant_header_sha256": "34c9f30dcfeb3b206fe9cfbe8ee331ff8280bc5e9f83a9d21be1587bea396d18",
+      "name_lookup_selector": true,
+      "selector_expression": "varlist[0]->vt==VT_INTEGER?varlist[0]->lVal:get_cached_model_index(StrCache_Get(varlist[0]->strVal))",
+      "source_has_index_bounds": true,
+      "getter_case1_falls_into_name": true,
+      "setter_cases0to3_fall_into_selectable": true,
+      "getter_minimum_arguments": 2,
+      "setter_minimum_check_in_source": 2,
+      "function_sha256": {
+        "getter": "869efdc5d2c153651697c8d7714ade020926b247fef70e3853a382de3748e800",
+        "setter": "db98044634eecaea79e7b2c856fe02b53bb12983046bbc16b21d791b4ec95e00"
+      }
+    },
+    {
+      "revision": 3828,
+      "commit": "68441a1a32951cb03c1fda2f237076c338dd6128",
+      "script_source_sha256": "e85a2fe43a463834acfa8477e8b1d797d74b2f8af4d46368d12c50c58b90cd17",
+      "variant_header_sha256": "c932cb79c51d7df314e9861444f71536c2fdbb3e32ec6778a9f24fa4a2fb3466",
+      "name_lookup_selector": true,
+      "selector_expression": "varlist[0]->vt==VT_INTEGER?varlist[0]->lVal:get_cached_model_index(StrCache_Get(varlist[0]->strVal))",
+      "source_has_index_bounds": true,
+      "getter_case1_falls_into_name": true,
+      "setter_cases0to3_fall_into_selectable": true,
+      "getter_minimum_arguments": 2,
+      "setter_minimum_check_in_source": 2,
+      "function_sha256": {
+        "getter": "869efdc5d2c153651697c8d7714ade020926b247fef70e3853a382de3748e800",
+        "setter": "db98044634eecaea79e7b2c856fe02b53bb12983046bbc16b21d791b4ec95e00"
+      }
+    },
+    {
+      "revision": 3829,
+      "commit": "8223091e0ae85bd621572094c3465783d6f73429",
+      "script_source_sha256": "e85a2fe43a463834acfa8477e8b1d797d74b2f8af4d46368d12c50c58b90cd17",
+      "variant_header_sha256": "aa9cd303222ad4017069ffd05197577ac2d762c0027af4c3c42f0785128502e8",
+      "name_lookup_selector": true,
+      "selector_expression": "varlist[0]->vt==VT_INTEGER?varlist[0]->lVal:get_cached_model_index(StrCache_Get(varlist[0]->strVal))",
+      "source_has_index_bounds": true,
+      "getter_case1_falls_into_name": true,
+      "setter_cases0to3_fall_into_selectable": true,
+      "getter_minimum_arguments": 2,
+      "setter_minimum_check_in_source": 2,
+      "function_sha256": {
+        "getter": "869efdc5d2c153651697c8d7714ade020926b247fef70e3853a382de3748e800",
+        "setter": "db98044634eecaea79e7b2c856fe02b53bb12983046bbc16b21d791b4ec95e00"
+      }
+    },
+    {
+      "revision": 3830,
+      "commit": "1248ca60d338c911ef81a0b1ade0ef05ff0fa6cc",
+      "script_source_sha256": "e85a2fe43a463834acfa8477e8b1d797d74b2f8af4d46368d12c50c58b90cd17",
+      "variant_header_sha256": "aa9cd303222ad4017069ffd05197577ac2d762c0027af4c3c42f0785128502e8",
+      "name_lookup_selector": true,
+      "selector_expression": "varlist[0]->vt==VT_INTEGER?varlist[0]->lVal:get_cached_model_index(StrCache_Get(varlist[0]->strVal))",
+      "source_has_index_bounds": true,
+      "getter_case1_falls_into_name": true,
+      "setter_cases0to3_fall_into_selectable": true,
+      "getter_minimum_arguments": 2,
+      "setter_minimum_check_in_source": 2,
+      "function_sha256": {
+        "getter": "869efdc5d2c153651697c8d7714ade020926b247fef70e3853a382de3748e800",
+        "setter": "db98044634eecaea79e7b2c856fe02b53bb12983046bbc16b21d791b4ec95e00"
+      }
+    },
+    {
+      "revision": 3831,
+      "commit": "c61f02b3fbb155dd416a7750eb9cb645d7785266",
+      "script_source_sha256": "8ef46af0205fb5b86eb268cfbac4464e57c2a9687a52912cd6dea3acb1f26f43",
+      "variant_header_sha256": "aa9cd303222ad4017069ffd05197577ac2d762c0027af4c3c42f0785128502e8",
+      "name_lookup_selector": true,
+      "selector_expression": "varlist[0]->vt==VT_INTEGER?varlist[0]->lVal:get_cached_model_index(StrCache_Get(varlist[0]->strVal))",
+      "source_has_index_bounds": true,
+      "getter_case1_falls_into_name": true,
+      "setter_cases0to3_fall_into_selectable": true,
+      "getter_minimum_arguments": 2,
+      "setter_minimum_check_in_source": 2,
+      "function_sha256": {
+        "getter": "869efdc5d2c153651697c8d7714ade020926b247fef70e3853a382de3748e800",
+        "setter": "db98044634eecaea79e7b2c856fe02b53bb12983046bbc16b21d791b4ec95e00"
+      }
+    },
+    {
+      "revision": 3834,
+      "commit": "b3ad0f9d585abf5388041d953dad08f57d2561bf",
+      "script_source_sha256": "88b4d62f247f005d11512d9c096d8fb2d5a9b595a3a670ce1fd732d880248cbe",
+      "variant_header_sha256": "ef5a6206b8810265793ec9b8ab21c6d6f428282e393f0def1990ae4a0be1d4bf",
+      "name_lookup_selector": true,
+      "selector_expression": "varlist[0]->vt==VT_INTEGER?varlist[0]->lVal:get_cached_model_index(StrCache_Get(varlist[0]->strVal))",
+      "source_has_index_bounds": true,
+      "getter_case1_falls_into_name": true,
+      "setter_cases0to3_fall_into_selectable": true,
+      "getter_minimum_arguments": 2,
+      "setter_minimum_check_in_source": 2,
+      "function_sha256": {
+        "getter": "869efdc5d2c153651697c8d7714ade020926b247fef70e3853a382de3748e800",
+        "setter": "db98044634eecaea79e7b2c856fe02b53bb12983046bbc16b21d791b4ec95e00"
+      }
+    },
+    {
+      "revision": 3835,
+      "commit": "e449c98ba611ad56407cc5cc525547b8f61e7558",
+      "script_source_sha256": "88b4d62f247f005d11512d9c096d8fb2d5a9b595a3a670ce1fd732d880248cbe",
+      "variant_header_sha256": "ef5a6206b8810265793ec9b8ab21c6d6f428282e393f0def1990ae4a0be1d4bf",
+      "name_lookup_selector": true,
+      "selector_expression": "varlist[0]->vt==VT_INTEGER?varlist[0]->lVal:get_cached_model_index(StrCache_Get(varlist[0]->strVal))",
+      "source_has_index_bounds": true,
+      "getter_case1_falls_into_name": true,
+      "setter_cases0to3_fall_into_selectable": true,
+      "getter_minimum_arguments": 2,
+      "setter_minimum_check_in_source": 2,
+      "function_sha256": {
+        "getter": "869efdc5d2c153651697c8d7714ade020926b247fef70e3853a382de3748e800",
+        "setter": "db98044634eecaea79e7b2c856fe02b53bb12983046bbc16b21d791b4ec95e00"
+      }
+    },
+    {
+      "revision": 3837,
+      "commit": "f2b4258428af00b3748ef7713d36201d4d0678ac",
+      "script_source_sha256": "0df49d7758964678ad1bf733d3024f524d3147d6247e5a3e40e83dbad75d57dd",
+      "variant_header_sha256": "ef5a6206b8810265793ec9b8ab21c6d6f428282e393f0def1990ae4a0be1d4bf",
+      "name_lookup_selector": true,
+      "selector_expression": "varlist[0]->vt==VT_INTEGER?varlist[0]->lVal:get_cached_model_index(StrCache_Get(varlist[0]->strVal))",
+      "source_has_index_bounds": true,
+      "getter_case1_falls_into_name": true,
+      "setter_cases0to3_fall_into_selectable": true,
+      "getter_minimum_arguments": 2,
+      "setter_minimum_check_in_source": 2,
+      "function_sha256": {
+        "getter": "869efdc5d2c153651697c8d7714ade020926b247fef70e3853a382de3748e800",
+        "setter": "db98044634eecaea79e7b2c856fe02b53bb12983046bbc16b21d791b4ec95e00"
+      }
+    },
+    {
+      "revision": 3839,
+      "commit": "b6712f11af263c3ad438d87241cec38f18570046",
+      "script_source_sha256": "b884c3b74c15b693708c8863e6c4137facfe1de3d250cc8e3efa6d90e5375e1b",
+      "variant_header_sha256": "286861a8d8bc050ac3a81955c3687380a73db1254eecec65c9ab6819b04cbd66",
+      "name_lookup_selector": true,
+      "selector_expression": "varlist[0]->vt==VT_INTEGER?varlist[0]->lVal:get_cached_model_index(StrCache_Get(varlist[0]->strVal))",
+      "source_has_index_bounds": true,
+      "getter_case1_falls_into_name": true,
+      "setter_cases0to3_fall_into_selectable": true,
+      "getter_minimum_arguments": 2,
+      "setter_minimum_check_in_source": 2,
+      "function_sha256": {
+        "getter": "869efdc5d2c153651697c8d7714ade020926b247fef70e3853a382de3748e800",
+        "setter": "db98044634eecaea79e7b2c856fe02b53bb12983046bbc16b21d791b4ec95e00"
+      }
+    },
+    {
+      "revision": 3840,
+      "commit": "0970c306de4f128fe223a544478226d5a64a1844",
+      "script_source_sha256": "b884c3b74c15b693708c8863e6c4137facfe1de3d250cc8e3efa6d90e5375e1b",
+      "variant_header_sha256": "286861a8d8bc050ac3a81955c3687380a73db1254eecec65c9ab6819b04cbd66",
+      "name_lookup_selector": true,
+      "selector_expression": "varlist[0]->vt==VT_INTEGER?varlist[0]->lVal:get_cached_model_index(StrCache_Get(varlist[0]->strVal))",
+      "source_has_index_bounds": true,
+      "getter_case1_falls_into_name": true,
+      "setter_cases0to3_fall_into_selectable": true,
+      "getter_minimum_arguments": 2,
+      "setter_minimum_check_in_source": 2,
+      "function_sha256": {
+        "getter": "869efdc5d2c153651697c8d7714ade020926b247fef70e3853a382de3748e800",
+        "setter": "db98044634eecaea79e7b2c856fe02b53bb12983046bbc16b21d791b4ec95e00"
+      }
+    },
+    {
+      "revision": 3841,
+      "commit": "4c79b2e9ff9ad14115e695fc82e4c0ca10c0d822",
+      "script_source_sha256": "b884c3b74c15b693708c8863e6c4137facfe1de3d250cc8e3efa6d90e5375e1b",
+      "variant_header_sha256": "286861a8d8bc050ac3a81955c3687380a73db1254eecec65c9ab6819b04cbd66",
+      "name_lookup_selector": true,
+      "selector_expression": "varlist[0]->vt==VT_INTEGER?varlist[0]->lVal:get_cached_model_index(StrCache_Get(varlist[0]->strVal))",
+      "source_has_index_bounds": true,
+      "getter_case1_falls_into_name": true,
+      "setter_cases0to3_fall_into_selectable": true,
+      "getter_minimum_arguments": 2,
+      "setter_minimum_check_in_source": 2,
+      "function_sha256": {
+        "getter": "869efdc5d2c153651697c8d7714ade020926b247fef70e3853a382de3748e800",
+        "setter": "db98044634eecaea79e7b2c856fe02b53bb12983046bbc16b21d791b4ec95e00"
+      }
+    },
+    {
+      "revision": 3842,
+      "commit": "1f702a991ace7fa31884262e458a85e351f62713",
+      "script_source_sha256": "80fc85d07a86206647d4d4877a4f91b2cbe5e94598b6cd934ebf05d184bf719b",
+      "variant_header_sha256": "286861a8d8bc050ac3a81955c3687380a73db1254eecec65c9ab6819b04cbd66",
+      "name_lookup_selector": true,
+      "selector_expression": "varlist[0]->vt==VT_INTEGER?varlist[0]->lVal:get_cached_model_index(StrCache_Get(varlist[0]->strVal))",
+      "source_has_index_bounds": true,
+      "getter_case1_falls_into_name": true,
+      "setter_cases0to3_fall_into_selectable": true,
+      "getter_minimum_arguments": 2,
+      "setter_minimum_check_in_source": 2,
+      "function_sha256": {
+        "getter": "869efdc5d2c153651697c8d7714ade020926b247fef70e3853a382de3748e800",
+        "setter": "db98044634eecaea79e7b2c856fe02b53bb12983046bbc16b21d791b4ec95e00"
+      }
+    }
+  ],
+  "representation": [
+    {
+      "revision": 3761,
+      "depends_sha256": "59302cf0861d8c2779b9d025b92ea160c11de31fd06e6d8601031b98b6238b03",
+      "variant_c_sha256": "4f156c2c3735776367a8633a33eb0c33109ce64ec159e931c0965b636ad9601f",
+      "long_is_signed32": true,
+      "init_clears_union_via_pointer": true
+    },
+    {
+      "revision": 3769,
+      "depends_sha256": "59302cf0861d8c2779b9d025b92ea160c11de31fd06e6d8601031b98b6238b03",
+      "variant_c_sha256": "4f156c2c3735776367a8633a33eb0c33109ce64ec159e931c0965b636ad9601f",
+      "long_is_signed32": true,
+      "init_clears_union_via_pointer": true
+    },
+    {
+      "revision": 3773,
+      "depends_sha256": "59302cf0861d8c2779b9d025b92ea160c11de31fd06e6d8601031b98b6238b03",
+      "variant_c_sha256": "4f156c2c3735776367a8633a33eb0c33109ce64ec159e931c0965b636ad9601f",
+      "long_is_signed32": true,
+      "init_clears_union_via_pointer": true
+    },
+    {
+      "revision": 3780,
+      "depends_sha256": "59302cf0861d8c2779b9d025b92ea160c11de31fd06e6d8601031b98b6238b03",
+      "variant_c_sha256": "4f156c2c3735776367a8633a33eb0c33109ce64ec159e931c0965b636ad9601f",
+      "long_is_signed32": true,
+      "init_clears_union_via_pointer": true
+    },
+    {
+      "revision": 3783,
+      "depends_sha256": "59302cf0861d8c2779b9d025b92ea160c11de31fd06e6d8601031b98b6238b03",
+      "variant_c_sha256": "4f156c2c3735776367a8633a33eb0c33109ce64ec159e931c0965b636ad9601f",
+      "long_is_signed32": true,
+      "init_clears_union_via_pointer": true
+    },
+    {
+      "revision": 3789,
+      "depends_sha256": "59302cf0861d8c2779b9d025b92ea160c11de31fd06e6d8601031b98b6238b03",
+      "variant_c_sha256": "4f156c2c3735776367a8633a33eb0c33109ce64ec159e931c0965b636ad9601f",
+      "long_is_signed32": true,
+      "init_clears_union_via_pointer": true
+    },
+    {
+      "revision": 3793,
+      "depends_sha256": "59302cf0861d8c2779b9d025b92ea160c11de31fd06e6d8601031b98b6238b03",
+      "variant_c_sha256": "4f156c2c3735776367a8633a33eb0c33109ce64ec159e931c0965b636ad9601f",
+      "long_is_signed32": true,
+      "init_clears_union_via_pointer": true
+    },
+    {
+      "revision": 3797,
+      "depends_sha256": "59302cf0861d8c2779b9d025b92ea160c11de31fd06e6d8601031b98b6238b03",
+      "variant_c_sha256": "4f156c2c3735776367a8633a33eb0c33109ce64ec159e931c0965b636ad9601f",
+      "long_is_signed32": true,
+      "init_clears_union_via_pointer": true
+    },
+    {
+      "revision": 3805,
+      "depends_sha256": "59302cf0861d8c2779b9d025b92ea160c11de31fd06e6d8601031b98b6238b03",
+      "variant_c_sha256": "4f156c2c3735776367a8633a33eb0c33109ce64ec159e931c0965b636ad9601f",
+      "long_is_signed32": true,
+      "init_clears_union_via_pointer": true
+    },
+    {
+      "revision": 3806,
+      "depends_sha256": "59302cf0861d8c2779b9d025b92ea160c11de31fd06e6d8601031b98b6238b03",
+      "variant_c_sha256": "4f156c2c3735776367a8633a33eb0c33109ce64ec159e931c0965b636ad9601f",
+      "long_is_signed32": true,
+      "init_clears_union_via_pointer": true
+    },
+    {
+      "revision": 3812,
+      "depends_sha256": "59302cf0861d8c2779b9d025b92ea160c11de31fd06e6d8601031b98b6238b03",
+      "variant_c_sha256": "4f156c2c3735776367a8633a33eb0c33109ce64ec159e931c0965b636ad9601f",
+      "long_is_signed32": true,
+      "init_clears_union_via_pointer": true
+    },
+    {
+      "revision": 3813,
+      "depends_sha256": "59302cf0861d8c2779b9d025b92ea160c11de31fd06e6d8601031b98b6238b03",
+      "variant_c_sha256": "4f156c2c3735776367a8633a33eb0c33109ce64ec159e931c0965b636ad9601f",
+      "long_is_signed32": true,
+      "init_clears_union_via_pointer": true
+    },
+    {
+      "revision": 3814,
+      "depends_sha256": "59302cf0861d8c2779b9d025b92ea160c11de31fd06e6d8601031b98b6238b03",
+      "variant_c_sha256": "4f156c2c3735776367a8633a33eb0c33109ce64ec159e931c0965b636ad9601f",
+      "long_is_signed32": true,
+      "init_clears_union_via_pointer": true
+    },
+    {
+      "revision": 3815,
+      "depends_sha256": "59302cf0861d8c2779b9d025b92ea160c11de31fd06e6d8601031b98b6238b03",
+      "variant_c_sha256": "4f156c2c3735776367a8633a33eb0c33109ce64ec159e931c0965b636ad9601f",
+      "long_is_signed32": true,
+      "init_clears_union_via_pointer": true
+    },
+    {
+      "revision": 3818,
+      "depends_sha256": "59302cf0861d8c2779b9d025b92ea160c11de31fd06e6d8601031b98b6238b03",
+      "variant_c_sha256": "4f156c2c3735776367a8633a33eb0c33109ce64ec159e931c0965b636ad9601f",
+      "long_is_signed32": true,
+      "init_clears_union_via_pointer": true
+    },
+    {
+      "revision": 3819,
+      "depends_sha256": "59302cf0861d8c2779b9d025b92ea160c11de31fd06e6d8601031b98b6238b03",
+      "variant_c_sha256": "4f156c2c3735776367a8633a33eb0c33109ce64ec159e931c0965b636ad9601f",
+      "long_is_signed32": true,
+      "init_clears_union_via_pointer": true
+    },
+    {
+      "revision": 3820,
+      "depends_sha256": "59302cf0861d8c2779b9d025b92ea160c11de31fd06e6d8601031b98b6238b03",
+      "variant_c_sha256": "4f156c2c3735776367a8633a33eb0c33109ce64ec159e931c0965b636ad9601f",
+      "long_is_signed32": true,
+      "init_clears_union_via_pointer": true
+    },
+    {
+      "revision": 3821,
+      "depends_sha256": "59302cf0861d8c2779b9d025b92ea160c11de31fd06e6d8601031b98b6238b03",
+      "variant_c_sha256": "4f156c2c3735776367a8633a33eb0c33109ce64ec159e931c0965b636ad9601f",
+      "long_is_signed32": true,
+      "init_clears_union_via_pointer": true
+    },
+    {
+      "revision": 3822,
+      "depends_sha256": "59302cf0861d8c2779b9d025b92ea160c11de31fd06e6d8601031b98b6238b03",
+      "variant_c_sha256": "4f156c2c3735776367a8633a33eb0c33109ce64ec159e931c0965b636ad9601f",
+      "long_is_signed32": true,
+      "init_clears_union_via_pointer": true
+    },
+    {
+      "revision": 3823,
+      "depends_sha256": "59302cf0861d8c2779b9d025b92ea160c11de31fd06e6d8601031b98b6238b03",
+      "variant_c_sha256": "4f156c2c3735776367a8633a33eb0c33109ce64ec159e931c0965b636ad9601f",
+      "long_is_signed32": true,
+      "init_clears_union_via_pointer": true
+    },
+    {
+      "revision": 3824,
+      "depends_sha256": "59302cf0861d8c2779b9d025b92ea160c11de31fd06e6d8601031b98b6238b03",
+      "variant_c_sha256": "4f156c2c3735776367a8633a33eb0c33109ce64ec159e931c0965b636ad9601f",
+      "long_is_signed32": true,
+      "init_clears_union_via_pointer": true
+    },
+    {
+      "revision": 3825,
+      "depends_sha256": "59302cf0861d8c2779b9d025b92ea160c11de31fd06e6d8601031b98b6238b03",
+      "variant_c_sha256": "4f156c2c3735776367a8633a33eb0c33109ce64ec159e931c0965b636ad9601f",
+      "long_is_signed32": true,
+      "init_clears_union_via_pointer": true
+    },
+    {
+      "revision": 3826,
+      "depends_sha256": "59302cf0861d8c2779b9d025b92ea160c11de31fd06e6d8601031b98b6238b03",
+      "variant_c_sha256": "4f156c2c3735776367a8633a33eb0c33109ce64ec159e931c0965b636ad9601f",
+      "long_is_signed32": true,
+      "init_clears_union_via_pointer": true
+    },
+    {
+      "revision": 3827,
+      "depends_sha256": "59302cf0861d8c2779b9d025b92ea160c11de31fd06e6d8601031b98b6238b03",
+      "variant_c_sha256": "4f156c2c3735776367a8633a33eb0c33109ce64ec159e931c0965b636ad9601f",
+      "long_is_signed32": true,
+      "init_clears_union_via_pointer": true
+    },
+    {
+      "revision": 3828,
+      "depends_sha256": "59302cf0861d8c2779b9d025b92ea160c11de31fd06e6d8601031b98b6238b03",
+      "variant_c_sha256": "4cdde2b0458d6140d4e9ecdbe1c818e0fcf4511eb9676a7497d9868837a8dd17",
+      "long_is_signed32": true,
+      "init_clears_union_via_pointer": true
+    },
+    {
+      "revision": 3829,
+      "depends_sha256": "59302cf0861d8c2779b9d025b92ea160c11de31fd06e6d8601031b98b6238b03",
+      "variant_c_sha256": "4d744e4b7ddf1f47010a07b0e298097b214908fcf39c63d98daeb4e46761c73e",
+      "long_is_signed32": true,
+      "init_clears_union_via_pointer": true
+    },
+    {
+      "revision": 3830,
+      "depends_sha256": "59302cf0861d8c2779b9d025b92ea160c11de31fd06e6d8601031b98b6238b03",
+      "variant_c_sha256": "4d744e4b7ddf1f47010a07b0e298097b214908fcf39c63d98daeb4e46761c73e",
+      "long_is_signed32": true,
+      "init_clears_union_via_pointer": true
+    },
+    {
+      "revision": 3831,
+      "depends_sha256": "59302cf0861d8c2779b9d025b92ea160c11de31fd06e6d8601031b98b6238b03",
+      "variant_c_sha256": "4d744e4b7ddf1f47010a07b0e298097b214908fcf39c63d98daeb4e46761c73e",
+      "long_is_signed32": true,
+      "init_clears_union_via_pointer": true
+    },
+    {
+      "revision": 3834,
+      "depends_sha256": "59302cf0861d8c2779b9d025b92ea160c11de31fd06e6d8601031b98b6238b03",
+      "variant_c_sha256": "24bfb9a800b45c6c4072a8e6020b4afa05ca3557425dfc5f835d294a90b40e34",
+      "long_is_signed32": true,
+      "init_clears_union_via_pointer": true
+    },
+    {
+      "revision": 3835,
+      "depends_sha256": "59302cf0861d8c2779b9d025b92ea160c11de31fd06e6d8601031b98b6238b03",
+      "variant_c_sha256": "24bfb9a800b45c6c4072a8e6020b4afa05ca3557425dfc5f835d294a90b40e34",
+      "long_is_signed32": true,
+      "init_clears_union_via_pointer": true
+    },
+    {
+      "revision": 3837,
+      "depends_sha256": "59302cf0861d8c2779b9d025b92ea160c11de31fd06e6d8601031b98b6238b03",
+      "variant_c_sha256": "24bfb9a800b45c6c4072a8e6020b4afa05ca3557425dfc5f835d294a90b40e34",
+      "long_is_signed32": true,
+      "init_clears_union_via_pointer": true
+    },
+    {
+      "revision": 3839,
+      "depends_sha256": "59302cf0861d8c2779b9d025b92ea160c11de31fd06e6d8601031b98b6238b03",
+      "variant_c_sha256": "90f803017ad651853285f84e61c0c717abff041727e17d5a98655c714c6b37c7",
+      "long_is_signed32": true,
+      "init_clears_union_via_pointer": true
+    },
+    {
+      "revision": 3840,
+      "depends_sha256": "59302cf0861d8c2779b9d025b92ea160c11de31fd06e6d8601031b98b6238b03",
+      "variant_c_sha256": "90f803017ad651853285f84e61c0c717abff041727e17d5a98655c714c6b37c7",
+      "long_is_signed32": true,
+      "init_clears_union_via_pointer": true
+    },
+    {
+      "revision": 3841,
+      "depends_sha256": "59302cf0861d8c2779b9d025b92ea160c11de31fd06e6d8601031b98b6238b03",
+      "variant_c_sha256": "90f803017ad651853285f84e61c0c717abff041727e17d5a98655c714c6b37c7",
+      "long_is_signed32": true,
+      "init_clears_union_via_pointer": true
+    },
+    {
+      "revision": 3842,
+      "depends_sha256": "59302cf0861d8c2779b9d025b92ea160c11de31fd06e6d8601031b98b6238b03",
+      "variant_c_sha256": "90f803017ad651853285f84e61c0c717abff041727e17d5a98655c714c6b37c7",
+      "long_is_signed32": true,
+      "init_clears_union_via_pointer": true
+    }
+  ],
+  "scope": "Own-source selector expression, diagnostics and native switch fallthrough. Legacy bounded string slots are numeric union members; name lookup begins3822. Out-of-table queries are checked only against the safe candidate, not executed in old originals."
+}

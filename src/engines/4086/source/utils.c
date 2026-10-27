@@ -1,4 +1,4 @@
-/* AnyBOR modification record: 2026-10-12.
+/* AnyBOR modification record: 2026-10-21.
  * Port maintained by retrodiv <retrodiv@proton.me>.
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
@@ -7,7 +7,8 @@
  * and mkdir forms macOS also uses, and the standard allocation declarations
  * instead of the glibc-only <malloc.h>. Derive output names from the content
  * basename with explicit destination capacities, and reject overflowing
- * output path joins.
+ * output path joins. Bound adjacent string-table reads while preserving the
+ * original search order and duplicate preference.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/4086.md
  * at the source repository root. Original notices follow below.
@@ -445,9 +446,13 @@ int searchList(const char *list[], const char *value, int length)
 {
     int i;
     int a = 0;
-    int b = length / 2;
-    int c = length - 1;
-    int v = value[0];
+    int b;
+    int c;
+    int v;
+    if(!list || !value || length <= 0) return -1;
+    b = length / 2;
+    c = length - 1;
+    v = value[0];
 
     // We must convert uppercase values to lowercase,
     // since this is how every command is written in
@@ -467,7 +472,7 @@ int searchList(const char *list[], const char *value, int length)
         }
 
         // Search Down the List.
-        if(v == list[b - 1][0])
+        if(b > 0 && v == list[b - 1][0])
         {
             for(i = b - 1 ; i >= 0; i--)
             {
@@ -475,7 +480,7 @@ int searchList(const char *list[], const char *value, int length)
                 {
                     return i;
                 }
-                if(v != list[i - 1][0])
+                if(i == 0 || v != list[i - 1][0])
                 {
                     break;
                 }
@@ -483,7 +488,7 @@ int searchList(const char *list[], const char *value, int length)
         }
 
         // Search Up the List.
-        if(v == list[b + 1][0])
+        if(b + 1 < length && v == list[b + 1][0])
         {
             for(i = b + 1; i < length; i++)
             {
@@ -491,7 +496,7 @@ int searchList(const char *list[], const char *value, int length)
                 {
                     return i;
                 }
-                if(v != list[i + 1][0])
+                if(i + 1 == length || v != list[i + 1][0])
                 {
                     break;
                 }
@@ -503,11 +508,11 @@ int searchList(const char *list[], const char *value, int length)
     }
 
     // Define the starting point.
-    if(v >= list[b + 1][0])
+    if(b + 1 < length && v >= list[b + 1][0])
     {
         a = b + 1;
     }
-    else if(v <= list[b - 1][0])
+    else if(b > 0 && v <= list[b - 1][0])
     {
         c = b - 1;
     }
@@ -525,7 +530,7 @@ int searchList(const char *list[], const char *value, int length)
             {
                 return i;
             }
-            if(v != list[i + 1][0])
+            if(i + 1 == length || v != list[i + 1][0])
             {
                 break;
             }

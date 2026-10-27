@@ -54,6 +54,7 @@ void font_unload(int which){
 	s_font** sets, *font;
 
 	which %= MAX_FONTS;
+	if(which < 0) return;
 
 	sets = fonts[which];
 
@@ -155,6 +156,7 @@ int font_load(int which, char *filename, char *packfile, int flags){
 	int i, max;
 
 	which %= MAX_FONTS;
+	if(which < 0) return 0;
 
 	font_unload(which);
 
@@ -195,6 +197,7 @@ int fontmonowidth(int which){
 
 	s_font** sets;
 	which %= MAX_FONTS;
+	if(which < 0) return 0;
 
 	sets = fonts[which];
 
@@ -206,6 +209,7 @@ int fontmonowidth(int which){
 int fontheight(int which){
 	s_font** sets;
 	which %= MAX_FONTS;
+	if(which < 0) return 0;
 
 	sets = fonts[which];
 
@@ -224,6 +228,7 @@ int font_string_width(int which, char* format, ...)
 	int mbs, index;
 
 	which %= MAX_FONTS;
+	if(which < 0) return 0;
 
 	sets = fonts[which];
 
@@ -270,6 +275,7 @@ void font_printf(int x, int y, int which, int layeroffset,char *format, ...){
 	int mbs, index, w, lf;
 
 	which %= MAX_FONTS;
+	if(which < 0) return;
 
 	sets = fonts[which];
 
@@ -316,6 +322,7 @@ void screen_printf(s_screen * screen, int x, int y, int which, char *format, ...
 	int mbs, index, w, lf;
 
 	which %= MAX_FONTS;
+	if(which < 0) return;
 
 	sets = fonts[which];
 

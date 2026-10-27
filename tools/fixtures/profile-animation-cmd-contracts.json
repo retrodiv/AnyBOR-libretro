@@ -1,0 +1,484 @@
+{
+  "schema": 1,
+  "scope": "Actual @cmd generator text for consecutive and nonconsecutive frames,own-source aliases and return placement. Does not execute script VM or gameplay.",
+  "commands": [
+    {
+      "frame": 0,
+      "name": "alpha"
+    },
+    {
+      "frame": 0,
+      "name": "beta"
+    },
+    {
+      "frame": 1,
+      "name": "gamma"
+    },
+    {
+      "frame": 0,
+      "name": "delta"
+    }
+  ],
+  "sources": [
+    {
+      "revision": 3761,
+      "engine": "3842",
+      "commit": "16814fdf39fdcdd78cb59f3d70748f1dc023a24f",
+      "flag": 0,
+      "cmd_body_sha256": "21e1e27b44ea179bf2dbf04a2fa373de939a24afdc09aa33f5d127555d3feba0",
+      "grouped": false,
+      "returns": false,
+      "expected": "voidmain(){intframe=getlocalvar(\"frame\");intanimhandle=getlocalvar(\"animhandle\");if(animhandle==7){if(frame==0){alpha();}if(frame==0){beta();}if(frame==1){gamma();}if(frame==0){delta();}return;}}"
+    },
+    {
+      "revision": 3761,
+      "engine": "3842",
+      "commit": "16814fdf39fdcdd78cb59f3d70748f1dc023a24f",
+      "flag": 1,
+      "cmd_body_sha256": "21e1e27b44ea179bf2dbf04a2fa373de939a24afdc09aa33f5d127555d3feba0",
+      "grouped": false,
+      "returns": false,
+      "expected": "voidmain(){intframe=getlocalvar(\"frame\");intanimhandle=getlocalvar(\"animhandle\");if(animhandle==7){if(frame==0){alpha();}if(frame==0){beta();}if(frame==1){gamma();}if(frame==0){delta();}return;}}"
+    },
+    {
+      "revision": 3769,
+      "engine": "3842",
+      "commit": "14ac619f7d9f21bf1ac331932308c3ced4a65615",
+      "flag": 0,
+      "cmd_body_sha256": "21e1e27b44ea179bf2dbf04a2fa373de939a24afdc09aa33f5d127555d3feba0",
+      "grouped": false,
+      "returns": false,
+      "expected": "voidmain(){intframe=getlocalvar(\"frame\");intanimhandle=getlocalvar(\"animhandle\");if(animhandle==7){if(frame==0){alpha();}if(frame==0){beta();}if(frame==1){gamma();}if(frame==0){delta();}return;}}"
+    },
+    {
+      "revision": 3769,
+      "engine": "3842",
+      "commit": "14ac619f7d9f21bf1ac331932308c3ced4a65615",
+      "flag": 1,
+      "cmd_body_sha256": "21e1e27b44ea179bf2dbf04a2fa373de939a24afdc09aa33f5d127555d3feba0",
+      "grouped": false,
+      "returns": false,
+      "expected": "voidmain(){intframe=getlocalvar(\"frame\");intanimhandle=getlocalvar(\"animhandle\");if(animhandle==7){if(frame==0){alpha();}if(frame==0){beta();}if(frame==1){gamma();}if(frame==0){delta();}return;}}"
+    },
+    {
+      "revision": 3773,
+      "engine": "3842",
+      "commit": "e39bfa21d708f2f7a586085d8689bff94440a104",
+      "flag": 0,
+      "cmd_body_sha256": "21e1e27b44ea179bf2dbf04a2fa373de939a24afdc09aa33f5d127555d3feba0",
+      "grouped": false,
+      "returns": false,
+      "expected": "voidmain(){intframe=getlocalvar(\"frame\");intanimhandle=getlocalvar(\"animhandle\");if(animhandle==7){if(frame==0){alpha();}if(frame==0){beta();}if(frame==1){gamma();}if(frame==0){delta();}return;}}"
+    },
+    {
+      "revision": 3773,
+      "engine": "3842",
+      "commit": "e39bfa21d708f2f7a586085d8689bff94440a104",
+      "flag": 1,
+      "cmd_body_sha256": "21e1e27b44ea179bf2dbf04a2fa373de939a24afdc09aa33f5d127555d3feba0",
+      "grouped": false,
+      "returns": false,
+      "expected": "voidmain(){intframe=getlocalvar(\"frame\");intanimhandle=getlocalvar(\"animhandle\");if(animhandle==7){if(frame==0){alpha();}if(frame==0){beta();}if(frame==1){gamma();}if(frame==0){delta();}return;}}"
+    },
+    {
+      "revision": 3780,
+      "engine": "3842",
+      "commit": "760cb0e6fdbda9d8a4c426f00c84623349ca5b17",
+      "flag": 0,
+      "cmd_body_sha256": "21e1e27b44ea179bf2dbf04a2fa373de939a24afdc09aa33f5d127555d3feba0",
+      "grouped": false,
+      "returns": false,
+      "expected": "voidmain(){intframe=getlocalvar(\"frame\");intanimhandle=getlocalvar(\"animhandle\");if(animhandle==7){if(frame==0){alpha();}if(frame==0){beta();}if(frame==1){gamma();}if(frame==0){delta();}return;}}"
+    },
+    {
+      "revision": 3780,
+      "engine": "3842",
+      "commit": "760cb0e6fdbda9d8a4c426f00c84623349ca5b17",
+      "flag": 1,
+      "cmd_body_sha256": "21e1e27b44ea179bf2dbf04a2fa373de939a24afdc09aa33f5d127555d3feba0",
+      "grouped": false,
+      "returns": false,
+      "expected": "voidmain(){intframe=getlocalvar(\"frame\");intanimhandle=getlocalvar(\"animhandle\");if(animhandle==7){if(frame==0){alpha();}if(frame==0){beta();}if(frame==1){gamma();}if(frame==0){delta();}return;}}"
+    },
+    {
+      "revision": 3783,
+      "engine": "3842",
+      "commit": "5da3e255b2783079872a57247b020090e307df0d",
+      "flag": 0,
+      "cmd_body_sha256": "21e1e27b44ea179bf2dbf04a2fa373de939a24afdc09aa33f5d127555d3feba0",
+      "grouped": false,
+      "returns": false,
+      "expected": "voidmain(){intframe=getlocalvar(\"frame\");intanimhandle=getlocalvar(\"animhandle\");if(animhandle==7){if(frame==0){alpha();}if(frame==0){beta();}if(frame==1){gamma();}if(frame==0){delta();}return;}}"
+    },
+    {
+      "revision": 3783,
+      "engine": "3842",
+      "commit": "5da3e255b2783079872a57247b020090e307df0d",
+      "flag": 1,
+      "cmd_body_sha256": "21e1e27b44ea179bf2dbf04a2fa373de939a24afdc09aa33f5d127555d3feba0",
+      "grouped": false,
+      "returns": false,
+      "expected": "voidmain(){intframe=getlocalvar(\"frame\");intanimhandle=getlocalvar(\"animhandle\");if(animhandle==7){if(frame==0){alpha();}if(frame==0){beta();}if(frame==1){gamma();}if(frame==0){delta();}return;}}"
+    },
+    {
+      "revision": 3789,
+      "engine": "3842",
+      "commit": "cc5166a117318987f638b4b6c6d1034384409372",
+      "flag": 0,
+      "cmd_body_sha256": "21e1e27b44ea179bf2dbf04a2fa373de939a24afdc09aa33f5d127555d3feba0",
+      "grouped": false,
+      "returns": false,
+      "expected": "voidmain(){intframe=getlocalvar(\"frame\");intanimhandle=getlocalvar(\"animhandle\");if(animhandle==7){if(frame==0){alpha();}if(frame==0){beta();}if(frame==1){gamma();}if(frame==0){delta();}return;}}"
+    },
+    {
+      "revision": 3789,
+      "engine": "3842",
+      "commit": "cc5166a117318987f638b4b6c6d1034384409372",
+      "flag": 1,
+      "cmd_body_sha256": "21e1e27b44ea179bf2dbf04a2fa373de939a24afdc09aa33f5d127555d3feba0",
+      "grouped": false,
+      "returns": false,
+      "expected": "voidmain(){intframe=getlocalvar(\"frame\");intanimhandle=getlocalvar(\"animhandle\");if(animhandle==7){if(frame==0){alpha();}if(frame==0){beta();}if(frame==1){gamma();}if(frame==0){delta();}return;}}"
+    },
+    {
+      "revision": 3793,
+      "engine": "3842",
+      "commit": "edf234656cae88b078718661a2bd0c42090f0687",
+      "flag": 0,
+      "cmd_body_sha256": "21e1e27b44ea179bf2dbf04a2fa373de939a24afdc09aa33f5d127555d3feba0",
+      "grouped": false,
+      "returns": false,
+      "expected": "voidmain(){intframe=getlocalvar(\"frame\");intanimhandle=getlocalvar(\"animhandle\");if(animhandle==7){if(frame==0){alpha();}if(frame==0){beta();}if(frame==1){gamma();}if(frame==0){delta();}return;}}"
+    },
+    {
+      "revision": 3793,
+      "engine": "3842",
+      "commit": "edf234656cae88b078718661a2bd0c42090f0687",
+      "flag": 1,
+      "cmd_body_sha256": "21e1e27b44ea179bf2dbf04a2fa373de939a24afdc09aa33f5d127555d3feba0",
+      "grouped": false,
+      "returns": false,
+      "expected": "voidmain(){intframe=getlocalvar(\"frame\");intanimhandle=getlocalvar(\"animhandle\");if(animhandle==7){if(frame==0){alpha();}if(frame==0){beta();}if(frame==1){gamma();}if(frame==0){delta();}return;}}"
+    },
+    {
+      "revision": 3797,
+      "engine": "3842",
+      "commit": "4490ee5d18ffcc7604e95cd4910dadf6191e694a",
+      "flag": 0,
+      "cmd_body_sha256": "21e1e27b44ea179bf2dbf04a2fa373de939a24afdc09aa33f5d127555d3feba0",
+      "grouped": false,
+      "returns": false,
+      "expected": "voidmain(){intframe=getlocalvar(\"frame\");intanimhandle=getlocalvar(\"animhandle\");if(animhandle==7){if(frame==0){alpha();}if(frame==0){beta();}if(frame==1){gamma();}if(frame==0){delta();}return;}}"
+    },
+    {
+      "revision": 3797,
+      "engine": "3842",
+      "commit": "4490ee5d18ffcc7604e95cd4910dadf6191e694a",
+      "flag": 1,
+      "cmd_body_sha256": "21e1e27b44ea179bf2dbf04a2fa373de939a24afdc09aa33f5d127555d3feba0",
+      "grouped": false,
+      "returns": false,
+      "expected": "voidmain(){intframe=getlocalvar(\"frame\");intanimhandle=getlocalvar(\"animhandle\");if(animhandle==7){if(frame==0){alpha();}if(frame==0){beta();}if(frame==1){gamma();}if(frame==0){delta();}return;}}"
+    },
+    {
+      "revision": 3805,
+      "engine": "3842",
+      "commit": "2abee79303b17b269e88cd986ab78dda2bd526d6",
+      "flag": 0,
+      "cmd_body_sha256": "21e1e27b44ea179bf2dbf04a2fa373de939a24afdc09aa33f5d127555d3feba0",
+      "grouped": false,
+      "returns": false,
+      "expected": "voidmain(){intframe=getlocalvar(\"frame\");intanimhandle=getlocalvar(\"animhandle\");if(animhandle==7){if(frame==0){alpha();}if(frame==0){beta();}if(frame==1){gamma();}if(frame==0){delta();}return;}}"
+    },
+    {
+      "revision": 3805,
+      "engine": "3842",
+      "commit": "2abee79303b17b269e88cd986ab78dda2bd526d6",
+      "flag": 1,
+      "cmd_body_sha256": "21e1e27b44ea179bf2dbf04a2fa373de939a24afdc09aa33f5d127555d3feba0",
+      "grouped": false,
+      "returns": false,
+      "expected": "voidmain(){intframe=getlocalvar(\"frame\");intanimhandle=getlocalvar(\"animhandle\");if(animhandle==7){if(frame==0){alpha();}if(frame==0){beta();}if(frame==1){gamma();}if(frame==0){delta();}return;}}"
+    },
+    {
+      "revision": 3812,
+      "engine": "3842",
+      "commit": "47644bfb79de4b5e304f21578d4e065a379720f0",
+      "flag": 0,
+      "cmd_body_sha256": "21e1e27b44ea179bf2dbf04a2fa373de939a24afdc09aa33f5d127555d3feba0",
+      "grouped": false,
+      "returns": false,
+      "expected": "voidmain(){intframe=getlocalvar(\"frame\");intanimhandle=getlocalvar(\"animhandle\");if(animhandle==7){if(frame==0){alpha();}if(frame==0){beta();}if(frame==1){gamma();}if(frame==0){delta();}return;}}"
+    },
+    {
+      "revision": 3812,
+      "engine": "3842",
+      "commit": "47644bfb79de4b5e304f21578d4e065a379720f0",
+      "flag": 1,
+      "cmd_body_sha256": "21e1e27b44ea179bf2dbf04a2fa373de939a24afdc09aa33f5d127555d3feba0",
+      "grouped": false,
+      "returns": false,
+      "expected": "voidmain(){intframe=getlocalvar(\"frame\");intanimhandle=getlocalvar(\"animhandle\");if(animhandle==7){if(frame==0){alpha();}if(frame==0){beta();}if(frame==1){gamma();}if(frame==0){delta();}return;}}"
+    },
+    {
+      "revision": 3813,
+      "engine": "3842",
+      "commit": "a7252885dfb67a52ec1e6b6cc9e636b7a05976d6",
+      "flag": 0,
+      "cmd_body_sha256": "1da193e7875e8134a0b74540daf433db14c208cf65f2a3b3bfe15b3f7b738f52",
+      "grouped": true,
+      "returns": false,
+      "expected": "voidmain(){intframe=getlocalvar(\"frame\");intanimhandle=getlocalvar(\"animhandle\");if(animhandle==7){if(frame==0){alpha();beta();}if(frame==1){gamma();}if(frame==0){delta();}return;}}"
+    },
+    {
+      "revision": 3813,
+      "engine": "3842",
+      "commit": "a7252885dfb67a52ec1e6b6cc9e636b7a05976d6",
+      "flag": 1,
+      "cmd_body_sha256": "1da193e7875e8134a0b74540daf433db14c208cf65f2a3b3bfe15b3f7b738f52",
+      "grouped": true,
+      "returns": false,
+      "expected": "voidmain(){intframe=getlocalvar(\"frame\");intanimhandle=getlocalvar(\"animhandle\");if(animhandle==7){if(frame==0){alpha();beta();}if(frame==1){gamma();}if(frame==0){delta();}return;}}"
+    },
+    {
+      "revision": 3814,
+      "engine": "3842",
+      "commit": "46d398cfb2e75a142c7bf6dc38cc2f9603b57ecf",
+      "flag": 0,
+      "cmd_body_sha256": "1da193e7875e8134a0b74540daf433db14c208cf65f2a3b3bfe15b3f7b738f52",
+      "grouped": true,
+      "returns": false,
+      "expected": "voidmain(){intframe=getlocalvar(\"frame\");intanimhandle=getlocalvar(\"animhandle\");if(animhandle==7){if(frame==0){alpha();beta();}if(frame==1){gamma();}if(frame==0){delta();}return;}}"
+    },
+    {
+      "revision": 3814,
+      "engine": "3842",
+      "commit": "46d398cfb2e75a142c7bf6dc38cc2f9603b57ecf",
+      "flag": 1,
+      "cmd_body_sha256": "1da193e7875e8134a0b74540daf433db14c208cf65f2a3b3bfe15b3f7b738f52",
+      "grouped": true,
+      "returns": false,
+      "expected": "voidmain(){intframe=getlocalvar(\"frame\");intanimhandle=getlocalvar(\"animhandle\");if(animhandle==7){if(frame==0){alpha();beta();}if(frame==1){gamma();}if(frame==0){delta();}return;}}"
+    },
+    {
+      "revision": 3818,
+      "engine": "3842",
+      "commit": "cae686392d0b5e52563e9dd191801193796cd4a5",
+      "flag": 0,
+      "cmd_body_sha256": "1da193e7875e8134a0b74540daf433db14c208cf65f2a3b3bfe15b3f7b738f52",
+      "grouped": true,
+      "returns": false,
+      "expected": "voidmain(){intframe=getlocalvar(\"frame\");intanimhandle=getlocalvar(\"animhandle\");if(animhandle==7){if(frame==0){alpha();beta();}if(frame==1){gamma();}if(frame==0){delta();}return;}}"
+    },
+    {
+      "revision": 3818,
+      "engine": "3842",
+      "commit": "cae686392d0b5e52563e9dd191801193796cd4a5",
+      "flag": 1,
+      "cmd_body_sha256": "1da193e7875e8134a0b74540daf433db14c208cf65f2a3b3bfe15b3f7b738f52",
+      "grouped": true,
+      "returns": false,
+      "expected": "voidmain(){intframe=getlocalvar(\"frame\");intanimhandle=getlocalvar(\"animhandle\");if(animhandle==7){if(frame==0){alpha();beta();}if(frame==1){gamma();}if(frame==0){delta();}return;}}"
+    },
+    {
+      "revision": 3820,
+      "engine": "3842",
+      "commit": "ee9b34fd1f52d7edb3c4604b39dc4efe2bb1b6ab",
+      "flag": 0,
+      "cmd_body_sha256": "1da193e7875e8134a0b74540daf433db14c208cf65f2a3b3bfe15b3f7b738f52",
+      "grouped": true,
+      "returns": false,
+      "expected": "voidmain(){intframe=getlocalvar(\"frame\");intanimhandle=getlocalvar(\"animhandle\");if(animhandle==7){if(frame==0){alpha();beta();}if(frame==1){gamma();}if(frame==0){delta();}return;}}"
+    },
+    {
+      "revision": 3820,
+      "engine": "3842",
+      "commit": "ee9b34fd1f52d7edb3c4604b39dc4efe2bb1b6ab",
+      "flag": 1,
+      "cmd_body_sha256": "1da193e7875e8134a0b74540daf433db14c208cf65f2a3b3bfe15b3f7b738f52",
+      "grouped": true,
+      "returns": false,
+      "expected": "voidmain(){intframe=getlocalvar(\"frame\");intanimhandle=getlocalvar(\"animhandle\");if(animhandle==7){if(frame==0){alpha();beta();}if(frame==1){gamma();}if(frame==0){delta();}return;}}"
+    },
+    {
+      "revision": 3821,
+      "engine": "3842",
+      "commit": "651c34ffec57b78a8df7ae24898d8e369978d398",
+      "flag": 0,
+      "cmd_body_sha256": "1da193e7875e8134a0b74540daf433db14c208cf65f2a3b3bfe15b3f7b738f52",
+      "grouped": true,
+      "returns": true,
+      "expected": "voidmain(){intframe=getlocalvar(\"frame\");intanimhandle=getlocalvar(\"animhandle\");if(animhandle==7){if(frame==0){alpha();beta();return;}if(frame==1){gamma();return;}if(frame==0){delta();return;}return;}}"
+    },
+    {
+      "revision": 3821,
+      "engine": "3842",
+      "commit": "651c34ffec57b78a8df7ae24898d8e369978d398",
+      "flag": 1,
+      "cmd_body_sha256": "1da193e7875e8134a0b74540daf433db14c208cf65f2a3b3bfe15b3f7b738f52",
+      "grouped": true,
+      "returns": true,
+      "expected": "voidmain(){intframe=getlocalvar(\"frame\");intanimhandle=getlocalvar(\"animhandle\");if(animhandle==7){if(frame==0){alpha();beta();return;}if(frame==1){gamma();return;}if(frame==0){delta();return;}return;}}"
+    },
+    {
+      "revision": 3822,
+      "engine": "3842",
+      "commit": "7ddd15b4981ea7b55f1851db926bc86276632b8c",
+      "flag": 0,
+      "cmd_body_sha256": "1da193e7875e8134a0b74540daf433db14c208cf65f2a3b3bfe15b3f7b738f52",
+      "grouped": true,
+      "returns": true,
+      "expected": "voidmain(){intframe=getlocalvar(\"frame\");intanimhandle=getlocalvar(\"animhandle\");if(animhandle==7){if(frame==0){alpha();beta();return;}if(frame==1){gamma();return;}if(frame==0){delta();return;}return;}}"
+    },
+    {
+      "revision": 3822,
+      "engine": "3842",
+      "commit": "7ddd15b4981ea7b55f1851db926bc86276632b8c",
+      "flag": 1,
+      "cmd_body_sha256": "1da193e7875e8134a0b74540daf433db14c208cf65f2a3b3bfe15b3f7b738f52",
+      "grouped": true,
+      "returns": true,
+      "expected": "voidmain(){intframe=getlocalvar(\"frame\");intanimhandle=getlocalvar(\"animhandle\");if(animhandle==7){if(frame==0){alpha();beta();return;}if(frame==1){gamma();return;}if(frame==0){delta();return;}return;}}"
+    },
+    {
+      "revision": 3823,
+      "engine": "3842",
+      "commit": "825e094e7417162e7787be0bdb77512d82e30fdd",
+      "flag": 0,
+      "cmd_body_sha256": "88e4454f870731582fce5cefb13207829182d750ef56ce9d3598337e4c04e68a",
+      "grouped": false,
+      "returns": false,
+      "expected": "voidmain(){intframe=getlocalvar(\"frame\");intanimhandle=getlocalvar(\"animhandle\");if(animhandle==7){if(frame==0){alpha();}if(frame==0){beta();}if(frame==1){gamma();}if(frame==0){delta();}return;}}"
+    },
+    {
+      "revision": 3823,
+      "engine": "3842",
+      "commit": "825e094e7417162e7787be0bdb77512d82e30fdd",
+      "flag": 1,
+      "cmd_body_sha256": "88e4454f870731582fce5cefb13207829182d750ef56ce9d3598337e4c04e68a",
+      "grouped": true,
+      "returns": true,
+      "expected": "voidmain(){intframe=getlocalvar(\"frame\");intanimhandle=getlocalvar(\"animhandle\");if(animhandle==7){if(frame==0){alpha();beta();return;}if(frame==1){gamma();return;}if(frame==0){delta();return;}return;}}"
+    },
+    {
+      "revision": 3824,
+      "engine": "3842",
+      "commit": "e260635df5095577fb729555cd5c08ecce37316d",
+      "flag": 0,
+      "cmd_body_sha256": "88e4454f870731582fce5cefb13207829182d750ef56ce9d3598337e4c04e68a",
+      "grouped": false,
+      "returns": false,
+      "expected": "voidmain(){intframe=getlocalvar(\"frame\");intanimhandle=getlocalvar(\"animhandle\");if(animhandle==7){if(frame==0){alpha();}if(frame==0){beta();}if(frame==1){gamma();}if(frame==0){delta();}return;}}"
+    },
+    {
+      "revision": 3824,
+      "engine": "3842",
+      "commit": "e260635df5095577fb729555cd5c08ecce37316d",
+      "flag": 1,
+      "cmd_body_sha256": "88e4454f870731582fce5cefb13207829182d750ef56ce9d3598337e4c04e68a",
+      "grouped": true,
+      "returns": true,
+      "expected": "voidmain(){intframe=getlocalvar(\"frame\");intanimhandle=getlocalvar(\"animhandle\");if(animhandle==7){if(frame==0){alpha();beta();return;}if(frame==1){gamma();return;}if(frame==0){delta();return;}return;}}"
+    },
+    {
+      "revision": 3829,
+      "engine": "3842",
+      "commit": "8223091e0ae85bd621572094c3465783d6f73429",
+      "flag": 0,
+      "cmd_body_sha256": "88e4454f870731582fce5cefb13207829182d750ef56ce9d3598337e4c04e68a",
+      "grouped": false,
+      "returns": false,
+      "expected": "voidmain(){intframe=getlocalvar(\"frame\");intanimhandle=getlocalvar(\"animhandle\");if(animhandle==7){if(frame==0){alpha();}if(frame==0){beta();}if(frame==1){gamma();}if(frame==0){delta();}return;}}"
+    },
+    {
+      "revision": 3829,
+      "engine": "3842",
+      "commit": "8223091e0ae85bd621572094c3465783d6f73429",
+      "flag": 1,
+      "cmd_body_sha256": "88e4454f870731582fce5cefb13207829182d750ef56ce9d3598337e4c04e68a",
+      "grouped": true,
+      "returns": true,
+      "expected": "voidmain(){intframe=getlocalvar(\"frame\");intanimhandle=getlocalvar(\"animhandle\");if(animhandle==7){if(frame==0){alpha();beta();return;}if(frame==1){gamma();return;}if(frame==0){delta();return;}return;}}"
+    },
+    {
+      "revision": 3831,
+      "engine": "3842",
+      "commit": "c61f02b3fbb155dd416a7750eb9cb645d7785266",
+      "flag": 0,
+      "cmd_body_sha256": "8aa9bb862a4c5d928e7925a706c6ee28821dfd307106ca0ff7e0668534cc031d",
+      "grouped": false,
+      "returns": false,
+      "expected": "voidmain(){intframe=getlocalvar(\"frame\");intanimhandle=getlocalvar(\"animhandle\");if(animhandle==7){if(frame==0){alpha();}if(frame==0){beta();}if(frame==1){gamma();}if(frame==0){delta();}return;}}"
+    },
+    {
+      "revision": 3831,
+      "engine": "3842",
+      "commit": "c61f02b3fbb155dd416a7750eb9cb645d7785266",
+      "flag": 1,
+      "cmd_body_sha256": "8aa9bb862a4c5d928e7925a706c6ee28821dfd307106ca0ff7e0668534cc031d",
+      "grouped": true,
+      "returns": true,
+      "expected": "voidmain(){intframe=getlocalvar(\"frame\");intanimhandle=getlocalvar(\"animhandle\");if(animhandle==7){if(frame==0){alpha();beta();return;}if(frame==1){gamma();return;}if(frame==0){delta();return;}return;}}"
+    },
+    {
+      "revision": 3837,
+      "engine": "3842",
+      "commit": "f2b4258428af00b3748ef7713d36201d4d0678ac",
+      "flag": 0,
+      "cmd_body_sha256": "8aa9bb862a4c5d928e7925a706c6ee28821dfd307106ca0ff7e0668534cc031d",
+      "grouped": false,
+      "returns": false,
+      "expected": "voidmain(){intframe=getlocalvar(\"frame\");intanimhandle=getlocalvar(\"animhandle\");if(animhandle==7){if(frame==0){alpha();}if(frame==0){beta();}if(frame==1){gamma();}if(frame==0){delta();}return;}}"
+    },
+    {
+      "revision": 3837,
+      "engine": "3842",
+      "commit": "f2b4258428af00b3748ef7713d36201d4d0678ac",
+      "flag": 1,
+      "cmd_body_sha256": "8aa9bb862a4c5d928e7925a706c6ee28821dfd307106ca0ff7e0668534cc031d",
+      "grouped": true,
+      "returns": true,
+      "expected": "voidmain(){intframe=getlocalvar(\"frame\");intanimhandle=getlocalvar(\"animhandle\");if(animhandle==7){if(frame==0){alpha();beta();return;}if(frame==1){gamma();return;}if(frame==0){delta();return;}return;}}"
+    },
+    {
+      "revision": 3839,
+      "engine": "3842",
+      "commit": "b6712f11af263c3ad438d87241cec38f18570046",
+      "flag": 0,
+      "cmd_body_sha256": "8aa9bb862a4c5d928e7925a706c6ee28821dfd307106ca0ff7e0668534cc031d",
+      "grouped": false,
+      "returns": false,
+      "expected": "voidmain(){intframe=getlocalvar(\"frame\");intanimhandle=getlocalvar(\"animhandle\");if(animhandle==7){if(frame==0){alpha();}if(frame==0){beta();}if(frame==1){gamma();}if(frame==0){delta();}return;}}"
+    },
+    {
+      "revision": 3839,
+      "engine": "3842",
+      "commit": "b6712f11af263c3ad438d87241cec38f18570046",
+      "flag": 1,
+      "cmd_body_sha256": "8aa9bb862a4c5d928e7925a706c6ee28821dfd307106ca0ff7e0668534cc031d",
+      "grouped": true,
+      "returns": true,
+      "expected": "voidmain(){intframe=getlocalvar(\"frame\");intanimhandle=getlocalvar(\"animhandle\");if(animhandle==7){if(frame==0){alpha();beta();return;}if(frame==1){gamma();return;}if(frame==0){delta();return;}return;}}"
+    },
+    {
+      "revision": 3842,
+      "engine": "3842",
+      "commit": "1f702a991ace7fa31884262e458a85e351f62713",
+      "flag": 0,
+      "cmd_body_sha256": "8aa9bb862a4c5d928e7925a706c6ee28821dfd307106ca0ff7e0668534cc031d",
+      "grouped": false,
+      "returns": false,
+      "expected": "voidmain(){intframe=getlocalvar(\"frame\");intanimhandle=getlocalvar(\"animhandle\");if(animhandle==7){if(frame==0){alpha();}if(frame==0){beta();}if(frame==1){gamma();}if(frame==0){delta();}return;}}"
+    },
+    {
+      "revision": 3842,
+      "engine": "3842",
+      "commit": "1f702a991ace7fa31884262e458a85e351f62713",
+      "flag": 1,
+      "cmd_body_sha256": "8aa9bb862a4c5d928e7925a706c6ee28821dfd307106ca0ff7e0668534cc031d",
+      "grouped": true,
+      "returns": true,
+      "expected": "voidmain(){intframe=getlocalvar(\"frame\");intanimhandle=getlocalvar(\"animhandle\");if(animhandle==7){if(frame==0){alpha();beta();return;}if(frame==1){gamma();return;}if(frame==0){delta();return;}return;}}"
+    }
+  ]
+}

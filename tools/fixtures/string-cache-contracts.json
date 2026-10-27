@@ -1,0 +1,304 @@
+{
+  "schema": 1,
+  "scope": "Native bounded query equivalence, cold/warm boundaries, cache growth and native released-slot semantics. No complete text API or game acceptance.",
+  "engines": {
+    "3400": {
+      "revisions": [
+        3400
+      ],
+      "slots": 80,
+      "payload": [
+        99,
+        97,
+        99,
+        104,
+        101,
+        32,
+        101,
+        110,
+        116,
+        114,
+        121
+      ],
+      "pop_with_length": false,
+      "header_includes": [
+        "ScriptVariant.h"
+      ],
+      "check_termination": true
+    },
+    "3741": {
+      "revisions": [
+        3666,
+        3667,
+        3669,
+        3670,
+        3671,
+        3672,
+        3673,
+        3674,
+        3675,
+        3677,
+        3678,
+        3679,
+        3680,
+        3681,
+        3682,
+        3683,
+        3685,
+        3686,
+        3689,
+        3690,
+        3691,
+        3692,
+        3693,
+        3694,
+        3697,
+        3699,
+        3701,
+        3703,
+        3704,
+        3707,
+        3708,
+        3709,
+        3710,
+        3711,
+        3713,
+        3714,
+        3715,
+        3716,
+        3722,
+        3725,
+        3726,
+        3727,
+        3728,
+        3729,
+        3730,
+        3732,
+        3738,
+        3739,
+        3740,
+        3741,
+        3742
+      ],
+      "slots": 80,
+      "payload": [
+        99,
+        97,
+        99,
+        104,
+        101,
+        32,
+        101,
+        110,
+        116,
+        114,
+        121
+      ],
+      "pop_with_length": false,
+      "header_includes": [
+        "ScriptVariant.h"
+      ],
+      "check_termination": true
+    },
+    "3842": {
+      "revisions": [
+        3761,
+        3769,
+        3773,
+        3780,
+        3783,
+        3789,
+        3793,
+        3797,
+        3805,
+        3814,
+        3818,
+        3820,
+        3821,
+        3822,
+        3824,
+        3829,
+        3830,
+        3831,
+        3837,
+        3839,
+        3842
+      ],
+      "slots": 80,
+      "payload": [
+        99,
+        97,
+        99,
+        104,
+        101,
+        32,
+        101,
+        110,
+        116,
+        114,
+        121
+      ],
+      "pop_with_length": false,
+      "header_includes": [
+        "ScriptVariant.h"
+      ],
+      "check_termination": true
+    },
+    "4086": {
+      "revisions": [
+        4086,
+        4088,
+        4107,
+        4111,
+        4129,
+        4153
+      ],
+      "slots": 80,
+      "payload": [
+        99,
+        97,
+        99,
+        104,
+        101,
+        32,
+        101,
+        110,
+        116,
+        114,
+        121
+      ],
+      "pop_with_length": false,
+      "header_includes": [
+        "ScriptVariant.h"
+      ],
+      "check_termination": true
+    },
+    "4432": {
+      "revisions": [
+        4432,
+        4453
+      ],
+      "slots": 80,
+      "payload": [
+        99,
+        97,
+        99,
+        104,
+        101,
+        32,
+        101,
+        110,
+        116,
+        114,
+        121
+      ],
+      "pop_with_length": false,
+      "header_includes": [
+        "ScriptVariant.h"
+      ],
+      "check_termination": true
+    },
+    "6391": {
+      "revisions": [
+        6330,
+        6391,
+        6392,
+        6412,
+        6510
+      ],
+      "slots": 80,
+      "payload": [
+        99,
+        97,
+        99,
+        104,
+        101,
+        32,
+        101,
+        110,
+        116,
+        114,
+        121
+      ],
+      "pop_with_length": true,
+      "header_includes": [
+        "ScriptVariant.h"
+      ],
+      "check_termination": true
+    },
+    "7142": {
+      "revisions": [
+        7086,
+        7123,
+        7142
+      ],
+      "slots": 80,
+      "payload": [
+        99,
+        97,
+        99,
+        104,
+        101,
+        32,
+        101,
+        110,
+        116,
+        114,
+        121
+      ],
+      "pop_with_length": true,
+      "header_includes": [
+        "ScriptVariant.h"
+      ],
+      "check_termination": true
+    },
+    "7533": {
+      "revisions": [
+        7533
+      ],
+      "slots": 80,
+      "payload": [
+        99,
+        97,
+        99,
+        104,
+        101,
+        32,
+        101,
+        110,
+        116,
+        114,
+        121
+      ],
+      "pop_with_length": true,
+      "header_includes": [
+        "ScriptVariant.h"
+      ],
+      "check_termination": true
+    },
+    "8023": {
+      "revisions": [
+        8023
+      ],
+      "slots": 80,
+      "payload": [
+        99,
+        97,
+        99,
+        104,
+        101,
+        32,
+        101,
+        110,
+        116,
+        114,
+        121
+      ],
+      "pop_with_length": true,
+      "header_includes": [
+        "ScriptVariant.h"
+      ],
+      "check_termination": true
+    }
+  }
+}

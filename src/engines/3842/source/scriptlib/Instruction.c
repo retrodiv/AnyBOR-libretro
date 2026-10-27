@@ -1,9 +1,9 @@
-/* AnyBOR modification record: 2026-09-12.
+/* AnyBOR modification record: 2026-10-26.
  * Port maintained by retrodiv <retrodiv@proton.me>.
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
  * Upstream code retains its original license and notices.
- * Store each compiled script constant once, compact call parameter
+ * Own and release retained historical literal baselines, compact call
  * references, and distinguish parser storage from compiled call and jump
  * targets.
  * Existing changes recorded here; this is not their implementation date.
@@ -103,6 +103,12 @@ ScriptVariant** Instruction_FirstReferenceAddress(Instruction* pins)
 
 void Instruction_Clear(Instruction* pins)
 {
+    if((pins->OpCode == CONSTSTR || pins->OpCode == CONSTDBL || pins->OpCode == CONSTINT) && pins->theRef2)
+    {
+        ScriptVariant_Clear(pins->theRef2);
+        free(pins->theRef2);
+        pins->theRef2 = NULL;
+    }
 	if(Instruction_OwnsValue(pins) && pins->theVal) {ScriptVariant_Clear(pins->theVal);free((void*)pins->theVal);}
 	if(pins->OpCode == CALL && pins->theRefList)
 	{

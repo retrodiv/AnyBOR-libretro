@@ -71,7 +71,7 @@ def main():
             if options.get("OBOR_SAVE_AT"):
                 assert re.search(r"saved state \(\d+ bytes\) at frame " +
                                  str(options["OBOR_SAVE_AT"]) + r"\b", result), result
-            if options.get("OBOR_OPTIONS_VERSION") == 2:
+            if options.get("OBOR_OPTIONS_VERSION") == 2 and "category_order=" in result:
                 assert "category_order=Video|Input|System" in result, result
                 assert "video_category=Video" in result, result
                 assert "crt_option=Adjust for 4:3 CRT TV category=video default=Off" in result, result

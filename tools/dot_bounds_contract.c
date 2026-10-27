@@ -16,6 +16,13 @@
 
 entity *self;
 u32 time;
+uint32_t obor_profile_build;
+#ifdef DOT_HAS_PROFILE_COMBAT
+/* The MP-only contract never exercises these HP providers. Retain the
+ * complete native helpers and supply their inactive scalar dependencies. */
+const s_defense default_defense = {0};
+int max_attack_types;
+#endif
 #ifndef DOT_ATTACK_TYPE
 #define DOT_ATTACK_TYPE s_attack
 #endif
@@ -50,9 +57,11 @@ void execute_takedamage_script(entity *ent, entity *other, int force,
 
 #include "common_dot.inc"
 
-int main(void)
+int main(int argc, char **argv)
 {
     int i, last = MAX_DOTS - 1;
+    assert(argc == 2);
+    obor_profile_build = (uint32_t)strtoul(argv[1], NULL, 10);
     assert(MAX_DOTS > 1);
     self = calloc(1, sizeof(*self));
     assert(self);

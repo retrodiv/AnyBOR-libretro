@@ -14,17 +14,27 @@ import tempfile
 import unittest
 from test_historical_player import function
 from native_sanitizers import sanitizer_environment
+import test_historical_tolerance as _text_contracts
 
 ROOT = Path(os.environ.get('OBOR_TEST_SOURCE', Path(__file__).resolve().parents[1]))
+
+
+class NativeTextOwnershipTests(_text_contracts.NativeTextReturnTests):
+    fixture_name='text-object-ownership-contracts.json'
+    scope_marker='native text ownership'
 
 
 class TextObjectOwnershipTests(unittest.TestCase):
     def test_repeated_replacement_keeps_one_owned_allocation(self):
         pin = json.loads((ROOT / 'src/pin.json').read_text())
+        fixture=json.loads(Path(__file__).with_name('fixtures').joinpath('text-object-ownership-contracts.json').read_text())
+        native_engines={row['engine']for row in fixture['models']}
         with tempfile.TemporaryDirectory(prefix='text-object-ownership-') as folder:
             work = Path(folder)
             for engine in pin['engines']:
                 build = engine['build']
+                # Complete callbacks and matching variants are exercised above.
+                if build in native_engines:continue
                 with self.subTest(engine=build):
                     source = (ROOT / 'src/engines' / build / 'openborscript.c').read_text()
                     setter = function(source, 'openbor_changetextobjproperty')
@@ -37,6 +47,9 @@ class TextObjectOwnershipTests(unittest.TestCase):
                     branch = setter[match.end():match.end() + end.start()]
                     helper = (function(source, 'openbor_textobj_set_text')
                               if 'openbor_textobj_set_text(' in branch else '')
+                    if 'obor_textobj_format(' in branch:
+                        helper += function(source, 'obor_textobj_store')
+                        helper += function(source, 'obor_textobj_format')
                     profiles = [int(p.get('revision', p['build'])) for p in pin['profiles']
                                 if p['engine'] == build]
                     program = r'''
@@ -51,8 +64,8 @@ typedef int HRESULT,LONG;
 #define FAILED(x) ((x)<0)
 #define MAX_STR_VAR_LEN 255
 #define SCRIPT_VARIANT_CONVERSION_BUFFER_LENGTH 255
-enum {VT_STR=1,VT_INTEGER=2};
-typedef struct {int vt; const char *strVal;} ScriptVariant;
+enum {VT_EMPTY=0,VT_STR=1,VT_INTEGER=2,VT_DECIMAL=3,VT_PTR=4};
+typedef struct {int vt; const char *strVal; long lVal; double dblVal; void *ptrVal;} ScriptVariant;
 typedef struct {const char *string;size_t length;} ScriptVariantStringView;
 typedef struct {char *text;} s_textobj;
 static struct {s_textobj textobjs[1];} storage,*level=&storage;
@@ -63,6 +76,7 @@ static void counted_free(void *p) {if(p){assert(live_allocations);--live_allocat
 #define malloc counted_malloc
 #define free counted_free
 #define StrCache_Get(x) (x)
+#define StrCache_GetIfPresent(x) (x)
 static void ScriptVariant_ToString(const ScriptVariant *v,char *b) {strcpy(b,v->strVal);}
 static HRESULT ScriptVariant_GetStringView(const ScriptVariant *v,char *b,size_t n,ScriptVariantStringView *out) {
     (void)b;(void)n;if(v->vt!=VT_STR)return E_FAIL;
@@ -70,7 +84,7 @@ static HRESULT ScriptVariant_GetStringView(const ScriptVariant *v,char *b,size_t
 }
 HELPER
 static HRESULT replace(ScriptVariant **varlist) {
-    int ind=0,legacy_result=obor_profile_build<3821;char buf[MAX_STR_VAR_LEN];
+    int ind=0,legacy_result=obor_profile_build<3821;char buf[MAX_STR_VAR_LEN+1];
     struct {int lVal;} result,*result_ptr=&result,**pretvar=&result_ptr;
     (void)ind;(void)buf;(void)pretvar;(void)legacy_result;
     switch(0) {case 0: BRANCH }

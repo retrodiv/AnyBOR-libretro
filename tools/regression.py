@@ -15,6 +15,7 @@ import tempfile
 from pathlib import Path
 import make_fixture
 import release
+from profile_groups import select_profile_group
 from test_state_options import state_head
 from test_historical_player import player_fixture, check_player_continuation
 from test_script_variable_keys import variable_key_fixture, check_variable_key_continuation
@@ -53,6 +54,12 @@ def check_movie_restore(result, audio_path, restores=1):
         raise RuntimeError("Restored pre-movie full PCM differs")
 
 
+def model_attack_warning(profile, number, declared):
+    """The historical model allocation retains an extra slot in these sources."""
+    spare = int(profile["engine"] in ("3741", "3842"))
+    return number > (10 if declared is None else declared) + spare
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--core", default=str(DEFAULT_CORE))
@@ -61,9 +68,12 @@ def main():
     parser.add_argument("--runner", default="", help="optional emulator command for the host")
     parser.add_argument("--windows", action="store_true", help="use Wine Z: paths with a Windows host")
     parser.add_argument("--historical-only", action="store_true", help="run only historical compiled-script contracts")
+    parser.add_argument("--profile-group", help="one-based INDEX/COUNT partition of all profile cases")
     args = parser.parse_args()
     root = release.ROOT
-    profiles = release.read_json(root / "src/pin.json")["profiles"]
+    profiles = select_profile_group(release.read_json(root / "src/pin.json")["profiles"],
+                                    args.profile_group)
+    selected = {p["build"] for p in profiles}
     core = Path(args.core).resolve()
     cache = root / ".build"
     cache.mkdir(exist_ok=True)
@@ -250,29 +260,30 @@ def main():
             check_variable_key_continuation(result, profile['engine'])
             state.unlink()
 
-        peak = work / "6412/saves/AnyBOR/diagnostic/6412/Saves/.obor_peak_sparse_v2_diagnostic.pak.txt"
-        peak.write_text(str(64 << 20) + "\n")
-        run("6412", pak, "retain a previous larger peak", OBOR_SAVE_AT=120,
-            OBOR_SAVE_STATE=work / "peak.state")
-        if int(peak.read_text()) != (64 << 20):
-            raise RuntimeError("A smaller session overwrote the learned peak")
-        run("6412", raw / "data/models.txt", "unpacked mod save directory",
-            OBOR_SAVE_AT=120, OBOR_SAVE_STATE=work / "raw.state")
-        if not (work / "6412/saves/AnyBOR/raw/6412/Saves/.obor_peak_sparse_v2_raw.pak.txt").is_file():
-            raise RuntimeError("Unpacked mod peak is missing")
+        if "6412" in selected:
+            peak = work / "6412/saves/AnyBOR/diagnostic/6412/Saves/.obor_peak_sparse_v2_diagnostic.pak.txt"
+            peak.write_text(str(64 << 20) + "\n")
+            run("6412", pak, "retain a previous larger peak", OBOR_SAVE_AT=120,
+                OBOR_SAVE_STATE=work / "peak.state")
+            if int(peak.read_text()) != (64 << 20):
+                raise RuntimeError("A smaller session overwrote the learned peak")
+            run("6412", raw / "data/models.txt", "unpacked mod save directory",
+                OBOR_SAVE_AT=120, OBOR_SAVE_STATE=work / "raw.state")
+            if not (work / "6412/saves/AnyBOR/raw/6412/Saves/.obor_peak_sparse_v2_raw.pak.txt").is_file():
+                raise RuntimeError("Unpacked mod peak is missing")
 
 
         # Optional model entries must not index beyond the configured tables.
         # Each case has fresh files so an earlier warning cannot satisfy it.
-        bounds_cases = (("defense", 11, None, True),
-                        ("defense", 12, None, True),
-                        ("offense", 11, None, True),
-                        ("defense", 13, 12, True),
-                        ("offense", 2147483647, None, True),
-                        ("defense", 10, None, False),
-                        ("defense", 12, 12, False),
-                        ("offense", 12, 12, False))
-        for index, (command, number, declared, warn) in enumerate(bounds_cases):
+        bounds_cases = (("defense", 11, None),
+                        ("defense", 12, None),
+                        ("offense", 11, None),
+                        ("defense", 13, 12),
+                        ("offense", 2147483647, None),
+                        ("defense", 10, None),
+                        ("defense", 12, 12),
+                        ("offense", 12, 12))
+        for index, (command, number, declared) in enumerate(bounds_cases):
             model_members = make_fixture.files()
             if declared is not None:
                 model_members["data/models.txt"] = (
@@ -285,6 +296,7 @@ def main():
             make_fixture.write_pak(model_pak, model_members)
             for profile in profiles:
                 engine = profile["build"]
+                warn = model_attack_warning(profile, number, declared)
                 system = work / ("model-attack-{0}-{1}".format(index, engine))
                 label = "model attack bounds {0} normal{1} max={2}".format(command, number, declared)
                 result = run(engine, model_pak, label, frames=1000, system_dir=system,
@@ -303,7 +315,8 @@ def main():
         print("Model attack bounds: {0} conditions across {1} profiles: OK".format(
             len(bounds_cases) * len(profiles), len(profiles)), flush=True)
 
-        if args.webm:
+        movies = [e for e in ("4153", "4432", "6412", "8023") if e in selected]
+        if args.webm and movies:
             for audio, width, height in ((False, 160, 120), (True, 160, 120), (True, 800, 450)):
                 video = work / "green.webm"
                 command = ["ffmpeg", "-v", "error", "-f", "lavfi", "-i",
@@ -319,7 +332,7 @@ def main():
                 video_pak = work / "video.pak"
                 make_fixture.write_pak(video_pak, video_members)
                 kind = ("WebM with audio" if audio else "WebM without audio") + " {0}x{1}".format(width, height)
-                for engine in ("4153", "4432", "6412", "8023"):
+                for engine in movies:
                     physical = next(p["engine"] for p in profiles if p["build"] == engine)
                     movie_sources = root / "src/engines" / physical / "source/webmlib"
                     if not (movie_sources / "vidplay.c").is_file():

@@ -1,4 +1,4 @@
-/* AnyBOR modification record: 2026-10-15.
+/* AnyBOR modification record: 2026-10-24.
  * Port maintained by retrodiv <retrodiv@proton.me>.
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
@@ -18,7 +18,17 @@
  * newly completed model during explicit model-list or level preparation, and
  * defer states until that preparation has cleaned up its intermediate
  * parsers and handles. Fall back when legacy content names missing model,
- * level, scene or background overrides.
+ * level, scene or background overrides. Keep selected palette-conversion
+ * reads bounded and reject missing maps or flags, while preserving
+ * unselected slots and native allocation failure callbacks. Access script-
+ * container pointer slots with byte copies, preserving record layout,
+ * pointer values and native copy/cleanup order. Release each sprite owner
+ * once and complete cleanup independently of alias counts. Preserve native
+ * sprite-map capacity policies, check allocation extents and retain existing
+ * storage and capacity when growth is unavailable. Validate sprite-node
+ * allocations and release partial resources without changing existing
+ * owners. Retire only the released level's owned stream bytes and extent
+ * metadata.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/3400.md
  * at the source repository root. Original notices follow below.
@@ -38,6 +48,8 @@
 /////////////////////////////////////////////////////////////////////////////
 
 #include "openbor.h"
+#include <limits.h>
+#include <stdint.h>
 #include "commands.h"
 #include "models.h"
 
@@ -1273,47 +1285,63 @@ void clear_scripts()
 	Script_Global_Clear();
 }
 
-void alloc_all_scripts(s_scripts* s) {
-	static const size_t scripts_membercount = sizeof(s_scripts) / sizeof(Script*);
-	size_t i;
-
-	for (i = 0; i < scripts_membercount; i++) {
-		(((Script**) s)[i]) = alloc_script();
-	}
+void alloc_all_scripts(s_scripts* s)
+{
+    void *scripts = s;
+    size_t i;
+    const size_t scripts_membercount = sizeof(s_scripts) / sizeof(Script*);
+    if(!scripts) return;
+    for(i = 0; i < scripts_membercount; ++i)
+    {
+        Script *script = alloc_script();
+        memcpy((unsigned char*)scripts + i * sizeof(script), &script, sizeof(script));
+    }
 }
 
-void clear_all_scripts(s_scripts* s, int method) {
-	static const size_t scripts_membercount = sizeof(s_scripts) / sizeof(Script*);
-	size_t i;
-	Script** ps = (Script**) s;
-
-	for (i = 0; i < scripts_membercount; i++) {
-		Script_Clear(ps[i],   method);
-	}
+void clear_all_scripts(s_scripts* s, int method)
+{
+    size_t i;
+    const size_t scripts_membercount = sizeof(s_scripts) / sizeof(Script*);
+    if(!s) return;
+    for(i = 0; i < scripts_membercount; ++i)
+    {
+        Script *script = NULL;
+        memcpy(&script, (const unsigned char*)s + i * sizeof(script), sizeof(script));
+        if(script) Script_Clear(script, method);
+    }
 }
 
-void free_all_scripts(s_scripts* s) {
-	static const size_t scripts_membercount = sizeof(s_scripts) / sizeof(Script*);
-	size_t i;
-	Script** ps = (Script**) s;
-
-	for (i = 0; i < scripts_membercount; i++) {
-		if (ps[i]) {
-			free(ps[i]);
-			ps[i] = NULL;
-		}
-	}
+void free_all_scripts(s_scripts* s)
+{
+    void *scripts = s;
+    size_t i;
+    const size_t scripts_membercount = sizeof(s_scripts) / sizeof(Script*);
+    if(!scripts) return;
+    for(i = 0; i < scripts_membercount; ++i)
+    {
+        Script *script = NULL;
+        memcpy(&script, (const unsigned char*)scripts + i * sizeof(script), sizeof(script));
+        if(script)
+        {
+            free(script);
+            script = NULL;
+            memcpy((unsigned char*)scripts + i * sizeof(script), &script, sizeof(script));
+        }
+    }
 }
 
-void copy_all_scripts(s_scripts* src, s_scripts* dest, int method) {
-	static const size_t scripts_membercount = sizeof(s_scripts) / sizeof(Script*);
-	size_t i;
-	Script** ps = (Script**) src;
-	Script** pd = (Script**) dest;
-
-	for (i = 0; i < scripts_membercount; i++) {
-			Script_Copy(pd[i], ps[i], method);
-	}
+void copy_all_scripts(s_scripts* src, s_scripts* dest, int method)
+{
+    size_t i;
+    const size_t scripts_membercount = sizeof(s_scripts) / sizeof(Script*);
+    if(!src || !dest) return;
+    for(i = 0; i < scripts_membercount; ++i)
+    {
+        Script *source = NULL, *destination = NULL;
+        memcpy(&source, (const unsigned char*)src + i * sizeof(source), sizeof(source));
+        memcpy(&destination, (const unsigned char*)dest + i * sizeof(destination), sizeof(destination));
+        if(source && destination) Script_Copy(destination, source, method);
+    }
 }
 
 void execute_animation_script(entity* ent)
@@ -2683,14 +2711,18 @@ int convert_map_to_palette(s_model* model, unsigned char mapflag[])
 	int i, c;
 	unsigned char *newmap, *oldmap;
 	unsigned char *p1, *p2;
+    if(!model || screenformat < 0 || (unsigned)screenformat >= sizeof(pixelbytes)/sizeof(pixelbytes[0])) return 0;
 	unsigned pb = pixelbytes[(int)screenformat];
 	if(model->palette==NULL) return 0;
 	for(c=0; c<model->maps_loaded; c++)
 	{
+        if(!mapflag) return 0;
 		if(mapflag[c]==0) continue;
+        if(c >= MAX_COLOUR_MAPS || !model->colourmap[c]) return 0;
 		if((newmap = malloc(PAL_BYTES)) == NULL)
 		{
 			shutdown(1, "Error convert_map_to_palette for model: %s\n", model->name);
+            return 0;
 		}
 		// Create new colour map
 		memcpy(newmap, model->palette, PAL_BYTES);
@@ -3384,44 +3416,65 @@ void resourceCleanUp(){
 
 void freesprites()
 {
-	unsigned short i;
-	s_sprite_list *head;
-	for(i=0; i<=sprites_loaded; i++)
-	{
-		if(sprite_list != NULL)
-		{
-			free(sprite_list->sprite);
-			sprite_list->sprite = NULL;
-			free(sprite_list->filename);
-			sprite_list->filename = NULL;
-			head = sprite_list->next;
-			free(sprite_list);
-			sprite_list = head;
-		}
-	}
-	if(sprite_map != NULL)
-	{
-		free(sprite_map);
-		sprite_map = NULL;
-	}
-	sprites_loaded = 0;
+    s_sprite_list *head;
+    while(sprite_list != NULL)
+    {
+        free(sprite_list->sprite);
+        sprite_list->sprite = NULL;
+        free(sprite_list->filename);
+        sprite_list->filename = NULL;
+        head = sprite_list->next;
+        free(sprite_list);
+        sprite_list = head;
+    }
+    if(sprite_map != NULL)
+    {
+        free(sprite_map);
+        sprite_map = NULL;
+    }
+    sprites_loaded = 0;
 }
 
 // allocate enough members for sprite_map
 void prepare_sprite_map(size_t size)
 {
-	if(sprite_map == NULL || size + 1 > sprite_map_max_items )
-	{
+    size_t new_capacity;
+    s_sprite_map *resized;
+    if(size >= (size_t)INT_MAX || sprite_map_max_items < 0)
+    {
+        shutdown(1, "Out Of Memory!  Failed to create a new sprite_map\n");
+        return;
+    }
+    if(sprite_map != NULL && size + 1 <= (size_t)sprite_map_max_items)
+    {
+        return;
+    }
 #ifdef VERBOSE
-		printf("%s %p\n", "prepare_sprite_map was", sprite_map);
+    printf("%s %p\n", "prepare_sprite_map was", sprite_map);
 #endif
-		do {
-			sprite_map_max_items += 256;
-		}
-		while (size + 1 > sprite_map_max_items);
-		sprite_map = realloc(sprite_map, sizeof(s_sprite_map) * sprite_map_max_items);
-		if(sprite_map == NULL) shutdown(1, "Out Of Memory!  Failed to create a new sprite_map\n");
-	}
+    new_capacity = (size_t)sprite_map_max_items;
+    if(size + 1 > new_capacity)
+    {
+        size_t blocks = (size + 1 - new_capacity + 255) / 256;
+        new_capacity += blocks * 256;
+    }
+    else
+    {
+        new_capacity += 256;
+    }
+    if(new_capacity > (size_t)INT_MAX || new_capacity > SIZE_MAX / sizeof(*sprite_map))
+    {
+        shutdown(1, "Out Of Memory!  Failed to create a new sprite_map\n");
+        return;
+    }
+    resized = realloc(sprite_map, sizeof(*sprite_map) * new_capacity);
+    if(resized == NULL)
+    {
+        shutdown(1, "Out Of Memory!  Failed to create a new sprite_map\n");
+        return;
+    }
+    sprite_map = resized;
+    sprite_map_max_items = (int)new_capacity;
 }
 
 // Returns sprite index.
@@ -3470,12 +3523,23 @@ int loadsprite(char *filename, int ofsx, int ofsy, int bmpformat)
 	len = strlen(filename);
 	size = fakey_encodesprite(bitmap);
 	curr = malloc(sizeof(s_sprite_list));
+    if(curr == NULL)
+    {
+        freebitmap(bitmap);
+        shutdown(1, "loadsprite() Out of memory!\n");
+        return -1;
+    }
 	curr->sprite = malloc(size);
 	curr->filename = malloc(len + 1);
-	if(curr == NULL || curr->sprite == NULL || curr->filename == NULL){
-		freebitmap(bitmap);
-		shutdown(1, "loadsprite() Out of memory!\n");
-	}
+	if(curr->sprite == NULL || curr->filename == NULL)
+    {
+        free(curr->sprite);
+        free(curr->filename);
+        free(curr);
+        freebitmap(bitmap);
+        shutdown(1, "loadsprite() Out of memory!\n");
+        return -1;
+    }
 	memcpy(curr->filename, filename,len);
 	curr->filename[len] = 0;
 	encodesprite(ofsx-clipl, ofsy-clipt, bitmap, curr->sprite);
@@ -7283,7 +7347,11 @@ s_model* load_cached_model(char * name, char * owner, char unload)
 	// we need to convert 8bit colourmap into 24bit palette
 	if(pixelformat==PIXEL_x8)
 	{
-		convert_map_to_palette(newchar, mapflag);
+		if(!convert_map_to_palette(newchar, mapflag) && newchar->palette)
+        {
+            shutdownmessage = "Failed to convert colourmaps.";
+            goto lCleanup;
+        }
 	}
 
 	printf("Loading '%s' from %s\n", newchar->name, filename);
@@ -8509,6 +8577,7 @@ void free_level(s_level* lv)
 		{
 			free(lv->filestreams[i].buf);
 			lv->filestreams[i].buf = NULL;
+            lv->filestreams[i].obor_capacity = 0;
 		}
 	}
 

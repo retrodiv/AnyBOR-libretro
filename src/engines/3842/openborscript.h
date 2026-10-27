@@ -1,4 +1,4 @@
-/* AnyBOR modification record: 2026-10-17.
+/* AnyBOR modification record: 2026-10-22.
  * Port maintained by retrodiv <retrodiv@proton.me>.
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
@@ -36,6 +36,8 @@ typedef struct
 //osc
 #define script_magic ((int)0x73636f)
 
+#include "obor_script_storage.h"
+
 typedef struct Script
 {
 	int magic;
@@ -44,6 +46,8 @@ typedef struct Script
 	ScriptVariant* vars;
 	int initialized;        //flag
 	int interpreterowner;   //flag
+    obor_script_reference *obor_interpreter;
+    obor_script_reference *obor_comment;
 }Script;
 
 extern s_variantnode** global_var_list;
@@ -233,11 +237,14 @@ HRESULT openbor_executescript(ScriptVariant** varlist , ScriptVariant** pretvar,
 
 void mapstrings_systemvariant(ScriptVariant** varlist, int paramCount);
 void mapstrings_entityproperty(ScriptVariant** varlist, int paramCount);
+void mapstrings_getentityproperty(ScriptVariant** varlist, int paramCount);
+void mapstrings_changeentityproperty(ScriptVariant** varlist, int paramCount);
 void mapstrings_playerproperty(ScriptVariant** varlist, int paramCount);
 void mapstrings_setspawnentry(ScriptVariant** varlist, int paramCount);
 void mapstrings_transconst(ScriptVariant** varlist, int paramCount);
 void mapstrings_playerkeys(ScriptVariant** varlist, int paramCount);
 void mapstrings_textobjproperty(ScriptVariant** varlist, int paramCount);
+void mapstrings_changetextobjproperty(ScriptVariant** varlist, int paramCount);
 void mapstrings_layerproperty(ScriptVariant** varlist, int paramCount);
 void mapstrings_drawmethodproperty(ScriptVariant** varlist, int paramCount);
 void mapstrings_gfxproperty(ScriptVariant** varlist, int paramCount);

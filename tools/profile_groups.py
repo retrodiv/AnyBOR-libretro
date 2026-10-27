@@ -53,9 +53,10 @@ def expand_workflow_profile_groups(workflow):
 
 def check_workflow_groups(workflow, profiles):
     """Require complete bounded coverage in each native/emulated CI path."""
-    scripts = ('tools/test_rewind.py', 'tools/test_state_options.py')
+    scripts = ('tools/test_rewind.py', 'tools/test_state_options.py', 'tools/regression.py')
     paths = {(script, platform): [] for script in scripts
-             for platform in ('linux', 'windows', 'macos')}
+             for platform in ('linux', 'windows', 'macos')
+             if script != 'tools/regression.py' or platform != 'windows'}
     for line in expand_workflow_profile_groups(workflow).splitlines():
         if not line.strip().startswith('python3 '):
             continue
@@ -74,6 +75,8 @@ def check_workflow_groups(workflow, profiles):
             group = args[offset]
             platform = ('windows' if '--windows' in args else
                         'macos' if 'anybor_libretro.dylib' in args else 'linux')
+            if (script, platform) not in paths:
+                raise ValueError("Unexpected grouped runtime platform")
             paths[script, platform].append(group)
     names = [entry['build'] for entry in profiles]
     for (script, platform), selectors in paths.items():

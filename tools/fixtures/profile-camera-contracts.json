@@ -1,0 +1,305 @@
+{
+  "boundary_controls": [
+    3782,
+    3783,
+    3784,
+    3836,
+    3837
+  ],
+  "sources": [
+    {
+      "revision": 3761,
+      "commit": "16814fdf39fdcdd78cb59f3d70748f1dc023a24f",
+      "separate_limits": false,
+      "early_blockade": false,
+      "bounding_box": false,
+      "source_sha256": {
+        "update_scroller": "791ea6f1106f04a0a5935211c0ad622a9ca85e737e841c7823c8fcbbbddb6ab8",
+        "constants": "3e5a121634a265246d74772ec0612e4204487bc9aea371b149c21b247695ade4",
+        "level_scroll_parser": "62a4d17305455bd80bd27dfe6e85e816039a720d07201afdbbdd3ac0334ebdaf",
+        "initial_limits": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "cleared_limits": "40891e6302f360b43e97d4bdbef56d33f57773293a620e824aea4551dcb6e26a"
+      }
+    },
+    {
+      "revision": 3769,
+      "commit": "14ac619f7d9f21bf1ac331932308c3ced4a65615",
+      "separate_limits": false,
+      "early_blockade": false,
+      "bounding_box": false,
+      "source_sha256": {
+        "update_scroller": "791ea6f1106f04a0a5935211c0ad622a9ca85e737e841c7823c8fcbbbddb6ab8",
+        "constants": "3e5a121634a265246d74772ec0612e4204487bc9aea371b149c21b247695ade4",
+        "level_scroll_parser": "62a4d17305455bd80bd27dfe6e85e816039a720d07201afdbbdd3ac0334ebdaf",
+        "initial_limits": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "cleared_limits": "40891e6302f360b43e97d4bdbef56d33f57773293a620e824aea4551dcb6e26a"
+      }
+    },
+    {
+      "revision": 3773,
+      "commit": "e39bfa21d708f2f7a586085d8689bff94440a104",
+      "separate_limits": false,
+      "early_blockade": false,
+      "bounding_box": false,
+      "source_sha256": {
+        "update_scroller": "791ea6f1106f04a0a5935211c0ad622a9ca85e737e841c7823c8fcbbbddb6ab8",
+        "constants": "3e5a121634a265246d74772ec0612e4204487bc9aea371b149c21b247695ade4",
+        "level_scroll_parser": "62a4d17305455bd80bd27dfe6e85e816039a720d07201afdbbdd3ac0334ebdaf",
+        "initial_limits": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "cleared_limits": "40891e6302f360b43e97d4bdbef56d33f57773293a620e824aea4551dcb6e26a"
+      }
+    },
+    {
+      "revision": 3780,
+      "commit": "760cb0e6fdbda9d8a4c426f00c84623349ca5b17",
+      "separate_limits": false,
+      "early_blockade": false,
+      "bounding_box": false,
+      "source_sha256": {
+        "update_scroller": "791ea6f1106f04a0a5935211c0ad622a9ca85e737e841c7823c8fcbbbddb6ab8",
+        "constants": "3e5a121634a265246d74772ec0612e4204487bc9aea371b149c21b247695ade4",
+        "level_scroll_parser": "62a4d17305455bd80bd27dfe6e85e816039a720d07201afdbbdd3ac0334ebdaf",
+        "initial_limits": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "cleared_limits": "40891e6302f360b43e97d4bdbef56d33f57773293a620e824aea4551dcb6e26a"
+      }
+    },
+    {
+      "revision": 3782,
+      "commit": "aef946a62f1e56863307267ec86c641e4447a61d",
+      "separate_limits": false,
+      "early_blockade": false,
+      "bounding_box": false,
+      "source_sha256": {
+        "update_scroller": "791ea6f1106f04a0a5935211c0ad622a9ca85e737e841c7823c8fcbbbddb6ab8",
+        "constants": "3e5a121634a265246d74772ec0612e4204487bc9aea371b149c21b247695ade4",
+        "level_scroll_parser": "62a4d17305455bd80bd27dfe6e85e816039a720d07201afdbbdd3ac0334ebdaf",
+        "initial_limits": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "cleared_limits": "40891e6302f360b43e97d4bdbef56d33f57773293a620e824aea4551dcb6e26a"
+      }
+    },
+    {
+      "revision": 3783,
+      "commit": "5da3e255b2783079872a57247b020090e307df0d",
+      "separate_limits": true,
+      "early_blockade": false,
+      "bounding_box": false,
+      "source_sha256": {
+        "update_scroller": "bfcb655d5bd062e0f0c10b147f5d8598c92dfff17de28b945c2bb65a189a9993",
+        "constants": "3e5a121634a265246d74772ec0612e4204487bc9aea371b149c21b247695ade4",
+        "level_scroll_parser": "a1dea549b9a375e83a268763523af1582e60774ad8f3afaa8d187bbdb9cffc9e",
+        "initial_limits": "87b150cd62b38f3d05f3a8cbc1c4de6b61fc310b6da4a45b1f373c2355f4e172",
+        "cleared_limits": "129470ca06eb9fd1e1cebb60332b79973a28f1cd5ab8d1de0e92ae4f9270f27b"
+      }
+    },
+    {
+      "revision": 3784,
+      "commit": "d4b6a5f7818d1d3fd6ef20b68e95b7e2a8a4dc5f",
+      "separate_limits": true,
+      "early_blockade": true,
+      "bounding_box": false,
+      "source_sha256": {
+        "update_scroller": "d2ae2055cc84e3e3afa7371ebd55c1e99345923824f6900972b1e7ccdd1c333a",
+        "constants": "3e5a121634a265246d74772ec0612e4204487bc9aea371b149c21b247695ade4",
+        "level_scroll_parser": "a1dea549b9a375e83a268763523af1582e60774ad8f3afaa8d187bbdb9cffc9e",
+        "initial_limits": "87b150cd62b38f3d05f3a8cbc1c4de6b61fc310b6da4a45b1f373c2355f4e172",
+        "cleared_limits": "129470ca06eb9fd1e1cebb60332b79973a28f1cd5ab8d1de0e92ae4f9270f27b"
+      }
+    },
+    {
+      "revision": 3789,
+      "commit": "cc5166a117318987f638b4b6c6d1034384409372",
+      "separate_limits": true,
+      "early_blockade": true,
+      "bounding_box": false,
+      "source_sha256": {
+        "update_scroller": "d2ae2055cc84e3e3afa7371ebd55c1e99345923824f6900972b1e7ccdd1c333a",
+        "constants": "3e5a121634a265246d74772ec0612e4204487bc9aea371b149c21b247695ade4",
+        "level_scroll_parser": "a1dea549b9a375e83a268763523af1582e60774ad8f3afaa8d187bbdb9cffc9e",
+        "initial_limits": "87b150cd62b38f3d05f3a8cbc1c4de6b61fc310b6da4a45b1f373c2355f4e172",
+        "cleared_limits": "129470ca06eb9fd1e1cebb60332b79973a28f1cd5ab8d1de0e92ae4f9270f27b"
+      }
+    },
+    {
+      "revision": 3793,
+      "commit": "edf234656cae88b078718661a2bd0c42090f0687",
+      "separate_limits": true,
+      "early_blockade": true,
+      "bounding_box": false,
+      "source_sha256": {
+        "update_scroller": "d2ae2055cc84e3e3afa7371ebd55c1e99345923824f6900972b1e7ccdd1c333a",
+        "constants": "3e5a121634a265246d74772ec0612e4204487bc9aea371b149c21b247695ade4",
+        "level_scroll_parser": "a1dea549b9a375e83a268763523af1582e60774ad8f3afaa8d187bbdb9cffc9e",
+        "initial_limits": "87b150cd62b38f3d05f3a8cbc1c4de6b61fc310b6da4a45b1f373c2355f4e172",
+        "cleared_limits": "129470ca06eb9fd1e1cebb60332b79973a28f1cd5ab8d1de0e92ae4f9270f27b"
+      }
+    },
+    {
+      "revision": 3797,
+      "commit": "4490ee5d18ffcc7604e95cd4910dadf6191e694a",
+      "separate_limits": true,
+      "early_blockade": true,
+      "bounding_box": false,
+      "source_sha256": {
+        "update_scroller": "d2ae2055cc84e3e3afa7371ebd55c1e99345923824f6900972b1e7ccdd1c333a",
+        "constants": "3e5a121634a265246d74772ec0612e4204487bc9aea371b149c21b247695ade4",
+        "level_scroll_parser": "a1dea549b9a375e83a268763523af1582e60774ad8f3afaa8d187bbdb9cffc9e",
+        "initial_limits": "87b150cd62b38f3d05f3a8cbc1c4de6b61fc310b6da4a45b1f373c2355f4e172",
+        "cleared_limits": "129470ca06eb9fd1e1cebb60332b79973a28f1cd5ab8d1de0e92ae4f9270f27b"
+      }
+    },
+    {
+      "revision": 3805,
+      "commit": "2abee79303b17b269e88cd986ab78dda2bd526d6",
+      "separate_limits": true,
+      "early_blockade": true,
+      "bounding_box": false,
+      "source_sha256": {
+        "update_scroller": "d2ae2055cc84e3e3afa7371ebd55c1e99345923824f6900972b1e7ccdd1c333a",
+        "constants": "3e5a121634a265246d74772ec0612e4204487bc9aea371b149c21b247695ade4",
+        "level_scroll_parser": "a1dea549b9a375e83a268763523af1582e60774ad8f3afaa8d187bbdb9cffc9e",
+        "initial_limits": "87b150cd62b38f3d05f3a8cbc1c4de6b61fc310b6da4a45b1f373c2355f4e172",
+        "cleared_limits": "129470ca06eb9fd1e1cebb60332b79973a28f1cd5ab8d1de0e92ae4f9270f27b"
+      }
+    },
+    {
+      "revision": 3814,
+      "commit": "46d398cfb2e75a142c7bf6dc38cc2f9603b57ecf",
+      "separate_limits": true,
+      "early_blockade": true,
+      "bounding_box": false,
+      "source_sha256": {
+        "update_scroller": "d2ae2055cc84e3e3afa7371ebd55c1e99345923824f6900972b1e7ccdd1c333a",
+        "constants": "3e5a121634a265246d74772ec0612e4204487bc9aea371b149c21b247695ade4",
+        "level_scroll_parser": "a1dea549b9a375e83a268763523af1582e60774ad8f3afaa8d187bbdb9cffc9e",
+        "initial_limits": "87b150cd62b38f3d05f3a8cbc1c4de6b61fc310b6da4a45b1f373c2355f4e172",
+        "cleared_limits": "129470ca06eb9fd1e1cebb60332b79973a28f1cd5ab8d1de0e92ae4f9270f27b"
+      }
+    },
+    {
+      "revision": 3818,
+      "commit": "cae686392d0b5e52563e9dd191801193796cd4a5",
+      "separate_limits": true,
+      "early_blockade": true,
+      "bounding_box": false,
+      "source_sha256": {
+        "update_scroller": "d2ae2055cc84e3e3afa7371ebd55c1e99345923824f6900972b1e7ccdd1c333a",
+        "constants": "3e5a121634a265246d74772ec0612e4204487bc9aea371b149c21b247695ade4",
+        "level_scroll_parser": "a1dea549b9a375e83a268763523af1582e60774ad8f3afaa8d187bbdb9cffc9e",
+        "initial_limits": "87b150cd62b38f3d05f3a8cbc1c4de6b61fc310b6da4a45b1f373c2355f4e172",
+        "cleared_limits": "129470ca06eb9fd1e1cebb60332b79973a28f1cd5ab8d1de0e92ae4f9270f27b"
+      }
+    },
+    {
+      "revision": 3822,
+      "commit": "7ddd15b4981ea7b55f1851db926bc86276632b8c",
+      "separate_limits": true,
+      "early_blockade": true,
+      "bounding_box": false,
+      "source_sha256": {
+        "update_scroller": "d2ae2055cc84e3e3afa7371ebd55c1e99345923824f6900972b1e7ccdd1c333a",
+        "constants": "3e5a121634a265246d74772ec0612e4204487bc9aea371b149c21b247695ade4",
+        "level_scroll_parser": "a1dea549b9a375e83a268763523af1582e60774ad8f3afaa8d187bbdb9cffc9e",
+        "initial_limits": "87b150cd62b38f3d05f3a8cbc1c4de6b61fc310b6da4a45b1f373c2355f4e172",
+        "cleared_limits": "129470ca06eb9fd1e1cebb60332b79973a28f1cd5ab8d1de0e92ae4f9270f27b"
+      }
+    },
+    {
+      "revision": 3824,
+      "commit": "e260635df5095577fb729555cd5c08ecce37316d",
+      "separate_limits": true,
+      "early_blockade": true,
+      "bounding_box": false,
+      "source_sha256": {
+        "update_scroller": "d2ae2055cc84e3e3afa7371ebd55c1e99345923824f6900972b1e7ccdd1c333a",
+        "constants": "3e5a121634a265246d74772ec0612e4204487bc9aea371b149c21b247695ade4",
+        "level_scroll_parser": "a1dea549b9a375e83a268763523af1582e60774ad8f3afaa8d187bbdb9cffc9e",
+        "initial_limits": "87b150cd62b38f3d05f3a8cbc1c4de6b61fc310b6da4a45b1f373c2355f4e172",
+        "cleared_limits": "129470ca06eb9fd1e1cebb60332b79973a28f1cd5ab8d1de0e92ae4f9270f27b"
+      }
+    },
+    {
+      "revision": 3829,
+      "commit": "8223091e0ae85bd621572094c3465783d6f73429",
+      "separate_limits": true,
+      "early_blockade": true,
+      "bounding_box": false,
+      "source_sha256": {
+        "update_scroller": "d2ae2055cc84e3e3afa7371ebd55c1e99345923824f6900972b1e7ccdd1c333a",
+        "constants": "3e5a121634a265246d74772ec0612e4204487bc9aea371b149c21b247695ade4",
+        "level_scroll_parser": "a1dea549b9a375e83a268763523af1582e60774ad8f3afaa8d187bbdb9cffc9e",
+        "initial_limits": "87b150cd62b38f3d05f3a8cbc1c4de6b61fc310b6da4a45b1f373c2355f4e172",
+        "cleared_limits": "129470ca06eb9fd1e1cebb60332b79973a28f1cd5ab8d1de0e92ae4f9270f27b"
+      }
+    },
+    {
+      "revision": 3831,
+      "commit": "c61f02b3fbb155dd416a7750eb9cb645d7785266",
+      "separate_limits": true,
+      "early_blockade": true,
+      "bounding_box": false,
+      "source_sha256": {
+        "update_scroller": "b2b91dac5a31385b03f74f8ec4881fc7905695b7d72a2114d7c77dc23b7b16b9",
+        "constants": "3e5a121634a265246d74772ec0612e4204487bc9aea371b149c21b247695ade4",
+        "level_scroll_parser": "a1dea549b9a375e83a268763523af1582e60774ad8f3afaa8d187bbdb9cffc9e",
+        "initial_limits": "87b150cd62b38f3d05f3a8cbc1c4de6b61fc310b6da4a45b1f373c2355f4e172",
+        "cleared_limits": "129470ca06eb9fd1e1cebb60332b79973a28f1cd5ab8d1de0e92ae4f9270f27b"
+      }
+    },
+    {
+      "revision": 3836,
+      "commit": "bd018c0ff25f089f9430c2eafbc394f040d0f5c0",
+      "separate_limits": true,
+      "early_blockade": true,
+      "bounding_box": false,
+      "source_sha256": {
+        "update_scroller": "b2b91dac5a31385b03f74f8ec4881fc7905695b7d72a2114d7c77dc23b7b16b9",
+        "constants": "3e5a121634a265246d74772ec0612e4204487bc9aea371b149c21b247695ade4",
+        "level_scroll_parser": "a1dea549b9a375e83a268763523af1582e60774ad8f3afaa8d187bbdb9cffc9e",
+        "initial_limits": "87b150cd62b38f3d05f3a8cbc1c4de6b61fc310b6da4a45b1f373c2355f4e172",
+        "cleared_limits": "129470ca06eb9fd1e1cebb60332b79973a28f1cd5ab8d1de0e92ae4f9270f27b"
+      }
+    },
+    {
+      "revision": 3837,
+      "commit": "f2b4258428af00b3748ef7713d36201d4d0678ac",
+      "separate_limits": true,
+      "early_blockade": true,
+      "bounding_box": true,
+      "source_sha256": {
+        "update_scroller": "fafda5a186e8776087a285a3d596814c1a0ee2f97ba1c42c3e245e0223bea39e",
+        "constants": "3e5a121634a265246d74772ec0612e4204487bc9aea371b149c21b247695ade4",
+        "level_scroll_parser": "a1dea549b9a375e83a268763523af1582e60774ad8f3afaa8d187bbdb9cffc9e",
+        "initial_limits": "87b150cd62b38f3d05f3a8cbc1c4de6b61fc310b6da4a45b1f373c2355f4e172",
+        "cleared_limits": "129470ca06eb9fd1e1cebb60332b79973a28f1cd5ab8d1de0e92ae4f9270f27b"
+      }
+    },
+    {
+      "revision": 3839,
+      "commit": "b6712f11af263c3ad438d87241cec38f18570046",
+      "separate_limits": true,
+      "early_blockade": true,
+      "bounding_box": true,
+      "source_sha256": {
+        "update_scroller": "fafda5a186e8776087a285a3d596814c1a0ee2f97ba1c42c3e245e0223bea39e",
+        "constants": "3e5a121634a265246d74772ec0612e4204487bc9aea371b149c21b247695ade4",
+        "level_scroll_parser": "a1dea549b9a375e83a268763523af1582e60774ad8f3afaa8d187bbdb9cffc9e",
+        "initial_limits": "87b150cd62b38f3d05f3a8cbc1c4de6b61fc310b6da4a45b1f373c2355f4e172",
+        "cleared_limits": "129470ca06eb9fd1e1cebb60332b79973a28f1cd5ab8d1de0e92ae4f9270f27b"
+      }
+    },
+    {
+      "revision": 3842,
+      "commit": "1f702a991ace7fa31884262e458a85e351f62713",
+      "separate_limits": true,
+      "early_blockade": true,
+      "bounding_box": true,
+      "source_sha256": {
+        "update_scroller": "fafda5a186e8776087a285a3d596814c1a0ee2f97ba1c42c3e245e0223bea39e",
+        "constants": "3e5a121634a265246d74772ec0612e4204487bc9aea371b149c21b247695ade4",
+        "level_scroll_parser": "a1dea549b9a375e83a268763523af1582e60774ad8f3afaa8d187bbdb9cffc9e",
+        "initial_limits": "87b150cd62b38f3d05f3a8cbc1c4de6b61fc310b6da4a45b1f373c2355f4e172",
+        "cleared_limits": "129470ca06eb9fd1e1cebb60332b79973a28f1cd5ab8d1de0e92ae4f9270f27b"
+      }
+    }
+  ]
+}

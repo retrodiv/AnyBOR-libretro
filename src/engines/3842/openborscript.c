@@ -1,28 +1,50 @@
-/* AnyBOR modification record: 2026-10-20.
+/* AnyBOR modification record: 2026-10-26.
  * Port maintained by retrodiv <retrodiv@proton.me>.
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
  * Upstream code retains its original license and notices.
- * Keep the dormant constant-lowering diagnostic compatible with the single-
- * value instruction layout, map string constants from direct contiguous
- * instruction storage, select historical player and AI-flag property
- * contracts by logical build, and own complete dynamically allocated script
- * variable names through slot reuse and shutdown. Derive output names from
- * the content basename with explicit destination capacities, and reject
- * overflowing output path joins. Compact compiler-only instruction records
- * after resolving value ownership, preserving branch and export anchors, all
- * mutable values and exactly-once pool cleanup. Select historical attack
- * domains, environmental damage, camera and scroll behavior, model-save
- * loading, weapon and idle order, nested scripts and numeric script
- * selectors. Retain bounded storage, safe ownership and the selected
- * rejected-value contracts. Resolve text-property names within the actual
- * table bounds while preserving native numeric selectors. Reuse each text
- * object's owned buffer when replacing its contents. Select historical
- * level/text setter tolerance and pre-3826 empty-success unknown textual
- * constants without changing later strict contracts. Select the original
- * level runtime mapper before the getter repair in 3820 and setter repair in
- * 3821, preserving literal preconversion, second-argument mutation and
- * bounded dispatch through the variant's native integer union member.
+ * Map constants from direct contiguous instructions; select fixed animation
+ * names, suffix resolution, player and AI-flag properties by profile; bound
+ * historical suffix reads and own complete script variable names through
+ * slot reuse and shutdown. Derive output names from the content basename
+ * with explicit destination capacities, and reject overflowing output path
+ * joins. Compact compiler-only instruction records after resolving value
+ * ownership, preserving branch and export anchors, all mutable values and
+ * exactly-once pool cleanup. Select historical attack domains, environmental
+ * damage, camera and scroll behavior, model-save loading, weapon and idle
+ * order, nested scripts and numeric script selectors. Retain bounded
+ * storage, safe ownership and the selected rejected-value contracts.
+ * Validate coordinate query arguments and animation/frame indices; retain
+ * each profile's native coordinate extent and defined empty results outside
+ * it. Preserve source-defined argument counts, line capacities and script
+ * constants for each historical profile. Select each profile's native
+ * callback names, creation dispatch and post-compilation reset state.
+ * Preserve native script-owner initialization and capacity-collection
+ * boundaries, with safe handling of internal context labels. Retain shared
+ * interpreters through the last script reference while preserving
+ * independent variables, replacement and native callbacks. Track diagnostic
+ * comments independently so interpreter replacement can retain them. Resolve
+ * text-property names within the actual table bounds while preserving native
+ * numeric selectors. Reuse each text object's owned buffer when replacing
+ * its contents. Reject missing colourtable indices and keep selector
+ * arithmetic and table reads defined. Validate coordinate query arguments
+ * and animation/frame indices; retain each profile's native coordinate
+ * extent and defined empty results outside it. Use the declared staydown
+ * name-table length for lookup. Select historical level/text setter
+ * tolerance and pre-3826 empty-success unknown textual constants without
+ * changing later strict contracts. Select the original level runtime mapper
+ * before the getter repair in 3820 and setter repair in 3821, preserving
+ * literal preconversion, second-argument mutation and bounded dispatch
+ * through the variant's native integer union member. Preserve numeric model-
+ * cache selectors and diagnostics before name lookup begins, retaining
+ * bounded cache indices and native switch results. Transfer loaded stream
+ * buffers through aligned local outputs while preserving native record
+ * layout and results. Close owned input files after stream loading and on
+ * buffer allocation failure. Terminate fixed-cache stream line and argument
+ * results and preserve appended bytes with checked conversion and output
+ * allocation. Track initialized owned stream bytes independently of native
+ * size, bound cursor reads and preserve buffer-base append/save behavior and
+ * native slot policy.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/3842.md
  * at the source repository root. Original notices follow below.
@@ -61,6 +83,7 @@
 #include "openbor.h"
 #include "soundmix.h"
 #include "globals.h"
+#include <limits.h>
 #include "ImportCache.h"
 #include "models.h"
 
@@ -250,6 +273,7 @@ void Script_Global_Clear()
 		{
 			free(filestreams[i].buf);
 			filestreams[i].buf = NULL;
+            filestreams[i].obor_capacity = 0;
 		}
 	}
 	if(filestreams) free(filestreams);
@@ -306,6 +330,9 @@ int _set_var(char* theName, ScriptVariant* var, Script* owner)
 	int i;
 	s_variantnode* tempnode;
 	if(!theName || !theName[0]) return 0;
+    /* Internal context labels are not Script objects. */
+    if(obor_profile_build < 3814 && owner && !((uintptr_t)owner & 1u) &&
+       !owner->initialized) return 0;
 	// search the name
 	for(i=0; i<=max_global_var_index; i++)
 	{
@@ -345,7 +372,7 @@ int _set_var(char* theName, ScriptVariant* var, Script* owner)
 		global_var_list[max_global_var_index]->owner = owner;
         free(global_var_list[max_global_var_index]->key);
         global_var_list[max_global_var_index]->key = name;
-		if(max_global_var_index >= max_global_vars-1) _gc_var();
+		if(obor_profile_build >= 3815 && max_global_var_index >= max_global_vars-1) _gc_var();
 		return 1;
 	}
 }// end of _set_var
@@ -449,6 +476,84 @@ Script* alloc_script()
 	return pscript;
 }
 
+
+static void obor_script_destroy_interpreter(void *value)
+{
+    Interpreter_Clear((Interpreter *)value);
+    free(value);
+}
+
+static int obor_script_replace_interpreter(Script *script, char *name)
+{
+    Interpreter *replacement = malloc(sizeof(*replacement));
+    obor_script_reference *reference;
+    if(!replacement) return 0;
+    Interpreter_Init(replacement, name, &theFunctionList);
+    reference = obor_script_reference_new(replacement, obor_script_destroy_interpreter);
+    if(!reference)
+    {
+        obor_script_destroy_interpreter(replacement);
+        return 0;
+    }
+    if(!obor_script_reference_release(&script->obor_interpreter))
+    {
+        obor_script_reference_release(&reference);
+        return 0;
+    }
+    script->obor_interpreter = reference;
+    script->pinterpreter = replacement;
+    return 1;
+}
+
+static void obor_script_destroy_comment(void *value)
+{
+    free(value);
+}
+
+static int obor_script_replace_comment(Script *script, const char *comment)
+{
+    char *replacement;
+    obor_script_reference *reference;
+    size_t length = strlen(comment);
+    if(length == SIZE_MAX) return 0;
+    replacement = malloc(length + 1);
+    if(!replacement) return 0;
+    memcpy(replacement, comment, length + 1);
+    reference = obor_script_reference_new(replacement, obor_script_destroy_comment);
+    if(!reference)
+    {
+        free(replacement);
+        return 0;
+    }
+    if(!obor_script_reference_release(&script->obor_comment))
+    {
+        obor_script_reference_release(&reference);
+        return 0;
+    }
+    script->obor_comment = reference;
+    script->comment = replacement;
+    return 1;
+}
+
+static int obor_script_share_references(Script *destination, Script *source)
+{
+    if(!source->obor_interpreter ||
+       source->obor_interpreter->value != source->pinterpreter ||
+       !obor_script_reference_retain(source->obor_interpreter)) return 0;
+    if(source->obor_comment &&
+       (source->obor_comment->value != source->comment ||
+        !obor_script_reference_retain(source->obor_comment)))
+    {
+        obor_script_reference *rollback = source->obor_interpreter;
+        obor_script_reference_release(&rollback);
+        return 0;
+    }
+
+    destination->obor_interpreter = source->obor_interpreter;
+    destination->obor_comment = source->obor_comment;
+    return 1;
+}
+
 void Script_Init(Script* pscript, char* theName, char* comment, int first)
 {
 	int i;
@@ -464,18 +569,23 @@ void Script_Init(Script* pscript, char* theName, char* comment, int first)
 	}
 	if(!theName || !theName[0])  return; // if no name specified, only alloc the variants
 
-	pscript->pinterpreter = malloc(sizeof(*pscript->pinterpreter));
-	Interpreter_Init(pscript->pinterpreter, theName, &theFunctionList);
+	if(!obor_script_replace_interpreter(pscript, theName))
+    {
+        shutdown(1, "Unable to allocate script interpreter.");
+        return;
+    }
 	pscript->interpreterowner = 1; // this is the owner, important
 	pscript->initialized = 1;
-	if(comment){
-		pscript->comment = malloc(sizeof(*pscript->comment)*(strlen(comment)+1));
-		strcpy(pscript->comment, comment);
-	}
+	if(comment && !obor_script_replace_comment(pscript, comment))
+    {
+        shutdown(1, "Unable to allocate script comment.");
+        return;
+    }
 }
 
 static void execute_init_method(Script* pdest, int iscopy, int localclear)
 {
+    if(obor_profile_build < 3762) return;
 	Script* temp;
 	ScriptVariant tempvar;
 	//Execute init method
@@ -505,9 +615,15 @@ static void execute_init_method(Script* pdest, int iscopy, int localclear)
 //safe copy method
 void Script_Copy(Script* pdest, Script* psrc, int localclear)
 {
+    if(!pdest || !psrc || pdest == psrc) return;
 	if(!psrc->initialized) return;
 	if(pdest->initialized) Script_Clear(pdest, localclear);
-	pdest->pinterpreter = psrc->pinterpreter;
+	if(!obor_script_share_references(pdest, psrc))
+    {
+        shutdown(1, "Unable to retain script interpreter.");
+        return;
+    }
+    pdest->pinterpreter = psrc->pinterpreter;
 	pdest->comment = psrc->comment;
 	pdest->interpreterowner = 0; // dont own it
 	pdest->initialized = psrc->initialized; //just copy, it should be 1
@@ -552,14 +668,11 @@ void Script_Clear(Script* pscript, int localclear)
 	}
 	if(!pscript->initialized) return;
 
-	//if it is the owner, free the interpreter
-	if(pscript->pinterpreter && pscript->interpreterowner){
-		Interpreter_Clear(pscript->pinterpreter);
-		free(pscript->pinterpreter);
-		pscript->pinterpreter = NULL;
-		if(pscript->comment) free(pscript->comment);
-		pscript->comment = NULL;
-	}
+	/* Shared values survive until their final script reference ends. */
+	obor_script_reference_release(&pscript->obor_interpreter);
+    pscript->pinterpreter = NULL;
+    obor_script_reference_release(&pscript->obor_comment);
+    pscript->comment = NULL;
 	if(localclear) Script_Local_Clear(pscript);
 	pvars = pscript->vars; // in game clear(localclear!=2) just keep this value
 	memset(pscript, 0, sizeof(*pscript));
@@ -581,8 +694,17 @@ int Script_AppendText(Script* pscript, char* text, char* path)
 }
 
 //return name of function from pointer to function
+static int obor_script_function_available(void *functionRef)
+{
+    if(functionRef == (void*)system_exit) return obor_profile_build >= 3834;
+    if(functionRef == (void*)openbor_querychannel) return obor_profile_build >= 3838;
+    if(functionRef == (void*)openbor_stopchannel) return obor_profile_build >= 3838;
+    return 1;
+}
+
 const char* Script_GetFunctionName(void* functionRef)
 {
+    if(!obor_script_function_available(functionRef)) return "<unknown function>";
 	if (functionRef==((void*)system_isempty)) return "isempty";
 	else if (functionRef==((void*)system_exit)) return "exit";
 	else if (functionRef==((void*)system_NULL)) return "NULL";
@@ -726,15 +848,15 @@ void* Script_GetStringMapFunction(void* functionRef)
 {
 	if (functionRef==((void*)openbor_systemvariant)) return (void*)mapstrings_systemvariant;
 	else if (functionRef==((void*)openbor_changesystemvariant)) return (void*)mapstrings_systemvariant;
-	else if (functionRef==((void*)openbor_getentityproperty)) return (void*)mapstrings_entityproperty;
-	else if (functionRef==((void*)openbor_changeentityproperty)) return (void*)mapstrings_entityproperty;
+	else if (functionRef==((void*)openbor_getentityproperty)) return obor_profile_build < 3828 ? (void*)mapstrings_getentityproperty : (void*)mapstrings_entityproperty;
+	else if (functionRef==((void*)openbor_changeentityproperty)) return obor_profile_build < 3828 ? (void*)mapstrings_changeentityproperty : (void*)mapstrings_entityproperty;
 	else if (functionRef==((void*)openbor_getplayerproperty)) return (void*)mapstrings_playerproperty;
 	else if (functionRef==((void*)openbor_changeplayerproperty)) return (void*)mapstrings_playerproperty;
 	else if (functionRef==((void*)openbor_setspawnentry)) return (void*)mapstrings_setspawnentry;
 	else if (functionRef==((void*)openbor_transconst)) return (void*)mapstrings_transconst;
 	else if (functionRef==((void*)openbor_playerkeys)) return (void*)mapstrings_playerkeys;
 	else if (functionRef==((void*)openbor_gettextobjproperty)) return (void*)mapstrings_textobjproperty;
-	else if (functionRef==((void*)openbor_changetextobjproperty)) return (void*)mapstrings_textobjproperty;
+	else if (functionRef==((void*)openbor_changetextobjproperty)) return obor_profile_build < 3821 ? (void*)mapstrings_changetextobjproperty : (void*)mapstrings_textobjproperty;
 	else if (functionRef==((void*)openbor_getlayerproperty)) return (void*)mapstrings_layerproperty;
 	else if (functionRef==((void*)openbor_changelayerproperty)) return (void*)mapstrings_layerproperty;
 	else if (functionRef==((void*)openbor_changedrawmethod)) return (void*)mapstrings_drawmethodproperty;
@@ -787,7 +909,7 @@ int Script_MapStringConstants(Script* pscript)
 		{
 			params = Instruction_CallReferenceValues(pInstruction);
 			paramCount = Instruction_CallReferenceCount(pInstruction);
-			assert(paramCount<=32);
+			if(obor_profile_build >= 3828) assert(paramCount<=32);
 			// Get the pointer to the correct mapstrings function, if one exists.
 			pMapstrings = Script_GetStringMapFunction(pInstruction->functionRef);
 			if(pMapstrings)
@@ -993,7 +1115,7 @@ int Script_Compile(Script* pscript)
 	result = Script_MapStringConstants(pscript);
 	if(!result) {Script_Clear(pscript, 1);shutdown(1, "Can't compile script!\n");}
 
-	pscript->pinterpreter->bReset = FALSE;
+	if(obor_profile_build >= 3808) pscript->pinterpreter->bReset = FALSE;
 	//result = Script_DetectUnusedFunctions(pscript);
 	//if(!result) {Script_Clear(pscript, 1);shutdown(1, "Script optimization failed!\n");}
 	//Script_LowerConstants(pscript);
@@ -1138,8 +1260,10 @@ void Script_LoadSystemFunctions()
 					  (void*)openbor_setmusictempo, "setmusictempo");
 	List_InsertAfter(&theFunctionList,
 					  (void*)openbor_pausemusic, "pausemusic");
+	if(obor_script_function_available((void*)openbor_querychannel))
 	List_InsertAfter(&theFunctionList,
 					  (void*)openbor_querychannel, "querychannel");
+	if(obor_script_function_available((void*)openbor_stopchannel))
 	List_InsertAfter(&theFunctionList,
 					  (void*)openbor_stopchannel, "stopchannel");
 	List_InsertAfter(&theFunctionList,
@@ -2626,12 +2750,15 @@ HRESULT openbor_getmodelproperty(ScriptVariant** varlist , ScriptVariant** pretv
 		return E_FAIL;
 	}
 
-	if((varlist[0]->vt!=VT_INTEGER && varlist[0]->vt!=VT_STR) || varlist[1]->vt!=VT_INTEGER)
+	if((varlist[0]->vt!=VT_INTEGER &&
+        (obor_profile_build < 3822 || varlist[0]->vt!=VT_STR)) || varlist[1]->vt!=VT_INTEGER)
 	{
 		printf("\n Error, getmodelproperty({model}, {property}): Invalid or missing parameter. Getmodelproperty must be passed valid {model} and {property} indexes.\n");
 	}
 
-	iArg = varlist[0]->vt==VT_INTEGER?varlist[0]->lVal:get_cached_model_index(StrCache_Get(varlist[0]->strVal));
+	/* Legacy selectors use the numeric member, even after a type warning. */
+	iArg = (obor_profile_build < 3822 || varlist[0]->vt==VT_INTEGER)
+        ? varlist[0]->lVal : get_cached_model_index(StrCache_Get(varlist[0]->strVal));
 
 	if(iArg<0 || iArg>=models_cached) return E_FAIL;
 
@@ -2682,12 +2809,15 @@ HRESULT openbor_changemodelproperty(ScriptVariant** varlist , ScriptVariant** pr
 		return E_FAIL;
 	}
 
-	if((varlist[0]->vt!=VT_INTEGER && varlist[0]->vt!=VT_STR) || varlist[1]->vt!=VT_INTEGER)
+	if((varlist[0]->vt!=VT_INTEGER &&
+        (obor_profile_build < 3822 || varlist[0]->vt!=VT_STR)) || varlist[1]->vt!=VT_INTEGER)
 	{
 		printf("\n Error, changemodelproperty({model}, {property}, {value}): Invalid or missing parameter. Changemodelproperty must be passed valid {model}, {property} and {value}.\n");
 	}
 
-	iArg = varlist[0]->vt==VT_INTEGER?varlist[0]->lVal:get_cached_model_index(StrCache_Get(varlist[0]->strVal));
+	/* Legacy selectors use the numeric member, even after a type warning. */
+	iArg = (obor_profile_build < 3822 || varlist[0]->vt==VT_INTEGER)
+        ? varlist[0]->lVal : get_cached_model_index(StrCache_Get(varlist[0]->strVal));
 
 	if(iArg<0 || iArg>=models_cached) return E_FAIL;
 
@@ -3168,18 +3298,22 @@ static int obor_aiflag_property_native(int property)
     return obor_profile_build < 3797 ? before_expansion[property] : property;
 }
 
-static void obor_map_aiflag_property(ScriptVariant *property)
+static const char **obor_aiflag_names(void)
 {
-    char *propname;
-    int prop;
     static const char *before_expansion[] = {
         "animating", "attacking", "autokill", "blink", "blocking",
         "charging", "dead", "drop", "falling", "freezetime", "frozen",
         "getting", "idling", "inpain", "invincible", "jumpid", "jumping",
         "pain_time", "projectile", "running", "toexplode", "turning", "walking",
     };
-    const char **names = obor_profile_build < 3797 ? before_expansion : eplist_aiflag;
-    MAPSTRINGS(property, names, _ep_aiflag_the_end,
+    return obor_profile_build < 3797 ? before_expansion : eplist_aiflag;
+}
+
+static void obor_map_aiflag_property(ScriptVariant *property)
+{
+    char *propname;
+    int prop;
+    MAPSTRINGS(property, obor_aiflag_names(), _ep_aiflag_the_end,
         "'%s' is not a known subproperty of 'aiflag'.\n");
 }
 
@@ -3710,7 +3844,7 @@ void mapstrings_entityproperty(ScriptVariant** varlist, int paramCount)
 	// map subproperties of Staydown
 	case _ep_staydown:
 	{
-		MAPSTRINGS(varlist[2], proplist_staydown, _ep_running_the_end,
+		MAPSTRINGS(varlist[2], proplist_staydown, sizeof(proplist_staydown) / sizeof(*proplist_staydown),
 			"Property name '%s' is not a known subproperty of 'staydown'.\n");
 		break;
 	}
@@ -3743,6 +3877,430 @@ void mapstrings_entityproperty(ScriptVariant** varlist, int paramCount)
 	}
 }
 
+
+void mapstrings_getentityproperty(ScriptVariant** varlist, int paramCount)
+{
+    if(obor_profile_build >= 3828) {mapstrings_entityproperty(varlist, paramCount);return;}
+    if(paramCount < 2) return;
+
+	char* propname;
+	int prop;
+
+    static const char* proplist_attack[] = {
+		"blast",
+		"blockflash",
+		"blocksound",
+		"coords",
+		"counterattack",
+		"direction",
+		"dol",
+		"dot",
+		"dotforce",
+		"dotindex",
+		"dotrate",
+		"dottime",
+		"drop",
+		"dropv",
+		"force",
+		"forcemap",
+		"freeze",
+		"freezetime",
+		"grab",
+		"grabdistance",
+		"guardcost",
+		"hitflash",
+		"hitsound",
+		"jugglecost",
+		"maptime",
+		"noblock",
+		"noflash",
+		"nokill",
+		"nopain",
+		"otg",
+		"pause",
+		"seal",
+		"sealtime",
+		"staydown",
+		"steal",
+		"type",
+	};
+
+	static const char* proplist_defense[] = {
+		"blockpower",
+		"blockratio",
+		"blockthreshold",
+		"blocktype",
+		"factor",
+		"knockdown",
+		"pain",
+	};
+
+    static const char* proplist_dot[] = {
+		"force",
+		"mode",
+		"owner",
+		"rate",
+		"time",
+		"type",
+	};
+
+    static const char* proplist_edelay[] = {
+		"cap_max",
+		"cap_min",
+		"factor",
+		"mode",
+		"range_max",
+		"range_min",
+	};
+
+    static const char* proplist_energycost[] = {
+		"cost",
+		"disable",
+		"mponly",
+	};
+
+    static const char* proplist_flash[] = {
+        "block",
+        "default",
+        "noattack",
+    };
+
+    static const char* proplist_icon[] = {
+        "default",
+        "die",
+        "get",
+        "mphigh",
+        "mplow",
+        "mpmed",
+        "pain",
+        "weapon",
+        "x",
+        "y",
+    };
+
+    static const char* proplist_knockdowncount[] = {
+        "current",
+        "max",
+        "time",
+    };
+
+    static const char* proplist_landframe[] = {
+        "ent",
+        "frame",
+	};
+
+    static const char* proplist_maps[] = {
+        "count",
+        "current",
+        "default",
+        "dying",
+        "dying_critical",
+        "dying_low",
+        "frozen",
+        "hide_end",
+        "hide_start",
+        "ko",
+        "kotype",
+        "table",
+        "time",
+    };
+
+	static const char* proplist_range[] = {
+		"amax",
+		"amin",
+		"bmax",
+		"bmin",
+		"xmax",
+		"xmin",
+		"zmax",
+		"zmin",
+	};
+
+	static const char* proplist_running[] = {
+		"jumpx",
+		"jumpy",
+		"land",
+		"movez",
+		"speed",
+	};
+
+    static const char* proplist_spritea[] = {
+        "centerx",
+        "centery",
+        "file",
+        "offsetx",
+        "offsety",
+        "sprite",
+	};
+
+    static const char* proplist_staydown[] = {
+        "rise",
+        "riseattack",
+        "riseattack_stall",
+    };
+
+	if(paramCount < 2) return;
+
+	// map entity properties
+	MAPSTRINGS(varlist[1], eplist, _ep_the_end,
+		"Property name '%s' is not supported by function getentityproperty.\n");
+
+	if(paramCount < 3) return;
+
+	// map subproperties of aiflag property
+	if((varlist[1]->vt == VT_INTEGER) && (varlist[1]->lVal == _ep_aiflag))
+	{
+		MAPSTRINGS(varlist[2], obor_aiflag_names(), _ep_aiflag_the_end,
+			"'%s' is not a known subproperty of 'aiflag'.\n");
+	}
+
+	// map subproperties of Attack
+	if((varlist[1]->vt == VT_INTEGER) && (varlist[1]->lVal == _ep_attack))
+	{
+		MAPSTRINGS(varlist[2], proplist_attack, _ep_attack_the_end,
+			"Property name '%s' is not a known subproperty of 'attack'.\n");
+	}
+
+	// map subproperties of defense property
+	if((varlist[1]->vt == VT_INTEGER) && (varlist[1]->lVal == _ep_defense))
+	{
+		if(paramCount >= 4)
+		{
+			MAPSTRINGS(varlist[3], proplist_defense, _ep_defense_the_end,
+				"'%s' is not a known subproperty of 'defense'.\n");
+		}
+	}
+
+    // map subproperties of DOT
+	if((varlist[1]->vt == VT_INTEGER) && (varlist[1]->lVal == _ep_dot))
+	{
+		MAPSTRINGS(varlist[2], proplist_dot, _ep_dot_the_end,
+			"Property name '%s' is not a known subproperty of 'dot'.\n");
+	}
+
+    // map subproperties of Edelay property
+	if((varlist[1]->vt == VT_INTEGER) && (varlist[1]->lVal == _ep_edelay))
+	{
+		MAPSTRINGS(varlist[2], proplist_edelay, _ep_edelay_the_end,
+			"'%s' is not a known subproperty of 'edelay'.\n");
+	}
+
+	// map subproperties of Energycost
+	if((varlist[1]->vt == VT_INTEGER) && (varlist[1]->lVal == _ep_energycost))
+	{
+		MAPSTRINGS(varlist[2], proplist_energycost, _ep_energycost_the_end,
+			"Property name '%s' is not a known subproperty of 'energycost'.\n");
+	}
+
+	// map subproperties of Flash
+	if((varlist[1]->vt == VT_INTEGER) && (varlist[1]->lVal == _ep_flash))
+	{
+		MAPSTRINGS(varlist[2], proplist_flash, _ep_flash_the_end,
+			"Property name '%s' is not a known subproperty of 'flash'.\n");
+	}
+
+    // map subproperties of Icon
+	if((varlist[1]->vt == VT_INTEGER) && (varlist[1]->lVal == _ep_icon))
+	{
+		MAPSTRINGS(varlist[2], proplist_icon, _ep_icon_the_end,
+			"Property name '%s' is not a known subproperty of 'icon'.\n");
+	}
+
+	// map subproperties of Knockdowncount
+	if((varlist[1]->vt == VT_INTEGER) && (varlist[1]->lVal == _ep_knockdowncount))
+	{
+		MAPSTRINGS(varlist[2], proplist_knockdowncount, _ep_knockdowncount_the_end,
+			"Property name '%s' is not a known subproperty of 'knockdowncount'.\n");
+	}
+
+	// map subproperties of Landframe
+	if((varlist[1]->vt == VT_INTEGER) && (varlist[1]->lVal == _ep_landframe))
+	{
+		MAPSTRINGS(varlist[2], proplist_landframe, _ep_landframe_the_end,
+			"Property name '%s' is not a known subproperty of 'landframe'.\n");
+	}
+
+	// map subproperties of Maps
+	if((varlist[1]->vt == VT_INTEGER) && (varlist[1]->lVal == _ep_maps))
+	{
+		MAPSTRINGS(varlist[2], proplist_maps, _ep_maps_the_end,
+			"Property name '%s' is not a known subproperty of 'maps'.\n");
+	}
+
+	// map subproperties of Range
+	if((varlist[1]->vt == VT_INTEGER) && (varlist[1]->lVal == _ep_range))
+	{
+		MAPSTRINGS(varlist[2], proplist_range, _ep_range_the_end,
+			"Property name '%s' is not a known subproperty of 'range'.\n");
+	}
+
+	// map subproperties of Running
+	if((varlist[1]->vt == VT_INTEGER) && (varlist[1]->lVal == _ep_running))
+	{
+		MAPSTRINGS(varlist[2], proplist_running, _ep_running_the_end,
+			"Property name '%s' is not a known subproperty of 'running'.\n");
+	}
+
+	// map subproperties of Spritea
+	if((varlist[1]->vt == VT_INTEGER) && (varlist[1]->lVal == _ep_spritea))
+	{
+		MAPSTRINGS(varlist[2], proplist_spritea, _ep_spritea_the_end,
+			"Property name '%s' is not a known subproperty of 'spritea'.\n");
+	}
+
+	// map subproperties of Staydown
+	if((varlist[1]->vt == VT_INTEGER) && (varlist[1]->lVal == _ep_staydown))
+	{
+		MAPSTRINGS(varlist[2], proplist_staydown, sizeof(proplist_staydown) / sizeof(*proplist_staydown),
+			"Property name '%s' is not a known subproperty of 'staydown'.\n");
+	}
+}
+
+
+void mapstrings_changeentityproperty(ScriptVariant** varlist, int paramCount)
+{
+    if(obor_profile_build >= 3828) {mapstrings_entityproperty(varlist, paramCount);return;}
+    if(paramCount < 2) return;
+
+	char* propname;
+	int prop, i;
+
+    static const char* proplist_energycost[] = {
+        "cost",
+        "disable",
+        "mponly",
+    };
+
+    static const char* proplist_hostile_candamage[] = {
+        "ground",
+        "type_enemy",
+        "type_npc",
+        "type_obstacle",
+        "type_player",
+        "type_shot",
+    };
+
+    static const char* proplist_knockdowncount[] = { //2011_04_14, DC: Knockdowncount colleciton.
+	    "current",
+	    "max",
+	    "time",
+	};
+
+    static const char* proplist_spritea[] = {       //2011_05_15, DC: Sprite array.
+        "centerx",
+        "centery",
+        "file",
+        "offsetx",
+        "offsety",
+        "sprite",
+	};
+
+    static const char* proplist_staydown[] = { //2011_04_08, DC: Staydown colleciton.
+	    "rise",
+	    "riseattack",
+	    "riseattack_stall",
+	};
+
+	static const char* proplist_takeaction[] = {
+		"bomb_explode",
+		"common_attack_proc",
+		"common_block",
+		"common_drop",
+		"common_fall",
+		"common_get",
+		"common_grab",
+		"common_grabattack",
+		"common_grabbed",
+		"common_jump",
+		"common_land",
+		"common_lie",
+		"common_pain",
+		"common_prejump",
+		"common_rise",
+		"common_spawn",
+		"common_turn",
+		"common_vault",
+		"normal_prepare",
+		"npc_warp",
+		"player_blink",
+		"suicide",
+	};
+
+	static const char* proplist_think[] = { // 2011_03_03, DC: Think types.
+		"common_think",
+		"player_think",
+		"steam_think",
+		"steamer_think",
+		"text_think",
+		"trap_think",
+	};
+
+	// property name
+	MAPSTRINGS(varlist[1], eplist, _ep_the_end,
+		"Property name '%s' is not supported by function changeentityproperty.\n");
+    if(paramCount < 3) return;
+
+    // AI flag name for aiflag
+	if((varlist[1]->vt == VT_INTEGER) && (varlist[1]->lVal == _ep_aiflag))
+	{
+		MAPSTRINGS(varlist[2], obor_aiflag_names(), _ep_aiflag_the_end,
+			"Flag '%s' is not supported by 'aiflag'.\n");
+	}
+
+	//2011_03_31, DC: Energycost
+	if((varlist[1]->vt == VT_INTEGER) && (varlist[1]->lVal == _ep_energycost))
+	{
+		MAPSTRINGS(varlist[2], proplist_energycost, _ep_energycost_the_end,
+			"Flag '%s' is not supported by 'energycost'.\n");
+	}
+
+    // entity type(s) for hostile, candamage, and projectilehit.
+	if((varlist[1]->vt == VT_INTEGER) &&
+		((varlist[1]->lVal == _ep_hostile) || (varlist[1]->lVal == _ep_candamage) || (varlist[1]->lVal == _ep_projectilehit)))
+	{
+		for(i=2; i<paramCount; i++)
+		{
+			MAPSTRINGS(varlist[i], proplist_hostile_candamage, _ep_hcd_the_end,
+				"Entity type '%s' is not supported by 'hostile', 'candamage', or 'projectilehit'\n");
+		}
+	}
+
+	// 2011_04_14, DC: Knockdowncount
+	if((varlist[1]->vt == VT_INTEGER) && (varlist[1]->lVal == _ep_knockdowncount))
+	{
+		MAPSTRINGS(varlist[2], proplist_knockdowncount, _ep_knockdowncount_the_end,
+			"Subproperty '%s' is not supported by 'knockdowncount'.\n");
+	}
+
+	// 2011_05_15, DC: Sprite array
+	if((varlist[1]->vt == VT_INTEGER) && (varlist[1]->lVal == _ep_spritea))
+	{
+		MAPSTRINGS(varlist[2], proplist_spritea, _ep_spritea_the_end,
+			"Property name '%s' is not a known subproperty of 'spritea'.\n");
+	}
+
+    // 2011_04_08, DC: Staydown
+	if((varlist[1]->vt == VT_INTEGER) && (varlist[1]->lVal == _ep_staydown))
+	{
+		MAPSTRINGS(varlist[2], proplist_staydown, _ep_staydown_the_end,
+			"Subproperty '%s' is not supported by 'staydown'.\n");
+	}
+
+	// action for takeaction
+	if((varlist[1]->vt == VT_INTEGER) && (varlist[1]->lVal == _ep_takeaction))
+	{
+		MAPSTRINGS(varlist[2], proplist_takeaction, _ep_ta_the_end,
+			"Action '%s' is not supported by 'takeaction'.\n");
+	}
+
+    // 2011_03_13, DC: Think sets for think.
+	if((varlist[1]->vt == VT_INTEGER) && (varlist[1]->lVal == _ep_think))
+	{
+		MAPSTRINGS(varlist[2], proplist_think, _ep_th_the_end,
+			"Set '%s' is not supported by 'think'.\n");
+	}
+}
+
 //getentityproperty(pentity, propname);
 HRESULT openbor_getentityproperty(ScriptVariant** varlist , ScriptVariant** pretvar, int paramCount)
 {
@@ -3764,7 +4322,8 @@ HRESULT openbor_getentityproperty(ScriptVariant** varlist , ScriptVariant** pret
 	}
 
 	ScriptVariant_Clear(*pretvar);
-	mapstrings_entityproperty(varlist, paramCount);
+	if(obor_profile_build < 3828) mapstrings_getentityproperty(varlist, paramCount);
+	else mapstrings_entityproperty(varlist, paramCount);
 
 	arg = varlist[0];
 	if(arg->vt != VT_PTR && arg->vt != VT_EMPTY)
@@ -4007,7 +4566,9 @@ HRESULT openbor_getentityproperty(ScriptVariant** varlist , ScriptVariant** pret
 		i		= varlist[4]->lVal;												//Animation parameter.
 		tempint	= varlist[5]->lVal;												//Frame parameter.
 
-		if(!validanim(ent,i) || !ent->modeldata.animation[i]->attacks || !ent->modeldata.animation[i]->attacks[tempint])	//Verify animation and active attack on frame.
+		if(!ent->modeldata.animation || !validanim(ent,i) || tempint < 0 ||
+           tempint >= ent->modeldata.animation[i]->numframes ||
+           !ent->modeldata.animation[i]->attacks || !ent->modeldata.animation[i]->attacks[tempint])	//Verify animation and active attack on frame.
 		{
 			break;
 		}
@@ -4025,6 +4586,9 @@ HRESULT openbor_getentityproperty(ScriptVariant** varlist , ScriptVariant** pret
 				 (*pretvar)->lVal = (LONG)attack->blocksound;
 				 break;
 			case _ep_attack_coords:
+                 if(paramCount < 7 || varlist[6]->vt != VT_INTEGER || varlist[6]->lVal < 0 ||
+                    (size_t)varlist[6]->lVal >= (obor_profile_build < 3729 ? 5u :
+                       sizeof(attack->attack_coords) / sizeof(attack->attack_coords[0]))) break;
 				 ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
 				 (*pretvar)->lVal = (LONG)attack->attack_coords[varlist[6]->lVal];
 				 break;
@@ -4222,12 +4786,21 @@ HRESULT openbor_getentityproperty(ScriptVariant** varlist , ScriptVariant** pret
 		i		= varlist[3]->lVal;												//Animation parameter.
 		tempint	= varlist[4]->lVal;												//Frame parameter.
 
+		if(!ent->modeldata.animation || !validanim(ent,i) || tempint < 0 ||
+           tempint >= ent->modeldata.animation[i]->numframes ||
+           !ent->modeldata.animation[i]->vulnerable ||
+           !ent->modeldata.animation[i]->bbox_coords) break;
+
 		if(!ent->modeldata.animation[i]->vulnerable[tempint])
 		{
 			
 			ScriptVariant_Clear(*pretvar);
 			break;
 		}
+
+		if(varlist[5]->lVal < 0 || (size_t)varlist[5]->lVal >=
+           (obor_profile_build < 3729 ? 5u :
+            sizeof(*ent->modeldata.animation[i]->bbox_coords) / sizeof(coords[0]))) break;
 
 		coords = ent->modeldata.animation[i]->bbox_coords[tempint];
 
@@ -4326,12 +4899,14 @@ HRESULT openbor_getentityproperty(ScriptVariant** varlist , ScriptVariant** pret
 		break;
 	}
 	case _ep_colourtable:
-	{
-		ScriptVariant_ChangeType(*pretvar, VT_PTR);
-		(*pretvar)->ptrVal = (VOID*)model_get_colourmap(&(ent->modeldata), varlist[2]->lVal+1);
-		break;
-	}
-	case _ep_damage_on_landing:
+    {
+        if(paramCount < 3) break;
+        ScriptVariant_ChangeType(*pretvar, VT_PTR);
+        (*pretvar)->ptrVal = (VOID*)model_get_colourmap(&ent->modeldata,
+            (unsigned)varlist[2]->lVal + 1u);
+        break;
+    }
+    case _ep_damage_on_landing:
 	{
 		ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
 		(*pretvar)->lVal = (LONG)ent->damage_on_landing;
@@ -5831,7 +6406,8 @@ HRESULT openbor_changeentityproperty(ScriptVariant** varlist , ScriptVariant** p
 		goto changeentityproperty_error;
 	}
 
-	mapstrings_entityproperty(varlist, paramCount);
+	if(obor_profile_build < 3828) mapstrings_changeentityproperty(varlist, paramCount);
+	else mapstrings_entityproperty(varlist, paramCount);
 
 	if(varlist[0]->vt != VT_PTR && varlist[0]->vt != VT_EMPTY)
 	{
@@ -5880,7 +6456,10 @@ HRESULT openbor_changeentityproperty(ScriptVariant** varlist , ScriptVariant** p
         int flag = obor_aiflag_property_native(varlist[2]->lVal);
         if(obor_profile_build < 3797 &&
            (flag < 0 || flag == _obor_aiflag_freezetime || flag == _obor_aiflag_pain_time))
+        {
+            printf("Unknown AI flag.\n");
             goto changeentityproperty_error;
+        }
 
 		if(SUCCEEDED(ScriptVariant_IntegerValue(varlist[3], &ltemp)))
 		{
@@ -6685,18 +7264,21 @@ HRESULT openbor_changeentityproperty(ScriptVariant** varlist , ScriptVariant** p
 	}
     case _ep_x:
 	{
+        if(obor_profile_build < 3786) goto changeentityproperty_error;
 		if(SUCCEEDED(ScriptVariant_DecimalValue(varlist[2], &dbltemp)))
 			ent->x = (float)dbltemp;
 		break;
 	}
     case _ep_z:
 	{
+        if(obor_profile_build < 3786) goto changeentityproperty_error;
 		if(SUCCEEDED(ScriptVariant_DecimalValue(varlist[2], &dbltemp)))
 			ent->z = (float)dbltemp;
 		break;
 	}
     case _ep_a:
 	{
+        if(obor_profile_build < 3786) goto changeentityproperty_error;
 		if(SUCCEEDED(ScriptVariant_DecimalValue(varlist[2], &dbltemp)))
 			ent->a = (float)dbltemp;
 		break;
@@ -7653,6 +8235,47 @@ HRESULT openbor_checkplatformbelow(ScriptVariant** varlist , ScriptVariant** pre
 	return S_OK;
 }
 
+static int obor_filestream_reserve(int count)
+{
+    s_filestream *grown;
+    if(count < 0 || numfilestreams < 0 || (numfilestreams && !filestreams)) return 0;
+    if(count <= numfilestreams) return 1;
+    if((size_t)count > (size_t)-1 / sizeof(*filestreams)) return 0;
+    grown = realloc(filestreams, (size_t)count * sizeof(*filestreams));
+    if(!grown) return 0;
+    memset(grown + numfilestreams, 0, (size_t)(count - numfilestreams) * sizeof(*grown));
+    filestreams = grown;
+    numfilestreams = count;
+    return 1;
+}
+
+static int obor_filestream_next_slot(void)
+{
+    int i;
+    if(numfilestreams < 0 || (numfilestreams && !filestreams)) return -1;
+    for(i = 0; i < numfilestreams; ++i) if(!filestreams[i].buf) return i;
+    if(numfilestreams == INT_MAX || !obor_filestream_reserve(numfilestreams + 1)) return -1;
+    return numfilestreams - 1;
+}
+
+static int obor_filestream_index(int index)
+{
+    return index >= 0 && numfilestreams >= 0 && filestreams && index < numfilestreams;
+}
+
+static int obor_filestream_buffer(int index, int at_position)
+{
+    size_t start;
+    s_filestream *stream;
+    if(!obor_filestream_index(index)) return 0;
+    stream = &filestreams[index];
+    if(!stream->buf || !stream->obor_capacity ||
+        (at_position && stream->pos < 0)) return 0;
+    start = at_position ? (size_t)stream->pos : 0;
+    return start < stream->obor_capacity &&
+        memchr(stream->buf + start, 0, stream->obor_capacity - start) != NULL;
+}
+
 HRESULT openbor_openfilestream(ScriptVariant** varlist , ScriptVariant** pretvar, int paramCount)
 {
 	char* filename = NULL;
@@ -7667,7 +8290,7 @@ HRESULT openbor_openfilestream(ScriptVariant** varlist , ScriptVariant** pretvar
 
 	ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
 
-	if(paramCount < 1)
+	if(paramCount < 1 || !varlist || !varlist[0])
 	{
 		*pretvar = NULL;
 		return E_FAIL;
@@ -7687,6 +8310,7 @@ HRESULT openbor_openfilestream(ScriptVariant** varlist , ScriptVariant** pretvar
 
 	if(paramCount > 1)
 	{
+		if(!varlist[1]) { *pretvar = NULL; return E_FAIL; }
 		arg = varlist[1];
 		if(FAILED(ScriptVariant_IntegerValue(arg, &location))){
 			*pretvar = NULL;
@@ -7694,17 +8318,8 @@ HRESULT openbor_openfilestream(ScriptVariant** varlist , ScriptVariant** pretvar
 		}
 	}
 
-	for(fsindex=0; fsindex<numfilestreams; fsindex++){
-		if(filestreams[fsindex].buf==NULL){
-			break;
-		}
-	}
-
-	if(fsindex == numfilestreams)
-	{
-		__realloc(filestreams, numfilestreams); //warning, don't ++ here, its a macro
-		numfilestreams++;
-	}
+    fsindex = obor_filestream_next_slot();
+    if(fsindex < 0) { *pretvar = NULL; return E_FAIL; }
 
 	// Load file from saves directory if specified
 	if(location)
@@ -7738,21 +8353,37 @@ HRESULT openbor_openfilestream(ScriptVariant** varlist , ScriptVariant** pretvar
 		size = ftell(handle);
 		//printf("\n file size %d fsindex %d\n", size, fsindex);
 		rewind(handle);
-		filestreams[fsindex].buf = malloc(sizeof(*filestreams[fsindex].buf)*(size+1));
+		if(size < 0 || (unsigned long)size > (size_t)-1 - 1) { fclose(handle); *pretvar = NULL; return E_FAIL; }
+		filestreams[fsindex].buf = malloc((size_t)size + 1);
 		if(filestreams[fsindex].buf == NULL) {
+            fclose(handle);
             (*pretvar)->lVal = -1;
 			return S_OK;
 		}
-		fread(filestreams[fsindex].buf, 1, size, handle);
-		filestreams[fsindex].buf[size] = 0;
+		size_t obor_read = fread(filestreams[fsindex].buf, 1, (size_t)size, handle);
+        filestreams[fsindex].obor_capacity = obor_read + 1;
+        filestreams[fsindex].buf[obor_read] = 0;
+		fclose(handle);
+		/* The terminator follows the bytes actually initialized by fread. */
 	}
-	else if(buffer_pakfile(filename, &filestreams[fsindex].buf, &filestreams[fsindex].size)!=1)
-	{
-		printf("Invalid filename used in openfilestream.\n");
-		(*pretvar)->lVal = -1;
-		return S_OK;
-	}
+	else
+    {
+        s_filestream *obor_stream_slot = &(filestreams[fsindex]);
+        char *obor_stream_buffer = obor_stream_slot->buf;
+        size_t obor_stream_size = obor_stream_slot->size;
+        int obor_stream_loaded = buffer_pakfile(filename,
+            &obor_stream_buffer, &obor_stream_size);
+        obor_stream_slot->buf = obor_stream_buffer;
+        obor_stream_slot->size = obor_stream_size;
+        if(obor_stream_loaded != 1)
+        {
+    		printf("Invalid filename used in openfilestream.\n");
+    		(*pretvar)->lVal = -1;
+    		return S_OK;
+        }
+    }
 
+    if(!location) filestreams[fsindex].obor_capacity = filestreams[fsindex].size + 1;
 	(*pretvar)->lVal = (LONG)fsindex;
 
 	filestreams[fsindex].pos = 0;
@@ -7762,11 +8393,11 @@ HRESULT openbor_openfilestream(ScriptVariant** varlist , ScriptVariant** pretvar
 HRESULT openbor_getfilestreamline(ScriptVariant** varlist , ScriptVariant** pretvar, int paramCount)
 {
 	char line[MAX_STR_VAR_LEN];
-	int length;
+	size_t length;
 	ScriptVariant* arg = NULL;
 	LONG filestreamindex;
 
-	if(paramCount < 1)
+	if(paramCount < 1 || !varlist || !varlist[0])
 	{
 		*pretvar = NULL;
 		return E_FAIL;
@@ -7776,13 +8407,14 @@ HRESULT openbor_getfilestreamline(ScriptVariant** varlist , ScriptVariant** pret
 	if(FAILED(ScriptVariant_IntegerValue(arg, &filestreamindex)))
 		return S_OK;
 
+    if(!obor_filestream_buffer(filestreamindex, 1)) { *pretvar = NULL; return E_FAIL; }
 	ScriptVariant_Clear(*pretvar);
 	ScriptVariant_ChangeType(*pretvar, VT_STR);
 
 	length = 0;
 	strncpy(line, "it's initialized now", MAX_STR_VAR_LEN);
 
-	while(filestreams[filestreamindex].buf[filestreams[filestreamindex].pos+length] && filestreams[filestreamindex].buf[filestreams[filestreamindex].pos+length]!='\n' && filestreams[filestreamindex].buf[filestreams[filestreamindex].pos+length]!='\r') ++length;
+	while(filestreams[filestreamindex].buf[(size_t)filestreams[filestreamindex].pos+length] && filestreams[filestreamindex].buf[(size_t)filestreams[filestreamindex].pos+length]!='\n' && filestreams[filestreamindex].buf[(size_t)filestreams[filestreamindex].pos+length]!='\r') ++length;
 	if(length >= MAX_STR_VAR_LEN)
 		strncpy(StrCache_Get((*pretvar)->strVal), (char*)(filestreams[filestreamindex].buf+filestreams[filestreamindex].pos), MAX_STR_VAR_LEN);
 	else
@@ -7791,6 +8423,8 @@ HRESULT openbor_getfilestreamline(ScriptVariant** varlist , ScriptVariant** pret
 		line[length] = '\0';
 		strncpy(StrCache_Get((*pretvar)->strVal), line, MAX_STR_VAR_LEN);
 	}
+    /* Fixed caches reserve one extra byte for a defined string terminator. */
+    StrCache_Get((*pretvar)->strVal)[MAX_STR_VAR_LEN] = '\0';
 	return S_OK;
 }
 
@@ -7800,7 +8434,7 @@ HRESULT openbor_getfilestreamargument(ScriptVariant** varlist , ScriptVariant** 
 	LONG filestreamindex, argument;
 	char* argtype = NULL;
 
-	if(paramCount < 3)
+	if(paramCount < 3 || !varlist || !varlist[0])
 	{
 		*pretvar = NULL;
 		return E_FAIL;
@@ -7810,11 +8444,13 @@ HRESULT openbor_getfilestreamargument(ScriptVariant** varlist , ScriptVariant** 
 	if(FAILED(ScriptVariant_IntegerValue(arg, &filestreamindex)))
 		return S_OK;
 
+    if(!varlist[1]) { *pretvar = NULL; return E_FAIL; }
 	arg = varlist[1];
 	if(FAILED(ScriptVariant_IntegerValue(arg, &argument)))
 		return S_OK;
 	ScriptVariant_Clear(*pretvar);
 
+    if(!varlist[2]) { *pretvar = NULL; return E_FAIL; }
 	if(varlist[2]->vt != VT_STR)
 	{
 		printf("You must give a string value specifying what kind of value you want the argument converted to.\n");
@@ -7824,16 +8460,20 @@ HRESULT openbor_getfilestreamargument(ScriptVariant** varlist , ScriptVariant** 
 
 	if(stricmp(argtype, "string")==0)
 	{
+    if(!obor_filestream_buffer(filestreamindex, 1)) { *pretvar = NULL; return E_FAIL; }
 		ScriptVariant_ChangeType(*pretvar, VT_STR);
 		strncpy(StrCache_Get((*pretvar)->strVal), (char*)findarg(filestreams[filestreamindex].buf+filestreams[filestreamindex].pos, argument), MAX_STR_VAR_LEN);
+        StrCache_Get((*pretvar)->strVal)[MAX_STR_VAR_LEN] = '\0';
 	}
 	else if(stricmp(argtype, "int")==0)
 	{
+    if(!obor_filestream_buffer(filestreamindex, 1)) { *pretvar = NULL; return E_FAIL; }
 		ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
 		(*pretvar)->lVal = (LONG)atoi(findarg(filestreams[filestreamindex].buf+filestreams[filestreamindex].pos, argument));
 	}
 	else if(stricmp(argtype, "float")==0)
 	{
+    if(!obor_filestream_buffer(filestreamindex, 1)) { *pretvar = NULL; return E_FAIL; }
 		ScriptVariant_ChangeType(*pretvar, VT_DECIMAL);
 		(*pretvar)->dblVal = (DOUBLE)atof(findarg(filestreams[filestreamindex].buf+filestreams[filestreamindex].pos, argument));
 	}
@@ -7851,7 +8491,7 @@ HRESULT openbor_filestreamnextline(ScriptVariant** varlist , ScriptVariant** pre
 	ScriptVariant* arg = NULL;
 	LONG filestreamindex;
 
-	if(paramCount < 1)
+	if(paramCount < 1 || !varlist || !varlist[0])
 	{
 		*pretvar = NULL;
 		return E_FAIL;
@@ -7860,8 +8500,17 @@ HRESULT openbor_filestreamnextline(ScriptVariant** varlist , ScriptVariant** pre
 	arg = varlist[0];
 	if(FAILED(ScriptVariant_IntegerValue(arg, &filestreamindex)))
 		return S_OK;
-	while(filestreams[filestreamindex].buf[filestreams[filestreamindex].pos] && filestreams[filestreamindex].buf[filestreams[filestreamindex].pos]!='\n' && filestreams[filestreamindex].buf[filestreams[filestreamindex].pos]!='\r') ++filestreams[filestreamindex].pos;
-	while(filestreams[filestreamindex].buf[filestreams[filestreamindex].pos]=='\n' || filestreams[filestreamindex].buf[filestreams[filestreamindex].pos]=='\r') ++filestreams[filestreamindex].pos;
+    if(!obor_filestream_buffer(filestreamindex, 1)) { *pretvar = NULL; return E_FAIL; }
+	while(filestreams[filestreamindex].buf[filestreams[filestreamindex].pos] && filestreams[filestreamindex].buf[filestreams[filestreamindex].pos]!='\n' && filestreams[filestreamindex].buf[filestreams[filestreamindex].pos]!='\r')
+    {
+        if(filestreams[filestreamindex].pos == INT_MAX) { *pretvar = NULL; return E_FAIL; }
+        ++filestreams[filestreamindex].pos;
+    }
+	while(filestreams[filestreamindex].buf[filestreams[filestreamindex].pos]=='\n' || filestreams[filestreamindex].buf[filestreams[filestreamindex].pos]=='\r')
+    {
+        if(filestreams[filestreamindex].pos == INT_MAX) { *pretvar = NULL; return E_FAIL; }
+        ++filestreams[filestreamindex].pos;
+    }
 
 	return S_OK;
 }
@@ -7871,7 +8520,7 @@ HRESULT openbor_getfilestreamposition(ScriptVariant** varlist , ScriptVariant** 
 	ScriptVariant* arg = NULL;
 	LONG filestreamindex;
 
-	if(paramCount < 1)
+	if(paramCount < 1 || !varlist || !varlist[0])
 	{
 		*pretvar = NULL;
 		return E_FAIL;
@@ -7881,6 +8530,7 @@ HRESULT openbor_getfilestreamposition(ScriptVariant** varlist , ScriptVariant** 
 	if(FAILED(ScriptVariant_IntegerValue(arg, &filestreamindex)))
 		return S_OK;
 
+    if(!obor_filestream_index(filestreamindex)) { *pretvar = NULL; return E_FAIL; }
 	ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
 	(*pretvar)->lVal = (LONG)filestreams[filestreamindex].pos;
 	return S_OK;
@@ -7892,7 +8542,7 @@ HRESULT openbor_setfilestreamposition(ScriptVariant** varlist , ScriptVariant** 
 	LONG filestreamindex, position;
 
 
-	if(paramCount < 2)
+	if(paramCount < 2 || !varlist || !varlist[0])
 	{
 		*pretvar = NULL;
 		return E_FAIL;
@@ -7902,10 +8552,12 @@ HRESULT openbor_setfilestreamposition(ScriptVariant** varlist , ScriptVariant** 
 	if(FAILED(ScriptVariant_IntegerValue(arg, &filestreamindex)))
 		return S_OK;
 
+    if(!varlist[1]) { *pretvar = NULL; return E_FAIL; }
 	arg = varlist[1];
 	if(FAILED(ScriptVariant_IntegerValue(arg, &position)))
 		return S_OK;
 
+    if(!obor_filestream_index(filestreamindex)) { *pretvar = NULL; return E_FAIL; }
 	filestreams[filestreamindex].pos = position;
 	return S_OK;
 }
@@ -7918,10 +8570,13 @@ HRESULT openbor_filestreamappend(ScriptVariant** varlist , ScriptVariant** pretv
 	LONG ltemp;
 	DOUBLE dbltemp;
 	char* temp;
-	char append[MAX_STR_VAR_LEN];
+	char conversion[512];
+    const char *append;
+    int conversion_length;
+    size_t old_bytes, added_bytes;
 
 
-	if(paramCount < 3)
+	if(paramCount < 3 || !varlist || !varlist[0])
 	{
 		*pretvar = NULL;
 		return E_FAIL;
@@ -7933,22 +8588,27 @@ HRESULT openbor_filestreamappend(ScriptVariant** varlist , ScriptVariant** pretv
 	if(FAILED(ScriptVariant_IntegerValue(arg, &filestreamindex)))
 		return S_OK;
 
+    if(!varlist[1]) { *pretvar = NULL; return E_FAIL; }
 	arg = varlist[1];
 	if(arg->vt==VT_STR)
 	{
-		strcpy(append, StrCache_Get(arg->strVal));
+		append = StrCache_Get(arg->strVal);
 	}
 	else if(arg->vt==VT_INTEGER)
 	{
 		if(FAILED(ScriptVariant_IntegerValue(arg, &ltemp)))
 			return S_OK;
-		sprintf(append, "%d", (int)ltemp);
+		conversion_length = snprintf(conversion, sizeof(conversion), "%d", (int)ltemp);
+        if(conversion_length < 0 || (size_t)conversion_length >= sizeof(conversion)) { *pretvar = NULL; return E_FAIL; }
+        append = conversion;
 	}
 	else if(arg->vt==VT_DECIMAL)
 	{
 		if(FAILED(ScriptVariant_DecimalValue(arg, &dbltemp)))
 			return S_OK;
-		sprintf(append, "%f", dbltemp);
+		conversion_length = snprintf(conversion, sizeof(conversion), "%f", dbltemp);
+        if(conversion_length < 0 || (size_t)conversion_length >= sizeof(conversion)) { *pretvar = NULL; return E_FAIL; }
+        append = conversion;
 	}
 	else
 	{
@@ -7959,11 +8619,17 @@ HRESULT openbor_filestreamappend(ScriptVariant** varlist , ScriptVariant** pretv
 
 
 
+    if(!varlist[2]) { *pretvar = NULL; return E_FAIL; }
 	arg = varlist[2];
 	if(FAILED(ScriptVariant_IntegerValue(arg, &appendtype)))
 		return S_OK;
 
-	temp = malloc(sizeof(*temp)*(strlen(filestreams[filestreamindex].buf) + strlen(append) + 4));
+    if(!obor_filestream_buffer(filestreamindex, 0)) { *pretvar = NULL; return E_FAIL; }
+    old_bytes = strlen(filestreams[filestreamindex].buf);
+    added_bytes = strlen(append);
+    if(added_bytes > (size_t)-1 - 4 || old_bytes > (size_t)-1 - added_bytes - 4) { *pretvar = NULL; return E_FAIL; }
+    temp = calloc(old_bytes + added_bytes + 4, 1);
+    if(!temp) { *pretvar = NULL; return E_FAIL; }
 	strcpy(temp, filestreams[filestreamindex].buf);
 
 	if(appendtype == 0)
@@ -7981,6 +8647,7 @@ HRESULT openbor_filestreamappend(ScriptVariant** varlist , ScriptVariant** pretv
 	}
 	free(filestreams[filestreamindex].buf);
 	filestreams[filestreamindex].buf = temp;
+    filestreams[filestreamindex].obor_capacity = old_bytes + added_bytes + 4;
 
 	return S_OK;
 }
@@ -7990,24 +8657,17 @@ HRESULT openbor_createfilestream(ScriptVariant** varlist , ScriptVariant** pretv
 	int fsindex;
 	ScriptVariant_Clear(*pretvar);
 
-	for(fsindex=0; fsindex<numfilestreams; fsindex++){
-		if(filestreams[fsindex].buf==NULL){
-			break;
-		}
-	}
-
-	if(fsindex == numfilestreams)
-	{
-		__realloc(filestreams, numfilestreams); //warning, don't ++ here, its a macro
-		numfilestreams++;
-	}
+    fsindex = obor_filestream_next_slot();
+    if(fsindex < 0) { *pretvar = NULL; return E_FAIL; }
 
 	ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
 	(*pretvar)->lVal = (LONG)fsindex;
 
 	// Initialize the new filestream
 	filestreams[fsindex].pos = 0;
-	filestreams[fsindex].buf = malloc(sizeof(*filestreams[fsindex].buf)*128);
+	filestreams[fsindex].buf = calloc(128, 1);
+    if(!filestreams[fsindex].buf) { *pretvar = NULL; return E_FAIL; }
+    filestreams[fsindex].obor_capacity = 128;
 	filestreams[fsindex].buf[0] = '\0';
 	return S_OK;
 }
@@ -8023,7 +8683,7 @@ HRESULT openbor_savefilestream(ScriptVariant** varlist , ScriptVariant** pretvar
 
 	*pretvar = NULL;
 
-	if(paramCount < 1)
+	if(paramCount < 1 || !varlist || !varlist[0])
 	{
 		return E_FAIL;
 	}
@@ -8034,12 +8694,15 @@ HRESULT openbor_savefilestream(ScriptVariant** varlist , ScriptVariant** pretvar
 		return E_FAIL;
 	}
 
+    if(paramCount < 2 || !varlist[1]) { *pretvar = NULL; return E_FAIL; }
 	arg = varlist[1];
 	if(arg->vt!=VT_STR)
 	{
 		printf("Filename for savefilestream must be a string.\n");
 		return E_FAIL;
 	}
+
+    if(!obor_filestream_buffer(filestreamindex, 0)) { *pretvar = NULL; return E_FAIL; }
 
 	// Get the saves directory
 	getBasePath(path, "Saves", 0);
@@ -8082,7 +8745,7 @@ HRESULT openbor_closefilestream(ScriptVariant** varlist , ScriptVariant** pretva
 
 	*pretvar = NULL;
 
-	if(paramCount < 1)
+	if(paramCount < 1 || !varlist || !varlist[0])
 		return E_FAIL;
 
 	arg = varlist[0];
@@ -8090,10 +8753,12 @@ HRESULT openbor_closefilestream(ScriptVariant** varlist , ScriptVariant** pretva
 		return E_FAIL;
 
 
+    if(!obor_filestream_index(filestreamindex)) { *pretvar = NULL; return E_FAIL; }
 	if(filestreams[filestreamindex].buf){
 		free(filestreams[filestreamindex].buf);
 		filestreams[filestreamindex].buf = NULL;
 	}
+    filestreams[filestreamindex].obor_capacity = 0;
 	return S_OK;
 }
 
@@ -8635,17 +9300,22 @@ else if(stricmp(#x, constname)==0) {\
 } 
 
 #define ICMPSCONSTA(x, y) \
-else if(strnicmp(constname, #x, sizeof(#x)-1)==0 && constname[sizeof(#x)-1] >= '1' && constname[sizeof(#x)-1]<='9') \
+else if(obor_profile_build >= 3826 && strnicmp(constname, #x, sizeof(#x)-1)==0 && constname[sizeof(#x)-1] >= '1' && constname[sizeof(#x)-1]<='9') \
 { \
 	v.lVal = (LONG)(y[atoi(constname+(sizeof(#x)-1))-1]);\
 }
 
 #define ICMPSCONSTB(x, y) \
-else if(strnicmp(constname, #x, sizeof(#x)-1)==0 && constname[sizeof(#x)-1] >= '1' && constname[sizeof(#x)-1]<='9') \
+else if(obor_profile_build >= 3826 && strnicmp(constname, #x, sizeof(#x)-1)==0 && constname[sizeof(#x)-1] >= '1' && constname[sizeof(#x)-1]<='9') \
 { \
 	v.lVal = (LONG)(y[atoi(constname+(sizeof(#x)-1))+OBOR_ATTACK_SPECIAL-1]);\
 }
 
+
+#define ICMPLEGACYCONST(x) \
+else if(obor_profile_build < 3826 && stricmp(#x, constname)==0) { \
+    v.lVal = (LONG)x; \
+}
 
 void mapstrings_transconst(ScriptVariant** varlist, int paramCount)
 {
@@ -8662,6 +9332,21 @@ void mapstrings_transconst(ScriptVariant** varlist, int paramCount)
 		constname = (char*)StrCache_Get(varlist[0]->strVal);
 
 		IICMPCONST(COMPATIBLEVERSION)
+		ICMPLEGACYCONST(ANI_ATTACK1)
+		ICMPLEGACYCONST(ANI_ATTACK2)
+		ICMPLEGACYCONST(ANI_ATTACK3)
+		ICMPLEGACYCONST(ANI_ATTACK4)
+		ICMPLEGACYCONST(ANI_FOLLOW1)
+		ICMPLEGACYCONST(ANI_FOLLOW2)
+		ICMPLEGACYCONST(ANI_FOLLOW3)
+		ICMPLEGACYCONST(ANI_FOLLOW4)
+		ICMPLEGACYCONST(ANI_FREESPECIAL2)
+		ICMPLEGACYCONST(ANI_FREESPECIAL3)
+		ICMPLEGACYCONST(ANI_FREESPECIAL4)
+		ICMPLEGACYCONST(ANI_FREESPECIAL5)
+		ICMPLEGACYCONST(ANI_FREESPECIAL6)
+		ICMPLEGACYCONST(ANI_FREESPECIAL7)
+		ICMPLEGACYCONST(ANI_FREESPECIAL8)
 		ICMPCONST(MIN_INT)
 		ICMPCONST(MAX_INT)
 		ICMPCONST(PIXEL_8)
@@ -8688,7 +9373,10 @@ void mapstrings_transconst(ScriptVariant** varlist, int paramCount)
 		ICMPCONST(MAX_ATTACKS)
 		ICMPCONST(MAX_FOLLOWS)
 		ICMPCONST(MAX_PLAYERS)
-		ICMPCONST(MAX_ARG_LEN)
+		else if(stricmp(constname, "MAX_ARG_LEN")==0)
+		{
+			v.lVal = (LONG)(obor_profile_build < 3822 ? 512 : 511);
+		}
 		ICMPCONST(FLAG_ESC)
 		ICMPCONST(FLAG_START)
 		ICMPCONST(FLAG_MOVELEFT)
@@ -9021,6 +9709,122 @@ HRESULT openbor_transconst(ScriptVariant** varlist , ScriptVariant** pretvar, in
 	} else {
         if(obor_profile_build < 3826 && varlist[0]->vt == VT_STR)
         {
+            const char *constname = StrCache_Get(varlist[0]->strVal);
+            long temp;
+            extern int max_attack_types, max_attacks, max_backwalks, max_downs, max_follows, max_freespecials, max_idles, max_ups, max_walks;
+            /* Preserve the original offsets and clamps within owned tables. */
+// for the extra animation ids
+	// for the extra animation ids
+	if(strlen(constname) >= 9 && strnicmp(constname, "ANI_DOWN", 8)==0 && constname[8] >= '1') // new down walk?
+	{
+		temp = strtol(constname+8, NULL, 10);
+		if(!animdowns || temp < 0 || temp > max_downs || (temp-1) < 0 || (temp-1) >= max_downs) { ScriptVariant_Clear(*pretvar); return S_OK; }
+		ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
+		(*pretvar)->lVal = (LONG)(animdowns[temp-1]);
+		return S_OK;
+	}
+	if(strlen(constname) >= 9 && strnicmp(constname, "ANI_UP", 8)==0 && constname[8] >= '1') // new up walk?
+	{
+		temp = strtol(constname+8, NULL, 10);
+		if(!animups || temp < 0 || temp > max_ups || (temp-1) < 0 || (temp-1) >= max_ups) { ScriptVariant_Clear(*pretvar); return S_OK; }
+		ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
+		(*pretvar)->lVal = (LONG)(animups[temp-1]);
+		return S_OK;
+	}
+	if(strlen(constname) >= 9 && strnicmp(constname, "ANI_BACKWALK", 8)==0 && constname[8] >= '1') // new backwalk?
+	{
+		temp = strtol(constname+8, NULL, 10);
+		if(!animbackwalks || temp < 0 || temp > max_backwalks || (temp-1) < 0 || (temp-1) >= max_backwalks) { ScriptVariant_Clear(*pretvar); return S_OK; }
+		ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
+		(*pretvar)->lVal = (LONG)(animbackwalks[temp-1]);
+		return S_OK;
+	}
+	if(strlen(constname) >= 9 && strnicmp(constname, "ANI_WALK", 8)==0 && constname[8] >= '1') // new Walk?
+	{
+		temp = strtol(constname+8, NULL, 10);
+		if(!animwalks || temp < 0 || temp > max_walks || (temp-1) < 0 || (temp-1) >= max_walks) { ScriptVariant_Clear(*pretvar); return S_OK; }
+		ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
+		(*pretvar)->lVal = (LONG)(animwalks[temp-1]);
+		return S_OK;
+	}
+	if(strlen(constname) >= 9 && strnicmp(constname, "ANI_IDLE", 8)==0 && constname[8] >= '1') // new idle?
+	{
+		temp = strtol(constname+8, NULL, 10);
+		if(!animidles || temp < 0 || temp > max_idles || (temp-1) < 0 || (temp-1) >= max_idles) { ScriptVariant_Clear(*pretvar); return S_OK; }
+		ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
+		(*pretvar)->lVal = (LONG)(animidles[temp-1]);
+		return S_OK;
+	}
+	if(strlen(constname) >= 9 && strnicmp(constname, "ANI_FALL", 8)==0 && constname[8] >= '1' && constname[8]<='9') // new fall?
+	{
+		temp = strtol(constname+8, NULL, 10); // so must be greater than 10
+		if(temp<OBOR_ATTACK_BASE-OBOR_ATTACK_SPECIAL+1) temp = OBOR_ATTACK_BASE-OBOR_ATTACK_SPECIAL+1; // just in case
+		if(!animfalls || temp < 0 || temp > max_attack_types || (temp+OBOR_ATTACK_SPECIAL-1) < 0 || (temp+OBOR_ATTACK_SPECIAL-1) >= max_attack_types) { ScriptVariant_Clear(*pretvar); return S_OK; }
+		ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
+		(*pretvar)->lVal = (LONG)(animfalls[temp+OBOR_ATTACK_SPECIAL-1]);
+		return S_OK;
+	}
+	if(strlen(constname) >= 9 && strnicmp(constname, "ANI_RISE", 8)==0 && constname[8] >= '1' && constname[8]<='9') // new fall?
+	{
+		temp = strtol(constname+8, NULL, 10);
+		if(temp<OBOR_ATTACK_BASE-OBOR_ATTACK_SPECIAL+1) temp = OBOR_ATTACK_BASE-OBOR_ATTACK_SPECIAL+1; // just in case
+		if(!animrises || temp < 0 || temp > max_attack_types || (temp+OBOR_ATTACK_SPECIAL-1) < 0 || (temp+OBOR_ATTACK_SPECIAL-1) >= max_attack_types) { ScriptVariant_Clear(*pretvar); return S_OK; }
+		ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
+		(*pretvar)->lVal = (LONG)(animrises[temp+OBOR_ATTACK_SPECIAL-1]);
+		return S_OK;
+	}
+	if(strlen(constname) >= 15 && strnicmp(constname, "ANI_RISEATTACK", 14)==0 && constname[14] >= '1' && constname[14]<='9') // new fall?
+	{
+		temp = strtol(constname+14, NULL, 10);
+		if(temp<OBOR_ATTACK_BASE-OBOR_ATTACK_SPECIAL+1) temp = OBOR_ATTACK_BASE-OBOR_ATTACK_SPECIAL+1; // just in case
+		if(!animriseattacks || temp < 0 || temp > max_attack_types || (temp+OBOR_ATTACK_SPECIAL-1) < 0 || (temp+OBOR_ATTACK_SPECIAL-1) >= max_attack_types) { ScriptVariant_Clear(*pretvar); return S_OK; }
+		ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
+		(*pretvar)->lVal = (LONG)(animriseattacks[temp+OBOR_ATTACK_SPECIAL-1]);
+		return S_OK;
+	}
+	if(strlen(constname) >= 9 && strnicmp(constname, "ANI_PAIN", 8)==0 && constname[8] >= '1' && constname[8]<='9') // new fall?
+	{
+		temp = strtol(constname+8, NULL, 10); // so must be greater than 10
+		if(temp<OBOR_ATTACK_BASE-OBOR_ATTACK_SPECIAL+1) temp = OBOR_ATTACK_BASE-OBOR_ATTACK_SPECIAL+1; // just in case
+		if(!animpains || temp < 0 || temp > max_attack_types || (temp+OBOR_ATTACK_SPECIAL-1) < 0 || (temp+OBOR_ATTACK_SPECIAL-1) >= max_attack_types) { ScriptVariant_Clear(*pretvar); return S_OK; }
+		ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
+		(*pretvar)->lVal = (LONG)(animpains[temp+OBOR_ATTACK_SPECIAL-1]);
+		return S_OK;
+	}
+	if(strlen(constname) >= 8 && strnicmp(constname, "ANI_DIE", 7)==0 && constname[7] >= '1' && constname[7]<='9') // new fall?
+	{
+		temp = strtol(constname+7, NULL, 10); // so must be greater than 10
+		if(temp<OBOR_ATTACK_BASE-OBOR_ATTACK_SPECIAL+1) temp = OBOR_ATTACK_BASE-OBOR_ATTACK_SPECIAL+1; // just in case
+		if(!animdies || temp < 0 || temp > max_attack_types || (temp+OBOR_ATTACK_SPECIAL-1) < 0 || (temp+OBOR_ATTACK_SPECIAL-1) >= max_attack_types) { ScriptVariant_Clear(*pretvar); return S_OK; }
+		ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
+		(*pretvar)->lVal = (LONG)(animdies[temp+OBOR_ATTACK_SPECIAL-1]);
+		return S_OK;
+	}
+	if(strlen(constname) >= 11 && strnicmp(constname, "ANI_ATTACK", 10)==0 && constname[10] >= '1' && constname[10]<='9')
+	{
+		temp = strtol(constname+10, NULL, 10);
+		if(!animattacks || temp < 0 || temp > max_attacks || (temp-1) < 0 || (temp-1) >= max_attacks) { ScriptVariant_Clear(*pretvar); return S_OK; }
+		ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
+		(*pretvar)->lVal = (LONG)(animattacks[temp-1]);
+		return S_OK;
+	}
+	if(strlen(constname) >= 11 && strnicmp(constname, "ANI_FOLLOW", 10)==0 && constname[10] >= '1' && constname[10]<='9')
+	{
+		temp = strtol(constname+10, NULL, 10);
+		if(!animfollows || temp < 0 || temp > max_follows || (temp-1) < 0 || (temp-1) >= max_follows) { ScriptVariant_Clear(*pretvar); return S_OK; }
+		ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
+		(*pretvar)->lVal = (LONG)(animfollows[temp-1]);
+		return S_OK;
+	}
+	if(strlen(constname) >= 16 && strnicmp(constname, "ANI_FREESPECIAL", 15)==0 && (!constname[15] ||(constname[15] >= '1' && constname[15]<='9')))
+	{
+		temp = strtol(constname+15, NULL, 10);
+		if(temp<1) temp = 1;
+		if(!animspecials || temp < 0 || temp > max_freespecials || (temp-1) < 0 || (temp-1) >= max_freespecials) { ScriptVariant_Clear(*pretvar); return S_OK; }
+		ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
+		(*pretvar)->lVal = (LONG)(animspecials[temp-1]);
+		return S_OK;
+	}
             ScriptVariant_Clear(*pretvar);
             return S_OK;
         }
@@ -9546,17 +10350,17 @@ void mapstrings_textobjproperty(ScriptVariant** varlist, int paramCount)
 	static const char* proplist[] = {
 		"font",
 		"text",
-		"time",
-		"x",
+		"timex",
 		"y",
 		"z",
 	};
 
-	if(paramCount < 2) return;
+	if(paramCount < 2 || !varlist || !varlist[1]) return;
 
 	if(varlist[1]->vt == VT_STR)
     {
-        propname = (char *)StrCache_Get(varlist[1]->strVal);
+        propname = (char *)StrCache_GetIfPresent(varlist[1]->strVal);
+        if(!propname) return;
         for(prop = 0; prop < (int)(sizeof(proplist) / sizeof(*proplist)); ++prop)
         {
             if(!stricmp(proplist[prop], propname))
@@ -9566,18 +10370,131 @@ void mapstrings_textobjproperty(ScriptVariant** varlist, int paramCount)
                 break;
             }
         }
+        if(prop == (int)(sizeof(proplist) / sizeof(*proplist)))
+            printf(obor_profile_build < 3821 ?
+                "Property name '%s' is not supported by function gettextobjproperty.\n" :
+                "'%s' is not a valid textobj property.\n", propname);
     }
+}
+
+void mapstrings_changetextobjproperty(ScriptVariant** varlist, int paramCount)
+{
+    static const char *names[] = {"font", "text", "time", "x", "y", "z"};
+    int property;
+    const char *name;
+    if(obor_profile_build >= 3821)
+    {
+        mapstrings_textobjproperty(varlist, paramCount);
+        return;
+    }
+    if(paramCount < 2 || !varlist || !varlist[1]) return;
+    if(varlist[1]->vt != VT_STR) return;
+    name = StrCache_GetIfPresent(varlist[1]->strVal);
+    if(!name) return;
+    for(property = 0; property < (int)(sizeof(names) / sizeof(*names)); ++property)
+    {
+        if(!stricmp(names[property], name))
+        {
+            ScriptVariant_ChangeType(varlist[1], VT_INTEGER);
+            varlist[1]->lVal = property;
+            return;
+        }
+    }
+    printf("Property name '%s' is not supported by function changetextobjproperty.\n", name);
+}
+
+static int obor_textobj_index(int index, int grow)
+{
+    s_textobj *grown;
+    int count;
+    if(index < 0) return 0;
+    if(!level || level->numtextobjs < 0 ||
+        (level->numtextobjs && !level->textobjs)) return -1;
+    count = level->numtextobjs;
+    if(index < count) return 1;
+    if(!grow) return 0;
+    if(index == INT_MAX ||
+        (size_t)(index + 1) > (size_t)-1 / sizeof(*grown)) return -1;
+    grown = realloc(level->textobjs, (size_t)(index + 1) * sizeof(*grown));
+    if(!grown) return -1;
+    memset(grown + count, 0, (size_t)(index + 1 - count) * sizeof(*grown));
+    level->textobjs = grown;
+    level->numtextobjs = index + 1;
+    return 1;
+}
+
+static int obor_textobj_store(s_textobj *object, const char *text)
+{
+    const char *end;
+    char *stored;
+    size_t length;
+    if(!object || !text) return 0;
+    end = memchr(text, 0, MAX_STR_VAR_LEN + 1);
+    if(!end) return 0;
+    length = (size_t)(end - text);
+    stored = object->text;
+    if(!stored)
+    {
+        stored = malloc(MAX_STR_VAR_LEN + 1);
+        if(!stored) return 0;
+    }
+    memmove(stored, text, length);
+    memset(stored + length, 0, MAX_STR_VAR_LEN + 1 - length);
+    object->text = stored;
+    return 1;
+}
+
+static int obor_textobj_format(ScriptVariant *value, char *buffer)
+{
+    int written;
+    const char *text;
+    if(!buffer) return 0;
+    buffer[0] = 0;
+    if(!value) return 0;
+    switch(value->vt)
+    {
+    case VT_EMPTY:
+        written = snprintf(buffer, MAX_STR_VAR_LEN + 1, "<VT_EMPTY>   Unitialized");
+        break;
+    case VT_INTEGER:
+        written = snprintf(buffer, MAX_STR_VAR_LEN + 1, "%d", (int)value->lVal);
+        break;
+    case VT_DECIMAL:
+        written = snprintf(buffer, MAX_STR_VAR_LEN + 1, "%lf", value->dblVal);
+        break;
+    case VT_PTR:
+        written = snprintf(buffer, MAX_STR_VAR_LEN + 1, "#%ld", (long)value->ptrVal);
+        break;
+    case VT_STR:
+        text = StrCache_GetIfPresent(value->strVal);
+        if(!text || !memchr(text, 0, MAX_STR_VAR_LEN + 1)) return 0;
+        written = snprintf(buffer, MAX_STR_VAR_LEN + 1, "%s", text);
+        break;
+    default:
+        written = snprintf(buffer, MAX_STR_VAR_LEN + 1, "<Unprintable VARIANT type.>");
+        break;
+    }
+    if(written < 0 || written > MAX_STR_VAR_LEN)
+    {
+        buffer[0] = 0;
+        return 0;
+    }
+    return 1;
 }
 
 HRESULT openbor_gettextobjproperty(ScriptVariant** varlist , ScriptVariant** pretvar, int paramCount)
 {
+    if(!pretvar || !*pretvar) return E_FAIL;
+
 	LONG ind;
+	int obor_index;
 	int propind;
 
 	if(paramCount < 2)
 		goto gettextobjproperty_error;
 
 
+	if(!varlist) { *pretvar = NULL; return E_FAIL; }
 	if(FAILED(ScriptVariant_IntegerValue(varlist[0], &ind)))
 	{
 		printf("Function's 1st argument must be a numeric value: gettextproperty(int index, \"property\")\n");
@@ -9587,12 +10504,15 @@ HRESULT openbor_gettextobjproperty(ScriptVariant** varlist , ScriptVariant** pre
 	ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
 	mapstrings_textobjproperty(varlist, paramCount);
 
-	if(ind<0 || ind >= level->numtextobjs)
+	obor_index = obor_textobj_index(ind, 0);
+	if(obor_index < 0) goto gettextobjproperty_error;
+	if(!obor_index)
 	{
 		(*pretvar)->lVal = 0;
 		return S_OK;
 	}
 
+	if(!varlist[1]) { *pretvar = NULL; return E_FAIL; }
 	if(varlist[1]->vt != VT_INTEGER)
 	{
 		if(varlist[1]->vt != VT_STR)
@@ -9612,8 +10532,12 @@ HRESULT openbor_gettextobjproperty(ScriptVariant** varlist , ScriptVariant** pre
 	}
 	case _top_text:
 	{
+		if(!level->textobjs[ind].text ||
+		    !memchr(level->textobjs[ind].text, 0, MAX_STR_VAR_LEN + 1))
+		    goto gettextobjproperty_error;
 		ScriptVariant_ChangeType(*pretvar, VT_STR);
 		strncpy(StrCache_Get((*pretvar)->strVal), level->textobjs[ind].text, MAX_STR_VAR_LEN);
+		StrCache_Get((*pretvar)->strVal)[MAX_STR_VAR_LEN] = 0;
 		break;
 	}
 	case _top_time:
@@ -9655,14 +10579,128 @@ gettextobjproperty_error:
 
 HRESULT openbor_changetextobjproperty(ScriptVariant** varlist , ScriptVariant** pretvar, int paramCount)
 {
+    if(!pretvar || (obor_profile_build < 3821 && !*pretvar)) return E_FAIL;
+
+    if(obor_profile_build < 3821)
+    {
+    	LONG ind;
+    	int propind;
+    	LONG ltemp;
+    
+    	if(paramCount < 3)
+    		goto legacy_changetextobjproperty_error;
+    
+    
+    	if(!varlist) { *pretvar = NULL; return E_FAIL; }
+    	if(FAILED(ScriptVariant_IntegerValue(varlist[0], &ind)))
+    	{
+    		printf("Function's 1st argument must be a numeric value: changetextobjproperty(int index, \"property\", value)\n");
+    		goto legacy_changetextobjproperty_error;
+    	}
+    
+    	ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
+    	mapstrings_changetextobjproperty(varlist, paramCount);
+    
+    	if(ind<0)
+    	{
+    		(*pretvar)->lVal = 0;
+    		return S_OK;
+    	}
+    	else
+    	{
+    	    if(obor_textobj_index(ind, 1) < 0) goto legacy_changetextobjproperty_error;
+    	}
+    
+    	if(!varlist[1]) { *pretvar = NULL; return E_FAIL; }
+	if(varlist[1]->vt != VT_INTEGER)
+    	{
+    		if(varlist[1]->vt != VT_STR)
+    			printf("Function changetextobjproperty must have a string property name.\n");
+    		goto legacy_changetextobjproperty_error;
+    	}
+    
+    	propind = varlist[1]->lVal;
+    
+    	switch(propind)
+    	{
+    	case _top_font:
+    	{
+    		if(SUCCEEDED(ScriptVariant_IntegerValue(varlist[2], &ltemp)))
+    		{
+    			(*pretvar)->lVal = (LONG)1;
+    			level->textobjs[ind].font = (int)ltemp;
+    		}
+    		break;
+    	}
+    	case _top_text:
+    	{
+    		if(!varlist[2]) { *pretvar = NULL; return E_FAIL; }
+	if(varlist[2]->vt != VT_STR)
+    		{
+    			printf("You must give a string value for textobj text.\n");
+    			goto legacy_changetextobjproperty_error;
+    		}
+    		if(!obor_textobj_store(&level->textobjs[ind], StrCache_GetIfPresent(varlist[2]->strVal)))
+    		    goto legacy_changetextobjproperty_error;
+    		//level->textobjs[ind].text = (char*)StrCache_Get(varlist[2]->strVal);
+    		(*pretvar)->lVal = (LONG)1;
+    		break;
+    	}
+    	case _top_time:
+    	{
+    		if(SUCCEEDED(ScriptVariant_IntegerValue(varlist[2], &ltemp)))
+    		{
+    			(*pretvar)->lVal = (LONG)1;
+    			level->textobjs[ind].t = (int)ltemp;
+    		}
+    		break;
+    	}
+    	case _top_x:
+    	{
+    		if(SUCCEEDED(ScriptVariant_IntegerValue(varlist[2], &ltemp)))
+    		{
+    			(*pretvar)->lVal = (LONG)1;
+    			level->textobjs[ind].x = (int)ltemp;
+    		}
+    		break;
+    	}
+    	case _top_y:
+    	{
+    		if(SUCCEEDED(ScriptVariant_IntegerValue(varlist[2], &ltemp)))
+    		{
+    			(*pretvar)->lVal = (LONG)1;
+    			level->textobjs[ind].y = (int)ltemp;
+    		}
+    		break;
+    	}
+    	case _top_z:
+    	{
+    		if(SUCCEEDED(ScriptVariant_IntegerValue(varlist[2], &ltemp)))
+    		{
+    			(*pretvar)->lVal = (LONG)1;
+    			level->textobjs[ind].z = (int)ltemp;
+    		}
+    		break;
+    	}
+    	default:
+    		//printf("Property name '%s' is not supported by function changetextobjproperty.\n", propname);
+    		goto legacy_changetextobjproperty_error;
+    		break;
+    	}
+    
+    	return S_OK;
+    
+    legacy_changetextobjproperty_error:
+    	*pretvar = NULL;
+    	return E_FAIL;
+    }
+
 	LONG ind;
 	int propind;
-	static char buf[MAX_STR_VAR_LEN];
+	static char buf[MAX_STR_VAR_LEN + 1];
 	LONG ltemp;
 	const char* ctotext = "changetextobjproperty(int index, \"property\", value)";
 
-    ScriptVariant *result = *pretvar;
-    const int legacy_result = obor_profile_build < 3821;
 	*pretvar = NULL;
 
 	if(paramCount < 3) {
@@ -9670,6 +10708,7 @@ HRESULT openbor_changetextobjproperty(ScriptVariant** varlist , ScriptVariant** 
 		return E_FAIL;
 	}
 
+	if(!varlist) { *pretvar = NULL; return E_FAIL; }
 	if(FAILED(ScriptVariant_IntegerValue(varlist[0], &ind)))
 	{
 		printf("Function's 1st argument must be a numeric value: %s\n", ctotext);
@@ -9680,22 +10719,15 @@ HRESULT openbor_changetextobjproperty(ScriptVariant** varlist , ScriptVariant** 
 
 	if(ind<0)
 	{
-        if(legacy_result)
-        {
-            *pretvar = result;
-            ScriptVariant_ChangeType(result, VT_INTEGER);
-            result->lVal = 0;
-            return S_OK;
-        }
 		printf("Invalid textobj index, must be >= 0\n");
 		return E_FAIL;
 	}
-	else if (ind >= level->numtextobjs)
+	else
 	{
-		__reallocto(level->textobjs, level->numtextobjs, ind+1);
-		level->numtextobjs = ind+1;
+	    if(obor_textobj_index(ind, 1) < 0) return E_FAIL;
 	}
 
+	if(!varlist[1]) { *pretvar = NULL; return E_FAIL; }
 	if(varlist[1]->vt != VT_INTEGER)
 	{
 		printf("Invalid property type for changetextobjproperty.\n");
@@ -9715,11 +10747,8 @@ HRESULT openbor_changetextobjproperty(ScriptVariant** varlist , ScriptVariant** 
 	}
 	case _top_text:
 	{
-        if(legacy_result && varlist[2]->vt != VT_STR) return E_FAIL;
-		ScriptVariant_ToString(varlist[2], buf);
-        if(!level->textobjs[ind].text)
-            level->textobjs[ind].text = malloc(MAX_STR_VAR_LEN);
-		strncpy(level->textobjs[ind].text, buf, MAX_STR_VAR_LEN);
+		if(!obor_textobj_format(varlist[2], buf)) goto changetextobjproperty_error;
+		if(!obor_textobj_store(&level->textobjs[ind], buf)) return E_FAIL;
 		break;
 	}
 	case _top_time:
@@ -9756,23 +10785,10 @@ HRESULT openbor_changetextobjproperty(ScriptVariant** varlist , ScriptVariant** 
 		break;
 	}
 
-    if(legacy_result)
-    {
-        *pretvar = result;
-        ScriptVariant_ChangeType(result, VT_INTEGER);
-        result->lVal = 1;
-    }
 	return S_OK;
 
 changetextobjproperty_error:
-    if(legacy_result)
-    {
-        *pretvar = result;
-        ScriptVariant_ChangeType(result, VT_INTEGER);
-        result->lVal = 0;
-        return S_OK;
-    }
-	ScriptVariant_ToString(varlist[2], buf);
+	if(!obor_textobj_format(varlist[2], buf)) buf[0] = 0;
 	printf("Invalid textobj value: %s\n", buf);
 	return E_FAIL;
 }
@@ -9780,13 +10796,91 @@ changetextobjproperty_error:
 // settextobj(int index, int x, int y, int font, int z, char text, int time {optional})
 HRESULT openbor_settextobj(ScriptVariant** varlist , ScriptVariant** pretvar, int paramCount)
 {
+    if(!pretvar || (obor_profile_build < 3821 && !*pretvar)) return E_FAIL;
+
+    if(obor_profile_build < 3821)
+    {
+    	LONG ind;
+    	LONG ltemp;
+    
+    	if(paramCount < 6)
+    		goto legacy_settextobj_error;
+    
+    	if(!varlist) { *pretvar = NULL; return E_FAIL; }
+    	if(FAILED(ScriptVariant_IntegerValue(varlist[0], &ind)))
+    	{
+    		printf("Function's 1st argument must be a numeric value: settextobj(int index, int x, int y, int font, int z, char text, int time {optional})\n");
+    		goto legacy_settextobj_error;
+    	}
+    
+    	ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
+    
+    	if(ind<0)
+    	{
+    		(*pretvar)->lVal = 0;
+    		return S_OK;
+    	}
+    	else
+    	{
+    	    if(obor_textobj_index(ind, 1) < 0) goto legacy_settextobj_error;
+    	}
+    
+    	if(SUCCEEDED(ScriptVariant_IntegerValue(varlist[1], &ltemp)))
+    	{
+    		(*pretvar)->lVal = (LONG)1;
+    		level->textobjs[ind].x = (int)ltemp;
+    	}
+    
+    	if(SUCCEEDED(ScriptVariant_IntegerValue(varlist[2], &ltemp)))
+    	{
+    		(*pretvar)->lVal = (LONG)1;
+    		level->textobjs[ind].y = (int)ltemp;
+    	}
+    
+    	if(SUCCEEDED(ScriptVariant_IntegerValue(varlist[3], &ltemp)))
+    	{
+    		(*pretvar)->lVal = (LONG)1;
+    		level->textobjs[ind].font = (int)ltemp;
+    	}
+    
+    	if(SUCCEEDED(ScriptVariant_IntegerValue(varlist[4], &ltemp)))
+    	{
+    		(*pretvar)->lVal = (LONG)1;
+    		level->textobjs[ind].z = (int)ltemp;
+    	}
+    
+    	if(!varlist[5]) { *pretvar = NULL; return E_FAIL; }
+	if(varlist[5]->vt != VT_STR)
+    	{
+    		printf("You must give a string value for textobj text.\n");
+    		goto legacy_settextobj_error;
+    	}
+    
+    	if(paramCount >= 7)
+    	{
+    		if(SUCCEEDED(ScriptVariant_IntegerValue(varlist[6], &ltemp)))
+    		{
+    			(*pretvar)->lVal = (LONG)1;
+    			level->textobjs[ind].t = (int)ltemp;
+    		}
+    	}
+    
+    	if(!obor_textobj_store(&level->textobjs[ind], StrCache_GetIfPresent(varlist[5]->strVal)))
+    	    goto legacy_settextobj_error;
+    	(*pretvar)->lVal = (LONG)1;
+    
+    	return S_OK;
+    
+    legacy_settextobj_error:
+    	*pretvar = NULL;
+    	return E_FAIL;
+    }
+
 	LONG ind;
 	LONG X,Y,Z,F,T=0;
-	static char buf[MAX_STR_VAR_LEN];
+	static char buf[MAX_STR_VAR_LEN + 1];
 	const char* stotext = "settextobj(int index, int x, int y, int font, int z, char text, int time {optional})";
 
-    ScriptVariant *result = *pretvar;
-    const int legacy_result = obor_profile_build < 3821;
 	*pretvar = NULL;
 
 
@@ -9796,6 +10890,7 @@ HRESULT openbor_settextobj(ScriptVariant** varlist , ScriptVariant** pretvar, in
 		return E_FAIL;
 	}
 
+	if(!varlist) { *pretvar = NULL; return E_FAIL; }
 	if(FAILED(ScriptVariant_IntegerValue(varlist[0], &ind)))
 	{
 		printf("Function's 1st argument must be a numeric value: %s\n", stotext);
@@ -9804,53 +10899,20 @@ HRESULT openbor_settextobj(ScriptVariant** varlist , ScriptVariant** pretvar, in
 
 	if(ind<0)
 	{
-        if(legacy_result)
-        {
-            *pretvar = result;
-            ScriptVariant_ChangeType(result, VT_INTEGER);
-            result->lVal = 0;
-            return S_OK;
-        }
 		printf("Invalid textobj index, must be >= 0\n");
 		return E_FAIL;
 	}
-	else if(ind>=level->numtextobjs) {
-		__reallocto(level->textobjs, level->numtextobjs, ind+1);
-		level->numtextobjs = ind+1;
+	else
+	{
+	    if(obor_textobj_index(ind, 1) < 0) return E_FAIL;
 	}
 
-    if(legacy_result)
-    {
-        LONG value;
-        X = level->textobjs[ind].x;
-        Y = level->textobjs[ind].y;
-        Z = level->textobjs[ind].z;
-        F = level->textobjs[ind].font;
-        T = level->textobjs[ind].t;
-        /* Rejected numeric fields retain their previous value independently. */
-        if(SUCCEEDED(ScriptVariant_IntegerValue(varlist[1], &value))) X = value;
-        if(SUCCEEDED(ScriptVariant_IntegerValue(varlist[2], &value))) Y = value;
-        if(SUCCEEDED(ScriptVariant_IntegerValue(varlist[3], &value))) F = value;
-        if(SUCCEEDED(ScriptVariant_IntegerValue(varlist[4], &value))) Z = value;
-        /* The earlier setter commits numeric fields before validating text. */
-        level->textobjs[ind].x = (int)X;
-        level->textobjs[ind].y = (int)Y;
-        level->textobjs[ind].z = (int)Z;
-        level->textobjs[ind].font = (int)F;
-        if(varlist[5]->vt != VT_STR) goto settextobj_error;
-        if(paramCount >= 7 && SUCCEEDED(ScriptVariant_IntegerValue(varlist[6], &value))) T = value;
-        ScriptVariant_ToString(varlist[5], buf);
-    }
-    else
-    {
 	if(FAILED(ScriptVariant_IntegerValue(varlist[1], &X))) goto settextobj_error;
 	if(FAILED(ScriptVariant_IntegerValue(varlist[2], &Y))) goto settextobj_error;
 	if(FAILED(ScriptVariant_IntegerValue(varlist[3], &F))) goto settextobj_error;
 	if(FAILED(ScriptVariant_IntegerValue(varlist[4], &Z))) goto settextobj_error;
-	ScriptVariant_ToString(varlist[5], buf);
+	if(!obor_textobj_format(varlist[5], buf)) goto settextobj_error;
 	if(paramCount >= 7 && FAILED(ScriptVariant_IntegerValue(varlist[6], &T))) goto settextobj_error;
-
-    }
 
 	level->textobjs[ind].t = (int)T;
 	level->textobjs[ind].x = (int)X;
@@ -9858,16 +10920,8 @@ HRESULT openbor_settextobj(ScriptVariant** varlist , ScriptVariant** pretvar, in
 	level->textobjs[ind].z = (int)Z;
 	level->textobjs[ind].font = (int)F;
 
-	if(!level->textobjs[ind].text)
-		level->textobjs[ind].text = (char*)malloc(MAX_STR_VAR_LEN);
-	strncpy(level->textobjs[ind].text, buf, MAX_STR_VAR_LEN);
+	if(!obor_textobj_store(&level->textobjs[ind], buf)) return E_FAIL;
 
-    if(legacy_result)
-    {
-        *pretvar = result;
-        ScriptVariant_ChangeType(result, VT_INTEGER);
-        result->lVal = 1;
-    }
 	return S_OK;
 
 settextobj_error:
@@ -9877,11 +10931,53 @@ settextobj_error:
 
 HRESULT openbor_cleartextobj(ScriptVariant** varlist , ScriptVariant** pretvar, int paramCount)
 {
+    if(!pretvar || (obor_profile_build < 3821 && !*pretvar)) return E_FAIL;
+
+    if(obor_profile_build < 3821)
+    {
+    	LONG ind;
+    	int obor_index;
+    
+    	if(paramCount < 1)
+    		goto legacy_cleartextobj_error;
+    
+    
+    	if(!varlist) { *pretvar = NULL; return E_FAIL; }
+    	if(FAILED(ScriptVariant_IntegerValue(varlist[0], &ind)))
+    	{
+    		printf("Function's 1st argument must be a numeric value: cleartextobj(int index)\n");
+    		goto legacy_cleartextobj_error;
+    	}
+    
+    	ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
+    
+    	obor_index = obor_textobj_index(ind, 0);
+    	if(obor_index < 0) goto legacy_cleartextobj_error;
+    	if(!obor_index)
+    	{
+    		(*pretvar)->lVal = 0;
+    		return S_OK;
+    	}
+    
+    	level->textobjs[ind].t = 0;
+    	level->textobjs[ind].x = 0;
+    	level->textobjs[ind].y = 0;
+    	level->textobjs[ind].font = 0;
+    	level->textobjs[ind].z = 0;
+    	if(level->textobjs[ind].text)
+    		 free(level->textobjs[ind].text);
+    	level->textobjs[ind].text = NULL;
+    	return S_OK;
+    
+    legacy_cleartextobj_error:
+    	*pretvar = NULL;
+    	return E_FAIL;
+    }
+
 	LONG ind;
+	int obor_index;
 	const char* cltotext = "cleartextobj(int index)";
 
-    ScriptVariant *result = *pretvar;
-    const int legacy_result = obor_profile_build < 3821;
 	*pretvar = NULL;
 
 	if(paramCount < 1) {
@@ -9889,19 +10985,16 @@ HRESULT openbor_cleartextobj(ScriptVariant** varlist , ScriptVariant** pretvar, 
 		return E_FAIL;
 	}
 
+	if(!varlist) { *pretvar = NULL; return E_FAIL; }
 	if(FAILED(ScriptVariant_IntegerValue(varlist[0], &ind)))
 	{
 		printf("Function's 1st argument must be a numeric value: %s\n", cltotext);
 		return E_FAIL;
 	}
 
-    if(legacy_result)
-    {
-        *pretvar = result;
-        ScriptVariant_ChangeType(result, VT_INTEGER);
-    }
-
-	if(ind<0 || ind >= level->numtextobjs)
+	obor_index = obor_textobj_index(ind, 0);
+	if(obor_index < 0) return E_FAIL;
+	if(!obor_index)
 	{
 		return S_OK;
 	}
@@ -10521,6 +11614,9 @@ HRESULT openbor_getlevelproperty(ScriptVariant** varlist , ScriptVariant** pretv
 		else goto getlevelproperty_error;
 	}
 	default:
+        if(obor_profile_build < 3820)
+            printf("Property is not supported by function getlevelproperty yet.\n");
+        else
 		printf("Property is not supported by function getlevelproperty yet. %d\n", varlist[0]->lVal);
 		goto getlevelproperty_error;
 		break;
@@ -10548,6 +11644,7 @@ HRESULT openbor_changelevelproperty(ScriptVariant** varlist , ScriptVariant** pr
 
 	if(paramCount < 2)
 	{
+        if(obor_profile_build >= 3820)
 		printf("Function changelevelproperty(prop, value) need at least 2 parameters.\n");
 		return E_FAIL;
 	}
@@ -10673,6 +11770,9 @@ HRESULT openbor_changelevelproperty(ScriptVariant** varlist , ScriptVariant** pr
 		break;
 	}
 	default:
+        if(obor_profile_build < 3820)
+            printf("The level property is read-only.\n");
+        else
 		printf("Invalid or read-only level property.\n");
 		return E_FAIL;
 		break;

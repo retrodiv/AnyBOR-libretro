@@ -1,3 +1,14 @@
+/* AnyBOR modification record: 2026-10-22.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Declare the modern logical profiles' unload_model script entry point.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/7142.md
+ * at the source repository root. Original notices follow below.
+ */
+
 /*
  * OpenBOR - http://www.chronocrash.com
  * -----------------------------------------------------------------------
@@ -55,6 +66,8 @@ typedef struct
     ScriptVariant *vars;
 } Varlist;
 
+#include "obor_script_storage.h"
+
 typedef struct Script
 {
     int magic;
@@ -63,6 +76,8 @@ typedef struct Script
     Varlist *varlist;
     int initialized;        //flag
     int interpreterowner;   //flag
+    obor_script_reference *obor_interpreter;
+    obor_script_reference *obor_comment;
 } Script;
 
 extern Varlist global_var_list;

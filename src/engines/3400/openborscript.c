@@ -1,4 +1,4 @@
-/* AnyBOR modification record: 2026-10-17.
+/* AnyBOR modification record: 2026-10-24.
  * Port maintained by retrodiv <retrodiv@proton.me>.
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
@@ -10,8 +10,19 @@
  * the content basename with explicit destination capacities, and reject
  * overflowing output path joins. Compact compiler-only instruction records
  * after resolving value ownership, preserving branch and export anchors, all
- * mutable values and exactly-once pool cleanup. Resolve text-property names
- * within the actual table bounds while preserving native numeric selectors.
+ * mutable values and exactly-once pool cleanup. Retain shared interpreters
+ * through the last script reference while preserving independent variables,
+ * replacement and native callbacks. Resolve text-property names within the
+ * actual table bounds while preserving native numeric selectors. Reject
+ * missing colourtable indices and keep selector arithmetic and table reads
+ * defined. Use the declared staydown name-table length for lookup. Transfer
+ * loaded stream buffers through aligned local outputs while preserving
+ * native record layout and results. Close owned input files after stream
+ * loading and on buffer allocation failure. Terminate fixed-cache stream
+ * line and argument results and preserve appended bytes with checked
+ * conversion and output allocation. Track initialized owned stream bytes
+ * independently of native size, bound cursor reads and preserve buffer-base
+ * append/save behavior and native slot policy.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/3400.md
  * at the source repository root. Original notices follow below.
@@ -50,6 +61,7 @@
 #include "openbor.h"
 #include "soundmix.h"
 #include "globals.h"
+#include <limits.h>
 #include "ImportCache.h"
 #include "models.h"
 
@@ -356,6 +368,46 @@ Script* alloc_script()
 	return pscript;
 }
 
+
+static void obor_script_destroy_interpreter(void *value)
+{
+    Interpreter_Clear((Interpreter *)value);
+    free(value);
+}
+
+static int obor_script_replace_interpreter(Script *script, char *name)
+{
+    Interpreter *replacement = malloc(sizeof(*replacement));
+    obor_script_reference *reference;
+    if(!replacement) return 0;
+    Interpreter_Init(replacement, name, &theFunctionList);
+    reference = obor_script_reference_new(replacement, obor_script_destroy_interpreter);
+    if(!reference)
+    {
+        obor_script_destroy_interpreter(replacement);
+        return 0;
+    }
+    if(!obor_script_reference_release(&script->obor_interpreter))
+    {
+        obor_script_reference_release(&reference);
+        return 0;
+    }
+    script->obor_interpreter = reference;
+    script->pinterpreter = replacement;
+    return 1;
+}
+
+static int obor_script_share_references(Script *destination, Script *source)
+{
+    if(!source->obor_interpreter ||
+       source->obor_interpreter->value != source->pinterpreter ||
+       !obor_script_reference_retain(source->obor_interpreter)) return 0;
+
+    destination->obor_interpreter = source->obor_interpreter;
+
+    return 1;
+}
+
 void Script_Init(Script* pscript, char* theName, int first)
 {
 	int i;
@@ -370,8 +422,11 @@ void Script_Init(Script* pscript, char* theName, int first)
 	}
 	if(!theName || !theName[0])  return; // if no name specified, only alloc the variants
 	pcurrentscript = pscript; //used by local script functions
-	pscript->pinterpreter = (Interpreter*)malloc(sizeof(Interpreter));
-	Interpreter_Init(pscript->pinterpreter, theName, &theFunctionList);
+	if(!obor_script_replace_interpreter(pscript, theName))
+    {
+        shutdown(1, "Unable to allocate script interpreter.");
+        return;
+    }
 	pscript->interpreterowner = 1; // this is the owner, important
 	pscript->initialized = 1;
 }
@@ -379,9 +434,15 @@ void Script_Init(Script* pscript, char* theName, int first)
 //safe copy method
 void Script_Copy(Script* pdest, Script* psrc, int localclear)
 {
+    if(!pdest || !psrc || pdest == psrc) return;
 	if(!psrc->initialized) return;
 	if(pdest->initialized) Script_Clear(pdest, localclear);
-	pdest->pinterpreter = psrc->pinterpreter;
+	if(!obor_script_share_references(pdest, psrc))
+    {
+        shutdown(1, "Unable to retain script interpreter.");
+        return;
+    }
+    pdest->pinterpreter = psrc->pinterpreter;
 	pdest->interpreterowner = 0; // dont own it
 	pdest->initialized = psrc->initialized; //just copy, it should be 1
 }
@@ -403,12 +464,9 @@ void Script_Clear(Script* pscript, int localclear)
 	if(!pscript->initialized) return;
 	temp = pcurrentscript;
 	pcurrentscript = pscript; //used by local script functions
-	//if it is the owner, free the interpreter
-	if(pscript->pinterpreter && pscript->interpreterowner){
-		Interpreter_Clear(pscript->pinterpreter);
-		free(pscript->pinterpreter);
-		pscript->pinterpreter = NULL;
-	}
+	/* Shared values survive until their final script reference ends. */
+	obor_script_reference_release(&pscript->obor_interpreter);
+    pscript->pinterpreter = NULL;
 	if(localclear) Script_Local_Clear();
 	pvars = pscript->vars; // in game clear(localclear!=2) just keep this value
 	memset(pscript, 0, sizeof(Script));
@@ -3283,7 +3341,7 @@ void mapstrings_getentityproperty(ScriptVariant** varlist, int paramCount)
 	// map subproperties of Staydown
 	if((varlist[1]->vt == VT_INTEGER) && (varlist[1]->lVal == _gep_staydown))
 	{
-		MAPSTRINGS(varlist[2], proplist_staydown, _gep_running_the_end,
+		MAPSTRINGS(varlist[2], proplist_staydown, sizeof(proplist_staydown) / sizeof(*proplist_staydown),
 			"Property name '%s' is not a known subproperty of 'staydown'.\n");
 	}
 }
@@ -3853,12 +3911,15 @@ HRESULT openbor_getentityproperty(ScriptVariant** varlist , ScriptVariant** pret
 		break;
 	}
 	case _gep_colourtable:
-	{
-		ScriptVariant_ChangeType(*pretvar, VT_PTR);
-		(*pretvar)->ptrVal = (VOID*)(ent->modeldata.colourmap[varlist[2]->lVal]);
-		break;
-	}
-	case _gep_damage_on_landing:
+    {
+        if(paramCount < 3) break;
+        ScriptVariant_ChangeType(*pretvar, VT_PTR);
+        (*pretvar)->ptrVal = NULL;
+        if((unsigned)varlist[2]->lVal < MAX_COLOUR_MAPS)
+            (*pretvar)->ptrVal = ent->modeldata.colourmap[varlist[2]->lVal];
+        break;
+    }
+    case _gep_damage_on_landing:
 	{
 		ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
 		(*pretvar)->lVal = (LONG)ent->damage_on_landing;
@@ -7876,6 +7937,24 @@ HRESULT openbor_checkplatformbelow(ScriptVariant** varlist , ScriptVariant** pre
 	return S_OK;
 }
 
+static int obor_filestream_index(int index)
+{
+    return level && index >= 0 && index < LEVEL_MAX_FILESTREAMS;
+}
+
+static int obor_filestream_buffer(int index, int at_position)
+{
+    size_t start;
+    s_filestream *stream;
+    if(!obor_filestream_index(index)) return 0;
+    stream = &level->filestreams[index];
+    if(!stream->buf || !stream->obor_capacity ||
+        (at_position && stream->pos < 0)) return 0;
+    start = at_position ? (size_t)stream->pos : 0;
+    return start < stream->obor_capacity &&
+        memchr(stream->buf + start, 0, stream->obor_capacity - start) != NULL;
+}
+
 HRESULT openbor_openfilestream(ScriptVariant** varlist , ScriptVariant** pretvar, int paramCount)
 {
 	char* filename = NULL;
@@ -7887,7 +7966,7 @@ HRESULT openbor_openfilestream(ScriptVariant** varlist , ScriptVariant** pretvar
 	char path[128] = {""};
 	long size;
 
-	if(paramCount < 1)
+	if(paramCount < 1 || !varlist || !varlist[0])
 	{
 		*pretvar = NULL;
 		return E_FAIL;
@@ -7907,11 +7986,13 @@ HRESULT openbor_openfilestream(ScriptVariant** varlist , ScriptVariant** pretvar
 
 	if(paramCount > 1)
 	{
+		if(!varlist[1]) { *pretvar = NULL; return E_FAIL; }
 		arg = varlist[1];
 		if(FAILED(ScriptVariant_IntegerValue(arg, &location)))
 			return S_OK;
 	}
 
+	if(!level || level->numfilestreams < 0 || level->numfilestreams > LEVEL_MAX_FILESTREAMS) { *pretvar = NULL; return E_FAIL; }
 	if(!level->numfilestreams) level->numfilestreams = 0;
 	else if(level->numfilestreams == LEVEL_MAX_FILESTREAMS)
 	{
@@ -7946,17 +8027,31 @@ HRESULT openbor_openfilestream(ScriptVariant** varlist , ScriptVariant** pretvar
 		fseek(handle, 0, SEEK_END);
 		size = ftell(handle);
 		rewind(handle);
-		level->filestreams[level->numfilestreams].buf = (char*)malloc(sizeof(char)*size);
-		if(level->filestreams[level->numfilestreams].buf == NULL) return E_FAIL;
-		disCcWarns = fread(level->filestreams[level->numfilestreams].buf, 1, size, handle);
+		if(size < 0 || (unsigned long)size > (size_t)-1 - 0) { fclose(handle); *pretvar = NULL; return E_FAIL; }
+		level->filestreams[level->numfilestreams].buf = malloc((size ? (size_t)size : 1));
+		if(level->filestreams[level->numfilestreams].buf == NULL) { fclose(handle); return E_FAIL; }
+		size_t obor_read = fread(level->filestreams[level->numfilestreams].buf, 1, (size_t)size, handle);
+        level->filestreams[level->numfilestreams].obor_capacity = obor_read;
+		fclose(handle);
 	}
-	else if(buffer_pakfile(filename, &level->filestreams[level->numfilestreams].buf, &level->filestreams[level->numfilestreams].size)!=1)
-	{
-		  printf("Invalid filename used in openfilestream.\n");
-		  *pretvar = NULL;
-		  return E_FAIL;
-	}
+	else
+    {
+        s_filestream *obor_stream_slot = &(level->filestreams[level->numfilestreams]);
+        char *obor_stream_buffer = obor_stream_slot->buf;
+        size_t obor_stream_size = obor_stream_slot->size;
+        int obor_stream_loaded = buffer_pakfile(filename,
+            &obor_stream_buffer, &obor_stream_size);
+        obor_stream_slot->buf = obor_stream_buffer;
+        obor_stream_slot->size = obor_stream_size;
+        if(obor_stream_loaded != 1)
+        {
+    		  printf("Invalid filename used in openfilestream.\n");
+    		  *pretvar = NULL;
+    		  return E_FAIL;
+        }
+    }
 
+    if(!location) level->filestreams[level->numfilestreams].obor_capacity = level->filestreams[level->numfilestreams].size + 1;
 	ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
 	(*pretvar)->lVal = (LONG)level->numfilestreams;
 
@@ -7968,11 +8063,11 @@ HRESULT openbor_openfilestream(ScriptVariant** varlist , ScriptVariant** pretvar
 HRESULT openbor_getfilestreamline(ScriptVariant** varlist , ScriptVariant** pretvar, int paramCount)
 {
 	char line[MAX_STR_VAR_LEN];
-	int length;
+	size_t length;
 	ScriptVariant* arg = NULL;
 	LONG filestreamindex;
 
-	if(paramCount < 1)
+	if(paramCount < 1 || !varlist || !varlist[0])
 	{
 		*pretvar = NULL;
 		return E_FAIL;
@@ -7982,13 +8077,14 @@ HRESULT openbor_getfilestreamline(ScriptVariant** varlist , ScriptVariant** pret
 	if(FAILED(ScriptVariant_IntegerValue(arg, &filestreamindex)))
 		return S_OK;
 
+    if(!obor_filestream_buffer(filestreamindex, 1)) { *pretvar = NULL; return E_FAIL; }
 	ScriptVariant_Clear(*pretvar);
 	ScriptVariant_ChangeType(*pretvar, VT_STR);
 
 	length = 0;
 	strncpy(line, "it's initialized now", MAX_STR_VAR_LEN);
 
-	while(level->filestreams[filestreamindex].buf[level->filestreams[filestreamindex].pos+length] && level->filestreams[filestreamindex].buf[level->filestreams[filestreamindex].pos+length]!='\n' && level->filestreams[filestreamindex].buf[level->filestreams[filestreamindex].pos+length]!='\r') ++length;
+	while(level->filestreams[filestreamindex].buf[(size_t)level->filestreams[filestreamindex].pos+length] && level->filestreams[filestreamindex].buf[(size_t)level->filestreams[filestreamindex].pos+length]!='\n' && level->filestreams[filestreamindex].buf[(size_t)level->filestreams[filestreamindex].pos+length]!='\r') ++length;
 	if(length >= MAX_STR_VAR_LEN)
 		strncpy(StrCache_Get((*pretvar)->strVal), (char*)(level->filestreams[filestreamindex].buf+level->filestreams[filestreamindex].pos), MAX_STR_VAR_LEN);
 	else
@@ -7997,6 +8093,8 @@ HRESULT openbor_getfilestreamline(ScriptVariant** varlist , ScriptVariant** pret
 		line[length] = '\0';
 		strncpy(StrCache_Get((*pretvar)->strVal), line, MAX_STR_VAR_LEN);
 	}
+    /* Fixed caches reserve one extra byte for a defined string terminator. */
+    StrCache_Get((*pretvar)->strVal)[MAX_STR_VAR_LEN] = '\0';
 	return S_OK;
 }
 
@@ -8006,7 +8104,7 @@ HRESULT openbor_getfilestreamargument(ScriptVariant** varlist , ScriptVariant** 
 	LONG filestreamindex, argument;
 	char* argtype = NULL;
 
-	if(paramCount < 3)
+	if(paramCount < 3 || !varlist || !varlist[0])
 	{
 		*pretvar = NULL;
 		return E_FAIL;
@@ -8016,11 +8114,13 @@ HRESULT openbor_getfilestreamargument(ScriptVariant** varlist , ScriptVariant** 
 	if(FAILED(ScriptVariant_IntegerValue(arg, &filestreamindex)))
 		return S_OK;
 
+    if(!varlist[1]) { *pretvar = NULL; return E_FAIL; }
 	arg = varlist[1];
 	if(FAILED(ScriptVariant_IntegerValue(arg, &argument)))
 		return S_OK;
 	ScriptVariant_Clear(*pretvar);
 
+    if(!varlist[2]) { *pretvar = NULL; return E_FAIL; }
 	if(varlist[2]->vt != VT_STR)
 	{
 		printf("You must give a string value specifying what kind of value you want the argument converted to.\n");
@@ -8030,16 +8130,20 @@ HRESULT openbor_getfilestreamargument(ScriptVariant** varlist , ScriptVariant** 
 
 	if(stricmp(argtype, "string")==0)
 	{
+    if(!obor_filestream_buffer(filestreamindex, 1)) { *pretvar = NULL; return E_FAIL; }
 		ScriptVariant_ChangeType(*pretvar, VT_STR);
 		strncpy(StrCache_Get((*pretvar)->strVal), (char*)findarg(level->filestreams[filestreamindex].buf+level->filestreams[filestreamindex].pos, argument), MAX_STR_VAR_LEN);
+        StrCache_Get((*pretvar)->strVal)[MAX_STR_VAR_LEN] = '\0';
 	}
 	else if(stricmp(argtype, "int")==0)
 	{
+    if(!obor_filestream_buffer(filestreamindex, 1)) { *pretvar = NULL; return E_FAIL; }
 		ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
 		(*pretvar)->lVal = (LONG)atoi(findarg(level->filestreams[filestreamindex].buf+level->filestreams[filestreamindex].pos, argument));
 	}
 	else if(stricmp(argtype, "float")==0)
 	{
+    if(!obor_filestream_buffer(filestreamindex, 1)) { *pretvar = NULL; return E_FAIL; }
 		ScriptVariant_ChangeType(*pretvar, VT_DECIMAL);
 		(*pretvar)->dblVal = (DOUBLE)atof(findarg(level->filestreams[filestreamindex].buf+level->filestreams[filestreamindex].pos, argument));
 	}
@@ -8057,7 +8161,7 @@ HRESULT openbor_filestreamnextline(ScriptVariant** varlist , ScriptVariant** pre
 	ScriptVariant* arg = NULL;
 	LONG filestreamindex;
 
-	if(paramCount < 1)
+	if(paramCount < 1 || !varlist || !varlist[0])
 	{
 		*pretvar = NULL;
 		return E_FAIL;
@@ -8066,8 +8170,17 @@ HRESULT openbor_filestreamnextline(ScriptVariant** varlist , ScriptVariant** pre
 	arg = varlist[0];
 	if(FAILED(ScriptVariant_IntegerValue(arg, &filestreamindex)))
 		return S_OK;
-	while(level->filestreams[filestreamindex].buf[level->filestreams[filestreamindex].pos] && level->filestreams[filestreamindex].buf[level->filestreams[filestreamindex].pos]!='\n' && level->filestreams[filestreamindex].buf[level->filestreams[filestreamindex].pos]!='\r') ++level->filestreams[filestreamindex].pos;
-	while(level->filestreams[filestreamindex].buf[level->filestreams[filestreamindex].pos]=='\n' || level->filestreams[filestreamindex].buf[level->filestreams[filestreamindex].pos]=='\r') ++level->filestreams[filestreamindex].pos;
+    if(!obor_filestream_buffer(filestreamindex, 1)) { *pretvar = NULL; return E_FAIL; }
+	while(level->filestreams[filestreamindex].buf[level->filestreams[filestreamindex].pos] && level->filestreams[filestreamindex].buf[level->filestreams[filestreamindex].pos]!='\n' && level->filestreams[filestreamindex].buf[level->filestreams[filestreamindex].pos]!='\r')
+    {
+        if(level->filestreams[filestreamindex].pos == INT_MAX) { *pretvar = NULL; return E_FAIL; }
+        ++level->filestreams[filestreamindex].pos;
+    }
+	while(level->filestreams[filestreamindex].buf[level->filestreams[filestreamindex].pos]=='\n' || level->filestreams[filestreamindex].buf[level->filestreams[filestreamindex].pos]=='\r')
+    {
+        if(level->filestreams[filestreamindex].pos == INT_MAX) { *pretvar = NULL; return E_FAIL; }
+        ++level->filestreams[filestreamindex].pos;
+    }
 
 	return S_OK;
 }
@@ -8077,7 +8190,7 @@ HRESULT openbor_getfilestreamposition(ScriptVariant** varlist , ScriptVariant** 
 	ScriptVariant* arg = NULL;
 	LONG filestreamindex;
 
-	if(paramCount < 1)
+	if(paramCount < 1 || !varlist || !varlist[0])
 	{
 		*pretvar = NULL;
 		return E_FAIL;
@@ -8087,6 +8200,7 @@ HRESULT openbor_getfilestreamposition(ScriptVariant** varlist , ScriptVariant** 
 	if(FAILED(ScriptVariant_IntegerValue(arg, &filestreamindex)))
 		return S_OK;
 
+    if(!obor_filestream_index(filestreamindex)) { *pretvar = NULL; return E_FAIL; }
 	ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
 	(*pretvar)->lVal = (LONG)level->filestreams[filestreamindex].pos;
 	return S_OK;
@@ -8098,7 +8212,7 @@ HRESULT openbor_setfilestreamposition(ScriptVariant** varlist , ScriptVariant** 
 	LONG filestreamindex, position;
 
 
-	if(paramCount < 2)
+	if(paramCount < 2 || !varlist || !varlist[0])
 	{
 		*pretvar = NULL;
 		return E_FAIL;
@@ -8108,10 +8222,12 @@ HRESULT openbor_setfilestreamposition(ScriptVariant** varlist , ScriptVariant** 
 	if(FAILED(ScriptVariant_IntegerValue(arg, &filestreamindex)))
 		return S_OK;
 
+    if(!varlist[1]) { *pretvar = NULL; return E_FAIL; }
 	arg = varlist[1];
 	if(FAILED(ScriptVariant_IntegerValue(arg, &position)))
 		return S_OK;
 
+    if(!obor_filestream_index(filestreamindex)) { *pretvar = NULL; return E_FAIL; }
 	level->filestreams[filestreamindex].pos = position;
 	return S_OK;
 }
@@ -8124,10 +8240,13 @@ HRESULT openbor_filestreamappend(ScriptVariant** varlist , ScriptVariant** pretv
 	LONG ltemp;
 	DOUBLE dbltemp;
 	char* temp;
-	char append[MAX_STR_VAR_LEN];
+	char conversion[512];
+    const char *append;
+    int conversion_length;
+    size_t old_bytes, added_bytes;
 
 
-	if(paramCount < 3)
+	if(paramCount < 3 || !varlist || !varlist[0])
 	{
 		*pretvar = NULL;
 		return E_FAIL;
@@ -8139,22 +8258,27 @@ HRESULT openbor_filestreamappend(ScriptVariant** varlist , ScriptVariant** pretv
 	if(FAILED(ScriptVariant_IntegerValue(arg, &filestreamindex)))
 		return S_OK;
 
+    if(!varlist[1]) { *pretvar = NULL; return E_FAIL; }
 	arg = varlist[1];
 	if(arg->vt==VT_STR)
 	{
-		strcpy(append, StrCache_Get(arg->strVal));
+		append = StrCache_Get(arg->strVal);
 	}
 	else if(arg->vt==VT_INTEGER)
 	{
 		if(FAILED(ScriptVariant_IntegerValue(arg, &ltemp)))
 			return S_OK;
-		sprintf(append, "%d", (int)ltemp);
+		conversion_length = snprintf(conversion, sizeof(conversion), "%d", (int)ltemp);
+        if(conversion_length < 0 || (size_t)conversion_length >= sizeof(conversion)) { *pretvar = NULL; return E_FAIL; }
+        append = conversion;
 	}
 	else if(arg->vt==VT_DECIMAL)
 	{
 		if(FAILED(ScriptVariant_DecimalValue(arg, &dbltemp)))
 			return S_OK;
-		sprintf(append, "%f", dbltemp);
+		conversion_length = snprintf(conversion, sizeof(conversion), "%f", dbltemp);
+        if(conversion_length < 0 || (size_t)conversion_length >= sizeof(conversion)) { *pretvar = NULL; return E_FAIL; }
+        append = conversion;
 	}
 	else
 	{
@@ -8165,11 +8289,17 @@ HRESULT openbor_filestreamappend(ScriptVariant** varlist , ScriptVariant** pretv
 
 
 
+    if(!varlist[2]) { *pretvar = NULL; return E_FAIL; }
 	arg = varlist[2];
 	if(FAILED(ScriptVariant_IntegerValue(arg, &appendtype)))
 		return S_OK;
 
-	temp = (char*)malloc(sizeof(char)*(strlen(level->filestreams[filestreamindex].buf) + strlen(append) + 4));
+    if(!obor_filestream_buffer(filestreamindex, 0)) { *pretvar = NULL; return E_FAIL; }
+    old_bytes = strlen(level->filestreams[filestreamindex].buf);
+    added_bytes = strlen(append);
+    if(added_bytes > (size_t)-1 - 4 || old_bytes > (size_t)-1 - added_bytes - 4) { *pretvar = NULL; return E_FAIL; }
+    temp = calloc(old_bytes + added_bytes + 4, 1);
+    if(!temp) { *pretvar = NULL; return E_FAIL; }
 	strcpy(temp, level->filestreams[filestreamindex].buf);
 
 	if(appendtype == 0)
@@ -8187,6 +8317,7 @@ HRESULT openbor_filestreamappend(ScriptVariant** varlist , ScriptVariant** pretv
 	}
 	free(level->filestreams[filestreamindex].buf);
 	level->filestreams[filestreamindex].buf = temp;
+    level->filestreams[filestreamindex].obor_capacity = old_bytes + added_bytes + 4;
 
 	return S_OK;
 }
@@ -8195,6 +8326,7 @@ HRESULT openbor_createfilestream(ScriptVariant** varlist , ScriptVariant** pretv
 {
 	ScriptVariant_Clear(*pretvar);
 
+	if(!level || level->numfilestreams < 0 || level->numfilestreams > LEVEL_MAX_FILESTREAMS) { *pretvar = NULL; return E_FAIL; }
 	if(!level->numfilestreams) level->numfilestreams = 0;
 	else if(level->numfilestreams == LEVEL_MAX_FILESTREAMS)
 	{
@@ -8208,7 +8340,9 @@ HRESULT openbor_createfilestream(ScriptVariant** varlist , ScriptVariant** pretv
 
 	// Initialize the new filestream
 	level->filestreams[level->numfilestreams].pos = 0;
-	level->filestreams[level->numfilestreams].buf = (char*)malloc(sizeof(char)*128);
+	level->filestreams[level->numfilestreams].buf = calloc(128, 1);
+    if(!level->filestreams[level->numfilestreams].buf) { *pretvar = NULL; return E_FAIL; }
+    level->filestreams[level->numfilestreams].obor_capacity = 128;
 	level->filestreams[level->numfilestreams].buf[0] = '\0';
 	level->numfilestreams++;
 	return S_OK;
@@ -8225,7 +8359,7 @@ HRESULT openbor_savefilestream(ScriptVariant** varlist , ScriptVariant** pretvar
 	char tmpname[128] = {""};
 	char mod[256] = {""};
 
-	if(paramCount < 1)
+	if(paramCount < 1 || !varlist || !varlist[0])
 	{
 		*pretvar = NULL;
 		return E_FAIL;
@@ -8237,6 +8371,7 @@ HRESULT openbor_savefilestream(ScriptVariant** varlist , ScriptVariant** pretvar
 	if(FAILED(ScriptVariant_IntegerValue(arg, &filestreamindex)))
 		return S_OK;
 
+    if(paramCount < 2 || !varlist[1]) { *pretvar = NULL; return E_FAIL; }
 	arg = varlist[1];
 	if(arg->vt!=VT_STR)
 	{
@@ -8244,6 +8379,8 @@ HRESULT openbor_savefilestream(ScriptVariant** varlist , ScriptVariant** pretvar
 		*pretvar = NULL;
 		return E_FAIL;
 	}
+
+    if(!obor_filestream_buffer(filestreamindex, 0)) { *pretvar = NULL; return E_FAIL; }
 
 	// Get the saves directory
 	getBasePath(path, "Saves/", 0);
@@ -9741,17 +9878,17 @@ void mapstrings_gettextobjproperty(ScriptVariant** varlist, int paramCount)
 	static const char* proplist[] = {
 		"font",
 		"text",
-		"time",
-		"x",
+		"timex",
 		"y",
 		"z",
 	};
 
-	if(paramCount < 2) return;
+	if(paramCount < 2 || !varlist || !varlist[1]) return;
 
 	if(varlist[1]->vt == VT_STR)
     {
-        propname = (char *)StrCache_Get(varlist[1]->strVal);
+        propname = (char *)StrCache_GetIfPresent(varlist[1]->strVal);
+        if(!propname) return;
         for(prop = 0; prop < (int)(sizeof(proplist) / sizeof(*proplist)); ++prop)
         {
             if(!stricmp(proplist[prop], propname))
@@ -9761,11 +9898,36 @@ void mapstrings_gettextobjproperty(ScriptVariant** varlist, int paramCount)
                 break;
             }
         }
+        if(prop == (int)(sizeof(proplist) / sizeof(*proplist)))
+            printf("Property name '%s' is not supported by function gettextobjproperty.\n", propname);
     }
+}
+
+static int obor_textobj_store(s_textobj *object, const char *text)
+{
+    const char *end;
+    char *stored;
+    size_t length;
+    if(!object || !text) return 0;
+    end = memchr(text, 0, MAX_STR_VAR_LEN + 1);
+    if(!end) return 0;
+    length = (size_t)(end - text);
+    stored = object->text;
+    if(!stored)
+    {
+        stored = malloc(MAX_STR_VAR_LEN + 1);
+        if(!stored) return 0;
+    }
+    memmove(stored, text, length);
+    memset(stored + length, 0, MAX_STR_VAR_LEN + 1 - length);
+    object->text = stored;
+    return 1;
 }
 
 HRESULT openbor_gettextobjproperty(ScriptVariant** varlist , ScriptVariant** pretvar, int paramCount)
 {
+    if(!pretvar || !*pretvar) return E_FAIL;
+
 	LONG ind;
 	int propind;
 
@@ -9773,6 +9935,7 @@ HRESULT openbor_gettextobjproperty(ScriptVariant** varlist , ScriptVariant** pre
 		goto gettextobjproperty_error;
 
 
+	if(!varlist) { *pretvar = NULL; return E_FAIL; }
 	if(FAILED(ScriptVariant_IntegerValue(varlist[0], &ind)))
 	{
 		printf("Function's 1st argument must be a numeric value: gettextproperty(int index, \"property\")\n");
@@ -9788,12 +9951,15 @@ HRESULT openbor_gettextobjproperty(ScriptVariant** varlist , ScriptVariant** pre
 		return S_OK;
 	}
 
+	if(!varlist[1]) { *pretvar = NULL; return E_FAIL; }
 	if(varlist[1]->vt != VT_INTEGER)
 	{
 		if(varlist[1]->vt != VT_STR)
 			printf("Function gettextobjproperty must have a string property name.\n");
 		goto gettextobjproperty_error;
 	}
+
+	if(!level) goto gettextobjproperty_error;
 
 	propind = varlist[1]->lVal;
 
@@ -9807,6 +9973,9 @@ HRESULT openbor_gettextobjproperty(ScriptVariant** varlist , ScriptVariant** pre
 	}
 	case _gtop_text:
 	{
+		if(!level->textobjs[ind].text ||
+		    !memchr(level->textobjs[ind].text, 0, MAX_STR_VAR_LEN + 1))
+		    goto gettextobjproperty_error;
 		ScriptVariant_ChangeType(*pretvar, VT_STR);
 		strcpy(StrCache_Get((*pretvar)->strVal), level->textobjs[ind].text);
 		break;
@@ -9874,10 +10043,11 @@ void mapstrings_changetextobjproperty(ScriptVariant** varlist, int paramCount)
 		"z",
 	};
 
-	if(paramCount < 2) return;
+	if(paramCount < 2 || !varlist || !varlist[1]) return;
 	if(varlist[1]->vt == VT_STR)
     {
-        propname = (char *)StrCache_Get(varlist[1]->strVal);
+        propname = (char *)StrCache_GetIfPresent(varlist[1]->strVal);
+        if(!propname) return;
         for(prop = 0; prop < (int)(sizeof(proplist) / sizeof(*proplist)); ++prop)
         {
             if(!stricmp(proplist[prop], propname))
@@ -9887,11 +10057,15 @@ void mapstrings_changetextobjproperty(ScriptVariant** varlist, int paramCount)
                 break;
             }
         }
+        if(prop == (int)(sizeof(proplist) / sizeof(*proplist)))
+            printf("Property name '%s' is not supported by function changetextobjproperty.\n", propname);
     }
 }
 
 HRESULT openbor_changetextobjproperty(ScriptVariant** varlist , ScriptVariant** pretvar, int paramCount)
 {
+    if(!pretvar || !*pretvar) return E_FAIL;
+
 	LONG ind;
 	int propind;
 	LONG ltemp;
@@ -9900,6 +10074,7 @@ HRESULT openbor_changetextobjproperty(ScriptVariant** varlist , ScriptVariant** 
 		goto changetextobjproperty_error;
 
 
+	if(!varlist) { *pretvar = NULL; return E_FAIL; }
 	if(FAILED(ScriptVariant_IntegerValue(varlist[0], &ind)))
 	{
 		printf("Function's 1st argument must be a numeric value: changetextobjproperty(int index, \"property\", value)\n");
@@ -9915,12 +10090,15 @@ HRESULT openbor_changetextobjproperty(ScriptVariant** varlist , ScriptVariant** 
 		return S_OK;
 	}
 
+	if(!varlist[1]) { *pretvar = NULL; return E_FAIL; }
 	if(varlist[1]->vt != VT_INTEGER)
 	{
 		if(varlist[1]->vt != VT_STR)
 			printf("Function changetextobjproperty must have a string property name.\n");
 		goto changetextobjproperty_error;
 	}
+
+	if(!level) goto changetextobjproperty_error;
 
 	propind = varlist[1]->lVal;
 
@@ -9937,16 +10115,14 @@ HRESULT openbor_changetextobjproperty(ScriptVariant** varlist , ScriptVariant** 
 	}
 	case _ctop_text:
 	{
-		if(varlist[2]->vt != VT_STR)
+		if(!varlist[2]) { *pretvar = NULL; return E_FAIL; }
+	if(varlist[2]->vt != VT_STR)
 		{
 			printf("You must give a string value for textobj text.\n");
 			goto changetextobjproperty_error;
 		}
-		if(!level->textobjs[ind].text)
-		{
-			level->textobjs[ind].text = (char*)malloc(MAX_STR_VAR_LEN);
-		}
-		strncpy(level->textobjs[ind].text, (char*)StrCache_Get(varlist[2]->strVal), MAX_STR_VAR_LEN);
+		if(!obor_textobj_store(&level->textobjs[ind], StrCache_GetIfPresent(varlist[2]->strVal)))
+			goto changetextobjproperty_error;
 		//level->textobjs[ind].text = (char*)StrCache_Get(varlist[2]->strVal);
 		(*pretvar)->lVal = (LONG)1;
 		break;
@@ -10003,12 +10179,15 @@ changetextobjproperty_error:
 // settextobj(int index, int x, int y, int font, int z, char text, int time {optional})
 HRESULT openbor_settextobj(ScriptVariant** varlist , ScriptVariant** pretvar, int paramCount)
 {
+    if(!pretvar || !*pretvar) return E_FAIL;
+
 	LONG ind;
 	LONG ltemp;
 
 	if(paramCount < 6)
 		goto settextobj_error;
 
+	if(!varlist) { *pretvar = NULL; return E_FAIL; }
 	if(FAILED(ScriptVariant_IntegerValue(varlist[0], &ind)))
 	{
 		printf("Function's 1st argument must be a numeric value: settextobj(int index, int x, int y, int font, int z, char text, int time {optional})\n");
@@ -10022,6 +10201,8 @@ HRESULT openbor_settextobj(ScriptVariant** varlist , ScriptVariant** pretvar, in
 		(*pretvar)->lVal = 0;
 		return S_OK;
 	}
+
+	if(!level) goto settextobj_error;
 
 	if(SUCCEEDED(ScriptVariant_IntegerValue(varlist[1], &ltemp)))
 	{
@@ -10047,6 +10228,7 @@ HRESULT openbor_settextobj(ScriptVariant** varlist , ScriptVariant** pretvar, in
 		level->textobjs[ind].z = (int)ltemp;
 	}
 
+	if(!varlist[5]) { *pretvar = NULL; return E_FAIL; }
 	if(varlist[5]->vt != VT_STR)
 	{
 		printf("You must give a string value for textobj text.\n");
@@ -10062,11 +10244,8 @@ HRESULT openbor_settextobj(ScriptVariant** varlist , ScriptVariant** pretvar, in
 		}
 	}
 
-	if(!level->textobjs[ind].text)
-	{
-		level->textobjs[ind].text = (char*)malloc(MAX_STR_VAR_LEN);
-	}
-	strncpy(level->textobjs[ind].text, (char*)StrCache_Get(varlist[5]->strVal), MAX_STR_VAR_LEN);
+	if(!obor_textobj_store(&level->textobjs[ind], StrCache_GetIfPresent(varlist[5]->strVal)))
+		goto settextobj_error;
 	(*pretvar)->lVal = (LONG)1;
 
 	return S_OK;
@@ -10078,12 +10257,15 @@ settextobj_error:
 
 HRESULT openbor_cleartextobj(ScriptVariant** varlist , ScriptVariant** pretvar, int paramCount)
 {
+    if(!pretvar || !*pretvar) return E_FAIL;
+
 	LONG ind;
 
 	if(paramCount < 1)
 		goto cleartextobj_error;
 
 
+	if(!varlist) { *pretvar = NULL; return E_FAIL; }
 	if(FAILED(ScriptVariant_IntegerValue(varlist[0], &ind)))
 	{
 		printf("Function's 1st argument must be a numeric value: cleartextobj(int index)\n");
@@ -10097,6 +10279,8 @@ HRESULT openbor_cleartextobj(ScriptVariant** varlist , ScriptVariant** pretvar, 
 		(*pretvar)->lVal = 0;
 		return S_OK;
 	}
+
+	if(!level) goto cleartextobj_error;
 
 	level->textobjs[ind].t = 0;
 	level->textobjs[ind].x = 0;

@@ -1,3 +1,15 @@
+/* AnyBOR modification record: 2026-10-24.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Keep unavailable sprite images out of the drawing queue while retaining
+ * native requests, ordering and copied draw methods.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/3741.md
+ * at the source repository root. Original notices follow below.
+ */
+
 /*
  * OpenBOR - http://www.LavaLit.com
  * -----------------------------------------------------------------------
@@ -73,6 +85,7 @@ void spriteq_add_sprite(int x, int y, int z, int id, s_drawmethod* pdrawmethod, 
 	if(frame == NULL) {
 		sprite_map[id].node->sprite = frame = loadsprite2(sprite_map[id].node->filename, NULL, NULL);
 	}
+	if(frame == NULL) return;
 	if(spritequeue_len>=MAXQSPRITES) return;
 	queue[spritequeue_len].type = SQT_SPRITE;
 	queue[spritequeue_len].x = x;

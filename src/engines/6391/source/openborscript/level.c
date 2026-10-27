@@ -348,12 +348,14 @@ HRESULT openbor_get_level_property(ScriptVariant **varlist, ScriptVariant **pret
 
     // Clear pass by reference argument used to send
     // property data back to calling script.     .
+    if(!pretvar || !*pretvar) goto error_local;
     ScriptVariant_Clear(*pretvar);
 
     // Verify incoming arguments. There should at least
     // be a pointer for the property handle and an integer
     // to determine which property is accessed.
     if(paramCount < ARG_MINIMUM
+       || !varlist || !varlist[ARG_HANDLE] || !varlist[ARG_PROPERTY]
        || varlist[ARG_PROPERTY]->vt != VT_INTEGER)
     {
         *pretvar = NULL;
@@ -824,6 +826,8 @@ HRESULT openbor_get_level_property(ScriptVariant **varlist, ScriptVariant **pret
 
         case LEVEL_PROP_TEXT_OBJECT_COLLECTION:          // s_textobj *textobjs;
 
+            if(!handle) goto error_local;
+
             if(handle->textobjs)
             {
                 ScriptVariant_ChangeType(*pretvar, VT_PTR);
@@ -831,6 +835,8 @@ HRESULT openbor_get_level_property(ScriptVariant **varlist, ScriptVariant **pret
             }
 
         case LEVEL_PROP_TEXT_OBJECT_COUNT:
+
+            if(!handle) goto error_local;
 
             ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
             (*pretvar)->lVal = (LONG)handle->numtextobjs;
@@ -949,10 +955,11 @@ HRESULT openbor_set_level_property(ScriptVariant **varlist, ScriptVariant **pret
     // to determine which property is accessed and a
     // new value to apply.
     if(paramCount < ARG_MINIMUM
+       || !varlist || !varlist[ARG_HANDLE] || !varlist[ARG_PROPERTY] || !varlist[ARG_VALUE]
        || varlist[ARG_HANDLE]->vt != VT_PTR
        || varlist[ARG_PROPERTY]->vt != VT_INTEGER)
     {
-        *pretvar = NULL;
+        if(pretvar) *pretvar = NULL;
         goto error_local;
     }
     else
@@ -1561,7 +1568,7 @@ HRESULT openbor_set_level_property(ScriptVariant **varlist, ScriptVariant **pret
 
         case LEVEL_PROP_TEXT_OBJECT_COLLECTION:
 
-            if(invalid_pointer_input)
+            if(!handle || (invalid_pointer_input))
             {
                 goto error_local;
             }
@@ -1571,7 +1578,7 @@ HRESULT openbor_set_level_property(ScriptVariant **varlist, ScriptVariant **pret
 
         case LEVEL_PROP_TEXT_OBJECT_COUNT:
 
-            if(FAILED(ScriptVariant_IntegerValue(arg_value, &temp_int)))
+            if(!handle || (FAILED(ScriptVariant_IntegerValue(arg_value, &temp_int))))
             {
                 goto error_local;
             }

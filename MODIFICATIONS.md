@@ -1,6 +1,6 @@
 # AnyBOR port modification record
 
-Record updated: **2026-10-20**. Port maintainer: **retrodiv**
+Record updated: **2026-10-24**. Port maintainer: **retrodiv**
 (<retrodiv@proton.me>).
 
 AnyBOR offers selectable engine profiles through its libretro port.
@@ -20,6 +20,73 @@ The repository includes core-info capability and runtime notes, checked
 source-only ZIP packaging, and publication and user guides in
 [PUBLISHING.md](docs/PUBLISHING.md) and [ANYBOR.md](docs/ANYBOR.md). Binary release ZIPs carry the modification record
 and documentation alongside their existing notices and receipts.
+
+## Unavailable sprite images
+
+Sprite images that could not be loaded are left out of the drawing queue.
+Available images retain native loading requests, queue order and draw methods.
+
+## Sprite ownership cleanup
+
+Sprite cleanup releases each owned sprite and filename once, followed by its
+owning node and the alias map. Cleanup follows the owning list independently
+of the number of shared references. The native release order, reset count and
+retained map capacity are preserved.
+
+## Sprite map growth
+
+Sprite maps retain their native capacity policy and existing entries during
+growth. An unavailable expansion retains the previous storage and capacity
+and reports the native loading error. Unrepresentable allocation extents
+stop loading before a new allocation is attempted.
+
+## Sprite node loading
+
+Sprite loading checks allocation and reload availability before using the data.
+An incomplete node releases its new resources while retaining existing owners.
+Shared images retain the native filename lookup, center coordinates and map
+indices. Cache requests for absent nodes leave the cache unchanged.
+
+## Rendering colourmaps
+
+Rendering preserves each profile's selected colourmap entry, including empty
+entries, and its palette fallback. Model and table availability are checked
+before lookup.
+
+## Script streams
+
+File streams retain each profile's capacity, slot reuse and lifetime across
+level changes. Type and argument-count errors preserve native return values,
+result clearing and diagnostics. Argument checks, buffer extents and allocation checks give
+unavailable storage a defined result while retaining existing owners.
+Initialized byte extents are independent of the native size field. Cursor-based
+reads stay within that extent; append and save use the buffer base independently
+of the stored cursor.
+Loaded buffers pass through aligned local outputs before their pointer and size
+are stored in native stream records. Native field offsets and callback results
+are preserved.
+Input files close after their bytes have been loaded and when buffer allocation
+fails; the stream retains its native data and return values.
+Fixed-cache line and argument results keep the native prefix and a defined
+terminator. Argument queries preserve each profile's comment recognition,
+numeric conversions and retained parser bytes.
+For these profiles, append retains the native formatting and mode behavior,
+checks output allocation and preserves the existing buffer when storage is
+unavailable.
+
+## Script integer conversion
+
+Script integers retain their native signed 32-bit values. Decimal conversion
+truncates toward zero when the result is representable. Unavailable arguments
+and non-representable decimal results return a defined refusal and preserve
+the destination value.
+
+## Script shared storage
+
+Copied scripts retain their shared interpreter and any diagnostic comment until
+the last reference ends. Local variables remain independent. Script replacement
+preserves the native callback order and retains an existing comment when the
+replacement supplies none.
 
 ## Record dates and file notices
 
@@ -266,6 +333,9 @@ normalization and cleanup paths use the model's recorded capacity. The global
 author-facing animation limit and sparse numeric indexes remain unchanged, so
 scripts and model data keep their existing semantics without reserving the
 largest table for every loaded model.
+Model changes check the destination table before retaining an existing
+animation. Each profile preserves its reset, synchronization and timing
+behavior within that allocated capacity.
 
 ## Empty player slot safety
 
@@ -477,6 +547,11 @@ later engines retain their existing allocated-name tables. This safety fix is
 enabled for every profile.
 
 ## Logical profile compatibility
+
+Screen centering and indexed palette transparency follow each profile's native drawing rules.
+Indexed transformations follow each profile's remap, fill and blend order.
+Transparency tests the source index before fill replacement; fill indices use their low eight bits.
+Centered sprites retain each profile's native drawing route and palette blending.
 
 Profile contracts and their implementation are documented in the [technical profile reference](docs/HISTORICAL_PROFILES.md#profile-implementation-details).
 
@@ -707,11 +782,11 @@ in every engine with a dynamic panel table.
 ## Model attack type bounds
 
 Optional model `defense normalN` and `offense normalN` entries are checked
-against the configured `maxattacktypes` before computing their table index.
-An entry outside that range is ignored with a warning in the engine log,
+against their allocated table extent before accessing it. Each profile retains
+its mapping and any extra slot reserved by its model allocation. An entry
+outside the supported extent is ignored with a warning in the engine log,
 including its file, command and configured limit. Valid entries retain the
-engine's existing mapping and behavior. This prevents an invalid optional
-entry from overwriting adjacent heap storage in every engine profile.
+engine's existing behavior.
 
 ## Session relative filesystem
 
@@ -992,14 +1067,64 @@ historical union reads or malformed-input behavior.
 
 ## Script property names
 
-Text-property tables are searched within their actual bounds in every engine,
-without assuming alphabetical enumeration order. The two older tables contain separate
-time/x names while preserving their numeric selectors.
+Text-property lookups stay within their actual table bounds. Getter and setter
+name tables remain separate where their contracts differ, preserving their
+declared numeric selectors. Rejected names retain the selected profile's
+defined diagnostic and result. Available-property lists stay within their
+declared entries.
+
+## Colourmap loading
+
+Historical profiles retain fixed-table slot selection and limits or dynamic
+append behavior, with their own counter updates when image loading fails.
+Fixed-table queries retain occupied slots above a counter reduced by hole
+reuse, while keeping accesses within the initialized allocation. Remap flags
+retain their fixed-table or dynamic storage behavior and survive failed growth.
+Alternate palettes respect the historical table limit; missing allocations
+produce a defined load error.
+
+Inherited palette slots retain their historical copying behavior. Models and
+entities retain borrowed maps while they are in use; changing a child model's
+maps preserves the data held by its other owners.
+
+## Palette conversion safety
+
+Palette conversion preserves selected colour bytes, untouched slots and native
+allocation failures. Missing map or flag data produces a defined failure, and
+unselected slots remain untouched. Model loading reports selected conversion
+failures while retaining valid models without a palette.
+
+## Colourtable selector bounds
+
+Colourtable queries retain valid colourmap pointers and palette fallback.
+Missing indices produce an empty result; invalid fixed-table indices and missing
+dynamic storage produce null results. Selector arithmetic stays defined at the
+integer limits, and missing models or tables do not cause an invalid read.
+
+## Sprite and statistics queries
+
+Sprite, icon and statistics getters preserve each profile's valid results,
+including sprite centers, absent-icon sentinels and model/entity statistics
+selection. Missing arguments, unavailable sprite data and indices outside
+initialized entries produce an empty result. Sprite filename results must fit
+the script string capacity.
+
+Statistics writes preserve model/entity selection, decimal index conversion and
+each profile's callback result. Missing arguments and indices outside the
+statistics array leave its values unchanged.
+
+## Script list bounds
+
+String lookup keeps adjacent reads within the declared table while retaining
+the search order and duplicate preference. Staydown property lookup uses its
+own name-table length. Missing entries return a failed lookup.
 
 ## Script parser table safety
 
-The native 3741 grammar-table constructor bounds terminal writes to the declared
+The grammar-table constructor bounds terminal writes to the declared
 production count while retaining valid entries and token membership.
+The historical parser refuses instructions with an unresolved control target
+before recording them; valid label instructions retain their native behavior.
 
 ## Script preprocessor safety
 
@@ -1020,7 +1145,41 @@ The selected historical revision controls coupled attack-type numbering,
 environmental damage, defense defaults, script numeric selectors, weapon update
 order, idle timing, shadow color conversion, native model-save loading,
 animation-command grouping, nested interpreter behavior, camera framing and
-sample-playback results. New function names follow their introduction boundaries.
+sample-playback results. Callback names, automatic creation dispatch and
+post-compilation reset state follow each profile's source contract. New function
+names follow their introduction boundaries.
+Model construction preserves each profile's fixed or configured jump, grab and
+throw defaults, initial special-move allocation extent and its historical
+load-stop response when that allocation fails.
+Attack decisions preserve native distance and group probabilities, always-attack
+availability, offscreen suppression and model throttling. Attack priority, think
+intervals and cooldown responses to target actions follow the selected revision.
+Normal attacks retain native wait checks, probability arguments, callback order
+and clock arithmetic. AI attack commands retain native argument handling,
+switch state and load diagnostics. Jump attacks retain native wait checks,
+probability arguments, movement and spawn callback order.
+Platform and obstacle collision queries retain the native per-profile scene
+counts, update sites and reset behavior, with bounded integer arithmetic.
+Entity combat factors start at their native zero or copied model values.
+A model change with no previous model uses an empty platform source.
+Wandering retains native chase distances and destination arithmetic. Grab
+placement and movement retain each profile's distance checks, eligible types,
+lookup coordinates and action order.
+An absent model retains the selected revision's diagnostic and leaves entity
+state unchanged.
+Line parsing preserves each profile's argument count, line capacity and
+`MAX_ARG_LEN` script constant. Reader storage remains bounded.
+Argument lookup preserves the profile's comment recognition, signed-index
+scanning and initialized bytes retained between queries.
+
+Authored collision bounds retain each profile's accepted coordinates, frame
+conversion order, default depth tolerance and reported impact position.
+Coordinate queries validate arguments, animation/frame indices and native
+coordinate extents. Unsupported indices return a defined empty value.
+
+WAV reads retain each profile's byte/sample counts and 16-bit padding, with
+checked allocation and read sizes. Resident-byte ranges cover the actual loaded
+bytes; padding and mutable mixer state remain ordinary state data.
 Additive grammar remains available, and memory-safety and lifecycle corrections
 remain active for every profile. The boundary table and limits are recorded in
 [choosing a profile](docs/HISTORICAL_PROFILES.md).
@@ -1059,6 +1218,42 @@ Replacing a text object's contents reuses its existing owned storage in the
 older fixed-buffer implementations. Repeated updates retain that allocation. The earlier reuse path and later exact-size replacement path keep
 their native behavior; tests check ownership across every retained profile.
 
+In the 3400 and 3741 trees, fixed text storage includes the string terminator
+and preserves native padding when contents change. Unavailable storage leaves
+an existing owner intact. Queries for an object without text, and fixed-table
+callbacks without an active level, return a defined error.
+
+The 3741 and 3842 trees validate text-table indices and growth arithmetic.
+Unavailable growth preserves the table and existing objects. Out-of-range
+queries and integer or void results follow the selected profile.
+
+The 3842 tree keeps text terminators inside owned storage and checks native
+string extents before copying. Bounded conversion uses each variant type's
+native format. A formatted value that does not fit returns a defined error
+without replacing existing text. Earlier partial field updates retain their
+profile's order.
+
+Text callbacks validate argument and required result slots before use. Missing
+entries have defined results. Valid numeric fields, optional result values, lazy
+index results and partial updates retain their selected profile's behavior.
+
+Level text collection/count accessors preserve native returns and field-update
+order. Missing arguments, required result slots and level handles produce
+defined errors; valid setters retain optional result slots.
+
+Text property-name lookups retain native selector values and use each table's
+actual entry count with bounded string-cache queries. The 4086 and 4432
+trees preserve rejected-name returns and the native getter/setter diagnostic
+order. Earlier name mappers retain their own warning text. Modular diagnostics
+list only the available table entries. The early fixed-buffer text writers
+validate cached string IDs before copying. Valid
+queries retain the native cache data and released-slot behavior.
+Cached names must terminate within their allocated storage before lookup.
+
+Font selection retains its native modulo wrapping. A negative remainder
+returns zero or performs no operation before accessing the font table.
+Valid font selection, measurement and glyph output retain their native paths.
+
 ## Script property error bounds
 
 Unknown-property diagnostics stop at the mapping table's declared length.
@@ -1085,3 +1280,54 @@ Periodic damage-over-time scans iterate over the declared effect slots. The
 final valid slot retains its tick and expiration behavior without an extra
 iteration beyond the effect arrays.
 
+
+## Script container alignment
+
+Script containers retain their pointer values and native copy and cleanup order
+when embedded records have narrower alignment than host pointers. Access uses
+byte copies without changing the record layout. Missing containers are ignored.
+
+Binding-script destruction callbacks follow their profile's source declaration
+order while the shared record layout remains unchanged.
+
+## Native hit-pause timing
+
+Hit-pause accumulation and animation resets follow each profile's frame-based
+or timer-based rules. The pause state shares storage without changing the
+entity record extent.
+
+Animation refusal diagnostics follow each profile's contract. Idle target
+queries retain their native context, and a missing context leaves a defined
+idle fallback.
+
+Animation-frame spawn, summon and removal order, removal attack defaults and
+script interruption follow the selected profile. Idle context restoration
+preserves the profile's explicit scan or animation-series behavior.
+
+Fresh script records retain the selected profile's initial validity marker
+and empty variables, with explicit initialization handled separately.
+
+## Drawing record alignment
+
+Drawing methods retain their field values, offsets and sizes when embedded in
+packed engine records. Their declared alignment permits safe property changes
+and drawing calls through those records.
+
+## Primitive coordinate bounds
+
+Point coordinates outside the screen leave its pixels unchanged. Coordinates
+inside the screen retain the selected profile's color and blending behavior.
+
+## Screen blend bounds
+
+Screen drawing selects blend operations within each profile's supported range.
+Missing indexed tables use transparent copy. Unavailable true-color operations
+use the existing unblended path. Valid native blend and tint selections retain
+their operation and side effects.
+
+
+## Bitmap row bounds
+
+Bitmap row reads stay within the requested output width. Palette-only reads
+retain their native behavior. Bitmap loading applies the selected profile's
+native image dimensions.

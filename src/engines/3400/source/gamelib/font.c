@@ -1,3 +1,15 @@
+/* AnyBOR modification record: 2026-09-12.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Reject missing or undersized indexed font palettes before copying their
+ * true-color entries; retain atlas raster output for valid fonts.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/3400.md
+ * at the source repository root. Original notices follow below.
+ */
+
 /*
  * OpenBOR - http://www.LavaLit.com
  * -----------------------------------------------------------------------
@@ -36,6 +48,7 @@ void font_unload(int which){
 	int i;
 
 	which %= MAX_FONTS;
+	if(which < 0) return;
 
 	for(i=0; i<256; i++){
 		if(fonts[which].token[i] != NULL) free(fonts[which].token[i]);
@@ -57,6 +70,7 @@ int font_load(int which, char *filename, char *packfile, int monospace){
 	int tw, th;
 
 	which %= MAX_FONTS;
+	if(which < 0) return 0;
 
 	font_unload(which);
 
@@ -111,6 +125,7 @@ int font_string_width(int which, char* format, ...)
 	va_list arglist;
 
 	which %= MAX_FONTS;
+	if(which < 0) return 0;
 
 	if(!fonts[which].font_loaded || !format) return 0;
 
@@ -131,6 +146,7 @@ void font_printf(int x, int y, int which, int layeroffset,char *format, ...){
 	va_list arglist;
 
 	which %= MAX_FONTS;
+	if(which < 0) return;
 
 	if(!fonts[which].font_loaded) return;
 
@@ -154,6 +170,7 @@ void screen_printf(s_screen * screen, int x, int y, int which, char *format, ...
 	int ox = x;
 
 	which %= MAX_FONTS;
+	if(which < 0) return;
 
 	if(!fonts[which].font_loaded) return;
 

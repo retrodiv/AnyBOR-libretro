@@ -2,7 +2,8 @@
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
 /* Private prototype. Run after value compaction and before converting entry
  * and branch indices to pointers. Keep the existing evaluator's anchor and
- * skip semantics. All ScriptVariants remain owned by the complete value pool. */
+ * skip semantics. Working values belong to the complete value pool; historical
+ * constant baselines belong to their retained instruction records. */
 #ifndef OBOR_SCRIPT_EXECUTABLE_H
 #define OBOR_SCRIPT_EXECUTABLE_H
 #include <stdint.h>
@@ -18,6 +19,9 @@ static int obor_script_compile_only(unsigned opcode)
         /* Paired historical constants restore their working value on each
          * execution. Retain that operation and the mapper's source record. */
         return 0;
+#elif OBOR_ENGINE_BUILD == 3842
+        /* Earlier profiles refresh a separately owned literal baseline. */
+        return obor_profile_build >= 3831;
 #else
         return 1;
 #endif

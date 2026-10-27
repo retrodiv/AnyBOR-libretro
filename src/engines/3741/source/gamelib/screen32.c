@@ -1,3 +1,15 @@
+/* AnyBOR modification record: 2026-10-21.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Match each profile's native transparency when blending an indexed screen
+ * into 32-bit pixels.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/3741.md
+ * at the source repository root. Original notices follow below.
+ */
+
 /*
  * OpenBOR - http://www.LavaLit.com
  * -----------------------------------------------------------------------
@@ -9,6 +21,7 @@
 #include <stdio.h>
 #include <string.h>
 #include "types.h"
+#include "globals.h"
 
 //with remap, work only under 8bit pixel format
 void putscreenx8p32(s_screen * dest, s_screen * src, int x, int y, int key, u32* remap, u32(*blendfp)(u32,u32))
@@ -58,7 +71,7 @@ void putscreenx8p32(s_screen * dest, s_screen * src, int x, int y, int key, u32*
 				i=cw-1;
 				do
 				{
-				   if(!sp[i])continue;
+				   if(obor_profile_build < 3727 ? sp[i] != 0 : sp[i] == 0)continue;
 				   dp[i] = blendfp(remap[sp[i]], dp[i]);
 				}while(i--);
 				sp += sw;

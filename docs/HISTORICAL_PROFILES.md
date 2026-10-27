@@ -1,15 +1,125 @@
 # Choosing a profile
 
-Selectable engine profiles: v3.0 3400, v3.0 3741, v3.0 3780, v3.0 3783, v3.0 3789, v3.0
-3793, v3.0 3797, v3.0 3805, v3.0 3814, v3.0 3818, v3.0 3822, v3.0 3824, v3.0
-3829, v3.0 3831, v3.0 3837, v3.0 3839, v3.0 3842, v3.0 4086, v3.0 4088-dev,
-v3.0 4107, v3.0 4111, v3.0 4129, v3.0 4153, v3.0 4432, v3.0 4453, v3.0 6330,
-v3.0 6391, v3.0 6391-mod, v3.0 6392-dev, v3.0 6412-dev, v3.0 6510-dev, v3.0 7086-dev, v3.0
-7123-dev, v4.0 7142-alpha, v4.0 7533 and v4.0 8023-dev.
+Selectable engine profiles: v3.0 3400, v3.0 3666, v3.0 3667, v3.0 3669, v3.0 3670, v3.0 3671, v3.0 3672,
+v3.0 3673, v3.0 3674, v3.0 3675, v3.0 3677, v3.0 3678, v3.0 3679, v3.0 3680,
+v3.0 3682, v3.0 3685, v3.0 3686, v3.0 3689, v3.0 3690, v3.0 3691, v3.0 3692,
+v3.0 3693, v3.0 3694, v3.0 3697, v3.0 3699, v3.0 3701, v3.0 3703, v3.0 3704,
+v3.0 3707, v3.0 3708, v3.0 3709, v3.0 3710, v3.0 3711, v3.0 3713, v3.0 3714,
+v3.0 3715, v3.0 3716, v3.0 3722, v3.0 3725, v3.0 3726, v3.0 3727, v3.0 3728,
+v3.0 3729, v3.0 3730, v3.0 3732, v3.0 3738, v3.0 3740, v3.0 3741, v3.0
+3742-dev, v3.0 3761-dev, v3.0 3769, v3.0 3773, v3.0 3780, v3.0 3783, v3.0
+3789, v3.0 3793, v3.0 3797, v3.0 3805, v3.0 3814, v3.0 3818, v3.0 3822, v3.0
+3824, v3.0 3829, v3.0 3831, v3.0 3837, v3.0 3839, v3.0 3842, v3.0 4086, v3.0
+4088-dev, v3.0 4107, v3.0 4111, v3.0 4129, v3.0 4153, v3.0 4432, v3.0 4453,
+v3.0 6330, v3.0 6391, v3.0 6391-mod, v3.0 6392-dev, v3.0 6412-dev, v3.0
+6510-dev, v3.0 7086-dev, v3.0 7123-dev, v4.0 7142-alpha, v4.0 7533 and v4.0
+8023-dev.
 
 Auto uses build tags and content clues to choose a profile. You can select one
 manually when a game needs it. Historical profiles preserve selected earlier
 content behavior while retaining safety and lifecycle corrections.
+
+The 3741 source tree reads GIF headers and image descriptors as 13 and 9 bytes.
+Persisted configuration, progress and score records have their own explicit
+packing scope. GIF header packing does not change those record declarations;
+native ABI checks do not establish cross-platform save-file compatibility.
+
+Profiles before 3667 initialize each level set with two players and apply
+`single`/`maxplayers` only within a set. From 3667, those commands also define
+the defaults before the first set. Regular input refresh covers the selected
+set before 3668 and all player ports from that boundary, within the player
+table limits.
+
+Buffered reads from 3777 prefer an external file before the cached archive
+reader. Earlier profiles use the selected archive reader directly; its uncached
+mode retains external-file overrides. Active-content aliases retain their
+existing handling.
+
+Model-copy script loading and callbacks are available from 3793. Earlier
+profiles retain unknown-command diagnostics for that declaration. Callback
+self/old locals clear after execution. Creation-entry caches retain the native
+lookup and failed-compilation reset rules; no creation callback runs before
+3762.
+
+Video settings preserve the selected profile's numeric-prefix conversion.
+Custom dimensions and numeric mode 255 are available from 3784; custom-mode
+debug text retains its prior offset in 3784 and derives it from the height
+from 3785. Player spawn Z clamps to 232 outside 0–232 before 3800.
+
+Menu key names accept escape from 3777; the twelve other names retain their
+indices. Unknown menu commands warn before 3766, except for the ignored font
+options; profiles from 3766 ignore unknown commands.
+
+Selection icons with colourmap zero use their sprite palette before 3673
+and the model palette from that boundary. Valid nonzero indices select the
+corresponding model map.
+
+Duplicate-player checks use a case-sensitive name prefix before 3831 and
+full case-insensitive equality from that boundary. The final-player countdown
+applies the original joining-state predicate from 3820; its earlier rule
+depends on available credits.
+
+Profiles before 3791 retain unsigned spawn scores and model AI flags, while
+negative signed score multipliers clamp to zero. From 3791, the `-1` sentinel
+controls score/multiplier clamping and model AI inheritance.
+
+Profiles before 3828 read animation limits from the selected model list after
+global scripts are compiled, then construct animation vectors before loading
+the models. Profiles from 3828 read those limits from the standard model list
+before global scripts. Vector reconstruction during model reload follows the
+same source boundary; script and model availability checks remain bounded.
+
+Animation callbacks before 3813 clear their four context locals after the
+model scripts run. Profiles from 3813 preserve an initialized local context
+when its interpreter is resetting and restore the current model's script
+binding when available. Real uninitialized script owners reject writes before
+3814; internal context labels retain safe handling. From 3815, a successful
+insertion that fills the variable table collects retired entries. A refused
+insertion does not collect them.
+
+The `nonestedscript` setting is available from 3806 and `nocmdcompatible` from
+3823. Earlier profiles leave those flags unchanged when reading the settings.
+
+Sprite cleanup follows the owning list independently of the original counter
+width or the number of shared map entries. Each owner releases its sprite and
+filename once; map entries borrow those resources. Native release order, count
+reset and retained map capacity are preserved in every profile.
+
+Sprite-map growth preserves each source's capacity policy and existing entries.
+Failed growth retains the previous storage and capacity; allocation extents are
+checked before an allocation is requested.
+
+Sprite loading preserves native filename lookup and center-dependent sharing.
+The direct-map source creates an additional alias at the first filename match
+when its center differs; node-cache sources can reuse a later matching entry.
+The image format is not part of the native filename cache key. A reload must
+be available before its metadata is read, and an incomplete new node releases
+only its own partial resources. Cache requests for absent nodes are inert.
+
+Rendering in profiles before 3741 reads a selected positive colourmap entry
+directly, including an empty entry, independently of the loaded-map count.
+The fixed-table profiles before 3739 retain their fixed extent. Profiles from
+3741 use their native loaded-count palette fallback. Missing models, missing
+tables and unavailable extents have bounded, defined results.
+
+Script streams in profiles before 3739 use 50 slots and release their buffers
+with the level. Closing a slot retains its native position and size fields.
+Profiles from 3739 grow the slot table and retain streams across level changes;
+script shutdown releases them. Owned buffer extents are tracked independently
+of those native fields so argument and position checks preserve initialized
+data after embedded zero bytes.
+Stream loading uses aligned local output parameters before updating the native
+record, preserving its field offsets, loaded bytes and callback result.
+
+Native global-script cleanup omits the loading script's `clear` callback before
+3727 and invokes it from 3727. Earlier profiles retain that script until the
+engine's arena is released.
+
+Projected shadows retain the default drawing palette before 3716. From 3716,
+the shadow and its reflection use the entity's drawing palette.
+
+Remap errors stop model loading before 3787. Profiles from 3787 report a warning
+and continue; successful loads update palette flags.
 
 ## Select a profile
 
@@ -34,15 +144,36 @@ output dimensions or pixel conversion. This is a limit of visual fidelity.
 
 | Boundary | Selected earlier contract |
 |---|---|
+| 3670 | Line parsing accepts 18 arguments earlier and 64 from this revision. |
+| 3685 | Default attack-depth tolerance adds one to a third of grab distance from this revision. |
+| 3729 | Authored collision bounds gain an upper depth coordinate. Frame conversion, hit centers and flash positions follow the native range calculation. |
+| 3762 | Copy and compile leave creation functions uncalled before this revision; later profiles dispatch them with native local arguments. |
+| 3767 | Callback entries use `clear` and `init` earlier, and `ondestroy` and `oncreate` from this revision. Creation dispatch requires 3762 or later. |
+| 3792 | WAV reads use the earlier sample-count extent and zero 16-bit padding before this revision; later profiles use byte extents and native 0x80 padding. |
 | 3797 | Player-property names/numeric selectors, integer/void setter result and rejected numeric values; AI-flag names/selectors, earlier read-only nested timers and deprecated walking result. |
 | 3798 | Introduction of the player keys setter. |
 | 3800 | Earlier player spawn Z limit of 0..232. |
-| 3802 | Earlier user-defined preprocessor names, including names reserved by later builtins. |
+| 3802 | Earlier user-defined preprocessor names, conditional handling and function-macro parsing. |
+| 3808 | Compilation preserves the interpreter's reset flag earlier and clears it from this revision. |
 | 3820 | Earlier level-property selectors and nonfatal rejected setter values. |
 | 3821 | Earlier text setters retain their numeric result, tolerate negative indices and preserve rejected numeric fields. |
+| 3822 | Line capacity and the script constant `MAX_ARG_LEN` are 512 earlier and 511 from this revision. |
 | 3826 | Unknown textual constants return an empty value before this revision; later profiles reject them. |
 | 3805 | Ordered level spawn scripts with shared cached per-file locals before this revision; combined per-entry scripts afterwards. |
 | 3821 | Player weapon-number spelling and introduction of its setter. |
+
+Under the integer result contract, `changetextobjproperty` leaves a rejected
+numeric field and any existing integer result intact. `cleartextobj` retains
+that integer when clearing a valid object and returns zero for an out-of-range
+index. `settextobj` updates accepted scalar fields before validating its string
+and keeps the current expiry when time is omitted. Under the void result
+contract, supplied numeric fields are validated before record updates and an
+omitted timeout has the defined value zero.
+
+The 3741 source tree provides 50 zeroed text-object slots for profiles below
+3739 and dynamic slots from 3739. Fixed tables return their profile's
+out-of-range result for indices outside 0..49 without growing. If dynamic
+growth cannot reserve storage, the table and its existing objects remain intact.
 
 Complete script variable names are supported in every engine. Names are never
 truncated to imitate unsafe fixed-size storage. Native and compiled-script
@@ -55,43 +186,54 @@ corrections. An earlier profile never requests unsafe memory behavior.
 
 | Revision | Policy | Scope |
 |---|---|---|
-|3783|conditional|Earlier shared scroll axes, zero-as-unspecified bounds and numeric system-property ordering; later independent bounds. Camera safety corrections remain universal.|
-|3784|shared|Direct video dimensions are additive syntax; clipping and camera bounds remain safe.|
-|3786|shared|Individual x/z/a setters are additive aliases; the existing position setter remains available.|
+|3681|conditional|Earlier model attacks, smartbombs and environment damage retain fixed drop velocities; later profiles use configured defaults. Explosive attacks retain the native fixed value or scaled default, while smartbombs preserve the template's third component.|
+|3722|conditional|Earlier difficulty menus show at most the first two five-entry pages; later profiles page through the selected entry.|
+|3762|conditional|Automatic creation callbacks run after copying or compiling, with source-defined local arguments and restoration of the current script. Earlier profiles do not dispatch a creation callback.|
+|3767|conditional|Destruction/creation callback names are `clear`/`init` earlier and `ondestroy`/`oncreate` from this revision; these spellings are not aliases.|
+|3773|conditional|The Back entry retains the final difficulty page from this boundary. A difficulty locked behind one completion uses the native earlier or later row position.|
+|3776|conditional|Earlier profiles pass each HUD icon owner's color map and ignore the extra icon-command flag. Profiles from this boundary honor that flag for player, weapon, MP, opponent and joining-model icons.|
+|3779|conditional|Earlier imports retain exact paths and release modules with their last importing script; calls resolve local or native functions. Later profiles normalize ASCII case and separators, retain modules until script-system cleanup, and search exported functions in reverse import order after local functions.|
+|3783|conditional|Earlier shared scroll axes, zero-as-unspecified bounds and numeric system-property ordering; later independent bounds. Exact endpoint and reverse speed-limit progress follow the native earlier or later rules. Camera bounds remain checked.|
+|3784|conditional|Direct video dimensions and mode 255 follow their native availability. Earlier profiles retain numeric-mode parsing and errors. Camera blockades apply after speed limiting earlier and before it from this revision; clipping and camera bounds remain checked.|
+|3785|conditional|The debug text offset for direct video dimensions follows the native height calculation at this revision and later.|
+|3786|conditional|Individual x/z/a entity setters follow their native availability and result values. The position setter retains independent coordinate updates.|
 |3787|conditional|The spawn-to-respawn animation fallback follows its introduction. Missing color maps remain safe rather than restoring an abort.|
 |3789|not applicable|Standalone touch-screen docking is replaced by the frontend interface.|
+|3792|conditional|WAV read extents, sample lengths and 16-bit padding follow the native byte/sample contract. Allocation and read counts remain checked; resident-byte registration covers the bytes actually loaded.|
 |3793|conditional|Weapon-model update order and model-copy callback registration follow this revision; snapshots and ownership remain initialized.|
 |3797|conditional|Player-property and AI-flag names, numeric selectors, result values and rejected-value handling follow the selected contract.|
 |3798|conditional|The player keys setter follows its introduction. Guard-point and memory/lifecycle corrections remain shared.|
 |3800|conditional|Player spawn Z uses the earlier 0..232 limit before this revision.|
 |3801|conditional|Holdblock bit 2 and AI orbit sign/parity handling follow this boundary.|
-|3802|conditional|Preprocessor builtin-like names remain ordinary user macros earlier; malformed lexical input is always rejected safely.|
+|3802|conditional|Earlier profiles treat builtin-like names as user macros, reject `#if`/`#elif`, and retain their top-of-stack conditional decisions, token lookahead and macro argument splitting. Lexical errors and excess conditional depth have bounded, defined rejection.|
 |3803|shared|Retain corrected lexer token handoff and preprocessing bounds; defined is already reserved by the selected 3802 boundary.|
-|3805|conditional|Earlier ordered spawn scripts retain shared per-file locals; later entries use combined scripts. Additive level-script syntax remains accepted.|
+|3805|conditional|Earlier ordered spawn scripts retain shared per-file locals and the spawnscript scope. Inline level scripts and combined per-entry scripts are available from this revision.|
 |3806|conditional|The explicit nested-script suppression flag applies from this revision; script ownership remains safe.|
-|3810|shared|switch, case, default and break were already reserved in 3780. The added grammar does not newly reserve these identifiers.|
-|3812|shared|String switch/case is additive grammar; diagnostics remain safe.|
+|3808|conditional|Successful compilation clears the interpreter reset flag from this revision and preserves the earlier flag beforehand.|
+|3810|conditional|Integer switch/case syntax is available from this revision. Its keywords remain reserved in earlier profiles. Earlier diagnostics retain numeric production identifiers; invalid control targets receive a defined refusal.|
+|3812|conditional|String case labels are accepted from this revision; earlier switch syntax accepts integer labels.|
 |3813|conditional|Animation-command grouping, early return and nested-interpreter snapshots follow 3813, 3823 and 3836 boundaries.|
-|3816|shared|Ternary operators are additive grammar and introduce no reserved identifiers.|
+|3816|conditional|Conditional expressions are available from this revision. First/Follow sets match the selected grammar.|
+|3818|conditional|Assignment expressions yield the earlier loaded value before this revision and reload the assigned value from this revision.|
 |3819|conditional|Raw versus format-aware shadowcolor conversion, idle entry order and sleep timing follow this boundary.|
 |3820|conditional|Level selector numbering, successful results and nonfatal rejection preserve the earlier contract. The level getter uses the drawmethod runtime mapper earlier and the level mapper from this boundary; compiler literals use the level mapper in both. Completed-game bonuses are recalculated by successful character/difficulty menu loads earlier and by the saved-game loader from this boundary; other callers retain their native side effects.|
 |3821|conditional|The level setter changes from the drawmethod runtime mapper to the level mapper. Unconverted property strings preserve their native cache-index dispatch. Text numeric/string conversion, result values, partial field updates and weapon-number spelling follow this boundary. Text ownership remains bounded.|
-|3822|conditional|Native saves begin recording selectable/model state here; eager cached-model loading ends at 3835. Model-name lookup remains additive.|
+|3822|conditional|Native saves begin recording selectable/model state here; eager cached-model loading ends at 3835. Saved-game restores reset player-model selection before this boundary and retain saved model selection from it. Model-cache getters and setters resolve names from this boundary. Earlier profiles retain numeric-member selection and their native diagnostic, with bounded cache indices.|
 |3823|conditional|Animation commands use the original default grouping and early-return policy, with nocmdcompatible controlling the later contract.|
 |3824|conditional|The idle/sleep timer guard and finished-animation behavior follow this boundary.|
 |3825|conditional|Sleep activation changes from an inclusive to a strict deadline.|
-|3826|conditional|Unknown textual constants return empty earlier and are rejected later. Dynamic suffix lookups retain safe corrected prefix mapping.|
-|3828|conditional|Earlier unsupported unary operands clear to empty; supported numeric values follow the earlier contract without unsafe signed overflow. Other selector sub-enum orders are unchanged.|
+|3826|conditional|Earlier profiles retain fixed numbered animation constants and resolve other animation suffixes at runtime, using their original offsets and clamps within table bounds. From this boundary, configured suffixes resolve in the constant mapper. Unknown textual constants return empty earlier and are rejected later.|
+|3828|conditional|Entity getters and setters use their separate subproperty mappings and diagnostics before this boundary, for compiler literals and runtime calls. Earlier unsupported unary operands clear to empty; supported numeric values follow the earlier contract without unsafe signed overflow. The compiler mapping pass limits native calls to 32 arguments from this revision; earlier profiles retain their dynamic argument lists. Other selector sub-enum orders are unchanged.|
 |3830|conditional|Attack-table size, environmental damage typing/health and Defense ALL are selected together, retaining bounded storage.|
-|3831|conditional|Attack extension offsets, exported environmental constants, default animation slots and Offense ALL follow this revision.|
-|3833|shared|Shift operators are additive grammar. Formatting safety is retained.|
-|3834|conditional|exit function registration and completed holdblock animation behavior follow this boundary. Interpreter completion safety remains shared.|
+|3831|conditional|Attack extension offsets, exported environmental constants, default animation slots and Offense ALL follow this revision. Earlier profiles refresh literal values before runtime unary operations and print their own opcode numbers on execution failure. Unary constant folding and expression-statement instruction removal follow the selected parser contract.|
+|3833|conditional|Shift expressions are available from this revision, with their native precedence.|
+|3834|conditional|exit function registration and completed holdblock animation behavior follow this boundary. Earlier calls clear their completion flag; calls from this revision derive it from the reset state.|
 |3835|conditional|Native saved model records stop eagerly loading cached models here.|
 |3836|conditional|Nested interpreter snapshots and bReset behavior follow the original nocmdcompatible contract; ownership remains valid.|
 |3837|conditional|Earlier arithmetic-mean camera framing, integer truncation and branch-specific offsets; later extreme-player framing and span limits.|
-|3838|conditional|playsample result type, negative sample handling and system-property numbering follow this boundary. Dynamic sample ownership and channel safety remain shared.|
-|3839|shared|Bitwise operators are additive grammar and introduce no reserved words.|
-|3841|shared|Extracted animation statements are semantically unchanged; sync syntax is additive.|
+|3838|conditional|Sample caching uses 1,024 reusable slots before this boundary, releasing names with their audio. Later profiles retain named identifiers and reload audio on demand or during model-cache operations. Playback identifiers, playsample result type, negative sample handling and system-property numbering follow this boundary; channel bounds remain checked.|
+|3839|conditional|Bitwise AND, XOR and OR expressions are available from this revision, with their native precedence.|
+|3841|conditional|Animation-name lookup preserves native aliases, ranges, implicit synchronization, bounce, attack-one and energy defaults. Explicit sync is recognized from this revision; earlier profiles use their unknown-command route.|
 |3842|conditional|Model clips use absolute screen coordinates earlier; later profiles subtract frame offsets and add the projected entity position. Coordinate arithmetic and sprite bounds remain safe. Font atlas storage preserves earlier glyph widths, palettes and raster output, checked against each profile's own source. Font palettes must fit their owning allocation before use. Sprite sizing uses defined byte counts; empty viewport intersections return without raster access.|
 
 A failure that disappears in the original declared engine remains a compatibility
@@ -192,7 +334,57 @@ Profiles are compatibility selections. Several profiles use one physical source 
 | Selectable profile | Source tree |
 |---|---|
 | v3.0 3400 | `3400` |
+| v3.0 3666 | `3741` |
+| v3.0 3667 | `3741` |
+| v3.0 3669 | `3741` |
+| v3.0 3670 | `3741` |
+| v3.0 3671 | `3741` |
+| v3.0 3672 | `3741` |
+| v3.0 3673 | `3741` |
+| v3.0 3674 | `3741` |
+| v3.0 3675 | `3741` |
+| v3.0 3677 | `3741` |
+| v3.0 3678 | `3741` |
+| v3.0 3679 | `3741` |
+| v3.0 3680 | `3741` |
+| v3.0 3682 | `3741` |
+| v3.0 3685 | `3741` |
+| v3.0 3686 | `3741` |
+| v3.0 3689 | `3741` |
+| v3.0 3690 | `3741` |
+| v3.0 3691 | `3741` |
+| v3.0 3692 | `3741` |
+| v3.0 3693 | `3741` |
+| v3.0 3694 | `3741` |
+| v3.0 3697 | `3741` |
+| v3.0 3699 | `3741` |
+| v3.0 3701 | `3741` |
+| v3.0 3703 | `3741` |
+| v3.0 3704 | `3741` |
+| v3.0 3707 | `3741` |
+| v3.0 3708 | `3741` |
+| v3.0 3709 | `3741` |
+| v3.0 3710 | `3741` |
+| v3.0 3711 | `3741` |
+| v3.0 3713 | `3741` |
+| v3.0 3714 | `3741` |
+| v3.0 3715 | `3741` |
+| v3.0 3716 | `3741` |
+| v3.0 3722 | `3741` |
+| v3.0 3725 | `3741` |
+| v3.0 3726 | `3741` |
+| v3.0 3727 | `3741` |
+| v3.0 3728 | `3741` |
+| v3.0 3729 | `3741` |
+| v3.0 3730 | `3741` |
+| v3.0 3732 | `3741` |
+| v3.0 3738 | `3741` |
+| v3.0 3740 | `3741` |
 | v3.0 3741 | `3741` |
+| v3.0 3742-dev | `3741` |
+| v3.0 3761-dev | `3842` |
+| v3.0 3769 | `3842` |
+| v3.0 3773 | `3842` |
 | v3.0 3780 | `3842` |
 | v3.0 3783 | `3842` |
 | v3.0 3789 | `3842` |
@@ -278,7 +470,9 @@ Before 3805, level spawn scripts retain ordered calls and one cached interpreter
 per file, including shared script locals across spawn entries. The level owns
 both cached resources and call nodes, including nodes belonging to discarded
 parser entries. Cleanup preserves resource creation order and frees each
-interpreter once. Later profiles retain the combined per-entry script path.
+interpreter once. Their scope name is `spawnscript`. Inline level scripts are
+available from 3805; earlier profiles handle their lines as ordinary level
+commands. Later profiles retain the combined per-entry script path.
 
 Patch `70-profile-4453.patch` adapts the behavior of upstream
 [4453](https://github.com/DCurrent/openbor/commit/7906e2573fcd70e9eafcd30fbdcc680832c4ae42)
@@ -311,7 +505,46 @@ inside the same 6391 engine object. Runtime profile branches restore 6330's
 boomerang model commands, projectile movement and catching, earlier juggle
 condition and settings layout. The 6510 branches supply binding matching,
 positioning, tags, overrides and script events, revised blocking and flashes,
-and the distinct boss-death attack type. Native animation, attack, entity,
+and the distinct boss-death attack type. Script-container copy and cleanup
+follow the native callback declaration order, retaining the shared field layout. Native animation, attack, entity,
 subtype and spawn IDs are translated at script boundaries so adding shared
 selectors does not change the public numbering of older profiles. The earlier
 collision scripting entry points remain unavailable in profile 6330.
+
+Profiles before build 3680 track impact pause by animation frame; later profiles
+track its deadline. The earlier frame state retains its native signed 16-bit
+representation within the shared pause storage. Animation changes and frame
+updates use the corresponding profile rules for resetting that state.
+
+Idle animation selection retains the incoming target-query context in profiles
+before build 3680. Other profiles use their source-defined context selection
+and restoration, including the alternate-animation path. Missing contexts
+leave a defined fallback. Refused animation changes emit their source-defined
+diagnostics in profiles before build 3694.
+
+Level physics starts with maximum toss speed 100, maximum fall speed -6 and
+gravity -0.1 in profiles below build 3681. Profiles from build 3681 use the
+configured level defaults.
+
+Animation-triggered removal uses fixed drop velocity before build 3681 and
+configured default drop velocity from build 3681. Spawn and summon events
+precede removal before build 3689; removal precedes those events from build
+3689. Script changes to the active animation or frame interrupt the remaining
+frame events. Alternate idle queries retain the subject context through build
+3796; the animation-series path restores the incoming context from build 3797.
+
+Fresh native script records retain a zero validity marker before build 3693
+and the script marker from build 3693. Explicit first initialization sets the
+script marker in both cases. Variable arrays retain their native empty state.
+
+Failed assertions identify the expression, function, source file and line.
+Profiles before 3811 use a C-style diagnostic on standard error; profiles from
+3811 use the engine log. Failed invariants stop the active engine through the
+core's controlled exit while the frontend process remains running. Assertion
+evaluation follows each profile's source rules when NDEBUG is defined.
+
+The source-defined profiles from 3666 through 3773 retain their own script,
+data, rendering and audio contracts. The 3742-dev and 3761-dev profiles are
+available through an exact build tag or manual selection; weak-tag and
+unlabelled content inference do not select them. Their source commits are
+recorded in `src/pin.json`.

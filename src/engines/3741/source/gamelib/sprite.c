@@ -1,10 +1,13 @@
-/* AnyBOR modification record: 2026-10-21.
+/* AnyBOR modification record: 2026-10-23.
  * Port maintained by retrodiv <retrodiv@proton.me>.
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
  * Upstream code retains its original license and notices.
  * Declare initialized encoded sprite-body ranges and source crops for exact
  * reconstruction proof, retaining headers, palettes and mutable changes.
+ * Resolve palette blend tables within the selected profile's native domain,
+ * retaining missing-table fallback. Preserve each profile's centered-sprite
+ * drawing route and native remap/blend ordering.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/3741.md
  * at the source repository root. Original notices follow below.
@@ -291,7 +294,8 @@ void putsprite_ex(int x, int y, s_sprite *frame, s_screen *screen, s_drawmethod*
 	if(!drawmethod->scalex || !drawmethod->scaley) return; // zero size
 
 	// no scale, no shift, no flip, no fill, so use common method
-	if(!drawmethod->water.watermode && drawmethod->scalex==256 && drawmethod->scaley==256 && !drawmethod->flipy && !drawmethod->shiftx && drawmethod->fillcolor==TRANSPARENT_IDX && !drawmethod->rotate)
+	if(!drawmethod->water.watermode && drawmethod->scalex==256 && drawmethod->scaley==256 && !drawmethod->flipy && !drawmethod->shiftx && drawmethod->fillcolor==TRANSPARENT_IDX && !drawmethod->rotate &&
+	   (obor_profile_build>=3736 || (!drawmethod->centerx && !drawmethod->centery)))
 	{
 		if(drawmethod->flipx) x += drawmethod->centerx;
 		else x -= drawmethod->centerx;
@@ -299,7 +303,7 @@ void putsprite_ex(int x, int y, s_sprite *frame, s_screen *screen, s_drawmethod*
 		switch(screen->pixelformat)
 		{
 		case PIXEL_8:
-			putsprite_8(x, y, drawmethod->flipx, frame, screen, drawmethod->table, drawmethod->alpha>0?blendtables[drawmethod->alpha-1]:NULL);
+			putsprite_8(x, y, drawmethod->flipx, frame, screen, drawmethod->table, obor_blend_table(drawmethod->alpha));
 			break;
 		case PIXEL_16:
 			putsprite_x8p16(x, y, drawmethod->flipx, frame, screen, (unsigned short*)drawmethod->table, getblendfunction16(drawmethod->alpha));

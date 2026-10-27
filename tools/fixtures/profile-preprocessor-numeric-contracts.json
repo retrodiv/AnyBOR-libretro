@@ -1,0 +1,381 @@
+{
+  "schema": 1,
+  "boundary_controls": [
+    3801,
+    3802
+  ],
+  "sources": [
+    {
+      "revision": 3761,
+      "commit": "16814fdf39fdcdd78cb59f3d70748f1dc023a24f",
+      "legacy": true,
+      "source_sha256": {
+        "lexer": "6bb6e4fcff70412cb3898a9290042188fc8c871106fe7a32c43500c4feaa2cf7",
+        "number": "bdc6b3c0bf6f3dbef0fca2708ca1936e4b14b93b873f8fe1ea5c124a6e4bf145"
+      }
+    },
+    {
+      "revision": 3769,
+      "commit": "14ac619f7d9f21bf1ac331932308c3ced4a65615",
+      "legacy": true,
+      "source_sha256": {
+        "lexer": "6bb6e4fcff70412cb3898a9290042188fc8c871106fe7a32c43500c4feaa2cf7",
+        "number": "bdc6b3c0bf6f3dbef0fca2708ca1936e4b14b93b873f8fe1ea5c124a6e4bf145"
+      }
+    },
+    {
+      "revision": 3773,
+      "commit": "e39bfa21d708f2f7a586085d8689bff94440a104",
+      "legacy": true,
+      "source_sha256": {
+        "lexer": "6bb6e4fcff70412cb3898a9290042188fc8c871106fe7a32c43500c4feaa2cf7",
+        "number": "bdc6b3c0bf6f3dbef0fca2708ca1936e4b14b93b873f8fe1ea5c124a6e4bf145"
+      }
+    },
+    {
+      "revision": 3801,
+      "commit": "00d501f1dd4754475cbe508c2e8a4a4c40bd89af",
+      "legacy": true,
+      "source_sha256": {
+        "lexer": "6bb6e4fcff70412cb3898a9290042188fc8c871106fe7a32c43500c4feaa2cf7",
+        "number": "bdc6b3c0bf6f3dbef0fca2708ca1936e4b14b93b873f8fe1ea5c124a6e4bf145"
+      }
+    },
+    {
+      "revision": 3802,
+      "commit": "76fc4703514f8b188fb3b9bf1783c83978f4993d",
+      "legacy": false,
+      "source_sha256": {
+        "lexer": "33ff86a30fe0db3dd532120f51e386fb31263d9aef32e1cdf3a226f67fcfdd5c",
+        "number": "6fa918722c881a95db21d9bbfb6715a42019eca71382c50ef6e81c5e217dd4f9"
+      }
+    }
+  ],
+  "scenarios": [
+    {
+      "input": "0",
+      "type": "PP_TOKEN_INTCONSTANT",
+      "legacy": [
+        "0",
+        ""
+      ],
+      "modern": [
+        "0",
+        ""
+      ]
+    },
+    {
+      "input": "0u",
+      "type": "PP_TOKEN_INTCONSTANT",
+      "legacy": [
+        "0",
+        "u"
+      ],
+      "modern": [
+        "0u",
+        ""
+      ]
+    },
+    {
+      "input": "0U",
+      "type": "PP_TOKEN_INTCONSTANT",
+      "legacy": [
+        "0",
+        "U"
+      ],
+      "modern": [
+        "0U",
+        ""
+      ]
+    },
+    {
+      "input": "0l",
+      "type": "PP_TOKEN_INTCONSTANT",
+      "legacy": [
+        "0",
+        "l"
+      ],
+      "modern": [
+        "0l",
+        ""
+      ]
+    },
+    {
+      "input": "0L",
+      "type": "PP_TOKEN_INTCONSTANT",
+      "legacy": [
+        "0",
+        "L"
+      ],
+      "modern": [
+        "0L",
+        ""
+      ]
+    },
+    {
+      "input": "1",
+      "type": "PP_TOKEN_INTCONSTANT",
+      "legacy": [
+        "1",
+        ""
+      ],
+      "modern": [
+        "1",
+        ""
+      ]
+    },
+    {
+      "input": "1u",
+      "type": "PP_TOKEN_INTCONSTANT",
+      "legacy": [
+        "1",
+        "u"
+      ],
+      "modern": [
+        "1u",
+        ""
+      ]
+    },
+    {
+      "input": "1U",
+      "type": "PP_TOKEN_INTCONSTANT",
+      "legacy": [
+        "1",
+        "U"
+      ],
+      "modern": [
+        "1U",
+        ""
+      ]
+    },
+    {
+      "input": "1l",
+      "type": "PP_TOKEN_INTCONSTANT",
+      "legacy": [
+        "1",
+        "l"
+      ],
+      "modern": [
+        "1l",
+        ""
+      ]
+    },
+    {
+      "input": "1L",
+      "type": "PP_TOKEN_INTCONSTANT",
+      "legacy": [
+        "1",
+        "L"
+      ],
+      "modern": [
+        "1L",
+        ""
+      ]
+    },
+    {
+      "input": "012",
+      "type": "PP_TOKEN_INTCONSTANT",
+      "legacy": [
+        "012",
+        ""
+      ],
+      "modern": [
+        "012",
+        ""
+      ]
+    },
+    {
+      "input": "012u",
+      "type": "PP_TOKEN_INTCONSTANT",
+      "legacy": [
+        "012",
+        "u"
+      ],
+      "modern": [
+        "012u",
+        ""
+      ]
+    },
+    {
+      "input": "012U",
+      "type": "PP_TOKEN_INTCONSTANT",
+      "legacy": [
+        "012",
+        "U"
+      ],
+      "modern": [
+        "012U",
+        ""
+      ]
+    },
+    {
+      "input": "012l",
+      "type": "PP_TOKEN_INTCONSTANT",
+      "legacy": [
+        "012",
+        "l"
+      ],
+      "modern": [
+        "012l",
+        ""
+      ]
+    },
+    {
+      "input": "012L",
+      "type": "PP_TOKEN_INTCONSTANT",
+      "legacy": [
+        "012",
+        "L"
+      ],
+      "modern": [
+        "012L",
+        ""
+      ]
+    },
+    {
+      "input": "123456",
+      "type": "PP_TOKEN_INTCONSTANT",
+      "legacy": [
+        "123456",
+        ""
+      ],
+      "modern": [
+        "123456",
+        ""
+      ]
+    },
+    {
+      "input": "123456u",
+      "type": "PP_TOKEN_INTCONSTANT",
+      "legacy": [
+        "123456",
+        "u"
+      ],
+      "modern": [
+        "123456u",
+        ""
+      ]
+    },
+    {
+      "input": "123456U",
+      "type": "PP_TOKEN_INTCONSTANT",
+      "legacy": [
+        "123456",
+        "U"
+      ],
+      "modern": [
+        "123456U",
+        ""
+      ]
+    },
+    {
+      "input": "123456l",
+      "type": "PP_TOKEN_INTCONSTANT",
+      "legacy": [
+        "123456",
+        "l"
+      ],
+      "modern": [
+        "123456l",
+        ""
+      ]
+    },
+    {
+      "input": "123456L",
+      "type": "PP_TOKEN_INTCONSTANT",
+      "legacy": [
+        "123456",
+        "L"
+      ],
+      "modern": [
+        "123456L",
+        ""
+      ]
+    },
+    {
+      "input": "0x1u",
+      "type": "PP_TOKEN_HEXCONSTANT",
+      "legacy": [
+        "0x1u",
+        ""
+      ],
+      "modern": [
+        "0x1u",
+        ""
+      ]
+    },
+    {
+      "input": "0XFFL",
+      "type": "PP_TOKEN_HEXCONSTANT",
+      "legacy": [
+        "0XFFL",
+        ""
+      ],
+      "modern": [
+        "0XFFL",
+        ""
+      ]
+    },
+    {
+      "input": "1e2L",
+      "type": "PP_TOKEN_FLOATCONSTANT",
+      "legacy": [
+        "1e2L",
+        ""
+      ],
+      "modern": [
+        "1e2L",
+        ""
+      ]
+    },
+    {
+      "input": "1.5",
+      "type": "PP_TOKEN_FLOATCONSTANT",
+      "legacy": [
+        "1.5",
+        ""
+      ],
+      "modern": [
+        "1.5",
+        ""
+      ]
+    },
+    {
+      "input": "1.5e2L",
+      "type": "PP_TOKEN_FLOATCONSTANT",
+      "legacy": [
+        "1.5e2L",
+        ""
+      ],
+      "modern": [
+        "1.5e2L",
+        ""
+      ]
+    },
+    {
+      "input": "12f",
+      "type": "PP_TOKEN_INTCONSTANT",
+      "legacy": [
+        "12",
+        "f"
+      ],
+      "modern": [
+        "12",
+        "f"
+      ]
+    },
+    {
+      "input": "123ul",
+      "type": "PP_TOKEN_INTCONSTANT",
+      "legacy": [
+        "123",
+        "ul"
+      ],
+      "modern": [
+        "123u",
+        "l"
+      ]
+    }
+  ],
+  "scope": "Completeactual3842preprocessorlexer;ownsource5contexts,decimalsuffixsplit/consumptionandunchangedhex/float/one-suffixpaths. NoVM/scriptgrammaracceptanceclaim."
+}

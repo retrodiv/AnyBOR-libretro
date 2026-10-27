@@ -1,0 +1,9729 @@
+{
+  "schema": 1,
+  "engines": [
+    "3400",
+    "3741",
+    "3842",
+    "4086"
+  ],
+  "source_hashes": {
+    "3400": "2db1ed840881a2e89e8d10cb5d9bcd837e2a29fbc4d1290a2884e826974bb630",
+    "3741": "2db1ed840881a2e89e8d10cb5d9bcd837e2a29fbc4d1290a2884e826974bb630",
+    "3842": "2db1ed840881a2e89e8d10cb5d9bcd837e2a29fbc4d1290a2884e826974bb630",
+    "4086": "7981d4b23eabebb9808a5f7fa19b2d5ebbb662b30dd2f7cc83effd056807eda3"
+  },
+  "oracle": "Each original function executed with index access instrumentation. Only defined original results are contractual. Undefined queries must remain bounded; a found result must name the requested value. Empty/null arguments return -1.",
+  "queries": [
+    {
+      "names": [
+        "a"
+      ],
+      "query": "a",
+      "original_defined": true,
+      "original_result": 0
+    },
+    {
+      "names": [
+        "a"
+      ],
+      "query": "A",
+      "original_defined": true,
+      "original_result": 0
+    },
+    {
+      "names": [
+        "a"
+      ],
+      "query": "",
+      "original_defined": false,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a"
+      ],
+      "query": "@missing",
+      "original_defined": false,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a"
+      ],
+      "query": "a_missing",
+      "original_defined": false,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a"
+      ],
+      "query": "z",
+      "original_defined": false,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a"
+      ],
+      "query": "0",
+      "original_defined": false,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "b"
+      ],
+      "query": "b",
+      "original_defined": true,
+      "original_result": 0
+    },
+    {
+      "names": [
+        "b"
+      ],
+      "query": "B",
+      "original_defined": true,
+      "original_result": 0
+    },
+    {
+      "names": [
+        "b"
+      ],
+      "query": "",
+      "original_defined": false,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "b"
+      ],
+      "query": "@missing",
+      "original_defined": false,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "b"
+      ],
+      "query": "a_missing",
+      "original_defined": false,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "b"
+      ],
+      "query": "z",
+      "original_defined": false,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "b"
+      ],
+      "query": "0",
+      "original_defined": false,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "c"
+      ],
+      "query": "c",
+      "original_defined": true,
+      "original_result": 0
+    },
+    {
+      "names": [
+        "c"
+      ],
+      "query": "C",
+      "original_defined": true,
+      "original_result": 0
+    },
+    {
+      "names": [
+        "c"
+      ],
+      "query": "",
+      "original_defined": false,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "c"
+      ],
+      "query": "@missing",
+      "original_defined": false,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "c"
+      ],
+      "query": "a_missing",
+      "original_defined": false,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "c"
+      ],
+      "query": "z",
+      "original_defined": false,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "c"
+      ],
+      "query": "0",
+      "original_defined": false,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "a"
+      ],
+      "query": "a",
+      "original_defined": true,
+      "original_result": 1
+    },
+    {
+      "names": [
+        "a",
+        "a"
+      ],
+      "query": "A",
+      "original_defined": true,
+      "original_result": 1
+    },
+    {
+      "names": [
+        "a",
+        "a"
+      ],
+      "query": "",
+      "original_defined": false,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "a"
+      ],
+      "query": "@missing",
+      "original_defined": false,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "a"
+      ],
+      "query": "a_missing",
+      "original_defined": false,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "a"
+      ],
+      "query": "z",
+      "original_defined": false,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "a"
+      ],
+      "query": "0",
+      "original_defined": false,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "b"
+      ],
+      "query": "a",
+      "original_defined": false,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "b"
+      ],
+      "query": "b",
+      "original_defined": true,
+      "original_result": 1
+    },
+    {
+      "names": [
+        "a",
+        "b"
+      ],
+      "query": "A",
+      "original_defined": false,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "b"
+      ],
+      "query": "B",
+      "original_defined": true,
+      "original_result": 1
+    },
+    {
+      "names": [
+        "a",
+        "b"
+      ],
+      "query": "",
+      "original_defined": false,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "b"
+      ],
+      "query": "@missing",
+      "original_defined": false,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "b"
+      ],
+      "query": "a_missing",
+      "original_defined": false,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "b"
+      ],
+      "query": "z",
+      "original_defined": false,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "b"
+      ],
+      "query": "0",
+      "original_defined": false,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "c"
+      ],
+      "query": "a",
+      "original_defined": false,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "c"
+      ],
+      "query": "c",
+      "original_defined": true,
+      "original_result": 1
+    },
+    {
+      "names": [
+        "a",
+        "c"
+      ],
+      "query": "A",
+      "original_defined": false,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "c"
+      ],
+      "query": "C",
+      "original_defined": true,
+      "original_result": 1
+    },
+    {
+      "names": [
+        "a",
+        "c"
+      ],
+      "query": "",
+      "original_defined": false,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "c"
+      ],
+      "query": "@missing",
+      "original_defined": false,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "c"
+      ],
+      "query": "a_missing",
+      "original_defined": false,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "c"
+      ],
+      "query": "z",
+      "original_defined": false,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "c"
+      ],
+      "query": "0",
+      "original_defined": false,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "b",
+        "b"
+      ],
+      "query": "b",
+      "original_defined": true,
+      "original_result": 1
+    },
+    {
+      "names": [
+        "b",
+        "b"
+      ],
+      "query": "B",
+      "original_defined": true,
+      "original_result": 1
+    },
+    {
+      "names": [
+        "b",
+        "b"
+      ],
+      "query": "",
+      "original_defined": false,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "b",
+        "b"
+      ],
+      "query": "@missing",
+      "original_defined": false,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "b",
+        "b"
+      ],
+      "query": "a_missing",
+      "original_defined": false,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "b",
+        "b"
+      ],
+      "query": "z",
+      "original_defined": false,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "b",
+        "b"
+      ],
+      "query": "0",
+      "original_defined": false,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "b",
+        "c"
+      ],
+      "query": "b",
+      "original_defined": false,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "b",
+        "c"
+      ],
+      "query": "c",
+      "original_defined": true,
+      "original_result": 1
+    },
+    {
+      "names": [
+        "b",
+        "c"
+      ],
+      "query": "B",
+      "original_defined": false,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "b",
+        "c"
+      ],
+      "query": "C",
+      "original_defined": true,
+      "original_result": 1
+    },
+    {
+      "names": [
+        "b",
+        "c"
+      ],
+      "query": "",
+      "original_defined": false,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "b",
+        "c"
+      ],
+      "query": "@missing",
+      "original_defined": false,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "b",
+        "c"
+      ],
+      "query": "a_missing",
+      "original_defined": false,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "b",
+        "c"
+      ],
+      "query": "z",
+      "original_defined": false,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "b",
+        "c"
+      ],
+      "query": "0",
+      "original_defined": false,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "c",
+        "c"
+      ],
+      "query": "c",
+      "original_defined": true,
+      "original_result": 1
+    },
+    {
+      "names": [
+        "c",
+        "c"
+      ],
+      "query": "C",
+      "original_defined": true,
+      "original_result": 1
+    },
+    {
+      "names": [
+        "c",
+        "c"
+      ],
+      "query": "",
+      "original_defined": false,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "c",
+        "c"
+      ],
+      "query": "@missing",
+      "original_defined": false,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "c",
+        "c"
+      ],
+      "query": "a_missing",
+      "original_defined": false,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "c",
+        "c"
+      ],
+      "query": "z",
+      "original_defined": false,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "c",
+        "c"
+      ],
+      "query": "0",
+      "original_defined": false,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "a"
+      ],
+      "query": "a",
+      "original_defined": true,
+      "original_result": 1
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "a"
+      ],
+      "query": "A",
+      "original_defined": true,
+      "original_result": 1
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "a"
+      ],
+      "query": "",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "a"
+      ],
+      "query": "@missing",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "a"
+      ],
+      "query": "a_missing",
+      "original_defined": false,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "a"
+      ],
+      "query": "z",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "a"
+      ],
+      "query": "0",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "b"
+      ],
+      "query": "a",
+      "original_defined": true,
+      "original_result": 1
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "b"
+      ],
+      "query": "b",
+      "original_defined": true,
+      "original_result": 2
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "b"
+      ],
+      "query": "A",
+      "original_defined": true,
+      "original_result": 1
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "b"
+      ],
+      "query": "B",
+      "original_defined": true,
+      "original_result": 2
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "b"
+      ],
+      "query": "",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "b"
+      ],
+      "query": "@missing",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "b"
+      ],
+      "query": "a_missing",
+      "original_defined": false,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "b"
+      ],
+      "query": "z",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "b"
+      ],
+      "query": "0",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "c"
+      ],
+      "query": "a",
+      "original_defined": true,
+      "original_result": 1
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "c"
+      ],
+      "query": "c",
+      "original_defined": true,
+      "original_result": 2
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "c"
+      ],
+      "query": "A",
+      "original_defined": true,
+      "original_result": 1
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "c"
+      ],
+      "query": "C",
+      "original_defined": true,
+      "original_result": 2
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "c"
+      ],
+      "query": "",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "c"
+      ],
+      "query": "@missing",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "c"
+      ],
+      "query": "a_missing",
+      "original_defined": false,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "c"
+      ],
+      "query": "z",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "c"
+      ],
+      "query": "0",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "b",
+        "b"
+      ],
+      "query": "a",
+      "original_defined": true,
+      "original_result": 0
+    },
+    {
+      "names": [
+        "a",
+        "b",
+        "b"
+      ],
+      "query": "b",
+      "original_defined": true,
+      "original_result": 1
+    },
+    {
+      "names": [
+        "a",
+        "b",
+        "b"
+      ],
+      "query": "A",
+      "original_defined": true,
+      "original_result": 0
+    },
+    {
+      "names": [
+        "a",
+        "b",
+        "b"
+      ],
+      "query": "B",
+      "original_defined": true,
+      "original_result": 1
+    },
+    {
+      "names": [
+        "a",
+        "b",
+        "b"
+      ],
+      "query": "",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "b",
+        "b"
+      ],
+      "query": "@missing",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "b",
+        "b"
+      ],
+      "query": "a_missing",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "b",
+        "b"
+      ],
+      "query": "z",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "b",
+        "b"
+      ],
+      "query": "0",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "b",
+        "c"
+      ],
+      "query": "a",
+      "original_defined": true,
+      "original_result": 0
+    },
+    {
+      "names": [
+        "a",
+        "b",
+        "c"
+      ],
+      "query": "b",
+      "original_defined": true,
+      "original_result": 1
+    },
+    {
+      "names": [
+        "a",
+        "b",
+        "c"
+      ],
+      "query": "c",
+      "original_defined": true,
+      "original_result": 2
+    },
+    {
+      "names": [
+        "a",
+        "b",
+        "c"
+      ],
+      "query": "A",
+      "original_defined": true,
+      "original_result": 0
+    },
+    {
+      "names": [
+        "a",
+        "b",
+        "c"
+      ],
+      "query": "B",
+      "original_defined": true,
+      "original_result": 1
+    },
+    {
+      "names": [
+        "a",
+        "b",
+        "c"
+      ],
+      "query": "C",
+      "original_defined": true,
+      "original_result": 2
+    },
+    {
+      "names": [
+        "a",
+        "b",
+        "c"
+      ],
+      "query": "",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "b",
+        "c"
+      ],
+      "query": "@missing",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "b",
+        "c"
+      ],
+      "query": "a_missing",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "b",
+        "c"
+      ],
+      "query": "z",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "b",
+        "c"
+      ],
+      "query": "0",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "c",
+        "c"
+      ],
+      "query": "a",
+      "original_defined": true,
+      "original_result": 0
+    },
+    {
+      "names": [
+        "a",
+        "c",
+        "c"
+      ],
+      "query": "c",
+      "original_defined": true,
+      "original_result": 1
+    },
+    {
+      "names": [
+        "a",
+        "c",
+        "c"
+      ],
+      "query": "A",
+      "original_defined": true,
+      "original_result": 0
+    },
+    {
+      "names": [
+        "a",
+        "c",
+        "c"
+      ],
+      "query": "C",
+      "original_defined": true,
+      "original_result": 1
+    },
+    {
+      "names": [
+        "a",
+        "c",
+        "c"
+      ],
+      "query": "",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "c",
+        "c"
+      ],
+      "query": "@missing",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "c",
+        "c"
+      ],
+      "query": "a_missing",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "c",
+        "c"
+      ],
+      "query": "z",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "c",
+        "c"
+      ],
+      "query": "0",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "b",
+        "b",
+        "b"
+      ],
+      "query": "b",
+      "original_defined": true,
+      "original_result": 1
+    },
+    {
+      "names": [
+        "b",
+        "b",
+        "b"
+      ],
+      "query": "B",
+      "original_defined": true,
+      "original_result": 1
+    },
+    {
+      "names": [
+        "b",
+        "b",
+        "b"
+      ],
+      "query": "",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "b",
+        "b",
+        "b"
+      ],
+      "query": "@missing",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "b",
+        "b",
+        "b"
+      ],
+      "query": "a_missing",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "b",
+        "b",
+        "b"
+      ],
+      "query": "z",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "b",
+        "b",
+        "b"
+      ],
+      "query": "0",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "b",
+        "b",
+        "c"
+      ],
+      "query": "b",
+      "original_defined": true,
+      "original_result": 1
+    },
+    {
+      "names": [
+        "b",
+        "b",
+        "c"
+      ],
+      "query": "c",
+      "original_defined": true,
+      "original_result": 2
+    },
+    {
+      "names": [
+        "b",
+        "b",
+        "c"
+      ],
+      "query": "B",
+      "original_defined": true,
+      "original_result": 1
+    },
+    {
+      "names": [
+        "b",
+        "b",
+        "c"
+      ],
+      "query": "C",
+      "original_defined": true,
+      "original_result": 2
+    },
+    {
+      "names": [
+        "b",
+        "b",
+        "c"
+      ],
+      "query": "",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "b",
+        "b",
+        "c"
+      ],
+      "query": "@missing",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "b",
+        "b",
+        "c"
+      ],
+      "query": "a_missing",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "b",
+        "b",
+        "c"
+      ],
+      "query": "z",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "b",
+        "b",
+        "c"
+      ],
+      "query": "0",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "b",
+        "c",
+        "c"
+      ],
+      "query": "b",
+      "original_defined": true,
+      "original_result": 0
+    },
+    {
+      "names": [
+        "b",
+        "c",
+        "c"
+      ],
+      "query": "c",
+      "original_defined": true,
+      "original_result": 1
+    },
+    {
+      "names": [
+        "b",
+        "c",
+        "c"
+      ],
+      "query": "B",
+      "original_defined": true,
+      "original_result": 0
+    },
+    {
+      "names": [
+        "b",
+        "c",
+        "c"
+      ],
+      "query": "C",
+      "original_defined": true,
+      "original_result": 1
+    },
+    {
+      "names": [
+        "b",
+        "c",
+        "c"
+      ],
+      "query": "",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "b",
+        "c",
+        "c"
+      ],
+      "query": "@missing",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "b",
+        "c",
+        "c"
+      ],
+      "query": "a_missing",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "b",
+        "c",
+        "c"
+      ],
+      "query": "z",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "b",
+        "c",
+        "c"
+      ],
+      "query": "0",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "c",
+        "c",
+        "c"
+      ],
+      "query": "c",
+      "original_defined": true,
+      "original_result": 1
+    },
+    {
+      "names": [
+        "c",
+        "c",
+        "c"
+      ],
+      "query": "C",
+      "original_defined": true,
+      "original_result": 1
+    },
+    {
+      "names": [
+        "c",
+        "c",
+        "c"
+      ],
+      "query": "",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "c",
+        "c",
+        "c"
+      ],
+      "query": "@missing",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "c",
+        "c",
+        "c"
+      ],
+      "query": "a_missing",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "c",
+        "c",
+        "c"
+      ],
+      "query": "z",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "c",
+        "c",
+        "c"
+      ],
+      "query": "0",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "a",
+        "a"
+      ],
+      "query": "a",
+      "original_defined": true,
+      "original_result": 2
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "a",
+        "a"
+      ],
+      "query": "A",
+      "original_defined": true,
+      "original_result": 2
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "a",
+        "a"
+      ],
+      "query": "",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "a",
+        "a"
+      ],
+      "query": "@missing",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "a",
+        "a"
+      ],
+      "query": "a_missing",
+      "original_defined": false,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "a",
+        "a"
+      ],
+      "query": "z",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "a",
+        "a"
+      ],
+      "query": "0",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "a",
+        "b"
+      ],
+      "query": "a",
+      "original_defined": true,
+      "original_result": 2
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "a",
+        "b"
+      ],
+      "query": "b",
+      "original_defined": true,
+      "original_result": 3
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "a",
+        "b"
+      ],
+      "query": "A",
+      "original_defined": true,
+      "original_result": 2
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "a",
+        "b"
+      ],
+      "query": "B",
+      "original_defined": true,
+      "original_result": 3
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "a",
+        "b"
+      ],
+      "query": "",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "a",
+        "b"
+      ],
+      "query": "@missing",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "a",
+        "b"
+      ],
+      "query": "a_missing",
+      "original_defined": false,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "a",
+        "b"
+      ],
+      "query": "z",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "a",
+        "b"
+      ],
+      "query": "0",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "a",
+        "c"
+      ],
+      "query": "a",
+      "original_defined": true,
+      "original_result": 2
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "a",
+        "c"
+      ],
+      "query": "c",
+      "original_defined": true,
+      "original_result": 3
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "a",
+        "c"
+      ],
+      "query": "A",
+      "original_defined": true,
+      "original_result": 2
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "a",
+        "c"
+      ],
+      "query": "C",
+      "original_defined": true,
+      "original_result": 3
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "a",
+        "c"
+      ],
+      "query": "",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "a",
+        "c"
+      ],
+      "query": "@missing",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "a",
+        "c"
+      ],
+      "query": "a_missing",
+      "original_defined": false,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "a",
+        "c"
+      ],
+      "query": "z",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "a",
+        "c"
+      ],
+      "query": "0",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "b",
+        "b"
+      ],
+      "query": "a",
+      "original_defined": true,
+      "original_result": 0
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "b",
+        "b"
+      ],
+      "query": "b",
+      "original_defined": true,
+      "original_result": 2
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "b",
+        "b"
+      ],
+      "query": "A",
+      "original_defined": true,
+      "original_result": 0
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "b",
+        "b"
+      ],
+      "query": "B",
+      "original_defined": true,
+      "original_result": 2
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "b",
+        "b"
+      ],
+      "query": "",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "b",
+        "b"
+      ],
+      "query": "@missing",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "b",
+        "b"
+      ],
+      "query": "a_missing",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "b",
+        "b"
+      ],
+      "query": "z",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "b",
+        "b"
+      ],
+      "query": "0",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "b",
+        "c"
+      ],
+      "query": "a",
+      "original_defined": true,
+      "original_result": 0
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "b",
+        "c"
+      ],
+      "query": "b",
+      "original_defined": true,
+      "original_result": 2
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "b",
+        "c"
+      ],
+      "query": "c",
+      "original_defined": true,
+      "original_result": 3
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "b",
+        "c"
+      ],
+      "query": "A",
+      "original_defined": true,
+      "original_result": 0
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "b",
+        "c"
+      ],
+      "query": "B",
+      "original_defined": true,
+      "original_result": 2
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "b",
+        "c"
+      ],
+      "query": "C",
+      "original_defined": true,
+      "original_result": 3
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "b",
+        "c"
+      ],
+      "query": "",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "b",
+        "c"
+      ],
+      "query": "@missing",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "b",
+        "c"
+      ],
+      "query": "a_missing",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "b",
+        "c"
+      ],
+      "query": "z",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "b",
+        "c"
+      ],
+      "query": "0",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "c",
+        "c"
+      ],
+      "query": "a",
+      "original_defined": true,
+      "original_result": 0
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "c",
+        "c"
+      ],
+      "query": "c",
+      "original_defined": true,
+      "original_result": 2
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "c",
+        "c"
+      ],
+      "query": "A",
+      "original_defined": true,
+      "original_result": 0
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "c",
+        "c"
+      ],
+      "query": "C",
+      "original_defined": true,
+      "original_result": 2
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "c",
+        "c"
+      ],
+      "query": "",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "c",
+        "c"
+      ],
+      "query": "@missing",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "c",
+        "c"
+      ],
+      "query": "a_missing",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "c",
+        "c"
+      ],
+      "query": "z",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "c",
+        "c"
+      ],
+      "query": "0",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "b",
+        "b",
+        "b"
+      ],
+      "query": "a",
+      "original_defined": true,
+      "original_result": 0
+    },
+    {
+      "names": [
+        "a",
+        "b",
+        "b",
+        "b"
+      ],
+      "query": "b",
+      "original_defined": true,
+      "original_result": 2
+    },
+    {
+      "names": [
+        "a",
+        "b",
+        "b",
+        "b"
+      ],
+      "query": "A",
+      "original_defined": true,
+      "original_result": 0
+    },
+    {
+      "names": [
+        "a",
+        "b",
+        "b",
+        "b"
+      ],
+      "query": "B",
+      "original_defined": true,
+      "original_result": 2
+    },
+    {
+      "names": [
+        "a",
+        "b",
+        "b",
+        "b"
+      ],
+      "query": "",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "b",
+        "b",
+        "b"
+      ],
+      "query": "@missing",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "b",
+        "b",
+        "b"
+      ],
+      "query": "a_missing",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "b",
+        "b",
+        "b"
+      ],
+      "query": "z",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "b",
+        "b",
+        "b"
+      ],
+      "query": "0",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "b",
+        "b",
+        "c"
+      ],
+      "query": "a",
+      "original_defined": true,
+      "original_result": 0
+    },
+    {
+      "names": [
+        "a",
+        "b",
+        "b",
+        "c"
+      ],
+      "query": "b",
+      "original_defined": true,
+      "original_result": 2
+    },
+    {
+      "names": [
+        "a",
+        "b",
+        "b",
+        "c"
+      ],
+      "query": "c",
+      "original_defined": true,
+      "original_result": 3
+    },
+    {
+      "names": [
+        "a",
+        "b",
+        "b",
+        "c"
+      ],
+      "query": "A",
+      "original_defined": true,
+      "original_result": 0
+    },
+    {
+      "names": [
+        "a",
+        "b",
+        "b",
+        "c"
+      ],
+      "query": "B",
+      "original_defined": true,
+      "original_result": 2
+    },
+    {
+      "names": [
+        "a",
+        "b",
+        "b",
+        "c"
+      ],
+      "query": "C",
+      "original_defined": true,
+      "original_result": 3
+    },
+    {
+      "names": [
+        "a",
+        "b",
+        "b",
+        "c"
+      ],
+      "query": "",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "b",
+        "b",
+        "c"
+      ],
+      "query": "@missing",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "b",
+        "b",
+        "c"
+      ],
+      "query": "a_missing",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "b",
+        "b",
+        "c"
+      ],
+      "query": "z",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "b",
+        "b",
+        "c"
+      ],
+      "query": "0",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "b",
+        "c",
+        "c"
+      ],
+      "query": "a",
+      "original_defined": true,
+      "original_result": 0
+    },
+    {
+      "names": [
+        "a",
+        "b",
+        "c",
+        "c"
+      ],
+      "query": "b",
+      "original_defined": true,
+      "original_result": 1
+    },
+    {
+      "names": [
+        "a",
+        "b",
+        "c",
+        "c"
+      ],
+      "query": "c",
+      "original_defined": true,
+      "original_result": 2
+    },
+    {
+      "names": [
+        "a",
+        "b",
+        "c",
+        "c"
+      ],
+      "query": "A",
+      "original_defined": true,
+      "original_result": 0
+    },
+    {
+      "names": [
+        "a",
+        "b",
+        "c",
+        "c"
+      ],
+      "query": "B",
+      "original_defined": true,
+      "original_result": 1
+    },
+    {
+      "names": [
+        "a",
+        "b",
+        "c",
+        "c"
+      ],
+      "query": "C",
+      "original_defined": true,
+      "original_result": 2
+    },
+    {
+      "names": [
+        "a",
+        "b",
+        "c",
+        "c"
+      ],
+      "query": "",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "b",
+        "c",
+        "c"
+      ],
+      "query": "@missing",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "b",
+        "c",
+        "c"
+      ],
+      "query": "a_missing",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "b",
+        "c",
+        "c"
+      ],
+      "query": "z",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "b",
+        "c",
+        "c"
+      ],
+      "query": "0",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "c",
+        "c",
+        "c"
+      ],
+      "query": "a",
+      "original_defined": true,
+      "original_result": 0
+    },
+    {
+      "names": [
+        "a",
+        "c",
+        "c",
+        "c"
+      ],
+      "query": "c",
+      "original_defined": true,
+      "original_result": 2
+    },
+    {
+      "names": [
+        "a",
+        "c",
+        "c",
+        "c"
+      ],
+      "query": "A",
+      "original_defined": true,
+      "original_result": 0
+    },
+    {
+      "names": [
+        "a",
+        "c",
+        "c",
+        "c"
+      ],
+      "query": "C",
+      "original_defined": true,
+      "original_result": 2
+    },
+    {
+      "names": [
+        "a",
+        "c",
+        "c",
+        "c"
+      ],
+      "query": "",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "c",
+        "c",
+        "c"
+      ],
+      "query": "@missing",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "c",
+        "c",
+        "c"
+      ],
+      "query": "a_missing",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "c",
+        "c",
+        "c"
+      ],
+      "query": "z",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "c",
+        "c",
+        "c"
+      ],
+      "query": "0",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "b",
+        "b",
+        "b",
+        "b"
+      ],
+      "query": "b",
+      "original_defined": true,
+      "original_result": 2
+    },
+    {
+      "names": [
+        "b",
+        "b",
+        "b",
+        "b"
+      ],
+      "query": "B",
+      "original_defined": true,
+      "original_result": 2
+    },
+    {
+      "names": [
+        "b",
+        "b",
+        "b",
+        "b"
+      ],
+      "query": "",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "b",
+        "b",
+        "b",
+        "b"
+      ],
+      "query": "@missing",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "b",
+        "b",
+        "b",
+        "b"
+      ],
+      "query": "a_missing",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "b",
+        "b",
+        "b",
+        "b"
+      ],
+      "query": "z",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "b",
+        "b",
+        "b",
+        "b"
+      ],
+      "query": "0",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "b",
+        "b",
+        "b",
+        "c"
+      ],
+      "query": "b",
+      "original_defined": true,
+      "original_result": 2
+    },
+    {
+      "names": [
+        "b",
+        "b",
+        "b",
+        "c"
+      ],
+      "query": "c",
+      "original_defined": true,
+      "original_result": 3
+    },
+    {
+      "names": [
+        "b",
+        "b",
+        "b",
+        "c"
+      ],
+      "query": "B",
+      "original_defined": true,
+      "original_result": 2
+    },
+    {
+      "names": [
+        "b",
+        "b",
+        "b",
+        "c"
+      ],
+      "query": "C",
+      "original_defined": true,
+      "original_result": 3
+    },
+    {
+      "names": [
+        "b",
+        "b",
+        "b",
+        "c"
+      ],
+      "query": "",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "b",
+        "b",
+        "b",
+        "c"
+      ],
+      "query": "@missing",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "b",
+        "b",
+        "b",
+        "c"
+      ],
+      "query": "a_missing",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "b",
+        "b",
+        "b",
+        "c"
+      ],
+      "query": "z",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "b",
+        "b",
+        "b",
+        "c"
+      ],
+      "query": "0",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "b",
+        "b",
+        "c",
+        "c"
+      ],
+      "query": "b",
+      "original_defined": true,
+      "original_result": 0
+    },
+    {
+      "names": [
+        "b",
+        "b",
+        "c",
+        "c"
+      ],
+      "query": "c",
+      "original_defined": true,
+      "original_result": 2
+    },
+    {
+      "names": [
+        "b",
+        "b",
+        "c",
+        "c"
+      ],
+      "query": "B",
+      "original_defined": true,
+      "original_result": 0
+    },
+    {
+      "names": [
+        "b",
+        "b",
+        "c",
+        "c"
+      ],
+      "query": "C",
+      "original_defined": true,
+      "original_result": 2
+    },
+    {
+      "names": [
+        "b",
+        "b",
+        "c",
+        "c"
+      ],
+      "query": "",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "b",
+        "b",
+        "c",
+        "c"
+      ],
+      "query": "@missing",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "b",
+        "b",
+        "c",
+        "c"
+      ],
+      "query": "a_missing",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "b",
+        "b",
+        "c",
+        "c"
+      ],
+      "query": "z",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "b",
+        "b",
+        "c",
+        "c"
+      ],
+      "query": "0",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "b",
+        "c",
+        "c",
+        "c"
+      ],
+      "query": "b",
+      "original_defined": true,
+      "original_result": 0
+    },
+    {
+      "names": [
+        "b",
+        "c",
+        "c",
+        "c"
+      ],
+      "query": "c",
+      "original_defined": true,
+      "original_result": 2
+    },
+    {
+      "names": [
+        "b",
+        "c",
+        "c",
+        "c"
+      ],
+      "query": "B",
+      "original_defined": true,
+      "original_result": 0
+    },
+    {
+      "names": [
+        "b",
+        "c",
+        "c",
+        "c"
+      ],
+      "query": "C",
+      "original_defined": true,
+      "original_result": 2
+    },
+    {
+      "names": [
+        "b",
+        "c",
+        "c",
+        "c"
+      ],
+      "query": "",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "b",
+        "c",
+        "c",
+        "c"
+      ],
+      "query": "@missing",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "b",
+        "c",
+        "c",
+        "c"
+      ],
+      "query": "a_missing",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "b",
+        "c",
+        "c",
+        "c"
+      ],
+      "query": "z",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "b",
+        "c",
+        "c",
+        "c"
+      ],
+      "query": "0",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "c",
+        "c",
+        "c",
+        "c"
+      ],
+      "query": "c",
+      "original_defined": true,
+      "original_result": 2
+    },
+    {
+      "names": [
+        "c",
+        "c",
+        "c",
+        "c"
+      ],
+      "query": "C",
+      "original_defined": true,
+      "original_result": 2
+    },
+    {
+      "names": [
+        "c",
+        "c",
+        "c",
+        "c"
+      ],
+      "query": "",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "c",
+        "c",
+        "c",
+        "c"
+      ],
+      "query": "@missing",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "c",
+        "c",
+        "c",
+        "c"
+      ],
+      "query": "a_missing",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "c",
+        "c",
+        "c",
+        "c"
+      ],
+      "query": "z",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "c",
+        "c",
+        "c",
+        "c"
+      ],
+      "query": "0",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "a",
+        "a",
+        "a"
+      ],
+      "query": "a",
+      "original_defined": true,
+      "original_result": 2
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "a",
+        "a",
+        "a"
+      ],
+      "query": "A",
+      "original_defined": true,
+      "original_result": 2
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "a",
+        "a",
+        "a"
+      ],
+      "query": "",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "a",
+        "a",
+        "a"
+      ],
+      "query": "@missing",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "a",
+        "a",
+        "a"
+      ],
+      "query": "a_missing",
+      "original_defined": false,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "a",
+        "a",
+        "a"
+      ],
+      "query": "z",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "a",
+        "a",
+        "a"
+      ],
+      "query": "0",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "a",
+        "a",
+        "b"
+      ],
+      "query": "a",
+      "original_defined": true,
+      "original_result": 2
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "a",
+        "a",
+        "b"
+      ],
+      "query": "b",
+      "original_defined": true,
+      "original_result": 4
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "a",
+        "a",
+        "b"
+      ],
+      "query": "A",
+      "original_defined": true,
+      "original_result": 2
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "a",
+        "a",
+        "b"
+      ],
+      "query": "B",
+      "original_defined": true,
+      "original_result": 4
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "a",
+        "a",
+        "b"
+      ],
+      "query": "",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "a",
+        "a",
+        "b"
+      ],
+      "query": "@missing",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "a",
+        "a",
+        "b"
+      ],
+      "query": "a_missing",
+      "original_defined": false,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "a",
+        "a",
+        "b"
+      ],
+      "query": "z",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "a",
+        "a",
+        "b"
+      ],
+      "query": "0",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "a",
+        "a",
+        "c"
+      ],
+      "query": "a",
+      "original_defined": true,
+      "original_result": 2
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "a",
+        "a",
+        "c"
+      ],
+      "query": "c",
+      "original_defined": true,
+      "original_result": 4
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "a",
+        "a",
+        "c"
+      ],
+      "query": "A",
+      "original_defined": true,
+      "original_result": 2
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "a",
+        "a",
+        "c"
+      ],
+      "query": "C",
+      "original_defined": true,
+      "original_result": 4
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "a",
+        "a",
+        "c"
+      ],
+      "query": "",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "a",
+        "a",
+        "c"
+      ],
+      "query": "@missing",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "a",
+        "a",
+        "c"
+      ],
+      "query": "a_missing",
+      "original_defined": false,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "a",
+        "a",
+        "c"
+      ],
+      "query": "z",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "a",
+        "a",
+        "c"
+      ],
+      "query": "0",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "a",
+        "b",
+        "b"
+      ],
+      "query": "a",
+      "original_defined": true,
+      "original_result": 2
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "a",
+        "b",
+        "b"
+      ],
+      "query": "b",
+      "original_defined": true,
+      "original_result": 3
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "a",
+        "b",
+        "b"
+      ],
+      "query": "A",
+      "original_defined": true,
+      "original_result": 2
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "a",
+        "b",
+        "b"
+      ],
+      "query": "B",
+      "original_defined": true,
+      "original_result": 3
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "a",
+        "b",
+        "b"
+      ],
+      "query": "",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "a",
+        "b",
+        "b"
+      ],
+      "query": "@missing",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "a",
+        "b",
+        "b"
+      ],
+      "query": "a_missing",
+      "original_defined": false,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "a",
+        "b",
+        "b"
+      ],
+      "query": "z",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "a",
+        "b",
+        "b"
+      ],
+      "query": "0",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "a",
+        "b",
+        "c"
+      ],
+      "query": "a",
+      "original_defined": true,
+      "original_result": 2
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "a",
+        "b",
+        "c"
+      ],
+      "query": "b",
+      "original_defined": true,
+      "original_result": 3
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "a",
+        "b",
+        "c"
+      ],
+      "query": "c",
+      "original_defined": true,
+      "original_result": 4
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "a",
+        "b",
+        "c"
+      ],
+      "query": "A",
+      "original_defined": true,
+      "original_result": 2
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "a",
+        "b",
+        "c"
+      ],
+      "query": "B",
+      "original_defined": true,
+      "original_result": 3
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "a",
+        "b",
+        "c"
+      ],
+      "query": "C",
+      "original_defined": true,
+      "original_result": 4
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "a",
+        "b",
+        "c"
+      ],
+      "query": "",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "a",
+        "b",
+        "c"
+      ],
+      "query": "@missing",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "a",
+        "b",
+        "c"
+      ],
+      "query": "a_missing",
+      "original_defined": false,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "a",
+        "b",
+        "c"
+      ],
+      "query": "z",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "a",
+        "b",
+        "c"
+      ],
+      "query": "0",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "a",
+        "c",
+        "c"
+      ],
+      "query": "a",
+      "original_defined": true,
+      "original_result": 2
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "a",
+        "c",
+        "c"
+      ],
+      "query": "c",
+      "original_defined": true,
+      "original_result": 3
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "a",
+        "c",
+        "c"
+      ],
+      "query": "A",
+      "original_defined": true,
+      "original_result": 2
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "a",
+        "c",
+        "c"
+      ],
+      "query": "C",
+      "original_defined": true,
+      "original_result": 3
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "a",
+        "c",
+        "c"
+      ],
+      "query": "",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "a",
+        "c",
+        "c"
+      ],
+      "query": "@missing",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "a",
+        "c",
+        "c"
+      ],
+      "query": "a_missing",
+      "original_defined": false,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "a",
+        "c",
+        "c"
+      ],
+      "query": "z",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "a",
+        "c",
+        "c"
+      ],
+      "query": "0",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "b",
+        "b",
+        "b"
+      ],
+      "query": "a",
+      "original_defined": true,
+      "original_result": 0
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "b",
+        "b",
+        "b"
+      ],
+      "query": "b",
+      "original_defined": true,
+      "original_result": 2
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "b",
+        "b",
+        "b"
+      ],
+      "query": "A",
+      "original_defined": true,
+      "original_result": 0
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "b",
+        "b",
+        "b"
+      ],
+      "query": "B",
+      "original_defined": true,
+      "original_result": 2
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "b",
+        "b",
+        "b"
+      ],
+      "query": "",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "b",
+        "b",
+        "b"
+      ],
+      "query": "@missing",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "b",
+        "b",
+        "b"
+      ],
+      "query": "a_missing",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "b",
+        "b",
+        "b"
+      ],
+      "query": "z",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "b",
+        "b",
+        "b"
+      ],
+      "query": "0",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "b",
+        "b",
+        "c"
+      ],
+      "query": "a",
+      "original_defined": true,
+      "original_result": 0
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "b",
+        "b",
+        "c"
+      ],
+      "query": "b",
+      "original_defined": true,
+      "original_result": 2
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "b",
+        "b",
+        "c"
+      ],
+      "query": "c",
+      "original_defined": true,
+      "original_result": 4
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "b",
+        "b",
+        "c"
+      ],
+      "query": "A",
+      "original_defined": true,
+      "original_result": 0
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "b",
+        "b",
+        "c"
+      ],
+      "query": "B",
+      "original_defined": true,
+      "original_result": 2
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "b",
+        "b",
+        "c"
+      ],
+      "query": "C",
+      "original_defined": true,
+      "original_result": 4
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "b",
+        "b",
+        "c"
+      ],
+      "query": "",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "b",
+        "b",
+        "c"
+      ],
+      "query": "@missing",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "b",
+        "b",
+        "c"
+      ],
+      "query": "a_missing",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "b",
+        "b",
+        "c"
+      ],
+      "query": "z",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "b",
+        "b",
+        "c"
+      ],
+      "query": "0",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "b",
+        "c",
+        "c"
+      ],
+      "query": "a",
+      "original_defined": true,
+      "original_result": 0
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "b",
+        "c",
+        "c"
+      ],
+      "query": "b",
+      "original_defined": true,
+      "original_result": 2
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "b",
+        "c",
+        "c"
+      ],
+      "query": "c",
+      "original_defined": true,
+      "original_result": 3
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "b",
+        "c",
+        "c"
+      ],
+      "query": "A",
+      "original_defined": true,
+      "original_result": 0
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "b",
+        "c",
+        "c"
+      ],
+      "query": "B",
+      "original_defined": true,
+      "original_result": 2
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "b",
+        "c",
+        "c"
+      ],
+      "query": "C",
+      "original_defined": true,
+      "original_result": 3
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "b",
+        "c",
+        "c"
+      ],
+      "query": "",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "b",
+        "c",
+        "c"
+      ],
+      "query": "@missing",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "b",
+        "c",
+        "c"
+      ],
+      "query": "a_missing",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "b",
+        "c",
+        "c"
+      ],
+      "query": "z",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "b",
+        "c",
+        "c"
+      ],
+      "query": "0",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "c",
+        "c",
+        "c"
+      ],
+      "query": "a",
+      "original_defined": true,
+      "original_result": 0
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "c",
+        "c",
+        "c"
+      ],
+      "query": "c",
+      "original_defined": true,
+      "original_result": 2
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "c",
+        "c",
+        "c"
+      ],
+      "query": "A",
+      "original_defined": true,
+      "original_result": 0
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "c",
+        "c",
+        "c"
+      ],
+      "query": "C",
+      "original_defined": true,
+      "original_result": 2
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "c",
+        "c",
+        "c"
+      ],
+      "query": "",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "c",
+        "c",
+        "c"
+      ],
+      "query": "@missing",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "c",
+        "c",
+        "c"
+      ],
+      "query": "a_missing",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "c",
+        "c",
+        "c"
+      ],
+      "query": "z",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "c",
+        "c",
+        "c"
+      ],
+      "query": "0",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "b",
+        "b",
+        "b",
+        "b"
+      ],
+      "query": "a",
+      "original_defined": true,
+      "original_result": 0
+    },
+    {
+      "names": [
+        "a",
+        "b",
+        "b",
+        "b",
+        "b"
+      ],
+      "query": "b",
+      "original_defined": true,
+      "original_result": 2
+    },
+    {
+      "names": [
+        "a",
+        "b",
+        "b",
+        "b",
+        "b"
+      ],
+      "query": "A",
+      "original_defined": true,
+      "original_result": 0
+    },
+    {
+      "names": [
+        "a",
+        "b",
+        "b",
+        "b",
+        "b"
+      ],
+      "query": "B",
+      "original_defined": true,
+      "original_result": 2
+    },
+    {
+      "names": [
+        "a",
+        "b",
+        "b",
+        "b",
+        "b"
+      ],
+      "query": "",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "b",
+        "b",
+        "b",
+        "b"
+      ],
+      "query": "@missing",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "b",
+        "b",
+        "b",
+        "b"
+      ],
+      "query": "a_missing",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "b",
+        "b",
+        "b",
+        "b"
+      ],
+      "query": "z",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "b",
+        "b",
+        "b",
+        "b"
+      ],
+      "query": "0",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "b",
+        "b",
+        "b",
+        "c"
+      ],
+      "query": "a",
+      "original_defined": true,
+      "original_result": 0
+    },
+    {
+      "names": [
+        "a",
+        "b",
+        "b",
+        "b",
+        "c"
+      ],
+      "query": "b",
+      "original_defined": true,
+      "original_result": 2
+    },
+    {
+      "names": [
+        "a",
+        "b",
+        "b",
+        "b",
+        "c"
+      ],
+      "query": "c",
+      "original_defined": true,
+      "original_result": 4
+    },
+    {
+      "names": [
+        "a",
+        "b",
+        "b",
+        "b",
+        "c"
+      ],
+      "query": "A",
+      "original_defined": true,
+      "original_result": 0
+    },
+    {
+      "names": [
+        "a",
+        "b",
+        "b",
+        "b",
+        "c"
+      ],
+      "query": "B",
+      "original_defined": true,
+      "original_result": 2
+    },
+    {
+      "names": [
+        "a",
+        "b",
+        "b",
+        "b",
+        "c"
+      ],
+      "query": "C",
+      "original_defined": true,
+      "original_result": 4
+    },
+    {
+      "names": [
+        "a",
+        "b",
+        "b",
+        "b",
+        "c"
+      ],
+      "query": "",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "b",
+        "b",
+        "b",
+        "c"
+      ],
+      "query": "@missing",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "b",
+        "b",
+        "b",
+        "c"
+      ],
+      "query": "a_missing",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "b",
+        "b",
+        "b",
+        "c"
+      ],
+      "query": "z",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "b",
+        "b",
+        "b",
+        "c"
+      ],
+      "query": "0",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "b",
+        "b",
+        "c",
+        "c"
+      ],
+      "query": "a",
+      "original_defined": true,
+      "original_result": 0
+    },
+    {
+      "names": [
+        "a",
+        "b",
+        "b",
+        "c",
+        "c"
+      ],
+      "query": "b",
+      "original_defined": true,
+      "original_result": 2
+    },
+    {
+      "names": [
+        "a",
+        "b",
+        "b",
+        "c",
+        "c"
+      ],
+      "query": "c",
+      "original_defined": true,
+      "original_result": 3
+    },
+    {
+      "names": [
+        "a",
+        "b",
+        "b",
+        "c",
+        "c"
+      ],
+      "query": "A",
+      "original_defined": true,
+      "original_result": 0
+    },
+    {
+      "names": [
+        "a",
+        "b",
+        "b",
+        "c",
+        "c"
+      ],
+      "query": "B",
+      "original_defined": true,
+      "original_result": 2
+    },
+    {
+      "names": [
+        "a",
+        "b",
+        "b",
+        "c",
+        "c"
+      ],
+      "query": "C",
+      "original_defined": true,
+      "original_result": 3
+    },
+    {
+      "names": [
+        "a",
+        "b",
+        "b",
+        "c",
+        "c"
+      ],
+      "query": "",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "b",
+        "b",
+        "c",
+        "c"
+      ],
+      "query": "@missing",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "b",
+        "b",
+        "c",
+        "c"
+      ],
+      "query": "a_missing",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "b",
+        "b",
+        "c",
+        "c"
+      ],
+      "query": "z",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "b",
+        "b",
+        "c",
+        "c"
+      ],
+      "query": "0",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "b",
+        "c",
+        "c",
+        "c"
+      ],
+      "query": "a",
+      "original_defined": true,
+      "original_result": 0
+    },
+    {
+      "names": [
+        "a",
+        "b",
+        "c",
+        "c",
+        "c"
+      ],
+      "query": "b",
+      "original_defined": true,
+      "original_result": 1
+    },
+    {
+      "names": [
+        "a",
+        "b",
+        "c",
+        "c",
+        "c"
+      ],
+      "query": "c",
+      "original_defined": true,
+      "original_result": 2
+    },
+    {
+      "names": [
+        "a",
+        "b",
+        "c",
+        "c",
+        "c"
+      ],
+      "query": "A",
+      "original_defined": true,
+      "original_result": 0
+    },
+    {
+      "names": [
+        "a",
+        "b",
+        "c",
+        "c",
+        "c"
+      ],
+      "query": "B",
+      "original_defined": true,
+      "original_result": 1
+    },
+    {
+      "names": [
+        "a",
+        "b",
+        "c",
+        "c",
+        "c"
+      ],
+      "query": "C",
+      "original_defined": true,
+      "original_result": 2
+    },
+    {
+      "names": [
+        "a",
+        "b",
+        "c",
+        "c",
+        "c"
+      ],
+      "query": "",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "b",
+        "c",
+        "c",
+        "c"
+      ],
+      "query": "@missing",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "b",
+        "c",
+        "c",
+        "c"
+      ],
+      "query": "a_missing",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "b",
+        "c",
+        "c",
+        "c"
+      ],
+      "query": "z",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "b",
+        "c",
+        "c",
+        "c"
+      ],
+      "query": "0",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "c",
+        "c",
+        "c",
+        "c"
+      ],
+      "query": "a",
+      "original_defined": true,
+      "original_result": 0
+    },
+    {
+      "names": [
+        "a",
+        "c",
+        "c",
+        "c",
+        "c"
+      ],
+      "query": "c",
+      "original_defined": true,
+      "original_result": 2
+    },
+    {
+      "names": [
+        "a",
+        "c",
+        "c",
+        "c",
+        "c"
+      ],
+      "query": "A",
+      "original_defined": true,
+      "original_result": 0
+    },
+    {
+      "names": [
+        "a",
+        "c",
+        "c",
+        "c",
+        "c"
+      ],
+      "query": "C",
+      "original_defined": true,
+      "original_result": 2
+    },
+    {
+      "names": [
+        "a",
+        "c",
+        "c",
+        "c",
+        "c"
+      ],
+      "query": "",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "c",
+        "c",
+        "c",
+        "c"
+      ],
+      "query": "@missing",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "c",
+        "c",
+        "c",
+        "c"
+      ],
+      "query": "a_missing",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "c",
+        "c",
+        "c",
+        "c"
+      ],
+      "query": "z",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "c",
+        "c",
+        "c",
+        "c"
+      ],
+      "query": "0",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "b",
+        "b",
+        "b",
+        "b",
+        "b"
+      ],
+      "query": "b",
+      "original_defined": true,
+      "original_result": 2
+    },
+    {
+      "names": [
+        "b",
+        "b",
+        "b",
+        "b",
+        "b"
+      ],
+      "query": "B",
+      "original_defined": true,
+      "original_result": 2
+    },
+    {
+      "names": [
+        "b",
+        "b",
+        "b",
+        "b",
+        "b"
+      ],
+      "query": "",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "b",
+        "b",
+        "b",
+        "b",
+        "b"
+      ],
+      "query": "@missing",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "b",
+        "b",
+        "b",
+        "b",
+        "b"
+      ],
+      "query": "a_missing",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "b",
+        "b",
+        "b",
+        "b",
+        "b"
+      ],
+      "query": "z",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "b",
+        "b",
+        "b",
+        "b",
+        "b"
+      ],
+      "query": "0",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "b",
+        "b",
+        "b",
+        "b",
+        "c"
+      ],
+      "query": "b",
+      "original_defined": true,
+      "original_result": 2
+    },
+    {
+      "names": [
+        "b",
+        "b",
+        "b",
+        "b",
+        "c"
+      ],
+      "query": "c",
+      "original_defined": true,
+      "original_result": 4
+    },
+    {
+      "names": [
+        "b",
+        "b",
+        "b",
+        "b",
+        "c"
+      ],
+      "query": "B",
+      "original_defined": true,
+      "original_result": 2
+    },
+    {
+      "names": [
+        "b",
+        "b",
+        "b",
+        "b",
+        "c"
+      ],
+      "query": "C",
+      "original_defined": true,
+      "original_result": 4
+    },
+    {
+      "names": [
+        "b",
+        "b",
+        "b",
+        "b",
+        "c"
+      ],
+      "query": "",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "b",
+        "b",
+        "b",
+        "b",
+        "c"
+      ],
+      "query": "@missing",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "b",
+        "b",
+        "b",
+        "b",
+        "c"
+      ],
+      "query": "a_missing",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "b",
+        "b",
+        "b",
+        "b",
+        "c"
+      ],
+      "query": "z",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "b",
+        "b",
+        "b",
+        "b",
+        "c"
+      ],
+      "query": "0",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "b",
+        "b",
+        "b",
+        "c",
+        "c"
+      ],
+      "query": "b",
+      "original_defined": true,
+      "original_result": 2
+    },
+    {
+      "names": [
+        "b",
+        "b",
+        "b",
+        "c",
+        "c"
+      ],
+      "query": "c",
+      "original_defined": true,
+      "original_result": 3
+    },
+    {
+      "names": [
+        "b",
+        "b",
+        "b",
+        "c",
+        "c"
+      ],
+      "query": "B",
+      "original_defined": true,
+      "original_result": 2
+    },
+    {
+      "names": [
+        "b",
+        "b",
+        "b",
+        "c",
+        "c"
+      ],
+      "query": "C",
+      "original_defined": true,
+      "original_result": 3
+    },
+    {
+      "names": [
+        "b",
+        "b",
+        "b",
+        "c",
+        "c"
+      ],
+      "query": "",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "b",
+        "b",
+        "b",
+        "c",
+        "c"
+      ],
+      "query": "@missing",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "b",
+        "b",
+        "b",
+        "c",
+        "c"
+      ],
+      "query": "a_missing",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "b",
+        "b",
+        "b",
+        "c",
+        "c"
+      ],
+      "query": "z",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "b",
+        "b",
+        "b",
+        "c",
+        "c"
+      ],
+      "query": "0",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "b",
+        "b",
+        "c",
+        "c",
+        "c"
+      ],
+      "query": "b",
+      "original_defined": true,
+      "original_result": 0
+    },
+    {
+      "names": [
+        "b",
+        "b",
+        "c",
+        "c",
+        "c"
+      ],
+      "query": "c",
+      "original_defined": true,
+      "original_result": 2
+    },
+    {
+      "names": [
+        "b",
+        "b",
+        "c",
+        "c",
+        "c"
+      ],
+      "query": "B",
+      "original_defined": true,
+      "original_result": 0
+    },
+    {
+      "names": [
+        "b",
+        "b",
+        "c",
+        "c",
+        "c"
+      ],
+      "query": "C",
+      "original_defined": true,
+      "original_result": 2
+    },
+    {
+      "names": [
+        "b",
+        "b",
+        "c",
+        "c",
+        "c"
+      ],
+      "query": "",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "b",
+        "b",
+        "c",
+        "c",
+        "c"
+      ],
+      "query": "@missing",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "b",
+        "b",
+        "c",
+        "c",
+        "c"
+      ],
+      "query": "a_missing",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "b",
+        "b",
+        "c",
+        "c",
+        "c"
+      ],
+      "query": "z",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "b",
+        "b",
+        "c",
+        "c",
+        "c"
+      ],
+      "query": "0",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "b",
+        "c",
+        "c",
+        "c",
+        "c"
+      ],
+      "query": "b",
+      "original_defined": true,
+      "original_result": 0
+    },
+    {
+      "names": [
+        "b",
+        "c",
+        "c",
+        "c",
+        "c"
+      ],
+      "query": "c",
+      "original_defined": true,
+      "original_result": 2
+    },
+    {
+      "names": [
+        "b",
+        "c",
+        "c",
+        "c",
+        "c"
+      ],
+      "query": "B",
+      "original_defined": true,
+      "original_result": 0
+    },
+    {
+      "names": [
+        "b",
+        "c",
+        "c",
+        "c",
+        "c"
+      ],
+      "query": "C",
+      "original_defined": true,
+      "original_result": 2
+    },
+    {
+      "names": [
+        "b",
+        "c",
+        "c",
+        "c",
+        "c"
+      ],
+      "query": "",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "b",
+        "c",
+        "c",
+        "c",
+        "c"
+      ],
+      "query": "@missing",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "b",
+        "c",
+        "c",
+        "c",
+        "c"
+      ],
+      "query": "a_missing",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "b",
+        "c",
+        "c",
+        "c",
+        "c"
+      ],
+      "query": "z",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "b",
+        "c",
+        "c",
+        "c",
+        "c"
+      ],
+      "query": "0",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "c",
+        "c",
+        "c",
+        "c",
+        "c"
+      ],
+      "query": "c",
+      "original_defined": true,
+      "original_result": 2
+    },
+    {
+      "names": [
+        "c",
+        "c",
+        "c",
+        "c",
+        "c"
+      ],
+      "query": "C",
+      "original_defined": true,
+      "original_result": 2
+    },
+    {
+      "names": [
+        "c",
+        "c",
+        "c",
+        "c",
+        "c"
+      ],
+      "query": "",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "c",
+        "c",
+        "c",
+        "c",
+        "c"
+      ],
+      "query": "@missing",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "c",
+        "c",
+        "c",
+        "c",
+        "c"
+      ],
+      "query": "a_missing",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "c",
+        "c",
+        "c",
+        "c",
+        "c"
+      ],
+      "query": "z",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "c",
+        "c",
+        "c",
+        "c",
+        "c"
+      ],
+      "query": "0",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "c",
+        "b"
+      ],
+      "query": "a",
+      "original_defined": true,
+      "original_result": 0
+    },
+    {
+      "names": [
+        "a",
+        "c",
+        "b"
+      ],
+      "query": "c",
+      "original_defined": true,
+      "original_result": 1
+    },
+    {
+      "names": [
+        "a",
+        "c",
+        "b"
+      ],
+      "query": "b",
+      "original_defined": true,
+      "original_result": 2
+    },
+    {
+      "names": [
+        "a",
+        "c",
+        "b"
+      ],
+      "query": "A",
+      "original_defined": true,
+      "original_result": 0
+    },
+    {
+      "names": [
+        "a",
+        "c",
+        "b"
+      ],
+      "query": "C",
+      "original_defined": true,
+      "original_result": 1
+    },
+    {
+      "names": [
+        "a",
+        "c",
+        "b"
+      ],
+      "query": "B",
+      "original_defined": true,
+      "original_result": 2
+    },
+    {
+      "names": [
+        "a",
+        "c",
+        "b"
+      ],
+      "query": "",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "c",
+        "b"
+      ],
+      "query": "@missing",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "c",
+        "b"
+      ],
+      "query": "a_missing",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "c",
+        "b"
+      ],
+      "query": "z",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "c",
+        "b"
+      ],
+      "query": "0",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "b",
+        "a",
+        "c"
+      ],
+      "query": "b",
+      "original_defined": true,
+      "original_result": 0
+    },
+    {
+      "names": [
+        "b",
+        "a",
+        "c"
+      ],
+      "query": "a",
+      "original_defined": true,
+      "original_result": 1
+    },
+    {
+      "names": [
+        "b",
+        "a",
+        "c"
+      ],
+      "query": "c",
+      "original_defined": true,
+      "original_result": 2
+    },
+    {
+      "names": [
+        "b",
+        "a",
+        "c"
+      ],
+      "query": "B",
+      "original_defined": true,
+      "original_result": 0
+    },
+    {
+      "names": [
+        "b",
+        "a",
+        "c"
+      ],
+      "query": "A",
+      "original_defined": true,
+      "original_result": 1
+    },
+    {
+      "names": [
+        "b",
+        "a",
+        "c"
+      ],
+      "query": "C",
+      "original_defined": true,
+      "original_result": 2
+    },
+    {
+      "names": [
+        "b",
+        "a",
+        "c"
+      ],
+      "query": "",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "b",
+        "a",
+        "c"
+      ],
+      "query": "@missing",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "b",
+        "a",
+        "c"
+      ],
+      "query": "a_missing",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "b",
+        "a",
+        "c"
+      ],
+      "query": "z",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "b",
+        "a",
+        "c"
+      ],
+      "query": "0",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "b",
+        "c",
+        "a"
+      ],
+      "query": "b",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "b",
+        "c",
+        "a"
+      ],
+      "query": "c",
+      "original_defined": true,
+      "original_result": 1
+    },
+    {
+      "names": [
+        "b",
+        "c",
+        "a"
+      ],
+      "query": "a",
+      "original_defined": true,
+      "original_result": 2
+    },
+    {
+      "names": [
+        "b",
+        "c",
+        "a"
+      ],
+      "query": "B",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "b",
+        "c",
+        "a"
+      ],
+      "query": "C",
+      "original_defined": true,
+      "original_result": 1
+    },
+    {
+      "names": [
+        "b",
+        "c",
+        "a"
+      ],
+      "query": "A",
+      "original_defined": true,
+      "original_result": 2
+    },
+    {
+      "names": [
+        "b",
+        "c",
+        "a"
+      ],
+      "query": "",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "b",
+        "c",
+        "a"
+      ],
+      "query": "@missing",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "b",
+        "c",
+        "a"
+      ],
+      "query": "a_missing",
+      "original_defined": false,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "b",
+        "c",
+        "a"
+      ],
+      "query": "z",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "b",
+        "c",
+        "a"
+      ],
+      "query": "0",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "c",
+        "a",
+        "b"
+      ],
+      "query": "c",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "c",
+        "a",
+        "b"
+      ],
+      "query": "a",
+      "original_defined": true,
+      "original_result": 1
+    },
+    {
+      "names": [
+        "c",
+        "a",
+        "b"
+      ],
+      "query": "b",
+      "original_defined": true,
+      "original_result": 2
+    },
+    {
+      "names": [
+        "c",
+        "a",
+        "b"
+      ],
+      "query": "C",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "c",
+        "a",
+        "b"
+      ],
+      "query": "A",
+      "original_defined": true,
+      "original_result": 1
+    },
+    {
+      "names": [
+        "c",
+        "a",
+        "b"
+      ],
+      "query": "B",
+      "original_defined": true,
+      "original_result": 2
+    },
+    {
+      "names": [
+        "c",
+        "a",
+        "b"
+      ],
+      "query": "",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "c",
+        "a",
+        "b"
+      ],
+      "query": "@missing",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "c",
+        "a",
+        "b"
+      ],
+      "query": "a_missing",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "c",
+        "a",
+        "b"
+      ],
+      "query": "z",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "c",
+        "a",
+        "b"
+      ],
+      "query": "0",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "c",
+        "b",
+        "a"
+      ],
+      "query": "c",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "c",
+        "b",
+        "a"
+      ],
+      "query": "b",
+      "original_defined": true,
+      "original_result": 1
+    },
+    {
+      "names": [
+        "c",
+        "b",
+        "a"
+      ],
+      "query": "a",
+      "original_defined": true,
+      "original_result": 2
+    },
+    {
+      "names": [
+        "c",
+        "b",
+        "a"
+      ],
+      "query": "C",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "c",
+        "b",
+        "a"
+      ],
+      "query": "B",
+      "original_defined": true,
+      "original_result": 1
+    },
+    {
+      "names": [
+        "c",
+        "b",
+        "a"
+      ],
+      "query": "A",
+      "original_defined": true,
+      "original_result": 2
+    },
+    {
+      "names": [
+        "c",
+        "b",
+        "a"
+      ],
+      "query": "",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "c",
+        "b",
+        "a"
+      ],
+      "query": "@missing",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "c",
+        "b",
+        "a"
+      ],
+      "query": "a_missing",
+      "original_defined": false,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "c",
+        "b",
+        "a"
+      ],
+      "query": "z",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "c",
+        "b",
+        "a"
+      ],
+      "query": "0",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "ent",
+        "frame"
+      ],
+      "query": "ent",
+      "original_defined": false,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "ent",
+        "frame"
+      ],
+      "query": "frame",
+      "original_defined": true,
+      "original_result": 1
+    },
+    {
+      "names": [
+        "ent",
+        "frame"
+      ],
+      "query": "ENT",
+      "original_defined": false,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "ent",
+        "frame"
+      ],
+      "query": "FRAME",
+      "original_defined": true,
+      "original_result": 1
+    },
+    {
+      "names": [
+        "ent",
+        "frame"
+      ],
+      "query": "",
+      "original_defined": false,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "ent",
+        "frame"
+      ],
+      "query": "@missing",
+      "original_defined": false,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "ent",
+        "frame"
+      ],
+      "query": "a_missing",
+      "original_defined": false,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "ent",
+        "frame"
+      ],
+      "query": "z",
+      "original_defined": false,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "ent",
+        "frame"
+      ],
+      "query": "0",
+      "original_defined": false,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "rise",
+        "riseattack",
+        "riseattack_stall"
+      ],
+      "query": "rise",
+      "original_defined": true,
+      "original_result": 0
+    },
+    {
+      "names": [
+        "rise",
+        "riseattack",
+        "riseattack_stall"
+      ],
+      "query": "riseattack",
+      "original_defined": true,
+      "original_result": 1
+    },
+    {
+      "names": [
+        "rise",
+        "riseattack",
+        "riseattack_stall"
+      ],
+      "query": "riseattack_stall",
+      "original_defined": false,
+      "original_result": 2
+    },
+    {
+      "names": [
+        "rise",
+        "riseattack",
+        "riseattack_stall"
+      ],
+      "query": "RISE",
+      "original_defined": true,
+      "original_result": 0
+    },
+    {
+      "names": [
+        "rise",
+        "riseattack",
+        "riseattack_stall"
+      ],
+      "query": "RISEATTACK",
+      "original_defined": true,
+      "original_result": 1
+    },
+    {
+      "names": [
+        "rise",
+        "riseattack",
+        "riseattack_stall"
+      ],
+      "query": "RISEATTACK_STALL",
+      "original_defined": false,
+      "original_result": 2
+    },
+    {
+      "names": [
+        "rise",
+        "riseattack",
+        "riseattack_stall"
+      ],
+      "query": "",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "rise",
+        "riseattack",
+        "riseattack_stall"
+      ],
+      "query": "@missing",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "rise",
+        "riseattack",
+        "riseattack_stall"
+      ],
+      "query": "a_missing",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "rise",
+        "riseattack",
+        "riseattack_stall"
+      ],
+      "query": "z",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "rise",
+        "riseattack",
+        "riseattack_stall"
+      ],
+      "query": "0",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "aa",
+        "ab",
+        "ac",
+        "ba",
+        "bb"
+      ],
+      "query": "aa",
+      "original_defined": true,
+      "original_result": 0
+    },
+    {
+      "names": [
+        "aa",
+        "ab",
+        "ac",
+        "ba",
+        "bb"
+      ],
+      "query": "ab",
+      "original_defined": true,
+      "original_result": 1
+    },
+    {
+      "names": [
+        "aa",
+        "ab",
+        "ac",
+        "ba",
+        "bb"
+      ],
+      "query": "ac",
+      "original_defined": true,
+      "original_result": 2
+    },
+    {
+      "names": [
+        "aa",
+        "ab",
+        "ac",
+        "ba",
+        "bb"
+      ],
+      "query": "ba",
+      "original_defined": true,
+      "original_result": 3
+    },
+    {
+      "names": [
+        "aa",
+        "ab",
+        "ac",
+        "ba",
+        "bb"
+      ],
+      "query": "bb",
+      "original_defined": true,
+      "original_result": 4
+    },
+    {
+      "names": [
+        "aa",
+        "ab",
+        "ac",
+        "ba",
+        "bb"
+      ],
+      "query": "AA",
+      "original_defined": true,
+      "original_result": 0
+    },
+    {
+      "names": [
+        "aa",
+        "ab",
+        "ac",
+        "ba",
+        "bb"
+      ],
+      "query": "AB",
+      "original_defined": true,
+      "original_result": 1
+    },
+    {
+      "names": [
+        "aa",
+        "ab",
+        "ac",
+        "ba",
+        "bb"
+      ],
+      "query": "AC",
+      "original_defined": true,
+      "original_result": 2
+    },
+    {
+      "names": [
+        "aa",
+        "ab",
+        "ac",
+        "ba",
+        "bb"
+      ],
+      "query": "BA",
+      "original_defined": true,
+      "original_result": 3
+    },
+    {
+      "names": [
+        "aa",
+        "ab",
+        "ac",
+        "ba",
+        "bb"
+      ],
+      "query": "BB",
+      "original_defined": true,
+      "original_result": 4
+    },
+    {
+      "names": [
+        "aa",
+        "ab",
+        "ac",
+        "ba",
+        "bb"
+      ],
+      "query": "",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "aa",
+        "ab",
+        "ac",
+        "ba",
+        "bb"
+      ],
+      "query": "@missing",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "aa",
+        "ab",
+        "ac",
+        "ba",
+        "bb"
+      ],
+      "query": "a_missing",
+      "original_defined": false,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "aa",
+        "ab",
+        "ac",
+        "ba",
+        "bb"
+      ],
+      "query": "z",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "aa",
+        "ab",
+        "ac",
+        "ba",
+        "bb"
+      ],
+      "query": "0",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "b",
+        "a",
+        "b",
+        "c"
+      ],
+      "query": "b",
+      "original_defined": true,
+      "original_result": 2
+    },
+    {
+      "names": [
+        "b",
+        "a",
+        "b",
+        "c"
+      ],
+      "query": "a",
+      "original_defined": true,
+      "original_result": 1
+    },
+    {
+      "names": [
+        "b",
+        "a",
+        "b",
+        "c"
+      ],
+      "query": "c",
+      "original_defined": true,
+      "original_result": 3
+    },
+    {
+      "names": [
+        "b",
+        "a",
+        "b",
+        "c"
+      ],
+      "query": "B",
+      "original_defined": true,
+      "original_result": 2
+    },
+    {
+      "names": [
+        "b",
+        "a",
+        "b",
+        "c"
+      ],
+      "query": "A",
+      "original_defined": true,
+      "original_result": 1
+    },
+    {
+      "names": [
+        "b",
+        "a",
+        "b",
+        "c"
+      ],
+      "query": "C",
+      "original_defined": true,
+      "original_result": 3
+    },
+    {
+      "names": [
+        "b",
+        "a",
+        "b",
+        "c"
+      ],
+      "query": "",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "b",
+        "a",
+        "b",
+        "c"
+      ],
+      "query": "@missing",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "b",
+        "a",
+        "b",
+        "c"
+      ],
+      "query": "a_missing",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "b",
+        "a",
+        "b",
+        "c"
+      ],
+      "query": "z",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "b",
+        "a",
+        "b",
+        "c"
+      ],
+      "query": "0",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "b",
+        "a",
+        "a"
+      ],
+      "query": "a",
+      "original_defined": true,
+      "original_result": 3
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "b",
+        "a",
+        "a"
+      ],
+      "query": "b",
+      "original_defined": true,
+      "original_result": 2
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "b",
+        "a",
+        "a"
+      ],
+      "query": "A",
+      "original_defined": true,
+      "original_result": 3
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "b",
+        "a",
+        "a"
+      ],
+      "query": "B",
+      "original_defined": true,
+      "original_result": 2
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "b",
+        "a",
+        "a"
+      ],
+      "query": "",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "b",
+        "a",
+        "a"
+      ],
+      "query": "@missing",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "b",
+        "a",
+        "a"
+      ],
+      "query": "a_missing",
+      "original_defined": false,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "b",
+        "a",
+        "a"
+      ],
+      "query": "z",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "b",
+        "a",
+        "a"
+      ],
+      "query": "0",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "aa"
+      ],
+      "query": "aa",
+      "original_defined": true,
+      "original_result": 0
+    },
+    {
+      "names": [
+        "aa"
+      ],
+      "query": "AA",
+      "original_defined": true,
+      "original_result": 0
+    },
+    {
+      "names": [
+        "aa"
+      ],
+      "query": "",
+      "original_defined": false,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "aa"
+      ],
+      "query": "@missing",
+      "original_defined": false,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "aa"
+      ],
+      "query": "a_missing",
+      "original_defined": false,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "aa"
+      ],
+      "query": "z",
+      "original_defined": false,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "aa"
+      ],
+      "query": "0",
+      "original_defined": false,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "aa",
+        "ab"
+      ],
+      "query": "aa",
+      "original_defined": true,
+      "original_result": 0
+    },
+    {
+      "names": [
+        "aa",
+        "ab"
+      ],
+      "query": "ab",
+      "original_defined": true,
+      "original_result": 1
+    },
+    {
+      "names": [
+        "aa",
+        "ab"
+      ],
+      "query": "AA",
+      "original_defined": true,
+      "original_result": 0
+    },
+    {
+      "names": [
+        "aa",
+        "ab"
+      ],
+      "query": "AB",
+      "original_defined": true,
+      "original_result": 1
+    },
+    {
+      "names": [
+        "aa",
+        "ab"
+      ],
+      "query": "",
+      "original_defined": false,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "aa",
+        "ab"
+      ],
+      "query": "@missing",
+      "original_defined": false,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "aa",
+        "ab"
+      ],
+      "query": "a_missing",
+      "original_defined": false,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "aa",
+        "ab"
+      ],
+      "query": "z",
+      "original_defined": false,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "aa",
+        "ab"
+      ],
+      "query": "0",
+      "original_defined": false,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "aa"
+      ],
+      "query": "a",
+      "original_defined": true,
+      "original_result": 0
+    },
+    {
+      "names": [
+        "a",
+        "aa"
+      ],
+      "query": "aa",
+      "original_defined": true,
+      "original_result": 1
+    },
+    {
+      "names": [
+        "a",
+        "aa"
+      ],
+      "query": "A",
+      "original_defined": true,
+      "original_result": 0
+    },
+    {
+      "names": [
+        "a",
+        "aa"
+      ],
+      "query": "AA",
+      "original_defined": true,
+      "original_result": 1
+    },
+    {
+      "names": [
+        "a",
+        "aa"
+      ],
+      "query": "",
+      "original_defined": false,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "aa"
+      ],
+      "query": "@missing",
+      "original_defined": false,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "aa"
+      ],
+      "query": "a_missing",
+      "original_defined": false,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "aa"
+      ],
+      "query": "z",
+      "original_defined": false,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "aa"
+      ],
+      "query": "0",
+      "original_defined": false,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "aa",
+        "ab",
+        "ac"
+      ],
+      "query": "aa",
+      "original_defined": true,
+      "original_result": 0
+    },
+    {
+      "names": [
+        "aa",
+        "ab",
+        "ac"
+      ],
+      "query": "ab",
+      "original_defined": true,
+      "original_result": 1
+    },
+    {
+      "names": [
+        "aa",
+        "ab",
+        "ac"
+      ],
+      "query": "ac",
+      "original_defined": false,
+      "original_result": 2
+    },
+    {
+      "names": [
+        "aa",
+        "ab",
+        "ac"
+      ],
+      "query": "AA",
+      "original_defined": true,
+      "original_result": 0
+    },
+    {
+      "names": [
+        "aa",
+        "ab",
+        "ac"
+      ],
+      "query": "AB",
+      "original_defined": true,
+      "original_result": 1
+    },
+    {
+      "names": [
+        "aa",
+        "ab",
+        "ac"
+      ],
+      "query": "AC",
+      "original_defined": false,
+      "original_result": 2
+    },
+    {
+      "names": [
+        "aa",
+        "ab",
+        "ac"
+      ],
+      "query": "",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "aa",
+        "ab",
+        "ac"
+      ],
+      "query": "@missing",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "aa",
+        "ab",
+        "ac"
+      ],
+      "query": "a_missing",
+      "original_defined": false,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "aa",
+        "ab",
+        "ac"
+      ],
+      "query": "z",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "aa",
+        "ab",
+        "ac"
+      ],
+      "query": "0",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "aa",
+        "ab"
+      ],
+      "query": "a",
+      "original_defined": true,
+      "original_result": 0
+    },
+    {
+      "names": [
+        "a",
+        "aa",
+        "ab"
+      ],
+      "query": "aa",
+      "original_defined": true,
+      "original_result": 1
+    },
+    {
+      "names": [
+        "a",
+        "aa",
+        "ab"
+      ],
+      "query": "ab",
+      "original_defined": false,
+      "original_result": 2
+    },
+    {
+      "names": [
+        "a",
+        "aa",
+        "ab"
+      ],
+      "query": "A",
+      "original_defined": true,
+      "original_result": 0
+    },
+    {
+      "names": [
+        "a",
+        "aa",
+        "ab"
+      ],
+      "query": "AA",
+      "original_defined": true,
+      "original_result": 1
+    },
+    {
+      "names": [
+        "a",
+        "aa",
+        "ab"
+      ],
+      "query": "AB",
+      "original_defined": false,
+      "original_result": 2
+    },
+    {
+      "names": [
+        "a",
+        "aa",
+        "ab"
+      ],
+      "query": "",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "aa",
+        "ab"
+      ],
+      "query": "@missing",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "aa",
+        "ab"
+      ],
+      "query": "a_missing",
+      "original_defined": false,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "aa",
+        "ab"
+      ],
+      "query": "z",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "aa",
+        "ab"
+      ],
+      "query": "0",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "aa",
+        "aa",
+        "ab",
+        "ac"
+      ],
+      "query": "aa",
+      "original_defined": true,
+      "original_result": 1
+    },
+    {
+      "names": [
+        "aa",
+        "aa",
+        "ab",
+        "ac"
+      ],
+      "query": "ab",
+      "original_defined": true,
+      "original_result": 2
+    },
+    {
+      "names": [
+        "aa",
+        "aa",
+        "ab",
+        "ac"
+      ],
+      "query": "ac",
+      "original_defined": false,
+      "original_result": 3
+    },
+    {
+      "names": [
+        "aa",
+        "aa",
+        "ab",
+        "ac"
+      ],
+      "query": "AA",
+      "original_defined": true,
+      "original_result": 1
+    },
+    {
+      "names": [
+        "aa",
+        "aa",
+        "ab",
+        "ac"
+      ],
+      "query": "AB",
+      "original_defined": true,
+      "original_result": 2
+    },
+    {
+      "names": [
+        "aa",
+        "aa",
+        "ab",
+        "ac"
+      ],
+      "query": "AC",
+      "original_defined": false,
+      "original_result": 3
+    },
+    {
+      "names": [
+        "aa",
+        "aa",
+        "ab",
+        "ac"
+      ],
+      "query": "",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "aa",
+        "aa",
+        "ab",
+        "ac"
+      ],
+      "query": "@missing",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "aa",
+        "aa",
+        "ab",
+        "ac"
+      ],
+      "query": "a_missing",
+      "original_defined": false,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "aa",
+        "aa",
+        "ab",
+        "ac"
+      ],
+      "query": "z",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "aa",
+        "aa",
+        "ab",
+        "ac"
+      ],
+      "query": "0",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "aa",
+        "ab",
+        "b"
+      ],
+      "query": "a",
+      "original_defined": true,
+      "original_result": 0
+    },
+    {
+      "names": [
+        "a",
+        "aa",
+        "ab",
+        "b"
+      ],
+      "query": "aa",
+      "original_defined": true,
+      "original_result": 1
+    },
+    {
+      "names": [
+        "a",
+        "aa",
+        "ab",
+        "b"
+      ],
+      "query": "ab",
+      "original_defined": true,
+      "original_result": 2
+    },
+    {
+      "names": [
+        "a",
+        "aa",
+        "ab",
+        "b"
+      ],
+      "query": "b",
+      "original_defined": true,
+      "original_result": 3
+    },
+    {
+      "names": [
+        "a",
+        "aa",
+        "ab",
+        "b"
+      ],
+      "query": "A",
+      "original_defined": true,
+      "original_result": 0
+    },
+    {
+      "names": [
+        "a",
+        "aa",
+        "ab",
+        "b"
+      ],
+      "query": "AA",
+      "original_defined": true,
+      "original_result": 1
+    },
+    {
+      "names": [
+        "a",
+        "aa",
+        "ab",
+        "b"
+      ],
+      "query": "AB",
+      "original_defined": true,
+      "original_result": 2
+    },
+    {
+      "names": [
+        "a",
+        "aa",
+        "ab",
+        "b"
+      ],
+      "query": "B",
+      "original_defined": true,
+      "original_result": 3
+    },
+    {
+      "names": [
+        "a",
+        "aa",
+        "ab",
+        "b"
+      ],
+      "query": "",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "aa",
+        "ab",
+        "b"
+      ],
+      "query": "@missing",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "aa",
+        "ab",
+        "b"
+      ],
+      "query": "a_missing",
+      "original_defined": false,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "aa",
+        "ab",
+        "b"
+      ],
+      "query": "z",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "aa",
+        "ab",
+        "b"
+      ],
+      "query": "0",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "aa",
+        "aa",
+        "ab",
+        "ab",
+        "ac"
+      ],
+      "query": "aa",
+      "original_defined": true,
+      "original_result": 1
+    },
+    {
+      "names": [
+        "aa",
+        "aa",
+        "ab",
+        "ab",
+        "ac"
+      ],
+      "query": "ab",
+      "original_defined": true,
+      "original_result": 2
+    },
+    {
+      "names": [
+        "aa",
+        "aa",
+        "ab",
+        "ab",
+        "ac"
+      ],
+      "query": "ac",
+      "original_defined": false,
+      "original_result": 4
+    },
+    {
+      "names": [
+        "aa",
+        "aa",
+        "ab",
+        "ab",
+        "ac"
+      ],
+      "query": "AA",
+      "original_defined": true,
+      "original_result": 1
+    },
+    {
+      "names": [
+        "aa",
+        "aa",
+        "ab",
+        "ab",
+        "ac"
+      ],
+      "query": "AB",
+      "original_defined": true,
+      "original_result": 2
+    },
+    {
+      "names": [
+        "aa",
+        "aa",
+        "ab",
+        "ab",
+        "ac"
+      ],
+      "query": "AC",
+      "original_defined": false,
+      "original_result": 4
+    },
+    {
+      "names": [
+        "aa",
+        "aa",
+        "ab",
+        "ab",
+        "ac"
+      ],
+      "query": "",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "aa",
+        "aa",
+        "ab",
+        "ab",
+        "ac"
+      ],
+      "query": "@missing",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "aa",
+        "aa",
+        "ab",
+        "ab",
+        "ac"
+      ],
+      "query": "a_missing",
+      "original_defined": false,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "aa",
+        "aa",
+        "ab",
+        "ab",
+        "ac"
+      ],
+      "query": "z",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "aa",
+        "aa",
+        "ab",
+        "ab",
+        "ac"
+      ],
+      "query": "0",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "aa",
+        "ab",
+        "b",
+        "ba"
+      ],
+      "query": "a",
+      "original_defined": true,
+      "original_result": 0
+    },
+    {
+      "names": [
+        "a",
+        "aa",
+        "ab",
+        "b",
+        "ba"
+      ],
+      "query": "aa",
+      "original_defined": true,
+      "original_result": 1
+    },
+    {
+      "names": [
+        "a",
+        "aa",
+        "ab",
+        "b",
+        "ba"
+      ],
+      "query": "ab",
+      "original_defined": true,
+      "original_result": 2
+    },
+    {
+      "names": [
+        "a",
+        "aa",
+        "ab",
+        "b",
+        "ba"
+      ],
+      "query": "b",
+      "original_defined": true,
+      "original_result": 3
+    },
+    {
+      "names": [
+        "a",
+        "aa",
+        "ab",
+        "b",
+        "ba"
+      ],
+      "query": "ba",
+      "original_defined": true,
+      "original_result": 4
+    },
+    {
+      "names": [
+        "a",
+        "aa",
+        "ab",
+        "b",
+        "ba"
+      ],
+      "query": "A",
+      "original_defined": true,
+      "original_result": 0
+    },
+    {
+      "names": [
+        "a",
+        "aa",
+        "ab",
+        "b",
+        "ba"
+      ],
+      "query": "AA",
+      "original_defined": true,
+      "original_result": 1
+    },
+    {
+      "names": [
+        "a",
+        "aa",
+        "ab",
+        "b",
+        "ba"
+      ],
+      "query": "AB",
+      "original_defined": true,
+      "original_result": 2
+    },
+    {
+      "names": [
+        "a",
+        "aa",
+        "ab",
+        "b",
+        "ba"
+      ],
+      "query": "B",
+      "original_defined": true,
+      "original_result": 3
+    },
+    {
+      "names": [
+        "a",
+        "aa",
+        "ab",
+        "b",
+        "ba"
+      ],
+      "query": "BA",
+      "original_defined": true,
+      "original_result": 4
+    },
+    {
+      "names": [
+        "a",
+        "aa",
+        "ab",
+        "b",
+        "ba"
+      ],
+      "query": "",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "aa",
+        "ab",
+        "b",
+        "ba"
+      ],
+      "query": "@missing",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "aa",
+        "ab",
+        "b",
+        "ba"
+      ],
+      "query": "a_missing",
+      "original_defined": false,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "aa",
+        "ab",
+        "b",
+        "ba"
+      ],
+      "query": "z",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "aa",
+        "ab",
+        "b",
+        "ba"
+      ],
+      "query": "0",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "aa",
+        "aa",
+        "ab",
+        "ab",
+        "ac",
+        "ac"
+      ],
+      "query": "aa",
+      "original_defined": true,
+      "original_result": 1
+    },
+    {
+      "names": [
+        "aa",
+        "aa",
+        "ab",
+        "ab",
+        "ac",
+        "ac"
+      ],
+      "query": "ab",
+      "original_defined": true,
+      "original_result": 3
+    },
+    {
+      "names": [
+        "aa",
+        "aa",
+        "ab",
+        "ab",
+        "ac",
+        "ac"
+      ],
+      "query": "ac",
+      "original_defined": false,
+      "original_result": 4
+    },
+    {
+      "names": [
+        "aa",
+        "aa",
+        "ab",
+        "ab",
+        "ac",
+        "ac"
+      ],
+      "query": "AA",
+      "original_defined": true,
+      "original_result": 1
+    },
+    {
+      "names": [
+        "aa",
+        "aa",
+        "ab",
+        "ab",
+        "ac",
+        "ac"
+      ],
+      "query": "AB",
+      "original_defined": true,
+      "original_result": 3
+    },
+    {
+      "names": [
+        "aa",
+        "aa",
+        "ab",
+        "ab",
+        "ac",
+        "ac"
+      ],
+      "query": "AC",
+      "original_defined": false,
+      "original_result": 4
+    },
+    {
+      "names": [
+        "aa",
+        "aa",
+        "ab",
+        "ab",
+        "ac",
+        "ac"
+      ],
+      "query": "",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "aa",
+        "aa",
+        "ab",
+        "ab",
+        "ac",
+        "ac"
+      ],
+      "query": "@missing",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "aa",
+        "aa",
+        "ab",
+        "ab",
+        "ac",
+        "ac"
+      ],
+      "query": "a_missing",
+      "original_defined": false,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "aa",
+        "aa",
+        "ab",
+        "ab",
+        "ac",
+        "ac"
+      ],
+      "query": "z",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "aa",
+        "aa",
+        "ab",
+        "ab",
+        "ac",
+        "ac"
+      ],
+      "query": "0",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "b",
+        "b",
+        "c",
+        "c"
+      ],
+      "query": "a",
+      "original_defined": true,
+      "original_result": 0
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "b",
+        "b",
+        "c",
+        "c"
+      ],
+      "query": "b",
+      "original_defined": true,
+      "original_result": 3
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "b",
+        "b",
+        "c",
+        "c"
+      ],
+      "query": "c",
+      "original_defined": true,
+      "original_result": 4
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "b",
+        "b",
+        "c",
+        "c"
+      ],
+      "query": "A",
+      "original_defined": true,
+      "original_result": 0
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "b",
+        "b",
+        "c",
+        "c"
+      ],
+      "query": "B",
+      "original_defined": true,
+      "original_result": 3
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "b",
+        "b",
+        "c",
+        "c"
+      ],
+      "query": "C",
+      "original_defined": true,
+      "original_result": 4
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "b",
+        "b",
+        "c",
+        "c"
+      ],
+      "query": "",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "b",
+        "b",
+        "c",
+        "c"
+      ],
+      "query": "@missing",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "b",
+        "b",
+        "c",
+        "c"
+      ],
+      "query": "a_missing",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "b",
+        "b",
+        "c",
+        "c"
+      ],
+      "query": "z",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "b",
+        "b",
+        "c",
+        "c"
+      ],
+      "query": "0",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "aa",
+        "ab",
+        "b",
+        "ba",
+        "c"
+      ],
+      "query": "a",
+      "original_defined": true,
+      "original_result": 0
+    },
+    {
+      "names": [
+        "a",
+        "aa",
+        "ab",
+        "b",
+        "ba",
+        "c"
+      ],
+      "query": "aa",
+      "original_defined": true,
+      "original_result": 1
+    },
+    {
+      "names": [
+        "a",
+        "aa",
+        "ab",
+        "b",
+        "ba",
+        "c"
+      ],
+      "query": "ab",
+      "original_defined": true,
+      "original_result": 2
+    },
+    {
+      "names": [
+        "a",
+        "aa",
+        "ab",
+        "b",
+        "ba",
+        "c"
+      ],
+      "query": "b",
+      "original_defined": true,
+      "original_result": 3
+    },
+    {
+      "names": [
+        "a",
+        "aa",
+        "ab",
+        "b",
+        "ba",
+        "c"
+      ],
+      "query": "ba",
+      "original_defined": true,
+      "original_result": 4
+    },
+    {
+      "names": [
+        "a",
+        "aa",
+        "ab",
+        "b",
+        "ba",
+        "c"
+      ],
+      "query": "c",
+      "original_defined": true,
+      "original_result": 5
+    },
+    {
+      "names": [
+        "a",
+        "aa",
+        "ab",
+        "b",
+        "ba",
+        "c"
+      ],
+      "query": "A",
+      "original_defined": true,
+      "original_result": 0
+    },
+    {
+      "names": [
+        "a",
+        "aa",
+        "ab",
+        "b",
+        "ba",
+        "c"
+      ],
+      "query": "AA",
+      "original_defined": true,
+      "original_result": 1
+    },
+    {
+      "names": [
+        "a",
+        "aa",
+        "ab",
+        "b",
+        "ba",
+        "c"
+      ],
+      "query": "AB",
+      "original_defined": true,
+      "original_result": 2
+    },
+    {
+      "names": [
+        "a",
+        "aa",
+        "ab",
+        "b",
+        "ba",
+        "c"
+      ],
+      "query": "B",
+      "original_defined": true,
+      "original_result": 3
+    },
+    {
+      "names": [
+        "a",
+        "aa",
+        "ab",
+        "b",
+        "ba",
+        "c"
+      ],
+      "query": "BA",
+      "original_defined": true,
+      "original_result": 4
+    },
+    {
+      "names": [
+        "a",
+        "aa",
+        "ab",
+        "b",
+        "ba",
+        "c"
+      ],
+      "query": "C",
+      "original_defined": true,
+      "original_result": 5
+    },
+    {
+      "names": [
+        "a",
+        "aa",
+        "ab",
+        "b",
+        "ba",
+        "c"
+      ],
+      "query": "",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "aa",
+        "ab",
+        "b",
+        "ba",
+        "c"
+      ],
+      "query": "@missing",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "aa",
+        "ab",
+        "b",
+        "ba",
+        "c"
+      ],
+      "query": "a_missing",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "aa",
+        "ab",
+        "b",
+        "ba",
+        "c"
+      ],
+      "query": "z",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "aa",
+        "ab",
+        "b",
+        "ba",
+        "c"
+      ],
+      "query": "0",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "aa",
+        "aa",
+        "aa",
+        "ab",
+        "ab",
+        "ac",
+        "ac"
+      ],
+      "query": "aa",
+      "original_defined": true,
+      "original_result": 2
+    },
+    {
+      "names": [
+        "aa",
+        "aa",
+        "aa",
+        "ab",
+        "ab",
+        "ac",
+        "ac"
+      ],
+      "query": "ab",
+      "original_defined": true,
+      "original_result": 3
+    },
+    {
+      "names": [
+        "aa",
+        "aa",
+        "aa",
+        "ab",
+        "ab",
+        "ac",
+        "ac"
+      ],
+      "query": "ac",
+      "original_defined": false,
+      "original_result": 5
+    },
+    {
+      "names": [
+        "aa",
+        "aa",
+        "aa",
+        "ab",
+        "ab",
+        "ac",
+        "ac"
+      ],
+      "query": "AA",
+      "original_defined": true,
+      "original_result": 2
+    },
+    {
+      "names": [
+        "aa",
+        "aa",
+        "aa",
+        "ab",
+        "ab",
+        "ac",
+        "ac"
+      ],
+      "query": "AB",
+      "original_defined": true,
+      "original_result": 3
+    },
+    {
+      "names": [
+        "aa",
+        "aa",
+        "aa",
+        "ab",
+        "ab",
+        "ac",
+        "ac"
+      ],
+      "query": "AC",
+      "original_defined": false,
+      "original_result": 5
+    },
+    {
+      "names": [
+        "aa",
+        "aa",
+        "aa",
+        "ab",
+        "ab",
+        "ac",
+        "ac"
+      ],
+      "query": "",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "aa",
+        "aa",
+        "aa",
+        "ab",
+        "ab",
+        "ac",
+        "ac"
+      ],
+      "query": "@missing",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "aa",
+        "aa",
+        "aa",
+        "ab",
+        "ab",
+        "ac",
+        "ac"
+      ],
+      "query": "a_missing",
+      "original_defined": false,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "aa",
+        "aa",
+        "aa",
+        "ab",
+        "ab",
+        "ac",
+        "ac"
+      ],
+      "query": "z",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "aa",
+        "aa",
+        "aa",
+        "ab",
+        "ab",
+        "ac",
+        "ac"
+      ],
+      "query": "0",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "a",
+        "b",
+        "b",
+        "c",
+        "c"
+      ],
+      "query": "a",
+      "original_defined": true,
+      "original_result": 0
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "a",
+        "b",
+        "b",
+        "c",
+        "c"
+      ],
+      "query": "b",
+      "original_defined": true,
+      "original_result": 3
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "a",
+        "b",
+        "b",
+        "c",
+        "c"
+      ],
+      "query": "c",
+      "original_defined": true,
+      "original_result": 5
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "a",
+        "b",
+        "b",
+        "c",
+        "c"
+      ],
+      "query": "A",
+      "original_defined": true,
+      "original_result": 0
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "a",
+        "b",
+        "b",
+        "c",
+        "c"
+      ],
+      "query": "B",
+      "original_defined": true,
+      "original_result": 3
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "a",
+        "b",
+        "b",
+        "c",
+        "c"
+      ],
+      "query": "C",
+      "original_defined": true,
+      "original_result": 5
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "a",
+        "b",
+        "b",
+        "c",
+        "c"
+      ],
+      "query": "",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "a",
+        "b",
+        "b",
+        "c",
+        "c"
+      ],
+      "query": "@missing",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "a",
+        "b",
+        "b",
+        "c",
+        "c"
+      ],
+      "query": "a_missing",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "a",
+        "b",
+        "b",
+        "c",
+        "c"
+      ],
+      "query": "z",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "a",
+        "b",
+        "b",
+        "c",
+        "c"
+      ],
+      "query": "0",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "aa",
+        "ab",
+        "b",
+        "ba",
+        "c"
+      ],
+      "query": "a",
+      "original_defined": true,
+      "original_result": 1
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "aa",
+        "ab",
+        "b",
+        "ba",
+        "c"
+      ],
+      "query": "aa",
+      "original_defined": true,
+      "original_result": 2
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "aa",
+        "ab",
+        "b",
+        "ba",
+        "c"
+      ],
+      "query": "ab",
+      "original_defined": true,
+      "original_result": 3
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "aa",
+        "ab",
+        "b",
+        "ba",
+        "c"
+      ],
+      "query": "b",
+      "original_defined": true,
+      "original_result": 4
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "aa",
+        "ab",
+        "b",
+        "ba",
+        "c"
+      ],
+      "query": "ba",
+      "original_defined": true,
+      "original_result": 5
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "aa",
+        "ab",
+        "b",
+        "ba",
+        "c"
+      ],
+      "query": "c",
+      "original_defined": true,
+      "original_result": 6
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "aa",
+        "ab",
+        "b",
+        "ba",
+        "c"
+      ],
+      "query": "A",
+      "original_defined": true,
+      "original_result": 1
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "aa",
+        "ab",
+        "b",
+        "ba",
+        "c"
+      ],
+      "query": "AA",
+      "original_defined": true,
+      "original_result": 2
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "aa",
+        "ab",
+        "b",
+        "ba",
+        "c"
+      ],
+      "query": "AB",
+      "original_defined": true,
+      "original_result": 3
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "aa",
+        "ab",
+        "b",
+        "ba",
+        "c"
+      ],
+      "query": "B",
+      "original_defined": true,
+      "original_result": 4
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "aa",
+        "ab",
+        "b",
+        "ba",
+        "c"
+      ],
+      "query": "BA",
+      "original_defined": true,
+      "original_result": 5
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "aa",
+        "ab",
+        "b",
+        "ba",
+        "c"
+      ],
+      "query": "C",
+      "original_defined": true,
+      "original_result": 6
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "aa",
+        "ab",
+        "b",
+        "ba",
+        "c"
+      ],
+      "query": "",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "aa",
+        "ab",
+        "b",
+        "ba",
+        "c"
+      ],
+      "query": "@missing",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "aa",
+        "ab",
+        "b",
+        "ba",
+        "c"
+      ],
+      "query": "a_missing",
+      "original_defined": false,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "aa",
+        "ab",
+        "b",
+        "ba",
+        "c"
+      ],
+      "query": "z",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "aa",
+        "ab",
+        "b",
+        "ba",
+        "c"
+      ],
+      "query": "0",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "aa",
+        "aa",
+        "aa",
+        "ab",
+        "ab",
+        "ab",
+        "ac",
+        "ac"
+      ],
+      "query": "aa",
+      "original_defined": true,
+      "original_result": 2
+    },
+    {
+      "names": [
+        "aa",
+        "aa",
+        "aa",
+        "ab",
+        "ab",
+        "ab",
+        "ac",
+        "ac"
+      ],
+      "query": "ab",
+      "original_defined": true,
+      "original_result": 4
+    },
+    {
+      "names": [
+        "aa",
+        "aa",
+        "aa",
+        "ab",
+        "ab",
+        "ab",
+        "ac",
+        "ac"
+      ],
+      "query": "ac",
+      "original_defined": false,
+      "original_result": 6
+    },
+    {
+      "names": [
+        "aa",
+        "aa",
+        "aa",
+        "ab",
+        "ab",
+        "ab",
+        "ac",
+        "ac"
+      ],
+      "query": "AA",
+      "original_defined": true,
+      "original_result": 2
+    },
+    {
+      "names": [
+        "aa",
+        "aa",
+        "aa",
+        "ab",
+        "ab",
+        "ab",
+        "ac",
+        "ac"
+      ],
+      "query": "AB",
+      "original_defined": true,
+      "original_result": 4
+    },
+    {
+      "names": [
+        "aa",
+        "aa",
+        "aa",
+        "ab",
+        "ab",
+        "ab",
+        "ac",
+        "ac"
+      ],
+      "query": "AC",
+      "original_defined": false,
+      "original_result": 6
+    },
+    {
+      "names": [
+        "aa",
+        "aa",
+        "aa",
+        "ab",
+        "ab",
+        "ab",
+        "ac",
+        "ac"
+      ],
+      "query": "",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "aa",
+        "aa",
+        "aa",
+        "ab",
+        "ab",
+        "ab",
+        "ac",
+        "ac"
+      ],
+      "query": "@missing",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "aa",
+        "aa",
+        "aa",
+        "ab",
+        "ab",
+        "ab",
+        "ac",
+        "ac"
+      ],
+      "query": "a_missing",
+      "original_defined": false,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "aa",
+        "aa",
+        "aa",
+        "ab",
+        "ab",
+        "ab",
+        "ac",
+        "ac"
+      ],
+      "query": "z",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "aa",
+        "aa",
+        "aa",
+        "ab",
+        "ab",
+        "ab",
+        "ac",
+        "ac"
+      ],
+      "query": "0",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "a",
+        "b",
+        "b",
+        "b",
+        "c",
+        "c"
+      ],
+      "query": "a",
+      "original_defined": true,
+      "original_result": 0
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "a",
+        "b",
+        "b",
+        "b",
+        "c",
+        "c"
+      ],
+      "query": "b",
+      "original_defined": true,
+      "original_result": 4
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "a",
+        "b",
+        "b",
+        "b",
+        "c",
+        "c"
+      ],
+      "query": "c",
+      "original_defined": true,
+      "original_result": 6
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "a",
+        "b",
+        "b",
+        "b",
+        "c",
+        "c"
+      ],
+      "query": "A",
+      "original_defined": true,
+      "original_result": 0
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "a",
+        "b",
+        "b",
+        "b",
+        "c",
+        "c"
+      ],
+      "query": "B",
+      "original_defined": true,
+      "original_result": 4
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "a",
+        "b",
+        "b",
+        "b",
+        "c",
+        "c"
+      ],
+      "query": "C",
+      "original_defined": true,
+      "original_result": 6
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "a",
+        "b",
+        "b",
+        "b",
+        "c",
+        "c"
+      ],
+      "query": "",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "a",
+        "b",
+        "b",
+        "b",
+        "c",
+        "c"
+      ],
+      "query": "@missing",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "a",
+        "b",
+        "b",
+        "b",
+        "c",
+        "c"
+      ],
+      "query": "a_missing",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "a",
+        "b",
+        "b",
+        "b",
+        "c",
+        "c"
+      ],
+      "query": "z",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "a",
+        "b",
+        "b",
+        "b",
+        "c",
+        "c"
+      ],
+      "query": "0",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "aa",
+        "aa",
+        "ab",
+        "b",
+        "ba",
+        "c"
+      ],
+      "query": "a",
+      "original_defined": true,
+      "original_result": 1
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "aa",
+        "aa",
+        "ab",
+        "b",
+        "ba",
+        "c"
+      ],
+      "query": "aa",
+      "original_defined": true,
+      "original_result": 3
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "aa",
+        "aa",
+        "ab",
+        "b",
+        "ba",
+        "c"
+      ],
+      "query": "ab",
+      "original_defined": true,
+      "original_result": 4
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "aa",
+        "aa",
+        "ab",
+        "b",
+        "ba",
+        "c"
+      ],
+      "query": "b",
+      "original_defined": true,
+      "original_result": 5
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "aa",
+        "aa",
+        "ab",
+        "b",
+        "ba",
+        "c"
+      ],
+      "query": "ba",
+      "original_defined": true,
+      "original_result": 6
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "aa",
+        "aa",
+        "ab",
+        "b",
+        "ba",
+        "c"
+      ],
+      "query": "c",
+      "original_defined": true,
+      "original_result": 7
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "aa",
+        "aa",
+        "ab",
+        "b",
+        "ba",
+        "c"
+      ],
+      "query": "A",
+      "original_defined": true,
+      "original_result": 1
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "aa",
+        "aa",
+        "ab",
+        "b",
+        "ba",
+        "c"
+      ],
+      "query": "AA",
+      "original_defined": true,
+      "original_result": 3
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "aa",
+        "aa",
+        "ab",
+        "b",
+        "ba",
+        "c"
+      ],
+      "query": "AB",
+      "original_defined": true,
+      "original_result": 4
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "aa",
+        "aa",
+        "ab",
+        "b",
+        "ba",
+        "c"
+      ],
+      "query": "B",
+      "original_defined": true,
+      "original_result": 5
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "aa",
+        "aa",
+        "ab",
+        "b",
+        "ba",
+        "c"
+      ],
+      "query": "BA",
+      "original_defined": true,
+      "original_result": 6
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "aa",
+        "aa",
+        "ab",
+        "b",
+        "ba",
+        "c"
+      ],
+      "query": "C",
+      "original_defined": true,
+      "original_result": 7
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "aa",
+        "aa",
+        "ab",
+        "b",
+        "ba",
+        "c"
+      ],
+      "query": "",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "aa",
+        "aa",
+        "ab",
+        "b",
+        "ba",
+        "c"
+      ],
+      "query": "@missing",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "aa",
+        "aa",
+        "ab",
+        "b",
+        "ba",
+        "c"
+      ],
+      "query": "a_missing",
+      "original_defined": false,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "aa",
+        "aa",
+        "ab",
+        "b",
+        "ba",
+        "c"
+      ],
+      "query": "z",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "aa",
+        "aa",
+        "ab",
+        "b",
+        "ba",
+        "c"
+      ],
+      "query": "0",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "aa",
+        "aa",
+        "aa",
+        "ab",
+        "ab",
+        "ab",
+        "ac",
+        "ac",
+        "ac"
+      ],
+      "query": "aa",
+      "original_defined": true,
+      "original_result": 2
+    },
+    {
+      "names": [
+        "aa",
+        "aa",
+        "aa",
+        "ab",
+        "ab",
+        "ab",
+        "ac",
+        "ac",
+        "ac"
+      ],
+      "query": "ab",
+      "original_defined": true,
+      "original_result": 4
+    },
+    {
+      "names": [
+        "aa",
+        "aa",
+        "aa",
+        "ab",
+        "ab",
+        "ab",
+        "ac",
+        "ac",
+        "ac"
+      ],
+      "query": "ac",
+      "original_defined": false,
+      "original_result": 6
+    },
+    {
+      "names": [
+        "aa",
+        "aa",
+        "aa",
+        "ab",
+        "ab",
+        "ab",
+        "ac",
+        "ac",
+        "ac"
+      ],
+      "query": "AA",
+      "original_defined": true,
+      "original_result": 2
+    },
+    {
+      "names": [
+        "aa",
+        "aa",
+        "aa",
+        "ab",
+        "ab",
+        "ab",
+        "ac",
+        "ac",
+        "ac"
+      ],
+      "query": "AB",
+      "original_defined": true,
+      "original_result": 4
+    },
+    {
+      "names": [
+        "aa",
+        "aa",
+        "aa",
+        "ab",
+        "ab",
+        "ab",
+        "ac",
+        "ac",
+        "ac"
+      ],
+      "query": "AC",
+      "original_defined": false,
+      "original_result": 6
+    },
+    {
+      "names": [
+        "aa",
+        "aa",
+        "aa",
+        "ab",
+        "ab",
+        "ab",
+        "ac",
+        "ac",
+        "ac"
+      ],
+      "query": "",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "aa",
+        "aa",
+        "aa",
+        "ab",
+        "ab",
+        "ab",
+        "ac",
+        "ac",
+        "ac"
+      ],
+      "query": "@missing",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "aa",
+        "aa",
+        "aa",
+        "ab",
+        "ab",
+        "ab",
+        "ac",
+        "ac",
+        "ac"
+      ],
+      "query": "a_missing",
+      "original_defined": false,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "aa",
+        "aa",
+        "aa",
+        "ab",
+        "ab",
+        "ab",
+        "ac",
+        "ac",
+        "ac"
+      ],
+      "query": "z",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "aa",
+        "aa",
+        "aa",
+        "ab",
+        "ab",
+        "ab",
+        "ac",
+        "ac",
+        "ac"
+      ],
+      "query": "0",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "a",
+        "b",
+        "b",
+        "b",
+        "c",
+        "c",
+        "c"
+      ],
+      "query": "a",
+      "original_defined": true,
+      "original_result": 0
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "a",
+        "b",
+        "b",
+        "b",
+        "c",
+        "c",
+        "c"
+      ],
+      "query": "b",
+      "original_defined": true,
+      "original_result": 4
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "a",
+        "b",
+        "b",
+        "b",
+        "c",
+        "c",
+        "c"
+      ],
+      "query": "c",
+      "original_defined": true,
+      "original_result": 6
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "a",
+        "b",
+        "b",
+        "b",
+        "c",
+        "c",
+        "c"
+      ],
+      "query": "A",
+      "original_defined": true,
+      "original_result": 0
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "a",
+        "b",
+        "b",
+        "b",
+        "c",
+        "c",
+        "c"
+      ],
+      "query": "B",
+      "original_defined": true,
+      "original_result": 4
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "a",
+        "b",
+        "b",
+        "b",
+        "c",
+        "c",
+        "c"
+      ],
+      "query": "C",
+      "original_defined": true,
+      "original_result": 6
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "a",
+        "b",
+        "b",
+        "b",
+        "c",
+        "c",
+        "c"
+      ],
+      "query": "",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "a",
+        "b",
+        "b",
+        "b",
+        "c",
+        "c",
+        "c"
+      ],
+      "query": "@missing",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "a",
+        "b",
+        "b",
+        "b",
+        "c",
+        "c",
+        "c"
+      ],
+      "query": "a_missing",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "a",
+        "b",
+        "b",
+        "b",
+        "c",
+        "c",
+        "c"
+      ],
+      "query": "z",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "a",
+        "b",
+        "b",
+        "b",
+        "c",
+        "c",
+        "c"
+      ],
+      "query": "0",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "aa",
+        "aa",
+        "ab",
+        "ab",
+        "b",
+        "ba",
+        "c"
+      ],
+      "query": "a",
+      "original_defined": true,
+      "original_result": 1
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "aa",
+        "aa",
+        "ab",
+        "ab",
+        "b",
+        "ba",
+        "c"
+      ],
+      "query": "aa",
+      "original_defined": true,
+      "original_result": 3
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "aa",
+        "aa",
+        "ab",
+        "ab",
+        "b",
+        "ba",
+        "c"
+      ],
+      "query": "ab",
+      "original_defined": true,
+      "original_result": 4
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "aa",
+        "aa",
+        "ab",
+        "ab",
+        "b",
+        "ba",
+        "c"
+      ],
+      "query": "b",
+      "original_defined": true,
+      "original_result": 6
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "aa",
+        "aa",
+        "ab",
+        "ab",
+        "b",
+        "ba",
+        "c"
+      ],
+      "query": "ba",
+      "original_defined": true,
+      "original_result": 7
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "aa",
+        "aa",
+        "ab",
+        "ab",
+        "b",
+        "ba",
+        "c"
+      ],
+      "query": "c",
+      "original_defined": true,
+      "original_result": 8
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "aa",
+        "aa",
+        "ab",
+        "ab",
+        "b",
+        "ba",
+        "c"
+      ],
+      "query": "A",
+      "original_defined": true,
+      "original_result": 1
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "aa",
+        "aa",
+        "ab",
+        "ab",
+        "b",
+        "ba",
+        "c"
+      ],
+      "query": "AA",
+      "original_defined": true,
+      "original_result": 3
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "aa",
+        "aa",
+        "ab",
+        "ab",
+        "b",
+        "ba",
+        "c"
+      ],
+      "query": "AB",
+      "original_defined": true,
+      "original_result": 4
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "aa",
+        "aa",
+        "ab",
+        "ab",
+        "b",
+        "ba",
+        "c"
+      ],
+      "query": "B",
+      "original_defined": true,
+      "original_result": 6
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "aa",
+        "aa",
+        "ab",
+        "ab",
+        "b",
+        "ba",
+        "c"
+      ],
+      "query": "BA",
+      "original_defined": true,
+      "original_result": 7
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "aa",
+        "aa",
+        "ab",
+        "ab",
+        "b",
+        "ba",
+        "c"
+      ],
+      "query": "C",
+      "original_defined": true,
+      "original_result": 8
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "aa",
+        "aa",
+        "ab",
+        "ab",
+        "b",
+        "ba",
+        "c"
+      ],
+      "query": "",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "aa",
+        "aa",
+        "ab",
+        "ab",
+        "b",
+        "ba",
+        "c"
+      ],
+      "query": "@missing",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "aa",
+        "aa",
+        "ab",
+        "ab",
+        "b",
+        "ba",
+        "c"
+      ],
+      "query": "a_missing",
+      "original_defined": false,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "aa",
+        "aa",
+        "ab",
+        "ab",
+        "b",
+        "ba",
+        "c"
+      ],
+      "query": "z",
+      "original_defined": true,
+      "original_result": -1
+    },
+    {
+      "names": [
+        "a",
+        "a",
+        "aa",
+        "aa",
+        "ab",
+        "ab",
+        "b",
+        "ba",
+        "c"
+      ],
+      "query": "0",
+      "original_defined": true,
+      "original_result": -1
+    }
+  ]
+}

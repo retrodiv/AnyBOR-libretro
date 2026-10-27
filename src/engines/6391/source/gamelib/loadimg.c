@@ -1,4 +1,4 @@
-/* AnyBOR modification record: 2026-10-19.
+/* AnyBOR modification record: 2026-10-24.
  * Port maintained by retrodiv <retrodiv@proton.me>.
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
@@ -7,7 +7,8 @@
  * independent sprite reconstruction proof. Validate PCX sprite signatures
  * before using header dimensions. Preserve native palette-only filename
  * probing, three-plane refusals and final RGB table conversion without
- * interpreting palette bytes as sprite dimensions.
+ * interpreting palette bytes as sprite dimensions. Keep bitmap row reads
+ * within the requested output width.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/6391.md
  * at the source repository root. Original notices follow below.
@@ -160,12 +161,14 @@ static int readbmp(unsigned char *buf, unsigned char *pal, int maxwidth, int max
 
     if(buf)
     {
+        const int readwidth = maxwidth < bmp_header.xsize ? maxwidth : bmp_header.xsize;
+        if(readwidth <= 0 || maxheight <= 0) return 0;
         y = 0;
         while(y < maxheight && y < bmp_header.ysize)
         {
             linebuffer = buf + y * maxwidth;
             seekpackfile(handle, bmp_header.picstart + ((bmp_header.ysize - y - 1)*bmp_header.xsize), SEEK_SET);
-            readpackfile(handle, linebuffer, bmp_header.xsize);
+            readpackfile(handle, linebuffer, readwidth);
             ++y;
         }
     }

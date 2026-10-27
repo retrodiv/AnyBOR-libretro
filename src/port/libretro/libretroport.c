@@ -460,6 +460,18 @@ void borExit(int reset)
         co_switch(co_frontend);
 }
 
+void obor_port_assert(int value, const char *assertion, const char *func,
+                      const char *file, int line)
+{
+    if (!value)
+    {
+        fprintf(stderr, "%s:%i: %s: Assertion `%s' failed.\n",
+                file, line, func, assertion);
+        fflush(stderr);
+        borExit(1);
+    }
+}
+
 static void engine_entry(void)
 {
     inject_test_fault(0);

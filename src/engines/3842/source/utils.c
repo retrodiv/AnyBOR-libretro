@@ -1,4 +1,4 @@
-/* AnyBOR modification record: 2026-10-12.
+/* AnyBOR modification record: 2026-10-27.
  * Port maintained by retrodiv <retrodiv@proton.me>.
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
@@ -7,7 +7,9 @@
  * and mkdir forms macOS also uses, and the standard allocation declarations
  * instead of the glibc-only <malloc.h>. Derive output names from the content
  * basename with explicit destination capacities, and reject overflowing
- * output path joins.
+ * output path joins. Preserve profile-specific assertion diagnostics with
+ * controlled engine termination. Bound adjacent string-table reads while
+ * preserving the original search order and duplicate preference.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/3842.md
  * at the source repository root. Original notices follow below.
@@ -287,6 +289,11 @@ void debug_printf(char *format, ...){
 // replacement for assert that writes the error to the log file
 void exitIfFalse(int value, const char* assertion, const char* func, const char* file, int line)
 {
+	if(obor_profile_build < 3811)
+	{
+		obor_port_assert(value, assertion, func, file, line);
+		return;
+	}
 	if(!value)
 	{
 		writeToLogFile("\n\n********** An Error Occurred **********"
@@ -305,7 +312,7 @@ void abortIfFalse(int value, const char* assertion, const char* func, const char
 	{
 		fprintf(stderr, "%s:%i: %s: Assertion `%s' failed.\n", file, line, func, assertion);
 		fflush(stderr);
-		abort();
+		borExit(1);
 	}
 }
 
@@ -393,9 +400,13 @@ int searchList(const char* list[], const char* value, int length)
 {
 	int i;
 	int a = 0;
-	int b = length / 2;
-	int c = length - 1;
-	int v = value[0];
+	int b;
+	int c;
+	int v;
+	if(!list || !value || length <= 0) return -1;
+	b = length / 2;
+	c = length - 1;
+	v = value[0];
 
 	// We must convert uppercase values to lowercase,
 	// since this is how every command is written in
@@ -409,22 +420,22 @@ int searchList(const char* list[], const char* value, int length)
 		if(stricmp(list[b], value) == 0) return b;
 
 		// Search Down the List.
-		if(v == list[b-1][0])
+		if(b > 0 && v == list[b - 1][0])
 		{
 			for(i=b-1 ; i>=0; i--)
 			{
 				if(stricmp(list[i], value) == 0) return i;
-				if(v != list[i-1][0]) break;
+				if(i == 0 || v != list[i - 1][0]) break;
 			}
 		}
 
 		// Search Up the List.
-		if(v == list[b+1][0])
+		if(b + 1 < length && v == list[b + 1][0])
 		{
 			for(i=b+1; i<length; i++)
 			{
 				if(stricmp(list[i], value) == 0) return i;
-				if(v != list[i+1][0]) break;
+				if(i + 1 == length || v != list[i + 1][0]) break;
 			}
 		}
 
@@ -433,8 +444,8 @@ int searchList(const char* list[], const char* value, int length)
 	}
 
 	// Define the starting point.
-	if(v >= list[b+1][0]) a = b+1;
-	else if(v <= list[b-1][0]) c = b-1;
+	if(b + 1 < length && v >= list[b + 1][0]) a = b+1;
+	else if(b > 0 && v <= list[b - 1][0]) c = b-1;
 	else goto searchListFailed;
 
 	// Search Up from starting point.
@@ -443,7 +454,7 @@ int searchList(const char* list[], const char* value, int length)
 		if(v == list[i][0])
 		{
 			if(stricmp(list[i], value) == 0) return i;
-			if(v != list[i+1][0]) break;
+			if(i + 1 == length || v != list[i + 1][0]) break;
 		}
 	}
 

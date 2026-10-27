@@ -1,3 +1,16 @@
+/* AnyBOR modification record: 2026-10-21.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Match each profile's native screen centering and preserve existing
+ * compiler cleanup. Bound screen blend selectors and use transparent copy
+ * when an indexed table is unavailable.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/3741.md
+ * at the source repository root. Original notices follow below.
+ */
+
 /*
  * OpenBOR - http://www.LavaLit.com
  * -----------------------------------------------------------------------
@@ -266,6 +279,12 @@ void blendscreen(s_screen * dest, s_screen * src, int x, int y, unsigned char* l
 }
 
 
+static unsigned char *obor_screen_blend_table(int alpha)
+{
+    if(alpha <= 0 || alpha > OBOR_BLEND_COUNT) return NULL;
+    return blendtables[alpha - 1];
+}
+
 static void _putscreen(s_screen* dest, s_screen* src, int x, int y, s_drawmethod* drawmethod)
 {
 	unsigned char* table;
@@ -295,8 +314,10 @@ static void _putscreen(s_screen* dest, s_screen* src, int x, int y, s_drawmethod
 		table = drawmethod->table;
 		alpha = drawmethod->alpha;
 		transbg = drawmethod->transbg;
-		x -= drawmethod->centerx;
-		y -= drawmethod->centery;
+		if(obor_profile_build >= 3702) {
+			x -= drawmethod->centerx;
+			y -= drawmethod->centery;
+		}
 	}
 
 	if(!table && alpha<=0 && !transbg && !usechannel)
@@ -316,7 +337,9 @@ static void _putscreen(s_screen* dest, s_screen* src, int x, int y, s_drawmethod
 		}
 		else if(alpha>0)
 		{
-			blendscreen(dest, src, x, y, blendtables[drawmethod->alpha-1]);
+			unsigned char *blend_table = obor_screen_blend_table(alpha);
+            if(blend_table) blendscreen(dest, src, x, y, blend_table);
+            else copyscreen_trans(dest, src, x, y);
 		}
 		else if(transbg) copyscreen_trans(dest, src, x, y);
 		else copyscreen_o(dest, src, x, y);

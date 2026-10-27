@@ -1,0 +1,25 @@
+{
+  "schema": 1,
+  "scope": "Complete level-owned stream callbacks with empty other level resources; native field retention, initialized storage and argument-level ownership. Not full level or VM cleanup.",
+  "backends": [
+    {
+      "engine": "3400",
+      "revisions": [
+        3400
+      ],
+      "slots": 50,
+      "buffer_bytes": 128,
+      "header_includes": [
+        "ScriptVariant.h",
+        "openborscript.h",
+        "openbor.h",
+        "libretroport.h"
+      ],
+      "source_commit": "66fa1529897131ca51528967fbb21ee124e45775",
+      "source_sha256": {
+        "openbor_createfilestream": "63140dd8b2c0e2425dec486b486a3d17027a4c660f448f498b05ed34f331e29a",
+        "free_level": "9a785e99c44a9b7012f5135eda1cff8a31997705b17ec391a64d510a49c8fab1"
+      }
+    }
+  ]
+}

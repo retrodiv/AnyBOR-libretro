@@ -1,9 +1,11 @@
-/* AnyBOR modification record: 2026-09-12.
+/* AnyBOR modification record: 2026-10-27.
  * Port maintained by retrodiv <retrodiv@proton.me>.
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
  * Upstream code retains its original license and notices.
- * Include the libretro platform interface.
+ * Include the libretro platform interface. Keep each profile's assertion
+ * evaluation under NDEBUG and stop failed invariants without terminating the
+ * frontend.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/3842.md
  * at the source repository root. Original notices follow below.
@@ -75,7 +77,11 @@
 #define printf writeToLogFile
 
 #undef assert
+#ifdef NDEBUG
+#define assert(x) do { if(obor_profile_build >= 3811) exitIfFalse((x)?1:0, #x, __func__, __FILE__, __LINE__); } while(0)
+#else
 #define assert(x)    exitIfFalse((x)?1:0, #x, __func__, __FILE__, __LINE__)
+#endif
 #define sysassert(x) abortIfFalse((x)?1:0, #x, __func__, __FILE__, __LINE__)
 
 /////////////////////////////////////////////////////////////////////////////

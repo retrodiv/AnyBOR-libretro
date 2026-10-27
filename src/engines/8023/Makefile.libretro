@@ -112,7 +112,7 @@ PORT_LIBCO_OBJ = $(OBJDIR)/port/libco.o
 
 OBJS = $(ENGINE_OBJS) $(PORT_BASE_OBJS) $(PORT_LIBCO_OBJ)
 
-CFLAGS += $(addprefix -I,$(INCS)) -DLIBRETRO=1 -DOBOR_ENGINE_BUILD=$(BUILD_NUM) $(PLAT_DEF)
+CFLAGS += $(addprefix -I,$(INCS)) -DLIBRETRO=1 -DOBOR_CONTROLLED_ASSERTIONS=1 -DOBOR_ENGINE_BUILD=$(BUILD_NUM) $(PLAT_DEF)
 CFLAGS += -O2 -g0 -Wall -fsigned-char -std=gnu99 -fPIC -fvisibility=hidden
 CFLAGS += -ffile-prefix-map=$(CURDIR)=. -fdebug-prefix-map=$(CURDIR)=.
 CFLAGS += -ffile-prefix-map=$(PORT_ROOT)=port/libretro

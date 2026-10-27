@@ -34,8 +34,10 @@ class ProfileGroupsTests(unittest.TestCase):
     def test_each_workflow_path_requires_complete_bounded_groups(self):
         profiles = [dict(build=str(n)) for n in range(27)]
         lines = []
-        for script in ('test_rewind', 'test_state_options'):
+        for script in ('test_rewind', 'test_state_options', 'regression'):
             for flags in ('', '--windows --runner wine', '--core anybor_libretro.dylib'):
+                if script == 'regression' and '--windows' in flags:
+                    continue
                 for group in range(1, 5):
                     lines.append('python3 tools/' + script + '.py ' + flags +
                                  ' --profile-group ' + str(group) + '/4')
@@ -47,6 +49,17 @@ class ProfileGroupsTests(unittest.TestCase):
                     workflow.replace('--profile-group 1/4', '--profile-group 1/1', 1)):
             with self.subTest(bad=bad[-50:]), self.assertRaises(ValueError):
                 check_workflow_groups(bad, profiles)
+
+    def test_model_warning_preserves_historical_spare_slot(self):
+        from regression import model_attack_warning
+        for engine in ("3400", "3741", "3842", "4086", "4432", "6391", "7142", "7533", "8023"):
+            profile = dict(engine=engine)
+            spare = engine in ("3741", "3842")
+            for declared in (None, 12):
+                boundary = 10 if declared is None else declared
+                self.assertFalse(model_attack_warning(profile, boundary, declared))
+                self.assertEqual(model_attack_warning(profile, boundary + 1, declared), not spare)
+                self.assertTrue(model_attack_warning(profile, boundary + 2, declared))
 
     def test_current_workflow_partition(self):
         import json

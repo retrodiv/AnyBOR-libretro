@@ -3,7 +3,9 @@
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
  * Upstream code retains its original license and notices.
- * Remove a guard whose only statement assigned the counter to itself.
+ * Remove a guard whose only statement assigned the counter to itself. Bound
+ * screen blend selectors and use transparent copy when an indexed table is
+ * unavailable.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/3400.md
  * at the source repository root. Original notices follow below.
@@ -527,6 +529,12 @@ void blendscreen(s_screen * dest, s_screen * src, int x, int y, unsigned char* l
 }
 
 
+static unsigned char *obor_screen_blend_table(int alpha)
+{
+    if(alpha <= 0 || alpha > MAX_BLENDINGS) return NULL;
+    return blendtables[alpha - 1];
+}
+
 void putscreen(s_screen* dest, s_screen* src, int x, int y, s_drawmethod* drawmethod)
 {
 	unsigned char* table;
@@ -561,7 +569,9 @@ void putscreen(s_screen* dest, s_screen* src, int x, int y, s_drawmethod* drawme
 		}
 		else if(alpha>0)
 		{
-			blendscreen(dest, src, x, y, blendtables[drawmethod->alpha-1]);
+			unsigned char *blend_table = obor_screen_blend_table(alpha);
+            if(blend_table) blendscreen(dest, src, x, y, blend_table);
+            else copyscreen_trans(dest, src, x, y);
 		}
 		else if(transbg) copyscreen_trans(dest, src, x, y);
 		else copyscreen_o(dest, src, x, y);
@@ -569,16 +579,16 @@ void putscreen(s_screen* dest, s_screen* src, int x, int y, s_drawmethod* drawme
 	else if(dest->pixelformat==PIXEL_16)
 	{
 		if(src->pixelformat==PIXEL_x8)
-			putscreenx8p16(dest, src, x, y, transbg, (unsigned short*)table, alpha>0?blendfunctions16[alpha-1]:NULL);
+			putscreenx8p16(dest, src, x, y, transbg, (unsigned short*)table, alpha > 0 && alpha <= MAX_BLENDINGS ? blendfunctions16[alpha-1] : NULL);
 		else if(src->pixelformat==PIXEL_16)
-			blendscreen16(dest, src, x, y, transbg, alpha>0?blendfunctions16[alpha-1]:NULL);
+			blendscreen16(dest, src, x, y, transbg, alpha > 0 && alpha <= MAX_BLENDINGS ? blendfunctions16[alpha-1] : NULL);
 	}
 	else if(dest->pixelformat==PIXEL_32)
 	{
 		if(src->pixelformat==PIXEL_x8)
-			putscreenx8p32(dest, src, x, y, transbg, (unsigned*)table, alpha>0?blendfunctions32[alpha-1]:NULL);
+			putscreenx8p32(dest, src, x, y, transbg, (unsigned*)table, alpha > 0 && alpha <= MAX_BLENDINGS ? blendfunctions32[alpha-1] : NULL);
 		else if(src->pixelformat==PIXEL_32)
-			blendscreen32(dest, src, x, y, transbg, alpha>0?blendfunctions32[alpha-1]:NULL);
+			blendscreen32(dest, src, x, y, transbg, alpha > 0 && alpha <= MAX_BLENDINGS ? blendfunctions32[alpha-1] : NULL);
 	}
 }
 
@@ -612,18 +622,20 @@ void putscreen_water(s_screen* dest, s_screen* src, int x, int y, int amplitude,
 	{
 		if(alpha>0)
 		{
-			blendscreen_water(dest, src, x, y, amplitude, wavelength, time, watermode, blendtables[drawmethod->alpha-1]);
+			unsigned char *blend_table = obor_screen_blend_table(alpha);
+            if(blend_table) blendscreen_water(dest, src, x, y, amplitude, wavelength, time, watermode, blend_table);
+            else copyscreen_trans_water(dest, src, x, y, amplitude, wavelength, time, watermode);
 		}
 		else if(transbg) copyscreen_trans_water(dest, src, x, y, amplitude, wavelength, time, watermode);
 		else copyscreen_water(dest, src, x, y, amplitude, wavelength, time, watermode);
 	}
 	else if(dest->pixelformat==PIXEL_16)
 	{
-		putscreenx8p16_water(dest, src, x, y, transbg, (unsigned short*)table, alpha>0?blendfunctions16[alpha-1]:NULL, amplitude, wavelength, time, watermode);
+		putscreenx8p16_water(dest, src, x, y, transbg, (unsigned short*)table, alpha > 0 && alpha <= MAX_BLENDINGS ? blendfunctions16[alpha-1] : NULL, amplitude, wavelength, time, watermode);
 	}
 	else if(dest->pixelformat==PIXEL_32)
 	{
-		putscreenx8p32_water(dest, src, x, y, transbg, (u32*)table, alpha>0?blendfunctions32[alpha-1]:NULL, amplitude, wavelength, time, watermode);
+		putscreenx8p32_water(dest, src, x, y, transbg, (u32*)table, alpha > 0 && alpha <= MAX_BLENDINGS ? blendfunctions32[alpha-1] : NULL, amplitude, wavelength, time, watermode);
 	}
 }
 

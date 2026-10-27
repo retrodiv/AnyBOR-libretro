@@ -1,0 +1,632 @@
+[
+  {
+    "bits": 16,
+    "mode": 1,
+    "source": 0,
+    "destination": 65535,
+    "expected": 65535
+  },
+  {
+    "bits": 16,
+    "mode": 1,
+    "source": 65535,
+    "destination": 0,
+    "expected": 65535
+  },
+  {
+    "bits": 16,
+    "mode": 1,
+    "source": 65535,
+    "destination": 65535,
+    "expected": 65535
+  },
+  {
+    "bits": 16,
+    "mode": 1,
+    "source": 1,
+    "destination": 65534,
+    "expected": 65535
+  },
+  {
+    "bits": 16,
+    "mode": 1,
+    "source": 4660,
+    "destination": 17185,
+    "expected": 21653
+  },
+  {
+    "bits": 16,
+    "mode": 1,
+    "source": 291,
+    "destination": 30292,
+    "expected": 30358
+  },
+  {
+    "bits": 16,
+    "mode": 2,
+    "source": 0,
+    "destination": 65535,
+    "expected": 0
+  },
+  {
+    "bits": 16,
+    "mode": 2,
+    "source": 65535,
+    "destination": 0,
+    "expected": 0
+  },
+  {
+    "bits": 16,
+    "mode": 2,
+    "source": 65535,
+    "destination": 65535,
+    "expected": 65535
+  },
+  {
+    "bits": 16,
+    "mode": 2,
+    "source": 1,
+    "destination": 65534,
+    "expected": 0
+  },
+  {
+    "bits": 16,
+    "mode": 2,
+    "source": 4660,
+    "destination": 17185,
+    "expected": 192
+  },
+  {
+    "bits": 16,
+    "mode": 2,
+    "source": 291,
+    "destination": 30292,
+    "expected": 225
+  },
+  {
+    "bits": 16,
+    "mode": 3,
+    "source": 0,
+    "destination": 65535,
+    "expected": 63454
+  },
+  {
+    "bits": 16,
+    "mode": 3,
+    "source": 65535,
+    "destination": 0,
+    "expected": 0
+  },
+  {
+    "bits": 16,
+    "mode": 3,
+    "source": 65535,
+    "destination": 65535,
+    "expected": 65535
+  },
+  {
+    "bits": 16,
+    "mode": 3,
+    "source": 1,
+    "destination": 65534,
+    "expected": 63453
+  },
+  {
+    "bits": 16,
+    "mode": 3,
+    "source": 4660,
+    "destination": 17185,
+    "expected": 2465
+  },
+  {
+    "bits": 16,
+    "mode": 3,
+    "source": 291,
+    "destination": 30292,
+    "expected": 1291
+  },
+  {
+    "bits": 16,
+    "mode": 4,
+    "source": 0,
+    "destination": 65535,
+    "expected": 0
+  },
+  {
+    "bits": 16,
+    "mode": 4,
+    "source": 65535,
+    "destination": 0,
+    "expected": 63454
+  },
+  {
+    "bits": 16,
+    "mode": 4,
+    "source": 65535,
+    "destination": 65535,
+    "expected": 65535
+  },
+  {
+    "bits": 16,
+    "mode": 4,
+    "source": 1,
+    "destination": 65534,
+    "expected": 1
+  },
+  {
+    "bits": 16,
+    "mode": 4,
+    "source": 4660,
+    "destination": 17185,
+    "expected": 2473
+  },
+  {
+    "bits": 16,
+    "mode": 4,
+    "source": 291,
+    "destination": 30292,
+    "expected": 451
+  },
+  {
+    "bits": 16,
+    "mode": 5,
+    "source": 0,
+    "destination": 65535,
+    "expected": 65535
+  },
+  {
+    "bits": 16,
+    "mode": 5,
+    "source": 65535,
+    "destination": 0,
+    "expected": 0
+  },
+  {
+    "bits": 16,
+    "mode": 5,
+    "source": 65535,
+    "destination": 65535,
+    "expected": 65535
+  },
+  {
+    "bits": 16,
+    "mode": 5,
+    "source": 1,
+    "destination": 65534,
+    "expected": 65534
+  },
+  {
+    "bits": 16,
+    "mode": 5,
+    "source": 4660,
+    "destination": 17185,
+    "expected": 17474
+  },
+  {
+    "bits": 16,
+    "mode": 5,
+    "source": 291,
+    "destination": 30292,
+    "expected": 30550
+  },
+  {
+    "bits": 16,
+    "mode": 6,
+    "source": 0,
+    "destination": 65535,
+    "expected": 31727
+  },
+  {
+    "bits": 16,
+    "mode": 6,
+    "source": 65535,
+    "destination": 0,
+    "expected": 31727
+  },
+  {
+    "bits": 16,
+    "mode": 6,
+    "source": 65535,
+    "destination": 65535,
+    "expected": 65535
+  },
+  {
+    "bits": 16,
+    "mode": 6,
+    "source": 1,
+    "destination": 65534,
+    "expected": 31727
+  },
+  {
+    "bits": 16,
+    "mode": 6,
+    "source": 4660,
+    "destination": 17185,
+    "expected": 10922
+  },
+  {
+    "bits": 16,
+    "mode": 6,
+    "source": 291,
+    "destination": 30292,
+    "expected": 15275
+  },
+  {
+    "bits": 32,
+    "mode": 1,
+    "source": 0,
+    "destination": 16777215,
+    "expected": 16777215
+  },
+  {
+    "bits": 32,
+    "mode": 1,
+    "source": 16777215,
+    "destination": 0,
+    "expected": 16777215
+  },
+  {
+    "bits": 32,
+    "mode": 1,
+    "source": 16777215,
+    "destination": 16777215,
+    "expected": 16777215
+  },
+  {
+    "bits": 32,
+    "mode": 1,
+    "source": 1,
+    "destination": 16777214,
+    "expected": 16777215
+  },
+  {
+    "bits": 32,
+    "mode": 1,
+    "source": 4660,
+    "destination": 17185,
+    "expected": 20815
+  },
+  {
+    "bits": 32,
+    "mode": 1,
+    "source": 291,
+    "destination": 30292,
+    "expected": 30572
+  },
+  {
+    "bits": 32,
+    "mode": 1,
+    "source": 1122867,
+    "destination": 10581444,
+    "expected": 11045072
+  },
+  {
+    "bits": 32,
+    "mode": 1,
+    "source": 255,
+    "destination": 16711680,
+    "expected": 16711935
+  },
+  {
+    "bits": 32,
+    "mode": 1,
+    "source": 16711680,
+    "destination": 255,
+    "expected": 16711935
+  },
+  {
+    "bits": 32,
+    "mode": 2,
+    "source": 0,
+    "destination": 16777215,
+    "expected": 0
+  },
+  {
+    "bits": 32,
+    "mode": 2,
+    "source": 16777215,
+    "destination": 0,
+    "expected": 0
+  },
+  {
+    "bits": 32,
+    "mode": 2,
+    "source": 16777215,
+    "destination": 16777215,
+    "expected": 16711422
+  },
+  {
+    "bits": 32,
+    "mode": 2,
+    "source": 1,
+    "destination": 16777214,
+    "expected": 0
+  },
+  {
+    "bits": 32,
+    "mode": 2,
+    "source": 4660,
+    "destination": 17185,
+    "expected": 1030
+  },
+  {
+    "bits": 32,
+    "mode": 2,
+    "source": 291,
+    "destination": 30292,
+    "expected": 11
+  },
+  {
+    "bits": 32,
+    "mode": 2,
+    "source": 1122867,
+    "destination": 10581444,
+    "expected": 659239
+  },
+  {
+    "bits": 32,
+    "mode": 2,
+    "source": 255,
+    "destination": 16711680,
+    "expected": 0
+  },
+  {
+    "bits": 32,
+    "mode": 2,
+    "source": 16711680,
+    "destination": 255,
+    "expected": 0
+  },
+  {
+    "bits": 32,
+    "mode": 3,
+    "source": 0,
+    "destination": 16777215,
+    "expected": 16711422
+  },
+  {
+    "bits": 32,
+    "mode": 3,
+    "source": 16777215,
+    "destination": 0,
+    "expected": 0
+  },
+  {
+    "bits": 32,
+    "mode": 3,
+    "source": 16777215,
+    "destination": 16777215,
+    "expected": 16777215
+  },
+  {
+    "bits": 32,
+    "mode": 3,
+    "source": 1,
+    "destination": 16777214,
+    "expected": 16711421
+  },
+  {
+    "bits": 32,
+    "mode": 3,
+    "source": 4660,
+    "destination": 17185,
+    "expected": 2317
+  },
+  {
+    "bits": 32,
+    "mode": 3,
+    "source": 291,
+    "destination": 30292,
+    "expected": 22
+  },
+  {
+    "bits": 32,
+    "mode": 3,
+    "source": 1122867,
+    "destination": 10581444,
+    "expected": 5185440
+  },
+  {
+    "bits": 32,
+    "mode": 3,
+    "source": 255,
+    "destination": 16711680,
+    "expected": 16646144
+  },
+  {
+    "bits": 32,
+    "mode": 3,
+    "source": 16711680,
+    "destination": 255,
+    "expected": 254
+  },
+  {
+    "bits": 32,
+    "mode": 4,
+    "source": 0,
+    "destination": 16777215,
+    "expected": 0
+  },
+  {
+    "bits": 32,
+    "mode": 4,
+    "source": 16777215,
+    "destination": 0,
+    "expected": 16711422
+  },
+  {
+    "bits": 32,
+    "mode": 4,
+    "source": 16777215,
+    "destination": 16777215,
+    "expected": 16777215
+  },
+  {
+    "bits": 32,
+    "mode": 4,
+    "source": 1,
+    "destination": 16777214,
+    "expected": 1
+  },
+  {
+    "bits": 32,
+    "mode": 4,
+    "source": 4660,
+    "destination": 17185,
+    "expected": 2317
+  },
+  {
+    "bits": 32,
+    "mode": 4,
+    "source": 291,
+    "destination": 30292,
+    "expected": 22
+  },
+  {
+    "bits": 32,
+    "mode": 4,
+    "source": 1122867,
+    "destination": 10581444,
+    "expected": 1384270
+  },
+  {
+    "bits": 32,
+    "mode": 4,
+    "source": 255,
+    "destination": 16711680,
+    "expected": 254
+  },
+  {
+    "bits": 32,
+    "mode": 4,
+    "source": 16711680,
+    "destination": 255,
+    "expected": 16646144
+  },
+  {
+    "bits": 32,
+    "mode": 5,
+    "source": 0,
+    "destination": 16777215,
+    "expected": 16777215
+  },
+  {
+    "bits": 32,
+    "mode": 5,
+    "source": 16777215,
+    "destination": 0,
+    "expected": 0
+  },
+  {
+    "bits": 32,
+    "mode": 5,
+    "source": 16777215,
+    "destination": 16777215,
+    "expected": 16777215
+  },
+  {
+    "bits": 32,
+    "mode": 5,
+    "source": 1,
+    "destination": 16777214,
+    "expected": 16777214
+  },
+  {
+    "bits": 32,
+    "mode": 5,
+    "source": 4660,
+    "destination": 17185,
+    "expected": 18473
+  },
+  {
+    "bits": 32,
+    "mode": 5,
+    "source": 291,
+    "destination": 30292,
+    "expected": 30305
+  },
+  {
+    "bits": 32,
+    "mode": 5,
+    "source": 1122867,
+    "destination": 10581444,
+    "expected": 11306740
+  },
+  {
+    "bits": 32,
+    "mode": 5,
+    "source": 255,
+    "destination": 16711680,
+    "expected": 16711680
+  },
+  {
+    "bits": 32,
+    "mode": 5,
+    "source": 16711680,
+    "destination": 255,
+    "expected": 255
+  },
+  {
+    "bits": 32,
+    "mode": 6,
+    "source": 0,
+    "destination": 16777215,
+    "expected": 8355711
+  },
+  {
+    "bits": 32,
+    "mode": 6,
+    "source": 16777215,
+    "destination": 0,
+    "expected": 8355711
+  },
+  {
+    "bits": 32,
+    "mode": 6,
+    "source": 16777215,
+    "destination": 16777215,
+    "expected": 16777215
+  },
+  {
+    "bits": 32,
+    "mode": 6,
+    "source": 1,
+    "destination": 16777214,
+    "expected": 8355711
+  },
+  {
+    "bits": 32,
+    "mode": 6,
+    "source": 4660,
+    "destination": 17185,
+    "expected": 10794
+  },
+  {
+    "bits": 32,
+    "mode": 6,
+    "source": 291,
+    "destination": 30292,
+    "expected": 15163
+  },
+  {
+    "bits": 32,
+    "mode": 6,
+    "source": 1122867,
+    "destination": 10581444,
+    "expected": 5852027
+  },
+  {
+    "bits": 32,
+    "mode": 6,
+    "source": 255,
+    "destination": 16711680,
+    "expected": 8323199
+  },
+  {
+    "bits": 32,
+    "mode": 6,
+    "source": 16711680,
+    "destination": 255,
+    "expected": 8323199
+  }
+]
