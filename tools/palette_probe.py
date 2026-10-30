@@ -112,12 +112,19 @@ static int model_palette(char *name) {
 #define GET_ARG(n) name
 #define CMD_MODEL_PALETTE 1
 #define malloc model_palette_allocate
+/* This provider observes only the declared model palette allocation. Image
+ * decoder scratch storage uses the actual named policy and ordinary heap. */
+#define obor_profile_malloc_named(name,bytes) model_palette_allocate(bytes)
+/* Diagnostic contents are covered by the model-feedback contract. */
+#define OBOR_MODEL_ERROR(modern,...) (modern)
     switch(1) {
 '''
 
 MODEL_SUFFIX = r'''
     }
 #undef malloc
+#undef obor_profile_malloc_named
+#undef OBOR_MODEL_ERROR
 #undef GET_ARG
     return newchar->palette!=NULL;
 lCleanup:

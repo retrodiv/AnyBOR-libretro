@@ -86,9 +86,15 @@ static int stream_message(const char *message,...){
 #define __realloc(p,n) do {void *grown=realloc((p),sizeof(*(p))*((size_t)(n)+1)); \
  CHECK(grown,"bounded oracle allocation");(p)=grown;memset((p)+(n),0,sizeof(*(p)));}while(0)
 @HOOKS@
+#define obor_profile_malloc_named(name, bytes) malloc(bytes)
+#define obor_profile_calloc_named(name, bytes) calloc(1, bytes)
+#define obor_profile_realloc_named(name, pointer, bytes) realloc(pointer, bytes)
 @HELPERS@
 @CREATE@
 @CLOSE@
+#undef obor_profile_malloc_named
+#undef obor_profile_calloc_named
+#undef obor_profile_realloc_named
 #undef printf
 static void close_slot(unsigned index){
  ScriptVariant arg={VT_INTEGER,(LONG)index},*argv[]={&arg};

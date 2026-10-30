@@ -29,7 +29,7 @@ void Instruction_InitViaToken(Instruction* pins, OpCode code, Token* pToken )
 	memset(pins, 0, sizeof(Instruction));
 	pins->OpCode = code;
 	pins->storageType = INSTRUCTION_SOURCE_TOKEN;
-	pins->theToken = malloc(sizeof(Token));
+	pins->theToken = obor_profile_malloc_named("Instruction_InitViaToken", sizeof(Token));
 	memset(pins->theToken, 0, sizeof(Token));
 	if(pToken) *(pins->theToken) = *pToken;
 	else       pins->theToken->theType = END_OF_TOKENS;
@@ -40,7 +40,7 @@ void Instruction_InitViaLabel(Instruction* pins, OpCode code, LPCSTR label )
 	memset(pins, 0, sizeof(Instruction));
 	pins->OpCode = code;
 	pins->storageType = INSTRUCTION_SOURCE_LABEL;
-	pins->Label = malloc(sizeof(CHAR)*(MAX_STR_LEN+1));
+	pins->Label = obor_profile_malloc_named("Instruction_InitViaLabel#2", sizeof(CHAR)*(MAX_STR_LEN+1));
 	strcpy(pins->Label, label);
 }
 
@@ -48,7 +48,7 @@ void Instruction_Init(Instruction* pins)
 {
 	memset(pins, 0, sizeof(Instruction));
 	pins->storageType = INSTRUCTION_SOURCE_TOKEN;
-	pins->theToken = malloc(sizeof(Token));
+	pins->theToken = obor_profile_malloc_named("Instruction_Init", sizeof(Token));
 	memset(pins->theToken, 0, sizeof(Token));
 	pins->theToken->theType = END_OF_TOKENS;
 }
@@ -179,14 +179,14 @@ int htoi(const char* src)
 void Instruction_NewData(Instruction* pins)
 {
 	 if(pins->theVal) return;
-	 pins->theVal = (ScriptVariant*)malloc(sizeof(ScriptVariant));
+	 pins->theVal = (ScriptVariant*)obor_profile_malloc_named("Instruction_NewData", sizeof(ScriptVariant));
 	 ScriptVariant_Init( pins->theVal);
 }
 
 void Instruction_NewData2(Instruction* pins)
 {
 	 if(pins->theVal2) return;
-	 pins->theVal2 = (ScriptVariant*)malloc(sizeof(ScriptVariant));
+	 pins->theVal2 = (ScriptVariant*)obor_profile_malloc_named("Instruction_NewData2", sizeof(ScriptVariant));
 	 ScriptVariant_Init( pins->theVal2);
 }
 
@@ -197,7 +197,7 @@ void Instruction_ConvertConstant(Instruction* pins)
 	ScriptVariant *pvar;
 	if(pins->theVal) return; //already have the constant as a variant
 	if( pins->OpCode == CONSTDBL){
-		pvar = (ScriptVariant*)malloc(sizeof(ScriptVariant));
+		pvar = (ScriptVariant*)obor_profile_malloc_named("Instruction_ConvertConstant #1", sizeof(ScriptVariant));
 		ScriptVariant_Init(pvar);
 		ScriptVariant_ChangeType(pvar, VT_DECIMAL);
 		if (pins->storageType == INSTRUCTION_SOURCE_TOKEN && pins->theToken->theType != END_OF_TOKENS)
@@ -205,7 +205,7 @@ void Instruction_ConvertConstant(Instruction* pins)
 		else pvar->dblVal = (DOUBLE)atof( pins->Label);
 	}
 	else if( pins->OpCode == CONSTINT || pins->OpCode == CHECKARG){
-		pvar = (ScriptVariant*)malloc(sizeof(ScriptVariant));
+		pvar = (ScriptVariant*)obor_profile_malloc_named("Instruction_ConvertConstant #2", sizeof(ScriptVariant));
 		ScriptVariant_Init(pvar);
 		ScriptVariant_ChangeType(pvar, VT_INTEGER);
 		if (pins->storageType == INSTRUCTION_SOURCE_TOKEN && pins->theToken->theType != END_OF_TOKENS){
@@ -220,7 +220,7 @@ void Instruction_ConvertConstant(Instruction* pins)
 		}
 	}
 	else if(pins->OpCode == CONSTSTR){
-		pvar = (ScriptVariant*)malloc(sizeof(ScriptVariant));
+		pvar = (ScriptVariant*)obor_profile_malloc_named("Instruction_ConvertConstant #3", sizeof(ScriptVariant));
 		ScriptVariant_Init(pvar);
 		ScriptVariant_ChangeType(pvar, VT_STR);
 		strcpy(StrCache_Get(pvar->strVal), pins->theToken->theSource);

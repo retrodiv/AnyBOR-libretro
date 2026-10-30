@@ -1177,6 +1177,52 @@ size_t obor_allocation_size(const void *p)
     return dlmalloc_usable_size((void *)p);
 }
 
+int obor_allocation_contains(const void *p, size_t length)
+{
+    uintptr_t address = (uintptr_t)p;
+    uintptr_t begin = (uintptr_t)OBOR_ARENA_BASE + OBOR_STACK_RESERVE;
+    uintptr_t end = (uintptr_t)arena_brk;
+    int found = 0;
+    if(!length || !arena_brk || address < begin || address >= end ||
+       length > end - address) return 0;
+    obor_fault_allocator_activity(1);
+    ensure_initialization();
+    mstate m = gm;
+    if(PREACTION(m)) {
+        obor_fault_allocator_activity(0);
+        return 0;
+    }
+    /* MORECORE is contiguous and mmap allocations are disabled. Do not infer
+     * ownership if that layout changes. Walk known chunk boundaries instead
+     * of interpreting bytes immediately before an untrusted reference. */
+    if(is_initialized(m) && !m->seg.next) {
+        uintptr_t first = (uintptr_t)m->seg.base;
+        size_t extent = m->seg.size;
+        if(first >= begin && first < end && extent <= end - first) {
+            uintptr_t limit = first + extent;
+            mchunkptr q = align_as_chunk(m->seg.base);
+            while((uintptr_t)q >= first && (uintptr_t)q < limit &&
+                  sizeof(mchunk) <= limit - (uintptr_t)q && q != m->top &&
+                  q->head != FENCEPOST_HEAD) {
+                size_t chunk = chunksize(q);
+                if(chunk < MIN_CHUNK_SIZE || (chunk & CHUNK_ALIGN_MASK) ||
+                   chunk > limit - (uintptr_t)q) break;
+                uintptr_t owner = (uintptr_t)chunk2mem(q);
+                size_t usable = chunk - overhead_for(q);
+                if(is_inuse(q) && address >= owner && address - owner < usable &&
+                   length <= usable - (address - owner)) {
+                    found = 1;
+                    break;
+                }
+                q = next_chunk(q);
+            }
+        }
+    }
+    POSTACTION(m);
+    obor_fault_allocator_activity(0);
+    return found;
+}
+
 static void profile_large_alloc(const char *kind, size_t bytes, void *result,
                                 void *caller)
 {

@@ -18,6 +18,7 @@ import unittest
 
 from historical_filestream_transfer import render_pak_open
 from native_sanitizers import sanitizer_environment
+from native_allocation_policy import bind_named_allocation_support
 from test_color_blends import compile_checked
 from test_historical_player import function
 
@@ -57,7 +58,8 @@ class FilestreamTransferTests(unittest.TestCase):
                 opening=function(script,'openbor_openfilestream'),helpers=helpers,
                 payload=[97,0,98,10],**{key:layout[key]for key in
                     ['header_includes','level_streams','provider_const_name','owned_extent']})
-            source=work/(engine+'.c');source.write_bytes(runtime_profile(program).encode('utf-8','surrogateescape'))
+            source=work/(engine+'.c');source.write_bytes(
+                bind_named_allocation_support(runtime_profile(program),root).encode('utf-8','surrogateescape'))
             binary=source.with_suffix('');includes=[root,SOURCE/'src/port/libretro',root/'source',
                 *sorted(p for p in(root/'source').iterdir()if p.is_dir())]
             compile_checked(compiler+['-std=gnu11','-fgnu89-inline','-Wall','-Wextra','-Werror',

@@ -48,6 +48,7 @@
 #include "stristr.h"
 #include "packfile.h"
 #include "obor_loose.h"
+#include "obor_packfile_profile.h"
 #include "filecache.h"
 #include "globals.h"
 #include "openbor.h"
@@ -305,7 +306,12 @@ char * casesearch(const char *dir, const char *filepath)
 	rest_of_path = strchr(filepath, '/');
 	if (rest_of_path != NULL) // directory
 	{
-		assert(rest_of_path-filepath > 0);
+        if(rest_of_path == filepath)
+        {
+            (void)closedir(d);
+            obor_profile_casesearch_assert();
+            return NULL;
+        }
 		strncat(filename, filepath, rest_of_path-filepath);
 		rest_of_path++;
 	} else strcpy(filename, filepath); // file
@@ -319,8 +325,17 @@ char * casesearch(const char *dir, const char *filepath)
 		}
 	}
 
-	if (entry != NULL)
-		sprintf(fullpath, "%s/%s", dir, entry->d_name);
+    if(entry != NULL)
+    {
+        char joined[sizeof(fullpath)];
+        int length = snprintf(joined, sizeof(joined), "%s/%s", dir, entry->d_name);
+        if(length < 0 || (size_t)length >= sizeof(joined))
+        {
+            (void)closedir(d);
+            return NULL;
+        }
+        memcpy(fullpath, joined, (size_t)length + 1);
+    }
 
 	if (closedir(d)) return NULL;
 	if (i == 0) return NULL;
@@ -336,7 +351,14 @@ int getFreeHandle(void) {
 	int h;
 	for(h=0; h<MAXPACKHANDLES && packhandle[h]>-1; h++) { } // Find free handle
 		if(h>=MAXPACKHANDLES) {
-			printf ("no free handles\n"); // since this condition shuts down openbor, we can savely give more info.
+#ifdef VERBOSE
+            if(obor_profile_build >= 3067)
+#else
+            if(obor_profile_build >= 3186)
+#endif
+            {
+                printf ("no free handles\n"); // since this condition shuts down openbor, we can savely give more info.
+            }
 			return -1;			// No free handles
 		}
 		return h;
@@ -574,28 +596,41 @@ void update_filecache_vfd(int vfd)
 	else filecache_setvfd(vfd, -1, -1, 0);
 }
 
-void makefilenamecache(void) {
-	ptrdiff_t hpos;
-	char target[256];
-
-	if(!filenamelist)
-		filenamelist = malloc(sizeof(List));
-	List_Init(filenamelist);
-
-	// look for filename in the header
-
-	hpos = 0;
-	for(;;)
-	{
-		if((hpos + 12) >= pak_headersize)
-			return;
-		strncpy(target, (char*)pak_header + hpos + 12, 256);
-		fnlc(target);
-		List_InsertAfter(filenamelist, (void*) hpos, target);
-		hpos += readlsb32(pak_header + hpos);
-	}
+static int pak_header_entry(size_t hpos, size_t *next, size_t *length)
+{
+    size_t remaining, record;
+    const unsigned char *name, *end;
+    if(!pak_header || pak_headersize < 0 || hpos > (size_t)pak_headersize) return 0;
+    remaining = (size_t)pak_headersize - hpos;
+    if(remaining <= 12) return 0;
+    record = (unsigned int)readlsb32(pak_header + hpos);
+    if(record <= 12 || record > remaining) return 0;
+    name = pak_header + hpos + 12;
+    end = memchr(name, 0, record - 12);
+    if(!end) return 0;
+    *next = hpos + record;
+    *length = (size_t)(end - name);
+    return 1;
 }
 
+void makefilenamecache(void) {
+    size_t hpos = 0, next, length;
+    char target[256];
+    if(!filenamelist)
+        filenamelist = malloc(sizeof(List));
+    if(!filenamelist) return;
+    List_Init(filenamelist);
+    while(pak_header_entry(hpos, &next, &length))
+    {
+        if(length < sizeof(target))
+        {
+            memcpy(target, pak_header + hpos + 12, length + 1);
+            fnlc(target);
+            List_InsertAfter(filenamelist, (void*)hpos, target);
+        }
+        hpos = next;
+    }
+}
 void freefilenamecache(void) {
 	Node* n;
 	size_t count = 0;
@@ -646,18 +681,34 @@ int openreadaheadpackfile(const char *filename, const char *packfilename, int re
 		}
 	}
 
-	if(!filenamelist)
-		makefilenamecache();
+    if(obor_profile_build < 3186)
+    {
+        size_t next, length;
+        fnl = strlen(filename);
+        hpos = 0;
+        for(;;)
+        {
+            if(!pak_header_entry(hpos, &next, &length)) return -1;
+            if(!myfilenamecmp((char*)pak_header + hpos + 12, length, filename, fnl)) break;
+            hpos = next;
+        }
+    }
+    else
+    {
+        if(strlen(filename) >= sizeof(target)) return -1;
+        if(!filenamelist) makefilenamecache();
+        if(!filenamelist) return -1;
+        memcpy(target, filename, strlen(filename) + 1);
+        fnlc(target);
 
-	strncpy(target, filename, 256);
-	fnlc(target);
+    	n = List_GetNodeByName(filenamelist, target);
+    	if (!n)
+    		return -1;
 
-	n = List_GetNodeByName(filenamelist, target);
-	if (!n)
-		return -1;
+    	hpos = (size_t) n->value & ~USED_FLAG;
+    	n->value = (void*) (((size_t) n->value) | USED_FLAG);
 
-	hpos = (size_t) n->value & ~USED_FLAG;
-	n->value = (void*) (((size_t) n->value) | USED_FLAG);
+    }
 
 	// find a free vfd
 	for(vfd = 0; vfd < MAXPACKHANDLES; vfd++) if(!pak_vfdexists[vfd]) break;
@@ -1033,7 +1084,7 @@ int pak_init()
 		return 0;
 	}
 
-	if(isRawData())
+	if(obor_profile_build >= 3063 && isRawData())
 	{
 		pak_initialized = 1;
 		return 0;
@@ -1064,7 +1115,14 @@ int pak_init()
 
 	if(pakfd < 0)
 	{
+        if(obor_profile_build < 3121)
+        {
+            printf("error opening %s (%d)\n", packfile, pakfd);
+        }
+        else
+        {
 		printf("error opening %s (%d) - could not get a valid device descriptor.\n%s\n", packfile, pakfd, strerror(errno));
+        }
 		return 0;
 	}
 
@@ -1103,7 +1161,7 @@ int pak_init()
 		return -1;
 	}
 
-	sectors = malloc(4096);
+	sectors = obor_profile_malloc_named("pak_init 1", 4096);
 	if(!sectors) { printf("sector malloc failed\n"); return 0; }
 	{
 		int getptrfrom = paksize - 4;
@@ -1135,7 +1193,7 @@ int pak_init()
 			printf("pak header is too large: %d\n",pak_cdheadersize);
 			return 0;
 		}
-		pak_cdheader = malloc(pak_cdheadersize);
+		pak_cdheader = obor_profile_malloc_named("pak_init 2", pak_cdheadersize);
 		if(!pak_cdheader) { printf("pak_cdheader malloc failed\n"); return 0; }
 		if(pak_getsectors(pak_cdheader, pak_cdheaderstart >> 11, pak_cdheadersize >> 11) != (pak_cdheadersize >> 11))
 		{

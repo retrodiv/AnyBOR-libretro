@@ -18,16 +18,20 @@ sys.path.insert(0, str(HERE))
 PUBLIC = (HERE.parent / 'src/pin.json').is_file()
 if PUBLIC:
     DEFAULT_SOURCE = HERE.parent
-    FIXTURE = HERE / 'profile-palette-contracts.json'
+    FIXTURE = HERE / 'fixtures/profile-palette-contracts.json'
 else:
     sys.path.insert(0, str(HERE.parent))
+    sys.path.insert(0, str(HERE.parent / 'templates/public/tools'))
     DEFAULT_SOURCE = HERE.parents[2] / 'AnyBOR-libretro'
     FIXTURE = HERE / 'fixtures/profile-palette-contracts.json'
 from palette_probe import program
 from native_sanitizers import sanitizer_environment
+from native_allocation_policy import bind_named_allocation_support
+from contract_fixtures import load_contract_fixture, contract_profiles
 
 SOURCE = Path(os.environ.get('OBOR_TEST_SOURCE', DEFAULT_SOURCE))
-CONTRACTS = json.loads(FIXTURE.read_text())['profiles']
+CONTRACT_FIXTURE = load_contract_fixture(FIXTURE)
+CONTRACTS = CONTRACT_FIXTURE['profiles']
 
 
 class ProfilePaletteTests(unittest.TestCase):
@@ -47,7 +51,7 @@ class ProfilePaletteTests(unittest.TestCase):
     def test_profile_registry_is_complete(self):
         profiles = json.loads((SOURCE / 'src/pin.json').read_text())['profiles']
         self.assertEqual([(p['build'], p['engine'], int(p.get('revision', p['build'])))
-                          for p in profiles],
+                          for p in contract_profiles(CONTRACT_FIXTURE, profiles)],
                          [(p['profile'], p['engine'], int(p.get('revision', p['profile'])))
                           for p in CONTRACTS])
         for contract in CONTRACTS:
@@ -58,6 +62,7 @@ class ProfilePaletteTests(unittest.TestCase):
         engine = SOURCE / 'src/engines' / contract['engine']
         harness = program((engine / 'source/gamelib/loadimg.c').read_text(),
                           (engine / 'openbor.c').read_text())
+        harness = bind_named_allocation_support(harness, engine)
         digest = hashlib.sha256(harness.encode()).hexdigest()
         if digest not in cls.executables:
             source = cls.work / (digest + '.c')

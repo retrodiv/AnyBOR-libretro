@@ -300,6 +300,51 @@ jobs:
           run_check python3 tools/test_historical_level.py
           run_check python3 tools/test_historical_tolerance.py
           run_check python3 tools/test_preprocessor_strings.py
+          run_check python3 tools/test_early_script_lexers.py
+          run_check python3 tools/test_early_entity_lifecycle.py
+          run_check python3 tools/test_early_script_macros.py
+          run_check python3 tools/test_early_script_imports.py
+          run_check python3 tools/test_early_script_passes.py
+          run_check python3 tools/test_early_callback_order.py
+          run_check python3 tools/test_early_settings_records.py
+          run_check python3 tools/test_early_level_feedback.py
+          run_check python3 tools/test_early_models_feedback.py
+          run_check python3 tools/test_early_levelorder_feedback.py
+          run_check python3 tools/test_early_item_players.py
+          run_check python3 tools/test_early_attack_commands.py
+          run_check python3 tools/test_early_model_inheritance.py
+          run_check python3 tools/test_early_model_resources.py
+          run_check python3 tools/test_early_packfile.py
+          run_check python3 tools/test_early_screenshots.py
+          run_check python3 tools/test_early_model_callers.py
+          run_check python3 tools/test_early_model_passes.py
+          run_check python3 tools/test_early_model_level_state.py
+          run_check python3 tools/test_early_entity_namespaces.py
+          run_check python3 tools/test_early_energycost.py
+          run_check python3 tools/test_early_entity_subproperties.py
+          run_check python3 tools/test_early_komap.py
+          run_check python3 tools/test_early_system_callbacks.py
+          run_check python3 tools/test_early_entity_origin_masks.py
+          run_check python3 tools/test_early_knockdown.py
+          run_check python3 tools/test_early_dot.py
+          run_check python3 tools/test_early_landframe.py
+          run_check python3 tools/test_early_landing_metadata.py
+          run_check python3 tools/test_early_loading_body.py
+          run_check python3 tools/test_early_graphics_offsets.py
+          run_check python3 tools/test_early_zoom.py
+          run_check python3 tools/test_early_target_detection.py
+          run_check python3 tools/test_early_ai_path.py
+          run_check python3 tools/test_early_loading_callbacks.py
+          run_check python3 tools/test_early_select_music.py
+          run_check python3 tools/test_early_spritea.py
+          run_check python3 tools/test_early_combo_delay.py
+          run_check python3 tools/test_early_jump_walkoff.py
+          run_check python3 tools/test_early_text_numbers.py
+          run_check python3 tools/test_early_text_arguments.py
+          run_check python3 tools/test_early_level_music.py
+          run_check python3 tools/test_early_level_layers.py
+          run_check python3 tools/test_early_command_case.py
+          run_check python3 tools/test_early_model_lifecycle.py
           run_check python3 tools/test_text_property_names.py
           run_check python3 tools/test_native_sanitizers.py
           run_check python3 tools/test_historical_behavior.py
@@ -416,6 +461,7 @@ jobs:
           run_check python3 tools/test_geometry.py --core anybor_libretro.dylib
           run_check python3 tools/test_4453.py --core anybor_libretro.dylib
           run_check python3 tools/test_6330_6510.py --core anybor_libretro.dylib
+          run_check python3 tools/test_script_file_records.py
           if (( ${#failures[@]} )); then
             printf "Failed regression commands (%s):\n" "${#failures[@]}"
             printf "  %s\n" "${failures[@]}"
@@ -453,7 +499,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        profile_group: ["1/11", "2/11", "3/11", "4/11", "5/11", "6/11", "7/11", "8/11", "9/11", "10/11", "11/11"]
+        profile_group: ["1/18", "2/18", "3/18", "4/18", "5/18", "6/18", "7/18", "8/18", "9/18", "10/18", "11/18", "12/18", "13/18", "14/18", "15/18", "16/18", "17/18", "18/18"]
     steps:
       - uses: actions/checkout@v4
         with:
@@ -490,7 +536,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        profile_group: ["1/11", "2/11", "3/11", "4/11", "5/11", "6/11", "7/11", "8/11", "9/11", "10/11", "11/11"]
+        profile_group: ["1/18", "2/18", "3/18", "4/18", "5/18", "6/18", "7/18", "8/18", "9/18", "10/18", "11/18", "12/18", "13/18", "14/18", "15/18", "16/18", "17/18", "18/18"]
     env:
       WINEDEBUG: '-all'
     steps:
@@ -526,7 +572,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        profile_group: ["1/4", "2/4", "3/4", "4/4"]
+        profile_group: ["1/6", "2/6", "3/6", "4/6", "5/6", "6/6"]
         platform:
           - runner: macos-15-intel
             target: macos-x86_64
@@ -566,7 +612,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        profile_group: ["1/4", "2/4", "3/4", "4/4"]
+        profile_group: ["1/6", "2/6", "3/6", "4/6", "5/6", "6/6"]
         platform:
           - runner: macos-15
             target: macos-arm64

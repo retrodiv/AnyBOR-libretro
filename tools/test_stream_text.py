@@ -4,6 +4,7 @@ SPDX-License-Identifier: BSD-3-Clause
 Copyright (c) 2026 retrodiv <retrodiv@proton.me>
 """
 import json
+from contract_fixtures import load_contract_fixture
 from historical_filestreams import extract_storage_helpers
 import os
 from pathlib import Path
@@ -15,6 +16,7 @@ import unittest
 
 from historical_stream_text import PARTS, render_text
 from native_sanitizers import sanitizer_environment
+from native_allocation_policy import bind_named_allocation_support
 from test_color_blends import compile_checked
 from test_filestream_transfer import runtime_profile
 from test_historical_player import function
@@ -27,7 +29,7 @@ class StreamTextTests(unittest.TestCase):
     fixture_path=FIXTURE
     @classmethod
     def setUpClass(cls):
-        cls.fixture=json.loads(cls.fixture_path.read_text());cls.rows=cls.fixture['sources']
+        cls.fixture=load_contract_fixture(cls.fixture_path);cls.rows=cls.fixture['sources']
         cls.pin=json.loads((SOURCE/'src/pin.json').read_text())
         temporary=tempfile.TemporaryDirectory(prefix='abtxt-')
         cls.addClassCleanup(temporary.cleanup);work=Path(temporary.name);cls.executables={}
@@ -51,7 +53,8 @@ class StreamTextTests(unittest.TestCase):
             program=render_text(revisions=[int(engine)],
                 callbacks={n:function(script,n)for n in PARTS},helpers=helpers,**options)
             source=work/(group+'.c')
-            source.write_bytes(runtime_profile(program).encode('utf-8','surrogateescape'))
+            source.write_bytes(bind_named_allocation_support(
+                runtime_profile(program), root).encode('utf-8','surrogateescape'))
             binary=source.with_suffix('');includes=[root,SOURCE/'src/port/libretro',root/'source',
                 *sorted(p for p in(root/'source').iterdir()if p.is_dir())]
             compile_checked(compiler+['-std=gnu11','-fgnu89-inline','-Wall','-Wextra','-Werror',

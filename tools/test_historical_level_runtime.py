@@ -14,6 +14,7 @@ import tempfile
 import unittest
 from test_historical_player import function
 from native_sanitizers import sanitizer_environment
+from native_allocation_policy import bind_named_allocation_support
 
 ROOT = Path(os.environ.get('OBOR_TEST_SOURCE', Path(__file__).resolve().parents[1]))
 ENGINE = Path(os.environ.get('OBOR_HISTORICAL_ENGINE', ROOT / 'src/engines/3842'))
@@ -548,6 +549,51 @@ int main(void) {
             subprocess.run([str(work/'probe')], check=True, timeout=20,
                            stdout=subprocess.DEVNULL,
                            env=sanitizer_environment())
+
+
+    def test_early_camera_command_and_property_availability(self):
+        from historical_camera import render_camera_options
+        import sys
+        fixture = load_contract_fixture(Path(__file__).parent / 'fixtures/profile-early-camera-options.json')
+        rows = fixture['sources']
+        revisions = {row['revision'] for row in rows}
+        self.assertEqual(len(rows), len(revisions))
+        self.assertTrue(set(fixture['boundary_controls']) <= revisions)
+        for profile in contract_profiles(fixture, json.loads((ROOT / 'src/pin.json').read_text())['profiles']):
+            revision = int(profile.get('revision', profile['build']))
+            if profile['engine'] == fixture['engine'] and fixture['range'][0] <= revision <= fixture['range'][1]:
+                self.assertIn(revision, revisions)
+        for row in rows:
+            self.assertEqual(row['engine'], fixture['engine'])
+            self.assertRegex(row['commit'], r'^[0-9a-f]{40}$')
+            for name in ['command', 'setter', 'getter']:
+                self.assertIn(row[name], (0, 1))
+        engine = Path(os.environ.get('OBOR_EARLY_TEXT_ENGINE', ROOT / 'src/engines' / fixture['engine']))
+        with tempfile.TemporaryDirectory(prefix='early-camera-options-') as folder:
+            work = Path(folder)
+            unit, obj, binary = work / 'probe.c', work / 'list.o', work / 'probe'
+            unit.write_text(bind_named_allocation_support(render_camera_options(engine, rows), engine))
+            cc = shlex.split(os.environ.get('HOST_CC', 'cc'))
+            includes = [engine, engine / 'source', engine / 'source/gamelib',
+                        engine / 'source/scriptlib', ROOT / 'src/port/libretro', ROOT / 'src/glue']
+            common = ['-std=gnu99', '-O1', '-g', '-UNDEBUG', '-DUNIT_TEST=1',
+                      '-Dstricmp=strcasecmp', '-Dstrnicmp=strncasecmp',
+                      '-fsanitize=address,undefined', '-fno-sanitize-recover=all',
+                      '-fno-omit-frame-pointer', *['-I' + str(p) for p in includes]]
+            build = subprocess.run(cc + common + ['-c', str(engine / 'source/scriptlib/List.c'), '-o', str(obj)],
+                                   capture_output=True, text=True, timeout=45)
+            self.assertEqual(build.returncode, 0, build.stdout + build.stderr)
+            build = subprocess.run(cc + common + [
+                '-Wall', '-Wextra', '-Werror', '-Wno-error=deprecated-declarations',
+                '-Wno-unused-parameter', '-Wno-unused-variable', '-Wno-sign-compare',
+                '-Wno-misleading-indentation', '-Wno-implicit-fallthrough',
+                str(unit), str(obj), *([] if sys.platform == 'darwin' else ['-no-pie']), '-o', str(binary)],
+                capture_output=True, text=True, timeout=45)
+            self.assertEqual(build.returncode, 0, build.stdout + build.stderr)
+            run = subprocess.run([str(binary)], capture_output=True, text=True, timeout=15,
+                                 env=sanitizer_environment())
+            self.assertEqual(run.returncode, 0, run.stdout + run.stderr)
+            self.assertIn('camera_options=1', run.stdout)
 
 
 if __name__ == '__main__':

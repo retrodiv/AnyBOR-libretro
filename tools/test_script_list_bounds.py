@@ -42,6 +42,18 @@ def mapper_program(script, lookup):
     macro = re.search(r'(?ms)^#define MAPSTRINGS\(.*?(?=\n\n)', script)
     if macro is None:
         raise ValueError('Own string mapping macro required')
+    mapper = function(script, name)
+    descriptor = support = ''
+    if 'obor_get_property_namespace(' in mapper:
+        from test_early_entity_namespaces import namespace_descriptor
+        descriptor = namespace_descriptor(script, 'obor_property_namespace')
+        support = '\n'.join(function(script, helper) for helper in (
+            'obor_property_index', 'obor_get_property_namespace', 'obor_get_aiflag_namespace'))
+        tables = re.findall(r'(?m)^static const [^\n]*\bobor_(?:get_property|get_aiflag)_namespace_\d+_(?:names|ids|table)\b[^\n]*;', script)
+        referenced = set(re.findall(r'&([A-Za-z_]\w*_table)\b', support))
+        if not referenced or any(sum(bool(re.search(r'\b' + re.escape(name) + r'\s*=', row)) for row in tables) != 1 for name in referenced):
+            raise ValueError('Every selected namespace must retain its actual table')
+        support = '\n'.join(tables) + '\n' + support
     prefix = r'''
 #include <assert.h>
 #include <stdint.h>
@@ -79,8 +91,8 @@ int main(void) {
  return 0;
 }
 '''
-    return '\n'.join((prefix, lookup, macro[0], declarations,
-                       function(script, name), main.replace('@MAPPER@', name)))
+    return '\n'.join((prefix, descriptor, lookup, macro[0], declarations,
+                       support, mapper, main.replace('@MAPPER@', name)))
 
 
 def lookup_program(functions, cases, *, original=False):

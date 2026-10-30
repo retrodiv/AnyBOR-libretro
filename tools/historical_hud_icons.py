@@ -5,6 +5,167 @@ Copyright (c) 2026 retrodiv <retrodiv@proton.me>
 """
 import re
 from test_historical_player import function
+from test_early_jump_walkoff import braced_statement, continued_macro
+
+
+def render_model_icon_domains(engine, fixture):
+    """Use native model records, stores and the icon-dependent HUD windows."""
+    source = (engine / 'openbor.c').read_text()
+    predraw = function(source, 'predrawstatus')
+    enemy = function(source, 'drawenemystatus')
+
+    def state_window(body, who):
+        chain = re.search(r'if\(' + re.escape(who) + r'->health\s*<=\s*0\).*?else\s+icon\s*=\s*' +
+                          re.escape(who) + r'->modeldata\.icon\.def;', body, re.S)[0]
+        rest = body[body.index(chain) + len(chain):]
+        anchor = 'if(icon>=0)'
+        first = rest.index(anchor)
+        following = rest.find(anchor, first + len(anchor))
+        window = rest[:following] if following >= 0 else rest
+        return chain + '\n' + braced_statement(window, anchor)
+
+    player = state_window(predraw, 'player[i].ent')
+    opponent = state_window(predraw, 'player[i].ent->opponent')
+    enemy_window = state_window(enemy, 'ent')
+    weapon = braced_statement(predraw, 'if(player[i].ent->weapent->modeldata.icon.weapon >= 0)')
+    magic = braced_statement(predraw, 'if(player[i].ent->modeldata.mp)')
+    join = predraw[predraw.index('icon = model->icon.def;'):]
+    last = braced_statement(join, 'else if(icon>=0)')
+    join = join[:join.index(last) + len(last)]
+    inherit = re.search(r'if\(newmodel->icon\.def[^\r\n]+\r?\n(?:[^\r\n]+\r?\n){3}',
+                        function(source, 'set_model_ex'))[0]
+    commands = ('ICON', 'ICONPAIN', 'ICONDIE', 'ICONGET', 'ICONW', 'ICONMPHIGH', 'ICONMPHALF', 'ICONMPLOW')
+    cases = []
+    for name in commands:
+        label = 'case CMD_MODEL_' + name + ':'
+        if source.count(label) != 1:
+            raise ValueError('Exactly one icon model command required: ' + name)
+        rest = source[source.index(label):]
+        cases.append(rest[:re.search(r'\bcase CMD_MODEL_\w+:', rest[len(label):]).start() + len(label)])
+    numbers = ','.join('{%d,%d}' % (row['input'], row['signed16']) for row in fixture['cases'])
+    contexts = ','.join('{%d,%d}' % (row['revision'], row['icon_bits']) for row in fixture['sources'])
+    return r'''
+#include <assert.h>
+#include <stdint.h>
+#include <stdarg.h>
+#include <stdio.h>
+#include <string.h>
+#include "openbor.h"
+#include "commands.h"
+#undef printf
+#undef exit
+#undef time
+#undef pause
+#undef shutdown
+#undef kill
+uint32_t obor_profile_build;
+@MODEL_ERROR@
+int PLAYER_MAX_Z=232;
+static entity actor,rival,held;
+static struct {entity *ent;int colourmap;} player[1];
+static struct {int shiftpos[1];} videomodes;
+static int picon[1][2]={{10,20}},piconw[1][2]={{30,40}},mpicon[1][2]={{50,60}},eicon[1][2]={{70,80}};
+static s_drawmethod plainmethod;
+static unsigned char palettes[3][16];
+static char image_name[]="image";
+static int next_image,image_reads,calls,queued_id,queued_x,queued_y,queued_z;
+static void *queued_table;
+#define GET_ARG(i) (assert((i)==1),image_name)
+int loadsprite(char *name,int x,int y,int format){assert(name==image_name && !x && !y && format==4);++image_reads;return next_image;}
+static int load(s_model *newchar,int command,int value_index){
+ char *value,*shutdownmessage=NULL;int pixelformat=4;next_image=value_index;image_reads=0;
+ char *filename=(char *)"data/model.txt";
+ @MODEL_ERROR_STORAGE@
+ switch(command){@CASES@ default:assert(0);}
+ assert(image_reads==1);return 1;
+lCleanup:assert(shutdownmessage);return 0;
+}
+void spriteq_add_sprite(int x,int y,int z,int id,s_drawmethod *method,int sort){
+ assert(!sort && !calls);++calls;queued_id=id;queued_x=x;queued_y=y;queued_z=z;queued_table=method?method->table:NULL;
+}
+static void submit(int path){
+ int i=0,icon=-1;entity *ent=&actor;s_model *model=&actor.modeldata;s_drawmethod drawmethod=plainmethod;
+ switch(path){case 0:{@PLAYER@}break;case 1:{@OPPONENT@}break;case 2:{@ENEMY@}break;
+ case 3:{@WEAPON@}break;case 4:{@MAGIC@}break;case 5:{@JOIN@}break;default:assert(0);}
+}
+static void inherit(s_model *newmodel,s_model *model){@INHERIT@}
+static const int commands[]={CMD_MODEL_ICON,CMD_MODEL_ICONPAIN,CMD_MODEL_ICONDIE,CMD_MODEL_ICONGET,
+ CMD_MODEL_ICONW,CMD_MODEL_ICONMPHIGH,CMD_MODEL_ICONMPHALF,CMD_MODEL_ICONMPLOW};
+static const struct {int input,v16;} numbers[]={@NUMBERS@};
+static const struct {unsigned revision;int bits;} contexts[]={@CONTEXTS@};
+static int expected(unsigned i,int bits){assert(bits==16 || bits==32);return bits==16?numbers[i].v16:numbers[i].input;}
+static void check_slots(s_model *model,const int want[8]){
+ int actual[]={model->icon.def,model->icon.pain,model->icon.die,model->icon.get,model->icon.weapon,
+  model->icon.mphigh,model->icon.mpmed,model->icon.mplow};
+ for(int i=0;i<8;++i)assert(actual[i]==want[i]);
+}
+static void construct(s_model *model,const unsigned indices[8],int want[8],int bits){
+ memset(model,0,sizeof(*model));model->icon.def=-1;
+ for(int i=0;i<8;++i){assert(numbers[indices[i]].input>=-1);assert(load(model,commands[i],numbers[indices[i]].input));want[i]=expected(indices[i],bits);}
+ check_slots(model,want);
+}
+static void observe(int path,int wanted,int x,int y,int z,void *table){
+ calls=0;queued_id=-99;queued_table=NULL;submit(path);
+ assert(calls==(wanted>=0));if(wanted>=0)assert(queued_id==wanted && queued_x==x && queued_y==y && queued_z==z && queued_table==table);
+}
+int main(void){
+ assert(sizeof(int)==4 && sizeof(short)==2);const unsigned count=sizeof(numbers)/sizeof(numbers[0]);
+ unsigned accepted[64],accepted_count=0;
+ for(unsigned n=0;n<count;++n)if(numbers[n].input>=-1){assert(accepted_count<64);accepted[accepted_count++]=n;}
+ player[0].ent=&actor;actor.opponent=&rival;actor.weapent=&held;
+ videomodes.shiftpos[0]=33;savedata.windowpos=7;
+ actor.colourmap=palettes[0];rival.colourmap=palettes[1];held.colourmap=palettes[2];
+ for(unsigned p=0;p<sizeof(contexts)/sizeof(contexts[0]);++p){
+  obor_profile_build=contexts[p].revision;
+  for(unsigned n=0;n<accepted_count;++n){
+   unsigned indices[8];int want[8];
+   for(int i=0;i<8;++i)indices[i]=accepted[(n+3*i)%accepted_count];
+   construct(&actor.modeldata,indices,want,contexts[p].bits);
+   s_model duplicate=actor.modeldata;
+   int accepted_again=load(&duplicate,CMD_MODEL_ICON,1);
+   assert(accepted_again==(want[0]<0));
+   if(accepted_again)assert(duplicate.icon.def==1 && duplicate.icon.pain==1 && duplicate.icon.die==1 && duplicate.icon.get==1);
+   else assert(!image_reads && duplicate.icon.def==want[0]);
+   rival.modeldata=held.modeldata=actor.modeldata;
+   actor.modeldata.icon.x=101;actor.modeldata.icon.y=202;actor.modeldata.colourmap[0]=palettes[1];
+   for(int state=0;state<4;++state){
+    actor.health=rival.health=state==0?0:100;actor.inpain=rival.inpain=state==1;actor.getting=rival.getting=state==2;
+    int wanted=want[state==0?2:state==1?1:state==2?3:0];
+    observe(0,wanted,43,27,10000,palettes[0]);observe(1,wanted,103,87,10000,palettes[1]);
+    observe(2,wanted,101,202,HUD_Z,palettes[0]);
+   }
+   observe(3,want[4],63,47,10000,palettes[2]);
+   const int magic[]={-1,0,32,33,65,66,100};actor.modeldata.mp=100;
+   for(unsigned m=0;m<sizeof(magic)/sizeof(magic[0]);++m){
+    actor.oldmp=magic[m];int wanted=-1;
+    if(want[5]>0 && magic[m]>=66)wanted=want[5];
+    else if(want[6]>0 && magic[m]>=33 && magic[m]<66)wanted=want[6];
+    else if(want[7]>0 && magic[m]>=0 && magic[m]<33)wanted=want[7];
+    else if(want[5]>0 && want[6]==-1 && want[7]==-1)wanted=want[5];
+    observe(4,wanted,83,67,10000,palettes[0]);
+   }
+   actor.modeldata.icon.mpmed=actor.modeldata.icon.mplow=-1;actor.oldmp=-1;
+   observe(4,want[5]>0?want[5]:-1,83,67,10000,palettes[0]);
+   for(int map=0;map<2;++map){player[0].colourmap=map;observe(5,want[0],43,20,10000,map?palettes[1]:NULL);}
+   // Four fallback fields retain the value already converted by the loader.
+   for(unsigned mask=0;mask<16;++mask){
+    s_model child,base;unsigned children[8],parents[8];int child_values[8],base_values[8];
+    for(int i=0;i<8;++i){children[i]=accepted[(n+i)%accepted_count];parents[i]=accepted[(n+i+5)%accepted_count];}
+    construct(&child,children,child_values,contexts[p].bits);construct(&base,parents,base_values,contexts[p].bits);
+    for(int i=0;i<4;++i)if(mask&(1u<<i)){int *field=i==0?&child.icon.def:i==1?&child.icon.pain:i==2?&child.icon.die:&child.icon.get;*field=-1;child_values[i]=-1;}
+    inherit(&child,&base);
+    for(int i=0;i<4;++i)if(child_values[i]<0)child_values[i]=base_values[i];
+    check_slots(&child,child_values);
+   }
+  }
+ }
+ printf("model icon contexts: %zu\n",sizeof(contexts)/sizeof(contexts[0]));return 0;
+}
+'''.replace('@MODEL_ERROR@', function(source, 'obor_model_error') + '\n' + continued_macro(source, 'OBOR_MODEL_ERROR')).replace(
+        '@MODEL_ERROR_STORAGE@', re.search(r'char legacy_model_error\[\d+\][^;]*;', function(source, 'load_cached_model')).group()).replace(
+        '@CASES@', '\n'.join(cases)).replace('@PLAYER@', player).replace('@OPPONENT@', opponent).replace(
+        '@ENEMY@', enemy_window).replace('@WEAPON@', weapon).replace('@MAGIC@', magic).replace(
+        '@JOIN@', join).replace('@INHERIT@', inherit).replace('@NUMBERS@', numbers).replace('@CONTEXTS@', contexts)
 
 
 def render_selection_icon(engine, fixture):

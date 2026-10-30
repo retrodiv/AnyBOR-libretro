@@ -34,6 +34,9 @@
 #include "List.h"
 #include "pp_parser.h"
 #include "borendian.h"
+#include <stdint.h>
+
+extern uint32_t obor_profile_build;
 
 #if PP_TEST // using pp_test.c to test the preprocessor functionality; OpenBOR functionality is not available
 #undef printf
@@ -141,7 +144,7 @@ void pp_parser_init(pp_parser* self, pp_context* ctx, const char* filename, char
  */
 pp_parser* pp_parser_alloc(pp_parser* parent, const char* filename, char* sourceCode, pp_parser_type type)
 {
-	pp_parser* self = malloc(sizeof(pp_parser));
+	pp_parser* self = obor_profile_malloc_named("pp_parser_alloc", sizeof(pp_parser));
 	TEXTPOS initialPos = {1, 0};
 
 	pp_parser_init(self, parent->ctx, filename, sourceCode, initialPos);
@@ -570,7 +573,7 @@ HRESULT pp_parser_stringify(pp_parser* self)
  */
 void pp_parser_concatenate(pp_parser* self, const char* token1, const char* token2)
 {
-	char* output = malloc(strlen(token1) + strlen(token2) + 1);
+	char* output = obor_profile_malloc_named("pp_concatenate", strlen(token1) + strlen(token2) + 1);
 	pp_parser* outputParser;
 
 	sprintf(output, "%s%s", token1, token2);
@@ -644,7 +647,8 @@ HRESULT pp_parser_parse_directive(pp_parser* self)
 				free(List_Retrieve(&self->ctx->macros));
 				List_Remove(&self->ctx->macros);
 			}
-			if(List_FindByName(&self->ctx->func_macros, self->token.theSource))
+			if(obor_profile_build >= 3231 &&
+				List_FindByName(&self->ctx->func_macros, self->token.theSource))
 			{
 				List* params = List_Retrieve(&self->ctx->func_macros);
 				while(params->size > 0)
@@ -719,7 +723,7 @@ HRESULT pp_parser_include(pp_parser* self, char* filename)
 	seekpackfile(handle, 0, SEEK_SET);
 
 	// Allocate a buffer for the file's contents
-	buffer = malloc(length + 1);
+	buffer = obor_profile_malloc_named("#include", length + 1);
 	memset(buffer, 0, length + 1);
 
 	// Read the file into the buffer
@@ -749,20 +753,20 @@ HRESULT pp_parser_define(pp_parser* self, char* name)
 {
 	char* contents = NULL;
 	bool is_function = false; // true if this is a function-style #define; false otherwise
-	List* params = malloc(sizeof(List));
+	List* params = obor_profile_malloc_named("#define params", sizeof(List));
 
 	List_Init(params);
 
 	// emit a warning if the macro is already defined
 	// note: this won't mess with function macro parameters since #define can't be used from inside a macro
 
-	if(List_FindByName(&self->ctx->macros, name))
+	if(obor_profile_build >= 3231 && List_FindByName(&self->ctx->macros, name))
 	{
 		pp_warning(self, "'%s' redefined", name);
 		free(List_Retrieve(&self->ctx->macros));
 		List_Remove(&self->ctx->macros);
 	}
-	if(List_FindByName(&self->ctx->func_macros, name))
+	if(obor_profile_build >= 3231 && List_FindByName(&self->ctx->func_macros, name))
 	{
 		List* params = List_Retrieve(&self->ctx->func_macros);
 		pp_warning(self, "'%s' redefined", name);
@@ -803,7 +807,8 @@ HRESULT pp_parser_define(pp_parser* self, char* name)
 					if(FAILED(pp_parser_lex_token(self, true))) goto error;
 					if(self->token.theType == PP_TOKEN_COMMA || self->token.theType == PP_TOKEN_RPAREN) break;
 				default:
-					return pp_error(self, "unexpected token '%s' in #define parameter list", self->token.theSource);
+					pp_error(self, "unexpected token '%s' in #define parameter list", self->token.theSource);
+					goto error;
 			}
 
 			if(self->token.theType != PP_TOKEN_RPAREN) pp_parser_lex_token(self, true);
@@ -813,7 +818,7 @@ HRESULT pp_parser_define(pp_parser* self, char* name)
 	else self->overread = true;
 
 	// Read macro contents
-	contents = malloc(MACRO_CONTENTS_SIZE);
+	contents = obor_profile_malloc_named("#define contents", MACRO_CONTENTS_SIZE);
 	contents[0] = '\0';
 	if(FAILED(pp_parser_readline(self, contents, MACRO_CONTENTS_SIZE))) goto error;
 
@@ -834,6 +839,7 @@ HRESULT pp_parser_define(pp_parser* self, char* name)
 error:
 	List_Reset(params);
 	while(List_GetSize(params)) List_Remove(params);
+	List_Clear(params);
 	free(params);
 	if(contents) free(contents);
 	return E_FAIL;

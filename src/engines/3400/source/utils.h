@@ -36,6 +36,9 @@ extern unsigned long debug_time;
 
 // *** FUNCTIONS DECLARATIONS ***
 void writeToLogFile(const char *, ...);
+void *obor_profile_malloc_named(const char *name, size_t bytes);
+void *obor_profile_calloc_named(const char *name, size_t bytes);
+void *obor_profile_realloc_named(void *pointer, size_t bytes);
 void writeToScriptLog(const char *msg);
 
 #ifndef DC

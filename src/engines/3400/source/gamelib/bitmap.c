@@ -1,3 +1,16 @@
+/* AnyBOR modification record: 2026-09-12.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Declare physical bitmap crops so independent sprite reconstruction
+ * composes each source rectangle without discarding unproven or modified
+ * bytes.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/3400.md
+ * at the source repository root. Original notices follow below.
+ */
+
 /*
  * OpenBOR - http://www.LavaLit.com
  * -----------------------------------------------------------------------
@@ -24,9 +37,9 @@ s_bitmap * allocbitmap(int width, int height, int format){
 	psize = width*height*pixelbytes[(int)format];
 	extrab = (4-psize%4)%4;
 	if(format==PIXEL_x8)
-		b = (s_bitmap *)malloc(sizeof(s_bitmap) + psize + extrab +PAL_BYTES);
+		b = (s_bitmap *)obor_profile_malloc_named("allocbitmap", sizeof(s_bitmap) + psize + extrab +PAL_BYTES);
 	else
-		b = (s_bitmap *)malloc(sizeof(s_bitmap) + psize);
+		b = (s_bitmap *)obor_profile_malloc_named("allocbitmap#2", sizeof(s_bitmap) + psize);
 	if(b){
 		b->width = width;
 		b->height = height;

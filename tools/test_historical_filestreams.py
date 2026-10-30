@@ -17,6 +17,7 @@ import unittest
 from historical_filestreams import extract_storage_helpers, render_create_close
 from historical_level_streams import render_level_storage
 from native_sanitizers import sanitizer_environment
+from native_allocation_policy import bind_named_allocation_support
 from test_color_blends import compile_checked
 from test_historical_player import function
 
@@ -123,7 +124,9 @@ class LevelOwnedStreamTests(unittest.TestCase):
                 creating=function(script,'openbor_createfilestream'),
                 releasing=function(level,'free_level'),helpers=extract_storage_helpers(script,function),
                 owned_extent=True,**{k:row[k]for k in ['slots','buffer_bytes','header_includes']})
-            source=work/(engine+'.c');source.write_text(code);binary=source.with_suffix('')
+            source=work/(engine+'.c')
+            source.write_text(bind_named_allocation_support(code, root))
+            binary=source.with_suffix('')
             includes=[root,SOURCE/'src/port/libretro',root/'source',
                 *sorted(p for p in(root/'source').iterdir()if p.is_dir())]
             compile_checked(compiler+['-std=gnu11','-fgnu89-inline','-Wall','-Wextra','-Werror',

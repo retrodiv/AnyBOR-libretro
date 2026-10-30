@@ -368,7 +368,15 @@ static int profile_for_range(int lower, int upper, bool automatic_only)
  * use the first intervening era, then the latest post-release v4 snapshot. */
 static int content_profile_for_range(int lower, int upper)
 {
-    if (lower <= 3842 && declared_build_has_variants(lower)) {
+    /* A minimum older than every automatic profile does not locate content
+     * inside a retained era. Keep ordinary fallback/upper-bound routing. */
+    bool known_era = false;
+    for (size_t i = 0; i < sizeof(kProfiles) / sizeof(kProfiles[0]); ++i)
+        if (kProfiles[i].automatic && kProfiles[i].build <= lower) {
+            known_era = true;
+            break;
+        }
+    if (known_era && lower <= 3842 && declared_build_has_variants(lower)) {
         int anchor = pick_anchor(lower);
         if (anchor <= upper) return anchor;
         return profile_in_range(lower, upper, true);

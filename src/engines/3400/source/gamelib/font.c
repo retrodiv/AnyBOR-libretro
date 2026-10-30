@@ -1,10 +1,11 @@
-/* AnyBOR modification record: 2026-09-12.
+/* AnyBOR modification record: 2026-10-30.
  * Port maintained by retrodiv <retrodiv@proton.me>.
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
  * Upstream code retains its original license and notices.
  * Reject missing or undersized indexed font palettes before copying their
- * true-color entries; retain atlas raster output for valid fonts.
+ * true-color entries; retain atlas raster output for valid fonts. Preserve
+ * each profile's queued newline glyph placement and screen line advance.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/3400.md
  * at the source repository root. Original notices follow below.
@@ -21,6 +22,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdarg.h>
+#include <stdint.h>
+extern uint32_t obor_profile_build;
 #include <string.h>
 #include "types.h"
 #include "screen.h"
@@ -89,7 +92,7 @@ int font_load(int which, char *filename, char *packfile, int monospace){
 			clipbitmap(bitmap, &cx, NULL, &cy, NULL);
 			if(index>0)  bitmap->palette=NULL;
 			size = fakey_encodesprite(bitmap);
-			fonts[which].token[index] = (s_sprite*)malloc(size);
+			fonts[which].token[index] = (s_sprite*)obor_profile_malloc_named("font_load", size);
 			if(!fonts[which].token[index]){
 				font_unload(which);
 				goto err;
@@ -157,7 +160,7 @@ void font_printf(int x, int y, int which, int layeroffset,char *format, ...){
 	while(*buf){
 		spriteq_add_frame(x,y, FONT_LAYER + layeroffset, fonts[which].token[((int)(*buf)) & 0xFF], NULL, 0);
 		x += fonts[which].token_width[((int)(*buf)) & 0xFF];
-		if(*buf=='\n') y += fonts[which].token[0]->height;
+		if(obor_profile_build >= 3374 && *buf=='\n') y += fonts[which].token[0]->height;
 		buf++;
 	}
 }
@@ -197,7 +200,7 @@ void screen_printf(s_screen * screen, int x, int y, int which, char *format, ...
 		}
 		else if(*buf=='\n'){
 			x = ox;
-			y += fonts[which].token[0]->height;;
+			y += obor_profile_build < 3374 ? 10 : fonts[which].token[0]->height;
 		}
 		buf++;
 	}

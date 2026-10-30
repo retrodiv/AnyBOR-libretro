@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.77 — early historical profiles
+
+- Add 56 official profiles from 3057 through 3397 and the exact-tag/manual 3020-dev profile.
+- Preserve source-defined script, model, level, graphics, audio and save behavior for each profile.
+- Keep script file records independent of live table storage and validate names, values and references.
+- Retain behavior-boundary regression coverage with the complete private matrix.
+
 ## 0.1.76 — native CI corrections
 
 - Keep script allocation and cleanup stable for packed pointer records.

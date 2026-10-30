@@ -70,13 +70,11 @@
 #define		pause				borPause
 #define		shutdown			borShutdown
 
-#define		DEFAULT_SHUTDOWN_MESSAGE \
-			"OpenBOR %s, Compile Date: " __DATE__ "\n" \
-			"Presented by Senile Team.\n" \
-			"This Version is unofficial and based on the Senile source code.\n" \
-			"\n" \
-			"Special thanks to SEGA and SNK.\n\n", \
-			VERSION
+#define DEFAULT_SHUTDOWN_MESSAGE \
+    (obor_profile_build < 3078 ? \
+    "OpenBoR %s, Compile Date: " __DATE__ "\nPresented by Team Senile.\nThis Version is unofficial and based on the Senile Source Code.\n\nSpecial thanks to SEGA and SNK.\n\n" : \
+    "OpenBOR %s, Compile Date: " __DATE__ "\nPresented by Senile Team.\nThis Version is unofficial and based on the Senile source code.\n\nSpecial thanks to SEGA and SNK.\n\n"), \
+    VERSION
 
 #define		COMPATIBLEVERSION	0x00030000
 #define		CV_SAVED_GAME		0x00021276
@@ -435,6 +433,7 @@
 #define		ANI_WALKOFF			161
 
 #define		MAX_ANIS			162    // max_anis increased for new ANIs
+#define OBOR_PROFILE_BASE_ANIMATIONS (obor_profile_build < 3398 ? ANI_WALKOFF : MAX_ANIS)
 
 #define     ARG_FLOAT            0
 #define     ARG_STRING           1
@@ -576,8 +575,11 @@
 		  (self->modeldata.type == TYPE_PLAYER && other->modeldata.type == TYPE_PLAYER && savedata.mode)))
 
 #define cangrab(self, other) \
-		((other->modeldata.antigrab - self->modeldata.grabforce + \
-		  (other->modeldata.paingrab?(other->modeldata.paingrab-other->inpain):0)<=0) &&\
+		((obor_profile_build < 3391 ? \
+		 (other->model->antigrab - self->model->grabforce + \
+		  (other->model->paingrab?(other->model->paingrab-other->inpain):0)<=0) : \
+		 (other->modeldata.antigrab - self->modeldata.grabforce + \
+		  (other->modeldata.paingrab?(other->modeldata.paingrab-other->inpain):0)<=0)) &&\
 		 canbegrabbed(self, other) && \
 		 !inair(self) && \
 		 diff(other->a, self->a) <= 0.1)
@@ -706,8 +708,8 @@ typedef struct                                      //2011_04_01, DC: Counterstr
 {
 	short int       frameend;                       //Last frame of counter range.
 	short int       framestart;                     //First frame of counter range.
-	signed char     condition;                      //Counter conditions. 1 = Always. 2 = Hostile attacker. 3 = Hostile attacker from front not using freeze attack.
-	signed char     damaged;                        //Receive damage from attack. 0 = No damage. 1 = Normal damage.
+	short int     condition;                      //Counter conditions. 1 = Always. 2 = Hostile attacker. 3 = Hostile attacker from front not using freeze attack.
+	short int     damaged;                        //Receive damage from attack. 0 = No damage. 1 = Normal damage.
 }s_counterrange;
 
 typedef struct                                      //2011_04_01, DC: Outdated Dive from jump functionality originally added by tails. Retained for backward compatibility.
@@ -719,9 +721,65 @@ typedef struct                                      //2011_04_01, DC: Outdated D
 typedef struct                                      //2011_04_01, DC: HP and/or MP cost to perform special/freespecials.
 {
     short int       cost;                           //Amount of energy cost.
-    signed char     disable;                        //Disable flag. See check_energy function.
-    signed char     mponly;                         //MPonly type. 0 = MP while available, then HP. 1 = MP only. 2 = HP only.
+    short int     disable;                        //Disable flag. See check_energy function.
+    short int     mponly;                         //MPonly type. 0 = MP while available, then HP. 1 = MP only. 2 = HP only.
 }s_energycost;
+
+static inline int obor_profile_signed_value(int value, unsigned int bits)
+{
+    unsigned int sign, mask, narrowed;
+    if(!bits || bits >= 32) return value;
+    sign = 1u << (bits - 1);
+    mask = (sign << 1) - 1;
+    narrowed = (unsigned int)value & mask;
+    return (narrowed & sign) ? -(int)((mask - narrowed) + 1u) : (int)narrowed;
+}
+
+
+static inline int obor_range_value(int value, unsigned int build)
+{
+    return obor_profile_signed_value(value, build < 3321 ? 32 : 16);
+}
+
+
+static inline int obor_loop_value(int value, unsigned int build, int frame)
+{
+    return obor_profile_signed_value(value, build < 3319 ? 32 : (frame ? 16 : 8));
+}
+
+
+static inline short int obor_counterrange_value(int value, unsigned int build)
+{
+    return (short int)obor_profile_signed_value(value, build < 3323 ? 16 : 8);
+}
+
+static inline int obor_icon_value(int value, unsigned int build)
+{
+    return obor_profile_signed_value(value, build < 3330 ? 32 : 16);
+}
+
+static inline int obor_stealth_value(int value, unsigned int build)
+{
+    return obor_profile_signed_value(value, build < 3330 ? 16 : 8);
+}
+
+
+static inline int obor_model_points_value(long long value, unsigned int build)
+{
+    unsigned int low = (unsigned int)value;
+    int exact = low <= 0x7fffffffU ? (int)low : -1 - (int)(0xffffffffU - low);
+    return obor_profile_signed_value(exact, build < 3330 ? 32 : 16);
+}
+
+static inline short int obor_energycost_flag(int value, unsigned int build)
+{
+    unsigned int bits = build < 3319 ? 16 : 8;
+    unsigned int sign = 1u << (bits - 1);
+    unsigned int mask = (sign << 1) - 1;
+    unsigned int narrowed = (unsigned int)value & mask;
+    return (short int)((narrowed & sign) ? (int)narrowed - (int)(mask + 1u) : (int)narrowed);
+}
+
 
 typedef struct                                      //2011_04_01, DC: On frame movement (slide, jump, dive, etc.).
 {
@@ -740,29 +798,42 @@ typedef struct                                      //2011_04_01, DC: Behavior w
 
 typedef struct                                      //2011_04_01, DC: Animation looping.
 {
-    short int       frameend;                       //Frame animation reaches before looping.
-    short int       framestart;                     //Frame animation loops back to.
-    signed char     mode;                           //0 = No loop, 1 = Loop. Redundant after frame additions, but needed for backward compatibility.
+    int       frameend;                       //Frame animation reaches before looping.
+    int       framestart;                     //Frame animation loops back to.
+    int     mode;                           //0 = No loop, 1 = Loop. Redundant after frame additions, but needed for backward compatibility.
 }s_loop;
 
 typedef struct                                      //2011_04_01, DC: Frame based screen shake functionality.
 {
-    signed char     cnt;                            //Repetition count.
+    short int     cnt;                            //Repetition count.
     short int       framestart;                     //Frame to start quake.
-    signed char     repeat;                         //Repetitons.
-    signed char     v;                              //Vertical distance of screen movement (in pixels).
+    short int     repeat;                         //Repetitons.
+    short int     v;                              //Vertical distance of screen movement (in pixels).
 }s_quakeframe;
+
+static inline short int obor_quakeframe_value(int value, unsigned int build, int frame)
+{
+    unsigned int bits = build < 3322 || (frame && build >= 3325) ? 16 : 8;
+    return (short int)obor_profile_signed_value(value, bits);
+}
+
+static inline void obor_quakeframe_init(s_quakeframe *frame, unsigned int build)
+{
+    frame->framestart = 0;
+    if(build < 3322) frame->cnt = frame->repeat = frame->v = 0;
+}
+
 
 typedef struct                                      //2011_04_01, DC: Distance to target verification for AI running, jumping, following parent, and combo chains for all entity types.
 {
-    short int       xmin;                           //Minimum horizontal range.
-    short int       xmax;                           //Maximum horizontal range.
-    short int       zmin;                           //Minimum lateral range.
-    short int       zmax;                           //Maximum lateral range.
-    short int       amin;                           //Minimum vertical range.
-    short int       amax;                           //Maximum vertical range.
-    short int       bmin;                           //Minumum base range.
-    short int       bmax;                           //Maximum base rnage.
+    int       xmin;                           //Minimum horizontal range.
+    int       xmax;                           //Maximum horizontal range.
+    int       zmin;                           //Minimum lateral range.
+    int       zmax;                           //Maximum lateral range.
+    int       amin;                           //Minimum vertical range.
+    int       amax;                           //Maximum vertical range.
+    int       bmin;                           //Minumum base range.
+    int       bmax;                           //Maximum base rnage.
 }s_range;                                           //2011_04_01, DC: Target range verification for various AI and player functions.
 
 typedef struct
@@ -889,6 +960,7 @@ typedef struct {
 	short tx; //determines x and y coordinates of "LOADING" text location respectively.
 	short ty;
 	short refreshMs; // modder defined number of milliseconds in which the screen is updated while loading
+	int legacy_args[7]; // Full-width loadingbg arguments before the descriptor API.
 } s_loadingbar;
 
 typedef struct {
@@ -939,28 +1011,28 @@ typedef enum  {
 
 typedef struct
 {
-    short int       current;                        //Current guard points remaining.
-    short int       maximum;                        //Maximum guard points.
+    int       current;                        //Current guard points remaining.
+    int       maximum;                        //Maximum guard points.
 } s_guardpoints;                                    //2011_04_05, DC: Guardpoints feature added by OX.
 
 typedef struct
 {
-    short int		def;                            //Default icon.
-    short int       die;     					    //Health depleted.
-    short int		get;    					    //Retrieving item.
-	short int       mphigh;                         //MP bar icon; at 66% or more (default if other mp icons not used).
-	short int       mplow;                          //MP bar icon; at or between 0% and 32%.
-	short int       mpmed;                          //MP bar icon; at or between 33% and 65%.
-	short int 		pain;   					    //Taking damage.
-	short int       weapon;                         //Weapon model.
+    int		def;                            //Default icon.
+    int       die;     					    //Health depleted.
+    int		get;    					    //Retrieving item.
+	int       mphigh;                         //MP bar icon; at 66% or more (default if other mp icons not used).
+	int       mplow;                          //MP bar icon; at or between 0% and 32%.
+	int       mpmed;                          //MP bar icon; at or between 33% and 65%.
+	int 		pain;   					    //Taking damage.
+	int       weapon;                         //Weapon model.
 	short int       x;                              //X position.
 	short int       y;                              //Y position.
 } s_icon;                                           //2011_04_05, DC: In game icons added 2005_01_20.
 
 typedef struct
 {
-    short int       current;                        //Current juggle points accumulated.
-    short int       maximum;                        //Maximum juggle points possible.
+    int       current;                        //Current juggle points accumulated.
+    int       maximum;                        //Maximum juggle points possible.
 } s_jugglepoints;                                   //2011_04_05, DC: Jugglepoints feature added by OX.
 
 typedef struct
@@ -984,8 +1056,8 @@ typedef struct
 
 typedef struct
 {
-    signed char     detect;                         //Invisbility penetration. If self's detect >= target's hide, self can "see" target.
-    signed char     hide;                           //Invisibility to AI.
+    short int     detect;                         //Invisbility penetration. If self's detect >= target's hide, self can "see" target.
+    short int     hide;                           //Invisibility to AI.
 } s_stealth;                                        //2011_04_05, DC: Invisibility to AI feature added by DC.
 
 typedef struct
@@ -1620,6 +1692,7 @@ typedef struct ArgList {
 	size_t count;
 	size_t arglen[18];
 	char* args[18];
+	char* source;
 } ArgList;
 
 int     buffer_pakfile(char* filename, char** pbuffer, size_t* psize);

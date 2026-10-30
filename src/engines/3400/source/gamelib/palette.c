@@ -1,3 +1,15 @@
+/* AnyBOR modification record: 2026-09-12.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Preserve palette blend-table allocation failure feedback through the
+ * native profile policy.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/3400.md
+ * at the source repository root. Original notices follow below.
+ */
+
 /*
  * OpenBOR - http://www.LavaLit.com
  * -----------------------------------------------------------------------
@@ -127,7 +139,7 @@ unsigned char * palette_table_multiply(unsigned char *pal){
 
 	if(pal==NULL) return NULL;
 
-	lut = (unsigned char*)malloc(256*256);
+	lut = (unsigned char*)obor_profile_malloc_named("palette_table_multiply", 256*256);
 	if(lut==NULL) return NULL;
 
 	for(fg=0; fg<256; fg++){
@@ -155,7 +167,7 @@ unsigned char * palette_table_screen(unsigned char *pal){
 
 	if(pal==NULL) return NULL;
 
-	lut = (unsigned char*)malloc(256*256);
+	lut = (unsigned char*)obor_profile_malloc_named("palette_table_screen", 256*256);
 	if(lut==NULL) return NULL;
 
 	for(fg=0; fg<256; fg++){
@@ -183,7 +195,7 @@ unsigned char * palette_table_overlay(unsigned char *pal){
 
 	if(pal==NULL) return NULL;
 
-	lut = (unsigned char*)malloc(256*256);
+	lut = (unsigned char*)obor_profile_malloc_named("palette_table_overlay", 256*256);
 	if(lut==NULL) return NULL;
 
 	for(fg=0; fg<256; fg++){
@@ -208,7 +220,7 @@ unsigned char * palette_table_hardlight(unsigned char *pal){
 
 	if(pal==NULL) return NULL;
 
-	lut = (unsigned char*)malloc(256*256);
+	lut = (unsigned char*)obor_profile_malloc_named("palette_table_hardlight", 256*256);
 	if(lut==NULL) return NULL;
 
 	for(fg=0; fg<256; fg++){
@@ -237,7 +249,7 @@ unsigned char * palette_table_dodge(unsigned char *pal){
 
 	if(pal==NULL) return NULL;
 
-	lut = (unsigned char*)malloc(256*256);
+	lut = (unsigned char*)obor_profile_malloc_named("palette_table_dodgs", 256*256);
 	if(lut==NULL) return NULL;
 
 
@@ -277,7 +289,7 @@ unsigned char * palette_table_half(unsigned char *pal){
 
 	if(pal==NULL) return NULL;
 
-	lut = (unsigned char*)malloc(256*256);
+	lut = (unsigned char*)obor_profile_malloc_named("palette_table_half", 256*256);
 	if(lut==NULL) return NULL;
 
 	for(fg=0; fg<256; fg++){

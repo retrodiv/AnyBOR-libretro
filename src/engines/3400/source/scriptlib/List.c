@@ -1,3 +1,14 @@
+/* AnyBOR modification record: 2026-09-12.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Preserve native list name lookup order and allocation failure feedback.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/3400.md
+ * at the source repository root. Original notices follow below.
+ */
+
 /*
  * List library.
  * 90% 2011 anallyst
@@ -11,6 +22,9 @@
 
 #include "List.h"
 #include <assert.h>
+#include <stdint.h>
+
+extern uint32_t obor_profile_build;
 
 #ifdef DEBUG
 void chklist(List* list) {
@@ -301,7 +315,7 @@ void List_Solidify(List* list)
 	if(!list->size) return;
 
 	sldsize = sizeof(void*)*(list->size);
-	list->solidlist = (void**)malloc(sldsize);
+	list->solidlist = (void**)obor_profile_malloc_named("List_Solidify", sldsize);
 
 	savesize = list->size;
 
@@ -384,7 +398,7 @@ void List_Copy(List* listdest, const List* listsrc)
 	List_Init(listdest);
 	if (lptr == NULL) return;
 	//create the first Node
-	nptr = (Node*)malloc(sizeof(Node));
+	nptr = (Node*)obor_profile_malloc_named("List_Copy #1", sizeof(Node));
 	nptr->value = lptr->value;
 	nptr->name = NAME(lptr->name);
 	nptr->prev = NULL;
@@ -473,7 +487,7 @@ void List_InsertBefore(List* list, void* e, const char* theName)
 	#endif
 
 	//Construct a new Node
-	Node *nptr = (Node*)malloc(sizeof(Node));
+	Node *nptr = (Node*)obor_profile_malloc_named("List_InsertBefore", sizeof(Node));
 	assert(nptr != NULL);
 
 	nptr->value = e;
@@ -520,7 +534,7 @@ void List_InsertAfter(List* list, void* e, const char* theName) {
 	#endif
 
 	//Construct a new Node and fill it with the appropriate value
-	Node *nptr = (Node*)malloc(sizeof(Node));
+	Node *nptr = (Node*)obor_profile_malloc_named("List_InsertAfter", sizeof(Node));
 
 	assert(nptr != NULL);
 	nptr->value = e;
@@ -759,17 +773,20 @@ Node* List_GetNodeByName(List* list, const char* name) {
 		return NULL;
 
 #ifdef USE_STRING_HASHES
-	size_t i;
-	unsigned char h = strhash(name);
-	if (!list->buckets || !list->buckets[h]) return 0;
-	for(i=0;i<list->buckets[h]->used;i++) {
-		nptr = list->buckets[h]->nodes[i];
-		if(nptr && strcmp(name, nptr->name)==0) {
-			return list->buckets[h]->nodes[i];
+	if(obor_profile_build >= 3101)
+	{
+		size_t i;
+		unsigned char h = strhash(name);
+		if (!list->buckets || !list->buckets[h]) return 0;
+		for(i=0;i<list->buckets[h]->used;i++) {
+			nptr = list->buckets[h]->nodes[i];
+			if(nptr && strcmp(name, nptr->name)==0) {
+				return list->buckets[h]->nodes[i];
+			}
 		}
+		return NULL;
 	}
-	return NULL;
-#else
+#endif
 	nptr = list->first;
 
 	while (nptr){
@@ -780,7 +797,6 @@ Node* List_GetNodeByName(List* list, const char* name) {
 		nptr = nptr->next;
 	}
 	return NULL;
-#endif
 
 }
 /* SIDE EFFECTS: sets list->current to the first found node */

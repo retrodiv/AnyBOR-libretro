@@ -16,6 +16,7 @@ import unittest
 
 from historical_string_mapper import render_string_mapper
 from native_sanitizers import sanitizer_environment
+from native_allocation_policy import bind_named_allocation_support
 from test_historical_player import function
 from test_color_blends import compile_checked
 
@@ -48,7 +49,8 @@ class NativeTextMapperTests(unittest.TestCase):
                 code=render_string_mapper(**options,method_name=method_name,
                     declarations=declarations,
                     method=function(script,method_name))
-                work=Path(temporary);source=work/'probe.c';source.write_text(code);binary=work/'probe'
+                work=Path(temporary);source=work/'probe.c'
+                source.write_text(bind_named_allocation_support(code, root));binary=work/'probe'
                 includes=[root/'source/scriptlib',root,SOURCE/'src/port/libretro',root/'source',
                           *sorted(p for p in (root/'source').iterdir() if p.is_dir())]
                 compile_checked(cc+['-std=gnu11','-fgnu89-inline','-Wall','-Wextra','-Werror',

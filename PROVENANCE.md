@@ -30,6 +30,11 @@ documentation; the included sources build directly.
 
 The source snapshots originate from the [OpenBOR repository](https://github.com/DCurrent/openbor).
 The 3400 and 3741 source snapshots retain their original no-sale licenses.
+Logical profile source revisions, dates and physical source trees are recorded
+in `src/pin.json`. The 3020-dev profile identifies the first revision with
+preserved engine code, commit `473ee64634faa77b2ac4302f71987d600774c199`
+(2011-02-23). Official release profiles in the same range identify their own
+source commits; the shared 3400 source tree retains its original license.
 Each included snapshot keeps its own license; later license grants do not
 replace the terms of earlier source.
 

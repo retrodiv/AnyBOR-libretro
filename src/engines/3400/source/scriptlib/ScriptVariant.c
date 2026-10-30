@@ -56,13 +56,13 @@ void StrCache_Init()
 {
 	int i;
 	StrCache_Clear(); // just in case
-	strcache = malloc(sizeof(CHAR*)*STRCACHE_INC);
+	strcache = obor_profile_malloc_named("StrCache_Init", sizeof(CHAR*)*STRCACHE_INC);
 	//if(!strcache) shutdown(1, "out of memory");
-	strcache_index = malloc(sizeof(int)*STRCACHE_INC);
+	strcache_index = obor_profile_malloc_named("StrCache_Init#2", sizeof(int)*STRCACHE_INC);
 	//if(!strcache_index) shutdown(1, "out of memory");
 	for(i=0; i<STRCACHE_INC; i++)
 	{
-		strcache[i] = malloc((MAX_STR_VAR_LEN+1)*sizeof(CHAR));
+		strcache[i] = obor_profile_malloc_named("StrCache_Init#3", (MAX_STR_VAR_LEN+1)*sizeof(CHAR));
 		//if(!strcache[i]) shutdown(1, "out of memory");
 		strcache[i][0] = 0;
 		strcache_index[i] = i;
@@ -94,11 +94,11 @@ int StrCache_Pop()
 	}
 	if(strcache_top<0) // realloc
 	{
-		temp = malloc(sizeof(CHAR*)*(strcache_size+STRCACHE_INC));
+		temp = obor_profile_malloc_named("StrCache_Pop", sizeof(CHAR*)*(strcache_size+STRCACHE_INC));
 		//if(!temp) shutdown(1, "out of memory");
 		for(i=strcache_size; i<strcache_size+STRCACHE_INC; i++)
 		{
-			temp[i] = malloc((MAX_STR_VAR_LEN+1)*sizeof(CHAR));
+			temp[i] = obor_profile_malloc_named("StrCache_Pop#2", (MAX_STR_VAR_LEN+1)*sizeof(CHAR));
 			//if(!strcache[i]) shutdown(1, "out of memory");
 			temp[i][0] = 0;
 		}
@@ -108,7 +108,7 @@ int StrCache_Pop()
 		}
 		free(strcache);
 		strcache = temp;
-		tempi = malloc(sizeof(int)*(strcache_size+STRCACHE_INC));
+		tempi = obor_profile_malloc_named("StrCache_Pop#3", sizeof(int)*(strcache_size+STRCACHE_INC));
 		//if(!tempi) shutdown(1, "out of memory");
 		for(i=0; i<STRCACHE_INC; i++)
 		{

@@ -23,54 +23,17 @@ EXPECTED_BOUNDS = dict(position=(0, 4), nextanim=(0, 0xffffffff),
                        force=(0, 100), attack_type=(0, 10))
 
 
-def render_frame_events(source, *, revision, legacy_field, helpers, cases,
-                        unused_graphics_inlines=False,
-                        unused_inline_declarations=None):
-    if not isinstance(source, str) or not source.strip() or len(source) > 32768:
-        raise ValueError('Complete bounded native frame caller required')
+def render_frame_services(*, revision, unused_graphics_inlines=False,
+                          unused_inline_declarations=None, require_assertions=True):
+    """Provide bounded native frame services without a frame implementation."""
     if (type(revision) is not int or not 0 < revision <= 0xffffffff or
-            not isinstance(legacy_field, str) or
-            not re.fullmatch(r'[A-Za-z_][A-Za-z_0-9]{0,63}', legacy_field)):
-        raise ValueError('Explicit profile and native pause/frame storage required')
-    if (not isinstance(helpers, list) or len(helpers) > 4 or
-            any(not isinstance(v, str) or not v.strip() or len(v) > 16384
-                for v in helpers)):
-        raise ValueError('Bounded complete source helpers required')
-    if not isinstance(cases, list) or not 1 <= len(cases) <= 2048:
-        raise ValueError('Bounded independently expected frame cases required')
-
-    def integer(v, bounds):
-        return type(v) is int and bounds[0] <= v <= bounds[1]
-
-    def number(v):
-        return type(v) in (int, float) and math.isfinite(v) and -32 <= v <= 32
-
-    def emit(values, keys):
-        return ','.join(str(values[k]) + ('u' if k in ('clock', 'nextanim') else '')
-                        for k in keys)
-
-    rows = []
-    for case in cases:
-        if (not isinstance(case, dict) or set(case) != {'inputs', 'expected'} or
-                not isinstance(case['inputs'], dict) or
-                set(case['inputs']) != set(INPUT_BOUNDS) | {'factor'} or
-                not isinstance(case['expected'], dict) or
-                set(case['expected']) != set(EXPECTED_BOUNDS) | {'trace', 'drop'}):
-            raise ValueError('Complete independent input and expectation required')
-        a, b = case['inputs'], case['expected']
-        if (any(not integer(a[k], v) for k, v in INPUT_BOUNDS.items()) or
-                not number(a['factor']) or
-                any(not integer(b[k], v) for k, v in EXPECTED_BOUNDS.items()) or
-                not isinstance(b['trace'], list) or len(b['trace']) > 8 or
-                any(not integer(v, (1, 7)) for v in b['trace']) or
-                not isinstance(b['drop'], list) or len(b['drop']) != 3 or
-                any(not number(v) for v in b['drop'])):
-            raise ValueError('Bounded frame values, services and payload required')
-        rows.append('{{' + emit(a, INPUT_BOUNDS) + ',' + str(float(a['factor'])) +
-                    'f},{' + emit(b, EXPECTED_BOUNDS) + ',{' +
-                    ','.join(str(v) for v in b['trace'] + [0]*(8-len(b['trace']))) +
-                    '},' + str(len(b['trace'])) + ',{' +
-                    ','.join(str(float(v))+'f' for v in b['drop']) + '}}}')
+            type(require_assertions) is not bool):
+        raise ValueError('Explicit bounded frame revision and assertion policy required')
+    values = dict(
+        REVISION=str(revision)+'u',
+        GRAPHICS=graphics_refusals(unused_graphics_inlines),
+        REFUSALS=inline_refusals(unused_inline_declarations,
+                                forbidden_names=('update_frame',)))
     code = r'''
 #include <stdint.h>
 #include <stdio.h>
@@ -138,7 +101,63 @@ entity *bomb_spawn(char *name,int index,float x,float z,float a,int direction,in
  (void)name;(void)index;(void)x;(void)z;(void)a;(void)direction;(void)map;unexpected_service();return NULL;
 }
 #define time fixture_clock
-@HELPERS@
+'''
+    if not require_assertions:
+        code = code.replace('#ifdef NDEBUG\n#error Native frame assertions must remain enabled\n#endif\n', '')
+    return re.sub(r'@('+'|'.join(values)+r')@', lambda m: values[m[1]], code)
+
+
+def render_frame_events(source, *, revision, legacy_field, helpers, cases,
+                        unused_graphics_inlines=False,
+                        unused_inline_declarations=None):
+    if not isinstance(source, str) or not source.strip() or len(source) > 32768:
+        raise ValueError('Complete bounded native frame caller required')
+    if (type(revision) is not int or not 0 < revision <= 0xffffffff or
+            not isinstance(legacy_field, str) or
+            not re.fullmatch(r'[A-Za-z_][A-Za-z_0-9]{0,63}', legacy_field)):
+        raise ValueError('Explicit profile and native pause/frame storage required')
+    if (not isinstance(helpers, list) or len(helpers) > 4 or
+            any(not isinstance(v, str) or not v.strip() or len(v) > 16384
+                for v in helpers)):
+        raise ValueError('Bounded complete source helpers required')
+    if not isinstance(cases, list) or not 1 <= len(cases) <= 2048:
+        raise ValueError('Bounded independently expected frame cases required')
+
+    def integer(v, bounds):
+        return type(v) is int and bounds[0] <= v <= bounds[1]
+
+    def number(v):
+        return type(v) in (int, float) and math.isfinite(v) and -32 <= v <= 32
+
+    def emit(values, keys):
+        return ','.join(str(values[k]) + ('u' if k in ('clock', 'nextanim') else '')
+                        for k in keys)
+
+    rows = []
+    for case in cases:
+        if (not isinstance(case, dict) or set(case) != {'inputs', 'expected'} or
+                not isinstance(case['inputs'], dict) or
+                set(case['inputs']) != set(INPUT_BOUNDS) | {'factor'} or
+                not isinstance(case['expected'], dict) or
+                set(case['expected']) != set(EXPECTED_BOUNDS) | {'trace', 'drop'}):
+            raise ValueError('Complete independent input and expectation required')
+        a, b = case['inputs'], case['expected']
+        if (any(not integer(a[k], v) for k, v in INPUT_BOUNDS.items()) or
+                not number(a['factor']) or
+                any(not integer(b[k], v) for k, v in EXPECTED_BOUNDS.items()) or
+                not isinstance(b['trace'], list) or len(b['trace']) > 8 or
+                any(not integer(v, (1, 7)) for v in b['trace']) or
+                not isinstance(b['drop'], list) or len(b['drop']) != 3 or
+                any(not number(v) for v in b['drop'])):
+            raise ValueError('Bounded frame values, services and payload required')
+        rows.append('{{' + emit(a, INPUT_BOUNDS) + ',' + str(float(a['factor'])) +
+                    'f},{' + emit(b, EXPECTED_BOUNDS) + ',{' +
+                    ','.join(str(v) for v in b['trace'] + [0]*(8-len(b['trace']))) +
+                    '},' + str(len(b['trace'])) + ',{' +
+                    ','.join(str(float(v))+'f' for v in b['drop']) + '}}}')
+    code = render_frame_services(revision=revision,
+        unused_graphics_inlines=unused_graphics_inlines,
+        unused_inline_declarations=unused_inline_declarations) + r'''@HELPERS@
 @SOURCE@
 struct frame_input {
  int frame,animating,context,child,handler,spawn,summon,unsummon,interrupt;

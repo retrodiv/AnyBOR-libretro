@@ -18,6 +18,7 @@ import unittest
 
 from historical_stream_filesystem import render_filesystem
 from native_sanitizers import sanitizer_environment
+from native_allocation_policy import bind_named_allocation_support
 from test_color_blends import compile_checked
 from test_filestream_transfer import runtime_profile
 from test_historical_player import function
@@ -46,7 +47,8 @@ class StreamFilesystemTests(unittest.TestCase):
                 opening=function(script,'openbor_openfilestream'),
                 saving=function(script,'openbor_savefilestream'),helpers=helpers,**options)
             source=cls.work/(engine+'.c')
-            source.write_bytes(runtime_profile(program).encode('utf-8','surrogateescape'))
+            source.write_bytes(bind_named_allocation_support(
+                runtime_profile(program), root).encode('utf-8','surrogateescape'))
             binary=source.with_suffix('');includes=[root,SOURCE/'src/port/libretro',root/'source',
                 *sorted(p for p in(root/'source').iterdir()if p.is_dir())]
             compile_checked(compiler+['-std=gnu11','-fgnu89-inline','-Wall','-Wextra','-Werror',
@@ -77,6 +79,13 @@ class StreamFilesystemTests(unittest.TestCase):
             if profile['engine']in self.executables:
                 with self.subTest(profile=profile['build']):
                     self.check_context(profile['engine'],int(profile.get('revision',profile['build'])))
+
+    def test_missing_file_policy_boundary_controls(self):
+        for engine,options in self.fixture['engines'].items():
+            for rule in options.get('missing_file_contracts',[]):
+                for revision in rule.get('controls',[]):
+                    with self.subTest(engine=engine,revision=revision):
+                        self.check_context(engine,revision)
 
     def test_source_and_policy_coverage_is_explicit(self):
         self.assertEqual(len(self.rows),len({r['revision']for r in self.rows}))

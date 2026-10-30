@@ -99,7 +99,9 @@ def write_pak(path, members):
         data += content
     directory = len(data)
     for name, start, size in entries:
-        encoded = name.encode("ascii") + b"\0"
+        # The uncached historical reader compares DOS-style archive names.
+        # Cached readers also accept these separators.
+        encoded = name.replace("/", "\\").encode("ascii") + b"\0"
         data += struct.pack("<III", 12 + len(encoded), start, size) + encoded
     data += struct.pack("<I", directory)
     path.parent.mkdir(parents=True, exist_ok=True)

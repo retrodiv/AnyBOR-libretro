@@ -206,4 +206,6 @@ void mapstrings_changebglayerproperty(ScriptVariant** varlist, int paramCount);
 void mapstrings_getfglayerproperty(ScriptVariant** varlist, int paramCount);
 void mapstrings_changefglayerproperty(ScriptVariant** varlist, int paramCount);
 
+int obor_system_property_index(int index);
+
 #endif

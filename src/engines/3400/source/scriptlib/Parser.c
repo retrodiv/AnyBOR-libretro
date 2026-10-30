@@ -1,3 +1,15 @@
+/* AnyBOR modification record: 2026-09-12.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Preserve native parser instruction, label and expression allocation
+ * failure feedback.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/3400.md
+ * at the source repository root. Original notices follow below.
+ */
+
 /*
  * OpenBOR - http://www.LavaLit.com
  * -----------------------------------------------------------------------
@@ -97,7 +109,7 @@ void Parser_ParseExpression(Parser* pparser, List* pIList, LPSTR scriptText,
 
    //Append a semi-colon to the end of the expression, in order to use the
    //same grammar as regular script text.
-   LPSTR expressionText = (CHAR*)malloc(sizeof(CHAR) * strlen(scriptText) + 2);
+   LPSTR expressionText = (CHAR*)obor_profile_malloc_named("Parser_ParseExpression", sizeof(CHAR) * strlen(scriptText) + 2);
    strcpy( (CHAR*)expressionText, scriptText );
    strcat( (CHAR*)expressionText, ";" );
 
@@ -140,7 +152,7 @@ void Parser_ParseExpression(Parser* pparser, List* pIList, LPSTR scriptText,
 void Parser_AddInstructionViaToken(Parser* pparser, OpCode pCode, Token* pToken, Label label )
 {
 	Instruction* pInstruction = NULL;
-	pInstruction = (Instruction*)malloc(sizeof(Instruction));
+	pInstruction = (Instruction*)obor_profile_malloc_named("Parser_AddInstructionViaToken", sizeof(Instruction));
 	Instruction_InitViaToken(pInstruction, pCode, pToken);
 	List_InsertAfter(pparser->pIList, pInstruction, label);
 }
@@ -156,7 +168,7 @@ void Parser_AddInstructionViaToken(Parser* pparser, OpCode pCode, Token* pToken,
 void Parser_AddInstructionViaLabel(Parser* pparser, OpCode pCode, Label instrLabel, Label listLabel )
 {
 	Instruction* pInstruction = NULL;
-	pInstruction = (Instruction*)malloc(sizeof(Instruction));
+	pInstruction = (Instruction*)obor_profile_malloc_named("Parser_AddInstructionViaLabel", sizeof(Instruction));
 	Instruction_InitViaLabel(pInstruction, pCode, instrLabel);
 	List_InsertAfter(pparser->pIList, pInstruction, listLabel);
 }
@@ -196,7 +208,7 @@ Label Parser_CreateLabel( Parser* pparser )
 	//Allocate a buffer for the new Label.  A long can take 10 characters at
 	//most, so allocate that plus two extra for the "" and the null
 	//terminator
-	Label theLabel = (CHAR*)malloc(12);
+	Label theLabel = (CHAR*)obor_profile_malloc_named("Parser_CreateLabel", 12);
 	memset((void*)theLabel, 0, 12);
 
 	//Increment the label count.
@@ -489,7 +501,7 @@ void Parser_Param_list2(Parser* pparser )
 			 List_GotoPrevious(pparser->pIList);
 
 		 sprintf( buf, "%d", pparser->paramCount );
-		 pinstruction = (Instruction*)malloc(sizeof(Instruction));
+		 pinstruction = (Instruction*)obor_profile_malloc_named("Parser_Param_list2", sizeof(Instruction));
 		 Instruction_InitViaLabel(pinstruction, CHECKARG, buf);
 
 		 List_InsertBefore(pparser->pIList, (void*)pinstruction, NULL );
@@ -799,7 +811,7 @@ List* Parser_Defer_expr_stmt(Parser* pparser )
 		//We have to swap out instruction lists
 		pMainList = pparser->pIList;
 		//create a new Instruction List
-		pparser->pIList = (List*)malloc(sizeof(List));
+		pparser->pIList = (List*)obor_profile_malloc_named("Parser_Defer_expr_stmt", sizeof(List));
 		List_Init(pparser->pIList);
 
 		//Expr_stmt( );

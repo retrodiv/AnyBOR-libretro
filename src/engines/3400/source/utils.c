@@ -39,6 +39,8 @@
 #include "openbor.h"
 #include "packfile.h"
 
+extern uint32_t obor_profile_build;
+
 #if PSP || WIN || LINUX || GP2X || DINGOO || SYMBIAN || defined(DARWIN)
 #include <dirent.h>
 #endif
@@ -234,8 +236,68 @@ stringptr* readFromLogFile(int which)
 }
 #endif
 
+#ifndef DC
+/* Own early log lifetime; bounded formatting retains the defined byte prefix. */
+static FILE *obor_profile_open_log(int which, int *first)
+{
+    if(CHECK_LOGFILE(which) && !*first) return APPEND_LOGFILE(which);
+    *first = 0;
+    return OPEN_LOGFILE(which);
+}
+#endif
+
+/* Keep source-owned release allocation feedback without debug heap records.
+ * Byte counts remain size_t in every profile. */
+void *obor_profile_malloc_named(const char *name, size_t bytes)
+{
+    void *pointer = malloc(bytes);
+    if(!pointer && obor_profile_build < 3056)
+        writeToLogFile("name: %s Requested: %zu Bytes, Remaining, %llu Bytes\n",
+                       name ? name : "", bytes, (unsigned long long)getFreeRam(BYTES));
+    return pointer;
+}
+
+void *obor_profile_calloc_named(const char *name, size_t bytes)
+{
+    void *pointer;
+    if(obor_profile_build >= 3056) return calloc(1, bytes);
+    pointer = obor_profile_malloc_named(name, bytes);
+    if(pointer) memset(pointer, 0, bytes);
+    return pointer;
+}
+
+void *obor_profile_realloc_named(void *pointer, size_t bytes)
+{
+    if(obor_profile_build >= 3056) return realloc(pointer, bytes);
+    if(!pointer) return obor_profile_malloc_named("tracerealloc", bytes);
+    if(!bytes)
+    {
+        free(pointer);
+        return NULL;
+    }
+    return realloc(pointer, bytes);
+}
+
 void writeToLogFile(const char * msg, ...)
 {
+#ifndef DC
+    if(obor_profile_build < 3072)
+    {
+        static int first = 1;
+        FILE *handle;
+        char buffer[1024] = "";
+        va_list args;
+        if(!savedata.uselog) return;
+        va_start(args, msg);
+        if(vsnprintf(buffer, sizeof(buffer), msg, args) < 0) buffer[0] = 0;
+        va_end(args);
+        handle = obor_profile_open_log(OPENBOR_LOG, &first);
+        if(handle == NULL) return;
+        (void)fwrite(buffer, 1, strlen(buffer), handle);
+        fclose(handle);
+        return;
+    }
+#endif
 	va_list arglist;
 
 #ifdef DC
@@ -259,6 +321,17 @@ void writeToLogFile(const char * msg, ...)
 void writeToScriptLog(const char *msg)
 {
 #ifndef DC
+    if(obor_profile_build < 3072)
+    {
+        static int first = 1;
+        FILE *handle;
+        if(!savedata.uselog) return;
+        handle = obor_profile_open_log(SCRIPT_LOG, &first);
+        if(handle == NULL) return;
+        (void)fwrite(msg, 1, strlen(msg), handle);
+        fclose(handle);
+        return;
+    }
 	int disCcWarns;
 
 	if(scriptLog == NULL)
@@ -313,7 +386,7 @@ void screenshot(s_screen *vscreen, unsigned char *pal, int ingame){
 #elif WII
 			sprintf(shotname, "%s/%s - %04u.png", screenShotsDir,modname,shotnum);
 #else
-			sprintf(shotname, "./ScreenShots/%s - %04u.png", modname,shotnum);
+			sprintf(shotname, "./ScreenShots/%s - %04u.%s", modname,shotnum, obor_profile_build < 3344 ? "pcx" : "png");
 #endif
 			++shotnum;
 		}while(fileExists(shotname) && shotnum<100);

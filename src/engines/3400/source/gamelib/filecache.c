@@ -556,7 +556,7 @@ void filecache_init(int realfd, int pakcdsectors, int blocksize, unsigned char b
 #elif DC
 	filecache_head = (void*)(0xA5500000 - 64);
 #else
-	filecache_head = malloc(filecache_blocksize * filecache_blocks + 64);
+	filecache_head = obor_profile_malloc_named("filecache_head", filecache_blocksize * filecache_blocks + 64);
 #endif
 
 	filecache = filecache_head;
@@ -567,31 +567,31 @@ void filecache_init(int realfd, int pakcdsectors, int blocksize, unsigned char b
 	filecache += 0x40 - (((size_t)filecache) & 0x3F);
 
 	// pakmap: all values should be -1
-	filecache_pakmap = malloc(sizeof(int) * filecache_blocks);
+	filecache_pakmap = obor_profile_malloc_named("filecache_init", sizeof(int) * filecache_blocks);
 	for(i = 0; i < filecache_blocks; i++) filecache_pakmap[i] = -1;
 
 	// where_is_this_pakblock_cached: all values should be filecache_blocks
-	where_is_this_pakblock_cached = malloc(total_pakblocks);
+	where_is_this_pakblock_cached = obor_profile_malloc_named("filecache_init", total_pakblocks);
 	for(i = 0; i < total_pakblocks; i++) where_is_this_pakblock_cached[i] = filecache_blocks;
 
 	// vfd read pointers: init to -1
-	vfd_readptr_pakblock = malloc(sizeof(int) * max_vfds);
+	vfd_readptr_pakblock = obor_profile_malloc_named("filecache_init", sizeof(int) * max_vfds);
 	for(i = 0; i < max_vfds; i++) vfd_readptr_pakblock[i] = -1;
 
 	// vfd starting pointers: init to -1
-	vfd_startptr_pakblock = malloc(sizeof(int) * max_vfds);
+	vfd_startptr_pakblock = obor_profile_malloc_named("filecache_init", sizeof(int) * max_vfds);
 	for(i = 0; i < max_vfds; i++) vfd_startptr_pakblock[i] = -1;
 
 	// desired readahead: init to 0
-	vfd_desired_readahead_blocks = malloc(sizeof(int) * max_vfds);
+	vfd_desired_readahead_blocks = obor_profile_malloc_named("filecache_init", sizeof(int) * max_vfds);
 	for(i = 0; i < max_vfds; i++) vfd_desired_readahead_blocks[i] = -1;
 
 	// cache mru: init to 0
-	cacheblock_mru = malloc(sizeof(unsigned) * filecache_blocks);
+	cacheblock_mru = obor_profile_malloc_named("filecache_init", sizeof(unsigned) * filecache_blocks);
 	for(i = 0; i < filecache_blocks; i++) cacheblock_mru[i] = 0;
 
 	// blocks available: needs no init
-	vfd_blocks_available = malloc(sizeof(int) * max_vfds);
+	vfd_blocks_available = obor_profile_malloc_named("filecache_init", sizeof(int) * max_vfds);
 
 	filecache_ready = 1;
 }

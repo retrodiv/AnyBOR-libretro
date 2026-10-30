@@ -13,6 +13,7 @@ import unittest
 from historical_image_rows import render_image_rows
 from make_fixture import png, indexed_bmp
 from native_sanitizers import sanitizer_environment
+from native_allocation_policy import bind_named_allocation_support
 from test_bitmap_dimensions import SOURCE, fixture_palette, native_context, compile_image_units, profile_program
 from test_color_blends import compile_checked
 
@@ -44,7 +45,8 @@ class ImageRowTests(unittest.TestCase):
                 revision=int(engine), cases=cases, row_cases=rows,
                 palette=fixture_palette(context['palette_bytes']), **options)
             source = work/(engine+'.c')
-            source.write_text(profile_program(code))
+            source.write_text(bind_named_allocation_support(profile_program(code),
+                SOURCE/'src/engines'/engine))
             executable = source.with_suffix('')
             compile_checked(compiler+flags+[str(source), *objects, *links, '-o', str(executable)])
             cls.executables[engine] = executable

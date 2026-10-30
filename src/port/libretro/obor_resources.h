@@ -27,6 +27,9 @@ void obor_resources_member_bytes_loaded(const char *member, uint32_t member_offs
 /* Invoke before free or after successful realloc, even at the same address. */
 void obor_resources_forget_owner(const void *owner);
 size_t obor_allocation_size(const void *owner);
+/* Check an interior reference against live chunks without reading metadata
+ * at the supplied address. Zero bytes and unsupported heap layouts refuse. */
+int obor_allocation_contains(const void *address, size_t length);
 /* Called from the video backend immediately before capture. A missing or
  * unsupported source removes only the conditional output-copy declaration. */
 void obor_resources_framebuffer(void *frame, const void *source_owner,

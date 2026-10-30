@@ -28,6 +28,7 @@
 // creating them on-the-fly if necessary.
 
 #include <stdio.h>
+#include <stdint.h>
 #include <string.h>
 #include <assert.h>
 #include "utils.h"
@@ -35,6 +36,7 @@
 #include "borendian.h"
 #include "bitmap.h"
 #include "screen.h"
+#include "obor_image_assert.h"
 #include "packfile.h"
 #include "png.h"
 
@@ -158,7 +160,7 @@ static int readbmp(unsigned char *buf, unsigned char *pal, int maxwidth, int max
 		}
 	}
 
-	if(pal && (linebuffer=(unsigned char*)malloc(1024))){
+	if(pal && (linebuffer=(unsigned char*)obor_profile_malloc_named("readbmp", 1024))){
 		seekpackfile(handle,bmp_header.picstart-1024, SEEK_SET);
 		readpackfile(handle,linebuffer,1024);
 		if(pb==512) // 16bit 565
@@ -198,6 +200,20 @@ static int png_height = 0;
 static png_structp png_ptr = NULL;
 static png_infop info_ptr = NULL;
 static png_bytep * row_pointers = NULL;
+
+extern uint32_t obor_profile_build;
+
+static png_voidp PNGCBAPI obor_profile_png_allocate(png_structp pngp, png_alloc_size_t bytes)
+{
+    (void)pngp;
+    return obor_profile_malloc_named("png_tracemalloc", bytes);
+}
+
+static void PNGCBAPI obor_profile_png_release(png_structp pngp, png_voidp pointer)
+{
+    (void)pngp;
+    if(pointer) free(pointer);
+}
 
 static void png_read_fn(png_structp pngp, png_bytep outp, png_size_t size)
 {
@@ -241,7 +257,11 @@ static int openpng(char *filename, char *packfilename)
 
 	if (png_sig_cmp(header, 0, 8)) goto openpng_abort;
 
-	png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
+    if(obor_profile_build < 3056)
+        png_ptr = png_create_read_struct_2(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL,
+                                         NULL, obor_profile_png_allocate, obor_profile_png_release);
+    else
+        png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
 
 	if (!png_ptr) goto openpng_abort;
 
@@ -262,9 +282,9 @@ static int openpng(char *filename, char *packfilename)
 
 	png_read_update_info(png_ptr, info_ptr);
 
-	row_pointers = (png_bytep*) malloc(sizeof(png_bytep) * png_height);
+	row_pointers = (png_bytep*) obor_profile_malloc_named("openpng", sizeof(png_bytep) * png_height);
 	for (y=0; y<png_height; y++)
-		row_pointers[y] = (png_byte*) malloc(png_get_rowbytes(png_ptr, info_ptr));
+		row_pointers[y] = (png_byte*) obor_profile_malloc_named("openpng", png_get_rowbytes(png_ptr, info_ptr));
 
 	png_read_image(png_ptr, row_pointers);
 	return 1;
@@ -550,7 +570,7 @@ static int readgif(unsigned char *buf, unsigned char *pal, int maxwidth, int max
 		if(pal){
 			if(pb==512) // 16bit 565
 			{
-				pbuf = malloc(768);
+				pbuf = obor_profile_malloc_named("readgif#1", 768);
 				if(readpackfile(handle,pbuf,numcolours*3) != numcolours*3){
 					free(pbuf); pbuf = NULL;
 					return 0;
@@ -569,7 +589,7 @@ static int readgif(unsigned char *buf, unsigned char *pal, int maxwidth, int max
 			}
 			else if(pb==1024) // 32bit
 			{
-				pbuf = malloc(768);
+				pbuf = obor_profile_malloc_named("readgif#2", 768);
 				if(readpackfile(handle,pbuf,numcolours*3) != numcolours*3){
 					free(pbuf); pbuf = NULL;
 					return 0;
@@ -755,7 +775,7 @@ static int readpcx(unsigned char *buf, unsigned char *pal, int maxwidth, int max
 	}
 	else if(buf){
 
-		if(!(codebuffer=(unsigned char*)malloc(64000))) return 0;
+		if(!(codebuffer=(unsigned char*)obor_profile_malloc_named("readpcx", 64000))) return 0;
 
 		x = 0;
 		y = 0;
@@ -810,7 +830,7 @@ static int readpcx(unsigned char *buf, unsigned char *pal, int maxwidth, int max
 		seekpackfile(handle, -768, SEEK_END);
 		if(pb==512) // 16bit 565
 		{
-			pbuf = malloc(768);
+			pbuf = obor_profile_malloc_named("readpcx#1", 768);
 			if(readpackfile(handle,pbuf,768) != 768){
 				free(pbuf); pbuf = NULL;
 				return 0;
@@ -829,7 +849,7 @@ static int readpcx(unsigned char *buf, unsigned char *pal, int maxwidth, int max
 		}
 		else if(pb==1024) // 32bit
 		{
-			pbuf = malloc(768);
+			pbuf = obor_profile_malloc_named("readpcx#2", 768);
 			if(readpackfile(handle,pbuf,768) != 768){
 				free(pbuf); pbuf = NULL;
 				return 0;
@@ -1010,7 +1030,7 @@ int loadscreen(char *filename, char *packfile, unsigned char *pal, int format, s
 		(*screen) = allocscreen(res[0], res[1], format);
 		if((*screen) == NULL){
 			closeimage();
-			assert(0);
+			obor_early_image_assert(0);
 			return 0;
 		}
 	}
@@ -1020,7 +1040,7 @@ int loadscreen(char *filename, char *packfile, unsigned char *pal, int format, s
 	closeimage();
 	if(!result){
 		freescreen(screen);
-		assert(0);
+		obor_early_image_assert(1);
 		return 0;
 	}
 	return 1;

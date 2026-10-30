@@ -3,11 +3,11 @@
   "scope": "Preserve full parent/method sizes and embedded offsets while permitting methods in their packed owning records. Every registered profile uses its physical record layout.",
   "shapes": {
     "3400": {
-      "entity_size": 2304,
+      "entity_size": 2332,
       "entity_alignment": 4,
       "method_size": 48,
       "method_alignment": 4,
-      "entity_method_offset": 2088,
+      "entity_method_offset": 2116,
       "layer_size": 0,
       "layer_method_offset": 0,
       "entity_embedded": true

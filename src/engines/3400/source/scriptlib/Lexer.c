@@ -1,3 +1,15 @@
+/* AnyBOR modification record: 2026-09-12.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Select native string-escape advancement and unknown-token handling for
+ * each profile.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/3400.md
+ * at the source repository root. Original notices follow below.
+ */
+
 /*
  * OpenBOR - http://www.LavaLit.com
  * -----------------------------------------------------------------------
@@ -10,6 +22,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdint.h>
+
+extern uint32_t obor_profile_build;
 
 //Constructor
 void Token_Init(Token* ptoken, MY_TOKEN_TYPE theType, LPCSTR theSource, TEXTPOS theTextPosition, ULONG charOffset)
@@ -62,28 +77,28 @@ HRESULT Token_InitFromPreprocessor(Token* ptoken, pp_token* ppToken)
 					switch (*(++src))
 					{
 						case 's':
-							*dest++ = ' '; src++;
+							*dest++ = ' '; if(obor_profile_build >= 3368) src++;
 							break;
 						case 'r':
-							*dest++ = '\r'; src++;
+							*dest++ = '\r'; if(obor_profile_build >= 3368) src++;
 							break;
 						case 'n':
-							*dest++ = '\n'; src++;
+							*dest++ = '\n'; if(obor_profile_build >= 3368) src++;
 							break;
 						case 't':
-							*dest++ = '\t'; src++;
+							*dest++ = '\t'; if(obor_profile_build >= 3368) src++;
 							break;
 						case '0':
-							*dest++ = '\0'; src++;
+							*dest++ = '\0'; if(obor_profile_build >= 3368) src++;
 							break;
 						case '\"':
-							*dest++ = '\"'; src++;
+							*dest++ = '\"'; if(obor_profile_build >= 3368) src++;
 							break;
 						case '\'':
-							*dest++ = '\''; src++;
+							*dest++ = '\''; if(obor_profile_build >= 3368) src++;
 							break;
 						case '\\':
-							*dest++ = '\\'; src++;
+							*dest++ = '\\'; if(obor_profile_build >= 3368) src++;
 							break;
 						default: // invalid escape sequence
 							// TODO: emit a warning here
@@ -190,6 +205,7 @@ HRESULT Token_InitFromPreprocessor(Token* ptoken, pp_token* ppToken)
 			ptoken->theType = TOKEN_ERROR;
 			return E_FAIL;
 		default:
+			if(obor_profile_build < 3129) break;
 			printf("Script error: unknown token type %d\n", ppToken->theType);
 			ptoken->theType = TOKEN_ERROR;
 			return E_FAIL;

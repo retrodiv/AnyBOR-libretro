@@ -57,7 +57,7 @@ static const obor_contract_rule kContentContracts[] = {
     { "on_bind_update_other_to_self_script", OBOR_CT_COMMAND, 6421, INT_MAX, 0 },
     { "on_bind_update_self_to_other_script", OBOR_CT_COMMAND, 6421, INT_MAX, 0 },
     { "onmodelcopyscript", OBOR_CT_COMMAND, 3793, INT_MAX, 0 },
-    { "pain_time", OBOR_CT_AIFLAG_READ, 1, 3796, 0 },
+    { "pain_time", OBOR_CT_AIFLAG_READ, 3367, 3796, 0 },
     { "pit", OBOR_CT_ATTACK_NAME, 3831, INT_MAX, 0 },
     { "remap", OBOR_CT_COMMAND, 1, INT_MAX, OBOR_CT_NO_4453 },
     { "sample_play_id", OBOR_CT_SYSTEM, 3838, INT_MAX, 0 },

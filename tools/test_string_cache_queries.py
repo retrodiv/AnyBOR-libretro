@@ -15,6 +15,7 @@ import unittest
 
 from historical_string_cache import render_string_cache
 from native_sanitizers import sanitizer_environment
+from native_allocation_policy import bind_named_allocation_support
 from test_color_blends import compile_checked
 
 SOURCE = Path(os.environ.get('OBOR_TEST_SOURCE', Path(__file__).resolve().parents[1]))
@@ -37,7 +38,8 @@ class StringCacheQueryTests(unittest.TestCase):
                 root = SOURCE / 'src/engines' / engine
                 work = Path(folder)
                 src = work / 'probe.c'
-                src.write_text(render_string_cache(**options))
+                src.write_text(bind_named_allocation_support(
+                    render_string_cache(**options), root))
                 includes = [root / 'source/scriptlib', root, SOURCE / 'src/port/libretro', root / 'source',
                             *sorted(p for p in (root / 'source').iterdir() if p.is_dir())]
                 executable = work / 'probe'

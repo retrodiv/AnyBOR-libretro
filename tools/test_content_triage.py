@@ -173,6 +173,51 @@ class ContentTriageTests(unittest.TestCase):
                               ('6331',6391),('6393',6391),('6411',6391)):
             self.assertEqual(self.select(tag)[0], expected)
 
+    def test_pain_time_aiflag_contract_matches_each_early_source(self):
+        fixture = load_contract_fixture(Path(__file__).parent / 'fixtures' /
+                                        'profile-early-entity-namespaces.json')
+        rules = subprocess.check_output([str(self.host), '--rules'], text=True, timeout=8)
+        rule = next(row.split() for row in rules.splitlines()
+                    if row.split()[1:3] == ['7', 'pain_time'])
+        observed = set()
+        for row in fixture['sources']:
+            expected = 'pain_time' in row['namespaces']['aiflag']['names']
+            observed.add(expected)
+            actual = subprocess.check_output([str(self.host), '--rule-probe', rule[0],
+                                             str(row['revision']), row['engine']],
+                                            text=True, timeout=8)
+            with self.subTest(profile=row['profile']):
+                self.assertEqual(bool(int(actual)), expected)
+        self.assertEqual(observed, {False, True})
+
+    def test_missing_early_exact_tag_respects_pain_time_introduction(self):
+        pins = json.loads((ROOT / 'src/pin.json').read_text())
+        compatible = [int(row.get('revision', row['build'])) for row in pins['profiles']
+                      if row['engine'] == '3400' and row.get('automatic', True) and
+                      int(row.get('revision', row['build'])) >= 3367]
+        self.assertTrue(compatible)
+        profile, log = self.script('3060',
+            'void main(){getentityproperty(self,"aiflag","pain_time");}')
+        self.assertEqual(profile, min(compatible), log)
+        # Explicit tags with their own profile retain authority over content.
+        if any(row['build'] == '3366' for row in pins['profiles']):
+            profile, log = self.script('3366',
+                'void main(){getentityproperty(self,"aiflag","pain_time");}')
+            self.assertEqual(profile, 3366, log)
+            self.assertNotIn('conflicts with proved content', log)
+
+    def test_weak_old_minimum_keeps_unlabelled_fallback_policy(self):
+        pins = json.loads((ROOT / 'src/pin.json').read_text())
+        fallback = int(pins['fallback_build'])
+        for tag in (None, 'XXXX'):
+            for command in (b'spdirection 1\n', b'maxattacks 2\n', b'offscreenkill 100\n'):
+                profile, log = self.select(tag, {'data/chars/hero.txt': command})
+                with self.subTest(tag=tag, command=command):
+                    self.assertEqual(profile, fallback, log)
+            profile, log = self.select(tag,
+                {'data/chars/hero.txt': b'spdirection 1\ncounterframe 1 1 0\n'})
+            self.assertEqual(profile, 4153, log)
+
     def test_early_compatible_alias_retains_filename_priority_over_legacy_preflight(self):
         profile, log = self.script('4108',
             'void main(){getentityproperty(self,"attack",0);}')

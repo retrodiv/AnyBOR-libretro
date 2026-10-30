@@ -1,6 +1,6 @@
 # AnyBOR port modification record
 
-Record updated: **2026-10-27**. Port maintainer: **retrodiv**
+Record updated: **2026-10-30**. Port maintainer: **retrodiv**
 (<retrodiv@proton.me>).
 
 AnyBOR offers selectable engine profiles through its libretro port.
@@ -73,6 +73,13 @@ numeric conversions and retained parser bytes.
 For these profiles, append retains the native formatting and mode behavior,
 checks output allocation and preserves the existing buffer when storage is
 unavailable.
+
+## Script save records
+
+Script saves retain the selected profile's 32-bit record fields and defined
+read/write traversal. Variable names remain owned by the live script table.
+Valid cached strings and live references retain their values; unavailable
+references and out-of-range table accesses receive a defined refusal.
 
 ## Script integer conversion
 
@@ -336,6 +343,12 @@ largest table for every loaded model.
 Model changes check the destination table before retaining an existing
 animation. Each profile preserves its reset, synchronization and timing
 behavior within that allocated capacity.
+
+## Playable model validation
+
+Player selection validates a missing model before accessing its name. The
+historical missing-model diagnostic is retained, and failure returns control
+to the frontend through controlled engine shutdown.
 
 ## Empty player slot safety
 
@@ -1132,6 +1145,43 @@ Legacy preprocessor string scanners reject end-of-input, unfinished escapes and
 fixed token overflow before consuming an invalid byte. The dynamic-string engine
 keeps its existing complete-source-view implementation and receives the same
 malformed-input regression coverage.
+
+The early script parser releases temporary parameter storage after rejecting a
+macro definition, retaining the selected profile's diagnostic and token results.
+
+Historical profiles preserve their source-defined initializer and compile-time
+name-conversion passes while retaining complete instruction storage and ordinary
+call arguments.
+
+Callback cleanup and copy order preserve each profile's local-variable visibility
+while retaining reference-counted interpreter ownership.
+
+Configuration files retain the selected profile's field layout through explicit
+conversion, preserving settings values and partial-read behavior.
+
+Level command diagnostics retain the profile's text and blank-line policy;
+historical fatal errors request a controlled engine stop.
+
+File-command feedback retains each loader's diagnostic, continuation and input
+buffer release. Model-list lookup preserves the profile's zero-command alias
+and resulting idle-animation limit updates.
+
+Level-list commands retain their case, blank-line warnings and fatal-error
+policy. Invalid level ordering reports the selected profile's diagnostic and
+requests a controlled engine stop; input buffers are released safely.
+
+Contained items retain each profile's player-count requirement through level
+entry creation, spawning and item drops.
+
+Attack commands retain each profile's accepted names and attack-type mapping,
+including numeric suffixes and consecutive freeze/steal updates.
+
+Model inheritance retains each profile's command availability and animation
+script compilation. Callback storage remains independently owned, with shared
+interpreters retained until their final reference ends.
+
+Combo timing retains each profile's fixed or configurable delay. Unsupported
+combo-delay directives follow the profile's original model-list lookup behavior.
 
 CI partitions rewind and state-option matrices into explicit profile groups,
 verified for complete and unique coverage in each platform path. The Windows

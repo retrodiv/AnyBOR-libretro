@@ -3,8 +3,9 @@
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
  * Upstream code retains its original license and notices.
- * Convert the command-list lookup result to its command enumeration
- * explicitly instead of through a plain pointer cast.
+ * Preserve command lookup and source-owned allocation diagnostics with
+ * controlled engine termination; convert command enumeration results
+ * explicitly.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/3400.md
  * at the source repository root. Original notices follow below.
@@ -13,6 +14,8 @@
 #include "commands.h"
 #include "openbor.h"
 
+#include <stdint.h>
+extern uint32_t obor_profile_build;
 
 void freeCommandList(List* list) {
 	List_Clear(list);
@@ -47,7 +50,12 @@ levelOrderCommands getLevelOrderCommand(List* list, char* usercommand) {
 	return (levelOrderCommands)(intptr_t) getCommandlistCommand(list, usercommand);
 }
 
-List* prepareList(void) {
+#include "obor_command_assert.h"
+/* This translation unit has one allocation assertion, with its own site. */
+#undef assert
+#define assert(value) obor_command_allocation_assert(!!(value), site)
+List* prepareList(unsigned site) {
+	(void)site;
 	List* result = malloc(sizeof(List));
 	assert(result);
 	List_Init(result);
@@ -55,7 +63,7 @@ List* prepareList(void) {
 }
 
 List* createModelstxtCommandList(void) {
-	List* result = prepareList();
+	List* result = prepareList(1);
 	#define LIST_ADD(y,z) List_InsertAfter(result, (void*) y, z)
 	LIST_ADD(CMD_MODELSTXT_MAXIDLES, "maxidles");
 	LIST_ADD(CMD_MODELSTXT_MAXWALKS, "maxwalks");
@@ -93,7 +101,7 @@ List* createModelstxtCommandList(void) {
 List* createModelCommandList(void) {
 	int i, amax = 99;
 	char buf[64] ;
-	List* result = prepareList();
+	List* result = prepareList(0);
 	#define LIST_ADD(y,z) List_InsertAfter(result, (void*) y, z)
 	LIST_ADD(CMD_MODEL_NAME, "name");
 	LIST_ADD(CMD_MODEL_TYPE, "type");
@@ -378,7 +386,7 @@ List* createModelCommandList(void) {
 }
 
 List* createLevelCommandList(void) {
-	List* result = prepareList();
+	List* result = prepareList(2);
 	#define LIST_ADD(y,z) List_InsertAfter(result, (void*) y, z)
 
 	LIST_ADD(CMD_LEVEL_LOADINGBG, "loadingbg");
@@ -395,7 +403,9 @@ List* createLevelCommandList(void) {
 	LIST_ADD(CMD_LEVEL_FACING, "facing");
 	LIST_ADD(CMD_LEVEL_ROCK, "rock");
 	LIST_ADD(CMD_LEVEL_BGSPEED, "bgspeed");
-	LIST_ADD(CMD_LEVEL_SCROLLSPEED, "scrollspeed");
+	if(obor_profile_build >= 3352) {
+        LIST_ADD(CMD_LEVEL_SCROLLSPEED, "scrollspeed");
+    }
 	LIST_ADD(CMD_LEVEL_MIRROR, "mirror");
 	LIST_ADD(CMD_LEVEL_BOSSMUSIC, "bossmusic");
 	LIST_ADD(CMD_LEVEL_NOPAUSE, "nopause");
@@ -478,7 +488,7 @@ List* createLevelCommandList(void) {
 }
 
 List* createLevelOrderCommandList(void) {
-	List* result = prepareList();
+	List* result = prepareList(3);
 	#define LIST_ADD(y,z) List_InsertAfter(result, (void*) y, z)
 	LIST_ADD(CMD_LEVELORDER_BLENDFX, "blendfx");
 	LIST_ADD(CMD_LEVELORDER_SET, "set");

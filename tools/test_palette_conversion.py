@@ -13,10 +13,12 @@ from pathlib import Path
 import re
 import shlex
 import subprocess
+import sys
 import tempfile
 import unittest
 
 from native_sanitizers import sanitizer_environment
+from native_allocation_policy import bind_named_allocation_support
 from test_historical_player import function
 from test_historical_palette_loading import colourmap_storage_support
 
@@ -45,6 +47,7 @@ def conversion_program(engine, body=None, row=None, *, original=False, source_ro
 #include <stdio.h>
 #include <string.h>
 #include <setjmp.h>
+@PROFILE@
 #define MAX_PAL_SIZE 1024
 #define MAX_COLOUR_MAPS 30
 #define PIXEL_8 0
@@ -71,6 +74,7 @@ static void *fixture_malloc(size_t bytes) {
  return malloc(bytes);
 }
 #define malloc fixture_malloc
+/* NATIVE ALLOCATION POLICY */
 @STORAGE@
 @BODY@
 static s_model *create(unsigned count,unsigned mask) {
@@ -191,13 +195,19 @@ int main(int argc,char **argv) {@MAIN@ return 0;}
                                              'fixed_table': bool(fixed),
                                              'sources': len(source_rows) if source_rows is not None else 1}))+');'
     else:
-        main = 'assert(argc==2 && atoi(argv[1])>0);check();'
+        main = ('assert(argc==2 && atoi(argv[1])>0);'
+                'obor_profile_build=(uint32_t)strtoul(argv[1],NULL,10);check();')
     values = {'STORAGE': colourmap_storage_support(body),
+              'PROFILE': '' if original else 'static uint32_t obor_profile_build;',
               'PALETTE_MACRO': row['palette_macro'], 'FLAG': row['flag_type'],
               'TABLE': table, 'COUNTER': counter, 'BODY': body, 'FIXED': str(int(fixed)),
               'FORMAT_DEP': str(int(row['format_dependent'])), 'FORMATS': formats,
               'CAPACITY': str(int(engine == '3741')), 'GENERATED': str(int(not original)), 'MAIN': main}
-    return re.sub(r'@('+'|'.join(values)+r')@', lambda match: values[match[1]], program)
+    program = re.sub(r'@('+'|'.join(values)+r')@', lambda match: values[match[1]], program)
+    if original:
+        return program.replace('/* NATIVE ALLOCATION POLICY */', '')
+    return bind_named_allocation_support(program, SOURCE / 'src/engines' / engine,
+                                         marker='/* NATIVE ALLOCATION POLICY */')
 
 
 class PaletteConversionTests(unittest.TestCase):
@@ -223,7 +233,9 @@ class PaletteConversionTests(unittest.TestCase):
                     subprocess.run(shlex.split(os.environ.get('HOST_CC', 'cc'))+[
                         '-std=c11', '-Wall', '-Wextra', '-Werror', '-Wno-error=deprecated-declarations',
                         '-Wno-unused-variable', '-Wno-unused-function', '-Wno-sign-compare', '-fsigned-char',
-                        '-g', '-fsanitize=address,undefined', str(source), '-o', str(exe)], check=True, timeout=60)
+                        '-g', '-fsanitize=address,undefined',
+                        *(['-no-pie'] if sys.platform.startswith('linux') else []),
+                        str(source), '-o', str(exe)], check=True, timeout=60)
                     cases = {x['build']: int(x.get('revision', x['build'])) for x in contract_profiles(Path(__file__).parent / 'fixtures/palette-conversion-contracts.json', pin['profiles'])
                              if x['engine'] == engine}
                     for row in CONTRACTS['sources']:

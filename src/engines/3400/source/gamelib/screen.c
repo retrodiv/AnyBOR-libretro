@@ -3,8 +3,9 @@
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
  * Upstream code retains its original license and notices.
- * Remove a guard whose only statement assigned the counter to itself. Bound
- * screen blend selectors and use transparent copy when an indexed table is
+ * Preserve native water phase, byte widths, clipping and transparent
+ * traversal by profile; bound screen extents before drawing. Bound screen
+ * blend selectors and use transparent copy when an indexed table is
  * unavailable.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/3400.md
@@ -29,6 +30,7 @@
 #include "types.h"
 #include "screen.h"
 
+#include "obor_water.h"
 extern float _sinfactors[256];
 #define distortion(x, a) ((int)(_sinfactors[x]*a+0.5))
 
@@ -95,84 +97,19 @@ void clearscreen(s_screen * s)
 // Screen copy function with offset options. Supports clipping.
 void copyscreen_water(s_screen * dest, s_screen * src, int x, int y, int amplitude, float wavelength, int time, int watermode)
 {
-	unsigned char* sp = (unsigned char*)src->data, *dp =(unsigned char*)dest->data;
-	int pixelformat = src->pixelformat;
-	int sb, db;
-	int sw = src->width;
-	int sh = src->height;
-	int dw = dest->width;
-	int dh = dest->height;
-	int ch = sh;
-	int sox, soy;
-	float s = (float)(time % 256);
-	int t, u;
-	int sbeginx, sendx, dbeginx, dendx;
-	int bpp = pixelbytes[(int)pixelformat];
-
-
-	if(dest->pixelformat != src->pixelformat) return;
-
-	// Copy anything at all?
-	if(x + amplitude*2 + sw <= 0 || x - amplitude*2  >= dw) return;
-	/*if(x >= dw) return;
-	if(sw+x <= 0) return;
-	if(y >= dh) return;
-	if(sh+y <= 0) return;*/
-
-	sox = 0;
-	soy = 0;
-
-	// Clip?
-	//if(x<0) {sox = -x; cw += x;}
-	if(y<0) {soy = -y; ch += y;}
-
-	//if(x+sw > dw) cw -= (x+sw) - dw;
-	if(y+sh > dh) ch -= (y+sh) - dh;
-
-	//if(x<0) x = 0;
-	if(y<0) y = 0;
-
-	sb = soy*sw;
-	db = y*dw;
-
-	u = (watermode==1)?distortion((int)s, amplitude):amplitude;
-	wavelength = 256 / wavelength;
-	s += soy*wavelength;
-
-	// Copy data
-	do{
-			s = s - (int)s + (int)s % 256;
-			t = distortion((int)s, amplitude) - u;
-
-			dbeginx = x+t;
-			dendx = x+t+sw;
-			
-			if(dbeginx>=sw || dendx<=0) {dbeginx = dendx = sbeginx = sendx = 0;} //Nothing to draw
-			//clip both
-			else if(dbeginx<0 && dendx>dw){ 
-				sbeginx = -dbeginx; sendx = sbeginx + dw;
-				dbeginx = 0; dendx = dw;
-			}
-			//clip left
-			else if(dbeginx<0) {
-				sbeginx = -dbeginx; sendx = sw;
-				dbeginx = 0;
-			}
-			// clip right
-			else if(dendx>dw) {
-				sbeginx = 0; sendx = dw - dbeginx;	
-				dendx = dw;
-			}
-			// clip none
-			else{
-				sbeginx = 0; sendx = sw;
-			}
-			memcpy(dp + (db + dbeginx)*bpp, sp+ (sb + sbeginx)*bpp, (dendx-dbeginx)*bpp);
-
-			s += wavelength;
-		sb += sw;
-		db += dw;
-	}while(--ch);
+    obor_water_rows w;
+    int row, sx, dx, count, bpp, format;
+    if(!obor_water_begin(&w, dest, src, x, y, amplitude, wavelength, time, watermode)) return;
+    format = src->pixelformat;
+    if(dest->pixelformat != format ||
+       format < 0 || format >= 5) return;
+    bpp = pixelbytes[format];
+    for(row = 0; row < w.rows; ++row) {
+        if(!obor_water_span(&w, row, &sx, &dx, &count)) continue;
+        if((size_t)count > (size_t)w.dw * w.dh - ((size_t)(w.dy + row) * w.dw + dx)) continue;
+        memcpy(dest->data + ((size_t)(w.dy + row) * w.dw + dx) * bpp,
+               src->data + ((size_t)(w.sy + row) * w.sw + sx) * bpp, (size_t)count * bpp);
+    }
 }
 
 // Screen copy function with offset options. Supports clipping.
@@ -225,83 +162,22 @@ void copyscreen_o(s_screen * dest, s_screen * src, int x, int y)
 // Screen copy function with offset options. Supports clipping.
 void copyscreen_trans_water(s_screen * dest, s_screen * src, int x, int y, int amplitude, float wavelength, int time, int watermode)
 {
-	unsigned char* sp = (unsigned char*)src->data, *dp =(unsigned char*)dest->data;
-	int sb, db;
-	int sw = src->width;
-	int sh = src->height;
-	int dw = dest->width;
-	int dh = dest->height;
-	int ch = sh;
-	int sox, soy;
-	float s = (float)(time % 256);
-	int t, u;
-	unsigned char* csp, *cdp;
-	int sbeginx, sendx, dbeginx, dendx;
-	int bytestocopy;
-
-	// Copy anything at all?
-	if(x + amplitude*2 + sw <= 0 || x - amplitude*2  >= dw) return;
-
-	sox = 0;
-	soy = 0;
-
-	// Clip?
-	//if(x<0) {sox = -x; cw += x;}
-	if(y<0) {soy = -y; ch += y;}
-
-	//if(x+sw > dw) cw -= (x+sw) - dw;
-	if(y+sh > dh) ch -= (y+sh) - dh;
-
-	//if(x<0) x = 0;
-	if(y<0) y = 0;
-
-	sb = soy*sw;
-	db = y*dw;
-
-	u = (watermode==1)?distortion((int)s, amplitude):amplitude;
-	wavelength = 256 / wavelength;
-	s += soy*wavelength;
-
-	// Copy data
-	do{
-			s = s - (int)s + (int)s % 256;
-			t = distortion((int)s, amplitude) - u;
-
-			dbeginx = x+t;
-			dendx = x+t+sw;
-			
-			if(dbeginx>=sw || dendx<=0) {dbeginx = dendx = sbeginx = sendx = 0;} //Nothing to draw
-			//clip both
-			else if(dbeginx<0 && dendx>dw){ 
-				sbeginx = -dbeginx; sendx = sbeginx + dw;
-				dbeginx = 0; dendx = dw;
-			}
-			//clip left
-			else if(dbeginx<0) {
-				sbeginx = -dbeginx; sendx = sw;
-				dbeginx = 0;
-			}
-			// clip right
-			else if(dendx>dw) {
-				sbeginx = 0; sendx = dw - dbeginx;	
-				dendx = dw;
-			}
-			// clip none
-			else{
-				sbeginx = 0; sendx = sw;
-			}
-			cdp = dp + db + dbeginx;
-			csp = sp+ sb + sbeginx; 
-			bytestocopy = dendx-dbeginx;
-
-			for(t=0; t<bytestocopy; t++){
-				if(csp[t]) cdp[t] = csp[t];
-			}
-
-			s += wavelength;
-		sb += sw;
-		db += dw;
-	}while(--ch);
+    obor_water_rows w;
+    int row, sx, dx, count, j;
+    if(!obor_water_begin(&w, dest, src, x, y, amplitude, wavelength, time, watermode)) return;
+    if(obor_profile_build < 3390 && dest->pixelformat != src->pixelformat) return;
+    for(row = 0; row < w.rows; ++row) {
+        unsigned char *sp, *dp;
+        if(!obor_water_span(&w, row, &sx, &dx, &count)) continue;
+        if((size_t)count > (size_t)w.dw * w.dh - ((size_t)(w.dy + row) * w.dw + dx))
+            count = (int)((size_t)w.dw * w.dh - ((size_t)(w.dy + row) * w.dw + dx));
+        sp = src->data + (size_t)(w.sy + row) * w.sw + sx;
+        dp = dest->data + (size_t)(w.dy + row) * w.dw + dx;
+        for(j = 0; j < count; ++j) {
+            int i = obor_profile_build < 3390 ? count - 1 - j : j;
+            if(sp[i]) dp[i] = sp[i];
+        }
+    }
 }
 
 // same as above, with color key
@@ -399,83 +275,23 @@ void copyscreen_remap(s_screen * dest, s_screen * src, int x, int y, unsigned ch
 // Screen copy function with offset options. Supports clipping.
 void blendscreen_water(s_screen * dest, s_screen * src, int x, int y, int amplitude, float wavelength, int time, int watermode, unsigned char* lut)
 {
-	unsigned char* sp = (unsigned char*)src->data, *dp =(unsigned char*)dest->data;
-	int sb, db;
-	int sw = src->width;
-	int sh = src->height;
-	int dw = dest->width;
-	int dh = dest->height;
-	int ch = sh;
-	int sox, soy;
-	float s = (float)(time % 256);
-	int t, u;
-	unsigned char* csp, *cdp;
-	int sbeginx, sendx, dbeginx, dendx;
-	int bytestocopy;
-
-	// Copy anything at all?
-	if(x + amplitude*2 + sw <= 0 || x - amplitude*2  >= dw) return;
-
-	sox = 0;
-	soy = 0;
-
-	// Clip?
-	//if(x<0) {sox = -x; cw += x;}
-	if(y<0) {soy = -y; ch += y;}
-
-	//if(x+sw > dw) cw -= (x+sw) - dw;
-	if(y+sh > dh) ch -= (y+sh) - dh;
-
-	//if(x<0) x = 0;
-	if(y<0) y = 0;
-
-	sb = soy*sw;
-	db = y*dw;
-
-	u = (watermode==1)?distortion((int)s, amplitude):amplitude;
-	wavelength = 256 / wavelength;
-	s += soy*wavelength;
-
-	// Copy data
-	do{
-			s = s - (int)s + (int)s % 256;
-			t = distortion((int)s, amplitude) - u;
-
-			dbeginx = x+t;
-			dendx = x+t+sw;
-			
-			if(dbeginx>=sw || dendx<=0) {dbeginx = dendx = sbeginx = sendx = 0;} //Nothing to draw
-			//clip both
-			else if(dbeginx<0 && dendx>dw){ 
-				sbeginx = -dbeginx; sendx = sbeginx + dw;
-				dbeginx = 0; dendx = dw;
-			}
-			//clip left
-			else if(dbeginx<0) {
-				sbeginx = -dbeginx; sendx = sw;
-				dbeginx = 0;
-			}
-			// clip right
-			else if(dendx>dw) {
-				sbeginx = 0; sendx = dw - dbeginx;	
-				dendx = dw;
-			}
-			// clip none
-			else{
-				sbeginx = 0; sendx = sw;
-			}
-			cdp = dp + db + dbeginx;
-			csp = sp+ sb + sbeginx; 
-			bytestocopy = dendx-dbeginx;
-
-			for(t=0; t<bytestocopy; t++){
-				if(csp[t]) cdp[t] = lut[csp[t]<<8|cdp[t]];;
-			}
-
-			s += wavelength;
-		sb += sw;
-		db += dw;
-	}while(--ch);
+    obor_water_rows w;
+    int row, sx, dx, count, j;
+    if(!obor_water_begin(&w, dest, src, x, y, amplitude, wavelength, time, watermode)) return;
+    if(obor_profile_build < 3390 && dest->pixelformat != src->pixelformat) return;
+    if(!lut) return;
+    for(row = 0; row < w.rows; ++row) {
+        unsigned char *sp, *dp;
+        if(!obor_water_span(&w, row, &sx, &dx, &count)) continue;
+        if((size_t)count > (size_t)w.dw * w.dh - ((size_t)(w.dy + row) * w.dw + dx))
+            count = (int)((size_t)w.dw * w.dh - ((size_t)(w.dy + row) * w.dw + dx));
+        sp = src->data + (size_t)(w.sy + row) * w.sw + sx;
+        dp = dest->data + (size_t)(w.dy + row) * w.dw + dx;
+        for(j = 0; j < count; ++j) {
+            int i = obor_profile_build < 3390 ? count - 1 - j : j;
+            if(sp[i]) dp[i] = lut[(sp[i] << 8) | dp[i]];
+        }
+    }
 }
 
 //same as above, with alpha blend

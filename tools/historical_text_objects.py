@@ -195,9 +195,17 @@ HRESULT Interpreter_EvalInstruction(Interpreter *p){(void)p;abort();}
 #define realloc native_realloc
 #define free native_free
 #define printf native_printf
+/* Callback allocations belong to the observed text ledger. The separately
+   compiled variant cache uses the actual allocation policy outside this scope. */
+#define obor_profile_malloc_named(name, bytes) native_malloc(bytes)
+#define obor_profile_calloc_named(name, bytes) native_calloc(1, bytes)
+#define obor_profile_realloc_named(name, pointer, bytes) native_realloc(pointer, bytes)
 @MAPPING@
 @HELPERS@
 @CALLBACKS@
+#undef obor_profile_malloc_named
+#undef obor_profile_calloc_named
+#undef obor_profile_realloc_named
 #undef malloc
 #undef calloc
 #undef realloc

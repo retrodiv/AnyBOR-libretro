@@ -1,11 +1,13 @@
-/* AnyBOR modification record: 2026-10-08.
+/* AnyBOR modification record: 2026-10-30.
  * Port maintained by retrodiv <retrodiv@proton.me>.
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
  * Upstream code retains its original license and notices.
  * Declare exact resident PCM content-member ranges for independently
  * verified reconstruction; preserve allocation tails and mutable mixer
- * state. Map stricmp on macOS.
+ * state. Map stricmp on macOS. Enforce the profile's sample-slot capacity in
+ * allocation, caching, release and playback while retaining fixed backing
+ * storage. Preserve the profile's sample-load failure diagnostic.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/3400.md
  * at the source repository root. Original notices follow below.
@@ -47,6 +49,8 @@
 */
 
 #include <stdio.h>
+#include <stdint.h>
+extern uint32_t obor_profile_build;
 #include <string.h>
 #include "obor_resources.h"
 #include <assert.h>
@@ -74,6 +78,7 @@
 #define		MIXSHIFT		     3	    // 2 should be OK
 #define		MAXVOLUME		     64	    // 64 for backw. compat.
 #define		MAX_SAMPLES		     1024	// Should be well enough
+#define OBOR_PROFILE_SAMPLE_LIMIT (obor_profile_build < 3383 ? 512 : MAX_SAMPLES)
 #define		MAX_CHANNELS	     64	    // Should be well enough
 
 // Hardware settings for SoundBlaster (change only if latency is too big)
@@ -269,7 +274,7 @@ static int loadwave(char *filename, char *packname, samplestruct *buf, unsigned 
 	}
 
 	if(rifftag.size<maxsize) maxsize = rifftag.size;
-	if((buf->sampleptr = malloc(maxsize*mulbytes+8))==NULL){
+	if((buf->sampleptr = obor_profile_malloc_named("load_wave", maxsize*mulbytes+8))==NULL){
 		closepackfile(handle);
 		return 0;
 	}
@@ -303,7 +308,7 @@ static int loadwave(char *filename, char *packname, samplestruct *buf, unsigned 
 
 void sound_free_sample(int which){
 	if(!mixing_inited) return;
-	if(which<0 || which>=MAX_SAMPLES) return;
+	if(which<0 || which>=OBOR_PROFILE_SAMPLE_LIMIT) return;
 	if(sampledata[which].sampleptr != NULL){
 		free(sampledata[which].sampleptr);
 		sampledata[which].sampleptr = NULL;
@@ -316,8 +321,8 @@ int sound_alloc_sample(char *filename, char *packfilename){
 	int i;
 	if(!mixing_inited) return -1;
 	// Search for available slot to store sample data
-	for(i=0; i<MAX_SAMPLES; i++) if(sampledata[i].sampleptr==NULL) break;
-	if(i>=MAX_SAMPLES) return -1;
+	for(i=0; i<OBOR_PROFILE_SAMPLE_LIMIT; i++) if(sampledata[i].sampleptr==NULL) break;
+	if(i>=OBOR_PROFILE_SAMPLE_LIMIT) return -1;
 	memset(&sampledata[i], 0, sizeof(samplestruct));
 	if(!loadwave(filename, packfilename, &sampledata[i], MAX_SOUND_LEN)) return -1;
 	return i;
@@ -326,8 +331,8 @@ int sound_alloc_sample(char *filename, char *packfilename){
 // Load a sound or return index
 int sound_load_sample(char *filename, char *packfilename, int iLog){
 	int i, len;
-	for(i=0; i<=MAX_SAMPLES; i++){
-		if(i == MAX_SAMPLES) return -1;
+	for(i=0; i<=OBOR_PROFILE_SAMPLE_LIMIT; i++){
+		if(i == OBOR_PROFILE_SAMPLE_LIMIT) return -1;
 		if(soundcache[i].filename == NULL) break;
 		if(stricmp(filename, soundcache[i].filename)==0) return soundcache[i].index;
 	}
@@ -335,12 +340,14 @@ int sound_load_sample(char *filename, char *packfilename, int iLog){
 	if(soundcache[i].index == -1){
 		if(!iLog)
 		{
-			writeToLogFile("\nsound_load_sample: Failed to load: %s\n", filename);
+			writeToLogFile(obor_profile_build < 3163
+                ? "\nFailed to load: %s\n"
+                : "\nsound_load_sample: Failed to load: %s\n", filename);
 		}
 		return -1;
 	}
 	len = strlen(filename);
-	soundcache[i].filename = malloc(len + 1);
+	soundcache[i].filename = obor_profile_malloc_named("sound_load_sample", len + 1);
 	strcpy(soundcache[i].filename, filename);
 	soundcache[i].filename[len] = 0;
 	return soundcache[i].index;
@@ -348,7 +355,7 @@ int sound_load_sample(char *filename, char *packfilename, int iLog){
 
 // Changed to conserve memory: added this function
 void sound_unload_sample(int index){
-	if(index<0 || index>=MAX_SAMPLES) return;
+	if(index<0 || index>=OBOR_PROFILE_SAMPLE_LIMIT) return;
 	if(soundcache[index].filename != NULL){
 		soundcache[index].index = -1;
 		free(soundcache[index].filename);
@@ -359,7 +366,7 @@ void sound_unload_sample(int index){
 
 void sound_unload_all_samples(){
 	int i;
-	for(i=0;i<MAX_SAMPLES;i++){
+	for(i=0;i<OBOR_PROFILE_SAMPLE_LIMIT;i++){
 		sound_unload_sample(i);
 	}
 }
@@ -612,7 +619,7 @@ int sound_play_sample(int samplenum, unsigned int priority, int lvolume, int rvo
 
 	if(speed<1) speed = 100;
 	if(!mixing_inited) return -1;
-	if(samplenum<0 || samplenum>=MAX_SAMPLES) return -1;
+	if(samplenum<0 || samplenum>=OBOR_PROFILE_SAMPLE_LIMIT) return -1;
 	if(!sampledata[samplenum].sampleptr) return -1;
 
 	// Try to find unused SFX channel
@@ -800,11 +807,11 @@ int sound_open_adpcm(char *filename, char *packname, int volume, int loop, u32 m
 	music_looping = loop;
 	music_atend = 0;
 
-	adpcm_inbuf = malloc(MUSIC_BUF_SIZE / 2);
+	adpcm_inbuf = obor_profile_malloc_named("sound_open_music 1", MUSIC_BUF_SIZE / 2);
 	if(adpcm_inbuf==NULL) goto error_exit;
 
 	for(i=0; i<MUSIC_NUM_BUFFERS; i++){
-		musicchannel.buf[i] = malloc(MUSIC_BUF_SIZE*sizeof(short));
+		musicchannel.buf[i] = obor_profile_malloc_named("sound_open_music 2", MUSIC_BUF_SIZE*sizeof(short));
 		if(musicchannel.buf[i]==NULL) goto error_exit;
 		memset(musicchannel.buf[i], 0, MUSIC_BUF_SIZE*sizeof(short));
 	}
@@ -1007,7 +1014,7 @@ int sound_open_ogg(char *filename, char *packname, int volume, int loop, u32 mus
 #endif
 		return 0;
 	}
-	oggfile = malloc(sizeof(OggVorbis_File));
+	oggfile = obor_profile_malloc_named("sound_open_music 1", sizeof(OggVorbis_File));
 	if (ov_open_callbacks(&ogg_handle, oggfile, NULL, 0, ogg_callbacks)!=0) {
 #ifdef VERBOSE
 		printf("ov_open_callbacks failed\n");
@@ -1037,7 +1044,7 @@ int sound_open_ogg(char *filename, char *packname, int volume, int loop, u32 mus
 	music_atend = 0;
 
 	for(i=0; i<MUSIC_NUM_BUFFERS; i++){
-		musicchannel.buf[i] = malloc(MUSIC_BUF_SIZE*sizeof(short));
+		musicchannel.buf[i] = obor_profile_malloc_named("sound_open_music 2", MUSIC_BUF_SIZE*sizeof(short));
 		if(musicchannel.buf[i]==NULL){
 			sound_close_ogg();
 #ifdef VERBOSE
@@ -1317,12 +1324,12 @@ int sound_init(int channels){
 	sound_exit();
 
 #ifdef XBOX
-	DMAbuf8 = (char*)malloc(SB_BUFFER_SIZE << 1 ) ;
+	DMAbuf8 = (char*)obor_profile_malloc_named("DMAbuf8", SB_BUFFER_SIZE << 1 ) ;
 	DMAbuf16 = (void*)DMAbuf8;
 #endif
 
 	// Allocate the maximum amount ever possibly needed for mixing
-	if((mixbuf = malloc(MIXBUF_SIZE)) == NULL){
+	if((mixbuf = obor_profile_malloc_named("sound_init", MIXBUF_SIZE)) == NULL){
 
 #ifdef PSP
 		SB_exit();
@@ -1335,7 +1342,7 @@ int sound_init(int channels){
 		memset(&vchannel[i], 0, sizeof(channelstruct));
 	}
 
-	for(i=0; i<MAX_SAMPLES; i++) sampledata[i].sampleptr = NULL;
+	for(i=0; i<OBOR_PROFILE_SAMPLE_LIMIT; i++) sampledata[i].sampleptr = NULL;
 	mixing_active = 0;
 	mixing_inited = 1;
 

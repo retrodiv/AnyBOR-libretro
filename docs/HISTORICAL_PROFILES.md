@@ -1,19 +1,27 @@
 # Choosing a profile
 
-Selectable engine profiles: v3.0 3400, v3.0 3666, v3.0 3667, v3.0 3669, v3.0 3670, v3.0 3671, v3.0 3672,
-v3.0 3673, v3.0 3674, v3.0 3675, v3.0 3677, v3.0 3678, v3.0 3679, v3.0 3680,
-v3.0 3682, v3.0 3685, v3.0 3686, v3.0 3689, v3.0 3690, v3.0 3691, v3.0 3692,
-v3.0 3693, v3.0 3694, v3.0 3697, v3.0 3699, v3.0 3701, v3.0 3703, v3.0 3704,
-v3.0 3707, v3.0 3708, v3.0 3709, v3.0 3710, v3.0 3711, v3.0 3713, v3.0 3714,
-v3.0 3715, v3.0 3716, v3.0 3722, v3.0 3725, v3.0 3726, v3.0 3727, v3.0 3728,
-v3.0 3729, v3.0 3730, v3.0 3732, v3.0 3738, v3.0 3740, v3.0 3741, v3.0
-3742-dev, v3.0 3761-dev, v3.0 3769, v3.0 3773, v3.0 3780, v3.0 3783, v3.0
-3789, v3.0 3793, v3.0 3797, v3.0 3805, v3.0 3814, v3.0 3818, v3.0 3822, v3.0
-3824, v3.0 3829, v3.0 3831, v3.0 3837, v3.0 3839, v3.0 3842, v3.0 4086, v3.0
-4088-dev, v3.0 4107, v3.0 4111, v3.0 4129, v3.0 4153, v3.0 4432, v3.0 4453,
-v3.0 6330, v3.0 6391, v3.0 6391-mod, v3.0 6392-dev, v3.0 6412-dev, v3.0
-6510-dev, v3.0 7086-dev, v3.0 7123-dev, v4.0 7142-alpha, v4.0 7533 and v4.0
-8023-dev.
+Selectable engine profiles: v3.0 3020-dev, v3.0 3057, v3.0 3062, v3.0 3073,
+v3.0 3081, v3.0 3109, v3.0 3117, v3.0 3143, v3.0 3160, v3.0 3173, v3.0 3192,
+v3.0 3208, v3.0 3273, v3.0 3288, v3.0 3303, v3.0 3307, v3.0 3310, v3.0 3311,
+v3.0 3316, v3.0 3317, v3.0 3318, v3.0 3327, v3.0 3328, v3.0 3330, v3.0 3332,
+v3.0 3335, v3.0 3337, v3.0 3340, v3.0 3341, v3.0 3342, v3.0 3350, v3.0 3351,
+v3.0 3352, v3.0 3353, v3.0 3354, v3.0 3355, v3.0 3356, v3.0 3357, v3.0 3360,
+v3.0 3361, v3.0 3362, v3.0 3365, v3.0 3366, v3.0 3367, v3.0 3371, v3.0 3372,
+v3.0 3373, v3.0 3375, v3.0 3379, v3.0 3380, v3.0 3381, v3.0 3383, v3.0 3385,
+v3.0 3388, v3.0 3391, v3.0 3394, v3.0 3397, v3.0 3400, v3.0 3666, v3.0 3667,
+v3.0 3669, v3.0 3670, v3.0 3671, v3.0 3672, v3.0 3673, v3.0 3674, v3.0 3675,
+v3.0 3677, v3.0 3678, v3.0 3679, v3.0 3680, v3.0 3682, v3.0 3685, v3.0 3686,
+v3.0 3689, v3.0 3690, v3.0 3691, v3.0 3692, v3.0 3693, v3.0 3694, v3.0 3697,
+v3.0 3699, v3.0 3701, v3.0 3703, v3.0 3704, v3.0 3707, v3.0 3708, v3.0 3709,
+v3.0 3710, v3.0 3711, v3.0 3713, v3.0 3714, v3.0 3715, v3.0 3716, v3.0 3722,
+v3.0 3725, v3.0 3726, v3.0 3727, v3.0 3728, v3.0 3729, v3.0 3730, v3.0 3732,
+v3.0 3738, v3.0 3740, v3.0 3741, v3.0 3742-dev, v3.0 3761-dev, v3.0 3769, v3.0
+3773, v3.0 3780, v3.0 3783, v3.0 3789, v3.0 3793, v3.0 3797, v3.0 3805, v3.0
+3814, v3.0 3818, v3.0 3822, v3.0 3824, v3.0 3829, v3.0 3831, v3.0 3837, v3.0
+3839, v3.0 3842, v3.0 4086, v3.0 4088-dev, v3.0 4107, v3.0 4111, v3.0 4129,
+v3.0 4153, v3.0 4432, v3.0 4453, v3.0 6330, v3.0 6391, v3.0 6391-mod, v3.0
+6392-dev, v3.0 6412-dev, v3.0 6510-dev, v3.0 7086-dev, v3.0 7123-dev, v4.0
+7142-alpha, v4.0 7533 and v4.0 8023-dev.
 
 Auto uses build tags and content clues to choose a profile. You can select one
 manually when a game needs it. Historical profiles preserve selected earlier
@@ -23,6 +31,16 @@ The 3741 source tree reads GIF headers and image descriptors as 13 and 9 bytes.
 Persisted configuration, progress and score records have their own explicit
 packing scope. GIF header packing does not change those record declarations;
 native ABI checks do not establish cross-platform save-file compatibility.
+
+The 3400 source tree uses explicit 32-bit script-save records: a four-byte
+counter, a 24-byte variable name and fixed variant fields. Linux x86-64 and
+macOS use 12-byte variants and 40-byte named records; Windows, Linux ARM64,
+Linux RISC-V and Android use 16-byte variants and 48-byte named records.
+String values retain their cache-index semantics. Non-null object references
+resolve within live allocations in the current engine arena; unavailable
+references are rejected. These records do not establish portable object or
+string identities between sessions. Partial reads retain unaffected fields,
+and indexed writes retain the original offset within each profile's capacity.
 
 Profiles before 3667 initialize each level set with two players and apply
 `single`/`maxplayers` only within a set. From 3667, those commands also define
@@ -333,6 +351,63 @@ Profiles are compatibility selections. Several profiles use one physical source 
 
 | Selectable profile | Source tree |
 |---|---|
+| v3.0 3020-dev | `3400` |
+| v3.0 3057 | `3400` |
+| v3.0 3062 | `3400` |
+| v3.0 3073 | `3400` |
+| v3.0 3081 | `3400` |
+| v3.0 3109 | `3400` |
+| v3.0 3117 | `3400` |
+| v3.0 3143 | `3400` |
+| v3.0 3160 | `3400` |
+| v3.0 3173 | `3400` |
+| v3.0 3192 | `3400` |
+| v3.0 3208 | `3400` |
+| v3.0 3273 | `3400` |
+| v3.0 3288 | `3400` |
+| v3.0 3303 | `3400` |
+| v3.0 3307 | `3400` |
+| v3.0 3310 | `3400` |
+| v3.0 3311 | `3400` |
+| v3.0 3316 | `3400` |
+| v3.0 3317 | `3400` |
+| v3.0 3318 | `3400` |
+| v3.0 3327 | `3400` |
+| v3.0 3328 | `3400` |
+| v3.0 3330 | `3400` |
+| v3.0 3332 | `3400` |
+| v3.0 3335 | `3400` |
+| v3.0 3337 | `3400` |
+| v3.0 3340 | `3400` |
+| v3.0 3341 | `3400` |
+| v3.0 3342 | `3400` |
+| v3.0 3350 | `3400` |
+| v3.0 3351 | `3400` |
+| v3.0 3352 | `3400` |
+| v3.0 3353 | `3400` |
+| v3.0 3354 | `3400` |
+| v3.0 3355 | `3400` |
+| v3.0 3356 | `3400` |
+| v3.0 3357 | `3400` |
+| v3.0 3360 | `3400` |
+| v3.0 3361 | `3400` |
+| v3.0 3362 | `3400` |
+| v3.0 3365 | `3400` |
+| v3.0 3366 | `3400` |
+| v3.0 3367 | `3400` |
+| v3.0 3371 | `3400` |
+| v3.0 3372 | `3400` |
+| v3.0 3373 | `3400` |
+| v3.0 3375 | `3400` |
+| v3.0 3379 | `3400` |
+| v3.0 3380 | `3400` |
+| v3.0 3381 | `3400` |
+| v3.0 3383 | `3400` |
+| v3.0 3385 | `3400` |
+| v3.0 3388 | `3400` |
+| v3.0 3391 | `3400` |
+| v3.0 3394 | `3400` |
+| v3.0 3397 | `3400` |
 | v3.0 3400 | `3400` |
 | v3.0 3666 | `3741` |
 | v3.0 3667 | `3741` |

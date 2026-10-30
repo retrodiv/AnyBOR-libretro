@@ -109,7 +109,11 @@ HRESULT Interpreter_EvalInstruction(Interpreter *p){(void)p;abort();}
 #define malloc create_malloc
 #define calloc create_calloc
 #define printf stream_message
+#define obor_profile_malloc_named(name, bytes) create_malloc(bytes)
+#define obor_profile_calloc_named(name, bytes) create_calloc(1, bytes)
 @CREATING@
+#undef obor_profile_malloc_named
+#undef obor_profile_calloc_named
 #undef malloc
 #undef calloc
 #undef printf

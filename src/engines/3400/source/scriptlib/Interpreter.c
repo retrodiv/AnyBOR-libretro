@@ -27,6 +27,9 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
+
+extern uint32_t obor_profile_build;
 #include "obor_script_compact.h"
 #include "obor_script_executable.h"
 
@@ -312,7 +315,8 @@ HRESULT Interpreter_EvaluateImmediate(Interpreter* pinterpreter)
 	Instruction* pInstruction = NULL;
 	int size, index;
 
-	if(pinterpreter->bHasImmediateCode)
+	if(pinterpreter->bHasImmediateCode &&
+	   (obor_profile_build < 3081 || obor_profile_build >= 3187))
 	{
 		//Run through all the instructions in the list, only executing those wrapped
 		//by IMMEDIATE and DEFERRED.
@@ -405,7 +409,7 @@ HRESULT Interpreter_EvaluateCall(Interpreter* pinterpreter)
 		Stack_Pop(&(pinterpreter->theDataStack)); \
 		pSVar1 = Stack_Top(&(pinterpreter->theDataStack)); \
 		Stack_Pop(&(pinterpreter->theDataStack)); \
-		pRetVal = (ScriptVariant*)malloc(sizeof(ScriptVariant));\
+		pRetVal = (ScriptVariant*)obor_profile_malloc_named("COMPILEBINARYOP", sizeof(ScriptVariant));\
 		ScriptVariant_Init(pRetVal);\
 		Stack_Push(&(pinterpreter->theDataStack),(void*)pRetVal); \
 		pInstruction->theVal = pRetVal;\
@@ -545,7 +549,7 @@ HRESULT Interpreter_CompileInstructions(Interpreter* pinterpreter, List *exports
 		case PARAM:
 			Instruction_NewData(pInstruction); //cache the the new variant
 			pToken = pInstruction->theToken;
-			pSymbol = (Symbol*)malloc(sizeof(Symbol));
+			pSymbol = (Symbol*)obor_profile_malloc_named("Interpreter_CompileInstructions #1", sizeof(Symbol));
 			Symbol_Init(pSymbol, pToken->theSource, 0, NULL, pInstruction);
 			StackedSymbolTable_AddSymbol(&(pinterpreter->theSymbolTable), pSymbol );
 			break;
@@ -571,7 +575,9 @@ HRESULT Interpreter_CompileInstructions(Interpreter* pinterpreter, List *exports
 			}
 			else // can't find the jump target
 			{
-				printf("Script compile error: can't find function '%s'\n", pToken->theSource);
+				if(obor_profile_build >= 3337) {
+					printf("Script compile error: can't find function '%s'\n", pToken->theSource);
+				}
 				hr = E_FAIL;
 			}
 			//cache the paramCount
@@ -579,7 +585,7 @@ HRESULT Interpreter_CompileInstructions(Interpreter* pinterpreter, List *exports
 			Stack_Pop(&(pinterpreter->theDataStack));
 			//printf("#%u\n", pInstruction->theRef);
 			// alloc the param ref list;
-			pInstruction->theRefList = (List*)malloc(sizeof(List));
+			pInstruction->theRefList = (List*)obor_profile_malloc_named("Interpreter_CompileInstructions #2", sizeof(List));
 			List_Init(pInstruction->theRefList);
 			//cache parameter list
 			for(j=0; j<pSVar1->lVal; j++){
@@ -1005,7 +1011,11 @@ HRESULT Interpreter_EvalInstruction(Interpreter* pinterpreter)
 				currentCall = pinterpreter->pCurrentCall;
 				if(pInstruction->theVal->lVal != Instruction_CallReferenceCount(currentCall))
 				{
+                    if(obor_profile_build < 3218) {
+                        printf("Runtime error: argument count(%d) doesn't match, check your function call.\n", (int)pInstruction->theVal->lVal);
+                    } else {
 					printf("Runtime error: argument count(%d) doesn't match the compiled function call.\n", (int)pInstruction->theVal->lVal);
+                    }
 					hr = E_FAIL;
 				}
 			}

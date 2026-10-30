@@ -15,6 +15,7 @@ import unittest
 
 from historical_sprite_nodes import render_sprite_nodes
 from native_sanitizers import sanitizer_environment
+from native_allocation_policy import bind_named_allocation_support
 from test_color_blends import compile_checked
 from test_historical_player import function
 
@@ -56,10 +57,20 @@ class SpriteNodeTests(unittest.TestCase):
                 '-ffunction-sections','-fdata-sections','-fsanitize=address,undefined,pointer-overflow',
                 '-fno-sanitize-recover=all']
             text=(root/'openbor.c').read_bytes().decode('utf8',errors='surrogateescape')
-            code=render_sprite_nodes(loader=function(text,'loadsprite'),cleanup=function(text,'freesprites'),
+            loader=function(text,'loadsprite')
+            code=render_sprite_nodes(loader=loader,cleanup=function(text,'freesprites'),
                 cache=function(text,'cachesprite')if context['node_cache']else '',revision=int(engine),
                 node_cache=context['node_cache'],clipped_metadata=context['clipped_metadata'],
                 count_type=context['count_type'],mode='all')
+            if 'obor_prepare_sprite_map(' in loader:
+                # Keep the source-owned wrapper; the existing finite map provider
+                # still owns capacity, while the map-growth suite checks growth.
+                code=code.replace(loader,function(text,'obor_prepare_sprite_map')+'\n'+loader,1)
+            if 'obor_profile_malloc_named(' in loader:
+                # Bind inside the owning allocator scope, retaining refusal and
+                # release-ledger controls instead of allocating outside them.
+                code=code.replace(loader,'@NAMED_ALLOCATION_SUPPORT@\n'+loader,1)
+                code=bind_named_allocation_support(code,root,marker='@NAMED_ALLOCATION_SUPPORT@')
             source=work/(engine+'.c');source.write_text(profile_program(code));binary=source.with_suffix('')
             compile_checked(compiler+flags+[str(source),*links,'-o',str(binary)])
             cls.executables[engine]=binary

@@ -1,3 +1,14 @@
+/* AnyBOR modification record: 2026-09-12.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Preserve native script-scope allocation failure feedback.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/3400.md
+ * at the source repository root. Original notices follow below.
+ */
+
 /*
  * OpenBOR - http://www.LavaLit.com
  * -----------------------------------------------------------------------
@@ -46,7 +57,7 @@ void StackedSymbolTable_PushScope(StackedSymbolTable* sstable, LPCSTR scopeName 
 
    SymbolTable* newSymbolTable = NULL;
 
-   newSymbolTable =(SymbolTable*)malloc(sizeof(SymbolTable));
+   newSymbolTable =(SymbolTable*)obor_profile_malloc_named("StackedSymbolTable_PushScope", sizeof(SymbolTable));
    //We have to have a name for this scope, so if we got NULL, then use ""
    if (scopeName) SymbolTable_Init(newSymbolTable, scopeName);
    else           SymbolTable_Init(newSymbolTable, "");

@@ -155,7 +155,7 @@ void Script_Global_Init()
 	{
 		psize = (sizeof(s_variantnode*) * max_global_vars);
 		csize = psize + (sizeof(s_variantnode) * max_global_vars);
-		global_var_list = malloc(csize);
+		global_var_list = obor_profile_malloc_named("Script_Global_Init", csize);
 		assert(global_var_list != NULL);
 		memset(global_var_list, 0, csize);
 		for (i=0; i < max_global_vars; i++) {
@@ -165,7 +165,7 @@ void Script_Global_Init()
 	/*
 	for(i=0; i<max_global_vars; i++)
 	{
-		global_var_list[i] = malloc(sizeof(s_variantnode));
+		global_var_list[i] = obor_profile_malloc_named("Script_Global_Init#1", sizeof(s_variantnode));
 		assert(global_var_list[i] != NULL);
 		memset(global_var_list[i], 0, sizeof(s_variantnode));
 	} */
@@ -176,7 +176,7 @@ void Script_Global_Init()
 	if(max_indexed_vars>0)
 	{
 		csize = sizeof(ScriptVariant)*(max_indexed_vars + 1);
-		indexed_var_list = (ScriptVariant*)malloc(csize);
+		indexed_var_list = (ScriptVariant*)obor_profile_malloc_named("Script_Global_Init#2", csize);
 		assert(indexed_var_list != NULL);
 		memset(indexed_var_list, 0, csize);
 	}
@@ -248,7 +248,7 @@ ScriptVariant* Script_Get_Global_Variant(char* theName)
 	if(!theName || !theName[0]) return NULL;
 
 	for(i=0; i<=max_global_var_index; i++){
-		if(!global_var_list[i]->owner &&
+		if(!global_var_list[i]->owner && global_var_list[i]->key &&
 		   strcmp(theName, global_var_list[i]->key)==0)
 			return &(global_var_list[i]->value);
 	}
@@ -265,7 +265,7 @@ int _set_var(char* theName, ScriptVariant* var, Script* owner)
 	// search the name
 	for(i=0; i<=max_global_var_index; i++)
 	{
-		if(global_var_list[i]->owner == owner &&
+		if(global_var_list[i]->owner == owner && global_var_list[i]->key &&
 		   !strcmp(theName, global_var_list[i]->key))
 		{
 			if(var->vt != VT_EMPTY)
@@ -341,7 +341,7 @@ ScriptVariant* Script_Get_Local_Variant(char* theName)
 
 	for(i=0; i<=max_global_var_index; i++)
 	{
-		if(global_var_list[i]->owner == pcurrentscript &&
+		if(global_var_list[i]->owner == pcurrentscript && global_var_list[i]->key &&
 		   strcmp(theName, global_var_list[i]->key)==0)
 			return &(global_var_list[i]->value);
 	}
@@ -358,11 +358,11 @@ int Script_Set_Local_Variant(char* theName, ScriptVariant* var)
 Script* alloc_script()
 {
 	int i;
-	Script* pscript = (Script*)malloc(sizeof(Script));
+	Script* pscript = (Script*)obor_profile_malloc_named("alloc_script", sizeof(Script));
 	memset(pscript, 0, sizeof(Script));
 	if(max_script_vars>0)
 	{
-		pscript->vars = (ScriptVariant*)malloc(sizeof(ScriptVariant)*max_script_vars);
+		pscript->vars = (ScriptVariant*)obor_profile_malloc_named("alloc_script#pscript->vars", sizeof(ScriptVariant)*max_script_vars);
 		for(i=0; i<max_script_vars; i++) ScriptVariant_Init(pscript->vars+i);
 	}
 	return pscript;
@@ -377,7 +377,7 @@ static void obor_script_destroy_interpreter(void *value)
 
 static int obor_script_replace_interpreter(Script *script, char *name)
 {
-    Interpreter *replacement = malloc(sizeof(*replacement));
+    Interpreter *replacement = obor_profile_malloc_named("Script_Init#2", sizeof(*replacement));
     obor_script_reference *reference;
     if(!replacement) return 0;
     Interpreter_Init(replacement, name, &theFunctionList);
@@ -416,7 +416,7 @@ void Script_Init(Script* pscript, char* theName, int first)
 		memset(pscript, 0, sizeof(Script));
 		if(max_script_vars>0)
 		{
-			pscript->vars = (ScriptVariant*)malloc(sizeof(ScriptVariant)*max_script_vars);
+			pscript->vars = (ScriptVariant*)obor_profile_malloc_named("Script_Init#pscript->vars", sizeof(ScriptVariant)*max_script_vars);
 			for(i=0; i<max_script_vars; i++) ScriptVariant_Init(pscript->vars+i);
 		}
 	}
@@ -593,10 +593,10 @@ const char* Script_GetFunctionName(void* functionRef)
 	else if (functionRef==((void*)openbor_getmodelproperty)) return "getmodelproperty";
 	else if (functionRef==((void*)openbor_changemodelproperty)) return "changemodelproperty";
 	else if (functionRef==((void*)openbor_rgbcolor)) return "rgbcolor";
-	else if (functionRef==((void*)openbor_zoom)) return "zoom";
-	else if (functionRef==((void*)openbor_settexture)) return "settexture";
-	else if (functionRef==((void*)openbor_setvertex)) return "setvertex";
-	else if (functionRef==((void*)openbor_trianglelist)) return "trianglelist";
+	else if (obor_profile_build >= 3366 && functionRef==((void*)openbor_zoom)) return "zoom";
+	else if (obor_profile_build >= 3381 && functionRef==((void*)openbor_settexture)) return "settexture";
+	else if (obor_profile_build >= 3381 && functionRef==((void*)openbor_setvertex)) return "setvertex";
+	else if (obor_profile_build >= 3381 && functionRef==((void*)openbor_trianglelist)) return "trianglelist";
 	else return "<unknown function>";
 }
 
@@ -621,6 +621,9 @@ void* Script_GetStringMapFunction(void* functionRef)
 	else return NULL;
 }
 
+#include <stdint.h>
+extern uint32_t obor_profile_build;
+
 /* Replace string constants with enum constants at compile time to speed up
    script execution. */
 int Script_MapStringConstants(Script* pscript)
@@ -631,6 +634,7 @@ int Script_MapStringConstants(Script* pscript)
 	//ScriptVariant* var;
 	void (*pMapstrings)(ScriptVariant**, int);
 	int i, j, k, size, paramCount;
+	if(obor_profile_build >= 3081 && obor_profile_build < 3187) return 1;
 
 	size = List_GetSize(&(pinterpreter->theInstructionList));
 	for(i=0; i<size; i++)
@@ -715,7 +719,7 @@ void Script_LowerConstants(Script* pscript)
 {
 	Interpreter* pinterpreter = pscript->pinterpreter;
 	Instruction* pInstruction, *pInstruction2;
-	List* newInstructionList = malloc(sizeof(List));
+	List* newInstructionList = obor_profile_malloc_named("Script_LowerConstants", sizeof(List));
 	int i, j, size;
 
 	List_Init(newInstructionList);
@@ -1085,12 +1089,16 @@ void Script_LoadSystemFunctions()
 					  (void*)openbor_changemodelproperty, "changemodelproperty");
 	List_InsertAfter(&theFunctionList,
 					  (void*)openbor_rgbcolor, "rgbcolor");
+    if(obor_profile_build >= 3366)
 	List_InsertAfter(&theFunctionList,
 					  (void*)openbor_zoom, "zoom");
+    if(obor_profile_build >= 3381)
 	List_InsertAfter(&theFunctionList,
 					  (void*)openbor_settexture, "settexture");
+    if(obor_profile_build >= 3381)
 	List_InsertAfter(&theFunctionList,
 					  (void*)openbor_setvertex, "setvertex");
+    if(obor_profile_build >= 3381)
 	List_InsertAfter(&theFunctionList,
 					  (void*)openbor_trianglelist, "trianglelist");
 	//printf("Done!\n");
@@ -1251,14 +1259,13 @@ HRESULT system_free(ScriptVariant** varlist , ScriptVariant** pretvar, int param
 //////////////////////////////////////////////////////////
 
 // ===== openborvariant =====
-void mapstrings_systemvariant(ScriptVariant** varlist, int paramCount)
-{
-	char* propname;
-	int prop;
-
-	// This enum is replicated in getsyspropertybyindex in openbor.c. If you
-	// change one, you must change the other as well!!!!
-	enum systemvariant_enum
+/* Own script-visible system IDs stay unchanged through compiler mapping. */
+typedef struct {
+    const char *const *names;
+    const int *ids;
+    int count, name_count;
+} obor_system_namespace;
+enum systemvariant_enum
 	{
 		_sv_branchname,
 		_sv_count_enemies,
@@ -1325,6 +1332,88 @@ void mapstrings_systemvariant(ScriptVariant** varlist, int paramCount)
 		_sv_ypos,
 		_sv_the_end,
 	 };
+static const char *const obor_system_property_namespace_0_names[] = {"branchname","count_enemies","count_entities","count_npcs","count_players","current_level","current_palette","current_set","current_stage","elapsed_time","ent_max","game_paused","game_speed","gfx_y_offset","hResolution","in_level","in_selectscreen","lasthita","lasthitc","lasthitt","lasthitx","lasthitz","levelheight","levelwidth","lightx","lightz","maxentityvars","maxglobalvars","maxindexedvars","maxplayers","maxscriptvars","models_cached","models_loaded","numpalettes","pixelformat","player","player1","player2","player3","player4","player_max_z","player_min_z","shadowalpha","shadowcolor","slowmotion","slowmotion_duration","totalram","freeram","usedram","vResolution","xpos","ypos"};
+static const int obor_system_property_namespace_0_ids[] = {_sv_branchname,_sv_count_enemies,_sv_count_entities,_sv_count_npcs,_sv_count_players,_sv_current_level,_sv_current_palette,_sv_current_set,_sv_current_stage,_sv_elapsed_time,_sv_ent_max,_sv_game_paused,_sv_game_speed,_sv_gfx_y_offset,_sv_hResolution,_sv_in_level,_sv_in_selectscreen,_sv_lasthita,_sv_lasthitc,_sv_lasthitt,_sv_lasthitx,_sv_lasthitz,_sv_levelheight,_sv_levelwidth,_sv_lightx,_sv_lightz,_sv_maxentityvars,_sv_maxglobalvars,_sv_maxindexedvars,_sv_maxplayers,_sv_maxscriptvars,_sv_models_cached,_sv_models_loaded,_sv_numpalettes,_sv_pixelformat,_sv_player,_sv_player1,_sv_player2,_sv_player3,_sv_player4,_sv_player_max_z,_sv_player_min_z,_sv_shadowalpha,_sv_shadowcolor,_sv_slowmotion,_sv_slowmotion_duration,_sv_totalram,_sv_freeram,_sv_usedram,_sv_vResolution,_sv_xpos,_sv_ypos};
+static const obor_system_namespace obor_system_property_namespace_0_table = {obor_system_property_namespace_0_names,obor_system_property_namespace_0_ids,52,52};
+static const char *const obor_system_property_namespace_1_names[] = {"branchname","count_enemies","count_entities","count_npcs","count_players","current_level","current_palette","current_set","current_stage","elapsed_time","ent_max","game_paused","game_speed","gfx_x_offset","gfx_y_offset","gfx_y_offset_adj","hResolution","in_level","in_selectscreen","lasthita","lasthitc","lasthitt","lasthitx","lasthitz","levelheight","levelwidth","lightx","lightz","maxentityvars","maxglobalvars","maxindexedvars","maxplayers","maxscriptvars","models_cached","models_loaded","numpalettes","pixelformat","player","player1","player2","player3","player4","player_max_z","player_min_z","shadowalpha","shadowcolor","slowmotion","slowmotion_duration","totalram","freeram","usedram","vResolution","xpos","ypos"};
+static const int obor_system_property_namespace_1_ids[] = {_sv_branchname,_sv_count_enemies,_sv_count_entities,_sv_count_npcs,_sv_count_players,_sv_current_level,_sv_current_palette,_sv_current_set,_sv_current_stage,_sv_elapsed_time,_sv_ent_max,_sv_game_paused,_sv_game_speed,_sv_gfx_x_offset,_sv_gfx_y_offset,_sv_gfx_y_offset_adj,_sv_hResolution,_sv_in_level,_sv_in_selectscreen,_sv_lasthita,_sv_lasthitc,_sv_lasthitt,_sv_lasthitx,_sv_lasthitz,_sv_levelheight,_sv_levelwidth,_sv_lightx,_sv_lightz,_sv_maxentityvars,_sv_maxglobalvars,_sv_maxindexedvars,_sv_maxplayers,_sv_maxscriptvars,_sv_models_cached,_sv_models_loaded,_sv_numpalettes,_sv_pixelformat,_sv_player,_sv_player1,_sv_player2,_sv_player3,_sv_player4,_sv_player_max_z,_sv_player_min_z,_sv_shadowalpha,_sv_shadowcolor,_sv_slowmotion,_sv_slowmotion_duration,_sv_totalram,_sv_freeram,_sv_usedram,_sv_vResolution,_sv_xpos,_sv_ypos};
+static const obor_system_namespace obor_system_property_namespace_1_table = {obor_system_property_namespace_1_names,obor_system_property_namespace_1_ids,54,54};
+static const char *const obor_system_property_namespace_2_names[] = {"branchname","count_enemies","count_entities","count_npcs","count_players","current_level","current_palette","current_set","current_stage","effectvol","elapsed_time","ent_max","game_paused","game_speed","gfx_x_offset","gfx_y_offset","gfx_y_offset_adj","hResolution","in_level","in_selectscreen","lasthita","lasthitc","lasthitt","lasthitx","lasthitz","levelheight","levelwidth","lightx","lightz","maxentityvars","maxglobalvars","maxindexedvars","maxplayers","maxscriptvars","models_cached","models_loaded","musicvol","numpalettes","pixelformat","player","player1","player2","player3","player4","player_max_z","player_min_z","shadowalpha","shadowcolor","slowmotion","slowmotion_duration","soundvol","totalram","freeram","usedram","vResolution","xpos","ypos"};
+static const int obor_system_property_namespace_2_ids[] = {_sv_branchname,_sv_count_enemies,_sv_count_entities,_sv_count_npcs,_sv_count_players,_sv_current_level,_sv_current_palette,_sv_current_set,_sv_current_stage,_sv_effectvol,_sv_elapsed_time,_sv_ent_max,_sv_game_paused,_sv_game_speed,_sv_gfx_x_offset,_sv_gfx_y_offset,_sv_gfx_y_offset_adj,_sv_hResolution,_sv_in_level,_sv_in_selectscreen,_sv_lasthita,_sv_lasthitc,_sv_lasthitt,_sv_lasthitx,_sv_lasthitz,_sv_levelheight,_sv_levelwidth,_sv_lightx,_sv_lightz,_sv_maxentityvars,_sv_maxglobalvars,_sv_maxindexedvars,_sv_maxplayers,_sv_maxscriptvars,_sv_models_cached,_sv_models_loaded,_sv_musicvol,_sv_numpalettes,_sv_pixelformat,_sv_player,_sv_player1,_sv_player2,_sv_player3,_sv_player4,_sv_player_max_z,_sv_player_min_z,_sv_shadowalpha,_sv_shadowcolor,_sv_slowmotion,_sv_slowmotion_duration,_sv_soundvol,_sv_totalram,_sv_freeram,_sv_usedram,_sv_vResolution,_sv_xpos,_sv_ypos};
+static const obor_system_namespace obor_system_property_namespace_2_table = {obor_system_property_namespace_2_names,obor_system_property_namespace_2_ids,57,57};
+static const char *const obor_system_property_namespace_3_names[] = {"branchname","count_enemies","count_entities","count_npcs","count_players","current_level","current_palette","current_scene","current_set","current_stage","effectvol","elapsed_time","ent_max","game_paused","game_speed","gfx_x_offset","gfx_y_offset","gfx_y_offset_adj","hResolution","in_gameoverscreen","in_halloffamescreen","in_level","in_menuscreen","in_selectscreen","in_titlescreen","lasthita","lasthitc","lasthitt","lasthitx","lasthitz","levelheight","levelwidth","lightx","lightz","maxentityvars","maxglobalvars","maxindexedvars","maxplayers","maxscriptvars","models_cached","models_loaded","musicvol","numpalettes","pixelformat","player","player1","player2","player3","player4","player_max_z","player_min_z","shadowalpha","shadowcolor","slowmotion","slowmotion_duration","soundvol","totalram","freeram","usedram","vResolution","xpos","ypos"};
+static const int obor_system_property_namespace_3_ids[] = {_sv_branchname,_sv_count_enemies,_sv_count_entities,_sv_count_npcs,_sv_count_players,_sv_current_level,_sv_current_palette,_sv_current_scene,_sv_current_set,_sv_current_stage,_sv_effectvol,_sv_elapsed_time,_sv_ent_max,_sv_game_paused,_sv_game_speed,_sv_gfx_x_offset,_sv_gfx_y_offset,_sv_gfx_y_offset_adj,_sv_hResolution,_sv_in_gameoverscreen,_sv_in_halloffamescreen,_sv_in_level,_sv_in_menuscreen,_sv_in_selectscreen,_sv_in_titlescreen,_sv_lasthita,_sv_lasthitc,_sv_lasthitt,_sv_lasthitx,_sv_lasthitz,_sv_levelheight,_sv_levelwidth,_sv_lightx,_sv_lightz,_sv_maxentityvars,_sv_maxglobalvars,_sv_maxindexedvars,_sv_maxplayers,_sv_maxscriptvars,_sv_models_cached,_sv_models_loaded,_sv_musicvol,_sv_numpalettes,_sv_pixelformat,_sv_player,_sv_player1,_sv_player2,_sv_player3,_sv_player4,_sv_player_max_z,_sv_player_min_z,_sv_shadowalpha,_sv_shadowcolor,_sv_slowmotion,_sv_slowmotion_duration,_sv_soundvol,_sv_totalram,_sv_freeram,_sv_usedram,_sv_vResolution,_sv_xpos,_sv_ypos};
+static const obor_system_namespace obor_system_property_namespace_3_table = {obor_system_property_namespace_3_names,obor_system_property_namespace_3_ids,62,62};
+static const obor_system_namespace *obor_system_property_namespace(void) {
+    switch(obor_profile_build) {
+    case 3020u:
+    case 3057u:
+    case 3062u:
+    case 3073u:
+    case 3081u:
+    case 3109u:
+    case 3117u:
+    case 3143u:
+    case 3160u:
+    case 3173u:
+    case 3192u:
+    case 3208u:
+    case 3273u:
+    case 3288u:
+    case 3303u:
+    case 3307u:
+    case 3310u:
+    case 3311u:
+    case 3316u:
+    case 3317u:
+    case 3318u:
+    case 3327u:
+        return &obor_system_property_namespace_0_table;
+    case 3328u:
+    case 3330u:
+    case 3332u:
+    case 3335u:
+    case 3337u:
+    case 3340u:
+    case 3341u:
+    case 3342u:
+    case 3350u:
+    case 3351u:
+    case 3352u:
+    case 3353u:
+        return &obor_system_property_namespace_1_table;
+    case 3354u:
+    case 3355u:
+    case 3356u:
+    case 3357u:
+        return &obor_system_property_namespace_2_table;
+    case 3360u:
+    case 3361u:
+    case 3362u:
+    case 3365u:
+    case 3366u:
+    case 3367u:
+    case 3371u:
+        return &obor_system_property_namespace_3_table;
+    default: return NULL;
+    }
+}
+
+int obor_system_property_index(int index)
+{
+    const obor_system_namespace *ns = obor_system_property_namespace();
+    if(!ns) return index;
+    return index >= 0 && index < ns->count ? ns->ids[index] : -1;
+}
+
+void mapstrings_systemvariant(ScriptVariant** varlist, int paramCount)
+{
+	char* propname;
+	int prop;
+
+	// This enum is replicated in getsyspropertybyindex in openbor.c. If you
+	// change one, you must change the other as well!!!!
+	
 
 	// arranged list, for searching
 	static const char* proplist[] = {
@@ -1393,7 +1482,8 @@ void mapstrings_systemvariant(ScriptVariant** varlist, int paramCount)
 		"ypos",
 	 };
 
-	MAPSTRINGS(varlist[0], proplist, _sv_the_end,
+	const obor_system_namespace *ns = obor_system_property_namespace();
+    MAPSTRINGS(varlist[0], (const char **)(ns ? ns->names : proplist), ns ? ns->name_count : _sv_the_end,
 		"openborvariant: System variable name not found: '%s'\n");
 }
 
@@ -1483,7 +1573,15 @@ void mapstrings_changesystemvariant(ScriptVariant** varlist, int paramCount)
 		"ypos",
 	 };
 
-	 MAPSTRINGS(varlist[0], proplist, _csv_the_end,
+    static const char* legacy_proplist[] = {
+        "blockade", "elapsed_time", "lasthita", "lasthitc", "lasthitt",
+        "lasthitx", "lasthitz", "levelpos", "scrollmaxz", "scrollminz",
+        "slowmotion", "slowmotion_duration", "smartbomber", "textbox",
+        "xpos", "ypos"
+    };
+    const char** names = obor_profile_build < 3328 ? legacy_proplist : proplist;
+    int count = obor_profile_build < 3328 ? _csv_the_end - 3 : _csv_the_end;
+    MAPSTRINGS(varlist[0], names, count,
 		"changeopenborvariant: System variable name not found: '%s'\n");
 }
 
@@ -2567,6 +2665,52 @@ HRESULT openbor_changemodelproperty(ScriptVariant** varlist , ScriptVariant** pr
 }
 
 // ===== getentityproperty =====
+/* Keep script-visible IDs in each build's namespace through compile and runtime. */
+typedef struct {
+    const char *const *names;
+    const int *ids;
+    int count, name_count;
+} obor_property_namespace;
+static const obor_property_namespace *obor_get_property_namespace(void);
+static const obor_property_namespace *obor_set_property_namespace(void);
+static const obor_property_namespace *obor_get_aiflag_namespace(void);
+static const obor_property_namespace *obor_set_aiflag_namespace(void);
+
+static int obor_property_index(const obor_property_namespace *space, int index, int physical_count)
+{
+    int count = space ? space->count : physical_count;
+    if(index < 0 || index >= count) return -1;
+    return space ? space->ids[index] : index;
+}
+
+static LONG obor_legacy_energycost(const s_anim *animation, int index)
+{
+    switch(index)
+    {
+    case 0: return (LONG)animation->energycost.cost;
+    case 1: return (LONG)animation->energycost.mponly;
+    case 2: return (LONG)animation->energycost.disable;
+    default: return 0;
+    }
+}
+
+extern int sprite_map_max_items;
+static int obor_icon_sprite_index(int index)
+{
+    return index >= 0 && sprite_map && index < sprite_map_max_items && sprite_map[index].sprite;
+}
+
+static uint32_t obor_old_staydown(const entity *ent, int index)
+{
+    switch(index)
+    {
+    case 0: return (uint32_t)ent->staydown.rise;
+    case 1: return (uint32_t)ent->staydown.riseattack;
+    case 2: return (uint32_t)ent->staydown.riseattack_stall;
+    default: return 0;
+    }
+}
+
 enum getentityproperty_enum {
 	_gep_a,
 	_gep_aggression,
@@ -2905,6 +3049,8 @@ enum gep_staydown_enum {
 
 void mapstrings_getentityproperty(ScriptVariant** varlist, int paramCount)
 {
+    const obor_property_namespace *space = obor_get_property_namespace();
+    int obor_property;
 	char* propname;
 	int prop;
 
@@ -3232,27 +3378,31 @@ void mapstrings_getentityproperty(ScriptVariant** varlist, int paramCount)
 	if(paramCount < 2) return;
 
 	// map entity properties
-	MAPSTRINGS(varlist[1], proplist, _gep_the_end,
+	MAPSTRINGS(varlist[1], space ? (const char**)space->names : proplist,
+        space ? space->name_count : _gep_the_end,
 		"Property name '%s' is not supported by function getentityproperty.\n");
+    obor_property = obor_property_index(space, varlist[1]->lVal, _gep_the_end);
 
 	if(paramCount < 3) return;
 
 	// map subproperties of aiflag property
-	if((varlist[1]->vt == VT_INTEGER) && (varlist[1]->lVal == _gep_aiflag))
+	if((varlist[1]->vt == VT_INTEGER) && (obor_property == _gep_aiflag))
 	{
-		MAPSTRINGS(varlist[2], proplist_aiflag, _gep_aiflag_the_end,
+		const obor_property_namespace *flags = obor_get_aiflag_namespace();
+        MAPSTRINGS(varlist[2], flags ? (const char**)flags->names : proplist_aiflag,
+            flags ? flags->name_count : _gep_aiflag_the_end,
 			"'%s' is not a known subproperty of 'aiflag'.\n");
 	}
 
 	// map subproperties of Attack
-	if((varlist[1]->vt == VT_INTEGER) && (varlist[1]->lVal == _gep_attack))
+	if((varlist[1]->vt == VT_INTEGER) && (obor_property == _gep_attack))
 	{
 		MAPSTRINGS(varlist[2], proplist_attack, _gep_attack_the_end,
 			"Property name '%s' is not a known subproperty of 'attack'.\n");
 	}
 
 	// map subproperties of defense property
-	if((varlist[1]->vt == VT_INTEGER) && (varlist[1]->lVal == _gep_defense))
+	if((varlist[1]->vt == VT_INTEGER) && (obor_property == _gep_defense))
 	{
 		if(paramCount >= 4)
 		{
@@ -3262,86 +3412,88 @@ void mapstrings_getentityproperty(ScriptVariant** varlist, int paramCount)
 	}
 
     // map subproperties of DOT
-	if((varlist[1]->vt == VT_INTEGER) && (varlist[1]->lVal == _gep_dot))
+	if((varlist[1]->vt == VT_INTEGER) && (obor_property == _gep_dot))
 	{
 		MAPSTRINGS(varlist[2], proplist_dot, _gep_dot_the_end,
 			"Property name '%s' is not a known subproperty of 'dot'.\n");
 	}
 
     // map subproperties of Edelay property
-	if((varlist[1]->vt == VT_INTEGER) && (varlist[1]->lVal == _gep_edelay))
+	if((varlist[1]->vt == VT_INTEGER) && (obor_property == _gep_edelay))
 	{
 		MAPSTRINGS(varlist[2], proplist_edelay, _gep_edelay_the_end,
 			"'%s' is not a known subproperty of 'edelay'.\n");
 	}
 
 	// map subproperties of Energycost
-	if((varlist[1]->vt == VT_INTEGER) && (varlist[1]->lVal == _gep_energycost))
+	if((varlist[1]->vt == VT_INTEGER) && (obor_property == _gep_energycost) && (obor_profile_build >= 3319))
 	{
 		MAPSTRINGS(varlist[2], proplist_energycost, _gep_energycost_the_end,
 			"Property name '%s' is not a known subproperty of 'energycost'.\n");
 	}
 
 	// map subproperties of Flash
-	if((varlist[1]->vt == VT_INTEGER) && (varlist[1]->lVal == _gep_flash))
+	if((varlist[1]->vt == VT_INTEGER) && (obor_property == _gep_flash) && (obor_profile_build >= 3330))
 	{
 		MAPSTRINGS(varlist[2], proplist_flash, _gep_flash_the_end,
 			"Property name '%s' is not a known subproperty of 'flash'.\n");
 	}
 
     // map subproperties of Icon
-	if((varlist[1]->vt == VT_INTEGER) && (varlist[1]->lVal == _gep_icon))
+	if((varlist[1]->vt == VT_INTEGER) && (obor_property == _gep_icon) && (obor_profile_build >= 3330))
 	{
 		MAPSTRINGS(varlist[2], proplist_icon, _gep_icon_the_end,
 			"Property name '%s' is not a known subproperty of 'icon'.\n");
 	}
 
 	// map subproperties of Knockdowncount
-	if((varlist[1]->vt == VT_INTEGER) && (varlist[1]->lVal == _gep_knockdowncount))
+	if((varlist[1]->vt == VT_INTEGER) && (obor_property == _gep_knockdowncount) && obor_profile_build >= 3338)
 	{
 		MAPSTRINGS(varlist[2], proplist_knockdowncount, _gep_knockdowncount_the_end,
 			"Property name '%s' is not a known subproperty of 'knockdowncount'.\n");
 	}
 
 	// map subproperties of Landframe
-	if((varlist[1]->vt == VT_INTEGER) && (varlist[1]->lVal == _gep_landframe))
+	if((varlist[1]->vt == VT_INTEGER) && (obor_property == _gep_landframe) && obor_profile_build >= 3325)
 	{
 		MAPSTRINGS(varlist[2], proplist_landframe, _gep_landframe_the_end,
 			"Property name '%s' is not a known subproperty of 'landframe'.\n");
 	}
 
 	// map subproperties of Maps
-	if((varlist[1]->vt == VT_INTEGER) && (varlist[1]->lVal == _gep_maps))
+	if((varlist[1]->vt == VT_INTEGER) && (obor_property == _gep_maps))
 	{
 		MAPSTRINGS(varlist[2], proplist_maps, _gep_maps_the_end,
 			"Property name '%s' is not a known subproperty of 'maps'.\n");
 	}
 
 	// map subproperties of Range
-	if((varlist[1]->vt == VT_INTEGER) && (varlist[1]->lVal == _gep_range))
+	if((varlist[1]->vt == VT_INTEGER) && (obor_property == _gep_range))
 	{
 		MAPSTRINGS(varlist[2], proplist_range, _gep_range_the_end,
 			"Property name '%s' is not a known subproperty of 'range'.\n");
 	}
 
 	// map subproperties of Running
-	if((varlist[1]->vt == VT_INTEGER) && (varlist[1]->lVal == _gep_running))
+	if((varlist[1]->vt == VT_INTEGER) && (obor_property == _gep_running))
 	{
 		MAPSTRINGS(varlist[2], proplist_running, _gep_running_the_end,
 			"Property name '%s' is not a known subproperty of 'running'.\n");
 	}
 
 	// map subproperties of Spritea
-	if((varlist[1]->vt == VT_INTEGER) && (varlist[1]->lVal == _gep_spritea))
+	if((varlist[1]->vt == VT_INTEGER) && (obor_property == _gep_spritea))
 	{
 		MAPSTRINGS(varlist[2], proplist_spritea, _gep_spritea_the_end,
 			"Property name '%s' is not a known subproperty of 'spritea'.\n");
 	}
 
 	// map subproperties of Staydown
-	if((varlist[1]->vt == VT_INTEGER) && (varlist[1]->lVal == _gep_staydown))
+	if((varlist[1]->vt == VT_INTEGER) && (obor_property == _gep_staydown) && (obor_profile_build >= 3330))
 	{
-		MAPSTRINGS(varlist[2], proplist_staydown, sizeof(proplist_staydown) / sizeof(*proplist_staydown),
+		static const char* old_staydown[] = {"attack", "time"};
+        MAPSTRINGS(varlist[2], obor_profile_build < 3334 ? old_staydown : proplist_staydown,
+            obor_profile_build < 3334 ? 2 : sizeof(proplist_staydown) / sizeof(*proplist_staydown),
 			"Property name '%s' is not a known subproperty of 'staydown'.\n");
 	}
 }
@@ -3386,6 +3538,7 @@ HRESULT openbor_getentityproperty(ScriptVariant** varlist , ScriptVariant** pret
 	}
 
 	propind = arg->lVal;
+    propind = obor_property_index(obor_get_property_namespace(), propind, _gep_the_end);
 
 	switch(propind)
 	{
@@ -3416,7 +3569,7 @@ HRESULT openbor_getentityproperty(ScriptVariant** varlist , ScriptVariant** pret
 			printf("You must give a string name for aiflag.\n");
 			return E_FAIL;
 		}
-		ltemp = arg->lVal;
+		ltemp = obor_property_index(obor_get_aiflag_namespace(), arg->lVal, _gep_aiflag_the_end);
 		switch(ltemp)
 		{
 		case _gep_aiflag_dead:
@@ -3571,6 +3724,11 @@ HRESULT openbor_getentityproperty(ScriptVariant** varlist , ScriptVariant** pret
 	}
     case _gep_animal:
 	{
+        if(obor_profile_build >= 3317 && obor_profile_build < 3319)
+        {
+            *pretvar = NULL;
+            return E_FAIL;
+        }
 		ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
 		(*pretvar)->lVal = (LONG)ent->modeldata.animal;
 		break;
@@ -4022,15 +4180,22 @@ HRESULT openbor_getentityproperty(ScriptVariant** varlist , ScriptVariant** pret
 		if(arg->vt != VT_INTEGER)
 		{
 			if(arg->vt != VT_STR)
-				printf("You must provide a string name for dot subproperty.\n\
+            {
+                if(obor_profile_build < 3334)
+                    printf("You must give a string name for dot property.\n");
+                else printf("You must provide a string name for dot subproperty.\n\
                         ~'time'\n\
                         ~'mode'\n\
                         ~'force'\n\
                         ~'rate'\n\
                         ~'type'\n\
                         ~'owner'\n");
+            }
 			return E_FAIL;
 		}
+        if(arg->lVal >= _gep_dot_force && arg->lVal < _gep_dot_the_end &&
+           (i < 0 || i >= MAX_DOTS))
+            return E_FAIL;
 		switch(arg->lVal)
 		{
 		case _gep_dot_time:
@@ -4072,6 +4237,12 @@ HRESULT openbor_getentityproperty(ScriptVariant** varlist , ScriptVariant** pret
 		}
 		break;
 		}
+        if(obor_profile_build < 3330)
+        {
+            if(SUCCEEDED(ScriptVariant_IntegerValue(varlist[2], &ltemp)))
+                ent->modeldata.blockback = (int)ltemp;
+            break;
+        }
 	}
 	case _gep_dropframe:
 	{
@@ -4082,6 +4253,10 @@ HRESULT openbor_getentityproperty(ScriptVariant** varlist , ScriptVariant** pret
 			if(FAILED(ScriptVariant_IntegerValue(arg, &ltemp)))
 			ltemp = (LONG)0;
 		}
+        if(!ent->modeldata.animation || ltemp < 0 ||
+           ltemp >= ent->modeldata.animation_capacity ||
+           !ent->modeldata.animation[ltemp])
+            return E_FAIL;
 		ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
 		(*pretvar)->lVal = (LONG)ent->modeldata.animation[ltemp]->dropframe;
 		break;
@@ -4092,6 +4267,10 @@ HRESULT openbor_getentityproperty(ScriptVariant** varlist , ScriptVariant** pret
 		if(arg->vt != VT_INTEGER)
 		{
 			if(arg->vt != VT_STR)
+			{
+                if(obor_profile_build < 3334)
+                    printf("You must give a string name for edelay property.\n");
+                else
 				printf("You must provide a string name for edelay subproperty.\n\
                         ~'cap_max'\n\
                         ~'cap_min'\n\
@@ -4099,6 +4278,7 @@ HRESULT openbor_getentityproperty(ScriptVariant** varlist , ScriptVariant** pret
                         ~'mode'\n\
                         ~'range_max'\n\
                         ~'range_min'\n");
+			}
 			return E_FAIL;
 		}
 		ltemp = arg->lVal;
@@ -4144,8 +4324,39 @@ HRESULT openbor_getentityproperty(ScriptVariant** varlist , ScriptVariant** pret
 	}
 	case _gep_energycost:
 	{
+        if(obor_profile_build < 3319)
+        {        
+		if(paramCount != 4						//Validate parameter count and types.
+			|| varlist[2]->vt != VT_INTEGER 
+			|| varlist[3]->vt != VT_INTEGER)	
+        {
+			printf("\n Error, getentityproperty({ent}, 'energycost', {animation}, {argument}): Missing or invalid parameter. \n");
+			return E_FAIL;    
+        }
+		
+		i	= varlist[2]->lVal;					//Animation.
+		
+		if(!validanim(ent,i))					//Bad or missing animation = instant crash, let's validate and pass user friendly error.
+		{			
+			printf("\n Error, getentityproperty({ent}, 'energycost', {animation}, {argument}): {animation} argument invalid. Make sure the animation exists. \n");
+			return E_FAIL;
+		}        
+
+        if(varlist[3]->lVal < 0 || varlist[3]->lVal >= 3) return E_FAIL;
+        ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
+        (*pretvar)->lVal = (LONG)obor_legacy_energycost(ent->modeldata.animation[i], varlist[3]->lVal);
+        break;
+    
+        }
+
 		if(paramCount<4) break;
 
+        if(obor_profile_build < 3350 &&
+           (varlist[2]->vt != VT_INTEGER || varlist[3]->vt != VT_INTEGER))
+        {
+            printf("\n Error, getentityproperty({ent}, 'energycost', {sub property}, {animation}): {Sub property} or {Animation} parameter is missing or invalid. \n");
+            return E_FAIL;
+        }
 		if(varlist[2]->vt != VT_INTEGER)
 		{
 			if(varlist[2]->vt != VT_STR)
@@ -4209,6 +4420,36 @@ HRESULT openbor_getentityproperty(ScriptVariant** varlist , ScriptVariant** pret
 	}
 	case _gep_flash:
 	{
+        if(obor_profile_build < 3330)
+        {
+        if(paramCount < 3) {printf("Error, getentityproperty({ent}, 'flash', {argument}): Missing or invalid parameter. \n {argument}: \n 0 = Flash \n 1 = Noatflash \n 2=bflash \n"); return E_FAIL;}
+       
+        arg = varlist[2];
+        if(paramCount<3 || arg->vt != VT_INTEGER)
+        {
+			printf("Error, getentityproperty({ent}, 'flash', {argument}): Missing or invalid parameter. \n {argument}: \n 0 = Flash \n 1 = Noatflash \n 2=bflash \n");
+            return E_FAIL;            
+        }    
+
+		switch (arg->lVal)
+		{
+			default:
+				i = ent->modeldata.flash;
+				break;
+			case 1:
+				i = ent->modeldata.noatflash;
+				break;
+			case 2:
+				i = ent->modeldata.bflash;
+				break;
+		}
+        ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
+        (*pretvar)->lVal = (LONG)i;
+        break;
+    
+        }
+        if(paramCount < 3) return E_FAIL;
+
 		arg = varlist[2];
 		if(arg->vt != VT_INTEGER)
 		{
@@ -4323,11 +4564,76 @@ HRESULT openbor_getentityproperty(ScriptVariant** varlist , ScriptVariant** pret
 	}
 	case _gep_icon:
 	{
+        if(obor_profile_build < 3330)
+        {
+        if(paramCount<3) break;
+        arg = varlist[2];
+        if(arg->vt != VT_INTEGER)
+        {
+			printf("Error, getentityproperty({ent}, 'icon', {type}): {type} parameter missing or invalid. \n {type}: \n 0 = Icon \n 1 = Icondie \n 2 = Iconget \n 3 = Iconmphigh \n 4 = Iconmphalf \n 5 = Iconmplow \n 6 = Iconpain \n 7 = Iconw \n 8 = Iconx \n 9 = Icony \n");
+            return E_FAIL;            
+        }        
+
+        switch(arg->lVal)
+        {
+            default:
+                i = ent->modeldata.icon.def;                
+                break;
+            case 1:
+                i = ent->modeldata.icon.die;
+                break;
+            case 2:
+                i = ent->modeldata.icon.get;
+                break;
+            case 3:
+                i = ent->modeldata.icon.mphigh;
+                break;
+            case 4:
+                i = ent->modeldata.icon.mpmed;
+                break;
+            case 5:
+                i = ent->modeldata.icon.mplow;
+                break;
+            case 6:
+                i = ent->modeldata.icon.pain;
+                break;
+            case 7:
+                i = ent->modeldata.icon.weapon;
+                break;
+            case 8:
+                i = ent->modeldata.icon.x;
+                break;
+            case 9:
+                i = ent->modeldata.icon.y;
+                break;                
+        }
+
+        if (i >= 0)
+        {
+            if(!obor_icon_sprite_index(i)) {ScriptVariant_Clear(*pretvar);return E_FAIL;}
+            ScriptVariant_ChangeType(*pretvar, VT_PTR);        
+            spr = sprite_map[i].sprite;
+            spr->centerx = sprite_map[i].centerx;
+            spr->centery = sprite_map[i].centery;
+            (*pretvar)->ptrVal = (VOID*)(spr);
+        }
+        else
+        {
+            ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
+            (*pretvar)->lVal = -1;
+        }
+        break;
+    
+        }
+        if(paramCount < 3) break;
+
 	    arg = varlist[2];
 		if(arg->vt != VT_INTEGER)
 		{
 			if(arg->vt != VT_STR)
-				printf("You must provide a string name for icon subproperty:\n\
+            {
+				if(obor_profile_build < 3334) printf("You must give a string name for icon property.\n");
+            else printf("You must provide a string name for icon subproperty:\n\
                         getentityproperty({ent}, 'icon', {subproperty});\n\
                         ~'default'\n\
                         ~'die'\n\
@@ -4339,6 +4645,7 @@ HRESULT openbor_getentityproperty(ScriptVariant** varlist , ScriptVariant** pret
                         ~'weapon'\n\
                         ~'x'\n\
                         ~'y'\n");
+            }
 			return E_FAIL;
 		}
 		ltemp = arg->lVal;
@@ -4405,6 +4712,7 @@ HRESULT openbor_getentityproperty(ScriptVariant** varlist , ScriptVariant** pret
 
 		if (i >= 0)
 		{
+            if(!obor_icon_sprite_index(i)) {ScriptVariant_Clear(*pretvar);return E_FAIL;}
 			ScriptVariant_ChangeType(*pretvar, VT_PTR);
 			spr = sprite_map[i].sprite;
 			spr->centerx = sprite_map[i].centerx;
@@ -4438,6 +4746,12 @@ HRESULT openbor_getentityproperty(ScriptVariant** varlist , ScriptVariant** pret
 	}
 	case _gep_knockdowncount:
 	{
+        if(obor_profile_build < 3338)
+        {
+            ScriptVariant_ChangeType(*pretvar, VT_DECIMAL);
+            (*pretvar)->dblVal = (DOUBLE)ent->knockdowncount;
+            break;
+        }
 	    /*
 	    2011_04_14, DC: Backward compatability; default to current if subproperty not provided.
 	    */
@@ -4475,8 +4789,7 @@ HRESULT openbor_getentityproperty(ScriptVariant** varlist , ScriptVariant** pret
                 (*pretvar)->dblVal = (DOUBLE)ent->modeldata.knockdowncount;
 				 break;
             case _gep_knockdowncount_time:
-                ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
-                (*pretvar)->lVal = (LONG)ent->knockdowncount;
+                /* The original always continues into failure; no numeric result survives. */
 			default:
 				ScriptVariant_Clear(*pretvar);
 				return E_FAIL;
@@ -4485,6 +4798,20 @@ HRESULT openbor_getentityproperty(ScriptVariant** varlist , ScriptVariant** pret
 	}
 	case _gep_komap:
 	{
+        if(obor_profile_build < 3331)
+        {
+            if(paramCount < 3) break;
+            arg = varlist[2];
+            if(arg->vt != VT_INTEGER)
+            {
+                printf("You must provide a Komap parameter index: \n 0 = Komap \n 1 = Komap type \n");
+                return E_FAIL;
+            }
+            if(arg->lVal < 0 || arg->lVal > 1) return E_FAIL;
+            ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
+            (*pretvar)->lVal = arg->lVal ? ent->modeldata.maps.kotype : ent->modeldata.maps.ko;
+            break;
+        }
 		if(paramCount<2) break;
 
 		ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
@@ -4493,6 +4820,19 @@ HRESULT openbor_getentityproperty(ScriptVariant** varlist , ScriptVariant** pret
 	}
 	case _gep_landframe:
 	{
+        if(obor_profile_build < 3325)
+        {
+            ltemp = 0;
+            if(paramCount == 3 && FAILED(ScriptVariant_IntegerValue(varlist[2], &ltemp)))
+                ltemp = 0;
+            if(!ent->modeldata.animation || ltemp < 0 ||
+               ltemp >= ent->modeldata.animation_capacity ||
+               !ent->modeldata.animation[ltemp])
+                return E_FAIL;
+            ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
+            (*pretvar)->lVal = (LONG)ent->modeldata.animation[ltemp]->landframe.frame;
+            break;
+        }
 	    if(paramCount<4) break;
 
 		if(varlist[2]->vt != VT_INTEGER
@@ -4504,7 +4844,7 @@ HRESULT openbor_getentityproperty(ScriptVariant** varlist , ScriptVariant** pret
 		ltemp	= varlist[2]->lVal;												//Subproperty.
 		i		= varlist[3]->lVal;												//Animation.
 
-		if(!validanim(ent,i))													//Verify animation.
+		if(!ent->modeldata.animation || !validanim(ent,i))													//Verify animation.
 		{
 			break;
 		}
@@ -4568,6 +4908,7 @@ HRESULT openbor_getentityproperty(ScriptVariant** varlist , ScriptVariant** pret
 	}
 	case _gep_maps:
 	{
+        if(paramCount < 3) return E_FAIL;
 	    arg = varlist[2];
 		if(arg->vt != VT_INTEGER)
 		{
@@ -5141,6 +5482,63 @@ HRESULT openbor_getentityproperty(ScriptVariant** varlist , ScriptVariant** pret
 	}
 	case _gep_staydown:
 	{
+        if(obor_profile_build < 3330)
+        {		
+        if(paramCount <4) break;        
+        arg = varlist[3];                
+        if(arg->vt != VT_INTEGER)
+        {
+            printf("Incorrect parameters: getentityproperty({ent}, 'staydown', {type}) \n {type}: \n 0 = Staydown. \n 1 = Staydownatk. \n");
+            return E_FAIL;
+        }        
+
+        if(arg->lVal < 0 || arg->lVal >= 3) return E_FAIL;
+        ScriptVariant_ChangeType(*pretvar, VT_DECIMAL);
+        (*pretvar)->dblVal = (DOUBLE)obor_old_staydown(ent, arg->lVal);                
+    
+        ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
+        (*pretvar)->lVal = (LONG)ent->modeldata.gfxshadow;
+        break;
+
+        }
+        if(paramCount < 3) break;
+
+        if(obor_profile_build < 3334)
+        {
+		arg = varlist[2];
+		if(arg->vt != VT_INTEGER)
+		{
+			if(arg->vt != VT_STR)
+				printf("You must give a string name for staydown property.\n");
+			return E_FAIL;
+		}
+		ltemp = arg->lVal;
+		ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
+
+		switch(ltemp)
+		{
+            case _gep_staydown_rise:
+            {
+                i = ent->staydown.rise;
+                break;
+            }
+            case _gep_staydown_riseattack:
+            {
+                i = ent->staydown.riseattack;
+                break;
+            }
+            default:
+			{
+                ScriptVariant_Clear(*pretvar);
+                return E_FAIL;
+            }
+		}
+		ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
+		(*pretvar)->lVal = (LONG)i;
+		break;
+	
+        }
+
 		arg = varlist[2];
 		if(arg->vt != VT_INTEGER)
 		{
@@ -5562,8 +5960,311 @@ enum cep_think_enum { // 2011_03_03, DC: Think types.
     _cep_th_the_end,
 };
 
+static const char *const obor_get_property_namespace_0_names[] = {"a","aggression","aiattack","aiflag","aimove","alpha","animal","animating","animation","animationid","animheight","animhits","animnum","animpos","animvalid","antigravity","attack","attacking","attackid","autokill","base","bbox","blink","blockback","blockpain","bounce","chargerate","colourmap","colourtable","damage_on_landing","dead","defaultmodel","defaultname","defense","detect","direction","dot","dropframe","edelay","energycost","exists","falldie","flash","freezetime","frozen","gfxshadow","grabbing","guardpoints","health","height","hitbyid","hmapl","hmapu","icon","invincible","invinctime","jugglepoints","knockdowncount","komap","landframe","lifespancountdown","link","map","mapcount","mapdefault","maxguardpoints","maxhealth","maxjugglepoints","maxmp","model","mp","mpdroprate","mprate","mpstable","mpstableval","name","nextanim","nextthink","no_adjust_base","noaicontrol","nodieblink","nodrop","nograb","nopain","offense","opponent","owner","parent","path","playerindex","projectile","range","running","rush_count","rush_tally","rush_time","scroll","seal","sealtime","setlayer","speed","sprite","stalltime","stats","staydown","staydownatk","stealth","subentity","subject_to_gravity","subject_to_hole","subject_to_maxz","subject_to_minz","subject_to_obstacle","subject_to_platform","subject_to_screen","subject_to_wall","subtype","throwdamage","throwdist","throwframewait","throwheight","tosstime","tossv","type","weapent","x","xdir","z","zdir"};
+static const int obor_get_property_namespace_0_ids[] = {_gep_a,_gep_aggression,_gep_aiattack,_gep_aiflag,_gep_aimove,_gep_alpha,_gep_animal,_gep_animating,_gep_animation,_gep_animationid,_gep_animheight,_gep_animhits,_gep_animnum,_gep_animpos,_gep_animvalid,_gep_antigravity,_gep_attack,_gep_attacking,_gep_attackid,_gep_autokill,_gep_base,_gep_bbox,_gep_blink,_gep_blockback,_gep_blockpain,_gep_bounce,_gep_chargerate,_gep_colourmap,_gep_colourtable,_gep_damage_on_landing,_gep_dead,_gep_defaultmodel,_gep_defaultname,_gep_defense,_gep_detect,_gep_direction,_gep_dot,_gep_dropframe,_gep_edelay,_gep_energycost,_gep_exists,_gep_falldie,_gep_flash,_gep_freezetime,_gep_frozen,_gep_gfxshadow,_gep_grabbing,_gep_guardpoints,_gep_health,_gep_height,_gep_hitbyid,_gep_hmapl,_gep_hmapu,_gep_icon,_gep_invincible,_gep_invinctime,_gep_jugglepoints,_gep_knockdowncount,_gep_komap,_gep_landframe,_gep_lifespancountdown,_gep_link,_gep_map,_gep_mapcount,_gep_mapdefault,_gep_maxguardpoints,_gep_maxhealth,_gep_maxjugglepoints,_gep_maxmp,_gep_model,_gep_mp,_gep_mpdroprate,_gep_mprate,_gep_mpstable,_gep_mpstableval,_gep_name,_gep_nextanim,_gep_nextthink,_gep_no_adjust_base,_gep_noaicontrol,_gep_nodieblink,_gep_nodrop,_gep_nograb,_gep_nopain,_gep_offense,_gep_opponent,_gep_owner,_gep_parent,_gep_path,_gep_playerindex,_gep_projectile,_gep_range,_gep_running,_gep_rush_count,_gep_rush_tally,_gep_rush_time,_gep_scroll,_gep_seal,_gep_sealtime,_gep_setlayer,_gep_speed,_gep_sprite,_gep_stalltime,_gep_stats,_gep_staydown,-1,_gep_stealth,_gep_subentity,_gep_subject_to_gravity,_gep_subject_to_hole,_gep_subject_to_maxz,_gep_subject_to_minz,_gep_subject_to_obstacle,_gep_subject_to_platform,_gep_subject_to_screen,_gep_subject_to_wall,_gep_subtype,_gep_throwdamage,_gep_throwdist,_gep_throwframewait,_gep_throwheight,_gep_tosstime,_gep_tossv,_gep_type,_gep_weapent,_gep_x,_gep_xdir,_gep_z,_gep_zdir};
+static const obor_property_namespace obor_get_property_namespace_0_table = {obor_get_property_namespace_0_names,obor_get_property_namespace_0_ids,129,129};
+static const char *const obor_get_property_namespace_1_names[] = {"a","aggression","aiattack","aiflag","aimove","alpha","animal","animating","animation","animationid","animheight","animhits","animnum","animpos","animvalid","antigravity","attack","attacking","attackid","autokill","base","bbox","blink","blockback","blockpain","bounce","chargerate","colourmap","colourtable","damage_on_landing","dead","defaultmodel","defaultname","defense","detect","direction","dot","dropframe","edelay","energycost","exists","falldie","flash","freezetime","frozen","gfxshadow","grabbing","guardpoints","health","height","hitbyid","hmapl","hmapu","icon","invincible","invinctime","jugglepoints","knockdowncount","komap","landframe","lifespancountdown","link","map","mapcount","mapdefault","maxguardpoints","maxhealth","maxjugglepoints","maxmp","model","mp","mpdroprate","mprate","mpstable","mpstableval","name","nextanim","nextthink","no_adjust_base","noaicontrol","nodieblink","nodrop","nograb","nopain","offense","opponent","owner","parent","path","playerindex","projectile","range","running","rush_count","rush_tally","rush_time","scroll","seal","sealtime","setlayer","spawntype","speed","sprite","stalltime","stats","staydown","staydownatk","stealth","subentity","subject_to_gravity","subject_to_hole","subject_to_maxz","subject_to_minz","subject_to_obstacle","subject_to_platform","subject_to_screen","subject_to_wall","subtype","throwdamage","throwdist","throwframewait","throwheight","tosstime","tossv","type","weapent","x","xdir","z","zdir"};
+static const int obor_get_property_namespace_1_ids[] = {_gep_a,_gep_aggression,_gep_aiattack,_gep_aiflag,_gep_aimove,_gep_alpha,_gep_animal,_gep_animating,_gep_animation,_gep_animationid,_gep_animheight,_gep_animhits,_gep_animnum,_gep_animpos,_gep_animvalid,_gep_antigravity,_gep_attack,_gep_attacking,_gep_attackid,_gep_autokill,_gep_base,_gep_bbox,_gep_blink,_gep_blockback,_gep_blockpain,_gep_bounce,_gep_chargerate,_gep_colourmap,_gep_colourtable,_gep_damage_on_landing,_gep_dead,_gep_defaultmodel,_gep_defaultname,_gep_defense,_gep_detect,_gep_direction,_gep_dot,_gep_dropframe,_gep_edelay,_gep_energycost,_gep_exists,_gep_falldie,_gep_flash,_gep_freezetime,_gep_frozen,_gep_gfxshadow,_gep_grabbing,_gep_guardpoints,_gep_health,_gep_height,_gep_hitbyid,_gep_hmapl,_gep_hmapu,_gep_icon,_gep_invincible,_gep_invinctime,_gep_jugglepoints,_gep_knockdowncount,_gep_komap,_gep_landframe,_gep_lifespancountdown,_gep_link,_gep_map,_gep_mapcount,_gep_mapdefault,_gep_maxguardpoints,_gep_maxhealth,_gep_maxjugglepoints,_gep_maxmp,_gep_model,_gep_mp,_gep_mpdroprate,_gep_mprate,_gep_mpstable,_gep_mpstableval,_gep_name,_gep_nextanim,_gep_nextthink,_gep_no_adjust_base,_gep_noaicontrol,_gep_nodieblink,_gep_nodrop,_gep_nograb,_gep_nopain,_gep_offense,_gep_opponent,_gep_owner,_gep_parent,_gep_path,_gep_playerindex,_gep_projectile,_gep_range,_gep_running,_gep_rush_count,_gep_rush_tally,_gep_rush_time,_gep_scroll,_gep_seal,_gep_sealtime,_gep_setlayer,_gep_spawntype,_gep_speed,_gep_sprite,_gep_stalltime,_gep_stats,_gep_staydown,-1,_gep_stealth,_gep_subentity,_gep_subject_to_gravity,_gep_subject_to_hole,_gep_subject_to_maxz,_gep_subject_to_minz,_gep_subject_to_obstacle,_gep_subject_to_platform,_gep_subject_to_screen,_gep_subject_to_wall,_gep_subtype,_gep_throwdamage,_gep_throwdist,_gep_throwframewait,_gep_throwheight,_gep_tosstime,_gep_tossv,_gep_type,_gep_weapent,_gep_x,_gep_xdir,_gep_z,_gep_zdir};
+static const obor_property_namespace obor_get_property_namespace_1_table = {obor_get_property_namespace_1_names,obor_get_property_namespace_1_ids,130,130};
+static const char *const obor_get_property_namespace_2_names[] = {"a","aggression","aiattack","aiflag","aimove","alpha","animal","animating","animation","animationid","animheight","animhits","animnum","animpos","animvalid","antigravity","attack","attacking","attackid","autokill","base","bbox","blink","blockback","blockodds","blockpain","bounce","chargerate","colourmap","colourtable","damage_on_landing","dead","defaultmodel","defaultname","defense","detect","direction","dot","dropframe","edelay","energycost","escapecount","escapehits","exists","falldie","flash","freezetime","frozen","gfxshadow","grabforce","grabbing","guardpoints","health","height","hitbyid","hmapl","hmapu","icon","invincible","invinctime","jugglepoints","knockdowncount","komap","landframe","lifespancountdown","link","map","mapcount","mapdefault","maxguardpoints","maxhealth","maxjugglepoints","maxmp","model","mp","mpdroprate","mprate","mpstable","mpstableval","name","nextanim","nextthink","no_adjust_base","noaicontrol","nodieblink","nodrop","nograb","nopain","offense","opponent","owner","parent","path","playerindex","projectile","range","running","rush_count","rush_tally","rush_time","score","scroll","seal","sealtime","setlayer","spawntype","speed","sprite","stalltime","stats","staydown","staydownatk","stealth","subentity","subject_to_gravity","subject_to_hole","subject_to_maxz","subject_to_minz","subject_to_obstacle","subject_to_platform","subject_to_screen","subject_to_wall","subtype","thold","throwdamage","throwdist","throwframewait","throwheight","tosstime","tossv","type","weapent","x","xdir","z","zdir"};
+static const int obor_get_property_namespace_2_ids[] = {_gep_a,_gep_aggression,_gep_aiattack,_gep_aiflag,_gep_aimove,_gep_alpha,_gep_animal,_gep_animating,_gep_animation,_gep_animationid,_gep_animheight,_gep_animhits,_gep_animnum,_gep_animpos,_gep_animvalid,_gep_antigravity,_gep_attack,_gep_attacking,_gep_attackid,_gep_autokill,_gep_base,_gep_bbox,_gep_blink,_gep_blockback,_gep_blockodds,_gep_blockpain,_gep_bounce,_gep_chargerate,_gep_colourmap,_gep_colourtable,_gep_damage_on_landing,_gep_dead,_gep_defaultmodel,_gep_defaultname,_gep_defense,_gep_detect,_gep_direction,_gep_dot,_gep_dropframe,_gep_edelay,_gep_energycost,_gep_escapecount,_gep_escapehits,_gep_exists,_gep_falldie,_gep_flash,_gep_freezetime,_gep_frozen,_gep_gfxshadow,_gep_grabbing,_gep_grabforce,_gep_guardpoints,_gep_health,_gep_height,_gep_hitbyid,_gep_hmapl,_gep_hmapu,_gep_icon,_gep_invincible,_gep_invinctime,_gep_jugglepoints,_gep_knockdowncount,_gep_komap,_gep_landframe,_gep_lifespancountdown,_gep_link,_gep_map,_gep_mapcount,_gep_mapdefault,_gep_maxguardpoints,_gep_maxhealth,_gep_maxjugglepoints,_gep_maxmp,_gep_model,_gep_mp,_gep_mpdroprate,_gep_mprate,_gep_mpstable,_gep_mpstableval,_gep_name,_gep_nextanim,_gep_nextthink,_gep_no_adjust_base,_gep_noaicontrol,_gep_nodieblink,_gep_nodrop,_gep_nograb,_gep_nopain,_gep_offense,_gep_opponent,_gep_owner,_gep_parent,_gep_path,_gep_playerindex,_gep_projectile,_gep_range,_gep_running,_gep_rush_count,_gep_rush_tally,_gep_rush_time,_gep_score,_gep_scroll,_gep_seal,_gep_sealtime,_gep_setlayer,_gep_spawntype,_gep_speed,_gep_sprite,_gep_stalltime,_gep_stats,_gep_staydown,-1,_gep_stealth,_gep_subentity,_gep_subject_to_gravity,_gep_subject_to_hole,_gep_subject_to_maxz,_gep_subject_to_minz,_gep_subject_to_obstacle,_gep_subject_to_platform,_gep_subject_to_screen,_gep_subject_to_wall,_gep_subtype,_gep_thold,_gep_throwdamage,_gep_throwdist,_gep_throwframewait,_gep_throwheight,_gep_tosstime,_gep_tossv,_gep_type,_gep_weapent,_gep_x,_gep_xdir,_gep_z,_gep_zdir};
+static const obor_property_namespace obor_get_property_namespace_2_table = {obor_get_property_namespace_2_names,obor_get_property_namespace_2_ids,136,136};
+static const char *const obor_get_property_namespace_3_names[] = {"a","aggression","aiattack","aiflag","aimove","alpha","animal","animating","animation","animationid","animheight","animhits","animnum","animpos","animvalid","antigravity","attack","attacking","attackid","autokill","base","bbox","blink","blockback","blockodds","blockpain","bounce","chargerate","colourmap","colourtable","damage_on_landing","dead","defaultmodel","defaultname","defense","detect","direction","dot","dropframe","edelay","energycost","escapecount","escapehits","exists","falldie","flash","freezetime","frozen","gfxshadow","grabbing","grabforce","guardpoints","health","height","hitbyid","hmapl","hmapu","icon","invincible","invinctime","jugglepoints","knockdowncount","komap","landframe","lifespancountdown","link","map","mapcount","mapdefault","maxguardpoints","maxhealth","maxjugglepoints","maxmp","model","mp","mpdroprate","mprate","mpstable","mpstableval","name","nextanim","nextthink","no_adjust_base","noaicontrol","nodieblink","nodrop","nograb","nopain","offense","opponent","owner","parent","path","playerindex","projectile","range","running","rush_count","rush_tally","rush_time","score","scroll","seal","sealtime","setlayer","spawntype","speed","sprite","stalltime","stats","staydown","stealth","subentity","subject_to_gravity","subject_to_hole","subject_to_maxz","subject_to_minz","subject_to_obstacle","subject_to_platform","subject_to_screen","subject_to_wall","subtype","thold","throwdamage","throwdist","throwframewait","throwheight","tosstime","tossv","type","weapent","x","xdir","z","zdir"};
+static const int obor_get_property_namespace_3_ids[] = {_gep_a,_gep_aggression,_gep_aiattack,_gep_aiflag,_gep_aimove,_gep_alpha,_gep_animal,_gep_animating,_gep_animation,_gep_animationid,_gep_animheight,_gep_animhits,_gep_animnum,_gep_animpos,_gep_animvalid,_gep_antigravity,_gep_attack,_gep_attacking,_gep_attackid,_gep_autokill,_gep_base,_gep_bbox,_gep_blink,_gep_blockback,_gep_blockodds,_gep_blockpain,_gep_bounce,_gep_chargerate,_gep_colourmap,_gep_colourtable,_gep_damage_on_landing,_gep_dead,_gep_defaultmodel,_gep_defaultname,_gep_defense,_gep_detect,_gep_direction,_gep_dot,_gep_dropframe,_gep_edelay,_gep_energycost,_gep_escapecount,_gep_escapehits,_gep_exists,_gep_falldie,_gep_flash,_gep_freezetime,_gep_frozen,_gep_gfxshadow,_gep_grabbing,_gep_grabforce,_gep_guardpoints,_gep_health,_gep_height,_gep_hitbyid,_gep_hmapl,_gep_hmapu,_gep_icon,_gep_invincible,_gep_invinctime,_gep_jugglepoints,_gep_knockdowncount,_gep_komap,_gep_landframe,_gep_lifespancountdown,_gep_link,_gep_map,_gep_mapcount,_gep_mapdefault,_gep_maxguardpoints,_gep_maxhealth,_gep_maxjugglepoints,_gep_maxmp,_gep_model,_gep_mp,_gep_mpdroprate,_gep_mprate,_gep_mpstable,_gep_mpstableval,_gep_name,_gep_nextanim,_gep_nextthink,_gep_no_adjust_base,_gep_noaicontrol,_gep_nodieblink,_gep_nodrop,_gep_nograb,_gep_nopain,_gep_offense,_gep_opponent,_gep_owner,_gep_parent,_gep_path,_gep_playerindex,_gep_projectile,_gep_range,_gep_running,_gep_rush_count,_gep_rush_tally,_gep_rush_time,_gep_score,_gep_scroll,_gep_seal,_gep_sealtime,_gep_setlayer,_gep_spawntype,_gep_speed,_gep_sprite,_gep_stalltime,_gep_stats,_gep_staydown,_gep_stealth,_gep_subentity,_gep_subject_to_gravity,_gep_subject_to_hole,_gep_subject_to_maxz,_gep_subject_to_minz,_gep_subject_to_obstacle,_gep_subject_to_platform,_gep_subject_to_screen,_gep_subject_to_wall,_gep_subtype,_gep_thold,_gep_throwdamage,_gep_throwdist,_gep_throwframewait,_gep_throwheight,_gep_tosstime,_gep_tossv,_gep_type,_gep_weapent,_gep_x,_gep_xdir,_gep_z,_gep_zdir};
+static const obor_property_namespace obor_get_property_namespace_3_table = {obor_get_property_namespace_3_names,obor_get_property_namespace_3_ids,135,135};
+static const char *const obor_get_property_namespace_4_names[] = {"a","aggression","aiattack","aiflag","aimove","alpha","animal","animating","animation","animationid","animheight","animhits","animnum","animpos","animvalid","antigravity","attack","attacking","attackid","autokill","base","bbox","blink","blockback","blockodds","blockpain","bounce","chargerate","colourmap","colourtable","damage_on_landing","dead","defaultmodel","defaultname","defense","detect","direction","dot","dropframe","edelay","energycost","escapecount","escapehits","exists","falldie","flash","freezetime","frozen","gfxshadow","grabbing","grabforce","guardpoints","health","height","hitbyid","hmapl","hmapu","icon","invincible","invinctime","jugglepoints","knockdowncount","komap","landframe","lifespancountdown","link","map","mapcount","mapdefault","maxguardpoints","maxhealth","maxjugglepoints","maxmp","model","mp","mpdroprate","mprate","mpstable","mpstableval","name","nextanim","nextthink","no_adjust_base","noaicontrol","nodieblink","nodrop","nograb","nopain","offense","opponent","owner","parent","path","playerindex","projectile","range","running","rush_count","rush_tally","rush_time","score","scroll","seal","sealtime","setlayer","spawntype","speed","sprite","stalltime","stats","staydown","stealth","subentity","subject_to_gravity","subject_to_hole","subject_to_maxz","subject_to_minz","subject_to_obstacle","subject_to_platform","subject_to_screen","subject_to_wall","subtype","thold","throwdamage","throwdist","throwframewait","throwheight","tosstime","tossv","type","weapent","x","xdir","z","zdir"};
+static const int obor_get_property_namespace_4_ids[] = {_gep_a,_gep_aggression,_gep_aiattack,_gep_aiflag,_gep_aimove,_gep_alpha,_gep_animal,_gep_animating,_gep_animation,_gep_animationid,_gep_animheight,_gep_animhits,_gep_animnum,_gep_animpos,_gep_animvalid,_gep_antigravity,_gep_attack,_gep_attacking,_gep_attackid,_gep_autokill,_gep_base,_gep_bbox,_gep_blink,_gep_blockback,_gep_blockodds,_gep_blockpain,_gep_bounce,_gep_chargerate,_gep_colourmap,_gep_colourtable,_gep_damage_on_landing,_gep_dead,_gep_defaultmodel,_gep_defaultname,_gep_defense,_gep_detect,_gep_direction,_gep_dot,_gep_dropframe,_gep_edelay,_gep_energycost,_gep_escapecount,_gep_escapehits,_gep_exists,_gep_falldie,_gep_flash,_gep_freezetime,_gep_frozen,_gep_gfxshadow,_gep_grabbing,_gep_grabforce,_gep_guardpoints,_gep_health,_gep_height,_gep_hitbyid,_gep_hmapl,_gep_hmapu,_gep_icon,_gep_invincible,_gep_invinctime,_gep_jugglepoints,_gep_knockdowncount,_gep_komap,_gep_landframe,_gep_lifespancountdown,_gep_link,_gep_map,_gep_maps,_gep_mapcount,_gep_mapdefault,_gep_maxguardpoints,_gep_maxhealth,_gep_maxjugglepoints,_gep_maxmp,_gep_model,_gep_mp,_gep_mpdroprate,_gep_mprate,_gep_mpstable,_gep_mpstableval,_gep_name,_gep_nextanim,_gep_nextthink,_gep_no_adjust_base,_gep_noaicontrol,_gep_nodieblink,_gep_nodrop,_gep_nograb,_gep_nopain,_gep_offense,_gep_opponent,_gep_owner,_gep_parent,_gep_path,_gep_playerindex,_gep_projectile,_gep_range,_gep_running,_gep_rush_count,_gep_rush_tally,_gep_rush_time,_gep_score,_gep_scroll,_gep_seal,_gep_sealtime,_gep_setlayer,_gep_spawntype,_gep_speed,_gep_sprite,_gep_stalltime,_gep_stats,_gep_staydown,_gep_stealth,_gep_subentity,_gep_subject_to_gravity,_gep_subject_to_hole,_gep_subject_to_maxz,_gep_subject_to_minz,_gep_subject_to_obstacle,_gep_subject_to_platform,_gep_subject_to_screen,_gep_subject_to_wall,_gep_subtype,_gep_thold,_gep_throwdamage,_gep_throwdist,_gep_throwframewait,_gep_throwheight,_gep_tosstime,_gep_tossv,_gep_type,_gep_weapent,_gep_x,_gep_xdir,_gep_z,_gep_zdir};
+static const obor_property_namespace obor_get_property_namespace_4_table = {obor_get_property_namespace_4_names,obor_get_property_namespace_4_ids,136,135};
+static const char *const obor_get_property_namespace_5_names[] = {"a","aggression","aiattack","aiflag","aimove","alpha","animal","animating","animation","animationid","animheight","animhits","animnum","animpos","animvalid","antigravity","attack","attacking","attackid","autokill","base","bbox","blink","blockback","blockodds","blockpain","bounce","chargerate","colourmap","colourtable","damage_on_landing","dead","defaultmodel","defaultname","defense","detect","direction","dot","dropframe","edelay","energycost","escapecount","escapehits","exists","falldie","flash","freezetime","frozen","gfxshadow","grabbing","grabforce","guardpoints","health","height","hitbyid","hmapl","hmapu","icon","invincible","invinctime","jugglepoints","knockdowncount","komap","landframe","lifespancountdown","link","map","mapcount","mapdefault","maps","maxguardpoints","maxhealth","maxjugglepoints","maxmp","model","mp","mpdroprate","mprate","mpstable","mpstableval","name","nextanim","nextthink","no_adjust_base","noaicontrol","nodieblink","nodrop","nograb","nopain","offense","opponent","owner","parent","path","playerindex","projectile","range","running","rush_count","rush_tally","rush_time","score","scroll","seal","sealtime","setlayer","spawntype","speed","sprite","stalltime","stats","staydown","stealth","subentity","subject_to_gravity","subject_to_hole","subject_to_maxz","subject_to_minz","subject_to_obstacle","subject_to_platform","subject_to_screen","subject_to_wall","subtype","thold","throwdamage","throwdist","throwframewait","throwheight","tosstime","tossv","type","weapent","x","xdir","z","zdir"};
+static const int obor_get_property_namespace_5_ids[] = {_gep_a,_gep_aggression,_gep_aiattack,_gep_aiflag,_gep_aimove,_gep_alpha,_gep_animal,_gep_animating,_gep_animation,_gep_animationid,_gep_animheight,_gep_animhits,_gep_animnum,_gep_animpos,_gep_animvalid,_gep_antigravity,_gep_attack,_gep_attacking,_gep_attackid,_gep_autokill,_gep_base,_gep_bbox,_gep_blink,_gep_blockback,_gep_blockodds,_gep_blockpain,_gep_bounce,_gep_chargerate,_gep_colourmap,_gep_colourtable,_gep_damage_on_landing,_gep_dead,_gep_defaultmodel,_gep_defaultname,_gep_defense,_gep_detect,_gep_direction,_gep_dot,_gep_dropframe,_gep_edelay,_gep_energycost,_gep_escapecount,_gep_escapehits,_gep_exists,_gep_falldie,_gep_flash,_gep_freezetime,_gep_frozen,_gep_gfxshadow,_gep_grabbing,_gep_grabforce,_gep_guardpoints,_gep_health,_gep_height,_gep_hitbyid,_gep_hmapl,_gep_hmapu,_gep_icon,_gep_invincible,_gep_invinctime,_gep_jugglepoints,_gep_knockdowncount,_gep_komap,_gep_landframe,_gep_lifespancountdown,_gep_link,_gep_map,_gep_mapcount,_gep_mapdefault,_gep_maps,_gep_maxguardpoints,_gep_maxhealth,_gep_maxjugglepoints,_gep_maxmp,_gep_model,_gep_mp,_gep_mpdroprate,_gep_mprate,_gep_mpstable,_gep_mpstableval,_gep_name,_gep_nextanim,_gep_nextthink,_gep_no_adjust_base,_gep_noaicontrol,_gep_nodieblink,_gep_nodrop,_gep_nograb,_gep_nopain,_gep_offense,_gep_opponent,_gep_owner,_gep_parent,_gep_path,_gep_playerindex,_gep_projectile,_gep_range,_gep_running,_gep_rush_count,_gep_rush_tally,_gep_rush_time,_gep_score,_gep_scroll,_gep_seal,_gep_sealtime,_gep_setlayer,_gep_spawntype,_gep_speed,_gep_sprite,_gep_stalltime,_gep_stats,_gep_staydown,_gep_stealth,_gep_subentity,_gep_subject_to_gravity,_gep_subject_to_hole,_gep_subject_to_maxz,_gep_subject_to_minz,_gep_subject_to_obstacle,_gep_subject_to_platform,_gep_subject_to_screen,_gep_subject_to_wall,_gep_subtype,_gep_thold,_gep_throwdamage,_gep_throwdist,_gep_throwframewait,_gep_throwheight,_gep_tosstime,_gep_tossv,_gep_type,_gep_weapent,_gep_x,_gep_xdir,_gep_z,_gep_zdir};
+static const obor_property_namespace obor_get_property_namespace_5_table = {obor_get_property_namespace_5_names,obor_get_property_namespace_5_ids,136,136};
+static const char *const obor_get_property_namespace_6_names[] = {"a","aggression","aiattack","aiflag","aimove","alpha","animal","animating","animation","animationid","animheight","animhits","animnum","animpos","animvalid","antigravity","attack","attacking","attackid","autokill","base","bbox","blink","blockback","blockodds","blockpain","bounce","chargerate","colourmap","colourtable","damage_on_landing","dead","defaultmodel","defaultname","defense","detect","direction","dot","dropframe","edelay","energycost","escapecount","escapehits","exists","falldie","flash","freezetime","frozen","gfxshadow","grabbing","grabforce","guardpoints","health","height","hitbyid","hmapl","hmapu","icon","invincible","invinctime","jugglepoints","knockdowncount","komap","landframe","lifespancountdown","link","map","mapcount","mapdefault","maps","maxguardpoints","maxhealth","maxjugglepoints","maxmp","model","mp","mpdroprate","mprate","mpstable","mpstableval","name","nextanim","nextthink","no_adjust_base","noaicontrol","nodieblink","nodrop","nograb","nopain","offense","opponent","owner","parent","path","playerindex","projectile","range","running","rush_count","rush_tally","rush_time","score","scroll","seal","sealtime","setlayer","spawntype","speed","sprite","spritea","stalltime","stats","staydown","stealth","subentity","subject_to_gravity","subject_to_hole","subject_to_maxz","subject_to_minz","subject_to_obstacle","subject_to_platform","subject_to_screen","subject_to_wall","subtype","thold","throwdamage","throwdist","throwframewait","throwheight","tosstime","tossv","type","weapent","x","xdir","z","zdir"};
+static const int obor_get_property_namespace_6_ids[] = {_gep_a,_gep_aggression,_gep_aiattack,_gep_aiflag,_gep_aimove,_gep_alpha,_gep_animal,_gep_animating,_gep_animation,_gep_animationid,_gep_animheight,_gep_animhits,_gep_animnum,_gep_animpos,_gep_animvalid,_gep_antigravity,_gep_attack,_gep_attacking,_gep_attackid,_gep_autokill,_gep_base,_gep_bbox,_gep_blink,_gep_blockback,_gep_blockodds,_gep_blockpain,_gep_bounce,_gep_chargerate,_gep_colourmap,_gep_colourtable,_gep_damage_on_landing,_gep_dead,_gep_defaultmodel,_gep_defaultname,_gep_defense,_gep_detect,_gep_direction,_gep_dot,_gep_dropframe,_gep_edelay,_gep_energycost,_gep_escapecount,_gep_escapehits,_gep_exists,_gep_falldie,_gep_flash,_gep_freezetime,_gep_frozen,_gep_gfxshadow,_gep_grabbing,_gep_grabforce,_gep_guardpoints,_gep_health,_gep_height,_gep_hitbyid,_gep_hmapl,_gep_hmapu,_gep_icon,_gep_invincible,_gep_invinctime,_gep_jugglepoints,_gep_knockdowncount,_gep_komap,_gep_landframe,_gep_lifespancountdown,_gep_link,_gep_map,_gep_mapcount,_gep_mapdefault,_gep_maps,_gep_maxguardpoints,_gep_maxhealth,_gep_maxjugglepoints,_gep_maxmp,_gep_model,_gep_mp,_gep_mpdroprate,_gep_mprate,_gep_mpstable,_gep_mpstableval,_gep_name,_gep_nextanim,_gep_nextthink,_gep_no_adjust_base,_gep_noaicontrol,_gep_nodieblink,_gep_nodrop,_gep_nograb,_gep_nopain,_gep_offense,_gep_opponent,_gep_owner,_gep_parent,_gep_path,_gep_playerindex,_gep_projectile,_gep_range,_gep_running,_gep_rush_count,_gep_rush_tally,_gep_rush_time,_gep_score,_gep_scroll,_gep_seal,_gep_sealtime,_gep_setlayer,_gep_spawntype,_gep_speed,_gep_sprite,_gep_spritea,_gep_stalltime,_gep_stats,_gep_staydown,_gep_stealth,_gep_subentity,_gep_subject_to_gravity,_gep_subject_to_hole,_gep_subject_to_maxz,_gep_subject_to_minz,_gep_subject_to_obstacle,_gep_subject_to_platform,_gep_subject_to_screen,_gep_subject_to_wall,_gep_subtype,_gep_thold,_gep_throwdamage,_gep_throwdist,_gep_throwframewait,_gep_throwheight,_gep_tosstime,_gep_tossv,_gep_type,_gep_weapent,_gep_x,_gep_xdir,_gep_z,_gep_zdir};
+static const obor_property_namespace obor_get_property_namespace_6_table = {obor_get_property_namespace_6_names,obor_get_property_namespace_6_ids,137,137};
+static const char *const obor_get_property_namespace_7_names[] = {"a","aggression","aiattack","aiflag","aimove","alpha","animal","animating","animation","animationid","animheight","animhits","animnum","animpos","animvalid","antigravity","attack","attacking","attackid","autokill","base","bbox","blink","blockback","blockodds","blockpain","bounce","chargerate","colourmap","colourtable","damage_on_landing","dead","defaultmodel","defaultname","defense","detect","direction","dot","dropframe","edelay","energycost","escapecount","escapehits","exists","falldie","flash","freezetime","frozen","gfxshadow","grabbing","grabforce","guardpoints","health","height","hitbyid","hmapl","hmapu","icon","invincible","invinctime","jugglepoints","knockdowncount","komap","landframe","lifespancountdown","link","map","mapcount","mapdefault","maps","maxguardpoints","maxhealth","maxjugglepoints","maxmp","model","mp","mpdroprate","mprate","mpstable","mpstableval","name","nextanim","nextthink","no_adjust_base","noaicontrol","nodieblink","nodrop","nograb","nopain","offense","opponent","owner","pain_time","parent","path","playerindex","projectile","range","running","rush_count","rush_tally","rush_time","score","scroll","seal","sealtime","setlayer","spawntype","speed","sprite","spritea","stalltime","stats","staydown","stealth","subentity","subject_to_gravity","subject_to_hole","subject_to_maxz","subject_to_minz","subject_to_obstacle","subject_to_platform","subject_to_screen","subject_to_wall","subtype","thold","throwdamage","throwdist","throwframewait","throwheight","tosstime","tossv","type","weapent","x","xdir","z","zdir"};
+static const int obor_get_property_namespace_7_ids[] = {_gep_a,_gep_aggression,_gep_aiattack,_gep_aiflag,_gep_aimove,_gep_alpha,_gep_animal,_gep_animating,_gep_animation,_gep_animationid,_gep_animheight,_gep_animhits,_gep_animnum,_gep_animpos,_gep_animvalid,_gep_antigravity,_gep_attack,_gep_attacking,_gep_attackid,_gep_autokill,_gep_base,_gep_bbox,_gep_blink,_gep_blockback,_gep_blockodds,_gep_blockpain,_gep_bounce,_gep_chargerate,_gep_colourmap,_gep_colourtable,_gep_damage_on_landing,_gep_dead,_gep_defaultmodel,_gep_defaultname,_gep_defense,_gep_detect,_gep_direction,_gep_dot,_gep_dropframe,_gep_edelay,_gep_energycost,_gep_escapecount,_gep_escapehits,_gep_exists,_gep_falldie,_gep_flash,_gep_freezetime,_gep_frozen,_gep_gfxshadow,_gep_grabbing,_gep_grabforce,_gep_guardpoints,_gep_health,_gep_height,_gep_hitbyid,_gep_hmapl,_gep_hmapu,_gep_icon,_gep_invincible,_gep_invinctime,_gep_jugglepoints,_gep_knockdowncount,_gep_komap,_gep_landframe,_gep_lifespancountdown,_gep_link,_gep_map,_gep_mapcount,_gep_mapdefault,_gep_maps,_gep_maxguardpoints,_gep_maxhealth,_gep_maxjugglepoints,_gep_maxmp,_gep_model,_gep_mp,_gep_mpdroprate,_gep_mprate,_gep_mpstable,_gep_mpstableval,_gep_name,_gep_nextanim,_gep_nextthink,_gep_no_adjust_base,_gep_noaicontrol,_gep_nodieblink,_gep_nodrop,_gep_nograb,_gep_nopain,_gep_offense,_gep_opponent,_gep_owner,_gep_pain_time,_gep_parent,_gep_path,_gep_playerindex,_gep_projectile,_gep_range,_gep_running,_gep_rush_count,_gep_rush_tally,_gep_rush_time,_gep_score,_gep_scroll,_gep_seal,_gep_sealtime,_gep_setlayer,_gep_spawntype,_gep_speed,_gep_sprite,_gep_spritea,_gep_stalltime,_gep_stats,_gep_staydown,_gep_stealth,_gep_subentity,_gep_subject_to_gravity,_gep_subject_to_hole,_gep_subject_to_maxz,_gep_subject_to_minz,_gep_subject_to_obstacle,_gep_subject_to_platform,_gep_subject_to_screen,_gep_subject_to_wall,_gep_subtype,_gep_thold,_gep_throwdamage,_gep_throwdist,_gep_throwframewait,_gep_throwheight,_gep_tosstime,_gep_tossv,_gep_type,_gep_weapent,_gep_x,_gep_xdir,_gep_z,_gep_zdir};
+static const obor_property_namespace obor_get_property_namespace_7_table = {obor_get_property_namespace_7_names,obor_get_property_namespace_7_ids,138,138};
+static const char *const obor_get_property_namespace_8_names[] = {"a","aggression","aiattack","aiflag","aimove","alpha","animal","animating","animation","animationid","animheight","animhits","animnum","animpos","animvalid","antigrab","antigravity","attack","attacking","attackid","autokill","base","bbox","blink","blockback","blockodds","blockpain","bounce","chargerate","colourmap","colourtable","damage_on_landing","dead","defaultmodel","defaultname","defense","detect","direction","dot","dropframe","edelay","energycost","escapecount","escapehits","exists","falldie","flash","freezetime","frozen","gfxshadow","grabbing","grabforce","guardpoints","health","height","hitbyid","hmapl","hmapu","icon","invincible","invinctime","jugglepoints","knockdowncount","komap","landframe","lifespancountdown","link","map","mapcount","mapdefault","maps","maxguardpoints","maxhealth","maxjugglepoints","maxmp","model","mp","mpdroprate","mprate","mpstable","mpstableval","name","nextanim","nextthink","no_adjust_base","noaicontrol","nodieblink","nodrop","nograb","nopain","offense","opponent","owner","pain_time","parent","path","playerindex","projectile","range","running","rush_count","rush_tally","rush_time","score","scroll","seal","sealtime","setlayer","spawntype","speed","sprite","spritea","stalltime","stats","staydown","stealth","subentity","subject_to_gravity","subject_to_hole","subject_to_maxz","subject_to_minz","subject_to_obstacle","subject_to_platform","subject_to_screen","subject_to_wall","subtype","thold","throwdamage","throwdist","throwframewait","throwheight","tosstime","tossv","type","weapent","x","xdir","z","zdir"};
+static const int obor_get_property_namespace_8_ids[] = {_gep_a,_gep_aggression,_gep_aiattack,_gep_aiflag,_gep_aimove,_gep_alpha,_gep_animal,_gep_animating,_gep_animation,_gep_animationid,_gep_animheight,_gep_animhits,_gep_animnum,_gep_animpos,_gep_animvalid,_gep_antigrab,_gep_antigravity,_gep_attack,_gep_attacking,_gep_attackid,_gep_autokill,_gep_base,_gep_bbox,_gep_blink,_gep_blockback,_gep_blockodds,_gep_blockpain,_gep_bounce,_gep_chargerate,_gep_colourmap,_gep_colourtable,_gep_damage_on_landing,_gep_dead,_gep_defaultmodel,_gep_defaultname,_gep_defense,_gep_detect,_gep_direction,_gep_dot,_gep_dropframe,_gep_edelay,_gep_energycost,_gep_escapecount,_gep_escapehits,_gep_exists,_gep_falldie,_gep_flash,_gep_freezetime,_gep_frozen,_gep_gfxshadow,_gep_grabbing,_gep_grabforce,_gep_guardpoints,_gep_health,_gep_height,_gep_hitbyid,_gep_hmapl,_gep_hmapu,_gep_icon,_gep_invincible,_gep_invinctime,_gep_jugglepoints,_gep_knockdowncount,_gep_komap,_gep_landframe,_gep_lifespancountdown,_gep_link,_gep_map,_gep_mapcount,_gep_mapdefault,_gep_maps,_gep_maxguardpoints,_gep_maxhealth,_gep_maxjugglepoints,_gep_maxmp,_gep_model,_gep_mp,_gep_mpdroprate,_gep_mprate,_gep_mpstable,_gep_mpstableval,_gep_name,_gep_nextanim,_gep_nextthink,_gep_no_adjust_base,_gep_noaicontrol,_gep_nodieblink,_gep_nodrop,_gep_nograb,_gep_nopain,_gep_offense,_gep_opponent,_gep_owner,_gep_pain_time,_gep_parent,_gep_path,_gep_playerindex,_gep_projectile,_gep_range,_gep_running,_gep_rush_count,_gep_rush_tally,_gep_rush_time,_gep_score,_gep_scroll,_gep_seal,_gep_sealtime,_gep_setlayer,_gep_spawntype,_gep_speed,_gep_sprite,_gep_spritea,_gep_stalltime,_gep_stats,_gep_staydown,_gep_stealth,_gep_subentity,_gep_subject_to_gravity,_gep_subject_to_hole,_gep_subject_to_maxz,_gep_subject_to_minz,_gep_subject_to_obstacle,_gep_subject_to_platform,_gep_subject_to_screen,_gep_subject_to_wall,_gep_subtype,_gep_thold,_gep_throwdamage,_gep_throwdist,_gep_throwframewait,_gep_throwheight,_gep_tosstime,_gep_tossv,_gep_type,_gep_weapent,_gep_x,_gep_xdir,_gep_z,_gep_zdir};
+static const obor_property_namespace obor_get_property_namespace_8_table = {obor_get_property_namespace_8_names,obor_get_property_namespace_8_ids,139,139};
+static const obor_property_namespace *obor_get_property_namespace(void) {
+    switch(obor_profile_build) {
+    case 3020u:
+    case 3057u:
+    case 3062u:
+    case 3073u:
+    case 3081u:
+    case 3109u:
+    case 3117u:
+    case 3143u:
+    case 3160u:
+    case 3173u:
+    case 3192u:
+    case 3208u:
+    case 3273u:
+    case 3288u:
+        return &obor_get_property_namespace_0_table;
+    case 3303u:
+    case 3307u:
+    case 3310u:
+    case 3311u:
+    case 3316u:
+        return &obor_get_property_namespace_1_table;
+    case 3317u:
+    case 3318u:
+    case 3327u:
+    case 3328u:
+        return &obor_get_property_namespace_2_table;
+    case 3330u:
+        return &obor_get_property_namespace_3_table;
+    case 3332u:
+        return &obor_get_property_namespace_4_table;
+    case 3335u:
+    case 3337u:
+    case 3340u:
+    case 3341u:
+    case 3342u:
+        return &obor_get_property_namespace_5_table;
+    case 3350u:
+    case 3351u:
+    case 3352u:
+    case 3353u:
+    case 3354u:
+    case 3355u:
+    case 3356u:
+    case 3357u:
+    case 3360u:
+    case 3361u:
+    case 3362u:
+    case 3365u:
+    case 3366u:
+        return &obor_get_property_namespace_6_table;
+    case 3367u:
+    case 3371u:
+    case 3372u:
+    case 3373u:
+    case 3375u:
+    case 3379u:
+    case 3380u:
+    case 3381u:
+    case 3383u:
+    case 3385u:
+    case 3388u:
+        return &obor_get_property_namespace_7_table;
+    case 3391u:
+    case 3394u:
+        return &obor_get_property_namespace_8_table;
+    default: return NULL;
+    }
+}
+static const char *const obor_set_property_namespace_0_names[] = {"aggression","aiattack","aiflag","aimove","alpha","animation","animhits","animpos","antigrab","antigravity","attacking","attackid","autokill","base","blink","blockback","blockpain","bounce","candamage","combostep","colourmap","damage_on_landing","dead","defaultname","defense","detect","direction","dot","edelay","energycost","falldie","freezetime","frozen","gfxshadow","grabforce","guardpoints","health","hitbyid","hmapl","hmapu","hostile","iconposition","invincible","invinctime","jugglepoints","komap","lifeposition","lifespancountdown","map","maptime","maxguardpoints","maxhealth","maxjugglepoints","maxmp","model","mp","mpset","name","nameposition","nextanim","nextthink","no_adjust_base","noaicontrol","nodieblink","nodrop","nograb","nopain","offense","opponent","owner","parent","position","projectile","running","rush_count","rush_tally","rush_time","scroll","seal","sealtime","setlayer","speed","stalltime","stats","staydown","staydownatk","stealth","subentity","subject_to_gravity","subject_to_hole","subject_to_maxz","subject_to_minz","subject_to_obstacle","subject_to_platform","subject_to_screen","subject_to_wall","takeaction","throwdamage","throwdist","throwframewait","throwheight","tosstime","trymove","velocity","weapon"};
+static const int obor_set_property_namespace_0_ids[] = {_cep_aggression,_cep_aiattack,_cep_aiflag,_cep_aimove,_cep_alpha,_cep_animation,_cep_animhits,_cep_animpos,_cep_antigrab,_cep_antigravity,_cep_attacking,_cep_attackid,_cep_autokill,_cep_base,_cep_blink,_cep_blockback,_cep_blockpain,_cep_bounce,_cep_candamage,_cep_combostep,_cep_colourmap,_cep_damage_on_landing,_cep_dead,_cep_defaultname,_cep_defense,_cep_detect,_cep_direction,_cep_dot,_cep_edelay,_cep_energycost,_cep_falldie,_cep_freezetime,_cep_frozen,_cep_gfxshadow,_cep_grabforce,_cep_guardpoints,_cep_health,_cep_hitbyid,_cep_hmapl,_cep_hmapu,_cep_hostile,_cep_iconposition,_cep_invincible,_cep_invinctime,_cep_jugglepoints,_cep_komap,_cep_lifeposition,_cep_lifespancountdown,_cep_map,_cep_maptime,_cep_maxguardpoints,_cep_maxhealth,_cep_maxjugglepoints,_cep_maxmp,_cep_model,_cep_mp,_cep_mpset,_cep_name,_cep_nameposition,_cep_nextanim,_cep_nextthink,_cep_no_adjust_base,_cep_noaicontrol,_cep_nodieblink,_cep_nodrop,_cep_nograb,_cep_nopain,_cep_offense,_cep_opponent,_cep_owner,_cep_parent,_cep_position,_cep_projectile,_cep_running,_cep_rush_count,_cep_rush_tally,_cep_rush_time,_cep_scroll,_cep_seal,_cep_sealtime,_cep_setlayer,_cep_speed,_cep_stalltime,_cep_stats,_cep_staydown,_cep_staydownatk,_cep_stealth,_cep_subentity,_cep_subject_to_gravity,_cep_subject_to_hole,_cep_subject_to_maxz,_cep_subject_to_minz,_cep_subject_to_obstacle,_cep_subject_to_platform,_cep_subject_to_screen,_cep_subject_to_wall,_cep_takeaction,_cep_throwdamage,_cep_throwdist,_cep_throwframewait,_cep_throwheight,_cep_tosstime,_cep_trymove,_cep_velocity,_cep_weapon};
+static const obor_property_namespace obor_set_property_namespace_0_table = {obor_set_property_namespace_0_names,obor_set_property_namespace_0_ids,105,105};
+static const char *const obor_set_property_namespace_1_names[] = {"aggression","aiattack","aiflag","aimove","alpha","animation","animhits","animpos","antigrab","antigravity","attacking","attackid","autokill","base","blink","blockback","blockpain","bounce","candamage","combostep","colourmap","damage_on_landing","dead","defaultname","defense","detect","direction","dot","edelay","energycost","falldie","freezetime","frozen","gfxshadow","grabforce","guardpoints","health","hitbyid","hmapl","hmapu","hostile","iconposition","invincible","invinctime","jugglepoints","komap","lifeposition","lifespancountdown","map","maptime","maxguardpoints","maxhealth","maxjugglepoints","maxmp","model","mp","mpset","name","nameposition","nextanim","nextthink","no_adjust_base","noaicontrol","nodieblink","nodrop","nograb","nopain","offense","opponent","owner","parent","position","projectile","running","rush_count","rush_tally","rush_time","scroll","seal","sealtime","setlayer","speed","stalltime","stats","staydown","staydownatk","stealth","subentity","subject_to_gravity","subject_to_hole","subject_to_maxz","subject_to_minz","subject_to_obstacle","subject_to_platform","subject_to_screen","subject_to_wall","takeaction","think","throwdamage","throwdist","throwframewait","throwheight","tosstime","trymove","type","velocity","weapon"};
+static const int obor_set_property_namespace_1_ids[] = {_cep_aggression,_cep_aiattack,_cep_aiflag,_cep_aimove,_cep_alpha,_cep_animation,_cep_animhits,_cep_animpos,_cep_antigrab,_cep_antigravity,_cep_attacking,_cep_attackid,_cep_autokill,_cep_base,_cep_blink,_cep_blockback,_cep_blockpain,_cep_bounce,_cep_candamage,_cep_combostep,_cep_colourmap,_cep_damage_on_landing,_cep_dead,_cep_defaultname,_cep_defense,_cep_detect,_cep_direction,_cep_dot,_cep_edelay,_cep_energycost,_cep_falldie,_cep_freezetime,_cep_frozen,_cep_gfxshadow,_cep_grabforce,_cep_guardpoints,_cep_health,_cep_hitbyid,_cep_hmapl,_cep_hmapu,_cep_hostile,_cep_iconposition,_cep_invincible,_cep_invinctime,_cep_jugglepoints,_cep_komap,_cep_lifeposition,_cep_lifespancountdown,_cep_map,_cep_maptime,_cep_maxguardpoints,_cep_maxhealth,_cep_maxjugglepoints,_cep_maxmp,_cep_model,_cep_mp,_cep_mpset,_cep_name,_cep_nameposition,_cep_nextanim,_cep_nextthink,_cep_no_adjust_base,_cep_noaicontrol,_cep_nodieblink,_cep_nodrop,_cep_nograb,_cep_nopain,_cep_offense,_cep_opponent,_cep_owner,_cep_parent,_cep_position,_cep_projectile,_cep_running,_cep_rush_count,_cep_rush_tally,_cep_rush_time,_cep_scroll,_cep_seal,_cep_sealtime,_cep_setlayer,_cep_speed,_cep_stalltime,_cep_stats,_cep_staydown,_cep_staydownatk,_cep_stealth,_cep_subentity,_cep_subject_to_gravity,_cep_subject_to_hole,_cep_subject_to_maxz,_cep_subject_to_minz,_cep_subject_to_obstacle,_cep_subject_to_platform,_cep_subject_to_screen,_cep_subject_to_wall,_cep_takeaction,_cep_think,_cep_throwdamage,_cep_throwdist,_cep_throwframewait,_cep_throwheight,_cep_tosstime,_cep_trymove,_cep_type,_cep_velocity,_cep_weapon};
+static const obor_property_namespace obor_set_property_namespace_1_table = {obor_set_property_namespace_1_names,obor_set_property_namespace_1_ids,107,107};
+static const char *const obor_set_property_namespace_2_names[] = {"aggression","aiattack","aiflag","aimove","alpha","animation","animhits","animpos","antigrab","antigravity","attacking","attackid","autokill","base","blink","blockback","blockpain","bounce","candamage","combostep","colourmap","damage_on_landing","dead","defaultname","defense","detect","direction","dot","edelay","energycost","falldie","freezetime","frozen","gfxshadow","grabforce","guardpoints","health","hitbyid","hmapl","hmapu","hostile","iconposition","invincible","invinctime","jugglepoints","komap","lifeposition","lifespancountdown","map","maptime","maxguardpoints","maxhealth","maxjugglepoints","maxmp","model","mp","mpset","name","nameposition","nextanim","nextthink","no_adjust_base","noaicontrol","nodieblink","nodrop","nograb","nopain","offense","opponent","owner","parent","position","projectile","projectilehit","running","rush_count","rush_tally","rush_time","scroll","seal","sealtime","setlayer","speed","stalltime","stats","staydown","staydownatk","stealth","subentity","subject_to_gravity","subject_to_hole","subject_to_maxz","subject_to_minz","subject_to_obstacle","subject_to_platform","subject_to_screen","subject_to_wall","takeaction","think","throwdamage","throwdist","throwframewait","throwheight","tosstime","trymove","type","velocity","weapon"};
+static const int obor_set_property_namespace_2_ids[] = {_cep_aggression,_cep_aiattack,_cep_aiflag,_cep_aimove,_cep_alpha,_cep_animation,_cep_animhits,_cep_animpos,_cep_antigrab,_cep_antigravity,_cep_attacking,_cep_attackid,_cep_autokill,_cep_base,_cep_blink,_cep_blockback,_cep_blockpain,_cep_bounce,_cep_candamage,_cep_combostep,_cep_colourmap,_cep_damage_on_landing,_cep_dead,_cep_defaultname,_cep_defense,_cep_detect,_cep_direction,_cep_dot,_cep_edelay,_cep_energycost,_cep_falldie,_cep_freezetime,_cep_frozen,_cep_gfxshadow,_cep_grabforce,_cep_guardpoints,_cep_health,_cep_hitbyid,_cep_hmapl,_cep_hmapu,_cep_hostile,_cep_iconposition,_cep_invincible,_cep_invinctime,_cep_jugglepoints,_cep_komap,_cep_lifeposition,_cep_lifespancountdown,_cep_map,_cep_maptime,_cep_maxguardpoints,_cep_maxhealth,_cep_maxjugglepoints,_cep_maxmp,_cep_model,_cep_mp,_cep_mpset,_cep_name,_cep_nameposition,_cep_nextanim,_cep_nextthink,_cep_no_adjust_base,_cep_noaicontrol,_cep_nodieblink,_cep_nodrop,_cep_nograb,_cep_nopain,_cep_offense,_cep_opponent,_cep_owner,_cep_parent,_cep_position,_cep_projectile,_cep_projectilehit,_cep_running,_cep_rush_count,_cep_rush_tally,_cep_rush_time,_cep_scroll,_cep_seal,_cep_sealtime,_cep_setlayer,_cep_speed,_cep_stalltime,_cep_stats,_cep_staydown,_cep_staydownatk,_cep_stealth,_cep_subentity,_cep_subject_to_gravity,_cep_subject_to_hole,_cep_subject_to_maxz,_cep_subject_to_minz,_cep_subject_to_obstacle,_cep_subject_to_platform,_cep_subject_to_screen,_cep_subject_to_wall,_cep_takeaction,_cep_think,_cep_throwdamage,_cep_throwdist,_cep_throwframewait,_cep_throwheight,_cep_tosstime,_cep_trymove,_cep_type,_cep_velocity,_cep_weapon};
+static const obor_property_namespace obor_set_property_namespace_2_table = {obor_set_property_namespace_2_names,obor_set_property_namespace_2_ids,108,108};
+static const char *const obor_set_property_namespace_3_names[] = {"aggression","aiattack","aiflag","aimove","alpha","animation","animhits","animpos","antigrab","antigravity","attacking","attackid","autokill","base","blink","blockback","blockodds","blockpain","bounce","candamage","combostep","colourmap","damage_on_landing","dead","defaultname","defense","detect","direction","dot","edelay","energycost","escapehits","escapecount","falldie","freezetime","frozen","gfxshadow","grabforce","guardpoints","health","hitbyid","hmapl","hmapu","hostile","iconposition","invincible","invinctime","jugglepoints","komap","lifeposition","lifespancountdown","map","maptime","maxguardpoints","maxhealth","maxjugglepoints","maxmp","model","mp","mpset","name","nameposition","nextanim","nextthink","no_adjust_base","noaicontrol","nodieblink","nodrop","nograb","nopain","offense","opponent","owner","parent","position","projectile","projectilehit","running","rush_count","rush_tally","rush_time","score","scroll","seal","sealtime","setlayer","speed","stalltime","stats","staydown","staydownatk","stealth","subentity","subject_to_gravity","subject_to_hole","subject_to_maxz","subject_to_minz","subject_to_obstacle","subject_to_platform","subject_to_screen","subject_to_wall","takeaction","think","thold","throwdamage","throwdist","throwframewait","throwheight","tosstime","trymove","type","velocity","weapon"};
+static const int obor_set_property_namespace_3_ids[] = {_cep_aggression,_cep_aiattack,_cep_aiflag,_cep_aimove,_cep_alpha,_cep_animation,_cep_animhits,_cep_animpos,_cep_antigrab,_cep_antigravity,_cep_attacking,_cep_attackid,_cep_autokill,_cep_base,_cep_blink,_cep_blockback,_cep_blockodds,_cep_blockpain,_cep_bounce,_cep_candamage,_cep_combostep,_cep_colourmap,_cep_damage_on_landing,_cep_dead,_cep_defaultname,_cep_defense,_cep_detect,_cep_direction,_cep_dot,_cep_edelay,_cep_energycost,_cep_escapecount,_cep_escapehits,_cep_falldie,_cep_freezetime,_cep_frozen,_cep_gfxshadow,_cep_grabforce,_cep_guardpoints,_cep_health,_cep_hitbyid,_cep_hmapl,_cep_hmapu,_cep_hostile,_cep_iconposition,_cep_invincible,_cep_invinctime,_cep_jugglepoints,_cep_komap,_cep_lifeposition,_cep_lifespancountdown,_cep_map,_cep_maptime,_cep_maxguardpoints,_cep_maxhealth,_cep_maxjugglepoints,_cep_maxmp,_cep_model,_cep_mp,_cep_mpset,_cep_name,_cep_nameposition,_cep_nextanim,_cep_nextthink,_cep_no_adjust_base,_cep_noaicontrol,_cep_nodieblink,_cep_nodrop,_cep_nograb,_cep_nopain,_cep_offense,_cep_opponent,_cep_owner,_cep_parent,_cep_position,_cep_projectile,_cep_projectilehit,_cep_running,_cep_rush_count,_cep_rush_tally,_cep_rush_time,_cep_score,_cep_scroll,_cep_seal,_cep_sealtime,_cep_setlayer,_cep_speed,_cep_stalltime,_cep_stats,_cep_staydown,_cep_staydownatk,_cep_stealth,_cep_subentity,_cep_subject_to_gravity,_cep_subject_to_hole,_cep_subject_to_maxz,_cep_subject_to_minz,_cep_subject_to_obstacle,_cep_subject_to_platform,_cep_subject_to_screen,_cep_subject_to_wall,_cep_takeaction,_cep_think,_cep_thold,_cep_throwdamage,_cep_throwdist,_cep_throwframewait,_cep_throwheight,_cep_tosstime,_cep_trymove,_cep_type,_cep_velocity,_cep_weapon};
+static const obor_property_namespace obor_set_property_namespace_3_table = {obor_set_property_namespace_3_names,obor_set_property_namespace_3_ids,113,113};
+static const char *const obor_set_property_namespace_4_names[] = {"aggression","aiattack","aiflag","aimove","alpha","animation","animhits","animpos","antigrab","antigravity","attacking","attackid","autokill","base","blink","blockback","blockodds","blockpain","bounce","candamage","combostep","colourmap","damage_on_landing","dead","defaultname","defense","detect","direction","dot","edelay","energycost","escapehits","escapecount","falldie","freezetime","frozen","gfxshadow","grabforce","guardpoints","health","hitbyid","hmapl","hmapu","hostile","iconposition","invincible","invinctime","jugglepoints","knockdowncount","komap","lifeposition","lifespancountdown","map","maptime","maxguardpoints","maxhealth","maxjugglepoints","maxmp","model","mp","mpset","name","nameposition","nextanim","nextthink","no_adjust_base","noaicontrol","nodieblink","nodrop","nograb","nopain","offense","opponent","owner","parent","position","projectile","projectilehit","running","rush_count","rush_tally","rush_time","score","scroll","seal","sealtime","setlayer","speed","stalltime","stats","staydown","staydownatk","stealth","subentity","subject_to_gravity","subject_to_hole","subject_to_maxz","subject_to_minz","subject_to_obstacle","subject_to_platform","subject_to_screen","subject_to_wall","takeaction","think","thold","throwdamage","throwdist","throwframewait","throwheight","tosstime","trymove","type","velocity","weapon"};
+static const int obor_set_property_namespace_4_ids[] = {_cep_aggression,_cep_aiattack,_cep_aiflag,_cep_aimove,_cep_alpha,_cep_animation,_cep_animhits,_cep_animpos,_cep_antigrab,_cep_antigravity,_cep_attacking,_cep_attackid,_cep_autokill,_cep_base,_cep_blink,_cep_blockback,_cep_blockodds,_cep_blockpain,_cep_bounce,_cep_candamage,_cep_combostep,_cep_colourmap,_cep_damage_on_landing,_cep_dead,_cep_defaultname,_cep_defense,_cep_detect,_cep_direction,_cep_dot,_cep_edelay,_cep_energycost,_cep_escapecount,_cep_escapehits,_cep_falldie,_cep_freezetime,_cep_frozen,_cep_gfxshadow,_cep_grabforce,_cep_guardpoints,_cep_health,_cep_hitbyid,_cep_hmapl,_cep_hmapu,_cep_hostile,_cep_iconposition,_cep_invincible,_cep_invinctime,_cep_jugglepoints,_cep_knockdowncount,_cep_komap,_cep_lifeposition,_cep_lifespancountdown,_cep_map,_cep_maptime,_cep_maxguardpoints,_cep_maxhealth,_cep_maxjugglepoints,_cep_maxmp,_cep_model,_cep_mp,_cep_mpset,_cep_name,_cep_nameposition,_cep_nextanim,_cep_nextthink,_cep_no_adjust_base,_cep_noaicontrol,_cep_nodieblink,_cep_nodrop,_cep_nograb,_cep_nopain,_cep_offense,_cep_opponent,_cep_owner,_cep_parent,_cep_position,_cep_projectile,_cep_projectilehit,_cep_running,_cep_rush_count,_cep_rush_tally,_cep_rush_time,_cep_score,_cep_scroll,_cep_seal,_cep_sealtime,_cep_setlayer,_cep_speed,_cep_stalltime,_cep_stats,_cep_staydown,_cep_staydownatk,_cep_stealth,_cep_subentity,_cep_subject_to_gravity,_cep_subject_to_hole,_cep_subject_to_maxz,_cep_subject_to_minz,_cep_subject_to_obstacle,_cep_subject_to_platform,_cep_subject_to_screen,_cep_subject_to_wall,_cep_takeaction,_cep_think,_cep_thold,_cep_throwdamage,_cep_throwdist,_cep_throwframewait,_cep_throwheight,_cep_tosstime,_cep_trymove,_cep_type,_cep_velocity,_cep_weapon};
+static const obor_property_namespace obor_set_property_namespace_4_table = {obor_set_property_namespace_4_names,obor_set_property_namespace_4_ids,114,114};
+static const char *const obor_set_property_namespace_5_names[] = {"aggression","aiattack","aiflag","aimove","alpha","animation","animhits","animpos","antigrab","antigravity","attacking","attackid","autokill","base","blink","blockback","blockodds","blockpain","bounce","candamage","combostep","colourmap","damage_on_landing","dead","defaultname","defense","detect","direction","dot","edelay","energycost","escapehits","escapecount","falldie","freezetime","frozen","gfxshadow","grabforce","guardpoints","health","hitbyid","hmapl","hmapu","hostile","iconposition","invincible","invinctime","jugglepoints","knockdowncount","komap","lifeposition","lifespancountdown","map","maptime","maxguardpoints","maxhealth","maxjugglepoints","maxmp","model","mp","mpset","name","nameposition","nextanim","nextthink","no_adjust_base","noaicontrol","nodieblink","nodrop","nograb","nopain","offense","opponent","owner","parent","position","projectile","projectilehit","running","rush_count","rush_tally","rush_time","score","scroll","seal","sealtime","setlayer","speed","spritea","stalltime","stats","staydown","staydownatk","stealth","subentity","subject_to_gravity","subject_to_hole","subject_to_maxz","subject_to_minz","subject_to_obstacle","subject_to_platform","subject_to_screen","subject_to_wall","takeaction","think","thold","throwdamage","throwdist","throwframewait","throwheight","tosstime","trymove","type","velocity","weapon"};
+static const int obor_set_property_namespace_5_ids[] = {_cep_aggression,_cep_aiattack,_cep_aiflag,_cep_aimove,_cep_alpha,_cep_animation,_cep_animhits,_cep_animpos,_cep_antigrab,_cep_antigravity,_cep_attacking,_cep_attackid,_cep_autokill,_cep_base,_cep_blink,_cep_blockback,_cep_blockodds,_cep_blockpain,_cep_bounce,_cep_candamage,_cep_combostep,_cep_colourmap,_cep_damage_on_landing,_cep_dead,_cep_defaultname,_cep_defense,_cep_detect,_cep_direction,_cep_dot,_cep_edelay,_cep_energycost,_cep_escapecount,_cep_escapehits,_cep_falldie,_cep_freezetime,_cep_frozen,_cep_gfxshadow,_cep_grabforce,_cep_guardpoints,_cep_health,_cep_hitbyid,_cep_hmapl,_cep_hmapu,_cep_hostile,_cep_iconposition,_cep_invincible,_cep_invinctime,_cep_jugglepoints,_cep_knockdowncount,_cep_komap,_cep_lifeposition,_cep_lifespancountdown,_cep_map,_cep_maptime,_cep_maxguardpoints,_cep_maxhealth,_cep_maxjugglepoints,_cep_maxmp,_cep_model,_cep_mp,_cep_mpset,_cep_name,_cep_nameposition,_cep_nextanim,_cep_nextthink,_cep_no_adjust_base,_cep_noaicontrol,_cep_nodieblink,_cep_nodrop,_cep_nograb,_cep_nopain,_cep_offense,_cep_opponent,_cep_owner,_cep_parent,_cep_position,_cep_projectile,_cep_projectilehit,_cep_running,_cep_rush_count,_cep_rush_tally,_cep_rush_time,_cep_score,_cep_scroll,_cep_seal,_cep_sealtime,_cep_setlayer,_cep_speed,_cep_spritea,_cep_stalltime,_cep_stats,_cep_staydown,_cep_staydownatk,_cep_stealth,_cep_subentity,_cep_subject_to_gravity,_cep_subject_to_hole,_cep_subject_to_maxz,_cep_subject_to_minz,_cep_subject_to_obstacle,_cep_subject_to_platform,_cep_subject_to_screen,_cep_subject_to_wall,_cep_takeaction,_cep_think,_cep_thold,_cep_throwdamage,_cep_throwdist,_cep_throwframewait,_cep_throwheight,_cep_tosstime,_cep_trymove,_cep_type,_cep_velocity,_cep_weapon};
+static const obor_property_namespace obor_set_property_namespace_5_table = {obor_set_property_namespace_5_names,obor_set_property_namespace_5_ids,115,115};
+static const char *const obor_set_property_namespace_6_names[] = {"aggression","aiattack","aiflag","aimove","alpha","animation","animhits","animpos","antigrab","antigravity","attacking","attackid","autokill","base","blink","blockback","blockodds","blockpain","bounce","candamage","combostep","colourmap","damage_on_landing","dead","defaultname","defense","detect","direction","dot","edelay","energycost","escapehits","escapecount","falldie","freezetime","frozen","gfxshadow","grabforce","guardpoints","health","hitbyid","hmapl","hmapu","hostile","iconposition","invincible","invinctime","jugglepoints","knockdowncount","komap","lifeposition","lifespancountdown","map","maptime","maxguardpoints","maxhealth","maxjugglepoints","maxmp","model","mp","mpset","name","nameposition","nextanim","nextthink","no_adjust_base","noaicontrol","nodieblink","nodrop","nograb","nopain","offense","opponent","owner","pain_time","parent","position","projectile","projectilehit","running","rush_count","rush_tally","rush_time","score","scroll","seal","sealtime","setlayer","speed","spritea","stalltime","stats","staydown","staydownatk","stealth","subentity","subject_to_gravity","subject_to_hole","subject_to_maxz","subject_to_minz","subject_to_obstacle","subject_to_platform","subject_to_screen","subject_to_wall","takeaction","think","thold","throwdamage","throwdist","throwframewait","throwheight","tosstime","trymove","type","velocity","weapon"};
+static const int obor_set_property_namespace_6_ids[] = {_cep_aggression,_cep_aiattack,_cep_aiflag,_cep_aimove,_cep_alpha,_cep_animation,_cep_animhits,_cep_animpos,_cep_antigrab,_cep_antigravity,_cep_attacking,_cep_attackid,_cep_autokill,_cep_base,_cep_blink,_cep_blockback,_cep_blockodds,_cep_blockpain,_cep_bounce,_cep_candamage,_cep_combostep,_cep_colourmap,_cep_damage_on_landing,_cep_dead,_cep_defaultname,_cep_defense,_cep_detect,_cep_direction,_cep_dot,_cep_edelay,_cep_energycost,_cep_escapecount,_cep_escapehits,_cep_falldie,_cep_freezetime,_cep_frozen,_cep_gfxshadow,_cep_grabforce,_cep_guardpoints,_cep_health,_cep_hitbyid,_cep_hmapl,_cep_hmapu,_cep_hostile,_cep_iconposition,_cep_invincible,_cep_invinctime,_cep_jugglepoints,_cep_knockdowncount,_cep_komap,_cep_lifeposition,_cep_lifespancountdown,_cep_map,_cep_maptime,_cep_maxguardpoints,_cep_maxhealth,_cep_maxjugglepoints,_cep_maxmp,_cep_model,_cep_mp,_cep_mpset,_cep_name,_cep_nameposition,_cep_nextanim,_cep_nextthink,_cep_no_adjust_base,_cep_noaicontrol,_cep_nodieblink,_cep_nodrop,_cep_nograb,_cep_nopain,_cep_offense,_cep_opponent,_cep_owner,_cep_pain_time,_cep_parent,_cep_position,_cep_projectile,_cep_projectilehit,_cep_running,_cep_rush_count,_cep_rush_tally,_cep_rush_time,_cep_score,_cep_scroll,_cep_seal,_cep_sealtime,_cep_setlayer,_cep_speed,_cep_spritea,_cep_stalltime,_cep_stats,_cep_staydown,_cep_staydownatk,_cep_stealth,_cep_subentity,_cep_subject_to_gravity,_cep_subject_to_hole,_cep_subject_to_maxz,_cep_subject_to_minz,_cep_subject_to_obstacle,_cep_subject_to_platform,_cep_subject_to_screen,_cep_subject_to_wall,_cep_takeaction,_cep_think,_cep_thold,_cep_throwdamage,_cep_throwdist,_cep_throwframewait,_cep_throwheight,_cep_tosstime,_cep_trymove,_cep_type,_cep_velocity,_cep_weapon};
+static const obor_property_namespace obor_set_property_namespace_6_table = {obor_set_property_namespace_6_names,obor_set_property_namespace_6_ids,116,116};
+static const obor_property_namespace *obor_set_property_namespace(void) {
+    switch(obor_profile_build) {
+    case 3020u:
+    case 3057u:
+    case 3062u:
+    case 3073u:
+    case 3081u:
+    case 3109u:
+    case 3117u:
+    case 3143u:
+    case 3160u:
+    case 3173u:
+    case 3192u:
+        return &obor_set_property_namespace_0_table;
+    case 3208u:
+    case 3273u:
+        return &obor_set_property_namespace_1_table;
+    case 3288u:
+    case 3303u:
+    case 3307u:
+    case 3310u:
+    case 3311u:
+    case 3316u:
+        return &obor_set_property_namespace_2_table;
+    case 3317u:
+    case 3318u:
+    case 3327u:
+    case 3328u:
+    case 3330u:
+    case 3332u:
+    case 3335u:
+    case 3337u:
+        return &obor_set_property_namespace_3_table;
+    case 3340u:
+    case 3341u:
+    case 3342u:
+        return &obor_set_property_namespace_4_table;
+    case 3350u:
+    case 3351u:
+    case 3352u:
+    case 3353u:
+    case 3354u:
+    case 3355u:
+    case 3356u:
+    case 3357u:
+    case 3360u:
+    case 3361u:
+    case 3362u:
+    case 3365u:
+    case 3366u:
+        return &obor_set_property_namespace_5_table;
+    case 3367u:
+    case 3371u:
+    case 3372u:
+    case 3373u:
+    case 3375u:
+    case 3379u:
+    case 3380u:
+    case 3381u:
+    case 3383u:
+    case 3385u:
+    case 3388u:
+    case 3391u:
+    case 3394u:
+        return &obor_set_property_namespace_6_table;
+    default: return NULL;
+    }
+}
+static const char *const obor_get_aiflag_namespace_0_names[] = {"animating","attacking","autokill","blink","blocking","charging","dead","drop","falling","freezetime","frozen","getting","idling","inpain","invincible","jumping","projectile","running","toexplode","turning"};
+static const int obor_get_aiflag_namespace_0_ids[] = {_gep_aiflag_animating,_gep_aiflag_attacking,_gep_aiflag_autokill,_gep_aiflag_blink,_gep_aiflag_blocking,_gep_aiflag_charging,_gep_aiflag_dead,_gep_aiflag_drop,_gep_aiflag_falling,_gep_aiflag_freezetime,_gep_aiflag_frozen,_gep_aiflag_getting,_gep_aiflag_idling,_gep_aiflag_inpain,_gep_aiflag_invincible,_gep_aiflag_jumping,_gep_aiflag_projectile,_gep_aiflag_running,_gep_aiflag_toexplode,_gep_aiflag_turning};
+static const obor_property_namespace obor_get_aiflag_namespace_0_table = {obor_get_aiflag_namespace_0_names,obor_get_aiflag_namespace_0_ids,20,20};
+static const char *const obor_get_aiflag_namespace_1_names[] = {"animating","attacking","autokill","blink","blocking","charging","dead","drop","falling","freezetime","frozen","getting","idling","inpain","invincible","jumping","pain_time","projectile","running","toexplode","turning"};
+static const int obor_get_aiflag_namespace_1_ids[] = {_gep_aiflag_animating,_gep_aiflag_attacking,_gep_aiflag_autokill,_gep_aiflag_blink,_gep_aiflag_blocking,_gep_aiflag_charging,_gep_aiflag_dead,_gep_aiflag_drop,_gep_aiflag_falling,_gep_aiflag_freezetime,_gep_aiflag_frozen,_gep_aiflag_getting,_gep_aiflag_idling,_gep_aiflag_inpain,_gep_aiflag_invincible,_gep_aiflag_jumping,_gep_aiflag_pain_time,_gep_aiflag_projectile,_gep_aiflag_running,_gep_aiflag_toexplode,_gep_aiflag_turning};
+static const obor_property_namespace obor_get_aiflag_namespace_1_table = {obor_get_aiflag_namespace_1_names,obor_get_aiflag_namespace_1_ids,21,21};
+static const obor_property_namespace *obor_get_aiflag_namespace(void) {
+    switch(obor_profile_build) {
+    case 3020u:
+    case 3057u:
+    case 3062u:
+    case 3073u:
+    case 3081u:
+    case 3109u:
+    case 3117u:
+    case 3143u:
+    case 3160u:
+    case 3173u:
+    case 3192u:
+    case 3208u:
+    case 3273u:
+    case 3288u:
+    case 3303u:
+    case 3307u:
+    case 3310u:
+    case 3311u:
+    case 3316u:
+    case 3317u:
+    case 3318u:
+    case 3327u:
+    case 3328u:
+    case 3330u:
+    case 3332u:
+    case 3335u:
+    case 3337u:
+    case 3340u:
+    case 3341u:
+    case 3342u:
+    case 3350u:
+    case 3351u:
+    case 3352u:
+    case 3353u:
+    case 3354u:
+    case 3355u:
+    case 3356u:
+    case 3357u:
+    case 3360u:
+    case 3361u:
+    case 3362u:
+    case 3365u:
+    case 3366u:
+        return &obor_get_aiflag_namespace_0_table;
+    case 3367u:
+    case 3371u:
+    case 3372u:
+        return &obor_get_aiflag_namespace_1_table;
+    default: return NULL;
+    }
+}
+static const char *const obor_set_aiflag_namespace_0_names[] = {"animating","attacking","autokill","blink","blocking","charging","dead","drop","falling","frozen","getting","idling","inpain","invincible","jumping","projectile","running","toexplode","turning"};
+static const int obor_set_aiflag_namespace_0_ids[] = {_cep_aiflag_animating,_cep_aiflag_attacking,_cep_aiflag_autokill,_cep_aiflag_blink,_cep_aiflag_blocking,_cep_aiflag_charging,_cep_aiflag_dead,_cep_aiflag_drop,_cep_aiflag_falling,_cep_aiflag_frozen,_cep_aiflag_getting,_cep_aiflag_idling,_cep_aiflag_inpain,_cep_aiflag_invincible,_cep_aiflag_jumping,_cep_aiflag_projectile,_cep_aiflag_running,_cep_aiflag_toexplode,_cep_aiflag_turning};
+static const obor_property_namespace obor_set_aiflag_namespace_0_table = {obor_set_aiflag_namespace_0_names,obor_set_aiflag_namespace_0_ids,19,19};
+static const obor_property_namespace *obor_set_aiflag_namespace(void) {
+    switch(obor_profile_build) {
+    case 3020u:
+    case 3057u:
+    case 3062u:
+    case 3073u:
+    case 3081u:
+    case 3109u:
+    case 3117u:
+    case 3143u:
+    case 3160u:
+    case 3173u:
+    case 3192u:
+    case 3208u:
+    case 3273u:
+    case 3288u:
+    case 3303u:
+    case 3307u:
+    case 3310u:
+    case 3311u:
+    case 3316u:
+    case 3317u:
+    case 3318u:
+    case 3327u:
+    case 3328u:
+    case 3330u:
+    case 3332u:
+    case 3335u:
+    case 3337u:
+    case 3340u:
+    case 3341u:
+    case 3342u:
+    case 3350u:
+    case 3351u:
+    case 3352u:
+    case 3353u:
+    case 3354u:
+    case 3355u:
+    case 3356u:
+    case 3357u:
+    case 3360u:
+    case 3361u:
+    case 3362u:
+    case 3365u:
+    case 3366u:
+    case 3367u:
+    case 3371u:
+    case 3372u:
+        return &obor_set_aiflag_namespace_0_table;
+    default: return NULL;
+    }
+}
+
 void mapstrings_changeentityproperty(ScriptVariant** varlist, int paramCount)
 {
+    const obor_property_namespace *space = obor_set_property_namespace();
+    int obor_property;
 	char* propname;
 	int prop, i;
 
@@ -5780,19 +6481,26 @@ void mapstrings_changeentityproperty(ScriptVariant** varlist, int paramCount)
 		"trap_think",
 	};
 
+    if(paramCount < 2 || (obor_profile_build < 3319 && paramCount < 3)) return;
+
 	// property name
-	MAPSTRINGS(varlist[1], proplist, _cep_the_end,
+	MAPSTRINGS(varlist[1], space ? (const char**)space->names : proplist,
+        space ? space->name_count : _cep_the_end,
 		"Property name '%s' is not supported by function changeentityproperty.\n");
+    obor_property = obor_property_index(space, varlist[1]->lVal, _cep_the_end);
+    if(paramCount < 3) return;
 
     // AI flag name for aiflag
-	if((varlist[1]->vt == VT_INTEGER) && (varlist[1]->lVal == _cep_aiflag))
+	if((varlist[1]->vt == VT_INTEGER) && (obor_property == _cep_aiflag))
 	{
-		MAPSTRINGS(varlist[2], proplist_aiflag, _cep_aiflag_the_end,
+		const obor_property_namespace *flags = obor_set_aiflag_namespace();
+        MAPSTRINGS(varlist[2], flags ? (const char**)flags->names : proplist_aiflag,
+            flags ? flags->name_count : _cep_aiflag_the_end,
 			"Flag '%s' is not supported by 'aiflag'.\n");
 	}
 
 	//2011_03_31, DC: Energycost
-	if((varlist[1]->vt == VT_INTEGER) && (varlist[1]->lVal == _cep_energycost))
+	if((varlist[1]->vt == VT_INTEGER) && (obor_property == _cep_energycost) && (obor_profile_build >= 3319))
 	{
 		MAPSTRINGS(varlist[2], proplist_energycost, _cep_energycost_the_end,
 			"Flag '%s' is not supported by 'energycost'.\n");
@@ -5800,7 +6508,7 @@ void mapstrings_changeentityproperty(ScriptVariant** varlist, int paramCount)
 
     // entity type(s) for hostile, candamage, and projectilehit.
 	if((varlist[1]->vt == VT_INTEGER) &&
-		((varlist[1]->lVal == _cep_hostile) || (varlist[1]->lVal == _cep_candamage) || (varlist[1]->lVal == _cep_projectilehit)))
+		((obor_property == _cep_hostile) || (obor_property == _cep_candamage) || (obor_property == _cep_projectilehit)))
 	{
 		for(i=2; i<paramCount; i++)
 		{
@@ -5810,35 +6518,35 @@ void mapstrings_changeentityproperty(ScriptVariant** varlist, int paramCount)
 	}
 
 	// 2011_04_14, DC: Knockdowncount
-	if((varlist[1]->vt == VT_INTEGER) && (varlist[1]->lVal == _cep_knockdowncount))
+	if((varlist[1]->vt == VT_INTEGER) && (obor_property == _cep_knockdowncount))
 	{
 		MAPSTRINGS(varlist[2], proplist_knockdowncount, _cep_knockdowncount_the_end,
 			"Subproperty '%s' is not supported by 'knockdowncount'.\n");
 	}
 
 	// 2011_05_15, DC: Sprite array
-	if((varlist[1]->vt == VT_INTEGER) && (varlist[1]->lVal == _cep_spritea))
+	if((varlist[1]->vt == VT_INTEGER) && (obor_property == _cep_spritea))
 	{
 		MAPSTRINGS(varlist[2], proplist_spritea, _cep_spritea_the_end,
 			"Property name '%s' is not a known subproperty of 'spritea'.\n");
 	}
 
     // 2011_04_08, DC: Staydown
-	if((varlist[1]->vt == VT_INTEGER) && (varlist[1]->lVal == _cep_staydown))
+	if((varlist[1]->vt == VT_INTEGER) && (obor_property == _cep_staydown) && (obor_profile_build >= 3334))
 	{
 		MAPSTRINGS(varlist[2], proplist_staydown, _cep_staydown_the_end,
 			"Subproperty '%s' is not supported by 'staydown'.\n");
 	}
 
 	// action for takeaction
-	if((varlist[1]->vt == VT_INTEGER) && (varlist[1]->lVal == _cep_takeaction))
+	if((varlist[1]->vt == VT_INTEGER) && (obor_property == _cep_takeaction))
 	{
 		MAPSTRINGS(varlist[2], proplist_takeaction, _cep_ta_the_end,
 			"Action '%s' is not supported by 'takeaction'.\n");
 	}
 
     // 2011_03_13, DC: Think sets for think.
-	if((varlist[1]->vt == VT_INTEGER) && (varlist[1]->lVal == _cep_think))
+	if((varlist[1]->vt == VT_INTEGER) && (obor_property == _cep_think))
 	{
 		MAPSTRINGS(varlist[2], proplist_think, _cep_th_the_end,
 			"Set '%s' is not supported by 'think'.\n");
@@ -5930,6 +6638,7 @@ HRESULT openbor_changeentityproperty(ScriptVariant** varlist , ScriptVariant** p
 	}
 
 	propind = varlist[1]->lVal;
+    propind = obor_property_index(obor_set_property_namespace(), propind, _cep_the_end);
 
 	switch(propind)
 	{
@@ -5955,7 +6664,7 @@ HRESULT openbor_changeentityproperty(ScriptVariant** varlist , ScriptVariant** p
 		}
 		if(paramCount<4) break;
 
-		switch(varlist[2]->lVal)
+		switch(obor_property_index(obor_set_aiflag_namespace(), varlist[2]->lVal, _cep_aiflag_the_end))
 		{
 		case _cep_aiflag_dead:
 		{
@@ -6132,7 +6841,13 @@ HRESULT openbor_changeentityproperty(ScriptVariant** varlist , ScriptVariant** p
 	case _cep_antigrab:
 	{
 		if(SUCCEEDED(ScriptVariant_IntegerValue(varlist[2], &ltemp)))
-			ent->modeldata.antigrab = (int)ltemp;
+		{
+			if(obor_profile_build < 3391)
+			{
+				if(ent->model) ent->model->antigrab = (int)ltemp;
+			}
+			else ent->modeldata.antigrab = (int)ltemp;
+		}
 		break;
 	}
     case _cep_antigravity:
@@ -6343,7 +7058,7 @@ HRESULT openbor_changeentityproperty(ScriptVariant** varlist , ScriptVariant** p
     case _cep_detect:
 	{
 		if(SUCCEEDED(ScriptVariant_IntegerValue(varlist[2], &ltemp)))
-			ent->modeldata.stealth.detect = (int)ltemp;
+			ent->modeldata.stealth.detect = obor_stealth_value((int)ltemp, obor_profile_build);
 		break;
 	}
 	case _cep_direction:
@@ -6436,6 +7151,46 @@ HRESULT openbor_changeentityproperty(ScriptVariant** varlist , ScriptVariant** p
 	}
 	case _cep_energycost:
 	{
+        if(obor_profile_build < 3319)
+        {		
+		if(paramCount != 6)
+        {			
+			printf("\n Error, changeentityproperty({ent}, 'energycost', {animation}, {cost}, {mponly}, {disable}): Invalid or missing parameter. \n");
+			goto changeentityproperty_error;		
+		}
+
+		(*pretvar)->lVal = (LONG)1;
+		
+		if(SUCCEEDED(ScriptVariant_IntegerValue(varlist[2], &ltemp)))
+        {
+			i = (int)ltemp;
+		}		
+
+		if(!validanim(ent,i))
+		{			
+			printf("\n Error, changeentityproperty({ent}, 'energycost', {animation}, {cost}, {mponly}, {disable}): {animation} parameter invalid. Make sure the animation exists. \n");
+			goto changeentityproperty_error;
+		}		
+		
+		if(SUCCEEDED(ScriptVariant_IntegerValue(varlist[3], &ltemp)))
+        {          
+			ent->modeldata.animation[i]->energycost.cost = (int)ltemp;
+        }
+               
+        if(SUCCEEDED(ScriptVariant_IntegerValue(varlist[4], &ltemp)))
+		{
+			ent->modeldata.animation[i]->energycost.mponly = obor_energycost_flag((int)ltemp, obor_profile_build);
+        }
+
+		if(SUCCEEDED(ScriptVariant_IntegerValue(varlist[5], &ltemp)))
+        {            
+            ent->modeldata.animation[i]->energycost.disable = obor_energycost_flag((int)ltemp, obor_profile_build);
+        } 
+		
+        break;
+	
+        }
+
 		if(paramCount != 5)
 		{
 			printf("\n Error, changeentityproperty({ent}, 'energycost', {subproperty}, {animation}, {value}): Invalid or missing parameter. \n");
@@ -6473,13 +7228,13 @@ HRESULT openbor_changeentityproperty(ScriptVariant** varlist , ScriptVariant** p
 		case _cep_energycost_disable:
 		{
 			if(SUCCEEDED(ScriptVariant_IntegerValue(varlist[4], &ltemp)))
-				ent->modeldata.animation[i]->energycost.disable = (int)ltemp;
+				ent->modeldata.animation[i]->energycost.disable = obor_energycost_flag((int)ltemp, obor_profile_build);
 			break;
 		}
 		case _cep_energycost_mponly:
 		{
 			if(SUCCEEDED(ScriptVariant_IntegerValue(varlist[4], &ltemp)))
-				ent->modeldata.animation[i]->energycost.mponly = (int)ltemp;
+				ent->modeldata.animation[i]->energycost.mponly = obor_energycost_flag((int)ltemp, obor_profile_build);
 			break;
 		}
 		default:
@@ -6539,7 +7294,13 @@ HRESULT openbor_changeentityproperty(ScriptVariant** varlist , ScriptVariant** p
     case _cep_grabforce:
 	{
 		if(SUCCEEDED(ScriptVariant_IntegerValue(varlist[2], &ltemp)))
-			ent->modeldata.grabforce = (int)ltemp;
+        {
+            if(obor_profile_build < 3394)
+            {
+                if(ent->model) ent->model->grabforce = (int)ltemp;
+            }
+            else ent->modeldata.grabforce = (int)ltemp;
+        }
 		break;
 	}
 	case _cep_guardpoints:
@@ -6547,7 +7308,7 @@ HRESULT openbor_changeentityproperty(ScriptVariant** varlist , ScriptVariant** p
 		if(SUCCEEDED(ScriptVariant_IntegerValue(varlist[2], &ltemp)))
 		{
 			(*pretvar)->lVal = (LONG)1;
-			ent->modeldata.guardpoints.current = (int)ltemp;
+			ent->modeldata.guardpoints.current = obor_model_points_value((int)ltemp, obor_profile_build);
 		}
 		break;
 	}
@@ -6631,7 +7392,7 @@ HRESULT openbor_changeentityproperty(ScriptVariant** varlist , ScriptVariant** p
 		if(SUCCEEDED(ScriptVariant_IntegerValue(varlist[2], &ltemp)))
 		{
 			(*pretvar)->lVal = (LONG)1;
-			ent->modeldata.jugglepoints.current = (int)ltemp;
+			ent->modeldata.jugglepoints.current = obor_model_points_value((int)ltemp, obor_profile_build);
 		}
 		break;
 	}
@@ -6647,6 +7408,13 @@ HRESULT openbor_changeentityproperty(ScriptVariant** varlist , ScriptVariant** p
                         ~'time'\n");
 			goto changeentityproperty_error;
 		}
+
+        if(paramCount < 4 && (varlist[2]->lVal == _cep_knockdowncount_current ||
+                              varlist[2]->lVal == _cep_knockdowncount_max))
+        {
+            printf("Unknown knockdowncount subproperty.\n");
+            goto changeentityproperty_error;
+        }
 
 		switch(varlist[2]->lVal)
 		{
@@ -6730,7 +7498,7 @@ HRESULT openbor_changeentityproperty(ScriptVariant** varlist , ScriptVariant** p
 		if(SUCCEEDED(ScriptVariant_IntegerValue(varlist[2], &ltemp)))
 		{
 			(*pretvar)->lVal = (LONG)1;
-			ent->modeldata.guardpoints.maximum = (int)ltemp;
+			ent->modeldata.guardpoints.maximum = obor_model_points_value((int)ltemp, obor_profile_build);
 		}
 		break;
 	}
@@ -6749,7 +7517,7 @@ HRESULT openbor_changeentityproperty(ScriptVariant** varlist , ScriptVariant** p
 		if(SUCCEEDED(ScriptVariant_IntegerValue(varlist[2], &ltemp)))
 		{
 			(*pretvar)->lVal = (LONG)1;
-			ent->modeldata.jugglepoints.maximum = (int)ltemp;
+			ent->modeldata.jugglepoints.maximum = obor_model_points_value((int)ltemp, obor_profile_build);
 		}
 		break;
 	}
@@ -6977,7 +7745,9 @@ HRESULT openbor_changeentityproperty(ScriptVariant** varlist , ScriptVariant** p
 			if(varlist[i]->vt == VT_INTEGER) // known entity type
 			{
 				ltemp = varlist[i]->lVal;
-				ent->modeldata.projectilehit |= entitytypes[(int)ltemp];
+				if(ltemp < 0 || (size_t)ltemp >= sizeof(entitytypes) / sizeof(*entitytypes))
+                    goto changeentityproperty_error;
+                ent->modeldata.projectilehit |= entitytypes[(int)ltemp];
 			}
 			else
 			{
@@ -7207,6 +7977,25 @@ HRESULT openbor_changeentityproperty(ScriptVariant** varlist , ScriptVariant** p
 	}
 	case _cep_staydown:
 	{
+        if(obor_profile_build < 3334)
+        {
+        if(SUCCEEDED(ScriptVariant_IntegerValue(varlist[2], &ltemp)))
+        {
+            (*pretvar)->lVal = (LONG)1;
+            ent->staydown.rise = (int)ltemp;
+        }
+        if(paramCount >= 4 && (*pretvar)->lVal == (LONG)1)
+        {
+            if(SUCCEEDED(ScriptVariant_IntegerValue(varlist[3], &ltemp)))
+                ent->staydown.riseattack = (int)ltemp;
+        }
+    
+        if(SUCCEEDED(ScriptVariant_IntegerValue(varlist[2], &ltemp)))
+            ent->modeldata.stealth.hide = obor_stealth_value((int)ltemp, obor_profile_build);
+        break;
+
+        }
+
 		if(varlist[2]->vt != VT_INTEGER)
 		{
 			if(varlist[2]->vt != VT_STR)
@@ -7248,7 +8037,7 @@ HRESULT openbor_changeentityproperty(ScriptVariant** varlist , ScriptVariant** p
     case _cep_stealth:
 	{
 		if(SUCCEEDED(ScriptVariant_IntegerValue(varlist[2], &ltemp)))
-			ent->modeldata.stealth.hide = (int)ltemp;
+			ent->modeldata.stealth.hide = obor_stealth_value((int)ltemp, obor_profile_build);
 		break;
 	}
     case _cep_subentity:
@@ -8010,6 +8799,11 @@ HRESULT openbor_openfilestream(ScriptVariant** varlist , ScriptVariant** pretvar
 #ifndef DC
 		if(!(fileExists(path)))
 		{
+            if(obor_profile_build < 3313)
+            {
+                printf("Openfilestream - file specified does not exist.\n");
+                return E_FAIL;
+            }
 		    /*
 		    2011_03_27, DC: Let's be a little more friendly about missing files; this will let a function evaluate if file exists and decide what to do.
 
@@ -8028,7 +8822,7 @@ HRESULT openbor_openfilestream(ScriptVariant** varlist , ScriptVariant** pretvar
 		size = ftell(handle);
 		rewind(handle);
 		if(size < 0 || (unsigned long)size > (size_t)-1 - 0) { fclose(handle); *pretvar = NULL; return E_FAIL; }
-		level->filestreams[level->numfilestreams].buf = malloc((size ? (size_t)size : 1));
+		level->filestreams[level->numfilestreams].buf = obor_profile_malloc_named("openfilestream()", (size ? (size_t)size : 1));
 		if(level->filestreams[level->numfilestreams].buf == NULL) { fclose(handle); return E_FAIL; }
 		size_t obor_read = fread(level->filestreams[level->numfilestreams].buf, 1, (size_t)size, handle);
         level->filestreams[level->numfilestreams].obor_capacity = obor_read;
@@ -8298,7 +9092,7 @@ HRESULT openbor_filestreamappend(ScriptVariant** varlist , ScriptVariant** pretv
     old_bytes = strlen(level->filestreams[filestreamindex].buf);
     added_bytes = strlen(append);
     if(added_bytes > (size_t)-1 - 4 || old_bytes > (size_t)-1 - added_bytes - 4) { *pretvar = NULL; return E_FAIL; }
-    temp = calloc(old_bytes + added_bytes + 4, 1);
+    temp = obor_profile_calloc_named("filestreamappend()", old_bytes + added_bytes + 4);
     if(!temp) { *pretvar = NULL; return E_FAIL; }
 	strcpy(temp, level->filestreams[filestreamindex].buf);
 
@@ -8340,7 +9134,7 @@ HRESULT openbor_createfilestream(ScriptVariant** varlist , ScriptVariant** pretv
 
 	// Initialize the new filestream
 	level->filestreams[level->numfilestreams].pos = 0;
-	level->filestreams[level->numfilestreams].buf = calloc(128, 1);
+	level->filestreams[level->numfilestreams].buf = obor_profile_calloc_named("createfilestream()", 128);
     if(!level->filestreams[level->numfilestreams].buf) { *pretvar = NULL; return E_FAIL; }
     level->filestreams[level->numfilestreams].obor_capacity = 128;
 	level->filestreams[level->numfilestreams].buf[0] = '\0';
@@ -8526,7 +9320,7 @@ HRESULT openbor_findtarget(ScriptVariant** varlist , ScriptVariant** pretvar, in
 	entity* tempself, *target;
 	LONG anim = -1;
 
-    if(paramCount>2) ScriptVariant_IntegerValue(varlist[2], &i);
+    if(obor_profile_build >= 3355 && paramCount>2) ScriptVariant_IntegerValue(varlist[2], &i);
 
 	if(paramCount < 1)
 	{
@@ -9211,6 +10005,11 @@ void mapstrings_transconst(ScriptVariant** varlist, int paramCount)
 		ICMPCONST(ANI_RUNSLIDE)
 		ICMPCONST(ANI_BLOCKPAIN)
 		ICMPCONST(ANI_DUCKATTACK)
+		if(obor_profile_build < 3398 && stricmp("MAX_ANIS", constname)==0) {
+			ScriptVariant_ChangeType(varlist[0], VT_INTEGER);
+			varlist[0]->lVal = (LONG)OBOR_PROFILE_BASE_ANIMATIONS;
+			return;
+		}
 		ICMPCONST(MAX_ANIS)
 		ICMPCONST(PLAYER_MIN_Z)
 		ICMPCONST(PLAYER_MAX_Z)
@@ -9915,7 +10714,7 @@ static int obor_textobj_store(s_textobj *object, const char *text)
     stored = object->text;
     if(!stored)
     {
-        stored = malloc(MAX_STR_VAR_LEN + 1);
+        stored = obor_profile_malloc_named("alloctextobj", MAX_STR_VAR_LEN + 1);
         if(!stored) return 0;
     }
     memmove(stored, text, length);
@@ -11208,7 +12007,8 @@ HRESULT openbor_getlevelproperty(ScriptVariant** varlist , ScriptVariant** pretv
 
 	propname = (char*)StrCache_Get(varlist[0]->strVal);//see what property it is
 
-	propind = searchList(proplist, propname, _lp_the_end);
+	propind = searchList(proplist, propname,
+        obor_profile_build < 3357 ? _lp_scrollspeed : _lp_the_end);
 
 	switch(propind)
 	{
@@ -11287,7 +12087,7 @@ HRESULT openbor_changelevelproperty(ScriptVariant** varlist , ScriptVariant** pr
 			level->bgspeed = (float)ltemp;
 		else (*pretvar)->lVal = (LONG)0;
 	}
-	else if(strcmp(propname, "scrollspeed")==0)
+	else if(obor_profile_build >= 3353 && strcmp(propname, "scrollspeed")==0)
 	{
 		if(SUCCEEDED(ScriptVariant_IntegerValue(arg, &ltemp)))
 			level->scrollspeed = (float)ltemp;
@@ -11731,7 +12531,9 @@ HRESULT openbor_zoom(ScriptVariant** varlist , ScriptVariant** pretvar, int para
 	extern int zoom_center_x, zoom_center_y, zoom_scale_x, zoom_scale_y, zoom_z;
 
 	*pretvar = NULL;
-	if(paramCount<4) goto zoom_error;
+    if(obor_profile_build < 3366) return E_FAIL;
+    if(!varlist || paramCount < 5) goto zoom_error;
+    for(int i=0; i<5; ++i) if(!varlist[i]) goto zoom_error;
 
 	if(FAILED(ScriptVariant_IntegerValue(varlist[0], &zoom_center_x)))
 		goto zoom_error;

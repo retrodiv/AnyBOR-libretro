@@ -37,6 +37,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdint.h>
+
+extern uint32_t obor_profile_build;
 
 #ifdef PP_TEST
 #undef printf
@@ -197,7 +200,7 @@ HRESULT pp_lexer_GetNextToken (pp_lexer* plexer, pp_token* theNextToken)
 	  }
 
 	  //non-breaking space (A0 in Windows-1252 and ISO-8859-* encodings)
-	  else if ( !strncmp(plexer->pcurChar, "\xa0", 1)){
+	  else if (obor_profile_build >= 3095 && !strncmp(plexer->pcurChar, "\xa0", 1)){
 		 //increment the offset counter and replace with a normal space
 		 plexer->theTokenSource[strlen(plexer->theTokenSource)] = ' ';
 		 plexer->theTokenSource[strlen(plexer->theTokenSource)] = '\0';
@@ -424,7 +427,7 @@ HRESULT pp_lexer_GetTokenIdentifier(pp_lexer* plexer, pp_token* theNextToken)
 	  MAKETOKEN( PP_TOKEN_WHILE );}
    else if (!strcmp( plexer->theTokenSource, "include")){
 	  MAKETOKEN( PP_TOKEN_INCLUDE );}
-   else if (!strcmp( plexer->theTokenSource, "import")){
+   else if (obor_profile_build >= 3129 && !strcmp( plexer->theTokenSource, "import")){
 	  MAKETOKEN( PP_TOKEN_IMPORT );}
    else if (!strcmp( plexer->theTokenSource, "define")){
 	  MAKETOKEN( PP_TOKEN_DEFINE );}

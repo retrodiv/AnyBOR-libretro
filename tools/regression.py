@@ -18,7 +18,8 @@ import release
 from profile_groups import select_profile_group
 from test_state_options import state_head
 from test_historical_player import player_fixture, check_player_continuation
-from test_script_variable_keys import variable_key_fixture, check_variable_key_continuation
+from test_script_variable_keys import (variable_key_fixture, check_variable_key_continuation,
+                                       variable_key_requires_level, variable_key_legacy_escape)
 from test_historical_level import level_fixture, check_level_continuation
 from test_historical_constants import constants_fixture, check_constants_continuation
 from test_historical_tolerance import tolerance_fixture, check_tolerance_continuation
@@ -242,22 +243,35 @@ def main():
             return
 
         variable_pak = work / "variable-keys.pak"
-        make_fixture.write_pak(variable_pak, variable_key_fixture(members))
         for profile in profiles:
+            make_fixture.write_pak(variable_pak, variable_key_fixture(members, profile))
+            early = variable_key_requires_level(profile)
+            # Before the global updated/alwaysupdate contract, enter gameplay
+            # before saving. Pulse Start again after reset to exercise the same
+            # full-name checks in a fresh level instead of an unavailable hook.
+            frame, reset, frames = (900, 1100, 1900) if early else (120, 140, 180)
+            entry = dict(OBOR_INPUT="150-1850:start:pulse") if early else {}
             state = work / (profile['build'] + '-complete-variable-names.state')
             result = run(profile['build'], variable_pak,
                          "complete script variable names across load and reset",
-                         OBOR_GAMELOG="On", OBOR_SAVE_AT=120, OBOR_SAVE_STATE=state,
-                         OBOR_LOAD_AT=121, OBOR_LOAD_STATE=state, OBOR_RESET_AT=140)
+                         system_dir=work / (profile['build'] + '-variable-write'),
+                         frames=frames, OBOR_GAMELOG="On", OBOR_SAVE_AT=frame, OBOR_SAVE_STATE=state,
+                         OBOR_LOAD_AT=frame + 1, OBOR_LOAD_STATE=state, OBOR_RESET_AT=reset, **entry)
             if not state.is_file() or \
                     re.findall(r"load state at frame \d+: (ok|FAILED)", result) != ["ok"]:
                 raise RuntimeError("Complete variable names did not survive load: " + result)
-            check_variable_key_continuation(result, profile['engine'], restarts=1)
+            check_variable_key_continuation(result, profile['build'], restarts=1,
+                                           legacy_escape=variable_key_legacy_escape(profile),
+                                           gameplay_callback=early)
             result = run(profile['build'], variable_pak,
                          "complete script variable names across a fresh process",
-                         OBOR_GAMELOG="On", OBOR_LOAD_AT=120, OBOR_LOAD_STATE=state)
+                         system_dir=work / (profile['build'] + '-variable-read'),
+                         frames=1000 if early else 180,
+                         OBOR_GAMELOG="On", OBOR_LOAD_AT=frame, OBOR_LOAD_STATE=state, **entry)
             check_loads(result, state, 1)
-            check_variable_key_continuation(result, profile['engine'])
+            check_variable_key_continuation(result, profile['build'],
+                                           legacy_escape=variable_key_legacy_escape(profile),
+                                           gameplay_callback=early)
             state.unlink()
 
         if "6412" in selected:

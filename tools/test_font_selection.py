@@ -37,7 +37,11 @@ class FontSelectionTests(unittest.TestCase):
         for row in fixture['models']:
             with self.subTest(engine=row['engine']),tempfile.TemporaryDirectory(prefix='native-text-display-')as folder:
                 required={int(p.get('revision',p['build']))for p in contract_profiles(fixture, pin['profiles'])if p['engine']==row['engine']}
-                self.assertTrue(required<=set(row['revisions']))
+                covered = [revision for model in fixture['models']
+                           if model['engine'] == row['engine']
+                           for revision in model['revisions']]
+                self.assertEqual(len(covered), len(set(covered)))
+                self.assertTrue(required <= set(covered))
                 self.assertEqual(row['revisions'],[v['revision']for v in row['original_sources']])
                 for ref in row['original_sources']:
                     self.assertRegex(ref['commit'],r'^[0-9a-f]{40}$')
@@ -102,6 +106,105 @@ class FontSelectionTests(unittest.TestCase):
                 self.assertEqual(actual['status'], 'PASS')
                 self.assertEqual(actual['contexts'], len(options['revisions']))
                 self.assertGreater(actual['checks'], 2*options['slots']*actual['contexts'])
+
+
+    def test_early_font_newline_positions(self):
+        fixture = load_contract_fixture(Path(__file__).parent /
+                                        'fixtures/profile-early-font-newline.json')
+        rows = fixture['sources']
+        revisions = {row['revision'] for row in rows}
+        self.assertTrue(set(fixture['boundary_controls']) <= revisions)
+        for profile in contract_profiles(fixture, json.loads((SOURCE / 'src/pin.json').read_text())['profiles']):
+            revision = int(profile.get('revision', profile['build']))
+            if profile['engine'] == fixture['engine'] and fixture['range'][0] <= revision <= fixture['range'][1]:
+                self.assertIn(revision, revisions)
+        engine = Path(os.environ.get('OBOR_EARLY_TEXT_ENGINE', SOURCE / 'src/engines' / fixture['engine']))
+        text = (engine / 'source/gamelib/font.c').read_text()
+        declaration = re.search(r'typedef struct\s*\{[^}]*}\s*s_font;', text)
+        self.assertIsNotNone(declaration)
+        checks = []
+        for row in rows:
+            self.assertEqual(row['engine'], fixture['engine'])
+            self.assertRegex(row['commit'], r'^[0-9a-f]{40}$')
+            self.assertIn(row['modern'], (0, 1))
+            checks.append('check(%d,%d);' % (row['revision'], row['modern']))
+        program = r'''
+#include <assert.h>
+#include <stdint.h>
+#include <stdarg.h>
+#include <stdio.h>
+#include <string.h>
+#include "types.h"
+#include "screen.h"
+#include "sprite.h"
+#define MAX_FONTS 8
+#define FONT_LAYER 0x0FFFFFFF
+@FONT_TYPE@
+static s_font fonts[MAX_FONTS];
+static s_sprite glyphs[256];
+static char b[256];
+uint32_t obor_profile_build;
+static struct {int x,y,z,glyph,format;} calls[16];
+static int count;
+static void observe(int x,int y,int z,s_sprite *sprite,int format) {
+ assert(count<16 && sprite>=glyphs && sprite<glyphs+256);
+ calls[count].x=x;calls[count].y=y;calls[count].z=z;
+ calls[count].glyph=(int)(sprite-glyphs);calls[count].format=format;count++;
+}
+#define spriteq_add_frame(x,y,z,sprite,method,id) observe(x,y,z,sprite,-1)
+#define putsprite_8(x,y,flip,sprite,screen,table,method) observe(x,y,0,sprite,PIXEL_8)
+#define putsprite_x8p16(x,y,flip,sprite,screen,table,method) observe(x,y,0,sprite,PIXEL_16)
+#define putsprite_x8p32(x,y,flip,sprite,screen,table,method) observe(x,y,0,sprite,PIXEL_32)
+@FUNCTIONS@
+static void check(unsigned revision,int modern) {
+ obor_profile_build=revision;
+ for(int height=3;height<=17;height+=14) {
+  memset(fonts,0,sizeof(fonts));memset(glyphs,0,sizeof(glyphs));
+  for(int i=0;i<256;i++){fonts[0].token[i]=&glyphs[i];fonts[0].token_width[i]=2;}
+  fonts[0].font_loaded=1;glyphs[0].height=height;glyphs['\n'].height=99;
+  fonts[0].token_width['A']=3;fonts[0].token_width['B']=4;fonts[0].token_width['C']=5;
+  fonts[0].token_width['\n']=7;
+  count=0;font_printf(10,20,0,5,"%s","A\nB\nC");
+  assert(count==5);
+  const int glyph[]={ 'A','\n','B','\n','C'},x[]={10,13,20,24,31},lines[]={0,0,1,1,2};
+  for(int i=0;i<5;i++)assert(calls[i].glyph==glyph[i] && calls[i].x==x[i] &&
+    calls[i].y==20+(modern?height*lines[i]:0) && calls[i].z==FONT_LAYER+5 && calls[i].format==-1);
+  const int formats[]={PIXEL_8,PIXEL_16,PIXEL_32};
+  for(unsigned k=0;k<sizeof(formats)/sizeof(formats[0]);k++){
+   s_screen screen={0};screen.pixelformat=formats[k];count=0;
+   screen_printf(&screen,10,20,MAX_FONTS,"%s","A\nB\nC");
+   assert(count==3);
+   for(int i=0;i<3;i++)assert(calls[i].glyph=="ABC"[i] && calls[i].x==10 &&
+      calls[i].y==20+i*(modern?height:10) && calls[i].format==formats[k]);
+   count=0;screen_printf(&screen,10,20,-1,"%s","A");assert(!count);
+  }
+  count=0;font_printf(1,2,-1,0,"%s","A");assert(!count);
+  fonts[0].font_loaded=0;font_printf(1,2,0,0,"%s","A");assert(!count);
+ }
+}
+int main(void){@CHECKS@ puts("early_font_newline=1");return 0;}
+'''
+        for key, value in dict(FONT_TYPE=declaration[0], FUNCTIONS='\n'.join(
+                function(text, name) for name in ['font_printf', 'screen_printf']),
+                CHECKS='\n'.join(checks)).items():
+            program = program.replace('@' + key + '@', value)
+        with tempfile.TemporaryDirectory(prefix='early-font-newline-') as folder:
+            unit, binary = Path(folder) / 'probe.c', Path(folder) / 'probe'
+            unit.write_text(program)
+            includes = [engine, engine / 'source', engine / 'source/gamelib',
+                        SOURCE / 'src/port/libretro', SOURCE / 'src/glue']
+            command = shlex.split(os.environ.get('HOST_CC', 'cc')) + [
+                '-std=gnu99', '-O1', '-g', '-Wall', '-Wextra', '-Werror',
+                '-Wno-error=deprecated-declarations', '-fsanitize=address,undefined',
+                '-fno-sanitize-recover=all', '-fno-omit-frame-pointer',
+                *['-I' + str(p) for p in includes], str(unit),
+                *([] if sys.platform == 'darwin' else ['-no-pie']), '-o', str(binary)]
+            build = subprocess.run(command, capture_output=True, text=True, timeout=45)
+            self.assertEqual(build.returncode, 0, build.stdout + build.stderr)
+            run = subprocess.run([str(binary)], capture_output=True, text=True, timeout=10,
+                                 env=sanitizer_environment())
+            self.assertEqual(run.returncode, 0, run.stdout + run.stderr)
+            self.assertIn('early_font_newline=1', run.stdout)
 
 
 if __name__ == '__main__':

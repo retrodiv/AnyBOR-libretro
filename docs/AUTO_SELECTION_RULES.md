@@ -79,7 +79,7 @@ namespace support, rather than an assumption that build numbers form one line.
 |command|`on_bind_update_other_to_self_script`|from 6421|[`ab98603e`](https://github.com/DCurrent/openbor/commit/ab98603e7244ab6b41eac3e1cb94be5941cdbf80)|
 |command|`on_bind_update_self_to_other_script`|from 6421|[`ab98603e`](https://github.com/DCurrent/openbor/commit/ab98603e7244ab6b41eac3e1cb94be5941cdbf80)|
 |command|`onmodelcopyscript`|from 3793|[`edf23465`](https://github.com/DCurrent/openbor/commit/edf234656cae88b078718661a2bd0c42090f0687)|
-|aiflag_read|`pain_time`|any earlier revision through 3796|[`4490ee5d`](https://github.com/DCurrent/openbor/commit/4490ee5d18ffcc7604e95cd4910dadf6191e694a)|
+|aiflag_read|`pain_time`|3367–3796|[`45b122c0`](https://github.com/DCurrent/openbor/commit/45b122c0449b187fc21aa1708d3e7a06dbfc192a), [`4490ee5d`](https://github.com/DCurrent/openbor/commit/4490ee5d18ffcc7604e95cd4910dadf6191e694a)|
 |attack_name|`pit`|from 3831|[`c61f02b3`](https://github.com/DCurrent/openbor/commit/c61f02b3fbb155dd416a7750eb9cb645d7785266)|
 |command|`remap`|all retained compatible eras except v3.0 4453|[`562f36d7`](https://github.com/DCurrent/openbor/commit/562f36d736aadc5ac0644a4ab2dbd50d20f880a3), [`c89f970c`](https://github.com/DCurrent/openbor/commit/c89f970c12754b617d3670124fb59b1ea7f0eb9a), [`7906e257`](https://github.com/DCurrent/openbor/commit/7906e2573fcd70e9eafcd30fbdcc680832c4ae42), [`4b1705fa`](https://github.com/DCurrent/openbor/commit/4b1705fa37457ab38bc5d0fcc561242019588e32)|
 |system|`sample_play_id`|from 3838|[`cb129b1f`](https://github.com/DCurrent/openbor/commit/cb129b1f2d01e3653ade9f0663609a54527d8ca3)|
@@ -112,3 +112,7 @@ official releases v3.0 4453 and v3.0 6330 participate in ordinary automatic
 routing. Accompanying executables and unlabelled inference do not select
 nonautomatic test profiles. Loose mod directories retain metadata routing;
 the packed-content analysis applies to prepared PACK content.
+
+A minimum requirement older than every automatic profile does not locate
+content inside a retained historical era. Ordinary fallback and any proved
+upper bound determine that selection.

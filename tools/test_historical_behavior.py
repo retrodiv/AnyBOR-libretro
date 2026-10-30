@@ -572,6 +572,685 @@ class HistoricalBehaviorTests(unittest.TestCase):
         with patch.dict(os.environ, sanitizer_environment()):
             native(render_camera(ROOT / 'src/engines/3842', rows))
 
+
+    def test_early_camera_timing_progress_offsets_and_spawn_priority(self):
+        from historical_camera import render_camera_step
+        from native_sanitizers import sanitizer_environment
+        from unittest.mock import patch
+        fixture = load_contract_fixture(Path(__file__).parent / 'fixtures/profile-early-camera-step.json')
+        rows = fixture['sources']
+        revisions = {row['revision'] for row in rows}
+        self.assertEqual(len(rows), len(revisions))
+        self.assertTrue(set(fixture['boundary_controls']) <= revisions)
+        for profile in contract_profiles(fixture, json.loads((ROOT / 'src/pin.json').read_text())['profiles']):
+            revision = int(profile.get('revision', profile['build']))
+            if profile['engine'] == fixture['engine'] and fixture['range'][0] <= revision <= fixture['range'][1]:
+                self.assertIn(revision, revisions)
+        for row in rows:
+            self.assertEqual(row['engine'], fixture['engine'])
+            self.assertRegex(row['commit'], r'^[0-9a-f]{40}$')
+        engine = Path(os.environ.get('OBOR_EARLY_TEXT_ENGINE', ROOT / 'src/engines' / fixture['engine']))
+        links = () if sys.platform == 'darwin' else ('-no-pie',)
+        with patch.dict(os.environ, sanitizer_environment()):
+            native(render_camera_step(engine, rows), extra_flags=(
+                '-O1', '-fno-sanitize-recover=all', '-fno-omit-frame-pointer', *links))
+
+    def test_early_animation_loop_widths_and_frames(self):
+        from historical_animation_loop import render_animation_loop
+        from native_sanitizers import sanitizer_environment
+        from unittest.mock import patch
+        fixture = load_contract_fixture(Path(__file__).parent /
+            'fixtures/profile-early-animation-loop.json')
+        rows = fixture['sources']
+        revisions = {row['revision'] for row in rows}
+        self.assertEqual(len(rows), len(revisions))
+        self.assertTrue(set(fixture['boundary_controls']) <= revisions)
+        for profile in contract_profiles(fixture, json.loads((ROOT / 'src/pin.json').read_text())['profiles']):
+            revision = int(profile.get('revision', profile['build']))
+            if profile['engine'] == fixture['engine'] and fixture['range'][0] <= revision <= fixture['range'][1]:
+                self.assertIn(revision, revisions)
+        for row in rows:
+            self.assertEqual(row['engine'], fixture['engine'])
+            self.assertRegex(row['commit'], r'^[0-9a-f]{40}$')
+            self.assertIn(row['mode_bits'], (8, 32))
+            self.assertIn(row['frame_bits'], (16, 32))
+        engine = Path(os.environ.get('OBOR_EARLY_TEXT_ENGINE', ROOT / 'src/engines' / fixture['engine']))
+        includes = [engine / name for name in ('', 'source', 'source/gamelib', 'source/gfxlib',
+                    'source/scriptlib', 'source/preprocessorlib', 'source/randlib', 'source/ramlib')]
+        includes += [ROOT / 'src/port/libretro', ROOT / 'src/glue']
+        links = () if sys.platform == 'darwin' else ('-no-pie',)
+        with patch.dict(os.environ, sanitizer_environment()):
+            native(render_animation_loop(engine, fixture), include_dirs=includes, extra_flags=(
+                '-std=gnu99', '-O1', '-DUNIT_TEST=1', '-DSAFEALLOC_H=1', '-Dstricmp=strcasecmp',
+                '-fsigned-char', '-fno-sanitize-recover=all', '-fno-omit-frame-pointer',
+                '-Wno-unused-parameter', '-Wno-unused-variable', '-Wno-unused-function',
+                '-Wno-sign-compare', '-Wno-misleading-indentation', *links))
+
+    def test_early_energy_availability_and_projectile_charge(self):
+        from historical_energy_gate import render_energy_gate
+        from native_sanitizers import sanitizer_environment
+        from unittest.mock import patch
+        fixture = load_contract_fixture(Path(__file__).parent /
+            'fixtures/profile-early-energy-gate.json')
+        rows = fixture['sources']
+        revisions = {row['revision'] for row in rows}
+        self.assertEqual(len(rows), len(revisions))
+        self.assertTrue(set(fixture['boundary_controls']) <= revisions)
+        for profile in contract_profiles(fixture, json.loads((ROOT / 'src/pin.json').read_text())['profiles']):
+            revision = int(profile.get('revision', profile['build']))
+            if profile['engine'] == fixture['engine'] and fixture['range'][0] <= revision <= fixture['range'][1]:
+                self.assertIn(revision, revisions)
+        for row in rows:
+            self.assertEqual(row['engine'], fixture['engine'])
+            self.assertRegex(row['commit'], r'^[0-9a-f]{40}$')
+            self.assertIn(row['flag_bits'], (8, 16))
+        engine = Path(os.environ.get('OBOR_EARLY_TEXT_ENGINE', ROOT / 'src/engines' / fixture['engine']))
+        includes = [engine / name for name in ('', 'source', 'source/gamelib', 'source/gfxlib',
+                    'source/scriptlib', 'source/preprocessorlib', 'source/randlib', 'source/ramlib')]
+        includes += [ROOT / 'src/port/libretro', ROOT / 'src/glue']
+        links = () if sys.platform == 'darwin' else ('-no-pie',)
+        with patch.dict(os.environ, sanitizer_environment()):
+            native(render_energy_gate(engine, fixture), include_dirs=includes, extra_flags=(
+                '-std=gnu99', '-O1', '-DUNIT_TEST=1', '-DSAFEALLOC_H=1', '-Dstricmp=strcasecmp',
+                '-fsigned-char', '-fno-sanitize-recover=all', '-fno-omit-frame-pointer',
+                '-Wno-unused-parameter', '-Wno-unused-variable', '-Wno-unused-function',
+                '-Wno-sign-compare', '-Wno-misleading-indentation', *links))
+
+    def test_early_landing_entity_index_widths(self):
+        from historical_land_entity import render_land_entity
+        from native_sanitizers import sanitizer_environment
+        from unittest.mock import patch
+        fixture = load_contract_fixture(Path(__file__).parent /
+            'fixtures/profile-early-land-entity.json')
+        rows = fixture['sources']
+        revisions = {row['revision'] for row in rows}
+        self.assertEqual(len(rows), len(revisions))
+        self.assertTrue(set(fixture['boundary_controls']) <= revisions)
+        for profile in contract_profiles(fixture, json.loads((ROOT / 'src/pin.json').read_text())['profiles']):
+            revision = int(profile.get('revision', profile['build']))
+            if profile['engine'] == fixture['engine'] and fixture['range'][0] <= revision <= fixture['range'][1]:
+                self.assertIn(revision, revisions)
+        for row in rows:
+            self.assertEqual(row['engine'], fixture['engine'])
+            self.assertRegex(row['commit'], r'^[0-9a-f]{40}$')
+            self.assertIn(row['entity_bits'], (16, 32))
+        engine = Path(os.environ.get('OBOR_EARLY_TEXT_ENGINE', ROOT / 'src/engines' / fixture['engine']))
+        includes = [engine / name for name in ('', 'source', 'source/gamelib', 'source/gfxlib',
+                    'source/scriptlib', 'source/preprocessorlib', 'source/randlib', 'source/ramlib')]
+        includes += [ROOT / 'src/port/libretro', ROOT / 'src/glue']
+        links = () if sys.platform == 'darwin' else ('-no-pie',)
+        with patch.dict(os.environ, sanitizer_environment()):
+            native(render_land_entity(engine, fixture), include_dirs=includes, extra_flags=(
+                '-std=gnu99', '-O1', '-DUNIT_TEST=1', '-DSAFEALLOC_H=1', '-Dstricmp=strcasecmp',
+                '-fsigned-char', '-fno-sanitize-recover=all', '-fno-omit-frame-pointer',
+                '-Wno-unused-parameter', '-Wno-unused-variable', '-Wno-unused-function',
+                '-Wno-sign-compare', '-Wno-misleading-indentation', *links))
+
+    def test_early_animation_range_widths_and_consumers(self):
+        from historical_animation_range import render_animation_range
+        from native_sanitizers import sanitizer_environment
+        from unittest.mock import patch
+        fixture = load_contract_fixture(Path(__file__).parent /
+            'fixtures/profile-early-animation-range.json')
+        rows = fixture['sources']
+        revisions = {row['revision'] for row in rows}
+        self.assertEqual(len(rows), len(revisions))
+        self.assertTrue(set(fixture['boundary_controls']) <= revisions)
+        for profile in contract_profiles(fixture, json.loads((ROOT / 'src/pin.json').read_text())['profiles']):
+            revision = int(profile.get('revision', profile['build']))
+            if profile['engine'] == fixture['engine'] and fixture['range'][0] <= revision <= fixture['range'][1]:
+                self.assertIn(revision, revisions)
+        for row in rows:
+            self.assertEqual(row['engine'], fixture['engine'])
+            self.assertRegex(row['commit'], r'^[0-9a-f]{40}$')
+            self.assertIn(row['range_bits'], (16, 32))
+        engine = Path(os.environ.get('OBOR_EARLY_TEXT_ENGINE', ROOT / 'src/engines' / fixture['engine']))
+        includes = [engine / name for name in ('', 'source', 'source/gamelib', 'source/gfxlib',
+                    'source/scriptlib', 'source/preprocessorlib', 'source/randlib', 'source/ramlib')]
+        includes += [ROOT / 'src/port/libretro', ROOT / 'src/glue']
+        links = () if sys.platform == 'darwin' else ('-no-pie',)
+        with patch.dict(os.environ, sanitizer_environment()):
+            native(render_animation_range(engine, fixture), include_dirs=includes, extra_flags=(
+                '-std=gnu99', '-O1', '-DUNIT_TEST=1', '-DSAFEALLOC_H=1', '-Dstricmp=strcasecmp',
+                '-fsigned-char', '-fno-sanitize-recover=all', '-fno-omit-frame-pointer',
+                '-Wno-unused-parameter', '-Wno-unused-variable', '-Wno-unused-function',
+                '-Wno-sign-compare', '-Wno-misleading-indentation', *links))
+
+    def test_early_model_icon_domains_and_consumers(self):
+        from historical_hud_icons import render_model_icon_domains
+        from native_sanitizers import sanitizer_environment
+        from unittest.mock import patch
+        fixture = load_contract_fixture(Path(__file__).parent /
+            'fixtures/profile-early-model-icons.json')
+        rows = fixture['sources']
+        revisions = {row['revision'] for row in rows}
+        self.assertEqual(len(rows), len(revisions))
+        self.assertTrue(set(fixture['boundary_controls']) <= revisions)
+        for profile in contract_profiles(fixture, json.loads((ROOT / 'src/pin.json').read_text())['profiles']):
+            revision = int(profile.get('revision', profile['build']))
+            if profile['engine'] == fixture['engine'] and fixture['range'][0] <= revision <= fixture['range'][1]:
+                self.assertIn(revision, revisions)
+        for row in rows:
+            self.assertEqual(row['engine'], fixture['engine'])
+            self.assertRegex(row['commit'], r'^[0-9a-f]{40}$')
+            self.assertIn(row['icon_bits'], (16, 32))
+        engine = Path(os.environ.get('OBOR_EARLY_TEXT_ENGINE', ROOT / 'src/engines' / fixture['engine']))
+        includes = [engine / name for name in ('', 'source', 'source/gamelib', 'source/gfxlib',
+                    'source/scriptlib', 'source/preprocessorlib', 'source/randlib', 'source/ramlib')]
+        includes += [ROOT / 'src/port/libretro', ROOT / 'src/glue']
+        links = () if sys.platform == 'darwin' else ('-no-pie',)
+        with patch.dict(os.environ, sanitizer_environment()):
+            native(render_model_icon_domains(engine, fixture), include_dirs=includes, extra_flags=(
+                '-std=gnu99', '-O1', '-DUNIT_TEST=1', '-DSAFEALLOC_H=1', '-Dstricmp=strcasecmp',
+                '-fsigned-char', '-fno-sanitize-recover=all', '-fno-omit-frame-pointer',
+                '-Wno-unused-parameter', '-Wno-unused-variable', '-Wno-unused-function',
+                '-Wno-sign-compare', '-Wno-misleading-indentation', *links))
+
+    def test_early_model_stealth_domains_and_target(self):
+        from historical_model_stealth import render_model_stealth
+        from native_sanitizers import sanitizer_environment
+        from unittest.mock import patch
+        fixture = load_contract_fixture(Path(__file__).parent /
+            'fixtures/profile-early-model-stealth.json')
+        rows = fixture['sources']
+        revisions = {row['revision'] for row in rows}
+        self.assertEqual(len(rows), len(revisions))
+        self.assertTrue(set(fixture['boundary_controls']) <= revisions)
+        for profile in contract_profiles(fixture, json.loads((ROOT / 'src/pin.json').read_text())['profiles']):
+            revision = int(profile.get('revision', profile['build']))
+            if profile['engine'] == fixture['engine'] and fixture['range'][0] <= revision <= fixture['range'][1]:
+                self.assertIn(revision, revisions)
+        for row in rows:
+            self.assertEqual(row['engine'], fixture['engine'])
+            self.assertRegex(row['commit'], r'^[0-9a-f]{40}$')
+            self.assertIn(row['stealth_bits'], (8, 16))
+        engine = Path(os.environ.get('OBOR_EARLY_TEXT_ENGINE', ROOT / 'src/engines' / fixture['engine']))
+        includes = [engine / name for name in ('', 'source', 'source/gamelib', 'source/gfxlib',
+                    'source/scriptlib', 'source/preprocessorlib', 'source/randlib', 'source/ramlib')]
+        includes += [ROOT / 'src/port/libretro', ROOT / 'src/glue']
+        links = () if sys.platform == 'darwin' else ('-no-pie',)
+        with patch.dict(os.environ, sanitizer_environment()):
+            native(render_model_stealth(engine, fixture), include_dirs=includes, extra_flags=(
+                '-std=gnu99', '-O1', '-DUNIT_TEST=1', '-DSAFEALLOC_H=1', '-Dstricmp=strcasecmp',
+                '-fsigned-char', '-fno-sanitize-recover=all', '-fno-omit-frame-pointer',
+                '-Wno-unused-parameter', '-Wno-unused-variable', '-Wno-unused-function',
+                '-Wno-sign-compare', '-Wno-misleading-indentation', *links))
+
+    def test_early_water_row_and_palette_contracts(self):
+        from historical_water_rows import render_water_rows
+        from native_sanitizers import sanitizer_environment
+        from unittest.mock import patch
+        fixture = load_contract_fixture(Path(__file__).parent / 'fixtures/profile-early-water-rows.json')
+        rows = fixture['sources']
+        revisions = {row['revision'] for row in rows}
+        self.assertEqual(len(rows), len(revisions))
+        self.assertTrue(set(fixture['boundary_controls']) <= revisions)
+        for profile in contract_profiles(fixture, json.loads((ROOT / 'src/pin.json').read_text())['profiles']):
+            revision = int(profile.get('revision', profile['build']))
+            if profile['engine'] == fixture['engine'] and fixture['range'][0] <= revision <= fixture['range'][1]:
+                self.assertIn(revision, revisions)
+        engine = Path(os.environ.get('OBOR_EARLY_TEXT_ENGINE', ROOT / 'src/engines' / fixture['engine']))
+        includes = [engine / name for name in ('', 'source', 'source/gamelib', 'source/gfxlib',
+                    'source/scriptlib', 'source/preprocessorlib', 'source/randlib', 'source/ramlib')]
+        includes += [ROOT / 'src/port/libretro', ROOT / 'src/glue']
+        with patch.dict(os.environ, sanitizer_environment()):
+            native(render_water_rows(engine, fixture), include_dirs=includes, extra_flags=(
+                '-std=gnu99', '-O0', '-DUNIT_TEST=1', '-DSAFEALLOC_H=1', '-Dstricmp=strcasecmp',
+                '-fcommon', '-fsigned-char', '-fno-sanitize-recover=all', '-fno-omit-frame-pointer',
+                '-Wno-unused-parameter', '-Wno-unused-variable', '-Wno-unused-function',
+                '-Wno-unused-but-set-variable', '-Wno-implicit-fallthrough',
+                '-Wno-sign-compare', '-Wno-misleading-indentation',
+                *(() if sys.platform == 'darwin' else ('-no-pie',))))
+
+
+
+    def test_early_water_phase_period(self):
+        from historical_water_phase import render_water_phase
+        from native_sanitizers import sanitizer_environment
+        from unittest.mock import patch
+        fixture = load_contract_fixture(Path(__file__).parent / 'fixtures/profile-early-water-phase.json')
+        rows = fixture['sources']
+        revisions = {row['revision'] for row in rows}
+        self.assertEqual(len(rows), len(revisions))
+        self.assertTrue(set(fixture['boundary_controls']) <= revisions)
+        for profile in contract_profiles(fixture, json.loads((ROOT / 'src/pin.json').read_text())['profiles']):
+            revision = int(profile.get('revision', profile['build']))
+            if profile['engine'] == fixture['engine'] and fixture['range'][0] <= revision <= fixture['range'][1]:
+                self.assertIn(revision, revisions)
+        engine = Path(os.environ.get('OBOR_EARLY_TEXT_ENGINE', ROOT / 'src/engines' / fixture['engine']))
+        includes = [engine / name for name in ('', 'source', 'source/gamelib', 'source/gfxlib',
+                    'source/scriptlib', 'source/preprocessorlib', 'source/randlib', 'source/ramlib')]
+        includes += [ROOT / 'src/port/libretro', ROOT / 'src/glue']
+        with patch.dict(os.environ, sanitizer_environment()):
+            native(render_water_phase(engine, fixture), include_dirs=includes, extra_flags=(
+                '-std=gnu99', '-O0', '-DUNIT_TEST=1', '-DSAFEALLOC_H=1', '-Dstricmp=strcasecmp',
+                '-fcommon', '-fsigned-char', '-fno-sanitize-recover=all', '-fno-omit-frame-pointer',
+                '-Wno-unused-parameter', '-Wno-unused-variable', '-Wno-unused-function',
+                '-Wno-unused-but-set-variable', '-Wno-implicit-fallthrough',
+                '-Wno-sign-compare', '-Wno-misleading-indentation',
+                *(() if sys.platform == 'darwin' else ('-no-pie',))))
+
+
+    def test_early_frame_and_draw_guards(self):
+        from historical_frame_guards import render_frame_guards
+        from native_sanitizers import sanitizer_environment
+        from unittest.mock import patch
+        fixture = load_contract_fixture(Path(__file__).parent / 'fixtures/profile-early-frame-guards.json')
+        revisions = {r['revision'] for r in fixture['sources']}
+        self.assertEqual(len(revisions), len(fixture['sources']))
+        self.assertTrue(set(fixture['boundary_controls']) <= revisions)
+        for profile in contract_profiles(fixture, json.loads((ROOT / 'src/pin.json').read_text())['profiles']):
+            revision = int(profile.get('revision', profile['build']))
+            if profile['engine'] == fixture['engine'] and fixture['range'][0] <= revision <= fixture['range'][1]:
+                self.assertIn(revision, revisions)
+        engine = Path(os.environ.get('OBOR_EARLY_TEXT_ENGINE', ROOT / 'src/engines' / fixture['engine']))
+        includes = [engine, engine / 'source', *sorted(p for p in (engine / 'source').iterdir() if p.is_dir()),
+                    ROOT / 'src/port/libretro', ROOT / 'src/glue']
+        source = (engine / 'openbor.c').read_text()
+        for name in ('getDrawMethod', 'update_frame'):
+            body = function(source, name).rstrip('\n')
+            self.assertEqual(source.count(body), 1)
+            tail = source[source.index(body)+len(body):]
+            self.assertRegex(tail, r'^\s*#pragma pop_macro\("assert"\)')
+        program = render_frame_guards(engine, ROOT / 'src/port/libretro/libretroport.c', fixture)
+        with patch.dict(os.environ, sanitizer_environment()):
+            for enabled in (True, False):
+                native(program, include_dirs=includes, extra_flags=(
+                    '-std=gnu99', '-O1', '-DUNIT_TEST=1', '-DSAFEALLOC_H=1', '-DLIBRETRO=1',
+                    '-DOBOR_ENGINE_BUILD='+fixture['engine'], '-UNDEBUG' if enabled else '-DNDEBUG',
+                    '-fcommon', '-fno-sanitize-recover=all', '-fno-omit-frame-pointer',
+                    '-Wno-unused-parameter', '-Wno-unused-variable', '-Wno-unused-function',
+                    '-Wno-sign-compare', '-Wno-misleading-indentation', '-Wno-implicit-fallthrough',
+                    *(() if sys.platform == 'darwin' else ('-no-pie',)), '-lm'))
+
+    def test_early_image_failure_routes(self):
+        from historical_image_failures import render_image_failures
+        from native_sanitizers import sanitizer_environment
+        from unittest.mock import patch
+        fixture = load_contract_fixture(Path(__file__).parent / 'fixtures/profile-early-image-failures.json')
+        rows = fixture['sources']
+        revisions = {row['revision'] for row in rows}
+        self.assertEqual(len(rows), len(revisions))
+        self.assertTrue(set(fixture['boundary_controls']) <= revisions)
+        for profile in contract_profiles(fixture, json.loads((ROOT / 'src/pin.json').read_text())['profiles']):
+            revision = int(profile.get('revision', profile['build']))
+            if profile['engine'] == fixture['engine'] and fixture['range'][0] <= revision <= fixture['range'][1]:
+                self.assertIn(revision, revisions)
+        engine = Path(os.environ.get('OBOR_EARLY_TEXT_ENGINE', ROOT / 'src/engines' / fixture['engine']))
+        includes = [engine / name for name in ('', 'source', 'source/gamelib', 'source/gfxlib',
+                    'source/scriptlib', 'source/preprocessorlib', 'source/randlib', 'source/ramlib')]
+        includes += [ROOT / 'src/port/libretro', ROOT / 'src/glue']
+        for enabled in (True, False):
+            with patch.dict(os.environ, sanitizer_environment()):
+                native(render_image_failures(engine, ROOT / 'src/port/libretro/libretroport.c', fixture, assertions_enabled=enabled), include_dirs=includes, extra_flags=(
+                    '-std=gnu99', '-O1', '-DUNIT_TEST=1', '-DSAFEALLOC_H=1', '-Dstricmp=strcasecmp',
+                    '-fcommon', '-fsigned-char', '-fno-sanitize-recover=all', '-fno-omit-frame-pointer',
+                    '-Wno-unused-parameter', '-Wno-unused-variable', '-Wno-unused-function',
+                    '-Wno-sign-compare', '-Wno-misleading-indentation', '-Wno-implicit-fallthrough',
+                    *(() if sys.platform == 'darwin' else ('-no-pie',))))
+
+
+
+    def test_early_loader_query_plumbing(self):
+        from historical_loader_arguments import render_query_windows
+        from native_sanitizers import sanitizer_environment
+        from unittest.mock import patch
+        fixture = load_contract_fixture(Path(__file__).parent / 'fixtures/profile-early-parser-query.json')
+        rows = fixture['sources']
+        revisions = {row['revision'] for row in rows}
+        self.assertEqual(len(rows), len(revisions))
+        self.assertTrue(set(fixture['boundary_controls']) <= revisions)
+        for profile in contract_profiles(fixture, json.loads((ROOT / 'src/pin.json').read_text())['profiles']):
+            revision = int(profile.get('revision', profile['build']))
+            if profile['engine'] == fixture['engine'] and fixture['range'][0] <= revision <= fixture['range'][1]:
+                self.assertIn(revision, revisions)
+        engine = Path(os.environ.get('OBOR_EARLY_TEXT_ENGINE', ROOT / 'src/engines' / fixture['engine']))
+        includes = [engine / name for name in ('', 'source', 'source/gamelib', 'source/gfxlib',
+                    'source/scriptlib', 'source/preprocessorlib', 'source/randlib', 'source/ramlib')]
+        includes += [ROOT / 'src/port/libretro', ROOT / 'src/glue']
+        with patch.dict(os.environ, sanitizer_environment()):
+            native(render_query_windows(engine, fixture), include_dirs=includes, extra_flags=(
+                '-std=gnu99', '-O1', '-DUNIT_TEST=1', '-DSAFEALLOC_H=1', '-Dstricmp=strcasecmp',
+                '-fcommon', '-fsigned-char', '-fno-sanitize-recover=all', '-fno-omit-frame-pointer',
+                '-Wno-unused-parameter', '-Wno-unused-variable', '-Wno-unused-function',
+                '-Wno-sign-compare', '-Wno-misleading-indentation', '-Wno-implicit-fallthrough',
+                *(() if sys.platform == 'darwin' else ('-no-pie',))))
+
+
+
+    def test_early_playable_argument_limits(self):
+        from historical_playable_models import render_playable_models
+        from native_sanitizers import sanitizer_environment
+        from unittest.mock import patch
+        fixture = load_contract_fixture(Path(__file__).parent / 'fixtures/profile-early-playable-arguments.json')
+        rows = fixture['sources']
+        revisions = {row['revision'] for row in rows}
+        self.assertEqual(len(rows), len(revisions))
+        self.assertTrue(set(fixture['boundary_controls']) <= revisions)
+        for profile in contract_profiles(fixture, json.loads((ROOT / 'src/pin.json').read_text())['profiles']):
+            revision = int(profile.get('revision', profile['build']))
+            if profile['engine'] == fixture['engine'] and fixture['range'][0] <= revision <= fixture['range'][1]:
+                self.assertIn(revision, revisions)
+        engine = Path(os.environ.get('OBOR_EARLY_TEXT_ENGINE', ROOT / 'src/engines' / fixture['engine']))
+        includes = [engine / name for name in ('', 'source', 'source/gamelib', 'source/gfxlib',
+                    'source/scriptlib', 'source/preprocessorlib', 'source/randlib', 'source/ramlib')]
+        includes += [ROOT / 'src/port/libretro', ROOT / 'src/glue']
+        with patch.dict(os.environ, sanitizer_environment()):
+            native(render_playable_models(engine, ROOT / 'src/port/libretro/libretroport.c', fixture), include_dirs=includes, extra_flags=(
+                '-std=gnu99', '-O1', '-DUNIT_TEST=1', '-DSAFEALLOC_H=1', '-Dstricmp=strcasecmp',
+                '-fcommon', '-fsigned-char', '-fno-sanitize-recover=all', '-fno-omit-frame-pointer',
+                '-Wno-unused-parameter', '-Wno-unused-variable', '-Wno-unused-function',
+                '-Wno-sign-compare', '-Wno-misleading-indentation', '-Wno-implicit-fallthrough',
+                *(() if sys.platform == 'darwin' else ('-no-pie',))))
+
+
+
+    def test_early_barstatus_argument_loading(self):
+        from historical_loader_arguments import render_barstatus_arguments
+        from native_sanitizers import sanitizer_environment
+        from unittest.mock import patch
+        fixture = load_contract_fixture(Path(__file__).parent / 'fixtures/profile-early-barstatus-arguments.json')
+        rows = fixture['sources']
+        revisions = {row['revision'] for row in rows}
+        self.assertEqual(len(rows), len(revisions))
+        self.assertTrue(set(fixture['boundary_controls']) <= revisions)
+        for profile in contract_profiles(fixture, json.loads((ROOT / 'src/pin.json').read_text())['profiles']):
+            revision = int(profile.get('revision', profile['build']))
+            if profile['engine'] == fixture['engine'] and fixture['range'][0] <= revision <= fixture['range'][1]:
+                self.assertIn(revision, revisions)
+        engine = Path(os.environ.get('OBOR_EARLY_TEXT_ENGINE', ROOT / 'src/engines' / fixture['engine']))
+        includes = [engine / name for name in ('', 'source', 'source/gamelib', 'source/gfxlib',
+                    'source/scriptlib', 'source/preprocessorlib', 'source/randlib', 'source/ramlib')]
+        includes += [ROOT / 'src/port/libretro', ROOT / 'src/glue']
+        with patch.dict(os.environ, sanitizer_environment()):
+            native(render_barstatus_arguments(engine, fixture), include_dirs=includes, extra_flags=(
+                '-std=gnu99', '-O1', '-DUNIT_TEST=1', '-DSAFEALLOC_H=1', '-Dstricmp=strcasecmp',
+                '-fcommon', '-fsigned-char', '-fno-sanitize-recover=all', '-fno-omit-frame-pointer',
+                '-Wno-unused-parameter', '-Wno-unused-variable', '-Wno-unused-function',
+                '-Wno-sign-compare', '-Wno-misleading-indentation', '-Wno-implicit-fallthrough',
+                *(() if sys.platform == 'darwin' else ('-no-pie',))))
+
+
+
+    def test_early_level_failure_diagnostics(self):
+        from historical_level_errors import render_level_errors
+        from native_sanitizers import sanitizer_environment
+        from unittest.mock import patch
+        fixture = load_contract_fixture(Path(__file__).parent / 'fixtures/profile-early-level-errors.json')
+        rows = fixture['sources']
+        revisions = {row['revision'] for row in rows}
+        self.assertEqual(len(rows), len(revisions))
+        self.assertTrue(set(fixture['boundary_controls']) <= revisions)
+        for profile in contract_profiles(fixture, json.loads((ROOT / 'src/pin.json').read_text())['profiles']):
+            revision = int(profile.get('revision', profile['build']))
+            if profile['engine'] == fixture['engine'] and fixture['range'][0] <= revision <= fixture['range'][1]:
+                self.assertIn(revision, revisions)
+        engine = Path(os.environ.get('OBOR_EARLY_TEXT_ENGINE', ROOT / 'src/engines' / fixture['engine']))
+        includes = [engine / name for name in ('', 'source', 'source/gamelib', 'source/gfxlib',
+                    'source/scriptlib', 'source/preprocessorlib', 'source/randlib', 'source/ramlib')]
+        includes += [ROOT / 'src/port/libretro', ROOT / 'src/glue']
+        with patch.dict(os.environ, sanitizer_environment()):
+            native(render_level_errors(engine, ROOT / 'src/port/libretro/libretroport.c', fixture), include_dirs=includes, extra_flags=(
+                '-std=gnu99', '-O1', '-DUNIT_TEST=1', '-DSAFEALLOC_H=1', '-Dstricmp=strcasecmp',
+                '-fcommon', '-fsigned-char', '-fno-sanitize-recover=all', '-fno-omit-frame-pointer',
+                '-Wno-unused-parameter', '-Wno-unused-variable', '-Wno-unused-function',
+                '-Wno-sign-compare', '-Wno-misleading-indentation', '-Wno-implicit-fallthrough',
+                *(() if sys.platform == 'darwin' else ('-no-pie',))))
+
+
+
+    def test_early_model_failure_diagnostics(self):
+        from historical_model_errors import render_model_errors
+        from native_sanitizers import sanitizer_environment
+        from unittest.mock import patch
+        fixture = load_contract_fixture(Path(__file__).parent / 'fixtures/profile-early-model-errors.json')
+        rows = fixture['sources']
+        revisions = {row['revision'] for row in rows}
+        self.assertEqual(len(rows), len(revisions))
+        self.assertTrue(set(fixture['boundary_controls']) <= revisions)
+        for profile in contract_profiles(fixture, json.loads((ROOT / 'src/pin.json').read_text())['profiles']):
+            revision = int(profile.get('revision', profile['build']))
+            if profile['engine'] == fixture['engine'] and fixture['range'][0] <= revision <= fixture['range'][1]:
+                self.assertIn(revision, revisions)
+        engine = Path(os.environ.get('OBOR_EARLY_TEXT_ENGINE', ROOT / 'src/engines' / fixture['engine']))
+        includes = [engine / name for name in ('', 'source', 'source/gamelib', 'source/gfxlib',
+                    'source/scriptlib', 'source/preprocessorlib', 'source/randlib', 'source/ramlib')]
+        includes += [ROOT / 'src/port/libretro', ROOT / 'src/glue']
+        with patch.dict(os.environ, sanitizer_environment()):
+            native(render_model_errors(engine, ROOT / 'src/port/libretro/libretroport.c', fixture), include_dirs=includes, extra_flags=(
+                '-std=gnu99', '-O1', '-DUNIT_TEST=1', '-DSAFEALLOC_H=1', '-Dstricmp=strcasecmp',
+                '-fcommon', '-fsigned-char', '-fno-sanitize-recover=all', '-fno-omit-frame-pointer',
+                '-Wno-unused-parameter', '-Wno-unused-variable', '-Wno-unused-function',
+                '-Wno-sign-compare', '-Wno-misleading-indentation', '-Wno-implicit-fallthrough',
+                *(() if sys.platform == 'darwin' else ('-no-pie',))))
+
+
+
+    def test_early_playable_model_validation(self):
+        from historical_playable_models import render_playable_models
+        from native_sanitizers import sanitizer_environment
+        from unittest.mock import patch
+        fixture = load_contract_fixture(Path(__file__).parent / 'fixtures/profile-early-playable-models.json')
+        rows = fixture['sources']
+        revisions = {row['revision'] for row in rows}
+        self.assertEqual(len(rows), len(revisions))
+        self.assertTrue(set(fixture['boundary_controls']) <= revisions)
+        for profile in contract_profiles(fixture, json.loads((ROOT / 'src/pin.json').read_text())['profiles']):
+            revision = int(profile.get('revision', profile['build']))
+            if profile['engine'] == fixture['engine'] and fixture['range'][0] <= revision <= fixture['range'][1]:
+                self.assertIn(revision, revisions)
+        engine = Path(os.environ.get('OBOR_EARLY_TEXT_ENGINE', ROOT / 'src/engines' / fixture['engine']))
+        includes = [engine / name for name in ('', 'source', 'source/gamelib', 'source/gfxlib',
+                    'source/scriptlib', 'source/preprocessorlib', 'source/randlib', 'source/ramlib')]
+        includes += [ROOT / 'src/port/libretro', ROOT / 'src/glue']
+        with patch.dict(os.environ, sanitizer_environment()):
+            native(render_playable_models(engine, ROOT / 'src/port/libretro/libretroport.c', fixture), include_dirs=includes, extra_flags=(
+                '-std=gnu99', '-O1', '-DUNIT_TEST=1', '-DSAFEALLOC_H=1', '-Dstricmp=strcasecmp',
+                '-fcommon', '-fsigned-char', '-fno-sanitize-recover=all', '-fno-omit-frame-pointer',
+                '-Wno-unused-parameter', '-Wno-unused-variable', '-Wno-unused-function',
+                '-Wno-sign-compare', '-Wno-misleading-indentation', '-Wno-implicit-fallthrough',
+                *(() if sys.platform == 'darwin' else ('-no-pie',))))
+
+
+    def test_early_menu_frame_and_locked_queue_routing(self):
+        from historical_menu_queue import render_menu_queue
+        from native_sanitizers import sanitizer_environment
+        from unittest.mock import patch
+        fixture = load_contract_fixture(Path(__file__).parent / 'fixtures/profile-early-menu-queue.json')
+        rows = fixture['sources']
+        revisions = {row['revision'] for row in rows}
+        self.assertEqual(len(rows), len(revisions))
+        self.assertTrue(set(fixture['boundary_controls']) <= revisions)
+        for profile in contract_profiles(fixture, json.loads((ROOT / 'src/pin.json').read_text())['profiles']):
+            revision = int(profile.get('revision', profile['build']))
+            if profile['engine'] == fixture['engine'] and fixture['range'][0] <= revision <= fixture['range'][1]:
+                self.assertIn(revision, revisions)
+        engine = Path(os.environ.get('OBOR_EARLY_TEXT_ENGINE', ROOT / 'src/engines' / fixture['engine']))
+        includes = [engine / name for name in ('', 'source', 'source/gamelib', 'source/gfxlib',
+                    'source/scriptlib', 'source/preprocessorlib', 'source/randlib', 'source/ramlib')]
+        includes += [ROOT / 'src/port/libretro', ROOT / 'src/glue']
+        with patch.dict(os.environ, sanitizer_environment()):
+            native(render_menu_queue(engine, fixture), include_dirs=includes, extra_flags=(
+                '-std=gnu99', '-O1', '-DUNIT_TEST=1', '-DSAFEALLOC_H=1', '-Dstricmp=strcasecmp',
+                '-fcommon', '-fsigned-char', '-fno-sanitize-recover=all', '-fno-omit-frame-pointer',
+                '-Wno-unused-parameter', '-Wno-unused-variable', '-Wno-unused-function',
+                '-Wno-sign-compare', '-Wno-misleading-indentation',
+                *(() if sys.platform == 'darwin' else ('-no-pie',))))
+
+    def test_early_triangle_probe_requires_bounded_contexts(self):
+        import copy
+        from historical_early_triangle import render_early_triangle
+        fixture = load_contract_fixture(Path(__file__).parent / 'fixtures/profile-early-triangle.json')
+        for kind in ('duplicate', 'revision', 'capacity', 'angle'):
+            invalid = copy.deepcopy(fixture)
+            if kind == 'duplicate':
+                invalid['sources'].append(copy.deepcopy(invalid['sources'][0]))
+            elif kind == 'revision':
+                invalid['sources'][0]['revision'] = True
+            elif kind == 'capacity':
+                invalid['vertex_capacity'] = 1000000
+            else:
+                invalid['geometry'][0]['rotate'] = 720
+            with self.subTest(kind=kind), self.assertRaises(ValueError):
+                render_early_triangle(Path('unread-invalid-context'), invalid)
+
+    def test_early_sprite_size_and_encoded_roundtrip(self):
+        from test_sprite_encoding import encoding_program
+        from native_sanitizers import sanitizer_environment
+        from unittest.mock import patch
+        fixture = load_contract_fixture(Path(__file__).parent / 'fixtures/profile-early-triangle.json')
+        engine = Path(os.environ.get('OBOR_EARLY_TEXT_ENGINE', ROOT / 'src/engines' / fixture['engine']))
+        code = encoding_program((engine / 'source/gamelib/spritef.c').read_text())
+        with patch.dict(os.environ, sanitizer_environment()):
+            native(code, include_dirs=(engine / 'source/gamelib',), extra_flags=(
+                '-fcommon', '-fno-sanitize-recover=all',
+                *(() if sys.platform == 'darwin' else ('-no-pie',))))
+
+    def test_early_triangle_routes_pixels_and_script_entries(self):
+        from historical_early_triangle import render_early_triangle
+        from native_sanitizers import sanitizer_environment
+        from unittest.mock import patch
+        fixture = load_contract_fixture(Path(__file__).parent / 'fixtures/profile-early-triangle.json')
+        rows = fixture['sources']
+        revisions = {row['revision'] for row in rows}
+        self.assertEqual(len(rows), len(revisions))
+        self.assertTrue(set(fixture['boundary_controls']) <= revisions)
+        for profile in contract_profiles(fixture, json.loads((ROOT / 'src/pin.json').read_text())['profiles']):
+            revision = int(profile.get('revision', profile['build']))
+            if profile['engine'] == fixture['engine'] and fixture['range'][0] <= revision <= fixture['range'][1]:
+                self.assertIn(revision, revisions)
+        engine = Path(os.environ.get('OBOR_EARLY_TEXT_ENGINE', ROOT / 'src/engines' / fixture['engine']))
+        includes = [engine / name for name in ('', 'source', 'source/gamelib', 'source/scriptlib', 'source/ramlib')]
+        includes += [ROOT / 'src/port/libretro', ROOT / 'src/glue']
+        links = () if sys.platform == 'darwin' else ('-no-pie',)
+        units = tuple(str(engine / 'source/gamelib' / (name + '.c'))
+                      for name in ('spritex8p16', 'spritex8p32', 'pixelformat'))
+        with patch.dict(os.environ, sanitizer_environment()):
+            native(render_early_triangle(engine, fixture), include_dirs=includes, extra_flags=(
+                '-std=gnu99', '-O0', '-fcommon', '-DLIBRETRO=1', '-DUNIT_TEST=1', '-Dstricmp=strcasecmp',
+                '-fsigned-char', '-fno-sanitize-recover=all', '-fno-omit-frame-pointer',
+                '-Wno-unused-parameter', '-Wno-unused-variable', '-Wno-unused-function', '-Wno-unused-but-set-variable',
+                '-Wno-sign-compare', '-Wno-misleading-indentation', '-Wno-implicit-fallthrough',
+                *units, *links))
+
+    def test_early_model_point_domains_and_arithmetic(self):
+        from historical_model_points import render_model_points
+        from native_sanitizers import sanitizer_environment
+        from unittest.mock import patch
+        fixture = load_contract_fixture(Path(__file__).parent /
+            'fixtures/profile-early-model-points.json')
+        rows = fixture['sources']
+        revisions = {row['revision'] for row in rows}
+        self.assertEqual(len(rows), len(revisions))
+        self.assertTrue(set(fixture['boundary_controls']) <= revisions)
+        for profile in contract_profiles(fixture, json.loads((ROOT / 'src/pin.json').read_text())['profiles']):
+            revision = int(profile.get('revision', profile['build']))
+            if profile['engine'] == fixture['engine'] and fixture['range'][0] <= revision <= fixture['range'][1]:
+                self.assertIn(revision, revisions)
+        for row in rows:
+            self.assertEqual(row['engine'], fixture['engine'])
+            self.assertRegex(row['commit'], r'^[0-9a-f]{40}$')
+            self.assertIn(row['point_bits'], (16, 32))
+        engine = Path(os.environ.get('OBOR_EARLY_TEXT_ENGINE', ROOT / 'src/engines' / fixture['engine']))
+        includes = [engine / name for name in ('', 'source', 'source/gamelib', 'source/gfxlib',
+                    'source/scriptlib', 'source/preprocessorlib', 'source/randlib', 'source/ramlib')]
+        includes += [ROOT / 'src/port/libretro', ROOT / 'src/glue']
+        links = () if sys.platform == 'darwin' else ('-no-pie',)
+        with patch.dict(os.environ, sanitizer_environment()):
+            native(render_model_points(engine, fixture), include_dirs=includes, extra_flags=(
+                '-std=gnu99', '-O1', '-DUNIT_TEST=1', '-DSAFEALLOC_H=1', '-Dstricmp=strcasecmp',
+                '-fsigned-char', '-fno-sanitize-recover=all', '-fno-omit-frame-pointer',
+                '-Wno-unused-parameter', '-Wno-unused-variable', '-Wno-unused-function',
+                '-Wno-sign-compare', '-Wno-misleading-indentation', *links))
+
+    def test_early_counter_range_widths_and_damage(self):
+        from historical_counter_range import render_counter_range
+        from native_sanitizers import sanitizer_environment
+        from unittest.mock import patch
+        fixture = load_contract_fixture(Path(__file__).parent /
+            'fixtures/profile-early-counter-range.json')
+        rows = fixture['sources']
+        revisions = {row['revision'] for row in rows}
+        self.assertEqual(len(rows), len(revisions))
+        self.assertTrue(set(fixture['boundary_controls']) <= revisions)
+        for profile in contract_profiles(fixture, json.loads((ROOT / 'src/pin.json').read_text())['profiles']):
+            revision = int(profile.get('revision', profile['build']))
+            if profile['engine'] == fixture['engine'] and fixture['range'][0] <= revision <= fixture['range'][1]:
+                self.assertIn(revision, revisions)
+        for row in rows:
+            self.assertEqual(row['engine'], fixture['engine'])
+            self.assertRegex(row['commit'], r'^[0-9a-f]{40}$')
+            self.assertIn(row['flag_bits'], (8, 16))
+        engine = Path(os.environ.get('OBOR_EARLY_TEXT_ENGINE', ROOT / 'src/engines' / fixture['engine']))
+        includes = [engine / name for name in ('', 'source', 'source/gamelib', 'source/gfxlib',
+                    'source/scriptlib', 'source/preprocessorlib', 'source/randlib', 'source/ramlib')]
+        includes += [ROOT / 'src/port/libretro', ROOT / 'src/glue']
+        links = () if sys.platform == 'darwin' else ('-no-pie',)
+        with patch.dict(os.environ, sanitizer_environment()):
+            native(render_counter_range(engine, fixture), include_dirs=includes, extra_flags=(
+                '-std=gnu99', '-O1', '-DUNIT_TEST=1', '-DSAFEALLOC_H=1', '-Dstricmp=strcasecmp',
+                '-fsigned-char', '-fno-sanitize-recover=all', '-fno-omit-frame-pointer',
+                '-Wno-unused-parameter', '-Wno-unused-variable', '-Wno-unused-function',
+                '-Wno-sign-compare', '-Wno-misleading-indentation', *links))
+
+    def test_early_quake_widths_defaults_counter_and_background(self):
+        from historical_camera import render_camera_quake
+        from native_sanitizers import sanitizer_environment
+        from unittest.mock import patch
+        fixture = load_contract_fixture(Path(__file__).parent /
+            'fixtures/profile-early-camera-quake.json')
+        rows = fixture['sources']
+        revisions = {row['revision'] for row in rows}
+        self.assertEqual(len(rows), len(revisions))
+        self.assertTrue(set(fixture['boundary_controls']) <= revisions)
+        for profile in contract_profiles(fixture, json.loads((ROOT / 'src/pin.json').read_text())['profiles']):
+            revision = int(profile.get('revision', profile['build']))
+            if profile['engine'] == fixture['engine'] and fixture['range'][0] <= revision <= fixture['range'][1]:
+                self.assertIn(revision, revisions)
+        for row in rows:
+            self.assertEqual(row['engine'], fixture['engine'])
+            self.assertRegex(row['commit'], r'^[0-9a-f]{40}$')
+            self.assertIn(row['frame_bits'], (8, 16))
+            self.assertIn(row['repeat_bits'], (8, 16))
+            self.assertEqual(row['count_bits'], row['repeat_bits'])
+            self.assertEqual(row['amplitude_bits'], row['repeat_bits'])
+        engine = Path(os.environ.get('OBOR_EARLY_TEXT_ENGINE', ROOT / 'src/engines' / fixture['engine']))
+        includes = [engine / name for name in ('', 'source', 'source/gamelib', 'source/gfxlib',
+                    'source/scriptlib', 'source/preprocessorlib', 'source/randlib', 'source/ramlib')]
+        includes += [ROOT / 'src/port/libretro', ROOT / 'src/glue']
+        links = () if sys.platform == 'darwin' else ('-no-pie',)
+        with patch.dict(os.environ, sanitizer_environment()):
+            native(render_camera_quake(engine, fixture), include_dirs=includes, extra_flags=(
+                '-std=gnu99', '-O1', '-DUNIT_TEST=1', '-DSAFEALLOC_H=1', '-Dstricmp=strcasecmp',
+                '-fsigned-char', '-fno-sanitize-recover=all', '-fno-omit-frame-pointer',
+                '-Wno-unused-parameter', '-Wno-unused-variable', '-Wno-unused-function',
+                '-Wno-sign-compare', '-Wno-misleading-indentation', *links))
+
+    def test_early_entity_camera_origin_with_and_without_level(self):
+        from historical_camera import render_camera_render_origin
+        from native_sanitizers import sanitizer_environment
+        from unittest.mock import patch
+        fixture = load_contract_fixture(Path(__file__).parent /
+            'fixtures/profile-early-camera-render-origin.json')
+        rows = fixture['sources']
+        revisions = {row['revision'] for row in rows}
+        self.assertEqual(len(rows), len(revisions))
+        self.assertTrue(set(fixture['boundary_controls']) <= revisions)
+        for profile in contract_profiles(fixture, json.loads((ROOT / 'src/pin.json').read_text())['profiles']):
+            revision = int(profile.get('revision', profile['build']))
+            if profile['engine'] == fixture['engine'] and fixture['range'][0] <= revision <= fixture['range'][1]:
+                self.assertIn(revision, revisions)
+        for row in rows:
+            self.assertEqual(row['engine'], fixture['engine'])
+            self.assertEqual(row['offset_without_level'], row['revision'] < 3255)
+            self.assertEqual(row['graphics_adjustment'], row['revision'] >= 3328)
+            self.assertRegex(row['commit'], r'^[0-9a-f]{40}$')
+        engine = Path(os.environ.get('OBOR_EARLY_TEXT_ENGINE', ROOT / 'src/engines' / fixture['engine']))
+        links = () if sys.platform == 'darwin' else ('-no-pie',)
+        with patch.dict(os.environ, sanitizer_environment()):
+            native(render_camera_render_origin(engine, rows), extra_flags=(
+                '-O1', '-fno-sanitize-recover=all', '-fno-omit-frame-pointer', *links))
+
     def test_attack_drop_defaults_match_each_source_profile(self):
         from native_sanitizers import sanitizer_environment
         from unittest.mock import patch

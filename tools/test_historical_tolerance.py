@@ -15,6 +15,7 @@ import tempfile
 import unittest
 from test_historical_player import function
 from native_sanitizers import sanitizer_environment
+from native_allocation_policy import bind_named_allocation_support
 from historical_text_objects import CALLBACKS, render_text_objects
 from historical_stringmap_dispatch import render_dispatch
 from test_color_blends import compile_checked
@@ -365,7 +366,9 @@ class NativeTextReturnTests(unittest.TestCase):
             code=render_text_objects(revisions=row['revisions'],
                 callbacks={key:function(script,name)for key,name in CALLBACKS.items()},
                 mapping=enums+'\n'+'\n'.join(mappers),helpers=helpers,**options)
-            source=work/(row['id']+'.c');source.write_text(code);binary=source.with_suffix('')
+            source=work/(row['id']+'.c')
+            source.write_text(bind_named_allocation_support(code, root))
+            binary=source.with_suffix('')
             includes=[root/'source/scriptlib',root,SOURCE/'src/port/libretro',root/'source',
                       *sorted(p for p in(root/'source').iterdir()if p.is_dir())]
             compile_checked(compiler+['-std=gnu11','-fgnu89-inline','-Wall','-Wextra','-Werror',

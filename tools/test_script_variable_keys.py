@@ -15,10 +15,38 @@ ROOT = Path(__file__).resolve().parents[1]
 SOURCE = Path(os.environ.get('OBOR_TEST_SOURCE', ROOT))
 
 
-def variable_key_fixture(members):
+def variable_key_requires_level(profile):
+    return (profile['engine'] == '3400' and
+            int(profile.get('revision', profile['build'])) < 3358)
+
+
+def variable_key_legacy_escape(profile):
+    return (profile['engine'] == '3400' and
+            int(profile.get('revision', profile['build'])) < 3368)
+
+
+def variable_key_fixture(members, profile=None):
     result = dict(members)
-    result['data/script.txt'] = b'alwaysupdate 1\n'
-    result['data/scripts/updated.c'] = b'''void main() {
+    # Earlier builds run the global update callback in gameplay, and do not
+    # execute the global updated callback. Keep their original callback rules.
+    early = profile is not None and variable_key_requires_level(profile)
+    if early:
+        # Keep the level open while variables are observed and saved. This is
+        # the same stationary geometric target used by the input fixture.
+        result['data/models.txt'] += b'load VariableWitness data/chars/variable-witness.txt\n'
+        result['data/chars/variable-witness.txt'] = (
+            members['data/chars/block.txt'].replace(b'name TestBlock', b'name VariableWitness')
+            .replace(b'type player', b'type enemy').replace(b'health 100', b'health 100000')
+            .replace(b'speed 2', b'speed 0'))
+        result['data/levels.txt'] = result['data/levels.txt'].replace(
+            b'file data/levels/room.txt', b'skipselect TestBlock\nfile data/levels/room.txt')
+        result['data/levels/room.txt'] = result['data/levels/room.txt'].replace(
+            b'order a\n', b'order aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n') + (
+            b'nopause 1\ngroup 1 1\nspawn VariableWitness\ncoords 600 200\nat 0\n')
+    else:
+        result['data/script.txt'] = b'alwaysupdate 1\n'
+    callback = 'update' if early else 'updated'
+    result['data/scripts/' + callback + '.c'] = b'''void main() {
     void tick;
     void first;
     void second;
@@ -53,9 +81,27 @@ def variable_key_fixture(members):
     return result
 
 
-def check_variable_key_continuation(log, engine, restarts=0):
+def check_variable_key_continuation(log, engine, restarts=0, *, legacy_escape=False,
+                                    gameplay_callback=False):
+    if gameplay_callback:
+        # A gameplay-only callback cannot run before startup completes. The
+        # frontend log tail may read the previous session's file while a reset
+        # is still loading; those lines are not evidence from this session.
+        ready = False
+        current = []
+        for line in log.splitlines():
+            if line.startswith('[OpenBOR] pak needs ') or line.startswith('[OpenBOR] reset:'):
+                ready = False
+            if line == '[OpenBOR] resource initialization complete':
+                ready = True
+            if ready:
+                current.append(line)
+        log = '\n'.join(current)
+    # The original lexer before3368 emits LF followed by the literal n for
+    # \n, which can prefix the next actual log line. Retain that behavior.
+    prefix = 'n?' if legacy_escape else ''
     markers = re.findall(r'(?m)^(?:\[(?:OpenBOR(?::[0-9]+)?|game)\][ \t]*)?'
-                         r'(VARIABLE_KEY_[A-Z_]+)[ \t]*\r?$', log)
+                         + prefix + r'(VARIABLE_KEY_[A-Z_]+)[ \t]*\r?$', log)
     verified = markers.count('VARIABLE_KEY_VERIFIED')
     markers = [marker for marker in markers if marker != 'VARIABLE_KEY_VERIFIED']
     if markers != ['VARIABLE_KEY_FULL_NAMES', 'VARIABLE_KEY_CONTINUED'] * (1 + restarts) or \
@@ -76,6 +122,52 @@ def function(source, name):
 
 
 class ScriptVariableKeyTests(unittest.TestCase):
+    def test_runtime_fixture_uses_available_callback_on_both_sides(self):
+        from make_fixture import files
+        members = files()
+        for engine, revision, early in (('3400', 3020, True), ('3400', 3357, True),
+                                        ('3400', 3358, False), ('3400', 3400, False),
+                                        ('3741', 3741, False)):
+            with self.subTest(engine=engine, revision=revision):
+                profile = dict(engine=engine, build=str(revision))
+                self.assertEqual(variable_key_requires_level(profile), early)
+                fixture = variable_key_fixture(members, profile)
+                callback = 'update' if early else 'updated'
+                self.assertIn('data/scripts/' + callback + '.c', fixture)
+                self.assertEqual('data/script.txt' in fixture, not early)
+                self.assertTrue(fixture['data/models.txt'].startswith(members['data/models.txt']))
+                self.assertEqual('data/chars/variable-witness.txt' in fixture, early)
+                if early:
+                    self.assertIn(b'spawn VariableWitness', fixture['data/levels/room.txt'])
+                self.assertIn(b'VARIABLE_KEY_FULL_NAMES',
+                              fixture['data/scripts/' + callback + '.c'])
+
+    def test_runtime_markers_preserve_own_lexer_escape_boundary(self):
+        log = ('[game] VARIABLE_KEY_FULL_NAMES\n[game] nVARIABLE_KEY_CONTINUED\n'
+               '[game] nVARIABLE_KEY_VERIFIED\n[game] nVARIABLE_KEY_VERIFIED\n')
+        check_variable_key_continuation(log, '3357', legacy_escape=True)
+        with self.assertRaises(RuntimeError):
+            check_variable_key_continuation(log, '3368')
+        for revision, legacy in ((3020, True), (3367, True), (3368, False), (3400, False)):
+            self.assertEqual(variable_key_legacy_escape(dict(engine='3400', build=str(revision))), legacy)
+        for bad in (log.replace('CONTINUED', 'BAD_RESULT'),
+                    log.replace('nVARIABLE_KEY_CONTINUED', 'nnVARIABLE_KEY_CONTINUED'),
+                    'log("VARIABLE_KEY_FULL_NAMES\\n");'):
+            with self.assertRaises(RuntimeError):
+                check_variable_key_continuation(bad, '3357', legacy_escape=True)
+
+    def test_gameplay_markers_require_current_session_startup(self):
+        markers = ('[game] VARIABLE_KEY_FULL_NAMES\n[game] VARIABLE_KEY_CONTINUED\n'
+                   '[game] VARIABLE_KEY_VERIFIED\n[game] VARIABLE_KEY_VERIFIED\n')
+        ready = '[OpenBOR] resource initialization complete\n'
+        reset = '[OpenBOR] reset: booting engine 3400\n'
+        log = ready + markers + reset + markers + ready + markers
+        check_variable_key_continuation(log, '3020', restarts=1, gameplay_callback=True)
+        for bad in (ready + markers + reset + markers,
+                    log.replace(ready + markers, ready + markers.replace('CONTINUED', 'BAD_RESULT'))):
+            with self.assertRaises(RuntimeError):
+                check_variable_key_continuation(bad, '3020', restarts=1, gameplay_callback=True)
+
     def test_runtime_check_requires_actual_full_name_continuation(self):
         check_variable_key_continuation('[game] VARIABLE_KEY_FULL_NAMES\n'
                                        '[game] VARIABLE_KEY_CONTINUED\n'
@@ -87,7 +179,7 @@ class ScriptVariableKeyTests(unittest.TestCase):
             with self.subTest(log=log), self.assertRaises(RuntimeError):
                 check_variable_key_continuation(log, '3842')
 
-    def check_old_table(self, source, header, *, has_gc, explicit_owner, revision):
+    def check_old_table(self, source, header, *, has_gc, explicit_owner, revision, counted_empty=False):
         program = r'''
 #include <assert.h>
 #include <stddef.h>
@@ -117,6 +209,7 @@ METHODS
 LOCAL_WRAPPER
 int main(void) {
     for(int i=0;i<8;++i) slots[i]=nodes+i;
+COUNTED_EMPTY
     char name[]="abcdefghijklmnopqrstuvwx";
     const char *full="abcdefghijklmnopqrstuvwx",*longer="abcdefghijklmnopqrstuvwx_tail";
     const char *prefix="abcdefghijklmnopqrstuvw";
@@ -186,7 +279,25 @@ int main(void) {
                      'static ScriptVariant *read_local(Script *owner,char *name) { '
                      'pcurrentscript=owner;return Script_Get_Local_Variant(name); }')
             native = Path(temporary) / 'keys.c'
-            body = program
+            empty_control = r"""
+    {
+        ScriptVariant seed={VT_INTEGER,101};
+        Script empty_owner={1};
+        max_global_var_index=0;
+        assert(!Script_Get_Global_Variant("absent"));
+        assert(_set_var("global_seed",&seed,NULL)==1 && max_global_var_index==1);
+        assert(Script_Get_Global_Variant("global_seed")->value==101);
+        nodes[0].owner=&empty_owner;
+        assert(!read_local(&empty_owner,"absent"));
+        assert(_set_var("local_seed",&seed,&empty_owner)==1 && max_global_var_index==2);
+        assert(read_local(&empty_owner,"local_seed")->value==101);
+        assert(!Script_Get_Global_Variant("local_seed"));
+        assert(active==2);
+        obor_script_variable_names_clear();assert(active==0);
+        memset(nodes,0,sizeof(nodes));max_global_var_index=-1;copies=0;pcurrentscript=NULL;
+    }
+""" if counted_empty else ''
+            body = program.replace('COUNTED_EMPTY', empty_control)
             for key, value in (('NODE', node), ('GC', gc), ('METHODS', methods),
                                ('LOCAL_WRAPPER', local), ('PROFILE_REVISION', str(revision))):
                 body = body.replace(key, value)
@@ -199,6 +310,12 @@ int main(void) {
             result = subprocess.run([str(host)], capture_output=True, text=True, timeout=10)
             self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
             self.assertIn('complete script variable names: OK', result.stdout)
+
+    def test_counted_empty_slot_behaves_like_original_empty_name(self):
+        engine = Path(os.environ.get('OBOR_VARIABLE_KEYS_ENGINE', SOURCE / 'src/engines/3400'))
+        self.check_old_table((engine / 'openborscript.c').read_text(),
+                             (engine / 'openborscript.h').read_text(),
+                             has_gc=False, explicit_owner=False, revision=3400, counted_empty=True)
 
     def test_old_tables_own_full_names_without_truncation_or_aliases(self):
         for build in ('3400', '3741', '3842'):

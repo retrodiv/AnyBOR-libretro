@@ -1,3 +1,14 @@
+/* AnyBOR modification record: 2026-09-12.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Declare the named allocation policy for list nodes and owned names.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/3400.md
+ * at the source repository root. Original notices follow below.
+ */
+
 /*
  * List library.
  * 90% 2011 anallyst
@@ -30,6 +41,9 @@
 
 #include <stddef.h>
 #include <stdlib.h>
+
+/* Named allocation policy also serves the standalone list interface. */
+void *obor_profile_malloc_named(const char *name, size_t bytes);
 #include <string.h>
 #include <stdio.h>
 
@@ -52,7 +66,7 @@
 	  } \
    }
 
-#define NAME(s) ((s==NULL)?NULL:(strcpy((char*)malloc(strlen(s)+1),s)))
+#define NAME(s) ((s==NULL)?NULL:(strcpy((char*)obor_profile_malloc_named("NAME(s)", strlen(s)+1),s)))
 
 typedef struct Node{
 	struct Node* prev;          //pointer to previous Node

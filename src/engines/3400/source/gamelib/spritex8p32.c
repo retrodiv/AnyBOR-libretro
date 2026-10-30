@@ -1,3 +1,15 @@
+/* AnyBOR modification record: 2026-10-21.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Preserve each profile's scanline width order and shifted sprite clipping
+ * with its original 32-bit color and rotation tables.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/3400.md
+ * at the source repository root. Original notices follow below.
+ */
+
 /*
  * OpenBOR - http://www.LavaLit.com
  * -----------------------------------------------------------------------
@@ -12,6 +24,8 @@
 #include <string.h>
 #include "types.h"
 #include "sprite.h"
+
+extern uint32_t obor_profile_build;
 /////////////////////////////////////////////////////////////////////////////
 
 
@@ -248,6 +262,7 @@ static int screenwidth, screenheight;
 // x: centerx on screen cx: centerx of this line
 static void scaleline(int x, int cx, int width, int *linetab, unsigned* palette, unsigned *dest_c, blend32fp fp,  int scale)
 {
+    const int obor_legacy_width = obor_profile_build < 3396;
         unsigned char* data;
         int dx, i, d;
         unsigned char * charptr;
@@ -266,6 +281,13 @@ static void scaleline(int x, int cx, int width, int *linetab, unsigned* palette,
         {
                 cleft = *data++;
                 if(cleft==0xFF) return;// end of line
+    if(obor_legacy_width) {
+                cwidth = *data++;
+                if(!cwidth) continue;
+                //scale_s += cleft<<8;     // src scale, 256
+                charptr = data;
+                data += cwidth; // skip some bytes to next block
+    }
                 scale_d += cleft*scale;  // dest scale, scale
                 dx += (cleft*scale)>>8;
                 if(dx>=screenwidth) return; // out of right border? exit
@@ -275,11 +297,13 @@ static void scaleline(int x, int cx, int width, int *linetab, unsigned* palette,
                         dest_c += (d>>8);
                         old_scale_d = scale_d & 0xFFFFFF00;
                 }
+    if(!obor_legacy_width) {
                 cwidth = *data++;
                 if(!cwidth) continue;
                 //scale_s += cleft<<8;     // src scale, 256
                 charptr = data;
                 data += cwidth; // skip some bytes to next block
+    }
                 while(cwidth--) // draw these pixels
                 {
                         scale_d += scale;
@@ -313,6 +337,7 @@ static void scaleline(int x, int cx, int width, int *linetab, unsigned* palette,
 // x: centerx on screen cx: centerx of this line, flip version
 static void scaleline_flip(int x, int cx, int width, int *linetab, unsigned* palette, unsigned *dest_c, blend32fp fp,  int scale)
 {
+    const int obor_legacy_width = obor_profile_build < 3396;
         unsigned char* data;
         int dx, i, d;
         unsigned char * charptr;
@@ -331,6 +356,13 @@ static void scaleline_flip(int x, int cx, int width, int *linetab, unsigned* pal
         {
                 cleft = *data++;
                 if(cleft==0xFF) return; // end of line
+    if(obor_legacy_width) {
+                cwidth = *data++;
+                if(!cwidth) continue;
+                //scale_s += cleft<<8;     // src scale, 256
+                charptr = data;
+                data += cwidth; // skip some bytes to next block
+    }
                 scale_d += cleft*scale;  // dest scale, scale
                 dx -= (cleft*scale)>>8;  // move left , because it is flipped
                 if(dx<0) return; // out of left border? exit
@@ -340,11 +372,13 @@ static void scaleline_flip(int x, int cx, int width, int *linetab, unsigned* pal
                         dest_c -= (d>>8);
                         old_scale_d = scale_d & 0xFFFFFF00;
                 }
+    if(!obor_legacy_width) {
                 cwidth = *data++;
                 if(!cwidth) continue;
                 //scale_s += cleft<<8;     // src scale, 256
                 charptr = data;
                 data += cwidth; // skip some bytes to next block
+    }
                 while(cwidth--) // draw these pixels
                 {
                         scale_d += scale;
@@ -389,6 +423,7 @@ static const double cos_table[] = //360
 // angle: rotate angle, should be a positive value from 0 - 359, check it before use this function
 static void scaleline_rot(int x, int y, int cx, int dy, int width, int *linetab, unsigned* palette, unsigned *dest_c, blend32fp fp, int scale, int angle)
 {
+    const int obor_legacy_width = obor_profile_build < 3396;
         unsigned char* data;
         int dx, rx, ry, i, d;
         unsigned char * charptr;
@@ -408,6 +443,13 @@ static void scaleline_rot(int x, int y, int cx, int dy, int width, int *linetab,
         {
                 cleft = *data++;
                 if(cleft==0xFF) return;// end of line
+    if(obor_legacy_width) {
+                cwidth = *data++;
+                if(!cwidth) continue;
+                //scale_s += cleft<<8;     // src scale, 256
+                charptr = data;
+                data += cwidth; // skip some bytes to next block
+    }
                 scale_d += cleft*scale;  // dest scale, scale
                 dx += (cleft*scale)>>8;
                 //if(dx>=screenwidth) return; // out of right border? exit
@@ -416,11 +458,13 @@ static void scaleline_rot(int x, int y, int cx, int dy, int width, int *linetab,
                 {
                         old_scale_d = scale_d & 0xFFFFFF00;
                 }
+    if(!obor_legacy_width) {
                 cwidth = *data++;
                 if(!cwidth) continue;
                 //scale_s += cleft<<8;     // src scale, 256
                 charptr = data;
                 data += cwidth; // skip some bytes to next block
+    }
                 while(cwidth--) // draw these pixels
                 {
                         scale_d += scale;
@@ -489,6 +533,7 @@ static void scaleline_rot(int x, int y, int cx, int dy, int width, int *linetab,
 // angle: rotate angle, should be a positive value from 0 - 359, check it before use this function
 static void scaleline_rotflip(int x, int y, int cx, int dy, int width, int *linetab, unsigned* palette, unsigned *dest_c, blend32fp fp,  int scale, int angle)
 {
+    const int obor_legacy_width = obor_profile_build < 3396;
         unsigned char* data;
         int dx, rx, ry, i, d;
         unsigned char * charptr;
@@ -509,6 +554,13 @@ static void scaleline_rotflip(int x, int y, int cx, int dy, int width, int *line
         {
                 cleft = *data++;
                 if(cleft==0xFF) return;
+    if(obor_legacy_width) {
+                cwidth = *data++;
+                if(!cwidth) continue; // end of line
+                //scale_s += cleft<<8;     // src scale, 256
+                charptr = data;
+                data += cwidth; // skip some bytes to next block
+    }
                 scale_d += cleft*scale;  // dest scale, scale
                 dx -= (cleft*scale)>>8;  // move left , because it is flipped
                 //if(dx<0) return; // out of left border? exit
@@ -517,11 +569,13 @@ static void scaleline_rotflip(int x, int y, int cx, int dy, int width, int *line
                 {
                         old_scale_d = scale_d & 0xFFFFFF00;
                 }
+    if(!obor_legacy_width) {
                 cwidth = *data++;
                 if(!cwidth) continue; // end of line
                 //scale_s += cleft<<8;     // src scale, 256
                 charptr = data;
                 data += cwidth; // skip some bytes to next block
+    }
                 while(cwidth--) // draw these pixels
                 {
                         scale_d += scale;
@@ -695,7 +749,7 @@ void putsprite_ex_x8p32(int x, int y, s_sprite *frame, s_screen *screen, s_drawm
 
                 if(drawmethod->flipx)
                 {
-					if(!drawmethod->shiftx){
+					if(obor_profile_build < 3399 || !drawmethod->shiftx){
                         dx = x + ((centerx*drawmethod->scalex)/256); //draw start x
                         if(dx<0 || dx-((frame->width*drawmethod->scalex)>>8)>=screenwidth) return; // out of left or right border
 					}
@@ -703,7 +757,7 @@ void putsprite_ex_x8p32(int x, int y, s_sprite *frame, s_screen *screen, s_drawm
                 }
                 else
                 {
-					if(!drawmethod->shiftx){
+					if(obor_profile_build < 3399 || !drawmethod->shiftx){
                         dx = x - ((centerx*drawmethod->scalex)/256); //draw start x
                         if(dx>=screenwidth || dx+((frame->width*drawmethod->scalex)>>8)<0) return; // out of left or right border
 					}

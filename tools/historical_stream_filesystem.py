@@ -5,6 +5,7 @@ bounded fixture data; archive reads and unrelated interpreter calls are refused.
 SPDX-License-Identifier: BSD-3-Clause
 Copyright (c) 2026 retrodiv <retrodiv@proton.me>
 """
+import json
 import re
 
 
@@ -14,7 +15,7 @@ def render_filesystem(*, revisions, opening, saving, helpers, slots,
                       record=None, record_pack=None, header_includes=None,
                       level_streams=False, size_from_file=False,
                       save_returns_null=True, dynamic_strings=False,
-                      check_allocation_refusal=False):
+                      check_allocation_refusal=False, missing_file_contracts=None):
     if (not isinstance(revisions,list) or not 0<len(revisions)<=128 or
         any(type(n)is not int or not 0<n<=0xffffffff for n in revisions) or
         revisions!=sorted(set(revisions)) or type(slots)is not int or not 4<=slots<=1024 or
@@ -49,11 +50,47 @@ def render_filesystem(*, revisions, opening, saving, helpers, slots,
                 any(type(n)is not int or not 0<=n<=255 for n in case[k])for k in case) or
             not appends_terminator and (not case['input'] or case['input'][-1]!=0)):
             raise ValueError('Bounded byte expectations and terminated original input required')
+    if missing_file_contracts is None:
+        missing_file_contracts = [dict(first=0,last=0xffffffff,status='S_OK',
+            type='VT_INTEGER',value=-1,diagnostic='',diagnostic_events=0)]
+    if not isinstance(missing_file_contracts,list) or not 0<len(missing_file_contracts)<=128:
+        raise ValueError('Explicit bounded missing-file contracts required')
+    missing_checks=[];previous=-1
+    for rule in missing_file_contracts:
+        if (not isinstance(rule,dict) or not
+            {'first','last','status','type','value','diagnostic','diagnostic_events'}<=set(rule)<=
+            {'first','last','status','type','value','diagnostic','diagnostic_events','controls'} or
+            any(type(rule[k])is not int for k in ['first','last','diagnostic_events']) or
+            not 0<=rule['first']<=rule['last']<=0xffffffff or rule['first']!=previous+1 or
+            rule['status']not in ('S_OK','E_FAIL') or rule['type']not in ('VT_EMPTY','VT_INTEGER') or
+            (rule['type']=='VT_EMPTY' and rule['value']is not None) or
+            (rule['type']=='VT_INTEGER' and
+             (type(rule['value'])is not int or not -0x80000000<=rule['value']<=0x7fffffff)) or
+            not isinstance(rule['diagnostic'],str) or len(rule['diagnostic'])>1024 or
+            '\0'in rule['diagnostic'] or not 0<=rule['diagnostic_events']<=16):
+            raise ValueError('Disjoint complete profile ranges and typed missing-file results required')
+        controls=rule.get('controls',[])
+        if (not isinstance(controls,list) or len(controls)>16 or
+            any(type(n)is not int or not max(1,rule['first'])<=n<=rule['last'] for n in controls) or
+            controls!=sorted(set(controls))):
+            raise ValueError('Bounded missing-file controls must belong to their declared range')
+        previous=rule['last'];conditions=[]
+        if rule['first']:conditions.append('obor_profile_build>='+str(rule['first'])+'u')
+        if rule['last']!=0xffffffff:conditions.append('obor_profile_build<='+str(rule['last'])+'u')
+        result='status=='+rule['status']+'&&out==&result&&result.vt=='+rule['type']
+        if rule['type']=='VT_INTEGER':result+='&&result.lVal==('+str(rule['value'])+')'
+        missing_checks.append('if('+('&&'.join(conditions)or'1')+'){++matched;'
+            'CHECK('+result+',"native missing file result");'
+            'CHECK(diagnostic_events=='+str(rule['diagnostic_events'])+'u&&!strcmp(diagnostic,'+
+            json.dumps(rule['diagnostic'])+'),"native missing file diagnostic");}')
+    if previous!=0xffffffff:
+        raise ValueError('Missing-file contracts must cover the complete profile domain')
     code=r'''
 #include <stdint.h>
 #include <stddef.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <stdarg.h>
 #include <string.h>
 #include <limits.h>
 #include <sys/stat.h>
@@ -82,6 +119,14 @@ static char directory[256],input_path[256],output_path[256],missing_path[256];
 static const char *scratch;
 static FILE *handles[4];
 static unsigned opens,closes,cases_checked;
+static unsigned diagnostic_events;
+static char diagnostic[2048];
+static int callback_printf(const char *format,...){
+ va_list args;va_start(args,format);size_t used=strlen(diagnostic);
+ int n=vsnprintf(diagnostic+used,sizeof(diagnostic)-used,format,args);va_end(args);
+ CHECK(n>=0&&(size_t)n<sizeof(diagnostic)-used,"bounded callback diagnostic");
+ ++diagnostic_events;return n;
+}
 static int refuse_buffer_allocation;
 static void *callback_allocation(size_t size){
  if(refuse_buffer_allocation){refuse_buffer_allocation=0;return NULL;}
@@ -138,15 +183,19 @@ HRESULT Interpreter_EvalInstruction(Interpreter *interpreter){(void)interpreter;
 #define fopen open_owned
 #define fclose close_owned
 #define malloc callback_allocation
+#define obor_profile_malloc_named(name, bytes) callback_allocation(bytes)
+#define printf callback_printf
 @HELPERS@
 @OPENING@
 @SAVING@
+#undef obor_profile_malloc_named
+#undef printf
 #undef fopen
 #undef fclose
 #undef malloc
 @CASES@
 static void seed_streams(void){
- opens=closes=0;refuse_buffer_allocation=0;CHECK(!active_files(),"no retained fixture handles");
+ opens=closes=diagnostic_events=0;diagnostic[0]=0;refuse_buffer_allocation=0;CHECK(!active_files(),"no retained fixture handles");
  @SEED_TABLE@
  FIXTURE_STREAMS[0].pos=9;FIXTURE_STREAMS[0].size=71;
 }
@@ -189,7 +238,9 @@ static void missing_case(void){
  seed_streams();ScriptVariant name={0},location={0},result={0},*out=&result;
  string_value(&name,"missing.txt");location.vt=VT_INTEGER;location.lVal=1;
  ScriptVariant *args[]={&name,&location};
- CHECK(openbor_openfilestream(args,&out,2)==S_OK&&out==&result&&result.vt==VT_INTEGER&&result.lVal==-1,"native missing file result");
+ HRESULT status=openbor_openfilestream(args,&out,2);unsigned matched=0;
+ @MISSING_CHECKS@
+ CHECK(matched==1,"one declared missing file policy");
  CHECK(!FIXTURE_STREAMS[0].buf&&FIXTURE_STREAMS[0].pos==9&&FIXTURE_STREAMS[0].size==71,"missing file retains free slot fields");
  CHECK(!opens&&!active_files(),"missing input has no file owner");
  ScriptVariant_Clear(&name);ScriptVariant_Clear(&result);retire_streams();++cases_checked;
@@ -267,5 +318,6 @@ static void allocation_case(void){
                       'strcpy(StrCache_Get(value->strVal),text);',
         ALLOCATION_CASE=allocation_case,RUN_ALLOCATION_CASE='allocation_case();'if check_allocation_refusal else'',
         OPEN_HANDLES='0'if open_closes_file else'1',
-        REVISIONS=','.join(str(n)+'u'for n in revisions))
+        REVISIONS=','.join(str(n)+'u'for n in revisions),
+        MISSING_CHECKS='\n'.join(missing_checks))
     return re.sub(r'@('+'|'.join(values)+r')@',lambda m:values[m[1]],code)

@@ -1,0 +1,209 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <assert.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+typedef int32_t LONG;
+typedef void VOID;
+typedef double DOUBLE;
+@VARIANT@
+@NODE@
+static s_variantnode **global_var_list;
+static ScriptVariant *indexed_var_list;
+static int max_global_vars, max_global_var_index, max_indexed_vars;
+static uint32_t obor_profile_build;
+static size_t named_bytes, indexed_bytes;
+static int reference_live = 1;
+static const uintptr_t reference_base = UINT64_C(0x2A000000000);
+static const uintptr_t reference_body = UINT64_C(0x2A001000040);
+static const char *cache_value = "alpha";
+char *obor_arena_base(void) { return (char *)reference_base; }
+size_t obor_allocation_size(const void *p) {
+    return p == global_var_list ? named_bytes : p == indexed_var_list ? indexed_bytes : 0;
+}
+int obor_allocation_contains(const void *p, size_t length) {
+    uintptr_t address = (uintptr_t)p;
+    return reference_live && length && address >= reference_body &&
+           address - reference_body < 256 && length <= 256 - (address - reference_body);
+}
+static char *StrCache_GetIfPresent(int index) {
+    return index == 1 ? (char *)cache_value : NULL;
+}
+#include "obor_script_file32.inc"
+@CONTEXTS@
+
+static void release(void) {
+    if(global_var_list) for(int i = 0; i < max_global_vars; ++i) free(global_var_list[i]->key);
+    free(global_var_list); free(indexed_var_list);
+    global_var_list = NULL; indexed_var_list = NULL;
+}
+static void integer(ScriptVariant *value, int32_t number) {
+    memset(value, 0, sizeof(*value)); value->vt = VT_INTEGER; value->lVal = number;
+}
+static void name(s_variantnode *node, const char *key) {
+    free(node->key); node->key = malloc(strlen(key) + 1); assert(node->key);
+    strcpy(node->key, key);
+}
+static void initialize(int indexed) {
+    release(); max_global_vars = 4; max_global_var_index = -1;
+    named_bytes = 4 * sizeof(*global_var_list) + 4 * sizeof(**global_var_list);
+    global_var_list = calloc(1, named_bytes); assert(global_var_list);
+    for(int i = 0; i < 4; ++i) {
+        global_var_list[i] = (s_variantnode *)((char *)global_var_list +
+                            4 * sizeof(*global_var_list) + i * sizeof(**global_var_list));
+        name(global_var_list[i], "old"); integer(&global_var_list[i]->value, 7 + i);
+    }
+    max_indexed_vars = indexed; indexed_bytes = indexed ? (indexed + 1) * sizeof(*indexed_var_list) : 0;
+    indexed_var_list = indexed ? calloc(1, indexed_bytes) : NULL;
+    if(indexed) {
+        assert(indexed_var_list);
+        for(int i = 0; i < indexed; ++i) integer(indexed_var_list + i, 11 * (i + 1));
+    }
+    reference_live = 1; cache_value = "alpha";
+}
+static size_t file_bytes(FILE *stream, unsigned char *bytes, size_t capacity) {
+    assert(!fflush(stream)); rewind(stream);
+    size_t size = fread(bytes, 1, capacity, stream); assert(!ferror(stream)); rewind(stream);
+    return size;
+}
+static void named_and_prefixes(size_t variant) {
+    unsigned char saved[64], expected[48];
+    const size_t node_size = variant == 12 ? 40 : 48;
+    initialize(0); max_global_var_index = 0;
+    name(global_var_list[0], "abcdefghijklmnopqrstuvw"); integer(&global_var_list[0]->value, 42);
+    FILE *stream = tmpfile(); assert(stream);
+    assert(obor_script_file32_write(stream, variant));
+    assert(file_bytes(stream, saved, sizeof(saved)) == 4 + node_size);
+    assert(!memcmp(saved, "\1\0\0\0", 4));
+    assert(saved[4] == 42 && saved[12] == VT_INTEGER);
+    assert(!memcmp(saved + 4 + variant, "abcdefghijklmnopqrstuvw", 24));
+    for(size_t prefix = 0; prefix <= node_size; ++prefix) {
+        initialize(0); max_global_var_index = 3;
+        memset(expected, 0, sizeof(expected)); expected[0] = 7; expected[8] = VT_INTEGER;
+        memcpy(expected + variant, "old", 4); memcpy(expected, saved + 4, prefix);
+        FILE *partial = tmpfile(); assert(partial);
+        assert(fwrite(saved, 1, 4 + prefix, partial) == 4 + prefix); rewind(partial);
+        assert(obor_script_file32_read(partial, variant));
+        assert(max_global_var_index == 1);
+        assert(global_var_list[0]->value.vt == VT_INTEGER);
+        assert(global_var_list[0]->value.lVal == (prefix ? 42 : 7));
+        assert(!strcmp(global_var_list[0]->key, (char *)expected + variant));
+        assert(!strcmp(global_var_list[1]->key, "old") && global_var_list[1]->value.lVal == 8);
+        assert(!fclose(partial));
+    }
+    assert(!fclose(stream));
+}
+static void indexed_traversal(size_t variant, int extra_slot) {
+    unsigned char saved[192]; size_t node_size = variant == 12 ? 40 : 48;
+    for(int active = 0; active <= 1; ++active) {
+        if(active && !extra_slot) continue; /* Original allocation has no spare slot. */
+        initialize(2); max_global_var_index = active - 1;
+        name(global_var_list[0], "score"); integer(&global_var_list[0]->value, 42);
+        FILE *stream = tmpfile(); assert(stream); assert(obor_script_file32_write(stream, variant));
+        size_t length = file_bytes(stream, saved, sizeof(saved));
+        assert(length == 4 + active * node_size + 2 * variant);
+        assert(saved[4 + active * node_size] == (active ? 22 : 11));
+        assert(saved[4 + active * node_size + variant] == (active ? 0 : 22));
+        initialize(2); integer(indexed_var_list, 100); integer(indexed_var_list + 1, 200);
+        assert(obor_script_file32_read(stream, variant));
+        assert(max_global_var_index == active);
+        assert(indexed_var_list[0].lVal == 100 && indexed_var_list[1].lVal == 200);
+        s_variantnode *extra = global_var_list[active];
+        assert(extra->value.vt == VT_INTEGER && extra->value.lVal == (active ? 22 : 11));
+        assert((unsigned char)extra->key[0] == (active ? 0 : 22));
+        assert(!fclose(stream));
+    }
+    /* Valid input can contain an extra complete node before the indexed
+     * tail. Observe the original loop-counter subtraction and full clamp. */
+    initialize(0); max_global_var_index = 0;
+    FILE *stream = tmpfile(); assert(stream); assert(obor_script_file32_write(stream, variant));
+    assert(file_bytes(stream, saved, sizeof(saved)) == 4 + node_size);
+    FILE *tail = tmpfile(); assert(tail);
+    assert(fwrite(saved, 1, 4 + node_size, tail) == 4 + node_size);
+    assert(fwrite(saved + 4, 1, node_size, tail) == node_size);
+    unsigned char raw[16] = {0}; raw[0] = 91; raw[8] = VT_INTEGER;
+    assert(fwrite(raw, 1, variant, tail) == variant);
+    raw[0] = 92; assert(fwrite(raw, 1, variant, tail) == variant); rewind(tail);
+    initialize(2); assert(obor_script_file32_read(tail, variant));
+    assert(indexed_var_list[0].lVal == 91 && indexed_var_list[1].lVal == 92);
+    assert(indexed_var_list[2].vt == VT_EMPTY);
+    assert(!fclose(tail) && !fclose(stream));
+}
+static void values_and_references(size_t variant) {
+    initialize(0); max_global_var_index = 3;
+    integer(&global_var_list[0]->value, INT32_MIN);
+    global_var_list[1]->value.vt = VT_DECIMAL; global_var_list[1]->value.dblVal = 1.5;
+    global_var_list[2]->value.vt = VT_STR; global_var_list[2]->value.strVal = 1;
+    global_var_list[3]->value.vt = VT_PTR; global_var_list[3]->value.ptrVal = (void *)reference_body;
+    FILE *stream = tmpfile(); assert(stream); assert(obor_script_file32_write(stream, variant));
+    rewind(stream); initialize(0); cache_value = "beta";
+    assert(obor_script_file32_read(stream, variant));
+    assert(max_global_var_index == 3 && global_var_list[0]->value.lVal == INT32_MIN);
+    assert(global_var_list[1]->value.vt == VT_DECIMAL && global_var_list[1]->value.dblVal == 1.5);
+    assert(global_var_list[2]->value.vt == VT_STR && global_var_list[2]->value.strVal == 1);
+    assert(!strcmp(StrCache_GetIfPresent(global_var_list[2]->value.strVal), "beta"));
+    assert(global_var_list[3]->value.vt == VT_PTR && global_var_list[3]->value.ptrVal == (void *)reference_body);
+    /* Non-null local owners are skipped on save and retained after an EOF
+     * partial read, including owners outside the snapshot arena. */
+    initialize(0); max_global_var_index = 0;
+    global_var_list[0]->owner = (struct Script *)(uintptr_t)&reference_live;
+    FILE *local = tmpfile(); assert(local); assert(obor_script_file32_write(local, variant));
+    assert(ftell(local) == 4); rewind(local);
+    assert(obor_script_file32_read(local, variant));
+    assert(global_var_list[0]->owner == (struct Script *)(uintptr_t)&reference_live);
+    assert(!fclose(local) && !fclose(stream));
+}
+static void defined_refusals(size_t variant) {
+    unsigned char saved[64];
+    initialize(0); max_global_var_index = 0;
+    global_var_list[0]->value.vt = VT_PTR; global_var_list[0]->value.ptrVal = (void *)reference_body;
+    FILE *stream = tmpfile(); assert(stream); assert(obor_script_file32_write(stream, variant));
+    size_t length = file_bytes(stream, saved, sizeof(saved));
+    initialize(0); reference_live = 0;
+    assert(!obor_script_file32_read(stream, variant));
+    assert(global_var_list[0]->value.vt == VT_INTEGER && global_var_list[0]->value.lVal == 7);
+    for(int kind = 0; kind < 4; ++kind) {
+        unsigned char modified[64]; memcpy(modified, saved, length);
+        if(kind == 0) memset(modified, 255, 4);
+        if(kind == 1) modified[12] = 255;
+        if(kind == 2) memset(modified + 4 + variant, 'x', 24);
+        if(kind == 3) { modified[12] = VT_STR; memset(modified + 4, 255, 4); }
+        initialize(0); FILE *invalid = tmpfile(); assert(invalid);
+        assert(fwrite(modified, 1, length, invalid) == length); rewind(invalid);
+        assert(!obor_script_file32_read(invalid, variant));
+        assert(global_var_list[0]->value.vt == VT_INTEGER && global_var_list[0]->value.lVal == 7);
+        assert(!fclose(invalid));
+    }
+    for(size_t prefix = 0; prefix < 4; ++prefix) {
+        initialize(0); FILE *short_header = tmpfile(); assert(short_header);
+        assert(fwrite(saved, 1, prefix, short_header) == prefix); rewind(short_header);
+        assert(!obor_script_file32_read(short_header, variant));
+        assert(max_global_var_index == -1 && !fclose(short_header));
+    }
+    initialize(2); max_global_var_index = 2;
+    FILE *bounded = tmpfile(); assert(bounded);
+    assert(!obor_script_file32_write(bounded, variant));
+    initialize(0); --named_bytes;
+    assert(!obor_script_file32_write(bounded, variant)); ++named_bytes;
+    assert(!fclose(bounded) && !fclose(stream));
+}
+int main(void) {
+    assert(obor_script32_target_variant_size() == 12 || obor_script32_target_variant_size() == 16);
+    for(size_t context = 0; context < sizeof(contexts) / sizeof(contexts[0]); ++context) {
+        obor_profile_build = contexts[context].revision;
+        for(size_t layout = 12; layout <= 16; layout += 4) {
+            named_and_prefixes(layout); indexed_traversal(layout, contexts[context].extra_slot);
+            values_and_references(layout); defined_refusals(layout);
+            if(!contexts[context].extra_slot) {
+                initialize(2); max_global_var_index = 0;
+                FILE *invalid = tmpfile(); assert(invalid);
+                assert(!obor_script_file32_write(invalid, layout));
+                assert(!fclose(invalid));
+            }
+        }
+    }
+    release(); puts("PASS explicit script records: defined traversal, partial reads, values, ownership and bounded refusals");
+    return 0;
+}

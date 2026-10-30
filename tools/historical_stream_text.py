@@ -197,9 +197,13 @@ static int bounded_format(char *out,size_t capacity,const char *format,...){
 #define malloc callback_malloc
 #define calloc callback_calloc
 #define printf(...) callback_printf(__VA_ARGS__)
+#define obor_profile_malloc_named(name, bytes) callback_malloc(bytes)
+#define obor_profile_calloc_named(name, bytes) callback_calloc(1, bytes)
 @CALLBACKS@
 @ARGUMENT_READER@
 @SAVE_ERRORS@
+#undef obor_profile_malloc_named
+#undef obor_profile_calloc_named
 #undef printf
 #undef malloc
 #undef calloc
