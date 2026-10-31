@@ -65,12 +65,15 @@ class EarlyCallbackOrderTests(unittest.TestCase):
                 self.assertRegex(digest, r'^[0-9a-f]{64}$')
             for op, record in enumerate(row['operations']):
                 self.assertEqual(sorted(record['order']), list(range(len(slots))))
+                self.assertEqual(len(record['remaining']), len(fixture['patterns']))
                 for pattern, remaining in enumerate(record['remaining']):
                     self.assertEqual(len(remaining), len(set(remaining)))
                     self.assertTrue(all(0 <= i < len(fixture['patterns'][pattern]) for i in remaining))
-                    checks.append('check(%d,%d,%d,(int[]){%s},%d,(int[]){%s},%d);' % (
+                    checks.append('{%d,%d,%d,{%s},%d,{%s},%d}' % (
                         row['revision'], op, record['method'], ','.join(map(str, record['order'])),
                         pattern, ','.join(map(str, remaining)) or '-1', len(remaining)))
+        expected_checks = len(rows) * len(operation_names) * len(fixture['patterns'])
+        self.assertEqual(len(checks), expected_checks)
         patterns = '\n'.join('static const int pattern_%d[]={%s};' % (i, ','.join(map(str, p)))
                              for i, p in enumerate(fixture['patterns']))
         pattern_select = '\n'.join('case %d: owners=pattern_%d; length=sizeof(pattern_%d)/sizeof(int); break;' %
@@ -185,10 +188,24 @@ static void check(unsigned revision,int op,int method,const int *order,int patte
  assert(destroyed==(int)count*(copying?2:3));
  obor_profile_callback_scripts(NULL,NULL,method,operation);
 }
-int main(void) {@CHECKS@ puts("early_callback_order=1");return 0;}
+typedef struct {
+ unsigned revision;
+ int op,method,order[64],pattern,remaining[16],remaining_count;
+} callback_case;
+static const callback_case cases[]={@CHECKS@};
+int main(void) {
+ unsigned executed=0;
+ for(size_t i=0;i<sizeof(cases)/sizeof(*cases);i++) {
+  const callback_case *item=cases+i;
+  check(item->revision,item->op,item->method,item->order,item->pattern,
+        item->remaining,item->remaining_count);
+  executed++;
+ }
+ fprintf(stdout,"early_callback_order=1 checks=%u\n",executed);return 0;
+}
 '''.replace('@AGGREGATE@', aggregate[0]).replace('@ENUM@', enum[0]).replace(
             '@FUNCTIONS@', functions).replace('@PATTERNS@', patterns).replace(
-            '@PATTERN_SELECT@', pattern_select).replace('@CHECKS@', '\n'.join(checks))
+            '@PATTERN_SELECT@', pattern_select).replace('@CHECKS@', ',\n'.join(checks))
         with tempfile.TemporaryDirectory(prefix='early-callback-order-') as name:
             work = Path(name)
             unit, binary = work / 'probe.c', work / 'probe'
@@ -218,6 +235,7 @@ int main(void) {@CHECKS@ puts("early_callback_order=1");return 0;}
                 }, indent=2) + '\n')
             self.assertEqual(run.returncode, 0, run.stdout + run.stderr)
             self.assertIn('early_callback_order=1', run.stdout)
+            self.assertIn('checks=%d' % expected_checks, run.stdout)
 
 
 if __name__ == '__main__':

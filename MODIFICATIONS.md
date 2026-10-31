@@ -1,6 +1,6 @@
 # AnyBOR port modification record
 
-Record updated: **2026-10-30**. Port maintainer: **retrodiv**
+Record updated: **2026-10-31**. Port maintainer: **retrodiv**
 (<retrodiv@proton.me>).
 
 AnyBOR offers selectable engine profiles through its libretro port.

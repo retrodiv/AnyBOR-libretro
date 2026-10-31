@@ -4,24 +4,89 @@ SPDX-License-Identifier: BSD-3-Clause
 Copyright (c) 2026 retrodiv <retrodiv@proton.me>
 """
 import json
+import math
+from pathlib import Path
 import re
 import shlex
 
 
-def select_profile_group(profiles, value):
+def balanced_boundaries(weights, count):
+    """Minimize the largest contiguous group's measured cost, without omissions."""
+    if (not weights or not 1 <= count <= len(weights) or
+            any(not isinstance(w, (int, float)) or isinstance(w, bool) or
+                not math.isfinite(w) or w <= 0 for w in weights)):
+        raise ValueError('Positive finite profile costs and nonempty groups required')
+    prefix = [0.0]
+    for weight in weights:
+        prefix.append(prefix[-1] + weight)
+    previous = {0: (0.0, [])}
+    for groups in range(1, count + 1):
+        current = {}
+        for end in range(groups, len(weights) + 1):
+            best = None
+            for start, (maximum, cuts) in previous.items():
+                if start >= end:
+                    continue
+                candidate = (max(maximum, prefix[end] - prefix[start]), cuts + [end])
+                if best is None or candidate[0] < best[0]:
+                    best = candidate
+            current[end] = best
+        previous = current
+    maximum, cuts = previous[len(weights)]
+    return [0] + cuts, maximum
+
+
+def policy_weights(profiles, policy):
+    """Use observed profiles and conservative physical-family costs for growth."""
+    if not isinstance(policy, dict) or set(policy) != {'profiles', 'engines', 'budget_seconds'}:
+        raise ValueError('Invalid measured profile cost policy')
+    observed, engines = policy['profiles'], policy['engines']
+    if not isinstance(observed, dict) or not isinstance(engines, dict):
+        raise ValueError('Profile and engine cost inventories required')
+    result = []
+    for entry in profiles:
+        name, engine = entry['build'], entry.get('engine')
+        if name in observed:
+            row = observed[name]
+            if not isinstance(row, dict) or row.get('engine') != engine:
+                raise ValueError('Measured profile engine changed: ' + name)
+            result.append(row.get('seconds'))
+        elif engine in engines:
+            result.append(engines[engine])
+        else:
+            raise ValueError('No measured cost for profile family: ' + name)
+    budget = policy['budget_seconds']
+    if (not isinstance(budget, (int, float)) or isinstance(budget, bool) or
+            not math.isfinite(budget) or budget <= 0):
+        raise ValueError('Positive finite runtime budget required')
+    return result, budget
+
+
+def select_profile_group(profiles, value, *, policies_path=None):
     profiles = list(profiles)
     names = [entry['build'] for entry in profiles]
     if not names or len(set(names)) != len(names):
         raise ValueError('Profile inventory must be nonempty and unique')
     if value is None:
         return profiles
-    match = re.fullmatch(r'([1-9][0-9]*)/([1-9][0-9]*)', value)
+    match = re.fullmatch(r'(?:([a-z][a-z0-9-]*):)?([1-9][0-9]*)/([1-9][0-9]*)', value)
     if match is None:
         raise ValueError('Profile group must be a one-based INDEX/COUNT')
-    index, count = map(int, match.groups())
+    policy_name, index, count = match.groups()
+    index, count = int(index), int(count)
     if not 1 <= index <= count <= len(profiles):
         raise ValueError('Profile group must be nonempty and within the inventory')
-    return profiles[len(profiles) * (index - 1) // count:len(profiles) * index // count]
+    if policy_name is None:
+        return profiles[len(profiles) * (index - 1) // count:len(profiles) * index // count]
+    path = policies_path or Path(__file__).with_name('profile_costs.json')
+    policies = json.loads(Path(path).read_text())
+    if policies.get('schema') != 1 or policy_name not in policies.get('policies', {}):
+        raise ValueError('Unknown measured profile policy: ' + policy_name)
+    weights, budget = policy_weights(profiles, policies['policies'][policy_name])
+    cuts, maximum = balanced_boundaries(weights, count)
+    if maximum > budget:
+        raise ValueError('Measured runtime budget exceeded; review native grouping: ' + policy_name)
+    return profiles[cuts[index - 1]:cuts[index]]
 
 
 def expand_workflow_profile_groups(workflow):
@@ -96,8 +161,11 @@ def check_workflow_groups(workflow, profiles):
     for (script, platform), selectors in paths.items():
         groups = [select_profile_group(profiles, value) for value in selectors]
         limit = 24 if platform == 'macos' else 8
-        if not groups or any(len(group) > limit for group in groups):
+        if not groups or any(len(group) > limit and ':' not in selector
+                             for group, selector in zip(groups, selectors)):
             raise ValueError('CI profile group exceeds platform budget: ' + platform)
+        if any(':' in selector for selector in selectors) and platform != 'macos':
+            raise ValueError('Measured native grouping requires macOS cost evidence')
         if [entry['build'] for group in groups for entry in group] != names:
             raise ValueError('Incomplete or duplicate CI profile coverage: ' + script + ' / ' + platform)
     # The ARM native job reuses the same steps but has its own matrix and

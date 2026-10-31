@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.78 — CI compilation and native scheduling
+
+- Compile callback-order checks from a case table while retaining every assertion.
+- Balance native runtime groups using measured profile costs and bounded family estimates.
+- Keep complete per-profile coverage while reducing queued macOS Intel jobs.
+
 ## 0.1.77 — early historical profiles
 
 - Add 56 official profiles from 3057 through 3397 and the exact-tag/manual 3020-dev profile.

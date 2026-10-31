@@ -15,6 +15,8 @@ import unittest
 from unittest.mock import patch
 
 from ci_focused import load_suites, select_suites, completed_test_failure, run_suites, verify_workflow, workflow_job
+# unittest collects the imported controls in this shared CI suite as well.
+from test_profile_groups import ProfileGroupsTests
 
 
 class FocusedPlanTests(unittest.TestCase):

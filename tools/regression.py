@@ -69,7 +69,7 @@ def main():
     parser.add_argument("--runner", default="", help="optional emulator command for the host")
     parser.add_argument("--windows", action="store_true", help="use Wine Z: paths with a Windows host")
     parser.add_argument("--historical-only", action="store_true", help="run only historical compiled-script contracts")
-    parser.add_argument("--profile-group", help="one-based INDEX/COUNT partition of all profile cases")
+    parser.add_argument("--profile-group", help="INDEX/COUNT or measured POLICY:INDEX/COUNT of all profile cases")
     args = parser.parse_args()
     root = release.ROOT
     profiles = select_profile_group(release.read_json(root / "src/pin.json")["profiles"],

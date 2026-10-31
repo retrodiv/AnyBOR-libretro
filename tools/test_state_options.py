@@ -206,7 +206,7 @@ def main():
     parser.add_argument("--runner", default="")
     parser.add_argument("--keep-wine-server", action="store_true")
     parser.add_argument("--work-parent")
-    parser.add_argument("--profile-group", help="one-based INDEX/COUNT partition; omitted runs every profile")
+    parser.add_argument("--profile-group", help="INDEX/COUNT or measured POLICY:INDEX/COUNT; omitted runs every profile")
     args = parser.parse_args()
     if args.keep_wine_server and (not args.windows or args.runner != "wine" or not args.work_parent):
         parser.error("--keep-wine-server requires --windows --runner wine --work-parent")

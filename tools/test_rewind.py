@@ -60,7 +60,7 @@ def main():
     parser.add_argument("--windows-native", action="store_true",
                         help="run a Windows host natively (also supports WSL interop)")
     parser.add_argument("--work-parent", help="parent for temporary test files; use a Windows drive under WSL")
-    parser.add_argument("--profile-group", help="one-based INDEX/COUNT partition; omitted runs every profile")
+    parser.add_argument("--profile-group", help="INDEX/COUNT or measured POLICY:INDEX/COUNT; omitted runs every profile")
     args = parser.parse_args()
     profiles = select_profile_group(release.read_json(release.ROOT / "src/pin.json")["profiles"], args.profile_group)
     if args.keep_wine_server and (not args.windows or args.runner != 'wine' or not args.work_parent):

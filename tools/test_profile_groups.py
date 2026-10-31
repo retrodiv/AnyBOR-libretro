@@ -6,10 +6,41 @@ Copyright (c) 2026 retrodiv <retrodiv@proton.me>
 import os
 import unittest
 from pathlib import Path
-from profile_groups import select_profile_group, check_workflow_groups
+from profile_groups import (balanced_boundaries, policy_weights,
+                            select_profile_group, check_workflow_groups)
 
 
 class ProfileGroupsTests(unittest.TestCase):
+    def test_measured_partition_keeps_order_and_balances_heavy_profiles(self):
+        cuts, maximum = balanced_boundaries([9, 1, 1, 1, 1, 1], 2)
+        self.assertEqual(cuts, [0, 1, 6])
+        self.assertEqual(maximum, 9)
+        for costs in ([], [0], [-1], [float('inf')], [float('nan')], [True]):
+            with self.subTest(costs=costs), self.assertRaises(ValueError):
+                balanced_boundaries(costs, 1)
+
+    def test_measured_policy_growth_has_explicit_family_cost_and_budget(self):
+        import json
+        import tempfile
+        profiles = [dict(build='old', engine='family'), dict(build='new', engine='family')]
+        policy = dict(profiles={'old': dict(engine='family', seconds=3)},
+                      engines={'family': 7}, budget_seconds=10)
+        self.assertEqual(policy_weights(profiles, policy), ([3, 7], 10))
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / 'costs.json'
+            path.write_text(json.dumps(dict(schema=1, policies={'native': policy})))
+            self.assertEqual(select_profile_group(profiles, 'native:1/2', policies_path=path), profiles[:1])
+            self.assertEqual(select_profile_group(profiles, 'native:2/2', policies_path=path), profiles[1:])
+            with self.assertRaisesRegex(ValueError, 'runtime budget exceeded'):
+                select_profile_group(profiles + [dict(build='more', engine='family')],
+                                     'native:1/1', policies_path=path)
+            with self.assertRaisesRegex(ValueError, 'Unknown measured'):
+                select_profile_group(profiles, 'missing:1/2', policies_path=path)
+            with self.assertRaisesRegex(ValueError, 'engine changed'):
+                select_profile_group([dict(build='old', engine='other')], 'native:1/1', policies_path=path)
+            with self.assertRaisesRegex(ValueError, 'No measured cost'):
+                select_profile_group([dict(build='unknown', engine='other')], 'native:1/1', policies_path=path)
+
     def test_all_sizes_counts_and_no_selection(self):
         for size in (1, 9, 13, 27, 32, 37):
             inventory = [dict(build=str(n), engine=str(n % 9)) for n in range(size)]
