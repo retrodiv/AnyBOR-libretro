@@ -59,10 +59,10 @@ void freescreen(s_screen **screen)
 {
     s_screen *owned;
     if(!screen) return;
-    memcpy(&owned, screen, sizeof(owned));
+    memcpy(&owned, (const void *)screen, sizeof(owned));
     if(owned) free(owned);
     owned = NULL;
-    memcpy(screen, &owned, sizeof(owned));
+    memcpy((void *)screen, &owned, sizeof(owned));
 }
 
 // Screen copy func. Supports clipping.

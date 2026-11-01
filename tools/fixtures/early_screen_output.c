@@ -10,8 +10,8 @@ static int owner_open_ok,owner_alloc_ok,owner_read_ok,owner_assertion,owner_expl
 static int owner_opens,owner_allocs,owner_reads,owner_closes,owner_frees,owner_active;
 static int owner_res[2]={2,3};
 static jmp_buf owner_stop;
-static s_screen *owner_get(void) {s_screen *value;memcpy(&value,owner_slot,sizeof(value));return value;}
-static void owner_put(s_screen *value) {memcpy(owner_slot,&value,sizeof(value));}
+static s_screen *owner_get(void) {s_screen *value;memcpy(&value,(const void *)owner_slot,sizeof(value));return value;}
+static void owner_put(s_screen *value) {memcpy((void *)owner_slot,&value,sizeof(value));}
 static void owner_free(void *pointer) {
  int found=0;
  for(int i=0;i<2;++i)if(owner_live[i]==pointer){owner_live[i]=NULL;found=1;break;}

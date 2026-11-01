@@ -1028,12 +1028,12 @@ int loadscreen(char *filename, char *packfile, unsigned char *pal, int format, s
     printf("loadscreen called packfile: %s, filename %s\n", packfile, filename);
 #endif
     if(!screen) return 0;
-    memcpy(&loaded, screen, sizeof(loaded));
+    memcpy(&loaded, (const void *)screen, sizeof(loaded));
     if(loaded) { freescreen(screen); loaded = NULL; }
     if(!openimage(filename, packfile)) return 0;
     if(!loaded || (loaded->width != res[0] && loaded->height != res[1] && loaded->pixelformat != format)) {
         loaded = allocscreen(res[0], res[1], format);
-        memcpy(screen, &loaded, sizeof(loaded));
+        memcpy((void *)screen, &loaded, sizeof(loaded));
         if(loaded == NULL) {
             closeimage();
             obor_early_image_assert(0);

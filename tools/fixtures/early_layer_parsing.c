@@ -41,7 +41,7 @@ s_sprite *loadsprite2(char *name,int *width,int *height) {
  event(1,name,0);*width=7;*height=provider_height;return &picture;
 }
 int loadscreen(char *name,char *pack,unsigned char *palette,int format,s_screen **out) {
- assert(pack==packfile && !palette && format==PIXEL_8);event(2,name,0);s_screen *loaded=&image;memcpy(out,&loaded,sizeof(loaded));return 1;
+ assert(pack==packfile && !palette && format==PIXEL_8);event(2,name,0);s_screen *loaded=&image;memcpy((void *)out,&loaded,sizeof(loaded));return 1;
 }
 void load_texture(char *name) {event(3,name,0);}
 void texture_set_wave(float amplitude) {event(4,NULL,amplitude);}

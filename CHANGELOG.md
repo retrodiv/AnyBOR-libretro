@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.80 — native alignment checks and CI scheduling
+
+- Preserve image ownership when copying references from packed records.
+- Keep historical layer probes compatible with native alignment sanitizers.
+- Balance native runtime groups using measured per-profile costs.
+
 ## 0.1.79 — historical profiles through 3482
 
 - Add 25 official profiles from 3406 through 3482.

@@ -232,7 +232,7 @@
       "upstream_sha256": "be38caf09258969a0f9c68502c91e7ca46546f65d68f4aa5c169e1665838054a"
     },
     "source/gamelib/loadimg.c": {
-      "distributed_sha256": "b989d5cd871a6cab951cb5e77ba8262278591527e26e724f7ada9faffe93981f",
+      "distributed_sha256": "3672db35005315a2465bab28cfb2f42dfa68d736df6e79ade03c83b35a3b0651",
       "modified": true,
       "summary": "Validate legacy PCX sprite headers, read uncompressed indexed PCX scanlines, and represent RIFF/WAVE paths used as animation frames with an empty frame. Preserve native palette-only filename probing, three-plane refusals and final RGB table conversion without interpreting palette bytes as sprite dimensions. Keep bitmap row reads within the requested output width. Preserve native image decoder selection and palette results with checked output alignment and owned storage.",
       "topics": [
@@ -376,7 +376,7 @@
       "upstream_sha256": "c3371b58605f5b5f2ebe58b2afaeafb265e92cf8d4fe5d7a371cd3fa0a7e786d"
     },
     "source/gamelib/screen.c": {
-      "distributed_sha256": "b5ec6cb3bc5a7ac8f04f7b0487627bd31fb432f196af4a4e8cc25bd9ffe9da44",
+      "distributed_sha256": "dbd25e951da8e97faef2e87ee63eb34f3bdcfa6448fc1f6c593c0b53f7b6a5d5",
       "modified": true,
       "summary": "Preserve native water phase, byte widths, clipping and transparent traversal by profile; bound screen extents before drawing. Bound screen blend selectors and use transparent copy when an indexed table is unavailable.",
       "topics": [
