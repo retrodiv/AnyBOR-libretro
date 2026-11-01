@@ -6,6 +6,7 @@ Copyright (c) 2026 retrodiv <retrodiv@proton.me>
 import re
 
 from test_historical_player import function
+from historical_water_phase import water_sines
 
 
 def render_early_triangle(engine, fixture):
@@ -72,6 +73,7 @@ def render_early_triangle(engine, fixture):
 #include <stdlib.h>
 #include <string.h>
 #include "source/scriptlib/ScriptVariant.h"
+@WATER_SINES@
 @TRIANGLE_UNIT@
 #include "source/gamelib/spritef.c"
 #undef printf
@@ -79,6 +81,9 @@ def render_early_triangle(engine, fixture):
 #define assert(c) do {if(!(c)){fprintf(stderr,"triangle contract revision=%u line=%d: %s\n",obor_profile_build,__LINE__,#c);abort();}}while(0)
 uint32_t obor_profile_build;
 void writeToLogFile(const char *format,...) {(void)format;}
+void obor_port_assert(int value,const char *expression,const char *function,const char *file,int line){
+ if(!value){fprintf(stderr,"%s:%d: %s: %s\n",file,line,function,expression);abort();}
+}
 static unsigned triangle_calls;
 static vert2d observed[4];
 void draw_triangle_list(vert2d *vertices,s_screen *dest,gfx_entry *src,s_drawmethod *method,int count){
@@ -282,7 +287,7 @@ int main(void){
 }
 '''
     for key, value in dict(VERTEX_STORAGE=storage[0], VERTEX_CAPACITY=str(fixture['vertex_capacity']),
-                           TRIANGLE_UNIT=triangle, VARIANTS=variants, STUBS=stubs, CALLBACKS=callback_source,
+                           WATER_SINES=water_sines(engine), TRIANGLE_UNIT=triangle, VARIANTS=variants, STUBS=stubs, CALLBACKS=callback_source,
                            METHODS=methods, GEOMETRY=','.join(cases), CHECKS=checks).items():
         code = code.replace('@' + key + '@', value)
     return code

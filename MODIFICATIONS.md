@@ -33,6 +33,13 @@ owning node and the alias map. Cleanup follows the owning list independently
 of the number of shared references. The native release order, reset count and
 retained map capacity are preserved.
 
+## Jump effect creation
+
+Unavailable jump effects leave the jump active without an effect callback.
+Available effects retain their native placement, lifetime and callback order.
+An unavailable optional held item leaves its parent entity active, with the
+parent's creation callbacks preserved.
+
 ## Sprite map growth
 
 Sprite maps retain their native capacity policy and existing entries during
@@ -565,6 +572,19 @@ Screen centering and indexed palette transparency follow each profile's native d
 Indexed transformations follow each profile's remap, fill and blend order.
 Transparency tests the source index before fill replacement; fill indices use their low eight bits.
 Centered sprites retain each profile's native drawing route and palette blending.
+Scaled sprite lines preserve each profile's fractional positioning, clipping
+and pixel order. Historical positions are checked against the image capacity
+before forming a pixel pointer; clipped rows do not form pointers outside it.
+Water rows preserve the profile's palette fallback, clipped-row lookup,
+phase normalization and clipping. Indexed water applies its profile's key,
+remap and blend order through the normal screen entry point. Plane effects retain the profile's
+source wrapping, center, vertical progression and perspective ratio. Queued
+drawing methods retain the profile's enablement behavior.
+
+Inverse sprite sampling and shared triangle pixels preserve the profile's
+scale, rotation, centers, palette and blend rules. Disabled advanced drawing
+uses the plain sprite path. Bitmap assertions stop the engine through the
+controlled core shutdown; builds without assertions retain bitmap drawing.
 
 Profile contracts and their implementation are documented in the [technical profile reference](docs/HISTORICAL_PROFILES.md#profile-implementation-details).
 
@@ -1208,6 +1228,21 @@ Normal attacks retain native wait checks, probability arguments, callback order
 and clock arithmetic. AI attack commands retain native argument handling,
 switch state and load diagnostics. Jump attacks retain native wait checks,
 probability arguments, movement and spawn callback order.
+Item searches retain each profile's distance and blink checks. Attack choices
+preserve target vulnerability checks and random-call order. Retreat completion
+and recovery delays follow the selected revision.
+Target searches preserve native candidate order, facing and vulnerability rules,
+and each revision's distance reuse.
+Blocked-path steering retains the native depth-edge response, blocked count
+threshold, wait time and animation callback/reset order.
+Avoidance retains native axis selection, screen-edge response, distance bands
+and added wait time.
+Chasing preserves native facing checks, weighted or per-axis speeds, speed
+normalization and close-range reversal with its wait adjustment.
+Following retains native parent or supplied-target selection, distance and axis
+results, facing and run checks.
+Wandering without a target retains native random-draw and turn order, screen
+limits, reflection waits and fixed-model behavior.
 Platform and obstacle collision queries retain the native per-profile scene
 counts, update sites and reset behavior, with bounded integer arithmetic.
 Entity combat factors start at their native zero or copied model values.

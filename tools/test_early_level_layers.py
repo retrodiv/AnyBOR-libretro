@@ -44,6 +44,95 @@ def layer_statements(source, member):
 
 
 class EarlyLevelLayerTests(unittest.TestCase):
+    def test_foreground_layer_capacity_per_profile(self):
+        from test_early_jump_walkoff import braced_statement, continued_macro
+        fixture = load_contract_fixture(Path(__file__).parent /
+            'fixtures/profile-foreground-capacity-contracts.json')
+        rows = fixture['sources']
+        revisions = {row['revision'] for row in rows}
+        self.assertEqual(len(rows), len(revisions))
+        for profile in contract_profiles(fixture, json.loads((ROOT / 'src/pin.json').read_text())['profiles']):
+            revision = int(profile.get('revision', profile['build']))
+            if profile['engine'] == fixture['engine'] and fixture['range'][0] <= revision <= fixture['range'][1]:
+                self.assertIn(revision, revisions)
+        engine = Path(os.environ.get('OBOR_EARLY_TEXT_ENGINE', ROOT / 'src/engines' / fixture['engine']))
+        source = (engine / 'openbor.c').read_text()
+        header = (engine / 'openbor.h').read_text()
+        self.assertRegex(header, r'\bs_fglayer\s+fglayers\[LEVEL_MAX_FGLAYERS\]')
+        limit = re.search(r'(?m)^#define\s+LEVEL_MAX_FGLAYERS\s+(\d+)\b', header)
+        self.assertIsNotNone(limit)
+        level = function(source, 'load_level')
+        guard = braced_statement(level, 'if(level->numfglayers >= OBOR_PROFILE_FGLAYERS)')
+        checks = []
+        for row in rows:
+            self.assertRegex(row['commit'], r'^[0-9a-f]{40}$')
+            self.assertEqual(row['engine'], fixture['engine'])
+            self.assertIs(type(row['capacity']), int)
+            checks.append('check(%d,%d);' % (row['revision'], row['capacity']))
+        program = r'''
+#include <assert.h>
+#include <stdio.h>
+#include <stdint.h>
+#include <stdlib.h>
+#include <stdarg.h>
+#include <string.h>
+#include "openbor.h"
+#undef exit
+#undef time
+#undef pause
+#undef shutdown
+uint32_t obor_profile_build;
+static char legacy_level_error[512];
+@ERROR_FUNCTION@
+@ERROR_MACRO@
+static int admitted(s_level *level,const char **error){
+ char *errormessage=NULL;
+ @GUARD@
+ *error=NULL;return 1;
+lCleanup:
+ *error=errormessage;return 0;
+}
+static void check(unsigned revision,int capacity){
+ obor_profile_build=revision;
+ s_level *level=calloc(1,sizeof(*level));assert(level);
+ const char *error;
+ assert(sizeof(level->fglayers)/sizeof(level->fglayers[0])==@LIMIT@);
+ for(int i=0;i<=@LIMIT@;i++){
+  level->numfglayers=i;
+  int accepted=admitted(level,&error);
+  assert(accepted==(i<capacity));
+  if(accepted){assert(!error);level->fglayers[i].z=7;assert(level->fglayers[i].z==7);}
+  else assert(error && !strcmp(error,"Too many bg layers in level (check LEVEL_MAX_FGLAYERS)!"));
+ }
+ free(level);
+}
+int main(void){@CHECKS@ puts("foreground_capacity=1");return 0;}
+'''
+        for key, value in dict(ERROR_FUNCTION=function(source, 'obor_level_error'),
+                               ERROR_MACRO=continued_macro(source, 'OBOR_LEVEL_ERROR'),
+                               GUARD=guard, LIMIT=limit[1], CHECKS='\n'.join(checks)).items():
+            program = program.replace('@' + key + '@', value)
+        with tempfile.TemporaryDirectory(prefix='foreground-capacity-') as directory:
+            unit, binary = Path(directory) / 'probe.c', Path(directory) / 'probe'
+            unit.write_text(program)
+            cc = shlex.split(os.environ.get('HOST_CC', 'cc'))
+            flags = ['-std=gnu99', '-O1', '-g', '-UNDEBUG', '-DUNIT_TEST=1', '-DSAFEALLOC_H=1',
+                     '-fcommon', '-fsigned-char', '-fsanitize=address,undefined',
+                     '-fno-sanitize-recover=all', '-fno-omit-frame-pointer', '-Wall', '-Wextra', '-Werror',
+                     '-Wno-unused-parameter', '-Wno-unused-variable', '-Wno-unused-function',
+                     '-Wno-sign-compare', '-Wno-misleading-indentation', '-Wno-error=deprecated-declarations']
+            for include in ['', 'source', 'source/gamelib', 'source/gfxlib', 'source/scriptlib',
+                            'source/preprocessorlib', 'source/randlib', 'source/ramlib']:
+                flags += ['-I', str(engine / include)]
+            flags += ['-I', str(ROOT / 'src/port/libretro'), '-I', str(ROOT / 'src/glue')]
+            build = subprocess.run(cc + flags + [str(unit), *([] if sys.platform == 'darwin' else ['-no-pie']),
+                                                 '-o', str(binary)], capture_output=True, text=True, timeout=60)
+            self.assertEqual(build.returncode, 0, build.stdout + build.stderr)
+            run = subprocess.run([str(binary)], capture_output=True, text=True, timeout=20,
+                                 env=sanitizer_environment())
+            self.assertEqual(run.returncode, 0, run.stdout + run.stderr)
+            self.assertIn('foreground_capacity=1', run.stdout)
+
     def test_ratio_repeat_and_missing_argument_results(self):
         fixture = load_contract_fixture(FIXTURE)
         rows = fixture['sources']

@@ -7,6 +7,7 @@ from contract_fixtures import load_contract_fixture, contract_profiles
 import json
 import os
 from pathlib import Path
+import re
 import shlex
 import subprocess
 import sys
@@ -19,7 +20,7 @@ SOURCE=Path(os.environ.get('OBOR_TEST_SOURCE',Path(__file__).resolve().parents[1
 FIXTURE=Path(__file__).parent/'fixtures/drawmethod-alignment.json'
 
 
-def program(shape):
+def program(shape, extra_owners=()):
     fields={'entity_size','entity_alignment','method_size','method_alignment',
             'entity_method_offset','layer_size','layer_method_offset','entity_embedded'}
     if (not isinstance(shape,dict) or set(shape)!=fields or
@@ -27,10 +28,16 @@ def program(shape):
             any(type(v) is not int or not 0<=v<=1<<20 for k,v in shape.items() if k!='entity_embedded') or
             any(shape[k]<=0 for k in ['entity_size','entity_alignment','method_size','method_alignment']) or
             shape['method_alignment'] not in (1,2,4,8,16)):
-        raise ValueError('Explicit bounded native drawing-record representation required')
+        raise ValueError('Explicit bounded runtime drawing-record representation required')
+    if (not isinstance(extra_owners, (list, tuple)) or len(extra_owners)>8 or
+            any(not isinstance(row,dict) or set(row)!={'type','size','alignment','method_offset'} or
+                not isinstance(row['type'],str) or not re.fullmatch(r'[A-Za-z_]\w{0,63}',row['type']) or
+                any(type(row[key])is not int or not 0<row[key]<=1<<20
+                    for key in ('size','alignment','method_offset')) for row in extra_owners)):
+        raise ValueError('Explicit bounded additional method owners required')
     checks=''
     for record,field,expected in [('entity','',shape['entity_size']),('s_drawmethod','',shape['method_size'])]:
-        checks+='_Static_assert(sizeof('+record+')=='+str(expected)+',"Preserve native record extent");\n'
+        checks+='_Static_assert(sizeof('+record+')=='+str(expected)+',"Preserve declared runtime record extent");\n'
     checks+='_Static_assert(_Alignof(entity)=='+str(shape['entity_alignment'])+',"Preserve owner alignment");\n'
     checks+='_Static_assert(_Alignof(s_drawmethod)=='+str(shape['method_alignment'])+',"Safe embedded alignment");\n'
     checks+='_Static_assert(offsetof(entity,drawmethod)=='+str(shape['entity_method_offset'])+',"Preserve method offset");\n'
@@ -47,10 +54,20 @@ def program(shape):
  for(int i=0;i<2;++i){owners[i].drawmethod=methods+i;set_table(owners[i].drawmethod,markers+i);assert(methods[i].table==markers+i);}
  free(methods);free(owners);'''
     layers=''
+    for index,row in enumerate(extra_owners):
+        record=row['type']
+        checks+='_Static_assert(sizeof('+record+')=='+str(row['size'])+',"Additional owner extent");\n'
+        checks+='_Static_assert(_Alignof('+record+')=='+str(row['alignment'])+',"Additional owner alignment");\n'
+        checks+='_Static_assert(offsetof('+record+',drawmethod)=='+str(row['method_offset'])+',"Additional method offset");\n'
+        checks+='_Static_assert(_Alignof('+record+')>=_Alignof(s_drawmethod),"Additional owner must align method");\n'
+        layers+='''{ @TYPE@ *owners=calloc(2,sizeof(*owners));assert(owners);
+ for(int i=0;i<2;++i){set_table(&owners[i].drawmethod,markers+i);assert(owners[i].drawmethod.table==markers+i);}
+ free(owners);}
+'''.replace('@TYPE@',record)
     if shape['layer_size']:
         checks+='_Static_assert(sizeof(s_layer)=='+str(shape['layer_size'])+' && offsetof(s_layer,drawmethod)=='+str(shape['layer_method_offset'])+',"Preserve layer representation");\n'
         checks+='_Static_assert(_Alignof(s_layer)>=_Alignof(s_drawmethod),"Layer must align its method");\n'
-        layers='''s_layer *layers=calloc(2,sizeof(*layers));assert(layers);
+        layers+='''s_layer *layers=calloc(2,sizeof(*layers));assert(layers);
  for(int i=0;i<2;++i){set_table(&layers[i].drawmethod,markers+i);assert(layers[i].drawmethod.table==markers+i);}
  free(layers);'''
     return r'''
@@ -97,7 +114,8 @@ class DrawmethodAlignmentTests(unittest.TestCase):
             includes=[root,SOURCE/'src/glue',SOURCE/'src/port/libretro',root/'source',
                       *sorted(p for p in (root/'source').iterdir() if p.is_dir())]
             source=work/(engine+'.c');executable=source.with_suffix('')
-            source.write_text(program(cls.fixture['shapes'][engine]))
+            source.write_text(program(cls.fixture['shapes'][engine],
+                                      cls.fixture.get('extra_owners',{}).get(engine,())))
             result=subprocess.run(compiler+['-I'+str(p) for p in includes]+[
                 '-std=gnu11','-Wall','-Wextra','-Werror','-Wno-error=deprecated-declarations',
                 '-Wno-unused-function','-Wno-unused-variable','-Wno-unused-parameter',*warnings,

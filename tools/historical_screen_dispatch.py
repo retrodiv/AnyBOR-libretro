@@ -6,6 +6,7 @@ SPDX-License-Identifier: BSD-3-Clause
 Copyright (c) 2026 retrodiv <retrodiv@proton.me>
 """
 from native_header_fixtures import graphics_refusals, inline_refusals
+import re
 from test_historical_player import function
 
 
@@ -32,6 +33,8 @@ def render_screen_dispatch(parts, *, revision, legacy_water, config_flags, key_v
             legacy_water and (config_flags or unexpected_transform) or
             not isinstance(cases, list) or not 1 <= len(cases) <= 2048):
         raise ValueError('Complete bounded native dispatcher, explicit layout and observations required')
+    graphics_headers = not legacy_water or any(
+        re.search(r'\bgfx_draw_[A-Za-z_]+\s*\(', body) for body in parts.values())
     rows = []
     for row in cases:
         if (not isinstance(row, dict) or set(row) != {'bits', 'indexed', 'method', 'alpha', 'key',
@@ -40,7 +43,8 @@ def render_screen_dispatch(parts, *, revision, legacy_water, config_flags, key_v
                 any(type(row[k]) is not bool for k in ('indexed', 'key', 'table', 'available', 'water')) or
                 type(row['method']) is not int or row['method'] not in (-1, 0, 1) or
                 type(row['alpha']) is not int or not -2 <= row['alpha'] <= 63 or
-                type(row['route']) is not int or not 1 <= row['route'] <= 13 or
+                type(row['route']) is not int or not 1 <= row['route'] <= 14 or
+                row['route'] == 14 and not (legacy_water and row['water'] and row['bits'] == 8) or
                 type(row['slot']) is not int or not -1 <= row['slot'] <= 6 or
                 row['water'] and not legacy_water or row['bits'] == 8 and row['indexed'] or
                 row['water'] and row['bits'] != 8 and not row['indexed']):
@@ -70,7 +74,7 @@ static unsigned active_case;
 struct dispatch_case {int bits,indexed,method,alpha,key,table,available,water,route,slot;};
 static const struct dispatch_case tests[]={@CASES@};
 static s_screen *observed_dest,*observed_src;
-static int calls,route;static unsigned char *wanted_table;
+static int calls,route;static unsigned char *wanted_table,*wanted_lut;
 static blend16fp wanted16;static blend32fp wanted32;
 static int expected_key(void){return tests[active_case].method==1?@EXPECTED_KEY@:0;}
 static void record_route(int value,s_screen *dest,s_screen *src,int x,int y){
@@ -111,6 +115,11 @@ void copyscreen_trans_water(s_screen *d,s_screen *s,int x,int y,int a,float w,in
 void blendscreen_water(s_screen *d,s_screen *s,int x,int y,int a,float w,int t,int m,unsigned char *table){
  record_route(11,d,s,x,y);water_args(a,w,t,m);assert(table==wanted_table && table);
 }
+void putscreen8_water(s_screen *d,s_screen *s,int x,int y,int key,unsigned char *remap,
+                     unsigned char *lut,int a,float w,int t,int m){
+ record_route(14,d,s,x,y);water_args(a,w,t,m);assert(key==expected_key());
+ assert(remap==wanted_table && lut==wanted_lut);
+}
 ''']
         for bits, scalar, number in ((16, 'unsigned short', 12), (32, 'unsigned', 13)):
             services.append('void putscreenx8p' + str(bits) + '_water(s_screen *d,s_screen *s,int x,int y,int key,' +
@@ -137,6 +146,7 @@ int main(void){
   method.scalex=method.scaley=256;method.table=t->table?remap:NULL;
   unsigned char original[sizeof(method)];memcpy(original,&method,sizeof(method));
   wanted_table=t->method==1 && t->table?remap:NULL;
+  wanted_lut=t->slot>=0?tokens+t->slot:NULL;
   if(t->route==4 || t->route==11){assert(t->slot>=0 && t->slot<CAPACITY);wanted_table=tokens+t->slot;}
   if(t->slot>=0){
    assert((unsigned)t->slot<sizeof(blendfunctions16)/sizeof(blendfunctions16[0]));
@@ -163,8 +173,8 @@ int main(void){
               '(t->key?DRAWMETHOD_CONFIG_BACKGROUND_TRANSPARENCY:0);' if config_flags else
               'method.flag=t->method==1;')
     values = dict(REVISION=str(revision) + 'u', CASES=',\n'.join(rows),
-                  TRANSFORM_HEADER='' if legacy_water else '#include "transform.h"',
-                  GRAPHICS='' if legacy_water else graphics_refusals(True),
+                  TRANSFORM_HEADER='#include "transform.h"' if graphics_headers else '',
+                  GRAPHICS=graphics_refusals(graphics_headers),
                   INLINE_REFUSALS=inline_refusals(unused_inline_declarations, forbidden_names=tuple(parts) +
                         ('record_route', 'expected_key', 'water_args', 'copyscreen', 'copyscreen_o',
                          'copyscreen_trans', 'copyscreen_remap', 'blendscreen', 'getblendfunction16',

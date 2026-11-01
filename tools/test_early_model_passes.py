@@ -165,7 +165,7 @@ List *modelstxtcmdlist;
 static s_loadingbar loadingbg[2];
 static char *custModels,*custBkgrds,*packfile;
 static s_screen pixels,*vscreen=&pixels;
-static int colourselect,spdirection[4],autoland,nolost,ajspecial,nocost,forcecheatsoff,nodropen;
+static int colourselect,spdirection[4],autoland,nolost,ajspecial,nocost,forcecheatsoff,nodropen,nodropspawn;
 static int noaircancel,nomaxrushreset[5],mpblock,blockratio,nochipdeath,versusdamage,combodelay;
 static unsigned lifescore,credscore,models_cached;
 static s_modelcache cache[8];

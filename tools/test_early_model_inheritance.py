@@ -94,6 +94,9 @@ static s_variantnode entries[65],*entry_ptrs[65];
 void shutdown(int code,char *message,...) {(void)code;(void)message;abort();}
 void ScriptVariant_Clear(ScriptVariant *value) {memset(value,0,sizeof(*value));}
 void ScriptVariant_Init(ScriptVariant *value) {memset(value,0,sizeof(*value));}
+/* A later cleanup path is outside these legacy contexts. */
+int Script_Set_Local_Variant(char *name,ScriptVariant *value) {(void)name;(void)value;abort();}
+HRESULT Interpreter_EvaluateCall(Interpreter *value) {(void)value;abort();}
 void ScriptVariant_ChangeType(ScriptVariant *value,VARTYPE type) {memset(value,0,sizeof(*value));value->vt=type;}
 int Script_Compile(Script *value) {assert(value);compiled++;return 1;}
 @SCRIPT_FUNCTIONS@

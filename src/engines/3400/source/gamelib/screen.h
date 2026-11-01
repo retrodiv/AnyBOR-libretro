@@ -1,3 +1,14 @@
+/* AnyBOR modification record: 2026-10-30.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Declare the historical indexed and true-color screen rendering interfaces.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/3400.md
+ * at the source repository root. Original notices follow below.
+ */
+
 /*
  * OpenBOR - http://www.LavaLit.com
  * -----------------------------------------------------------------------
@@ -13,6 +24,9 @@
 s_screen * allocscreen(int width, int height, int pixelformat);
 void freescreen(s_screen **screen);
 void copyscreen(s_screen * dest, s_screen * src);
+void putscreen8_water(s_screen *dest, s_screen *src, int x, int y, int key,
+                     unsigned char *remap, unsigned char *lut, int amplitude,
+                     float wavelength, int time, int watermode);
 void copyscreen_water(s_screen * dest, s_screen * src, int x, int y, int amplitude, float wavelength, int time, int watermode);
 void copyscreen_o(s_screen * dest, s_screen * src, int x, int y);
 

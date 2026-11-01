@@ -178,9 +178,11 @@ def render_camera_step(engine, rows):
     for row in rows:
         if row['integer_target'] not in (0, 1) or row['progress_mode'] not in (0, 1, 2):
             raise ValueError('Own integer and progress contracts required')
-        contexts.append('check(%d,%d,%d,%d,%d);' % (
+        if type(row.get('end_on_short_level', False)) is not bool:
+            raise ValueError('Own short-level progress contract required')
+        contexts.append('check(%d,%d,%d,%d,%d,%d);' % (
             row['revision'], row['integer_target'], row['progress_mode'],
-            row['offsets'], row['exclusive_music']))
+            row['offsets'], row['exclusive_music'], row.get('end_on_short_level', False)))
     return r'''
 #include <assert.h>
 #include <stdint.h>
@@ -244,7 +246,7 @@ static void observe(float x,float y,int pos){
  assert(dx>-0.001f && dx<0.001f && dy>-0.001f && dy<0.001f && storage.pos==pos);
  assert(scrolldx==advancex-oldx && scrolldy==advancey-oldy);
 }
-static void check(unsigned revision,int integer,int progress,int offsets,int exclusive){
+static void check(unsigned revision,int integer,int progress,int offsets,int exclusive,int short_end){
  obor_profile_build=revision;
  reset();observe(integer?81:240,80,integer?81:240);
  /* Fractional input and integer division differ before final coordinate storage. */
@@ -267,6 +269,18 @@ static void check(unsigned revision,int integer,int progress,int offsets,int exc
  /* The RIGHT clamp order differs for a level narrower than the display. */
  reset();storage.width=300;coordinates(400,200);
  observe(progress==2?-20:0,80,progress==0?18:progress==1?0:18);
+ /* Equal-width levels need progress even without a camera overshoot. The
+  * narrow RIGHT clamp already reached the end before this boundary; LEFT
+  * retains its own clamp order. Observe three frames, not just coordinates. */
+ if(revision>=3400)for(int left=0;left<2;left++)for(int width=319;width<=321;width++){
+  reset();storage.scrolldir=left?SCROLL_LEFT:SCROLL_RIGHT;storage.width=width;
+  advancex=0;coordinates(160,200);
+  for(int frame=1;frame<=3;frame++){
+   int end=(short_end && width<=320) || (!left && width<320);
+   int expected_pos=end?17+frame:left?width-320:0;
+   observe(!left && width<320?-1:0,80,expected_pos);
+  }
+ }
  /* Offset selection is direction-specific, including OUTWARD using X. */
  reset();storage.cameraxoffset=11;storage.camerazoffset=17;coordinates(480,300);
  observe(integer?81:331,integer?81:197,integer?81:331);

@@ -323,6 +323,9 @@ int main(void) {assert(sizeof(LONG)==4 && sizeof(values[0].strVal)==4);@CHECKS@ 
 '''
         fields = re.findall(r'\b_cep_aiflag_(\w+)', enum_set.split('enum cep_aiflag_enum', 1)[1].split('};', 1)[0])
         self.assertEqual(fields.pop(), 'the_end')
+        # The deprecated walking selector has no backing entity field. Its
+        # empty getter and no-op setter have a separate boundary contract.
+        fields = [field for field in fields if field != 'walking']
         for key, value in dict(PIECES='\n'.join(pieces), ARRAYS='\n'.join(arrays), CHECKS='\n'.join(checks),
                                FLAG_FIELDS='\n'.join('case _cep_aiflag_' + field + ':return e.' + field + ';' for field in fields),
                                FLAG_SUM='+'.join('e.' + field for field in fields),

@@ -37,7 +37,7 @@ void obor_port_assert(int value,const char *expression,const char *function,cons
 }
 static int obor_loose_may_exist(const char *name) {CHECK(name);return 1;}
 static void filecache_init(int fd,int sectors,int blocksize,unsigned char blocks,int vfds) {
- CHECK(!cache_active && fd>=0 && sectors==1 && blocksize==CACHEBLOCKSIZE && blocks==CACHEBLOCKS && vfds==MAXPACKHANDLES);
+ CHECK(!cache_active && fd>=0 && sectors==(paksize+0x7ff)/0x800 && blocksize==CACHEBLOCKSIZE && blocks==CACHEBLOCKS && vfds==MAXPACKHANDLES);
  cache_active=1;cache_fd=fd;++cache_inits;
 }
 static void filecache_term(void) {cache_active=0;cache_fd=-1;++cache_terms;}
@@ -58,7 +58,7 @@ static void retire_cache(int disablelog) {
 @RETIRE@
 }
 #undef printf
-typedef struct {unsigned revision;int startup,raw_check,handle_message;const char *error_format;int filename_cache;} Row;
+typedef struct {unsigned revision;int startup,raw_check,handle_message;const char *error_format;int filename_cache,header_warning;} Row;
 static const Row rows[]={@ROWS@};
 static void put32(unsigned char *p,unsigned value) {
  for(int i=0;i<4;++i)p[i]=(unsigned char)(value>>(i*8));
@@ -160,11 +160,16 @@ static void check_directory(const Row *row) {
   reset_backend();++scenarios;
  }
 }
+@HEADER@
 @LOOKUP@
 int main(void) {
 #ifdef TEST_CACHED_NAMES
  for(unsigned i=0;i<sizeof(rows)/sizeof(rows[0]);++i)check_lookup(&rows[i]);
  printf("early_pack_lookup=1 contexts=%zu scenarios=%u\n",sizeof(rows)/sizeof(rows[0]),scenarios);
+ return 0;
+#elif defined(TEST_LARGE_HEADERS)
+ check_large_headers();
+ printf("early_pack_header=1 contexts=%zu scenarios=%u\n",sizeof(rows)/sizeof(rows[0]),scenarios);
  return 0;
 #else
  CHECK(sizeof(unsigned)==4);authored_pak();

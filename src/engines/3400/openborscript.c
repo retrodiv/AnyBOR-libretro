@@ -318,6 +318,10 @@ void Script_Local_Clear()
 	{
 		if(global_var_list[i]->owner == pcurrentscript)
 		{
+            if(obor_profile_build >= 3450)
+                ScriptVariant_Clear(&global_var_list[i]->value);
+            else
+            {
 			if(i!=max_global_var_index)
 			{
 				tempnode = global_var_list[i];
@@ -325,6 +329,7 @@ void Script_Local_Clear()
 				global_var_list[max_global_var_index] = tempnode;
 			}
 			max_global_var_index--;
+            }
 		}
 	}
 	if(pcurrentscript->vars)
@@ -452,6 +457,23 @@ void Script_Clear(Script* pscript, int localclear)
 	Script* temp;
 	int i;
 	ScriptVariant* pvars;
+    ScriptVariant tempvar;
+    if(obor_profile_build >= 3430 && pscript->initialized &&
+       pscript->pinterpreter && pscript->pinterpreter->pClearEntry)
+    {
+        temp = pcurrentscript;
+        pcurrentscript = pscript;
+        ScriptVariant_Init(&tempvar);
+        ScriptVariant_ChangeType(&tempvar, VT_INTEGER);
+        tempvar.lVal = (LONG)localclear;
+        Script_Set_Local_Variant("localclear", &tempvar);
+        pscript->pinterpreter->pCurrentInstruction = pscript->pinterpreter->pClearEntry;
+        if(FAILED(Interpreter_EvaluateCall(pscript->pinterpreter)))
+            shutdown(1, "Fatal: failed to execute 'clear' in script %s", pscript->pinterpreter->theSymbolTable.name);
+        ScriptVariant_Clear(&tempvar);
+        Script_Set_Local_Variant("localclear", &tempvar);
+        pcurrentscript = temp;
+    }
 	if(localclear==2 && pscript->vars)
 	{
 		for(i=0; i<max_script_vars; i++)
@@ -564,6 +586,7 @@ const char* Script_GetFunctionName(void* functionRef)
 	else if (functionRef==((void*)openbor_setfilestreamposition)) return "setfilestreamposition";
 	else if (functionRef==((void*)openbor_filestreamappend)) return "filestreamappend";
 	else if (functionRef==((void*)openbor_createfilestream)) return "createfilestream";
+	else if (obor_profile_build >= 3422 && functionRef==((void*)openbor_closefilestream)) return "closefilestream";
 	else if (functionRef==((void*)openbor_savefilestream)) return "savefilestream";
 	else if (functionRef==((void*)openbor_getindexedvar)) return "getindexedvar";
 	else if (functionRef==((void*)openbor_setindexedvar)) return "setindexedvar";
@@ -575,6 +598,10 @@ const char* Script_GetFunctionName(void* functionRef)
 	else if (functionRef==((void*)openbor_changelight)) return "changelight";
 	else if (functionRef==((void*)openbor_changeshadowcolor)) return "changeshadowcolor";
 	else if (functionRef==((void*)openbor_bindentity)) return "bindentity";
+	else if (obor_profile_build >= 3428 && functionRef==((void*)openbor_array)) return "array";
+	else if (obor_profile_build >= 3429 && functionRef==((void*)openbor_size)) return "size";
+	else if (obor_profile_build >= 3428 && functionRef==((void*)openbor_get)) return "get";
+	else if (obor_profile_build >= 3428 && functionRef==((void*)openbor_set)) return "set";
 	else if (functionRef==((void*)openbor_allocscreen)) return "allocscreen";
 	else if (functionRef==((void*)openbor_clearscreen)) return "clearscreen";
 	else if (functionRef==((void*)openbor_setdrawmethod)) return "setdrawmethod";
@@ -1031,6 +1058,9 @@ void Script_LoadSystemFunctions()
 					  (void*)openbor_filestreamappend, "filestreamappend");
 	List_InsertAfter(&theFunctionList,
 					  (void*)openbor_createfilestream, "createfilestream");
+    if(obor_profile_build >= 3422)
+	List_InsertAfter(&theFunctionList,
+					  (void*)openbor_closefilestream, "closefilestream");
 	List_InsertAfter(&theFunctionList,
 					  (void*)openbor_savefilestream, "savefilestream");
 	List_InsertAfter(&theFunctionList,
@@ -1053,6 +1083,14 @@ void Script_LoadSystemFunctions()
 					  (void*)openbor_changeshadowcolor, "changeshadowcolor");
 	List_InsertAfter(&theFunctionList,
 					  (void*)openbor_bindentity, "bindentity");
+    if(obor_profile_build >= 3428)
+    {
+        List_InsertAfter(&theFunctionList, (void*)openbor_array, "array");
+        if(obor_profile_build >= 3429)
+            List_InsertAfter(&theFunctionList, (void*)openbor_size, "size");
+        List_InsertAfter(&theFunctionList, (void*)openbor_get, "get");
+        List_InsertAfter(&theFunctionList, (void*)openbor_set, "set");
+    }
 	List_InsertAfter(&theFunctionList,
 					  (void*)openbor_allocscreen, "allocscreen");
 	List_InsertAfter(&theFunctionList,
@@ -1330,6 +1368,7 @@ enum systemvariant_enum
 		_sv_vResolution,
 		_sv_xpos,
 		_sv_ypos,
+		_sv_in_showcomplete,
 		_sv_the_end,
 	 };
 static const char *const obor_system_property_namespace_0_names[] = {"branchname","count_enemies","count_entities","count_npcs","count_players","current_level","current_palette","current_set","current_stage","elapsed_time","ent_max","game_paused","game_speed","gfx_y_offset","hResolution","in_level","in_selectscreen","lasthita","lasthitc","lasthitt","lasthitx","lasthitz","levelheight","levelwidth","lightx","lightz","maxentityvars","maxglobalvars","maxindexedvars","maxplayers","maxscriptvars","models_cached","models_loaded","numpalettes","pixelformat","player","player1","player2","player3","player4","player_max_z","player_min_z","shadowalpha","shadowcolor","slowmotion","slowmotion_duration","totalram","freeram","usedram","vResolution","xpos","ypos"};
@@ -1344,7 +1383,11 @@ static const obor_system_namespace obor_system_property_namespace_2_table = {obo
 static const char *const obor_system_property_namespace_3_names[] = {"branchname","count_enemies","count_entities","count_npcs","count_players","current_level","current_palette","current_scene","current_set","current_stage","effectvol","elapsed_time","ent_max","game_paused","game_speed","gfx_x_offset","gfx_y_offset","gfx_y_offset_adj","hResolution","in_gameoverscreen","in_halloffamescreen","in_level","in_menuscreen","in_selectscreen","in_titlescreen","lasthita","lasthitc","lasthitt","lasthitx","lasthitz","levelheight","levelwidth","lightx","lightz","maxentityvars","maxglobalvars","maxindexedvars","maxplayers","maxscriptvars","models_cached","models_loaded","musicvol","numpalettes","pixelformat","player","player1","player2","player3","player4","player_max_z","player_min_z","shadowalpha","shadowcolor","slowmotion","slowmotion_duration","soundvol","totalram","freeram","usedram","vResolution","xpos","ypos"};
 static const int obor_system_property_namespace_3_ids[] = {_sv_branchname,_sv_count_enemies,_sv_count_entities,_sv_count_npcs,_sv_count_players,_sv_current_level,_sv_current_palette,_sv_current_scene,_sv_current_set,_sv_current_stage,_sv_effectvol,_sv_elapsed_time,_sv_ent_max,_sv_game_paused,_sv_game_speed,_sv_gfx_x_offset,_sv_gfx_y_offset,_sv_gfx_y_offset_adj,_sv_hResolution,_sv_in_gameoverscreen,_sv_in_halloffamescreen,_sv_in_level,_sv_in_menuscreen,_sv_in_selectscreen,_sv_in_titlescreen,_sv_lasthita,_sv_lasthitc,_sv_lasthitt,_sv_lasthitx,_sv_lasthitz,_sv_levelheight,_sv_levelwidth,_sv_lightx,_sv_lightz,_sv_maxentityvars,_sv_maxglobalvars,_sv_maxindexedvars,_sv_maxplayers,_sv_maxscriptvars,_sv_models_cached,_sv_models_loaded,_sv_musicvol,_sv_numpalettes,_sv_pixelformat,_sv_player,_sv_player1,_sv_player2,_sv_player3,_sv_player4,_sv_player_max_z,_sv_player_min_z,_sv_shadowalpha,_sv_shadowcolor,_sv_slowmotion,_sv_slowmotion_duration,_sv_soundvol,_sv_totalram,_sv_freeram,_sv_usedram,_sv_vResolution,_sv_xpos,_sv_ypos};
 static const obor_system_namespace obor_system_property_namespace_3_table = {obor_system_property_namespace_3_names,obor_system_property_namespace_3_ids,62,62};
+static const char *const obor_system_property_namespace_4_names[] = {"branchname","count_enemies","count_entities","count_npcs","count_players","current_level","current_palette","current_scene","current_set","current_stage","effectvol","elapsed_time","ent_max","game_paused","game_speed","gfx_x_offset","gfx_y_offset","gfx_y_offset_adj","hResolution","in_gameoverscreen","in_halloffamescreen","in_level","in_menuscreen","in_selectscreen","in_showcomplete","in_titlescreen","lasthita","lasthitc","lasthitt","lasthitx","lasthitz","levelheight","levelwidth","lightx","lightz","maxentityvars","maxglobalvars","maxindexedvars","maxplayers","maxscriptvars","models_cached","models_loaded","musicvol","numpalettes","pause","pixelformat","player","player1","player2","player3","player4","player_max_z","player_min_z","shadowalpha","shadowcolor","slowmotion","slowmotion_duration","soundvol","totalram","freeram","usedram","vResolution","xpos","ypos"};
+static const int obor_system_property_namespace_4_ids[] = {_sv_branchname,_sv_count_enemies,_sv_count_entities,_sv_count_npcs,_sv_count_players,_sv_current_level,_sv_current_palette,_sv_current_scene,_sv_current_set,_sv_current_stage,_sv_effectvol,_sv_elapsed_time,_sv_ent_max,_sv_game_paused,_sv_game_speed,_sv_gfx_x_offset,_sv_gfx_y_offset,_sv_gfx_y_offset_adj,_sv_hResolution,_sv_in_gameoverscreen,_sv_in_halloffamescreen,_sv_in_level,_sv_in_menuscreen,_sv_in_selectscreen,_sv_in_showcomplete,_sv_in_titlescreen,_sv_lasthita,_sv_lasthitc,_sv_lasthitt,_sv_lasthitx,_sv_lasthitz,_sv_levelheight,_sv_levelwidth,_sv_lightx,_sv_lightz,_sv_maxentityvars,_sv_maxglobalvars,_sv_maxindexedvars,_sv_maxplayers,_sv_maxscriptvars,_sv_models_cached,_sv_models_loaded,_sv_musicvol,_sv_numpalettes,_sv_pause,_sv_pixelformat,_sv_player,_sv_player1,_sv_player2,_sv_player3,_sv_player4,_sv_player_max_z,_sv_player_min_z,_sv_shadowalpha,_sv_shadowcolor,_sv_slowmotion,_sv_slowmotion_duration,_sv_soundvol,_sv_totalram,_sv_freeram,_sv_usedram,_sv_vResolution,_sv_xpos,_sv_ypos};
+static const obor_system_namespace obor_system_property_namespace_4_table = {obor_system_property_namespace_4_names,obor_system_property_namespace_4_ids,64,64};
 static const obor_system_namespace *obor_system_property_namespace(void) {
+    if(obor_profile_build >= 3481) return &obor_system_property_namespace_4_table;
     switch(obor_profile_build) {
     case 3020u:
     case 3057u:
@@ -1402,7 +1445,7 @@ static const obor_system_namespace *obor_system_property_namespace(void) {
 int obor_system_property_index(int index)
 {
     const obor_system_namespace *ns = obor_system_property_namespace();
-    if(!ns) return index;
+    if(!ns) return index >= 0 && index < _sv_in_showcomplete ? index : -1;
     return index >= 0 && index < ns->count ? ns->ids[index] : -1;
 }
 
@@ -1483,7 +1526,7 @@ void mapstrings_systemvariant(ScriptVariant** varlist, int paramCount)
 	 };
 
 	const obor_system_namespace *ns = obor_system_property_namespace();
-    MAPSTRINGS(varlist[0], (const char **)(ns ? ns->names : proplist), ns ? ns->name_count : _sv_the_end,
+    MAPSTRINGS(varlist[0], (const char **)(ns ? ns->names : proplist), ns ? ns->name_count : (int)(sizeof(proplist)/sizeof(*proplist)),
 		"openborvariant: System variable name not found: '%s'\n");
 }
 
@@ -2695,6 +2738,7 @@ static LONG obor_legacy_energycost(const s_anim *animation, int index)
 }
 
 extern int sprite_map_max_items;
+extern int max_attack_types;
 static int obor_icon_sprite_index(int index)
 {
     return index >= 0 && sprite_map && index < sprite_map_max_items && sprite_map[index].sprite;
@@ -2878,6 +2922,7 @@ enum gep_aiflag_enum {
 	_gep_aiflag_running,
 	_gep_aiflag_toexplode,
 	_gep_aiflag_turning,
+	_gep_aiflag_walking,
 	_gep_aiflag_the_end,
 };
 
@@ -2909,6 +2954,7 @@ enum gep_attack_enum {
 	_gep_attack_maptime,
 	_gep_attack_noblock,
 	_gep_attack_noflash,
+	_gep_attack_nokill,
 	_gep_attack_nopain,
 	_gep_attack_otg,
 	_gep_attack_pause,
@@ -2919,6 +2965,19 @@ enum gep_attack_enum {
 	_gep_attack_type,
 	_gep_attack_the_end,
 };
+/* Source-owned attack property namespaces. */
+static const char *const obor_attack_old_names[] = {"blast","blockflash","blocksound","coords","counterattack","direction","dol","dot","dotforce","dotindex","dotrate","dottime","drop","dropv","force","forcemap","freeze","freezetime","grab","grabdistance","guardcost","hitflash","hitsound","jugglecost","maptime","noblock","noflash","nopain","otg","pause","seal","sealtime","staydown","steal","type"};
+static const int obor_attack_old_ids[] = {_gep_attack_blast,_gep_attack_blockflash,_gep_attack_blocksound,_gep_attack_coords,_gep_attack_counterattack,_gep_attack_direction,_gep_attack_dol,_gep_attack_dot,_gep_attack_dotforce,_gep_attack_dotindex,_gep_attack_dotrate,_gep_attack_dottime,_gep_attack_drop,_gep_attack_dropv,_gep_attack_force,_gep_attack_forcemap,_gep_attack_freeze,_gep_attack_freezetime,_gep_attack_grab,_gep_attack_grabdistance,_gep_attack_guardcost,_gep_attack_hitflash,_gep_attack_hitsound,_gep_attack_jugglecost,_gep_attack_maptime,_gep_attack_noblock,_gep_attack_noflash,_gep_attack_nopain,_gep_attack_otg,_gep_attack_pause,_gep_attack_seal,_gep_attack_sealtime,_gep_attack_staydown,_gep_attack_steal,_gep_attack_type};
+static const obor_property_namespace obor_attack_old_space = {obor_attack_old_names,obor_attack_old_ids,35,35};
+static const char *const obor_attack_new_names[] = {"blast","blockflash","blocksound","coords","counterattack","direction","dol","dot","dotforce","dotindex","dotrate","dottime","drop","dropv","force","forcemap","freeze","freezetime","grab","grabdistance","guardcost","hitflash","hitsound","jugglecost","maptime","noblock","noflash","nokill","nopain","otg","pause","seal","sealtime","staydown","steal","type"};
+static const int obor_attack_new_ids[] = {_gep_attack_blast,_gep_attack_blockflash,_gep_attack_blocksound,_gep_attack_coords,_gep_attack_counterattack,_gep_attack_direction,_gep_attack_dol,_gep_attack_dot,_gep_attack_dotforce,_gep_attack_dotindex,_gep_attack_dotrate,_gep_attack_dottime,_gep_attack_drop,_gep_attack_dropv,_gep_attack_force,_gep_attack_forcemap,_gep_attack_freeze,_gep_attack_freezetime,_gep_attack_grab,_gep_attack_grabdistance,_gep_attack_guardcost,_gep_attack_hitflash,_gep_attack_hitsound,_gep_attack_jugglecost,_gep_attack_maptime,_gep_attack_noblock,_gep_attack_noflash,_gep_attack_nokill,_gep_attack_nopain,_gep_attack_otg,_gep_attack_pause,_gep_attack_seal,_gep_attack_sealtime,_gep_attack_staydown,_gep_attack_steal,_gep_attack_type};
+static const obor_property_namespace obor_attack_new_space = {obor_attack_new_names,obor_attack_new_ids,36,36};
+static const obor_property_namespace *obor_get_attack_namespace(void)
+{
+    return obor_profile_build >= 3427 ? &obor_attack_new_space : &obor_attack_old_space;
+}
+/* End source-owned attack property namespaces. */
+
 
 enum _gep_defense_enum {
     _gep_defense_blockpower,
@@ -3221,45 +3280,9 @@ void mapstrings_getentityproperty(ScriptVariant** varlist, int paramCount)
 		"running",
 		"toexplode",
 		"turning",
+		"walking",
 	};
 
-    static const char* proplist_attack[] = {
-		"blast",
-		"blockflash",
-		"blocksound",
-		"coords",
-		"counterattack",
-		"direction",
-		"dol",
-		"dot",
-		"dotforce",
-		"dotindex",
-		"dotrate",
-		"dottime",
-		"drop",
-		"dropv",
-		"force",
-		"forcemap",
-		"freeze",
-		"freezetime",
-		"grab",
-		"grabdistance",
-		"guardcost",
-		"hitflash",
-		"hitsound",
-		"jugglecost",
-		"maptime",
-		"noblock",
-		"noflash",
-		"nopain",
-		"otg",
-		"pause",
-		"seal",
-		"sealtime",
-		"staydown",
-		"steal",
-		"type",
-	};
 
 	static const char* proplist_defense[] = {
 		"blockpower",
@@ -3390,21 +3413,22 @@ void mapstrings_getentityproperty(ScriptVariant** varlist, int paramCount)
 	{
 		const obor_property_namespace *flags = obor_get_aiflag_namespace();
         MAPSTRINGS(varlist[2], flags ? (const char**)flags->names : proplist_aiflag,
-            flags ? flags->name_count : _gep_aiflag_the_end,
+            flags ? flags->name_count : _gep_aiflag_the_end - (obor_profile_build < 3439),
 			"'%s' is not a known subproperty of 'aiflag'.\n");
 	}
 
 	// map subproperties of Attack
 	if((varlist[1]->vt == VT_INTEGER) && (obor_property == _gep_attack))
 	{
-		MAPSTRINGS(varlist[2], proplist_attack, _gep_attack_the_end,
+        const obor_property_namespace *attack_space = obor_get_attack_namespace();
+        MAPSTRINGS(varlist[2], (const char**)attack_space->names, attack_space->name_count,
 			"Property name '%s' is not a known subproperty of 'attack'.\n");
 	}
 
 	// map subproperties of defense property
 	if((varlist[1]->vt == VT_INTEGER) && (obor_property == _gep_defense))
 	{
-		if(paramCount >= 4)
+		if(paramCount >= 4 && varlist[3])
 		{
 			MAPSTRINGS(varlist[3], proplist_defense, _gep_defense_the_end,
 				"'%s' is not a known subproperty of 'defense'.\n");
@@ -3507,7 +3531,7 @@ HRESULT openbor_getentityproperty(ScriptVariant** varlist , ScriptVariant** pret
 	ScriptVariant* arg1	= NULL;
 	s_sprite* spr;
 	s_attack* attack;
-	LONG ltemp;
+	LONG ltemp, ltemp2;
 	int i				= 0;
 	int propind ;
 	int tempint			= 0;
@@ -3569,7 +3593,7 @@ HRESULT openbor_getentityproperty(ScriptVariant** varlist , ScriptVariant** pret
 			printf("You must give a string name for aiflag.\n");
 			return E_FAIL;
 		}
-		ltemp = obor_property_index(obor_get_aiflag_namespace(), arg->lVal, _gep_aiflag_the_end);
+		ltemp = obor_property_index(obor_get_aiflag_namespace(), arg->lVal, _gep_aiflag_the_end - (obor_profile_build < 3439));
 		switch(ltemp)
 		{
 		case _gep_aiflag_dead:
@@ -3704,6 +3728,11 @@ HRESULT openbor_getentityproperty(ScriptVariant** varlist , ScriptVariant** pret
 			 (*pretvar)->lVal = (LONG)ent->autokill;
 			 break;
 		}
+		case _gep_aiflag_walking:
+        {
+            ScriptVariant_Clear(*pretvar);
+            break;
+        }
 		default:
 			ScriptVariant_Clear(*pretvar);
 			return E_FAIL;
@@ -3810,6 +3839,10 @@ HRESULT openbor_getentityproperty(ScriptVariant** varlist , ScriptVariant** pret
 			return E_FAIL;
 		}
 		ltemp = arg->lVal;
+        {
+            const obor_property_namespace *attack_space = obor_get_attack_namespace();
+            ltemp = ltemp >= 0 && ltemp < attack_space->count ? attack_space->ids[ltemp] : -1;
+        }
 
 		if(varlist[3]->vt != VT_INTEGER
 			|| varlist[4]->vt != VT_INTEGER
@@ -3936,6 +3969,10 @@ HRESULT openbor_getentityproperty(ScriptVariant** varlist , ScriptVariant** pret
 				 ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
 				 (*pretvar)->lVal = (LONG)attack->no_flash;
 				 break;
+            case _gep_attack_nokill:
+                ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
+                (*pretvar)->lVal = (LONG)attack->no_kill;
+                break;
 			case _gep_attack_nopain:
 				 ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
 				 (*pretvar)->lVal = (LONG)attack->no_pain;
@@ -4099,57 +4136,77 @@ HRESULT openbor_getentityproperty(ScriptVariant** varlist , ScriptVariant** pret
 	case _gep_defense:
 	{
 		ltemp = 0;
-		if(paramCount == 3)
-		{
-			arg = varlist[2];
-			if(FAILED(ScriptVariant_IntegerValue(arg, &ltemp)))
-				ltemp = (LONG)0;
-		}
-
-		arg = varlist[3];
-		if(arg->vt != VT_INTEGER)
-		{
-			if(arg->vt != VT_STR)
-				printf("You must give a string name for defense property.\n");
-			return E_FAIL;
-		}
+        ltemp2 = _gep_defense_factor;
+        if(obor_profile_build >= 3441)
+        {
+            if(paramCount < 3) return E_FAIL;
+            if(FAILED(ScriptVariant_IntegerValue(varlist[2], &ltemp)))
+            {
+                printf("You must specify an attack type for your defense property.\n");
+                return E_FAIL;
+            }
+        }
+        else if(paramCount < 4) return E_FAIL;
+        if(paramCount >= 4)
+        {
+            arg = varlist[3];
+            if(obor_profile_build < 3441)
+            {
+                if(!arg) return E_FAIL;
+                if(arg->vt != VT_INTEGER)
+                {
+                    if(arg->vt != VT_STR) printf("You must give a string name for defense property.\n");
+                    return E_FAIL;
+                }
+                ltemp2 = arg->lVal;
+            }
+            else if(FAILED(ScriptVariant_IntegerValue(arg, &ltemp2))) return E_FAIL;
+        }
+        if(ltemp < 0 || ltemp > max_attack_types) return E_FAIL;
 		ScriptVariant_ChangeType(*pretvar, VT_DECIMAL);
 
-		switch(arg->lVal)
+		switch(ltemp2)
 		{
 		case _gep_defense_factor:
 		{
-			(*pretvar)->dblVal = (float)ent->modeldata.defense_factors[(int)ltemp];
+
+            if(!ent->modeldata.defense_factors) return E_FAIL;			(*pretvar)->dblVal = (DOUBLE)ent->modeldata.defense_factors[(int)ltemp];
 			break;
 		}
 		case _gep_defense_blockpower:
 		{
-			(*pretvar)->dblVal = (DOUBLE)ent->modeldata.defense_blockpower[(int)ltemp];
+
+            if(!ent->modeldata.defense_blockpower) return E_FAIL;			(*pretvar)->dblVal = (DOUBLE)ent->modeldata.defense_blockpower[(int)ltemp];
 			break;
 		}
 		case _gep_defense_blockratio:
 		{
-			(*pretvar)->dblVal = (DOUBLE)ent->modeldata.defense_blockratio[(int)ltemp];
+
+            if(!ent->modeldata.defense_blockratio) return E_FAIL;			(*pretvar)->dblVal = (DOUBLE)ent->modeldata.defense_blockratio[(int)ltemp];
 			break;
 		}
 		case _gep_defense_blockthreshold:
 		{
-			(*pretvar)->dblVal = (DOUBLE)ent->modeldata.defense_blockthreshold[(int)ltemp];
+
+            if(!ent->modeldata.defense_blockthreshold) return E_FAIL;			(*pretvar)->dblVal = (DOUBLE)ent->modeldata.defense_blockthreshold[(int)ltemp];
 			break;
 		}
 		case _gep_defense_blocktype:
 		{
-			(*pretvar)->dblVal = (DOUBLE)ent->modeldata.defense_blocktype[(int)ltemp];
+
+            if(!ent->modeldata.defense_blocktype) return E_FAIL;			(*pretvar)->dblVal = (DOUBLE)ent->modeldata.defense_blocktype[(int)ltemp];
 			break;
 		}
 		case _gep_defense_knockdown:
 		{
-			(*pretvar)->dblVal = (DOUBLE)ent->modeldata.defense_knockdown[(int)ltemp];
+
+            if(!ent->modeldata.defense_knockdown) return E_FAIL;			(*pretvar)->dblVal = (DOUBLE)ent->modeldata.defense_knockdown[(int)ltemp];
 			break;
 		}
 		case _gep_defense_pain:
 		{
-			(*pretvar)->dblVal = (DOUBLE)ent->modeldata.defense_pain[(int)ltemp];
+
+            if(!ent->modeldata.defense_pain) return E_FAIL;			(*pretvar)->dblVal = (DOUBLE)ent->modeldata.defense_pain[(int)ltemp];
 			break;
 		}
 		default:
@@ -4784,12 +4841,18 @@ HRESULT openbor_getentityproperty(ScriptVariant** varlist , ScriptVariant** pret
 			case _gep_knockdowncount_current:
                 ScriptVariant_ChangeType(*pretvar, VT_DECIMAL);
                 (*pretvar)->dblVal = (DOUBLE)ent->knockdowncount;
+                if(obor_profile_build >= 3406) break;
 			case _gep_knockdowncount_max:
                 ScriptVariant_ChangeType(*pretvar, VT_DECIMAL);
                 (*pretvar)->dblVal = (DOUBLE)ent->modeldata.knockdowncount;
 				 break;
             case _gep_knockdowncount_time:
-                /* The original always continues into failure; no numeric result survives. */
+                if(obor_profile_build >= 3406)
+                {
+                    ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
+                    (*pretvar)->lVal = (LONG)ent->knockdowncount;
+                    break;
+                }
 			default:
 				ScriptVariant_Clear(*pretvar);
 				return E_FAIL;
@@ -5880,6 +5943,7 @@ enum cep_aiflag_enum {
 	_cep_aiflag_running,
 	_cep_aiflag_toexplode,
 	_cep_aiflag_turning,
+	_cep_aiflag_walking,
 	_cep_aiflag_the_end,
 };
 
@@ -6409,6 +6473,7 @@ void mapstrings_changeentityproperty(ScriptVariant** varlist, int paramCount)
 		"running",
 		"toexplode",
 		"turning",
+		"walking",
 	};
 
     static const char* proplist_energycost[] = {
@@ -6495,7 +6560,7 @@ void mapstrings_changeentityproperty(ScriptVariant** varlist, int paramCount)
 	{
 		const obor_property_namespace *flags = obor_set_aiflag_namespace();
         MAPSTRINGS(varlist[2], flags ? (const char**)flags->names : proplist_aiflag,
-            flags ? flags->name_count : _cep_aiflag_the_end,
+            flags ? flags->name_count : _cep_aiflag_the_end - (obor_profile_build < 3439),
 			"Flag '%s' is not supported by 'aiflag'.\n");
 	}
 
@@ -6664,7 +6729,7 @@ HRESULT openbor_changeentityproperty(ScriptVariant** varlist , ScriptVariant** p
 		}
 		if(paramCount<4) break;
 
-		switch(obor_property_index(obor_set_aiflag_namespace(), varlist[2]->lVal, _cep_aiflag_the_end))
+		switch(obor_property_index(obor_set_aiflag_namespace(), varlist[2]->lVal, _cep_aiflag_the_end - (obor_profile_build < 3439)))
 		{
 		case _cep_aiflag_dead:
 		{
@@ -6786,6 +6851,8 @@ HRESULT openbor_changeentityproperty(ScriptVariant** varlist , ScriptVariant** p
 				  ent->autokill = (int)ltemp;
 			 break;
 		}
+		case _cep_aiflag_walking:
+            break;
 		default:
 			printf("Unknown AI flag.\n");
 			goto changeentityproperty_error;
@@ -7426,6 +7493,7 @@ HRESULT openbor_changeentityproperty(ScriptVariant** varlist , ScriptVariant** p
                     ent->knockdowncount = (float)dbltemp;
                 }
             }
+                if(obor_profile_build >= 3406) break;
             case _cep_knockdowncount_max:
             {
                 if(SUCCEEDED(ScriptVariant_DecimalValue(varlist[3], &dbltemp)))
@@ -7433,12 +7501,14 @@ HRESULT openbor_changeentityproperty(ScriptVariant** varlist , ScriptVariant** p
                     (*pretvar)->lVal = (LONG)1;
                     ent->modeldata.knockdowncount = (float)dbltemp;
                 }
+                if(obor_profile_build >= 3406) break;
             case _cep_knockdowncount_time:
                 if(SUCCEEDED(ScriptVariant_IntegerValue(varlist[2], &ltemp)))
                 {
                     (*pretvar)->lVal = (LONG)1;
                     ent->knockdowntime = (int)ltemp;
                 }
+                if(obor_profile_build >= 3406) break;
             }
             default:
                 printf("Unknown knockdowncount subproperty.\n");
@@ -8722,7 +8792,7 @@ HRESULT openbor_checkplatformbelow(ScriptVariant** varlist , ScriptVariant** pre
 		return S_OK;
 
 	ScriptVariant_ChangeType(*pretvar, VT_PTR);
-	(*pretvar)->ptrVal = (VOID*)check_platform_below((float)x,(float)z,(float)a);
+	(*pretvar)->ptrVal = (VOID*)check_platform_below((float)x,(float)z,(float)a, NULL);
 	return S_OK;
 }
 
@@ -8746,6 +8816,7 @@ static int obor_filestream_buffer(int index, int at_position)
 
 HRESULT openbor_openfilestream(ScriptVariant** varlist , ScriptVariant** pretvar, int paramCount)
 {
+    int fsindex;
 	char* filename = NULL;
 	ScriptVariant* arg = NULL;
 	LONG location = 0;
@@ -8781,9 +8852,14 @@ HRESULT openbor_openfilestream(ScriptVariant** varlist , ScriptVariant** pretvar
 			return S_OK;
 	}
 
-	if(!level || level->numfilestreams < 0 || level->numfilestreams > LEVEL_MAX_FILESTREAMS) { *pretvar = NULL; return E_FAIL; }
-	if(!level->numfilestreams) level->numfilestreams = 0;
-	else if(level->numfilestreams == LEVEL_MAX_FILESTREAMS)
+	if(!level || (obor_profile_build < 3422 && (level->numfilestreams < 0 || level->numfilestreams > LEVEL_MAX_FILESTREAMS))) { *pretvar = NULL; return E_FAIL; }
+    if(obor_profile_build >= 3422)
+    {
+        for(fsindex = 0; fsindex < LEVEL_MAX_FILESTREAMS; ++fsindex)
+            if(level->filestreams[fsindex].buf == NULL) break;
+    }
+    else fsindex = level->numfilestreams;
+    if(fsindex == LEVEL_MAX_FILESTREAMS)
 	{
 		printf("Maximum file streams exceeded.\n");
 		*pretvar = NULL;
@@ -8822,15 +8898,15 @@ HRESULT openbor_openfilestream(ScriptVariant** varlist , ScriptVariant** pretvar
 		size = ftell(handle);
 		rewind(handle);
 		if(size < 0 || (unsigned long)size > (size_t)-1 - 0) { fclose(handle); *pretvar = NULL; return E_FAIL; }
-		level->filestreams[level->numfilestreams].buf = obor_profile_malloc_named("openfilestream()", (size ? (size_t)size : 1));
-		if(level->filestreams[level->numfilestreams].buf == NULL) { fclose(handle); return E_FAIL; }
-		size_t obor_read = fread(level->filestreams[level->numfilestreams].buf, 1, (size_t)size, handle);
-        level->filestreams[level->numfilestreams].obor_capacity = obor_read;
+		level->filestreams[fsindex].buf = obor_profile_malloc_named("openfilestream()", (size ? (size_t)size : 1));
+		if(level->filestreams[fsindex].buf == NULL) { fclose(handle); return E_FAIL; }
+		size_t obor_read = fread(level->filestreams[fsindex].buf, 1, (size_t)size, handle);
+        level->filestreams[fsindex].obor_capacity = obor_read;
 		fclose(handle);
 	}
 	else
     {
-        s_filestream *obor_stream_slot = &(level->filestreams[level->numfilestreams]);
+        s_filestream *obor_stream_slot = &(level->filestreams[fsindex]);
         char *obor_stream_buffer = obor_stream_slot->buf;
         size_t obor_stream_size = obor_stream_slot->size;
         int obor_stream_loaded = buffer_pakfile(filename,
@@ -8845,12 +8921,12 @@ HRESULT openbor_openfilestream(ScriptVariant** varlist , ScriptVariant** pretvar
         }
     }
 
-    if(!location) level->filestreams[level->numfilestreams].obor_capacity = level->filestreams[level->numfilestreams].size + 1;
+    if(!location) level->filestreams[fsindex].obor_capacity = level->filestreams[fsindex].size + 1;
 	ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
-	(*pretvar)->lVal = (LONG)level->numfilestreams;
+	(*pretvar)->lVal = (LONG)fsindex;
 
-	level->filestreams[level->numfilestreams].pos = 0;
-	level->numfilestreams++;
+	level->filestreams[fsindex].pos = 0;
+	if(obor_profile_build < 3422) level->numfilestreams++;
 	return S_OK;
 }
 
@@ -9118,11 +9194,17 @@ HRESULT openbor_filestreamappend(ScriptVariant** varlist , ScriptVariant** pretv
 
 HRESULT openbor_createfilestream(ScriptVariant** varlist , ScriptVariant** pretvar, int paramCount)
 {
+    int fsindex;
 	ScriptVariant_Clear(*pretvar);
 
-	if(!level || level->numfilestreams < 0 || level->numfilestreams > LEVEL_MAX_FILESTREAMS) { *pretvar = NULL; return E_FAIL; }
-	if(!level->numfilestreams) level->numfilestreams = 0;
-	else if(level->numfilestreams == LEVEL_MAX_FILESTREAMS)
+	if(!level || (obor_profile_build < 3422 && (level->numfilestreams < 0 || level->numfilestreams > LEVEL_MAX_FILESTREAMS))) { *pretvar = NULL; return E_FAIL; }
+    if(obor_profile_build >= 3422)
+    {
+        for(fsindex = 0; fsindex < LEVEL_MAX_FILESTREAMS; ++fsindex)
+            if(level->filestreams[fsindex].buf == NULL) break;
+    }
+    else fsindex = level->numfilestreams;
+    if(fsindex == LEVEL_MAX_FILESTREAMS)
 	{
 		printf("Maximum file streams exceeded.\n");
 		*pretvar = NULL;
@@ -9130,15 +9212,15 @@ HRESULT openbor_createfilestream(ScriptVariant** varlist , ScriptVariant** pretv
 	}
 
 	ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
-	(*pretvar)->lVal = (LONG)level->numfilestreams;
+	(*pretvar)->lVal = (LONG)fsindex;
 
 	// Initialize the new filestream
-	level->filestreams[level->numfilestreams].pos = 0;
-	level->filestreams[level->numfilestreams].buf = obor_profile_calloc_named("createfilestream()", 128);
-    if(!level->filestreams[level->numfilestreams].buf) { *pretvar = NULL; return E_FAIL; }
-    level->filestreams[level->numfilestreams].obor_capacity = 128;
-	level->filestreams[level->numfilestreams].buf[0] = '\0';
-	level->numfilestreams++;
+	level->filestreams[fsindex].pos = 0;
+	level->filestreams[fsindex].buf = obor_profile_calloc_named("createfilestream()", 128);
+    if(!level->filestreams[fsindex].buf) { *pretvar = NULL; return E_FAIL; }
+    level->filestreams[fsindex].obor_capacity = 128;
+	level->filestreams[fsindex].buf[0] = '\0';
+	if(obor_profile_build < 3422) level->numfilestreams++;
 	return S_OK;
 }
 
@@ -9218,6 +9300,24 @@ HRESULT openbor_savefilestream(ScriptVariant** varlist , ScriptVariant** pretvar
 
 	return S_OK;
 }
+
+HRESULT openbor_closefilestream(ScriptVariant** varlist, ScriptVariant** pretvar, int paramCount)
+{
+    LONG index;
+    *pretvar = NULL;
+    if(obor_profile_build < 3422 || paramCount < 1 || !varlist || !varlist[0] || !level)
+        return E_FAIL;
+    if(FAILED(ScriptVariant_IntegerValue(varlist[0], &index)) || index < 0 || index >= LEVEL_MAX_FILESTREAMS)
+        return E_FAIL;
+    if(level->filestreams[index].buf)
+    {
+        free(level->filestreams[index].buf);
+        level->filestreams[index].buf = NULL;
+        level->filestreams[index].obor_capacity = 0;
+    }
+    return S_OK;
+}
+
 
 //damageentity(entity, other, force, drop, type)
 HRESULT openbor_damageentity(ScriptVariant** varlist , ScriptVariant** pretvar, int paramCount)
@@ -9607,13 +9707,13 @@ HRESULT openbor_setspawnentry(ScriptVariant** varlist, ScriptVariant** pretvar, 
 		if(paramCount >= 3 && temp)
 		{
 			if(SUCCEEDED(ScriptVariant_IntegerValue(varlist[2], &ltemp)))
-				spawnentry.per1 = (int)ltemp;
+				spawnentry.per1 = obor_flash_spawn_value((int)ltemp, obor_profile_build);
 			else temp = 0;
 		}
 		if(paramCount >= 4 && temp)
 		{
 			if(SUCCEEDED(ScriptVariant_IntegerValue(varlist[3], &ltemp)))
-				spawnentry.per2 = (int)ltemp;
+				spawnentry.per2 = obor_flash_spawn_value((int)ltemp, obor_profile_build);
 			else temp = 0;
 		}
 		(*pretvar)->lVal = (LONG)temp;
@@ -10005,6 +10105,7 @@ void mapstrings_transconst(ScriptVariant** varlist, int paramCount)
 		ICMPCONST(ANI_RUNSLIDE)
 		ICMPCONST(ANI_BLOCKPAIN)
 		ICMPCONST(ANI_DUCKATTACK)
+        if(obor_profile_build >= 3466) { ICMPCONST(ANI_WALKOFF) }
 		if(obor_profile_build < 3398 && stricmp("MAX_ANIS", constname)==0) {
 			ScriptVariant_ChangeType(varlist[0], VT_INTEGER);
 			varlist[0]->lVal = (LONG)OBOR_PROFILE_BASE_ANIMATIONS;
@@ -11148,6 +11249,13 @@ void mapstrings_getbglayerproperty(ScriptVariant** varlist, int paramCount)
 		"Property name '%s' is not supported by function getbglayerproperty.\n");
 }
 
+static LONG obor_layer_wavelength(float value)
+{
+    /* Preserve valid source truncation; aliases outside signed32 have no integer result. */
+    if(!(value >= -2147483648.0f && value < 2147483648.0f)) return 0;
+    return (LONG)value;
+}
+
 HRESULT openbor_getbglayerproperty(ScriptVariant** varlist , ScriptVariant** pretvar, int paramCount)
 {
 	LONG ind;
@@ -11184,13 +11292,13 @@ HRESULT openbor_getbglayerproperty(ScriptVariant** varlist , ScriptVariant** pre
 	case _gbglp_alpha:
 	{
 		ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
-		(*pretvar)->lVal = (LONG)level->bglayers[ind].alpha;
+		(*pretvar)->lVal = (LONG)(obor_profile_build >= 3462 ? level->bglayers[ind].drawmethod.alpha : level->bglayers[ind].alpha);
 		break;
 	}
 	case _gbglp_amplitude:
 	{
 		ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
-		(*pretvar)->lVal = (LONG)level->bglayers[ind].amplitude;
+		(*pretvar)->lVal = (LONG)(obor_profile_build >= 3462 ? level->bglayers[ind].drawmethod.water.amplitude : level->bglayers[ind].amplitude);
 		break;
 	}
 	case _gbglp_bgspeedratio:
@@ -11208,26 +11316,26 @@ HRESULT openbor_getbglayerproperty(ScriptVariant** varlist , ScriptVariant** pre
 	case _gbglp_transparency:
 	{
 		ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
-		(*pretvar)->lVal = (LONG)level->bglayers[ind].transparency;
+		(*pretvar)->lVal = (LONG)(obor_profile_build >= 3462 ? level->bglayers[ind].drawmethod.transbg : level->bglayers[ind].transparency);
 		break;
 	}
 	case _gbglp_watermode:
 	{
 		ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
-		(*pretvar)->lVal = (LONG)level->bglayers[ind].watermode;
+		(*pretvar)->lVal = (LONG)(obor_profile_build >= 3462 ? level->bglayers[ind].drawmethod.water.watermode : level->bglayers[ind].watermode);
 		break;
 	}
 
 	case _gbglp_wavelength:
 	{
 		ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
-		(*pretvar)->lVal = (LONG)level->bglayers[ind].wavelength;
+		(*pretvar)->lVal = (obor_profile_build >= 3462 ? obor_layer_wavelength(level->bglayers[ind].drawmethod.water.wavelength) : (LONG)level->bglayers[ind].wavelength);
 		break;
 	}
 	case _gbglp_wavespeed:
 	{
 		ScriptVariant_ChangeType(*pretvar, VT_DECIMAL);
-		(*pretvar)->dblVal = (DOUBLE)level->bglayers[ind].wavespeed;
+		(*pretvar)->dblVal = (DOUBLE)(obor_profile_build >= 3462 ? level->bglayers[ind].drawmethod.water.wavespeed : level->bglayers[ind].wavespeed);
 		break;
 	}
 	case _gbglp_xoffset:
@@ -11383,7 +11491,8 @@ HRESULT openbor_changebglayerproperty(ScriptVariant** varlist , ScriptVariant** 
 		if(SUCCEEDED(ScriptVariant_IntegerValue(varlist[2], &ltemp)))
 		{
 			(*pretvar)->lVal = (LONG)1;
-			level->bglayers[ind].alpha = (int)ltemp;
+			if(obor_profile_build >= 3462) level->bglayers[ind].drawmethod.alpha = (int)ltemp;
+			else level->bglayers[ind].alpha = (int)ltemp;
 		}
 		break;
 	}
@@ -11392,7 +11501,8 @@ HRESULT openbor_changebglayerproperty(ScriptVariant** varlist , ScriptVariant** 
 		if(SUCCEEDED(ScriptVariant_IntegerValue(varlist[2], &ltemp)))
 		{
 			(*pretvar)->lVal = (LONG)1;
-			level->bglayers[ind].amplitude = (int)ltemp;
+			if(obor_profile_build >= 3462) level->bglayers[ind].drawmethod.water.amplitude = (int)ltemp;
+			else level->bglayers[ind].amplitude = (int)ltemp;
 		}
 		break;
 	}
@@ -11419,7 +11529,8 @@ HRESULT openbor_changebglayerproperty(ScriptVariant** varlist , ScriptVariant** 
 		if(SUCCEEDED(ScriptVariant_IntegerValue(varlist[2], &ltemp)))
 		{
 			(*pretvar)->lVal = (LONG)1;
-			level->bglayers[ind].transparency = (int)ltemp;
+			if(obor_profile_build >= 3462) level->bglayers[ind].drawmethod.transbg = (int)ltemp;
+			else level->bglayers[ind].transparency = (int)ltemp;
 		}
 		break;
 	}
@@ -11428,7 +11539,8 @@ HRESULT openbor_changebglayerproperty(ScriptVariant** varlist , ScriptVariant** 
 		if(SUCCEEDED(ScriptVariant_IntegerValue(varlist[2], &ltemp)))
 		{
 			(*pretvar)->lVal = (LONG)1;
-			level->bglayers[ind].watermode = (int)ltemp;
+			if(obor_profile_build >= 3462) level->bglayers[ind].drawmethod.water.watermode = (int)ltemp;
+			else level->bglayers[ind].watermode = (int)ltemp;
 		}
 		break;
 	}
@@ -11438,7 +11550,8 @@ HRESULT openbor_changebglayerproperty(ScriptVariant** varlist , ScriptVariant** 
 		if(SUCCEEDED(ScriptVariant_IntegerValue(varlist[2], &ltemp)))
 		{
 			(*pretvar)->lVal = (LONG)1;
-			level->bglayers[ind].wavelength = (int)ltemp;
+			if(obor_profile_build >= 3462) level->bglayers[ind].drawmethod.water.wavelength = (int)ltemp;
+			else level->bglayers[ind].wavelength = (int)ltemp;
 		}
 		break;
 	}
@@ -11447,7 +11560,8 @@ HRESULT openbor_changebglayerproperty(ScriptVariant** varlist , ScriptVariant** 
 		if(SUCCEEDED(ScriptVariant_DecimalValue(varlist[2], &dbltemp)))
 		{
 			(*pretvar)->lVal = (LONG)1;
-			level->bglayers[ind].wavespeed = (float)dbltemp;
+			if(obor_profile_build >= 3462) level->bglayers[ind].drawmethod.water.wavespeed = (float)dbltemp;
+			else level->bglayers[ind].wavespeed = (float)dbltemp;
 		}
 		break;
 	}
@@ -11624,13 +11738,13 @@ HRESULT openbor_getfglayerproperty(ScriptVariant** varlist , ScriptVariant** pre
 	case _gfglp_alpha:
 	{
 		ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
-		(*pretvar)->lVal = (LONG)level->fglayers[ind].alpha;
+		(*pretvar)->lVal = (LONG)(obor_profile_build >= 3462 ? level->fglayers[ind].drawmethod.alpha : level->fglayers[ind].alpha);
 		break;
 	}
 	case _gfglp_amplitude:
 	{
 		ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
-		(*pretvar)->lVal = (LONG)level->fglayers[ind].amplitude;
+		(*pretvar)->lVal = (LONG)(obor_profile_build >= 3462 ? level->fglayers[ind].drawmethod.water.amplitude : level->fglayers[ind].amplitude);
 		break;
 	}
 	case _gfglp_bgspeedratio:
@@ -11648,26 +11762,26 @@ HRESULT openbor_getfglayerproperty(ScriptVariant** varlist , ScriptVariant** pre
 	case _gfglp_transparency:
 	{
 		ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
-		(*pretvar)->lVal = (LONG)level->fglayers[ind].transparency;
+		(*pretvar)->lVal = (LONG)(obor_profile_build >= 3462 ? level->fglayers[ind].drawmethod.transbg : level->fglayers[ind].transparency);
 		break;
 	}
 	case _gfglp_watermode:
 	{
 		ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
-		(*pretvar)->lVal = (LONG)level->fglayers[ind].watermode;
+		(*pretvar)->lVal = (LONG)(obor_profile_build >= 3462 ? level->fglayers[ind].drawmethod.water.watermode : level->fglayers[ind].watermode);
 		break;
 	}
 
 	case _gfglp_wavelength:
 	{
 		ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
-		(*pretvar)->lVal = (LONG)level->fglayers[ind].wavelength;
+		(*pretvar)->lVal = (obor_profile_build >= 3462 ? obor_layer_wavelength(level->fglayers[ind].drawmethod.water.wavelength) : (LONG)level->fglayers[ind].wavelength);
 		break;
 	}
 	case _gfglp_wavespeed:
 	{
 		ScriptVariant_ChangeType(*pretvar, VT_DECIMAL);
-		(*pretvar)->dblVal = (DOUBLE)level->fglayers[ind].wavespeed;
+		(*pretvar)->dblVal = (DOUBLE)(obor_profile_build >= 3462 ? level->fglayers[ind].drawmethod.water.wavespeed : level->fglayers[ind].wavespeed);
 		break;
 	}
 	case _gfglp_xoffset:
@@ -11822,7 +11936,8 @@ HRESULT openbor_changefglayerproperty(ScriptVariant** varlist , ScriptVariant** 
 		if(SUCCEEDED(ScriptVariant_IntegerValue(varlist[2], &ltemp)))
 		{
 			(*pretvar)->lVal = (LONG)1;
-			level->fglayers[ind].alpha = (int)ltemp;
+			if(obor_profile_build >= 3462) level->fglayers[ind].drawmethod.alpha = (int)ltemp;
+			else level->fglayers[ind].alpha = (int)ltemp;
 		}
 		break;
 	}
@@ -11831,7 +11946,8 @@ HRESULT openbor_changefglayerproperty(ScriptVariant** varlist , ScriptVariant** 
 		if(SUCCEEDED(ScriptVariant_IntegerValue(varlist[2], &ltemp)))
 		{
 			(*pretvar)->lVal = (LONG)1;
-			level->fglayers[ind].amplitude = (int)ltemp;
+			if(obor_profile_build >= 3462) level->fglayers[ind].drawmethod.water.amplitude = (int)ltemp;
+			else level->fglayers[ind].amplitude = (int)ltemp;
 		}
 		break;
 	}
@@ -11858,7 +11974,8 @@ HRESULT openbor_changefglayerproperty(ScriptVariant** varlist , ScriptVariant** 
 		if(SUCCEEDED(ScriptVariant_IntegerValue(varlist[2], &ltemp)))
 		{
 			(*pretvar)->lVal = (LONG)1;
-			level->fglayers[ind].transparency = (int)ltemp;
+			if(obor_profile_build >= 3462) level->fglayers[ind].drawmethod.transbg = (int)ltemp;
+			else level->fglayers[ind].transparency = (int)ltemp;
 		}
 		break;
 	}
@@ -11867,7 +11984,8 @@ HRESULT openbor_changefglayerproperty(ScriptVariant** varlist , ScriptVariant** 
 		if(SUCCEEDED(ScriptVariant_IntegerValue(varlist[2], &ltemp)))
 		{
 			(*pretvar)->lVal = (LONG)1;
-			level->fglayers[ind].watermode = (int)ltemp;
+			if(obor_profile_build >= 3462) level->fglayers[ind].drawmethod.water.watermode = (int)ltemp;
+			else level->fglayers[ind].watermode = (int)ltemp;
 		}
 		break;
 	}
@@ -11877,7 +11995,8 @@ HRESULT openbor_changefglayerproperty(ScriptVariant** varlist , ScriptVariant** 
 		if(SUCCEEDED(ScriptVariant_IntegerValue(varlist[2], &ltemp)))
 		{
 			(*pretvar)->lVal = (LONG)1;
-			level->fglayers[ind].wavelength = (int)ltemp;
+			if(obor_profile_build >= 3462) level->fglayers[ind].drawmethod.water.wavelength = (int)ltemp;
+			else level->fglayers[ind].wavelength = (int)ltemp;
 		}
 		break;
 	}
@@ -11886,7 +12005,8 @@ HRESULT openbor_changefglayerproperty(ScriptVariant** varlist , ScriptVariant** 
 		if(SUCCEEDED(ScriptVariant_DecimalValue(varlist[2], &dbltemp)))
 		{
 			(*pretvar)->lVal = (LONG)1;
-			level->fglayers[ind].wavespeed = (float)dbltemp;
+			if(obor_profile_build >= 3462) level->fglayers[ind].drawmethod.water.wavespeed = (float)dbltemp;
+			else level->fglayers[ind].wavespeed = (float)dbltemp;
 		}
 		break;
 	}
@@ -12210,6 +12330,123 @@ BIND:
 	return S_OK;
 }
 
+#include "obor_resources.h"
+
+/* The heap list identifies live arrays; native allocation size bounds all accesses. */
+static size_t obor_array_capacity(const ScriptVariant *handle)
+{
+    Node *node;
+    size_t bytes, offset = obor_profile_build >= 3429 ? 1 : 0;
+    if(!handle || handle->vt != VT_PTR || !handle->ptrVal) return 0;
+    node = List_GetNodeByValue(&scriptheap, handle->ptrVal);
+    if(!node || !node->name || strcmp(node->name, "openbor_array")) return 0;
+    bytes = obor_allocation_size(handle->ptrVal);
+    if(bytes / sizeof(ScriptVariant) <= offset) return 0;
+    return bytes / sizeof(ScriptVariant) - offset;
+}
+
+HRESULT openbor_array(ScriptVariant** varlist, ScriptVariant** pretvar, int paramCount)
+{
+    LONG size;
+    size_t slots, offset = obor_profile_build >= 3429 ? 1 : 0;
+    ScriptVariant *array;
+    if(!pretvar || !*pretvar) return E_FAIL;
+    if(obor_profile_build < 3428 || paramCount < 1 || !varlist || !varlist[0] ||
+       FAILED(ScriptVariant_IntegerValue(varlist[0], &size)) || size <= 0 ||
+       (uintmax_t)size > SIZE_MAX / sizeof(ScriptVariant) - offset)
+        goto array_error;
+    slots = (size_t)size + offset;
+    ScriptVariant_ChangeType(*pretvar, VT_PTR);
+    array = malloc(sizeof(ScriptVariant) * slots);
+    if(array) memset(array, 0, sizeof(ScriptVariant) * slots);
+    (*pretvar)->ptrVal = array;
+    if(!array)
+    {
+        printf("Not enough memory: array(%d)\n", (int)size);
+        *pretvar = NULL;
+        return E_FAIL;
+    }
+    if(offset)
+    {
+        ScriptVariant_ChangeType(array, VT_INTEGER);
+        array->lVal = size;
+    }
+    List_InsertAfter(&scriptheap, array, "openbor_array");
+    return S_OK;
+array_error:
+    printf("Function requires 1 positive int value: array(int size)\n");
+    *pretvar = NULL;
+    return E_FAIL;
+}
+
+HRESULT openbor_size(ScriptVariant** varlist, ScriptVariant** pretvar, int paramCount)
+{
+    if(!pretvar || !*pretvar) return E_FAIL;
+    if(obor_profile_build < 3429 || paramCount < 1 || !varlist ||
+       !obor_array_capacity(varlist[0]))
+    {
+        printf("Function requires 1 array handle and 1 int value: get(array, int index)\n");
+        *pretvar = NULL;
+        return E_FAIL;
+    }
+    ScriptVariant_Copy(*pretvar, (ScriptVariant*)varlist[0]->ptrVal);
+    return S_OK;
+}
+
+HRESULT openbor_get(ScriptVariant** varlist, ScriptVariant** pretvar, int paramCount)
+{
+    LONG ind, size = 0;
+    size_t capacity, offset = obor_profile_build >= 3429 ? 1 : 0;
+    if(!pretvar || !*pretvar) return E_FAIL;
+    if(obor_profile_build < 3428 || paramCount < 2 || !varlist || !varlist[1] ||
+       !(capacity = obor_array_capacity(varlist[0]))) goto get_error;
+    if(!offset) ScriptVariant_Clear(*pretvar);
+    if(FAILED(ScriptVariant_IntegerValue(varlist[1], &ind))) goto get_error;
+    if(offset)
+    {
+        if(FAILED(ScriptVariant_IntegerValue((ScriptVariant*)varlist[0]->ptrVal, &size)) ||
+           size < 0 || (uintmax_t)size > capacity) goto get_error;
+        if(ind < 0 || ind >= size) goto get_error2;
+    }
+    else if(ind < 0 || (uintmax_t)ind >= capacity) goto get_error;
+    ScriptVariant_Copy(*pretvar, (ScriptVariant*)varlist[0]->ptrVal + ind + offset);
+    return S_OK;
+get_error:
+    printf("Function requires 1 array handle and 1 int value: get(array, int index)\n");
+    *pretvar = NULL;
+    return E_FAIL;
+get_error2:
+    printf("Array bound out of range: %d, max %d\n", (int)ind, (int)(size - 1));
+    *pretvar = NULL;
+    return E_FAIL;
+}
+
+HRESULT openbor_set(ScriptVariant** varlist, ScriptVariant** pretvar, int paramCount)
+{
+    LONG ind, size = 0;
+    size_t capacity, offset = obor_profile_build >= 3429 ? 1 : 0;
+    if(!pretvar) return E_FAIL;
+    *pretvar = NULL;
+    if(obor_profile_build < 3428 || paramCount < 3 || !varlist || !varlist[1] || !varlist[2] ||
+       !(capacity = obor_array_capacity(varlist[0]))) goto set_error;
+    if(FAILED(ScriptVariant_IntegerValue(varlist[1], &ind))) goto set_error;
+    if(offset)
+    {
+        if(FAILED(ScriptVariant_IntegerValue((ScriptVariant*)varlist[0]->ptrVal, &size)) ||
+           size < 0 || (uintmax_t)size > capacity) goto set_error;
+        if(ind < 0 || ind >= size) goto set_error2;
+    }
+    else if(ind < 0 || (uintmax_t)ind >= capacity) goto set_error;
+    ScriptVariant_Copy((ScriptVariant*)varlist[0]->ptrVal + ind + offset, varlist[2]);
+    return S_OK;
+set_error:
+    printf("Function requires 1 array handle, 1 int value and 1 value: set(array, int index, value)\n");
+    return E_FAIL;
+set_error2:
+    printf("Array bound out of range: %d, max %d\n", (int)ind, (int)(size - 1));
+    return E_FAIL;
+}
+
 //allocscreen(int w, int h);
 HRESULT openbor_allocscreen(ScriptVariant** varlist , ScriptVariant** pretvar, int paramCount)
 {
@@ -12386,7 +12623,7 @@ performattack_error:
 //setidle(entity, int anim, int resetable, int stalladd);
 HRESULT openbor_setidle(ScriptVariant** varlist , ScriptVariant** pretvar, int paramCount)
 {
-	LONG anim, resetable=0, stalladd=0;
+	LONG anim=0, resetable=0, stalladd=0;
 	entity* e;
 	extern unsigned int time;
 
@@ -12420,7 +12657,7 @@ HRESULT openbor_setidle(ScriptVariant** varlist , ScriptVariant** pretvar, int p
 	return S_OK;
 
 setidle_error:
-	printf("Function need a valid entity handle, the other 2 integer parameters are optional: setidle(entity, int anim, int resetable, int stalladd)\n");
+	printf("Function need a valid entity handle, the other %d integer parameters are optional: setidle(entity, int anim, int resetable, int stalladd)\n", obor_profile_build < 3416 ? 2 : 3);
 	return E_FAIL;
 }
 

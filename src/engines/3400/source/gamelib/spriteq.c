@@ -1,10 +1,11 @@
-/* AnyBOR modification record: 2026-09-12.
+/* AnyBOR modification record: 2026-10-30.
  * Port maintained by retrodiv <retrodiv@proton.me>.
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
  * Upstream code retains its original license and notices.
  * Select the native queued-sprite Z-range filtering while preserving locked
- * queue entries and order.
+ * queue entries and order. Preserve each profile's queued water flags, layer
+ * defaults and rendering order.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/3400.md
  * at the source repository root. Original notices follow below.
@@ -71,7 +72,7 @@ void spriteq_add_frame(int x, int y, int z, s_sprite* frame, s_drawmethod* pdraw
 	if(pdrawmethod)
 	{
 	    queue[spritequeue_len].drawmethod = *pdrawmethod;
-	    queue[spritequeue_len].drawmethod.flag = 1;
+        if(obor_profile_build<3468) queue[spritequeue_len].drawmethod.flag = 1;
 	}
 	else queue[spritequeue_len].drawmethod.flag = 0;
 	queue[spritequeue_len].params[0] = 0; // determin if the sprite's center should be readjusted;
@@ -92,7 +93,7 @@ void spriteq_add_sprite(int x, int y, int z, int id, s_drawmethod* pdrawmethod, 
 	if(pdrawmethod)
 	{
 	    queue[spritequeue_len].drawmethod = *pdrawmethod;
-	    queue[spritequeue_len].drawmethod.flag = 1;
+        if(obor_profile_build<3468) queue[spritequeue_len].drawmethod.flag = 1;
 	}
 	else queue[spritequeue_len].drawmethod.flag = 0;
 	queue[spritequeue_len].params[0] = 1; // determin if the sprite's center should be readjusted;
@@ -114,7 +115,7 @@ void spriteq_add_screen(int x, int y, int z, s_screen* ps, s_drawmethod* pdrawme
 	if(pdrawmethod)
 	{
 	    queue[spritequeue_len].drawmethod = *pdrawmethod;
-	    queue[spritequeue_len].drawmethod.flag = 1;
+        if(obor_profile_build<3468) queue[spritequeue_len].drawmethod.flag = 1;
 	}
 	else queue[spritequeue_len].drawmethod.flag = 0;
 	order[spritequeue_len] = &queue[spritequeue_len];

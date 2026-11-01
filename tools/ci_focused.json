@@ -332,12 +332,82 @@
       "ci": "shared"
     },
     {
+      "id": "test_early_spawn_continuation",
+      "memory_mib": 512,
+      "seconds": 120,
+      "command": [
+        "python3",
+        "tools/test_early_spawn_continuation.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_early_sprite_lines",
+      "memory_mib": 512,
+      "seconds": 120,
+      "command": [
+        "python3",
+        "tools/test_early_sprite_lines.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_early_inverse_transform",
+      "memory_mib": 512,
+      "seconds": 180,
+      "command": [
+        "python3",
+        "tools/test_early_inverse_transform.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_early_gif",
+      "memory_mib": 512,
+      "seconds": 120,
+      "command": [
+        "python3",
+        "tools/test_early_gif.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_early_menu_system",
+      "memory_mib": 512,
+      "seconds": 120,
+      "command": [
+        "python3",
+        "tools/test_early_menu_system.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_early_pixel_blends",
+      "memory_mib": 512,
+      "seconds": 120,
+      "command": [
+        "python3",
+        "tools/test_early_pixel_blends.py"
+      ],
+      "ci": "shared"
+    },
+    {
       "id": "test_early_komap",
       "memory_mib": 512,
       "seconds": 120,
       "command": [
         "python3",
         "tools/test_early_komap.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_early_palette_selection",
+      "memory_mib": 512,
+      "seconds": 120,
+      "command": [
+        "python3",
+        "tools/test_early_palette_selection.py"
       ],
       "ci": "shared"
     },
@@ -648,6 +718,16 @@
       "command": [
         "python3",
         "tools/test_historical_entity_complex.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_historical_knockdowncount",
+      "memory_mib": 512,
+      "seconds": 120,
+      "command": [
+        "python3",
+        "tools/test_historical_knockdowncount.py"
       ],
       "ci": "shared"
     },
@@ -1668,6 +1748,66 @@
       "command": [
         "python3",
         "tools/test_content_triage.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_early_arrays",
+      "memory_mib": 512,
+      "seconds": 120,
+      "command": [
+        "python3",
+        "tools/test_early_arrays.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_early_sample_pause",
+      "memory_mib": 512,
+      "seconds": 120,
+      "command": [
+        "python3",
+        "tools/test_early_sample_pause.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_early_script_clear",
+      "memory_mib": 1024,
+      "seconds": 180,
+      "command": [
+        "python3",
+        "tools/test_early_script_clear.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_early_nodropspawn",
+      "memory_mib": 512,
+      "seconds": 120,
+      "command": [
+        "python3",
+        "tools/test_early_nodropspawn.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_early_nokill",
+      "memory_mib": 512,
+      "seconds": 180,
+      "command": [
+        "python3",
+        "tools/test_early_nokill.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_early_ai_combat",
+      "memory_mib": 512,
+      "seconds": 180,
+      "command": [
+        "python3",
+        "tools/test_early_ai_combat.py"
       ],
       "ci": "shared"
     }

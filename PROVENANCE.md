@@ -8,9 +8,16 @@ distributed hash of every retained upstream file. This makes the port's modifica
 distinguishable from upstream code without importing upstream Git history.
 The shared port, frontend glue and build tooling are included as source.
 
-Files imported from a profile revision into another physical baseline have a
+Files imported from an upstream revision into another physical baseline have a
 `source_import` entry with their own upstream commit, repository and original
-SHA-256. The baseline hash remains separate. The imported media sources retain
+SHA-256. The baseline hash remains separate. Provenance-only revisions in
+`src/pin.json` identify source inputs without adding selectable profiles.
+Restored graphics code from revision `b38a0a6dd38dc5b638e895183f4ed4df469300ae`
+retains the [original no-sale license](LICENSES/OpenBOR-3400.txt); the mathematical
+controls in `tools/fixtures/early_inverse_math.c`, `early_water_geometry_math.c`
+and `early_model_remaining_math.c` retain their own original source notices.
+BSD-3-Clause covers only the original adapters and modifications.
+The imported media sources retain
 their original copyright blocks and the complete [profile license](LICENSES/OpenBOR-profile-4153-BSD-3-Clause.txt);
 the SBOM identifies the selected source revision and its embedded component terms.
 

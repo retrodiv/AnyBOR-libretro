@@ -150,6 +150,7 @@ HRESULT openbor_setfilestreamposition(ScriptVariant** varlist , ScriptVariant** 
 
 HRESULT openbor_filestreamappend(ScriptVariant** varlist , ScriptVariant** pretvar, int paramCount);
 HRESULT openbor_createfilestream(ScriptVariant** varlist , ScriptVariant** pretvar, int paramCount);
+HRESULT openbor_closefilestream(ScriptVariant** varlist, ScriptVariant** pretvar, int paramCount);
 HRESULT openbor_savefilestream(ScriptVariant** varlist , ScriptVariant** pretvar, int paramCount);
 
 HRESULT openbor_getindexedvar(ScriptVariant** varlist , ScriptVariant** pretvar, int paramCount);
@@ -164,6 +165,11 @@ HRESULT openbor_jumptobranch(ScriptVariant** varlist , ScriptVariant** pretvar, 
 HRESULT openbor_changelight(ScriptVariant** varlist , ScriptVariant** pretvar, int paramCount);
 HRESULT openbor_changeshadowcolor(ScriptVariant** varlist , ScriptVariant** pretvar, int paramCount);
 HRESULT openbor_bindentity(ScriptVariant** varlist , ScriptVariant** pretvar, int paramCount);
+
+HRESULT openbor_array(ScriptVariant** varlist, ScriptVariant** pretvar, int paramCount);
+HRESULT openbor_size(ScriptVariant** varlist, ScriptVariant** pretvar, int paramCount);
+HRESULT openbor_get(ScriptVariant** varlist, ScriptVariant** pretvar, int paramCount);
+HRESULT openbor_set(ScriptVariant** varlist, ScriptVariant** pretvar, int paramCount);
 
 HRESULT openbor_allocscreen(ScriptVariant** varlist , ScriptVariant** pretvar, int paramCount);
 HRESULT openbor_clearscreen(ScriptVariant** varlist , ScriptVariant** pretvar, int paramCount);

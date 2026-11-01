@@ -17,7 +17,8 @@ import unittest
 from contract_fixtures import contract_profiles, load_contract_fixture
 from native_sanitizers import sanitizer_environment
 from test_early_entity_namespaces import namespace_descriptor, selected_dispatch
-from test_historical_player import function
+from test_historical_player import function, switch_cases
+from test_early_system_callbacks import block
 
 ROOT = Path(os.environ.get('OBOR_TEST_SOURCE', Path(__file__).resolve().parents[1]))
 FIXTURE = Path(__file__).parent / 'fixtures/profile-early-entity-subproperties.json'
@@ -297,6 +298,120 @@ int main(void) {
                     'stdout': run.stdout, 'stderr': run.stderr, 'scope': fixture['scope'], 'retirement': 'TemporaryDirectory removes source/binary'}, indent=2) + '\n')
             self.assertEqual(run.returncode, 0, run.stdout + run.stderr)
             self.assertIn('early_entity_subproperties=1', run.stdout)
+
+
+class DefenseWalkingTests(unittest.TestCase):
+    def test_defense_arguments_and_deprecated_walking_get_set(self):
+        path=Path(__file__).parent/'fixtures/profile-early-defense-walking.json'
+        fixture=load_contract_fixture(path)
+        revisions={r['revision'] for r in fixture['sources']}
+        self.assertEqual(len(revisions),len(fixture['sources']))
+        self.assertTrue(set(fixture['boundary_controls'])<=revisions)
+        for profile in contract_profiles(fixture,json.loads((ROOT/'src/pin.json').read_text())['profiles']):
+            revision=int(profile.get('revision',profile['build']))
+            if profile['engine']==fixture['engine'] and fixture['range'][0]<=revision<=fixture['range'][1]:
+                self.assertIn(revision,revisions)
+        engine=Path(os.environ.get('OBOR_EARLY_TEXT_ENGINE',ROOT/'src/engines'/fixture['engine']))
+        source=(engine/'openborscript.c').read_text()
+        enum_get=source[source.index('enum getentityproperty_enum'):source.index('void mapstrings_getentityproperty(')]
+        enum_set=source[source.index('enum changeentityproperty_enum'):source.index('void mapstrings_changeentityproperty(')]
+        descriptor=namespace_descriptor(source,'obor_property_namespace')
+        macro=re.search(r'(?m)^#define MAPSTRINGS\([^\n]+(?:\n[^\n]*)*?\n}',source)
+        self.assertIsNotNone(macro)
+        pieces=[descriptor,'\n'.join('static const obor_property_namespace *'+n+'(void);' for n in
+            ['obor_get_property_namespace','obor_set_property_namespace','obor_get_aiflag_namespace','obor_set_aiflag_namespace']),
+            function(source,'obor_property_index'),enum_get,enum_set,
+            function((engine/'source/utils.c').read_text(),'searchList'),macro[0],
+            function(source,'mapstrings_getentityproperty'),function(source,'mapstrings_changeentityproperty')]
+        variant=(engine/'source/scriptlib/ScriptVariant.c').read_text()
+        pieces += [function(variant,n) for n in ['ScriptVariant_ChangeType','ScriptVariant_Clear','ScriptVariant_IntegerValue']]
+        pieces.append(selected_dispatch(source,'openbor_getentityproperty',['_gep_defense','_gep_aiflag']))
+        setter=selected_dispatch(source,'openbor_changeentityproperty',['_cep_aiflag'])
+        # Lookup tables belong to discarded property cases; prefix validation and
+        # selected native dispatch bodies remain unchanged.
+        for name in ['actions','entitytypes','think']:
+            setter,count=re.subn(r'(?s)static const (?:void\*|int) '+name+r'\[\]\s*=\s*\{.*?\};','',setter)
+            self.assertEqual(count,1)
+        pieces.append(setter)
+        cases=[]
+        for row in fixture['cases']:
+            self.assertEqual(len(row['results']),3)
+            results=['{'+','.join([str(r['ok']),str(r['type']),str(r['value']),str(r['turning']),json.dumps(r['diagnostic'])])+'}' for r in row['results']]
+            inputs=[json.dumps(row['input'][k]) if isinstance(row['input'][k],str) else str(row['input'][k]) for k in fixture['input_fields']]
+            cases.append('{'+','.join([json.dumps(row['name']),*inputs,'{'+','.join(results)+'}'])+'}')
+        code=(path.parent/'early_defense_walking.c').read_text().replace('@PIECES@','\n'.join(pieces)).replace('@CASES@',',\n'.join(cases))
+        code=code.replace('@CHECKS@','\n'.join('check(%d,%d,%d,%d,%d);'%(r['revision'],r['era'],r['defense_id'],r['getflag_id'],r['setflag_id']) for r in fixture['sources']))
+        with tempfile.TemporaryDirectory(prefix='early-defense-walking-') as directory:
+            unit=Path(directory)/'probe.c';unit.write_text(code);binary=unit.with_suffix('')
+            flags=['-std=gnu11','-O1','-g','-UNDEBUG','-DUNIT_TEST=1','-DSAFEALLOC_H=1','-Dstricmp=strcasecmp','-fcommon','-fsigned-char',
+                '-fsanitize=address,undefined,pointer-overflow','-fno-sanitize-recover=all','-fno-omit-frame-pointer','-Wall','-Wextra','-Werror',
+                '-Wno-unused-variable','-Wno-unused-function','-Wno-sign-compare','-Wno-misleading-indentation','-Wno-error=deprecated-declarations']
+            for include in ['', 'source','source/gamelib','source/gfxlib','source/scriptlib','source/preprocessorlib','source/randlib','source/ramlib']:
+                flags+=['-I',str(engine/include)]
+            flags+=['-I',str(ROOT/'src/port/libretro'),'-I',str(ROOT/'src/glue')]
+            build=subprocess.run(shlex.split(os.environ.get('HOST_CC','cc'))+flags+[str(unit),*([] if sys.platform=='darwin' else ['-no-pie']),'-o',str(binary)],capture_output=True,text=True,timeout=60)
+            self.assertEqual(build.returncode,0,build.stdout+build.stderr)
+            run=subprocess.run([str(binary)],capture_output=True,text=True,timeout=30,env=sanitizer_environment())
+            self.assertEqual(run.returncode,0,run.stdout+run.stderr)
+            self.assertIn('early_defense_walking=1',run.stdout)
+
+
+class FlashThresholdTests(unittest.TestCase):
+    def test_entity_and_spawn_threshold_storage_at_each_boundary(self):
+        path=Path(__file__).parent/'fixtures/profile-early-flash-widths.json'
+        fixture=load_contract_fixture(path)
+        revisions={r['revision'] for r in fixture['sources']}
+        self.assertEqual(len(revisions),len(fixture['sources']))
+        self.assertTrue(set(fixture['boundary_controls'])<=revisions)
+        for profile in contract_profiles(fixture,json.loads((ROOT/'src/pin.json').read_text())['profiles']):
+            revision=int(profile.get('revision',profile['build']))
+            if profile['engine']==fixture['engine'] and fixture['range'][0]<=revision<=fixture['range'][1]:
+                self.assertIn(revision,revisions)
+        engine=Path(os.environ.get('OBOR_EARLY_TEXT_ENGINE',ROOT/'src/engines'/fixture['engine']))
+        core=(engine/'openbor.c').read_text();script=(engine/'openborscript.c').read_text()
+        macro=re.search(r'(?m)^#define MAPSTRINGS\([^\n]+(?:\n[^\n]*)*?\n}',script);self.assertIsNotNone(macro)
+        enum=re.search(r'(?s)enum gep_maps_enum\s*\{[^}]*\};',script);self.assertIsNotNone(enum)
+        start=script.index('enum setspawnentry_enum');end=script.index('void mapstrings_setspawnentry(',start)
+        pieces=[script[start:end],enum[0],function((engine/'source/utils.c').read_text(),'searchList'),macro[0],function(script,'mapstrings_setspawnentry')]
+        variant=(engine/'source/scriptlib/ScriptVariant.c').read_text()
+        pieces += [function(variant,n) for n in ['ScriptVariant_ChangeType','ScriptVariant_Clear','ScriptVariant_IntegerValue']]
+        setter,cases=switch_cases(script,'openbor_setspawnentry','prop')
+        prefix=re.split(r'\bswitch\s*\(prop\)',setter,maxsplit=1)[0]
+        pieces.append(prefix+'switch(prop){case _sse_dying:'+cases['_sse_dying']['body']+'default:*pretvar=NULL;return E_FAIL;}return S_OK;}')
+        level=function(core,'load_level');a=level.index('case CMD_LEVEL_DYING:')+len('case CMD_LEVEL_DYING:');b=level.index('case CMD_LEVEL_ITEM:',a)
+        copy=function(core,'smartspawn');needle='if(props->dying)';self.assertEqual(copy.count(needle),1)
+        getter=function(script,'openbor_getentityproperty');a_get=getter.index('case _gep_maps_dying_critical:');b_get=getter.index('case _gep_maps_frozen:',a_get)
+        rows=[]
+        for row in fixture['cases']:
+            self.assertEqual(len(row['results']),4)
+            results=[]
+            for result in row['results']:
+                results.append('{'+','.join('{'+','.join(map(str,result[k]))+'}' for k in ['direct','spawn','pipeline','script','script_entity'])+'}')
+            rows.append('{'+','.join([json.dumps(row['name']),*(str(row['input'][k]) for k in fixture['input_fields']),'{'+','.join(results)+'}'])+'}')
+        originals=[]
+        for i,layout in enumerate(fixture['original_layouts']):
+            originals.append('static void original_%d(void){struct original_entity{%s};struct original_spawn{%s};for(unsigned i=0;i<sizeof(cases)/sizeof(cases[0]);i++){const scenario *c=&cases[i];struct original_entity e;struct original_spawn p;e.per1=c->low;e.per2=c->critical;p.per1=c->low;p.per2=c->critical;assert(e.per1==c->results[%d].direct[0] && e.per2==c->results[%d].direct[1] && p.per1==c->results[%d].spawn[0] && p.per2==c->results[%d].spawn[1]);}}'%(i,layout['entity_declarations'],layout['spawn_declarations'],i,i,i,i))
+        code=(path.parent/'early_flash_widths.c').read_text()
+        for key,value in dict(PIECES='\n'.join(pieces),CASES=',\n'.join(rows),ORIGINALS='\n'.join(originals),
+                LEVEL=level[a:b],COPY=block(copy,copy.index(needle)),GETTERS=getter[a_get:b_get],
+                ORIGINAL_CHECKS='\n'.join('original_%d();'%i for i in range(len(originals))),
+                CHECKS='\n'.join('check(%d,%d);'%(r['revision'],r['era']) for r in fixture['sources'])).items():
+            code=code.replace('@'+key+'@',value)
+        with tempfile.TemporaryDirectory(prefix='early-flash-widths-') as directory:
+            unit=Path(directory)/'probe.c';unit.write_text(code);binary=unit.with_suffix('')
+            flags=['-std=gnu11','-O1','-g','-UNDEBUG','-DUNIT_TEST=1','-DSAFEALLOC_H=1','-Dstricmp=strcasecmp','-fcommon','-fsigned-char',
+                '-fsanitize=address,undefined,pointer-overflow','-fno-sanitize-recover=all','-fno-omit-frame-pointer','-Wall','-Wextra','-Werror',
+                '-Wno-unused-variable','-Wno-unused-function','-Wno-unused-parameter','-Wno-error=deprecated-declarations']
+            for include in ['', 'source','source/gamelib','source/gfxlib','source/scriptlib','source/preprocessorlib','source/randlib','source/ramlib']:
+                flags+=['-I',str(engine/include)]
+            flags+=['-I',str(ROOT/'src/port/libretro'),'-I',str(ROOT/'src/glue')]
+            build=subprocess.run(shlex.split(os.environ.get('HOST_CC','cc'))+flags+[str(unit),*([] if sys.platform=='darwin' else ['-no-pie']),'-o',str(binary)],capture_output=True,text=True,timeout=60)
+            self.assertEqual(build.returncode,0,build.stdout+build.stderr)
+            run=subprocess.run([str(binary)],capture_output=True,text=True,timeout=30,env=sanitizer_environment())
+            self.assertEqual(run.returncode,0,run.stdout+run.stderr);self.assertIn('early_flash_widths=1',run.stdout)
+            if os.environ.get('OBOR_FLASH_WIDTH_OBSERVATIONS'):
+                match=re.search(r'flash_layout=([0-9,]+)',run.stdout);self.assertIsNotNone(match)
+                Path(os.environ['OBOR_FLASH_WIDTH_OBSERVATIONS']).write_text(json.dumps(dict(compiler=os.environ.get('HOST_CC','cc'),source_sha256=hashlib.sha256(code.encode()).hexdigest(),contexts=len(fixture['sources']),cases=len(fixture['cases']),original_layouts=len(originals),sizes=list(map(int,match[1].split(','))),stdout=run.stdout,scope=fixture['scope']),indent=2)+'\n')
 
 
 if __name__ == '__main__':

@@ -1,3 +1,14 @@
+/* AnyBOR modification record: 2026-10-30.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Declare the profile-aware native palette and color-blend interfaces.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/3400.md
+ * at the source repository root. Original notices follow below.
+ */
+
 /*
  * OpenBOR - http://www.LavaLit.com
  * -----------------------------------------------------------------------
@@ -22,6 +33,7 @@ void palette_set_corrected(unsigned char *pal, int gr, int gg, int gb, int br, i
 int palette_find(unsigned char *pal, int r, int g, int b);
 
 typedef unsigned char* (*palette_table_function)(unsigned char*);
+typedef unsigned char* (*blend_table_function)(void);
 
 // Create lookup tables
 unsigned char * palette_table_multiply(unsigned char *pal);
@@ -31,6 +43,19 @@ unsigned char * palette_table_half(unsigned char *pal);
 unsigned char * palette_table_overlay(unsigned char *pal);
 unsigned char * palette_table_hardlight(unsigned char *pal);
 
+
+unsigned char * create_screen16_tbl(void);
+unsigned char * create_multiply16_tbl(void);
+unsigned char * create_overlay16_tbl(void);
+unsigned char * create_hardlight16_tbl(void);
+unsigned char * create_dodge16_tbl(void);
+unsigned char * create_half16_tbl(void);
+unsigned char * create_screen32_tbl(void);
+unsigned char * create_multiply32_tbl(void);
+unsigned char * create_overlay32_tbl(void);
+unsigned char * create_hardlight32_tbl(void);
+unsigned char * create_dodge32_tbl(void);
+unsigned char * create_half32_tbl(void);
 
 #endif
 

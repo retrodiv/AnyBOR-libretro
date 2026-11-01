@@ -158,4 +158,56 @@ class LevelOwnedStreamTests(unittest.TestCase):
                 int(p.get('revision',p['build']))in row['revisions']for p in contract_profiles(Path(__file__).parent / 'fixtures/filestream-contracts.json', self.pin['profiles'])))
 
 
+class EarlyStreamSlotTests(unittest.TestCase):
+    def test_slot_selection_close_availability_and_owned_release(self):
+        path=Path(__file__).parent/'fixtures/profile-early-stream-slots.json'
+        fixture=load_contract_fixture(path)
+        revisions={r['revision'] for r in fixture['sources']}
+        self.assertEqual(len(revisions),len(fixture['sources']))
+        self.assertTrue(set(fixture['boundary_controls']) <= revisions)
+        for profile in contract_profiles(fixture,json.loads((SOURCE/'src/pin.json').read_text())['profiles']):
+            revision=int(profile.get('revision',profile['build']))
+            if profile['engine']==fixture['engine'] and fixture['range'][0]<=revision<=fixture['range'][1]:
+                self.assertIn(revision,revisions)
+        engine=Path(os.environ.get('OBOR_EARLY_TEXT_ENGINE',SOURCE/'src/engines'/fixture['engine']))
+        script=(engine/'openborscript.c').read_text()
+        loader=function(script,'Script_LoadSystemFunctions')
+        registration=re.search(r'if\(obor_profile_build >= 3422\)\s+List_InsertAfter\(&theFunctionList,\s*\(void\*\)openbor_closefilestream, "closefilestream"\);',loader)
+        self.assertIsNotNone(registration)
+        names=function(script,'Script_GetFunctionName')
+        lookup=re.search(r'else if \(obor_profile_build >= 3422 && functionRef==\(\(void\*\)openbor_closefilestream\)\) return "closefilestream";',names)
+        self.assertIsNotNone(lookup)
+        self.assertRegex((engine/'openborscript.h').read_text(),r'HRESULT openbor_closefilestream\(ScriptVariant\*\* varlist, ScriptVariant\*\* pretvar, int paramCount\);')
+        cases=[]
+        for row in fixture['cases']:
+            self.assertEqual(len(row['results']),2)
+            results=','.join('{'+','.join(map(str,r))+'}' for r in row['results'])
+            cases.append('{'+','.join([json.dumps(row['name']),*(str(row['input'][key]) for key in fixture['input_fields']),'{'+results+'}'])+'}')
+        code=(path.parent/'early_stream_slots.c').read_text()
+        code=code.replace('@BODIES@','\n'.join(function(script,n) for n in
+             ['openbor_openfilestream','openbor_createfilestream','openbor_closefilestream']))
+        variant=(engine/'source/scriptlib/ScriptVariant.c').read_text()
+        code=code.replace('@VARIANTS@','\n'.join(function(variant,n) for n in
+             ['ScriptVariant_ChangeType','ScriptVariant_Clear','ScriptVariant_IntegerValue']))
+        code=code.replace('@REGISTER@',registration[0]).replace('@LOOKUP@',lookup[0])
+        code=code.replace('@CASES@',',\n'.join(cases))
+        code=code.replace('@CHECKS@','\n'.join('check(%d,%d);'%(r['revision'],r['era']) for r in fixture['sources']))
+        code=bind_named_allocation_support(code,engine,marker='@ALLOCATION@')
+        with tempfile.TemporaryDirectory(prefix='early-stream-slots-') as directory:
+            source=Path(directory)/'probe.c';source.write_text(code);binary=source.with_suffix('')
+            flags=['-std=gnu11','-O0','-g','-UNDEBUG','-DUNIT_TEST=1','-DSAFEALLOC_H=1',
+                   '-fcommon','-fsigned-char','-fno-omit-frame-pointer','-Wall','-Wextra','-Werror',
+                   '-Wno-unused-parameter','-Wno-unused-variable','-Wno-error=deprecated-declarations',
+                   '-fsanitize=address,undefined,pointer-overflow','-fno-sanitize-recover=all']
+            for include in ['', 'source','source/gamelib','source/gfxlib','source/scriptlib',
+                            'source/preprocessorlib','source/randlib','source/ramlib']:
+                flags+=['-I',str(engine/include)]
+            flags+=['-I',str(SOURCE/'src/port/libretro'),'-I',str(SOURCE/'src/glue')]
+            compile_checked(shlex.split(os.environ.get('HOST_CC','cc'))+flags+
+                [str(source),*([] if sys.platform=='darwin' else ['-no-pie']),'-o',str(binary)])
+            observed=subprocess.run([str(binary)],capture_output=True,text=True,timeout=30,env=sanitizer_environment())
+            self.assertEqual(observed.returncode,0,observed.stdout+observed.stderr)
+            self.assertIn('early_stream_slots=1',observed.stdout)
+
+
 if __name__=='__main__':unittest.main()

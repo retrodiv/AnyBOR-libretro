@@ -32,7 +32,7 @@ void putscreenx8p16_water(s_screen * dest, s_screen * src, int x, int y, int key
     obor_water_rows w;
     int row, sx, dx, count, j;
     if(!obor_water_begin(&w, dest, src, x, y, amplitude, wavelength, time, watermode)) return;
-    if(obor_profile_build < 3390 && !remap) remap = (unsigned short*)src->palette;
+    if((obor_profile_build < 3390 || obor_profile_build >= 3401) && !remap) remap = (unsigned short*)src->palette;
     if(!remap) return;
     for(row = 0; row < w.rows; ++row) {
         unsigned char *sp;
@@ -50,7 +50,7 @@ void putscreenx8p16_water(s_screen * dest, s_screen * src, int x, int y, int key
         for(j = 0; j < count; ++j) {
             int i = obor_profile_build < 3390 ? count - 1 - j : j;
             if(!key || sp[i]) {
-                if(obor_profile_build < 3390)
+                if(obor_profile_build < 3390 || obor_profile_build >= 3401)
                     dp[i] = blendfp ? blendfp(remap[sp[i]], dp[i]) : remap[sp[i]];
                 else
                     /* Color and blend destination use the original base rows. */

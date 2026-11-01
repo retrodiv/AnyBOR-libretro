@@ -84,6 +84,7 @@ List* createModelstxtCommandList(void) {
 	LIST_ADD(CMD_MODELSTXT_NOCOST, "nocost");
 	LIST_ADD(CMD_MODELSTXT_NOCHEATS, "nocheats");
 	LIST_ADD(CMD_MODELSTXT_NODROPEN, "nodropen");
+    if(obor_profile_build >= 3430) LIST_ADD(CMD_MODELSTXT_NODROPSPAWN, "nodropspawn");
 	LIST_ADD(CMD_MODELSTXT_KNOW, "know");
 	LIST_ADD(CMD_MODELSTXT_NOAIRCANCEL, "noaircancel");
 	LIST_ADD(CMD_MODELSTXT_NOMAXRUSHRESET, "nomaxrushreset");
@@ -346,6 +347,7 @@ List* createModelCommandList(void) {
 	LIST_ADD(CMD_MODEL_STUN, "stun");
 	LIST_ADD(CMD_MODEL_GRABIN, "grabin");
 	LIST_ADD(CMD_MODEL_NOREFLECT, "noreflect");
+    if(obor_profile_build >= 3427) LIST_ADD(CMD_MODEL_NOKILL, "nokill");
 	LIST_ADD(CMD_MODEL_FORCEDIRECTION, "forcedirection");
 	LIST_ADD(CMD_MODEL_DAMAGEONLANDING, "damageonlanding");
 	LIST_ADD(CMD_MODEL_SEAL, "seal");

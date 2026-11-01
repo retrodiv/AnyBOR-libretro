@@ -106,11 +106,12 @@ int buffer_pakfile(@NAME_TYPE@name,char **buffer,size_t *length){
 @HELPERS@
 @OPENING@
 int main(void){
+ enum{OPENED_STREAMS=3};
  const uint32_t revisions[]={@REVISIONS@};
  for(unsigned n=0;n<sizeof(revisions)/sizeof(*revisions);++n){
   obor_profile_build=revisions[n];provider_calls=0;
   @LEVEL_SETUP@
-  for(int i=0;i<3;++i){
+  for(int i=0;i<OPENED_STREAMS;++i){
    ScriptVariant name={0},result={0},*out=&result,*argv[]={&name};
    name.vt=VT_STR;name.strVal=0;
    CHECK(openbor_openfilestream(argv,&out,1)==S_OK && out==&result,"opening result");
@@ -120,8 +121,10 @@ int main(void){
    @EXTENT@
    ++observations;
   }
-  CHECK(provider_calls==3,"provider route");
-  for(int i=0;i<@COUNT@;++i)free(@SLOT@.buf);
+  CHECK(provider_calls==OPENED_STREAMS,"provider route");
+  /* The returned IDs prove which slots this probe owns. A first-free slot
+   * policy can leave the engine's sequential allocation counter unchanged. */
+  for(int i=0;i<OPENED_STREAMS;++i){free(@SLOT@.buf);@SLOT@.buf=NULL;}
   @RESET@
  }
  printf("{\"status\":\"PASS\",\"contexts\":%u,\"cases\":%u,\"record_bytes\":%zu,\"buffer_offset\":%zu,\"size_offset\":%zu}\n",
@@ -136,7 +139,6 @@ int main(void){
                 LEVEL_DECLARATION='s_level *level;'if level_streams else'',
                 LEVEL_SETUP='level=calloc(1,sizeof(*level));CHECK(level,"bounded level storage");'if level_streams else'',
                 SLOT='level->filestreams[i]'if level_streams else'filestreams[i]',
-                COUNT='level->numfilestreams'if level_streams else'numfilestreams',
                 RESET='free(level);level=NULL;'if level_streams else'free(filestreams);filestreams=NULL;numfilestreams=0;',
                 EXTENT='CHECK('+('level->filestreams[i]'if level_streams else'filestreams[i]')+
                        '.obor_capacity==sizeof(bytes)+1,"owned extent");'if owned_extent else'')

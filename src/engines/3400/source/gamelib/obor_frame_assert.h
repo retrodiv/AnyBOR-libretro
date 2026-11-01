@@ -89,7 +89,32 @@ static const obor_frame_assert_location obor_frame_assert_locations[] = {
     {3391, {585, 586, 587, 588, 593, 594, 595, 0}, {"index >= 0", "a != NULL", "m != NULL", "index < a->numframes", "index >= 0", "a != NULL", "index < a->numframes", ""}},
     {3394, {587, 588, 589, 590, 595, 596, 597, 0}, {"index >= 0", "a != NULL", "m != NULL", "index < a->numframes", "index >= 0", "a != NULL", "index < a->numframes", ""}},
     {3397, {587, 588, 589, 590, 595, 596, 597, 0}, {"index >= 0", "a != NULL", "m != NULL", "index < a->numframes", "index >= 0", "a != NULL", "index < a->numframes", ""}},
-    {3400, {588, 589, 590, 591, 596, 597, 598, 0}, {"index >= 0", "a != NULL", "m != NULL", "index < a->numframes", "index >= 0", "a != NULL", "index < a->numframes", ""}}
+    {3400, {588, 589, 590, 591, 596, 597, 598, 0}, {"index >= 0", "a != NULL", "m != NULL", "index < a->numframes", "index >= 0", "a != NULL", "index < a->numframes", ""}},
+    {3406, {588, 589, 590, 591, 596, 597, 598, 0}, {"index >= 0", "a != NULL", "m != NULL", "index < a->numframes", "index >= 0", "a != NULL", "index < a->numframes", ""}},
+    {3411, {589, 590, 591, 592, 597, 598, 599, 0}, {"index >= 0", "a != NULL", "m != NULL", "index < a->numframes", "index >= 0", "a != NULL", "index < a->numframes", ""}},
+    {3415, {587, 588, 589, 590, 595, 596, 597, 0}, {"index >= 0", "a != NULL", "m != NULL", "index < a->numframes", "index >= 0", "a != NULL", "index < a->numframes", ""}},
+    {3416, {587, 588, 589, 590, 595, 596, 597, 0}, {"index >= 0", "a != NULL", "m != NULL", "index < a->numframes", "index >= 0", "a != NULL", "index < a->numframes", ""}},
+    {3420, {587, 588, 589, 590, 595, 596, 597, 0}, {"index >= 0", "a != NULL", "m != NULL", "index < a->numframes", "index >= 0", "a != NULL", "index < a->numframes", ""}},
+    {3422, {591, 592, 593, 594, 599, 600, 601, 0}, {"index >= 0", "a != NULL", "m != NULL", "index < a->numframes", "index >= 0", "a != NULL", "index < a->numframes", ""}},
+    {3427, {594, 595, 596, 597, 602, 603, 604, 0}, {"index >= 0", "a != NULL", "m != NULL", "index < a->numframes", "index >= 0", "a != NULL", "index < a->numframes", ""}},
+    {3428, {594, 595, 596, 597, 602, 603, 604, 0}, {"index >= 0", "a != NULL", "m != NULL", "index < a->numframes", "index >= 0", "a != NULL", "index < a->numframes", ""}},
+    {3431, {595, 596, 597, 598, 603, 604, 605, 0}, {"index >= 0", "a != NULL", "m != NULL", "index < a->numframes", "index >= 0", "a != NULL", "index < a->numframes", ""}},
+    {3434, {595, 596, 597, 598, 603, 604, 605, 0}, {"index >= 0", "a != NULL", "m != NULL", "index < a->numframes", "index >= 0", "a != NULL", "index < a->numframes", ""}},
+    {3436, {595, 596, 597, 598, 603, 604, 605, 0}, {"index >= 0", "a != NULL", "m != NULL", "index < a->numframes", "index >= 0", "a != NULL", "index < a->numframes", ""}},
+    {3441, {595, 596, 597, 598, 603, 604, 605, 0}, {"index >= 0", "a != NULL", "m != NULL", "index < a->numframes", "index >= 0", "a != NULL", "index < a->numframes", ""}},
+    {3445, {595, 596, 597, 598, 603, 604, 605, 0}, {"index >= 0", "a != NULL", "m != NULL", "index < a->numframes", "index >= 0", "a != NULL", "index < a->numframes", ""}},
+    {3446, {599, 600, 601, 602, 607, 608, 609, 0}, {"index >= 0", "a != NULL", "m != NULL", "index < a->numframes", "index >= 0", "a != NULL", "index < a->numframes", ""}},
+    {3449, {599, 600, 601, 602, 607, 608, 609, 0}, {"index >= 0", "a != NULL", "m != NULL", "index < a->numframes", "index >= 0", "a != NULL", "index < a->numframes", ""}},
+    {3454, {600, 601, 602, 603, 608, 609, 610, 0}, {"index >= 0", "a != NULL", "m != NULL", "index < a->numframes", "index >= 0", "a != NULL", "index < a->numframes", ""}},
+    {3458, {600, 601, 602, 603, 608, 609, 610, 0}, {"index >= 0", "a != NULL", "m != NULL", "index < a->numframes", "index >= 0", "a != NULL", "index < a->numframes", ""}},
+    {3461, {599, 600, 601, 602, 607, 608, 609, 0}, {"index >= 0", "a != NULL", "m != NULL", "index < a->numframes", "index >= 0", "a != NULL", "index < a->numframes", ""}},
+    {3463, {599, 600, 601, 602, 607, 608, 609, 0}, {"index >= 0", "a != NULL", "m != NULL", "index < a->numframes", "index >= 0", "a != NULL", "index < a->numframes", ""}},
+    {3465, {599, 600, 601, 602, 607, 608, 609, 0}, {"index >= 0", "a != NULL", "m != NULL", "index < a->numframes", "index >= 0", "a != NULL", "index < a->numframes", ""}},
+    {3467, {599, 600, 601, 602, 607, 608, 609, 0}, {"index >= 0", "a != NULL", "m != NULL", "index < a->numframes", "index >= 0", "a != NULL", "index < a->numframes", ""}},
+    {3469, {599, 600, 601, 602, 607, 608, 609, 0}, {"index >= 0", "a != NULL", "m != NULL", "index < a->numframes", "index >= 0", "a != NULL", "index < a->numframes", ""}},
+    {3472, {599, 600, 601, 602, 607, 608, 609, 0}, {"index >= 0", "a != NULL", "m != NULL", "index < a->numframes", "index >= 0", "a != NULL", "index < a->numframes", ""}},
+    {3477, {599, 600, 601, 602, 607, 608, 609, 0}, {"index >= 0", "a != NULL", "m != NULL", "index < a->numframes", "index >= 0", "a != NULL", "index < a->numframes", ""}},
+    {3482, {600, 601, 602, 603, 608, 609, 610, 0}, {"index >= 0", "a != NULL", "m != NULL", "index < a->numframes", "index >= 0", "a != NULL", "index < a->numframes", ""}}
 };
 #endif
 static void obor_frame_assert(int valid, const char *expression, const char *function)

@@ -461,6 +461,10 @@ HRESULT Interpreter_CompileInstructions(Interpreter* pinterpreter, List *exports
 	if(List_FindByName(&(pinterpreter->theInstructionList), "main"))
 		pinterpreter->mainEntryIndex = List_GetIndex(&(pinterpreter->theInstructionList));
 	else pinterpreter->mainEntryIndex = -1;
+    if(obor_profile_build >= 3430 &&
+       List_FindByName(&(pinterpreter->theInstructionList), "clear"))
+        pinterpreter->clearEntryIndex = List_GetIndex(&(pinterpreter->theInstructionList));
+    else pinterpreter->clearEntryIndex = -1;
 	List_Reset(&(pinterpreter->theInstructionList));
 	size = List_GetSize(&(pinterpreter->theInstructionList));
 	for(i=0; i<size; i++)
@@ -720,6 +724,7 @@ HRESULT Interpreter_CompileInstructions(Interpreter* pinterpreter, List *exports
 			}
 			List_Clear(&(pinterpreter->theInstructionList));
 			pinterpreter->mainEntryIndex = -1;
+            pinterpreter->clearEntryIndex = -1;
 			break;
 		}
 		if(compileToken) { free(compileToken); pInstruction->storageType = INSTRUCTION_COMPILED; }
@@ -763,6 +768,10 @@ HRESULT Interpreter_CompileInstructions(Interpreter* pinterpreter, List *exports
 		pinterpreter->pMainEntry = &(pinterpreter->instructionStorage[pinterpreter->mainEntryIndex]);
 	else
 		pinterpreter->pMainEntry = NULL;
+
+    if(pinterpreter->clearEntryIndex >= 0)
+        pinterpreter->pClearEntry = &pinterpreter->instructionStorage[pinterpreter->clearEntryIndex];
+    else pinterpreter->pClearEntry = NULL;
 
 	// convert theJumpTargetIndex (int) to a direct instruction pointer
 	for(i=0; i<size; i++)

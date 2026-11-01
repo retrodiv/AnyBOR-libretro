@@ -45,6 +45,66 @@ def continued_macro(source, name):
 
 
 class EarlyJumpWalkoffTests(unittest.TestCase):
+    def test_walkoff_constant_name_mapping(self):
+        from test_historical_behavior import native
+        from unittest.mock import patch
+        fixture = load_contract_fixture(Path(__file__).parent /
+            'fixtures/profile-walkoff-constant-contracts.json')
+        rows = fixture['sources']
+        revisions = {row['revision'] for row in rows}
+        self.assertEqual(len(rows), len(revisions))
+        for profile in contract_profiles(fixture, json.loads((ROOT / 'src/pin.json').read_text())['profiles']):
+            revision = int(profile.get('revision', profile['build']))
+            if profile['engine'] == fixture['engine'] and fixture['range'][0] <= revision <= fixture['range'][1]:
+                self.assertIn(revision, revisions)
+        engine = Path(os.environ.get('OBOR_EARLY_TEXT_ENGINE', ROOT / 'src/engines' / fixture['engine']))
+        script = (engine / 'openborscript.c').read_text()
+        mapper = function(script, 'mapstrings_transconst')
+        statement = braced_statement(mapper, 'if(obor_profile_build >= 3466)')
+        self.assertEqual(statement.count('ICMPCONST(ANI_WALKOFF)'), 1)
+        macro = continued_macro(script, 'ICMPCONST')
+        constant = re.search(r'(?m)^#define\s+ANI_WALKOFF\s+(\d+)\b', (engine / 'openbor.h').read_text())
+        self.assertIsNotNone(constant)
+        checks = []
+        for row in rows:
+            self.assertRegex(row['commit'], r'^[0-9a-f]{40}$')
+            self.assertEqual(row['engine'], fixture['engine'])
+            self.assertIn(row['mapped'], (0, 1))
+            checks.append('check(%d,%d,%d);' % (row['revision'], row['mapped'], row['value']))
+        # Only the changed mapper statement is compiled. The unchanged dynamic
+        # constant API and unrelated names have separate tests.
+        program = r'''
+#include <assert.h>
+#include <stdio.h>
+#include <string.h>
+#include <strings.h>
+typedef long LONG;
+enum {VT_STR,VT_INTEGER};
+typedef struct {int vt;LONG lVal;} ScriptVariant;
+static unsigned obor_profile_build;
+#define stricmp strcasecmp
+#define ANI_WALKOFF @VALUE@
+static void ScriptVariant_ChangeType(ScriptVariant *v,int type){v->vt=type;v->lVal=0;}
+@MACRO@
+static void map(ScriptVariant **varlist,const char *constname){@STATEMENT@}
+static void check(unsigned revision,int mapped,int value){
+ obor_profile_build=revision;
+ const char *names[]={"ANI_WALKOFF","ani_walkoff","Ani_Walkoff","ANI_WALKOFFtail","ANI_WALKOFF0",""};
+ for(unsigned i=0;i<sizeof(names)/sizeof(*names);++i){
+  ScriptVariant item={VT_STR,37},*args[]={&item};
+  map(args,names[i]);
+  if(i<3 && mapped)assert(item.vt==VT_INTEGER && item.lVal==value);
+  else assert(item.vt==VT_STR && item.lVal==37);
+ }
+}
+int main(void){@CHECKS@ puts("walkoff_constant=1");return 0;}
+'''
+        for key, value in dict(VALUE=constant[1], MACRO=macro, STATEMENT=statement,
+                               CHECKS='\n'.join(checks)).items():
+            program = program.replace('@' + key + '@', value)
+        with patch.dict(os.environ, sanitizer_environment()):
+            native(program, extra_flags=('-fno-sanitize-recover=all',))
+
     def test_jump_walkoff_and_animation_ids(self):
         fixture = load_contract_fixture(FIXTURE)
         rows = fixture['sources']
@@ -143,6 +203,7 @@ static float requested_height,requested_speed,requested_z;
 static int checkwall_below(float x,float z,float a) {(void)x;(void)z;(void)a;return environment==1||environment==2?0:-1;}
 static int checkhole(float x,float z) {(void)z;return environment==3 && (x==2 || x==-2);}
 static int checkwall(float x,float z) {(void)x;(void)z;return -1;}
+static entity *check_platform(float x,float z,entity *exclude) {(void)x;(void)z;(void)exclude;abort();}
 static int inair(entity *e) {assert(e==self);return airborne;}
 static void tryjump(float h,float s,float z,int ani) {requests++;requested_height=h;requested_speed=s;requested_z=z;requested_animation=ani;}
 static void set_idle(entity *e) {assert(e==self);idle_calls++;}

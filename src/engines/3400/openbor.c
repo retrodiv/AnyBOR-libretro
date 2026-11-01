@@ -32,7 +32,9 @@
  * the released level's owned stream bytes and extent metadata. Preserve
  * source-defined model-allocation failure feedback. Preserve script-save
  * values with explicit 32-bit fields, owned names, live references and
- * profile-defined indexed capacity.
+ * profile-defined indexed capacity. Preserve native session-save ordering,
+ * movie-menu availability, layer loading, water clocks, shadow predicates
+ * and camera progress for each profile.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/3400.md
  * at the source repository root. Original notices follow below.
@@ -123,7 +125,8 @@ const s_drawmethod plainmethod = {
 	256,  //scaley
 	0,    //shiftx
 	0,    //centerx  //currently used only by gfxshadow, do not touch it
-	0     //centery
+	0,    //centery
+    .water={{.beginsize=0.0}, {.endsize=0.0}, 0, {.wavespeed=0}, 0}
 };
 
 
@@ -141,6 +144,7 @@ const s_attack emptyattack = {
 	0,
 	0}, // coods
 	0,  // nopain/noreflect
+    0,  // nokill
 	0,  // noflash
 	0,  // noblock
 	0,  // grab
@@ -187,10 +191,14 @@ unsigned char*      blendings[MAX_BLENDINGS] = {NULL, NULL, NULL, NULL, NULL, NU
 palette_table_function blending_table_functions[MAX_BLENDINGS] = {palette_table_screen, palette_table_multiply, palette_table_overlay,
 										 palette_table_hardlight, palette_table_dodge, palette_table_half};
 
+blend_table_function blending_table_functions16[MAX_BLENDINGS] = {create_screen16_tbl, create_multiply16_tbl, create_overlay16_tbl, create_hardlight16_tbl, create_dodge16_tbl, create_half16_tbl};
+blend_table_function blending_table_functions32[MAX_BLENDINGS] = {create_screen32_tbl, create_multiply32_tbl, create_overlay32_tbl, create_hardlight32_tbl, create_dodge32_tbl, create_half32_tbl};
+
 
 int                 current_set = 0;
 int                 current_level = 0;
 int                 current_stage = 1;
+int                 new_game = 0;
 
 float               bgtravelled;
 int                 traveltime;
@@ -397,6 +405,7 @@ int					titleScreen			= 0;
 int					menuScreen			= 0;
 int					hallOfFame			= 0;
 int					gameOver			= 0;
+int showComplete = 0;
 char*				currentScene		= NULL;
 int                 tospeedup           = 0;          			// If set will speed the level back up after a boss hits the ground
 int                 reached[4]          = {0,0,0,0};			// Used with TYPE_ENDLEVEL to determine which players have reached the point //4player
@@ -520,6 +529,7 @@ int                 scbonuses[4]        = {10000, 1000, 100, 0};//Stage complete
 int                 showrushbonus       = 0;
 int                 noshare				= 0;					// Used for when you want to keep p1 & p2 credits separate
 int                 nodropen			= 0;					// Drop or not when spawning is now a modder option
+int nodropspawn = 0;
 int                 gfx_x_offset		= 0;                    //2011_04_03, DC: Enable X offset adjustment by modders.
 int                 gfx_y_offset		= 0;
 int                 gfx_y_offset_adj    = 0;                    //2011_04_03, DC: Enable Y offset adjustment by modders.
@@ -823,6 +833,7 @@ int getsyspropertybyindex(ScriptVariant* var, int index)
 		_e_vResolution,
 		_e_xpos,
 		_e_ypos,
+		_e_in_showcomplete,
 		_e_the_end,
 	};
 
@@ -861,8 +872,14 @@ int getsyspropertybyindex(ScriptVariant* var, int index)
 		break;
 	case _e_in_menuscreen:
 		ScriptVariant_ChangeType(var, VT_INTEGER);
-		var->lVal = (LONG)(menuScreen);
+        var->lVal = (LONG)(obor_profile_build >= 3481 &&
+            (selectScreen || titleScreen || hallOfFame || gameOver || showComplete || currentScene ||
+             (obor_profile_build >= 3482 && level)) ? 0 : menuScreen);
 		break;
+    case _e_in_showcomplete:
+        ScriptVariant_ChangeType(var, VT_INTEGER);
+        var->lVal = (LONG)showComplete;
+        break;
 	case _e_in_titlescreen:
 		ScriptVariant_ChangeType(var, VT_INTEGER);
 		var->lVal = (LONG)(titleScreen);
@@ -946,7 +963,11 @@ int getsyspropertybyindex(ScriptVariant* var, int index)
 		var->lVal = (LONG)videomodes.vRes;
 		break;
 	case _e_current_scene:
-        if(!currentScene) return 0;
+        if(!currentScene) {
+            if(obor_profile_build < 3454) return 0;
+            ScriptVariant_Clear(var);
+            break;
+        }
 		ScriptVariant_ChangeType(var, VT_STR);
 		strcpy(StrCache_Get(var->strVal), currentScene);
 		break;
@@ -2616,6 +2637,7 @@ void loadHighScoreFile(){
 
 
 #include "obor_script_file32.inc"
+#include "obor_script_file_text.inc"
 
 void saveScriptFile()
 {
@@ -2634,7 +2656,11 @@ void saveScriptFile()
 	path[l-1] = '0'+(current_set%10);
 	handle = fopen(path, "wb");
 	if(handle == NULL) return;
-	(void)obor_script_file32_write(handle, obor_script32_target_variant_size());
+    if(obor_profile_build >= 3413) {
+        (void)obor_script_file_text_write(handle);
+    } else {
+        (void)obor_script_file32_write(handle, obor_script32_target_variant_size());
+    }
 	fclose(handle);
 #endif
 }
@@ -2655,6 +2681,17 @@ void loadScriptFile(){
 	l = strlen(path); //s00, s01, s02 etc
 	path[l-2] = '0'+(current_set/10);
 	path[l-1] = '0'+(current_set%10);
+    if(obor_profile_build >= 3413) {
+        Script script;
+        Script *previous = pcurrentscript;
+        Script_Init(&script, "loadScriptFile", 1);
+        if(!load_script(&script, path)) Script_Clear(&script, 2);
+        Script_Compile(&script);
+        if(Script_IsInitialized(&script)) Script_Execute(&script);
+        pcurrentscript = previous;
+        Script_Clear(&script, 2);
+        return;
+    }
 	handle = fopen(path, "rb");
 	if(handle == NULL) return;
 	(void)obor_script_file32_read(handle, obor_script32_target_variant_size());
@@ -2746,6 +2783,8 @@ float getValidFloat(char* text, char* file, char* cmd)  {
 	if(obor_profile_build >= 3122 && !*text) return 0.0f;
 	if(obor_profile_build < 3118 ?
 		(*text && strspn(text, "0123456789.") == strlen(text)) : isNumeric(text)) {
+		if(obor_profile_build >= 3417 && text[strlen(text)-1] == '%')
+			return atof(text)/100.0f;
 		return atof(text);
 	} else {
 		printf(WARN_NUMBER_EXPECTED, file, cmd, text);
@@ -3070,6 +3109,32 @@ int create_blending_tables(unsigned char* palette, unsigned char* tables[], int 
 	return 1;
 }
 
+
+void create_blend_tables_x8(unsigned char* tables[]){
+	if(obor_profile_build < 3454 || !tables) return;
+	int i;
+	for(i=0; i<MAX_BLENDINGS; i++){
+		switch(screenformat){
+		case PIXEL_16:
+			tables[i] = (blending_table_functions16[i])();
+			break;
+		case PIXEL_32:
+			tables[i] = (blending_table_functions32[i])();
+			break;
+		}
+	}
+
+}
+
+static void obor_free_blend_tables_x8(void)
+{
+    int i;
+    if(obor_profile_build < 3454 || pixelformat != PIXEL_x8) return;
+    for(i=0; i<MAX_BLENDINGS; ++i) {
+        free(blendtables[i]);
+        blendtables[i] = NULL;
+    }
+}
 
 //change system palette by index
 void change_system_palette(int palindex)
@@ -3439,66 +3504,69 @@ void cache_all_backgrounds()
 }
 #endif
 
+static void obor_layer_repeat(int width, int *offset, int *repeat)
+{
+    int64_t origin;
+    if(*repeat >= 0) return;
+    origin = -(int64_t)width * 20000;
+    if(origin < INT_MIN || origin > INT_MAX) {
+        shutdown(1, "Layer repeat origin is outside the supported range");
+        return;
+    }
+    *offset = (int)origin;
+    *repeat = 40000;
+}
+
 void load_bglayer(char *filename, int index)
 {
-	if(!level) return;
-
-	// use screen for water effect for now, maybe get it to work with sprites at some point
-	if(level->bglayers[index].watermode)
-	{
-		if(loadscreen(filename, packfile, NULL, pixelformat, &level->bglayers[index].screen))
-		{
-			level->bglayers[index].height = level->bglayers[index].screen->height;
-			level->bglayers[index].width = level->bglayers[index].screen->width;
-			level->bglayers[index].type = bg_screen;
-		}
-	}
-	else if(level->bglayers[index].alpha>0 || level->bglayers[index].transparency)
-	{
-	// assume sprites are faster than screen when transparency or alpha are specified
-		level->bglayers[index].sprite = loadsprite2(filename, &(level->bglayers[index].width),&(level->bglayers[index].height));
-		level->bglayers[index].type = bg_sprite;
-	}
-	else
-	{
-	// otherwise, a screen should be fine, especially in 8bit mode, it is super fast,
-	//            or, at least it is not slower than a sprite
-		if(loadscreen(filename, packfile, NULL, pixelformat, &level->bglayers[index].screen))
-		{
-			level->bglayers[index].height = level->bglayers[index].screen->height;
-			level->bglayers[index].width = level->bglayers[index].screen->width;
-			level->bglayers[index].type = bg_screen;
-		}
-	}
-
-	if(level->bglayers[index].handle ==NULL) shutdown(1, "Error loading file '%s'", filename);
-
+    int alpha, transparency, watermode;
+    s_bglayer *layer;
+    if(!level || index < 0 || index >= LEVEL_MAX_BGLAYERS) return;
+    layer = &level->bglayers[index];
+    alpha = obor_profile_build >= 3462 ? layer->drawmethod.alpha : layer->alpha;
+    transparency = obor_profile_build >= 3462 ? layer->drawmethod.transbg : layer->transparency;
+    watermode = obor_profile_build >= 3462 ? layer->drawmethod.water.watermode : layer->watermode;
+    if(filename || obor_profile_build < 3456) {
+        if((alpha > 0 || transparency) && !watermode) {
+            layer->sprite = loadsprite2(filename, &layer->width, &layer->height);
+            layer->type = bg_sprite;
+        } else if(loadscreen(filename, packfile, NULL, pixelformat, &layer->screen)) {
+            layer->height = layer->screen->height;
+            layer->width = layer->screen->width;
+            layer->type = bg_screen;
+        }
+    }
+    if(layer->handle == NULL) shutdown(1, "Error loading file '%s'", filename);
+    else if(obor_profile_build >= 3456) {
+        obor_layer_repeat(layer->width, &layer->xoffset, &layer->xrepeat);
+        obor_layer_repeat(layer->height, &layer->zoffset, &layer->zrepeat);
+    }
 }
 
 void load_fglayer(char *filename, int index)
 {
-	if(!level) return;
-
-	if(level->fglayers[index].alpha>0 || level->fglayers[index].transparency)
-	{
-	// assume sprites are faster than screen when transparency or alpha are specified
-		level->fglayers[index].sprite = loadsprite2(filename, &(level->fglayers[index].width),&(level->fglayers[index].height));
-		level->fglayers[index].type = fg_sprite;
-	}
-	else
-	{
-	// otherwise, a screen should be fine, especially in 8bit mode, it is super fast,
-	//            or, at least it is not slower than a sprite
-		if(loadscreen(filename, packfile, NULL, pixelformat, &level->fglayers[index].screen))
-		{
-			level->fglayers[index].height = level->fglayers[index].screen->height;
-			level->fglayers[index].width = level->fglayers[index].screen->width;
-			level->fglayers[index].type = fg_screen;
-		}
-	}
-
-	if(level->fglayers[index].handle ==NULL) shutdown(1, "Error loading file '%s'", filename);
-
+    int alpha, transparency, watermode;
+    s_fglayer *layer;
+    if(!level || index < 0 || index >= LEVEL_MAX_FGLAYERS) return;
+    layer = &level->fglayers[index];
+    alpha = obor_profile_build >= 3462 ? layer->drawmethod.alpha : layer->alpha;
+    transparency = obor_profile_build >= 3462 ? layer->drawmethod.transbg : layer->transparency;
+    watermode = obor_profile_build >= 3462 ? layer->drawmethod.water.watermode : layer->watermode;
+     {
+        if((alpha > 0 || transparency) && (obor_profile_build < 3454 || !watermode)) {
+            layer->sprite = loadsprite2(filename, &layer->width, &layer->height);
+            layer->type = fg_sprite;
+        } else if(loadscreen(filename, packfile, NULL, pixelformat, &layer->screen)) {
+            layer->height = layer->screen->height;
+            layer->width = layer->screen->width;
+            layer->type = fg_screen;
+        }
+    }
+    if(layer->handle == NULL) shutdown(1, "Error loading file '%s'", filename);
+    else if(obor_profile_build >= 3456) {
+        obor_layer_repeat(layer->width, &layer->xoffset, &layer->xrepeat);
+        obor_layer_repeat(layer->height, &layer->zoffset, &layer->zrepeat);
+    }
 }
 
 void unload_texture(){
@@ -4620,6 +4688,13 @@ void lcmHandleCommandType(ArgList* arglist, s_model* newchar, char* filename) {
 	}
 	else if(stricmp(value, "obstacle")==0){
 		newchar->type                   = TYPE_OBSTACLE;
+        if(obor_profile_build >= 3437)
+        {
+            if(newchar->aimove == -1) newchar->aimove = 0;
+            newchar->aimove |= AIMOVE1_NOMOVE;
+            if(newchar->aimove == -1) newchar->aiattack = 0;
+            newchar->aimove |= AIATTACK1_NOATTACK;
+        }
 		newchar->subject_to_wall        = 1;
 		newchar->subject_to_platform    = 1;
 		newchar->subject_to_hole        = 1;
@@ -4928,6 +5003,9 @@ void lcmHandleCommandAimove(ArgList* arglist, s_model* newchar, int* aimoveset, 
 		else if(stricmp(value, "ignoreholes")==0){
 			newchar->aimove |= AIMOVE2_IGNOREHOLES;
 		}
+        else if(obor_profile_build >= 3424 && stricmp(value, "notargetidle") == 0) {
+            newchar->aimove |= AIMOVE2_NOTARGETIDLE;
+        }
 		else shutdown(1, "Model '%s' has invalid A.I. move switch: '%s'", filename, value);
 	}
 }
@@ -5664,16 +5742,16 @@ s_model* load_cached_model(char * name, char * owner, char unload)
 					#define tempdef(x, y, z, p, k, b, t, r, e) \
 					x(stricmp(value, #y)==0)\
 					{\
-					newchar->z[ATK_##y] = GET_FLOAT_ARG(2);\
+					if(obor_profile_build < 3417 || arglist.count>=2) newchar->z[ATK_##y] = GET_FLOAT_ARG(2);\
 					/*newchar->z[ATK_##y] /= 100;*/\
-					newchar->p[ATK_##y] = GET_FLOAT_ARG(3);\
-					newchar->k[ATK_##y] = GET_FLOAT_ARG(4);\
+					if(obor_profile_build < 3417 || arglist.count>=3) newchar->p[ATK_##y] = GET_FLOAT_ARG(3);\
+					if(obor_profile_build < 3417 || arglist.count>=4) newchar->k[ATK_##y] = GET_FLOAT_ARG(4);\
 					/*newchar->k[ATK_##y] /= 100;*/\
-					newchar->b[ATK_##y] = GET_FLOAT_ARG(5);\
-					newchar->t[ATK_##y] = GET_FLOAT_ARG(6);\
-					newchar->r[ATK_##y] = GET_FLOAT_ARG(7);\
+					if(obor_profile_build < 3417 || arglist.count>=5) newchar->b[ATK_##y] = GET_FLOAT_ARG(5);\
+					if(obor_profile_build < 3417 || arglist.count>=6) newchar->t[ATK_##y] = GET_FLOAT_ARG(6);\
+					if(obor_profile_build < 3417 || arglist.count>=7) newchar->r[ATK_##y] = GET_FLOAT_ARG(7);\
 					/*newchar->r[ATK_##y] /= 100;*/\
-					newchar->e[ATK_##y] = GET_FLOAT_ARG(8);\
+					if(obor_profile_build < 3417 || arglist.count>=8) newchar->e[ATK_##y] = GET_FLOAT_ARG(8);\
 					}
 					{
 						value = GET_ARG(1);
@@ -5704,25 +5782,25 @@ s_model* load_cached_model(char * name, char * owner, char unload)
 							                   value, filename, command, max_attack_types - STA_ATKS);
 							    break;
 							}
-							newchar->defense_factors[tempInt+STA_ATKS-1]        = GET_FLOAT_ARG(2);
-							newchar->defense_pain[tempInt+STA_ATKS-1]           = GET_FLOAT_ARG(3);
-							newchar->defense_knockdown[tempInt+STA_ATKS-1]      = GET_FLOAT_ARG(4);
-							newchar->defense_blockpower[tempInt+STA_ATKS-1]     = GET_FLOAT_ARG(5);
-							newchar->defense_blockthreshold[tempInt+STA_ATKS-1] = GET_FLOAT_ARG(6);
-							newchar->defense_blockratio[tempInt+STA_ATKS-1]     = GET_FLOAT_ARG(7);
-							newchar->defense_blocktype[tempInt+STA_ATKS-1]      = GET_FLOAT_ARG(8);
+							if(obor_profile_build < 3417 || arglist.count>=2) newchar->defense_factors[tempInt+STA_ATKS-1]        = GET_FLOAT_ARG(2);
+							if(obor_profile_build < 3417 || arglist.count>=3) newchar->defense_pain[tempInt+STA_ATKS-1]           = GET_FLOAT_ARG(3);
+							if(obor_profile_build < 3417 || arglist.count>=4) newchar->defense_knockdown[tempInt+STA_ATKS-1]      = GET_FLOAT_ARG(4);
+							if(obor_profile_build < 3417 || arglist.count>=5) newchar->defense_blockpower[tempInt+STA_ATKS-1]     = GET_FLOAT_ARG(5);
+							if(obor_profile_build < 3417 || arglist.count>=6) newchar->defense_blockthreshold[tempInt+STA_ATKS-1] = GET_FLOAT_ARG(6);
+							if(obor_profile_build < 3417 || arglist.count>=7) newchar->defense_blockratio[tempInt+STA_ATKS-1]     = GET_FLOAT_ARG(7);
+							if(obor_profile_build < 3417 || arglist.count>=8) newchar->defense_blocktype[tempInt+STA_ATKS-1]      = GET_FLOAT_ARG(8);
 						}
 						else if(stricmp(value, "ALL")==0)
 						{
 							for(i=0;i<max_attack_types;i++)
 							{
-								newchar->defense_factors[i]         = GET_FLOAT_ARG(2);
-								newchar->defense_pain[i]            = GET_FLOAT_ARG(3);
-								newchar->defense_knockdown[i]       = GET_FLOAT_ARG(4);
-								newchar->defense_blockpower[i]      = GET_FLOAT_ARG(5);
-								newchar->defense_blockthreshold[i]  = GET_FLOAT_ARG(6);
-								newchar->defense_blockratio[i]      = GET_FLOAT_ARG(7);
-								newchar->defense_blocktype[i]       = GET_FLOAT_ARG(8);
+								if(obor_profile_build < 3417 || arglist.count>=2) newchar->defense_factors[i]         = GET_FLOAT_ARG(2);
+								if(obor_profile_build < 3417 || arglist.count>=3) newchar->defense_pain[i]            = GET_FLOAT_ARG(3);
+								if(obor_profile_build < 3417 || arglist.count>=4) newchar->defense_knockdown[i]       = GET_FLOAT_ARG(4);
+								if(obor_profile_build < 3417 || arglist.count>=5) newchar->defense_blockpower[i]      = GET_FLOAT_ARG(5);
+								if(obor_profile_build < 3417 || arglist.count>=6) newchar->defense_blockthreshold[i]  = GET_FLOAT_ARG(6);
+								if(obor_profile_build < 3417 || arglist.count>=7) newchar->defense_blockratio[i]      = GET_FLOAT_ARG(7);
+								if(obor_profile_build < 3417 || arglist.count>=8) newchar->defense_blocktype[i]       = GET_FLOAT_ARG(8);
 							}
 						}
 					}
@@ -6115,7 +6193,14 @@ s_model* load_cached_model(char * name, char * owner, char unload)
 						if(pixelformat==PIXEL_x8 && newchar->palette==NULL)
 						{
 							newchar->palette = obor_profile_malloc_named("newchar#remap#palette", PAL_BYTES);
-							memcpy(newchar->palette, pal, PAL_BYTES);
+							if(obor_profile_build >= 3412) {
+								if(loadimagepalette(value, packfile, newchar->palette)==0) {
+									shutdownmessage = "Failed to load palette!";
+									goto lCleanup;
+								}
+							} else {
+								memcpy(newchar->palette, pal, PAL_BYTES);
+							}
 						}
 						mapflag[newchar->maps_loaded-1] = 1;
 						if(!errorVal){
@@ -7187,12 +7272,13 @@ s_model* load_cached_model(char * name, char * owner, char unload)
 					drawmethod.remap = GET_INT_ARG(7);
 					drawmethod.fillcolor = parsecolor(GET_ARG(8));
 					drawmethod.rotate = GET_INT_ARG(9);
-					drawmethod.fliprotate = GET_INT_ARG(10)%360;
+					drawmethod.fliprotate = obor_profile_build >= 3447 ? GET_INT_ARG(10) : GET_INT_ARG(10)%360;
 					if(drawmethod.scalex<0) {drawmethod.scalex = -drawmethod.scalex;drawmethod.flipx = !drawmethod.flipx;}
 					if(drawmethod.scaley<0) {drawmethod.scaley = - drawmethod.scaley;drawmethod.flipy = !drawmethod.flipy;}
 					if(drawmethod.rotate)
 					{
-						if(drawmethod.rotate<0) drawmethod.rotate += 360;
+						if(obor_profile_build >= 3447) drawmethod.rotate = (drawmethod.rotate%360 + 360)%360;
+                        else if(drawmethod.rotate<0) drawmethod.rotate += 360;
 					}
 					drawmethod.flag = 1;
 					break;
@@ -7336,6 +7422,10 @@ s_model* load_cached_model(char * name, char * owner, char unload)
 					pattack = (!newanim && newchar->smartbomb)?newchar->smartbomb:&attack;
 					pattack->no_pain = GET_INT_ARG(1);
 					break;
+                case CMD_MODEL_NOKILL:
+                    pattack = (!newanim && newchar->smartbomb) ? newchar->smartbomb : &attack;
+                    pattack->no_kill = GET_INT_ARG(1);
+                    break;
 				case CMD_MODEL_FORCEDIRECTION:
 					// the attack direction
 					pattack = (!newanim && newchar->smartbomb)?newchar->smartbomb:&attack;
@@ -7371,7 +7461,8 @@ s_model* load_cached_model(char * name, char * owner, char unload)
 					// force color map change for specified time
 					pattack = (!newanim && newchar->smartbomb)?newchar->smartbomb:&attack;
 					pattack->forcemap = GET_INT_ARG(1);
-					pattack->maptime = GET_INT_ARG(2) * GAME_SPEED;
+					if(obor_profile_build >= 3465) pattack->maptime = GET_FLOAT_ARG(2) * GAME_SPEED;
+                    else pattack->maptime = GET_INT_ARG(2) * GAME_SPEED;
 					break;
 				case CMD_MODEL_IDLE:
 					idle = GET_INT_ARG(1);
@@ -8128,6 +8219,9 @@ case CMD_MODELSTXT_COLOURSELECT:
 			case CMD_MODELSTXT_NODROPEN:
 				nodropen = 1;
 				break;
+            case CMD_MODELSTXT_NODROPSPAWN:
+                nodropspawn = 1;
+                break;
 			case CMD_MODELSTXT_KNOW:
 			{
 				// Just add path to cache list
@@ -9188,9 +9282,9 @@ void unload_level(){
 	s_model* temp;
     char legacy_level_name[128] = "";
 	unload_background();
-	unload_texture();
+	if(obor_profile_build < 3460) unload_texture();
 	freepanels();
-	freescreen(&bgbuffer);
+	if(obor_profile_build < 3415 || obor_profile_build >= 3424) freescreen(&bgbuffer);
 
 	if(level){
 
@@ -9391,6 +9485,46 @@ static char *obor_level_spawn_error(char *message, char *storage,
 }
 
 
+static void obor_layer_blend(int alpha)
+{
+    if(!blendfx_is_set && alpha > 0 && alpha <= MAX_BLENDINGS) blendfx[alpha-1] = 1;
+}
+
+static void obor_prepare_background_buffer(void)
+{
+    if((obor_profile_build < 3403 || obor_profile_build >= 3424) &&
+       pixelformat == PIXEL_x8 && level->numbglayers > 0)
+        bgbuffer = allocscreen(videomodes.hRes, videomodes.vRes, screenformat);
+    if(obor_profile_build < 3415 || obor_profile_build >= 3424)
+        bgbuffer_updated = 0;
+}
+
+static void obor_finish_layers(void)
+{
+    int index;
+    if(obor_profile_build < 3456 || !level || level->numbglayers <= 0) return;
+    load_bglayer(NULL, 0);
+    if(obor_profile_build < 3460) return;
+    for(index=1; index<level->numbglayers && index<LEVEL_MAX_BGLAYERS; index++) {
+        s_bglayer *layer = level->bglayers+index;
+        if(layer->zoffset != 1234567890) continue;
+        layer->zoffset = level->bglayers[0].height;
+        if(!level->rocking) continue;
+        layer->bgspeedratio = 2;
+        if(obor_profile_build >= 3462) {
+            layer->drawmethod.water.watermode = 3;
+            layer->drawmethod.water.beginsize = 1.0;
+            layer->drawmethod.water.endsize = 1 + level->bglayers[0].height/11.0;
+            layer->drawmethod.water.perspective = 0;
+        } else {
+            layer->watermode = 3;
+            layer->wavelength = 10;
+            layer->wavespeed = 0;
+        }
+    }
+}
+
+
 void load_level(char *filename){
 	char *buf = NULL;
 	size_t size, len;
@@ -9422,6 +9556,7 @@ void load_level(char *filename){
 	char legacy_level_error[1024];
 	char* scriptname = NULL;
 	Script* tempscript = NULL;
+	s_drawmethod *dm;
 
 	obor_preload_begin();
 	unload_level();
@@ -9591,6 +9726,7 @@ void load_level(char *filename){
 				level->bglayers[0].type = bg_screen;
 				level->bglayers[0].bgspeedratio = 1;
 
+				if(obor_profile_build >= 3462) { dm = &level->bglayers[0].drawmethod; *dm = plainmethod; }
 				level->bglayers[0].xratio = GET_FLOAT_ARG(2); // x ratio
 				level->bglayers[0].zratio = GET_FLOAT_ARG(3); // z ratio
 				level->bglayers[0].xoffset = GET_INT_ARG(4); // x start
@@ -9600,19 +9736,34 @@ void load_level(char *filename){
 				level->bglayers[0].xrepeat = GET_INT_ARG(8); // x repeat
 				level->bglayers[0].zrepeat = GET_INT_ARG(9); // z repeat
 				// unused
+				if(obor_profile_build >= 3462) {
+                    dm->transbg = GET_INT_ARG(10);
+                    dm->alpha = GET_INT_ARG(11);
+                    dm->water.watermode = GET_INT_ARG(12);
+                    if(dm->water.watermode == 3) {
+                        dm->water.beginsize = GET_FLOAT_ARG(13);
+                        dm->water.endsize = GET_FLOAT_ARG(14);
+                        dm->water.perspective = GET_INT_ARG(15);
+                    } else {
+                        dm->water.amplitude = GET_INT_ARG(13);
+                        dm->water.wavelength = GET_INT_ARG(14);
+                        dm->water.wavespeed = GET_FLOAT_ARG(15);
+                    }
+                } else {
 				level->bglayers[0].transparency = GET_INT_ARG(10); // transparency
 				level->bglayers[0].alpha = GET_INT_ARG(11); // alpha
 				level->bglayers[0].watermode = GET_INT_ARG(12); // amplitude
 				level->bglayers[0].amplitude = GET_INT_ARG(13); // amplitude
 				level->bglayers[0].wavelength = GET_INT_ARG(14); // wavelength
 				level->bglayers[0].wavespeed = GET_FLOAT_ARG(15); // waterspeed
+                }
 				level->bglayers[0].enabled = 1; // enabled
 
 				if((value=GET_ARG(2))[0]==0) level->bglayers[0].xratio = 0.5;
 				if((value=GET_ARG(3))[0]==0) level->bglayers[0].zratio = 0.5;
 
-				if((value=GET_ARG(8))[0]==0) level->bglayers[0].xrepeat = 5000;
-				if((value=GET_ARG(9))[0]==0) level->bglayers[0].zrepeat = 5000;
+				if((value=GET_ARG(8))[0]==0) level->bglayers[0].xrepeat = obor_profile_build >= 3456 ? -1 : 5000;
+				if((value=GET_ARG(9))[0]==0) level->bglayers[0].zrepeat = obor_profile_build >= 3456 ? -1 : 5000;
 
 				if(level->numbglayers==0) level->numbglayers = 1;
 				break;
@@ -9623,6 +9774,7 @@ void load_level(char *filename){
 				}
 				if(level->numbglayers==0) level->numbglayers = 1; // reserve for background
 
+				if(obor_profile_build >= 3462) { dm = &level->bglayers[level->numbglayers].drawmethod; *dm = plainmethod; }
 				level->bglayers[level->numbglayers].xratio = GET_FLOAT_ARG(2); // x ratio
 				level->bglayers[level->numbglayers].zratio = GET_FLOAT_ARG(3); // z ratio
 				level->bglayers[level->numbglayers].xoffset = GET_INT_ARG(4); // x start
@@ -9631,32 +9783,48 @@ void load_level(char *filename){
 				level->bglayers[level->numbglayers].zspacing = GET_INT_ARG(7); // z spacing
 				level->bglayers[level->numbglayers].xrepeat = GET_INT_ARG(8); // x repeat
 				level->bglayers[level->numbglayers].zrepeat = GET_INT_ARG(9); // z repeat
+				if(obor_profile_build >= 3462) {
+                    dm->transbg = GET_INT_ARG(10);
+                    dm->alpha = GET_INT_ARG(11);
+                    dm->water.watermode = GET_INT_ARG(12);
+                    if(dm->water.watermode == 3) {
+                        dm->water.beginsize = GET_FLOAT_ARG(13);
+                        dm->water.endsize = GET_FLOAT_ARG(14);
+                        dm->water.perspective = GET_INT_ARG(15);
+                    } else {
+                        dm->water.amplitude = GET_INT_ARG(13);
+                        dm->water.wavelength = GET_INT_ARG(14);
+                        dm->water.wavespeed = GET_FLOAT_ARG(15);
+                    }
+                } else {
 				level->bglayers[level->numbglayers].transparency = GET_INT_ARG(10); // transparency
 				level->bglayers[level->numbglayers].alpha = GET_INT_ARG(11); // alpha
 				level->bglayers[level->numbglayers].watermode = GET_INT_ARG(12); // amplitude
 				level->bglayers[level->numbglayers].amplitude = GET_INT_ARG(13); // amplitude
 				level->bglayers[level->numbglayers].wavelength = GET_INT_ARG(14); // wavelength
 				level->bglayers[level->numbglayers].wavespeed = GET_FLOAT_ARG(15); // waterspeed
+                }
 				level->bglayers[level->numbglayers].bgspeedratio = GET_FLOAT_ARG(16); // moving
 				level->bglayers[level->numbglayers].enabled = 1; // enabled
 
 				if((value=GET_ARG(2))[0]==0) level->bglayers[level->numbglayers].xratio = 0.5;
 				if((value=GET_ARG(3))[0]==0) level->bglayers[level->numbglayers].zratio = 0.5;
 
-				if((value=GET_ARG(8))[0]==0) level->bglayers[level->numbglayers].xrepeat = 5000; // close enough to infinite, lol
-				if((value=GET_ARG(9))[0]==0) level->bglayers[level->numbglayers].zrepeat = 5000;
+				if((value=GET_ARG(8))[0]==0) level->bglayers[level->numbglayers].xrepeat = obor_profile_build >= 3456 ? -1 : 5000; // close enough to infinite, lol
+				if((value=GET_ARG(9))[0]==0) level->bglayers[level->numbglayers].zrepeat = obor_profile_build >= 3456 ? -1 : 5000;
 
-				if(blendfx_is_set==0 && level->bglayers[level->numbglayers].alpha) blendfx[level->bglayers[level->numbglayers].alpha-1] = 1;
+				obor_layer_blend(obor_profile_build >= 3462 ? dm->alpha : level->bglayers[level->numbglayers].alpha);
 
 				load_bglayer(GET_ARG(1), level->numbglayers);
 				level->numbglayers++;
 				break;
 			case CMD_LEVEL_FGLAYER:
-				if(level->numfglayers >= LEVEL_MAX_FGLAYERS) {
-					errormessage = OBOR_LEVEL_ERROR("Too many bg layers in level (check LEVEL_MAX_FGLAYERS)!", "Too many bg layers in level (max %i)!", LEVEL_MAX_FGLAYERS);
+				if(level->numfglayers >= OBOR_PROFILE_FGLAYERS) {
+					errormessage = OBOR_LEVEL_ERROR("Too many bg layers in level (check LEVEL_MAX_FGLAYERS)!", "Too many bg layers in level (max %i)!", OBOR_PROFILE_FGLAYERS);
 					goto lCleanup;
 				}
 
+				if(obor_profile_build >= 3462) { dm = &level->fglayers[level->numfglayers].drawmethod; *dm = plainmethod; }
 				level->fglayers[level->numfglayers].z = GET_INT_ARG(2); // z
 				level->fglayers[level->numfglayers].xratio = GET_FLOAT_ARG(3); // x ratio
 				level->fglayers[level->numfglayers].zratio = GET_FLOAT_ARG(4); // z ratio
@@ -9667,33 +9835,91 @@ void load_level(char *filename){
 				level->fglayers[level->numfglayers].xrepeat = GET_INT_ARG(9); // x repeat
 
 				level->fglayers[level->numfglayers].zrepeat = GET_INT_ARG(10); // z repeat
+				if(obor_profile_build >= 3462) {
+                    dm->transbg = GET_INT_ARG(11);
+                    dm->alpha = GET_INT_ARG(12);
+                    dm->water.watermode = GET_INT_ARG(13);
+                    if(dm->water.watermode == 3) {
+                        dm->water.beginsize = GET_FLOAT_ARG(14);
+                        dm->water.endsize = GET_FLOAT_ARG(15);
+                        dm->water.perspective = GET_INT_ARG(16);
+                    } else {
+                        dm->water.amplitude = GET_INT_ARG(14);
+                        dm->water.wavelength = GET_INT_ARG(15);
+                        dm->water.wavespeed = GET_FLOAT_ARG(16);
+                    }
+                } else {
 				level->fglayers[level->numfglayers].transparency = GET_INT_ARG(11); // transparency
 				level->fglayers[level->numfglayers].alpha = GET_INT_ARG(12); // alpha
 				level->fglayers[level->numfglayers].watermode = GET_INT_ARG(13); // amplitude
 				level->fglayers[level->numfglayers].amplitude = GET_INT_ARG(14); // amplitude
 				level->fglayers[level->numfglayers].wavelength = GET_INT_ARG(15); // wavelength
 				level->fglayers[level->numfglayers].wavespeed = GET_FLOAT_ARG(16); // waterspeed
+                }
 				level->fglayers[level->numfglayers].bgspeedratio = GET_FLOAT_ARG(17); // moving
 				level->fglayers[level->numfglayers].enabled = 1;
 
 				if((value=GET_ARG(2))[0]==0) level->fglayers[level->numfglayers].xratio = 1.5;
 				if((value=GET_ARG(3))[0]==0) level->fglayers[level->numfglayers].zratio = 1.5;
 
-				if((value=GET_ARG(8))[0]==0) level->fglayers[level->numfglayers].xrepeat = 5000; // close enough to infinite, lol
-				if((value=GET_ARG(9))[0]==0) level->fglayers[level->numfglayers].zrepeat = 5000;
+				if((value=GET_ARG(8))[0]==0) level->fglayers[level->numfglayers].xrepeat = obor_profile_build >= 3456 ? -1 : 5000; // close enough to infinite, lol
+				if((value=GET_ARG(9))[0]==0) level->fglayers[level->numfglayers].zrepeat = obor_profile_build >= 3456 ? -1 : 5000;
 
-				if(blendfx_is_set==0 && level->fglayers[level->numfglayers].alpha) blendfx[level->fglayers[level->numfglayers].alpha-1] = 1;
+				obor_layer_blend(obor_profile_build >= 3462 ? dm->alpha : level->fglayers[level->numfglayers].alpha);
 
 				load_fglayer(GET_ARG(1), level->numfglayers);
 				level->numfglayers++;
 				break;
 			case CMD_LEVEL_WATER:
+                if(obor_profile_build < 3460) {
+
 				load_texture(GET_ARG(1));
 				i = GET_INT_ARG(2);
 				if(i<1) i = 1;
 				texture_set_wave((float)i);
-				break;
-			case CMD_LEVEL_DIRECTION:
+				
+			
+                } else {
+                    int index = level->numbglayers;
+                    if(index < 0 || index >= LEVEL_MAX_BGLAYERS) {
+                        errormessage = OBOR_LEVEL_ERROR("Too many bg layers in level (check LEVEL_MAX_BGLAYERS)!", "Too many bg layers in level (max %i)!", LEVEL_MAX_BGLAYERS);
+                        goto lCleanup;
+                    }
+                    if(index == 0) index = level->numbglayers = 1;
+                    level->bglayers[index].xratio = 0.5;
+                    level->bglayers[index].zratio = 0.5;
+                    level->bglayers[index].xoffset = 0;
+                    level->bglayers[index].zoffset = 1234567890;
+                    level->bglayers[index].xspacing = 0;
+                    level->bglayers[index].zspacing = 0;
+                    level->bglayers[index].xrepeat = -1;
+                    level->bglayers[index].zrepeat = 1;
+                    if(obor_profile_build >= 3462) {
+                        dm = &level->bglayers[index].drawmethod;
+                        *dm = plainmethod;
+                        dm->transbg = 0;
+                        dm->alpha = 0;
+                        dm->water.watermode = 2;
+                        dm->water.amplitude = GET_INT_ARG(2);
+                        dm->water.wavelength = 40;
+                        dm->water.wavespeed = 1.0;
+                        if(dm->water.amplitude < 1) dm->water.amplitude = 1;
+                    } else {
+                        level->bglayers[index].transparency = 0;
+                        level->bglayers[index].alpha = 0;
+                        level->bglayers[index].watermode = 2;
+                        level->bglayers[index].amplitude = GET_INT_ARG(2);
+                        level->bglayers[index].wavelength = 40;
+                        level->bglayers[index].wavespeed = 1;
+                        if(level->bglayers[index].amplitude < 1) level->bglayers[index].amplitude = 1;
+                    }
+                    level->bglayers[index].bgspeedratio = 0;
+                    level->bglayers[index].enabled = 1;
+                    load_bglayer(GET_ARG(1), index);
+                    level->numbglayers++;
+                }
+                break;
+            case CMD_LEVEL_DIRECTION:
 				value = GET_ARG(1);
 				if(stricmp(value, "up")==0) level->scrolldir = SCROLL_UP;
 				else if(stricmp(value, "down")==0) level->scrolldir = SCROLL_DOWN;
@@ -10103,8 +10329,8 @@ case CMD_LEVEL_2PSPAWN:
 			case CMD_LEVEL_DYING:
 				// Used to store which remake corresponds with the dying flash
 				next.dying = GET_INT_ARG(1);
-				next.per1 = GET_INT_ARG(2);
-				next.per2 = GET_INT_ARG(3);
+				next.per1 = obor_flash_spawn_value(GET_INT_ARG(2), obor_profile_build);
+				next.per2 = obor_flash_spawn_value(GET_INT_ARG(3), obor_profile_build);
 				break;
 			case CMD_LEVEL_ITEM: case CMD_LEVEL_2PITEM: case CMD_LEVEL_3PITEM: case CMD_LEVEL_4PITEM:
 			{
@@ -10238,15 +10464,15 @@ case CMD_LEVEL_AGGRESSION:
 		if(background) unload_background();
 	}
 
-	if(pixelformat==PIXEL_x8)
-	{
-		if(level->numbglayers>0) bgbuffer = allocscreen(videomodes.hRes, videomodes.vRes, screenformat);
-	}
-	bgbuffer_updated = 0;
+    obor_finish_layers();
+
+    obor_prepare_background_buffer();
 	if(musicPath[0]) music(musicPath, 1, musicOffset);
 
 	timeleft = level->settime * COUNTER_SPEED;    // Feb 24, 2005 - This line moved here to set custom time
 	level->width = level->numpanels * panel_width;
+    if(obor_profile_build >= 3437 && level->width < videomodes.hRes)
+        level->width = videomodes.hRes;
 
 	if(level->scrolldir&SCROLL_LEFT)
 		advancex = (float)(level->width-videomodes.hRes);
@@ -10382,18 +10608,21 @@ void pausemenu()
 			}
 			quit = 1;
 			sound_pause_music(0);
+            if(obor_profile_build >= 3434) sound_pause_sample(0);
 			sound_play_sample(SAMPLE_BEEP2, 0, savedata.effectvol,savedata.effectvol, 100);
 			pauselector = 0;
 		}
 		if(bothnewkeys & FLAG_ESC){
 			quit = 1;
 			sound_pause_music(0);
+            if(obor_profile_build >= 3434) sound_pause_sample(0);
 			sound_play_sample(SAMPLE_BEEP2, 0, savedata.effectvol,savedata.effectvol, 100);
 			pauselector = 0;
 		}
 		if(bothnewkeys & FLAG_SCREENSHOT){
 			pause = 1;
 			sound_pause_music(1);
+            if(obor_profile_build >= 3434) sound_pause_sample(1);
 			sound_play_sample(SAMPLE_BEEP2, 0, savedata.effectvol,savedata.effectvol, 100);
 			options();
 		}
@@ -11158,12 +11387,25 @@ void ent_default_init(entity* e)
 			{
 				dodrop = (e->modeldata.subtype != SUBTYPE_ARROW && level && (level->scrolldir==SCROLL_UP || level->scrolldir==SCROLL_DOWN));
 
+                if(obor_profile_build >= 3430)
+                {
+                    if(!nodropspawn && (dodrop || (e->x > advancex-30 && e->x < advancex + videomodes.hRes+30 && e->a == 0)))
+                        e->a += videomodes.vRes + randf(40);
+                    if(inair(e))
+                    {
+                        e->takeaction = common_drop;
+                        if(validanim(e, ANI_JUMP)) ent_set_anim(e, ANI_JUMP, 0);
+                    }
+                }
+                else
+                {
 				if(dodrop || (e->x > advancex-30 && e->x < advancex + videomodes.hRes+30 && e->a == 0))
 				{
 					e->a += videomodes.vRes + randf(40);
 					e->takeaction = common_drop;//enemy_drop;
 					if(validanim(e, ANI_JUMP)) ent_set_anim(e, ANI_JUMP, 0);
 				}
+                }
 			}
 			break;
 		// define trap type
@@ -11228,7 +11470,7 @@ void ent_default_init(entity* e)
 	if(e->modeldata.multiple < 0)
 		e->modeldata.multiple = 0;
 
-	if(e->modeldata.subject_to_platform>0 && (other=check_platform_below(e->x, e->z, e->a+1)) && other != e)
+	if(e->modeldata.subject_to_platform>0 && (other=check_platform_below(e->x, e->z, e->a + (obor_profile_build < 3449 ? 1 : 0), e)) && other != e)
 		e->base += other->a + other->animation->platform[other->animpos][7];
 	else if(e->modeldata.subject_to_wall>0 && (wall=checkwall_below(e->x, e->z, 9999999)) >= 0)
 		e->base += level->walls[wall][7];
@@ -11442,9 +11684,12 @@ void update_frame(entity* ent, int f)
 		if(self->animation->jumpframe.ent>=0)
 		{
 			dust = spawn(self->x, self->z, self->a, self->direction, NULL, self->animation->jumpframe.ent, NULL);
+			if(dust)
+			{
 			dust->base = self->a;
 			dust->autokill = 1;
 			execute_onspawn_script(dust);
+			}
 		}
 	}
 
@@ -11541,12 +11786,12 @@ void ent_set_anim(entity *ent, int aninum, int resetable)
 
 
 
-// 0 = none, 1+ = alternative
+// 0 = profile default, 1+ = alternative
 void ent_set_colourmap(entity *ent, unsigned int which)
 {
 	if(which>MAX_COLOUR_MAPS) which = 0;
 	if(which==0)
-		ent->colourmap = NULL;
+		ent->colourmap = obor_profile_build >= 3471 ? ent->modeldata.palette : NULL;
 	else
 		ent->colourmap = ent->modeldata.colourmap[which-1];
 	ent->map = which;
@@ -11591,7 +11836,7 @@ void ent_copy_uninit(entity* ent, s_model* oldmodel)
 		ent->modeldata.mp                   = oldmodel->mp;
 	if(ent->modeldata.risetime[0]==-1)
 		ent->modeldata.risetime[0]          = oldmodel->risetime[0];
-	if(obor_profile_build >= 3394)
+	if(obor_profile_build >= 3394 && obor_profile_build < 3416)
 	{
 		if(!ent->modeldata.antigrab)
 			ent->modeldata.antigrab             = oldmodel->antigrab;
@@ -11765,6 +12010,7 @@ entity * spawn(float x, float z, float a, int direction, char * name, int index,
 			e->a = a;
 			e->direction = direction;
 			e->nextthink = time + 1;
+			if(obor_profile_build >= 3471) ent_set_colourmap(e, 0);
 			e->lifespancountdown = model->lifespan; // new life span countdown
 			if((e->modeldata.type & (TYPE_PLAYER|TYPE_SHOT)) && level && (level->nohit || savedata.mode)) e->modeldata.hostile &= ~TYPE_PLAYER;
 			if(e->modeldata.type==TYPE_PLAYER) e->playerindex = currentspawnplayer;
@@ -11909,7 +12155,10 @@ void kill_all()
 	{
 		e = ent_list[i];
 		if (e && e->exists)
+        {
 			execute_onkill_script(e);
+            if(obor_profile_build >= 3431) clear_all_scripts(&e->scripts, 1);
+        }
 		e->exists = 0; // well, no need to use kill function
 	}
 	textbox = smartbomber = NULL;
@@ -12115,7 +12364,7 @@ int checkwall_below(float x, float z, float a)
 	ind = -1;
 	for(i=0; i<level->numwalls; i++)
 	{
-		if(testwall(i, x, z) && level->walls[i][7] < a+0.1 && level->walls[i][7] > maxa)
+		if(testwall(i, x, z) && (obor_profile_build < 3449 ? level->walls[i][7] < a+0.1 : level->walls[i][7] <= a) && level->walls[i][7] > maxa)
 		{
 			maxa = level->walls[i][7];
 			ind = i;
@@ -12143,10 +12392,11 @@ the bottom of the platform and multiplying the result by the difference of the b
 left point divided by depth of the platform. The same is done for the right side, and checks to see if they are
 within the bottom/top and the left/right area.
 */
-int testplatform(entity* plat, float x, float z)
+int testplatform(entity* plat, float x, float z, entity* exclude)
 {
 	float coef1, coef2;
 	float offz, offx;
+	if(obor_profile_build >= 3445 && plat == exclude) return 0;
 	if(!plat->animation || !plat->animation->platform || !plat->animation->platform[plat->animpos][7]) return 0;
 	offz = plat->z+plat->animation->platform[plat->animpos][1];
 	offx = plat->x+plat->animation->platform[plat->animpos][0];
@@ -12165,7 +12415,7 @@ int testplatform(entity* plat, float x, float z)
 
 
 //find the first platform between these 2 altitudes
-entity * check_platform_between(float x, float z, float amin, float amax)
+entity * check_platform_between(float x, float z, float amin, float amax, entity* exclude)
 {
 	entity *plat = NULL;
 	int i;
@@ -12174,7 +12424,7 @@ entity * check_platform_between(float x, float z, float amin, float amax)
 
 	for(i=0; i<ent_max; i++)
 	{
-		if(ent_list[i]->exists && testplatform(ent_list[i], x, z) )
+		if(ent_list[i]->exists && testplatform(ent_list[i], x, z, exclude) )
 		{
 			plat = ent_list[i];
 			if(plat->a <= amax && plat->a + plat->animation->platform[plat->animpos][7] > amin)
@@ -12187,7 +12437,7 @@ entity * check_platform_between(float x, float z, float amin, float amax)
 }
 
 //find a lowest platform above this altitude
-entity * check_platform_above(float x, float z, float a)
+entity * check_platform_above(float x, float z, float a, entity* exclude)
 {
 	float mina;
 	entity *plat = NULL;
@@ -12199,7 +12449,7 @@ entity * check_platform_above(float x, float z, float a)
 	ind = -1;
 	for(i=0; i<ent_max; i++)
 	{
-		if(ent_list[i]->exists && testplatform(ent_list[i], x, z) )
+		if(ent_list[i]->exists && testplatform(ent_list[i], x, z, exclude) )
 		{
 			plat = ent_list[i];
 			if(plat->a >= a && plat->a < mina)
@@ -12213,7 +12463,7 @@ entity * check_platform_above(float x, float z, float a)
 }
 
 //find a highest platform below this altitude
-entity * check_platform_below(float x, float z, float a)
+entity * check_platform_below(float x, float z, float a, entity* exclude)
 {
 	float maxa;
 	entity *plat = NULL;
@@ -12221,11 +12471,11 @@ entity * check_platform_below(float x, float z, float a)
 
 	if(level==NULL) return NULL;
 
-	maxa = 0;
+	maxa = obor_profile_build < 3449 ? 0 : MIN_INT;
 	ind = -1;
 	for(i=0; i<ent_max; i++)
 	{
-		if(ent_list[i]->exists && testplatform(ent_list[i], x, z) )
+		if(ent_list[i]->exists && testplatform(ent_list[i], x, z, exclude) )
 		{
 			plat = ent_list[i];
 			if(plat->a + plat->animation->platform[plat->animpos][7] <= a &&
@@ -12240,19 +12490,126 @@ entity * check_platform_below(float x, float z, float a)
 }
 
 // find the 1st platform entity here
-entity * check_platform(float x, float z)
+entity * check_platform(float x, float z, entity* exclude)
 {
 	int i;
 	if(level==NULL) return NULL;
 
 	for(i=0; i<ent_max; i++)
 	{
-		if(ent_list[i]->exists && testplatform(ent_list[i], x, z))
+		if(ent_list[i]->exists && testplatform(ent_list[i], x, z, exclude))
 		{
 			return ent_list[i];
 		}
 	}
 	return NULL;
+}
+
+/* Historical base query and movement predicate; selected by their callers. */
+float checkbase(entity* ent, float x, float z){
+	float h1, h2, h;
+	entity* plat;
+	int wall;
+	int subwall, subhole, subplat;
+
+	subwall = ent?ent->modeldata.subject_to_wall:1;
+	subhole = ent?ent->modeldata.subject_to_hole:1;
+	subplat = ent?ent->modeldata.subject_to_platform:1;
+
+	plat = subplat?check_platform_below(x, z, ent?ent->a:(float)9999999, ent):NULL;
+	wall = subwall?checkwall_below(x, z, ent?ent->a:(float)9999999):-1;
+
+	if(plat) h1 = plat->a + plat->animation->platform[plat->animpos][7];
+	else h1 = (float)-9999999;
+
+	if(wall>0) h2 = level->walls[wall][7];
+	else h2 = (float)-9999999;
+
+	h = MIN(h1, h2);
+
+	if(h>-1000) return h;
+
+	else if(subhole && checkhole(x, z) )
+		return -1000;
+
+	return 0;
+
+}
+int testmove(entity* ent, float sx, float sz, float x, float z){
+	entity *other = NULL;
+	int wall, heightvar;
+	float xdir, zdir;
+
+	xdir = x - sx;
+	zdir = z - sz;
+
+	if(!xdir && !zdir) return 1;
+
+	// -----------bounds checking---------------
+	// Subjec to Z and out of bounds? Return to level!
+	if (ent->modeldata.subject_to_minz>0)
+	{
+		if(zdir && z < PLAYER_MIN_Z)
+			return 0;
+	}
+
+	if (ent->modeldata.subject_to_maxz>0)
+	{
+		if(zdir && z > PLAYER_MAX_Z)
+			return 0;
+	}
+
+	// End of level is blocked?
+	if(level->exit_blocked)
+	{
+		if(x > level->width-30-(PLAYER_MAX_Z-z)) return 0;
+	}
+	// screen checking
+	if(ent->modeldata.subject_to_screen>0)
+	{
+		if(x < advancex+10) return 0;
+		else if(x > advancex+(videomodes.hRes-10)) return 0;
+	}
+	//-----------end of bounds checking-----------
+
+	//-------------hole checking ---------------------
+	if(ent->modeldata.subject_to_hole>0)
+	{
+		if(checkhole(x, z) && checkwall(x, z)<0 && (((other = check_platform(x, z, ent)) &&  ent->base < other->a + other->animation->platform[other->animpos][7]) || other == NULL))
+			return 0;
+	}
+	//-----------end of hole checking---------------
+
+	//--------------obstacle checking ------------------
+	if(ent->modeldata.subject_to_obstacle>0)
+	{
+		if((other = find_ent_here(ent, x, z, (TYPE_OBSTACLE | TYPE_TRAP))) &&
+		   (!other->animation->platform||!other->animation->platform[other->animpos][7]))
+			return 0;
+	}
+	//-----------end of obstacle checking--------------
+
+	// ---------------- platform checking----------------
+
+	if(ent->animation->height) heightvar = ent->animation->height;
+	else heightvar = ent->modeldata.height;
+
+	// Check for obstacles with platform code and adjust base accordingly
+	if(ent->modeldata.subject_to_platform>0 && (other = check_platform_between(x, z, ent->a, ent->a+heightvar, ent)) )
+	{
+		return 0;
+	}
+	//-----------end of platform checking------------------
+
+	// ------------------ wall checking ---------------------
+	if(ent->modeldata.subject_to_wall>0 && (wall = checkwall(x, z))>=0 && level->walls[wall][7]>ent->a)
+	{
+		return 0;
+	}
+	//----------------end of wall checking--------------
+
+	return 1;
+
 }
 
 // find real opponent
@@ -12673,7 +13030,7 @@ void check_gravity()
 		if((self->falling || self->tossv || self->a!=self->base) && self->toss_time <= time && !self->animation->dive.x && !self->animation->dive.v)
 		{
 			if(self->modeldata.subject_to_platform>0 && self->tossv>0)
-				other = check_platform_above(self->x, self->z, self->a+self->tossv);
+				other = check_platform_above(self->x, self->z, self->a+self->tossv, self);
 			else other = NULL;
 
 			if(self->animation->height) heightvar = self->animation->height;
@@ -12726,9 +13083,12 @@ void check_gravity()
 				if(self->modeldata.dust[0]>=0 && self->tossv < -1 && self->drop)
 				{
 					dust = spawn(self->x, self->z, self->a, self->direction, NULL, self->modeldata.dust[0], NULL);
-					dust->base = self->a;
-					dust->autokill = 1;
-					execute_onspawn_script(dust);
+					if(dust)
+					{
+						dust->base = self->a;
+						dust->autokill = 1;
+						execute_onspawn_script(dust);
+					}
 				}
 				// bounce/quake
 				if(tobounce(self) && self->modeldata.bounce)
@@ -12751,14 +13111,18 @@ void check_gravity()
                     && self->animation->landframe.frame<= self->animation->numframes   //Not over animation frame count?
                     && self->animpos < self->animation->landframe.frame)               //Not already past landframe?
 				{
-					update_frame(self, self->animation->landframe.frame);
+					if(obor_profile_build < 3436) update_frame(self, self->animation->landframe.frame);
 					if(self->animation->landframe.ent>=0)
 					{
 						dust = spawn(self->x, self->z, self->a, self->direction, NULL, self->animation->landframe.ent, NULL);
-						dust->base = self->a;
-						dust->autokill = 1;
-						execute_onspawn_script(dust);
+						if(dust)
+						{
+							dust->base = self->a;
+							dust->autokill = 1;
+							execute_onspawn_script(dust);
+						}
 					}
+					if(obor_profile_build >= 3436) update_frame(self, self->animation->landframe.frame);
 				}
 
 				// takedamage if thrown or basted
@@ -12769,7 +13133,7 @@ void check_gravity()
 					{
 						attack              = emptyattack;
 						attack.attack_force = self->damage_on_landing;
-						attack.attack_type  = ATK_NORMAL;
+						attack.attack_type  = obor_profile_build < 3450 ? ATK_NORMAL : self->damagetype;
 						self->takedamage(self, &attack);
 					}
 					else
@@ -12854,8 +13218,8 @@ void check_ai()
 	if((plat=self->landed_on_platform) &&
 		(plat->xdir || plat->zdir) &&
 		(plat->nextthink <= time || (plat->update_mark & 2)) &&// plat is updated before self or will be updated this loop
-		testplatform(plat,self->x,self->z) &&
-		self->a <= plat->a + plat->animation->platform[plat->animpos][7] + 0.5 ) // on the platform?
+		testplatform(plat,self->x,self->z, NULL) &&
+		self->a <= plat->a + plat->animation->platform[plat->animpos][7] + (obor_profile_build < 3449 ? 0.5 : 0) ) // on the platform?
 	{
 		// passive move with the platform
 		if(self->trymove )
@@ -12977,7 +13341,7 @@ void update_animation()
 		self->arrowon       = 0;
 	}
 
-	if(self->dying)    // Code for doing dying flash
+	if(obor_profile_build < 3473 && self->dying)    // Code for doing dying flash
 	{
 		if((self->health <= self->per1 && self->health > self->per2 && (time %(GAME_SPEED / 10)) < (GAME_SPEED / 40)) ||
 			(self->health <= self->per2))
@@ -13075,11 +13439,13 @@ void update_animation()
 	if(self->modeldata.subject_to_platform>0 /*&& self->projectile==0*/)
 	{
 		other = self->landed_on_platform;
-		if(other && testplatform(other, self->x, self->z) && self->a < other->a + other->animation->platform[other->animpos][7])
+		if(other && testplatform(other, self->x, self->z, NULL) &&
+			(obor_profile_build < 3449 ? self->a < other->a + other->animation->platform[other->animpos][7] :
+			 self->a <= other->a + other->animation->platform[other->animpos][7]))
 		{
-			self->a = self->base = other->a + other->animation->platform[other->animpos][7]+0.5;
+			self->a = self->base = other->a + other->animation->platform[other->animpos][7]+(obor_profile_build < 3449 ? 0.5 : 0);
 		}
-		else other = check_platform_below(self->x, self->z, self->a+1);
+		else other = check_platform_below(self->x, self->z, self->a+(obor_profile_build < 3449 ? 1 : 0), self);
 	}
 	else other = NULL;
 	self->landed_on_platform = other;
@@ -13140,7 +13506,7 @@ void update_animation()
 	{
 		// a bit complex, other->nextanim == time means other is behind self and not been updated,
 		// update_mark & 1 means other is updated in this loop and before self
-		if((other->nextanim == time || (other->update_mark & 1)) && self->a <= other->a + other->animation->platform[other->animpos][7]+0.5)
+		if((other->nextanim == time || (other->update_mark & 1)) && self->a <= other->a + other->animation->platform[other->animpos][7]+(obor_profile_build < 3449 ? 0.5 : 0))
 		{
 			if(other->update_mark & 1) f = other->animpos;
 			else f = other->animpos + other->animating;
@@ -13539,7 +13905,7 @@ void display_ents()
 			{    // If special is being executed, display all entities regardless
 				f = e->animation->sprite[e->animpos];
 
-				other = check_platform(e->x, e->z);
+				other = check_platform(e->x, e->z, e);
 				wall = checkwall(e->x, e->z);
 
 				if(f<sprites_loaded)
@@ -13561,7 +13927,9 @@ void display_ents()
 						else                             z++;
 					}
 
-					if(other && other != e && e->a >= other->a + other->animation->platform[other->animpos][7])
+					if(other && (obor_profile_build >= 3445 || other != e) &&
+						e->a >= other->a + other->animation->platform[other->animpos][7] &&
+						(obor_profile_build < 3409 || !other->modeldata.setlayer))
 					{
 						if(
 							e->link &&
@@ -13601,6 +13969,15 @@ void display_ents()
 					{
 						if(drawmethod->remap<0) drawmethod->table = e->colourmap;
 					}
+					if(obor_profile_build >= 3473 && e->dying)
+					{
+						if((e->health <= e->per1 && e->health > e->per2 && (time %(GAME_SPEED / 5)) < (GAME_SPEED / 10)) ||
+							(e->health <= e->per2 && (time %(GAME_SPEED / 10)) < (GAME_SPEED / 20)))
+						{
+							if(e->health > 0) drawmethod->table = e->modeldata.colourmap[e->dying - 1];
+						}
+					}
+
 					if(e->modeldata.alpha >=1 && e->modeldata.alpha <= MAX_BLENDINGS)
 					{
 						if(drawmethod->alpha<0)
@@ -13659,7 +14036,8 @@ void display_ents()
 						}
 
 						wall2=checkwall_below(e->x + temp1, e->z + temp2, e->a); // check if the shadow drop into a hole or fall on another wall
-						if(!(checkhole(e->x + temp1, e->z + temp2) && wall2<0) )//&& !(wall>=0 && level->walls[wall][7]>e->a))
+						if(!(checkhole(e->x + temp1, e->z + temp2) && wall2<0 &&
+                             (obor_profile_build < 3408 || !other)) )//&& !(wall>=0 && level->walls[wall][7]>e->a))
 						{
 							if(wall>=0 && wall2 >= 0)
 							{
@@ -14109,6 +14487,7 @@ entity* normal_find_target(int anim, int iDetect)
 	int index = -1;
 	min = 0;
 	max = 9999;
+    float diffd = 0, diffo = 0;
 
     if(obor_profile_build < 3355) iDetect = 0;
     iDetect += self->modeldata.stealth.detect;
@@ -14120,15 +14499,20 @@ entity* normal_find_target(int anim, int iDetect)
 			&& (ent_list[i]->modeldata.type & self->modeldata.hostile)
 			&& (anim<0||(anim>=0 && check_range(self, ent_list[i], anim)))
 			&& !ent_list[i]->dead //must be alive
-			&& diff(ent_list[i]->x,self->x)+ diff(ent_list[i]->z,self->z) >= min
-			&& diff(ent_list[i]->x,self->x)+ diff(ent_list[i]->z,self->z) <= max
+            && (obor_profile_build >= 3415 ?
+                ((diffd = diff(ent_list[i]->x,self->x) + diff(ent_list[i]->z,self->z)) >= min && diffd <= max) :
+                (diff(ent_list[i]->x,self->x) + diff(ent_list[i]->z,self->z) >= min &&
+                 diff(ent_list[i]->x,self->x) + diff(ent_list[i]->z,self->z) <= max))
 			&& (ent_list[i]->modeldata.stealth.hide <= iDetect) //Stealth factor less then perception factor (allows invisibility).
 			  )
 		{
 			if(index <0 || (index>=0 && (!ent_list[index]->animation->vulnerable[ent_list[index]->animpos] || ent_list[index]->invincible == 1)) ||
 				( (self->x < ent_list[i]->x) == (self->direction) && // don't turn to the one on the back
-				diff(ent_list[i]->x, self->x)+diff(ent_list[i]->z, self->z) < diff(ent_list[index]->x, self->x)+diff(ent_list[index]->z, self->z)))
+				(obor_profile_build >= 3415 ? diffd < diffo : diff(ent_list[i]->x, self->x)+diff(ent_list[i]->z, self->z) < diff(ent_list[index]->x, self->x)+diff(ent_list[index]->z, self->z))))
+			{
 				index = i;
+                if(obor_profile_build >= 3415) diffo = diffd;
+			}
 		}
 	}
 	if( index >=0) {return ent_list[index];}
@@ -14168,8 +14552,8 @@ entity * normal_find_item(){
 
 		if( ce->exists && isItem(ce) &&
 		(obor_profile_build < 3400 || ce->modeldata.stealth.hide <= self->modeldata.stealth.detect) &&
-		diff(ce->x,self->x) + diff(ce->z,self->z)< 300 &&
-		ce->animation->vulnerable[ce->animpos] &&
+		diff(ce->x,self->x) + diff(ce->z,self->z)< (obor_profile_build >= 3416 ? videomodes.hRes/2 : 300) &&
+		ce->animation->vulnerable[ce->animpos] && (obor_profile_build < 3416 || !ce->blink) &&
 		(validanim(self,ANI_GET) || (isSubtypeTouch(ce) && (obor_profile_build < 3218 || canBeDamaged(ce, self)))) &&
 		(
 			(isSubtypeWeapon(ce) && !self->weapent && self->modeldata.weapon && (*self->modeldata.weapon)[ce->modeldata.weapnum-1]>=0)
@@ -14377,9 +14761,12 @@ void common_jump()
 			if(self->modeldata.dust[1]>=0)
 			{
 				dust = spawn(self->x, self->z, self->a, self->direction, NULL, self->modeldata.dust[1], NULL);
+				if(dust)
+				{
 				dust->base = self->a;
 				dust->autokill = 1;
 				execute_onspawn_script(dust);
+				}
 			}
 			self->takeaction = common_jumpland;
 		}
@@ -14388,9 +14775,12 @@ void common_jump()
 			if(self->modeldata.dust[1]>=0 && self->animation->landframe.frame == -1)
 			{
 				dust = spawn(self->x, self->z, self->a, self->direction, NULL, self->modeldata.dust[1], NULL);
+				if(dust)
+				{
 				dust->base = self->a;
 				dust->autokill = 1;
 				execute_onspawn_script(dust);
+				}
 			}
 			if(self->animation->landframe.frame >= 0 && self->animating) return;
 
@@ -14486,7 +14876,7 @@ void common_fall()
 	}
 
 	// Drop Weapon due to Enemy Falling.
-	if(self->modeldata.weaploss[0] == 1) dropweapon(1);
+	if(obor_profile_build < 3425 && self->modeldata.weaploss[0] == 1) dropweapon(1);
 
 	if(self->boss && level_completed) tospeedup = 1;
 
@@ -14524,13 +14914,14 @@ void common_lie()
 	if(self->health <= 0)
 	{
 		// Drop Weapon due to death.
-		if(self->modeldata.weaploss[0] <= 2) dropweapon(1);
+		if(obor_profile_build < 3425 && self->modeldata.weaploss[0] <= 2) dropweapon(1);
 		if(self->modeldata.falldie == 2) set_death(self, self->damagetype, 0);
 		if(!self->modeldata.nodieblink || (self->modeldata.nodieblink == 1 && !self->animating))
 		{    // Now have the option to blink or not
 			self->takeaction = (self->modeldata.type == TYPE_PLAYER)?player_blink:suicide;
 			self->blink = 1;
-			self->stalltime = self->nextthink = time + GAME_SPEED * 2;
+			self->stalltime = time + GAME_SPEED * 2;
+			if(obor_profile_build < 3443) self->nextthink = self->stalltime;
 		}
 		else if(self->modeldata.nodieblink == 2  && !self->animating)
 		{
@@ -15074,6 +15465,8 @@ void checkdamage(entity* other, s_attack* attack)
 
 	if (self->health > self->modeldata.health) self->health = self->modeldata.health; //Cap negative damage to max health.
 
+    if(obor_profile_build >= 3427 && attack->no_kill && self->health <= 0) self->health = 1;
+
 	execute_takedamage_script(self, other, force, attack->attack_drop, type, attack->no_block, attack->guardcost, attack->jugglecost, attack->pause_add);                       //Execute the take damage script.
 
 	if (self->health <= 0)                                      //Health at 0?
@@ -15179,7 +15572,8 @@ int common_takedamage(entity *other, s_attack* attack)
 	if(self->drop || self->health <= 0)
 	{
 		// Drop Weapon due to death.
-		if(self->modeldata.weaploss[0] <= 2) dropweapon(1);
+		if(self->modeldata.weaploss[0] <= 2 &&
+		   (obor_profile_build < 3425 || self->health <= 0 || self->modeldata.weaploss[0] <= 1)) dropweapon(1);
 		if(self->health <= 0 && self->modeldata.falldie == 1)
 		{
 			self->xdir = self->zdir = self->tossv = 0;
@@ -15254,6 +15648,8 @@ int common_try_runattack(entity* target)
 
 	if(target)
 	{
+        if(obor_profile_build >= 3416 && !target->animation->vulnerable[target->animpos] &&
+           (target->drop || target->attacking)) return 0;
 		self->zdir = self->xdir = 0;
 		set_attacking(self);
 		ent_set_anim(self, ANI_RUNATTACK, 0);
@@ -15339,6 +15735,8 @@ int common_try_normalattack(entity* target)
 
 	if(found)
 	{
+        if(obor_profile_build >= 3416 && !target->animation->vulnerable[target->animpos] &&
+           (target->drop || target->attacking)) return 0;
 		self->zdir = self->xdir = 0;
 		set_idle(self);
 		self->idling = 0; // not really idle, in fact it is thinking
@@ -15367,17 +15765,27 @@ int common_try_jumpattack(entity* target)
 			// do a jumpattack
 			(target || (target = normal_find_target(ANI_JUMPATTACK,0))) )
 		{
+            if(obor_profile_build >= 3416 && !target->animation->vulnerable[target->animpos] &&
+               (target->drop || target->attacking)) rnum = -1;
+            else
+            {
 			ent_set_anim(self, ANI_JUMPATTACK, 0);
 			if(self->direction) self->xdir = (float)1.3;
 			else self->xdir = (float)-1.3;
 			self->zdir = 0;
+            }
 		}
 		else if(rnum==1 &&
 			// do a jumpattack2
 			(target || (target = normal_find_target(ANI_JUMPATTACK2,0))) )
 		{
+            if(obor_profile_build >= 3416 && !target->animation->vulnerable[target->animpos] &&
+               (target->drop || target->attacking)) rnum = -1;
+            else
+            {
 			ent_set_anim(self, ANI_JUMPATTACK2, 0);
 			self->xdir = self->zdir = 0;
+            }
 		} else {
 			rnum = -1;
 		}
@@ -15393,9 +15801,12 @@ int common_try_jumpattack(entity* target)
 			if(self->modeldata.dust[2]>=0)
 			{
 				dust = spawn(self->x, self->z, self->a, self->direction, NULL, self->modeldata.dust[2], NULL);
+                if(dust)
+                {
 				dust->base = self->a;
 				dust->autokill = 1;
 				execute_onspawn_script(dust);
+                }
 			}
 
 			return 1;
@@ -15523,6 +15934,8 @@ int adjust_grabposition(entity* ent, entity* other, float dist, int grabin)
 {
 	float x1, z1, x2, z2, a, x;
 	int wall1, wall2;
+	if(obor_profile_build >= 3476 &&
+	   (ent->a != other->a || ent->base != other->base)) return 0;
 	a = ent->a;
 	if(grabin==1)
 	{
@@ -15538,19 +15951,36 @@ int adjust_grabposition(entity* ent, entity* other, float dist, int grabin)
 		z1 = z2 = (ent->z + other->z)/2;
 	}
 
-	if(ent->modeldata.subject_to_screen>0 && (x1<advancex || x1>advancex+videomodes.hRes)) return 0;
-	else if(other->modeldata.subject_to_screen>0 && (x2<advancex || x2>advancex+videomodes.hRes)) return 0;
+	if(obor_profile_build >= 3476)
+	{
+		if(!testmove(ent, ent->x, ent->z, x1, z1) ||
+		   !testmove(other, other->x, other->z, x2, z2)) return 0;
+	}
+	else
+	{
+		if(ent->modeldata.subject_to_screen>0 && (x1<advancex || x1>advancex+videomodes.hRes)) return 0;
+		else if(other->modeldata.subject_to_screen>0 && (x2<advancex || x2>advancex+videomodes.hRes)) return 0;
 
-	wall1 = checkwall_below(x1, z1, 9999999);
-	wall2 = checkwall_below(x2, z2, 9999999);
-	if(wall1<0 && wall2>=0) return 0;
-	else if(wall1>=0 && wall2<0) return 0;
-	else if(wall1>=0 && level->walls[wall1][7] >a) return 0;
-	else if(wall2>=0 && level->walls[wall2][7] >a) return 0;
-	else if(wall1>=0 && wall2>=0 && level->walls[wall1][7] != level->walls[wall2][7]) return 0;
+		if(obor_profile_build >= 3449)
+		{
+			float base1 = checkbase(ent, x1, z1);
+			float base2 = checkbase(other, x2, z2);
+			if(base1 != base2) return 0;
+		}
+		else
+		{
+			wall1 = checkwall_below(x1, z1, 9999999);
+			wall2 = checkwall_below(x2, z2, 9999999);
+			if(wall1<0 && wall2>=0) return 0;
+			else if(wall1>=0 && wall2<0) return 0;
+			else if(wall1>=0 && level->walls[wall1][7] >a) return 0;
+			else if(wall2>=0 && level->walls[wall2][7] >a) return 0;
+			else if(wall1>=0 && wall2>=0 && level->walls[wall1][7] != level->walls[wall2][7]) return 0;
 
-	if(wall1<0 && checkhole(x1, z1)) return 0;
-	if(wall2<0 && checkhole(x2, z2)) return 0;
+			if(wall1<0 && checkhole(x1, z1)) return 0;
+			if(wall2<0 && checkhole(x2, z2)) return 0;
+		}
+	}
 
 	ent->x = x1; ent->z = z1;
 	other->x = x2; other->z = z2;
@@ -15633,15 +16063,15 @@ int common_trymove(float xdir, float zdir)
 		!(self->modeldata.aimove&AIMOVE2_IGNOREHOLES))
 	{
 
-		if(obor_profile_build < 3400 && xdir && checkhole(x, self->z) && checkwall(x, self->z)<0 && (((other = check_platform(x, self->z)) &&  self->base < other->a + other->animation->platform[other->animpos][7]) || other == NULL))
+		if(obor_profile_build < 3400 && xdir && checkhole(x, self->z) && checkwall(x, self->z)<0 && (((other = check_platform(x, self->z, self)) &&  self->base < other->a + other->animation->platform[other->animpos][7]) || other == NULL))
 		{
 			xdir = 0;
 		}
-		if(zdir && checkhole(self->x, z) && checkwall(self->x, z)<0 && (((other = check_platform(self->x, z)) &&  self->base < other->a + other->animation->platform[other->animpos][7]) || other == NULL))
+		if(zdir && checkhole(self->x, z) && checkwall(self->x, z)<0 && (((other = check_platform(self->x, z, self)) &&  self->base < other->a + other->animation->platform[other->animpos][7]) || other == NULL))
 		{
 			zdir = 0;
 		}
-		if(obor_profile_build >= 3400 && xdir && checkhole(x, self->z) && checkwall(x, self->z)<0 && (((other = check_platform(x, self->z)) &&  self->base < other->a + other->animation->platform[other->animpos][7]) || other == NULL))
+		if(obor_profile_build >= 3400 && xdir && checkhole(x, self->z) && checkwall(x, self->z)<0 && (((other = check_platform(x, self->z, self)) &&  self->base < other->a + other->animation->platform[other->animpos][7]) || other == NULL))
 		{
 			xdir = 0;
 		}
@@ -15681,7 +16111,7 @@ int common_trymove(float xdir, float zdir)
 	else heightvar = self->modeldata.height;
 
 	// Check for obstacles with platform code and adjust base accordingly
-	if(self->modeldata.subject_to_platform>0 && (other = check_platform_between(x, z, self->a, self->a+heightvar)) )
+	if(self->modeldata.subject_to_platform>0 && (other = check_platform_between(x, z, self->a, self->a+heightvar, self)) )
 	{
 		if(xdir>0 ? other->x>self->x : other->x<self->x) {xdir = 0; }
 		if(zdir>0 ? other->z>self->z : other->z<self->z) {zdir = 0; }
@@ -15783,7 +16213,16 @@ void common_runoff()
 {
 	entity *target = normal_find_target(-1,0);
 
-	if(target == NULL) return;    // There are no players?
+    if(target == NULL)
+    {
+        if(obor_profile_build >= 3416)
+        {
+            set_idle(self);
+            self->zdir = self->xdir = 0;
+            self->takeaction = NULL;
+        }
+        return;
+    }
 	if(!self->modeldata.noflip) self->direction = (self->x < target->x);
 	if(self->direction) self->xdir = -self->modeldata.speed/2;
 	else self->xdir = self->modeldata.speed/2;
@@ -15831,7 +16270,7 @@ void common_stuck_underneath()
 		self->takeaction = common_attack_proc;
 		return;
 	}
-	if(!check_platform_between(self->x, self->z, self->a, self->a+self->modeldata.height) )
+	if(!check_platform_between(self->x, self->z, self->a, self->a+self->modeldata.height, self) )
 	{
 		set_idle(self);
 		self->takeaction = NULL;
@@ -15854,7 +16293,7 @@ void common_attack_finish()
 		return;
 	}
 
-	target = normal_find_target(-1,0);
+	target = obor_profile_build >= 3416 ? self->opponent : normal_find_target(-1,0);
 
 	if(target && !self->modeldata.nomove && diff(self->x, target->x)<80 && (rand32()&3))
 	{
@@ -15869,6 +16308,13 @@ void common_attack_finish()
 		self->takeaction = NULL;
 	}
 
+    if(obor_profile_build >= 3416)
+    {
+        int stall = GAME_SPEED - self->modeldata.aggression;
+        if(stall < GAME_SPEED/2) stall = GAME_SPEED/2;
+        self->stalltime = time + stall;
+    }
+    else
 	self->stalltime = time + GAME_SPEED - self->modeldata.aggression;
 }
 
@@ -15959,6 +16405,7 @@ int common_try_jump()
 		}
 		else if(checkhole(self->x + (self->direction?2:-2), zdir) &&
 				checkwall(self->x + (self->direction?2:-2), zdir)<0 &&
+				(obor_profile_build < 3445 || check_platform(self->x + (self->direction?2:-2), zdir, self)==NULL) &&
 				!checkhole(self->x + (self->direction?rmax:-rmax), zdir))
 		{
 			j=1;
@@ -15992,6 +16439,7 @@ int common_try_jump()
 		//Check for pit in range of RUNJUMP.
 		else if(checkhole(self->x + (self->direction?2:-2), zdir) &&
 				checkwall(self->x + (self->direction?2:-2), zdir)<0 &&
+				(obor_profile_build < 3445 || check_platform(self->x + (self->direction?2:-2), zdir, self)==NULL) &&
 				!checkhole(self->x + (self->direction?rmax:-rmax), zdir))
 		{
 			j=2;																				//Set to perform runjump.
@@ -16117,7 +16565,7 @@ int adjustdirection(float coords[], float offx, float offz, float ox, float oz, 
 	return whichside;
 }
 
-void checkpathblocked()
+int checkpathblocked()
 {
     if(obor_profile_build < 3400)
     {
@@ -16133,23 +16581,33 @@ void checkpathblocked()
                 self->stalltime = time + GAME_SPEED/4;
             }
         }
-        return;
+        return 0;
     }
 
 	float x, z, r;
 	int aitype;
+	if(obor_profile_build >= 3445 && self->modeldata.nomove) return 0;
 	if(self->stalltime>=time)
 	{
 		aitype = self->modeldata.aimove;
 		if(self->modeldata.subtype==SUBTYPE_CHASE) aitype |= AIMOVE1_CHASE;
 
-		if(self->pathblocked>200 || (self->pathblocked>20 && (aitype & (AIMOVE1_CHASEX|AIMOVE1_CHASEZ|AIMOVE1_CHASE))))
+        if(obor_profile_build >= 3420 &&
+           ((self->modeldata.subject_to_maxz && self->zdir > 0 && !self->xdir && self->zdir + self->z >= PLAYER_MAX_Z) ||
+            (self->modeldata.subject_to_minz && self->zdir < 0 && !self->xdir && self->zdir + self->z <= PLAYER_MIN_Z)))
+        {
+            self->zdir = -self->zdir;
+            if(obor_profile_build >= 3454) self->pathblocked = 0;
+            return obor_profile_build >= 3435;
+        }
+
+		if(self->pathblocked>(obor_profile_build >= 3434 ? 40 : 200) || (self->pathblocked>20 && (aitype & (AIMOVE1_CHASEX|AIMOVE1_CHASEZ|AIMOVE1_CHASE))))
 		{
 			/*
 			self->xdir = self->zdir = 0;
 			set_idle(self);
 			self->pathblocked = 0;
-			self->stalltime = time + GAME_SPEED;*/
+			self->stalltime = time + (obor_profile_build >= 3416 ? GAME_SPEED/2 : GAME_SPEED);*/
 
 			x = self->xdir;
 			z = self->zdir;
@@ -16169,18 +16627,23 @@ void checkpathblocked()
 				self->xdir = (1.0f - randf(2))*self->modeldata.speed;
 			}
 			self->running = 0; // TODO: re-adjust walk speed 
-			self->stalltime = time + GAME_SPEED;
-			self->pathblocked = 0;
+			self->stalltime = time + (obor_profile_build >= 3416 ? GAME_SPEED/2 : GAME_SPEED);
+			if(obor_profile_build < 3454) self->pathblocked = 0;
 			adjust_walk_animation(NULL);
+			if(obor_profile_build >= 3454) self->pathblocked = 0;
 
 		}
+        return obor_profile_build >= 3435;
 	}
+    return 0;
 }
 
 //may be used many times, so make a function
 // try to move towards the target
-int common_try_chase(entity* target)
+int common_try_chase(entity* target, int dox, int doz)
 {
+    if(obor_profile_build < 3434)
+    {
 	// start chasing the target
 	float maxspeed;
 	float dx, dz;
@@ -16215,13 +16678,17 @@ int common_try_chase(entity* target)
 		self->xdir = maxspeed ;
 		if(self->modeldata.runupdown || !self->running)
 		{
-			if(diff(target->z, self->z) > videomodes.vRes/3)
+			if(obor_profile_build >= 3416 && self->z < advancey-videomodes.vRes/8) self->zdir = self->modeldata.speed/2;
+            else if(obor_profile_build >= 3416 && self->z > advancey+videomodes.vRes*9/8) self->zdir = -self->modeldata.speed/2;
+            else if((obor_profile_build >= 3416 ? dz : diff(target->z, self->z)) > videomodes.vRes/3)
 				self->zdir = (target->z>self->z)?self->modeldata.speed/2:-self->modeldata.speed/2;
 			else self->zdir = randf(1) - randf(1);
 		}
 	}
 	else if(aitype & AIMOVE1_CHASEZ){// wander in x direction, chase in z direction
-		if(diff(target->x, self->x) > videomodes.hRes/2.5)
+		if(obor_profile_build >= 3416 && self->x < advancex-videomodes.hRes/8) self->xdir = self->modeldata.speed;
+        else if(obor_profile_build >= 3416 && self->x > advancex+videomodes.hRes*9/8) self->xdir = -self->modeldata.speed;
+        else if((obor_profile_build >= 3416 ? dx : diff(target->x, self->x)) > videomodes.hRes/2.5)
 			self->xdir = (target->x>self->x)?self->modeldata.speed:-self->modeldata.speed;
 		else self->xdir = randf(1) - randf(1);
 		self->zdir = maxspeed / 2;
@@ -16244,14 +16711,74 @@ int common_try_chase(entity* target)
 	adjust_walk_animation(target);
 
 	return 1;
+
+    }
+
+    float dx, dz;
+    int grabd, stalladd = 0;
+    self->running = 0;
+    if(obor_profile_build >= 3448)
+    {
+        if(self->xdir > 0) self->xdir = self->modeldata.speed;
+        else if(self->xdir < 0) self->xdir = -self->modeldata.speed;
+        if(self->zdir > 0) self->zdir = self->modeldata.speed/2;
+        else if(self->zdir < 0) self->zdir = -self->modeldata.speed/2;
+    }
+    if(target == NULL || self->modeldata.nomove) return 0;
+    if(!(self->direction ? self->x < target->x : self->x > target->x)) return 0;
+    dx = diff(self->x, target->x);
+    dz = diff(self->z, target->z);
+    grabd = self->modeldata.grabdistance;
+    if(obor_profile_build < 3454)
+    {
+        int mx = !(dox && dx < grabd * 1.5);
+        int mz = !(doz && dz < grabd / 4);
+        if(!mx) self->xdir = 0;
+        if(!mz) self->zdir = 0;
+        if(!mx && !mz) return 0;
+    }
+    if(dox)
+    {
+        if((dx > 150 || dx + dz > 200) && validanim(self, ANI_RUN))
+        {
+            self->xdir = self->modeldata.runspeed;
+            self->running = 1;
+        }
+        else self->xdir = self->modeldata.speed;
+        if(target->x < self->x) self->xdir = -self->xdir;
+        if(obor_profile_build >= 3454 && dx < grabd && dz < grabd / 4)
+        {
+            self->xdir = -self->xdir;
+            stalladd = -GAME_SPEED/3;
+        }
+    }
+    if(doz)
+    {
+        if(dz > 100 && self->modeldata.runupdown && validanim(self, ANI_RUN))
+        {
+            self->zdir = self->modeldata.runspeed/2;
+            self->running = 1;
+        }
+        else self->zdir = self->modeldata.speed/2;
+        if(target->z < self->z) self->zdir = -self->zdir;
+        if(obor_profile_build >= 3454 && dx < grabd && dz < grabd / 4)
+        {
+            self->zdir = -self->zdir/2;
+            stalladd = -GAME_SPEED/3;
+        }
+    }
+    if(obor_profile_build >= 3454) self->stalltime += stalladd;
+    return 1;
 }
 
 //may be used many times, so make a function
 // minion follow his owner
-int common_try_follow()
+int common_try_follow(entity* target, int dox, int doz)
 {
+    if(obor_profile_build < 3434)
+    {
 	// start chasing the target
-	entity* target = NULL;
+	/* Earlier callers follow their parent. */
 	float distance = 0;
 	float maxspeed, dx, dz;
 
@@ -16288,12 +16815,58 @@ int common_try_follow()
 	adjust_walk_animation(target);
 
 	return 1;
+
+    }
+
+    float dx, dz, distance;
+    int mx, mz, facing;
+    if(target == NULL || self->modeldata.nomove) return 0;
+    distance = (float)(validanim(self, ANI_IDLE) ? self->modeldata.animation[ANI_IDLE]->range.xmin : 100);
+    if(obor_profile_build >= 3454 && distance <= 0) distance = 100.0;
+    facing = self->direction ? self->x < target->x : self->x > target->x;
+    dx = diff(self->x, target->x);
+    dz = diff(self->z, target->z);
+    mx = !(dox && dx < distance);
+    mz = !(doz && dz < distance/2);
+    if(!mx) self->xdir = 0;
+    if(!mz) self->zdir = 0;
+    if(!mx && !mz)
+    {
+        self->running = 0;
+        return obor_profile_build >= 3454;
+    }
+    if(dox && (obor_profile_build < 3454 || mx))
+    {
+        if((obor_profile_build < 3454 || facing) && dx > 200 && validanim(self, ANI_RUN))
+        {
+            self->xdir = self->modeldata.runspeed;
+            self->running = 1;
+        }
+        else self->xdir = self->modeldata.speed;
+    }
+    if(doz && (obor_profile_build < 3454 || mz))
+    {
+        if((obor_profile_build < 3454 || facing) && dx > 200 && self->modeldata.runupdown && validanim(self, ANI_RUN))
+        {
+            self->zdir = self->modeldata.runspeed/2;
+            self->running = 1;
+        }
+        else self->zdir = self->modeldata.speed/2;
+    }
+    if(obor_profile_build >= 3454)
+    {
+        if(self->x > target->x) self->xdir = -self->xdir;
+        if(self->z > target->z) self->zdir = -self->zdir;
+    }
+    return 1;
 }
 
 // try to avoid the target
 // used by 'avoid avoidz avoidx
-int common_try_avoid(entity* target)
+int common_try_avoid(entity* target, int dox, int doz)
 {
+    if(obor_profile_build < 3434)
+    {
 	float maxspeed = 0;
 	float dx, dz;
 
@@ -16332,11 +16905,64 @@ int common_try_avoid(entity* target)
 	adjust_walk_animation(target);
 
 	return 1;
+
+    }
+
+    float dx, dz;
+    int stalladd = 0;
+    if(target == NULL || self->modeldata.nomove) return 0;
+    dx = diff(self->x, target->x);
+    dz = diff(self->z, target->z);
+    if(obor_profile_build < 3454 && dox && doz &&
+       dx > videomodes.hRes/2 && dz > videomodes.vRes/2) return 0;
+    if(dox)
+    {
+        int padding = obor_profile_build < 3454 ? 10 : 0;
+        if(self->x < screenx - padding)
+        {
+            self->xdir = self->modeldata.speed;
+            stalladd = GAME_SPEED;
+        }
+        else if(self->x > screenx + videomodes.hRes + padding)
+        {
+            self->xdir = -self->modeldata.speed;
+            stalladd = GAME_SPEED;
+        }
+        else if(obor_profile_build < 3454 || dx < (obor_profile_build >= 3480 ? videomodes.hRes/3 : videomodes.hRes/2))
+            self->xdir = self->x < target->x ? -self->modeldata.speed : self->modeldata.speed;
+        else if(obor_profile_build >= 3480 && dx > videomodes.hRes/2)
+            self->xdir = self->x < target->x ? self->modeldata.speed : -self->modeldata.speed;
+        else self->xdir = 0;
+    }
+    if(doz)
+    {
+        int padding = obor_profile_build < 3454 ? 5 : 0;
+        if(self->z < screeny - padding)
+        {
+            self->zdir = self->modeldata.speed/2;
+            stalladd = GAME_SPEED;
+        }
+        else if(self->z > screeny + videomodes.vRes + padding)
+        {
+            self->zdir = -self->modeldata.speed/2;
+            stalladd = GAME_SPEED;
+        }
+        else if(obor_profile_build < 3454 || dz < (obor_profile_build >= 3480 ? videomodes.vRes/3 : videomodes.vRes/2))
+            self->zdir = self->z < target->z ? -self->modeldata.speed/2 : self->modeldata.speed/2;
+        else if(obor_profile_build >= 3480 && dz > videomodes.vRes/2)
+            self->zdir = self->z < target->z ? self->modeldata.speed/2 : -self->modeldata.speed/2;
+        else self->zdir = 0;
+    }
+    if(obor_profile_build >= 3435) self->stalltime += stalladd;
+    return 1;
 }
 
+
 //  wander completely
-int common_try_wandercompletely()
+int common_try_wandercompletely(int dox, int doz)
 {
+    if(obor_profile_build < 3434)
+    {
 	int walk = 0;
 	int rnum = 0;
 
@@ -16374,17 +17000,36 @@ int common_try_wandercompletely()
 		} else self->direction = !self->direction;
 	}
 
+    if(obor_profile_build < 3420)
+    {
 	if(self->x < advancex - 10) {
 		self->xdir = self->modeldata.speed;
 	}
 	else if(self->x > advancex + videomodes.hRes + 10) {
 		self->xdir = -self->modeldata.speed;
 	}
+    }
 
 	if(((self->xdir > 0 && !self->direction) ||
 		(self->xdir < 0 && self->direction)) && !self->modeldata.noflip)
 		self->direction = !self->direction;
 
+    if(obor_profile_build >= 3420)
+    {
+	if(self->x < advancex - 10) {
+		self->xdir = self->modeldata.speed;
+	}
+	else if(self->x > advancex + videomodes.hRes + 10) {
+		self->xdir = -self->modeldata.speed;
+	}
+    }
+    else if(obor_profile_build >= 3416)
+    {
+        if(self->z < screeny) self->zdir = self->modeldata.speed/2;
+        else if(self->z > screeny + videomodes.vRes) self->zdir = -self->modeldata.speed/2;
+    }
+    else
+    {
 	if((level->scrolldir != SCROLL_UP && level->scrolldir != SCROLL_DOWN && self->z < advancey - 5) ||
 		((level->scrolldir == SCROLL_UP || level->scrolldir == SCROLL_DOWN ) && self->z < -5) ){
 			self->zdir = self->modeldata.speed/2;
@@ -16393,6 +17038,7 @@ int common_try_wandercompletely()
 		((level->scrolldir == SCROLL_UP || level->scrolldir == SCROLL_DOWN ) && self->z > videomodes.vRes + 5) ){
 			self->zdir = -self->modeldata.speed/2;
 		}
+    }
 
 		if(self->xdir || self->zdir){
 			if((self->xdir > 0 && !self->direction) ||
@@ -16407,20 +17053,71 @@ int common_try_wandercompletely()
 			return 1;
 		}
 		return 0;
+
+    }
+
+    int rnum, stalladd = 0;
+    if(obor_profile_build >= 3444 && self->modeldata.nomove) return 0;
+    if(dox)
+    {
+        rnum = rand32();
+        if((rnum & 15) < 4) self->xdir = -self->modeldata.speed;
+        else if((rnum & 15) > 11) self->xdir = self->modeldata.speed;
+        else self->xdir = 0;
+        if((self->x < screenx-10 && self->xdir < 0) ||
+           (self->x > screenx+videomodes.hRes+10 && self->xdir > 0))
+        {
+            self->xdir = -self->xdir;
+            stalladd = GAME_SPEED;
+        }
+    }
+    if(doz)
+    {
+        rnum = rand32();
+        if((rnum & 15) < 4) self->zdir = -self->modeldata.speed/2;
+        else if((rnum & 15) > 11) self->zdir = self->modeldata.speed/2;
+        else self->zdir = 0;
+        if((self->z < screeny-10 && self->zdir < 0) ||
+           (self->z > screeny+videomodes.vRes+10 && self->zdir > 0))
+        {
+            self->zdir = -self->zdir;
+            stalladd = GAME_SPEED;
+        }
+    }
+    if(obor_profile_build >= 3438) self->stalltime += stalladd;
+    return 1;
 }
 
 // just wander around, face to the target
-int common_try_wander(entity* target)
+int common_try_wander(entity* target, int dox, int doz)
 {
-	int walk = 0;
-	int rnum = rand32()&7;
+    int walk = 0;
+    int rnum = rand32()&7, rnum2 = obor_profile_build >= 3416 ? rand32()&15 : 0;
+    if(target == NULL || self->modeldata.nomove) return 0;
+    if(obor_profile_build < 3416)
+    {
+        float diffx = 0, diffz = 0, returndx = 0, returndz = 0;
+        if(obor_profile_build >= 3407)
+        {
+            diffx = diff(self->x, target->x);
+            diffz = diff(self->z, target->z);
+            returndx = (self->x < advancex || self->x > advancex+videomodes.hRes) ? videomodes.hRes/5 : videomodes.hRes/2;
+            returndz = (self->z < advancey || self->z > advancey+videomodes.vRes) ? videomodes.vRes/5 : videomodes.vRes/2;
+        }
 
-	if(target == NULL || self->modeldata.nomove) return 0;
+
+
+
+
 	// Decide next direction... randomly.
 
 	self->xdir = self->zdir = 0;
 
-	if(diff(self->x, target->x)>videomodes.hRes/2)
+	if(obor_profile_build >= 3407 ?
+       (diffx > returndx ||
+        (self->x > target->x && target->direction == 0 && diffz < 2*self->modeldata.grabdistance && (rnum & 1)) ||
+        (self->x < target->x && target->direction == 1 && diffz < 2*self->modeldata.grabdistance && (rnum & 1))) :
+       diff(self->x, target->x) > videomodes.hRes/2)
 	{
 		self->xdir = (self->x>target->x)?-self->modeldata.speed:self->modeldata.speed;;
 		walk = 1;
@@ -16435,7 +17132,15 @@ int common_try_wander(entity* target)
 	}
 
 	rnum = rand32()&7;
-	if(rnum < 2){
+    if(obor_profile_build >= 3407 &&
+       (diffz > returndz ||
+        (self->x > target->x && target->direction == 0 && diffz > self->modeldata.grabdistance && (rnum & 1)) ||
+        (self->x < target->x && target->direction == 1 && diffz > self->modeldata.grabdistance && (rnum & 1))))
+    {
+        self->zdir = self->z > target->z ? -self->modeldata.speed/2 : self->modeldata.speed/2;
+        walk |= 1;
+    }
+    else if(rnum < 2){
 		// Move up
 		self->zdir = -self->modeldata.speed/2;
 		walk |= 1;
@@ -16456,6 +17161,106 @@ int common_try_wander(entity* target)
 	}
 
 	return 1;
+
+    }
+
+    int behind, grabd, agg, t, stalladd = 0;
+    float diffx, diffz, returndx, returndz, borderdx, borderdz, mindx = 0, mindz = 0;
+    if(obor_profile_build < 3434) self->xdir = self->zdir = 0;
+    diffx = diff(self->x, target->x);
+    diffz = diff(self->z, target->z);
+    behind = ((self->x < target->x) == target->direction);
+    grabd = self->modeldata.grabdistance;
+    agg = self->modeldata.aggression/50;
+    if(agg > 10) agg = 10;
+    if(behind && diffx < grabd*4 && diffz < grabd) t = 13;
+    else if(behind) t = 7;
+    else t = 1;
+    t += agg;
+    if(obor_profile_build >= 3434 && behind && target->attacking) t += 5;
+    if(rnum2 < t)
+    {
+        returndx = grabd*1.5;
+        returndz = grabd/3;
+    }
+    else
+    {
+        returndx = videomodes.hRes/2;
+        returndz = videomodes.vRes/2;
+    }
+    if(rnum2 > 7)
+    {
+        borderdx = videomodes.hRes/8;
+        borderdz = videomodes.vRes/8;
+    }
+    else borderdx = borderdz = 0;
+    if(obor_profile_build >= 3434)
+    {
+        mindx = !behind && target->attacking ? grabd*3 : grabd*1.2;
+        mindz = grabd/4;
+    }
+    if(obor_profile_build < 3434 || dox)
+    {
+        if(self->x < screenx-borderdx)
+        {
+            self->xdir = self->modeldata.speed;
+            stalladd = GAME_SPEED/2;
+            walk = 1;
+        }
+        else if(self->x > screenx+videomodes.hRes+borderdx)
+        {
+            self->xdir = -self->modeldata.speed;
+            stalladd = GAME_SPEED/2;
+            walk = 1;
+        }
+        else if(obor_profile_build >= 3434 && (obor_profile_build >= 3454 || diffx > returndx) && diffx < mindx/2)
+        {
+            self->xdir = self->x > target->x ? self->modeldata.speed : -self->modeldata.speed;
+            walk = 1;
+        }
+        else if(obor_profile_build >= 3434 && (obor_profile_build >= 3454 || diffx > returndx) && diffx < mindx)
+            self->xdir = 0;
+        else if(diffx > returndx)
+        {
+            self->xdir = self->x > target->x ? -self->modeldata.speed : self->modeldata.speed;
+            walk = 1;
+        }
+        else if(rnum < 3) {self->xdir = self->modeldata.speed;walk = 1;}
+        else if(rnum > 4) {self->xdir = -self->modeldata.speed;walk = 1;}
+    }
+    if(obor_profile_build < 3434 || doz)
+    {
+        rnum = rand32()&7;
+        if(self->z < screeny-borderdz)
+        {
+            self->zdir = self->modeldata.speed/2;
+            stalladd = GAME_SPEED/2;
+            walk |= 1;
+        }
+        else if(self->z > screeny+videomodes.vRes+borderdz)
+        {
+            self->zdir = -self->modeldata.speed/2;
+            stalladd = GAME_SPEED/2;
+            walk |= 1;
+        }
+        else if(obor_profile_build >= 3434 && (obor_profile_build >= 3454 || diffz > returndz) && diffz < mindz)
+            self->zdir = 0;
+        else if(diffz > returndz)
+        {
+            self->zdir = self->z > target->z ? -self->modeldata.speed/2 : self->modeldata.speed/2;
+            walk |= 1;
+        }
+        else if(rnum < 2) {self->zdir = -self->modeldata.speed/2;walk |= 1;}
+        else if(rnum > 5) {self->zdir = self->modeldata.speed/2;walk |= 1;}
+    }
+    if(obor_profile_build < 3434)
+    {
+        if(walk) adjust_walk_animation(target);
+        else {self->xdir = self->zdir = 0;set_idle(self);}
+        return 1;
+    }
+    if(obor_profile_build >= 3438) self->stalltime += stalladd;
+    return walk;
 }
 
 //A.I chracter pickup an item
@@ -16494,8 +17299,10 @@ void common_pickupitem(entity* other){
 	else if(! isSubtypeWeapon(other) && ! isSubtypeProjectile(other))
 	{
 		if(validanim(self,ANI_GET) &&
-           (obor_profile_build < 3215 ? !isSubtypeTouch(other) :
-            (isSubtypeTouch(other) && (obor_profile_build < 3218 || canBeDamaged(other, self)))))
+           (obor_profile_build >= 3403 ?
+            (!isSubtypeTouch(other) && (obor_profile_build >= 3454 || canBeDamaged(other, self))) :
+            (obor_profile_build < 3215 ? !isSubtypeTouch(other) :
+            (isSubtypeTouch(other) && (obor_profile_build < 3218 || canBeDamaged(other, self))))))
 		{
 			ent_set_anim(self, ANI_GET, 0);
 			set_getting(self);
@@ -16569,19 +17376,28 @@ int normal_move()
 		else if(target && (self->modeldata.subtype == SUBTYPE_CHASE ||
 			(self->modeldata.type == TYPE_NPC && self->parent))){
 				// try chase a target
-				common_try_chase(target);
+				common_try_chase(target, 1, 1);
 			}
 		else if(target){
 			// just wander around
-			common_try_wander(target);
-		} else if(!common_try_follow()){
+			common_try_wander(target, 1, 1);
+		} else if(!common_try_follow(self->parent, 1, 1) &&
+            (obor_profile_build < 3423 ||
+             ((obor_profile_build < 3424 || !(self->modeldata.aimove & AIMOVE2_NOTARGETIDLE)) &&
+              !common_try_wandercompletely(1, 1)))){
 			// no target or item, just relex and idle
 			self->xdir = self->zdir = 0;
 			set_idle(self);
 		}
 		//end of if
 
-		self->stalltime = time + GAME_SPEED - self->modeldata.aggression;
+		if(obor_profile_build >= 3416)
+        {
+            int stall = GAME_SPEED - self->modeldata.aggression;
+            if(stall < GAME_SPEED) stall = GAME_SPEED/2;
+            self->stalltime = time + stall;
+        }
+        else self->stalltime = time + GAME_SPEED - self->modeldata.aggression;
 	}
 
 	//pick up the item if possible
@@ -16639,14 +17455,17 @@ int avoid_move()
 			(other && diff(self->x, other->x) + diff(self->z, other->z) >
 			diff(self->x, target->x)+ diff(self->z, target->z)))){
 				// avoid the target
-				if(!common_try_avoid(target))
-					common_try_wander(target);
+				if(!common_try_avoid(target, 1, 1))
+					common_try_wander(target, 1, 1);
 
 			}
 		else if(other){
 			// try walking to the item
 			common_try_pick(other);
-		} else if(!common_try_follow()){
+		} else if(!common_try_follow(self->parent, 1, 1) &&
+            (obor_profile_build < 3423 ||
+             ((obor_profile_build < 3424 || !(self->modeldata.aimove & AIMOVE2_NOTARGETIDLE)) &&
+              !common_try_wandercompletely(1, 1)))){
 			// no target or item, just relex and idle
 			self->xdir = self->zdir = 0;
 			set_idle(self);
@@ -16711,14 +17530,17 @@ int chase_move()
 			(other && diff(self->x, other->x) + diff(self->z, other->z) >
 			diff(self->x, target->x)+ diff(self->z, target->z)))){
 				// chase the target
-				if(!common_try_chase(target))
-					common_try_wander(target);
+				if(!common_try_chase(target, 1, 1))
+					common_try_wander(target, 1, 1);
 
 			}
 		else if(other){
 			// try walking to the item
 			common_try_pick(other);
-		} else if(!common_try_follow()){
+		} else if(!common_try_follow(self->parent, 1, 1) &&
+            (obor_profile_build < 3423 ||
+             ((obor_profile_build < 3424 || !(self->modeldata.aimove & AIMOVE2_NOTARGETIDLE)) &&
+              !common_try_wandercompletely(1, 1)))){
 			// no target or item, just relex and idle
 			self->xdir = self->zdir = 0;
 			set_idle(self);
@@ -16780,7 +17602,7 @@ int wander_move()
 			common_try_pick(other);
 		}
 		// let's wander around
-		else if(!common_try_wandercompletely()){
+		else if(!common_try_wandercompletely(1, 1)){
 			// no target or item, just relex and idle
 			self->xdir = self->zdir = 0;
 			set_idle(self);
@@ -16928,15 +17750,24 @@ int arrow_move(){
 // for common bomb types
 int bomb_move()
 {
-	/*if(!(self->x > level->width - 30 - (PLAYER_MAX_Z-self->z)))
-	{*/
+	if(obor_profile_build >= 3443)
+	{
+		if(inair(self) && self->toexplode == 1)
+		{
+			if(self->direction == 0) self->xdir = -self->modeldata.speed;
+			else if(self->direction == 1) self->xdir = self->modeldata.speed;
+			self->nextthink = time + THINK_SPEED / 2;
+			return 1;
+		}
+		if(self->takeaction == bomb_explode) return 1;
+	}
+	else
+	{
 		if(self->direction == 0) self->xdir = -self->modeldata.speed;
 		else if(self->direction == 1) self->xdir = self->modeldata.speed;
-	/*}*/
-
-	self->nextthink = time + THINK_SPEED / 2;
-
-	if(inair(self) && self->toexplode == 1) return 1;
+		self->nextthink = time + THINK_SPEED / 2;
+		if(inair(self) && self->toexplode == 1) return 1;
+	}
 
 	self->tossv = 0;    // Stop moving up/down
 	self->modeldata.no_adjust_base = 1;    // Stop moving up/down
@@ -17001,11 +17832,149 @@ int star_move(){
 
 
 //dispatch move patterns
+/* Per-axis movement and pickup ordering follow the selected source revision. */
+static int obor_profile_move_pickup(entity *other)
+{
+    if(other && other == find_ent_here(self, self->x, self->z, TYPE_ITEM) &&
+       other->animation->vulnerable[other->animpos])
+    {
+        float seta = (float)(self->animation->seta ? self->animation->seta[self->animpos] : -1);
+        if(diff(self->a - (seta >= 0) * seta, other->a) < 0.1)
+            common_pickupitem(other);
+        return 1;
+    }
+    return 0;
+}
+
+static int obor_profile_modern_move(int air)
+{
+    int aimove = self->modeldata.aimove & MASK_AIMOVE1;
+    entity *other, *target, *owner, *ent = NULL;
+    int predir, stall, blocked;
+    int patx[4], patz[4], pxc = 0, pzc = 0, px, pz, fz;
+
+    if(aimove & AIMOVE1_BIKER) return biker_move();
+    if(aimove & AIMOVE1_ARROW) return arrow_move();
+    if(aimove & AIMOVE1_STAR) return star_move();
+    if(aimove & AIMOVE1_BOMB) return bomb_move();
+    if(aimove & AIMOVE1_NOMOVE) return 0;
+    if(air) return 0;
+
+    predir = self->direction;
+    target = normal_find_target(-1, 0);
+    other = normal_find_item();
+    owner = self->parent;
+    if(!self->xdir) self->running = 0;
+    if(!self->modeldata.noflip && !self->running && aimove != AIMOVE1_WANDER)
+    {
+        if(other) self->direction = self->x < other->x;
+        else if(target) self->direction = self->x < target->x;
+        else if(owner) self->direction = self->x < owner->x;
+    }
+    else if(aimove == AIMOVE1_WANDER) self->direction = self->xdir > 0;
+    if(self->direction != predir && validanim(self, ANI_TURN))
+    {
+        self->direction = !self->direction;
+        ent_set_anim(self, ANI_TURN, 0);
+        self->xdir = self->zdir = 0;
+        self->takeaction = common_turn;
+        return 1;
+    }
+    if(obor_profile_build >= 3446 && obor_profile_move_pickup(other) && obor_profile_build >= 3454)
+        return 1;
+    if(common_try_jump()) return 1;
+    blocked = checkpathblocked();
+    if(obor_profile_build >= 3435 && blocked) return 1;
+    if(obor_profile_build >= 3454 && !other && target &&
+       diff(self->x, target->x) < self->modeldata.grabdistance * 2 &&
+       diff(self->z, target->z) < self->modeldata.grabdistance)
+        self->stalltime = time - 1;
+
+    if(self->stalltime < time)
+    {
+        if(other)
+        {
+            common_try_pick(other);
+            ent = other;
+        }
+        /* Before 3446 an item does not exclude the target/follow route. */
+        if(obor_profile_build < 3446 || !other)
+        {
+            if(!other && target && (self->modeldata.subtype == SUBTYPE_CHASE ||
+               (self->modeldata.type == TYPE_NPC && self->parent)))
+                aimove |= AIMOVE1_CHASE;
+            if(aimove & AIMOVE1_CHASE) aimove |= AIMOVE1_CHASEX | AIMOVE1_CHASEZ;
+            if(aimove & AIMOVE1_AVOID) aimove |= AIMOVE1_AVOIDX | AIMOVE1_AVOIDZ;
+            if(obor_profile_build < 3446 || other != ent) self->xdir = self->zdir = 0;
+            if(obor_profile_build >= 3435) self->stalltime = time;
+            if(!aimove && target)
+            {
+                common_try_wander(target, 1, 1);
+                ent = target;
+            }
+            else if(target)
+            {
+                ent = target;
+                if(aimove & AIMOVE1_WANDER) { patx[pxc++] = AIMOVE1_WANDER; patz[pzc++] = AIMOVE1_WANDER; }
+                if(aimove & AIMOVE1_CHASEX) patx[pxc++] = AIMOVE1_CHASEX;
+                if(aimove & AIMOVE1_AVOIDX) patx[pxc++] = AIMOVE1_AVOIDX;
+                if(aimove & AIMOVE1_CHASEZ) patz[pzc++] = AIMOVE1_CHASEZ;
+                if(aimove & AIMOVE1_AVOIDZ) patz[pzc++] = AIMOVE1_AVOIDZ;
+                if(!pxc) patx[pxc++] = AIMOVE1_WANDER;
+                if(!pzc) patz[pzc++] = AIMOVE1_WANDER;
+                px = patx[(rand32() & 0xff) % pxc];
+                pz = patz[(rand32() & 0xff) % pzc];
+                fz = 0;
+                if(px == AIMOVE1_WANDER)
+                {
+                    common_try_wandercompletely(1, pz == AIMOVE1_WANDER);
+                    fz = pz == AIMOVE1_WANDER;
+                }
+                else if(px == AIMOVE1_CHASEX)
+                {
+                    common_try_chase(target, 1, pz == AIMOVE1_CHASEZ);
+                    fz = pz == AIMOVE1_CHASEZ;
+                }
+                else if(px == AIMOVE1_AVOIDX)
+                {
+                    common_try_avoid(target, 1, pz == AIMOVE1_AVOIDZ);
+                    fz = pz == AIMOVE1_AVOIDZ;
+                }
+                if(!fz)
+                {
+                    if(pz == AIMOVE1_WANDER) common_try_wandercompletely(0, 1);
+                    else if(pz == AIMOVE1_CHASEZ) common_try_chase(target, 0, 1);
+                    else if(pz == AIMOVE1_AVOIDZ) common_try_avoid(target, 0, 1);
+                }
+            }
+            else if(!common_try_follow(owner, 1, 1) && !(self->modeldata.aimove & AIMOVE2_NOTARGETIDLE))
+            {
+                common_try_wandercompletely(1, 1);
+                ent = NULL;
+            }
+            else ent = owner;
+        }
+        if(!self->xdir && !self->zdir) set_idle(self);
+        else
+        {
+            if(self->running && !self->modeldata.runupdown) self->zdir = 0;
+            adjust_walk_animation(ent);
+        }
+        stall = GAME_SPEED - self->modeldata.aggression;
+        if(stall < GAME_SPEED) stall = GAME_SPEED / 2;
+        if(obor_profile_build < 3435) self->stalltime = time + stall;
+        else self->stalltime += stall;
+    }
+    if(obor_profile_build < 3446) obor_profile_move_pickup(other);
+    return 1;
+}
+
 int common_move()
 {
 	int aimove;
 	int air = inair(self);
 	if(self->modeldata.aimove==-1) return 0; // invalid value
+	if(obor_profile_build >= 3434) return obor_profile_modern_move(air);
 
 	// get move pattern
 	aimove = self->modeldata.aimove & MASK_AIMOVE1 & rand32();
@@ -17074,6 +18043,7 @@ void common_think()
 
 	// Escape?
 	if(self->link && !self->grabbing && !self->inpain && self->takeaction!=common_prethrow &&
+	   (obor_profile_build < 3440 || !inair(self)) &&
 	   time >= self->stalltime && validanim(self,ANI_SPECIAL))
 	{
 		check_special();
@@ -17427,9 +18397,12 @@ void dojump(float jumpv, float jumpx, float jumpz, int jumpid)
 	if(self->modeldata.dust[2]>=0)
 	{
 		dust = spawn(self->x, self->z, self->a, self->direction, NULL, self->modeldata.dust[2], NULL);
-		dust->base = self->a;
-		dust->autokill = 1;
-		execute_onspawn_script(dust);
+		if(dust)
+		{
+			dust->base = self->a;
+			dust->autokill = 1;
+			execute_onspawn_script(dust);
+		}
 	}
 
 	set_jumping(self);
@@ -18386,7 +19359,7 @@ void player_think()
 	}
 
 	// Check if entity is under a platform
-	if(self->modeldata.subject_to_platform>0 && validanim(self,ANI_DUCK) && check_platform_between(self->x/*+self->direction*2-1*/, self->z, self->a, self->a+self->modeldata.height) && (check_platform_between(self->x/*+self->direction*2-1*/, self->z, self->a, self->a+self->animation->height) || !self->animation->height) )
+	if(self->modeldata.subject_to_platform>0 && validanim(self,ANI_DUCK) && check_platform_between(self->x/*+self->direction*2-1*/, self->z, self->a, self->a+self->modeldata.height, self) && (check_platform_between(self->x/*+self->direction*2-1*/, self->z, self->a, self->a+self->animation->height, self) || !self->animation->height) )
 	{
 		ent_set_anim(self, ANI_DUCK, 1);
 		self->takeaction = common_stuck_underneath;
@@ -19218,7 +20191,7 @@ void dropweapon(int flag)
 			self->weapent->x = self->x;
 			self->weapent->a = self->a;
 
-			other = check_platform(self->weapent->x, self->weapent->z);
+			other = check_platform(self->weapent->x, self->weapent->z, self);
 			wall = checkwall(self->weapent->x, self->weapent->z);
 
 			if(other && other != self->weapent)   self->weapent->base += other->a + other->animation->platform[other->animpos][7];
@@ -19471,7 +20444,7 @@ entity * bomb_spawn(char *name, int index, float x, float z, float a, int direct
 
 	if(e==NULL) return NULL;
 
-	e->a = a;
+	e->a = a + (obor_profile_build >= 3436 ? 0.5 : 0.0);
 
 	if(self->animation->energycost.cost > 0 && nocost) self->cantfire = 1;    // Can't fire if still exists on screen
 
@@ -19832,8 +20805,8 @@ entity * smartspawn(s_spawn_entry * props){   // 7-1-2005 Entire section replace
 	// Feb 26, 2005 - Store the original map to be able to restore with dying flash
 	if(props->dying){
 		e->dying = props->dying;    // Feb 26, 2005 - Used to define which colourmap is used for the dying flash
-		e->per1 = props->per1;    // Mar 21, 2005 - Used to store custom percentages
-		e->per2 = props->per2;    // Mar 21, 2005 - Used to store custom percentages
+		e->per1 = obor_flash_entity_value(props->per1, obor_profile_build, 0);    // Mar 21, 2005 - Used to store custom percentages
+		e->per2 = obor_flash_entity_value(props->per2, obor_profile_build, 1);    // Mar 21, 2005 - Used to store custom percentages
 	}
 
 	if(props->nolife) e->modeldata.nolife = props->nolife;    // Overwrite whether live is visible or not
@@ -19848,9 +20821,12 @@ entity * smartspawn(s_spawn_entry * props){   // 7-1-2005 Entire section replace
 	if(props->weapon)
 	{
 		wp = spawn(e->x, 100000, 0, 0, props->weapon, props->weaponindex, props->weaponmodel);
+		if(wp)
+		{
 		//ent_default_init(wp);
 		set_weapon(e, wp->modeldata.weapnum, 0);
 		e->weapent = wp;
+		}
 	}
 
 	//ent_default_init(e);
@@ -20416,6 +21392,8 @@ void update_scroller(){
 	if(!level->waiting)
 	{
 		if(level->scrolldir&SCROLL_RIGHT){
+            if(obor_profile_build >= 3438)
+                againstend = (level->width <= videomodes.hRes);
 
 			for(i=0; i<maxplayers[current_set]; i++)
 			{
@@ -20460,6 +21438,8 @@ void update_scroller(){
 
 		}
 		else if(level->scrolldir&SCROLL_LEFT){
+            if(obor_profile_build >= 3438)
+                againstend = (level->width <= videomodes.hRes);
 
 			for(i=0; i<maxplayers[current_set]; i++)
 			{
@@ -20658,148 +21638,211 @@ void update_scroller(){
 }
 
 
+static int obor_layer_int(double value, int *out)
+{
+    if(!(value >= -2147483648.0 && value < 2147483648.0)) return 0;
+    *out = (int)value;
+    return 1;
+}
+
+static void obor_layer_clock(void)
+{
+    if(textbox) texttime += time-traveltime;
+    else if(obor_profile_build < 3426)
+        bgtravelled += ((time-traveltime)*level->bgspeed/30*4) +
+            (level->rocking ? (time-traveltime)/(GAME_SPEED/30) : 0);
+    else if(obor_profile_build < 3456)
+        bgtravelled += ((time-traveltime)*level->bgspeed/30*4) +
+            (level->rocking ? (time-traveltime)/((float)GAME_SPEED/30) : 0);
+    else {
+        float rocktravel = level->rocking ? (time-traveltime)/((float)GAME_SPEED/30) : 0;
+        if(level->bgspeed < 0) rocktravel = -rocktravel;
+        if(obor_profile_build == 3456)
+            bgtravelled += (time-traveltime)*level->bgspeed/30*2 + rocktravel;
+        else bgtravelled += (time-traveltime)*level->bgspeed/30*4 + rocktravel;
+    }
+}
+
 void applybglayers(s_screen* pbgscreen)
 {
-	int index, x, z, i, j, k, l, timevar;
-	s_bglayer* bglayer;
-	int width, height;
-	s_drawmethod screenmethod;
-
-	if(!textbox)
-		 bgtravelled += (((time-traveltime)*level->bgspeed/30*4) + ((level->rocking)?((time-traveltime)/(GAME_SPEED/30)):0)); // no like in real life, maybe
-	else
-		 texttime += time-traveltime;
-
-	timevar = time - texttime;
-
-	for(index = 0; index < level->numbglayers; index++)
-	{
-		bglayer = level->bglayers+index;
-
-
-		if(!bglayer->xrepeat || !bglayer->zrepeat || !bglayer->enabled) continue;
-
-		width = bglayer->width + bglayer->xspacing;
-		height = bglayer->height + bglayer->zspacing;
-
-		//if(level->bgdir==0) // count from left
-		//{
-			x = (int)(bglayer->xoffset + (advancex)*(bglayer->xratio) - advancex - (int)(bgtravelled * (1-bglayer->xratio) * bglayer->bgspeedratio)%width);
-		//}
-		//else //count from right, complex
-		//{
-		//    x = videomodes.hRes1 - (level->width-videomodes.hRes1-advancex)*(bglayer->xratio) - bglayer->xoffset - width*bglayer->xrepeat + bglayer->xspacing + (int)(bgtravelled * (1-bglayer->xratio) * bglayer->bgspeedratio)%width;
-		//}
-
-		if(level->scrolldir&SCROLL_UP)
-		{
-			z = (int)(4 + videomodes.vRes + (advancey+4)*bglayer->zratio - bglayer->zoffset - height*bglayer->zrepeat + height + bglayer->zspacing);
-		}
-		else
-		{
-			z = (int)(4 + bglayer->zoffset + (advancey-4)* bglayer->zratio - advancey);
-		}
-
-		if(x<0)
-		{
-			i = (-x)/width;
-			x %= width;
-		}
-		else i=0;
-		if(z<0)
-		{
-			j = (-z)/height;
-			z %= height;
-		}
-		else j=0;
-
-		screenmethod=plainmethod;
-		screenmethod.table = (pixelformat==PIXEL_x8)?(current_palette>0?(level->palettes[current_palette-1]):NULL):NULL;
-		screenmethod.alpha = bglayer->alpha;
-		screenmethod.transbg = bglayer->transparency;
-		for(; j<bglayer->zrepeat && z<videomodes.vRes; z+=height, j++)
-		{
-			for(k=i, l=x; k<bglayer->xrepeat && l<videomodes.hRes + bglayer->amplitude*2; l+=width, k++)
-			{
-				if(bglayer->type==bg_screen)
-				{
-					if(bglayer->watermode && bglayer->amplitude)
-						 putscreen_water(pbgscreen, bglayer->screen, l, z, bglayer->amplitude, (float)bglayer->wavelength, (int)(timevar*bglayer->wavespeed), bglayer->watermode, &screenmethod);
-					else
-						 putscreen(pbgscreen, bglayer->screen, l, z, &screenmethod);
-				}
-				else if(bglayer->type==bg_sprite)
-					putsprite(l, z, bglayer->sprite, pbgscreen, &screenmethod);
-
-			}
-		}
-	}
-
-	traveltime = time;
+    int index, x, z, i, j, k, l, timevar;
+    int width, height, phase;
+    int64_t sum, span;
+    s_drawmethod screenmethod;
+    s_bglayer *layer;
+    if(!level) return;
+    obor_layer_clock();
+    timevar = time-texttime;
+    for(index=0; index<level->numbglayers && index<LEVEL_MAX_BGLAYERS; index++) {
+        layer = level->bglayers+index;
+        if(!layer->xrepeat || !layer->zrepeat || !layer->enabled) continue;
+        sum = (int64_t)layer->width + layer->xspacing;
+        if(sum <= 0 || sum > INT_MAX) continue;
+        width = (int)sum;
+        sum = (int64_t)layer->height + layer->zspacing;
+        if(sum <= 0 || sum > INT_MAX) continue;
+        height = (int)sum;
+        if(obor_profile_build < 3437) {
+            int travelled;
+            if(!obor_layer_int(bgtravelled*(1-layer->xratio)*layer->bgspeedratio, &travelled)) continue;
+            if(!obor_layer_int(layer->xoffset + advancex*layer->xratio - advancex - travelled%width, &x)) continue;
+        } else if(!obor_layer_int(layer->xoffset + advancex*layer->xratio - advancex -
+                                  bgtravelled*(1-layer->xratio)*layer->bgspeedratio, &x)) continue;
+        if(level->scrolldir & SCROLL_UP) {
+            sum = (int64_t)height*layer->zrepeat;
+            if(sum < INT_MIN || sum > INT_MAX) continue;
+            if(!obor_layer_int(4 + videomodes.vRes + (advancey+4)*layer->zratio - layer->zoffset -
+                              (int)sum + height + layer->zspacing, &z)) continue;
+        } else {
+            sum = (int64_t)4 + layer->zoffset;
+            if(sum < INT_MIN || sum > INT_MAX) continue;
+            if(!obor_layer_int((int)sum + (advancey-4)*layer->zratio - advancey, &z)) continue;
+        }
+        sum = x<0 ? -(int64_t)x/width : 0;
+        if(sum > INT_MAX) continue;
+        i = (int)sum;
+        sum = z<0 ? -(int64_t)z/height : 0;
+        if(sum > INT_MAX) continue;
+        j = (int)sum;
+        if(obor_profile_build >= 3452 && obor_profile_build < 3456) {
+            x %= width;
+            if(x>0) x -= width;
+            z %= height;
+            if(z>0) z -= height;
+        } else {
+            if(x<0) x %= width;
+            if(z<0) z %= height;
+        }
+        if(obor_profile_build >= 3462) screenmethod = layer->drawmethod;
+        else {
+            screenmethod = plainmethod;
+            screenmethod.alpha = layer->alpha;
+            screenmethod.transbg = layer->transparency;
+            if(obor_profile_build >= 3454) {
+                screenmethod.water.wavelength = (float)layer->wavelength;
+                screenmethod.water.amplitude = layer->amplitude;
+                screenmethod.water.watermode = layer->watermode;
+            }
+        }
+        screenmethod.table = pixelformat==PIXEL_x8 && current_palette>0 && current_palette<=LEVEL_MAX_PALETTES
+            ? level->palettes[current_palette-1] : NULL;
+        if(obor_profile_build >= 3454) {
+            float speed = obor_profile_build >= 3462 ? screenmethod.water.wavespeed : layer->wavespeed;
+            if(!obor_layer_int(timevar*speed, &phase)) continue;
+            screenmethod.water.wavetime = phase;
+        }
+        if(obor_profile_build < 3454 && layer->type==bg_screen && layer->watermode && layer->amplitude &&
+           !obor_layer_int(timevar*layer->wavespeed, &phase)) continue;
+        span = (int64_t)videomodes.hRes +
+            (obor_profile_build>=3462 ? (screenmethod.water.watermode==3 ? 0 : (int64_t)screenmethod.water.amplitude*2)
+                                     : (int64_t)layer->amplitude*2);
+        if(span < INT_MIN || span > INT_MAX) continue;
+        for(; j<layer->zrepeat && z<videomodes.vRes; j++) {
+            for(k=i,l=x; k<layer->xrepeat && l<span; k++) {
+                if(layer->type==bg_screen) {
+                    if(obor_profile_build < 3454 && layer->watermode && layer->amplitude) {
+                        putscreen_water(pbgscreen,layer->screen,l,z,layer->amplitude,(float)layer->wavelength,
+                                        phase,layer->watermode,&screenmethod);
+                    } else putscreen(pbgscreen,layer->screen,l,z,&screenmethod);
+                } else if(layer->type==bg_sprite) putsprite(l,z,layer->sprite,pbgscreen,&screenmethod);
+                if(l > INT_MAX-width) break;
+                l += width;
+            }
+            if(z > INT_MAX-height) break;
+            z += height;
+        }
+    }
+    traveltime = time;
 }
 
 void applyfglayers(s_screen* pbgscreen)
 {
-	int index, x, z, i, j, k, l;
-	s_fglayer* fglayer;
-	int width, height;
-	s_drawmethod screenmethod;
-
-	for(index = 0; index < level->numfglayers; index++)
-	{
-		fglayer = level->fglayers+index;
-
-
-		if(!fglayer->xrepeat || !fglayer->zrepeat || !fglayer->enabled) continue;
-
-		width = fglayer->width + fglayer->xspacing;
-		height = fglayer->height + fglayer->zspacing;
-
-		//if(level->bgdir==0) // count from left
-		//{
-			x = (int)(fglayer->xoffset + (advancex)*(fglayer->xratio) - advancex - (int)(bgtravelled * (1-fglayer->xratio) * fglayer->bgspeedratio)%width);
-		//}
-		//else //count from right, complex
-		//{
-		//    x = videomodes.hRes1 - (level->width-videomodes.hRes1-advancex)*(fglayer->xratio) - fglayer->xoffset - width*fglayer->xrepeat + fglayer->xspacing + (int)(bgtravelled * (1-fglayer->xratio) * fglayer->bgspeedratio)%width;
-		//}
-
-		if(level->scrolldir&SCROLL_UP)
-		{
-			z = (int)(4 + videomodes.vRes + (advancey+4)*fglayer->zratio - fglayer->zoffset - height*fglayer->zrepeat + height + fglayer->zspacing);
-		}
-		else
-		{
-			z = (int)(4 + fglayer->zoffset + (advancey-4)* fglayer->zratio - advancey);
-		}
-
-		if(x<0)
-		{
-			i = (-x)/width;
-			x %= width;
-		}
-		else i=0;
-		if(z<0)
-		{
-			j = (-z)/height;
-			z %= height;
-		}
-		else j=0;
-
-
-		screenmethod=plainmethod;
-		screenmethod.table = (pixelformat==PIXEL_x8)?(current_palette>0?(level->palettes[current_palette-1]):NULL):NULL;
-		screenmethod.alpha = fglayer->alpha;
-		screenmethod.transbg = fglayer->transparency;
-		for(; j<fglayer->zrepeat && z<videomodes.vRes; z+=height, j++)
-		{
-			for(k=i, l=x; k<fglayer->xrepeat && l<videomodes.hRes + fglayer->amplitude*2; l+=width, k++)
-			{
-					spriteq_add_frame(l, z, FRONTPANEL_Z + fglayer->z, fglayer->sprite, &screenmethod, 0);
-
-			}
-		}
-	}
+    int index, x, z, i, j, k, l, timevar;
+    int width, height, phase;
+    int64_t sum, span, depth;
+    s_drawmethod screenmethod;
+    s_fglayer *layer;
+    if(!level) return;
+    if(obor_profile_build >= 3454 && obor_profile_build < 3457) obor_layer_clock();
+    timevar = time-texttime;
+    for(index=0; index<level->numfglayers && index<LEVEL_MAX_FGLAYERS; index++) {
+        layer = level->fglayers+index;
+        depth = (int64_t)PLAYER_MAX_Z + 50 + layer->z;
+        if(depth < INT_MIN || depth > INT_MAX) continue;
+        if(!layer->xrepeat || !layer->zrepeat || !layer->enabled) continue;
+        sum = (int64_t)layer->width + layer->xspacing;
+        if(sum <= 0 || sum > INT_MAX) continue;
+        width = (int)sum;
+        sum = (int64_t)layer->height + layer->zspacing;
+        if(sum <= 0 || sum > INT_MAX) continue;
+        height = (int)sum;
+        if(obor_profile_build < 3454) {
+            int travelled;
+            if(!obor_layer_int(bgtravelled*(1-layer->xratio)*layer->bgspeedratio, &travelled)) continue;
+            if(!obor_layer_int(layer->xoffset + advancex*layer->xratio - advancex - travelled%width, &x)) continue;
+        } else if(!obor_layer_int(layer->xoffset + advancex*layer->xratio - advancex -
+                                  bgtravelled*(1-layer->xratio)*layer->bgspeedratio, &x)) continue;
+        if(level->scrolldir & SCROLL_UP) {
+            sum = (int64_t)height*layer->zrepeat;
+            if(sum < INT_MIN || sum > INT_MAX) continue;
+            if(!obor_layer_int(4 + videomodes.vRes + (advancey+4)*layer->zratio - layer->zoffset -
+                              (int)sum + height + layer->zspacing, &z)) continue;
+        } else {
+            sum = (int64_t)4 + layer->zoffset;
+            if(sum < INT_MIN || sum > INT_MAX) continue;
+            if(!obor_layer_int((int)sum + (advancey-4)*layer->zratio - advancey, &z)) continue;
+        }
+        sum = x<0 ? -(int64_t)x/width : 0;
+        if(sum > INT_MAX) continue;
+        i = (int)sum;
+        sum = z<0 ? -(int64_t)z/height : 0;
+        if(sum > INT_MAX) continue;
+        j = (int)sum;
+        if(obor_profile_build >= 3454 && obor_profile_build < 3456) {
+            x %= width;
+            if(x>0) x -= width;
+            z %= height;
+            if(z>0) z -= height;
+        } else {
+            if(x<0) x %= width;
+            if(z<0) z %= height;
+        }
+        if(obor_profile_build >= 3462) screenmethod = layer->drawmethod;
+        else {
+            screenmethod = plainmethod;
+            screenmethod.alpha = layer->alpha;
+            screenmethod.transbg = layer->transparency;
+            if(obor_profile_build >= 3454) {
+                screenmethod.water.wavelength = (float)layer->wavelength;
+                screenmethod.water.amplitude = layer->amplitude;
+                screenmethod.water.watermode = layer->watermode;
+            }
+        }
+        screenmethod.table = pixelformat==PIXEL_x8 && current_palette>0 && current_palette<=LEVEL_MAX_PALETTES
+            ? level->palettes[current_palette-1] : NULL;
+        if(obor_profile_build >= 3454) {
+            float speed = obor_profile_build >= 3462 ? screenmethod.water.wavespeed : layer->wavespeed;
+            if(!obor_layer_int(timevar*speed, &phase)) continue;
+            screenmethod.water.wavetime = phase;
+        }
+        span = (int64_t)videomodes.hRes +
+            (obor_profile_build>=3462 ? (screenmethod.water.watermode==3 ? 0 : (int64_t)screenmethod.water.amplitude*2)
+                                     : (int64_t)layer->amplitude*2);
+        if(span < INT_MIN || span > INT_MAX) continue;
+        for(; j<layer->zrepeat && z<videomodes.vRes; j++) {
+            for(k=i,l=x; k<layer->xrepeat && l<span; k++) {
+                if(obor_profile_build < 3454 || layer->type==fg_sprite)
+                    spriteq_add_frame(l,z,(int)depth,layer->sprite,&screenmethod,0);
+                else if(layer->type==fg_screen)
+                    spriteq_add_screen(l,z,(int)depth,layer->screen,&screenmethod,0);
+                if(l > INT_MAX-width) break;
+                l += width;
+            }
+            if(z > INT_MAX-height) break;
+            z += height;
+        }
+    }
+    
 }
 
 
@@ -20844,26 +21887,52 @@ void draw_scrolled_bg(){
 		screenmethod.table = current_palette? level->palettes[current_palette-1]: NULL;
 	}
 
-	if(bgbuffer)
-	{
-		if(((level->rocking || level->bgspeed>0 || texture)&& !pause) ||
-		   oldadvx!=advancex || oldadvy != advancey || current_palette!=oldpal)
-			bgbuffer_updated = 0;
-		oldadvx = advancex;
-		oldadvy = advancey;
-		oldpal = current_palette;
-	}
-	else bgbuffer_updated = 0;
-	//font_printf(2, 100, 1, 0, "%d", bgbuffer_updated);
-
-	if(bgbuffer)  pbgscreen = bgbuffer_updated?vscreen:bgbuffer;
-	else          pbgscreen = vscreen;
-
-	if(!bgbuffer_updated && level->numbglayers>0) applybglayers(pbgscreen);
+    if(obor_profile_build >= 3415 && obor_profile_build < 3424)
+    {
+        pbgscreen = vscreen;
+        clearscreen(pbgscreen);
+        if(level->numbglayers > 0) applybglayers(pbgscreen);
+    }
+    else
+    {
+        if(bgbuffer)
+        {
+            int animated = level->rocking ||
+                (obor_profile_build >= 3460 ? level->bgspeed != 0 : level->bgspeed > 0) ||
+                (obor_profile_build < 3460 && texture);
+            if((animated && !pause) || oldadvx != advancex ||
+               oldadvy != advancey || current_palette != oldpal)
+                bgbuffer_updated = 0;
+            else if(obor_profile_build >= 3402)
+            {
+                for(i = 0; i < level->numbglayers; ++i)
+                {
+                    s_bglayer *layer = &level->bglayers[i];
+                    int water = obor_profile_build >= 3462
+                        ? layer->drawmethod.water.watermode : layer->watermode;
+                    if(water && (obor_profile_build >= 3460 || layer->amplitude))
+                    {
+                        bgbuffer_updated = 0;
+                        break;
+                    }
+                }
+            }
+            oldadvx = advancex;
+            oldadvy = advancey;
+            oldpal = current_palette;
+        }
+        else bgbuffer_updated = 0;
+        pbgscreen = bgbuffer && !bgbuffer_updated ? bgbuffer : vscreen;
+        if(!bgbuffer_updated && level->numbglayers > 0)
+        {
+            if(obor_profile_build >= 3424) clearscreen(pbgscreen);
+            applybglayers(pbgscreen);
+        }
+    }
 	applyfglayers(pbgscreen);
 
 	// Append bg with texture?
-	if(texture){
+	if(obor_profile_build < 3460 && texture){
 		inta = (int)(advancex/2);
 		if(level->rocking){
 			inta += (time/(GAME_SPEED/30));
@@ -20875,12 +21944,11 @@ void draw_scrolled_bg(){
 	pscreenmethod->alpha = 0;
 	pscreenmethod->transbg = 0;
 
-	if(bgbuffer)
-	{
-		putscreen(vscreen, bgbuffer, 0, 0, NULL);
-	}
-
-	bgbuffer_updated = 1;
+    if(obor_profile_build < 3415 || obor_profile_build >= 3424)
+    {
+        if(bgbuffer) putscreen(vscreen, bgbuffer, 0, 0, NULL);
+        bgbuffer_updated = 1;
+    }
 
 	if(level->rocking){
 		rockpos = (time/(GAME_SPEED/8)) & 31;
@@ -21088,7 +22156,7 @@ void inputrefresh()
 
 #ifndef DC
 	int moviestop = 0;
-	if(movieplay)
+	if(obor_profile_build < 3446 && movieplay)
 	{
 		control_update(playercontrolpointers, maxplayers[current_set]);
 		for(p=0; p<maxplayers[current_set]; p++)
@@ -21120,7 +22188,7 @@ void inputrefresh()
 #ifndef DC
 	}
 
-	if(movielog && !pause)
+	if(obor_profile_build < 3446 && movielog && !pause)
 	{
 		movie_save(playercontrolpointers);
 		font_printf(2, 2, 1, 0, "Recording movie, frames: %d", movieloglen + moviebufptr);
@@ -21140,7 +22208,7 @@ void inputrefresh()
 		bothkeys |= player[p].keys;
 		bothnewkeys |= player[p].newkeys;
 #ifndef DC
-		if(movielog && (bothnewkeys & FLAG_ESC) && !pause)
+		if(obor_profile_build < 3446 && movielog && (bothnewkeys & FLAG_ESC) && !pause)
 		{
 			movie_flushbuf();
 			movie_closefile();
@@ -21284,7 +22352,7 @@ void update(int ingame, int usevwait)
 
 	if(ingame==1 &&
 #ifndef DC
-		!movieplay &&
+		(obor_profile_build >= 3446 || !movieplay) &&
 #endif
 		!pause && !nopause &&
 	   ((player[0].ent && (player[0].newkeys & FLAG_START)) ||
@@ -21293,8 +22361,14 @@ void update(int ingame, int usevwait)
 		(player[3].ent && (player[3].newkeys & FLAG_START)))
 	)
 	{
-		sound_play_sample(SAMPLE_BEEP2, 0, savedata.effectvol,savedata.effectvol, 100);
-		sound_pause_music(1);
+        if(obor_profile_build < 3434)
+            sound_play_sample(SAMPLE_BEEP2, 0, savedata.effectvol,savedata.effectvol, 100);
+        sound_pause_music(1);
+        if(obor_profile_build >= 3434)
+        {
+            sound_pause_sample(1);
+            sound_play_sample(SAMPLE_BEEP2, 0, savedata.effectvol,savedata.effectvol, 100);
+        }
 		spriteq_lock();
 		pausemenu();
 	}
@@ -21654,6 +22728,7 @@ void shutdown(int status, char *msg, ...)
 	if(!disablelog) printf("Release graphics data");
 	if(!disablelog) printf("..");
 	if(startup_done) freescreen(&vscreen); // allocated by init_videomodes
+	if(startup_done) obor_free_blend_tables_x8();
 	if(!disablelog) printf("..");
 	if(startup_done) freescreen(&background);
 	if(!disablelog) printf("..");
@@ -21826,6 +22901,9 @@ void startup(){
 	printf("Done!\n");
 #endif
 
+	if(obor_profile_build >= 3454 && pixelformat == PIXEL_x8)
+		create_blend_tables_x8(blendtables);
+
 	printf("\n\n");
 
 	for(i=0; i<MAX_PAL_SIZE/4; i++) neontable[i] = i;
@@ -21844,8 +22922,8 @@ void startup(){
 // ----------------------------------------------------------------------------
 
 // Returns 0 on error, -1 on escape
-int playgif(char *filename, int x, int y, int noskip){
-	unsigned char gifpal[768] = {0};
+static int obor_playgif_legacy(char *filename, int x, int y, int noskip){
+	unsigned char gifpal[1024] = {0};
 	int code;
 	int delay;
 	u32 milliseconds;
@@ -21923,6 +23001,207 @@ int playgif(char *filename, int x, int y, int noskip){
 	return 1;
 }
 
+static void update_backbuffer(s_screen* backbuffer, s_screen** gifbuffer){
+	int i, l = backbuffer->width*backbuffer->height;
+    unsigned char *pr=gifbuffer[0]->data, *pg=gifbuffer[1]->data, *pb=gifbuffer[2]->data;
+	unsigned short *ps16, *ppr16, *ppg16, *ppb16;
+	unsigned int *ps32, *ppr32, *ppg32, *ppb32;
+	switch(screenformat){
+	case PIXEL_16:
+		ps16 = (unsigned short*)(backbuffer->data);
+		ppr16 = (unsigned short*)(obor_profile_build < 3477 ? gifbuffer[0]->palette : gifbuffer[0]->data);
+		ppg16 = (unsigned short*)(obor_profile_build < 3477 ? gifbuffer[1]->palette : gifbuffer[1]->data);
+		ppb16 = (unsigned short*)(obor_profile_build < 3477 ? gifbuffer[2]->palette : gifbuffer[2]->data);
+		for(i=0; i<l; i++){
+			if(obor_profile_build < 3419) ps16[i] = (unsigned short)_makecolour(pr[i],pg[i],pb[i]);
+            else if(obor_profile_build < 3477) ps16[i] = ppr16[pr[i]]|ppg16[pg[i]]|ppb16[pb[i]];
+            else ps16[i] = ppr16[i]|ppg16[i]|ppb16[i];
+		}
+		break;
+	case PIXEL_32:
+		ps32 = (unsigned int*)(backbuffer->data);
+		ppr32 = (unsigned int*)(obor_profile_build < 3477 ? gifbuffer[0]->palette : gifbuffer[0]->data);
+		ppg32 = (unsigned int*)(obor_profile_build < 3477 ? gifbuffer[1]->palette : gifbuffer[1]->data);
+		ppb32 = (unsigned int*)(obor_profile_build < 3477 ? gifbuffer[2]->palette : gifbuffer[2]->data);
+		for(i=0; i<l; i++){
+			if(obor_profile_build < 3419) ps32[i] = (unsigned int)_makecolour(pr[i],pg[i],pb[i]);
+            else if(obor_profile_build < 3477) ps32[i] = ppr32[pr[i]]|ppg32[pg[i]]|ppb32[pb[i]];
+            else ps32[i] = ppr32[i]|ppg32[i]|ppb32[i];
+			//printf(" %u %u %u\n", ppr32[i], ppg32[i], ppb32[i]);
+		}
+		break;
+	}
+
+}
+
+int playgif(char *filename, int x, int y, int noskip){
+	unsigned char gifpal[3][1024] = {{0}};
+	char tname[256] = {""};
+	int code[3];
+	int delay[3];
+	u32 milliseconds;
+	u32 nextframe[3];
+	u32 lasttime;
+	u32 temptime, tempnewtime; // temporary patch for ingame gif play
+	int done;
+	int frame = 0;
+	int synctosound = 0;
+	s_screen* backbuffer = NULL, *gifbuffer[3] = {NULL, NULL, NULL}, *tempbg = background;
+	static anigif_info info[3];
+	int isRGB = (pixelformat==PIXEL_x8);
+
+    size_t name_length;
+    if(!filename) return 0;
+    if(obor_profile_build < 3418) return obor_playgif_legacy(filename,x,y,noskip);
+    name_length = strlen(filename);
+    if(name_length >= sizeof(tname)) return 0;
+    if(name_length >= 4 && stricmp(filename+name_length-4,".gif")==0)
+        name_length -= 4;
+    if(name_length > sizeof(tname)-6) return 0;
+    memcpy(tname, filename, name_length);
+    tname[name_length] = 0;
+    info[0].handle = info[1].handle = info[2].handle = -1;
+
+	strcat(tname, "_.gif");
+	
+	if(isRGB){
+		tname[strlen(tname)-5] = 'r';
+		if(testpackfile(tname, packfile)<0) isRGB = 0;
+		tname[strlen(tname)-5] = 'g';
+		if(testpackfile(tname, packfile)<0) isRGB = 0;
+		tname[strlen(tname)-5] = 'b';
+		if(testpackfile(tname, packfile)<0) isRGB = 0;
+	}
+
+	
+
+	background = gifbuffer[0] = allocscreen(videomodes.hRes, videomodes.vRes, obor_profile_build < 3477 ? pixelformat : screenformat);
+    if(!background) goto playgif_error;
+	clearscreen(background);
+	info->noblackenbg = (info+1)->noblackenbg = (info+2)->noblackenbg = (obor_profile_build >= 3453 && isRGB);
+
+	if(isRGB) {
+		backbuffer = allocscreen(videomodes.hRes, videomodes.vRes, screenformat);
+        if(!backbuffer) goto playgif_error;
+		gifbuffer[1] = allocscreen(videomodes.hRes, videomodes.vRes, obor_profile_build < 3477 ? pixelformat : screenformat);
+        if(!gifbuffer[1]) goto playgif_error;
+		clearscreen(gifbuffer[1]);
+		gifbuffer[2] = allocscreen(videomodes.hRes, videomodes.vRes, obor_profile_build < 3477 ? pixelformat : screenformat);
+        if(!gifbuffer[2]) goto playgif_error;
+		clearscreen(gifbuffer[2]);
+		background = NULL;
+	}
+	standard_palette(1);
+
+	if(!isRGB){
+		if(!anigif_open_ex(filename, packfile, obor_profile_build < 3477 && background->palette ? background->palette : gifpal[0], info))
+			goto playgif_error;
+	}else{
+		tname[strlen(tname)-5] = 'r';
+		if(!anigif_open_ex(tname, packfile, obor_profile_build < 3477 ? gifbuffer[0]->palette : gifpal[0], info)) goto playgif_error;
+		tname[strlen(tname)-5] = 'g';
+		if(!anigif_open_ex(tname, packfile, obor_profile_build < 3477 ? gifbuffer[1]->palette : gifpal[1], info+1)) goto playgif_error;
+		tname[strlen(tname)-5] = 'b';
+		if(!anigif_open_ex(tname, packfile, obor_profile_build < 3477 ? gifbuffer[2]->palette : gifpal[2], info+2)) goto playgif_error;
+	}
+
+	temptime = time;
+	tempnewtime = newtime;
+	time = 0;
+	lasttime = 0;
+	milliseconds = 0;
+	nextframe[0] = nextframe[1] = nextframe[2] = 0;
+	delay[0] = delay[1] = delay[2] = 100;
+	code[0] = code[1] = code[2] = ANIGIF_DECODE_RETRY;
+	done = 0;
+	synctosound = (sound_getinterval() != 0xFFFFFFFF);
+
+	while(!done){
+		//printf("gif\n");
+		if(milliseconds >= nextframe[0]){
+			if(code[0] != ANIGIF_DECODE_END){
+				while((code[0] = anigif_decode_ex(gifbuffer[0], delay, x, y, gifpal[0], info)) == ANIGIF_DECODE_RETRY);
+				// if(code == ANIGIF_DECODE_FRAME){
+				// Set time for next frame
+				nextframe[0] += delay[0] * 10;
+			// }
+			}
+			else done |= 1;
+		}
+		if(code[0] == ANIGIF_DECODE_END) break;
+
+		if(isRGB){
+			//g
+			if(milliseconds >= nextframe[1]){
+				if(code[1] != ANIGIF_DECODE_END){
+					while((code[1] = anigif_decode_ex(gifbuffer[1], delay+1, x, y, gifpal[1], info+1)) == ANIGIF_DECODE_RETRY);
+					nextframe[1] += delay[1] * 10;
+				}
+				else done |= 1;
+			}
+			//b
+			if(milliseconds >= nextframe[2]){
+				if(code[2] != ANIGIF_DECODE_END){
+					while((code[2] = anigif_decode_ex(gifbuffer[2], delay+2, x, y, gifpal[2], info+2)) == ANIGIF_DECODE_RETRY);
+					nextframe[2] += delay[2] * 10;
+				}
+				else done |= 1;
+			}
+			if(backbuffer) update_backbuffer(backbuffer, gifbuffer);
+		}
+		
+		if(backbuffer){
+			spriteq_add_screen(0,0,0,backbuffer,NULL,0);
+		}
+
+		if(frame==0){
+			vga_vwait();
+			if(background && (obor_profile_build >= 3477 || !background->palette))
+				palette_set_corrected(gifpal[0], savedata.gamma,savedata.gamma,savedata.gamma, savedata.brightness,savedata.brightness,savedata.brightness);
+			update(0,0);
+		}
+		else update(0,1);
+
+		++frame;
+
+		if(synctosound){
+			milliseconds += sound_getinterval();
+			if(milliseconds==0xFFFFFFFF) synctosound = 0;
+		}
+		if(!synctosound) milliseconds += (time-lasttime) * 1000 / GAME_SPEED;
+		lasttime = time;
+
+		if(!noskip && (bothnewkeys & (FLAG_ESC | FLAG_ANYBUTTON))) done = 1;
+	}
+	anigif_close_ex(info);
+	if(isRGB){
+		anigif_close_ex(info+1);
+		anigif_close_ex(info+2);
+	}
+
+	time = temptime;
+	newtime = tempnewtime;
+
+	if(backbuffer) freescreen(&backbuffer);
+	if(gifbuffer[0]) freescreen(&(gifbuffer[0]));
+	if(gifbuffer[1]) freescreen(&(gifbuffer[1]));
+	if(gifbuffer[2]) freescreen(&(gifbuffer[2]));
+	background = tempbg;
+	if(bothnewkeys & (FLAG_ESC | FLAG_ANYBUTTON)) return -1;
+	return 1;
+
+playgif_error:
+	if(info->handle>=0) anigif_close_ex(info);
+	if((info+1)->handle>=0) anigif_close_ex(info+1);
+	if((info+2)->handle>=0) anigif_close_ex(info+2);
+	if(backbuffer) freescreen(&backbuffer);
+	if(gifbuffer[0]) freescreen(&(gifbuffer[0]));
+	if(gifbuffer[1]) freescreen(&(gifbuffer[1]));
+	if(gifbuffer[2]) freescreen(&(gifbuffer[2]));
+	background = tempbg;
+	return 0;
+}
+
 
 
 
@@ -21944,7 +23223,7 @@ void playscene(char *filename)
 	if(buffer_pakfile(filename, &buf, &size)!=1) return;
 
 	currentScene = filename;
-	titleScreen = menuScreen = 0;
+	if(obor_profile_build < 3481) titleScreen = menuScreen = 0;
 
 	// Now interpret the contents of buf line by line
 	pos = 0;
@@ -22029,7 +23308,7 @@ void hallfame(int addtoscore)
 	int col1 = -8;
 	int col2 = 6;
 
-	titleScreen = menuScreen = 0;
+	if(obor_profile_build < 3481) titleScreen = menuScreen = 0;
 	hallOfFame = 1;
 
 	if(hiscorebg)
@@ -22107,6 +23386,8 @@ void showcomplete(int num)
 	u32 finishtime = 0;
 	int chan = 0;
 	char tmpBuff[128] = {""};
+
+	if(obor_profile_build >= 3481) showComplete = 1;
 
 	if(completebg)
 	{
@@ -22215,6 +23496,7 @@ void showcomplete(int num)
 		}
 	}
 	unload_background();
+	if(obor_profile_build >= 3481) showComplete = 0;
 }
 
 void savelevelinfo()
@@ -22249,10 +23531,14 @@ int playlevel(char *filename)
 
 	kill_all();
 
-	savelevelinfo();
-	saveGameFile();
-	saveHighScoreFile();
-	saveScriptFile();
+    if(obor_profile_build < 3407 || !new_game)
+    {
+        savelevelinfo();
+        saveGameFile();
+        saveHighScoreFile();
+        saveScriptFile();
+    }
+    if(obor_profile_build >= 3407) new_game = 0;
 
 	load_level(filename);
 	time = 0;
@@ -22327,7 +23613,7 @@ int selectplayer(int *players, char* filename)
 	char argbuf[MAX_ARG_LEN+1] = "";
 
 	selectScreen = 1;
-	titleScreen = menuScreen = 0;
+	if(obor_profile_build < 3481) titleScreen = menuScreen = 0;
 	kill_all();
 	reset_playable_list(1);
 
@@ -22636,9 +23922,10 @@ int selectplayer(int *players, char* filename)
 	}
 
 	// No longer at the select screen
-	selectScreen = 0;
+	if(obor_profile_build < 3481) selectScreen = 0;
 	kill_all();
 	sound_close_music();
+	if(obor_profile_build >= 3481) selectScreen = 0;
 
 	return (!escape);
 }
@@ -22688,7 +23975,8 @@ void playgame(int *players,  unsigned which_set, int useSavedGame)
 	}
 	else
 	{
-		max_global_var_index = 0;
+		if(obor_profile_build < 3414) max_global_var_index = 0;
+        if(obor_profile_build >= 3407) new_game = 1;
 	}
 
 	if((useSavedGame && savelevel[current_set].flag == 2) || selectplayer(players, NULL)) // if save flag is 2 don't select player
@@ -22768,8 +24056,10 @@ void playgame(int *players,  unsigned which_set, int useSavedGame)
 	}
 	// clear global script variant list
 	if(obor_profile_build >= 3389) branch_name[0] = 0;
-	max_global_var_index = -1;
-	for(i=0; i<max_indexed_vars; i++) ScriptVariant_Clear(indexed_var_list+i);
+    if(obor_profile_build < 3415) {
+        max_global_var_index = -1;
+        for(i=0; i<max_indexed_vars; i++) ScriptVariant_Clear(indexed_var_list+i);
+    }
 	sound_close_music();
 }
 
@@ -24548,6 +25838,30 @@ void display_logfile()
 // ----------------------------------------------------------------------------
 
 
+static void obor_main_menu_choices(int selector)
+{
+    int shift = obor_profile_build >= 3449;
+    _menutextm((selector==0), 2, 0, "Start Game");
+    if(!shift)
+    {
+#ifndef DC
+        if(obor_profile_build < 3446)
+            _menutextm((selector==1), 3, 0, "Movie Mode");
+        else
+#endif
+            _menutextm((selector==1), 3, 0, "Movie Options(Disabled)");
+    }
+    _menutextm((selector==2-shift), 4-shift, 0, "Options");
+    _menutextm((selector==3-shift), 5-shift, 0, "How To Play");
+    _menutextm((selector==4-shift), 6-shift, 0, "Hall Of Fame");
+    _menutextm((selector==5-shift), 7-shift, 0, "Quit");
+}
+
+static int obor_main_menu_action(int selector)
+{
+    return selector + (obor_profile_build >= 3449 && selector >= 1);
+}
+
 void openborMain(int argc, char** argv)
 {
 	sprite_map = NULL;
@@ -24734,16 +26048,7 @@ void openborMain(int argc, char** argv)
 		}
 		else
 		{
-			_menutextm((selector==0), 2, 0, "Start Game");
-#ifndef DC
-			_menutextm((selector==1), 3, 0, "Movie Mode");
-#else
-			_menutextm((selector==1), 3, 0, "Movie Options(Disabled)");
-#endif
-			_menutextm((selector==2), 4, 0, "Options");
-			_menutextm((selector==3), 5, 0, "How To Play");
-			_menutextm((selector==4), 6, 0, "Hall Of Fame");
-			_menutextm((selector==5), 7, 0, "Quit");
+            obor_main_menu_choices(selector);
 			if(selector<0) selector = 5;
 			if(selector>5) selector = 0;
 
@@ -24762,7 +26067,7 @@ void openborMain(int argc, char** argv)
 			if(bothnewkeys&(FLAG_ANYBUTTON))
 			{
 				if(SAMPLE_BEEP2 >= 0) sound_play_sample(SAMPLE_BEEP2, 0, savedata.effectvol,savedata.effectvol, 100);
-				switch(selector)
+				switch(obor_main_menu_action(selector))
 				{
 				case 0:
 					for(i=0; i<MAX_PLAYERS; i++) players[i] = player[i].newkeys & (FLAG_ANYBUTTON);
@@ -24771,7 +26076,7 @@ void openborMain(int argc, char** argv)
 					break;
 				case 1:
 #ifndef DC
-					movie_options();
+					if(obor_profile_build < 3446) movie_options();
 #endif
 					break;
 				case 2:

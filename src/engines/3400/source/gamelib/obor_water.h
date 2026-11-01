@@ -62,6 +62,7 @@ static int obor_water_begin(obor_water_rows *w, s_screen *dest, s_screen *src,
     w->x = x; w->amplitude = amplitude;
     w->period = obor_profile_build < 3366 ? 255 : 256;
     w->phase = (float)(time % w->period);
+    if(obor_profile_build >= 3404 && w->phase < 0) w->phase += 256;
     w->origin = amplitude;
     if(mode == 1 && !obor_water_distortion(w->phase, amplitude, &w->origin)) return 0;
     w->step = w->period / wavelength;
@@ -81,8 +82,9 @@ static int obor_water_span(obor_water_rows *w, int row, int *sx, int *dx, int *l
     shift = (int64_t)wave - w->origin;
     begin = (int64_t)w->x + shift; end = begin + w->sw;
     if(obor_profile_build >= 3390) {
-        /* The original rejects against source width, not destination width. */
-        if(begin >= w->sw || end <= 0) return 0;
+        /* Own3404changes horizontal rejection to destination width. */
+        if(begin >= (obor_profile_build < 3404 ? w->sw : w->dw) ||
+           end <= 0) return 0;
         source = begin < 0 ? -begin : 0;
         if(begin < 0) begin = 0;
         if(end > w->dw) end = w->dw;

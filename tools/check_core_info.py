@@ -33,8 +33,12 @@ def check_core_info(root, pin):
     engine_fields = {"build", "commit", "date", "covers", "major", "stage", "version_major"}
     revision_fields = {"upstream_commit", "upstream_date", "upstream_branch"}
     profile_fields = {"build", "revision", "features", "engine", "covers", "major", "stage", "auto_until", "automatic", "tagged", "triage", "reconstruction"} | revision_fields
-    if set(pin) != expected_fields or set(pin["engine_repo"]) != {"url"}:
+    if (set(pin) - {"source_revisions"} != expected_fields or
+            set(pin["engine_repo"]) != {"url"}):
         raise RuntimeError("Unexpected public source metadata fields")
+    if "source_revisions" in pin:
+        from check_modifications import source_revision_refs
+        source_revision_refs(root, pin)
     if type(pin["source_date_epoch"]) is not int or pin["source_date_epoch"] < 0:
         raise RuntimeError("Invalid reproducible build timestamp")
     # MAJOR.MINOR.PATCH as plain integers without leading zeros: the patch

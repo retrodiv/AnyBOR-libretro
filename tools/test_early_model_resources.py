@@ -956,6 +956,8 @@ static int capture_printf(const char *format,...) {
 #define freeCommandList(...) cleanup_event("freeCommandList")
 #define freeModelList(...) cleanup_event("freeModelList")
 #define freefilenamecache(...) cleanup_event("freefilenamecache")
+/* The original contexts here precede active true-color blend tables. */
+static void obor_free_blend_tables_x8(void){CHECK(obor_profile_build<3454);}
 @SHUTDOWN@
 #undef exit
 #undef printf

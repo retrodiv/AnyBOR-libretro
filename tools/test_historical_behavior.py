@@ -776,6 +776,570 @@ class HistoricalBehaviorTests(unittest.TestCase):
                 '-Wno-unused-parameter', '-Wno-unused-variable', '-Wno-unused-function',
                 '-Wno-sign-compare', '-Wno-misleading-indentation', *links))
 
+    def test_early_layer_script_properties_match_source_storage_and_results(self):
+        from native_sanitizers import sanitizer_environment
+        from unittest.mock import patch
+        fixture = load_contract_fixture(Path(__file__).parent /
+            'fixtures/profile-early-layer-properties.json')
+        rows = fixture['sources']
+        revisions = {row['revision'] for row in rows}
+        self.assertEqual(len(rows), len(revisions))
+        self.assertTrue(set(fixture['boundary_controls']) <= revisions)
+        for profile in contract_profiles(fixture, json.loads((ROOT/'src/pin.json').read_text())['profiles']):
+            revision = int(profile.get('revision', profile['build']))
+            if profile['engine'] == fixture['engine'] and fixture['range'][0] <= revision <= fixture['range'][1]:
+                self.assertIn(revision, revisions)
+        engine = Path(os.environ.get('OBOR_EARLY_TEXT_ENGINE', ROOT/'src/engines'/fixture['engine']))
+        source = (engine/'openborscript.c').read_text()
+        entries = [function(source, 'obor_layer_wavelength')]
+        for layer in ('bg', 'fg'):
+            for operation in ('get', 'change'):
+                name = operation+layer+'layerproperty'
+                mapper = function(source, 'mapstrings_'+name)
+                tag = ('g' if operation=='get' else 'c')+layer+'lp'
+                enum = re.findall(r'(?ms)^(?:typedef )?enum[^\n]*\n\{\s*_'+tag+
+                                  r'_alpha,.*?^}[^;]*;', source)
+                self.assertEqual(len(enum), 1)
+                entries += [enum[0], mapper, function(source, 'openbor_'+name)]
+        start = source.index('#define MAPSTRINGS(')
+        macro = source[start:source.index('\n\n', start)]
+        variant = (engine/'source/scriptlib/ScriptVariant.c').read_text()
+        variants = '\n'.join(function(variant, name) for name in (
+            'ScriptVariant_ChangeType', 'ScriptVariant_IntegerValue', 'ScriptVariant_DecimalValue'))
+        search = function((engine/'source/utils.c').read_text(), 'searchList')
+        checks = []
+        for row in rows:
+            self.assertIs(type(row['revision']), int)
+            self.assertIs(type(row['nested']), bool)
+            self.assertRegex(row['commit'], r'^[0-9a-f]{40}$')
+            for digest in row['source_sha256'].values():
+                self.assertRegex(digest, r'^[0-9a-f]{64}$')
+            checks.append('obor_profile_build=%d;check(%d);' % (row['revision'], row['nested']))
+        program = (Path(__file__).parent/'fixtures/early_layer_properties.c').read_text()
+        for key, value in dict(VARIANTS=variants, SEARCH=search, MACRO=macro,
+                               ENTRIES='\n'.join(entries), CHECKS='\n'.join(checks)).items():
+            program = program.replace('@'+key+'@', value)
+        includes = [engine, ROOT/'src/port/libretro', ROOT/'src/glue', engine/'source',
+                    *sorted(p for p in (engine/'source').iterdir() if p.is_dir())]
+        flags = ['-std=gnu11', '-DLIBRETRO=1', '-DOBOR_ENGINE_BUILD='+fixture['engine'],
+                 '-fsigned-char', '-ffunction-sections', '-fdata-sections',
+                 '-Wno-unused-variable', '-Wno-unused-function', '-Wno-unused-parameter',
+                 '-Wno-error=sign-compare', '-Wno-error=misleading-indentation',
+                 '-fsanitize=pointer-overflow', '-fno-sanitize-recover=all']
+        flags += ['-Wl,-dead_strip'] if sys.platform=='darwin' else ['-DLINUX=1', '-no-pie', '-Wl,--gc-sections']
+        with patch.dict(os.environ, sanitizer_environment()):
+            native(program, includes, flags)
+
+    def test_early_layer_loading_routes_and_repeat_origins(self):
+        from native_sanitizers import sanitizer_environment
+        from unittest.mock import patch
+        fixture = load_contract_fixture(Path(__file__).parent /
+            'fixtures/profile-early-layer-loading.json')
+        rows = fixture['sources']
+        revisions = {row['revision'] for row in rows}
+        self.assertEqual(len(rows), len(revisions))
+        self.assertTrue(set(fixture['boundary_controls']) <= revisions)
+        for profile in contract_profiles(fixture, json.loads((ROOT/'src/pin.json').read_text())['profiles']):
+            revision = int(profile.get('revision', profile['build']))
+            if profile['engine'] == fixture['engine'] and fixture['range'][0] <= revision <= fixture['range'][1]:
+                self.assertIn(revision, revisions)
+        engine = Path(os.environ.get('OBOR_EARLY_TEXT_ENGINE', ROOT/'src/engines'/fixture['engine']))
+        source = (engine/'openbor.c').read_text()
+        functions = '\n'.join(function(source, name) for name in (
+            'obor_layer_repeat', 'load_bglayer', 'load_fglayer'))
+        checks = []
+        for row in rows:
+            self.assertIs(type(row['revision']), int)
+            for key in ('foreground_water_screen', 'reuse_background', 'repeat_origin', 'nested'):
+                self.assertIs(type(row[key]), bool)
+            self.assertRegex(row['commit'], r'^[0-9a-f]{40}$')
+            for digest in row['source_sha256'].values():
+                self.assertRegex(digest, r'^[0-9a-f]{64}$')
+            checks.append('obor_profile_build=%d;check(%d,%d,%d,%d);' % (row['revision'],
+                row['foreground_water_screen'], row['reuse_background'], row['repeat_origin'], row['nested']))
+        program = (Path(__file__).parent/'fixtures/early_layer_loading.c').read_text()
+        program = program.replace('@FUNCTIONS@', functions).replace('@CHECKS@', '\n'.join(checks))
+        includes = [engine, ROOT/'src/port/libretro', ROOT/'src/glue', engine/'source',
+                    *sorted(p for p in (engine/'source').iterdir() if p.is_dir())]
+        flags = ['-std=gnu11', '-DLIBRETRO=1', '-DOBOR_ENGINE_BUILD='+fixture['engine'],
+                 '-fsigned-char', '-ffunction-sections', '-fdata-sections',
+                 '-Wno-unused-variable', '-Wno-unused-function', '-Wno-unused-parameter',
+                 '-Wno-error=sign-compare', '-Wno-error=misleading-indentation',
+                 '-fsanitize=pointer-overflow', '-fno-sanitize-recover=all']
+        flags += ['-Wl,-dead_strip'] if sys.platform=='darwin' else ['-DLINUX=1', '-no-pie', '-Wl,--gc-sections']
+        with patch.dict(os.environ, sanitizer_environment()):
+            native(program, includes, flags)
+
+    def test_early_layer_rendering_clocks_positions_methods_and_calls(self):
+        from native_sanitizers import sanitizer_environment
+        from unittest.mock import patch
+        fixture = load_contract_fixture(Path(__file__).parent /
+            'fixtures/profile-early-layer-rendering.json')
+        rows = fixture['sources']
+        revisions = {row['revision'] for row in rows}
+        self.assertEqual(len(rows), len(revisions))
+        self.assertTrue(set(fixture['boundary_controls']) <= revisions)
+        for profile in contract_profiles(fixture, json.loads((ROOT/'src/pin.json').read_text())['profiles']):
+            revision = int(profile.get('revision', profile['build']))
+            if profile['engine'] == fixture['engine'] and fixture['range'][0] <= revision <= fixture['range'][1]:
+                self.assertIn(revision, revisions)
+        engine = Path(os.environ.get('OBOR_EARLY_TEXT_ENGINE', ROOT/'src/engines'/fixture['engine']))
+        source = (engine/'openbor.c').read_text()
+        plain = re.findall(r'(?ms)^const s_drawmethod plainmethod\s*=\s*\{.*?^};', source)
+        self.assertEqual(len(plain), 1)
+        functions = '\n'.join(function(source, name) for name in (
+            'obor_layer_int', 'obor_layer_clock', 'applybglayers', 'applyfglayers'))
+        originals = (Path(__file__).parent/'fixtures/early_layer_render_math.c').read_text()
+        references = {tag: re.findall(r'(?m)^void (reference_'+tag+r'_[0-9]+)\(', originals)
+                      for tag in ('bg','fg')}
+        checks = []
+        for row in rows:
+            self.assertIs(type(row['revision']), int)
+            self.assertRegex(row['commit'], r'^[0-9a-f]{40}$')
+            for key, tag in [('background_epoch','bg'),('foreground_epoch','fg')]:
+                self.assertIs(type(row[key]), int)
+                self.assertTrue(0 <= row[key] < len(references[tag]))
+            for digest in row['source_sha256'].values():
+                self.assertRegex(digest, r'^[0-9a-f]{64}$')
+            checks.append('obor_profile_build=%d;check(%d,%d);' %
+                          (row['revision'], row['background_epoch'], row['foreground_epoch']))
+        fields = ('x','z','bgspeed','travelled','scroll_up','textbox','rocking','format','palette',
+                  'style','source_type','method_enabled','clock','previous_clock','text_clock','xratio','zratio')
+        self.assertTrue(1 <= len(fixture['inputs']) <= 256)
+        inputs = []
+        for row in fixture['inputs']:
+            self.assertEqual(set(row), set(fields))
+            self.assertTrue(all(type(v) in (int,float,bool) and -100 <= v <= 100 for v in row.values()))
+            inputs.append('{'+','.join(repr(v)+'f' if type(v) is float else str(int(v))
+                                      for v in [row[k] for k in fields])+'}')
+        method_fields = ('fillcolor','flag','alpha','remap','flipx','flipy','transbg','fliprotate',
+                         'rotate','scalex','scaley','shiftx','centerx','centery')
+        program = (Path(__file__).parent/'fixtures/early_layer_rendering.c').read_text()
+        values = dict(PLAIN=plain[0],FUNCTIONS=functions,ORIGINALS=originals,
+                      REFERENCE_BG=','.join(references['bg']),REFERENCE_FG=','.join(references['fg']),
+                      INPUTS=','.join(inputs),CHECKS='\n'.join(checks),
+                      METHOD_CHECKS='\n'.join('assert(a->%s==b->%s);'%(f,f) for f in method_fields))
+        for key,value in values.items(): program=program.replace('@'+key+'@',value)
+        includes = [engine, ROOT/'src/port/libretro', ROOT/'src/glue', engine/'source',
+                    *sorted(p for p in (engine/'source').iterdir() if p.is_dir())]
+        flags = ['-std=gnu11','-DLIBRETRO=1','-DOBOR_ENGINE_BUILD='+fixture['engine'],'-fsigned-char',
+                 '-ffunction-sections','-fdata-sections','-Wno-unused-variable','-Wno-unused-function',
+                 '-Wno-unused-parameter','-Wno-unused-but-set-variable','-Wno-error=sign-compare',
+                 '-Wno-error=misleading-indentation','-fsanitize=pointer-overflow','-fno-sanitize-recover=all']
+        flags += ['-Wl,-dead_strip'] if sys.platform=='darwin' else ['-DLINUX=1','-no-pie','-Wl,--gc-sections']
+        with patch.dict(os.environ, sanitizer_environment()):
+            native(program, includes, flags)
+
+    def test_early_script_packing_preserves_valid_value_results(self):
+        from native_sanitizers import sanitizer_environment
+        from unittest.mock import patch
+        fixture = load_contract_fixture(Path(__file__).parent / 'fixtures/profile-early-script-pack.json')
+        rows = fixture['sources']; revisions = {r['revision'] for r in rows}
+        self.assertTrue(1 <= len(rows) <= 128); self.assertEqual(len(rows), len(revisions))
+        self.assertTrue(set(fixture['boundary_controls']) <= revisions)
+        for profile in contract_profiles(fixture, json.loads((ROOT / 'src/pin.json').read_text())['profiles']):
+            revision = int(profile.get('revision', profile['build']))
+            if profile['engine'] == fixture['engine'] and fixture['range'][0] <= revision <= fixture['range'][1]:
+                self.assertIn(revision, revisions)
+        engine = Path(os.environ.get('OBOR_EARLY_TEXT_ENGINE', ROOT / 'src/engines' / fixture['engine']))
+        source = (engine / 'source/scriptlib/ScriptVariant.c').read_text(); checks = []
+        for row in rows:
+            self.assertIs(type(row['revision']), int); self.assertIs(type(row['original_packed']), bool)
+            self.assertEqual(row['original_variant_size'], 12 if row['original_packed'] else 16)
+            self.assertEqual(row['original_variant_alignment'], 4 if row['original_packed'] else 8)
+            self.assertRegex(row['commit'], r'^[0-9a-f]{40}$')
+            for digest in row['source_sha256'].values(): self.assertRegex(digest, r'^[0-9a-f]{64}$')
+            checks.append('check(%d,%d);' % (row['revision'], row['original_packed']))
+        names = ('ScriptVariant_DecimalValue', 'ScriptVariant_IntegerValue', 'ScriptVariant_IsTrue',
+                 'ScriptVariant_Eq', 'ScriptVariant_Ne', 'ScriptVariant_Lt', 'ScriptVariant_Gt',
+                 'ScriptVariant_Le', 'ScriptVariant_Ge')
+        program = (Path(__file__).parent / 'fixtures/early_script_pack.c').read_text()
+        declarations = '#include "openbor.h"\n#define EXPECTED_VARIANT_SIZE 16\n#define EXPECTED_VARIANT_ALIGNMENT 8\n'
+        program = program.replace('@DECLARATIONS@', declarations)
+        program = program.replace('@FUNCTIONS@', '\n'.join(function(source, n) for n in names))
+        program = program.replace('@CHECKS@', '\n'.join(checks))
+        includes = [engine, ROOT / 'src/port/libretro', ROOT / 'src/glue', engine / 'source',
+                    *sorted(p for p in (engine / 'source').iterdir() if p.is_dir())]
+        flags = ['-std=gnu11', '-DLIBRETRO=1', '-DOBOR_ENGINE_BUILD=' + fixture['engine'], '-fsigned-char',
+                 '-ffunction-sections', '-fdata-sections', '-Wno-unused-function', '-Wno-unused-parameter',
+                 '-Wno-unused-variable', '-fsanitize=pointer-overflow', '-fno-sanitize-recover=all']
+        flags += ['-Wl,-dead_strip'] if sys.platform == 'darwin' else ['-DLINUX=1', '-no-pie', '-Wl,--gc-sections']
+        with patch.dict(os.environ, sanitizer_environment()): native(program, includes, flags)
+
+    def test_early_header_transform_and_path_interfaces(self):
+        from native_sanitizers import sanitizer_environment
+        from unittest.mock import patch
+        engine = Path(os.environ.get('OBOR_EARLY_TEXT_ENGINE', ROOT / 'src/engines/3400'))
+        header = (engine / 'openbor.h').read_text()
+        self.assertRegex(header, r'(?m)^#include\s+"transform.h"')
+        self.assertRegex(header, r'(?m)^int checkpathblocked\(\);')
+        program = r'''
+#include "openbor.h"
+typedef void (*transform_entry)(s_screen*,gfx_entry*,int,int,int,int,s_drawmethod*);
+_Static_assert(_Generic(&checkpathblocked,int (*)():1,default:0),"path query interface");
+_Static_assert(_Generic(&gfx_draw_rotate,transform_entry:1,default:0),"rotation interface");
+_Static_assert(_Generic(&gfx_draw_scale,transform_entry:1,default:0),"scale interface");
+_Static_assert(_Generic(&gfx_draw_water,transform_entry:1,default:0),"water interface");
+_Static_assert(_Generic(&gfx_draw_plane,transform_entry:1,default:0),"plane interface");
+int main(void){return 0;}
+'''
+        includes = [engine, ROOT / 'src/port/libretro', ROOT / 'src/glue', engine / 'source',
+                    *sorted(p for p in (engine / 'source').iterdir() if p.is_dir())]
+        flags = ['-std=gnu11', '-DLIBRETRO=1', '-DOBOR_ENGINE_BUILD=3400', '-fsigned-char',
+                 '-Wno-unused-function', '-Wno-unused-parameter', '-fno-sanitize-recover=all']
+        if sys.platform != 'darwin': flags += ['-DLINUX=1', '-no-pie']
+        with patch.dict(os.environ, sanitizer_environment()): native(program, includes, flags)
+
+    def test_early_loaded_width_and_platform_shadow_boundaries(self):
+        from native_sanitizers import sanitizer_environment
+        from unittest.mock import patch
+        fixture = load_contract_fixture(Path(__file__).parent / 'fixtures/profile-early-viewport-shadow.json')
+        rows = fixture['sources']; revisions = {r['revision'] for r in rows}
+        self.assertTrue(1 <= len(rows) <= 128); self.assertEqual(len(rows), len(revisions))
+        self.assertTrue(set(fixture['boundary_controls']) <= revisions)
+        for profile in contract_profiles(fixture, json.loads((ROOT / 'src/pin.json').read_text())['profiles']):
+            revision = int(profile.get('revision', profile['build']))
+            if profile['engine'] == fixture['engine'] and fixture['range'][0] <= revision <= fixture['range'][1]:
+                self.assertIn(revision, revisions)
+        engine = Path(os.environ.get('OBOR_EARLY_TEXT_ENGINE', ROOT / 'src/engines' / fixture['engine']))
+        source = (engine / 'openbor.c').read_text(); checks = []
+        load = function(source, 'load_level'); display = function(source, 'display_ents')
+        width = re.findall(r'if\(obor_profile_build >= 3437 && level->width < videomodes.hRes\)\s*'
+                           r'level->width = videomodes.hRes;', load)
+        shadow = re.findall(r'if\((!\(checkhole\(e->x \+ temp1, e->z \+ temp2\) && wall2<0 &&\s*'
+                            r'\(obor_profile_build < 3408 \|\| !other\)\))\s*\)', display)
+        self.assertEqual(len(width), 1); self.assertEqual(len(shadow), 1)
+        for row in rows:
+            self.assertIs(type(row['revision']), int)
+            for field in ('minimum_viewport', 'platform_shadow'): self.assertIs(type(row[field]), bool)
+            self.assertRegex(row['commit'], r'^[0-9a-f]{40}$')
+            for digest in row['source_sha256'].values(): self.assertRegex(digest, r'^[0-9a-f]{64}$')
+            checks.append('check(%d,%d,%d);' % (row['revision'], row['minimum_viewport'], row['platform_shadow']))
+        program = (Path(__file__).parent / 'fixtures/early_viewport_shadow.c').read_text()
+        program = program.replace('@WIDTH@', width[0]).replace('@SHADOW@', shadow[0]).replace('@CHECKS@', '\n'.join(checks))
+        flags = ['-fsanitize=pointer-overflow', '-fno-sanitize-recover=all']
+        if sys.platform != 'darwin': flags += ['-no-pie']
+        with patch.dict(os.environ, sanitizer_environment()): native(program, extra_flags=flags)
+
+    def test_early_movie_input_pause_and_main_menu_boundaries(self):
+        from native_sanitizers import sanitizer_environment
+        from unittest.mock import patch
+        fixture = load_contract_fixture(Path(__file__).parent / 'fixtures/profile-early-movie-menu.json')
+        rows = fixture['sources']; revisions = {r['revision'] for r in rows}
+        self.assertTrue(1 <= len(rows) <= 128); self.assertEqual(len(rows), len(revisions))
+        self.assertTrue(set(fixture['boundary_controls']) <= revisions)
+        for profile in contract_profiles(fixture, json.loads((ROOT / 'src/pin.json').read_text())['profiles']):
+            revision = int(profile.get('revision', profile['build']))
+            if profile['engine'] == fixture['engine'] and fixture['range'][0] <= revision <= fixture['range'][1]:
+                self.assertIn(revision, revisions)
+        engine = Path(os.environ.get('OBOR_EARLY_TEXT_ENGINE', ROOT / 'src/engines' / fixture['engine']))
+        source = (engine / 'openbor.c').read_text(); checks = []
+        for row in rows:
+            self.assertIs(type(row['revision']), int)
+            for field in ('movie', 'menu_removed'): self.assertIs(type(row[field]), bool)
+            self.assertRegex(row['commit'], r'^[0-9a-f]{40}$')
+            for digest in row['source_sha256'].values(): self.assertRegex(digest, r'^[0-9a-f]{64}$')
+            checks.append('check(%d,%d,%d);' % (row['revision'], row['movie'], row['menu_removed']))
+        main = function(source, 'openborMain')
+        selector = 'switch(obor_main_menu_action(selector))'
+        self.assertEqual(main.count(selector), 1)
+        brace = main.index('{', main.index(selector))
+        body = function('void menu(void) ' + main[brace:], 'menu')
+        action = selector + body[body.index('{'):]
+        # Preserve the original wrap through the unlabelled last position.
+        self.assertRegex(main, r'if\(selector\s*<\s*0\)\s*selector\s*=\s*5;')
+        self.assertRegex(main, r'if\(selector\s*>\s*5\)\s*selector\s*=\s*0;')
+        update = function(source, 'update'); start = update.index('if(ingame==1 &&')
+        pause = update[start:update.index('{', start)]
+        program = (Path(__file__).parent / 'fixtures/early_movie_menu.c').read_text()
+        program = program.replace('@INPUT@', function(source, 'inputrefresh')).replace('@PAUSE@', pause)
+        program = program.replace('@HELPERS@', '\n'.join(function(source, name) for name in (
+            'obor_main_menu_choices', 'obor_main_menu_action')))
+        program = program.replace('@SWITCH@', action).replace('@CHECKS@', '\n'.join(checks))
+        includes = [engine, ROOT / 'src/port/libretro', ROOT / 'src/glue', engine / 'source',
+                    *sorted(p for p in (engine / 'source').iterdir() if p.is_dir())]
+        flags = ['-std=gnu11', '-DLIBRETRO=1', '-DOBOR_ENGINE_BUILD=' + fixture['engine'], '-fsigned-char',
+                 '-ffunction-sections', '-fdata-sections', '-Wno-unused-function', '-Wno-unused-parameter',
+                 '-fsanitize=pointer-overflow', '-fno-sanitize-recover=all']
+        flags += ['-Wl,-dead_strip'] if sys.platform == 'darwin' else ['-DLINUX=1', '-no-pie', '-Wl,--gc-sections']
+        with patch.dict(os.environ, sanitizer_environment()): native(program, includes, flags)
+
+    def test_early_screenshot_search_capacity_and_final_calls(self):
+        from native_sanitizers import sanitizer_environment
+        from unittest.mock import patch
+        fixture=load_contract_fixture(Path(__file__).parent/'fixtures/profile-early-shot-cap.json')
+        rows=fixture['sources'];revisions={r['revision'] for r in rows}
+        self.assertTrue(1 <= len(rows) <= 128);self.assertEqual(len(rows),len(revisions))
+        self.assertTrue(set(fixture['boundary_controls']) <= revisions)
+        for profile in contract_profiles(fixture,json.loads((ROOT/'src/pin.json').read_text())['profiles']):
+            revision=int(profile.get('revision',profile['build']))
+            if profile['engine']==fixture['engine'] and fixture['range'][0]<=revision<=fixture['range'][1]:
+                self.assertIn(revision,revisions)
+        engine=Path(os.environ.get('OBOR_EARLY_TEXT_ENGINE',ROOT/'src/engines'/fixture['engine']))
+        source=(engine/'source/utils.c').read_text();checks=[]
+        for r in rows:
+            self.assertIs(type(r['revision']),int);self.assertIs(type(r['limit']),int)
+            self.assertIn(r['limit'],(100,10000));self.assertRegex(r['commit'],r'^[0-9a-f]{40}$')
+            self.assertRegex(r['source_sha256'],r'^[0-9a-f]{64}$')
+            checks.append('check(%d,%d);'%(r['revision'],r['limit']))
+        collisions=fixture['collisions'];self.assertTrue(1 <= len(collisions) <= 16)
+        self.assertTrue(all(type(v) is int and 0 <= v <= 10000 for v in collisions))
+        program=(Path(__file__).parent/'fixtures/early_shot_cap.c').read_text()
+        program=program.replace('@SCREENSHOT@',function(source,'screenshot')).replace('@CHECKS@','\n'.join(checks))
+        program=program.replace('@COLLISIONS@',','.join(map(str,collisions)))
+        includes=[engine,ROOT/'src/port/libretro',ROOT/'src/glue',engine/'source',
+                  *sorted(p for p in (engine/'source').iterdir() if p.is_dir())]
+        flags=['-std=gnu11','-DLIBRETRO=1','-DOBOR_ENGINE_BUILD='+fixture['engine'],'-fsigned-char',
+               '-Wno-unused-function','-Wno-unused-parameter','-fsanitize=pointer-overflow',
+               '-fno-sanitize-recover=all']
+        if sys.platform!='darwin':flags+=['-DLINUX=1','-no-pie']
+        with patch.dict(os.environ,sanitizer_environment()):native(program,includes,flags)
+
+    def test_early_new_session_flag_and_level_entry_save_order(self):
+        from native_sanitizers import sanitizer_environment
+        from unittest.mock import patch
+        fixture=load_contract_fixture(Path(__file__).parent/'fixtures/profile-early-new-game.json')
+        rows=fixture['sources'];revisions={r['revision'] for r in rows}
+        self.assertTrue(1 <= len(rows) <= 128);self.assertEqual(len(rows),len(revisions))
+        self.assertTrue(set(fixture['boundary_controls']) <= revisions)
+        for profile in contract_profiles(fixture,json.loads((ROOT/'src/pin.json').read_text())['profiles']):
+            revision=int(profile.get('revision',profile['build']))
+            if profile['engine']==fixture['engine'] and fixture['range'][0]<=revision<=fixture['range'][1]:
+                self.assertIn(revision,revisions)
+        engine=Path(os.environ.get('OBOR_EARLY_TEXT_ENGINE',ROOT/'src/engines'/fixture['engine']))
+        source=(engine/'openbor.c').read_text();checks=[]
+        self.assertRegex(source,r'(?m)^int\s+new_game\s*=\s*0;')
+        for r in rows:
+            self.assertIs(type(r['revision']),int);self.assertIs(type(r['suppress_first_save']),bool)
+            self.assertRegex(r['commit'],r'^[0-9a-f]{40}$')
+            for digest in r['source_sha256'].values():self.assertRegex(digest,r'^[0-9a-f]{64}$')
+            checks.append('check(%d,%d);'%(r['revision'],r['suppress_first_save']))
+        program=(Path(__file__).parent/'fixtures/early_new_game.c').read_text()
+        program=program.replace('@FUNCTIONS@','\n'.join(function(source,n) for n in ('playlevel','playgame')))
+        program=program.replace('@CHECKS@','\n'.join(checks))
+        includes=[engine,ROOT/'src/port/libretro',ROOT/'src/glue',engine/'source',
+                  *sorted(p for p in (engine/'source').iterdir() if p.is_dir())]
+        flags=['-std=gnu11','-DLIBRETRO=1','-DOBOR_ENGINE_BUILD='+fixture['engine'],'-fsigned-char',
+               '-ffunction-sections','-fdata-sections','-Wno-unused-variable','-Wno-unused-function',
+               '-Wno-unused-parameter','-Wno-unused-but-set-variable','-Wno-error=sign-compare',
+               '-Wno-error=misleading-indentation','-fsanitize=pointer-overflow','-fno-sanitize-recover=all']
+        flags+=['-Wl,-dead_strip'] if sys.platform=='darwin' else ['-DLINUX=1','-no-pie','-Wl,--gc-sections']
+        with patch.dict(os.environ,sanitizer_environment()):native(program,includes,flags)
+
+    def test_early_model_obstacle_idle_rotation_and_forcemap_commands(self):
+        from native_sanitizers import sanitizer_environment
+        from unittest.mock import patch
+        fixture=load_contract_fixture(Path(__file__).parent/'fixtures/profile-early-model-remaining.json')
+        rows=fixture['sources'];revisions={row['revision'] for row in rows}
+        self.assertTrue(1 <= len(rows) <= 128);self.assertEqual(len(rows),len(revisions))
+        self.assertTrue(set(fixture['boundary_controls']) <= revisions)
+        for profile in contract_profiles(fixture,json.loads((ROOT/'src/pin.json').read_text())['profiles']):
+            revision=int(profile.get('revision',profile['build']))
+            if profile['engine']==fixture['engine'] and fixture['range'][0]<=revision<=fixture['range'][1]:
+                self.assertIn(revision,revisions)
+        engine=Path(os.environ.get('OBOR_EARLY_TEXT_ENGINE',ROOT/'src/engines'/fixture['engine']))
+        source=(engine/'openbor.c').read_text();loader=function(source,'load_cached_model')
+        cases={}
+        for name in ('DRAWMETHOD','FORCEMAP'):
+            marker='case CMD_MODEL_'+name+':'
+            self.assertEqual(loader.count(marker),1)
+            tail=loader.split(marker,1)[1];end=re.search(r'\n[ \t]*case CMD_MODEL_\w+:',tail)
+            self.assertIsNotNone(end);cases[name]=marker+tail[:end.start()]
+        checks=[]
+        for row in rows:
+            self.assertIs(type(row['revision']),int);self.assertRegex(row['commit'],r'^[0-9a-f]{40}$')
+            self.assertIs(type(row['obstacle']),bool);self.assertIs(type(row['notargetidle']),bool)
+            for name in ('rotate','fractional'):
+                self.assertIs(type(row[name]),int);self.assertIn(row[name],(0,1))
+            checks.append('check(%d,%d,%d,%d,%d);'%(row['revision'],row['obstacle'],row['notargetidle'],row['rotate'],row['fractional']))
+        macros='\n'.join(re.search(r'(?m)^#define '+name+r'\([^\n]*',source)[0]
+                         for name in ('GET_ARG','GET_ARGP','GET_INT_ARG','GET_FLOAT_ARG'))
+        parsers='\n'.join(function(source,n) for n in ('isNumeric','getValidInt','getValidFloat','ParseArgs','findarg','obor_legacy_arg'))
+        values=dict(MACROS=macros,PARSERS=parsers,HANDLERS='\n'.join(function(source,n) for n in
+                    ('lcmHandleCommandType','lcmHandleCommandAimove')),
+                    ORIGINALS=(Path(__file__).parent/'fixtures/early_model_remaining_math.c').read_text(),
+                    DRAW_CASE=cases['DRAWMETHOD'],MAP_CASE=cases['FORCEMAP'],CHECKS='\n'.join(checks))
+        program=(Path(__file__).parent/'fixtures/early_model_remaining.c').read_text()
+        for key,value in values.items():program=program.replace('@'+key+'@',value)
+        includes=[engine,ROOT/'src/port/libretro',ROOT/'src/glue',engine/'source',
+                  *sorted(p for p in (engine/'source').iterdir() if p.is_dir())]
+        flags=['-std=gnu11','-DLIBRETRO=1','-DOBOR_ENGINE_BUILD='+fixture['engine'],'-fsigned-char',
+               '-ffunction-sections','-fdata-sections','-Wno-unused-variable','-Wno-unused-function',
+               '-Wno-unused-parameter','-Wno-unused-but-set-variable','-Wno-error=sign-compare',
+               '-Wno-error=misleading-indentation','-Wno-error=implicit-fallthrough',
+               '-fsanitize=pointer-overflow','-fno-sanitize-recover=all']
+        compiler=shlex.split(os.environ.get('HOST_CC','cc'))
+        if 'clang' in subprocess.check_output(compiler+['--version'],text=True,timeout=10).lower():
+            flags+=['-Wno-error=single-bit-bitfield-constant-conversion','-Wno-error=pragma-pack']
+        flags+=['-Wl,-dead_strip'] if sys.platform=='darwin' else ['-DLINUX=1','-no-pie','-Wl,--gc-sections']
+        with patch.dict(os.environ,sanitizer_environment()):native(program,includes,flags)
+
+    def test_early_background_allocation_reset_and_owned_teardown(self):
+        from native_sanitizers import sanitizer_environment
+        from unittest.mock import patch
+        fixture = load_contract_fixture(Path(__file__).parent/'fixtures/profile-early-background-ownership.json')
+        rows = fixture['sources']
+        revisions = {row['revision'] for row in rows}
+        self.assertTrue(1 <= len(rows) <= 128)
+        self.assertEqual(len(rows),len(revisions))
+        self.assertTrue(set(fixture['boundary_controls']) <= revisions)
+        for profile in contract_profiles(fixture,json.loads((ROOT/'src/pin.json').read_text())['profiles']):
+            revision = int(profile.get('revision',profile['build']))
+            if profile['engine']==fixture['engine'] and fixture['range'][0]<=revision<=fixture['range'][1]:
+                self.assertIn(revision,revisions)
+        engine = Path(os.environ.get('OBOR_EARLY_TEXT_ENGINE',ROOT/'src/engines'/fixture['engine']))
+        source = (engine/'openbor.c').read_text()
+        checks = []
+        for row in rows:
+            self.assertIs(type(row['revision']),int)
+            self.assertRegex(row['commit'],r'^[0-9a-f]{40}$')
+            values = []
+            for key in ('allocate','reset','release','texture'):
+                self.assertIs(type(row[key]),bool)
+                values.append(int(row[key]))
+            for digest in row['source_sha256'].values():
+                self.assertTrue(digest=='absent' or re.fullmatch(r'[0-9a-f]{64}',digest))
+            checks.append('check(%d,%d,%d,%d,%d);'%tuple([row['revision'],*values]))
+        # Bind the extracted helper to its real, singular load-level call site.
+        loader = function(source,'load_level')
+        self.assertEqual(loader.count('obor_prepare_background_buffer();'),1)
+        program = (Path(__file__).parent/'fixtures/early_background_ownership.c').read_text()
+        values = dict(FREE_SCREEN=function((engine/'source/gamelib/screen.c').read_text(),'freescreen'),
+                      TEXTURE_FUNCTIONS='\n'.join(function(source,n) for n in ('unload_texture','load_texture')),
+                      FUNCTIONS='\n'.join(function(source,n) for n in ('obor_prepare_background_buffer','unload_level')),
+                      CHECKS='\n'.join(checks))
+        for key,value in values.items():program=program.replace('@'+key+'@',value)
+        includes = [engine,ROOT/'src/port/libretro',ROOT/'src/glue',engine/'source',
+                    *sorted(p for p in (engine/'source').iterdir() if p.is_dir())]
+        flags = ['-std=gnu11','-DLIBRETRO=1','-DOBOR_ENGINE_BUILD='+fixture['engine'],'-fsigned-char',
+                 '-ffunction-sections','-fdata-sections','-Wno-unused-variable','-Wno-unused-function',
+                 '-Wno-unused-parameter','-Wno-unused-but-set-variable','-Wno-error=sign-compare',
+                 '-Wno-error=misleading-indentation','-fsanitize=pointer-overflow','-fno-sanitize-recover=all']
+        flags += ['-Wl,-dead_strip'] if sys.platform=='darwin' else ['-DLINUX=1','-no-pie','-Wl,--gc-sections']
+        with patch.dict(os.environ,sanitizer_environment()):
+            native(program,includes,flags)
+
+    def test_early_background_cache_clear_copy_and_texture_dispatch(self):
+        from native_sanitizers import sanitizer_environment
+        from unittest.mock import patch
+        fixture = load_contract_fixture(Path(__file__).parent/'fixtures/profile-early-background-cache.json')
+        rows = fixture['sources']
+        revisions = {row['revision'] for row in rows}
+        self.assertTrue(1 <= len(rows) <= 128)
+        self.assertEqual(len(rows),len(revisions))
+        self.assertTrue(set(fixture['boundary_controls']) <= revisions)
+        for profile in contract_profiles(fixture,json.loads((ROOT/'src/pin.json').read_text())['profiles']):
+            revision = int(profile.get('revision',profile['build']))
+            if profile['engine']==fixture['engine'] and fixture['range'][0]<=revision<=fixture['range'][1]:
+                self.assertIn(revision,revisions)
+        engine = Path(os.environ.get('OBOR_EARLY_TEXT_ENGINE',ROOT/'src/engines'/fixture['engine']))
+        source = (engine/'openbor.c').read_text()
+        plain = re.findall(r'(?ms)^const s_drawmethod plainmethod\s*=\s*\{.*?^};',source)
+        self.assertEqual(len(plain),1)
+        checks = []
+        for row in rows:
+            self.assertIs(type(row['revision']),int)
+            self.assertIs(type(row['epoch']),int)
+            self.assertTrue(0 <= row['epoch'] <= 5)
+            self.assertRegex(row['commit'],r'^[0-9a-f]{40}$')
+            self.assertRegex(row['source_sha256'],r'^[0-9a-f]{64}$')
+            checks.append('check(%d,%d);'%(row['revision'],row['epoch']))
+        fields = ('buffer','cached','paused','rocking','speed','texture','flat','nested','amplitude','count')
+        self.assertTrue(1 <= len(fixture['inputs']) <= 128)
+        inputs = []
+        for row in fixture['inputs']:
+            self.assertEqual(set(row),set(fields))
+            self.assertTrue(all(type(v) is int and -2 <= v <= 3 for v in row.values()))
+            inputs.append('{'+','.join(str(row[k]) for k in fields)+'}')
+        program = (Path(__file__).parent/'fixtures/early_background_cache.c').read_text()
+        for key,value in dict(PLAIN=plain[0],FUNCTION=function(source,'draw_scrolled_bg'),
+                              CHECKS='\n'.join(checks),INPUTS=','.join(inputs)).items():
+            program=program.replace('@'+key+'@',value)
+        includes = [engine,ROOT/'src/port/libretro',ROOT/'src/glue',engine/'source',
+                    *sorted(p for p in (engine/'source').iterdir() if p.is_dir())]
+        flags = ['-std=gnu11','-DLIBRETRO=1','-DOBOR_ENGINE_BUILD='+fixture['engine'],'-fsigned-char',
+                 '-ffunction-sections','-fdata-sections','-Wno-unused-variable','-Wno-unused-function',
+                 '-Wno-unused-parameter','-Wno-unused-but-set-variable','-Wno-error=sign-compare',
+                 '-Wno-error=misleading-indentation','-fsanitize=pointer-overflow','-fno-sanitize-recover=all']
+        flags += ['-Wl,-dead_strip'] if sys.platform=='darwin' else ['-DLINUX=1','-no-pie','-Wl,--gc-sections']
+        with patch.dict(os.environ,sanitizer_environment()):
+            native(program,includes,flags)
+
+    def test_early_layer_parsing_fields_loading_and_postload_defaults(self):
+        from native_sanitizers import sanitizer_environment
+        from unittest.mock import patch
+        fixture = load_contract_fixture(Path(__file__).parent /
+            'fixtures/profile-early-layer-parsing.json')
+        rows = fixture['sources']
+        revisions = {row['revision'] for row in rows}
+        self.assertEqual(len(rows), len(revisions))
+        self.assertTrue(set(fixture['boundary_controls']) <= revisions)
+        for profile in contract_profiles(fixture, json.loads((ROOT/'src/pin.json').read_text())['profiles']):
+            revision = int(profile.get('revision', profile['build']))
+            if profile['engine'] == fixture['engine'] and fixture['range'][0] <= revision <= fixture['range'][1]:
+                self.assertIn(revision, revisions)
+        engine = Path(os.environ.get('OBOR_EARLY_TEXT_ENGINE', ROOT/'src/engines'/fixture['engine']))
+        source = (engine/'openbor.c').read_text()
+        parsed = function(source, 'load_level')
+        cases = parsed[parsed.index('case CMD_LEVEL_BACKGROUND:'):parsed.index('case CMD_LEVEL_DIRECTION:')]
+        plain = re.findall(r'(?ms)^const s_drawmethod plainmethod\s*=\s*\{.*?^};', source)
+        self.assertEqual(len(plain), 1)
+        helpers = '\n'.join(function(source, name) for name in (
+            'isNumeric','getValidInt','getValidFloat','findarg','obor_legacy_arg',
+            'obor_level_error','obor_layer_repeat','load_bglayer','load_fglayer',
+            'obor_layer_blend','obor_finish_layers'))
+        macros = '\n'.join(re.search(r'(?m)^#define '+name+r'\([^\n]*',source)[0]
+                             for name in ('GET_ARG','GET_INT_ARG','GET_FLOAT_ARG'))
+        start = source.index('#define OBOR_LEVEL_ERROR(')
+        macros += '\n'+source[start:source.index('\n\n',start)]
+        originals = (Path(__file__).parent/'fixtures/early_layer_parser_math.c').read_text()
+        tags = ('background','bglayer','fglayer','water','post')
+        references = {tag:re.findall(r'(?m)^static (?:int|void) (reference_'+tag+r'_[0-9]+)\(',originals)
+                      for tag in tags}
+        checks = []
+        for row in rows:
+            self.assertIs(type(row['revision']), int)
+            self.assertRegex(row['commit'], r'^[0-9a-f]{40}$')
+            self.assertRegex(row['load_level_sha256'], r'^[0-9a-f]{64}$')
+            for tag in tags:
+                self.assertIs(type(row[tag+'_epoch']),int)
+                self.assertTrue(0 <= row[tag+'_epoch'] < len(references[tag]))
+            checks.append('obor_profile_build=%d;check(%s);' %
+                (row['revision'],','.join(str(row[tag+'_epoch']) for tag in tags)))
+        inputs = []
+        self.assertTrue(1 <= len(fixture['inputs']) <= 256)
+        for row in fixture['inputs']:
+            self.assertIn(row['command'], ('BACKGROUND','BGLAYER','FGLAYER','WATER'))
+            self.assertTrue(2 <= len(row['args']) <= 18)
+            self.assertTrue(all(isinstance(s,str) and len(s)<=64 and '\0' not in s for s in row['args']))
+            inputs.append('{CMD_LEVEL_%s,%d,{%s}}' % (row['command'],len(row['args']),
+                ','.join(json.dumps(word) for word in row['args'])))
+        method_fields = ('fillcolor','flag','alpha','remap','flipx','flipy','transbg','fliprotate',
+                         'rotate','scalex','scaley','shiftx','centerx','centery')
+        layer_fields = ('handle','type','width','height','xratio','zratio','xoffset','zoffset',
+                        'xspacing','zspacing','xrepeat','zrepeat','transparency','alpha',
+                        'watermode','amplitude','wavelength','wavespeed','bgspeedratio','enabled')
+        values = dict(PLAIN=plain[0],HELPERS=helpers,MACROS=macros,CASES=cases,ORIGINALS=originals,
+                      INPUTS=','.join(inputs),CHECKS='\n'.join(checks),
+                      METHOD_CHECKS='\n'.join('assert(a->%s==b->%s);'%(f,f) for f in method_fields),
+                      LAYER_CHECKS='\n'.join('assert(a->%s==b->%s);'%(f,f) for f in layer_fields))
+        values.update({tag.upper():','.join(references[tag]) for tag in tags})
+        ownership = (Path(__file__).parent/'fixtures/early_screen_output.c').read_text()
+        ownership = ownership.replace('@OWNED_FREE@',function((engine/'source/gamelib/screen.c').read_text(),'freescreen'))
+        ownership = ownership.replace('@OWNED_LOAD@',function((engine/'source/gamelib/loadimg.c').read_text(),'loadscreen'))
+        values['OWNERSHIP'] = ownership
+        program = (Path(__file__).parent/'fixtures/early_layer_parsing.c').read_text()
+        for key,value in values.items():program=program.replace('@'+key+'@',value)
+        includes = [engine, ROOT/'src/port/libretro', ROOT/'src/glue', engine/'source',
+                    *sorted(p for p in (engine/'source').iterdir() if p.is_dir())]
+        flags = ['-std=gnu11','-DLIBRETRO=1','-DOBOR_ENGINE_BUILD='+fixture['engine'],'-fsigned-char',
+                 '-ffunction-sections','-fdata-sections','-Wno-unused-variable','-Wno-unused-function',
+                 '-Wno-unused-parameter','-Wno-unused-but-set-variable','-Wno-error=sign-compare',
+                 '-Wno-error=misleading-indentation','-fsanitize=pointer-overflow','-fno-sanitize-recover=all']
+        flags += ['-Wl,-dead_strip'] if sys.platform=='darwin' else ['-DLINUX=1','-no-pie','-Wl,--gc-sections']
+        with patch.dict(os.environ, sanitizer_environment()):
+            native(program, includes, flags)
+
     def test_early_water_row_and_palette_contracts(self):
         from historical_water_rows import render_water_rows
         from native_sanitizers import sanitizer_environment
@@ -803,6 +1367,29 @@ class HistoricalBehaviorTests(unittest.TestCase):
                 *(() if sys.platform == 'darwin' else ('-no-pie',))))
 
 
+
+    def test_early_water_entry_remap_key_and_blend_order(self):
+        from historical_water_entry import render_water_entry
+        from native_sanitizers import sanitizer_environment
+        from unittest.mock import patch
+        fixture = load_contract_fixture(Path(__file__).parent/'fixtures/profile-early-water-entry.json')
+        revisions = {r['revision'] for r in fixture['sources']}
+        self.assertTrue(set(fixture['boundary_controls']) <= revisions)
+        for profile in contract_profiles(fixture,json.loads((ROOT/'src/pin.json').read_text())['profiles']):
+            revision = int(profile.get('revision',profile['build']))
+            if profile['engine']==fixture['engine'] and fixture['range'][0]<=revision<=fixture['range'][1]:
+                self.assertIn(revision,revisions)
+        engine = Path(os.environ.get('OBOR_EARLY_TEXT_ENGINE',ROOT/'src/engines'/fixture['engine']))
+        includes = [engine,engine/'source',*sorted(p for p in (engine/'source').iterdir() if p.is_dir()),
+                    ROOT/'src/port/libretro',ROOT/'src/glue']
+        with patch.dict(os.environ,sanitizer_environment()):
+            native(render_water_entry(engine,fixture),include_dirs=includes,extra_flags=(
+                '-std=gnu99','-O0','-DUNIT_TEST=1','-DSAFEALLOC_H=1','-Dstricmp=strcasecmp',
+                '-DLIBRETRO=1','-fcommon','-fsigned-char','-fno-sanitize-recover=all',
+                '-fno-omit-frame-pointer','-Wno-unused-parameter','-Wno-unused-variable',
+                '-Wno-unused-function','-Wno-unused-but-set-variable','-Wno-implicit-fallthrough',
+                '-Wno-sign-compare','-Wno-misleading-indentation',
+                *(() if sys.platform=='darwin' else ('-no-pie',))))
 
     def test_early_water_phase_period(self):
         from historical_water_phase import render_water_phase
@@ -1124,14 +1711,26 @@ class HistoricalBehaviorTests(unittest.TestCase):
         includes += [ROOT / 'src/port/libretro', ROOT / 'src/glue']
         links = () if sys.platform == 'darwin' else ('-no-pie',)
         units = tuple(str(engine / 'source/gamelib' / (name + '.c'))
-                      for name in ('spritex8p16', 'spritex8p32', 'pixelformat'))
-        with patch.dict(os.environ, sanitizer_environment()):
-            native(render_early_triangle(engine, fixture), include_dirs=includes, extra_flags=(
-                '-std=gnu99', '-O0', '-fcommon', '-DLIBRETRO=1', '-DUNIT_TEST=1', '-Dstricmp=strcasecmp',
-                '-fsigned-char', '-fno-sanitize-recover=all', '-fno-omit-frame-pointer',
-                '-Wno-unused-parameter', '-Wno-unused-variable', '-Wno-unused-function', '-Wno-unused-but-set-variable',
-                '-Wno-sign-compare', '-Wno-misleading-indentation', '-Wno-implicit-fallthrough',
-                *units, *links))
+                      for name in ('spritex8p16', 'spritex8p32'))
+        if (engine / 'source/gamelib/transform.c').is_file():
+            units += (str(engine / 'source/gamelib/transform.c'),)
+        from native_c_fragments import split_macro_functions
+        compile_fixture = load_contract_fixture(Path(__file__).parent/
+            'fixtures/profile-early-inverse-transform.json')
+        self.assertEqual(compile_fixture['engine'],fixture['engine'])
+        colour = (engine/compile_fixture['colour_unit']).read_text()
+        with tempfile.TemporaryDirectory(prefix='historical-native-copy-') as temporary:
+            copies = []
+            for label,code in split_macro_functions(colour,compile_fixture['macro_start'],
+                    compile_fixture['macro_end'],compile_fixture['copy_functions']):
+                source = Path(temporary)/(label+'.c');source.write_text(code);copies.append(str(source))
+            with patch.dict(os.environ, sanitizer_environment()):
+                native(render_early_triangle(engine, fixture), include_dirs=includes, extra_flags=(
+                    '-std=gnu99', '-O0', '-fcommon', '-DLIBRETRO=1', '-DUNIT_TEST=1', '-Dstricmp=strcasecmp',
+                    '-fsigned-char', '-fno-sanitize-recover=all', '-fno-omit-frame-pointer',
+                    '-Wno-unused-parameter', '-Wno-unused-variable', '-Wno-unused-function', '-Wno-unused-but-set-variable',
+                    '-Wno-sign-compare', '-Wno-misleading-indentation', '-Wno-implicit-fallthrough',
+                    *units, *copies, *links))
 
     def test_early_model_point_domains_and_arithmetic(self):
         from historical_model_points import render_model_points

@@ -1,3 +1,15 @@
+/* AnyBOR modification record: 2026-09-12.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Declare the shared level alpha-mask command without changing the model
+ * command namespace.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/3400.md
+ * at the source repository root. Original notices follow below.
+ */
+
 /*
  * OpenBOR - http://www.LavaLit.com
  * -
@@ -460,6 +472,7 @@ typedef enum modelCommand {
 	CMD_MODEL_STUN,
 	CMD_MODEL_GRABIN,
 	CMD_MODEL_NOREFLECT,
+	CMD_MODEL_NOKILL,
 	CMD_MODEL_FORCEDIRECTION,
 	CMD_MODEL_DAMAGEONLANDING,
 	CMD_MODEL_SEAL,
@@ -517,6 +530,7 @@ typedef enum {
 	CMD_MODELSTXT_NOCOST,
 	CMD_MODELSTXT_NOCHEATS,
 	CMD_MODELSTXT_NODROPEN,
+	CMD_MODELSTXT_NODROPSPAWN,
 	CMD_MODELSTXT_KNOW,
 	CMD_MODELSTXT_NOAIRCANCEL,
 	CMD_MODELSTXT_NOMAXRUSHRESET,

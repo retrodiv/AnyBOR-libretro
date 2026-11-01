@@ -54,7 +54,11 @@ class EarlyPackfileTests(unittest.TestCase):
         self._exercise(load_contract_fixture(FIXTURE.with_name(
             "profile-early-pack-lookup.json")), lookup=True)
 
-    def _exercise(self, fixture, lookup=False):
+    def test_large_header_acceptance(self):
+        self._exercise(load_contract_fixture(FIXTURE.with_name(
+            'profile-early-pack-header.json')), header=True)
+
+    def _exercise(self, fixture, lookup=False, header=False):
         rows = fixture['sources']
         revisions = {row['revision'] for row in rows}
         self.assertEqual(len(rows), len(revisions))
@@ -69,9 +73,10 @@ class EarlyPackfileTests(unittest.TestCase):
             self.assertRegex(row['commit'], r'^[0-9a-f]{40}$')
             for key in ('filename_cache',) if lookup else ('startup_enabled', 'raw_directory_check', 'handle_message'):
                 self.assertIs(type(row[key]), bool)
-            entries.append('{%d,%d,%d,%d,%s,%d}' % (row['revision'], row.get('startup_enabled', False),
+            entries.append('{%d,%d,%d,%d,%s,%d,%d}' % (row['revision'], row.get('startup_enabled', False),
                 row.get('raw_directory_check', False), row.get('handle_message', False),
-                json.dumps(row.get('error_format', '')), row.get('filename_cache', False)))
+                json.dumps(row.get('error_format', '')), row.get('filename_cache', False),
+                row.get('large_header_warning', False)))
         engine = Path(os.environ.get('OBOR_EARLY_TEXT_ENGINE', ROOT / 'src/engines' / fixture['engine']))
         unit = (engine / 'source/gamelib/packfile.c').read_text()
         core = (engine / 'openbor.c').read_text()
@@ -118,7 +123,8 @@ class EarlyPackfileTests(unittest.TestCase):
         replacements = dict(ROWS=',\n'.join(entries), GLOBALS='\n'.join(declarations),
             CONSTANTS='\n'.join(constants), FUNCTIONS=bodies, STARTUP=startup, RETIRE=retirement,
             READ_LE=function((engine / 'source/utils.c').read_text(), 'readlsb32'),
-            LOOKUP=(FIXTURE.parent / 'early_packfile_lookup.c').read_text() if lookup else '')
+            LOOKUP=(FIXTURE.parent / 'early_packfile_lookup.c').read_text() if lookup else '',
+            HEADER=(FIXTURE.parent / 'early_packfile_header.c').read_text() if header else '')
         for key, value in replacements.items():
             program = program.replace('@'+key+'@', value)
         self.assertNotRegex(program, r'@[A-Z_]+@')
@@ -135,6 +141,8 @@ class EarlyPackfileTests(unittest.TestCase):
                      '-I', str(ROOT / 'src/port/libretro')]
             if lookup:
                 flags.append('-DTEST_CACHED_NAMES=1')
+            if header:
+                flags.append('-DTEST_LARGE_HEADERS=1')
             obj = work / 'list.o'
             build = subprocess.run(compiler + flags + ['-c', str(engine / 'source/scriptlib/List.c'),
                                    '-o', str(obj)], capture_output=True, text=True, timeout=45)
@@ -146,7 +154,8 @@ class EarlyPackfileTests(unittest.TestCase):
             self.assertEqual(build.returncode, 0, build.stdout + build.stderr)
             run = subprocess.run([str(binary)], cwd=work, capture_output=True, text=True,
                                  timeout=30, env=sanitizer_environment())
-            observation = 'OBOR_PACK_LOOKUP_OBSERVATIONS' if lookup else 'OBOR_PACK_BACKEND_OBSERVATIONS'
+            observation = ('OBOR_PACK_HEADER_OBSERVATIONS' if header else
+                           'OBOR_PACK_LOOKUP_OBSERVATIONS' if lookup else 'OBOR_PACK_BACKEND_OBSERVATIONS')
             if os.environ.get(observation):
                 Path(os.environ[observation]).write_text(json.dumps(dict(
                     contexts=len(rows), compiler=compiler, returncode=run.returncode,
@@ -155,7 +164,8 @@ class EarlyPackfileTests(unittest.TestCase):
                     retirement='TemporaryDirectory removes authored PAK,loose data,objects,source and binary'),
                     indent=2)+'\n')
             self.assertEqual(run.returncode, 0, run.stdout + run.stderr)
-            self.assertIn('early_pack_lookup=1' if lookup else 'early_pack_backend=1', run.stdout)
+            self.assertIn('early_pack_header=1' if header else
+                          'early_pack_lookup=1' if lookup else 'early_pack_backend=1', run.stdout)
 
 
 if __name__ == '__main__':

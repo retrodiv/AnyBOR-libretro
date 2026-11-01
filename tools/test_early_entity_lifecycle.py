@@ -604,7 +604,8 @@ int main(void){@CHECKS@ puts("early_grab_order=1");return 0;}
         core = (engine / 'openbor.c').read_text()
         game = function(core, 'playgame')
         branch = block(game, game.index('if(branch_name[0])'))
-        cleanup = game[game.index('// clear global script variant list'):game.index('max_global_var_index = -1;')]
+        cleanup_scope = game[game.index('// clear global script variant list'):]
+        cleanup = re.search(r'if\(obor_profile_build >= 3389\) branch_name\[0\] = 0;', cleanup_scope).group()
         checks = []
         for row in rows:
             self.assertRegex(row['commit'], r'^[0-9a-f]{40}$')

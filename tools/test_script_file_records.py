@@ -19,6 +19,7 @@ from test_historical_player import function
 
 ROOT = Path(os.environ.get('OBOR_TEST_SOURCE', Path(__file__).resolve().parents[1]))
 FIXTURE = Path(__file__).parent / 'fixtures/profile-script-file-records.json'
+TEXT_FIXTURE = Path(__file__).parent / 'fixtures/profile-script-text-contracts.json'
 
 
 class ScriptFileRecordsTests(unittest.TestCase):
@@ -75,7 +76,7 @@ class ScriptFileRecordsTests(unittest.TestCase):
             program = program.replace(marker, text)
         return program
 
-    def run_probe(self, program):
+    def run_probe(self, program, extra_flags=()):
         unused, port = self.paths()
         with tempfile.TemporaryDirectory(prefix='script-file-records-') as directory:
             work = Path(directory)
@@ -84,14 +85,86 @@ class ScriptFileRecordsTests(unittest.TestCase):
             compiler = os.environ.get('HOST_CC', os.environ.get('CC', 'cc'))
             command = [*shlex.split(compiler), '-std=c99', '-Wall', '-Wextra', '-Werror',
                        '-Wno-deprecated-declarations', '-fsanitize=address,undefined',
-                       '-fno-sanitize-recover=all', '-fno-omit-frame-pointer']
+                       '-fno-sanitize-recover=all', '-fno-omit-frame-pointer', *extra_flags]
             if sys.platform.startswith('linux'):
                 command.append('-no-pie')
-            command += ['-I', str(port), str(source), '-o', str(binary)]
+            command += ['-I', str(port), '-I', os.environ.get('OBOR_SCRIPT_TEXT_PORT', str(port)),
+                        str(source), '-o', str(binary)]
             built = subprocess.run(command, capture_output=True, text=True, timeout=45)
             self.assertEqual(built.returncode, 0, built.stdout + built.stderr)
             return subprocess.run([str(binary)], capture_output=True, text=True,
                                   timeout=30, env=sanitizer_environment())
+
+    def test_text_format_profile_coverage(self):
+        fixture = load_contract_fixture(TEXT_FIXTURE)
+        rows = fixture['sources']
+        revisions = {row['revision'] for row in rows}
+        self.assertEqual(len(rows), len(revisions))
+        self.assertTrue(set(fixture['boundary_controls']) <= revisions)
+        for row in rows:
+            self.assertRegex(row['commit'], r'^[0-9a-f]{40}$')
+            self.assertEqual(row['engine'], fixture['engine'])
+            for digest in row['source_sha256'].values():
+                self.assertRegex(digest, r'^[0-9a-f]{64}$')
+        for profile in contract_profiles(fixture, json.loads((ROOT / 'src/pin.json').read_text())['profiles']):
+            revision = int(profile.get('revision', profile['build']))
+            if profile['engine'] == fixture['engine'] and fixture['range'][0] <= revision <= fixture['range'][1]:
+                self.assertIn(revision, revisions)
+
+    def test_text_bytes_filters_and_bounded_tables(self):
+        fixture = load_contract_fixture(TEXT_FIXTURE)
+        engine, unused = self.paths()
+        variant = (engine / 'source/scriptlib/ScriptVariant.h').read_text()
+        script = (engine / 'openborscript.h').read_text()
+        declarations = []
+        for expression in (r'typedef enum VariantType\s*\{[^{}]*\}\s*VARTYPE;',
+                           r'typedef struct ScriptVariant\s*\{[\s\S]*?\}\s*ScriptVariant;'):
+            match = re.search(expression, variant)
+            self.assertIsNotNone(match)
+            declarations.append(match[0])
+        node = re.search(r'typedef struct\s*\{[^{}]*\}\s*s_variantnode;', script)
+        self.assertIsNotNone(node)
+        entries = []
+        for row in fixture['value_cases']:
+            entries.append('{%s,%d,%s,%s,%s}' % (row['type'], row.get('integer', 0),
+                repr(row.get('decimal', 0.0)), json.dumps(row.get('text', '')),
+                json.dumps(row['expected'])))
+        values = ('typedef struct {int type;int32_t integer;double decimal;'
+                  'const char *text,*expected;} value_case;\n'
+                  'static const value_case value_cases[]={' + ','.join(entries) + '};')
+        checks = ['check(%d,%d);' % (row['revision'], row['filter_empty_globals'])
+                  for row in fixture['sources'] if row['text']]
+        program = Path(__file__).with_name('script_file_text_io.c.in').read_text()
+        for marker, text in {'VARIANT':'\n'.join(declarations), 'NODE':node[0],
+                             'CONTEXTS':values, 'FILTERED':json.dumps(fixture['filtered']),
+                             'UNFILTERED':json.dumps(fixture['unfiltered']),
+                             'CHECKS':'\n'.join(checks)}.items():
+            self.assertEqual(program.count('@' + marker + '@'), 1)
+            program = program.replace('@' + marker + '@', text)
+        run = self.run_probe(program, extra_flags=('-Wno-unused-function',))
+        self.assertEqual(run.returncode, 0, run.stdout + run.stderr)
+        self.assertIn('PASS script text bytes and tables', run.stdout)
+
+    def test_file_dispatch_and_game_variable_retention(self):
+        from test_early_jump_walkoff import braced_statement
+        fixture = load_contract_fixture(TEXT_FIXTURE)
+        engine, unused = self.paths()
+        core = (engine / 'openbor.c').read_text()
+        game = function(core, 'playgame')
+        begin = re.search(r'if\(obor_profile_build < 3414\) max_global_var_index = 0;', game)
+        self.assertIsNotNone(begin)
+        finish = braced_statement(game, 'if(obor_profile_build < 3415)')
+        checks = ['check(%d,%d,%d,%d);' % (row['revision'], row['text'],
+                  row['retain_new_game'], row['retain_exit']) for row in fixture['sources']]
+        program = Path(__file__).with_name('script_file_dispatch.c.in').read_text()
+        for marker, text in {'SAVE':function(core, 'saveScriptFile'),
+                             'LOAD':function(core, 'loadScriptFile'), 'BEGIN':begin[0],
+                             'FINISH':finish, 'CHECKS':'\n'.join(checks)}.items():
+            self.assertEqual(program.count('@' + marker + '@'), 1)
+            program = program.replace('@' + marker + '@', text)
+        run = self.run_probe(program)
+        self.assertEqual(run.returncode, 0, run.stdout + run.stderr)
+        self.assertIn('PASS script persistence dispatch and lifecycle', run.stdout)
 
     def test_profile_registry_coverage(self):
         fixture = self.fixture()

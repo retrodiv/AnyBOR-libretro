@@ -1,3 +1,14 @@
+/* AnyBOR modification record: 2026-09-12.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Expose the native media mixer layout to the cutscene decoder.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/3400.md
+ * at the source repository root. Original notices follow below.
+ */
+
 /*
  * OpenBOR - http://www.LavaLit.com
  * -----------------------------------------------------------------------
@@ -33,6 +44,7 @@ int sound_play_sample(int samplenum, unsigned int priority, int lvolume, int rvo
 int sound_loop_sample(int samplenum, unsigned int priority, int lvolume, int rvolume, unsigned int speed);
 void sound_stop_sample(int channel);
 void sound_stopall_sample();
+void sound_pause_sample(int toggle);
 void sound_volume_sample(int channel, int lvolume, int rvolume);
 int sound_getpos_sample(int channel);
 

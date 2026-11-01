@@ -4,11 +4,44 @@
 SPDX-License-Identifier: BSD-3-Clause
 Copyright (c) 2026 retrodiv <retrodiv@proton.me>
 """
+import hashlib
 import re
 import release
 
 
+def source_revision_refs(root, pin):
+    """Validate provenance-only revisions without making them selectable."""
+    rows = pin.get("source_revisions", [])
+    if not isinstance(rows, list) or len(rows) > 128:
+        raise RuntimeError("Invalid source revision references")
+    result = set()
+    for row in rows:
+        if (not isinstance(row, dict) or set(row) != {
+                "build", "commit", "license_file", "license_sha256"} or
+                any(not isinstance(value, str) for value in row.values()) or
+                not re.fullmatch(r"[1-9][0-9]{3,4}", row["build"]) or
+                not re.fullmatch(r"[0-9a-f]{40}", row["commit"]) or
+                not re.fullmatch(r"[0-9a-f]{64}", row["license_sha256"]) or
+                not re.fullmatch(r"LICENSES/[A-Za-z0-9_.-]+\.txt", row["license_file"])):
+            raise RuntimeError("Invalid source revision reference")
+        key = row["build"], row["commit"]
+        path = root / row["license_file"]
+        if (key in result or any(build == row["build"] for build, unused in result) or not path.is_file() or
+                not (root / "LICENSES").resolve().is_relative_to(root.resolve()) or
+                not path.resolve().is_relative_to((root / "LICENSES").resolve())):
+            raise RuntimeError("Missing or duplicate source revision grant")
+        text = path.read_text().strip() + "\n"
+        if hashlib.sha256(text.encode()).hexdigest() != row["license_sha256"]:
+            raise RuntimeError("Source revision grant identity mismatch")
+        for profile in pin.get("profiles", []):
+            if profile["build"] == row["build"] and profile.get("upstream_commit") != row["commit"]:
+                raise RuntimeError("Conflicting selectable/source revision identity")
+        result.add(key)
+    return result
+
+
 def check_modifications(root, pin):
+    source_refs = source_revision_refs(root, pin)
     documents = [root / "MODIFICATIONS.md"]
     catalogue = documents[0].read_text(encoding="utf-8")
     topics = {line[3:].lower().replace(" ", "-")
@@ -54,8 +87,10 @@ def check_modifications(root, pin):
                         data["upstream_sha256"] is not None or
                         origin["repository"].removesuffix(".git") != manifest["repository"].removesuffix(".git") or
                         not re.fullmatch(r"[0-9a-f]{64}", origin["sha256"]) or
-                        not any(p["build"] == origin["build"] and
-                                p.get("upstream_commit") == origin["commit"] for p in pin["profiles"])):
+                        not ((origin["build"], origin["commit"]) in source_refs or
+                             any(p["build"] == origin["build"] and
+                                 p.get("upstream_commit") == origin["commit"]
+                                 for p in pin.get("profiles", [])))):
                     raise RuntimeError("Invalid imported source provenance: " + rel)
             references = data.get("topics", [])
             if references != sorted(set(references)) or set(references) - topics:

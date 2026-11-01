@@ -1,4 +1,4 @@
-/* AnyBOR modification record: 2026-10-24.
+/* AnyBOR modification record: 2026-10-30.
  * Port maintained by retrodiv <retrodiv@proton.me>.
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
@@ -8,7 +8,8 @@
  * empty frame. Preserve native palette-only filename probing, three-plane
  * refusals and final RGB table conversion without interpreting palette bytes
  * as sprite dimensions. Keep bitmap row reads within the requested output
- * width.
+ * width. Preserve native image decoder selection and palette results with
+ * checked output alignment and owned storage.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/3400.md
  * at the source repository root. Original notices follow below.
@@ -1018,32 +1019,36 @@ static int iswavefile(char *filename, char *packname){
 
 // ============================== Interface ===============================
 
-int loadscreen(char *filename, char *packfile, unsigned char *pal, int format, s_screen **screen){
-	int result;
-	unsigned char* p;
+int loadscreen(char *filename, char *packfile, unsigned char *pal, int format, s_screen **screen)
+{
+    int result;
+    unsigned char *p;
+    s_screen *loaded;
 #ifdef VERBOSE
-	printf("loadscreen called packfile: %s, filename %s\n", packfile, filename);
+    printf("loadscreen called packfile: %s, filename %s\n", packfile, filename);
 #endif
-	if((*screen)) freescreen(screen);
-	if(!openimage(filename, packfile)) return 0;
-	if(!(*screen) || ((*screen)->width != res[0] && (*screen)->height != res[1] && (*screen)->pixelformat != format)){
-		(*screen) = allocscreen(res[0], res[1], format);
-		if((*screen) == NULL){
-			closeimage();
-			obor_early_image_assert(0);
-			return 0;
-		}
-	}
-	if(pal) p = pal;
-	else p = (*screen)->palette;
-	result = readimage((unsigned char*)(*screen)->data, p, (*screen)->width, (*screen)->height);
-	closeimage();
-	if(!result){
-		freescreen(screen);
-		obor_early_image_assert(1);
-		return 0;
-	}
-	return 1;
+    if(!screen) return 0;
+    memcpy(&loaded, screen, sizeof(loaded));
+    if(loaded) { freescreen(screen); loaded = NULL; }
+    if(!openimage(filename, packfile)) return 0;
+    if(!loaded || (loaded->width != res[0] && loaded->height != res[1] && loaded->pixelformat != format)) {
+        loaded = allocscreen(res[0], res[1], format);
+        memcpy(screen, &loaded, sizeof(loaded));
+        if(loaded == NULL) {
+            closeimage();
+            obor_early_image_assert(0);
+            return 0;
+        }
+    }
+    p = pal ? pal : loaded->palette;
+    result = readimage((unsigned char*)loaded->data, p, loaded->width, loaded->height);
+    closeimage();
+    if(!result) {
+        freescreen(screen);
+        obor_early_image_assert(1);
+        return 0;
+    }
+    return 1;
 }
 
 s_bitmap * loadbitmap(char *filename, char *packfile, int format){

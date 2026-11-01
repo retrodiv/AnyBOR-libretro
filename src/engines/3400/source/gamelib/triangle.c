@@ -1,3 +1,15 @@
+/* AnyBOR modification record: 2026-10-30.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Preserve each profile's original triangle rasterization constants and
+ * integer rounding.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/3400.md
+ * at the source repository root. Original notices follow below.
+ */
+
 /*
  * OpenBOR - http://www.LavaLit.com
  * -----------------------------------------------------------------------
@@ -12,6 +24,8 @@
 
 #include "globals.h"
 #include "types.h"
+#include "transform.h"
+extern uint32_t obor_profile_build;
 
 #ifndef TRANSPARENT_IDX
 #define		TRANSPARENT_IDX		0x00
@@ -205,6 +219,11 @@ void draw_pixel_sprite(s_screen* dest, gfx_entry* src, int dx, int dy, int sx, i
 
 void draw_triangle_list(vert2d* vertices, s_screen *dest, gfx_entry *src, s_drawmethod* drawmethod, int triangleCount)
 {
+    if(obor_profile_build>=3451) {
+        obor_transform_triangle(vertices,dest,src,drawmethod,triangleCount);
+        return;
+    }
+
 	vert2d *v1, *v2, *v3, *vsw = NULL;
 
 	int i, triangleHalf;

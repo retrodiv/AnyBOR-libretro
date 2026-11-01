@@ -29,6 +29,7 @@
 #include <string.h>
 #include "types.h"
 #include "screen.h"
+#include "transform.h"
 
 #include "obor_water.h"
 extern float _sinfactors[256];
@@ -56,8 +57,12 @@ s_screen * allocscreen(int width, int height, int pixelformat)
 
 void freescreen(s_screen **screen)
 {
-	if((*screen) != NULL) free((*screen));
-	(*screen) = NULL;
+    s_screen *owned;
+    if(!screen) return;
+    memcpy(&owned, screen, sizeof(owned));
+    if(owned) free(owned);
+    owned = NULL;
+    memcpy(screen, &owned, sizeof(owned));
 }
 
 // Screen copy func. Supports clipping.
@@ -109,6 +114,32 @@ void copyscreen_water(s_screen * dest, s_screen * src, int x, int y, int amplitu
         if((size_t)count > (size_t)w.dw * w.dh - ((size_t)(w.dy + row) * w.dw + dx)) continue;
         memcpy(dest->data + ((size_t)(w.dy + row) * w.dw + dx) * bpp,
                src->data + ((size_t)(w.sy + row) * w.sw + sx) * bpp, (size_t)count * bpp);
+    }
+}
+
+/* Source-owned unified indexed water path from3415. */
+void putscreen8_water(s_screen *dest, s_screen *src, int x, int y, int key,
+                     unsigned char *remap, unsigned char *lut, int amplitude,
+                     float wavelength, int time, int watermode)
+{
+    obor_water_rows w;
+    int row, sx, dx, count, i;
+    if(!obor_water_begin(&w,dest,src,x,y,amplitude,wavelength,time,watermode)) return;
+    for(row=0;row<w.rows;++row) {
+        unsigned char *sp,*dp;
+        size_t remaining;
+        if(!obor_water_span(&w,row,&sx,&dx,&count)) continue;
+        sp=src->data+(size_t)(w.sy+row)*w.sw+sx;
+        dp=dest->data+(size_t)(w.dy+row)*w.dw+dx;
+        remaining=(size_t)w.dw*w.dh-((size_t)(w.dy+row)*w.dw+dx);
+        if((size_t)count>remaining) count=(int)remaining;
+        if(!key && !remap && !lut) memcpy(dp,sp,(size_t)count);
+        else for(i=0;i<count;++i) {
+            unsigned char colour;
+            if(key && !sp[i]) continue;
+            colour=remap?remap[sp[i]]:sp[i];
+            dp[i]=lut?lut[(colour<<8)|dp[i]]:colour;
+        }
     }
 }
 
@@ -361,6 +392,16 @@ void putscreen(s_screen* dest, s_screen* src, int x, int y, s_drawmethod* drawme
 		alpha = 0;
 		transbg = 0;
 	}
+    else if(obor_profile_build >= 3454 && drawmethod->water.watermode)
+    {
+        gfx_entry gfx;
+        gfx.type = gfx_screen;
+        gfx.screen = src;
+        if(drawmethod->water.watermode == 3)
+            gfx_draw_plane(dest, &gfx, x, y, 0, 0, drawmethod);
+        else gfx_draw_water(dest, &gfx, x, y, 0, 0, drawmethod);
+        return;
+    }
 	else
 	{
 		table = drawmethod->table;
@@ -436,6 +477,12 @@ void putscreen_water(s_screen* dest, s_screen* src, int x, int y, int amplitude,
 
 	if(dest->pixelformat==PIXEL_8)
 	{
+        if(obor_profile_build>=3415) {
+            unsigned char *blend_table=alpha>0?obor_screen_blend_table(alpha):NULL;
+            putscreen8_water(dest,src,x,y,transbg,table,blend_table,
+                             amplitude,wavelength,time,watermode);
+            return;
+        }
 		if(alpha>0)
 		{
 			unsigned char *blend_table = obor_screen_blend_table(alpha);

@@ -120,13 +120,14 @@ void spriteq_add_frame(int x,int y,int z,s_sprite *sprite,s_drawmethod *method,i
  queued[count++]=(struct queued){x,y,z,id,1};
 }
 static void drawenemystatus(entity *e){(void)e;abort();}
-entity *check_platform(float x,float z){(void)x;(void)z;return platform;}
+entity *check_platform(float x,float z,entity *exclude){(void)x;(void)z;(void)exclude;return platform;}
 int checkwall(float x,float z){(void)x;(void)z;return wall_index;}
 int checkwall_below(float x,float z,float a){(void)x;(void)z;(void)a;return wall_below;}
 int checkhole(float x,float z){(void)x;(void)z;return 0;}
 int inair(entity *e){(void)e;return 1;}
 s_drawmethod *getDrawMethod(s_anim *animation,int frame){(void)animation;(void)frame;abort();}
 static void applybglayers(s_screen *s){(void)s;abort();}
+void clearscreen(s_screen *s){(void)s;abort();}
 static void applyfglayers(s_screen *s){assert(s==vscreen);}
 void putscreen(s_screen *dst,s_screen *src,int x,int y,s_drawmethod *method){(void)dst;(void)src;(void)x;(void)y;(void)method;abort();}
 void apply_texture_plane(s_screen *dst,int x,int y,int width,int height,int offset,int factor,s_bitmap *src,s_drawmethod *method){(void)dst;(void)x;(void)y;(void)width;(void)height;(void)offset;(void)factor;(void)src;(void)method;abort();}

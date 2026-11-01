@@ -1,0 +1,104 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <assert.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+typedef int32_t LONG;
+typedef void VOID;
+typedef double DOUBLE;
+@VARIANT@
+@NODE@
+static s_variantnode **global_var_list;
+static ScriptVariant *indexed_var_list;
+static int max_global_vars, max_global_var_index, max_indexed_vars;
+static uint32_t obor_profile_build;
+static size_t named_bytes, indexed_bytes;
+static char long_text[2049];
+static const char *cache_values[]={NULL,"one\ntwo\r\\three","",long_text};
+char *obor_arena_base(void){return NULL;}
+size_t obor_allocation_size(const void *p){
+    return p==global_var_list?named_bytes:p==indexed_var_list?indexed_bytes:0;
+}
+int obor_allocation_contains(const void *p,size_t length){(void)p;(void)length;return 0;}
+static char *StrCache_GetIfPresent(int index){
+    return index>0 && index<4?(char*)cache_values[index]:NULL;
+}
+#include "obor_script_file32.inc"
+#include "obor_script_file_text.inc"
+@CONTEXTS@
+static size_t bytes(FILE *stream,char *out,size_t capacity){
+    assert(!fflush(stream));rewind(stream);
+    size_t n=fread(out,1,capacity-1,stream);assert(!ferror(stream));out[n]=0;
+    assert(feof(stream));return n;
+}
+static void initialize(void){
+    max_global_vars=8;max_global_var_index=7;max_indexed_vars=5;
+    named_bytes=8*sizeof(*global_var_list)+8*sizeof(**global_var_list);
+    global_var_list=calloc(1,named_bytes);assert(global_var_list);
+    indexed_bytes=6*sizeof(*indexed_var_list);
+    indexed_var_list=calloc(1,indexed_bytes);assert(indexed_var_list);
+    const char *names[]={"score","ratio","line","empty","","private","pointer","tail"};
+    for(int i=0;i<8;i++){
+        global_var_list[i]=(s_variantnode*)((char*)global_var_list+
+            8*sizeof(*global_var_list)+i*sizeof(**global_var_list));
+        global_var_list[i]->key=(char*)names[i];
+    }
+    global_var_list[0]->value.vt=VT_INTEGER;global_var_list[0]->value.lVal=42;
+    global_var_list[1]->value.vt=VT_DECIMAL;global_var_list[1]->value.dblVal=-1.25;
+    global_var_list[2]->value.vt=VT_STR;global_var_list[2]->value.strVal=1;
+    global_var_list[3]->value.vt=VT_EMPTY;
+    global_var_list[4]->value.vt=VT_INTEGER;global_var_list[4]->value.lVal=9;
+    global_var_list[5]->owner=(void*)global_var_list;
+    global_var_list[5]->value.vt=VT_INTEGER;global_var_list[5]->value.lVal=99;
+    global_var_list[6]->value.vt=VT_PTR;
+    global_var_list[7]->value.vt=VT_STR;global_var_list[7]->value.strVal=2;
+    indexed_var_list[0].vt=VT_INTEGER;indexed_var_list[0].lVal=-8;
+    indexed_var_list[1].vt=VT_EMPTY;
+    indexed_var_list[2].vt=VT_STR;indexed_var_list[2].strVal=1;
+    indexed_var_list[3].vt=VT_PTR;
+    indexed_var_list[4].vt=VT_DECIMAL;indexed_var_list[4].dblVal=2.5;
+    indexed_var_list[5].vt=VT_INTEGER;indexed_var_list[5].lVal=999;
+}
+static void check(unsigned revision,int filtered){
+    obor_profile_build=revision;initialize();
+    FILE *stream=tmpfile();assert(stream);
+    assert(obor_script_file_text_write(stream));
+    char output[8192];bytes(stream,output,sizeof(output));
+    assert(!strcmp(output,filtered?@FILTERED@:@UNFILTERED@));
+    assert(!fclose(stream));
+    /* Table/capacity and value controls use defined refusals, never an
+     * expectation taken from an undefined original access. */
+    stream=tmpfile();assert(stream);
+    max_global_var_index=8;assert(!obor_script_file_text_write(stream));
+    max_global_var_index=7;max_global_vars=9;assert(!obor_script_file_text_write(stream));
+    max_global_vars=8;indexed_bytes=sizeof(*indexed_var_list);
+    assert(!obor_script_file_text_write(stream));
+    indexed_bytes=6*sizeof(*indexed_var_list);
+    assert(!obor_script_file_text_write(NULL));
+    ScriptVariant value;memset(&value,0,sizeof(value));value.vt=VT_STR;value.strVal=9;
+    assert(!obor_script_text_value(stream,&value));
+    assert(!obor_script_text_value(stream,NULL));assert(!fclose(stream));
+    free(global_var_list);free(indexed_var_list);
+    global_var_list=NULL;indexed_var_list=NULL;
+}
+static void literal_values(void){
+    for(size_t i=0;i<sizeof(value_cases)/sizeof(*value_cases);i++){
+        const value_case *c=value_cases+i;
+        ScriptVariant value;memset(&value,0,sizeof(value));value.vt=(VARTYPE)c->type;
+        value.lVal=c->integer;
+        if(c->type==VT_DECIMAL)value.dblVal=c->decimal;
+        if(c->type==VT_STR){cache_values[1]=c->text;value.strVal=1;}
+        FILE *stream=tmpfile();assert(stream);assert(obor_script_text_value(stream,&value));
+        char out[8192];bytes(stream,out,sizeof(out));assert(!strcmp(out,c->expected));
+        assert(!fclose(stream));
+    }
+    memset(long_text,'z',sizeof(long_text)-1);long_text[sizeof(long_text)-1]=0;
+    ScriptVariant value;memset(&value,0,sizeof(value));value.vt=VT_STR;value.strVal=3;
+    FILE *stream=tmpfile();assert(stream);assert(obor_script_text_value(stream,&value));
+    char out[8192];assert(bytes(stream,out,sizeof(out))==2050);
+    assert(out[0]=='"' && out[2049]=='"');
+    assert(!memcmp(out+1,long_text,2048));assert(!fclose(stream));
+}
+int main(void){@CHECKS@ literal_values();puts("PASS script text bytes and tables");return 0;}

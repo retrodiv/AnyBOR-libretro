@@ -1,3 +1,15 @@
+/* AnyBOR modification record: 2026-09-12.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Bound clip endpoints without signed overflow while retaining native color
+ * and draw-method initialization.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/3400.md
+ * at the source repository root. Original notices follow below.
+ */
+
 /*
  * OpenBOR - http://www.LavaLit.com
  * -----------------------------------------------------------------------
@@ -11,6 +23,9 @@
 ////////////////////////////////////////////////////////////////////////////
 
 #include "types.h"
+#include "globals.h"
+#include <stdint.h>
+extern uint32_t obor_profile_build;
 
 #ifndef NULL
 #define NULL (void*)0
@@ -39,6 +54,16 @@ unsigned colour32(unsigned char r, unsigned char g, unsigned char b)
 #endif
 }
 
+
+#define rs ((color1&0xff0000)>>8)
+#define gs (color1&0xFF00)
+#define bs ((color1&0xFF)<<8)
+#define rd (color2>>16)
+#define gd ((color2&0xFF00)>>8)
+#define bd (color2&0xFF)
+#define ri (rs|rd)
+#define gi (gs|gd)
+#define bi (bs|bd)
 #define _multiply(c1,c2) (((c1)*(c2))>>8)
 #define _screen(c1,c2) ((((c1)^255)*((c2)^255)/255)^255)
 #define _hardlight(c1,c2) ((c1)<128?_multiply((c1)<<1,(c2)):_screen(((c1)-128)<<1,(c2)))
@@ -84,50 +109,145 @@ unsigned blend_half(register unsigned color1, register unsigned color2)
 // color1 front colour,
 // color2 bg colour
 ////////////////////////////////////////////////////////////////////
+
+unsigned char* create_multiply32_tbl(){
+	unsigned i, j;
+	unsigned char* tbl = (unsigned char*)malloc(256*256);
+	if(!tbl) return NULL;
+	for(i=0; i<256; i++)
+		for(j=0; j<256; j++)
+			tbl[(i<<8)|j] = (unsigned char)blend_multiply(i,j);
+
+	return tbl;
+}
+
+
 unsigned blend_multiply32(register unsigned color1, register unsigned color2)
 {
+	unsigned char* tbl;
+	if(obor_profile_build >= 3454 && (tbl=blendtables[BLEND_MULTIPLY])){
+		return _color(tbl[ri], tbl[gi], tbl[bi]);
+	}
 	return _color(_multiply(color1>>16,color2>>16),
 				  _multiply((color1&0xFF00)>>8,(color2&0xFF00)>>8),
 				  _multiply(color1&0xFF,color2&0xFF));
 }
 
+unsigned char* create_screen32_tbl(){
+	unsigned i, j;
+	unsigned char* tbl = (unsigned char*)malloc(256*256);
+	if(!tbl) return NULL;
+	for(i=0; i<256; i++)
+		for(j=0; j<256; j++)
+			tbl[(i<<8)|j] = (unsigned char)blend_screen(i,j);
+
+	return tbl;
+}
+
 unsigned blend_screen32(register unsigned color1, register unsigned color2)
 {
+	unsigned char* tbl;
+	if(obor_profile_build >= 3454 && (tbl=blendtables[BLEND_SCREEN])){
+		return _color(tbl[ri], tbl[gi], tbl[bi]);
+	}
 	return _color(_screen(color1>>16,color2>>16),
 				  _screen((color1&0xFF00)>>8,(color2&0xFF00)>>8),
 				  _screen(color1&0xFF,color2&0xFF));
 }
 
+unsigned char* create_overlay32_tbl(){
+	unsigned i, j;
+	unsigned char* tbl = (unsigned char*)malloc(256*256);
+	if(!tbl) return NULL;
+	for(i=0; i<256; i++)
+		for(j=0; j<256; j++)
+			tbl[(i<<8)|j] = (unsigned char)blend_overlay(i,j);
+
+	return tbl;
+}
+
 unsigned blend_overlay32(register unsigned color1, register unsigned color2)
 {
-	int r1 = color1>>16, r2 = color2>>16;
-	int g1 = (color1&0xFF00)>>8, g2 = (color2&0xFF00)>>8;
-	int b1 = color1&0xFF, b2 = color2&0xFF;
+	int r1, g1, b1, r2, g2, b2;
+	unsigned char* tbl;
+	if(obor_profile_build >= 3454 && (tbl=blendtables[BLEND_OVERLAY])){
+		return _color(tbl[ri], tbl[gi], tbl[bi]);
+	}
+	r1 = color1>>16, r2 = color2>>16;
+	g1 = (color1&0xFF00)>>8, g2 = (color2&0xFF00)>>8;
+	b1 = color1&0xFF, b2 = color2&0xFF;
 	return _color(_overlay(r1,r2),
 				  _overlay(g1,g2),
 				  _overlay(b1,b2));
 }
 
+unsigned char* create_hardlight32_tbl(){
+	unsigned i, j;
+	unsigned char* tbl = (unsigned char*)malloc(256*256);
+	if(!tbl) return NULL;
+	for(i=0; i<256; i++)
+		for(j=0; j<256; j++)
+			tbl[(i<<8)|j] = (unsigned char)blend_hardlight(i,j);
+
+	return tbl;
+}
+
 unsigned blend_hardlight32(register unsigned color1, register unsigned color2)
 {
-	int r1 = color1>>16, r2 = color2>>16;
-	int g1 = (color1&0xFF00)>>8, g2 = (color2&0xFF00)>>8;
-	int b1 = color1&0xFF, b2 = color2&0xFF;
+	int r1, g1, b1, r2, g2, b2;
+	unsigned char* tbl;
+	if(obor_profile_build >= 3454 && (tbl=blendtables[BLEND_HARDLIGHT])){
+		return _color(tbl[ri], tbl[gi], tbl[bi]);
+	}
+	r1 = color1>>16, r2 = color2>>16;
+	g1 = (color1&0xFF00)>>8, g2 = (color2&0xFF00)>>8;
+	b1 = color1&0xFF, b2 = color2&0xFF;
 	return _color(_hardlight(r1,r2),
 				  _hardlight(g1,g2),
 				  _hardlight(b1,b2));
 }
 
+unsigned char* create_dodge32_tbl(){
+	unsigned i, j;
+	unsigned char* tbl = (unsigned char*)malloc(256*256);
+	if(!tbl) return NULL;
+	for(i=0; i<256; i++)
+		for(j=0; j<256; j++)
+			tbl[(i<<8)|j] = (unsigned char)blend_dodge(i,j);
+
+	return tbl;
+}
+
 unsigned blend_dodge32(register unsigned color1, register unsigned color2)
 {
-	unsigned r = _dodge(color1>>16,color2>>16);
-	unsigned g = _dodge((color1&0xFF00)>>8,(color2&0xFF00)>>8);
-	unsigned b = _dodge(color1&0xFF,color2&0xFF);
+	unsigned r,g,b;
+	unsigned char* tbl;
+	if(obor_profile_build >= 3454 && (tbl=blendtables[BLEND_DODGE])){
+		return _color(tbl[ri], tbl[gi], tbl[bi]);
+	}
+	r = _dodge(color1>>16,color2>>16);
+	g = _dodge((color1&0xFF00)>>8,(color2&0xFF00)>>8);
+	b = _dodge(color1&0xFF,color2&0xFF);
 	return _color(r>255?255:r, g>255?255:g, b>255?255:b);
+}
+
+unsigned char* create_half32_tbl(){
+	unsigned i, j;
+	unsigned char* tbl = (unsigned char*)malloc(256*256);
+	if(!tbl) return NULL;
+	for(i=0; i<256; i++)
+		for(j=0; j<256; j++)
+			tbl[(i<<8)|j] = (unsigned char)blend_half(i,j);
+
+	return tbl;
 }
 
 unsigned blend_half32(register unsigned color1, register unsigned color2)
 {
+	unsigned char* tbl;
+	if(obor_profile_build >= 3454 && (tbl=blendtables[BLEND_HALF])){
+		return _color(tbl[ri], tbl[gi], tbl[bi]);
+	}
 	return _color(((color1>>16)+(color2>>16))>>1,
 				  (((color1&0xFF00)>>8) + ((color2&0xFF00)>>8))>>1,
 				  ((color1&0xFF) + (color2&0xFF))>>1);
@@ -154,6 +274,9 @@ unsigned blend_channel32(register unsigned color1, register unsigned color2, reg
 #define _r2 (color2>>11)
 #define _g2 ((color2&0x7E0)>>5)
 #define _b2 (color2&0x1F)
+#define _ri ((_r1<<5)|_r2)
+#define _gi (((_g1<<6)|_g2)+1024)
+#define _bi ((_b1<<5)|_b2)
 #define _multiply16(c1,c2,m) ((c1)*(c2)/(m))
 #define _screen16(c1,c2,m) ((((c1)^(m))*((c2)^(m))/(m))^(m))
 #define _hardlight16(c1,c2,m,m2) ((c1)<(m)?_multiply16(((c1)<<1),(c2),(m2)):_screen16((((c1)-(m))<<1),(c2),(m2)))
@@ -162,46 +285,160 @@ unsigned blend_channel32(register unsigned color1, register unsigned color2, reg
 #define _channel16(src,dest,alpha) (((src*alpha)+(dest*(255-alpha)))>>8)
 #define _color16(r,g,b) ( ((r)<<11)|((g)<<5)|b )
 
+unsigned char* create_multiply16_tbl(){
+	unsigned i, j;
+	unsigned char* tbl = (unsigned char*)malloc(32*32+64*64);
+	if(!tbl) return NULL;
+	for(i=0; i<32; i++)
+		for(j=0; j<32; j++)
+			tbl[(i<<5)|j] = (unsigned char)_multiply16(i,j, 0x1f);
+	for(i=0; i<64; i++)
+		for(j=0; j<64; j++)
+			tbl[((i<<6)|j)+1024] = (unsigned char)_multiply16(i,j, 0x3f);
+	return tbl;
+}
+
 //16bit blending, bit565
 unsigned short blend_multiply16(unsigned short color1, unsigned short color2)
 {
+	unsigned char* tbl;
+	if(obor_profile_build >= 3454 && (tbl=blendtables[BLEND_MULTIPLY])){
+		return _color16(tbl[_ri], tbl[_gi], tbl[_bi]);
+	}
 	return _color16(_multiply16(_r1,_r2,0x1F), _multiply16(_g1,_g2,0x3F), _multiply16(_b1,_b2,0x1F));
+}
+
+unsigned char* create_screen16_tbl(){
+	unsigned i, j;
+	unsigned char* tbl = (unsigned char*)malloc(32*32+64*64);
+	if(!tbl) return NULL;
+	for(i=0; i<32; i++)
+		for(j=0; j<32; j++)
+			tbl[(i<<5)|j] = (unsigned char)_screen16(i,j, 0x1f);
+	for(i=0; i<64; i++)
+		for(j=0; j<64; j++)
+			tbl[((i<<6)|j)+1024] = (unsigned char)_screen16(i,j, 0x3f);
+	return tbl;
 }
 
 unsigned short blend_screen16(unsigned short color1, unsigned short color2)
 {
+	unsigned char* tbl;
+	if(obor_profile_build >= 3454 && (tbl=blendtables[BLEND_SCREEN])){
+		return _color16(tbl[_ri], tbl[_gi], tbl[_bi]);
+	}
 	return _color16(_screen16(_r1,_r2,0x1F), _screen16(_g1,_g2,0x3F), _screen16(_b1,_b2,0x1F));
+}
+
+unsigned char* create_overlay16_tbl(){
+	unsigned i, j;
+	unsigned char* tbl = (unsigned char*)malloc(32*32+64*64);
+	if(!tbl) return NULL;
+	for(i=0; i<32; i++)
+		for(j=0; j<32; j++)
+			tbl[(i<<5)|j] = (unsigned char)_overlay16(i,j, 0x10, 0x1f);
+	for(i=0; i<64; i++)
+		for(j=0; j<64; j++)
+			tbl[((i<<6)|j)+1024] = (unsigned char)_overlay16(i,j, 0x20, 0x3f);
+	return tbl;
 }
 
 unsigned short blend_overlay16(unsigned short color1, unsigned short color2)
 {
-	unsigned r1 = _r1, r2 = _r2;
-	unsigned g1 = _g1, g2 = _g2;
-	unsigned b1 = _b1, b2 = _b2;
+	unsigned r1, g1, b1, r2, g2, b2;
+	unsigned char* tbl;
+	if(obor_profile_build >= 3454 && (tbl=blendtables[BLEND_OVERLAY])){
+		return _color16(tbl[_ri], tbl[_gi], tbl[_bi]);
+	}
+	r1 = _r1, r2 = _r2;
+	g1 = _g1, g2 = _g2;
+	b1 = _b1, b2 = _b2;
 	return _color16(_overlay16(r1,r2,0x10,0x1F),_overlay16(g1,g2,0x20,0x3F),_overlay16(b1,b2,0x10,0x1F));
+}
+
+unsigned char* create_hardlight16_tbl(){
+	unsigned i, j;
+	unsigned char* tbl = (unsigned char*)malloc(32*32+64*64);
+	if(!tbl) return NULL;
+	for(i=0; i<32; i++)
+		for(j=0; j<32; j++)
+			tbl[(i<<5)|j] = (unsigned char)_hardlight16(i,j, 0x10, 0x1f);
+	for(i=0; i<64; i++)
+		for(j=0; j<64; j++)
+			tbl[((i<<6)|j)+1024] = (unsigned char)_hardlight16(i,j, 0x20, 0x3f);
+	return tbl;
 }
 
 unsigned short blend_hardlight16(unsigned short color1, unsigned short color2)
 {
-	unsigned r1 = _r1, r2 = _r2;
-	unsigned g1 = _g1, g2 = _g2;
-	unsigned b1 = _b1, b2 = _b2;
+	unsigned r1, g1, b1, r2, g2, b2;
+	unsigned char* tbl;
+	if(obor_profile_build >= 3454 && (tbl=blendtables[BLEND_HARDLIGHT])){
+		return _color16(tbl[_ri], tbl[_gi], tbl[_bi]);
+	}
+	r1 = _r1, r2 = _r2;
+	g1 = _g1, g2 = _g2;
+	b1 = _b1, b2 = _b2;
 	return _color16(_hardlight16(r1,r2,0x10,0x1F),_hardlight16(g1,g2,0x20,0x3F),_hardlight16(b1,b2,0x10,0x1F));
+}
+
+unsigned char* create_dodge16_tbl(){
+	unsigned i, j;
+	unsigned char* tbl = (unsigned char*)malloc(32*32+64*64);
+	if(!tbl) return NULL;
+	unsigned t;
+	for(i=0; i<32; i++)
+		for(j=0; j<32; j++){
+			t = _dodge16(i, j, 0x20);
+			if(obor_profile_build < 3467) t = (unsigned char)t;
+			if(t>0x1f) t=0x1f;
+			tbl[(i<<5)|j] = t;
+		}
+	for(i=0; i<64; i++)
+		for(j=0; j<64; j++){
+			t = _dodge16(i, j, 0x40);
+			if(obor_profile_build < 3467) t = (unsigned char)t;
+			if(t>0x3f) t=0x3f;
+			tbl[((i<<6)|j)+1024] = t;
+		}
+	return tbl;
 }
 
 unsigned short blend_dodge16(unsigned short color1, unsigned short color2)
 {
-	int r = _dodge16(_r1,_r2,0x20);
-	int g = _dodge16(_g1,_g2,0x40);
-	int b = _dodge16(_b1,_b2,0x20);
+	int r,g,b;
+	unsigned char* tbl;
+	if(obor_profile_build >= 3454 && (tbl=blendtables[BLEND_DODGE])){
+		return _color16(tbl[_ri], tbl[_gi], tbl[_bi]);
+	}
+	r = _dodge16(_r1,_r2,0x20);
+	g = _dodge16(_g1,_g2,0x40);
+	b = _dodge16(_b1,_b2,0x20);
 	if(r>0x1F) r = 0x1F;
 	if(g>0x3F) g = 0x3F;
 	if(b>0x1F) b = 0x1F;
 	return _color16(r,g,b);
 }
 
+unsigned char* create_half16_tbl(){
+	unsigned i, j;
+	unsigned char* tbl = (unsigned char*)malloc(32*32+64*64);
+	if(!tbl) return NULL;
+	for(i=0; i<32; i++)
+		for(j=0; j<32; j++)
+			tbl[(i<<5)|j] = (i+j)>>1;
+	for(i=0; i<64; i++)
+		for(j=0; j<64; j++)
+			tbl[((i<<6)|j)+1024] = (i+j)>>1;
+	return tbl;
+}
+
 unsigned short blend_half16(unsigned short color1, unsigned short color2)
 {
+	unsigned char* tbl;
+	if(obor_profile_build >= 3454 && (tbl=blendtables[BLEND_HALF])){
+		return _color16(tbl[_ri], tbl[_gi], tbl[_bi]);
+	}
 	return _color16((_r1+_r2)>>1, (_g1+_g2)>>1, (_b1+_b2)>>1);
 }
 

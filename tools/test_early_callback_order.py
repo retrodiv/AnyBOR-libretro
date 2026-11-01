@@ -97,6 +97,11 @@ static Script dest[64],origin[64],current;
 static s_variantnode entries[16],*entry_ptrs[16];
 void shutdown(int code,char *message,...) {(void)code;(void)message;abort();}
 void ScriptVariant_Clear(ScriptVariant *value) {memset(value,0,sizeof(*value));}
+/* These legacy contexts never enter the later local-self cleanup path.
+ * Refuse its dependencies here; active-path controls use the full provider. */
+void ScriptVariant_Init(ScriptVariant *value) {(void)value;abort();}
+int Script_Set_Local_Variant(char *name,ScriptVariant *value) {(void)name;(void)value;abort();}
+HRESULT Interpreter_EvaluateCall(Interpreter *value) {(void)value;abort();}
 void ScriptVariant_ChangeType(ScriptVariant *value,VARTYPE type) {
  memset(value,0,sizeof(*value));value->vt=type;
 }

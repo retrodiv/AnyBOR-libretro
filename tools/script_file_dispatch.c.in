@@ -1,0 +1,70 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <assert.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "obor_pak_name.h"
+typedef struct {int initialized;} Script;
+typedef struct {int value;} ScriptVariant;
+static unsigned obor_profile_build;
+static int current_set=3,load_present,clears;
+static Script origin,*pcurrentscript=&origin;
+static ScriptVariant indexed[3],*indexed_var_list=indexed;
+static int max_global_var_index,max_indexed_vars=3;
+static char trace[64];static size_t at;
+static void event(char c){assert(at+1<sizeof(trace));trace[at++]=c;trace[at]=0;}
+static void getBasePath(char *path,const char *directory,int ignored){
+    assert(!strcmp(directory,"Saves") && !ignored);strcpy(path,"Saves/");
+}
+static void getPakName(char *path,size_t capacity,int type){
+    assert(type==2);assert(obor_pak_name(path,capacity,"sample.pak",type));
+}
+static void borExit(int status){(void)status;abort();}
+static FILE *probe_open(const char *path,const char *mode){
+    assert(!strcmp(path,"Saves/sample.s03"));assert(!strcmp(mode,"wb")||!strcmp(mode,"rb"));
+    event('O');FILE *stream=tmpfile();assert(stream);return stream;
+}
+static int probe_close(FILE *stream){event('F');return fclose(stream);}
+static size_t obor_script32_target_variant_size(void){return 12;}
+static int obor_script_file32_write(FILE *stream,size_t size){assert(stream && size==12);event('B');return 1;}
+static int obor_script_file32_read(FILE *stream,size_t size){assert(stream && size==12);event('R');return 1;}
+static int obor_script_file_text_write(FILE *stream){assert(stream);event('T');return 1;}
+static void Script_Init(Script *s,const char *name,int local){
+    assert(!strcmp(name,"loadScriptFile") && local==1);s->initialized=1;event('I');
+}
+static int load_script(Script *s,char *path){
+    assert(s && !strcmp(path,"Saves/sample.s03"));pcurrentscript=s;event('L');return load_present;
+}
+static void Script_Clear(Script *s,int local){
+    assert(s && local==2);if(at>2)assert(pcurrentscript==&origin);
+    s->initialized=0;event('C');
+}
+static int Script_Compile(Script *s){assert(s);event('P');return 1;}
+static int Script_IsInitialized(Script *s){event('N');if(s->initialized)pcurrentscript=s;return s->initialized;}
+static int Script_Execute(Script *s){assert(pcurrentscript==s && s->initialized);event('E');return 1;}
+static void ScriptVariant_Clear(ScriptVariant *v){assert(v>=indexed && v<indexed+3);v->value=0;clears++;}
+#define fopen probe_open
+#define fclose probe_close
+@SAVE@
+@LOAD@
+#undef fopen
+#undef fclose
+static void begin_game(void){@BEGIN@}
+static void finish_game(void){int i;@FINISH@}
+static void reset(void){at=0;trace[0]=0;pcurrentscript=&origin;}
+static void check(unsigned revision,int text,int retain_new,int retain_exit){
+    obor_profile_build=revision;reset();saveScriptFile();assert(!strcmp(trace,text?"OTF":"OBF"));
+    for(load_present=0;load_present<2;load_present++){
+        reset();loadScriptFile();
+        assert(!strcmp(trace,text?(load_present?"ILPNEC":"ILCPNC"):"ORF"));
+        assert(pcurrentscript==&origin);
+    }
+    max_global_var_index=7;begin_game();assert(max_global_var_index==(retain_new?7:0));
+    max_global_var_index=7;clears=0;for(int i=0;i<3;i++)indexed[i].value=21+i;
+    finish_game();assert(max_global_var_index==(retain_exit?7:-1));assert(clears==(retain_exit?0:3));
+    for(int i=0;i<3;i++)assert(indexed[i].value==(retain_exit?21+i:0));
+}
+int main(void){@CHECKS@ puts("PASS script persistence dispatch and lifecycle");return 0;}

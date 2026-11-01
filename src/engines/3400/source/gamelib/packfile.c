@@ -1190,8 +1190,11 @@ int pak_init()
 			// this size.  Hence, I have doubled it.  This could
 			// pose a problem on optical media, but that is yet to be
 			// determined.
-			printf("pak header is too large: %d\n",pak_cdheadersize);
-			return 0;
+			if(obor_profile_build < 3411) {
+				printf("pak header is too large: %d\n",pak_cdheadersize);
+				return 0;
+			}
+			printf("Warning: pak header is too large: %d / 524288\n",pak_cdheadersize);
 		}
 		pak_cdheader = obor_profile_malloc_named("pak_init 2", pak_cdheadersize);
 		if(!pak_cdheader) { printf("pak_cdheader malloc failed\n"); return 0; }

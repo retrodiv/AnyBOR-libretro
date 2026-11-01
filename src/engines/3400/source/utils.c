@@ -389,7 +389,7 @@ void screenshot(s_screen *vscreen, unsigned char *pal, int ingame){
 			sprintf(shotname, "./ScreenShots/%s - %04u.%s", modname,shotnum, obor_profile_build < 3344 ? "pcx" : "png");
 #endif
 			++shotnum;
-		}while(fileExists(shotname) && shotnum<100);
+		}while(fileExists(shotname) && shotnum<(obor_profile_build >= 3422 ? 10000 : 100));
 
 #ifdef PSP
 		if(shotnum<10000) saveImage(shotname);

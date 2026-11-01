@@ -1,7 +1,7 @@
 {
   "core_name": "AnyBOR",
   "core_basename": "anybor_libretro",
-  "version": "0.1.78",
+  "version": "0.1.79",
   "fallback_build": "6391",
   "profiles": [
     {
@@ -696,6 +696,306 @@
       "engine": "3400",
       "covers": "<= 3400 including lost pre-3020 era (best effort)",
       "major": "v3.0"
+    },
+    {
+      "build": "3406",
+      "engine": "3400",
+      "major": "v3.0",
+      "automatic": true,
+      "tagged": true,
+      "auto_until": 3406,
+      "upstream_commit": "3d2d311c449d5400161b07d42ec0bde2a6a8521f",
+      "upstream_date": "2011-09-01",
+      "upstream_branch": "preserved upstream first-parent history",
+      "covers": "Historical automatic or exact-tag profile."
+    },
+    {
+      "build": "3411",
+      "engine": "3400",
+      "major": "v3.0",
+      "automatic": true,
+      "tagged": true,
+      "auto_until": 3411,
+      "upstream_commit": "a0ed35c11e8677349e644f7e11eb18fdba91691f",
+      "upstream_date": "2011-09-02",
+      "upstream_branch": "preserved upstream first-parent history",
+      "covers": "Historical automatic or exact-tag profile."
+    },
+    {
+      "build": "3415",
+      "engine": "3400",
+      "major": "v3.0",
+      "automatic": true,
+      "tagged": true,
+      "auto_until": 3415,
+      "upstream_commit": "353a8092fca7f28b635090ce2bbe678cad93b95b",
+      "upstream_date": "2011-09-03",
+      "upstream_branch": "preserved upstream first-parent history",
+      "covers": "Historical automatic or exact-tag profile."
+    },
+    {
+      "build": "3416",
+      "engine": "3400",
+      "major": "v3.0",
+      "automatic": true,
+      "tagged": true,
+      "auto_until": 3416,
+      "upstream_commit": "ebaefc841ed0b5fb56f634b8979c4a111e713d27",
+      "upstream_date": "2011-09-03",
+      "upstream_branch": "preserved upstream first-parent history",
+      "covers": "Historical automatic or exact-tag profile."
+    },
+    {
+      "build": "3420",
+      "engine": "3400",
+      "major": "v3.0",
+      "automatic": true,
+      "tagged": true,
+      "auto_until": 3420,
+      "upstream_commit": "f713ecc42e274c70c2a6fa0ff4a312166ee03750",
+      "upstream_date": "2011-09-05",
+      "upstream_branch": "preserved upstream first-parent history",
+      "covers": "Historical automatic or exact-tag profile."
+    },
+    {
+      "build": "3422",
+      "engine": "3400",
+      "major": "v3.0",
+      "automatic": true,
+      "tagged": true,
+      "auto_until": 3422,
+      "upstream_commit": "7dce7fa12d90cc4a6bcc0c7d25df26416fa1b2ad",
+      "upstream_date": "2011-09-07",
+      "upstream_branch": "preserved upstream first-parent history",
+      "covers": "Historical automatic or exact-tag profile."
+    },
+    {
+      "build": "3427",
+      "engine": "3400",
+      "major": "v3.0",
+      "automatic": true,
+      "tagged": true,
+      "auto_until": 3427,
+      "upstream_commit": "8027367d46d0647c6a6ab98be4bab633d6ebd117",
+      "upstream_date": "2011-09-08",
+      "upstream_branch": "preserved upstream first-parent history",
+      "covers": "Historical automatic or exact-tag profile."
+    },
+    {
+      "build": "3428",
+      "engine": "3400",
+      "major": "v3.0",
+      "automatic": true,
+      "tagged": true,
+      "auto_until": 3428,
+      "upstream_commit": "24cc4b86e90242ddf47381f28fc13deec91181a1",
+      "upstream_date": "2011-09-08",
+      "upstream_branch": "preserved upstream first-parent history",
+      "covers": "Historical automatic or exact-tag profile."
+    },
+    {
+      "build": "3431",
+      "engine": "3400",
+      "major": "v3.0",
+      "automatic": true,
+      "tagged": true,
+      "auto_until": 3431,
+      "upstream_commit": "094b4bcc5262fdffe5aaeebdf8d81b308ba8b73d",
+      "upstream_date": "2011-09-09",
+      "upstream_branch": "preserved upstream first-parent history",
+      "covers": "Historical automatic or exact-tag profile."
+    },
+    {
+      "build": "3434",
+      "engine": "3400",
+      "major": "v3.0",
+      "automatic": true,
+      "tagged": true,
+      "auto_until": 3434,
+      "upstream_commit": "cf18337701552a4ce95d9ef8275f68f5acb1bb88",
+      "upstream_date": "2011-09-10",
+      "upstream_branch": "preserved upstream first-parent history",
+      "covers": "Historical automatic or exact-tag profile."
+    },
+    {
+      "build": "3436",
+      "engine": "3400",
+      "major": "v3.0",
+      "automatic": true,
+      "tagged": true,
+      "auto_until": 3436,
+      "upstream_commit": "3edf12e0fa18080539b5e90a30ac204a845c1146",
+      "upstream_date": "2011-09-11",
+      "upstream_branch": "preserved upstream first-parent history",
+      "covers": "Historical automatic or exact-tag profile."
+    },
+    {
+      "build": "3441",
+      "engine": "3400",
+      "major": "v3.0",
+      "automatic": true,
+      "tagged": true,
+      "auto_until": 3441,
+      "upstream_commit": "48c20c1a9d66b289fe772b2a3ab593cb868642bd",
+      "upstream_date": "2011-09-13",
+      "upstream_branch": "preserved upstream first-parent history",
+      "covers": "Historical automatic or exact-tag profile."
+    },
+    {
+      "build": "3445",
+      "engine": "3400",
+      "major": "v3.0",
+      "automatic": true,
+      "tagged": true,
+      "auto_until": 3445,
+      "upstream_commit": "f281ce104a4e83e2050dcb9611bf34c295a0440e",
+      "upstream_date": "2011-09-14",
+      "upstream_branch": "preserved upstream first-parent history",
+      "covers": "Historical automatic or exact-tag profile."
+    },
+    {
+      "build": "3446",
+      "engine": "3400",
+      "major": "v3.0",
+      "automatic": true,
+      "tagged": true,
+      "auto_until": 3446,
+      "upstream_commit": "0da3dd6b3b9e566ff49784daea87b842a78de583",
+      "upstream_date": "2011-09-15",
+      "upstream_branch": "preserved upstream first-parent history",
+      "covers": "Historical automatic or exact-tag profile."
+    },
+    {
+      "build": "3449",
+      "engine": "3400",
+      "major": "v3.0",
+      "automatic": true,
+      "tagged": true,
+      "auto_until": 3449,
+      "upstream_commit": "98cceac579810a3887d1cbe286402ebcc7533aca",
+      "upstream_date": "2011-09-16",
+      "upstream_branch": "preserved upstream first-parent history",
+      "covers": "Historical automatic or exact-tag profile."
+    },
+    {
+      "build": "3454",
+      "engine": "3400",
+      "major": "v3.0",
+      "automatic": true,
+      "tagged": true,
+      "auto_until": 3454,
+      "upstream_commit": "c4e2c4dfe71ba36ec140a17b6b5fa9135217402d",
+      "upstream_date": "2011-09-19",
+      "upstream_branch": "preserved upstream first-parent history",
+      "covers": "Historical automatic or exact-tag profile."
+    },
+    {
+      "build": "3458",
+      "engine": "3400",
+      "major": "v3.0",
+      "automatic": true,
+      "tagged": true,
+      "auto_until": 3458,
+      "upstream_commit": "16bf017ff71b61cab183afd21bc60373db00360e",
+      "upstream_date": "2011-09-19",
+      "upstream_branch": "preserved upstream first-parent history",
+      "covers": "Historical automatic or exact-tag profile."
+    },
+    {
+      "build": "3461",
+      "engine": "3400",
+      "major": "v3.0",
+      "automatic": true,
+      "tagged": true,
+      "auto_until": 3461,
+      "upstream_commit": "81449294a83054838e129686e3927131e651a250",
+      "upstream_date": "2011-09-21",
+      "upstream_branch": "preserved upstream first-parent history",
+      "covers": "Historical automatic or exact-tag profile."
+    },
+    {
+      "build": "3463",
+      "engine": "3400",
+      "major": "v3.0",
+      "automatic": true,
+      "tagged": true,
+      "auto_until": 3463,
+      "upstream_commit": "8796b294eea8ee814c327ec049822c918bc87cda",
+      "upstream_date": "2011-09-21",
+      "upstream_branch": "preserved upstream first-parent history",
+      "covers": "Historical automatic or exact-tag profile."
+    },
+    {
+      "build": "3465",
+      "engine": "3400",
+      "major": "v3.0",
+      "automatic": true,
+      "tagged": true,
+      "auto_until": 3465,
+      "upstream_commit": "e5c447dff40e9f5c37d8a1105ba6d357f412ae85",
+      "upstream_date": "2011-09-22",
+      "upstream_branch": "preserved upstream first-parent history",
+      "covers": "Historical automatic or exact-tag profile."
+    },
+    {
+      "build": "3467",
+      "engine": "3400",
+      "major": "v3.0",
+      "automatic": true,
+      "tagged": true,
+      "auto_until": 3467,
+      "upstream_commit": "9382d24f1bc65975f0a55cf13462ddd5b6df0da4",
+      "upstream_date": "2011-09-24",
+      "upstream_branch": "preserved upstream first-parent history",
+      "covers": "Historical automatic or exact-tag profile."
+    },
+    {
+      "build": "3469",
+      "engine": "3400",
+      "major": "v3.0",
+      "automatic": true,
+      "tagged": true,
+      "auto_until": 3469,
+      "upstream_commit": "c2f822f998c8b61c0a8ed8f9b4c4f4b6d53c69f5",
+      "upstream_date": "2011-09-24",
+      "upstream_branch": "preserved upstream first-parent history",
+      "covers": "Historical automatic or exact-tag profile."
+    },
+    {
+      "build": "3472",
+      "engine": "3400",
+      "major": "v3.0",
+      "automatic": true,
+      "tagged": true,
+      "auto_until": 3472,
+      "upstream_commit": "777828f3e2c43a5c8cd60c4adea7d1337a409d18",
+      "upstream_date": "2011-09-25",
+      "upstream_branch": "preserved upstream first-parent history",
+      "covers": "Historical automatic or exact-tag profile."
+    },
+    {
+      "build": "3477",
+      "engine": "3400",
+      "major": "v3.0",
+      "automatic": true,
+      "tagged": true,
+      "auto_until": 3477,
+      "upstream_commit": "01ff021199c2f1d90455f0e3951d1807d52ca917",
+      "upstream_date": "2011-09-27",
+      "upstream_branch": "preserved upstream first-parent history",
+      "covers": "Historical automatic or exact-tag profile."
+    },
+    {
+      "build": "3482",
+      "engine": "3400",
+      "major": "v3.0",
+      "automatic": true,
+      "tagged": true,
+      "auto_until": 3482,
+      "upstream_commit": "2c1ecd7da8720c33982d634eadc0b8c9f55a9151",
+      "upstream_date": "2011-09-28",
+      "upstream_branch": "preserved upstream first-parent history",
+      "covers": "Historical automatic or exact-tag profile."
     },
     {
       "build": "3666",
@@ -1716,7 +2016,7 @@
       "build": "3400",
       "commit": "66fa1529897131ca51528967fbb21ee124e45775",
       "date": "2011-08-31",
-      "covers": "<= 3400 including lost pre-3020 era (best effort)",
+      "covers": "Historical profiles through3482;lost pre-3020 era best effort",
       "major": "v3.0"
     },
     {
@@ -1778,6 +2078,14 @@
       "major": "v4.0",
       "stage": "dev",
       "version_major": "4"
+    }
+  ],
+  "source_revisions": [
+    {
+      "build": "3451",
+      "commit": "b38a0a6dd38dc5b638e895183f4ed4df469300ae",
+      "license_file": "LICENSES/OpenBOR-3400.txt",
+      "license_sha256": "0854d130894ce6dafecc0b067b30eb26b8661bdcfca246f96c0677fd7d7c1e2a"
     }
   ]
 }

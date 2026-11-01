@@ -1,3 +1,15 @@
+/* AnyBOR modification record: 2026-10-30.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Preserve each profile's GIF decoding, palette, frame disposal and playback
+ * results with bounded input and owned decoder storage.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/3400.md
+ * at the source repository root. Original notices follow below.
+ */
+
 /*
  * OpenBOR - http://www.LavaLit.com
  * -----------------------------------------------------------------------
@@ -10,64 +22,52 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <stdint.h>
+#include <stddef.h>
 #include "packfile.h"
 #include "borendian.h"
 #include "types.h"
 #include "screen.h"
+#include "anigif.h"
 
 
-#pragma pack (1)
+extern uint32_t obor_profile_build;
 
+static void obor_gif_palette(unsigned char *destination, unsigned char *rgb,
+                            int suppress_blackening)
+{
+    int i;
+    if(obor_profile_build < 3424) rgb[0] = 0;
+    else if(obor_profile_build >= 3453 && !suppress_blackening)
+        rgb[0] = rgb[1] = rgb[2] = 0;
+    switch(PAL_BYTES) {
+    case 768: memcpy(destination, rgb, 768); break;
+    case 512:
+        for(i=0; i<256; ++i) {
+            unsigned short color = colour16(rgb[i*3], rgb[i*3+1], rgb[i*3+2]);
+            memcpy(destination+i*2, &color, sizeof(color));
+        }
+        break;
+    case 1024:
+        for(i=0; i<256; ++i) {
+            unsigned color = colour32(rgb[i*3], rgb[i*3+1], rgb[i*3+2]);
+            memcpy(destination+i*4, &color, sizeof(color));
+        }
+        break;
+    }
+}
 
-// ============================== This is it! ===============================
-// Should be something like this...
-
-
-#define			ANIGIF_DECODE_END		0
-#define			ANIGIF_DECODE_FRAME		1
-#define			ANIGIF_DECODE_RETRY		3
-
-#define			NO_CODE				-1
-
-
-
-typedef struct{
-	char		magic[6];
-	unsigned short	screenwidth, screenheight;
-		unsigned char	flags;
-	unsigned char	background;
-	unsigned char	aspect;
-}gifheaderstruct;
-
-
-typedef struct {
-	short	left, top;
-	unsigned short width, height;
-	unsigned char	flags;
-}gifblockstruct;
-
-static gifheaderstruct gif_header;
-
-
-
-
-#if PSP || PS2 || DC
-#define sizeof_gifheaderstruct 13
-#define sizeof_iblock 9
-#endif
-
-
-
-
-static int current_res[2];	// Resolution of opened image
-static int handle = -1;
-static int transparent = -1;
-static int bitdepth;
-static int numcolours;
-static int lastdelay;
-
-
-
+static void obor_gif_pixel(anigif_info *info, s_screen *screen,
+                          size_t position, unsigned char index)
+{
+    unsigned char *palette = info->local_pal ? info->local_pal : info->global_pal;
+    if(obor_profile_build < 3477 || screen->pixelformat == PIXEL_8)
+        screen->data[position] = index;
+    else if(palette && screen->pixelformat == PIXEL_16)
+        memcpy(screen->data+position*2, palette+(size_t)index*2, 2);
+    else if(palette && screen->pixelformat == PIXEL_32)
+        memcpy(screen->data+position*4, palette+(size_t)index*4, 4);
+}
 
 static unsigned char readbyte(int handle){
 	unsigned char c = 0;
@@ -75,34 +75,30 @@ static unsigned char readbyte(int handle){
 	return c;
 }
 
-
-
-
-
-static void passgifblock(int handle){
+static void passgifblock(anigif_info* info){
 	int len;
 
 	// Skip all contained blocks
-	while((len=readbyte(handle))!=0) seekpackfile(handle, len, SEEK_CUR);
+	while((len=readbyte(info->handle))!=0) seekpackfile(info->handle, len, SEEK_CUR);
 }
 
 
 
-static void handle_gfx_control(int handle){
+static void handle_gfx_control(anigif_info* info){
 	int len;
 	int skip;
-	unsigned char buf[4];
+	unsigned char buf[4] = {0};
 
 
 	// Handle all contained blocks
-	while((len=readbyte(handle))!=0){
+	while((len=readbyte(info->handle))!=0){
 		skip = len - 4;
 		if(len>4) len = 4;
-		readpackfile(handle, buf, len);
-		if(skip>0) seekpackfile(handle, skip, SEEK_CUR);
+		readpackfile(info->handle, buf, len);
+		if(skip>0) seekpackfile(info->handle, skip, SEEK_CUR);
 
-		if(buf[0]&1) transparent = buf[3];
-		lastdelay = (buf[2]<<8) | buf[1];
+		if(buf[0]&1) info->transparent = buf[3];
+		info->lastdelay = (buf[2]<<8) | buf[1];
 
 		// disposal = (buf[0]>>2) & 7;
 		// inputflag = (buf[0]>>1) & 1;
@@ -111,23 +107,23 @@ static void handle_gfx_control(int handle){
 
 
 
-static void gifextension(int handle){
+static void gifextension(anigif_info* info){
 	int function;
 
 	// Get extension function code
-	function = readbyte(handle);
+	function = readbyte(info->handle);
 
 	// Note: function may be repeated multiple times (size, data, size, data)
 	switch(function){
 		case 0xF9:
 			// Graphic control
-			handle_gfx_control(handle);
+			handle_gfx_control(info);
 			return;
 		default:
 			// 0x01 = text
 			// 0xFF = app. extension
 			// 0xFE = comment
-			passgifblock(handle);
+			passgifblock(info);
 			return;
 	}
 }
@@ -147,7 +143,7 @@ int readnonzero(int handle){
 
 
 
-static int decodegifblock(int handle, unsigned char *buf, int width, int height, gifblockstruct *gb){
+static int decodegifblock(anigif_info* info, s_screen* buf, int width, int height, gifblockstruct *gb){
 
 	unsigned char bits;
 	short bits2;
@@ -169,7 +165,6 @@ static int decodegifblock(int handle, unsigned char *buf, int width, int height,
 
 	unsigned char *q;
 	unsigned char b[255];
-	unsigned char *linebuffer;
 
 	static unsigned char firstcodestack[4096];
 	static unsigned char lastcodestack[4096];
@@ -185,9 +180,8 @@ static int decodegifblock(int handle, unsigned char *buf, int width, int height,
 
 
 	// get the initial LZW code bits
-	bits = readbyte(handle);
+	bits = readbyte(info->handle);
 	if(bits<2 || bits>8) return 0;
-
 
 	p = q = b;
 	bitsleft = 8;
@@ -197,13 +191,12 @@ static int decodegifblock(int handle, unsigned char *buf, int width, int height,
 	codesize2 = 1 << (codesize = bits + 1);
 	oldcode = oldtoken = NO_CODE;
 
-	linebuffer = buf + (gb->top * width);
 
 	// loop until something breaks
 	for(;;){
 		if(bitsleft == 8){
-			if(++p >= q && (((blocksize = readbyte(handle)) < 1) ||
-				(q=(p=b) + readpackfile(handle, b, blocksize)) < (b+blocksize))){
+			if(++p >= q && (((blocksize = readbyte(info->handle)) < 1) ||
+				(q=(p=b) + readpackfile(info->handle, b, blocksize)) < (b+blocksize))){
 				return 1;	// Done
 			}
 			bitsleft = 0;
@@ -214,16 +207,16 @@ static int decodegifblock(int handle, unsigned char *buf, int width, int height,
 			bitsleft = currentcode;
 		}
 		else{
-			if(++p >= q && (((blocksize = readbyte(handle)) < 1) ||
-				(q=(p=b)+readpackfile(handle, b, blocksize)) < (b+blocksize))){
+			if(++p >= q && (((blocksize = readbyte(info->handle)) < 1) ||
+				(q=(p=b)+readpackfile(info->handle, b, blocksize)) < (b+blocksize))){
 				return 1;	// Done
 			}
 
 			thiscode |= *p << (8 - bitsleft);
 			if(currentcode<=16) *p >>= (bitsleft = currentcode - 8);
 			else{
-				if(++p >= q && (((blocksize = readbyte(handle)) < 1) ||
-					(q=(p=b) + readpackfile(handle, b, blocksize)) < (b+blocksize))){
+				if(++p >= q && (((blocksize = readbyte(info->handle)) < 1) ||
+					(q=(p=b) + readpackfile(info->handle, b, blocksize)) < (b+blocksize))){
 					return 1;	// Done
 				}
 
@@ -252,28 +245,35 @@ static int decodegifblock(int handle, unsigned char *buf, int width, int height,
 			if(oldcode==NO_CODE){
 				return 0;		// Bad code
 			}
+			if(u >= firstcodestack+4096) return 0;
 			*u++ = oldtoken;
 			thiscode = oldcode;
 		}
 
 		while(thiscode>=bits2){
+            if(thiscode>=nextcode || thiscode>=4096 || u>=firstcodestack+4096) return 0;
 			*u++ = lastcodestack [thiscode];
 			thiscode = codestack[thiscode];
 		}
 
 		oldtoken = thiscode;
 		do{
-			if(byte<width && byte>=0 && gb->top+line>=0 && line<(height - gb->top) && thiscode!=transparent) linebuffer[byte] = thiscode;
+			if(byte<width && byte>=0 && (int64_t)gb->top+line>=0 &&
+               (int64_t)gb->top+line<height && thiscode!=info->transparent)
+                obor_gif_pixel(info, buf, ((size_t)((int64_t)gb->top+line)*(size_t)width)+(size_t)byte,
+                               (unsigned char)thiscode);
 			byte++;
 			if(byte >= gb->left + gb->width){
 				byte = gb->left;
 				// check for interlaced image
 				if(gb->flags&0x40){
 					line += inctable[pass];
-					if(line >= gb->height) line = startable[++pass];
+					if(line >= gb->height) {
+                        if(pass>=4) return 0;
+                        line = startable[++pass];
+                    }
 				}
 				else ++line;
-				linebuffer = buf + (width*(gb->top+line));
 			}
 			if (u<=firstcodestack) break;
 			thiscode = *--u;
@@ -297,77 +297,74 @@ static int decodegifblock(int handle, unsigned char *buf, int width, int height,
 
 
 
-void anigif_close(){
-	closepackfile(handle);
-	handle = -1;
+void anigif_close_ex(anigif_info* info){
+    if(!info) return;
+	closepackfile(info->handle);
+	info->handle = -1;
 }
 
 
 
 // Returns true on success
-int anigif_open(char *filename, char *packfilename, unsigned char *pal){
-	unsigned char tpal[1024];
-	int i, j;
-	anigif_close();
+int anigif_open_ex(char *filename, char *packfilename, unsigned char *pal, anigif_info* info){
+	unsigned char tpal[1024] = {0};
+    int noblackenbg, legacy_transparent;
+    if(!info) return 0;
+    noblackenbg = info->noblackenbg;
+    legacy_transparent = info->transparent;
+
+	memset(info, 0, sizeof(anigif_info));
+
+	info->handle = -1;
+	info->transparent = obor_profile_build < 3418 ? legacy_transparent : -1;
+	info->noblackenbg = obor_profile_build >= 3477 ? noblackenbg : 0;
 
 #if PSP || PS2 || DC
-	if((handle=openreadaheadpackfile(filename,packfilename,1*1024*1024, 131072))==-1) return 0;
+	if((info->handle=openreadaheadpackfile(filename,packfilename,1*1024*1024, 131072))==-1) return 0;
 #else
-	if((handle=openpackfile(filename,packfilename))==-1) return 0;
+	if((info->handle=openpackfile(filename,packfilename))==-1) return 0;
 #endif
 
-#if PSP || PS2 || DC
-	if(readpackfile(handle,&gif_header,sizeof_gifheaderstruct)!=sizeof_gifheaderstruct){
-#else
-	if(readpackfile(handle,&gif_header,sizeof(gifheaderstruct))!=sizeof(gifheaderstruct)){
-#endif
-		anigif_close();
+	if(readpackfile(info->handle,&info->gif_header,sizeof_gifheaderstruct)!=sizeof_gifheaderstruct){
+		anigif_close_ex(info);
 		return 0;
 	}
 
-	if(gif_header.magic[0]!='G' || gif_header.magic[1]!='I' || gif_header.magic[2]!='F'){
+	if(info->gif_header.magic[0]!='G' || info->gif_header.magic[1]!='I' || info->gif_header.magic[2]!='F'){
 		// Not a GIF file!
-		anigif_close();
+		anigif_close_ex(info);
 		return 0;
 	}
 
-	current_res[0] = SwapLSB16(gif_header.screenwidth);
-	current_res[1] = SwapLSB16(gif_header.screenheight);
+	//info->current_res[0] = SwapLSB16(info->gif_header.screenwidth);
+	//info->current_res[1] = SwapLSB16(info->gif_header.screenheight);
 
-	bitdepth = (gif_header.flags&7)+1;
-	numcolours = (1<<bitdepth);
-	lastdelay = 1;
-
+    if(obor_profile_build < 3477) {
+        info->bitdepth = (info->gif_header.flags&7)+1;
+        info->numcolours = 1<<info->bitdepth;
+    } else if(obor_profile_build == 3477) {
+        info->bitdepth = info->gif_header.flags&0x80 ?
+            (info->gif_header.flags&7)+1 : ((info->gif_header.flags>>4)&7)+1;
+        info->numcolours = 1<<info->bitdepth;
+    } else if(info->gif_header.flags&0x80) {
+        info->bitdepth = (info->gif_header.flags&7)+1;
+        if(obor_profile_build >= 3479) info->numcolours = 1<<info->bitdepth;
+    } else info->bitdepth = 8;
+	info->lastdelay = 1;
+	//printf("numcolours:%d\n", info->numcolours);
 
 	// Get global palette, if present and if wanted
-	if(gif_header.flags&0x80){
+	if(info->gif_header.flags&0x80){
+		info->global_pal = pal;
 		if(pal){
-			if(readpackfile(handle, tpal, numcolours*3) != numcolours*3){
+			if(readpackfile(info->handle, tpal, info->numcolours*3) != info->numcolours*3){
 
-				anigif_close();
+				anigif_close_ex(info);
 				return 0;
 			}
-			*tpal &= 0xFF000000;
-			switch(PAL_BYTES)
-			{
-			case 768:
-				memcpy(pal, tpal, 768);
-				break;
-			case 1024:
-				for(i=0, j=0; i<1024; i+=4, j+=3)
-				{
-					*(unsigned*)(pal+i) = colour32(tpal[j], tpal[j+1], tpal[j+2]);
-				}
-				break;
-			case 512:
-				for(i=0, j=0; i<512; i+=2, j+=3)
-				{
-					*(unsigned short*)(pal+i) = colour16(tpal[j], tpal[j+1], tpal[j+2]);
-				}
-				break;
-			}
+            obor_gif_palette(pal, tpal, noblackenbg);
 		}
-		else seekpackfile(handle, numcolours*3, SEEK_CUR);
+		else seekpackfile(info->handle, info->numcolours*3, SEEK_CUR);
 	}
 
 	return 1;
@@ -377,20 +374,22 @@ int anigif_open(char *filename, char *packfilename, unsigned char *pal){
 
 
 // Returns type of action to take (frame, retry, end)
-int anigif_decode(s_screen * screen, int *delay, int x, int y){
+int anigif_decode_ex(s_screen * screen, int *delay, int x, int y, unsigned char* pal, anigif_info* info){
 
 	gifblockstruct iblock;
+	unsigned char tpal[1024] = {0};
 	unsigned char c;
+	int numcolours;
 
 
-	if(handle<0) return ANIGIF_DECODE_END;
+	if(!info || info->handle<0) return ANIGIF_DECODE_END;
 	if(screen==NULL){
-		anigif_close();
+		anigif_close_ex(info);
 		return ANIGIF_DECODE_END;
 	}
 
-	if(readpackfile(handle,&c,1)!=1){
-		anigif_close();
+	if(readpackfile(info->handle,&c,1)!=1){
+		anigif_close_ex(info);
 		return ANIGIF_DECODE_END;
 	}
 
@@ -398,19 +397,26 @@ int anigif_decode(s_screen * screen, int *delay, int x, int y){
 	switch(c){
 		case ',':
 			// An image block
-#if PSP || PS2 || DC
-			if(readpackfile(handle, &iblock, sizeof_iblock)!=sizeof_iblock){
-#else
-			if(readpackfile(handle, &iblock, sizeof(iblock))!=sizeof(iblock)){
-#endif
-				anigif_close();
+			if(readpackfile(info->handle, &iblock, sizeof_iblock)!=sizeof_iblock){
+				anigif_close_ex(info);
 				return ANIGIF_DECODE_END;
 			}
 
-			// We don't do local palettes
-			if(iblock.flags&0x80){
-				seekpackfile(handle, numcolours*3, SEEK_CUR);
-			}
+            if(iblock.flags&0x80) {
+                numcolours = obor_profile_build >= 3478 ?
+                    1<<((iblock.flags&7)+1) : info->numcolours;
+                if(obor_profile_build < 3477 || !pal)
+                    seekpackfile(info->handle, numcolours*3, SEEK_CUR);
+                else {
+                    info->local_pal = pal;
+                    if(readpackfile(info->handle, tpal, numcolours*3) != numcolours*3) {
+                        anigif_close_ex(info);
+                        return ANIGIF_DECODE_END;
+                    }
+                    obor_gif_palette(pal, tpal, info->noblackenbg);
+                }
+                if(obor_profile_build >= 3477) info->local_pal = pal;
+            }
 
 			iblock.left = SwapLSB16(iblock.left);
 			iblock.top = SwapLSB16(iblock.top);
@@ -419,21 +425,23 @@ int anigif_decode(s_screen * screen, int *delay, int x, int y){
 			iblock.left += x;
 			iblock.top += y;
 
-			decodegifblock(handle, (unsigned char*)screen->data, screen->width, screen->height, &iblock);
+			decodegifblock(info, screen, screen->width, screen->height, &iblock);
 /*
 			if(!decodegifblock(handle, screen->data, screen->width, screen->height, &iblock)){
-				anigif_close();
+				anigif_close_ex();
 				return ANIGIF_DECODE_END;
 			}
 */
 
-			if(delay) *delay = lastdelay;
+			if(delay) *delay = info->lastdelay;
 			// lastdelay = 0;
-			return ANIGIF_DECODE_FRAME;
+			if(obor_profile_build >= 3477 && iblock.left<0) return ANIGIF_DECODE_RETRY;
+
+			return ANIGIF_DECODE_FRAME|((obor_profile_build >= 3477 && (iblock.flags&0x80))?ANIGIF_DECODE_PAL:0);
 
 		case '!':
 			// Handle GIF extension
-			gifextension(handle);
+			gifextension(info);
 			// if(delay) *delay = lastdelay;
 			// lastdelay = 0;
 			return ANIGIF_DECODE_RETRY;
@@ -442,11 +450,11 @@ int anigif_decode(s_screen * screen, int *delay, int x, int y){
 		default:
 			// Isn't this an EOF?
 			return ANIGIF_DECODE_RETRY;
-//			anigif_close();
+//			anigif_close_ex();
 //			return ANIGIF_DECODE_END;
 	}
 
-	anigif_close();
+	anigif_close_ex(info);
 	return ANIGIF_DECODE_END;
 }
 
@@ -457,3 +465,17 @@ int anigif_decode(s_screen * screen, int *delay, int x, int y){
 
 
 
+
+/* Original single-stream callers keep their state and close/open ordering. */
+static anigif_info obor_legacy_gif = {.handle=-1, .transparent=-1};
+void anigif_close(void) { anigif_close_ex(&obor_legacy_gif); }
+int anigif_open(char *filename, char *packfilename, unsigned char *pal)
+{
+    anigif_close();
+    return anigif_open_ex(filename, packfilename, pal, &obor_legacy_gif);
+}
+int anigif_decode(s_screen *screen, int *delay, int x, int y)
+{
+    return anigif_decode_ex(screen, delay, x, y, obor_legacy_gif.global_pal,
+                           &obor_legacy_gif);
+}

@@ -1,4 +1,4 @@
-/* AnyBOR modification record: 2026-10-24.
+/* AnyBOR modification record: 2026-10-30.
  * Port maintained by retrodiv <retrodiv@proton.me>.
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
@@ -7,7 +7,9 @@
  * used by each collection. Track each model's allocated animation-table
  * capacity and reject lookups outside it. Track initialized owned stream
  * bytes independently of native size, bound cursor reads and preserve
- * buffer-base append/save behavior and native slot policy.
+ * buffer-base append/save behavior and native slot policy. Declare the
+ * historical transform interface, path query and layer records used by the
+ * shared runtime.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/3400.md
  * at the source repository root. Original notices follow below.
@@ -37,6 +39,7 @@
 #include	"video.h"
 #include	"vga.h"
 #include	"screen.h"
+#include	"transform.h"
 #include	"loadimg.h"
 #include	"bitmap.h"
 #include	"sprite.h"
@@ -92,7 +95,8 @@
 #define		LEVEL_MAX_HOLES		40
 #define		LEVEL_MAX_WALLS		40
 #define     LEVEL_MAX_BGLAYERS  100
-#define     LEVEL_MAX_FGLAYERS  10
+#define     LEVEL_MAX_FGLAYERS  100
+#define OBOR_PROFILE_FGLAYERS (obor_profile_build < 3470 ? 10 : LEVEL_MAX_FGLAYERS)
 #define     LEVEL_MAX_TEXTOBJS  50
 #define     LEVEL_MAX_FILESTREAMS 50
 #define     LEVEL_MAX_PALETTES  40                  // altered palettes
@@ -190,7 +194,11 @@
 // A.I move2, affect terrain reflect
 #define     AIMOVE2_NORMAL      0                   // Current default style
 #define     AIMOVE2_IGNOREHOLES 0x00010000          // don't avoid holes
+#define     AIMOVE2_NOTARGETIDLE 0x00020000          // No-target idle movement policy
 #define     MASK_AIMOVE2        0xFFFF0000
+
+#define screenx advancex
+#define screeny ((level->scrolldir == SCROLL_UP || level->scrolldir == SCROLL_DOWN) ? 0 : advancey)
 
 // A.I. attack1, affect attacking style
 #define     AIATTACK1_NORMAL      0                   // Current default style
@@ -675,6 +683,7 @@ typedef struct
 	char            counterattack:8;
 	short 			attack_coords[5];               // stick on the only one victim
 	char            no_pain:8;
+    char no_kill:8;
 	char            no_flash:8;						// Flag to determine if an attack spawns a flash or not
 	char	        no_block:8;						// Flag to determine if an attack is blockable (default 0 - blockable)
 	char            grab:8;
@@ -769,6 +778,19 @@ static inline int obor_model_points_value(long long value, unsigned int build)
     unsigned int low = (unsigned int)value;
     int exact = low <= 0x7fffffffU ? (int)low : -1 - (int)(0xffffffffU - low);
     return obor_profile_signed_value(exact, build < 3330 ? 32 : 16);
+}
+
+static inline int obor_flash_spawn_value(int value, unsigned int build)
+{
+    if(build < 3475) return obor_profile_signed_value(value, 8);
+    return (int)((unsigned int)value & 65535u);
+}
+
+static inline int obor_flash_entity_value(int value, unsigned int build, int critical)
+{
+    if(build < 3473) return obor_profile_signed_value(value, 8);
+    if(critical && build < 3474) return obor_profile_signed_value(value, 16);
+    return (int)((unsigned int)value & 65535u);
 }
 
 static inline short int obor_energycost_flag(int value, unsigned int build)
@@ -1278,8 +1300,8 @@ typedef struct entity
 	short           itemplayer_count:8;
 	short			boss:8;
 	char			dying:8;						// Coresponds with which remap is to be used for the dying flash
-	char			per1:8;							// Used to store at what health value the entity begins to flash
-	char			per2:8;							// Used to store at what health value the entity flashes more rapidly
+	int			per1;							// Used to store at what health value the entity begins to flash
+	int			per2;							// Used to store at what health value the entity flashes more rapidly
 	char			direction:8;					// 0=left 1=right
 	char			nograb:8;			            // Some enemies cannot be grabbed (bikes) - now used with cantgrab as well
 	char			movestep:8;
@@ -1486,8 +1508,8 @@ typedef struct
 	char			itemmap:8;
 	char			colourmap:8;
 	char			dying:8;					// Used for the dying flash animation
-	char			per1:8;						// Used to store at what health value the entity begins to flash
-	char			per2:8;					    // Used to store at what health value the entity flashes more rapidly
+	int			per1;						// Used to store at what health value the entity begins to flash
+	int			per2;					    // Used to store at what health value the entity flashes more rapidly
 	char			nolife:8;					// So nolife can be overriden for all characters
 	char            itemplayer_count:8;         // spawn the item according to the amount of players
 	s_model         *itemmodel;
@@ -1568,6 +1590,7 @@ typedef struct
 	int            amplitude;
 	int            wavelength;
 	float          wavespeed;
+	s_drawmethod   drawmethod; /* Layer representation from profile3462. */
 	float          bgspeedratio;
 	int            enabled;
 }s_bglayer;
@@ -1597,6 +1620,7 @@ typedef struct
 	int            amplitude;
 	int            wavelength;
 	float          wavespeed;
+	s_drawmethod   drawmethod; /* Layer representation from profile3462. */
 	float          bgspeedratio;
 	int            enabled;
 	int            z;
@@ -1837,15 +1861,17 @@ void kill(entity *victim);
 void kill_all();
 int checkhit(entity *attacker, entity *target, int counter);
 int checkhole(float x, float z);
-int testplatform(entity*, float, float);
+int testplatform(entity*, float, float, entity*);
 int testhole(int, float, float);
 int testwall(int, float, float);
 int checkwalls(float x, float z, float a1, float a2);
 int checkholes(float, float);
 int checkwall_below(float x, float z, float a);
 int checkwall(float x, float z);
-entity * check_platform_below(float x, float z, float a);
-entity * check_platform(float x, float z);
+entity * check_platform_below(float x, float z, float a, entity* exclude);
+entity * check_platform(float x, float z, entity* exclude);
+float checkbase(entity*, float, float);
+int testmove(entity*, float, float, float, float);
 void do_attack(entity *e);
 void update_ents();
 entity * find_ent_here(entity *exclude, float x, float z, int types);
@@ -1897,6 +1923,7 @@ void common_throw(void);
 void common_throw_wait(void);
 void common_prethrow(void);
 void npc_warp();
+int checkpathblocked();
 int common_trymove(float xdir, float zdir);
 void normal_runoff();
 void common_stuck_underneath();
@@ -1906,11 +1933,11 @@ entity* common_find_target();
 int common_attack(void);
 int common_try_jump(void);
 int common_try_pick(entity* other);
-int common_try_chase(entity* target);
-int common_try_follow();
-int common_try_avoid(entity* target);
-int common_try_wandercompletely();
-int common_try_wander(entity* target);
+int common_try_chase(entity* target, int dox, int doz);
+int common_try_follow(entity* target, int dox, int doz);
+int common_try_avoid(entity* target, int dox, int doz);
+int common_try_wandercompletely(int dox, int doz);
+int common_try_wander(entity* target, int dox, int doz);
 void common_pickupitem(entity* other);
 int common_walk_anim(entity* ent);
 int common_idle_anim(entity* ent);

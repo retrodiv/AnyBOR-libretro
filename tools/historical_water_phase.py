@@ -8,7 +8,16 @@ import re
 from test_historical_player import function
 
 
-def water_source(engine):
+def water_sines(engine):
+    """Keep the exact native float table without linking unrelated texture APIs."""
+    source = (engine/'source/gamelib/texture.c').read_text()
+    matches = list(re.finditer(r'(?m)^float _sinfactors\[256\]\s*=\s*\{[^}]+};',source))
+    if len(matches)!=1:
+        raise ValueError('One exact native water sine table required')
+    return matches[0][0]
+
+
+def water_source(engine, *, include_entry=False):
     """Read complete shared traversal, water bodies, sine table and native copies."""
     pieces = []
     for filename, names in (
@@ -17,14 +26,14 @@ def water_source(engine):
             ('screen32.c', ('putscreenx8p32_water',))):
         source = (engine / 'source/gamelib' / filename).read_text()
         pieces.extend(function(source, name) for name in names)
-    texture = (engine / 'source/gamelib/texture.c').read_text()
-    table = re.search(r'(?m)^float _sinfactors\[256\]\s*=\s*\{[^}]+};', texture)
-    if table is None:
-        raise ValueError('Actual native water sine table required')
+    if include_entry:
+        source = (engine / 'source/gamelib/screen.c').read_text()
+        pieces += [function(source,name) for name in (
+            'putscreen8_water','obor_screen_blend_table','putscreen_water')]
     pixel = (engine / 'source/gamelib/pixelformat.c').read_text()
     copy_macro = next(line for line in pixel.splitlines() if line.startswith('#define _pcpy '))
     copies = copy_macro + '\n' + function(pixel, 'u16pcpy') + '\n' + function(pixel, 'u32pcpy')
-    return table.group() + '\n' + (engine / 'source/gamelib/obor_water.h').read_text() + '\n' + copies + '\n' + '\n'.join(pieces)
+    return water_sines(engine) + '\n' + (engine / 'source/gamelib/obor_water.h').read_text() + '\n' + copies + '\n' + '\n'.join(pieces)
 
 
 def render_water_phase(engine, fixture):

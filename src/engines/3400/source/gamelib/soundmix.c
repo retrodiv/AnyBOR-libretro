@@ -115,6 +115,7 @@ s_soundcache soundcache[MAX_SAMPLES];
 
 typedef struct{
 	int            active;		 // 1 = play, 2 = loop
+    int paused;
 	int            samplenum;	 // Index of sound playing
 	unsigned int   priority;	 // Used for SFX
 	int            volume[2];	 // Stereo :)
@@ -499,7 +500,7 @@ static void mixaudio(unsigned int todo){
 
 
 	for(chan=0; chan<max_channels; chan++){
-		if(vchannel[chan].active){
+		if(vchannel[chan].active && (obor_profile_build < 3434 || !vchannel[chan].paused)){
 			unsigned modlen;
 			snum = vchannel[chan].samplenum;
 			modlen = sampledata[snum].soundlen;
@@ -653,6 +654,7 @@ int sound_play_sample(int samplenum, unsigned int priority, int lvolume, int rvo
 	vchannel[channel].priority = priority;
 	vchannel[channel].channels = sampledata[samplenum].channels;
 	vchannel[channel].active = CHANNEL_PLAYING;
+    vchannel[channel].paused = 0;
 
 	return channel;
 }
@@ -673,6 +675,14 @@ void sound_stopall_sample(){
 	for(channel=0; channel<max_channels; channel++){
 		vchannel[channel].active = 0;
 	}
+}
+
+void sound_pause_sample(int toggle)
+{
+    int channel;
+    if(obor_profile_build < 3434) return;
+    for(channel = 0; channel < max_channels; channel++)
+        vchannel[channel].paused = toggle;
 }
 
 void sound_volume_sample(int channel, int lvolume, int rvolume){

@@ -116,7 +116,7 @@ class EarlySystemCallbackTests(unittest.TestCase):
 uint32_t obor_profile_build;
 static char diagnostic[1024],cache[1024][256],trace[128];
 static int next_cache,trace_at,mutate_pause;
-static int pause,alwaysupdate,selectScreen,gameOver,menuScreen,titleScreen,hallOfFame;
+static int pause,alwaysupdate,selectScreen,gameOver,menuScreen,titleScreen,hallOfFame,showComplete;
 static unsigned time,newtime;
 static char *currentScene;
 static s_level instance,*level;
@@ -162,7 +162,7 @@ static void check(unsigned revision,int count,const int *ids,const int *resolved
    if(k==3){currentScene=NULL;setup();input.lVal=i;assert(openbor_systemvariant(args,&out,1)==E_FAIL && !out);currentScene=(char*)"scene/name";}
   }
  }
- assert(obor_system_property_index(-1)==-1 && obor_system_property_index(count)==(count==@CANONICAL_COUNT@?count:-1));
+ assert(obor_system_property_index(-1)==-1 && obor_system_property_index(count)==-1);
  setup();assert(openbor_systemvariant(args,&out,0)==E_FAIL && !out);
  alwaysupdate=0;assert(set_alwaysupdate((char*)"AlwaysUpdate",7)==supports_always && alwaysupdate==(supports_always?7:0));
  memset(&instance,0,sizeof(instance));instance.textobjs[0].text=(char*)"visible";

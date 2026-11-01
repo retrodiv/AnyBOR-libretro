@@ -1,13 +1,13 @@
 {
   "schema": 1,
-  "scope": "Preserve full parent/method sizes and embedded offsets while permitting methods in their packed owning records. Every registered profile uses its physical record layout.",
+  "scope": "Preserve declared shared-runtime extents, embedded offsets and alignment for actual entity and layer arrays. Historical field semantics and file wire layouts have separate original-source controls; runtime layouts are not original file formats.",
   "shapes": {
     "3400": {
-      "entity_size": 2332,
+      "entity_size": 2356,
       "entity_alignment": 4,
-      "method_size": 48,
+      "method_size": 64,
       "method_alignment": 4,
-      "entity_method_offset": 2116,
+      "entity_method_offset": 2124,
       "layer_size": 0,
       "layer_method_offset": 0,
       "entity_embedded": true
@@ -92,5 +92,21 @@
       "layer_method_offset": 48,
       "entity_embedded": false
     }
+  },
+  "extra_owners": {
+    "3400": [
+      {
+        "type": "s_bglayer",
+        "size": 148,
+        "alignment": 4,
+        "method_offset": 76
+      },
+      {
+        "type": "s_fglayer",
+        "size": 152,
+        "alignment": 4,
+        "method_offset": 76
+      }
+    ]
   }
 }

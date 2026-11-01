@@ -96,7 +96,32 @@ static const obor_command_assert_location obor_command_assert_locations[] = {
     {3391, {39, 39, 39, 39}, {"prepareList", "prepareList", "prepareList", "prepareList"}},
     {3394, {39, 39, 39, 39}, {"prepareList", "prepareList", "prepareList", "prepareList"}},
     {3397, {39, 39, 39, 39}, {"prepareList", "prepareList", "prepareList", "prepareList"}},
-    {3400, {40, 40, 40, 40}, {"prepareList", "prepareList", "prepareList", "prepareList"}}
+    {3400, {40, 40, 40, 40}, {"prepareList", "prepareList", "prepareList", "prepareList"}},
+    {3406, {40, 40, 40, 40}, {"prepareList", "prepareList", "prepareList", "prepareList"}},
+    {3411, {40, 40, 40, 40}, {"prepareList", "prepareList", "prepareList", "prepareList"}},
+    {3415, {40, 40, 40, 40}, {"prepareList", "prepareList", "prepareList", "prepareList"}},
+    {3416, {40, 40, 40, 40}, {"prepareList", "prepareList", "prepareList", "prepareList"}},
+    {3420, {40, 40, 40, 40}, {"prepareList", "prepareList", "prepareList", "prepareList"}},
+    {3422, {40, 40, 40, 40}, {"prepareList", "prepareList", "prepareList", "prepareList"}},
+    {3427, {40, 40, 40, 40}, {"prepareList", "prepareList", "prepareList", "prepareList"}},
+    {3428, {40, 40, 40, 40}, {"prepareList", "prepareList", "prepareList", "prepareList"}},
+    {3431, {40, 40, 40, 40}, {"prepareList", "prepareList", "prepareList", "prepareList"}},
+    {3434, {40, 40, 40, 40}, {"prepareList", "prepareList", "prepareList", "prepareList"}},
+    {3436, {40, 40, 40, 40}, {"prepareList", "prepareList", "prepareList", "prepareList"}},
+    {3441, {40, 40, 40, 40}, {"prepareList", "prepareList", "prepareList", "prepareList"}},
+    {3445, {40, 40, 40, 40}, {"prepareList", "prepareList", "prepareList", "prepareList"}},
+    {3446, {40, 40, 40, 40}, {"prepareList", "prepareList", "prepareList", "prepareList"}},
+    {3449, {40, 40, 40, 40}, {"prepareList", "prepareList", "prepareList", "prepareList"}},
+    {3454, {40, 40, 40, 40}, {"prepareList", "prepareList", "prepareList", "prepareList"}},
+    {3458, {40, 40, 40, 40}, {"prepareList", "prepareList", "prepareList", "prepareList"}},
+    {3461, {40, 40, 40, 40}, {"prepareList", "prepareList", "prepareList", "prepareList"}},
+    {3463, {40, 40, 40, 40}, {"prepareList", "prepareList", "prepareList", "prepareList"}},
+    {3465, {40, 40, 40, 40}, {"prepareList", "prepareList", "prepareList", "prepareList"}},
+    {3467, {40, 40, 40, 40}, {"prepareList", "prepareList", "prepareList", "prepareList"}},
+    {3469, {40, 40, 40, 40}, {"prepareList", "prepareList", "prepareList", "prepareList"}},
+    {3472, {40, 40, 40, 40}, {"prepareList", "prepareList", "prepareList", "prepareList"}},
+    {3477, {40, 40, 40, 40}, {"prepareList", "prepareList", "prepareList", "prepareList"}},
+    {3482, {40, 40, 40, 40}, {"prepareList", "prepareList", "prepareList", "prepareList"}}
 };
 #endif
 static void obor_command_allocation_assert(int valid, unsigned site)

@@ -124,7 +124,7 @@ static void check_ai(int first,int last){
  actor.modeldata.jumpmovez=0;stage.walls[0][7]=5;
  for(unsigned n=0;n<sizeof(distances)/sizeof(distances[0]);++n){
   candidate.x=distances[n];candidate.z=0;walk_calls=0;
-  int follow=common_try_follow();assert(follow==(distances[n]>=(float)first) && walk_calls==follow);
+  int follow=common_try_follow(NULL,0,0);assert(follow==(distances[n]>=(float)first) && walk_calls==follow);
   actor.takeaction=NULL;warp();assert((actor.takeaction==npc_warp)==(distances[n]>(float)last));
  }
  for(int direction=0;direction<2;++direction)for(int selected=1;selected<=2;++selected){

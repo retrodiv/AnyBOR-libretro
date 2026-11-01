@@ -12,11 +12,13 @@ def render_water_rows(engine, fixture):
             any(type(r['revision']) is not int or not 0 < r['revision'] <= 0xffffffff or
                 type(r['period']) is not int or r['period'] not in (255, 256) or
                 type(r['legacy_rows']) is not bool or
+                any(type(r[k]) is not bool for k in ('palette_rows','destination_clip','normalize_phase')) or
                 type(r['copy_limit']) is not int or not 1 <= r['copy_limit'] <= 4096 for r in rows) or
             len({r['revision'] for r in rows}) != len(rows)):
         raise ValueError('Bounded unique contexts and explicit water row contracts required')
-    checks = '\n'.join('check(%d,%d,%d,%d);' % (
-        r['revision'], r['period'], r['legacy_rows'], r['copy_limit']) for r in rows)
+    checks = '\n'.join('check(%d,%d,%d,%d,%d,%d,%d);' % (
+        r['revision'], r['period'], r['legacy_rows'], r['copy_limit'],
+        r['palette_rows'],r['destination_clip'],r['normalize_phase']) for r in rows)
     code = r'''
 #include <assert.h>
 #include <math.h>
@@ -54,7 +56,10 @@ static const scenario scenarios[]={
  {8,5,8,5,-1,1,0,0,7,0,1},
  {960,1,960,3,0,1,0,0,7,0,0},
  {961,1,961,3,0,1,0,0,7,0,0},
- {10,1,6,1,-2,0,0,0,7,0,0}
+ {10,1,6,1,-2,0,0,0,7,0,0},
+ {8,3,8,5,0,-1,2,-1,4.5f,0,0},
+ {8,3,8,5,0,1,2,-1,4.5f,0,0},
+ {8,3,8,5,0,1,2,-1,4.5f,1,0}
 };
 static s_screen *screen(int width,int height,int format){
  s_screen *s=calloc(1,sizeof(*s)+(size_t)width*height*pixelbytes[format]+32);assert(s);
@@ -62,25 +67,30 @@ static s_screen *screen(int width,int height,int format){
 }
 static int wave_at(float phase,int a){return (int)(_sinfactors[(int)phase]*a+0.5);}
 static void expected(unsigned char *out,s_screen *src,const scenario *c,int format,int kind,
-                     int period,int legacy,int copy_limit,int key,int palette,int mismatch){
+                     int period,int legacy,int copy_limit,int palette_rows,int destination_clip,int normalize_phase,
+                     int key,int palette,int mismatch){
  if((kind==0 || (legacy && kind<3)) && mismatch)return;
  /* A missing explicit remap has defined fallback only in the old source.
     Later null-remap calls are candidate stability controls, not old oracles. */
- if(kind>=3 && palette && (!legacy || palette==2))return;
+ if(kind>=3 && palette && (!palette_rows || palette==2))return;
  if(c->x+c->a*2+c->sw<=0 || c->x-c->a*2>=c->dw)return;
  int sy=c->y<0?-c->y:0,dy=c->y<0?0:c->y,rows=c->sh-sy;
  if(c->y+c->sh>c->dh)rows-=c->y+c->sh-c->dh;
- float phase=(float)(c->time%period);int origin=c->mode==1?wave_at(phase,c->a):c->a;
+ float phase=(float)(c->time%period);if(normalize_phase && phase<0)phase+=256;
+ if(c->mode==1 && (int)phase<0)return;
+ int origin=c->mode==1?wave_at(phase,c->a):c->a;
  float step=period/c->wave;phase+=sy*step;
  for(int r=0;r<rows;++r){
-  phase=phase-(int)phase+(int)phase%period;int shift=wave_at(phase,c->a)-origin;phase+=step;
+  phase=phase-(int)phase+(int)phase%period;
+  if((int)phase<0 || (int)phase>=256)continue;
+  int shift=wave_at(phase,c->a)-origin;phase+=step;
   int first=c->x+shift,last=first+c->sw,source=0,count;
   if(legacy){
    if(last<0||first>c->dw)continue;
    if(first<0){source=-first;count=last;first=0;}
    else count=last>c->dw?c->dw-first:c->sw;
   }else{
-   if(first>=c->sw||last<=0)continue;
+   if(first>=(destination_clip?c->dw:c->sw)||last<=0)continue;
    if(first<0){source=-first;first=0;}if(last>c->dw)last=c->dw;count=last-first;
   }
   if(count<=0)continue;
@@ -94,7 +104,7 @@ static void expected(unsigned char *out,s_screen *src,const scenario *c,int form
    if(kind==1){if(input[si+i])out[di+i]=input[si+i];}
    else if(kind==2){if(input[si+i])out[di+i]=lut[(input[si+i]<<8)|out[di+i]];}
    else if(!key||input[si+i]){
-    unsigned index=input[legacy?si+i:i];int dest_index=legacy?di+i:i;
+    unsigned index=input[palette_rows?si+i:i];int dest_index=palette_rows?di+i:i;
     if(format==PIXEL_16){unsigned short v=map16[index],d;
      memcpy(&d,out+dest_index*2,2);if(kind==4)v=blend16(v,d);memcpy(out+(di+i)*2,&v,2);}
     else{unsigned v=map32[index],d;
@@ -110,7 +120,8 @@ static void invoke(s_screen *dest,s_screen *src,const scenario *c,int format,int
  else if(format==PIXEL_16)putscreenx8p16_water(dest,src,c->x,c->y,key,palette?NULL:map16,kind==4?blend16:NULL,c->a,c->wave,c->time,c->mode);
  else putscreenx8p32_water(dest,src,c->x,c->y,key,palette?NULL:map32,kind==4?blend32:NULL,c->a,c->wave,c->time,c->mode);
 }
-static void check(unsigned revision,int period,int legacy,int copy_limit){
+static void check(unsigned revision,int period,int legacy,int copy_limit,
+                  int palette_rows,int destination_clip,int normalize_phase){
  obor_profile_build=revision;
  for(int i=0;i<256;++i){map16[i]=(unsigned short)(0x1111+i*17);map32[i]=0x21212121u+i*11111u;}
  for(int i=0;i<65536;++i)lut[i]=(unsigned char)(((i>>8)*3+i)&255);
@@ -130,7 +141,7 @@ static void check(unsigned revision,int period,int legacy,int copy_limit){
     if(c->sh==1&&c->dh==1){bytes(src)[8]=bytes(src)[9]=0;}
     if(kind>=3)src->palette=palette==2?NULL:(unsigned char*)(format==PIXEL_16?(void*)map16:(void*)map32);
     unsigned char *oracle=malloc(size);assert(oracle);memcpy(oracle,bytes(dest),size);
-    trace=0;calls=0;expected(oracle,src,c,format,kind,period,legacy,copy_limit,key,palette,mismatch);
+    trace=0;calls=0;expected(oracle,src,c,format,kind,period,legacy,copy_limit,palette_rows,destination_clip,normalize_phase,key,palette,mismatch);
     uint64_t expected_trace=trace;unsigned expected_calls=calls;trace=0;calls=0;
     invoke(dest,src,c,format,kind,key,palette);
     if(memcmp(bytes(dest),oracle,size)||trace!=expected_trace||calls!=expected_calls){
@@ -143,7 +154,7 @@ static void check(unsigned revision,int period,int legacy,int copy_limit){
  scenario c={8,2,8,3,0,0,2,0,7,0,0};s_screen *src=screen(8,2,PIXEL_8),*dest=screen(8,3,PIXEL_8);
  for(int which=0;which<7;++which){scenario bad=c;src->height=2;memset(bytes(dest),9,24);
   if(which==0)src->height=0;else if(which==1)bad.y=INT_MIN;else if(which==2)bad.y=INT_MAX;
-  else if(which==3)bad.wave=0;else if(which==4)bad.wave=NAN;else if(which==5){bad.time=-1;bad.mode=1;}else bad.wave=1.0e-38f;
+  else if(which==3)bad.wave=0;else if(which==4)bad.wave=NAN;else if(which==5){bad.time=-1;bad.mode=1;if(normalize_phase)bad.wave=0;}else bad.wave=1.0e-38f;
   copyscreen_water(dest,src,bad.x,bad.y,bad.a,bad.wave,bad.time,bad.mode);
   for(int i=0;i<24;++i)assert(bytes(dest)[i]==9);
  }

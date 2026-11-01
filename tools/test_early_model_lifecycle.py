@@ -3,6 +3,7 @@
 SPDX-License-Identifier: BSD-3-Clause
 Copyright (c) 2026 retrodiv <retrodiv@proton.me>
 """
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -25,6 +26,98 @@ FIXTURE = Path(__file__).parent / 'fixtures/profile-early-model-lifecycle.json'
 
 def ints(values):
     return '{' + ','.join(map(str, values)) + '}'
+
+
+class ModelDefaultTests(unittest.TestCase):
+    def test_copy_idle_percent_and_partial_defense_boundaries(self):
+        path = FIXTURE.with_name('profile-early-model-defaults.json')
+        fixture = load_contract_fixture(path)
+        rows = fixture['sources']
+        revisions = {row['revision'] for row in rows}
+        self.assertEqual(len(rows), len(revisions))
+        self.assertTrue(set(fixture['boundary_controls']) <= revisions)
+        for profile in contract_profiles(fixture, json.loads((ROOT/'src/pin.json').read_text())['profiles']):
+            revision = int(profile.get('revision', profile['build']))
+            if profile['engine'] == fixture['engine'] and fixture['range'][0] <= revision <= fixture['range'][1]:
+                self.assertIn(revision, revisions)
+        engine = Path(os.environ.get('OBOR_EARLY_TEXT_ENGINE', ROOT/'src/engines'/fixture['engine']))
+        core = (engine/'openbor.c').read_text()
+        script = (engine/'openborscript.c').read_text()
+        variant = (engine/'source/scriptlib/ScriptVariant.c').read_text()
+        macros = []
+        for name in ['GET_ARG', 'GET_FLOAT_ARG']:
+            found = re.findall(r'(?m)^#define '+name+r'\(z\)[^\n]*', core)
+            self.assertEqual(len(found), 1)
+            macros += found
+        pieces = [function(core, name) for name in
+                  ['isNumeric', 'getValidFloat', 'ParseArgs', 'findarg', 'obor_legacy_arg', 'ent_copy_uninit']]
+        pieces += [function(variant, 'ScriptVariant_IntegerValue'), function(script, 'openbor_setidle')]
+        loader = function(core, 'load_cached_model')
+        start = loader.index('case CMD_MODEL_DEFENSE:')
+        defense = loader[start:loader.index('case CMD_MODEL_OFFENSE:', start)]
+
+        def floats(values):
+            return '{'+','.join(repr(float(v))+'f' for v in values)+'}'
+
+        numbers = ['{'+(json.dumps(c['input']) if c['input'] is not None else 'NULL')+','+
+                   floats([r[0] for r in c['results']])+','+ints([r[1] for r in c['results']])+'}'
+                   for c in fixture['numbers']]
+        defenses = []
+        for c in fixture['defense']:
+            results = ['{'+floats(r['values'])+','+str(r['warnings'])+','+str(r['log_warnings'])+'}'
+                       for r in c['results']]
+            defenses.append('{'+json.dumps(c['line'])+','+ints(c['targets'] or [0])+','+
+                            str(len(c['targets']))+',{'+','.join(results)+'}}')
+        copies = ['{'+','.join([ints(c['values']), ints(c['prior']), ints(c['health']),
+                               '{'+','.join(ints(r) for r in c['expected'])+'}'])+'}'
+                  for c in fixture['copy']]
+        idles = []
+        for c in fixture['idle']:
+            values = c['input']
+            idles.append('{'+','.join([str(values[0]), str(values[1]), ints(values[2:5]),
+                         '{'+','.join(map(str, values[5:8]))+'}', str(values[8])+'u',
+                         *(str(v)+('u' if i == 5 else '') for i, v in enumerate(c['result']))])+'}')
+        checks = []
+        for r in rows:
+            self.assertIs(type(r['copy_zero']), bool)
+            self.assertIs(type(r['percent']), bool)
+            self.assertRegex(r['commit'], r'^[0-9a-f]{40}$')
+            checks.append('check(%d,%d,%d,%s);' %
+                          (r['revision'], r['copy_zero'], r['percent'], r['diagnostic']))
+        program = (path.parent/'early_model_defaults.c').read_text()
+        for key, value in dict(MACROS='\n'.join(macros), PIECES='\n'.join(pieces),
+                               DEFENSE_CASE=defense, NUMBERS=',\n'.join(numbers),
+                               DEFENSE=',\n'.join(defenses), COPY=',\n'.join(copies),
+                               IDLE=',\n'.join(idles), CHECKS='\n'.join(checks)).items():
+            program = program.replace('@'+key+'@', value)
+        with tempfile.TemporaryDirectory(prefix='early-model-defaults-') as name:
+            unit = Path(name)/'probe.c'
+            binary = unit.with_suffix('')
+            unit.write_text(program)
+            includes = [engine, ROOT/'src/port/libretro', ROOT/'src/glue', engine/'source',
+                        *sorted(p for p in (engine/'source').iterdir() if p.is_dir())]
+            flags = ['-std=gnu11', '-O1', '-g', '-UNDEBUG', '-DUNIT_TEST=1', '-DSAFEALLOC_H=1',
+                     '-Dstricmp=strcasecmp', '-Dstrnicmp=strncasecmp', '-fsigned-char', '-fcommon',
+                     '-fsanitize=address,undefined,pointer-overflow', '-fno-sanitize-recover=all',
+                     '-fno-omit-frame-pointer', '-Wall', '-Wextra', '-Werror',
+                     '-Wno-error=type-limits', '-Wno-error=implicit-fallthrough',
+                     '-Wno-error=deprecated-declarations', '-Wno-unused-parameter', '-Wno-unused-function']
+            compiler = shlex.split(os.environ.get('HOST_CC', 'cc'))
+            links = [] if sys.platform == 'darwin' else ['-no-pie']
+            build = subprocess.run(compiler+flags+['-I'+str(p) for p in includes]+
+                                   [str(unit), *links, '-o', str(binary)], capture_output=True,
+                                   text=True, timeout=60)
+            self.assertEqual(build.returncode, 0, build.stdout+build.stderr)
+            run = subprocess.run([str(binary)], capture_output=True, text=True, timeout=20,
+                                 env=sanitizer_environment())
+            self.assertEqual(run.returncode, 0, run.stdout+run.stderr)
+            self.assertIn('early_model_defaults=1', run.stdout)
+            if os.environ.get('OBOR_MODEL_DEFAULT_OBSERVATIONS'):
+                Path(os.environ['OBOR_MODEL_DEFAULT_OBSERVATIONS']).write_text(json.dumps(dict(
+                    compiler=compiler, contexts=len(rows), cases={k:len(fixture[k]) for k in
+                        ['numbers', 'defense', 'copy', 'idle']},
+                    source_sha256=hashlib.sha256(program.encode()).hexdigest(),
+                    stdout=run.stdout, scope=fixture['scope']), indent=2)+'\n')
 
 
 class EarlyModelLifecycleTests(unittest.TestCase):

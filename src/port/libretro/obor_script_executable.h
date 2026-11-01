@@ -97,11 +97,9 @@ static int obor_script_compact_executable(Interpreter *p, List *exports)
     if (index >= 0) map[index] = 1; \
 } while (0)
     OBOR_KEEP_ENTRY(mainEntryIndex);
-#if OBOR_ENGINE_BUILD != 3400
     OBOR_KEEP_ENTRY(clearEntryIndex);
-#if OBOR_ENGINE_BUILD != 3741
+#if OBOR_ENGINE_BUILD != 3400 && OBOR_ENGINE_BUILD != 3741
     OBOR_KEEP_ENTRY(initEntryIndex);
-#endif
 #endif
 #undef OBOR_KEEP_ENTRY
     if (exports) {
@@ -138,11 +136,9 @@ static int obor_script_compact_executable(Interpreter *p, List *exports)
         }
     }
     if (p->mainEntryIndex >= 0) p->mainEntryIndex = map[p->mainEntryIndex];
-#if OBOR_ENGINE_BUILD != 3400
     if (p->clearEntryIndex >= 0) p->clearEntryIndex = map[p->clearEntryIndex];
-#if OBOR_ENGINE_BUILD != 3741
+#if OBOR_ENGINE_BUILD != 3400 && OBOR_ENGINE_BUILD != 3741
     if (p->initEntryIndex >= 0) p->initEntryIndex = map[p->initEntryIndex];
-#endif
 #endif
     for (i = 0; i < size; ++i)
         p->theInstructionList.solidlist[i] = i < count ? &storage[i] : NULL;

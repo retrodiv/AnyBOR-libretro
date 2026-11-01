@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.79 — historical profiles through 3482
+
+- Add 25 official profiles from 3406 through 3482.
+- Preserve each profile's script values, saved data, movement, layers, sprite rendering and audio behavior.
+- Retain original diagnostic messages with controlled engine stops and bounded data access.
+
 ## 0.1.78 — CI compilation and native scheduling
 
 - Compile callback-order checks from a case table while retaining every assertion.

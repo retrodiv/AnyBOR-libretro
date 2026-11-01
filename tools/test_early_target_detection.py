@@ -36,14 +36,16 @@ class EarlyTargetDetectionTests(unittest.TestCase):
         variant = (engine / 'source/scriptlib/ScriptVariant.c').read_text()
         variants = '\n'.join(function(variant, name) for name in
                              ['ScriptVariant_ChangeType', 'ScriptVariant_Clear', 'ScriptVariant_IntegerValue'])
-        target = function(core, 'diff') + function(core, 'normal_find_target')
+        target = function(core, 'diff').replace('diff(', 'native_diff(', 1)
+        target += '\nstatic int diff_calls;\nfloat diff(float a,float b){diff_calls++;return native_diff(a,b); }\n'
+        target += function(core, 'normal_find_target')
         callback = function(script, 'openbor_findtarget')
         checks = []
         for row in rows:
             self.assertRegex(row['commit'], r'^[0-9a-f]{40}$')
             self.assertEqual(row['engine'], fixture['engine'])
             self.assertIn(row['core_interface'], (0, 1, 2))
-            checks.append('check(%d,%d);' % (row['revision'], row['optional_detect']))
+            checks.append('check(%d,%d,%d);' % (row['revision'], row['optional_detect'], row['cached_distances']))
         program = r'''
 #include <assert.h>
 #include <stdint.h>
@@ -57,7 +59,7 @@ class EarlyTargetDetectionTests(unittest.TestCase):
 #undef shutdown
 #undef check_range
 uint32_t obor_profile_build;
-static entity actor,candidate,sentinel,*self,*ent_list[2]={&actor,&candidate};
+static entity actor,candidate,alternate,sentinel,*self,*ent_list[3]={&actor,&candidate,&alternate};
 static int ent_max=2,range_ok,range_calls,find_calls,extra_seen,animation_seen,third_reads;
 static ScriptVariant *third_argument;
 CHAR *StrCache_Get(int index){(void)index;abort();}
@@ -82,7 +84,44 @@ static HRESULT record_integer(ScriptVariant *value,LONG *out){
 @CALLBACK@
 #undef normal_find_target
 #undef ScriptVariant_IntegerValue
-static void check(unsigned revision,int enabled){
+static void selection_checks(int cached){
+ static const struct {float ax,az,bx,bz;int vulnerable,invincible,exists,dead,type,hide,second_dead,result,old_calls,new_calls;} cases[]={
+  {10,0,5,0,1,0,1,0,2,0,0,2,12,4},
+  {10,0,10,0,1,0,1,0,2,0,0,1,12,4},
+  {10,0,-5,0,1,0,1,0,2,0,0,1,8,4},
+  {-10,0,5,0,1,0,1,0,2,0,0,2,12,4},
+  {10,0,100,0,1,0,1,0,2,0,0,1,12,4},
+  {10,0,-100,0,1,1,1,0,2,0,0,2,8,4},
+  {10,0,-100,0,1,2,1,0,2,0,0,1,8,4},
+  {10,0,-100,0,0,0,1,0,2,0,0,2,8,4},
+  {10,0,5,0,1,0,0,0,2,0,0,2,4,2},
+  {10,0,5,0,1,0,1,1,2,0,0,2,4,2},
+  {10,0,5,0,1,0,1,0,4,0,0,2,4,2},
+  {10,0,5,0,1,0,1,0,2,11,0,2,8,4},
+  {10000,0,5,0,1,0,1,0,2,0,0,2,8,4},
+  {0.5f,1.25f,1.5f,0.5f,1,0,1,0,2,0,0,1,12,4},
+  {0.5f,1.25f,1,0.5f,1,0,1,0,2,0,0,2,12,4},
+  {0,0,0,0,1,0,1,0,2,0,0,1,8,4},
+  {10,0,5,0,1,0,0,0,2,0,1,0,0,0}
+ };
+ s_anim first_animation={0},second_animation={0};short first_vulnerable[1],second_vulnerable[1]={1};
+ first_animation.vulnerable=first_vulnerable;second_animation.vulnerable=second_vulnerable;
+ ent_max=3;
+ for(unsigned k=0;k<sizeof(cases)/sizeof(*cases);k++){
+  memset(&actor,0,sizeof(actor));memset(&candidate,0,sizeof(candidate));memset(&alternate,0,sizeof(alternate));
+  self=&actor;actor.modeldata.hostile=2;actor.modeldata.stealth.detect=10;actor.direction=1;actor.exists=1;
+  first_vulnerable[0]=cases[k].vulnerable;candidate.animation=&first_animation;alternate.animation=&second_animation;
+  candidate.x=cases[k].ax;candidate.z=cases[k].az;alternate.x=cases[k].bx;alternate.z=cases[k].bz;
+  candidate.invincible=cases[k].invincible;candidate.exists=cases[k].exists;candidate.dead=cases[k].dead;
+  candidate.modeldata.type=cases[k].type;candidate.modeldata.stealth.hide=cases[k].hide;
+  alternate.exists=1;alternate.dead=cases[k].second_dead;alternate.modeldata.type=2;
+  diff_calls=range_calls=0;entity *chosen=normal_find_target(-1,0);
+  assert(chosen==(cases[k].result==1?&candidate:cases[k].result==2?&alternate:NULL));
+  assert(!range_calls && diff_calls==(cached?cases[k].new_calls:cases[k].old_calls));
+ }
+ ent_max=2;
+}
+static void check(unsigned revision,int enabled,int cached){
  static const struct {int argc,anim,type,extra,hide,range;} cases[]={
   {1,-1,VT_INTEGER,4,11,1},{2,-1,VT_INTEGER,4,11,1},
   {3,-1,VT_INTEGER,2,12,1},{3,-1,VT_INTEGER,2,13,1},
@@ -120,6 +159,7 @@ static void check(unsigned revision,int enabled){
  self=&sentinel;find_calls=0;
  assert(openbor_findtarget(args,&out,1)==S_OK && out==&result && result.vt==VT_EMPTY && self==&sentinel && !find_calls);
  out=&result;assert(openbor_findtarget(NULL,&out,0)==E_FAIL && !out && self==&sentinel);
+ selection_checks(cached);
 }
 int main(void){@CHECKS@ puts("early_target_detection=1");return 0;}
 '''

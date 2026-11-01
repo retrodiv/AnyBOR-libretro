@@ -1,10 +1,11 @@
-/* AnyBOR modification record: 2026-10-23.
+/* AnyBOR modification record: 2026-10-30.
  * Port maintained by retrodiv <retrodiv@proton.me>.
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
  * Upstream code retains its original license and notices.
- * Match drawing-method typedef alignment to packed owning records without
- * changing fields, offsets or sizes.
+ * Keep drawing-method alignment compatible with packed owning records and
+ * reserve shared water and layer fields; select each profile's native field
+ * use, aliases and defaults in its accessors and renderers.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/3400.md
  * at the source repository root. Original notices follow below.
@@ -20,6 +21,10 @@
 
 #ifndef GAMELIB_TYPES_H
 #define GAMELIB_TYPES_H
+
+#ifndef TRANSPARENT_IDX
+#define		TRANSPARENT_IDX		0x00
+#endif
 
 
 #define	ANYNUMBER		 2
@@ -175,6 +180,15 @@ void u16pcpy(unsigned short* pdest, const unsigned char* psrc, unsigned short* p
 void u32revpcpy(unsigned* pdest, const unsigned char* psrc, unsigned* pp, unsigned len);
 void u32pcpy(unsigned* pdest, const unsigned char* psrc, unsigned* pp, unsigned len);
 
+/* Own water fields from3454;3462adds float/plane aliases. */
+typedef struct {
+    union {int amplitude;float beginsize;};
+    union {float wavelength;float endsize;};
+    int wavetime;
+    union {float wavespeed;int perspective;int historical_wavespeed;};
+    int watermode;
+} water_transform;
+
 typedef struct
 {
 	unsigned char* table;
@@ -193,6 +207,7 @@ typedef struct
 	int shiftx;
 	int centerx;   // shift centerx
 	int centery;   //shift centery
+    water_transform water;
 } s_drawmethod
 #ifdef LIBRETRO
     /* Match packed owning records without changing fields or their offsets. */
