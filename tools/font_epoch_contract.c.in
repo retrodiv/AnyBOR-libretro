@@ -1,0 +1,136 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <stdint.h>
+#include <stddef.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdarg.h>
+#include <string.h>
+#include "types.h"
+#include "font.h"
+#include "bitmap.h"
+#include "sprite.h"
+#include "screen.h"
+#include "spriteq.h"
+#include "loadimg.h"
+#undef printf
+uint32_t obor_profile_build;
+#define CHECK(c) do {if(!(c)){fprintf(stderr,"FONT_EPOCH profile=%u line=%d\n",obor_profile_build,__LINE__);abort();}}while(0)
+static s_font **fonts[MAX_FONTS];
+static char b[1024];
+int pixelformat=PIXEL_8,screenformat=PIXEL_8;
+int pixelbytes[5]={1,1,2,3,4};
+static int tile_width=12,tile_height=9,fail_image,fail_bitmap,fail_glyph;
+static int current_bank,current_glyph,loads;
+static void *glyph_owners[512];
+static unsigned glyph_live;
+static void *glyph_malloc(size_t size) {
+    if(fail_glyph && current_glyph==17)return NULL;
+    void *p=malloc(size);CHECK(p);
+    for(unsigned i=0;i<512;++i)if(!glyph_owners[i]) {glyph_owners[i]=p;++glyph_live;return p;}
+    CHECK(0);return NULL;
+}
+static void observed_free(void *p) {
+    for(unsigned i=0;i<512;++i)if(p && glyph_owners[i]==p) {glyph_owners[i]=NULL;--glyph_live;break;}
+    free(p);
+}
+static struct {int route,x,y,bank,glyph;} events[128];
+static unsigned event_count;
+static struct {int hRes,vRes;} videomodes={320,240};
+@HUD_MACROS@
+static void record(int route,int x,int y,s_sprite *frame) {
+    CHECK(event_count<128 && frame);
+    events[event_count].route=route;events[event_count].x=x;events[event_count].y=y;
+    events[event_count].bank=frame->offsety;events[event_count].glyph=frame->offsetx;++event_count;
+}
+void spriteq_add_frame(int x,int y,int z,s_sprite *frame,s_drawmethod *dm,int sortid) {
+    CHECK((z==FONT_LAYER+5 || z==FONT_LAYER) && !dm && !sortid);record(4,x,y,frame);
+}
+void putsprite(int x,int y,s_sprite *frame,s_screen *screen,s_drawmethod *dm) {
+    CHECK(screen && !dm);record(3,x,y,frame);
+}
+void putsprite_8(int x,int y,int flip,s_sprite *frame,s_screen *screen,unsigned char *remap,unsigned char *blend) {
+    CHECK(!flip && screen && !remap && !blend);record(0,x,y,frame);
+}
+void putsprite_x8p16(int x,int y,int flip,s_sprite *frame,s_screen *screen,unsigned short *remap,unsigned short(*fp)(unsigned short,unsigned short)) {
+    CHECK(!flip && screen && !remap && !fp);record(1,x,y,frame);
+}
+void putsprite_x8p32(int x,int y,int flip,s_sprite *frame,s_screen *screen,unsigned *remap,unsigned(*fp)(unsigned,unsigned)) {
+    CHECK(!flip && screen && !remap && !fp);record(2,x,y,frame);
+}
+size_t obor_allocation_size(const void *p){(void)p;CHECK(0);return 0;}
+int loadscreen(char *filename,char *archive,unsigned char *pal,int format,s_screen **output) {
+    CHECK(filename && archive && !strcmp(archive,"fixture") && !pal && format==PIXEL_8);
+    ++loads;const char *slash=strrchr(filename,'/');current_bank=slash?(int)strtol(slash+1,NULL,16):0;
+    if(fail_image || (current_bank!=0 && current_bank!=129))return 0;
+    *output=calloc(1,sizeof(**output));CHECK(*output);
+    (*output)->width=tile_width*16;(*output)->height=tile_height*16;(*output)->pixelformat=PIXEL_8;
+    return 1;
+}
+void freescreen(s_screen **screen){if(screen){free(*screen);*screen=NULL;}}
+s_bitmap *allocbitmap(int width,int height,int format) {
+    if(fail_bitmap)return NULL;
+    s_bitmap *p=calloc(1,sizeof(*p));CHECK(p);p->width=width;p->height=height;p->pixelformat=format;return p;
+}
+void freebitmap(s_bitmap *p){free(p);}
+void getbitmap(int x,int y,int width,int height,s_bitmap *bitmap,s_screen *screen) {
+    CHECK(screen && width==tile_width && height==tile_height);
+    current_glyph=(y/height)*16+x/width;bitmap->width=width;bitmap->height=height;
+}
+void clipbitmap(s_bitmap *bitmap,int *left,int *right,int *top,int *bottom) {
+    CHECK(left && !right && top && !bottom);*left=1;*top=2;
+    bitmap->width=current_glyph==1?0:1+current_glyph%5;
+    bitmap->height=current_glyph==0?3:7;
+}
+unsigned fakey_encodesprite(s_bitmap *bitmap){CHECK(bitmap);return sizeof(s_sprite);}
+unsigned encodesprite(int x,int y,s_bitmap *bitmap,s_sprite *dest) {
+    CHECK(x==-1 && y==-2 && bitmap && dest);memset(dest,0,sizeof(*dest));
+    dest->width=bitmap->width;dest->height=bitmap->width?bitmap->height:0;
+    dest->offsetx=current_glyph;dest->offsety=current_bank;return sizeof(*dest);
+}
+@FUNCTIONS@
+static void trace(unsigned revision,int flags,int kind,int format) {
+    printf("{\"revision\":%u,\"flags\":%d,\"kind\":%d,\"format\":%d,\"events\":[",revision,flags,kind,format);
+    for(unsigned i=0;i<event_count;++i)printf("%s[%d,%d,%d,%d,%d]",i?",":"",events[i].route,events[i].x,events[i].y,events[i].bank,events[i].glyph);
+    puts("]}");
+}
+int main(void) {
+    static const unsigned revisions[]={@REVISIONS@};
+    static const int flags[]={0,1,2,3,-2};
+    static const int formats[]={PIXEL_8,PIXEL_x8,PIXEL_16,PIXEL_32};
+    static char text[]="AB\nC\001\201A\202B\201";
+    for(unsigned ri=0;ri<sizeof(revisions)/sizeof(revisions[0]);++ri) {
+        obor_profile_build=revisions[ri];@RESET@
+        for(unsigned fi=0;fi<sizeof(flags)/sizeof(flags[0]);++fi) {
+            int flag=flags[fi];fail_image=fail_bitmap=0;tile_width=12;tile_height=9;loads=0;
+            CHECK(font_load(0,"fixture","fixture",flag));
+            printf("{\"revision\":%u,\"flags\":%d,\"kind\":0,\"width\":%d,\"height\":%d,\"text_width\":%d,\"loads\":%d}\n",obor_profile_build,flag,fontmonowidth(0),fontheight(0),font_string_width(0,"%s",text),loads);
+            printf("{\"revision\":%u,\"flags\":%d,\"kind\":6,\"col\":%d,\"line\":%d}\n",obor_profile_build,flag,_colx(0,2),_liney(0,-3));
+            event_count=0;_menutextm(0,-3,1,"%s","A");trace(obor_profile_build,flag,7,0);
+            event_count=0;font_printf(7,11,0,5,"%s",text);trace(obor_profile_build,flag,1,0);
+            for(unsigned pf=0;pf<sizeof(formats)/sizeof(formats[0]);++pf) {
+                s_screen screen={0};screen.pixelformat=formats[pf];event_count=0;
+                screen_printf(&screen,7,11,0,"%s",text);trace(obor_profile_build,flag,2,formats[pf]);
+            }
+            font_unload(0);
+            CHECK(!glyph_live);
+            printf("{\"revision\":%u,\"flags\":%d,\"kind\":3,\"width\":%d,\"height\":%d,\"text_width\":%d}\n",obor_profile_build,flag,fontmonowidth(0),fontheight(0),font_string_width(0,"%s",text));
+        }
+        fail_image=1;CHECK(!font_load(0,"fixture","fixture",0));fail_image=0;
+        printf("{\"revision\":%u,\"kind\":4,\"width\":%d,\"height\":%d}\n",obor_profile_build,fontmonowidth(0),fontheight(0));
+        fail_bitmap=1;tile_width=16;tile_height=11;CHECK(!font_load(0,"fixture","fixture",0));fail_bitmap=0;
+        printf("{\"revision\":%u,\"kind\":5,\"width\":%d,\"height\":%d}\n",obor_profile_build,fontmonowidth(0),fontheight(0));
+        fail_glyph=1;tile_width=20;tile_height=13;CHECK(!font_load(0,"fixture","fixture",0));fail_glyph=0;
+        CHECK(!glyph_live);
+        printf("{\"revision\":%u,\"kind\":8,\"width\":%d,\"height\":%d}\n",obor_profile_build,fontmonowidth(0),fontheight(0));
+        font_unload(0);
+        for(int slot=0;slot<MAX_FONTS;++slot) {
+            tile_width=8+slot;tile_height=10+slot;
+            CHECK(font_load(slot,"fixture","fixture",0));
+            printf("{\"revision\":%u,\"kind\":9,\"slot\":%d,\"width\":%d,\"height\":%d,\"col\":%d,\"line\":%d}\n",obor_profile_build,slot,fontmonowidth(slot),fontheight(slot),_colx(slot,2),_liney(slot,-3));
+            font_unload(slot);CHECK(!glyph_live);
+            printf("{\"revision\":%u,\"kind\":10,\"slot\":%d,\"width\":%d,\"height\":%d}\n",obor_profile_build,slot,fontmonowidth(slot),fontheight(slot));
+        }
+    }
+    return 0;
+}

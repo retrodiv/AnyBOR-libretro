@@ -1,0 +1,146 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <assert.h>
+#include <math.h>
+#include <stdint.h>
+#include <stdarg.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "openbor.h"
+#undef assert
+#undef printf
+#ifdef NDEBUG
+#error Path assertions must remain enabled
+#endif
+_Static_assert(__builtin_types_compatible_p(__typeof__(((entity *)0)->destx), float),
+ "Path destination x retains its source floating-point type");
+_Static_assert(__builtin_types_compatible_p(__typeof__(((entity *)0)->destz), float),
+ "Path destination z retains its source floating-point type");
+_Static_assert(__builtin_types_compatible_p(__typeof__(((entity *)0)->waypoints), point2d *),
+ "Entity path storage retains its native point element type");
+_Static_assert(__builtin_types_compatible_p(__typeof__(((entity *)0)->numwaypoints), int),
+ "Entity path count retains its source integer type");
+struct path_case {
+ int routine;uint32_t first,last;
+ int flags[10],video[2],zrange[2];
+ float position[2],target[2],velocity[2],destination[2],random[3];
+ float speed,step;int geometry,exceptional;uint32_t clock,stall;
+};
+static const struct path_case cases[]={@CASES@},*test;
+static const uint32_t profiles[]={@PROFILES@};
+uint32_t obor_profile_build;
+static entity actor,target,*self=&actor;
+static s_videomodes videomodes;
+static int PLAYER_MIN_Z,PLAYER_MAX_Z;
+static uint32_t fixture_clock;
+static unsigned active_case,randoms,queries,stopped;
+static char trace[512];static size_t used;
+static int allocation_trace;
+struct allocation {void *p;size_t bytes;};
+static struct allocation allocations[32];
+#define assert(c) do {if(!(c)){fprintf(stderr,"Path provider mismatch: profile=%u case=%u line=%d trace=%s\n",obor_profile_build,active_case,__LINE__,trace);abort();}}while(0)
+static uint32_t bits(float value){uint32_t word;_Static_assert(sizeof(value)==sizeof(word),"binary32 required");memcpy(&word,&value,sizeof(word));return word;}
+static void emit(const char *format,...){va_list args;va_start(args,format);int n=vsnprintf(trace+used,sizeof(trace)-used,format,args);va_end(args);assert(n>=0&&(size_t)n<sizeof(trace)-used);used+=(size_t)n;}
+static unsigned slot(void *p){for(unsigned i=0;i<32;++i)if(allocations[i].p==p)return i;abort();}
+static void *observed_malloc(size_t n){
+ assert(n>0&&n<=4u*1024u*1024u);
+ if(allocation_trace)emit("M%zu;",n);
+ if(test->flags[9])return NULL;
+ void *p=malloc(n);assert(p);memset(p,0xa5,n);
+ for(unsigned i=0;i<32;++i)if(!allocations[i].p){allocations[i]=(struct allocation){p,n};return p;}
+ abort();
+}
+static void observed_free(void *p){if(!p)return;if(allocation_trace)emit("F;");unsigned i=slot(p);free(p);allocations[i]=(struct allocation){0};}
+void shutdown(int status,char *message,...){assert(status==1&&strstr(message,"waypoints"));emit("E;");++stopped;}
+static uint32_t path_hash(const point2d *points,unsigned count){uint32_t h=2166136261u;for(unsigned i=0;i<count;++i){h=(h^bits(points[i].x))*16777619u;h=(h^bits(points[i].z))*16777619u;}return h;}
+int testmove(entity *ent,float x,float z,float tx,float tz){
+ assert(ent==self&&isfinite(x)&&isfinite(z)&&isfinite(tx)&&isfinite(tz));assert(++queries<=1000000);
+ if(test->geometry==0)return 1;
+ if(test->geometry==1)return 0;
+ if(test->geometry==2)return -1;
+ /* Static separated rows avoid marking a future valid cell blocked merely
+  * because it is not the successor of the current point. */
+ assert(tx==floorf(tx)&&tz==floorf(tz));
+ if(tx<0||tx>300||tz<0||tz>20)return 0;
+ if(((int)tz&1)==0)return 1;
+ return tx==((((int)tz/2)&1)?0:300);
+}
+float randf(float maximum){assert(randoms<3);emit("R%u;",bits(maximum));return test->random[randoms++];}
+entity *normal_find_target(int animation,int detect){assert(animation==-1&&!detect);emit("T;");return test->flags[6]?&target:NULL;}
+void adjust_walk_animation(entity *ent){
+ assert(!ent);emit("L%u,%u,%u,%u,%u,%u,%d;",bits(actor.xdir),bits(actor.zdir),bits(actor.destx),bits(actor.destz),actor.stalltime,(unsigned)actor.pathblocked,actor.running);
+ if(test->flags[7]){actor.x+=4;actor.z+=6;actor.xdir=-7;actor.zdir=8;actor.pathblocked=200;}
+}
+@DIFF@
+@STORAGE@
+@OBOR_PROFILE_PATHFIND@
+#define malloc observed_malloc
+#define free observed_free
+#define astar native_astar
+@ASTAR@
+#undef astar
+static int observed_astar(entity *ent,float x,float z,float step,point2d **out){
+ assert(ent==self&&x==target.x&&z==target.z);emit("A%u;",bits(step));
+ float ix=320+(x-ent->x)/step,iz=180+(z-ent->z)/step;
+ if(test->geometry==1||!(ix>-1&&ix<640&&iz>-1&&iz<360)){*out=NULL;return 0;}
+ *out=observed_malloc(3*sizeof(**out));assert(*out);
+ (*out)[0]=(point2d){31,32};(*out)[1]=(point2d){41,42};(*out)[2]=(point2d){51,52};return 3;
+}
+#define astar observed_astar
+#undef time
+#define time fixture_clock
+@CHECKPATHBLOCKED@
+#undef time
+#undef astar
+#undef malloc
+#undef free
+int main(void){
+ _Static_assert(sizeof(point2d)==8,"Native path points require two binary32 coordinates");
+ for(unsigned p=0;p<sizeof(profiles)/sizeof(*profiles);++p){
+  obor_profile_build=profiles[p];
+  for(unsigned c=0;c<sizeof(cases)/sizeof(*cases);++c){
+   active_case=c;test=cases+c;if(obor_profile_build<test->first||obor_profile_build>test->last)continue;
+   memset(&actor,0,sizeof(actor));memset(&target,0,sizeof(target));
+   actor.modeldata.nomove=test->flags[0];actor.modeldata.aimove=test->flags[1];actor.modeldata.subtype=test->flags[2];
+   actor.modeldata.subject_to_minz=test->flags[3];actor.modeldata.subject_to_maxz=test->flags[4];actor.pathblocked=test->flags[5];actor.running=1;
+   actor.x=test->position[0];actor.z=test->position[1];target.x=test->target[0];target.z=test->target[1];
+   actor.xdir=test->velocity[0];actor.zdir=test->velocity[1];actor.destx=test->destination[0];actor.destz=test->destination[1];
+   actor.modeldata.speed=test->speed;actor.modeldata.pathfindstep=test->step;actor.stalltime=test->stall;fixture_clock=test->clock;
+   videomodes.hRes=test->video[0];videomodes.vRes=test->video[1];PLAYER_MIN_Z=test->zrange[0];PLAYER_MAX_Z=test->zrange[1];
+   allocation_trace=0;
+   if(test->flags[8]){ /* setup storage uses an ordinary owned allocation */
+    point2d *existing=malloc(2*sizeof(*existing));assert(existing);existing[0]=(point2d){11,12};existing[1]=(point2d){13,14};
+    unsigned i=0;while(i<32&&allocations[i].p)++i;assert(i<32);allocations[i]=(struct allocation){existing,2*sizeof(*existing)};actor.waypoints=existing;actor.numwaypoints=1;}
+   for(unsigned i=0;i<4096;++i)obor_profile_path_nodes[i]=(point2d){-12345.25f,-23456.5f};
+   randoms=queries=stopped=0;used=0;trace[0]=0;int result;unsigned produced=0;uint32_t search_hash=2166136261u,firstx=0,firstz=0,lastx=0,lastz=0;
+   float step=test->step;
+   if(test->exceptional==1)step=NAN;else if(test->exceptional==2)step=INFINITY;else if(test->exceptional==3)target.x=NAN;else if(test->exceptional==4)actor.x=INFINITY;
+   if(test->routine==0){allocation_trace=1;result=checkpathblocked();}
+   else if(test->routine==1){
+    result=obor_profile_pathfind(test->exceptional==5?NULL:self,target.x,target.z,step);
+    for(unsigned i=0;i<4096;++i){if(obor_profile_path_nodes[i].x!=-12345.25f||obor_profile_path_nodes[i].z!=-23456.5f){assert(i==produced);++produced;}}
+    search_hash=path_hash(obor_profile_path_nodes,produced);
+    if(produced){firstx=bits(obor_profile_path_nodes[0].x);firstz=bits(obor_profile_path_nodes[0].z);lastx=bits(obor_profile_path_nodes[produced-1].x);lastz=bits(obor_profile_path_nodes[produced-1].z);}
+   }else{
+    point2d *output=NULL;result=native_astar(self,target.x,target.z,step,&output);
+    assert(result>=0);
+    if(result){
+     assert(output&&allocations[slot(output)].bytes==(size_t)result*sizeof(*output));
+     /* Only the prefix assigned by the original is a fidelity oracle.
+      * The remaining output slot is a separate initialization review item. */
+     produced=(unsigned)result-1;search_hash=path_hash(output,produced);
+     if(produced){firstx=bits(output[0].x);firstz=bits(output[0].z);lastx=bits(output[produced-1].x);lastz=bits(output[produced-1].z);}
+    }else assert(!output);
+    observed_free(output);
+   }
+   unsigned count=actor.waypoints?(unsigned)(allocations[slot(actor.waypoints)].bytes/sizeof(point2d)):0;
+   printf("{\"revision\":%u,\"case\":%u,\"state\":[%d,%u,%u,%d,%d,%d,%u],\"vectors\":[%u,%u,%u,%u,%u,%u],\"path\":[%u,%u],\"search\":[%u,%u,%u,%u,%u,%u],\"trace\":\"%s\"}\n",
+    obor_profile_build,c,result,actor.stalltime,(unsigned)actor.pathblocked,actor.running,actor.numwaypoints,!!actor.waypoints,stopped,
+    bits(actor.xdir),bits(actor.zdir),bits(actor.destx),bits(actor.destz),bits(actor.x),bits(actor.z),count,path_hash(actor.waypoints,count),
+    produced,search_hash,firstx,firstz,lastx,lastz,trace);
+   allocation_trace=0;observed_free(actor.waypoints);for(unsigned i=0;i<32;++i)assert(!allocations[i].p);
+  }
+ }
+ return 0;
+}

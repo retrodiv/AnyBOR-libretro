@@ -1,0 +1,192 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <assert.h>
+#include <stdint.h>
+#include <stddef.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdarg.h>
+#include <string.h>
+#include "openbor.h"
+#include "obor_resources.h"
+#undef exit
+#undef time
+#undef pause
+#undef shutdown
+#undef printf
+#undef assert
+uint32_t obor_profile_build;
+#define assert(c) do {if(!(c)){fprintf(stderr,"LEGACY_GRAPHICS revision=%u line=%d\n",obor_profile_build,__LINE__);abort();}}while(0)
+int zoom_center_x,zoom_center_y,zoom_scale_x,zoom_scale_y,zoom_z;
+s_screen *vscreen,*zoombuffer;
+static char diagnostic[512];
+static const void *owners[16];
+static size_t sizes[16];
+static unsigned draw_calls;
+static int depths[2][2];
+static int capture(const char *format,...) {
+ va_list ap;va_start(ap,format);int n=vsnprintf(diagnostic,sizeof(diagnostic),format,ap);va_end(ap);return n;
+}
+#define printf capture
+CHAR *StrCache_Get(int index){(void)index;abort();}
+void StrCache_Collect(int index){(void)index;abort();}
+int StrCache_Pop(void){abort();}
+size_t obor_allocation_size(const void *owner) {
+ for(unsigned i=0;i<16;++i)if(owners[i] && owners[i]==owner)return sizes[i];
+ return 0;
+}
+static void *owned(size_t bytes) {
+ for(unsigned i=0;i<16;++i)if(!owners[i]) {
+  void *p=calloc(1,bytes);assert(p);owners[i]=p;sizes[i]=bytes;return p;
+ }
+ abort();
+}
+static void release(void *p) {
+ for(unsigned i=0;i<16;++i)if(owners[i]==p){owners[i]=NULL;sizes[i]=0;free(p);return;}
+ abort();
+}
+static unsigned pixel_bytes(int format){return format==PIXEL_16?2:format==PIXEL_32?4:1;}
+s_screen *allocscreen(int w,int h,int format) {
+ assert(w>0 && w<=16 && h>0 && h<=16);
+ s_screen *s=owned(sizeof(*s)+(size_t)w*h*pixel_bytes(format));
+ s->magic=screen_magic;s->width=w;s->height=h;s->pixelformat=format;return s;
+}
+void freescreen(s_screen **p){assert(p && *p);release(*p);*p=NULL;}
+void copyscreen(s_screen *dest,s_screen *src) {
+ assert(dest->width==src->width && dest->height==src->height && dest->pixelformat==src->pixelformat);
+ memcpy(dest->data,src->data,(size_t)src->width*src->height*pixel_bytes(src->pixelformat));
+}
+void spriteq_draw(s_screen *dest,int only,int lo,int hi,int dx,int dy) {
+ assert(draw_calls<2 && !only && !dx && !dy);
+ assert(dest==(draw_calls? vscreen:zoombuffer) || (!zoombuffer && dest==vscreen));
+ depths[draw_calls][0]=lo;depths[draw_calls++][1]=hi;
+}
+void shutdown(int code,const char *format,...){(void)code;(void)format;abort();}
+@VARIANTS@
+@FUNCTIONS@
+@SAMPLER@
+@COMPOSE@
+static void store(s_screen *s,unsigned index,uint32_t value) {
+ unsigned n=pixel_bytes(s->pixelformat);
+ size_t offset=offsetof(s_screen,data)+(size_t)index*n;
+ assert(offset+n<=obor_allocation_size(s));
+ unsigned char *pixel=(unsigned char*)s+offset;
+ if(n==1)*pixel=(unsigned char)value;
+ else if(n==2){uint16_t v=(uint16_t)value;memcpy(pixel,&v,2);}
+ else memcpy(pixel,&value,4);
+}
+static uint32_t fetch(s_screen *s,unsigned index) {
+ unsigned n=pixel_bytes(s->pixelformat);uint32_t v=0;
+ if(n==1)return s->data[index];
+ if(n==2){uint16_t word;memcpy(&word,s->data+index*2,2);return word;}
+ memcpy(&v,s->data+index*4,4);return v;
+}
+static void zoom_api(int available) {
+ ScriptVariant values[6],*args[6],result,*out;int good[]={7,9,256,300,0,99};
+ memset(values,0,sizeof(values));memset(&result,0,sizeof(result));
+ for(int i=0;i<6;++i){values[i].vt=VT_INTEGER;values[i].lVal=good[i];args[i]=values+i;}
+ for(int n=5;n<=6;++n) {
+  out=&result;assert(openbor_zoom(args,&out,n)==(available?S_OK:E_FAIL) && !out);
+  if(available)assert(zoom_center_x==7 && zoom_center_y==9 && zoom_scale_x==256 && zoom_scale_y==300 && zoom_z==0);
+ }
+ if(!available)return;
+ for(int bad=0;bad<5;++bad) {
+  zoom_center_x=zoom_center_y=zoom_scale_x=zoom_scale_y=zoom_z=-1;
+  values[bad].vt=VT_EMPTY;out=&result;diagnostic[0]=0;
+  assert(openbor_zoom(args,&out,5)==E_FAIL && !out);
+  assert(!strcmp(diagnostic,"Function requires 5 int values: zoom(int x, int y, int scalex, int scaley, int z)\n"));
+  int actual[]={zoom_center_x,zoom_center_y,zoom_scale_x,zoom_scale_y,zoom_z};
+  for(int i=0;i<5;++i)assert(actual[i]==(i<bad?good[i]:-1));
+  values[bad].vt=VT_INTEGER;
+ }
+ for(int i=0;i<5;++i){values[i].vt=VT_DECIMAL;values[i].dblVal=good[i]+0.75;}
+ out=&result;assert(openbor_zoom(args,&out,5)==S_OK && !out && zoom_scale_x==256 && zoom_z==0);
+ for(int n=0;n<5;++n){out=&result;assert(openbor_zoom(args,&out,n)==E_FAIL && !out);}
+ out=&result;assert(openbor_zoom(NULL,&out,5)==E_FAIL && !out);
+ assert(openbor_zoom(args,NULL,5)==E_FAIL);
+}
+static void pixel_query(void *handle,int x,int y,int kind,int count,int ok,LONG expected) {
+ ScriptVariant values[5],*args[5],result,*out=&result;memset(values,0,sizeof(values));memset(&result,0,sizeof(result));
+ for(int i=0;i<5;++i){values[i].vt=VT_INTEGER;args[i]=values+i;}
+ values[0].vt=VT_PTR;values[0].ptrVal=handle;values[1].lVal=x;values[2].lVal=y;values[3].lVal=kind;
+ for(int decimal=0;decimal<2;++decimal) {
+  for(int i=1;i<4;++i) {
+   LONG value=i==1?x:i==2?y:kind;
+   values[i].vt=decimal?VT_DECIMAL:VT_INTEGER;
+   if(decimal)values[i].dblVal=value+(value<0?-0.75:0.75);else values[i].lVal=value;
+  }
+  out=&result;memset(&result,0,sizeof(result));diagnostic[0]=0;
+  HRESULT status=openbor_getpixel(args,&out,count);
+  assert(status==(ok?S_OK:E_FAIL));
+  if(ok)assert(out==&result && result.vt==VT_INTEGER && result.lVal==expected);
+  else {
+   assert(!out);
+   if(obor_profile_build>=3565 && obor_profile_build<3627)
+    assert(!strcmp(diagnostic,"Function getpixel(handle, x, y, type) requires a valid handle and at least two integer values."));
+  }
+ }
+}
+static void pixel_api(int available) {
+ int formats[]={PIXEL_8,PIXEL_x8,PIXEL_16,PIXEL_32};
+ for(unsigned f=0;f<4;++f) {
+  s_screen *s=allocscreen(4,1,formats[f]);
+  uint32_t words[]={0,127,128,255};
+  if(f==2){words[1]=32767;words[2]=32768;words[3]=65535;}
+  if(f==3){words[1]=0x7fffffff;words[2]=0x80000000u;words[3]=0xffffffffu;}
+  for(unsigned i=0;i<4;++i)store(s,i,words[i]);
+  for(int magic=0;magic<2;++magic) {
+   s->magic=magic?bitmap_magic:screen_magic;
+   for(int x=-1;x<=4;++x)pixel_query(s,x,0,0,3,available,x>=0 && x<4?(LONG)words[x]:0);
+   pixel_query(s,0,1,0,4,available,0);
+  }
+  pixel_query(s,0,0,2,4,0,0);
+  pixel_query(s,0,0,0,2,0,0);pixel_query(s,0,0,0,5,0,0);
+  freescreen(&s);
+ }
+ s_sprite *sprite=owned(sizeof(*sprite)+32);sprite->magic=sprite_magic;sprite->width=3;sprite->height=1;
+ int offset=sizeof(int);memcpy(sprite->data,&offset,sizeof(offset));
+ const unsigned char run[]={0,3,0,128,255,255};memcpy(sprite->data+sizeof(int),run,sizeof(run));
+ LONG expected[]={0,128,255};
+ for(int x=-1;x<=3;++x)pixel_query(sprite,x,0,1,4,available,x>=0 && x<3?expected[x]:0);
+ const unsigned char clear[]={1,1,200,255};memcpy(sprite->data+sizeof(int),clear,sizeof(clear));
+ for(int x=0;x<3;++x)pixel_query(sprite,x,0,1,4,available,x==1?200:0);
+ release(sprite);
+ pixel_query(NULL,0,0,0,3,0,0);
+ s_screen *short_screen=owned(offsetof(s_screen,data));short_screen->magic=screen_magic;
+ short_screen->width=4;short_screen->height=1;short_screen->pixelformat=PIXEL_32;
+ pixel_query(short_screen,0,0,0,3,0,0);release(short_screen);
+}
+static void sampling(void) {
+ static const struct {int cx,cy,sx,sy;unsigned pixels[12];} cases[]={@SAMPLES@};
+ const int formats[]={PIXEL_8,PIXEL_x8,PIXEL_16,PIXEL_32};
+ for(unsigned f=0;f<4;++f) {
+  s_screen *src=allocscreen(6,4,formats[f]),*dest=allocscreen(4,3,formats[f]);
+  for(unsigned i=0;i<24;++i)store(src,i,i+1);
+  for(unsigned c=0;c<sizeof(cases)/sizeof(*cases);++c) {
+   for(unsigned i=0;i<12;++i)store(dest,i,85);
+   zoomscreen(dest,src,cases[c].cx,cases[c].cy,cases[c].sx,cases[c].sy);
+   for(unsigned i=0;i<12;++i)assert(fetch(dest,i)==cases[c].pixels[i]);
+  }
+  freescreen(&src);freescreen(&dest);
+ }
+}
+static void frame_window(int available) {
+ vscreen=allocscreen(4,3,PIXEL_8);zoom_center_x=2;zoom_center_y=1;
+ zoom_scale_x=zoom_scale_y=256;
+ const int layers[]={MIN_INT,0,MAX_INT};
+ for(unsigned i=0;i<3;++i) {
+  draw_calls=0;zoom_z=layers[i];compose();
+  assert(draw_calls==(available && zoom_z<MAX_INT?2u:1u));
+  if(available){assert(zoombuffer && depths[0][0]==MIN_INT && depths[0][1]==zoom_z);}
+  else assert(!zoombuffer && depths[0][0]==MIN_INT && depths[0][1]==MAX_INT);
+  if(draw_calls==2)assert(depths[1][0]==zoom_z+1 && depths[1][1]==MAX_INT);
+ }
+ zoom_scale_x=0;draw_calls=0;compose();assert(!zoombuffer && draw_calls==1);
+ freescreen(&vscreen);
+}
+static void check(unsigned revision,int zoom,int pixel) {
+ obor_profile_build=revision;zoom_api(zoom);pixel_api(pixel);sampling();frame_window(zoom);
+ fprintf(stdout,"{\"revision\":%u,\"zoom\":%d,\"getpixel\":%d}\n",revision,zoom,pixel);
+ for(unsigned i=0;i<16;++i)assert(!owners[i]);
+}
+int main(void){@CHECKS@ return 0;}

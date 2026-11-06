@@ -1,0 +1,204 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <assert.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+@CONSTANTS@
+@RECORD@
+static unsigned obor_profile_build;
+static int num_difficulties;
+static s_savelevel *savelevel;
+static int expected_fixed;
+static int mode, open_failed, file_exists, file_writing, closes, clears;
+static size_t file_size, io_count, allocations;
+static unsigned char file_data[300 * 288 + 11];
+static const unsigned char reference_bytes[] = {@RECORD_BYTES@};
+#undef assert
+#define assert(c) do { if(!(c)) { fprintf(stderr,"LEVEL_SAVE profile=%u mode=%d difficulties=%d line=%d\n",obor_profile_build,mode,num_difficulties,__LINE__); abort(); } } while(0)
+
+static void getBasePath(char *path, const char *kind, int unused)
+{ (void)kind; (void)unused; strcpy(path,"saves/"); }
+static void getPakName(char *name, size_t capacity, int type)
+{ (void)type; assert(capacity >= 11); strcpy(name,"probe.save"); }
+static int obor_pak_path_append(char *path, size_t capacity, const char *name)
+{ assert(strlen(path) + strlen(name) < capacity); strcat(path,name); return 1; }
+static void borExit(int status) { (void)status; abort(); }
+
+/* Real stdio on an anonymous file; only path lookup and persistence are supplied. */
+static FILE *file_open(const char *path, const char *access)
+{
+    assert(!strcmp(path,"saves/probe.save"));
+    file_writing = access[0] == 'w';
+    if(open_failed || (!file_writing && !file_exists)) return NULL;
+    FILE *file = tmpfile(); assert(file);
+    if(!file_writing) {
+        assert(fwrite(file_data,1,file_size,file) == file_size);
+        rewind(file);
+    }
+    return file;
+}
+static int file_close(FILE *file)
+{
+    ++closes;
+    if(file_writing) {
+        assert(fflush(file) == 0);
+        long size = ftell(file); assert(size >= 0 && (size_t)size <= sizeof(file_data));
+        file_size = (size_t)size; file_exists = 1;
+        rewind(file);
+        assert(fread(file_data,1,file_size,file) == file_size);
+    }
+    return fclose(file);
+}
+static size_t file_read(void *data, size_t size, size_t count, FILE *file)
+{ assert(size == sizeof(s_savelevel)); io_count = count; return fread(data,size,count,file); }
+static size_t file_write(const void *data, size_t size, size_t count, FILE *file)
+{ assert(size == sizeof(s_savelevel)); io_count = count; return fwrite(data,size,count,file); }
+static void *record_allocate(size_t count, size_t size)
+{ assert(size == sizeof(s_savelevel)); ++allocations; return calloc(count,size); }
+@HELPER@
+@CLEAR@
+static void checked_clear(void)
+{ ++clears; assert(closes == expected_fixed); clearSavedGame(); }
+#define fopen file_open
+#define fclose file_close
+#define fread file_read
+#define fwrite file_write
+@SAVE@
+#define clearSavedGame checked_clear
+@LOAD@
+#undef clearSavedGame
+#undef fopen
+#undef fclose
+#undef fread
+#undef fwrite
+
+static void initialize(void)
+{
+#define calloc record_allocate
+    @INITIALIZE@
+#undef calloc
+}
+
+static void cleared_record(s_savelevel *record, int fixed)
+{ memset(record,0,sizeof(*record)); if(fixed)record->compatibleversion = CV_SAVED_GAME; }
+
+static unsigned check_context(int fixed, int invalid_returns_failure)
+{
+    const int difficulties[] = {0,1,3,10};
+    unsigned cases = 0;
+    expected_fixed = fixed;
+    assert(sizeof(s_savelevel) == sizeof(reference_bytes) && sizeof(s_savelevel) == 288);
+    assert(offsetof(s_savelevel,dName) == 4 && offsetof(s_savelevel,pScores) == 60);
+    assert(offsetof(s_savelevel,pName) == 83 && offsetof(s_savelevel,pSpawnhealth) == 248);
+    s_savelevel reference; memcpy(&reference,reference_bytes,sizeof(reference));
+    assert(reference.compatibleversion == CV_SAVED_GAME);
+    assert(!strcmp(reference.dName,"source record") && reference.level == 0x1234);
+    assert(reference.stage == 0x5678 && reference.pScores[3] == UINT32_MAX);
+    assert(reference.pLives[3] == 4 && reference.pCredits[0] == 11);
+    assert(reference.pSpawnhealth[0] == -2 && reference.pWeapnum[3] == -128);
+    for(unsigned d = 0; d < sizeof(difficulties)/sizeof(*difficulties); ++d) {
+        num_difficulties = difficulties[d];
+        size_t count = fixed ? MAX_DIFFICULTIES : (size_t)num_difficulties;
+        savelevel = NULL; allocations = 0; initialize();
+        assert(allocations == (size_t)!fixed);
+        assert(savelevel || !count);
+        s_savelevel *storage = savelevel;
+        /* A second parse keeps existing records and does not allocate them again. */
+        initialize(); assert(savelevel == storage && allocations == (size_t)!fixed);
+        ++cases;
+        for(size_t i = 0; i < count; ++i)savelevel[i] = reference;
+        clearSavedGame();
+        s_savelevel zero; cleared_record(&zero,fixed);
+        for(size_t i = 0; i < count; ++i)assert(!memcmp(savelevel+i,&zero,sizeof(zero)));
+        ++cases;
+        for(size_t i = 0; i < count; ++i)savelevel[i] = reference;
+        file_exists = 0; open_failed = 0; closes = 0; io_count = (size_t)-1;
+        (void)saveGameFile();
+        assert(file_exists && closes == 1 && io_count == count);
+        assert(file_size == count * sizeof(reference));
+        for(size_t i = 0; i < count; ++i)
+            assert(!memcmp(file_data+i*sizeof(reference),reference_bytes,sizeof(reference)));
+        ++cases;
+        open_failed = 1; closes = 0; io_count = (size_t)-1;
+        (void)saveGameFile();
+        assert(!closes && io_count == (size_t)-1); open_failed = 0;
+        ++cases;
+        for(mode = 0; mode < 8; ++mode) {
+            for(size_t i = 0; i < count; ++i)savelevel[i] = reference;
+            file_exists = mode != 0; file_size = 0; closes = clears = 0; io_count = (size_t)-1;
+            s_savelevel input[10];
+            for(unsigned i = 0; i < 10; ++i) {
+                input[i] = reference; input[i].times_completed = 100+i;
+            }
+            if(mode == 2 || mode == 3 || mode == 4)file_size = sizeof(input);
+            if(mode == 3)input[0].compatibleversion = 0;
+            if(mode == 4)input[9].compatibleversion = 0;
+            if(mode == 5 || mode == 6)file_size = sizeof(input[0])+sizeof(unsigned int);
+            if(mode == 6)input[1].compatibleversion = 0;
+            if(mode == 7 && count)savelevel[count-1].compatibleversion = 0;
+            memcpy(file_data,input,file_size);
+            s_savelevel expected[10]; assert(count <= 10);
+            memcpy(expected,savelevel,count*sizeof(*expected));
+            size_t copied = file_size < count*sizeof(*expected) ? file_size : count*sizeof(*expected);
+            memcpy(expected,file_data,copied);
+            int rejected = 0;
+            if(fixed && mode)for(size_t i = 0; i < count; ++i)
+                if(expected[i].compatibleversion != CV_SAVED_GAME)rejected = 1;
+            if(rejected)for(size_t i = 0; i < count; ++i)cleared_record(expected+i,1);
+            int result = loadGameFile();
+            assert(result == (mode != 0));
+            assert(closes == (mode != 0));
+            assert(io_count == (mode ? count : (size_t)-1));
+            assert(clears == rejected);
+            assert(!memcmp(savelevel,expected,count*sizeof(*expected)));
+            ++cases;
+        }
+        /* Legacy operations rebind to the original static records before parsing. */
+        if(fixed) {
+            savelevel = NULL; clearSavedGame(); assert(savelevel == storage); ++cases;
+            savelevel = NULL; file_exists = 0; assert(loadGameFile() == 0);
+            assert(savelevel == storage); ++cases;
+        } else { cases += 2; free(savelevel); }
+    }
+    /* Exercise the dynamic loader's historical item-count comparison as well. */
+    num_difficulties = (int)sizeof(s_savelevel);
+    if(fixed) {
+        savelevel = NULL; initialize(); assert(allocations == 0);
+    } else {
+        savelevel = calloc((size_t)num_difficulties,sizeof(*savelevel)); assert(savelevel);
+    }
+    size_t count = fixed ? MAX_DIFFICULTIES : (size_t)num_difficulties;
+    for(mode = 0; mode < 4; ++mode) {
+        for(size_t i = 0; i < count; ++i)savelevel[i] = reference;
+        file_exists = 1; file_size = count*sizeof(reference); closes = clears = 0;
+        for(size_t i = 0; i < count; ++i)memcpy(file_data+i*sizeof(reference),&reference,sizeof(reference));
+        if(mode < 2)memset(file_data+(mode ? count-1 : 0)*sizeof(reference),0,sizeof(unsigned int));
+        if(mode == 3)file_size = 0;
+        int rejected = mode == 0 || (fixed && mode == 1);
+        int result = loadGameFile();
+        assert(result == (rejected && !fixed && invalid_returns_failure ? 0 : 1));
+        assert(io_count == count && closes == 1 && clears == rejected);
+        if(rejected) {
+            s_savelevel zero; cleared_record(&zero,fixed);
+            for(size_t i = 0; i < count; ++i)assert(!memcmp(savelevel+i,&zero,sizeof(zero)));
+        }
+        ++cases;
+    }
+    if(!fixed)free(savelevel);
+    savelevel = NULL;
+    return cases;
+}
+
+int main(void)
+{
+    const struct { unsigned revision; int fixed, invalid_returns_failure; } contexts[] = {@CONTEXTS@};
+    for(unsigned i = 0; i < sizeof(contexts)/sizeof(*contexts); ++i) {
+        obor_profile_build = contexts[i].revision;
+        unsigned cases = check_context(contexts[i].fixed,contexts[i].invalid_returns_failure);
+        printf("{\"revision\":%u,\"cases\":%u}\n",obor_profile_build,cases);
+    }
+    return 0;
+}

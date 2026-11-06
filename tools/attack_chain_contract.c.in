@@ -1,0 +1,87 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <assert.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "openbor.h"
+#undef assert
+#undef printf
+#ifdef NDEBUG
+#error Attack chain assertions must remain enabled
+#endif
+uint32_t obor_profile_build;
+static unsigned active_case;
+#define assert(c) do {if(!(c)){fprintf(stderr,"ATTACK_CHAIN revision=%u case=%u line=%d\n",obor_profile_build,active_case,__LINE__);abort();}}while(0)
+static entity actor,target;
+entity *self;
+unsigned int time;
+int combodelay;
+static int attack_slots[]={10,11,12};
+int *animattacks=attack_slots;
+static s_anim animation,*animations[13];
+static int target_mask,find_style,animation_mode,animation_style;
+static void initial_action(void) {abort();}
+static void callback_action(void) {abort();}
+void common_attack_proc(void) {abort();}
+static int action_id(void (*action)(void)) {
+ if(action==initial_action)return 1;
+ if(action==callback_action)return 2;
+ if(action==common_attack_proc)return 3;
+ abort();
+}
+#define WIDTH 7
+static void snapshot(int *out) {
+ const int fields[]={action_id(actor.takeaction),actor.attacking,actor.idling,
+ actor.combostep[0],(int)actor.combotime,actor.modeldata.combostyle,actor.modeldata.chainlength};
+ _Static_assert(sizeof(fields)/sizeof(*fields)==WIDTH,"Observer fields bound");
+ memcpy(out,fields,sizeof(fields));
+}
+struct event {int kind,index,fields[WIDTH];};
+static struct event events[8];static unsigned event_count;
+static void observe(int kind,int index) {
+ assert(event_count<8);struct event *out=&events[event_count++];
+ out->kind=kind;out->index=index;snapshot(out->fields);
+}
+entity *normal_find_target(int index,int detect) {
+ assert(index>=10 && index<=12 && !detect);observe(1,index);
+ if(find_style>=0)actor.modeldata.combostyle=find_style;
+ return target_mask&(1<<(index-10))?&target:NULL;
+}
+void ent_set_anim(entity *e,int index,int reset) {
+ assert(e==self && index>=10 && index<=12 && reset==1);observe(2,index);
+ if(animation_mode){actor.takeaction=callback_action;actor.modeldata.combostyle=animation_style;}
+ if(animation_mode==2){actor.attacking=3;actor.idling=4;actor.combostep[0]=2;actor.combotime=777;actor.modeldata.chainlength=1;}
+}
+@FUNCTION@
+struct chain_case {int style,type,step,future,targets,available,find_style,animation_mode,animation_style;};
+static const struct chain_case cases[]={@CASES@};
+static const unsigned profiles[]={@PROFILES@};
+static void prepare(const struct chain_case *c) {
+ memset(&actor,0,sizeof(actor));memset(&target,0,sizeof(target));
+ memset(&animation,0,sizeof(animation));memset(animations,0,sizeof(animations));
+ self=&actor;time=100;combodelay=25;actor.takeaction=initial_action;actor.idling=1;
+ actor.modeldata.type=c->type;actor.modeldata.combostyle=c->style;
+ actor.combostep[0]=c->step;actor.combotime=c->future?101:100;
+ actor.modeldata.chainlength=3;
+ for(unsigned i=0;i<3;++i)actor.modeldata.atchain[i]=(char)(i+1);
+ actor.modeldata.animation=animations;actor.modeldata.animation_capacity=13;animation.numframes=1;
+ for(unsigned i=0;i<3;++i)if(c->available&(1<<i))animations[attack_slots[i]]=&animation;
+ target_mask=c->targets;find_style=c->find_style;animation_mode=c->animation_mode;animation_style=c->animation_style;event_count=0;
+}
+static void fields_json(const int *v) {
+ putchar('[');for(unsigned i=0;i<WIDTH;++i){if(i)putchar(',');printf("%d",v[i]);}putchar(']');
+}
+int main(void) {
+ for(unsigned p=0;p<sizeof(profiles)/sizeof(*profiles);++p){
+  obor_profile_build=profiles[p];
+  for(unsigned k=0;k<sizeof(cases)/sizeof(*cases);++k){
+   active_case=k;prepare(&cases[k]);int result=perform_atchain(),final[WIDTH];snapshot(final);
+   printf("{\"revision\":%u,\"case\":%u,\"result\":%d,\"fields\":",obor_profile_build,k,result);fields_json(final);printf(",\"events\":[");
+   for(unsigned i=0;i<event_count;++i){struct event *e=&events[i];if(i)putchar(',');printf("{\"kind\":%d,\"index\":%d,\"fields\":",e->kind,e->index);fields_json(e->fields);putchar('}');}
+   puts("]}");
+  }
+ }
+ return 0;
+}

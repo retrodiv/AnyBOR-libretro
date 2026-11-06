@@ -3,7 +3,7 @@
 SPDX-License-Identifier: BSD-3-Clause
 Copyright (c) 2026 retrodiv <retrodiv@proton.me>
 """
-from contract_fixtures import load_contract_fixture, contract_profiles
+from contract_fixtures import load_contract_fixture, contract_profiles, contract_revisions
 import json
 import os
 from pathlib import Path
@@ -20,6 +20,281 @@ ROOT = Path(os.environ.get('OBOR_TEST_SOURCE', Path(__file__).resolve().parents[
 ENGINE = Path(os.environ.get('OBOR_HISTORICAL_ENGINE', ROOT / 'src/engines/3842'))
 PROFILES = (3780, 3783, 3789, 3793, 3797, 3805, 3814, 3818,
             3819, 3820, 3821, 3822, 3824, 3829, 3831, 3837, 3839, 3842)
+
+
+class PanelOptionalContracts(unittest.TestCase):
+    def test_native_optional_layers_continue_at_the_own_boundary(self):
+        from test_historical_common_think import native_output
+        data = load_contract_fixture(Path(__file__).with_name('fixtures') /
+                                     'profile-panel-optionals-contracts.json')
+        rows = data['sources']
+        revisions = {r['revision'] for r in rows}
+        self.assertEqual(revisions, contract_revisions(data, data['expected_revisions']))
+        self.assertEqual(len(rows), len(revisions))
+        self.assertTrue(set(data['boundary_controls']) <= revisions)
+        core = (ROOT / 'src/engines' / data['engine'] / 'openbor.c').read_text()
+        load = function(core, 'load_level')
+        start = load.index('case CMD_LEVEL_PANEL:')
+        end = load.index('case CMD_LEVEL_', start+len('case CMD_LEVEL_PANEL:'))
+        plain = re.findall(r'const s_drawmethod plainmethod\s*=\s*{[^;]+;', core)
+        self.assertEqual(len(plain), 1)
+        depth = []
+        for name in ('PLAYER_MIN_Z', 'PLAYER_MAX_Z'):
+            declaration = re.findall(r'(?m)^int\s+'+name+r'\s*=\s*[^;]+;', core)
+            self.assertEqual(len(declaration), 1)
+            depth.append(declaration[0])
+        values = dict(PLAIN=plain[0], DEPTH='\n'.join(depth), CASE=load[start:end],
+                      PROFILES=','.join(str(r['revision'])+'u' for r in rows),
+                      CASES=',\n'.join('{'+','.join(str(c[k]) for k in data['case_fields'])+'}'
+                                        for c in data['cases']))
+        text = Path(__file__).with_name('panel_optionals_contract.c.in').read_text()
+        for key, value in values.items():
+            text = text.replace('@'+key+'@', value)
+        self.assertIsNone(re.search(r'@[A-Z_]+@', text))
+        actual = [json.loads(line) for line in native_output(text, data).splitlines()]
+        self.assertEqual(len(actual), len(rows))
+        for row, result in zip(rows, actual):
+            with self.subTest(revision=row['revision']):
+                self.assertEqual(result, dict(revision=row['revision'], results=data['contracts'][row['contract']]))
+
+
+class RangeHitContracts(unittest.TestCase):
+    def test_native_equal_range_and_hit_depth_endpoints(self):
+        from test_historical_common_think import native_output
+        data = load_contract_fixture(Path(__file__).with_name('fixtures') /
+                                     'profile-range-hit-contracts.json')
+        rows = data['sources']
+        revisions = {r['revision'] for r in rows}
+        self.assertEqual(revisions, contract_revisions(data, data['expected_revisions']))
+        self.assertEqual(len(revisions), len(rows))
+        self.assertTrue(set(data['boundary_controls']) <= revisions)
+        core = (ROOT / 'src/engines' / data['engine'] / 'openbor.c').read_text()
+        load = function(core, 'load_cached_model')
+        start = load.index('case CMD_MODEL_RANGE:')
+        values = dict(CASE=load[start:load.index('case CMD_MODEL_RANGEZ:', start)],
+                      FUNCTIONS='\n'.join(function(core, name) for name in ('diff', 'checkhit')),
+                      PROFILES=','.join(str(r['revision'])+'u' for r in rows))
+        for name in ('range', 'hit'):
+            values[name.upper()+'_CASES'] = ',\n'.join('{'+','.join(str(c[k]) for k in
+                data[name+'_fields'])+'}' for c in data[name+'_cases'])
+        text = Path(__file__).with_name('range_hit_contract.c.in').read_text()
+        for key, value in values.items():
+            text = text.replace('@'+key+'@', value)
+        self.assertIsNone(re.search(r'@[A-Z_]+@', text))
+        actual = [json.loads(line) for line in native_output(text, data).splitlines()]
+        self.assertEqual(len(actual), len(rows))
+        for row, result in zip(rows, actual):
+            with self.subTest(revision=row['revision']):
+                self.assertEqual(result, dict(revision=row['revision'], **data['contracts'][row['contract']]))
+
+
+class FrontpanelNormalization(unittest.TestCase):
+    def test_native_panel_dimensions_and_vertical_frontpanel_ratio(self):
+        from test_historical_common_think import native_output
+        data = load_contract_fixture(Path(__file__).with_name('fixtures') /
+                                     'profile-frontpanel-normalization-contracts.json')
+        rows = data['sources']
+        revisions = {r['revision'] for r in rows}
+        self.assertEqual(revisions, contract_revisions(data, data['expected_revisions']))
+        self.assertEqual(len(revisions), len(rows))
+        self.assertTrue(set(data['boundary_controls']) <= revisions)
+        load = function((ROOT / 'src/engines' / data['engine'] / 'openbor.c').read_text(), 'load_level')
+        start = load.index('case bgt_panel:')
+        values = dict(REGION=load[start:load.index('case bgt_background:', start)],
+                      PROFILES=','.join(str(r['revision'])+'u' for r in rows),
+                      CASES=',\n'.join('{'+','.join(str(c[k]) for k in data['case_fields'])+'}'
+                                        for c in data['cases']))
+        text = Path(__file__).with_name('frontpanel_normalization_contract.c.in').read_text()
+        for key, value in values.items():
+            text = text.replace('@'+key+'@', value)
+        self.assertIsNone(re.search(r'@[A-Z_]+@', text))
+        actual = [json.loads(line) for line in native_output(text, data).splitlines()]
+        self.assertEqual(len(actual), len(rows))
+        for row, result in zip(rows, actual):
+            with self.subTest(revision=row['revision']):
+                self.assertEqual(result, dict(revision=row['revision'], results=data['contracts'][row['contract']]))
+
+
+class LevelLifecycleContracts(unittest.TestCase):
+    def test_native_playable_resets_offsets_and_level_exit_order(self):
+        from test_historical_common_think import native_output
+        data = load_contract_fixture(Path(__file__).with_name('fixtures') /
+                                     'profile-level-lifecycle-contracts.json')
+        rows = data['sources']
+        revisions = {r['revision'] for r in rows}
+        self.assertEqual(revisions, contract_revisions(data, data['expected_revisions']))
+        self.assertEqual(len(rows), len(revisions))
+        self.assertTrue(set(data['boundary_controls']) <= revisions)
+        core = (ROOT / 'src/engines' / data['engine'] / 'openbor.c').read_text()
+        load = function(core, 'load_level')
+        calls = [line.strip() for line in load.splitlines() if 'reset_playable_list(1);' in line]
+        self.assertEqual(len(calls), 1)
+        unload = function(core, 'unload_level').removesuffix('\n')
+        tail = unload[unload.index('cameratype = 0;'):unload.rindex('}')]
+        play = function(core, 'playlevel')
+        start = play.rindex('if(!musicoverlap)')
+        end = play.index('unload_level();', start) + len('unload_level();')
+        values = dict(RESET=function(core, 'reset_playable_list'), LOAD=calls[0],
+                      UNLOAD=tail, AUDIO=play[start:end],
+                      PROFILES=','.join(str(r['revision'])+'u' for r in rows))
+        text = Path(__file__).with_name('level_lifecycle_contract.c.in').read_text()
+        for key, value in values.items():
+            text = text.replace('@'+key+'@', value)
+        self.assertIsNone(re.search(r'@[A-Z_]+@', text))
+        actual = [json.loads(line) for line in native_output(text, data).splitlines()]
+        self.assertEqual(len(actual), len(rows))
+        for row, result in zip(rows, actual):
+            with self.subTest(revision=row['revision']):
+                self.assertEqual(result, dict(revision=row['revision'], **data['contracts'][row['contract']]))
+
+
+class ScrollLimitContracts(unittest.TestCase):
+    def test_native_scroll_defaults_and_rocking_camera_margin(self):
+        from test_historical_common_think import native_output
+        data = load_contract_fixture(Path(__file__).with_name('fixtures') / 'profile-scroll-limit-contracts.json')
+        rows = data['sources']
+        self.assertEqual({r['revision'] for r in rows}, contract_revisions(data, data['expected_revisions']))
+        self.assertEqual(len(rows), len({r['revision'] for r in rows}))
+        self.assertTrue(set(data['boundary_controls']) <= {r['revision'] for r in rows})
+        core = (ROOT / 'src/engines' / data['engine'] / 'openbor.c').read_text()
+        load = function(core, 'load_level')
+        start = load.index('case CMD_LEVEL_SCROLLZ:')
+        case = load[start:load.index('case CMD_LEVEL_BLOCKADE:', start)]
+        camera = re.findall(r'if\(advancey > panel_height[^\n]+\n\s*if\(advancey < 0\) advancey = 0;',
+                            function(core, 'update_scroller'))
+        self.assertEqual(len(camera), 1)
+        values = dict(CASE=case, CAMERA=camera[0], PROFILES=','.join(str(r['revision'])+'u' for r in rows))
+        for name in ('parser', 'camera'):
+            values[name.upper()+'_CASES'] = ',\n'.join('{'+','.join(str(c[k]) for k in
+                data[name+'_fields'])+'}' for c in data[name+'_cases'])
+        text = Path(__file__).with_name('scroll_limit_contract.c.in').read_text()
+        for key, value in values.items():
+            text = text.replace('@'+key+'@', value)
+        self.assertIsNone(re.search(r'@[A-Z_]+@', text))
+        actual = [json.loads(line) for line in native_output(text, data).splitlines()]
+        self.assertEqual(len(actual), len(rows))
+        for row, result in zip(rows, actual):
+            with self.subTest(revision=row['revision']):
+                self.assertEqual(result, dict(revision=row['revision'], **data['contracts'][row['contract']]))
+
+
+class HudFpsContracts(unittest.TestCase):
+    def test_native_fps_text_matches_own_minimum_width(self):
+        from test_historical_common_think import native_output
+        data = load_contract_fixture(Path(__file__).with_name('fixtures') / 'profile-hud-fps-contracts.json')
+        rows = data['sources']
+        self.assertEqual({r['revision'] for r in rows}, contract_revisions(data, data['expected_revisions']))
+        self.assertEqual(len(rows), len({r['revision'] for r in rows}))
+        self.assertTrue(set(data['boundary_controls']) <= {r['revision'] for r in rows})
+        core = (ROOT / 'src/engines' / data['engine'] / 'openbor.c').read_text()
+        values = dict(PROFILES=','.join('{%du,%d}' % (r['revision'],
+            r['native_owner']=='obor_legacy_predrawstatus') for r in rows),
+            VALUES=','.join(map(str, data['fps_values'])))
+        for key, name in [('LEGACY_CALL', 'obor_legacy_predrawstatus'), ('CURRENT_CALL', 'predrawstatus')]:
+            calls = [line.strip() for line in function(core, name).splitlines()
+                     if 'font_printf' in line and 'FPS:' in line]
+            self.assertEqual(len(calls), 1)
+            values[key] = calls[0]
+        text = Path(__file__).with_name('hud_fps_contract.c.in').read_text()
+        for key, value in values.items():
+            text = text.replace('@'+key+'@', value)
+        self.assertIsNone(re.search(r'@[A-Z_]+@', text))
+        actual = [json.loads(line) for line in native_output(text, data).splitlines()]
+        self.assertEqual(len(actual), len(rows))
+        for row, result in zip(rows, actual):
+            with self.subTest(revision=row['revision']):
+                self.assertEqual(result, dict(revision=row['revision'], results=data['contracts'][row['contract']]))
+
+
+class OffscreenLossContracts(unittest.TestCase):
+    def test_native_depth_projection_and_termination_callback(self):
+        from test_historical_common_think import native_output
+        data = load_contract_fixture(Path(__file__).with_name('fixtures') /
+                                     'profile-offscreen-loss-contracts.json')
+        rows = data['sources']
+        self.assertEqual({r['revision'] for r in rows}, contract_revisions(data, data['expected_revisions']))
+        self.assertEqual(len(rows), len({r['revision'] for r in rows}))
+        self.assertTrue(set(data['boundary_controls']) <= {r['revision'] for r in rows})
+        core = (ROOT / 'src/engines' / data['engine'] / 'openbor.c').read_text()
+        body = function(core, 'check_lost')
+        declaration = re.findall(r'int osk = [^;]+;', body)
+        default = re.findall(r'(?m)^static int DEFAULT_OFFSCREEN_KILL\s*=\s*[^;]+;', core)
+        self.assertEqual(len(declaration), 1)
+        self.assertEqual(len(default), 1)
+        region = body[body.index('if((self->z'):body.index('// fall in to a pit')]
+        text = Path(__file__).with_name('offscreen_loss_contract.c.in').read_text()
+        for key, value in dict(DEFAULT_DECLARATION=default[0], DECLARATION=declaration[0], REGION=region,
+                              PROFILES=','.join(str(r['revision'])+'u' for r in rows),
+                              CASES=',\n'.join('{'+','.join(str(c[k]) for k in data['case_fields'])+'}'
+                                              for c in data['cases'])).items():
+            text = text.replace('@'+key+'@', value)
+        self.assertIsNone(re.search(r'@[A-Z_]+@', text))
+        actual = [json.loads(line) for line in native_output(text, data).splitlines()]
+        self.assertEqual(len(actual), len(rows))
+        for row, result in zip(rows, actual):
+            with self.subTest(revision=row['revision']):
+                self.assertEqual(result, dict(revision=row['revision'], results=data['contracts'][row['contract']]))
+
+
+class NullableLevelBackground(unittest.TestCase):
+    def test_native_background_copy_and_missing_background(self):
+        from test_historical_common_think import native_output
+        data = load_contract_fixture(Path(__file__).with_name('fixtures') /
+                                     'profile-level-background-guard-contracts.json')
+        rows = data['sources']
+        self.assertEqual({r['revision'] for r in rows}, contract_revisions(data, data['expected_revisions']))
+        self.assertEqual(len(rows), len({r['revision'] for r in rows}))
+        self.assertTrue(set(data['boundary_controls']) <= {r['revision'] for r in rows})
+        source = (ROOT / 'src/engines' / data['engine'] / 'openbor.c').read_text()
+        load = function(source, 'load_level')
+        blocks = re.findall(r'if\(level->background\)\s*\{\s*'
+                            r'__realloc\(level->layersref,level->numlayersref\);[\s\S]*?\}', load)
+        self.assertEqual(len(blocks), 1)
+        text = r'''
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "openbor.h"
+#undef printf
+#undef assert
+uint32_t obor_profile_build;
+#define assert(c) do {if(!(c)){fprintf(stderr,"Background copy revision=%u line=%d\n",obor_profile_build,__LINE__);abort();}}while(0)
+static s_level storage,*level=&storage;
+@ENCODE@
+@DECODE@
+static void append_background(void){@BLOCK@}
+int main(void){
+ const unsigned profiles[]={@PROFILES@};
+ for(unsigned p=0;p<sizeof(profiles)/sizeof(*profiles);++p){
+  obor_profile_build=profiles[p];
+  for(int count=0;count<3;++count)for(int present=0;present<2;++present){
+   memset(level,0,sizeof(*level));s_layer background;memset(&background,0,sizeof(background));
+   background.width=917;background.height=71;background.xratio=1.25f;background.z=-3;
+   if(count){level->layersref=calloc((size_t)count,sizeof(*level->layersref));assert(level->layersref);}
+   for(int i=0;i<count;++i){level->layersref[i].width=100+i;level->layersref[i].height=200+i;}
+   level->numlayersref=count;level->background=present?&background:NULL;
+   s_layer *before=level->layersref;append_background();
+   assert(level->numlayersref==count+present);
+   for(int i=0;i<count;++i)assert(level->layersref[i].width==100+i && level->layersref[i].height==200+i);
+   if(present){
+    assert(!memcmp(level->layersref+count,&background,sizeof(background)));
+    assert(obor_layer_decode(level,level->background)==level->layersref+count);
+   }else assert(!level->background && level->layersref==before);
+   free(level->layersref);level->layersref=NULL;
+  }
+  printf("{\"revision\":%u,\"present_cases\":3,\"missing_cases\":3}\n",obor_profile_build);
+ }
+ return 0;
+}
+'''
+        for key, value in dict(ENCODE=function(source, 'obor_layer_encode'),
+                               DECODE=function(source, 'obor_layer_decode'), BLOCK=blocks[0],
+                               PROFILES=','.join(str(r['revision'])+'u' for r in rows)).items():
+            text = text.replace('@'+key+'@', value)
+        self.assertIsNone(re.search(r'@[A-Z_]+@', text))
+        actual = [json.loads(line) for line in native_output(text, data).splitlines()]
+        self.assertEqual(actual, [dict(revision=r['revision'], present_cases=3, missing_cases=3) for r in rows])
 
 
 def level_runtime_program(script, header, variants, utils, profiles, original=False):

@@ -1,0 +1,61 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <ctype.h>
+#include <limits.h>
+#include "openbor.h"
+#undef printf
+#undef time
+#undef assert
+uint32_t obor_profile_build;
+static s_attack attack,*pattack=&attack;
+static s_model model,*newchar=&model;
+static entity subject,*self=&subject;
+static entity *ent=&subject;
+static s_anim native_animation,*newanim=&native_animation,*animation_table[1];
+static int iForce,i;
+static LONG force,drop,ltemp;
+static char number_text[16][32];
+static const char *arguments[16];
+static const int numbers[]={@NUMBERS@};
+static const char *freeze_numbers[]={@FREEZE_NUMBERS@};
+#define CHECK(c,message) do {if(!(c)){fprintf(stderr,"Attack scalar mismatch: profile=%u %s\n",obor_profile_build,message);abort();}}while(0)
+#define assert(c) CHECK(c,"native numeric precondition")
+/* All statement targets refer to the controlled attack object. */
+#define atk attack
+@DEFAULT@
+@PARSERS@
+static char *argument(unsigned index){CHECK(index<16,"argument index");return (char*)arguments[index];}
+#undef GET_INT_ARG
+#undef GET_FLOAT_ARG
+#undef GET_ARGP
+#define GET_ARGP(n) argument(n)
+#define GET_INT_ARG(n) getValidInt(argument(n),"fixture","attack")
+#define GET_FLOAT_ARG(n) getValidFloat(argument(n),"fixture","attack")
+static void observed_variant(ScriptVariant *value,int type){memset(value,0,sizeof(*value));value->vt=type;}
+#define ScriptVariant_ChangeType observed_variant
+@GETTERS@
+#undef ScriptVariant_ChangeType
+@DECLARATIONS@
+static void setup(unsigned index){
+ memset(&model,0,sizeof(model));memset(&subject,0,sizeof(subject));
+ model.smartbomb=&attack;pattack=&attack;
+ memset(&native_animation,0,sizeof(native_animation));i=0;
+ animation_table[0]=newanim;subject.modeldata.animation=animation_table;
+ subject.modeldata.animation_capacity=1;ltemp=numbers[index];
+ for(unsigned i=0;i<16;++i){snprintf(number_text[i],sizeof(number_text[i]),"%d",numbers[(index+i)%(sizeof(numbers)/sizeof(*numbers))]);arguments[i]=number_text[i];}
+ iForce=numbers[index];force=numbers[(index+1)%(sizeof(numbers)/sizeof(*numbers))];
+ drop=numbers[(index+2)%(sizeof(numbers)/sizeof(*numbers))];
+ subject.health=numbers[index];subject.damage_on_landing=numbers[(index+3)%(sizeof(numbers)/sizeof(*numbers))];
+}
+@CHECKS@
+int main(void){
+ _Static_assert(sizeof(int)==4 && sizeof(short)==2 && CHAR_BIT==8,"native scalar widths");
+ CHECK((char)255==-1,"own signed-char build flag");
+ @CALLS@
+ return 0;
+}

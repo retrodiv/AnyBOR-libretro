@@ -1,0 +1,76 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "openbor.h"
+#undef printf
+#undef assert
+#undef time
+#define time 100u
+uint32_t obor_profile_build;
+static unsigned case_number;
+#define assert(c) do{if(!(c)){fprintf(stderr,"Early grab revision=%u case=%u line=%d\n",obor_profile_build,case_number,__LINE__);abort();}}while(0)
+struct state {int action,other,attacking,direction,combo;u32 stall,release;};
+struct event {int kind;struct state state;};
+struct input {int available,idling,found,can_grab,adjust,word,wait,mutate;};
+struct expected {int result,rands;struct state final;unsigned event_count;struct event events[10];};
+struct profile {unsigned revision,contract;};
+static const struct input inputs[]={@INPUTS@};
+static const struct expected expected[][sizeof(inputs)/sizeof(*inputs)]={@EXPECTED@};
+static const struct profile profiles[]={@PROFILES@};
+static const struct input *test;
+static entity actor,partner,*self=&actor;
+static s_model model;
+static s_anim animations[2],*slots[MAX_ANIS];
+static struct event events[10];static unsigned event_count,rands;
+static void initial(void){abort();}
+static void changed(void){abort();}
+void common_grab(void){abort();}
+void common_grabbed(void){abort();}
+void common_prethrow(void){abort();}
+void common_throw_wait(void){abort();}
+static int action(void (*p)(void)){if(p==initial)return 1;if(p==common_grab)return 2;if(p==common_throw_wait)return 3;if(p==common_grabbed)return 4;if(p==common_prethrow)return 5;assert(p==changed);return 6;}
+static struct state state(void){return (struct state){action(self->takeaction),action(partner.takeaction),self->attacking,partner.direction,self->combostep[0],partner.stalltime,self->releasetime};}
+static void observe(int kind){assert(event_count<10);events[event_count++]=(struct event){kind,state()};}
+static void mutation(void){self->takeaction=partner.takeaction=changed;self->attacking=1;self->combostep[0]=5;partner.direction=1;partner.stalltime=self->releasetime=0;}
+static int observed_word(void){++rands;observe(1);return test->word;}
+static entity *observed_find(entity *e,float x,float z,int type){assert(e==self && x==2 && z==3 && type==TYPE_ENEMY);observe(2);return test->found?&partner:NULL;}
+static int observed_can(entity *e,entity *other){assert(e==self && other==&partner);observe(3);return test->can_grab;}
+static int observed_adjust(entity *e,entity *other,float distance,int mode){assert(e==self && other==&partner && distance==7 && !mode);observe(4);return test->adjust;}
+static void observed_animation(entity *e,int animation,int reset){assert(e==self && !reset && animation==(test->available&1?ANI_GRAB:ANI_THROW));observe(5);if(test->mutate==1)mutation();}
+static int observed_pain(entity *e,int type,int reset){assert(e==&partner && type==-1 && !reset);observe(6);if(test->mutate==2)mutation();return 1;}
+static void observed_throw(void){observe(7);}
+#undef rand
+#define rand observed_word
+#define find_ent_here(e,x,z,t,last) observed_find(e,x,z,t)
+#undef cangrab
+#define cangrab observed_can
+#define adjust_grabposition observed_adjust
+#define ent_set_anim observed_animation
+#define set_pain observed_pain
+#define dothrow observed_throw
+@LINKS@
+@GRAB@
+static int selected(float x,float z){entity *other=NULL;@SELECTOR@return 1;}
+static void equal(struct state a,struct state b){assert(a.action==b.action && a.other==b.other && a.attacking==b.attacking && a.direction==b.direction && a.combo==b.combo && a.stall==b.stall && a.release==b.release);}
+int main(void){
+ _Static_assert(GAME_SPEED==200 && GRAB_STALL==160,"Own clock contract");
+ for(unsigned p=0;p<sizeof(profiles)/sizeof(*profiles);++p){obor_profile_build=profiles[p].revision;
+  for(unsigned c=0;c<sizeof(inputs)/sizeof(*inputs);++c){++case_number;test=inputs+c;const struct expected *wanted=&expected[profiles[p].contract][c];
+   memset(&actor,0,sizeof(actor));memset(&partner,0,sizeof(partner));memset(&model,0,sizeof(model));memset(animations,0,sizeof(animations));memset(slots,0,sizeof(slots));
+   actor.exists=partner.exists=1;partner.modeldata.type=TYPE_ENEMY;
+   actor.model=&model;model.grabflip=3;actor.modeldata.animation=slots;actor.modeldata.animation_capacity=MAX_ANIS;
+   for(int a=0;a<2;++a)if(test->available&(1<<a)){animations[a].numframes=1;slots[a?ANI_THROW:ANI_GRAB]=animations+a;}
+   actor.takeaction=partner.takeaction=initial;actor.idling=test->idling;actor.running=1;actor.attacking=1;partner.attacking=1;
+   actor.modeldata.type=TYPE_ENEMY;actor.modeldata.hostile=TYPE_ENEMY;actor.modeldata.grabdistance=7;actor.modeldata.throwframewait=test->wait;
+   actor.x=1;actor.z=1;partner.x=3;partner.direction=1;actor.xdir=5;actor.zdir=3;partner.xdir=4;partner.zdir=2;
+   actor.combostep[0]=9;partner.stalltime=11;actor.releasetime=13;rands=event_count=0;
+   assert(selected(2,3)==wanted->result && rands==(unsigned)wanted->rands);equal(state(),wanted->final);
+   assert(event_count==wanted->event_count);for(unsigned k=0;k<event_count;++k){assert(events[k].kind==wanted->events[k].kind);equal(events[k].state,wanted->events[k].state);}
+   if(!wanted->result){assert(actor.direction==1 && !actor.idling && !actor.running && !partner.attacking);assert(actor.link==&partner && partner.link==self && actor.grabbing==&partner);}
+  }
+ }
+ printf("{\"contexts\":%zu,\"cases\":%u}\n",sizeof(profiles)/sizeof(*profiles),case_number);return 0;
+}

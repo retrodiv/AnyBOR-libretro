@@ -354,6 +354,69 @@ jobs:
           run_check python3 tools/test_historical_entity_returns.py
           run_check python3 tools/test_historical_entity_complex.py
           run_check python3 tools/test_historical_entity_domains.py
+          run_check python3 tools/test_historical_entity_values.py
+          run_check python3 tools/test_historical_action_completion.py
+          run_check python3 tools/test_historical_action_attacks.py
+          run_check python3 tools/test_historical_motion_order.py
+          run_check python3 tools/test_historical_block_attempt.py
+          run_check python3 tools/test_historical_jump_order.py
+          run_check python3 tools/test_historical_attack_chain.py
+          run_check python3 tools/test_historical_special_order.py
+          run_check python3 tools/test_historical_action_exit.py
+          run_check python3 tools/test_historical_dive_data.py
+          run_check python3 tools/test_historical_stuck_input.py
+          run_check python3 tools/test_historical_pickup_caller.py
+          run_check python3 tools/test_historical_arrow_caller.py
+          run_check python3 tools/test_historical_common_think.py
+          run_check python3 tools/test_historical_combo_selection.py
+          run_check python3 tools/test_historical_combo_loading.py
+          run_check python3 tools/test_historical_legacy_combo.py
+          run_check python3 tools/test_historical_player_air_grab.py
+          run_check python3 tools/test_historical_player_phase.py
+          run_check python3 tools/test_historical_player_actions.py
+          run_check python3 tools/test_historical_weapon_tables.py
+          run_check python3 tools/test_historical_player_items.py
+          run_check python3 tools/test_historical_player_input_helpers.py
+          run_check python3 tools/test_historical_player_history.py
+          run_check python3 tools/test_historical_input_constants.py
+          run_check python3 tools/test_historical_frozen_timers.py
+          run_check python3 tools/test_historical_model_selection.py
+          run_check python3 tools/test_historical_script_registry.py
+          run_check python3 tools/test_historical_legacy_graphics.py
+          run_check python3 tools/test_historical_gfx_properties.py
+          run_check python3 tools/test_historical_texture_dispatch.py
+          run_check python3 tools/test_historical_graphics_allocation.py
+          run_check python3 tools/test_historical_font_epochs.py
+          run_check python3 tools/test_historical_level_saves.py
+          run_check python3 tools/test_historical_level_entries.py
+          run_check python3 tools/test_historical_level_sets.py
+          run_check python3 tools/test_historical_level_consumers.py
+          run_check python3 tools/test_historical_level_progression.py
+          run_check python3 tools/test_historical_set_callers.py
+          run_check python3 tools/test_historical_hud_schedule.py
+          run_check python3 tools/test_historical_background_layers.py
+          run_check python3 tools/test_historical_frame_debug.py
+          run_check python3 tools/test_historical_background_cache.py
+          run_check python3 tools/test_historical_layer_repeats.py
+          run_check python3 tools/test_historical_draw_repeats.py
+          run_check python3 tools/test_historical_draw_method_arguments.py
+          run_check python3 tools/test_historical_script_queue.py
+          run_check python3 tools/test_historical_queue_dispatch.py
+          run_check python3 tools/test_historical_sprite_cache.py
+          run_check python3 tools/test_historical_sprite_map.py
+          run_check python3 tools/test_historical_entity_queries.py
+          run_check python3 tools/test_historical_script_model_calls.py
+          run_check python3 tools/test_historical_ai_script_calls.py
+          run_check python3 tools/test_historical_projectile_calls.py
+          run_check python3 tools/test_historical_stream_io.py
+          run_check python3 tools/test_historical_stream_ownership.py
+          run_check python3 tools/test_historical_menu_layout.py
+          run_check python3 tools/test_historical_visual_defaults.py
+          run_check python3 tools/test_historical_scalar_fields.py
+          run_check python3 tools/test_historical_attack_fields.py
+          run_check python3 tools/test_historical_mp_recovery.py
+          run_check python3 tools/test_historical_frame_sampling.py
+          run_check python3 tools/test_historical_scene_scores.py
           run_check python3 tools/test_historical_entity_mapper_split.py
           run_check python3 tools/test_historical_entity_factor_reads.py
           run_check python3 tools/test_historical_sprite_stats_reads.py
@@ -418,6 +481,22 @@ jobs:
           run_check python3 tools/test_historical_aiattack_command.py
           run_check python3 tools/test_level_cleanup_ownership.py
           run_check python3 tools/test_script_parser_tables.py
+          run_check python3 tools/test_historical_control_flow.py
+          run_check python3 tools/test_historical_interpreter_reset.py
+          run_check python3 tools/test_historical_script_context.py
+          run_check python3 tools/test_historical_animation_sync.py
+          run_check python3 tools/test_historical_animation_dispatch.py
+          run_check python3 tools/test_historical_animation_defaults.py
+          run_check python3 tools/test_historical_ai_prepare.py
+          run_check python3 tools/test_historical_ai_cost.py
+          run_check python3 tools/test_historical_ai_picker.py
+          run_check python3 tools/test_historical_early_normal_attack.py
+          run_check python3 tools/test_historical_random_scaling.py
+          run_check python3 tools/test_historical_wander.py
+          run_check python3 tools/test_historical_free_wander.py
+          run_check python3 tools/test_historical_move.py
+          run_check python3 tools/test_historical_navigation.py
+          run_check python3 tools/test_historical_paths.py
           run_check python3 tools/test_historical_colourtable_reads.py
           run_check python3 tools/test_colourtable_bounds.py
           run_check python3 tools/test_render_colourmaps.py
@@ -572,7 +651,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        profile_group: ["macos-intel:1/5", "macos-intel:2/5", "macos-intel:3/5", "macos-intel:4/5", "macos-intel:5/5"]
+        profile_group: ["macos-intel:1/7", "macos-intel:2/7", "macos-intel:3/7", "macos-intel:4/7", "macos-intel:5/7", "macos-intel:6/7", "macos-intel:7/7"]
         platform:
           - runner: macos-15-intel
             target: macos-x86_64

@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.81 — historical profiles through 3665
+
+- Add 61 official profiles from 3500 through 3665.
+- Preserve each profile’s script, model, level, input, graphics, audio and save behavior.
+- Keep valid historical results with bounded data access and controlled engine stops.
+- Match Auto requirements to literal API availability and balance native CI coverage using measured costs.
+
 ## 0.1.80 — native alignment checks and CI scheduling
 
 - Preserve image ownership when copying references from packed records.

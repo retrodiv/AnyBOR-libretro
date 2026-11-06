@@ -1,0 +1,171 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <limits.h>
+#pragma GCC diagnostic push
+#pragma GCC diagnostic warning "-Wmissing-field-initializers"
+#if defined(__clang__)
+#if __has_warning("-Wsingle-bit-bitfield-constant-conversion")
+#pragma GCC diagnostic warning "-Wsingle-bit-bitfield-constant-conversion"
+#endif
+#endif
+@DECLARATIONS@
+#pragma GCC diagnostic pop
+#undef printf
+uint32_t obor_profile_build;
+int pixelformat,screenformat,pixelbytes[5]={1,1,2,3,4};
+@CACHE_GLOBALS@
+static s_level fixture_level;
+static s_layer layers[2];
+static s_screen output,cache,images[2];
+static s_sprite frames[2];
+static entity frozen_textbox;
+static unsigned char fixture_palettes[1][1024];
+static unsigned cases,allocs,free_calls,releases,clears,directs,queues,blits;
+static int allocation_fails,owned,expected_travel,expected_wave;
+static unsigned neon_count_expected[2];
+#undef assert
+#define assert(c) do{if(!(c)){fprintf(stderr,"BGCACHE profile=%u case=%u line=%d C%u D%u Q%u L%u\n",obor_profile_build,cases,__LINE__,clears,directs,queues,blits);abort();}}while(0)
+s_screen *allocscreen(int width,int height,int format)
+{
+    assert(!owned && width==videomodes.hRes && height==videomodes.vRes && format==screenformat);
+    ++allocs;if(allocation_fails)return NULL;owned=1;return &cache;
+}
+void freescreen(s_screen **screen)
+{
+    assert(screen==&bgbuffer);++free_calls;
+    if(*screen){assert(*screen==&cache && owned);owned=0;++releases;*screen=NULL;}
+}
+void clearscreen(s_screen *screen){assert(screen==(bgbuffer?bgbuffer:vscreen) && !blits);++clears;}
+static void tile(s_screen *destination,s_drawmethod *method)
+{
+    assert(destination==(bgbuffer?bgbuffer:vscreen) && clears==1 && !blits && traveltime==expected_travel);
+    assert(method && method->xrepeat==1 && method->yrepeat==1 && !method->xspan && !method->yspan && method->water.wavetime==expected_wave);++directs;
+}
+void putscreen(s_screen *destination,s_screen *source,int x,int y,s_drawmethod *method)
+{
+    if(!method){assert(destination==vscreen && source==bgbuffer && !x && !y && traveltime==time && queues==1 && directs==(bgbuffer_updated?0u:1u));++blits;return;}
+    assert(source==images);tile(destination,method);
+}
+void putsprite(int x,int y,s_sprite *source,s_screen *destination,s_drawmethod *method)
+{(void)x;(void)y;assert(source==frames);tile(destination,method);}
+void spriteq_add_screen(int x,int y,int z,s_screen *source,s_drawmethod *method,int sort)
+{(void)x;(void)y;assert(source==images+1 && z==10 && method && !sort && !blits && traveltime==expected_travel && method->water.wavetime==expected_wave);if(level->layersref==layers)assert(directs==(bgbuffer_updated?0u:1u));++queues;}
+void spriteq_add_frame(int x,int y,int z,s_sprite *source,s_drawmethod *method,int sort)
+{(void)x;(void)y;assert(source==frames+1 && z==10 && method && !sort && !blits && traveltime==expected_travel && method->water.wavetime==expected_wave);if(level->layersref==layers)assert(directs==(bgbuffer_updated?0u:1u));++queues;}
+void spriteq_add_sprite(int x,int y,int z,int id,s_drawmethod *method,int sort)
+{(void)x;(void)y;(void)z;(void)id;(void)method;(void)sort;abort();}
+@NATIVE@
+static void draw_observed(void){expected_travel=traveltime;draw_scrolled_bg();}
+static void begin(int sprite)
+{
+    assert(!owned);bgbuffer=NULL;bgbuffer_updated=0;
+    memset(&fixture_level,0,sizeof(fixture_level));level=&fixture_level;
+    memset(layers,0,sizeof(layers));level->layersref=layers;level->numlayersref=level->numlayers=2;
+    level->scrolldir=SCROLL_RIGHT;level->quaketime=UINT32_MAX;
+    level->palettes=fixture_palettes;level->numpalettes=1;
+    memset(&videomodes,0,sizeof(videomodes));videomodes.hRes=32;videomodes.vRes=24;
+    vscreen=canvas=&output;screenformat=PIXEL_32;pixelformat=PIXEL_x8;
+    viewportx=viewporty=viewportw=viewporth=0;
+    time=traveltime=100;texttime=0;bgtravelled=advancex=advancey=0;
+    gfx_x_offset=gfx_y_offset=gfx_y_offset_adj=0;pause=0;current_palette=0;
+    smartbomber=textbox=NULL;neon_time=UINT32_MAX;
+    for(int n=0;n<2;++n){
+        layers[n].enabled=1;layers[n].width=layers[n].height=4;layers[n].z=n?10:MIN_INT;
+        layers[n].drawmethod=plainmethod;layers[n].drawmethod.xrepeat=layers[n].drawmethod.yrepeat=1;layers[n].drawmethod.water.wavespeed=1.5f;
+        layers[n].gfx.type=sprite?gfx_sprite:gfx_screen;
+        images[n].magic=screen_magic;frames[n].magic=sprite_magic;
+        if(sprite)layers[n].gfx.sprite=frames+n;else layers[n].gfx.screen=images+n;
+    }
+    allocs=free_calls=releases=clears=directs=queues=blits=0;allocation_fails=0;expected_wave=150;
+}
+static void render(unsigned clear,unsigned direct,unsigned queued,unsigned blit)
+{
+    ++cases;clears=directs=queues=blits=0;draw_observed();
+    assert(clears==clear && directs==direct && queues==queued && blits==blit && bgbuffer_updated==1);
+}
+static void check_lifecycle(int legacy)
+{
+    for(int indexed=1;indexed>=0;--indexed)for(int rgb32=0;rgb32<2;++rgb32)
+    for(int has_layers=1;has_layers>=0;--has_layers)for(int fail=0;fail<2;++fail){
+        ++cases;begin(0);pixelformat=indexed?PIXEL_x8:PIXEL_8;screenformat=rgb32?PIXEL_32:PIXEL_16;
+        level->numlayers=has_layers;allocation_fails=fail;bgbuffer_updated=1;
+        obor_legacy_background_cache_load();int requested=legacy && indexed && has_layers;
+        assert(allocs==(unsigned)requested && bgbuffer==(requested && !fail?&cache:NULL));
+        assert(bgbuffer_updated==(legacy?0:1));
+        level=NULL;obor_legacy_background_cache_unload();
+        assert(!bgbuffer && !owned && free_calls==(unsigned)legacy && releases==(unsigned)(requested && !fail));
+        obor_legacy_background_cache_unload();assert(free_calls==(unsigned)(2*legacy) && releases==(unsigned)(requested && !fail));
+    }
+}
+static void check_reuse(void)
+{
+    for(int sprite=0;sprite<2;++sprite){
+        begin(sprite);obor_legacy_background_cache_load();assert(bgbuffer==&cache);
+        render(1,1,1,1);render(0,0,1,1);
+        advancex=1;render(1,1,1,1);
+        advancey=1;render(1,1,1,1);
+        current_palette=1;render(1,1,1,1);
+        layers[0].drawmethod.water.watermode=1;render(1,1,1,1);
+        layers[0].enabled=0;render(0,0,1,1);
+        layers[0].enabled=1;layers[0].drawmethod.water.watermode=0;
+        layers[1].drawmethod.water.watermode=1;render(0,0,1,1);
+        level->bgspeed=1;render(1,1,1,1);
+        pause=1;render(0,0,1,1);
+        pause=0;level->bgspeed=0;level->rocking=1;render(1,1,1,1);
+        pause=1;render(0,0,1,1);
+        obor_legacy_background_cache_unload();pause=0;level->rocking=0;
+        render(1,1,1,0);
+    }
+}
+static void no_layers(void){level->numlayersref=level->numholes=0;}
+static void check_clock(int always_quake,int zero_time_offset)
+{
+    ++cases;begin(0);no_layers();level->quaketime=100;draw_observed();
+    assert(level->quaketime==(always_quake?108u:100u));
+    for(int sign=-1;sign<=1;sign+=2){
+        ++cases;begin(0);no_layers();level->quake=8*sign;level->quaketime=100;
+        draw_observed();assert(level->quake==4*sign && level->quaketime==108);
+    }
+    ++cases;begin(0);no_layers();time=traveltime=99;level->quake=8;level->quaketime=100;
+    draw_observed();assert(level->quake==8 && level->quaketime==100);
+    ++cases;begin(0);no_layers();time=traveltime=0;gfx_y_offset=13;level->scrolldir=SCROLL_UP;
+    draw_observed();assert(gfx_y_offset==(zero_time_offset?-4:13));
+    ++cases;begin(0);no_layers();time=120;traveltime=100;texttime=7;bgtravelled=5;
+    textbox=&frozen_textbox;neon_time=0;level->layersref=layers+1;level->numlayersref=1;expected_wave=139;draw_observed();
+    assert(bgtravelled==5 && texttime==27 && traveltime==120 && !neon_time && queues==1);textbox=NULL;
+    ++cases;begin(0);no_layers();time=106;traveltime=100;texttime=7;bgtravelled=5;level->bgspeed=1.25f;
+    level->layersref=layers+1;level->numlayersref=1;expected_wave=148;draw_observed();assert(bgtravelled==6 && texttime==7 && traveltime==106 && queues==1);
+}
+static void check_neon(int legacy)
+{
+    unsigned *count=neon_count_expected+(legacy?0:1);
+    ++cases;begin(0);no_layers();pixelformat=PIXEL_8;neon_time=0;
+    if(legacy)draw_observed();else update_scrolled_bg();
+    for(unsigned n=0;n<8;++n)assert(neontable[128+n]==128+((n+*count)&7));
+    *count+=2;assert(neon_time==166);
+    for(int rgb32=0;rgb32<2;++rgb32){
+        ++cases;begin(0);no_layers();screenformat=rgb32?PIXEL_32:PIXEL_16;neon_time=0;
+        unsigned char before[1024];for(unsigned n=0;n<sizeof(before);++n)neontable[n]=before[n]=n%251;
+        unsigned bytes=rgb32?4:2;if(legacy)draw_observed();else update_scrolled_bg();
+        for(unsigned n=0;n<8;++n)for(unsigned c=0;c<bytes;++c)
+            assert(neontable[(128+n)*bytes+c]==before[(128+((n+2)%8))*bytes+c]);
+        *count+=2;assert(neon_time==166);
+    }
+}
+int main(void)
+{
+    const struct{unsigned revision;int legacy,always_quake,zero_offset;}contexts[]={@CONTEXTS@};
+    for(unsigned i=0;i<sizeof(contexts)/sizeof(*contexts);++i){
+        obor_profile_build=contexts[i].revision;cases=0;
+        check_lifecycle(contexts[i].legacy);
+        if(contexts[i].legacy){check_reuse();check_clock(contexts[i].always_quake,contexts[i].zero_offset);}
+        check_neon(contexts[i].legacy);
+        assert(cases==(contexts[i].legacy?52u:19u));
+        printf("{\"revision\":%u,\"cases\":%u,\"status\":\"PASS\"}\n",obor_profile_build,cases);
+    }
+    return 0;
+}

@@ -1,0 +1,50 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "openbor.h"
+#undef printf
+#undef time
+uint32_t obor_profile_build;
+static entity attacker, victim, *self = &attacker;
+static int magic_type;
+#define CHECK(c,message) do {if(!(c)){fprintf(stderr,"MP recovery mismatch: profile=%u %s\n",obor_profile_build,message);abort();}}while(0)
+@FUNCTION@
+int main(void) {
+    static const struct {unsigned revision; int zero_is_one, lower_clamp;} profiles[] = {
+@PROFILES@
+    };
+    static const int magic_types[] = {@MAGIC_TYPES@}, opponents[] = {@OPPONENTS@};
+    static const int rates[] = {@RATES@}, initial[] = {@INITIAL_MP@}, maximum[] = {@MAXIMUM_MP@};
+    for(unsigned p = 0; p < sizeof(profiles)/sizeof(*profiles); ++p) {
+        unsigned cases = 0; obor_profile_build = profiles[p].revision;
+        for(unsigned m = 0; m < sizeof(magic_types)/sizeof(*magic_types); ++m)
+        for(unsigned o = 0; o < sizeof(opponents)/sizeof(*opponents); ++o)
+        for(unsigned r = 0; r < sizeof(rates)/sizeof(*rates); ++r)
+        for(unsigned v = 0; v < sizeof(initial)/sizeof(*initial); ++v)
+        for(unsigned c = 0; c < sizeof(maximum)/sizeof(*maximum); ++c) {
+            memset(&attacker, 0, sizeof(attacker)); memset(&victim, 0, sizeof(victim));
+            attacker.health = 99; attacker.mp = 27; victim.health = 88;
+            victim.mp = initial[v]; victim.modeldata.mp = maximum[c]; victim.modeldata.mprate = rates[r];
+            attacker.opponent = opponents[o] == 0 ? NULL : opponents[o] == 1 ? &attacker : &victim;
+            magic_type = magic_types[m];
+            int expected = initial[v];
+            if(opponents[o] == 2 && magic_type == 1) {
+                expected += rates[r] == 0 && profiles[p].zero_is_one ? 1 : rates[r];
+                if(expected > maximum[c]) expected = maximum[c];
+                else if(expected < 0 && profiles[p].lower_clamp) expected = 0;
+            }
+            checkmpadd();
+            CHECK(victim.mp == expected, "victim MP");
+            CHECK(attacker.mp == 27 && attacker.health == 99 && victim.health == 88, "unrelated entity state");
+            CHECK(victim.modeldata.mprate == rates[r] && victim.modeldata.mp == maximum[c], "model values");
+            CHECK(attacker.opponent == (opponents[o] == 0 ? NULL : opponents[o] == 1 ? &attacker : &victim), "opponent binding");
+            ++cases;
+        }
+        printf("{\"revision\":%u,\"cases\":%u}\n", obor_profile_build, cases);
+    }
+    return 0;
+}

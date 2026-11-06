@@ -6,6 +6,31 @@
 #include <stddef.h>
 #include <string.h>
 
+/* Readonly script label: the historical producer removes four bytes from
+ * the full path before scanning separators. A separator at offset zero is
+ * retained. This text is independent of the output-file namespace below. */
+static inline int obor_pak_label(char *out, size_t capacity, const char *path)
+{
+    size_t end, start = 0, length, i;
+    if (!out || !capacity || !path) return 0;
+    end = strlen(path);
+    if (end < 4) {
+        out[0] = '\0';
+        return 0;
+    }
+    end -= 4;
+    for (i = 0; i < end; ++i)
+        if (path[i] == '/' || path[i] == '\\') start = i ? i + 1 : 0;
+    length = end - start;
+    if (length >= capacity) {
+        out[0] = '\0';
+        return 0;
+    }
+    memmove(out, path + start, length);
+    out[length] = '\0';
+    return 1;
+}
+
 /* Engine output names come from the basename, never from a copy of the
  * entire content path. Keep the engines' four-character extension convention
  * for normal archive names. Reject insufficient destinations without silently

@@ -1,0 +1,31 @@
+/* Native final flash handling with retained-effect observations.
+ * SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <stdint.h>
+#include <stdio.h>
+#include <string.h>
+#include "openbor.h"
+#undef printf
+uint32_t obor_profile_build;
+static void apply(entity *flash,entity *e,entity *self,s_attack *attack,float lasthita){
+@REGION@
+}
+static const unsigned revisions[]={@PROFILES@};
+static const struct {int reset,has_flash,no_flash,toflip;float attacker,target,height;} cases[]={@CASES@};
+int main(void){
+ entity child,attacker,target;s_attack attack;
+ for(unsigned p=0;p<sizeof(revisions)/sizeof(*revisions);++p){
+  obor_profile_build=revisions[p];memset(&child,0,sizeof(child));
+  printf("{\"revision\":%u,\"results\":[",obor_profile_build);
+  for(unsigned k=0;k<sizeof(cases)/sizeof(*cases);++k){
+   if(cases[k].reset){memset(&child,0,sizeof(child));child.base=9.5f;child.direction=1;child.autokill=7;}
+   memset(&attacker,0,sizeof(attacker));memset(&target,0,sizeof(target));memset(&attack,0,sizeof(attack));
+   attacker.x=cases[k].attacker;target.x=cases[k].target;
+   attack.no_flash=cases[k].no_flash;child.modeldata.toflip=cases[k].toflip;
+   apply(cases[k].has_flash?&child:NULL,&attacker,&target,&attack,cases[k].height);
+   printf("%s[%.9g,%d,%d]",k?",":"",(double)child.base,child.direction,child.autokill);
+  }
+  puts("]}");
+ }
+ return 0;
+}

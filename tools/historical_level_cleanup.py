@@ -11,7 +11,8 @@ import re
 def render_level_cleanup(source, *, revision, release_fields, script_fields,
                          spawn_scripts, revisions=None, stream_clear='',
                          stream_release_before=None, stream_slots=None,
-                         profile_helpers='', release_extents=None):
+                         profile_helpers='', release_extents=None, stream_release='',
+                         level_stream_field='', level_stream_before=None):
     if not isinstance(source, str) or not source.strip() or len(source) > 65536:
         raise ValueError('Bounded complete native cleanup function required')
     if type(revision) is not int or not 0 < revision <= 0xffffffff:
@@ -47,6 +48,18 @@ def render_level_cleanup(source, *, revision, release_fields, script_fields,
                      type(stream_slots)is not int or not 4<=stream_slots<=1024) or
         not streams and (stream_release_before is not None or stream_slots is not None)):
         raise ValueError('Complete native stream cleanup and explicit extent/boundary required')
+    if (not isinstance(stream_release,str) or len(stream_release)>8192 or '\0' in stream_release or
+            stream_release and (not streams or not re.match(
+                r'\s*void\s+obor_filestream_release_level\s*\(',stream_release))):
+        raise ValueError('A bounded native level stream release definition is required')
+    if 'obor_filestream_release_level(' in source and not stream_release:
+        raise ValueError('Retain the native level stream release dependency')
+    if (not isinstance(level_stream_field,str) or
+            level_stream_field and (not streams or not stream_release or not re.fullmatch(
+                r'[A-Za-z_]\w{0,63}',level_stream_field) or
+                type(level_stream_before)is not int or not 0<level_stream_before<=stream_release_before) or
+            not level_stream_field and level_stream_before is not None):
+        raise ValueError('Explicit owned level stream field and boundary required')
     declarations = r'''
 #include <assert.h>
 #include <stdint.h>
@@ -178,7 +191,8 @@ int main(void) {
 '''
     stream_declarations=stream_seed=stream_verify=stream_reset=''
     if streams:
-        stream_declarations='static s_filestream *filestreams;\nstatic int numfilestreams;\n'+stream_clear
+        stream_declarations=('static s_filestream *filestreams;\nstatic int numfilestreams;\n'+
+                             stream_clear+'\n'+stream_release)
         stream_seed=r'''
  unsigned stream_table_slot=owned_count;
  filestreams=allocate_owned(@SLOTS@*sizeof(*filestreams));numfilestreams=@SLOTS@;
@@ -200,6 +214,15 @@ int main(void) {
   assert(filestreams[i].buf==(released?NULL:owned[stream_owned[j]]));
  }
 '''.replace('@SLOTS@',str(stream_slots)).replace('@BOUNDARY@',str(stream_release_before))
+        if level_stream_field:
+            allocation='filestreams=allocate_owned('+str(stream_slots)+'*sizeof(*filestreams));numfilestreams='+str(stream_slots)+';\n expected_releases[stream_table_slot]=0;'
+            assert allocation in stream_seed
+            stream_seed=stream_seed.replace(allocation,
+                'if(obor_profile_build<'+str(level_stream_before)+')filestreams=lv->'+level_stream_field+';\n'+
+                ' else {filestreams=allocate_owned('+str(stream_slots)+'*sizeof(*filestreams));expected_releases[stream_table_slot]=0;}\n'+
+                ' numfilestreams='+str(stream_slots)+';')
+            stream_verify=stream_verify.replace('filestreams==owned[stream_table_slot]',
+                'filestreams==(obor_profile_build<'+str(level_stream_before)+'?lv->'+level_stream_field+':owned[stream_table_slot])')
         stream_reset='filestreams=NULL;numfilestreams=0;'
     blend_seed=''
     if profile_helpers and 'blendings'in release_fields:

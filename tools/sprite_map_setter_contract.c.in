@@ -1,0 +1,49 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+static const int legacy[]={@LEGACY@};
+int main(void){
+ for(unsigned p=0;p<sizeof(contracts)/sizeof(*contracts);++p){
+  const struct contract *c=contracts+p;obor_profile_build=c->revision;observed_unknown=0;
+  entity subject={0};s_sprite image={1},replacement={2};
+  int ids[]={0,1};s_animation animation={.numframes=2,.sprite=ids},*animations[]={&animation};
+  subject.modeldata.animation=animations;subject.modeldata.animation_capacity=1;
+  s_sprite_list node={0};node.filename=malloc(32);assert(node.filename);
+  strcpy(node.filename,"original");node.sprite=&image;
+  sprite_map=calloc(2,sizeof(*sprite_map));assert(sprite_map);sprite_map_max_items=2;sprites_loaded=2;
+  for(int i=0;i<2;++i){sprite_map[i].node=&node;sprite_map[i].profile_sprite=&image;}
+  sprite_map[0].ofsx=11;sprite_map[0].ofsy=22;sprite_map[0].centerx=33;sprite_map[0].centery=44;
+  ScriptVariant v[6]={{.vt=VT_PTR,.ptrVal=&subject},{.vt=VT_INTEGER,.lVal=_ep_spritea},
+   {.vt=VT_INTEGER,.lVal=_cep_spritea_offsetx},{.vt=VT_INTEGER,.lVal=0},
+   {.vt=VT_INTEGER,.lVal=0},{.vt=VT_INTEGER,.lVal=17}};
+  call(c,v,6,legacy[p]?S_OK:E_FAIL,1);
+  assert(sprite_map[0].ofsx==(legacy[p]?17:11) && sprite_map[0].centerx==33);
+  v[5]=(ScriptVariant){.vt=VT_DECIMAL,.dblVal=-18.75};
+  call(c,v,6,legacy[p]?S_OK:E_FAIL,1);
+  assert(sprite_map[0].ofsx==(legacy[p]?-18:11));
+  v[5]=(ScriptVariant){.vt=VT_EMPTY};call(c,v,6,legacy[p]?S_OK:E_FAIL,0);
+  assert(sprite_map[0].ofsx==(legacy[p]?-18:11));
+  v[2].lVal=_cep_spritea_offsety;v[5]=(ScriptVariant){.vt=VT_INTEGER,.lVal=-91};
+  call(c,v,6,legacy[p]?S_OK:E_FAIL,1);
+  assert(sprite_map[0].ofsy==(legacy[p]?_cep_spritea_offsety:22) && sprite_map[0].centery==44);
+  /* The own original reads the selector argument for this one field. */
+  v[5].vt=VT_EMPTY;call(c,v,6,legacy[p]?S_OK:E_FAIL,1);
+  assert(sprite_map[0].ofsy==(legacy[p]?_cep_spritea_offsety:22));
+  assert(observed_unknown==(legacy[p]?0:5));
+  v[2].lVal=_cep_spritea_sprite;v[5]=(ScriptVariant){.vt=VT_PTR,.ptrVal=&replacement};
+  call(c,v,6,S_OK,1);
+  assert(sprite_map[0].profile_sprite==(legacy[p]?&replacement:&image));
+  assert(sprite_map[1].profile_sprite==&image);
+  assert(node.sprite==(legacy[p]?&image:&replacement));
+  v[2].lVal=_cep_spritea_file;strcpy(cached_string,"renamed");
+  v[5]=(ScriptVariant){.vt=VT_STR,.strVal=0};call(c,v,6,S_OK,1);
+  assert(!strcmp(sprite_map[0].node->filename,"renamed") && !strcmp(sprite_map[1].node->filename,"renamed"));
+  v[2].lVal=_cep_spritea_centerx;v[5]=(ScriptVariant){.vt=VT_INTEGER,.lVal=99};
+  call(c,v,6,S_OK,1);assert(sprite_map[0].centerx==99);
+  assert(sprite_map[0].ofsx==(legacy[p]?-18:11));
+  v[4].lVal=-1;call(c,v,6,S_OK,0);assert(sprite_map[0].centerx==99);
+  v[4].lVal=0;call(c,v,3,S_OK,0);assert(sprite_map[0].centerx==99);
+  free(sprite_map);sprite_map=NULL;free(node.filename);
+  fprintf(stdout,"{\"revision\":%d,\"setter\":\"PASS\"}\n",c->revision);
+ }
+ return 0;
+}

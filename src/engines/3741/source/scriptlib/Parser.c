@@ -1,3 +1,15 @@
+/* AnyBOR modification record: 2026-10-21.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Preserve each profile's loop compiler targets and continue grammar while
+ * releasing temporary labels.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/3741.md
+ * at the source repository root. Original notices follow below.
+ */
+
 /*
  * OpenBOR - http://www.LavaLit.com
  * -----------------------------------------------------------------------
@@ -7,6 +19,9 @@
  */
 
 #include "Parser.h"
+#include <stdint.h>
+
+extern uint32_t obor_profile_build;
 
 Parser* pcurParser = NULL;
 
@@ -690,7 +705,7 @@ void Parser_Iter_stmt(Parser* pparser )
    //Create some labels for jump targets
 	endLabel = Parser_CreateLabel(pparser);
 	startLabel = Parser_CreateLabel(pparser); 
-	continueLabel = Parser_CreateLabel(pparser);
+	continueLabel = obor_profile_build >= 3515 ? Parser_CreateLabel(pparser) : NULL;
 
 
 	if (Parser_Check(pparser, TOKEN_WHILE )){
@@ -700,12 +715,15 @@ void Parser_Iter_stmt(Parser* pparser )
 		Parser_Match(pparser);
 		Parser_Expr(pparser );
 		Parser_Check(pparser, TOKEN_RPAREN );
-		Parser_AddInstructionViaLabel(pparser, Branch_FALSE, endLabel, NULL );
-		Stack_Push(&(pparser->LabelStack), (void*)startLabel ); //*****
+		Parser_AddInstructionViaLabel(pparser, Branch_FALSE,
+            obor_profile_build >= 3515 && obor_profile_build < 3528 ? startLabel : endLabel, NULL );
+		if(obor_profile_build >= 3515)
+            Stack_Push(&(pparser->LabelStack),
+                obor_profile_build < 3527 ? (void*)continueLabel : (void*)startLabel);
 		Stack_Push(&(pparser->LabelStack), (void*)endLabel ); //*****
 		Parser_Match(pparser);
 		Parser_Stmt(pparser );
-		Stack_Pop(&(pparser->LabelStack)); //*****
+		if(obor_profile_build >= 3515) Stack_Pop(&(pparser->LabelStack)); //*****
 		Stack_Pop(&(pparser->LabelStack)); //*****
 		Parser_AddInstructionViaLabel(pparser, JUMP, startLabel, NULL );
 		Parser_AddInstructionViaToken(pparser, NOOP, (Token*)NULL, endLabel );
@@ -713,7 +731,7 @@ void Parser_Iter_stmt(Parser* pparser )
 	else if (Parser_Check(pparser, TOKEN_DO )){
 		Parser_Match(pparser);
 		Parser_AddInstructionViaToken(pparser, NOOP, (Token*)NULL, startLabel );
-		Stack_Push(&(pparser->LabelStack), (void*)startLabel ); //*****
+		if(obor_profile_build >= 3515) Stack_Push(&(pparser->LabelStack), (void*)startLabel ); //*****
 		Stack_Push(&(pparser->LabelStack), (void*)endLabel ); //*****
 		Parser_Stmt(pparser );
 		Parser_Check(pparser, TOKEN_WHILE );
@@ -724,7 +742,7 @@ void Parser_Iter_stmt(Parser* pparser )
 		Parser_Check(pparser, TOKEN_RPAREN );
 		Parser_AddInstructionViaLabel(pparser, Branch_TRUE, startLabel, NULL );
 		Parser_AddInstructionViaToken(pparser, NOOP, (Token*)NULL, endLabel );
-		Stack_Pop(&(pparser->LabelStack)); //*****
+		if(obor_profile_build >= 3515) Stack_Pop(&(pparser->LabelStack)); //*****
 		Stack_Pop(&(pparser->LabelStack)); //*****
 		Parser_Match(pparser);
 		Parser_Check(pparser, TOKEN_SEMICOLON );
@@ -740,7 +758,7 @@ void Parser_Iter_stmt(Parser* pparser )
 
 		//Set the flag for the conditional to jump back to.
 		Parser_AddInstructionViaToken(pparser, NOOP, (Token*)NULL, startLabel );
-		Stack_Push(&(pparser->LabelStack), (void*)continueLabel); //*****
+		if(obor_profile_build >= 3515) Stack_Push(&(pparser->LabelStack), (void*)continueLabel); //*****
 		Stack_Push(&(pparser->LabelStack), (void*)endLabel ); //*****
 
 		//Build the conditional statement
@@ -761,7 +779,7 @@ void Parser_Iter_stmt(Parser* pparser )
 		Parser_Stmt(pparser );
 		
 		// for continue statement
-		Parser_AddInstructionViaToken(pparser, NOOP, (Token*)NULL, continueLabel );
+		if(obor_profile_build >= 3515) Parser_AddInstructionViaToken(pparser, NOOP, (Token*)NULL, continueLabel );
 		//Add in the deferred instructions, if there were any.
 		if (pDefInst){
 			pInstruction = NULL;
@@ -784,7 +802,7 @@ void Parser_Iter_stmt(Parser* pparser )
 
 		//Add the end label.
 		Parser_AddInstructionViaToken(pparser, NOOP, (Token*)NULL, endLabel );
-		Stack_Pop(&(pparser->LabelStack));//**********
+		if(obor_profile_build >= 3515) Stack_Pop(&(pparser->LabelStack));//**********
 		Stack_Pop(&(pparser->LabelStack));//**********
 	}
 	else Parser_Error(pparser, iter_stmt );
@@ -840,7 +858,7 @@ void Parser_Jump_stmt(Parser* pparser )
 		breakTarget = Stack_Top(&(pparser->LabelStack));
 		Parser_AddInstructionViaLabel(pparser, JUMP, breakTarget, NULL );
 	}
-	else if (Parser_Check(pparser, TOKEN_CONTINUE)){
+	else if (obor_profile_build >= 3515 && Parser_Check(pparser, TOKEN_CONTINUE)){
 		Parser_Match(pparser);
 		Parser_Check(pparser, TOKEN_SEMICOLON );
 		Parser_Match(pparser);

@@ -46,6 +46,24 @@ int main(void)
     memset(joined, 'x', sizeof(joined));
     assert(!obor_pak_path_append(joined, sizeof(joined), "x"));
     assert(joined[127] == 'x');
+    assert(obor_pak_label(result, sizeof(result), "/fixture.pak"));
+    assert(!strcmp(result, "/fixture"));
+    assert(obor_pak_label(result, sizeof(result), "dir/fixture.pak"));
+    assert(!strcmp(result, "fixture"));
+    assert(obor_pak_label(result, 1, ".pak") && !*result);
+    assert(obor_pak_label(result, sizeof(result), "dir/a.b"));
+    assert(!strcmp(result, "dir"));
+    assert(obor_pak_label(result, 8, "fixture.pak"));
+    result[7] = 'G';
+    assert(!obor_pak_label(result, 7, "fixture.pak"));
+    assert(!*result && result[7] == 'G');
+    assert(!obor_pak_label(result, sizeof(result), "abc") && !*result);
+    assert(!obor_pak_label(NULL, 0, "fixture.pak"));
+    assert(!obor_pak_label(result, 0, "fixture.pak"));
+    assert(!obor_pak_label(result, sizeof(result), NULL));
+    strcpy(result, "dir/fixture.pak");
+    assert(obor_pak_label(result, sizeof(result), result));
+    assert(!strcmp(result, "fixture"));
     puts("long_parent=1 extensions=1 exact_capacity=1 rejection=1 bounded_join=1");
     return 0;
 }

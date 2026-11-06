@@ -28,7 +28,7 @@ def coordinate_entry(source):
 
 
 def render_reads(parts, *, scalar, components, visible_components, revision,
-                 labels, check_invalid=False):
+                 labels, check_invalid=False, bbox_requires_vulnerable=True):
     if (not isinstance(parts,dict) or set(parts)!={'entry','clear','change_type'} or
             any(not isinstance(s,str) or not s.strip() or len(s)>32768 for s in parts.values())):
         raise ValueError('Bounded exact entry and variant source components required')
@@ -36,7 +36,7 @@ def render_reads(parts, *, scalar, components, visible_components, revision,
             type(visible_components) is not int or visible_components not in (5,6) or
             visible_components>components):
         raise ValueError('Explicit native and visible coordinate shapes required')
-    if type(check_invalid) is not bool:
+    if type(check_invalid) is not bool or type(bbox_requires_vulnerable) is not bool:
         raise ValueError('Invalid-input checks must be distinct from original valid-call oracles')
     if type(revision) is not int or not 0<=revision<=0x7fffffff:
         raise ValueError('Bounded native profile context required')
@@ -61,6 +61,7 @@ typedef enum {VT_EMPTY=0,VT_INTEGER=1,VT_DECIMAL=2,VT_PTR=5,VT_STR=6} VARTYPE;
 typedef struct {union {LONG lVal;DOUBLE dblVal;void *ptrVal;int strVal;};VARTYPE vt;} ScriptVariant;
 typedef @SCALAR@ coord_t;
 enum {COMPONENTS=@COMPONENTS@,VISIBLE=@VISIBLE@};
+enum {BBOX_REQUIRES_VULNERABLE=@BBOX_VULNERABLE@};
 enum {_ep_attack=1,_ep_bbox=2,_gep_attack_coords=3,_ep_attack_coords=3};
 typedef struct {int unused;} s_sprite;
 typedef struct {coord_t attack_coords[COMPONENTS];} s_attack;
@@ -126,7 +127,14 @@ static void valid_checks(void) {
  assert(cases==8*VISIBLE);
  setup(_ep_bbox,0,0,0);vulnerable[0][0]=0;
  ScriptVariant result={.vt=VT_INTEGER,.lVal=99},*out=&result;
- assert(openbor_getentityproperty(argv,&out,6)==S_OK && out==&result && result.vt==VT_EMPTY);
+ assert(openbor_getentityproperty(argv,&out,6)==S_OK && out==&result);
+ if(BBOX_REQUIRES_VULNERABLE)assert(result.vt==VT_EMPTY);
+ else {
+  assert(result.vt==VT_INTEGER && result.lVal==(LONG)boxes[0][0][0]);
+  animations[0].vulnerable=NULL;
+  assert(openbor_getentityproperty(argv,&out,6)==S_OK && out==&result &&
+         result.vt==VT_INTEGER && result.lVal==(LONG)boxes[0][0][0]);
+ }
  setup(_ep_attack,0,0,0);animations[0].attacks=NULL;out=&result;
  assert(openbor_getentityproperty(argv,&out,7)==S_OK && out==&result && result.vt==VT_EMPTY);
  setup(_ep_attack,0,0,0);args[0]=(ScriptVariant){.vt=VT_EMPTY,.ptrVal=NULL};out=&result;
@@ -156,8 +164,10 @@ static void invalid_checks(void) {
   setup(property,0,0,0);actor.modeldata.animation=NULL;empty_repeat(count);++cases;
  }
  setup(_ep_bbox,0,0,0);animations[0].bbox_coords=NULL;empty_repeat(6);++cases;
- setup(_ep_bbox,0,0,0);animations[0].vulnerable=NULL;empty_repeat(6);++cases;
- assert(cases==39);
+ if(BBOX_REQUIRES_VULNERABLE) {
+  setup(_ep_bbox,0,0,0);animations[0].vulnerable=NULL;empty_repeat(6);++cases;
+ }
+ assert(cases==(BBOX_REQUIRES_VULNERABLE?39u:38u));
 }
 int main(void) {
  @CALLS@
@@ -165,10 +175,12 @@ int main(void) {
 }
 '''
     values=dict(SCALAR=scalar,COMPONENTS=str(components),VISIBLE=str(visible_components),
+                BBOX_VULNERABLE=str(int(bbox_requires_vulnerable)),
                 REVISION=str(revision),ENTRY=parts['entry'],CLEAR=parts['clear'],CHANGE=parts['change_type'],
                 CALLS='\n'.join('valid_checks();'+('invalid_checks();' if check_invalid else '') for label in labels),
                 OUTPUT=json.dumps(json.dumps({'status':'PASS','sources':len(labels),
-                    'valid_queries_each':8*visible_components,'defined_empty_cases_each':3,
-                    'invalid_queries_each':39 if check_invalid else 0})))
+                    'valid_queries_each':8*visible_components,
+                    'defined_empty_cases_each':3 if bbox_requires_vulnerable else 2,
+                    'invalid_queries_each':(39 if bbox_requires_vulnerable else 38) if check_invalid else 0})))
     for name,value in values.items():program=program.replace('@'+name+'@',value)
     return program

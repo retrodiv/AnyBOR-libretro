@@ -1,0 +1,108 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <stdint.h>
+#include <stddef.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "openbor.h"
+#undef printf
+#undef assert
+uint32_t obor_profile_build;
+static int active_shape,active_format,active_magic;
+#define assert(c) do {if(!(c)){fprintf(stderr,"TEXTURE_CURSOR revision=%u shape=%d format=%d magic=%d line=%d\n",obor_profile_build,active_shape,active_format,active_magic,__LINE__);abort();}}while(0)
+@GLOBALS@
+int pixelbytes[5]={1,1,2,0,4};
+int pixelformat=PIXEL_8;
+static int copied_blocks;
+static unsigned char sprite_pixels[64];
+static int selected,seek_calls;
+static void set_tag(gfx_entry *entry,int kind){@TAG_SET@}
+static int read_tag(const gfx_entry *entry){@TAG_GET@}
+static void spy(int kind,s_screen *dest,gfx_entry *src,int dx,int dy,int sx,int sy) {
+ assert(dest && src && dx==0 && dy==0 && sx==1 && sy==0);selected=kind;
+}
+void draw_pixel_dummy(s_screen *d,gfx_entry *s,int x,int y,int a,int b){spy(-1,d,s,x,y,a,b);}
+void draw_pixel_screen(s_screen *d,gfx_entry *s,int x,int y,int a,int b){spy(0,d,s,x,y,a,b);}
+void draw_pixel_bitmap(s_screen *d,gfx_entry *s,int x,int y,int a,int b){spy(1,d,s,x,y,a,b);}
+void draw_pixel_sprite(s_screen *d,gfx_entry *s,int x,int y,int a,int b){spy(2,d,s,x,y,a,b);}
+unsigned char *obor_blend_table(int alpha){(void)alpha;abort();}
+blend16fp getblendfunction16(int alpha){assert(alpha==0);return NULL;}
+blend32fp getblendfunction32(int alpha){assert(alpha==0);return NULL;}
+void _sprite_seek(int x,int y) {
+ assert(x>=0 && x<3 && y>=0 && y<2);++seek_calls;
+ cur_spr=sprite_pixels;cur_src=sprite_pixels+8+y*3+x;
+}
+@FUNCTIONS@
+static void observed_copy_pixel_block(int bytes){++copied_blocks;copy_pixel_block(bytes);}
+static void water_copy_window(gfx_entry *src) {
+ int dbeginx=0,dendx=2,y=0,sbeginx=0,sy=0,bytestocopy,t;
+ #define copy_pixel_block observed_copy_pixel_block
+ @WATER@
+ #undef copy_pixel_block
+}
+static const struct {unsigned revision;int declared,bulk;} contexts[]={@CONTEXTS@};
+static void store(unsigned char *p,int format,unsigned index) {
+ if(format==PIXEL_8)p[index]=(unsigned char)(5+index);
+ else if(format==PIXEL_16){uint16_t v=(uint16_t)(0x1230+index);memcpy(p+index*2,&v,2);}
+ else {uint32_t v=0x12345670u+index;memcpy(p+index*4,&v,4);}
+}
+static uint32_t fetch(unsigned char *p,int format) {
+ if(format==PIXEL_8)return *p;
+ if(format==PIXEL_16){uint16_t v;memcpy(&v,p,2);return v;}
+ uint32_t v;memcpy(&v,p,4);return v;
+}
+static void check(int declared,int bulk,int shape,int format,int magic_ok) {
+ active_shape=shape;active_format=format;active_magic=magic_ok;
+ s_screen *source=calloc(1,sizeof(*source)+32),*dest=calloc(1,sizeof(*dest)+32);
+ s_sprite sprite;memset(&sprite,0,sizeof(sprite));assert(source && dest);
+ source->magic=shape==1?bitmap_magic:screen_magic;
+ source->width=dest->width=3;source->height=dest->height=2;
+ source->pixelformat=dest->pixelformat=format;
+ sprite.magic=sprite_magic;sprite.width=3;sprite.height=2;sprite.pixelformat=PIXEL_8;
+ sprite.data[0]=8;
+ for(unsigned i=0;i<6;++i)store((unsigned char*)source+offsetof(s_screen,data),format,i);
+ memset(sprite_pixels,0,sizeof(sprite_pixels));sprite_pixels[0]=24;
+ for(unsigned i=0;i<6;++i)sprite_pixels[8+i]=(unsigned char)(5+i);
+ if(!magic_ok)source->magic=sprite.magic=123;
+ gfx_entry graphics;memset(&graphics,0,sizeof(graphics));
+ graphics.handle=shape==2?(void*)&sprite:(void*)source;set_tag(&graphics,shape);
+ if(!declared)set_tag(&graphics,(shape+1)%3); /* Later profiles ignore the retained field. */
+ s_drawmethod method;memset(&method,0,sizeof(method));method.scalex=method.scaley=256;
+ trans_sw=trans_sh=0;seek_calls=0;selected=-99;
+ init_gfx_global_draw_stuff(dest,&graphics,&method);
+ int allowed=declared || magic_ok;
+ draw_pixel_gfx(dest,&graphics,0,0,1,0);
+ assert(selected==(allowed?shape:-1));
+ if(allowed) {
+  assert(trans_sw==3 && trans_sh==2 && trans_dw==3 && trans_dh==2);
+  assert(transbg==(shape==2) && drawfp==(shape==0?draw_pixel_screen:shape==1?draw_pixel_bitmap:draw_pixel_sprite));
+  src_seek(1,0);dest_seek(0,0);write_pixel();
+  assert(fetch((unsigned char*)dest+offsetof(s_screen,data),format)==(format==PIXEL_8?6u:format==PIXEL_16?0x1231u:0x12345671u));
+  src_inc();dest_seek(1,0);write_pixel();
+  assert(fetch((unsigned char*)dest+offsetof(s_screen,data)+pixelbytes[format],format)==(format==PIXEL_8?7u:format==PIXEL_16?0x1232u:0x12345672u));
+  src_dec();src_line_inc();dest_seek(0,1);write_pixel();
+  assert(fetch((unsigned char*)dest+offsetof(s_screen,data)+3*pixelbytes[format],format)==(format==PIXEL_8?9u:format==PIXEL_16?0x1234u:0x12345674u));
+  src_line_dec();dest_seek(2,1);write_pixel();
+  assert(fetch((unsigned char*)dest+offsetof(s_screen,data)+5*pixelbytes[format],format)==(format==PIXEL_8?6u:format==PIXEL_16?0x1231u:0x12345671u));
+  assert(seek_calls==(shape==2?4:0));
+  if(format==PIXEL_8) {
+   copied_blocks=0;water_copy_window(&graphics);
+   assert(copied_blocks==(shape==0 && bulk));
+   unsigned char *body=(unsigned char*)dest+offsetof(s_screen,data);
+   assert(body[0]==5 && body[1]==6);
+  }
+ } else assert(trans_sw==0 && !seek_calls);
+ free(source);free(dest);
+}
+int main(void) {
+ for(unsigned p=0;p<sizeof(contexts)/sizeof(*contexts);++p) {
+  obor_profile_build=contexts[p].revision;
+  for(int shape=0;shape<3;++shape)for(int f=0;f<3;++f)for(int magic=0;magic<2;++magic) {
+   const int formats[]={PIXEL_8,PIXEL_16,PIXEL_32};if(shape==2 && f)continue;
+   check(contexts[p].declared,contexts[p].bulk,shape,formats[f],magic);
+  }
+  printf("{\"revision\":%u,\"declared\":%d}\n",obor_profile_build,contexts[p].declared);
+ }
+ return 0;
+}

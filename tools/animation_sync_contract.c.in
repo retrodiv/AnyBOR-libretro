@@ -1,0 +1,65 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <assert.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "openbor.h"
+
+uint32_t obor_profile_build;
+u32 time;
+int max_animations=MAX_ANIS;
+static int frame_calls,observed_frame;
+static entity subject;
+void writeToLogFile(const char *format,...) {
+ (void)format;assert(!"Unexpected animation diagnostic");abort();
+}
+void update_frame(entity *ent,int frame) {
+ assert(ent==&subject && frame>=0);
+ ++frame_calls;observed_frame=frame;
+ if(frame>=ent->animation->numframes) return;
+ ent->animpos=frame;ent->nextanim=0xaabbccddu+(unsigned)frame;
+}
+@SELECTOR@
+
+struct sync_case {
+ uint32_t revision;
+ int frame_history,previous,same,sync,position,reset,sleep;
+ int out_position;uint32_t out_sleep;
+ int out_hits,out_animating,out_last_frame,out_lasthit,out_altbase,out_calls,out_frame;
+ uint32_t out_nextanim;int selected;
+};
+static const struct sync_case cases[]={@CASES@};
+int main(void) {
+ s_anim *animations[MAX_ANIS],previous,target;
+ entity other;
+ for(unsigned i=0;i<sizeof(cases)/sizeof(*cases);++i) {
+  const struct sync_case *c=cases+i;
+  fprintf(stderr,"Animation sync profile=%u case=%u\n",c->revision,i);
+  obor_profile_build=c->revision;time=0xfffffff8u;
+  memset(&subject,0,sizeof(subject));memset(&other,0,sizeof(other));
+  memset(&previous,0,sizeof(previous));memset(&target,0,sizeof(target));
+  memset(animations,0,sizeof(animations));
+  previous.sync=3;previous.numframes=8;
+  target.sync=c->sync?3:-1;target.numframes=4;target.animhits=6;
+  int index=c->sleep?ANI_SLEEP:ANI_IDLE;animations[index]=&target;
+  subject.modeldata.animation=animations;subject.modeldata.animation_capacity=MAX_ANIS;
+  subject.modeldata.sleepwait=12;strcpy(subject.name,"sync-contract");
+  subject.animation=c->previous?(c->same?&target:&previous):NULL;
+  subject.animnum=ANI_WALK;subject.animpos=c->position;
+  subject.nextanim=0xfffffff1u;subject.sleeptime=100;
+  subject.grabbing=&other;subject.altbase=4;
+  subject.obor_legacy_lastanimpos=9;
+  frame_calls=0;observed_frame=-1;
+  ent_set_anim(&subject,index,c->reset);
+  assert(subject.animation==(c->selected?&target:(c->previous?(c->same?&target:&previous):NULL)));
+  assert(subject.animnum==(c->selected?index:ANI_WALK));
+  assert(subject.animpos==c->out_position && subject.sleeptime==c->out_sleep);
+  assert(target.animhits==c->out_hits && subject.animating==c->out_animating);
+  assert(subject.lasthit==(c->out_lasthit?&other:NULL) && subject.altbase==c->out_altbase);
+  if(c->frame_history) assert(subject.obor_legacy_lastanimpos==c->out_last_frame);
+  assert(frame_calls==c->out_calls && observed_frame==c->out_frame && subject.nextanim==c->out_nextanim);
+ }
+ return 0;
+}

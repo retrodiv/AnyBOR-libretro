@@ -1,0 +1,151 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <assert.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "openbor.h"
+#undef assert
+#undef printf
+#ifdef NDEBUG
+#error Attack caller assertions must remain enabled
+#endif
+uint32_t obor_profile_build;
+static unsigned active_case;
+#define assert(c) do {if(!(c)){fprintf(stderr,"ACTION_ATTACK revision=%u case=%u line=%d\n",obor_profile_build,active_case,__LINE__);abort();}}while(0)
+static entity actor,target;
+entity *self;
+unsigned int time;
+int max_attack_types=2,nolost;
+static int rise_indices[2]={100,101},block_indices[2]={102,103};
+int *animriseattacks=rise_indices,*animblkpains=block_indices;
+@GRAB_TABLE@
+static s_anim nodes[256],*animation_table[256],actor_animation,target_animation;
+static int random_value,mutate;
+static void initial_action(void) {abort();}
+static void callback_action(void) {abort();}
+void common_attack_proc(void) {abort();}
+void common_pain(void) {abort();}
+void common_block(void) {abort();}
+void common_grab(void);
+void common_grabattack(void);
+void common_grabbed(void) {abort();}
+static int action_id(void (*action)(void)) {
+ if(!action)return 0;
+ if(action==initial_action)return 1;
+ if(action==callback_action)return 2;
+ if(action==common_attack_proc)return 3;
+ if(action==common_pain)return 4;
+ if(action==common_block)return 5;
+ if(action==common_grab)return 6;
+ if(action==common_grabbed)return 7;
+ if(action==common_grabattack)return 8;
+ abort();
+}
+#define WIDTH 60
+static void snapshot(double *v) {
+ const double fields[]={action_id(actor.takeaction),action_id(target.takeaction),
+ actor.attacking,target.attacking,actor.idling,target.idling,actor.drop,target.drop,
+ actor.nograb,target.nograb,actor.modeldata.jugglepoints.current,target.modeldata.jugglepoints.current,
+ actor.staydown.riseattack_stall,target.staydown.riseattack_stall,
+ actor.a,actor.base,actor.x,actor.direction,target.a,target.base,target.x,target.direction,
+ actor.link==&target,target.link==&actor,actor.grabbing==&target,target.grabbing==&actor,
+ actor.releasetime,actor.animating,target.animating,actor.xdir,actor.zdir,target.xdir,target.zdir};
+ _Static_assert(sizeof(fields)/sizeof(*fields)==33,"Observer scalar fields bound");
+ _Static_assert(MAX_SPECIAL_INPUTS==27 && sizeof(actor.combostep)==27 && sizeof(int)==4,
+                "Native combo byte slots and historical clear extent required");
+ memcpy(v,fields,sizeof(fields));
+ for(unsigned i=0;i<27;++i)v[33+i]=actor.combostep[i];
+}
+struct event {int kind,subject,index,reset;double fields[WIDTH];};
+static struct event events[12];static unsigned event_count;
+static void observe(int kind,entity *ent,int index,int reset,int callback) {
+ assert(event_count<12);struct event *e=&events[event_count++];
+ assert(!ent || ent==&actor || ent==&target);
+ e->kind=kind;e->subject=!ent?-1:ent==&actor?0:1;e->index=index;e->reset=reset;snapshot(e->fields);
+ if(callback && mutate){actor.takeaction=callback_action;target.takeaction=callback_action;}
+}
+int set_idle(entity *e) {observe(1,e,0,0,1);return 1;}
+void ent_set_anim(entity *e,int index,int reset) {observe(2,e,index,reset,1);}
+int set_pain(entity *e,int type,int reset) {observe(3,e,type,reset,1);return 1;}
+#define ent_unlink native_unlink
+@UNLINK@
+#undef ent_unlink
+void ent_unlink(entity *e) {observe(4,e,0,0,0);native_unlink(e);}
+unsigned int rand32(void) {observe(5,NULL,random_value,0,0);return (unsigned)random_value;}
+void update_frame(entity *e,int index) {observe(6,e,index,0,1);}
+void dropweapon(int flag) {observe(8,self,flag,0,0);}
+void doprethrow(void) {observe(9,self,0,0,1);}
+void dothrow(void) {observe(10,self,0,0,1);}
+void observed_grab_attack(int which) {observe(11,self,which,0,1);}
+void dovault(void) {observe(12,self,0,0,1);}
+@FUNCTIONS@
+struct attack_case {int operation,subject,type,reset,rise_type,rise_mask,block_mask,primary,linked,animating,grabfinish,grabwalking,base_equal,release,rnum,nolost,throw_valid,throwwait,grab_mask,vault_valid,mutate,direction,which,combo_seed,finisher_mask,attack3_valid;};
+static const struct attack_case cases[]={@CASES@};
+static const unsigned profiles[]={@PROFILES@};
+static void prepare(const struct attack_case *c) {
+ memset(&actor,0,sizeof(actor));memset(&target,0,sizeof(target));
+ memset(nodes,0,sizeof(nodes));memset(animation_table,0,sizeof(animation_table));
+ memset(&actor_animation,0,sizeof(actor_animation));memset(&target_animation,0,sizeof(target_animation));
+ self=&actor;time=100;actor.takeaction=target.takeaction=initial_action;
+ actor.idling=target.idling=1;actor.drop=target.drop=1;actor.nograb=target.nograb=1;
+ actor.attacking=c->operation==5 || c->operation==6;
+ for(int i=0;i<27;++i)actor.combostep[i]=(unsigned char)(i<5?c->combo_seed:11+i);
+ actor.modeldata.jugglepoints.current=3;actor.modeldata.jugglepoints.maximum=11;
+ target.modeldata.jugglepoints.current=4;target.modeldata.jugglepoints.maximum=12;
+ actor.staydown.riseattack_stall=7;target.staydown.riseattack_stall=8;
+ actor.a=6;actor.base=5;actor.x=9;actor.direction=c->direction;
+ target.a=10;target.base=c->base_equal?5:10;target.x=42;
+ if(c->linked){actor.link=actor.grabbing=&target;target.link=target.grabbing=&actor;}
+ actor.releasetime=(unsigned)c->release;actor.animating=c->animating;
+ actor.xdir=2;actor.zdir=3;target.xdir=5;target.zdir=6;
+ actor.modeldata.riseattacktype=target.modeldata.riseattacktype=c->rise_type;
+ actor.modeldata.grabfinish=c->grabfinish;actor.grabwalking=c->grabwalking;
+ actor.modeldata.grabdistance=2;actor.modeldata.throwframewait=c->throwwait;
+ actor.modeldata.animation=target.modeldata.animation=animation_table;
+ actor.modeldata.animation_capacity=target.modeldata.animation_capacity=256;
+ for(int i=0;i<256;++i)nodes[i].numframes=1;
+ for(int i=0;i<2;++i){
+  if(c->rise_mask&(1<<i))animation_table[rise_indices[i]]=&nodes[rise_indices[i]];
+  if(c->block_mask&(1<<i))animation_table[block_indices[i]]=&nodes[block_indices[i]];
+ }
+ if(c->primary)animation_table[ANI_BLOCKPAIN]=&nodes[ANI_BLOCKPAIN];
+ if(c->throw_valid)animation_table[ANI_THROW]=&nodes[ANI_THROW];
+ if(c->vault_valid)animation_table[ANI_VAULT]=&nodes[ANI_VAULT];
+ for(int i=0;i<5;++i)if(c->grab_mask&(1<<i))animation_table[grab_attacks[i][0]]=&nodes[grab_attacks[i][0]];
+ for(int i=0;i<5;++i)if(c->finisher_mask&(1<<i))animation_table[grab_attacks[i][1]]=&nodes[grab_attacks[i][1]];
+ if(c->attack3_valid)animation_table[ANI_ATTACK3]=&nodes[ANI_ATTACK3];
+ actor_animation.numframes=3;target_animation.numframes=4;
+ actor.animation=&actor_animation;target.animation=&target_animation;
+ nolost=c->nolost;random_value=c->rnum;mutate=c->mutate;event_count=0;
+}
+static void array_json(const double *v) {
+ putchar('[');for(unsigned i=0;i<WIDTH;++i){if(i)putchar(',');printf("%.17g",v[i]);}putchar(']');
+}
+int main(void) {
+ for(unsigned p=0;p<sizeof(profiles)/sizeof(*profiles);++p){
+  obor_profile_build=profiles[p];
+  for(unsigned k=0;k<sizeof(cases)/sizeof(*cases);++k){
+   active_case=k;const struct attack_case *c=&cases[k];prepare(c);
+   entity *subject=c->subject?&target:&actor;int result=-1;
+   switch(c->operation){
+    case 0:result=set_riseattack(subject,c->type,c->reset);break;
+    case 1:result=set_blockpain(subject,c->type,c->reset);break;
+    case 2:common_grab_check();break;
+    case 3:common_vault();break;
+    case 4:dograbattack(c->which);break;
+    case 5:common_grab();break;
+    case 6:common_grabattack();break;
+    default:abort();
+   }
+   double final[WIDTH];snapshot(final);
+   printf("{\"revision\":%u,\"case\":%u,\"result\":%d,\"fields\":",obor_profile_build,k,result);array_json(final);
+   printf(",\"events\":[");
+   for(unsigned i=0;i<event_count;++i){struct event *e=&events[i];if(i)putchar(',');
+    printf("{\"kind\":%d,\"subject\":%d,\"index\":%d,\"reset\":%d,\"fields\":",e->kind,e->subject,e->index,e->reset);array_json(e->fields);putchar('}');}
+   puts("]}");
+  }
+ }
+ return 0;
+}

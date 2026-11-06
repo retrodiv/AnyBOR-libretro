@@ -1,0 +1,92 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <assert.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "openbor.h"
+#undef assert
+#undef printf
+#ifdef NDEBUG
+#error Jump assertions must remain enabled
+#endif
+uint32_t obor_profile_build;
+static unsigned active_case;
+#define assert(c) do {if(!(c)){fprintf(stderr,"JUMP_ORDER revision=%u case=%u line=%d\n",obor_profile_build,active_case,__LINE__);abort();}}while(0)
+static entity actor,dust_entity;
+entity *self;
+unsigned int time;
+int SAMPLE_JUMP;
+s_savedata savedata;
+static int spawn_result,mutate_spawn,mutate_animation;
+static void initial_action(void) {abort();}
+static void callback_action(void) {abort();}
+void common_jump(void) {abort();}
+static int action_id(void (*action)(void)) {
+ if(action==initial_action)return 1;
+ if(action==callback_action)return 2;
+ if(action==common_jump)return 3;
+ abort();
+}
+#define WIDTH 14
+static void snapshot(double *out) {
+ const double fields[]={action_id(actor.takeaction),actor.jumping,actor.idling,actor.direction,
+ actor.xdir,actor.zdir,actor.tossv,actor.a,actor.toss_time,actor.base,
+ dust_entity.base,dust_entity.autokill,dust_entity.x,dust_entity.z};
+ _Static_assert(sizeof(fields)/sizeof(*fields)==WIDTH,"Observer fields bound");
+ memcpy(out,fields,sizeof(fields));
+}
+struct event {int kind;double args[7],fields[WIDTH];};
+static struct event events[6];static unsigned event_count;
+static void observe(int kind,double a,double b,double c,double d,double e,double f,double g) {
+ assert(event_count<6);struct event *out=&events[event_count++];out->kind=kind;
+ out->args[0]=a;out->args[1]=b;out->args[2]=c;out->args[3]=d;out->args[4]=e;out->args[5]=f;out->args[6]=g;snapshot(out->fields);
+}
+int sound_play_sample(int sample,unsigned int priority,int left,int right,unsigned int speed) {
+ observe(1,sample,priority,left,right,speed,0,0);return 0;
+}
+entity *spawn(float x,float z,float a,int direction,char *name,int index,s_model *model) {
+ assert(!name && !model && index==7);observe(2,x,z,a,direction,index,spawn_result,0);
+ if(!spawn_result)return NULL;
+ dust_entity.x=x;dust_entity.z=z;return &dust_entity;
+}
+void execute_onspawn_script(entity *e) {
+ assert(e==&dust_entity);observe(3,0,0,0,0,0,0,0);
+ if(mutate_spawn){actor.takeaction=callback_action;actor.direction=!actor.direction;actor.xdir=21;actor.zdir=22;actor.a=12;}
+}
+void ent_set_anim(entity *e,int index,int reset) {
+ assert(e==self && index==ANI_JUMP && !reset);observe(4,index,reset,0,0,0,0,0);
+ if(mutate_animation){actor.takeaction=callback_action;actor.direction=!actor.direction;actor.xdir=31;actor.zdir=32;actor.a=14;}
+}
+#define toss native_toss
+@TOSS@
+#undef toss
+void toss(entity *e,float lift) {assert(e==self);observe(5,lift,0,0,0,0,0,0);native_toss(e,lift);}
+@FUNCTION@
+struct jump_case {int sample,dust,spawn_result,direction,mutate_spawn,mutate_animation;float lift,x,z;};
+static const struct jump_case cases[]={@CASES@};
+static const unsigned profiles[]={@PROFILES@};
+static void prepare(const struct jump_case *c) {
+ memset(&actor,0,sizeof(actor));memset(&dust_entity,0,sizeof(dust_entity));memset(&savedata,0,sizeof(savedata));
+ self=&actor;time=100;actor.takeaction=initial_action;actor.idling=1;actor.direction=c->direction;
+ actor.xdir=2;actor.zdir=3;actor.tossv=4;actor.a=6;actor.base=5;actor.x=9;actor.z=12;
+ actor.modeldata.dust[2]=c->dust?7:-1;SAMPLE_JUMP=c->sample?2:-1;savedata.effectvol=60;
+ spawn_result=c->spawn_result;mutate_spawn=c->mutate_spawn;mutate_animation=c->mutate_animation;event_count=0;
+}
+static void array_json(const double *v,unsigned count) {
+ putchar('[');for(unsigned i=0;i<count;++i){if(i)putchar(',');printf("%.17g",v[i]);}putchar(']');
+}
+int main(void) {
+ for(unsigned p=0;p<sizeof(profiles)/sizeof(*profiles);++p){
+  obor_profile_build=profiles[p];
+  for(unsigned k=0;k<sizeof(cases)/sizeof(*cases);++k){
+   active_case=k;const struct jump_case *c=&cases[k];prepare(c);dojump(c->lift,c->x,c->z,ANI_JUMP);
+   double final[WIDTH];snapshot(final);
+   printf("{\"revision\":%u,\"case\":%u,\"fields\":",obor_profile_build,k);array_json(final,WIDTH);printf(",\"events\":[");
+   for(unsigned i=0;i<event_count;++i){struct event *e=&events[i];if(i)putchar(',');printf("{\"kind\":%d,\"args\":",e->kind);array_json(e->args,7);printf(",\"fields\":");array_json(e->fields,WIDTH);putchar('}');}
+   puts("]}");
+  }
+ }
+ return 0;
+}

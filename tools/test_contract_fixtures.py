@@ -11,7 +11,7 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from contract_fixtures import load_contract_fixture, contract_profiles, contract_revisions, fixture_path
+from contract_fixtures import load_contract_fixture, contract_profiles, contract_revisions, fixture_path, contract_group
 
 
 class ContractFixtureTests(unittest.TestCase):
@@ -81,6 +81,36 @@ class ContractFixtureTests(unittest.TestCase):
             with patch.dict(os.environ, ANYBOR_CONTRACT_FIXTURE_DIR='relative'):
                 with self.assertRaises(ValueError):
                     fixture_path(root / 'fixtures/missing.json')
+
+    def grouped_fixture(self):
+        return dict(engines={'early': {'engine': 'physical'}, 'late': {'engine': 'physical'},
+                             'other': {}}, profile_groups=[
+            dict(engine='physical', first=0, last=7, group='early'),
+            dict(engine='physical', first=8, last=0xffffffff, group='late')])
+
+    def test_profile_groups_preserve_both_sides_and_unrelated_engine_default(self):
+        fixture = self.grouped_fixture()
+        for revision in (1, 7):
+            self.assertEqual(contract_group(fixture, 'physical', revision), 'early')
+        for revision in (8, 100, 0xffffffff):
+            self.assertEqual(contract_group(fixture, 'physical', revision), 'late')
+        self.assertEqual(contract_group(fixture, 'other', 2), 'other')
+        self.assertEqual(contract_group(dict(engines={'named': {'engine': 'physical'}}),
+                                        'physical', 2, default='named'), 'named')
+
+    def test_profile_groups_refuse_gaps_overlaps_wrong_engines_and_missing_groups(self):
+        good = self.grouped_fixture()
+        changes = [dict(first=9), dict(first=7), dict(first=True), dict(last=9),
+                   dict(group='missing'), dict(group='other'), dict(engine='other')]
+        for change in changes:
+            value = copy.deepcopy(good); value['profile_groups'][1].update(change)
+            with self.subTest(change=change), self.assertRaises(ValueError):
+                contract_group(value, 'physical', 8)
+        for revision in (True, 0, -1, 1 << 32, '8'):
+            with self.subTest(revision=revision), self.assertRaises(ValueError):
+                contract_group(good, 'physical', revision)
+        with self.assertRaises(ValueError):
+            contract_group(good, 'absent', 8)
 
 
 if __name__ == '__main__':

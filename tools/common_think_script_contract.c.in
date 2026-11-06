@@ -1,0 +1,52 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <assert.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "source/scriptlib/ScriptVariant.h"
+#undef printf
+#undef assert
+uint32_t obor_profile_build;
+#define assert(c) do {if(!(c)){fprintf(stderr,"AI_SCRIPT revision=%u line=%d\n",obor_profile_build,__LINE__);abort();}}while(0)
+static int theFunctionList,returned_value;
+static unsigned registered,calls[8];
+@PROTOTYPES@
+static HRESULT (*const callbacks[])(ScriptVariant**,ScriptVariant**,int)={@CALLBACK_POINTERS@};
+static const char *const names[]={@NAMES@};
+static void List_Reset(int *list) {assert(list==&theFunctionList);registered=0;}
+static void List_InsertAfter(int *list,void *callback,const char *name) {
+ assert(list==&theFunctionList && callback);
+ for(unsigned i=0;i<8;++i)if(!strcmp(name,names[i])) {
+  assert(callback==(void*)callbacks[i] && !(registered&(1u<<i)));registered|=1u<<i;
+ }
+}
+CHAR *StrCache_Get(int index) {(void)index;abort();}
+void StrCache_Collect(int index) {(void)index;abort();}
+int StrCache_Pop(void) {abort();}
+@VARIANTS@
+@STUBS@
+@GATES@
+@CALLBACKS@
+@AVAILABILITY@
+@METHODS@
+static void check(unsigned revision,int available) {
+ obor_profile_build=revision;Script_LoadSystemFunctions();
+ assert(registered==(available?255u:0u));
+ for(unsigned i=0;i<8;++i) {
+  const char *name=Script_GetFunctionName((void*)callbacks[i]);assert(name);
+  assert(available?!strcmp(name,names[i]):strcmp(name,names[i])!=0);
+  if(!available)continue;
+  for(int result=0;result<=1;++result)for(int decimal=0;decimal<=1;++decimal) {
+   ScriptVariant value,*out=&value;memset(&value,0,sizeof(value));
+   value.vt=decimal?VT_DECIMAL:VT_EMPTY;value.dblVal=0.25;
+   returned_value=result;memset(calls,0,sizeof(calls));
+   assert(callbacks[i](NULL,&out,0)==S_OK && out==&value);
+   assert(value.vt==VT_INTEGER && value.lVal==result);
+   for(unsigned j=0;j<8;++j)assert(calls[j]==(j==i));
+   ScriptVariant_Clear(&value);assert(value.vt==VT_EMPTY && !value.ptrVal);
+  }
+ }
+}
+int main(void) {@CHECKS@ return 0;}

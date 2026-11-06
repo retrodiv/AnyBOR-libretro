@@ -1,0 +1,105 @@
+/* Complete native entity display with fixed source-reviewed queue observations.
+ * SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "openbor.h"
+#undef time
+#undef printf
+#undef assert
+#ifdef NDEBUG
+#error Entity-display assertions must remain enabled
+#endif
+uint32_t obor_profile_build;
+static uint32_t time;
+static int PLAYER_MIN_Z=@MIN_Z@,PLAYER_MAX_Z=@MAX_Z@;
+static int current_palette,gfx_x_offset,gfx_y_offset;
+static entity *smartbomber,*textbox;
+static int shadowcolor=1,shadowalpha=1,light[2]={32,128},shadowsprites[6]={11};
+static int ent_max=1,ent_list_size=@CAPACITY@,sprites_loaded=16;
+static unsigned char pal[MAX_PAL_SIZE];
+static float advancex,advancey;
+static entity subject,linked,bound,owner,platform,*self=&subject,*ent_list[1]={&subject};
+static s_level level_storage,*level;
+static s_anim animation,platform_animation;
+static unsigned active_case;
+static const char *case_name;
+#define assert(c) do{if(!(c)){fprintf(stderr,"Entity display mismatch revision=%u case=%s line=%d\n",obor_profile_build,case_name,__LINE__);abort();}}while(0)
+struct display_case {const char *name;int shadow,surface,direction,present,mirror,vertical,relation,layer,hole;float ax,ay;int gx,gy;};
+static const struct display_case cases[]={@CASES@},*test;
+static const struct {unsigned revision,contract;} profiles[]={@PROFILES@};
+static const struct observation {unsigned count;int rows[6][5];} expected[][sizeof(cases)/sizeof(*cases)]={@EXPECTED@};
+static int queued[6][5];
+static unsigned count;
+void spriteq_add_sprite(int x,int y,int z,int sprite,s_drawmethod *method,int sortid){
+ (void)method;assert(count<6);
+ const int row[5]={x,y,z,sprite,sortid};memcpy(queued[count++],row,sizeof(row));
+}
+static void drawenemystatus(entity *e){(void)e;abort();}
+entity *check_platform(float x,float z,entity *e){assert(e==self && x==e->x && z==e->z);return test->surface==1?&platform:NULL;}
+int checkwall(float x,float z){assert(x==self->x && z==self->z);return test->surface==2?0:-1;}
+int checkwall_below(float x,float z,float a){(void)x;(void)z;(void)a;return test->surface==2?0:-1;}
+int checkhole(float x,float z){(void)x;(void)z;return test->hole;}
+int inair(entity *e){assert(e==self);return 1;}
+s_drawmethod *getDrawMethod(s_anim *a,int frame){(void)a;(void)frame;abort();}
+unsigned char *model_get_colourmap(s_model *model,unsigned index){(void)model;(void)index;abort();}
+int obor_profile_blend_count(void){abort();}
+#if defined(__clang__)
+#pragma clang diagnostic push
+#if __has_warning("-Wsingle-bit-bitfield-constant-conversion")
+#pragma clang diagnostic warning "-Wsingle-bit-bitfield-constant-conversion"
+#endif
+#endif
+@PLAIN@
+#if defined(__clang__)
+#pragma clang diagnostic pop
+#endif
+@DISPLAY@
+static void setup(void){
+ memset(&subject,0,sizeof(subject));memset(&linked,0,sizeof(linked));
+ memset(&bound,0,sizeof(bound));memset(&owner,0,sizeof(owner));memset(&platform,0,sizeof(platform));
+ memset(&level_storage,0,sizeof(level_storage));memset(&animation,0,sizeof(animation));
+ memset(&platform_animation,0,sizeof(platform_animation));memset(queued,0,sizeof(queued));count=0;
+ static int sprites[1]={5};static short coords[1][2]={{2,3}};
+ static float platform_rows[1][8]={{0,0,0,0,0,0,0,2}},wall_rows[1][8]={{0,0,0,0,0,0,0,4}};
+ animation.numframes=1;animation.sprite=sprites;animation.shadow_coords=coords;
+ platform_animation.numframes=1;platform_animation.platform=platform_rows;
+ subject.animation=&animation;platform.animation=&platform_animation;
+ subject.x=100.75f;subject.z=200.5f;subject.a=10.25f;subject.exists=1;
+ subject.sortid=10;subject.direction=test->direction;
+ subject.modeldata.shadow=test->shadow==1;subject.modeldata.gfxshadow=test->shadow==2;
+ subject.modeldata.setlayer=test->layer;
+ subject.arrowon=1;subject.invincible=1;
+ subject.modeldata.parrow[0][0]=7;subject.modeldata.parrow[0][1]=7;subject.modeldata.parrow[0][2]=9;
+ linked.sortid=90;linked.z=250.75f;bound.sortid=40;owner.sortid=70;
+ platform.a=3;platform.z=201.25f;
+ level=test->present?&level_storage:NULL;
+ level_storage.mirror=test->mirror;level_storage.scrolldir=test->vertical?SCROLL_UP:SCROLL_RIGHT;
+ level_storage.walls=wall_rows;level_storage.numwalls=1;
+ advancex=test->ax;advancey=test->ay;gfx_x_offset=test->gx;gfx_y_offset=test->gy;
+ if(test->relation==1 || test->relation==2 || test->relation==3 || test->relation==7)subject.bound=&bound;
+ if(test->relation==2 || test->relation==3 || test->relation==7){bound.grabbing=&subject;bound.modeldata.grabback=test->relation!=3;}
+ if(test->relation==4 || test->relation==5 || test->relation==7 || test->relation==8){
+  subject.grabbing=subject.link=&linked;subject.modeldata.grabback=test->relation!=5;
+ }
+ if(test->relation==6 || test->relation==8)subject.owner=&owner;
+}
+int main(void){
+ _Static_assert(MAX_ENTS==@LEGACY_CAPACITY@,"source-defined legacy mirror domain");
+ for(unsigned p=0;p<sizeof(profiles)/sizeof(*profiles);++p){
+  obor_profile_build=profiles[p].revision;
+  for(active_case=0;active_case<sizeof(cases)/sizeof(*cases);++active_case){
+   test=cases+active_case;case_name=test->name;setup();display_ents();
+   const struct observation *wanted=&expected[profiles[p].contract][active_case];
+   assert(count==wanted->count);
+   for(unsigned i=0;i<count;++i)for(unsigned k=0;k<5;++k){
+    if(queued[i][k]!=wanted->rows[i][k])fprintf(stderr,"queue=%u field=%u actual=%d expected=%d\n",i,k,queued[i][k],wanted->rows[i][k]);
+    assert(queued[i][k]==wanted->rows[i][k]);
+   }
+  }
+  printf("{\"revision\":%u,\"cases\":%u}\n",obor_profile_build,active_case);
+ }
+ return 0;
+}

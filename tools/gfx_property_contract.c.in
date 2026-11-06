@@ -1,0 +1,102 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <stdint.h>
+#include <stddef.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdarg.h>
+#include <string.h>
+#include <strings.h>
+#include <ctype.h>
+#include "openbor.h"
+#undef printf
+#undef assert
+#ifndef stricmp
+#define stricmp strcasecmp
+#endif
+uint32_t obor_profile_build;
+static unsigned active_case;
+#define assert(c) do {if(!(c)){fprintf(stderr,"GFX_PROPERTY revision=%u case=%u line=%d\n",obor_profile_build,active_case,__LINE__);abort();}}while(0)
+static const char *cache;
+static int collects,diagnostics,pixels,lastx,lasty;
+static char message[512];
+static int palette_marker;
+CHAR *StrCache_Get(int index){assert(index==63 && cache);return (CHAR*)cache;}
+void StrCache_Collect(int index){assert(index==63);++collects;}
+int StrCache_Pop(void){abort();}
+static int capture(const char *format,...) {
+ va_list ap;va_start(ap,format);int n=vsnprintf(message,sizeof(message),format,ap);va_end(ap);
+ assert(n>=0 && (size_t)n<sizeof(message));++diagnostics;return n;
+}
+#define printf capture
+unsigned char sprite_get_pixel(s_sprite *sprite,int x,int y) {
+ assert(sprite->magic==sprite_magic && x>=0 && x<sprite->width && y>=0 && y<sprite->height);
+ ++pixels;lastx=x;lasty=y;return (unsigned char)(200+x+3*y);
+}
+@ENUM@
+@MACRO@
+@SEARCH@
+@VARIANTS@
+@FUNCTIONS@
+#undef printf
+struct query {int shape,mode,index,argc,x,y,coordinate_kind,handle,format;const char *name;};
+static const struct query cases[]={@CASES@};
+static const struct {unsigned revision;int available;} contexts[]={@CONTEXTS@};
+static void quoted(const char *text) {
+ fputc('"',stdout);
+ for(;*text;++text) {
+  unsigned char c=(unsigned char)*text;
+  if(c=='"' || c=='\\'){fputc('\\',stdout);fputc(c,stdout);}
+  else if(c=='\n')fputs("\\n",stdout);
+  else {assert(c>=32 && c<127);fputc(c,stdout);}
+ }
+ fputc('"',stdout);
+}
+static void observe(const struct query *q) {
+ unsigned char *storage=calloc(1,sizeof(s_screen)+80);assert(storage);
+ s_screen *screen=(s_screen*)storage;s_sprite sprite;memset(&sprite,0,sizeof(sprite));
+ screen->magic=q->shape==1?bitmap_magic:screen_magic;
+ screen->width=q->shape==1?5:3;screen->height=q->shape==0?1:2;
+ screen->pixelformat=q->format;screen->palette=(unsigned char*)&palette_marker;
+ sprite.magic=sprite_magic;sprite.width=3;sprite.height=2;sprite.srcwidth=7;sprite.srcheight=9;
+ sprite.centerx=-2;sprite.centery=4;sprite.pixelformat=q->format;sprite.palette=(unsigned char*)&palette_marker;
+ for(int i=0;i<screen->width*screen->height;++i) {
+  size_t offset=offsetof(s_screen,data)+(size_t)i*(q->format==PIXEL_16?2:q->format==PIXEL_32?4:1);
+  assert(offset+4<=sizeof(s_screen)+80);
+  if(q->format==PIXEL_16){uint16_t v=(uint16_t)(0x8000+i);memcpy(storage+offset,&v,2);}
+  else if(q->format==PIXEL_32){uint32_t v=0x80000000u+(unsigned)i;memcpy(storage+offset,&v,4);}
+  else storage[offset]=(unsigned char)(100+17*i);
+ }
+ ScriptVariant args[5],*list[5],result,*out=&result;
+ memset(args,0,sizeof(args));memset(&result,0,sizeof(result));
+ for(int i=0;i<5;++i){list[i]=args+i;args[i].vt=VT_INTEGER;}
+ args[0].vt=VT_PTR;args[0].ptrVal=q->shape==2?(void*)&sprite:(void*)screen;
+ if(q->handle==1)args[0].ptrVal=NULL;
+ if(q->handle==2){args[0].vt=VT_INTEGER;args[0].lVal=0;}
+ if(q->handle==3){sprite.magic=screen->magic=123;}
+ char name[64];assert(strlen(q->name)<sizeof(name));strcpy(name,q->name);
+ if(q->mode==1 || q->mode==2)for(char *p=name;*p;++p)*p=(char)toupper((unsigned char)*p);
+ cache=name;collects=diagnostics=pixels=lastx=lasty=0;message[0]=0;
+ args[1].vt=q->mode==3?VT_INTEGER:VT_STR;
+ if(q->mode==3)args[1].lVal=q->index;else args[1].strVal=63;
+ args[2].lVal=q->x;args[3].lVal=q->y;
+ if(q->coordinate_kind==1)for(int i=2;i<4;++i) {
+  LONG v=args[i].lVal;args[i].vt=VT_DECIMAL;args[i].dblVal=v+(v<0?-0.75:0.75);
+ }
+ if(q->coordinate_kind==2)args[3].vt=VT_EMPTY;
+ if(q->mode==2)mapstrings_gfxproperty(list,q->argc);
+ HRESULT status=openbor_getgfxproperty(list,&out,q->argc);
+ int present=out!=NULL;const char *kind=!out?"none":out->vt==VT_INTEGER?"integer":out->vt==VT_PTR?"pointer":"unexpected";
+ LONG value=!out?0:out->vt==VT_PTR?(out->ptrVal==(void*)&palette_marker):out->lVal;
+ printf("{\"revision\":%u,\"case\":%u,\"ok\":%d,\"present\":%d,\"kind\":\"%s\",\"value\":%ld,\"mapped\":%d,\"index\":%ld,\"collects\":%d,\"diagnostics\":%d,\"pixels\":%d,\"x\":%d,\"y\":%d,\"message\":",
+   obor_profile_build,active_case,status==S_OK,present,kind,(long)value,args[1].vt==VT_INTEGER,
+   (long)args[1].lVal,collects,diagnostics,pixels,lastx,lasty);
+ quoted(message);fputs("}\n",stdout);free(storage);
+}
+int main(void) {
+ for(unsigned p=0;p<sizeof(contexts)/sizeof(*contexts);++p) {
+  obor_profile_build=contexts[p].revision;if(!contexts[p].available)continue;
+  for(active_case=0;active_case<sizeof(cases)/sizeof(*cases);++active_case)observe(cases+active_case);
+ }
+ return 0;
+}

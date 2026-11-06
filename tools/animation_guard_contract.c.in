@@ -1,0 +1,82 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <assert.h>
+#include <stdint.h>
+#include <stddef.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "obor_abi.h"
+typedef int32_t LONG;
+typedef struct {int index;} s_anim;
+static unsigned obor_profile_build;
+static void shutdown(int status,const char *format,...) {(void)status;(void)format;abort();}
+@HELPER@
+@APPEND@
+static char *scriptbuf,*shutdownmessage,namebuf[256],buf[128],*value;
+static size_t sbsize,scriptlen,len;
+static ptrdiff_t pos;
+static int script_id,ani_id,j,curframe=2;
+static s_anim animations[2]={{7},{11}},*newanim;
+static char *arguments[]={"@cmd","sample","17","0",""};
+static char *argument(unsigned index) {assert(index<5);return arguments[index];}
+#define GET_ARG(index) argument(index)
+@CONSTANTS@
+static void generate(int kind) {
+ switch(kind) {case 0:@SCRIPT@
+ case 1:@COMMAND@
+ }
+lCleanup:
+ ;
+}
+static void check(int kind,int animated,int handle_type,const char *script_error) {
+ sbsize=4096;scriptbuf=calloc(1,sbsize);assert(scriptbuf);scriptlen=0;
+ script_id=-1;ani_id=animated?17:-1;shutdownmessage=NULL;
+ LONG expected_identity;
+ if(handle_type==0) expected_identity=ani_id;
+ else if(handle_type==1) {
+  uint32_t bits=(uint32_t)(uintptr_t)newanim;
+  memcpy(&expected_identity,&bits,sizeof(expected_identity));
+ } else expected_identity=newanim->index;
+ const char *name=handle_type?"animhandle":"animnum";
+ for(int repeat=1;repeat<=2;++repeat) {
+  strcpy(buf,"prefix @script\nA\n@end_script");pos=0;
+  generate(kind);
+  if(!kind && !animated && script_error) {
+   assert(shutdownmessage && !strcmp(shutdownmessage,script_error));
+   assert(!scriptlen && !scriptbuf[0] && script_id==-1 && pos==0);
+   continue;
+  }
+  assert(!shutdownmessage);
+  char expected[2048],part[256];
+  snprintf(expected,sizeof(expected),"void main()\n{\n    int frame = getlocalvar(\"frame\");\n    int %s = getlocalvar(\"%s\");\n",name,name);
+  if(animated) {
+   snprintf(part,sizeof(part),"    if(%s==%ld)\n    {\n",name,(long)expected_identity);
+   strcat(expected,part);
+  }
+  for(int n=0;n<repeat;++n) strcat(expected,kind?
+    "        if(frame==2)\n        {\n            sample(17, 0);\n\n        }\n":"\nA\n");
+  if(animated) strcat(expected,"        return;\n    }\n");
+  strcat(expected,"\n}\n");
+  if(strcmp(scriptbuf,expected)) fprintf(stderr,"Generated guard mismatch: profile=%u kind=%d repeat=%d\nExpected:\n%s\nActual:\n%s\n",obor_profile_build,kind,repeat,expected,scriptbuf);
+  assert(!strcmp(scriptbuf,expected) && scriptlen==strlen(expected));
+  assert(script_id==(animated?ani_id:-1));
+  if(!kind) assert(pos==28);
+ }
+ free(scriptbuf);scriptbuf=NULL;
+}
+int main(void) {
+ const struct {unsigned revision;int handle_type;const char *script_error;} cases[]={@CASES@};
+ /* Reverse traversal also checks that using one historical profile does not
+  * change the constant choices of a later content session. */
+ for(int reverse=0;reverse<2;++reverse) for(unsigned i=0;i<sizeof(cases)/sizeof(*cases);++i) {
+  unsigned index=reverse?(unsigned)(sizeof(cases)/sizeof(*cases))-1-i:i;
+  obor_profile_build=cases[index].revision;
+  for(unsigned animation=0;animation<2;++animation) {
+   newanim=animations+animation;
+   for(int kind=0;kind<2;++kind) for(int animated=kind;animated<2;++animated)
+    check(kind,animated,cases[index].handle_type,cases[index].script_error);
+  }
+ }
+ return 0;
+}

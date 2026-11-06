@@ -1,0 +1,279 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ * Actual context functions with bounded scalar/VM services. */
+#include <assert.h>
+#include <stdint.h>
+#include <stddef.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "openbor.h"
+#include "obor_pak_name.h"
+
+uint32_t obor_profile_build;
+Script *pcurrentscript;
+List theFunctionList;
+int max_script_vars=2,max_global_vars=128,max_global_var_index=-1;
+s_variantnode **global_var_list;
+static s_variantnode nodes[128];
+static s_variantnode *node_pointers[128];
+Script update_script,updated_script,loading_script,key_script_all,timetick_script;
+Script level_script,endlevel_script;
+Script key_script[4],join_script[4],respawn_script[4],pdie_script[4],score_script[4];
+s_level *level;
+s_player player[4];
+s_savedata savedata;
+unsigned int lifescore=50000;
+int SAMPLE_1UP=-1;
+static Script *expected_execution,*displaced_owner,*expected_calls[4];
+static unsigned expected_calls_count;
+static const char *retained_callback_key;
+static unsigned executions,parse_calls,destroy_calls;
+static int legacy_context,displace_on_clear;
+static Script *expected_final_destroy_context;
+int current_set=3;
+u32 time;
+int nextplan,nosave,nofadeout,musicoverlap=1,endgame=1,level_completed,nomaxrushreset[5];
+entity *stalker,*firstplayer;
+s_set_entry levelset_storage[4],*levelsets=levelset_storage;
+static int obor_profile_new_game;
+static unsigned unloaded_levels;
+static Script *unload_context;
+static unsigned loaded_scripts;
+void getBasePath(char *out,char *kind,int index) {
+ assert(!strcmp(kind,"Saves") && index==0);strcpy(out,"./");
+}
+void getPakName(char *out,size_t capacity,int index) {
+ assert(index==2 && capacity>20);strcpy(out,"context-fixture.s00");
+}
+void borExit(int status) {(void)status;assert(!"unexpected path rejection");abort();}
+void writeToLogFile(const char *format,...) {(void)format;assert(!"unexpected script diagnostic");}
+char *StrCache_Get(int index) {assert(index==0);return "probe";}
+void kill_all(void) {}
+void savelevelinfo(void) {}
+int saveGameFile(void) {return 1;}
+int saveHighScoreFile(void) {return 1;}
+int saveScriptFile(void) {return 1;}
+void load_level(char *name) {assert(!strcmp(name,"context-level"));}
+void unload_level(void) {++unloaded_levels;unload_context=pcurrentscript;}
+void spawnplayer(int index) {(void)index;assert(!"unexpected player spawn");}
+void update(int ingame,int wait) {(void)ingame;(void)wait;assert(!"unexpected level update");}
+entity *findent(int types) {(void)types;return NULL;}
+void fade_out(int type,int speed) {assert(type==0 && speed==0);}
+void sound_close_music(void) {}
+void sound_stopall_sample(void) {}
+
+void ScriptVariant_Init(ScriptVariant *v) { memset(v,0,sizeof(*v)); }
+void ScriptVariant_Clear(ScriptVariant *v) { memset(v,0,sizeof(*v)); }
+void ScriptVariant_ChangeType(ScriptVariant *v,VARTYPE type) {ScriptVariant_Clear(v);v->vt=type;}
+void ScriptVariant_Copy(ScriptVariant *destination,ScriptVariant *source) {
+ assert(source->vt==VT_EMPTY || source->vt==VT_INTEGER || source->vt==VT_PTR || source->vt==VT_DECIMAL);
+ memcpy(destination,source,sizeof(*destination));
+}
+void Interpreter_Init(Interpreter *p,LPCSTR name,List *functions) {
+ assert(functions==&theFunctionList);memset(p,0,sizeof(*p));
+ assert(strlen(name)<sizeof(p->theSymbolTable.name));strcpy(p->theSymbolTable.name,name);
+}
+void Interpreter_Clear(Interpreter *p) {
+ assert(p);++destroy_calls;
+ if(expected_final_destroy_context) assert(pcurrentscript==expected_final_destroy_context);
+}
+void Interpreter_Reset(Interpreter *p) {assert(p);p->bReset=TRUE;}
+HRESULT Interpreter_ParseText(Interpreter *p,LPSTR text,ULONG line,LPCSTR path) {
+ assert(p && text && path && line==1);++parse_calls;return S_OK;
+}
+HRESULT Interpreter_EvaluateImmediate(Interpreter *p) {
+ assert(executions<expected_calls_count);
+ Script *selected=expected_calls[executions];
+ assert(p==selected->pinterpreter && pcurrentscript==selected);++executions;
+ for(int i=0;i<=max_global_var_index;++i) assert(global_var_list[i]->owner==selected);
+ /* Nested script initialization may change the ambient context. The actual
+  * Script_Execute must still restore the context it received. */
+ pcurrentscript=displaced_owner;return S_OK;
+}
+HRESULT Interpreter_EvaluateCall(Interpreter *p) {
+ assert(p && p->pCurrentInstruction==p->pClearEntry && p->pClearEntry);
+ if(displace_on_clear) pcurrentscript=displaced_owner;
+ return S_OK;
+}
+int sound_play_sample(int sample,unsigned int priority,int left,int right,unsigned int speed) {
+ (void)sample;(void)priority;(void)left;(void)right;(void)speed;assert(!"unexpected sample");return 0;
+}
+void shutdown(int status,char *format,...) {
+ (void)status;(void)format;assert(!"unexpected shutdown");abort();
+}
+void Script_Local_Clear(Script *);
+int load_script(Script *script,char *path) {
+ assert(!strcmp(path,"./context-fixture.s03"));++loaded_scripts;
+ expected_calls[0]=script;expected_calls_count=1;
+ return Script_AppendText(script,"void main() {}",path);
+}
+int Script_Compile(Script *script) {assert(script->initialized);return 1;}
+@FUNCTIONS@
+
+static void clear_nodes(void) {
+ for(unsigned i=0;i<128;++i) {
+  free(nodes[i].key);memset(nodes+i,0,sizeof(nodes[i]));node_pointers[i]=nodes+i;
+ }
+ max_global_var_index=-1;global_var_list=node_pointers;
+}
+static void initialize(Script *s,const char *name) {
+ Script_Init(s,(char*)name,NULL,1);assert(s->initialized && s->pinterpreter);
+}
+static void scalar_context_checks(void) {
+ Script caller={0},script={0},other={0},empty={0};
+ pcurrentscript=&caller;Script_Init(&script,NULL,NULL,1);
+ assert(pcurrentscript==&caller && !script.initialized);
+ Script_Init(&script,"context",NULL,0);
+ assert(script.initialized && pcurrentscript==(legacy_context?&script:&caller));
+ initialize(&other,"other");displaced_owner=&other;
+ pcurrentscript=&caller;assert(!Script_IsInitialized(&empty));assert(pcurrentscript==&caller);
+ assert(Script_IsInitialized(&script));assert(pcurrentscript==(legacy_context?&script:&caller));
+ pcurrentscript=&caller;parse_calls=0;
+ assert(Script_AppendText(&script,"void main() {}","fixture.c"));
+ assert(parse_calls==1 && pcurrentscript==(legacy_context?&script:&caller));
+ ScriptVariant v;ScriptVariant_Init(&v);ScriptVariant_ChangeType(&v,VT_INTEGER);v.lVal=19;
+ assert(Script_Set_Local_Variant(&script,"probe",&v));v.lVal=23;
+ assert(Script_Set_Local_Variant(&other,"probe",&v));
+ assert(Script_Get_Local_Variant(&script,"probe")->lVal==19);
+ assert(Script_Get_Local_Variant(&other,"probe")->lVal==23);
+ ScriptVariant key,result,*result_pointer=&result,*args[2]={&key,&v};
+ ScriptVariant_Init(&key);key.vt=VT_STR;key.strVal=0;
+ pcurrentscript=&script;v.lVal=31;
+ assert(system_setlocalvar(args,&result_pointer,2)==S_OK && result_pointer==&result && result.lVal==1);
+ assert(system_getlocalvar(args,&result_pointer,1)==S_OK && result.vt==VT_INTEGER && result.lVal==31);
+ assert(system_clearlocalvar(args,&result_pointer,0)==S_OK && result_pointer==NULL);
+ assert(Script_Get_Local_Variant(&other,"probe")->lVal==23);
+ result_pointer=&result;
+ assert(system_getlocalvar(args,&result_pointer,1)==S_OK && result.vt==VT_EMPTY);
+ /* The clear entry changes ambient context. Before the explicit-owner
+  * boundary, removing its localclear variable follows that changed context. */
+ v.lVal=91;assert(Script_Set_Local_Variant(&other,"localclear",&v));
+ static Instruction entry;script.pinterpreter->pClearEntry=&entry;
+ pcurrentscript=&caller;displace_on_clear=1;
+ expected_final_destroy_context=legacy_context?&script:&caller;
+ Script_Clear(&script,0);displace_on_clear=0;expected_final_destroy_context=NULL;
+ assert(pcurrentscript==&caller && !script.initialized);
+ ScriptVariant *left=Script_Get_Local_Variant(&other,"localclear");
+ assert(legacy_context ? left==NULL : left && left->lVal==91);
+ /* Retained script-local storage remains available until localclear=2. */
+ assert(script.vars);Script_Clear(&script,2);assert(!script.vars);
+ Script_Clear(&other,2);Script_Clear(&empty,2);clear_nodes();
+}
+
+static Script callback,second,caller,displaced;
+/* The packed level ABI can give embedded Script members only four-byte
+ * alignment. Context routing is tested with an owned level placement that
+ * aligns those members; the separate layout issue remains a safety finding. */
+static union {void *alignment;unsigned char bytes[sizeof(s_level)+sizeof(void*)];} level_storage;
+#define test_level (*level)
+static entity ent,other_ent;
+static s_scripts scripts;
+static Interpreter callback_interpreter,second_interpreter;
+static void before_callback(Script *selected) {
+ clear_nodes();pcurrentscript=&caller;expected_execution=selected;executions=0;
+ displaced_owner=&displaced;expected_calls[0]=selected;expected_calls_count=1;
+ retained_callback_key=NULL;
+}
+static void after_callback(unsigned count) {
+ assert(executions==count && pcurrentscript==&caller);
+ unsigned retained=0;
+ for(int i=0;i<=max_global_var_index;++i) {
+  if(global_var_list[i]->value.vt==VT_EMPTY) continue;
+  assert(retained_callback_key && !strcmp(global_var_list[i]->key,retained_callback_key));
+  assert(global_var_list[i]->owner==expected_execution);
+  assert(global_var_list[i]->value.vt==VT_PTR && global_var_list[i]->value.lVal==2);
+  ++retained;
+ }
+ assert(retained==(retained_callback_key?1u:0u));
+}
+static void callback_checks(void) {
+ size_t adjustment=(sizeof(void*)-offsetof(s_level,update_script)%sizeof(void*))%sizeof(void*);
+ level=(s_level*)(level_storage.bytes+adjustment);
+ assert((uintptr_t)&level->update_script%sizeof(void*)==0);
+ assert((uintptr_t)&level->updated_script%sizeof(void*)==0);
+ assert((uintptr_t)&level->key_script%sizeof(void*)==0);
+ memset(&ent,0,sizeof(ent));memset(&other_ent,0,sizeof(other_ent));
+ memset(&scripts,0,sizeof(scripts));memset(&test_level,0,sizeof(test_level));
+ callback=(Script){0};callback.initialized=1;callback.pinterpreter=&callback_interpreter;
+ second=callback;second.pinterpreter=&second_interpreter;
+ for(size_t i=0;i<sizeof(scripts)/sizeof(Script*);++i) {
+  Script *p=&callback;memcpy((unsigned char*)&scripts+i*sizeof(p),&p,sizeof(p));
+ }
+ ent.scripts=&scripts;ent.playerindex=2;
+ #define RUN(expression) do {before_callback(&callback);expression;after_callback(1);}while(0)
+ RUN(execute_takedamage_script(&ent,&other_ent,1,2,3,4,5,6,7));
+ /* Both originals retain attacktype: cleanup names type instead. Its native
+  * pointer tag and integer member are common across this context boundary. */
+ before_callback(&callback);retained_callback_key="attacktype";
+ execute_onpain_script(&ent,2,1);after_callback(1);
+ RUN(execute_onfall_script(&ent,&other_ent,1,2,3,4,5,6,7));
+ RUN(execute_onblocks_script(&ent));RUN(execute_onblockw_script(&ent,1,2.5f));
+ RUN(execute_onblocko_script(&ent,&other_ent));RUN(execute_onblockz_script(&ent));
+ RUN(execute_onblocka_script(&ent,&other_ent));RUN(execute_onmovex_script(&ent));
+ RUN(execute_onmovez_script(&ent));RUN(execute_onmovea_script(&ent));
+ RUN(execute_ondeath_script(&ent,&other_ent,1,2,3,4,5,6,7));RUN(execute_onkill_script(&ent));
+ RUN(execute_didblock_script(&ent,&other_ent,1,2,3,4,5,6,7));
+ RUN(execute_ondoattack_script(&ent,&other_ent,1,2,3,4,5,6,7,8,9));
+ RUN(execute_updateentity_script(&ent));RUN(execute_think_script(&ent));
+ RUN(execute_didhit_script(&ent,&other_ent,1,2,3,4,5,6,7,1));
+ RUN(execute_onspawn_script(&ent));RUN(execute_entity_key_script(&ent));
+ test_level.key_script=callback;before_callback(&test_level.key_script);
+ execute_level_key_script(2);after_callback(1);
+ key_script_all=callback;before_callback(&key_script_all);execute_key_script_all(2);after_callback(1);
+ timetick_script=callback;before_callback(&timetick_script);execute_timetick_script(42,3);after_callback(1);
+ loading_script=callback;before_callback(&loading_script);execute_loading_script(4,9);after_callback(1);
+ key_script[2]=join_script[2]=respawn_script[2]=pdie_script[2]=score_script[2]=callback;
+ before_callback(key_script+2);execute_key_script(2);after_callback(1);
+ before_callback(join_script+2);execute_join_script(2);after_callback(1);
+ before_callback(respawn_script+2);execute_respawn_script(2);after_callback(1);
+ before_callback(pdie_script+2);execute_pdie_script(2);after_callback(1);
+ before_callback(score_script+2);player[2].score=0;addscore(2,10);after_callback(1);
+ assert(player[2].score==10);
+ before_callback(&callback);execute_entity_key_script(NULL);addscore(-1,10);after_callback(0);
+ /* Missing callbacks must not select another script or execute the VM. */
+ callback.initialized=0;before_callback(&callback);execute_onspawn_script(&ent);after_callback(0);
+ callback.initialized=1;
+ s_spawn_script_list_node tail={0},head={0};s_spawn_entry spawn={0};
+ head.spawn_script=&callback;head.next=&tail;tail.spawn_script=&second;
+ spawn.spawn_script_list_head=&head;
+ before_callback(&callback);expected_calls[1]=&second;expected_calls_count=2;
+ execute_spawn_script(&spawn,&ent);after_callback(2);
+ before_callback(&callback);expected_calls[1]=&second;expected_calls_count=2;
+ execute_spawn_script(&spawn,NULL);after_callback(2);
+ update_script=updated_script=callback;
+ test_level.update_script=test_level.updated_script=second;
+ before_callback(&update_script);expected_calls[1]=&test_level.update_script;expected_calls_count=2;
+ execute_updatescripts();after_callback(2);
+ before_callback(&updated_script);expected_calls[1]=&test_level.updated_script;expected_calls_count=2;
+ execute_updatedscripts();after_callback(2);
+ before_callback(&callback);loaded_scripts=0;
+ if(obor_profile_build<3708) {
+  assert(loadScriptFile()==1 && loaded_scripts==1);after_callback(1);
+ } else {
+  /* No fixture exists in the owned temporary working directory. */
+  assert(loadScriptFile()==0 && loaded_scripts==0);after_callback(0);
+ }
+ level_script=endlevel_script=callback;
+ test_level.level_script=test_level.endlevel_script=second;
+ assert((uintptr_t)&test_level.level_script%sizeof(void*)==0);
+ assert((uintptr_t)&test_level.endlevel_script%sizeof(void*)==0);
+ before_callback(&level_script);expected_calls[1]=&test_level.level_script;
+ expected_calls[2]=&endlevel_script;expected_calls[3]=&test_level.endlevel_script;expected_calls_count=4;
+ unloaded_levels=0;unload_context=NULL;memset(player,0,sizeof(player));player[0].lives=1;
+ assert(playlevel("context-level"));after_callback(4);
+ assert(unloaded_levels==1);
+ assert(unload_context==(legacy_context?&test_level.endlevel_script:&caller));
+ #undef RUN
+ clear_nodes();
+}
+
+int main(void) {
+ const struct {uint32_t revision;int legacy;} cases[]={@CASES@};
+ for(unsigned i=0;i<sizeof(cases)/sizeof(*cases);++i) {
+  fprintf(stderr,"Script context profile %u\n",cases[i].revision);
+  obor_profile_build=cases[i].revision;legacy_context=cases[i].legacy;
+  clear_nodes();scalar_context_checks();callback_checks();
+ }
+ return 0;
+}

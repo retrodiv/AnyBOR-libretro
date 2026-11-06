@@ -1,0 +1,116 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+typedef struct {VARTYPE kind;double number;int pointer;const char *text;} legacy_expected;
+static s_screen legacy_screens[4];
+static void *legacy_pointer(int slot) {
+ switch(slot) {
+ case 1:return legacy_screens;
+ case 2:return legacy_screens+1;
+ case 3:return legacy_screens+2;
+ case 4:return player;
+ case 5:return player+1;
+ case 6:return player+2;
+ case 7:return player+3;
+ default:abort();
+ }
+}
+static double legacy_bank(int index) {
+ switch(index) {@LEGACY_BANK@default:abort();}
+}
+static void legacy_seed(void) {
+ reset();level=&level_record;currentScene="probe-scene";branch_name="probe-branch";
+ time=101;gfx_x_offset=102;gfx_y_offset=103;gfx_y_offset_adj=104;
+ lasthita=105.5f;lasthitc=106;lasthitt=107;lasthitx=108.5f;lasthitz=109.5f;
+ advancex=110.5f;advancey=111.5f;blockade=112.5f;scrollmaxz=113.5f;scrollminz=114.5f;
+ slowmotion[0]=115;slowmotion[1]=116;viewporth=117;viewportw=118;viewportx=119;viewporty=120;
+ level_record.pos=121;level_record.width=122;level_record.numpalettes=123;panel_height=124;
+ savedata.effectvol=125;savedata.musicvol=126;savedata.soundvol=127;
+ videomodes.hRes=320;videomodes.vRes=240;pixelformat=144;shadowalpha=145;shadowcolor=146;
+ current_palette=147;current_stage=148;levelsets[0].maxplayers=149;light[0]=150;light[1]=151;
+ ent_count=152;ent_max=153;max_entity_vars=154;max_global_vars=155;max_indexed_vars=156;
+ max_script_vars=157;models_cached=158;models_loaded=159;pause=1;
+ gameOver=2;selectScreen=3;hallOfFame=4;showComplete=5;titleScreen=6;menuScreen=7;
+ background=legacy_screens;canvas=legacy_screens+1;vscreen=legacy_screens+2;
+ smartbomber=player;textbox=player+1;
+}
+static ScriptVariant legacy_name(const char *name,int form) {
+ ScriptVariant result=text(name);
+ if(form==3)for(char *p=cache[1];*p;++p)if(*p>='a' && *p<='z')*p=(char)(*p-'a'+'A');
+ return result;
+}
+static void legacy_domains(const char **reads,const int *read_lookup,const legacy_expected *values,int nread,
+                           const char **writes,const int *write_lookup,const int *targets,int nwrite) {
+ assert(Script_GetStringMapFunction((void*)openbor_systemvariant)==(void*)mapstrings_systemvariant);
+ assert(Script_GetStringMapFunction((void*)openbor_changesystemvariant)==(void*)mapstrings_changesystemvariant);
+ for(int physical_id=0;physical_id<_sv_the_end;++physical_id)for(int changing=0;changing<2;++changing) {
+  ++cases;legacy_seed();const char **names=changing?writes:reads;
+  const int *lookup=changing?write_lookup:read_lookup;int count=changing?nwrite:nread;
+  int member=-1;for(int i=0;i<count;++i)if(!strcmp(names[i],svlist[physical_id]))member=i;
+  int expected=member>=0?lookup[member]:-1;
+  if(!changing)assert(obor_systemvariant_available(physical_id)==(member>=0));
+  ScriptVariant name=text(svlist[physical_id]),*args[]={&name};
+  if(changing)mapstrings_changesystemvariant(args,1);else mapstrings_systemvariant(args,1);
+  assert(name.vt==(expected>=0?VT_INTEGER:VT_STR));
+  if(expected>=0)assert(name.lVal==expected && !*diagnostic);
+  else {char wanted[256];snprintf(wanted,sizeof(wanted),"%s: System variable name not found: '%s'\n",changing?"changeopenborvariant":"openborvariant",svlist[physical_id]);assert(!strcmp(wanted,diagnostic));}
+ }
+ for(int i=0;i<nread;++i) {
+  assert(obor_systemvariant_native(i)==physical(reads[i]));
+  for(int form=0;form<4;++form) {
+   ++cases;legacy_seed();ScriptVariant name=legacy_name(reads[i],form),result=integer(911),*out=&result,*args[]={&name};
+   int success=form==2 || read_lookup[i]>=0;
+   if(form==1)mapstrings_systemvariant(args,1);
+   if(form==2)name=integer(i);
+   assert(openbor_systemvariant(args,&out,1)==(success?S_OK:E_FAIL));
+   assert(out==(success?&result:NULL));
+   if(success) {
+    assert(name.vt==VT_INTEGER && name.lVal==(form==2?i:read_lookup[i]) && !*diagnostic);
+    assert(result.vt==values[i].kind);
+    if(result.vt==VT_INTEGER)assert(result.lVal==values[i].number);
+    else if(result.vt==VT_DECIMAL)assert(result.dblVal==values[i].number);
+    else if(result.vt==VT_PTR)assert(result.ptrVal==legacy_pointer(values[i].pointer));
+    else if(result.vt==VT_STR)assert(!strcmp(StrCache_Get(result.strVal),values[i].text));
+   } else {
+    assert(name.vt==VT_STR && result.vt==VT_INTEGER && result.lVal==911);
+    char wanted[256],both[512];snprintf(wanted,sizeof(wanted),"openborvariant: System variable name not found: '%s'\n",StrCache_Get(name.strVal));
+    snprintf(both,sizeof(both),"%s%s",wanted,form==1?wanted:"");assert(!strcmp(both,diagnostic));
+   }
+  }
+ }
+ for(int i=0;i<nwrite;++i) {
+  assert(obor_changesystemvariant_native(i)==physical(writes[i]));
+  for(int form=0;form<4;++form)for(int kind=0;kind<(targets[i]<0?2:3);++kind) {
+   ++cases;legacy_seed();double before[@LEGACY_COUNT@];for(int k=0;k<@LEGACY_COUNT@;++k)before[k]=legacy_bank(k);
+   ScriptVariant name=legacy_name(writes[i],form),value=integer(321),result=integer(911),*out=&result,*args[]={&name,&value};
+   if(targets[i]<0){value.vt=VT_PTR;value.ptrVal=kind==1?NULL:targets[i]==-1?(void*)(legacy_screens+3):(void*)(player+3);}
+   else if(kind==1){value.vt=VT_DECIMAL;value.dblVal=321.75;}
+   else if(kind==2){value.vt=VT_STR;value.strVal=2;strcpy(cache[2],"unconverted");}
+   if(form==1)mapstrings_changesystemvariant(args,2);
+   if(form==2)name=integer(i);
+   assert(write_lookup[i]>=0);
+   assert(openbor_changesystemvariant(args,&out,2)==S_OK && out==&result && !*diagnostic);
+   assert(name.vt==VT_INTEGER && name.lVal==(form==2?i:write_lookup[i]));
+   assert(result.vt==VT_INTEGER && result.lVal==911);
+   for(int k=0;k<@LEGACY_COUNT@;++k)assert(legacy_bank(k)==(k==targets[i] && kind<2?(@LEGACY_NARROW@?65:321):before[k]));
+   assert(canvas==(targets[i]==-1?(kind==1?NULL:legacy_screens+3):legacy_screens+1));
+   assert(smartbomber==(targets[i]==-2?(kind==1?NULL:player+3):player));
+   assert(textbox==(targets[i]==-3?(kind==1?NULL:player+3):player+1));
+   if(targets[i]==-1) {
+    name=text("canvas");out=&result;
+    assert(openbor_systemvariant(args,&out,1)==S_OK && out==&result);
+    assert(result.vt==VT_PTR && result.ptrVal==canvas);
+   }
+  }
+ }
+ for(int changing=0;changing<2;++changing)for(int q=0;q<3;++q) {
+  ++cases;legacy_seed();int index=q==0?-1:q==1?(changing?nwrite:nread):INT_MAX;
+  ScriptVariant name=integer(index),value=integer(321),result=integer(911),*out=&result,*args[]={&name,&value};
+  assert((changing?obor_changesystemvariant_native(index):obor_systemvariant_native(index))==_sv_the_end);
+  assert((changing?openbor_changesystemvariant(args,&out,2):openbor_systemvariant(args,&out,1))==E_FAIL && out==NULL);
+ }
+ /* Getter-only names must not be compiled into a setter's numeric domain. */
+ ++cases;legacy_seed();ScriptVariant name=text("branchname"),value=integer(321),result=integer(911),*out=&result,*args[]={&name,&value};
+ assert(openbor_changesystemvariant(args,&out,2)==E_FAIL && out==NULL && name.vt==VT_STR);
+ assert(!strcmp(diagnostic,"changeopenborvariant: System variable name not found: 'branchname'\n"));
+}

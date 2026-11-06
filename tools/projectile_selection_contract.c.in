@@ -1,0 +1,49 @@
+/* Native projectile selector prefixes with an observed spawn provider.
+ * SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "openbor.h"
+#undef printf
+#undef assert
+uint32_t obor_profile_build;
+static entity actor,weapon,created;
+entity *self=&actor;
+static s_anim animation;
+static int spawn_ok,calls,name_code,model_index,spawn_altitude;
+#define assert(c) do{if(!(c)){fprintf(stderr,"Projectile selector revision=%u line=%d\n",obor_profile_build,__LINE__);abort();}}while(0)
+entity *spawn(float x,float z,float a,int direction,char *name,int index,s_model *model){
+ assert(x==10 && z==20 && direction==1 && !model && !calls);
+ ++calls;model_index=index;spawn_altitude=(int)a;
+ if(!name){name_code=0;}else if(!*name){name_code=2;}
+ else if(!strcmp(name,"external")){name_code=1;}
+ else if(!strcmp(name,"Shot")){name_code=3;}
+ else if(!strcmp(name,"Knife")){name_code=4;}else{abort();}
+ created.ptype=7;created.a=-22;
+ return spawn_ok?&created:NULL;
+}
+@FUNCTIONS@
+static const unsigned revisions[]={@PROFILES@};
+static const struct {int kind,name,index,weapon,weapon_projectile,custknife,custpshot,custbomb,knife,pshot,bomb,type,spawn_ok;} cases[]={@CASES@};
+int main(void){
+ for(unsigned p=0;p<sizeof(revisions)/sizeof(*revisions);++p){
+  obor_profile_build=revisions[p];printf("{\"revision\":%u,\"results\":[",obor_profile_build);
+  for(unsigned i=0;i<sizeof(cases)/sizeof(*cases);++i){
+   const __typeof__(*cases) *c=cases+i;
+   memset(&actor,0,sizeof(actor));memset(&weapon,0,sizeof(weapon));memset(&animation,0,sizeof(animation));memset(&created,0,sizeof(created));
+   self->animation=&animation;self->weapent=c->weapon>=0?&weapon:NULL;
+   weapon.modeldata.project=c->weapon;weapon.modeldata.subtype=c->weapon_projectile?SUBTYPE_PROJECTILE:0;
+   animation.custknife=c->custknife;animation.custpshotno=c->custpshot;animation.custbomb=c->custbomb;
+   self->modeldata.knife=c->knife;self->modeldata.pshotno=c->pshot;self->modeldata.bomb=c->bomb;
+   calls=0;name_code=model_index=spawn_altitude=-999;spawn_ok=c->spawn_ok;
+   char *name=c->name==1?"external":c->name==2?"":NULL;
+   entity *out=c->kind?bomb_spawn(name,c->index,10,20,30,1,0):knife_spawn(name,c->index,10,20,30,1,c->type,0);
+   assert(!out || out==&created);
+   if(i){putchar(',');}printf("[%d,%d,%d,%d,%d,%d,%d]",calls,out!=NULL,name_code,model_index,spawn_altitude,out?out->ptype:-999,out?(int)out->a:-999);
+  }
+  puts("]}");
+ }
+ return 0;
+}

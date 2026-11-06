@@ -1,0 +1,153 @@
+/* Controlled services for the complete native frame caller.
+ * SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <limits.h>
+#include "openbor.h"
+#undef printf
+#undef time
+#undef assert
+#ifdef NDEBUG
+#error Frame contract assertions must remain enabled
+#endif
+static unsigned active_case;
+#define assert(c) do { if(!(c)) { fprintf(stderr,"Frame sampling check case=%u line=%d\n",active_case,__LINE__); abort(); } } while(0)
+_Static_assert(CHAR_BIT==8 && sizeof(unsigned)==4 && sizeof(u32)==4,"32-bit original clock domain");
+uint32_t obor_profile_build;
+HRESULT Interpreter_Call(Interpreter *p){(void)p;abort();}
+HRESULT Interpreter_EvalInstruction(Interpreter *p){(void)p;abort();}
+entity *self;
+s_level *level;
+s_attack emptyattack;
+s_savedata savedata;
+int max_attack_types=7;
+float default_model_dropv[3]={9,4,2};
+static entity subject,other,old_child,fresh_child,dust,projectile;
+static s_level fixture_level;
+static s_anim animation,replacement;
+static unsigned fixture_clock;
+static int trace[64][6],width[64],trace_count,changed;
+struct animation_input {
+ int numframes,flipframe,subentity,unsummonframe,throwframe,throwa;
+ int custknife,custpshotno,custstar,shootframe,tossframe;
+ struct {int framestart,cnt,repeat,v;} quakeframe;
+ struct {int f,v,x,z,ent;} jumpframe;
+#define INPUT_VECTOR(n) int n##_present,n[8];
+ INPUT_VECTOR(delay) INPUT_VECTOR(move) INPUT_VECTOR(movez) INPUT_VECTOR(movea)
+ INPUT_VECTOR(seta) INPUT_VECTOR(soundtoplay) INPUT_VECTOR(weaponframe)
+ INPUT_VECTOR(spawnframe) INPUT_VECTOR(summonframe)
+#undef INPUT_VECTOR
+};
+struct case_input {
+ struct animation_input a,b;
+ int target,position_only,initial_child,jumping,star_result,knife_result;
+ int frame,animating,base,altbase,direction,old_nextanim,level,handler,position[3];
+ unsigned clock;
+ struct {int mode,factor,range_min,range_max,cap_min,cap_max;} edelay;
+};
+static const struct case_input cases[]={@CASES@};
+static const struct case_input *current;
+static void event(int stage,int count,int a,int b,int c,int d,int e) {
+ assert(trace_count<64 && count>=0 && count<=5);
+ int values[6]={stage,a,b,c,d,e};
+ memcpy(trace[trace_count],values,sizeof(values));width[trace_count++]=count+1;
+ if(stage==current->target && !changed) {
+  if(current->position_only)subject.animpos=current->frame+1;
+  else subject.animation=&replacement;
+  changed=1;
+ }
+}
+static void parent_context(void){assert(self==&subject);}
+void execute_animation_script(entity *ent){parent_context();assert(ent==&subject);event(1,0,0,0,0,0,0);}
+static int observed_move(float x,float z){parent_context();subject.x+=x;subject.z+=z;event(2,2,x,z,0,0,0);return 1;}
+void dropweapon(int flag){parent_context();event(3,1,flag,0,0,0,0);}
+void set_weapon(entity *ent,int weapon,int flag){parent_context();assert(ent==&subject);event(4,2,weapon,flag,0,0,0);}
+void ent_spawn_ent(entity *ent){parent_context();assert(ent==&subject);event(5,0,0,0,0,0,0);}
+void ent_summon_ent(entity *ent){parent_context();assert(ent==&subject);event(6,0,0,0,0,0,0);ent->subentity=&fresh_child;}
+int sound_play_sample(int sample,unsigned priority,int left,int right,unsigned speed){
+ parent_context();assert(priority==0 && left==savedata.effectvol && right==left && speed==100);
+ event(7,1,sample,0,0,0,0);return 0;
+}
+void toss(entity *ent,float lift){parent_context();assert(ent==&subject);ent->tossv=lift;event(8,1,lift,0,0,0,0);}
+entity *spawn(float x,float z,float a,int direction,char *name,int index,s_model *model){
+ parent_context();assert(x==subject.x && z==subject.z && a==subject.a && direction==subject.direction && !name && !model);
+ event(9,1,index,0,0,0,0);return &dust;
+}
+void execute_onspawn_script(entity *ent){parent_context();assert(ent==&dust);event(10,0,0,0,0,0,0);}
+int star_spawn(float x,float z,float a,int direction){parent_context();event(11,4,x,z,a,direction,0);return current->star_result;}
+entity *knife_spawn(char *name,int index,float x,float z,float a,int direction,int type,int map){
+ parent_context();assert(!name && index==-1 && map==0);event(12,5,x,z,a,direction,type);
+ return current->knife_result?&projectile:NULL;
+}
+entity *bomb_spawn(char *name,int index,float x,float z,float a,int direction,int map){
+ parent_context();assert(!name && index==-1 && map==0);event(13,4,x,z,a,direction,0);return &projectile;
+}
+void kill(entity *ent){assert(self==ent && (ent==&old_child || ent==&fresh_child));ent->dead=1;event(14,1,ent==&old_child?1:2,0,0,0,0);}
+#define time fixture_clock
+@FUNCTIONS@
+#undef time
+
+static void load_animation(s_anim *out,const struct animation_input *in) {
+ memset(out,0,sizeof(*out));
+#define SCALAR(n) out->n=in->n;
+ SCALAR(numframes) SCALAR(flipframe) SCALAR(subentity) SCALAR(unsummonframe)
+ SCALAR(throwframe) SCALAR(throwa) SCALAR(custknife) SCALAR(custpshotno)
+ SCALAR(custstar) SCALAR(shootframe) SCALAR(tossframe)
+ SCALAR(quakeframe.framestart) SCALAR(quakeframe.cnt) SCALAR(quakeframe.repeat) SCALAR(quakeframe.v)
+ SCALAR(jumpframe.f) SCALAR(jumpframe.v) SCALAR(jumpframe.x) SCALAR(jumpframe.z) SCALAR(jumpframe.ent)
+#undef SCALAR
+#define VECTOR(n,extent) do {if(in->n##_present){out->n=calloc((extent),sizeof(*out->n));assert(out->n);for(int i=0;i<(extent);++i)out->n[i]=in->n[i];}}while(0)
+ VECTOR(delay,in->numframes);VECTOR(move,in->numframes);VECTOR(movez,in->numframes);
+ VECTOR(movea,in->numframes);VECTOR(seta,in->numframes);VECTOR(soundtoplay,in->numframes);
+ VECTOR(weaponframe,2);VECTOR(spawnframe,5);VECTOR(summonframe,5);
+#undef VECTOR
+}
+static void release_animation(s_anim *anim) {
+ free(anim->delay);free(anim->move);free(anim->movez);free(anim->movea);free(anim->seta);
+ free(anim->soundtoplay);free(anim->weaponframe);free(anim->spawnframe);free(anim->summonframe);
+}
+static void observe(unsigned revision,unsigned index) {
+ current=&cases[index];active_case=index;trace_count=changed=0;
+ memset(&subject,0,sizeof(subject));memset(&other,0,sizeof(other));
+ memset(&old_child,0,sizeof(old_child));memset(&fresh_child,0,sizeof(fresh_child));
+ memset(&dust,0,sizeof(dust));memset(&projectile,0,sizeof(projectile));
+ memset(&fixture_level,0,sizeof(fixture_level));
+ load_animation(&animation,&current->a);load_animation(&replacement,&current->b);
+ subject.animation=&animation;subject.animating=current->animating;
+ subject.nextanim=current->old_nextanim;subject.jumping=current->jumping;
+ subject.x=current->position[0];subject.z=current->position[1];subject.a=current->position[2];
+ subject.base=current->base;subject.altbase=current->altbase;subject.direction=current->direction;
+ if(current->initial_child)subject.subentity=&old_child;
+ subject.trymove=current->handler?observed_move:NULL;
+ subject.modeldata.edelay.mode=current->edelay.mode;subject.modeldata.edelay.factor=current->edelay.factor;
+ subject.modeldata.edelay.range_min=current->edelay.range_min;subject.modeldata.edelay.range_max=current->edelay.range_max;
+ subject.modeldata.edelay.cap_min=current->edelay.cap_min;subject.modeldata.edelay.cap_max=current->edelay.cap_max;
+ level=current->level?&fixture_level:NULL;self=&other;fixture_clock=current->clock;
+ update_frame(&subject,current->frame);assert(self==&other);
+ printf("{\"revision\":%u,\"case\":%u,\"state\":[",revision,index);
+ const long long state[]={subject.x,subject.z,subject.base,subject.altbase,subject.direction,
+  subject.xdir,subject.zdir,subject.tossv,subject.idling,subject.reactive,fixture_level.quake,
+  animation.quakeframe.cnt,replacement.quakeframe.cnt,subject.animation==&replacement,
+  subject.subentity==&old_child?1:subject.subentity==&fresh_child?2:0,old_child.dead,fresh_child.dead,
+  subject.nextanim,dust.base,dust.autokill,subject.animpos};
+ for(unsigned i=0;i<sizeof(state)/sizeof(*state);++i)printf("%s%lld",i?",":"",state[i]);
+ printf("],\"trace\":[");
+ for(int i=0;i<trace_count;++i){printf("%s[",i?",":"");for(int j=0;j<width[i];++j)printf("%s%d",j?",":"",trace[i][j]);printf("]");}
+ puts("]}");release_animation(&animation);release_animation(&replacement);
+}
+int main(void) {
+ const unsigned revisions[]={@PROFILES@},values[]={@CLOCK_VALUES@};
+ for(unsigned p=0;p<sizeof(revisions)/sizeof(*revisions);++p) {
+  obor_profile_build=revisions[p];unsigned checked=0;
+  for(unsigned i=0;i<sizeof(values)/sizeof(*values);++i) {
+   const uint32_t value=values[i];
+   @CLOCK_CHECKS@
+  }
+  printf("{\"revision\":%u,\"clocks\":%u}\n",revisions[p],checked);
+  for(unsigned i=0;i<sizeof(cases)/sizeof(*cases);++i)observe(revisions[p],i);
+ }
+ return 0;
+}

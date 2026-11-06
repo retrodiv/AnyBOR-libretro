@@ -1,0 +1,79 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+static uint32_t obor_profile_build;
+static unsigned case_index,menu_index,draw_count;
+static int draws[256][5];
+#define CHECK(c) do{if(!(c)){fprintf(stderr,"MENU_LAYOUT revision=%u case=%u menu=%u line=%d\n",obor_profile_build,case_index,menu_index,__LINE__);abort();}}while(0)
+struct scene {int selector,disabled,status,found,sets,bonus,lock,width,height,hshift,vshift,flags,highlight,slot;};
+static const struct scene scenes[]={@CASES@};
+static const struct scene *scene;
+static struct {int hRes,vRes,hShift,vShift;} videomodes;
+static const int heights[]={8,11,15,19},widths[]={5,7,9,11};
+static int disabledkey[12],topten[10];
+static int num_difficulties,bonus,saveslot,current_set,hiscorebg,versusdamage;
+static int savedStatus,saved,loaded,restored,livescheat,creditscheat,healthcheat;
+static struct {int usejoy,mode,debuginfo,uselog;} savedata;
+static struct {int ifcomplete,maxplayers;} levelsets[16];
+static int forcecheatsoff,cheats,scoreformat;
+static int fontheight(int f){CHECK(f>=0&&f<4);return heights[f];}
+static int fontmonowidth(int f){CHECK(f>=0&&f<4);return widths[f];}
+/* Deterministic font/column services isolate native caller arguments. */
+static int _strmidx(int f,const char *text){CHECK(f>=0&&f<4);return 1000+100*f+10*(int)strlen(text);}
+static int _colx(int f,int col){CHECK(f>=0&&f<4);return 2000+100*f+17*col;}
+static int _liney(int f,int row){return videomodes.vRes/2+row*(fontheight(f)+1);}
+static int control_getjoyenabled(void){return (scene->flags>>1)&1;}
+static int obor_legacy_player_control(int index){CHECK(index==0);return scene->flags&1;}
+static int obor_saved_game_slots(void){return scene->sets;}
+static void observe(int kind,int a,int b,int c,int d){
+ CHECK(draw_count<256);draws[draw_count][0]=kind;draws[draw_count][1]=a;
+ draws[draw_count][2]=b;draws[draw_count][3]=c;draws[draw_count][4]=d;++draw_count;
+}
+static void recorded_font(int x,int y,int font,int z,const char *format){
+ observe(2,x,y,font,z);
+ if(!strcmp(format,"Dingoo")||!strcmp(format,"OpenDingux"))
+  observe(5,(int)strlen(format),0,0,0);
+}
+/* Payload formatting and rasterization are covered by their own contracts. */
+#define _menutextm(f,row,shift,...) observe(0,(f),(row),(shift),0)
+#define _menutext(f,col,row,...) observe(1,(f),(col),(row),0)
+#define font_printf(x,y,f,z,format,...) recorded_font((x),(y),(f),(z),(format))
+#define spriteq_add_box(x,y,w,h,...) observe(3,(x),(y),(w),(h))
+#define spriteq_add_line(x,y,tx,ty,...) observe(4,(x),(y),(tx),(ty))
+@FUNCTIONS@
+static void initialize(void){
+ memset(draws,0,sizeof(draws));draw_count=0;
+ videomodes.hRes=scene->width;videomodes.vRes=scene->height;
+ videomodes.hShift=scene->hshift;videomodes.vShift=scene->vshift;
+ for(int i=0;i<12;++i)disabledkey[i]=(scene->disabled>>i)&1;
+ for(int i=0;i<10;++i)topten[i]=(scene->highlight>>i)&1;
+ for(int i=0;i<16;++i){levelsets[i].ifcomplete=scene->lock;levelsets[i].maxplayers=4;}
+ num_difficulties=scene->sets;bonus=scene->bonus;
+ saveslot=scene->found?scene->slot:16;savedStatus=scene->status;
+ saved=scene->flags&1;loaded=(scene->flags>>1)&1;restored=(scene->flags>>2)&1;
+ savedata.usejoy=scene->flags&1;savedata.mode=(scene->flags>>1)&1;
+ savedata.debuginfo=0;savedata.uselog=0;
+ livescheat=scene->flags&1;creditscheat=(scene->flags>>1)&1;healthcheat=(scene->flags>>2)&1;
+ current_set=0;hiscorebg=(scene->flags>>3)&1;versusdamage=scene->flags%3;
+ forcecheatsoff=0;cheats=0;
+}
+static void emit(void){
+ printf("{\"revision\":%u,\"case\":%u,\"menu\":%u,\"draws\":[",obor_profile_build,case_index,menu_index);
+ for(unsigned i=0;i<draw_count;++i){if(i)putchar(',');
+  printf("[%d,%d,%d,%d,%d]",draws[i][0],draws[i][1],draws[i][2],draws[i][3],draws[i][4]);}
+ puts("]}");draw_count=0;
+}
+int main(void){
+ const uint32_t profiles[]={@PROFILES@};
+ for(unsigned p=0;p<sizeof(profiles)/sizeof(*profiles);++p){
+  obor_profile_build=profiles[p];
+  for(case_index=0;case_index<sizeof(scenes)/sizeof(*scenes);++case_index){
+   scene=scenes+case_index;initialize();
+   @CALLS@
+  }
+ }
+ return 0;
+}

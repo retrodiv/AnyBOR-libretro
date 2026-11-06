@@ -1,0 +1,84 @@
+/* Complete native music-fade and level-spawn callers with observed services.
+ * SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "openbor.h"
+#undef printf
+#undef assert
+uint32_t obor_profile_build;
+s_savedata savedata;
+static unsigned case_index,phase,event_count,spawn_calls,count_calls,script_count;
+static int events[16][3],script_events[2],backend_volume,player_count,spawn_ok;
+static char musicname[128];
+static float musicfade[2],advancex=4,advancey=6;
+static int musicloop=1;
+static long musicoffset=17;
+static entity actor;
+static s_model model;
+static s_spawn_entry properties;
+static s_level level_storage,*level=&level_storage;
+#define assert(c) do{if(!(c)){fprintf(stderr,"Music/spawn revision=%u phase=%u case=%u line=%d\n",obor_profile_build,phase,case_index,__LINE__);abort();}}while(0)
+void sound_volume_music(int left,int right){
+ assert(phase==1 && event_count<16);events[event_count][0]=1;events[event_count][1]=left;events[event_count++][2]=right;backend_volume=left;
+}
+int music(char *name,int loop,long offset){
+ assert(phase==1 && !strcmp(name,"next.ogg") && event_count<16);
+ events[event_count][0]=2;events[event_count][1]=loop;events[event_count++][2]=(int)offset;backend_volume=99;return 1;
+}
+int count_ents(int types){assert(phase==2 && types==TYPE_PLAYER);++count_calls;return player_count;}
+entity *spawn(float x,float z,float a,int direction,char *name,int index,s_model *source){
+ assert(phase==2 && name==properties.name && index==-1 && source==&model && direction==1 && a==30);
+ int vertical=!!(level->scrolldir&SCROLL_INWARD);
+ assert(x==properties.x+(vertical?0:advancex) && z==properties.z+(vertical?advancey:0));
+ ++spawn_calls;if(!spawn_ok)return NULL;
+ memset(&actor,0,sizeof(actor));actor.x=x;actor.z=z;actor.a=a;actor.health=actor.modeldata.health=9;return &actor;
+}
+void ent_set_colourmap(entity *ent,unsigned which){(void)ent;(void)which;abort();}
+void set_weapon(entity *ent,int number,int flag){(void)ent;(void)number;(void)flag;abort();}
+void execute_onspawn_script(entity *ent){assert(ent==&actor && script_count==0);script_events[script_count++]=1;}
+void execute_spawn_script(s_spawn_entry *props,entity *ent){assert(props==&properties && ent==&actor && script_count==1);script_events[script_count++]=2;}
+/* Native alias copies are outside these cases; keep their GCC warning visible. */
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic warning "-Wstringop-truncation"
+#endif
+@FUNCTIONS@
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC diagnostic pop
+#endif
+static const unsigned revisions[]={@PROFILES@};
+static const struct {float fade,step;int pending,ticks,volume;} music_cases[]={@MUSIC_CASES@};
+static const struct {int players,threshold,boss,present,level,spawn_ok,vertical,health;} spawn_cases[]={@SPAWN_CASES@};
+int main(void){
+ for(unsigned p=0;p<sizeof(revisions)/sizeof(*revisions);++p){
+  obor_profile_build=revisions[p];printf("{\"revision\":%u,\"music\":[",obor_profile_build);phase=1;
+  for(case_index=0;case_index<sizeof(music_cases)/sizeof(*music_cases);++case_index){
+   memset(&savedata,0,sizeof(savedata));savedata.musicvol=music_cases[case_index].volume;
+   strcpy(musicname,music_cases[case_index].pending?"next.ogg":"");musicfade[0]=music_cases[case_index].step;musicfade[1]=music_cases[case_index].fade;
+   event_count=0;backend_volume=7;
+   for(int i=0;i<music_cases[case_index].ticks;++i)check_music();
+   if(case_index){putchar(',');}
+   printf("{\"fade\":%.9g,\"pending\":%d,\"backend\":%d,\"events\":[",(double)musicfade[1],!!musicname[0],backend_volume);
+   for(unsigned i=0;i<event_count;++i){if(i){putchar(',');}printf("[%d,%d,%d]",events[i][0],events[i][1],events[i][2]);}printf("]}");
+  }
+  printf("],\"spawn\":[");phase=2;
+  for(case_index=0;case_index<sizeof(spawn_cases)/sizeof(*spawn_cases);++case_index){
+   memset(&properties,0,sizeof(properties));memset(&level_storage,0,sizeof(level_storage));memset(&model,0,sizeof(model));
+   const __typeof__(*spawn_cases) *c=spawn_cases+case_index;
+   properties.name="unit";properties.index=-1;properties.model=&model;properties.x=10;properties.z=20;properties.a=30;properties.flip=1;
+   properties.spawnplayer_count=c->threshold;properties.boss=c->boss;
+   for(int i=0;i<MAX_PLAYERS;++i)properties.health[i]=c->health?11*(i+1):0;
+   level_storage.bosses=3;level_storage.scrolldir=c->vertical?SCROLL_INWARD:SCROLL_RIGHT;level=c->level?&level_storage:NULL;
+   player_count=c->players;spawn_ok=c->spawn_ok;spawn_calls=count_calls=script_count=0;
+   entity *result=smartspawn(c->present?&properties:NULL);
+   if(case_index){putchar(',');}
+   printf("{\"result\":%d,\"count_calls\":%u,\"spawn_calls\":%u,\"bosses\":%d,\"health\":%d,\"entity_boss\":%d,\"scripts\":[",result!=NULL,count_calls,spawn_calls,level_storage.bosses,result?result->health:-1,result?result->boss:-1);
+   for(unsigned i=0;i<script_count;++i){if(i){putchar(',');}printf("%d",script_events[i]);}printf("]}");
+  }
+  puts("]}");
+ }
+ return 0;
+}

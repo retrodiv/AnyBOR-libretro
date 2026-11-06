@@ -6,18 +6,20 @@ interpreter execution, model loading or gameplay.
 SPDX-License-Identifier: BSD-3-Clause
 Copyright (c) 2026 retrodiv <retrodiv@proton.me>
 """
-from contract_fixtures import load_contract_fixture, contract_profiles
+from contract_fixtures import load_contract_fixture, contract_profiles, contract_revisions
 import json
 import os
 from pathlib import Path
 import re
 import shlex
 import subprocess
+import sys
 import tempfile
 import unittest
 
 from historical_script_lifecycle import render, render_owned
 from native_sanitizers import sanitizer_environment
+from test_historical_common_think import native_output
 from test_historical_player import function
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -72,19 +74,86 @@ def program(owned):
               'direct_checks();container_checks();')
     revisions = ','.join(str(row['revision']) for row in rows)
     magic=','.join(str(int(row['source_allocation_magic'])) for row in rows)
+    resets=','.join(str(int(row['clear_resets_interpreter'])) for row in rows)
     return text[:text.index(marker)] + '''
 int main(int argc,char **argv) {
  const int revisions[]={@REVISIONS@};
  const int magic[]={@MAGIC@};
+ const int resets[]={@RESETS@};
  assert(argc==2);int revision=atoi(argv[1]),matches=0;
  for(unsigned i=0;i<sizeof(revisions)/sizeof(*revisions);++i)
-  if(revisions[i]==revision) {++matches;obor_profile_build=(uint32_t)revision;fixture_expected_magic=magic[i];@CHECKS@}
+  if(revisions[i]==revision) {++matches;obor_profile_build=(uint32_t)revision;fixture_expected_magic=magic[i];expected_reset_before_clear=resets[i];@CHECKS@}
  assert(matches==1);return 0;
 }
-'''.replace('@REVISIONS@', revisions).replace('@MAGIC@',magic).replace('@CHECKS@', checks)
+'''.replace('@REVISIONS@', revisions).replace('@MAGIC@',magic).replace('@RESETS@',resets).replace('@CHECKS@', checks)
 
 
 class LoadingScriptCleanupTests(unittest.TestCase):
+    def test_model_script_copy_flag_matches_own_wrapper(self):
+        fixture = load_contract_fixture(Path(__file__).parent /
+            'fixtures/profile-model-script-copy-contracts.json')
+        rows = fixture['sources']
+        self.assertEqual(len(rows),len({r['revision'] for r in rows}))
+        self.assertEqual({r['revision'] for r in rows},contract_revisions(fixture,fixture['expected_revisions']))
+        self.assertTrue(set(fixture['boundary_controls'])<={r['revision'] for r in rows})
+        source = (SOURCE/'src/engines'/fixture['engine']/'openbor.c').read_text()
+        wrapper = function(source,'set_model_ex')
+        blocks = re.findall(r'(?m)^[ \t]*if\([^\n]*\bMODEL_NO_SCRIPT_COPY\b[^\n]*\)\s*\n'
+            r'[ \t]*clear_all_scripts\(ent->scripts,\s*0\);\s*\n'
+            r'[ \t]*copy_all_scripts\(newmodel->scripts,\s*ent->scripts,\s*0\);',wrapper)
+        self.assertEqual(len(blocks),1)
+        code = r'''
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "openbor.h"
+#undef printf
+#undef assert
+#ifdef NDEBUG
+#error Model script flag assertions must remain enabled
+#endif
+uint32_t obor_profile_build;
+static unsigned active_flag;
+#define assert(c) do{if(!(c)){fprintf(stderr,"Model script flag mismatch revision=%u flag=%u line=%d\n",obor_profile_build,active_flag,__LINE__);abort();}}while(0)
+static entity actor;
+static s_model model;
+static s_scripts source_scripts,destination_scripts;
+static unsigned calls,events[2];
+void clear_all_scripts(s_scripts *scripts,int mode){
+ assert(scripts==&destination_scripts && mode==0 && calls==0);events[calls++]=1;
+}
+void copy_all_scripts(s_scripts *from,s_scripts *to,int mode){
+ assert(from==&source_scripts && to==&destination_scripts && mode==0 && calls<2);events[calls++]=2;
+}
+static void apply_flag(entity *ent,s_model *newmodel){@BLOCK@}
+int main(void){
+ const struct {unsigned revision;int clear;} profiles[]={@PROFILES@};
+ const unsigned flags[]={@FLAGS@};
+ assert(MODEL_NO_SCRIPT_COPY==4);
+ for(unsigned p=0;p<sizeof(profiles)/sizeof(*profiles);++p){
+  obor_profile_build=profiles[p].revision;
+  for(unsigned f=0;f<sizeof(flags)/sizeof(*flags);++f){
+   active_flag=flags[f];calls=0;events[0]=events[1]=0;
+   actor.scripts=&destination_scripts;model.scripts=&source_scripts;model.model_flag=active_flag;
+   apply_flag(&actor,&model);
+   int cleared=profiles[p].clear && (active_flag&4);
+   assert(calls==(cleared?2u:1u));
+   assert(events[0]==(cleared?1u:2u));if(cleared)assert(events[1]==2);
+   assert(actor.scripts==&destination_scripts && model.scripts==&source_scripts);
+  }
+  printf("{\"revision\":%u,\"cases\":%zu}\n",obor_profile_build,sizeof(flags)/sizeof(*flags));
+ }
+ return 0;
+}
+'''.replace('@BLOCK@',blocks[0]).replace('@PROFILES@',','.join(
+            '{%du,%d}'%(r['revision'],r['clear_before_copy']) for r in rows)).replace(
+            '@FLAGS@',','.join(str(v) for v in fixture['flags']))
+        actual = [json.loads(line) for line in native_output(code,fixture).splitlines()]
+        self.assertEqual(actual,[dict(revision=r['revision'],cases=len(fixture['flags'])) for r in rows])
+        print(json.dumps(dict(model_script_contexts=len(rows),
+                              model_script_cases=len(rows)*len(fixture['flags']))),file=sys.stderr)
+
     def test_global_cleanup_callback_order_matches_each_source_profile(self):
         fixture=load_contract_fixture(Path(__file__).parent /
             'fixtures/profile-loading-script-clear-contracts.json')
@@ -221,6 +290,7 @@ class ScriptOwnershipTests(unittest.TestCase):
                 self.assertIn(row['source_container'], ('pointer', 'embedded'))
                 self.assertIs(type(row['source_allocation_magic']), bool)
                 self.assertIs(type(row['source_cleanup_safe']), bool)
+                self.assertIs(type(row['clear_resets_interpreter']), bool)
                 for digest in row['source_sha256'].values():
                     self.assertRegex(digest, r'^[0-9a-f]{64}$')
 

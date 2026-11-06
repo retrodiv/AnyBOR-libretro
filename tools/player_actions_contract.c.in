@@ -1,0 +1,315 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <assert.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "openbor.h"
+#undef assert
+#undef printf
+uint32_t obor_profile_build;
+static unsigned active_case;
+#define assert(c) do {if(!(c)){fprintf(stderr,"PLAYER_ACTIONS revision=%u case=%u line=%d\n",obor_profile_build,active_case,__LINE__);abort();}}while(0)
+static entity actor,item,weapon;
+entity *self;
+s_player player[MAX_PLAYERS];
+unsigned int time;
+int reached[4],level_completed,PLAYER_MIN_Z,PLAYER_MAX_Z,SAMPLE_PUNCH;
+char branch_name[MAX_NAME_LEN+1];
+s_savedata savedata;
+static int attack_indices[1]={ANI_ATTACK1};
+int *animattacks=attack_indices;
+static int ajspecial,operation,mutate,matched,match_calls,redirect,redirect_keys;
+static int legacy_result,legacy_mutate,legacy_key,cost_result,special_result,cost_mutate,special_mutate;
+static int trace_inputs,context_stage,context_pending,context_held,context_release,scored_index;
+static s_level *level;
+static s_anim animation,nodes[MAX_ANIS],*animations[MAX_ANIS];
+static void initial_action(void){abort();}
+static void callback_action(void){abort();}
+void common_attack_proc(void){abort();}
+void common_dodge(void){abort();}
+void common_charge(void){abort();}
+void common_block(void){abort();}
+void common_get(void){abort();}
+void common_stuck_underneath(void){abort();}
+void common_turn(void){abort();}
+void common_throw_wait(void){abort();}
+static int action_id(void (*p)(void)){
+ if(!p)return 9;
+ if(p==initial_action)return 0;
+ if(p==callback_action)return 1;
+ if(p==common_attack_proc)return 2;
+ if(p==common_dodge)return 3;
+ if(p==common_charge)return 4;
+ if(p==common_block)return 5;
+ if(p==common_get)return 6;
+ if(p==common_stuck_underneath)return 7;
+ if(p==common_turn)return 8;
+ abort();
+}
+static const int animation_ids[]={ANI_DUCK,ANI_ATTACKUP,ANI_ATTACKDOWN,ANI_DODGE,
+ ANI_ATTACKFORWARD,ANI_ATTACKBOTH,ANI_CHARGE,ANI_BLOCK,ANI_CHARGEATTACK,ANI_ATTACK1,
+ ANI_DUCKATTACK,ANI_RUNATTACK,ANI_ATTACKBACKWARD,ANI_GET,ANI_THROWATTACK,ANI_RUNSLIDE,
+ ANI_SLIDE,ANI_TURN,ANI_RUN,ANI_SPECIAL2,ANI_JUMP,ANI_FORWARDJUMP,ANI_RUNJUMP};
+static int animation_id(int index){
+ for(unsigned i=0;i<sizeof(animation_ids)/sizeof(*animation_ids);++i)
+  if(animation_ids[i]==index)return (int)i;
+ abort();
+}
+#define WIDTH 15
+#define INPUT_WIDTH 8
+static void input_snapshot(double *v){
+ const double fields[]={player[0].playkeys,player[0].keys,actor.lastmove,
+  actor.lastdir,actor.movetime,actor.movestep,player[0].combostep,actor.playerindex};
+ _Static_assert(sizeof(fields)/sizeof(*fields)==INPUT_WIDTH,"Input observer field count");
+ memcpy(v,fields,sizeof(fields));
+}
+static void snapshot(double *v){
+ const double fields[]={action_id(actor.takeaction),actor.attacking,actor.idling,
+ actor.charging,actor.blocking,actor.turning,actor.getting,actor.xdir,actor.zdir,
+ actor.tossv,actor.combostep[0],actor.stalltime,actor.running,actor.direction,
+ player[0].combostep};
+ _Static_assert(sizeof(fields)/sizeof(*fields)==WIDTH,"Observer field count");
+ memcpy(v,fields,sizeof(fields));
+}
+struct event {int kind,arg,reset;double fields[WIDTH];};
+static struct event events[8];static unsigned event_count;
+static double event_inputs[8][INPUT_WIDTH];
+struct input_call{int kind;unsigned key;double input[INPUT_WIDTH];};
+static struct input_call input_calls[8];static unsigned input_call_count;
+static void input_call(int kind,unsigned key){
+ assert(input_call_count<8);struct input_call *c=&input_calls[input_call_count++];
+ c->kind=kind;c->key=key;input_snapshot(c->input);
+}
+static void observe(int kind,int arg,int reset){
+ assert(event_count<8);if(operation==28 || operation==29 || trace_inputs)input_snapshot(event_inputs[event_count]);
+ struct event *e=&events[event_count++];
+ e->kind=kind;e->arg=arg;e->reset=reset;snapshot(e->fields);
+}
+static void callback(void){
+ if(mutate){actor.takeaction=callback_action;actor.attacking=actor.idling=actor.charging=0;
+  actor.blocking=actor.turning=actor.getting=0;actor.xdir=11;actor.zdir=12;actor.tossv=13;
+  actor.combostep[0]=17;actor.stalltime=19;actor.running=actor.direction=0;}
+}
+static void context_redirect(void){
+ player[1]=player[0];player[1].playkeys=(unsigned)context_pending;
+ player[1].keys=(unsigned)context_held;player[1].releasekeys=(unsigned)context_release;
+ actor.playerindex=1;
+}
+void addscore(int index,int value){
+ assert(context_stage==2 && index==0 && value==7);scored_index=index;context_redirect();
+}
+int player_preinput(void){
+ if((operation==27 || operation==28) && redirect){player[1]=player[0];player[1].keys=redirect_keys;actor.playerindex=1;}
+ return 0;
+}
+static void service_callback(int enabled){
+ if(enabled){int saved=mutate;mutate=1;callback();mutate=saved;
+  if(enabled==2){player[1]=player[0];actor.playerindex=1;}}
+}
+static int obor_check_combo_key(int key){
+ if(operation!=28 && operation!=29)return 0;
+ input_call(0,(unsigned)key);
+ int result=legacy_result && (!legacy_key || key==legacy_key);
+ service_callback(result?legacy_mutate:0);return result;
+}
+int player_check_special(void){
+ if(operation!=29){if(context_stage==3)context_redirect();return 0;}
+ input_call(4,0);if(context_stage==3)context_redirect();
+ service_callback(special_result?special_mutate:0);return special_result;
+}
+int check_costmove(int animation_id,int fs,int jumphack){
+ assert(operation==29 && animation_id==ANI_SPECIAL2 && !fs && !jumphack);
+ input_call(2,19);service_callback(cost_result?cost_mutate:0);return cost_result;
+}
+entity *find_ent_here(entity *e,float x,float z,int types,int (*test)(entity*,entity*)){
+ assert(e==self && x==0 && z==0);(void)test;
+ if(types==TYPE_ENDLEVEL){if(context_stage==1)context_redirect();if(context_stage==2)return &item;}
+ return types==TYPE_ITEM && operation==15?&item:NULL;
+}
+entity *check_platform_between(float x,float z,float low,float high,entity *e){
+ assert(e==self && x==0 && z==0 && high>=low);return operation==0?&item:NULL;
+}
+int match_combo(int a[],s_player *p,int count){
+ assert(p==player && count==2);
+ if(operation==27){assert((unsigned)a[0]==FLAG_BACKWARD && (unsigned)a[1]==FLAG_ATTACK);++match_calls;return matched;}
+ if(operation==28){assert(a[0]==a[1]);input_call(1,(unsigned)a[0]);return matched;}
+ if(operation==29){assert((unsigned)a[0]==FLAG_BACKWARD && a[1]==FLAG_ATTACK);input_call(1,FLAG_BACKWARD);return matched;}
+ return 1;
+}
+int perform_atchain(void){assert(operation==27 || operation==29);if(operation==29)input_call(3,0);return 0;}
+void tryjump(float height,float x,float z,int index){
+ assert(operation==29 && !z && (index==ANI_JUMP || index==ANI_FORWARDJUMP || index==ANI_RUNJUMP));
+ assert((height==4 && (x==0 || x==2)) || (height==5 && x==6));
+ observe(7,animation_id(index),0);callback();
+}
+void ent_set_anim(entity *e,int index,int reset){
+ assert(e==self);observe(1,animation_id(index),reset);callback();
+}
+int sound_play_sample(int sample,unsigned priority,int l,int r,unsigned speed){
+ assert(sample==7 && priority==0 && l==66 && r==66 && speed==100);
+ observe(2,0,0);callback();return 1;
+}
+void didfind_item(entity *e){assert(e==&item);observe(3,0,0);}
+void execute_didhit_script(entity *e,entity *other,int force,int drop,int type,int no,
+                          int guard,int juggle,int pause,int blocked){
+ assert(e==&item && other==self && !force && !drop && !type && !no && !guard && !juggle && !pause && !blocked);
+ observe(4,0,0);
+}
+int common_walk_anim(entity *e){assert(e==self);observe(5,0,0);callback();return 1;}
+int common_idle_anim(entity *e){assert(e==self);observe(6,0,0);callback();return 1;}
+@TRAPS@
+@DIFF@
+#pragma GCC diagnostic push
+#pragma GCC diagnostic warning "-Wmisleading-indentation"
+@THINKER@
+#pragma GCC diagnostic pop
+struct input{int operation,mutate,ring,held,history_keys,history_age,deadline,
+ lastmove,movestep,matched,available,direction,redirect,input_key,prior_key,
+ prior_direction,animation_kind,airborne,legacy_result,legacy_mutate,held_directions,
+ pending,held_flags,animation_mask,cost_result,special_result,running,cost_mutate,
+ special_mutate,legacy_key,ajspecial,holdblock,already_blocking,trace_inputs,context_stage,context_pending,context_held,context_release;};
+static const struct input cases[]={@CASES@};
+static const unsigned profiles[]={@PROFILES@};
+static void enable(int index){animations[index]=&nodes[index];}
+static void prepare(const struct input *c){
+ memset(&actor,0,sizeof(actor));memset(&item,0,sizeof(item));memset(&weapon,0,sizeof(weapon));
+ memset(player,0,sizeof(player));memset(&animation,0,sizeof(animation));
+ memset(nodes,0,sizeof(nodes));memset(animations,0,sizeof(animations));
+ for(int i=0;i<MAX_ANIS;++i)nodes[i].numframes=4;
+ self=&actor;actor.animation=&animation;animation.numframes=4;actor.takeaction=initial_action;
+ actor.idling=1;actor.xdir=2;actor.zdir=3;actor.tossv=4;actor.combostep[0]=5;
+ actor.stalltime=60;actor.direction=1;actor.modeldata.speed=4;
+ actor.modeldata.animation=animations;actor.modeldata.animation_capacity=MAX_ANIS;
+ actor.modeldata.chainlength=1;actor.modeldata.atchain[0]=1;
+ actor.movetime=150;actor.rushtime=200;actor.movestep=0;
+ player[0].ent=&actor;player[0].combostep=c->ring;player[0].inputtime[0]=90;player[0].inputtime[1]=95;
+ player[0].combokey[0]=FLAG_BACKWARD|FLAG_MOVERIGHT;
+ time=100;PLAYER_MIN_Z=0;PLAYER_MAX_Z=100;SAMPLE_PUNCH=7;savedata.effectvol=66;
+ ajspecial=0;operation=c->operation;mutate=c->mutate;event_count=0;match_calls=0;matched=c->matched;
+ redirect=c->redirect;redirect_keys=0;
+ input_call_count=0;legacy_result=c->legacy_result;legacy_mutate=c->legacy_mutate;
+ legacy_key=c->legacy_key;cost_result=c->cost_result;special_result=c->special_result;
+ cost_mutate=c->cost_mutate;special_mutate=c->special_mutate;
+ trace_inputs=c->trace_inputs;context_stage=c->context_stage;
+ context_pending=c->context_pending;context_held=c->context_held;context_release=c->context_release;scored_index=-1;
+ memset(reached,0,sizeof(reached));item.modeldata.score=7;level_completed=0;
+ switch(operation){
+  case 0:actor.modeldata.subject_to_platform=1;actor.modeldata.height=5;animation.height=4;enable(ANI_DUCK);break;
+  case 1:case 3:player[0].playkeys=FLAG_MOVEUP;actor.lastmove=FLAG_MOVEUP;
+   enable(operation==1?ANI_ATTACKUP:ANI_DODGE);break;
+  case 2:case 4:player[0].playkeys=FLAG_MOVEDOWN;actor.lastmove=FLAG_MOVEDOWN;
+   enable(operation==2?ANI_ATTACKDOWN:ANI_DODGE);break;
+  case 5:case 6:actor.direction=operation==6;player[0].keys=player[0].playkeys=operation==5?FLAG_MOVELEFT:FLAG_MOVERIGHT;
+   actor.lastdir=player[0].keys;enable(ANI_ATTACKFORWARD);break;
+  case 7:player[0].playkeys=FLAG_JUMP;player[0].keys=FLAG_ATTACK;enable(ANI_ATTACKBOTH);break;
+  case 8:player[0].playkeys=FLAG_JUMP|FLAG_SPECIAL;player[0].keys=FLAG_SPECIAL;enable(ANI_CHARGE);break;
+  case 9:player[0].playkeys=FLAG_SPECIAL;enable(ANI_BLOCK);break;
+  case 10:case 11:player[0].releasekeys=FLAG_ATTACK;
+   enable(operation==10?ANI_CHARGEATTACK:ANI_ATTACK1);break;
+  case 12:player[0].playkeys=FLAG_ATTACK;player[0].keys=FLAG_MOVEDOWN;
+   PLAYER_MAX_Z=0;enable(ANI_DUCKATTACK);break;
+  case 13:player[0].playkeys=FLAG_ATTACK;actor.running=1;enable(ANI_RUNATTACK);break;
+  case 14:player[0].playkeys=FLAG_ATTACK;player[0].keys=FLAG_MOVERIGHT;
+   actor.lastmove=FLAG_BACKWARD;enable(ANI_ATTACKBACKWARD);break;
+  case 15:player[0].playkeys=FLAG_ATTACK;enable(ANI_GET);break;
+  case 16:player[0].playkeys=FLAG_ATTACK;actor.weapent=&weapon;weapon.modeldata.subtype=SUBTYPE_PROJECTILE;enable(ANI_THROWATTACK);break;
+  case 17:case 18:player[0].playkeys=FLAG_JUMP;player[0].keys=FLAG_MOVEDOWN;actor.running=operation==17;
+   enable(operation==17?ANI_RUNSLIDE:ANI_SLIDE);break;
+  case 19:case 20:case 21:case 22:actor.direction=operation==19 || operation==21;
+   player[0].keys=actor.direction?FLAG_MOVELEFT:FLAG_MOVERIGHT;enable(ANI_TURN);
+   if(operation>=21){actor.modeldata.turndelay=10;actor.turntime=99;}break;
+  case 23:case 24:player[0].keys=operation==23?FLAG_MOVELEFT:FLAG_MOVERIGHT;break;
+  case 25:break;
+  case 26:player[0].playkeys=player[0].keys=FLAG_MOVERIGHT;actor.lastdir=FLAG_MOVERIGHT;enable(ANI_RUN);break;
+  case 27:{
+   static const int keys[]={0,FLAG_MOVELEFT,FLAG_MOVERIGHT,FLAG_MOVELEFT|FLAG_MOVERIGHT};
+   static const int prior[]={0,FLAG_BACKWARD,FLAG_BACKWARD|FLAG_FORWARD,FLAG_FORWARD};
+   assert(c->held>=0 && c->held<4 && c->history_keys>=0 && c->history_keys<4);
+   assert(c->lastmove>=0 && c->lastmove<4 && c->ring>=0 && c->ring<MAX_SPECIAL_INPUTS);
+   player[0].keys=keys[c->held];player[0].playkeys=FLAG_ATTACK;
+   redirect_keys=keys[c->history_keys];
+   actor.direction=c->direction;actor.lastmove=prior[c->lastmove];actor.movestep=c->movestep;
+   actor.movetime=time+c->deadline;
+   int t=(c->ring-1+MAX_SPECIAL_INPUTS)%MAX_SPECIAL_INPUTS;
+   int t2=(c->ring-2+MAX_SPECIAL_INPUTS)%MAX_SPECIAL_INPUTS;
+   player[0].inputtime[t]=100+c->history_age;player[0].inputtime[t2]=100;
+   player[0].combokey[t2]=keys[c->history_keys];
+   if(c->available){enable(ANI_ATTACKBACKWARD);if(c->available==2)nodes[ANI_ATTACKBACKWARD].numframes=0;}
+   break;
+  }
+  case 28:{
+   static const unsigned keys[]={0,FLAG_MOVEUP,FLAG_MOVEDOWN,FLAG_MOVELEFT,
+    FLAG_MOVERIGHT,FLAG_MOVEUP|FLAG_MOVEDOWN,FLAG_MOVELEFT|FLAG_MOVERIGHT};
+   static const unsigned opposite[]={0,FLAG_MOVEDOWN,FLAG_MOVEUP,FLAG_MOVERIGHT,
+    FLAG_MOVELEFT,FLAG_MOVEUP|FLAG_MOVEDOWN,FLAG_MOVELEFT|FLAG_MOVERIGHT};
+   assert(c->input_key>0 && c->input_key<7 && c->prior_key>=0 && c->prior_key<4);
+   assert(c->prior_direction>=0 && c->prior_direction<6 && c->held_directions>=0 && c->held_directions<4);
+   unsigned key=keys[c->input_key],other=opposite[c->input_key];
+   player[0].playkeys=key;player[0].keys=c->held_directions==1?key:
+    c->held_directions==2?other:c->held_directions==3?(key|other):0;
+   redirect_keys=player[0].keys;
+   actor.direction=c->direction;actor.movetime=time+c->deadline;actor.movestep=c->movestep;
+   actor.lastmove=c->prior_key==1?key:c->prior_key==2?(key|FLAG_ATTACK):c->prior_key==3?other:0;
+   actor.lastdir=c->prior_direction==1?key:c->prior_direction==2?other:c->prior_direction==3?(key|FLAG_ATTACK):
+    c->prior_direction==4?FLAG_MOVELEFT:c->prior_direction==5?FLAG_MOVERIGHT:0;
+   actor.modeldata.runspeed=6;if(c->airborne)actor.a=3;
+   if(c->animation_kind==1 || c->animation_kind==4 || c->animation_kind==5)
+    enable(c->input_key==1 || c->input_key==5?ANI_ATTACKUP:c->input_key==2?ANI_ATTACKDOWN:ANI_ATTACKFORWARD);
+   if(c->animation_kind==2)enable(ANI_DODGE);
+   if(c->animation_kind>=3){enable(ANI_RUN);if(c->animation_kind==5)nodes[ANI_RUN].numframes=0;}
+   break;
+  }
+  case 29:{
+   static const int ids[]={ANI_SPECIAL2,ANI_BLOCK,ANI_ATTACKBOTH,ANI_CHARGE,ANI_DUCKATTACK,
+    ANI_RUNATTACK,ANI_ATTACKBACKWARD,ANI_GET,ANI_SLIDE,ANI_RUNSLIDE,ANI_JUMP,
+    ANI_FORWARDJUMP,ANI_RUNJUMP};
+   player[0].playkeys=(unsigned)c->pending;player[0].keys=(unsigned)c->held_flags;
+   actor.direction=c->direction;actor.movestep=c->movestep;actor.running=c->running;
+   actor.modeldata.holdblock=c->holdblock;actor.blocking=c->already_blocking;
+   actor.movetime=time+c->deadline;actor.lastmove=c->animation_mask&64?FLAG_BACKWARD:43;
+   actor.lastdir=47;if(c->airborne)actor.a=3;
+   actor.modeldata.jumpheight=4;actor.modeldata.jumpspeed=2;actor.modeldata.runjumpheight=5;
+   actor.modeldata.runjumpdist=3;
+   for(unsigned i=0;i<sizeof(ids)/sizeof(*ids);++i)if(c->animation_mask&(1u<<i))enable(ids[i]);
+   if(c->animation_mask&16)PLAYER_MAX_Z=0;
+   ajspecial=c->ajspecial;
+   break;
+  }
+  default:abort();
+ }
+ if(context_stage)player[0].releasekeys=0;
+ if(trace_inputs){
+  player[0].playkeys=(unsigned)c->pending;
+  if(trace_inputs==2){actor.modeldata.subject_to_platform=0;PLAYER_MAX_Z=0;player[0].keys=FLAG_MOVEDOWN;}
+ }
+}
+static void array_json(const double *v){
+ putchar('[');for(unsigned i=0;i<WIDTH;++i){if(i)putchar(',');printf("%.17g",v[i]);}putchar(']');
+}
+int main(void){
+ for(unsigned p=0;p<sizeof(profiles)/sizeof(*profiles);++p){
+  obor_profile_build=profiles[p];
+  for(unsigned k=0;k<sizeof(cases)/sizeof(*cases);++k){
+   active_case=k;prepare(&cases[k]);player_think();double final[WIDTH];snapshot(final);
+   printf("{\"revision\":%u,\"case\":%u,\"fields\":",obor_profile_build,k);array_json(final);
+   printf(",\"events\":[");for(unsigned i=0;i<event_count;++i){if(i)putchar(',');
+    printf("{\"kind\":%d,\"arg\":%d,\"reset\":%d,\"fields\":",events[i].kind,events[i].arg,events[i].reset);array_json(events[i].fields);putchar('}');}
+   putchar(']');if(operation==27)printf(",\"match_calls\":%d",match_calls);
+   if(operation==28 || operation==29 || trace_inputs){
+    double inputs[INPUT_WIDTH];input_snapshot(inputs);printf(",\"input\":[");
+    for(unsigned i=0;i<INPUT_WIDTH;++i){if(i)putchar(',');printf("%.17g",inputs[i]);}
+    printf("],\"calls\":[");for(unsigned n=0;n<input_call_count;++n){if(n)putchar(',');
+     printf("{\"kind\":%d,\"key\":%u,\"input\":[",input_calls[n].kind,input_calls[n].key);
+     for(unsigned i=0;i<INPUT_WIDTH;++i){if(i)putchar(',');printf("%.17g",input_calls[n].input[i]);}printf("]}");}
+    printf("],\"event_inputs\":[");for(unsigned n=0;n<event_count;++n){if(n)putchar(',');putchar('[');
+     for(unsigned i=0;i<INPUT_WIDTH;++i){if(i)putchar(',');printf("%.17g",event_inputs[n][i]);}putchar(']');}putchar(']');
+   }
+   if(context_stage)printf(",\"context\":[%d,%d,%u,%u,%u,%u,%d,%d,%d]",
+    reached[0],reached[1],player[0].playkeys,player[1].playkeys,player[0].keys,player[1].keys,actor.playerindex,scored_index,level_completed);
+   puts("}");
+  }
+ }
+ return 0;
+}

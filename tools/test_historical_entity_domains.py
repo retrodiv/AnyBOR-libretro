@@ -26,14 +26,36 @@ CONTRACTS = load_contract_fixture(Path(__file__).parent /
     'fixtures/profile-entity-domain-contracts.json')
 
 
+
+def flag_routing_body(body):
+    selected = re.search(r'\bswitch\s*\((.*?)\)\s*\{', body, re.S)
+    if selected is None:
+        raise ValueError('Reviewed flag switch required')
+    original = selected[0][:-1]
+    named = body[:selected.start()] + 'switch(flag_selector) ' + body[selected.end()-1:]
+    prefix = 'void flag_probe(void) {\n'
+    method, cases = switch_cases(prefix + named + '\n}', 'flag_probe', 'flag_selector')
+    for label, row in sorted(cases.items(), key=lambda item: item[1]['body_start'], reverse=True):
+        if label == 'default':
+            continue
+        match = re.fullmatch(r'_(?:ep|gep|cep)_aiflag_(\w+)', label)
+        if match is None:
+            raise ValueError('Reviewed flag case required')
+        method = method[:row['body_start']] + '{ last_subcase=' + json.dumps(match[1]) + ';break; }\n' + method[row['end']:]
+    result = method[len(prefix):-2].replace('switch(flag_selector) ', original, 1)
+    return result.replace('{', '{ last_case="aiflag";', 1)
+
+
 def routing_entry(source, name):
     method, cases = switch_cases(source, name, 'propind')
     for label, row in sorted(cases.items(), key=lambda item: item[1]['body_start'], reverse=True):
         if label != 'default':
-            if not re.fullmatch(r'_ep_[a-z_0-9]+', label):
+            match = re.fullmatch(r'_(?:ep|gep|cep)_([a-z_0-9]+)', label)
+            if match is None:
                 raise ValueError('Reviewed entity case labels required')
-            method = (method[:row['body_start']] +
-                '{ last_case=' + json.dumps(label[4:]) + ';break; }\n' + method[row['end']:])
+            body = (flag_routing_body(row['body']) if match[1] == 'aiflag' else
+                    '{ last_case=' + json.dumps(match[1]) + ';break; }\n')
+            method = method[:row['body_start']] + body + method[row['end']:]
     actions = set()
     for body in re.findall(r'static const void\*\s*(?:actions|think)\[\]\s*=\s*\{([^}]*)\}', method):
         body = re.sub(r'//[^\n]*|/\*.*?\*/', '', body, flags=re.S)
@@ -85,6 +107,12 @@ def generated_fragments():
         fragments[name] = function(source, name)
     fragments['compiler_dispatch'] = function(source, 'Script_GetStringMapFunction')
     fragments['searchList'] = function((engine / 'source/utils.c').read_text(), 'searchList')
+    match = re.search(r'(?m)^#define[ \t]+TYPE_RESERVED[ \t]+[^\n]*',
+                      (engine / 'openbor.h').read_text())
+    if match is None:
+        raise ValueError('Physical entity type marker required')
+    fragments['type_reserved'] = match[0]
+
     for name in ('ScriptVariant_ChangeType', 'ScriptVariant_Clear', 'ScriptVariant_IntegerValue'):
         fragments[name] = function(variants, name)
     return fragments
@@ -102,26 +130,38 @@ def domain_program(components=None, common=None, contracts=None, original=False)
     for row in rows:
         spec = CONTRACTS['contracts'][row['contract']]
         stem = 'contract_' + str(row['revision'])
-        parts.append('static const char *const ' + stem + '_names[]={' +
-                     ','.join(map(json.dumps, spec['properties'])) + '};')
+        properties = {op: spec.get(op + '_properties', spec.get('properties'))
+                      for op in ('get', 'set')}
         for operation in ('get', 'set'):
+            names = spec.get(operation + '_names', properties[operation])
+            parts.append('static const char *const ' + stem + '_' + operation + '_names[]={' +
+                         ','.join(map(json.dumps, names)) + '};')
+            parts.append('static const char *const ' + stem + '_' + operation + '_labels[]={' +
+                         ','.join(map(json.dumps, properties[operation])) + '};')
             parts.append('static const unsigned char ' + stem + '_' + operation + '[]={' +
                 ','.join(str(int(name in spec[operation + '_cases']))
-                         for name in spec['properties']) + '};')
+                         for name in properties[operation]) + '};')
         subs = []
         for setter, operation in enumerate(('get', 'set')):
             for sub in spec[operation + '_subproperties']:
                 symbol = stem + '_sub_' + str(len(subs))
                 parts.append('static const char *const ' + symbol + '[]={' +
                              ','.join(map(json.dumps, sub['names'])) + '};')
-                subs.append('{%d,%d,%d,%d,%d,%s},' %
-                    (setter, spec['properties'].index(sub['property']), sub['argument'],
-                     sub['repeat'], len(sub['names']), symbol))
+                flags = 'NULL'
+                if 'cases' in sub:
+                    flags = symbol + '_cases'
+                    parts.append('static const char *const ' + flags + '[]={' +
+                        ','.join('NULL' if value is None else json.dumps(value)
+                                 for value in sub['cases']) + '};')
+                subs.append('{%d,%d,%d,%d,%d,%s,%s},' %
+                    (setter, properties[operation].index(sub['property']), sub['argument'],
+                     sub['repeat'], len(sub['names']), symbol, flags))
         parts.append('static const struct subproperty ' + stem + '_subs[]={' + ''.join(subs) + '};')
         component = components[row['revision']]
-        structs.append('{%d,%d,%d,%s_names,%s_get,%s_set,%d,%s_subs,%s,%s,%s},' %
-            (row['revision'], row['has_result'], len(spec['properties']), stem, stem, stem,
-             len(subs), stem, component['get'], component['set'], component['dispatch']))
+        structs.append('{%d,%d,{%d,%d},{%s_get_names,%s_set_names},{%s_get_labels,%s_set_labels},%s_get,%s_set,%d,%s_subs,%s,%s,%s},' %
+            (row['revision'], row['has_result'], len(properties['get']), len(properties['set']),
+             stem, stem, stem, stem, stem, stem, len(subs), stem,
+             component['get'], component['set'], component['dispatch']))
     definitions = '\n'.join(dict.fromkeys(component['definitions'] for component in components.values()))
     stubs = sorted({name for component in components.values() for name in component['stubs']})
     program = r'''
@@ -140,13 +180,14 @@ typedef enum { VT_EMPTY=0,VT_INTEGER=1,VT_DECIMAL=2,VT_PTR=5,VT_STR=6 } VARTYPE;
 typedef struct { union { LONG lVal; void *ptrVal; DOUBLE dblVal; int strVal; }; VARTYPE vt; } ScriptVariant;
 typedef struct { int marker; } entity,s_model,s_sprite,s_attack;
 enum { TYPE_ENEMY=1,TYPE_NPC,TYPE_OBSTACLE,TYPE_PLAYER,TYPE_SHOT };
+@RESERVED@
 #define S_OK 0
 #define E_FAIL (-1)
 #define SUCCEEDED(x) ((x)>=0)
 #define FAILED(x) ((x)<0)
 #define stricmp strcasecmp
 static uint32_t obor_profile_build;
-static const char *last_case;
+static const char *last_case,*last_subcase;
 static int fixture_source_lookup_invalid;
 static char strings[16][128];
 static int next_string;
@@ -162,9 +203,9 @@ static int quiet_printf(const char *format,...) { (void)format;return 0; }
 @DEFINITIONS@
 typedef HRESULT (*entry_fn)(ScriptVariant **,ScriptVariant **,int);
 typedef void (*map_fn)(ScriptVariant **,int);
-struct subproperty { int setter,property,argument,repeat,count; const char *const *names; };
+struct subproperty { int setter,property,argument,repeat,count; const char *const *names,*const *cases; };
 struct contract {
- int revision,has_result,count;const char *const *names;
+ int revision,has_result,count[2];const char *const *names[2],*const *labels[2];
  const unsigned char *get_cases,*set_cases;int sub_count;
  const struct subproperty *subs;entry_fn get,set;void *(*dispatch)(void *);
 };
@@ -182,24 +223,30 @@ static void route(const struct contract *c,int setter,ScriptVariant *values,
                   int expected_status,const char *expected_case,int count) {
  ScriptVariant *args[4];assert(count>=2 && count<=4);
  for(int i=0;i<count;++i) args[i]=&values[i];
- ScriptVariant result={.vt=VT_INTEGER,.lVal=999},*output=&result;last_case=NULL;
+ ScriptVariant result={.vt=VT_INTEGER,.lVal=999},*output=&result;last_case=last_subcase=NULL;
  fixture_source_lookup_invalid=0;
  assert((setter?c->set:c->get)(args,&output,count)==expected_status);
  assert(!fixture_source_lookup_invalid);
  assert((output!=NULL)==(expected_status==S_OK && (!setter || c->has_result)));
- if(expected_case) assert(last_case && !strcmp(last_case,expected_case));
+ if(expected_case) {
+  if(!last_case || strcmp(last_case,expected_case))
+   fprintf(stderr,"ENTITY_ROUTE revision=%d setter=%d index=%d expected=%s observed=%s\n",
+           c->revision,setter,values[1].lVal,expected_case,last_case?last_case:"<none>");
+  assert(last_case && !strcmp(last_case,expected_case));
+ }
  else assert(last_case==NULL);
 }
 static void check(const struct contract *c) {
  obor_profile_build=c->revision;entity subject={0};
  assert(c->dispatch(NULL)==NULL);
  for(int setter=0;setter<2;++setter) {
-  for(int property=0;property<c->count;++property) {
+  int count=c->count[setter];const char *const *names=c->names[setter],*const *labels=c->labels[setter];
+  for(int property=0;property<count;++property) {
    for(int form=0;form<4;++form) {
     next_string=0;ScriptVariant values[3]={{.vt=VT_PTR,.ptrVal=&subject},
         {.vt=VT_INTEGER,.lVal=property},{.vt=VT_INTEGER,.lVal=0}};
     if(form) {
-     char name[128];strcpy(name,c->names[property]);
+     char name[128];strcpy(name,names[property]);
      if(form==3) for(unsigned i=0;i<strlen(name);++i) name[i]=(char)toupper((unsigned char)name[i]);
      values[1]=text(name);
      if(form==2) {
@@ -211,12 +258,12 @@ static void check(const struct contract *c) {
      }
     }
     int available=(setter?c->set_cases:c->get_cases)[property];
-    route(c,setter,values,available?S_OK:E_FAIL,available?c->names[property]:NULL,3);
+    route(c,setter,values,available?S_OK:E_FAIL,available?labels[property]:NULL,3);
     assert(values[1].vt==VT_INTEGER && values[1].lVal==property);
    }
   }
   for(int invalid=0;invalid<3;++invalid) {
-   int property=invalid==0?-1:invalid==1?c->count:INT_MAX;
+   int property=invalid==0?-1:invalid==1?count:INT_MAX;
    ScriptVariant values[3]={{.vt=VT_PTR,.ptrVal=&subject},
     {.vt=VT_INTEGER,.lVal=property},{.vt=VT_INTEGER,.lVal=0}};
    route(c,setter,values,E_FAIL,NULL,3);
@@ -226,7 +273,7 @@ static void check(const struct contract *c) {
   next_string=0;ScriptVariant values[3]={{.vt=VT_PTR,.ptrVal=&subject},
     {.vt=VT_EMPTY},{.vt=VT_INTEGER,.lVal=0}};
   values[1]=text("@missing");assert(values[1].strVal==0);
-  route(c,setter,values,setter?E_FAIL:S_OK,setter?NULL:c->names[0],3);
+  route(c,setter,values,setter?E_FAIL:S_OK,setter?NULL:labels[0],3);
   values[0]=(ScriptVariant){.vt=VT_EMPTY};
   route(c,setter,values,S_OK,NULL,3);
   values[0]=(ScriptVariant){.vt=VT_INTEGER,.lVal=0};
@@ -237,7 +284,7 @@ static void check(const struct contract *c) {
   for(int value=0;value<s->count;++value) for(int upper=0;upper<2;++upper) {
    next_string=0;ScriptVariant values[6]={0},*args[6];
    for(int i=0;i<6;++i) args[i]=&values[i];
-   values[1]=text(c->names[s->property]);
+   values[1]=text(c->names[s->setter][s->property]);
    char name[128];strcpy(name,s->names[value]);
    if(upper) for(unsigned i=0;i<strlen(name);++i) name[i]=(char)toupper((unsigned char)name[i]);
    int count=s->repeat?6:s->argument+1;
@@ -247,7 +294,7 @@ static void check(const struct contract *c) {
 #if !@GENERATED@
    if(fixture_source_lookup_invalid) {
     fprintf(stderr,"SOURCE_UNDEFINED_LOOKUP revision=%d setter=%d property=%s query=%s\n",
-            c->revision,s->setter,c->names[s->property],name);
+            c->revision,s->setter,c->names[s->setter][s->property],name);
     continue;
    }
 #endif
@@ -256,11 +303,18 @@ static void check(const struct contract *c) {
     assert(values[arg].vt==VT_INTEGER && values[arg].lVal==value);
    mapper(c,s->setter)(args,count);
    for(int arg=s->argument;arg<count;++arg) assert(values[arg].lVal==value);
+   if(s->cases) {
+    values[0]=(ScriptVariant){.vt=VT_PTR,.ptrVal=&subject};
+    values[3]=(ScriptVariant){.vt=VT_INTEGER,.lVal=1};
+    route(c,s->setter,values,s->cases[value]?S_OK:E_FAIL,"aiflag",s->setter?4:3);
+    if(s->cases[value])assert(last_subcase && !strcmp(last_subcase,s->cases[value]));
+    else assert(last_subcase==NULL);
+   }
   }
 #if @GENERATED@
   next_string=0;ScriptVariant values[6]={0},*args[6];
   for(int i=0;i<6;++i) args[i]=&values[i];
-  values[1]=text(c->names[s->property]);
+  values[1]=text(c->names[s->setter][s->property]);
   int count=s->repeat?6:s->argument+1;
   for(int arg=s->argument;arg<count;++arg) values[arg]=text("@missing");
   mapper(c,s->setter)(args,count);
@@ -286,6 +340,7 @@ int main(int argc,char **argv) {
         ('CONVERSIONS', '\n'.join(common[name] for name in
             ('ScriptVariant_ChangeType', 'ScriptVariant_Clear', 'ScriptVariant_IntegerValue'))),
         ('LOOKUP', common['searchList']), ('MACRO', common['mapstrings_macro']),
+        ('RESERVED', common.get('type_reserved', '')),
         ('STUBS', '\n'.join('static void '+name+'(void) {}' for name in stubs)),
         ('DEFINITIONS', definitions), ('DATA', '\n'.join(parts)),
         ('CONTRACTS', '\n'.join(structs)), ('GENERATED', str(int(not original)))))
@@ -300,7 +355,10 @@ class EntityDomainTests(unittest.TestCase):
         for key, contract in CONTRACTS['contracts'].items():
             raw = json.dumps(contract, sort_keys=True, separators=(',', ':')).encode()
             self.assertEqual(hashlib.sha256(raw).hexdigest(), key)
-            self.assertEqual(len(contract['properties']), len(set(contract['properties'])))
+            for operation in ('get', 'set'):
+                properties = contract.get(operation + '_properties', contract.get('properties'))
+                self.assertEqual(len(properties), len(set(properties)))
+                self.assertEqual(len(properties), len(contract.get(operation + '_names', properties)))
         for row in CONTRACTS['sources']:
             self.assertIn(row['contract'], CONTRACTS['contracts'])
             spec = CONTRACTS['contracts'][row['contract']]

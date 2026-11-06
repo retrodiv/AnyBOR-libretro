@@ -21,10 +21,11 @@ def render_entity_spawn(parts, *, revision, factor_layout, scripts_pointer,
             type(scripts_pointer) is not bool or type(flag_member) is not bool):
         raise ValueError('Explicit native record and revision context required')
     keys = {'zero_factors', 'priority_reuse', 'counter_updates'}
-    if (not isinstance(contract, dict) or set(contract) != keys or
+    if (not isinstance(contract, dict) or not keys <= set(contract) <= keys | {'clear_variables'} or
             any(type(v) is not bool for v in contract.values()) or
             (contract['counter_updates'] and not flag_member)):
         raise ValueError('Explicit independent spawn/kill expectations required')
+    contract = {'clear_variables': True, **contract}
     if not isinstance(cases, list) or not 1 <= len(cases) <= 1024:
         raise ValueError('Bounded explicit entity spawn cases required')
     entries = []
@@ -91,7 +92,7 @@ HRESULT Interpreter_EvalInstruction(Interpreter *p){(void)p;abort();}
 struct spawn_case {int type,flag,variables,route,occupied,expected_slot;};
 static const struct spawn_case cases[]={@CASES@},*test;
 static const int native_types[]={TYPE_ENEMY,TYPE_OBSTACLE,TYPE_TRAP,TYPE_PLAYER,TYPE_TEXTBOX,TYPE_SHOT};
-static entity pool[3],*ent_list[]={&pool[0],&pool[1],&pool[2]};
+static entity pool[3],*entity_slots[]={&pool[0],&pool[1],&pool[2]},**ent_list=entity_slots;
 static entity *self,*smartbomber,*textbox;
 static s_model model;
 static s_modelcache fixture_cache[1];
@@ -111,7 +112,7 @@ int max_entity_vars;
 static int currentspawnplayer,level_completed,spawnoverride;
 static int numPlatforms,numObstacles;
 static uint32_t fixture_clock;
-static unsigned cleared,copied,initialized,unlinked,killed,variants;
+static unsigned cleared,copied,initialized,unlinked,killed,variants,collected;
 @HELPERS@
 static void observed_clear(void *scripts,int mode){
  assert(scripts && mode==1);++cleared;
@@ -122,7 +123,9 @@ static void observed_copy(void *from,void *to,int mode){
 }
 static s_model *observed_find(char *name){assert(!strcmp(name,"actor"));return &model;}
 static void observed_variant(ScriptVariant *v){
- assert(v);memset(v,0,sizeof(*v));++variants;
+ assert(v);
+ if(v->vt==VT_STR){assert(v->strVal>=4 && v->strVal<=6);++collected;}
+ memset(v,0,sizeof(*v));++variants;
 }
 static int observed_grow(void){abort();}
 static void observed_default(entity *e){assert(e && e->exists);++initialized;}
@@ -170,6 +173,11 @@ int main(void){
   memset(pool,0,sizeof(pool));memset(&model,0,sizeof(model));
   memset(&scene,0,sizeof(scene));memset(&savedata,0,sizeof(savedata));
   memset(player,0,sizeof(player));memset(variables,0,sizeof(variables));
+  int dirty=(n&1) && test->variables;
+  if(dirty)for(int i=0;i<3;++i){
+   variables[i][0].vt=VT_INTEGER;variables[i][0].lVal=71+i;
+   variables[i][1].vt=VT_STR;variables[i][1].strVal=4+i;
+  }
   memset(&model_scripts,0,sizeof(model_scripts));memset(entity_scripts,0,sizeof(entity_scripts));
   memset(model_defense,0,sizeof(model_defense));memset(entity_defense,0,sizeof(entity_defense));
   memset(entity_offense,0,sizeof(entity_offense));
@@ -191,7 +199,7 @@ int main(void){
   ent_count=1+test->occupied;ent_max=3;max_entity_vars=test->variables;
   currentspawnplayer=0;level_completed=0;spawnoverride=1;
   level=&scene;fixture_clock=123;numPlatforms=numObstacles=0;
-  cleared=copied=initialized=unlinked=killed=variants=0;
+  cleared=copied=initialized=unlinked=killed=variants=collected=0;
   phase="native pool selection";
   entity *e=spawn(3,4,5,1,test->route==2?"actor":NULL,
                  test->route==1?0:-1,test->route==0?&model:NULL);
@@ -199,7 +207,15 @@ int main(void){
   assert(e->sortid==10+test->expected_slot && e->health==40 && e->mp==9);
   assert(e->x==3 && e->z==4 && e->a==5 && e->direction==1);
   assert(e->timestamp==123 && e->nextthink==124 && initialized==1 && copied==1);
-  assert(variants==(unsigned)max_entity_vars);
+  assert(variants==(@CLEAR_VARIABLES@?(unsigned)max_entity_vars:0));
+  assert(collected==(@CLEAR_VARIABLES@ && dirty?1u:0u));
+  assert(e->entvars==variables[test->expected_slot]);
+  for(int owner=0;owner<3;++owner){
+   int retained=dirty && (owner!=test->expected_slot || !@CLEAR_VARIABLES@);
+   assert(variables[owner][0].vt==(retained?VT_INTEGER:VT_EMPTY));
+   assert(variables[owner][1].vt==(retained?VT_STR:VT_EMPTY));
+   if(retained){assert(variables[owner][0].lVal==71+owner && variables[owner][1].strVal==4+owner);}
+  }
   unsigned reused=test->occupied && test->expected_slot==0;
   assert(killed==reused && unlinked==reused && cleared==1+reused);
   assert(ent_count==2+test->occupied-(int)reused);
@@ -225,6 +241,7 @@ int main(void){
   native_kill(e);native_kill(NULL);
   assert(killed==reused+3 && unlinked==reused+1 && cleared==reused+2);
   assert(ent_count==before-1 && !numPlatforms && !numObstacles);
+  assert(variants==(@CLEAR_VARIABLES@?(unsigned)max_entity_vars:0));
  }
  printf("{\"status\":\"PASS\",\"cases\":%u}\n",(unsigned)(sizeof(cases)/sizeof(*cases)));
  return 0;

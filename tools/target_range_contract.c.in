@@ -1,0 +1,57 @@
+/* Native target-range predicates with independent boundary expectations.
+ * SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "openbor.h"
+#undef assert
+#undef printf
+#ifdef NDEBUG
+#error Target-range assertions must remain enabled
+#endif
+uint32_t obor_profile_build;
+static const char *case_name;
+#define assert(c) do{if(!(c)){fprintf(stderr,"Target range mismatch revision=%u case=%s line=%d\n",obor_profile_build,case_name,__LINE__);abort();}}while(0)
+static const struct {unsigned revision,regime;} profiles[]={@PROFILES@};
+static const struct range_case {
+ const char *name;
+ float subject[4],target[4];
+ short bounds[8];
+ int direction,present,expected[3][2];
+} cases[]={@CASES@};
+int main(void){
+ static entity subject,target_storage;
+ static s_anim animation;
+ s_anim *animations[1]={&animation};
+ for(unsigned p=0;p<sizeof(profiles)/sizeof(*profiles);++p){
+  obor_profile_build=profiles[p].revision;
+  for(unsigned n=0;n<sizeof(cases)/sizeof(*cases);++n){
+   const struct range_case *c=cases+n;case_name=c->name;
+   memset(&subject,0,sizeof(subject));memset(&target_storage,0,sizeof(target_storage));
+   memset(&animation,0,sizeof(animation));
+   subject.modeldata.animation=animations;subject.modeldata.animation_capacity=1;
+   subject.direction=c->direction;
+   subject.x=c->subject[0];subject.z=c->subject[1];
+   subject.a=c->subject[2];subject.base=c->subject[3];
+   target_storage.x=c->target[0];target_storage.z=c->target[1];
+   target_storage.a=c->target[2];target_storage.base=c->target[3];
+   animation.range.xmin=c->bounds[0];animation.range.xmax=c->bounds[1];
+   animation.range.zmin=c->bounds[2];animation.range.zmax=c->bounds[3];
+   animation.range.amin=c->bounds[4];animation.range.amax=c->bounds[5];
+   animation.range.bmin=c->bounds[6];animation.range.bmax=c->bounds[7];
+   unsigned char before[sizeof(subject)],other[sizeof(target_storage)],anim[sizeof(animation)];
+   memcpy(before,&subject,sizeof(subject));memcpy(other,&target_storage,sizeof(target_storage));
+   memcpy(anim,&animation,sizeof(animation));
+   entity *self=&subject,*target=c->present?&target_storage:NULL;
+   assert((!!check_range(self,target,0))==c->expected[profiles[p].regime][0]);
+   assert((!!check_range_both(self,target,0))==c->expected[profiles[p].regime][1]);
+   assert(!memcmp(before,&subject,sizeof(subject)));
+   assert(!memcmp(other,&target_storage,sizeof(target_storage)));
+   assert(!memcmp(anim,&animation,sizeof(animation)));
+  }
+  printf("{\"revision\":%u,\"cases\":%zu,\"predicates\":2}\n",obor_profile_build,sizeof(cases)/sizeof(*cases));
+ }
+ return 0;
+}

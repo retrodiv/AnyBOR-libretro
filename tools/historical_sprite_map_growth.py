@@ -6,7 +6,7 @@ Copyright (c) 2026 retrodiv <retrodiv@proton.me>
 import re
 
 
-def render_sprite_map_growth(*, definition, revision, cases, mode='valid'):
+def render_sprite_map_growth(*, definition, revision, cases, mode='valid', capacity_definition=''):
     modes={'valid':0,'unavailable':1,'checked_extents':2,'all':3}
     if (not isinstance(definition,str) or not 0<len(definition)<=8192 or '\0'in definition or
             not re.match(r'\s*void\s+prepare_sprite_map\s*\(',definition) or
@@ -14,6 +14,12 @@ def render_sprite_map_growth(*, definition, revision, cases, mode='valid'):
             not isinstance(mode,str) or mode not in modes or
             not isinstance(cases,list) or not 0<len(cases)<=32):
         raise ValueError('Native map definition, revision, bounded cases and observation mode required')
+    if (not isinstance(capacity_definition, str) or len(capacity_definition)>8192 or
+            '\0' in capacity_definition or capacity_definition and not re.match(
+                r'\s*static\s+size_t\s+obor_profile_sprite_map_capacity\s*\(', capacity_definition)):
+        raise ValueError('A bounded native sprite-map capacity definition is required')
+    if bool(re.search(r'\bobor_profile_sprite_map_capacity\s*\(', definition)) != bool(capacity_definition):
+        raise ValueError('The native map capacity dependency must be retained when used')
     records=[]
     for row in cases:
         if (not isinstance(row,dict) or set(row)!={'initial_capacity','present','request','expected_capacity','allocations'} or
@@ -130,4 +136,4 @@ int main(void){
  return 0;
 }
 '''.replace('@REVISION@',str(revision)+'u').replace('@CASES@',',\n'.join(records)).replace(
-        '@DEFINITION@',definition).replace('@MODE@',str(modes[mode]))
+        '@DEFINITION@',(capacity_definition+'\n' if capacity_definition else '')+definition).replace('@MODE@',str(modes[mode]))

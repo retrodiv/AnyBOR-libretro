@@ -1,0 +1,37 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <stdint.h>
+#include <stdio.h>
+#include <string.h>
+#include "openbor.h"
+#undef printf
+#ifdef NDEBUG
+#error Frozen timer checks must remain enabled
+#endif
+_Static_assert(sizeof(((entity *)0)->pain_time) == sizeof(uint32_t),
+ "Native pain timer is a 32-bit value");
+_Static_assert(sizeof(((entity *)0)->turntime) == sizeof(uint32_t),
+ "Native turn timer is a 32-bit value");
+uint32_t obor_profile_build;
+entity *textbox, *smartbomber;
+static const unsigned profiles[] = {@PROFILES@};
+static const struct timer_case {
+ uint32_t timers[@WIDTH@]; int textbox, smartbomber;
+} cases[] = {@CASES@};
+int main(void)
+{
+ for(unsigned p=0; p<sizeof(profiles)/sizeof(*profiles); ++p) {
+  obor_profile_build=profiles[p];
+  for(unsigned c=0; c<sizeof(cases)/sizeof(*cases); ++c) {
+   entity actor; memset(&actor,0,sizeof(actor)); entity *current=&actor;
+   @INIT@
+   textbox=cases[c].textbox?current:NULL;
+   smartbomber=cases[c].smartbomber?current:NULL;
+   expand_time(current);
+   printf("{\"revision\":%u,\"case\":%u,\"timers\":[",obor_profile_build,c);
+   @READ@
+   puts("]}");
+  }
+ }
+ return 0;
+}

@@ -1,0 +1,86 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdarg.h>
+#include <string.h>
+#include <limits.h>
+#pragma GCC diagnostic push
+#pragma GCC diagnostic warning "-Wmissing-field-initializers"
+#if defined(__clang__)
+#if __has_warning("-Wsingle-bit-bitfield-constant-conversion")
+#pragma GCC diagnostic warning "-Wsingle-bit-bitfield-constant-conversion"
+#endif
+#endif
+@DECLARATIONS@
+#pragma GCC diagnostic pop
+#undef printf
+uint32_t obor_profile_build;
+@GLOBALS@
+static s_level fixture_level;
+static s_screen fixture_screen;
+static int current_ingame;
+static char observed[16];
+static unsigned events,cases;
+#undef assert
+#define assert(c) do{if(!(c)){fprintf(stderr,"FRAME_DEBUG profile=%u case=%u line=%d trace=%s\n",obor_profile_build,cases,__LINE__,observed);abort();}}while(0)
+static void event(char value){assert(events+1<sizeof(observed));observed[events++]=value;observed[events]=0;}
+static void observations(void){events=0;observed[0]=0;}
+void spriteq_clear(void){event('R');}
+void font_printf(int x,int y,int font,int layer,char *format,...)
+{assert(x==0 && y==230 && font==0 && layer==0 && format==debug_msg);event('F');}
+void screen_printf(s_screen *screen,int x,int y,int font,char *format,...)
+{assert(screen==vscreen && x==0 && y==230 && font==0 && format==debug_msg);event('S');}
+void spriteq_draw(s_screen *screen,int newonly,int minz,int maxz,int dx,int dy)
+{assert(screen==vscreen && newonly==(current_ingame==0) && minz==MIN_INT && maxz==MAX_INT && !dx && !dy);event('D');}
+@INIT@
+@PRODUCER@
+static void overlay(void)
+{
+    int ingame=current_ingame;
+@OVERLAY@
+}
+static void unload_debug(void)
+{
+@UNLOAD@
+}
+static void check(int legacy,int pending,int clear)
+{
+    _Static_assert(sizeof(u32)==4 && UINT_MAX==UINT32_MAX,"Declared native clock domain");
+    const u32 times[]={0,100,UINT32_MAX-500,UINT32_MAX};
+    for(unsigned t=0;t<sizeof(times)/sizeof(*times);++t)for(int ingame=0;ingame<3;++ingame){
+        ++cases;time=times[t];current_ingame=ingame;debug_time=123;
+        debug_msg[0]=0;observations();obor_profile_debug_init();
+        assert(debug_time==(pending?UINT32_MAX:0));
+        u32 deadline=(u32)(((uint64_t)times[t]+GAME_SPEED*UINT64_C(5))&UINT32_MAX);
+        overlay();assert(!events && !debug_msg[0] && debug_time==(pending?deadline:0));
+        debug_printf("fixture-%d",7);assert(!strcmp(debug_msg,"fixture-7") && debug_time==UINT32_MAX);
+        observations();overlay();assert(debug_time==deadline);
+        int visible=times[t]<deadline;
+        assert(!strcmp(observed,visible?(legacy?"RFD":"S"):""));
+        assert(visible?!strcmp(debug_msg,"fixture-7"):!debug_msg[0]);
+    }
+    for(int delta=-1;delta<=1;++delta)for(int ingame=0;ingame<3;++ingame){
+        ++cases;time=50;current_ingame=ingame;debug_time=50+delta;
+        strcpy(debug_msg,"fixture");observations();overlay();
+        assert(!strcmp(observed,delta>0?(legacy?"RFD":"S"):""));
+        assert(delta>0?!strcmp(debug_msg,"fixture"):!debug_msg[0]);
+    }
+    ++cases;time=70;current_ingame=1;debug_time=0;
+    debug_printf("first");observations();overlay();assert(debug_time==1070);
+    time=80;debug_printf("second");observations();overlay();
+    assert(debug_time==1080 && !strcmp(debug_msg,"second"));
+    ++cases;debug_time=1234;unload_debug();assert(debug_time==(clear?0u:1234u));
+}
+int main(void)
+{
+    const struct{unsigned revision;int legacy,pending,clear;}contexts[]={@CONTEXTS@};
+    level=&fixture_level;vscreen=&fixture_screen;
+    for(unsigned i=0;i<sizeof(contexts)/sizeof(*contexts);++i){
+        obor_profile_build=contexts[i].revision;cases=0;
+        check(contexts[i].legacy,contexts[i].pending,contexts[i].clear);
+        assert(cases==23);printf("{\"revision\":%u,\"cases\":%u,\"status\":\"PASS\"}\n",obor_profile_build,cases);
+    }
+    return 0;
+}

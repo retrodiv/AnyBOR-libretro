@@ -1,0 +1,78 @@
+/* Complete native transform unit with finite source-owned pixel contracts.
+ * SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <stddef.h>
+#include <float.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "transform.c"
+#undef calloc
+#undef free
+#undef printf
+#undef assert
+#ifdef NDEBUG
+#error Native pixel controls require assertions
+#endif
+_Static_assert(FLT_RADIX==2 && FLT_MANT_DIG==24 && FLT_EVAL_METHOD==0,
+               "Finite pixel oracle requires ordinary binary32 expression evaluation");
+uint32_t obor_profile_build;
+static unsigned active_case;
+#define assert(c) do{if(!(c)){fprintf(stderr,"Transform loop revision=%u case=%u line=%d\n",obor_profile_build,active_case,__LINE__);abort();}}while(0)
+static const struct {int bits;unsigned source[16],before[64];} patterns[]={@PATTERNS@};
+static const struct {int op,bits,x,y,angle,key,alpha,fill,remap;} cases[]={@CASES@};
+static const unsigned revisions[]={@PROFILES@};
+static s_screen *owned_screen(int width,int height,int bits){
+ size_t bytes=offsetof(s_screen,data)+(size_t)width*height*(bits/8);
+ if(bytes<sizeof(s_screen)){bytes=sizeof(s_screen);}
+ s_screen *screen=calloc(1,bytes);assert(screen);
+ screen->width=width;screen->height=height;screen->pixelformat=bits==8?PIXEL_8:bits==16?PIXEL_16:PIXEL_32;screen->magic=screen_magic;
+ return screen;
+}
+static void store(s_screen *screen,int bits,unsigned index,unsigned value){
+ unsigned char *data=(unsigned char*)screen+offsetof(s_screen,data);
+ if(bits==8){data[index]=(unsigned char)value;}
+ else if(bits==16){((unsigned short*)data)[index]=(unsigned short)value;}
+ else{((unsigned*)data)[index]=value;}
+}
+static unsigned fetch(s_screen *screen,int bits,unsigned index){
+ unsigned char *data=(unsigned char*)screen+offsetof(s_screen,data);
+ return bits==8?data[index]:bits==16?((unsigned short*)data)[index]:((unsigned*)data)[index];
+}
+int main(void){
+ enum{CAPACITY=sizeof(blendtables)/sizeof(*blendtables)};
+ assert(CAPACITY>=6 && CAPACITY<=16);
+ unsigned char *luts=calloc(CAPACITY,65536),remap[256];assert(luts);
+ for(unsigned value=0;value<256;++value){remap[value]=(unsigned char)(value*7+11);}
+ for(unsigned mode=0;mode<CAPACITY;++mode){
+  blendtables[mode]=luts+mode*65536;
+  for(unsigned front=0;front<256;++front)for(unsigned back=0;back<256;++back){blendtables[mode][(front<<8)+back]=(unsigned char)(front*3+back*5+mode+1);}
+ }
+ for(unsigned p=0;p<sizeof(revisions)/sizeof(*revisions);++p){
+  obor_profile_build=revisions[p];printf("{\"revision\":%u,\"pixels\":[",obor_profile_build);
+  for(active_case=0;active_case<sizeof(cases)/sizeof(*cases);++active_case){
+   const __typeof__(*cases) *c=cases+active_case;
+   const __typeof__(*patterns) *pattern=patterns+(c->bits==8?0:c->bits==16?1:2);assert(pattern->bits==c->bits);
+   s_screen *dest=owned_screen(8,8,c->bits),*src=owned_screen(4,4,c->bits);
+   for(unsigned i=0;i<64;++i){store(dest,c->bits,i,pattern->before[i]);}
+   for(unsigned i=0;i<16;++i){store(src,c->bits,i,pattern->source[i]);}
+   unsigned char original_source[64];memcpy(original_source,src->data,(size_t)16*(c->bits/8));
+   gfx_entry graphics;memset(&graphics,0,sizeof(graphics));graphics.screen=src;
+   s_drawmethod method;memset(&method,0,sizeof(method));method.flag=c->bits>0;method.scalex=method.scaley=256;
+   method.transbg=c->key;method.alpha=c->alpha;method.fillcolor=(unsigned)c->fill;method.table=c->remap?remap:NULL;
+   method.rotate=c->angle;method.water.watermode=1;method.water.amplitude=0;method.water.wavelength=1;method.water.wavetime=0;
+   unsigned char original_method[sizeof(method)];memcpy(original_method,&method,sizeof(method));
+   pixelformat=screenformat=dest->pixelformat;
+   if(c->op==0){gfx_draw_rotate(dest,&graphics,c->x,c->y,2,2,&method);}
+   else{gfx_draw_water(dest,&graphics,c->x,c->y,0,0,&method);}
+   assert(!memcmp(original_source,src->data,(size_t)16*(c->bits/8)) && !memcmp(original_method,&method,sizeof(method)));
+   if(active_case){putchar(',');}putchar('[');
+   for(unsigned i=0;i<64;++i){if(i){putchar(',');}printf("%u",fetch(dest,c->bits,i));}putchar(']');
+   free(src);free(dest);
+  }
+  puts("]}");
+ }
+ for(unsigned mode=0;mode<CAPACITY;++mode){blendtables[mode]=NULL;}
+ free(luts);return 0;
+}

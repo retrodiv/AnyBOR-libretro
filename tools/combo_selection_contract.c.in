@@ -1,0 +1,91 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <assert.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "openbor.h"
+#undef assert
+#undef printf
+#ifdef NDEBUG
+#error Combo selection assertions must remain enabled
+#endif
+uint32_t obor_profile_build;
+static unsigned active_case;
+#define assert(c) do {if(!(c)){fprintf(stderr,"COMBO_SELECTION revision=%u case=%u line=%d\n",obor_profile_build,active_case,__LINE__);abort();}}while(0)
+static entity actor;
+entity *self;
+s_player player[MAX_PLAYERS];
+/* This consumer covers modern profiles;old callees must stay unreachable. */
+unsigned int time;
+static int obor_check_combo_key(int key) {(void)key;abort();}
+void common_attack_proc(void) {abort();}
+void common_jump(void) {abort();}
+static s_anim current,animations[8],*animation_table[8];
+static s_com combos[4];
+struct combo_input {int input[MAX_SPECIAL_INPUTS];int steps,anim,cancel,start,end,hits,cost,mp,hp,frames;};
+struct test_input {
+ int playkeys,idling,cancel,animnum,animpos,animhits,a,base,ringstep,jumping;
+ int ring[MAX_SPECIAL_INPUTS];
+ int count;
+ struct combo_input combos[4];
+};
+static const struct test_input cases[]={@CASES@};
+struct event {int kind,which,anim,health,idling;};
+static struct event events[32];static unsigned event_count;
+static int cost_allowed[8],mp_allowed[8],hp_allowed[8];
+static void record(int kind,int which,int anim) {
+ assert(event_count<32);events[event_count++]=(struct event){kind,which,anim,self->health,self->idling};
+}
+int check_energy(int which,int anim) {
+ assert(anim>0 && anim<8 && (which==0||which==1));record(1,which,anim);
+ return which ? mp_allowed[anim] : hp_allowed[anim];
+}
+int check_costmove(int anim,int force,int jumping) {
+ assert(anim>0 && anim<8 && force==1);
+ if(obor_profile_build>=3672)assert(jumping==self->jumping);
+ record(2,force,anim);
+ if(!cost_allowed[anim])return 0;
+ self->health-=anim+1;self->idling=0;self->animnum=anim;
+ self->animation=animation_table[anim];self->jumping=0;
+ return 1;
+}
+@FUNCTIONS@
+static void check(const struct test_input *input) {
+ assert(obor_profile_build>=3652);
+ memset(&actor,0,sizeof(actor));memset(player,0,sizeof(player));
+ memset(&current,0,sizeof(current));memset(animations,0,sizeof(animations));
+ memset(combos,0,sizeof(combos));memset(animation_table,0,sizeof(animation_table));
+ memset(cost_allowed,0,sizeof(cost_allowed));memset(mp_allowed,0,sizeof(mp_allowed));
+ memset(hp_allowed,0,sizeof(hp_allowed));event_count=0;self=&actor;
+ assert(input->count>=0 && input->count<=4 && input->ringstep>=0 && input->ringstep<MAX_SPECIAL_INPUTS);
+ actor.health=100;actor.idling=input->idling;actor.jumping=input->jumping;
+ actor.animnum=input->animnum;actor.animpos=input->animpos;actor.a=input->a;actor.base=input->base;
+ actor.animation=&current;current.cancel=input->cancel;current.animhits=input->animhits;
+ actor.modeldata.special=combos;actor.modeldata.specials_loaded=input->count;
+ actor.modeldata.animation=animation_table;actor.modeldata.animation_capacity=8;
+ player[0].playkeys=input->playkeys;player[0].combostep=input->ringstep;
+ for(int i=0;i<MAX_SPECIAL_INPUTS;++i)player[0].combokey[i]=(unsigned)input->ring[i];
+ for(int i=0;i<input->count;++i) {
+  const struct combo_input *c=&input->combos[i];int anim=c->anim;
+  assert(anim>0 && anim<8 && c->steps>=0 && c->steps<=MAX_SPECIAL_INPUTS);
+  memcpy(combos[i].input,c->input,sizeof(combos[i].input));
+  combos[i].steps=c->steps;combos[i].anim=anim;combos[i].cancel=c->cancel;
+  combos[i].startframe=c->start;combos[i].endframe=c->end;combos[i].hits=c->hits;
+  cost_allowed[anim]=c->cost;mp_allowed[anim]=c->mp;hp_allowed[anim]=c->hp;
+  animations[anim].numframes=c->frames;animation_table[anim]=&animations[anim];
+ }
+ int result=player_preinput();
+ printf("{\"revision\":%u,\"case\":%u,\"result\":%d,\"health\":%d,\"idling\":%d,\"animnum\":%d,\"jumping\":%d,\"playkeys\":%u,\"events\":[",obor_profile_build,active_case,result,actor.health,actor.idling,actor.animnum,actor.jumping,player[0].playkeys);
+ for(unsigned i=0;i<event_count;++i){const struct event *e=&events[i];if(i)printf(",");printf("[%d,%d,%d,%d,%d]",e->kind,e->which,e->anim,e->health,e->idling);}
+ puts("]}");
+}
+int main(void) {
+ const uint32_t profiles[]={@PROFILES@};
+ for(unsigned p=0;p<sizeof(profiles)/sizeof(*profiles);++p) {
+  obor_profile_build=profiles[p];
+  for(active_case=0;active_case<sizeof(cases)/sizeof(*cases);++active_case)check(&cases[active_case]);
+ }
+ return 0;
+}

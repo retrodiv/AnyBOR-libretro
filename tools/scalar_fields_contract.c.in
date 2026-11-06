@@ -1,0 +1,40 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <limits.h>
+#include "openbor.h"
+#undef printf
+#undef time
+#undef assert
+
+uint32_t obor_profile_build;
+int max_animations=MAX_ANIS;
+static s_model actual_s_model;
+static entity actual_entity, subject;
+static s_anim animation, *animation_table[MAX_ANIS];
+static unsigned frame_calls;
+static uint32_t fixture_clock;
+static const int inputs[]={@INPUTS@};
+static const uint32_t clocks[]={@CLOCKS@};
+#define CHECK(c,field) do {if(!(c)){fprintf(stderr,"Scalar contract mismatch: profile=%u field=%s\n",obor_profile_build,field);abort();}}while(0)
+static void observed_frame(entity *ent,int frame) {
+ CHECK(ent==&subject && frame==0,"frame observer");++frame_calls;
+}
+#define time fixture_clock
+#define update_frame observed_frame
+@NATIVE@
+#undef update_frame
+#undef time
+@DECLARATIONS@
+@CHECKS@
+int main(void) {
+ _Static_assert(CHAR_BIT==8 && sizeof(short)==2 && sizeof(int)==4,"native scalar widths");
+ _Static_assert(ANI_IDLE>=0 && ANI_SLEEP>=0 && ANI_IDLE<MAX_ANIS && ANI_SLEEP<MAX_ANIS,"native animation indexes");
+ CHECK((char)255==-1,"own signed-char build flag");
+ @CALLS@
+ return 0;
+}

@@ -57,7 +57,23 @@ def native(program, include_dirs=(), extra_flags=()):
                        stdout=subprocess.DEVNULL)
 
 
+def system_variant_methods(source):
+    names = ('obor_systemvariant_legacy_native', 'obor_systemvariant_available',
+             'obor_systemvariant_native', 'obor_changesystemvariant_native',
+             'mapstrings_systemvariant', 'mapstrings_changesystemvariant',
+             'openbor_systemvariant', 'openbor_changesystemvariant')
+    optional = {'obor_systemvariant_legacy_native', 'obor_changesystemvariant_native',
+                'mapstrings_changesystemvariant'}
+    return '\n'.join(function(source, name) for name in names
+                     if name not in optional or re.search(r'\b' + name + r'\s*\([^;{}]*\)\s*\{', source))
+
+
 class HistoricalBehaviorTests(unittest.TestCase):
+    def test_global_line_readers_preserve_empty_and_unknown_commands(self):
+        from global_line_contract import check_global_lines
+        check_global_lines(ROOT, Path(__file__).parent /
+                           'fixtures/profile-global-line-contracts.json')
+
     def test_release_assertions_cover_late_header_includes(self):
         from historical_assertions import render_late_assertions
         from native_sanitizers import sanitizer_environment
@@ -1886,8 +1902,13 @@ int main(void){return 0;}
             for name, block in zip(names, blocks):
                 definitions.append('static s_attack drop_'+engine+'_'+name+
                     '(void) {s_attack attack=emptyattack;'+block+'return attack;}')
-            definitions.append(function(source, 'lcmHandleCommandSmartbomb').replace(
-                'lcmHandleCommandSmartbomb', 'smartbomb_'+engine, 1))
+            smartbomb = function(source, 'lcmHandleCommandSmartbomb')
+            for helper in ('obor_profile_attack_short_value',):
+                if helper+'(' in smartbomb:
+                    renamed = helper+'_'+engine
+                    definitions.append(function(header, helper).replace(helper+'(', renamed+'(', 1))
+                    smartbomb = smartbomb.replace(helper+'(', renamed+'(')
+            definitions.append(smartbomb.replace('lcmHandleCommandSmartbomb', 'smartbomb_'+engine, 1))
         self.assertEqual(constant_sets[0], constant_sets[1])
         for profile in contract_profiles(fixture, json.loads((ROOT / 'src/pin.json').read_text())['profiles']):
             if profile['engine'] == '3741':
@@ -2070,6 +2091,10 @@ void Script_Clear(Script *script,int localclear) {
    assert(!!filestreams[i].buf==(filled[i] && !clear_streams));
    assert(filestreams[i].obor_capacity==(size_t)(filled[i] && !clear_streams?32:0));
   }
+  if(obor_profile_build<3537)for(int i=0;i<50;++i){
+   assert(!active_level->obor_legacy_filestreams[i].buf && !active_level->obor_legacy_filestreams[i].obor_capacity);
+   assert(active_level->obor_legacy_filestreams[i].pos==i%5 && active_level->obor_legacy_filestreams[i].size==(size_t)(17+i));
+  }
  } else {
   assert(phase<=6);phase=6;int found=0;
   for(int i=0;i<owned_count;++i)if(owned[i].pointer==script && owned[i].live && owned[i].role==R_SCRIPT) {
@@ -2102,6 +2127,10 @@ static void begin(int stream_mode) {
   if(filled[i]){filestreams[i].buf=take(32,R_STREAM);strcpy(filestreams[i].buf,"stream");filestreams[i].obor_capacity=32;}
  }
  active_level=take(sizeof(*active_level),R_LEVEL);
+ if(obor_profile_build<3537)for(int i=0;i<50;++i){
+  s_filestream *slot=active_level->obor_legacy_filestreams+i;slot->pos=i%5;slot->size=17+i;
+  if(filled[i]){slot->buf=take(32,R_STREAM);strcpy(slot->buf,"owned-level-stream");slot->obor_capacity=32;}
+ }
 }
 static void finish(int expected_caches) {
  in_destructor=1;free_level(active_level);in_destructor=0;active_level=NULL;
@@ -2173,7 +2202,8 @@ static void check(int fixed,int stream_boundary) {
 int main(void) {@CHECKS@assert(test_case==@CASE_COUNT@);return 0;}
 '''.replace('@TEXT_INITIALIZER@', function(source, 'obor_textobjs_initialize'))
            .replace('@TABLE_INITIALIZER@', initializer).replace('@CREATOR@', function(source, 'create_blending_tables'))
-           .replace('@STREAM_CLEAR@', function(script, 'obor_filestream_level_clear'))
+           .replace('@STREAM_CLEAR@', function(script, 'obor_filestream_level_clear') + '\n' +
+                    (function(source, 'obor_filestream_release_level') if 'obor_filestream_release_level' in source else ''))
            .replace('@FREE_LEVEL@', function(source, 'free_level')).replace('@CHECKS@', '\n'.join(checks))
            .replace('@CASE_COUNT@', str(sum(53 if row['legacy_fixed_tables'] else 61 for row in rows))), includes, flags)
 
@@ -2388,7 +2418,7 @@ int main(void) {@CHECKS@assert(test_case==@CASE_COUNT@);return 0;}
                 self.assertNotIn('LEVEL_MAX_PANELS', row['order_loop'])
             checks.append('obor_profile_build=%d;check(%s);' % (row['revision'], ','.join(
                 [str(int(row['legacy_fixed_caps']))] + [str(caps[k]) for k in
-                ('LAYERS', 'PANELS', 'HOLES', 'WALLS', 'PALETTES', 'SPAWNS')])))
+                ('LAYERS', 'PANELS', 'HOLES', 'WALLS', 'PALETTES', 'SPAWNS')] + [str(int(row['independent_optional_panels']))])))
         includes = [root, ROOT / 'src/port/libretro', ROOT / 'src/glue', root / 'source',
                     *sorted(p for p in (root / 'source').iterdir() if p.is_dir())]
         version = subprocess.check_output(shlex.split(os.environ.get('HOST_CC', 'cc')) +
@@ -2495,7 +2525,7 @@ static void order_step(int fixed,int limit,const char *text) {
   for(int j=0;j<3;++j)assert(!level->panels[initial+k][j]);
  }
 }
-static void check(int fixed,int layer_limit,int panel_limit,int hole_limit,int wall_limit,int palette_limit,int spawn_limit) {
+static void check(int fixed,int layer_limit,int panel_limit,int hole_limit,int wall_limit,int palette_limit,int spawn_limit,int independent_panels) {
  const levelCommands layer_commands[]={CMD_LEVEL_BACKGROUND,CMD_LEVEL_BGLAYER,CMD_LEVEL_LAYER,
   CMD_LEVEL_FGLAYER,CMD_LEVEL_WATER,CMD_LEVEL_PANEL,CMD_LEVEL_FRONTPANEL};
  const int layer_counts[]={0,1,layer_limit-3,layer_limit-2,layer_limit-1,layer_limit,layer_limit+1};
@@ -2507,7 +2537,8 @@ static void check(int fixed,int layer_limit,int panel_limit,int hole_limit,int w
   level->numlayers=initial;if(initial){level->layers=calloc(initial,sizeof(*level->layers));assert(level->layers);}
   strcpy(arguments[1],"image");
   if(is_panel){strcpy(arguments[2],aux&1?"neon":"none");strcpy(arguments[3],aux&2?"screen":"none");}
-  int expected=initial,added=0,requested=1+!!(aux&1)+!!(aux&2);
+  int screen=(aux&2) && (independent_panels || (aux&1));
+  int expected=initial,added=0,requested=1+!!(aux&1)+!!screen;
   int first=initial?initial:is_panel?1:0;
   if(is_panel && !initial)expected=1;
   while(added<requested && (!fixed || expected<layer_limit)){++expected;++added;}
@@ -2523,7 +2554,7 @@ static void check(int fixed,int layer_limit,int panel_limit,int hole_limit,int w
    if(added) {
     assert(panels[0][0]==first);
     assert(panels[0][1]==((aux&1) && added>=2?first+1:0));
-    assert(panels[0][2]==((aux&2) && added==requested?first+requested-1:0));
+    assert(panels[0][2]==(screen && added==requested?first+requested-1:0));
    }
   }
   if(cmd==CMD_LEVEL_FRONTPANEL)assert(frontpanels_loaded==!!added);
@@ -2606,12 +2637,14 @@ int main(void) {@CHECKS@assert(test_case==@CASE_COUNT@);return 0;}
         default = re.search(r'const\s+s_defense\s+default_defense\s*=\s*\{[^}]*\};', source)
         self.assertIsNotNone(default)
         helper = default[0] + '\n' + function(source, 'obor_combat_defense')
+        if 'static u32 obor_profile_pain_deadline(' in source:
+            helper += '\n' + function(source, 'obor_profile_pain_deadline')
         checks = []
         for row in rows:
             self.assertRegex(row['commit'], r'^[0-9a-f]{40}$')
             self.assertRegex(row['common_takedamage_sha256'], r'^[0-9a-f]{64}$')
-            checks.append('obor_profile_build=%d;check(%d);' % (
-                row['revision'], row['factor_target'] == 'model'))
+            checks.append('obor_profile_build=%d;pain_action_first=%d;check(%d);' % (
+                row['revision'], row['pain_action_before_callback'], row['factor_target'] == 'model'))
         includes = [root, ROOT / 'src/port/libretro', ROOT / 'src/glue', root / 'source',
                     *sorted(p for p in (root / 'source').iterdir() if p.is_dir())]
         version = subprocess.check_output(shlex.split(os.environ.get('HOST_CC', 'cc')) +
@@ -2636,7 +2669,7 @@ static unsigned test_case;
 HRESULT Interpreter_Call(Interpreter *p) {(void)p;abort();}
 HRESULT Interpreter_EvalInstruction(Interpreter *p) {(void)p;abort();}
 entity *self;
-static int max_attack_types=24,grab_allowed=1,pain_calls,damage_calls;
+static int max_attack_types=24,grab_allowed=1,pain_calls,damage_calls,pain_action_first;
 static void previous(void) {abort();}
 static void pain_action(void) {abort();}
 static void fall_action(void) {abort();}
@@ -2645,7 +2678,7 @@ static void damage_service(entity *other,s_attack *attack) {
  assert(other && attack && self->health==100);++damage_calls;
 }
 static int pain_service(entity *e,int type,int reset) {
- assert(e==self && type==self->damagetype && reset==1 && self->takeaction==pain_action);
+ assert(e==self && type==self->damagetype && reset==1 && self->takeaction==(pain_action_first?pain_action:previous));
  ++pain_calls;return 1;
 }
 #undef time
@@ -3029,7 +3062,7 @@ DECLARATIONS
 static int yuv_mode;
 static const unsigned expected[4]={0xff0000,0x00ff00,0x0000ff,0xffffff};
 static unsigned submitted,yielded;
-static uint32_t obor_profile_build;
+uint32_t obor_profile_build;
 static void obor_port_submit_frame(const unsigned *pixels,int w,int h,int pitch) {
     assert(obor_profile_build && w==2 && h==2 && pitch==2);
     assert(!memcmp(pixels,expected,sizeof(expected)));
@@ -3374,10 +3407,10 @@ int main(void) {
                     if row['engine'] == engine:
                         self.assertRegex(row['commit'], r'^[0-9a-f]{40}$')
                         self.assertEqual(row['wrapper_uses_sync_api'], row['sync_api'])
-                        checks.append('obor_profile_build=%d;check(%d,%d,%d,%d,%d,%d);' % (
+                        checks.append('obor_profile_build=%d;check(%d,%d,%d,%d,%d,%d,%d);' % (
                             row['revision'], row['sync_api'], row['sync_requires_animation'],
                             row['sync_updates_frame'], row['sync_schedules_delay'],
-                            row['modelcopy_callback'], row['platform_counter']))
+                            row['modelcopy_callback'], row['platform_counter'],row['clear_before_copy']))
                 program = r'''
 #include <assert.h>
 #include <stdint.h>
@@ -3489,7 +3522,7 @@ static void reset(int mask,int has_current,int fallback,int kind,int elapsed,int
 }
 #undef assert
 #define assert(c) do{if(!(c)){fprintf(stderr,"Model switch revision=%u case=%u line=%d\n",obor_profile_build,cases,__LINE__);abort();}}while(0)
-static void check(int sync_api,int require_animation,int refresh,int schedule,int callback_api,int count_platforms) {
+static void check(int sync_api,int require_animation,int refresh,int schedule,int callback_api,int count_platforms,int clear_before_copy) {
  for(int wrapper=0;wrapper<2;++wrapper)for(int flag=0;flag<2;++flag)
  for(int mask=0;mask<8;++mask)for(int has_current=0;has_current<2;++has_current)
  for(int fallback=0;fallback<8;++fallback)for(int kind=0;kind<2;++kind)
@@ -3524,7 +3557,7 @@ static void check(int sync_api,int require_animation,int refresh,int schedule,in
   if(expected_frames && expected_current && expected_pos<expected_current->numframes)next=900+expected_pos;
   if(synced && schedule)next=time+20+expected_pos;
   assert(live.nextanim==next && numPlatforms==100+(count_platforms && new_model.hasPlatforms));
-  assert(copies==wrapper && clears==(wrapper && (mask&MODEL_NO_SCRIPT_COPY)!=0));
+  assert(copies==wrapper && clears==(wrapper && clear_before_copy && (mask&MODEL_NO_SCRIPT_COPY)!=0));
   assert(callback_checks==(wrapper && callback_api?2:0) && callbacks==(wrapper && callback_api));
   for(int i=0;i<5;++i){int copied=wrapper && sync_api && i<3;assert(live_defense[i].marker==(copied?30:70)+i);assert(live_defense[i].factor==(copied?31:71)+i);assert(live_offense[i]==(copied?41:81)+i);}
   assert(new_model.speed==(inherit && !kind?1.5f:kind?8:0));
@@ -3596,7 +3629,10 @@ int main(void) {@CHECKS@assert(cases==@TOTAL@);return 0;}
                     else 'model = skipselect[i][0]?')
                 lookup = status[start:status.index(';', start) + 1]
                 timer = expression(update, 'if(level->settime > 0')
-                status_calls = '\n'.join(next(line for line in update.splitlines() if re.search(r'\b' + name + r'\(\);', line))
+                # This fixture covers the later campaign path. Earlier profiles
+                # have their own combined HUD and frame-order contract.
+                status_region = update[update.index('/************ gfx queueing'):]
+                status_calls = '\n'.join(next(line for line in status_region.splitlines() if re.search(r'\b' + name + r'\(\);', line))
                     for name in ('updatestatus', 'predrawstatus', 'drawstatus'))
                 scroller = expression(scroll, 'if(!findent(TYPE_ENDLEVEL)')
                 quick = expression(game, 'if(obor_profile_build >= 3700 && useSave)' if 'if(obor_profile_build >= 3700 && useSave)' in game
@@ -3677,7 +3713,8 @@ static char *arguments[5];
 #define GET_ARG(i) arguments[i]
 #define NAME(s) (s)
 #define CHKDEF assert(set)
-static void parse_skip(void) {int i;char *arg;switch(0){case 0:@SKIP_CASE@break;}}
+static void shutdown(int reason,const char *message) {(void)reason;(void)message;abort();}
+static void parse_skip(void) {(void)shutdown;int i;char *arg;switch(0){case 0:@SKIP_CASE@break;}}
 static int restore_argument,start_loads;
 static int loadGameFile(void) {++start_loads;return 1;}
 static void playgame(int *players,int target,int restore) {(void)players;assert(target==skiptoset);restore_argument=restore;}
@@ -3784,6 +3821,8 @@ int main(void) {@CHECKS@assert(cases==@TOTAL@);return 0;}
                 constants = model[start:model.index('modelCommands cmd;', start)]
                 init_start = model.index('sbsize = size+1;')
                 init_end = model.index('scriptbuf = (char*)malloc(sbsize);', init_start) + len('scriptbuf = (char*)malloc(sbsize);')
+                identity = (function(source, 'obor_profile_animation_identity')
+                            if 'static LONG obor_profile_animation_identity(' in source else '')
                 checks = []
                 for row in rows:
                     if row['engine'] == engine:
@@ -3798,6 +3837,7 @@ int main(void) {@CHECKS@assert(cases==@TOTAL@);return 0;}
 #include <stdlib.h>
 #include <string.h>
 #include <stdarg.h>
+#include "obor_abi.h"
 static unsigned obor_profile_build,cases;
 static int diagnostics;
 int record_diagnostic(const char *format,...) {(void)format;++diagnostics;return 0;}
@@ -3807,13 +3847,21 @@ static void shutdown(int code,const char *format,...) {(void)code;(void)format;a
 #define strclen(s) strlen(s)
 @APPEND@
 static char *scriptbuf,filename[]="model",namebuf[256],buf[128];
+static const char *shutdownmessage;
 static size_t sbsize,scriptlen,len;
 static ptrdiff_t pos;
 static int script_id,ani_id;
-static struct {int index;} animation={7},*newanim=&animation;
+typedef int32_t LONG;
+typedef struct {int index;} s_anim;
+static s_anim animation={7},*newanim=&animation;
+@IDENTITY@
 @CONSTANTS@
 static void initialize(size_t size) {@INITIALIZER@assert(scriptbuf);*scriptbuf=0;scriptlen=0;}
-static void generate(void) {switch(0){case 0:@CASE@}}
+static void generate(void) {
+ shutdownmessage=NULL;
+ switch(0){case 0:@CASE@}
+ @CLEANUP@
+}
 #undef assert
 #define assert(c) do{if(!(c)){fprintf(stderr,"Script append revision=%u case=%u line=%d\n",obor_profile_build,cases,__LINE__);abort();}}while(0)
 static void check(int character_copy) {
@@ -3830,7 +3878,7 @@ static void check(int character_copy) {
    ++cases;memset(buf,0,sizeof(buf));memcpy(buf,"prefix @script",14);
    memcpy(buf+14,payloads[payload],lengths[payload]);
    memcpy(buf+14+lengths[payload],"@end_script",12);pos=0;
-   generate();char expected[1024];strcpy(expected,prefix);
+   generate();assert(!shutdownmessage);char expected[1024];strcpy(expected,prefix);
    if(animated)strcat(expected,animation_prefix);
    for(int j=0;j<repeat;++j)strcat(expected,body);
    if(animated)strcat(expected,animation_suffix);
@@ -3844,11 +3892,14 @@ static void check(int character_copy) {
 }
 int main(void) {@CHECKS@return 0;}
 '''
-                for key, value in {'APPEND': function(source, 'buffer_append'), 'CONSTANTS': constants,
-                    'INITIALIZER': model[init_start:init_end], 'CASE': case, 'CHECKS': '\n'.join(checks)}.items():
+                for key, value in {'APPEND': function(source, 'buffer_append'), 'CONSTANTS': constants, 'IDENTITY': identity,
+                    'INITIALIZER': model[init_start:init_end], 'CASE': case,
+                    'CLEANUP': 'lCleanup: return;' if 'goto lCleanup' in case else '',
+                    'CHECKS': '\n'.join(checks)}.items():
                     program = program.replace('@' + key + '@', value)
                 program = re.sub(r'^[ \t]+', lambda m: m.group(0).expandtabs(4), program, flags=re.MULTILINE)
-                native(program, extra_flags=('-Wno-unused-const-variable', '-Wno-unused-variable'))
+                native(program, include_dirs=(ROOT / 'src/port/libretro',),
+                       extra_flags=('-Wno-unused-const-variable', '-Wno-unused-variable'))
 
     def test_text_inclusion_matches_each_source_profile(self):
         fixture = load_contract_fixture(Path(__file__).parent /
@@ -3961,6 +4012,15 @@ int main(void) {@CHECKS@return 0;}
     def test_own_system_property_domains_and_native_effects(self):
         fixture = load_contract_fixture(Path(__file__).parent /
             'fixtures/profile-system-property-contracts.json')
+        label_fixture = load_contract_fixture(Path(__file__).parent /
+            'fixtures/profile-pak-label-contracts.json')
+        label_rows = label_fixture['sources']
+        self.assertEqual(len(label_rows), len({r['revision'] for r in label_rows}))
+        for profile in contract_profiles(label_fixture,
+                json.loads((ROOT / 'src/pin.json').read_text())['profiles']):
+            revision = int(profile.get('revision', profile['build']))
+            if profile['engine'] == '3741' and 3500 <= revision <= 3665:
+                self.assertIn(revision, {r['revision'] for r in label_rows})
         rows = fixture['sources']
         self.assertEqual(len(rows), len({r['revision'] for r in rows}))
         for profile in contract_profiles(fixture, json.loads((ROOT / 'src/pin.json').read_text())['profiles']):
@@ -3968,6 +4028,14 @@ int main(void) {@CHECKS@return 0;}
             if any(s['engine'] == profile['engine'] and s['first'] <= revision <= s['last']
                    for s in fixture['coverage']):
                 self.assertIn(revision, {r['revision'] for r in rows})
+        introductions = fixture.get('query_introductions', [])
+        self.assertEqual(len(introductions), len({(r['engine'], r['revision']) for r in introductions}))
+        for profile in contract_profiles(fixture, json.loads((ROOT / 'src/pin.json').read_text())['profiles']):
+            revision = int(profile.get('revision', profile['build']))
+            if any(s['engine'] == profile['engine'] and s['first'] <= revision <= s['last']
+                   for s in fixture.get('query_coverage', [])):
+                self.assertIn((profile['engine'], revision),
+                              {(r['engine'], r['revision']) for r in introductions})
         fields = ('current_stage', 'current_set', 'current_level', 'nofadeout',
                   'nopause', 'nosave', 'noscreenshot', 'skiptoset', 'useSave',
                   'blockade', 'shadowalpha', 'shadowcolor', 'scrollminz',
@@ -3994,14 +4062,28 @@ int main(void) {@CHECKS@return 0;}
                 names = script[start:script.index('};', start) + 2]
                 start = script.index('#define MAPSTRINGS(')
                 macro = script[start:script.index('\n\n', start)]
-                methods = '\n'.join(function(script, n) for n in (
-                    'obor_systemvariant_available', 'obor_systemvariant_native',
-                    'mapstrings_systemvariant', 'openbor_systemvariant', 'openbor_changesystemvariant'))
+                methods = system_variant_methods(script)
                 converters = '\n'.join(function(variants, n) for n in (
                     'ScriptVariant_ChangeType', 'ScriptVariant_Clear',
                     'ScriptVariant_IntegerValue', 'ScriptVariant_DecimalValue'))
                 callbacks = '\n'.join(function(main, n) for n in (
                     'getsyspropertybyindex', 'changesyspropertybyindex'))
+                dispatcher = function(script, 'Script_GetStringMapFunction')
+                refs = set(re.findall(r'\(void\*\)\s*(\w+)', dispatcher))
+                implemented = {'openbor_systemvariant', 'openbor_changesystemvariant',
+                               'mapstrings_systemvariant', 'mapstrings_changesystemvariant'}
+                dispatcher = '\n'.join('static void %s(void) {}' % n
+                    for n in sorted(refs - implemented)) + '\n' + dispatcher
+                legacy = ''
+                if any(r['engine'] == engine and 'write_names' in r for r in rows):
+                    bank = fixture['legacy_write_fields']
+                    legacy = Path(__file__).with_name('system_legacy_contract.c.in').read_text()
+                    legacy = legacy.replace('@LEGACY_BANK@', '\n'.join(
+                        'case %d:return %s;' % (i, name) for i, name in enumerate(bank)))
+                    legacy = legacy.replace('@LEGACY_COUNT@', str(len(bank)))
+                    legacy = legacy.replace('@LEGACY_NARROW@', ' || '.join(
+                        'k==%d' % i for i, name in enumerate(bank) if name.startswith('slowmotion[')))
+
                 contexts, definitions = [], []
                 for row in rows:
                     if row['engine'] != engine:
@@ -4010,6 +4092,24 @@ int main(void) {@CHECKS@return 0;}
                     tag = 'profile_' + str(row['revision'])
                     definitions.append('static const char *%s[]={%s};' % (
                         tag, ','.join(json.dumps(n) for n in row['names'])))
+                    if 'write_names' in row:
+                        definitions.append('static const char *%s_writes[]={%s};' % (
+                            tag, ','.join(json.dumps(n) for n in row['write_names'])))
+                        for suffix, values in [('read_lookup', row['read_lookup']),
+                                               ('write_lookup', row['write_lookup']),
+                                               ('targets', row['write_targets'])]:
+                            definitions.append('static const int %s_%s[]={%s};' % (
+                                tag, suffix, ','.join(str(v) for v in values)))
+                        kinds = {'integer': 'VT_INTEGER', 'decimal': 'VT_DECIMAL',
+                                 'pointer': 'VT_PTR', 'string': 'VT_STR'}
+                        definitions.append('static const legacy_expected %s_values[]={%s};' % (
+                            tag, ','.join('{%s,%s,%d,%s}' % (kinds[v['kind']],
+                                json.dumps(v.get('number', 0)), v.get('pointer', 0),
+                                json.dumps(v.get('text', ''))) for v in row['read_values'])))
+                        contexts.append('obor_profile_build=%d;legacy_domains(%s,%s_read_lookup,%s_values,%d,%s_writes,%s_write_lookup,%s_targets,%d);' % (
+                            row['revision'], tag, tag, tag, len(row['names']), tag,
+                            tag, tag, len(row['write_names'])))
+                        continue
                     contexts.append('obor_profile_build=%d;domains(%s,%d);' % (
                         row['revision'], tag, len(row['names'])))
                     for name in sorted(set(row['getters']) | set(row['setters'])):
@@ -4024,6 +4124,72 @@ int main(void) {@CHECKS@return 0;}
                         contexts.append('effect(%s,%d,%d,%d,%d,%d);' % (
                             json.dumps(name), bool(get), index, get is not None and get['kind'] == 'decimal',
                             target, narrow))
+                    if 'system_limits' in row:
+                        limits = row['system_limits']
+                        self.assertEqual(set(limits), {'self', 'maxima', 'waiting_returns'})
+                        contexts.append('system_limits(%d,%d,%d);' % (
+                            limits['self'], limits['maxima'], limits['waiting_returns']))
+                for row in fixture.get('query_introductions', []):
+                    if row['engine'] == engine:
+                        self.assertRegex(row['commit'], r'^[0-9a-f]{40}$')
+                        self.assertRegex(row['source_sha256'], r'^[0-9a-f]{64}$')
+                        contexts.append('obor_profile_build=%d;system_limits(%d,%d,-1);' % (
+                            row['revision'], row['self'], row['maxima']))
+                string_limits = re.findall(r'(?m)^#define[ \t]+MAX_STR_VAR_LEN[ \t]+([0-9]+)\b',
+                    (root / 'source/scriptlib/depends.h').read_text())
+                self.assertEqual(len(string_limits), 1)
+                string_limit = int(string_limits[0])
+                self.assertTrue(32 <= string_limit <= 4095)
+                label_checks = ''
+                pak_provider = ('static void getPakName(char *out,int size,int index) '
+                    '{(void)index;snprintf(out,size,"test");}')
+                if engine == '3741':
+                    pak_provider = ('static void writeToLogFile(const char *format,...) '
+                        '{(void)format;abort();}\nstatic void borExit(int code) '
+                        '{(void)code;abort();}\n' +
+                        function((root / 'source/utils.c').read_text(), 'getPakName'))
+                    label_checks = r'''
+static void pak_labels(int available) {
+ assert(obor_systemvariant_available(_sv_pakname)==available);
+ static const struct {const char *path,*label;} paths[]={@LABEL_PATHS@};
+ for(unsigned i=0;i<sizeof(paths)/sizeof(*paths);++i)for(int form=0;form<3;++form) {
+  ++cases;reset();strcpy(packfile,paths[i].path);memset(cache[0],'Z',sizeof(cache[0]));
+  ScriptVariant name=text("pakname"),result=integer(911),*out=&result,*args[]={&name};
+  if(form==1)mapstrings_systemvariant(args,1);
+  if(form==2) {
+   int logical=-1;
+   for(int k=0;k<_sv_the_end;++k)if(obor_systemvariant_native(k)==_sv_pakname){logical=k;break;}
+   assert((logical>=0)==available);name=integer(logical);
+  }
+  assert(openbor_systemvariant(args,&out,1)==(available?S_OK:E_FAIL));
+  assert(out==(available?&result:NULL));
+  if(available) {
+   assert(result.vt==VT_STR && !strcmp(StrCache_Get(result.strVal),paths[i].label));
+   assert(StrCache_Get(result.strVal)[strlen(paths[i].label)]==0);
+   assert(!*diagnostic && cache[0][MAX_STR_VAR_LEN]=='Z');
+  } else if(form==2)assert(result.vt==VT_EMPTY);
+  else assert(result.vt==VT_INTEGER && result.lVal==911);
+ }
+ if(available)for(int edge=0;edge<3;++edge) {
+  ++cases;reset();
+  if(edge==0)strcpy(packfile,"abc");
+  else {memset(packfile,'a',MAX_STR_VAR_LEN-1+edge);strcpy(packfile+MAX_STR_VAR_LEN-1+edge,".pak");}
+  ScriptVariant name=text("pakname"),result=integer(911),*out=&result,*args[]={&name};
+  assert(openbor_systemvariant(args,&out,1)==(edge==1?S_OK:E_FAIL));
+  assert(out==(edge==1?&result:NULL));
+  if(edge==1)assert(result.vt==VT_STR && strlen(StrCache_Get(result.strVal))==MAX_STR_VAR_LEN);
+  else assert(result.vt==VT_EMPTY);
+ }
+}
+'''.replace('@LABEL_PATHS@', ','.join('{%s,%s}' %
+                        (json.dumps(row['path']), json.dumps(row['label']))
+                        for row in label_fixture['cases']))
+                    for row in label_rows:
+                        self.assertEqual(row['engine'], engine)
+                        self.assertRegex(row['commit'], r'^[0-9a-f]{40}$')
+                        self.assertRegex(row['source_sha256'], r'^[0-9a-f]{64}$')
+                        contexts.append('obor_profile_build=%d;pak_labels(%d);' %
+                            (row['revision'], row['available']))
                 read_fields = '\n'.join('case %d:return %s;' % (i, name) for i, name in enumerate(fields))
                 initializers = '\n'.join('%s=%d;' % (name, 201 + i) for i, name in enumerate(fields))
                 program = r'''
@@ -4043,7 +4209,8 @@ typedef int32_t LONG;typedef double DOUBLE;typedef void VOID;typedef int HRESULT
 #define stricmp strcasecmp
 @RECORDS@
 static unsigned obor_profile_build,cases;
-static char cache[4][256],diagnostic[512];static int collects;
+#define MAX_STR_VAR_LEN @STRING_LIMIT@
+static char cache[4][MAX_STR_VAR_LEN+1],diagnostic[512];static int collects;
 static char *StrCache_Get(int index) {assert(index>=0 && index<4);return cache[index];}
 static int StrCache_Pop(void) {return 0;}
 static void StrCache_Collect(int index) {assert(index>=0 && index<4);++collects;}
@@ -4059,11 +4226,15 @@ static int record_diagnostic(const char *format,...) {
 @SEARCH@
 @MACRO@
 typedef struct {int unused;} entity;
+typedef struct {int unused;} s_screen;
+static s_screen *canvas;
 static entity player[4],*self,*smartbomber,*textbox;
 static struct {int width,numpalettes,pos,waiting;} level_record,*level=&level_record;
 static struct {int effectvol,musicvol,soundvol;} savedata;
 static struct {int hRes,vRes;} videomodes;
 static struct {int maxplayers;struct {char *branchname;} levelorder[1];} levelsets[1];
+/* Level-set storage is a separate native contract;observe the supplied record. */
+static int obor_level_set_player_count(int index) {assert(index==0);return levelsets[0].maxplayers;}
 static int ent_count,ent_max,gameOver,selectScreen,titleScreen,hallOfFame,showComplete,menuScreen;
 static int optionsMenu,systemoptionsMenu,cheatoptionsMenu,controloptionsMenu,soundoptionsMenu;
 static int videooptionsMenu,startgameMenu,newgameMenu,loadgameMenu;
@@ -4082,20 +4253,23 @@ static @SLOWTYPE@ slowmotion[2];
 #define PLAYER_MAX_Z 240
 #define PLAYER_MIN_Z 160
 #define KBYTES 1
-#define MAX_STR_VAR_LEN 255
 static int count_ents(int kind) {return kind+10;}
 static int getSystemRam(int unit) {return unit+20;}
 static int getFreeRam(int unit) {return unit+30;}
 static int getUsedRam(int unit) {return unit+40;}
 static int timer_gettick(void) {return 991;}
-static void getPakName(char *out,int size,int index) {(void)index;snprintf(out,size,"test");}
+static char packfile[512]="test.pak";
+@PAK_HEADER@
+@PAK_PROVIDER@
 @CALLBACKS@
 @METHODS@
+@DISPATCHER@
 static double field(int index) {switch(index){@READ_FIELDS@default:abort();}}
 static ScriptVariant integer(int number) {ScriptVariant v={0};v.vt=VT_INTEGER;v.lVal=number;return v;}
-static ScriptVariant text(const char *name) {ScriptVariant v={0};v.vt=VT_STR;v.strVal=1;snprintf(cache[1],256,"%s",name);return v;}
+static ScriptVariant text(const char *name) {ScriptVariant v={0};v.vt=VT_STR;v.strVal=1;snprintf(cache[1],sizeof(cache[1]),"%s",name);return v;}
 static void reset(void) {
  @INITIALIZERS@
+ strcpy(packfile,"test.pak");
  current_set=current_level=0;levelsets[0].levelorder[0].branchname="branch";
  *diagnostic=0;collects=0;
 }
@@ -4106,6 +4280,8 @@ static int physical(const char *name) {
 #undef assert
 #define assert(c) do{if(!(c)){fprintf(stderr,"System property revision=%u case=%u line=%d\n",obor_profile_build,cases,__LINE__);abort();}}while(0)
 static void domains(const char **names,int count) {
+ assert(Script_GetStringMapFunction((void*)openbor_systemvariant)==(void*)mapstrings_systemvariant);
+ assert(Script_GetStringMapFunction((void*)openbor_changesystemvariant)==(void*)mapstrings_systemvariant);
  assert(sizeof(svlist)/sizeof(*svlist)==_sv_the_end);
  for(int i=0;i<_sv_the_end;++i) {
   ++cases;reset();int logical=-1;
@@ -4148,15 +4324,64 @@ static void effect(const char *name,int readable,int field_id,int decimal,int ta
   }
  }
 }
+static void system_limits(int has_self,int has_maxima,int waiting_returns) {
+ for(int present=0;present<2;++present) {
+  level=present?&level_record:NULL;level_record.waiting=419;max_attack_types=513;max_animations=773;
+  self=present?player+2:NULL;
+  const char *queries[]={"self","maxanimations","maxattacktypes","waiting"};
+  for(int q=0;q<(waiting_returns<0?3:4);++q)for(int numeric=0;numeric<2;++numeric) {
+   ++cases;reset();int available=q==0?has_self:q<3?has_maxima:1;
+   int success=available && (q!=3 || waiting_returns);
+   ScriptVariant name=text(queries[q]),result=integer(911),*out=&result,*args[]={&name};
+   if(numeric)mapstrings_systemvariant(args,1);
+   assert(openbor_systemvariant(args,&out,1)==(success?S_OK:E_FAIL));
+   assert(out==(success?&result:NULL));
+   if(success) {
+    assert(!*diagnostic);
+    if(q==0)assert(result.vt==VT_PTR && result.ptrVal==self);
+    else assert(result.vt==VT_INTEGER && result.lVal==(q==1?773:513));
+   } else {
+    assert(result.vt==VT_INTEGER && result.lVal==(available?(present?419:0):911));
+    if(available)assert(!strcmp(diagnostic,"Unknown system property name.\n"));
+    else {
+     char wanted[256],both[512];snprintf(wanted,sizeof(wanted),"openborvariant: System variable name not found: '%s'\n",queries[q]);
+     snprintf(both,sizeof(both),"%s%s",wanted,numeric?wanted:"");assert(!strcmp(both,diagnostic));
+    }
+   }
+   if(waiting_returns<0)continue; /* Earlier sources have separate numeric domains. */
+   *diagnostic=0;result=integer(911);
+   assert(getsyspropertybyindex(&result,physical(queries[q]))==success);
+   if(q==3 && !success)assert(result.vt==VT_INTEGER && result.lVal==(present?419:0));
+   if(!success)assert(!strcmp(diagnostic,"Unknown system property name.\n"));
+  }
+  if(waiting_returns<0)continue;
+  for(int numeric=0;numeric<2;++numeric)for(int kind=0;kind<3;++kind) {
+   ++cases;reset();level_record.waiting=419;
+   ScriptVariant name=text("waiting"),value=integer(300),result=integer(911),*out=&result,*args[]={&name,&value};
+   if(kind==1){value.vt=VT_DECIMAL;value.dblVal=300.75;}
+   if(kind==2){value.vt=VT_STR;value.strVal=2;strcpy(cache[2],"unconverted");}
+   if(numeric)mapstrings_systemvariant(args,2);
+   assert(openbor_changesystemvariant(args,&out,2)==S_OK && out==&result);
+   assert(result.vt==VT_INTEGER && result.lVal==911 && !*diagnostic);
+   assert(level_record.waiting==(present && kind<2?300:419));
+  }
+ }
+ level=&level_record;
+}
+@LEGACY@
+@LABEL_CHECKS@
 @DEFINITIONS@
 int main(void) {@CONTEXTS@return 0;}
 '''
                 replacements = {'RECORDS': '\n'.join(records), 'CONVERTERS': converters,
                     'ENUM': enum, 'NAMES': names, 'MACRO': macro,
                     'SEARCH': function((root / 'source/utils.c').read_text(), 'searchList'),
-                    'CALLBACKS': callbacks, 'METHODS': methods, 'READ_FIELDS': read_fields,
+                    'CALLBACKS': callbacks, 'METHODS': methods, 'DISPATCHER': dispatcher,
+                    'LEGACY': legacy, 'READ_FIELDS': read_fields,
                     'INITIALIZERS': initializers, 'DEFINITIONS': '\n'.join(definitions),
                     'CONTEXTS': '\n'.join(contexts), 'SLOWTYPE': 'unsigned char' if engine == '3741' else 'unsigned'}
+                replacements.update(PAK_HEADER=(ROOT / 'src/port/libretro/obor_pak_name.h').read_text(),
+                    PAK_PROVIDER=pak_provider, LABEL_CHECKS=label_checks, STRING_LIMIT=str(string_limit))
                 for key, value in replacements.items():
                     program = program.replace('@' + key + '@', value)
                 program = re.sub(r'^[ \t]+', lambda m: m.group(0).expandtabs(4), program, flags=re.MULTILINE)
@@ -4170,9 +4395,7 @@ int main(void) {@CONTEXTS@return 0;}
         enum = header[start:header.index('};', start)+2]
         start = source.index('static const char* svlist[]')
         names = source[start:source.index('};', start)+2]
-        methods = '\n'.join(function(source, name) for name in (
-            'obor_systemvariant_available', 'obor_systemvariant_native',
-            'mapstrings_systemvariant', 'openbor_systemvariant', 'openbor_changesystemvariant'))
+        methods = system_variant_methods(source)
         native(r'''
 #include <assert.h>
 #include <stdint.h>
@@ -4767,7 +4990,7 @@ int main(void) {
         checks = []
         for row in rows:
             self.assertRegex(row['commit'], r'^[0-9a-f]{40}$')
-            self.assertRegex(row['loader_sha256'], r'^[0-9a-f]{64}$')
+            self.assertRegex(row.get('loader_sha256', row.get('source_file_sha256')), r'^[0-9a-f]{64}$')
             for digest in row['parser_sha256'].values():
                 self.assertRegex(digest, r'^[0-9a-f]{64}$')
             checks.append('obor_profile_build=%d;check(%d);' % (
@@ -4970,7 +5193,7 @@ int main(void) {@CHECKS@return 0;}
         root = ROOT / 'src/engines/3741'
         source = (root / 'openbor.c').read_text()
         thinker = function(source, 'player_think')
-        match = re.search(r'if\([^\n]*find_ent_here[^\n]*player_test_pickable[^\n]*\)\s*\{', thinker)
+        match = re.search(r'(?m)^[ \t]*if\([^{};]*find_ent_here[^{};]*player_test_pickable[^{};]*\)\s*\{', thinker)
         self.assertIsNotNone(match)
         brace = thinker.index('{', match.start())
         wrapper = function('void selected(void) ' + thinker[brace:], 'selected')
@@ -4980,9 +5203,9 @@ int main(void) {@CHECKS@return 0;}
             self.assertRegex(row['commit'], r'^[0-9a-f]{40}$')
             for key in ('common_sha256', 'player_pickup_block_sha256', 'didfind_sha256'):
                 self.assertRegex(row[key], r'^[0-9a-f]{64}$')
-            checks.append('obor_profile_build=%d;check(%d,%d);' % (
+            checks.append('obor_profile_build=%d;check(%d,%d,%d);' % (
                 row['revision'], int(row['common_hide_before_script']),
-                int(row['player_effect_before_animation_and_script'])))
+                int(row['player_effect_before_animation_and_script']),int(row['common_ride_before_animation'])))
         includes = [root, ROOT / 'src/port/libretro', ROOT / 'src/glue', root / 'source',
                     *sorted(p for p in (root / 'source').iterdir() if p.is_dir())]
         version = subprocess.check_output(shlex.split(os.environ.get('HOST_CC', 'cc')) +
@@ -5036,8 +5259,8 @@ int test_item(entity *e,entity *other) {assert(e==self && other==item);return 1;
 @HELPERS@
 void set_opponent(entity *e,entity *other) {event('D');native_set_opponent(e,other);}
 entity *find_ent_here(entity *exclude,float x,float z,int types,int (*test)(entity*,entity*)) {
- assert(exclude==self && x==self->x && z==self->z && types==TYPE_ITEM && test==player_test_pickable);
- return available && test(self,item)?item:NULL;
+ assert(exclude==self && x==self->x && z==self->z && types==TYPE_ITEM && test==(obor_profile_build<3646?NULL:player_test_pickable));
+ return available && (!test || test(self,item))?item:NULL;
 }
 void ent_set_anim(entity *e,int animation,int reset) {
  assert(e==self && animation==ANI_GET && !reset && ++anim_calls==1);event('A');
@@ -5052,8 +5275,9 @@ void execute_didhit_script(entity *e,entity *other,int force,int drop,int type,i
 }
 @DIDFIND@
 @COMMON@
-static int player_pickup(void) {entity *other=NULL;@PLAYER_BLOCK@return 0;endthinkcheck:return 1;}
-static void check(int common_before,int player_before) {
+static int player_pickup(void) {entity *other=NULL;float seta=-1;@PLAYER_BLOCK@return 0;endthinkcheck:return 1;}
+static void check(int common_before,int player_before,int common_ride_before) {
+ int allowed_weapons[7]={0};
  s_anim anim={0};anim.numframes=1;
  s_anim *animations[MAX_ANIS]={0};
  savedata.effectvol=50;
@@ -5066,6 +5290,7 @@ static void check(int common_before,int player_before) {
   anim_calls=script_calls=drops=weapons=score_total=trace_count=0;trace[0]=0;
   self->health=50;self->modeldata.health=100;self->x=10;self->z=20;
   self->xdir=2;self->zdir=3;self->idling=1;self->modeldata.animal=animal;
+  self->modeldata.weapon=allowed_weapons;self->modeldata.numweapons=7;
   self->modeldata.animation=animations;self->modeldata.animation_capacity=MAX_ANIS;animations[ANI_GET]=valid?&anim:NULL;
   self->weapent=holding?&held:NULL;
   item->x=30;item->z=40;item->modeldata.name="fixture";item->modeldata.weapnum=7;
@@ -5097,7 +5322,7 @@ static void check(int common_before,int player_before) {
   if(animated) {
    assert(animation_seen.item_z==(path && player_before?100000:40));
    assert(animation_seen.health==(path && player_before && kind==0?70:50));
-   int seen_copy=copied && (!path || player_before);
+   int seen_copy=copied && (path?player_before:common_ride_before);
    assert(animation_seen.x==(seen_copy?30:10) && animation_seen.z==(seen_copy?40:20));
   }
   if(accepted) {
@@ -5110,6 +5335,8 @@ static void check(int common_before,int player_before) {
 int main(void) {@CHECKS@return 0;}
 '''.replace('@HELPERS@', '\n'.join(function(source, name) for name in (
                 'diff','isSubtypeWeapon','isSubtypeProjectile','isSubtypeTouch','player_test_pickable')) + '\n' +
+                (function(source, 'obor_legacy_player_weapon_allowed') + '\n' if
+                 'static int obor_legacy_player_weapon_allowed(' in source else '') +
                 function(source, 'set_opponent').replace('set_opponent(', 'native_set_opponent(', 1))
            .replace('@DIDFIND@', function(source, 'didfind_item'))
            .replace('@COMMON@', function(source, 'common_pickupitem'))
@@ -5132,7 +5359,7 @@ int main(void) {@CHECKS@return 0;}
             self.assertRegex(row['commit'], r'^[0-9a-f]{40}$')
             self.assertRegex(row['costmove_sha256'], r'^[0-9a-f]{64}$')
             self.assertRegex(row['combo_sha256'], r'^[0-9a-f]{64}$')
-            checks.append('obor_profile_build=%d;check(%d);' % (row['revision'], int(row['jump_keeps_action'])))
+            checks.append('obor_profile_build=%d;check(%d,%d,%d,%d);' % (row['revision'], int(row['jump_keeps_action']), row['action_before_animation'], row['clears_movement_step'], row['longest_combo_caller']))
         includes = [root, ROOT / 'src/port/libretro', ROOT / 'src/glue', root / 'source',
                     *sorted(p for p in (root / 'source').iterdir() if p.is_dir())]
         version = subprocess.check_output(shlex.split(os.environ.get('HOST_CC', 'cc')) +
@@ -5177,7 +5404,7 @@ void ent_set_anim(entity *e,int animation,int reset) {
  seen_action=e->takeaction;
 }
 @FUNCTIONS@
-static void check(int keeps_action) {
+static void check(int keeps_action,int before_animation,int clears_step,int combo_caller) {
  s_anim anim={0},pose={0};anim.numframes=1;anim.energycost.cost=7;
  s_anim *animations[MAX_ANIS]={0};animations[ANI_ATTACK1]=animations[ANI_ATTACK2]=&anim;
  s_com commands[2];memset(commands,0,sizeof(commands));
@@ -5187,11 +5414,12 @@ static void check(int keeps_action) {
  for(int setting=0;setting<4;++setting)for(energy_mode=0;energy_mode<4;++energy_mode)
  for(nocost=0;nocost<2;++nocost)for(healthcheat=0;healthcheat<2;++healthcheat)
  for(int route=0;route<2;++route) {
+  if(caller && !combo_caller)continue;
   ++test_case;entity actor={0};self=&actor;memset(player,0,sizeof(player));
   self->modeldata.animation=animations;self->modeldata.animation_capacity=MAX_ANIS;
   self->modeldata.special=commands;self->modeldata.specials_loaded=2;
   self->animation=&pose;self->animnum=ANI_IDLE;self->idling=1;
-  self->jumping=jump;self->takeaction=airborne_action;
+  self->jumping=jump;self->takeaction=airborne_action;self->movestep=7;
   self->mp=self->health=100;self->xdir=2;self->zdir=3;self->inpain=1;
   memset(self->combostep,0x5a,sizeof(self->combostep));
   level->nospecial=setting;anim_calls=unlink_calls=0;seen_action=NULL;
@@ -5202,7 +5430,8 @@ static void check(int keeps_action) {
   assert(result==!!allowed && anim_calls==!!allowed && unlink_calls==!!allowed);
   void (*expected_action)(void)=allowed && (!keeps_action || !jump)?common_attack_proc:airborne_action;
   assert(self->takeaction==expected_action);
-  if(allowed)assert(seen_action==expected_action);
+  if(allowed)assert(seen_action==(before_animation?expected_action:airborne_action));
+  assert(self->movestep==(allowed && clears_step?0:7));
   int spent=allowed && !nocost && !healthcheat;
   assert(self->mp==100-(spent && (energy_mode&2)?7:0));
   assert(self->health==100-(spent && !(energy_mode&2)?7:0));
@@ -5333,7 +5562,7 @@ int main(void) {@CHECKS@return 0;}
         root = ROOT / 'src/engines/3741'
         source = (root / 'openbor.c').read_text()
         thinker = function(source, 'player_think')
-        blocks = re.findall(r'self->takeaction\s*=\s*common_turn;[\s\S]*?goto endthinkcheck;', thinker)
+        blocks = re.findall(r'(?:if\(obor_profile_build\s*>=\s*3584\)\s*)?self->takeaction\s*=\s*common_turn;[\s\S]*?goto endthinkcheck;', thinker)
         self.assertEqual(len(blocks), 4)
         wrappers = '\n'.join('static void turn_%d(void){%s\nassert(0);\nendthinkcheck:++completed;}' % (i, block)
             for i, block in enumerate(blocks))
@@ -5343,7 +5572,7 @@ int main(void) {@CHECKS@return 0;}
             self.assertEqual(len(row['branch_sha256']), 4)
             for digest in row['branch_sha256']:
                 self.assertRegex(digest, r'^[0-9a-f]{64}$')
-            checks.append('obor_profile_build=%d;check(%d);' % (row['revision'], int(row['clear_velocity'])))
+            checks.append('obor_profile_build=%d;action_first=%d;check(%d);' % (row['revision'], int(row['action_before_animation']), int(row['clear_velocity'])))
         includes = [root, ROOT / 'src/port/libretro', ROOT / 'src/glue', root / 'source',
                     *sorted(p for p in (root / 'source').iterdir() if p.is_dir())]
         version = subprocess.check_output(shlex.split(os.environ.get('HOST_CC', 'cc')) +
@@ -5364,7 +5593,7 @@ int main(void) {@CHECKS@return 0;}
 #undef printf
 #undef assert
 uint32_t obor_profile_build;
-static int branch,mutate,calls,completed;
+static int branch,mutate,calls,completed,action_first;
 #define assert(c) do {if(!(c)){fprintf(stderr,"Turn velocity mismatch: revision=%u branch=%d line=%d\n",obor_profile_build,branch,__LINE__);abort();}}while(0)
 HRESULT Interpreter_Call(Interpreter *p) {(void)p;abort();}
 HRESULT Interpreter_EvalInstruction(Interpreter *p) {(void)p;abort();}
@@ -5373,7 +5602,7 @@ static float seen_x,seen_z;
 void common_turn(void) {abort();}
 void ent_set_anim(entity *e,int animation,int reset) {
  assert(e==self && animation==ANI_TURN && !reset && ++calls==1);
- assert(e->takeaction==common_turn && e->turning && !e->idling);
+ assert(e->takeaction==(action_first?common_turn:NULL) && e->turning && !e->idling);
  seen_x=e->xdir;seen_z=e->zdir;
  if(mutate){e->xdir=-7;e->zdir=11;}
 }
@@ -5411,8 +5640,8 @@ int main(void) {@CHECKS@return 0;}
         for row in rows:
             self.assertRegex(row['commit'], r'^[0-9a-f]{40}$')
             self.assertRegex(row['jump_check_sha256'], r'^[0-9a-f]{64}$')
-            checks.append('obor_profile_build=%d;check(%d);' % (
-                row['revision'], int(row['callback_after_motion_reset'])))
+            checks.append('obor_profile_build=%d;check(%d,%d,%d,%d,%d);' % (
+                row['revision'], int(row['callback_after_motion_reset']), row['consumes_special'], row['consumes_attack'], row['consumes_failed_special'], row['legacy_preinput']))
         includes = [root, ROOT / 'src/port/libretro', ROOT / 'src/glue', root / 'source',
                     *sorted(p for p in (root / 'source').iterdir() if p.is_dir())]
         version = subprocess.check_output(shlex.split(os.environ.get('HOST_CC', 'cc')) +
@@ -5433,7 +5662,7 @@ int main(void) {@CHECKS@return 0;}
 #undef printf
 #undef assert
 uint32_t obor_profile_build;
-static int scenario,healthcheat,noaircancel,mutate,calls,called_animation;
+static int scenario,healthcheat,noaircancel,mutate,calls,called_animation,preinputs;
 #define assert(c) do {if(!(c)){fprintf(stderr,"Jump special order mismatch: revision=%u case=%d line=%d\n",obor_profile_build,scenario,__LINE__);abort();}}while(0)
 HRESULT Interpreter_Call(Interpreter *p) {(void)p;abort();}
 HRESULT Interpreter_EvalInstruction(Interpreter *p) {(void)p;abort();}
@@ -5452,14 +5681,18 @@ void ent_set_anim(entity *e,int animation,int reset) {
  e->animnum=animation;
  if(mutate && animation==ANI_JUMPSPECIAL){e->xdir=11;e->zdir=12;e->tossv=13;e->attacking=0;}
 }
+/* The isolated special path has no cancel combo; input refresh is observed separately. */
+static int obor_check_combo_key(int key) {(void)key;abort();}
+int player_preinput(void) {++preinputs;return 0;}
+void common_jump(void) {abort();}
 @JUMP_CHECK@
-static void check(int after_reset) {
+static void check(int after_reset,int consume_special,int consume_attack,int consume_failed,int legacy) {
  for(scenario=0;scenario<9;++scenario)for(healthcheat=0;healthcheat<2;++healthcheat)
  for(mutate=0;mutate<2;++mutate) {
   entity actor={0};self=&actor;
   memset(player,0,sizeof(player));memset(level,0,sizeof(*level));memset(&seen,0,sizeof(seen));
-  calls=0;called_animation=-1;noaircancel=0;
-  s_anim anim={0};anim.numframes=1;anim.energycost.cost=7;
+  calls=preinputs=0;called_animation=-1;noaircancel=0;
+  s_anim anim={0},pose={0};self->animation=&pose;anim.numframes=1;anim.energycost.cost=7;
   s_anim *animations[MAX_ANIS]={0};
   animations[ANI_JUMPSPECIAL]=animations[ANI_JUMPCANT]=animations[ANI_JUMPATTACK]=&anim;
   self->modeldata.animation=animations;self->modeldata.animation_capacity=MAX_ANIS;
@@ -5472,25 +5705,25 @@ static void check(int after_reset) {
   if(scenario==6)level->nospecial=1;
   if(scenario==7)level->nospecial=3;
   if(scenario==8)self->animnum=self->jumpid;
-  player_jump_check();
+  player_jump_check();assert(preinputs==legacy);
   int special=scenario==0 || scenario==1 || scenario==7 || scenario==8;
   int expected_animation=special?ANI_JUMPSPECIAL:scenario==2?ANI_JUMPCANT:scenario==4?ANI_JUMPATTACK:-1;
   assert(calls==(expected_animation>=0) && called_animation==expected_animation);
   assert(self->health==(special && scenario==1 && !healthcheat?93:100));
   assert(self->mp==(special && scenario!=1 && !healthcheat?93:100));
   if(special) {
-   assert(!seen.special && seen.health==self->health && seen.mp==self->mp);
+   assert(seen.special==!consume_special && seen.health==self->health && seen.mp==self->mp);
    assert(seen.x==(after_reset?0:2) && seen.z==(after_reset?0:3) && seen.toss==(after_reset?0:4));
    assert(seen.attacking==after_reset);
    assert(self->xdir==(after_reset && mutate?11:0));
    assert(self->zdir==(after_reset && mutate?12:0));
    assert(self->tossv==(after_reset && mutate?13:0));
    assert(!!self->attacking==!(after_reset && mutate));
-   assert(!player[0].playkeys);
+   assert(player[0].playkeys==(consume_special?0:FLAG_SPECIAL));
   } else {
    assert(self->xdir==2 && self->zdir==3 && self->tossv==(scenario==2?0:4));
    assert(!!self->attacking==(scenario==4));
-   assert(player[0].playkeys==(scenario==4?0:FLAG_SPECIAL));
+   assert(player[0].playkeys==(scenario==4?(consume_attack?0:FLAG_ATTACK):scenario==2 && consume_failed?0:FLAG_SPECIAL));
   }
  }
 }
@@ -5532,7 +5765,7 @@ int main(void) {@CHECKS@return 0;}
 #include "anigif.h"
 @FLAGS@
 #define stricmp strcasecmp
-static uint32_t obor_profile_build;
+uint32_t obor_profile_build;
 static int scenario,rgb_case;
 #undef assert
 #define assert(c) do {if(!(c)){fprintf(stderr,"GIF footer mismatch: revision=%u mode=%d rgb=%d line=%d\n",obor_profile_build,scenario,rgb_case,__LINE__);abort();}}while(0)
@@ -5765,7 +5998,7 @@ int main(void) {@CHECKS@return 0;}
             ['--version'], text=True, timeout=10)
         flags = ['-std=gnu11', '-DLIBRETRO=1', '-DOBOR_ENGINE_BUILD=3741', '-fsigned-char',
                  '-ffunction-sections', '-fdata-sections', '-Wno-unused-variable',
-                 '-Wno-unused-function', '-Wno-unused-parameter', '-Wno-error=sign-compare',
+                 '-Wno-unused-function', '-Wno-unused-parameter', '-Wno-unused-label', '-Wno-error=sign-compare',
                  '-Wno-error=misleading-indentation', '-Wno-error=int-to-pointer-cast']
         flags += ['-Wno-error=pragma-pack'] if 'clang' in version.lower() else []
         flags += ['-Wl,-dead_strip'] if sys.platform == 'darwin' else ['-DLINUX=1', '-Wl,--gc-sections']
@@ -6025,6 +6258,10 @@ int main(void) {@CHECKS@return 0;}
             set(assessed) - {'VT_EMPTY', 'VT_INTEGER', 'VT_STR'})]
         definitions += ['#define MAX_ATKS 16'] if 'MAX_ATKS' not in constants else []
         definitions += ['#define STA_ATKS 6'] if 'STA_ATKS' not in constants else []
+        if 'obor_entity_type_reserved(' in mapper:
+            definitions = [line for line in definitions if not line.startswith('#define TYPE_RESERVED ')]
+            definitions += [re.search(r'(?m)^#define\s+TYPE_RESERVED\s+[^\r\n]+', header)[0],
+                            function(text, 'obor_entity_type_reserved')]
         arrays = sorted(set(re.findall(r'\b(anim\w+)\[', entry)))
         definitions += ['static int '+name+'[1];' for name in arrays]
         checks = []

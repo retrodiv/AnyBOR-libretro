@@ -1,0 +1,120 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <assert.h>
+#include <stdint.h>
+#include <stdarg.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "openbor.h"
+#undef assert
+#undef printf
+#ifdef NDEBUG
+#error Movement assertions must remain enabled
+#endif
+struct move_case {
+ uint32_t first;
+ int model[9],state[5],objects[5],animation[3],services[7],path[2];
+ float position[4],velocity[2],destination[2],target[4],item[3],owner[2],speeds[3],motion[2],waypoint[2];
+ uint32_t clockstall[2],random[2];
+};
+static const struct move_case cases[]={@CASES@},*test;
+static const uint32_t profiles[]={@PROFILES@};
+uint32_t obor_profile_build;
+static uint32_t fixture_clock;
+static entity actor,target,item,parent,*self=&actor;
+static unsigned active_case,draws;
+static char trace[1024];static size_t used;
+static int PLAYER_MIN_Z=0,PLAYER_MAX_Z=200;
+#define assert(c) do {if(!(c)){fprintf(stderr,"Movement provider mismatch: profile=%u case=%u line=%d trace=%s\n",obor_profile_build,active_case,__LINE__,trace);abort();}}while(0)
+static uint32_t bits(float value){uint32_t word;_Static_assert(sizeof(value)==sizeof(word),"binary32 required");memcpy(&word,&value,sizeof(word));return word;}
+static void emit(const char *format,...){
+ va_list args;va_start(args,format);int n=vsnprintf(trace+used,sizeof(trace)-used,format,args);va_end(args);
+ assert(n>=0 && (size_t)n<sizeof(trace)-used);used+=(size_t)n;
+}
+void common_turn(void){abort();}
+static void callback_action(void){abort();}
+static int action(void){if(!actor.takeaction)return 0;if(actor.takeaction==common_turn)return 1;assert(actor.takeaction==callback_action);return 2;}
+static int which(entity *ent){if(!ent)return 0;if(ent==&target)return 1;if(ent==&item)return 2;assert(ent==&parent);return 3;}
+int inair(entity *ent){assert(ent==self);emit("Q;");return test->services[0];}
+int biker_move(void){emit("b;");return 11;}
+int arrow_move(void){emit("a;");return 12;}
+int star_move(void){emit("s;");return 13;}
+int bomb_move(void){emit("o;");return 14;}
+entity *normal_find_target(int n,int mode){assert(n==-1&&!mode);emit("T;");return test->objects[0]?&target:NULL;}
+entity *normal_find_item(void){emit("I;");return test->objects[1]?&item:NULL;}
+entity *find_ent_here(entity *ent,float x,float z,int type,int (*predicate)(entity*,entity*)){
+ assert(ent==self && x==self->x && z==self->z && type==TYPE_ITEM && !predicate);emit("H;");return test->objects[3]?&item:NULL;
+}
+void ent_set_anim(entity *ent,int anim,int reset){
+ assert(ent==self && anim==ANI_TURN && !reset);emit("N%d,%u,%u,%d;",actor.direction,bits(actor.xdir),bits(actor.zdir),action());
+ if(test->services[4]){actor.xdir=7;actor.zdir=8;actor.takeaction=callback_action;}
+}
+void common_pickupitem(entity *ent){assert(ent==&item);emit("K;");}
+int common_try_jump(void){emit("J;");return test->services[1];}
+int checkpathblocked(void){emit("B;");return test->services[2];}
+static void helper(const char *name,entity *ent,int x,int z){
+ emit("%s%d%d;",name,x,z);if(ent)assert(ent==&target||ent==&item||ent==&parent);
+ if(test->services[6]){if(x)actor.xdir=test->motion[0];if(z)actor.zdir=test->motion[1];}
+}
+int common_try_pick(entity *ent){assert(ent==&item);helper("P",ent,1,1);return 1;}
+int common_try_wander(entity *ent,int x,int z){assert(ent==&target);helper("W",ent,x,z);return 1;}
+int common_try_wandercompletely(int x,int z){helper("F",NULL,x,z);return 1;}
+int common_try_chase(entity *ent,int x,int z){assert(ent==&target);helper("C",ent,x,z);return 1;}
+int common_try_avoid(entity *ent,int x,int z){assert(ent==&target);helper("V",ent,x,z);return 1;}
+int common_try_follow(entity *ent,int x,int z){assert(ent==self->parent);helper("O",ent,x,z);return test->services[3];}
+static void adjustspeed(float speed,float x,float z,float dx,float dz,float *vx,float *vz){
+ assert(x==self->x&&z==self->z&&dx==self->destx&&dz==self->destz&&vx==&self->xdir&&vz==&self->zdir);
+ emit("S%u;",bits(speed));*vx=test->motion[0];*vz=test->motion[1];
+}
+int set_idle(entity *ent){assert(ent==self);emit("E;");actor.idling=1;if(test->services[5])actor.modeldata.aggression=100;return 1;}
+void adjust_walk_animation(entity *ent){emit("L%d;",which(ent));}
+static uint32_t observed_rand32(void){assert(draws<2);uint32_t word=test->random[draws++];emit("R%u;",word);return word;}
+static void observed_free(void *p){assert(p==actor.waypoints);emit("Z;");free(p);}
+#undef rand32
+#define rand32 observed_rand32
+#undef time
+#define time fixture_clock
+#define free observed_free
+@DISTANCE@
+@FUNCTION@
+#undef free
+#undef time
+int main(void){
+ s_anim animation,*animations[MAX_ANIS]={0};short vulnerable[1],seta[1];
+ for(unsigned p=0;p<sizeof(profiles)/sizeof(*profiles);++p){
+  obor_profile_build=profiles[p];
+  for(unsigned c=0;c<sizeof(cases)/sizeof(*cases);++c){
+   active_case=c;test=cases+c;if(obor_profile_build<test->first)continue;
+   memset(&actor,0,sizeof(actor));memset(&target,0,sizeof(target));memset(&item,0,sizeof(item));memset(&parent,0,sizeof(parent));
+   memset(&animation,0,sizeof(animation));memset(animations,0,sizeof(animations));
+   actor.modeldata.animation=animations;actor.modeldata.animation_capacity=MAX_ANIS;
+   animation.numframes=1;animation.vulnerable=vulnerable;vulnerable[0]=test->objects[4];
+   seta[0]=test->animation[1];if(test->animation[0])animation.seta=seta;
+   if(test->animation[2])animations[ANI_TURN]=&animation;
+   actor.animation=item.animation=&animation;
+   actor.modeldata.aimove=test->model[0];actor.modeldata.nomove=test->model[1];actor.modeldata.noflip=test->model[2];
+   actor.modeldata.subtype=test->model[3];actor.modeldata.type=test->model[4]?TYPE_NPC:TYPE_ENEMY;
+   actor.modeldata.subject_to_minz=test->model[5];actor.modeldata.subject_to_maxz=test->model[6];
+   actor.modeldata.runupdown=test->model[7];actor.modeldata.aggression=test->model[8];
+   actor.direction=test->state[0];actor.running=test->state[1];actor.idling=test->state[2];actor.health=test->state[3];actor.sortid=test->state[4];
+   actor.x=test->position[0];actor.z=test->position[1];actor.a=test->position[2];actor.base=test->position[3];
+   actor.xdir=test->velocity[0];actor.zdir=test->velocity[1];actor.destx=test->destination[0];actor.destz=test->destination[1];
+   target.x=test->target[0];target.z=test->target[1];target.xdir=test->target[2];target.zdir=test->target[3];
+   item.x=test->item[0];item.z=test->item[1];item.a=test->item[2];parent.x=test->owner[0];parent.z=test->owner[1];
+   if(test->objects[2])actor.parent=&parent;
+   actor.modeldata.speed=test->speeds[0];actor.modeldata.runspeed=test->speeds[1];actor.modeldata.grabdistance=test->speeds[2];
+   fixture_clock=test->clockstall[0];actor.stalltime=test->clockstall[1];
+   actor.numwaypoints=test->path[1];
+   if(test->path[0]){actor.waypoints=calloc(2,sizeof(*actor.waypoints));assert(actor.waypoints);
+    for(unsigned i=0;i<2;++i){actor.waypoints[i].x=test->waypoint[0];actor.waypoints[i].z=test->waypoint[1];}}
+   draws=used=0;trace[0]=0;
+   int result=common_move();
+   printf("{\"revision\":%u,\"case\":%u,\"state\":[%d,%d,%d,%u,%d,%d,%d,%d],\"vectors\":[%u,%u,%u,%u],\"trace\":\"%s\"}\n",
+    obor_profile_build,c,actor.direction,actor.running,actor.idling,actor.stalltime,actor.numwaypoints,!!actor.waypoints,action(),result,
+    bits(actor.xdir),bits(actor.zdir),bits(actor.destx),bits(actor.destz),trace);
+   free(actor.waypoints);
+  }
+ }
+ return 0;
+}

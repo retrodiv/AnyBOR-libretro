@@ -1,0 +1,42 @@
+/* Native screen queries; undefined historical level absence stays safe.
+ * SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "openbor.h"
+#undef printf
+#undef assert
+#ifdef NDEBUG
+#error Screen-coordinate assertions must remain enabled
+#endif
+uint32_t obor_profile_build;
+static float advancex,advancey;
+static s_level storage,*level;
+static unsigned active_case;
+#define assert(c) do{if(!(c)){fprintf(stderr,"Screen coordinate mismatch revision=%u case=%u line=%d\n",obor_profile_build,active_case,__LINE__);abort();}}while(0)
+static const struct {unsigned revision;int level_guard;} profiles[]={@PROFILES@};
+static const float advances[][2]={@ADVANCES@};
+int main(void){
+ const int directions[]={SCROLL_RIGHT,SCROLL_LEFT,SCROLL_UP,SCROLL_DOWN,
+                         SCROLL_BOTH,SCROLL_LEFTRIGHT,SCROLL_UPWARD,SCROLL_DOWNWARD};
+ for(unsigned p=0;p<sizeof(profiles)/sizeof(*profiles);++p){
+  obor_profile_build=profiles[p].revision;active_case=0;
+  for(unsigned a=0;a<sizeof(advances)/sizeof(*advances);++a)
+   for(unsigned d=0;d<sizeof(directions)/sizeof(*directions);++d)
+    for(int present=0;present<2;++present){
+     ++active_case;advancex=advances[a][0];advancey=advances[a][1];
+     memset(&storage,0,sizeof(storage));storage.scrolldir=directions[d];
+     level=present?&storage:NULL;
+     float x=screenx,y=screeny;
+     assert(x==((present || !profiles[p].level_guard)?advances[a][0]:0));
+     /* No original oracle exists for a missing level's vertical query. */
+     assert(y==((!present || d==2 || d==3)?0:advances[a][1]));
+     assert(level==(present?&storage:NULL) && storage.scrolldir==directions[d]);
+     assert(advancex==advances[a][0] && advancey==advances[a][1]);
+    }
+  printf("{\"revision\":%u,\"cases\":%u}\n",obor_profile_build,active_case);
+ }
+ return 0;
+}

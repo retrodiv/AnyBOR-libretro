@@ -1,0 +1,128 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <assert.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "Parser.h"
+uint32_t obor_profile_build;
+#include "ParserSet.c"
+#undef assert
+#define assert(x) do { if(!(x)) { fprintf(stderr,"contract line %d, profile %u\n",__LINE__,obor_profile_build);abort();} } while(0)
+
+static const MY_TOKEN_TYPE *tokens;
+static unsigned cursor;
+static int emitted[4], false_target, true_target, back_target;
+static int body_break, body_continue, body_depth;
+static int in_body,jump_result,errors;
+
+BOOL Parser_Check(Parser *parser, MY_TOKEN_TYPE token)
+{ return parser->theNextToken.theType == token; }
+void Parser_Match(Parser *parser)
+{ assert(cursor < 12);parser->theNextToken.theType = tokens[++cursor]; }
+void Parser_Expr(Parser *parser)
+{ assert(Parser_Check(parser,TOKEN_INTCONSTANT));Parser_Match(parser); }
+void Parser_Opt_expr_stmt(Parser *parser)
+{ assert(Parser_Check(parser,TOKEN_SEMICOLON));Parser_Match(parser); }
+List *Parser_Defer_expr_stmt(Parser *parser)
+{ (void)parser;return NULL; }
+void Parser_Opt_expr(Parser *parser)
+{ assert(Parser_Check(parser,TOKEN_SEMICOLON)); }
+void Parser_Error(Parser *parser, PRODUCTION offender)
+{ (void)parser;(void)offender;++errors; }
+Label Parser_CreateLabel(Parser *parser)
+{
+    char *name=malloc(24);assert(name);
+    snprintf(name,24,"%d",(int)parser->LabelCount++);return name;
+}
+void Parser_AddInstructionViaToken(Parser *parser, OpCode code, Token *token, Label label)
+{
+    (void)parser;(void)token;assert(code==NOOP);
+    int id=atoi(label);assert(id>=0&&id<4);++emitted[id];
+}
+void Parser_AddInstructionViaLabel(Parser *parser, OpCode code, Label label, Label listing)
+{
+    (void)parser;assert(listing==NULL);int id=atoi(label);
+    if(code==Branch_FALSE)false_target=id;
+    else if(code==Branch_TRUE)true_target=id;
+    else if(code==JUMPR) {assert(in_body);jump_result=id;}
+    else {assert(code==JUMP);if(in_body)jump_result=id;else back_target=id;}
+}
+void Parser_Stmt(Parser *parser)
+{
+    static const MY_TOKEN_TYPE break_tokens[]={TOKEN_BREAK,TOKEN_SEMICOLON,TOKEN_EOF};
+    static const MY_TOKEN_TYPE continue_tokens[]={TOKEN_CONTINUE,TOKEN_SEMICOLON,TOKEN_EOF};
+    static const MY_TOKEN_TYPE return_tokens[]={TOKEN_RETURN,TOKEN_SEMICOLON,TOKEN_EOF};
+    const MY_TOKEN_TYPE *saved_tokens=tokens;
+    unsigned saved_cursor=cursor;Token saved_next=parser->theNextToken;
+    Stack *stack=&parser->LabelStack;
+    body_depth=List_GetSize(stack);assert(body_depth==1||body_depth==2);
+    in_body=1;tokens=break_tokens;cursor=0;parser->theNextToken.theType=tokens[0];
+    jump_result=-1;Parser_Jump_stmt(parser);body_break=jump_result;
+    assert(body_break==0&&List_GetSize(stack)==body_depth);
+    tokens=continue_tokens;cursor=0;parser->theNextToken.theType=tokens[0];
+    jump_result=-1;Parser_Jump_stmt(parser);body_continue=jump_result;
+    if(body_depth==1) {assert(errors==1&&jump_result==-1&&cursor==0);errors=0;}
+    else assert(errors==0&&List_GetSize(stack)==body_depth);
+    tokens=return_tokens;cursor=0;parser->theNextToken.theType=tokens[0];
+    strcpy(parser->theRetLabel,"3");jump_result=-1;Parser_Jump_stmt(parser);
+    assert(jump_result==3&&errors==0&&List_GetSize(stack)==body_depth);
+    in_body=0;tokens=saved_tokens;cursor=saved_cursor;parser->theNextToken=saved_next;
+}
+
+@ITERATION@
+
+@JUMPS@
+
+struct contract {int revision,continues,false_repeats,continue_resolved,first_count,follow_count;};
+static const struct contract cases[]={@CASES@};
+
+static void run_loop(const struct contract *expected,int kind)
+{
+    static const MY_TOKEN_TYPE while_tokens[]={TOKEN_WHILE,TOKEN_LPAREN,TOKEN_INTCONSTANT,TOKEN_RPAREN,TOKEN_EOF};
+    static const MY_TOKEN_TYPE do_tokens[]={TOKEN_DO,TOKEN_WHILE,TOKEN_LPAREN,TOKEN_INTCONSTANT,TOKEN_RPAREN,TOKEN_SEMICOLON,TOKEN_EOF};
+    static const MY_TOKEN_TYPE for_tokens[]={TOKEN_FOR,TOKEN_LPAREN,TOKEN_SEMICOLON,TOKEN_INTCONSTANT,TOKEN_SEMICOLON,TOKEN_RPAREN,TOKEN_EOF};
+    Parser parser;memset(&parser,0,sizeof(parser));Stack_Init(&parser.LabelStack);
+    ParserSet_Buildup(&parser.theParserSet);cursor=0;errors=0;in_body=0;
+    tokens=kind==0?while_tokens:kind==1?do_tokens:for_tokens;
+    parser.theNextToken.theType=tokens[0];memset(emitted,0,sizeof(emitted));
+    false_target=true_target=back_target=-1;body_depth=0;
+    Parser_Iter_stmt(&parser);
+    assert(parser.LabelCount==(expected->continues?3:2));
+    assert(Stack_IsEmpty(&parser.LabelStack));assert(errors==0);
+    assert(body_depth==(expected->continues?2:1));assert(body_break==0);
+    assert(emitted[0]==1&&emitted[1]==1);
+    if(kind==0) {
+        assert(false_target==(expected->false_repeats?1:0));assert(back_target==1);
+        assert(body_continue==(expected->continues?(expected->continue_resolved?1:2):-1));
+        if(body_continue>=0)assert(!!emitted[body_continue]==expected->continue_resolved);
+    } else if(kind==1) {
+        assert(true_target==1&&back_target==-1);
+        assert(body_continue==(expected->continues?1:-1));
+    } else {
+        assert(false_target==0&&back_target==1);
+        assert(body_continue==(expected->continues?2:-1));
+        assert(emitted[2]==expected->continues);
+    }
+    List_Clear(&parser.LabelStack);ParserSet_Clear(&parser.theParserSet);
+}
+
+int main(void)
+{
+    for(unsigned i=0;i<sizeof(cases)/sizeof(*cases);++i) {
+        const struct contract *expected=&cases[i];obor_profile_build=expected->revision;
+        ParserSet sets;ParserSet_Buildup(&sets);int first_count=0,follow_count=0;
+        for(int production=0;production<NUMPRODUCTIONS;++production) {
+            int fc=!!ParserSet_First(&sets,production,TOKEN_CONTINUE);
+            int lc=!!ParserSet_Follow(&sets,production,TOKEN_CONTINUE);
+            assert(fc==(expected->continues && ParserSet_First(&sets,production,TOKEN_BREAK)));
+            assert(lc==(expected->continues && ParserSet_Follow(&sets,production,TOKEN_BREAK)));
+            first_count+=fc;follow_count+=lc;
+        }
+        assert(first_count==expected->first_count&&follow_count==expected->follow_count);
+        ParserSet_Clear(&sets);
+        for(int kind=0;kind<3;++kind)run_loop(expected,kind);
+    }
+    return 0;
+}

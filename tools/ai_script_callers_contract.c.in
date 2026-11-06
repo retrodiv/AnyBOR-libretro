@@ -1,0 +1,174 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <stdarg.h>
+#include "openbor.h"
+#undef assert
+#undef printf
+uint32_t obor_profile_build;
+unsigned int time;
+entity *self;
+static entity actor,target,previous,found;
+static int cases,active_case,service_calls,returned,seen_anim,seen_reset;
+static entity *seen_self,*seen_target;
+static float seen_x,seen_z,seen_tx,seen_tz;
+static int null_found,expected_destination;
+static char diagnostic[256];
+static ScriptVariant values[5];
+#define assert(c) do{if(!(c)){fprintf(stderr,"AI_SCRIPT_CALL revision=%u case=%d line=%d\n",obor_profile_build,active_case,__LINE__);abort();}}while(0)
+static int captured_printf(const char *format,...){
+ va_list ap;va_start(ap,format);
+ int n=vsnprintf(diagnostic,sizeof(diagnostic),format,ap);va_end(ap);
+ assert(n>=0 && (size_t)n<sizeof(diagnostic));return n;
+}
+CHAR *StrCache_Get(int index){(void)index;abort();}
+void StrCache_Collect(int index){(void)index;abort();}
+int StrCache_Pop(void){abort();}
+@VARIANTS@
+static void observe(entity *other){++service_calls;seen_self=self;seen_target=other;}
+void adjust_walk_animation(entity *other){observe(other);}
+entity *normal_find_item(void){observe(NULL);return null_found?NULL:&found;}
+void common_pickupitem(entity *other){observe(other);}
+int common_try_jump(void){observe(NULL);return returned;}
+int checkpathblocked(void){observe(NULL);return returned;}
+int testmove(entity *subject,float x,float z,float tx,float tz){
+ observe(subject);seen_x=x;seen_z=z;seen_tx=tx;seen_tz=tz;return returned;
+}
+void ent_set_anim(entity *subject,int anim,int resetable){
+ observe(subject);seen_anim=anim;seen_reset=resetable;
+ assert(!subject->takeaction && !subject->attacking && subject->idling &&
+        !subject->drop && !subject->falling && !subject->inpain &&
+        !subject->blocking && !subject->nograb && subject->stalltime==17);
+ assert(subject->destx==(expected_destination?subject->x:31) &&
+        subject->destz==(expected_destination?subject->z:32));
+}
+#define printf captured_printf
+@FUNCTIONS@
+#undef printf
+@STUBS@
+@AVAILABILITY@
+static HRESULT (*const callbacks[])(ScriptVariant**,ScriptVariant**,int)={@CALLBACKS@};
+struct context{unsigned revision;int available[7],target_second,find_returns,idle_destination;};
+static const struct context contexts[]={@CONTEXTS@};
+static void pending_action(void){}
+static void reset(void){
+ memset(&actor,0,sizeof(actor));memset(&target,0,sizeof(target));
+ memset(&previous,0,sizeof(previous));memset(&found,0,sizeof(found));
+ memset(values,0,sizeof(values));for(int i=0;i<5;++i)values[i].vt=VT_INTEGER;
+ self=&previous;actor.x=11.5f;actor.z=-4.25f;actor.destx=31;actor.destz=32;
+ actor.attacking=actor.drop=actor.falling=actor.inpain=actor.blocking=actor.nograb=1;
+ actor.takeaction=pending_action;actor.stalltime=17;time=100;
+ diagnostic[0]=0;service_calls=null_found=0;returned=-3;
+ seen_self=seen_target=NULL;seen_anim=seen_reset=-99;seen_x=seen_z=seen_tx=seen_tz=0;
+}
+static void handle(int index,int kind,entity *value){
+ values[index].vt=kind==0||kind==1?VT_PTR:kind==2?VT_EMPTY:kind==3?VT_INTEGER:VT_DECIMAL;
+ if(kind<=1)values[index].ptrVal=kind?NULL:value;
+}
+static HRESULT call_native(int which,int count,ScriptVariant *result,ScriptVariant **out){
+ ScriptVariant **args=count?malloc((size_t)count*sizeof(*args)):NULL;
+ assert(!count||args);for(int i=0;i<count;++i)args[i]=values+i;
+ memset(result,0,sizeof(*result));result->vt=VT_INTEGER;result->lVal=999;*out=result;
+ HRESULT status=callbacks[which](args,out,count);free(args);++cases;++active_case;return status;
+}
+static void adjust_case(const struct context *c,int count,int first,int second){
+ reset();handle(0,first,&actor);handle(1,second,&target);
+ int bad=(count>=1&&first>=2)||(count>=2&&second>=3);
+ entity *subject=count?(first?NULL:&actor):&previous;
+ entity *other=count>=2&&second<=1?(c->target_second?(second?NULL:&target):subject):NULL;
+ ScriptVariant result,*out;HRESULT status=call_native(0,count,&result,&out);
+ assert(status==(bad?E_FAIL:S_OK) && !out && self==&previous && service_calls==!bad);
+ assert(!strcmp(diagnostic,bad?"Function adjustwalkanimation(entity, target), both parameters are optional, but must be valid.":""));
+ if(!bad)assert(seen_self==subject&&seen_target==other);
+}
+static void find_case(const struct context *c,int count,int first,int missing){
+ reset();handle(0,first,&actor);null_found=missing;
+ int bad=count&&first>=2;entity *subject=count?(first?NULL:&actor):&previous;
+ ScriptVariant result,*out;HRESULT status=call_native(1,count,&result,&out);
+ assert(status==(bad?E_FAIL:S_OK) && self==&previous && service_calls==!bad);
+ assert(!strcmp(diagnostic,bad?"Function finditem(entity), entity is optional, but must be valid.":""));
+ if(!bad){
+  assert(seen_self==subject);
+  if(c->find_returns)assert(out==&result&&result.vt==VT_PTR&&result.ptrVal==(missing?NULL:&found));
+  else assert(!out && result.vt==VT_INTEGER && result.lVal==999);
+ }else assert(!out);
+}
+static void pickup_case(const struct context *c,int count,int first,int second){
+ reset();handle(0,first,&actor);handle(1,second,&target);
+ int bad=count<2||first!=0||second>=2||(c->target_second&&second==1);
+ ScriptVariant result,*out;HRESULT status=call_native(2,count,&result,&out);
+ assert(status==(bad?E_FAIL:S_OK) && !out && self==&previous && service_calls==!bad);
+ assert(!strcmp(diagnostic,bad?"Function pickup(entity, item), handles must be valid.":""));
+ if(!bad)assert(seen_self==&actor&&seen_target==(c->target_second?&target:&actor));
+}
+static void bridge_case(int which,int count,int answer){
+ reset();returned=answer;ScriptVariant result,*out;HRESULT status=call_native(which,count,&result,&out);
+ assert(status==S_OK&&out==&result&&result.vt==VT_INTEGER&&result.lVal==answer);
+ assert(service_calls==1&&seen_self==&previous&&self==&previous&&!diagnostic[0]);
+}
+static void move_case(int count,int kind){
+ reset();handle(0,0,&actor);values[1].vt=VT_DECIMAL;values[1].dblVal=2.5;
+ values[2].lVal=-3;
+ if(kind==1)handle(0,1,&actor);
+ if(kind==2)handle(0,3,&actor);
+ if(kind==3)values[1].vt=VT_EMPTY;
+ if(kind==4)values[2].vt=VT_EMPTY;
+ if(kind==5){values[1].vt=VT_INTEGER;values[1].lVal=4;values[2].vt=VT_DECIMAL;values[2].dblVal=-1.25;}
+ int bad=count<3||(kind>=1&&kind<=4);
+ ScriptVariant result,*out;HRESULT status=call_native(5,count,&result,&out);
+ assert(status==(bad?E_FAIL:S_OK) && service_calls==!bad && self==&previous);
+ assert(!strcmp(diagnostic,bad?"Function testmove(entity, x, z)":""));
+ if(bad)assert(!out);
+ else{
+  assert(out==&result&&result.vt==VT_INTEGER&&result.lVal==returned&&seen_target==&actor);
+  assert(seen_x==actor.x&&seen_z==actor.z&&seen_tx==(kind==5?4:2.5f)&&seen_tz==(kind==5?-1.25f:-3));
+ }
+}
+static void idle_case(const struct context *c,int count,int kind){
+ reset();handle(0,0,&actor);values[1].lVal=6;values[2].lVal=1;values[3].lVal=5;
+ if(kind==1)handle(0,1,&actor);
+ if(kind==2)handle(0,2,&actor);
+ if(kind==3)handle(0,3,&actor);
+ if(kind>=4&&kind<=6)values[kind-3].vt=VT_EMPTY;
+ if(kind==7){values[1].vt=VT_DECIMAL;values[1].dblVal=6.75;values[2].vt=VT_DECIMAL;values[2].dblVal=1.5;values[3].vt=VT_DECIMAL;values[3].dblVal=5.75;}
+ if(kind==8)values[3].lVal=-1;
+ if(kind==9)values[3].lVal=0;
+ int touched=count>=1&&!(kind>=1&&kind<=3);
+ int bad=!touched||(kind>=4&&kind<=6&&count>kind-3);
+ ScriptVariant result,*out;HRESULT status=call_native(6,count,&result,&out);
+ assert(status==(bad?E_FAIL:S_OK)&&!out&&self==&previous);
+ assert(!strcmp(diagnostic,bad?"Function need a valid entity handle, the other 3 integer parameters are optional: setidle(entity, int anim, int resetable, int stalladd)\n":""));
+ assert(actor.attacking==!touched&&actor.idling==touched&&actor.drop==!touched&&
+        actor.falling==!touched&&actor.inpain==!touched&&actor.blocking==!touched&&actor.nograb==!touched);
+ assert(actor.takeaction==(touched?NULL:pending_action));
+ assert(actor.destx==(touched&&c->idle_destination?actor.x:31)&&actor.destz==(touched&&c->idle_destination?actor.z:32));
+ int called=!bad&&count>1;
+ assert(service_calls==called);
+ if(called)assert(seen_target==&actor&&seen_anim==6&&seen_reset==(count>=3?1:0));
+ assert(actor.stalltime==(unsigned)(called&&count>=4&&kind!=8&&kind!=9?105:17));
+}
+int main(void){
+ for(unsigned i=0;i<sizeof(contexts)/sizeof(*contexts);++i){
+  const struct context *c=contexts+i;obor_profile_build=c->revision;
+  expected_destination=c->idle_destination;cases=active_case=0;
+  /* testmove's native body is tested separately from script registration. */
+  for(unsigned n=0;n<7;++n)if(n!=5)assert(obor_script_function_available((void*)callbacks[n])==c->available[n]);
+  if(c->available[0]){
+   adjust_case(c,0,0,0);
+   for(int a=0;a<4;++a)adjust_case(c,1,a,0);
+   for(int a=0;a<4;++a)for(int b=0;b<5;++b)adjust_case(c,2,a,b);
+  }
+  if(c->available[1])for(int missing=0;missing<2;++missing){
+   find_case(c,0,0,missing);for(int count=1;count<=3;count+=2)for(int a=0;a<4;++a)find_case(c,count,a,missing);
+  }
+  if(c->available[2])for(int count=1;count<=3;++count)for(int a=0;a<3;++a)for(int b=0;b<5;++b)pickup_case(c,count,a,b);
+  for(int which=3;which<=4;++which)if(c->available[which])for(int count=0;count<=2;count+=2)for(int answer=-1;answer<=1;++answer)bridge_case(which,count,answer);
+  if(c->available[5])for(int count=0;count<=5;++count)for(int kind=0;kind<6;++kind)move_case(count,kind);
+  if(c->available[6])for(int count=0;count<=4;++count)for(int kind=0;kind<10;++kind)idle_case(c,count,kind);
+  fprintf(stdout,"{\"revision\":%u,\"cases\":%d,\"availability\":6}\n",obor_profile_build,cases);
+ }
+ return 0;
+}

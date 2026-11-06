@@ -85,6 +85,8 @@ class FontSelectionTests(unittest.TestCase):
                 required = {int(p.get('revision', p['build'])) for p in contract_profiles(fixture, pin['profiles']) if p['engine']==engine}
                 self.assertTrue(required <= set(options['revisions']))
                 root = SOURCE/'src/engines'/engine
+                if options.get('cache_dimension_setter') is not None:
+                    function((root/'source/gamelib/font.c').read_text(),options['cache_dimension_setter'])
                 work = Path(folder)
                 src = work/'probe.c'
                 src.write_text(render_font_selection(**options))

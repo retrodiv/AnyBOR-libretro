@@ -1,0 +1,116 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <assert.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <stdarg.h>
+#include "openbor.h"
+#include "commands.h"
+#undef assert
+#undef printf
+#ifdef NDEBUG
+#error Model selection assertions must remain enabled
+#endif
+#define assert(c) do {if(!(c)){fprintf(stderr,"Model selection provider line=%d\n",__LINE__);abort();}}while(0)
+uint32_t obor_profile_build;
+static unsigned int models_cached;
+static int bonus, allow_secret_chars;
+static s_model models[4], alien;
+static char names[4][3]={"m0","m1","m2","m3"};
+static s_modelcache cache[4];
+static char messages[8][512], stops[2][96];
+static unsigned message_count, stop_count, argument_count;
+static int arguments_read[4];
+static const struct context {unsigned revision; int clear_present;} contexts[]={@CONTEXTS@};
+static const struct test_case {
+ int count,current,allow_secret,bonus,load;
+ struct {int present,kind,secret,clearcount,selectable;} cache[4];
+ const char *arguments[4];
+} cases[]={@CASES@};
+static int observe_printf(const char *format, ...)
+{
+ assert(message_count<8);va_list args;va_start(args,format);
+ int length=vsnprintf(messages[message_count],sizeof(messages[0]),format,args);
+ va_end(args);assert(length>=0 && (size_t)length<sizeof(messages[0]));
+ ++message_count;return length;
+}
+void shutdown(int status,char *format,...)
+{
+ assert(status==1 && stop_count<2);va_list args;va_start(args,format);
+ int length=vsnprintf(stops[stop_count],sizeof(stops[0]),format,args);
+ va_end(args);assert(length>=0 && (size_t)length<sizeof(stops[0]));++stop_count;
+}
+#define printf observe_printf
+@FUNCTIONS@
+static char *argument(const struct test_case *test,int index)
+{
+ assert(index>=1 && index<=2 && argument_count<4);
+ arguments_read[argument_count++]=index;
+ return test->arguments[index]?(char *)test->arguments[index]:(char *)"";
+}
+static void load_secret(const struct test_case *test)
+{
+ s_model *newchar=models;char *filename=(char *)"contract",*command=(char *)"secret";
+#define GET_ARG(z) argument(test,(z))
+@INTEGER_MACRO@
+ switch(CMD_MODEL_SECRET) {
+ @COMMAND@
+ default:abort();
+ }
+#undef GET_INT_ARG
+#undef GET_ARG
+}
+#undef printf
+static int model_index(s_model *model)
+{
+ if(!model)return -1;
+ for(int i=0;i<4;++i)if(model==models+i)return i;
+ abort();
+}
+static void quoted(const char *text)
+{
+ putchar('"');
+ for(const unsigned char *p=(const unsigned char *)text;*p;++p) {
+  if(*p=='"' || *p=='\\'){putchar('\\');putchar(*p);}
+  else if(*p<32)printf("\\u%04x",*p);
+  else putchar(*p);
+ }
+ putchar('"');
+}
+int main(void)
+{
+ static const int kinds[]={TYPE_NONE,TYPE_PLAYER,TYPE_ENEMY};
+ for(unsigned p=0;p<sizeof(contexts)/sizeof(*contexts);++p) {
+  obor_profile_build=contexts[p].revision;
+  for(unsigned c=0;c<sizeof(cases)/sizeof(*cases);++c) {
+   const struct test_case *test=cases+c;
+   memset(models,0,sizeof(models));memset(cache,0,sizeof(cache));memset(&alien,0,sizeof(alien));
+   model_cache=cache;models_cached=(unsigned)test->count;
+   bonus=test->bonus;allow_secret_chars=test->allow_secret;
+   message_count=stop_count=argument_count=0;
+   for(int i=0;i<test->count;++i) {
+    models[i].type=kinds[test->cache[i].kind];models[i].secret=test->cache[i].secret;
+    models[i].clearcount=test->cache[i].clearcount;cache[i].selectable=(char)test->cache[i].selectable;
+    models[i].name=names[i];
+    cache[i].model=test->cache[i].present?models+i:NULL;
+   }
+   if(test->load)load_secret(test);
+   s_model *current=test->current==-2?&alien:test->current<0?NULL:cache[test->current].model;
+   int next=model_index(nextplayermodel(current));
+   int prev=model_index(prevplayermodel(current));
+   printf("{\"revision\":%u,\"case\":%u,\"selected\":[%d,%d],\"secret\":%d,\"clearcount\":",
+          obor_profile_build,c,next,prev,models[0].secret);
+   if(contexts[p].clear_present)printf("%d",models[0].clearcount);else fputs("null",stdout);
+   fputs(",\"arguments\":[",stdout);
+   for(unsigned i=0;i<argument_count;++i)printf("%s%d",i?",":"",arguments_read[i]);
+   fputs("],\"messages\":[",stdout);
+   for(unsigned i=0;i<message_count;++i){if(i)putchar(',');quoted(messages[i]);}
+   fputs("],\"stops\":[",stdout);
+   for(unsigned i=0;i<stop_count;++i){if(i)putchar(',');quoted(stops[i]);}
+   puts("]}");
+  }
+ }
+ return 0;
+}

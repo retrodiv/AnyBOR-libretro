@@ -50,7 +50,8 @@ def bonus_program(source, header, profiles, *, trace=True):
     start = header.rfind('typedef struct', 0, end.start())
     record = header[start:end.end()]
     constants = []
-    for name in ('MAX_NAME_LEN', 'MAX_PLAYERS', 'CV_SAVED_GAME'):
+    for name in ('MAX_NAME_LEN', 'MAX_PLAYERS', 'CV_SAVED_GAME') + (
+            ('MAX_DIFFICULTIES',) if 'obor_legacy_saved_game(' in source else ()):
         match = re.search(r'^#define\s+' + name + r'\s+[^\n]+', header, re.M)
         if match is None:
             raise AssertionError('Missing native constant ' + name)
@@ -81,6 +82,10 @@ def bonus_program(source, header, profiles, *, trace=True):
                    ' return -1; }')
     loader = function(source, 'loadGameFile')
     clear = function(source, 'clearSavedGame')
+    if 'obor_legacy_saved_game(' in clear:
+        clear = function(source, 'obor_legacy_saved_game') + clear
+    if 'obor_saved_game_slots(' in '\n'.join(callers):
+        clear = function(source, 'obor_saved_game_slots') + clear
     return r'''
 #include <assert.h>
 #include <stdint.h>
@@ -242,6 +247,7 @@ int main(void) {@CHECKS@free(savelevel);remove("probe.save");return 0;}
 #include <stdlib.h>
 #include <string.h>
 typedef struct {int initialized;} Script;
+static Script *pcurrentscript;
 static unsigned obor_profile_build;
 static int current_set,present,append_ok,execute_ok;
 static char events[64],expected_path[256],loaded_path[256],appended[64],warning[128];
@@ -291,7 +297,9 @@ static void check(int native_file) {
  for(append_ok=0;append_ok<2;++append_ok)for(execute_ok=0;execute_ok<2;++execute_ok) {
   current_set=sets[k];snprintf(expected_path,sizeof(expected_path),"Saves/probe.s%02d",current_set);
   *events=*loaded_path=*appended=0;assert(!owned_file);
+  Script caller_script={1};pcurrentscript=&caller_script;
   int result=loadScriptFile();
+  assert(pcurrentscript==&caller_script);
   const char *wanted=native_file?(!present?"O":!append_ok?"OIAZ":"OIACEZ"):
       (present && append_ok?"ILCNEZ":"ILZCNZ");
   assert(!strcmp(events,wanted));

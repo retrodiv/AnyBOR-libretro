@@ -3,8 +3,8 @@
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
  * Upstream code retains its original license and notices.
- * Keep terminal grammar-table writes within the declared production count
- * while retaining every valid native entry.
+ * Retain bounded grammar tables and each profile's continue-token
+ * membership.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/3741.md
  * at the source repository root. Original notices follow below.
@@ -20,6 +20,9 @@
 
 #include "ParserSet.h"
 #include "FirstFollow.h"
+#include <stdint.h>
+
+extern uint32_t obor_profile_build;
 #include <string.h>
 
 void ParserSet_Buildup(ParserSet* pset)
@@ -58,6 +61,7 @@ void ParserSet_Clear(ParserSet* pset)
 
 BOOL ParserSet_First(ParserSet* pset, PRODUCTION theProduction, MY_TOKEN_TYPE theToken)
 {
+    if(obor_profile_build < 3515 && theToken == TOKEN_CONTINUE) return FALSE;
 	MY_TOKEN_TYPE* ptr = NULL;
 	ptr = pset->FirstSet[theProduction];
 	while((*ptr)!=END_OF_TOKENS)
@@ -70,6 +74,7 @@ BOOL ParserSet_First(ParserSet* pset, PRODUCTION theProduction, MY_TOKEN_TYPE th
 
 BOOL ParserSet_Follow(ParserSet* pset, PRODUCTION theProduction, MY_TOKEN_TYPE theToken)
 {
+    if(obor_profile_build < 3515 && theToken == TOKEN_CONTINUE) return FALSE;
 	MY_TOKEN_TYPE* ptr = NULL;
 	ptr = pset->FollowSet[theProduction];
 	while((*ptr)!=END_OF_TOKENS)

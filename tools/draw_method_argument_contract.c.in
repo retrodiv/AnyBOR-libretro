@@ -1,0 +1,108 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <stdint.h>
+#include <limits.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdarg.h>
+#include <string.h>
+#include "openbor.h"
+#undef printf
+#undef assert
+uint32_t obor_profile_build;
+static int active_case;
+#define assert(c) do{if(!(c)){fprintf(stderr,"DRAW_METHOD_ARGUMENT revision=%u case=%d line=%d\n",obor_profile_build,active_case,__LINE__);abort();}}while(0)
+static char message[1024];
+static int diagnostics;
+static int capture(const char *format,...){
+ va_list ap;va_start(ap,format);int n=vsnprintf(message,sizeof(message),format,ap);va_end(ap);
+ assert(n>=0 && (size_t)n<sizeof(message));++diagnostics;return n;
+}
+#define printf capture
+s_drawmethod drawmethod;
+#pragma GCC diagnostic push
+#if defined(__clang__)
+#if __has_warning("-Wsingle-bit-bitfield-constant-conversion")
+#pragma GCC diagnostic warning "-Wsingle-bit-bitfield-constant-conversion"
+#endif
+#endif
+@PLAIN@
+#pragma GCC diagnostic pop
+@HELPERS@
+@VARIANT@
+@FUNCTION@
+static union {uint32_t pixels[256];unsigned char bytes[1024];} tables[3];
+struct context {unsigned revision;int center_arguments;const char *diagnostic;};
+static const struct context contexts[]={@CONTEXTS@};
+struct query {int arity,target,numeric,table,centers,bad_scalar,rotation;};
+static const struct query cases[]={@CASES@};
+static int supported_numeric(const ScriptVariant *v){return v->vt==VT_INTEGER || v->vt==VT_DECIMAL;}
+static int number(const ScriptVariant *v){return v->vt==VT_INTEGER?(int)v->lVal:(int)v->dblVal;}
+static void numeric(ScriptVariant *v,int n,int decimal){
+ if(decimal){v->vt=VT_DECIMAL;v->dblVal=n+(n<0?-0.75:0.75);}
+ else{v->vt=VT_INTEGER;v->lVal=n;}
+}
+static void arguments(ScriptVariant *v,entity *e,const struct query *q){
+ static const int scalar[]={-1,257,258,-1,0,7,3,4,17,0,-1,-1};
+ memset(v,0,18*sizeof(*v));
+ if(q->target==0)v[0].vt=VT_EMPTY;
+ else if(q->target<3){v[0].vt=VT_PTR;v[0].ptrVal=q->target==1?e:NULL;}
+ else{v[0].vt=VT_INTEGER;v[0].lVal=1;}
+ for(int i=1;i<=12;++i)numeric(v+i,i==10?q->rotation:scalar[i-1],q->numeric);
+ v[13].vt=VT_PTR;v[13].ptrVal=tables[2].bytes;
+ if(q->table==1){v[13].vt=VT_EMPTY;v[13].ptrVal=NULL;}
+ if(q->table==2)v[13].ptrVal=NULL;
+ if(q->table==3){v[13].vt=VT_INTEGER;v[13].lVal=1;}
+ if(q->table==4){v[13].vt=VT_DECIMAL;v[13].dblVal=1.5;}
+ if(q->table==5){v[13].vt=VT_STR;v[13].strVal=63;}
+ for(int i=14;i<16;++i){
+  numeric(v+i,i==14?23:-29,q->centers==1);
+  if(q->centers==2){v[i].vt=VT_STR;v[i].strVal=63;}
+  if(q->centers==3){v[i].vt=VT_PTR;v[i].ptrVal=tables[2].bytes;}
+  if(q->centers==4){v[i].vt=VT_EMPTY;v[i].ptrVal=NULL;}
+ }
+ v[16].vt=VT_STR;v[16].strVal=63;v[17].vt=VT_PTR;v[17].ptrVal=tables[0].bytes;
+ if(q->bad_scalar>=0){assert(q->bad_scalar<18);v[q->bad_scalar].vt=VT_PTR;v[q->bad_scalar].ptrVal=tables[2].bytes;}
+}
+static int expected_valid(const ScriptVariant *v,const struct query *q,int centers){
+ if(q->arity<2 || q->target==3)return 0;
+ for(int i=1;i<=12 && i<q->arity;++i)if(!supported_numeric(v+i))return 0;
+ /* Existing universal input validation remains active at the first table slot. */
+ if(q->arity>=14 && v[13].vt!=VT_PTR && v[13].vt!=VT_EMPTY)return 0;
+ if(centers)for(int i=14;i<16 && i<q->arity;++i)if(!supported_numeric(v+i))return 0;
+ return 1;
+}
+static int supplied(const ScriptVariant *v,int index,int arity){return index<arity?number(v+index):0;}
+static void expected_method(s_drawmethod *m,const ScriptVariant *v,const struct query *q,int centers){
+ #define V(i) supplied(v,i,q->arity)
+ m->flag=V(1);m->scalex=V(2);m->scaley=V(3);m->flipx=V(4);m->flipy=V(5);
+ m->shiftx=V(6);m->alpha=V(7);m->remap=V(8);m->fillcolor=V(9);
+ m->rotate=(V(10)%360+360)%360;m->fliprotate=V(11);m->transbg=V(12);
+ if(q->arity>=14)m->table=v[13].ptrVal;
+ if(centers){m->centerx=V(14);m->centery=V(15);}
+ #undef V
+}
+int main(void){
+ _Static_assert(__builtin_types_compatible_p(__typeof__(&plainmethod),const s_drawmethod*),"consistent immutable plain method type");
+ for(unsigned p=0;p<sizeof(contexts)/sizeof(*contexts);++p){
+  const struct context *context=contexts+p;obor_profile_build=context->revision;
+  for(unsigned c=0;c<sizeof(cases)/sizeof(*cases);++c){
+   const struct query *q=cases+c;active_case=(int)c;
+   entity *e=calloc(1,sizeof(*e));assert(e);e->health=37;
+   drawmethod=method_seed();drawmethod.centerx=11;drawmethod.centery=-12;drawmethod.table=tables[0].bytes;
+   e->drawmethod=method_seed();e->drawmethod.centerx=21;e->drawmethod.centery=-22;e->drawmethod.table=tables[1].bytes;
+   s_drawmethod expected_global=drawmethod,expected_entity=e->drawmethod;
+   ScriptVariant v[18],*args[18],result={0},*out=&result;for(int i=0;i<18;++i)args[i]=v+i;
+   arguments(v,e,q);int valid=expected_valid(v,q,context->center_arguments);
+   if(valid)expected_method(q->target==1?&expected_entity:&expected_global,v,q,context->center_arguments);
+   diagnostics=0;message[0]=0;
+   int status=openbor_setdrawmethod(q->arity?args:NULL,&out,q->arity);
+   assert(status==(valid?S_OK:E_FAIL) && !out);
+   assert(diagnostics==!valid && (valid || !strcmp(message,context->diagnostic)));
+   assert(same_method(&drawmethod,&expected_global) && same_method(&e->drawmethod,&expected_entity));
+   assert(e->health==37);free(e);
+  }
+  fprintf(stdout,"{\"revision\":%u,\"cases\":%zu}\n",obor_profile_build,sizeof(cases)/sizeof(*cases));
+ }
+ return 0;
+}

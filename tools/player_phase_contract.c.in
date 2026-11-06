@@ -1,0 +1,131 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <assert.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "openbor.h"
+#undef assert
+#undef printf
+uint32_t obor_profile_build;
+static unsigned active_case;
+#define assert(c) do {if(!(c)){fprintf(stderr,"PLAYER_PHASE revision=%u case=%u line=%d\n",obor_profile_build,active_case,__LINE__);abort();}}while(0)
+static entity actor,replacement;
+entity *self;
+s_player player[MAX_PLAYERS];
+unsigned int time;
+int reached[4],level_completed,PLAYER_MIN_Z,PLAYER_MAX_Z=100,SAMPLE_PUNCH=-1;
+char branch_name[MAX_NAME_LEN+1];
+s_savedata savedata;
+int *animattacks;
+static int ajspecial;
+static s_level *level;
+static s_anim animation;
+static int result,mutate_pre,mutate_child,rebind;
+static void initial_action(void){abort();}
+static void callback_action(void){abort();}
+void common_attack_proc(void){abort();}
+void common_block(void){abort();}
+void common_charge(void){abort();}
+void common_dodge(void){abort();}
+void common_get(void){abort();}
+void common_stuck_underneath(void){abort();}
+void common_throw_wait(void){abort();}
+void common_turn(void){abort();}
+static int action_id(void (*p)(void)){
+ if(!p)return 2;
+ if(p==initial_action)return 0;
+ if(p==callback_action)return 1;
+ abort();
+}
+#define WIDTH 15
+static void snapshot(double *v){
+ const double fields[]={player[0].playkeys,player[0].keys,actor.direction,
+ actor.movetime,actor.lastmove,actor.lastdir,actor.rush[0],actor.rushtime,
+ replacement.rush[0],replacement.rushtime,action_id(actor.takeaction),
+ actor.charging,actor.inpain,actor.jumping,actor.drop};
+ _Static_assert(sizeof(fields)/sizeof(*fields)==WIDTH,"Observer field count");
+ memcpy(v,fields,sizeof(fields));
+}
+struct event{int kind;double fields[WIDTH];};
+static struct event events[8];static unsigned event_count;
+static void observe(int kind){
+ assert(event_count<8);struct event *e=&events[event_count++];e->kind=kind;snapshot(e->fields);
+}
+static void callback(void){
+ player[0].playkeys=FLAG_MOVERIGHT|FLAG_ATTACK;actor.direction=0;actor.takeaction=callback_action;
+}
+entity *find_ent_here(entity *excluded,float x,float z,int types,int (*test)(entity*,entity*)){
+ assert(excluded==self && x==0 && z==0);
+ assert((types==TYPE_ENDLEVEL && test==NULL) || types==TYPE_ITEM);
+ observe(types==TYPE_ENDLEVEL?0:10);
+ if(types==TYPE_ENDLEVEL && rebind)player[0].ent=rebind==1?&replacement:NULL;
+ return NULL;
+}
+int player_preinput(void){observe(1);if(mutate_pre)callback();return result;}
+static void child(int kind){observe(kind);if(mutate_child)callback();}
+void player_charge_check(void){child(2);}
+void player_pain_check(void){child(3);}
+void player_fall_check(void){child(4);}
+void player_grab_check(void){child(5);}
+void player_jump_check(void){child(6);}
+void player_lie_check(void){child(7);}
+int match_combo(int a[],s_player *p,int count){
+ assert(p==player && count==2 && a[0]==a[1]);observe(8);return 0;
+}
+static int obor_check_combo_key(int key){(void)key;abort();}
+int player_check_special(void){observe(9);return 0;}
+int common_walk_anim(entity *e){assert(e==self);observe(11);if(mutate_child)callback();return 1;}
+int sound_play_sample(int n,unsigned priority,int l,int r,unsigned speed){abort();}
+@TRAPS@
+@DIFF@
+#pragma GCC diagnostic push
+#pragma GCC diagnostic warning "-Wmisleading-indentation"
+@THINKER@
+#pragma GCC diagnostic pop
+struct input{int gate,result,playkeys,held,direction,mutate_pre,mutate_child,expired,entry,rebind,min_revision,max_revision;};
+static const struct input cases[]={@CASES@};
+static const unsigned profiles[]={@PROFILES@};
+static void prepare(const struct input *c){
+ memset(&actor,0,sizeof(actor));memset(&replacement,0,sizeof(replacement));
+ memset(player,0,sizeof(player));memset(&animation,0,sizeof(animation));
+ self=&actor;actor.animation=&animation;animation.numframes=4;actor.takeaction=initial_action;
+ actor.movetime=41;actor.lastmove=43;actor.lastdir=47;actor.direction=c->direction;
+ actor.rush[0]=7;actor.rushtime=c->expired?90:110;
+ replacement.rush[0]=9;replacement.rushtime=80;
+ time=100;player[0].ent=c->entry==1?NULL:&actor;actor.dead=c->entry==2;
+ player[0].playkeys=c->playkeys;player[0].keys=c->held;
+ switch(c->gate){
+  case 0:actor.charging=1;break;
+  case 1:actor.inpain=1;break;
+  case 2:actor.projectile=2;break;
+  case 3:actor.grabbing=&replacement;break;
+  case 4:actor.jumping=1;break;
+  case 5:actor.drop=1;break;
+  case 6:break; /* Busy without an idle frame. */
+  case 7:actor.charging=actor.inpain=actor.jumping=actor.drop=1;actor.projectile=2;break;
+  case 8:actor.link=&replacement;break;
+  case 9:actor.idling=1;break;
+  default:abort();
+ }
+ result=c->result;mutate_pre=c->mutate_pre;mutate_child=c->mutate_child;rebind=c->rebind;event_count=0;
+}
+static void array_json(const double *v){
+ putchar('[');for(unsigned i=0;i<WIDTH;++i){if(i)putchar(',');printf("%.17g",v[i]);}putchar(']');
+}
+int main(void){
+ for(unsigned p=0;p<sizeof(profiles)/sizeof(*profiles);++p){
+  obor_profile_build=profiles[p];
+  for(unsigned k=0;k<sizeof(cases)/sizeof(*cases);++k){
+   if(cases[k].min_revision && (obor_profile_build<(unsigned)cases[k].min_revision ||
+      obor_profile_build>(unsigned)cases[k].max_revision))continue;
+   active_case=k;prepare(&cases[k]);player_think();double final[WIDTH];snapshot(final);
+   printf("{\"revision\":%u,\"case\":%u,\"fields\":",obor_profile_build,k);array_json(final);
+   printf(",\"events\":[");for(unsigned i=0;i<event_count;++i){if(i)putchar(',');
+    printf("{\"kind\":%d,\"fields\":",events[i].kind);array_json(events[i].fields);putchar('}');}
+   puts("]}");
+  }
+ }
+ return 0;
+}

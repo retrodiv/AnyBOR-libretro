@@ -289,12 +289,12 @@ void putsprite_8(
 // scalex scaley flipy ...
 void putsprite_ex(int x, int y, s_sprite *frame, s_screen *screen, s_drawmethod* drawmethod)
 {
-	gfx_entry gfx;
+	gfx_entry gfx = {.type=gfx_sprite};
 
 	if(!drawmethod->scalex || !drawmethod->scaley) return; // zero size
 
 	// no scale, no shift, no flip, no fill, so use common method
-	if(!drawmethod->water.watermode && drawmethod->scalex==256 && drawmethod->scaley==256 && !drawmethod->flipy && !drawmethod->shiftx && drawmethod->fillcolor==TRANSPARENT_IDX && !drawmethod->rotate &&
+	if((obor_profile_build < 3554 || !drawmethod->water.watermode) && drawmethod->scalex==256 && drawmethod->scaley==256 && !drawmethod->flipy && !drawmethod->shiftx && drawmethod->fillcolor==TRANSPARENT_IDX && !drawmethod->rotate &&
 	   (obor_profile_build>=3736 || (!drawmethod->centerx && !drawmethod->centery)))
 	{
 		if(drawmethod->flipx) x += drawmethod->centerx;
@@ -357,6 +357,12 @@ void putsprite(int x, int y, s_sprite* sprite, s_screen* screen, s_drawmethod* d
 
 	drawmethod_global_init(drawmethod);
 
+    if(obor_profile_build < 3556)
+    {
+        _putsprite(x, y, sprite, screen, drawmethod);
+        return;
+    }
+
 	if(drawmethod && drawmethod->flag){
 		xrepeat = drawmethod->xrepeat;
 		yrepeat = drawmethod->yrepeat;
@@ -367,8 +373,10 @@ void putsprite(int x, int y, s_sprite* sprite, s_screen* screen, s_drawmethod* d
 		xspan = yspan = 0;
 	}
 
+	dx = x;
 	for(j=0, dy=y; j<yrepeat; j++, dy+=yspan){
-		for(i=0, dx=x; i<xrepeat; i++, dx+=xspan){
+		if(obor_profile_build >= 3558) dx = x;
+		for(i=0; i<xrepeat; i++, dx+=xspan){
 			_putsprite(dx, dy, sprite, screen, drawmethod);
 		}
 	}

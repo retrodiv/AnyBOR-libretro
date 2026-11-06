@@ -1,0 +1,88 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <math.h>
+#include "openbor.h"
+#undef printf
+#undef assert
+#undef time
+uint32_t obor_profile_build;
+static u32 fixture_clock;
+#define time fixture_clock
+static unsigned case_number;
+#define assert(c) do{if(!(c)){fprintf(stderr,"Early jump revision=%u case=%u line=%d\n",obor_profile_build,case_number,__LINE__);abort();}}while(0)
+struct event {int kind,action,attacking,jumping;float x,z;};
+struct input {int available,supplied,found,vulnerable,drop,attacking,direction,distance,aggression,probability,dust,spawn,mutate;u32 timer;unsigned word,bit;float sample;};
+struct expected {int result,action,animation;u32 timer;float x,z;unsigned words,random[2],floats,event_count;struct event events[12];};
+struct profile {unsigned revision,contract;int autokill;float minimum;};
+static const struct input inputs[]={@INPUTS@};
+static const struct expected expected[][sizeof(inputs)/sizeof(*inputs)]={@EXPECTED@};
+static const struct profile profiles[]={@PROFILES@};
+static const struct input *test;
+static const struct expected *wanted;
+static const struct profile *profile;
+static entity subject,opponent,dust_entity,*self=&subject;
+static s_anim target_animation,jump_animations[2],*slots[MAX_ANIS];
+static __typeof__(*target_animation.vulnerable) vulnerability[1];
+static s_videomodes videomodes;
+static float noatk_duration;
+static unsigned word_at,float_at,event_count;
+static int animation_seen;
+static struct event events[12];
+void common_jump(void){abort();}
+static void initial_action(void){abort();}
+static void changed_action(void){abort();}
+static int action(void){if(self->takeaction==initial_action)return 1;if(self->takeaction==common_jump)return 2;assert(self->takeaction==changed_action);return 3;}
+static void observe(int id){assert(event_count<12);events[event_count++]=(struct event){id,action(),self->attacking,self->jumping,self->xdir,self->zdir};}
+static unsigned observed_word(void){assert(word_at<wanted->words);unsigned v=wanted->random[word_at++];observe(1);return v;}
+static float observed_float(float maximum){assert(maximum==1 && float_at<wanted->floats);++float_at;observe(2);return test->sample;}
+static entity *observed_find(int animation,int detect){assert(!detect && (animation==ANI_JUMPATTACK || animation==ANI_JUMPATTACK2));observe(3);return test->found?&opponent:NULL;}
+static int observed_chance(entity *target,float minimum,float maximum){int secondary=test->available==2 || (test->available==3 && test->bit);assert(target==&opponent);assert(fabsf(minimum-(secondary?0.5f:profile->minimum))<0.000001f && fabsf(maximum-0.95f)<0.000001f);observe(4);return test->probability;}
+static u32 observed_recheck(entity *target){(void)target;assert(!"Later cooldown helper outside this source range");return 0;}
+static void observed_toss(entity *e,float height){assert(e==self && height==4);observe(5);if(test->mutate==2)self->takeaction=changed_action;}
+static entity *observed_spawn(float x,float z,float a,int direction,char *name,int index,s_model *model){assert(x==self->x && z==self->z && a==self->a && direction==self->direction && !name && !model && index==test->dust);observe(6);return test->spawn?&dust_entity:NULL;}
+static void observed_onspawn(entity *e){assert(e==&dust_entity && e->base==self->a && e->autokill==profile->autokill);observe(7);if(test->mutate==3)self->takeaction=changed_action;}
+static void observed_animation(entity *e,int animation,int reset){assert(e==self && !reset);animation_seen=animation==ANI_JUMPATTACK?0:1;assert(animation==ANI_JUMPATTACK || animation==ANI_JUMPATTACK2);observe(8);if(test->mutate==1)self->takeaction=changed_action;}
+/* Probability observes the selected slot before animation publication. */
+static int observed_probability(entity *target,float minimum,float maximum){return observed_chance(target,minimum,maximum);}
+#define rand32 observed_word
+#define randf observed_float
+#define normal_find_target observed_find
+#define check_attack_chance observed_probability
+#define recheck_nextattack observed_recheck
+#define toss observed_toss
+#define spawn observed_spawn
+#define execute_onspawn_script observed_onspawn
+#define ent_set_anim observed_animation
+@DISTANCE@
+@CALLER@
+int main(void){
+ for(unsigned p=0;p<sizeof(profiles)/sizeof(*profiles);++p){profile=profiles+p;obor_profile_build=profile->revision;
+  for(unsigned c=0;c<sizeof(inputs)/sizeof(*inputs);++c){
+   ++case_number;test=inputs+c;wanted=&expected[profile->contract][c];
+   memset(&subject,0,sizeof(subject));memset(&opponent,0,sizeof(opponent));memset(&dust_entity,0,sizeof(dust_entity));
+   memset(&target_animation,0,sizeof(target_animation));memset(jump_animations,0,sizeof(jump_animations));memset(slots,0,sizeof(slots));
+   subject.exists=opponent.exists=1;subject.modeldata.type=TYPE_ENEMY;subject.modeldata.hostile=TYPE_PLAYER;opponent.modeldata.type=TYPE_PLAYER;
+   subject.modeldata.animation=slots;subject.modeldata.animation_capacity=MAX_ANIS;
+   for(int i=0;i<2;++i)if(test->available&(1<<i)){jump_animations[i].numframes=1;slots[i?ANI_JUMPATTACK2:ANI_JUMPATTACK]=jump_animations+i;}
+   subject.takeaction=initial_action;subject.idling=1;subject.xdir=3;subject.zdir=-2;subject.a=7;subject.direction=test->direction;
+   subject.modeldata.jumpheight=4;subject.modeldata.dust[2]=test->dust;subject.nextattack=test->timer;subject.modeldata.aggression=test->aggression;
+   subject.destx=test->distance;videomodes.hRes=320;videomodes.vRes=80;
+   target_animation.vulnerable=vulnerability;vulnerability[0]=test->vulnerable;opponent.animation=&target_animation;
+   opponent.drop=test->drop;opponent.attacking=test->attacking;fixture_clock=100;
+   word_at=float_at=event_count=0;animation_seen=-1;
+   int result=common_try_jumpattack(test->supplied?&opponent:NULL);
+   assert(result==wanted->result && subject.nextattack==wanted->timer && action()==wanted->action);
+   assert(subject.attacking==result && subject.jumping==result && subject.idling==!result);
+   assert(fabsf(subject.xdir-wanted->x)<0.000001f && fabsf(subject.zdir-wanted->z)<0.000001f);
+   assert(animation_seen==wanted->animation && word_at==wanted->words && float_at==wanted->floats && event_count==wanted->event_count);
+   for(unsigned k=0;k<event_count;++k){struct event *a=events+k;const struct event *b=wanted->events+k;
+    assert(a->kind==b->kind && a->action==b->action && a->attacking==b->attacking && a->jumping==b->jumping);
+    assert(fabsf(a->x-b->x)<0.000001f && fabsf(a->z-b->z)<0.000001f);}
+  }
+ }
+ printf("{\"contexts\":%zu,\"cases\":%u}\n",sizeof(profiles)/sizeof(*profiles),case_number);return 0;
+}

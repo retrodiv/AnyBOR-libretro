@@ -30,13 +30,16 @@ def matrix_digest(rows):
     return digest.hexdigest()
 
 
-def program(engine, *, blank_zero=False, dimensions=None, palette_validation=False):
+def program(engine, *, blank_zero=False, dimensions=None, palette_validation=False, profile=None):
     engine = Path(engine)
     source = (engine/'source/gamelib/font.c').read_text()
     main = (engine/'openbor.c').read_text()
     start = main.index('const s_drawmethod plainmethod =')
     plain = main[start:main.index('\n};', start)+3]
     methods = '\n'.join(function(source, name) for name in FONT_FUNCTIONS)
+    for name in ('obor_font_loading_slot', 'obor_font_cached_dimension'):
+        if 'static int ' + name + '(' in source:
+            methods = function(source, name) + '\n' + methods
     if 'static int obor_font_palette_valid(' in source:
         methods = function(source, 'obor_font_palette_valid') + '\n' + methods
     screen = (engine/'source/gamelib/screen.c').read_text()
@@ -51,8 +54,15 @@ def program(engine, *, blank_zero=False, dimensions=None, palette_validation=Fal
             raise ValueError('Authored tile dimensions must be integer pairs within 1..32')
         pairs = '{' + ','.join('{' + str(w) + ',' + str(h) + '}' for w, h in dimensions) + '}'
         body = body.replace('{{1,1},{8,8},{17,11}}', pairs).replace('dim<3;', 'dim<' + str(len(dimensions)) + ';')
+    if profile is not None and (type(profile) is not int or profile <= 0):
+        raise ValueError('A profile must be a positive integer')
+    if 'obor_profile_build' in methods and profile is None:
+        raise ValueError('Profile-aware font code requires an explicit profile')
+    prefix = PREFIX
+    if profile is not None:
+        prefix = prefix.replace('#undef printf', '#undef printf\nuint32_t obor_profile_build = ' + str(profile) + 'u;')
     return ('#define PROBE_BLANK_ZERO ' + str(int(blank_zero)) + '\n' +
-            PREFIX.replace('PLAIN_METHOD', plain).replace('SCREEN_ALLOCATION', allocation).replace('FONT_METHODS', methods) + body)
+            prefix.replace('PLAIN_METHOD', plain).replace('SCREEN_ALLOCATION', allocation).replace('FONT_METHODS', methods) + body)
 
 
 PREFIX = r'''
@@ -233,13 +243,13 @@ int main(void) {
 '''
 
 
-def run(engine, port_include, *, cc=None, sanitizers=True, null_offset_control=False, blank_zero=False, dimensions=None, palette_validation=False):
+def run(engine, port_include, *, cc=None, sanitizers=True, null_offset_control=False, blank_zero=False, dimensions=None, palette_validation=False, profile=None):
     """Return byte-derived digests; discard temporary executables and raw pixels."""
     engine = Path(engine).resolve()
     for flag in (sanitizers, null_offset_control, blank_zero, palette_validation):
         if type(flag) is not bool:
             raise ValueError('Probe switches must be JSON booleans')
-    code = program(engine, blank_zero=blank_zero, dimensions=dimensions, palette_validation=palette_validation)
+    code = program(engine, blank_zero=blank_zero, dimensions=dimensions, palette_validation=palette_validation, profile=profile)
     inputs = [engine/'source/gamelib'/name for name in UNITS]
     with tempfile.TemporaryDirectory(prefix='font-raster-') as temp:
         work = Path(temp)
@@ -304,6 +314,7 @@ def run(engine, port_include, *, cc=None, sanitizers=True, null_offset_control=F
                 'sanitizers_enabled': sanitizers,
                 'blank_zero_glyph': bool(blank_zero),
                 'palette_validation': palette_validation,
+                'profile': profile,
                 'tile_dimensions': dimensions or [[1, 1], [8, 8], [17, 11]],
                 'scope': 'Authored images; actual font/bitmap/encoder/raster/queue C paths. Neutral transforms only; resource notifications are observed as no-ops, not state acceptance.'}
 
@@ -318,7 +329,7 @@ def main():
                  sanitizers=spec.get('sanitizers', True),
                  null_offset_control=spec.get('null_offset_control', False),
                  blank_zero=spec.get('blank_zero', False), dimensions=spec.get('dimensions'),
-                 palette_validation=spec.get('palette_validation', False))
+                 palette_validation=spec.get('palette_validation', False), profile=spec.get('profile'))
     Path(spec['output']).write_text(json.dumps(result, sort_keys=True, indent=2)+'\n')
     print('Font raster observations:', len(result['rows']))
 

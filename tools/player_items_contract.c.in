@@ -1,0 +1,125 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <assert.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "openbor.h"
+#undef assert
+#undef printf
+uint32_t obor_profile_build;
+static unsigned active_case;
+#define assert(c) do {if(!(c)){fprintf(stderr,"PLAYER_ITEMS revision=%u case=%u line=%d\n",obor_profile_build,active_case,__LINE__);abort();}}while(0)
+static entity actor,items[2],end,unused,equipped;
+entity *self;
+s_player player[MAX_PLAYERS];
+unsigned int time;
+int reached[4],level_completed,PLAYER_MIN_Z,PLAYER_MAX_Z,SAMPLE_PUNCH;
+char branch_name[MAX_NAME_LEN+1];
+s_savedata savedata;
+static int attack_indices[1]={ANI_ATTACK1},weapon_slots[10];
+int *animattacks=attack_indices;
+static int ajspecial;
+static s_level *level;
+static s_anim animation,*animations[MAX_ANIS];
+static short vulnerability[1],altitude[1];
+static entity *entities[MAX_ENTS+2];
+entity **ent_list=entities;
+int ent_max,ent_list_size;
+static int found,animated,scripted,score_calls,walk_calls,idle_calls;
+static int item_index(entity *e){if(e==&end)return 2;assert(e==items || e==items+1);return (int)(e-items);}
+static void initial_action(void){abort();}
+void common_attack_proc(void){abort();}
+void common_dodge(void){abort();}
+void common_charge(void){abort();}
+void common_block(void){abort();}
+void common_get(void){abort();}
+void common_stuck_underneath(void){abort();}
+void common_turn(void){abort();}
+void common_throw_wait(void){abort();}
+int player_preinput(void){return 0;}
+static int obor_check_combo_key(int key){(void)key;return 0;}
+int player_check_special(void){return 0;}
+int match_combo(int a[],s_player *p,int count){(void)a;assert(p==player && count==2);return 0;}
+int perform_atchain(void){return 0;}
+int sound_play_sample(int sample,unsigned priority,int l,int r,unsigned speed){
+ (void)sample;(void)priority;(void)l;(void)r;(void)speed;abort();
+}
+void ent_set_anim(entity *e,int index,int reset){assert(e==self && index==ANI_GET && !reset);++animated;}
+void didfind_item(entity *e){found=item_index(e);}
+void execute_didhit_script(entity *e,entity *other,int force,int drop,int type,int no,
+                          int guard,int juggle,int pause,int blocked){
+ assert(other==self && !force && !drop && type==e->modeldata.subtype && !no && !guard && !juggle && !pause && !blocked);
+ scripted=item_index(e);
+}
+void addscore(int who,int amount){assert(who==0 && amount==17);++score_calls;}
+int count_ents(int types){assert(types==TYPE_PLAYER);return 1;}
+int common_walk_anim(entity *e){assert(e==self);++walk_calls;return 1;}
+int common_idle_anim(entity *e){assert(e==self);++idle_calls;return 1;}
+@TRAPS@
+@FUNCTIONS@
+#pragma GCC diagnostic push
+#pragma GCC diagnostic warning "-Wmisleading-indentation"
+@THINKER@
+#pragma GCC diagnostic pop
+struct input {int mode,move,get,subtype,blink,vulnerable,second,weapon,number,animal,equipped,
+ seta,endlevel,high,backing;float a,base,item_a,end_a;};
+static const struct input cases[]={@CASES@};
+static const unsigned profiles[]={@PROFILES@};
+static void prepare(const struct input *c){
+ memset(&actor,0,sizeof(actor));memset(items,0,sizeof(items));memset(&end,0,sizeof(end));
+ memset(&unused,0,sizeof(unused));memset(&equipped,0,sizeof(equipped));
+ memset(player,0,sizeof(player));memset(&animation,0,sizeof(animation));
+ memset(animations,0,sizeof(animations));memset(reached,0,sizeof(reached));
+ memset(branch_name,0,sizeof(branch_name));level_completed=0;
+ for(unsigned i=0;i<MAX_ENTS+2;++i)entities[i]=&unused;
+ ent_list_size=c->backing?c->backing:MAX_ENTS+2;ent_max=MAX_ENTS+2;
+ assert(ent_list_size>0 && ent_list_size<=MAX_ENTS+2);
+ self=&actor;actor.animation=&animation;animation.numframes=1;
+ vulnerability[0]=(short)c->vulnerable;animation.vulnerable=vulnerability;
+ altitude[0]=(short)c->seta;if(c->seta!=-999)animation.seta=altitude;
+ actor.takeaction=initial_action;actor.idling=1;actor.direction=0;actor.modeldata.speed=4;
+ actor.modeldata.type=TYPE_PLAYER;actor.modeldata.animation=animations;
+ actor.modeldata.animation_capacity=MAX_ANIS;actor.modeldata.grabdistance=30;
+ actor.modeldata.animal=c->animal;actor.a=c->a;actor.base=c->base;actor.movetime=150;actor.rushtime=200;
+ if(c->get)animations[ANI_GET]=&animation;
+ if(c->weapon){
+  actor.modeldata.weapon=weapon_slots;actor.modeldata.numweapons=obor_profile_build<3531?10:2;
+  for(int i=0;i<10;++i)weapon_slots[i]=c->weapon==2?-1:7;
+ }
+ if(c->equipped)actor.weapent=&equipped;
+ player[0].ent=&actor;if(c->mode==1)player[0].playkeys=FLAG_ATTACK;
+ else if(c->move)player[0].keys=FLAG_MOVELEFT;
+ for(int i=0;i<2;++i){items[i].exists=1;items[i].modeldata.type=TYPE_ITEM;
+  items[i].animation=&animation;items[i].a=c->item_a;}
+ switch(c->subtype){case 0:break;case 1:items[0].modeldata.subtype=SUBTYPE_TOUCH;break;
+  case 2:items[0].modeldata.subtype=SUBTYPE_WEAPON;break;
+  case 3:items[0].modeldata.subtype=SUBTYPE_PROJECTILE;break;default:abort();}
+ items[0].modeldata.candamage=TYPE_PLAYER;items[0].modeldata.weapnum=c->number;items[0].blink=c->blink;
+ items[1].modeldata.subtype=c->mode==2?SUBTYPE_TOUCH:SUBTYPE_NONE;
+ items[1].modeldata.candamage=TYPE_PLAYER;
+ if(c->second==2)items[1].a=c->base;
+ entities[c->high?MAX_ENTS+1:0]=items;
+ if(c->second)entities[1]=items+1;
+ if(c->endlevel){end.exists=1;end.modeldata.type=TYPE_ENDLEVEL;end.animation=&animation;
+  end.modeldata.score=17;end.a=c->end_a;
+  if(c->endlevel==2)end.modeldata.subtype=SUBTYPE_TOUCH;
+  if(c->endlevel==3)end.modeldata.subtype=SUBTYPE_BOTH;
+  entities[2]=&end;
+ }
+ time=100;PLAYER_MIN_Z=0;PLAYER_MAX_Z=100;SAMPLE_PUNCH=-1;ajspecial=0;
+ found=scripted=-1;animated=score_calls=walk_calls=idle_calls=0;
+}
+int main(void){
+ for(unsigned p=0;p<sizeof(profiles)/sizeof(*profiles);++p){
+  obor_profile_build=profiles[p];
+  for(unsigned k=0;k<sizeof(cases)/sizeof(*cases);++k){
+   active_case=k;prepare(cases+k);player_think();
+   printf("{\"revision\":%u,\"case\":%u,\"result\":[%d,%d,%d,%d,%d,%d,%d,%d,%d]}\n",
+    obor_profile_build,k,found,animated,scripted,reached[0],level_completed,score_calls,
+    walk_calls,idle_calls,actor.getting);
+  }
+ }
+ return 0;
+}

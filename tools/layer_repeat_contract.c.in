@@ -1,0 +1,203 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <stdint.h>
+#include <stddef.h>
+#include <limits.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdarg.h>
+#include <string.h>
+#include <strings.h>
+#include "openbor.h"
+#undef assert
+#undef printf
+#undef shutdown
+#ifndef stricmp
+#define stricmp strcasecmp
+#endif
+uint32_t obor_profile_build;
+static int active_case;
+#define assert(c) do {if(!(c)){fprintf(stderr,"LAYER_REPEAT revision=%u case=%d line=%d\n",obor_profile_build,active_case,__LINE__);abort();}}while(0)
+struct context {unsigned revision;int all_speed_default,legacy_layer_type,water_depth;float front_zratio;};
+static const struct context contexts[]={@CONTEXTS@};
+static const struct context *context;
+static const char *cache[2];
+static int collects;
+CHAR *StrCache_Get(int index){assert(index>=0 && index<2);return (CHAR*)cache[index];}
+void StrCache_Collect(int index){assert(index>=0 && index<2);++collects;}
+int StrCache_Pop(void){abort();}
+static int capture(const char *format,...){(void)format;abort();}
+#define printf capture
+s_level *level;
+char packfile[OBOR_CONTENT_PATH_MAX];
+int pixelformat=PIXEL_8;
+int PLAYER_MIN_Z=160,PLAYER_MAX_Z=232;
+@NAN@
+static s_screen image;
+static s_sprite sprite;
+static int loads;
+int loadscreen(char *filename,char *archive,unsigned char *palette,int format,s_screen **output){
+ assert(!strcmp(filename,"fixture") && archive==packfile && !palette && format==PIXEL_8);
+ assert((uintptr_t)output%__alignof__(s_screen*)==0);*output=&image;++loads;return 1;
+}
+s_sprite *loadsprite2(char *filename,int *width,int *height){
+ assert(!strcmp(filename,"fixture"));*width=10;*height=20;++loads;return &sprite;
+}
+void shutdown(int code,const char *format,...){(void)code;(void)format;abort();}
+@ENUMS@
+@MACRO@
+@SEARCH@
+@VARIANTS@
+@FUNCTIONS@
+@NORMALIZER@
+#pragma GCC diagnostic push
+#pragma GCC diagnostic warning "-Woverflow"
+#if defined(__clang__)
+#if __has_warning("-Wsingle-bit-bitfield-constant-conversion")
+#pragma GCC diagnostic warning "-Wsingle-bit-bitfield-constant-conversion"
+#endif
+#endif
+@PLAIN@
+#pragma GCC diagnostic pop
+static char tokens[32][24];
+static char *token(int i){assert(i>=0 && i<32);return tokens[i];}
+#define GET_ARG(i) token(i)
+#define GET_INT_ARG(i) atoi(token(i))
+#define GET_FLOAT_ARG(i) atof(token(i))
+/* The original copy spelling is retained; test filenames fit in 24 bytes. */
+#pragma GCC diagnostic push
+#if !defined(__clang__)
+#pragma GCC diagnostic warning "-Wstringop-truncation"
+#endif
+static void layer_parser(s_layer *bgl,int kind){
+ enum {CMD_LEVEL_BACKGROUND,CMD_LEVEL_BGLAYER,CMD_LEVEL_FGLAYER,CMD_LEVEL_LAYER};
+ int cmd=kind,i=0;s_drawmethod *dm;char bgPath[32]={0},*value,*errormessage=NULL;
+ @LAYER@
+ return;
+ lCleanup:(void)errormessage;abort();
+}
+#pragma GCC diagnostic pop
+static void water_parser(s_layer *bgl){
+ s_drawmethod *dm;
+ @WATER@
+}
+#if defined(__clang__)
+#pragma GCC diagnostic push
+#if __has_warning("-Wsingle-bit-bitfield-constant-conversion")
+#pragma GCC diagnostic warning "-Wsingle-bit-bitfield-constant-conversion"
+#endif
+#endif
+static void panel_parser(s_layer *bgl){
+ int panelcount=0,frontpanels_loaded=0,panels[1][3]={{0}};
+ s_drawmethod *dm=&bgl->drawmethod;*dm=plainmethod;
+ #undef __realloc
+ #define __realloc(array,index) do{assert((index)==0);}while(0)
+ @PANEL@
+ #undef __realloc
+ if(bgl->oldtype==bgt_panel){assert(panelcount==1 && panels[0][0]==level->numlayers);}
+ else assert(frontpanels_loaded==1);
+}
+#if defined(__clang__)
+#pragma GCC diagnostic pop
+#endif
+#undef GET_ARG
+#undef GET_INT_ARG
+#undef GET_FLOAT_ARG
+static void check_get(s_layer *layer,int prop,int expected){
+ ScriptVariant value={0},*out=&value;
+ assert(_getlayerproperty(layer,prop,&out)==S_OK && out==&value);
+ assert(value.vt==VT_INTEGER && value.lVal==expected);
+}
+static void api(void){
+ static const int values[]={INT_MIN,-1,0,1,40000,INT_MAX};
+ s_layer *layer=level->layers;
+ for(int property=0;property<2;++property)for(int v=0;v<6;++v)for(int mode=0;mode<3;++mode){
+  int prop=property?_glp_zrepeat:_glp_xrepeat;
+  ScriptVariant argsv[4],*args[]={argsv,argsv+1,argsv+2,argsv+3},result={0},*out=&result;
+  memset(argsv,0,sizeof(argsv));
+  memset(layer,0,sizeof(*layer));layer->drawmethod=plainmethod;
+  layer->drawmethod.xrepeat=17;layer->drawmethod.yrepeat=19;
+  argsv[0].vt=VT_INTEGER;argsv[0].lVal=_glt_generic;
+  argsv[1].vt=VT_INTEGER;argsv[1].lVal=0;
+  argsv[2].vt=VT_INTEGER;argsv[2].lVal=prop;
+  argsv[3].vt=mode==1?VT_DECIMAL:VT_INTEGER;
+  if(mode==1)argsv[3].dblVal=values[v];else argsv[3].lVal=values[v];
+  collects=0;
+  if(mode==2){
+   cache[0]="generic";cache[1]=property?"zrepeat":"xrepeat";
+   argsv[0].vt=argsv[2].vt=VT_STR;argsv[0].strVal=0;argsv[2].strVal=1;
+  }
+  assert(openbor_changelayerproperty(args,&out,4)==S_OK && out==NULL);
+  assert(collects==(mode==2?2:0));
+  assert(layer->drawmethod.xrepeat==(property?17:values[v]));
+  assert(layer->drawmethod.yrepeat==(property?values[v]:19));
+  assert(layer->drawmethod.xspan==0 && layer->drawmethod.yspan==0);
+  check_get(layer,prop,values[v]);
+  out=&result;assert(openbor_getlayerproperty(args,&out,3)==S_OK && out==&result);
+  assert(result.vt==VT_INTEGER && result.lVal==values[v]);
+  ++active_case;
+ }
+}
+static void parse(void){
+ static const int values[]={-1,0,3,40000};
+ for(int kind=0;kind<4;++kind)for(int missing=0;missing<4;++missing)for(int v=0;v<4;++v){
+  s_layer layer;memset(&layer,0,sizeof(layer));memset(tokens,0,sizeof(tokens));
+  int i=kind<2?0:1;
+  strcpy(tokens[1],"fixture");
+  if(!(missing&1))snprintf(tokens[i+8],sizeof(tokens[0]),"%d",values[v]);
+  if(!(missing&2))snprintf(tokens[i+9],sizeof(tokens[0]),"%d",values[v]);
+  if(v&1)strcpy(tokens[i+16],"2.5");
+  layer_parser(&layer,kind);
+  assert(layer.drawmethod.xrepeat==((missing&1)?-1:values[v]));
+  assert(layer.drawmethod.yrepeat==((missing&2)?-1:values[v]));
+  assert(layer.drawmethod.xspan==0 && layer.drawmethod.yspan==0);
+  check_get(&layer,_glp_xrepeat,(missing&1)?-1:values[v]);
+  check_get(&layer,_glp_zrepeat,(missing&2)?-1:values[v]);
+  assert(layer.bgspeedratio==((v&1)?2.5f:(context->all_speed_default || !kind)?1.0f:0.0f));
+  assert(layer.oldtype==(!kind?bgt_background:context->legacy_layer_type?bgt_bglayer:
+                        kind==1?bgt_bglayer:kind==2?bgt_fglayer:bgt_generic));
+  assert(layer.xratio==(kind==2?1.5f:0.5f) && layer.zratio==(kind==2?1.5f:0.5f));
+  ++active_case;
+ }
+ for(int kind=0;kind<3;++kind){
+  s_layer layer;memset(&layer,0,sizeof(layer));memset(tokens,0,sizeof(tokens));
+  if(!kind){water_parser(&layer);assert(layer.drawmethod.xrepeat==-1 && layer.drawmethod.yrepeat==1);
+   assert(layer.oldtype==bgt_water && layer.z==MIN_INT+context->water_depth);}
+  else{layer.oldtype=kind==1?bgt_panel:bgt_frontpanel;panel_parser(&layer);
+   assert(layer.drawmethod.xrepeat==(kind==1?1:-1) && layer.drawmethod.yrepeat==1);}
+  if(kind==2)assert(layer.zratio==context->front_zratio);
+  assert(layer.drawmethod.xspan==0 && layer.drawmethod.yspan==0);++active_case;
+ }
+}
+static void normalize(void){
+ static const int values[]={INT_MIN,-1,0,1,40000,INT_MAX};
+ for(int x=0;x<6;++x)for(int y=0;y<6;++y)for(int kind=0;kind<2;++kind){
+  s_layer *layer=level->layers;memset(layer,0,sizeof(*layer));layer->drawmethod=plainmethod;
+  layer->drawmethod.xrepeat=values[x];layer->drawmethod.yrepeat=values[y];
+  layer->drawmethod.transbg=kind;loads=0;
+  load_layer("fixture",0);
+  assert(loads==1 && layer->width==10 && layer->height==20);
+  assert(layer->drawmethod.xrepeat==(values[x]<0?40000:values[x]));
+  assert(layer->drawmethod.yrepeat==(values[y]<0?40000:values[y]));
+  assert(layer->xoffset==(values[x]<0?-200000:0));
+  assert(layer->zoffset==(values[y]<0?-400000:0));
+  check_get(layer,_glp_xrepeat,values[x]<0?40000:values[x]);
+  check_get(layer,_glp_zrepeat,values[y]<0?40000:values[y]);++active_case;
+ }
+}
+int main(void){
+ _Static_assert(sizeof(((s_layer*)0)->drawmethod.xrepeat)==sizeof(int),"repeat int width");
+ _Static_assert(sizeof(((s_layer*)0)->drawmethod.yrepeat)==sizeof(int),"repeat int width");
+ level=calloc(1,sizeof(*level));assert(level);level->layers=calloc(1,sizeof(*level->layers));assert(level->layers);
+ level->genericlayers=calloc(1,sizeof(*level->genericlayers));assert(level->genericlayers);
+ level->genericlayers[0]=level->layers;level->numgenericlayers=1;
+ memset(&image,0,sizeof(image));image.magic=screen_magic;image.width=10;image.height=20;
+ memset(&sprite,0,sizeof(sprite));sprite.magic=sprite_magic;
+ for(unsigned i=0;i<sizeof(contexts)/sizeof(*contexts);++i){
+  context=contexts+i;obor_profile_build=context->revision;active_case=0;
+  assert(plainmethod.xrepeat==1 && plainmethod.yrepeat==1 && plainmethod.xspan==0 && plainmethod.yspan==0);
+  assert(_glp_xrepeat==12 && _glp_zrepeat==17);api();parse();normalize();
+  fprintf(stdout,"{\"revision\":%u,\"cases\":%d}\n",obor_profile_build,active_case);
+ }
+ free(level->genericlayers);free(level->layers);free(level);return 0;
+}

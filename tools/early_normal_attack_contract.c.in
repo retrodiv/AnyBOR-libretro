@@ -1,0 +1,124 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <assert.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <stdarg.h>
+#include <math.h>
+#include "openbor.h"
+#undef assert
+#undef printf
+#ifdef NDEBUG
+#error Early normal-attack assertions must remain enabled
+#endif
+_Static_assert(sizeof(u32)==4 && sizeof(unsigned int)==4 && sizeof(int)==4,
+               "Original clock/random/cast widths differ");
+struct caller_case {
+ uint32_t revision;const char *name;
+ uint32_t clock,nextattack,stalltime,combotime;
+ int combo,supplied,target,valid,weapon,energy,pick,vulnerable,drop,attacking,rising;
+ int aggression,probability,entity_count,mutate,distance;
+ int result;uint32_t out_nextattack,out_stalltime;int action,prepared,out_aggression;
+ const char *trace;unsigned random_count,random[4],float_count;float floats[2][2];
+};
+static const struct caller_case cases[]={@CASES@},*test;
+static unsigned active_case,random_at,float_at;
+static char observed[4096];static size_t used;
+uint32_t obor_profile_build;
+u32 time;
+static entity subject,opponent,weapon_storage,*self=&subject;
+static s_videomodes videomodes;
+static float min_noatk_chance,max_noatk_chance,noatk_duration;
+static int max_attacks=1,max_freespecials=4;
+static int animattacks[]={114},animspecials[]={110,111,112,113};
+#define assert(c) do {if(!(c)) {fprintf(stderr,"Early caller mismatch: profile=%u case=%u (%s) line=%d trace=%s expected=%s\n",obor_profile_build,active_case,test->name,__LINE__,observed,test->trace);abort();}} while(0)
+static void record(const char *format,...) {
+ assert(used<sizeof(observed));va_list arguments;va_start(arguments,format);
+ int n=vsnprintf(observed+used,sizeof(observed)-used,format,arguments);va_end(arguments);
+ assert(n>=0 && (size_t)n<sizeof(observed)-used);used+=(size_t)n;
+}
+void normal_prepare(void) {abort();}
+void common_rise(void) {abort();}
+static void initial_action(void) {abort();}
+static void changed_action(void) {abort();}
+static int action_id(void) {
+ if(self->takeaction==initial_action)return 1;
+ if(self->takeaction==normal_prepare)return 2;
+ assert(self->takeaction==changed_action);return 3;
+}
+entity *normal_find_target(int animation,int detect) {
+ assert(!detect);int slot=animation==-1?-1:animation==114?0:animation==110?3:5;
+ assert(animation==-1 || animation==114 || animation==110 || animation==ANI_THROWATTACK);
+ record("F%d;",slot);return test->target?&opponent:NULL;
+}
+int check_energy(int which,int animation) {
+ assert((which==0 || which==1) && animation==110);record("E%d;",which);
+ return !!(test->energy&(which?2:1));
+}
+static int pick_random_attack(entity *target,int testonly) {
+ assert(target==&opponent && testonly==1);record("P;");return test->pick;
+}
+static unsigned observed_random(void) {
+ assert(random_at<test->random_count && random_at<4);unsigned v=test->random[random_at++];
+ record("D%u:%d;",v,action_id());return v;
+}
+static float observed_float(float maximum) {
+ assert(float_at<test->float_count && float_at<2);
+ assert(fabsf(maximum-test->floats[float_at][0])<0.00001f);
+ float result=test->floats[float_at++][1];record("R%.3g:%.3g:%d;",maximum,result,action_id());return result;
+}
+#define rand32 observed_random
+#define randf observed_float
+static int observed_probability(entity *target,float minimum,float maximum) {
+ assert(target==&opponent);record("Q%.3g:%.3g;",minimum,maximum);return test->probability;
+}
+#define check_attack_chance observed_probability
+static int observed_count(int type) {assert(type==TYPE_ENEMY);record("N%d;",test->entity_count);return test->entity_count;}
+#define count_ents observed_count
+static u32 observed_recheck(entity *target) {(void)target;assert(!"Unexpected later cooldown route");return 0;}
+#define recheck_nextattack observed_recheck
+int set_idle(entity *ent) {
+ assert(ent==self && self->xdir==0 && self->zdir==0);
+ record("I%d:%u:%d;",action_id(),self->stalltime,self->attacking);
+ if(test->mutate){self->takeaction=changed_action;self->modeldata.aggression=120;}
+ return 1;
+}
+@DISTANCE@
+@CALLER@
+int main(void) {
+ s_anim *animations[MAX_ANIS],attack,target;
+ __typeof__(*target.vulnerable) vulnerability[1];
+ memset(&attack,0,sizeof(attack));attack.numframes=1;
+ memset(&target,0,sizeof(target));target.vulnerable=vulnerability;
+ for(unsigned i=0;i<sizeof(cases)/sizeof(*cases);++i) {
+  active_case=i;test=cases+i;obor_profile_build=test->revision;
+  memset(&subject,0,sizeof(subject));memset(&opponent,0,sizeof(opponent));
+  memset(&weapon_storage,0,sizeof(weapon_storage));
+  memset(animations,0,sizeof(animations));
+  if(test->valid&1)animations[114]=&attack;
+  if(test->valid&8)animations[110]=&attack;
+  if(test->valid&32)animations[ANI_THROWATTACK]=&attack;
+  subject.modeldata.animation=animations;subject.modeldata.animation_capacity=MAX_ANIS;
+  subject.modeldata.type=TYPE_ENEMY;subject.modeldata.aggression=test->aggression;
+  if(test->weapon){subject.weapent=&weapon_storage;weapon_storage.modeldata.subtype=SUBTYPE_PROJECTILE;}
+  subject.modeldata.attackthrottletime=150;subject.destx=test->distance;
+  subject.nextattack=test->nextattack;subject.stalltime=test->stalltime;
+  subject.combotime=test->combotime;subject.combostep[0]=test->combo;
+  subject.xdir=2;subject.zdir=-3;subject.idling=1;subject.takeaction=initial_action;
+  opponent.animation=&target;opponent.animpos=0;vulnerability[0]=test->vulnerable;
+  opponent.drop=test->drop;opponent.attacking=test->attacking;
+  if(test->rising)opponent.takeaction=common_rise;
+  videomodes.hRes=320;videomodes.vRes=240;time=test->clock;
+  used=random_at=float_at=0;observed[0]=0;
+  int result=common_try_normalattack(test->supplied?&opponent:NULL);
+  assert(result==test->result && subject.nextattack==test->out_nextattack);
+  assert(subject.stalltime==test->out_stalltime && action_id()==test->action);
+  assert(subject.xdir==(test->prepared?0:2) && subject.zdir==(test->prepared?0:-3));
+  assert(subject.attacking==(test->prepared?-1:0) && subject.idling==(test->prepared?0:1));
+  assert(subject.modeldata.aggression==test->out_aggression);
+  assert(random_at==test->random_count && float_at==test->float_count && !strcmp(observed,test->trace));
+ }
+ printf("{\"status\":\"PASS\",\"cases\":%u}\n",(unsigned)(sizeof(cases)/sizeof(*cases)));return 0;
+}

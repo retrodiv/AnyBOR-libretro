@@ -1,0 +1,128 @@
+/* Native screen conversion and bounded encoded-sprite copy callers.
+ * SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <stddef.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "openbor.h"
+#undef printf
+#undef assert
+uint32_t obor_profile_build;
+static unsigned case_id;
+static const char *phase;
+static int variant;
+#define assert(c) do{if(!(c)){fprintf(stderr,"Pixel copy mismatch revision=%u phase=%s variant=%d case=%u line=%d\n",obor_profile_build,phase,variant,case_id,__LINE__);abort();}}while(0)
+@FUNCTIONS@
+static const struct {unsigned revision;int span_limit,zero_key32;} profiles[]={@PROFILES@};
+static const struct {int sw,sh,dw,dh,x,y,key,blend,palette;} screen_cases[]={@SCREEN_CASES@};
+static const struct {int length,runs,skip,x,width,zero;} sprite_cases[]={@SPRITE_CASES@};
+static unsigned short pal16[256];
+static unsigned pal32[256];
+static unsigned char pal8[256];
+static unsigned blends;
+static unsigned short blend16(unsigned short source,unsigned short dest){++blends;return source^dest;}
+static unsigned blend32(unsigned source,unsigned dest){++blends;return source^dest;}
+static void screens(unsigned p){
+ phase="screen";
+ for(case_id=0;case_id<sizeof(screen_cases)/sizeof(*screen_cases);++case_id){
+  const int sw=screen_cases[case_id].sw,sh=screen_cases[case_id].sh;
+  const int dw=screen_cases[case_id].dw,dh=screen_cases[case_id].dh;
+  const int x=screen_cases[case_id].x,y=screen_cases[case_id].y;
+  assert(sw>0 && sh>0 && dw>0 && dh>0 && sw<=2048 && dw<=2048 && sh<=4 && dh<=4);
+  s_screen *src=calloc(1,sizeof(*src)+(size_t)sw*sh);
+  s_screen *dst=calloc(1,sizeof(*dst)+(size_t)dw*dh*4);
+  assert(src && dst);src->width=sw;src->height=sh;dst->width=dw;dst->height=dh;
+  for(int yy=0;yy<sh;++yy)for(int xx=0;xx<sw;++xx)src->data[yy*sw+xx]=(unsigned char)(xx+13*yy);
+  int left=x>0?x:0,right=x+sw<dw?x+sw:dw;
+  int visible=right>left?right-left:0;
+  int permitted=!profiles[p].span_limit || visible<=profiles[p].span_limit ||
+                screen_cases[case_id].key || screen_cases[case_id].blend;
+  for(int bits=16;bits<=32;bits+=16){
+   variant=bits;
+   memset(dst->data,0x55,(size_t)dw*dh*4);blends=0;
+   src->palette=screen_cases[case_id].palette==2?NULL:
+                 bits==16?(unsigned char*)pal16:(unsigned char*)pal32;
+   if(bits==16)putscreenx8p16(dst,src,x,y,screen_cases[case_id].key,
+       screen_cases[case_id].palette==1?pal16:NULL,screen_cases[case_id].blend?blend16:NULL);
+   else putscreenx8p32(dst,src,x,y,screen_cases[case_id].key,
+       screen_cases[case_id].palette==1?pal32:NULL,screen_cases[case_id].blend?blend32:NULL);
+   unsigned expected_calls=0;
+   for(int yy=0;yy<dh;++yy)for(int xx=0;xx<dw;++xx){
+    int sx=xx-x,sy=yy-y;unsigned expected=bits==16?0x5555u:0x55555555u;
+    if(sx>=0 && sx<sw && sy>=0 && sy<sh && permitted && screen_cases[case_id].palette!=2){
+     unsigned index=(unsigned char)(sx+13*sy);
+     int keep=bits==32 && screen_cases[case_id].blend && profiles[p].zero_key32?index==0:index!=0;
+     if(!screen_cases[case_id].key || keep){
+      unsigned value=bits==16?pal16[index]:pal32[index];
+      if(screen_cases[case_id].blend){expected^=value;++expected_calls;}else expected=value;
+     }
+    }
+    unsigned actual=bits==16?((unsigned short*)dst->data)[yy*dw+xx]:((unsigned*)dst->data)[yy*dw+xx];
+    assert(actual==expected);
+   }
+   assert(blends==expected_calls);
+  }
+  free(src);free(dst);
+ }
+}
+static void sprites(void){
+ phase="sprite";
+ for(case_id=0;case_id<sizeof(sprite_cases)/sizeof(*sprite_cases);++case_id){
+  int length=sprite_cases[case_id].length,runs=sprite_cases[case_id].runs;
+  int skip=sprite_cases[case_id].skip,width=sprite_cases[case_id].width,x=sprite_cases[case_id].x;
+  assert(length>=0 && length<=255 && runs>0 && runs<=2 && skip>=0 && skip<255 && width>0 && width<=1024);
+  union {int words[1024];unsigned char bytes[4096];} packet;
+  memset(&packet,0,sizeof(packet));int *lines=packet.words;size_t used=sizeof(int)*2;
+  for(int yy=0;yy<2;++yy){
+   lines[yy]=(int)(used-sizeof(int)*yy);
+   if(sprite_cases[case_id].zero){packet.bytes[used++]=0;packet.bytes[used++]=0;}
+   for(int n=0;n<runs;++n){
+    packet.bytes[used++]=(unsigned char)skip;packet.bytes[used++]=(unsigned char)length;
+    for(int q=0;q<length;++q)packet.bytes[used++]=(unsigned char)(q+n*13+yy*5);
+   }
+   packet.bytes[used++]=255;
+  }
+  assert(used<=sizeof(packet));
+  for(int mode=0;mode<7;++mode){
+   variant=mode;
+   unsigned char out8[2048];unsigned short out16[2048];unsigned out32[2048],expected[2048];
+   memset(out8,0x55,sizeof(out8));memset(out16,0x55,sizeof(out16));memset(out32,0x55,sizeof(out32));
+   unsigned initial=mode<=2?0x55u:mode<=4?0x5555u:0x55555555u;
+   for(int i=0;i<width*2;++i)expected[i]=initial;
+   int flipped=mode==0 || mode==2 || mode==4 || mode==6;
+   for(int yy=0;yy<2;++yy){
+    int position=0;
+    for(int n=0;n<runs;++n){
+     position+=skip;
+     for(int q=0;q<length;++q){
+      int dx=flipped?x-1-position-q:x+position+q;
+      unsigned index=(unsigned char)(q+n*13+yy*5);
+      if(dx>=0 && dx<width)expected[yy*width+dx]=mode==0?index:mode<=2?pal8[index]:mode<=4?pal16[index]:pal32[index];
+     }
+     position+=length;
+    }
+   }
+   switch(mode){
+    case 0:sprite8_flip(out8,x,lines,2,width);break;
+    case 1:sprite8_remap(out8,x,lines,2,width,pal8);break;
+    case 2:sprite8_remap_flip(out8,x,lines,2,width,pal8);break;
+    case 3:sprite16_copy(out16,x,lines,pal16,2,width);break;
+    case 4:sprite16_flip(out16,x,lines,pal16,2,width);break;
+    case 5:sprite32_copy(out32,x,lines,pal32,2,width);break;
+    case 6:sprite32_flip(out32,x,lines,pal32,2,width);break;
+   }
+   for(int i=0;i<width*2;++i){unsigned actual=mode<=2?out8[i]:mode<=4?out16[i]:out32[i];assert(actual==expected[i]);}
+  }
+ }
+}
+int main(void){
+ for(unsigned i=0;i<256;++i){pal8[i]=(unsigned char)(255-i);pal16[i]=(unsigned short)(0x1000+i*3);pal32[i]=0x01000000u+i*0x010101u;}
+ for(unsigned p=0;p<sizeof(profiles)/sizeof(*profiles);++p){
+  obor_profile_build=profiles[p].revision;screens(p);sprites();
+  printf("{\"revision\":%u,\"screen_cases\":%u,\"sprite_cases\":%u}\n",obor_profile_build,
+     (unsigned)(sizeof(screen_cases)/sizeof(*screen_cases))*2u,(unsigned)(sizeof(sprite_cases)/sizeof(*sprite_cases))*7u);
+ }
+ return 0;
+}

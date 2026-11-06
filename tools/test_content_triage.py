@@ -160,8 +160,10 @@ class ContentTriageTests(unittest.TestCase):
 
     def test_official_automatic_build_coverage(self):
         for tag, expected in (('3401',3406),('3406',3406),('3407',3411),('3411',3411),
-                              ('3449',3449),('3450',3454),('3482',3482),('3483',3666),
-                              ('3665',3666),('3666',3666),
+                              ('3449',3449),('3450',3454),('3482',3482),('3483',3500),
+                              ('3500',3500),('3501',3509),('3509',3509),('3555',3557),
+                              ('3608',3608),('3609',3609),('3612',3614),
+                              ('3664',3664),('3665',3665),('3666',3666),
                               ('3668',3669),('3740',3740),('3741',3741),
                               ('3742',3742),('3742-3742',3769),('3743',3769),
                               ('3761',3761),('3762',3769),('3769',3769),
@@ -174,6 +176,54 @@ class ContentTriageTests(unittest.TestCase):
                               ('4454',6330),('6000',6330),('6330',6330),
                               ('6331',6391),('6393',6391),('6411',6391)):
             self.assertEqual(self.select(tag)[0], expected)
+
+    def test_early_api_requirements_match_each_own_source(self):
+        fixture = load_contract_fixture(Path(__file__).parent / 'fixtures' /
+                                        'profile-early-content-contracts.json')
+        rules = subprocess.check_output([str(self.host), '--rules'], text=True, timeout=8)
+        ids = {(int(parts[1]), parts[2]): parts[0]
+               for parts in (line.split() for line in rules.splitlines())}
+        for row in fixture['sources']:
+            self.assertRegex(row['commit'], r'^[0-9a-f]{40}$')
+            self.assertEqual(len(row['supported']), len(fixture['rules']))
+            for rule, expected in zip(fixture['rules'], row['supported']):
+                actual = subprocess.check_output([str(self.host), '--rule-probe',
+                    ids[(rule['kind'], rule['name'])], str(row['revision']), row['engine']],
+                    text=True, timeout=8)
+                self.assertEqual(bool(int(actual)), expected, (row['revision'], rule))
+        for row in fixture['controls']:
+            actual = subprocess.check_output([str(self.host), '--rule-probe',
+                ids[(row['kind'], row['name'])], str(row['revision']), row['engine']],
+                text=True, timeout=8)
+            self.assertEqual(bool(int(actual)), row['supported'], row)
+
+    def test_sprite_offset_requirements_distinguish_reads_and_writes(self):
+        for name in ('offsetx', 'offsety'):
+            profile, log = self.script('3500-3665',
+                'void main(){getentityproperty(self,"spritea","' + name + '",0,0);}')
+            self.assertEqual(profile, 3608, log)
+            self.assertIn('name=' + name + ' bounds=3350-', log)
+            self.assertEqual(self.script('3500-3665',
+                'void main(){changeentityproperty(self,"spritea","' + name + '",0,0,1);}')[0], 3608)
+            for source in (
+                    'void main(){log("getentityproperty(self,spritea,' + name + ')");}',
+                    'void main(){getentityproperty(self,"spritea","' + name + '"+suffix);}',
+                    'void getentityproperty(int a,int b,int c){} void main(){getentityproperty(0,"spritea","' + name + '");}'):
+                self.assertEqual(self.script('3500-3665', source)[0], 3665, source)
+
+    def test_early_graphics_calls_need_literal_syntax_and_keep_exact_profiles(self):
+        calls = ('changedrawmethod(self,"xrepeat",2);', 'openborvariant("viewportx");',
+                 'getpixel(screen,0,0,0);', 'zoom(0,0,320,240,1);')
+        for call in calls:
+            profile, log = self.script('3500', 'void main(){' + call + '}')
+            self.assertEqual(profile, 3500, log)
+            self.assertNotIn('filename exact triage', log)
+        for source in ('void main(){log("openborvariant(viewportx)");}',
+                       'void main(){openborvariant("viewportx"+suffix);}',
+                       'void main(){changedrawmethod(self,"xrepeat"+suffix,2);}'):
+            _, log = self.script('3500-3665', source)
+            self.assertNotIn('name=viewportx bounds=', log)
+            self.assertNotIn('name=xrepeat bounds=', log)
 
     def test_pain_time_aiflag_contract_matches_each_early_source(self):
         fixture = load_contract_fixture(Path(__file__).parent / 'fixtures' /
@@ -317,11 +367,14 @@ class ContentTriageTests(unittest.TestCase):
         names=[row.split()[2] for row in rules]
         self.assertEqual(names,sorted(names))
         for row in rules:
-            ident,kind,name,lower,upper,flags=row.split()
-            kind,lower,upper,flags=map(int,(kind,lower,upper,flags))
-            for build in {max(1,lower-1),lower,min(99999,upper),min(99999,upper+1),4453,7086,7123,7142}:
+            ident,kind,name,lower,upper,flags,gap_lower,gap_upper=row.split()
+            kind,lower,upper,flags,gap_lower,gap_upper=map(int,(kind,lower,upper,flags,gap_lower,gap_upper))
+            controls={max(1,lower-1),lower,min(99999,upper),min(99999,upper+1),4453,7086,7123,7142}
+            if gap_lower: controls.update((gap_lower-1,gap_lower,gap_upper,gap_upper+1))
+            for build in controls:
                 for engine in {build,7142}:
-                    expected=(lower<=build<=upper and not(flags&1 and build==4453))
+                    expected=(lower<=build<=upper and not(flags&1 and build==4453) and
+                              not(gap_lower and gap_lower<=build<=gap_upper))
                     if flags&2 and engine==7142 and build in (7086,7123):expected=True
                     actual=subprocess.check_output([str(self.host),'--rule-probe',ident,str(build),str(engine)],
                                                    text=True,timeout=8)
@@ -334,6 +387,9 @@ class ContentTriageTests(unittest.TestCase):
             elif kind==6: source='void main(){openborvariant("'+name+'");}'
             elif kind==7: source='void main(){getentityproperty(self,"aiflag","'+name+'");}'
             elif kind==10: source='void main(){getentityproperty(self,"'+name+'");}'
+            elif kind==11: source='void main(){changedrawmethod(self,"'+name+'",0);}'
+            elif kind==12: source='void main(){getentityproperty(self,"spritea","'+name+'",0,0);}'
+            elif kind==13: source='void main(){changeentityproperty(self,"spritea","'+name+'",0,0,0);}'
             else: source=None
             if source is not None:
                 _,log=self.script('1000-99999',source)

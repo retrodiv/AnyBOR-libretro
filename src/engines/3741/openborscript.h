@@ -234,6 +234,7 @@ HRESULT openbor_compilescript(ScriptVariant** varlist , ScriptVariant** pretvar,
 HRESULT openbor_executescript(ScriptVariant** varlist , ScriptVariant** pretvar, int paramCount);
 
 void mapstrings_systemvariant(ScriptVariant** varlist, int paramCount);
+void mapstrings_changesystemvariant(ScriptVariant** varlist, int paramCount);
 void mapstrings_getentityproperty(ScriptVariant** varlist, int paramCount);
 void mapstrings_changeentityproperty(ScriptVariant** varlist, int paramCount);
 void mapstrings_playerproperty(ScriptVariant** varlist, int paramCount);
@@ -255,6 +256,7 @@ enum systemvariant_enum
 _sv_background,
 _sv_blockade,
 _sv_branchname,
+_sv_canvas,
 _sv_count_enemies,
 _sv_count_entities,
 _sv_count_npcs,
@@ -343,5 +345,8 @@ _sv_xpos,
 _sv_ypos,
 _sv_the_end,
  };
+
+HRESULT openbor_zoom(ScriptVariant **, ScriptVariant **, int);
+HRESULT openbor_getpixel(ScriptVariant **, ScriptVariant **, int);
 
 #endif

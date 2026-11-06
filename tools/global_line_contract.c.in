@@ -1,0 +1,105 @@
+/* Native global line readers; archive, colour and model services are observers.
+ * SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <assert.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <strings.h>
+#include <stdarg.h>
+#include "openbor.h"
+_Static_assert(MAX_IDLES==1 && MAX_WALKS==1 && BLEND_MULTIPLY==1,
+               "Global line oracle constants differ");
+#undef printf
+#undef assert
+uint32_t obor_profile_build;
+HRESULT Interpreter_Call(Interpreter *p) {(void)p;abort();}
+HRESULT Interpreter_EvalInstruction(Interpreter *p) {(void)p;abort();}
+@LOWERCASE@
+#include @LIST_C@
+#include @COMMANDS_C@
+#undef assert
+#define assert(c) do {if(!(c))abort();}while(0)
+@NEWLINE@
+static char diagnostic[4096];
+static unsigned diagnostic_size;
+static int warning(const char *format,...) {
+ va_list args;va_start(args,format);
+ int count=vsnprintf(diagnostic+diagnostic_size,sizeof(diagnostic)-diagnostic_size,format,args);
+ va_end(args);
+ if(count<0 || (unsigned)count>=sizeof(diagnostic)-diagnostic_size)abort();
+ diagnostic_size+=(unsigned)count;return count;
+}
+#define printf warning
+@PARSERS@
+@MACROS@
+static int color_black,color_red,color_orange,color_yellow,color_white,color_blue,color_green;
+static int color_pink,color_purple,color_magic,color_magic2,shadowcolor,shadowalpha,colorbars;
+int max_script_vars,max_entity_vars,max_indexed_vars,max_global_vars;
+static int keyscriptrate,alwaysupdate;
+static int max_idles,max_walks,max_ups,max_downs,max_backwalks,max_attack_types,max_freespecials;
+static int max_follows,max_attacks,combodelay,colourselect,spdirection[4],autoland,nolost,ajspecial;
+static int nocost,forcecheatsoff,nodropen,nodropspawn,noaircancel,nomaxrushreset[5],mpblock,blockratio;
+static int nochipdeath,lifescore,credscore,versusdamage;
+static float default_model_dropv[3],default_model_jumpspeed,default_model_jumpheight,default_model_grabdistance;
+static float move_noatk_factor,group_noatk_factor,agg_noatk_factor,min_noatk_chance,max_noatk_chance;
+static float offscreen_noatk_factor,noatk_duration;
+s_savedata savedata;
+static List *modelstxtcmdlist;
+static const char *input;
+static int present;
+static char service[2048];static unsigned service_size;
+static void observe(const char *kind,const char *a,const char *b,long value){
+ int count=snprintf(service+service_size,sizeof(service)-service_size,"%s:%s:%s:%ld;",kind,a,b,value);
+ if(count<0 || (unsigned)count>=sizeof(service)-service_size)abort();
+ service_size+=(unsigned)count;
+}
+int music(char *name,int loop,long offset){observe("music",name,"",offset);assert(loop==1);return 1;}
+void cache_model(char *name,char *path,int flag){observe("cache",name,path,flag);}
+int _makecolour(int r,int g,int b){return r*65536+g*256+b;}
+int buffer_pakfile(char *name,char **buffer,size_t *length){
+ assert(strcmp(name,"data/lifebar.txt")==0 || strcmp(name,"data/script.txt")==0);
+ if(!present)return 0;
+ *length=strlen(input);*buffer=malloc(*length+1);if(!*buffer)abort();
+ memcpy(*buffer,input,*length+1);return 1;
+}
+@LIFEBAR@
+@SCRIPT@
+static void model_lines(void){
+ char *buf=malloc(strlen(input)+1);if(!buf)abort();strcpy(buf,input);
+ size_t size=strlen(buf);ptrdiff_t pos=0;int line=0,modelLoadCount=0;
+ char *command,*filename="data/models.txt";
+ ArgList arglist;char argbuf[MAX_ARG_LEN+1]="";modelstxtCommands cmd;
+ @MODELS@
+ (void)modelLoadCount;
+ free(buf);
+}
+#undef printf
+static void hex(const char *s){for(const unsigned char *p=(const unsigned char*)s;*p;++p)printf("%02x",*p);}
+static const unsigned profiles[]={@PROFILES@};
+static const struct {int reader,present;const char *text;} cases[]={@CASES@};
+int main(void){
+ for(unsigned p=0;p<sizeof(profiles)/sizeof(*profiles);++p){
+  obor_profile_build=profiles[p];modelstxtcmdlist=createModelstxtCommandList();
+  for(unsigned c=0;c<sizeof(cases)/sizeof(*cases);++c){
+   input=cases[c].text;present=cases[c].present;diagnostic[0]=service[0]=0;
+   diagnostic_size=service_size=0;max_idles=max_walks=1;combodelay=17;
+   color_black=color_red=color_orange=color_yellow=color_white=color_blue=color_green=17;
+   color_pink=color_purple=color_magic=color_magic2=shadowcolor=shadowalpha=colorbars=17;
+   max_script_vars=max_entity_vars=max_indexed_vars=max_global_vars=17;
+   keyscriptrate=alwaysupdate=17;
+   int result=1;
+   if(cases[c].reader==0)model_lines();
+   else if(cases[c].reader==1)lifebar_colors();
+   else result=load_script_setting();
+   printf("{\"revision\":%u,\"case\":%u,\"values\":[%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d],\"diagnostic_hex\":\"",
+    obor_profile_build,c,result,max_idles,max_walks,combodelay,color_black,color_white,color_orange,
+    color_red,color_yellow,color_green,color_blue,color_pink,color_purple,color_magic,color_magic2,
+    shadowcolor,shadowalpha,colorbars,max_script_vars,max_entity_vars,max_indexed_vars,max_global_vars,keyscriptrate,alwaysupdate);
+   hex(diagnostic);printf("\",\"services_hex\":\"");hex(service);puts("\"}");
+  }
+  freeCommandList(modelstxtcmdlist);
+ }
+ return 0;
+}

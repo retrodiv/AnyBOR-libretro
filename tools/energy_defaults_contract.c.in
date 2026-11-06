@@ -1,0 +1,78 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <ctype.h>
+#include "openbor.h"
+#include "commands.h"
+#undef printf
+#undef time
+#undef assert
+uint32_t obor_profile_build;
+static s_anim animation, *newanim = &animation;
+static struct { int count; char *args[5]; } arglist;
+static unsigned reads;
+#define CHECK(c,message) do {if(!(c)){fprintf(stderr,"Energy contract mismatch: profile=%u %s\n",obor_profile_build,message);abort();}}while(0)
+#define assert(c) CHECK(c,"native numeric precondition")
+@PARSERS@
+static int argument(unsigned n) {
+    CHECK(n < 5, "argument index");
+    reads |= 1u << n;
+    return getValidInt(arglist.count > (int)n ? arglist.args[n] : "", "fixture", "energycost");
+}
+#undef GET_INT_ARG
+#define GET_INT_ARG(n) argument(n)
+static void initialize(void) {
+    memset(newanim, 0, sizeof(*newanim));
+@DEFAULT@
+}
+static void command(int value) {
+    switch(value) {
+@COMMAND@
+    default: CHECK(0, "command dispatch");
+    }
+}
+static int signed_value(int input, unsigned bits) {
+    unsigned range = 1u << bits, raw = (unsigned)input & (range - 1);
+    return raw < range / 2 ? (int)raw : (int)raw - (int)range;
+}
+int main(void) {
+    static const struct {unsigned revision; int default_value, guarded; unsigned width;} profiles[] = {
+@PROFILES@
+    };
+    static const int values[] = {@VALUES@};
+    static const int commands[] = {CMD_MODEL_ENERGYCOST, CMD_MODEL_MPCOST};
+    char number[32];
+    arglist.args[0] = "energycost";
+    arglist.args[1] = "17";
+    arglist.args[2] = "-1";
+    arglist.args[3] = number;
+    arglist.args[4] = "99";
+    for(unsigned p = 0; p < sizeof(profiles)/sizeof(*profiles); ++p) {
+        unsigned cases = 1;
+        obor_profile_build = profiles[p].revision;
+        initialize();
+        CHECK(newanim->energycost.disable == profiles[p].default_value, "initial disable");
+        for(unsigned c = 0; c < sizeof(commands)/sizeof(*commands); ++c)
+            for(int count = 1; count <= 5; ++count)
+                for(unsigned v = 0; v < sizeof(values)/sizeof(*values); ++v) {
+                    snprintf(number, sizeof(number), "%d", values[v]);
+                    initialize(); reads = 0; arglist.count = count;
+                    command(commands[c]);
+                    int writes_disable = !profiles[p].guarded || count >= 3;
+                    int expected = writes_disable ?
+                        (count > 3 ? signed_value(values[v], profiles[p].width) : 0) :
+                        profiles[p].default_value;
+                    CHECK(newanim->energycost.disable == expected, "command disable");
+                    CHECK(newanim->energycost.cost == (count > 1 ? 17 : 0), "command cost");
+                    CHECK(newanim->energycost.mponly == (count > 2 ? -1 : 0), "command mponly");
+                    CHECK(reads == (6u | (writes_disable ? 8u : 0u)), "argument reads");
+                    ++cases;
+                }
+        printf("{\"revision\":%u,\"cases\":%u}\n", obor_profile_build, cases);
+    }
+    return 0;
+}

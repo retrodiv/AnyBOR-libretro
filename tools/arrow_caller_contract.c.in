@@ -1,0 +1,108 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <assert.h>
+#include <limits.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "openbor.h"
+#undef assert
+#undef printf
+#ifdef NDEBUG
+#error Arrow caller assertions must remain enabled
+#endif
+uint32_t obor_profile_build;
+static unsigned active_case;
+#define assert(c) do {if(!(c)){fprintf(stderr,"ARROW_CALLER revision=%u case=%u line=%d\n",obor_profile_build,active_case,__LINE__);abort();}}while(0)
+static entity actor,target;
+entity *self;
+unsigned int time;
+static s_level scene;
+s_level *level;
+static int PLAYER_MAX_Z=232,target_index,wall_present,mutate;
+static float walls[1][8];
+static s_anim animation,*animations[MAX_ANIS];
+static void initial_action(void) {abort();}
+static void callback_action(void) {abort();}
+void common_fall(void) {abort();}
+static int action_id(void (*action)(void)) {
+ if(action==initial_action)return 1;
+ if(action==callback_action)return 2;
+ if(action==common_fall)return 3;
+ abort();
+}
+#define WIDTH 19
+static void snapshot(double *out) {
+ const double fields[]={action_id(actor.takeaction),actor.health,actor.attacking,actor.projectile,
+ actor.xdir,actor.zdir,actor.direction,actor.tossv,actor.a,actor.toss_time,
+ actor.autokill,actor.ptype,actor.nextthink,actor.damage_on_landing,actor.modeldata.no_adjust_base,
+ actor.modeldata.subject_to_wall,actor.modeldata.subject_to_platform,actor.modeldata.subject_to_hole,actor.modeldata.subject_to_gravity};
+ _Static_assert(sizeof(fields)/sizeof(*fields)==WIDTH,"Observer fields bound");
+ _Static_assert(sizeof(actor.health)==4,"Native signed health domain");
+ memcpy(out,fields,sizeof(fields));
+}
+struct event {int kind;double value,fields[WIDTH];};
+static struct event events[8];static unsigned event_count;
+static void observe(int kind,double value) {
+ assert(event_count<8);struct event *out=&events[event_count++];
+ out->kind=kind;out->value=value;snapshot(out->fields);
+}
+entity *homing_find_target(int hostile) {
+ assert(hostile==TYPE_PLAYER);observe(1,target_index);return target_index?&target:NULL;
+}
+static void animation_event(int index) {
+ observe(2,index);
+ if(mutate){actor.takeaction=callback_action;actor.autokill=2;actor.health=40;actor.direction=!actor.direction;}
+}
+int common_up_anim(entity *e) {assert(e==self);animation_event(1);return 1;}
+int common_down_anim(entity *e) {assert(e==self);animation_event(2);return 1;}
+int common_walk_anim(entity *e) {assert(e==self);animation_event(3);return 1;}
+void ent_set_anim(entity *e,int index,int reset) {assert(e==self && index==ANI_IDLE && !reset);animation_event(0);}
+int checkwall(float x,float z) {assert(x==100 && z==150);observe(3,wall_present?0:-1);return wall_present?0:-1;}
+float randf(float maximum) {assert(maximum==1);observe(4,maximum);return 0.25f;}
+@DIFF@
+#define toss native_toss
+@TOSS@
+#undef toss
+void toss(entity *e,float lift) {assert(e==self && lift==2.75f);observe(5,lift);native_toss(e,lift);}
+int set_fall(entity *e,int type,int reset,entity *other,int force,int drop,int noblock,int guardcost,int jugglecost,int pauseadd) {
+ assert(e==self && other==self && type==ATK_NORMAL && !reset && force==100000 && !drop && !noblock && !guardcost && !jugglecost && !pauseadd);observe(6,force);
+ if(mutate){actor.takeaction=callback_action;actor.health=250000;actor.autokill=1;actor.ptype=2;actor.nextthink=55;}
+ return 1;
+}
+@FUNCTION@
+struct arrow_case {int chase,target,direction,noflip,nomove,moving,level,exit_blocked,wall_present,above,available,ptype,autokill,health,mutate;};
+static const struct arrow_case cases[]={@CASES@};
+static const unsigned profiles[]={@PROFILES@};
+static void prepare(const struct arrow_case *c) {
+ memset(&actor,0,sizeof(actor));memset(&target,0,sizeof(target));memset(&scene,0,sizeof(scene));memset(walls,0,sizeof(walls));
+ memset(&animation,0,sizeof(animation));memset(animations,0,sizeof(animations));
+ self=&actor;time=100;actor.takeaction=initial_action;actor.health=c->health;actor.attacking=actor.projectile=1;
+ actor.x=100;actor.z=150;actor.a=c->above?20:6;actor.base=5;actor.direction=c->direction;
+ actor.xdir=actor.zdir=c->moving?1:0;actor.autokill=c->autokill;actor.ptype=c->ptype;actor.nextthink=50;actor.damage_on_landing=7;
+ actor.modeldata.subtype=c->chase?SUBTYPE_CHASE:SUBTYPE_NONE;actor.modeldata.hostile=TYPE_PLAYER;
+ actor.modeldata.speed=2;actor.modeldata.noflip=c->noflip;actor.modeldata.nomove=c->nomove;actor.modeldata.no_adjust_base=1;actor.modeldata.subject_to_wall=1;
+ actor.modeldata.animation=animations;actor.modeldata.animation_capacity=MAX_ANIS;animation.numframes=1;
+ animations[ANI_IDLE]=&animation;animations[ANI_UP]=(c->available&1)?&animation:NULL;animations[ANI_DOWN]=(c->available&2)?&animation:NULL;
+ animations[ANI_WALK]=(c->available&4)?&animation:NULL;animations[ANI_FALL]=(c->available&8)?&animation:NULL;
+ const float positions[5][2]={{100,150},{104,154},{96,146},{100,150},{100,146}};
+ assert(c->target>=0 && c->target<=4);target.x=positions[c->target][0];target.z=positions[c->target][1];
+ level=c->level?&scene:NULL;scene.exit_blocked=c->exit_blocked;scene.width=200;scene.walls=walls;scene.numwalls=1;walls[0][7]=20;
+ target_index=c->target;wall_present=c->wall_present;mutate=c->mutate;event_count=0;
+}
+static void fields_json(const double *v) {
+ putchar('[');for(unsigned i=0;i<WIDTH;++i){if(i)putchar(',');printf("%.17g",v[i]);}putchar(']');
+}
+int main(void) {
+ for(unsigned p=0;p<sizeof(profiles)/sizeof(*profiles);++p){
+  obor_profile_build=profiles[p];
+  for(unsigned k=0;k<sizeof(cases)/sizeof(*cases);++k){
+   active_case=k;prepare(&cases[k]);int result=arrow_move();double final[WIDTH];snapshot(final);
+   printf("{\"revision\":%u,\"case\":%u,\"result\":%d,\"fields\":",obor_profile_build,k,result);fields_json(final);printf(",\"events\":[");
+   for(unsigned i=0;i<event_count;++i){struct event *e=&events[i];if(i)putchar(',');printf("{\"kind\":%d,\"value\":%.17g,\"fields\":",e->kind,e->value);fields_json(e->fields);putchar('}');}
+   puts("]}");
+  }
+ }
+ return 0;
+}

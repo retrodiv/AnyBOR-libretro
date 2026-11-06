@@ -1,0 +1,53 @@
+/* Source-reviewed rise invincibility conversion with native numeric providers.
+ * SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "openbor.h"
+#include "commands.h"
+#undef printf
+#undef assert
+#ifdef NDEBUG
+#error Native model command assertions must remain enabled
+#endif
+uint32_t obor_profile_build;
+static unsigned active_case;
+#define assert(c) do{if(!(c)){fprintf(stderr,"Riseinv contract mismatch revision=%u case=%u line=%d\n",obor_profile_build,active_case,__LINE__);abort();}}while(0)
+static s_model model,*newchar=&model;
+static char *arguments[3];
+static unsigned reads[3];
+static char filename[]="fixture",command[]="riseinv";
+@PARSERS@
+static char *argument(unsigned index){assert(index<3);++reads[index];return arguments[index];}
+#undef GET_ARG
+#define GET_ARG(z) argument(z)
+@MACROS@
+static void load_command(void){switch(CMD_MODEL_RISEINV){
+@COMMAND@
+ default:assert(0);
+}}
+int main(void){
+ const struct {unsigned revision;int floating;} profiles[]={@PROFILES@};
+ const struct {char *text;int integer,floating;} values[]={@VALUES@};
+ const int flags[]={@FLAGS@};
+ char flag[32];
+ for(unsigned p=0;p<sizeof(profiles)/sizeof(*profiles);++p){
+  obor_profile_build=profiles[p].revision;active_case=0;
+  for(unsigned v=0;v<sizeof(values)/sizeof(*values);++v)
+   for(unsigned f=0;f<sizeof(flags)/sizeof(*flags);++f){
+    ++active_case;memset(newchar,0,sizeof(*newchar));memset(reads,0,sizeof(reads));
+    newchar->riseinv=777;newchar->makeinv=999;
+    snprintf(flag,sizeof(flag),"%d",flags[f]);
+    arguments[0]=command;arguments[1]=values[v].text;arguments[2]=flag;
+    load_command();
+    int expected=profiles[p].floating?values[v].floating:values[v].integer;
+    if(flags[f])expected=-expected;
+    assert(newchar->riseinv==expected && newchar->makeinv==999);
+    assert(reads[0]==0 && reads[1]==1 && reads[2]==1);
+   }
+  printf("{\"revision\":%u,\"cases\":%u}\n",obor_profile_build,active_case);
+ }
+ return 0;
+}

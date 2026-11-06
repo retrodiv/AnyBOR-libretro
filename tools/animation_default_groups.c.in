@@ -1,0 +1,54 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <assert.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <strings.h>
+#include "openbor.h"
+#define stricmp strcasecmp
+#define strnicmp strncasecmp
+uint32_t obor_profile_build;
+u32 time;
+int max_animations=MAX_ANIS;
+static int animidles[2]={ANI_IDLE,ANI_IDLE+1},animwalks[2]={ANI_WALK,ANI_WALK+1};
+static int animups[2]={ANI_UP,ANI_UP+1},animdowns[2]={ANI_DOWN,ANI_DOWN+1};
+static int animbackwalks[2]={ANI_BACKWALK,ANI_BACKWALK+1};
+static unsigned active_case;
+static int frame_calls,frame_argument;
+void writeToLogFile(const char *format,...) {(void)format;assert(!"Unexpected animation diagnostic");}
+void update_frame(entity *ent,int frame) {++frame_calls;frame_argument=frame;ent->animpos=frame;}
+@SELECTOR@
+static int parse(char *value,s_anim *newanim) {
+ int tempInt=0,ani_id=-1;
+ @INITIALIZE@
+ @BRANCHES@
+ return ani_id;
+}
+struct group_case {unsigned revision;int available,mode;const char *name;int group;};
+static const struct group_case cases[]={@CASES@};
+int main(void) {
+ for(active_case=0;active_case<sizeof(cases)/sizeof(*cases);++active_case) {
+  const struct group_case *c=cases+active_case;
+  s_anim target={0},previous={0},*table[MAX_ANIS]={0};entity subject={0};
+  obor_profile_build=c->revision;time=100;
+  int id=parse((char*)c->name,&target);
+  assert(id>=0 && id<MAX_ANIS);
+  if(c->available && target.sync!=c->group) {
+   fprintf(stderr,"Animation default mismatch: profile=%u name=%s actual=%d expected=%d\n",
+           c->revision,c->name,target.sync,c->group);return 1;
+  }
+  target.numframes=previous.numframes=4;previous.sync=target.sync;
+  table[id]=&target;subject.modeldata.animation=table;subject.modeldata.animation_capacity=MAX_ANIS;
+  subject.animation=&previous;subject.animpos=2;subject.animnum=ANI_IDLE;subject.nextanim=77;
+  frame_calls=0;frame_argument=-1;
+  ent_set_anim(&subject,id,1);
+  int synchronized=c->available && c->group>=0;
+  int expected_frame=synchronized?2:0;
+  assert(subject.animation==&target && subject.animnum==id && subject.animpos==expected_frame);
+  assert(frame_calls==(synchronized && c->mode==3?0:1));
+  if(frame_calls) assert(frame_argument==expected_frame);
+ }
+ return 0;
+}

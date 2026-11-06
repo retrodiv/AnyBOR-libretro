@@ -1,0 +1,43 @@
+/* Native offscreen guard with observed view and termination callbacks.
+ * SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "openbor.h"
+#undef printf
+#undef assert
+#undef videomodes
+uint32_t obor_profile_build;
+static entity actor;
+entity *self=&actor;
+static s_level level_storage,*level=&level_storage;
+static struct {int hRes,vRes;} fixture_view={320,240};
+#define videomodes fixture_view
+static float advancex=100,advancey=50;
+static int outcome;
+@DEFAULT_DECLARATION@
+#define assert(c) do{if(!(c)){fprintf(stderr,"Offscreen revision=%u line=%d\n",obor_profile_build,__LINE__);abort();}}while(0)
+void player_die(void){assert(!outcome);outcome=1;}
+void kill(entity *ent){assert(ent==self && !outcome);outcome=2;}
+static void bounds(void){
+@DECLARATION@
+@REGION@
+}
+static const unsigned revisions[]={@PROFILES@};
+static const struct {float x,z,a;int player,scroll,offscreen;} cases[]={@CASES@};
+int main(void){
+ for(unsigned p=0;p<sizeof(revisions)/sizeof(*revisions);++p){
+  obor_profile_build=revisions[p];printf("{\"revision\":%u,\"results\":[",obor_profile_build);
+  for(unsigned i=0;i<sizeof(cases)/sizeof(*cases);++i){
+   memset(self,0,sizeof(*self));memset(level,0,sizeof(*level));outcome=0;
+   self->x=cases[i].x;self->z=cases[i].z;self->a=cases[i].a;
+   self->modeldata.type=cases[i].player?TYPE_PLAYER:TYPE_ENEMY;self->modeldata.offscreenkill=cases[i].offscreen;
+   level->scrolldir=cases[i].scroll==1?SCROLL_UP:cases[i].scroll==2?SCROLL_DOWN:SCROLL_RIGHT;
+   bounds();if(i){putchar(',');}printf("%d",outcome);
+  }
+  puts("]}");
+ }
+ return 0;
+}

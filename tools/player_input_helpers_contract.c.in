@@ -1,0 +1,103 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <assert.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "openbor.h"
+#undef assert
+#undef printf
+uint32_t obor_profile_build;
+static unsigned active_case;
+#define assert(c) do {if(!(c)){fprintf(stderr,"PLAYER_INPUT revision=%u case=%u line=%d\n",obor_profile_build,active_case,__LINE__);abort();}}while(0)
+static entity actor;
+entity *self;
+s_player player[MAX_PLAYERS];
+unsigned int time;
+static int ajspecial,autoland,returned,mutate,redirect,preinput_mutates;
+static s_anim nodes[MAX_ANIS],*animations[MAX_ANIS];
+static void initial_action(void){abort();}
+static void callback_action(void){abort();}
+static int action_id(void (*p)(void)){
+ if(p==initial_action)return 0;
+ if(p==callback_action)return 1;
+ if(!p)return 2;
+ abort();
+}
+#define WIDTH 11
+static void snapshot(double *v){
+ const double values[]={player[0].playkeys,player[1].playkeys,player[0].keys,
+ player[1].keys,actor.playerindex,actor.stalltime,actor.inpain,actor.charging,
+ actor.direction,actor.damage_on_landing,action_id(actor.takeaction)};
+ _Static_assert(sizeof(values)/sizeof(*values)==WIDTH,"Input helper observer count");
+ memcpy(v,values,sizeof(values));
+}
+struct event{int kind;double fields[WIDTH];};
+static struct event events[4];static unsigned event_count;
+static void observe(int kind){
+ assert(event_count<4);struct event *e=&events[event_count++];e->kind=kind;snapshot(e->fields);
+}
+static void callback(int enabled){
+ if(enabled){actor.stalltime=73;actor.inpain=1;actor.charging=1;
+  actor.direction=0;actor.takeaction=callback_action;}
+ if(redirect){player[1]=player[0];actor.playerindex=1;}
+}
+int check_special(void){observe(1);callback(mutate);return returned;}
+int set_riseattack(entity *e,int type,int reset){
+ assert(e==self && type==5 && !reset);observe(2);callback(mutate);return 1;
+}
+int player_preinput(void){observe(3);callback(preinput_mutates);return 0;}
+int set_idle(entity *e){assert(e==self);observe(4);callback(mutate);return 1;}
+#pragma GCC diagnostic push
+#pragma GCC diagnostic warning "-Wmisleading-indentation"
+@FUNCTIONS@
+#pragma GCC diagnostic pop
+struct input{int operation,pending,held,alt,block,result,rise,health,age,
+ autoland,mutate,redirect,preinput,charging,direction;};
+static const struct input cases[]={@CASES@};
+static const unsigned profiles[]={@PROFILES@};
+static void prepare(const struct input *c){
+ memset(&actor,0,sizeof(actor));memset(player,0,sizeof(player));
+ memset(nodes,0,sizeof(nodes));memset(animations,0,sizeof(animations));
+ self=&actor;time=100;event_count=0;
+ for(int i=0;i<MAX_ANIS;++i)nodes[i].numframes=4;
+ actor.modeldata.animation=animations;actor.modeldata.animation_capacity=MAX_ANIS;
+ if(c->block)animations[ANI_BLOCK]=&nodes[ANI_BLOCK];
+ if(c->rise){animations[ANI_RISEATTACK]=&nodes[ANI_RISEATTACK];
+  if(c->rise==2)nodes[ANI_RISEATTACK].numframes=0;}
+ actor.health=c->health;actor.staydown.riseattack_stall=100+c->age;
+ actor.stalltime=60;actor.inpain=1;actor.charging=c->charging;
+ actor.direction=c->direction;actor.damage_on_landing=7;actor.damagetype=5;
+ actor.takeaction=initial_action;player[0].playkeys=(unsigned)c->pending;
+ player[0].keys=(unsigned)c->held;player[0].ent=self;
+ ajspecial=c->alt;autoland=c->autoland;returned=c->result;
+ mutate=c->mutate;redirect=c->redirect;preinput_mutates=c->preinput;
+}
+static void array_json(const double *v){
+ putchar('[');for(unsigned i=0;i<WIDTH;++i){if(i)putchar(',');printf("%.17g",v[i]);}putchar(']');
+}
+int main(void){
+ _Static_assert(FLAG_MOVEUP==16 && FLAG_MOVELEFT==4 && FLAG_MOVERIGHT==8 &&
+ FLAG_ATTACK==64 && FLAG_JUMP==128 && FLAG_SPECIAL==256,"Source oracle input bits");
+ for(unsigned p=0;p<sizeof(profiles)/sizeof(*profiles);++p){
+  obor_profile_build=profiles[p];
+  for(unsigned k=0;k<sizeof(cases)/sizeof(*cases);++k){
+   active_case=k;prepare(&cases[k]);int result=0;
+   switch(cases[k].operation){
+    case 0:result=player_check_special();break;
+    case 1:player_pain_check();break;
+    case 2:player_lie_check();break;
+    case 3:player_fall_check();break;
+    case 4:player_charge_check();break;
+    default:abort();
+   }
+   double final[WIDTH];snapshot(final);
+   printf("{\"revision\":%u,\"case\":%u,\"result\":%d,\"fields\":",obor_profile_build,k,result);
+   array_json(final);printf(",\"events\":[");
+   for(unsigned i=0;i<event_count;++i){if(i)putchar(',');printf("{\"kind\":%d,\"fields\":",events[i].kind);array_json(events[i].fields);putchar('}');}
+   puts("]}");
+  }
+ }
+ return 0;
+}

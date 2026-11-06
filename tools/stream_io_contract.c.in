@@ -1,0 +1,241 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <stdint.h>
+#include <stddef.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <stdarg.h>
+#include "openbor.h"
+#include "libretroport.h"
+#include "obor_pak_name.h"
+#undef assert
+#undef printf
+uint32_t obor_profile_build;
+char packfile[OBOR_CONTENT_PATH_MAX];
+s_filestream *filestreams;
+int numfilestreams;
+static s_level stage;
+s_level *level=&stage;
+static int active_case,open_cases,save_cases,active_slot=3,level_owned;
+static s_filestream *active_table;
+static char names[6][320]={"checkpoint","out.txt","old-result","nested/out.txt","nested\\out.txt",{0}};
+static ScriptVariant values[3];
+static FILE *active_file;
+static char active_mode[4],seen_path[512],seen_directory[512],seen_base[16],diagnostic[512];
+static unsigned char saved_bytes[32];
+static size_t saved_length;
+static int open_attempts,close_calls,base_calls,pak_calls,exists_calls,dir_calls,pack_reads,collections,name_reads;
+static int existing,refuse_open,refuse_buffer,pack_success;
+static const unsigned char payload[]={'A','\n',0};
+#define assert(c) do{if(!(c)){fprintf(stderr,"STREAM_IO revision=%u case=%d line=%d\n",obor_profile_build,active_case,__LINE__);abort();}}while(0)
+static void copy_text(char *to,size_t capacity,const char *from){
+ size_t length=strlen(from);assert(length<capacity);memcpy(to,from,length+1);
+}
+static int captured_printf(const char *format,...){
+ va_list ap;va_start(ap,format);int n=vsnprintf(diagnostic,sizeof(diagnostic),format,ap);va_end(ap);
+ assert(n>=0&&(size_t)n<sizeof(diagnostic));return n;
+}
+CHAR *StrCache_Get(int index){assert(index>=0&&index<6);++name_reads;return names[index];}
+void StrCache_Collect(int index){assert(index==2);++collections;}
+int StrCache_Pop(void){abort();}
+@VARIANTS@
+void getBasePath(char *out,char *kind,int create){
+ assert(!create&&(!strcmp(kind,"Saves")||!strcmp(kind,"Saves/")));++base_calls;
+ copy_text(seen_base,sizeof(seen_base),kind);copy_text(out,256,"/saves/");
+}
+void getPakName(char *out,size_t capacity,int which){
+ assert(which==-1);++pak_calls;assert(obor_pak_name(out,capacity,packfile,which));
+}
+int fileExists(char *path){++exists_calls;copy_text(seen_path,sizeof(seen_path),path);return existing;}
+int dirExists(char *path,int create){
+ assert(create==1);++dir_calls;copy_text(seen_directory,sizeof(seen_directory),path);return 1;
+}
+int buffer_pakfile(char *name,char **buffer,size_t *size){
+ volatile uintptr_t buffer_address=(uintptr_t)buffer,size_address=(uintptr_t)size;
+ assert(buffer_address%__alignof__(char*)==0&&size_address%__alignof__(size_t)==0);
+ assert(!strcmp(name,names[0])&&!*buffer);++pack_reads;
+ if(!pack_success)return 0;
+ *buffer=malloc(sizeof(payload)+1);assert(*buffer);memcpy(*buffer,payload,sizeof(payload));
+ (*buffer)[sizeof(payload)]=0;*size=sizeof(payload);return 1;
+}
+static FILE *open_file(const char *path,const char *mode){
+ assert(!active_file&&(!strcmp(mode,"rb")||!strcmp(mode,"wb")));++open_attempts;
+ copy_text(seen_path,sizeof(seen_path),path);copy_text(active_mode,sizeof(active_mode),mode);
+ if(refuse_open)return NULL;
+ active_file=tmpfile();assert(active_file);
+ if(!strcmp(mode,"rb")){assert(fwrite(payload,1,sizeof(payload),active_file)==sizeof(payload));rewind(active_file);}
+ return active_file;
+}
+static int close_file(FILE *file){
+ assert(file&&file==active_file);++close_calls;
+ if(!strcmp(active_mode,"wb")){
+  assert(!fflush(file)&&!fseek(file,0,SEEK_SET));
+  saved_length=fread(saved_bytes,1,sizeof(saved_bytes),file);assert(!ferror(file));
+ }
+ active_file=NULL;return fclose(file);
+}
+static void *allocate_buffer(size_t size){
+ assert(active_file&&!strcmp(active_mode,"rb")&&size==sizeof(payload)+1);
+ if(refuse_buffer){refuse_buffer=0;return NULL;}return malloc(size);
+}
+#define fopen open_file
+#define fclose close_file
+#define malloc allocate_buffer
+#define obor_profile_malloc_named(name,bytes) allocate_buffer(bytes)
+#define printf captured_printf
+@HELPERS@
+@FUNCTIONS@
+#undef printf
+#undef obor_profile_malloc_named
+#undef malloc
+#undef fclose
+#undef fopen
+struct outcome{int status,null_result;char protocol;const char *diagnostic;};
+struct context{unsigned revision;int open_namespace,save_legacy_name,nested_directory,level_owned;struct outcome opening[14],saving[10];};
+static const struct context contexts[]={@CONTEXTS@};
+struct package{const char *path,*legacy,*current;};
+static const struct package packages[]={@PACKAGES@};
+static void initialize_case(int saving){
+ assert(!active_file&&!filestreams&&!numfilestreams);
+ memset(&stage,0,sizeof(stage));level=&stage;
+ filestreams=calloc(50,sizeof(*filestreams));assert(filestreams);numfilestreams=50;
+ active_table=level_owned?stage.obor_legacy_filestreams:filestreams;
+ for(int i=0;i<50;++i){active_table[i].pos=9;active_table[i].size=71;}
+ for(int i=0;i<active_slot;++i){active_table[i].buf=calloc(1,8);assert(active_table[i].buf);strcpy(active_table[i].buf,"keep");active_table[i].obor_capacity=8;}
+ if(saving){active_table[active_slot].buf=calloc(1,16);assert(active_table[active_slot].buf);strcpy(active_table[active_slot].buf,"saved");active_table[active_slot].obor_capacity=16;}
+ memset(values,0,sizeof(values));for(int i=0;i<3;++i)values[i].vt=VT_INTEGER;
+ memset(names[5],'L',300);names[5][300]=0;
+ open_attempts=close_calls=base_calls=pak_calls=exists_calls=dir_calls=pack_reads=collections=name_reads=0;
+ saved_length=0;seen_path[0]=seen_directory[0]=seen_base[0]=diagnostic[0]=0;
+ existing=pack_success=1;refuse_open=refuse_buffer=0;copy_text(packfile,sizeof(packfile),"session.pak");
+}
+static void retire(void){
+ assert(!active_file);
+ for(int i=0;i<active_slot;++i)assert(active_table[i].buf&&!strcmp(active_table[i].buf,"keep")&&active_table[i].pos==9&&active_table[i].size==71);
+ for(int i=0;i<numfilestreams;++i)free(active_table[i].buf);
+ if(level_owned)for(int i=0;i<numfilestreams;++i)assert(!filestreams[i].buf);
+ free(filestreams);filestreams=NULL;numfilestreams=0;active_table=NULL;
+}
+static void initial(ScriptVariant *result,int kind){
+ memset(result,0,sizeof(*result));
+ switch(kind){
+  case 0:result->vt=VT_EMPTY;break;
+  case 1:result->vt=VT_INTEGER;result->lVal=999;break;
+  case 2:result->vt=VT_DECIMAL;result->dblVal=1.25;break;
+  case 3:result->vt=VT_STR;result->strVal=2;break;
+  default:abort();
+ }
+}
+static HRESULT call_native(int saving,int count,ScriptVariant *result,ScriptVariant **out){
+ ScriptVariant **args=count?malloc((size_t)count*sizeof(*args)):NULL;
+ assert(!count||args);for(int i=0;i<count;++i)args[i]=values+i;*out=result;
+ HRESULT status=saving?openbor_savefilestream(args,out,count):openbor_openfilestream(args,out,count);
+ free(args);return status;
+}
+static void check_result(const struct outcome *oracle,HRESULT status,const ScriptVariant *before,
+                         const ScriptVariant *result,ScriptVariant *out,int kind){
+ ScriptVariant expected=*before;
+ switch(oracle->protocol){
+  case 'U':break;
+  case 'I':expected.vt=VT_INTEGER;break;
+  case 'E':expected.vt=VT_EMPTY;expected.ptrVal=NULL;break;
+  case 'M':expected.vt=VT_EMPTY;expected.ptrVal=NULL;expected.lVal=-1;break;
+  case 'N':expected.vt=VT_INTEGER;expected.lVal=-1;break;
+  case 'S':expected.vt=VT_INTEGER;expected.lVal=active_slot;break;
+  default:abort();
+ }
+ assert(status==oracle->status&&(oracle->null_result?!out:out==result));
+ assert(expected.vt==result->vt&&!strcmp(diagnostic,oracle->diagnostic));
+ /* Observe the declared value; inactive union bytes are not script values. */
+ switch(expected.vt){
+  case VT_INTEGER:assert(result->lVal==expected.lVal);break;
+  case VT_STR:assert(result->strVal==expected.strVal);break;
+  case VT_DECIMAL:assert(result->dblVal==expected.dblVal);break;
+  case VT_EMPTY:if(oracle->protocol=='M')assert(result->lVal==-1);else assert(!result->ptrVal);break;
+  default:abort();
+ }
+ assert(collections==(kind==3&&oracle->protocol!='U'));
+}
+static void open_case(const struct context *c,int which,int kind){
+ initialize_case(0);int count=which==0?0:which==11?1:which==9?3:2;
+ values[0].vt=which==1?VT_INTEGER:VT_STR;values[0].strVal=which==13?5:0;
+ int from_file=(which>=5&&which<=10)||which==12||which==13;
+ values[1].lVal=from_file?1:0;
+ if(which==2)values[1].vt=VT_EMPTY;
+ if(which==10){values[1].vt=VT_DECIMAL;values[1].dblVal=1.75;}
+ if(which==12)values[1].lVal=-1;
+ if(which==4)pack_success=0;
+ if(which==5)existing=0;
+ if(which==6)refuse_open=1;
+ if(which==7)refuse_buffer=1;
+ ScriptVariant result,before,*out;initial(&result,kind);before=result;
+ const struct outcome *oracle=&c->opening[which];
+ HRESULT status=call_native(0,count,&result,&out);check_result(oracle,status,&before,&result,out,kind);
+ assert(name_reads==(which>=2));
+ assert(base_calls==from_file&&pak_calls==(from_file&&c->open_namespace));
+ if(from_file){
+  assert(!strcmp(seen_base,"Saves"));
+  if(which!=13){char path[128];snprintf(path,sizeof(path),"/saves/%s/checkpoint",c->open_namespace?"session":"");assert(!strcmp(seen_path,path));}
+ }
+ assert(exists_calls==(from_file&&which!=13));
+ int opened=from_file&&which!=5&&which!=13;
+ assert(open_attempts==opened&&close_calls==(opened&&which!=6)&&!active_file&&!refuse_buffer);
+ assert(pack_reads==(which==3||which==4||which==11)&&!dir_calls&&!saved_length);
+ if(oracle->protocol=='S'){
+  assert(active_table[active_slot].buf&&!memcmp(active_table[active_slot].buf,payload,sizeof(payload))&&
+         active_table[active_slot].buf[sizeof(payload)]==0&&active_table[active_slot].pos==0&&
+         active_table[active_slot].size==(from_file?71:sizeof(payload))&&active_table[active_slot].obor_capacity==sizeof(payload)+1);
+ }else assert(!active_table[active_slot].buf&&active_table[active_slot].pos==9&&active_table[active_slot].size==71&&!active_table[active_slot].obor_capacity);
+ retire();++open_cases;++active_case;
+}
+static void save_case(const struct context *c,int which,int kind,const struct package *package){
+ initialize_case(1);copy_text(packfile,sizeof(packfile),package->path);
+ int count=which==0?0:which==7?1:which==6?3:2;
+ values[0].lVal=3;values[1].vt=VT_STR;values[1].strVal=which==5?3:which==8?4:which==9?5:1;
+ if(which==1)values[0].vt=VT_EMPTY;
+ if(which==2)values[1].vt=VT_INTEGER;
+ if(which==3)refuse_open=1;
+ ScriptVariant result,before,*out;initial(&result,kind);before=result;
+ const struct outcome *oracle=&c->saving[which];
+ HRESULT status=call_native(1,count,&result,&out);check_result(oracle,status,&before,&result,out,kind);
+ int routed=which>=3&&which!=7;
+ assert(base_calls==routed&&pak_calls==(routed&&!c->save_legacy_name)&&!exists_calls&&!pack_reads);
+ assert(name_reads==routed);
+ const char *name=c->save_legacy_name?package->legacy:package->current;
+ if(routed){
+  assert(!strcmp(seen_base,c->save_legacy_name?"Saves/":"Saves"));
+  char directory[256],path[256];snprintf(directory,sizeof(directory),"/saves/%s",name);
+  if(which==9){
+   assert(!open_attempts&&!close_calls&&dir_calls==!c->nested_directory);
+   if(dir_calls)assert(!strcmp(seen_directory,directory));
+  }else{
+   const char *filename=which==5?"nested/out.txt":which==8?(c->nested_directory?"nested/out.txt":"nested\\out.txt"):"out.txt";
+   int n=snprintf(path,sizeof(path),"/saves/%s/%s",name,filename);assert(n>0&&(size_t)n<sizeof(path));
+   assert(!strcmp(seen_path,path));
+   if(c->nested_directory&&(which==5||which==8))strcat(directory,"/nested");
+   assert(dir_calls==1&&!strcmp(seen_directory,directory)&&open_attempts==1&&close_calls==(which!=3));
+  }
+ }else assert(!open_attempts&&!close_calls&&!dir_calls);
+ if(which==4||which==5||which==6||which==8)
+  assert(saved_length==7&&!memcmp(saved_bytes,"saved\r\n",7));
+ else assert(!saved_length);
+ assert(active_table[3].buf&&!strcmp(active_table[3].buf,"saved")&&active_table[3].pos==9&&active_table[3].size==71&&active_table[3].obor_capacity==16);
+ retire();++save_cases;++active_case;
+}
+int main(void){
+ assert(sizeof(packages)/sizeof(*packages)==3);
+ fprintf(stderr,"STREAM_LAYOUT record=%zu align=%zu buffer_offset=%zu size_offset=%zu pointer_align=%zu\n",
+         sizeof(s_filestream),(size_t)__alignof__(s_filestream),offsetof(s_filestream,buf),
+         offsetof(s_filestream,size),(size_t)__alignof__(void*));
+ for(unsigned p=0;p<sizeof(contexts)/sizeof(*contexts);++p){
+  const struct context *c=contexts+p;obor_profile_build=c->revision;level_owned=c->level_owned;active_case=open_cases=save_cases=0;active_slot=3;
+  for(int which=0;which<14;++which)for(int kind=0;kind<4;++kind)open_case(c,which,kind);
+  active_slot=0;open_case(c,3,0);active_slot=3;
+  for(unsigned pack=0;pack<sizeof(packages)/sizeof(*packages);++pack)
+   for(int which=0;which<10;++which)for(int kind=0;kind<4;++kind)save_case(c,which,kind,packages+pack);
+  assert(open_cases==57&&save_cases==120);
+  fprintf(stdout,"{\"revision\":%u,\"open_cases\":%d,\"save_cases\":%d}\n",obor_profile_build,open_cases,save_cases);
+ }
+ return 0;
+}

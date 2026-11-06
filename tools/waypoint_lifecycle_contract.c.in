@@ -1,0 +1,61 @@
+/* Native entity waypoint ownership at destruction and reuse.
+ * SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "openbor.h"
+#undef printf
+#undef assert
+uint32_t obor_profile_build;
+static unsigned clears,script_frees,waypoint_frees,variant_clears,owner_releases;
+static void *owned_waypoints;
+static s_scripts *owned_scripts;
+int max_entity_vars=2;
+#define assert(c) do{if(!(c)){fprintf(stderr,"Waypoint lifecycle revision=%u line=%d\n",obor_profile_build,__LINE__);abort();}}while(0)
+void clear_all_scripts(s_scripts *scripts,int method){
+ assert(scripts==owned_scripts && (method==1 || method==2));++clears;
+}
+void free_all_scripts(s_scripts **scripts){
+ assert(clears==1 && *scripts==owned_scripts);free(*scripts);*scripts=NULL;++script_frees;
+}
+void ScriptVariant_Clear(ScriptVariant *value){assert(value->vt==VT_EMPTY);++variant_clears;}
+static void obor_colourmap_owner_release(s_model *model){assert(!model->maps_loaded);++owner_releases;}
+static void observed_free(void *data){
+ if(data==owned_waypoints && data){assert(clears==1 && !waypoint_frees);++waypoint_frees;owned_waypoints=NULL;}
+ free(data);
+}
+#define free observed_free
+@FREE_ENT@
+static void recycle(entity *e){s_scripts *scripts;
+@RECYCLE@
+ assert(scripts==owned_scripts && !e->waypoints && !e->numwaypoints);
+}
+#undef free
+static const unsigned revisions[]={@PROFILES@};
+static entity *create(int has_waypoints){
+ entity *e=calloc(1,sizeof(*e));assert(e);
+ owned_scripts=e->scripts=calloc(1,sizeof(*e->scripts));assert(owned_scripts);
+ e->entvars=calloc((size_t)max_entity_vars,sizeof(*e->entvars));assert(e->entvars);
+ if(has_waypoints){e->waypoints=calloc(3,sizeof(*e->waypoints));assert(e->waypoints);e->numwaypoints=3;}
+ owned_waypoints=e->waypoints;return e;
+}
+int main(void){
+ for(unsigned p=0;p<sizeof(revisions)/sizeof(*revisions);++p){
+  obor_profile_build=revisions[p];
+  for(int has_waypoints=0;has_waypoints<=1;++has_waypoints){
+   clears=script_frees=waypoint_frees=variant_clears=owner_releases=0;
+   free_ent(NULL);assert(!clears && !owner_releases);
+   entity *e=create(has_waypoints);free_ent(e);
+   assert(clears==1 && script_frees==1 && waypoint_frees==(unsigned)has_waypoints && variant_clears==2 && owner_releases==1);
+   clears=script_frees=waypoint_frees=variant_clears=owner_releases=0;
+   e=create(has_waypoints);s_scripts *scripts=e->scripts;ScriptVariant *vars=e->entvars;
+   recycle(e);
+   assert(clears==1 && !script_frees && waypoint_frees==(unsigned)has_waypoints && !variant_clears && owner_releases==1);
+   free(scripts);free(vars);free(e);owned_scripts=NULL;
+  }
+  printf("{\"revision\":%u,\"null_free_safe\":true,\"destroy_releases_owned_waypoints\":true,\"recycle_releases_before_clear\":true}\n",obor_profile_build);
+ }
+ return 0;
+}

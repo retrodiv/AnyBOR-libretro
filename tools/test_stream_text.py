@@ -4,8 +4,8 @@ SPDX-License-Identifier: BSD-3-Clause
 Copyright (c) 2026 retrodiv <retrodiv@proton.me>
 """
 import json
-from contract_fixtures import load_contract_fixture
-from historical_filestreams import extract_storage_helpers
+from contract_fixtures import load_contract_fixture, contract_group, contract_profiles
+from historical_filestreams import single_active_table_provider, extract_storage_helpers
 import os
 from pathlib import Path
 import shlex
@@ -44,7 +44,7 @@ class StreamTextTests(unittest.TestCase):
             save_errors=options.pop('save_errors',False)
             root=SOURCE/'src/engines'/engine
             script=(root/'openborscript.c').read_bytes().decode('utf-8','surrogateescape')
-            helpers=extract_storage_helpers(script,function)
+            helpers=extract_storage_helpers(script,function,level_table_provider=single_active_table_provider())
             if argument_mode:
                 options['argument_reader']=function(script,'openbor_getfilestreamargument')
                 options['argument_parser']=function((root/'openbor.c').read_text(),'findarg')
@@ -91,15 +91,19 @@ class StreamTextTests(unittest.TestCase):
             self.assertRegex(row['source_commit'],r'^[0-9a-f]{40}$')
             self.assertEqual(set(row['callbacks']),set(PARTS))
             for digest in row['callbacks'].values():self.assertRegex(digest,r'^[0-9a-f]{64}$')
+        revisions={row['revision'] for row in self.rows}
+        for profile in contract_profiles(self.fixture,self.pin['profiles']):
+            if profile['engine'] in self.fixture.get('source_profile_engines',[]):
+                self.assertIn(int(profile.get('revision',profile['build'])),revisions)
 
 
 
 class StreamArgumentTests(StreamTextTests):
     fixture_path=Path(__file__).parent/'fixtures/stream-argument-contracts.json'
 
-    @staticmethod
-    def group(engine,revision):
-        return engine+('-prefix'if revision<3831 else'-whole')
+    def group(self,engine,revision):
+        return contract_group(self.fixture,engine,revision,
+            default=engine+('-prefix'if revision<3831 else'-whole'))
 
     def test_every_own_source_context_keeps_native_valid_results(self):
         for row in self.rows:
@@ -129,6 +133,10 @@ class StreamArgumentTests(StreamTextTests):
                  'openbor_filestreamappend','openbor_savefilestream'})
             for digest in row['error_callback_sha256'].values():
                 self.assertRegex(digest,r'^[0-9a-f]{64}$')
+        revisions={row['revision'] for row in self.rows}
+        for profile in contract_profiles(self.fixture,self.pin['profiles']):
+            if profile['engine'] in self.fixture.get('source_profile_engines',[]):
+                self.assertIn(int(profile.get('revision',profile['build'])),revisions)
 
 
 if __name__=='__main__':unittest.main()

@@ -14,7 +14,7 @@ import sys
 import tempfile
 import unittest
 
-from historical_filestreams import extract_storage_helpers, render_create_close
+from historical_filestreams import single_active_table_provider, extract_storage_helpers, render_create_close
 from historical_level_streams import render_level_storage
 from native_sanitizers import sanitizer_environment
 from native_allocation_policy import bind_named_allocation_support
@@ -56,7 +56,7 @@ class HistoricalFilestreamTests(unittest.TestCase):
             header=(engine/'openbor.h').read_text()
             record=re.search(r'(?ms)^typedef struct\s*\{[^{}]*\}\s*s_filestream\s*;',header)
             if record is None:raise ValueError('One complete native stream record required')
-            helpers=extract_storage_helpers(script,function)
+            helpers=extract_storage_helpers(script,function,level_table_provider=single_active_table_provider())
             code=render_create_close(revisions=[row['revision']],record=record[0],
                 create=function(script,'openbor_createfilestream'),
                 close=function(script,'openbor_closefilestream'),physical_fixed=False,
@@ -122,7 +122,7 @@ class LevelOwnedStreamTests(unittest.TestCase):
             script=(root/'openborscript.c').read_text();level=(root/'openbor.c').read_text()
             code=render_level_storage(revisions=row['revisions'],
                 creating=function(script,'openbor_createfilestream'),
-                releasing=function(level,'free_level'),helpers=extract_storage_helpers(script,function),
+                releasing=function(level,'free_level'),helpers=extract_storage_helpers(script,function,level_table_provider=single_active_table_provider()),
                 owned_extent=True,**{k:row[k]for k in ['slots','buffer_bytes','header_includes']})
             source=work/(engine+'.c')
             source.write_text(bind_named_allocation_support(code, root))

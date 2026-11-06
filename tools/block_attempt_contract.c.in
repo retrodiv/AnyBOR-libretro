@@ -1,0 +1,82 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <assert.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "openbor.h"
+#undef assert
+#undef printf
+#ifdef NDEBUG
+#error Block attempt assertions must remain enabled
+#endif
+uint32_t obor_profile_build;
+static unsigned active_case;
+#define assert(c) do {if(!(c)){fprintf(stderr,"BLOCK_ATTEMPT revision=%u case=%u line=%d\n",obor_profile_build,active_case,__LINE__);abort();}}while(0)
+static entity actor,given_target,normal_target,block_target;
+entity *self;
+static s_anim animation,*animations[ANI_BLOCK+1];
+static int random_value,normal_found,block_found,mutate;
+static void initial_action(void) {abort();}
+static void callback_action(void) {abort();}
+void common_block(void) {abort();}
+static int action_id(void (*action)(void)) {
+ if(action==initial_action)return 1;
+ if(action==callback_action)return 2;
+ if(action==common_block)return 3;
+ abort();
+}
+static void snapshot(int out[6]) {
+ const int fields[]={action_id(actor.takeaction),actor.blocking,actor.idling,(int)actor.xdir,(int)actor.zdir,actor.attacking};
+ memcpy(out,fields,sizeof(fields));
+}
+struct event {int kind,value,fields[6];};
+static struct event events[3];static unsigned event_count;
+static void observe(int kind,int value) {
+ assert(event_count<3);struct event *e=&events[event_count++];
+ e->kind=kind;e->value=value;snapshot(e->fields);
+}
+unsigned int rand32(void) {observe(1,random_value);return (unsigned)random_value;}
+entity *normal_find_target(int index,int detect) {
+ assert(index==ANI_BLOCK && !detect);observe(2,normal_found?2:0);return normal_found?&normal_target:NULL;
+}
+entity *block_find_target(int index,int detect) {
+ assert(index==ANI_BLOCK && !detect);observe(3,block_found?3:0);return block_found?&block_target:NULL;
+}
+void ent_set_anim(entity *e,int index,int reset) {
+ assert(e==self && index==ANI_BLOCK && !reset);observe(4,index);
+ if(mutate){e->takeaction=callback_action;e->blocking=4;e->idling=7;e->xdir=9;e->zdir=10;}
+}
+@FUNCTION@
+struct block_case {int passive,random,mask,animation,provided,normal_found,block_found,given_attacking,normal_attacking,block_attacking,mutate;};
+static const struct block_case cases[]={@CASES@};
+static const unsigned profiles[]={@PROFILES@};
+static void prepare(const struct block_case *c) {
+ memset(&actor,0,sizeof(actor));memset(&given_target,0,sizeof(given_target));memset(&normal_target,0,sizeof(normal_target));memset(&block_target,0,sizeof(block_target));
+ memset(animations,0,sizeof(animations));memset(&animation,0,sizeof(animation));
+ self=&actor;actor.takeaction=initial_action;actor.idling=1;actor.xdir=2;actor.zdir=3;
+ actor.modeldata.nopassiveblock=c->passive;actor.modeldata.blockodds=c->mask;
+ actor.modeldata.animation=animations;actor.modeldata.animation_capacity=ANI_BLOCK+1;
+ animation.numframes=1;animations[ANI_BLOCK]=c->animation?&animation:NULL;
+ given_target.attacking=c->given_attacking;normal_target.attacking=c->normal_attacking;block_target.attacking=c->block_attacking;
+ normal_found=c->normal_found;block_found=c->block_found;random_value=c->random;mutate=c->mutate;event_count=0;
+}
+static void fields_json(const int *f) {
+ printf("[%d,%d,%d,%d,%d,%d]",f[0],f[1],f[2],f[3],f[4],f[5]);
+}
+int main(void) {
+ for(unsigned p=0;p<sizeof(profiles)/sizeof(*profiles);++p){
+  obor_profile_build=profiles[p];
+  for(unsigned k=0;k<sizeof(cases)/sizeof(*cases);++k){
+   active_case=k;const struct block_case *c=&cases[k];prepare(c);
+   int result=common_try_block(c->provided?&given_target:NULL),final[6];snapshot(final);
+   printf("{\"revision\":%u,\"case\":%u,\"result\":%d,\"fields\":",obor_profile_build,k,result);fields_json(final);
+   printf(",\"events\":[");
+   for(unsigned i=0;i<event_count;++i){struct event *e=&events[i];if(i)putchar(',');
+    printf("{\"kind\":%d,\"value\":%d,\"fields\":",e->kind,e->value);fields_json(e->fields);putchar('}');}
+   puts("]}");
+  }
+ }
+ return 0;
+}

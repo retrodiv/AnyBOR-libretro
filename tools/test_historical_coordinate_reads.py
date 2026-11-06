@@ -41,6 +41,7 @@ def program(engine,rows):
     first=rows[0]
     code=render_reads(parts,scalar=scalar,components=components,
         visible_components=first['coordinate_components'],revision=first['revision'],
+        bbox_requires_vulnerable=first.get('bbox_requires_vulnerable',True),
         labels=['prepared_source'],check_invalid=True)
     marker='int main(void) {'
     if code.count(marker)!=1:
@@ -63,7 +64,8 @@ class CoordinateReadTests(unittest.TestCase):
         cls.addClassCleanup(temporary.cleanup);cls.work=Path(temporary.name)
         cls.groups={}
         for row in cls.rows:
-            cls.groups.setdefault((row['engine'],row['coordinate_components']),[]).append(row)
+            cls.groups.setdefault((row['engine'],row['coordinate_components'],
+                                   row.get('bbox_requires_vulnerable',True)),[]).append(row)
         cls.executables={}
         for index,(key,rows) in enumerate(cls.groups.items()):
             code=cls.work/('contract-%d.c'%index);executable=code.with_suffix('')
@@ -80,6 +82,8 @@ class CoordinateReadTests(unittest.TestCase):
         self.assertEqual(len(by_revision),len(self.rows))
         self.assertEqual(by_revision[3728]['coordinate_components'],5)
         self.assertEqual(by_revision[3729]['coordinate_components'],6)
+        self.assertIs(by_revision[3587]['bbox_requires_vulnerable'],False)
+        self.assertIs(by_revision[3588]['bbox_requires_vulnerable'],True)
         engines={row['engine'] for row in self.rows}
         pin=json.loads((SOURCE/'src/pin.json').read_text())
         for profile in contract_profiles(Path(__file__).parent / 'fixtures/profile-coordinate-read-contracts.json', pin['profiles']):
@@ -88,6 +92,7 @@ class CoordinateReadTests(unittest.TestCase):
                 self.assertEqual(row['engine'],profile['engine'])
         for row in self.rows:
             self.assertRegex(row['commit'],r'^[0-9a-f]{40}$')
+            self.assertIs(type(row.get('bbox_requires_vulnerable',True)),bool)
             for value in row['source_sha256'].values():self.assertRegex(value,r'^[0-9a-f]{64}$')
 
     def test_each_profile_valid_queries_and_defined_prepared_refusals(self):

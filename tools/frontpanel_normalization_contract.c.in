@@ -1,0 +1,41 @@
+/* Native layer switch region with real level and layer records.
+ * SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <stdint.h>
+#include <stdio.h>
+#include <string.h>
+#include "openbor.h"
+#undef printf
+uint32_t obor_profile_build;
+static s_level storage,*level=&storage;
+static s_layer layer,*bgl=&layer;
+static int panel_width,panel_height;
+/* The historical panel case deliberately continues into frontpanel handling. */
+#if defined(__GNUC__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic warning "-Wimplicit-fallthrough"
+#endif
+static void normalize(void){switch(bgl->oldtype){
+@REGION@
+ default:break;
+}}
+#if defined(__GNUC__)
+#pragma GCC diagnostic pop
+#endif
+static const unsigned revisions[]={@PROFILES@};
+static const struct {int kind,scroll;float ratio;} cases[]={@CASES@};
+int main(void){
+ const int directions[]={SCROLL_RIGHT,SCROLL_UP,SCROLL_DOWN,SCROLL_LEFT,SCROLL_INWARD,SCROLL_OUTWARD,SCROLL_UP|SCROLL_DOWN};
+ for(unsigned p=0;p<sizeof(revisions)/sizeof(*revisions);++p){
+  obor_profile_build=revisions[p];printf("{\"revision\":%u,\"results\":[",obor_profile_build);
+  for(unsigned i=0;i<sizeof(cases)/sizeof(*cases);++i){
+   memset(level,0,sizeof(*level));memset(bgl,0,sizeof(*bgl));
+   bgl->oldtype=cases[i].kind==0?bgt_panel:cases[i].kind==1?bgt_frontpanel:bgt_generic;
+   bgl->width=320;bgl->height=240;bgl->zratio=cases[i].ratio;
+   level->scrolldir=directions[cases[i].scroll];panel_width=111;panel_height=222;normalize();
+   if(i){putchar(',');}printf("[%d,%d,%.9g]",panel_width,panel_height,(double)bgl->zratio);
+  }
+  puts("]}");
+ }
+ return 0;
+}

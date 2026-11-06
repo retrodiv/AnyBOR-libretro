@@ -89,12 +89,14 @@ def rename_identifiers(source, replacements):
     return tokens.sub(lambda match: replacements.get(match[0], match[0]), source)
 
 
-def switch_cases(source, name, selector):
+def switch_cases(source, name, selector, *, outermost=False):
     """Extract direct named cases of one native switch, retaining exact bytes.
 
     Nested switches and braces in comments/literals cannot become sibling
     cases. Ambiguous selectors, computed labels and unfinished blocks refuse.
     Offsets are relative to the extracted function, not the translation unit.
+    An explicit outermost selection permits nested switches using the same
+    selector, while sibling switches at the minimum depth remain ambiguous.
     """
     if not re.fullmatch(r'[A-Za-z_]\w*', selector):
         raise AssertionError('A named native switch selector is required')
@@ -105,6 +107,10 @@ def switch_cases(source, name, selector):
     masked = tokens.sub(lambda m: re.sub(r'[^\r\n]', ' ', m[0]), method)
     matches = list(re.finditer(r'\bswitch\s*\(\s*' + re.escape(selector) +
                                r'\s*\)\s*\{', masked))
+    if outermost and matches:
+        depths = [masked[:match.start()].count('{') -
+                  masked[:match.start()].count('}') for match in matches]
+        matches = [match for match, depth in zip(matches, depths) if depth == min(depths)]
     if len(matches) != 1:
         raise AssertionError('One unambiguous native switch is required')
     start, depth, end, labels = matches[0].end(), 1, None, []
@@ -134,6 +140,24 @@ def switch_cases(source, name, selector):
 
 
 class HistoricalPlayerTests(unittest.TestCase):
+    def test_outermost_switch_selector_requires_a_unique_minimum_depth(self):
+        sample = '''int sample(int value) {
+ switch(value) {
+ case FIRST: switch(value) {case INNER: break; default: break;} break;
+ default: break;
+ } return 0;
+}'''
+        with self.assertRaises(AssertionError):
+            switch_cases(sample, 'sample', 'value')
+        _, cases = switch_cases(sample, 'sample', 'value', outermost=True)
+        self.assertEqual(list(cases), ['FIRST', 'default'])
+        self.assertIn('case INNER:', cases['FIRST']['body'])
+        sibling = sample.replace('return 0;', 'switch(value) {default: break;} return 0;')
+        with self.assertRaises(AssertionError):
+            switch_cases(sibling, 'sample', 'value', outermost=True)
+        with self.assertRaises(AssertionError):
+            switch_cases('int empty(void) { return 0; }', 'empty', 'value', outermost=True)
+
     def test_source_namespaces_leave_comments_and_literals_intact(self):
         source = '''#define MAP(value) _ep_a + value
 int select(void) { // select _ep_a MAP

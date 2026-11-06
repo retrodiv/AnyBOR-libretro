@@ -1,0 +1,104 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <assert.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "openbor.h"
+#undef assert
+#undef printf
+#ifdef NDEBUG
+#error Completion assertions must remain enabled
+#endif
+uint32_t obor_profile_build;
+static unsigned active_case;
+#define assert(c) do {if(!(c)){fprintf(stderr,"ACTION_COMPLETION revision=%u case=%u line=%d\n",obor_profile_build,active_case,__LINE__);abort();}}while(0)
+static entity actor,target;
+entity *self;
+unsigned int time;
+s_player player[4];
+static s_anim current_animation,land_animation,*animation_table[ANI_LAND+1];
+static int airborne,mutate;
+@DECLARATIONS@
+void common_vault(void) {abort();}
+static void initial_action(void) {abort();}
+static void callback_action(void) {abort();}
+static int action_id(void (*action)(void)) {
+ if(!action)return 0;
+ if(action==initial_action)return 1;
+ if(action==callback_action)return 2;
+ if(action==common_land)return 3;
+ if(action==common_block)return 4;
+ if(action==common_grabbed)return 5;
+ if(action==common_prethrow)return 6;
+ if(action==common_throw_wait)return 7;
+ if(action==common_vault)return 8;
+ abort();
+}
+#define WIDTH 27
+static void snapshot(double *v) {
+ const double fields[]={action_id(actor.takeaction),action_id(target.takeaction),
+ actor.xdir,actor.zdir,actor.tossv,target.xdir,target.zdir,target.tossv,actor.stalltime,
+ actor.idling,actor.blink,actor.invincible,actor.invinctime,actor.getting,actor.blocking,
+ actor.charging,actor.running,actor.direction,actor.base,actor.drop,actor.projectile,
+ actor.damage_on_landing,actor.inpain,actor.staydown.riseattack_stall,actor.attacking,
+ actor.x,actor.releasetime};
+ _Static_assert(sizeof(fields)/sizeof(*fields)==WIDTH,"Observer fields bound");
+ memcpy(v,fields,sizeof(fields));
+}
+struct event {int kind,index,reset;double fields[WIDTH];};
+static struct event events[4];static unsigned event_count;
+static void observe(int kind,int index,int reset) {
+ assert(event_count<4);struct event *e=&events[event_count++];
+ e->kind=kind;e->index=index;e->reset=reset;snapshot(e->fields);
+ if(mutate){actor.takeaction=callback_action;target.takeaction=callback_action;}
+}
+int inair(entity *e) {assert(e==self);return airborne;}
+int set_idle(entity *e) {assert(e==self);observe(1,0,0);return 1;}
+void ent_set_anim(entity *e,int index,int reset) {assert(e==self);observe(2,index,reset);}
+void dothrow(void) {observe(3,0,0);}
+@FUNCTIONS@
+static void (*const entries[])(void)={@ENTRIES@};
+struct completion_case {int function,animating,airborne,linked,blocking,keys,riseinv,height,land_valid,frame,mutate,zdir;};
+static const struct completion_case cases[]={@CASES@};
+static const unsigned profiles[]={@PROFILES@};
+static void prepare(const struct completion_case *c) {
+ memset(&actor,0,sizeof(actor));memset(&target,0,sizeof(target));memset(player,0,sizeof(player));
+ memset(&current_animation,0,sizeof(current_animation));memset(&land_animation,0,sizeof(land_animation));
+ memset(animation_table,0,sizeof(animation_table));self=&actor;time=100;
+ actor.takeaction=target.takeaction=initial_action;
+ actor.xdir=2;actor.zdir=c->zdir;actor.tossv=4;
+ target.xdir=5;target.zdir=6;target.tossv=7;
+ actor.stalltime=9;actor.idling=1;actor.getting=1;actor.blocking=c->blocking;
+ actor.charging=1;actor.running=1;actor.direction=1;actor.base=5;
+ actor.drop=actor.projectile=1;actor.damage_on_landing=7;actor.inpain=1;
+ actor.staydown.riseattack_stall=7;actor.x=9;actor.releasetime=12;
+ actor.animating=c->animating;actor.animpos=c->frame;
+ actor.link=c->linked?&target:NULL;actor.modeldata.riseinv=c->riseinv;
+ actor.modeldata.speed=2;actor.modeldata.throwframewait=0;
+ target.animation=&current_animation;current_animation.height=c->height;
+ target.modeldata.height=11;target.base=10;target.x=42;
+ actor.modeldata.animation=animation_table;actor.modeldata.animation_capacity=ANI_LAND+1;
+ land_animation.numframes=1;animation_table[ANI_LAND]=c->land_valid?&land_animation:NULL;
+ player[0].keys=(c->keys&1?FLAG_JUMP:0)|(c->keys&2?FLAG_SPECIAL:0);
+ airborne=c->airborne;mutate=c->mutate;event_count=0;
+}
+static void array_json(const double *v) {
+ putchar('[');for(unsigned i=0;i<WIDTH;++i){if(i)putchar(',');printf("%.17g",v[i]);}putchar(']');
+}
+int main(void) {
+ for(unsigned p=0;p<sizeof(profiles)/sizeof(*profiles);++p){
+  obor_profile_build=profiles[p];
+  for(unsigned k=0;k<sizeof(cases)/sizeof(*cases);++k){
+   active_case=k;prepare(&cases[k]);entries[cases[k].function]();
+   double final[WIDTH];snapshot(final);
+   printf("{\"revision\":%u,\"case\":%u,\"fields\":",obor_profile_build,k);array_json(final);
+   printf(",\"events\":[");
+   for(unsigned i=0;i<event_count;++i){struct event *e=&events[i];if(i)putchar(',');
+    printf("{\"kind\":%d,\"index\":%d,\"reset\":%d,\"fields\":",e->kind,e->index,e->reset);array_json(e->fields);putchar('}');}
+   puts("]}");
+  }
+ }
+ return 0;
+}

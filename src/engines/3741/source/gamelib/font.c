@@ -5,7 +5,8 @@
  * Upstream code retains its original license and notices.
  * Validate indexed palette ownership and capacity, and retain the first
  * glyph's shared palette when it is empty; preserve native per-glyph raster
- * output.
+ * output. Preserve source-owned mono and multibyte selection, cached
+ * dimensions, glyph dispatch and newline positioning by profile.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/3741.md
  * at the source repository root. Original notices follow below.
@@ -39,6 +40,24 @@
 s_font** fonts[MAX_FONTS];
 
 static char b[1024];
+
+/* Profile font metadata: canonical storage, historical dimension lifetime. */
+static int obor_font_loading_slot(int store, int value)
+{
+    static int slot = -1;
+    int previous = slot;
+    if(store) slot = value;
+    return previous;
+}
+
+static int obor_font_cached_dimension(int which, int axis, int store, int value)
+{
+    static int dimensions[MAX_FONTS][2];
+    if(which < 0 || which >= MAX_FONTS || axis < 0 || axis > 1) return 0;
+    if(store) dimensions[which][axis] = value;
+    return dimensions[which][axis];
+}
+
 
 void _font_unload(s_font* font){
 	int i;
@@ -104,6 +123,11 @@ int _font_load(s_font* font, char *filename, char *packfile){
 	if(!obor_font_palette_valid(screen)) goto err;
 	font->width = tw = screen->width/16;
 	font->height = th = screen->height/16;
+    if(obor_profile_build < 3624) {
+        int slot = obor_font_loading_slot(0, 0);
+        obor_font_cached_dimension(slot, 0, 1, tw);
+        obor_font_cached_dimension(slot, 1, 1, th);
+    }
 	if(!(bitmap = allocbitmap(tw,th,pixelformat))) goto err;
 
 	if(bitmap->palette && screen->palette)
@@ -155,6 +179,7 @@ int font_load(int which, char *filename, char *packfile, int flags){
 	s_font** sets, *font;
 	int i, max;
 
+	if(obor_profile_build < 3624) flags = !!flags;
 	which %= MAX_FONTS;
 	if(which < 0) return 0;
 
@@ -177,7 +202,10 @@ int font_load(int which, char *filename, char *packfile, int flags){
 		}else 
 			strcpy(b, filename);
 		
-		if(!_font_load(font, b, packfile)){
+        int previous_slot = obor_font_loading_slot(1, obor_profile_build < 3624 ? which : -1);
+        int loaded = _font_load(font, b, packfile);
+        obor_font_loading_slot(1, previous_slot);
+        if(!loaded){
 			_font_unload(font);
 			font = NULL;
 		}
@@ -199,6 +227,7 @@ int fontmonowidth(int which){
 	which %= MAX_FONTS;
 	if(which < 0) return 0;
 
+	if(obor_profile_build < 3624) return obor_font_cached_dimension(which, 0, 0, 0);
 	sets = fonts[which];
 
 	if(!sets || !sets[0]) return 0;
@@ -211,6 +240,7 @@ int fontheight(int which){
 	which %= MAX_FONTS;
 	if(which < 0) return 0;
 
+	if(obor_profile_build < 3624) return obor_font_cached_dimension(which, 1, 0, 0);
 	sets = fonts[which];
 
 	if(!sets || !sets[0]) return 0;
@@ -234,7 +264,8 @@ int font_string_width(int which, char* format, ...)
 
 	if(!sets || !format) return 0;
 
-	mbs = sets[0]->mbs;
+    mbs = obor_profile_build < 3624 ? 0 : obor_profile_build < 3635 ?
+        ((sets[0] && sets[0]->mbs == 0) ? 0 : 1) : sets[0]->mbs;
 
 	va_start(arglist, format);
 	vsprintf(buf, format, arglist);
@@ -281,11 +312,24 @@ void font_printf(int x, int y, int which, int layeroffset,char *format, ...){
 
 	if(!sets) return;
 
-	mbs = sets[0]->mbs;
+    mbs = obor_profile_build < 3624 ? 0 : obor_profile_build < 3635 ?
+        ((sets[0] && sets[0]->mbs == 0) ? 0 : 1) : sets[0]->mbs;
 
 	va_start(arglist, format);
 	vsprintf(buf, format, arglist);
 	va_end(arglist);
+
+    if(obor_profile_build < 3624) {
+        font = sets[0];
+        if(!font) return;
+        while(*buf) {
+            spriteq_add_frame(x,y,FONT_LAYER + layeroffset,font->token[(unsigned char)*buf],NULL,0);
+            x += font->token_width[(unsigned char)*buf];
+            if(*buf == '\n') y += font->token[0]->height;
+            ++buf;
+        }
+        return;
+    }
 
 	while((c=*buf)){
 		lf = (c=='\n');
@@ -328,11 +372,35 @@ void screen_printf(s_screen * screen, int x, int y, int which, char *format, ...
 
 	if(!sets) return;
 
-	mbs = sets[0]->mbs;
+    mbs = obor_profile_build < 3624 ? 0 : obor_profile_build < 3635 ?
+        ((sets[0] && sets[0]->mbs == 0) ? 0 : 1) : sets[0]->mbs;
 
 	va_start(arglist, format);
 	vsprintf(buf, format, arglist);
 	va_end(arglist);
+
+    if(obor_profile_build < 3624) {
+        font = sets[0];
+        if(!font) return;
+        while(*buf) {
+            if(*buf >= 32) {
+                s_sprite *glyph = font->token[(unsigned char)*buf];
+                if(obor_profile_build < 3593) {
+                    switch(screen->pixelformat) {
+                    case PIXEL_8: putsprite_8(x,y,0,glyph,screen,NULL,NULL); break;
+                    case PIXEL_16: putsprite_x8p16(x,y,0,glyph,screen,NULL,NULL); break;
+                    case PIXEL_32: putsprite_x8p32(x,y,0,glyph,screen,NULL,NULL); break;
+                    }
+                } else putsprite(x,y,glyph,screen,NULL);
+                x += font->token_width[(unsigned char)*buf];
+            } else if(*buf == '\n') {
+                x = ox;
+                y += font->token[0]->height;
+            }
+            ++buf;
+        }
+        return;
+    }
 
 	while((c=*buf)){
 		lf = (c=='\n');

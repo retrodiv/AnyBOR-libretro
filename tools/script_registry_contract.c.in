@@ -1,0 +1,41 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <assert.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#undef assert
+uint32_t obor_profile_build;
+#define assert(c) do {if(!(c)){fprintf(stderr,"REGISTRY revision=%u line=%d\n",obor_profile_build,__LINE__);abort();}}while(0)
+@STUBS@
+static void unknown_function(void) {}
+static void *const pointers[]={@POINTERS@};
+static const char *const symbols[]={@SYMBOLS@};
+static const unsigned profiles[]={@PROFILES@};
+static int theFunctionList;
+static unsigned registered, indices[512];
+static const char *names[512];
+static void List_Reset(int *list) {assert(list==&theFunctionList);registered=0;}
+static void List_InsertAfter(int *list,void *callback,const char *name) {
+ assert(list==&theFunctionList && callback && name && registered<512);
+ unsigned i;
+ for(i=0;i<sizeof(pointers)/sizeof(*pointers);++i)if(pointers[i]==callback)break;
+ assert(i<sizeof(pointers)/sizeof(*pointers));
+ indices[registered]=i;names[registered++]=name;
+}
+@METHODS@
+int main(void) {
+ for(unsigned p=0;p<sizeof(profiles)/sizeof(*profiles);++p) {
+  obor_profile_build=profiles[p];Script_LoadSystemFunctions();
+  printf("{\"revision\":%u,\"register\":[",obor_profile_build);
+  for(unsigned i=0;i<registered;++i)printf("%s[\"%s\",\"%s\"]",i?",":"",symbols[indices[i]],names[i]);
+  printf("],\"reverse\":[");
+  for(unsigned i=0;i<sizeof(pointers)/sizeof(*pointers);++i) {
+   const char *name=Script_GetFunctionName(pointers[i]);assert(name);
+   printf("%s\"%s\"",i?",":"",name);
+  }
+  printf("],\"unknown\":\"%s\"}\n",Script_GetFunctionName((void*)unknown_function));
+ }
+ return 0;
+}

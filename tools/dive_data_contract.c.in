@@ -1,0 +1,63 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <assert.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "openbor.h"
+#include "commands.h"
+#undef assert
+#undef printf
+uint32_t obor_profile_build;
+static unsigned active_case;
+#define assert(c) do {if(!(c)){fprintf(stderr,"DIVE_DATA revision=%u case=%u line=%d\n",obor_profile_build,active_case,__LINE__);abort();}}while(0)
+static entity actor;
+entity *self;
+unsigned int time;
+static s_anim animation;
+static s_level level_storage;
+s_level *level;
+float default_level_gravity=-0.5f;
+static float arguments[3];
+#define GET_FLOAT_ARG(i) arguments[i]
+static void apply_command(int command) {
+ s_anim *newanim=&animation;
+ int commands[]={0,CMD_MODEL_DIVE,CMD_MODEL_DIVE1,CMD_MODEL_DIVE2};
+ assert(command>=0 && command<=3);
+ if(!command)return;
+ switch(commands[command]) {@LOADER@ default:abort();}
+}
+static void initialize(void) {s_anim *newanim=&animation;@INIT@}
+static int physics(void) {
+ int allowed=!!(@GATE@);
+ if(allowed){float gravity;@GRAVITY@}
+ return allowed;
+}
+struct dive_case {int first,second,initialize;float arg1,arg2;int physics,subject,flag;float horizontal,vertical,toss,gravity,model_antigravity,entity_antigravity;};
+static const struct dive_case cases[]={@CASES@};
+static const unsigned profiles[]={@PROFILES@};
+int main(void) {
+ for(unsigned p=0;p<sizeof(profiles)/sizeof(*profiles);++p){
+  obor_profile_build=profiles[p];
+  for(unsigned k=0;k<sizeof(cases)/sizeof(*cases);++k){
+   active_case=k;const struct dive_case *c=&cases[k];
+   memset(&actor,0,sizeof(actor));memset(&animation,0,sizeof(animation));memset(&level_storage,0,sizeof(level_storage));
+   self=&actor;level=&level_storage;time=100;level->gravity=c->gravity;actor.animation=&animation;
+   actor.a=6;actor.base=5;actor.tossv=c->toss;actor.modeldata.antigravity=c->model_antigravity;actor.antigravity=c->entity_antigravity;actor.toss_time=10;actor.falling=1;actor.modeldata.subject_to_gravity=c->subject;
+   animation.obor_legacy_dive_x=c->horizontal;animation.obor_legacy_dive_v=c->vertical;animation.dive=c->flag;
+   animation.jumpframe.f=5;animation.jumpframe.x=6;animation.jumpframe.v=7;animation.jumpframe.ent=8;
+   arguments[1]=c->arg1;arguments[2]=c->arg2;
+   if(c->initialize)initialize();
+   apply_command(c->first);apply_command(c->second);
+   int allowed=c->physics?physics():-1;
+   double fields[]={obor_profile_build<3643?animation.obor_legacy_dive_x:0,
+    obor_profile_build<3643?animation.obor_legacy_dive_v:0,obor_profile_build>=3643?animation.dive:0,
+    animation.jumpframe.f,animation.jumpframe.x,animation.jumpframe.v,animation.jumpframe.ent,allowed,actor.a,actor.tossv};
+   printf("{\"revision\":%u,\"case\":%u,\"fields\":[",obor_profile_build,k);
+   for(unsigned i=0;i<sizeof(fields)/sizeof(*fields);++i){if(i)putchar(',');printf("%.17g",fields[i]);}
+   puts("]}");
+  }
+ }
+ return 0;
+}

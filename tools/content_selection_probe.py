@@ -48,7 +48,11 @@ int main(int argc,char **argv) {
  if(argc==2&&!strcmp(argv[1],"--rules")) {
   for(size_t i=0;i<sizeof(kContentContracts)/sizeof(*kContentContracts);++i) {
    const obor_contract_rule *r=&kContentContracts[i];
-   printf("%u %d %s %d %d %u\n",(unsigned)i,(int)r->kind,r->name,r->lower,r->upper,r->flags);
+#ifdef OBOR_CONTENT_CONTRACT_GAPS
+   printf("%u %d %s %d %d %u %d %d\n",(unsigned)i,(int)r->kind,r->name,r->lower,r->upper,r->flags,r->gap_lower,r->gap_upper);
+#else
+   printf("%u %d %s %d %d %u 0 0\n",(unsigned)i,(int)r->kind,r->name,r->lower,r->upper,r->flags);
+#endif
   }
   return 0;
  }

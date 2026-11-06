@@ -1,0 +1,82 @@
+/* Complete native block target finder and its caller.
+ * SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "openbor.h"
+#undef printf
+#undef assert
+#undef check_range
+uint32_t obor_profile_build;
+static entity actor,candidates[4],given,normal;
+entity *self=&actor;
+static entity *entries[5],**ent_list=entries;
+static int ent_max=5;
+static s_anim frames[4],block_animation,*animations[ANI_BLOCK+1];
+static s_attack attacks[4],*attack_tables[4][1];
+static unsigned case_index,range_count,range_indices[4],normal_calls,block_calls,animation_calls,random_calls;
+static int range_ok[4],normal_mode,random_value,callback_action;
+#define assert(c) do{if(!(c)){fprintf(stderr,"Block target revision=%u case=%u line=%d\n",obor_profile_build,case_index,__LINE__);abort();}}while(0)
+static void initial_action(void){}
+void common_block(void){}
+static int action_id(void){return self->takeaction==common_block?3:self->takeaction==initial_action?1:0;}
+static int check_range(entity *source,entity *target,int anim){
+ assert(source==self && anim==ANI_BLOCK && range_count<4);
+ int index=(int)(target-candidates);assert(index>=0 && index<4);
+ range_indices[range_count++]=(unsigned)index;return range_ok[index];
+}
+unsigned int rand32(void){++random_calls;return (unsigned)random_value;}
+entity *normal_find_target(int anim,int detect){
+ assert(anim==ANI_BLOCK && !detect);++normal_calls;return normal_mode?&normal:NULL;
+}
+void ent_set_anim(entity *ent,int anim,int reset){
+ assert(ent==self && anim==ANI_BLOCK && !reset);++animation_calls;callback_action=action_id();
+ assert(ent->blocking && ent->xdir==0 && ent->zdir==0);
+}
+@DIFF@
+#define block_find_target native_block_find_target
+@FINDER@
+#undef block_find_target
+entity *block_find_target(int anim,int detect){++block_calls;return native_block_find_target(anim,detect);}
+@CALLER@
+static const unsigned revisions[]={@PROFILES@};
+struct candidate_case {int exists,damage,dead,attacking,table,frame,no_block,range_ok,hide;float x,z;};
+struct target_case {int anim,detect,self_detect,provided,normal,passive,random,animation;struct candidate_case items[4];};
+static const struct target_case cases[]={@CASES@};
+static void emit_ranges(void){
+ putchar('[');for(unsigned i=0;i<range_count;++i){if(i){putchar(',');}printf("%u",range_indices[i]);}putchar(']');
+}
+int main(void){
+ for(unsigned p=0;p<sizeof(revisions)/sizeof(*revisions);++p){
+  obor_profile_build=revisions[p];
+  for(case_index=0;case_index<sizeof(cases)/sizeof(*cases);++case_index){
+   const struct target_case *c=&cases[case_index];
+   memset(&actor,0,sizeof(actor));memset(candidates,0,sizeof(candidates));memset(frames,0,sizeof(frames));
+   memset(&given,0,sizeof(given));memset(&normal,0,sizeof(normal));memset(animations,0,sizeof(animations));
+   memset(&block_animation,0,sizeof(block_animation));memset(attacks,0,sizeof(attacks));
+   self->exists=1;self->takeaction=initial_action;self->modeldata.type=TYPE_PLAYER;self->modeldata.stealth.detect=c->self_detect;
+   self->modeldata.nopassiveblock=c->passive;self->modeldata.blockodds=3;self->xdir=2;self->zdir=3;
+   self->modeldata.animation=animations;self->modeldata.animation_capacity=ANI_BLOCK+1;
+   block_animation.numframes=1;animations[ANI_BLOCK]=c->animation?&block_animation:NULL;
+   entries[0]=self;
+   for(int i=0;i<4;++i){
+    const struct candidate_case *e=c->items+i;entity *ent=candidates+i;entries[i+1]=ent;
+    ent->exists=e->exists;ent->modeldata.candamage=e->damage?TYPE_PLAYER:0;ent->dead=e->dead;
+    ent->attacking=e->attacking;ent->modeldata.stealth.hide=e->hide;ent->x=e->x;ent->z=e->z;
+    frames[i].numframes=1;ent->animation=frames+i;attacks[i].no_block=e->no_block;
+    attack_tables[i][0]=e->frame?attacks+i:NULL;frames[i].attacks=e->table?attack_tables[i]:NULL;range_ok[i]=e->range_ok;
+   }
+   range_count=0;int selected=-2;
+   if(obor_profile_build>=3535){entity *ent=block_find_target(c->anim?ANI_BLOCK:-1,c->detect);selected=ent?(int)(ent-candidates):-1;}
+   printf("{\"revision\":%u,\"case\":%u,\"selected\":%d,\"direct_range\":",obor_profile_build,case_index,selected);emit_ranges();
+   range_count=normal_calls=block_calls=animation_calls=random_calls=0;callback_action=0;
+   normal_mode=c->normal;normal.attacking=c->normal==1;given.attacking=c->provided==1;random_value=c->random;
+   int result=common_try_block(c->provided?&given:NULL);
+   printf(",\"result\":%d,\"normal_calls\":%u,\"block_calls\":%u,\"caller_range\":",result,normal_calls,block_calls);emit_ranges();
+   printf(",\"animation_calls\":%u,\"random_calls\":%u,\"callback_action\":%d,\"final_action\":%d}\n",animation_calls,random_calls,callback_action,action_id());
+  }
+ }
+ return 0;
+}

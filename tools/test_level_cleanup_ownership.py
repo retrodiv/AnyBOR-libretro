@@ -111,7 +111,10 @@ class LevelCleanupOwnershipTests(unittest.TestCase):
                     if 'stream_release_before'in layout:
                         script=(root/'openborscript.c').read_text()
                         stream_options['stream_clear']=function(script,'obor_filestream_level_clear')
-                    program = render_level_cleanup(function(source, 'free_level'),
+                    cleanup=function(source,'free_level')
+                    if 'obor_filestream_release_level(' in cleanup:
+                        stream_options['stream_release']=function(source,'obor_filestream_release_level')
+                    program = render_level_cleanup(cleanup,
                         revision=revisions[0], revisions=revisions,
                         **{key: value for key, value in layout.items() if key != 'engine'},
                         **stream_options)

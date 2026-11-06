@@ -11,7 +11,7 @@
  * native map counter. Reserve bounded blend-table storage for each profile's
  * native six- or seven-mode domain. Retain source-defined frame and timer
  * pause state within shared entity storage. Track owned script stream buffer
- * extents.
+ * extents. Preserve per-profile timer compensation during entity freezing.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/3741.md
  * at the source repository root. Original notices follow below.
@@ -535,7 +535,8 @@ memset((p)+(n), 0, sizeof(*(p))*((s)-(n)));\
 						 if(e->freezetime>0 && (textbox || smartbomber))e->freezetime++;\
 						 if(e->mpchargetime>0)e->mpchargetime++;\
 						 if(e->invinctime>0) e->invinctime++;\
-						 if(e->turntime>0) e->turntime++;\
+						 if(obor_profile_build >= 3656 && obor_profile_build < 3662 && e->pain_time>0) e->pain_time++;\
+						 if(obor_profile_build >= 3656 && e->turntime>0) e->turntime++;\
 						 if(e->sealtime>0) e->sealtime++;
 /*                       if(e->dot_time>0) e->dot_time++;\
 						 if(e->dot_cnt>0) e->dot_cnt++;
@@ -546,41 +547,103 @@ memset((p)+(n), 0, sizeof(*(p))*((s)-(n)));\
 #define is_projectile(e) (e->modeldata.type == TYPE_SHOT || e->model->subtype == SUBTYPE_ARROW || e->owner)
 
 #define screeny (level?((level->scrolldir == SCROLL_UP || level->scrolldir == SCROLL_DOWN )? 0:advancey ):0)
-#define screenx (level?advancex:0)
+#define screenx ((obor_profile_build < 3562 || level)?advancex:0)
 
 #define check_range(self, target, animnum) \
-		 ( target && \
-		  (self->direction ? \
-		  (int)target->x >= self->x+self->modeldata.animation[animnum]->range.xmin &&\
-		  (int)target->x <= self->x+self->modeldata.animation[animnum]->range.xmax\
-		:\
-		  (int)target->x <= self->x-self->modeldata.animation[animnum]->range.xmin &&\
-		  (int)target->x >= self->x-self->modeldata.animation[animnum]->range.xmax)\
-		  && (int)(target->z - self->z) >= self->modeldata.animation[animnum]->range.zmin \
-		  && (int)(target->z - self->z) <= self->modeldata.animation[animnum]->range.zmax \
-		  && (int)(target->a - self->a) >= self->modeldata.animation[animnum]->range.amin \
-		  && (int)(target->a - self->a) <= self->modeldata.animation[animnum]->range.amax \
-		  && (int)(target->base - self->base) >= self->modeldata.animation[animnum]->range.bmin \
-		  && (int)(target->base - self->base) <= self->modeldata.animation[animnum]->range.bmax \
-		  )\
+    (obor_profile_build < 3567 ? \
+    ( target && \
+    		  (self->direction ? \
+    		  target->x > self->x+self->modeldata.animation[animnum]->range.xmin && \
+    		  target->x < self->x+self->modeldata.animation[animnum]->range.xmax \
+    		: \
+    		  target->x < self->x-self->modeldata.animation[animnum]->range.xmin && \
+    		  target->x > self->x-self->modeldata.animation[animnum]->range.xmax) \
+    		  && target->z - self->z > self->modeldata.animation[animnum]->range.zmin \
+    		  && target->z - self->z < self->modeldata.animation[animnum]->range.zmax \
+    		  && (target->a - self->a) > self->modeldata.animation[animnum]->range.amin \
+    		  && (target->a - self->a) < self->modeldata.animation[animnum]->range.amax \
+    		  && (target->base - self->base) > self->modeldata.animation[animnum]->range.bmin \
+    		  && (target->base - self->base) < self->modeldata.animation[animnum]->range.bmax \
+    		  ) \
+    : obor_profile_build < 3569 ? \
+    ( target && \
+    		  (self->direction ? \
+    		  (int)target->x >= self->x+self->modeldata.animation[animnum]->range.xmin && \
+    		  (int)target->x <= self->x+self->modeldata.animation[animnum]->range.xmax \
+    		: \
+    		  (int)target->x <= self->x-self->modeldata.animation[animnum]->range.xmin && \
+    		  (int)target->x >= self->x-self->modeldata.animation[animnum]->range.xmax) \
+    		  && (int)target->z - self->z >= self->modeldata.animation[animnum]->range.zmin \
+    		  && (int)target->z - self->z <= self->modeldata.animation[animnum]->range.zmax \
+    		  && (int)(target->a - self->a) >= self->modeldata.animation[animnum]->range.amin \
+    		  && (int)(target->a - self->a) <= self->modeldata.animation[animnum]->range.amax \
+    		  && (int)(target->base - self->base) >= self->modeldata.animation[animnum]->range.bmin \
+    		  && (int)(target->base - self->base) <= self->modeldata.animation[animnum]->range.bmax \
+    		  ) \
+    : \
+    ( target && \
+    		  (self->direction ? \
+    		  (int)target->x >= self->x+self->modeldata.animation[animnum]->range.xmin && \
+    		  (int)target->x <= self->x+self->modeldata.animation[animnum]->range.xmax \
+    		: \
+    		  (int)target->x <= self->x-self->modeldata.animation[animnum]->range.xmin && \
+    		  (int)target->x >= self->x-self->modeldata.animation[animnum]->range.xmax) \
+    		  && (int)(target->z - self->z) >= self->modeldata.animation[animnum]->range.zmin \
+    		  && (int)(target->z - self->z) <= self->modeldata.animation[animnum]->range.zmax \
+    		  && (int)(target->a - self->a) >= self->modeldata.animation[animnum]->range.amin \
+    		  && (int)(target->a - self->a) <= self->modeldata.animation[animnum]->range.amax \
+    		  && (int)(target->base - self->base) >= self->modeldata.animation[animnum]->range.bmin \
+    		  && (int)(target->base - self->base) <= self->modeldata.animation[animnum]->range.bmax \
+    		  ) \
+    )
 
 #define check_range_both(self, target, animnum) \
-		 ( target && \
-		  (((int)target->x >= self->x+self->modeldata.animation[animnum]->range.xmin &&\
-			(int)target->x <= self->x+self->modeldata.animation[animnum]->range.xmax)\
-		||\
-		   ((int)target->x <= self->x-self->modeldata.animation[animnum]->range.xmin &&\
-			(int)target->x >= self->x-self->modeldata.animation[animnum]->range.xmax))\
-		  && (int)(target->z - self->z) >= self->modeldata.animation[animnum]->range.zmin \
-		  && (int)(target->z - self->z) <= self->modeldata.animation[animnum]->range.zmax \
-		  && (int)(target->a - self->a) >= self->modeldata.animation[animnum]->range.amin \
-		  && (int)(target->a - self->a) <= self->modeldata.animation[animnum]->range.amax \
-		  && (int)(target->base - self->base) >= self->modeldata.animation[animnum]->range.bmin \
-		  && (int)(target->base - self->base) <= self->modeldata.animation[animnum]->range.bmax \
-		  )\
+    (obor_profile_build < 3567 ? \
+    ( target && \
+    		  ((target->x > self->x+self->modeldata.animation[animnum]->range.xmin && \
+    			target->x < self->x+self->modeldata.animation[animnum]->range.xmax) \
+    		|| \
+    		   (target->x < self->x-self->modeldata.animation[animnum]->range.xmin && \
+    			target->x > self->x-self->modeldata.animation[animnum]->range.xmax)) \
+    		  && target->z - self->z > self->modeldata.animation[animnum]->range.zmin \
+    		  && target->z - self->z < self->modeldata.animation[animnum]->range.zmax \
+    		  && (target->a - self->a) > self->modeldata.animation[animnum]->range.amin \
+    		  && (target->a - self->a) < self->modeldata.animation[animnum]->range.amax \
+    		  && (target->base - self->base) > self->modeldata.animation[animnum]->range.bmin \
+    		  && (target->base - self->base) < self->modeldata.animation[animnum]->range.bmax \
+    		  ) \
+    : obor_profile_build < 3569 ? \
+    ( target && \
+    		  (((int)target->x >= self->x+self->modeldata.animation[animnum]->range.xmin && \
+    			(int)target->x <= self->x+self->modeldata.animation[animnum]->range.xmax) \
+    		|| \
+    		   ((int)target->x <= self->x-self->modeldata.animation[animnum]->range.xmin && \
+    			(int)target->x >= self->x-self->modeldata.animation[animnum]->range.xmax)) \
+    		  && (int)target->z - self->z >= self->modeldata.animation[animnum]->range.zmin \
+    		  && (int)target->z - self->z <= self->modeldata.animation[animnum]->range.zmax \
+    		  && (int)(target->a - self->a) >= self->modeldata.animation[animnum]->range.amin \
+    		  && (int)(target->a - self->a) <= self->modeldata.animation[animnum]->range.amax \
+    		  && (int)(target->base - self->base) >= self->modeldata.animation[animnum]->range.bmin \
+    		  && (int)(target->base - self->base) <= self->modeldata.animation[animnum]->range.bmax \
+    		  ) \
+    : \
+    ( target && \
+    		  (((int)target->x >= self->x+self->modeldata.animation[animnum]->range.xmin && \
+    			(int)target->x <= self->x+self->modeldata.animation[animnum]->range.xmax) \
+    		|| \
+    		   ((int)target->x <= self->x-self->modeldata.animation[animnum]->range.xmin && \
+    			(int)target->x >= self->x-self->modeldata.animation[animnum]->range.xmax)) \
+    		  && (int)(target->z - self->z) >= self->modeldata.animation[animnum]->range.zmin \
+    		  && (int)(target->z - self->z) <= self->modeldata.animation[animnum]->range.zmax \
+    		  && (int)(target->a - self->a) >= self->modeldata.animation[animnum]->range.amin \
+    		  && (int)(target->a - self->a) <= self->modeldata.animation[animnum]->range.amax \
+    		  && (int)(target->base - self->base) >= self->modeldata.animation[animnum]->range.bmin \
+    		  && (int)(target->base - self->base) <= self->modeldata.animation[animnum]->range.bmax \
+    		  ) \
+    )
 
 
-#define tobounce(e) (e->animation->bounce && diff(0, e->tossv) > 1.5 && \
+#define tobounce(e) (e->animation->bounce && diff(0, e->tossv) > (obor_profile_build < 3529 ? 2.0 : 1.5) && \
 					 !((autoland == 1 && e->damage_on_landing == -1) ||e->damage_on_landing == -2))
 
 #define getpal ((current_palette&&level)?(level->palettes[current_palette-1]):pal)
@@ -706,8 +769,8 @@ typedef struct
 	int freezetime;
 	int maptime;
 	int sealtime;
-	int dot:8;                          //Dot mode.
-	int dot_index:8;                    //Dot index.
+	int dot;                          //Dot mode.
+	int dot_index;                    //Dot index.
 	int dot_time;                       //Dot time to expire.
 	int dot_force;                      //Dot amount per tick.
 	int dot_rate;                       //Dot tick delay.
@@ -721,6 +784,49 @@ typedef struct
 	int pause_add:16;					// Flag to determine if an attack adds a pause before updating the animation
 	int pain_time:16;					// pain invincible time
 }s_attack;
+
+/* Historical energy-disable storage is signed8 before its signed16 epoch. */
+static inline int obor_profile_energy_disable_value(int value, unsigned revision)
+{
+    if(revision < 3647)
+    {
+        unsigned low = (unsigned)value & 255u;
+        return (int)low - (low >= 128u ? 256 : 0);
+    }
+    return value;
+}
+
+/* Keep scalar conversions at the source-owned attack writes. */
+static inline int obor_profile_attack_short_value(int value, unsigned revision)
+{
+    if(revision < 3636)
+    {
+        unsigned low = (unsigned)value & 65535u;
+        return (int)low - (low >= 32768u ? 65536 : 0);
+    }
+    return value;
+}
+
+static inline int obor_profile_attack_byte_value(int value, unsigned revision)
+{
+    if(revision < 3636)
+    {
+        unsigned low = (unsigned)value & 255u;
+        return (int)low - (low >= 128u ? 256 : 0);
+    }
+    return value;
+}
+
+static inline int obor_profile_attack_dot_value(int value, unsigned revision)
+{
+    if(revision >= 3636)
+    {
+        unsigned low = (unsigned)value & 255u;
+        return (int)low - (low >= 128u ? 256 : 0);
+    }
+    return value;
+}
+
 
 typedef struct                                      //2011_04_01, DC: Counterstrike when taking hit.
 {
@@ -823,6 +929,8 @@ typedef struct
 	int cancel:8; // Cancel anims with freespecial
 	int attackone:8; // stick on the only one victim
 	int dive:8; // UT: make dive a similar property as antigravity
+	float obor_legacy_dive_v;
+	float obor_legacy_dive_x;
 	short* weaponframe; // Specify with a frame when to switch to a weapon model
 	s_quakeframe quakeframe; // Screen shake effect. 2011_04_01, DC; Moved to struct.
     float* spawnframe; // Spawn the subentity as its default type. {frame} {x} {z} {a} {relative?}
@@ -832,6 +940,7 @@ typedef struct
 	int dropframe:16; // if tossv < 0, this frame will be set
 	int animhits:16; // Does the attack need to hit before cancel is allowed?
 	int sync:16; // sychronize frame to previous animation if they matches
+    unsigned char obor_legacy_fastattack;
 }s_anim;
 
 typedef struct
@@ -1647,7 +1756,12 @@ typedef struct
 	int quake;
 	int waiting;
 
+    s_filestream obor_legacy_filestreams[LEVEL_MAX_FILESTREAMS];
+
 }s_level;
+
+s_filestream *obor_filestream_level_table(void);
+void obor_filestream_release_level(s_level *owner);
 
 #define MAX_ARG_COUNT 64
 

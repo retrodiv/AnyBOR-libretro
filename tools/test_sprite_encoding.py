@@ -16,7 +16,7 @@ ROOT = Path(os.environ.get('OBOR_TEST_SOURCE', Path(__file__).resolve().parents[
 ENGINE = Path(os.environ.get('OBOR_HISTORICAL_ENGINE', ROOT/'src/engines/3842'))
 
 
-def encoding_program(source):
+def encoding_program(source, *, emit=True):
     methods = '\n'.join(function(source, name) for name in ('encodesprite', 'fakey_encodesprite'))
     return r'''
 #include <assert.h>
@@ -94,16 +94,18 @@ int main(void) {
                 assert(sprite->palette==allocation+bytes+padding);
                 assert(memcmp(sprite->palette,bitmap->palette,PAL_BYTES)==0);
             } else assert(sprite->palette==NULL);
-            printf("ENCODING %d %d %d %d %d %u ",screenformat,width,height,pattern,palette,size);
-            for(const unsigned char *p=(const unsigned char*)sprite->data;p<last;++p)printf("%02x",*p);
-            putchar('\n');
+            if(EMIT_OUTPUT) {
+                printf("ENCODING %d %d %d %d %d %u ",screenformat,width,height,pattern,palette,size);
+                for(const unsigned char *p=(const unsigned char*)sprite->data;p<last;++p)printf("%02x",*p);
+                putchar('\n');
+            }
         } else assert(sprite->width==0 && sprite->height==0 && sprite->palette==NULL);
         assert(memcmp(snapshot,bitmap,backing)==0);
         free(allocation);free(snapshot);free(bitmap);
     }
     return 0;
 }
-'''.replace('METHODS', methods)
+'''.replace('METHODS', methods).replace('EMIT_OUTPUT', '1' if emit else '0')
 
 
 class SpriteEncodingTests(unittest.TestCase):

@@ -1,0 +1,81 @@
+/* Native palette command and first-frame palette routing.
+ * SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <stdarg.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <strings.h>
+#include "openbor.h"
+#include "commands.h"
+#undef printf
+#undef assert
+uint32_t obor_profile_build;
+int pixelformat,screenformat,pixelbytes[5]={1,1,2,3,4};
+char packfile[OBOR_CONTENT_PATH_MAX]="fixture";
+static unsigned case_id,palette_calls,sprite_calls,warnings;
+#define assert(c) do {if(!(c)){fprintf(stderr,"Model palette revision=%u case=%u line=%d\n",obor_profile_build,case_id,__LINE__);abort();}}while(0)
+static s_model model;
+static s_sprite frame;
+static s_sprite_list node;
+static s_sprite_map sprite_map[1];
+static unsigned char own_palette[1024];
+static char diagnostic[512],*shutdownmessage,*argument;
+static int nopalette,force_palette_error,sprite_result,requested_format;
+static int capture_printf(const char *format,...){
+ va_list args;va_start(args,format);int n=vsnprintf(diagnostic,sizeof(diagnostic),format,args);va_end(args);
+ assert(n>=0 && (size_t)n<sizeof(diagnostic));++warnings;return n;
+}
+int loadimagepalette(char *filename,char *pak,unsigned char *palette){
+ assert(pak==packfile && palette);++palette_calls;
+ if(force_palette_error || !strcmp(filename,"missing"))return 0;
+ memset(palette,17,(size_t)PAL_BYTES);return 1;
+}
+int loadsprite(char *filename,int x,int y,int format){
+ assert(!strcmp(filename,"frame") && x==2 && y==3);++sprite_calls;requested_format=format;
+ if(sprite_result>=0)frame.pixelformat=format;
+ return sprite_result;
+}
+#define GET_ARG(n) ((void)(n),argument)
+#define printf capture_printf
+static int palette_command(void){
+ s_model *newchar=&model;char *value=NULL,*command="palette";
+ switch(CMD_MODEL_PALETTE){@PALETTE_CASE@}
+ if(shutdownmessage)goto lCleanup;
+ return 1;
+lCleanup:return 0;
+}
+static int first_frame(void){
+ s_model *newchar=&model;char *value="frame";int offset[2]={2,3},index;
+ @FRAME_PALETTE@
+ if(shutdownmessage)goto lCleanup;
+ return 1;
+lCleanup:return 0;
+}
+#undef printf
+static const unsigned revisions[]={@PROFILES@};
+static const struct {int mode,screen,seed,fail,result,count;const char *commands[2];} cases[]={@CASES@};
+static void hex_text(const char *s){for(const unsigned char *p=(const unsigned char*)s;*p;++p)printf("%02x",(unsigned)*p);}
+int main(void){
+ for(unsigned p=0;p<sizeof(revisions)/sizeof(*revisions);++p){
+  obor_profile_build=revisions[p];
+  for(case_id=0;case_id<sizeof(cases)/sizeof(*cases);++case_id){
+   const unsigned k=case_id;memset(&model,0,sizeof(model));memset(&frame,0,sizeof(frame));memset(&node,0,sizeof(node));
+   pixelformat=cases[k].mode;screenformat=cases[k].screen;nopalette=0;
+   force_palette_error=cases[k].fail;sprite_result=cases[k].result;
+   palette_calls=sprite_calls=warnings=0;requested_format=-1;shutdownmessage=NULL;diagnostic[0]=0;
+   frame.palette=own_palette;frame.pixelformat=PIXEL_8;node.sprite=&frame;
+   obor_profile_map_init(&sprite_map[0],&node,0,0,0,0,&frame);
+   if(cases[k].seed){model.palette=malloc((size_t)PAL_BYTES);assert(model.palette);memset(model.palette,23,(size_t)PAL_BYTES);}
+   int accepted=1;
+   for(int i=0;i<cases[k].count && accepted;++i){argument=(char*)cases[k].commands[i];accepted=palette_command();}
+   if(accepted)accepted=first_frame();
+   int palette_owner=frame.palette==own_palette?2:frame.palette==model.palette?1:0;
+   printf("{\"revision\":%u,\"case\":%u,\"accepted\":%d,\"no_palette\":%d,\"model_palette\":%d,\"palette_calls\":%u,\"sprite_calls\":%u,\"requested_format\":%d,\"sprite_format\":%d,\"sprite_palette\":%d,\"warnings\":%u,\"diagnostic_hex\":\"",obor_profile_build,k,accepted,nopalette,!!model.palette,palette_calls,sprite_calls,requested_format,frame.pixelformat,palette_owner,warnings);
+   hex_text(shutdownmessage?shutdownmessage:diagnostic);puts("\"}");
+   free(model.palette);model.palette=NULL;
+  }
+ }
+ return 0;
+}

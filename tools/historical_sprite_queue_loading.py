@@ -6,11 +6,15 @@ Copyright (c) 2026 retrodiv <retrodiv@proton.me>
 import json
 
 
-def render_sprite_queue_loading(*,queue_source,revision,node_cache):
+def render_sprite_queue_loading(*,queue_source,revision,node_cache,
+                                profile_sprite=False,load_on_miss=None):
+    load_on_miss=node_cache if load_on_miss is None else load_on_miss
     if (not isinstance(queue_source,str) or not queue_source.startswith('/') or
             not queue_source.endswith('.c') or len(queue_source)>4096 or
             any(c in queue_source for c in ('\0','\r','\n')) or
-            type(revision) is not int or not 0<revision<=0xffffffff or type(node_cache) is not bool):
+            type(revision) is not int or not 0<revision<=0xffffffff or type(node_cache) is not bool or
+            type(profile_sprite) is not bool or type(load_on_miss) is not bool or
+            profile_sprite and not node_cache):
         raise ValueError('Complete native queue source, revision and cache layout required')
     return r'''
 #include <stdint.h>
@@ -70,4 +74,6 @@ int main(void){
 '''.replace('@QUEUE@',json.dumps(queue_source)).replace('@REVISION@',str(revision)+'u').replace(
         '@NODES@','static s_sprite_list node;'if node_cache else '').replace('@PREPARE@',
         'memset(&node,0,sizeof(node));node.sprite=cached;node.filename=image_name;entries[0].node=&node;'
-        if node_cache else 'entries[0].sprite=cached;').replace('@COLD_READY@','1'if node_cache else'0')
+        if node_cache else 'entries[0].sprite=cached;').replace('@COLD_READY@','1'if load_on_miss else'0').replace(
+        'entries[0].node=&node;', 'entries[0].node=&node;entries[0].profile_sprite=cached;'
+        if profile_sprite else 'entries[0].node=&node;')

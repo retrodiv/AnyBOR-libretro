@@ -1,0 +1,82 @@
+/* Native waypoint entry and model command routing with owned records.
+ * SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <ctype.h>
+#include <stdarg.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "openbor.h"
+#include "commands.h"
+#undef printf
+#undef assert
+uint32_t obor_profile_build;
+static unsigned case_id;
+#define assert(c) do {if(!(c)){fprintf(stderr,"Waypoint revision=%u case=%u line=%d\n",obor_profile_build,case_id,__LINE__);abort();}}while(0)
+#include "source/scriptlib/List.c"
+@LOWERCASE@
+@COMMANDS@
+static char diagnostic[512];
+static int capture_printf(const char *format,...){
+ va_list args;va_start(args,format);int n=vsnprintf(diagnostic,sizeof(diagnostic),format,args);va_end(args);
+ assert(n>=0 && (size_t)n<sizeof(diagnostic));return n;
+}
+@INCLUDE_OBSERVER@
+static float supplied_number;
+#define GET_FLOAT_ARG(n) ((void)(n),supplied_number)
+#define printf capture_printf
+@DECIMAL_VALUE@
+@WAYPOINTS@
+static void apply_model(List *list,s_model *newchar,char *command){
+ ArgList arglist;memset(&arglist,0,sizeof(arglist));char *filename="fixture.txt",fnbuf[128],*buf=NULL;
+ ptrdiff_t pos=0;size_t size=0;modelCommands cmd=getModelCommand(list,command);
+ switch(cmd){case CMD_MODEL_PATHFINDSTEP:@CASE@ default:@DEFAULT@}
+}
+#undef printf
+static int available(void *functionRef){@AVAILABILITY@ return 0;}
+static const unsigned revisions[]={@PROFILES@};
+static const struct {const char *name;float initial,value;} model_cases[]={@MODEL_CASES@};
+static const struct {int argc,seed,first_type,coordinates;} script_cases[]={@SCRIPT_CASES@};
+static void hex_text(const char *s){for(const unsigned char *p=(const unsigned char*)s;*p;++p)printf("%02x",(unsigned)*p);}
+int main(void){
+ for(unsigned p=0;p<sizeof(revisions)/sizeof(*revisions);++p){
+  obor_profile_build=revisions[p];List *list=createModelCommandList();assert(list);
+  int api=available((void*)openbor_waypoints);
+  printf("{\"revision\":%u,\"kind\":\"availability\",\"case\":0,\"available\":%d}\n",obor_profile_build,api);
+  for(case_id=0;case_id<sizeof(model_cases)/sizeof(*model_cases);++case_id){
+   s_model model;memset(&model,0,sizeof(model));model.pathfindstep=model_cases[case_id].initial;
+   supplied_number=model_cases[case_id].value;char name[32];strcpy(name,model_cases[case_id].name);
+   int registered=getModelCommand(list,name)==CMD_MODEL_PATHFINDSTEP;diagnostic[0]=0;
+   apply_model(list,&model,name);
+   printf("{\"revision\":%u,\"kind\":\"model\",\"case\":%u,\"registered\":%d,\"value\":%.9g,\"diagnostic_hex\":\"",obor_profile_build,case_id,registered,(double)model.pathfindstep);
+   hex_text(diagnostic);puts("\"}");
+  }
+  freeCommandList(list);
+  if(api)for(case_id=0;case_id<sizeof(script_cases)/sizeof(*script_cases);++case_id){
+   entity actor;memset(&actor,0,sizeof(actor));int seed=script_cases[case_id].seed;
+   actor.numwaypoints=seed;
+   if(seed){actor.waypoints=malloc(sizeof(*actor.waypoints)*(size_t)seed);assert(actor.waypoints);}
+   for(int i=0;i<seed;++i){actor.waypoints[i].x=(float)(10+i);actor.waypoints[i].z=(float)(20+i);}
+   uintptr_t before=(uintptr_t)actor.waypoints;
+   ScriptVariant args[7]={0},out={0},*ret=&out,*values[7];
+   for(unsigned i=0;i<7;++i){values[i]=args+i;args[i].vt=VT_INTEGER;args[i].lVal=(LONG)(90+i);}
+   args[0].vt=(VARTYPE)script_cases[case_id].first_type;
+   if(args[0].vt==VT_PTR)args[0].ptrVal=&actor;
+   int coordinates=script_cases[case_id].coordinates;
+   if(coordinates==1){args[1].vt=args[2].vt=VT_DECIMAL;args[1].dblVal=1.25;args[2].dblVal=2.5;}
+   else {args[1].lVal=1;args[2].lVal=2;}
+   if(coordinates==2)args[1].vt=VT_STR;
+   if(coordinates==3)args[2].vt=VT_STR;
+   diagnostic[0]=0;int rc=openbor_waypoints(values,&ret,script_cases[case_id].argc);assert(!ret);
+   int added=(script_cases[case_id].argc-1)/2;
+   int extent=FAILED(rc)?seed:added>0?added+seed:0;
+   assert(extent>=0 && extent<=5 && actor.numwaypoints>=0 && actor.numwaypoints<=5);
+   printf("{\"revision\":%u,\"kind\":\"script\",\"case\":%u,\"ok\":%d,\"count\":%d,\"same_storage\":%d,\"diagnostic_hex\":\"",obor_profile_build,case_id,!FAILED(rc),actor.numwaypoints,(uintptr_t)actor.waypoints==before);
+   hex_text(diagnostic);printf("\",\"points\":[");
+   for(int i=0;i<extent;++i){if(i)putchar(',');printf("[%.9g,%.9g]",(double)actor.waypoints[i].x,(double)actor.waypoints[i].z);}
+   puts("]}");free(actor.waypoints);actor.waypoints=NULL;
+  }
+ }
+ return 0;
+}

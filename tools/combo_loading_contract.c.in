@@ -1,0 +1,113 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <assert.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <strings.h>
+#include <setjmp.h>
+#include <stdarg.h>
+#include "openbor.h"
+#include "commands.h"
+#undef assert
+#undef printf
+#ifdef NDEBUG
+#error Combo loading assertions must remain enabled
+#endif
+uint32_t obor_profile_build;
+static unsigned active_case;
+#define assert(c) do {if(!(c)){fprintf(stderr,"COMBO_LOADING revision=%u case=%u line=%d\n",obor_profile_build,active_case,__LINE__);abort();}}while(0)
+#define stricmp strcasecmp
+#define strnicmp strncasecmp
+@ERROR_DECL@
+static int max_freespecials=MAX_SPECIALS;
+static int special_animations[MAX_SPECIALS]={ANI_FREESPECIAL,ANI_FREESPECIAL2,ANI_FREESPECIAL3,ANI_FREESPECIAL4,ANI_FREESPECIAL5,ANI_FREESPECIAL6,ANI_FREESPECIAL7,ANI_FREESPECIAL8};
+static int *animspecials=special_animations;
+static s_model model;
+static s_anim animations[MAX_ANIS],*animation_table[MAX_ANIS];
+static int status,active_animation;
+static const char *diagnostic;
+static jmp_buf stop;
+void shutdown(int code,char *format,...) {
+ assert(code==1);
+ assert(strcmp(format,"Too many Freespecials and/or Cancels. Please increase Maxfreespecials")==0);
+ status=2;diagnostic="capacity";longjmp(stop,1);
+}
+@FUNCTIONS@
+struct operation {int command;char *arguments[32];};
+struct test_input {int conflicts,seed,count;struct operation operations[16];};
+static const struct test_input cases[]={@CASES@};
+static char *argument(const struct operation *operation,int index) {
+ assert(index>=0 && index<32);
+ return operation->arguments[index]?operation->arguments[index]:(char*)"";
+}
+static void command(const struct operation *operation) {
+ s_model *newchar=&model;
+ s_anim *newanim=animations+active_animation;
+ char *value=NULL,*shutdownmessage=NULL;
+ int tempInt=0,ani_id=active_animation;
+#define GET_ARG(i) argument(operation,(i))
+#define GET_INT_ARG(i) atoi(GET_ARG(i))
+ if(operation->command==3) {
+  value=GET_ARG(1);
+  @ANIM@
+  assert(ani_id>=0 && ani_id<MAX_ANIS);
+  animation_table[ani_id]=animations+ani_id;animations[ani_id].numframes=1;active_animation=ani_id;
+  return;
+ }
+ switch(operation->command==1?CMD_MODEL_COM:CMD_MODEL_CANCEL) {
+  @COM@
+  @CANCEL@
+  default:abort();
+ }
+ return;
+lCleanup:
+ assert(shutdownmessage);
+ status=1;
+ if(strcmp(shutdownmessage,"Invalid freespecial command")==0)diagnostic="com";
+ else if(strcmp(shutdownmessage,"Invalid cancel command!")==0)diagnostic="cancel";
+ else abort();
+#undef GET_ARG
+#undef GET_INT_ARG
+}
+static void defaults(void) {s_model *newchar=&model;@DEFAULTS@}
+static void allocate(void) {s_model *newchar=&model;@ALLOCATE@}
+static void check(const struct test_input *input) {
+ memset(&model,0,sizeof(model));memset(animations,0,sizeof(animations));
+ memset(animation_table,0,sizeof(animation_table));status=0;diagnostic="";
+ model.animation=animation_table;model.animation_capacity=MAX_ANIS;
+ /* A valid idle declaration precedes these isolated command windows. */
+ active_animation=ANI_IDLE;animation_table[ANI_IDLE]=animations+ANI_IDLE;animations[ANI_IDLE].numframes=1;
+ allocate();assert(model.special);
+ if(input->seed) {
+  model.special[0].input[26]=5;model.special[0].cancel=ANI_ATTACK1;
+  model.special[0].startframe=7;model.special[0].endframe=9;
+  model.special[0].hits=2;model.special[0].valid=3;
+ }
+ const int conflicts[]={ANI_RUN,ANI_ATTACKFORWARD,ANI_DODGE,ANI_ATTACKDOWN,ANI_ATTACKUP};
+ for(unsigned i=0;i<sizeof(conflicts)/sizeof(*conflicts);++i)
+  if(input->conflicts&(1<<i))animation_table[conflicts[i]]=animations+conflicts[i];
+ assert(input->count>=0 && input->count<=16);
+ if(!setjmp(stop)) {
+  for(int i=0;i<input->count && !status;++i)command(input->operations+i);
+  if(!status)defaults();
+ }
+ printf("{\"revision\":%u,\"case\":%u,\"status\":%d,\"diagnostic\":\"%s\",\"rows\":[",obor_profile_build,active_case,status,diagnostic);
+ for(int i=0;i<model.specials_loaded;++i) {
+  s_com *row=model.special+i;if(i)printf(",");printf("[");
+  for(unsigned j=0;j<MAX_SPECIAL_INPUTS;++j){if(j)printf(",");printf("%d",row->input[j]);}
+  if(obor_profile_build>=3652)printf(",%d,%d,%d,%d,%d,%d,%d",row->steps,row->anim,row->cancel,row->startframe,row->endframe,row->hits,row->valid);
+  printf("]");
+ }
+ printf("],\"defined\":[%d,%d,%d]}\n",is_set(&model,ANI_FREESPECIAL),is_set(&model,ANI_FREESPECIAL2),is_set(&model,ANI_FREESPECIAL3));
+ free(model.special);model.special=NULL;
+}
+int main(void) {
+ const uint32_t profiles[]={@PROFILES@};
+ for(unsigned p=0;p<sizeof(profiles)/sizeof(*profiles);++p) {
+  obor_profile_build=profiles[p];
+  for(active_case=0;active_case<sizeof(cases)/sizeof(*cases);++active_case)check(cases+active_case);
+ }
+ return 0;
+}

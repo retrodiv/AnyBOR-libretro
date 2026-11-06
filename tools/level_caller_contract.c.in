@@ -1,0 +1,128 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+static int freezeall,nojoin;
+static void *playercontrolpointers[4];
+static int requested;
+static void control_update(void **ports,int count)
+{assert(ports==playercontrolpointers);requested=count;}
+static void sample_controls(int expected)
+{
+    @INPUT_PREFIX@
+    @CONTROL_CALL@
+    assert(requested==expected);
+}
+@LOOPS@
+static int joins(int i)
+{
+    @BINDING@
+    return @JOIN@;
+}
+static const char *chosen_name;
+static int lookup_kind;
+static void *findmodel(const char *name) {chosen_name=name;lookup_kind=1;return NULL;}
+static void *nextplayermodel(void *unused) {assert(!unused);lookup_kind=2;return NULL;}
+static void choose_model(int i)
+{
+    @BINDING@
+    void *model;
+    @MODEL@
+    (void)model;
+}
+static void continue_score(int i)
+{
+    @BINDING@
+    @SCORE@
+}
+static int spawn_calls,draw_calls,spdirection[4];
+static float spawn_x,spawn_y;
+static int draw_x,draw_y;
+static entity *spawn(float x,float y,int altitude,int direction,void *unused,int index,void *model)
+{
+    assert(!altitude && direction>=0 && direction<4 && !unused && index==-1 && !model);
+    spawn_x=x;spawn_y=y;++spawn_calls;return NULL;
+}
+static void font_printf(int x,int y,int slot,int mode,const char *format,...)
+{
+    assert(!slot && !mode && !strcmp(format,"Ready!"));
+    draw_x=x;draw_y=y;++draw_calls;
+}
+static void positions(int i)
+{
+    @BINDING@
+    entity *example[4]={0};
+    spawn_calls=0;
+    @SPAWN_FIRST@
+    assert(spawn_calls==(set->maxplayers>2));
+    @SPAWN_SECOND@
+    assert(spawn_calls==2*(set->maxplayers>2));
+    draw_calls=0;
+    @READY@
+    assert(draw_calls==(set->maxplayers>2));
+    (void)example;
+}
+static void run(int global_names,int all_inputs)
+{
+    (void)selector_and_query;(void)menus;
+    /* A distinct value in every canonical slot catches a wrong binding. */
+    fresh_context();
+    for(int slot=0;slot<10;++slot)assert(command(CMD_LEVELORDER_SET,"a",0));
+    int slots[]={0,3,9};
+    for(unsigned index=0;index<sizeof(slots)/sizeof(*slots);++index) {
+        current_set=slots[index];
+        for(int slot=0;slot<10;++slot)levelsets[slot].maxplayers=slot%4+1;
+        for(int count=0;count<=4;++count) {
+            levelsets[current_set].maxplayers=count;
+            @LOOP_CALLS@
+            sample_controls(all_inputs?4:count);
+        }
+        s_set_entry *set=levelsets+current_set;
+        for(int port=0;port<4;++port)for(int owner=0;owner<3;++owner)
+        for(int key=0;key<2;++key)for(freezeall=0;freezeall<2;++freezeall)
+        for(nojoin=0;nojoin<2;++nojoin) {
+            /* The parsed buffers are owned; these borrowed witnesses are
+             * removed before the native unload function releases storage. */
+            char empty[]="",local[]="local",global[]="global";
+            set->skipselect[port]=owner==0?NULL:owner==1?empty:local;
+            skipselect[port][0]=0;if(owner==2)strcpy(skipselect[port],global);
+            player[port].playkeys=key?FLAG_ANYBUTTON:0;
+            int supplied=global_names?owner==2:owner!=0;
+            assert(joins(port)==((key || supplied) && !freezeall && !nojoin));
+            lookup_kind=0;chosen_name=NULL;choose_model(port);
+            assert(lookup_kind==(supplied?1:2));
+            if(supplied)assert(!strcmp(chosen_name,global_names?"global":owner==1?"":"local"));
+            set->skipselect[port]=NULL;
+        }
+        const u32 scores[]={0,1,42,UINT32_MAX};
+        for(int policy=-1;policy<=3;++policy)for(unsigned value=0;value<4;++value)
+        for(int port=0;port<4;++port) {
+            set->continuescore=policy;player[port].score=scores[value];continue_score(port);
+            u32 expected=policy==1?0:policy==2?scores[value]+1u:scores[value];
+            assert(player[port].score==expected);
+        }
+        const int expected_spawn[2][4]={{69,157,245,0},{55,124,194,264}};
+        const int expected_ready[2][4]={{53,141,229,0},{39,108,178,248}};
+        for(int count=1;count<=4;++count)for(int port=0;port<count;++port)
+        for(int shifted=0;shifted<2;++shifted) {
+            set->maxplayers=count;videomodes.hShift=shifted?17:0;videomodes.vShift=shifted?9:0;
+            for(int i=0;i<4;++i)spdirection[i]=i;
+            positions(port);
+            if(count>2) {
+                assert(spawn_x==expected_spawn[count-3][port]+videomodes.hShift);
+                assert(spawn_y==230+videomodes.vShift);
+                assert(draw_x==expected_ready[count-3][port]+videomodes.hShift);
+                assert(draw_y==225+videomodes.vShift);
+            }
+        }
+    }
+    clear_parser();
+}
+int main(void)
+{
+    const struct {unsigned revision;int global_names,all_inputs;} contexts[]={@CONTEXTS@};
+    for(unsigned p=0;p<sizeof(contexts)/sizeof(*contexts);++p) {
+        obor_profile_build=contexts[p].revision;
+        run(contexts[p].global_names,contexts[p].all_inputs);
+        printf("{\"revision\":%u,\"loops\":%d,\"status\":\"PASS\"}\n",obor_profile_build,@LOOP_COUNT@);
+    }
+    return 0;
+}

@@ -1,3 +1,15 @@
+/* AnyBOR modification record: 2026-10-21.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Preserve the native pre-3600 copy-width limit for opaque, unblended
+ * indexed screens in 16-bit output.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/3741.md
+ * at the source repository root. Original notices follow below.
+ */
+
 /*
  * OpenBOR - http://www.LavaLit.com
  * -----------------------------------------------------------------------
@@ -44,6 +56,8 @@ void putscreenx8p16(s_screen * dest, s_screen * src, int x, int y, int key, unsi
 
 	if(x<0) x = 0;
 	if(y<0) y = 0;
+
+    if(obor_profile_build < 3600 && !key && !blendfp && cw > 960) return;
 
 	sp += (soy*sw + sox);
 	dp += (y*dw + x);

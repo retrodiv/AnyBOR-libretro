@@ -23,7 +23,7 @@ SOURCE = Path(os.environ.get('OBOR_TEST_SOURCE', ROOT))
 FIXTURE = Path(__file__).parent / 'fixtures/script-list-contracts.json'
 
 
-def mapper_program(script, lookup):
+def mapper_program(script, lookup, *, type_definitions=''):
     """Retain real mapper/tables; stub variant storage/conversion and logging."""
     start = re.search(r'(?m)^enum (?:get)?entityproperty_enum\s*\{', script)
     entry = re.search(r'(?m)^(?:void|int) mapstrings_(?:getentityproperty|entityproperty)\(', script)
@@ -43,6 +43,12 @@ def mapper_program(script, lookup):
     if macro is None:
         raise ValueError('Own string mapping macro required')
     mapper = function(script, name)
+    if (not isinstance(type_definitions,str) or len(type_definitions)>512 or
+            type_definitions and not re.fullmatch(
+                r'#define[ \t]+TYPE_RESERVED[ \t]+[^\r\n\0]+',type_definitions)):
+        raise ValueError('One source-owned reserved-type definition required')
+    if re.search(r'\bTYPE_RESERVED\b',declarations) and not type_definitions:
+        raise ValueError('Copied entity declarations require their own reserved-type constant')
     descriptor = support = ''
     if 'obor_get_property_namespace(' in mapper:
         from test_early_entity_namespaces import namespace_descriptor
@@ -91,7 +97,7 @@ int main(void) {
  return 0;
 }
 '''
-    return '\n'.join((prefix, descriptor, lookup, macro[0], declarations,
+    return '\n'.join((prefix, type_definitions, descriptor, lookup, macro[0], declarations,
                        support, mapper, main.replace('@MAPPER@', name)))
 
 
@@ -172,6 +178,21 @@ int main(void) {
 
 
 class ScriptListTests(unittest.TestCase):
+    def test_copied_entity_helpers_require_their_own_type_definition(self):
+        root=SOURCE/'src/engines/3741'
+        script=(root/'openborscript.c').read_text()
+        lookup=function((root/'source/utils.c').read_text(),'searchList')
+        with self.assertRaisesRegex(ValueError,'own reserved-type constant'):
+            mapper_program(script,lookup)
+        header=(root/'openbor.h').read_text()
+        definition=re.search(r'(?m)^#define[ \t]+TYPE_RESERVED[^\r\n]*',header)
+        self.assertIsNotNone(definition)
+        code=mapper_program(script,lookup,type_definitions=definition[0])
+        self.assertIn(definition[0],code)
+        for invalid in [None,'#define OTHER 1',definition[0]+'\n#undef TYPE_RESERVED']:
+            with self.subTest(invalid=invalid),self.assertRaises(ValueError):
+                mapper_program(script,lookup,type_definitions=invalid)
+
     def test_actual_landframe_and_staydown_mappers_remain_in_their_tables(self):
         fixture = load_contract_fixture(FIXTURE)
         with tempfile.TemporaryDirectory(prefix='anybor-script-mapper-') as temporary:
@@ -180,8 +201,11 @@ class ScriptListTests(unittest.TestCase):
                 with self.subTest(engine=engine):
                     root = SOURCE / 'src/engines' / engine
                     source = work / (engine + '.c'); executable = work / engine
+                    definition=re.search(r'(?m)^#define[ \t]+TYPE_RESERVED[^\r\n]*',
+                                         (root/'openbor.h').read_text())
                     source.write_text(mapper_program((root / 'openborscript.c').read_text(),
-                        function((root / 'source/utils.c').read_text(), 'searchList')))
+                        function((root / 'source/utils.c').read_text(), 'searchList'),
+                        type_definitions=definition[0] if definition else ''))
                     subprocess.run(shlex.split(os.environ.get('HOST_CC', 'cc')) + [
                         '-std=c11', '-Wall', '-Wextra', '-Werror',
                         '-Wno-error=deprecated-declarations', '-Wno-unused-function',

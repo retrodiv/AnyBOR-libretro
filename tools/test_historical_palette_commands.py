@@ -6,7 +6,7 @@ source fixture. Subclass ownership, conversion and full parsing are separate.
 SPDX-License-Identifier: BSD-3-Clause
 Copyright (c) 2026 retrodiv <retrodiv@proton.me>
 """
-from contract_fixtures import load_contract_fixture
+from contract_fixtures import load_contract_fixture, contract_revisions
 import json
 import os
 from pathlib import Path
@@ -20,6 +20,42 @@ from native_sanitizers import sanitizer_environment
 from test_historical_behavior import native
 from test_historical_palette_loading import CONTRACTS, SOURCE, bitmap_fixture, colourmap_storage_support
 from test_historical_player import function, rename_identifiers, switch_cases
+from test_historical_common_think import native_output
+
+
+class ModelPaletteNone(unittest.TestCase):
+    def test_native_palette_directive_and_frame_routing(self):
+        data = load_contract_fixture(Path(__file__).with_name('fixtures') /
+                                     'profile-model-palette-none-contracts.json')
+        rows = data['sources']
+        self.assertEqual({r['revision'] for r in rows}, contract_revisions(data, data['expected_revisions']))
+        self.assertEqual(len(rows), len({r['revision'] for r in rows}))
+        self.assertTrue(set(data['boundary_controls']) <= {r['revision'] for r in rows})
+        source = (SOURCE / 'src/engines' / data['engine'] / 'openbor.c').read_text()
+        method = function(source, 'load_cached_model')
+        case = re.search(r'case CMD_MODEL_PALETTE:[\s\S]*?(?=case CMD_MODEL_ALTERNATEPAL:)', method)
+        frame = re.search(r'index\s*=\s*loadsprite\(value,\s*offset\[0\],\s*offset\[1\]'
+                          r'[\s\S]*?(?=\s*if\(\(index>=0\)\s*&&\s*\(maskindex>=0\)\))', method)
+        self.assertIsNotNone(case)
+        self.assertIsNotNone(frame)
+        self.assertRegex(method, r'maskindex\s*=\s*-1,\s*nopalette\s*=\s*0;')
+        text = Path(__file__).with_name('model_palette_none_contract.c.in').read_text()
+        parts = dict(PALETTE_CASE=case[0], FRAME_PALETTE=frame[0],
+                     PROFILES=','.join(str(r['revision'])+'u' for r in rows),
+                     CASES=',\n'.join('{%d,%d,%d,%d,%d,%d,{%s,%s}}' %
+                         (c['mode'], c['screen'], c['seed'], c['fail'], c['result'], len(c['commands']),
+                          json.dumps(c['commands'][0]) if c['commands'] else 'NULL',
+                          json.dumps(c['commands'][1]) if len(c['commands'])>1 else 'NULL') for c in data['cases']))
+        for key, value in parts.items():
+            text = text.replace('@'+key+'@', value)
+        self.assertIsNone(re.search(r'@[A-Z_]+@', text))
+        actual = [json.loads(line) for line in native_output(text, data).splitlines()]
+        expected = [dict(revision=row['revision'], case=i, **value) for row in rows
+                    for i, value in enumerate(data['contracts'][row['contract']])]
+        self.assertEqual(len(actual), len(expected))
+        for result, oracle in zip(actual, expected):
+            with self.subTest(revision=oracle['revision'], case=oracle['case']):
+                self.assertEqual(result, oracle)
 
 
 def model_palette_cases(source):

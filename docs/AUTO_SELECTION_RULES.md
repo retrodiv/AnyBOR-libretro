@@ -95,6 +95,15 @@ namespace support, rather than an assumption that build numbers form one line.
 |player|`weapnum`|from 3821|[`651c34ff`](https://github.com/DCurrent/openbor/commit/651c34ffec57b78a8df7ae24898d8e369978d398)|
 |player|`weaponum`|any earlier revision through 3820|[`651c34ff`](https://github.com/DCurrent/openbor/commit/651c34ffec57b78a8df7ae24898d8e369978d398)|
 
+|function|`changedrawmethod`|from 3551|[`693cffe3`](https://github.com/DCurrent/openbor/commit/693cffe3968cdc84c10ab16c2d42cabfdcc8bfa6)|
+|function|`getgfxproperty`|from 3627|[`f86ba81f`](https://github.com/DCurrent/openbor/commit/f86ba81f11a1f28c5a3eb81e37d81a9e6347830a)|
+|function|`getpixel`|3565–3626|[`bae1c7d5`](https://github.com/DCurrent/openbor/commit/bae1c7d5c461838f99541f117be230221c21d825), [`f86ba81f`](https://github.com/DCurrent/openbor/commit/f86ba81f11a1f28c5a3eb81e37d81a9e6347830a)|
+|function|`zoom`|through 3551|[`5e610a03`](https://github.com/DCurrent/openbor/commit/5e610a031db943c1ffb196ed083d095f901713b3)|
+|system query/write|`viewporth`, `viewportw`, `viewportx`, `viewporty`|from 3552|[`5e610a03`](https://github.com/DCurrent/openbor/commit/5e610a031db943c1ffb196ed083d095f901713b3)|
+|drawmethod setter property|`xrepeat`, `xspan`, `yrepeat`, `yspan`|from 3556|[`6c59b450`](https://github.com/DCurrent/openbor/commit/6c59b450d2436810af52e084ed04aaaaa8b32b8f)|
+|entity spritea getter subproperty|`offsetx`, `offsety`|3350–3608 or from 4180|[`4724b341`](https://github.com/DCurrent/openbor/commit/4724b3414be71e53b10d863b335842bb004b7f4a), [`a5d771de`](https://github.com/DCurrent/openbor/commit/a5d771dedd0dcfccadbf9b62fa3fbddd582cc502), [`325bdb39`](https://github.com/DCurrent/openbor/commit/325bdb39ae2aa4479d864725063aed4920997a20)|
+|entity spritea setter subproperty|`offsetx`, `offsety`|3350–3608|[`4724b341`](https://github.com/DCurrent/openbor/commit/4724b3414be71e53b10d863b335842bb004b7f4a), [`a5d771de`](https://github.com/DCurrent/openbor/commit/a5d771dedd0dcfccadbf9b62fa3fbddd582cc502)|
+
 The existing literal `getentityproperty(..., "attack", ...)` probe supplies
 the upper bound 4166 for this removed API; upstream change
 [`4b3adb06`](https://github.com/DCurrent/openbor/commit/4b3adb06168068fd6388f907f2f79c51bf506e13)

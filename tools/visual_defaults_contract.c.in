@@ -1,0 +1,54 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ * Native light hook, shadow depth statements and bounce predicate.
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include <limits.h>
+
+static uint32_t obor_profile_build;
+static int light[2], autoland, PLAYER_MIN_Z;
+static void *level;
+static struct { int bounce; } animation;
+static struct { void *unused; typeof(animation) *animation; float tossv;
+                int damage_on_landing; } subject;
+@MACROS@
+@FUNCTIONS@
+static int separator;
+static void emit_int(int value) { printf("%s%d", separator ? "," : "", value); separator=1; }
+
+int main(void)
+{
+    const uint32_t profiles[]={@PROFILES@};
+    const float velocities[]={@VELOCITIES@};
+    const int depths[]={@DEPTHS@}, damages[]={@DAMAGES@};
+    _Static_assert(MIN_INT==INT_MIN, "native minimum depth");
+    subject.animation=&animation;
+    for(unsigned p=0;p<sizeof(profiles)/sizeof(*profiles);++p) {
+        obor_profile_build=profiles[p];
+        light[0]=-13;light[1]=17;
+        obor_profile_light_init();
+        printf("{\"revision\":%u,\"initial\":[%d,%d],", obor_profile_build,light[0],light[1]);
+        light[0]=20;light[1]=30;
+        @RESET@
+        printf("\"reset\":[%d,%d],\"bounce\":[",light[0],light[1]);
+        separator=0;
+        for(int enabled=0;enabled<2;++enabled)for(autoland=0;autoland<2;++autoland)
+        for(unsigned d=0;d<sizeof(damages)/sizeof(*damages);++d)
+        for(unsigned v=0;v<sizeof(velocities)/sizeof(*velocities);++v) {
+            animation.bounce=enabled;subject.damage_on_landing=damages[d];
+            subject.tossv=velocities[v];
+            emit_int(!!tobounce((&subject)));
+        }
+        printf("],\"shadows\":[");separator=0;
+        for(int present=0;present<2;++present)
+        for(unsigned d=0;d<sizeof(depths)/sizeof(*depths);++d) {
+            int shadowz, z;
+            level=present ? &subject : NULL;PLAYER_MIN_Z=depths[d];
+            @SHADOW_SETUP@
+            @SHADOW_USES@
+        }
+        puts("]}");
+    }
+    return 0;
+}

@@ -1,0 +1,85 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <stdint.h>
+#include <limits.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdarg.h>
+#include <string.h>
+#include "ScriptVariant.h"
+#include "screen.h"
+#undef printf
+#undef assert
+uint32_t obor_profile_build;
+static int active_case;
+#define assert(c) do{if(!(c)){fprintf(stderr,"SCRIPT_QUEUE revision=%u case=%d line=%d\n",obor_profile_build,active_case,__LINE__);abort();}}while(0)
+static char message[256];
+static int diagnostics,draws,clears,observed[5];
+static s_screen main_screen,other_screen,*observed_screen;
+s_screen *vscreen=&main_screen;
+static int capture(const char *format,...){
+ va_list ap;va_start(ap,format);int n=vsnprintf(message,sizeof(message),format,ap);va_end(ap);
+ assert(n>=0 && (size_t)n<sizeof(message));++diagnostics;return n;
+}
+void spriteq_draw(s_screen *screen,int newonly,int minz,int maxz,int dx,int dy){
+ ++draws;observed_screen=screen;observed[0]=newonly;observed[1]=minz;
+ observed[2]=maxz;observed[3]=dx;observed[4]=dy;
+}
+void spriteq_clear(void){++clears;}
+@VARIANT@
+#define printf capture
+@FUNCTIONS@
+#undef printf
+@STUBS@
+@AVAILABILITY@
+struct context{unsigned revision;int available;};
+static const struct context contexts[]={@CONTEXTS@};
+struct query{int arity,target,decimal,bad_scalar;};
+static const struct query cases[]={@CASES@};
+int main(void){
+ _Static_assert(sizeof(LONG)==4 && (LONG)-1<0,"native signed integer width");
+ _Static_assert(MIN_INT==INT_MIN && MAX_INT==INT_MAX,"native signed limit definitions");
+ for(unsigned p=0;p<sizeof(contexts)/sizeof(*contexts);++p){
+  const struct context *context=contexts+p;obor_profile_build=context->revision;
+  assert(obor_script_function_available((void*)openbor_drawspriteq)==context->available);
+  assert(obor_script_function_available((void*)openbor_clearspriteq)==context->available);
+  for(unsigned k=0;context->available && k<sizeof(cases)/sizeof(*cases);++k){
+   const struct query *q=cases+k;active_case=(int)k;
+   ScriptVariant v[9]={0},*args[9],result={0},*out=&result;
+   for(int i=0;i<9;++i)args[i]=v+i;
+   v[0].vt=q->target==1?VT_EMPTY:q->target>=3?VT_INTEGER:VT_PTR;
+   if(q->target==0)v[0].ptrVal=&other_screen;
+   if(q->target==3)v[0].lVal=1;
+   if(q->target==4){v[0].vt=VT_DECIMAL;v[0].dblVal=1.5;}
+   if(q->target==5){v[0].vt=VT_STR;v[0].strVal=31;}
+   static const int supplied[]={1,-17,23,-31,37};
+   for(int i=1;i<=5;++i){
+    v[i].vt=q->decimal?VT_DECIMAL:VT_INTEGER;
+    if(q->decimal)v[i].dblVal=supplied[i-1]+(supplied[i-1]<0?-0.75:0.75);
+    else v[i].lVal=supplied[i-1];
+   }
+   for(int i=6;i<9;++i){v[i].vt=VT_STR;v[i].strVal=31;}
+   if(q->bad_scalar>0){assert(q->bad_scalar<=5);v[q->bad_scalar].vt=VT_STR;v[q->bad_scalar].strVal=31;}
+   int valid=q->arity>=1 && q->target<=2 &&
+             !(q->bad_scalar>0 && q->bad_scalar<q->arity);
+   int expected[]={0,INT_MIN,INT_MAX,0,0};
+   for(int i=1;i<q->arity && i<=5;++i)expected[i-1]=supplied[i-1];
+   draws=clears=diagnostics=0;message[0]=0;observed_screen=NULL;
+   memset(observed,0,sizeof(observed));
+   int status=openbor_drawspriteq(q->arity?args:NULL,&out,q->arity);
+   assert(status==(valid?S_OK:E_FAIL) && !out && draws==valid && !clears);
+   assert(diagnostics==!valid);
+   if(valid){
+    assert(observed_screen==(q->target==0?&other_screen:vscreen));
+    assert(!memcmp(observed,expected,sizeof(expected)));
+   }else assert(!strcmp(message,"Function drawspriteq needs a valid screen handle and all other paramaters must be integers."));
+   /* Clear accepts and ignores its arguments, including a missing list. */
+   out=&result;diagnostics=0;
+   assert(openbor_clearspriteq(q->arity?args:NULL,&out,q->arity)==S_OK && !out);
+   assert(clears==1 && draws==valid && !diagnostics);
+  }
+  fprintf(stdout,"{\"revision\":%u,\"available\":%d,\"cases\":%zu}\n",
+   obor_profile_build,context->available,context->available?sizeof(cases)/sizeof(*cases):0);
+ }
+ return 0;
+}

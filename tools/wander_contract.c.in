@@ -1,0 +1,79 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <assert.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "openbor.h"
+#undef assert
+#undef printf
+#ifdef NDEBUG
+#error Wandering assertions must remain enabled
+#endif
+struct wander_case {
+ const char *name;float video[2],camera[2],zrange[2],position[2],target[4],range[2];
+ int present,nomove,dox,doz;float speed,grab;int health,sortid,pathblocked,aggression;
+ uint32_t clock;int pick;uint32_t random[3];
+};
+static const struct wander_case cases[]={@CASES@},*test;
+struct wander_result {float velocity[2],destination[2];uint32_t stalltime;int result;const char *trace;};
+static const struct wander_result results[][sizeof(cases)/sizeof(*cases)]={@RESULTS@};
+static const struct {uint32_t revision;unsigned contract;} profiles[]={@PROFILES@};
+static const struct wander_result *expected;
+static unsigned active_case,draws;
+static char trace[128];static size_t used;
+uint32_t obor_profile_build;
+u32 time;
+static entity actor,target,*self=&actor;
+static s_level world,*level=&world;
+static s_videomodes videomodes;
+static float advancex,advancey;
+static int PLAYER_MIN_Z,PLAYER_MAX_Z;
+#define assert(c) do {if(!(c)) {fprintf(stderr,"Wander mismatch: profile=%u case=%u (%s) line=%d trace=%s expected=%s velocity=%a,%a destination=%a,%a\n",obor_profile_build,active_case,test->name,__LINE__,trace,expected->trace,actor.xdir,actor.zdir,actor.destx,actor.destz);abort();}} while(0)
+static uint32_t observed_random(void) {
+ assert(draws<3);uint32_t value=test->random[draws++];
+ int n=snprintf(trace+used,sizeof(trace)-used,"D%u;",value);
+ assert(n>=0 && (size_t)n<sizeof(trace)-used);used+=(size_t)n;return value;
+}
+static int pick_random_attack(entity *ent,int mode) {
+ assert(!ent && !mode);assert(used+2<sizeof(trace));trace[used++]='P';trace[used++]=';';trace[used]=0;
+ return test->pick?114:-1;
+}
+#undef rand32
+#define rand32 observed_random
+@DISTANCE@
+@FUNCTION@
+int main(void) {
+ s_anim animation,*animations[MAX_ANIS]={0};memset(&animation,0,sizeof(animation));
+ animation.numframes=1;animations[114]=&animation;
+ for(unsigned p=0;p<sizeof(profiles)/sizeof(*profiles);++p) {
+  obor_profile_build=profiles[p].revision;
+  for(unsigned c=0;c<sizeof(cases)/sizeof(*cases);++c) {
+   active_case=c;test=cases+c;expected=&results[profiles[p].contract][c];
+   memset(&actor,0,sizeof(actor));memset(&target,0,sizeof(target));memset(&world,0,sizeof(world));
+   actor.modeldata.animation=animations;actor.modeldata.animation_capacity=MAX_ANIS;
+   actor.modeldata.nomove=test->nomove;actor.modeldata.speed=test->speed;
+   actor.modeldata.grabdistance=test->grab;actor.modeldata.aggression=test->aggression;
+   actor.health=test->health;actor.sortid=test->sortid;actor.pathblocked=test->pathblocked;
+   actor.x=test->position[0];actor.z=test->position[1];
+   target.x=test->target[0];target.z=test->target[1];target.direction=test->target[2];
+   target.attacking=test->target[3];videomodes.hRes=test->video[0];videomodes.vRes=test->video[1];
+   advancex=test->camera[0];advancey=test->camera[1];
+   PLAYER_MIN_Z=test->zrange[0];PLAYER_MAX_Z=test->zrange[1];time=test->clock;
+   animation.range.xmin=test->range[0];animation.range.xmax=test->range[1];
+   actor.xdir=9.5f;actor.zdir=-4.25f;actor.destx=-71.25f;actor.destz=-83.5f;actor.stalltime=13;
+   unsigned char target_before[sizeof(target)];memcpy(target_before,&target,sizeof(target));
+   used=draws=0;trace[0]=0;
+   int result=@CALL@;
+   assert(result==expected->result && actor.stalltime==expected->stalltime);
+   assert(!memcmp(&actor.xdir,&expected->velocity[0],sizeof(float)));
+   assert(!memcmp(&actor.zdir,&expected->velocity[1],sizeof(float)));
+   assert(!memcmp(&actor.destx,&expected->destination[0],sizeof(float)));
+   assert(!memcmp(&actor.destz,&expected->destination[1],sizeof(float)));
+   assert(!strcmp(trace,expected->trace) && !memcmp(target_before,&target,sizeof(target)));
+  }
+ }
+ printf("{\"status\":\"PASS\",\"cases\":%u}\n",
+        (unsigned)((sizeof(profiles)/sizeof(*profiles))*(sizeof(cases)/sizeof(*cases))));return 0;
+}

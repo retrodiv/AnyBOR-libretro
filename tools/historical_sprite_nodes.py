@@ -11,7 +11,8 @@ import re
 
 
 def render_sprite_nodes(*, loader, cleanup, cache, revision, node_cache,
-                        clipped_metadata=False, count_type='unsigned int', mode='valid'):
+                        clipped_metadata=False, count_type='unsigned int', mode='valid',
+                        alias_loads=None, full_search=None, cache_operations=None):
     definitions=((loader,'int','loadsprite'),(cleanup,'void','freesprites'))
     if (type(node_cache)is not bool or type(clipped_metadata)is not bool or
             (clipped_metadata and not node_cache) or mode not in ('valid','all') or
@@ -20,6 +21,13 @@ def render_sprite_nodes(*, loader, cleanup, cache, revision, node_cache,
             (node_cache and (not isinstance(cache,str) or not cache)) or
             (not node_cache and cache!='')):
         raise ValueError('Explicit native cache layout, revision and observation mode required')
+    alias_loads=(1 if node_cache else 2) if alias_loads is None else alias_loads
+    full_search=node_cache if full_search is None else full_search
+    cache_operations=node_cache if cache_operations is None else cache_operations
+    if (type(alias_loads)is not int or alias_loads not in (1,2) or
+            type(full_search)is not bool or type(cache_operations)is not bool or
+            cache_operations and not node_cache):
+        raise ValueError('Explicit bounded alias lookup and cache observations required')
     if node_cache:definitions+=((cache,'void','cachesprite'),)
     for body,result,name in definitions:
         if (not isinstance(body,str) or not 0<len(body)<=16384 or '\0'in body or
@@ -197,12 +205,12 @@ static void unavailable_reload(void){
                           if node_cache else ''),
         '@AT_SPRITE@':'return sprite_map[index].node->sprite;'if node_cache else 'return sprite_map[index].sprite;',
         '@AT_NAME@':'return sprite_map[index].node->filename;'if node_cache else 'return sprite_map[index].filename;',
-        '@ALIAS_LOADS@':'1'if node_cache else '2','@VALID_CACHE@':valid_cache if node_cache else '',
-        '@LATER_INDEX@':'1'if node_cache else '3','@LATER_COUNT@':'3'if node_cache else '4',
-        '@VALID_COUNT@':'12'if node_cache else '6',
-        '@UNAVAILABLE_CACHE@':unavailable_cache if node_cache else '',
+        '@ALIAS_LOADS@':str(alias_loads),'@VALID_CACHE@':valid_cache if cache_operations else '',
+        '@LATER_INDEX@':'1'if full_search else '3','@LATER_COUNT@':'3'if full_search else '4',
+        '@VALID_COUNT@':'12'if cache_operations else '6',
+        '@UNAVAILABLE_CACHE@':unavailable_cache if cache_operations else '',
         '@ALL_CASES@':('for(unsigned n=1;n<=3;++n)unavailable_component(n);'+
-                      ('unavailable_reload();'if node_cache else ''))if mode=='all'else '',
+                      ('unavailable_reload();'if cache_operations else ''))if mode=='all'else '',
     }
     for key,value in replacements.items():code=code.replace(key,value)
     return code

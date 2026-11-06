@@ -15,8 +15,9 @@ def render_jump_attack(parts, *, revision, target_argument, cooldown_available,
                        throttle_time_field, animation_capacity_field,
                        game_speed, cases, unused_graphics_inlines=False,
                        unused_inline_declarations=None):
-    if (not isinstance(parts, dict) or
-            set(parts) != {'common_try_jumpattack', 'recheck_nextattack'} or
+    required = {'common_try_jumpattack', 'recheck_nextattack'}
+    if (not isinstance(parts, dict) or not required <= set(parts) or
+            set(parts) - required - {'diff'} or
             any(not isinstance(s, str) or len(s) > 65536 for s in parts.values()) or
             not parts['common_try_jumpattack'].strip()):
         raise ValueError('Complete bounded native jump provider source required')
@@ -118,6 +119,8 @@ static entity subject,opponent,dust_entity,*self=&subject;
 static s_anim target_animation,jump_animations[2],*slots[MAX_ANIS];
 static __typeof__(*target_animation.vulnerable) vulnerability[1];
 static uint32_t fixture_clock;
+/* Initialized synthetic viewport for the earlier probability branches. */
+s_videomodes videomodes={.hRes=320,.vRes=240};
 static float noatk_duration;
 static unsigned trace[8],trace_count,random_count,random_bit_calls;
 static void observe(unsigned id) {assert(trace_count<8);trace[trace_count++]=id;}
@@ -166,6 +169,7 @@ static void observed_animation(entity *ent,int animation,int reset) {
 #define execute_onspawn_script observed_spawn_script
 #define ent_set_anim observed_animation
 #define time fixture_clock
+@DISTANCE@
 @COOLDOWN@
 @PROVIDER@
 #undef time
@@ -214,11 +218,12 @@ int main(void) {
     values = dict(GAME_SPEED=str(game_speed), REVISION=str(revision),
         GRAPHICS=graphics_refusals(unused_graphics_inlines),
         REFUSALS=inline_refusals(unused_inline_declarations,
-            forbidden_names=('common_try_jumpattack', 'recheck_nextattack', 'common_jump')),
+            forbidden_names=('common_try_jumpattack', 'recheck_nextattack', 'common_jump', 'diff')),
         CASES=',\n'.join(entries),
         CHANCE_PARAMETERS=('entity *target,' if target_argument else '') +
                           'float minimum,float maximum',
         TARGET_CHECK='assert(target==&opponent);' if target_argument else '',
+        DISTANCE=parts.get('diff', ''),
         COOLDOWN=parts['recheck_nextattack'], PROVIDER=parts['common_try_jumpattack'],
         CAPACITY='subject.modeldata.animation_capacity=MAX_ANIS;' if animation_capacity_field else '',
         THROTTLE='subject.modeldata.attackthrottletime=test->throttle_time;'

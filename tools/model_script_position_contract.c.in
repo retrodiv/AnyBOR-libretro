@@ -1,0 +1,55 @@
+/* Native inline model-script case with owned text and an identity observer.
+ * SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <stddef.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "openbor.h"
+#undef printf
+#undef shutdown
+uint32_t obor_profile_build;
+static char *scriptbuf,*shutdownmessage,namebuf[256],buf[1024];
+static size_t scriptlen,sbsize,len;
+static ptrdiff_t pos;
+static int ani_id,script_id;
+static s_anim animation,*newanim=&animation;
+static void unexpected_shutdown(int code,const char *message,...){(void)code;(void)message;abort();}
+static LONG obor_profile_animation_identity(int identifier,const s_anim *value){
+ if(value!=&animation || identifier!=animation.index)abort();
+ return (LONG)animation.index;
+}
+#define shutdown unexpected_shutdown
+@APPEND@
+#undef shutdown
+@CONSTANTS@
+static int generate(void){
+ switch(0){case 0:@CASE@}
+ if(shutdownmessage)goto lCleanup;
+ return 1;
+lCleanup:
+ return 0;
+}
+static const unsigned revisions[]={@PROFILES@};
+static const struct {int reset,animation;const char *body;} cases[]={@CASES@};
+static void hex_text(const char *text){
+ for(const unsigned char *p=(const unsigned char*)text;*p;++p)printf("%02x",(unsigned)*p);
+}
+int main(void){
+ for(unsigned p=0;p<sizeof(revisions)/sizeof(*revisions);++p){
+  obor_profile_build=revisions[p];scriptbuf=NULL;sbsize=scriptlen=0;script_id=-1;
+  for(unsigned k=0;k<sizeof(cases)/sizeof(*cases);++k){
+   if(cases[k].reset){free(scriptbuf);sbsize=8192;scriptbuf=calloc(1,sbsize);if(!scriptbuf)abort();scriptlen=0;script_id=-1;}
+   if(!scriptbuf)abort();
+   memset(&animation,0,sizeof(animation));ani_id=animation.index=cases[k].animation;
+   if(snprintf(buf,sizeof(buf),"prefix @script%s@end_script",cases[k].body)>=(int)sizeof(buf))abort();
+   shutdownmessage=NULL;pos=0;len=0;int accepted=generate();
+   if(scriptlen!=strlen(scriptbuf) || sbsize!=8192)abort();
+   printf("{\"revision\":%u,\"case\":%u,\"accepted\":%d,\"script_id\":%d,\"position\":%td,\"text_hex\":\"",obor_profile_build,k,accepted,script_id,pos);
+   hex_text(scriptbuf);printf("\",\"diagnostic_hex\":\"");hex_text(shutdownmessage?shutdownmessage:"");puts("\"}");
+  }
+  free(scriptbuf);scriptbuf=NULL;
+ }
+ return 0;
+}

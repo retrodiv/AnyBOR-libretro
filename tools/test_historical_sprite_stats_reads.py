@@ -32,13 +32,14 @@ def reader_entry(source):
     return method
 
 
-def reader_program(components=None, common=None, contracts=None, *, original=False):
+def reader_program(components=None, common=None, contracts=None, *, original=False, driver=None):
+    explicit_components = components is not None
     rows = load_contract_fixture(CONTRACT_PATH)['sources'] if contracts is None else contracts
     if components is None:
         source = (SOURCE / 'src/engines/3741/openborscript.c').read_text()
         components = {'entries': reader_entry(source),
             'translation': 'static int obor_entity_get_property_native(int p) {return p;}',
-            'helpers': ''}
+            'helpers': function((SOURCE / 'src/engines/3741/source/gamelib/types.h').read_text(), 'obor_profile_map_sprite')}
         variant = (SOURCE / 'src/engines/3741/source/scriptlib/ScriptVariant.c').read_text()
         common = {name: function(variant, name) for name in
             ('ScriptVariant_ChangeType', 'ScriptVariant_Clear')}
@@ -59,13 +60,13 @@ typedef struct {union {LONG lVal;DOUBLE dblVal;void *ptrVal;int strVal;};VARTYPE
 typedef struct {int centerx,centery;} s_sprite;
 typedef struct {int marker;} s_attack;
 typedef struct {s_sprite *sprite;char *filename;} s_sprite_list;
-typedef struct {int centerx,centery;s_sprite_list *node;} s_sprite_map;
+typedef struct {int centerx,centery;s_sprite_list *node;int ofsx,ofsy;s_sprite *profile_sprite;} s_sprite_map;
 typedef struct {int numframes;int *sprite;} s_animation;
 typedef struct {s_animation **animation;int animation_capacity;float stats[20];
  struct {short def,die,get,mphigh,mplow,mpmed,pain,weapon,x,y;} icon;} s_model;
 typedef struct {s_model modeldata;s_animation *animation;int animpos;float stats[20];} entity;
 enum {_ep_sprite,_ep_spritea,_ep_stats,_ep_icon};
-enum {_gep_spritea_centerx,_gep_spritea_centery,_gep_spritea_file,_gep_spritea_sprite};
+enum {_gep_spritea_centerx,_gep_spritea_centery,_gep_spritea_file,_gep_spritea_offsetx,_gep_spritea_offsety,_gep_spritea_sprite};
 enum {_gep_icon_def,_gep_icon_die,_gep_icon_get,_gep_icon_mphigh,_gep_icon_mplow,
  _gep_icon_mpmed,_gep_icon_pain,_gep_icon_weapon,_gep_icon_x,_gep_icon_y};
 #define S_OK 0
@@ -95,7 +96,7 @@ static void mapstrings_getentityproperty(ScriptVariant **args,int count) {(void)
 @TRANSLATION@
 @HELPERS@
 @ENTRIES@
-struct contract {int revision,stats_count,spritea_x_is_y;};
+struct contract {int revision,stats_count,spritea_x_is_y,legacy_sprite,offsets_available;};
 static const struct contract contracts[]={@CONTRACTS@};
 static ScriptVariant integer(LONG value) {return (ScriptVariant){.vt=VT_INTEGER,.lVal=value};}
 static short *icon_field(int selector) {
@@ -123,7 +124,8 @@ static void reset(void) {
  for(int i=0;i<5;++i) {
   snprintf(names[i],sizeof(names[i]),"data/sprites/frame-%d.gif",i);
   nodes[i]=(s_sprite_list){&sprites[i],names[i]};
-  maps[i]=(s_sprite_map){10+i,30+i,&nodes[i]};
+  maps[i]=(s_sprite_map){.centerx=10+i,.centery=30+i,.node=&nodes[i],
+      .ofsx=17+i,.ofsy=-19-i,.profile_sprite=&sprites[i]};
   sprites[i]=(s_sprite){-1,-1};
  }
  for(int i=0;i<20;++i) {
@@ -153,7 +155,9 @@ static void check(const struct contract *c) {
   int id=frame_ids[a][f];actor.animation=&animations[a];actor.animpos=f;
   run(_ep_sprite,integer(0),integer(0),integer(0),2,S_OK,VT_PTR,0,id);
   assert(sprites[id].centerx==maps[id].centerx && sprites[id].centery==maps[id].centery);
-  for(int p=_gep_spritea_centerx;p<=_gep_spritea_sprite;++p) {
+  const int properties[]={_gep_spritea_centerx,_gep_spritea_centery,_gep_spritea_file,_gep_spritea_sprite};
+  for(unsigned slot=0;slot<sizeof(properties)/sizeof(*properties);++slot) {
+   int p=properties[slot];
    VARTYPE kind=p==_gep_spritea_file?VT_STR:p==_gep_spritea_sprite?VT_PTR:VT_INTEGER;
    DOUBLE value=p==_gep_spritea_centerx?maps[id].centerx:maps[id].centery;
    run(_ep_spritea,integer(p),integer(a),integer(f),5,S_OK,kind,value,id);
@@ -163,6 +167,12 @@ static void check(const struct contract *c) {
    }
   }
   run(_ep_spritea,integer(99),integer(a),integer(f),5,E_FAIL,VT_EMPTY,0,0);
+  for(int offset=0;offset<2;++offset) {
+   int selector=offset?_gep_spritea_offsety:_gep_spritea_offsetx;
+   DOUBLE value=offset?maps[id].ofsy:maps[id].ofsx;
+   run(_ep_spritea,integer(selector),integer(a),integer(f),5,
+       c->offsets_available?S_OK:E_FAIL,c->offsets_available?VT_INTEGER:VT_EMPTY,value,0);
+  }
  }
  for(int selector=-1;selector<=2;++selector) for(int i=0;i<c->stats_count;++i) {
   DOUBLE expected=selector==1?actor.stats[i]:actor.modeldata.stats[i];
@@ -222,13 +232,22 @@ static void check(const struct contract *c) {
   empty(_ep_spritea,integer(0),integer(0),integer(0),5);
  }
  frame_ids[0][0]=0;maps[0].node=NULL;
- empty(_ep_icon,integer(_gep_icon_def),integer(0),integer(0),3);
- empty(_ep_sprite,integer(0),integer(0),integer(0),2);
+ if(c->legacy_sprite) {
+  run(_ep_icon,integer(_gep_icon_def),integer(0),integer(0),3,S_OK,VT_PTR,0,0);
+  run(_ep_sprite,integer(0),integer(0),integer(0),2,S_OK,VT_PTR,0,0);
+ } else {
+  empty(_ep_icon,integer(_gep_icon_def),integer(0),integer(0),3);
+  empty(_ep_sprite,integer(0),integer(0),integer(0),2);
+ }
  /* Coordinate reads require only a valid map entry. */
  run(_ep_spritea,integer(_gep_spritea_centerx),integer(0),integer(0),5,S_OK,VT_INTEGER,10,0);
  empty(_ep_spritea,integer(_gep_spritea_file),integer(0),integer(0),5);
- empty(_ep_spritea,integer(_gep_spritea_sprite),integer(0),integer(0),5);
+ run(_ep_spritea,integer(_gep_spritea_sprite),integer(0),integer(0),5,S_OK,
+     c->legacy_sprite?VT_PTR:VT_EMPTY,0,0);
  maps[0].node=&nodes[0];nodes[0].sprite=NULL;
+ if(c->legacy_sprite)
+  run(_ep_spritea,integer(_gep_spritea_sprite),integer(0),integer(0),5,S_OK,VT_PTR,0,0);
+ maps[0].profile_sprite=NULL;
  empty(_ep_icon,integer(_gep_icon_def),integer(0),integer(0),3);
  empty(_ep_sprite,integer(0),integer(0),integer(0),2);
  empty(_ep_spritea,integer(_gep_spritea_sprite),integer(0),integer(0),5);
@@ -252,6 +271,25 @@ int main(int argc,char **argv) {
  assert(matched==1);return 0;
 }
 '''
+    if driver is not None:
+        if (not explicit_components or original or not isinstance(driver, str) or
+                not 0 < len(driver) <= 65536 or not rows or len(rows) > 256 or
+                any(type(row.get('revision')) is not int or
+                    not 0 < row['revision'] <= 0xffffffff for row in rows) or
+                len({row['revision'] for row in rows}) != len(rows)):
+            raise ValueError('Explicit reader, driver and unique revision contracts required')
+        marker = 'static void check(const struct contract *c)'
+        if program.count(marker) != 1:
+            raise ValueError('One shared reader prefix required')
+        program = program[:program.index(marker)] + driver
+        declaration = 'struct contract {int revision,stats_count,spritea_x_is_y,legacy_sprite,offsets_available;};'
+        if program.count(declaration) != 1:
+            raise ValueError('One reader contract declaration required')
+        program = program.replace(declaration, 'struct contract {int revision;};')
+        contract_values = ','.join('{%du}' % row['revision'] for row in rows)
+    else:
+        contract_values = ','.join('{%d,%d,%d,%d,%d}' % (row['revision'], row['stats_count'],
+            row['spritea_x_is_y'], row['legacy_sprite'], row['offsets_available']) for row in rows)
     if original:
         observation = {'status': 'PASS', 'sources': len(rows), 'properties': 4}
         program = program[:program.index('int main(int argc,char **argv)')] + (
@@ -262,8 +300,7 @@ int main(int argc,char **argv) {
         'TRANSLATION': components.get('translation', ''),
         'HELPERS': components.get('helpers', ''), 'ENTRIES': components['entries'],
         'GENERATED': str(int(not original)),
-        'CONTRACTS': ','.join('{%d,%d,%d}' % (row['revision'], row['stats_count'],
-            row['spritea_x_is_y']) for row in rows)}
+        'CONTRACTS': contract_values}
     return re.sub(r'@(' + '|'.join(insertions) + r')@', lambda m: insertions[m[1]], program)
 
 
@@ -278,6 +315,8 @@ class SpriteStatsReadTests(unittest.TestCase):
                 self.assertIn(int(profile.get('revision', profile['build'])), revisions)
         for row in rows:
             self.assertEqual(row['stats_count'], 20)
+            self.assertIs(type(row['legacy_sprite']), bool)
+            self.assertIs(type(row['offsets_available']), bool)
             self.assertRegex(row['commit'], r'^[0-9a-f]{40}$')
             for digest in row['getter_hashes'].values():
                 self.assertRegex(digest, r'^[0-9a-f]{64}$')

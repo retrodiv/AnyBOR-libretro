@@ -1,0 +1,54 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <assert.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <strings.h>
+#include "ScriptVariant.h"
+#undef assert
+#undef printf
+#define stricmp strcasecmp
+#define strnicmp strncasecmp
+uint32_t obor_profile_build;
+static unsigned active_case;
+#define assert(c) do {if(!(c)){fprintf(stderr,"INPUT_CONSTANT revision=%u case=%u line=%d\n",obor_profile_build,active_case,__LINE__);abort();}}while(0)
+static const char *query_text;
+CHAR *StrCache_Get(int index){assert(index==7);return (CHAR*)query_text;}
+void ScriptVariant_Clear(ScriptVariant *v){memset(v,0,sizeof(*v));v->vt=VT_EMPTY;}
+void ScriptVariant_ChangeType(ScriptVariant *v,VARTYPE type){memset(v,0,sizeof(*v));v->vt=type;}
+void ScriptVariant_ToString(ScriptVariant *v,LPSTR out){(void)v;strcpy(out,"controlled");}
+static int quiet_printf(const char *format,...){(void)format;return 0;}
+@DEFINITIONS@
+@MACRO@
+#define printf quiet_printf
+@MAPPER@
+@ENTRY@
+#undef printf
+struct input{const char *query;int mode,kind,count,value;};
+static const struct input cases[]={@CASES@};
+static const unsigned profiles[]={@PROFILES@};
+int main(void){
+ _Static_assert(sizeof(LONG)==4 && (LONG)-1<0,"Native signed script integer width");
+ _Static_assert((LONG)0x80000000u==(-2147483647-1),"Target signed conversion");
+ for(unsigned p=0;p<sizeof(profiles)/sizeof(*profiles);++p){
+  obor_profile_build=profiles[p];
+  for(unsigned k=0;k<sizeof(cases)/sizeof(*cases);++k){
+   active_case=k;const struct input *c=&cases[k];query_text=c->query;
+   ScriptVariant arg={0},result={0},*out=&result,*args[]={&arg};
+   arg.vt=c->kind==0?VT_STR:c->kind==1?VT_INTEGER:VT_DECIMAL;
+   if(arg.vt==VT_STR)arg.strVal=7;else if(arg.vt==VT_INTEGER)arg.lVal=c->value;else arg.dblVal=3.5;
+   result.vt=VT_INTEGER;result.lVal=77;
+   if(c->mode)mapstrings_transconst(args,c->count);
+   int mapped_kind=arg.vt;
+   LONG mapped_value=arg.vt==VT_INTEGER?arg.lVal:0;
+   HRESULT status=openbor_transconst(args,&out,c->count);
+   printf("{\"revision\":%u,\"case\":%u,\"mapped\":[%d,%d],\"result\":[%d,%d,%d,%d],\"argument\":[%d,%d]}\n",
+    obor_profile_build,k,mapped_kind,(int)mapped_value,(int)status,out==&result,
+    (int)result.vt,result.vt==VT_INTEGER?(int)result.lVal:0,
+    (int)arg.vt,arg.vt==VT_INTEGER?(int)arg.lVal:0);
+  }
+ }
+ return 0;
+}

@@ -121,3 +121,39 @@ def contract_revisions(fixture, revisions):
     return {revision for revision in required
             if revision in retained or revision in controls or
             not any(low <= revision <= high for _, low, high in boundary['ranges'])}
+
+
+def contract_group(fixture, engine, revision, *, default=None):
+    """Choose a source-defined probe group independently of its physical engine."""
+    if (not isinstance(fixture, dict) or not isinstance(engine, str) or not engine or
+            type(revision) is not int or not 0 < revision <= 0xffffffff):
+        raise ValueError('Explicit engine and bounded profile revision required')
+    groups = fixture.get('engines')
+    rules = fixture.get('profile_groups', [])
+    if (not isinstance(groups, dict) or not groups or not isinstance(rules, list) or
+            len(rules) > 128):
+        raise ValueError('Declared probe groups and bounded profile rules required')
+    ends = {}
+    selected = None
+    for row in rules:
+        if (not isinstance(row, dict) or set(row) != {'engine', 'first', 'last', 'group'} or
+                not isinstance(row['engine'], str) or not row['engine'] or
+                not isinstance(row['group'], str) or row['group'] not in groups or
+                not isinstance(groups[row['group']], dict) or
+                groups[row['group']].get('engine', row['group']) != row['engine'] or
+                type(row['first']) is not int or type(row['last']) is not int or
+                not 0 <= row['first'] <= row['last'] <= 0xffffffff or
+                row['first'] != ends.get(row['engine'], -1) + 1):
+            raise ValueError('Disjoint complete profile rules for the same engine required')
+        ends[row['engine']] = row['last']
+        if row['engine'] == engine and row['first'] <= revision <= row['last']:
+            selected = row['group']
+    if any(last != 0xffffffff for last in ends.values()):
+        raise ValueError('Profile rules must cover their complete engine range')
+    if selected is None:
+        selected = engine if default is None else default
+    if (not isinstance(selected, str) or selected not in groups or
+            not isinstance(groups[selected], dict) or
+            groups[selected].get('engine', selected) != engine):
+        raise ValueError('Selected probe group must belong to its physical engine')
+    return selected

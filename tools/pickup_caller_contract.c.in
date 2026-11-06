@@ -1,0 +1,102 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <assert.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "openbor.h"
+#undef assert
+#undef printf
+#ifdef NDEBUG
+#error Pickup caller assertions must remain enabled
+#endif
+uint32_t obor_profile_build;
+static unsigned active_case;
+#define assert(c) do {if(!(c)){fprintf(stderr,"PICKUP_CALLER revision=%u case=%u line=%d\n",obor_profile_build,active_case,__LINE__);abort();}}while(0)
+static entity actor,item,held_entity;
+entity *self;
+unsigned int time;
+static s_anim animation,*animations[ANI_GET+1];
+static int gear_mutate,animation_mutate,hit_mutate;
+static void initial_action(void) {abort();}
+static void callback_action(void) {abort();}
+void common_get(void) {abort();}
+void suicide(void) {abort();}
+static int action_id(void (*action)(void)) {
+ if(!action)return 0;
+ if(action==initial_action)return 1;
+ if(action==callback_action)return 2;
+ if(action==common_get)return 3;
+ if(action==suicide)return 4;
+ abort();
+}
+static int weapon_id(entity *e) {
+ if(!e)return 0;
+ if(e==&item)return 2;
+ if(e==&held_entity)return 3;
+ abort();
+}
+#define WIDTH 18
+static void snapshot(double *out) {
+ const double fields[]={action_id(actor.takeaction),actor.getting,actor.idling,actor.xdir,actor.zdir,
+ actor.direction,actor.x,actor.z,actor.health,weapon_id(actor.weapent),actor.modeldata.animal,
+ action_id(item.takeaction),item.x,item.z,item.direction,item.health,item.nextanim,item.nextthink};
+ _Static_assert(sizeof(fields)/sizeof(*fields)==WIDTH,"Observer fields bound");
+ memcpy(out,fields,sizeof(fields));
+}
+struct event {int kind,value;double fields[WIDTH];};
+static struct event events[4];static unsigned event_count;
+static void observe(int kind,int value) {
+ assert(event_count<4);struct event *out=&events[event_count++];
+ out->kind=kind;out->value=value;snapshot(out->fields);
+}
+void dropweapon(int flag) {
+ assert(!flag && !actor.weapent);observe(1,flag);
+ if(gear_mutate)actor.takeaction=callback_action;
+}
+void set_weapon(entity *e,int number,int anim_flag) {
+ assert(e==self && e->weapent==&item && number==7 && !anim_flag);observe(2,number);
+ if(gear_mutate){actor.takeaction=callback_action;actor.modeldata.animal=1;actor.health=60;}
+}
+void ent_set_anim(entity *e,int index,int reset) {
+ assert(e==self && index==ANI_GET && !reset);observe(3,1);
+ if(animation_mutate){actor.takeaction=callback_action;actor.getting=4;actor.idling=5;
+  actor.xdir=9;actor.zdir=10;item.x=31;item.z=41;item.direction=0;item.nextanim=45;item.nextthink=46;}
+}
+void execute_didhit_script(entity *e,entity *other,int force,int drop,int type,int noblock,int guardcost,int jugglecost,int pauseadd,int blocked) {
+ assert(e==&item && other==self && !force && !drop && type==item.modeldata.subtype &&
+        !noblock && !guardcost && !jugglecost && !pauseadd && !blocked);observe(4,1);
+ if(hit_mutate){item.z=77;item.health=30;}
+}
+@HELPERS@
+@FUNCTION@
+struct pickup_case {int kind,valid,holding,animal,health,gear_mutate,animation_mutate,hit_mutate;};
+static const struct pickup_case cases[]={@CASES@};
+static const unsigned profiles[]={@PROFILES@};
+static void prepare(const struct pickup_case *c) {
+ memset(&actor,0,sizeof(actor));memset(&item,0,sizeof(item));memset(&held_entity,0,sizeof(held_entity));
+ memset(&animation,0,sizeof(animation));memset(animations,0,sizeof(animations));self=&actor;time=100;
+ actor.takeaction=item.takeaction=initial_action;actor.idling=1;actor.xdir=2;actor.zdir=3;
+ actor.x=10;actor.z=20;actor.health=90;actor.modeldata.health=100;actor.modeldata.animal=c->animal;
+ actor.weapent=c->holding?&held_entity:NULL;actor.modeldata.animation=animations;actor.modeldata.animation_capacity=ANI_GET+1;
+ animation.numframes=1;animations[ANI_GET]=c->valid?&animation:NULL;
+ item.x=30;item.z=40;item.direction=1;item.health=c->health;item.modeldata.type=TYPE_ITEM;item.modeldata.weapnum=7;
+ item.modeldata.subtype=c->kind==1?SUBTYPE_WEAPON:c->kind==2?SUBTYPE_PROJECTILE:c->kind==3?SUBTYPE_TOUCH:SUBTYPE_NONE;
+ item.nextanim=17;item.nextthink=18;gear_mutate=c->gear_mutate;animation_mutate=c->animation_mutate;hit_mutate=c->hit_mutate;event_count=0;
+}
+static void fields_json(const double *v) {
+ putchar('[');for(unsigned i=0;i<WIDTH;++i){if(i)putchar(',');printf("%.17g",v[i]);}putchar(']');
+}
+int main(void) {
+ for(unsigned p=0;p<sizeof(profiles)/sizeof(*profiles);++p){
+  obor_profile_build=profiles[p];
+  for(unsigned k=0;k<sizeof(cases)/sizeof(*cases);++k){
+   active_case=k;prepare(&cases[k]);common_pickupitem(&item);double final[WIDTH];snapshot(final);
+   printf("{\"revision\":%u,\"case\":%u,\"fields\":",obor_profile_build,k);fields_json(final);printf(",\"events\":[");
+   for(unsigned i=0;i<event_count;++i){struct event *e=&events[i];if(i)putchar(',');printf("{\"kind\":%d,\"value\":%d,\"fields\":",e->kind,e->value);fields_json(e->fields);putchar('}');}
+   puts("]}");
+  }
+ }
+ return 0;
+}

@@ -30,7 +30,7 @@ PROPERTIES = ('_ep_spritea', '_ep_weapon', '_ep_knockdowncount', '_ep_komap',
     '_ep_defaultname', '_ep_dot', '_ep_map', '_ep_model', '_ep_name')
 
 
-def complex_program(components=None, contracts=None):
+def complex_program(components=None, contracts=None, *, driver=None):
     contracts = CONTRACTS['sources'] if contracts is None else contracts
     generated = components is None
     if components is None:
@@ -39,6 +39,9 @@ def complex_program(components=None, contracts=None):
         components = {'entries': entry, 'actions': sorted(actions),
             'helpers': function(source, 'obor_script_sprite_filename'),
             'invoke': 'return openbor_changeentityproperty(args,result,count);'}
+        if 'obor_profile_energy_disable_value(' in entry:
+            components['helpers'] += function((SOURCE / 'src/engines/3741/openbor.h').read_text(),
+                                              'obor_profile_energy_disable_value')
         if 'obor_entity_set_property_native(' in entry:
             components['helpers'] += (
                 'static int obor_entity_set_property_native(int property) { return property; }\n')
@@ -60,7 +63,7 @@ enum { VT_EMPTY=0,VT_INTEGER=1,VT_DECIMAL=2,VT_PTR=5,VT_STR=6 };
 enum { TYPE_ENEMY=1,TYPE_NPC,TYPE_OBSTACLE,TYPE_PLAYER,TYPE_SHOT };
 PROPERTIES_ENUM
 enum { _cep_spritea_centerx, _cep_spritea_centery, _cep_spritea_file,
-       _cep_spritea_sprite };
+       _cep_spritea_offsetx, _cep_spritea_offsety, _cep_spritea_sprite };
 enum { _cep_knockdowncount_current, _cep_knockdowncount_max,
        _cep_knockdowncount_time };
 enum { _cep_ta_the_end=22, _cep_th_the_end=6 };
@@ -96,7 +99,7 @@ typedef struct entity {
     int dot[MAX_DOTS],dot_force[MAX_DOTS],dot_rate[MAX_DOTS],dot_atk[MAX_DOTS];
     struct entity *dot_owner[MAX_DOTS];
 } entity;
-typedef struct { int centerx,centery; s_sprite_list *node; } s_sprite_map;
+typedef struct { int centerx,centery; s_sprite_list *node; int ofsx,ofsy; s_sprite *profile_sprite; } s_sprite_map;
 static s_sprite_map *sprite_map;
 int sprite_map_max_items;
 unsigned int sprites_loaded;
@@ -148,7 +151,10 @@ STUBS
 HELPERS
 ENTRIES
 static int invoke(ScriptVariant **args,ScriptVariant **result,int count) { INVOKE }
-struct contract { int revision,has_result,action_empty; };
+struct contract {
+ int revision,has_result,action_empty,legacy_sprite,sprite_offsets_available;
+ int edelay_factor_argument,offset_y_from_selector;
+};
 static const struct contract contracts[]={ CONTRACTS };
 static void expected_field(entity *e,int property,int index,double value) {
     switch(property) {
@@ -234,6 +240,13 @@ static void check_sequences(const struct contract *c) {
                     int good=(mask>>i)&1;double value=17+i+(decimal?0.5:0.0);
                     v[i+2]=(ScriptVariant){.vt=good?(decimal?VT_DECIMAL:VT_INTEGER):VT_EMPTY};
                     if(decimal) v[i+2].dblVal=value;else v[i+2].lVal=(LONG)value;
+                }
+                for(int i=0;i<count;++i) {
+                    int argument=sequence[p].property==_ep_edelay && i==1?
+                        c->edelay_factor_argument-2:i;
+                    if(argument>=count)continue;
+                    int good=(mask>>argument)&1;
+                    double value=17+argument+(decimal?0.5:0.0);
                     int allowed=!c->has_result || i==0 || active;
                     if(good && allowed) expected_field(&expected,sequence[p].property,i,value);
                     if(i==0) active=result=good;
@@ -433,6 +446,7 @@ static void check(const struct contract *c) {
     sprite_map_max_items=3;sprites_loaded=3;
     sprite_map=calloc(3,sizeof(*sprite_map));assert(sprite_map);
     sprite_map[0].node=&node;
+    sprite_map[0].profile_sprite=&image;
     ScriptVariant v[6]={{.vt=VT_PTR,.ptrVal=&subject},
         {.vt=VT_INTEGER,.lVal=_ep_spritea},
         {.vt=VT_INTEGER,.lVal=_cep_spritea_centerx},
@@ -449,7 +463,16 @@ static void check(const struct contract *c) {
     v[5].vt=VT_EMPTY;call(c,v,6,E_FAIL,0);
     v[2].lVal=_cep_spritea_sprite;
     v[5]=(ScriptVariant){.vt=VT_PTR,.ptrVal=&replacement};call(c,v,6,S_OK,1);
-    assert(node.sprite==&replacement);
+    assert(c->legacy_sprite?sprite_map[0].profile_sprite==&replacement:
+                            node.sprite==&replacement);
+    v[2].lVal=_cep_spritea_offsetx;
+    v[5]=(ScriptVariant){.vt=VT_INTEGER,.lVal=31};
+    call(c,v,6,c->sprite_offsets_available?S_OK:E_FAIL,c->sprite_offsets_available);
+    assert(sprite_map[0].ofsx==(c->sprite_offsets_available?31:0));
+    v[2].lVal=_cep_spritea_offsety;v[5].lVal=47;
+    call(c,v,6,c->sprite_offsets_available?S_OK:E_FAIL,c->sprite_offsets_available);
+    assert(sprite_map[0].ofsy==(c->sprite_offsets_available?
+        (c->offset_y_from_selector?_cep_spritea_offsety:47):0));
     v[2].lVal=999;call(c,v,6,E_FAIL,0);
     // A centre write needs an allocated map entry, not a live sprite node.
     v[2].lVal=_cep_spritea_centerx;v[4].lVal=1;
@@ -526,7 +549,34 @@ int main(int argc,char **argv) {
     assert(matched==1);return 0;
 }
 '''
-    if not generated:
+    if driver is not None:
+        # Narrow callers retain the real callback and shared call checker, but
+        # supply their own oracle. Do not require unrelated contract fields.
+        if (generated or not isinstance(driver, str) or not 0 < len(driver) <= 65536 or
+                not contracts or len(contracts) > 256 or
+                any(type(row.get('revision')) is not int or
+                    not 0 < row['revision'] <= 0xffffffff or
+                    type(row.get('has_result')) is not bool for row in contracts) or
+                len({row['revision'] for row in contracts}) != len(contracts)):
+            raise ValueError('Explicit callback, driver and unique result contracts required')
+        marker = 'static void check_sequences(const struct contract *c)'
+        if program.count(marker) != 1:
+            raise ValueError('One shared callback prefix required')
+        program = program[:program.index(marker)] + driver
+        declaration = ('struct contract {\n'
+            ' int revision,has_result,action_empty,legacy_sprite,sprite_offsets_available;\n'
+            ' int edelay_factor_argument,offset_y_from_selector;\n};')
+        if program.count(declaration) != 1:
+            raise ValueError('One callback contract declaration required')
+        program = program.replace(declaration, 'struct contract { int revision,has_result; };')
+        contract_values = ','.join('{%du,%d}' % (row['revision'], row['has_result'])
+                                   for row in contracts)
+    else:
+        contract_values = '\n'.join('{%d,%d,%d,%d,%d,%d,%d},' %
+            (row['revision'], row['has_result'], row['action_empty'],
+             row['legacy_sprite'], row['sprite_offsets_available'],
+             row['edelay_factor_argument'], row['offset_y_from_selector']) for row in contracts)
+    if not generated and driver is None:
         observation = {'status': 'PASS', 'sources': len(contracts),
                        'properties': len(PROPERTIES)}
         program = program[:program.index('int main(int argc,char **argv)')] + (
@@ -539,9 +589,7 @@ int main(int argc,char **argv) {
                                   {'common_trymove', 'player_trymove'}))),
         ('HELPERS', components['helpers']), ('ENTRIES', components['entries']),
         ('INVOKE', components['invoke']), ('GENERATED', str(int(generated))),
-        ('CONTRACTS', '\n'.join('{%d,%d,%d},' %
-                              (row['revision'], row['has_result'], row['action_empty'])
-                              for row in contracts))]
+        ('CONTRACTS', contract_values)]
     for name, value in values:
         program = program.replace(name, value)
     return program
@@ -560,6 +608,10 @@ class EntityComplexTests(unittest.TestCase):
             self.assertRegex(row['commit'], r'^[0-9a-f]{40}$')
             self.assertRegex(row['setter_sha256'], r'^[0-9a-f]{64}$')
             self.assertIs(type(row['has_result']), bool)
+            self.assertIs(type(row['legacy_sprite']), bool)
+            self.assertIs(type(row['sprite_offsets_available']), bool)
+            self.assertIn(row['edelay_factor_argument'], (3,4))
+            self.assertIs(type(row['offset_y_from_selector']), bool)
             self.assertIs(type(row['action_empty']), bool)
             self.assertEqual(set(row['cases']), set(PROPERTIES))
             for digest in row['cases'].values():

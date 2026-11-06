@@ -1,0 +1,68 @@
+/* Native range loader and hit test with real engine records.
+ * SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "openbor.h"
+#include "commands.h"
+#undef printf
+#undef GET_INT_ARG
+uint32_t obor_profile_build;
+s_savedata savedata;
+static float lasthitx,lasthitz,lasthita;
+static int lasthitt,lasthitc;
+static s_anim range_animation,*newanim;
+static int arguments[3],argument_calls;
+static char *shutdownmessage;
+static int argument(int i){if(i<1 || i>2){abort();}++argument_calls;return arguments[i];}
+#define GET_INT_ARG(i) argument(i)
+static int parse_range(void){
+ switch(CMD_MODEL_RANGE){
+@CASE@
+ default:abort();
+ }
+ return 0;
+lCleanup:
+ if(!shutdownmessage || strcmp(shutdownmessage,"Cannot set range: no animation!")){abort();}
+ return 1;
+}
+@FUNCTIONS@
+static const unsigned revisions[]={@PROFILES@};
+static const struct {int present,minimum,maximum;} range_cases[]={@RANGE_CASES@};
+static const struct {int ad,td,grab;float delta;int counter,guard;} hit_cases[]={@HIT_CASES@};
+int main(void){
+ for(unsigned p=0;p<sizeof(revisions)/sizeof(*revisions);++p){
+  obor_profile_build=revisions[p];printf("{\"revision\":%u,\"range\":[",obor_profile_build);
+  for(unsigned i=0;i<sizeof(range_cases)/sizeof(*range_cases);++i){
+   memset(&range_animation,0,sizeof(range_animation));range_animation.range.xmin=117;range_animation.range.xmax=129;
+   newanim=range_cases[i].present?&range_animation:NULL;arguments[1]=range_cases[i].minimum;arguments[2]=range_cases[i].maximum;argument_calls=0;shutdownmessage=NULL;
+   int result=parse_range();if(i){putchar(',');}
+   printf("[%d,%d,%d,%d,%d]",result,range_animation.range.xmin,range_animation.range.xmax,argument_calls,shutdownmessage!=NULL);
+  }
+  printf("],\"hit\":[");
+  for(unsigned i=0;i<sizeof(hit_cases)/sizeof(*hit_cases);++i){
+   const __typeof__(*hit_cases) *c=hit_cases+i;
+   entity attacker,target;s_anim source_animation,target_animation;s_attack attack,counterattack;
+   memset(&attacker,0,sizeof(attacker));memset(&target,0,sizeof(target));memset(&source_animation,0,sizeof(source_animation));memset(&target_animation,0,sizeof(target_animation));memset(&attack,0,sizeof(attack));memset(&counterattack,0,sizeof(counterattack));memset(&savedata,0,sizeof(savedata));
+   short boxes[1][6]={{-10,-100,10,100,0,0}},vulnerable[]={1};
+   s_attack *source_attacks[]={&attack},*target_attacks[]={&counterattack};
+   attack.attack_coords[0]=counterattack.attack_coords[0]=-10;attack.attack_coords[1]=counterattack.attack_coords[1]=-100;
+   attack.attack_coords[2]=counterattack.attack_coords[2]=10;attack.attack_coords[3]=counterattack.attack_coords[3]=100;
+   attack.attack_coords[4]=c->ad;counterattack.attack_coords[4]=boxes[0][4]=c->td;
+   attack.counterattack=1;counterattack.counterattack=c->guard==7?2:1;attack.attack_type=11;
+   source_animation.attacks=source_attacks;target_animation.attacks=c->guard==6?NULL:target_attacks;
+   target_animation.bbox_coords=c->guard==3?NULL:boxes;target_animation.vulnerable=vulnerable;
+   if(c->guard==2){vulnerable[0]=0;}if(c->guard==4){source_animation.attacks=NULL;}
+   attacker.animation=&source_animation;target.animation=&target_animation;
+   attacker.direction=target.direction=1;attacker.z=20;target.z=20+c->delta;attacker.modeldata.grabdistance=c->grab;
+   attacker.modeldata.type=target.modeldata.type=c->guard==5?TYPE_PLAYER:TYPE_ENEMY;savedata.mode=c->guard==5;
+   lasthitx=lasthitz=lasthita=-999;lasthitt=lasthitc=-999;
+   int hit=checkhit(&attacker,c->guard==1?&attacker:&target,c->counter);
+   if(i){putchar(',');}printf("[%d,%.9g,%.9g,%.9g,%d,%d]",hit,(double)lasthitx,(double)lasthitz,(double)lasthita,lasthitt,lasthitc);
+  }
+  puts("]}");
+ }
+ return 0;
+}

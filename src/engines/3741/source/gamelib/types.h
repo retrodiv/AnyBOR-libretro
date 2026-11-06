@@ -22,6 +22,10 @@
 #ifndef GAMELIB_TYPES_H
 #define GAMELIB_TYPES_H
 
+#include <string.h>
+#include <stdint.h>
+#include <limits.h>
+
 #ifndef TRANSPARENT_IDX
 #define		TRANSPARENT_IDX		0x00
 #endif
@@ -174,7 +178,36 @@ typedef struct{
 	s_sprite_list *node;
 	int  centerx;
 	int  centery;
+    int ofsx, ofsy;
+    s_sprite *profile_sprite;
 }s_sprite_map;
+
+extern uint32_t obor_profile_build;
+static inline s_sprite *obor_profile_map_sprite(const s_sprite_map *entry)
+{
+    if(!entry) return NULL;
+    if(obor_profile_build < 3609) return entry->profile_sprite;
+    return entry->node ? entry->node->sprite : NULL;
+}
+
+static inline int obor_profile_map_center(int offset, int clip)
+{
+    int64_t value = (int64_t)offset - clip;
+    if(value > INT_MAX) return INT_MAX;
+    if(value < INT_MIN) return INT_MIN;
+    return (int)value;
+}
+
+static inline void obor_profile_map_init(s_sprite_map *entry, s_sprite_list *node,
+    int ofsx, int ofsy, int clipx, int clipy, s_sprite *frame)
+{
+    entry->node = node;
+    entry->centerx = obor_profile_map_center(ofsx, clipx);
+    entry->centery = obor_profile_map_center(ofsy, clipy);
+    entry->ofsx = obor_profile_build < 3609 ? ofsx : 0;
+    entry->ofsy = obor_profile_build < 3609 ? ofsy : 0;
+    entry->profile_sprite = obor_profile_build < 3609 ? frame : NULL;
+}
 
 void set_blendtables(unsigned char* tables[]); // set global blend tables for 8bit mode
 
@@ -292,13 +325,35 @@ typedef struct
 
 typedef struct 
 {
+    gfx_type type;
 	union{
 		s_screen * screen;
 		s_sprite * sprite;
 		s_bitmap * bitmap;
 		void*      handle;
 	};
-}gfx_entry;
+} gfx_entry
+#ifdef LIBRETRO
+    /* The entry is also embedded in records packed to four bytes. */
+    __attribute__((aligned(4)))
+#endif
+;
+
+extern uint32_t obor_profile_build;
+static inline int obor_gfx_entry_type(const gfx_entry *entry)
+{
+    if(!entry || !entry->handle) return -1;
+    if(obor_profile_build < 3627) return (int)entry->type;
+    int magic;
+    memcpy(&magic,entry->handle,sizeof magic);
+    switch(magic)
+    {
+        case screen_magic: return gfx_screen;
+        case bitmap_magic: return gfx_bitmap;
+        case sprite_magic: return gfx_sprite;
+        default: return -1;
+    }
+}
 
 typedef struct 
 {

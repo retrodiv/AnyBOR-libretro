@@ -55,17 +55,24 @@ class SpriteMapGrowthTests(unittest.TestCase):
                 '-O0','-g','-DLIBRETRO=1','-DOBOR_ENGINE_BUILD='+engine,*host,'-fsigned-char','-fcommon',
                 '-ffunction-sections','-fdata-sections','-fsanitize=address,undefined,pointer-overflow',
                 '-fno-sanitize-recover=all']
-            definition=function((root/'openbor.c').read_bytes().decode('utf8',errors='surrogateescape'),
-                                'prepare_sprite_map')
-            code=render_sprite_map_growth(definition=definition,revision=int(engine),mode='all',
-                cases=cls.fixture['cases'][context['policy']])
-            source=work/(engine+'.c');source.write_text(profile_program(code));binary=source.with_suffix('')
-            compile_checked(compiler+flags+[str(source),*links,'-o',str(binary)])
-            cls.executables[engine]=binary
+            text=(root/'openbor.c').read_bytes().decode('utf8',errors='surrogateescape')
+            definition=function(text,'prepare_sprite_map')
+            capacity=(function(text,'obor_profile_sprite_map_capacity')
+                      if 'obor_profile_sprite_map_capacity(' in definition else '')
+            policies={context['policy']}
+            policies.update(row.get('policy',context['policy']) for row in cls.contexts.values()
+                            if row['engine']==engine)
+            for policy in sorted(policies):
+                code=render_sprite_map_growth(definition=definition,capacity_definition=capacity,
+                    revision=int(engine),mode='all',cases=cls.fixture['cases'][policy])
+                source=work/(engine+'-'+policy+'.c');source.write_text(profile_program(code));binary=source.with_suffix('')
+                compile_checked(compiler+flags+[str(source),*links,'-o',str(binary)])
+                cls.executables[engine,policy]=binary
 
     def check_context(self,engine,revision):
-        cases=self.fixture['cases'][self.fixture['engines'][engine]['policy']]
-        output=subprocess.check_output([str(self.executables[engine]),str(revision)],
+        policy=self.contexts.get((engine,revision),{}).get('policy',self.fixture['engines'][engine]['policy'])
+        cases=self.fixture['cases'][policy]
+        output=subprocess.check_output([str(self.executables[engine,policy]),str(revision)],
             text=True,timeout=15,env=sanitizer_environment())
         self.assertEqual(json.loads(output),dict(status='PASS',cases=len(cases)+4,
             allocations=sum(row['allocations']for row in cases)+1))

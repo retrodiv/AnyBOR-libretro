@@ -11,7 +11,7 @@ import re
 
 
 def render_collision(parts, *, scalar, components, ranges, tolerance_bonus,
-                     revision, labels, threshold_only=False):
+                     revision, labels, threshold_only=False, separation_padding=1):
     if (not isinstance(parts, dict) or set(parts) !=
             {'checkhit', 'bbox', 'bboxz', 'attackz', 'frame_coordinates'} or
             any(not isinstance(value, str) or not value.strip() or
@@ -21,6 +21,8 @@ def render_collision(parts, *, scalar, components, ranges, tolerance_bonus,
         raise ValueError('Explicit native scalar and coordinate array extent required')
     if any(type(value) is not bool for value in (ranges, tolerance_bonus, threshold_only)) or (ranges and components != 6):
         raise ValueError('Explicit compatible range and default-tolerance expectations required')
+    if type(separation_padding) is not int or separation_padding not in (0, 1):
+        raise ValueError('Explicit zero or one unit separation padding required')
     if type(revision) is not int or not 0 <= revision <= 0x7fffffff:
         raise ValueError('Bounded native profile context required')
     if (not isinstance(labels, list) or not 0 < len(labels) <= 256 or
@@ -36,7 +38,8 @@ def render_collision(parts, *, scalar, components, ranges, tolerance_bonus,
 #error Native contract assertions must remain enabled
 #endif
 typedef @SCALAR@ coord_t;
-enum { COMPONENTS=@COMPONENTS@, HAS_RANGES=@RANGES@, TOLERANCE_BONUS=@BONUS@ };
+enum { COMPONENTS=@COMPONENTS@, HAS_RANGES=@RANGES@, TOLERANCE_BONUS=@BONUS@,
+       SEPARATION_PADDING=@PADDING@ };
 enum { TYPE_PLAYER=1, CMD_MODEL_BBOX=2, CMD_MODEL_BBOXZ=3,
        CMD_MODEL_ATTACKZ=4, CMD_MODEL_HITZ=5 };
 typedef struct {coord_t attack_coords[COMPONENTS];int attack_type,counterattack;} s_attack;
@@ -139,7 +142,7 @@ static hit_result reference_hit(const entity *a,const entity *b,int counter) {
   int half=(bc[5]-bc[4])/2;bz+=bc[4]+half;depth_b=(float)half;
  } else depth_b=(float)bc[4];
  float separation=az-bz;if(separation<0)separation=-separation;
- if(separation>depth_a+depth_b+1)return result;
+ if(separation>depth_a+depth_b+SEPARATION_PADDING)return result;
  int ax=(int)a->x,bx=(int)b->x,ay=(int)(az-a->a),by=(int)(bz-b->a);
  int left_a=ax+(a->direction?ac[0]:-ac[2]);
  int right_a=ax+(a->direction?ac[2]:-ac[0]);
@@ -205,6 +208,10 @@ static void threshold_checks(void) {
     tolerance. The broad geometry grid does not replace this exact edge. */
  assert(checkhit(&a,&b,0)==TOLERANCE_BONUS);
  compare_hit(&a,&b,0);
+ b.z=(float)(SEPARATION_PADDING+TOLERANCE_BONUS);
+ assert(checkhit(&a,&b,0)==1);compare_hit(&a,&b,0);
+ b.z+=0.25f;
+ assert(checkhit(&a,&b,0)==0);compare_hit(&a,&b,0);
 }
 int main(void) {
  @CALLS@
@@ -213,6 +220,7 @@ int main(void) {
 '''
     values = dict(SCALAR=scalar, COMPONENTS=str(components), RANGES=str(int(ranges)),
                   BONUS=str(int(tolerance_bonus)), REVISION=str(revision),
+                  PADDING=str(separation_padding),
                   CHECKHIT=parts['checkhit'], BBOX=parts['bbox'], BBOXZ=parts['bboxz'],
                   ATTACKZ=parts['attackz'], FRAME=parts['frame_coordinates'],
                   CALLS='\n'.join(('threshold_checks();' if threshold_only else
@@ -221,7 +229,7 @@ int main(void) {
                        'hit_cases_each':0 if threshold_only else 12600,
                        'loader_cases_each':0 if threshold_only else 4,
                        'frame_cases_each':0 if threshold_only else 60,
-                       'threshold_cases_each':1})))
+                       'threshold_cases_each':3})))
     for name,value in values.items():
         program = program.replace('@'+name+'@',value)
     return program

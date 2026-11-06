@@ -1,0 +1,91 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <assert.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#pragma GCC diagnostic push
+#pragma GCC diagnostic warning "-Wmissing-field-initializers"
+#if defined(__clang__)
+#if __has_warning("-Wsingle-bit-bitfield-constant-conversion")
+#pragma GCC diagnostic warning "-Wsingle-bit-bitfield-constant-conversion"
+#endif
+#endif
+@DECLARATIONS@
+#pragma GCC diagnostic pop
+#undef printf
+uint32_t obor_profile_build;
+char packfile[OBOR_CONTENT_PATH_MAX];
+int pixelformat,screenformat;
+@PIXEL_BYTES@
+static s_screen image;
+static unsigned char source_palette[MAX_PAL_SIZE];
+static char events[32];
+static unsigned event_count,case_id;
+static int copy_neon;
+#undef assert
+#define assert(c) do {if(!(c)){fprintf(stderr,"BACKGROUND_NEON revision=%u case=%u line=%d events=%s\n",obor_profile_build,case_id,__LINE__,events);abort();}}while(0)
+static void event(char ch)
+{assert(event_count+1<sizeof(events));events[event_count++]=ch;events[event_count]=0;}
+static void palette_state(int published)
+{
+    for(unsigned i=0;i<sizeof(pal);++i) {
+        unsigned char want=i<(unsigned)PAL_BYTES?source_palette[i]:0x55;
+        if(published && i<3)want=0;
+        assert(pal[i]==want);
+    }
+    for(unsigned i=0;i<sizeof(neontable);++i)
+        assert(neontable[i]==((copy_neon && pixelformat==PIXEL_x8 && i<(unsigned)PAL_BYTES)?source_palette[i]:0x33));
+}
+void unload_background(void)
+{assert(!background);event('U');}
+int loadscreen(char *filename,char *archive,unsigned char *palette,int format,s_screen **out)
+{
+    assert(!strcmp(filename,"fixture") && archive==packfile && format==pixelformat && out==&background);
+    assert((uintptr_t)out % __alignof__(s_screen*)==0);
+    assert(palette==(pixelformat==PIXEL_8?pal:NULL));
+    for(unsigned i=0;i<sizeof(neontable);++i)assert(neontable[i]==0x33);
+    if(palette)memcpy(palette,source_palette,PAL_BYTES);
+    *out=&image;event('L');return 1;
+}
+void standard_palette(int immediate) {assert(!immediate);palette_state(0);event('S');}
+int create_blending_tables(unsigned char *palette,unsigned char *tables[],int flags[])
+{assert(palette==pal && tables==blendings && flags==blendfx);palette_state(0);event('B');return 1;}
+void lifebar_colors(void)
+{
+    palette_state(0);event('I');
+    /* A configured lifebar supplies all colours;unchanged default-colour
+     * conversion has its own controls. */
+    color_black=color_red=color_orange=color_yellow=color_white=color_blue=color_green=17;
+    color_pink=color_purple=color_magic=color_magic2=shadowcolor=17;
+}
+int _makecolour(int r,int g,int b) {(void)r;(void)g;(void)b;abort();}
+void init_colourtable(void) {palette_state(0);event('T');}
+void video_clearscreen(void) {palette_state(0);event('V');}
+void change_system_palette(int index) {assert(!index);palette_state(1);event('P');}
+void shutdown(int code,char *format,...) {(void)code;(void)format;abort();}
+@NATIVE@
+int main(void)
+{
+    const struct {unsigned revision;int copy;} contexts[]={@CONTEXTS@};
+    const struct {int input,output,bytes;} formats[]={
+        {PIXEL_8,PIXEL_8,768},{PIXEL_x8,PIXEL_16,512},{PIXEL_x8,PIXEL_32,1024}};
+    for(unsigned p=0;p<sizeof(contexts)/sizeof(*contexts);++p) {
+        obor_profile_build=contexts[p].revision;copy_neon=contexts[p].copy;case_id=0;
+        for(unsigned f=0;f<3;++f)for(int tables=0;tables<2;++tables)for(int pattern=0;pattern<2;++pattern) {
+            ++case_id;pixelformat=formats[f].input;screenformat=formats[f].output;
+            assert(PAL_BYTES==formats[f].bytes && (unsigned)PAL_BYTES<=sizeof(source_palette));
+            for(unsigned i=0;i<sizeof(source_palette);++i)source_palette[i]=(unsigned char)((i*7u+pattern*11u)%255u+1);
+            memset(pal,0x55,sizeof(pal));memset(neontable,0x33,sizeof(neontable));
+            memset(blendings,0,sizeof(blendings));background=NULL;
+            memset(&image,0,sizeof(image));image.palette=source_palette;
+            strcpy(packfile,"archive");
+            event_count=0;*events=0;load_background("fixture",tables);
+            assert(!strcmp(events,tables?"ULSBITVP":"ULITVP"));
+            assert(background==&image);palette_state(1);
+        }
+        printf("{\"revision\":%u,\"cases\":12,\"status\":\"PASS\"}\n",obor_profile_build);
+    }
+    return 0;
+}

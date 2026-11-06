@@ -1,0 +1,69 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <assert.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "openbor.h"
+#undef assert
+#undef printf
+#define DISABLE_MOVIE 1
+uint32_t obor_profile_build;
+static unsigned active_case;
+#define assert(c) do {if(!(c)){fprintf(stderr,"PLAYER_HISTORY revision=%u case=%u line=%d\n",obor_profile_build,active_case,__LINE__);abort();}}while(0)
+static entity actors[MAX_PLAYERS];
+static s_player player[MAX_PLAYERS];
+static s_playercontrols controls[MAX_PLAYERS],*playercontrolpointers[MAX_PLAYERS];
+static s_set_entry selected,*levelsets=&selected;
+static int current_set,control_calls,control_count;
+static u32 time,interval,bothkeys,bothnewkeys,supplied_interval;
+void control_update(s_playercontrols **ports,int count){
+ assert(ports==playercontrolpointers && count>=0 && count<=MAX_PLAYERS);
+ ++control_calls;control_count=count;
+}
+unsigned timer_getinterval(unsigned rate){assert(rate==GAME_SPEED);return supplied_interval;}
+@INPUT@
+static void spawn_history_reset(int index){@RESET@}
+struct input{int operation,count,pending,oldheld,held,newkeys,entity,age,direction,
+ position,interval,slot;};
+static const struct input cases[]={@CASES@};
+static const unsigned profiles[]={@PROFILES@};
+static void prepare(const struct input *c){
+ memset(player,0,sizeof(player));memset(actors,0,sizeof(actors));
+ memset(controls,0,sizeof(controls));memset(&selected,0,sizeof(selected));
+ selected.maxplayers=c->count;current_set=0;time=100;interval=37;
+ supplied_interval=(unsigned)c->interval;control_calls=0;control_count=-1;
+ bothkeys=bothnewkeys=0xffffffffu;
+ for(int p=0;p<MAX_PLAYERS;++p){
+  playercontrolpointers[p]=&controls[p];
+  controls[p].keyflags=(unsigned)c->held;controls[p].newkeyflags=(unsigned)c->newkeys;
+  player[p].playkeys=(unsigned)c->pending;player[p].keys=(unsigned)c->oldheld;
+  player[p].newkeys=0x4000;player[p].releasekeys=0x2000;
+  player[p].combostep=c->position;
+  for(int j=0;j<MAX_SPECIAL_INPUTS;++j){player[p].combokey[j]=0x55;player[p].inputtime[j]=5;}
+  actors[p].movetime=100+c->age;actors[p].direction=c->direction;
+  if(c->entity)player[p].ent=&actors[p];
+ }
+}
+static void ring_json(const u32 *values){
+ putchar('[');for(int j=0;j<MAX_SPECIAL_INPUTS;++j){if(j)putchar(',');printf("%u",values[j]);}putchar(']');
+}
+int main(void){
+ _Static_assert(MAX_PLAYERS==4 && MAX_SPECIAL_INPUTS==27 && sizeof(int)==sizeof(u32),"Source ring extent");
+ _Static_assert(FLAG_MOVELEFT==4 && FLAG_MOVERIGHT==8 && FLAG_FORWARD==0x40000000u && FLAG_BACKWARD==0x80000000u,"Source direction bits");
+ for(unsigned p=0;p<sizeof(profiles)/sizeof(*profiles);++p){
+  obor_profile_build=profiles[p];
+  for(unsigned k=0;k<sizeof(cases)/sizeof(*cases);++k){
+   active_case=k;const struct input *c=&cases[k];prepare(c);
+   if(c->operation)spawn_history_reset(c->slot);else inputrefresh();
+   printf("{\"revision\":%u,\"case\":%u,\"summary\":[%d,%d,%u,%u,%u],\"players\":[",obor_profile_build,k,control_calls,control_count,interval,bothkeys,bothnewkeys);
+   for(int i=0;i<MAX_PLAYERS;++i){if(i)putchar(',');
+    printf("{\"fields\":[%u,%u,%u,%u,%d,%u],\"keys\":",player[i].keys,player[i].newkeys,player[i].playkeys,player[i].releasekeys,player[i].combostep,actors[i].movetime);
+    ring_json(player[i].combokey);printf(",\"times\":");ring_json(player[i].inputtime);putchar('}');
+   }
+   puts("]}");
+  }
+ }
+ return 0;
+}

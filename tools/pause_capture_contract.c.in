@@ -1,0 +1,118 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <assert.h>
+#include <limits.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#pragma GCC diagnostic push
+#pragma GCC diagnostic warning "-Wmissing-field-initializers"
+#if defined(__clang__)
+#if __has_warning("-Wsingle-bit-bitfield-constant-conversion")
+#pragma GCC diagnostic warning "-Wsingle-bit-bitfield-constant-conversion"
+#endif
+#endif
+@DECLARATIONS@
+#pragma GCC diagnostic pop
+#undef printf
+@SAVEDATA@
+uint32_t obor_profile_build;
+int screenformat;
+static s_screen live_screen, captured_screen;
+static char events[1024];
+static unsigned event_count, case_id, frame, menu_count, selector;
+static int queue_locked, capture, options_seen, expected_end;
+static const unsigned *inputs;
+#undef assert
+#define assert(c) do {if(!(c)){fprintf(stderr,"Pause profile=%u case=%u line=%d events=%s\n",obor_profile_build,case_id,__LINE__,events);abort();}}while(0)
+static void event(char ch)
+{assert(event_count+1<sizeof(events));events[event_count++]=ch;events[event_count]=0;}
+s_screen *allocscreen(int width,int height,int format)
+{assert(capture && !pause && width==320 && height==240 && format==PIXEL_8);event('A');return &captured_screen;}
+void copyscreen(s_screen *dst,s_screen *src)
+{assert(dst==&captured_screen && src==&live_screen && !pause);event('C');}
+void spriteq_draw(s_screen *screen,int only,int minz,int maxz,int dx,int dy)
+{assert(screen==&captured_screen && !only && minz==MIN_INT && maxz==MAX_INT && !dx && !dy);event('D');}
+void spriteq_clear(void)
+{assert(capture);event('R');}
+void spriteq_add_screen(int x,int y,int z,s_screen *screen,s_drawmethod *method,int sort)
+{assert(!x && !y && z==MIN_INT && screen==&captured_screen && !method && !sort);event('S');}
+void spriteq_lock(void) {assert(!queue_locked && capture);queue_locked=1;event('L');}
+void spriteq_unlock(void) {assert(queue_locked && pause==0 && bothnewkeys==0);queue_locked=0;event('U');}
+void freescreen(s_screen **screen)
+{assert(screen && *screen==&captured_screen && !queue_locked && !pause);*screen=NULL;event('F');}
+/* Observe the menu service, retaining its native call arguments. Raster layout
+ * is an independent font contract; no replacement pause body is used. */
+static void menu(int font,int line,int shift,const char *text)
+{
+    assert(frame<4 && menu_count<3 && !shift);
+    assert(pause==(options_seen?1:2) && queue_locked);
+    assert(line==(int)menu_count-2);
+    assert(font==(int)(menu_count==0?3:menu_count==1?!selector:selector));
+    assert(!strcmp(text,menu_count==0?"Pause":menu_count==1?"Continue":"End Game"));
+    event("PCE"[menu_count++]);
+}
+#undef _menutextm
+#define _menutextm(f,l,shift,s,...) menu(f,l,shift,s)
+void update(int ingame,int wait)
+{assert(ingame==1 && !wait && menu_count==3 && frame<4);menu_count=0;bothnewkeys=inputs[frame++];event('I');}
+int sound_play_sample(int id,unsigned priority,int left,int right,unsigned speed)
+{
+    assert(!priority && left==27 && right==27 && speed==100);
+    if(id==SAMPLE_BEEP) {selector^=1;event('B');}
+    else {assert(id==SAMPLE_BEEP2);event('K');}
+    return 0;
+}
+void sound_pause_music(int value) {event(value?'m':'M');}
+void sound_pause_sample(int value) {event(value?'s':'V');}
+void options(void) {assert(pause==1);options_seen=1;event('O');}
+@NATIVE@
+static const unsigned scripts[14][4]={
+    {FLAG_START}, {FLAG_MOVEDOWN|FLAG_START}, {FLAG_MOVEUP|FLAG_START},
+    {FLAG_ESC}, {FLAG_MOVEDOWN,FLAG_ESC}, {FLAG_SCREENSHOT,FLAG_START},
+    {FLAG_MOVEDOWN,FLAG_SCREENSHOT,FLAG_START}, {FLAG_SCREENSHOT|FLAG_START},
+    {FLAG_START|FLAG_ESC}, {FLAG_SCREENSHOT|FLAG_ESC},
+    {FLAG_MOVEDOWN,FLAG_MOVEUP,FLAG_START}, {0,FLAG_START},
+    {FLAG_MOVEUP|FLAG_MOVEDOWN,FLAG_START}, {FLAG_SCREENSHOT,FLAG_SCREENSHOT,FLAG_ESC}
+};
+/* Source-derived order: menu -> update -> move -> start -> escape -> options.
+ * Start/escape do not suppress later branches within that same iteration. */
+static void expected(char *out)
+{
+    strcpy(out,capture?"ACDRSL":"");
+    unsigned selected=0;
+    expected_end=0;
+    for(unsigned i=0;i<4;++i) {
+        unsigned keys=inputs[i];strcat(out,"PCEI");
+        if(keys&(FLAG_MOVEUP|FLAG_MOVEDOWN)) {selected^=1;strcat(out,"B");}
+        if(keys&FLAG_START) {expected_end=selected;strcat(out,"MVK");selected=0;}
+        if(keys&FLAG_ESC) {strcat(out,"MVK");selected=0;}
+        if(keys&FLAG_SCREENSHOT)strcat(out,"msKO");
+        if(keys&(FLAG_START|FLAG_ESC)) {strcat(out,capture?"URF":"U");return;}
+    }
+    abort();
+}
+int main(void)
+{
+    const struct {unsigned revision;int capture;} contexts[]={@CONTEXTS@};
+    for(unsigned r=0;r<sizeof(contexts)/sizeof(*contexts);++r) {
+        obor_profile_build=contexts[r].revision;capture=contexts[r].capture;
+        for(case_id=0;case_id<14;++case_id) {
+            char want[1024];inputs=scripts[case_id];expected(want);
+            memset(player,0,sizeof(player));for(unsigned i=0;i<4;++i)player[i].lives=3+i;
+            memset(&videomodes,0,sizeof(videomodes));videomodes.hRes=320;videomodes.vRes=240;
+            screenformat=PIXEL_8;vscreen=&live_screen;savedata.effectvol=27;
+            SAMPLE_BEEP=7;SAMPLE_BEEP2=8;endgame=0;pause=0;bothnewkeys=~0u;
+            event_count=frame=menu_count=selector=0;*events=0;options_seen=0;
+            /* Earlier callers enter with a locked queue;3553+captures it here. */
+            queue_locked=!capture;
+            pausemenu();
+            assert(!strcmp(events,want) && !pause && !bothnewkeys && !queue_locked);
+            assert(endgame==expected_end);
+            for(unsigned i=0;i<4;++i)assert(player[i].lives==(expected_end?0:(int)(3+i)));
+        }
+        printf("{\"revision\":%u,\"cases\":14,\"status\":\"PASS\"}\n",obor_profile_build);
+    }
+    return 0;
+}

@@ -1,0 +1,87 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <assert.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "Interpreter.h"
+uint32_t obor_profile_build;
+#undef assert
+#define assert(x) do {if(!(x)){fprintf(stderr,"Reset profile %u line %d\n",obor_profile_build,__LINE__);abort();}}while(0)
+
+static int steps,stop_at,error_at,reset_at;
+HRESULT Interpreter_EvalInstruction(Interpreter *p)
+{
+    assert(++steps<16);
+    if(steps==reset_at)p->bReset=FALSE;
+    if(steps==stop_at)p->bCallCompleted=TRUE;
+    return steps==error_at?E_FAIL:S_OK;
+}
+@FUNCTIONS@
+struct contract {int revision,has_flag,call_gate,immediate_clear;};
+static const struct contract cases[]={@CASES@};
+
+static void check_reset(const struct contract *c)
+{
+    Interpreter p;Instruction entry;memset(&p,0,sizeof(p));memset(&entry,0,sizeof(entry));
+    p.pCurrentCall=p.pReturnEntry=p.pCurrentInstruction=&entry;
+    p.bMainCompleted=p.bCallCompleted=TRUE;
+    Interpreter_Reset(&p);
+    assert(!p.pCurrentCall&&!p.pReturnEntry&&!p.pCurrentInstruction);
+    assert(!p.bMainCompleted&&p.bCallCompleted);
+    assert(p.bReset==c->has_flag);
+}
+static void check_calls(const struct contract *c)
+{
+    for(int initial=0;initial<=1;++initial)for(int mode=0;mode<3;++mode) {
+        Interpreter p;memset(&p,0,sizeof(p));p.bReset=initial;
+        steps=0;stop_at=3;error_at=mode==1?2:0;reset_at=mode==2?1:0;
+        HRESULT hr=Interpreter_EvaluateCall(&p);
+        int expected=c->call_gate&&!initial?0:mode==1?2:mode==2&&c->call_gate?1:3;
+        assert(steps==expected);
+        assert(hr==(expected==2?E_FAIL:S_OK));
+        assert(!!p.bCallCompleted==(expected==3));
+        memset(&p,0,sizeof(p));p.bReset=initial;p.bCallCompleted=TRUE;steps=0;
+        assert(Interpreter_EvaluateCall(&p)==S_OK&&steps==0);
+    }
+}
+static void check_immediate(const struct contract *c)
+{
+    Instruction instructions[4];memset(instructions,0,sizeof(instructions));
+    instructions[0].OpCode=IMMEDIATE;instructions[1].OpCode=CONSTINT;
+    instructions[2].OpCode=DEFERRED;instructions[3].OpCode=CONSTINT;
+    for(int initial=0;initial<=1;++initial)for(int mode=0;mode<7;++mode) {
+        Interpreter p;memset(&p,0,sizeof(p));p.bReset=initial;
+        steps=0;stop_at=3;error_at=0;reset_at=0;
+        if(mode==1)p.bMainCompleted=TRUE;
+        if(mode==2)p.pMainEntry=instructions;
+        if(mode>=3) {
+            p.bHasImmediateCode=TRUE;p.instructionStorage=instructions;
+            p.theInstructionList.size=4;p.bMainCompleted=TRUE;stop_at=4;
+            if(mode==4)error_at=1;
+            if(mode>=5) {p.bMainCompleted=FALSE;p.pMainEntry=instructions;}
+            if(mode==6)reset_at=1;
+        }
+        HRESULT hr=Interpreter_EvaluateImmediate(&p);
+        int expected_steps=0;HRESULT expected_hr=S_OK;
+        if(mode==0)expected_hr=E_FAIL;
+        if(mode==2)expected_steps=c->call_gate&&!initial?0:3;
+        if(mode==3)expected_steps=2;
+        if(mode==4) {expected_steps=1;expected_hr=E_FAIL;}
+        if(mode==5)expected_steps=c->call_gate&&!initial?2:4;
+        if(mode==6)expected_steps=c->call_gate?2:4;
+        assert(steps==expected_steps&&hr==expected_hr);
+        assert(!!p.bMainCompleted==(mode!=0));assert(!p.bCallCompleted);
+        int expected_flag=c->immediate_clear?0:mode==6?0:initial;
+        assert(p.bReset==expected_flag);
+    }
+}
+int main(void)
+{
+    for(unsigned i=0;i<sizeof(cases)/sizeof(*cases);++i) {
+        const struct contract *c=&cases[i];obor_profile_build=c->revision;
+        check_reset(c);check_calls(c);check_immediate(c);
+    }
+    return 0;
+}

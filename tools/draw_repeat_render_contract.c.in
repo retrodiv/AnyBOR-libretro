@@ -1,0 +1,128 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "openbor.h"
+#undef printf
+#undef assert
+uint32_t obor_profile_build;
+static int active_case;
+#define assert(c) do{if(!(c)){fprintf(stderr,"DRAW_REPEAT_RENDER revision=%u case=%d line=%d\n",obor_profile_build,active_case,__LINE__);abort();}}while(0)
+struct context {unsigned revision;int repeat_mode,screen_transform,offset_fastcopy;};
+static const struct context contexts[]={@CONTEXTS@};
+static const struct context *context;
+static s_screen image,display;
+static s_sprite frame;
+static union {uint32_t p32[256];uint16_t p16[512];unsigned char bytes[1024];} palette;
+int screenformat,pixelformat,usechannel;
+unsigned channelr,channelg,channelb,tintmode,tintcolor;
+unsigned char *blendtables[OBOR_BLEND_STORAGE];
+enum {R_OFFSET,R_TRANS,R_COPY,R_16,R_32,R_ROTATE,R_SCALE,R_WATER,R_PLANE,R_SPRITE,R_PLAIN};
+static struct event {int kind,x,y;} events[32];
+static int count;
+static void note(int kind,int x,int y){assert(count<32);events[count++]=(struct event){kind,x,y};}
+void copyscreen(s_screen *d,s_screen *s){assert(d==&display && s==&image);note(R_COPY,0,0);}
+void copyscreen_o(s_screen *d,s_screen *s,int x,int y){assert(d==&display && s==&image);note(R_OFFSET,x,y);}
+void copyscreen_trans(s_screen *d,s_screen *s,int x,int y){assert(d==&display && s==&image);note(R_TRANS,x,y);}
+void copyscreen_remap(s_screen *d,s_screen *s,int x,int y,unsigned char *p){(void)d;(void)s;(void)x;(void)y;(void)p;abort();}
+void blendscreen(s_screen *d,s_screen *s,int x,int y,unsigned char *p){(void)d;(void)s;(void)x;(void)y;(void)p;abort();}
+blend16fp getblendfunction16(int alpha){assert(alpha==0);return NULL;}
+blend32fp getblendfunction32(int alpha){assert(alpha==0);return NULL;}
+void putscreenx8p16(s_screen *d,s_screen *s,int x,int y,int k,u16 *p,u16(*fp)(u16,u16)){
+ (void)d;(void)s;(void)x;(void)y;(void)k;(void)p;(void)fp;abort();
+}
+void putscreenx8p32(s_screen *d,s_screen *s,int x,int y,int k,u32 *p,u32(*fp)(u32,u32)){
+ (void)d;(void)s;(void)x;(void)y;(void)k;(void)p;(void)fp;abort();
+}
+void blendscreen16(s_screen *d,s_screen *s,int x,int y,int k,u16(*fp)(u16,u16)){
+ assert(d==&display && s==&image && k==0 && !fp);note(R_16,x,y);
+}
+void blendscreen32(s_screen *d,s_screen *s,int x,int y,int k,u32(*fp)(u32,u32)){
+ assert(d==&display && s==&image && k==0 && !fp);note(R_32,x,y);
+}
+static void transformed(int kind,s_screen *d,gfx_entry *s,int x,int y,int cx,int cy,s_drawmethod *m){
+ assert(d==&display && s->screen==&image && cx==0 && cy==0 && m && m->flag);note(kind,x,y);
+}
+void gfx_draw_rotate(s_screen *d,gfx_entry *s,int x,int y,int cx,int cy,s_drawmethod *m){transformed(R_ROTATE,d,s,x,y,cx,cy,m);}
+void gfx_draw_scale(s_screen *d,gfx_entry *s,int x,int y,int cx,int cy,s_drawmethod *m){transformed(R_SCALE,d,s,x,y,cx,cy,m);}
+void gfx_draw_water(s_screen *d,gfx_entry *s,int x,int y,int cx,int cy,s_drawmethod *m){transformed(R_WATER,d,s,x,y,cx,cy,m);}
+void gfx_draw_plane(s_screen *d,gfx_entry *s,int x,int y,int cx,int cy,s_drawmethod *m){transformed(R_PLANE,d,s,x,y,cx,cy,m);}
+void putsprite_ex(int x,int y,s_sprite *f,s_screen *d,s_drawmethod *m){
+ assert(f==&frame && d==&display && m && m->flag);note(R_SPRITE,x,y);
+}
+void putsprite_8(int x,int y,int flip,s_sprite *f,s_screen *d,unsigned char *remap,unsigned char *blend){
+ assert(!flip && f==&frame && d==&display && !remap && !blend);note(R_PLAIN,x,y);
+}
+void putsprite_x8p16(int x,int y,int flip,s_sprite *f,s_screen *d,unsigned short *remap,unsigned short(*fp)(unsigned short,unsigned short)){
+ assert(!flip && f==&frame && d==&display && remap==(unsigned short*)palette.bytes && !fp);note(R_PLAIN,x,y);
+}
+void putsprite_x8p32(int x,int y,int flip,s_sprite *f,s_screen *d,unsigned *remap,unsigned(*fp)(unsigned,unsigned)){
+ assert(!flip && f==&frame && d==&display && remap==(unsigned*)palette.bytes && !fp);note(R_PLAIN,x,y);
+}
+#pragma GCC diagnostic push
+#if defined(__clang__)
+#if __has_warning("-Wsingle-bit-bitfield-constant-conversion")
+#pragma GCC diagnostic warning "-Wsingle-bit-bitfield-constant-conversion"
+#endif
+#endif
+@PLAIN@
+#pragma GCC diagnostic pop
+@FUNCTIONS@
+static void geometry(int format,int same){
+ memset(&image,0,sizeof(image));memset(&display,0,sizeof(display));
+ image.magic=display.magic=screen_magic;image.width=image.height=10;
+ display.width=display.height=same?10:64;image.pixelformat=display.pixelformat=format;
+ screenformat=pixelformat=format;count=usechannel=0;
+}
+static void grids(void){
+ static const int xs[]={-1,0,1,2,3},ys[]={-1,0,1,2},spansx[]={0,5,-4},spansy[]={0,7,-3};
+ for(int shape=0;shape<2;++shape)for(int mode=0;mode<3;++mode)
+  for(int ix=0;ix<5;++ix)for(int iy=0;iy<4;++iy)for(int sx=0;sx<3;++sx)for(int sy=0;sy<3;++sy){
+   geometry(PIXEL_8,0);s_drawmethod m=plainmethod,*method=mode?&m:NULL;
+   m.flag=mode==2?-1:0;m.alpha=0;m.transbg=-1;
+   m.xrepeat=xs[ix];m.yrepeat=ys[iy];m.xspan=spansx[sx];m.yspan=spansy[sy];
+   if(shape)putsprite(-5,9,&frame,&display,method);else putscreen(&display,&image,-5,9,method);
+   int enabled=mode==2,repeat=enabled && context->repeat_mode;
+   int nx=repeat?(xs[ix]>0?xs[ix]:0):1,ny=repeat?(ys[iy]>0?ys[iy]:0):1;
+   assert(count==nx*ny);
+   for(int row=0;row<ny;++row)for(int col=0;col<nx;++col){
+    struct event e=events[row*nx+col];
+    int cumulative=repeat && context->repeat_mode==1;
+    assert(e.kind==(shape?(enabled?R_SPRITE:R_PLAIN):(enabled?R_TRANS:R_OFFSET)));
+    assert(e.x==-5+(repeat?(col+(cumulative?row*nx:0))*spansx[sx]:0));
+    assert(e.y==9+(repeat?row*spansy[sy]:0));
+   }
+   ++active_case;
+  }
+}
+static void screen_paths(void){
+ static const int formats[]={PIXEL_8,PIXEL_16,PIXEL_32},coords[][2]={{0,0},{7,9},{-2,-3}};
+ for(int mode=0;mode<3;++mode)for(int effect=0;effect<7;++effect)
+  for(int same=0;same<2;++same)for(int pos=0;pos<3;++pos)for(int f=0;f<3;++f){
+   geometry(formats[f],same);s_drawmethod m=plainmethod,*method=mode?&m:NULL;
+   m.flag=mode==2?-1:0;m.alpha=0;m.transbg=0;
+   if(effect==1 || effect==6)m.rotate=90;
+   if(effect==2)m.scalex=128;
+   if(effect==3)m.shiftx=5;
+   if(effect>=4){m.water.watermode=effect==5?3:1;m.water.amplitude=1;}
+   int x=coords[pos][0],y=coords[pos][1],kind;
+   if(mode==2 && effect>=4)kind=effect==5?R_PLANE:R_WATER;
+   else if(mode==2 && context->screen_transform && effect==1)kind=R_ROTATE;
+   else if(mode==2 && context->screen_transform && (effect==2 || effect==3))kind=R_SCALE;
+   else if(same && (!context->offset_fastcopy || (!x && !y)))kind=R_COPY;
+   else kind=f==0?R_OFFSET:f==1?R_16:R_32;
+   putscreen(&display,&image,x,y,method);assert(count==1 && events[0].kind==kind);
+   assert(events[0].x==(kind==R_COPY?0:x) && events[0].y==(kind==R_COPY?0:y));
+   ++active_case;
+  }
+}
+int main(void){
+ memset(&frame,0,sizeof(frame));frame.magic=sprite_magic;frame.width=frame.height=1;frame.palette=palette.bytes;
+ for(unsigned i=0;i<sizeof(contexts)/sizeof(*contexts);++i){
+  context=contexts+i;obor_profile_build=context->revision;active_case=0;grids();screen_paths();
+  fprintf(stdout,"{\"revision\":%u,\"cases\":%d}\n",obor_profile_build,active_case);
+ }
+ return 0;
+}

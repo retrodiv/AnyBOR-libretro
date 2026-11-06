@@ -1,0 +1,197 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <strings.h>
+#include <ctype.h>
+#include "openbor.h"
+#undef printf
+#undef time
+#undef assert
+#undef stricmp
+#define stricmp strcasecmp
+uint32_t obor_profile_build;
+static s_player player[MAX_PLAYERS];
+static s_set_entry sets[1], *levelsets = sets;
+s_savescore savescore;
+static s_model models[MAX_PLAYERS];
+static char canonical_names[MAX_PLAYERS][MAX_NAME_LEN + 1];
+static int current_set, hallOfFame, hiscorebg, scoreformat;
+static char *custBkgrds, *currentScene;
+static unsigned game_time, bothnewkeys, lookup_calls, score_saves, display_updates;
+static unsigned scene_reads, scene_frees, scene_parses;
+static int scene_result, missing_model, missing_name, models_loaded;
+static char *scene_buffer;
+static struct {int hRes, vRes, vShift;} videomodes = {320, 240, 0};
+#define time game_time
+#define CHECK(c,message) do {if(!(c)){fprintf(stderr,"Scene/score mismatch: profile=%u %s\n",obor_profile_build,message);abort();}}while(0)
+#define assert(c) CHECK(c,"native numeric precondition")
+@PARSERS@
+#define GET_ARG(z) (arglist.count > z ? arglist.args[z] : "")
+#define GET_INT_ARG(z) getValidInt(GET_ARG(z), filename, command)
+static int observed_buffer(char *filename, char **buffer, size_t *size) {
+    CHECK(!strcmp(filename, "scene"), "scene filename"); ++scene_reads;
+    if(scene_result != 1) return scene_result;
+    *buffer = scene_buffer = malloc(2); CHECK(*buffer, "scene allocation");
+    memcpy(*buffer, "\n", 2); *size = 1; return 1;
+}
+static void observed_parse(ArgList *args, char *input, char *scratch) {
+    CHECK(input == scene_buffer && scratch, "scene parse arguments");
+    memset(args, 0, sizeof(*args)); ++scene_parses;
+}
+static size_t observed_newline(char *input) {
+    CHECK(input == scene_buffer && *input == '\n', "scene line advance"); return 1;
+}
+static void observed_free(void *buffer) {
+    CHECK(buffer == scene_buffer && scene_frees == 0, "scene buffer ownership");
+    ++scene_frees; free(buffer); scene_buffer = NULL;
+}
+static void observed_music(char *name, int loop, long offset) {
+    (void)name; (void)loop; (void)offset; CHECK(0, "unexpected music service");
+}
+static int observed_gif(char *name, int x, int y, int skip) {
+    (void)name; (void)x; (void)y; (void)skip; CHECK(0, "unexpected animation service"); return 0;
+}
+static void observed_silence(void) { CHECK(0, "unexpected silence service"); }
+#define buffer_pakfile observed_buffer
+#define ParseArgs observed_parse
+#define getNewLineStart observed_newline
+#define music observed_music
+#define playgif observed_gif
+#define sound_close_music observed_silence
+#define free observed_free
+@SCENE@
+#undef free
+#undef sound_close_music
+static s_model *observed_findmodel(char *name) {
+    ++lookup_calls;
+    for(unsigned i = 0; i < MAX_PLAYERS; ++i)
+        if(!strcasecmp(name, player[i].name)) {
+            if(missing_model) return NULL;
+            models[i].name = missing_name ? NULL : canonical_names[i];
+            return models + i;
+        }
+    CHECK(0, "unexpected model lookup"); return NULL;
+}
+static void observed_save(void) { ++score_saves; }
+static void observed_load_background(char *name, int mode) {
+    (void)name; (void)mode; CHECK(0, "unexpected background service");
+}
+static void observed_unload(void) { }
+static void observed_font(int x, int y, int font, int layer, const char *format, ...) {
+    (void)x; (void)y; (void)font; (void)layer; (void)format;
+}
+static int observed_height(int slot) { (void)slot; return 8; }
+static void observed_update(int a, int b) {
+    CHECK(!a && !b && ++display_updates == 1, "score display iteration");
+    game_time = GAME_SPEED * 9;
+}
+#undef _strmidx
+#undef _colx
+#define _strmidx(...) 0
+#define _colx(...) 0
+#define findmodel observed_findmodel
+#define saveHighScoreFile observed_save
+#define load_background observed_load_background
+#define load_cached_background observed_load_background
+#define unload_background observed_unload
+#define font_printf observed_font
+#define fontheight observed_height
+#define update observed_update
+@HALL@
+#undef findmodel
+static s_modelcache cache[3];
+static s_model cache_canary, *retired_model;
+static unsigned retired_slot, retire_calls;
+static void observed_delete(char *name) {
+    CHECK(retired_model && name == retired_model->name, "model name ownership");
+    CHECK(!cache[retired_slot].model, "cache invalid before model release");
+    ++retire_calls; free(retired_model); retired_model = NULL;
+}
+static int observed_retirement_log(const char *format, ...) { (void)format; return 0; }
+#define deleteModel observed_delete
+#define printf observed_retirement_log
+static int finish_model(s_model *model) {
+@CACHE@
+#undef printf
+static void check_cache(void) {
+    model_cache = cache;
+    for(unsigned slot = 0; slot < 3; ++slot) {
+        for(unsigned i = 0; i < 3; ++i) cache[i].model = &cache_canary;
+        retired_model = calloc(1, sizeof(*retired_model)); CHECK(retired_model, "model allocation");
+        retired_model->index = slot; retired_model->name = "retired";
+        retired_slot = slot; retire_calls = 0; cache[slot].model = retired_model;
+        models_loaded = 7;
+        CHECK(finish_model(retired_model) == 7 && models_loaded == 6, "model count");
+        CHECK(retire_calls == 1 && !retired_model, "model released once");
+        for(unsigned i = 0; i < 3; ++i)
+            CHECK(cache[i].model == (i == slot ? NULL : &cache_canary), "cache slot isolation");
+    }
+}
+static void check_scene(int result, int clears) {
+    scene_reads = scene_frees = scene_parses = 0; scene_result = result; scene_buffer = NULL;
+    currentScene = "prior";
+    memset(player, 0, sizeof(player));
+    for(unsigned i = 0; i < MAX_PLAYERS; ++i) {
+        player[i].newkeys = 0x1234u + i; player[i].playkeys = 0x4321u + i;
+        player[i].score = 77 + i;
+    }
+    playscene("scene");
+    CHECK(scene_reads == 1 && scene_frees == (unsigned)(result == 1), "scene IO ownership");
+    CHECK(scene_parses == (unsigned)(result == 1) && !scene_buffer, "scene parser calls");
+    CHECK(result == 1 ? !currentScene : currentScene && !strcmp(currentScene, "prior"), "current scene");
+    for(unsigned i = 0; i < MAX_PLAYERS; ++i) {
+        CHECK(player[i].newkeys == (result == 1 && clears ? 0 : 0x1234u + i), "scene new keys");
+        CHECK(player[i].playkeys == (result == 1 && clears ? 0 : 0x4321u + i), "scene play keys");
+        CHECK(player[i].score == 77 + i, "unrelated player state");
+    }
+}
+static void check_scores(int canonical, int saves, int missing) {
+    memset(&savescore, 0, sizeof(savescore)); memset(player, 0, sizeof(player));
+    memset(sets, 0, sizeof(sets)); levelsets[0].maxplayers = MAX_PLAYERS;
+    missing_model = missing == 1; missing_name = missing == 2;
+    lookup_calls = score_saves = display_updates = 0; bothnewkeys = 0;
+    for(unsigned i = 0; i < MAX_PLAYERS; ++i) {
+        snprintf(player[i].name, sizeof(player[i].name), "Hero%u", i);
+        snprintf(canonical_names[i], sizeof(canonical_names[i]), "hero%u", i);
+        player[i].score = 100 + i;
+    }
+    hallfame(1);
+    CHECK(lookup_calls == (unsigned)(canonical ? MAX_PLAYERS : 0), "canonical lookup count");
+    CHECK(score_saves == (unsigned)saves && !hallOfFame, "score save/exit");
+    for(unsigned i = 0; i < 10; ++i) {
+        CHECK(savescore.highsc[i] == (i < MAX_PLAYERS ? 100 + MAX_PLAYERS - 1 - i : 0), "score order");
+        char expected[MAX_NAME_LEN + 1] = {0};
+        if(i < MAX_PLAYERS)
+            snprintf(expected, sizeof(expected), canonical && !missing ? "hero%u" : "Hero%u", MAX_PLAYERS - 1 - i);
+        CHECK(!strcmp(savescore.hscoren[i], expected), "score name");
+    }
+    s_savescore prior; memcpy(&prior, &savescore, sizeof(prior));
+    lookup_calls = display_updates = 0; hallfame(0);
+    CHECK(!memcmp(&prior, &savescore, sizeof(prior)) && !lookup_calls, "display only scores");
+    CHECK(score_saves == (unsigned)saves, "display only save count");
+}
+int main(void) {
+    static const struct {unsigned revision; int clears, canonical, saves;} profiles[] = {
+@PROFILES@
+    };
+    for(unsigned i = 0; i < sizeof(profiles)/sizeof(*profiles); ++i) {
+        obor_profile_build = profiles[i].revision;
+        if(@FOCUS@) {
+            check_scores(profiles[i].canonical, profiles[i].saves, 0);
+            /* Defined core results where a legacy model lookup had no usable name. */
+            check_scores(profiles[i].canonical, profiles[i].saves, 1);
+            check_scores(profiles[i].canonical, profiles[i].saves, 2);
+            check_scores(profiles[i].canonical, profiles[i].saves, 0);
+        } else {
+            check_scene(1, profiles[i].clears); check_scene(0, profiles[i].clears);
+            check_scene(-1, profiles[i].clears); check_scene(2, profiles[i].clears);
+            check_cache();
+        }
+        printf("{\"revision\":%u,\"cases\":%d}\n", profiles[i].revision, @FOCUS@ ? 4 : 7);
+    }
+    return 0;
+}

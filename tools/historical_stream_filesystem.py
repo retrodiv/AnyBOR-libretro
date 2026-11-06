@@ -15,7 +15,8 @@ def render_filesystem(*, revisions, opening, saving, helpers, slots,
                       record=None, record_pack=None, header_includes=None,
                       level_streams=False, size_from_file=False,
                       save_returns_null=True, dynamic_strings=False,
-                      check_allocation_refusal=False, missing_file_contracts=None):
+                      check_allocation_refusal=False, missing_file_contracts=None,
+                      open_namespaced=None, allocation_refusal_result=None):
     if (not isinstance(revisions,list) or not 0<len(revisions)<=128 or
         any(type(n)is not int or not 0<n<=0xffffffff for n in revisions) or
         revisions!=sorted(set(revisions)) or type(slots)is not int or not 4<=slots<=1024 or
@@ -24,6 +25,21 @@ def render_filesystem(*, revisions, opening, saving, helpers, slots,
              level_streams,size_from_file,save_returns_null,dynamic_strings,check_allocation_refusal]) or
         physical_fixed and owned_extent or level_streams and physical_fixed):
         raise ValueError('Explicit bounded stream and filesystem context required')
+    if open_namespaced is not None and type(open_namespaced) is not bool:
+        raise ValueError('Explicit optional input namespace policy required')
+    allocation_result = None
+    if allocation_refusal_result is not None:
+        value = allocation_refusal_result
+        if (not isinstance(value,dict) or set(value)!={'status','out','type','value'} or
+                value['status']not in ('S_OK','E_FAIL') or value['out']not in ('retained','null') or
+                value['type']not in ('VT_EMPTY','VT_INTEGER') or
+                (value['type']=='VT_EMPTY' and value['value']is not None) or
+                (value['type']=='VT_INTEGER' and
+                 (type(value['value'])is not int or not -0x80000000<=value['value']<=0x7fffffff))):
+            raise ValueError('Explicit typed allocation refusal result required')
+        allocation_result = ('status=='+value['status']+'&&out=='+
+            ('&result'if value['out']=='retained'else'NULL')+'&&result.vt=='+value['type'])
+        if value['type']=='VT_INTEGER':allocation_result+='&&result.lVal==('+str(value['value'])+')'
     header_includes=['ScriptVariant.h','openborscript.h','openbor.h']if header_includes is None else header_includes
     if (not isinstance(header_includes,list)or not 0<len(header_includes)<=16 or
         any(not isinstance(n,str)or len(n)>256 or not re.fullmatch(r'[A-Za-z0-9_./-]+\.h',n)or
@@ -115,6 +131,7 @@ def render_filesystem(*, revisions, opening, saving, helpers, slots,
 #endif
 uint32_t obor_profile_build;
 @STREAM_DECLARATION@
+char packfile[4096]="session.pak";
 static char directory[256],input_path[256],output_path[256],missing_path[256];
 static const char *scratch;
 static FILE *handles[4];
@@ -251,9 +268,9 @@ int main(void){
  CHECK(snprintf(directory,sizeof(directory),"%s/session",scratch)>0&&strlen(directory)<sizeof(directory)-16,"bounded fixture directory");
  CHECK(!mkdir(directory,0700),"create owned session directory");
  CHECK(strlen(directory)+13<sizeof(input_path),"bounded file paths");
- strcpy(input_path,directory);strcat(input_path,"/input.txt");
+ strcpy(input_path,@INPUT_DIRECTORY@);strcat(input_path,"/input.txt");
  strcpy(output_path,directory);strcat(output_path,"/output.txt");
- strcpy(missing_path,directory);strcat(missing_path,"/missing.txt");
+ strcpy(missing_path,@INPUT_DIRECTORY@);strcat(missing_path,"/missing.txt");
  const uint32_t revisions[]={@REVISIONS@};
  for(unsigned n=0;n<sizeof(revisions)/sizeof(*revisions);++n){
   obor_profile_build=revisions[n];
@@ -289,14 +306,15 @@ static void allocation_case(void){
 }
 '''if check_allocation_refusal else''
     allocation_case=allocation_case.replace('@ALLOCATION_RESULT@',
-        'status==E_FAIL'if level_streams else
-        'status==S_OK&&out==&result&&result.vt==VT_INTEGER&&result.lVal==-1')
+        allocation_result if allocation_result is not None else
+        ('status==E_FAIL'if level_streams else
+         'status==S_OK&&out==&result&&result.vt==VT_INTEGER&&result.lVal==-1'))
     allocation_case=allocation_case.replace('@OPEN_HANDLES@','0'if open_closes_file else'1')
     values=dict(RENAME_RECORD='#define s_filestream anchor_filestream'if record is not None else'',
         HEADERS='\n'.join('#include "'+n+'"'for n in header_includes),
         OWN_RECORD=('#undef s_filestream\n#pragma pack(push,'+str(record_pack)+')\n'+record+
                     '\n#pragma pack(pop)')if record is not None else'',
-        STREAM_DECLARATION=('s_level *level;char packfile[4096]="session.pak";\n#define FIXTURE_STREAMS (level->filestreams)'if level_streams else
+        STREAM_DECLARATION=('s_level *level;\n#define FIXTURE_STREAMS (level->filestreams)'if level_streams else
                             ('s_filestream filestreams['+str(slots)+'];'if physical_fixed else
                              's_filestream *filestreams;int numfilestreams;')+'\n#define FIXTURE_STREAMS filestreams'),
         SLOTS=str(slots),NAME_CAPACITY=',size_t capacity'if pak_name_capacity else'',
@@ -312,6 +330,7 @@ static void allocation_case(void){
         VERIFY_TERMINATOR='CHECK(!FIXTURE_STREAMS[0].buf[length],"native appended terminator");'if appends_terminator else'',
         BASE_DIRECTORY='if(!strcmp(kind,"Saves"))strcpy(out,directory);else{strcpy(out,scratch);strcat(out,"/");}'if level_streams else
                        'strcpy(out,scratch);strcat(out,"/");',
+        INPUT_DIRECTORY='scratch'if open_namespaced is False else'directory',
         EXPECTED_SIZE='length'if size_from_file else'71',
         SAVE_RESULT='out==NULL'if save_returns_null else'out==&result&&result.vt==VT_EMPTY',
         ASSIGN_STRING='value->strVal=StrCache_CreateNewFrom(text);'if dynamic_strings else
@@ -320,4 +339,8 @@ static void allocation_case(void){
         OPEN_HANDLES='0'if open_closes_file else'1',
         REVISIONS=','.join(str(n)+'u'for n in revisions),
         MISSING_CHECKS='\n'.join(missing_checks))
+    if open_namespaced is False:
+        values['BASE_DIRECTORY']='strcpy(out,scratch);if(!strcmp(kind,"Saves/"))strcat(out,"/");'
+    elif open_namespaced is True:
+        values['BASE_DIRECTORY']='strcpy(out,scratch);strcat(out,"/");'
     return re.sub(r'@('+'|'.join(values)+r')@',lambda m:values[m[1]],code)

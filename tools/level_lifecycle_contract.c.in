@@ -1,0 +1,64 @@
+/* Native level lifecycle regions with observed delegated services.
+ * SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "openbor.h"
+#undef printf
+#undef assert
+uint32_t obor_profile_build;
+static int models_cached;
+static s_model models[2];
+static s_modelcache entries[4];
+static int cameratype,light[2],gfx_y_offset,gfx_x_offset,gfx_y_offset_adj;
+static int musicoverlap,active_mask,kill_mask,unload_mask,events[4],event_count;
+#define assert(c) do{if(!(c)){fprintf(stderr,"Lifecycle revision=%u line=%d\n",obor_profile_build,__LINE__);abort();}}while(0)
+void sound_close_music(void){assert(event_count<4);events[event_count++]=1;}
+void sound_stopall_sample(void){assert(event_count<4);events[event_count++]=2;active_mask=0;}
+void kill_all(void){assert(event_count<4);events[event_count++]=3;kill_mask=active_mask;}
+static void observed_unload(void){assert(event_count<4);events[event_count++]=4;unload_mask=active_mask;}
+@RESET@
+static void load_selection(void){
+@LOAD@
+}
+static void unload_offsets(void){@UNLOAD@}
+#define unload_level observed_unload
+static void level_exit(void){@AUDIO@}
+#undef unload_level
+static const unsigned revisions[]={@PROFILES@};
+static void initialize(int count){
+ memset(entries,0,sizeof(entries));memset(models,0,sizeof(models));
+ model_cache=entries;models_cached=count;models[0].type=TYPE_PLAYER;models[1].type=TYPE_ENEMY;
+ entries[0].model=entries[3].model=&models[0];entries[1].model=&models[1];
+ for(int i=0;i<4;++i)entries[i].selectable=7+i;
+}
+static void print_selection(void){
+ printf("[%d,%d,%d,%d]",entries[0].selectable,entries[1].selectable,entries[2].selectable,entries[3].selectable);
+}
+int main(void){
+ for(unsigned p=0;p<sizeof(revisions)/sizeof(*revisions);++p){
+  obor_profile_build=revisions[p];printf("{\"revision\":%u,\"reset\":[",obor_profile_build);
+  for(int count=0;count<=4;count+=4)for(int which=0;which<3;++which){
+   if(count || which){putchar(',');}initialize(count);reset_playable_list(which);print_selection();
+  }
+  printf("],\"load\":[");
+  for(int count=0;count<=4;count+=4){if(count){putchar(',');}initialize(count);load_selection();print_selection();}
+  printf("],\"unload\":[");
+  for(int i=0;i<2;++i){
+   gfx_x_offset=i?0:13;gfx_y_offset=i?0:-7;gfx_y_offset_adj=i?0:9;cameratype=7;light[0]=2;light[1]=3;
+   unload_offsets();if(i){putchar(',');}printf("[%d,%d,%d,%d,%d,%d]",gfx_x_offset,gfx_y_offset,gfx_y_offset_adj,cameratype,light[0],light[1]);
+  }
+  printf("],\"audio\":[");
+  const int masks[]={0,1,3};
+  for(musicoverlap=0;musicoverlap<2;++musicoverlap)for(unsigned i=0;i<3;++i){
+   active_mask=masks[i];event_count=0;kill_mask=unload_mask=-1;level_exit();
+   if(musicoverlap || i){putchar(',');}printf("{\"events\":[");
+   for(int j=0;j<event_count;++j){if(j){putchar(',');}printf("%d",events[j]);}
+   printf("],\"kill_mask\":%d,\"unload_mask\":%d,\"final_mask\":%d}",kill_mask,unload_mask,active_mask);
+  }
+  puts("]}");
+ }
+ return 0;
+}

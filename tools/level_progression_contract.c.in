@@ -1,0 +1,259 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+@PACK@
+@SCORE_RECORD@
+#pragma pack(pop)
+static s_savescore savescore;
+static int allow_secret_chars,musicoverlap,fade,magic_type,sameplayer,BGHEIGHT;
+static int nosave,obor_profile_new_game,useSave,nofadeout;
+static unsigned script_loads,list_resets,score_saves,game_saves,music_closes;
+static unsigned hof_calls,complete_calls,over_calls,fade_calls,scene_calls,level_calls,select_calls;
+static unsigned case_count;
+static int select_result=1,level_result=1,expected_ports[4],observed_ports[4];
+static int expected_min_z,expected_max_z,expected_height,expected_stage;
+static int mutate_players,jump_after_scene;
+static char last_filename[64];
+static char events[128];
+static void log_event(char ch)
+{ size_t n=strlen(events);assert(n+1<sizeof(events));events[n]=ch;events[n+1]=0; }
+static int loadScriptFile(void) {++script_loads;log_event('R');return 1;}
+static void reset_playable_list(int mode) {assert(mode==1);++list_resets;log_event('P');}
+static void saveHighScoreFile(void) {++score_saves;log_event('H');}
+static void saveGameFile(void) {++game_saves;log_event('G');}
+static void fade_out(int a,int b) {assert(!a && !b);++fade_calls;log_event('F');}
+static void sound_close_music(void) {++music_closes;log_event('M');}
+static int stricmp(const char *a,const char *b) {return strcmp(a,b);}
+/* The progression probe observes only the score insertion block. Its lookup
+ * provider preserves the supplied name; scene_score_contract checks canonical
+ * names and absent model records with the complete native function. */
+typedef struct {char *name;} score_model;
+static score_model *findmodel(char *name)
+{ static score_model current;current.name=name;return &current; }
+static void hallfame(int addtoscore)
+{
+    ++hof_calls;log_event('T');
+    int p,i,topten[10]={0};u32 score;char name[MAX_NAME_LEN+1];
+    score_model *model=NULL;
+    @HALL@
+    (void)topten;
+}
+static void gameover(void) {++over_calls;log_event('O');}
+static void showcomplete(int stage)
+{assert(stage==expected_stage);++complete_calls;log_event('C');}
+static void record_filename(const char *filename)
+{
+    assert(filename && strlen(filename)<sizeof(last_filename));strcpy(last_filename,filename);
+    assert(PLAYER_MIN_Z==expected_min_z && PLAYER_MAX_Z==expected_max_z && BGHEIGHT==expected_height);
+}
+static void playscene(char *filename)
+{
+    ++scene_calls;log_event('S');record_filename(filename);
+    if(jump_after_scene) {strcpy(branch_name,"target");jump_after_scene=0;}
+}
+static int selectplayer(int *players,char *filename)
+{
+    ++select_calls;log_event(filename?'Q':'I');
+    if(filename) {
+        record_filename(filename);
+        for(int i=0;i<4;++i){observed_ports[i]=players[i];assert(players[i]==expected_ports[i]);}
+    } else if(mutate_players) {
+        for(int i=0;i<4;++i) {
+            player[i].lives=0;player[i].hasplayed=1;player[i].weapnum=8;
+            player[i].spawnhealth=19;player[i].spawnmp=21;
+        }
+    }
+    return select_result;
+}
+static int playlevel(char *filename)
+{++level_calls;log_event('L');record_filename(filename);return level_result;}
+/* The original record-width copy warning is visible but is not promoted to
+ * an error. The memory and undefined-behavior sanitizers remain enabled. */
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic warning "-Wstringop-truncation"
+#endif
+@SAVE@
+@GAME@
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC diagnostic pop
+#endif
+static void reset_observation(void)
+{
+    script_loads=list_resets=score_saves=game_saves=music_closes=0;
+    hof_calls=complete_calls=over_calls=fade_calls=scene_calls=level_calls=select_calls=0;
+    *events=*last_filename=0;select_result=level_result=1;
+    mutate_players=jump_after_scene=useSave=nosave=nofadeout=obor_profile_new_game=0;
+    expected_min_z=11;expected_max_z=23;expected_height=31;expected_stage=1;
+    for(int i=0;i<4;++i)expected_ports[i]=observed_ports[i]=-1;
+    memset(&savescore,0,sizeof(savescore));memset(player,0,sizeof(player));
+    memset(records,0,sizeof(records));bonus=7;credits=13;
+}
+static void setup(unsigned ports)
+{
+    fresh_context();reset_observation();
+    assert(command(CMD_LEVELORDER_SET,"difficulty",0));
+    selected->maxplayers=ports;selected->noshowhof=0;
+}
+static s_level_entry *append(int type,const char *name,int next,const char *branch)
+{
+    strcpy(branch_name,branch);
+    s_level_entry *entry=type==normal_level?add_level((char *)name,selected):
+        type==cut_scene?add_scene((char *)name,selected):add_select((char *)name,selected);
+    *branch_name=0;entry->gonext=next;
+    entry->z_coords[0]=11;entry->z_coords[1]=23;entry->z_coords[2]=31;
+    return entry;
+}
+static void check_saved_update(unsigned ports)
+{
+    ++case_count;
+    setup(ports);selected->saveflag=2;credits=37;current_level=4;current_stage=3;
+    s_savelevel wanted;memset(&wanted,0,sizeof(wanted));
+    wanted.flag=2;wanted.credits=37;wanted.level=4;wanted.stage=3;wanted.which_set=0;
+    strcpy(wanted.dName,"difficulty");
+    for(unsigned i=0;i<4;++i) {
+        player[i].lives=2+i;player[i].credits=7+i;player[i].score=101+i;
+        player[i].spawnhealth=41+i;player[i].spawnmp=23+i;
+        player[i].weapnum=6+i;player[i].colourmap=1+i;
+        snprintf(player[i].name,sizeof(player[i].name),"player%u",i);
+        if(i<ports) {
+            wanted.pLives[i]=player[i].lives;wanted.pCredits[i]=player[i].credits;
+            wanted.pScores[i]=player[i].score;wanted.pSpawnhealth[i]=player[i].spawnhealth;
+            wanted.pSpawnmp[i]=player[i].spawnmp;wanted.pWeapnum[i]=player[i].weapnum;
+            wanted.pColourmap[i]=player[i].colourmap;strcpy(wanted.pName[i],player[i].name);
+        }
+    }
+    savelevelinfo();assert(!memcmp(records,&wanted,sizeof(wanted)));
+    for(unsigned i=1;i<10;++i) {s_savelevel zero={0};assert(!memcmp(records+i,&zero,sizeof(zero)));}
+    clear_parser();
+}
+static void check_restore(unsigned ports,int flag,int resets)
+{
+    ++case_count;
+    setup(ports);selected->ifcomplete=4;selected->lives=0;selected->credits=0;
+    selected->custfade=0;selected->musicoverlap=3;selected->typemp=7;selected->nosame=2;
+    records[0].flag=flag;records[0].level=1;records[0].stage=6;records[0].credits=17;
+    for(unsigned i=0;i<4;++i) {
+        records[0].pLives[i]=3+i;records[0].pScores[i]=100+i;
+        records[0].pSpawnhealth[i]=40+i;records[0].pSpawnmp[i]=20+i;
+        records[0].pWeapnum[i]=1+i;records[0].pColourmap[i]=2+i;
+        snprintf(records[0].pName[i],sizeof(records[0].pName[i]),"saved%u",i);
+    }
+    int players[4]={1,1,1,1};playgame(players,0,1);
+    assert(allow_secret_chars==4 && PLAYER_LIVES==3 && CONTINUES==5 && fade==24);
+    assert(musicoverlap==3 && magic_type==7 && sameplayer==2);
+    int loaded=obor_profile_build<3700 || flag;
+    assert(script_loads==(unsigned)loaded && list_resets==(unsigned)(loaded && flag==2 && resets));
+    assert(current_level==(loaded?1:0) && current_stage==(loaded?6:1));
+    assert(credits==(loaded && flag==2?17:13));
+    assert(select_calls==(unsigned)(!(loaded && flag==2)) && music_closes==1);
+    for(unsigned i=0;i<4;++i) {
+        int restored=loaded && flag==2 && i<ports;
+        assert(player[i].lives==(restored?(int)(3+i):0));
+        assert(player[i].score==(restored?100+i:0));
+        assert(player[i].spawnhealth==(restored?(int)(40+i):0));
+        assert(player[i].spawnmp==(restored?(int)(20+i):0));
+        assert(player[i].weapnum==(restored?(int)(1+i):0));
+        assert(player[i].colourmap==(restored?(int)(2+i):0));
+        assert(!strcmp(player[i].name,restored?records[0].pName[i]:""));
+    }
+    clear_parser();
+}
+static void check_scores(unsigned ports,int early_score)
+{
+    ++case_count;setup(ports);
+    for(unsigned i=0;i<4;++i) {
+        player[i].score=100+i;
+        snprintf(player[i].name,sizeof(player[i].name),"score%u",i);
+    }
+    hallfame(1);
+    assert(score_saves==(unsigned)!early_score);
+    for(unsigned i=0;i<10;++i) {
+        assert(savescore.highsc[i]==(i<ports?100+ports-1-i:0));
+        char expected[41]={0};if(i<ports)snprintf(expected,sizeof(expected),"score%u",ports-1-i);
+        assert(!strcmp(savescore.hscoren[i],expected));
+    }
+    s_savescore before;memcpy(&before,&savescore,sizeof(before));
+    hallfame(0);assert(!memcmp(&before,&savescore,sizeof(before)));
+    assert(score_saves==(unsigned)!early_score);
+    clear_parser();
+}
+static void check_progression(int legacy,int early_score)
+{
+    int players[4]={1,1,1,1};
+    for(int type=0;type<3;++type)for(int next=0;next<3;++next) {
+        ++case_count;
+        setup(2);append(type,"first",next,"");append(normal_level,"second",0,"");
+        expected_stage=1;
+        for(int i=0;i<4;++i)expected_ports[i]=i<(legacy?4:2)?0:1;
+        playgame(players,0,0);
+        assert(current_level==2 && game_saves==1 && records[0].times_completed==1 && bonus==7);
+        assert(current_stage==(next==1?2:1) && records[0].stage==(next==1?2:0));
+        assert(records[0].level==(next==2?1:2));
+        assert(complete_calls==(unsigned)(next==1) && fade_calls==1 && hof_calls==1 && music_closes==1);
+        assert(score_saves==1 && strstr(events,early_score?"GHFTM":"GFTHM"));
+        assert(scene_calls==(unsigned)(type==cut_scene));
+        assert(select_calls==1u+(type==select_screen));
+        assert(level_calls==(unsigned)((type==normal_level)+(next!=2)));
+        clear_parser();for(int i=0;i<4;++i)players[i]=1;
+    }
+    ++case_count;setup(2);append(cut_scene,"scene",0,"");append(normal_level,"ignored",0,"");
+    append(normal_level,"destination",0,"target");jump_after_scene=1;
+    playgame(players,0,0);assert(scene_calls==1 && level_calls==1 && !strcmp(last_filename,"destination"));
+    assert(current_level==3 && !*branch_name && records[0].level==3);
+    clear_parser();
+    for(int hidden=0;hidden<2;++hidden) {
+        ++case_count;
+        setup(2);append(normal_level,"failed",0,"");selected->noshowhof=hidden;
+        mutate_players=1;level_result=0;playgame(players,0,0);
+        assert(over_calls==1 && hof_calls==(unsigned)!hidden && !game_saves && !fade_calls && music_closes==1);
+        for(int i=0;i<4;++i) {
+            assert(player[i].hasplayed==(i<2?0:1) && player[i].weapnum==(i<2?0:8));
+            assert(player[i].spawnhealth==19 && player[i].spawnmp==21);
+        }
+        clear_parser();
+    }
+    ++case_count;setup(2);append(normal_level,"unfinished",0,"");select_result=0;
+    playgame(players,0,0);assert(!level_calls && !game_saves && current_level==0 && music_closes==1);
+    clear_parser();
+    ++case_count;setup(2);append(select_screen,"selection",0,"");
+    records[0].flag=2;records[0].pLives[0]=1;records[0].pLives[1]=0;
+    expected_ports[0]=1;expected_ports[1]=0;expected_ports[2]=legacy?0:1;expected_ports[3]=legacy?0:1;
+    select_result=0;playgame(players,0,1);
+    assert(select_calls==1 && current_level==0 && !game_saves && music_closes==1);
+    clear_parser();
+    ++case_count;setup(2);append(normal_level,"bonus",0,"");records[0].times_completed=3;bonus=7;
+    selected->lives=9;selected->credits=12;selected->custfade=31;
+    selected->ifcomplete=6;selected->nosame=3;selected->musicoverlap=2;selected->typemp=4;
+    playgame(players,0,0);assert(bonus==10 && records[0].times_completed==4 && game_saves==1);
+    assert(PLAYER_LIVES==9 && CONTINUES==12 && fade==31 && allow_secret_chars==6);
+    assert(sameplayer==3 && musicoverlap==2 && magic_type==4);
+    clear_parser();
+    for(int next=0;next<2;++next) {
+        ++case_count;setup(2);append(normal_level,"stage",next,"");mutate_players=1;
+        playgame(players,0,0);
+        for(int i=0;i<4;++i) {
+            assert(player[i].spawnhealth==(next && i<2?0:19));
+            assert(player[i].spawnmp==(next && i<2?0:21));
+        }
+        assert(current_stage==(next?2:1) && records[0].level==1);
+        clear_parser();
+    }
+}
+int main(void)
+{
+    (void)selector_and_query;(void)menus;
+    const struct {unsigned revision;int legacy,early_score,resets;} contexts[]={@CONTEXTS@};
+    for(unsigned p=0;p<sizeof(contexts)/sizeof(*contexts);++p) {
+        obor_profile_build=contexts[p].revision;
+        case_count=0;
+        for(unsigned ports=1;ports<=4;++ports) {
+            check_saved_update(ports);
+            check_scores(ports,contexts[p].early_score);
+            for(int flag=0;flag<3;++flag)check_restore(ports,flag,contexts[p].resets);
+        }
+        check_progression(contexts[p].legacy,contexts[p].early_score);
+        assert(case_count==37);
+        printf("{\"revision\":%u,\"cases\":%u,\"status\":\"PASS\"}\n",obor_profile_build,case_count);
+    }
+    return 0;
+}

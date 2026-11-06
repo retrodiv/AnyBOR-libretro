@@ -1,0 +1,49 @@
+/* Native scroll-command case and final camera clamps.
+ * SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "openbor.h"
+#include "commands.h"
+#undef printf
+#undef assert
+#undef GET_INT_ARG
+#undef videomodes
+uint32_t obor_profile_build;
+static s_spawn_entry next;
+static s_level level_storage,*level=&level_storage;
+static struct {int vRes;} fixture_view={240};
+#define videomodes fixture_view
+static int arguments[2],argument_calls,panel_height;
+static float advancey;
+#define assert(c) do{if(!(c)){fprintf(stderr,"Scroll limit revision=%u line=%d\n",obor_profile_build,__LINE__);abort();}}while(0)
+static int argument(int index){assert(index==argument_calls+1 && index<=2);++argument_calls;return arguments[index-1];}
+#define GET_INT_ARG(i) argument(i)
+static void parse_scroll_limits(int command){switch(command){
+@CASE@
+default:abort();}}
+static void apply_camera_limits(void){
+@CAMERA@
+}
+static const unsigned revisions[]={@PROFILES@};
+static const struct {int command,minimum,maximum;} parser_cases[]={@PARSER_CASES@};
+static const struct {int panel,rocking;float advance;} camera_cases[]={@CAMERA_CASES@};
+int main(void){
+ for(unsigned p=0;p<sizeof(revisions)/sizeof(*revisions);++p){
+  obor_profile_build=revisions[p];printf("{\"revision\":%u,\"parser\":[",obor_profile_build);
+  for(unsigned i=0;i<sizeof(parser_cases)/sizeof(*parser_cases);++i){
+   memset(&next,0x5a,sizeof(next));arguments[0]=parser_cases[i].minimum;arguments[1]=parser_cases[i].maximum;argument_calls=0;
+   parse_scroll_limits(parser_cases[i].command?CMD_LEVEL_SCROLLX:CMD_LEVEL_SCROLLZ);assert(argument_calls==2 && !next.boss);
+   if(i){putchar(',');}printf("{\"minimum\":%d,\"maximum\":%d}",next.scrollminz,next.scrollmaxz);
+  }
+  printf("],\"camera\":[");
+  for(unsigned i=0;i<sizeof(camera_cases)/sizeof(*camera_cases);++i){
+   memset(level,0,sizeof(*level));panel_height=camera_cases[i].panel;level->rocking=camera_cases[i].rocking;advancey=camera_cases[i].advance;
+   apply_camera_limits();if(i){putchar(',');}printf("%.9g",(double)advancey);
+  }
+  puts("]}");
+ }
+ return 0;
+}

@@ -16,11 +16,11 @@ PARTS = {'script', 'container', 'alloc_script', 'Script_Init', 'Script_Copy',
 
 
 def render(parts, *, pointer_container, allocation_magic, cleanup_safe, labels,
-           includes='', support=''):
+           includes='', support='', clear_reset=True):
     if (not isinstance(parts, dict) or set(parts) != PARTS or any(not isinstance(v, str) or not v.strip()
                                   or len(v) > 32768 for v in parts.values())):
         raise ValueError('Exact bounded nonempty script source components required')
-    if any(type(x) is not bool for x in (pointer_container, allocation_magic, cleanup_safe)):
+    if any(type(x) is not bool for x in (pointer_container, allocation_magic, cleanup_safe, clear_reset)):
         raise ValueError('Explicit source representation and cleanup expectations required')
     if any(not isinstance(x, str) or len(x) > 32768 for x in (includes, support)):
         raise ValueError('Bounded explicit include and support fragments required')
@@ -63,7 +63,7 @@ enum {VT_EMPTY,VT_INTEGER};
 #define FAILED(x) ((x)<0)
 #define script_magic ((int)0x73636f)
 typedef struct {int vt;LONG lVal;} ScriptVariant;
-typedef struct {void *pClearEntry,*pCurrentInstruction;int bReset;
+typedef struct {void *pClearEntry,*pCurrentInstruction,*pReturnEntry,*pCurrentCall;int bReset;
  struct {char name[32];} theSymbolTable;} Interpreter;
 @SCRIPT@
 @CONTAINER@
@@ -71,6 +71,8 @@ static int max_script_vars=3,theFunctionList;
 static const size_t scripts_membercount=sizeof(s_scripts)/sizeof(Script*);
 static Script *pcurrentscript;
 static unsigned evaluated,resets,interpreter_clears,local_clears,local_sets,local_unsets;
+static int expected_reset_before_clear=@CLEAR_RESET@;
+static void *expected_clear_return;
 static int expected_method,last_method;
 static Script *expected_script;
 static void ScriptVariant_Init(ScriptVariant *v) {*v=(ScriptVariant){0};}
@@ -83,10 +85,13 @@ static void Interpreter_Init(Interpreter *p,char *name,int *list) {
 static void Interpreter_Clear(Interpreter *p) {assert(p);++interpreter_clears;}
 static void Interpreter_Reset(Interpreter *p) {
  assert(p && pcurrentscript==expected_script);++resets;p->bReset=1;
+ p->pCurrentCall=p->pReturnEntry=p->pCurrentInstruction=NULL;
 }
 static int Interpreter_EvaluateCall(Interpreter *p) {
  assert(p && pcurrentscript==expected_script);
  assert(p->pCurrentInstruction==p->pClearEntry && p->pClearEntry);
+ assert(p->pReturnEntry==(expected_reset_before_clear?NULL:expected_clear_return));
+ assert(p->pCurrentCall==(expected_reset_before_clear?NULL:expected_clear_return));
  assert(last_method==expected_method);++evaluated;return 0;
 }
 static void Script_Set_Local_Variant(Script *s,const char *name,ScriptVariant *v) {
@@ -116,6 +121,8 @@ static void reset_counts(void) {
 static void enable_callback(Script *s,int method) {
  static int entry;expected_script=s;expected_method=method;
  s->pinterpreter->pClearEntry=&entry;
+ expected_clear_return=&entry;
+ s->pinterpreter->pReturnEntry=s->pinterpreter->pCurrentCall=expected_clear_return;
 }
 static void initialize(Script *s,const char *comment) {
  Script_Init(s,"fixture",(char*)comment,0);
@@ -138,7 +145,7 @@ static void direct_checks(void) {
   reset_counts();Script saved={0};pcurrentscript=&saved;
   enable_callback(&s,1);Script_Clear(&s,1);
   assert(pcurrentscript==&saved && !s.initialized && s.vars==vars);
-  assert(evaluated==1 && resets==1 && local_sets==1 && local_unsets==1);
+  assert(evaluated==1 && resets==(unsigned)expected_reset_before_clear && local_sets==1 && local_unsets==1);
   assert(interpreter_clears==1 && local_clears==1 && !s.comment && !s.pinterpreter);
   reset_counts();Script_Clear(&s,2);
   assert(!s.vars && !s.initialized && evaluated==0 && interpreter_clears==0);
@@ -162,7 +169,7 @@ static void direct_checks(void) {
   Script_Clear(copy,method);
   assert(pcurrentscript==&saved && !copy->initialized);
   assert(copy->vars==(method==2?NULL:copy_vars));
-  assert(evaluated==1 && resets==1 && local_sets==1 && local_unsets==1);
+  assert(evaluated==1 && resets==(unsigned)expected_reset_before_clear && local_sets==1 && local_unsets==1);
   assert(local_clears==(unsigned)(method!=0) && interpreter_clears==0);
   assert(owner->initialized && owner->interpreterowner && owner->pinterpreter->bReset==0);
   if(comment) assert(!strcmp(owner->comment,"shared comment"));
@@ -232,7 +239,7 @@ int main(void) {
               'COPY': parts['Script_Copy'], 'CLEAR': parts['Script_Clear'],
               'ALLOC_ALL': parts['alloc_all_scripts'], 'CLEAR_ALL': parts['clear_all_scripts'],
               'COPY_ALL': parts['copy_all_scripts'], 'FREE_ALL': parts['free_all_scripts'],
-              'MAGIC': str(int(allocation_magic)), 'DISPOSE': dispose,
+              'MAGIC': str(int(allocation_magic)), 'CLEAR_RESET': str(int(clear_reset)), 'DISPOSE': dispose,
               'CONTAINER_INIT': init, 'ALLOC_CONTAINERS': alloc, 'CONTAINER_END': end,
               'CHECKS': '\n'.join('direct_checks();container_checks();' for _ in labels),
               'OBSERVATION': json.dumps(json.dumps(observation))}

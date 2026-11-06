@@ -1,0 +1,31 @@
+/* Native difficulty scrollbar queue arguments.
+ * SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include "openbor.h"
+#undef printf
+#undef assert
+uint32_t obor_profile_build;
+const s_drawmethod plainmethod={0};
+static int barx=4,bary=5,barw=9,barh=40,color_black;
+static unsigned calls;
+static int alpha;
+#define assert(c) do{if(!(c)){fprintf(stderr,"Scrollbar revision=%u line=%d\n",obor_profile_build,__LINE__);abort();}}while(0)
+void spriteq_add_box(int x,int y,int w,int h,int z,int colour,s_drawmethod *method){
+ assert(x==barx && y==bary && w==barw && h==barh && z==0 && colour==color_black && method);
+ ++calls;alpha=method->alpha;
+}
+static void draw(void){
+@INITIALIZATION@
+@CALL@
+}
+static const unsigned revisions[]={@PROFILES@};
+int main(void){
+ for(unsigned i=0;i<sizeof(revisions)/sizeof(*revisions);++i){
+  obor_profile_build=revisions[i];calls=0;alpha=-1;draw();assert(calls==1);
+  printf("{\"revision\":%u,\"alpha\":%d}\n",obor_profile_build,alpha);
+ }
+ return 0;
+}

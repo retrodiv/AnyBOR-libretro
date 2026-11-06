@@ -1,0 +1,71 @@
+/* Native alpha/table selection with fixed own-source observations.
+ * SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "openbor.h"
+#undef printf
+#undef assert
+#ifdef NDEBUG
+#error Display-selection assertions must remain enabled
+#endif
+uint32_t obor_profile_build;
+static entity subject,*e=&subject;
+static s_drawmethod method,*drawmethod=&method;
+static s_level level_storage,*level;
+static unsigned char tables[4][MAX_PAL_SIZE],pal[MAX_PAL_SIZE];
+static unsigned char level_palettes[1][sizeof(*level_storage.palettes)];
+static int current_palette;
+static unsigned lookups;
+static const char *case_name;
+#define assert(c) do{if(!(c)){fprintf(stderr,"Display selection mismatch revision=%u case=%s line=%d\n",obor_profile_build,case_name,__LINE__);abort();}}while(0)
+static const struct {unsigned revision,contract;} profiles[]={@PROFILES@};
+static const struct {
+ const char *name;
+ int initial_table,draw_alpha,model_alpha,remap,entity_colourmap,globalmap,present,palette;
+ int expected[3][3];
+} cases[]={@CASES@};
+unsigned char *model_get_colourmap(s_model *model,unsigned which){
+ assert(model==&subject.modeldata && which==1 && ++lookups==1);
+ return tables[2];
+}
+@BLEND_COUNT@
+static void select_method(void){
+@SELECT@
+}
+static int table_id(void *table){
+ if(!table)return 0;
+ for(int i=0;i<4;++i)if(table==tables[i])return i+1;
+ if(table==level_palettes[0])return 5;
+ if(table==pal)return 6;
+ assert(0);return -1;
+}
+int main(void){
+ for(unsigned p=0;p<sizeof(profiles)/sizeof(*profiles);++p){
+  obor_profile_build=profiles[p].revision;
+  for(unsigned n=0;n<sizeof(cases)/sizeof(*cases);++n){
+   case_name=cases[n].name;lookups=0;
+   memset(&subject,0,sizeof(subject));memset(&method,0,sizeof(method));
+   memset(&level_storage,0,sizeof(level_storage));
+   subject.modeldata.alpha=cases[n].model_alpha;
+   subject.modeldata.maps_loaded=1;subject.modeldata.palette=tables[1];
+   subject.modeldata.globalmap=cases[n].globalmap;
+   subject.colourmap=cases[n].entity_colourmap?tables[3]:NULL;
+   method.alpha=cases[n].draw_alpha;method.remap=cases[n].remap;
+   method.table=cases[n].initial_table?tables[0]:NULL;
+   level_storage.palettes=level_palettes;level_storage.numpalettes=1;
+   level=cases[n].present?&level_storage:NULL;current_palette=cases[n].palette;
+   unsigned char before[sizeof(subject)],level_before[sizeof(level_storage)];
+   memcpy(before,&subject,sizeof(subject));memcpy(level_before,&level_storage,sizeof(level_storage));
+   select_method();
+   const int *expected=cases[n].expected[profiles[p].contract];
+   assert(method.alpha==expected[0] && table_id(method.table)==expected[1] && lookups==(unsigned)expected[2]);
+   assert(method.remap==cases[n].remap && !memcmp(before,&subject,sizeof(subject)));
+   assert(!memcmp(level_before,&level_storage,sizeof(level_storage)));
+  }
+  printf("{\"revision\":%u,\"cases\":%zu}\n",obor_profile_build,sizeof(cases)/sizeof(*cases));
+ }
+ return 0;
+}

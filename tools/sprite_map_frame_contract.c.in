@@ -1,0 +1,40 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include "openbor.h"
+#undef printf
+#undef assert
+uint32_t obor_profile_build;
+int pixelformat=PIXEL_x8;
+s_sprite_map *sprite_map;
+#define assert(c) do{if(!(c)){fprintf(stderr,"SPRITE_MAP_FRAME revision=%u line=%d\n",obor_profile_build,__LINE__);abort();}}while(0)
+struct context{unsigned revision;int legacy;};
+static const struct context contexts[]={@CONTEXTS@};
+int main(void){
+ for(unsigned p=0;p<sizeof(contexts)/sizeof(*contexts);++p){
+  obor_profile_build=contexts[p].revision;
+  for(int absent=0;absent<4;++absent)for(int disabled=0;disabled<2;++disabled){
+   s_sprite legacy_frame={0},modern_frame={0},legacy_mask={0},modern_mask={0};
+   s_sprite_list owners[2]={{0}};s_sprite_map maps[2]={{0}};sprite_map=maps;
+   owners[0].sprite=absent&1?NULL:&modern_frame;
+   owners[1].sprite=absent&2?NULL:&modern_mask;
+   maps[0].node=owners;maps[1].node=owners+1;
+   maps[0].profile_sprite=absent&1?NULL:&legacy_frame;
+   maps[1].profile_sprite=absent&2?NULL:&legacy_mask;
+   s_model model={0},*newchar=&model;unsigned char palette[16]={0};newchar->palette=palette;
+   int index=0,maskindex=1,nopalette=disabled;
+   @ASSIGNMENTS@
+   s_sprite *selected=contexts[p].legacy?&legacy_frame:&modern_frame;
+   s_sprite *other=contexts[p].legacy?&modern_frame:&legacy_frame;
+   assert(maskindex==-1);
+   assert(selected->palette==(!(absent&1) && !disabled?palette:NULL));
+   assert(selected->pixelformat==(!(absent&1) && !disabled?pixelformat:PIXEL_8));
+   assert(selected->mask==(!absent?(contexts[p].legacy?&legacy_mask:&modern_mask):NULL));
+   assert(!other->palette && !other->mask && other->pixelformat==PIXEL_8);
+  }
+  fprintf(stdout,"{\"revision\":%u,\"frame\":\"PASS\"}\n",obor_profile_build);
+ }
+ return 0;
+}

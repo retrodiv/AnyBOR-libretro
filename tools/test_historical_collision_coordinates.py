@@ -51,6 +51,7 @@ def program(engine,rows):
     first=rows[0]
     code=render_collision(parts,scalar=scalar,components=components,
         ranges=first['ranges'],tolerance_bonus=first['tolerance_bonus'],
+        separation_padding=first.get('separation_padding',1),
         revision=first['revision'],labels=['prepared_source'])
     marker='int main(void) {'
     if code.count(marker)!=1:
@@ -75,7 +76,8 @@ class CollisionCoordinateTests(unittest.TestCase):
         cls.work=Path(temporary.name)
         cls.groups={}
         for row in cls.rows:
-            cls.groups.setdefault((row['engine'],row['ranges'],row['tolerance_bonus']),[]).append(row)
+            cls.groups.setdefault((row['engine'],row['ranges'],row['tolerance_bonus'],
+                                   row.get('separation_padding',1)),[]).append(row)
         cls.executables={}
         for index,(key,rows) in enumerate(cls.groups.items()):
             code=cls.work/('contract-%d.c'%index);executable=code.with_suffix('')
@@ -90,6 +92,8 @@ class CollisionCoordinateTests(unittest.TestCase):
         by_revision={row['revision']:row for row in self.rows}
         self.assertEqual(len(by_revision),len(self.rows))
         self.assertTrue({3684,3685,3728,3729}<=set(by_revision))
+        self.assertEqual(by_revision[3573]['separation_padding'],0)
+        self.assertEqual(by_revision[3574]['separation_padding'],1)
         self.assertIs(by_revision[3684]['tolerance_bonus'],False)
         self.assertIs(by_revision[3685]['tolerance_bonus'],True)
         self.assertIs(by_revision[3728]['ranges'],False)
@@ -104,6 +108,7 @@ class CollisionCoordinateTests(unittest.TestCase):
             with self.subTest(revision=row['revision']):
                 self.assertRegex(row['commit'],r'^[0-9a-f]{40}$')
                 self.assertEqual(row['coordinate_components'],6 if row['ranges'] else 5)
+                self.assertIn(row.get('separation_padding',1),(0,1))
                 for value in row['source_sha256'].values():
                     self.assertRegex(value,r'^[0-9a-f]{64}$')
 

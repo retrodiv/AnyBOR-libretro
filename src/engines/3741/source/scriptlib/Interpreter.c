@@ -5,7 +5,8 @@
  * Upstream code retains its original license and notices.
  * Compact instruction/value storage while retaining constant refresh,
  * runtime argument checks and the native clear entry; copy packed reference
- * fields safely. Compact compiler-only instruction records after resolving
+ * fields safely. Preserve each profile's reset/call gate and immediate flag
+ * bookkeeping. Compact compiler-only instruction records after resolving
  * value ownership, preserving branch and export anchors, all mutable values
  * and exactly-once pool cleanup. Allocate parser state only while compiling
  * and release it once runtime instructions are ready.
@@ -23,6 +24,9 @@
  */
 
 #include "Interpreter.h"
+#include <stdint.h>
+
+extern uint32_t obor_profile_build;
 #include "ImportCache.h"
 #include <string.h>
 #include <stdio.h>
@@ -353,7 +357,7 @@ HRESULT Interpreter_EvaluateImmediate(Interpreter* pinterpreter)
 		pinterpreter->bCallCompleted = FALSE;
 	}
 
-	pinterpreter->bReset = FALSE;
+	if(obor_profile_build >= 3587) pinterpreter->bReset = FALSE;
 
 	return hr;
 }
@@ -370,7 +374,8 @@ HRESULT Interpreter_EvaluateCall(Interpreter* pinterpreter)
 	HRESULT hr = S_OK;
 	//Evaluate instructions until an error occurs or until the m_bCallCompleted
 	//flag is set to true.
-	while( ( SUCCEEDED(hr) ) && ( !pinterpreter->bCallCompleted )){//pinterpreter->bReset &&
+	while((obor_profile_build < 3587 || obor_profile_build >= 3590 ||
+           pinterpreter->bReset) && SUCCEEDED(hr) && !pinterpreter->bCallCompleted) {
 		hr = Interpreter_EvalInstruction(pinterpreter);
 	}
 	return hr;
@@ -1150,7 +1155,7 @@ void Interpreter_Reset(Interpreter* pinterpreter)
 	pinterpreter->pCurrentInstruction = NULL;
 	//Reset the main flag
 	pinterpreter->bMainCompleted = FALSE;
-	pinterpreter->bReset = TRUE;
+	if(obor_profile_build >= 3587) pinterpreter->bReset = TRUE;
 }
 
 /******************************************************************************

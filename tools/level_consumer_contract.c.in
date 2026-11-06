@@ -1,0 +1,221 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+typedef uint32_t u32;
+typedef struct entity entity;
+@FLAGS@
+@PACK@
+@PLAYER@
+@RECORD@
+#pragma pack(pop)
+static s_player player[MAX_PLAYERS];
+static s_savelevel records[512],*savelevel=records;
+static int credits,CONTINUES=5,PLAYER_LIVES=3,noshare,creditscheat,selectScreen;
+static char skipselect[MAX_PLAYERS][MAX_NAME_LEN+1];
+static int bonus,load_result=1,saveslot,current_level,current_stage,entered;
+static u32 bothnewkeys,keys[8];
+static unsigned frame,key_count;
+static int plural_hint,singular_hint;
+static struct {int hRes;} videomodes={320};
+static struct {int effectvol;} savedata={64};
+typedef struct {int alpha;} s_drawmethod;
+static s_drawmethod plainmethod;
+static int color_black,color_white;
+#define SAMPLE_BEEP 1
+#define SAMPLE_BEEP2 2
+static int fontheight(int slot) {(void)slot;return 8;}
+static int _liney(int row,int offset) {return 14+row*10+offset;}
+static void spriteq_add_box(int x,...) {(void)x;}
+static void spriteq_add_line(int x,...) {(void)x;}
+static void sound_play_sample(int sample,...) {(void)sample;}
+static void menu_log(int selected,int row,int column,const char *format,...)
+{
+    (void)selected;(void)row;(void)column;
+    char text[256];va_list args;va_start(args,format);vsnprintf(text,sizeof(text),format,args);va_end(args);
+    if(strstr(text,"Times To UnLock"))plural_hint=1;
+    if(strstr(text,"Finish Game To UnLock"))singular_hint=1;
+}
+static void update(int draw,int unused)
+{
+    (void)draw;(void)unused;assert(frame<16);
+    bothnewkeys=frame<key_count?keys[frame]:FLAG_ESC;++frame;
+}
+static void key_script(u32 first,u32 second,u32 third)
+{ frame=0;key_count=3;keys[0]=first;keys[1]=second;keys[2]=third;plural_hint=singular_hint=0; }
+static int loadGameFile(void) {return load_result;}
+static void getPakName(char *out,size_t size,int kind)
+{ (void)kind;assert(size>10);strcpy(out,"probe.save"); }
+@SLOTS@
+#define _menutext menu_log
+#define _menutextm menu_log
+/* Retain the native record-width copy. GCC's truncation heuristic is a
+ * warning here; byte/termination behavior remains covered by the controls
+ * and the native memory/undefined-behavior sanitizers remain enabled. */
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic warning "-Wstringop-truncation"
+#endif
+@CHOOSER@
+@SAVED@
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC diagnostic pop
+#endif
+#undef _menutext
+#undef _menutextm
+typedef intptr_t LONG;
+typedef struct {int vt;LONG lVal;} ScriptVariant;
+enum {_sv_maxplayers,VT_INTEGER};
+static void ScriptVariant_ChangeType(ScriptVariant *var,int kind) {var->vt=kind;}
+static LONG query_players(int index)
+{
+    int previous=current_set;current_set=index;
+    ScriptVariant value={0},*var=&value;
+    switch(_sv_maxplayers) {case _sv_maxplayers:
+@GETTER@
+    }
+    assert(value.vt==VT_INTEGER);current_set=previous;return value.lVal;
+}
+static int select_models(int *players)
+{
+    @SET_BINDING@
+    int i;
+@SELECTION@
+    return 0;
+}
+static void select_bonus(void) {int i;
+@BONUS@
+}
+@ENTRY@
+static void selected_ports(int *players)
+{
+    int i;s_set_entry *set=levelsets+current_set;
+    @PLAYERS@
+}
+static void allocation_failure(int selector)
+{
+    failures=request=0;fail_calloc=1;
+    if(!setjmp(stopped)) {
+        if(selector)command(CMD_LEVELORDER_SKIPSELECT,"model",0);
+        else command(CMD_LEVELORDER_SET,"a",0);
+        assert(0);
+    }
+    assert(failures==1 && request==1 && !strcmp(message,"Out of memory!"));
+    assert(!fail_calloc);
+}
+static void selector_and_query(int legacy,int global_names)
+{
+    fresh_context();
+    assert(query_players(0)==(legacy?2:0));
+    assert(query_players(9)==(legacy?2:0));
+    assert(query_players(-1)==0 && query_players(10)==0 && !levelsets);
+    assert(command(CMD_LEVELORDER_SET,"a",0));
+    assert(query_players(0)==2 && query_players(9)==(legacy?2:0));
+    assert(command(CMD_LEVELORDER_MAXPLAYERS,"",3));assert(query_players(0)==3);
+    if(legacy && @HAS_FIXED@) {
+        levelsets[9].maxplayers=4;levelsets[9].ifcomplete=17;levelsets[9].saveflag=2;
+        clear_parser();assert(query_players(9)==4);
+        assert(command(CMD_LEVELORDER_SET,"again",0));
+        assert(levelsets[9].ifcomplete==17 && levelsets[9].saveflag==2);
+    }
+    fresh_context();assert(command(CMD_LEVELORDER_SET,"a",0));
+    selector_count=1;memset(selector_args,0,sizeof(selector_args));
+    assert(command(CMD_LEVELORDER_SKIPSELECT,"",0));
+    int ports[4]={1,1,1,1};memset(skipselect,0,sizeof(skipselect));
+    memset(player,0,sizeof(player));selectScreen=1;
+    assert(select_models(ports)==global_names);
+    fresh_context();assert(command(CMD_LEVELORDER_SET,"a",0));
+    selector_count=2;
+    char text[201];memset(text,'x',200);text[200]=0;
+    assert(command(CMD_LEVELORDER_SKIPSELECT,text,0));
+    assert(strlen(selected->skipselect[0])==(legacy?40u:200u));
+    if(legacy) {
+        char *owned=selected->skipselect[0];
+        assert(command(CMD_LEVELORDER_SKIPSELECT,"model0",0));
+        assert(owned==selected->skipselect[0] && !strcmp(owned,"model0"));
+    }
+    clear_parser();
+    for(unsigned mask=0;mask<16;++mask)for(noshare=0;noshare<2;++noshare)
+    for(creditscheat=0;creditscheat<2;++creditscheat) {
+        fresh_context();assert(command(CMD_LEVELORDER_SET,"a",0));
+        selector_count=2;memset(selector_args,0,sizeof(selector_args));
+        selector_args[2]="local2";assert(command(CMD_LEVELORDER_SKIPSELECT,"local0",0));
+        memset(skipselect,0,sizeof(skipselect));strcpy(skipselect[0],"global0");strcpy(skipselect[2],"global2");
+        memset(player,0x5a,sizeof(player));s_player before[MAX_PLAYERS];memcpy(before,player,sizeof(before));
+        for(int i=0;i<4;++i)ports[i]=(mask>>i)&1;
+        credits=42;selectScreen=1;
+        assert(select_models(ports)==1 && !selectScreen);
+        unsigned count=legacy?MAX_PLAYERS:2;int active=0;
+        for(unsigned i=0;i<MAX_PLAYERS;++i) {
+            if(i>=count){assert(!memcmp(player+i,before+i,sizeof(*player)));continue;}
+            s_player expected;memset(&expected,0,sizeof(expected));
+            if(ports[i]) {
+                ++active;expected.lives=PLAYER_LIVES;
+                if(i==0)strcpy(expected.name,global_names?"global0":"local0");
+                if(i==2)strcpy(expected.name,global_names?"global2":"local2");
+                if(noshare){expected.credits=CONTINUES-!creditscheat;expected.hasplayed=1;}
+            }
+            assert(!memcmp(player+i,&expected,sizeof(expected)));
+        }
+        assert(credits==(!noshare && active?CONTINUES-!creditscheat:42));
+        clear_parser();
+    }
+    if(legacy && @HAS_FIXED@) {
+        fresh_context();allocation_failure(0);assert(!levelsets && !live && !num_difficulties);
+        assert(command(CMD_LEVELORDER_SET,"a",0));allocation_failure(1);
+        assert(!selected->skipselect[0]);clear_parser();
+    }
+}
+static int allowed(int legacy,int completed,int required)
+{ return legacy?(unsigned)completed>=(unsigned)required:completed>=required; }
+static void menus(int legacy)
+{
+    const int thresholds[]={0,1,2,-1,INT32_MAX,INT32_MIN};
+    const int completed[]={0,1,2,-1,INT32_MAX,INT32_MIN};
+    for(unsigned a=0;a<sizeof(thresholds)/sizeof(*thresholds);++a)
+    for(unsigned b=0;b<sizeof(completed)/sizeof(*completed);++b) {
+        fresh_context();assert(command(CMD_LEVELORDER_SET,"a",0));
+        selected->ifcomplete=thresholds[a];load_result=0;bonus=completed[b];
+        key_script(FLAG_ESC,FLAG_ESC,FLAG_ESC);
+        assert(choose_difficulty()==(allowed(legacy,completed[b],thresholds[a])?0:-1));
+        clear_parser();
+    }
+    for(unsigned a=1;a<4;++a) {
+        fresh_context();assert(command(CMD_LEVELORDER_SET,"a",0));selected->ifcomplete=thresholds[a];
+        assert(command(CMD_LEVELORDER_SET,"b",0));bonus=0;load_result=0;
+        key_script(FLAG_ESC,FLAG_ESC,FLAG_ESC);assert(choose_difficulty()==-1);
+        int locked=!allowed(legacy,0,thresholds[a]);
+        int plural=legacy?(unsigned)thresholds[a]>1u:thresholds[a]>1;
+        assert(plural_hint==(locked && plural) && singular_hint==(locked && !plural));
+        clear_parser();
+    }
+    fresh_context();assert(command(CMD_LEVELORDER_SET,"a",0));selected->ifcomplete=5;
+    memset(records,0,sizeof(records));records[0].times_completed=1;records[9].times_completed=7;
+    load_result=1;key_script(FLAG_ESC,FLAG_ESC,FLAG_ESC);
+    assert(choose_difficulty()==(legacy?0:-1) && bonus==(legacy?8:1));
+    bonus=-20;select_bonus();assert(bonus==(legacy?8:1));
+    memset(records,0,sizeof(records));records[9].flag=1;records[9].level=3;strcpy(records[9].dName,"reserved");
+    key_script(FLAG_MOVEDOWN,FLAG_ANYBUTTON,FLAG_ESC);
+    assert(load_saved_game()==(legacy?9:-1));
+    records[0].flag=1;records[0].level=1;
+    key_script(FLAG_MOVELEFT,FLAG_MOVEDOWN,FLAG_ANYBUTTON);
+    assert(load_saved_game()==(legacy?9:0));
+    key_script(FLAG_MOVELEFT,FLAG_MOVERIGHT,FLAG_MOVEDOWN);
+    keys[3]=FLAG_ANYBUTTON;key_count=4;assert(load_saved_game()==0);
+    memset(records,0,sizeof(records));key_script(FLAG_ESC,FLAG_ESC,FLAG_ESC);assert(load_saved_game()==-1);
+    entered=0;entry_prefix(NULL,7,0);assert(!entered && current_level==0 && current_stage==1 && current_set==7);
+    current_set=0;entry_prefix(NULL,0,0);assert(entered==1);
+    selected->maxplayers=2;
+    int ports[4]={-1,-1,-1,-1};for(int i=0;i<4;++i)player[i].lives=i!=1;
+    selected_ports(ports);for(int i=0;i<4;++i)assert(ports[i]==(i<(legacy?4:2)?(i!=1):-1));
+    clear_parser();
+}
+int main(void)
+{
+    const struct {unsigned revision;int legacy,global_names;} contexts[]={@CONTEXTS@};
+    for(unsigned p=0;p<sizeof(contexts)/sizeof(*contexts);++p) {
+        obor_profile_build=contexts[p].revision;
+        if(@FOCUS@==1)selector_and_query(contexts[p].legacy,contexts[p].global_names);
+        else menus(contexts[p].legacy);
+        printf("{\"revision\":%u,\"focus\":%d,\"status\":\"PASS\"}\n",obor_profile_build,@FOCUS@);
+    }
+    return 0;
+}

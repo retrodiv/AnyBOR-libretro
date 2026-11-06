@@ -1,0 +1,80 @@
+/* Native panel command with observed argument and layer-load services.
+ * SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <strings.h>
+#include "openbor.h"
+#include "commands.h"
+#undef printf
+#undef assert
+#undef GET_ARG
+#undef stricmp
+#define stricmp strcasecmp
+uint32_t obor_profile_build;
+@DEPTH@
+static unsigned case_index;
+#define assert(c) do{if(!(c)){fprintf(stderr,"Panel optionals revision=%u case=%u line=%d\n",obor_profile_build,case_index,__LINE__);abort();}}while(0)
+/* Preserve the native initializer's signed one-bit true value and its warning. */
+#if defined(__clang__)
+#pragma clang diagnostic push
+#pragma clang diagnostic warning "-Wsingle-bit-bitfield-constant-conversion"
+#endif
+@PLAIN@
+#if defined(__clang__)
+#pragma clang diagnostic pop
+#endif
+static s_level storage,*level=&storage;
+static s_layer *bgl;
+static s_drawmethod *dm;
+static int (*panels)[3],panelcount,frontpanels_loaded;
+static char *errormessage,*arguments[4];
+static unsigned args_count,loads_count;
+static int args[16],loads[3][11],markers[3];
+static char *argument(int i){assert(i>=1 && i<=3 && args_count<16);args[args_count++]=i;return arguments[i];}
+#define GET_ARG(i) argument(i)
+int load_layer(char *filename,int index){
+ assert(loads_count<3 && index>=0 && index<level->numlayers+1);
+ s_layer *layer=level->layers+index;assert(!layer->gfx.handle && layer->oldtype==bgt_panel);
+ int role=!strcmp(filename,"base.png")?1:!strcmp(filename,"neon.png")?2:!strcmp(filename,"screen.png")?3:0;assert(role);
+ int zrole=layer->z==PANEL_Z?1:layer->z==NEONPANEL_Z?2:layer->z==SCREENPANEL_Z?3:0;assert(zrole==role);
+ int record[]={role,index,zrole,layer->neon,layer->drawmethod.alpha,layer->order,layer->drawmethod.xrepeat,layer->drawmethod.yrepeat,!!layer->drawmethod.transbg,layer->enabled,layer->quake};
+ memcpy(loads[loads_count++],record,sizeof(record));layer->gfx.handle=markers+role-1;return 1;
+}
+#if defined(__clang__)
+#pragma clang diagnostic push
+#pragma clang diagnostic warning "-Wsingle-bit-bitfield-constant-conversion"
+#endif
+static int parse_panel(void){int cmd=CMD_LEVEL_PANEL;switch(cmd){
+@CASE@
+ default:abort();
+ }
+ return 0;
+lCleanup:
+ assert(errormessage && !strcmp(errormessage,"Too many layers in level (check LEVEL_MAX_LAYERS)!"));return 1;
+}
+#if defined(__clang__)
+#pragma clang diagnostic pop
+#endif
+static const unsigned revisions[]={@PROFILES@};
+static const struct {int initial,neon,screen;} cases[]={@CASES@};
+static void numbers(const int *values,unsigned count){putchar('[');for(unsigned i=0;i<count;++i){if(i){putchar(',');}printf("%d",values[i]);}putchar(']');}
+int main(void){
+ for(unsigned p=0;p<sizeof(revisions)/sizeof(*revisions);++p){
+  obor_profile_build=revisions[p];printf("{\"revision\":%u,\"results\":[",obor_profile_build);
+  for(case_index=0;case_index<sizeof(cases)/sizeof(*cases);++case_index){
+   const __typeof__(*cases) *c=cases+case_index;
+   memset(level,0,sizeof(*level));level->numlayers=c->initial;level->layers=calloc(c->initial?c->initial:1,sizeof(*level->layers));assert(level->layers);
+   panelcount=frontpanels_loaded=0;panels=NULL;errormessage=NULL;args_count=loads_count=0;
+   char *neon[]={"","none","NoNe","neon.png"},*screen[]={"","none","NoNe","screen.png"};arguments[1]="base.png";arguments[2]=neon[c->neon];arguments[3]=screen[c->screen];
+   int error=parse_panel();if(case_index){putchar(',');}
+   printf("{\"error\":%d,\"layers\":%d,\"panelcount\":%d,\"panels\":",error,level->numlayers,panelcount);
+   const int empty[3]={0};numbers(panels?panels[0]:empty,3);printf(",\"args\":");numbers(args,args_count);printf(",\"loads\":[");
+   for(unsigned i=0;i<loads_count;++i){if(i){putchar(',');}numbers(loads[i],11);}printf("]}");free(level->layers);free(panels);
+  }
+  puts("]}");
+ }
+ return 0;
+}

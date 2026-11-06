@@ -1,0 +1,69 @@
+/* Native dropped-weapon scheduling with observed animation services.
+ * SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "openbor.h"
+#undef printf
+#undef assert
+uint32_t obor_profile_build;
+static unsigned case_id,animation_calls,weapon_calls;
+#define assert(c) do {if(!(c)){fprintf(stderr,"Weapon drop revision=%u case=%u line=%d\n",obor_profile_build,case_id,__LINE__);abort();}}while(0)
+static entity actor,weapon,platform_actor,*self=&actor;
+static s_level level_storage,*level=&level_storage;
+static s_player player[4];
+static u32 time;
+static int ground,mutation,chosen_animation,chosen_reset,weapon_numbers[2];
+static s_anim frame;
+static s_anim *animation_table[ANI_RESPAWN+ANI_SPAWN+ANI_IDLE+1];
+static float platform_data[1][8];
+static float walls[1][8];
+void common_lie(void){}
+void runanimal(void){}
+entity *check_platform(float x,float z,entity *exclude){
+ assert(x==actor.x && z==actor.z && exclude==self);
+ return ground==2?&platform_actor:ground==3?&weapon:NULL;
+}
+int checkwall(float x,float z){assert(x==actor.x && z==actor.z);return ground==1 || ground==3?0:-1;}
+void ent_set_anim(entity *ent,int number,int reset){
+ assert(ent==&weapon && !animation_calls);++animation_calls;
+ chosen_animation=number==ANI_RESPAWN?2:number==ANI_SPAWN?1:0;
+ assert(number==ANI_RESPAWN || number==ANI_SPAWN || number==ANI_IDLE);chosen_reset=reset;
+ if(mutation==1)ent->modeldata.counter=0;
+ if(mutation==2)ent->modeldata.counter=2;
+}
+void set_weapon(entity *ent,int number,int anim_flag){
+ assert(ent==self && !anim_flag && weapon_calls<2);weapon_numbers[weapon_calls++]=number;
+}
+@FUNCTION@
+static const unsigned revisions[]={@PROFILES@};
+static const struct {int present,shoot,flag,counter,animation,animal,ground,mutation,slot,player,stored,loss;} cases[]={@CASES@};
+int main(void){
+ for(unsigned p=0;p<sizeof(revisions)/sizeof(*revisions);++p){
+  obor_profile_build=revisions[p];
+  for(case_id=0;case_id<sizeof(cases)/sizeof(*cases);++case_id){
+   unsigned k=case_id;memset(&actor,0,sizeof(actor));memset(&weapon,0,sizeof(weapon));memset(&platform_actor,0,sizeof(platform_actor));
+   memset(level,0,sizeof(*level));memset(player,0,sizeof(player));memset(&frame,0,sizeof(frame));memset(animation_table,0,sizeof(animation_table));
+   frame.numframes=1;frame.platform=platform_data;platform_data[0][7]=5;
+   platform_actor.animation=&frame;platform_actor.a=7;platform_actor.animpos=0;
+   actor.x=17;actor.z=11;actor.a=4;actor.direction=1;actor.playerindex=cases[k].slot;
+   actor.modeldata.type=cases[k].player?TYPE_PLAYER:TYPE_ENEMY;actor.modeldata.animal=cases[k].animal;actor.modeldata.weaploss[1]=cases[k].loss;
+   actor.weapent=cases[k].present?&weapon:NULL;
+   weapon.modeldata.typeshot=cases[k].shoot;weapon.modeldata.type=TYPE_ITEM;weapon.modeldata.counter=cases[k].counter;
+   weapon.modeldata.animation=animation_table;weapon.modeldata.animation_capacity=sizeof(animation_table)/sizeof(*animation_table);
+   animation_table[ANI_IDLE]=&frame;
+   if(cases[k].animation&1)animation_table[ANI_SPAWN]=&frame;
+   if(cases[k].animation&2)animation_table[ANI_RESPAWN]=&frame;
+   weapon.base=2;weapon.nextthink=900;player[cases[k].slot].weapnum=cases[k].stored;
+   ground=cases[k].ground;mutation=cases[k].mutation;walls[0][7]=3;level->walls=walls;level->numwalls=1;level->setweap=5;
+   time=1000;chosen_animation=chosen_reset=-1;animation_calls=weapon_calls=0;
+   dropweapon(cases[k].flag);
+   if(cases[k].present && cases[k].shoot)assert(weapon.x==actor.x && weapon.z==actor.z && weapon.a==actor.a && weapon.direction==actor.direction);
+   printf("{\"revision\":%u,\"case\":%u,\"nextthink\":%u,\"counter\":%d,\"animation\":%d,\"reset\":%d,\"base\":%.9g,\"blink\":%d,\"lie\":%d,\"animal\":%d,\"type_none\":%d,\"detached\":%d,\"weapons\":[",obor_profile_build,k,weapon.nextthink,weapon.modeldata.counter,chosen_animation,chosen_reset,(double)weapon.base,weapon.blink,weapon.takeaction==common_lie,weapon.think==runanimal,weapon.modeldata.type==TYPE_NONE,self->weapent==NULL);
+   for(unsigned i=0;i<weapon_calls;++i){if(i)putchar(',');printf("%d",weapon_numbers[i]);}puts("]}");
+  }
+ }
+ return 0;
+}

@@ -1,0 +1,88 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <assert.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "openbor.h"
+#undef assert
+#undef printf
+#ifdef NDEBUG
+#error Cost-move assertions must remain enabled
+#endif
+struct cost_case {uint32_t revision;int early_action,clear_movestep,jump_keeps_action;};
+static const struct cost_case cases[]={@CASES@},*test;
+uint32_t obor_profile_build;
+static entity subject,*self=&subject;
+static s_level level_storage,*level=&level_storage;
+static int nocost,healthcheat,energy_mode,animation_calls,unlink_calls,energy_trace;
+static int unlink_action,animation_action,unlink_movestep,animation_movestep,mutate;
+static unsigned case_index;
+#define assert(c) do {if(!(c)) {fprintf(stderr,"Cost-move mismatch: profile=%u case=%u line=%d\n",obor_profile_build,case_index,__LINE__);abort();}} while(0)
+static void initial_action(void) {abort();}
+static void changed_action(void) {abort();}
+void common_attack_proc(void) {abort();}
+static int action_id(void) {
+ if(self->takeaction==initial_action)return 1;
+ if(self->takeaction==common_attack_proc)return 2;
+ assert(self->takeaction==changed_action);return 3;
+}
+int check_energy(int which,int animation) {
+ assert((which==0 || which==1) && animation==ANI_ATTACK2);
+ energy_trace=energy_trace*4+which+1;return !!(energy_mode&(which?2:1));
+}
+void ent_unlink(entity *ent) {
+ assert(ent==self && ++unlink_calls==1 && animation_calls==0);
+ unlink_action=action_id();unlink_movestep=self->movestep;
+ assert(self->xdir==0 && self->zdir==0 && self->attacking==1 && self->idling==0 && self->inpain==0);
+}
+void ent_set_anim(entity *ent,int animation,int reset) {
+ assert(ent==self && animation==ANI_ATTACK2 && !reset && unlink_calls==1 && ++animation_calls==1);
+ animation_action=action_id();animation_movestep=self->movestep;
+ if(mutate)self->takeaction=changed_action;
+}
+@COST@
+int main(void) {
+ s_anim *animations[MAX_ANIS]={0},attack;
+ memset(&attack,0,sizeof(attack));attack.numframes=1;attack.energycost.cost=7;
+ animations[ANI_ATTACK2]=&attack;
+ for(unsigned i=0;i<sizeof(cases)/sizeof(*cases);++i) {
+  test=cases+i;obor_profile_build=test->revision;
+  for(int fs=0;fs<2;++fs)for(int setting=0;setting<4;++setting)
+  for(energy_mode=0;energy_mode<4;++energy_mode)for(nocost=0;nocost<2;++nocost)
+  for(healthcheat=0;healthcheat<2;++healthcheat)for(int jump=0;jump<2;++jump)
+  for(mutate=0;mutate<2;++mutate) {
+   ++case_index;memset(&subject,0,sizeof(subject));
+   subject.modeldata.animation=animations;subject.modeldata.animation_capacity=MAX_ANIS;
+   subject.mp=subject.health=100;subject.movestep=7;subject.takeaction=initial_action;
+   subject.xdir=2;subject.zdir=-3;subject.inpain=subject.idling=1;
+   memset(subject.combostep,0x5a,sizeof(subject.combostep));
+   unsigned char before[sizeof(subject)];memcpy(before,&subject,sizeof(subject));
+   level->nospecial=setting;animation_calls=unlink_calls=energy_trace=0;
+   animation_action=unlink_action=animation_movestep=unlink_movestep=-1;
+   int permitted=(fs?setting<2:(setting==0 || setting==3));
+   int allowed=permitted && energy_mode;
+   int result=check_costmove(ANI_ATTACK2,fs,jump);
+   assert(result==!!allowed && animation_calls==!!allowed && unlink_calls==!!allowed);
+   int trace=0;
+   if(permitted){trace=1;if(!(energy_mode&1))trace=trace*4+2;}
+   int spent=allowed && !nocost && !healthcheat;
+   if(spent)trace=trace*4+2;
+   assert(energy_trace==trace);
+   if(!allowed){assert(!memcmp(before,&subject,sizeof(subject)));continue;}
+   int before_action=test->early_action && (!test->jump_keeps_action || !jump)?2:1;
+   assert(unlink_action==before_action && animation_action==before_action);
+   assert(unlink_movestep==7 && animation_movestep==(test->clear_movestep?0:7));
+   int final_action=mutate?3:before_action;
+   if(!test->early_action)final_action=2;
+   assert(action_id()==final_action && subject.movestep==(test->clear_movestep?0:7));
+   assert(subject.mp==100-(spent && (energy_mode&2)?7:0));
+   assert(subject.health==100-(spent && !(energy_mode&2)?7:0));
+   assert(subject.xdir==0 && subject.zdir==0 && subject.attacking==1 && !subject.idling && !subject.inpain);
+   for(unsigned at=0;at<sizeof(subject.combostep);++at)
+    assert(((unsigned char *)subject.combostep)[at]==(at<sizeof(int)*5?0:0x5a));
+  }
+ }
+ printf("{\"status\":\"PASS\",\"cases\":%u}\n",case_index);return 0;
+}

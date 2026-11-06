@@ -26,7 +26,8 @@ CONTRACT_PATH = Path(__file__).parent / 'fixtures/profile-jump-attack-contracts.
 def source_parts(engine):
     source = (SOURCE / 'src/engines' / engine / 'openbor.c').read_bytes().decode(
         'utf-8', 'surrogateescape')
-    return {name: function(source, name) for name in ('common_try_jumpattack', 'recheck_nextattack')}
+    return {name: function(source, name) for name in
+            ('diff', 'common_try_jumpattack', 'recheck_nextattack')}
 
 
 def program(engine, rows, contracts):

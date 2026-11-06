@@ -1,0 +1,49 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+static const int legacy_factor[]={@LEGACY@};
+static void delay_values(ScriptVariant *v,entity *subject){
+ memset(subject,0,sizeof(*subject));subject->modeldata.edelay.factor=2.5f;
+ memset(v,0,8*sizeof(*v));
+ for(int i=0;i<8;++i)v[i].vt=VT_INTEGER;
+ v[0].vt=VT_PTR;v[0].ptrVal=subject;v[1].lVal=_ep_edelay;v[2].lVal=1;
+ v[3].vt=VT_DECIMAL;v[3].dblVal=1.25;v[4].lVal=7;v[5].lVal=11;v[6].lVal=13;v[7].lVal=17;
+}
+static void check(const struct contract *c){
+ obor_profile_build=(uint32_t)c->revision;
+ int legacy=legacy_factor[c-contracts];
+ for(int kind=0;kind<6;++kind){
+  entity subject;ScriptVariant v[8];delay_values(v,&subject);
+  if(kind==1)v[3].vt=VT_EMPTY;
+  if(kind==2){v[3].vt=VT_INTEGER;v[3].lVal=5;v[4].vt=VT_EMPTY;}
+  if(kind==3){v[3].vt=VT_INTEGER;v[3].lVal=9;v[4].vt=VT_DECIMAL;v[4].dblVal=7.5;}
+  if(kind==4)v[3].vt=VT_PTR;
+  if(kind==5){v[3].vt=VT_DECIMAL;v[3].dblVal=0;v[4].vt=VT_STR;}
+  int failed_cap=kind==2 || kind==5;
+  int continues=!c->has_result || !failed_cap;
+  float expected=kind==0?(legacy?7.0f:1.25f):kind==1 || kind==4?(legacy?7.0f:2.5f):
+                 kind==2?(legacy?2.5f:5.0f):kind==3?(legacy?7.5f:9.0f):legacy?2.5f:0;
+  call(c,v,8,S_OK,!failed_cap);
+  assert(subject.modeldata.edelay.mode==1 && subject.modeldata.edelay.factor==expected);
+  assert(subject.modeldata.edelay.cap_min==(failed_cap?0:7));
+  assert(subject.modeldata.edelay.cap_max==(continues?11:0));
+  assert(subject.modeldata.edelay.range_min==(continues?13:0));
+  assert(subject.modeldata.edelay.range_max==(continues?17:0));
+ }
+ /* Short arrays were outside the original defined contract. The maintained
+    caller allocates exactly count pointers and checks the bounded core. */
+ for(int count=3;count<8;++count){
+  entity subject;ScriptVariant v[8];delay_values(v,&subject);
+  float expected=count>(legacy?4:3)?(legacy?7.0f:1.25f):2.5f;
+  call(c,v,count,S_OK,1);
+  assert(subject.modeldata.edelay.mode==1 && subject.modeldata.edelay.factor==expected);
+  assert(subject.modeldata.edelay.cap_min==(count>=5?7:0));
+  assert(subject.modeldata.edelay.cap_max==(count>=6?11:0));
+  assert(subject.modeldata.edelay.range_min==(count>=7?13:0));
+  assert(subject.modeldata.edelay.range_max==0);
+ }
+ fprintf(stdout,"{\"revision\":%d,\"delay_oracle_cases\":6,\"delay_validation_cases\":5}\n",c->revision);
+}
+int main(void){
+ for(unsigned i=0;i<sizeof(contracts)/sizeof(*contracts);++i)check(contracts+i);
+ return 0;
+}

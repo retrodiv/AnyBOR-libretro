@@ -1,0 +1,79 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+@NATIVE@
+struct animation_case {
+ unsigned revision;int legacy,handle_type,entity,model,default_script,same,null_models,mutation,locals;
+ int count,first,second;
+};
+static const struct animation_case animation_cases[]={@CASES@};
+static const struct animation_case *active_animation_case;
+static entity *animation_subject;
+static Script *animation_scripts[3];
+static LONG expected_animation_identity;
+
+static void observe_animation_call(Interpreter *interpreter) {
+ const struct animation_case *c=active_animation_case;
+ assert(executions<(unsigned)c->count);
+ int callee=executions?c->second:c->first;
+ assert(callee>=0 && callee<3);
+ assert(interpreter==animation_scripts[callee]->pinterpreter);
+ Script *script=animation_scripts[0];
+ ScriptVariant *self_value=Script_Get_Local_Variant(script,"self");
+ ScriptVariant *number=Script_Get_Local_Variant(script,"animnum");
+ ScriptVariant *frame=Script_Get_Local_Variant(script,"frame");
+ ScriptVariant *handle=Script_Get_Local_Variant(script,"animhandle");
+ if(c->locals) {
+  assert(self_value && self_value->vt==VT_PTR && self_value->ptrVal==animation_subject);
+  assert(number && number->vt==VT_INTEGER && number->lVal==17);
+  assert(frame && frame->vt==VT_INTEGER && frame->lVal==2);
+  if(c->handle_type) assert(handle && handle->vt==VT_INTEGER && handle->lVal==expected_animation_identity);
+  else assert(!handle);
+ } else assert(!self_value && !number && !frame && !handle);
+ if(!executions && c->mutation==1) animation_subject->defaultmodel=animation_subject->model;
+ if(!executions && c->mutation==2) {
+  static s_anim changed;changed.index=99;
+  animation_subject->animation=&changed;animation_subject->animnum=23;animation_subject->animpos=3;
+ }
+}
+
+static void dispatch_checks(const struct animation_case *c) {
+ Script entity_script={0},model_script={0},default_script={0};
+ s_scripts entity_scripts={0},model_scripts={0},default_scripts={0};
+ s_model model={0},default_model={0};entity subject={0};s_anim animation={0};
+ active_animation_case=c;animation_subject=&subject;
+ animation_scripts[0]=&entity_script;animation_scripts[1]=&model_script;
+ animation_scripts[2]=c->same?&model_script:&default_script;
+ Script_Init(&entity_script,NULL,NULL,1);Script_Init(&model_script,NULL,NULL,1);
+ Script_Init(&default_script,NULL,NULL,1);
+ if(c->entity) Script_Init(&entity_script,"entity",NULL,0);
+ if(c->model) Script_Init(&model_script,"model",NULL,0);
+ if(c->default_script && !c->same) Script_Init(&default_script,"default",NULL,0);
+ entity_scripts.animation_script=&entity_script;model_scripts.animation_script=&model_script;
+ default_scripts.animation_script=&default_script;model.scripts=&model_scripts;
+ default_model.scripts=&default_scripts;subject.scripts=&entity_scripts;
+ subject.model=c->null_models?NULL:&model;
+ subject.defaultmodel=c->null_models?NULL:c->same?&model:&default_model;
+ subject.animation=&animation;animation.index=7;subject.animnum=17;subject.animpos=2;
+ if(c->handle_type==1) {
+  uint32_t bits=(uint32_t)(uintptr_t)&animation;
+  _Static_assert(sizeof(bits)==sizeof(expected_animation_identity),"source scalar width");
+  memcpy(&expected_animation_identity,&bits,sizeof(bits));
+ } else expected_animation_identity=7;
+ before_callback(&entity_script);expected_calls_count=(unsigned)c->count;
+ expected_calls[0]=expected_calls[1]=&entity_script;animation_fixture_active=1;
+ execute_animation_script(&subject);animation_fixture_active=0;
+ after_callback((unsigned)c->count);
+ pcurrentscript=&caller;
+ Script_Clear(&entity_script,2);Script_Clear(&model_script,2);Script_Clear(&default_script,2);
+ clear_nodes();
+}
+
+int main(void) {
+ assert(historical_context_main()==0);
+ for(unsigned i=0;i<sizeof(animation_cases)/sizeof(*animation_cases);++i) {
+  const struct animation_case *c=animation_cases+i;
+  fprintf(stderr,"Animation dispatch profile=%u case=%u\n",c->revision,i);
+  obor_profile_build=c->revision;legacy_context=c->legacy;dispatch_checks(c);
+ }
+ return 0;
+}

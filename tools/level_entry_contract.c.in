@@ -1,0 +1,116 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <assert.h>
+#include <stdarg.h>
+#include <setjmp.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+@CONSTANTS@
+@PACK@
+@RECORDS@
+#pragma pack(pop)
+static unsigned obor_profile_build;
+static int num_difficulties, PLAYER_MIN_Z, PLAYER_MAX_Z, z_coords[3];
+static s_set_entry *levelsets;
+static char branch_name[41], message[128];
+static size_t live, allocations;
+static int fail_calloc;
+static int kind, request, failures;
+static jmp_buf stopped;
+#undef assert
+#define assert(c) do { if(!(c)) { fprintf(stderr,"LEVEL_ENTRY profile=%u kind=%d line=%d\n",obor_profile_build,kind,__LINE__);abort(); } } while(0)
+static void *owned_malloc(size_t size)
+{ void *p=malloc(size);assert(p);++live;++allocations;return p; }
+static void *owned_calloc(size_t count,size_t size)
+{
+    if(fail_calloc){--fail_calloc;return NULL;}
+    void *p=calloc(count,size);assert(p);++live;++allocations;return p;
+}
+static void *owned_realloc(void *p,size_t size)
+{ if(!p)++live;void *result=realloc(p,size);assert(result);++allocations;return result; }
+static void owned_free(void *p)
+{ if(p){assert(live);--live;}free(p); }
+static void controlled_stop(int code,const char *format,...)
+{
+    va_list args;va_start(args,format);vsnprintf(message,sizeof(message),format,args);va_end(args);
+    request=code;++failures;longjmp(stopped,1);
+}
+#define malloc owned_malloc
+#define calloc owned_calloc
+#define realloc owned_realloc
+#define free owned_free
+#define shutdown controlled_stop
+@NAME@
+@METHODS@
+#undef malloc
+#undef calloc
+#undef realloc
+#undef free
+#undef shutdown
+
+static void begin(void)
+{
+    assert(!live && !levelsets);
+    size_t count=obor_profile_build<3666?MAX_DIFFICULTIES:1;
+    levelsets=owned_malloc(count*sizeof(*levelsets));memset(levelsets,0,count*sizeof(*levelsets));
+    num_difficulties=1;
+}
+
+static void append_extra(s_level_entry *(*constructor)(char *,s_set_entry *),int fixed)
+{
+    size_t before=allocations;failures=request=0;message[0]=0;
+    if(!setjmp(stopped))constructor("extra",levelsets);
+    if(fixed) {
+        assert(failures==1 && request==1 && allocations==before);
+        assert(!strcmp(message,"Too many entries in level order (max. 100)!"));
+        assert(levelsets->numlevels==MAX_LEVELS);
+    } else assert(!failures && levelsets->numlevels==MAX_LEVELS+1);
+}
+
+int main(void)
+{
+    const struct { unsigned revision;int fixed,min_z,max_z; } contexts[] = {@CONTEXTS@};
+    s_level_entry *(*constructors[])(char *,s_set_entry *)={add_level,add_scene,add_select};
+    for(unsigned p=0;p<sizeof(contexts)/sizeof(*contexts);++p) {
+        obor_profile_build=contexts[p].revision;
+        PLAYER_MIN_Z=contexts[p].min_z;PLAYER_MAX_Z=contexts[p].max_z;
+        unsigned cases=0;
+        for(kind=0;kind<3;++kind) {
+            for(int branch=0;branch<2;++branch)for(int coords=0;coords<4;++coords) {
+                begin();strcpy(branch_name,branch?"chapter-a":"");
+                char filename[201];memset(filename,'x',200);filename[200]=0;
+                for(int z=0;z<3;++z)z_coords[z]=coords==0?0:coords==1?-10:coords==2?23+z:z==1?45:0;
+                s_level_entry *entry=constructors[kind](filename,levelsets);
+                assert(entry==levelsets->levelorder && levelsets->numlevels==1);
+                assert(entry->filename!=filename && !strcmp(entry->filename,filename));
+                if(contexts[p].fixed || branch) {
+                    assert(entry->branchname && entry->branchname!=branch_name);
+                    assert(!strcmp(entry->branchname,branch_name));
+                } else assert(!entry->branchname);
+                assert(entry->type==(kind==0?normal_level:kind==1?cut_scene:select_screen));
+                for(int z=0;z<3;++z) {
+                    int expected=kind?0:z_coords[z]>0?z_coords[z]:z==1?PLAYER_MAX_Z:PLAYER_MIN_Z;
+                    assert(entry->z_coords[z]==expected);
+                }
+                assert(!entry->gonext);
+                /* Caller mutation cannot change the strings owned by this entry. */
+                filename[0]='y';branch_name[0]='z';
+                assert(entry->filename[0]=='x');
+                if(entry->branchname)assert(entry->branchname[0]==(branch?'c':0));
+                unload_levelorder();assert(!live && !levelsets && !num_difficulties);++cases;
+            }
+            begin();branch_name[0]=0;
+            for(int i=0;i<MAX_LEVELS;++i) {
+                s_level_entry *entry=constructors[kind]("level",levelsets);
+                assert(entry==levelsets->levelorder+i && levelsets->numlevels==i+1);
+            }
+            append_extra(constructors[kind],contexts[p].fixed);
+            ++cases;
+            unload_levelorder();assert(!live && !levelsets && !num_difficulties);++cases;
+        }
+        printf("{\"revision\":%u,\"cases\":%u}\n",obor_profile_build,cases);
+    }
+    return 0;
+}

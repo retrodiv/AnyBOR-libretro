@@ -3,14 +3,19 @@
 SPDX-License-Identifier: BSD-3-Clause
 Copyright (c) 2026 retrodiv <retrodiv@proton.me>
 """
+import re
 
 
-def render_font_selection(*, revisions, slots, inline_fonts):
+def render_font_selection(*, revisions, slots, inline_fonts, cache_dimension_setter=None):
     if (not isinstance(revisions, list) or not 0 < len(revisions) <= 128 or
         any(type(n) is not int or not 0 < n <= 0xffffffff for n in revisions) or
         revisions != sorted(set(revisions)) or type(slots) is not int or
         not 1 <= slots <= 256 or type(inline_fonts) is not bool):
         raise ValueError('Explicit revisions, native font capacity and storage required')
+    if cache_dimension_setter is not None and (
+            not isinstance(cache_dimension_setter,str) or inline_fonts or
+            re.fullmatch(r'[A-Za-z_][A-Za-z_0-9]{0,126}',cache_dimension_setter) is None):
+        raise ValueError('Explicit native dimension-cache setter required')
     source = r'''
 #include <limits.h>
 #include <stdint.h>
@@ -67,6 +72,8 @@ int main(void){
   fonts[i][0]=calloc(1,sizeof(*fonts[i][0]));CHECK(fonts[i][0]);
   fonts[i][0]->width=i+11;fonts[i][0]->height=i+21;
   for(int j=0;j<256;++j)fonts[i][0]->token_width[j]=i+1;''')
+    if cache_dimension_setter is not None:
+        setup += '\n'+cache_dimension_setter+'(i,0,1,i+11);\n'+cache_dimension_setter+'(i,1,1,i+21);'
     dimensions = '' if inline_fonts else '''
   CHECK(fontmonowidth(index)==(selected<0?0:selected+11));++checks;
   CHECK(fontheight(index)==(selected<0?0:selected+21));++checks;'''

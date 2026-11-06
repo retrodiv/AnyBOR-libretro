@@ -1,31 +1,42 @@
 # Choosing a profile
 
-Selectable engine profiles: v3.0 3020-dev, v3.0 3057, v3.0 3062, v3.0 3073,
-v3.0 3081, v3.0 3109, v3.0 3117, v3.0 3143, v3.0 3160, v3.0 3173, v3.0 3192,
-v3.0 3208, v3.0 3273, v3.0 3288, v3.0 3303, v3.0 3307, v3.0 3310, v3.0 3311,
-v3.0 3316, v3.0 3317, v3.0 3318, v3.0 3327, v3.0 3328, v3.0 3330, v3.0 3332,
-v3.0 3335, v3.0 3337, v3.0 3340, v3.0 3341, v3.0 3342, v3.0 3350, v3.0 3351,
-v3.0 3352, v3.0 3353, v3.0 3354, v3.0 3355, v3.0 3356, v3.0 3357, v3.0 3360,
-v3.0 3361, v3.0 3362, v3.0 3365, v3.0 3366, v3.0 3367, v3.0 3371, v3.0 3372,
-v3.0 3373, v3.0 3375, v3.0 3379, v3.0 3380, v3.0 3381, v3.0 3383, v3.0 3385,
-v3.0 3388, v3.0 3391, v3.0 3394, v3.0 3397, v3.0 3400, v3.0 3406, v3.0 3411,
-v3.0 3415, v3.0 3416, v3.0 3420, v3.0 3422, v3.0 3427, v3.0 3428, v3.0 3431,
-v3.0 3434, v3.0 3436, v3.0 3441, v3.0 3445, v3.0 3446, v3.0 3449, v3.0 3454,
-v3.0 3458, v3.0 3461, v3.0 3463, v3.0 3465, v3.0 3467, v3.0 3469, v3.0 3472,
-v3.0 3477, v3.0 3482, v3.0 3666, v3.0 3667, v3.0 3669, v3.0 3670, v3.0 3671,
-v3.0 3672, v3.0 3673, v3.0 3674, v3.0 3675, v3.0 3677, v3.0 3678, v3.0 3679,
-v3.0 3680, v3.0 3682, v3.0 3685, v3.0 3686, v3.0 3689, v3.0 3690, v3.0 3691,
-v3.0 3692, v3.0 3693, v3.0 3694, v3.0 3697, v3.0 3699, v3.0 3701, v3.0 3703,
-v3.0 3704, v3.0 3707, v3.0 3708, v3.0 3709, v3.0 3710, v3.0 3711, v3.0 3713,
-v3.0 3714, v3.0 3715, v3.0 3716, v3.0 3722, v3.0 3725, v3.0 3726, v3.0 3727,
-v3.0 3728, v3.0 3729, v3.0 3730, v3.0 3732, v3.0 3738, v3.0 3740, v3.0 3741,
-v3.0 3742-dev, v3.0 3761-dev, v3.0 3769, v3.0 3773, v3.0 3780, v3.0 3783,
-v3.0 3789, v3.0 3793, v3.0 3797, v3.0 3805, v3.0 3814, v3.0 3818, v3.0 3822,
-v3.0 3824, v3.0 3829, v3.0 3831, v3.0 3837, v3.0 3839, v3.0 3842, v3.0 4086,
-v3.0 4088-dev, v3.0 4107, v3.0 4111, v3.0 4129, v3.0 4153, v3.0 4432, v3.0
-4453, v3.0 6330, v3.0 6391, v3.0 6391-mod, v3.0 6392-dev, v3.0 6412-dev,
-v3.0 6510-dev, v3.0 7086-dev, v3.0 7123-dev, v4.0 7142-alpha, v4.0 7533 and
-v4.0 8023-dev.
+Selectable engine profiles: v3.0 3020-dev, v3.0 3057, v3.0 3062, v3.0 3073, v3.0 3081, v3.0 3109,
+v3.0 3117, v3.0 3143, v3.0 3160, v3.0 3173, v3.0 3192, v3.0 3208, v3.0
+3273, v3.0 3288, v3.0 3303, v3.0 3307, v3.0 3310, v3.0 3311, v3.0 3316,
+v3.0 3317, v3.0 3318, v3.0 3327, v3.0 3328, v3.0 3330, v3.0 3332, v3.0
+3335, v3.0 3337, v3.0 3340, v3.0 3341, v3.0 3342, v3.0 3350, v3.0 3351,
+v3.0 3352, v3.0 3353, v3.0 3354, v3.0 3355, v3.0 3356, v3.0 3357, v3.0
+3360, v3.0 3361, v3.0 3362, v3.0 3365, v3.0 3366, v3.0 3367, v3.0 3371,
+v3.0 3372, v3.0 3373, v3.0 3375, v3.0 3379, v3.0 3380, v3.0 3381, v3.0
+3383, v3.0 3385, v3.0 3388, v3.0 3391, v3.0 3394, v3.0 3397, v3.0 3400,
+v3.0 3406, v3.0 3411, v3.0 3415, v3.0 3416, v3.0 3420, v3.0 3422, v3.0
+3427, v3.0 3428, v3.0 3431, v3.0 3434, v3.0 3436, v3.0 3441, v3.0 3445,
+v3.0 3446, v3.0 3449, v3.0 3454, v3.0 3458, v3.0 3461, v3.0 3463, v3.0
+3465, v3.0 3467, v3.0 3469, v3.0 3472, v3.0 3477, v3.0 3482, v3.0 3500,
+v3.0 3509, v3.0 3511, v3.0 3515, v3.0 3517, v3.0 3520, v3.0 3526, v3.0
+3549, v3.0 3550, v3.0 3551, v3.0 3552, v3.0 3553, v3.0 3554, v3.0 3557,
+v3.0 3559, v3.0 3562, v3.0 3565, v3.0 3567, v3.0 3568, v3.0 3581, v3.0
+3583, v3.0 3585, v3.0 3586, v3.0 3587, v3.0 3591, v3.0 3594, v3.0 3596,
+v3.0 3597, v3.0 3602, v3.0 3604, v3.0 3605, v3.0 3608, v3.0 3609, v3.0
+3611, v3.0 3614, v3.0 3618, v3.0 3619, v3.0 3623, v3.0 3624, v3.0 3626,
+v3.0 3629, v3.0 3631, v3.0 3633, v3.0 3635, v3.0 3638, v3.0 3639, v3.0
+3640, v3.0 3644, v3.0 3646, v3.0 3647, v3.0 3649, v3.0 3650, v3.0 3651,
+v3.0 3655, v3.0 3656, v3.0 3657, v3.0 3660, v3.0 3661, v3.0 3663, v3.0
+3664, v3.0 3665, v3.0 3666, v3.0 3667, v3.0 3669, v3.0 3670, v3.0 3671,
+v3.0 3672, v3.0 3673, v3.0 3674, v3.0 3675, v3.0 3677, v3.0 3678, v3.0
+3679, v3.0 3680, v3.0 3682, v3.0 3685, v3.0 3686, v3.0 3689, v3.0 3690,
+v3.0 3691, v3.0 3692, v3.0 3693, v3.0 3694, v3.0 3697, v3.0 3699, v3.0
+3701, v3.0 3703, v3.0 3704, v3.0 3707, v3.0 3708, v3.0 3709, v3.0 3710,
+v3.0 3711, v3.0 3713, v3.0 3714, v3.0 3715, v3.0 3716, v3.0 3722, v3.0
+3725, v3.0 3726, v3.0 3727, v3.0 3728, v3.0 3729, v3.0 3730, v3.0 3732,
+v3.0 3738, v3.0 3740, v3.0 3741, v3.0 3742-dev, v3.0 3761-dev, v3.0
+3769, v3.0 3773, v3.0 3780, v3.0 3783, v3.0 3789, v3.0 3793, v3.0 3797,
+v3.0 3805, v3.0 3814, v3.0 3818, v3.0 3822, v3.0 3824, v3.0 3829, v3.0
+3831, v3.0 3837, v3.0 3839, v3.0 3842, v3.0 4086, v3.0 4088-dev, v3.0
+4107, v3.0 4111, v3.0 4129, v3.0 4153, v3.0 4432, v3.0 4453, v3.0 6330,
+v3.0 6391, v3.0 6391-mod, v3.0 6392-dev, v3.0 6412-dev, v3.0 6510-dev,
+v3.0 7086-dev, v3.0 7123-dev, v4.0 7142-alpha, v4.0 7533 and v4.0
+8023-dev.
 
 Auto uses build tags and content clues to choose a profile. You can select one
 manually when a game needs it. Historical profiles preserve selected earlier
@@ -51,11 +62,14 @@ references are omitted. Profiles from 3421 also omit empty global names and
 empty global values. Native script values remain aligned in memory; their
 internal record spacing does not select the persistent file format.
 
-Profiles before 3667 initialize each level set with two players and apply
-`single`/`maxplayers` only within a set. From 3667, those commands also define
-the defaults before the first set. Regular input refresh covers the selected
-set before 3668 and all player ports from that boundary, within the player
-table limits.
+Profiles before 3666 keep fixed level-set slots initialized for two players.
+Before the first set, `single`/`maxplayers` configure all those slots; within a
+set they configure that slot. Build 3666 initializes each dynamic set for two
+players and applies these commands within a set. Profiles from 3667 also use
+them to configure defaults before the first set. Regular input refresh covers
+the selected set before 3668 and all player ports from that boundary, within
+the player table limits. Combination history is available from 3652 and its
+timestamps from 3656.
 
 Buffered reads from 3777 prefer an external file before the cached archive
 reader. Earlier profiles use the selected archive reader directly; its uncached
@@ -147,6 +161,29 @@ the shadow and its reflection use the entity's drawing palette.
 
 Remap errors stop model loading before 3787. Profiles from 3787 report a warning
 and continue; successful loads update palette flags.
+
+Entity-property reads and writes use separate name and index tables before
+3632 and a shared table from 3632. Earlier setter names retain the exchanged
+escape-counter selectors through 3598. AI-flag writes use 21 selectors before
+3632; reads use 23. The shared write domain accepts the two additional names,
+whose missing setter cases retain the native error result.
+
+`getentity` uses 150 fixed query slots through 3660 and the allocated list size
+from 3661. Unallocated fixed slots return a null handle; queries outside the
+selected domain return an empty result.
+The 3660 profile uses the actual storage type consistently across engine and
+script units; it does not reproduce the original incompatible array declaration.
+
+System-variable names and numeric selectors follow each profile's source.
+Before 3632, read and write queries use separate name and index tables; the
+`freeram` getter is available by index while its misplaced name is not found.
+Package-name queries are available from 3550. Screen and viewport queries are
+available from 3552, with `canvas` restricted to 3552–3555. Entity-handle setters
+use the handle payload, retaining safe ownership in every profile.
+The `self` query is available from 3642; `maxanimations` and `maxattacktypes`
+are available from 3647. In the shared namespace, `waiting` reports an unknown
+property before 3647; from 3647 its getter returns the attack-type limit through
+the original case fallthrough. Its setter updates the level's waiting flag.
 
 ## Select a profile
 
@@ -443,6 +480,67 @@ Profiles are compatibility selections. Several profiles use one physical source 
 | v3.0 3472 | `3400` |
 | v3.0 3477 | `3400` |
 | v3.0 3482 | `3400` |
+| v3.0 3500 | `3741` |
+| v3.0 3509 | `3741` |
+| v3.0 3511 | `3741` |
+| v3.0 3515 | `3741` |
+| v3.0 3517 | `3741` |
+| v3.0 3520 | `3741` |
+| v3.0 3526 | `3741` |
+| v3.0 3549 | `3741` |
+| v3.0 3550 | `3741` |
+| v3.0 3551 | `3741` |
+| v3.0 3552 | `3741` |
+| v3.0 3553 | `3741` |
+| v3.0 3554 | `3741` |
+| v3.0 3557 | `3741` |
+| v3.0 3559 | `3741` |
+| v3.0 3562 | `3741` |
+| v3.0 3565 | `3741` |
+| v3.0 3567 | `3741` |
+| v3.0 3568 | `3741` |
+| v3.0 3581 | `3741` |
+| v3.0 3583 | `3741` |
+| v3.0 3585 | `3741` |
+| v3.0 3586 | `3741` |
+| v3.0 3587 | `3741` |
+| v3.0 3591 | `3741` |
+| v3.0 3594 | `3741` |
+| v3.0 3596 | `3741` |
+| v3.0 3597 | `3741` |
+| v3.0 3602 | `3741` |
+| v3.0 3604 | `3741` |
+| v3.0 3605 | `3741` |
+| v3.0 3608 | `3741` |
+| v3.0 3609 | `3741` |
+| v3.0 3611 | `3741` |
+| v3.0 3614 | `3741` |
+| v3.0 3618 | `3741` |
+| v3.0 3619 | `3741` |
+| v3.0 3623 | `3741` |
+| v3.0 3624 | `3741` |
+| v3.0 3626 | `3741` |
+| v3.0 3629 | `3741` |
+| v3.0 3631 | `3741` |
+| v3.0 3633 | `3741` |
+| v3.0 3635 | `3741` |
+| v3.0 3638 | `3741` |
+| v3.0 3639 | `3741` |
+| v3.0 3640 | `3741` |
+| v3.0 3644 | `3741` |
+| v3.0 3646 | `3741` |
+| v3.0 3647 | `3741` |
+| v3.0 3649 | `3741` |
+| v3.0 3650 | `3741` |
+| v3.0 3651 | `3741` |
+| v3.0 3655 | `3741` |
+| v3.0 3656 | `3741` |
+| v3.0 3657 | `3741` |
+| v3.0 3660 | `3741` |
+| v3.0 3661 | `3741` |
+| v3.0 3663 | `3741` |
+| v3.0 3664 | `3741` |
+| v3.0 3665 | `3741` |
 | v3.0 3666 | `3741` |
 | v3.0 3667 | `3741` |
 | v3.0 3669 | `3741` |
@@ -638,9 +736,56 @@ configured level defaults.
 Animation-triggered removal uses fixed drop velocity before build 3681 and
 configured default drop velocity from build 3681. Spawn and summon events
 precede removal before build 3689; removal precedes those events from build
-3689. Script changes to the active animation or frame interrupt the remaining
-frame events. Alternate idle queries retain the subject context through build
+3689. From build 3573, script changes to the active animation or frame interrupt
+the remaining frame events. Earlier profiles continue those events using their
+entry animation. Alternate idle queries retain the subject context through build
 3796; the animation-series path restores the incoming context from build 3797.
+
+Within the 3741 source family, animation synchronization is inactive before
+3515. Its automatic groups link walking directions, grabbing walks and grabbed
+walks separately. Profiles before 3573 execute the entity's animation
+script. Profiles from 3573 run each initialized current-model script followed
+by the initialized script of a distinct default model. An initialized entity
+script receives its entry animation and frame locals before those copies.
+Profiles 3573–3602 use the animation's 32-bit address identity for `animhandle`
+and generated `@script`/`@cmd` guards; profiles from 3603 use its allocated index.
+The 32-bit form uses the fixed arena's low address bits; its
+aligned base and bounded size keep live animation identities distinct. These
+identities are scoped to the active engine session.
+
+Within the 3741 source family, attack preparation before3510 uses ordered
+per-animation target queries and random tests. From3510 it uses eligible attack
+pools with weighted normal attacks; its special fallback uses the cost path
+from3515. Action publication precedes animation callbacks from3584. Cost moves
+clear the movement step before3650 and preserve it from3650. Jump requests
+retain their current action from3672.
+Normal attack requests retain a supplied target before3510 and exclude
+invulnerable rising targets from3566. Wait clamping from3571 preserves the
+source macro's random consumption. The idle callback follows wait calculation
+from3584. Probability and rejection waits follow their source rules at3601,
+3602,3604,3605 and3606; entity-count bounds apply from3619.
+Wandering retains directional and stall behavior before3510, destination
+selection from3510 and source-specific orbit behavior from3515. Random draw
+order, pursuit distances, health/grab offsets and viewport return positions
+follow each profile's source. Float random scaling uses1000 steps before3602
+and10000 steps from3602, retaining its zero-maximum guard.
+Free wandering reflects an outward velocity at a viewport edge before3509
+and forces inward movement from3509. It adds a single wait increment before3510;
+from3510 it writes a destination for each active movement axis.
+Movement preserves profile-defined turning callbacks, mixed-pattern priorities,
+arrival thresholds and moving-target waits. Waypoint movement is available from
+3520. Item queries use source-defined scheduling and proximity from 3618; pickup
+height uses the animation offset before 3643 and the entity base from 3643.
+Chase movement retains the source-defined velocity normalization and run
+thresholds at 3501 and 3515, destination selection from 3510 and attack-range
+capping from 3511. Avoidance retains its source range and choice rules at
+3510 and 3512. Following before 3510 preserves axis sign changes and running
+state without destinations; pickup movement writes destinations from 3511.
+Path search uses the native early algorithm through 3528 and A* from 3529.
+The early search permits 2560 nodes before 3524 and 4096 nodes from 3524;
+negative movement-query results count as blocked from 3526. Blocked movement
+uses search from 3520 and a configurable search step from 3523. Its depth
+reflection, destination updates and owned point ordering follow each source.
 
 Fresh native script records retain a zero validity marker before build 3693
 and the script marker from build 3693. Explicit first initialization sets the

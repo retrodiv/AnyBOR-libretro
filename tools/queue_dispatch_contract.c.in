@@ -1,0 +1,89 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <stdint.h>
+#include <limits.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "screen.h"
+#include "sprite.h"
+#include "draw.h"
+#undef printf
+#undef assert
+uint32_t obor_profile_build;
+static int active_case;
+#define assert(c) do{if(!(c)){fprintf(stderr,"QUEUE_DISPATCH revision=%u case=%d line=%d\n",obor_profile_build,active_case,__LINE__);abort();}}while(0)
+@STORAGE@
+static int count,kind,format,coords[4],colour,alpha,initializations;
+static s_screen *target,*image;
+static s_sprite *sprite;
+static s_drawmethod *method;
+static void observe(int op,int fmt,int x,int y,int a,int b,unsigned col,s_screen *s,int blend){
+ ++count;kind=op;format=fmt;coords[0]=x;coords[1]=y;coords[2]=a;coords[3]=b;
+ colour=(int)col;alpha=blend;target=s;
+}
+void drawmethod_global_init(s_drawmethod *m){assert(m==method);++initializations;}
+void putsprite(int x,int y,s_sprite *f,s_screen *s,s_drawmethod *m){
+ assert(f==sprite && m==method);observe(0,s->pixelformat,x,y,0,0,0,s,0);
+}
+void putscreen(s_screen *dest,s_screen *src,int x,int y,s_drawmethod *m){
+ assert(src==image && m==method);observe(6,dest->pixelformat,x,y,0,0,0,dest,0);
+}
+#define PIXEL(name,fmt,type) void name(int x,int y,type c,s_screen *s,int blend){observe(1,fmt,x,y,0,0,c,s,blend);}
+#define LINE(name,fmt,type) void name(int x,int y,int a,int b,type c,s_screen *s,int blend){observe(2,fmt,x,y,a,b,c,s,blend);}
+#define BOX(name,fmt,type) void name(int x,int y,int a,int b,type c,s_screen *s,int blend){observe(3,fmt,x,y,a,b,c,s,blend);}
+PIXEL(_putpixel,PIXEL_8,int)
+PIXEL(_putpixel16,PIXEL_16,unsigned short)
+PIXEL(_putpixel32,PIXEL_32,unsigned)
+LINE(line,PIXEL_8,int)
+LINE(line16,PIXEL_16,unsigned short)
+LINE(line32,PIXEL_32,unsigned)
+BOX(drawbox,PIXEL_8,int)
+BOX(drawbox16,PIXEL_16,unsigned short)
+BOX(drawbox32,PIXEL_32,unsigned)
+@WRAPPERS@
+@QUEUE@
+struct context{unsigned revision;int offsets;};
+static const struct context contexts[]={@CONTEXTS@};
+struct query{int type,bits,flag,offset,range,locked,newonly;};
+static const struct query cases[]={@CASES@};
+int main(void){
+ for(unsigned p=0;p<sizeof(contexts)/sizeof(*contexts);++p){
+  obor_profile_build=contexts[p].revision;
+  for(unsigned k=0;k<sizeof(cases)/sizeof(*cases);++k){
+   const struct query *q=cases+k;active_case=(int)k;
+   s_screen screen={0},source={0};s_sprite frame={0};
+   screen.pixelformat=q->bits==8?PIXEL_8:q->bits==16?PIXEL_16:PIXEL_32;
+   memset(queue,0,sizeof(queue));memset(order,0,sizeof(order));
+   spritequeue_len=1;spriteq_old_len=1;spriteq_locked=q->locked;order[0]=queue;
+   queue[0].type=q->type;queue[0].x=20;queue[0].y=30;queue[0].z=5;
+   queue[0].drawmethod.flag=q->flag;queue[0].drawmethod.alpha=3;
+   queue[0].frame=q->type==SQT_SPRITE?(void*)&frame:(void*)&source;
+   queue[0].params[0]=q->type==SQT_SPRITE?1:0x12345;
+   queue[0].params[1]=41;queue[0].params[2]=43;
+   method=&queue[0].drawmethod;sprite=&frame;image=&source;
+   int dx=contexts[p].offsets?(q->offset==1?-7:q->offset==2?11:0):0;
+   int dy=contexts[p].offsets?(q->offset==1?9:q->offset==2?-13:0):0;
+   int minz=q->range==1?6:q->range==3?5:INT_MIN;
+   int maxz=q->range==2?4:q->range==3?5:INT_MAX;
+   int visible=!(q->locked && q->newonly) && q->range!=1 && q->range!=2;
+   count=initializations=0;target=NULL;kind=-1;
+   spriteq_draw(&screen,q->newonly,minz,maxz,dx,dy);
+   assert(count==visible);
+   if(!visible){assert(!initializations && !frame.centerx && !frame.centery);continue;}
+   assert(kind==q->type && format==screen.pixelformat && target==&screen);
+   assert(coords[0]==20+dx && coords[1]==30+dy);
+   if(q->type==SQT_LINE)assert(coords[2]==41+dx && coords[3]==43+dy);
+   else if(q->type==SQT_BOX)assert(coords[2]==41 && coords[3]==43);
+   else assert(!coords[2] && !coords[3]);
+   if(q->type==SQT_SPRITE)assert(frame.centerx==41 && frame.centery==43);
+   else assert(!frame.centerx && !frame.centery);
+   int primitive=q->type==SQT_DOT || q->type==SQT_LINE || q->type==SQT_BOX;
+   assert(initializations==primitive);
+   if(primitive){assert(colour==(q->bits==16?(0x12345&0xffff):0x12345));assert(alpha==(q->flag?3:0));}
+   assert(queue[0].x==20 && queue[0].y==30 && queue[0].params[1]==41 && queue[0].params[2]==43);
+  }
+  fprintf(stdout,"{\"revision\":%u,\"cases\":%zu}\n",obor_profile_build,sizeof(cases)/sizeof(*cases));
+ }
+ return 0;
+}

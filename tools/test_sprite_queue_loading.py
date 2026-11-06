@@ -3,7 +3,7 @@
 SPDX-License-Identifier: BSD-3-Clause
 Copyright (c) 2026 retrodiv <retrodiv@proton.me>
 """
-from contract_fixtures import load_contract_fixture, contract_profiles
+from contract_fixtures import load_contract_fixture, contract_profiles, contract_group
 import json
 import os
 from pathlib import Path
@@ -23,7 +23,9 @@ FIXTURE=Path(__file__).parent/'fixtures/sprite-queue-loading-contracts.json'
 
 def program(engine,context):
     code=render_sprite_queue_loading(queue_source=str(SOURCE/'src/engines'/engine/'source/gamelib/spriteq.c'),
-        revision=int(engine),node_cache=context['node_cache'])
+        revision=int(engine),node_cache=context['node_cache'],
+        profile_sprite=context.get('profile_sprite',False),
+        load_on_miss=context.get('load_on_miss'))
     marker='int main(void){'
     if code.count(marker)!=1:raise ValueError('One native queue-loading entry point required')
     return code.replace(marker,'''int main(int argc,char **argv){
@@ -43,7 +45,8 @@ class SpriteQueueLoadingTests(unittest.TestCase):
         host=[]if sys.platform=='darwin'else['-DLINUX=1']
         temporary=tempfile.TemporaryDirectory(prefix='anybor-queue-loading-');cls.addClassCleanup(temporary.cleanup)
         work=Path(temporary.name);cls.executables={}
-        for engine,context in cls.fixture['engines'].items():
+        for group,context in cls.fixture['engines'].items():
+            engine=context.get('engine',group)
             root=SOURCE/'src/engines'/engine
             includes=[root/'source/gamelib',root/'source',root,SOURCE/'src/glue',SOURCE/'src/port/libretro']
             flags=['-I'+str(path)for path in includes]+['-std=gnu11','-Wall','-Wextra','-Werror',
@@ -51,19 +54,27 @@ class SpriteQueueLoadingTests(unittest.TestCase):
                 '-Wno-unused-variable','-Wno-unused-function','-Wno-unused-parameter',*warnings,
                 '-O0','-g','-DLIBRETRO=1','-DOBOR_ENGINE_BUILD='+engine,*host,'-fsigned-char','-fcommon',
                 '-ffunction-sections','-fdata-sections','-fsanitize=address,undefined,pointer-overflow','-fno-sanitize-recover=all']
-            source=work/(engine+'.c');source.write_text(program(engine,context));binary=source.with_suffix('')
+            source=work/(group+'.c');source.write_text(program(engine,context));binary=source.with_suffix('')
             compile_checked(compiler+flags+[str(source),*links,'-o',str(binary)])
-            cls.executables[engine]=binary
+            cls.executables[group]=binary
 
     def check_context(self,engine,revision):
-        node=int(self.fixture['engines'][engine]['node_cache'])
-        observed=json.loads(subprocess.check_output([str(self.executables[engine]),str(revision)],
+        group=contract_group(self.fixture,engine,revision)
+        context=self.fixture['engines'][group]
+        node=int(context.get('load_on_miss',context['node_cache']))
+        observed=json.loads(subprocess.check_output([str(self.executables[group]),str(revision)],
             text=True,timeout=15,env=sanitizer_environment()))
         self.assertEqual(observed,dict(status='PASS',unavailable_queued=0,missing_requests=node,
             cold_ready=node,cold_requests=node,full_missing_requests=node))
 
     def test_every_registered_profile_has_an_explicit_queue_layout(self):
-        for profile in contract_profiles(self.fixture, self.pin['profiles']):self.assertIn(profile['engine'],self.fixture['engines'])
+        contexts={(row['engine'],row['revision'])for row in self.fixture['contexts']}
+        for profile in contract_profiles(self.fixture, self.pin['profiles']):
+            self.assertIn(profile['engine'],self.fixture['engines'])
+            revision=int(profile.get('revision',profile['build']))
+            contract_group(self.fixture,profile['engine'],revision)
+            if profile['engine']in self.fixture.get('source_profile_engines',[]):
+                self.assertIn((profile['engine'],revision),contexts)
         for row in self.fixture['contexts']:
             self.assertIn(row['engine'],self.fixture['engines'])
             self.assertRegex(row['source_commit'],r'^[0-9a-f]{40}$')

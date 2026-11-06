@@ -241,14 +241,14 @@ void draw_pixel_sprite(s_screen* dest, gfx_entry* src, int dx, int dy, int sx, i
 
 void draw_pixel_gfx(s_screen* dest, gfx_entry* src, int dx, int dy, int sx, int sy){
 	//drawfp(dest, src, dx, dy, sx, sy);
-	switch(src->screen->magic){
-	case sprite_magic:
+	switch(obor_gfx_entry_type(src)){
+	case gfx_sprite:
 		draw_pixel_sprite(dest, src, dx, dy, sx, sy);
 		break;
-	case screen_magic:
+	case gfx_screen:
 		draw_pixel_screen(dest, src, dx, dy, sx, sy);
 		break;
-	case bitmap_magic:
+	case gfx_bitmap:
 		draw_pixel_bitmap(dest, src, dx, dy, sx, sy);
 		break;
 	default:
@@ -380,13 +380,13 @@ quit:
 }
 
 void src_seek(int x, int y){
-	switch(handle_src->screen->magic){
-	case sprite_magic:
+	switch(obor_gfx_entry_type(handle_src)){
+	case gfx_sprite:
 		x_src = x; y_src = y;
 		_sprite_seek(x,y);
 		break;
-	case screen_magic:
-	case bitmap_magic:
+	case gfx_screen:
+	case gfx_bitmap:
 		cur_src = ptr_src + (y * trans_sw + x)*pixelbytes[spf];
 		break;
 	default:
@@ -395,13 +395,13 @@ void src_seek(int x, int y){
 }
 
 void src_line_inc(){
-	switch(handle_src->screen->magic){
-	case sprite_magic:
+	switch(obor_gfx_entry_type(handle_src)){
+	case gfx_sprite:
 		y_src++;
 		_sprite_seek(x_src, y_src);
 		break;
-	case screen_magic:
-	case bitmap_magic:
+	case gfx_screen:
+	case gfx_bitmap:
 		cur_src += span_src;
 		break;
 	default:
@@ -410,13 +410,13 @@ void src_line_inc(){
 }
 
 void src_line_dec(){
-	switch(handle_src->screen->magic){
-	case sprite_magic:
+	switch(obor_gfx_entry_type(handle_src)){
+	case gfx_sprite:
 		y_src--;
 		_sprite_seek(x_src, y_src);
 		break;
-	case screen_magic:
-	case bitmap_magic:
+	case gfx_screen:
+	case gfx_bitmap:
 		cur_src -= span_src;
 		break;
 	default:
@@ -428,15 +428,15 @@ void src_line_dec(){
 void src_inc(){
 	//int cnt;
 	x_src++;
-	switch(handle_src->screen->magic){
-	case sprite_magic:
+	switch(obor_gfx_entry_type(handle_src)){
+	case gfx_sprite:
 		//_sprite_seek(x,y);
 		if(cur_src && cur_spr + *cur_spr > cur_src){
 			cur_src++;
 		}else _sprite_seek(x_src, y_src);
 		break;
-	case screen_magic:
-	case bitmap_magic:
+	case gfx_screen:
+	case gfx_bitmap:
 		cur_src += pixelbytes[spf];
 		break;
 	default:
@@ -447,15 +447,15 @@ void src_inc(){
 //should be within a line
 void src_dec(){
 	x_src--;
-	switch(handle_src->screen->magic){
-	case sprite_magic:
+	switch(obor_gfx_entry_type(handle_src)){
+	case gfx_sprite:
 		//_sprite_seek(x,y);
 		if(cur_src && cur_spr + 1 < cur_src){
 			cur_src--;
 		}else _sprite_seek(x_src, y_src);
 		break;
-	case screen_magic:
-	case bitmap_magic:
+	case gfx_screen:
+	case gfx_bitmap:
 		cur_src -= pixelbytes[spf];
 		break;
 	default:
@@ -474,9 +474,9 @@ void init_gfx_global_draw_stuff(s_screen* dest, gfx_entry* src, s_drawmethod* dr
 	x_dest = y_dest = x_src = y_src = 0;
 
 	//nasty checkings due to those different pixel formats
-	switch(src->screen->magic)
+	switch(obor_gfx_entry_type(src))
 	{
-	case screen_magic:
+	case gfx_screen:
 		//printf("gfx_screen\n");
 		spf = src->screen->pixelformat;
 		drawfp = draw_pixel_screen;
@@ -485,7 +485,7 @@ void init_gfx_global_draw_stuff(s_screen* dest, gfx_entry* src, s_drawmethod* dr
 		cur_src = ptr_src = (unsigned char*)src->screen->data;
 		table = drawmethod->table?drawmethod->table:src->screen->palette;
 		break;
-	case bitmap_magic:
+	case gfx_bitmap:
 		//printf("gfx_bitmap\n");
 		spf = src->bitmap->pixelformat;
 		drawfp = draw_pixel_bitmap;
@@ -494,7 +494,7 @@ void init_gfx_global_draw_stuff(s_screen* dest, gfx_entry* src, s_drawmethod* dr
 		cur_src = ptr_src = (unsigned char*)src->bitmap->data;
 		table = drawmethod->table?drawmethod->table:src->bitmap->palette;
 		break;
-	case sprite_magic:
+	case gfx_sprite:
 		//printf("gfx_sprite\n");
 		spf = src->sprite->pixelformat;
 		drawfp = draw_pixel_sprite;
@@ -558,7 +558,7 @@ void init_gfx_global_draw_stuff(s_screen* dest, gfx_entry* src, s_drawmethod* dr
 
 	span_src = pixelbytes[spf]*trans_sw;
 	span_dest = pixelbytes[dpf]*trans_dw;
-	transbg = (drawmethod->transbg || src->screen->magic==sprite_magic); // check color key, we'll need this for screen and bitmap
+	transbg = (drawmethod->transbg || obor_gfx_entry_type(src)==gfx_sprite); // check color key, we'll need this for screen and bitmap
 
 	if(!trans_sw) return;
 	src_seek(0,0);
@@ -645,6 +645,7 @@ void gfx_draw_rotate(s_screen* dest, gfx_entry* src, int x, int y, int centerx, 
 
     for (j=ymin; j<ymax; j++)
     {
+        if(obor_profile_build < 3501) dest_seek(xmin, j);
         srcx_f = srcx0_f;
         srcy_f = srcy0_f;
         for (i=xmin;i<xmax;i++)
@@ -652,7 +653,13 @@ void gfx_draw_rotate(s_screen* dest, gfx_entry* src, int x, int y, int centerx, 
             srcx=(int)(srcx_f);
             srcy=(int)(srcy_f);
 			if(srcx>=0 && srcx<trans_sw && srcy>=0 && srcy<trans_sh){
-				draw_pixel_gfx(dest, src, i, j, srcx, srcy);
+				if(obor_profile_build < 3501)
+				{
+					src_seek(srcx, srcy);
+					write_pixel();
+					dest_inc();
+				}
+				else draw_pixel_gfx(dest, src, i, j, srcx, srcy);
 			}
             srcx_f+=ax;
             srcy_f+=ay;
@@ -823,7 +830,7 @@ void gfx_draw_water(s_screen *dest, gfx_entry* src, int x, int y, int centerx, i
 		else{
 			sbeginx = 0; sendx = sw;
 		}
-		if(pixelformat==PIXEL_8 && !transbg && src->screen->magic==screen_magic){
+		if(obor_profile_build >= 3617 && pixelformat==PIXEL_8 && (obor_profile_build < 3618 || !transbg) && obor_gfx_entry_type(src)==gfx_screen){
 			dest_seek(dbeginx, y); src_seek(sbeginx, sy);
 			copy_pixel_block(dendx-dbeginx);
 		}else{

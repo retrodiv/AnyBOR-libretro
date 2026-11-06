@@ -1,0 +1,139 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <stdint.h>
+#include <limits.h>
+#include <stddef.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdarg.h>
+#include <string.h>
+#include <strings.h>
+#include "openbor.h"
+#undef printf
+#undef assert
+#define stricmp strcasecmp
+uint32_t obor_profile_build;
+char packfile[OBOR_CONTENT_PATH_MAX]="controlled.pak";
+int pixelformat=PIXEL_8,sprite_map_max_items;
+unsigned int sprites_loaded;
+s_sprite_list *sprite_list;
+s_sprite_map *sprite_map;
+static int active_case,loads,clips,encodes,freed_bitmaps;
+static int clipx=3,clipy=4;
+#define assert(c) do{if(!(c)){fprintf(stderr,"SPRITE_MAP revision=%u case=%d line=%d\n",obor_profile_build,active_case,__LINE__);abort();}}while(0)
+static void stop_engine(int status,char *format,...){
+ (void)status;(void)format;fprintf(stderr,"Unexpected sprite-map stop\n");abort();
+}
+s_bitmap *loadbitmap(char *filename,char *pack,int format){
+ assert(filename && pack==packfile);++loads;s_bitmap *b=calloc(1,sizeof(*b));assert(b);
+ b->width=64;b->height=48;b->pixelformat=format;return b;
+}
+void clipbitmap(s_bitmap *bitmap,int *left,int *right,int *top,int *bottom){
+ assert(bitmap);++clips;*left=clipx;*top=clipy;*right=*bottom=0;
+}
+void freebitmap(s_bitmap *bitmap){assert(bitmap);++freed_bitmaps;free(bitmap);}
+unsigned fakey_encodesprite(s_bitmap *bitmap){assert(bitmap);return sizeof(s_sprite);}
+unsigned encodesprite(int x,int y,s_bitmap *bitmap,s_sprite *frame){
+ ++encodes;memset(frame,0,sizeof(*frame));frame->centerx=x;frame->centery=y;
+ frame->width=bitmap->width;frame->height=bitmap->height;frame->pixelformat=bitmap->pixelformat;
+ return sizeof(*frame);
+}
+#undef shutdown
+#define shutdown stop_engine
+@STORAGE@
+@FUNCTIONS@
+@QUEUE@
+#undef shutdown
+struct context{unsigned revision;int legacy,full_search;};
+static const struct context contexts[]={@CONTEXTS@};
+static void fresh(void){
+ freesprites();loads=clips=encodes=freed_bitmaps=0;clipx=3;clipy=4;
+ assert(!sprite_map && !sprite_list && !sprites_loaded);
+}
+static void entry(int id,int x,int y,int ox,int oy,s_sprite *frame,int legacy){
+ assert(id>=0 && (unsigned)id<sprites_loaded && sprite_map[id].node);
+ assert(sprite_map[id].centerx==x && sprite_map[id].centery==y);
+ assert(obor_profile_map_sprite(sprite_map+id)==frame);
+ assert(sprite_map[id].ofsx==(legacy?ox:0) && sprite_map[id].ofsy==(legacy?oy:0));
+ assert(sprite_map[id].profile_sprite==(legacy?frame:NULL));
+ if(!legacy)assert(frame->offsetx==3 && frame->offsety==4 && frame->srcwidth==64 && frame->srcheight==48);
+}
+int main(void){
+ _Static_assert(sizeof(void*)==8 && sizeof(int)==4,"supported64bit record representation");
+ _Static_assert(offsetof(s_sprite_map,ofsx)==16,"original node/center prefix retained");
+ _Static_assert(sizeof(s_sprite_map)==32,"initialized historical per-map state");
+ static char filename[]="sprite.file";
+ for(unsigned p=0;p<sizeof(contexts)/sizeof(*contexts);++p){
+  const struct context *c=contexts+p;obor_profile_build=c->revision;
+  fresh();active_case=0;
+  assert(loadsprite(filename,10,20,PIXEL_8)==0);
+  s_sprite *owned=sprite_list->sprite;entry(0,7,16,10,20,owned,c->legacy);
+  assert(loads==1 && clips==1 && encodes==1 && freed_bitmaps==1);
+  assert(loadsprite(filename,10,20,PIXEL_8)==0 && loads==1);
+  active_case=1;
+  int id=loadsprite(filename,12,23,PIXEL_8);assert(id==1);
+  entry(1,9,19,12,23,owned,c->legacy);
+  assert(sprite_map[0].node==sprite_map[1].node);
+  assert(loads==(c->legacy?2:1) && encodes==1);
+  id=loadsprite(filename,12,23,PIXEL_8);assert(id==(c->full_search?1:2));
+  assert(sprites_loaded==(c->full_search?2u:3u));
+  assert(loads==(c->legacy?3:1));
+  fresh();active_case=2;
+  assert(loadsprite(filename,10,20,PIXEL_8)==0);owned=sprite_list->sprite;
+  sprite_map[0].centerx=70;sprite_map[0].centery=80;
+  id=loadsprite(filename,10,20,PIXEL_8);assert(id==(c->legacy?0:1));
+  assert(loads==1 && (c->legacy || obor_profile_map_sprite(sprite_map+1)==owned));
+  fresh();active_case=3;
+  assert(loadsprite(filename,10,20,PIXEL_8)==0);owned=sprite_list->sprite;
+  clipx=8;clipy=9;assert(loadsprite(filename,12,23,PIXEL_8)==1);
+  entry(1,c->legacy?4:9,c->legacy?14:19,12,23,owned,c->legacy);
+  assert(loads==(c->legacy?2:1) && encodes==1);
+  fresh();active_case=4;
+  assert(loadsprite(filename,10,20,PIXEL_8)==0);owned=sprite_list->sprite;
+  s_sprite replacement={0};
+  if(c->legacy)sprite_map[0].profile_sprite=&replacement;
+  assert(loadsprite(filename,12,23,PIXEL_8)==1);
+  assert(obor_profile_map_sprite(sprite_map+1)==(c->legacy?&replacement:owned));
+  assert(sprite_list->sprite==owned);
+  spritequeue_len=0;spriteq_add_sprite(7,9,11,0,NULL,13);
+  assert(spritequeue_len==1 && queue[0].frame==(c->legacy?&replacement:owned));
+  spritequeue_len=0;
+  fresh();active_case=5;
+  assert(loadsprite(filename,10,20,PIXEL_8)==0);
+  owned=sprite_list->sprite;
+  if(c->legacy){sprite_map[0].ofsx=12;sprite_map[0].ofsy=23;}
+  id=loadsprite(filename,12,23,PIXEL_8);assert(id==(c->legacy?0:1));
+  assert(loads==1 && sprite_list->sprite==owned);
+  fresh();active_case=6;
+  assert(loadsprite(filename,10,20,PIXEL_8)==0);
+  if(c->full_search){
+   free(sprite_map[0].node->sprite);sprite_map[0].node->sprite=NULL;
+   assert(loadsprite(filename,10,20,PIXEL_8)==0 && loads==2 && encodes==2);
+  }
+  assert(obor_profile_map_center(INT_MIN,1)==INT_MIN);
+  assert(obor_profile_map_center(INT_MAX,-1)==INT_MAX);
+  assert(obor_profile_map_center(-17,3)==-20);
+  fresh();active_case=7;
+  static char second[]="second.file";
+  assert(loadsprite(filename,10,20,PIXEL_8)==0);
+  s_sprite_list *first_owner=sprite_map[0].node;
+  clipx=5;clipy=6;assert(loadsprite(second,14,24,PIXEL_8)==1);
+  s_sprite_list *second_owner=sprite_map[1].node;
+  assert(strlen(second_owner->filename)==strlen(filename));
+  strcpy(second_owner->filename,filename);clipx=3;clipy=4;
+  id=loadsprite(filename,14,24,PIXEL_8);
+  assert(id==(c->full_search?1:2));
+  assert(sprite_map[id].node==(c->full_search?second_owner:first_owner));
+  id=loadsprite(filename,99,101,PIXEL_8);
+  assert(sprite_map[id].node==(c->full_search?second_owner:first_owner));
+  fresh();active_case=8;
+  int width=0,height=0;s_sprite *direct=loadsprite2(filename,&width,&height);
+  assert(direct && width==64 && height==48 && direct->centerx==-3 && direct->centery==-4);
+  assert(loads==1 && clips==1 && encodes==1 && freed_bitmaps==1);
+  if(!c->legacy)assert(direct->offsetx==3 && direct->offsety==4 && direct->srcwidth==64 && direct->srcheight==48);
+  free(direct);
+  freesprites();assert(!sprite_list && !sprite_map && !sprites_loaded);
+  fprintf(stdout,"{\"revision\":%u,\"cases\":9,\"record_bytes\":%zu}\n",c->revision,sizeof(s_sprite_map));
+ }
+ return 0;
+}

@@ -2,6 +2,7 @@
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
 #ifndef OBOR_CONTENT_CONTRACTS_H
 #define OBOR_CONTENT_CONTRACTS_H
+#define OBOR_CONTENT_CONTRACT_GAPS 1
 /* Syntax facts for refining imprecise or unavailable exact declarations. The source boundaries
  * and branch exceptions are documented in docs/AUTO_SELECTION_RULES.md.
  * This header follows content_lex; no source is executed during detection. */
@@ -9,7 +10,8 @@ enum obor_contract_kind {
     OBOR_CT_FUNCTION, OBOR_CT_CONSTANT, OBOR_CT_COMMAND,
     OBOR_CT_PLAYER, OBOR_CT_PLAYER_WRITE, OBOR_CT_LEVEL,
     OBOR_CT_SYSTEM, OBOR_CT_AIFLAG_READ, OBOR_CT_ATTACK_NAME,
-    OBOR_CT_PALETTE, OBOR_CT_ENTITY
+    OBOR_CT_PALETTE, OBOR_CT_ENTITY, OBOR_CT_DRAW_WRITE,
+    OBOR_CT_SPRITE_READ, OBOR_CT_SPRITE_WRITE
 };
 enum { OBOR_CT_NO_4453 = 1, OBOR_CT_OLD_ANIMATION_BRANCH = 2 };
 struct obor_contract_rule {
@@ -17,61 +19,78 @@ struct obor_contract_rule {
     obor_contract_kind kind;
     int lower, upper;
     unsigned flags;
+    int gap_lower, gap_upper;
 };
 static const obor_contract_rule kContentContracts[] = {
-    { "16bit", OBOR_CT_PALETTE, 1, INT_MAX, OBOR_CT_NO_4453 },
-    { "8bit", OBOR_CT_PALETTE, 1, INT_MAX, OBOR_CT_NO_4453 },
-    { "allocate_palette", OBOR_CT_FUNCTION, 7582, INT_MAX, 0 },
-    { "ani_prop_animhits", OBOR_CT_CONSTANT, 4232, 7083, OBOR_CT_OLD_ANIMATION_BRANCH },
-    { "ani_prop_numframes", OBOR_CT_CONSTANT, 4232, 7083, OBOR_CT_OLD_ANIMATION_BRANCH },
-    { "animation", OBOR_CT_ENTITY, 1, 4201, 0 },
-    { "atk_land", OBOR_CT_CONSTANT, 3831, INT_MAX, 0 },
-    { "atk_lifespan", OBOR_CT_CONSTANT, 3831, INT_MAX, 0 },
-    { "atk_pit", OBOR_CT_CONSTANT, 3831, INT_MAX, 0 },
-    { "atk_timeover", OBOR_CT_CONSTANT, 3831, INT_MAX, 0 },
-    { "binding_ani_animation_kill", OBOR_CT_CONSTANT, 6397, 6434, 0 },
-    { "binding_ani_animation_match", OBOR_CT_CONSTANT, 6397, 6434, 0 },
-    { "binding_ani_frame_kill", OBOR_CT_CONSTANT, 6397, 6434, 0 },
-    { "binding_ani_frame_match", OBOR_CT_CONSTANT, 6397, 6434, 0 },
-    { "binding_ani_none", OBOR_CT_CONSTANT, 6397, 6434, 0 },
-    { "binding_matching_none", OBOR_CT_CONSTANT, 6436, 6964, 0 },
-    { "boomerang", OBOR_CT_COMMAND, 1, 6376, 0 },
-    { "boomerangvalues", OBOR_CT_COMMAND, 1, 6376, 0 },
-    { "custboomerang", OBOR_CT_COMMAND, 1, 6376, 0 },
-    { "ebox", OBOR_CT_COMMAND, 6332, INT_MAX, 0 },
-    { "exit", OBOR_CT_FUNCTION, 3834, INT_MAX, 0 },
-    { "freezetime", OBOR_CT_AIFLAG_READ, 1, 3796, 0 },
-    { "get_colorset_property", OBOR_CT_FUNCTION, 7470, INT_MAX, 0 },
-    { "get_command_input_event_property", OBOR_CT_FUNCTION, 7843, INT_MAX, 0 },
-    { "get_entity_collision_collection", OBOR_CT_FUNCTION, 6340, 7823, 0 },
-    { "get_entity_collision_instance", OBOR_CT_FUNCTION, 6340, 7823, 0 },
-    { "get_entity_collision_property", OBOR_CT_FUNCTION, 6340, 7823, 0 },
-    { "get_faction_property", OBOR_CT_FUNCTION, 7445, INT_MAX, 0 },
-    { "get_sound_property", OBOR_CT_FUNCTION, 7871, INT_MAX, 0 },
-    { "keys", OBOR_CT_PLAYER_WRITE, 3798, INT_MAX, 0 },
-    { "land", OBOR_CT_ATTACK_NAME, 3831, INT_MAX, 0 },
-    { "lifespan", OBOR_CT_ATTACK_NAME, 3831, INT_MAX, 0 },
-    { "movie_load", OBOR_CT_FUNCTION, 7964, INT_MAX, 0 },
-    { "movie_play", OBOR_CT_FUNCTION, 7964, INT_MAX, 0 },
-    { "movie_stop", OBOR_CT_FUNCTION, 7964, INT_MAX, 0 },
-    { "on_bind_update_other_to_self_script", OBOR_CT_COMMAND, 6421, INT_MAX, 0 },
-    { "on_bind_update_self_to_other_script", OBOR_CT_COMMAND, 6421, INT_MAX, 0 },
-    { "onmodelcopyscript", OBOR_CT_COMMAND, 3793, INT_MAX, 0 },
-    { "pain_time", OBOR_CT_AIFLAG_READ, 3367, 3796, 0 },
-    { "pit", OBOR_CT_ATTACK_NAME, 3831, INT_MAX, 0 },
-    { "remap", OBOR_CT_COMMAND, 1, INT_MAX, OBOR_CT_NO_4453 },
-    { "sample_play_id", OBOR_CT_SYSTEM, 3838, INT_MAX, 0 },
-    { "scrollmaxx", OBOR_CT_SYSTEM, 3783, INT_MAX, 0 },
-    { "scrollminx", OBOR_CT_SYSTEM, 3783, INT_MAX, 0 },
-    { "set_entity_collision_property", OBOR_CT_FUNCTION, 6340, 7823, 0 },
-    { "set_sound_property", OBOR_CT_FUNCTION, 7871, INT_MAX, 0 },
-    { "spawnhealth", OBOR_CT_PLAYER, 3797, INT_MAX, 0 },
-    { "spawnmp", OBOR_CT_PLAYER, 3797, INT_MAX, 0 },
-    { "timeover", OBOR_CT_ATTACK_NAME, 3831, INT_MAX, 0 },
-    { "type", OBOR_CT_LEVEL, 3820, INT_MAX, 0 },
-    { "unload_model", OBOR_CT_FUNCTION, 6411, INT_MAX, 0 },
-    { "weapnum", OBOR_CT_PLAYER, 3821, INT_MAX, 0 },
-    { "weaponum", OBOR_CT_PLAYER, 1, 3820, 0 },
+    { "16bit", OBOR_CT_PALETTE, 1, INT_MAX, OBOR_CT_NO_4453, 0, 0 },
+    { "8bit", OBOR_CT_PALETTE, 1, INT_MAX, OBOR_CT_NO_4453, 0, 0 },
+    { "allocate_palette", OBOR_CT_FUNCTION, 7582, INT_MAX, 0, 0, 0 },
+    { "ani_prop_animhits", OBOR_CT_CONSTANT, 4232, 7083, OBOR_CT_OLD_ANIMATION_BRANCH, 0, 0 },
+    { "ani_prop_numframes", OBOR_CT_CONSTANT, 4232, 7083, OBOR_CT_OLD_ANIMATION_BRANCH, 0, 0 },
+    { "animation", OBOR_CT_ENTITY, 1, 4201, 0, 0, 0 },
+    { "atk_land", OBOR_CT_CONSTANT, 3831, INT_MAX, 0, 0, 0 },
+    { "atk_lifespan", OBOR_CT_CONSTANT, 3831, INT_MAX, 0, 0, 0 },
+    { "atk_pit", OBOR_CT_CONSTANT, 3831, INT_MAX, 0, 0, 0 },
+    { "atk_timeover", OBOR_CT_CONSTANT, 3831, INT_MAX, 0, 0, 0 },
+    { "binding_ani_animation_kill", OBOR_CT_CONSTANT, 6397, 6434, 0, 0, 0 },
+    { "binding_ani_animation_match", OBOR_CT_CONSTANT, 6397, 6434, 0, 0, 0 },
+    { "binding_ani_frame_kill", OBOR_CT_CONSTANT, 6397, 6434, 0, 0, 0 },
+    { "binding_ani_frame_match", OBOR_CT_CONSTANT, 6397, 6434, 0, 0, 0 },
+    { "binding_ani_none", OBOR_CT_CONSTANT, 6397, 6434, 0, 0, 0 },
+    { "binding_matching_none", OBOR_CT_CONSTANT, 6436, 6964, 0, 0, 0 },
+    { "boomerang", OBOR_CT_COMMAND, 1, 6376, 0, 0, 0 },
+    { "boomerangvalues", OBOR_CT_COMMAND, 1, 6376, 0, 0, 0 },
+    { "changedrawmethod", OBOR_CT_FUNCTION, 3551, INT_MAX, 0, 0, 0 },
+    { "custboomerang", OBOR_CT_COMMAND, 1, 6376, 0, 0, 0 },
+    { "ebox", OBOR_CT_COMMAND, 6332, INT_MAX, 0, 0, 0 },
+    { "exit", OBOR_CT_FUNCTION, 3834, INT_MAX, 0, 0, 0 },
+    { "freezetime", OBOR_CT_AIFLAG_READ, 1, 3796, 0, 0, 0 },
+    { "get_colorset_property", OBOR_CT_FUNCTION, 7470, INT_MAX, 0, 0, 0 },
+    { "get_command_input_event_property", OBOR_CT_FUNCTION, 7843, INT_MAX, 0, 0, 0 },
+    { "get_entity_collision_collection", OBOR_CT_FUNCTION, 6340, 7823, 0, 0, 0 },
+    { "get_entity_collision_instance", OBOR_CT_FUNCTION, 6340, 7823, 0, 0, 0 },
+    { "get_entity_collision_property", OBOR_CT_FUNCTION, 6340, 7823, 0, 0, 0 },
+    { "get_faction_property", OBOR_CT_FUNCTION, 7445, INT_MAX, 0, 0, 0 },
+    { "get_sound_property", OBOR_CT_FUNCTION, 7871, INT_MAX, 0, 0, 0 },
+    { "getgfxproperty", OBOR_CT_FUNCTION, 3627, INT_MAX, 0, 0, 0 },
+    { "getpixel", OBOR_CT_FUNCTION, 3565, 3626, 0, 0, 0 },
+    { "keys", OBOR_CT_PLAYER_WRITE, 3798, INT_MAX, 0, 0, 0 },
+    { "land", OBOR_CT_ATTACK_NAME, 3831, INT_MAX, 0, 0, 0 },
+    { "lifespan", OBOR_CT_ATTACK_NAME, 3831, INT_MAX, 0, 0, 0 },
+    { "movie_load", OBOR_CT_FUNCTION, 7964, INT_MAX, 0, 0, 0 },
+    { "movie_play", OBOR_CT_FUNCTION, 7964, INT_MAX, 0, 0, 0 },
+    { "movie_stop", OBOR_CT_FUNCTION, 7964, INT_MAX, 0, 0, 0 },
+    { "offsetx", OBOR_CT_SPRITE_READ, 3350, INT_MAX, 0, 3609, 4179 },
+    { "offsetx", OBOR_CT_SPRITE_WRITE, 3350, 3608, 0, 0, 0 },
+    { "offsety", OBOR_CT_SPRITE_READ, 3350, INT_MAX, 0, 3609, 4179 },
+    { "offsety", OBOR_CT_SPRITE_WRITE, 3350, 3608, 0, 0, 0 },
+    { "on_bind_update_other_to_self_script", OBOR_CT_COMMAND, 6421, INT_MAX, 0, 0, 0 },
+    { "on_bind_update_self_to_other_script", OBOR_CT_COMMAND, 6421, INT_MAX, 0, 0, 0 },
+    { "onmodelcopyscript", OBOR_CT_COMMAND, 3793, INT_MAX, 0, 0, 0 },
+    { "pain_time", OBOR_CT_AIFLAG_READ, 3367, 3796, 0, 0, 0 },
+    { "pit", OBOR_CT_ATTACK_NAME, 3831, INT_MAX, 0, 0, 0 },
+    { "remap", OBOR_CT_COMMAND, 1, INT_MAX, OBOR_CT_NO_4453, 0, 0 },
+    { "sample_play_id", OBOR_CT_SYSTEM, 3838, INT_MAX, 0, 0, 0 },
+    { "scrollmaxx", OBOR_CT_SYSTEM, 3783, INT_MAX, 0, 0, 0 },
+    { "scrollminx", OBOR_CT_SYSTEM, 3783, INT_MAX, 0, 0, 0 },
+    { "set_entity_collision_property", OBOR_CT_FUNCTION, 6340, 7823, 0, 0, 0 },
+    { "set_sound_property", OBOR_CT_FUNCTION, 7871, INT_MAX, 0, 0, 0 },
+    { "spawnhealth", OBOR_CT_PLAYER, 3797, INT_MAX, 0, 0, 0 },
+    { "spawnmp", OBOR_CT_PLAYER, 3797, INT_MAX, 0, 0, 0 },
+    { "timeover", OBOR_CT_ATTACK_NAME, 3831, INT_MAX, 0, 0, 0 },
+    { "type", OBOR_CT_LEVEL, 3820, INT_MAX, 0, 0, 0 },
+    { "unload_model", OBOR_CT_FUNCTION, 6411, INT_MAX, 0, 0, 0 },
+    { "viewporth", OBOR_CT_SYSTEM, 3552, INT_MAX, 0, 0, 0 },
+    { "viewportw", OBOR_CT_SYSTEM, 3552, INT_MAX, 0, 0, 0 },
+    { "viewportx", OBOR_CT_SYSTEM, 3552, INT_MAX, 0, 0, 0 },
+    { "viewporty", OBOR_CT_SYSTEM, 3552, INT_MAX, 0, 0, 0 },
+    { "weapnum", OBOR_CT_PLAYER, 3821, INT_MAX, 0, 0, 0 },
+    { "weaponum", OBOR_CT_PLAYER, 1, 3820, 0, 0, 0 },
+    { "xrepeat", OBOR_CT_DRAW_WRITE, 3556, INT_MAX, 0, 0, 0 },
+    { "xspan", OBOR_CT_DRAW_WRITE, 3556, INT_MAX, 0, 0, 0 },
+    { "yrepeat", OBOR_CT_DRAW_WRITE, 3556, INT_MAX, 0, 0, 0 },
+    { "yspan", OBOR_CT_DRAW_WRITE, 3556, INT_MAX, 0, 0, 0 },
+    { "zoom", OBOR_CT_FUNCTION, 1, 3551, 0, 0, 0 },
 };
 static bool g_contract_valid, g_contract_scripts_ambiguous;
 static unsigned char g_contract_seen[sizeof(kContentContracts) / sizeof(kContentContracts[0])];
@@ -119,6 +138,7 @@ static bool content_contract_allows(const obor_contract_rule *rule, int profile,
     if ((rule->flags & OBOR_CT_OLD_ANIMATION_BRANCH) && engine == 7142 &&
         (profile == 7086 || profile == 7123)) return true;
     return profile >= rule->lower && profile <= rule->upper &&
+        !(rule->gap_lower && profile >= rule->gap_lower && profile <= rule->gap_upper) &&
         (!(rule->flags & OBOR_CT_NO_4453) || profile != 4453);
 }
 
@@ -131,6 +151,11 @@ static uint64_t content_contract_distance(int profile, int engine)
         if (content_contract_allows(rule, profile, engine)) continue;
         uint64_t gap = profile < rule->lower ? (uint64_t)rule->lower - profile :
             profile > rule->upper ? (uint64_t)profile - rule->upper : 1;
+        if (rule->gap_lower && profile >= rule->gap_lower && profile <= rule->gap_upper) {
+            uint64_t left = (uint64_t)profile - rule->gap_lower + 1;
+            uint64_t right = (uint64_t)rule->gap_upper - profile + 1;
+            gap = left < right ? left : right;
+        }
         if (gap > distance) distance = gap;
     }
     return distance;
@@ -172,7 +197,9 @@ static void content_contract_script(obor_content_scan *s, const char *name,
     bool system = !strcmp(name, "openborvariant") || !strcmp(name, "changeopenborvariant");
     bool constant = !strcmp(name, "openborconstant");
     bool entity = !strcmp(name, "getentityproperty");
-    if (!(native || player || level || system || constant || entity)) return;
+    bool entity_write = !strcmp(name, "changeentityproperty");
+    bool draw_write = !strcmp(name, "changedrawmethod");
+    if (!(native || player || level || system || constant || entity || entity_write || draw_write)) return;
     if (previous_kind == 'i' && strcmp(previous, "return")) {
         s->ambiguous_scripts = true;
         return;
@@ -191,6 +218,11 @@ static void content_contract_script(obor_content_scan *s, const char *name,
         content_contract_observe(OBOR_CT_LEVEL, arg);
     if (system && content_contract_argument(s, data, n, pos, 0, arg))
         content_contract_observe(OBOR_CT_SYSTEM, arg);
+    if (draw_write && content_contract_argument(s, data, n, pos, 1, arg))
+        content_contract_observe(OBOR_CT_DRAW_WRITE, arg);
+    if ((entity || entity_write) && content_contract_argument(s, data, n, pos, 1, arg) &&
+        !strcmp(arg, "spritea") && content_contract_argument(s, data, n, pos, 2, arg))
+        content_contract_observe(entity ? OBOR_CT_SPRITE_READ : OBOR_CT_SPRITE_WRITE, arg);
     if (entity && content_contract_argument(s, data, n, pos, 1, arg)) {
         content_contract_observe(OBOR_CT_ENTITY, arg);
         if (!strcmp(arg, "aiflag") && content_contract_argument(s, data, n, pos, 2, arg))

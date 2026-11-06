@@ -1,0 +1,180 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+@ENUM@
+static int defaultmaxplayers=2,current_set;
+static s_set_entry *selected;
+static s_level_entry *last_entry;
+static unsigned commands;
+static char menu_text[80];
+@SELECT_STATE@
+#define calloc owned_calloc
+#define realloc owned_realloc
+#define malloc owned_malloc
+#define shutdown controlled_stop
+@ADD_SET@
+static int command(int cmd,char *text,int number)
+{
+    static const char *defaulterr="Error in level order: a set must be specified.";
+    s_set_entry *set=selected;
+    s_level_entry *le=last_entry;
+    char *errormessage=NULL;
+    @VALUE@
+    @SELECT_DECLARATIONS@
+    ++commands;message[0]=0;
+#define GET_ARG(index) @GET_ARGUMENT@
+#define GET_INT_ARG(index) ((index)==1?number:0)
+@GUARD@
+    switch(cmd) {
+@CASES@
+    default: assert(0);
+    }
+    selected=set;last_entry=le;return 1;
+lCleanup:
+    assert(errormessage);snprintf(message,sizeof(message),"%s",errormessage);return 0;
+#undef CHKDEF
+#undef GET_ARG
+#undef GET_INT_ARG
+}
+#undef calloc
+#undef realloc
+#undef malloc
+#undef shutdown
+static void menu_print(int marked,int column,int row,const char *format,...)
+{
+    (void)marked;(void)column;(void)row;
+    va_list args;va_start(args,format);vsnprintf(menu_text,sizeof(menu_text),format,args);va_end(args);
+}
+#define _menutext menu_print
+static void display_players(void)
+{
+    int selector=2,col1=0,col2=1;
+    @DISPLAY@
+}
+#undef _menutext
+static void toggle_players(void)
+{
+    switch(2) {case 2:
+@MENU@
+    }
+}
+static void parser_begin(void)
+{
+    @INITIALS@
+    selected=set;last_entry=le;
+}
+static const char *empty_result(void)
+{
+    s_set_entry *set=selected;
+    const char *errormessage=NULL;
+    @EMPTY@
+    return errormessage;
+}
+static void clear_parser(void)
+{
+    unload_levelorder();assert(!live && !levelsets && !num_difficulties);
+    parser_begin();branch_name[0]=0;
+}
+static void fresh_context(void)
+{
+    clear_parser();defaultmaxplayers=2;current_set=0;
+    @RESET@
+}
+static void scalar_values(int legacy)
+{
+    assert(selected->lives==(legacy?7:0));
+    assert(selected->credits==(legacy?8:0));
+    assert(selected->noshowhof==(legacy?9:0));
+    assert(selected->custfade==(legacy?10:0));
+    assert(selected->musicoverlap==(legacy?11:0));
+    assert(selected->typemp==(legacy?12:0));
+    assert(selected->continuescore==(legacy?-1:0));
+    assert(selected->nosame==(legacy?13:0));
+}
+int main(void)
+{
+    const struct { unsigned revision;int legacy,pre_set_players,name_limit,filename_limit; } contexts[]={@CONTEXTS@};
+    for(unsigned p=0;p<sizeof(contexts)/sizeof(*contexts);++p) {
+        obor_profile_build=contexts[p].revision;commands=0;
+        fresh_context();
+        assert(!strcmp(empty_result(),"No levels were loaded!"));
+        assert(!command(CMD_LEVELORDER_LIVES,"",7));
+        assert(!strcmp(message,"Error in level order: a set must be specified."));
+        assert(command(CMD_LEVELORDER_SINGLE,"",0));
+        assert(empty_result());
+        char title[201];memset(title,'t',200);title[200]=0;
+        assert(command(CMD_LEVELORDER_SET,title,0));
+        assert(!empty_result());
+        assert(selected->maxplayers==contexts[p].pre_set_players);
+        assert(strlen(selected->name)==(size_t)contexts[p].name_limit);
+        assert(!selected->ifcomplete && selected->saveflag==1);
+        assert(command(CMD_LEVELORDER_LIVES,"",7));
+        assert(command(CMD_LEVELORDER_CREDITS,"",8));
+        assert(command(CMD_LEVELORDER_DISABLEHOF,"",9));
+        assert(command(CMD_LEVELORDER_CUSTFADE,"",10));
+        assert(command(CMD_LEVELORDER_MUSICOVERLAP,"",11));
+        assert(command(CMD_LEVELORDER_TYPEMP,"",12));
+        assert(command(CMD_LEVELORDER_CONTINUESCORE,"",-1));
+        assert(command(CMD_LEVELORDER_NOSAME,"",13));
+        assert(command(CMD_LEVELORDER_IFCOMPLETE,"",14));
+        assert(command(CMD_LEVELORDER_CANSAVE,"",2));
+        assert(command(CMD_LEVELORDER_MAXPLAYERS,"",3));
+        scalar_values(1);
+        assert(selected->ifcomplete==14 && selected->saveflag==2 && selected->maxplayers==3);
+        clear_parser();assert(command(CMD_LEVELORDER_SET,"again",0));
+        scalar_values(contexts[p].legacy);
+        assert(selected->maxplayers==(contexts[p].legacy?3:contexts[p].pre_set_players));
+        assert(!selected->ifcomplete && selected->saveflag==1);
+        display_players();
+        if(contexts[p].legacy)assert(!strcmp(menu_text,"3 by Mod"));
+        int players=selected->maxplayers;toggle_players();assert(selected->maxplayers==players);
+        fresh_context();assert(command(CMD_LEVELORDER_SET,"unlocked",0));
+        display_players();assert(!strcmp(menu_text,contexts[p].legacy?"2":"2 by Mod"));
+        toggle_players();assert(selected->maxplayers==(contexts[p].legacy?4:2));
+        clear_parser();assert(command(CMD_LEVELORDER_SET,"reloaded",0));
+        assert(selected->maxplayers==(contexts[p].legacy?4:2));
+        toggle_players();assert(selected->maxplayers==2);
+        /* Scalar state belongs to its fixed slot and survives fewer parsed sets. */
+        fresh_context();assert(command(CMD_LEVELORDER_SET,"a",0));
+        assert(command(CMD_LEVELORDER_LIVES,"",21));
+        assert(command(CMD_LEVELORDER_SET,"b",0));
+        assert(command(CMD_LEVELORDER_LIVES,"",22));
+        clear_parser();assert(command(CMD_LEVELORDER_SET,"a",0));
+        assert(selected->lives==(contexts[p].legacy?21:0));
+        clear_parser();assert(command(CMD_LEVELORDER_SET,"a",0));
+        assert(command(CMD_LEVELORDER_SET,"b",0));
+        assert(selected->lives==(contexts[p].legacy?22:0));
+        fresh_context();assert(command(CMD_LEVELORDER_MAXPLAYERS,"",4));
+        for(int i=0;i<MAX_DIFFICULTIES;++i) {
+            assert(command(CMD_LEVELORDER_SET,"capacity",0));
+            assert(selected->maxplayers==(contexts[p].pre_set_players==2?2:4));
+        }
+        int result=command(CMD_LEVELORDER_SET,"extra",0);
+        assert(result==!contexts[p].legacy);
+        if(contexts[p].legacy) {
+            assert(num_difficulties==MAX_DIFFICULTIES);
+            assert(!strcmp(message,"Too many sets of levels (check MAX_DIFFICULTIES)!"));
+        } else assert(num_difficulties==MAX_DIFFICULTIES+1);
+        for(int type=0;type<3;++type) {
+            fresh_context();assert(command(CMD_LEVELORDER_SET,"entries",0));
+            result=command(CMD_LEVELORDER_NEXT,"",0);assert(result==!contexts[p].legacy);
+            if(contexts[p].legacy)assert(!strcmp(message,"Error in level order (next before file)!"));
+            result=command(CMD_LEVELORDER_END,"",0);assert(result==!contexts[p].legacy);
+            if(contexts[p].legacy)assert(!strcmp(message,"Error in level order (next before file)!"));
+            char filename[201];memset(filename,'f',200);filename[200]=0;
+            assert(command(type==0?CMD_LEVELORDER_FILE:type==1?CMD_LEVELORDER_SCENE:CMD_LEVELORDER_SELECT,filename,0));
+            assert(last_entry==selected->levelorder && selected->numlevels==1);
+            assert(strlen(last_entry->filename)==(size_t)contexts[p].filename_limit);
+            assert(command(CMD_LEVELORDER_NEXT,"",0));assert(last_entry->gonext==1);
+            assert(command(CMD_LEVELORDER_END,"",0));assert(last_entry->gonext==2);
+            /* Supply owned selector strings to test all unload slots separately
+             * from the still-independent skipselect parser contract. */
+            for(int i=0;i<MAX_PLAYERS;++i) {
+                selected->skipselect[i]=owned_malloc(8);
+                snprintf(selected->skipselect[i],8,"model%d",i);
+            }
+        }
+        clear_parser();
+        printf("{\"revision\":%u,\"status\":\"PASS\",\"commands\":%u}\n",obor_profile_build,commands);
+    }
+    return 0;
+}

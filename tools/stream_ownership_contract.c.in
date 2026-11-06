@@ -1,0 +1,142 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <stdint.h>
+#include <stddef.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "openbor.h"
+#include "libretroport.h"
+#undef assert
+#undef printf
+uint32_t obor_profile_build;
+s_filestream *filestreams;
+int numfilestreams;
+s_level *level;
+s_screen *background;
+/* Blend tables are absent in this stream contract. */
+int obor_profile_blend_count(void){abort();}
+static s_level *first, *second, *retiring;
+static void *watched[3];
+static unsigned releases[3], clear_calls, diagnostics;
+static int level_owned, clears_global;
+static char strings[32][MAX_STR_VAR_LEN+1];
+static unsigned string_next;
+#define assert(c) do{if(!(c)){fprintf(stderr,"STREAM_OWNER revision=%u line=%d\n",obor_profile_build,__LINE__);abort();}}while(0)
+CHAR *StrCache_Get(int n){assert(n>=0&&n<32);return strings[n];}
+int StrCache_Pop(void){assert(string_next<32);return (int)string_next++;}
+void StrCache_Collect(int n){assert(n>=0&&n<32);}
+@VARIANTS@
+static void tracked_free(void *pointer){
+ if(!pointer)return;
+ for(unsigned i=0;i<3;++i)if(watched[i]==pointer){assert(!releases[i]);++releases[i];watched[i]=NULL;}
+ free(pointer);
+}
+void Script_Clear(Script *script,int local){
+ assert(retiring&&local==2);
+ Script *order[]={&retiring->update_script,&retiring->updated_script,
+                 &retiring->key_script,&retiring->level_script,&retiring->endlevel_script};
+ assert(clear_calls<5&&script==order[clear_calls]);
+ if(retiring==second){assert(!releases[0]);assert(releases[1]==(unsigned)level_owned);}
+ else assert(releases[0]==(unsigned)level_owned);
+ assert(releases[2]==(unsigned)clears_global);++clear_calls;
+}
+@PARSER@
+static int stream_message(const char *format,...){
+ assert(!strcmp(format,"Maximum file streams exceeded.\n"));++diagnostics;return 0;
+}
+#define printf stream_message
+#define free tracked_free
+#define obor_profile_calloc_named(name,bytes) calloc(1,bytes)
+@HELPERS@
+@FUNCTIONS@
+@RELEASE@
+@FREE_LEVEL@
+#undef printf
+#undef obor_profile_calloc_named
+#undef free
+static void seed_stream(s_filestream *stream,const char *text){
+ assert(!stream->buf);stream->buf=calloc(1,128);assert(stream->buf);
+ strcpy(stream->buf,text);stream->obor_capacity=128;stream->size=71;stream->pos=0;
+}
+static ScriptVariant integer(int value){ScriptVariant v={0};v.vt=VT_INTEGER;v.lVal=value;return v;}
+static ScriptVariant string(const char *text){
+ ScriptVariant v={0};v.vt=VT_STR;v.strVal=StrCache_Pop();strcpy(StrCache_Get(v.strVal),text);return v;
+}
+typedef HRESULT (*callback)(ScriptVariant **,ScriptVariant **,int);
+static ScriptVariant call(callback fn,ScriptVariant *args,int count){
+ ScriptVariant *argv[3],result={0},*out=&result;assert(count<=3);
+ for(int i=0;i<count;++i)argv[i]=args+i;
+ assert(fn(argv,&out,count)==S_OK);return result;
+}
+static void exercise(int which){
+ string_next=clear_calls=diagnostics=0;memset(releases,0,sizeof(releases));
+ first=calloc(1,sizeof(*first));second=calloc(1,sizeof(*second));assert(first&&second);
+ filestreams=calloc(50,sizeof(*filestreams));assert(filestreams);numfilestreams=50;
+ seed_stream(filestreams,"33 token\r\nnext");watched[2]=filestreams[0].buf;
+ if(level_owned){
+  seed_stream(first->obor_legacy_filestreams,"11 token\r\nnext");
+  seed_stream(second->obor_legacy_filestreams,"22 token\r\nnext");
+  watched[0]=first->obor_legacy_filestreams[0].buf;watched[1]=second->obor_legacy_filestreams[0].buf;
+ }else watched[0]=watched[1]=NULL;
+ level=which?second:first;
+ s_filestream *expected=level_owned?level->obor_legacy_filestreams:filestreams;
+ int number=level_owned?(which?22:11):33;
+ assert(obor_filestream_level_table()==level->obor_legacy_filestreams);
+ assert(obor_filestream_table()==expected);
+ ScriptVariant result=call(openbor_createfilestream,NULL,0);
+ assert(result.vt==VT_INTEGER&&result.lVal==1&&expected[1].buf&&!expected[1].buf[0]);
+ ScriptVariant args[3];memset(args,0,sizeof(args));args[0]=integer(0);args[1]=integer(0);
+ result=call(openbor_getfilestreamposition,args,1);assert(result.vt==VT_INTEGER&&!result.lVal);
+ args[1]=integer(3);call(openbor_setfilestreamposition,args,2);
+ assert(expected[0].pos==3);
+ result=call(openbor_getfilestreamline,args,1);
+ assert(result.vt==VT_STR&&!strcmp(StrCache_Get(result.strVal),"token"));
+ args[1]=integer(0);call(openbor_setfilestreamposition,args,2);
+ args[2]=string("int");result=call(openbor_getfilestreamargument,args,3);
+ assert(result.vt==VT_INTEGER&&result.lVal==number);
+ args[2]=string("float");result=call(openbor_getfilestreamargument,args,3);
+ assert(result.vt==VT_DECIMAL&&result.dblVal==number);
+ args[2]=string("string");result=call(openbor_getfilestreamargument,args,3);
+ char numeric[16];snprintf(numeric,sizeof(numeric),"%d",number);
+ assert(result.vt==VT_STR&&!strcmp(StrCache_Get(result.strVal),numeric));
+ call(openbor_filestreamnextline,args,1);assert(expected[0].pos==10);
+ result=call(openbor_getfilestreamline,args,1);assert(!strcmp(StrCache_Get(result.strVal),"next"));
+ /* Append to the created slot: the watched native owner buffer stays stable. */
+ args[0]=integer(1);args[1]=string("tail");args[2]=integer(1);
+ call(openbor_filestreamappend,args,3);assert(!strcmp(expected[1].buf,"tail "));
+ call(openbor_closefilestream,args,1);assert(!expected[1].buf&&!expected[1].obor_capacity);
+ if(level_owned){
+  s_filestream *other=which?first->obor_legacy_filestreams:second->obor_legacy_filestreams;
+  assert(other[0].pos==0&&!other[1].buf&&!strcmp(filestreams[0].buf,"33 token\r\nnext"));
+ }else assert(!first->obor_legacy_filestreams[0].buf&&!second->obor_legacy_filestreams[0].buf);
+ /* Retire B while A is current: original pre-boundary cleanup uses B. */
+ level=first;retiring=second;clear_calls=0;free_level(second);second=NULL;
+ assert(clear_calls==5&&releases[1]==(unsigned)level_owned&&!releases[0]);
+ assert(releases[2]==(unsigned)clears_global);
+ retiring=first;clear_calls=0;free_level(first);first=level=NULL;
+ assert(clear_calls==5&&releases[0]==(unsigned)level_owned);
+ for(int i=0;i<numfilestreams;++i)tracked_free(filestreams[i].buf);
+ free(filestreams);filestreams=NULL;numfilestreams=0;
+ assert(!watched[0]&&!watched[1]&&!watched[2]&&releases[2]==1);
+ retiring=NULL;assert(!diagnostics);
+ /* Defined core validation with no current level; no original success claim. */
+ if(level_owned){
+  assert(!obor_filestream_table()&&!obor_filestream_index(0));
+  ScriptVariant value={0},*out=&value;
+  assert(openbor_createfilestream(NULL,&out,0)==E_FAIL&&!out&&diagnostics==1);
+ }
+}
+struct context{unsigned revision;int level_owned,clears_global;};
+static const struct context contexts[]={@CONTEXTS@};
+int main(void){
+ fprintf(stderr,"STREAM_OWNER_LAYOUT record=%zu level=%zu field_offset=%zu field_bytes=%zu\n",
+  sizeof(s_filestream),sizeof(s_level),offsetof(s_level,obor_legacy_filestreams),
+  sizeof(((s_level*)0)->obor_legacy_filestreams));
+ for(unsigned i=0;i<sizeof(contexts)/sizeof(*contexts);++i){
+  obor_profile_build=contexts[i].revision;level_owned=contexts[i].level_owned;clears_global=contexts[i].clears_global;
+  exercise(0);exercise(1);
+  printf("{\"revision\":%u,\"passes\":2}\n",obor_profile_build);
+ }
+ return 0;
+}

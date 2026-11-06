@@ -1,0 +1,48 @@
+/* Native fall continuation with fixed own-source observations.
+ * SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "openbor.h"
+#undef time
+#undef printf
+uint32_t obor_profile_build;
+static uint32_t fixture_clock;
+static entity actor,*self=&actor;
+static int airborne,autoland,level_completed,tospeedup,land_calls;
+static void initial_action(void){abort();}
+void common_lie(void){abort();}
+int inair(entity *ent){if(ent!=self)abort();return airborne;}
+void doland(void){++land_calls;}
+#define time fixture_clock
+@FUNCTION@
+#undef time
+static const unsigned revisions[]={@PROFILES@};
+static const struct {
+ unsigned clock;
+ int rise,riseattack,r0,r1,falling,airborne,toss,projectile,damage,autoland,boss,completed;
+} cases[]={@CASES@};
+int main(void){
+ for(unsigned p=0;p<sizeof(revisions)/sizeof(*revisions);++p){
+  obor_profile_build=revisions[p];
+  printf("{\"revision\":%u,\"results\":[",obor_profile_build);
+  for(unsigned k=0;k<sizeof(cases)/sizeof(*cases);++k){
+   memset(self,0,sizeof(*self));fixture_clock=cases[k].clock;
+   self->staydown.rise=cases[k].rise;self->staydown.riseattack=cases[k].riseattack;
+   self->modeldata.risetime[0]=cases[k].r0;self->modeldata.risetime[1]=cases[k].r1;
+   self->falling=cases[k].falling;airborne=cases[k].airborne;self->tossv=cases[k].toss;
+   self->projectile=cases[k].projectile;self->damage_on_landing=cases[k].damage;
+   autoland=cases[k].autoland;self->boss=cases[k].boss;level_completed=cases[k].completed;
+   self->stalltime=777;self->staydown.riseattack_stall=888;self->takeaction=initial_action;
+   tospeedup=land_calls=0;common_fall();
+   if(self->takeaction!=initial_action && self->takeaction!=common_lie)abort();
+   printf("%s[%u,%d,%d,%d,%d,%d,%d]",k?",":"",(unsigned)self->stalltime,
+    self->staydown.riseattack_stall,self->staydown.rise,self->staydown.riseattack,
+    self->takeaction==common_lie,land_calls,tospeedup);
+  }
+  puts("]}");
+ }
+ return 0;
+}

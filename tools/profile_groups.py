@@ -160,7 +160,10 @@ def check_workflow_groups(workflow, profiles):
     names = [entry['build'] for entry in profiles]
     for (script, platform), selectors in paths.items():
         groups = [select_profile_group(profiles, value) for value in selectors]
-        limit = 24 if platform == 'macos' else 8
+        # Bounded count partitions remain suitable for the faster hosts.
+        # Revalidate these ceilings against measured step times when profiles
+        # grow; scarce Intel hosts use the measured cost policy instead.
+        limit = 36 if platform == 'macos' else 12
         if not groups or any(len(group) > limit and ':' not in selector
                              for group, selector in zip(groups, selectors)):
             raise ValueError('CI profile group exceeds platform budget: ' + platform)
@@ -184,6 +187,6 @@ def check_workflow_groups(workflow, profiles):
         if not isinstance(selectors, list) or not selectors or not all(isinstance(x, str) for x in selectors):
             raise ValueError('Invalid native ARM state matrix')
         groups = [select_profile_group(profiles, value) for value in selectors]
-        if (not groups or any(len(group) > 24 for group in groups) or
+        if (not groups or any(len(group) > 36 for group in groups) or
                 [entry['build'] for group in groups for entry in group] != names):
             raise ValueError('Incomplete or oversized native ARM state coverage')

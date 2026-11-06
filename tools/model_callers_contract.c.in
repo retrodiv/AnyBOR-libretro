@@ -1,0 +1,161 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <stdarg.h>
+#include "openbor.h"
+#undef assert
+#undef printf
+uint32_t obor_profile_build;
+static int active_case,model_cases,spawn_cases,toss_cases;
+#define assert(c) do{if(!(c)){fprintf(stderr,"SCRIPT_MODEL_CALL revision=%u case=%d line=%d\n",obor_profile_build,active_case,__LINE__);abort();}}while(0)
+static s_model loaded_model;
+static s_modelcache cache_entries[2];
+static entity actor,spawned;
+static s_level stage;
+s_level *level;
+s_spawn_entry spawnentry;
+static char names[3][24]={"controlled-model","","flag"};
+static char diagnostic[256];
+static int load_success,spawn_success,load_calls,spawn_calls,toss_calls,cache_reads;
+static int boss_at_spawn;
+static char observed_unload;
+static float observed_lift,observed_x,observed_z;
+static ScriptVariant values[5];
+static int captured_printf(const char *format,...){
+ va_list ap;va_start(ap,format);
+ int n=vsnprintf(diagnostic,sizeof(diagnostic),format,ap);va_end(ap);
+ assert(n>=0 && (size_t)n<sizeof(diagnostic));return n;
+}
+CHAR *StrCache_Get(int index){assert(index>=0 && index<3);++cache_reads;return names[index];}
+void StrCache_Collect(int index){(void)index;abort();}
+int StrCache_Pop(void){abort();}
+@VARIANTS@
+s_model *load_cached_model(char *name,char *owner,char unload){
+ assert(!strcmp(name,names[0]) && !strcmp(owner,"openbor_loadmodel"));
+ ++load_calls;observed_unload=unload;return load_success?&loaded_model:NULL;
+}
+entity *smartspawn(s_spawn_entry *entry){
+ assert(entry==&spawnentry);++spawn_calls;boss_at_spawn=level?level->bosses:-1;
+ return spawn_success?&spawned:NULL;
+}
+void toss(entity *subject,float lift){
+ assert(subject==&actor);++toss_calls;observed_lift=lift;
+ observed_x=subject->xdir;observed_z=subject->zdir;
+}
+#define printf captured_printf
+@FUNCTIONS@
+#undef printf
+struct context{unsigned revision;int unload_extra,selectable,spawn_boss,toss_strict;const char *load_message,*toss_message;};
+static const struct context contexts[]={@CONTEXTS@};
+static void reset(void){
+ memset(&loaded_model,0,sizeof(loaded_model));memset(cache_entries,0,sizeof(cache_entries));
+ memset(&actor,0,sizeof(actor));memset(&spawned,0,sizeof(spawned));
+ memset(&stage,0,sizeof(stage));memset(&spawnentry,0,sizeof(spawnentry));
+ memset(values,0,sizeof(values));for(int i=0;i<5;++i)values[i].vt=VT_INTEGER;
+ model_cache=cache_entries;loaded_model.index=1;cache_entries[0].selectable=9;cache_entries[1].selectable=7;
+ level=&stage;stage.bosses=7;actor.xdir=9;actor.zdir=11;
+ load_success=spawn_success=1;load_calls=spawn_calls=toss_calls=cache_reads=0;
+ observed_unload=0;boss_at_spawn=-99;observed_lift=observed_x=observed_z=-99;
+ diagnostic[0]=0;
+}
+static HRESULT call_native(HRESULT (*callback)(ScriptVariant**,ScriptVariant**,int),
+                           int count,ScriptVariant *result,ScriptVariant **out){
+ ScriptVariant **args=count?malloc((size_t)count*sizeof(*args)):NULL;
+ assert(!count || args);for(int i=0;i<count;++i)args[i]=values+i;
+ memset(result,0,sizeof(*result));result->vt=VT_INTEGER;result->lVal=999;*out=result;
+ HRESULT status=callback(args,out,count);free(args);return status;
+}
+static int set_flag(int kind){
+ switch(kind){
+  case 0:values[2].lVal=0;return 0;
+  case 1:values[2].lVal=2;return 1;
+  case 2:values[2].vt=VT_DECIMAL;values[2].dblVal=0;return 0;
+  case 3:values[2].vt=VT_DECIMAL;values[2].dblVal=1.25;return 1;
+  case 4:values[2].vt=VT_EMPTY;return 0;
+  case 5:values[2].vt=VT_PTR;values[2].ptrVal=NULL;return 0;
+  case 6:values[2].vt=VT_PTR;values[2].ptrVal=&actor;return 1;
+  case 7:values[2].vt=VT_STR;values[2].strVal=1;return 0;
+  case 8:values[2].vt=VT_STR;values[2].strVal=2;return 1;
+  default:abort();
+ }
+}
+static void model_case(const struct context *c,int count,int bad_name,int unload_kind,int flag_kind,int success){
+ reset();load_success=success;values[0].vt=VT_STR;values[0].strVal=0;values[1].lVal=2;
+ if(bad_name==0)values[0].vt=VT_EMPTY;
+ if(bad_name==1)values[0].vt=VT_INTEGER;
+ if(bad_name==2){values[0].vt=VT_PTR;values[0].ptrVal=&actor;}
+ if(unload_kind==1){values[1].vt=VT_DECIMAL;values[1].dblVal=3.75;}
+ if(unload_kind==2)values[1].vt=VT_EMPTY;
+ if(unload_kind==3){values[1].vt=VT_STR;values[1].strVal=1;}
+ if(unload_kind==4){values[1].vt=VT_PTR;values[1].ptrVal=&actor;}
+ int truth=set_flag(flag_kind);
+ int reads=count>=2 && (c->unload_extra || count==2);
+ int error=count<1 || bad_name>=0 || (reads && unload_kind>=2);
+ ScriptVariant result,*out;HRESULT status=call_native(openbor_loadmodel,count,&result,&out);
+ assert(status==(error?E_FAIL:S_OK));
+ assert(load_calls==!error && !spawn_calls && !toss_calls);
+ assert(!strcmp(diagnostic,error?c->load_message:""));
+ if(error)assert(!out);
+ else{
+  assert(out==&result && result.vt==VT_PTR && result.ptrVal==(success?&loaded_model:NULL));
+  assert(observed_unload==(reads?(unload_kind==1?3:2):0));
+ }
+ int selected=!error && success && count>=3 && c->selectable;
+ assert(cache_entries[0].selectable==9 && cache_entries[1].selectable==(selected?truth:7));
+ assert(cache_reads==(!error)+(selected && flag_kind>=7));
+ ++model_cases;++active_case;
+}
+static void spawn_case(const struct context *c,int boss,int have_level,int success,int count){
+ reset();spawnentry.boss=boss;level=have_level?&stage:NULL;spawn_success=success;
+ ScriptVariant result,*out;HRESULT status=call_native(openbor_spawn,count,&result,&out);
+ int expected=7+(c->spawn_boss && boss && have_level);
+ assert(status==S_OK && out==&result && result.vt==(success?VT_PTR:VT_EMPTY));
+ if(success)assert(result.ptrVal==&spawned);
+ assert(spawn_calls==1 && !load_calls && !toss_calls && !cache_reads && !diagnostic[0]);
+ assert(stage.bosses==expected && boss_at_spawn==(have_level?expected:-1));
+ ++spawn_cases;++active_case;
+}
+static void toss_case(const struct context *c,int count,int have_entity,int bad_kind){
+ reset();values[0].vt=VT_PTR;values[0].ptrVal=have_entity?&actor:NULL;
+ values[1].vt=VT_DECIMAL;values[1].dblVal=2.5;values[2].lVal=3;
+ values[3].vt=VT_DECIMAL;values[3].dblVal=-1.25;
+ if(bad_kind==1)values[1].vt=VT_EMPTY;
+ if(bad_kind==2){values[2].vt=VT_STR;values[2].strVal=2;}
+ if(bad_kind==3){values[3].vt=VT_PTR;values[3].ptrVal=&actor;}
+ int bad_present=bad_kind && count>bad_kind;
+ int error=count==0 || (!have_entity && c->toss_strict);
+ int acted=!error && have_entity && (c->toss_strict || !bad_present);
+ ScriptVariant result,*out;HRESULT status=call_native(openbor_tossentity,count,&result,&out);
+ assert(status==(error?E_FAIL:S_OK) && !strcmp(diagnostic,error?c->toss_message:""));
+ if(error)assert(!out);
+ else assert(out==&result && result.vt==VT_INTEGER && result.lVal==acted);
+ assert(!load_calls && !spawn_calls && !cache_reads && toss_calls==acted);
+ float x=count>=3 && bad_kind!=2?3:0,z=count>=4 && bad_kind!=3?-1.25f:0;
+ float lift=count>=2 && bad_kind!=1?2.5f:0;
+ assert(actor.xdir==(acted?x:9) && actor.zdir==(acted?z:11));
+ if(acted)assert(observed_lift==lift && observed_x==x && observed_z==z);
+ ++toss_cases;++active_case;
+}
+int main(void){
+ for(unsigned p=0;p<sizeof(contexts)/sizeof(*contexts);++p){
+  const struct context *c=contexts+p;obor_profile_build=c->revision;
+  active_case=model_cases=spawn_cases=toss_cases=0;
+  for(int count=0;count<=4;++count)for(int success=0;success<2;++success)model_case(c,count,-1,0,1,success);
+  for(int name=0;name<3;++name)for(int count=1;count<=3;count+=2)model_case(c,count,name,0,1,1);
+  for(int kind=2;kind<5;++kind)for(int count=2;count<=4;++count)model_case(c,count,-1,kind,1,1);
+  for(int count=2;count<=4;++count)for(int success=0;success<2;++success)model_case(c,count,-1,1,1,success);
+  for(int flag=0;flag<9;++flag)for(int success=0;success<2;++success)model_case(c,3,-1,0,flag,success);
+  for(int flag=0;flag<9;++flag)model_case(c,4,-1,0,flag,1);
+  for(int boss=0;boss<3;++boss)for(int level_present=0;level_present<2;++level_present)
+  for(int success=0;success<2;++success)for(int extra=0;extra<2;++extra)spawn_case(c,boss,level_present,success,extra?3:0);
+  for(int count=0;count<=5;++count)for(int entity_present=0;entity_present<2;++entity_present)
+  for(int bad=0;bad<4;++bad)toss_case(c,count,entity_present,bad);
+  assert(model_cases==58 && spawn_cases==24 && toss_cases==48);
+  fprintf(stdout,"{\"revision\":%u,\"model_cases\":%d,\"spawn_cases\":%d,\"toss_cases\":%d}\n",
+          obor_profile_build,model_cases,spawn_cases,toss_cases);
+ }
+ return 0;
+}

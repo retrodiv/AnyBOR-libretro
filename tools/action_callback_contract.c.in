@@ -1,0 +1,126 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "openbor.h"
+#undef printf
+#undef time
+#undef assert
+#define time 37u
+uint32_t obor_profile_build;
+static unsigned cases;
+#define assert(c) do{if(!(c)){fprintf(stderr,"Action callback revision=%u case=%u line=%d\n",obor_profile_build,cases,__LINE__);abort();}}while(0)
+static void previous(void){abort();}
+static void previous_other(void){abort();}
+static void changed(void){abort();}
+static void pain_action(void){abort();}
+static void fall_action(void){abort();}
+static void grab_action(void){abort();}
+static void drop_action(void){abort();}
+static void block_action(void){abort();}
+#define common_pain pain_action
+#define common_fall fall_action
+#define common_grabattack grab_action
+#define common_drop drop_action
+#define common_block block_action
+entity *self;
+static entity actor,opponent;
+static s_level room;
+s_level *level=&room;
+static int before,mutate,phase,kind,valid,callbacks,damage_calls,retired,max_attack_types=24;
+static s_defense model_factors[25],entity_factors[24];
+HRESULT Interpreter_Call(Interpreter *p){(void)p;abort();}
+HRESULT Interpreter_EvalInstruction(Interpreter *p){(void)p;abort();}
+static void observe(void (*wanted)(void)){
+ ++callbacks;assert(actor.takeaction==(before?wanted:previous));
+ if(phase==2 && kind==1){
+  assert(opponent.takeaction==(before?grab_action:previous_other));
+  assert(opponent.stalltime==(before?time+GRAB_STALL:11u));
+  assert(actor.releasetime==(before?time+GAME_SPEED/2:13u));
+ }
+ if(mutate){actor.takeaction=changed;
+  if(phase==2 && kind==1){opponent.takeaction=changed;opponent.stalltime=0;actor.releasetime=0;}}
+}
+static int pain_service(entity *e,int type,int reset){
+ assert(e==self && e==&actor && type==actor.damagetype && reset==(kind==0));
+ observe(pain_action);return 1;
+}
+static int fall_service(entity *e){assert(e==&actor);observe(fall_action);return kind!=4;}
+static void death_service(entity *e){assert(e==&actor);observe(fall_action);}
+static void retire_service(entity *e){assert(e==&actor);++retired;}
+static void damage_service(entity *e,s_attack *a){assert(e==&opponent && a);++damage_calls;}
+static void animation_service(entity *e,int animation,int reset){
+ assert(e==&actor && reset==0);
+ if(phase==0){assert(animation==ANI_JUMP && actor.a==3);observe(drop_action);}
+ else {assert(phase==1 && animation==ANI_BLOCK && !actor.xdir && !actor.zdir);observe(block_action);}
+}
+static int valid_service(entity *e,int animation){assert(e==&actor && animation==ANI_JUMP);return valid;}
+#undef validanim
+#define validanim valid_service
+#define ent_set_anim animation_service
+#define checkgrab(...) 1
+#define checkdamagedrop(...) ((void)0)
+#define dropweapon(...) ((void)0)
+#define checkdamageeffects(...) ((void)0)
+#define checkdamageflip(...) ((void)0)
+#define checkmpadd(...) ((void)0)
+#define checkhitscore(...) ((void)0)
+#define checkdamage damage_service
+#define checkdeath(...) ((void)0)
+#define control_rumble(...) ((void)0)
+#define player_die() retire_service(self)
+#undef kill
+#define kill retire_service
+#define ent_unlink(...) ((void)0)
+#define set_death(e,...) death_service(e)
+#define toss(...) ((void)0)
+#define set_fall(e,...) fall_service(e)
+#define set_pain pain_service
+@HELPERS@
+@OPPONENT@
+@DAMAGE@
+static void initial_drop(entity *e){@SPAWN@}
+static void passive_block(void){@BLOCK@}
+static void setup(void){
+ memset(&actor,0,sizeof(actor));memset(&opponent,0,sizeof(opponent));memset(&room,0,sizeof(room));
+ actor.takeaction=previous;opponent.takeaction=previous_other;self=&actor;
+ actor.modeldata.defense=model_factors;actor.defense=entity_factors;
+ actor.modeldata.type=TYPE_ENEMY;actor.health=100;actor.a=1;actor.playerindex=0;
+ actor.releasetime=13;opponent.stalltime=11;opponent.grabbing=&actor;
+ actor.xdir=2;actor.zdir=3;room.spawn[0][2]=3;callbacks=damage_calls=retired=0;
+}
+struct profile {unsigned revision;int before;};
+static const struct profile profiles[]={@PROFILES@};
+int main(void){
+ for(unsigned r=0;r<sizeof(profiles)/sizeof(*profiles);++r){
+  obor_profile_build=profiles[r].revision;before=profiles[r].before;
+  phase=0;
+  for(valid=0;valid<2;++valid)for(mutate=0;mutate<2;++mutate){
+   ++cases;setup();actor.modeldata.type=TYPE_PLAYER;initial_drop(&actor);assert(callbacks==valid && actor.a==3);
+   assert(actor.takeaction==(valid && mutate && before?changed:drop_action));
+  }
+  phase=1;
+  for(mutate=0;mutate<2;++mutate){
+   ++cases;setup();passive_block();assert(callbacks==1);
+   assert(actor.takeaction==(mutate && before?changed:block_action));
+  }
+  phase=2;
+  for(kind=0;kind<5;++kind)for(mutate=0;mutate<2;++mutate){
+   ++cases;setup();s_attack attack={0};attack.attack_type=ATK_NORMAL;attack.attack_force=5;
+   if(kind==1)attack.grab=1;
+   if(kind==2 || kind==4)actor.drop=1;
+   if(kind==3){actor.health=0;actor.modeldata.falldie=1;}
+   assert(common_takedamage(&opponent,&attack)==1 && callbacks==1 && damage_calls==1);
+   void (*wanted)(void)=kind<2?pain_action:fall_action;
+   if(kind==4){assert(retired==1);wanted=mutate?changed:before?fall_action:previous;}
+   else {assert(!retired);if(before && mutate)wanted=changed;}
+   assert(actor.takeaction==wanted);
+   if(kind==1){assert(opponent.takeaction==(before && mutate?changed:grab_action));
+    assert(opponent.stalltime==(before && mutate?0:time+GRAB_STALL));
+    assert(actor.releasetime==(before && mutate?0:time+GAME_SPEED/2));}
+  }
+ }
+ printf("{\"contexts\":%zu,\"cases\":%u}\n",sizeof(profiles)/sizeof(*profiles),cases);return 0;
+}

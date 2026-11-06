@@ -1,0 +1,87 @@
+
+static const struct {unsigned revision;int signature;} contexts[]={@CONTEXTS@};
+static size_t requested;
+static unsigned char *allocated;
+static int fail_allocation;
+static void *record_malloc(size_t bytes) {
+    requested=bytes;
+    if(fail_allocation)return NULL;
+    allocated=malloc(bytes+32);assert(allocated);
+    memset(allocated,0xa5,bytes+32);return allocated;
+}
+#define malloc record_malloc
+@ALLOCATORS@
+#undef malloc
+
+static void check_tail(void) {
+    for(size_t i=0;i<32;++i)assert(allocated[requested+i]==0xa5);
+}
+
+static void allocation_checks(int signature) {
+    const int widths[]={0,1,7,8,255};
+    const int heights[]={0,1,3};
+    const int formats[]={PIXEL_8,PIXEL_x8,PIXEL_16,PIXEL_32};
+    const int displays[]={PIXEL_8,PIXEL_16,PIXEL_32};
+    for(unsigned di=0;di<3;++di)for(unsigned fi=0;fi<4;++fi)
+    for(unsigned wi=0;wi<5;++wi)for(unsigned hi=0;hi<3;++hi) {
+        screenformat=displays[di];int format=formats[fi];
+        int width=widths[wi],height=heights[hi],screen_width=width&~3;
+        size_t bytes=(size_t)screen_width*height*pixelbytes[format];
+        requested=0;allocated=NULL;fail_allocation=0;
+        s_screen *screen=allocscreen(width,height,format);assert(screen);
+        assert(requested==sizeof(*screen)+bytes+ANYNUMBER+(format==PIXEL_x8?PAL_BYTES:0));
+        assert(screen->width==screen_width && screen->height==height && screen->pixelformat==format);
+        assert(screen->palette==(format==PIXEL_x8?screen->data+bytes:NULL));
+        if(signature)assert(screen->magic==screen_magic);
+        memset(screen->data,19,bytes);
+        if(screen->palette)memset(screen->palette,23,PAL_BYTES);
+        check_tail();free(screen);
+        fail_allocation=1;assert(allocscreen(width,height,format)==NULL);
+
+        fail_allocation=0;requested=0;allocated=NULL;
+        s_bitmap *bitmap=allocbitmap(width,height,format);
+        if(!width || !height) {assert(!bitmap && !requested && !allocated);continue;}
+        assert(bitmap);
+        bytes=(size_t)width*height*pixelbytes[format];
+        size_t padding=(4-bytes%4)%4;
+        assert(requested==sizeof(*bitmap)+bytes+(format==PIXEL_x8?padding+PAL_BYTES:0));
+        assert(bitmap->width==width && bitmap->height==height && bitmap->pixelformat==format);
+        assert(bitmap->palette==(format==PIXEL_x8?bitmap->data+bytes+padding:NULL));
+        if(signature)assert(bitmap->magic==bitmap_magic);
+        memset(bitmap->data,29,bytes);
+        if(bitmap->palette)memset(bitmap->palette,31,PAL_BYTES);
+        check_tail();free(bitmap);
+        fail_allocation=1;assert(allocbitmap(width,height,format)==NULL);
+    }
+    fail_allocation=0;
+}
+
+static void sprite_signature_check(int signature) {
+    s_bitmap *bitmap=calloc(1,sizeof(s_bitmap)+8);assert(bitmap);
+    for(int empty=0;empty<2;++empty) {
+        bitmap->width=empty?0:2;bitmap->height=empty?0:1;bitmap->pixelformat=PIXEL_8;
+        bitmap->data[0]=0;bitmap->data[1]=7;
+        unsigned size=fakey_encodesprite(bitmap);
+        s_sprite *sprite=malloc(size);assert(sprite);memset(sprite,0xa5,size);
+        assert(encodesprite(3,-2,bitmap,sprite)==size);
+        if(signature)assert(sprite->magic==sprite_magic);
+        free(sprite);
+    }
+    free(bitmap);
+}
+
+int main(void) {
+    for(size_t i=0;i<sizeof(contexts)/sizeof(contexts[0]);++i) {
+        obor_profile_build=contexts[i].revision;
+        if(contexts[i].signature) {
+            assert(screen_magic==(int)0x726373);
+            assert(bitmap_magic==(int)0x706d62);
+            assert(sprite_magic==(int)0x727073);
+        }
+        allocation_checks(contexts[i].signature);
+        assert(encoding_checks()==0);
+        sprite_signature_check(contexts[i].signature);
+        printf("{\"revision\":%u,\"signature\":%d}\n",obor_profile_build,contexts[i].signature);
+    }
+    return 0;
+}

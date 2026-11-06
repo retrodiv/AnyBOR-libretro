@@ -1,0 +1,100 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "openbor.h"
+#undef printf
+#undef time
+#undef assert
+uint32_t obor_profile_build;
+static u32 fixture_clock;
+#define time fixture_clock
+static unsigned cases;
+#define CHECK(c) do{if(!(c)){fprintf(stderr,"Pain contract revision=%u case=%u line=%d\n",obor_profile_build,cases,__LINE__);abort();}}while(0)
+@FLAG_ACCESS@
+@EMPTY@
+@HELPER@
+static s_anim active,cached;
+static entity attacker,target,other;
+entity *self,**ent_list;
+static int argument,hit_calls;
+#undef GET_INT_ARG
+#define GET_INT_ARG(n) ((void)(n),argument)
+#define CMD_MODEL_FASTATTACK 1
+static void command(s_anim *newanim,s_attack *value,int input){
+ s_attack attack=*value;argument=input;switch(1){@COMMAND@}*value=attack;
+}
+static void defaults(s_anim *newanim){@DEFAULT@}
+static int damage_provider(entity *e,s_attack *a){(void)e;(void)a;return 1;}
+void common_lie(void){abort();}
+int checkhit(entity *e,entity *victim,int counter){CHECK(e==&attacker && victim==&target && counter==0);++hit_calls;return 1;}
+static int eligible(entity *e,s_attack *attack){
+ int i=0,them=TYPE_ENEMY,current_attack_id=17;s_anim *current_anim=e->animation;
+ @GATE@
+ { return 1; }
+ return 0;
+}
+static void block_hit(entity *e,s_anim *current_anim,int site){if(site==0){@INCREMENT_A@}else{@INCREMENT_B@}}
+static void plain_hit(entity *e){@INCREMENT_C@}
+static void retained_target(entity *victim){@KILL@}
+static void common_delay(s_attack *attack){@COMMON@}
+static void obstacle_delay(s_attack *attack){@OBSTACLE@}
+static void caller_delay(s_attack *attack){@CALLER@}
+static u32 expected_delay(int mode,u32 clock,int pain){
+ u32 sum=clock+(u32)pain;
+ switch(mode){
+ case 0:return clock+@DEFAULT_DELAY@u;
+ case 1:return sum?@DEFAULT_DELAY@u:(u32)pain;
+ case 2:return sum?(u32)pain:@DEFAULT_DELAY@u;
+ case 3:return clock+(u32)(pain?pain:@DEFAULT_DELAY@);
+ case 4:return 77;
+ default:abort();
+ }
+}
+struct profile {unsigned revision;int flag,cached,clear,caller,common,obstacle;};
+static const struct profile profiles[]={@PROFILES@};
+int main(void){
+ _Static_assert(sizeof(u32)==4,"own clock width");
+ _Static_assert(GAME_SPEED==@GAME_SPEED@,"source clock frequency");
+ static const int values[]={0,1,-1,255,256,257,32767,-32768};
+ static const u32 clocks[]={0,1,100,UINT32_MAX};
+ static const int pains[]={0,1,-1,10,-32768,32767};
+ entity *list[]={&target};ent_list=list;
+ for(unsigned r=0;r<sizeof(profiles)/sizeof(*profiles);++r){
+  const struct profile *p=profiles+r;obor_profile_build=p->revision;
+  memset(&active,0,sizeof(active));SET_FLAG(&active,173);defaults(&active);CHECK(!GET_FLAG(&active));
+  for(unsigned v=0;v<sizeof(values)/sizeof(*values);++v){
+   ++cases;s_attack a=emptyattack;CHECK(a.pain_time==0);defaults(&active);command(&active,&a,values[v]);
+   CHECK((GET_FLAG(&active)!=0)==(p->flag && (unsigned char)values[v]!=0));
+   CHECK(a.pain_time==(p->flag?0:values[v]?@FAST_DELAY@:0));
+   command(&active,&a,0);CHECK(!GET_FLAG(&active));
+   CHECK(a.pain_time==(p->flag?0:values[v]?@FAST_DELAY@:0));
+  }
+  for(int fast=0;fast<2;++fast)for(int delay=-1;delay<=1;++delay){
+   ++cases;memset(&attacker,0,sizeof(attacker));memset(&target,0,sizeof(target));
+   memset(&active,0,sizeof(active));memset(&cached,0,sizeof(cached));
+   attacker.animation=&active;SET_FLAG(&active,fast);target.exists=1;target.modeldata.type=TYPE_ENEMY;
+   target.takedamage=damage_provider;fixture_clock=100;target.pain_time=100+delay;
+   hit_calls=0;s_attack a=emptyattack;CHECK(eligible(&attacker,&a)==(delay<0 || (p->flag && fast)));
+   CHECK(hit_calls==(delay<0 || (p->flag && fast)));
+  }
+  for(int changed=0;changed<2;++changed)for(int site=0;site<3;++site){
+   ++cases;active.animhits=cached.animhits=0;attacker.animation=changed?&active:&cached;
+   if(site<2)block_hit(&attacker,&cached,site);else plain_hit(&attacker);
+   int uses_active=changed && (site==2 || !p->cached);
+   CHECK(active.animhits==uses_active && cached.animhits==!uses_active);
+  }
+  self=&attacker;attacker.exists=1;
+  for(int same=0;same<2;++same){++cases;attacker.lasthit=same?&target:&other;retained_target(&target);
+   CHECK(attacker.lasthit==(same?(p->clear?NULL:&target):&other));}
+  for(unsigned t=0;t<sizeof(clocks)/sizeof(*clocks);++t)for(unsigned a=0;a<sizeof(pains)/sizeof(*pains);++a){
+   s_attack attack=emptyattack;attack.pain_time=pains[a];fixture_clock=clocks[t];
+   ++cases;self=&target;target.pain_time=77;common_delay(&attack);CHECK(target.pain_time==expected_delay(p->common,clocks[t],pains[a]));
+   ++cases;target.pain_time=77;obstacle_delay(&attack);CHECK(target.pain_time==expected_delay(p->obstacle,clocks[t],pains[a]));
+   ++cases;target.pain_time=77;caller_delay(&attack);CHECK(target.pain_time==expected_delay(p->caller?3:4,clocks[t],pains[a]));
+  }
+ }
+ printf("{\"contexts\":%zu,\"cases\":%u,\"animation_bytes\":%zu}\n",sizeof(profiles)/sizeof(*profiles),cases,sizeof(s_anim));return 0;
+}

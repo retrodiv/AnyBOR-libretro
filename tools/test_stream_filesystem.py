@@ -5,9 +5,9 @@ directories stand in for frontend naming; archives and game execution are absent
 SPDX-License-Identifier: BSD-3-Clause
 Copyright (c) 2026 retrodiv <retrodiv@proton.me>
 """
-from contract_fixtures import load_contract_fixture, contract_profiles
+from contract_fixtures import load_contract_fixture, contract_profiles, contract_group
 import json
-from historical_filestreams import extract_storage_helpers
+from historical_filestreams import single_active_table_provider, extract_storage_helpers
 import os
 from pathlib import Path
 import shlex
@@ -33,20 +33,21 @@ class StreamFilesystemTests(unittest.TestCase):
         cls.fixture=load_contract_fixture(FIXTURE);cls.rows=cls.fixture['sources']
         cls.pin=json.loads((SOURCE/'src/pin.json').read_text())
         temporary=tempfile.TemporaryDirectory(prefix='abfs-')
-        cls.addClassCleanup(temporary.cleanup);cls.work=Path(temporary.name);cls.executables={}
+        cls.addClassCleanup(temporary.cleanup);cls.work=Path(temporary.name);cls.executables={};cls.physical={}
         compiler=shlex.split(os.environ.get('HOST_CC','cc'))
         version=subprocess.check_output(compiler+['--version'],text=True,timeout=10)
         warnings=['-Wno-error=pragma-pack','-Wno-error=deprecated-non-prototype']if'clang'in version.lower()else[]
         host=[]if sys.platform=='darwin'else['-DLINUX=1']
         link=['-Wl,-dead_strip']if sys.platform=='darwin'else['-no-pie','-Wl,--gc-sections']
-        for engine,options in cls.fixture['engines'].items():
+        for group,settings in cls.fixture['engines'].items():
+            options=dict(settings);engine=options.pop('engine',group);cls.physical[group]=engine
             root=SOURCE/'src/engines'/engine
             script=(root/'openborscript.c').read_bytes().decode('utf-8','surrogateescape')
-            helpers=extract_storage_helpers(script,function)
+            helpers=extract_storage_helpers(script,function,level_table_provider=single_active_table_provider())
             program=render_filesystem(revisions=[int(engine)],
                 opening=function(script,'openbor_openfilestream'),
                 saving=function(script,'openbor_savefilestream'),helpers=helpers,**options)
-            source=cls.work/(engine+'.c')
+            source=cls.work/(group+'.c')
             source.write_bytes(bind_named_allocation_support(
                 runtime_profile(program), root).encode('utf-8','surrogateescape'))
             binary=source.with_suffix('');includes=[root,SOURCE/'src/port/libretro',root/'source',
@@ -59,9 +60,10 @@ class StreamFilesystemTests(unittest.TestCase):
                 '-DOBOR_ENGINE_BUILD='+engine,'-fsanitize=address,undefined,pointer-overflow',
                 '-fno-sanitize-recover=all',*host,*warnings,*['-I'+str(p)for p in includes],
                 str(source),str(root/'source/scriptlib/ScriptVariant.c'),*link,'-lm','-o',str(binary)])
-            cls.executables[engine]=binary
+            cls.executables[group]=binary
 
     def check_context(self,engine,revision):
+        engine=contract_group(self.fixture,engine,revision)
         with tempfile.TemporaryDirectory(prefix='case-',dir=self.work)as scratch:
             environment=dict(sanitizer_environment(),TMPDIR=scratch)
             observed=subprocess.check_output([str(self.executables[engine]),str(revision)],
@@ -76,7 +78,7 @@ class StreamFilesystemTests(unittest.TestCase):
 
     def test_every_registered_affected_profile_closes_its_owned_files(self):
         for profile in contract_profiles(self.fixture, self.pin['profiles']):
-            if profile['engine']in self.executables:
+            if profile['engine']in set(self.physical.values()):
                 with self.subTest(profile=profile['build']):
                     self.check_context(profile['engine'],int(profile.get('revision',profile['build'])))
 
@@ -85,17 +87,21 @@ class StreamFilesystemTests(unittest.TestCase):
             for rule in options.get('missing_file_contracts',[]):
                 for revision in rule.get('controls',[]):
                     with self.subTest(engine=engine,revision=revision):
-                        self.check_context(engine,revision)
+                        self.check_context(self.physical[engine],revision)
 
     def test_source_and_policy_coverage_is_explicit(self):
         self.assertEqual(len(self.rows),len({r['revision']for r in self.rows}))
-        self.assertEqual(set(self.executables)|set(self.fixture['unaffected_native_owner_engines']),
+        self.assertEqual(set(self.physical.values())|set(self.fixture['unaffected_native_owner_engines']),
                          {r['build']for r in self.pin['engines']})
         for row in self.rows:
             self.assertRegex(row['source_commit'],r'^[0-9a-f]{40}$')
             self.assertEqual(set(row['source_sha256']),
                 {'openbor_openfilestream','openbor_savefilestream','ScriptVariant.c','ScriptVariant.h','depends.h'})
             for digest in row['source_sha256'].values():self.assertRegex(digest,r'^[0-9a-f]{64}$')
+        revisions={row['revision'] for row in self.rows}
+        for profile in contract_profiles(self.fixture,self.pin['profiles']):
+            if profile['engine'] in self.fixture.get('source_profile_engines',[]):
+                self.assertIn(int(profile.get('revision',profile['build'])),revisions)
         for options in self.fixture['engines'].values():
             self.assertTrue(options['open_closes_file']);self.assertTrue(options['check_allocation_refusal'])
 

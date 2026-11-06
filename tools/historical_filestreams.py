@@ -9,16 +9,33 @@ Copyright (c) 2026 retrodiv <retrodiv@proton.me>
 import re
 
 
-def extract_storage_helpers(source, extract):
+def single_active_table_provider():
+    """Controlled active-table service for tests that do not model level ownership."""
+    return ("s_filestream *obor_filestream_level_table(void) {\n"
+            "    if(!obor_filestream_reserve(LEVEL_MAX_FILESTREAMS)) return NULL;\n"
+            "    return filestreams;\n}\n")
+
+
+def extract_storage_helpers(source, extract, *, level_table_provider=None):
     """Select complete declared storage helpers without assuming an engine era."""
     if (not isinstance(source,str)or len(source)>8<<20 or '\0'in source or
         not callable(extract)):
         raise ValueError('Bounded native source and a complete function extractor required')
-    names=('obor_filestream_reserve','obor_filestream_prepare',
+    names=('obor_filestream_table','obor_filestream_reserve','obor_filestream_prepare',
            'obor_filestream_next_slot','obor_filestream_index',
            'obor_filestream_buffer','obor_filestream_level_clear')
-    return '\n'.join(extract(source,name)for name in names if re.search(
-        r'(?m)^(?:static\s+)?(?:int|void)\s+'+name+r'\s*\([^;{}]*\)\s*\{',source))
+    bodies=[extract(source,name) for name in names if re.search(
+        r'(?m)^(?:static\s+)?(?:int|void|s_filestream\s*\*)\s*'+name+r'\s*\([^;{}]*\)\s*\{',source)]
+    code='\n'.join(bodies)
+    if re.search(r'\bobor_filestream_level_table\s*\(',code):
+        if (not isinstance(level_table_provider,str) or
+            not 0<len(level_table_provider)<=16384 or '\0'in level_table_provider or
+            not re.match(r'\s*s_filestream\s*\*\s*obor_filestream_level_table\s*\(void\)\s*\{',
+                         level_table_provider)):
+            raise ValueError('Explicit native or controlled level-table provider required')
+        code='s_filestream *obor_filestream_level_table(void);\n'+code+'\n'+level_table_provider
+    return code
+
 
 
 def render_create_close(*, revisions, record, create, close, physical_fixed,

@@ -5,6 +5,7 @@ Copyright (c) 2026 retrodiv <retrodiv@proton.me>
 """
 import re
 from test_historical_player import function
+from test_historical_level_entries import level_set_helpers
 
 
 def render_player_extent(engine, fixture):
@@ -14,6 +15,9 @@ def render_player_extent(engine, fixture):
         raise ValueError('The source must disable the movie input branch')
     names = ('MAX_PLAYERS', 'MAX_SPECIAL_INPUTS', 'MAX_NAME_LEN', 'GAME_SPEED',
              'FLAG_ESC', 'FLAG_MOVELEFT', 'FLAG_MOVERIGHT', 'FLAG_FORWARD', 'FLAG_BACKWARD')
+    helpers = level_set_helpers(source)
+    if helpers:
+        names += ('MAX_DIFFICULTIES',)
     constants = '\n'.join(re.search(r'(?m)^#define\s+' + name + r'\s+[^\n]+', header)[0]
                           for name in names)
     declarations = '\n'.join(re.search(r'typedef struct\s*\{[^{}]*\}' + name + ';', header)[0]
@@ -21,9 +25,10 @@ def render_player_extent(engine, fixture):
     loader = function(source, 'load_levelorder')
     commands = loader[loader.index('case CMD_LEVELORDER_SINGLE:'):
                       loader.index('case CMD_LEVELORDER_NOSAME:')]
-    bodies = function(source, 'add_set') + function(source, 'inputrefresh')
-    checks = '\n'.join('obor_profile_build=%d;check(%d,%d);' % (
-        row['revision'], row['global_player_default'], row['refresh_all_ports'])
+    bodies = helpers + function(source, 'add_set') + function(source, 'inputrefresh')
+    checks = '\n'.join('obor_profile_build=%d;check(%d,%d,%d,%d,%d);' % (
+        row['revision'], row['global_player_default'], row['refresh_all_ports'],
+        row['combination_history'],row['input_history_clock'],row['fixed_set_defaults'])
         for row in fixture['sources'])
     return r'''
 #include <assert.h>
@@ -61,26 +66,31 @@ static void control_update(Control **ports,int count){
 static u32 timer_getinterval(int speed){
     assert(speed==GAME_SPEED);return pattern==0?GAME_SPEED+1:pattern==1?GAME_SPEED/4+1:pattern==2?3:0;
 }
+@STOP_PROVIDER@
 @BODIES@
+@STOP_END@
 enum {CMD_LEVELORDER_SINGLE,CMD_LEVELORDER_MAXPLAYERS};
 #define GET_INT_ARG(i) ((void)(i),argument)
 static void command(s_set_entry *set,int cmd){switch(cmd){@COMMANDS@}}
-static void defaults(int global){
+static void reset_defaults(void){@RESET_DEFAULTS@}
+static void defaults(int global,int fixed){
+    reset_defaults();
     defaultmaxplayers=3;num_difficulties=0;levelsets=NULL;
     s_set_entry *first=add_set();assert(first && first->maxplayers==(global?3:2));
     free(levelsets);levelsets=NULL;++cases;
     for(int cmd=0;cmd<2;++cmd)for(argument=0;argument<5;++argument){
+        reset_defaults();
         defaultmaxplayers=2;num_difficulties=0;
         command(NULL,cmd);int configured=cmd?argument:1;
         assert(defaultmaxplayers==(global?configured:2));
-        first=add_set();assert(first && first->maxplayers==(global?configured:2));
+        first=add_set();assert(first && first->maxplayers==((global || fixed)?configured:2));
         command(first,cmd);assert(first->maxplayers==configured);
-        s_set_entry *second=add_set();assert(second && second->maxplayers==(global?configured:2));
+        s_set_entry *second=add_set();assert(second && second->maxplayers==((global || fixed)?configured:2));
         assert(num_difficulties==2 && levelsets[0].maxplayers==configured);
         free(levelsets);levelsets=NULL;++cases;
     }
 }
-static void inputs(int all){
+static void inputs(int all,int history,int clock){
     s_set_entry selected={0};levelsets=&selected;current_set=0;
     for(extent=0;extent<=MAX_PLAYERS;++extent)
     for(frontend_all=0;frontend_all<2;++frontend_all)
@@ -106,30 +116,48 @@ static void inputs(int all){
             }
             assert(player[i].keys==0x10cu && player[i].newkeys==incoming_new());
             assert(player[i].playkeys==incoming_new() && player[i].releasekeys==0x8000u);
+            if(!history){
+                assert(player[i].combostep==2);
+                if(player[i].ent)assert(entities[i].movetime==(pattern==1?99u:1000u));
+                for(int j=0;j<MAX_SPECIAL_INPUTS;++j){
+                    assert(player[i].combokey[j]==0x55u && player[i].inputtime[j]==5u);
+                }
+                continue;
+            }
             assert(player[i].combostep==(pattern==0?2:pattern==1?1:3));
             if(pattern){
                 int index=pattern==1?0:2;u32 key=incoming_new();
                 if(pattern==1)key|=(i&1)?FLAG_BACKWARD:FLAG_FORWARD;
                 if(pattern==2)key|=(i&1)?FLAG_FORWARD:FLAG_BACKWARD;
-                assert(player[i].combokey[index]==key && player[i].inputtime[index]==time);
+                assert(player[i].combokey[index]==key && player[i].inputtime[index]==(clock?time:5u));
                 if(player[i].ent)assert(entities[i].movetime==time+GAME_SPEED/4);
             }
             for(int j=0;j<MAX_SPECIAL_INPUTS;++j){
                 if(pattern && j==(pattern==1?0:2))continue;
                 assert(player[i].combokey[j]==(pattern==1?0u:0x55u));
-                assert(player[i].inputtime[j]==(pattern==1?0u:5u));
+                assert(player[i].inputtime[j]==(clock && pattern==1?0u:5u));
             }
         }
         ++cases;
     }
     levelsets=NULL;
 }
-static void check(int global,int all){
-    if(PROBE_FOCUS!=2)defaults(global);
-    if(PROBE_FOCUS!=1)inputs(all);
+static void check(int global,int all,int history,int clock,int fixed){
+    if(PROBE_FOCUS!=2)defaults(global,fixed);
+    if(PROBE_FOCUS!=1)inputs(all,history,clock);
 }
-int main(void){@CHECKS@
+int main(void){@HELPER_KEEP@@CHECKS@
     printf("{\"status\":\"PASS\",\"cases\":%u}\n",cases);return 0;
 }
 '''.replace('@CONSTANTS@', constants).replace('@DECLARATIONS@', declarations).replace(
-        '@BODIES@', bodies).replace('@COMMANDS@', commands).replace('@CHECKS@', checks)
+        '@BODIES@', bodies).replace('@COMMANDS@', commands).replace('@CHECKS@', checks).replace(
+        '@HELPER_KEEP@', ('(void)obor_legacy_player_control;' +
+            ('(void)obor_level_set_player_count;' if 'obor_level_set_player_count(' in helpers else ''))
+            if helpers else '').replace('@STOP_PROVIDER@',
+        'static void extent_stop(int code,const char *text,...) {(void)code;(void)text;abort();}\n'
+        '#define shutdown extent_stop' if 'obor_legacy_levelsets(' in helpers else '').replace(
+        '@STOP_END@', '#undef shutdown' if 'obor_legacy_levelsets(' in helpers else '').replace(
+        '@RESET_DEFAULTS@',
+        's_obor_level_set_defaults *v=obor_legacy_set_options();'
+        'memset(v,0,sizeof(*v)*MAX_DIFFICULTIES);'
+        'for(int i=0;i<MAX_DIFFICULTIES;++i)v[i].maxplayers=2;' if helpers else '')

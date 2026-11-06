@@ -1,0 +1,163 @@
+/* Complete native pool callers with owned test records and observed services.
+ * SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <limits.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "openbor.h"
+#include "models.h"
+#undef time
+#undef printf
+#undef assert
+#undef shutdown
+#ifdef NDEBUG
+#error Entity-pool assertions must remain enabled
+#endif
+uint32_t obor_profile_build;
+static uint32_t fixture_clock;
+static const char *phase="initial";
+#define assert(c) do{if(!(c)){fprintf(stderr,"Entity capacity mismatch revision=%u phase=%s line=%d\n",obor_profile_build,phase,__LINE__);abort();}}while(0)
+static entity **ent_list,*textbox,*smartbomber;
+static int ent_list_size,ent_count,ent_max,currentspawnplayer,numPlatforms,numObstacles;
+int max_attack_types=1,max_entity_vars=1;
+s_savedata savedata;
+static s_model model;
+static s_scripts model_scripts;
+static s_defense model_defense[1];
+static float model_offense[1];
+static s_level *level;
+static unsigned active,constructors,releases,onkill;
+static int refuse_table,refuse_constructor;
+static const struct {unsigned revision;int dynamic,reset,capacity;} profiles[]={@PROFILES@},*profile;
+struct owned_record {entity *ent;s_defense *defense;float *offense;ScriptVariant *vars;s_scripts *scripts;};
+static struct owned_record owned[MAX_ENTS*5];
+#pragma GCC diagnostic push
+#if defined(__clang__)
+#if __has_warning("-Wsingle-bit-bitfield-constant-conversion")
+#pragma GCC diagnostic warning "-Wsingle-bit-bitfield-constant-conversion"
+#endif
+#endif
+@PLAINMETHOD@
+#pragma GCC diagnostic pop
+@DRAW_GLOBALS@
+static void unexpected_shutdown(int status,const char *text,...){(void)status;(void)text;abort();}
+static struct owned_record *owner(entity *ent){
+ for(unsigned i=0;i<sizeof(owned)/sizeof(*owned);++i)if(owned[i].ent==ent)return owned+i;
+ assert(0);return NULL;
+}
+entity *alloc_ent(void){
+ ++constructors;if(refuse_constructor && constructors==(unsigned)refuse_constructor)return NULL;
+ struct owned_record *slot=NULL;
+ for(unsigned i=0;i<sizeof(owned)/sizeof(*owned);++i)if(!owned[i].ent){slot=owned+i;break;}
+ assert(slot);
+ slot->ent=calloc(1,sizeof(entity));slot->defense=calloc(1,sizeof(s_defense));
+ slot->offense=calloc(1,sizeof(float));slot->vars=calloc(1,sizeof(ScriptVariant));
+ slot->scripts=calloc(1,sizeof(s_scripts));
+ assert(slot->ent && slot->defense && slot->offense && slot->vars && slot->scripts);
+ slot->ent->defense=slot->defense;slot->ent->offense_factors=slot->offense;
+ slot->ent->entvars=slot->vars;slot->ent->scripts=slot->scripts;++active;return slot->ent;
+}
+void free_ent(entity *ent){
+ if(!ent)return;
+ struct owned_record *slot=owner(ent);
+ assert(ent->defense==slot->defense && ent->offense_factors==slot->offense);
+ assert(ent->entvars==slot->vars && ent->scripts==slot->scripts && slot->scripts!=&model_scripts);
+ free(slot->defense);free(slot->offense);free(slot->vars);free(slot->scripts);free(slot->ent);
+ memset(slot,0,sizeof(*slot));assert(active>0);--active;++releases;
+}
+static void *pool_realloc(void *old,size_t bytes){if(refuse_table){refuse_table=0;return NULL;}return realloc(old,bytes);}
+void clear_all_scripts(s_scripts *scripts,int method){
+ assert(method==1 && scripts && scripts!=&model_scripts);
+ int found=0;for(unsigned i=0;i<sizeof(owned)/sizeof(*owned);++i)found|=owned[i].ent && owned[i].scripts==scripts;
+ assert(found);
+}
+void copy_all_scripts(s_scripts *source,s_scripts *destination,int method){
+ assert(source==&model_scripts);clear_all_scripts(destination,method);
+}
+void ScriptVariant_Clear(ScriptVariant *value){
+ int found=0;for(unsigned i=0;i<sizeof(owned)/sizeof(*owned);++i)found|=owned[i].ent && owned[i].vars==value;
+ assert(found && value->vt==VT_EMPTY);memset(value,0,sizeof(*value));
+}
+static void obor_colourmap_owner_release(s_model *value){assert(value && !value->maps_loaded);}
+static int obor_model_copy(s_model *destination,const s_model *source){
+ assert(source==&model);memcpy(destination,source,sizeof(*source));return 1;
+}
+s_model *findmodel(char *name){(void)name;abort();}
+void ent_set_colourmap(entity *ent,unsigned which){assert(owner(ent) && ent->exists && which==0);}
+void ent_default_init(entity *ent){assert(owner(ent) && ent->exists && ent->model==&model && ent->health==17);@DRAW_CHECK@}
+void execute_onkill_script(entity *ent){assert(owner(ent) && ent->exists);++onkill;}
+@HELPERS@
+#define time fixture_clock
+#define realloc pool_realloc
+#define shutdown unexpected_shutdown
+@ROUTINES@
+#undef shutdown
+#undef realloc
+#undef time
+static entity *create(void){return spawn(3,4,5,1,NULL,-1,&model);}
+static void begin(void){
+ assert(!active && !ent_list && !ent_list_size);
+ memset(owned,0,sizeof(owned));memset(&model,0,sizeof(model));memset(&savedata,0,sizeof(savedata));
+ model.scripts=&model_scripts;model.type=TYPE_ENEMY;model.health=17;model.mp=19;
+ model.defense=model_defense;model.offense_factors=model_offense;
+ model.name="fixture";constructors=releases=onkill=0;refuse_table=refuse_constructor=0;
+ fixture_clock=7;ent_count=ent_max=0;textbox=smartbomber=NULL;
+ assert(alloc_ents()==1 && ent_list_size==profile->capacity && active==(unsigned)profile->capacity);
+ for(int i=0;i<ent_list_size;++i)assert(ent_list[i] && ent_list[i]->sortid==i*100 && !ent_list[i]->exists);
+}
+static void finish(void){free_ents();assert(!ent_list && !ent_list_size && !active && !ent_count && !ent_max);}
+static void small_kill(void){
+ phase="small-kill";begin();assert(create()==ent_list[0] && ent_count==1 && ent_max==1);
+ kill_all();int retained=profile->reset?0:1;
+ assert(!fixture_clock && ent_count==retained && ent_max==retained && ent_list_size==profile->capacity && onkill==1);
+ assert(create()==ent_list[0] && ent_count==retained+1 && ent_max==retained+1);
+ finish();
+}
+static void full_pool(void){
+ phase="full-pool";begin();
+ for(int i=0;i<profile->capacity;++i){entity *ent=create();assert(ent==ent_list[i] && ent->sortid==i*100);}
+ entity *extra=create();int live=profile->capacity+profile->dynamic;
+ assert((extra!=NULL)==profile->dynamic && ent_count==live && ent_max==live);
+ assert(ent_list_size==profile->capacity*(profile->dynamic?2:1));
+ if(extra)assert(extra==ent_list[profile->capacity]);
+ assert(count_ents(TYPE_ENEMY)==live && findent(TYPE_ENEMY)==ent_list[0]);
+ phase="query-domain";int peak=ent_max;
+ for(int i=0;i<live;++i)ent_list[i]->modeldata.type=TYPE_NONE;
+ ent_list[live-1]->modeldata.type=TYPE_ENEMY;ent_max=1;
+ assert(count_ents(TYPE_ENEMY)==(profile->dynamic?0:1));
+ assert(findent(TYPE_ENEMY)==(profile->dynamic?NULL:ent_list[live-1]));
+ for(int i=0;i<live;++i)ent_list[i]->modeldata.type=TYPE_ENEMY;
+ ent_max=peak;unsigned freed=releases,created=constructors;
+ phase="full-kill";kill_all();
+ assert(!fixture_clock && !ent_count && !ent_max && ent_list_size==profile->capacity);
+ assert(releases-freed==(unsigned)(profile->dynamic?profile->capacity*2:0));
+ assert(constructors-created==(unsigned)(profile->dynamic?profile->capacity:0));
+ assert(count_ents(TYPE_ENEMY)==0 && findent(TYPE_ENEMY)==NULL);finish();
+}
+static void refusals(void){
+ phase="table-refusal";assert(!ent_list && !active);refuse_table=1;
+ assert(!alloc_ents() && !ent_list && !ent_list_size && !active);
+ phase="constructor-refusal";constructors=releases=0;refuse_constructor=3;
+ assert(!alloc_ents() && !ent_list && !ent_list_size && !active && releases==2);
+ refuse_constructor=0;assert(!ent_count && !ent_max);
+ if(profile->dynamic){
+  phase="growth-refusal";begin();entity **before=ent_list;unsigned built=constructors;
+  refuse_table=1;assert(!alloc_ents() && ent_list==before && ent_list_size==profile->capacity);
+  assert(constructors==built && active==(unsigned)profile->capacity && !ent_count && !ent_max);finish();
+ }
+}
+int main(void){
+#if @DRAW_ONLY@
+@DRAW_MAIN@
+#else
+ for(unsigned p=0;p<sizeof(profiles)/sizeof(*profiles);++p){
+  profile=profiles+p;obor_profile_build=profile->revision;
+  assert(profile->capacity==MAX_ENTS);small_kill();full_pool();
+  if(@FAILURES@)refusals();
+  printf("{\"revision\":%u,\"capacity\":%d,\"dynamic\":%d,\"reset\":%d}\n",obor_profile_build,profile->capacity,profile->dynamic,profile->reset);
+ }
+#endif
+ return 0;
+}

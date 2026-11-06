@@ -40,7 +40,9 @@ def program(engine, rows, contracts):
             any((row['engine'], row['contract']) != (engine, first['contract']) for row in rows)
             or [row['revision'] for row in rows] != sorted({row['revision'] for row in rows})):
         raise ValueError('One engine/expectation group with unique sorted revisions required')
-    code = render_normal_attack(source_parts(engine), revision=first['revision'],
+    parts = source_parts(engine)
+    code = render_normal_attack(parts, revision=first['revision'],
+        unused_early_routes='max_freespecials' in parts['common_try_normalattack'],
         **contracts[first['contract']])
     marker = 'int main(void) {'
     if code.count(marker) != 1:

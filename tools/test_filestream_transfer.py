@@ -7,7 +7,7 @@ Copyright (c) 2026 retrodiv <retrodiv@proton.me>
 """
 from contract_fixtures import load_contract_fixture, contract_profiles
 import json
-from historical_filestreams import extract_storage_helpers
+from historical_filestreams import single_active_table_provider, extract_storage_helpers
 import os
 from pathlib import Path
 import shlex
@@ -53,7 +53,7 @@ class FilestreamTransferTests(unittest.TestCase):
         link=['-Wl,-dead_strip']if sys.platform=='darwin'else['-no-pie','-Wl,--gc-sections']
         for engine,layout in cls.layouts.items():
             root=SOURCE/'src/engines'/engine;script=(root/'openborscript.c').read_text()
-            helpers=extract_storage_helpers(script,function)
+            helpers=extract_storage_helpers(script,function,level_table_provider=single_active_table_provider())
             program=render_pak_open(revisions=[int(engine)],
                 opening=function(script,'openbor_openfilestream'),helpers=helpers,
                 payload=[97,0,98,10],**{key:layout[key]for key in

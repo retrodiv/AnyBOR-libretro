@@ -1,0 +1,216 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <assert.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <limits.h>
+#pragma GCC diagnostic push
+#pragma GCC diagnostic warning "-Wmissing-field-initializers"
+#if defined(__clang__)
+#if __has_warning("-Wsingle-bit-bitfield-constant-conversion")
+#pragma GCC diagnostic warning "-Wsingle-bit-bitfield-constant-conversion"
+#endif
+#endif
+@DECLARATIONS@
+#pragma GCC diagnostic pop
+#undef printf
+uint32_t obor_profile_build;
+int screenformat, pixelformat;
+int pixelbytes[5]={1,1,2,3,4};
+static entity frozen_textbox;
+static s_level native_level;
+static s_layer native_layers[2];
+static s_screen screens[2];
+static s_sprite sprites[2];
+static float hole_data[1][7];
+static s_screen destinations[2];
+static unsigned cases,calls,holes,clears;
+static int hole_x,hole_y;
+static struct {int x,y,z,sort,type,layer;s_drawmethod method;} observed[64];
+#undef assert
+#define assert(c) do{if(!(c)){fprintf(stderr,"BG profile=%u case=%u line=%d\n",obor_profile_build,cases,__LINE__);abort();}}while(0)
+static void queue(int x,int y,int z,int sort,int type,s_drawmethod *method)
+{
+    assert(calls<64 && method);unsigned n=calls++;
+    observed[n].x=x;observed[n].y=y;observed[n].z=z;observed[n].sort=sort;
+    observed[n].type=type;observed[n].method=*method;
+}
+void spriteq_add_screen(int x,int y,int z,s_screen *screen,s_drawmethod *method,int sort)
+{assert(screen==screens || screen==screens+1);unsigned n=calls;queue(x,y,z,sort,gfx_screen,method);observed[n].layer=(int)(screen-screens);}
+void spriteq_add_frame(int x,int y,int z,s_sprite *sprite,s_drawmethod *method,int sort)
+{assert(sprite==sprites || sprite==sprites+1);unsigned n=calls;queue(x,y,z,sort,gfx_sprite,method);observed[n].layer=(int)(sprite-sprites);}
+void spriteq_add_sprite(int x,int y,int z,int id,s_drawmethod *method,int sort)
+{assert(z==HOLE_Z && id==holesprite && method && !sort);hole_x=x;hole_y=y;++holes;}
+void clearscreen(s_screen *screen){assert(screen==canvas);++clears;}
+void putscreen(s_screen *dest,s_screen *src,int x,int y,s_drawmethod *method)
+{assert(dest==canvas);spriteq_add_screen(x,y,MIN_INT,src,method,0);}
+void putsprite(int x,int y,s_sprite *src,s_screen *dest,s_drawmethod *method)
+{assert(dest==canvas);spriteq_add_frame(x,y,MIN_INT,src,method,0);}
+@UPDATE@
+@DRAW@
+static void begin(int kind)
+{
+    memset(&native_level,0,sizeof(native_level));level=&native_level;
+    memset(native_layers,0,sizeof(native_layers));level->layersref=native_layers;level->numlayersref=2;
+    memset(&videomodes,0,sizeof(videomodes));videomodes.hRes=32;videomodes.vRes=24;
+    screenformat=PIXEL_32;pixelformat=PIXEL_x8;current_palette=0;
+    viewportx=viewporty=viewportw=viewporth=0;
+    advancex=4;advancey=12;bgtravelled=8;
+    gfx_x_offset=3;gfx_y_offset=5;timevar=11;
+    memset(screens,0,sizeof(screens));memset(sprites,0,sizeof(sprites));
+    for(int n=0;n<2;++n) {
+        screens[n].magic=screen_magic;sprites[n].magic=sprite_magic;
+        s_layer *layer=native_layers+n;
+        layer->enabled=1;layer->width=10;layer->height=7;layer->xspacing=2;layer->zspacing=1;
+        layer->xoffset=-5+7*n;layer->xratio=0.5f;layer->zratio=0.25f;layer->bgspeedratio=0.25f;
+        layer->z=30+n;layer->drawmethod=plainmethod;
+        layer->drawmethod.xrepeat=4;layer->drawmethod.yrepeat=3;
+        layer->drawmethod.water.wavespeed=1.5f;layer->neon=n;
+        layer->gfx.type=kind;
+        if(kind==gfx_screen)layer->gfx.screen=screens+n;else layer->gfx.sprite=sprites+n;
+    }
+    level->numholes=1;level->holes=hole_data;
+    hole_data[0][0]=37;hole_data[0][1]=41;hole_data[0][6]=6;holesprite=17;
+    calls=holes=clears=0;vscreen=destinations;canvas=destinations+1;memset(observed,0,sizeof(observed));
+}
+static int ceiling_positive(int distance,int step)
+{return distance<=0?0:(distance+step-1)/step;}
+static int bounded_count(int limit,int skip,int distance,int step)
+{
+    int available=limit-skip,visible=ceiling_positive(distance,step);
+    if(available<0)return 0;
+    return available<visible?available:visible;
+}
+static void check(int nested,int precedence,int old_holes,int zero_sort,int stored_tag)
+{
+    const int offsets[]={0,8,-SCROLL_UP,-3};
+    for(int up=0;up<2;++up)for(unsigned offset=0;offset<4;++offset)
+    for(int moving=0;moving<2;++moving)for(int quake=0;quake<2;++quake)
+    for(int custom=0;custom<2;++custom)for(int amplitude=0;amplitude<2;++amplitude)
+    for(int kind_index=0;kind_index<2;++kind_index) {
+        ++cases;int kind=kind_index?gfx_sprite:gfx_screen;begin(kind);
+        level->scrolldir=up?SCROLL_UP:SCROLL_RIGHT;advancey=moving?12:0;
+        if(custom){viewportx=5;viewporty=3;viewportw=19;viewporth=17;}
+        for(int n=0;n<2;++n) {
+            native_layers[n].zoffset=offsets[offset];native_layers[n].quake=quake;
+            native_layers[n].drawmethod.water.amplitude=amplitude?2:0;
+        }
+        draw_scrolled_bg();assert(holes==1 && calls==2 && !clears);
+        assert(hole_x==36 && hole_y==(old_holes?44:40-(up?0:(int)advancey)));
+        int vx=custom?5:0,vy=custom?3:0,vw=custom?19:32,vh=custom?17:24;
+        for(int n=0;n<2;++n) {
+            int x=-8+7*n+(quake?3:0)-vx;
+            int z;
+            if(nested)z=up?(int)(24+advancey*0.25f-offsets[offset]-8*3+8+1):
+                (int)(offsets[offset]+advancey*0.25f-advancey);
+            else if(precedence)z=(offsets[offset]+(level->scrolldir&SCROLL_UP))?
+                (int)(-advancey*0.25f):(int)(advancey*0.25f);
+            else z=up?(int)(offsets[offset]+advancey*0.75f):(int)(offsets[offset]-advancey*0.75f);
+            if(quake)z+=5+(nested?advancey:0);
+            z-=vy;
+            int skip_x=x<0?(-x)/12:0,skip_y=z<0?(-z)/8:0;
+            if(x<0)x%=12;
+            if(z<0)z%=8;
+            if(skip_x>0 && amplitude){--skip_x;x-=12;}
+            int columns=bounded_count(4,skip_x,vw+(amplitude?4:0)-x,12);
+            int rows=bounded_count(3,skip_y,vh-z,8);
+            assert(observed[n].x==x+vx && observed[n].y==z+vy && observed[n].z==30+n);
+            assert(observed[n].type==kind && observed[n].layer==n && observed[n].sort==(zero_sort?0:n));
+            s_drawmethod *method=&observed[n].method;
+            assert(method->xspan==12 && method->yspan==8);
+            assert(method->xrepeat==(nested?columns*rows:columns) && method->yrepeat==rows);
+            assert(method->water.wavetime==16);
+            assert(method->table==(n?neontable:NULL));
+        }
+    }
+    /* The screen-coordinate macro uses direction equality, while layer z
+       uses a direction bit. Keep both contracts for combined directions. */
+    ++cases;begin(gfx_screen);level->scrolldir=SCROLL_UP|SCROLL_RIGHT;
+    level->numlayersref=0;draw_scrolled_bg();
+    assert(holes==1 && calls==0 && hole_x==36 && hole_y==(old_holes?44:28));
+    ++cases;begin(gfx_screen);
+    gfx_entry descriptor=native_layers[0].gfx;descriptor.type=gfx_bitmap;
+    assert(obor_gfx_entry_type(&descriptor)==(stored_tag?gfx_bitmap:gfx_screen));
+    descriptor.handle=NULL;assert(obor_gfx_entry_type(&descriptor)==-1);
+}
+static void check_canvas(void)
+{
+    for(int kind_index=0;kind_index<2;++kind_index)for(int direct=0;direct<2;++direct)
+    for(int custom=0;custom<2;++custom)for(int up=0;up<2;++up)for(int quake=0;quake<2;++quake) {
+        ++cases;int kind=kind_index?gfx_sprite:gfx_screen;begin(kind);
+        canvas=custom?destinations+1:NULL;level->scrolldir=up?SCROLL_UP:SCROLL_RIGHT;
+        if(custom){viewportx=5;viewporty=3;viewportw=19;viewporth=17;}
+        for(int n=0;n<2;++n) {
+            native_layers[n].xoffset=n?-25:-5;native_layers[n].zoffset=3;
+            native_layers[n].quake=quake;native_layers[n].z=direct?MIN_INT:30+n;
+            native_layers[n].drawmethod.water.amplitude=n?0:2;
+        }
+        draw_scrolled_bg();assert(holes==1 && clears==1 && hole_x==36 && hole_y==44);
+        assert(canvas==(custom?destinations+1:vscreen));
+        unsigned expected=0;int vx=custom?5:0,vy=custom?3:0,vw=custom?19:32,vh=custom?17:24;
+        for(int n=0;n<2;++n) {
+            int x=(n?-28:-8)+(quake?3:0)-vx;
+            int z=(up?9:-6)+(quake?17:0)-vy;
+            int skip_x=x<0?(-x)/12:0,skip_y=z<0?(-z)/8:0;
+            if(x<0)x%=12;
+            if(z<0)z%=8;
+            /* Before the method copy, the left-margin correction observes
+               the preceding layer's water amplitude;the first uses plain. */
+            if(skip_x>0 && n){--skip_x;x-=12;}
+            int columns=bounded_count(4,skip_x,vw+(n?0:4)-x,12);
+            int rows=bounded_count(3,skip_y,vh-z,8);
+            for(int row=0;row<rows;++row)for(int col=0;col<columns;++col) {
+                assert(expected<calls);unsigned at=expected++;
+                assert(observed[at].x==x+col*12+(direct?0:vx));
+                assert(observed[at].y==z+row*8+(direct?0:vy));
+                assert(observed[at].z==(direct?MIN_INT:30+n) && observed[at].sort==0);
+                assert(observed[at].type==kind && observed[at].layer==n);
+                s_drawmethod *method=&observed[at].method;
+                assert(method->xrepeat==1 && method->yrepeat==1 && !method->xspan && !method->yspan);
+                assert(method->water.wavetime==16 && method->table==(n?neontable:NULL));
+            }
+        }
+        assert(expected==calls);
+    }
+    ++cases;begin(gfx_screen);level->numlayersref=0;draw_scrolled_bg();
+    assert(clears==1 && holes==1 && calls==0);
+    ++cases;begin(gfx_screen);native_layers[0].enabled=0;native_layers[1].drawmethod.xrepeat=0;
+    draw_scrolled_bg();assert(clears==1 && holes==1 && calls==0);
+}
+static void check_clock(int old_camera)
+{
+    const int directions[]={SCROLL_UP,SCROLL_DOWN,SCROLL_RIGHT,SCROLL_LEFT,SCROLL_UP|SCROLL_RIGHT};
+    const int quakes[]={-6,0,8};
+    for(unsigned d=0;d<5;++d)for(int rock=0;rock<4;++rock)
+    for(unsigned q=0;q<3;++q)for(int frozen=0;frozen<2;++frozen) {
+        ++cases;begin(gfx_screen);level->scrolldir=directions[d];
+        level->rocking=rock;level->quake=quakes[q];level->quaketime=100;
+        level->bgspeed=1.25f;neon_time=1000;time=100;traveltime=94;texttime=7;
+        smartbomber=NULL;textbox=frozen?&frozen_textbox:NULL;gfx_y_offset_adj=9;
+        update_scrolled_bg();
+        float travelled=frozen?8.0f:(rock?9.9f:9.0f);
+        float difference=bgtravelled-travelled;
+        assert(difference<0.0001f && difference>-0.0001f);
+        assert(traveltime==100 && texttime==(frozen?13:7) && timevar==(frozen?87:93));
+        int y=rock?quakes[q]-4-(rock==1?4:(rock==2?2:3)):
+            (quakes[q]>=0?quakes[q]-4:quakes[q]+4);
+        if(old_camera && directions[d]!=SCROLL_UP && directions[d]!=SCROLL_DOWN)y-=12;
+        assert(gfx_y_offset==y+9 && gfx_x_offset==3);
+        assert(level->quake==quakes[q]/2 && level->quaketime==100+GAME_SPEED/25 && neon_time==1000);
+    }
+    smartbomber=textbox=NULL;
+}
+int main(void)
+{
+    const struct {unsigned revision;int nested,precedence,old_holes,zero_sort,stored_tag,legacy_canvas;} contexts[]={@CONTEXTS@};
+    for(unsigned p=0;p<sizeof(contexts)/sizeof(*contexts);++p) {
+        obor_profile_build=contexts[p].revision;cases=0;
+        if(contexts[p].legacy_canvas)check_canvas();
+        else check(contexts[p].nested,contexts[p].precedence,contexts[p].old_holes,contexts[p].zero_sort,contexts[p].stored_tag);
+        check_clock(contexts[p].old_holes);
+        assert(cases==(contexts[p].legacy_canvas?154u:378u));printf("{\"revision\":%u,\"cases\":%u,\"status\":\"PASS\"}\n",obor_profile_build,cases);
+    }
+    return 0;
+}

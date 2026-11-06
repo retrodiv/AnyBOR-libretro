@@ -4,7 +4,7 @@
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
  * Upstream code retains its original license and notices.
  * Match each profile's native transparency when blending an indexed screen
- * into 32-bit pixels.
+ * into 32-bit pixels and its pre-3600 opaque, unblended copy-width limit.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/3741.md
  * at the source repository root. Original notices follow below.
@@ -58,6 +58,8 @@ void putscreenx8p32(s_screen * dest, s_screen * src, int x, int y, int key, u32*
 
 	if(x<0) x = 0;
 	if(y<0) y = 0;
+
+    if(obor_profile_build < 3600 && !key && !blendfp && cw > 960) return;
 
 	sp += (soy*sw + sox);
 	dp += (y*dw + x);

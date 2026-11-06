@@ -1,0 +1,97 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <assert.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <strings.h>
+#include <stdarg.h>
+#include "openbor.h"
+#undef assert
+#undef printf
+#ifdef NDEBUG
+#error Value contract assertions must remain enabled
+#endif
+static unsigned active_case;
+uint32_t obor_profile_build;
+#define assert(c) do {if(!(c)){fprintf(stderr,"ENTITY_VALUE revision=%u case=%u line=%d\n",obor_profile_build,active_case,__LINE__);abort();}}while(0)
+static char cache[8][256],diagnostic[768];
+CHAR *StrCache_Get(int index){assert(index>=0 && index<8);return cache[index];}
+int StrCache_Pop(void){return 0;}
+void StrCache_Collect(int index){assert(index>=0 && index<8);}
+static int record_printf(const char *format,...) {
+ size_t used=strlen(diagnostic);va_list ap;va_start(ap,format);
+ int n=vsnprintf(diagnostic+used,sizeof(diagnostic)-used,format,ap);va_end(ap);
+ assert(n>=0 && (size_t)n<sizeof(diagnostic)-used);return n;
+}
+#define printf record_printf
+@CONVERTERS@
+@GET_DECLARATIONS@
+@SET_DECLARATIONS@
+@CONSTANT_MACRO@
+@CONSTANT_MAPPER@
+@ANIMATION_ARRAYS@
+@CONSTANT_ENTRY@
+static entity actor,target;
+static s_anim animations[2];static s_anim *animation_table[2];
+static short vulnerability[2][2]={{13,17},{19,23}};
+struct value_case {int operation,property,count,bound_null;int kinds[4];int64_t integers[4];double decimals[4];};
+static const struct value_case cases[]={@CASES@};
+struct value_profile {unsigned revision;int ids[2][10];uint32_t marker;unsigned representation;unsigned char enabled[sizeof(cases)/sizeof(*cases)];};
+static const struct value_profile profiles[]={@PROFILES@};
+@OWN_REPRESENTATIONS@
+static uint32_t bits(float x){uint32_t u;_Static_assert(sizeof(x)==sizeof(u),"binary32 required");memcpy(&u,&x,sizeof(u));return u;}
+static ScriptVariant integer(LONG n){ScriptVariant v={0};v.vt=VT_INTEGER;v.lVal=n;return v;}
+static void value_seed_records(void){
+ memset(&actor,0,sizeof(actor));memset(&target,0,sizeof(target));memset(animations,0,sizeof(animations));
+ actor.boss=7;actor.a=2.5f;actor.modeldata.pathfindstep=1.75f;
+ actor.modeldata.candamage=3;actor.modeldata.hostile=5;actor.modeldata.projectilehit=9;
+ actor.modeldata.ground=0;actor.bound=&target;actor.animnum=1;actor.animpos=1;
+ for(int i=0;i<2;++i){animations[i].vulnerable=vulnerability[i];animations[i].numframes=2;animation_table[i]=&animations[i];}
+ actor.modeldata.animation=animation_table;*diagnostic=0;memset(cache,0,sizeof(cache));
+}
+static HRESULT get_value(int property,ScriptVariant **varlist,ScriptVariant **pretvar,int paramCount){
+ entity *ent=&actor;int i=0,tempint=0;ScriptVariant_Clear(*pretvar);
+ switch(obor_entity_get_property_native(property)){@GET_CASES@default:*pretvar=NULL;return E_FAIL;}
+ return S_OK;
+}
+static HRESULT set_value(int property,ScriptVariant **varlist,ScriptVariant **pretvar,int paramCount){
+ entity *ent=&actor;LONG ltemp;DOUBLE dbltemp;int i;
+ static const int entitytypes[]={0,TYPE_ENEMY,TYPE_NPC,TYPE_OBSTACLE,TYPE_PLAYER,TYPE_SHOT};
+ ScriptVariant_ChangeType(*pretvar,VT_INTEGER);(*pretvar)->lVal=0;
+ switch(obor_entity_set_property_native(property)){@SET_CASES@default:goto changeentityproperty_error;}
+ return S_OK;
+changeentityproperty_error:*pretvar=NULL;return E_FAIL;
+}
+#undef printf
+static void string_json(const char *s){putchar('"');for(;*s;++s){unsigned char c=(unsigned char)*s;if(c=='"'||c=='\\'){putchar('\\');putchar(c);}else if(c<32)printf("\\u%04x",c);else putchar(c);}putchar('"');}
+int main(void){
+ _Static_assert(sizeof(LONG)==4,"Script integer width required");
+ for(unsigned p=0;p<sizeof(profiles)/sizeof(*profiles);++p){
+  obor_profile_build=profiles[p].revision;
+  for(unsigned k=0;k<sizeof(cases)/sizeof(*cases);++k){
+   active_case=k;const struct value_case *c=&cases[k];value_seed_records();if(c->bound_null)actor.bound=NULL;
+   int property=c->operation>=2?0:profiles[p].ids[c->operation][c->property];
+   if(!profiles[p].enabled[k] || (c->operation<2 && property<0)){printf("{\"revision\":%u,\"case\":%u,\"skipped\":true}\n",obor_profile_build,k);continue;}
+   ScriptVariant values[6]={0},result=integer(911),*out=&result,*args[6];
+   for(int i=0;i<6;++i)args[i]=&values[i];
+   values[0].vt=VT_PTR;values[0].ptrVal=&actor;values[1]=integer(property);
+   for(int i=0;i<4;++i){
+    values[i+2]=integer((LONG)c->integers[i]);
+    if(c->kinds[i]==1){values[i+2].vt=VT_DECIMAL;values[i+2].dblVal=c->decimals[i];}
+    if(c->kinds[i]==2){values[i+2].vt=VT_STR;values[i+2].strVal=i+1;strcpy(cache[i+1],"unconverted");}
+    if(c->kinds[i]==3)values[i+2]=integer((LONG)(profiles[p].marker|(uint32_t)c->integers[i]));
+   }
+   HRESULT status;int original_masks[3]={0,0,0};
+   if(c->operation==3){LONG value=values[2].lVal;actor.modeldata.candamage=value;actor.modeldata.hostile=value;actor.modeldata.projectilehit=value;own_representation(profiles[p].representation,value,original_masks);result=integer(0);status=S_OK;}
+   else if(c->operation==2){values[0].vt=VT_STR;values[0].strVal=1;strcpy(cache[1],"TYPE_RESERVED");status=openbor_transconst(args,&out,1);}
+   else status=c->operation?set_value(property,args,&out,c->count):get_value(property,args,&out,c->count);
+   int kind=result.vt==VT_INTEGER?1:result.vt==VT_DECIMAL?2:result.vt==VT_PTR?3:0;
+   double number=kind==1?(double)result.lVal:kind==2?result.dblVal:kind==3?(result.ptrVal==NULL?0:result.ptrVal==&target?1:2):0;
+   printf("{\"revision\":%u,\"case\":%u,\"status\":%d,\"output\":%d,\"kind\":%d,\"value\":%.17g,\"fields\":[%d,%u,%d,%d,%d,%d,%d],\"diagnostic\":",obor_profile_build,k,(int)status,out!=NULL,kind,number,(int)actor.boss,bits(actor.modeldata.pathfindstep),(int)actor.modeldata.candamage,(int)actor.modeldata.hostile,(int)actor.modeldata.projectilehit,(int)actor.modeldata.ground,actor.bound==&target);
+   string_json(diagnostic);printf(",\"own_fields\":[%d,%d,%d]}\n",original_masks[0],original_masks[1],original_masks[2]);
+  }
+ }
+ return 0;
+}

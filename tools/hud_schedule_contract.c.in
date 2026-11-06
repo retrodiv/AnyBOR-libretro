@@ -1,0 +1,345 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <assert.h>
+#include <limits.h>
+#include <stdint.h>
+#include <stdarg.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#pragma GCC diagnostic push
+#pragma GCC diagnostic warning "-Wmissing-field-initializers"
+#if defined(__clang__)
+#if __has_warning("-Wsingle-bit-bitfield-constant-conversion")
+#pragma GCC diagnostic warning "-Wsingle-bit-bitfield-constant-conversion"
+#endif
+#endif
+@DECLARATIONS@
+#pragma GCC diagnostic pop
+#undef printf
+@SAVEDATA@
+uint32_t obor_profile_build;
+static s_set_entry sets[10];
+static s_level native_level;
+static entity native_entities[4];
+static s_model choices[2];
+static unsigned char palette[4][256];
+static unsigned char *maps[4]={palette[0],palette[1],palette[2],palette[3]};
+static s_screen native_screen,native_background,native_canvas,native_zoom;
+static char events[2048],first_text[128];
+static unsigned event_count,cases,ticks,go_sounds,arrows,spawns,joins,drops;
+static int first_font_entity,last_tick,printed_time,printed_over,background_queues,last_background_z,draw_calls;
+static uint64_t icons;
+static void *icon_table;
+static int depths[4][2];
+static s_screen *draw_targets[4];
+#undef assert
+#define assert(c) do {if(!(c)){fprintf(stderr,"HUD profile=%u case=%u line=%d events=%s\n",obor_profile_build,cases,__LINE__,events);abort();}}while(0)
+static void event(char ch)
+{assert(event_count+1<sizeof(events));events[event_count++]=ch;events[event_count]=0;}
+static void observations(void)
+{
+    event_count=0;*events=*first_text=0;first_font_entity=-1;
+    ticks=go_sounds=arrows=spawns=joins=drops=0;
+    last_tick=printed_time=-1;printed_over=0;icons=0;icon_table=NULL;background_queues=0;last_background_z=99;draw_calls=0;
+}
+unsigned getFPS(void) {return 60;}
+char *commaprint(u64 value) {(void)value;return "12";}
+void font_printf(int x,int y,int which,int layer,char *format,...)
+{
+    (void)x;(void)y;(void)which;(void)layer;
+    char text[128];va_list args;va_start(args,format);vsnprintf(text,sizeof(text),format,args);va_end(args);
+    if(first_font_entity<0) {first_font_entity=player[0].ent!=NULL;strcpy(first_text,text);}
+    if(!strcmp(format,"%02i"))printed_time=atoi(text);
+    if(!strcmp(text,"TIME OVER"))printed_over=1;
+    event('f');
+}
+void spriteq_add_sprite(int x,int y,int z,int id,s_drawmethod *method,int sort)
+{
+    (void)x;(void)y;(void)z;(void)method;(void)sort;
+    if(id==gosprite || id==golsprite) {++arrows;event('A');}
+    else if(id>=0 && id<64) {icons|=UINT64_C(1)<<id;if(id==9)icon_table=method?method->table:NULL;}
+}
+void spriteq_add_box(int x,int y,int width,int height,int z,int color,s_drawmethod *method)
+{(void)x;(void)y;(void)width;(void)height;(void)color;(void)z;(void)method;}
+int sound_play_sample(int id,unsigned priority,int left,int right,unsigned speed)
+{
+    (void)priority;(void)left;(void)right;(void)speed;
+    if(id==SAMPLE_GO) {++go_sounds;event('G');} else if(id==SAMPLE_BEEP2)event('K');
+    return 0;
+}
+#if @MODEL_CHECKS@
+@MODEL_SERVICES@
+#else
+s_model *findmodel(char *name)
+{assert(!strcmp(name,"hero") || !strcmp(name,"other"));return !strcmp(name,"hero")?choices:choices+1;}
+s_model *nextplayermodel(s_model *previous) {return previous==choices?choices+1:choices;}
+s_model *prevplayermodel(s_model *previous) {return previous==choices+1?choices:choices+1;}
+#endif
+void spawnplayer(int index)
+{
+    assert(index>=0 && index<4);++spawns;event('S');
+    player[index].ent=native_entities+index;
+    strcpy(player[index].ent->name,player[index].name);
+    player[index].ent->modeldata=choices[0];player[index].ent->health=100;
+}
+void execute_join_script(int index) {assert(index>=0 && index<4);++joins;event('J');}
+void drop_all_enemies(void) {++drops;event('D');}
+void execute_timetick_script(int value,int gotime)
+{assert(gotime==(int)go_time);++ticks;last_tick=value;event('t');}
+void update_scrolled_bg(void) {event('F');}
+void draw_scrolled_bg(void) {if(obor_profile_build>=3552 && obor_profile_build<3556)assert(canvas);event('B');}
+void drawstatus(void) {event('H');}
+void draw_textobjs(void) {event('T');}
+void execute_updatedscripts(void) {event('U');}
+void display_ents(void) {event('E');}
+void clearscreen(s_screen *screen) {assert(screen==vscreen);event('C');}
+void putscreen(s_screen *destination,s_screen *source,int x,int y,s_drawmethod *method)
+{assert(destination==vscreen && source==background && !x && !y && !method);event('V');}
+void spriteq_add_screen(int x,int y,int z,s_screen *screen,s_drawmethod *method,int sort)
+{assert(!x && !y && screen==background && !method && !sort);++background_queues;last_background_z=z;event('N');}
+void sound_pause_music(int value) {assert(value==1);event('M');}
+void sound_pause_sample(int value) {assert(value==1);event('L');}
+void pausemenu(void) {event('P');}
+void spriteq_lock(void) {event('Q');}
+void spriteq_clear(void) {event('R');}
+void spriteq_draw(s_screen *screen,int newonly,int minz,int maxz,int dx,int dy)
+{
+    assert((screen==vscreen || screen==zoombuffer) && !newonly && !dx && !dy && draw_calls<4);
+    draw_targets[draw_calls]=screen;depths[draw_calls][0]=minz;depths[draw_calls][1]=maxz;
+    ++draw_calls;event('D');
+}
+s_screen *allocscreen(int width,int height,int format)
+{assert(width==vscreen->width && height==vscreen->height && format==vscreen->pixelformat);native_zoom=*vscreen;event('a');return &native_zoom;}
+void freescreen(s_screen **screen)
+{assert(screen==&zoombuffer && *screen==&native_zoom);*screen=NULL;event('r');}
+void copyscreen(s_screen *destination,s_screen *source)
+{assert(destination==zoombuffer && source==vscreen);event('c');}
+void zoomscreen(s_screen *destination,s_screen *source,int x,int y,int sx,int sy)
+{assert(destination==vscreen && source==zoombuffer && x==zoom_center_x && y==zoom_center_y && sx==zoom_scale_x && sy==zoom_scale_y);event('Z');}
+void shutdown(int code,char *format,...){(void)code;(void)format;abort();}
+#pragma GCC diagnostic push
+#if defined(__clang__)
+#if __has_warning("-Wsingle-bit-bitfield-constant-conversion")
+#pragma GCC diagnostic warning "-Wsingle-bit-bitfield-constant-conversion"
+#endif
+#endif
+@NATIVE@
+#pragma GCC diagnostic pop
+static void frame_gfx(int ingame)
+{
+@PHASE@
+    event('X');
+}
+static void begin(void)
+{
+    memset(sets,0,sizeof(sets));levelsets=sets;current_set=0;
+    memset(&native_level,0,sizeof(native_level));level=&native_level;level->notime=1;level->noreset=1;
+    memset(player,0,sizeof(player));memset(native_entities,0,sizeof(native_entities));
+    memset(choices,0,sizeof(choices));
+    for(int i=0;i<2;++i) {
+        choices[i].name=i?"other":"hero";choices[i].health=100;choices[i].mp=20;
+        choices[i].colourmap=maps;choices[i].colourmap_capacity=4;choices[i].maps_loaded=4;
+        choices[i].icon.def=choices[i].icon.pain=choices[i].icon.die=choices[i].icon.get=-1;
+        choices[i].icon.weapon=choices[i].icon.mphigh=choices[i].icon.mpmed=choices[i].icon.mplow=-1;
+    }
+    memset(&savedata,0,sizeof(savedata));memset(&videomodes,0,sizeof(videomodes));
+    videomodes.hRes=320;videomodes.vRes=240;
+    for(int i=0;i<4;++i)videomodes.shiftpos[i]=100*i;
+    bgicon=olicon=timeicon=-1;gosprite=1000;golsprite=-1;SAMPLE_GO=7;SAMPLE_BEEP2=8;
+    gosound=showgo=0;oldtime=99;timeleft=99*COUNTER_SPEED;time=1000;go_time=0;
+    PLAYER_LIVES=3;CONTINUES=5;credits=11;noshare=creditscheat=nodropen=nojoin=sameplayer=0;
+    smartbomber=textbox=NULL;
+    nopause=pause=alwaysupdate=selectScreen=0;
+    memset(rush,0,sizeof(rush));showtimeover=0;timetoshow=-7;
+    background=&native_background;vscreen=&native_screen;canvas=NULL;zoombuffer=NULL;zoom_scale_x=zoom_scale_y=0;
+    observations();
+}
+static void draw_hud(void) {
+#if @MODEL_CHECKS@
+    lookup_phase=0;
+#endif
+    updatestatus();
+#if @MODEL_CHECKS@
+    lookup_phase=1;
+#endif
+    predrawstatus();
+}
+static void check_join(int combined)
+{
+    ++cases;begin();sets[0].maxplayers=1;
+    player[0].joining=1;strcpy(player[0].name,"hero");player[0].playkeys=FLAG_ANYBUTTON;
+    draw_hud();assert(spawns==1 && joins==1 && drops==1 && player[0].ent && player[0].lives==3);
+    assert(first_font_entity==!combined);
+    ++cases;begin();sets[0].maxplayers=1;
+    player[0].credits=3;player[0].playkeys=FLAG_START;
+    draw_hud();assert(!spawns && player[0].joining && !strcmp(player[0].name,"hero") && credits==10);
+    assert(!strcmp(first_text,combined?"Press Start":"hero"));
+}
+static void check_timer_go(int combined)
+{
+    const int seconds[]={0,1,15,99,100};
+    const int deltas[]={-1,0,1,GAME_SPEED/2-1,GAME_SPEED/2,GAME_SPEED+1};
+    const int directions[]={0,SCROLL_LEFT,SCROLL_RIGHT,SCROLL_LEFT|SCROLL_RIGHT};
+    for(unsigned t=0;t<5;++t)for(int hidden=0;hidden<2;++hidden)
+    for(unsigned d=0;d<6;++d)for(unsigned direction=0;direction<4;++direction)
+    for(int prior_sound=0;prior_sound<2;++prior_sound) {
+        ++cases;begin();level->notime=hidden;level->scrolldir=directions[direction];
+        timeleft=seconds[t]*COUNTER_SPEED;showtimeover=1;gosound=prior_sound;
+        go_time=time+deltas[d];draw_hud();
+        int value=seconds[t]>99?99:seconds[t];
+        assert(printed_time==(hidden?-1:value));
+        assert(printed_over==(combined || value>=99));
+        assert(showtimeover==(value>=99));
+        assert(ticks==(unsigned)(value<99) && last_tick==(value<99?value:-1));
+        int active=deltas[d]>0;int flashing=active && deltas[d]%GAME_SPEED<GAME_SPEED/2;
+        assert(arrows==(unsigned)(flashing && direction!=0));
+        assert(go_sounds==(unsigned)(flashing && !prior_sound && (!combined || direction!=0)));
+        if(arrows && go_sounds)assert((strchr(events,'A')<strchr(events,'G'))==combined);
+    }
+}
+static void check_join_icons(void)
+{
+    const int colours[]={0,3,5,1};
+    for(unsigned n=0;n<4;++n) {
+        ++cases;begin();sets[0].maxplayers=1;player[0].joining=1;
+        strcpy(player[0].name,"hero");player[0].colourmap=colours[n];
+        choices[0].icon.def=9;choices[0].palette=palette[3];
+        if(n==3) {choices[0].colourmap=NULL;choices[0].colourmap_capacity=0;}
+        draw_hud();assert(icons==(UINT64_C(1)<<9));
+        void *expected=n==0?(obor_profile_build<3673?NULL:palette[3]):n==1?palette[2]:
+            n==2 && obor_profile_build>=3741?palette[3]:NULL;
+        assert(icon_table==expected);
+    }
+}
+static void check_rich_render(void)
+{
+    const int magic[]={0,11,19};
+    for(unsigned m=0;m<3;++m)for(int debug=0;debug<2;++debug) {
+        ++cases;begin();sets[0].maxplayers=1;bgicon=1;olicon=2;savedata.debuginfo=debug;
+        entity *actor=native_entities,*weapon=native_entities+1,*opponent=native_entities+2;
+        player[0].ent=actor;player[0].lives=3;player[0].score=123;
+        actor->modeldata=choices[0];actor->health=10;actor->inpain=1;actor->modeldata.icon.pain=3;
+        actor->colourmap=palette[0];strcpy(actor->name,"hero");actor->oldmp=magic[m];
+        actor->modeldata.icon.mphigh=5;actor->modeldata.icon.mpmed=6;actor->modeldata.icon.mplow=7;
+        actor->weapent=weapon;weapon->modeldata=choices[0];weapon->modeldata.icon.weapon=4;
+        weapon->modeldata.typeshot=1;weapon->modeldata.shootnum=2;weapon->colourmap=palette[1];
+        actor->opponent=opponent;opponent->modeldata=choices[0];opponent->health=10;
+        opponent->modeldata.icon.def=8;opponent->colourmap=palette[2];strcpy(opponent->name,"enemy");
+        draw_hud();
+        uint64_t expected=(UINT64_C(1)<<1)|(UINT64_C(1)<<2)|(UINT64_C(1)<<3)|
+            (UINT64_C(1)<<4)|(UINT64_C(1)<<(m==0?7:m==1?6:5))|(UINT64_C(1)<<8);
+        assert(icons==expected && first_font_entity==1);
+    }
+}
+static void check_frame(int combined,int canvas_phase,int pause_queue,int depth_zero)
+{
+    for(int ingame=0;ingame<3;++ingame)for(int paused=0;paused<2;++paused)
+    for(int selection=0;selection<2;++selection)for(int always=0;always<2;++always)
+    for(int trigger=0;trigger<2;++trigger)for(int provided=0;provided<2;++provided)
+    for(int has_background=0;has_background<2;++has_background) {
+        ++cases;begin();pause=paused;selectScreen=selection;alwaysupdate=always;
+        canvas=provided?&native_canvas:NULL;if(!has_background)background=NULL;
+        if(trigger){player[0].ent=native_entities;player[0].newkeys=FLAG_START;}
+        frame_gfx(ingame);
+        char expected[64]="";
+        int menu=ingame==1 && !paused && trigger;
+        if(combined) {
+            if(menu)strcat(expected,"MLKQP");
+            if(ingame==1)strcat(expected,"BH");
+            if(ingame==1 || always)strcat(expected,"UT");
+            if(!ingame){strcat(expected,"C");if(has_background)strcat(expected,"V");}
+            if(ingame==1 || selection)strcat(expected,"E");
+            strcat(expected,"DX");
+        } else {
+            if(!canvas_phase)strcat(expected,"C");
+            if(ingame==1 && !paused)strcat(expected,"FBHT");
+            if(!ingame && !canvas_phase && has_background)strcat(expected,"N");
+            if((ingame==1 || selection) && !paused)strcat(expected,"E");
+            if(ingame==1 || always)strcat(expected,"U");
+            if(menu)strcat(expected,pause_queue?"MLKQPR":"MLKP");
+            else {
+                if(!ingame && canvas_phase){strcat(expected,"C");if(has_background)strcat(expected,"V");}
+                strcat(expected,"DX");
+            }
+        }
+        assert(!strcmp(events,expected));
+        assert(canvas==(canvas_phase?(provided?&native_canvas:vscreen):(provided?&native_canvas:NULL)));
+        int queued=!combined && !canvas_phase && !ingame && has_background;
+        assert(background_queues==queued && draw_calls==(menu && !combined?0:1));
+        if(draw_calls)assert(draw_targets[0]==vscreen && depths[0][0]==MIN_INT && depths[0][1]==MAX_INT);
+        if(queued)assert(last_background_z==(depth_zero?0:MIN_INT));
+    }
+}
+#if @ZOOM_CHECKS@
+static void check_zoom_frame(int combined,int canvas_phase)
+{
+    const int layers[]={MIN_INT,-1,0,MAX_INT};
+    for(int ingame=0;ingame<3;++ingame)for(int paused=0;paused<2;++paused)
+    for(int selection=0;selection<2;++selection)for(unsigned d=0;d<4;++d)
+    for(int storage=0;storage<3;++storage) {
+        ++cases;begin();pause=paused;selectScreen=selection;
+        native_screen.width=32;native_screen.height=24;native_screen.pixelformat=PIXEL_8;
+        zoom_center_x=11;zoom_center_y=9;zoom_scale_x=384;zoom_scale_y=512;zoom_z=layers[d];
+        if(storage) {native_zoom=native_screen;zoombuffer=&native_zoom;}
+        if(storage==2)native_zoom.width=16;
+        frame_gfx(ingame);
+        char expected[128]="";
+        if(combined) {
+            if(ingame==1)strcat(expected,"BHUT");
+            if(!ingame)strcat(expected,"CV");
+            if(ingame==1 || selection)strcat(expected,"E");
+            if(storage==2)strcat(expected,"r");
+            if(storage!=1)strcat(expected,"a");
+            strcat(expected,zoom_z<MAX_INT?"cDZDX":"cDZX");
+            assert(zoombuffer==&native_zoom && native_zoom.width==32);
+            assert(draw_targets[0]==zoombuffer && depths[0][0]==MIN_INT && depths[0][1]==zoom_z);
+            assert(draw_calls==(zoom_z<MAX_INT?2u:1u));
+            if(draw_calls==2)assert(draw_targets[1]==vscreen && depths[1][0]==zoom_z+1 && depths[1][1]==MAX_INT);
+        } else {
+            if(!canvas_phase)strcat(expected,"C");
+            if(ingame==1 && !paused)strcat(expected,"FBHT");
+            if(!ingame && !canvas_phase)strcat(expected,"N");
+            if((ingame==1 || selection) && !paused)strcat(expected,"E");
+            if(ingame==1)strcat(expected,"U");
+            if(!ingame && canvas_phase)strcat(expected,"CV");
+            if(storage)strcat(expected,"r");
+            strcat(expected,"DX");
+            assert(!zoombuffer && draw_calls==1 && draw_targets[0]==vscreen);
+            assert(depths[0][0]==MIN_INT && depths[0][1]==MAX_INT);
+        }
+        assert(!strcmp(events,expected));
+        /* Disabling zoom on the next actual frame releases prior storage and
+         * restores the full queue domain, without a split or sampler call. */
+        zoom_scale_x=0;observations();frame_gfx(ingame);
+        assert(!zoombuffer && draw_calls==1 && draw_targets[0]==vscreen);
+        assert(depths[0][0]==MIN_INT && depths[0][1]==MAX_INT);
+        assert(!strchr(events,'Z') && !strchr(events,'a') && !strchr(events,'c'));
+        assert(!!strchr(events,'r')==combined);
+    }
+}
+#endif
+int main(void)
+{
+#if @MODEL_CHECKS@
+    const struct {unsigned revision;int epoch;} contexts[]={@MODEL_CONTEXTS@};
+    for(unsigned p=0;p<sizeof(contexts)/sizeof(*contexts);++p) {
+        obor_profile_build=contexts[p].revision;cases=0;
+        check_models(contexts[p].epoch);assert(cases==192);
+        printf("{\"revision\":%u,\"cases\":%u,\"status\":\"PASS\"}\n",obor_profile_build,cases);
+    }
+#else
+    const struct {unsigned revision;int combined,canvas_phase,pause_queue,depth_zero;} contexts[]={@CONTEXTS@};
+    for(unsigned p=0;p<sizeof(contexts)/sizeof(*contexts);++p) {
+        obor_profile_build=contexts[p].revision;cases=0;
+#if @ZOOM_CHECKS@
+        check_zoom_frame(contexts[p].combined,contexts[p].canvas_phase);assert(cases==144);
+#else
+        check_join(contexts[p].combined);check_timer_go(contexts[p].combined);
+        check_join_icons();check_rich_render();check_frame(contexts[p].combined,contexts[p].canvas_phase,contexts[p].pause_queue,contexts[p].depth_zero);assert(cases==684);
+#endif
+        printf("{\"revision\":%u,\"cases\":%u,\"status\":\"PASS\"}\n",obor_profile_build,cases);
+    }
+#endif
+    return 0;
+}

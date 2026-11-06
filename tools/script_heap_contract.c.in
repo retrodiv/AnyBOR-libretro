@@ -1,0 +1,152 @@
+/* Native dynamic-script entry points and heap disposal with observed services.
+ * SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <assert.h>
+#include <stdarg.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "openbor.h"
+#undef assert
+#undef printf
+#undef shutdown
+#define assert(c) do {if(!(c)){fprintf(stderr,"Script heap revision=%u case=%u line=%d\n",obor_profile_build,case_id,__LINE__);abort();}}while(0)
+uint32_t obor_profile_build;
+static unsigned case_id,interpreter_clears,local_clears,loads,compiles,executes,cache_clears;
+static int service_result,fail_allocation;
+static char diagnostic[512],loaded_path[128];
+int max_script_vars=3,max_global_vars,max_indexed_vars,max_global_var_index;
+Script *pcurrentscript;
+s_variantnode **global_var_list;
+ScriptVariant *indexed_var_list;
+s_spawn_entry spawnentry;
+s_filestream *filestreams;
+int numfilestreams;
+static List scriptheap;
+List theFunctionList;
+#include "source/scriptlib/List.c"
+static int capture_printf(const char *format,...){
+ va_list args;va_start(args,format);int n=vsnprintf(diagnostic,sizeof(diagnostic),format,args);va_end(args);
+ assert(n>=0 && (size_t)n<sizeof(diagnostic));return n;
+}
+static void unexpected_shutdown(int code,const char *message,...){(void)code;(void)message;abort();}
+CHAR *StrCache_Get(int index){
+ static char strings[][32]={"first","second","","file.txt"};
+ assert(index>=0 && index<4);return strings[index];
+}
+void StrCache_Collect(int index){assert(index>=0 && index<4);}
+int StrCache_Pop(void){abort();}
+void StrCache_Clear(void){++cache_clears;}
+void ImportCache_Clear(void){++cache_clears;}
+void Interpreter_Init(Interpreter *p,LPCSTR name,List *functions){
+ assert(functions==&theFunctionList);memset(p,0,sizeof(*p));
+ assert(strlen(name)<sizeof(p->theSymbolTable.name));strcpy(p->theSymbolTable.name,name);
+}
+void Interpreter_Clear(Interpreter *p){assert(p);++interpreter_clears;}
+void Interpreter_Reset(Interpreter *p){assert(p);p->bReset=TRUE;}
+HRESULT Interpreter_EvaluateCall(Interpreter *p){assert(p);return S_OK;}
+int Script_Set_Local_Variant(Script *p,char *name,ScriptVariant *v){(void)p;(void)name;(void)v;return 1;}
+static void Script_Local_Clear(Script *p){assert(p);++local_clears;}
+int load_script(Script *p,char *path){assert(p && p->magic==script_magic);++loads;strcpy(loaded_path,path);return service_result;}
+int Script_Compile(Script *p){assert(p && p->magic==script_magic);++compiles;return service_result;}
+int Script_Execute(Script *p){assert(p && p->magic==script_magic);++executes;return service_result;}
+#define printf capture_printf
+#define shutdown unexpected_shutdown
+@VARIANTS@
+@REFERENCES@
+@LIFECYCLE@
+@DISPOSAL@
+static void *entry_malloc(size_t bytes){if(fail_allocation){fail_allocation=0;return NULL;}return malloc(bytes);}
+#define malloc entry_malloc
+@ENTRY_POINTS@
+#undef malloc
+#undef shutdown
+#undef printf
+static int available(void *functionRef){
+@AVAILABILITY@
+return 1;
+}
+static const struct {unsigned revision;int available,comment,typed;} profiles[]={@PROFILES@};
+static void hex_text(const char *s){for(const unsigned char *p=(const unsigned char*)s;*p;++p)printf("%02x",(unsigned)*p);}
+static void emit(int status,int tag,const char *name,const char *comment,unsigned clear_count,unsigned services){
+ printf("{\"revision\":%u,\"case\":%u,\"ok\":%d,\"tag\":%d,\"name_hex\":\"",obor_profile_build,case_id,!FAILED(status),tag);
+ hex_text(name);printf("\",\"comment_hex\":\"");hex_text(comment);printf("\",\"diagnostic_hex\":\"");hex_text(diagnostic);
+ printf("\",\"clears\":%u,\"services\":%u}\n",clear_count,services);
+}
+static void reset_services(void){diagnostic[0]=loaded_path[0]=0;interpreter_clears=local_clears=loads=compiles=executes=cache_clears=0;}
+int main(void){
+ for(unsigned p=0;p<sizeof(profiles)/sizeof(*profiles);++p){
+  obor_profile_build=profiles[p].revision;case_id=0;pcurrentscript=NULL;
+  List_Init(&scriptheap);List_Init(&theFunctionList);
+  assert(available((void*)openbor_allocscript)==profiles[p].available);
+  assert(available((void*)openbor_loadscript)==profiles[p].available);
+  assert(available((void*)openbor_compilescript)==profiles[p].available);
+  assert(available((void*)openbor_executescript)==profiles[p].available);
+  reset_services();
+  Script initial;Script_Init(&initial,NULL,NULL,1);
+  assert(initial.magic==script_magic && !initial.initialized && initial.vars);
+  for(int v=0;v<max_script_vars;++v)assert(initial.vars[v].vt==VT_EMPTY);
+  Script_Clear(&initial,2);assert(!initial.vars);emit(S_OK,VT_EMPTY,"","",0,0);++case_id;
+  if(profiles[p].available){
+   const int argc_values[]={0,1,2,2,2,2,3};
+   const int first_tags[]={VT_STR,VT_STR,VT_STR,VT_INTEGER,VT_STR,VT_STR,VT_STR};
+   const int second_tags[]={VT_STR,VT_STR,VT_STR,VT_STR,VT_INTEGER,VT_STR,VT_STR};
+   const int first_values[]={0,0,0,0,0,2,0};
+   const int second_values[]={1,1,1,1,1,1,1};
+   const int incoming[]={VT_EMPTY,VT_INTEGER,VT_DECIMAL,VT_PTR};
+   for(unsigned c=0;c<sizeof(argc_values)/sizeof(*argc_values);++c)
+   for(unsigned t=0;t<sizeof(incoming)/sizeof(*incoming);++t){
+    reset_services();ScriptVariant args[3]={0},out={0},*ret=&out,*list[]={args,args+1,args+2};
+    args[0].vt=(VARTYPE)first_tags[c];args[0].strVal=first_values[c];
+    args[1].vt=(VARTYPE)second_tags[c];args[1].strVal=second_values[c];args[2].vt=VT_INTEGER;
+    out.vt=(VARTYPE)incoming[t];int result=openbor_allocscript(list,&ret,argc_values[c]);
+    assert(result==S_OK && ret==&out && out.ptrVal && List_GetSize(&scriptheap)==1);
+    Script *script=out.ptrVal;assert(script->magic==script_magic && script->vars);
+    const char *name=script->initialized?script->pinterpreter->theSymbolTable.name:"";
+    const char *comment=script->comment?script->comment:"";
+    emit(result,out.vt,name,comment,0,0);++case_id;
+    ScriptVariant handle={0},ignored={0},*pret=&ignored,*free_args[]={&handle};handle.vt=VT_PTR;handle.ptrVal=script;
+    int initialized=script->initialized;assert(system_free(free_args,&pret,1)==S_OK && !pret);
+    assert(List_GetSize(&scriptheap)==0 && interpreter_clears==(unsigned)initialized);
+   }
+   reset_services();fail_allocation=1;ScriptVariant out={0},*ret=&out;
+   int result=openbor_allocscript(NULL,&ret,0);assert(!ret && !fail_allocation && List_GetSize(&scriptheap)==0);
+   emit(result,-1,"","",0,0);++case_id;
+   ScriptVariant a={0},out2={0},*ret2=&out2,*args[]={&a};a.vt=VT_STR;a.strVal=0;
+   reset_services();assert(openbor_allocscript(args,&ret2,1)==S_OK);Script *script=out2.ptrVal;
+   ScriptVariant handle={0},path={0};handle.vt=VT_PTR;handle.ptrVal=script;path.vt=VT_STR;path.strVal=3;
+   ScriptVariant *service_args[]={&handle,&path};
+   for(int operation=0;operation<3;++operation)for(int supplied=0;supplied<3;++supplied)
+   for(int success=0;success<2;++success){
+    reset_services();service_result=success;ScriptVariant result_value={0},*value=&result_value;
+    int rc=(operation==0?openbor_loadscript:operation==1?openbor_compilescript:openbor_executescript)(service_args,&value,supplied);
+    assert(!value);unsigned calls=loads+compiles+executes;
+    if(operation==0 && calls)assert(!strcmp(loaded_path,"file.txt"));
+    emit(rc,-1,"","",0,calls);++case_id;
+   }
+   reset_services();ScriptVariant ignored={0},*ignored_result=&ignored,*free_args[]={&handle};
+   int rc=system_free(free_args,&ignored_result,1);assert(!ignored_result && List_GetSize(&scriptheap)==0);
+   emit(rc,-1,"","",interpreter_clears,local_clears);++case_id;
+   reset_services();ignored_result=&ignored;rc=system_free(free_args,&ignored_result,1);assert(!ignored_result);
+   emit(rc,-1,"","",interpreter_clears,0);++case_id;
+   /* Global teardown must visit each owned Script through the native helper. */
+   for(int i=0;i<2;++i){ret2=&out2;assert(openbor_allocscript(args,&ret2,1)==S_OK);}
+   reset_services();Script_Global_Clear();assert(List_GetSize(&scriptheap)==0 && cache_clears==2);
+   emit(S_OK,-1,"","",interpreter_clears,local_clears);++case_id;
+   List_Init(&theFunctionList);
+  }
+  /* Non-script heap entries use their own metadata and have no script callback. */
+  const char *owners[]={"openbor_array","openbor_allocscreen","openbor_loadsprite"};
+  for(unsigned k=0;k<3;++k){
+   reset_services();void *raw=calloc(1,sizeof(Script));assert(raw);List_InsertAfter(&scriptheap,raw,owners[k]);
+   ScriptVariant handle={0},out={0},*ret=&out,*args[]={&handle};handle.vt=VT_PTR;handle.ptrVal=raw;
+   int rc=system_free(args,&ret,1);assert(!ret && !List_GetSize(&scriptheap) && !interpreter_clears);
+   emit(rc,-1,"","",0,0);++case_id;
+  }
+  reset_services();ScriptVariant out={0},*ret=&out;int rc=system_free(NULL,&ret,0);assert(!ret);
+  emit(rc,-1,"","",0,0);++case_id;
+  List_Clear(&scriptheap);List_Clear(&theFunctionList);
+ }
+ return 0;
+}

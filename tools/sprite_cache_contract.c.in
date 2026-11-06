@@ -1,0 +1,103 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <stdint.h>
+#include <limits.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <stdarg.h>
+#include "screen.h"
+#include "sprite.h"
+#undef printf
+#undef assert
+uint32_t obor_profile_build;
+static int active_case;
+#define assert(c) do{if(!(c)){fprintf(stderr,"SPRITE_CACHE revision=%u case=%d line=%d\n",obor_profile_build,active_case,__LINE__);abort();}}while(0)
+@STORAGE@
+s_sprite_map *sprite_map;
+static int sprite_map_max_items,allocations,stops,fail_allocation;
+static size_t requested;
+static s_sprite_map old_storage[4096],new_storage[4096];
+static char diagnostic[128];
+static void stop_engine(int code,const char *format,...){
+ assert(code==1);++stops;va_list ap;va_start(ap,format);
+ int n=vsnprintf(diagnostic,sizeof(diagnostic),format,ap);va_end(ap);
+ assert(n>=0 && (size_t)n<sizeof(diagnostic));
+}
+static void *resize_map(void *old,size_t bytes){
+ assert(old==sprite_map && bytes<=sizeof(new_storage));++allocations;requested=bytes;
+ return fail_allocation?NULL:new_storage;
+}
+#define shutdown stop_engine
+#define realloc resize_map
+@FUNCTIONS@
+#undef realloc
+#undef shutdown
+static int loads,load_success;
+static s_sprite old_frame,new_frame;
+static const char filename[]="controlled.sprite";
+s_sprite *loadsprite2(char *name,int *width,int *height){
+ assert(name==filename && !width && !height);++loads;
+ return load_success?&new_frame:NULL;
+}
+@QUEUE@
+@SAME_METHOD@
+struct context{unsigned revision;int growth,reload;};
+static const struct context contexts[]={@CONTEXTS@};
+struct growth_case{int capacity,size,existing,fail;};
+static const struct growth_case growth_cases[]={@GROWTH@};
+int main(void){
+ for(unsigned p=0;p<sizeof(contexts)/sizeof(*contexts);++p){
+  const struct context *context=contexts+p;obor_profile_build=context->revision;
+  for(unsigned k=0;k<sizeof(growth_cases)/sizeof(*growth_cases);++k){
+   const struct growth_case *c=growth_cases+k;active_case=(int)k;
+   sprite_map=c->existing?old_storage:NULL;sprite_map_max_items=c->capacity;
+   s_sprite_map *prior=sprite_map;allocations=stops=0;requested=0;diagnostic[0]=0;fail_allocation=c->fail;
+   size_t capacity=(size_t)c->capacity;
+   int resize=!c->existing || c->size+1>c->capacity;
+   if(resize){
+    if(!context->growth){do{capacity+=256;}while(capacity<(size_t)c->size+1);}
+    else capacity=(((size_t)c->size+1)>>8)*256+256;
+   }
+   prepare_sprite_map((size_t)c->size);
+   assert(allocations==resize && stops==(resize && c->fail));
+   if(resize)assert(requested==capacity*sizeof(*sprite_map));
+   assert(sprite_map==(resize && !c->fail?new_storage:prior));
+   assert(sprite_map_max_items==(resize && !c->fail?(int)capacity:c->capacity));
+   if(stops)assert(!strcmp(diagnostic,"Out Of Memory!  Failed to create a new sprite_map\n"));
+  }
+  const size_t invalid_size[]={SIZE_MAX,(size_t)INT_MAX,(size_t)INT_MAX-1,0};
+  for(unsigned k=0;k<4;++k){
+   active_case=1000+(int)k;sprite_map=old_storage;sprite_map_max_items=k==3?-1:0;
+   allocations=stops=0;prepare_sprite_map(invalid_size[k]);
+   assert(stops==1 && !allocations && sprite_map==old_storage);
+  }
+  for(int present=0;present<2;++present)for(int success=0;success<2;++success)
+  for(int full=0;full<2;++full)for(int method_present=0;method_present<2;++method_present){
+   active_case=2000+present*8+success*4+full*2+method_present;
+   s_sprite_list node={0};s_sprite_map maps[3]={0};sprite_map=maps;
+   maps[1].node=&node;maps[1].centerx=12;maps[1].centery=-19;
+   node.sprite=present?&old_frame:NULL;node.filename=(char*)filename;maps[1].profile_sprite=node.sprite;
+   memset(queue,0,sizeof(queue));memset(order,0,sizeof(order));
+   s_drawmethod supplied={0};supplied.flag=-1;supplied.alpha=3;supplied.centerx=17;
+   queue[1].drawmethod=supplied;queue[1].drawmethod.centery=29;
+   s_drawmethod expected=method_present?supplied:queue[1].drawmethod;
+   if(!method_present)expected.flag=0;
+   spritequeue_len=full?MAXQSPRITES:1;loads=0;load_success=success;
+   int reload=!present && context->reload;
+   int append=!full && (present || (reload && success));
+   spriteq_add_sprite(7,9,11,1,method_present?&supplied:NULL,13);
+   assert(loads==reload && node.sprite==(present?&old_frame:reload && success?&new_frame:NULL));
+   assert(spritequeue_len==(full?MAXQSPRITES:1+append));
+   if(append){
+    assert(order[1]==queue+1 && queue[1].type==SQT_SPRITE);
+    assert(queue[1].x==7 && queue[1].y==9 && queue[1].z==11 && queue[1].sortid==13);
+    assert(queue[1].frame==node.sprite && same_method(&queue[1].drawmethod,&expected));
+    assert(queue[1].params[0]==1 && queue[1].params[1]==12 && queue[1].params[2]==-19);
+   }
+  }
+  fprintf(stdout,"{\"revision\":%u,\"growth_cases\":%zu,\"queue_cases\":16,\"invalid_cases\":4}\n",
+   obor_profile_build,sizeof(growth_cases)/sizeof(*growth_cases));
+ }
+ return 0;
+}

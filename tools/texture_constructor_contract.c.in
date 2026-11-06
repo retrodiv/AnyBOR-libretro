@@ -1,0 +1,180 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <stdint.h>
+#include <stddef.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdarg.h>
+#include <string.h>
+#include "openbor.h"
+#undef printf
+#undef assert
+#undef shutdown
+uint32_t obor_profile_build;
+static int active_path,active_index;
+#define assert(c) do {if(!(c)){fprintf(stderr,"TEXTURE_CONSTRUCTOR revision=%u path=%d index=%d line=%d\n",obor_profile_build,active_path,active_index,__LINE__);abort();}}while(0)
+static void set_tag(gfx_entry *entry,int kind){@TAG_SET@}
+static int read_tag(const gfx_entry *entry){@TAG_GET@}
+static const struct {unsigned revision;int declared,water_slow;} contexts[]={@CONTEXTS@};
+static gfx_entry texture;
+s_level *level;
+char packfile[OBOR_CONTENT_PATH_MAX];
+int pixelformat=PIXEL_8;
+static int render_calls,rendered_kind,rendered_tag,screen_calls,sprite_calls,stops;
+static int fast_calls,fast_kind;
+static int load_success,load_returns_handle,tag_seen;
+static int queued;
+static s_screen image;
+static s_sprite frame;
+CHAR *StrCache_Get(int index){(void)index;abort();}
+void StrCache_Collect(int index){(void)index;abort();}
+int StrCache_Pop(void){abort();}
+static char diagnostic[512];
+static int capture(const char *format,...) {
+ va_list ap;va_start(ap,format);int n=vsnprintf(diagnostic,sizeof(diagnostic),format,ap);va_end(ap);
+ assert(n>=0 && (size_t)n<sizeof(diagnostic));return n;
+}
+#define printf capture
+unsigned char *obor_blend_table(int alpha){assert(alpha==0);return NULL;}
+blend16fp getblendfunction16(int alpha){assert(alpha==0);return NULL;}
+blend32fp getblendfunction32(int alpha){assert(alpha==0);return NULL;}
+static void rendered(int kind,s_screen *dest,gfx_entry *src,int x,int y,int cx,int cy,s_drawmethod *method) {
+ assert(dest==&image && x==7 && y==9 && method);
+ assert(src->handle==(rendered_kind==0?(void*)&image:(void*)&frame));
+ assert(cx==(rendered_kind==0?0:frame.centerx) && cy==(rendered_kind==0?0:frame.centery));
+ ++render_calls;active_path=kind;rendered_tag=read_tag(src);
+}
+void gfx_draw_scale(s_screen *d,gfx_entry *s,int x,int y,int a,int b,s_drawmethod *m){rendered(0,d,s,x,y,a,b,m);}
+void gfx_draw_rotate(s_screen *d,gfx_entry *s,int x,int y,int a,int b,s_drawmethod *m){rendered(1,d,s,x,y,a,b,m);}
+void gfx_draw_water(s_screen *d,gfx_entry *s,int x,int y,int a,int b,s_drawmethod *m){rendered(2,d,s,x,y,a,b,m);}
+void gfx_draw_plane(s_screen *d,gfx_entry *s,int x,int y,int a,int b,s_drawmethod *m){rendered(3,d,s,x,y,a,b,m);}
+@TRAPS@
+int loadscreen(char *filename,char *archive,unsigned char *palette,int format,s_screen **output) {
+ assert(filename && !strcmp(filename,"fixture") && archive==packfile && !palette && format==PIXEL_8);
+ assert((uintptr_t)output % __alignof__(s_screen*)==0);
+ ++screen_calls;tag_seen=read_tag(&level->layers[active_index].gfx);
+ *output=load_returns_handle?&image:NULL;return load_success;
+}
+s_sprite *loadsprite2(char *filename,int *width,int *height) {
+ assert(filename && !strcmp(filename,"fixture"));++sprite_calls;
+ tag_seen=read_tag(&level->layers[active_index].gfx);*width=7;*height=9;
+ return load_returns_handle?&frame:NULL;
+}
+void shutdown(int code,const char *format,...) {
+ assert(code==1);va_list ap;va_start(ap,format);vsnprintf(diagnostic,sizeof(diagnostic),format,ap);va_end(ap);
+ ++stops;
+}
+void spriteq_add_screen(int x,int y,int z,s_screen *s,s_drawmethod *m,int id) {
+ assert(x==9 && y==12 && z==17 && s==&image && m && id==((obor_profile_build>=3556 && obor_profile_build<3562)?0:5));queued=0;
+}
+void spriteq_add_frame(int x,int y,int z,s_sprite *s,s_drawmethod *m,int id) {
+ assert(x==9 && y==12 && z==17 && s==&frame && m && id==((obor_profile_build>=3556 && obor_profile_build<3562)?0:5));queued=2;
+}
+@VARIANTS@
+@FUNCTIONS@
+static void background_constructor(s_layer *bgl) {
+ enum {CMD_LEVEL_BACKGROUND=1};int cmd=CMD_LEVEL_BACKGROUND;
+ char bgPath[32]={0},*value,*errormessage=NULL;
+ #define GET_ARG(i) ((void)(i),(char*)"fixture")
+ @BACKGROUND@
+ #undef GET_ARG
+ assert(bgl->oldtype==bgt_background && !strcmp(bgPath,"fixture"));return;
+ lCleanup:(void)errormessage;abort();
+}
+static void queue_window(s_layer *layer) {
+ int x=7,z=9,vpx=2,vpy=3,index=5;s_drawmethod screenmethod;
+ memset(&screenmethod,0,sizeof(screenmethod));
+ @QUEUE@
+}
+static void layer_dispatch(int declared) {
+ for(int sprite=0;sprite<2;++sprite)for(int magic=0;magic<2;++magic) {
+  s_layer layer;memset(&layer,0,sizeof(layer));layer.z=17;
+  layer.gfx.handle=sprite?(void*)&frame:(void*)&image;
+  set_tag(&layer.gfx,sprite?gfx_sprite:gfx_screen);
+  image.magic=magic?screen_magic:123;frame.magic=magic?sprite_magic:123;
+  queued=-1;queue_window(&layer);
+  assert(queued==((declared || magic)?(sprite?2:0):-1));
+ }
+ image.magic=screen_magic;frame.magic=sprite_magic;
+}
+static void constructors(int declared,int water_slow) {
+ s_layer layer;memset(&layer,0,sizeof(layer));set_tag(&layer.gfx,gfx_sprite);
+ background_constructor(&layer);if(declared)assert(read_tag(&layer.gfx)==gfx_screen);
+ const int formats[]={PIXEL_8,PIXEL_16,PIXEL_32};
+ for(unsigned format=0;format<3;++format)
+ for(int shape=0;shape<2;++shape)for(int path=0;path<4;++path) {
+  image.pixelformat=formats[format];
+  s_drawmethod method;memset(&method,0,sizeof(method));
+  method.flag=-1;method.scalex=method.scaley=256;
+  if(path==0)method.scalex=128;
+  if(path==1)method.rotate=90;
+  if(path>=2){method.water.watermode=path==2?1:3;method.water.amplitude=1;method.water.beginsize=1;}
+  rendered_kind=shape;render_calls=fast_calls=0;active_path=-1;rendered_tag=-1;fast_kind=-1;
+  if(shape)putsprite_ex(7,9,&frame,&image,&method);
+  else _putscreen(&image,&image,7,9,&method);
+  if(shape && path>=2 && !water_slow) {
+   assert(fast_calls==1 && fast_kind==formats[format] && !render_calls);
+   continue;
+  }
+  assert(!fast_calls);
+  if(!shape && obor_profile_build<3552 && path<2) {
+   assert(render_calls==0 && active_path==-1);continue;
+  }
+  assert(render_calls==1 && active_path==path);
+  if(declared)assert(rendered_tag==(shape?gfx_sprite:gfx_screen));
+ }
+ image.pixelformat=PIXEL_8;
+}
+static void api(int declared) {
+ ScriptVariant values[2],*args[]={values,values+1},result,*out;
+ memset(values,0,sizeof(values));memset(&result,0,sizeof(result));
+ for(int kind=0;kind<3;++kind)for(int decimal=0;decimal<2;++decimal) {
+  values[0].vt=VT_PTR;values[0].ptrVal=kind==2?(void*)&frame:(void*)&image;
+  values[1].vt=decimal?VT_DECIMAL:VT_INTEGER;
+  if(decimal)values[1].dblVal=kind+0.75;else values[1].lVal=kind;
+  out=&result;assert(openbor_settexture(args,&out,2)==S_OK && !out);
+  assert(texture.handle==values[0].ptrVal);
+  if(declared)assert(read_tag(&texture)==kind);
+ }
+ gfx_entry before;memcpy(&before,&texture,sizeof(before));values[1].vt=VT_INTEGER;values[1].lVal=99;
+ out=&result;assert(openbor_settexture(args,&out,2)==E_FAIL && !out);
+ assert(!memcmp(&texture,&before,sizeof(texture)));
+ values[1].vt=VT_EMPTY;out=&result;
+ assert(openbor_settexture(args,&out,2)==E_FAIL && !out && !memcmp(&texture,&before,sizeof(texture)));
+ out=&result;assert(openbor_settexture(args,&out,1)==E_FAIL && !out);
+}
+static void layers(int declared) {
+ for(int index=0;index<2;++index)for(int sprite=0;sprite<2;++sprite)
+  for(int success=0;success<2;++success)for(int handle=0;handle<2;++handle) {
+   if((sprite && success) || (!sprite && success && !handle))continue;
+   active_index=index;memset(level->layers,0,2*sizeof(*level->layers));s_layer *layer=level->layers+index;
+   set_tag(&layer->gfx,gfx_bitmap);layer->width=17;layer->height=19;
+   layer->drawmethod.transbg=sprite;layer->drawmethod.xrepeat=layer->drawmethod.yrepeat=-1;
+   screen_calls=sprite_calls=stops=0;tag_seen=-1;load_success=success;load_returns_handle=handle;
+   load_layer("fixture",index);
+   assert(screen_calls==!sprite && sprite_calls==sprite && stops==!handle);
+   assert(layer->gfx.handle==(handle?(sprite?(void*)&frame:(void*)&image):NULL));
+   if(declared) {
+    assert(tag_seen==gfx_bitmap);
+    assert(read_tag(&layer->gfx)==(sprite?gfx_sprite:success?gfx_screen:gfx_bitmap));
+   }
+   int width=sprite?7:success?3:17,height=sprite?9:success?2:19;
+   assert(layer->width==width && layer->height==height);
+   assert(layer->drawmethod.xrepeat==(handle?40000:-1));
+   assert(layer->drawmethod.yrepeat==(handle?40000:-1));
+   assert(layer->xoffset==(handle?-width*20000:0) && layer->zoffset==(handle?-height*20000:0));
+  }
+}
+int main(void) {
+ fprintf(stderr,"TEXTURE_LAYOUT entry=%zu align=%zu pointer_offset=%zu layer=%zu\n",sizeof(gfx_entry),(size_t)__alignof__(gfx_entry),offsetof(gfx_entry,handle),sizeof(s_layer));
+ memset(&image,0,sizeof(image));image.magic=screen_magic;image.width=3;image.height=2;image.pixelformat=PIXEL_8;
+ memset(&frame,0,sizeof(frame));frame.magic=sprite_magic;frame.width=3;frame.height=2;frame.centerx=2;frame.centery=1;
+ level=calloc(1,sizeof(*level));assert(level);level->layers=calloc(2,sizeof(*level->layers));assert(level->layers);
+ for(unsigned p=0;p<sizeof(contexts)/sizeof(*contexts);++p) {
+  obor_profile_build=contexts[p].revision;
+  constructors(contexts[p].declared,contexts[p].water_slow);api(contexts[p].declared);layers(contexts[p].declared);
+  layer_dispatch(contexts[p].declared);
+  fprintf(stdout,"{\"revision\":%u,\"declared\":%d}\n",obor_profile_build,contexts[p].declared);
+ }
+ free(level->layers);free(level);return 0;
+}

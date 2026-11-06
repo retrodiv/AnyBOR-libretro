@@ -1,0 +1,103 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <assert.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <strings.h>
+#include "openbor.h"
+#undef assert
+#undef printf
+#define stricmp strcasecmp
+#define GET_ARGP(i) (arglist->count>(unsigned)(i)?arglist->args[i]:(char*)"")
+uint32_t obor_profile_build;
+static unsigned active_case;
+#define assert(c) do {if(!(c)){fprintf(stderr,"WEAPON_TABLE revision=%u case=%u line=%d\n",obor_profile_build,active_case,__LINE__);abort();}}while(0)
+static entity actor,items[4],equipped;
+entity *self;
+s_player player[MAX_PLAYERS];
+static s_level stage,*level=&stage;
+static s_model parent,child,fallback;
+static s_anim animation,*animations[MAX_ANIS];
+static entity *entities[4];
+entity **ent_list=entities;
+int ent_max=4;
+static struct {int hRes;} videomodes={640};
+static int switched[16][4],switch_count;
+void shutdown(int code,char *message,...){(void)code;(void)message;abort();}
+int get_cached_model_index(char *name){
+ if(!strcmp(name,"Alpha"))return 7;
+ if(!strcmp(name,"Beta"))return 9;
+ if(!strcmp(name,"Zero"))return 0;
+ assert(!strcmp(name,"Missing"));return -1;
+}
+void set_model_ex(entity *e,char *name,int index,s_model *model,int flag){
+ assert(e==self && !name && (!model || model==&fallback) && switch_count<16);
+ switched[switch_count][0]=index;switched[switch_count][1]=model==&fallback;
+ switched[switch_count][2]=flag;++switch_count;
+}
+@FUNCTIONS@
+static void inherit(s_model *newmodel,s_model *model){@INHERIT@}
+struct input {int child_command,use_child,no_copy,anim_flag,loss,equipped,get,health,touch;
+ int count;char *commands[4][16];};
+static const struct input cases[]={@CASES@};
+static const unsigned profiles[]={@PROFILES@};
+static void command(s_model *model,char *const *args){
+ ArgList list={0};list.args[0]=(char*)"weapons";list.count=1;
+ for(unsigned i=0;i<16 && args[i];++i){list.args[list.count++]=args[i];}
+ lcmHandleCommandWeapons(&list,model);
+}
+static void slots(const s_model *model){
+ assert(model->numweapons>=0 && model->numweapons<=16);
+ putchar('[');for(int i=0;i<model->numweapons;++i){if(i)putchar(',');printf("%d",model->weapon[i]);}putchar(']');
+}
+static void run(const struct input *c){
+ memset(&parent,0,sizeof(parent));memset(&child,0,sizeof(child));memset(&actor,0,sizeof(actor));
+ memset(&fallback,0,sizeof(fallback));memset(&equipped,0,sizeof(equipped));
+ memset(items,0,sizeof(items));memset(player,0,sizeof(player));memset(&stage,0,sizeof(stage));
+ memset(animations,0,sizeof(animations));memset(&animation,0,sizeof(animation));
+ assert(c->count>=0 && c->count<=4);for(int i=0;i<c->count;++i)command(&parent,c->commands[i]);
+ if(c->child_command){char *args[]={c->child_command==2?(char*)"Beta":NULL,NULL};command(&child,args);}
+ parent.weapnum=7;child.weapnum=2;if(c->no_copy)child.model_flag|=MODEL_NO_WEAPON_COPY;
+ inherit(&child,&parent);
+ self=&actor;actor.modeldata=c->use_child?child:parent;actor.defaultmodel=&fallback;
+ actor.modeldata.type=TYPE_PLAYER;actor.modeldata.weaploss[0]=c->loss;
+ actor.modeldata.animation=animations;actor.modeldata.animation_capacity=MAX_ANIS;
+ actor.modeldata.health=100;actor.health=c->health;
+ animation.numframes=1;short vulnerable[1]={1};animation.vulnerable=vulnerable;
+ if(c->get)animations[ANI_GET]=&animation;
+ if(c->equipped)actor.weapent=&equipped;
+ stage.setweap=4;switch_count=0;
+ static const int numbers[]={-1,0,1,2,3,9,10,11};
+ set_weapon(NULL,1,0);assert(!switch_count);
+ for(unsigned i=0;i<sizeof(numbers)/sizeof(*numbers);++i){
+  set_weapon(self,numbers[i],c->anim_flag);assert(switch_count==(int)i+1);
+  switched[i][3]=player[0].weapnum;
+ }
+ for(int i=0;i<4;++i){
+  entities[i]=items+i;items[i].exists=1;items[i].modeldata.type=TYPE_ITEM;
+  items[i].x=(float)(i+1);items[i].animation=&animation;
+  if(i<2){items[i].modeldata.subtype=SUBTYPE_WEAPON;items[i].modeldata.weapnum=i?1:9;}
+  else if(i==2)items[i].modeldata.subtype=SUBTYPE_PROJECTILE;
+  else {items[i].health=10;if(c->touch){items[i].modeldata.subtype=SUBTYPE_TOUCH;items[i].modeldata.candamage=TYPE_PLAYER;}}
+ }
+ entity *selected=normal_find_item();int found=-1;
+ for(int i=0;i<4;++i)if(selected==items+i)found=i;
+ printf("{\"count\":%d,\"owner\":%d,\"slots\":",parent.numweapons,parent.ownweapons);slots(&parent);
+ printf(",\"child_count\":%d,\"child_owner\":%d,\"child_alias\":%d,\"child_number\":%d,\"child_slots\":",child.numweapons,child.ownweapons,child.weapon && child.weapon==parent.weapon,child.weapnum);slots(&child);
+ printf(",\"normal\":%d,\"switches\":[",found);
+ for(int i=0;i<switch_count;++i){if(i)putchar(',');printf("[%d,%d,%d,%d]",switched[i][0],switched[i][1],switched[i][2],switched[i][3]);}
+ putchar(']');
+ if(child.ownweapons)free(child.weapon);
+ if(parent.ownweapons)free(parent.weapon);
+}
+int main(void){
+ for(unsigned p=0;p<sizeof(profiles)/sizeof(*profiles);++p){
+  obor_profile_build=profiles[p];
+  for(unsigned k=0;k<sizeof(cases)/sizeof(*cases);++k){
+   active_case=k;printf("{\"revision\":%u,\"case\":%u,\"result\":",obor_profile_build,k);run(cases+k);puts("}}");
+  }
+ }
+ return 0;
+}

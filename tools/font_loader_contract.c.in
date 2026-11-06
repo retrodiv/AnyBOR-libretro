@@ -1,0 +1,106 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <stdint.h>
+#include <stddef.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdarg.h>
+#include <string.h>
+#include <strings.h>
+#include <setjmp.h>
+#include "types.h"
+#include "font.h"
+#undef printf
+uint32_t obor_profile_build;
+#define CHECK(c) do{if(!(c)){fprintf(stderr,"FONT_LOADER profile=%u line=%d\n",obor_profile_build,__LINE__);abort();}}while(0)
+#define stricmp strcasecmp
+char packfile[]="fixture";
+static int fontmonospace[MAX_FONTS],fontmbs[MAX_FONTS];
+static int success_mask,optional_mask,stopped;
+static int calls[16][2],checks[16],unloaded[16];
+static unsigned call_count,check_count,unload_count;
+static char diagnostic[2048];
+static jmp_buf stop;
+static int capture(const char *format,...) {
+    size_t size=strlen(diagnostic);va_list ap;va_start(ap,format);
+    int n=vsnprintf(diagnostic+size,sizeof(diagnostic)-size,format,ap);va_end(ap);
+    CHECK(n>=0 && (size_t)n<sizeof(diagnostic)-size);return n;
+}
+#define printf capture
+void shutdown(int code,const char *format,...) {
+    CHECK(code==1);va_list ap;va_start(ap,format);
+    int n=vsnprintf(diagnostic,sizeof(diagnostic),format,ap);va_end(ap);
+    CHECK(n>=0 && (size_t)n<sizeof(diagnostic));stopped=code;longjmp(stop,1);
+}
+static int slot_path(const char *path,int gif) {
+    char expected[128];
+    for(int i=0;i<MAX_FONTS;++i) {
+        if(i==0)snprintf(expected,sizeof(expected),"data/sprites/font%s",gif?".gif":"");
+        else snprintf(expected,sizeof(expected),"data/sprites/font%d%s",i+1,gif?".gif":"");
+        if(!strcmp(path,expected))return i;
+    }
+    CHECK(0);return -1;
+}
+int font_load(int slot,char *path,char *archive,int flags) {
+    CHECK(slot==slot_path(path,0) && archive==packfile && call_count<16);
+    calls[call_count][0]=slot;calls[call_count++][1]=flags;
+    return !!(success_mask&(1<<slot));
+}
+void font_unload(int slot){CHECK(unload_count<16);unloaded[unload_count++]=slot;}
+int testpackfile(char *path,char *archive) {
+    CHECK(archive==packfile && check_count<16);int slot=slot_path(path,1);checks[check_count++]=slot;
+    return optional_mask&(1<<slot)?1:-1;
+}
+typedef struct {int unused;} ArgList;
+#define MAX_ARG_LEN 1024
+static char *arguments[9];
+static const int raw[]={-2,0,1,2,3,4,7,-1};
+#define GET_ARG(i) arguments[(i)]
+#define GET_INT_ARG(i) raw[(i)-1]
+static int parse_status;
+int buffer_pakfile(char *path,char **buffer,size_t *size) {
+    CHECK(!strcmp(path,"data/menu.txt"));*size=3;*buffer=malloc(4);CHECK(*buffer);
+    memcpy(*buffer,"mbx",4);return 1;
+}
+int ParseArgs(ArgList *list,char *line,char *scratch) {
+    CHECK(list && line && scratch);arguments[0]=*line=='m'?"fontmonospace":*line=='b'?"fontmbs":"unknown";
+    return parse_status;
+}
+int getNewLineStart(char *line){CHECK(line);return 1;}
+@FUNCTIONS@
+static int keyboard_keyword(char *command) {
+    if(0){} @KEYWORD@ else return 0;
+    return 1;
+}
+#undef printf
+static void quoted(const char *text) {
+    putchar('"');for(;*text;++text){if(*text=='\n')fputs("\\n",stdout);else {if(*text=='"'||*text=='\\')putchar('\\');putchar(*text);}}putchar('"');
+}
+static void ints(const int *v,unsigned count) {
+    putchar('[');for(unsigned i=0;i<count;++i)printf("%s%d",i?",":"",v[i]);putchar(']');
+}
+int main(void) {
+    static const struct {unsigned revision;int normalized;} contexts[]={@REVISIONS@};
+    static const int successes[]={255,254,253,251,247,0,85};
+    static unsigned ri,si;
+    static int opt;
+    for(ri=0;ri<sizeof(contexts)/sizeof(contexts[0]);++ri) {
+        obor_profile_build=contexts[ri].revision;
+        for(si=0;si<sizeof(successes)/sizeof(successes[0]);++si)for(opt=0;opt<2;++opt) {
+            for(int i=0;i<MAX_FONTS;++i){fontmonospace[i]=contexts[ri].normalized?!!raw[i]:raw[i];fontmbs[i]=i%2?2:0;}
+            success_mask=successes[si];optional_mask=opt?240:0;stopped=0;call_count=check_count=0;diagnostic[0]=0;
+            if(!setjmp(stop))load_all_fonts();
+            printf("{\"revision\":%u,\"kind\":0,\"success\":%d,\"optional\":%d,\"calls\":[",obor_profile_build,success_mask,optional_mask);
+            for(unsigned i=0;i<call_count;++i)printf("%s[%d,%d]",i?",":"",calls[i][0],calls[i][1]);
+            fputs("],\"checks\":",stdout);ints(checks,check_count);printf(",\"stopped\":%d,\"diagnostic\":",stopped);quoted(diagnostic);puts("}");
+        }
+        unload_count=0;unload_all_fonts();printf("{\"revision\":%u,\"kind\":1,\"unloaded\":",obor_profile_build);ints(unloaded,unload_count);puts("}");
+        for(parse_status=0;parse_status<2;++parse_status) {
+            for(int i=0;i<MAX_FONTS;++i){fontmonospace[i]=17;fontmbs[i]=19;}
+            diagnostic[0]=0;load_menu_txt();
+            printf("{\"revision\":%u,\"kind\":2,\"status\":%d,\"mono\":",obor_profile_build,parse_status);ints(fontmonospace,8);
+            fputs(",\"banks\":",stdout);ints(fontmbs,8);fputs(",\"diagnostic\":",stdout);quoted(diagnostic);printf(",\"keyword\":%d}\n",keyboard_keyword("fontmbs"));
+        }
+    }
+    return 0;
+}

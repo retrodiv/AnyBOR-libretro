@@ -103,6 +103,7 @@ static const obor_content_rule kContentConstants[] = {
 static const obor_content_rule kContentFunctions[] = {
     { "allocate_drawmethod", 6982, INT_MAX },
     { "array", 3428, INT_MAX },
+    { "changedrawmethod", 3551, INT_MAX },
     { "checkrange", 1723, INT_MAX },
     { "copy_drawmethod", 6982, INT_MAX },
     { "free_drawmethod", 6982, INT_MAX },
@@ -110,7 +111,9 @@ static const obor_content_rule kContentFunctions[] = {
     { "get_drawmethod_property", 6982, INT_MAX },
     { "get_global_config_property", 7368, INT_MAX },
     { "getentityvar", 1205, INT_MAX },
+    { "getgfxproperty", 3627, INT_MAX },
     { "getindexedvar", 1205, INT_MAX },
+    { "getpixel", 3565, 3626 },
     { "getscriptvar", 1205, INT_MAX },
     { "jumptobranch", 1262, INT_MAX },
     { "set_bind_property", 6965, INT_MAX },
@@ -120,6 +123,14 @@ static const obor_content_rule kContentFunctions[] = {
     { "setindexedvar", 1205, INT_MAX },
     { "setscriptvar", 1205, INT_MAX },
     { "sin", 3869, INT_MAX },
+    { "zoom", 1, 3551 },
+};
+
+static const obor_content_rule kContentSystemQueries[] = {
+    { "viewporth", 3552, INT_MAX },
+    { "viewportw", 3552, INT_MAX },
+    { "viewportx", 3552, INT_MAX },
+    { "viewporty", 3552, INT_MAX },
 };
 
 static int g_content_lower, g_content_upper;
@@ -291,6 +302,14 @@ static void content_script(obor_content_scan *s, const char *data, size_t n)
                 char closing[64];
                 if (lower && content_lex(s, data, n, &q, closing) == ')')
                     content_bounds(s, lower, upper, true, arg);
+            }
+        }
+        if (kind == 'i' && (!strcmp(token, "openborvariant") || !strcmp(token, "changeopenborvariant"))) {
+            if (previous_kind == 'i' && strcmp(previous, "return")) s->ambiguous_scripts = true;
+            char arg[64];
+            if (content_contract_argument(s, data, n, pos, 0, arg)) {
+                const obor_content_rule *rule = content_rule(kContentSystemQueries, arg);
+                if (rule) content_bounds(s, rule->lower, rule->upper, true, arg);
             }
         }
         /* Keep old function-name estimates, but do not read quoted prose or

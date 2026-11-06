@@ -1,0 +1,75 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <stdarg.h>
+#include "openbor.h"
+#undef assert
+#undef printf
+uint32_t obor_profile_build;
+static int active_case;
+#define assert(c) do{if(!(c)){fprintf(stderr,"LAYER_DIAGNOSTIC revision=%u case=%d line=%d\n",obor_profile_build,active_case,__LINE__);abort();}}while(0)
+static char diagnostic[256];
+static int maps,finds,accesses,writes;
+static s_layer image;
+static int capture(const char *format,...){
+ va_list ap;va_start(ap,format);
+ int n=vsnprintf(diagnostic,sizeof(diagnostic),format,ap);va_end(ap);
+ assert(n>=0 && (size_t)n<sizeof(diagnostic));return n;
+}
+void mapstrings_layerproperty(ScriptVariant **args,int count){assert(args && count>=3);++maps;}
+s_layer *_getlayer(int type,int index){++finds;return type==1 && index==0?&image:NULL;}
+HRESULT _getlayerproperty(s_layer *layer,int property,ScriptVariant **out){
+ assert(layer==&image);++accesses;if(property!=7)return E_FAIL;
+ (*out)->vt=VT_INTEGER;(*out)->lVal=42;return S_OK;
+}
+HRESULT _changelayerproperty(s_layer *layer,int property,ScriptVariant *value){
+ assert(layer==&image);++accesses;if(property!=7 || value->vt!=VT_INTEGER)return E_FAIL;
+ writes=(int)value->lVal;return S_OK;
+}
+@INTEGER@
+#define printf capture
+@FUNCTIONS@
+#undef printf
+struct context{unsigned revision;int split;};
+static const struct context contexts[]={@CONTEXTS@};
+int main(void){
+ for(unsigned p=0;p<sizeof(contexts)/sizeof(*contexts);++p){
+  const struct context *c=contexts+p;obor_profile_build=c->revision;
+  for(int setter=0;setter<2;++setter)for(int kind=0;kind<9;++kind){
+   active_case=setter*9+kind;
+   ScriptVariant values[4],result,*args[4],*out=&result;
+   memset(values,0,sizeof(values));memset(&result,0,sizeof(result));
+   for(int i=0;i<4;++i){values[i].vt=VT_INTEGER;args[i]=values+i;}
+   values[0].lVal=1;values[1].lVal=0;values[2].lVal=7;values[3].lVal=17;
+   int count=setter?4:3,error=0;
+   if(kind==0){count=setter?3:2;error=1;}
+   if(kind==1){values[1].vt=VT_EMPTY;error=2;}
+   if(kind==2){values[1].vt=VT_DECIMAL;values[1].dblVal=0.0;}
+   if(kind==3){values[1].lVal=1;error=2;}
+   if(kind==4){values[2].lVal=99;error=3;}
+   if(kind==5){values[3].vt=VT_EMPTY;if(setter)error=3;}
+   if(kind==7){values[0].lVal=2;error=2;}
+   if(kind==8){values[1].lVal=-1;error=2;}
+   maps=finds=accesses=writes=0;diagnostic[0]=0;
+   HRESULT status=setter?openbor_changelayerproperty(args,&out,count):
+                         openbor_getlayerproperty(args,&out,count);
+   const char *usage=setter?
+    "Function changelayerproperty must have 4 parameters: layertype, index, propertyname and value\n":
+    "Function getlayerproperty must have 3 parameters: layertype, index and propertyname\n";
+   const char *expected=!error?"":!c->split || error==1?usage:error==2?"Layer not found!\n":setter?
+    "Layer property not understood or bad value.\n":"Bad property name or value.\n";
+   assert(status==(error?E_FAIL:S_OK) && !strcmp(diagnostic,expected));
+   assert(out==(!setter && !error?&result:NULL));
+   assert(maps==(kind!=0));
+   assert(finds==(kind!=0 && kind!=1));
+   assert(accesses==(kind==2 || kind==4 || kind==5 || kind==6));
+   if(!setter && !error)assert(result.vt==VT_INTEGER && result.lVal==42);
+   assert(writes==(setter && !error?17:0));
+  }
+  fprintf(stdout,"{\"revision\":%u,\"diagnostic_cases\":18}\n",obor_profile_build);
+ }
+ return 0;
+}

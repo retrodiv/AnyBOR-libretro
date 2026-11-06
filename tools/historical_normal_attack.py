@@ -13,6 +13,7 @@ from native_header_fixtures import graphics_refusals, inline_refusals
 
 def render_normal_attack(parts, *, revision, target_argument, cooldown_available,
                          throttle_time_field, game_speed, cases,
+                         unused_early_routes=False,
                          unused_graphics_inlines=False,
                          unused_inline_declarations=None):
     if (not isinstance(parts, dict) or
@@ -23,7 +24,7 @@ def render_normal_attack(parts, *, revision, target_argument, cooldown_available
     if (type(revision) is not int or not 0 < revision <= 0xffffffff or
             type(game_speed) is not int or not 1 <= game_speed <= 10000 or
             any(type(v) is not bool for v in
-                (target_argument, cooldown_available, throttle_time_field)) or
+                (target_argument, cooldown_available, throttle_time_field, unused_early_routes)) or
             (cooldown_available and not parts['recheck_nextattack'].strip())):
         raise ValueError('Explicit native signature, clock and field contracts required')
     if not isinstance(cases, list) or not 1 <= len(cases) <= 4096:
@@ -154,6 +155,7 @@ static void observed_idle(entity *target) {assert(target==self);observe(5);}
 #define randf observed_random
 #define set_idle observed_idle
 #define time fixture_clock
+@EARLY_REFUSALS@
 @COOLDOWN@
 @PROVIDER@
 #undef time
@@ -193,6 +195,14 @@ int main(void) {
 }
 '''
     values = dict(GAME_SPEED=str(game_speed), REVISION=str(revision),
+        EARLY_REFUSALS=r'''
+static int max_attacks,max_freespecials,animattacks[1],animspecials[1];
+static s_videomodes videomodes;
+static unsigned refused_early_random(void) {abort();}
+#define rand32 refused_early_random
+int check_energy(int which,int animation) {(void)which;(void)animation;abort();}
+float diff(float a,float b) {(void)a;(void)b;abort();}
+''' if unused_early_routes else '',
         GRAPHICS=graphics_refusals(unused_graphics_inlines),
         REFUSALS=inline_refusals(unused_inline_declarations,
             forbidden_names=('common_try_normalattack', 'recheck_nextattack',

@@ -11,8 +11,10 @@ def render_difficulty_menu(engines, rows):
         'choose_difficulty()', 'choose_difficulty_'+engine+'(void)', 1)
         for engine, root in engines.items())
     modes = {'two_pages': 0, 'selector_page': 1, 'back_on_previous_page': 2}
-    contexts = ','.join('{%d,%d,%d,choose_difficulty_%s}' % (
-        row['revision'], modes[row['paging']], row['locked_row_offset'], row['engine']) for row in rows)
+    contexts = ','.join('{%d,%d,%d,%d,%d,%d,%d,choose_difficulty_%s}' % (
+        row['revision'], modes[row['paging']], row['locked_row_offset'],
+        row.get('base_row', 0), row.get('back_row', 6), row.get('title_row', -2),
+        row.get('max_sets', 16), row['engine']) for row in rows)
     return r'''
 #include <assert.h>
 #include <stdint.h>
@@ -42,6 +44,8 @@ static int color_black,color_white=1;
 static int _liney(int a,int b) {(void)a;(void)b;return 10;}
 static int fontheight(int a) {(void)a;return 8;}
 static int loadGameFile(void) {return 0;}
+/* Save-file bonus loading is outside this input/selection contract. */
+static int obor_saved_game_slots(void) {abort();}
 static int sound_play_sample(int a,unsigned b,int c,int d,unsigned e) {
  (void)a;(void)b;(void)c;(void)d;(void)e;return 0;
 }
@@ -52,12 +56,12 @@ static void spriteq_add_line(int a,int b,int c,int d,int e,int f,s_drawmethod *g
  (void)a;(void)b;(void)c;(void)d;(void)e;(void)f;(void)g;
 }
 static struct {int index,row,selected,locked;} observed[5];
-static int observed_count,back_seen,back_selected,expected_selector,paging,row_offset;
+static int observed_count,back_seen,back_selected,expected_selector,paging,row_offset,base_row,back_row,title_row;
 static int keys[40],key_count,key_index;
 static void _menutextm(int selected,int row,int unused,const char *fmt,...) {
  (void)unused;
- if(!strcmp(fmt,"Game Mode"))return;
- if(!strcmp(fmt,"Back")) {assert(row==6 && !back_seen);back_seen=1;back_selected=selected;return;}
+ if(!strcmp(fmt,"Game Mode")){assert(row==title_row);return;}
+ if(!strcmp(fmt,"Back")) {assert(row==back_row && !back_seen);back_seen=1;back_selected=selected;return;}
  va_list args;va_start(args,fmt);const char *name=va_arg(args,const char*);va_end(args);
  int index=-1;for(int i=0;i<num_difficulties;++i)if(!strcmp(name,levelsets[i].name))index=i;
  assert(index>=0 && observed_count<5);
@@ -77,7 +81,7 @@ static void update(int a,int b) {
    int i=first+j,locked=bonus<levelsets[i].ifcomplete;
    assert(observed[j].index==i && observed[j].selected==(expected_selector==i));
    assert(observed[j].locked==locked);
-   assert(observed[j].row==j+(locked && levelsets[i].ifcomplete==1?row_offset:0));
+   assert(observed[j].row==j+base_row+(locked && levelsets[i].ifcomplete==1?row_offset:0));
   }
   assert(back_selected==(expected_selector==first+count));
  } else assert(!observed_count && !back_seen);
@@ -89,12 +93,13 @@ static void update(int a,int b) {
  if(expected_selector>num_difficulties)expected_selector=0;
 }
 @BODIES@
-static void check(int (*choose)(void)) {
+static void check(int (*choose)(void),int max_sets) {
  const int counts[]={1,2,5,6,9,10,11,15,16},values[]={0,1,3};
  for(unsigned n=0;n<sizeof(counts)/sizeof(*counts);++n)
  for(int l=0;l<3;++l)for(int b=0;b<3;++b)
  for(int path=0;path<2;++path)for(int accept=0;accept<2;++accept) {
   num_difficulties=counts[n];bonus=values[b];
+  if(num_difficulties>max_sets)continue;
   for(int target=0;target<=num_difficulties;++target) {
    ++test_case;
    for(int i=0;i<num_difficulties;++i) {
@@ -117,11 +122,16 @@ static void check(int (*choose)(void)) {
  }
 }
 int main(void) {
- const struct {unsigned revision;int paging,row_offset;int (*choose)(void);} rows[]={@ROWS@};
+ const struct {unsigned revision;int paging,row_offset,base_row,back_row,title_row,max_sets;int (*choose)(void);} rows[]={@ROWS@};
  for(unsigned i=0;i<sizeof(rows)/sizeof(*rows);++i) {
-  obor_profile_build=rows[i].revision;paging=rows[i].paging;row_offset=rows[i].row_offset;check(rows[i].choose);
+  obor_profile_build=rows[i].revision;paging=rows[i].paging;row_offset=rows[i].row_offset;
+  base_row=rows[i].base_row;back_row=rows[i].back_row;title_row=rows[i].title_row;
+  check(rows[i].choose,rows[i].max_sets);
  }
- assert(test_case==sizeof(rows)/sizeof(*rows)*84*36);
+ unsigned expected=0;const int counts[]={1,2,5,6,9,10,11,15,16};
+ for(unsigned i=0;i<sizeof(rows)/sizeof(*rows);++i)for(unsigned n=0;n<sizeof(counts)/sizeof(*counts);++n)
+  if(counts[n]<=rows[i].max_sets)expected+=(counts[n]+1)*36;
+ assert(test_case==expected);
  return 0;
 }
 '''.replace('@BODIES@', bodies).replace('@ROWS@', contexts)

@@ -1,0 +1,114 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <stdarg.h>
+#include "openbor.h"
+#undef assert
+#undef printf
+uint32_t obor_profile_build;
+static int active_case,oracle_cases,validation_cases;
+#define assert(c) do{if(!(c)){fprintf(stderr,"ENTITY_QUERY revision=%u case=%d line=%d\n",obor_profile_build,active_case,__LINE__);abort();}}while(0)
+static char diagnostic[512];
+static int captured_printf(const char *format,...){
+ va_list ap;va_start(ap,format);
+ int n=vsnprintf(diagnostic,sizeof(diagnostic),format,ap);va_end(ap);
+ assert(n>=0 && (size_t)n<sizeof(diagnostic));return n;
+}
+CHAR *StrCache_Get(int index){(void)index;abort();}
+void StrCache_Collect(int index){(void)index;abort();}
+int StrCache_Pop(void){abort();}
+@ENUMS@
+@VARIANTS@
+static int obor_entity_get_property_native(int property){return property;}
+void mapstrings_getentityproperty(ScriptVariant **args,int count){(void)args;(void)count;}
+#define printf captured_printf
+@ENTRY@
+#undef printf
+struct context{unsigned revision;int strict,vulnerable;const char *bbox_message,*energy_message;};
+static const struct context contexts[]={@CONTEXTS@};
+static entity actor;
+static s_anim clips[2],*table[2];
+static short rectangles[2][2][6],active[2][2];
+static ScriptVariant values[6],*args[6];
+static void reset(int property){
+ memset(&actor,0,sizeof(actor));memset(clips,0,sizeof(clips));
+ memset(values,0,sizeof(values));memset(active,0,sizeof(active));
+ actor.modeldata.animation=table;actor.modeldata.animation_capacity=2;
+ for(int a=0;a<2;++a){
+  table[a]=clips+a;clips[a].numframes=2;clips[a].bbox_coords=rectangles[a];clips[a].vulnerable=active[a];
+  clips[a].energycost.cost=9+a;clips[a].energycost.disable=1;clips[a].energycost.mponly=2;
+  for(int f=0;f<2;++f){active[a][f]=1;for(int c=0;c<6;++c)rectangles[a][f][c]=(short)(10+100*a+10*f+c);}
+ }
+ for(int i=0;i<6;++i){args[i]=values+i;values[i].vt=VT_INTEGER;}
+ values[0].vt=VT_PTR;values[0].ptrVal=&actor;values[1].lVal=property;
+}
+static void invoke(int count,HRESULT status,VARTYPE type,LONG value,const char *message,int validation){
+ ScriptVariant result,*output=&result;memset(&result,0,sizeof(result));result.vt=VT_INTEGER;result.lVal=999;
+ diagnostic[0]=0;
+ assert(openbor_getentityproperty(args,&output,count)==status && output==&result);
+ assert(result.vt==type && (type!=VT_INTEGER || result.lVal==value));
+ assert(!strcmp(diagnostic,message));
+ if(validation)++validation_cases;else ++oracle_cases;
+ ++active_case;
+}
+int main(void){
+ const VARTYPE bad_types[]={VT_EMPTY,VT_DECIMAL,VT_PTR,VT_STR};
+ for(unsigned p=0;p<sizeof(contexts)/sizeof(*contexts);++p){
+  const struct context *context=contexts+p;obor_profile_build=context->revision;
+  active_case=oracle_cases=validation_cases=0;
+  for(int a=0;a<2;++a)for(int f=0;f<2;++f)for(int c=0;c<5;++c)
+  for(int vulnerable=0;vulnerable<2;++vulnerable)for(int ignored=0;ignored<2;++ignored){
+   reset(_ep_bbox);active[a][f]=(short)vulnerable;values[2].lVal=ignored?777:-99;
+   values[3].lVal=a;values[4].lVal=f;values[5].lVal=c;
+   int empty=context->vulnerable && !vulnerable;
+   invoke(6,S_OK,empty?VT_EMPTY:VT_INTEGER,rectangles[a][f][c],"",0);
+  }
+  for(int count=2;count<6;++count){
+   reset(_ep_bbox);invoke(count,context->strict?E_FAIL:S_OK,VT_EMPTY,0,
+                         context->strict?context->bbox_message:"",0);
+  }
+  for(int argument=2;argument<6;++argument)for(unsigned kind=0;kind<4;++kind){
+   reset(_ep_bbox);values[argument].vt=bad_types[kind];
+   invoke(6,E_FAIL,VT_EMPTY,0,context->bbox_message,0);
+  }
+  /* These source-owned results above are distinct from the bounded-core
+     validation controls below; undefined original accesses are not oracles. */
+  for(int kind=0;kind<11;++kind){
+   reset(_ep_bbox);
+   if(kind==0)values[3].lVal=-1;
+   if(kind==1)values[3].lVal=2;
+   if(kind==2)values[4].lVal=-1;
+   if(kind==3)values[4].lVal=2;
+   if(kind==4)values[5].lVal=-1;
+   if(kind==5)values[5].lVal=1000;
+   if(kind==6)clips[0].bbox_coords=NULL;
+   if(kind==7)clips[0].vulnerable=NULL;
+   if(kind==8)actor.modeldata.animation=NULL;
+   if(kind==9)table[0]=NULL;
+   if(kind==10)clips[0].numframes=0;
+   int reads=kind==7 && !context->vulnerable;
+   invoke(6,S_OK,reads?VT_INTEGER:VT_EMPTY,10,"",1);
+  }
+  for(int a=0;a<2;++a)for(int selector=0;selector<3;++selector){
+   reset(_ep_energycost);values[2].lVal=selector;values[3].lVal=a;
+   LONG expected=selector==0?9+a:selector==1?1:2;
+   invoke(4,S_OK,VT_INTEGER,expected,"",0);
+  }
+  for(int count=2;count<4;++count){reset(_ep_energycost);invoke(count,S_OK,VT_EMPTY,0,"",0);}
+  for(unsigned kind=0;kind<4;++kind){
+   reset(_ep_energycost);values[2].vt=bad_types[kind];
+   invoke(4,E_FAIL,VT_EMPTY,0,bad_types[kind]==VT_STR?"":context->energy_message,0);
+  }
+  reset(_ep_energycost);values[2].lVal=99;invoke(4,E_FAIL,VT_EMPTY,0,"",0);
+  for(int side=0;side<2;++side){
+   reset(_ep_energycost);values[3].lVal=side?2:-1;invoke(4,S_OK,VT_EMPTY,0,"",1);
+  }
+  assert(oracle_cases==113 && validation_cases==13);
+  fprintf(stdout,"{\"revision\":%u,\"oracle_cases\":%d,\"validation_cases\":%d}\n",
+          obor_profile_build,oracle_cases,validation_cases);
+ }
+ return 0;
+}

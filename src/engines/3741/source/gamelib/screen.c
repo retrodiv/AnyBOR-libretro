@@ -3,9 +3,10 @@
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
  * Upstream code retains its original license and notices.
- * Match each profile's native screen centering and preserve existing
- * compiler cleanup. Bound screen blend selectors and use transparent copy
- * when an indexed table is unavailable.
+ * Match each profile's native screen centering and fixed-point zoom
+ * sampling; validate owned pixel storage and define unassigned crop pixels.
+ * Bound screen blend selectors and use transparent copy when an indexed
+ * table is unavailable.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/3741.md
  * at the source repository root. Original notices follow below.
@@ -29,6 +30,10 @@
 #include "types.h"
 #include "transform.h"
 #include "screen.h"
+#include <stddef.h>
+#include <stdint.h>
+#include <stdlib.h>
+#include "obor_resources.h"
 
 s_screen * allocscreen(int width, int height, int pixelformat)
 {
@@ -289,7 +294,7 @@ static void _putscreen(s_screen* dest, s_screen* src, int x, int y, s_drawmethod
 {
 	unsigned char* table;
 	int alpha, transbg;
-	gfx_entry gfx;
+	gfx_entry gfx = {.type=gfx_screen};
 
 	if(!drawmethod || drawmethod->flag==0)
 	{
@@ -302,11 +307,11 @@ static void _putscreen(s_screen* dest, s_screen* src, int x, int y, s_drawmethod
 			gfx_draw_plane(dest, &gfx, x, y, 0, 0, drawmethod);
 		else gfx_draw_water(dest, &gfx, x, y, 0, 0, drawmethod);
 		return ;
-	} else if(drawmethod->rotate) {
+	} else if(obor_profile_build >= 3552 && drawmethod->rotate) {
 		gfx.screen = src;
 		gfx_draw_rotate(dest, &gfx, x, y, 0, 0, drawmethod);
 		return;
-	} else if(drawmethod->scalex!=256 || drawmethod->scaley!=256 || drawmethod->shiftx){
+	} else if(obor_profile_build >= 3552 && (drawmethod->scalex!=256 || drawmethod->scaley!=256 || drawmethod->shiftx)){
 		gfx.screen = src;
 		gfx_draw_scale(dest, &gfx, x, y, 0, 0, drawmethod);
 		return;
@@ -322,7 +327,7 @@ static void _putscreen(s_screen* dest, s_screen* src, int x, int y, s_drawmethod
 
 	if(!table && alpha<=0 && !transbg && !usechannel)
 	{
-		if(dest->pixelformat==src->pixelformat && dest->width==src->width && dest->height==src->height && !x && !y)
+		if(dest->pixelformat==src->pixelformat && dest->width==src->width && dest->height==src->height && (obor_profile_build < 3558 || (!x && !y)))
 		{
 			copyscreen(dest, src);
 			return;
@@ -366,6 +371,12 @@ void putscreen(s_screen* dest, s_screen* src, int x, int y, s_drawmethod* drawme
 
 	drawmethod_global_init(drawmethod);
 
+    if(obor_profile_build < 3556)
+    {
+        _putscreen(dest, src, x, y, drawmethod);
+        return;
+    }
+
 	if(drawmethod && drawmethod->flag){
 		xrepeat = drawmethod->xrepeat;
 		yrepeat = drawmethod->yrepeat;
@@ -376,8 +387,10 @@ void putscreen(s_screen* dest, s_screen* src, int x, int y, s_drawmethod* drawme
 		xspan = yspan = 0;
 	}
 
+	dx = x;
 	for(j=0, dy=y; j<yrepeat; j++, dy+=yspan){
-		for(i=0, dx=x; i<xrepeat; i++, dx+=xspan){
+		if(obor_profile_build >= 3558) dx = x;
+		for(i=0; i<xrepeat; i++, dx+=xspan){
 			_putscreen(dest, src, dx, dy, drawmethod);
 		}
 	}
@@ -433,36 +446,55 @@ void scalescreen(s_screen * dest, s_screen * src)
  *     scalex - x scale factor
  *     scaley - y scale factor
  */
-void zoomscreen(s_screen* dest, s_screen* src, int centerx, int centery, int scalex, int scaley)
+static int obor_zoom_storage(const s_screen *screen, size_t *length)
 {
-	s_screen* frame;
-	int screenwidth = src->width;
-	int screenheight = src->height;
-	int width = (screenwidth<<8)/scalex; // width of clipped, unscaled screen
-	int height = (screenheight<<8)/scaley; // height of clipped, unscaled screen
-	int xmin = (width>>1)-centerx; // x coord before clipping corresponding to x=0 after clipping
-	int ymin = (height>>1)-centery; // y coord before clipping corresponding to y=0 after clipping
-	int pixelformat = dest->pixelformat;
+    size_t bytes=obor_allocation_size(screen), start=offsetof(s_screen,data);
+    unsigned count;
+    if(bytes < start || screen->magic != screen_magic || screen->width <= 0 || screen->height <= 0) return 0;
+    switch(screen->pixelformat) {
+        case PIXEL_8: case PIXEL_x8: count=1; break;
+        case PIXEL_16: count=2; break;
+        case PIXEL_32: count=4; break;
+        default: return 0;
+    }
+    if((size_t)screen->width > SIZE_MAX/count/(size_t)screen->height) return 0;
+    *length=(size_t)screen->width*(size_t)screen->height*count;
+    return *length <= bytes-start;
+}
 
-	if(src->pixelformat!=pixelformat) return;
-	if(xmin>=screenwidth || xmin+((width*scalex)>>8)<0) return; // out of left or right border
-	if(ymin>=screenheight) return;
-
-	frame = allocscreen(width, height, pixelformat); // the part of the screen that will be zoomed
-	copyscreen_o(frame, src, xmin, ymin);
-
-	if(pixelbytes[pixelformat]==1)
-	{
-		scalescreen(dest, frame);
-	}
-	else if(pixelbytes[pixelformat]==2)
-	{
-		scalescreen16(dest, frame);
-	}
-	else if(pixelbytes[pixelformat]==4)
-	{
-		scalescreen32(dest, frame);
-	}
-
-	freescreen(&frame);
+void zoomscreen(s_screen *dest, s_screen *src, int centerx, int centery, int scalex, int scaley)
+{
+    size_t source_bytes,dest_bytes;
+    int64_t width,height,xmin,ymin;
+    uint64_t xstep,ystep;
+    unsigned count;
+    const unsigned char *source;
+    unsigned char *copy=NULL;
+    if(scalex <= 0 || scaley <= 0 || !obor_zoom_storage(src,&source_bytes) ||
+       !obor_zoom_storage(dest,&dest_bytes) || src->pixelformat != dest->pixelformat) return;
+    width=((int64_t)src->width*256)/scalex;
+    height=((int64_t)src->height*256)/scaley;
+    if(width <= 0 || height <= 0) return;
+    xmin=width/2-centerx; ymin=height/2-centery;
+    if(xmin >= src->width || xmin+((width*scalex)/256) < 0 || ymin >= src->height) return;
+    count=src->pixelformat==PIXEL_16?2:src->pixelformat==PIXEL_32?4:1;
+    xstep=((uint64_t)width*65536)/(unsigned)dest->width;
+    ystep=((uint64_t)height*65536)/(unsigned)dest->height;
+    source=src->data;
+    if(src==dest) {
+        copy=malloc(source_bytes);
+        if(!copy) return;
+        memcpy(copy,source,source_bytes);source=copy;
+    }
+    for(int y=0;y<dest->height;++y) {
+        int64_t sy=(int64_t)(((uint64_t)(unsigned)y*ystep)/65536)-ymin;
+        for(int x=0;x<dest->width;++x) {
+            int64_t sx=(int64_t)(((uint64_t)(unsigned)x*xstep)/65536)-xmin;
+            unsigned char *pixel=dest->data+((size_t)y*(size_t)dest->width+(size_t)x)*count;
+            if(sx >= 0 && sx < src->width && sy >= 0 && sy < src->height)
+                memcpy(pixel,source+((size_t)sy*(size_t)src->width+(size_t)sx)*count,count);
+            else memset(pixel,0,count); /* Define only originally unassigned crop bytes. */
+        }
+    }
+    free(copy);
 }

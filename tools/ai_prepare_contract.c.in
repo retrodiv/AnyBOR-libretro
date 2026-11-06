@@ -1,0 +1,109 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <assert.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "openbor.h"
+#undef assert
+#undef printf
+#ifdef NDEBUG
+#error AI preparation assertions must remain enabled
+#endif
+struct prepare_case {
+ uint32_t revision;const char *name;
+ int target,flip,noflip,wait,weapon,chain,chain_ok,valid,range,mp,hp,cost,mutate;
+ int animation,action,idling,attacking,turning,direction;
+ const char *trace;unsigned random_count,random[16];
+};
+static const struct prepare_case cases[]={@CASES@},*test;
+static unsigned active_case,random_at;
+static char observed[2048];
+static size_t used;
+static entity subject,opponent,weapon,*self=&subject;
+uint32_t obor_profile_build;
+u32 time;
+static int max_freespecials=4,max_attacks=3,atkchoices[MAX_ANIS];
+static int animspecials[]={110,111,112,113},animattacks[]={114,115,116};
+static const int ids[]={ANI_TURN,ANI_THROWATTACK,110,111,112,113,114,115,116};
+static int selected;
+#define assert(c) do {if(!(c)) {fprintf(stderr,"AI preparation mismatch: profile=%u case=%u (%s) line=%d trace=%s expected=%s\n",obor_profile_build,active_case,test->name,__LINE__,observed,test->trace);abort();}} while(0)
+static void record(char code,int value,int extra) {
+ assert(used<sizeof(observed));
+ int count=extra<0?snprintf(observed+used,sizeof(observed)-used,"%c%d;",code,value):
+  snprintf(observed+used,sizeof(observed)-used,"%c%d:%d;",code,value,extra);
+ assert(count>=0 && (size_t)count<sizeof(observed)-used);used+=(size_t)count;
+}
+static int slot(int animation) {
+ if(animation==-1)return -1;
+ for(unsigned i=0;i<sizeof(ids)/sizeof(*ids);++i)if(ids[i]==animation)return (int)i;
+ assert(!"Unexpected animation argument");return -1;
+}
+static void initial_action(void) {abort();}
+static void changed_action(void) {abort();}
+void common_turn(void) {abort();}
+void common_attack_proc(void) {abort();}
+static int action_id(void) {
+ if(!self->takeaction)return 0;
+ if(self->takeaction==initial_action)return 1;
+ if(self->takeaction==common_turn)return 2;
+ if(self->takeaction==common_attack_proc)return 3;
+ assert(self->takeaction==changed_action);return 4;
+}
+entity *normal_find_target(int animation,int detect) {
+ int index=slot(animation);assert(!detect);record('F',index,-1);
+ return (index<0?test->target:(test->range&(1<<index)))?&opponent:NULL;
+}
+static int observed_range(entity *ent,entity *target,int animation) {
+ int index=slot(animation);assert(ent==self && target==&opponent && index>=0);
+ record('R',index,-1);return !!(test->range&(1<<index));
+}
+#undef check_range
+#define check_range observed_range
+int check_energy(int which,int animation) {
+ int index=slot(animation);assert((which==0 || which==1) && index>=2 && index<=5);
+ record('E',which,index);return !!((which?test->mp:test->hp)&(1<<index));
+}
+int check_costmove(int animation,int freespecial,int jumphack) {
+ int index=slot(animation);assert(freespecial==1 && jumphack==0);
+ record('C',index,-1);return test->cost;
+}
+static int perform_atchain(void) {record('H',test->chain_ok,-1);return test->chain_ok;}
+static unsigned observed_random(void) {
+ assert(random_at<test->random_count && random_at<16);
+ unsigned value=test->random[random_at++];record('D',(int)value,-1);return value;
+}
+#undef rand32
+#define rand32 observed_random
+void ent_set_anim(entity *ent,int animation,int reset) {
+ assert(ent==self && reset==0);selected=slot(animation);
+ record('A',selected,action_id());if(test->mutate)self->takeaction=changed_action;
+}
+@PREPARE@
+int main(void) {
+ s_anim *animations[MAX_ANIS],available;
+ memset(&available,0,sizeof(available));available.numframes=1;
+ for(unsigned i=0;i<sizeof(cases)/sizeof(*cases);++i) {
+  active_case=i;test=&cases[i];obor_profile_build=test->revision;
+  memset(&subject,0,sizeof(subject));memset(&opponent,0,sizeof(opponent));
+  memset(&weapon,0,sizeof(weapon));memset(animations,0,sizeof(animations));
+  for(unsigned at=0;at<sizeof(ids)/sizeof(*ids);++at)
+   if(test->valid&(1<<at))animations[ids[at]]=&available;
+  subject.modeldata.animation=animations;subject.modeldata.animation_capacity=MAX_ANIS;
+  subject.modeldata.noflip=test->noflip;subject.modeldata.chainlength=test->chain;
+  subject.direction=1;subject.x=0;opponent.x=test->flip?-1:1;
+  subject.xdir=3;subject.zdir=-2;subject.takeaction=initial_action;
+  subject.stalltime=test->wait?11:0;time=10;
+  if(test->weapon){subject.weapent=&weapon;weapon.modeldata.subtype=SUBTYPE_PROJECTILE;}
+  used=random_at=0;observed[0]=0;selected=-1;
+  normal_prepare();
+  assert(subject.xdir==0 && subject.zdir==0);
+  assert(selected==test->animation && action_id()==test->action);
+  assert(subject.idling==test->idling && subject.attacking==test->attacking);
+  assert(subject.turning==test->turning && subject.direction==test->direction);
+  assert(!strcmp(observed,test->trace));
+ }
+ printf("{\"status\":\"PASS\",\"cases\":%u}\n",(unsigned)(sizeof(cases)/sizeof(*cases)));
+ return 0;
+}

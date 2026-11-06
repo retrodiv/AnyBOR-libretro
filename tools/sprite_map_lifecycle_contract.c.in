@@ -1,0 +1,130 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "openbor.h"
+#undef printf
+#undef assert
+uint32_t obor_profile_build;
+unsigned int sprites_loaded;
+s_sprite_map *sprite_map;
+int max_animations=2;
+#define assert(c) do{if(!(c)){fprintf(stderr,"SPRITE_MAP_LIFECYCLE revision=%u line=%d\n",obor_profile_build,__LINE__);abort();}}while(0)
+static int reload_calls,reload_success;
+static char image_name[]="controlled.sprite";
+static s_sprite *cache_reload(char *filename,int *width,int *height){
+ assert(filename==image_name && !width && !height);++reload_calls;
+ return reload_success?calloc(1,sizeof(s_sprite)):NULL;
+}
+#define cachesprite actual_cachesprite
+#define loadsprite2 cache_reload
+@SERVICE@
+#undef loadsprite2
+#undef cachesprite
+static int walked,walk_mode;
+static void cache_index_observer(int index,int load){assert(index==walked++ && load==walk_mode);}
+#define cachesprite cache_index_observer
+#define cache_model_sprites cache_walk
+@WALK@
+#undef cache_model_sprites
+#undef cachesprite
+static s_model models[3];
+static int live[3],cursor,event_count;
+static int events[6];
+static int lookup_phase,lookup_found,lookup_updates,lookup_caches;
+static s_model lookup_model;
+s_model *findmodel(char *name){assert(!strcmp(name,"known"));return lookup_found?&lookup_model:NULL;}
+void update_model_loadflag(s_model *model,char flag){assert(model==&lookup_model && flag==5);++lookup_updates;}
+static s_model *current_model(void){
+ while(cursor<3 && !live[cursor])++cursor;
+ return cursor<3?models+cursor:NULL;
+}
+s_model *getFirstModel(void){cursor=0;return current_model();}
+s_model *getCurrentModel(void){return current_model();}
+s_model *getNextModel(void){++cursor;return current_model();}
+void cache_model_sprites(s_model *model,int load){
+ if(lookup_phase){assert(model==&lookup_model && load==1);++lookup_caches;return;}
+ assert(model==models+cursor && !load && event_count<6);events[event_count++]=10+cursor;
+}
+int free_model(s_model *model){
+ assert(model==models+cursor && live[cursor] && event_count<6);
+ events[event_count++]=20+cursor;live[cursor]=0;return 1;
+}
+static void unload_models(void){s_model *temp;@UNLOAD@}
+static s_model *cached_model(char *name,char unload){s_model *tempmodel;@EXISTING@return NULL;}
+struct context{unsigned revision;int epoch;};
+static const struct context contexts[]={@CONTEXTS@};
+int main(void){
+ for(unsigned p=0;p<sizeof(contexts)/sizeof(*contexts);++p){
+  const struct context *c=contexts+p;obor_profile_build=c->revision;
+  if(c->epoch){
+   for(int index=-1;index<=1;++index)for(int node_present=0;node_present<2;++node_present)
+   for(int present=0;present<2;++present)for(int mode=0;mode<2;++mode)
+   for(int success=0;success<2;++success){
+    if(mode && c->epoch<2)continue;
+    s_sprite_list node={0};s_sprite_map map={0};sprite_map=&map;sprites_loaded=1;
+    map.node=node_present?&node:NULL;node.filename=image_name;
+    node.sprite=present?calloc(1,sizeof(s_sprite)):NULL;assert(!present || node.sprite);
+    s_sprite *prior=node.sprite;reload_calls=0;reload_success=success;
+    actual_cachesprite(index,mode);
+    int active=index==0 && node_present;
+    assert(reload_calls==(active && mode && !present));
+    if(!active)assert(node.sprite==prior);
+    else if(!mode)assert(!node.sprite);
+    else if(present)assert(node.sprite==prior);
+    else assert((node.sprite!=NULL)==success);
+    free(node.sprite);
+   }
+   s_sprite_list shared={0};s_sprite_map aliases[2]={{0}};
+   sprite_map=aliases;sprites_loaded=2;aliases[0].node=aliases[1].node=&shared;
+   shared.filename=image_name;shared.sprite=calloc(1,sizeof(s_sprite));assert(shared.sprite);
+   actual_cachesprite(0,0);assert(!shared.sprite);
+   actual_cachesprite(1,0);assert(!shared.sprite);
+   if(c->epoch>=2){
+    reload_calls=0;reload_success=1;actual_cachesprite(0,1);assert(shared.sprite && reload_calls==1);
+    s_sprite *once=shared.sprite;actual_cachesprite(1,1);assert(shared.sprite==once && reload_calls==1);
+   }
+   free(shared.sprite);
+  }
+  s_model model={0};s_anim animation[2]={{0}};s_anim *table[]={animation,animation+1};
+  int ids[2][2];model.animation=table;model.animation_capacity=2;
+  model.icon.def=0;model.icon.die=1;model.icon.get=2;model.icon.mphigh=3;
+  model.icon.mplow=4;model.icon.mpmed=5;model.icon.pain=6;model.icon.weapon=7;
+  for(int i=0;i<MAX_PLAYERS;++i)model.parrow[i][0]=8+i;
+  for(int i=0;i<2;++i){
+   animation[i].numframes=2;animation[i].sprite=ids[i];
+   for(int f=0;f<2;++f)ids[i][f]=8+MAX_PLAYERS+2*i+f;
+  }
+  for(walk_mode=0;walk_mode<2;++walk_mode){
+   walked=0;cache_walk(&model,walk_mode);
+   int available=c->epoch && (!walk_mode || c->epoch>=2);
+   assert(walked==(available?12+MAX_PLAYERS:0));
+  }
+  lookup_phase=1;
+  for(lookup_found=0;lookup_found<2;++lookup_found){
+   lookup_updates=lookup_caches=0;
+   assert(cached_model("known",5)==(lookup_found?&lookup_model:NULL));
+   assert(lookup_updates==lookup_found && lookup_caches==(lookup_found && c->epoch>=2));
+  }
+  lookup_phase=0;
+  for(int a=0;a<8;++a)for(int b=0;b<8;++b)for(int d=0;d<8;++d){
+   int flags[]={a,b,d},expected[6],count=0;
+   memset(models,0,sizeof(models));event_count=0;
+   for(int i=0;i<3;++i){
+    live[i]=1;models[i].unload=flags[i];
+    int uncache=c->epoch==1?flags[i]==2:c->epoch>=2?(flags[i]&2)!=0:0;
+    int release=c->epoch<2?flags[i]!=0:(flags[i]&1)!=0;
+    if(uncache)expected[count++]=10+i;
+    if(release)expected[count++]=20+i;
+   }
+   unload_models();assert(event_count==count);
+   for(int i=0;i<count;++i)assert(events[i]==expected[i]);
+   for(int i=0;i<3;++i)assert(live[i]==(c->epoch<2?flags[i]==0:!(flags[i]&1)));
+  }
+  memset(live,0,sizeof(live));event_count=0;unload_models();assert(!event_count);
+  fprintf(stdout,"{\"revision\":%u,\"lifecycle\":\"PASS\"}\n",c->revision);
+ }
+ return 0;
+}

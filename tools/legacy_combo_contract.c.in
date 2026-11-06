@@ -1,0 +1,89 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+@LOAD@
+static entity actor;
+entity *self;
+s_player player[MAX_PLAYERS];
+unsigned int time;
+static int method,match_key,old_result,new_result,mutate,cost_allowed;
+static void initial_action(void) {abort();}
+static void callback_action(void) {abort();}
+void common_attack_proc(void) {abort();}
+void common_jump(void) {abort();}
+static int action_id(void (*p)(void)) {
+ if(p==initial_action)return 0;
+ if(p==common_attack_proc)return 1;
+ if(p==common_jump)return 2;
+ if(p==callback_action)return 3;
+ abort();
+}
+static int calls[32][3],call_count;
+static void observe(int kind,int key) {
+ assert(call_count<32);calls[call_count][0]=kind;calls[call_count][1]=key;
+ calls[call_count++][2]=(int)actor.lastdir;
+}
+static void callback(void) {
+ actor.attacking=0;actor.jumping=0;actor.takeaction=callback_action;
+}
+int check_costmove(int animation,int force,int jump) {
+ assert(force==1 && jump==0);observe(2,animation);
+ if(!cost_allowed)return 0;
+ if(obor_profile_build<3650)actor.movestep=0;
+ if(mutate)callback();
+ return 1;
+}
+@FUNCTIONS@
+static int probe_key(int key) {
+ observe(1,key);
+ if(method==2)return obor_check_combo_key(key);
+ int result=key==match_key?(obor_profile_build<3650?old_result:new_result):0;
+ if(result && mutate)callback();
+ return result;
+}
+int check_combo(void) {abort();}
+#define obor_check_combo_key probe_key
+@PREINPUT@
+#undef obor_check_combo_key
+struct combo_input {
+ int method,key,playkeys,step,lastmove,lastdir,deadline,now,direction,cancel,position,hits,idling,frame_idle,height,platform,jumping,attacking,match_key,old_result,new_result,mutate,cost,normal_flag,cancel_flag;
+ int count;struct operation operations[4];
+};
+static const struct combo_input combo_cases[]={@CASES@};
+static void run(const struct combo_input *in) {
+ memset(&actor,0,sizeof(actor));memset(player,0,sizeof(player));
+ memset(&model,0,sizeof(model));memset(animations,0,sizeof(animations));
+ memset(animation_table,0,sizeof(animation_table));status=0;diagnostic="";
+ model.animation=animation_table;model.animation_capacity=MAX_ANIS;
+ active_animation=ANI_ATTACK1;animation_table[ANI_ATTACK1]=animations+ANI_ATTACK1;
+ animations[ANI_ATTACK1].numframes=4;allocate();assert(model.special);
+ assert(in->count<=4);for(int i=0;i<in->count;++i)command(in->operations+i);
+ assert(!status);defaults();
+ for(int i=0;i<model.specials_loaded;++i){model.special[i].input[26]=in->normal_flag;model.special[i].input[23]=in->cancel_flag;}
+ actor.modeldata=model;actor.animation=animations+ANI_ATTACK1;
+ actor.animation->cancel=in->cancel;actor.animation->animhits=in->hits;
+ static unsigned char idle_frames[4];memset(idle_frames,0,sizeof(idle_frames));
+ if(in->position>=0 && in->position<4)idle_frames[in->position]=in->frame_idle;
+ actor.animation->idle=idle_frames;actor.animnum=ANI_ATTACK1;actor.animpos=in->position;
+ actor.movestep=in->step;actor.lastmove=(unsigned)in->lastmove;actor.lastdir=(unsigned)in->lastdir;
+ actor.movetime=(unsigned)in->deadline;time=(unsigned)in->now;actor.direction=in->direction;
+ actor.idling=in->idling;actor.a=(float)in->height;actor.base=0;
+ actor.landed_on_platform=in->platform?&actor:NULL;actor.jumping=in->jumping;
+ actor.attacking=in->attacking;actor.takeaction=initial_action;
+ player[0].playkeys=(unsigned)in->playkeys;self=&actor;
+ method=in->method;match_key=in->match_key;old_result=in->old_result;new_result=in->new_result;
+ mutate=in->mutate;cost_allowed=in->cost;call_count=0;
+ int result=method?player_preinput():obor_check_combo_key(in->key);
+ printf("{\"revision\":%u,\"case\":%u,\"result\":%d,\"step\":%d,\"lastmove\":%u,\"lastdir\":%u,\"deadline\":%u,\"playkeys\":%u,\"attacking\":%d,\"action\":%d,\"jumping\":%d,\"normal\":[",obor_profile_build,active_case,result,actor.movestep,actor.lastmove,actor.lastdir,actor.movetime,player[0].playkeys,actor.attacking,action_id(actor.takeaction),actor.jumping);
+ for(int i=0;i<model.specials_loaded;++i){if(i)printf(",");printf("%d",model.special[i].input[26]);}
+ printf("],\"cancelled\":[");for(int i=0;i<model.specials_loaded;++i){if(i)printf(",");printf("%d",model.special[i].input[23]);}
+ printf("],\"calls\":[");for(int i=0;i<call_count;++i){if(i)printf(",");printf("[%d,%d,%d]",calls[i][0],calls[i][1],calls[i][2]);}
+ puts("]}");free(model.special);model.special=NULL;
+}
+int main(void) {
+ const uint32_t profiles[]={@PROFILES@};
+ for(unsigned p=0;p<sizeof(profiles)/sizeof(*profiles);++p) {
+  obor_profile_build=profiles[p];assert(obor_profile_build<3652);
+  for(active_case=0;active_case<sizeof(combo_cases)/sizeof(*combo_cases);++active_case)run(combo_cases+active_case);
+ }
+ return 0;
+}

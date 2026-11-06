@@ -120,7 +120,32 @@ class ProfileGroupsTests(unittest.TestCase):
         root = Path(os.environ.get('OBOR_TEST_SOURCE', Path(__file__).resolve().parents[1]))
         workflow = (root / '.github/workflows/ci.yml').read_text()
         with self.assertRaisesRegex(ValueError, 'platform budget'):
-            check_workflow_groups(workflow, [dict(build=str(n)) for n in range(248)])
+            check_workflow_groups(workflow, [dict(build=str(n)) for n in range(253)])
+
+    def test_count_budget_boundaries_keep_every_platform_covered(self):
+        def workflow(size, native_count):
+            count = (size + 11) // 12
+            lines = []
+            for script in ('test_rewind', 'test_state_options', 'regression'):
+                for flags in ('', '--windows --runner wine', '--core anybor_libretro.dylib'):
+                    if script == 'regression' and '--windows' in flags:
+                        continue
+                    groups = native_count if 'dylib' in flags else count
+                    for index in range(1, groups + 1):
+                        lines.append('python3 tools/' + script + '.py ' + flags +
+                                     ' --profile-group ' + str(index) + '/' + str(groups))
+            return '\n'.join(lines)
+
+        for size in (12, 13, 36):
+            check_workflow_groups(workflow(size, 1),
+                                  [dict(build=str(n)) for n in range(size)])
+        with self.assertRaisesRegex(ValueError, 'platform budget: macos'):
+            check_workflow_groups(workflow(37, 1),
+                                  [dict(build=str(n)) for n in range(37)])
+        with self.assertRaisesRegex(ValueError, 'platform budget: linux'):
+            check_workflow_groups(workflow(13, 1).replace('--profile-group 1/2',
+                                  '--profile-group 1/1', 1),
+                                  [dict(build=str(n)) for n in range(13)])
 
 
 if __name__ == '__main__':

@@ -58,28 +58,42 @@ class SpriteNodeTests(unittest.TestCase):
                 '-fno-sanitize-recover=all']
             text=(root/'openbor.c').read_bytes().decode('utf8',errors='surrogateescape')
             loader=function(text,'loadsprite')
-            code=render_sprite_nodes(loader=loader,cleanup=function(text,'freesprites'),
-                cache=function(text,'cachesprite')if context['node_cache']else '',revision=int(engine),
-                node_cache=context['node_cache'],clipped_metadata=context['clipped_metadata'],
-                count_type=context['count_type'],mode='all')
-            if 'obor_prepare_sprite_map(' in loader:
-                # Keep the source-owned wrapper; the existing finite map provider
-                # still owns capacity, while the map-growth suite checks growth.
-                code=code.replace(loader,function(text,'obor_prepare_sprite_map')+'\n'+loader,1)
-            if 'obor_profile_malloc_named(' in loader:
-                # Bind inside the owning allocator scope, retaining refusal and
-                # release-ledger controls instead of allocating outside them.
-                code=code.replace(loader,'@NAMED_ALLOCATION_SUPPORT@\n'+loader,1)
-                code=bind_named_allocation_support(code,root,marker='@NAMED_ALLOCATION_SUPPORT@')
-            source=work/(engine+'.c');source.write_text(profile_program(code));binary=source.with_suffix('')
-            compile_checked(compiler+flags+[str(source),*links,'-o',str(binary)])
-            cls.executables[engine]=binary
+            policies={cls.policy(engine,int(engine))}
+            policies.update(cls.policy(engine,row['revision']) for row in cls.contexts.values()
+                            if row['engine']==engine)
+            for index,policy in enumerate(sorted(policies)):
+                alias_loads,full_search,cache_operations=policy
+                code=render_sprite_nodes(loader=loader,cleanup=function(text,'freesprites'),
+                    cache=function(text,'cachesprite')if context['node_cache']else '',revision=int(engine),
+                    node_cache=context['node_cache'],clipped_metadata=context['clipped_metadata'],
+                    count_type=context['count_type'],mode='all',alias_loads=alias_loads,
+                    full_search=full_search,cache_operations=cache_operations)
+                if 'obor_prepare_sprite_map(' in loader:
+                    # Keep the source-owned wrapper; the existing finite map provider
+                    # still owns capacity, while the map-growth suite checks growth.
+                    code=code.replace(loader,function(text,'obor_prepare_sprite_map')+'\n'+loader,1)
+                if 'obor_profile_malloc_named(' in loader:
+                    # Bind inside the owning allocator scope, retaining refusal and
+                    # release-ledger controls instead of allocating outside them.
+                    code=code.replace(loader,'@NAMED_ALLOCATION_SUPPORT@\n'+loader,1)
+                    code=bind_named_allocation_support(code,root,marker='@NAMED_ALLOCATION_SUPPORT@')
+                source=work/(engine+'-'+str(index)+'.c');source.write_text(profile_program(code));binary=source.with_suffix('')
+                compile_checked(compiler+flags+[str(source),*links,'-o',str(binary)])
+                cls.executables[engine,policy]=binary
+
+    @classmethod
+    def policy(cls,engine,revision):
+        native=cls.fixture['engines'][engine]['node_cache']
+        row=cls.contexts.get((engine,revision),{})
+        return (row.get('alias_loads',1 if native else 2),
+                row.get('full_search',native),row.get('cache_operations',native))
 
     def check_context(self,engine,revision):
-        output=subprocess.check_output([str(self.executables[engine]),str(revision)],
+        policy=self.policy(engine,revision)
+        output=subprocess.check_output([str(self.executables[engine,policy]),str(revision)],
             text=True,timeout=15,env=sanitizer_environment())
         self.assertEqual(json.loads(output),dict(status='PASS',
-            cases=18 if self.fixture['engines'][engine]['node_cache']else 9))
+            cases=18 if policy[2]else 9))
 
     def test_registered_profiles_and_sources_have_explicit_contexts(self):
         self.assertEqual(len(self.contexts),len(self.fixture['contexts']))

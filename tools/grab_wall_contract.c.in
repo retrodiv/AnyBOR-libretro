@@ -1,0 +1,65 @@
+/* Native wall-return and grab-position boundary controls.
+ * SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "openbor.h"
+#undef printf
+#undef assert
+uint32_t obor_profile_build;
+static s_level level_storage,*level=&level_storage;
+static float walls[1][8];
+static entity actor,partner;
+static s_anim jump;
+static s_anim *animations[ANI_JUMP+1];
+static int wall_result,movement_results[2];
+static unsigned movement_calls;
+#define assert(c) do{if(!(c)){fprintf(stderr,"Grab wall revision=%u line=%d\n",obor_profile_build,__LINE__);abort();}}while(0)
+int checkwall(float x,float z){assert(x==21 && z==7);return wall_result;}
+static int wall_move(entity *ent,float sz,float x,float z){int wall;
+@WALL@
+int testmove(entity *ent,float sx,float sz,float x,float z){
+ assert(movement_calls<2 && ent==(movement_calls?&partner:&actor));
+ assert(sx==ent->x && sz==ent->z);
+ assert(z==5 || z==7);assert(x>=11 && x<=23);
+ return movement_results[movement_calls++];
+}
+@GRAB@
+static const unsigned revisions[]={@PROFILES@};
+static const struct {int subject,wall,jump,source_z,height;} wall_cases[]={@WALL_CASES@};
+static const struct {int first,second,grabin,other_x,mismatch;} grab_cases[]={@GRAB_CASES@};
+int main(void){
+ for(unsigned p=0;p<sizeof(revisions)/sizeof(*revisions);++p){
+  obor_profile_build=revisions[p];
+  memset(level,0,sizeof(*level));level->walls=walls;level->numwalls=1;
+  memset(&jump,0,sizeof(jump));jump.numframes=1;jump.range.xmax=4;
+  walls[0][1]=10;walls[0][6]=6;
+  printf("{\"revision\":%u,\"wall\":[",obor_profile_build);
+  for(unsigned k=0;k<sizeof(wall_cases)/sizeof(*wall_cases);++k){
+   memset(&actor,0,sizeof(actor));memset(animations,0,sizeof(animations));
+   actor.a=4;actor.modeldata.subject_to_wall=wall_cases[k].subject;
+   actor.modeldata.animation=animations;actor.modeldata.animation_capacity=sizeof(animations)/sizeof(*animations);
+   animations[ANI_JUMP]=wall_cases[k].jump?&jump:NULL;
+   wall_result=wall_cases[k].wall;walls[0][7]=wall_cases[k].height;
+   if(k){putchar(',');}
+   printf("%d",wall_move(&actor,wall_cases[k].source_z,21,7));
+  }
+  printf("],\"grab\":[");
+  for(unsigned k=0;k<sizeof(grab_cases)/sizeof(*grab_cases);++k){
+   memset(&actor,0,sizeof(actor));memset(&partner,0,sizeof(partner));
+   actor.x=17;actor.z=5;actor.a=partner.a=4;actor.base=partner.base=2;
+   partner.x=grab_cases[k].other_x;partner.z=9;
+   if(grab_cases[k].mismatch==1)partner.a=5;
+   if(grab_cases[k].mismatch==2)partner.base=3;
+   movement_calls=0;movement_results[0]=grab_cases[k].first;movement_results[1]=grab_cases[k].second;
+   int result=adjust_grabposition(&actor,&partner,6,grab_cases[k].grabin);
+   if(k){putchar(',');}
+   printf("{\"result\":%d,\"calls\":%u,\"x1\":%.9g,\"z1\":%.9g,\"x2\":%.9g,\"z2\":%.9g}",
+    result,movement_calls,(double)actor.x,(double)actor.z,(double)partner.x,(double)partner.z);
+  }
+  puts("]}");
+ }
+ return 0;
+}

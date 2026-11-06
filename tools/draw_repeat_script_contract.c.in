@@ -1,0 +1,171 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <stdint.h>
+#include <limits.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdarg.h>
+#include <string.h>
+#include <strings.h>
+#include <ctype.h>
+#include "openbor.h"
+#undef printf
+#undef assert
+#ifndef stricmp
+#define stricmp strcasecmp
+#endif
+uint32_t obor_profile_build;
+static int active_case;
+#define assert(c) do{if(!(c)){fprintf(stderr,"DRAW_REPEAT_SCRIPT revision=%u case=%d line=%d\n",obor_profile_build,active_case,__LINE__);abort();}}while(0)
+static const char *cache;
+static int collects,diagnostics;
+static char message[512];
+CHAR *StrCache_Get(int index){assert(index==63 && cache);return (CHAR*)cache;}
+void StrCache_Collect(int index){assert(index==63);++collects;}
+int StrCache_Pop(void){abort();}
+static int capture(const char *format,...){
+ va_list ap;va_start(ap,format);int n=vsnprintf(message,sizeof(message),format,ap);va_end(ap);
+ assert(n>=0 && (size_t)n<sizeof(message));++diagnostics;return n;
+}
+#define printf capture
+s_drawmethod drawmethod;
+#pragma GCC diagnostic push
+#if defined(__clang__)
+#if __has_warning("-Wsingle-bit-bitfield-constant-conversion")
+#pragma GCC diagnostic warning "-Wsingle-bit-bitfield-constant-conversion"
+#endif
+#endif
+@PLAIN@
+#pragma GCC diagnostic pop
+@ENUM@
+@MACRO@
+@SEARCH@
+@VARIANTS@
+@FUNCTIONS@
+@FIELDS@
+struct context {unsigned revision;int available;const char *const *fields;int count;};
+static const struct context contexts[]={@CONTEXTS@};
+static const struct context *context;
+static unsigned table_marker;
+static int same_method(const s_drawmethod *a,const s_drawmethod *b){
+ #define FIELD(x) if(a->x!=b->x)return 0;
+ FIELD(table) FIELD(fp) FIELD(fillcolor) FIELD(flag) FIELD(alpha) FIELD(remap)
+ FIELD(flipx) FIELD(flipy) FIELD(transbg) FIELD(fliprotate) FIELD(rotate)
+ FIELD(scalex) FIELD(scaley) FIELD(shiftx) FIELD(centerx) FIELD(centery)
+ FIELD(xrepeat) FIELD(yrepeat) FIELD(xspan) FIELD(yspan)
+ FIELD(channelr) FIELD(channelg) FIELD(channelb) FIELD(tintmode) FIELD(tintcolor)
+ #undef FIELD
+ return !memcmp(&a->water,&b->water,sizeof(a->water));
+}
+static s_drawmethod method_seed(void){
+ s_drawmethod m;memset(&m,0,sizeof(m));m=plainmethod;
+ m.flag=-1;m.alpha=2;m.scalex=200;m.scaley=300;m.rotate=9;
+ m.xrepeat=17;m.yrepeat=19;m.xspan=5;m.yspan=-3;m.water.wavespeed=1.5f;
+ return m;
+}
+static int decimal_property(const char *name){
+ return !strcmp(name,"beginsize") || !strcmp(name,"endsize") ||
+        !strcmp(name,"wavelength") || !strcmp(name,"wavespeed");
+}
+static void expect_write(s_drawmethod *m,const char *name,const ScriptVariant *value){
+ LONG number=value->lVal;DOUBLE real=value->dblVal;
+ #define INTEGER(n,f) if(!strcmp(name,n)){m->f=number;return;}
+ #define DECIMAL(n,f) if(!strcmp(name,n)){m->f=real;return;}
+ INTEGER("alpha",alpha) INTEGER("amplitude",water.amplitude)
+ DECIMAL("beginsize",water.beginsize) INTEGER("centerx",centerx) INTEGER("centery",centery)
+ INTEGER("channelb",channelb) INTEGER("channelg",channelg) INTEGER("channelr",channelr)
+ INTEGER("enabled",flag) DECIMAL("endsize",water.endsize) INTEGER("fillcolor",fillcolor)
+ INTEGER("flag",flag) INTEGER("fliprotate",fliprotate) INTEGER("flipx",flipx)
+ INTEGER("perspective",water.perspective) INTEGER("remap",remap)
+ if(!strcmp(name,"reset")){if(number)*m=plainmethod;return;}
+ INTEGER("rotate",rotate) INTEGER("scalex",scalex) INTEGER("scaley",scaley)
+ INTEGER("shiftx",shiftx)
+ if(!strcmp(name,"table")){m->table=value->ptrVal;return;}
+ INTEGER("tintcolor",tintcolor) INTEGER("tintmode",tintmode) INTEGER("transbg",transbg)
+ INTEGER("watermode",water.watermode) DECIMAL("wavelength",water.wavelength)
+ DECIMAL("wavespeed",water.wavespeed)
+ if(!strcmp(name,"wavetime")){m->water.wavetime=(int)(number*1.5f);return;}
+ INTEGER("xrepeat",xrepeat) INTEGER("xspan",xspan) INTEGER("yrepeat",yrepeat) INTEGER("yspan",yspan)
+ #undef INTEGER
+ #undef DECIMAL
+ abort();
+}
+static void value_for(const char *name,ScriptVariant *v){
+ memset(v,0,sizeof(*v));
+ if(!strcmp(name,"table")){v->vt=VT_PTR;v->ptrVal=&table_marker;}
+ else if(decimal_property(name)){v->vt=VT_DECIMAL;v->dblVal=2.5;}
+ else{v->vt=VT_INTEGER;v->lVal=(!strcmp(name,"flag") || !strcmp(name,"enabled") ||
+              !strcmp(name,"flipx") || !strcmp(name,"fliprotate") || !strcmp(name,"transbg"))?-1:4;}
+}
+static void check_write(int index,const char *name,int mode,int target,int zero_reset,int boundary){
+ entity *e=calloc(1,sizeof(*e));assert(e);e->health=37;e->drawmethod=method_seed();drawmethod=method_seed();
+ s_drawmethod expected_global=drawmethod,expected_entity=e->drawmethod;
+ ScriptVariant v[3],*args[]={v,v+1,v+2},result={0},*out=&result;memset(v,0,sizeof(v));
+ v[0].vt=target?VT_PTR:VT_EMPTY;v[0].ptrVal=target?e:NULL;
+ v[1].vt=VT_INTEGER;v[1].lVal=index;value_for(name,v+2);
+ if(zero_reset)v[2].lVal=0;
+ if(boundary)v[2].lVal=boundary<0?INT_MIN:INT_MAX;
+ char upper[32];collects=diagnostics=0;message[0]=0;
+ if(mode){
+  assert(strlen(name)<sizeof(upper));strcpy(upper,name);
+  if(mode==2)for(char *p=upper;*p;++p)*p=(char)toupper((unsigned char)*p);
+  cache=upper;v[1].vt=VT_STR;v[1].strVal=63;
+ }
+ expect_write(target?&expected_entity:&expected_global,name,v+2);
+ assert(openbor_changedrawmethod(args,&out,3)==S_OK && !out);
+ assert(collects==(mode?1:0) && !diagnostics && v[1].vt==VT_INTEGER && v[1].lVal==index);
+ assert(same_method(&drawmethod,&expected_global) && same_method(&e->drawmethod,&expected_entity));
+ assert(e->health==37);free(e);++active_case;
+}
+static void edges(void){
+ static const char *names[]={"xrepeat","xspan","yrepeat","yspan"};
+ for(int i=0;i<4;++i){
+  drawmethod=method_seed();s_drawmethod before=drawmethod;
+  ScriptVariant v[3],*args[]={v,v+1,v+2},result={0},*out=&result;memset(v,0,sizeof(v));
+  v[1].vt=VT_INTEGER;v[1].lVal=i==0?-1:i==1?context->count:i==2?context->count+4:INT_MAX;
+  v[2].vt=VT_INTEGER;v[2].lVal=3;diagnostics=collects=0;
+  assert(openbor_changedrawmethod(args,&out,3)==S_OK && !out && !diagnostics && !collects);
+  assert(same_method(&drawmethod,&before));++active_case;
+ }
+ for(int i=0;i<4;++i){
+  int repeats=context->count>=28;cache=repeats?"unsupported_property":names[i];
+  drawmethod=method_seed();s_drawmethod before=drawmethod;
+  ScriptVariant v[3],*args[]={v,v+1,v+2},result={0},*out=&result;memset(v,0,sizeof(v));
+  v[1].vt=VT_STR;v[1].strVal=63;v[2].vt=VT_INTEGER;v[2].lVal=3;diagnostics=collects=0;
+  char wanted[256];snprintf(wanted,sizeof(wanted),"Property name '%s' is not supported by drawmethod.\n",cache);
+  assert(openbor_changedrawmethod(args,&out,3)==S_OK && !out && diagnostics==1 && !collects);
+  assert(v[1].vt==VT_STR && !strcmp(message,wanted) && same_method(&drawmethod,&before));++active_case;
+ }
+ for(int i=0;i<3;++i){
+  drawmethod=method_seed();s_drawmethod before=drawmethod;
+  ScriptVariant v[3],*args[]={v,v+1,v+2},result={0},*out=&result;memset(v,0,sizeof(v));
+  v[1].vt=v[2].vt=VT_INTEGER;v[2].lVal=3;
+  if(i==2){v[0].vt=VT_INTEGER;v[0].lVal=1;}
+  diagnostics=collects=0;
+  assert(openbor_changedrawmethod(args,&out,i==0?0:i==1?2:3)==E_FAIL && !out);
+  assert(diagnostics==1 && !collects && same_method(&drawmethod,&before));
+  assert(!strcmp(message,"Function changedrawmethod must have at least 3 parameters: entity, propertyname, value\n"));++active_case;
+ }
+ int reset=-1;for(int i=0;i<context->count;++i)if(!strcmp(context->fields[i],"reset"))reset=i;
+ assert(reset>=0);for(int target=0;target<2;++target)check_write(reset,"reset",0,target,1,0);
+ if(context->count>=28)for(int i=0;i<4;++i){
+  int index=-1;for(int j=0;j<context->count;++j)if(!strcmp(context->fields[j],names[i]))index=j;
+  assert(index>=0);
+  for(int target=0;target<2;++target)for(int side=-1;side<=1;side+=2)check_write(index,names[i],0,target,0,side);
+ }
+}
+int main(void){
+ _Static_assert(__builtin_types_compatible_p(__typeof__(&openbor_changedrawmethod),HRESULT(*)(ScriptVariant**,ScriptVariant**,int)),"native setter prototype");
+ _Static_assert(__builtin_types_compatible_p(__typeof__(&mapstrings_drawmethodproperty),void(*)(ScriptVariant**,int)),"native mapper prototype");
+ _Static_assert(sizeof(water_transform)==5*sizeof(int),"water value words");
+ for(unsigned p=0;p<sizeof(contexts)/sizeof(*contexts);++p){
+  context=contexts+p;obor_profile_build=context->revision;active_case=0;
+  if(context->available){
+   for(int i=0;i<context->count;++i)for(int mode=0;mode<3;++mode)for(int target=0;target<2;++target)
+    check_write(i,context->fields[i],mode,target,0,0);
+   edges();
+  }
+  fprintf(stdout,"{\"revision\":%u,\"cases\":%d}\n",obor_profile_build,active_case);
+ }
+ return 0;
+}

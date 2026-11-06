@@ -1,0 +1,108 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <assert.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "openbor.h"
+#undef assert
+#undef printf
+#ifdef NDEBUG
+#error Action exit assertions must remain enabled
+#endif
+uint32_t obor_profile_build;
+static unsigned active_case;
+#define assert(c) do {if(!(c)){fprintf(stderr,"ACTION_EXIT revision=%u case=%u line=%d\n",obor_profile_build,active_case,__LINE__);abort();}}while(0)
+static entity actor,target,dust_entity;
+entity *self;
+unsigned int time;
+static s_anim initial_animation,landing_animation,*animations[ANI_JUMPLAND+1];
+static int random_value,airborne,mutate,spawn_result,spawn_mutate;
+static void initial_action(void) {abort();}
+static void callback_action(void) {abort();}
+void common_runoff(void) {abort();}
+void common_jumpland(void) {abort();}
+static int action_id(void (*action)(void)) {
+ if(!action)return 0;
+ if(action==initial_action)return 1;
+ if(action==callback_action)return 2;
+ if(action==common_runoff)return 3;
+ if(action==common_jumpland)return 4;
+ abort();
+}
+#define WIDTH 20
+static void snapshot(double *out) {
+ const double fields[]={action_id(actor.takeaction),actor.idling,actor.attacking,actor.jumping,
+ actor.running,actor.xdir,actor.zdir,actor.a,actor.tossv,actor.toss_time,actor.base,
+ actor.destx,actor.destz,actor.stalltime,actor.direction,dust_entity.base,
+ dust_entity.autokill,dust_entity.x,dust_entity.z,actor.animation==&landing_animation};
+ _Static_assert(sizeof(fields)/sizeof(*fields)==WIDTH,"Observer fields bound");
+ memcpy(out,fields,sizeof(fields));
+}
+struct event {int kind;double args[6],fields[WIDTH];};
+static struct event events[8];static unsigned event_count;
+static void observe(int kind,double a,double b,double c,double d,double e,double f) {
+ assert(event_count<8);struct event *out=&events[event_count++];out->kind=kind;
+ out->args[0]=a;out->args[1]=b;out->args[2]=c;out->args[3]=d;out->args[4]=e;out->args[5]=f;snapshot(out->fields);
+}
+float diff(float a,float b) {observe(1,a,b,0,0,0,0);return a>b?a-b:b-a;}
+unsigned int rand32(void) {observe(2,random_value,0,0,0,0,0);return (unsigned)random_value;}
+static void mutate_walk(void) {
+ if(mutate){actor.takeaction=callback_action;actor.idling=4;actor.xdir=7;actor.zdir=8;
+ actor.destx=37;actor.destz=38;actor.modeldata.aggression=50;}
+}
+int set_idle(entity *e) {assert(e==self);observe(3,1,0,0,0,0,0);mutate_walk();return 1;}
+int common_walk_anim(entity *e) {assert(e==self);observe(4,1,0,0,0,0,0);mutate_walk();return 1;}
+void adjust_walk_animation(entity *e) {assert(e==&target);observe(5,2,0,0,0,0,0);mutate_walk();}
+int inair(entity *e) {assert(e==self);observe(6,airborne,0,0,0,0,0);return airborne;}
+void ent_set_anim(entity *e,int index,int reset) {
+ assert(e==self && index==ANI_JUMPLAND && !reset);observe(7,index,reset,0,0,0,0);
+ actor.animation=&landing_animation;
+ if(mutate){actor.takeaction=callback_action;actor.xdir=31;actor.zdir=32;actor.a=14;}
+}
+entity *spawn(float x,float z,float a,int direction,char *name,int index,s_model *model) {
+ assert(!name && !model && index==7);observe(8,x,z,a,direction,index,spawn_result);
+ if(!spawn_result)return NULL;
+ dust_entity.x=x;dust_entity.z=z;return &dust_entity;
+}
+void execute_onspawn_script(entity *e) {
+ assert(e==&dust_entity);observe(9,0,0,0,0,0,0);
+ if(spawn_mutate){actor.takeaction=callback_action;actor.xdir=21;actor.zdir=22;actor.a=12;}
+}
+@FUNCTIONS@
+struct exit_case {int op,type,opponent;float target_x;int nomove,random,aggression,mutate,air;float lift;int runhold;float dive_x,dive_v;int direction,landframe,land_available,animating,dust,spawn_result,spawn_mutate;};
+static const struct exit_case cases[]={@CASES@};
+static const unsigned profiles[]={@PROFILES@};
+static void prepare(const struct exit_case *c) {
+ memset(&actor,0,sizeof(actor));memset(&target,0,sizeof(target));memset(&dust_entity,0,sizeof(dust_entity));
+ memset(&initial_animation,0,sizeof(initial_animation));memset(&landing_animation,0,sizeof(landing_animation));memset(animations,0,sizeof(animations));
+ self=&actor;time=100;actor.takeaction=initial_action;actor.attacking=actor.jumping=actor.running=1;
+ actor.x=9;actor.z=12;actor.a=6;actor.base=5;actor.xdir=2;actor.zdir=3;actor.tossv=c->lift;
+ actor.toss_time=10;actor.destx=90;actor.destz=91;actor.stalltime=77;actor.direction=c->direction;
+ actor.modeldata.type=c->type;actor.modeldata.nomove=c->nomove;actor.modeldata.speed=2.5;actor.modeldata.aggression=c->aggression;
+ actor.opponent=c->opponent?&target:NULL;target.x=c->target_x;
+ actor.modeldata.runhold=c->runhold;actor.animation=&initial_animation;
+ initial_animation.landframe.frame=c->landframe;initial_animation.obor_legacy_dive_x=c->dive_x;initial_animation.obor_legacy_dive_v=c->dive_v;
+ actor.animating=c->animating;actor.modeldata.animation=animations;actor.modeldata.animation_capacity=ANI_JUMPLAND+1;
+ landing_animation.numframes=1;landing_animation.landframe.frame=-1;animations[ANI_JUMPLAND]=c->land_available?&landing_animation:NULL;
+ actor.modeldata.dust[1]=c->dust?7:-1;
+ random_value=c->random;airborne=c->air;mutate=c->mutate;spawn_result=c->spawn_result;spawn_mutate=c->spawn_mutate;event_count=0;
+}
+static void array_json(const double *v,unsigned count) {
+ putchar('[');for(unsigned i=0;i<count;++i){if(i)putchar(',');printf("%.17g",v[i]);}putchar(']');
+}
+int main(void) {
+ for(unsigned p=0;p<sizeof(profiles)/sizeof(*profiles);++p){
+  obor_profile_build=profiles[p];
+  for(unsigned k=0;k<sizeof(cases)/sizeof(*cases);++k){
+   active_case=k;const struct exit_case *c=&cases[k];prepare(c);
+   if(c->op==0)common_attack_finish();else {assert(c->op==1);common_jump();}
+   double final[WIDTH];snapshot(final);
+   printf("{\"revision\":%u,\"case\":%u,\"fields\":",obor_profile_build,k);array_json(final,WIDTH);printf(",\"events\":[");
+   for(unsigned i=0;i<event_count;++i){struct event *e=&events[i];if(i)putchar(',');printf("{\"kind\":%d,\"args\":",e->kind);array_json(e->args,6);printf(",\"fields\":");array_json(e->fields,WIDTH);putchar('}');}
+   puts("]}");
+  }
+ }
+ return 0;
+}

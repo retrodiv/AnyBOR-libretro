@@ -1,0 +1,33 @@
+/* Native pickup scheduling tail with real entity records.
+ * SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <stdint.h>
+#include <stdio.h>
+#include <string.h>
+#include "openbor.h"
+#undef printf
+uint32_t obor_profile_build;
+static u32 time;
+void suicide(void){}
+static void previous_action(void){}
+static void finish_pickup(entity *other){
+@REGION@
+}
+static const unsigned revisions[]={@PROFILES@};
+static const struct {int subtype,instant;u32 clock,nextthink,nextanim;int action;} cases[]={@CASES@};
+int main(void){
+ for(unsigned p=0;p<sizeof(revisions)/sizeof(*revisions);++p){
+  obor_profile_build=revisions[p];
+  for(unsigned k=0;k<sizeof(cases)/sizeof(*cases);++k){
+   entity item;memset(&item,0,sizeof(item));
+   item.modeldata.subtype=cases[k].subtype==1?SUBTYPE_WEAPON:cases[k].subtype==2?SUBTYPE_PROJECTILE:0;
+   item.modeldata.instantitemdeath=cases[k].instant;
+   item.nextthink=cases[k].nextthink;item.nextanim=cases[k].nextanim;
+   item.takeaction=cases[k].action?previous_action:NULL;item.z=17;time=cases[k].clock;
+   finish_pickup(&item);
+   printf("{\"revision\":%u,\"case\":%u,\"nextthink\":%u,\"nextanim\":%u,\"action\":%d,\"z\":%.9g}\n",
+    obor_profile_build,k,item.nextthink,item.nextanim,item.takeaction==suicide?2:item.takeaction==previous_action?1:0,(double)item.z);
+  }
+ }
+ return 0;
+}

@@ -1,0 +1,118 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <assert.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "openbor.h"
+#undef assert
+#undef printf
+#ifdef NDEBUG
+#error Common thinker assertions must remain enabled
+#endif
+uint32_t obor_profile_build;
+static unsigned active_case;
+#define assert(c) do {if(!(c)){fprintf(stderr,"COMMON_THINK revision=%u case=%u line=%d\n",obor_profile_build,active_case,__LINE__);abort();}}while(0)
+static entity actor,peer;
+entity *self;
+unsigned int time;
+static s_level *level;
+static float scrolldx,scrolldy;
+static unsigned bothnewkeys;
+static s_anim animation,*animations[MAX_ANIS];
+static unsigned random_value;
+static int air_value,attack_result,mutate;
+static void initial_action(void) {abort();}
+static void callback_action(void) {abort();}
+void npc_warp(void) {abort();}
+void common_prethrow(void) {abort();}
+static int action_id(void (*action)(void)) {
+ if(action==initial_action)return 1;
+ if(action==npc_warp)return 2;
+ if(action==common_prethrow)return 3;
+ if(action==callback_action)return 4;
+ abort();
+}
+#define WIDTH 10
+static void snapshot(int *out) {
+ const int fields[]={action_id(actor.takeaction),actor.escapecount,actor.idling,
+ actor.link!=NULL,actor.grabbing!=NULL,actor.attacking,actor.inpain,actor.health,actor.drop,actor.dead};
+ _Static_assert(sizeof(fields)/sizeof(*fields)==WIDTH,"Observer fields bound");
+ memcpy(out,fields,sizeof(fields));
+}
+struct event {int kind,value,fields[WIDTH];};
+static struct event events[12];static unsigned event_count;
+static void observe(int kind,int value) {
+ assert(event_count<12);struct event *out=&events[event_count++];
+ out->kind=kind;out->value=value;snapshot(out->fields);
+}
+static void callback(int kind,int value) {
+ observe(kind,value);
+ if(mutate){actor.escapecount=7;actor.idling=0;actor.link=&peer;actor.takeaction=callback_action;}
+}
+unsigned int rand32(void) {observe(1,(int)random_value);return random_value;}
+int inair(entity *e) {assert(e==self);observe(2,air_value);return air_value;}
+void common_try_riseattack(void) {callback(3,0);}
+int check_special(void) {callback(4,0);return attack_result;}
+void common_grab_check(void) {callback(5,0);}
+int check_costmove(int index,int force,int jump) {
+ assert(index==ANI_SPECIAL2 && !force && !jump);callback(6,0);return attack_result;
+}
+int common_attack(void) {callback(7,attack_result);return attack_result;}
+int common_move(void) {callback(8,0);return 1;}
+void ent_set_colourmap(entity *e,unsigned int map) {(void)e;(void)map;abort();}
+void kill(entity *e) {(void)e;abort();}
+void update_frame(entity *e,int frame) {
+ assert(e==self && frame==1);observe(9,frame);if(mutate)actor.escapecount=7;
+}
+int testplatform(entity *e,float x,float z,entity *other) {(void)e;(void)x;(void)z;(void)other;abort();}
+entity *check_platform_below(float x,float z,float a,entity *exclude) {(void)x;(void)z;(void)a;(void)exclude;abort();}
+int checkwall_below(float x,float z,float a) {(void)x;(void)z;(void)a;abort();}
+int checkhole(float x,float z) {(void)x;(void)z;abort();}
+void ent_unlink(entity *e) {(void)e;abort();}
+@FUNCTIONS@
+struct think_case {int dead,follow,parent,far,linked,drop,air,tossing,health,valid,
+ inpain,grabbing,attacking,prethrow,ready,rise_ready,escapehits,escapecount,idling,
+ random,attack_result,mutate,phase,frame;};
+static const struct think_case cases[]={@CASES@};
+static const unsigned profiles[]={@PROFILES@};
+static void prepare(const struct think_case *c) {
+ memset(&actor,0,sizeof(actor));memset(&peer,0,sizeof(peer));
+ memset(&animation,0,sizeof(animation));memset(animations,0,sizeof(animations));
+ self=&actor;time=100;actor.takeaction=c->prethrow?common_prethrow:initial_action;
+ actor.dead=c->dead;actor.modeldata.subtype=c->follow?SUBTYPE_FOLLOW:SUBTYPE_NONE;
+ actor.parent=c->parent?&peer:NULL;actor.link=c->linked?&peer:NULL;
+ peer.x=c->far==1?30:c->far==3?10:0;peer.z=c->far==2?30:0;
+ actor.drop=c->drop;actor.a=c->air?2:0;actor.base=0;actor.tossv=c->tossing?1:0;
+ actor.health=c->health;actor.inpain=c->inpain;actor.grabbing=c->grabbing?&peer:NULL;
+ actor.nextanim=c->frame?100:200;actor.animating=c->frame?1:0;actor.modeldata.no_adjust_base=1;
+ actor.attacking=c->attacking;actor.idling=c->idling;
+ actor.modeldata.escapehits=c->escapehits;actor.escapecount=c->escapecount;
+ actor.stalltime=c->ready?100:110;actor.staydown.riseattack_stall=c->rise_ready?90:110;
+ actor.modeldata.animation=animations;actor.modeldata.animation_capacity=MAX_ANIS;
+ animation.numframes=2;animation.range.xmax=10;actor.animation=&animation;
+ animations[ANI_IDLE]=&animation;animations[ANI_RISEATTACK]=(c->valid&1)?&animation:NULL;
+ animations[ANI_SPECIAL]=(c->valid&2)?&animation:NULL;
+ animations[ANI_SPECIAL2]=(c->valid&4)?&animation:NULL;
+ random_value=(unsigned)c->random;air_value=c->air;attack_result=c->attack_result;mutate=c->mutate;
+ event_count=0;
+}
+static void fields_json(const int *v) {
+ putchar('[');for(unsigned i=0;i<WIDTH;++i){if(i)putchar(',');printf("%d",v[i]);}putchar(']');
+}
+int main(void) {
+ for(unsigned p=0;p<sizeof(profiles)/sizeof(*profiles);++p){
+  obor_profile_build=profiles[p];
+  for(unsigned k=0;k<sizeof(cases)/sizeof(*cases);++k){
+   active_case=k;prepare(&cases[k]);
+   if(cases[k].phase)update_animation();
+   if(cases[k].phase!=1)common_think();
+   int final[WIDTH];snapshot(final);
+   printf("{\"revision\":%u,\"case\":%u,\"fields\":",obor_profile_build,k);fields_json(final);printf(",\"events\":[");
+   for(unsigned i=0;i<event_count;++i){struct event *e=&events[i];if(i)putchar(',');printf("{\"kind\":%d,\"value\":%d,\"fields\":",e->kind,e->value);fields_json(e->fields);putchar('}');}
+   puts("]}");
+  }
+ }
+ return 0;
+}

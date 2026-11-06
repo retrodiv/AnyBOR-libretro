@@ -1,0 +1,33 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+static const int legacy[]={@LEGACY@};
+int main(void){
+ for(unsigned p=0;p<sizeof(contracts)/sizeof(*contracts);++p){
+  obor_profile_build=contracts[p].revision;reset();
+  for(int i=0;i<5;++i){
+   maps[i].ofsx=100+i;maps[i].ofsy=-200-i;maps[i].profile_sprite=&sprites[i];
+  }
+  const int properties[]={_gep_spritea_offsetx,_gep_spritea_offsety};
+  for(int i=0;i<2;++i){
+   int value=i?maps[0].ofsy:maps[0].ofsx;
+   run(_ep_spritea,integer(properties[i]),integer(0),integer(0),5,
+       legacy[p]?S_OK:E_FAIL,legacy[p]?VT_INTEGER:VT_EMPTY,value,0);
+  }
+  maps[2].node=&nodes[0];
+  int selected=legacy[p]?2:0;
+  run(_ep_spritea,integer(_gep_spritea_file),integer(0),integer(1),5,S_OK,VT_STR,0,0);
+  run(_ep_spritea,integer(_gep_spritea_sprite),integer(0),integer(1),5,S_OK,VT_PTR,0,selected);
+  assert(sprites[selected].centerx==maps[2].centery && sprites[selected].centery==maps[2].centery);
+  actor.animation=&animations[0];actor.animpos=1;
+  run(_ep_sprite,integer(0),integer(0),integer(0),2,S_OK,VT_PTR,0,selected);
+  assert(sprites[selected].centerx==maps[2].centerx && sprites[selected].centery==maps[2].centery);
+  *icon_field(_gep_icon_def)=2;
+  run(_ep_icon,integer(_gep_icon_def),integer(0),integer(0),3,S_OK,VT_PTR,0,selected);
+  assert(sprites[selected].centerx==maps[2].centerx && sprites[selected].centery==maps[2].centery);
+  run(_ep_spritea,integer(_gep_spritea_centerx),integer(0),integer(1),5,S_OK,VT_INTEGER,maps[2].centerx,0);
+  empty(_ep_spritea,integer(_gep_spritea_offsetx),integer(0),integer(3),5);
+  run(_ep_spritea,integer(99),integer(0),integer(0),5,E_FAIL,VT_EMPTY,0,0);
+  fprintf(stdout,"{\"revision\":%u,\"reader\":\"PASS\"}\n",obor_profile_build);
+ }
+ return 0;
+}
