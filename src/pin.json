@@ -1,7 +1,7 @@
 {
   "core_name": "AnyBOR",
   "core_basename": "anybor_libretro",
-  "version": "0.1.81",
+  "version": "0.1.82",
   "fallback_build": "6391",
   "profiles": [
     {
@@ -2475,6 +2475,63 @@
       "engine": "3842",
       "covers": "3401-3842",
       "major": "v3.0"
+    },
+    {
+      "build": "3846",
+      "engine": "3842",
+      "major": "v3.0",
+      "automatic": true,
+      "tagged": true,
+      "covers": "Official historical automatic or exact-tag profile on source tree3842",
+      "revision": "3846",
+      "auto_until": "3846",
+      "triage": true,
+      "upstream_commit": "163da0a8cb554910d27a260f81e01d5dd4f73b56",
+      "upstream_date": "2013-02-27",
+      "upstream_branch": "legacy trunk"
+    },
+    {
+      "build": "3847",
+      "engine": "3842",
+      "major": "v3.0",
+      "automatic": false,
+      "tagged": true,
+      "covers": "Exact Build tag or core option only; excluded from weak-tag and content triage",
+      "revision": "3847",
+      "stage": "dev",
+      "auto_until": "3847",
+      "triage": false,
+      "upstream_commit": "58e705f28205352286f699f08321fe269172b484",
+      "upstream_date": "2013-02-28",
+      "upstream_branch": "legacy trunk"
+    },
+    {
+      "build": "3849",
+      "engine": "3842",
+      "major": "v3.0",
+      "automatic": true,
+      "tagged": true,
+      "covers": "Official historical automatic or exact-tag profile on source tree3842",
+      "revision": "3849",
+      "auto_until": "3849",
+      "triage": true,
+      "upstream_commit": "cf4181811580e79e0e4ca30bd6cae298fc7bdd9d",
+      "upstream_date": "2013-02-28",
+      "upstream_branch": "legacy trunk"
+    },
+    {
+      "build": "3854",
+      "engine": "3842",
+      "major": "v3.0",
+      "automatic": true,
+      "tagged": true,
+      "covers": "Official historical automatic or exact-tag profile on source tree3842",
+      "revision": "3854",
+      "auto_until": "3854",
+      "triage": true,
+      "upstream_commit": "764da976f45a65bf0e768ed50406c7815875656a",
+      "upstream_date": "2013-03-02",
+      "upstream_branch": "legacy trunk"
     },
     {
       "build": "4086",

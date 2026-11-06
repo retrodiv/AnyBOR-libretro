@@ -2252,6 +2252,16 @@
       "ci": "shared"
     },
     {
+      "id": "test_historical_late_script",
+      "memory_mib": 512,
+      "seconds": 180,
+      "command": [
+        "python3",
+        "tools/test_historical_late_script.py"
+      ],
+      "ci": "shared"
+    },
+    {
       "id": "test_historical_legacy_graphics",
       "memory_mib": 512,
       "seconds": 180,
@@ -2268,6 +2278,16 @@
       "command": [
         "python3",
         "tools/test_historical_gfx_properties.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_historical_late_graphics",
+      "memory_mib": 512,
+      "seconds": 180,
+      "command": [
+        "python3",
+        "tools/test_historical_late_graphics.py"
       ],
       "ci": "shared"
     },
@@ -2598,6 +2618,36 @@
       "command": [
         "python3",
         "tools/test_historical_frame_sampling.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_font_raster_transport",
+      "memory_mib": 512,
+      "seconds": 90,
+      "command": [
+        "python3",
+        "tools/test_font_raster_transport.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_font_masks",
+      "memory_mib": 512,
+      "seconds": 180,
+      "command": [
+        "python3",
+        "tools/test_font_masks.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_historical_late_selection",
+      "memory_mib": 512,
+      "seconds": 180,
+      "command": [
+        "python3",
+        "tools/test_historical_late_selection.py"
       ],
       "ci": "shared"
     }

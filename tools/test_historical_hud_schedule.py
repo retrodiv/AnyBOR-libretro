@@ -29,6 +29,15 @@ def native_declarations(core):
         r'\1 = {0};', declarations)
     if count != 3:
         raise AssertionError('Missing declared raster callback providers')
+    # Bar drawing is also a delegated service in these probes. Keep the native
+    # packed records, with inert initializers: their unused colour-table
+    # pointers can otherwise require unaligned static Mach-O fixups on ARM64.
+    declarations, count = re.subn(
+        r'(?m)^(s_barstatus\s+(?:loadingbarstatus|lbarstatus|olbarstatus|mpbarstatus))'
+        r'\s*=\s*(?://[^\n]*\n\s*)?\{[^}]*\};',
+        r'\1 = {0};', declarations)
+    if count != 4:
+        raise AssertionError('Missing declared auxiliary bar records')
     return declarations
 
 

@@ -1,4 +1,4 @@
-/* AnyBOR modification record: 2026-10-27.
+/* AnyBOR modification record: 2026-11-06.
  * Port maintained by retrodiv <retrodiv@proton.me>.
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
@@ -68,7 +68,9 @@
  * resources without changing existing owners. Check cached sprite
  * availability before reading metadata and ignore cache requests for absent
  * nodes. Preserve each profile's native argument-finder comment recognition
- * and retained parser bytes.
+ * and retained parser bytes. Preserve source-defined colour-map cycling,
+ * model rotation, selection confirmation and deadlines, camera bounds,
+ * reverse scrolling and damage attribution by profile.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/3842.md
  * at the source repository root. Original notices follow below.
@@ -4133,7 +4135,19 @@ void load_all_fonts()
 		if(i==0) strcpy(path, "data/sprites/font");
 		else sprintf(path, "%s%d", "data/sprites/font", i+1);
 		if(font_load(i, path, packfile, fontmonospace[i]|fontmbs[i]))
-			printf("%d ", i+1);
+        {
+            if(obor_profile_build >= 3852)
+            {
+                if(i==0) strcpy(path, "data/sprites/fontmask");
+                else sprintf(path, "%s%d", "data/sprites/fontmask", i+1);
+                if(font_loadmask(i, path, packfile, fontmonospace[i]|fontmbs[i]))
+                    printf("%d(m) ", i+1);
+                else
+                    printf("%d ", i+1);
+            }
+            else
+                printf("%d ", i+1);
+        }
 	}
 }
 
@@ -9571,6 +9585,17 @@ void load_levelorder()
 
 	if(!set)
 		errormessage = "No levels were loaded!";
+	else if(obor_profile_build >= 3849 && !psmenu[0][0] && !psmenu[0][1])
+	{
+		for(i=0; i<set->maxplayers && i<MAX_PLAYERS; i++) {
+			psmenu[i][0]=(set->maxplayers > 2)?((111-(set->maxplayers*14))+((i*(320-(166/set->maxplayers))/set->maxplayers)+videomodes.hShift)):
+												(83+(videomodes.hShift/2)+(i*(155+videomodes.hShift)));
+			psmenu[i][1]=230+videomodes.vShift;
+			psmenu[i][2]=(set->maxplayers > 2)?((95-(set->maxplayers*14))+((i*(320-(166/set->maxplayers))/set->maxplayers)+videomodes.hShift)):
+												(67+(videomodes.hShift/2)+(i*(155+videomodes.hShift)));
+			psmenu[i][3]=225+videomodes.vShift;
+		}
+	}
 
 	lCleanup:
 
@@ -10902,6 +10927,72 @@ unsigned getFPS(void)
 #endif
 }
 
+/* A hidden interval and one frozen entry can be skipped as contiguous runs.
+ * The bounded pass also defines the result when no selectable map exists. */
+static int obor_colourmap_step(s_model *model, int c, int backwards)
+{
+    int64_t value = c;
+    int first = obor_profile_build < 3848 ? 1 : 0;
+    unsigned pass;
+    if(!model || model->maps_loaded < 0) return 0;
+    for(pass=0; pass<4; ++pass)
+    {
+        value += backwards ? -1 : 1;
+        if(backwards) { if(value < first) value = model->maps_loaded; }
+        else if(value > model->maps_loaded) value = first;
+        if(model->maps.frozen > 0 && value == model->maps.frozen) continue;
+        if((obor_profile_build < 3848 || model->maps.hide_start > 0) &&
+           value >= model->maps.hide_start && value <= model->maps.hide_end)
+        {
+            value = backwards ? model->maps.hide_start : model->maps.hide_end;
+            continue;
+        }
+        if(value < INT_MIN || value > INT_MAX) return 0;
+        return (int)value;
+    }
+    return 0;
+}
+
+static int nextcolourmap(s_model *model, int c)
+{
+    return obor_colourmap_step(model, c, 0);
+}
+
+static int prevcolourmap(s_model *model, int c)
+{
+    return obor_colourmap_step(model, c, 1);
+}
+
+s_model* nextplayermodeln(s_model *current, int p)
+{
+	int i; 
+	s_set_entry* set = levelsets + current_set;
+	s_model* model = nextplayermodel(current);
+	if(set->nosame) {
+		for(i=0; model && i<set->maxplayers && i<MAX_PLAYERS; i++) {
+			if(i!=p && stricmp(model->name, player[i].name)==0) {
+				model = nextplayermodel(model);
+			}
+		}
+	}
+	return model;
+}
+
+s_model* prevplayermodeln(s_model *current, int p)
+{
+	int i;
+	s_set_entry* set = levelsets + current_set;
+	s_model* model = prevplayermodel(current);
+	if(set->nosame) {
+		for(i=0; model && i<set->maxplayers && i<MAX_PLAYERS; i++) {
+			if(i!=p && stricmp(model->name, player[i].name)==0) {
+				model = prevplayermodel(model);
+			}
+		}
+	}
+	return model;
+}
+
 void updatestatus(){
 
 	int dt;
@@ -10922,7 +11013,7 @@ void updatestatus(){
 			if((player[i].playkeys & FLAG_ANYBUTTON || skipselect[i][0]) && !freezeall && !nojoin)    // Can't join while animations are frozen
 			{
 				// reports error if players try to use the same character and sameplay mode is off
-				if(sameplayer){
+				if(obor_profile_build < 3845 && sameplayer){
 					for(x=0; x<set->maxplayers; x++){
 						if((obor_profile_build < 3831 ?
                             strncmp(player[i].name,player[x].name,strlen(player[i].name)) == 0 :
@@ -10933,7 +11024,7 @@ void updatestatus(){
 					}
 				}
 
-				if (!tperror){    // Fixed so players can be selected if other player is no longer va //4player                        player[i].playkeys = player[i].newkeys = 0;
+				if(obor_profile_build >= 3845 || !tperror){    // Fixed so players can be selected if other player is no longer va //4player                        player[i].playkeys = player[i].newkeys = 0;
 					player[i].lives = PLAYER_LIVES;            // to address new lives settings
 					player[i].joining = 0;
 					player[i].hasplayed = 1;
@@ -10953,7 +11044,21 @@ void updatestatus(){
 				}
 
 			}
-			else if(player[i].playkeys & FLAG_MOVELEFT)
+            else if(obor_profile_build >= 3845 &&
+                    (player[i].playkeys & (FLAG_MOVELEFT|FLAG_MOVERIGHT)))
+            {
+                player[i].colourmap = nextcolourmap(model, i-1);
+                model = ((player[i].playkeys&FLAG_MOVELEFT)?prevplayermodeln:nextplayermodeln)(model, i);
+                strcpy(player[i].name, model->name);
+                player[i].playkeys = 0;
+            }
+            else if(obor_profile_build >= 3845 && colourselect &&
+                    (player[i].playkeys & (FLAG_MOVEUP|FLAG_MOVEDOWN)))
+            {
+                player[i].colourmap = ((player[i].playkeys&FLAG_MOVEUP)?nextcolourmap:prevcolourmap)(model, player[i].colourmap);
+                player[i].playkeys = 0;
+            }
+			else if(obor_profile_build < 3845 && player[i].playkeys & FLAG_MOVELEFT)
 			{
 				player[i].colourmap = i;
 				model = prevplayermodel(model);
@@ -10971,7 +11076,7 @@ void updatestatus(){
 
 				player[i].playkeys = 0;
 			}
-			else if(player[i].playkeys & FLAG_MOVERIGHT)
+			else if(obor_profile_build < 3845 && player[i].playkeys & FLAG_MOVERIGHT)
 			{
 				player[i].colourmap = i;
 				model = nextplayermodel(model);
@@ -10991,7 +11096,7 @@ void updatestatus(){
 
 			}
 			// don't like a characters color try a new one!
-			else if(player[i].playkeys & FLAG_MOVEUP && colourselect)
+			else if(obor_profile_build < 3845 && player[i].playkeys & FLAG_MOVEUP && colourselect)
 			{
 
 				do{
@@ -11009,7 +11114,7 @@ void updatestatus(){
 
 					player[i].playkeys = 0;
 			}
-			else if(player[i].playkeys & FLAG_MOVEDOWN && colourselect)
+			else if(obor_profile_build < 3845 && player[i].playkeys & FLAG_MOVEDOWN && colourselect)
 			{
 
 				do{
@@ -11033,8 +11138,13 @@ void updatestatus(){
 			if(player[i].playkeys & FLAG_START)
 			{
 				player[i].lives = 0;
-				model = skipselect[i][0]?findmodel(skipselect[i]):nextplayermodel(NULL);
+				model = skipselect[i][0]?findmodel(skipselect[i]):
+                    (obor_profile_build >= 3845 ? nextplayermodeln(NULL, i) : nextplayermodel(NULL));
 				strncpy(player[i].name, model->name, MAX_NAME_LEN);
+                if(obor_profile_build >= 3845)
+                    player[i].colourmap = nextcolourmap(model, i-1);
+                else
+                {
 				player[i].colourmap = i;
 				 // Keep looping until a non-hmap is found
 				while(model->maps.hide_start && model->maps.hide_end && player[i].colourmap >= model->maps.hide_start && player[i].colourmap <= model->maps.hide_end)
@@ -11043,6 +11153,7 @@ void updatestatus(){
 					if(player[i].colourmap > model->maps_loaded) player[i].colourmap = 0;
 				}
 
+                }
 				player[i].joining = 1;
 				player[i].playkeys = player[i].newkeys = player[i].releasekeys = 0;
 
@@ -15839,7 +15950,7 @@ void checkdamageeffects(s_attack* attack)
 
 	if(_dot)                                                                        //dot: Damage over time effect.
 	{
-		self->dot_owner[_dot_index] = self->opponent;                               //dot owner.
+		self->dot_owner[_dot_index] = obor_profile_build >= 3853 ? (opp ? opp : self) : self->opponent;                               //dot owner.
 		self->dot[_dot_index]       = _dot;                                         //Mode: 1. HP (non lethal), 2. MP, 3. HP (non lethal) & MP, 4. HP, 5. HP & MP.
 		self->dot_time[_dot_index]  = time + (_dot_time * GAME_SPEED / 100);        //Gametime dot will expire.
 		self->dot_force[_dot_index] = _dot_force;                                   //How much to dot each tick.
@@ -20566,7 +20677,7 @@ int biker_takedamage(entity *other, s_attack* attack)
 		self = driver;
 		self->drop = 1;
 		self->direction = tempself->direction;
-		if(self->takedamage) self->takedamage(self, attack);
+		if(self->takedamage) self->takedamage(obor_profile_build >= 3853 ? other : self, attack);
 		else self->health -= attack->attack_force;
 		self = tempself;
 
@@ -21003,7 +21114,11 @@ void update_scroller(){
 				advancex = (float)to;
 			}
 
-			if(level->scrolldir&SCROLL_BACK){    // Can't go back to the beginning
+			else if(obor_profile_build >= 3851 && (level->scrolldir&SCROLL_BACK) && to < advancex) {
+                if(to < advancex-level->scrollspeed) to = advancex-level->scrollspeed;
+                advancex = to;
+            }
+            if(obor_profile_build < 3851 && (level->scrolldir&SCROLL_BACK)){
 
 				if(to < advancex && to > blockade){
 					if(to < advancex-level->scrollspeed) to = advancex-level->scrollspeed;
@@ -21050,7 +21165,11 @@ void update_scroller(){
                 }
 				advancex = (float)to;
 			}
-			if(level->scrolldir&SCROLL_BACK){    // Can't go back to the beginning
+			else if(obor_profile_build >= 3851 && (level->scrolldir&SCROLL_BACK) && to > advancex) {
+                if(to > advancex+level->scrollspeed) to = advancex+level->scrollspeed;
+                advancex = to;
+            }
+            if(obor_profile_build < 3851 && (level->scrolldir&SCROLL_BACK)){
 
 				if(to > advancex){
 					if(to > advancex+level->scrollspeed) to = advancex+level->scrollspeed;
@@ -21091,7 +21210,11 @@ void update_scroller(){
 				advancey = (float)to;
 			}
 
-			if(level->scrolldir&SCROLL_BACK){    // Can't go back to the beginning
+			else if(obor_profile_build >= 3851 && (level->scrolldir&SCROLL_BACK) && to < advancey) {
+                if(to < advancey-level->scrollspeed) to = advancey-level->scrollspeed;
+                advancey = to;
+            }
+            if(obor_profile_build < 3851 && (level->scrolldir&SCROLL_BACK)){
 
 				if(to < advancey){
 					if(to < advancey-level->scrollspeed) to = advancey-level->scrollspeed;
@@ -21134,7 +21257,11 @@ void update_scroller(){
                 }
 				advancey = (float)to;
 			}
-			if(level->scrolldir&SCROLL_BACK){    // Can't go back to the beginning
+			else if(obor_profile_build >= 3851 && (level->scrolldir&SCROLL_BACK) && to > advancey) {
+                if(to > advancey+level->scrollspeed) to = advancey+level->scrollspeed;
+                advancey = to;
+            }
+            if(obor_profile_build < 3851 && (level->scrolldir&SCROLL_BACK)){
 
 				if(to > advancey){
 					if(to > advancey+level->scrollspeed) to = advancey+level->scrollspeed;
@@ -21173,6 +21300,7 @@ void update_scroller(){
 	{
 
 		if(cameratype==1) {
+            if(obor_profile_build >= 3846) { bm=-9999; tm=999999; }
 			for(i=0; i<levelsets[current_set].maxplayers; i++)
 			{
 				if(player[i].ent) {
@@ -21192,9 +21320,28 @@ void update_scroller(){
         else to = (bm+tm)/2-videomodes.vRes/2+level->camerazoffset;
 
 		// new scroll limit
+        if(obor_profile_build >= 3851)
+        {
+            if(to > scrollmaxz) to = scrollmaxz;
+            else if(to < scrollminz) to = scrollminz;
+        }
+        else
+        {
 		if((obor_profile_build >= 3783 || scrollmaxz) && to > scrollmaxz) to = scrollmaxz;
 		if((obor_profile_build >= 3783 || scrollminz) && to < scrollminz) to = scrollminz;
+        }
 
+        if(obor_profile_build >= 3851)
+        {
+            if(to != advancey)
+            {
+                if(to > advancey+level->scrollspeed) to = advancey+level->scrollspeed;
+                else if(to < advancey-level->scrollspeed) to = advancey-level->scrollspeed;
+                advancey = to;
+            }
+        }
+        else
+        {
 		if(to > advancey){
 			if(to > advancey+level->scrollspeed) to = advancey+level->scrollspeed;
 			advancey = (float)to;
@@ -21204,6 +21351,7 @@ void update_scroller(){
 			if(to < advancey-level->scrollspeed) to = advancey-level->scrollspeed;
 			advancey = (float)to;
 		}
+        }
 
 		if(advancey > panel_height - (level->rocking?16:12) -videomodes.vRes) advancey = (float)(panel_height - (level->rocking?16:12) -videomodes.vRes);
 		if(advancey < 0) advancey = 0;
@@ -21221,11 +21369,30 @@ void update_scroller(){
         else to = (lm+rm)/2-videomodes.hRes/2+level->cameraxoffset;
 
 		// new scroll limit
+        if(obor_profile_build >= 3851)
+        {
+            if(to > scrollmaxx) to = scrollmaxx;
+            else if(to < scrollminx) to = scrollminx;
+        }
+        else
+        {
 		if(obor_profile_build < 3783) { if(scrollmaxz && to > scrollmaxz) to = scrollmaxz; }
         else if(to > scrollmaxx) to = scrollmaxx;
 		if(obor_profile_build < 3783) { if(scrollminz && to < scrollminz) to = scrollminz; }
         else if(to < scrollminx) to = scrollminx;
+        }
 
+        if(obor_profile_build >= 3851)
+        {
+            if(to != advancex)
+            {
+                if(to > advancex+level->scrollspeed) to = advancex+level->scrollspeed;
+                else if(to < advancex-level->scrollspeed) to = advancex-level->scrollspeed;
+                advancex = to;
+            }
+        }
+        else
+        {
 		if(to > advancex){
 			if(to > advancex+level->scrollspeed) to = advancex+level->scrollspeed;
 			advancex = (float)to;
@@ -21235,6 +21402,7 @@ void update_scroller(){
 			if(to < advancex-level->scrollspeed) to = advancex-level->scrollspeed;
 			advancex = (float)to;
 		}
+        }
 
 		if(advancex > level->width - videomodes.hRes) advancex = (float)(level->width - videomodes.hRes);
 		if(advancex < 0) advancex = 0;
@@ -22849,6 +23017,7 @@ int playlevel(char *filename)
 		{
 			player[i].newkeys = player[i].playkeys = 0;
 			player[i].weapnum = level->setweap;
+            if(obor_profile_build >= 3845) player[i].joining = 0;
 			spawnplayer(i);
 			player[i].ent->rush[1] = 0;
 		}
@@ -22888,6 +23057,28 @@ int playlevel(char *filename)
 }
 
 
+static entity* spawnexample(int i)
+{
+	entity* example;
+	s_set_entry* set = levelsets+current_set;
+    if(obor_profile_build >= 3849)
+        example = spawn((float)psmenu[i][0], (float)psmenu[i][1], 0, spdirection[i], NULL, -1, nextplayermodeln(NULL, i));
+    else if(!psmenu[i][0] && !psmenu[i][1])
+	{
+		if(set->maxplayers > 2) example = spawn((float)((111-(set->maxplayers*14))+((i*(320-(166/set->maxplayers))/set->maxplayers)+videomodes.hShift)),(float)(230+videomodes.vShift),0 ,spdirection[i] , NULL, -1, nextplayermodeln(NULL, i));
+		else example = spawn((float)(83+(videomodes.hShift/2)+(i*(155+videomodes.hShift))),(float)(230+videomodes.vShift),0 ,spdirection[i] , NULL, -1, nextplayermodeln(NULL, i));
+	}
+	else example = spawn((float)psmenu[i][0], (float)psmenu[i][1], 0, spdirection[i], NULL, -1, nextplayermodeln(NULL, i));
+    if(!example || !example->model) shutdown(1, "Failed to create player selection object!");
+	strcpy(player[i].name, example->model->name);
+    if(obor_profile_build >= 3849)
+    {
+        player[i].colourmap = nextcolourmap(example->model, i-1);
+        ent_set_colourmap(example, player[i].colourmap);
+    }
+	return example;
+}
+
 int selectplayer(int *players, char* filename)
 {
 	s_model* tempmodel;
@@ -22898,6 +23089,7 @@ int selectplayer(int *players, char* filename)
 	int exit = 0;
 	int ready[MAX_PLAYERS] = {0,0,0,0};
 	int escape = 0;
+    unsigned exitdelay = 0;
 	int players_busy = 0;
 	int players_ready = 0;
 	int immediate[MAX_PLAYERS]= {0,0,0,0};
@@ -22962,7 +23154,16 @@ int selectplayer(int *players, char* filename)
 		}
 		for(i=0; i<set->maxplayers; i++)
 		{
-			if(players[i])
+            if(obor_profile_build >= 3845 && players[i])
+            {
+                example[i] = spawnexample(i);
+                if(obor_profile_build < 3849)
+                {
+                    player[i].colourmap = nextcolourmap(example[i]->model, i-1);
+                    if(obor_profile_build >= 3848) ent_set_colourmap(example[i], player[i].colourmap);
+                }
+            }
+            else if(players[i])
 			{
 				if(!psmenu[i][0] && !psmenu[i][1])
 				{
@@ -23041,7 +23242,7 @@ int selectplayer(int *players, char* filename)
 		for(i=0; i<set->maxplayers; i++)
 		{
 			// you can't have that character!
-			if((tperror == i+1) && !ready[i]) font_printf(75+videomodes.hShift,123+videomodes.vShift,0, 0,"Player %d Choose a Different Character!", i+1);
+			if(obor_profile_build < 3845 && (tperror == i+1) && !ready[i]) font_printf(75+videomodes.hShift,123+videomodes.vShift,0, 0,"Player %d Choose a Different Character!", i+1);
 			if(!ready[i])
 			{
 				if(player[i].lives <= 0 && (noshare || credits>0) && ((player[i].newkeys & FLAG_ANYBUTTON) || immediate[i]))
@@ -23060,6 +23261,19 @@ int selectplayer(int *players, char* filename)
 
 					player[i].lives = PLAYER_LIVES;
 
+                    if(obor_profile_build >= 3845)
+                    {
+                        example[i] = spawnexample(i);
+                        if(obor_profile_build < 3849)
+                        {
+                            player[i].colourmap = nextcolourmap(example[i]->model, i-1);
+                            player[i].playkeys = 0;
+                            ent_set_colourmap(example[i], player[i].colourmap);
+                        }
+                        else player[i].playkeys = 0;
+                    }
+                    else
+                    {
 					if(!psmenu[i][0] && !psmenu[i][1])
 					{
 						if(set->maxplayers > 2) example[i] = spawn((float)((111-(set->maxplayers*14))+((i*(320-(166/set->maxplayers))/set->maxplayers)+videomodes.hShift)),(float)(230+videomodes.vShift),0 ,spdirection[i] , NULL, -1, nextplayermodel(NULL));
@@ -23086,12 +23300,35 @@ int selectplayer(int *players, char* filename)
 					player[i].playkeys = 0;
 					ent_set_colourmap(example[i], cmap[i]);
 
+                    }
+
 					if(SAMPLE_BEEP >= 0) sound_play_sample(SAMPLE_BEEP, 0, savedata.effectvol,savedata.effectvol, 100);
 				}
-				else if(player[i].newkeys & FLAG_MOVELEFT && example[i])
+                else if(obor_profile_build >= 3849 && (player[i].newkeys & (FLAG_MOVELEFT|FLAG_MOVERIGHT)) && example[i])
+                {
+                    if(SAMPLE_BEEP >= 0) sound_play_sample(SAMPLE_BEEP, 0, savedata.effectvol,savedata.effectvol, 100);
+                    ent_set_model(example[i], ((player[i].newkeys&FLAG_MOVELEFT)?prevplayermodeln:nextplayermodeln)(example[i]->model, i)->name, 0);
+                    strcpy(player[i].name, example[i]->model->name);
+                    player[i].colourmap = nextcolourmap(example[i]->model, i-1);
+                    ent_set_colourmap(example[i], player[i].colourmap);
+                }
+                else if(obor_profile_build >= 3849 && (player[i].newkeys & (FLAG_MOVEUP|FLAG_MOVEDOWN)) && colourselect && example[i])
+                {
+                    player[i].colourmap = ((player[i].newkeys&FLAG_MOVEUP)?nextcolourmap:prevcolourmap)(example[i]->model, player[i].colourmap);
+                    ent_set_colourmap(example[i], player[i].colourmap);
+                }
+				else if(obor_profile_build < 3849 && player[i].newkeys & FLAG_MOVELEFT && example[i])
 				{
 					if(SAMPLE_BEEP >= 0) sound_play_sample(SAMPLE_BEEP, 0, savedata.effectvol,savedata.effectvol, 100);
-					ent_set_model(example[i], prevplayermodel(example[i]->model)->name, 0);
+					ent_set_model(example[i], (obor_profile_build >= 3845 ? prevplayermodeln(example[i]->model, i) : prevplayermodel(example[i]->model))->name, 0);
+                    if(obor_profile_build >= 3845)
+                    {
+                        strcpy(player[i].name, example[i]->model->name);
+                        player[i].colourmap = nextcolourmap(example[i]->model, i-1);
+                        ent_set_colourmap(example[i], player[i].colourmap);
+                    }
+                    else
+                    {
 					cmap[i] = i;
 
 					while((example[i]->modeldata.maps.hide_start) && (example[i]->modeldata.maps.hide_end) &&
@@ -23103,12 +23340,21 @@ int selectplayer(int *players, char* filename)
 					}
 
 					ent_set_colourmap(example[i], cmap[i]);
+                    }
 					tperror = 0;
 				}
-				else if(player[i].newkeys & FLAG_MOVERIGHT && example[i])
+				else if(obor_profile_build < 3849 && player[i].newkeys & FLAG_MOVERIGHT && example[i])
 				{
 					if(SAMPLE_BEEP >= 0) sound_play_sample(SAMPLE_BEEP, 0, savedata.effectvol,savedata.effectvol, 100);
-					ent_set_model(example[i], nextplayermodel(example[i]->model)->name, 0);
+					ent_set_model(example[i], (obor_profile_build >= 3845 ? nextplayermodeln(example[i]->model, i) : nextplayermodel(example[i]->model))->name, 0);
+                    if(obor_profile_build >= 3845)
+                    {
+                        strcpy(player[i].name, example[i]->model->name);
+                        player[i].colourmap = nextcolourmap(example[i]->model, i-1);
+                        ent_set_colourmap(example[i], player[i].colourmap);
+                    }
+                    else
+                    {
 					cmap[i] = i;
 
 					while((example[i]->modeldata.maps.hide_start) && (example[i]->modeldata.maps.hide_end) &&
@@ -23119,11 +23365,20 @@ int selectplayer(int *players, char* filename)
 					}
 
 					ent_set_colourmap(example[i], cmap[i]);
+                    }
 					tperror = 0;
 				}
 				// oooh pretty colors! - selectable color scheme for player characters
-				else if(player[i].newkeys & FLAG_MOVEUP && colourselect && example[i])
+				else if(obor_profile_build < 3849 && player[i].newkeys & FLAG_MOVEUP && colourselect && example[i])
 				{
+                    if(obor_profile_build >= 3845)
+                    {
+                        player[i].colourmap = nextcolourmap(example[i]->model, player[i].colourmap);
+                        ent_set_colourmap(example[i], player[i].colourmap);
+                    }
+                    else
+                    {
+
 					do
 					{
 						cmap[i]++;
@@ -23138,9 +23393,18 @@ int selectplayer(int *players, char* filename)
 					);
 
 					ent_set_colourmap(example[i], cmap[i]);
+                    }
 				}
-				else if(player[i].newkeys & FLAG_MOVEDOWN && colourselect && example[i])
+				else if(obor_profile_build < 3849 && player[i].newkeys & FLAG_MOVEDOWN && colourselect && example[i])
 				{
+                    if(obor_profile_build >= 3845)
+                    {
+                        player[i].colourmap = prevcolourmap(example[i]->model, player[i].colourmap);
+                        ent_set_colourmap(example[i], player[i].colourmap);
+                    }
+                    else
+                    {
+
 					do
 					{
 						cmap[i]--;
@@ -23155,11 +23419,14 @@ int selectplayer(int *players, char* filename)
 					);
 
 					ent_set_colourmap(example[i], cmap[i]);
+                    }
 				}
 				else if((player[i].newkeys & FLAG_ANYBUTTON) && example[i])
 				{
 
 					if(SAMPLE_BEEP2 >= 0) sound_play_sample(SAMPLE_BEEP2, 0, savedata.effectvol,savedata.effectvol, 100);
+                    if(obor_profile_build < 3845)
+                    {
 					strcpy(player[i].name, example[i]->modeldata.name);
 					player[i].colourmap = cmap[i];
 
@@ -23178,11 +23445,19 @@ int selectplayer(int *players, char* filename)
 						}
 					}
 
-					if(!tperror)
+                    }
+					if(obor_profile_build >= 3845 || !tperror)
 					{
-						time=0;
+                        if(obor_profile_build < 3849) time=0;
 						// yay you picked me!
 						if(validanim(example[i],ANI_PICK)) ent_set_anim(example[i], ANI_PICK, 0);
+                        if(obor_profile_build >= 3849)
+                        {
+                            example[i]->stalltime = time+GAME_SPEED*2;
+                            ready[i] = 1;
+                        }
+                        else
+                        {
 						while(!ready[i] && example[i] != NULL)
 						{
 							update(0,0);
@@ -23190,12 +23465,23 @@ int selectplayer(int *players, char* filename)
 							else if(!example[i]->animating) ready[i] = 1;
 							if(ready[i]) time=0;
 						}
+                        }
 					}
 				}
 			}
-			else
-			{
-				if(!psmenu[i][2] && !psmenu[i][3])
+            else if(obor_profile_build >= 3849 && ready[i]==1)
+            {
+                if(((!validanim(example[i],ANI_PICK) || example[i]->modeldata.animation[ANI_PICK]->loop.mode) && time>example[i]->stalltime) || !example[i]->animating)
+                {
+                    ready[i] = 2;
+                    if(obor_profile_build >= 3850) exitdelay = time + GAME_SPEED;
+                }
+            }
+            else
+            {
+                if(obor_profile_build >= 3849)
+                    font_printf(psmenu[i][2], psmenu[i][3], 0, 0, "Ready!");
+                else if(!psmenu[i][2] && !psmenu[i][3])
 				{
 					if(set->maxplayers > 2) font_printf((95-(set->maxplayers*14))+((i*(320-(166/set->maxplayers))/set->maxplayers)+videomodes.hShift), 225+videomodes.vShift, 0, 0, "Ready!");
 					else font_printf(67+(videomodes.hShift/2)+(i*(155+videomodes.hShift)), 225+videomodes.vShift, 0, 0, "Ready!");
@@ -23204,10 +23490,11 @@ int selectplayer(int *players, char* filename)
 			}
 
 			if(example[i] != NULL) players_busy++;
-			if(ready[i]) players_ready++;
+			if(obor_profile_build >= 3849 ? ready[i]==2 : ready[i]!=0) players_ready++;
 		}
 
-		if(players_busy && players_busy==players_ready && time>GAME_SPEED) exit = 1;
+		if(players_busy && players_busy==players_ready &&
+           (obor_profile_build >= 3850 ? (exitdelay && time>exitdelay) : time>GAME_SPEED)) exit = 1;
 		update(0,0);
 
 		if(bothnewkeys & FLAG_ESC) escape = 1;

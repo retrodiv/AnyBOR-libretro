@@ -12,8 +12,10 @@ def constant_queries(fixture):
     names = sorted({name for row in fixture['sources'] for name in row['plain_names']})
     dynamic = []
     for call in fixture['sources'][-1]['suffix_calls']:
-        prefix = re.fullmatch(r'ICMPSCONST[AB]\((\w+), (\w+)\)', call)[1]
+        prefix = re.fullmatch(r'ICMPSCONST[ABC]\((\w+)(?:, \w+)?\)', call)[1]
         dynamic += [prefix + str(n) for n in (1, 2, 11, 12)]
+        if call.startswith('ICMPSCONSTC('):
+            dynamic += [prefix.lower()+'1',prefix+'0',prefix+'01',prefix+'-1',prefix+'1tail']
     return sorted(set(names + [name.lower() for name in names] + dynamic +
                       ['', 'SYNTHETIC_UNKNOWN_CONSTANT', 'ANI_UNKNOWN17',
                        'ANI_ATTACK11tail', 'ANI_FALL12tail']))
@@ -35,9 +37,11 @@ def _lookup(row, arrays, name, epoch, *, mapper):
         return 1, value
     if row['suffix_in_mapper']:
         for call in row['suffix_calls']:
-            kind, prefix, array = re.fullmatch(r'ICMPSCONST([AB])\((\w+), (\w+)\)', call).groups()
+            kind, prefix, array = re.fullmatch(r'ICMPSCONST([ABC])\((\w+)(?:, (\w+))?\)', call).groups()
             suffix = upper[len(prefix):] if upper.startswith(prefix) else ''
             if suffix and '1' <= suffix[0] <= '9':
+                if kind == 'C':
+                    return 1, _number(suffix) + row['special_slots'] - 1
                 index = _number(suffix) - 1 + (row['special_slots'] if kind == 'B' else 0)
                 if not 0 <= index < 64:
                     raise ValueError('Test query exceeds configured native table')

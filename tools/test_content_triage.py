@@ -197,6 +197,59 @@ class ContentTriageTests(unittest.TestCase):
                 text=True, timeout=8)
             self.assertEqual(bool(int(actual)), row['supported'], row)
 
+    def test_later_script_registration_bounds_match_own_sources(self):
+        fixture = load_contract_fixture(Path(__file__).parent / 'fixtures' /
+                                        'profile-late-script-registry-contracts.json')
+        rules = subprocess.check_output([str(self.host), '--rules'], text=True, timeout=8)
+        ids = {parts[2]: parts[0] for parts in
+               (line.split() for line in rules.splitlines()) if parts[1] == '0'}
+        for row in fixture['sources']:
+            # Own native registration contracts cover every context in this era.
+            for name, expected in [('changeattackproperty', row['attack_mapper'])] + [
+                    (name, row['revision'] < 3845)
+                    for name in ('settexture', 'setvertex', 'trianglelist')]:
+                actual = subprocess.check_output([str(self.host), '--rule-probe', ids[name],
+                    str(row['revision']), fixture['engine']], text=True, timeout=8)
+                self.assertEqual(bool(int(actual)), expected, (row['revision'], name))
+        for name, bounds in [('changeattackproperty', (3843, 4166)),
+                             ('settexture', (3381, 3844)), ('setvertex', (3381, 3844)),
+                             ('trianglelist', (3381, 3844))]:
+            lower, upper = bounds
+            for revision in (lower - 1, lower, upper, upper + 1):
+                actual = subprocess.check_output([str(self.host), '--rule-probe', ids[name],
+                    str(revision), '3842'], text=True, timeout=8)
+                self.assertEqual(bool(int(actual)), lower <= revision <= upper,
+                                 (name, revision))
+
+    def test_unavailable_tags_respect_later_script_retirements(self):
+        for name in ('settexture', 'setvertex', 'trianglelist'):
+            profile, log = self.script('3843', 'void main(){' + name + '(0);}')
+            self.assertEqual(profile, 3842, log)
+            self.assertIn('name=' + name + ' bounds=3381-3844', log)
+            # An available exact tag still has the documented authority.
+            self.assertEqual(self.script('3842', 'void main(){' + name + '(0);}')[0], 3842)
+        profile, log = self.script('4167', 'void main(){changeattackproperty("damage",1);}')
+        self.assertEqual(profile, 4153, log)
+        self.assertIn('name=changeattackproperty bounds=3843-4166', log)
+
+    def test_contract_inspection_preserves_positive_facts_and_uncertainty(self):
+        path = self.root / 'authored-inspection.pak'
+        path.write_bytes(pack({'data/scripts/main.c':
+            b'void main(){settexture(0);changeattackproperty("damage",1);}'}))
+        def inspect():
+            return json.loads(subprocess.check_output([str(self.host), '--inspect-contracts',
+                str(path), '3842', '3842'], text=True, timeout=8))
+        result = inspect()
+        self.assertTrue(result['complete'])
+        self.assertFalse(result['script_bindings_ambiguous'])
+        facts = {row['name']: row['supported'] for row in result['facts']}
+        self.assertEqual(facts, {'settexture': True, 'changeattackproperty': False})
+        path.write_bytes(pack({'data/scripts/main.c':
+            b'#define UNKNOWN 1\nvoid main(){settexture(0);}'}))
+        result = inspect()
+        self.assertTrue(result['script_bindings_ambiguous'])
+        self.assertEqual(result['facts'], [])
+
     def test_sprite_offset_requirements_distinguish_reads_and_writes(self):
         for name in ('offsetx', 'offsety'):
             profile, log = self.script('3500-3665',
@@ -305,7 +358,7 @@ class ContentTriageTests(unittest.TestCase):
                 ('3780-3831','openborconstant("ATK_LAND");',3831),
                 ('3780-3839','exit(0);',3839),
                 ('3780-3839','openborvariant("sample_play_id");',3839),
-                ('3792-3911','getlevelproperty("type");',3842)):
+                ('3792-3911','getlevelproperty("type");',3854)):
             profile,log=self.script(tag,'void main(){'+source+'}')
             self.assertEqual(profile,expected,log)
 

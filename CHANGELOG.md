@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.1.82 — historical profiles through 3854
+
+- Add v3.0 3846, v3.0 3847-dev, v3.0 3849 and v3.0 3854.
+- Preserve each profile’s scripts, character selection, fonts, colour maps and scrolling.
+- Match content requirements to native script-function availability.
+- Preserve graphics-query results with bounded coordinate indexing.
+- Present the README profile list in an ordered six-column table.
+- Keep projectile argument probes compatible with Clang's conversion diagnostics.
+- Keep native HUD and debug probes compatible with ARM64 Mach-O linking.
+
 ## 0.1.81 — historical profiles through 3665
 
 - Add 61 official profiles from 3500 through 3665.

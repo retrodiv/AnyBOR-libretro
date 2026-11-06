@@ -1,0 +1,78 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "openbor.h"
+#undef assert
+#undef printf
+#define assert(c) do {if(!(c)){fprintf(stderr,"late damage profile=%u line=%d\n",obor_profile_build,__LINE__);abort();}}while(0)
+HRESULT Interpreter_Call(Interpreter *p){(void)p;abort();}
+HRESULT Interpreter_EvalInstruction(Interpreter *p){(void)p;abort();}
+uint32_t obor_profile_build;
+entity *self;
+u32 time;
+static entity *driver_service,*callback_self,*callback_other;
+static unsigned callbacks,checks,deaths;
+unsigned char *model_get_colourmap(s_model *model,unsigned which){(void)model;(void)which;abort();}
+void ent_set_colourmap(entity *ent,unsigned map){(void)ent;(void)map;abort();}
+int inair(entity *ent){(void)ent;return 0;}
+void kill(entity *ent){(void)ent;abort();}
+int set_pain(entity *ent,int type,int reset){assert(ent==self);(void)type;(void)reset;return 1;}
+void bike_crash(void){abort();}
+entity *drop_driver(entity *ent){assert(ent==self);return driver_service;}
+void checkdamage(entity *other,s_attack *attack){(void)other;(void)attack;++checks;}
+void checkdeath(void){assert(!self->health);++deaths;}
+static int take_damage(entity *other,s_attack *attack){
+    assert(attack->attack_force==7);++callbacks;callback_self=self;callback_other=other;return 1;
+}
+@SET_OPPONENT@
+@EFFECTS@
+@BIKER@
+struct context {uint32_t revision;int dot_fallback,driver_attacker;};
+static const struct context contexts[]={@CONTEXTS@};
+int main(void){
+    static entity victim,opponent,driver;
+    unsigned cases=0;
+    for(unsigned c=0;c<sizeof(contexts)/sizeof(*contexts);++c){
+        const struct context *context=contexts+c;obor_profile_build=context->revision;
+        for(int other=0;other<3;++other)for(int index=0;index<MAX_DOTS;++index){
+            memset(&victim,0,sizeof(victim));memset(&opponent,0,sizeof(opponent));
+            self=&victim;time=100;
+            self->opponent=other==0?NULL:other==1?self:&opponent;
+            s_attack attack={0};attack.dot=4;attack.dot_index=index;
+            attack.dot_time=7;attack.dot_force=9;attack.dot_rate=11;attack.attack_type=2;
+            entity *wanted=self->opponent;
+            if(!wanted && context->dot_fallback)wanted=self;
+            checkdamageeffects(&attack);
+            assert(self==&victim && self->dot_owner[index]==wanted);
+            assert(self->dot[index]==4 && self->dot_time[index]==100+7*GAME_SPEED/100);
+            assert(self->dot_force[index]==9 && self->dot_rate[index]==11 && self->dot_atk[index]==2);
+            ++cases;
+        }
+        for(int other=0;other<3;++other)for(int present=0;present<2;++present)
+        for(int callback=0;callback<2;++callback)for(int painless=0;painless<2;++painless){
+            memset(&victim,0,sizeof(victim));memset(&opponent,0,sizeof(opponent));memset(&driver,0,sizeof(driver));
+            self=&victim;self->health=100;self->direction=1;driver.health=20;
+            callbacks=checks=deaths=0;callback_self=callback_other=NULL;
+            driver_service=present?&driver:NULL;driver.takedamage=callback?take_damage:NULL;
+            entity *attacker=other==0?NULL:other==1?self:&opponent;
+            s_attack attack={0};attack.attack_force=7;attack.no_pain=painless;
+            assert(biker_takedamage(attacker,&attack)==1 && self==&victim);
+            if(painless){assert(checks==1 && !callbacks && !deaths && self->health==100);}
+            else {
+                assert(!checks && deaths==1 && self->health==0 && self->nextthink==time+THINK_SPEED);
+                assert(callbacks==(unsigned)(present && callback));
+                if(present){
+                    assert(driver.drop==1 && driver.direction==1);
+                    if(callback)assert(callback_self==&driver && callback_other==(context->driver_attacker?attacker:&driver));
+                    else assert(driver.health==13);
+                }
+            }
+            ++cases;
+        }
+    }
+    printf("{\"status\":\"PASS\",\"contexts\":%zu,\"cases\":%u}\n",sizeof(contexts)/sizeof(*contexts),cases);
+    return 0;
+}

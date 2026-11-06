@@ -45,6 +45,22 @@ DETECTION
 DECISION
 int main(int argc,char **argv) {
 #ifdef OBOR_CONTENT_CONTRACTS_H
+ if(argc==5&&!strcmp(argv[1],"--inspect-contracts")) {
+  int profile=atoi(argv[3]),engine=atoi(argv[4]);
+  g_content_triage=true;build_from_content(argv[2]);
+  printf("{\"complete\":%s,\"script_bindings_ambiguous\":%s,\"lower\":%d,\"upper\":%d,\"facts\":[",
+         g_content_scan_complete?"true":"false",g_contract_scripts_ambiguous?"true":"false",
+         g_content_lower,g_content_upper);
+  bool comma=false;
+  for(size_t i=0;i<sizeof(kContentContracts)/sizeof(*kContentContracts);++i) {
+   if(!content_contract_active(i))continue;
+   const obor_contract_rule *r=&kContentContracts[i];
+   printf("%s{\"name\":\"%s\",\"kind\":%d,\"supported\":%s}",comma?",":"",r->name,
+          (int)r->kind,content_contract_allows(r,profile,engine)?"true":"false");
+   comma=true;
+  }
+  puts("]}");return 0;
+ }
  if(argc==2&&!strcmp(argv[1],"--rules")) {
   for(size_t i=0;i<sizeof(kContentContracts)/sizeof(*kContentContracts);++i) {
    const obor_contract_rule *r=&kContentContracts[i];

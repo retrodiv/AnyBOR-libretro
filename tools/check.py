@@ -20,6 +20,7 @@ import release
 import macho_inspect
 from check_modifications import check_modifications
 from check_core_info import check_core_info
+from profile_manifest import profile_display
 
 ROOT = release.ROOT
 
@@ -29,6 +30,38 @@ VERSION_LITERAL = re.compile(r"\b0\.1\.[0-9]+\b")
 # release history.  Everywhere else a literal is a copy that can go stale.
 VERSION_CARRIERS = {"src/pin.json", "src/glue/obor_engines.h", "CHANGELOG.md",
                     "SOURCES.json", "SBOM.spdx.json"}
+
+
+def check_readme_profiles(root, pin):
+    """README rows contain every exact profile label in registry order."""
+    text = (root / 'README.md').read_text(encoding='utf-8')
+    intro = re.search(r'offering selectable engine\s+profiles:\n\n', text)
+    if intro is None:
+        raise RuntimeError('Missing README profile table introduction')
+    table = text[intro.end():].split('\n\n', 1)[0].splitlines()
+    def cells(line):
+        if not line.startswith('|') or not line.endswith('|'):
+            raise RuntimeError('Invalid README profile table row')
+        result = [word.strip() for word in line[1:-1].split('|')]
+        if len(result) != 6:
+            raise RuntimeError('README profile table must have six columns')
+        return result
+    if len(table) < 3 or cells(table[0]) != [''] * 6 or cells(table[1]) != ['---'] * 6:
+        raise RuntimeError('README profile table needs an empty six-column header')
+    labels = []
+    for index, line in enumerate(table[2:]):
+        row = cells(line)
+        if not row[0]:
+            raise RuntimeError('README profile rows must contain a profile')
+        if '' in row:
+            if index != len(table) - 3 or any(row[row.index(''):]):
+                raise RuntimeError('Only trailing cells of the last README profile row may be empty')
+            row = row[:row.index('')]
+        labels.extend(row)
+    engines = {row['build']: row for row in pin['engines']}
+    expected = [profile_display(row, engines[row['engine']]) for row in pin['profiles']]
+    if labels != expected:
+        raise RuntimeError('README profile table differs from exact registry order or labels')
 
 
 def check_version_records(root, files):
@@ -108,6 +141,7 @@ def check_sources():
     if (ROOT / "src/glue/obor_abi.h").read_bytes() != (ROOT / "src/port/libretro/obor_abi.h").read_bytes():
         raise RuntimeError("Glue and engine ABI headers differ")
     pin = release.read_json(ROOT / "src/pin.json")
+    check_readme_profiles(ROOT, pin)
     from profile_groups import check_workflow_groups
     check_workflow_groups((ROOT / ".github/workflows/ci.yml").read_text(), pin["profiles"])
     check_core_info(ROOT, pin)

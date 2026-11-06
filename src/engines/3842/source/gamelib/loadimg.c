@@ -1,4 +1,4 @@
-/* AnyBOR modification record: 2026-10-24.
+/* AnyBOR modification record: 2026-11-06.
  * Port maintained by retrodiv <retrodiv@proton.me>.
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
@@ -9,13 +9,16 @@
  * dimensions for independent sprite reconstruction proof. Preserve native
  * palette-only filename probing, three-plane refusals and final RGB table
  * conversion without interpreting palette bytes as sprite dimensions. Keep
- * bitmap row reads within the requested output width.
+ * bitmap row reads within the requested output width. Preserve source-
+ * defined grayscale PNG palette acceptance and identity colours with bounded
+ * destination writes.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/3842.md
  * at the source repository root. Original notices follow below.
  */
 
 #include "obor_resources.h"
+extern uint32_t obor_profile_build;
 
 /*
  * OpenBOR - http://www.LavaLit.com
@@ -296,6 +299,13 @@ static int readpng(unsigned char *buf, unsigned char *pal, int maxwidth, int max
 	if(pal)
 	{
 
+        if(obor_profile_build >= 3852 &&
+           png_get_color_type(png_ptr, info_ptr) == PNG_COLOR_TYPE_GRAY)
+        {
+            /* Preserve the source RGB prefix within this palette's capacity. */
+            for(i=0; i<pb && i<768; ++i) pal[i] = (unsigned char)(i/3);
+            return 1;
+        }
 		if(png_get_PLTE(png_ptr, info_ptr, &png_pal_ptr, &png_pal_num) != PNG_INFO_PLTE ||
 		   png_pal_ptr == NULL)
 		{

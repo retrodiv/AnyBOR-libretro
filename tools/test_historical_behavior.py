@@ -3695,6 +3695,7 @@ typedef struct {int dummy;} Model;
 static Model storage,*model;
 static Model *findmodel(const char *name) {snprintf(lookup_name,sizeof(lookup_name),"%s",name);return &storage;}
 static Model *nextplayermodel(void *unused) {assert(!unused);strcpy(lookup_name,"<next>");return &storage;}
+static inline Model *nextplayermodeln(void *unused,int slot) {assert(slot>=0 && slot<4);return nextplayermodel(unused);}
 static void begin_game(int useSavedGame) {int i;@BEGIN@}
 static void phase(void) {char *filename="level";@PHASE@}
 static void finish(void) {@FINISH@}

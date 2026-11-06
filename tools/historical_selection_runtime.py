@@ -13,6 +13,9 @@ def render_selection_runtime(engine, fixture):
 
     def comparison(name):
         body = function(source, name)
+        gate = re.search(r'if\((obor_profile_build < \d+) && sameplayer\)', body)
+        if gate is None:
+            gate = re.search(r'if\((obor_profile_build < \d+)\)\s*\{\s*strcpy\(player\[i\]\.name', body)
         first = body.index('player[i].name,player[x].name')
         start = body.rfind('if(', 0, first) + 2
         if start < 2:
@@ -21,13 +24,15 @@ def render_selection_runtime(engine, fixture):
         for end in range(start, len(body)):
             depth += (body[end] == '(') - (body[end] == ')')
             if not depth:
-                return body[start + 1:end]
+                expression = body[start + 1:end]
+                return '('+gate[1]+') && ('+expression+')' if gate else expression
         raise ValueError('Unclosed native name-comparison condition')
 
     constants = '\n'.join(re.search(r'(?m)^#define\s+' + name + r'\s+[^\n]+', header)[0]
                           for name in ('GAME_SPEED', 'COUNTER_SPEED', 'TYPE_NONE'))
-    checks = '\n'.join('obor_profile_build=%d;check(%d,%d);' % (
-        row['revision'], row['names_casefold_full'], row['join_gates_half_counter'])
+    checks = '\n'.join('obor_profile_build=%d;check(%d,%d,%d);' % (
+        row['revision'], row['names_casefold_full'], row['join_gates_half_counter'],
+        row.get('duplicate_confirmation',True))
         for row in fixture['sources'])
     return r'''
 #include <assert.h>
@@ -62,14 +67,14 @@ static void drop_all_enemies(void){assert(0);}
 @DIE@
 static int update_duplicate(int i,int x){return (@UPDATE@);}
 static int select_duplicate(int i,int x){return (@SELECT@);}
-static void check(int full,int join_gate){
+static void check(int full,int join_gate,int duplicate_confirmation){
     const char *pairs[][2]={{"A","A"},{"A","AB"},{"AB","A"},{"a","A"},
         {"AB","ab"},{"","AB"},{"AB",""},{"A","B"},{"",""},{"A ","A"}};
     const int prefix[]={1,1,0,0,0,1,0,0,1,0};
     const int folded[]={1,0,0,1,1,0,0,0,1,0};
     if(PROBE_FOCUS!=2)for(sample=0;sample<10;++sample)for(int same=0;same<2;++same){
         strcpy(player[0].name,pairs[sample][0]);strcpy(player[1].name,pairs[sample][1]);
-        int expected=!same && (full?folded[sample]:prefix[sample]);
+        int expected=duplicate_confirmation && !same && (full?folded[sample]:prefix[sample]);
         assert(update_duplicate(0,same?0:1)==expected);
         assert(select_duplicate(0,same?0:1)==expected);++cases;
     }

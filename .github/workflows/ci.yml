@@ -382,8 +382,11 @@ jobs:
           run_check python3 tools/test_historical_frozen_timers.py
           run_check python3 tools/test_historical_model_selection.py
           run_check python3 tools/test_historical_script_registry.py
+          run_check python3 tools/test_historical_late_script.py
+          run_check python3 tools/test_historical_late_selection.py
           run_check python3 tools/test_historical_legacy_graphics.py
           run_check python3 tools/test_historical_gfx_properties.py
+          run_check python3 tools/test_historical_late_graphics.py
           run_check python3 tools/test_historical_texture_dispatch.py
           run_check python3 tools/test_historical_graphics_allocation.py
           run_check python3 tools/test_historical_font_epochs.py
@@ -522,6 +525,7 @@ jobs:
           run_check python3 tools/test_sprite_masks.py
           run_check python3 tools/test_sprite_encoding.py
           run_check python3 tools/test_font_raster.py
+          run_check python3 tools/test_font_masks.py
           run_check python3 tools/test_panel_order.py
           run_check python3 tools/test_dot_bounds.py
           run_check python3 tools/test_6392_profile.py

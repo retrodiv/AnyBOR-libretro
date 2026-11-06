@@ -1,0 +1,68 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <assert.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+typedef struct {unsigned char red,green,blue;} png_color;
+typedef png_color *png_colorp;
+#define PNG_INFO_PLTE 8
+#define PNG_COLOR_TYPE_GRAY 0
+static uint32_t obor_profile_build;
+static int palette_capacity,color_type,plte_present,plte_calls;
+#define PAL_BYTES palette_capacity
+static int res[2]={2,2};
+static unsigned char first_row[]={1,2},second_row[]={3,4};
+static unsigned char *row_pointers[]={first_row,second_row};
+static void *png_ptr,*info_ptr;
+static png_color colors[2];
+static int png_get_color_type(void *png,void *info){(void)png;(void)info;return color_type;}
+static int png_get_PLTE(void *png,void *info,png_colorp *out,int *count){
+    (void)png;(void)info;++plte_calls;
+    *out=plte_present?colors:NULL;*count=plte_present?2:0;
+    return plte_present?PNG_INFO_PLTE:0;
+}
+static unsigned short colour16(unsigned r,unsigned g,unsigned b){return (unsigned short)(((r>>3)<<11)|((g>>2)<<5)|(b>>3));}
+static unsigned colour32(unsigned r,unsigned g,unsigned b){return (r<<16)|(g<<8)|b;}
+@READER@
+struct context{uint32_t revision;int grayscale;};
+static const struct context contexts[]={@CONTEXTS@};
+int main(void){
+    const int capacities[]={512,768,1024};unsigned cases=0;
+    for(unsigned c=0;c<sizeof(contexts)/sizeof(*contexts);++c)
+    for(unsigned size=0;size<3;++size)for(int kind=0;kind<4;++kind){
+        obor_profile_build=contexts[c].revision;palette_capacity=capacities[size];
+        unsigned char *owner=malloc((size_t)palette_capacity+32);assert(owner);
+        memset(owner,0x6d,(size_t)palette_capacity+32);unsigned char *pal=owner+16;
+        color_type=kind<2?PNG_COLOR_TYPE_GRAY:3;plte_present=kind==2;plte_calls=0;
+        colors[0]=(png_color){8,9,10};colors[1]=(png_color){60,90,120};
+        unsigned char pixels[12];memset(pixels,0x6d,sizeof(pixels));
+        int has_palette=kind!=1;
+        int result=readpng(pixels,has_palette?pal:NULL,4,3);
+        assert(result==(kind==1 || kind==2 || (kind==0 && contexts[c].grayscale)));
+        for(unsigned i=0;i<sizeof(pixels);++i){
+            unsigned wanted=i==0?1:i==1?2:i==4?3:i==5?4:0x6d;assert(pixels[i]==wanted);
+        }
+        for(unsigned i=0;i<16;++i)assert(owner[i]==0x6d && pal[palette_capacity+i]==0x6d);
+        if(kind==0 && contexts[c].grayscale){
+            assert(!plte_calls);
+            for(int i=0;i<palette_capacity;++i)assert(pal[i]==(i<768?(unsigned char)(i/3):0x6d));
+        }else if(kind!=2){
+            for(int i=0;i<palette_capacity;++i)assert(pal[i]==0x6d);
+            assert(plte_calls==(kind!=1));
+        }else{
+            assert(plte_calls==1);
+            if(palette_capacity==768){
+                const unsigned char expected[]={0,0,0,60,90,120};assert(!memcmp(pal,expected,6));
+            }else if(palette_capacity==512){
+                unsigned short expected[]={0,colour16(60,90,120)};assert(!memcmp(pal,expected,4));
+            }else{
+                unsigned expected[]={0,colour32(60,90,120)};assert(!memcmp(pal,expected,8));
+            }
+        }
+        free(owner);++cases;
+    }
+    printf("{\"status\":\"PASS\",\"contexts\":%zu,\"cases\":%u}\n",sizeof(contexts)/sizeof(*contexts),cases);
+    return 0;
+}

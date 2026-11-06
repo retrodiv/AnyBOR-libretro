@@ -826,9 +826,9 @@ static const obor_marker kRemovedMarkers[] = {
     { "npc_warp", 6391 },
     { "onblockascript", 7533 },
     { "openborscript.h", 4432 },
-    { "settexture", 3842 },
-    { "setvertex", 3842 },
+    { "settexture", 3381 },
+    { "setvertex", 3381 },
     { "stats", 4432 },
-    { "trianglelist", 3842 },
+    { "trianglelist", 3381 },
     { "weaponum", 3400 },
 };

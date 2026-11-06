@@ -51,7 +51,8 @@ static void reset(void){
  memset(&actor,0,sizeof(actor));memset(&created,0,sizeof(created));memset(&animation,0,sizeof(animation));
  memset(values,0,sizeof(values));for(int i=0;i<10;++i)values[i].vt=VT_INTEGER;
  memset(names[2],'L',70);names[2][70]=0;seen_name[0]=diagnostic[0]=0;
- self=testing_absent_self?NULL:&actor;actor.x=10.5f;actor.z=-4.25f;actor.a=6.5f;actor.animation=&animation;animation.throwa=2.25f;
+ /* throwa has native integer storage; fractional coordinates remain below. */
+ self=testing_absent_self?NULL:&actor;actor.x=10.5f;actor.z=-4.25f;actor.a=6.5f;actor.animation=&animation;animation.throwa=2;
  spawn_calls=name_reads=0;spawn_success=1;seen_bomb=seen_direction=seen_ptype=seen_map=-99;
  seen_null_name=0;seen_x=seen_z=seen_a=-99;
  for(unsigned i=0;i<sizeof(entries)/sizeof(*entries);++i)entries[i]=i==1||i==149?NULL:&actor;

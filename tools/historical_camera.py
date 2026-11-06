@@ -16,8 +16,9 @@ def render_camera(engine, rows):
         for name in ('SCROLL_RIGHT', 'SCROLL_LEFT', 'SCROLL_OUTWARD', 'SCROLL_INWARD',
                      'SCROLL_UP', 'SCROLL_DOWN', 'SCROLL_BACK', 'TYPE_ENEMY',
                      'TYPE_ENDLEVEL', 'TYPE_ITEM', 'TYPE_OBSTACLE', 'GAME_SPEED', 'COUNTER_SPEED'))
-    contexts = ','.join('{%d,%d,%d,%d}' % (
-        row['revision'], row['separate_limits'], row['early_blockade'], row['bounding_box']) for row in rows)
+    contexts = ','.join('{%d,%d,%d,%d,%d,%d}' % (
+        row['revision'], row['separate_limits'], row['early_blockade'], row['bounding_box'],
+        row.get('reset_z_bounds',False),row.get('exclusive_smoothing',False)) for row in rows)
     loader = function(source, 'load_level')
     start = loader.index('case CMD_LEVEL_SCROLLZ:')
     parser = loader[start:loader.index('case CMD_LEVEL_BLOCKADE:', start)]
@@ -89,7 +90,7 @@ static void observe(float x,float y,int pos,int deltas) {
  assert(fabsf(scrolldx-(deltas?advancex-oldx:0))<0.001f);
  assert(fabsf(scrolldy-(deltas?advancey-oldy:0))<0.001f);
 }
-static void check(int limits,int early,int box) {
+static void check(int limits,int early,int box,int reset_bounds,int smoothing) {
  // The old average and later bounding-box center differ with three players.
  reset();actors[0].x=100;actors[1].x=200;actors[2].x=700;
  observe(box?80:1000.0f/3-160,80,box?80:173,1);
@@ -116,12 +117,28 @@ static void check(int limits,int early,int box) {
  observe(limits?400:150,limits?30:0,limits?30:0,1);
  reset();advancex=0;advancey=200;scrollminz=scrollmaxz=0;coordinates(200,500);
  observe(40,limits?0:348,40,1);
- // Height-aware centering retains the later original's initial Z bounds.
+ // Height-aware centering follows the own source's bound recalculation.
  reset();cameratype=1;coordinates(300,300);actors[1].z=350;actors[2].z=400;
  for(int i=0;i<3;++i)actors[i].a=100;
- observe(140,box?180:130,140,1);
+ observe(140,box && !reset_bounds?180:130,140,1);
  reset();storage.scrolldir=SCROLL_OUTWARD;storage.cameraxoffset=10;storage.camerazoffset=-10;
  coordinates(400,400);observe(250,box?270:290,box?270:290,1);
+ // Backward movement can reach the exact blockade from its own boundary.
+ reset();storage.scrolldir=SCROLL_RIGHT|SCROLL_BACK;
+ advancex=300;blockade=200;coordinates(300,200);
+ observe(smoothing?200:300,80,smoothing?200:300,1);
+ // Explicit inverted ranges preserve the source's clamp order.
+ reset();advancey=150;scrollminz=200;scrollmaxz=100;coordinates(400,400);
+ observe(240,smoothing?100:200,240,1);
+ reset();storage.scrolldir=SCROLL_OUTWARD;advancex=150;
+ scrollminx=200;scrollmaxx=100;coordinates(400,300);
+ observe(smoothing?100:limits?200:240,180,180,1);
+ // Negative configured speeds still have defined historical arithmetic.
+ reset();advancey=150;storage.scrollspeed=-20;coordinates(400,260);
+ observe(60,smoothing?130:170,60,1);
+ reset();storage.scrolldir=SCROLL_OUTWARD;advancex=150;
+ storage.scrollspeed=-20;coordinates(300,300);
+ observe(smoothing?130:170,60,60,1);
  // Spawn bounds at frame zero reset Y even without a current player.
  reset();for(int i=0;i<3;++i)player[i].ent=NULL;
  current_spawn=0;storage.numspawns=1;groupmin=groupmax=1;enemy_count=0;time=0;
@@ -156,11 +173,12 @@ static void check(int limits,int early,int box) {
  assert(scrollminx==0 && scrollmaxx==0 && scrollminz==0 && scrollmaxz==0);
 }
 int main(void) {
- const struct {unsigned revision;int limits,early,box;} rows[]={@ROWS@};
+ const struct {unsigned revision;int limits,early,box,reset_bounds,smoothing;} rows[]={@ROWS@};
  for(unsigned i=0;i<sizeof(rows)/sizeof(*rows);++i) {
-  obor_profile_build=rows[i].revision;check(rows[i].limits,rows[i].early,rows[i].box);
+  obor_profile_build=rows[i].revision;check(rows[i].limits,rows[i].early,rows[i].box,
+      rows[i].reset_bounds,rows[i].smoothing);
  }
- assert(test_case==sizeof(rows)/sizeof(*rows)*33);return 0;
+ assert(test_case==sizeof(rows)/sizeof(*rows)*38);return 0;
 }
 '''.replace('@CONSTANTS@', constants).replace('@SCROLLER@', function(source, 'update_scroller')).replace('@ROWS@', contexts).replace(
         '@PARSER@', parser).replace('@INITIALIZATION@', initialization).replace('@CLEARING@', clearing)

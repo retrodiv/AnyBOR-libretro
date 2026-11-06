@@ -381,6 +381,118 @@
         "openbor.c": "05da6ee5344e99dad15be7c2c803947d30138df3abab0369c0839442ed106614"
       },
       "original_program_sha256": "24505e4459b1ee59074cc633487b0bd448877281a4f989ca86a1145d3fb135da"
+    },
+    {
+      "profile": "3846",
+      "engine": "3842",
+      "observations": 221112,
+      "matrix_sha256": "5f2df90dc2d8bccbbb93bd7aae0dbeab6282fd02ad9bd291853c6007c4bdd9e8",
+      "source_reference": "https://github.com/DCurrent/openbor/blob/163da0a8cb554910d27a260f81e01d5dd4f73b56/engine/source/gamelib/font.c",
+      "source_commit": "163da0a8cb554910d27a260f81e01d5dd4f73b56",
+      "source_files_sha256": {
+        "source/gamelib/bitmap.c": "3b85fa2711c1928e848477b0e616ffd232c0f0404921027436a5675d9c91d081",
+        "source/gamelib/sprite.c": "82614bcf3814ac7606d7a13b34a8f00e74ff94bbf09d6893b2eaef06e49a3eb6",
+        "source/gamelib/spritex8p16.c": "80a8cd382e8589a3334b22c094071c5bb2b11fba569bd2ea40bba4f60b0e864e",
+        "source/gamelib/spritex8p32.c": "bc7d53055defe283c3ba055cf5f58dca2e7e483fdf7893d12a9596e8e60853f2",
+        "source/gamelib/pixelformat.c": "e1a8a45eec419058dcbc5ae73681410bb80f73abca6341285e0ba3dd1622ad20",
+        "source/gamelib/spriteq.c": "bed8373f0376107367f0bd7d3c41e3aabe2e3492bf0ed8d09c5aebe5888020ad",
+        "source/gamelib/screen.c": "1e79ad4df7b5db84c963331e59f659acddde97fcf35ad12f65ebfce84cf77fb6",
+        "source/gamelib/font.h": "95a23ea831bf158538c56b8f3f630c933191a29744f12aa493a98fb437fe7a94",
+        "source/gamelib/types.h": "f6ae137948720c400bf451838abf8da8b25fe3de9b32da84913008d78818b8bd",
+        "source/gamelib/transform.h": "e073c90d022467103a401af4004580db9fb4230499ac1cc3e03ea8a36a30441a",
+        "source/gamelib/font.c": "b3560f53d7534234b1c40bf3427b14eb6473c71e46d459b147540b7f857ecdce"
+      },
+      "oracle_execution": "Reused the measured original 3844 glyph-font oracle after own-source equivalence review; this context was not compiled separately.",
+      "oracle_source_equivalence": {
+        "anchor_revision": 3844,
+        "anchor_commit": "5bde6ef528a09fb04b1d9a8884b5dbe0acb8fe0c",
+        "measured_original_program_sha256": "d21b1581e8c5c60aa1aaa8ded21a0f02f26097b5fddf971211e64580c7aa0a91",
+        "evidence": "The seven raster units and the loading, rendering and metric functions are identical to the original anchor. Removed vertex declarations and the sprite_get_pixel prototype do not affect these font paths. The 3854 header adds only the mask-loader prototype; its unload also frees masks, which are absent in this ordinary font matrix."
+      }
+    },
+    {
+      "profile": "3847",
+      "engine": "3842",
+      "observations": 221112,
+      "matrix_sha256": "5f2df90dc2d8bccbbb93bd7aae0dbeab6282fd02ad9bd291853c6007c4bdd9e8",
+      "source_reference": "https://github.com/DCurrent/openbor/blob/58e705f28205352286f699f08321fe269172b484/engine/source/gamelib/font.c",
+      "source_commit": "58e705f28205352286f699f08321fe269172b484",
+      "source_files_sha256": {
+        "source/gamelib/bitmap.c": "3b85fa2711c1928e848477b0e616ffd232c0f0404921027436a5675d9c91d081",
+        "source/gamelib/sprite.c": "82614bcf3814ac7606d7a13b34a8f00e74ff94bbf09d6893b2eaef06e49a3eb6",
+        "source/gamelib/spritex8p16.c": "80a8cd382e8589a3334b22c094071c5bb2b11fba569bd2ea40bba4f60b0e864e",
+        "source/gamelib/spritex8p32.c": "bc7d53055defe283c3ba055cf5f58dca2e7e483fdf7893d12a9596e8e60853f2",
+        "source/gamelib/pixelformat.c": "e1a8a45eec419058dcbc5ae73681410bb80f73abca6341285e0ba3dd1622ad20",
+        "source/gamelib/spriteq.c": "bed8373f0376107367f0bd7d3c41e3aabe2e3492bf0ed8d09c5aebe5888020ad",
+        "source/gamelib/screen.c": "1e79ad4df7b5db84c963331e59f659acddde97fcf35ad12f65ebfce84cf77fb6",
+        "source/gamelib/font.h": "95a23ea831bf158538c56b8f3f630c933191a29744f12aa493a98fb437fe7a94",
+        "source/gamelib/types.h": "f6ae137948720c400bf451838abf8da8b25fe3de9b32da84913008d78818b8bd",
+        "source/gamelib/transform.h": "e073c90d022467103a401af4004580db9fb4230499ac1cc3e03ea8a36a30441a",
+        "source/gamelib/font.c": "b3560f53d7534234b1c40bf3427b14eb6473c71e46d459b147540b7f857ecdce"
+      },
+      "oracle_execution": "Reused the measured original 3844 glyph-font oracle after own-source equivalence review; this context was not compiled separately.",
+      "oracle_source_equivalence": {
+        "anchor_revision": 3844,
+        "anchor_commit": "5bde6ef528a09fb04b1d9a8884b5dbe0acb8fe0c",
+        "measured_original_program_sha256": "d21b1581e8c5c60aa1aaa8ded21a0f02f26097b5fddf971211e64580c7aa0a91",
+        "evidence": "The seven raster units and the loading, rendering and metric functions are identical to the original anchor. Removed vertex declarations and the sprite_get_pixel prototype do not affect these font paths. The 3854 header adds only the mask-loader prototype; its unload also frees masks, which are absent in this ordinary font matrix."
+      }
+    },
+    {
+      "profile": "3849",
+      "engine": "3842",
+      "observations": 221112,
+      "matrix_sha256": "5f2df90dc2d8bccbbb93bd7aae0dbeab6282fd02ad9bd291853c6007c4bdd9e8",
+      "source_reference": "https://github.com/DCurrent/openbor/blob/cf4181811580e79e0e4ca30bd6cae298fc7bdd9d/engine/source/gamelib/font.c",
+      "source_commit": "cf4181811580e79e0e4ca30bd6cae298fc7bdd9d",
+      "source_files_sha256": {
+        "source/gamelib/bitmap.c": "3b85fa2711c1928e848477b0e616ffd232c0f0404921027436a5675d9c91d081",
+        "source/gamelib/sprite.c": "82614bcf3814ac7606d7a13b34a8f00e74ff94bbf09d6893b2eaef06e49a3eb6",
+        "source/gamelib/spritex8p16.c": "80a8cd382e8589a3334b22c094071c5bb2b11fba569bd2ea40bba4f60b0e864e",
+        "source/gamelib/spritex8p32.c": "bc7d53055defe283c3ba055cf5f58dca2e7e483fdf7893d12a9596e8e60853f2",
+        "source/gamelib/pixelformat.c": "e1a8a45eec419058dcbc5ae73681410bb80f73abca6341285e0ba3dd1622ad20",
+        "source/gamelib/spriteq.c": "bed8373f0376107367f0bd7d3c41e3aabe2e3492bf0ed8d09c5aebe5888020ad",
+        "source/gamelib/screen.c": "1e79ad4df7b5db84c963331e59f659acddde97fcf35ad12f65ebfce84cf77fb6",
+        "source/gamelib/font.h": "95a23ea831bf158538c56b8f3f630c933191a29744f12aa493a98fb437fe7a94",
+        "source/gamelib/types.h": "f6ae137948720c400bf451838abf8da8b25fe3de9b32da84913008d78818b8bd",
+        "source/gamelib/transform.h": "e073c90d022467103a401af4004580db9fb4230499ac1cc3e03ea8a36a30441a",
+        "source/gamelib/font.c": "b3560f53d7534234b1c40bf3427b14eb6473c71e46d459b147540b7f857ecdce"
+      },
+      "oracle_execution": "Reused the measured original 3844 glyph-font oracle after own-source equivalence review; this context was not compiled separately.",
+      "oracle_source_equivalence": {
+        "anchor_revision": 3844,
+        "anchor_commit": "5bde6ef528a09fb04b1d9a8884b5dbe0acb8fe0c",
+        "measured_original_program_sha256": "d21b1581e8c5c60aa1aaa8ded21a0f02f26097b5fddf971211e64580c7aa0a91",
+        "evidence": "The seven raster units and the loading, rendering and metric functions are identical to the original anchor. Removed vertex declarations and the sprite_get_pixel prototype do not affect these font paths. The 3854 header adds only the mask-loader prototype; its unload also frees masks, which are absent in this ordinary font matrix."
+      }
+    },
+    {
+      "profile": "3854",
+      "engine": "3842",
+      "observations": 221112,
+      "matrix_sha256": "5f2df90dc2d8bccbbb93bd7aae0dbeab6282fd02ad9bd291853c6007c4bdd9e8",
+      "source_reference": "https://github.com/DCurrent/openbor/blob/764da976f45a65bf0e768ed50406c7815875656a/engine/source/gamelib/font.c",
+      "source_commit": "764da976f45a65bf0e768ed50406c7815875656a",
+      "source_files_sha256": {
+        "source/gamelib/bitmap.c": "3b85fa2711c1928e848477b0e616ffd232c0f0404921027436a5675d9c91d081",
+        "source/gamelib/sprite.c": "82614bcf3814ac7606d7a13b34a8f00e74ff94bbf09d6893b2eaef06e49a3eb6",
+        "source/gamelib/spritex8p16.c": "80a8cd382e8589a3334b22c094071c5bb2b11fba569bd2ea40bba4f60b0e864e",
+        "source/gamelib/spritex8p32.c": "bc7d53055defe283c3ba055cf5f58dca2e7e483fdf7893d12a9596e8e60853f2",
+        "source/gamelib/pixelformat.c": "e1a8a45eec419058dcbc5ae73681410bb80f73abca6341285e0ba3dd1622ad20",
+        "source/gamelib/spriteq.c": "bed8373f0376107367f0bd7d3c41e3aabe2e3492bf0ed8d09c5aebe5888020ad",
+        "source/gamelib/screen.c": "1e79ad4df7b5db84c963331e59f659acddde97fcf35ad12f65ebfce84cf77fb6",
+        "source/gamelib/font.h": "c4ca134c575e5c3ed51ea46adbc03e24c7add209aad4218e01f2179b9d7e1d8e",
+        "source/gamelib/types.h": "f6ae137948720c400bf451838abf8da8b25fe3de9b32da84913008d78818b8bd",
+        "source/gamelib/transform.h": "e073c90d022467103a401af4004580db9fb4230499ac1cc3e03ea8a36a30441a",
+        "source/gamelib/font.c": "ca366d643a3fa3ce46d28195f0f2c76168442f8149c94b4bd441cd7943542218"
+      },
+      "oracle_execution": "Reused the measured original 3844 glyph-font oracle after own-source equivalence review; this context was not compiled separately.",
+      "oracle_source_equivalence": {
+        "anchor_revision": 3844,
+        "anchor_commit": "5bde6ef528a09fb04b1d9a8884b5dbe0acb8fe0c",
+        "measured_original_program_sha256": "d21b1581e8c5c60aa1aaa8ded21a0f02f26097b5fddf971211e64580c7aa0a91",
+        "evidence": "The seven raster units and the loading, rendering and metric functions are identical to the original anchor. Removed vertex declarations and the sprite_get_pixel prototype do not affect these font paths. The 3854 header adds only the mask-loader prototype; its unload also frees masks, which are absent in this ordinary font matrix."
+      }
     }
   ]
 }

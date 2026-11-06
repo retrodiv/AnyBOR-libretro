@@ -1,0 +1,250 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <assert.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <strings.h>
+#include <stdarg.h>
+#include <limits.h>
+#define stricmp strcasecmp
+@CONSTANTS@
+static uint32_t obor_profile_build;
+static unsigned ticks,domain,case_id;
+#undef assert
+#define assert(c) do {if(!(c)){fprintf(stderr,"selection revision=%u domain=%u case=%u tick=%u line=%d\n",obor_profile_build,domain,case_id,ticks,__LINE__);abort();}}while(0)
+typedef struct {int numframes;struct{int mode;}loop;} s_anim;
+typedef struct s_model {
+    char *name;int type,secret,clearcount,health,mp,maps_loaded;
+    struct{int frozen,hide_start,hide_end;}maps;
+    int animation_capacity;s_anim **animation;
+} s_model;
+typedef struct entity {
+    s_model *model;s_model modeldata;int direction,animating,rush[2],health,mp;
+    uint32_t stalltime;
+} entity;
+typedef struct{int maxplayers,nosame,noselect,continuescore;} s_set_entry;
+static s_model models[4];
+static struct{s_model *model;int selectable;}model_cache[4];
+static int models_cached=4,allow_secret_chars,bonus;
+static struct{
+    char name[MAX_NAME_LEN+1];int lives,joining,hasplayed,spawnhealth,spawnmp,colourmap;
+    int playkeys,newkeys,releasekeys,credits,weapnum,score;entity *ent;
+}player[MAX_PLAYERS];
+static entity actors[4];
+static s_set_entry levelsets[2];
+static int current_set,psmenu[4][4],spdirection[4];
+static struct{int hShift,vShift;}videomodes;
+static struct{int effectvol;}savedata;
+static struct{int times_completed;}*savelevel;
+static unsigned time;
+static int num_difficulties,selectScreen;
+/* Native skip names are text. */
+static char skip_names[4][MAX_NAME_LEN+1];
+#define skipselect skip_names
+static int PLAYER_LIVES=3,CONTINUES=5,credits,noshare,creditscheat;
+static int unlockbg,colourselect=1,sameplayer,freezeall,nojoin,nodropen;
+static char *custBkgrds;
+static struct{int noreset,settime,setweap,type;int level_script,endlevel_script;}room,*level=&room;
+static int timeleft,oldtime,timetoshow,showtimeover,showgo,gosound,go_time;
+static int SAMPLE_BEEP=1,SAMPLE_BEEP2=2,SAMPLE_GO=3;
+static int bothnewkeys,active_players,pick_kind,action_kind;
+static int spawn_count,map_calls,first_maps,first_spawns,first_name;
+static int first_x,first_y,ready_calls,ready_x,ready_y;
+static unsigned picked[4],completed[4];
+static int remaining[4],confirmed[4];
+static int join_calls,drop_calls,spawn_joining;
+static s_anim pick_animation;
+static s_anim *animations[ANI_PICK+1];
+static int nofadeout=1,endgame=1,nosave=1,nextplan,musicoverlap=1,level_completed;
+static entity *stalker,*firstplayer;
+static int nomaxrushreset[4],level_script,endlevel_script;
+static void shutdown(int status,char *message,...){(void)status;(void)message;abort();}
+static s_model *findmodel(char *name){for(int i=0;i<4;++i)if(!stricmp(models[i].name,name))return models+i;return NULL;}
+static void kill_all(void){}
+static void reset_playable_list(int all){assert(all==1);}
+static int loadGameFile(void){return 0;}
+static int buffer_pakfile(char *name,char **out,size_t *size){(void)name;*out=malloc(1);assert(*out);*size=0;return 1;}
+typedef struct{int unused;}ArgList;
+static void ParseArgs(ArgList *args,char *source,char *buffer){(void)args;(void)source;(void)buffer;abort();}
+#define GET_ARG(i) ""
+#define GET_INT_ARG(i) 0
+static size_t getNewLineStart(char *text){(void)text;abort();}
+static int music(char *name,int loop,long offset){(void)name;(void)loop;(void)offset;return 1;}
+static void load_playable_list(char *text){(void)text;abort();}
+static void load_background(char *name,int flag){(void)name;(void)flag;}
+static void load_cached_background(char *name,int flag){(void)name;(void)flag;}
+static void load_cached_model(char *name,char *file,int flag){(void)name;(void)file;(void)flag;abort();}
+static void update_model_loadflag(s_model *model,int flag){(void)model;(void)flag;abort();}
+static entity *spawn(float x,float y,float z,int direction,char *name,int flag,s_model *model){
+    (void)z;(void)name;assert(flag==-1 && model);
+    int slot=spawn_count%active_players;entity *ent=actors+slot;++spawn_count;
+    memset(ent,0,sizeof(*ent));ent->model=model;ent->modeldata=*model;
+    ent->modeldata.name=(char*)"entity-alias";ent->direction=direction;
+    ent->animating=pick_kind!=0;ent->health=model->health;ent->mp=model->mp;
+    if(spawn_count==1){first_x=(int)x;first_y=(int)y;}
+    return ent;
+}
+static void ent_set_colourmap(entity *ent,int map){assert(ent && map>=0);++map_calls;}
+static void ent_set_model(entity *ent,char *name,int flag){
+    assert(!flag);s_model *model=findmodel(name);assert(model);
+    ent->model=model;ent->modeldata=*model;ent->modeldata.name=(char*)"entity-alias";
+}
+#define validanim(e,a) ((a)>=0 && (a)<(e)->modeldata.animation_capacity && (e)->modeldata.animation[a] && (e)->modeldata.animation[a]->numframes)
+static void ent_set_anim(entity *ent,int animation,int reset){
+    assert(animation==ANI_PICK && !reset);int slot=(int)(ent-actors);assert(slot>=0 && slot<active_players);
+    picked[slot]=ticks;confirmed[slot]=1;ent->animating=1;remaining[slot]=pick_kind==1?2:-1;
+}
+static int sound_play_sample(int sample,int priority,int l,int r,int speed){
+    (void)priority;(void)l;(void)r;(void)speed;
+    if(domain==3 && sample==SAMPLE_BEEP2 && active_players==1){picked[0]=ticks;confirmed[0]=1;}
+    return 0;
+}
+static void font_printf(int x,int y,int font,int layer,char *format,...){
+    (void)font;(void)layer;
+    if(!strcmp(format,"Ready!")){++ready_calls;ready_x=x;ready_y=y;}
+}
+static void sound_close_music(void){}
+static void execute_join_script(int p){assert(player[p].ent);++join_calls;}
+static void drop_all_enemies(void){++drop_calls;}
+static void execute_timetick_script(int dt,int go){(void)dt;(void)go;}
+static void spawnplayer(int p){spawn_joining=player[p].joining;player[p].ent=actors+p;}
+static void update(int game,int args){
+    (void)game;(void)args;assert(domain==3);assert(ticks<64);
+    if(!ticks){first_maps=map_calls;first_spawns=spawn_count;first_name=player[0].name[0]!=0;}
+    ++ticks;time+=GAME_SPEED/2;
+    for(int i=0;i<active_players;++i){
+        if(remaining[i]>0 && --remaining[i]==0){actors[i].animating=0;completed[i]=ticks;}
+        int key=0;
+        if(action_kind && ticks==1)key=action_kind==1?FLAG_MOVERIGHT:FLAG_MOVELEFT;
+        else if(action_kind && ticks==2)key=action_kind==1?FLAG_MOVEUP:FLAG_MOVEDOWN;
+        else if(ticks>=(unsigned)(1+2*(action_kind!=0)+i) && !confirmed[i])key=FLAG_ATTACK;
+        player[i].newkeys=player[i].playkeys=key;
+    }
+}
+static void savelevelinfo(void){}
+static void load_level(char *file){(void)file;}
+static void saveGameFile(void){}
+static void saveHighScoreFile(void){}
+static void saveScriptFile(void){}
+static int Script_IsInitialized(void *script){(void)script;return 0;}
+static void Script_Execute(void *script){(void)script;abort();}
+static void fade_out(int a,int b){(void)a;(void)b;abort();}
+static int findent(int type){(void)type;return 1;}
+static void sound_stopall_sample(void){}
+static void unload_level(void){}
+/* Complete upstream menu bodies retain bounded strncpy calls. GCC's
+ * truncation diagnostic does not describe the authored, terminated strings. */
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wstringop-truncation"
+#endif
+@NATIVE@
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC diagnostic pop
+#endif
+static void initial_positions(s_set_entry *set){
+    int i;char *errormessage=NULL;
+    @DEFAULTS@
+    (void)i;(void)errormessage;
+}
+static void reset(int players){
+    memset(player,0,sizeof(player));memset(actors,0,sizeof(actors));memset(levelsets,0,sizeof(levelsets));
+    memset(psmenu,0,sizeof(psmenu));memset(skip_names,0,sizeof(skip_names));memset(remaining,0,sizeof(remaining));
+    memset(confirmed,0,sizeof(confirmed));memset(picked,0,sizeof(picked));memset(completed,0,sizeof(completed));
+    memset(animations,0,sizeof(animations));
+    active_players=players;levelsets[0].maxplayers=players;levelsets[1].maxplayers=4;current_set=0;
+    models_cached=4;allow_secret_chars=bonus=0;
+    static char *names[]={"one","two","three","four"};
+    for(int i=0;i<4;++i){memset(models+i,0,sizeof(*models));models[i].name=names[i];
+        models[i].type=TYPE_PLAYER;models[i].health=101;models[i].mp=52;models[i].maps_loaded=2;
+        models[i].animation_capacity=ANI_PICK+1;models[i].animation=animations;
+        model_cache[i].model=models+i;model_cache[i].selectable=1;spdirection[i]=i&1;
+        player[i].hasplayed=1;}
+    videomodes.hShift=14;videomodes.vShift=-6;
+    sameplayer=freezeall=nojoin=noshare=creditscheat=unlockbg=0;custBkgrds=NULL;
+    credits=CONTINUES;colourselect=1;nodropen=0;timeleft=2000;oldtime=5;go_time=0;
+    room.noreset=0;room.settime=30;room.setweap=2;room.type=0;
+    ticks=spawn_count=map_calls=first_maps=first_spawns=first_name=0;
+    first_x=first_y=ready_calls=ready_x=ready_y=0;join_calls=drop_calls=spawn_joining=0;
+    bothnewkeys=0;time=900;pick_kind=action_kind=0;
+    nofadeout=1;endgame=1;nosave=1;
+}
+static const struct{unsigned revision;int helpers;}contexts[]={@CONTEXTS@};
+static const struct{int maps,c,frozen,low,high;}palette_cases[]={@PALETTES@};
+static const struct{int current,slot,nosame,count;char *names[4];}roster_cases[]={@ROSTERS@};
+static const struct{int players,pick,action,file,custom;}menu_cases[]={@MENUS@};
+int main(void){
+    for(unsigned context=0;context<sizeof(contexts)/sizeof(*contexts);++context){
+        obor_profile_build=contexts[context].revision;
+        domain=1;
+        if(contexts[context].helpers)for(case_id=0;case_id<sizeof(palette_cases)/sizeof(*palette_cases);++case_id){
+            reset(1);s_model *m=models;const __typeof__(*palette_cases)*c=palette_cases+case_id;
+            m->maps_loaded=c->maps;m->maps.frozen=c->frozen;m->maps.hide_start=c->low;m->maps.hide_end=c->high;
+            int next=nextcolourmap(m,c->c),previous=prevcolourmap(m,c->c);
+            printf("{\"revision\":%u,\"domain\":\"palette\",\"case\":%u,\"values\":[%d,%d]}\n",obor_profile_build,case_id,next,previous);
+        }
+        domain=2;
+        if(contexts[context].helpers)for(case_id=0;case_id<sizeof(roster_cases)/sizeof(*roster_cases);++case_id){
+            const __typeof__(*roster_cases)*c=roster_cases+case_id;reset(c->count);levelsets[0].nosame=c->nosame;
+            for(int i=0;i<4;++i)strcpy(player[i].name,c->names[i]);
+            s_model *current=c->current<0?NULL:models+c->current;
+            int next=(int)(nextplayermodeln(current,c->slot)-models);
+            int previous=(int)(prevplayermodeln(current,c->slot)-models);
+            printf("{\"revision\":%u,\"domain\":\"roster\",\"case\":%u,\"values\":[%d,%d]}\n",obor_profile_build,case_id,next,previous);
+        }
+        domain=3;
+        for(case_id=0;case_id<sizeof(menu_cases)/sizeof(*menu_cases);++case_id){
+            const __typeof__(*menu_cases)*c=menu_cases+case_id;reset(c->players);pick_kind=c->pick;action_kind=c->action;
+            pick_animation.numframes=1;pick_animation.loop.mode=c->pick==2;if(c->pick)animations[ANI_PICK]=&pick_animation;
+            if(c->custom){psmenu[0][0]=31;psmenu[0][1]=77;psmenu[0][2]=9;psmenu[0][3]=12;}
+            initial_positions(levelsets+1);
+            int participants[4]={1,c->players==2,0,0};
+            if(c->file)for(int i=0;i<c->players;++i)player[i].newkeys=FLAG_ATTACK;
+            int result=selectplayer(participants,c->file?(char*)"fixture":NULL);
+            printf("{\"revision\":%u,\"domain\":\"menu\",\"case\":%u,\"result\":%d,\"ticks\":%u,\"time\":%u,\"ready\":%d,\"ready_position\":[%d,%d],\"spawn_position\":[%d,%d],\"first_spawns\":%d,\"first_maps\":%d,\"first_name\":%d,\"maps\":%d,\"color\":%d,\"name\":\"%s\",\"picked\":[%u,%u],\"completed\":[%u,%u]}\n",obor_profile_build,case_id,result,ticks,time,ready_calls,ready_x,ready_y,first_x,first_y,first_spawns,first_maps,first_name,map_calls,player[0].colourmap,player[0].name,picked[0],picked[1],completed[0],completed[1]);
+        }
+        domain=4;
+        for(case_id=0;case_id<4;++case_id){
+            reset(2);strcpy(player[0].name,"one");strcpy(player[1].name,"one");
+            player[0].joining=1;player[0].playkeys=FLAG_ATTACK;sameplayer=1;
+            if(case_id==1){freezeall=1;}
+            if(case_id==2){nojoin=1;}
+            if(case_id==3){skip_names[0][0]='x';}
+            updatestatus();
+            printf("{\"revision\":%u,\"domain\":\"join\",\"case\":%u,\"joined\":%d,\"joining\":%d,\"lives\":%d,\"drop\":%d,\"timeleft\":%d}\n",obor_profile_build,case_id,join_calls,player[0].joining,player[0].lives,drop_calls,timeleft);
+        }
+        domain=5;case_id=0;reset(2);player[0].lives=1;strcpy(player[0].name,"one");
+        player[0].joining=player[1].joining=1;player[1].lives=1;
+        (void)playlevel((char*)"fixture");
+        printf("{\"revision\":%u,\"domain\":\"level\",\"case\":0,\"joining\":[%d,%d],\"spawn_joining\":%d}\n",obor_profile_build,player[0].joining,player[1].joining,spawn_joining);
+        domain=6;
+        for(case_id=0;case_id<3;++case_id){
+            reset(2);if(case_id==1)psmenu[0][0]=10;
+            initial_positions(case_id==2?NULL:levelsets+1);
+            printf("{\"revision\":%u,\"domain\":\"positions\",\"case\":%u,\"values\":[",obor_profile_build,case_id);
+            for(int p=0;p<4;++p)for(int field=0;field<4;++field)printf("%s%d",p||field?",":"",psmenu[p][field]);
+            puts("]}");
+        }
+        domain=7;
+        for(case_id=0;case_id<9;++case_id){
+            reset(4);models[0].maps_loaded=case_id==8?3:1;
+            for(int m=1;m<4;++m)models[m].maps_loaded=4;
+            strcpy(player[2].name,"one");player[2].joining=1;player[2].colourmap=1;
+            const int keys[]={FLAG_MOVELEFT,FLAG_MOVERIGHT,FLAG_MOVEUP,FLAG_MOVEDOWN,
+                FLAG_START,FLAG_MOVEUP,FLAG_MOVELEFT|FLAG_ATTACK,
+                FLAG_MOVELEFT|FLAG_MOVERIGHT,FLAG_MOVEUP|FLAG_MOVEDOWN};
+            player[2].playkeys=keys[case_id];
+            if(case_id==4){player[2].joining=0;player[2].name[0]=0;}
+            if(case_id==5){colourselect=0;}
+            if(case_id==6){freezeall=1;}
+            updatestatus();
+            printf("{\"revision\":%u,\"domain\":\"join-input\",\"case\":%u,\"name\":\"%s\",\"map\":%d,\"keys\":%d,\"joining\":%d,\"credits\":%d,\"timeleft\":%d}\n",
+                obor_profile_build,case_id,player[2].name,player[2].colourmap,player[2].playkeys,
+                player[2].joining,credits,timeleft);
+        }
+    }
+    return 0;
+}

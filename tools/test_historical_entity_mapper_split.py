@@ -82,6 +82,8 @@ class EntityMapperSplitTests(unittest.TestCase):
             prefixes.append(prefix+'}\n')
         owned={'openbor_getentityproperty','openbor_changeentityproperty','mapstrings_entityproperty',
                'mapstrings_getentityproperty','mapstrings_changeentityproperty'}
+        owned.update(re.findall(r'(?m)^(?:static\s+)?void\s+(mapstrings_\w+)\s*'
+                                r'\([^;{}]*\)\s*\{', declarations))
         references=set(re.findall(r'\(void\s*\*\)\s*([A-Za-z_]\w*)',dispatcher))
         stubs='\n'.join('static void '+name+'(void) {}' for name in sorted((references-owned)|actions))
         macro=source[source.index('#define MAPSTRINGS('):];macro=macro[:macro.index('\n\n')]

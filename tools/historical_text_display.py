@@ -22,7 +22,7 @@ def render_text_display(*, revisions, draw, plainmethod, physical_fixed,
             r'\s*const\s+s_drawmethod\s+plainmethod\s*=',plainmethod)):
         raise ValueError('Native plain drawmethod declaration required')
     if (type(physical_fixed)is not bool or type(slots)is not int or not 4<=slots<=128 or
-        font_tokens not in ('inline','indexed','atlas')):
+        font_tokens not in ('inline','indexed','atlas','glyphs')):
         raise ValueError('Explicit native table and font storage required')
     if not isinstance(cases,list) or not 0<len(cases)<=32:
         raise ValueError('Bounded native display cases required')
@@ -129,6 +129,7 @@ static unsigned checks,queued;
 static char *owned[@SLOTS@];
 static unsigned released[@SLOTS@];
 static s_sprite glyphs[MAX_FONTS][256],atlases[MAX_FONTS];
+@GLYPH_REFS@
 static s_font fixture_fonts[MAX_FONTS];
 static s_font *fixture_sets[MAX_FONTS][256];
 static struct {int x,y,z,font,byte;} queue[256];
@@ -204,9 +205,12 @@ int main(void){const uint32_t revisions[]={@REVISIONS@};
  fixture_fonts[f].width=8;fixture_fonts[f].height=9;
  @TOKENS@
  for(int c=0;c<256;++c)fixture_fonts[f].token_width[c]=3+f%2;''')
-    setup=setup.replace('@TOKENS@','fixture_fonts[f].token=&atlases[f];'if font_tokens=='atlas'else
+    tokens=('fixture_fonts[f].token=&atlases[f];'if font_tokens=='atlas'else
+        'fixture_fonts[f].glyphs=fixture_glyph_refs[f];for(int c=0;c<256;++c){glyphs[f][c].width=8;glyphs[f][c].height=9;fixture_glyph_refs[f][c]=&glyphs[f][c];}'if font_tokens=='glyphs'else
         'for(int c=0;c<256;++c){glyphs[f][c].width=8;glyphs[f][c].height=9;fixture_fonts[f].token[c]=&glyphs[f][c];}')
+    setup=setup.replace('@TOKENS@',tokens)
     values=dict(PLAINMETHOD=plainmethod,SLOTS=str(slots),IDENTIFY=identify,DRAW=draw,SETUP=setup,
+        GLYPH_REFS='static s_sprite *fixture_glyph_refs[MAX_FONTS][256];'if font_tokens=='glyphs'else'',
         FIXED_TABLE='CHECK(LEVEL_MAX_TEXTOBJS=='+str(slots)+',"native fixed text extent");'if physical_fixed else'',
         TABLE=''if physical_fixed else
         'level->numtextobjs='+str(slots)+';level->textobjs=calloc('+str(slots)+',sizeof(*level->textobjs));CHECK(level->textobjs,"fixture table allocation");',

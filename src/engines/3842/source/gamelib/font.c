@@ -1,10 +1,12 @@
-/* AnyBOR modification record: 2026-10-20.
+/* AnyBOR modification record: 2026-11-06.
  * Port maintained by retrodiv <retrodiv@proton.me>.
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
  * Upstream code retains its original license and notices.
  * Reject missing or undersized indexed font palettes before copying their
- * true-color entries; retain atlas raster output for valid fonts.
+ * true-color entries; retain source-defined raster output for valid fonts.
+ * Select atlas or separately owned glyph loading and drawing by profile;
+ * retain font-mask lookup, partial-load results and exact owner cleanup.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/3842.md
  * at the source repository root. Original notices follow below.
@@ -34,11 +36,24 @@ s_font** fonts[MAX_FONTS];
 static char b[1024];
 
 void _font_unload(s_font* font){
+    if(font->glyphs)
+    {
+        int i;
+        for(i=0; i<256; ++i)
+        {
+            if(font->glyphs[i])
+            {
+                free(font->glyphs[i]->mask);
+                free(font->glyphs[i]);
+            }
+        }
+        free(font->glyphs);
+        font->glyphs = NULL;
+    }
 	free(font->token);
 	font->token = NULL;
 	free(font);
 }
-
 void font_unload(int which){
 	int j, max;
 	s_font** sets, *font;
@@ -80,7 +95,72 @@ static int obor_font_palette_valid(const s_screen *screen)
     return offset <= bytes && (size_t)PAL_BYTES <= bytes - offset;
 }
 
+static int obor_font_load_glyphs(s_font* font, char *filename, char *packfile){
+	int x, y;
+	int index = 0;
+	int size;
+	int cx = 0, cy = 0;
+	s_bitmap *bitmap = NULL;
+	s_screen *screen = NULL;
+	int rval = 0;
+	int tw, th;
+
+	if(!loadscreen(filename, packfile, NULL, pixelformat, &screen)) goto err;
+    if(!obor_font_palette_valid(screen)) goto err;
+    font->glyphs = calloc(256, sizeof(*font->glyphs));
+    if(!font->glyphs) goto err;
+	font->width = tw = screen->width/16;
+	font->height = th = screen->height/16;
+	if(!(bitmap = allocbitmap(tw,th,pixelformat))) goto err;
+
+	if(bitmap->palette && screen->palette)
+		memcpy(bitmap->palette, screen->palette, PAL_BYTES);
+
+	// grab tokens
+	for(y=0; y<16; y++){
+		for(x=0; x<16; x++){
+			getbitmap(x*tw, y*th, tw,th, bitmap, screen);
+			clipbitmap(bitmap, &cx, NULL, &cy, NULL);
+			if(index>0)  bitmap->palette=NULL;
+			size = fakey_encodesprite(bitmap);
+            if(size <= 0) goto err;
+            size_t palette_padding = index == 0 && bitmap->palette &&
+                (bitmap->width <= 0 || bitmap->height <= 0) ? (size_t)PAL_BYTES : 0;
+			font->glyphs[index] = (s_sprite*)malloc((size_t)size + palette_padding);
+			if(!font->glyphs[index]){
+				goto err;
+			}
+			encodesprite(-cx,-cy, bitmap, font->glyphs[index]);
+            if(palette_padding)
+            {
+                font->glyphs[index]->palette = (unsigned char*)font->glyphs[index] + size;
+                memcpy(font->glyphs[index]->palette, screen->palette, palette_padding);
+            }
+			font->token_width[index] = font->mono?tw:(font->glyphs[index]->width+(tw/10));
+			if(font->token_width[index] <= 1) font->token_width[index] = tw/3;
+			if(index>0)
+			{
+				font->glyphs[index]->palette = font->glyphs[0]->palette ;
+				font->glyphs[index]->pixelformat = screen->pixelformat ;
+			}
+			++index;
+		}
+	}
+
+	rval = 1;
+
+err:
+	freebitmap(bitmap);
+	freescreen(&screen);
+
+	return rval;
+}
+
 int _font_load(s_font* font, char *filename, char *packfile){
+    if(obor_profile_build >= 3844)
+    {
+        return obor_font_load_glyphs(font, filename, packfile);
+    }
 	int x, y;
 	int index = 0;
 	int size;
@@ -163,6 +243,92 @@ int font_load(int which, char *filename, char *packfile, int flags){
 	if(sets[0]==NULL){
 		font_unload(which);
 		return 0;
+	}
+
+	return 1;
+
+}
+
+int _font_loadmask(s_font* font, char* filename, char *packfile){
+	int x, y;
+	int index = 0;
+	int size;
+	int cx = 0, cy = 0;
+	s_bitmap *bitmap = NULL;
+	s_screen *screen = NULL;
+	int rval = 0;
+	int tw, th;
+	int cw;
+
+	if(!font || !font->glyphs) return 0;
+	if(!loadscreen(filename, packfile, NULL, pixelformat, &screen)) goto err;
+    if(!obor_font_palette_valid(screen)) goto err;
+	tw = screen->width/16;
+	th = screen->height/16;
+	if(tw != font->width || th != font->height) goto err;
+	if(!(bitmap = allocbitmap(tw,th,pixelformat))) goto err;
+
+	if(bitmap->palette && screen->palette)
+		memcpy(bitmap->palette, screen->palette, PAL_BYTES);
+
+	// grab tokens
+	for(y=0; y<16; y++){
+		for(x=0; x<16; x++){
+			getbitmap(x*tw, y*th, tw,th, bitmap, screen);
+			clipbitmap(bitmap, &cx, NULL, &cy, NULL);
+			if(index>0)  bitmap->palette=NULL;
+			size = fakey_encodesprite(bitmap);
+            if(size <= 0) goto err;
+			if(!font->glyphs[index]) goto err;
+			if(font->glyphs[index]->mask) goto err;
+			font->glyphs[index]->mask = (s_sprite*)malloc(size);
+			if(!font->glyphs[index]->mask) goto err;
+			encodesprite(-cx,-cy, bitmap, font->glyphs[index]->mask);
+			cw = font->mono?tw:(font->glyphs[index]->mask->width+(tw/10));
+			if(cw <= 1) cw = tw/3;
+			if(cw != font->token_width[index]) goto err;
+			if(index>0)
+			{
+				//font->glyphs[index]->mask->palette = font->glyphs[0]->mask->palette ;
+				font->glyphs[index]->mask->pixelformat = screen->pixelformat ;
+			}
+			++index;
+		}
+	}
+
+	rval = 1;
+
+err:
+	freebitmap(bitmap);
+	freescreen(&screen);
+
+	return rval;
+}
+
+int font_loadmask(int which, char *filename, char *packfile, int flags){
+	s_font** sets, *font;
+	int i, max;
+
+	if(obor_profile_build < 3852) return 0;
+	which %= MAX_FONTS;
+    if(which < 0) return 0;
+	sets = fonts[which];
+	if(!sets || !sets[0]) return 0;
+    if((flags & FONT_MBS) && !sets[0]->mbs) return 0;
+	max = (flags&FONT_MBS)?256:1;
+
+	for(i=0; i<max; i++){
+		if(i==1) i=128;
+		font = sets[i];
+		if(!font) return 0;
+		if(font->mbs){
+			sprintf(b, "%s/%02x", filename, i);
+		}else 
+			strcpy(b, filename);
+		
+		if(!_font_loadmask(font, b, packfile)){
+			return 0;
+		}
 	}
 
 	return 1;
@@ -289,7 +455,9 @@ void font_printf(int x, int y, int which, int layeroffset,char *format, ...){
 				dm.clipw = font->width;
 				dm.cliph = font->height;
 				//printf("%d %d %d %d %d %d \n", dm.centerx, dm.centery, dm.clipx, dm.clipy, dm.clipw, dm.cliph);
-				spriteq_add_frame(x,y, FONT_LAYER + layeroffset, font->token, &dm, 0);
+				spriteq_add_frame(x,y, FONT_LAYER + layeroffset,
+                    font->glyphs ? font->glyphs[id] : font->token,
+                    font->glyphs ? NULL : &dm, 0);
 				x += w;
 			}
 		}
@@ -344,7 +512,8 @@ void screen_printf(s_screen * screen, int x, int y, int which, char *format, ...
 				dm.clipy = y;
 				dm.clipw = font->width;
 				dm.cliph = font->height;
-				putsprite(x, y, font->token, screen, &dm);
+				putsprite(x, y, font->glyphs ? font->glyphs[id] : font->token,
+                    screen, font->glyphs ? NULL : &dm);
 				x += w;
 			}
 		}

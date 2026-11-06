@@ -1,0 +1,91 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <stdint.h>
+#include <stdarg.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "openbor.h"
+HRESULT Interpreter_Call(Interpreter *p){(void)p;abort();}
+HRESULT Interpreter_EvalInstruction(Interpreter *p){(void)p;abort();}
+#undef assert
+#undef printf
+uint32_t obor_profile_build;
+static unsigned test_case;
+#define assert(c) do {if(!(c)){fprintf(stderr,"QUERY_ERROR revision=%u case=%u line=%d\n",obor_profile_build,test_case,__LINE__);abort();}}while(0)
+CHAR *StrCache_Get(int index){(void)index;abort();}
+int StrCache_Pop(void){abort();}
+void StrCache_Collect(int index){(void)index;abort();}
+static char diagnostic[2048];
+static int report(const char *format,...){
+ size_t at=strlen(diagnostic);va_list ap;va_start(ap,format);
+ int n=vsnprintf(diagnostic+at,sizeof(diagnostic)-at,format,ap);va_end(ap);
+ assert(n>=0 && at+(size_t)n<sizeof(diagnostic));return n;
+}
+s_sprite_map sprite_records[10],*sprite_map=sprite_records;
+@ENUMS@
+@VARIANTS@
+@NATIVE_ID@
+/* Mapper services preserve the supplied numeric parent and unconverted
+ * child. Complete mapper behavior has its own independent contract. */
+void mapstrings_getentityproperty(ScriptVariant **args,int count){(void)args;(void)count;}
+void mapstrings_entityproperty(ScriptVariant **args,int count){(void)args;(void)count;}
+#define printf report
+/* Keep the original dot-to-dropframe fallthrough in this complete branch
+ * selection; accepting its diagnostic must not change its result. */
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wimplicit-fallthrough"
+@GETTER@
+#pragma GCC diagnostic pop
+#undef printf
+struct argument{VARTYPE type;LONG value;};
+struct query{int property,count;struct argument args[5];};
+struct expected{int ok,present;VARTYPE kind;double value;const char *diagnostic;};
+static const struct query queries[]={@CASES@};
+@CONTRACTS@
+struct context{unsigned revision;const struct expected *expected;};
+static const struct context contexts[]={@CONTEXTS@};
+int main(void){
+ entity actor={0};s_anim animation={0},*animations[]={&animation};
+ s_defense defenses[1]={{0}};actor.defense=defenses;
+ s_sprite sprite_values[10]={{0}};s_sprite_list sprite_nodes[10]={{0}};
+ for(int i=0;i<10;++i){sprite_records[i].node=sprite_nodes+i;sprite_nodes[i].sprite=sprite_values+i;}
+ sprite_records[9].centerx=23;sprite_records[9].centery=29;
+ s_attack attack={0},*attacks[]={&attack};int vulnerable[]={1},bbox[1][6]={{91}},sprites[]={0};
+ actor.modeldata.animation=animations;actor.modeldata.animation_capacity=1;
+ animation.numframes=1;animation.attacks=attacks;animation.vulnerable=vulnerable;
+ animation.bbox_coords=bbox;animation.sprite=sprites;attack.attack_force=19;
+ animation.dropframe=17;
+ actor.defense[0].factor=2.5;actor.dot_time[0]=6;actor.modeldata.edelay.mode=3;
+ animation.energycost.cost=13;actor.modeldata.bflash=8;actor.modeldata.icon.def=9;
+ actor.knockdowncount=3.5;animation.landframe.ent=2;actor.modeldata.maps_loaded=2;
+ animation.range.amax=4;actor.modeldata.runspeed=3.5;sprite_records[0].centerx=16;
+ actor.modeldata.stats[0]=7.5;actor.staydown.rise=10;
+ for(unsigned p=0;p<sizeof(contexts)/sizeof(*contexts);++p){
+  obor_profile_build=contexts[p].revision;
+  for(test_case=0;test_case<sizeof(queries)/sizeof(*queries);++test_case){
+   const struct query *q=queries+test_case;const struct expected *wanted=contexts[p].expected+test_case;
+   ScriptVariant values[7],*args[7],result,*out=&result;memset(values,0,sizeof(values));memset(&result,0,sizeof(result));
+   for(int i=0;i<7;++i){args[i]=values+i;values[i].vt=VT_INTEGER;}
+   values[0].vt=VT_PTR;values[0].ptrVal=&actor;values[1].lVal=q->property;
+   for(int i=0;i<5;++i){values[i+2].vt=q->args[i].type;values[i+2].lVal=q->args[i].value;}
+   diagnostic[0]=0;HRESULT status=openbor_getentityproperty(args,&out,q->count);
+   assert(status==(wanted->ok?S_OK:E_FAIL));assert((out!=NULL)==wanted->present);
+   if(out){
+    assert(out==&result && result.vt==wanted->kind);
+    if(wanted->kind==VT_INTEGER && result.lVal!=(LONG)wanted->value){
+     fprintf(stderr,"integer result=%ld expected=%ld\n",(long)result.lVal,(long)wanted->value);abort();
+    }
+    if(wanted->kind==VT_DECIMAL)assert(result.dblVal==wanted->value);
+    if(wanted->kind==VT_PTR){
+     assert(result.ptrVal==sprite_values+9 && sprite_values[9].centerx==23 && sprite_values[9].centery==29);
+    }
+   }
+   if(strcmp(diagnostic,wanted->diagnostic)){
+    fprintf(stderr,"actual diagnostic=[%s]\nexpected diagnostic=[%s]\n",diagnostic,wanted->diagnostic);abort();
+   }
+  }
+  fprintf(stdout,"{\"revision\":%u,\"cases\":%u}\n",obor_profile_build,test_case);
+ }
+ return 0;
+}

@@ -1,0 +1,234 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <float.h>
+#include <ctype.h>
+#include <limits.h>
+#include <math.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <stdarg.h>
+#include "openbor.h"
+/* The reduced contract does not execute the VM. Complete these historical
+ * inline declarations explicitly instead of hiding compiler diagnostics. */
+HRESULT Interpreter_Call(Interpreter *interpreter){(void)interpreter;abort();}
+HRESULT Interpreter_EvalInstruction(Interpreter *interpreter){(void)interpreter;abort();}
+#undef assert
+#undef printf
+uint32_t obor_profile_build;
+static unsigned checked;
+#define assert(c) do {if(!(c)){fprintf(stderr,"LATE_ATTACK revision=%u case=%u line=%d\n",obor_profile_build,checked,__LINE__);abort();}}while(0)
+static char strings[16][128],diagnostic[1024];
+static int used_strings;
+CHAR *StrCache_Get(int index){assert(index>=0 && index<used_strings);return strings[index];}
+int StrCache_Pop(void){assert(used_strings<16);return used_strings++;}
+void StrCache_Collect(int index){assert(index>=0 && index<used_strings);}
+static int report(const char *format,...){
+ size_t at=strlen(diagnostic);va_list ap;va_start(ap,format);
+ int n=vsnprintf(diagnostic+at,sizeof(diagnostic)-at,format,ap);va_end(ap);
+ assert(n>=0 && at+(size_t)n<sizeof(diagnostic));return n;
+}
+@VARIANTS@
+@LOOKUP@
+#define printf report
+@MACRO@
+@ENUMS@
+@TABLE@
+@NATIVE_ID@
+@MAPPER@
+@ENTITY_MAPPER@
+@ATTACK_STATE@
+s_attack emptyattack;
+entity *self;
+static unsigned damage_calls,kill_calls;
+static entity *observed_self,*observed_other;
+static s_attack observed_attack;
+void kill(entity *victim){assert(victim);++kill_calls;}
+static int take_damage(entity *other,s_attack *attack){
+ ++damage_calls;observed_self=self;observed_other=other;observed_attack=*attack;return -7;
+}
+@SETTER@
+@GETTER@
+@DAMAGE_HELPER@
+@DAMAGE_ENTRY@
+#undef printf
+struct field {const char *name;size_t offset;int floating,kind;};
+struct context {unsigned revision;int setter,count;const char *const *names;
+ unsigned get_count,put_count;const struct field *get,*put;
+ int shared_short,null_target_error,null_other_fallback,callback_returned,validate_before_direct;};
+@CONTEXTS@
+static ScriptVariant values[7],*args[7];
+static void arguments(void){
+ used_strings=0;diagnostic[0]=0;memset(values,0,sizeof(values));
+ for(unsigned i=0;i<7;++i){args[i]=values+i;values[i].vt=VT_INTEGER;}
+}
+static void text(unsigned at,const char *word){
+ ScriptVariant_ChangeType(values+at,VT_STR);assert(strlen(word)<sizeof(strings[0]));
+ strcpy(StrCache_Get(values[at].strVal),word);
+}
+static int ordinal(const struct context *c,const char *word){
+ for(int i=0;i<c->count;++i)if(!strcmp(word,c->names[i]))return i;
+ return -1;
+}
+static HRESULT put(int count){
+ ScriptVariant result={0},*out=&result;HRESULT status=openbor_changeattackproperty(args,&out,count);
+ assert(out==NULL);++checked;return status;
+}
+static void reset_attack(const struct context *c){
+ arguments();values[0].lVal=ordinal(c,"reset");values[1].lVal=0;
+ assert(put(2)==S_OK);assert(!memcmp(&obor_script_attack,&emptyattack,sizeof(emptyattack)));
+}
+static void setter_checks(const struct context *c){
+ s_attack zero={0};obor_script_attack=zero;arguments();
+ assert(put(0)==E_FAIL && put(1)==E_FAIL);
+ if(!c->setter){assert(put(2)==E_FAIL);return;}
+ /* The shared native state starts at zero, independently of emptyattack. */
+ assert(!memcmp(&obor_script_attack,&zero,sizeof(zero)));
+ for(unsigned i=0;i<c->put_count;++i)for(int form=0;form<3;++form)
+ for(int sign=0;sign<2;++sign){
+  obor_script_attack=zero;arguments();const struct field *f=c->put+i;
+  if(form)text(0,f->name);else values[0].lVal=ordinal(c,f->name);
+  if(form==2)for(char *p=StrCache_Get(values[0].strVal);*p;++p)*p=(char)toupper((unsigned char)*p);
+  values[1].vt=VT_DECIMAL;values[1].dblVal=sign?-12.75:14.75;
+  assert(put(2)==S_OK);assert(values[0].vt==VT_INTEGER && values[0].lVal==ordinal(c,f->name));
+  s_attack expected={0};int wanted=sign?-12:14;
+  if(f->floating)*(float*)((char*)&expected+f->offset)=(float)wanted;
+  else *(int*)((char*)&expected+f->offset)=wanted;
+  assert(!memcmp(&obor_script_attack,&expected,sizeof(expected)));
+ }
+ for(int id=0;id<c->count;++id){
+  int supported=0;for(unsigned i=0;i<c->put_count;++i)if(!strcmp(c->names[id],c->put[i].name))supported=1;
+  if(supported || !strcmp(c->names[id],"reset") || !strcmp(c->names[id],"dropv"))continue;
+  arguments();values[0].lVal=id;values[1].lVal=9;obor_script_attack=zero;
+  assert(put(2)==E_FAIL && !memcmp(&obor_script_attack,&zero,sizeof(zero)));
+ }
+ reset_attack(c);s_attack saved=obor_script_attack;
+ arguments();text(0,"force");mapstrings_attackproperty(args,1);
+ assert(values[0].vt==VT_STR && !diagnostic[0]);
+ assert(put(1)==E_FAIL && values[0].vt==VT_STR && !diagnostic[0]);
+ arguments();text(0,"@missing");values[1].lVal=1;
+ assert(put(2)==E_FAIL && !memcmp(&obor_script_attack,&saved,sizeof(saved)));
+ assert(!strcmp(diagnostic,"'@missing' is not a valid attack property.\nYou must give a string value for spawn entry property name.\n"));
+ const int unknown[]={-1,c->count,c->count+65536};
+ for(unsigned i=0;i<sizeof(unknown)/sizeof(*unknown);++i){
+  arguments();values[0].lVal=unknown[i];values[1].lVal=1;
+  assert(put(2)==E_FAIL && !diagnostic[0] && !memcmp(&obor_script_attack,&saved,sizeof(saved)));
+ }
+ arguments();text(0,"reset");values[1].vt=VT_EMPTY;
+ assert(put(2)==E_FAIL && !memcmp(&obor_script_attack,&saved,sizeof(saved)));
+ arguments();text(0,"reset");values[1].vt=VT_DECIMAL;values[1].dblVal=NAN;
+ assert(put(2)==S_OK && !memcmp(&obor_script_attack,&emptyattack,sizeof(emptyattack)));
+ for(int count=2;count<=4;++count){
+  reset_attack(c);arguments();text(0,"dropv");
+  for(int i=1;i<4;++i){values[i].vt=VT_DECIMAL;values[i].dblVal=1.5+i;}
+  assert(put(count)==S_OK);
+  for(int i=0;i<3;++i)assert(obor_script_attack.dropv[i]==(i<count-1?2.5f+i:emptyattack.dropv[i]));
+ }
+ for(int failed=1;failed<=3;++failed){
+  reset_attack(c);arguments();text(0,"dropv");
+  for(int i=1;i<4;++i){values[i].vt=VT_DECIMAL;values[i].dblVal=5.5+i;}
+  values[failed].vt=VT_PTR;assert(put(4)==E_FAIL);
+  for(int i=0;i<3;++i)assert(obor_script_attack.dropv[i]==(i<failed-1?6.5f+i:emptyattack.dropv[i]));
+ }
+ /* Defined core validation controls, separate from the original oracle. */
+ const double outside[]={NAN,INFINITY,-INFINITY,1e100,-1e100};
+ for(unsigned i=0;i<sizeof(outside)/sizeof(*outside);++i){
+  reset_attack(c);saved=obor_script_attack;arguments();text(0,"force");
+  values[1].vt=VT_DECIMAL;values[1].dblVal=outside[i];
+  assert(put(2)==E_FAIL && !memcmp(&obor_script_attack,&saved,sizeof(saved)));
+ }
+}
+static void getter_checks(const struct context *c){
+ entity actor={0};s_anim animation={0},*animations[]={&animation};s_attack attack={0},*attacks[]={&attack};
+ actor.modeldata.animation=animations;actor.modeldata.animation_capacity=1;
+ animation.numframes=1;animation.attacks=attacks;
+ for(unsigned i=0;i<c->get_count;++i)for(int form=0;form<2;++form){
+  const struct field *f=c->get+i;
+  if(f->floating)*(float*)((char*)&attack+f->offset)=45.5f;
+  else *(int*)((char*)&attack+f->offset)=101+(int)i;
+  arguments();values[0].vt=VT_PTR;values[0].ptrVal=&actor;values[1].lVal=_ep_attack;
+  if(form)text(2,f->name);else values[2].lVal=ordinal(c,f->name);
+  values[6].lVal=0;
+  ScriptVariant result={0},*out=&result;
+  assert(openbor_getentityproperty(args,&out,7)==S_OK && out==&result);
+  assert(values[2].vt==VT_INTEGER && values[2].lVal==ordinal(c,f->name));
+  assert((int)result.vt==f->kind);
+  if(f->kind==VT_DECIMAL)assert(result.dblVal==45.5);
+  else if(f->kind==VT_PTR)assert(result.ptrVal==(void*)((char*)&attack+f->offset));
+  else assert(result.lVal==(f->floating?45:101+(int)i));
+  assert(!diagnostic[0]);++checked;
+ }
+}
+static void damage_checks(const struct context *c){
+ entity actor={0},other={0},previous={0};
+ for(int count=1;count<=5;++count)for(int callback=0;callback<2;++callback)
+ for(int null_other=0;null_other<2;++null_other)for(int health=5;health<=20;health+=15){
+  arguments();memset(&actor,0,sizeof(actor));actor.health=health;
+  actor.takedamage=callback?take_damage:NULL;self=&previous;
+  damage_calls=kill_calls=0;values[0].vt=VT_PTR;values[0].ptrVal=&actor;
+  values[1].vt=VT_PTR;values[1].ptrVal=null_other?NULL:&other;
+  for(int i=2;i<5;++i){values[i].vt=VT_DECIMAL;values[i].dblVal=i==2?7.75:i==3?2.75:10.75;}
+  obor_script_attack=emptyattack;obor_script_attack.attack_force=9;
+  obor_script_attack.attack_drop=4;obor_script_attack.attack_type=5;
+  obor_script_attack.dropv[0]=7;obor_script_attack.dropv[1]=8;obor_script_attack.dropv[2]=9;
+  s_attack wanted=count<3 && c->shared_short?obor_script_attack:emptyattack;
+  if(count>=3 || !c->shared_short){
+   wanted.attack_force=count>=3?7:1;wanted.attack_drop=count>=4?2:0;
+   wanted.attack_type=count>=5?10:ATK_NORMAL;
+   if(wanted.attack_drop){wanted.dropv[0]=3;wanted.dropv[1]=1.2f;wanted.dropv[2]=0;}
+  }
+  ScriptVariant result={0},*out=&result;
+  assert(openbor_damageentity(args,&out,count)==S_OK && out==&result && result.vt==VT_INTEGER);
+  assert(self==&previous && !diagnostic[0]);
+  int skipped=count>=2 && null_other && !c->null_other_fallback;
+  if(skipped){assert(!damage_calls && !kill_calls && actor.health==health && result.lVal==0);}
+  else if(callback){
+   assert(damage_calls==1 && !kill_calls && actor.health==health);
+   assert(observed_self==&actor && observed_other==(count<2 || null_other?&actor:&other));
+   assert(!memcmp(&observed_attack,&wanted,sizeof(wanted)));
+   assert(result.lVal==(c->callback_returned?-7:0));
+  }else{
+   assert(!damage_calls && actor.health==health-wanted.attack_force);
+   assert(kill_calls==(unsigned)(actor.health<=0) && result.lVal==1);
+  }
+  ++checked;
+ }
+ arguments();ScriptVariant result={0},*out=&result;
+ assert(openbor_damageentity(args,&out,0)==E_FAIL && out==NULL);
+ assert(!strcmp(diagnostic,c->null_target_error?"Function requires at least 1 parameter.\n":""));++checked;
+ arguments();out=&result;
+ assert(openbor_damageentity(args,&out,1)==(c->null_target_error?E_FAIL:S_OK));
+ assert(out==(c->null_target_error?NULL:&result));
+ assert(!strcmp(diagnostic,c->null_target_error?"Invalid entity parameter.\n":""));++checked;
+ for(int bad=2;bad<=4;++bad)for(int callback=0;callback<2;++callback){
+  arguments();memset(&actor,0,sizeof(actor));actor.health=20;actor.takedamage=callback?take_damage:NULL;
+  damage_calls=kill_calls=0;self=&previous;values[0].vt=VT_PTR;values[0].ptrVal=&actor;
+  values[1].vt=VT_PTR;values[1].ptrVal=&other;values[2].lVal=7;values[bad].vt=VT_EMPTY;out=&result;
+  assert(openbor_damageentity(args,&out,5)==(c->null_target_error?E_FAIL:S_OK));
+  assert(out==(c->null_target_error?NULL:&result) && self==&previous && !damage_calls && !kill_calls);
+  assert(actor.health==(!c->validate_before_direct && !callback && bad>2?13:20));
+  const char *message=bad==2?"Wrong force value.\n":bad==3?"Wrong drop value.\n":"Wrong type value.\n";
+  assert(!strcmp(diagnostic,c->null_target_error?message:""));++checked;
+ }
+ if(c->shared_short)for(int negative=0;negative<2;++negative){
+  arguments();memset(&actor,0,sizeof(actor));actor.health=negative?INT_MIN:INT_MAX;
+  obor_script_attack=emptyattack;obor_script_attack.attack_force=negative?INT_MAX:INT_MIN;
+  damage_calls=kill_calls=0;values[0].vt=VT_PTR;values[0].ptrVal=&actor;out=&result;
+  assert(openbor_damageentity(args,&out,1)==S_OK && out==&result && result.lVal==1);
+  assert(actor.health==(negative?INT_MIN:INT_MAX) && kill_calls==(unsigned)negative && !damage_calls);
+  ++checked;
+ }
+}
+int main(void){
+ memset(&emptyattack,0,sizeof(emptyattack));emptyattack.attack_force=211;
+ emptyattack.dropv[0]=21;emptyattack.dropv[1]=22;emptyattack.dropv[2]=23;
+ assert(!obor_script_attack.attack_force);
+ for(unsigned i=0;i<sizeof(contexts)/sizeof(*contexts);++i){
+  obor_profile_build=contexts[i].revision;checked=0;
+  setter_checks(contexts+i);getter_checks(contexts+i);damage_checks(contexts+i);
+  fprintf(stdout,"{\"revision\":%u,\"cases\":%u}\n",obor_profile_build,checked);
+ }
+ return 0;
+}
