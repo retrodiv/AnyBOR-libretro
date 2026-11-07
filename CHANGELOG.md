@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.1.83 — engine identity and ZIP content selection
+
+- Identify verified engine executables by SHA-256 without executing them.
+- Include preserved engine programs and installable packages across platforms.
+- Prefer a manual profile, then the identified engine, then filename and content evidence.
+- Recognize a unique ZIP game from its model references and ignore identifiable auxiliary audio.
+- Retain directory prefixes when finding unpacked assets with different filename case.
+- Reject ambiguous content while retaining extraction quotas and configured input preparation.
+- Complete historical probe dependencies and per-profile source references.
+
 ## 0.1.82 — historical profiles through 3854
 
 - Add v3.0 3846, v3.0 3847-dev, v3.0 3849 and v3.0 3854.

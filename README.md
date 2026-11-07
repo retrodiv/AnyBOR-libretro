@@ -155,9 +155,12 @@ requirements, controls and core options are in [docs/ANYBOR.md](docs/ANYBOR.md).
 ## Content
 
 Load a `.pak`, an unpacked game's `data/models.txt`, or a ZIP containing one
-game. ZIP entries are checked before extraction. A content-adjacent engine
-executable can be inspected as data for version selection; the core does
-not execute that file. The `.txt` extension is for `data/models.txt`, not
+game. ZIP entries are checked before extraction. A unique recognizable game
+can share its ZIP with identifiable auxiliary files; multiple games or
+inconclusive candidates are rejected. Verified engine executable hashes select
+the corresponding build before filename and content detection. A manual profile
+choice takes priority. Executables are inspected as data, never executed.
+The `.txt` extension is for `data/models.txt`, not
 arbitrary text documents. Newer engine versions are supported on a best
 effort basis through the latest pinned engine.
 

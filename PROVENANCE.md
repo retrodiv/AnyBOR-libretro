@@ -8,6 +8,17 @@ distributed hash of every retained upstream file. This makes the port's modifica
 distinguishable from upstream code without importing upstream Git history.
 The shared port, frontend glue and build tooling are included as source.
 
+[ENGINE_EXECUTABLES.json](docs/ENGINE_EXECUTABLES.json) records verified engine
+program and installable-package SHA-256 values, builds, variants, byte sizes and official
+source package/member references. The lookup table contains these factual
+identities, not executable code. Verification checks archive members' sizes and
+CRCs, directly preserved packages' manifest hashes, executable/package formats
+and local SHA-256. Package identity and embedded version labels are separate
+facts; supported discrepancies are recorded in the catalog. The catalog digest
+binds the published projection to its verified input. No game, PAK or game
+content hashes are compatibility selectors, and no executable is run for
+identification.
+
 Files imported from an upstream revision into another physical baseline have a
 `source_import` entry with their own upstream commit, repository and original
 SHA-256. The baseline hash remains separate. Provenance-only revisions in

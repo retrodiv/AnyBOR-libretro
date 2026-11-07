@@ -34,6 +34,7 @@ def compile_probe(glue, header, includes, third_party, output, sanitizers=False)
 PROFILES
 FALLBACK
 static char g_pak_path[4096],g_engine[48],g_logical_engine[48],g_selection_error[160];
+static char g_engine_source_path[4096];
 static bool g_raw;
 static bool environment(unsigned,void *) {return false;}
 static retro_environment_t env_cb=environment;

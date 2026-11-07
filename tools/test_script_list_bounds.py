@@ -66,6 +66,8 @@ def mapper_program(script, lookup, *, type_definitions=''):
 #include <stdio.h>
 #include <string.h>
 #include <strings.h>
+/* The extracted declarations use scriptlib/depends.h's signed 32-bit LONG. */
+typedef int32_t LONG;
 enum {VT_EMPTY=0,VT_INTEGER=1,VT_STR=6};
 typedef struct {int vt;union {int32_t lVal,strVal;};} ScriptVariant;
 static const char *strings[2];

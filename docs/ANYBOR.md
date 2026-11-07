@@ -57,11 +57,38 @@ Load one of these with **Load Content**, then select AnyBOR:
 | `.pak` | An OpenBOR game archive. An otherwise complete, unencoded PACK with a damaged four-byte signature is repaired automatically after structural validation. |
 | `.spk` | Accepted only for an ordinary PACK archive misnamed with this extension. A genuine SPAK/protected archive is recognized and rejected with an explicit error; it is never decoded. |
 | `.txt` | Exactly the `data/models.txt` entry point of an unpacked game. |
-| `.zip` | One PAK or one unpacked game's data tree. The core handles extraction. |
+| `.zip` | One structurally recognizable PAK or unpacked game. Identifiable auxiliary files are ignored; ambiguous candidates are rejected. |
 
 The core does not start without content. It includes no third-party games,
 artwork or soundtracks. Use game data from sources you trust. A nearby OpenBOR
 executable can be read as data for version detection; it is not executed.
+
+Auto checks verified engine-executable SHA-256 identities before filename and
+content clues. A manual profile choice takes priority. An identified engine
+selects its exact profile when available; otherwise the available-profile
+rules apply to that build. Unknown or absent executables, conflicting engine
+identities and incomplete scans retain the filename/content detection rules.
+Only engine executables supply these identities, never game or PAK hashes.
+The [verified catalog](ENGINE_EXECUTABLES.json) records the published engine
+packages supporting each identity.
+
+For unpacked content, executable inspection is limited to the directory
+containing `data/`; for a loose PAK it is limited to that PAK's directory.
+ZIP packages are inspected within their validated extraction. Inspection is
+bounded to 16 executables, 64 MiB per executable and 128 MiB in total; loose
+directory enumeration is bounded to 1,024 entries. The core reads these files
+without executing them.
+Recognized candidates include executable and installable engine packages,
+bare engine names with architecture suffixes, and console boot images. A hash
+accredited to several builds is inconclusive and retains the existing detection.
+
+ZIP game recognition checks a valid PACK directory and a nonempty model
+referenced by `data/models.txt`, or the equivalent unpacked files. It observes
+up to 4 MiB of model declarations and 32 model references. Insufficient evidence
+is reported as an inconclusive candidate, rather than discarded as auxiliary.
+A complete RIFF/WAVE audio asset can be ignored beside a unique game even when
+its filename has a PAK extension. Preparation uses the same structural repairs
+and external input configuration as loose packed content.
 
 ## Features
 
@@ -196,7 +223,7 @@ v4.0 8023-dev. Explicit filename intervals retain their highest-profile /
 next-revision policy. Ordinary unlabelled inference offers only automatic
 profiles, including the official releases v3.0 4453 and v3.0 6330. Test profiles
 v3.0 6392-dev, v3.0 6412-dev and v3.0 6510-dev can be selected directly by an
-exact filename Build tag or a manual choice. Accompanying executables and
+exact filename Build tag or a manual choice. Unidentified executable declarations and
 ordinary unlabelled inference do not select these nonautomatic profiles.
 Imprecise filename tags can select them when no stable or automatic candidate
 remains compatible in the declared interval. A complete numeric Build tag

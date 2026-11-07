@@ -63,8 +63,15 @@ exact filename Build 6392 or Build 6412 tag selects the corresponding test
 profile. Manual selection remains available. Profile v3.0 4453 uses 32-bit
 color, ignores `colourdepth` and removes legacy `remap` palette conversion;
 content needing those features requires an earlier compatible profile.
+Manual profile choices take priority over verified engine-executable hashes,
+which take priority over filename and content evidence. An identified engine
+uses its exact profile when available, or the available-profile rules for its
+build. Unknown, absent, conflicting or incompletely scanned executables leave
+the filename/content rules unchanged. See the
+[verified engine catalog](docs/ENGINE_EXECUTABLES.json).
+
 An explicit **Build 6391 Mod** variant or manual choice selects v3.0 6391-mod.
-Bare numeric tags, ordinary content evidence and accompanying executables do
+Bare numeric tags, ordinary content evidence and unidentified executable declarations do
 not select that variant. Missing build numbers are not inferred from an
 executable's compile date. See [variant rules](docs/ANYBOR.md#core-options).
 Builds 6413 through 7142 select v4.0 7142-alpha, unless an exact test-build
@@ -79,7 +86,7 @@ See [Engine build rules](docs/ANYBOR.md#core-options) for the authoritative
 filename grammar, priorities, examples and processing limits. Exact filename Build tags and manual options select test variants directly.
 Imprecise filename declarations use content evidence and prefer stable or
 automatic candidates; nonautomatic candidates are considered only when no such
-candidate remains compatible. Ordinary sidecar and unlabelled inference use
+candidate remains compatible. Unidentified sidecar declarations and unlabelled inference use
 automatic profiles only. Exact Build tags without their own selectable profile
 check the ordinary automatic candidate against proved content requirements;
 a conflicting candidate is replaced by the nearest profile satisfying all

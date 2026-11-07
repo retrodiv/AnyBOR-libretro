@@ -368,7 +368,7 @@ binary equivalence or endorsement by the experimental build's author.
 A manual choice or an explicit filename variant selects this profile:
 **Build 6391 Mod**, **Build 6391-mod** and **Build 6391_MOD** are equivalent.
 **Build 63XX Mod** selects it within that interval. A bare **Build 6391** tag,
-ordinary content evidence and accompanying executables retain numeric routing.
+ordinary content evidence and unidentified executable declarations retain numeric routing.
 Settings, logs and state identity use the separate `6391-mod` profile key.
 See [provenance](../PROVENANCE.md) for the official source commits.
 
@@ -384,7 +384,7 @@ See [provenance](../PROVENANCE.md) for the published behavioral and source basis
 An exact filename **Build 6392** tag or a manual choice selects this test
 revision directly. Imprecise tags are checked against content evidence, with
 stable or automatic profiles preferred. Ordinary unlabelled inference and
-accompanying executables do not select nonautomatic profiles.
+unidentified executable declarations do not select nonautomatic profiles.
 See [content selection rules](AUTO_SELECTION_RULES.md) for boundaries and limits.
 
 ## Divergent test profiles
@@ -403,7 +403,7 @@ Standalone device drivers and mod pickers are replaced by frontend facilities;
 in-game menus and script-visible timing remain covered by native regressions.
 
 Exact **Build 7086** and **Build 7123** filename tags select these profiles.
-Manual selection is available. Ordinary accompanying executable declarations
+Manual selection is available. Unidentified accompanying executable declarations
 and unlabelled inference use automatic profiles; imprecise tags retain the
 content-evidence and stable-profile priority described in
 [content selection rules](AUTO_SELECTION_RULES.md). Existing states require

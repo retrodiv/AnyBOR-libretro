@@ -1,6 +1,15 @@
 # Content evidence for build tags
 
-Manual selection is authoritative. An exact filename Build tag with its own
+Manual selection is authoritative. A unique verified engine-executable hash
+identifies the build and variant before filename or content evidence. The
+exact corresponding profile wins when available; otherwise the existing
+available-profile and content-triage rules apply to that build. Executables
+are read without execution. Unknown, missing, ambiguous or incompletely scanned
+executables leave the filename/content rules unchanged. Game, PAK and content
+hashes are not compatibility selectors. See the
+[verified engine catalog](ENGINE_EXECUTABLES.json).
+
+An exact filename Build tag with its own
 selectable profile retains its existing routing and priority. An exact Build
 tag without its own profile first uses the ordinary automatic candidate. If
 proved content requirements exclude that candidate, Auto chooses the profile
@@ -117,12 +126,12 @@ rules and whether the selected profile supports them.
 
 No absence of newer syntax establishes an old revision. Numeric values whose
 meaning changed, without a distinguishing API spelling, do not establish a
-version by themselves. A matching hash or game identity never selects a rule.
+version by themselves. A game identity or game-content hash never selects a rule.
 The reconstructed test profile has no invented content signature.
 
 Unlabelled content retains the existing inference/fallback policy. The two
 official releases v3.0 4453 and v3.0 6330 participate in ordinary automatic
-routing. Accompanying executables and unlabelled inference do not select
+routing. Unidentified executable declarations and unlabelled inference do not select
 nonautomatic test profiles. Loose mod directories retain metadata routing;
 the packed-content analysis applies to prepared PACK content.
 

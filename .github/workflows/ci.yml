@@ -531,6 +531,8 @@ jobs:
           run_check python3 tools/test_6392_profile.py
           run_check python3 tools/test_profile_identity.py
           run_check python3 tools/test_executable_build_tag.py
+          run_check python3 tools/test_engine_identity.py
+          run_check python3 tools/test_zip_content.py
           run_check python3 tools/test_branch_profiles.py
           run_check python3 tools/test_profile_palettes.py
           run_check python3 tools/test_early_v3_profiles.py

@@ -7,7 +7,8 @@
  * unused frontend APIs, and compile the case-insensitive loose-file search
  * on macOS. Skip a loose lookup only when the common bounded, watched
  * directory index proves its first component absent; preserve script changes
- * and case-insensitive overrides.
+ * and case-insensitive overrides. Join case-corrected directory components
+ * through a bounded temporary buffer, preserving nested loose-asset paths.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/6391.md
  * at the source repository root. Original notices follow below.
@@ -388,7 +389,14 @@ char *casesearch(const char *dir, const char *filepath)
     //if (entry != NULL && entry->d_name != NULL)
     if (entry != NULL)
     {
-        sprintf(fullpath, "%s/%s", dir, entry->d_name);
+        char joined[sizeof(fullpath)];
+        int length = snprintf(joined, sizeof(joined), "%s/%s", dir, entry->d_name);
+        if(length < 0 || (size_t)length >= sizeof(joined))
+        {
+            (void)closedir(d);
+            return NULL;
+        }
+        memcpy(fullpath, joined, (size_t)length + 1);
     }
 
     if (closedir(d))

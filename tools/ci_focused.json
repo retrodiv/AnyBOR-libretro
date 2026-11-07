@@ -2650,6 +2650,26 @@
         "tools/test_historical_late_selection.py"
       ],
       "ci": "shared"
+    },
+    {
+      "id": "test_engine_identity",
+      "memory_mib": 512,
+      "seconds": 120,
+      "command": [
+        "python3",
+        "tools/test_engine_identity.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_zip_content",
+      "memory_mib": 1024,
+      "seconds": 240,
+      "command": [
+        "python3",
+        "tools/test_zip_content.py"
+      ],
+      "ci": "shared"
     }
   ]
 }

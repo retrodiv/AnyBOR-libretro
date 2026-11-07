@@ -86,6 +86,11 @@ static int quiet_printf(const char *format,...) {(void)format;return 0;}
 static void mapstrings_getentityproperty(ScriptVariant **args,int count) {(void)args;(void)count;}
 static void mapstrings_entityproperty(ScriptVariant **args,int count) {(void)args;(void)count;}
 static int obor_entity_get_property_native(int value) {return value;}
+/* Numeric routing is an explicit fixture in this reduced getter probe.
+ * The actual attack mapper has separate namespace/registry contracts. */
+static int obor_attack_property_native(int value) {
+ assert(value==_gep_attack_coords);return value;
+}
 @ENTRY@
 #undef printf
 static s_attack attacks[2][2],*attack_rows[2][2];

@@ -7,7 +7,7 @@
  * objects whose only visible symbols are their suffixed obor_* ABI (see
  * obor_engines.h, generated from pin.json). At retro_load_game — and again
  * at retro_reset — the glue detects which OpenBOR build the pak needs
- * (core option -> explicit special profile -> legacy API -> filename tag
+ * (core option -> verified engine executable -> explicit special profile -> legacy API -> filename tag
  * -> sidecar exe -> content scan -> fallback),
  * points g_vtbl at that engine and shuttles video/audio/input.
  */
@@ -111,6 +111,8 @@ static char g_selection_error[160];
 static char g_save_dir[1024];
 static char g_game_dir[1600];
 static char g_pak_path[4096];
+/* Preserve the adjacent-engine location across packed-content preparation. */
+static char g_engine_source_path[4096];
 static bool g_raw; /* content is an unpacked mod dir, not a .pak */
 
 /* frame counter + rewind/trace bookkeeping (used across sections) */
@@ -660,6 +662,10 @@ static int build_from_sidecar(const char *pak_path)
     return build;
 }
 
+#include "obor_engine_identity.h"
+static obor_engine_identity g_zip_engine_identity;
+static bool g_zip_engine_scanned;
+
 /* Choose the first automatic profile whose covered range reaches the
  * detected build. Explicit-only profiles never win a heuristic. */
 static int pick_anchor(int build)
@@ -980,6 +986,9 @@ static void content_stop(bool preserve_geometry = false)
     g_engine[0] = '\0';
     g_logical_engine[0] = '\0';
     g_pak_path[0] = '\0';
+    g_engine_source_path[0] = '\0';
+    g_zip_engine_scanned = false;
+    memset(&g_zip_engine_identity, 0, sizeof(g_zip_engine_identity));
     free(g_crt_pixels);
     g_crt_pixels = NULL;
     if (!preserve_geometry) {
@@ -1099,7 +1108,7 @@ static void present_error_frame(void)
 
 #define ENGINE_OPT_INFO \
     "Which OpenBOR engine runs the game. Auto detects it from the pak " \
-    "(filename build range or tag, sidecar exe, bounded content scan). A manual choice is " \
+    "(verified engine executable, filename build range or tag, sidecar exe, bounded content scan). A manual choice is " \
     "applied on Restart."
 
 void retro_set_environment(retro_environment_t cb)
@@ -2227,6 +2236,36 @@ static void decide_engine(void)
         if (build)
             how = "core option";
     }
+    obor_engine_identity identity = {};
+    if (!build) {
+        identity = g_zip_engine_scanned ? g_zip_engine_identity :
+            obor_engine_for_content(g_engine_source_path[0] ? g_engine_source_path : g_pak_path, g_raw);
+        if (identity.status == OBOR_ENGINE_IDENTIFIED) {
+            build = identity.engine->build;
+            how = "engine executable SHA-256";
+            for (int i = 0; i < n_avail; ++i)
+                if (kProfiles[i].build == build &&
+                    (identity.engine->variant[0] ?
+                     !strcmp(kProfiles[i].variant, identity.engine->variant) :
+                     profile_is_revision(&kProfiles[i]))) explicit_profile = &kProfiles[i];
+            log_cb(RETRO_LOG_INFO,
+                "[OpenBOR] engine executable %s SHA-256 %s -> build %d%s%s%s\n",
+                identity.evidence, identity.engine->sha256, build,
+                identity.engine->variant[0] ? "-" : "", identity.engine->variant,
+                explicit_profile ? " (exact profile available)" : " (using available-profile rules)");
+        } else if (identity.status == OBOR_ENGINE_AMBIGUOUS) {
+            log_cb(RETRO_LOG_INFO,
+                "[OpenBOR] engine executable identification ambiguous: build %d%s%s (%s) versus %d%s%s (%s); using existing detection.\n",
+                identity.engine ? identity.engine->build : 0,
+                identity.engine && identity.engine->variant[0] ? "-" : "",
+                identity.engine ? identity.engine->variant : "", identity.evidence,
+                identity.conflict ? identity.conflict->build : 0,
+                identity.conflict && identity.conflict->variant[0] ? "-" : "",
+                identity.conflict ? identity.conflict->variant : "", identity.conflicting_evidence);
+        } else if (identity.status == OBOR_ENGINE_SCAN_INCOMPLETE) {
+            log_cb(RETRO_LOG_INFO, "[OpenBOR] engine executable identification incomplete within scan limits; using existing detection.\n");
+        }
+    }
     int filename_profile = 0;
     int filename_build = build_from_filename(g_pak_path, &filename_profile);
     if (!build) {
@@ -2245,6 +2284,14 @@ static void decide_engine(void)
     int triage_profile = 0;
     int legacy_build = 0;
     bool legacy_probed = false;
+    if (identity.status == OBOR_ENGINE_IDENTIFIED && !explicit_profile && !g_raw) {
+        g_content_triage = true;
+        build_from_content(g_pak_path);
+        legacy_build = obor_legacy_api_build(g_pak_path);
+        legacy_probed = true;
+        triage_profile = profile_triage_exact_select(build, legacy_build);
+        g_content_triage = false;
+    }
     if (!build && has_triage_interval && !g_raw && filename_profile >= 0) {
         g_content_triage = true;
         build_from_content(g_pak_path);
@@ -2659,12 +2706,15 @@ static bool load_game(const struct retro_game_info *info, bool retry, bool prepa
         if (n > 4 && strcasecmp(g_pak_path + n - 4, ".zip") == 0) {
             char newpath[4096];
             obor_prepare_stage(total_progress, 0, 400, 0);
+            const char *system = NULL;
+            env_cb(RETRO_ENVIRONMENT_GET_SYSTEM_DIRECTORY, &system);
             if (!obor_zip_prepare(g_pak_path, g_save_dir, newpath,
-                                  sizeof(newpath))) {
+                                  sizeof(newpath), system, &g_zip_engine_identity)) {
                 error_reason("Could not extract a single OpenBOR game from the ZIP.");
                 return false;
             }
             strncpy(g_pak_path, newpath, sizeof(g_pak_path) - 1);
+            g_zip_engine_scanned = true;
             packed_start = 400;
             obor_dbg("load_game: zip -> %s", g_pak_path);
         }
@@ -2706,6 +2756,7 @@ static bool load_game(const struct retro_game_info *info, bool retry, bool prepa
                    g_pak_path);
         }
     }
+    snprintf(g_engine_source_path, sizeof(g_engine_source_path), "%s", g_pak_path);
     if (!g_raw) {
         size_t n = strlen(g_pak_path);
         if (n <= 4 || (strcasecmp(g_pak_path + n - 4, ".pak") != 0 &&
@@ -2715,10 +2766,12 @@ static bool load_game(const struct retro_game_info *info, bool retry, bool prepa
             return false;
         }
         char prepared[4096];
+        snprintf(prepared, sizeof(prepared), "%s", g_pak_path);
         const char *system = NULL;
         env_cb(RETRO_ENVIRONMENT_GET_SYSTEM_DIRECTORY, &system);
         obor_prepare_stage(total_progress, packed_start, 950, 0);
-        if (!obor_packed_prepare(g_pak_path, g_save_dir, system, prepared, sizeof(prepared))) {
+        if (!g_zip_engine_scanned &&
+            !obor_packed_prepare(g_pak_path, g_save_dir, system, prepared, sizeof(prepared))) {
             error_reason("Could not read or prepare the packed content.");
             return false;
         }
