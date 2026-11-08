@@ -1,4 +1,4 @@
-/* AnyBOR modification record: 2026-10-27.
+/* AnyBOR modification record: 2026-11-08.
  * Port maintained by retrodiv <retrodiv@proton.me>.
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
@@ -7,24 +7,31 @@
  * on macOS. Select native early system-selector values, credit rendering and
  * active flags, true-color background and layer-mask admission, scene video
  * commands, menu flags and controller-assignment key flush; bound diagnostic
- * formatting and content paths and release owned layer masks. Keep damage-
- * over-time updates within the native effect arrays while retaining valid-
- * slot tick and expiration calculations. Derive output names from the
- * content basename with explicit destination capacities, and reject
- * overflowing output path joins. Leave multiplayer slots without a selected
- * model available to join even if game scripts preassign lives to them. Let
- * a missing basename-only PAK self-check read the active frontend content
- * after it has been validated and prepared. Allocate each model's animation
- * pointer table through the highest animation index that model uses, and
- * bound cache, copy and cleanup paths to that capacity. Ignore optional
- * defense and offense entries outside the configured attack-type range with
- * a log warning before accessing their tables. Yield after each newly
- * completed model during explicit model-list or level preparation, and defer
- * states until that preparation has cleaned up its intermediate parsers and
- * handles. Resize repeated weapon lists and detach borrowed lists before
- * replacing their entries. Return a defined null result for absent colourmap
- * models or tables while retaining valid palette fallback. Keep selected
- * palette-conversion reads bounded and reject missing maps or flags, while
+ * formatting and content paths and release owned layer masks. Preserve
+ * scrolling, startup palette and loading geometry, selection order, player
+ * spawn precision, walk/backwalk facing, blocking resources and defaults,
+ * counter damage, attack types and cancellation, periodic damage, rush,
+ * follow and ground-hit predicates, projectile costs and weapon loss. Retain
+ * frame-base and movement-table presence and cleanup, script animation
+ * identities and native limits, vault actions and caller priority, slow-
+ * motion arithmetic and main-loop seed timing. Keep damage-over-time updates
+ * within the native effect arrays while retaining valid-slot tick and
+ * expiration calculations. Derive output names from the content basename
+ * with explicit destination capacities, and reject overflowing output path
+ * joins. Leave multiplayer slots without a selected model available to join
+ * even if game scripts preassign lives to them. Let a missing basename-only
+ * PAK self-check read the active frontend content after it has been
+ * validated and prepared. Allocate each model's animation pointer table
+ * through the highest animation index that model uses, and bound cache, copy
+ * and cleanup paths to that capacity. Ignore optional defense and offense
+ * entries outside the configured attack-type range with a log warning before
+ * accessing their tables. Yield after each newly completed model during
+ * explicit model-list or level preparation, and defer states until that
+ * preparation has cleaned up its intermediate parsers and handles. Resize
+ * repeated weapon lists and detach borrowed lists before replacing their
+ * entries. Return a defined null result for absent colourmap models or
+ * tables while retaining valid palette fallback. Keep selected palette-
+ * conversion reads bounded and reject missing maps or flags, while
  * preserving unselected slots and native allocation failure callbacks. Check
  * destination animation capacity when retaining an animation across model
  * changes, preserving the native fallback and timing. Access script-
@@ -108,7 +115,7 @@ List *modelstxtcmdlist = NULL;
 List *levelcmdlist = NULL;
 List *levelordercmdlist = NULL;
 
-int atkchoices[MAX_ANIS]; //tempory values for ai functions, should be well enough LOL
+int atkchoices[MAX_ANIS + 1]; //tempory values for ai functions, should be well enough LOL
 
 //see types.h
 const s_drawmethod plainmethod =
@@ -155,6 +162,16 @@ const s_defense default_defense =
     .blockratio     = 0.f,
     .blocktype      = BLOCK_TYPE_MP_FIRST
 };
+
+static s_defense obor_profile_default_defense(void)
+{
+    s_defense defense = default_defense;
+    if(obor_profile_build < 4066)
+    {
+        defense.blocktype = 0;
+    }
+    return defense;
+}
 
 // unknockdown attack
 const s_attack emptyattack =
@@ -727,6 +744,7 @@ int isLoadingScreenTypeBg(e_loadingScreenType what)
 
 int isLoadingScreenTypeBar(e_loadingScreenType what)
 {
+    if(obor_profile_build < 4042) return (what & 1) == 1;
     return (what & LS_TYPE_BAR) == LS_TYPE_BAR;
 }
 
@@ -741,7 +759,7 @@ char *fill_s_loadingbar(s_loadingbar *s, e_loadingScreenType set, int bx, int by
             s->set = LS_TYPE_BACKGROUND;
             break;
         case LS_TYPE_BAR:
-            s->set = LS_TYPE_BAR;
+            s->set = obor_profile_build < 4042 ? 1 : LS_TYPE_BAR;
             break;
         case LS_TYPE_NONE:
             s->set = LS_TYPE_NONE;
@@ -1385,7 +1403,7 @@ int getsyspropertybyindex(ScriptVariant *var, int index)
         break;
     case _sv_maxanimations:
         ScriptVariant_ChangeType(var, VT_INTEGER);
-        var->lVal = (LONG)max_animations;
+        var->lVal = (LONG)obor_animation_public(max_animations, obor_profile_build);
         break;
     case _sv_ticks:
         ScriptVariant_ChangeType(var, VT_INTEGER);
@@ -1969,7 +1987,7 @@ void execute_animation_script(entity *ent)
         tempvar.ptrVal = (VOID *)ent;
         Script_Set_Local_Variant(cs, "self",    &tempvar);
         ScriptVariant_ChangeType(&tempvar, VT_INTEGER);
-        tempvar.lVal = (LONG)ent->animnum;
+        tempvar.lVal = (LONG)obor_animation_public(ent->animnum, obor_profile_build);
         Script_Set_Local_Variant(cs, "animnum", &tempvar);
         ScriptVariant_ChangeType(&tempvar, VT_INTEGER);
         tempvar.lVal = (LONG)ent->animpos;
@@ -2607,26 +2625,32 @@ void execute_spawn_script(s_spawn_entry *p, entity *e)
             ScriptVariant_ChangeType(&tempvar, VT_PTR);
             tempvar.ptrVal = (VOID *)e;
             Script_Set_Local_Variant(cs, "self", &tempvar);
-            ScriptVariant_ChangeType(&tempvar, VT_DECIMAL);
-            tempvar.dblVal = (DOUBLE)p->position.x;
-            Script_Set_Local_Variant(cs, "spawnx", &tempvar);
-            tempvar.dblVal = (DOUBLE)p->position.z;
-            Script_Set_Local_Variant(cs, "spawnz", &tempvar);
-            tempvar.dblVal = (DOUBLE)p->position.y;
-            Script_Set_Local_Variant(cs, "spawna", &tempvar);
-            ScriptVariant_ChangeType(&tempvar, VT_INTEGER);
-            tempvar.lVal = (LONG)p->at;
-            Script_Set_Local_Variant(cs, "spawnat", &tempvar);
+            if(obor_profile_build >= 3989)
+            {
+                ScriptVariant_ChangeType(&tempvar, VT_DECIMAL);
+                tempvar.dblVal = (DOUBLE)p->position.x;
+                Script_Set_Local_Variant(cs, "spawnx", &tempvar);
+                tempvar.dblVal = (DOUBLE)p->position.z;
+                Script_Set_Local_Variant(cs, "spawnz", &tempvar);
+                tempvar.dblVal = (DOUBLE)p->position.y;
+                Script_Set_Local_Variant(cs, "spawna", &tempvar);
+                ScriptVariant_ChangeType(&tempvar, VT_INTEGER);
+                tempvar.lVal = (LONG)p->at;
+                Script_Set_Local_Variant(cs, "spawnat", &tempvar);
+            }
         }
         Script_Execute(cs);
         if(e)
         {
             ScriptVariant_Clear(&tempvar);
             Script_Set_Local_Variant(cs, "self", &tempvar);
-            Script_Set_Local_Variant(cs, "spawnx", &tempvar);
-            Script_Set_Local_Variant(cs, "spawnz", &tempvar);
-            Script_Set_Local_Variant(cs, "spawna", &tempvar);
-            Script_Set_Local_Variant(cs, "spawnat", &tempvar);
+            if(obor_profile_build >= 3989)
+            {
+                Script_Set_Local_Variant(cs, "spawnx", &tempvar);
+                Script_Set_Local_Variant(cs, "spawnz", &tempvar);
+                Script_Set_Local_Variant(cs, "spawna", &tempvar);
+                Script_Set_Local_Variant(cs, "spawnat", &tempvar);
+            }
         }
     }
 }
@@ -5132,6 +5156,8 @@ void free_frames(s_anim *anim)
         free(anim->drawmethods);
         anim->drawmethods = NULL;
     }
+    anim->obor_classic_seta_active = 0;
+    anim->obor_classic_move_active = 0;
 }
 
 #if 0
@@ -5546,6 +5572,12 @@ int addframe(s_anim *a, int spriteindex, int framecount, int delay, unsigned idl
         }
         a->move[currentframe] = malloc(sizeof(**a->move));
         memcpy(a->move[currentframe], move, sizeof(**a->move));
+        if(obor_profile_build < 4064)
+        {
+            if(move->x || move->z) a->obor_classic_move_active = 1;
+            if(move->base >= 0) a->obor_classic_seta_active = 1;
+            if(!a->obor_classic_seta_active) a->move[currentframe]->base = -1;
+        }
     }
 
     if(frameshadow >= 0 && !a->shadow)
@@ -6456,6 +6488,10 @@ static int translate_ani_id(const char *value, s_model *newchar, s_anim *newanim
     {
         ani_id = ANI_DUCKATTACK;
     }
+    else if(obor_profile_build < 4035 && stricmp(value, "vault") == 0)
+    {
+        ani_id = obor_animation_vault(obor_profile_build);
+    }
     else if(stricmp(value, "walkoff") == 0)
     {
         ani_id = ANI_WALKOFF;
@@ -6760,7 +6796,7 @@ void lcmHandleCommandSmartbomb(ArgList *arglist, s_model *newchar, char *filenam
     newchar->smartbomb->attack_drop = 1; //by default
     newchar->smartbomb->dropv.y = default_model_dropv.y;
 
-    if(newchar->smartbomb->attack_type == ATK_BLAST)
+    if(newchar->smartbomb->attack_type == obor_attack_type_number(ATK_BLAST, obor_profile_build))
     {
         newchar->smartbomb->blast = 1;
         newchar->smartbomb->dropv.x = default_model_dropv.x * 2.083f;
@@ -6770,13 +6806,13 @@ void lcmHandleCommandSmartbomb(ArgList *arglist, s_model *newchar, char *filenam
         newchar->smartbomb->dropv.x = default_model_dropv.x;
     }
 
-    if(newchar->smartbomb->attack_type == ATK_FREEZE)
+    if(newchar->smartbomb->attack_type == obor_attack_type_number(ATK_FREEZE, obor_profile_build))
     {
         newchar->smartbomb->freeze = 1;
         newchar->smartbomb->forcemap = -1;
         newchar->smartbomb->attack_drop = 0;
     }
-    else if(newchar->smartbomb->attack_type == ATK_STEAL)
+    else if(newchar->smartbomb->attack_type == obor_attack_type_number(ATK_STEAL, obor_profile_build))
     {
         newchar->smartbomb->steal = 1;
     }
@@ -7209,7 +7245,7 @@ s_model *init_model(int cacheindex, int unload)
     newchar->jugglepoints.current = newchar->jugglepoints.max = 0;
     newchar->guardpoints.current = newchar->guardpoints.max = 0;
     newchar->mpswitch                   = -1;       // switch between reduce mp or gain mp for mpstabletype 4
-    newchar->weaploss[0]                = WEAPLOSS_TYPE_ANY;
+    newchar->weaploss[0]                = obor_profile_build < 4052 ? -1 : (int)WEAPLOSS_TYPE_ANY;
     newchar->weaploss[1]                = -1;
     newchar->lifespan                   = 0x7fffffff;
     newchar->summonkill                 = 1;
@@ -7253,7 +7289,7 @@ s_model *init_model(int cacheindex, int unload)
     for(i = 0; i < max_attack_types; i++)
     {
         newchar->offense_factors[i]     = 1;
-        newchar->defense[i]				= default_defense;
+        newchar->defense[i]				= obor_profile_default_defense();
     }
 
     //Default sight ranges.
@@ -7884,11 +7920,11 @@ s_model *load_cached_model(char *name, char *owner, char unload)
 #define tempdef(x, y) \
 					x(stricmp(value, #y)==0)\
 					{\
-						newchar->defense[ATK_##y] = defense;\
+						newchar->defense[obor_attack_type_number(ATK_##y, obor_profile_build)] = defense;\
 					}
             {
                 value = GET_ARG(1);
-                defense = default_defense;
+                defense = obor_profile_default_defense();
                 if(newchar->subtype == SUBTYPE_BIKER)
                 {
                     defense.factor = 2.f;
@@ -7920,9 +7956,12 @@ s_model *load_cached_model(char *name, char *owner, char unload)
                 }
                 if(arglist.count >= 8)
                 {
-                    defense.blocktype = GET_FLOAT_ARG(8);
+                    obor_defense_set_blocktype(&defense, GET_FLOAT_ARG(8), obor_profile_build);
                 }
 
+                if(obor_profile_build < 4011 && stricmp(value, "NORMAL1") == 0)
+                    newchar->defense[obor_attack_type_number(ATK_NORMAL, obor_profile_build)] = defense;
+                else
                 tempdef(if, NORMAL)
                     tempdef(else if, NORMAL2)
                         tempdef(else if, NORMAL3)
@@ -7963,7 +8002,7 @@ s_model *load_cached_model(char *name, char *owner, char unload)
                                                                                                         /*
                                                                                                         Skip the pit, lifespan, and time over attack types as these are for engine use. Nothing stops an author from defining defense settings for them individually.
                                                                                                         */
-                                                                                                        if(i != ATK_PIT && i != ATK_TIMEOVER && i != ATK_LIFESPAN)
+                                                                                                        if(i != obor_attack_type_number(ATK_PIT, obor_profile_build) && i != obor_attack_type_number(ATK_TIMEOVER, obor_profile_build) && i != obor_attack_type_number(ATK_LIFESPAN, obor_profile_build))
                                                                                                         {
                                                                                                             newchar->defense[i] = defense;
                                                                                                         }
@@ -7976,11 +8015,14 @@ s_model *load_cached_model(char *name, char *owner, char unload)
 #define tempoff(x, y, z) \
 					x(stricmp(value, #y)==0)\
 					{\
-					newchar->z[ATK_##y] = GET_FLOAT_ARG(2);\
-					/*newchar->z[ATK_##y] /= 100;*/\
+					newchar->z[obor_attack_type_number(ATK_##y, obor_profile_build)] = GET_FLOAT_ARG(2);\
+					/*newchar->z[obor_attack_type_number(ATK_##y, obor_profile_build)] /= 100;*/\
 					}
             {
                 value = GET_ARG(1);
+                if(obor_profile_build < 4011 && stricmp(value, "NORMAL1") == 0)
+                    newchar->offense_factors[obor_attack_type_number(ATK_NORMAL, obor_profile_build)] = GET_FLOAT_ARG(2);
+                else
                 tempoff(if,         NORMAL,     offense_factors)
                     tempoff(else if,    NORMAL2,    offense_factors)
                         tempoff(else if,    NORMAL3,    offense_factors)
@@ -8020,7 +8062,7 @@ s_model *load_cached_model(char *name, char *owner, char unload)
                                                                                                     for(i = 0; i < max_attack_types; i++)
                                                                                                     {
                                                                                                         //offense hardly need those, just in case
-                                                                                                        if(i != ATK_PIT && i != ATK_TIMEOVER && i != ATK_LIFESPAN)
+                                                                                                        if(i != obor_attack_type_number(ATK_PIT, obor_profile_build) && i != obor_attack_type_number(ATK_TIMEOVER, obor_profile_build) && i != obor_attack_type_number(ATK_LIFESPAN, obor_profile_build))
                                                                                                         {
                                                                                                             newchar->offense_factors[i] = tempFloat;
                                                                                                         }
@@ -9178,54 +9220,54 @@ s_model *load_cached_model(char *name, char *owner, char unload)
                 {
                 case CMD_MODEL_ATTACK:
                 case CMD_MODEL_ATTACK1:
-                    attack.attack_type = ATK_NORMAL;
+                    attack.attack_type = obor_attack_type_number(ATK_NORMAL, obor_profile_build);
                     break;
                 case CMD_MODEL_ATTACK2:
-                    attack.attack_type  = ATK_NORMAL2;
+                    attack.attack_type  = obor_attack_type_number(ATK_NORMAL2, obor_profile_build);
                     break;
                 case CMD_MODEL_ATTACK3:
-                    attack.attack_type  = ATK_NORMAL3;
+                    attack.attack_type  = obor_attack_type_number(ATK_NORMAL3, obor_profile_build);
                     break;
                 case CMD_MODEL_ATTACK4:
-                    attack.attack_type  = ATK_NORMAL4;
+                    attack.attack_type  = obor_attack_type_number(ATK_NORMAL4, obor_profile_build);
                     break;
                 case CMD_MODEL_ATTACK5:
-                    attack.attack_type  = ATK_NORMAL5;
+                    attack.attack_type  = obor_attack_type_number(ATK_NORMAL5, obor_profile_build);
                     break;
                 case CMD_MODEL_ATTACK6:
-                    attack.attack_type  = ATK_NORMAL6;
+                    attack.attack_type  = obor_attack_type_number(ATK_NORMAL6, obor_profile_build);
                     break;
                 case CMD_MODEL_ATTACK7:
-                    attack.attack_type  = ATK_NORMAL7;
+                    attack.attack_type  = obor_attack_type_number(ATK_NORMAL7, obor_profile_build);
                     break;
                 case CMD_MODEL_ATTACK8:
-                    attack.attack_type  = ATK_NORMAL8;
+                    attack.attack_type  = obor_attack_type_number(ATK_NORMAL8, obor_profile_build);
                     break;
                 case CMD_MODEL_ATTACK9:
-                    attack.attack_type  = ATK_NORMAL9;
+                    attack.attack_type  = obor_attack_type_number(ATK_NORMAL9, obor_profile_build);
                     break;
                 case CMD_MODEL_ATTACK10:
-                    attack.attack_type  = ATK_NORMAL10;
+                    attack.attack_type  = obor_attack_type_number(ATK_NORMAL10, obor_profile_build);
                     break;
                 case CMD_MODEL_SHOCK:
-                    attack.attack_type  = ATK_SHOCK;
+                    attack.attack_type  = obor_attack_type_number(ATK_SHOCK, obor_profile_build);
                     break;
                 case CMD_MODEL_BURN:
-                    attack.attack_type  = ATK_BURN;
+                    attack.attack_type  = obor_attack_type_number(ATK_BURN, obor_profile_build);
                     break;
                 case CMD_MODEL_STEAL:
                     attack.steal = 1;
-                    attack.attack_type  = ATK_STEAL;
+                    attack.attack_type  = obor_attack_type_number(ATK_STEAL, obor_profile_build);
                     break;
                 case CMD_MODEL_FREEZE:
-                    attack.attack_type  = ATK_FREEZE;
+                    attack.attack_type  = obor_attack_type_number(ATK_FREEZE, obor_profile_build);
                     attack.freeze = 1;
-                    attack.freezetime = GET_FLOAT_ARG(6) * GAME_SPEED;
+                    attack.freezetime = obor_time_load(GET_FLOAT_ARG(6) * GAME_SPEED, obor_profile_build);
                     attack.forcemap = -1;
                     attack.attack_drop = 0;
                     break;
                 case CMD_MODEL_ITEMBOX:
-                    attack.attack_type  = ATK_ITEM;
+                    attack.attack_type  = obor_attack_type_number(ATK_ITEM, obor_profile_build);
                     break;
                 default:
                     tempInt = atoi(command + 6);
@@ -9254,7 +9296,7 @@ s_model *load_cached_model(char *name, char *owner, char unload)
                 attack.no_flash = GET_INT_ARG(7);
                 attack.pause_add = GET_INT_ARG(8);
                 attack.attack_drop = 1;
-                attack.attack_type = ATK_BLAST;
+                attack.attack_type = obor_attack_type_number(ATK_BLAST, obor_profile_build);
                 attack.attack_coords[4] = GET_INT_ARG(9); // depth or z
                 attack.blast = 1;
                 break;
@@ -9281,7 +9323,7 @@ s_model *load_cached_model(char *name, char *owner, char unload)
                 //Like Freeze, but no auto remap.
                 pattack = (!newanim && newchar->smartbomb) ? newchar->smartbomb : &attack;
                 pattack->freeze = 1;
-                pattack->freezetime = GET_FLOAT_ARG(1) * GAME_SPEED;
+                pattack->freezetime = obor_time_load(GET_FLOAT_ARG(1) * GAME_SPEED, obor_profile_build);
                 pattack->attack_drop = 0;
                 break;
             case CMD_MODEL_GRABIN:
@@ -9335,7 +9377,7 @@ s_model *load_cached_model(char *name, char *owner, char unload)
                 // force color map change for specified time
                 pattack = (!newanim && newchar->smartbomb) ? newchar->smartbomb : &attack;
                 pattack->forcemap = GET_INT_ARG(1);
-                pattack->maptime = GET_FLOAT_ARG(2) * GAME_SPEED;
+                pattack->maptime = obor_time_load(GET_FLOAT_ARG(2) * GAME_SPEED, obor_profile_build);
                 break;
             case CMD_MODEL_IDLE:
                 idle = GET_INT_ARG(1);
@@ -10104,7 +10146,7 @@ void load_model_constants()
     ptrdiff_t pos;
     char *command;
     int line = 0;
-    int maxanim = MAX_ANIS; // temporary counter
+    int maxanim = obor_animation_storage_count(obor_profile_build); // temporary counter
     ArgList arglist;
     char argbuf[MAX_ARG_LEN + 1] = "";
     modelstxtCommands cmd;
@@ -10119,7 +10161,7 @@ void load_model_constants()
     max_freespecials = MAX_SPECIALS;
     max_follows      = MAX_FOLLOWS;
     max_attacks      = MAX_ATTACKS;
-    max_animations   = MAX_ANIS;
+    max_animations   = obor_animation_storage_count(obor_profile_build);
 
     // free old values
     if(animspecials)
@@ -12375,7 +12417,7 @@ void load_level(char *filename)
     level->nospecial = 0;    // Default set to specials can be used during bonus levels
     level->nohurt = 0;    // Default set to players can hurt each other during bonus levels
     level->nohit = 0;    // Default able to hit the other player
-    level->spawn[0].y = level->spawn[1].y = level->spawn[2].y = level->spawn[3].y = 300;    // Set the default spawn y to 300
+    obor_level_spawn_defaults(level, obor_profile_build);    // Set the default spawn y to 300
     level->setweap = 0;
     level->maxtossspeed = default_level_maxtossspeed;
     level->maxfallspeed = default_level_maxfallspeed;
@@ -12786,14 +12828,14 @@ void load_level(char *filename)
             default:
                 assert(0);
             }
-            level->spawn[i].x = GET_INT_ARG(1);
-            level->spawn[i].z = GET_INT_ARG(2);
-            level->spawn[i].y = GET_INT_ARG(3);
+            obor_level_spawn_set(level, i, 0, GET_INT_ARG(1), obor_profile_build);
+            obor_level_spawn_set(level, i, 1, GET_INT_ARG(2), obor_profile_build);
+            obor_level_spawn_set(level, i, 2, GET_INT_ARG(3), obor_profile_build);
 
             //if(level->spawn[i].z > 232 || level->spawn[i].z < 0) level->spawn[i].z= 232;
-            if(level->spawn[i].y < 0)
+            if(obor_level_spawn_get(level, i, 2, obor_profile_build) < 0)
             {
-                level->spawn[i].y = 300;
+                obor_level_spawn_set(level, i, 2, 300, obor_profile_build);
             }
             break;
         case CMD_LEVEL_FRONTPANEL:
@@ -14011,7 +14053,7 @@ void predrawstatus()
             font_printf(videomodes.shiftpos[i] + plifeX[i][0], savedata.windowpos + plifeX[i][1], plifeX[i][2], 0, "x");
             font_printf(videomodes.shiftpos[i] + plifeN[i][0], savedata.windowpos + plifeN[i][1], plifeN[i][2], 0, "%i", player[i].lives);
 
-            if(rush[0] && player[i].ent->rush.count.current > 1 && time <= player[i].ent->rush.time)
+            if(rush[0] && obor_rush_value(player[i].ent->rush.count.current, obor_profile_build) > 1 && time <= player[i].ent->rush.time)
             {
                 font_printf(videomodes.shiftpos[i] + prush[i][0], prush[i][1], rush[2], 0, "%s", rush_names[0]);
                 font_printf(videomodes.shiftpos[i] + prush[i][2], prush[i][3], rush[3], 0, "%i", player[i].ent->rush.count.current);
@@ -14635,10 +14677,10 @@ void ent_default_init(entity *e)
         }
         else if(!e->animation)
         {
-            if(time && level->spawn[(int)e->playerindex].y > e->position.y)
+            if(time && obor_level_spawn_get(level, (int)e->playerindex, 2, obor_profile_build) > e->position.y)
             {
                 e->takeaction = common_drop;
-                e->position.y = (float)level->spawn[(int)e->playerindex].y;
+                e->position.y = (float)obor_level_spawn_get(level, (int)e->playerindex, 2, obor_profile_build);
                 if(validanim(e, ANI_JUMP))
                 {
                     ent_set_anim(e, ANI_JUMP, 0);
@@ -14669,11 +14711,11 @@ void ent_default_init(entity *e)
             //e->direction = (e->position.x<0);
             if(e->modeldata.speed)
             {
-                e->velocity.x = (e->direction == DIRECTION_RIGHT) ? (e->modeldata.speed) : (-e->modeldata.speed);
+                e->velocity.x = (obor_direction_right(e->direction, obor_profile_build)) ? (e->modeldata.speed) : (-e->modeldata.speed);
             }
             else
             {
-                e->velocity.x = (e->direction == DIRECTION_RIGHT) ? (1.7 + randf((float)0.6)) : (-(1.7 + randf((float)0.6)));
+                e->velocity.x = (obor_direction_right(e->direction, obor_profile_build)) ? (1.7 + randf((float)0.6)) : (-(1.7 + randf((float)0.6)));
             }
             e->takedamage = biker_takedamage;
             e->speedmul = 2;
@@ -14812,7 +14854,7 @@ void ent_default_init(entity *e)
 
         if(validanim(e, ANI_WALK))
         {
-            if(e->direction == DIRECTION_RIGHT)
+            if(obor_direction_right(e->direction, obor_profile_build))
             {
                 e->velocity.x = e->modeldata.speed;
             }
@@ -14870,7 +14912,7 @@ void ent_spawn_ent(entity *ent)
     // spawn point relative to current entity
     if(spawnframe[4] == 0)
     {
-        s_ent = spawn(ent->position.x + ((ent->direction == DIRECTION_RIGHT) ? spawnframe[1] : -spawnframe[1]), ent->position.z + spawnframe[2], ent->position.y + spawnframe[3], ent->direction, NULL, ent->animation->subentity, NULL);
+        s_ent = spawn(ent->position.x + ((obor_direction_right(ent->direction, obor_profile_build)) ? spawnframe[1] : -spawnframe[1]), ent->position.z + spawnframe[2],  ent->position.y + spawnframe[3], ent->direction, NULL, ent->animation->subentity, NULL);
     }
     //relative to screen position
     else if(spawnframe[4] == 1)
@@ -14914,7 +14956,7 @@ void ent_summon_ent(entity *ent)
     // spawn point relative to current entity
     if(spawnframe[4] == 0)
     {
-        s_ent = spawn(ent->position.x + ((ent->direction == DIRECTION_RIGHT) ? spawnframe[1] : -spawnframe[1]), ent->position.z + spawnframe[2],  ent->position.y + spawnframe[3], ent->direction, NULL, ent->animation->subentity, NULL);
+        s_ent = spawn(ent->position.x + ((obor_direction_right(ent->direction, obor_profile_build)) ? spawnframe[1] : -spawnframe[1]), ent->position.z + spawnframe[2], ent->position.y + spawnframe[3], ent->direction, NULL, ent->animation->subentity, NULL);
     }
     //relative to screen position
     else if(spawnframe[4] == 1)
@@ -15028,7 +15070,7 @@ void update_frame(entity *ent, int f)
         goto uf_interrupted;
     }
 
-    if(level && (anim->move[f]->x || anim->move[f]->z))
+    if(level && obor_frame_has_move(anim, f, obor_profile_build))
     {
         move.x = (float)(anim->move[f]->x ? anim->move[f]->x : 0);
         move.z = (float)(anim->move[f]->z ? anim->move[f]->z : 0);
@@ -15040,11 +15082,11 @@ void update_frame(entity *ent, int f)
         self->movez += move.z;
     }
 
-    if(anim->move[0]->base && anim->move[0]->base >= 0 && self->base <= 0)
+    if(obor_frame_has_base(anim, 0, obor_profile_build) && self->base <= 0)
     {
         ent->base = (float)anim->move[0]->base;
     }
-    else if(!anim->move[0]->base || anim->move[0]->base < 0)
+    else if(!obor_frame_has_base(anim, 0, obor_profile_build))
     {
         move.y = (float)(anim->move[f]->y ? anim->move[f]->y : 0);
         self->base += move.y;
@@ -15144,7 +15186,7 @@ void update_frame(entity *ent, int f)
     {
         // Set custom jumpheight for jumpframes
         /*if(self->animation->jumpframe.v > 0)*/ toss(self, anim->jumpframe.velocity.y);
-        self->velocity.x = self->direction == DIRECTION_RIGHT ? anim->jumpframe.velocity.x : -anim->jumpframe.velocity.x;
+        self->velocity.x = obor_direction_right(self->direction, obor_profile_build) ? anim->jumpframe.velocity.x : -anim->jumpframe.velocity.x;
         self->velocity.z = anim->jumpframe.velocity.z;
 
         if(anim->jumpframe.ent >= 0)
@@ -15166,7 +15208,7 @@ void update_frame(entity *ent, int f)
         // custstar custknife in animation should be checked first
         // then if the entity is jumping, check star first, if failed, try knife instead
         // well, try knife at last, if still failed, try star, or just let if shutdown?
-#define __trystar star_spawn(self->position.x + (self->direction == DIRECTION_RIGHT ? 56 : -56), self->position.z, self->position.y+67, self->direction)
+#define __trystar star_spawn(self->position.x + (obor_direction_right(self->direction, obor_profile_build) ? 56 : -56), self->position.z, self->position.y+67, self->direction)
 #define __tryknife knife_spawn(NULL, -1, self->position.x, self->position.z, self->position.y + anim->projectile.position.y, self->direction, 0, 0)
         if(anim->projectile.knife >= 0 || anim->projectile.flash >= 0)
         {
@@ -16489,13 +16531,13 @@ void do_attack(entity *e)
         // if #0
         if( ent_list[i]->exists &&
                 !ent_list[i]->dead && // dont hit the dead
-                (ent_list[i]->invincible != 1 || attack->attack_type == ATK_ITEM) && // so invincible people can get items
+                (ent_list[i]->invincible != 1 || attack->attack_type == obor_attack_type_number(ATK_ITEM, obor_profile_build)) && // so invincible people can get items
                 !(current_anim->attackone > 0 && e->lasthit && ent_list[i] != e->lasthit) &&
                 (ent_list[i]->modeldata.type & them) &&
                 ent_list[i]->pain_time < time && //(ent_list[i]->pain_time<time || current_anim->fastattack) &&
                 ent_list[i]->takedamage &&
                 ent_list[i]->hit_by_attack_id != current_attack_id &&
-                ((ent_list[i]->takeaction != common_lie && attack->otg < OTG_GROUND_ONLY) || (attack->otg >= OTG_BOTH && ent_list[i]->takeaction == common_lie)) && //over the ground hit
+                ((ent_list[i]->takeaction != common_lie && obor_otg_hits(attack->otg, 0, obor_profile_build)) || (obor_otg_hits(attack->otg, 1, obor_profile_build) && ent_list[i]->takeaction == common_lie)) && //over the ground hit
                 ((ent_list[i]->falling == 0 && attack->jugglecost >= 0) || (ent_list[i]->falling == 1 && attack->jugglecost <= ent_list[i]->modeldata.jugglepoints.current)) && // juggle system
                 (checkhit(e, ent_list[i], 0) || // normal check bbox
                  (attack->counterattack && checkhit(e, ent_list[i], 1)))  )// check counter, e.g. upper
@@ -16515,6 +16557,8 @@ void do_attack(entity *e)
                 default hit handling below. Useful for scripting parry systems, alternate blocking,
                 or other custom collision events.
             */
+            if(obor_profile_build < 4017 && !lasthit.confirm)
+                return;
             if(lasthit.confirm)
             {
                 didhit = 1;
@@ -16541,7 +16585,7 @@ void do_attack(entity *e)
                 //if #05,   blocking code section
                 if(didhit)
                 {
-                    if(attack->attack_type == ATK_ITEM)
+                    if(attack->attack_type == obor_attack_type_number(ATK_ITEM, obor_profile_build))
                     {
                         execute_didhit_script(e, self, force, attack->attack_drop, self->modeldata.subtype, attack->no_block, attack->guardcost, attack->jugglecost, attack->pause_add, 1);
                         didfind_item(e);
@@ -16619,7 +16663,7 @@ void do_attack(entity *e)
                         }
                         //end of if #0531
                     }
-                    else if((self->modeldata.nopassiveblock || self->modeldata.type == TYPE_PLAYER) &&  // can block by itself
+                    else if((self->modeldata.nopassiveblock || (obor_profile_build >= 4086 && self->modeldata.type == TYPE_PLAYER)) &&  // can block by itself
                             self->blocking &&  // of course he must be blocking
                             ((self->modeldata.guardpoints.max == 0) || (self->modeldata.guardpoints.max > 0 && self->modeldata.guardpoints.current > 0)) &&
                             !((self->direction == e->direction && self->modeldata.blockback < 1) || self->frozen) &&   // Can't block if facing the wrong direction (unless blockback flag is enabled) or frozen in the block animation or opponent is a projectile
@@ -16681,7 +16725,8 @@ void do_attack(entity *e)
 
                         //&& (!self->animation->counterrange.damaged || self->health > force))													// Does damage matter?
                     {
-                        if(self->animation->counterrange.damaged == COUNTERACTION_DAMAGE_NORMAL)
+                        if(obor_profile_build < 4065 ? self->animation->counterrange.damaged != 0 :
+                           self->animation->counterrange.damaged == COUNTERACTION_DAMAGE_NORMAL)
                         {
                             self->health -= force;    // Take damage?
                         }
@@ -16796,9 +16841,9 @@ void do_attack(entity *e)
                     //if #055
                     if((e->animation->followup.animation) &&                                        // follow up?
                             (e->animation->counterrange.frame.min == -1) &&                                // This isn't suppossed to be a counter, right?
-                            ((e->animation->followup.condition < FOLLOW_CONDITION_HOSTILE) || (self->modeldata.type & e->modeldata.hostile)) &&    // Does type matter?
-                            ((e->animation->followup.condition < FOLLOW_CONDITION_HOSTILE_NOKILL_NOBLOCK) || ((self->health > 0) && !didblock)) &&                   // check if health or blocking matters
-                            ((e->animation->followup.condition < FOLLOW_CONDITION_HOSTILE_NOKILL_NOBLOCK_NOGRAB) || cangrab(e, self))  ) // check if nograb matters
+                            ((obor_follow_condition_below(e->animation->followup.condition, FOLLOW_CONDITION_HOSTILE, obor_profile_build)) || (self->modeldata.type & e->modeldata.hostile)) &&    // Does type matter?
+                            ((obor_follow_condition_below(e->animation->followup.condition, FOLLOW_CONDITION_HOSTILE_NOKILL_NOBLOCK, obor_profile_build)) || ((self->health > 0) && !didblock)) &&                   // check if health or blocking matters
+                            ((obor_follow_condition_below(e->animation->followup.condition, FOLLOW_CONDITION_HOSTILE_NOKILL_NOBLOCK_NOGRAB, obor_profile_build)) || cangrab(e, self))  ) // check if nograb matters
                     {
                         current_follow_id = animfollows[e->animation->followup.animation - 1];
                         if(validanim(e, current_follow_id))
@@ -16840,7 +16885,8 @@ void do_attack(entity *e)
         }
         else if(e != topowner && current_anim->energycost.cost > 0 && nocost && !healthcheat && !e->tocost) // if it is not top, then must be a shot
         {
-            if(current_anim->energycost.mponly != COST_TYPE_MP_THEN_HP && topowner->mp > 0)
+            if(current_anim->energycost.mponly !=
+                    (obor_profile_build < 4051 ? COST_TYPE_HP_ONLY : COST_TYPE_MP_THEN_HP) && topowner->mp > 0)
             {
                 topowner->mp -= current_anim->energycost.cost;
                 if(topowner->mp < 0)
@@ -16875,35 +16921,12 @@ void do_attack(entity *e)
                     force = force / 4;
                 }
 
-                /*
-                Block type handling. For backward compatibility we will use BLOCK_TYPE_MP_FIRST regardless
-                of defense setting if author has enabled mpblock. Otherwise the defender's blocktype
-                for incoming attack type will be used. Once this is determined, we will apply the
-                appropriate blocktype accordingly.
-                */
-                blocktype = mpblock ? BLOCK_TYPE_MP_FIRST : def->defense[attack->attack_type].blocktype;
-
-                switch (blocktype)
+                if(obor_profile_build < 4043)
                 {
-                    case BLOCK_TYPE_HP:
-                        //Do nothing. This is so modders can overidde energycost mponly 1 with health only.
-                        break;
-
-                    case BLOCK_TYPE_MP_ONLY:
-
+                    float blocktype = def->defense[attack->attack_type].obor_classic_blocktype;
+                    if(mpblock && !blocktype)
+                    {
                         def->mp -= force;
-                        force = 0;
-
-                        if(def->mp < 0)
-                        {
-                            def->mp = 0;
-                        }
-
-                    case BLOCK_TYPE_MP_FIRST:
-
-                        def->mp -= force;
-
-                        /* If there isn't enough MP to cover force, subtract remaining MP from force and set MP to 0 */
                         if(def->mp < 0)
                         {
                             force = -def->mp;
@@ -16913,15 +16936,76 @@ void do_attack(entity *e)
                         {
                             force = 0;
                         }
-
-                    case BLOCK_TYPE_BOTH:
-
+                    }
+                    else if(blocktype == 1)
+                    {
                         def->mp -= force;
-
                         if(def->mp < 0)
                         {
+                            force = -def->mp;
                             def->mp = 0;
                         }
+                        else
+                        {
+                            force = 0;
+                        }
+                    }
+                    else if(blocktype == 2)
+                    {
+                        def->mp -= force;
+                    }
+                }
+                else
+                {
+                    /*
+                    Block type handling. For backward compatibility we will use BLOCK_TYPE_MP_FIRST regardless
+                    of defense setting if author has enabled mpblock. Otherwise the defender's blocktype
+                    for incoming attack type will be used. Once this is determined, we will apply the
+                    appropriate blocktype accordingly.
+                    */
+                    blocktype = mpblock ? BLOCK_TYPE_MP_FIRST : def->defense[attack->attack_type].blocktype;
+    
+                    switch (blocktype)
+                    {
+                        case BLOCK_TYPE_HP:
+                            //Do nothing. This is so modders can overidde energycost mponly 1 with health only.
+                            break;
+    
+                        case BLOCK_TYPE_MP_ONLY:
+    
+                            def->mp -= force;
+                            force = 0;
+    
+                            if(def->mp < 0)
+                            {
+                                def->mp = 0;
+                            }
+    
+                        case BLOCK_TYPE_MP_FIRST:
+    
+                            def->mp -= force;
+    
+                            /* If there isn't enough MP to cover force, subtract remaining MP from force and set MP to 0 */
+                            if(def->mp < 0)
+                            {
+                                force = -def->mp;
+                                def->mp = 0;
+                            }
+                            else
+                            {
+                                force = 0;
+                            }
+    
+                        case BLOCK_TYPE_BOTH:
+    
+                            def->mp -= force;
+    
+                            if(def->mp < 0)
+                            {
+                                def->mp = 0;
+                            }
+                    }
+    
                 }
 
                 if(force < def->health)                    // If an attack won't deal damage, this line won't do anything anyway.
@@ -16945,11 +17029,7 @@ void do_attack(entity *e)
         if(!didblock)
         {
             topowner->rush.time = time + (GAME_SPEED * rush[1]);
-            topowner->rush.count.current++;
-            if(topowner->rush.count.current > topowner->rush.count.max && topowner->rush.count.current > 1)
-            {
-                topowner->rush.count.max = topowner->rush.count.current;
-            }
+            obor_rush_advance(&topowner->rush, obor_profile_build);
         }
 
         if(didblock)
@@ -17127,7 +17207,7 @@ void check_gravity(entity *e)
                         control_rumble(i, 75 * (int)self->velocity.y / 2);
                     }
                 }
-                else if((!self->animation->move[self->animpos]->base || self->animation->move[self->animpos]->base < 0) &&
+                else if(!obor_frame_has_base(self->animation, self->animpos, obor_profile_build) &&
                         (!self->animation->move[self->animpos]->y || self->animation->move[self->animpos]->y <= 0))
                 {
                     self->velocity.x = self->velocity.z = self->velocity.y = 0;
@@ -17167,13 +17247,13 @@ void check_gravity(entity *e)
                     {
                         attack              = emptyattack;
                         attack.attack_force = self->damage_on_landing;
-                        attack.attack_type  = ATK_LAND;
+                        attack.attack_type  = obor_attack_type_number(ATK_LAND, obor_profile_build);
                         self->takedamage(self, &attack);
                     }
                     else
                     {
 
-                        self->health -= (self->damage_on_landing * self->defense[ATK_LAND].factor);
+                        self->health -= (self->damage_on_landing * self->defense[obor_attack_type_number(ATK_LAND, obor_profile_build)].factor);
                         if(self->health <= 0 )
                         {
                             kill(self);
@@ -17232,7 +17312,7 @@ void check_lost()
             attack.dropv.x = default_model_dropv.x;
             attack.dropv.z = default_model_dropv.z;
             attack.attack_force = self->health;
-            attack.attack_type  = ATK_PIT;
+            attack.attack_type  = obor_attack_type_number(ATK_PIT, obor_profile_build);
             self->takedamage(self, &attack);
         }
         return;
@@ -17250,7 +17330,7 @@ void check_lost()
             attack.dropv.x = default_model_dropv.x;
             attack.dropv.z = default_model_dropv.z;
             attack.attack_force = self->health;
-            attack.attack_type  = ATK_LIFESPAN;
+            attack.attack_type  = obor_attack_type_number(ATK_LIFESPAN, obor_profile_build);
             self->takedamage(self, &attack);
         }
         return;
@@ -17349,6 +17429,15 @@ static float check_basemap(int x, int z)
     return base == -1000 ? base : maxbase;
 }
 
+static int obor_classic_vault_animation(entity *ent)
+{
+    int id;
+    if(obor_profile_build >= 4034) return 0;
+    id = obor_animation_vault(obor_profile_build);
+    return ent->modeldata.animation && id >= 0 && id < ent->modeldata.animation_capacity &&
+           ent->animation == ent->modeldata.animation[id];
+}
+
 void adjust_base(entity *e, entity **pla)
 {
     int wall, hole = -1;
@@ -17402,7 +17491,7 @@ void adjust_base(entity *e, entity **pla)
     // adjust base
     if(self->modeldata.no_adjust_base <= 0)
     {
-        seta = (float)((self->animation->move[self->animpos]->base) ? (self->animation->move[self->animpos]->base) : (-1));
+        seta = (float)obor_frame_base_value(self->animation, self->animpos, obor_profile_build);
 
         // Checks to see if entity is over a wall and or obstacle, and adjusts the base accordingly
         //wall = checkwall_below(self->position.x, self->position.z);
@@ -17455,7 +17544,8 @@ void adjust_base(entity *e, entity **pla)
             {
                 self->base = (seta + self->altbase >= 0 ) * (seta + self->altbase);
             }
-            else if(!self->animation->move[self->animpos]->y || self->animation->move[self->animpos]->y == 0)
+            else if(!obor_classic_vault_animation(self) &&
+                    (!self->animation->move[self->animpos]->y || self->animation->move[self->animpos]->y == 0))
             {
                 // No obstacle/wall or seta, so just set to 0
                 self->base = 0;
@@ -17510,7 +17600,7 @@ void update_animation()
                 scrollv = -scrollv;
             }
             self->position.y -= scrolldy * scrollv;
-            self->base = -99999; // temporary fix otherwise it won't go underground
+            self->base = obor_profile_build < 3979 ? self->position.y : -99999; // retain the native scrolling base
         }
     }
 
@@ -17777,6 +17867,23 @@ void update_health()
     }
 }
 
+static int obor_profile_dot_hits_hp(int mode)
+{
+    if(obor_profile_build < 4033)
+        return mode == 1 || mode == 3 || mode == 4 || mode == 5;
+    if(obor_profile_build < 4035)
+        return mode == 0 || mode == 2 || mode == 3 || mode == 4;
+    return mode == DOT_MODE_HP || mode == DOT_MODE_HP_MP ||
+           mode == DOT_MODE_NON_LETHAL_HP || mode == DOT_MODE_NON_LETHAL_HP_MP;
+}
+
+static int obor_profile_dot_hits_mp(int mode)
+{
+    if(obor_profile_build >= 4033 && obor_profile_build < 4035)
+        return mode == 1 || mode == 2 || mode == 4;
+    return mode == DOT_MODE_MP || mode == DOT_MODE_HP_MP || mode == DOT_MODE_NON_LETHAL_HP_MP;
+}
+
 void common_dot()
 {
     //common_dot
@@ -17821,10 +17928,7 @@ void common_dot()
                 iDot    =   self->dot[iIndex];                                                  //Get dot mode.
                 iForce  =   self->dot_force[iIndex];                                            //Get dot force.
 
-                if(iDot == DOT_MODE_HP
-                    || iDot == DOT_MODE_HP_MP
-                    || iDot == DOT_MODE_NON_LETHAL_HP
-                    || iDot == DOT_MODE_NON_LETHAL_HP_MP)                            //HP?
+                if(obor_profile_dot_hits_hp(iDot))                            //HP?
                 {
                     eOpp        = self->dot_owner[iIndex];                                      //Get dot effect owner.
                     iType       = self->dot_atk[iIndex];                                        //Get attack type.
@@ -17874,9 +17978,7 @@ void common_dot()
                 }
 
                 /* Drain MP ? */
-                if(iDot == DOT_MODE_MP
-                   || iDot == DOT_MODE_HP_MP
-                   || iDot == DOT_MODE_NON_LETHAL_HP_MP)
+                if(obor_profile_dot_hits_mp(iDot))
                 {
                     self->mp -= iForce;                                                         //Subtract force from MP.
                     if(self->mp < 0)
@@ -17916,7 +18018,7 @@ void adjust_bind(entity *e)
     switch(e->binding.direction)
     {
     case DIRECTION_ADJUST_NONE:
-        if(e->binding.ent->direction == DIRECTION_RIGHT)
+        if(obor_direction_right(e->binding.ent->direction, obor_profile_build))
         {
             e->position.x = e->binding.ent->position.x + e->binding.offset.x;
         }
@@ -17927,7 +18029,7 @@ void adjust_bind(entity *e)
         break;
     case DIRECTION_ADJUST_SAME:
         e->direction = e->binding.ent->direction;
-        if(e->binding.ent->direction == DIRECTION_RIGHT)
+        if(obor_direction_right(e->binding.ent->direction, obor_profile_build))
         {
             e->position.x = e->binding.ent->position.x + e->binding.offset.x;
         }
@@ -17938,7 +18040,7 @@ void adjust_bind(entity *e)
         break;
     case DIRECTION_ADJUST_OPPOSITE:
         e->direction = !e->binding.ent->direction;
-        if(e->binding.ent->direction == DIRECTION_RIGHT)
+        if(obor_direction_right(e->binding.ent->direction, obor_profile_build))
         {
             e->position.x = e->binding.ent->position.x + e->binding.offset.x;
         }
@@ -18429,7 +18531,7 @@ void display_ents()
                             sz = PANEL_Z - HUD_Z;
                             if(e->animation->shadow_coords)
                             {
-                                if(e->direction == DIRECTION_RIGHT)
+                                if(obor_direction_right(e->direction, obor_profile_build))
                                 {
                                     qx += e->animation->shadow_coords[e->animpos][0];
                                 }
@@ -18506,7 +18608,7 @@ void display_ents()
                         }
                         if(e->animation->shadow_coords)
                         {
-                            if(e->direction == DIRECTION_RIGHT)
+                            if(obor_direction_right(e->direction, obor_profile_build))
                             {
                                 qx += e->animation->shadow_coords[e->animpos][0];
                             }
@@ -18765,6 +18867,10 @@ int set_death(entity *iDie, int type, int reset)
     {
         unfrozen(iDie);
     }
+    else if(obor_profile_build < 3971)
+    {
+        iDie->freezetime = 0;
+    }
     return 1;
 }
 
@@ -18796,6 +18902,10 @@ int set_fall(entity *iFall, int type, int reset, entity *other, int force, int d
     if(iFall->frozen)
     {
         unfrozen(iFall);
+    }
+    else if(obor_profile_build < 3971)
+    {
+        iFall->freezetime = 0;
     }
     execute_onfall_script(iFall, other, force, drop, type, noblock, guardcost, jugglecost, pauseadd);
 
@@ -19110,7 +19220,8 @@ void set_weapon(entity *ent, int wpnum, int anim_flag) // anim_flag added for sc
 
     if(ent->modeldata.type & TYPE_PLAYER) // save current weapon for player's weaploss 3
     {
-        if(ent->modeldata.weaploss[0] == WEAPLOSS_TYPE_CHANGE)
+        if(obor_profile_build < 4052 ? ent->modeldata.weaploss[0] >= 3 :
+                ent->modeldata.weaploss[0] == WEAPLOSS_TYPE_CHANGE)
         {
             player[(int)ent->playerindex].weapnum = wpnum;
         }
@@ -19220,7 +19331,8 @@ entity *normal_find_target(int anim, int iDetect)
 
             if(index < 0 || (index >= 0 && (!ent_list[index]->animation->vulnerable[ent_list[index]->animpos] || ent_list[index]->invincible == 1)) ||
                     (
-                        (self->position.x < ent_list[i]->position.x) == (self->direction == DIRECTION_RIGHT) && // don't turn to the one on the back
+                        (self->position.x < ent_list[i]->position.x) == (obor_profile_build < 4032 ?
+                            obor_direction_signed(self->direction) : self->direction == DIRECTION_RIGHT) && // don't turn to the one on the back
                         //ent_list[i]->x >= advancex-10 && ent_list[i]->x<advancex+videomodes.hRes+10 && // don't turn to an offscreen target
                         //ent_list[i]->z >= advancey-10 && ent_list[i]->z<advancey+videomodes.vRes+10 &&
                         diffd < diffo
@@ -19828,6 +19940,21 @@ void dograbattack(int which)
     }
 }
 
+void dovault(void)
+{
+    int heightvar;
+    entity *other;
+    if(obor_profile_build >= 4034) return;
+    other = self->link;
+    self->takeaction = common_vault;
+    other->velocity.x = other->velocity.z = self->velocity.x = self->velocity.z = 0;
+    self->attacking = 1;
+    self->position.x = other->position.x;
+    heightvar = other->animation->size.y ? other->animation->size.y : other->modeldata.size.y;
+    self->base = other->base + heightvar;
+    ent_set_anim(self, obor_animation_vault(obor_profile_build), 0);
+}
+
 void common_grab_check()
 {
     int rnum, which;
@@ -19847,7 +19974,8 @@ void common_grab_check()
         return;
     }
 
-    if(!nolost && self->modeldata.weaploss[0] == WEAPLOSS_TYPE_ANY)
+    if(!nolost && (obor_profile_build < 4052 ? self->modeldata.weaploss[0] <= 0 :
+                    self->modeldata.weaploss[0] == WEAPLOSS_TYPE_ANY))
     {
         dropweapon(1);
     }
@@ -19895,6 +20023,13 @@ void common_grab_check()
     if(rnum > 12 && validanim(self, grab_attacks[which][0]))
     {
         dograbattack(which);
+        return;
+    }
+    // Historical vault dispatch follows throw and grab attack precedence.
+    if(obor_profile_build < 4034 && rnum < 8 &&
+       validanim(self, obor_animation_vault(obor_profile_build)))
+    {
+        dovault();
         return;
     }
 }
@@ -20225,7 +20360,7 @@ void checkdamageeffects(s_attack *attack)
     {
         self->dot_owner[_dot_index] = opp ? opp : self;			                    //dot owner.
         self->dot[_dot_index]       = _dot;                                         //Mode: 1. HP (non lethal), 2. MP, 3. HP (non lethal) & MP, 4. HP, 5. HP & MP.
-        self->dot_time[_dot_index]  = time + (_dot_time * GAME_SPEED / 100);        //Gametime dot will expire.
+        self->dot_time[_dot_index]  = time + obor_dot_ticks(_dot_time, obor_profile_build);        //Gametime dot will expire.
         self->dot_force[_dot_index] = _dot_force;                                   //How much to dot each tick.
         self->dot_rate[_dot_index]  = _dot_rate;                                    //Delay between dot ticks.
         self->dot_atk[_dot_index]   = attack->attack_type;                          //dot attack type.
@@ -20449,12 +20584,13 @@ int common_takedamage(entity *other, s_attack *attack)
     }
     else
     {
-        self->damagetype = ATK_NORMAL;
+        self->damagetype = obor_attack_type_number(ATK_NORMAL, obor_profile_build);
     }
     // pre-check drop
     checkdamagedrop(attack);
     // Drop Weapon due to being hit.
-    if(self->modeldata.weaploss[0] == WEAPLOSS_TYPE_ANY)
+    if(obor_profile_build < 4052 ? self->modeldata.weaploss[0] <= 0 :
+            self->modeldata.weaploss[0] == WEAPLOSS_TYPE_ANY)
     {
         dropweapon(1);
     }
@@ -20519,11 +20655,13 @@ int common_takedamage(entity *other, s_attack *attack)
     {
         self->takeaction = common_fall;
         // Drop Weapon due to death.
-        if(self->modeldata.weaploss[0] == WEAPLOSS_TYPE_DEATH && self->health <= 0)
+        if((obor_profile_build < 4052 ? self->modeldata.weaploss[0] <= 2 :
+                self->modeldata.weaploss[0] == WEAPLOSS_TYPE_DEATH) && self->health <= 0)
         {
             dropweapon(1);
         }
-        else if(self->modeldata.weaploss[0] == WEAPLOSS_TYPE_KNOCKDOWN)
+        else if(obor_profile_build < 4052 ? self->modeldata.weaploss[0] <= 1 :
+                self->modeldata.weaploss[0] == WEAPLOSS_TYPE_KNOCKDOWN)
         {
             dropweapon(1);
         }
@@ -20537,7 +20675,7 @@ int common_takedamage(entity *other, s_attack *attack)
         {
             self->velocity.x = attack->dropv.x;
             self->velocity.z = attack->dropv.z;
-            if(self->direction == DIRECTION_RIGHT)
+            if(obor_direction_right(self->direction, obor_profile_build))
             {
                 self->velocity.x = -self->velocity.x;
             }
@@ -20885,7 +21023,7 @@ int common_try_jumpattack(entity *target)
                 }
                 //ent_set_anim(self, ANI_JUMPATTACK, 0);
                 ani = ANI_JUMPATTACK;
-                if(self->direction == DIRECTION_RIGHT)
+                if(obor_direction_right(self->direction, obor_profile_build))
                 {
                     self->velocity.x = (float)1.3;
                 }
@@ -21028,7 +21166,7 @@ void dothrow()
 
     other->direction = self->direction;
     other->projectile = 2;
-    other->velocity.x = (other->direction == DIRECTION_RIGHT) ? (-other->modeldata.throwdist) : (other->modeldata.throwdist);
+    other->velocity.x = (obor_direction_right(other->direction, obor_profile_build)) ? (-other->modeldata.throwdist) : (other->modeldata.throwdist);
 
     if(autoland == 1 && validanim(other, ANI_LAND))
     {
@@ -21043,7 +21181,7 @@ void dothrow()
 
     other->takeaction = common_fall;
     self->takeaction = common_throw;
-    set_fall(other, ATK_NORMAL, 0, self, 0, 0, 0, 0, 0, 0);
+    set_fall(other, obor_attack_type_number(ATK_NORMAL, obor_profile_build), 0, self, 0, 0, 0, 0, 0, 0);
     ent_set_anim(self, ANI_THROW, 0);
 }
 
@@ -21346,7 +21484,7 @@ int common_trymove(float xdir, float zdir)
     //-------------hole checking ---------------------
     // Don't walk into a hole or walk off platforms into holes
     if( !(self->modeldata.type & TYPE_PLAYER) && self->idling &&
-            (!self->animation->move[self->animpos]->base || self->animation->move[self->animpos]->base < 0) &&
+            !obor_frame_has_base(self->animation, self->animpos, obor_profile_build) &&
             self->modeldata.subject_to_hole > 0 && !inair(self) &&
             !(self->modeldata.aimove & AIMOVE2_IGNOREHOLES))
     {
@@ -21517,7 +21655,7 @@ void common_runoff()
     {
         self->direction = (self->position.x < target->position.x);
     }
-    if(self->direction == DIRECTION_RIGHT)
+    if(obor_direction_right(self->direction, obor_profile_build))
     {
         self->velocity.x = -self->modeldata.speed / 2;
     }
@@ -21707,7 +21845,7 @@ int common_try_jump()
         wall = -1;
         rmin = (float)self->modeldata.animation[ANI_JUMP]->range.min.x;
         rmax = (float)self->modeldata.animation[ANI_JUMP]->range.max.x;
-        if(self->direction == DIRECTION_RIGHT)
+        if(obor_direction_right(self->direction, obor_profile_build))
         {
             xdir = self->position.x + rmin;
         }
@@ -21731,10 +21869,10 @@ int common_try_jump()
         {
             j = 1;
         }
-        else if(checkhole(self->position.x + (self->direction == DIRECTION_RIGHT ? 2 : -2), zdir) &&
-                checkwall(self->position.x + (self->direction == DIRECTION_RIGHT ? 2 : -2), zdir) < 0 &&
-                check_platform (self->position.x + (self->direction == DIRECTION_RIGHT ? 2 : -2), zdir, self) == NULL &&
-                !checkhole(self->position.x + (self->direction == DIRECTION_RIGHT ? rmax : -rmax), zdir))
+        else if(checkhole(self->position.x + (obor_direction_right(self->direction, obor_profile_build) ? 2 : -2), zdir) &&
+                checkwall(self->position.x + (obor_direction_right(self->direction, obor_profile_build) ? 2 : -2), zdir) < 0 &&
+                check_platform (self->position.x + (obor_direction_right(self->direction, obor_profile_build) ? 2 : -2), zdir, self) == NULL &&
+                !checkhole(self->position.x + (obor_direction_right(self->direction, obor_profile_build) ? rmax : -rmax), zdir))
         {
             j = 1;
         }
@@ -21753,7 +21891,7 @@ int common_try_jump()
         wall = -1;
         rmin = (float)self->modeldata.animation[ANI_RUNJUMP]->range.min.x;
         rmax = (float)self->modeldata.animation[ANI_RUNJUMP]->range.max.x;
-        if(self->direction == DIRECTION_RIGHT)
+        if(obor_direction_right(self->direction, obor_profile_build))
         {
             xdir = self->position.x + rmin;
         }
@@ -21778,10 +21916,10 @@ int common_try_jump()
             j = 2;																				//Set to perform runjump.
         }
         //Check for pit in range of RUNJUMP.
-        else if(checkhole(self->position.x + (self->direction == DIRECTION_RIGHT ? 2 : -2), zdir) &&
-                checkwall(self->position.x + (self->direction == DIRECTION_RIGHT ? 2 : -2), zdir) < 0 &&
-                check_platform (self->position.x + (self->direction == DIRECTION_RIGHT ? 2 : -2), zdir, self) == NULL &&
-                !checkhole(self->position.x + (self->direction == DIRECTION_RIGHT ? rmax : -rmax), zdir))
+        else if(checkhole(self->position.x + (obor_direction_right(self->direction, obor_profile_build) ? 2 : -2), zdir) &&
+                checkwall(self->position.x + (obor_direction_right(self->direction, obor_profile_build) ? 2 : -2), zdir) < 0 &&
+                check_platform (self->position.x + (obor_direction_right(self->direction, obor_profile_build) ? 2 : -2), zdir, self) == NULL &&
+                !checkhole(self->position.x + (obor_direction_right(self->direction, obor_profile_build) ? rmax : -rmax), zdir))
         {
             j = 2;																				//Set to perform runjump.
         }
@@ -21873,7 +22011,7 @@ void adjust_walk_animation(entity *other)
         common_down_anim(self); //ent_set_anim(self, ANI_DOWN, 0);
         dir = 3;
     }
-    else if((self->direction == DIRECTION_RIGHT ? self->velocity.x < 0 : self->velocity.x > 0) && validanim(self, ANI_BACKWALK))
+    else if((obor_direction_right(self->direction, obor_profile_build) ? self->velocity.x < 0 : self->velocity.x > 0) && validanim(self, ANI_BACKWALK))
     {
         common_backwalk_anim(self);    //ent_set_anim(self, ANI_BACKWALK, 0);
     }
@@ -21883,7 +22021,7 @@ void adjust_walk_animation(entity *other)
         dir = 1;
     }
 
-    if(((self->direction == DIRECTION_RIGHT ? self->velocity.x < 0 : self->velocity.x > 0) && dir == 1) ||
+    if(((obor_direction_right(self->direction, obor_profile_build) ? self->velocity.x < 0 : self->velocity.x > 0) && dir == 1) ||
             (dir == 2 && self->velocity.z > 0) || (dir == 3 && self->velocity.z < 0) )
     {
         self->animating = -1;
@@ -22477,7 +22615,7 @@ int common_try_follow(entity *target, int dox, int doz)
         distance = 100.0;
     }
 
-    facing = (self->direction == DIRECTION_RIGHT ? self->position.x < target->position.x : self->position.x > target->position.x);
+    facing = (obor_direction_right(self->direction, obor_profile_build) ? self->position.x < target->position.x : self->position.x > target->position.x);
 
     dx = diff(self->position.x, target->position.x);
     dz = diff(self->position.z, target->position.z);
@@ -23044,7 +23182,7 @@ void common_pickupitem(entity *other)
 int biker_move()
 {
 
-    if((self->direction == DIRECTION_RIGHT) ? (self->position.x > advancex + (videomodes.hRes + 200)) : (self->position.x < advancex - 200))
+    if((obor_direction_right(self->direction, obor_profile_build)) ? (self->position.x > advancex + (videomodes.hRes + 200)) : (self->position.x < advancex - 200))
     {
         self->direction = !self->direction;
         self->attack_id = 0;
@@ -23055,11 +23193,11 @@ int biker_move()
         }
         if(self->modeldata.speed)
         {
-            self->velocity.x = (self->direction == DIRECTION_RIGHT) ? (self->modeldata.speed) : (-self->modeldata.speed);
+            self->velocity.x = (obor_direction_right(self->direction, obor_profile_build)) ? (self->modeldata.speed) : (-self->modeldata.speed);
         }
         else
         {
-            self->velocity.x = (self->direction == DIRECTION_RIGHT) ? ((float)1.7 + randf((float)0.6)) : (-((float)1.7 + randf((float)0.6)));
+            self->velocity.x = (obor_direction_right(self->direction, obor_profile_build)) ? ((float)1.7 + randf((float)0.6)) : (-((float)1.7 + randf((float)0.6)));
         }
     }
 
@@ -23100,7 +23238,7 @@ int arrow_move()
                 self->velocity.x = maxspeed * dx / (dx + dz);
                 self->velocity.z = maxspeed * dz / (dx + dz);
             }
-            if(self->direction == DIRECTION_LEFT)
+            if(obor_profile_build < 4032 ? self->direction != DIRECTION_RIGHT : self->direction == DIRECTION_LEFT)
             {
                 self->velocity.x = -self->velocity.x;
             }
@@ -23179,7 +23317,7 @@ int arrow_move()
                 toss(self, 2.5 + randf(1));
                 self->modeldata.no_adjust_base = 0;
                 self->modeldata.subject_to_wall = self->modeldata.subject_to_platform = self->modeldata.subject_to_hole = self->modeldata.subject_to_gravity = 1;
-                set_fall(self, ATK_NORMAL, 0, self, 100000, 0, 0, 0, 0, 0);
+                set_fall(self, obor_attack_type_number(ATK_NORMAL, obor_profile_build), 0, self, 100000, 0, 0, 0, 0, 0);
             }
         }
     }
@@ -23255,10 +23393,10 @@ int star_move()
             self->attacking = 0;
             self->health = 0;
             self->projectile = 0;
-            self->velocity.x = (self->direction == DIRECTION_RIGHT) ? (-1.2) : 1.2;
+            self->velocity.x = (obor_direction_right(self->direction, obor_profile_build)) ? (-1.2) : 1.2;
             self->damage_on_landing = 0;
             toss(self, 2.5 + randf(1));
-            set_fall(self, ATK_NORMAL, 0, self, 100000, 0, 0, 0, 0, 0);
+            set_fall(self, obor_attack_type_number(ATK_NORMAL, obor_profile_build), 0, self, 100000, 0, 0, 0, 0, 0);
         }
     }
 
@@ -23995,7 +24133,8 @@ void player_die()
                 timeleft = COUNTER_SPEED / 2;
             }
         }
-        if(self->modeldata.weaploss[0] == WEAPLOSS_TYPE_CHANGE)
+        if(obor_profile_build < 4052 ? self->modeldata.weaploss[0] <= 3 :
+                self->modeldata.weaploss[0] == WEAPLOSS_TYPE_CHANGE)
         {
             player[playerindex].weapnum = level->setweap;
         }
@@ -24197,7 +24336,7 @@ void runanimal()
         return;
     }
 
-    if(self->direction == DIRECTION_RIGHT)
+    if(obor_direction_right(self->direction, obor_profile_build))
     {
         self->position.x += self->modeldata.speed;
     }
@@ -24249,6 +24388,31 @@ void common_grabattack()
         self->takeaction = NULL;
         memset(self->combostep, 0, sizeof(*self->combostep) * 5);
         set_idle(self);
+    }
+}
+
+void common_vault(void)
+{
+    if(obor_profile_build >= 4034) return;
+    if(!self->link)
+    {
+        self->takeaction = NULL;
+        set_idle(self);
+        return;
+    }
+    if(!self->animating)
+    {
+        self->takeaction = common_grab;
+        self->link->takeaction = common_grabbed;
+        self->attacking = 0;
+        self->direction = !self->direction;
+        self->position.y = self->base = self->link->base;
+        self->position.x = self->link->position.x +
+                           (self->direction ? -self->modeldata.grabdistance : self->modeldata.grabdistance);
+        ent_set_anim(self, ANI_GRAB, 0);
+        set_pain(self->link, -1, 0);
+        update_frame(self, self->animation->numframes - 1);
+        update_frame(self->link, self->link->animation->numframes - 1);
     }
 }
 
@@ -24540,7 +24704,8 @@ void player_grab_check()
         return;
     }
 
-    if(!nolost && self->modeldata.weaploss[0] == WEAPLOSS_TYPE_ANY)
+    if(!nolost && (obor_profile_build < 4052 ? self->modeldata.weaploss[0] <= 0 :
+                    self->modeldata.weaploss[0] == WEAPLOSS_TYPE_ANY))
     {
         dropweapon(1);
     }
@@ -24557,7 +24722,7 @@ void player_grab_check()
         // done turning? switch directions and return to grab animation
         else
         {
-            if(self->direction == DIRECTION_RIGHT)
+            if(obor_direction_right(self->direction, obor_profile_build))
             {
                 self->direction = DIRECTION_LEFT;
                 other->direction = DIRECTION_RIGHT;
@@ -24567,7 +24732,7 @@ void player_grab_check()
                 self->direction = DIRECTION_RIGHT;
                 other->direction = DIRECTION_LEFT;
             }
-            other->position.x = self->position.x + (((self->direction * 2) - 1) * self->modeldata.grabdistance);
+            other->position.x = self->position.x + obor_direction_grab_offset(self->direction, self->modeldata.grabdistance, obor_profile_build);
             ent_set_anim(self, ANI_GRAB, 0);
             set_pain(other, -1, 0);
             update_frame(self, self->animation->numframes - 1);
@@ -24577,7 +24742,7 @@ void player_grab_check()
 
     self->attacking = 0; //for checking
     self->grabwalking = 0;
-    if(self->direction == DIRECTION_RIGHT ?
+    if(obor_direction_right(self->direction, obor_profile_build) ?
             (player[self->playerindex].keys & FLAG_MOVELEFT) :
             (player[self->playerindex].keys & FLAG_MOVERIGHT))
     {
@@ -24608,7 +24773,7 @@ void player_grab_check()
             // otherwise, just turn around
             else
             {
-                if(self->direction == DIRECTION_RIGHT)
+                if(obor_direction_right(self->direction, obor_profile_build))
                 {
                     self->direction = DIRECTION_LEFT;
                     other->direction = DIRECTION_RIGHT;
@@ -24622,7 +24787,7 @@ void player_grab_check()
                 set_pain(other, -1, 0);
                 update_frame(self, self->animation->numframes - 1);
                 update_frame(other, other->animation->numframes - 1);
-                other->position.x = self->position.x + (((self->direction * 2) - 1) * self->modeldata.grabdistance);
+                other->position.x = self->position.x + obor_direction_grab_offset(self->direction, self->modeldata.grabdistance, obor_profile_build);
             }
         }
         else if(!validanim(self, ANI_GRABWALK) && time > self->releasetime)
@@ -24694,6 +24859,13 @@ void player_grab_check()
     {
         player[self->playerindex].playkeys &= ~FLAG_ATTACK;
         dograbattack(0);
+    }
+    // Historical vault dispatch precedes the grab attack finisher.
+    else if(obor_profile_build < 4034 && (player[self->playerindex].playkeys & FLAG_JUMP) &&
+            validanim(self, obor_animation_vault(obor_profile_build)))
+    {
+        player[self->playerindex].playkeys &= ~FLAG_JUMP;
+        dovault();
     }
     // grab attack finisher
     else if(player[self->playerindex].playkeys & (FLAG_JUMP | FLAG_ATTACK))
@@ -24787,7 +24959,7 @@ void player_grab_check()
         // setting the animations based on the velocity set above
         if(self->velocity.x || self->velocity.z)
         {
-            if(((self->velocity.x > 0 && self->direction == DIRECTION_LEFT) || (self->velocity.x < 0 && self->direction == DIRECTION_RIGHT)) && validanim(self, ANI_GRABBACKWALK))
+            if(((self->velocity.x > 0 && self->direction == DIRECTION_LEFT) || (self->velocity.x < 0 && obor_direction_right(self->direction, obor_profile_build))) && validanim(self, ANI_GRABBACKWALK))
             {
                 ent_set_anim(self, ANI_GRABBACKWALK, 0);
             }
@@ -25340,7 +25512,7 @@ void player_think()
 
     if((pl->playkeys & (FLAG_MOVELEFT | FLAG_MOVERIGHT)))
     {
-        t = (notinair && ((self->direction == DIRECTION_RIGHT && match_combo(rr, pl, 2)) || (self->direction == DIRECTION_LEFT && match_combo(ll, pl, 2))));
+        t = (notinair && ((obor_direction_right(self->direction, obor_profile_build) && match_combo(rr, pl, 2)) || (self->direction == DIRECTION_LEFT && match_combo(ll, pl, 2))));
 
         if(t && validanim(self, ANI_RUN))
         {
@@ -25492,7 +25664,7 @@ void player_think()
                 {
                     self->direction = DIRECTION_RIGHT;
                 }
-                else if(self->direction == DIRECTION_RIGHT && (pl->combokey[t2]&FLAG_MOVERIGHT))
+                else if(obor_direction_right(self->direction, obor_profile_build) && (pl->combokey[t2]&FLAG_MOVERIGHT))
                 {
                     self->direction = DIRECTION_LEFT;
                 }
@@ -25742,7 +25914,7 @@ void player_think()
 
     if(pl->keys & FLAG_MOVELEFT)
     {
-        if(self->direction == DIRECTION_RIGHT)
+        if(obor_direction_right(self->direction, obor_profile_build))
         {
             //self->running = 0;    // Quits running if player changes direction
             if(self->modeldata.turndelay && !self->turntime)
@@ -25879,7 +26051,8 @@ void player_think()
             {
                 bkwalk = !self->direction;
             }
-            else if(self->modeldata.facing == FACING_ADJUST_LEFT || level->facing == FACING_ADJUST_RIGHT)
+            else if(self->modeldata.facing == FACING_ADJUST_LEFT ||
+                    level->facing == (obor_profile_build < 4050 ? FACING_ADJUST_LEFT : FACING_ADJUST_RIGHT))
             {
                 bkwalk = self->direction;
             }
@@ -25887,7 +26060,7 @@ void player_think()
             {
                 bkwalk = 1;
             }
-            else if((self->modeldata.facing == FACING_ADJUST_LEVEL || level->facing == FACING_ADJUST_LEVEL) && (level->scrolldir & SCROLL_RIGHT) && self->direction == DIRECTION_RIGHT)
+            else if((self->modeldata.facing == FACING_ADJUST_LEVEL || level->facing == FACING_ADJUST_LEVEL) && (level->scrolldir & SCROLL_RIGHT) && obor_direction_right(self->direction, obor_profile_build))
             {
                 bkwalk = 1;
             }
@@ -26073,13 +26246,13 @@ void drop_all_enemies()
             ent_list[i]->damage_on_landing = 0;
             self = ent_list[i];
             ent_unlink(self);
-            ent_list[i]->velocity.x = (self->direction == DIRECTION_RIGHT) ? (-1.2) : 1.2;
+            ent_list[i]->velocity.x = (obor_direction_right(self->direction, obor_profile_build)) ? (-1.2) : 1.2;
             dropweapon(1);
             toss(ent_list[i], 2.5 + randf(1));
             ent_list[i]->knockdowncount = ent_list[i]->modeldata.knockdowncount;
 
             ent_list[i]->knockdowntime = 0;
-            set_fall(ent_list[i], ATK_NORMAL, 1, self, 0, 0, 0, 0, 0, 0);
+            set_fall(ent_list[i], obor_attack_type_number(ATK_NORMAL, obor_profile_build), 1, self, 0, 0, 0, 0, 0, 0);
         }
     }
     self = weapself;
@@ -26607,7 +26780,7 @@ entity *homing_find_target(int type)
 void bike_crash()
 {
     int i;
-    if(self->direction == DIRECTION_RIGHT)
+    if(obor_direction_right(self->direction, obor_profile_build))
     {
         self->velocity.x = 2;
     }
@@ -26941,9 +27114,9 @@ void spawnplayer(int index)
 
     if(level->scrolldir & SCROLL_LEFT)
     {
-        if(level->spawn[index].x)
+        if(obor_level_spawn_get(level, index, 0, obor_profile_build))
         {
-            p.position.x = (float)(videomodes.hRes - level->spawn[index].x);
+            p.position.x = obor_level_spawn_left(level, index, videomodes.hRes, obor_profile_build);
         }
         else
         {
@@ -26952,9 +27125,9 @@ void spawnplayer(int index)
     }
     else
     {
-        if(level->spawn[index].x)
+        if(obor_level_spawn_get(level, index, 0, obor_profile_build))
         {
-            p.position.x = (float)(level->spawn[index].x);
+            p.position.x = (float)(obor_level_spawn_get(level, index, 0, obor_profile_build));
         }
         else
         {
@@ -26962,15 +27135,15 @@ void spawnplayer(int index)
         }
         p.flip = 1;
     }
-    if(level->spawn[index].z)
+    if(obor_level_spawn_get(level, index, 1, obor_profile_build))
     {
         if(level->scrolldir & (SCROLL_INWARD | SCROLL_OUTWARD))
         {
-            p.position.z = (float)(level->spawn[index].z);
+            p.position.z = (float)(obor_level_spawn_get(level, index, 1, obor_profile_build));
         }
         else
         {
-            p.position.z = (float)(PLAYER_MIN_Z + level->spawn[index].z);
+            p.position.z = obor_level_spawn_z_offset(level, index, PLAYER_MIN_Z, obor_profile_build);
         }
     }
     else if(PLAYER_MAX_Z - PLAYER_MIN_Z > 5)
@@ -27111,7 +27284,7 @@ void time_over()
     s_attack attack;
 
     attack = emptyattack;
-    attack.attack_type = ATK_TIMEOVER;
+    attack.attack_type = obor_attack_type_number(ATK_TIMEOVER, obor_profile_build);
     attack.dropv.y = default_model_dropv.y;
     attack.dropv.x = default_model_dropv.x;
     attack.dropv.z = default_model_dropv.z;
@@ -28112,25 +28285,54 @@ void update(int ingame, int usevwait)
             execute_keyscripts();
         }
 
-        if((level_completed && !level->noslow && !tospeedup) || slowmotion.toggle > SLOW_MOTION_OFF)
+        if(obor_profile_build < 4072)
         {
-            if(slowmotion.duration == slowmotion.counter)
+            unsigned counter;
+            if((level_completed && !level->noslow && !tospeedup) || (unsigned)slowmotion.toggle)
+            {
+                if((unsigned)slowmotion.duration == (unsigned)slowmotion.counter)
+                {
+                    newtime = time + interval;
+                }
+            }
+            else
             {
                 newtime = time + interval;
             }
+            counter = (unsigned)slowmotion.counter + 1u;
+            if(counter == (unsigned)slowmotion.duration + 1u)
+            {
+                counter = 0;
+                if((unsigned)slowmotion.toggle > 1u)
+                {
+                    slowmotion.duration = slowmotion.toggle;
+                }
+            }
+            /* Preserve the old unsigned bit pattern in native signed storage. */
+            memcpy(&slowmotion.counter, &counter, sizeof(counter));
         }
         else
         {
-            newtime = time + interval;
-        }
-
-        slowmotion.counter++;
-        if(slowmotion.counter == (slowmotion.duration + 1))
-        {
-            slowmotion.counter = 0;
-            if(slowmotion.toggle > SLOW_MOTION_ON)
+            if((level_completed && !level->noslow && !tospeedup) || slowmotion.toggle > SLOW_MOTION_OFF)
             {
-                slowmotion.duration = slowmotion.toggle;
+                if(slowmotion.duration == slowmotion.counter)
+                {
+                    newtime = time + interval;
+                }
+            }
+            else
+            {
+                newtime = time + interval;
+            }
+
+            slowmotion.counter++;
+            if(slowmotion.counter == (slowmotion.duration + 1))
+            {
+                slowmotion.counter = 0;
+                if(slowmotion.toggle > SLOW_MOTION_ON)
+                {
+                    slowmotion.duration = slowmotion.toggle;
+                }
             }
         }
         if(newtime > time + 100)
@@ -28804,6 +29006,8 @@ void startup()
 {
     int i;
 
+    loadingbarstatus.size.y = obor_profile_build >= 4067 && obor_profile_build < 4085 ? 0 : 10;
+
     printf("FileCaching System Init......\t");
     if(pak_init())
     {
@@ -28847,7 +29051,7 @@ void startup()
         shutdown(1, "Unable to set video mode: %d x %d!\n", videomodes.hRes, videomodes.vRes);
     }
 
-    if(pixelformat == PIXEL_8)
+    if(obor_profile_build >= 3980 && pixelformat == PIXEL_8)
     {
         standard_palette(1);
     }
@@ -29628,6 +29832,42 @@ static entity *spawnexample(int i)
     return example;
 }
 
+static void obor_select_default_background(char *string)
+{
+    if(unlockbg && bonus)
+    {
+        // New alternative background path for PSP
+        if(custBkgrds != NULL)
+        {
+            strcpy(string, custBkgrds);
+            strncat(string, "unlockbg", 8);
+            load_background(string, 1);
+        }
+        else
+        {
+            load_cached_background("data/bgs/unlockbg", 1);
+        }
+    }
+    else
+    {
+        // New alternative background path for PSP
+        if(custBkgrds != NULL)
+        {
+            strncpy(string, custBkgrds, 128);
+            strncat(string, "select", 6);
+            load_background(string, 1);
+        }
+        else
+        {
+            load_cached_background("data/bgs/select", 1);
+        }
+    }
+    if(!music("data/music/menu", 1, 0))
+    {
+        music("data/music/remix", 1, 0);
+    }
+}
+
 int selectplayer(int *players, char *filename)
 {
     s_model *tempmodel;
@@ -29715,6 +29955,7 @@ int selectplayer(int *players, char *filename)
     else // without select.txt
     {
         defaultselect = 1;
+        if(obor_profile_build < 3990) obor_select_default_background(string);
         if(!noshare)
         {
             credits = CONTINUES;
@@ -29753,38 +29994,7 @@ int selectplayer(int *players, char *filename)
             return 1;
         }
 
-        if(unlockbg && bonus)
-        {
-            // New alternative background path for PSP
-            if(custBkgrds != NULL)
-            {
-                strcpy(string, custBkgrds);
-                strncat(string, "unlockbg", 8);
-                load_background(string, 1);
-            }
-            else
-            {
-                load_cached_background("data/bgs/unlockbg", 1);
-            }
-        }
-        else
-        {
-            // New alternative background path for PSP
-            if(custBkgrds != NULL)
-            {
-                strncpy(string, custBkgrds, 128);
-                strncat(string, "select", 6);
-                load_background(string, 1);
-            }
-            else
-            {
-                load_cached_background("data/bgs/select", 1);
-            }
-        }
-        if(!music("data/music/menu", 1, 0))
-        {
-            music("data/music/remix", 1, 0);
-        }
+        if(obor_profile_build >= 3990) obor_select_default_background(string);
     }
 
     for(i = 0; i < set->maxplayers; i++)
@@ -32578,6 +32788,7 @@ void openborMain(int argc, char **argv)
 
     while(!quit)
     {
+        if(obor_profile_build == 4080) srand32(time);
         if(skiptoset < 0)
         {
             if(time >= introtime)

@@ -1,0 +1,128 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ * Native mapper/callbacks and retained storage helpers; valid small objects.
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <strings.h>
+#include <stdarg.h>
+#include <limits.h>
+#include "openbor.h"
+#undef printf
+#undef assert
+#ifdef NDEBUG
+#error Text-property assertions must remain enabled
+#endif
+uint32_t obor_profile_build;
+static unsigned active_case;
+#define assert(c) do {if(!(c)){fprintf(stderr,"Text property revision=%u case=%u line=%d\n",obor_profile_build,active_case,__LINE__);abort();}}while(0)
+HRESULT Interpreter_Call(Interpreter *p) { (void)p; abort(); }
+HRESULT Interpreter_EvalInstruction(Interpreter *p) { (void)p; abort(); }
+static char strings[32][MAX_STR_VAR_LEN+1],diagnostic[4096];
+static int used[32];
+static s_level scene,*level=&scene;
+int StrCache_Pop(void)
+{for(int i=0;i<32;++i)if(!used[i]){used[i]=1;strings[i][0]=0;return i;}abort();}
+void StrCache_Collect(int i) {assert(i>=0 && i<32 && used[i]);used[i]=0;}
+CHAR *StrCache_Get(int i) {assert(i>=0 && i<32 && used[i]);return strings[i];}
+CHAR *StrCache_GetIfPresent(int i) {return i>=0 && i<32 && used[i]?strings[i]:NULL;}
+void StrCache_Copy(int i,CHAR *text)
+{assert(i>=0 && i<32 && used[i] && strlen(text)<sizeof(strings[i]));strcpy(strings[i],text);}
+static int record_printf(const char *format,...)
+{va_list args;va_start(args,format);size_t len=strlen(diagnostic);int n=vsnprintf(diagnostic+len,sizeof(diagnostic)-len,format,args);va_end(args);assert(n>=0 && (size_t)n<sizeof(diagnostic)-len);return n;}
+@VARIANTS@
+@SEARCH@
+#define printf record_printf
+@DECLARATIONS@
+@CALLBACKS@
+#undef printf
+static const struct {uint32_t revision;int name_count;const char *names[6];int field_count,fields[7];} contexts[]={@CONTEXTS@};
+static void clear_scene(void)
+{for(int i=0;i<level->numtextobjs;++i)free(level->textobjs[i].text);free(level->textobjs);memset(level,0,sizeof(*level));}
+static void reset_scene(void)
+{
+    clear_scene();level->textobjs=calloc(2,sizeof(s_textobj));assert(level->textobjs);level->numtextobjs=2;
+    for(int i=0;i<2;++i){s_textobj *o=level->textobjs+i;o->font=3+i;o->position.x=31+i;o->position.y=41+i;o->position.z=51+i;o->time=71+i;
+        o->text=calloc(MAX_STR_VAR_LEN+1,1);assert(o->text);strcpy(o->text,"seed");}
+    diagnostic[0]=0;
+}
+static void check_scene(int index,int field,int changed,int kind)
+{
+    assert(level->numtextobjs==2);
+    for(int i=0;i<2;++i){s_textobj *o=level->textobjs+i;int update=changed && i==index;
+        assert(o->font==(update && field==0?42:3+i));
+        assert(o->time==(unsigned)(update && field==2?42:71+i));
+        assert(o->position.x==(update && field==3?42:31+i));
+        assert(o->position.y==(update && field==4?42:41+i));
+        assert(o->position.z==(update && field==5?42:51+i));
+        assert(!strcmp(o->text,update && field==1?(kind?"updated":"42"):"seed"));}
+}
+static void property_value(ScriptVariant *v,int named,const char *name,int slot)
+{memset(v,0,sizeof(*v));if(named){ScriptVariant_ChangeType(v,VT_STR);StrCache_Copy(v->strVal,(char *)name);}else {v->vt=VT_INTEGER;v->lVal=slot;}}
+static void check_getter(ScriptVariant *result,int row,int field)
+{
+    if(field==1){assert(result->vt==VT_STR && !strcmp(StrCache_Get(result->strVal),"seed"));return;}
+    int expected=field==0?3+row:field==2?71+row:field==3?31+row:field==4?41+row:51+row;
+    assert(result->vt==VT_INTEGER && result->lVal==expected);
+}
+int main(void)
+{
+    for(unsigned p=0;p<sizeof(contexts)/sizeof(contexts[0]);++p)
+    {
+        obor_profile_build=contexts[p].revision;active_case=0;
+        for(int named=0;named<2;++named)
+        for(int slot=0;slot<(named?contexts[p].name_count:contexts[p].field_count);++slot)
+        for(int setter=0;setter<2;++setter)for(int kind=0;kind<(setter?2:1);++kind)for(int premap=0;premap<2;++premap)
+        {
+            reset_scene();int row=slot%2,field=contexts[p].fields[slot];
+            ScriptVariant index={.vt=VT_INTEGER},property,value={.vt=VT_INTEGER},*args[]={&index,&property,&value};index.lVal=row;
+            property_value(&property,named,named?contexts[p].names[slot]:"",slot);
+            if(kind && field==1)property_value(&value,1,"updated",0);
+            else if(kind){value.vt=VT_DECIMAL;value.dblVal=42.75;}else value.lVal=42;
+            if(premap)assert(mapstrings_textobjproperty(args,setter?3:2)==1);
+            for(int repeat=0;repeat<2;++repeat)
+            {
+                ScriptVariant result={.vt=VT_INTEGER},*output=&result;result.lVal=123;++active_case;
+                HRESULT status=setter?openbor_changetextobjproperty(args,&output,3):openbor_gettextobjproperty(args,&output,2);
+                assert(status==S_OK && (output==NULL)==setter && !diagnostic[0]);
+                assert(property.vt==VT_INTEGER && property.lVal==slot);
+                if(!setter)check_getter(&result,row,field);
+                check_scene(row,field,setter,kind);ScriptVariant_Clear(&result);
+            }
+            ScriptVariant_Clear(&property);ScriptVariant_Clear(&value);for(int i=0;i<32;++i)assert(!used[i]);
+        }
+        const char *missing[]={"a","time","x","unknown_text"};
+        for(int m=0;m<4;++m)
+        {
+            int found=0;for(int i=0;i<contexts[p].name_count;++i)found|=!strcmp(contexts[p].names[i],missing[m]);if(found)continue;
+            for(int setter=0;setter<2;++setter)
+            {
+                reset_scene();ScriptVariant index={.vt=VT_INTEGER},property,value={.vt=VT_INTEGER},*args[]={&index,&property,&value};value.lVal=42;
+                property_value(&property,1,missing[m],0);char message[256],expected[1024];expected[0]=0;
+                snprintf(message,sizeof(message),"'%s' is not a valid textobj property.\n",missing[m]);
+                for(int repeat=0;repeat<2;++repeat)
+                {
+                    ScriptVariant result={.vt=VT_INTEGER},*output=&result;result.lVal=123;++active_case;
+                    HRESULT status=setter?openbor_changetextobjproperty(args,&output,3):openbor_gettextobjproperty(args,&output,2);
+                    strcat(expected,message);if(setter)strcat(expected,"Invalid property type for changetextobjproperty.\n");
+                    assert(status==E_FAIL && !output && property.vt==VT_STR && !strcmp(diagnostic,expected));check_scene(0,0,0,0);ScriptVariant_Clear(&result);
+                }
+                ScriptVariant_Clear(&property);
+            }
+        }
+        for(int setter=0;setter<2;++setter)for(int edge=0;edge<3;++edge)
+        {
+            reset_scene();ScriptVariant index={.vt=VT_INTEGER},property={.vt=VT_INTEGER},value={.vt=VT_INTEGER},result={.vt=VT_INTEGER},*output=&result,*args[]={&index,&property,&value};
+            property.lVal=edge?contexts[p].field_count+edge-1:-1;value.lVal=42;++active_case;
+            assert((setter?openbor_changetextobjproperty(args,&output,3):openbor_gettextobjproperty(args,&output,2))==E_FAIL && !output);
+            assert(!diagnostic[0]);check_scene(0,0,0,0);ScriptVariant_Clear(&result);
+        }
+        for(int argc=0;argc<2;++argc){diagnostic[0]=0;++active_case;assert(mapstrings_textobjproperty(NULL,argc)==1 && !diagnostic[0]);}
+        for(int i=0;i<32;++i){assert(!used[i]);}
+        clear_scene();
+        printf("{\"revision\":%u,\"cases\":%u,\"status\":\"PASS\"}\n",obor_profile_build,active_case);
+    }
+    return 0;
+}

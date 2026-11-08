@@ -79,10 +79,10 @@ class ContentTriageTests(unittest.TestCase):
         self.assertIn('name=type bounds=3820-', log)
 
     def test_missing_exact_profile_keeps_a_compatible_candidate(self):
-        profile, log = self.script('4054', 'void main(){getentityproperty(self,"animation");}')
-        self.assertEqual(profile, 4086, log)
+        profile, log = self.script('4047', 'void main(){getentityproperty(self,"animation");}')
+        self.assertEqual(profile, 4051, log)
         self.assertNotIn('filename exact triage', log)
-        self.assertNotIn('candidate 4086 conflicts', log)
+        self.assertNotIn('candidate 4051 conflicts', log)
 
     def test_missing_exact_profile_requires_one_candidate_to_satisfy_all_facts(self):
         profile, log = self.script('4199',
@@ -333,6 +333,14 @@ class ContentTriageTests(unittest.TestCase):
         self.assertEqual(self.select('4088')[0], 4088)
         self.assertEqual(self.select('4088-4088')[0], 4107)
         self.assertEqual(self.select('408X')[0], 4086)
+        for revision in (3968, 3970):
+            with self.subTest(revision=revision):
+                self.assertEqual(self.select(str(revision))[0], revision)
+                for suffix in (' dev', '-DEV', '_Dev'):
+                    self.assertEqual(self.select(str(revision) + suffix)[0], revision)
+                self.assertNotIn(self.select('%d-%d' % (revision, revision))[0],
+                                 (3968, 3970))
+        self.assertNotIn(self.select('396X')[0], (3968, 3970))
 
     def test_palette_requirement_excludes_only_the_incompatible_revision(self):
         for text in (b'colourdepth 8bit\n', b'colourdepth 16bit\n', b'remap a.gif b.gif\n'):

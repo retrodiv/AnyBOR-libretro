@@ -1,0 +1,104 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ * Complete native constant mapper/callback and variant ownership operations.
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <strings.h>
+#include <stdarg.h>
+#include <ctype.h>
+#include <limits.h>
+#include "openbor.h"
+#undef printf
+#undef assert
+#ifdef NDEBUG
+#error Constant assertions must remain enabled
+#endif
+uint32_t obor_profile_build;
+static unsigned active_case;
+#define assert(c) do {if(!(c)){fprintf(stderr,"Removed constant revision=%u case=%u line=%d\n",obor_profile_build,active_case,__LINE__);abort();}}while(0)
+HRESULT Interpreter_Call(Interpreter *p) { (void)p; abort(); }
+HRESULT Interpreter_EvalInstruction(Interpreter *p) { (void)p; abort(); }
+static char strings[32][128],diagnostic[4096];
+static int refs[32];
+int StrCache_Pop(void)
+{for(int i=0;i<32;++i)if(!refs[i]){refs[i]=1;strings[i][0]=0;return i;}abort();}
+void StrCache_Collect(int i) {assert(i>=0 && i<32 && refs[i]>0);--refs[i];}
+void StrCache_Grab(int i) {assert(i>=0 && i<32 && refs[i]>0);++refs[i];}
+CHAR *StrCache_Get(int i) {assert(i>=0 && i<32 && refs[i]>0);return strings[i];}
+void StrCache_Copy(int i,CHAR *text)
+{assert(i>=0 && i<32 && refs[i]>0 && strlen(text)<sizeof(strings[i]));strcpy(strings[i],text);}
+static int record_printf(const char *format,...)
+{va_list args;va_start(args,format);size_t len=strlen(diagnostic);int n=vsnprintf(diagnostic+len,sizeof(diagnostic)-len,format,args);va_end(args);assert(n>=0 && (size_t)n<sizeof(diagnostic)-len);return n;}
+@VARIANTS@
+/* Dynamic animation aliases are not selected in this control. */
+@ARRAYS@
+/* Other runtime globals used by the full mapper are not assessed here. */
+@GLOBALS@
+#define printf record_printf
+@MACROS@
+@MAPPER@
+@ENTRY@
+#undef printf
+static const char *names[]={@NAMES@};
+static const struct {uint32_t revision;int values[9];} contexts[]={@CONTEXTS@};
+int main(void)
+{
+    for(unsigned p=0;p<sizeof(contexts)/sizeof(contexts[0]);++p)
+    {
+        obor_profile_build=contexts[p].revision;active_case=0;
+        for(unsigned name=0;name<sizeof(names)/sizeof(names[0])+1;++name)
+        for(int lower=0;lower<2;++lower)
+        for(int premap=0;premap<2;++premap)
+        {
+            const char *original=name<9?names[name]:"SYNTHETIC_UNKNOWN_CONSTANT";
+            int value=name<9?contexts[p].values[name]:-1;
+            char text[64],find_message[128],call_message[256],expected[1024];
+            strcpy(text,original);if(lower)for(char *c=text;*c;++c)*c=(char)tolower((unsigned char)*c);
+            snprintf(find_message,sizeof(find_message),"Can't find openbor constant '%s' \n",text);
+            snprintf(call_message,sizeof(call_message),"Can't translate constant %s\n",text);
+            ScriptVariant arg={.vt=VT_EMPTY};ScriptVariant_ChangeType(&arg,VT_STR);StrCache_Copy(arg.strVal,text);
+            int slot=arg.strVal;ScriptVariant *args[]={&arg};diagnostic[0]=expected[0]=0;
+            if(premap)
+            {
+                assert(mapstrings_transconst(args,1)==(value>=0));
+                if(value<0)strcat(expected,find_message);
+                assert(!strcmp(diagnostic,expected));
+            }
+            for(int repeat=0;repeat<2;++repeat)
+            {
+                ++active_case;ScriptVariant result={.vt=VT_EMPTY},*output=&result;
+                HRESULT status=openbor_transconst(args,&output,1);
+                if(value>=0)
+                {
+                    assert(status==S_OK && output==&result && result.vt==VT_INTEGER && result.lVal==value);
+                    assert(arg.vt==VT_INTEGER && arg.lVal==value && refs[slot]==0);
+                }
+                else
+                {
+                    strcat(expected,find_message);strcat(expected,call_message);
+                    assert(status==E_FAIL && !output && result.vt==VT_EMPTY);
+                    assert(arg.vt==VT_STR && arg.strVal==slot && refs[slot]==1);
+                    assert(!strcmp(StrCache_Get(slot),text));
+                }
+                assert(!strcmp(diagnostic,expected));ScriptVariant_Clear(&result);
+            }
+            ScriptVariant_Clear(&arg);for(int i=0;i<32;++i)assert(!refs[i]);
+        }
+        const int integers[]={-17,0,99,2147483647};
+        for(unsigned i=0;i<sizeof(integers)/sizeof(integers[0]);++i)
+        {
+            ScriptVariant arg={.vt=VT_INTEGER},result={.vt=VT_EMPTY},*output=&result,*args[]={&arg};
+            arg.lVal=integers[i];diagnostic[0]=0;++active_case;
+            assert(mapstrings_transconst(args,1)==1 && arg.vt==VT_INTEGER && arg.lVal==integers[i]);
+            assert(openbor_transconst(args,&output,1)==S_OK && output==&result);
+            assert(result.vt==VT_INTEGER && result.lVal==integers[i] && !diagnostic[0]);
+            ScriptVariant_Clear(&result);
+        }
+        diagnostic[0]=0;++active_case;assert(mapstrings_transconst(NULL,0)==1 && !diagnostic[0]);
+        printf("{\"revision\":%u,\"cases\":%u,\"status\":\"PASS\"}\n",obor_profile_build,active_case);
+    }
+    return 0;
+}

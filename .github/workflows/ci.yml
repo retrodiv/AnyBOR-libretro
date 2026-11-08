@@ -657,7 +657,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        profile_group: ["macos-intel:1/7", "macos-intel:2/7", "macos-intel:3/7", "macos-intel:4/7", "macos-intel:5/7", "macos-intel:6/7", "macos-intel:7/7"]
+        profile_group: ["macos-intel:1/8", "macos-intel:2/8", "macos-intel:3/8", "macos-intel:4/8", "macos-intel:5/8", "macos-intel:6/8", "macos-intel:7/8", "macos-intel:8/8"]
         platform:
           - runner: macos-15-intel
             target: macos-x86_64

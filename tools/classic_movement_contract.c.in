@@ -1,0 +1,74 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ * Native macro and case bodies; authored ordinary-entity service boundaries.
+ */
+#include <assert.h>
+#include <stdint.h>
+#include <string.h>
+
+typedef double DOUBLE;
+typedef struct { int vt; double dblVal; } ScriptVariant;
+enum { VT_DECIMAL = 2 };
+#define SUCCEEDED(result) ((result) >= 0)
+static uint32_t obor_profile_build;
+static int textbox, smartbomber;
+typedef struct {
+    uint32_t stalltime, releasetime, nextanim, nextthink, nextmove;
+    uint32_t magictime, guardtime, toss_time, freezetime, mpchargetime;
+    uint32_t invinctime, turntime, sealtime;
+    struct { float antigravity; } modeldata;
+} entity;
+static void ScriptVariant_ChangeType(ScriptVariant *value, int type) { value->vt = type; }
+static int ScriptVariant_DecimalValue(ScriptVariant *value, double *number)
+{
+    if(value->vt != VT_DECIMAL) return -1;
+    *number = value->dblVal;
+    return 0;
+}
+@MACRO@
+static double get_gravity(entity *ent)
+{
+    ScriptVariant result = {0, -123.0}, *output = &result, **pretvar = &output;
+    switch(0) { case 0: @GETTER@ }
+    assert(result.vt == VT_DECIMAL);
+    return result.dblVal;
+}
+static void set_gravity(entity *ent, double value)
+{
+    ScriptVariant argument = {VT_DECIMAL, value};
+    ScriptVariant *arguments[3] = {0, 0, &argument}, **varlist = arguments;
+    DOUBLE dbltemp;
+    switch(0) { case 0: @SETTER@ }
+}
+static void expand(entity *e) { expand_time(e); }
+static const struct { uint32_t revision; int advance, getter; } contexts[] = { @CONTEXTS@ };
+int main(void)
+{
+    for(unsigned i = 0; i < sizeof(contexts)/sizeof(contexts[0]); ++i)
+    {
+        entity e;
+        obor_profile_build = contexts[i].revision;
+        memset(&e, 0, sizeof(e));
+        e.stalltime = e.releasetime = e.nextanim = e.magictime = e.guardtime = 5;
+        e.toss_time = e.freezetime = e.mpchargetime = e.invinctime = e.turntime = e.sealtime = 5;
+        e.nextmove = 20; e.nextthink = 30;
+        textbox = smartbomber = 0;
+        expand(&e);
+        assert(e.nextmove == 20u + (unsigned)contexts[i].advance && e.nextthink == 31);
+        assert(e.stalltime == 6 && e.releasetime == 6 && e.nextanim == 6);
+        assert(e.magictime == 6 && e.guardtime == 6 && e.toss_time == 6);
+        assert(e.freezetime == 5 && e.mpchargetime == 6 && e.invinctime == 6);
+        assert(e.turntime == 6 && e.sealtime == 6);
+        memset(&e, 0, sizeof(e)); expand(&e);
+        assert(e.nextmove == 0 && e.nextthink == 0 && e.freezetime == 0);
+        textbox = 1; e.freezetime = 5; expand(&e); assert(e.freezetime == 6);
+        textbox = 0; smartbomber = 1; e.freezetime = 5;
+        expand(&e); assert(e.freezetime == 6);
+        e.modeldata.antigravity = 0.25f;
+        assert(get_gravity(&e) == (contexts[i].getter ? 0.25 : 0.0));
+        set_gravity(&e, 1.5);
+        assert(e.modeldata.antigravity == 1.5f);
+        assert(get_gravity(&e) == (contexts[i].getter ? 1.5 : 0.0));
+    }
+    return 0;
+}

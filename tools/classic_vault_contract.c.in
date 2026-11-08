@@ -1,0 +1,253 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ * Native vault routines/callers and bounded historical action tables.
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <strings.h>
+#include <stdarg.h>
+#include <limits.h>
+#include "openbor.h"
+#undef printf
+#undef assert
+#ifdef NDEBUG
+#error Vault assertions must remain enabled
+#endif
+uint32_t obor_profile_build;
+static unsigned active_case;
+#define assert(c) do {if(!(c)){fprintf(stderr,"Vault revision=%u case=%u line=%d\n",obor_profile_build,active_case,__LINE__);abort();}}while(0)
+HRESULT Interpreter_Call(Interpreter *p) {(void)p;abort();}
+HRESULT Interpreter_EvalInstruction(Interpreter *p) {(void)p;abort();}
+static char strings[32][128],diagnostic[4096];
+static int refs[32];
+int StrCache_Pop(void)
+{for(int i=0;i<32;++i)if(!refs[i]){refs[i]=1;strings[i][0]=0;return i;}abort();}
+void StrCache_Collect(int i) {assert(i>=0 && i<32 && refs[i]>0);--refs[i];}
+CHAR *StrCache_Get(int i) {assert(i>=0 && i<32 && refs[i]>0);return strings[i];}
+void StrCache_Copy(int i,CHAR *text)
+{assert(i>=0 && i<32 && refs[i]>0 && strlen(text)<sizeof(strings[i]));strcpy(strings[i],text);}
+static int record_printf(const char *format,...)
+{va_list args;va_start(args,format);size_t len=strlen(diagnostic);int n=vsnprintf(diagnostic+len,sizeof(diagnostic)-len,format,args);va_end(args);assert(n>=0 && (size_t)n<sizeof(diagnostic)-len);return n;}
+@VARIANTS@
+@SEARCH@
+@ACTIONS@
+enum {SLOT_COUNT=@SLOT_COUNT@};
+static entity actor,other,sentinel;
+entity *self;
+int max_animations,nolost=1;
+static s_anim animations[SLOT_COUNT],*table[SLOT_COUNT],other_animation,pain_animation;
+static s_axis_i movement[3];
+static s_axis_i *moves[3];
+s_player player[MAX_PLAYERS];
+s_level *level;
+unsigned int fixture_game_clock;
+static unsigned int random_value;
+static int candidate_slot,enabled,last_action,which_value,rand_calls,drop_calls,special,unlink_calls,idle_calls;
+static int updates[8][2],update_count,pain_calls;
+static volatile int action_identity;
+@STUBS@
+void update_frame(entity *ent,int frame)
+{
+    assert((ent==&actor || ent==&other) && frame>=0 && frame<ent->animation->numframes && update_count<8);
+    updates[update_count][0]=ent==&actor?0:1;updates[update_count++][1]=frame;ent->animpos=frame;
+    if(ent==&actor && ent->takeaction==common_vault)last_action=ACT_VAULT;
+}
+int set_pain(entity *ent,int type,int reset)
+{assert(ent==&other && type==-1 && !reset);++pain_calls;other.animation=&pain_animation;return 1;}
+int set_idle(entity *ent) {assert(ent==&actor);++idle_calls;last_action=ACT_RELEASE;return 1;}
+void ent_unlink(entity *ent) {assert(ent==&actor);ent->link=NULL;++unlink_calls;}
+void dropweapon(int flag) {assert(flag==1);++drop_calls;}
+unsigned int rand32(void) {++rand_calls;return random_value;}
+void dograbattack(int which) {which_value=which;last_action=which<0?ACT_FINISHER:ACT_GRAB;}
+void dothrow(void) {last_action=ACT_THROW;}
+void doprethrow(void) {last_action=ACT_PRETHROW;}
+int player_check_special(void) {if(special)last_action=ACT_SPECIAL;return special;}
+void tryjump(float height,float speed,float depth,int animation)
+{assert(height==actor.modeldata.jumpheight && speed==actor.modeldata.jumpspeed && !depth && animation==ANI_JUMP);last_action=ACT_JUMP;}
+entity *check_platform_below_entity(entity *ent) {(void)ent;abort();}
+int testplatform(entity *ent,float x,float z,entity *exclude) {(void)ent;(void)x;(void)z;(void)exclude;abort();}
+void check_gravity(entity *ent) {(void)ent;abort();}
+int checkwall_below(float x,float z,float height) {(void)x;(void)z;(void)height;abort();}
+int checkhole(float x,float z) {(void)x;(void)z;abort();}
+static float check_basemap(int x,int z) {(void)x;(void)z;return -1000;}
+/* The player caller's unselected depth-walking branch has a flat level. */
+#define PLAYER_MIN_Z 0
+#define PLAYER_MAX_Z 0
+@GRAB_ATTACKS@
+@ARRAYS@
+static int max_attack_types=MAX_ATKS;
+#define printf record_printf
+@MACROS@
+@DECLARATIONS@
+@CALLBACKS@
+@TRANSLATOR@
+@FUNCTIONS@
+#undef printf
+static const struct {
+    uint32_t revision;int enabled,model_command,vault,capacity,action_count;
+    const char *names[22];void (*functions[22])(void);
+} contexts[]={@CONTEXTS@};
+static const struct {int random,expired,throw_present,grab_present,vault_present,throw_wait,old_action,new_action,which;} ai_cases[]={@AI_CASES@};
+static const struct {int keys,play;unsigned available;int old_action,new_action,which,special,base_delta,link,guard,remaining;} player_cases[]={@PLAYER_CASES@};
+static const int heights[]={@HEIGHTS@},directions[]={@DIRECTIONS@},finish_states[]={@FINISH_STATES@};
+static void put_animation(int slot) {assert(slot>=0 && slot<SLOT_COUNT);table[slot]=&animations[slot];}
+static void init_scene(unsigned p)
+{
+    memset(&actor,0,sizeof(actor));memset(&other,0,sizeof(other));memset(table,0,sizeof(table));
+    memset(animations,0,sizeof(animations));memset(player,0,sizeof(player));memset(movement,0,sizeof(movement));
+    for(int f=0;f<3;++f){movement[f].base=-1;moves[f]=&movement[f];}
+    for(int i=0;i<SLOT_COUNT;++i){animations[i].numframes=3;animations[i].sync=-1;animations[i].move=moves;}
+    other_animation=(s_anim){0};other_animation.numframes=3;other_animation.size.y=9;
+    pain_animation=(s_anim){0};pain_animation.numframes=4;
+    put_animation(ANI_GRAB);actor.modeldata.animation=table;actor.modeldata.animation_capacity=contexts[p].capacity;
+    actor.animation=table[ANI_GRAB];actor.animnum=ANI_GRAB;actor.modeldata.grabdistance=12;
+    actor.modeldata.jumpheight=6;actor.modeldata.jumpspeed=2;actor.direction=DIRECTION_RIGHT;
+    actor.link=&other;other.link=&actor;other.animation=&other_animation;other.modeldata.size.y=@MODEL_HEIGHT@;
+    actor.takeaction=common_grab;actor.base=other.base=20;actor.position.x=17;actor.position.z=29;actor.position.y=35;
+    other.position.x=101;other.position.z=107;other.position.y=113;
+    actor.velocity.x=2;actor.velocity.z=3;actor.velocity.y=5;
+    other.velocity.x=7;other.velocity.z=11;other.velocity.y=13;
+    actor.releasetime=100;fixture_game_clock=100;max_animations=contexts[p].capacity;
+    candidate_slot=contexts[p].vault>=0?contexts[p].vault:ANI_ATTACK;enabled=contexts[p].enabled;
+    self=&actor;last_action=ACT_NONE;which_value=-9;rand_calls=drop_calls=special=unlink_calls=idle_calls=0;
+    update_count=pain_calls=0;diagnostic[0]=0;
+}
+static void configure_player(unsigned mask)
+{
+    @AVAILABILITY@
+}
+static void check_entered(void)
+{
+    assert(actor.takeaction==common_vault && actor.attacking==1 && actor.animation==table[candidate_slot]);
+    assert(actor.animnum==candidate_slot && actor.position.x==101 && actor.position.z==29 && actor.position.y==35);
+    assert(actor.base==29 && !actor.velocity.x && !actor.velocity.z && actor.velocity.y==5);
+    assert(!other.velocity.x && !other.velocity.z && other.velocity.y==13 && update_count==1);
+}
+static void actions(unsigned p)
+{
+    for(int i=0;i<contexts[p].action_count;++i)for(int named=0;named<2;++named)for(int premap=0;premap<2;++premap)
+    {
+        ScriptVariant entity={.vt=VT_PTR,.ptrVal=&actor},property={.vt=VT_EMPTY},action={.vt=VT_EMPTY};
+        ScriptVariant result={.vt=VT_EMPTY},*out=&result,*args[]={&entity,&property,&action};
+        ScriptVariant_ChangeType(&property,VT_STR);StrCache_Copy(property.strVal,"takeaction");
+        if(named){ScriptVariant_ChangeType(&action,VT_STR);StrCache_Copy(action.strVal,(char *)contexts[p].names[i]);}
+        else {action.vt=VT_INTEGER;action.lVal=i;}
+        diagnostic[0]=0;if(premap)assert(mapstrings_entityproperty(args,3)==1);
+        for(int repeat=0;repeat<2;++repeat)
+        {
+            actor.takeaction=common_block;out=&result;++active_case;
+            assert(openbor_changeentityproperty(args,&out,3)==S_OK && !out);
+            assert(actor.takeaction==contexts[p].functions[i] && action.vt==VT_INTEGER && action.lVal==i && !diagnostic[0]);
+            ScriptVariant_Clear(&result);
+        }
+        ScriptVariant_Clear(&property);ScriptVariant_Clear(&action);for(int k=0;k<32;++k)assert(!refs[k]);
+    }
+    for(int i=-1;i<=contexts[p].action_count+1;++i)
+    {
+        if(i>=0 && i<contexts[p].action_count)continue;
+        ScriptVariant entity={.vt=VT_PTR,.ptrVal=&actor},property={.vt=VT_EMPTY},action={.vt=VT_INTEGER,.lVal=i};
+        ScriptVariant result={.vt=VT_EMPTY},*out=&result,*args[]={&entity,&property,&action};
+        ScriptVariant_ChangeType(&property,VT_STR);StrCache_Copy(property.strVal,"takeaction");actor.takeaction=common_block;
+        diagnostic[0]=0;++active_case;assert(openbor_changeentityproperty(args,&out,3)==S_OK && !out && actor.takeaction==common_block);
+        assert(action.vt==VT_INTEGER && action.lVal==i && !diagnostic[0]);ScriptVariant_Clear(&property);
+    }
+    const char *unknown[]={"unknown_action","common_vault"};
+    for(unsigned i=0;i<sizeof(unknown)/sizeof(unknown[0]);++i)
+    {
+        if(i==1 && enabled)continue;
+        ScriptVariant entity={.vt=VT_PTR,.ptrVal=&actor},property={.vt=VT_EMPTY},action={.vt=VT_EMPTY};
+        ScriptVariant result={.vt=VT_EMPTY},*out=&result,*args[]={&entity,&property,&action};
+        ScriptVariant_ChangeType(&property,VT_STR);StrCache_Copy(property.strVal,"takeaction");
+        ScriptVariant_ChangeType(&action,VT_STR);StrCache_Copy(action.strVal,(char *)unknown[i]);actor.takeaction=common_block;
+        diagnostic[0]=0;++active_case;assert(openbor_changeentityproperty(args,&out,3)==E_FAIL && !out && actor.takeaction==common_block);
+        assert(action.vt==VT_STR && diagnostic[0]);ScriptVariant_Clear(&property);ScriptVariant_Clear(&action);
+    }
+    ScriptVariant entity={.vt=VT_PTR,.ptrVal=&actor},property={.vt=VT_EMPTY},action={.vt=VT_EMPTY};
+    ScriptVariant result={.vt=VT_EMPTY},*out=&result,*args[]={&entity,&property,&action};
+    ScriptVariant_ChangeType(&property,VT_STR);StrCache_Copy(property.strVal,"takeaction");
+    diagnostic[0]=0;++active_case;assert(openbor_changeentityproperty(args,&out,3)==S_OK && !out && !actor.takeaction);
+    ScriptVariant_Clear(&property);for(int k=0;k<32;++k)assert(!refs[k]);
+}
+int main(void)
+{
+    for(unsigned p=0;p<sizeof(contexts)/sizeof(contexts[0]);++p)
+    {
+        obor_profile_build=contexts[p].revision;active_case=0;init_scene(p);
+        ++active_case;assert(translate_ani_id("vault",NULL,NULL,NULL)==contexts[p].vault);
+        assert(translate_ani_id("VAULT",NULL,NULL,NULL)==contexts[p].vault && translate_ani_id("grab",NULL,NULL,NULL)==ANI_GRAB);
+        actions(p);
+        for(unsigned h=0;h<sizeof(heights)/sizeof(heights[0]);++h)
+        {
+            init_scene(p);put_animation(candidate_slot);other_animation.size.y=heights[h];++active_case;dovault();
+            if(enabled)
+            {
+                assert(actor.takeaction==common_vault && actor.animnum==candidate_slot && actor.animation==table[candidate_slot]);
+                assert(actor.base==20+(heights[h]?heights[h]:@MODEL_HEIGHT@));
+                assert(actor.position.x==101 && actor.position.z==29 && actor.position.y==35);
+                assert(!actor.velocity.x && !actor.velocity.z && actor.velocity.y==5);
+                assert(!other.velocity.x && !other.velocity.z && other.velocity.y==13 && update_count==1);
+            }
+            else assert(actor.takeaction==common_grab && actor.base==20 && actor.velocity.x==2 && !update_count);
+        }
+        for(unsigned d=0;d<sizeof(directions)/sizeof(directions[0]);++d)
+        for(unsigned s=0;s<sizeof(finish_states)/sizeof(finish_states[0]);++s)
+        {
+            int from_vault=finish_states[s];init_scene(p);put_animation(candidate_slot);
+            if(from_vault){actor.animation=table[candidate_slot];actor.animnum=candidate_slot;}
+            actor.direction=directions[d];actor.animating=0;actor.attacking=1;++active_case;common_vault();
+            if(enabled)
+            {
+                int direction=!directions[d];assert((int)actor.direction==direction && !actor.attacking);
+                assert(actor.takeaction==common_grab && other.takeaction==common_grabbed && actor.base==20 && actor.position.y==20);
+                assert(actor.position.x==(direction?89:113) && actor.animation==table[ANI_GRAB] && pain_calls==1 && update_count==2+from_vault);
+                assert(actor.animating==from_vault);
+                if(from_vault)assert(updates[0][0]==0 && updates[0][1]==0);
+                assert(updates[from_vault][0]==0 && updates[from_vault][1]==2);
+                assert(updates[1+from_vault][0]==1 && updates[1+from_vault][1]==3);
+            }
+            else assert((int)actor.direction==directions[d] && actor.attacking==1 && !pain_calls && !update_count);
+        }
+        init_scene(p);actor.animating=1;++active_case;common_vault();assert(actor.takeaction==common_grab && !pain_calls && !update_count);
+        init_scene(p);actor.link=NULL;++active_case;common_vault();
+        assert(idle_calls==enabled && (enabled?!actor.takeaction:actor.takeaction==common_grab));
+        for(unsigned i=0;i<sizeof(ai_cases)/sizeof(ai_cases[0]);++i)
+        {
+            init_scene(p);const __typeof__(ai_cases[0]) *c=&ai_cases[i];random_value=c->random;actor.releasetime=c->expired?99:100;
+            actor.modeldata.throwframewait=c->throw_wait;if(c->throw_present)put_animation(ANI_THROW);
+            if(c->grab_present)put_animation(grab_attacks[(c->random&31)%5][0]);
+            if(c->vault_present)put_animation(candidate_slot);
+            ++active_case;common_grab_check();int expected=enabled?c->old_action:c->new_action;
+            assert(last_action==expected && rand_calls==1 && !drop_calls);
+            if(expected==ACT_FINISHER || expected==ACT_GRAB)assert(which_value==c->which);
+            if(expected==ACT_VAULT)check_entered();
+            if(expected==ACT_RELEASE)assert(!actor.link && unlink_calls==1 && idle_calls==1);
+        }
+        for(unsigned i=0;i<sizeof(player_cases)/sizeof(player_cases[0]);++i)
+        {
+            init_scene(p);const __typeof__(player_cases[0]) *c=&player_cases[i];configure_player(c->available);
+            player[0].keys=c->keys;player[0].playkeys=c->play;special=c->special;other.base+=c->base_delta;
+            if(!c->link){actor.link=NULL;}
+            actor.modeldata.grabfinish=c->guard;actor.animating=c->guard;
+            actor.modeldata.throwframewait=-1;++active_case;player_grab_check();int expected=enabled?c->old_action:c->new_action;
+            assert(last_action==expected && player[0].playkeys==(unsigned)c->remaining && !rand_calls && !drop_calls);
+            if(expected==ACT_FINISHER || expected==ACT_GRAB)assert(which_value==c->which);
+            if(expected==ACT_VAULT)check_entered();
+        }
+        for(int is_vault=0;is_vault<2;++is_vault)
+        {
+            init_scene(p);put_animation(candidate_slot);actor.animation=table[is_vault?candidate_slot:ANI_GRAB];actor.velocity.y=0;
+            actor.base=8;actor.altbase=0;entity *platform=NULL;self=&sentinel;++active_case;adjust_base(&actor,&platform);
+            assert(actor.base==(enabled && is_vault?8:0) && self==&sentinel && !platform);
+        }
+        if(contexts[p].vault>=162)
+        {
+            init_scene(p);s_anim **small=calloc(162,sizeof(*small));assert(small);small[ANI_GRAB]=table[ANI_GRAB];
+            actor.modeldata.animation=small;actor.modeldata.animation_capacity=162;actor.base=8;actor.velocity.y=0;
+            entity *platform=NULL;++active_case;adjust_base(&actor,&platform);assert(actor.base==0 && !platform);free(small);
+        }
+        printf("{\"revision\":%u,\"cases\":%u,\"status\":\"PASS\"}\n",obor_profile_build,active_case);
+    }
+    return 0;
+}

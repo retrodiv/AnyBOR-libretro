@@ -1,0 +1,110 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ * Native selection entry/default setup through the interactive-loop boundary.
+ */
+#include <stdint.h>
+#include <stddef.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <strings.h>
+#include "openbor.h"
+#undef printf
+#undef assert
+#ifdef NDEBUG
+#error Selection setup assertions must remain enabled
+#endif
+HRESULT Interpreter_Call(Interpreter *p) {(void)p;abort();}
+HRESULT Interpreter_EvalInstruction(Interpreter *p) {(void)p;abort();}
+uint32_t obor_profile_build;
+static unsigned active_case;
+#define assert(c) do {if(!(c)){fprintf(stderr,"Selection profile=%u case=%u line=%d\n",obor_profile_build,active_case,__LINE__);abort();}}while(0)
+typedef struct {
+ int screen,credits,player_credits[4],lives[4],hasplayed[4];
+ char names[4][MAX_NAME_LEN];
+} Snapshot;
+typedef struct {int kind;const char *path;Snapshot snapshot;} Event;
+typedef struct {int result,count;Event events[8];Snapshot final;} Expected;
+typedef struct {
+ int file_style,skip_first,noselect,noshare,creditscheat,menu_ok,remix_ok,unlockbg,bonus,custom_path,maxplayers;
+ int players[4],continues,lives;const char *skip_names[4];Expected expected[2];
+} Case;
+static const Case cases[]={@CASES@};
+static const struct {unsigned revision;int early_skip;} contexts[]={@CONTEXTS@};
+static const Case *active;
+static const Expected *expected;
+static unsigned event_count;
+static s_player player[4];
+static s_set_entry levelsets[1];
+static int current_set,selectScreen,noshare,creditscheat,credits,unlockbg,bonus,CONTINUES,PLAYER_LIVES;
+static char skipselect[4][MAX_NAME_LEN],*custBkgrds;
+static void snapshot(Snapshot *out)
+{
+ memset(out,0,sizeof(*out));out->screen=selectScreen;out->credits=credits;
+ for(int i=0;i<4;++i){out->player_credits[i]=player[i].credits;out->lives[i]=player[i].lives;out->hasplayed[i]=player[i].hasplayed;strcpy(out->names[i],player[i].name);}
+}
+static void compare(const Snapshot *a,const Snapshot *b)
+{
+ assert(a->screen==b->screen && a->credits==b->credits);
+ for(int i=0;i<4;++i)assert(a->player_credits[i]==b->player_credits[i] && a->lives[i]==b->lives[i] && a->hasplayed[i]==b->hasplayed[i] && !strcmp(a->names[i],b->names[i]));
+}
+static void event(int kind,const char *path)
+{
+ assert(event_count<(unsigned)expected->count);const Event *wanted=&expected->events[event_count++];
+ assert(kind==wanted->kind && !strcmp(path,wanted->path));Snapshot state;snapshot(&state);compare(&state,&wanted->snapshot);
+}
+static void savelevelinfo(void) {event(1,"");}
+void kill_all(void) {event(2,"");}
+static void reset_playable_list(char which) {assert(which==1);event(3,"");}
+int buffer_pakfile(char *filename,char **buffer,size_t *size)
+{assert(!strcmp(filename,"selection.txt"));event(4,filename);*size=0;*buffer=calloc(1,1);assert(*buffer);return 1;}
+void load_background(char *filename,int tables) {assert(tables==1);event(6,filename);}
+static void load_cached_background(char *filename,int tables) {assert(tables==1);event(5,filename);}
+int music(char *filename,int loop,long offset)
+{
+ assert(loop==1 && offset==0);
+ if(!strcmp(filename,"data/music/menu")){event(7,filename);return active->menu_ok;}
+ assert(!strcmp(filename,"data/music/remix"));event(8,filename);return active->remix_ok;
+}
+static void observe_continuation(char *string,int defaultselect) {assert(defaultselect==(active->file_style!=2));event(9,string);}
+/* File-body parsing is outside this control; the provider supplies an empty file. */
+size_t ParseArgs(ArgList *list,char *input,char *output) {(void)list;(void)input;(void)output;abort();}
+size_t getNewLineStart(char *buffer) {(void)buffer;abort();}
+static void load_playable_list(char *buffer) {(void)buffer;abort();}
+s_model *findmodel(char *name) {(void)name;abort();}
+s_model *load_cached_model(char *name,char *owner,char unload) {(void)name;(void)owner;(void)unload;abort();}
+void update_model_loadflag(s_model *model,char unload) {(void)model;(void)unload;abort();}
+void shutdown(int status,char *message,...) {(void)status;(void)message;abort();}
+@NUMBERS@
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC diagnostic push
+/* Borrowed fixed-count strncat calls retain their original valid-input behavior. */
+#pragma GCC diagnostic ignored "-Wstringop-truncation"
+#endif
+@BACKGROUND@
+@PREFIX@
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC diagnostic pop
+#endif
+int main(void)
+{
+ for(unsigned p=0;p<sizeof(contexts)/sizeof(contexts[0]);++p)
+ {
+  obor_profile_build=contexts[p].revision;
+  for(unsigned k=0;k<sizeof(cases)/sizeof(cases[0]);++k)
+  {
+   active_case=k+1;active=&cases[k];expected=&active->expected[contexts[p].early_skip];event_count=0;
+   memset(player,0,sizeof(player));memset(levelsets,0,sizeof(levelsets));
+   for(int i=0;i<4;++i){player[i].credits=21+i;player[i].lives=31+i;player[i].hasplayed=41+i;strcpy(player[i].name,"old");strcpy(skipselect[i],active->skip_names[i]);}
+   current_set=0;selectScreen=9;credits=77;noshare=active->noshare;creditscheat=active->creditscheat;
+   unlockbg=active->unlockbg;bonus=active->bonus;CONTINUES=active->continues;PLAYER_LIVES=active->lives;
+   custBkgrds=active->custom_path?"custom/":NULL;levelsets[0].maxplayers=active->maxplayers;levelsets[0].noselect=active->noselect;
+   char *filename=active->file_style==0?NULL:active->file_style==1?"":"selection.txt";
+   int players[4];memcpy(players,active->players,sizeof(players));
+   int result=selectplayer(players,filename);assert(result==expected->result && event_count==(unsigned)expected->count);
+   Snapshot state;snapshot(&state);compare(&state,&expected->final);assert(!memcmp(players,active->players,sizeof(players)));
+  }
+  printf("{\"revision\":%u,\"cases\":%zu,\"status\":\"PASS\"}\n",obor_profile_build,sizeof(cases)/sizeof(cases[0]));
+ }
+ return 0;
+}

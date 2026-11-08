@@ -1,11 +1,14 @@
-/* AnyBOR modification record: 2026-10-19.
+/* AnyBOR modification record: 2026-11-08.
  * Port maintained by retrodiv <retrodiv@proton.me>.
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
  * Upstream code retains its original license and notices.
  * Drop the glibc-only <malloc.h> and rely on the standard library
- * declarations the parser already includes. Release the owned function-macro
- * parameter list after its final child token.
+ * declarations the parser already includes. Preserve source-defined macro
+ * argument admission, whitespace, directive position, parameter scope,
+ * forwarding and concatenation. Own temporary parameter data and retain
+ * discarded parser bindings until context shutdown; initialize concatenation
+ * output storage and release owned data at its final lifetime.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/4086.md
  * at the source repository root. Original notices follow below.
@@ -33,6 +36,9 @@
 #include <stdarg.h>
 #include <time.h>
 #include <errno.h>
+#include <stdint.h>
+
+extern uint32_t obor_profile_build;
 #include "List.h"
 #include "pp_parser.h"
 #include "pp_expr.h"
@@ -76,6 +82,7 @@ void pp_context_init(pp_context *self)
     // initialize the conditional stack
     self->conditionals.all = 0ll;
     self->num_conditionals = 0;
+    self->discarded_parsers = NULL;
 
     // initialize the builtin macros other than __FILE__ and __LINE__
     strcpy(buf, "\"");
@@ -104,6 +111,34 @@ void pp_context_init(pp_context *self)
  */
 void pp_context_destroy(pp_context *self)
 {
+    /* A replaced child is no longer evaluated. Preserve its historical
+     * binding lifetime until context shutdown, then release its owned data. */
+    while(self->discarded_parsers)
+    {
+        pp_parser *parser = self->discarded_parsers;
+        self->discarded_parsers = parser->discarded_next;
+        if(parser->child)
+        {
+            parser->child->discarded_next = self->discarded_parsers;
+            self->discarded_parsers = parser->child;
+        }
+        if(parser->type == PP_FUNCTION_MACRO && parser->params)
+        {
+            List_Reset(parser->params);
+            while(parser->params->size > 0)
+            {
+                free(List_Retrieve(parser->params));
+                List_Remove(parser->params);
+            }
+            List_Clear(parser->params);
+            free(parser->params);
+        }
+        if(parser->freeFilename) free((void *)parser->filename);
+        if(parser->freeSourceCode) free(parser->sourceCode);
+        free(parser->macroName);
+        free(parser);
+    }
+
     // undefine and free all non-function macros
     List_Reset(&self->macros);
     while(self->macros.size > 0)
@@ -157,6 +192,7 @@ void pp_parser_init(pp_parser *self, pp_context *ctx, const char *filename, char
     self->freeSourceCode = false;
     self->parent = NULL;
     self->child = NULL;
+    self->discarded_next = NULL;
     self->numParams = 0;
     self->params = NULL;
     self->macroName = NULL;
@@ -178,6 +214,11 @@ pp_parser *pp_parser_alloc(pp_parser *parent, const char *filename, char *source
     pp_parser_init(self, parent->ctx, filename, sourceCode, initialPos);
     self->type = type;
     self->parent = parent;
+    if(parent->child)
+    {
+        parent->child->discarded_next = parent->ctx->discarded_parsers;
+        parent->ctx->discarded_parsers = parent->child;
+    }
     parent->child = self;
 
     return self;
@@ -197,6 +238,90 @@ pp_parser* pp_parser_alloc_macro(pp_parser* parent, char* macroContents, List* p
     self->params = params;
     self->numParams = params ? List_GetSize(params) : 0;
     return self;
+}
+
+/* Arguments own their list. Legacy argument values live in the context,
+ * with the original insertion/lookup order; metadata nodes own no value. */
+static void obor_pp_release_arguments(pp_context *context, List *arguments)
+{
+    if(obor_profile_build < 3986)
+    {
+        int remaining = List_GetSize(arguments);
+        List_Reset(&context->macros);
+        while(remaining-- > 0 && context->macros.size > 0)
+        {
+            free(List_Retrieve(&context->macros));
+            List_Remove(&context->macros);
+        }
+    }
+    List_Reset(arguments);
+    while(arguments->size > 0)
+    {
+        free(List_Retrieve(arguments));
+        List_Remove(arguments);
+    }
+    List_Clear(arguments);
+    free(arguments);
+}
+
+/* Detect a repeated resolution state without limiting valid acyclic chains. */
+static HRESULT obor_pp_legacy_concat_operand(pp_parser *self, const char *text, const char **output)
+{
+    typedef struct seen_state
+    {
+        const char *text;
+        pp_parser *parser;
+        int64_t count;
+        struct seen_state *next;
+    } seen_state;
+    seen_state *seen = NULL, *item;
+    pp_parser *parser = self;
+    int64_t count = self->numParams;
+    HRESULT result = S_OK;
+    for(;;)
+    {
+        for(item = seen; item; item = item->next)
+            if(item->parser == parser && item->count == count && !strcmp(item->text, text)) break;
+        if(item)
+        {
+            result = pp_error(self, "cyclic macro concatenation parameter");
+            break;
+        }
+        item = malloc(sizeof(*item));
+        if(!item)
+        {
+            result = pp_error(self, "unable to resolve macro concatenation parameter");
+            break;
+        }
+        item->text = text;
+        item->parser = parser;
+        item->count = count;
+        item->next = seen;
+        seen = item;
+        if(List_FindByName(&self->ctx->macros, text) &&
+           List_GetIndex(&self->ctx->macros) < count)
+            text = List_Retrieve(&self->ctx->macros);
+        else if(parser->macroName && List_FindByName(&self->ctx->func_macros, parser->macroName) &&
+                List_FindByName(List_Retrieve(&self->ctx->func_macros), text))
+            ;
+        else
+        {
+            *output = text;
+            break;
+        }
+        if(parser->parent && parser->parent->type == PP_FUNCTION_MACRO)
+        {
+            parser = parser->parent;
+            count += parser->numParams;
+        }
+    }
+    while(seen)
+    {
+        item = seen;
+        seen = seen->next;
+        free(item);
+    }
+    return result;
 }
 
 /**
@@ -402,7 +527,6 @@ pp_token *pp_parser_emit_token(pp_parser *self)
     bool success = true;
     pp_token token2;
     pp_token *child_token;
-    int i;
     char *param1, *param2;
 
     while(success && !emitme)
@@ -417,14 +541,7 @@ pp_token *pp_parser_emit_token(pp_parser *self)
                 // free the parameters of function macros
                 if(self->child->type == PP_FUNCTION_MACRO)
                 {
-                    List_Reset(self->child->params);
-                    for(i=0; i<self->child->numParams; i++)
-                    {
-                        free(List_Retrieve(self->child->params));
-                        List_Remove(self->child->params);
-                    }
-                    List_Clear(self->child->params);
-                    free(self->child->params);
+                    obor_pp_release_arguments(self->ctx, self->child->params);
                 }
 
                 // free the source code and filename if necessary
@@ -478,7 +595,7 @@ pp_token *pp_parser_emit_token(pp_parser *self)
             {
                 pp_parser* p;
                 pp_lexer tmpLexer;
-                pp_token tokenA, tokenB;
+                pp_token tokenA = {0}, tokenB = {0};
                 char buf1[1024] = {""}, buf2[1024] = {""};
                 TEXTPOS start = {0,0};
 
@@ -501,6 +618,17 @@ pp_token *pp_parser_emit_token(pp_parser *self)
                     {
                         pp_error(self, "'##' at end of macro expansion");
                         return NULL;
+                    }
+
+                    if(obor_profile_build < 3986)
+                    {
+                        const char *left, *right;
+                        if(FAILED(obor_pp_legacy_concat_operand(self, token2.theSource, &left)) ||
+                           FAILED(obor_pp_legacy_concat_operand(self, self->token.theSource, &right)))
+                            return NULL;
+                        pp_parser_concatenate(self, left, right);
+                        emitme = false;
+                        continue;
                     }
 
                     // expand the token on the left side of the ##
@@ -614,9 +742,10 @@ pp_token *pp_parser_emit_token(pp_parser *self)
                 break;
             case PP_TOKEN_IDENTIFIER:
                 memcpy(&token2, &self->token, sizeof(pp_token)); // FIXME: this should be moved into the function macro else if block
-                self->newline = false;
+                if(obor_profile_build >= 3986) self->newline = false;
 
-                if(self->type == PP_FUNCTION_MACRO && List_FindByName(self->params, self->token.theSource))
+                if(obor_profile_build >= 3986 && self->type == PP_FUNCTION_MACRO &&
+                   List_FindByName(self->params, self->token.theSource))
                 {
                     pp_parser_insert_param(self, self->token.theSource);
                 }
@@ -1256,7 +1385,9 @@ void pp_parser_insert_macro(pp_parser *self, char *name)
         List_FindByName(&self->ctx->macros, name);
     }
 
-    pp_parser_alloc_macro(self, List_Retrieve(&self->ctx->macros), NULL, PP_NORMAL_MACRO);
+    char *contents = List_Retrieve(&self->ctx->macros);
+    pp_parser_alloc_macro(self, obor_profile_build < 3986 ? strdup(contents) : contents, NULL, PP_NORMAL_MACRO);
+    if(obor_profile_build < 3986) self->child->freeSourceCode = true;
 }
 
 /**
@@ -1323,7 +1454,8 @@ HRESULT pp_parser_insert_function_macro(pp_parser *self, char *name)
             tail = strchr(paramBuffer, '\0');
             while(--tail >= paramBuffer)
             {
-                if(*tail == ' ' || *tail == '\t' || *tail == '\n' || *tail == '\r')
+                if(*tail == ' ' || *tail == '\t' || *tail == '\n' ||
+                   (obor_profile_build >= 3986 && *tail == '\r'))
                 {
                     *tail = '\0';
                 }
@@ -1334,11 +1466,13 @@ HRESULT pp_parser_insert_function_macro(pp_parser *self, char *name)
             }
 
             // handle the case of a function with no parameters
-            if(type == PP_TOKEN_RPAREN && paramCount == 0 && paramBuffer[0] == '\0') break;
+            if(obor_profile_build >= 3986 && type == PP_TOKEN_RPAREN &&
+               paramCount == 0 && paramBuffer[0] == '\0') break;
 
             paramCount++;
             if(paramCount > numParams)
             {
+                obor_pp_release_arguments(self->ctx, paramDefs);
                 return pp_error(self, "too many parameters to function '%s'", name);
             }
 
@@ -1347,14 +1481,20 @@ HRESULT pp_parser_insert_function_macro(pp_parser *self, char *name)
             {
                 // add the new macro to the beginning of the macro list
                 paramMacros++;
-                List_InsertAfter(paramDefs, strdup(paramBuffer), List_GetName(params));
+                if(obor_profile_build < 3986)
+                {
+                    List_InsertBefore(&self->ctx->macros, strdup(paramBuffer), List_GetName(params));
+                    List_InsertAfter(paramDefs, NULL, List_GetName(params));
+                }
+                else List_InsertAfter(paramDefs, strdup(paramBuffer), List_GetName(params));
             }
 
             List_GotoNext(params);
             paramBuffer[0] = '\0';
             break;
         case PP_TOKEN_IDENTIFIER:
-            if(self->type == PP_FUNCTION_MACRO && List_FindByName(self->params, self->token.theSource))
+            if(obor_profile_build >= 3986 && self->type == PP_FUNCTION_MACRO &&
+                   List_FindByName(self->params, self->token.theSource))
             {
                 if((strlen(paramBuffer) + strlen(List_Retrieve(self->params)) + 1) > sizeof(paramBuffer))
                 {
@@ -1368,7 +1508,7 @@ HRESULT pp_parser_insert_function_macro(pp_parser *self, char *name)
             else write = true;
             break;
         case PP_TOKEN_WHITESPACE:
-            if(paramBuffer[0] == '\0')
+            if(obor_profile_build >= 3986 && paramBuffer[0] == '\0')
                 write = false;
             else
                 write = true;
@@ -1388,12 +1528,17 @@ HRESULT pp_parser_insert_function_macro(pp_parser *self, char *name)
     while(parenLevel >= 0 || type != PP_TOKEN_RPAREN);
 
     if(paramCount < numParams)
+    {
+        obor_pp_release_arguments(self->ctx, paramDefs);
         return pp_error(self, "not enough parameters to function '%s' (%i given, %i expected)",
                         name, paramCount, numParams);
+    }
 
     // do the actual parsing
     List_GotoLast(params);
-    pp_parser_alloc_macro(self, List_Retrieve(params), paramDefs, PP_FUNCTION_MACRO);
+    char *contents = List_Retrieve(params);
+    pp_parser_alloc_macro(self, obor_profile_build < 3986 ? strdup(contents) : contents, paramDefs, PP_FUNCTION_MACRO);
+    if(obor_profile_build < 3986) self->child->freeSourceCode = true;
     self->child->macroName = strdup(name);
 
     return S_OK;

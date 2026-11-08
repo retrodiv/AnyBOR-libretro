@@ -1,0 +1,138 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ * Native mapper, getter prefix and complete attack-query case.
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <strings.h>
+#include <stdarg.h>
+#include "openbor.h"
+#undef printf
+#undef assert
+#ifdef NDEBUG
+#error Dropv assertions must remain enabled
+#endif
+uint32_t obor_profile_build;
+static unsigned active_case;
+#define assert(c) do {if(!(c)){fprintf(stderr,"Dropv revision=%u case=%u line=%d\n",obor_profile_build,active_case,__LINE__);abort();}}while(0)
+HRESULT Interpreter_Call(Interpreter *p) { (void)p; abort(); }
+HRESULT Interpreter_EvalInstruction(Interpreter *p) { (void)p; abort(); }
+static char strings[32][128],diagnostic[4096];
+static int used[32];
+int StrCache_Pop(void)
+{for(int i=0;i<32;++i)if(!used[i]){used[i]=1;strings[i][0]=0;return i;}abort();}
+void StrCache_Collect(int i) {assert(i>=0 && i<32 && used[i]);used[i]=0;}
+CHAR *StrCache_Get(int i) {assert(i>=0 && i<32 && used[i]);return strings[i];}
+void StrCache_Copy(int i,CHAR *text)
+{assert(i>=0 && i<32 && used[i] && strlen(text)<sizeof(strings[i]));strcpy(strings[i],text);}
+static int record_printf(const char *format,...)
+{va_list args;va_start(args,format);size_t len=strlen(diagnostic);int n=vsnprintf(diagnostic+len,sizeof(diagnostic)-len,format,args);va_end(args);assert(n>=0 && (size_t)n<sizeof(diagnostic)-len);return n;}
+@VARIANTS@
+@SEARCH@
+#define printf record_printf
+@MACROS@
+@DECLARATIONS@
+@GETTER@
+#undef printf
+static const struct {uint32_t revision;int property,subproperty,axis_names;} contexts[]={@CONTEXTS@};
+static entity actor;
+static s_attack attack;
+static s_anim animation;
+static s_anim *animations[]={&animation};
+static s_attack *attacks[]={&attack};
+static const char *axis_names[]={"a","x","z"};
+static const double expected[]={11.25,12.5,13.75};
+static void string_value(ScriptVariant *v,const char *text)
+{ScriptVariant_ChangeType(v,VT_STR);StrCache_Copy(v->strVal,(char *)text);}
+int main(void)
+{
+    actor.modeldata.animation=animations;actor.modeldata.animation_capacity=1;
+    animation.numframes=1;animation.attacks=attacks;
+    attack.dropv.y=11.25f;attack.dropv.x=12.5f;attack.dropv.z=13.75f;
+    for(unsigned p=0;p<sizeof(contexts)/sizeof(contexts[0]);++p)
+    {
+        obor_profile_build=contexts[p].revision;active_case=0;
+        /* Numeric slots retain the original height/x/z order on both layouts. */
+        for(int named_root=0;named_root<2;++named_root)
+        for(int axis=0;axis<3;++axis)
+        for(int premap=0;premap<2;++premap)
+        {
+            ScriptVariant values[7],*args[7];memset(values,0,sizeof(values));
+            for(int i=0;i<7;++i){values[i].vt=VT_INTEGER;args[i]=&values[i];}
+            values[0].vt=VT_PTR;values[0].ptrVal=&actor;
+            if(named_root){string_value(&values[1],"attack");string_value(&values[2],"dropv");}
+            else {values[1].lVal=contexts[p].property;values[2].lVal=contexts[p].subproperty;}
+            values[6].lVal=axis;diagnostic[0]=0;
+            if(premap)assert(mapstrings_entityproperty(args,7)==1);
+            for(int repeat=0;repeat<2;++repeat)
+            {
+                ++active_case;ScriptVariant result={.vt=VT_EMPTY},*output=&result;
+                assert(openbor_getentityproperty(args,&output,7)==S_OK && output==&result);
+                assert(result.vt==VT_DECIMAL && result.dblVal==expected[axis]);
+                assert(values[1].vt==VT_INTEGER && values[1].lVal==contexts[p].property);
+                assert(values[2].vt==VT_INTEGER && values[2].lVal==contexts[p].subproperty);
+                assert(values[6].vt==VT_INTEGER && values[6].lVal==axis && !diagnostic[0]);
+                ScriptVariant_Clear(&result);
+            }
+        }
+        /* Before names exist the caller interprets a string's cached slot.
+         * Use slots 0..2 only, where the original array access was defined. */
+        for(int name=0;name<3;++name)
+        for(int cache_slot=0;cache_slot<3;++cache_slot)
+        for(int premap=0;premap<2;++premap)
+        {
+            ScriptVariant fillers[2],values[7],*args[7];
+            memset(fillers,0,sizeof(fillers));
+            for(int i=0;i<cache_slot;++i)string_value(&fillers[i],"reserved");
+            memset(values,0,sizeof(values));for(int i=0;i<7;++i){values[i].vt=VT_INTEGER;args[i]=&values[i];}
+            values[0].vt=VT_PTR;values[0].ptrVal=&actor;
+            values[1].lVal=contexts[p].property;values[2].lVal=contexts[p].subproperty;
+            string_value(&values[6],axis_names[name]);assert(values[6].strVal==cache_slot);
+            diagnostic[0]=0;if(premap)assert(mapstrings_entityproperty(args,7)==1);
+            for(int repeat=0;repeat<2;++repeat)
+            {
+                ++active_case;ScriptVariant result={.vt=VT_EMPTY},*output=&result;
+                assert(openbor_getentityproperty(args,&output,7)==S_OK && output==&result);
+                int slot=contexts[p].axis_names?name:cache_slot;
+                assert(result.vt==VT_DECIMAL && result.dblVal==expected[slot] && !diagnostic[0]);
+                assert(values[6].vt==(contexts[p].axis_names?VT_INTEGER:VT_STR));
+                assert(values[6].lVal==slot);ScriptVariant_Clear(&result);
+            }
+            ScriptVariant_Clear(&values[6]);for(int i=0;i<cache_slot;++i)ScriptVariant_Clear(&fillers[i]);
+        }
+        /* Native conversion starts only at arity seven, for attack/dropv. */
+        for(int count=3;count<=7;++count)
+        {
+            ScriptVariant values[7],*args[7];memset(values,0,sizeof(values));
+            for(int i=0;i<7;++i){values[i].vt=VT_INTEGER;args[i]=&values[i];}
+            values[1].lVal=contexts[p].property;values[2].lVal=contexts[p].subproperty;
+            string_value(&values[6],"z");diagnostic[0]=0;++active_case;
+            assert(mapstrings_entityproperty(args,count)==1 && !diagnostic[0]);
+            int mapped=contexts[p].axis_names && count==7;
+            assert(values[6].vt==(mapped?VT_INTEGER:VT_STR));
+            assert(values[6].lVal==(mapped?2:0));ScriptVariant_Clear(&values[6]);
+        }
+        ScriptVariant values[7],*args[7];memset(values,0,sizeof(values));
+        for(int i=0;i<7;++i){values[i].vt=VT_INTEGER;args[i]=&values[i];}
+        values[1].lVal=contexts[p].property;values[2].lVal=contexts[p].subproperty;
+        string_value(&values[6],"y");diagnostic[0]=0;++active_case;
+        assert(mapstrings_entityproperty(args,7)==!contexts[p].axis_names && values[6].vt==VT_STR);
+        assert(!strcmp(diagnostic,contexts[p].axis_names?"'y' is not supported by 'dropv'.\n":""));
+        ScriptVariant_Clear(&values[6]);
+        /* The bounded native switch supplies a defined result outside 0..2.
+         * This is retained safety, not a historical out-of-bounds oracle. */
+        for(int k=0;k<2;++k)
+        {
+            values[0].vt=VT_PTR;values[0].ptrVal=&actor;values[6].vt=VT_INTEGER;values[6].lVal=k?3:-1;
+            ScriptVariant result={.vt=VT_EMPTY},*output=&result;diagnostic[0]=0;++active_case;
+            assert(openbor_getentityproperty(args,&output,7)==E_FAIL && !output);
+            assert(!strcmp(diagnostic,"\n Error, invalid dropv parameter. Use a, y, or z. \n"));
+            ScriptVariant_Clear(&result);
+        }
+        for(int i=0;i<32;++i)assert(!used[i]);
+        printf("{\"revision\":%u,\"cases\":%u,\"status\":\"PASS\"}\n",obor_profile_build,active_case);
+    }
+    return 0;
+}

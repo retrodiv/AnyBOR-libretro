@@ -69,6 +69,699 @@ def system_variant_methods(source):
 
 
 class HistoricalBehaviorTests(unittest.TestCase):
+    def test_classic_rush_script_arithmetic_persistence_and_hud(self):
+        from historical_classic_rush import rush_program
+        from test_historical_common_think import native_output
+        data = load_contract_fixture(Path(__file__).parent / 'fixtures/profile-classic-rush.json')
+        contacts = load_contract_fixture(Path(__file__).parent /
+            'fixtures/profile-classic-attack-cancellation.json')
+        revisions = [row['revision'] for row in data['sources']]
+        self.assertEqual(len(revisions), len(set(revisions)))
+        self.assertEqual(set(revisions), contract_revisions(data, data['expected_revisions']))
+        registered = contract_profiles(data, json.loads((ROOT / 'src/pin.json').read_text())['profiles'])
+        self.assertTrue({int(row.get('revision', row['build'])) for row in registered
+                         if row['engine'] == data['engine']} <= set(revisions))
+        count = len(data['inputs'])*6 + len(data['counter_cases'])*2*(1+len(data['hud_cases'])+3+2)
+        actual = [json.loads(line) for line in native_output(rush_program(ROOT, data, contacts), data).splitlines()]
+        self.assertEqual(actual, [dict(revision=row['revision'], cases=count, status='PASS')
+                                  for row in data['sources']])
+
+    def test_classic_otg_loading_script_values_and_native_attack_filter(self):
+        from historical_classic_otg import otg_program
+        from test_historical_common_think import native_output
+        data = load_contract_fixture(Path(__file__).parent / 'fixtures/profile-classic-otg.json')
+        contacts = load_contract_fixture(Path(__file__).parent /
+            'fixtures/profile-classic-attack-cancellation.json')
+        revisions = [row['revision'] for row in data['sources']]
+        self.assertEqual(len(revisions), len(set(revisions)))
+        self.assertEqual(set(revisions), contract_revisions(data, data['expected_revisions']))
+        registered = contract_profiles(data, json.loads((ROOT / 'src/pin.json').read_text())['profiles'])
+        self.assertTrue({int(row.get('revision', row['build'])) for row in registered
+                         if row['engine'] == data['engine']} <= set(revisions))
+        count = 1 + sum(2 * (1 + 2 * (row['value'] == int(row['value']))) for row in data['inputs'])
+        actual = [json.loads(line) for line in native_output(otg_program(ROOT, data, contacts), data).splitlines()]
+        self.assertEqual(actual, [dict(revision=row['revision'], cases=count, status='PASS')
+                                  for row in data['sources']])
+
+    def test_classic_follow_condition_parser_signedness_and_dispatch(self):
+        from historical_classic_follow_condition import follow_program
+        from test_historical_common_think import native_output
+        data = load_contract_fixture(Path(__file__).parent /
+            'fixtures/profile-classic-follow-condition.json')
+        revisions = [row['revision'] for row in data['sources']]
+        self.assertEqual(len(revisions), len(set(revisions)))
+        self.assertEqual(set(revisions), contract_revisions(data, data['expected_revisions']))
+        registered = contract_profiles(data, json.loads((ROOT / 'src/pin.json').read_text())['profiles'])
+        self.assertTrue({int(row.get('revision', row['build'])) for row in registered
+                         if row['engine'] == data['engine']} <= set(revisions))
+        actual = [json.loads(line) for line in native_output(follow_program(ROOT, data), data).splitlines()]
+        self.assertEqual(actual, [dict(revision=row['revision'], cases=len(data['cases'])+1, status='PASS')
+                                  for row in data['sources']])
+
+    def test_classic_block_resource_dispatch_and_fractional_storage(self):
+        from historical_classic_block_resources import block_program
+        from test_historical_common_think import native_output
+        data = load_contract_fixture(Path(__file__).parent /
+            'fixtures/profile-classic-block-resources.json')
+        revisions = [row['revision'] for row in data['sources']]
+        self.assertEqual(len(revisions), len(set(revisions)))
+        self.assertEqual(set(revisions), contract_revisions(data, data['expected_revisions']))
+        registered = contract_profiles(data, json.loads((ROOT / 'src/pin.json').read_text())['profiles'])
+        self.assertTrue({int(row.get('revision', row['build'])) for row in registered
+                         if row['engine'] == data['engine']} <= set(revisions))
+        count = sum(2 + (row['blocktype'] == int(row['blocktype'])) for row in data['cases'])
+        actual = [json.loads(line) for line in native_output(block_program(ROOT, data), data).splitlines()]
+        self.assertEqual(actual, [dict(revision=row['revision'], cases=count, status='PASS')
+                                  for row in data['sources']])
+
+    def test_classic_direction_storage_arithmetic_and_retained_routes(self):
+        from historical_classic_direction import direction_program
+        from test_historical_common_think import native_output
+        data = load_contract_fixture(Path(__file__).parent /
+            'fixtures/profile-classic-direction.json')
+        revisions = [row['revision'] for row in data['sources']]
+        self.assertEqual(len(revisions), len(set(revisions)))
+        self.assertEqual(set(revisions), contract_revisions(data, data['expected_revisions']))
+        registered = contract_profiles(data, json.loads((ROOT / 'src/pin.json').read_text())['profiles'])
+        self.assertTrue({int(row.get('revision', row['build'])) for row in registered
+                         if row['engine'] == data['engine']} <= set(revisions))
+        self.assertTrue(all(row['whole_routes'] for row in data['sources']
+                            if row['revision'] in {int(p.get('revision', p['build'])) for p in registered
+                                                   if p['engine'] == data['engine']}))
+        actual = [json.loads(line) for line in native_output(direction_program(ROOT, data), data).splitlines()]
+        self.assertEqual(actual, [dict(revision=row['revision'], cases=2*len(data['property_inputs'])+1+
+            len(data['bounded_directions'])*(7+row['whole_routes']*(9+len(data['force_modes']))),
+            status='PASS') for row in data['sources']])
+
+    def test_classic_periodic_damage_raw_modes_and_services(self):
+        from historical_classic_dot_modes import dot_program
+        from test_historical_common_think import native_output
+        data = load_contract_fixture(Path(__file__).parent /
+            'fixtures/profile-classic-dot-modes.json')
+        revisions = [row['revision'] for row in data['sources']]
+        self.assertEqual(len(revisions), len(set(revisions)))
+        self.assertEqual(set(revisions), contract_revisions(data, data['expected_revisions']))
+        registered = contract_profiles(data, json.loads((ROOT / 'src/pin.json').read_text())['profiles'])
+        self.assertTrue({int(row.get('revision', row['build'])) for row in registered
+                         if row['engine'] == data['engine']} <= set(revisions))
+        actual = [json.loads(line) for line in native_output(dot_program(ROOT, data), data).splitlines()]
+        self.assertEqual(actual, [dict(revision=row['revision'],
+            cases=len(data['cases']), status='PASS') for row in data['sources']])
+
+    def test_classic_attack_cancellation_scan_context_and_final_summary(self):
+        from historical_classic_attack_cancellation import cancellation_program
+        from test_historical_common_think import native_output
+        data = load_contract_fixture(Path(__file__).parent /
+            'fixtures/profile-classic-attack-cancellation.json')
+        revisions = [row['revision'] for row in data['sources']]
+        self.assertEqual(len(revisions), len(set(revisions)))
+        self.assertEqual(set(revisions), contract_revisions(data, data['expected_revisions']))
+        registered = contract_profiles(data, json.loads((ROOT / 'src/pin.json').read_text())['profiles'])
+        self.assertTrue({int(row.get('revision', row['build'])) for row in registered
+                         if row['engine'] == data['engine']} <= set(revisions))
+        actual = [json.loads(line) for line in native_output(cancellation_program(ROOT, data), data).splitlines()]
+        self.assertEqual(actual, [dict(revision=row['revision'],
+            cases=len(data['cases']), status='PASS') for row in data['sources']])
+
+    def test_classic_attack_response_slots_and_callback_numbers(self):
+        from historical_classic_attack_types import response_program
+        from test_historical_common_think import native_output
+        data = load_contract_fixture(Path(__file__).parent /
+            'fixtures/profile-classic-attack-types.json')
+        actual = [json.loads(line) for line in native_output(response_program(ROOT, data), data).splitlines()]
+        self.assertEqual(actual, [dict(revision=row['revision'],
+            cases=2*len(data['response_families'])*len(data['symbols'])+1, status='PASS') for row in data['sources']])
+
+    def test_classic_attack_type_values_and_model_defense_offense_aliases(self):
+        from historical_classic_attack_types import model_program
+        from test_historical_common_think import native_output
+        data = load_contract_fixture(Path(__file__).parent /
+            'fixtures/profile-classic-attack-types.json')
+        revisions = [row['revision'] for row in data['sources']]
+        self.assertEqual(len(revisions), len(set(revisions)))
+        self.assertEqual(set(revisions), contract_revisions(data, data['expected_revisions']))
+        registered = contract_profiles(data, json.loads((ROOT / 'src/pin.json').read_text())['profiles'])
+        self.assertTrue({int(row.get('revision', row['build'])) for row in registered
+                         if row['engine'] == data['engine']} <= set(revisions))
+        actual = [json.loads(line) for line in native_output(model_program(ROOT, data), data).splitlines()]
+        self.assertEqual(actual, [dict(revision=row['revision'],
+            cases=len(data['symbols']) + 2*len(data['commands']), status='PASS') for row in data['sources']])
+
+    def test_classic_rng_script_registration_and_supplied_conversion_failure(self):
+        from historical_classic_rng import rng_script_program
+        from test_historical_common_think import native_output
+        data = load_contract_fixture(Path(__file__).parent /
+            'fixtures/profile-classic-rng-contracts.json')
+        actual = [json.loads(line) for line in native_output(rng_script_program(ROOT, data), data).splitlines()]
+        self.assertEqual(actual, [dict(revision=row['revision'], cases=1+row['registered']*
+            len(data['script_inputs'])*len(data['script_results'])*3, status='PASS') for row in data['sources']])
+
+    def test_classic_rng_native_lifetime_abi_and_owned_state(self):
+        from historical_classic_rng import rng_program
+        from test_historical_common_think import native_output
+        data = load_contract_fixture(Path(__file__).parent /
+            'fixtures/profile-classic-rng-contracts.json')
+        revisions = [row['revision'] for row in data['sources']]
+        self.assertEqual(len(revisions), len(set(revisions)))
+        self.assertEqual(set(revisions), contract_revisions(data, data['expected_revisions']))
+        registered = contract_profiles(data, json.loads((ROOT / 'src/pin.json').read_text())['profiles'])
+        self.assertTrue({int(row.get('revision', row['build'])) for row in registered
+                         if row['engine'] == data['engine']} <= set(revisions))
+        actual = [json.loads(line) for line in native_output(rng_program(ROOT, data), data).splitlines()]
+        expected = [dict(revision=row['revision'], cases=2+len(data['lcg_vectors'])//2 +
+            len(data['outer_clocks']) + 4*row['clock_libc_generator'], status='PASS') for row in data['sources']]
+        self.assertEqual(actual, expected)
+
+    def test_owned_additive_rng_matches_source_literals_and_replays(self):
+        from historical_classic_rng import additive_program
+        from test_historical_common_think import native_output
+        data = load_contract_fixture(Path(__file__).parent /
+            'fixtures/profile-classic-rng-contracts.json')
+        self.assertEqual(native_output(additive_program(data), data).strip(),
+            'owned_additive literal_vectors=PASS snapshot_replay=PASS')
+
+    def test_android_rng_provider_header_selects_owned_additive_state(self):
+        from historical_classic_rng import additive_program
+        from test_historical_common_think import native_output
+        data = load_contract_fixture(Path(__file__).parent /
+            'fixtures/profile-classic-rng-contracts.json')
+        self.assertEqual(native_output(additive_program(data, provider_header=True), data).strip(),
+            'owned_additive literal_vectors=PASS snapshot_replay=PASS')
+
+    def test_classic_slowmotion_unsigned_history_and_native_script_fields(self):
+        from historical_classic_slowmotion import slowmotion_program
+        from test_historical_common_think import native_output
+        data = load_contract_fixture(Path(__file__).parent /
+            'fixtures/profile-classic-slowmotion-contracts.json')
+        revisions = [row['revision'] for row in data['sources']]
+        self.assertEqual(len(revisions), len(set(revisions)))
+        self.assertEqual(set(revisions), contract_revisions(data, data['expected_revisions']))
+        registered = contract_profiles(data, json.loads((ROOT / 'src/pin.json').read_text())['profiles'])
+        self.assertTrue({int(row.get('revision', row['build'])) for row in registered
+                         if row['engine'] == data['engine']} <= set(revisions))
+        actual = [json.loads(line) for line in native_output(slowmotion_program(ROOT, data), data).splitlines()]
+        expected = [dict(revision=row['revision'], cases=2*len(data['script_inputs']) +
+            sum(case['oracles']['legacy' if row['unsigned_storage'] else 'modern'] is not None
+                for case in data['cases']), status='PASS') for row in data['sources']]
+        self.assertEqual(actual, expected)
+
+    def test_classic_dograb_availability_returns_and_context(self):
+        from historical_classic_scripts import dograb_program
+        from test_historical_common_think import native_output
+        data = load_contract_fixture(Path(__file__).parent /
+            'fixtures/profile-classic-dograb-contracts.json')
+        revisions = [row['revision'] for row in data['sources']]
+        self.assertEqual(len(revisions), len(set(revisions)))
+        self.assertEqual(set(revisions), contract_revisions(data, data['expected_revisions']))
+        registered = contract_profiles(data, json.loads((ROOT / 'src/pin.json').read_text())['profiles'])
+        self.assertTrue({int(row.get('revision', row['build'])) for row in registered
+                         if row['engine'] == data['engine']} <= set(revisions))
+        actual = [json.loads(line) for line in native_output(dograb_program(ROOT, data), data).splitlines()]
+        self.assertEqual(actual, [dict(revision=row['revision'],
+            cases=1 + 4*len(data['cases'])*row['registered'], status='PASS') for row in data['sources']])
+
+    def test_classic_vault_callers_model_name_and_action_namespaces(self):
+        from historical_classic_vault import vault_program
+        from test_historical_common_think import native_output
+        data = load_contract_fixture(Path(__file__).parent /
+            'fixtures/profile-classic-vault-contracts.json')
+        revisions = [row['revision'] for row in data['sources']]
+        self.assertEqual(len(revisions), len(set(revisions)))
+        self.assertEqual(set(revisions), contract_revisions(data, data['expected_revisions']))
+        registered = contract_profiles(data, json.loads((ROOT / 'src/pin.json').read_text())['profiles'])
+        self.assertTrue({int(row.get('revision', row['build'])) for row in registered
+                         if row['engine'] == data['engine']} <= set(revisions))
+        actual = [json.loads(line) for line in native_output(vault_program(ROOT, data), data).splitlines()]
+        expected = []
+        for row in data['sources']:
+            count = (8*len(row['action_names']) + 5 + (not row['functions_enabled']) +
+                1 + len(data['animation_heights']) + len(data['directions'])*len(data['finish_from_vault']) + 2 +
+                len(data['ai_cases']) + len(data['player_cases']) + 2 + (row['native_vault'] >= 162))
+            expected.append(dict(revision=row['revision'], cases=count, status='PASS'))
+        self.assertEqual(actual, expected)
+
+    def test_classic_animation_ids_in_script_arguments_results_and_locals(self):
+        from historical_classic_animation_script_ids import script_id_program
+        from test_historical_common_think import native_output
+        data = load_contract_fixture(Path(__file__).parent /
+            'fixtures/profile-classic-animation-indices.json')
+        revisions = [row['revision'] for row in data['sources']]
+        self.assertEqual(len(revisions), len(set(revisions)))
+        self.assertEqual(set(revisions), contract_revisions(data, data['expected_revisions']))
+        registered = contract_profiles(data, json.loads((ROOT / 'src/pin.json').read_text())['profiles'])
+        self.assertTrue({int(row.get('revision', row['build'])) for row in registered
+                         if row['engine'] == data['engine']} <= set(revisions))
+        actual = [json.loads(line) for line in native_output(script_id_program(ROOT, data), data).splitlines()]
+        self.assertEqual(actual, [dict(revision=row['revision'],
+            cases=58*(row['public_count']+data['script_id_controls']['extra_dynamic_ids'])+8,
+            status='PASS') for row in data['sources']])
+
+    def test_classic_animation_index_constants_and_dynamic_vectors(self):
+        from historical_classic_animation_indices import animation_index_program
+        from test_historical_common_think import native_output
+        data = load_contract_fixture(Path(__file__).parent /
+            'fixtures/profile-classic-animation-indices.json')
+        revisions = [row['revision'] for row in data['sources']]
+        self.assertEqual(len(revisions), len(set(revisions)))
+        self.assertEqual(set(revisions), contract_revisions(data, data['expected_revisions']))
+        registered = contract_profiles(data, json.loads((ROOT / 'src/pin.json').read_text())['profiles'])
+        self.assertTrue({int(row.get('revision', row['build'])) for row in registered
+                         if row['engine'] == data['engine']} <= set(revisions))
+        actual = [json.loads(line) for line in native_output(animation_index_program(ROOT, data), data).splitlines()]
+        expected = []
+        for row in data['sources']:
+            count = 1 + 5 * len(data['names'])
+            for config in data['configurations']:
+                count += 1
+                for family in data['families']:
+                    growth = config.get(family['command'], 0)
+                    count += len(row['arrays'][family['pointer']]) + growth + 4 * (growth > 0)
+            expected.append(dict(revision=row['revision'], cases=count, status='PASS'))
+        self.assertEqual(actual, expected)
+
+    def test_classic_frame_base_presence_and_consumers(self):
+        from historical_classic_frame_base import frame_base_program
+        from test_historical_common_think import native_output
+        data = load_contract_fixture(Path(__file__).parent /
+            'fixtures/profile-classic-frame-base-contracts.json')
+        revisions = [row['revision'] for row in data['sources']]
+        self.assertEqual(len(revisions), len(set(revisions)))
+        self.assertEqual(set(revisions), contract_revisions(data, data['expected_revisions']))
+        registered = contract_profiles(data, json.loads((ROOT / 'src/pin.json').read_text())['profiles'])
+        self.assertTrue({int(row.get('revision', row['build'])) for row in registered
+                         if row['engine'] == data['engine']} <= set(revisions))
+        for case in data['cases']:
+            self.assertEqual(len(case['commands']), len(case['oracles']['legacy']))
+            self.assertEqual(len(case['commands']), len(case['oracles']['modern']))
+        for case in data['movement_cases']:
+            self.assertEqual(len(case['frames']), len(case['modern_active']))
+        actual = [json.loads(line) for line in native_output(frame_base_program(ROOT, data), data).splitlines()]
+        count = 2 * sum(11 * len(case['commands']) + 1 for case in data['cases'])
+        count += 2 * sum(16 * len(case['frames']) + 2 for case in data['movement_cases'])
+        self.assertEqual(actual, [dict(revision=r, cases=count, status='PASS') for r in revisions])
+
+    def test_classic_animation_registry_and_diagnostic_names(self):
+        from historical_classic_scripts import animation_registry_program
+        from test_historical_common_think import native_output
+        data = load_contract_fixture(Path(__file__).parent /
+            'fixtures/profile-classic-animation-registry-contracts.json')
+        revisions = [row['revision'] for row in data['sources']]
+        self.assertEqual(len(revisions), len(set(revisions)))
+        self.assertEqual(set(revisions), contract_revisions(data, data['expected_revisions']))
+        registered = contract_profiles(data, json.loads((ROOT / 'src/pin.json').read_text())['profiles'])
+        self.assertTrue({int(row.get('revision', row['build'])) for row in registered
+                         if row['engine'] == data['engine']} <= set(revisions))
+        actual = [json.loads(line) for line in native_output(animation_registry_program(ROOT, data), data).splitlines()]
+        self.assertEqual(actual, [dict(revision=r, status='PASS') for r in revisions])
+
+    def test_classic_defense_defaults_and_counter_damage(self):
+        from historical_classic_combat import defense_program
+        from test_historical_common_think import native_output
+        data = load_contract_fixture(Path(__file__).parent /
+            'fixtures/profile-classic-defense-contracts.json')
+        revisions = [row['revision'] for row in data['sources']]
+        self.assertEqual(len(revisions), len(set(revisions)))
+        self.assertEqual(set(revisions), contract_revisions(data, data['expected_revisions']))
+        registered = contract_profiles(data, json.loads((ROOT / 'src/pin.json').read_text())['profiles'])
+        self.assertTrue({int(row.get('revision', row['build'])) for row in registered
+                         if row['engine'] == data['engine']} <= set(revisions))
+        actual = [json.loads(line) for line in native_output(defense_program(ROOT, data), data).splitlines()]
+        self.assertEqual(actual, [dict(revision=r, cases=115, status='PASS') for r in revisions])
+
+    def test_classic_import_failures_and_post_reset_calls(self):
+        from historical_classic_scripts import program
+        from test_historical_common_think import native_output
+        data = load_contract_fixture(Path(__file__).parent /
+            'fixtures/profile-classic-script-control-contracts.json')
+        revisions = [row['revision'] for row in data['sources']]
+        self.assertEqual(len(revisions), len(set(revisions)))
+        self.assertEqual(set(revisions), contract_revisions(data, data['expected_revisions']))
+        registered = contract_profiles(data, json.loads((ROOT / 'src/pin.json').read_text())['profiles'])
+        self.assertTrue({int(row.get('revision', row['build'])) for row in registered
+                         if row['engine'] == data['engine']} <= set(revisions))
+        actual = [json.loads(line) for line in native_output(program(ROOT, data), data).splitlines()]
+        self.assertEqual(actual, [dict(revision=r, cases=9, status='PASS') for r in revisions])
+
+    def test_classic_default_shutdown_message_contracts(self):
+        from historical_classic_loading import shutdown_program
+        from test_historical_common_think import native_output
+        data = load_contract_fixture(Path(__file__).parent /
+            'fixtures/profile-classic-shutdown-contracts.json')
+        revisions = [row['revision'] for row in data['sources']]
+        self.assertEqual(len(revisions), len(set(revisions)))
+        self.assertEqual(set(revisions), contract_revisions(data, data['expected_revisions']))
+        registered = contract_profiles(data, json.loads((ROOT / 'src/pin.json').read_text())['profiles'])
+        self.assertTrue({int(row.get('revision', row['build'])) for row in registered
+                         if row['engine'] == data['engine']} <= set(revisions))
+        actual = [json.loads(line) for line in native_output(shutdown_program(ROOT, data), data).splitlines()]
+        self.assertEqual(actual, [dict(revision=r, cases=5, status='PASS') for r in revisions])
+
+    def test_classic_text_property_tables_cached_ids_and_valid_fields(self):
+        from historical_classic_text import text_property_program
+        from test_historical_common_think import native_output
+        data = load_contract_fixture(Path(__file__).parent /
+            'fixtures/profile-classic-text-property-contracts.json')
+        revisions = [row['revision'] for row in data['sources']]
+        self.assertEqual(len(revisions), len(set(revisions)))
+        self.assertEqual(set(revisions), contract_revisions(data, data['expected_revisions']))
+        registered = contract_profiles(data, json.loads((ROOT / 'src/pin.json').read_text())['profiles'])
+        self.assertTrue({int(row.get('revision', row['build'])) for row in registered
+                         if row['engine'] == data['engine']} <= set(revisions))
+        actual = [json.loads(line) for line in native_output(text_property_program(ROOT, data), data).splitlines()]
+        missing = {'a', 'time', 'x', 'unknown_text'}
+        self.assertEqual(actual, [dict(revision=row['revision'], cases=12*(len(row['properties'])+len(row['fields']))+
+            4*len(missing-set(row['properties']))+8, status='PASS') for row in data['sources']])
+
+    def test_classic_system_variable_aliases_indices_and_last_hit_fields(self):
+        from historical_classic_system import system_program
+        from test_historical_common_think import native_output
+        data = load_contract_fixture(Path(__file__).parent /
+            'fixtures/profile-classic-system-variant-contracts.json')
+        revisions = [row['revision'] for row in data['sources']]
+        self.assertEqual(len(revisions), len(set(revisions)))
+        self.assertEqual(set(revisions), contract_revisions(data, data['expected_revisions']))
+        registered = contract_profiles(data, json.loads((ROOT / 'src/pin.json').read_text())['profiles'])
+        self.assertTrue({int(row.get('revision', row['build'])) for row in registered
+                         if row['engine'] == data['engine']} <= set(revisions))
+        actual = [json.loads(line) for line in native_output(system_program(ROOT, data), data).splitlines()]
+        missing = {'lasthity', 'in_enginecreditsscreen', 'synthetic_unknown_system'}
+        self.assertEqual(actual, [dict(revision=row['revision'], cases=16*len(row['properties'])+
+            4*len(missing-set(row['properties']))+48*len(row['queries'])+8, status='PASS')
+            for row in data['sources']])
+
+    def test_classic_animation_height_loading_and_original_getter_component(self):
+        from historical_classic_entities import animation_height_program
+        from test_historical_common_think import native_output
+        data = load_contract_fixture(Path(__file__).parent /
+            'fixtures/profile-classic-animation-height-contracts.json')
+        revisions = [row['revision'] for row in data['sources']]
+        self.assertEqual(len(revisions), len(set(revisions)))
+        self.assertEqual(set(revisions), contract_revisions(data, data['expected_revisions']))
+        registered = contract_profiles(data, json.loads((ROOT / 'src/pin.json').read_text())['profiles'])
+        self.assertTrue({int(row.get('revision', row['build'])) for row in registered
+                         if row['engine'] == data['engine']} <= set(revisions))
+        actual = [json.loads(line) for line in native_output(animation_height_program(ROOT, data), data).splitlines()]
+        cases = len(data['heights'])*len(data['widths'])*16+2
+        self.assertEqual(actual, [dict(revision=row['revision'], cases=cases, status='PASS')
+                                 for row in data['sources']])
+
+    def test_classic_terrain_numeric_fields_tuple_writes_and_refusal_routes(self):
+        from historical_classic_terrain import terrain_program
+        from test_historical_common_think import native_output
+        data = load_contract_fixture(Path(__file__).parent /
+            'fixtures/profile-classic-terrain-contracts.json')
+        revisions = [row['revision'] for row in data['sources']]
+        self.assertEqual(len(revisions), len(set(revisions)))
+        self.assertEqual(set(revisions), contract_revisions(data, data['expected_revisions']))
+        registered = contract_profiles(data, json.loads((ROOT / 'src/pin.json').read_text())['profiles'])
+        self.assertTrue({int(row.get('revision', row['build'])) for row in registered
+                         if row['engine'] == data['engine']} <= set(revisions))
+        actual = [json.loads(line) for line in native_output(terrain_program(ROOT, data), data).splitlines()]
+        self.assertEqual(actual, [dict(revision=row['revision'],
+            cases=543+row['old_hole']+row['old_wall'], status='PASS') for row in data['sources']])
+
+    def test_classic_removed_constant_names_values_and_cached_calls(self):
+        from historical_classic_entities import removed_constants_program
+        from test_historical_common_think import native_output
+        data = load_contract_fixture(Path(__file__).parent /
+            'fixtures/profile-classic-removed-constants-contracts.json')
+        revisions = [row['revision'] for row in data['sources']]
+        self.assertEqual(len(revisions), len(set(revisions)))
+        self.assertEqual(set(revisions), contract_revisions(data, data['expected_revisions']))
+        registered = contract_profiles(data, json.loads((ROOT / 'src/pin.json').read_text())['profiles'])
+        self.assertTrue({int(row.get('revision', row['build'])) for row in registered
+                         if row['engine'] == data['engine']} <= set(revisions))
+        actual = [json.loads(line) for line in native_output(removed_constants_program(ROOT, data), data).splitlines()]
+        self.assertEqual(actual, [dict(revision=row['revision'], cases=85, status='PASS')
+                                 for row in data['sources']])
+
+    def test_classic_preprocessor_empty_arguments_whitespace_and_directive_position(self):
+        from historical_classic_preprocessor import check_contract
+        check_contract(self, 'profile-classic-preprocessor.json')
+
+    def test_classic_macro_parameter_scope_nested_arguments_and_concatenation(self):
+        from historical_classic_preprocessor import check_contract
+        check_contract(self, 'profile-classic-macro-scope.json')
+
+    def test_classic_spawn_coordinate_storage_loading_and_player_positions(self):
+        from historical_classic_spawn_storage import program
+        from test_historical_common_think import native_output
+        data = load_contract_fixture(Path(__file__).parent / 'fixtures/profile-classic-spawn-storage.json')
+        revisions = [row['revision'] for row in data['sources']]
+        self.assertEqual(len(revisions), len(set(revisions)))
+        self.assertEqual(set(revisions), contract_revisions(data, data['expected_revisions']))
+        registered = contract_profiles(data, json.loads((ROOT / 'src/pin.json').read_text())['profiles'])
+        self.assertTrue({int(row.get('revision', row['build'])) for row in registered
+                         if row['engine'] == data['engine']} <= set(revisions))
+        actual = [json.loads(line) for line in native_output(program(ROOT, data), data).splitlines()]
+        self.assertEqual(actual, [dict(revision=row['revision'], cases=len(data['cases']), status='PASS')
+                                 for row in data['sources']])
+
+    def test_classic_spawn_callback_local_install_execution_and_cleanup(self):
+        from historical_classic_spawn_selection import spawn_callback_program
+        from test_historical_common_think import native_output
+        data = load_contract_fixture(Path(__file__).parent / 'fixtures/profile-classic-spawn-selection.json')
+        revisions = [row['revision'] for row in data['sources']]
+        self.assertEqual(len(revisions), len(set(revisions)))
+        self.assertEqual(set(revisions), contract_revisions(data, data['expected_revisions']))
+        registered = contract_profiles(data, json.loads((ROOT / 'src/pin.json').read_text())['profiles'])
+        self.assertTrue({int(row.get('revision', row['build'])) for row in registered
+                         if row['engine'] == data['engine']} <= set(revisions))
+        actual = [json.loads(line) for line in native_output(spawn_callback_program(ROOT, data), data).splitlines()]
+        self.assertEqual(actual, [dict(revision=row['revision'], cases=32*len(data['spawn_positions']), status='PASS')
+                                 for row in data['sources']])
+
+    def test_classic_skipselect_background_music_and_credit_order(self):
+        from historical_classic_spawn_selection import selection_program
+        from test_historical_common_think import native_output
+        data = load_contract_fixture(Path(__file__).parent / 'fixtures/profile-classic-spawn-selection.json')
+        revisions = [row['revision'] for row in data['sources']]
+        self.assertEqual(len(revisions), len(set(revisions)))
+        self.assertEqual(set(revisions), contract_revisions(data, data['expected_revisions']))
+        registered = contract_profiles(data, json.loads((ROOT / 'src/pin.json').read_text())['profiles'])
+        self.assertTrue({int(row.get('revision', row['build'])) for row in registered
+                         if row['engine'] == data['engine']} <= set(revisions))
+        actual = [json.loads(line) for line in native_output(selection_program(ROOT, data), data).splitlines()]
+        self.assertEqual(actual, [dict(revision=row['revision'], cases=len(data['selection_cases']), status='PASS')
+                                 for row in data['sources']])
+
+    def test_classic_property_diagnostic_whitespace_and_rejection_results(self):
+        from historical_classic_diagnostics import diagnostics_program
+        from test_historical_common_think import native_output
+        data = load_contract_fixture(Path(__file__).parent / 'fixtures/profile-classic-diagnostics.json')
+        revisions = [row['revision'] for row in data['sources']]
+        self.assertEqual(len(revisions), len(set(revisions)))
+        self.assertEqual(set(revisions), contract_revisions(data, data['expected_revisions']))
+        registered = contract_profiles(data, json.loads((ROOT / 'src/pin.json').read_text())['profiles'])
+        self.assertTrue({int(row.get('revision', row['build'])) for row in registered
+                         if row['engine'] == data['engine']} <= set(revisions))
+        self.assertTrue(all(len(row['cases']) == 9 for row in data['sources']))
+        actual = [json.loads(line) for line in native_output(diagnostics_program(ROOT, data), data).splitlines()]
+        self.assertEqual(actual, [dict(revision=row['revision'], cases=144, status='PASS')
+                                 for row in data['sources']])
+
+    def test_classic_duration_loading_getters_and_damage_effect_arithmetic(self):
+        from historical_classic_time import time_program
+        from test_historical_common_think import native_output
+        data = load_contract_fixture(Path(__file__).parent / 'fixtures/profile-classic-time.json')
+        revisions = [row['revision'] for row in data['sources']]
+        self.assertEqual(len(revisions), len(set(revisions)))
+        self.assertEqual(set(revisions), contract_revisions(data, data['expected_revisions']))
+        registered = contract_profiles(data, json.loads((ROOT / 'src/pin.json').read_text())['profiles'])
+        self.assertTrue({int(row.get('revision', row['build'])) for row in registered
+                         if row['engine'] == data['engine']} <= set(revisions))
+        actual = [json.loads(line) for line in native_output(time_program(ROOT, data), data).splitlines()]
+        seal_cases = 2*sum(-2147483648 <= int(value)*data['game_speed'] <= 2147483647 for value in data['script_values'])
+        cases = (len(data['script_values'])*32 + len(data['raw_times'])*4 +
+                 len(data['float_loads'])*6 + seal_cases + len(data['raw_times']) +
+                 len(data['raw_times'])*len(data['clocks'])*9)
+        self.assertEqual(actual, [dict(revision=row['revision'], cases=cases, status='PASS')
+                                 for row in data['sources']])
+
+    def test_classic_attack_staydown_native_pointer_and_integer_results(self):
+        from historical_classic_entities import staydown_program
+        from test_historical_common_think import native_output
+        data = load_contract_fixture(Path(__file__).parent /
+            'fixtures/profile-classic-staydown.json')
+        revisions = [row['revision'] for row in data['sources']]
+        self.assertEqual(len(revisions), len(set(revisions)))
+        self.assertEqual(set(revisions), contract_revisions(data, data['expected_revisions']))
+        registered = contract_profiles(data, json.loads((ROOT / 'src/pin.json').read_text())['profiles'])
+        self.assertTrue({int(row.get('revision', row['build'])) for row in registered
+                         if row['engine'] == data['engine']} <= set(revisions))
+        actual = [json.loads(line) for line in native_output(staydown_program(ROOT, data), data).splitlines()]
+        self.assertEqual(actual, [dict(revision=row['revision'], cases=len(data['input_bits'])*8,
+            status='PASS') for row in data['sources']])
+
+    def test_classic_attack_dropv_axis_names_and_numeric_slots(self):
+        from historical_classic_entities import dropv_program
+        from test_historical_common_think import native_output
+        data = load_contract_fixture(Path(__file__).parent /
+            'fixtures/profile-classic-dropv-contracts.json')
+        revisions = [row['revision'] for row in data['sources']]
+        self.assertEqual(len(revisions), len(set(revisions)))
+        self.assertEqual(set(revisions), contract_revisions(data, data['expected_revisions']))
+        registered = contract_profiles(data, json.loads((ROOT / 'src/pin.json').read_text())['profiles'])
+        self.assertTrue({int(row.get('revision', row['build'])) for row in registered
+                         if row['engine'] == data['engine']} <= set(revisions))
+        actual = [json.loads(line) for line in native_output(dropv_program(ROOT, data), data).splitlines()]
+        self.assertEqual(actual, [dict(revision=row['revision'], cases=68, status='PASS')
+                                 for row in data['sources']])
+
+    def test_classic_entity_namespaces_and_axis_warning_routes(self):
+        from historical_classic_entities import namespace_program
+        from test_historical_common_think import native_output
+        data = load_contract_fixture(Path(__file__).parent /
+            'fixtures/profile-classic-entity-namespace-contracts.json')
+        revisions = [row['revision'] for row in data['sources']]
+        self.assertEqual(len(revisions), len(set(revisions)))
+        self.assertEqual(set(revisions), contract_revisions(data, data['expected_revisions']))
+        registered = contract_profiles(data, json.loads((ROOT / 'src/pin.json').read_text())['profiles'])
+        self.assertTrue({int(row.get('revision', row['build'])) for row in registered
+                         if row['engine'] == data['engine']} <= set(revisions))
+        actual = [json.loads(line) for line in native_output(namespace_program(ROOT, data), data).splitlines()]
+        self.assertEqual(actual, [dict(revision=row['revision'], cases=8*len(row['properties']) +
+            len({'anim', 'y'}-set(row['properties'])) + 10 + 64*len(row['queries']), status='PASS')
+            for row in data['sources']])
+
+    def test_classic_drawmethod_property_ids_and_cached_updates(self):
+        from historical_classic_scripts import drawmethod_program
+        from test_historical_common_think import native_output
+        data = load_contract_fixture(Path(__file__).parent /
+            'fixtures/profile-classic-drawmethod-contracts.json')
+        revisions = [row['revision'] for row in data['sources']]
+        self.assertEqual(len(revisions), len(set(revisions)))
+        self.assertEqual(set(revisions), contract_revisions(data, data['expected_revisions']))
+        registered = contract_profiles(data, json.loads((ROOT / 'src/pin.json').read_text())['profiles'])
+        self.assertTrue({int(row.get('revision', row['build'])) for row in registered
+                         if row['engine'] == data['engine']} <= set(revisions))
+        actual = [json.loads(line) for line in native_output(drawmethod_program(ROOT, data), data).splitlines()]
+        self.assertEqual(actual, [dict(revision=row['revision'],
+            cases=8*len(row['properties'])+10, status='PASS') for row in data['sources']])
+
+    def test_classic_player_properties_keep_source_ids_and_cached_arguments(self):
+        from historical_classic_scripts import player_properties_program
+        from test_historical_common_think import native_output
+        data = load_contract_fixture(Path(__file__).parent /
+            'fixtures/profile-classic-player-property-contracts.json')
+        revisions = [row['revision'] for row in data['sources']]
+        self.assertEqual(len(revisions), len(set(revisions)))
+        self.assertEqual(set(revisions), contract_revisions(data, data['expected_revisions']))
+        registered = contract_profiles(data, json.loads((ROOT / 'src/pin.json').read_text())['profiles'])
+        self.assertTrue({int(row.get('revision', row['build'])) for row in registered
+                         if row['engine'] == data['engine']} <= set(revisions))
+        actual = [json.loads(line) for line in native_output(player_properties_program(ROOT, data), data).splitlines()]
+        self.assertEqual(actual, [dict(revision=row['revision'],
+            cases=16*len(row['properties'])+4+("newkeys" not in row['properties']), status='PASS')
+            for row in data['sources']])
+
+    def test_classic_weapon_loss_defaults_and_ordered_model_changes(self):
+        from historical_classic_combat import weapon_loss_program
+        from test_historical_common_think import native_output
+        data = load_contract_fixture(Path(__file__).parent /
+            'fixtures/profile-classic-weapon-loss-contracts.json')
+        revisions = [row['revision'] for row in data['sources']]
+        self.assertEqual(len(revisions), len(set(revisions)))
+        self.assertEqual(set(revisions), contract_revisions(data, data['expected_revisions']))
+        registered = contract_profiles(data, json.loads((ROOT / 'src/pin.json').read_text())['profiles'])
+        self.assertTrue({int(row.get('revision', row['build'])) for row in registered
+                         if row['engine'] == data['engine']} <= set(revisions))
+        for row in data['sources']:
+            self.assertEqual(len(data['contracts'][row['contract']]), len(data['cases']))
+        actual = [json.loads(line) for line in native_output(weapon_loss_program(ROOT, data), data).splitlines()]
+        self.assertEqual(actual, [dict(revision=r, cases=len(data['cases']), status='PASS') for r in revisions])
+
+    def test_classic_projectile_cost_modes_and_single_charge(self):
+        from historical_classic_combat import projectile_cost_program
+        from test_historical_common_think import native_output
+        data = load_contract_fixture(Path(__file__).parent /
+            'fixtures/profile-classic-projectile-cost-contracts.json')
+        revisions = [row['revision'] for row in data['sources']]
+        self.assertEqual(len(revisions), len(set(revisions)))
+        self.assertEqual(set(revisions), contract_revisions(data, data['expected_revisions']))
+        registered = contract_profiles(data, json.loads((ROOT / 'src/pin.json').read_text())['profiles'])
+        self.assertTrue({int(row.get('revision', row['build'])) for row in registered
+                         if row['engine'] == data['engine']} <= set(revisions))
+        for row in data['sources']:
+            self.assertEqual(len(data['contracts'][row['contract']]), len(data['cases']))
+        actual = [json.loads(line) for line in native_output(projectile_cost_program(ROOT, data), data).splitlines()]
+        self.assertEqual(actual, [dict(revision=r, cases=len(data['cases']), repeats=2,
+                                      status='PASS') for r in revisions])
+
+    def test_classic_blocking_and_freeze_transition_contracts(self):
+        from historical_classic_combat import program
+        from test_historical_common_think import native_output
+        data = load_contract_fixture(Path(__file__).parent /
+            'fixtures/profile-classic-combat-contracts.json')
+        revisions = [row['revision'] for row in data['sources']]
+        self.assertEqual(len(revisions), len(set(revisions)))
+        self.assertEqual(set(revisions), contract_revisions(data, data['expected_revisions']))
+        registered = contract_profiles(data, json.loads((ROOT / 'src/pin.json').read_text())['profiles'])
+        self.assertTrue({int(row.get('revision', row['build'])) for row in registered
+                         if row['engine'] == data['engine']} <= set(revisions))
+        actual = [json.loads(line) for line in native_output(program(ROOT, data), data).splitlines()]
+        self.assertEqual(actual, [dict(revision=r, cases=48, status='PASS') for r in revisions])
+
+    def test_classic_loading_mode_and_bar_height_contracts(self):
+        from historical_classic_loading import policy_program
+        from test_historical_common_think import native_output
+        data = load_contract_fixture(Path(__file__).parent /
+            'fixtures/profile-classic-loading-policy-contracts.json')
+        revisions = [row['revision'] for row in data['sources']]
+        self.assertEqual(len(revisions), len(set(revisions)))
+        self.assertEqual(set(revisions), contract_revisions(data, data['expected_revisions']))
+        registered = contract_profiles(data, json.loads((ROOT / 'src/pin.json').read_text())['profiles'])
+        self.assertTrue({int(row.get('revision', row['build'])) for row in registered
+                         if row['engine'] == data['engine']} <= set(revisions))
+        actual = [json.loads(line) for line in native_output(policy_program(ROOT, data), data).splitlines()]
+        self.assertEqual(actual, [dict(revision=r, cases=11, status='PASS') for r in revisions])
+
+    def test_classic_scroll_base_and_startup_palette_admission(self):
+        from historical_classic_loading import program
+        from test_historical_common_think import native_output
+        data = load_contract_fixture(Path(__file__).parent /
+            'fixtures/profile-classic-loading-contracts.json')
+        revisions = [row['revision'] for row in data['sources']]
+        self.assertEqual(len(revisions), len(set(revisions)))
+        self.assertEqual(set(revisions), contract_revisions(data, data['expected_revisions']))
+        registered = contract_profiles(data, json.loads((ROOT / 'src/pin.json').read_text())['profiles'])
+        self.assertTrue({int(row.get('revision', row['build'])) for row in registered
+                         if row['engine'] == data['engine']} <= set(revisions))
+        actual = [json.loads(line) for line in native_output(program(ROOT, data), data).splitlines()]
+        self.assertEqual(actual, [dict(revision=r, scroll_cases=len(data['scroll_cases']),
+                                      formats=4, status='PASS') for r in revisions])
+
+    def test_classic_backwalk_facing_and_animation_dispatch(self):
+        from historical_classic_movement import backwalk_program
+        from test_historical_common_think import native_output
+        data = load_contract_fixture(Path(__file__).parent /
+            'fixtures/profile-classic-backwalk-contracts.json')
+        revisions = [row['revision'] for row in data['sources']]
+        self.assertEqual(len(revisions), len(set(revisions)))
+        self.assertEqual(set(revisions), contract_revisions(data, data['expected_revisions']))
+        registered = contract_profiles(data, json.loads((ROOT / 'src/pin.json').read_text())['profiles'])
+        self.assertTrue({int(row.get('revision', row['build'])) for row in registered
+                         if row['engine'] == data['engine']} <= set(revisions))
+        for row in data['sources']:
+            self.assertEqual(len(data['contracts'][row['contract']]), len(data['cases']))
+        actual = [json.loads(line) for line in native_output(backwalk_program(ROOT, data), data).splitlines()]
+        self.assertEqual(actual, [dict(revision=r, cases=len(data['cases']), status='PASS') for r in revisions])
+
+    def test_classic_time_expansion_and_antigravity_property(self):
+        from historical_classic_movement import program
+        from native_sanitizers import sanitizer_environment
+        from unittest.mock import patch
+        data = load_contract_fixture(Path(__file__).parent /
+            'fixtures/profile-classic-movement-contracts.json')
+        revisions = [row['revision'] for row in data['sources']]
+        self.assertEqual(len(revisions), len(set(revisions)))
+        self.assertEqual(set(revisions), contract_revisions(data, data['expected_revisions']))
+        registered = contract_profiles(data, json.loads((ROOT / 'src/pin.json').read_text())['profiles'])
+        self.assertTrue({int(row.get('revision', row['build'])) for row in registered
+                         if row['engine'] == data['engine']} <= set(revisions))
+        with patch.dict(os.environ, sanitizer_environment()):
+            native(program(ROOT, data), extra_flags=('-fno-sanitize-recover=all',))
+
     def test_global_line_readers_preserve_empty_and_unknown_commands(self):
         from global_line_contract import check_global_lines
         check_global_lines(ROOT, Path(__file__).parent /
@@ -3695,7 +4388,7 @@ typedef struct {int dummy;} Model;
 static Model storage,*model;
 static Model *findmodel(const char *name) {snprintf(lookup_name,sizeof(lookup_name),"%s",name);return &storage;}
 static Model *nextplayermodel(void *unused) {assert(!unused);strcpy(lookup_name,"<next>");return &storage;}
-static inline Model *nextplayermodeln(void *unused,int slot) {assert(slot>=0 && slot<4);return nextplayermodel(unused);}
+@NEXT_MODEL_SLOT@
 static void begin_game(int useSavedGame) {int i;@BEGIN@}
 static void phase(void) {char *filename="level";@PHASE@}
 static void finish(void) {@FINISH@}
@@ -3797,7 +4490,13 @@ static void check(int runtime,int saved_flag,int save_phase,int initial_flag,int
 }
 int main(void) {@CHECKS@assert(cases==@TOTAL@);return 0;}
 '''
-                replacements = {'BEGIN': begin, 'PHASE': phase, 'FINISH': finish,
+                # Only later source lookups call the slot-aware provider. Do
+                # not emit an unused static helper for earlier engines.
+                slot_provider = ('static Model *nextplayermodeln(void *unused,int slot) '
+                    '{assert(slot>=0 && slot<4);return nextplayermodel(unused);}'
+                    if re.search(r'\bnextplayermodeln\s*\(', lookup) else '')
+                replacements = {'NEXT_MODEL_SLOT': slot_provider,
+                    'BEGIN': begin, 'PHASE': phase, 'FINISH': finish,
                     'FADE': level_fade, 'NOSELECT': noselect, 'COPY': name_copy, 'JOIN': join,
                     'LOOKUP': lookup, 'TIMER': timer, 'STATUSES': status_calls, 'SCROLLER': scroller,
                     'QUICK': quick, 'SUCCESS': success, 'SKIP_CASE': skip_case,

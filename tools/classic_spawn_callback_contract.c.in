@@ -1,0 +1,142 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ * Native spawn callback, initialized flag and variant ownership operations.
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "openbor.h"
+#undef printf
+#undef assert
+#ifdef NDEBUG
+#error Spawn callback assertions must remain enabled
+#endif
+uint32_t obor_profile_build;
+static unsigned active_case;
+#define assert(c) do {if(!(c)){fprintf(stderr,"Spawn callback profile=%u case=%u line=%d\n",obor_profile_build,active_case,__LINE__);abort();}}while(0)
+HRESULT Interpreter_Call(Interpreter *p) {(void)p;abort();}
+HRESULT Interpreter_EvalInstruction(Interpreter *p) {(void)p;abort();}
+static char strings[32][128];
+static int refs[32];
+int StrCache_Pop(void)
+{for(int i=0;i<32;++i)if(!refs[i]){refs[i]=1;strings[i][0]=0;return i;}abort();}
+void StrCache_Collect(int i) {assert(i>=0 && i<32 && refs[i]>0);--refs[i];}
+void StrCache_Grab(int i) {assert(i>=0 && i<32 && refs[i]>0);++refs[i];}
+CHAR *StrCache_Get(int i) {assert(i>=0 && i<32 && refs[i]>0);return strings[i];}
+void StrCache_Copy(int i,CHAR *text)
+{assert(i>=0 && i<32 && refs[i]>0 && strlen(text)<sizeof(strings[i]));strcpy(strings[i],text);}
+@VARIANTS@
+@INITIALIZED@
+static s_spawn_entry entry;
+static entity actor,other;
+static Varlist locals;
+static ScriptVariant values[6];
+static int present[6];
+static const char *names[]={"self","spawnx","spawnz","spawna","spawnat","unrelated"};
+static int recording,in_callback,events[16],event_types[16],event_count,execute_calls;
+static int has_entity,seeded,mutate,callback_result,modern,coordinate;
+static const struct {float input[3];int at;double expected[3];int expected_at;} positions[]={@POSITIONS@};
+int Varlist_SetByName(Varlist *list,char *name,ScriptVariant *value)
+{
+ assert(list==&locals);unsigned i=0;while(i<6 && strcmp(name,names[i]))++i;assert(i<6);
+ if(recording && !in_callback){assert(event_count<16);events[event_count]=(int)i;event_types[event_count++]=value->vt;}
+ ScriptVariant_Copy(values+i,value);present[i]=1;return 1;
+}
+static void assign(int index,int type,double number,void *pointer,const char *string)
+{
+ ScriptVariant v;ScriptVariant_Init(&v);ScriptVariant_ChangeType(&v,(VARTYPE)type);
+ if(type==VT_INTEGER)v.lVal=(LONG)number;
+ else if(type==VT_DECIMAL)v.dblVal=number;
+ else if(type==VT_PTR)v.ptrVal=pointer;
+ else if(type==VT_STR)StrCache_Copy(v.strVal,(char *)string);
+ assert(Varlist_SetByName(&locals,(char *)names[index],&v)==1);ScriptVariant_Clear(&v);
+}
+static void initial(int i)
+{
+ assert(present[i]==seeded);
+ if(!seeded){assert(values[i].vt==VT_EMPTY);return;}
+ switch(i){
+ case 0:assert(values[i].vt==VT_INTEGER && values[i].lVal==77);break;
+ case 1:assert(values[i].vt==VT_STR && !strcmp(StrCache_Get(values[i].strVal),"old-x"));break;
+ case 2:assert(values[i].vt==VT_DECIMAL && values[i].dblVal==-8.5);break;
+ case 3:assert(values[i].vt==VT_PTR && values[i].ptrVal==&other);break;
+ case 4:assert(values[i].vt==VT_INTEGER && values[i].lVal==23);break;
+ default:abort();}
+}
+static void changed(int i)
+{
+ assert(present[i]);
+ switch(i){
+ case 0:case 4:assert(values[i].vt==VT_PTR && values[i].ptrVal==&other);break;
+ case 1:assert(values[i].vt==VT_DECIMAL && values[i].dblVal==501.25);break;
+ case 2:assert(values[i].vt==VT_INTEGER && values[i].lVal==-77);break;
+ case 3:assert(values[i].vt==VT_STR && !strcmp(StrCache_Get(values[i].strVal),"callback-a"));break;
+ default:abort();}
+}
+int Script_Execute(Script *script)
+{
+ assert(script==&entry.spawnscript);++execute_calls;assert(event_count<16);events[event_count]=99;event_types[event_count++]=0;
+ if(has_entity)assert(present[0] && values[0].vt==VT_PTR && values[0].ptrVal==&actor);
+ else initial(0);
+ for(int i=1;i<5;++i)
+ {
+  if(has_entity && modern)
+  {
+   assert(present[i]);
+   if(i<4)assert(values[i].vt==VT_DECIMAL && values[i].dblVal==positions[coordinate].expected[i-1]);
+   else assert(values[i].vt==VT_INTEGER && values[i].lVal==positions[coordinate].expected_at);
+  }
+  else initial(i);
+ }
+ assert(present[5] && values[5].vt==VT_STR && !strcmp(StrCache_Get(values[5].strVal),"untouched"));
+ if(mutate)
+ {
+  in_callback=1;assign(0,VT_PTR,0,&other,NULL);assign(1,VT_DECIMAL,501.25,NULL,NULL);
+  assign(2,VT_INTEGER,-77,NULL,NULL);assign(3,VT_STR,0,NULL,"callback-a");assign(4,VT_PTR,0,&other,NULL);in_callback=0;
+ }
+ return callback_result;
+}
+@CALLER@
+static const struct {unsigned revision;int spawn_locals;} contexts[]={@CONTEXTS@};
+int main(void)
+{
+ for(unsigned p=0;p<sizeof(contexts)/sizeof(contexts[0]);++p)
+ {
+  obor_profile_build=contexts[p].revision;modern=contexts[p].spawn_locals;active_case=0;
+  for(int initialized=0;initialized<2;++initialized)
+  for(has_entity=0;has_entity<2;++has_entity)
+  for(seeded=0;seeded<2;++seeded)
+  for(mutate=0;mutate<2;++mutate)
+  for(callback_result=0;callback_result<2;++callback_result)
+  for(coordinate=0;coordinate<(int)(sizeof(positions)/sizeof(positions[0]));++coordinate)
+  {
+   ++active_case;memset(&entry,0,sizeof(entry));memset(values,0,sizeof(values));memset(present,0,sizeof(present));
+   entry.spawnscript.initialized=initialized;entry.spawnscript.varlist=&locals;
+   entry.position.x=positions[coordinate].input[0];entry.position.z=positions[coordinate].input[1];entry.position.y=positions[coordinate].input[2];entry.at=positions[coordinate].at;
+   recording=0;in_callback=0;event_count=execute_calls=0;
+   assign(5,VT_STR,0,NULL,"untouched");
+   if(seeded){assign(0,VT_INTEGER,77,NULL,NULL);assign(1,VT_STR,0,NULL,"old-x");assign(2,VT_DECIMAL,-8.5,NULL,NULL);assign(3,VT_PTR,0,&other,NULL);assign(4,VT_INTEGER,23,NULL,NULL);}
+   recording=1;execute_spawn_script(&entry,has_entity?&actor:NULL);recording=0;
+   assert(execute_calls==initialized);int count=has_entity?(modern?5:1):0;
+   assert(event_count==(initialized?count*2+1:0));
+   if(initialized)
+   {
+    for(int i=0;i<count;++i){assert(events[i]==i);assert(event_types[i]==(i==0?VT_PTR:i<4?VT_DECIMAL:VT_INTEGER));}
+    assert(events[count]==99);
+    for(int i=0;i<count;++i)assert(events[count+1+i]==i && event_types[count+1+i]==VT_EMPTY);
+   }
+   for(int i=0;i<5;++i)
+   {
+    if(initialized && has_entity && (i==0 || modern))assert(present[i] && values[i].vt==VT_EMPTY);
+    else if(initialized && mutate)changed(i);
+    else initial(i);
+   }
+   assert(present[5] && values[5].vt==VT_STR && !strcmp(StrCache_Get(values[5].strVal),"untouched"));
+   for(int i=0;i<6;++i)ScriptVariant_Clear(values+i);
+   for(int i=0;i<32;++i)assert(!refs[i]);
+  }
+  printf("{\"revision\":%u,\"cases\":%u,\"status\":\"PASS\"}\n",obor_profile_build,active_case);
+ }
+ return 0;
+}

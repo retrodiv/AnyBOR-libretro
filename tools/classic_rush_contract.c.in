@@ -1,0 +1,143 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ * Native combo update/copy/HUD paths and source-defined numeric conversion.
+ */
+@PREFIX@
+#include <stdarg.h>
+static unsigned rush_case;
+#undef assert
+#define assert(c) do {if(!(c)){fprintf(stderr,"Rush revision=%u case=%u line=%d\n",obor_profile_build,rush_case,__LINE__);abort();}}while(0)
+int StrCache_Pop(void) {abort();}
+void StrCache_Collect(int slot) {(void)slot;abort();}
+CHAR *StrCache_Get(int slot) {(void)slot;abort();}
+@VARIANTS@
+s_player player[4];
+s_videomodes videomodes;
+int nomaxrushreset[5],prush[4][8];
+char rush_names[2][MAX_NAME_LEN]={"hits","maximum"};
+static struct {int x,y,font;char text[64];} hud_trace[8];
+static unsigned hud_count;
+void font_printf(int x,int y,int which,int layer,char *format,...)
+{
+    assert(hud_count<8 && layer==0);va_list args;va_start(args,format);
+    int n=vsnprintf(hud_trace[hud_count].text,sizeof(hud_trace[hud_count].text),format,args);
+    va_end(args);assert(n>=0 && (size_t)n<sizeof(hud_trace[hud_count].text));
+    hud_trace[hud_count].x=x;hud_trace[hud_count].y=y;hud_trace[hud_count].font=which;++hud_count;
+}
+enum {_ep_rush_count,_ep_rush_tally,_ep_rush_time};
+static LONG getter(entity *ent,int property)
+{
+    ScriptVariant result={.vt=VT_EMPTY},*value=&result,**pretvar=&value;
+    switch(property) {@GETTER@}
+    assert(value==&result && result.vt==VT_INTEGER);return result.lVal;
+}
+static void setter(entity *ent,int property,int input,int decimal)
+{
+    ScriptVariant arg={.vt=VT_INTEGER},*varlist[]={NULL,NULL,&arg};LONG ltemp;
+    if(decimal){arg.vt=VT_DECIMAL;arg.dblVal=input;}else arg.lVal=input;
+    switch(property) {@SETTER@}
+}
+static void hud(void)
+{
+    int i=0;
+    @HUD@
+}
+static void expire(void) {@EXPIRE@}
+static void capture(void) {int playerindex=0;@CAPTURE@}
+static void restore(void) {int index=0;@RESTORE@}
+static const struct {unsigned revision;int unsigned_counter;} rush_contexts[]={@CONTEXTS@};
+static const struct {int value;long long getter32,unsigned64,signed64;} scalar_inputs[]={@INPUTS@};
+static const struct {
+    int current,maximum,later_defined;
+    struct {
+        int current,maximum;long long current64,maximum64;const char *current_text,*maximum_text;
+        struct {unsigned count;int slots[4];} screen[6];
+    } early,later;
+} counter_cases[]={@CASES@};
+static const struct {int mode;unsigned clock;} hud_cases[]={@HUD_CASES@};
+static const int hud_positions[4][3]={@HUD_POSITIONS@};
+int main(void)
+{
+    assert(sizeof(int)==4 && (sizeof(LONG)==4 || sizeof(LONG)==8) && GAME_SPEED==@GAME_SPEED@);
+    active_case=@CONTACT_CASE@;
+    for(unsigned p=0;p<sizeof(rush_contexts)/sizeof(rush_contexts[0]);++p)
+    {
+        obor_profile_build=rush_contexts[p].revision;rush_case=0;
+        for(unsigned v=0;v<sizeof(scalar_inputs)/sizeof(scalar_inputs[0]);++v)
+        for(int property=0;property<3;++property)
+        for(int decimal=0;decimal<2;++decimal)
+        {
+            ++rush_case;memset(&actors[0],0,sizeof(actors[0]));
+            actors[0].rush.count.min=42;setter(&actors[0],property,scalar_inputs[v].value,decimal);
+            long long expected=sizeof(LONG)==4?scalar_inputs[v].getter32:
+                (property==_ep_rush_time || rush_contexts[p].unsigned_counter)?
+                    scalar_inputs[v].unsigned64:scalar_inputs[v].signed64;
+            assert((long long)getter(&actors[0],property)==expected && actors[0].rush.count.min==42);
+        }
+        for(unsigned c=0;c<sizeof(counter_cases)/sizeof(counter_cases[0]);++c)
+        for(int decimal=0;decimal<2;++decimal)
+        {
+            ++rush_case;memset(actors,0,sizeof(actors));memset(&animation,0,sizeof(animation));
+            memset(animations,0,sizeof(animations));memset(defenses,0,sizeof(defenses));
+            memset(&attack,0,sizeof(attack));memset(&lasthit,0,sizeof(lasthit));
+            fixture_clock=@CLOCK@;rush[1]=@DURATION@;actors[0].rush.count.min=42;
+            setter(&actors[0],_ep_rush_count,counter_cases[c].current,decimal);
+            setter(&actors[0],_ep_rush_tally,counter_cases[c].maximum,decimal);
+            trace_count=summary_sounds=summary_kills=0;savedata.effectvol=9;
+            expected_type=0;attack.attack_type=0;attack.attack_force=12;attack.no_flash=1;attack.hitsound=2;
+            actors[0].exists=1;actors[0].animation=&animation;actors[0].defense=defenses[0];
+            actors[0].modeldata.type=TYPE_PLAYER;actors[0].modeldata.candamage=TYPE_ENEMY;
+            actors[0].attack_id=17;actors[0].remove_on_attack=1;
+            animation.numframes=1;animation.counterrange.frame.min=animation.counterrange.frame.max=-1;
+            attacks[0]=&attack;animation.attacks=attacks;
+            actors[1].exists=1;actors[1].health=100;actors[1].animation=&animation;
+            actors[1].modeldata.type=TYPE_ENEMY;actors[1].modeldata.nopassiveblock=1;
+            actors[1].modeldata.animation=animations[1];actors[1].modeldata.animation_capacity=MAX_ANIS+1;
+            actors[1].defense=defenses[1];actors[1].takedamage=damage;
+            entities[0]=&actors[1];ent_list=entities;ent_max=1;self=&actors[0];do_attack(&actors[0]);
+            int early=rush_contexts[p].unsigned_counter;
+            int current=early?counter_cases[c].early.current:counter_cases[c].later.current;
+            int maximum=early?counter_cases[c].early.maximum:counter_cases[c].later.maximum;
+            assert(self==&actors[0] && actors[0].rush.count.current==current && actors[0].rush.count.max==maximum);
+            assert(actors[0].rush.time==@TIMER@u && actors[0].rush.count.min==42);
+            long long cur64=early?counter_cases[c].early.current64:counter_cases[c].later.current64;
+            long long max64=early?counter_cases[c].early.maximum64:counter_cases[c].later.maximum64;
+            assert((long long)getter(&actors[0],_ep_rush_count)==(sizeof(LONG)==4?current:cur64));
+            assert((long long)getter(&actors[0],_ep_rush_tally)==(sizeof(LONG)==4?maximum:max64));
+            assert(trace_count==7 && summary_sounds==1 && summary_kills==1 && animation.animhits==1);
+            player[0].ent=&actors[0];videomodes.shiftpos[0]=30;
+            for(int i=0;i<8;++i)prush[0][i]=i+1;
+            for(int i=0;i<4;++i)rush[i+2]=i;
+            for(unsigned h=0;h<sizeof(hud_cases)/sizeof(hud_cases[0]);++h)
+            {
+                ++rush_case;fixture_clock=hud_cases[h].clock;rush[0]=hud_cases[h].mode;hud_count=0;hud();
+                unsigned count=early?counter_cases[c].early.screen[h].count:counter_cases[c].later.screen[h].count;
+                assert(hud_count==count);
+                for(unsigned i=0;i<count;++i)
+                {
+                    int slot=early?counter_cases[c].early.screen[h].slots[i]:counter_cases[c].later.screen[h].slots[i];
+                    const char *text=slot==0?"hits":slot==2?"maximum":slot==1?
+                        (early?counter_cases[c].early.current_text:counter_cases[c].later.current_text):
+                        (early?counter_cases[c].early.maximum_text:counter_cases[c].later.maximum_text);
+                    assert(hud_trace[i].x==hud_positions[slot][0] && hud_trace[i].y==hud_positions[slot][1] &&
+                           hud_trace[i].font==hud_positions[slot][2] && !strcmp(hud_trace[i].text,text));
+                }
+            }
+            for(int mode=0;mode<3;++mode)
+            {
+                ++rush_case;actors[0].rush.count.max=maximum;nomaxrushreset[0]=-7;nomaxrushreset[4]=mode;
+                capture();assert(nomaxrushreset[0]==(mode?maximum:-7));
+                actors[0].rush.count.max=123;restore();assert(actors[0].rush.count.max==(mode?maximum:0));
+            }
+            for(int expired=0;expired<2;++expired)
+            {
+                ++rush_case;actors[0].rush.count.current=current;actors[0].rush.count.max=maximum;
+                actors[0].rush.time=@TIMER@u;fixture_clock=@TIMER@u+expired;self=&actors[0];expire();
+                assert(actors[0].rush.count.current==(expired?0:current));
+                assert(actors[0].rush.time==(expired?0:@TIMER@u) && actors[0].rush.count.max==maximum);
+            }
+        }
+        printf("{\"revision\":%u,\"cases\":%u,\"status\":\"PASS\"}\n",obor_profile_build,rush_case);
+    }
+    return 0;
+}

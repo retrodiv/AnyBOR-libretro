@@ -1,0 +1,162 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ * Native mapper/getter/setter and variant operations; bounded string provider.
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <strings.h>
+#include <stdarg.h>
+#include "openbor.h"
+#undef printf
+#undef assert
+#ifdef NDEBUG
+#error Player property assertions must remain enabled
+#endif
+uint32_t obor_profile_build;
+static const char *active_name;
+static unsigned active_case;
+#define assert(c) do {if(!(c)){fprintf(stderr,"Player property revision=%u case=%u name=%s line=%d\n",obor_profile_build,active_case,active_name?active_name:"?",__LINE__);abort();}}while(0)
+HRESULT Interpreter_Call(Interpreter *p) { (void)p; abort(); }
+HRESULT Interpreter_EvalInstruction(Interpreter *p) { (void)p; abort(); }
+s_player player[MAX_PLAYERS];
+int credits, noshare;
+static entity actor, other;
+static char strings[32][128], diagnostic[512];
+static int used[32], weapon_calls, weapon_number, weapon_flag;
+int StrCache_Pop(void)
+{
+    for(int i=0;i<32;++i) if(!used[i]) {used[i]=1;strings[i][0]=0;return i;}
+    abort();
+}
+void StrCache_Collect(int i) { assert(i>=0 && i<32 && used[i]); used[i]=0; }
+CHAR *StrCache_Get(int i) { assert(i>=0 && i<32 && used[i]); return strings[i]; }
+void StrCache_Copy(int i, CHAR *value)
+{ assert(i>=0 && i<32 && used[i] && strlen(value)<sizeof(strings[i])); strcpy(strings[i],value); }
+void set_weapon(entity *ent, int number, int flag)
+{ assert(ent==&actor); ++weapon_calls; weapon_number=number; weapon_flag=flag; }
+static int record_printf(const char *format, ...)
+{
+    va_list args; va_start(args,format);
+    size_t length=strlen(diagnostic);
+    int n=vsnprintf(diagnostic+length,sizeof(diagnostic)-length,format,args);
+    va_end(args); assert(n>=0 && (size_t)n<sizeof(diagnostic)-length); return n;
+}
+@VARIANTS@
+@ENUM@
+@SEARCH@
+#define printf record_printf
+@MAP_MACRO@
+@METHODS@
+#undef printf
+static const struct {uint32_t revision;int count;const char *names[15];} contexts[] = {@CONTEXTS@};
+static void text_value(ScriptVariant *value,const char *text)
+{ ScriptVariant_ChangeType(value,VT_STR);StrCache_Copy(value->strVal,(char *)text); }
+static void reset_player(void)
+{
+    memset(player,0,sizeof(player));
+    player[0].ent=&actor; strcpy(player[0].name,"Player");
+    player[0].colourmap=11;player[0].credits=12;player[0].hasplayed=13;
+    player[0].keys=14;player[0].lives=15;player[0].newkeys=16;
+    player[0].playkeys=17;player[0].score=18;player[0].spawnhealth=19;
+    player[0].spawnmp=20;player[0].weapnum=21;credits=22;
+    weapon_calls=0;weapon_number=weapon_flag=-1;diagnostic[0]=0;
+}
+static void expected_player(const char *name,int changed)
+{
+    assert(player[0].ent == (changed && (!strcmp(name,"ent") || !strcmp(name,"entity")) ? &other : &actor));
+    assert(!strcmp(player[0].name,changed && !strcmp(name,"name") ? "Renamed" : "Player"));
+#define FIELD(n,v) assert(player[0].n==(changed && !strcmp(name,#n)?42:(v)))
+    FIELD(colourmap,11);FIELD(hasplayed,13);FIELD(keys,14);FIELD(lives,15);
+    FIELD(newkeys,16);FIELD(playkeys,17);FIELD(score,18);FIELD(spawnhealth,19);
+    FIELD(spawnmp,20);FIELD(weapnum,21);
+#undef FIELD
+    assert(player[0].credits==(changed && noshare && !strcmp(name,"credits")?42:12));
+    assert(credits==(changed && !noshare && !strcmp(name,"credits")?42:22));
+    assert(weapon_calls==(changed && !strcmp(name,"weapon")));
+    if(weapon_calls) assert(weapon_number==42 && weapon_flag==0);
+}
+static void expected_get(const char *name,ScriptVariant *result)
+{
+    if(!strcmp(name,"weapon")) {assert(result->vt==VT_EMPTY);return;}
+    if(!strcmp(name,"ent") || !strcmp(name,"entity")) {assert(result->vt==VT_PTR && result->ptrVal==&actor);return;}
+    if(!strcmp(name,"name")) {assert(result->vt==VT_STR && !strcmp(StrCache_Get(result->strVal),"Player"));return;}
+    int value=-1;
+    if(!strcmp(name,"colourmap"))value=11; else if(!strcmp(name,"credits"))value=noshare?12:22;
+    else if(!strcmp(name,"hasplayed"))value=13;else if(!strcmp(name,"keys"))value=14;
+    else if(!strcmp(name,"lives"))value=15;else if(!strcmp(name,"newkeys"))value=16;
+    else if(!strcmp(name,"playkeys"))value=17;else if(!strcmp(name,"score"))value=18;
+    else if(!strcmp(name,"spawnhealth"))value=19;else if(!strcmp(name,"spawnmp"))value=20;
+    else if(!strcmp(name,"weapnum"))value=21;
+    assert(value!=-1 && result->vt==VT_INTEGER && result->lVal==value);
+}
+int main(void)
+{
+    for(unsigned p=0;p<sizeof(contexts)/sizeof(contexts[0]);++p)
+    {
+        obor_profile_build=contexts[p].revision;active_case=0;
+        for(int slot=0;slot<contexts[p].count;++slot)
+        for(int named=0;named<2;++named)
+        for(int shared=0;shared<2;++shared)
+        {
+            active_name=contexts[p].names[slot];noshare=shared;
+            ScriptVariant index={.vt=VT_INTEGER,.lVal=0},property={.vt=VT_EMPTY},value={.vt=VT_EMPTY};
+            ScriptVariant result={.vt=VT_EMPTY},*returned=&result;
+            ScriptVariant *args[]={&index,&property,&value};
+            if(named)text_value(&property,active_name);else {property.vt=VT_INTEGER;property.lVal=slot;}
+            assert(mapstrings_playerproperty(args,2)==1);
+            assert(property.vt==VT_INTEGER && property.lVal==slot);
+            if(!strcmp(active_name,"name"))text_value(&value,"Renamed");
+            else if(!strcmp(active_name,"ent") || !strcmp(active_name,"entity")) {value.vt=VT_PTR;value.ptrVal=&other;}
+            else {value.vt=VT_INTEGER;value.lVal=42;}
+            for(int repeat=0;repeat<2;++repeat)
+            {
+                ++active_case;reset_player();returned=&result;
+                assert(openbor_getplayerproperty(args,&returned,2)==S_OK && returned==&result);
+                expected_get(active_name,&result);expected_player(active_name,0);
+                assert(property.vt==VT_INTEGER && property.lVal==slot);
+                ScriptVariant_Clear(&result);
+                ++active_case;reset_player();returned=&result;
+                assert(openbor_changeplayerproperty(args,&returned,3)==S_OK && returned==NULL);
+                expected_player(active_name,1);
+                assert(property.vt==VT_INTEGER && property.lVal==slot && !diagnostic[0]);
+            }
+            ScriptVariant_Clear(&property);ScriptVariant_Clear(&value);
+        }
+        /* A numeric old endpoint must not access the native last property. */
+        for(int i=0;i<3;++i)
+        {
+            ++active_case;active_name="numeric-endpoint";
+            ScriptVariant index={.vt=VT_INTEGER,.lVal=0};
+            ScriptVariant property={.vt=VT_INTEGER,.lVal=i?contexts[p].count+i-1:-1};
+            ScriptVariant value={.vt=VT_INTEGER,.lVal=42},result={.vt=VT_EMPTY},*returned=&result;
+            ScriptVariant *args[]={&index,&property,&value};
+            reset_player();assert(openbor_getplayerproperty(args,&returned,2)==S_OK && result.vt==VT_EMPTY);
+            expected_player("",0);returned=&result;
+            assert(openbor_changeplayerproperty(args,&returned,3)==E_FAIL && returned==NULL);
+            expected_player("",0);ScriptVariant_Clear(&result);
+        }
+        for(int i=0;i<2;++i)
+        {
+            const char *name=i?"newkeys":"zzzz";
+            if(i && contexts[p].count==15)continue;
+            ++active_case;active_name=name;
+            ScriptVariant index={.vt=VT_INTEGER,.lVal=0},property={.vt=VT_EMPTY};
+            ScriptVariant value={.vt=VT_INTEGER,.lVal=42},result={.vt=VT_EMPTY},*returned=&result;
+            ScriptVariant *args[]={&index,&property,&value};
+            text_value(&property,name);reset_player();
+            assert(openbor_getplayerproperty(args,&returned,2)==E_FAIL && returned==NULL);
+            char expected[128];snprintf(expected,sizeof(expected),"Player property name '%s' is not supported yet.\n",name);
+            assert(!strcmp(diagnostic,expected));expected_player("",0);
+            assert(property.vt==VT_STR && !strcmp(StrCache_Get(property.strVal),name));
+            reset_player();returned=&result;
+            assert(openbor_changeplayerproperty(args,&returned,3)==E_FAIL && returned==NULL);
+            assert(!strcmp(diagnostic,expected));expected_player("",0);
+            ScriptVariant_Clear(&property);ScriptVariant_Clear(&result);
+        }
+        for(int i=0;i<32;++i)assert(!used[i]);
+        printf("{\"revision\":%u,\"cases\":%u,\"status\":\"PASS\"}\n",obor_profile_build,active_case);
+    }
+    return 0;
+}

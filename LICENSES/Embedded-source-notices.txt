@@ -105,6 +105,20 @@ Source: src/engines/3842/source/globals.h
  * at the source repository root. Original notices follow below.
  */
 
+Source: src/engines/4086/openborscript.h
+/* AnyBOR modification record: 2026-11-08.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Declare owned script-variable name storage. Declare the shared engine-
+ * credit-screen selector and script seed callback without exposing them to
+ * earlier native namespaces.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/4086.md
+ * at the source repository root. Original notices follow below.
+ */
+
 Source: src/engines/7533/source/pnglib/savepng.c
 /* AnyBOR modification record: 2026-09-29.
  * Port maintained by retrodiv <retrodiv@proton.me>.
@@ -685,21 +699,6 @@ Source: src/engines/3400/source/pnglib/savepng.c
  * SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
 
-Source: src/engines/4086/openbor.h
-/* AnyBOR modification record: 2026-10-19.
- * Port maintained by retrodiv <retrodiv@proton.me>.
- * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
- * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
- * Upstream code retains its original license and notices.
- * Allocate collision pointer slots through the highest author-facing index
- * used by each collection. Declare the native media decoder interface for
- * the early profile family. Track each model's allocated animation-table
- * capacity and reject lookups outside it.
- * Existing changes recorded here; this is not their implementation date.
- * See MODIFICATIONS.md and docs/modifications/4086.md
- * at the source repository root. Original notices follow below.
- */
-
 Source: src/engines/3842/source/scriptlib/Instruction.c
 /* AnyBOR modification record: 2026-10-26.
  * Port maintained by retrodiv <retrodiv@proton.me>.
@@ -1175,36 +1174,6 @@ Source: src/engines/3842/source/scriptlib/ScriptVariant.c
  * at the source repository root. Original notices follow below.
  */
 
-Source: src/engines/4086/openborscript.c
-/* AnyBOR modification record: 2026-10-22.
- * Port maintained by retrodiv <retrodiv@proton.me>.
- * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
- * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
- * Upstream code retains its original license and notices.
- * Keep the dormant constant-lowering diagnostic compatible with the single-
- * value instruction layout. Map every early profile's native system-variable
- * namespace and numeric IDs, attack staydown return type and shutdown
- * message argument; bound cache access and reject formats requiring absent
- * variadic arguments. Derive output names from the content basename with
- * explicit destination capacities, and reject overflowing output path joins.
- * Compact compiler-only instruction records after resolving value ownership,
- * preserving branch and export anchors, all mutable values and exactly-once
- * pool cleanup. Retain shared interpreters through the last script reference
- * while preserving independent variables, replacement and native callbacks.
- * Track diagnostic comments independently so interpreter replacement can
- * retain them. Resolve text-property names within the actual table bounds
- * while preserving native numeric selectors. Reuse each text object's owned
- * buffer when replacing its contents. Reject missing colourtable indices and
- * keep selector arithmetic and table reads defined. Use the declared
- * staydown name-table length for lookup. Transfer loaded stream buffers
- * through aligned local outputs while preserving native record layout and
- * results. Close owned input files after stream loading and on buffer
- * allocation failure.
- * Existing changes recorded here; this is not their implementation date.
- * See MODIFICATIONS.md and docs/modifications/4086.md
- * at the source repository root. Original notices follow below.
- */
-
 Source: src/engines/6391/source/gamelib/draw32.c
 /* AnyBOR modification record: 2026-10-23.
  * Port maintained by retrodiv <retrodiv@proton.me>.
@@ -1214,6 +1183,26 @@ Source: src/engines/6391/source/gamelib/draw32.c
  * Validate point coordinates before writing native 32-bit pixels.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/6391.md
+ * at the source repository root. Original notices follow below.
+ */
+
+Source: src/engines/4086/source/scriptlib/Interpreter.c
+/* AnyBOR modification record: 2026-11-08.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Push canonical constants, release parser-only instruction data, and pack
+ * compiled instructions, values, and call references into exact contiguous
+ * storage. Preserve each profile's completed-call flag across reset before
+ * evaluating the next script entry. Clear resolved compile-only import nodes
+ * without changing compiled call targets. Compact compiler-only instruction
+ * records after resolving value ownership, preserving branch and export
+ * anchors, all mutable values and exactly-once pool cleanup. Allocate parser
+ * state only while compiling and release it once runtime instructions are
+ * ready.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/4086.md
  * at the source repository root. Original notices follow below.
  */
 
@@ -1461,6 +1450,23 @@ Source: src/deps/libogg/src/framing.c
 
 Source: src/glue/obor_engines.h
 /* Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+
+Source: src/engines/4086/source/scriptlib/ImportCache.c
+/* AnyBOR modification record: 2026-11-08.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Guard parser-only import metadata after compilation. Select each profile's
+ * additional import-failure diagnostics without changing cleanup. Compact
+ * compiler-only instruction records after resolving value ownership,
+ * preserving branch and export anchors, all mutable values and exactly-once
+ * pool cleanup. Read import metadata only while an interpreter still owns
+ * parser state.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/4086.md
+ * at the source repository root. Original notices follow below.
+ */
 
 Source: src/engines/3842/source/gamelib/transform.c
 /* AnyBOR modification record: 2026-09-12.
@@ -2329,52 +2335,6 @@ Source: src/engines/6391/source/gamelib/spritex8p16.c, src/engines/6391/source/g
  * at the source repository root. Original notices follow below.
  */
 
-Source: src/engines/4086/openbor.c
-/* AnyBOR modification record: 2026-10-27.
- * Port maintained by retrodiv <retrodiv@proton.me>.
- * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
- * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
- * Upstream code retains its original license and notices.
- * Apply the port's engine corrections and select the PC video configuration
- * on macOS. Select native early system-selector values, credit rendering and
- * active flags, true-color background and layer-mask admission, scene video
- * commands, menu flags and controller-assignment key flush; bound diagnostic
- * formatting and content paths and release owned layer masks. Keep damage-
- * over-time updates within the native effect arrays while retaining valid-
- * slot tick and expiration calculations. Derive output names from the
- * content basename with explicit destination capacities, and reject
- * overflowing output path joins. Leave multiplayer slots without a selected
- * model available to join even if game scripts preassign lives to them. Let
- * a missing basename-only PAK self-check read the active frontend content
- * after it has been validated and prepared. Allocate each model's animation
- * pointer table through the highest animation index that model uses, and
- * bound cache, copy and cleanup paths to that capacity. Ignore optional
- * defense and offense entries outside the configured attack-type range with
- * a log warning before accessing their tables. Yield after each newly
- * completed model during explicit model-list or level preparation, and defer
- * states until that preparation has cleaned up its intermediate parsers and
- * handles. Resize repeated weapon lists and detach borrowed lists before
- * replacing their entries. Return a defined null result for absent colourmap
- * models or tables while retaining valid palette fallback. Keep selected
- * palette-conversion reads bounded and reject missing maps or flags, while
- * preserving unselected slots and native allocation failure callbacks. Check
- * destination animation capacity when retaining an animation across model
- * changes, preserving the native fallback and timing. Access script-
- * container pointer slots with byte copies, preserving record layout,
- * pointer values and native copy/cleanup order. Pointer-slot allocation and
- * release accept byte storage without imposing pointer alignment on a packed
- * field. Release each sprite owner once and complete cleanup independently
- * of alias counts. Preserve native sprite-map capacity policies, check
- * allocation extents and retain existing storage and capacity when growth is
- * unavailable. Validate sprite-node allocations and release partial
- * resources without changing existing owners. Check cached sprite
- * availability before reading metadata and ignore cache requests for absent
- * nodes.
- * Existing changes recorded here; this is not their implementation date.
- * See MODIFICATIONS.md and docs/modifications/4086.md
- * at the source repository root. Original notices follow below.
- */
-
 Source: src/deps/libogg/include/ogg/ogg.h
 /********************************************************************
  *                                                                  *
@@ -2910,20 +2870,6 @@ Source: src/engines/3842/source/gamelib/draw.c
  * coordinates outside screen bounds while preserving valid pixels.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/3842.md
- * at the source repository root. Original notices follow below.
- */
-
-Source: src/engines/4086/source/preprocessorlib/pp_parser.c
-/* AnyBOR modification record: 2026-10-19.
- * Port maintained by retrodiv <retrodiv@proton.me>.
- * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
- * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
- * Upstream code retains its original license and notices.
- * Drop the glibc-only <malloc.h> and rely on the standard library
- * declarations the parser already includes. Release the owned function-macro
- * parameter list after its final child token.
- * Existing changes recorded here; this is not their implementation date.
- * See MODIFICATIONS.md and docs/modifications/4086.md
  * at the source repository root. Original notices follow below.
  */
 
@@ -3612,6 +3558,23 @@ Source: src/engines/8023/source/gamelib/spritex8p16.c, src/engines/8023/source/g
  * at the source repository root. Original notices follow below.
  */
 
+Source: src/engines/4086/openbor.h
+/* AnyBOR modification record: 2026-11-08.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Allocate collision pointer slots through the highest author-facing index
+ * used by each collection. Declare the native media decoder interface,
+ * profile movement deadlines, default shutdown text, historical frame-base
+ * and movement-table presence, spawn-coordinate storage and animation ID
+ * conversions. Declare the vault action used by early profiles. Track each
+ * model's allocated animation-table capacity and reject lookups outside it.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/4086.md
+ * at the source repository root. Original notices follow below.
+ */
+
 Source: src/engines/3741/openbor.h
 /* AnyBOR modification record: 2026-10-23.
  * Port maintained by retrodiv <retrodiv@proton.me>.
@@ -3792,6 +3755,23 @@ Source: src/engines/3842/source/gamelib/bitmap.c
  * bytes.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/3842.md
+ * at the source repository root. Original notices follow below.
+ */
+
+Source: src/engines/4086/source/preprocessorlib/pp_parser.c
+/* AnyBOR modification record: 2026-11-08.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Drop the glibc-only <malloc.h> and rely on the standard library
+ * declarations the parser already includes. Preserve source-defined macro
+ * argument admission, whitespace, directive position, parameter scope,
+ * forwarding and concatenation. Own temporary parameter data and retain
+ * discarded parser bindings until context shutdown; initialize concatenation
+ * output storage and release owned data at its final lifetime.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/4086.md
  * at the source repository root. Original notices follow below.
  */
 
@@ -4314,6 +4294,19 @@ Source: src/engines/7142/source/openborscript/recursive_damage.c
  * reject indices outside the retained table.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/7142.md
+ * at the source repository root. Original notices follow below.
+ */
+
+Source: src/engines/4086/source/preprocessorlib/pp_parser.h
+/* AnyBOR modification record: 2026-11-08.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Declare owned macro-expansion parameters and retained parser chains so
+ * historical bindings remain valid until context shutdown.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/4086.md
  * at the source repository root. Original notices follow below.
  */
 
@@ -5014,6 +5007,19 @@ Source: src/engines/6391/source/openborscript/animation.c
  * Translate native animation property IDs for the logical profile.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/6391.md
+ * at the source repository root. Original notices follow below.
+ */
+
+Source: src/engines/4086/source/randlib/rand32.h
+/* AnyBOR modification record: 2026-11-08.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Declare the shared unsigned-long seed entry while retaining native signed-
+ * int seed conversion in the custom generator profiles.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/4086.md
  * at the source repository root. Original notices follow below.
  */
 
@@ -6472,19 +6478,6 @@ Source: src/engines/3400/source/gamelib/screen16.c
  * at the source repository root. Original notices follow below.
  */
 
-Source: src/engines/4086/openborscript.h
-/* AnyBOR modification record: 2026-10-22.
- * Port maintained by retrodiv <retrodiv@proton.me>.
- * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
- * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
- * Upstream code retains its original license and notices.
- * Declare owned script-variable name storage. Declare the shared engine-
- * credit-screen selector without exposing it to earlier native namespaces.
- * Existing changes recorded here; this is not their implementation date.
- * See MODIFICATIONS.md and docs/modifications/4086.md
- * at the source repository root. Original notices follow below.
- */
-
 Source: src/engines/7142/source/utils.h
 /* AnyBOR modification record: 2026-10-12.
  * Port maintained by retrodiv <retrodiv@proton.me>.
@@ -6522,6 +6515,59 @@ Source: src/engines/6391/source/scriptlib/Instruction.c
  * targets.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/6391.md
+ * at the source repository root. Original notices follow below.
+ */
+
+Source: src/engines/4086/openbor.c
+/* AnyBOR modification record: 2026-11-08.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Apply the port's engine corrections and select the PC video configuration
+ * on macOS. Select native early system-selector values, credit rendering and
+ * active flags, true-color background and layer-mask admission, scene video
+ * commands, menu flags and controller-assignment key flush; bound diagnostic
+ * formatting and content paths and release owned layer masks. Preserve
+ * scrolling, startup palette and loading geometry, selection order, player
+ * spawn precision, walk/backwalk facing, blocking resources and defaults,
+ * counter damage, attack types and cancellation, periodic damage, rush,
+ * follow and ground-hit predicates, projectile costs and weapon loss. Retain
+ * frame-base and movement-table presence and cleanup, script animation
+ * identities and native limits, vault actions and caller priority, slow-
+ * motion arithmetic and main-loop seed timing. Keep damage-over-time updates
+ * within the native effect arrays while retaining valid-slot tick and
+ * expiration calculations. Derive output names from the content basename
+ * with explicit destination capacities, and reject overflowing output path
+ * joins. Leave multiplayer slots without a selected model available to join
+ * even if game scripts preassign lives to them. Let a missing basename-only
+ * PAK self-check read the active frontend content after it has been
+ * validated and prepared. Allocate each model's animation pointer table
+ * through the highest animation index that model uses, and bound cache, copy
+ * and cleanup paths to that capacity. Ignore optional defense and offense
+ * entries outside the configured attack-type range with a log warning before
+ * accessing their tables. Yield after each newly completed model during
+ * explicit model-list or level preparation, and defer states until that
+ * preparation has cleaned up its intermediate parsers and handles. Resize
+ * repeated weapon lists and detach borrowed lists before replacing their
+ * entries. Return a defined null result for absent colourmap models or
+ * tables while retaining valid palette fallback. Keep selected palette-
+ * conversion reads bounded and reject missing maps or flags, while
+ * preserving unselected slots and native allocation failure callbacks. Check
+ * destination animation capacity when retaining an animation across model
+ * changes, preserving the native fallback and timing. Access script-
+ * container pointer slots with byte copies, preserving record layout,
+ * pointer values and native copy/cleanup order. Pointer-slot allocation and
+ * release accept byte storage without imposing pointer alignment on a packed
+ * field. Release each sprite owner once and complete cleanup independently
+ * of alias counts. Preserve native sprite-map capacity policies, check
+ * allocation extents and retain existing storage and capacity when growth is
+ * unavailable. Validate sprite-node allocations and release partial
+ * resources without changing existing owners. Check cached sprite
+ * availability before reading metadata and ignore cache requests for absent
+ * nodes.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/4086.md
  * at the source repository root. Original notices follow below.
  */
 
@@ -6860,7 +6906,7 @@ Source: src/engines/8023/source/gamelib/font.c
  * at the source repository root. Original notices follow below.
  */
 
-Source: src/engines/3400/source/gamelib/obor_image_assert.h, src/engines/3400/version.h, src/engines/3741/version.h, src/engines/3842/version.h, src/engines/4086/version.h, src/engines/4432/version.h, src/engines/6391/version.h, src/engines/7142/version.h, src/engines/7533/version.h, src/engines/8023/version.h, src/port/libretro/assert.h, src/port/libretro/obor_block_crc.h, src/port/libretro/obor_block_state.c, src/port/libretro/obor_block_state.h, src/port/libretro/obor_block_threads.h, src/port/libretro/obor_block_worker_policy.h, src/port/libretro/obor_content_path.h, src/port/libretro/obor_directory.h, src/port/libretro/obor_directory_windows.h, src/port/libretro/obor_fault.c, src/port/libretro/obor_fault.h, src/port/libretro/obor_fault_context.h, src/port/libretro/obor_files.c, src/port/libretro/obor_framebuffer_state.h, src/port/libretro/obor_loading.h, src/port/libretro/obor_loose.c, src/port/libretro/obor_loose.h, src/port/libretro/obor_media_diag.c, src/port/libretro/obor_media_diag.h, src/port/libretro/obor_native_io.h, src/port/libretro/obor_pak_name.h, src/port/libretro/obor_paths.c, src/port/libretro/obor_paths.h, src/port/libretro/obor_profile_identity.h, src/port/libretro/obor_random.h, src/port/libretro/obor_resource_catalog.c, src/port/libretro/obor_resource_catalog.h, src/port/libretro/obor_resource_image.c, src/port/libretro/obor_resource_image.h, src/port/libretro/obor_resource_recipe.c, src/port/libretro/obor_resource_recipe.h, src/port/libretro/obor_resource_source.c, src/port/libretro/obor_resource_source.h, src/port/libretro/obor_resources.c, src/port/libretro/obor_resources.h, src/port/libretro/obor_runtime.h, src/port/libretro/obor_script_compact.h, src/port/libretro/obor_script_executable.h, src/port/libretro/obor_snapshot_cache.h, src/port/libretro/obor_state_cache_win.h, src/port/libretro/obor_state_config.h, src/port/libretro/obor_state_copy.h, src/port/libretro/obor_state_layout.h, src/port/libretro/obor_state_padding.h, src/port/libretro/obor_state_stream.h, src/port/libretro/obor_write_watch.c, src/port/libretro/obor_write_watch.h, src/glue/obor_build_identity.h, src/glue/obor_capture_cadence.h, src/glue/obor_content_contracts.h, src/glue/obor_content_scan.h, src/glue/obor_crt.h, src/glue/obor_detection_clock.h, src/glue/obor_engine_executables.h, src/glue/obor_engine_identity.h, src/glue/obor_engine_resources.h, src/glue/obor_error_screen.h, src/glue/obor_game_content.h, src/glue/obor_legacy_api.h, src/glue/obor_loading_screen.h, src/glue/obor_modern_api.h, src/glue/obor_packed_prepare.h, src/glue/obor_pak_repair.h, src/glue/obor_pak_validate.h, src/glue/obor_prepare_co.h, src/glue/obor_prepare_progress.h, src/glue/obor_prepare_sync.h, src/glue/obor_profile_triage.h, src/glue/obor_rewind.h, src/glue/obor_runtime.h, src/glue/obor_state_padding.h, src/glue/obor_storage.h, src/glue/obor_transform.h, src/glue/obor_video_config.h, src/glue/obor_zip_path.h
+Source: src/engines/3400/source/gamelib/obor_image_assert.h, src/engines/3400/version.h, src/engines/3741/version.h, src/engines/3842/version.h, src/engines/4086/version.h, src/engines/4432/version.h, src/engines/6391/version.h, src/engines/7142/version.h, src/engines/7533/version.h, src/engines/8023/version.h, src/port/libretro/assert.h, src/port/libretro/obor_block_crc.h, src/port/libretro/obor_block_state.c, src/port/libretro/obor_block_state.h, src/port/libretro/obor_block_threads.h, src/port/libretro/obor_block_worker_policy.h, src/port/libretro/obor_content_path.h, src/port/libretro/obor_directory.h, src/port/libretro/obor_directory_windows.h, src/port/libretro/obor_fault.c, src/port/libretro/obor_fault.h, src/port/libretro/obor_fault_context.h, src/port/libretro/obor_files.c, src/port/libretro/obor_framebuffer_state.h, src/port/libretro/obor_loading.h, src/port/libretro/obor_loose.c, src/port/libretro/obor_loose.h, src/port/libretro/obor_media_diag.c, src/port/libretro/obor_media_diag.h, src/port/libretro/obor_native_io.h, src/port/libretro/obor_pak_name.h, src/port/libretro/obor_paths.c, src/port/libretro/obor_paths.h, src/port/libretro/obor_profile_identity.h, src/port/libretro/obor_random.h, src/port/libretro/obor_random_additive.h, src/port/libretro/obor_resource_catalog.c, src/port/libretro/obor_resource_catalog.h, src/port/libretro/obor_resource_image.c, src/port/libretro/obor_resource_image.h, src/port/libretro/obor_resource_recipe.c, src/port/libretro/obor_resource_recipe.h, src/port/libretro/obor_resource_source.c, src/port/libretro/obor_resource_source.h, src/port/libretro/obor_resources.c, src/port/libretro/obor_resources.h, src/port/libretro/obor_runtime.h, src/port/libretro/obor_script_compact.h, src/port/libretro/obor_script_executable.h, src/port/libretro/obor_snapshot_cache.h, src/port/libretro/obor_state_cache_win.h, src/port/libretro/obor_state_config.h, src/port/libretro/obor_state_copy.h, src/port/libretro/obor_state_layout.h, src/port/libretro/obor_state_padding.h, src/port/libretro/obor_state_stream.h, src/port/libretro/obor_write_watch.c, src/port/libretro/obor_write_watch.h, src/glue/obor_build_identity.h, src/glue/obor_capture_cadence.h, src/glue/obor_content_contracts.h, src/glue/obor_content_scan.h, src/glue/obor_crt.h, src/glue/obor_detection_clock.h, src/glue/obor_engine_executables.h, src/glue/obor_engine_identity.h, src/glue/obor_engine_resources.h, src/glue/obor_error_screen.h, src/glue/obor_game_content.h, src/glue/obor_legacy_api.h, src/glue/obor_loading_screen.h, src/glue/obor_modern_api.h, src/glue/obor_packed_prepare.h, src/glue/obor_pak_repair.h, src/glue/obor_pak_validate.h, src/glue/obor_prepare_co.h, src/glue/obor_prepare_progress.h, src/glue/obor_prepare_sync.h, src/glue/obor_profile_triage.h, src/glue/obor_rewind.h, src/glue/obor_runtime.h, src/glue/obor_state_padding.h, src/glue/obor_storage.h, src/glue/obor_transform.h, src/glue/obor_video_config.h, src/glue/obor_zip_path.h
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
 
@@ -7241,24 +7287,6 @@ Source: src/deps/libpng/pngwutil.c
  *
  * This file contains routines that are only called from within
  * libpng itself during the course of writing an image.
- */
-
-Source: src/engines/4086/source/scriptlib/Interpreter.c
-/* AnyBOR modification record: 2026-10-19.
- * Port maintained by retrodiv <retrodiv@proton.me>.
- * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
- * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
- * Upstream code retains its original license and notices.
- * Push canonical constants, release parser-only instruction data, and pack
- * compiled instructions, values, and call references into exact contiguous
- * storage. Clear resolved compile-only import nodes without changing
- * compiled call targets. Compact compiler-only instruction records after
- * resolving value ownership, preserving branch and export anchors, all
- * mutable values and exactly-once pool cleanup. Allocate parser state only
- * while compiling and release it once runtime instructions are ready.
- * Existing changes recorded here; this is not their implementation date.
- * See MODIFICATIONS.md and docs/modifications/4086.md
- * at the source repository root. Original notices follow below.
  */
 
 Source: src/engines/8023/source/scriptlib/Instruction.c
@@ -7752,6 +7780,41 @@ Source: src/glue/obor_loading_background.h
  * Generated from assets/OpenBOR_Logo_3200x1800.png with centred Lanczos3
  * filtering by tools/embed_loading_background.py.
  * See assets/README.md and assets/LICENSE. */
+
+Source: src/engines/4086/openborscript.c
+/* AnyBOR modification record: 2026-11-08.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Keep the dormant constant-lowering diagnostic compatible with the single-
+ * value instruction layout. Preserve source-defined system, player, drawing,
+ * entity and text namespaces, numeric/cached selectors, axis warnings,
+ * terrain fields, removed constants and native animation argument/result
+ * identities. Retain native antigravity, drop-velocity and height results,
+ * shutdown arguments, duration conversions, rush and ground-hit values,
+ * block-resource representation, attack staydown return types and script API
+ * availability; bound cache and diagnostic access. Preserve spawn-callback
+ * locals, grab-script output/validation epochs, takeaction table bounds and
+ * seed-script conversion/advance behavior. Derive output names from the
+ * content basename with explicit destination capacities, and reject
+ * overflowing output path joins. Compact compiler-only instruction records
+ * after resolving value ownership, preserving branch and export anchors, all
+ * mutable values and exactly-once pool cleanup. Retain shared interpreters
+ * through the last script reference while preserving independent variables,
+ * replacement and native callbacks. Track diagnostic comments independently
+ * so interpreter replacement can retain them. Resolve text-property names
+ * within the actual table bounds while preserving native numeric selectors.
+ * Reuse each text object's owned buffer when replacing its contents. Reject
+ * missing colourtable indices and keep selector arithmetic and table reads
+ * defined. Use the declared staydown name-table length for lookup. Transfer
+ * loaded stream buffers through aligned local outputs while preserving
+ * native record layout and results. Close owned input files after stream
+ * loading and on buffer allocation failure.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/4086.md
+ * at the source repository root. Original notices follow below.
+ */
 
 Source: src/deps/libvorbis/lib/modes/psych_16.h, src/deps/libvorbis/lib/modes/setup_16.h
 /********************************************************************
@@ -8838,6 +8901,20 @@ Source: src/engines/4086/source/gamelib/timer.h
  * Upstream code retains its original license and notices.
  * Declare the shared platform microsecond clock used by native media
  * playback.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/4086.md
+ * at the source repository root. Original notices follow below.
+ */
+
+Source: src/engines/4086/source/randlib/rand32.c
+/* AnyBOR modification record: 2026-11-08.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Preserve each profile's native generator, seed initialization and
+ * unsigned-long storage, including clock-based libc seeding and engine-owned
+ * libc random state.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/4086.md
  * at the source repository root. Original notices follow below.
@@ -9977,21 +10054,6 @@ Source: src/engines/4086/openbor.h, src/engines/4432/openbor.h, src/engines/6391
  * All rights reserved, see LICENSE in OpenBOR root for details.
  *
  * Copyright (c) 2004 - 2014 OpenBOR Team
- */
-
-Source: src/engines/4086/source/scriptlib/ImportCache.c
-/* AnyBOR modification record: 2026-10-10.
- * Port maintained by retrodiv <retrodiv@proton.me>.
- * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
- * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
- * Upstream code retains its original license and notices.
- * Guard parser-only import metadata after compilation. Compact compiler-only
- * instruction records after resolving value ownership, preserving branch and
- * export anchors, all mutable values and exactly-once pool cleanup. Read
- * import metadata only while an interpreter still owns parser state.
- * Existing changes recorded here; this is not their implementation date.
- * See MODIFICATIONS.md and docs/modifications/4086.md
- * at the source repository root. Original notices follow below.
  */
 
 Source: src/deps/libpng/png.c

@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.84 — historical profiles through 4085
+
+- Add 13 official profiles from 3978 through 4085 and exact-tag/manual 3968-dev and 3970-dev.
+- Preserve each profile’s script, model, frame, movement, combat and loading behavior.
+- Keep campaign fixtures compatible with Clang’s unused-function checks.
+- Balance native runtime groups with the measured profile costs.
+
 ## 0.1.83 — engine identity and ZIP content selection
 
 - Identify verified engine executables by SHA-256 without executing them.

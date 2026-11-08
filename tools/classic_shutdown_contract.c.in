@@ -1,0 +1,69 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ * Native default message and script caller; observe the engine-stop service.
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "openbor.h"
+#undef printf
+#undef assert
+#include <assert.h>
+#ifdef NDEBUG
+#error Shutdown checks must remain enabled
+#endif
+uint32_t obor_profile_build;
+HRESULT Interpreter_Call(Interpreter *p) { (void)p; abort(); }
+HRESULT Interpreter_EvalInstruction(Interpreter *p) { (void)p; abort(); }
+static int stopped, stop_status;
+static const char *stop_message;
+HRESULT ScriptVariant_IntegerValue(ScriptVariant *var, LONG *value)
+{
+    assert(var && value && var->vt == VT_INTEGER);
+    *value = var->lVal; return S_OK;
+}
+static char *messages[]={"requested text","status one text","status two text"};
+char *StrCache_GetIfPresent(int index)
+{
+    assert(index>=0 && index<3);return messages[index];
+}
+void shutdown(int status, char *message, ...)
+{
+    assert(!stopped); ++stopped; stop_status = status; stop_message = message;
+}
+@SHUTDOWN@
+static const struct { unsigned revision; const char *body; int message_argument; }
+    contexts[] = {@CONTEXTS@};
+int main(void)
+{
+    for(unsigned p = 0; p < sizeof(contexts)/sizeof(contexts[0]); ++p)
+    {
+        obor_profile_build = contexts[p].revision;
+        for(int status = 0; status <= 2; ++status)
+        {
+            ScriptVariant argument = {0}, result = {0};
+            ScriptVariant *args[] = {&argument}, *out = &result;
+            argument.vt = VT_INTEGER; argument.lVal = status;
+            stopped = 0; stop_status = -1; stop_message = NULL;
+            assert(openbor_shutdown(args, &out, 1) == S_OK);
+            assert(!out && stopped == 1 && stop_status == status && stop_message);
+            const char *body = strchr(stop_message, '\n');
+            assert(body && !strcmp(body + 1, contexts[p].body));
+        }
+        for(int status=1;status<=2;++status)
+        {
+            ScriptVariant argument={0},message={0},result={0};
+            ScriptVariant *args[]={&argument,&message},*out=&result;
+            argument.vt=VT_INTEGER;argument.lVal=status;
+            message.vt=VT_STR;message.strVal=0;
+            stopped=0;stop_status=-1;stop_message=NULL;
+            assert(openbor_shutdown(args,&out,2)==S_OK);
+            assert(!out && stopped==1 && stop_status==status);
+            int expected=contexts[p].message_argument==0?status:0;
+            assert(stop_message==messages[expected]);
+        }
+        printf("{\"revision\":%u,\"cases\":5,\"status\":\"PASS\"}\n", obor_profile_build);
+    }
+    return 0;
+}

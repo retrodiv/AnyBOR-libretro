@@ -1,0 +1,75 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ * Original symbolic attack values and complete model defense/offense arms.
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "openbor.h"
+#undef printf
+#undef assert
+#ifdef NDEBUG
+#error Attack-type checks must remain enabled
+#endif
+uint32_t obor_profile_build;
+static unsigned active_case;
+#define assert(c) do {if(!(c)){fprintf(stderr,"Attack type revision=%u case=%u line=%d\n",obor_profile_build,active_case,__LINE__);abort();}}while(0)
+HRESULT Interpreter_Call(Interpreter *p) {(void)p;abort();}
+HRESULT Interpreter_EvalInstruction(Interpreter *p) {(void)p;abort();}
+int max_attack_types = MAX_ATKS + 4;
+static s_model model;
+static s_defense defenses[MAX_ATKS + 4];
+static float offense[MAX_ATKS + 4];
+enum {CMD_MODEL_DEFENSE,CMD_MODEL_OFFENSE};
+void writeToLogFile(const char *format,...) {(void)format;abort();}
+@DEFAULT@
+@HELPERS@
+static void directive(int cmd,char *name)
+{
+    ArgList arglist={0};s_model *newchar=&model;s_defense defense;
+    int tempInt,i;float tempFloat;char *value,*filename="fixture",*command="contract";
+    arglist.count=3;arglist.args[0]=command;arglist.args[1]=name;arglist.args[2]="2.5";
+    switch(cmd)
+    {
+        @DIRECTIVES@
+    }
+}
+static const int symbols[]={@SYMBOLS@};
+static const char *commands[]={@COMMANDS@};
+static const struct {
+    uint32_t revision;int values[@SYMBOL_COUNT@],slots[@COMMAND_COUNT@];
+} contexts[]={@CONTEXTS@};
+int main(void)
+{
+    for(unsigned p=0;p<sizeof(contexts)/sizeof(contexts[0]);++p)
+    {
+        obor_profile_build=contexts[p].revision;active_case=0;
+        for(unsigned i=0;i<sizeof(symbols)/sizeof(symbols[0]);++i)
+        {
+            ++active_case;
+            assert(obor_attack_type_number(symbols[i],obor_profile_build)==contexts[p].values[i]);
+        }
+        for(int mode=0;mode<2;++mode)
+        for(unsigned c=0;c<sizeof(commands)/sizeof(commands[0]);++c)
+        {
+            ++active_case;memset(&model,0,sizeof(model));
+            memset(defenses,0,sizeof(defenses));
+            model.defense=defenses;model.offense_factors=offense;
+            for(int i=0;i<max_attack_types;++i){defenses[i].factor=-9;offense[i]=-9;}
+            directive(mode?CMD_MODEL_OFFENSE:CMD_MODEL_DEFENSE,(char *)commands[c]);
+            int selected=contexts[p].slots[c];
+            for(int i=0;i<max_attack_types;++i)
+            {
+                int changed=i==selected;
+                if(selected==-2)
+                    changed=i!=contexts[p].values[17] && i!=contexts[p].values[18] &&
+                        i!=contexts[p].values[19];
+                assert(defenses[i].factor==(!mode && changed?2.5f:-9.f));
+                assert(offense[i]==(mode && changed?2.5f:-9.f));
+            }
+        }
+        printf("{\"revision\":%u,\"cases\":%u,\"status\":\"PASS\"}\n",obor_profile_build,active_case);
+    }
+    return 0;
+}

@@ -1,0 +1,216 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ * Native mapper, getter prefix and complete attack-query case.
+ */
+#include <stdint.h>
+#include <limits.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <strings.h>
+#include <stdarg.h>
+#include "openbor.h"
+#undef printf
+#undef assert
+#ifdef NDEBUG
+#error Duration assertions must remain enabled
+#endif
+uint32_t obor_profile_build;
+static unsigned active_case;
+#define assert(c) do {if(!(c)){fprintf(stderr,"Duration revision=%u case=%u line=%d\n",obor_profile_build,active_case,__LINE__);abort();}}while(0)
+HRESULT Interpreter_Call(Interpreter *p) { (void)p; abort(); }
+HRESULT Interpreter_EvalInstruction(Interpreter *p) { (void)p; abort(); }
+static char strings[32][128],diagnostic[4096];
+static int used[32];
+int StrCache_Pop(void)
+{for(int i=0;i<32;++i)if(!used[i]){used[i]=1;strings[i][0]=0;return i;}abort();}
+void StrCache_Collect(int i) {assert(i>=0 && i<32 && used[i]);used[i]=0;}
+CHAR *StrCache_Get(int i) {assert(i>=0 && i<32 && used[i]);return strings[i];}
+void StrCache_Copy(int i,CHAR *text)
+{assert(i>=0 && i<32 && used[i] && strlen(text)<sizeof(strings[i]));strcpy(strings[i],text);}
+static int record_printf(const char *format,...)
+{va_list args;va_start(args,format);size_t len=strlen(diagnostic);int n=vsnprintf(diagnostic+len,sizeof(diagnostic)-len,format,args);va_end(args);assert(n>=0 && (size_t)n<sizeof(diagnostic)-len);return n;}
+CHAR *StrCache_GetIfPresent(int i) {return i>=0 && i<32 && used[i]?strings[i]:NULL;}
+@VARIANTS@
+@SEARCH@
+static entity actor,opponent;
+entity *self;
+static s_attack attack,smartattack;
+static s_anim animation;
+static s_anim *animations[]={&animation};
+static s_attack *attacks[]={&attack};
+static s_model model;
+static s_level scene,*level=&scene;
+static s_textobj textobject;
+static uint32_t probe_clock;
+static unsigned char palettes[3][256];
+static unsigned map_calls,map_index;
+unsigned char *model_get_colourmap(s_model *m,unsigned which)
+{assert(m==&actor.modeldata && which<3);++map_calls;map_index=which;return palettes[which];}
+void ent_set_colourmap(entity *ent,unsigned which)
+{assert(ent==&actor && which<3);ent->colourmap=palettes[which];}
+void writeToLogFile(const char *format,...) {(void)format;abort();}
+@INAIR@
+#define printf record_printf
+@HELPERS@
+@MACROS@
+@DECLARATIONS@
+@GETTER@
+@ATTACK_MAPPER@
+@SETTER@
+@TEXT_DECLARATIONS@
+@TEXT_GETTER@
+@EFFECTS@
+#undef printf
+enum {CMD_MODEL_FREEZE,CMD_MODEL_STUN,CMD_MODEL_FORCEMAP,CMD_MODEL_SEAL,CMD_MODEL_DOT};
+static void load_duration(int kind,const char *number,int smart)
+{
+ ArgList arglist={0};s_model *newchar=&model;s_attack *pattack;
+ int newanim=!smart;char *filename="fixture",*command="duration";
+ char *args[]={"duration",(char *)number,"3","1","9","3",(char *)number};
+ if(kind==CMD_MODEL_FORCEMAP){args[1]="2";args[2]=(char *)number;}
+ if(kind==CMD_MODEL_DOT){args[1]="1";args[2]=(char *)number;}
+ model.smartbomb=&smartattack;arglist.count=7;
+ for(int i=0;i<7;++i)arglist.args[i]=args[i];
+ switch(kind){@DIRECTIVES@}
+}
+static void pain(s_attack *attack)
+{@PAIN@}
+static const struct {unsigned revision;int signed_time,property,subproperties[4],idle,textslot;const char *textname;} contexts[]={@CONTEXTS@};
+static const struct {const char *text;uint32_t old,later;int old_defined,later_defined;} floats[]={@FLOATS@};
+static const struct {uint32_t bits;int64_t signed_value;uint32_t old_ticks,later_ticks;int old_defined;} raw[]={@RAW@};
+static const double script_values[]={@SCRIPT_VALUES@};
+static const uint32_t clocks[]={@CLOCKS@};
+static const char *property_names[]={"dottime","freezetime","maptime","sealtime"};
+static uint32_t *time_field(s_attack *a,unsigned kind)
+{
+ switch(kind){case 0:return &a->dot_time;case 1:return &a->freezetime;case 2:return &a->maptime;case 3:return &a->sealtime;default:abort();}
+}
+static void string_value(ScriptVariant *v,const char *text)
+{ScriptVariant_ChangeType(v,VT_STR);StrCache_Copy(v->strVal,(char *)text);}
+static void arguments(ScriptVariant *v,ScriptVariant **args,unsigned count)
+{memset(v,0,count*sizeof(*v));for(unsigned i=0;i<count;++i){v[i].vt=VT_INTEGER;args[i]=v+i;}}
+static void reset_effects(uint32_t clock)
+{memset(&actor,0,sizeof(actor));self=&actor;probe_clock=clock;map_calls=map_index=0;}
+int main(void)
+{
+ assert(GAME_SPEED==@GAME_SPEED@);
+ for(unsigned p=0;p<sizeof(contexts)/sizeof(contexts[0]);++p)
+ {
+  obor_profile_build=contexts[p].revision;active_case=0;
+  actor.modeldata.animation=animations;actor.modeldata.animation_capacity=1;
+  animation.numframes=1;animation.attacks=attacks;
+  for(unsigned k=0;k<sizeof(script_values)/sizeof(script_values[0]);++k)
+  for(unsigned field=0;field<4;++field)
+  for(int named=0;named<2;++named)
+  for(int integer=0;integer<2;++integer)
+  {
+   ScriptVariant v[2],*args[2],unused={0},*out=&unused;arguments(v,args,2);
+   if(named)string_value(v,property_names[field]);else v[0].lVal=contexts[p].subproperties[field];
+   v[1].vt=integer?VT_INTEGER:VT_DECIMAL;
+   if(integer)v[1].lVal=(LONG)script_values[k];else v[1].dblVal=script_values[k];
+   diagnostic[0]=0;assert(openbor_changeattackproperty(args,&out,2)==S_OK && !out && !diagnostic[0]);
+   int expected=(int)script_values[k];assert(*time_field(&attack,field)==(uint32_t)expected);
+   for(int i=0;i<2;++i)ScriptVariant_Clear(v+i);
+   ScriptVariant q[6],*query[6];arguments(q,query,6);q[0].vt=VT_PTR;q[0].ptrVal=&actor;
+   q[4].lVal=contexts[p].idle;
+   if(named){string_value(q+1,"attack");string_value(q+2,property_names[field]);}
+   else {q[1].lVal=contexts[p].property;q[2].lVal=contexts[p].subproperties[field];}
+   for(int repeat=0;repeat<2;++repeat)
+   {
+    ++active_case;ScriptVariant result={0},*output=&result;
+    assert(openbor_getentityproperty(query,&output,6)==S_OK && output==&result && !diagnostic[0]);
+    LONG value=contexts[p].signed_time?(LONG)expected:(LONG)(uint32_t)expected;
+    assert(result.vt==VT_INTEGER && result.lVal==value);
+    assert(q[1].vt==VT_INTEGER && q[1].lVal==contexts[p].property);
+    assert(q[2].vt==VT_INTEGER && q[2].lVal==contexts[p].subproperties[field]);
+    ScriptVariant_Clear(&result);
+   }
+   for(int i=0;i<6;++i)ScriptVariant_Clear(q+i);
+  }
+  scene.numtextobjs=1;scene.textobjs=&textobject;
+  for(unsigned k=0;k<sizeof(raw)/sizeof(raw[0]);++k)
+  for(int named=0;named<2;++named)
+  {
+   textobject.time=raw[k].bits;ScriptVariant v[2],*args[2];arguments(v,args,2);
+   if(named)string_value(v+1,contexts[p].textname);else v[1].lVal=contexts[p].textslot;
+   for(int repeat=0;repeat<2;++repeat)
+   {
+    ++active_case;ScriptVariant result={0},*output=&result;diagnostic[0]=0;
+    assert(openbor_gettextobjproperty(args,&output,2)==S_OK && output==&result && !diagnostic[0]);
+    LONG expected=contexts[p].signed_time?(LONG)raw[k].signed_value:(LONG)raw[k].bits;
+    assert(result.vt==VT_INTEGER && result.lVal==expected && textobject.time==raw[k].bits);
+    assert(v[1].vt==VT_INTEGER && v[1].lVal==contexts[p].textslot);ScriptVariant_Clear(&result);
+   }
+   for(int i=0;i<2;++i)ScriptVariant_Clear(v+i);
+  }
+  for(unsigned k=0;k<sizeof(floats)/sizeof(floats[0]);++k)
+  for(int kind=CMD_MODEL_FREEZE;kind<=CMD_MODEL_FORCEMAP;++kind)
+  for(int smart=0;smart<2;++smart)
+  {
+   ++active_case;memset(&attack,0,sizeof(attack));memset(&smartattack,0,sizeof(smartattack));
+   load_duration(kind,floats[k].text,smart);
+   s_attack *selected=smart && kind!=CMD_MODEL_FREEZE?&smartattack:&attack;
+   s_attack *other=selected==&attack?&smartattack:&attack;
+   uint32_t value=kind==CMD_MODEL_FORCEMAP?selected->maptime:selected->freezetime;
+   assert(value==(contexts[p].signed_time?floats[k].old:floats[k].later));
+   assert(!other->maptime && !other->freezetime);
+   assert(kind==CMD_MODEL_FORCEMAP?selected->forcemap==2:selected->freeze==1);
+  }
+  /* Seal multiplies a signed parser result before storing in either epoch. */
+  for(unsigned k=0;k<sizeof(script_values)/sizeof(script_values[0]);++k)
+  for(int smart=0;smart<2;++smart)
+  {
+   int value=(int)script_values[k];if(value>INT_MAX/GAME_SPEED || value<INT_MIN/GAME_SPEED)continue;
+   ++active_case;char number[64];snprintf(number,sizeof(number),"%d",value);
+   memset(&attack,0,sizeof(attack));memset(&smartattack,0,sizeof(smartattack));load_duration(CMD_MODEL_SEAL,number,smart);
+   s_attack *selected=smart?&smartattack:&attack;
+   assert(selected->sealtime==(uint32_t)(value*GAME_SPEED) && selected->seal==3);
+  }
+  for(unsigned k=0;k<sizeof(raw)/sizeof(raw[0]);++k)
+  {
+   ++active_case;char number[64];snprintf(number,sizeof(number),"%lld",(long long)raw[k].signed_value);
+   memset(&attack,0,sizeof(attack));load_duration(CMD_MODEL_DOT,number,0);
+   assert(attack.dot_time==raw[k].bits && attack.dot_index==1 && attack.dot==1 && attack.dot_force==9 && attack.dot_rate==3);
+  }
+  for(unsigned k=0;k<sizeof(raw)/sizeof(raw[0]);++k)
+  for(unsigned t=0;t<sizeof(clocks)/sizeof(clocks[0]);++t)
+  {
+   for(int owner=0;owner<2;++owner)
+   for(int last=0;last<2;++last)
+   {
+    ++active_case;reset_effects(clocks[t]);memset(&attack,0,sizeof(attack));
+    int index=last?MAX_DOTS-1:0;actor.opponent=owner?&opponent:NULL;
+    attack.dot=1;attack.dot_index=index;attack.dot_time=raw[k].bits;
+    attack.dot_force=9;attack.dot_rate=3;attack.attack_type=ATK_NORMAL;
+    checkdamageeffects(&attack);
+    uint32_t ticks=contexts[p].signed_time?raw[k].old_ticks:raw[k].later_ticks;
+    assert(actor.dot_time[index]==(uint32_t)(clocks[t]+ticks));
+    assert(actor.dot_owner[index]==(owner?&opponent:&actor) && actor.dot[index]==1);
+    assert(actor.dot_force[index]==9 && actor.dot_rate[index]==3 && actor.dot_atk[index]==ATK_NORMAL);
+    assert(!map_calls);
+   }
+   for(int effect=0;effect<3;++effect)
+   {
+    ++active_case;reset_effects(clocks[t]);memset(&attack,0,sizeof(attack));
+    if(effect==0){attack.freeze=1;attack.freezetime=raw[k].bits;actor.modeldata.maps.frozen=-1;}
+    else if(effect==1){attack.forcemap=2;attack.maptime=raw[k].bits;}
+    else {attack.seal=3;attack.sealtime=raw[k].bits;}
+    checkdamageeffects(&attack);uint32_t expected=clocks[t]+raw[k].bits;
+    if(effect==0)assert(actor.frozen==1 && actor.freezetime==expected && !map_calls);
+    else if(effect==1)assert(actor.maptime==expected && map_calls==1 && map_index==2 && actor.colourmap==palettes[2]);
+    else assert(actor.seal==3 && actor.sealtime==expected && !map_calls);
+   }
+   ++active_case;reset_effects(clocks[t]);memset(&attack,0,sizeof(attack));
+   actor.drop=1;actor.staydown.riseattack_stall=43;
+   attack.staydown.rise=raw[k].bits;attack.staydown.riseattack=raw[k].bits;attack.staydown.riseattack_stall=33;
+   checkdamageeffects(&attack);
+   assert(actor.drop==1 && actor.staydown.rise==raw[k].bits && actor.staydown.riseattack==raw[k].bits && actor.staydown.riseattack_stall==43);
+   ++active_case;reset_effects(clocks[t]);attack.pain_time=raw[k].bits;pain(&attack);
+   assert(actor.pain_time==(uint32_t)(clocks[t]+(raw[k].bits?raw[k].bits:GAME_SPEED/5)));
+  }
+  for(int i=0;i<32;++i)assert(!used[i]);
+  printf("{\"revision\":%u,\"cases\":%u,\"status\":\"PASS\"}\n",obor_profile_build,active_case);
+ }
+ return 0;
+}

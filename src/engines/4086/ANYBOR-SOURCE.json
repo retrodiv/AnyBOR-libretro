@@ -17,9 +17,9 @@
       "upstream_sha256": null
     },
     "openbor.c": {
-      "distributed_sha256": "612f0faf5276e60dd2af408d84dbfda7c017e48a17657d720a487fe428d3b170",
+      "distributed_sha256": "b8cc32d5d8a12b07abe3269353c20aac83275387f450210bf75604a7e89c4bde",
       "modified": true,
-      "summary": "Apply the port's engine corrections and select the PC video configuration on macOS. Select native early system-selector values, credit rendering and active flags, true-color background and layer-mask admission, scene video commands, menu flags and controller-assignment key flush; bound diagnostic formatting and content paths and release owned layer masks. Keep damage-over-time updates within the native effect arrays while retaining valid-slot tick and expiration calculations. Derive output names from the content basename with explicit destination capacities, and reject overflowing output path joins. Leave multiplayer slots without a selected model available to join even if game scripts preassign lives to them. Let a missing basename-only PAK self-check read the active frontend content after it has been validated and prepared. Allocate each model's animation pointer table through the highest animation index that model uses, and bound cache, copy and cleanup paths to that capacity. Ignore optional defense and offense entries outside the configured attack-type range with a log warning before accessing their tables. Yield after each newly completed model during explicit model-list or level preparation, and defer states until that preparation has cleaned up its intermediate parsers and handles. Resize repeated weapon lists and detach borrowed lists before replacing their entries. Return a defined null result for absent colourmap models or tables while retaining valid palette fallback. Keep selected palette-conversion reads bounded and reject missing maps or flags, while preserving unselected slots and native allocation failure callbacks. Check destination animation capacity when retaining an animation across model changes, preserving the native fallback and timing. Access script-container pointer slots with byte copies, preserving record layout, pointer values and native copy/cleanup order. Pointer-slot allocation and release accept byte storage without imposing pointer alignment on a packed field. Release each sprite owner once and complete cleanup independently of alias counts. Preserve native sprite-map capacity policies, check allocation extents and retain existing storage and capacity when growth is unavailable. Validate sprite-node allocations and release partial resources without changing existing owners. Check cached sprite availability before reading metadata and ignore cache requests for absent nodes.",
+      "summary": "Apply the port's engine corrections and select the PC video configuration on macOS. Select native early system-selector values, credit rendering and active flags, true-color background and layer-mask admission, scene video commands, menu flags and controller-assignment key flush; bound diagnostic formatting and content paths and release owned layer masks. Preserve scrolling, startup palette and loading geometry, selection order, player spawn precision, walk/backwalk facing, blocking resources and defaults, counter damage, attack types and cancellation, periodic damage, rush, follow and ground-hit predicates, projectile costs and weapon loss. Retain frame-base and movement-table presence and cleanup, script animation identities and native limits, vault actions and caller priority, slow-motion arithmetic and main-loop seed timing. Keep damage-over-time updates within the native effect arrays while retaining valid-slot tick and expiration calculations. Derive output names from the content basename with explicit destination capacities, and reject overflowing output path joins. Leave multiplayer slots without a selected model available to join even if game scripts preassign lives to them. Let a missing basename-only PAK self-check read the active frontend content after it has been validated and prepared. Allocate each model's animation pointer table through the highest animation index that model uses, and bound cache, copy and cleanup paths to that capacity. Ignore optional defense and offense entries outside the configured attack-type range with a log warning before accessing their tables. Yield after each newly completed model during explicit model-list or level preparation, and defer states until that preparation has cleaned up its intermediate parsers and handles. Resize repeated weapon lists and detach borrowed lists before replacing their entries. Return a defined null result for absent colourmap models or tables while retaining valid palette fallback. Keep selected palette-conversion reads bounded and reject missing maps or flags, while preserving unselected slots and native allocation failure callbacks. Check destination animation capacity when retaining an animation across model changes, preserving the native fallback and timing. Access script-container pointer slots with byte copies, preserving record layout, pointer values and native copy/cleanup order. Pointer-slot allocation and release accept byte storage without imposing pointer alignment on a packed field. Release each sprite owner once and complete cleanup independently of alias counts. Preserve native sprite-map capacity policies, check allocation extents and retain existing storage and capacity when growth is unavailable. Validate sprite-node allocations and release partial resources without changing existing owners. Check cached sprite availability before reading metadata and ignore cache requests for absent nodes.",
       "topics": [
         "active-content-pak-aliases",
         "animation-memory-layout",
@@ -44,9 +44,9 @@
       "upstream_sha256": "fa319b01a0cd47dea0921e31eaa3532f614716c72ae3a780c5e2675bdcb0703a"
     },
     "openbor.h": {
-      "distributed_sha256": "e060ea58e2a76c2e9e93d62d7af4047199ba08fbe8d22e425e018a4a31c048c6",
+      "distributed_sha256": "f939374833ecaa009670c2e8f0c45490f7d01b8aaa80ebd94762059b1ffd20a9",
       "modified": true,
-      "summary": "Allocate collision pointer slots through the highest author-facing index used by each collection. Declare the native media decoder interface for the early profile family. Track each model's allocated animation-table capacity and reject lookups outside it.",
+      "summary": "Allocate collision pointer slots through the highest author-facing index used by each collection. Declare the native media decoder interface, profile movement deadlines, default shutdown text, historical frame-base and movement-table presence, spawn-coordinate storage and animation ID conversions. Declare the vault action used by early profiles. Track each model's allocated animation-table capacity and reject lookups outside it.",
       "topics": [
         "animation-memory-layout",
         "compiler-warning-cleanup",
@@ -56,9 +56,9 @@
       "upstream_sha256": "3d54f4d40f76c0e51fc30617c5dedd968ab57168a063cd349dc104ae5fc8756b"
     },
     "openborscript.c": {
-      "distributed_sha256": "50bd6eea49624826da7d5038ca9021263f65dadaed3915826aef21c4123f61d6",
+      "distributed_sha256": "abc5aebc4818c138f2117aed52f625b53197546d65f867b3e68ffcdfe9323059",
       "modified": true,
-      "summary": "Keep the dormant constant-lowering diagnostic compatible with the single-value instruction layout. Map every early profile's native system-variable namespace and numeric IDs, attack staydown return type and shutdown message argument; bound cache access and reject formats requiring absent variadic arguments. Derive output names from the content basename with explicit destination capacities, and reject overflowing output path joins. Compact compiler-only instruction records after resolving value ownership, preserving branch and export anchors, all mutable values and exactly-once pool cleanup. Retain shared interpreters through the last script reference while preserving independent variables, replacement and native callbacks. Track diagnostic comments independently so interpreter replacement can retain them. Resolve text-property names within the actual table bounds while preserving native numeric selectors. Reuse each text object's owned buffer when replacing its contents. Reject missing colourtable indices and keep selector arithmetic and table reads defined. Use the declared staydown name-table length for lookup. Transfer loaded stream buffers through aligned local outputs while preserving native record layout and results. Close owned input files after stream loading and on buffer allocation failure.",
+      "summary": "Keep the dormant constant-lowering diagnostic compatible with the single-value instruction layout. Preserve source-defined system, player, drawing, entity and text namespaces, numeric/cached selectors, axis warnings, terrain fields, removed constants and native animation argument/result identities. Retain native antigravity, drop-velocity and height results, shutdown arguments, duration conversions, rush and ground-hit values, block-resource representation, attack staydown return types and script API availability; bound cache and diagnostic access. Preserve spawn-callback locals, grab-script output/validation epochs, takeaction table bounds and seed-script conversion/advance behavior. Derive output names from the content basename with explicit destination capacities, and reject overflowing output path joins. Compact compiler-only instruction records after resolving value ownership, preserving branch and export anchors, all mutable values and exactly-once pool cleanup. Retain shared interpreters through the last script reference while preserving independent variables, replacement and native callbacks. Track diagnostic comments independently so interpreter replacement can retain them. Resolve text-property names within the actual table bounds while preserving native numeric selectors. Reuse each text object's owned buffer when replacing its contents. Reject missing colourtable indices and keep selector arithmetic and table reads defined. Use the declared staydown name-table length for lookup. Transfer loaded stream buffers through aligned local outputs while preserving native record layout and results. Close owned input files after stream loading and on buffer allocation failure.",
       "topics": [
         "colourtable-selector-bounds",
         "compiler-warning-cleanup",
@@ -75,9 +75,9 @@
       "upstream_sha256": "4be42b223e003565531d785e6182127d75307e4e0625028b7e03e2ab124ffa45"
     },
     "openborscript.h": {
-      "distributed_sha256": "19b39e909effb9a1a2a7ffd6134af702be41198d2df0ba911af334af6c202ba0",
+      "distributed_sha256": "6904d461beb1c74c231329c9eb4fd693104efd343bf436e57fdf06b45110ce55",
       "modified": true,
-      "summary": "Declare owned script-variable name storage. Declare the shared engine-credit-screen selector without exposing it to earlier native namespaces.",
+      "summary": "Declare owned script-variable name storage. Declare the shared engine-credit-screen selector and script seed callback without exposing them to earlier native namespaces.",
       "topics": [
         "logical-profile-compatibility",
         "record-dates-and-file-notices",
@@ -548,9 +548,9 @@
       "upstream_sha256": "14ea9856cad63f1c9e17dd3ae1bf9116d2fc962b179b1de86d713c1e8db58e1b"
     },
     "source/preprocessorlib/pp_parser.c": {
-      "distributed_sha256": "a52b471cedca8736c4917a8780c6d7f8a4dedd2f16852fa74bc74905a38f969b",
+      "distributed_sha256": "121042c34cd55f66afa2b9d793c96aaa245b77d9682db538c2b275ab5ce499a0",
       "modified": true,
-      "summary": "Drop the glibc-only <malloc.h> and rely on the standard library declarations the parser already includes. Release the owned function-macro parameter list after its final child token.",
+      "summary": "Drop the glibc-only <malloc.h> and rely on the standard library declarations the parser already includes. Preserve source-defined macro argument admission, whitespace, directive position, parameter scope, forwarding and concatenation. Own temporary parameter data and retain discarded parser bindings until context shutdown; initialize concatenation output storage and release owned data at its final lifetime.",
       "topics": [
         "darwin-platform-support",
         "logical-profile-compatibility",
@@ -559,9 +559,13 @@
       "upstream_sha256": "6c7daca5100da62ac7155bfd79e6826b449581b22be2937ef00e629f8db481a9"
     },
     "source/preprocessorlib/pp_parser.h": {
-      "distributed_sha256": "bf743d291108ab411fc0e34ed891ad78f2d52f1bf20bdfb36d226f0df279155e",
-      "modified": false,
-      "topics": [],
+      "distributed_sha256": "240c03be66ce0191db617c40002636a5fd9f4887c0769124e5d2b4d032f438c6",
+      "modified": true,
+      "summary": "Declare owned macro-expansion parameters and retained parser chains so historical bindings remain valid until context shutdown.",
+      "topics": [
+        "logical-profile-compatibility",
+        "record-dates-and-file-notices"
+      ],
       "upstream_sha256": "bf743d291108ab411fc0e34ed891ad78f2d52f1bf20bdfb36d226f0df279155e"
     },
     "source/ramlib/ram.c": {
@@ -581,15 +585,23 @@
       "upstream_sha256": "f6eb3efe273963475771e7f9344fdf4393d37eaaa1ae99fd11882aa4761ed653"
     },
     "source/randlib/rand32.c": {
-      "distributed_sha256": "bd6206bc7c71c0d4ce6dfa6003d1bd751124f3a7a716511f396a8989bcb6d88c",
-      "modified": false,
-      "topics": [],
+      "distributed_sha256": "c3ac0fc13ca25c937b31980a8da49c11a6323487c9317c2aec1286147cea5c0f",
+      "modified": true,
+      "summary": "Preserve each profile's native generator, seed initialization and unsigned-long storage, including clock-based libc seeding and engine-owned libc random state.",
+      "topics": [
+        "logical-profile-compatibility",
+        "record-dates-and-file-notices"
+      ],
       "upstream_sha256": "bd6206bc7c71c0d4ce6dfa6003d1bd751124f3a7a716511f396a8989bcb6d88c"
     },
     "source/randlib/rand32.h": {
-      "distributed_sha256": "e8002fb31b92354c5cc2a98d919ba122b86a3a878a2592ccb6debc6d4fd8f599",
-      "modified": false,
-      "topics": [],
+      "distributed_sha256": "2b0c2d086d261ddd172245ad2f59d361dbc9a8f4cbf23bf010b485c823f31ec7",
+      "modified": true,
+      "summary": "Declare the shared unsigned-long seed entry while retaining native signed-int seed conversion in the custom generator profiles.",
+      "topics": [
+        "logical-profile-compatibility",
+        "record-dates-and-file-notices"
+      ],
       "upstream_sha256": "e8002fb31b92354c5cc2a98d919ba122b86a3a878a2592ccb6debc6d4fd8f599"
     },
     "source/scriptlib/FirstFollow.h": {
@@ -599,11 +611,12 @@
       "upstream_sha256": "a07de58fe3114e86282e178250f054c28fb6f7eea52657d917809b6895c02696"
     },
     "source/scriptlib/ImportCache.c": {
-      "distributed_sha256": "a4a62f716193d7198cf15954274fdba2eef94c94f155e2c4680504e294ff95d3",
+      "distributed_sha256": "1e8fcde6369512e6f495b3f83d4af894243aa7d85296601bdb7423eb2bf7c84b",
       "modified": true,
-      "summary": "Guard parser-only import metadata after compilation. Compact compiler-only instruction records after resolving value ownership, preserving branch and export anchors, all mutable values and exactly-once pool cleanup. Read import metadata only while an interpreter still owns parser state.",
+      "summary": "Guard parser-only import metadata after compilation. Select each profile's additional import-failure diagnostics without changing cleanup. Compact compiler-only instruction records after resolving value ownership, preserving branch and export anchors, all mutable values and exactly-once pool cleanup. Read import metadata only while an interpreter still owns parser state.",
       "topics": [
         "compiler-warning-cleanup",
+        "logical-profile-compatibility",
         "record-dates-and-file-notices",
         "script-memory-layout"
       ],
@@ -639,9 +652,9 @@
       "upstream_sha256": "e283e23b1f8636ba4bf5a9a254c7a5897ad599dcb6c64d255552def5ac5ab60e"
     },
     "source/scriptlib/Interpreter.c": {
-      "distributed_sha256": "1ba31e4f135bd44b4e7bccca780771796ed0679d0ac8784e3a6c8d38d7f79114",
+      "distributed_sha256": "c5d2f0519b0d18d9c19f3dfbc5098e5e9511d4fba28fc284a1f4b229396762c7",
       "modified": true,
-      "summary": "Push canonical constants, release parser-only instruction data, and pack compiled instructions, values, and call references into exact contiguous storage. Clear resolved compile-only import nodes without changing compiled call targets. Compact compiler-only instruction records after resolving value ownership, preserving branch and export anchors, all mutable values and exactly-once pool cleanup. Allocate parser state only while compiling and release it once runtime instructions are ready.",
+      "summary": "Push canonical constants, release parser-only instruction data, and pack compiled instructions, values, and call references into exact contiguous storage. Preserve each profile's completed-call flag across reset before evaluating the next script entry. Clear resolved compile-only import nodes without changing compiled call targets. Compact compiler-only instruction records after resolving value ownership, preserving branch and export anchors, all mutable values and exactly-once pool cleanup. Allocate parser state only while compiling and release it once runtime instructions are ready.",
       "topics": [
         "logical-profile-compatibility",
         "record-dates-and-file-notices",

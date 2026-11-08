@@ -1,0 +1,61 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ * Native registry and name lookup; callbacks are never invoked by this control.
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "List.h"
+#undef assert
+#undef printf
+#ifdef NDEBUG
+#error Registry checks must remain enabled
+#endif
+uint32_t obor_profile_build;
+#define assert(c) do {if(!(c)){fprintf(stderr,"Registry revision=%u line=%d\n",obor_profile_build,__LINE__);abort();}}while(0)
+static unsigned calls[@SYMBOL_COUNT@];
+@STUBS@
+static List theFunctionList;
+static struct {void *function; const char *name;} registry[512];
+static unsigned entries, resets;
+void List_Reset(List *list)
+{
+    assert(list == &theFunctionList); entries = 0; ++resets;
+}
+void List_InsertAfter(List *list, void *function, const char *name)
+{
+    assert(list == &theFunctionList && function && name && entries < 512);
+    for(unsigned i = 0; i < entries; ++i) assert(strcmp(name, registry[i].name));
+    registry[entries].function = function; registry[entries++].name = name;
+}
+static void *lookup(const char *name)
+{
+    for(unsigned i = 0; i < entries; ++i)
+        if(!strcmp(name, registry[i].name)) return registry[i].function;
+    return NULL;
+}
+@METHODS@
+static const struct {
+    unsigned revision; int registered;
+    const char *entity_label, *player_label, *animation_label;
+} contexts[] = {@CONTEXTS@};
+int main(void)
+{
+    for(unsigned p = 0; p < sizeof(contexts)/sizeof(contexts[0]); ++p)
+    {
+        obor_profile_build = contexts[p].revision;
+        Script_LoadSystemFunctions();
+        assert(resets == p + 1 && entries > 8);
+        assert(lookup("getentityproperty") == (void *)openbor_getentityproperty);
+        assert(lookup("getplayerproperty") == (void *)openbor_getplayerproperty);
+        assert(lookup("getanimationproperty") == (contexts[p].registered ? (void *)openbor_getanimationproperty : NULL));
+        assert(!strcmp(Script_GetFunctionName((void *)openbor_getentityproperty), contexts[p].entity_label));
+        assert(!strcmp(Script_GetFunctionName((void *)openbor_getplayerproperty), contexts[p].player_label));
+        assert(!strcmp(Script_GetFunctionName((void *)openbor_getanimationproperty), contexts[p].animation_label));
+        assert(!strcmp(Script_GetFunctionName(NULL), "<unknown function>"));
+        for(unsigned i = 0; i < sizeof(calls)/sizeof(calls[0]); ++i) assert(!calls[i]);
+        printf("{\"revision\":%u,\"status\":\"PASS\"}\n", obor_profile_build);
+    }
+    return 0;
+}

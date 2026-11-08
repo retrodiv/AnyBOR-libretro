@@ -1,10 +1,11 @@
-/* AnyBOR modification record: 2026-10-22.
+/* AnyBOR modification record: 2026-11-08.
  * Port maintained by retrodiv <retrodiv@proton.me>.
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
  * Upstream code retains its original license and notices.
  * Declare owned script-variable name storage. Declare the shared engine-
- * credit-screen selector without exposing it to earlier native namespaces.
+ * credit-screen selector and script seed callback without exposing them to
+ * earlier native namespaces.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/4086.md
  * at the source repository root. Original notices follow below.
@@ -95,6 +96,7 @@ HRESULT system_isempty(ScriptVariant **varlist , ScriptVariant **pretvar, int pa
 HRESULT system_exit(ScriptVariant **varlist , ScriptVariant **pretvar, int paramCount);
 HRESULT system_NULL(ScriptVariant **varlist , ScriptVariant **pretvar, int paramCount);
 HRESULT system_rand(ScriptVariant **varlist , ScriptVariant **pretvar, int paramCount);
+HRESULT system_srand(ScriptVariant **varlist, ScriptVariant **pretvar, int paramCount);
 HRESULT system_getglobalvar(ScriptVariant **varlist , ScriptVariant **pretvar, int paramCount);
 HRESULT system_setglobalvar(ScriptVariant **varlist , ScriptVariant **pretvar, int paramCount);
 HRESULT system_getlocalvar(ScriptVariant **varlist , ScriptVariant **pretvar, int paramCount);

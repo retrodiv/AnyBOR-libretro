@@ -1,0 +1,87 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ * Complete native periodic-damage tick; delegated damage services observed.
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "openbor.h"
+#undef printf
+#undef assert
+#ifdef NDEBUG
+#error Periodic-damage checks must remain enabled
+#endif
+uint32_t obor_profile_build;
+static unsigned active_case;
+#define assert(c) do {if(!(c)){fprintf(stderr,"Periodic damage revision=%u case=%u line=%d\n",obor_profile_build,active_case,__LINE__);abort();}}while(0)
+HRESULT Interpreter_Call(Interpreter *p) {(void)p;abort();}
+HRESULT Interpreter_EvalInstruction(Interpreter *p) {(void)p;abort();}
+entity *self;
+static entity actor,owner;
+static s_defense defenses[MAX_ATKS];
+static float offenses[MAX_ATKS];
+static unsigned fixture_clock=100;
+static int damage_calls,script_calls,kills,payload_force;
+@GLOBALS@
+static int damage(entity *other,s_attack *attack)
+{
+    assert(self==&actor && other==&owner && attack->attack_type==2 && attack->attack_force==payload_force);
+    assert(attack->dropv.x==default_model_dropv.x && attack->dropv.y==default_model_dropv.y &&
+        attack->dropv.z==default_model_dropv.z);
+    ++damage_calls;self->health=-7;return 1;
+}
+void kill(entity *ent) {assert(ent==&actor);++kills;ent->health=-9;}
+void execute_takedamage_script(entity *ent,entity *other,int force,int drop,int type,
+    int noblock,int guardcost,int jugglecost,int pauseadd)
+{
+    assert(ent==&actor && other==&owner && force==payload_force && drop==0 && type==2 &&
+        noblock==0 && guardcost==0 && jugglecost==0 && pauseadd==0);++script_calls;
+}
+@HELPERS@
+@TICK@
+static const struct {
+    int mode,hp,mp,force;float offense,defense;int expiry,due,has_damage,index;
+} cases[]={@CASES@};
+static const struct {
+    unsigned revision;
+    struct {int hp,mp,mode,expiry,due,rate,force,type,damage,script,kill;} expected[@CASE_COUNT@];
+} contexts[]={@CONTEXTS@};
+int main(void)
+{
+    for(unsigned p=0;p<sizeof(contexts)/sizeof(contexts[0]);++p)
+    {
+        obor_profile_build=contexts[p].revision;
+        for(active_case=0;active_case<sizeof(cases)/sizeof(cases[0]);++active_case)
+        {
+            memset(&actor,0,sizeof(actor));memset(&owner,0,sizeof(owner));
+            memset(defenses,0,sizeof(defenses));memset(offenses,0,sizeof(offenses));
+            int index=cases[active_case].index;assert(index>=0 && index<MAX_DOTS);
+            actor.health=cases[active_case].hp;actor.mp=cases[active_case].mp;
+            actor.defense=defenses;owner.offense_factors=offenses;
+            actor.takedamage=cases[active_case].has_damage?damage:NULL;
+            actor.dot[index]=cases[active_case].mode;actor.dot_force[index]=cases[active_case].force;
+            actor.dot_atk[index]=2;actor.dot_owner[index]=&owner;
+            actor.dot_time[index]=cases[active_case].expiry;actor.dot_cnt[index]=cases[active_case].due;
+            actor.dot_rate[index]=13;defenses[2].factor=cases[active_case].defense;
+            offenses[2]=cases[active_case].offense;
+            payload_force=cases[active_case].force;damage_calls=script_calls=kills=0;self=&actor;
+            common_dot();
+            assert(self==&actor && actor.health==contexts[p].expected[active_case].hp &&
+                actor.mp==contexts[p].expected[active_case].mp);
+            assert(actor.dot[index]==contexts[p].expected[active_case].mode);
+            assert(actor.dot_time[index]==contexts[p].expected[active_case].expiry);
+            assert(actor.dot_cnt[index]==contexts[p].expected[active_case].due);
+            assert(actor.dot_rate[index]==contexts[p].expected[active_case].rate);
+            assert(actor.dot_force[index]==contexts[p].expected[active_case].force);
+            assert(actor.dot_atk[index]==contexts[p].expected[active_case].type && actor.dot_owner[index]==&owner);
+            assert(damage_calls==contexts[p].expected[active_case].damage &&
+                script_calls==contexts[p].expected[active_case].script && kills==contexts[p].expected[active_case].kill);
+            for(int i=0;i<MAX_DOTS;++i)
+                if(i!=index)assert(!actor.dot[i] && !actor.dot_time[i] && !actor.dot_cnt[i] &&
+                    !actor.dot_rate[i] && !actor.dot_force[i] && !actor.dot_atk[i] && !actor.dot_owner[i]);
+        }
+        printf("{\"revision\":%u,\"cases\":%u,\"status\":\"PASS\"}\n",obor_profile_build,active_case);
+    }
+    return 0;
+}

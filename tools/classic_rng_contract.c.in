@@ -1,0 +1,144 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ * Include the complete native RNG translation unit and actual owned provider.
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <limits.h>
+#include <time.h>
+static time_t supplied_wallclock;
+static unsigned wallclock_calls;
+static time_t observe_wallclock(time_t *out)
+{++wallclock_calls;if(out)*out=supplied_wallclock;return supplied_wallclock;}
+#define time observe_wallclock
+#include "source/randlib/rand32.c"
+#undef time
+#include "obor_random.h"
+#undef rand
+#undef srand
+#undef printf
+#undef assert
+#ifdef NDEBUG
+#error RNG assertions must remain enabled
+#endif
+uint32_t obor_profile_build;
+static unsigned active_case;
+#define assert(c) do {if(!(c)){fprintf(stderr,"RNG revision=%u case=%u line=%d\n",obor_profile_build,active_case,__LINE__);abort();}}while(0)
+struct captured_random {
+    unsigned long seed;
+    int ready;
+#if defined(OBOR_RANDOM_ADDITIVE_H)
+    obor_additive_random_state libc;
+#elif defined(__GLIBC__)
+    struct random_data libc;
+    int32_t buffer[32];
+    int initialized;
+#else
+    unsigned libc;
+#endif
+};
+static struct captured_random save_random(void)
+{
+    struct captured_random s;s.seed=seed;s.ready=obor_rand32_profile_ready;
+#if defined(OBOR_RANDOM_ADDITIVE_H)
+    s.libc=obor_additive_random;
+#elif defined(__GLIBC__)
+    s.libc=obor_random_context;memcpy(s.buffer,obor_random_buffer,sizeof(s.buffer));s.initialized=obor_random_initialized;
+#else
+    s.libc=obor_random_seed;
+#endif
+    return s;
+}
+static void load_random(const struct captured_random *s)
+{
+    seed=s->seed;obor_rand32_profile_ready=s->ready;
+#if defined(OBOR_RANDOM_ADDITIVE_H)
+    obor_additive_random=s->libc;
+#elif defined(__GLIBC__)
+    obor_random_context=s->libc;memcpy(obor_random_buffer,s->buffer,sizeof(s->buffer));obor_random_initialized=s->initialized;
+#else
+    obor_random_seed=s->libc;
+#endif
+}
+static void fresh_generator(void)
+{
+    seed=1234567890ul;obor_rand32_profile_ready=0;wallclock_calls=0;supplied_wallclock=7;
+    obor_srand(1);
+}
+static u32 fixture_clock;
+#define time fixture_clock
+static void outer_loop_entry(void) {@ENTRY@}
+#undef time
+struct vector {int64_t argument;uint32_t values[4];uint64_t seeds[4];};
+static const struct vector vectors32[]={@VECTORS32@};
+static const struct vector vectors64[]={@VECTORS64@};
+static const struct {unsigned revision;int libc,reseed;} contexts[]={@CONTEXTS@};
+static const u32 clocks[]={@OUTER_CLOCKS@};
+static void reference(unsigned seed_value,unsigned *values,unsigned count)
+{srand(seed_value);for(unsigned i=0;i<count;++i)values[i]=(unsigned)rand();}
+int main(void)
+{
+    assert(sizeof(unsigned)==4 && (sizeof(unsigned long)==4 || sizeof(unsigned long)==8));
+    for(unsigned p=0;p<sizeof(contexts)/sizeof(contexts[0]);++p)
+    {
+        obor_profile_build=contexts[p].revision;active_case=0;
+        const struct vector *vectors=sizeof(unsigned long)==4?vectors32:vectors64;
+        unsigned count=sizeof(vectors32)/sizeof(vectors32[0]);
+        assert(count==sizeof(vectors64)/sizeof(vectors64[0]));
+        unsigned expected[64],actual[64];
+        fresh_generator();++active_case;
+        if(contexts[p].libc)
+        {reference(7,expected,4);for(unsigned i=0;i<4;++i)assert(rand32()==expected[i]);assert(seed==7 && wallclock_calls==1);}
+        else
+        {for(unsigned i=0;i<4;++i)assert(rand32()==vectors[count-1].values[i]);assert(wallclock_calls==0);}
+        for(unsigned v=0;v<count;++v)
+        {
+            fresh_generator();++active_case;
+            srand32((unsigned long)vectors[v].argument);
+            if(contexts[p].libc)
+            {
+                unsigned native_seed=(unsigned)vectors[v].argument;
+                if(!native_seed)native_seed=7;
+                reference(native_seed,expected,4);
+                for(unsigned i=0;i<4;++i){(void)rand();assert(rand32()==expected[i]);}
+                assert(wallclock_calls==(vectors[v].argument==0));
+            }
+            else
+            {
+                for(unsigned i=0;i<4;++i){assert(rand32()==vectors[v].values[i]);assert((uint64_t)seed==vectors[v].seeds[i]);}
+                assert(!wallclock_calls);
+            }
+        }
+        for(unsigned c=0;c<sizeof(clocks)/sizeof(clocks[0]);++c)
+        {
+            fresh_generator();fixture_clock=clocks[c];outer_loop_entry();++active_case;
+            unsigned long entry_seed=seed;
+            for(unsigned i=0;i<4;++i)actual[i]=rand32();
+            outer_loop_entry();
+            if(contexts[p].reseed)
+            {assert(seed==entry_seed);for(unsigned i=0;i<4;++i)assert(rand32()==actual[i]);}
+            else
+            {unsigned long unchanged=seed;outer_loop_entry();assert(seed==unchanged);}
+        }
+        ++active_case;struct captured_random saved=save_random();
+        for(unsigned i=0;i<64;++i)actual[i]=rand32();
+        load_random(&saved);
+        for(unsigned i=0;i<64;++i)assert(rand32()==actual[i]);
+        if(contexts[p].libc)
+        {
+            ++active_case;fresh_generator();supplied_wallclock=0;reference(0,expected,1);
+            assert(rand32()==expected[0] && rand32()==expected[0]);assert(wallclock_calls==2 && seed==0);
+            ++active_case;fresh_generator();srand32(0);reference(7,expected,2);
+            assert(rand32()==expected[0] && rand32()==expected[1]);assert(wallclock_calls==1 && seed==7);
+            ++active_case;fresh_generator();supplied_wallclock=(time_t)UINT64_C(4294967296);reference(0,expected,2);
+            assert(rand32()==expected[0]);assert(seed==(unsigned long)UINT64_C(4294967296));
+            assert(rand32()==expected[sizeof(unsigned long)==8?1:0]);assert(wallclock_calls==(sizeof(unsigned long)==8?1u:2u));
+            ++active_case;fresh_generator();srand32(ULONG_MAX);reference(UINT_MAX,expected,2);
+            assert(rand32()==expected[0] && rand32()==expected[1]);assert(seed==ULONG_MAX && !wallclock_calls);
+        }
+        printf("{\"revision\":%u,\"cases\":%u,\"status\":\"PASS\"}\n",obor_profile_build,active_case);
+    }
+    return 0;
+}

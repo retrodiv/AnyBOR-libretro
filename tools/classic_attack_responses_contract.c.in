@@ -1,0 +1,103 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ * Native response tables, transitions and callback attack numbers.
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "openbor.h"
+#undef printf
+#undef assert
+#ifdef NDEBUG
+#error Attack response checks must remain enabled
+#endif
+uint32_t obor_profile_build;
+static unsigned active_case;
+#define assert(c) do {if(!(c)){fprintf(stderr,"Attack response revision=%u case=%u line=%d\n",obor_profile_build,active_case,__LINE__);abort();}}while(0)
+HRESULT Interpreter_Call(Interpreter *p) {(void)p;abort();}
+HRESULT Interpreter_EvalInstruction(Interpreter *p) {(void)p;abort();}
+entity *self;
+int max_attack_types=MAX_ATKS;
+static entity actor,other;
+static s_anim animation,*slots[MAX_ANIS+1];
+static int chosen,callback_type,callbacks;
+@ARRAYS@
+void common_rise(void) {abort();}
+void common_block(void) {abort();}
+void common_attack_proc(void) {abort();}
+void ent_set_anim(entity *ent,int index,int reset)
+{assert(ent==&actor && (reset==0 || reset==1));chosen=index;}
+void ent_set_colourmap(entity *ent,unsigned int map) {(void)ent;(void)map;abort();}
+void execute_onpain_script(entity *ent,int type,int reset)
+{assert(ent==&actor && reset==1);callback_type=type;++callbacks;}
+void execute_onfall_script(entity *ent,entity *attacker,int force,int drop,int type,
+    int noblock,int guardcost,int jugglecost,int pauseadd)
+{
+    assert(ent==&actor && attacker==&other && force==7 && drop==8 && noblock==9 &&
+        guardcost==10 && jugglecost==11 && pauseadd==12);
+    callback_type=type;++callbacks;
+}
+@PAINFLAGS@
+#if defined(__GNUC__) && !defined(__clang__)
+/* Retain the original multi-statement macro's exact scope and ordering. */
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wmultistatement-macros"
+#endif
+@FUNCTIONS@
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC diagnostic pop
+#endif
+static const struct {uint32_t revision;int responses[6][MAX_ATKS];} contexts[]={@CONTEXTS@};
+static int *responses[]={@POINTERS@};
+static void reset_actor(void)
+{
+    memset(&actor,0,sizeof(actor));memset(&other,0,sizeof(other));
+    animation.numframes=1;
+    for(unsigned i=0;i<sizeof(slots)/sizeof(slots[0]);++i)slots[i]=&animation;
+    actor.modeldata.animation=slots;actor.modeldata.animation_capacity=sizeof(slots)/sizeof(slots[0]);
+    actor.modeldata.riseattacktype=1;self=&actor;chosen=-1;callback_type=-99;callbacks=0;
+}
+static int transition(int family,int type)
+{
+    switch(family)
+    {
+    case 0:return set_pain(&actor,type,1);
+    case 1:return set_death(&actor,type,1);
+    case 2:return set_fall(&actor,type,1,&other,7,8,9,10,11,12);
+    case 3:return set_rise(&actor,type,1);
+    case 4:return set_riseattack(&actor,type,1);
+    case 5:return set_blockpain(&actor,type,1);
+    }
+    abort();
+}
+int main(void)
+{
+    for(unsigned p=0;p<sizeof(contexts)/sizeof(contexts[0]);++p)
+    {
+        obor_profile_build=contexts[p].revision;active_case=0;
+        for(int family=0;family<6;++family)
+        for(int type=0;type<MAX_ATKS;++type)
+        for(int missing=0;missing<2;++missing)
+        {
+            ++active_case;reset_actor();
+            int original=responses[family][type],fallback=responses[family][0];
+            assert(obor_animation_public(original,obor_profile_build)==contexts[p].responses[family][type]);
+            if(missing)slots[original]=NULL;
+            int expected=missing?fallback:original;
+            int success=!missing || original!=fallback;
+            if(family==0 && !success){expected=ANI_IDLE;success=1;}
+            assert(transition(family,type)==success);
+            assert(chosen==(success?expected:-1));
+            if(success && (family==0 || family==2))
+            {
+                assert(callbacks==1 && callback_type==(family==2 && missing?0:type));
+            }
+            else assert(!callbacks);
+        }
+        ++active_case;reset_actor();
+        assert(set_pain(&actor,-1,1)==1 && chosen==ANI_GRABBED && callbacks==1 && callback_type==-1);
+        printf("{\"revision\":%u,\"cases\":%u,\"status\":\"PASS\"}\n",obor_profile_build,active_case);
+    }
+    return 0;
+}

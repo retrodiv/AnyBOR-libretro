@@ -1,0 +1,175 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ * Native callback/mapper/dispatcher; selected actual last-hit field bodies.
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <strings.h>
+#include <stdarg.h>
+#include <ctype.h>
+#include "openbor.h"
+#undef printf
+#undef assert
+#ifdef NDEBUG
+#error System-variable assertions must remain enabled
+#endif
+uint32_t obor_profile_build;
+static unsigned active_case;
+static const char *active_name;
+#define assert(c) do {if(!(c)){fprintf(stderr,"System variable revision=%u case=%u name=%s line=%d\n",obor_profile_build,active_case,active_name?active_name:"?",__LINE__);abort();}}while(0)
+HRESULT Interpreter_Call(Interpreter *p) { (void)p; abort(); }
+HRESULT Interpreter_EvalInstruction(Interpreter *p) { (void)p; abort(); }
+static char strings[32][128],diagnostic[4096];
+static int used[32],observed_index,delegate_calls,field_mode,unused_calls;
+s_lasthit lasthit;
+int StrCache_Pop(void)
+{for(int i=0;i<32;++i)if(!used[i]){used[i]=1;strings[i][0]=0;return i;}abort();}
+void StrCache_Collect(int i) {assert(i>=0 && i<32 && used[i]);used[i]=0;}
+CHAR *StrCache_Get(int i) {assert(i>=0 && i<32 && used[i]);return strings[i];}
+CHAR *StrCache_GetIfPresent(int i) {return i>=0 && i<32 && used[i]?strings[i]:NULL;}
+void StrCache_Copy(int i,CHAR *text)
+{assert(i>=0 && i<32 && used[i] && strlen(text)<sizeof(strings[i]));strcpy(strings[i],text);}
+static int record_printf(const char *format,...)
+{va_list args;va_start(args,format);size_t len=strlen(diagnostic);int n=vsnprintf(diagnostic+len,sizeof(diagnostic)-len,format,args);va_end(args);assert(n>=0 && (size_t)n<sizeof(diagnostic)-len);return n;}
+@VARIANTS@
+#define printf record_printf
+@FIELDS@
+int getsyspropertybyindex(ScriptVariant *value,int index)
+{
+    observed_index=index;++delegate_calls;
+    if(field_mode)return probe_getsyspropertybyindex(value,index);
+    assert(index>=0 && index<_sv_the_end);ScriptVariant_ChangeType(value,VT_INTEGER);value->lVal=index;return 1;
+}
+int changesyspropertybyindex(int index,ScriptVariant *value)
+{
+    observed_index=index;++delegate_calls;
+    if(field_mode)return probe_changesyspropertybyindex(index,value);
+    assert(index>=0 && index<_sv_the_end);return 1;
+}
+@DECLARATION@
+@METHODS@
+@STUBS@
+@DISPATCH@
+#undef printf
+static const struct {
+    uint32_t revision;int count;const char *names[_sv_the_end];int native_ids[_sv_the_end];
+    int query_count,queries[6];
+} contexts[]={@CONTEXTS@};
+typedef int (*map_function)(ScriptVariant **,int);
+static map_function mapper_for(int setter)
+{
+    map_function mapper=(map_function)Script_GetStringMapFunction(setter?(void *)openbor_changesystemvariant:(void *)openbor_systemvariant);
+    assert(mapper==mapstrings_systemvariant);return mapper;
+}
+static void property_value(ScriptVariant *v,int named,const char *name,int slot)
+{
+    memset(v,0,sizeof(*v));
+    if(named){ScriptVariant_ChangeType(v,VT_STR);StrCache_Copy(v->strVal,(char *)name);}
+    else {v->vt=VT_INTEGER;v->lVal=slot;}
+}
+static void reset_fields(void)
+{memset(&lasthit,0,sizeof(lasthit));lasthit.position.x=12.5f;lasthit.position.y=11.25f;lasthit.position.z=13.75f;lasthit.confirm=7;lasthit.type=8;}
+static void check_fields(const char *name,int changed)
+{
+    assert(lasthit.position.x==(changed && !strcmp(name,"lasthitx")?-17:12.5f));
+    assert(lasthit.position.y==(changed && (!strcmp(name,"lasthita") || !strcmp(name,"lasthity"))?-17:11.25f));
+    assert(lasthit.position.z==(changed && !strcmp(name,"lasthitz")?-17:13.75f));
+    assert(lasthit.confirm==(changed && !strcmp(name,"lasthitc")?-17:7));
+    assert(lasthit.type==(changed && !strcmp(name,"lasthitt")?-17:8));
+}
+static void check_getter(const char *name,ScriptVariant *result,int changed)
+{
+    if(!strcmp(name,"lasthitc") || !strcmp(name,"lasthitt"))
+        assert(result->vt==VT_INTEGER && result->lVal==(changed?-17:!strcmp(name,"lasthitc")?7:8));
+    else
+    {
+        double value=!strcmp(name,"lasthitx")?12.5:!strcmp(name,"lasthitz")?13.75:11.25;
+        assert(result->vt==VT_DECIMAL && result->dblVal==(changed?-17:value));
+    }
+}
+int main(void)
+{
+    for(unsigned p=0;p<sizeof(contexts)/sizeof(contexts[0]);++p)
+    {
+        obor_profile_build=contexts[p].revision;active_case=0;field_mode=0;
+        for(int slot=0;slot<contexts[p].count;++slot)for(int named=0;named<2;++named)
+        for(int setter=0;setter<2;++setter)for(int premap=0;premap<2;++premap)
+        {
+            active_name=contexts[p].names[slot];reset_fields();
+            ScriptVariant property,value={.vt=VT_INTEGER},*args[]={&property,&value};value.lVal=91;
+            property_value(&property,named,active_name,slot);diagnostic[0]=0;
+            if(premap)assert(mapper_for(setter)(args,setter?2:1)==1);
+            for(int repeat=0;repeat<2;++repeat)
+            {
+                ScriptVariant result={.vt=VT_INTEGER},*output=&result;result.lVal=123;observed_index=-1;delegate_calls=0;++active_case;
+                HRESULT status=setter?openbor_changesystemvariant(args,&output,2):openbor_systemvariant(args,&output,1);
+                assert(status==S_OK && output==&result && result.vt==VT_INTEGER);
+                assert(result.lVal==(setter?123:contexts[p].native_ids[slot]));
+                assert(delegate_calls==1 && observed_index==contexts[p].native_ids[slot] && !diagnostic[0]);
+                assert(property.vt==VT_INTEGER && property.lVal==slot);check_fields("",0);ScriptVariant_Clear(&result);
+            }
+            ScriptVariant_Clear(&property);
+        }
+        const char *missing[]={"lasthity","in_enginecreditsscreen","synthetic_unknown_system"};
+        for(int m=0;m<3;++m)
+        {
+            int found=0;for(int slot=0;slot<contexts[p].count;++slot)found|=!strcmp(contexts[p].names[slot],missing[m]);
+            if(found)continue;
+            active_name=missing[m];
+            for(int setter=0;setter<2;++setter)
+            {
+                ScriptVariant property,value={.vt=VT_INTEGER},*args[]={&property,&value};property_value(&property,1,active_name,0);
+                char message[256],expected[1024];snprintf(message,sizeof(message),"openborvariant: System variable name not found: '%s'\n",active_name);expected[0]=diagnostic[0]=0;
+                for(int repeat=0;repeat<2;++repeat)
+                {
+                    ScriptVariant result={.vt=VT_INTEGER},*output=&result;result.lVal=123;delegate_calls=0;++active_case;
+                    HRESULT status=setter?openbor_changesystemvariant(args,&output,2):openbor_systemvariant(args,&output,1);
+                    strcat(expected,message);assert(status==E_FAIL && !output && result.vt==VT_INTEGER && result.lVal==123);
+                    assert(!delegate_calls && property.vt==VT_STR && !strcmp(StrCache_Get(property.strVal),active_name));
+                    assert(!strcmp(diagnostic,expected));ScriptVariant_Clear(&result);
+                }
+                ScriptVariant_Clear(&property);
+            }
+        }
+        field_mode=1;
+        for(int q=0;q<contexts[p].query_count;++q)for(int named=0;named<2;++named)
+        for(int kind=0;kind<3;++kind)for(int premap=0;premap<2;++premap)
+        {
+            int slot=contexts[p].queries[q];active_name=contexts[p].names[slot];reset_fields();
+            ScriptVariant property,value={.vt=VT_INTEGER},*args[]={&property,&value};property_value(&property,named,active_name,slot);
+            if(kind==0)value.lVal=-17;
+            else if(kind==1){value.vt=VT_DECIMAL;value.dblVal=-17.75;}
+            else property_value(&value,1,"unchanged",0);
+            diagnostic[0]=0;if(premap)assert(mapper_for(1)(args,2)==1);
+            for(int repeat=0;repeat<2;++repeat)
+            {
+                ScriptVariant result={.vt=VT_INTEGER},*output=&result;result.lVal=123;delegate_calls=0;++active_case;
+                assert(openbor_changesystemvariant(args,&output,2)==S_OK && output==&result && result.vt==VT_INTEGER && result.lVal==123);
+                assert(delegate_calls==1 && observed_index==contexts[p].native_ids[slot] && !diagnostic[0]);
+                assert(property.vt==VT_INTEGER && property.lVal==slot);check_fields(active_name,kind!=2);
+                ScriptVariant_Clear(&result);output=&result;delegate_calls=0;++active_case;
+                assert(openbor_systemvariant(args,&output,1)==S_OK && output==&result);
+                check_getter(active_name,&result,kind!=2);assert(delegate_calls==1 && observed_index==contexts[p].native_ids[slot] && !diagnostic[0]);ScriptVariant_Clear(&result);
+            }
+            ScriptVariant_Clear(&property);ScriptVariant_Clear(&value);
+        }
+        for(int setter=0;setter<2;++setter)for(int edge=0;edge<3;++edge)
+        {
+            active_name="numeric endpoint";ScriptVariant property={.vt=VT_INTEGER},value={.vt=VT_INTEGER},result={.vt=VT_INTEGER},*output=&result,*args[]={&property,&value};
+            property.lVal=edge?contexts[p].count+edge-1:-1;result.lVal=123;diagnostic[0]=0;delegate_calls=0;++active_case;
+            assert((setter?openbor_changesystemvariant(args,&output,2):openbor_systemvariant(args,&output,1))==E_FAIL && !output);
+            assert(delegate_calls==1 && observed_index==_sv_the_end);
+            assert(!strcmp(diagnostic,setter?"":"Unknown system property name.\n"));
+            assert(result.vt==(setter?VT_INTEGER:VT_EMPTY));ScriptVariant_Clear(&result);
+        }
+        for(int setter=0;setter<2;++setter)
+        {
+            active_name="empty mapper";diagnostic[0]=0;++active_case;assert(mapper_for(setter)(NULL,0)==0 && !diagnostic[0]);
+        }
+        assert(!unused_calls);for(int i=0;i<32;++i)assert(!used[i]);
+        printf("{\"revision\":%u,\"cases\":%u,\"status\":\"PASS\"}\n",obor_profile_build,active_case);
+    }
+    return 0;
+}

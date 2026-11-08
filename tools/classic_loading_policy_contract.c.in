@@ -1,0 +1,91 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ * Native parser, masks, initializer and bar; queue services record geometry.
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "openbor.h"
+#undef printf
+#undef assert
+#include <assert.h>
+#ifdef NDEBUG
+#error Loading-policy assertions must remain enabled
+#endif
+HRESULT Interpreter_Call(Interpreter *p) { (void)p; abort(); }
+HRESULT Interpreter_EvalInstruction(Interpreter *p) { (void)p; abort(); }
+uint32_t obor_profile_build;
+const s_drawmethod plainmethod = {0};
+int hpcolourtable[11], ldcolourtable[11];
+int colorbars, color_white, color_black;
+int PLAYER_MAX_Z = 232;
+@INITIALIZER@
+static int boxes, lines, box_width[2], box_height[2], line_xy[6][4];
+void spriteq_add_box(int x, int y, int w, int h, int z, int colour, s_drawmethod *dm)
+{
+    (void)x; (void)y; (void)z; (void)colour; (void)dm;
+    assert(boxes < 2); box_width[boxes] = w; box_height[boxes++] = h;
+}
+void spriteq_add_line(int sx, int sy, int ex, int ey, int z, int colour, s_drawmethod *dm)
+{
+    (void)z; (void)colour; (void)dm;
+    assert(lines < 6);
+    line_xy[lines][0] = sx; line_xy[lines][1] = sy;
+    line_xy[lines][2] = ex; line_xy[lines++][3] = ey;
+}
+@FUNCTIONS@
+static void startup_prefix(void)
+{
+@STARTUP@
+}
+static const struct {
+    uint32_t revision;
+    int height, bar_mask, stored[4];
+} contexts[] = {@CONTEXTS@};
+int main(void)
+{
+    for(unsigned p = 0; p < sizeof(contexts)/sizeof(contexts[0]); ++p)
+    {
+        obor_profile_build = contexts[p].revision;
+        /* A new startup restores this profile's default, also after another profile. */
+        loadingbarstatus.size.y = 71;
+        startup_prefix();
+        assert(loadingbarstatus.size.y == contexts[p].height);
+        for(int input = 0; input != 4; ++input)
+        {
+            for(int delay = 0; delay != 2; ++delay)
+            {
+                s_loadingbar out;
+                memset(&out, 0, sizeof(out));
+                assert(fill_s_loadingbar(&out, (e_loadingScreenType)input,
+                    12, 23, 100, 31, 41, 2, delay ? 37 : 0) == NULL);
+                assert((int)out.set == contexts[p].stored[input]);
+                assert(isLoadingScreenTypeBg(out.set) == ((contexts[p].stored[input] & 2) == 2));
+                assert(isLoadingScreenTypeBar(out.set) ==
+                    ((contexts[p].stored[input] & contexts[p].bar_mask) == contexts[p].bar_mask));
+                assert(out.bar_position.x == 12 && out.bar_position.y == 23 && out.bsize == 100);
+                assert(out.text_position.x == 31 && out.text_position.y == 41 && out.tf == 2);
+                assert(out.refreshMs == (delay ? 37 : 100));
+            }
+        }
+        /* Settings are consumed as written; drawing must not restore the default. */
+        for(int explicit_height = 0; explicit_height != 2; ++explicit_height)
+        {
+            int height = explicit_height ? 7 : contexts[p].height;
+            loadingbarstatus.size.y = height;
+            loadingbarstatus.size.x = 100;
+            boxes = lines = 0;
+            bar(12, 23, 50, 100, &loadingbarstatus);
+            assert(loadingbarstatus.size.y == height);
+            assert(boxes == 2 && lines == 6);
+            assert(box_width[0] == 100 && box_width[1] == 50);
+            assert(box_height[0] == height && box_height[1] == height);
+            assert(line_xy[0][1] == 23 && line_xy[1][1] == 24 + height);
+            assert(line_xy[2][1] == 24 && line_xy[2][3] == 23 + height);
+            assert(line_xy[4][1] == 25 + height);
+        }
+        printf("{\"revision\":%u,\"cases\":11,\"status\":\"PASS\"}\n", obor_profile_build);
+    }
+    return 0;
+}

@@ -1,12 +1,14 @@
-/* AnyBOR modification record: 2026-10-19.
+/* AnyBOR modification record: 2026-11-08.
  * Port maintained by retrodiv <retrodiv@proton.me>.
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
  * Upstream code retains its original license and notices.
  * Allocate collision pointer slots through the highest author-facing index
- * used by each collection. Declare the native media decoder interface for
- * the early profile family. Track each model's allocated animation-table
- * capacity and reject lookups outside it.
+ * used by each collection. Declare the native media decoder interface,
+ * profile movement deadlines, default shutdown text, historical frame-base
+ * and movement-table presence, spawn-coordinate storage and animation ID
+ * conversions. Declare the vault action used by early profiles. Track each
+ * model's allocated animation-table capacity and reject lookups outside it.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/4086.md
  * at the source repository root. Original notices follow below.
@@ -73,6 +75,14 @@
 #define		shutdown			borShutdown
 
 #define		DEFAULT_SHUTDOWN_MESSAGE \
+            (obor_profile_build < 3996 ? \
+            "OpenBOR " VERSION ", Compile Date: " __DATE__ "\n" \
+            "Presented by Senile Team.\n" \
+            "This Version is unofficial and based on the Senile source code.\n" \
+            "\nSpecial thanks to SEGA and SNK.\n\n" : \
+            OBOR_LATER_SHUTDOWN_MESSAGE)
+
+#define     OBOR_LATER_SHUTDOWN_MESSAGE \
 			"OpenBOR " VERSION ", Compile Date: " __DATE__ "\n" \
 			"Presented by the OpenBOR Team.\n" \
 			"www.chronocrash.com\n"\
@@ -465,6 +475,83 @@ typedef enum //Animations
     MAX_ANIS                // Maximum # of animations. This must always be last.
 } e_animations;
 
+/* Public animation numbers follow the selected source; model storage uses
+ * native identities. Keep argument conversion at the script boundary. */
+static inline int obor_animation_public_count(unsigned profile)
+{
+    if(profile >= 4010 && profile <= 4012) return 163;
+    return profile >= 4035 && profile < 4038 ? 161 : 162;
+}
+
+static inline int obor_animation_storage_count(unsigned profile)
+{
+    return profile >= 4010 && profile <= 4012 ? 163 : 162;
+}
+
+static inline int obor_animation_native(int id, unsigned profile)
+{
+    static const unsigned char alphabetical[] = {
+        7, 8, 9, 10, 11, 43, 51, 41, 42, 40, 79, 13, 124, 137, 138, 139,
+        140, 141, 142, 143, 144, 145, 146, 147, 32, 67, 34, 62, 78, 64, 148, 24,
+        75, 76, 77, 97, 98, 99, 100, 101, 102, 50, 30, 60, 125, 61, 5, 72,
+        73, 74, 91, 92, 93, 94, 95, 96, 81, 82, 83, 84, 105, 22, 26, 28,
+        44, 45, 46, 47, 48, 16, 17, 18, 19, 120, 110, 111, 35, 121, 119, 113,
+        117, 115, 55, 56, 52, 53, 118, 57, 58, 112, 116, 114, 149, 109, 0, 2,
+        14, 15, 27, 65, 108, 54, 107, 66, 3, 25, 4, 69, 70, 71, 85, 86,
+        87, 88, 89, 90, 104, 6, 126, 127, 128, 129, 130, 131, 132, 133, 134, 49,
+        150, 151, 152, 153, 154, 155, 156, 157, 158, 159, 160, 135, 136, 37, 106, 38,
+        39, 123, 59, 31, 68, 33, 23, 21, 36, 80, 122, 20, 29, 12, 63, 103,
+        162, 1, 161,
+    };
+    if(id < 0 || profile >= 4038) return id;
+    if(profile == 4011 || profile == 4012)
+        return id < 163 ? alphabetical[id] : id;
+    if(profile == 4010)
+        return id < 65 ? id : id == 65 ? 162 : id < 163 ? id - 1 : id;
+    if(profile >= 4035)
+        return id < 7 ? id : id < 0x7fffffff ? id + 1 : -1;
+    if(id < 7 || id >= 65) return id;
+    return id == 64 ? 7 : id + 1;
+}
+
+static inline int obor_animation_public(int id, unsigned profile)
+{
+    static const unsigned char alphabetical[] = {
+        94, 161, 95, 104, 106, 46, 117, 0, 1, 2, 3, 4, 157, 11, 96, 97,
+        69, 70, 71, 72, 155, 151, 61, 150, 31, 105, 62, 98, 63, 156, 42, 147,
+        24, 149, 26, 76, 152, 141, 143, 144, 9, 7, 8, 5, 64, 65, 66, 67,
+        68, 127, 41, 6, 84, 85, 101, 82, 83, 87, 88, 146, 43, 45, 27, 158,
+        29, 99, 103, 25, 148, 107, 108, 109, 47, 48, 49, 32, 33, 34, 28, 10,
+        153, 56, 57, 58, 59, 110, 111, 112, 113, 114, 115, 50, 51, 52, 53, 54,
+        55, 35, 36, 37, 38, 39, 40, 159, 116, 60, 142, 102, 100, 93, 74, 75,
+        89, 79, 91, 81, 90, 80, 86, 78, 73, 77, 154, 145, 12, 44, 118, 119,
+        120, 121, 122, 123, 124, 125, 126, 139, 140, 13, 14, 15, 16, 17, 18, 19,
+        20, 21, 22, 23, 30, 92, 128, 129, 130, 131, 132, 133, 134, 135, 136, 137,
+        138, 162, 160,
+    };
+    if(id < 0 || profile >= 4038) return id;
+    if(profile == 4011 || profile == 4012)
+        return id < 163 ? alphabetical[id] : id;
+    if(profile == 4010)
+        return id < 65 ? id : id == 162 ? 65 : id < 162 ? id + 1 : id;
+    if(profile >= 4035)
+        return id < 7 ? id : id == 7 ? -1 : id - 1;
+    if(id < 7 || id >= 65) return id;
+    return id == 7 ? 64 : id - 1;
+}
+
+static inline int obor_animation_vault(unsigned profile)
+{
+    if(profile >= 4035) return -1;
+    return profile >= 4010 && profile <= 4012 ? 162 : 7;
+}
+
+static inline int obor_animation_attack_alias(unsigned profile)
+{
+    return profile < 4010 || (profile >= 4013 && profile < 4038);
+}
+
+
 typedef enum
 {
     /*
@@ -510,6 +597,19 @@ typedef enum
     MAX_ATKS,                       //Default max attack types (must be below all attack types in enum to get correct value)
     STA_ATKS        = (MAX_ATKS-10)
 } e_attack_types;
+
+/* Attack-valued storage and script arguments keep the selected source's raw
+ * numbering. Translate semantic symbols, leaving numeric slots unchanged. */
+static inline int obor_attack_type_number(int symbol, unsigned profile)
+{
+    static const unsigned char alphabetical[] = {
+        6, 7, 8, 9, 0, 1, 2, 17, 18, 10, 11, 12, 13, 14, 15, 3, 4, 16, 5, 19
+    };
+    if((profile == 4011 || profile == 4012) && symbol >= 0 && symbol < MAX_ATKS)
+        return alphabetical[symbol];
+    return symbol;
+}
+
 
 typedef enum
 {
@@ -623,6 +723,26 @@ typedef enum
     DIRECTION_RIGHT
 } e_direction;
 
+/* Preserve source-facing predicates without normalizing stored direction. */
+static inline int obor_direction_right(e_direction direction, unsigned profile)
+{
+    return profile < 4032 ? direction != 0 : direction == DIRECTION_RIGHT;
+}
+
+static inline int obor_direction_signed(e_direction direction)
+{
+    uint32_t value = (uint32_t)direction;
+    return value <= INT32_MAX ? (int)value : -1 - (int)(UINT32_MAX - value);
+}
+
+static inline float obor_direction_grab_offset(e_direction direction, float distance, unsigned profile)
+{
+    if(profile < 4032)
+        return (float)((int64_t)obor_direction_signed(direction) * 2 - 1) * distance;
+    return ((direction * 2) - 1) * distance;
+}
+
+
 typedef enum
 {
     /*
@@ -706,6 +826,20 @@ typedef enum
     FOLLOW_CONDITION_HOSTILE_NOKILL_NOBLOCK_NOGRAB //Perform if target is hostile, will not be killed, didn't block, and cannot be grabbed.
 } e_follow_condition;
 
+static inline int obor_follow_condition_below(e_follow_condition value,
+                                              e_follow_condition threshold,
+                                              unsigned profile)
+{
+    if(profile < 4057)
+    {
+        uint32_t raw = (uint32_t)value;
+        int historical = raw <= INT32_MAX ? (int)raw : -1 - (int)(UINT32_MAX - raw);
+        return historical < (int)threshold;
+    }
+    return value < threshold;
+}
+
+
 typedef enum
 {
     /*
@@ -775,6 +909,23 @@ typedef enum
    OTG_BOTH,       //Can hit grounded targets.
    OTG_GROUND_ONLY //Can ONLY hit grounded targets.
 } e_otg;
+
+static inline int obor_otg_signed(e_otg value)
+{
+    uint32_t raw = (uint32_t)value;
+    return raw <= INT32_MAX ? (int)raw : -1 - (int)(UINT32_MAX - raw);
+}
+
+static inline int obor_otg_hits(e_otg value, int grounded, unsigned profile)
+{
+    if(profile < 4044)
+    {
+        int historical = obor_otg_signed(value);
+        return grounded ? historical >= 1 : historical < 2;
+    }
+    return grounded ? value >= OTG_BOTH : value < OTG_GROUND_ONLY;
+}
+
 
 typedef enum
 {
@@ -885,7 +1036,7 @@ if(n<1) n = 1;
 						 if(e->releasetime>0)e->releasetime++;\
 						 if(e->nextanim>0)e->nextanim++;\
 						 if(e->nextthink>0)e->nextthink++;\
-						 if(e->nextmove>0)e->nextmove++;\
+						 if(obor_profile_build >= 3969 && e->nextmove>0)e->nextmove++;\
 						 if(e->magictime>0)e->magictime++;\
 						 if(e->guardtime>0)e->guardtime++;\
 						 if(e->toss_time>0)e->toss_time++;\
@@ -907,7 +1058,7 @@ if(n<1) n = 1;
 
 #define check_range(self, target, animnum) \
 		 ( target && \
-		  (self->direction == DIRECTION_RIGHT ? \
+		  (obor_direction_right(self->direction, obor_profile_build) ? \
 		  (int)target->position.x >= self->position.x+self->modeldata.animation[animnum]->range.min.x &&\
 		  (int)target->position.x <= self->position.x+self->modeldata.animation[animnum]->range.max.x\
 		:\
@@ -1377,7 +1528,27 @@ typedef struct
     s_onframe dropframe;            // if tossv < 0, this frame will be set
     int animhits;                   // Does the attack need to hit before cancel is allowed?
     int sync;                       // sychronize frame to previous animation if they matches
+    unsigned obor_classic_seta_active; // Historical per-animation base-table presence.
+    unsigned obor_classic_move_active; // Historical horizontal/depth table presence.
 } s_anim;
+
+static inline int obor_frame_has_move(const s_anim *anim, int frame, unsigned profile)
+{
+    return profile < 4064 ? anim->obor_classic_move_active != 0 :
+           anim->move[frame]->x != 0 || anim->move[frame]->z != 0;
+}
+
+static inline int obor_frame_has_base(const s_anim *anim, int frame, unsigned profile)
+{
+    int value = anim->move[frame]->base;
+    return profile < 4064 ? value >= 0 : value > 0;
+}
+
+static inline int obor_frame_base_value(const s_anim *anim, int frame, unsigned profile)
+{
+    int value = anim->move[frame]->base;
+    return profile < 4064 || value != 0 ? value : -1;
+}
 
 struct animlist
 {
@@ -1514,8 +1685,27 @@ typedef struct
     float blockpower;       //If > unblockable, this attack type is blocked.
     float blockthreshold;   //Strongest attack from this attack type that can be blocked.
     float blockratio;       //% of damage still taken from this attack type when blocked.
-    e_blocktype blocktype;  //Resource drained when attack is blocked.
+    union
+    {
+        e_blocktype blocktype;  //Resource drained when attack is blocked.
+        float obor_classic_blocktype;
+    };
 } s_defense;
+
+static inline double obor_defense_blocktype(const s_defense *defense, unsigned profile)
+{
+    return profile < 4043 ? (double)defense->obor_classic_blocktype :
+                            (double)defense->blocktype;
+}
+
+static inline void obor_defense_set_blocktype(s_defense *defense, double value, unsigned profile)
+{
+    if(profile < 4043)
+        defense->obor_classic_blocktype = (float)value;
+    else
+        defense->blocktype = value;
+}
+
 
 //UT: new bit flags for noquake property
 #define NO_QUAKE 1  //do not make screen quake
@@ -1758,6 +1948,42 @@ typedef struct
     s_metric_i_current count;   //Hits counter.
     u32 time;           //Time to perform combo.
 } s_rush;
+
+static inline int64_t obor_time_value(uint32_t value, unsigned profile)
+{
+    if(profile >= 4035 || value <= INT32_MAX) return (int64_t)value;
+    return (int64_t)value - INT64_C(4294967296);
+}
+
+static inline uint32_t obor_time_load(float ticks, unsigned profile)
+{
+    if(profile < 4035)
+        return ticks >= -2147483648.0f && ticks < 2147483648.0f ?
+            (uint32_t)(int32_t)ticks : 0;
+    return ticks > -1.0f && ticks < 4294967296.0f ? (uint32_t)ticks : 0;
+}
+
+static inline uint32_t obor_dot_ticks(uint32_t duration, unsigned profile)
+{
+    if(profile < 4035)
+        return (uint32_t)(obor_time_value(duration, profile) * GAME_SPEED / 100);
+    return duration * GAME_SPEED / 100;
+}
+
+static inline int64_t obor_rush_value(int value, unsigned profile)
+{
+    return profile < 4031 ? (int64_t)(uint32_t)value : (int64_t)value;
+}
+
+static inline void obor_rush_advance(s_rush *state, unsigned profile)
+{
+    uint32_t next = (uint32_t)state->count.current + UINT32_C(1);
+    state->count.current = next <= INT32_MAX ? (int)next : -1 - (int)(UINT32_MAX - next);
+    if(obor_rush_value(state->count.current, profile) > obor_rush_value(state->count.max, profile) &&
+       obor_rush_value(state->count.current, profile) > 1)
+        state->count.max = state->count.current;
+}
+
 
 typedef struct entity
 {
@@ -2139,7 +2365,11 @@ typedef struct
     int nohurt; // Used to specify if you can hurt the other player during bonus levels
     int noslow; // Flag so the level doesn't slow down after a boss is defeated
     int nohit; // Not able to grab / hit other player on a per level basis
-    s_axis_f spawn[MAX_PLAYERS]; // Used to determine the spawn position of players
+    union
+    {
+        s_axis_f spawn[MAX_PLAYERS];
+        int obor_classic_spawn[MAX_PLAYERS][3];
+    }; // Player spawn coordinates retain their profile's storage.
     int setweap; // Levels can now specified which weapon will be used by default
     e_facing_adjust facing; // Force the players to face to ...
 //--------------------gravity system-------------------------
@@ -2159,6 +2389,48 @@ typedef struct
     int waiting;
 
 } s_level;
+
+static inline void obor_level_spawn_set(s_level *p, int player, unsigned axis, int value, unsigned profile)
+{
+    if(!p || (unsigned)player >= MAX_PLAYERS || axis >= 3) return;
+    if(profile < 3999) p->obor_classic_spawn[player][axis] = value;
+    else if(axis == 0) p->spawn[player].x = (float)value;
+    else if(axis == 1) p->spawn[player].z = (float)value;
+    else p->spawn[player].y = (float)value;
+}
+
+static inline float obor_level_spawn_get(const s_level *p, int player, unsigned axis, unsigned profile)
+{
+    if(!p || (unsigned)player >= MAX_PLAYERS || axis >= 3) return 0;
+    if(profile < 3999) return (float)p->obor_classic_spawn[player][axis];
+    if(axis == 0) return p->spawn[player].x;
+    if(axis == 1) return p->spawn[player].z;
+    return p->spawn[player].y;
+}
+
+static inline void obor_level_spawn_defaults(s_level *p, unsigned profile)
+{
+    unsigned player;
+    for(player = 0; player < MAX_PLAYERS; ++player)
+        obor_level_spawn_set(p, (int)player, 2, 300, profile);
+}
+
+static inline float obor_level_spawn_left(const s_level *p, int player, int width, unsigned profile)
+{
+    if(!p || (unsigned)player >= MAX_PLAYERS) return 0;
+    if(profile < 3999)
+        return (float)((int64_t)width - p->obor_classic_spawn[player][0]);
+    return (float)width - p->spawn[player].x;
+}
+
+static inline float obor_level_spawn_z_offset(const s_level *p, int player, int minimum, unsigned profile)
+{
+    if(!p || (unsigned)player >= MAX_PLAYERS) return 0;
+    if(profile < 3999)
+        return (float)((int64_t)minimum + p->obor_classic_spawn[player][1]);
+    return (float)minimum + p->spawn[player].z;
+}
+
 
 typedef struct ArgList
 {
@@ -2373,6 +2645,7 @@ void common_pain();
 void common_get();
 void common_land();
 void common_grab(void);
+void common_vault(void);
 void common_grabattack();
 void common_grabbed();
 void common_block(void);

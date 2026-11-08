@@ -1,0 +1,226 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ * Native frame ownership, persistent seta directive and changed consumers.
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <math.h>
+#include "openbor.h"
+#undef printf
+#undef assert
+#ifdef NDEBUG
+#error Frame-base assertions must remain enabled
+#endif
+uint32_t obor_profile_build;
+static unsigned active_case;
+#define assert(c) do {if(!(c)){fprintf(stderr,"Frame base revision=%u case=%u line=%d\n",obor_profile_build,active_case,__LINE__);abort();}}while(0)
+HRESULT Interpreter_Call(Interpreter *p) { (void)p; abort(); }
+HRESULT Interpreter_EvalInstruction(Interpreter *p) { (void)p; abort(); }
+entity *self;
+s_level *level;
+static s_level scene;
+static entity actor, platform_actor, sentinel;
+static s_anim platform_animation;
+static float platform_data[1][8];
+static int geometry, hole_queries;
+static void *live[64];
+static unsigned live_count;
+static void *tracked_malloc(size_t bytes)
+{
+    assert(bytes>0 && bytes<65536);
+    void *p=malloc(bytes);assert(p);
+    for(unsigned i=0;i<64;++i)if(!live[i]){live[i]=p;++live_count;return p;}
+    abort();
+}
+static void tracked_free(void *p)
+{
+    if(!p)return;
+    for(unsigned i=0;i<64;++i)if(live[i]==p){live[i]=NULL;--live_count;free(p);return;}
+    abort();
+}
+int checkhole(float x,float z) {(void)x;(void)z;++hole_queries;return 1;}
+int checkwall(float x,float z) {(void)x;(void)z;return -1;}
+entity *check_platform_below(float x,float z,float y,entity *exclude)
+{(void)x;(void)z;(void)y;assert(exclude==&actor);return NULL;}
+entity *check_platform_below_entity(entity *e) {assert(e==&actor);return geometry==2?&platform_actor:NULL;}
+int testplatform(entity *e,float x,float z,entity *exclude)
+{(void)e;(void)x;(void)z;(void)exclude;abort();}
+void check_gravity(entity *e) {(void)e;abort();}
+void ent_unlink(entity *e) {(void)e;abort();}
+int checkwall_below(float x,float z,float height)
+{(void)x;(void)z;assert(height==9999999);return geometry==1?0:-1;}
+static float check_basemap(int x,int z) {(void)x;(void)z;return -1000;}
+#define malloc tracked_malloc
+#define free tracked_free
+@FUNCTIONS@
+#undef malloc
+#undef free
+@NUMBERS@
+static void seta_directive(s_axis_i *value,int number)
+{
+    enum {CMD_MODEL_SETA};
+    s_axis_i move=*value;ArgList arglist={0};char text[32];
+    char *filename="fixture",*command="seta";
+    snprintf(text,sizeof(text),"%d",number);arglist.count=2;
+    arglist.args[0]=command;arglist.args[1]=text;
+    switch(CMD_MODEL_SETA){@DIRECTIVE@}
+    *value=move;
+}
+static void base_update(entity *ent,int f)
+{
+    entity *self=ent;s_anim *anim=ent->animation;s_axis_f move={0};
+    @UPDATE@
+}
+static void movement_update(entity *ent,int f)
+{
+    entity *self=ent;s_anim *anim=ent->animation;s_axis_f move={0};
+    @MOVE_UPDATE@
+}
+static void landing_arm(entity *self)
+{
+    @GRAVITY@
+}
+static void hole_arm(int *dx,int *dz)
+{
+    int xdir=*dx,zdir=*dz,needcheckhole=0;
+    float x=self->position.x+xdir,z=self->position.z+zdir;
+    @HOLE@
+    assert(needcheckhole==(hole_queries!=0));
+    *dx=xdir;*dz=zdir;
+}
+static const struct {uint32_t revision;int legacy;} contexts[]={@CONTEXTS@};
+static const int initial_bases[]={@INITIAL_BASES@},altbases[]={@ALTBASES@};
+struct frame_oracle {int base,dy,active,update[2][2],gravity[3],hole[3],adjust[6];};
+static const struct {
+    int frames;struct {int present,value;} command[@MAX_FRAMES@];
+    struct frame_oracle legacy[@MAX_FRAMES@],modern[@MAX_FRAMES@];
+} cases[]={@CASES@};
+static const struct {
+    int frames;int value[@MOVE_MAX_FRAMES@][2];
+    int legacy_active,modern_active[@MOVE_MAX_FRAMES@];
+} movement_cases[]={@MOVE_CASES@};
+static void actor_at(s_anim *animation,int frame)
+{
+    memset(&actor,0,sizeof(actor));actor.animation=animation;actor.animpos=frame;
+    actor.position.x=17;actor.position.z=27;
+}
+int main(void)
+{
+    level=&scene;level->walls=calloc(1,sizeof(*level->walls));assert(level->walls);
+    level->walls[0].height=100;
+    platform_actor.animation=&platform_animation;platform_actor.position.y=90;
+    platform_actor.update_mark=8;platform_animation.platform=platform_data;
+    platform_data[0][7]=10;
+    for(unsigned p=0;p<sizeof(contexts)/sizeof(contexts[0]);++p)
+    {
+        obor_profile_build=contexts[p].revision;active_case=0;
+        for(unsigned c=0;c<sizeof(movement_cases)/sizeof(movement_cases[0]);++c)
+        {
+            s_anim animation={0};
+            for(int cycle=0;cycle<2;++cycle)
+            {
+                for(int f=0;f<movement_cases[c].frames;++f)
+                {
+                    s_axis_i move={.x=movement_cases[c].value[f][0],
+                        .z=movement_cases[c].value[f][1],.base=-1};
+                    s_attack attack={0};s_drawmethod draw={0};
+                    int bbox[6]={0},shadow[2]={0};float platform[8]={0};
+                    assert(addframe(&animation,20+f,f?-movement_cases[c].frames:
+                        movement_cases[c].frames,100,0,bbox,&attack,&move,
+                        platform,-1,shadow,-1,&draw)==f+1);
+                }
+                ++active_case;
+                assert(animation.obor_classic_move_active==(unsigned)
+                    (contexts[p].legacy?movement_cases[c].legacy_active:0));
+                for(int f=0;f<movement_cases[c].frames;++f)
+                for(int has_level=0;has_level<2;++has_level)
+                for(int direction=-1;direction<=2;++direction)
+                for(int zero=0;zero<2;++zero)
+                {
+                    actor_at(&animation,f);actor.direction=direction;
+                    actor.movex=zero?-0.0f:7.0f;actor.movez=zero?-0.0f:-9.0f;
+                    float expected_x=actor.movex,expected_z=actor.movez;
+                    int active=contexts[p].legacy?movement_cases[c].legacy_active:
+                        movement_cases[c].modern_active[f];
+                    if(has_level && active)
+                    {
+                        float dx=(float)movement_cases[c].value[f][0];
+                        if(direction==0)dx=-dx;
+                        expected_x+=dx;expected_z+=(float)movement_cases[c].value[f][1];
+                    }
+                    level=has_level?&scene:NULL;++active_case;
+                    movement_update(&actor,f);
+                    assert(actor.movex==expected_x && actor.movez==expected_z);
+                    assert(!!signbit(actor.movex)==!!signbit(expected_x));
+                    assert(!!signbit(actor.movez)==!!signbit(expected_z));
+                    assert(actor.position.x==17 && actor.position.z==27);
+                }
+                level=&scene;++active_case;free_frames(&animation);
+                assert(live_count==0 && !animation.obor_classic_move_active);
+                animation.numframes=0;
+            }
+        }
+        for(unsigned c=0;c<sizeof(cases)/sizeof(cases[0]);++c)
+        {
+            s_anim animation={0};
+            for(int cycle=0;cycle<2;++cycle)
+            {
+                s_axis_i move={.base=-1};
+                for(int f=0;f<cases[c].frames;++f)
+                {
+                    if(cases[c].command[f].present)seta_directive(&move,cases[c].command[f].value);
+                    move.x=f+2;move.y=f%3-1;move.z=f+4;
+                    s_axis_i input=move;s_attack attack={0};s_drawmethod draw={0};
+                    int bbox[6]={0},shadow[2]={0};float platform[8]={0};
+                    ++active_case;
+                    assert(addframe(&animation,20+f,f?-cases[c].frames:cases[c].frames,100,0,
+                        bbox,&attack,&move,platform,-1,shadow,-1,&draw)==f+1);
+                    assert(!memcmp(&input,&move,sizeof(move)) && live_count==5u+(unsigned)f);
+                    const struct frame_oracle *rows=contexts[p].legacy?cases[c].legacy:cases[c].modern;
+                    assert(animation.obor_classic_seta_active==(unsigned)rows[f].active);
+                    for(int j=0;j<=f;++j)
+                    {
+                        assert(animation.move[j]->base==rows[j].base && animation.move[j]->x==j+2);
+                        assert(animation.move[j]->y==rows[j].dy && animation.move[j]->z==j+4);
+                        assert(animation.sprite[j]==20+j && animation.delay[j]==GAME_SPEED);
+                    }
+                }
+                const struct frame_oracle *rows=contexts[p].legacy?cases[c].legacy:cases[c].modern;
+                for(int f=0;f<cases[c].frames;++f)
+                {
+                    const struct frame_oracle *row=&rows[f];
+                    for(unsigned b=0;b<sizeof(initial_bases)/sizeof(initial_bases[0]);++b)
+                    {
+                        actor_at(&animation,f);actor.base=initial_bases[b];actor.altbase=5;++active_case;
+                        base_update(&actor,f);
+                        assert(actor.base==row->update[b][0] && actor.altbase==row->update[b][1]);
+                    }
+                    actor_at(&animation,f);actor.velocity.x=2;actor.velocity.y=-3;actor.velocity.z=4;
+                    ++active_case;landing_arm(&actor);
+                    assert(actor.velocity.x==row->gravity[0] && actor.velocity.y==row->gravity[1] && actor.velocity.z==row->gravity[2]);
+                    actor_at(&animation,f);actor.modeldata.type=TYPE_ENEMY;actor.idling=1;
+                    actor.modeldata.subject_to_hole=1;self=&actor;hole_queries=0;
+                    int dx=1,dz=1;++active_case;hole_arm(&dx,&dz);
+                    assert(dx==row->hole[0] && dz==row->hole[1] && hole_queries==row->hole[2]);
+                    for(geometry=0;geometry<3;++geometry)
+                    for(unsigned a=0;a<sizeof(altbases)/sizeof(altbases[0]);++a)
+                    {
+                        actor_at(&animation,f);actor.base=8;actor.altbase=altbases[a];actor.position.y=200;
+                        actor.modeldata.subject_to_wall=geometry==1;actor.modeldata.subject_to_platform=geometry==2;
+                        entity *out=NULL;self=&sentinel;++active_case;adjust_base(&actor,&out);
+                        assert(actor.base==row->adjust[geometry*2+a] && self==&sentinel);
+                        assert(out==(geometry==2?&platform_actor:NULL) && actor.position.y==200 && !actor.landed_on_platform);
+                        assert(actor.position.x==17 && actor.position.z==27 && actor.altbase==altbases[a]);
+                    }
+                }
+                ++active_case;free_frames(&animation);
+                assert(live_count==0 && !animation.move && !animation.sprite && !animation.delay && !animation.vulnerable);
+                assert(!animation.obor_classic_seta_active);animation.numframes=0;
+            }
+        }
+        printf("{\"revision\":%u,\"cases\":%u,\"status\":\"PASS\"}\n",obor_profile_build,active_case);
+    }
+    free(level->walls);return 0;
+}

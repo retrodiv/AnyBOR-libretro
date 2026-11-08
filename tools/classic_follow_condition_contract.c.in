@@ -1,0 +1,109 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ * Native follow parser and dispatch, with controlled animation transitions.
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "openbor.h"
+#undef printf
+#undef assert
+#ifdef NDEBUG
+#error Follow checks must remain enabled
+#endif
+uint32_t obor_profile_build;
+static unsigned active_case;
+#define assert(c) do {if(!(c)){fprintf(stderr,"Follow revision=%u case=%u line=%d\n",obor_profile_build,active_case,__LINE__);abort();}}while(0)
+HRESULT Interpreter_Call(Interpreter *p) {(void)p;abort();}
+HRESULT Interpreter_EvalInstruction(Interpreter *p) {(void)p;abort();}
+entity *self;
+s_savedata savedata;
+int max_follows=@MAX_FOLLOWS@;
+static int follows[@MAX_FOLLOWS@];
+int *animfollows=follows;
+static entity actor,target;
+static s_anim original,target_animation,destinations[@MAX_FOLLOWS@];
+static s_anim *table[MAX_ANIS+1];
+static int vulnerable[]={1};
+static int grab_calls,animation_changes;
+@HELPERS@
+static int observed_grab(entity *source,entity *other)
+{
+    assert(source==&actor && other==&target);++grab_calls;
+    return cangrab(source,other);
+}
+#undef cangrab
+#define cangrab(source,other) observed_grab(source,other)
+void ent_set_anim(entity *ent,int index,int reset)
+{
+    assert(ent==&actor && index>=5 && index<5+max_follows && reset==1);
+    ++animation_changes;ent->animnum=index;ent->animation=ent->modeldata.animation[index];
+}
+enum {CMD_MODEL_FOLLOWANIM,CMD_MODEL_FOLLOWCOND};
+static void defaults(s_anim *newanim) {@DEFAULTS@}
+static void directive(int cmd,int input)
+{
+    char number[32];snprintf(number,sizeof(number),"%d",input);
+    ArgList arglist={0};arglist.count=2;arglist.args[0]="follow";arglist.args[1]=number;
+    char *filename="fixture",*command="follow";
+    s_anim *newanim=&original;
+    switch(cmd) {@DIRECTIVES@}
+}
+static int follow(int didblock)
+{
+    entity *e=&actor;int current_follow_id=-77;
+    @FOLLOW@
+    return current_follow_id;
+}
+static const struct {unsigned revision;int signed_condition;} contexts[]={@CONTEXTS@};
+static const struct {
+    int condition,hostile,healthy,blocked,grab,follow,counter_ready,valid_follow,attackone;
+    struct {int grab_calls,current_follow,animation_changes,attackone,animnum;} early,later;
+} cases[]={@CASES@};
+int main(void)
+{
+    assert(sizeof(e_follow_condition)==sizeof(int) && sizeof(int)==4);
+    for(unsigned p=0;p<sizeof(contexts)/sizeof(contexts[0]);++p)
+    {
+        obor_profile_build=contexts[p].revision;active_case=0;
+        ++active_case;memset(&original,0x5a,sizeof(original));defaults(&original);
+        assert(original.followup.animation==0 && original.followup.condition==0);
+        for(unsigned c=0;c<sizeof(cases)/sizeof(cases[0]);++c)
+        {
+            ++active_case;memset(&actor,0,sizeof(actor));memset(&target,0,sizeof(target));
+            memset(&original,0,sizeof(original));memset(&target_animation,0,sizeof(target_animation));
+            memset(destinations,0,sizeof(destinations));memset(table,0,sizeof(table));
+            original.numframes=target_animation.numframes=1;original.vulnerable=target_animation.vulnerable=vulnerable;
+            original.attackone=7;original.counterrange.frame.min=cases[c].counter_ready?-1:0;
+            defaults(&original);actor.animation=&original;actor.modeldata.animation=table;
+            actor.modeldata.animation_capacity=MAX_ANIS+1;actor.model=&actor.modeldata;
+            target.animation=&target_animation;target.model=&target.modeldata;
+            actor.modeldata.type=target.modeldata.type=TYPE_ENEMY;
+            actor.modeldata.hostile=cases[c].hostile?TYPE_ENEMY:0;
+            target.health=cases[c].healthy?10:0;target.nograb=!cases[c].grab;
+            actor.modeldata.grabforce=1;
+            directive(CMD_MODEL_FOLLOWANIM,cases[c].follow);
+            directive(CMD_MODEL_FOLLOWCOND,cases[c].condition);
+            assert((uint32_t)original.followup.condition==(uint32_t)cases[c].condition);
+            int selected=original.followup.animation;
+            assert(selected>=0 && selected<=max_follows);
+            for(int i=0;i<max_follows;++i)
+            {
+                follows[i]=i+5;table[i+5]=&destinations[i];
+                destinations[i].numframes=cases[c].valid_follow;
+                destinations[i].attackone=cases[c].attackone;
+            }
+            self=&target;grab_calls=animation_changes=0;
+            int result=follow(cases[c].blocked),early=contexts[p].signed_condition;
+            assert(grab_calls==(early?cases[c].early.grab_calls:cases[c].later.grab_calls));
+            assert(result==(early?cases[c].early.current_follow:cases[c].later.current_follow));
+            assert(animation_changes==(early?cases[c].early.animation_changes:cases[c].later.animation_changes));
+            assert(actor.animnum==(early?cases[c].early.animnum:cases[c].later.animnum));
+            if(selected)assert(destinations[selected-1].attackone==(early?cases[c].early.attackone:cases[c].later.attackone));
+            assert(self==&target && target.health==(cases[c].healthy?10:0));
+        }
+        printf("{\"revision\":%u,\"cases\":%u,\"status\":\"PASS\"}\n",obor_profile_build,active_case);
+    }
+    return 0;
+}

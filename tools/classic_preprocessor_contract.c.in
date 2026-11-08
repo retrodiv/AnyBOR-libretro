@@ -1,0 +1,58 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ * Whole native preprocessor/lexer/list path with synthetic bounded source.
+ */
+#include <assert.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include "pp_parser.h"
+uint32_t obor_profile_build;
+static unsigned active_case,checks,contexts,last_profile;
+char *get_full_path(char *filename) {return filename;}
+void exitIfFalse(int value,const char *condition,const char *function,const char *file,int line)
+{(void)condition;(void)function;(void)file;(void)line;if(!value)abort();}
+#undef assert
+#ifdef NDEBUG
+#error Preprocessor assertions must remain enabled
+#endif
+#define assert(c) do {if(!(c)){fprintf(stderr,"Classic preprocessor revision=%u case=%u line=%d\n",obor_profile_build,active_case,__LINE__);abort();}}while(0)
+static void check(unsigned revision,unsigned which,const char *input,int accepted,
+                  const char *wanted,const char *diagnostic,const char *exact)
+{
+ obor_profile_build=revision;active_case=which;++checks;if(last_profile!=revision){++contexts;last_profile=revision;}
+ pp_context context;pp_parser parser;TEXTPOS start={1,0};
+ char *source=strdup(input);assert(source);FILE *messages=tmpfile();assert(messages);
+ fflush(stderr);int saved=dup(STDERR_FILENO);assert(saved>=0 && dup2(fileno(messages),STDERR_FILENO)>=0);
+ pp_context_init(&context);pp_parser_init(&parser,&context,"fixture.c",source,start);
+ int eof=0,steps=0;char tokens[2048]={0},text[2048]={0};
+ for(;;)
+ {
+  pp_token *token=pp_parser_emit_token(&parser);
+  if(!token)break;
+  assert(++steps<512);
+  if(token->theType==PP_TOKEN_EOF){eof=1;break;}
+  assert(strlen(text)+strlen(token->theSource)<sizeof(text));strcat(text,token->theSource);
+  if(token->theType==PP_TOKEN_WHITESPACE || token->theType==PP_TOKEN_NEWLINE)continue;
+  assert(strlen(tokens)+strlen(token->theSource)+2<sizeof(tokens));
+  if(tokens[0])strcat(tokens,"|");strcat(tokens,token->theSource);
+ }
+ /* Exhausted child parsers are native-owned and released on EOF/error.
+    This control deliberately refuses dangling children rather than hiding one. */
+ assert(!parser.child);pp_context_destroy(&context);pp_context_destroy(&context);free(source);
+ fflush(stderr);assert(dup2(saved,STDERR_FILENO)>=0);close(saved);
+ rewind(messages);char errors[8192]={0};size_t size=fread(errors,1,sizeof(errors)-1,messages);
+ assert(!ferror(messages) && size<sizeof(errors)-1);fclose(messages);
+ if(eof!=accepted || strcmp(tokens,wanted) || (exact[0] && strcmp(text,exact)) ||
+    (diagnostic[0] && !strstr(errors,diagnostic)) || (!diagnostic[0] && strstr(errors,"Script error:")))
+ {
+  fprintf(stderr,"Expected accepted=%d tokens=[%s] exact=[%s] diagnostic=[%s]; got accepted=%d tokens=[%s] text=[%s] errors=[%s]\n",accepted,wanted,exact,diagnostic,eof,tokens,text,errors);assert(0);
+ }
+}
+int main(void)
+{
+@CHECKS@
+ printf("{\"contexts\":%u,\"cases\":%u,\"status\":\"PASS\"}\n",contexts,checks);return 0;
+}

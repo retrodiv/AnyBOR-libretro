@@ -1,0 +1,117 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ * Native model/script storage and complete blocked-resource branch.
+ */
+#include <stdint.h>
+#include <stddef.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "openbor.h"
+#undef printf
+#undef assert
+#ifdef NDEBUG
+#error Block-resource checks must remain enabled
+#endif
+uint32_t obor_profile_build;
+static unsigned active_case;
+#define assert(c) do {if(!(c)){fprintf(stderr,"Block revision=%u case=%u line=%d\n",obor_profile_build,active_case,__LINE__);abort();}}while(0)
+HRESULT Interpreter_Call(Interpreter *p) {(void)p;abort();}
+HRESULT Interpreter_EvalInstruction(Interpreter *p) {(void)p;abort();}
+CHAR *StrCache_Get(int slot) {(void)slot;abort();}
+@VARIANTS@
+entity *self;
+static entity actor,attacker;
+static s_model model;
+static s_defense defenses[MAX_ATKS+4];
+static float offense[MAX_ATKS+4];
+int max_attack_types=MAX_ATKS+4;
+static int fatal_calls;
+enum {CMD_MODEL_DEFENSE,CMD_MODEL_OFFENSE,_ep_defense,_ep_defense_blocktype};
+void writeToLogFile(const char *format,...) {(void)format;abort();}
+@DEFAULT@
+@HELPERS@
+static void directive(double numeric)
+{
+    char number[64];snprintf(number,sizeof(number),"%.9g",numeric);
+    ArgList arglist={0};s_model *newchar=&model;s_defense defense;
+    int tempInt,i;float tempFloat;char *value,*filename="fixture",*command="defense";
+    char selector[16]="ALL";
+    char *args[]={"defense",selector,"1","0","1","0","0","0.25",number};
+    arglist.count=9;for(i=0;i<9;++i)arglist.args[i]=args[i];
+    switch(CMD_MODEL_DEFENSE) {@DIRECTIVES@}
+}
+static double getter(entity *ent)
+{
+    LONG ltemp=0;ScriptVariant result={.vt=VT_DECIMAL},*value=&result,**pretvar=&value;
+    switch(_ep_defense_blocktype) {@GETTER@}
+    return result.dblVal;
+}
+static void setter(entity *ent,double value,int integral)
+{
+    ScriptVariant args[10],*varlist[10];memset(args,0,sizeof(args));
+    for(int i=0;i<10;++i){args[i].vt=VT_DECIMAL;args[i].dblVal=0;varlist[i]=&args[i];}
+    args[2].vt=VT_INTEGER;args[2].lVal=0;args[3].dblVal=1;args[5].dblVal=1;args[8].dblVal=.25;
+    args[9].vt=integral?VT_INTEGER:VT_DECIMAL;
+    if(integral)args[9].lVal=(LONG)value;else args[9].dblVal=value;
+    int paramCount=10;LONG ltemp=0,ltemp2=0;DOUBLE dbltemp=0;
+    switch(_ep_defense) {@SETTER@}
+}
+static int fatal(entity *source,s_attack *attack)
+{
+    assert(self==&actor && source==&attacker && attack->attack_type==0);
+    ++fatal_calls;self->health=-999;return 1;
+}
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wimplicit-fallthrough"
+static int blocked(int initial_force,int mpblock,int didblock,int nohurt,int nochipdeath,int blockratio)
+{
+    entity *def=&actor,*e=&attacker,*temp;
+    s_attack incoming={0},*attack=&incoming;attack->attack_type=0;attack->attack_force=initial_force;
+    s_level storage={0},*level=&storage;level->nohurt=nohurt;
+    int force=initial_force;e_blocktype blocktype;
+    @RESOURCE@
+    return force;
+}
+#pragma GCC diagnostic pop
+static const struct {unsigned revision;int fractional;} contexts[]={@CONTEXTS@};
+static const struct {
+    double blocktype;int mpblock,mp,health,force;double ratio;
+    int global_ratio,didblock,nohurt,nochipdeath;
+    struct {int health,mp,force,fatal;} old,later;
+} cases[]={@CASES@};
+int main(void)
+{
+    assert(sizeof(e_blocktype)==sizeof(float) && sizeof(s_defense)==7*sizeof(float));
+    assert(offsetof(s_defense,blocktype)==offsetof(s_defense,obor_classic_blocktype));
+    for(unsigned p=0;p<sizeof(contexts)/sizeof(contexts[0]);++p)
+    {
+        obor_profile_build=contexts[p].revision;active_case=0;
+        for(unsigned c=0;c<sizeof(cases)/sizeof(cases[0]);++c)
+        for(int route=0;route<3;++route)
+        {
+            if(route==2 && cases[c].blocktype!=(int)cases[c].blocktype)continue;
+            ++active_case;memset(&actor,0,sizeof(actor));memset(defenses,0,sizeof(defenses));
+            memset(&model,0,sizeof(model));model.defense=defenses;model.offense_factors=offense;
+            actor.defense=defenses;
+            double value=cases[c].blocktype;
+            if(route==0)directive(value);
+            else setter(&actor,value,route==2);
+            double expected=contexts[p].fractional?value:(int)value;
+            assert(getter(&actor)==expected);
+            s_defense copy;memcpy(&copy,&defenses[0],sizeof(copy));
+            assert(obor_defense_blocktype(&copy,obor_profile_build)==expected);
+            actor.health=cases[c].health;actor.mp=cases[c].mp;actor.takedamage=fatal;
+            defenses[0].blockratio=(float)cases[c].ratio;fatal_calls=0;self=&attacker;
+            int force=blocked(cases[c].force,cases[c].mpblock,cases[c].didblock,cases[c].nohurt,
+                              cases[c].nochipdeath,cases[c].global_ratio);
+            int old=contexts[p].fractional;
+            assert(actor.health==(old?cases[c].old.health:cases[c].later.health));
+            assert(actor.mp==(old?cases[c].old.mp:cases[c].later.mp));
+            assert(force==(old?cases[c].old.force:cases[c].later.force));
+            assert(fatal_calls==(old?cases[c].old.fatal:cases[c].later.fatal) && self==&attacker);
+        }
+        printf("{\"revision\":%u,\"cases\":%u,\"status\":\"PASS\"}\n",obor_profile_build,active_case);
+    }
+    return 0;
+}

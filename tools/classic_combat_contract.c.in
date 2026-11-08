@@ -1,0 +1,123 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ * Native predicates and complete transitions; services record their ordering.
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "openbor.h"
+#undef printf
+#undef assert
+#ifdef NDEBUG
+#error Combat checks must remain enabled
+#endif
+uint32_t obor_profile_build;
+static unsigned active_case;
+#define assert(c) do {if(!(c)){fprintf(stderr,"Combat revision=%u case=%u line=%d\n",obor_profile_build,active_case,__LINE__);abort();}}while(0)
+HRESULT Interpreter_Call(Interpreter *p) { (void)p; abort(); }
+HRESULT Interpreter_EvalInstruction(Interpreter *p) { (void)p; abort(); }
+entity *self;
+int max_attack_types = 1;
+static int death_ids[] = {ANI_DIE}, fall_ids[] = {ANI_FALL};
+int *animdies = death_ids, *animfalls = fall_ids;
+static entity actor, other;
+static s_anim animation;
+static s_anim *slots[ANI_CHIPDEATH + ANI_DIE + ANI_FALL + ANI_BLOCK + 1];
+static s_defense defenses[1];
+static char events[8];
+static int event_count, expected_callback_time, expected_callback_frozen, chosen_animation;
+static void event(char value) { assert(event_count < 7); events[event_count++] = value; events[event_count] = 0; }
+void ent_set_anim(entity *ent, int index, int reset)
+{
+    assert(ent == &actor && reset == 1); chosen_animation = index; event('A');
+}
+void ent_set_colourmap(entity *ent, unsigned int map)
+{
+    assert(ent == &actor && map == 3); event('M');
+}
+void execute_onfall_script(entity *ent, entity *attacker, int force, int drop,
+    int type, int noblock, int guardcost, int jugglecost, int pauseadd)
+{
+    assert(ent == &actor && attacker == &other && force == 7 && drop == 8);
+    assert(type == 0 && noblock == 9 && guardcost == 10 && jugglecost == 11 && pauseadd == 12);
+    assert(ent->freezetime == (unsigned)expected_callback_time && ent->frozen == expected_callback_frozen);
+    assert(ent->falling && ent->drop && ent->nograb && !ent->blocking);
+    event('F');
+}
+int inair(entity *ent) { assert(ent == &actor); return 0; }
+unsigned int rand32(void) { return 3; }
+static void reset_actor(void)
+{
+    memset(&actor, 0, sizeof(actor)); memset(&other, 0, sizeof(other));
+    memset(&animation, 0, sizeof(animation)); memset(slots, 0, sizeof(slots));
+    memset(defenses, 0, sizeof(defenses)); memset(events, 0, sizeof(events));
+    event_count = 0; chosen_animation = -1;
+    actor.modeldata.animation = slots;
+    actor.modeldata.animation_capacity = sizeof(slots) / sizeof(slots[0]);
+    actor.defense = defenses; animation.numframes = 1; actor.map = 3;
+    self = &other;
+}
+@FUNCTIONS@
+static int block_branch(entity *e, s_attack *attack, int force)
+{
+    float fdefense_blockthreshold = self->defense[attack->attack_type].blockthreshold;
+    if(@PASSIVE@) return 2;
+    else if(@MANUAL@) return 1;
+    return 0;
+}
+static const struct { unsigned revision; int player_block, clear_nonfrozen_time; } contexts[] = {@CONTEXTS@};
+int main(void)
+{
+    for(unsigned p = 0; p < sizeof(contexts)/sizeof(contexts[0]); ++p)
+    {
+        obor_profile_build = contexts[p].revision; active_case = 0;
+        for(int scenario = 0; scenario < 12; ++scenario)
+        {
+            ++active_case; reset_actor(); self = &actor;
+            actor.modeldata.type = TYPE_PLAYER; actor.blocking = actor.idling = 1;
+            actor.direction = DIRECTION_RIGHT; other.direction = DIRECTION_LEFT;
+            slots[ANI_BLOCK] = &animation; s_attack attack = {0};
+            switch(scenario)
+            {
+            case 1: actor.modeldata.type = TYPE_ENEMY; break;
+            case 2: actor.modeldata.type = TYPE_ENEMY; actor.modeldata.nopassiveblock = 1; break;
+            case 3: actor.blocking = 0; break;
+            case 4: actor.frozen = 1; break;
+            case 5: other.direction = actor.direction; break;
+            case 6: actor.modeldata.type = TYPE_PLAYER | TYPE_ENEMY; break;
+            case 7: actor.modeldata.guardpoints.max = 1; break;
+            case 8: attack.no_block = 1; break;
+            case 9: actor.modeldata.thold = 1; break;
+            case 10: actor.modeldata.thold = 2; break;
+            case 11: actor.modeldata.nopassiveblock = 1; break;
+            }
+            int expected = scenario == 2 || scenario == 11 ||
+                (contexts[p].player_block && (scenario == 0 || scenario == 10));
+            assert(block_branch(&other, &attack, 1) == expected);
+        }
+        for(int kind = 0; kind < 3; ++kind)
+        for(int available = 0; available < 2; ++available)
+        for(int frozen = 0; frozen < 2; ++frozen)
+        for(int type = -1; type <= 1; ++type)
+        {
+            ++active_case; reset_actor();
+            actor.frozen = frozen; actor.freezetime = 123;
+            actor.idling = actor.getting = actor.jumping = actor.charging = actor.attacking = 1;
+            actor.blocking = kind == 2;
+            if(available) slots[kind == 0 ? ANI_DIE : kind == 1 ? ANI_FALL : ANI_CHIPDEATH] = &animation;
+            int changed = available && kind != 2;
+            expected_callback_time = changed && (frozen || contexts[p].clear_nonfrozen_time) ? 0 : 123;
+            expected_callback_frozen = changed ? 0 : frozen;
+            int result = kind == 1 ? set_fall(&actor, type, 1, &other, 7, 8, 9, 10, 11, 12) :
+                                      set_death(&actor, type, 1);
+            assert(result == available && self == &other);
+            assert(actor.freezetime == (unsigned)expected_callback_time && actor.frozen == expected_callback_frozen);
+            assert(!strcmp(events, !available ? "" : kind == 2 ? "A" :
+                kind == 0 ? (frozen ? "AM" : "A") : (frozen ? "AMF" : "AF")));
+            if(available) assert(chosen_animation == (kind == 0 ? ANI_DIE : kind == 1 ? ANI_FALL : ANI_CHIPDEATH));
+        }
+        printf("{\"revision\":%u,\"cases\":%u,\"status\":\"PASS\"}\n", obor_profile_build, active_case);
+    }
+    return 0;
+}

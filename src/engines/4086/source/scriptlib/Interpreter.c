@@ -1,15 +1,17 @@
-/* AnyBOR modification record: 2026-10-19.
+/* AnyBOR modification record: 2026-11-08.
  * Port maintained by retrodiv <retrodiv@proton.me>.
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
  * Upstream code retains its original license and notices.
  * Push canonical constants, release parser-only instruction data, and pack
  * compiled instructions, values, and call references into exact contiguous
- * storage. Clear resolved compile-only import nodes without changing
- * compiled call targets. Compact compiler-only instruction records after
- * resolving value ownership, preserving branch and export anchors, all
- * mutable values and exactly-once pool cleanup. Allocate parser state only
- * while compiling and release it once runtime instructions are ready.
+ * storage. Preserve each profile's completed-call flag across reset before
+ * evaluating the next script entry. Clear resolved compile-only import nodes
+ * without changing compiled call targets. Compact compiler-only instruction
+ * records after resolving value ownership, preserving branch and export
+ * anchors, all mutable values and exactly-once pool cleanup. Allocate parser
+ * state only while compiling and release it once runtime instructions are
+ * ready.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/4086.md
  * at the source repository root. Original notices follow below.
@@ -1446,5 +1448,5 @@ void Interpreter_Reset(Interpreter *pinterpreter)
     //Reset the main flag
     pinterpreter->bMainCompleted = FALSE;
     pinterpreter->bReset = TRUE;
-    pinterpreter->bCallCompleted = FALSE;
+    if(obor_profile_build >= 3991) pinterpreter->bCallCompleted = FALSE;
 }

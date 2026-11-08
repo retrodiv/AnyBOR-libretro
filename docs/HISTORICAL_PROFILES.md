@@ -1,40 +1,42 @@
 # Choosing a profile
 
-Selectable engine profiles: v3.0 3020-dev, v3.0 3057, v3.0 3062, v3.0 3073,
-v3.0 3081, v3.0 3109, v3.0 3117, v3.0 3143, v3.0 3160, v3.0 3173, v3.0 3192,
-v3.0 3208, v3.0 3273, v3.0 3288, v3.0 3303, v3.0 3307, v3.0 3310, v3.0 3311,
-v3.0 3316, v3.0 3317, v3.0 3318, v3.0 3327, v3.0 3328, v3.0 3330, v3.0 3332,
-v3.0 3335, v3.0 3337, v3.0 3340, v3.0 3341, v3.0 3342, v3.0 3350, v3.0 3351,
-v3.0 3352, v3.0 3353, v3.0 3354, v3.0 3355, v3.0 3356, v3.0 3357, v3.0 3360,
-v3.0 3361, v3.0 3362, v3.0 3365, v3.0 3366, v3.0 3367, v3.0 3371, v3.0 3372,
-v3.0 3373, v3.0 3375, v3.0 3379, v3.0 3380, v3.0 3381, v3.0 3383, v3.0 3385,
-v3.0 3388, v3.0 3391, v3.0 3394, v3.0 3397, v3.0 3400, v3.0 3406, v3.0 3411,
-v3.0 3415, v3.0 3416, v3.0 3420, v3.0 3422, v3.0 3427, v3.0 3428, v3.0 3431,
-v3.0 3434, v3.0 3436, v3.0 3441, v3.0 3445, v3.0 3446, v3.0 3449, v3.0 3454,
-v3.0 3458, v3.0 3461, v3.0 3463, v3.0 3465, v3.0 3467, v3.0 3469, v3.0 3472,
-v3.0 3477, v3.0 3482, v3.0 3500, v3.0 3509, v3.0 3511, v3.0 3515, v3.0 3517,
-v3.0 3520, v3.0 3526, v3.0 3549, v3.0 3550, v3.0 3551, v3.0 3552, v3.0 3553,
-v3.0 3554, v3.0 3557, v3.0 3559, v3.0 3562, v3.0 3565, v3.0 3567, v3.0 3568,
-v3.0 3581, v3.0 3583, v3.0 3585, v3.0 3586, v3.0 3587, v3.0 3591, v3.0 3594,
-v3.0 3596, v3.0 3597, v3.0 3602, v3.0 3604, v3.0 3605, v3.0 3608, v3.0 3609,
-v3.0 3611, v3.0 3614, v3.0 3618, v3.0 3619, v3.0 3623, v3.0 3624, v3.0 3626,
-v3.0 3629, v3.0 3631, v3.0 3633, v3.0 3635, v3.0 3638, v3.0 3639, v3.0 3640,
-v3.0 3644, v3.0 3646, v3.0 3647, v3.0 3649, v3.0 3650, v3.0 3651, v3.0 3655,
-v3.0 3656, v3.0 3657, v3.0 3660, v3.0 3661, v3.0 3663, v3.0 3664, v3.0 3665,
-v3.0 3666, v3.0 3667, v3.0 3669, v3.0 3670, v3.0 3671, v3.0 3672, v3.0 3673,
-v3.0 3674, v3.0 3675, v3.0 3677, v3.0 3678, v3.0 3679, v3.0 3680, v3.0 3682,
-v3.0 3685, v3.0 3686, v3.0 3689, v3.0 3690, v3.0 3691, v3.0 3692, v3.0 3693,
-v3.0 3694, v3.0 3697, v3.0 3699, v3.0 3701, v3.0 3703, v3.0 3704, v3.0 3707,
-v3.0 3708, v3.0 3709, v3.0 3710, v3.0 3711, v3.0 3713, v3.0 3714, v3.0 3715,
-v3.0 3716, v3.0 3722, v3.0 3725, v3.0 3726, v3.0 3727, v3.0 3728, v3.0 3729,
-v3.0 3730, v3.0 3732, v3.0 3738, v3.0 3740, v3.0 3741, v3.0 3742-dev, v3.0
-3761-dev, v3.0 3769, v3.0 3773, v3.0 3780, v3.0 3783, v3.0 3789, v3.0 3793,
-v3.0 3797, v3.0 3805, v3.0 3814, v3.0 3818, v3.0 3822, v3.0 3824, v3.0 3829,
-v3.0 3831, v3.0 3837, v3.0 3839, v3.0 3842, v3.0 3846, v3.0 3847-dev, v3.0
-3849, v3.0 3854, v3.0 4086, v3.0 4088-dev, v3.0 4107, v3.0 4111, v3.0 4129,
-v3.0 4153, v3.0 4432, v3.0 4453, v3.0 6330, v3.0 6391, v3.0 6391-mod, v3.0
-6392-dev, v3.0 6412-dev, v3.0 6510-dev, v3.0 7086-dev, v3.0 7123-dev, v4.0
-7142-alpha, v4.0 7533 and v4.0 8023-dev.
+Selectable engine profiles: v3.0 3020-dev, v3.0 3057, v3.0 3062, v3.0 3073, v3.0
+3081, v3.0 3109, v3.0 3117, v3.0 3143, v3.0 3160, v3.0 3173, v3.0 3192, v3.0
+3208, v3.0 3273, v3.0 3288, v3.0 3303, v3.0 3307, v3.0 3310, v3.0 3311, v3.0
+3316, v3.0 3317, v3.0 3318, v3.0 3327, v3.0 3328, v3.0 3330, v3.0 3332, v3.0
+3335, v3.0 3337, v3.0 3340, v3.0 3341, v3.0 3342, v3.0 3350, v3.0 3351, v3.0
+3352, v3.0 3353, v3.0 3354, v3.0 3355, v3.0 3356, v3.0 3357, v3.0 3360, v3.0
+3361, v3.0 3362, v3.0 3365, v3.0 3366, v3.0 3367, v3.0 3371, v3.0 3372, v3.0
+3373, v3.0 3375, v3.0 3379, v3.0 3380, v3.0 3381, v3.0 3383, v3.0 3385, v3.0
+3388, v3.0 3391, v3.0 3394, v3.0 3397, v3.0 3400, v3.0 3406, v3.0 3411, v3.0
+3415, v3.0 3416, v3.0 3420, v3.0 3422, v3.0 3427, v3.0 3428, v3.0 3431, v3.0
+3434, v3.0 3436, v3.0 3441, v3.0 3445, v3.0 3446, v3.0 3449, v3.0 3454, v3.0
+3458, v3.0 3461, v3.0 3463, v3.0 3465, v3.0 3467, v3.0 3469, v3.0 3472, v3.0
+3477, v3.0 3482, v3.0 3500, v3.0 3509, v3.0 3511, v3.0 3515, v3.0 3517, v3.0
+3520, v3.0 3526, v3.0 3549, v3.0 3550, v3.0 3551, v3.0 3552, v3.0 3553, v3.0
+3554, v3.0 3557, v3.0 3559, v3.0 3562, v3.0 3565, v3.0 3567, v3.0 3568, v3.0
+3581, v3.0 3583, v3.0 3585, v3.0 3586, v3.0 3587, v3.0 3591, v3.0 3594, v3.0
+3596, v3.0 3597, v3.0 3602, v3.0 3604, v3.0 3605, v3.0 3608, v3.0 3609, v3.0
+3611, v3.0 3614, v3.0 3618, v3.0 3619, v3.0 3623, v3.0 3624, v3.0 3626, v3.0
+3629, v3.0 3631, v3.0 3633, v3.0 3635, v3.0 3638, v3.0 3639, v3.0 3640, v3.0
+3644, v3.0 3646, v3.0 3647, v3.0 3649, v3.0 3650, v3.0 3651, v3.0 3655, v3.0
+3656, v3.0 3657, v3.0 3660, v3.0 3661, v3.0 3663, v3.0 3664, v3.0 3665, v3.0
+3666, v3.0 3667, v3.0 3669, v3.0 3670, v3.0 3671, v3.0 3672, v3.0 3673, v3.0
+3674, v3.0 3675, v3.0 3677, v3.0 3678, v3.0 3679, v3.0 3680, v3.0 3682, v3.0
+3685, v3.0 3686, v3.0 3689, v3.0 3690, v3.0 3691, v3.0 3692, v3.0 3693, v3.0
+3694, v3.0 3697, v3.0 3699, v3.0 3701, v3.0 3703, v3.0 3704, v3.0 3707, v3.0
+3708, v3.0 3709, v3.0 3710, v3.0 3711, v3.0 3713, v3.0 3714, v3.0 3715, v3.0
+3716, v3.0 3722, v3.0 3725, v3.0 3726, v3.0 3727, v3.0 3728, v3.0 3729, v3.0
+3730, v3.0 3732, v3.0 3738, v3.0 3740, v3.0 3741, v3.0 3742-dev, v3.0 3761-dev,
+v3.0 3769, v3.0 3773, v3.0 3780, v3.0 3783, v3.0 3789, v3.0 3793, v3.0 3797,
+v3.0 3805, v3.0 3814, v3.0 3818, v3.0 3822, v3.0 3824, v3.0 3829, v3.0 3831,
+v3.0 3837, v3.0 3839, v3.0 3842, v3.0 3846, v3.0 3847-dev, v3.0 3849, v3.0 3854,
+v3.0 3968-dev, v3.0 3970-dev, v3.0 3978, v3.0 3984, v3.0 3993, v3.0 3994, v3.0
+4011, v3.0 4046, v3.0 4051, v3.0 4054, v3.0 4055, v3.0 4079, v3.0 4080, v3.0
+4082, v3.0 4085, v3.0 4086, v3.0 4088-dev, v3.0 4107, v3.0 4111, v3.0 4129, v3.0
+4153, v3.0 4432, v3.0 4453, v3.0 6330, v3.0 6391, v3.0 6391-mod, v3.0 6392-dev,
+v3.0 6412-dev, v3.0 6510-dev, v3.0 7086-dev, v3.0 7123-dev, v4.0 7142-alpha,
+v4.0 7533 and v4.0 8023-dev.
 
 Auto uses build tags and content clues to choose a profile. You can select one
 manually when a game needs it. Historical profiles preserve selected earlier
@@ -182,6 +184,20 @@ The `self` query is available from 3642; `maxanimations` and `maxattacktypes`
 are available from 3647. In the shared namespace, `waiting` reports an unknown
 property before 3647; from 3647 its getter returns the attack-type limit through
 the original case fallthrough. Its setter updates the level's waiting flag.
+
+## Classic script and runtime contracts
+
+Player-property names and numeric IDs retain their source ordering; `newkeys`
+is available from 3988. Terrain properties retain the original tuple ordering,
+coordinate conversion and growth behavior. Script animation and attack IDs,
+action names, direction comparisons and diagnostics follow the selected build.
+
+Model and frame defaults retain their loading order, movement-table presence,
+spawn coordinate precision, weapon loss, block resources and counter behavior.
+Macro arguments, whitespace, parameter scope and nested expansion retain their
+source-defined contracts. Rejected input uses bounded storage and controlled
+engine stops.
+
 
 ## Select a profile
 
@@ -333,6 +349,23 @@ through 4153. Source commits and dates are recorded in [src/pin.json](../src/pin
 
 | Boundary | Native behavior |
 |---|---|
+| 4010 | `ANI_ATTACK` and `ANI_ATTACK1` have distinct values; the static namespace has 163 entries. Earlier profiles retain the attack alias and 162 entries. |
+| 4011–4012 | Animation IDs and named attack types use the source's alphabetical order. Attack response tables retain their native slot order, including fallback slot zero. Script attack arguments and callback values use the same attack numbers. |
+| 4011 | Earlier profiles accept `NORMAL1` as the model defense/offense alias for `NORMAL`. From this build, `NORMAL1` uses numeric attack slot 10. Script `ATK_NORMAL1` uses slot 10 in every profile. |
+| 4013 | Animation IDs use the legacy order and attack alias, with 162 entries. |
+| 4017 | Script-cancelled contacts skip default hit handling and continue scanning other targets. Earlier profiles stop the whole attack and skip its final summary, even after a prior hit. Callback order and global entity context follow the source. |
+| 4033/4035 | Periodic damage mode 2 drains MP and mode 3 drains HP/MP before 4033; from 4035, mode 2 drains HP/MP and mode 3 drains MP. Stored modes, damage callbacks and lethal tests retain their source-defined behavior. |
+| 4034 | Earlier profiles support vault actions, their player/AI dispatch and base-height exception. Action names and numeric selectors follow the original table; selectors outside that table leave the action unchanged. |
+| 4035 | The model animation name and script constant for vault are absent. The animation namespace has no vault slot and contains 161 entries. |
+| 4038 | Animation IDs use the native order with distinct attack values and 162 entries. |
+| 4054 | The `dograb` script function is available. Its result uses the native pointer type; a missing entity produces an empty successful result, while too few arguments fail without a result. |
+| 4061 | `dograb` returns an integer. Missing entities or required arguments clear the result and report the native validation error. The function retains the original global entity context. |
+| 4064 | Earlier profiles retain an explicit frame base of zero and the original per-animation table-presence transition. Negative bases before that transition are absent; later negative values are retained. Animation updates consult the first frame, while landing and terrain checks use the current frame. Later profiles treat zero as absent. |
+| 4072 | Slow-motion settings use signed values and positive activation. Earlier profiles use unsigned counter arithmetic and nonzero activation. |
+| 4078–4079 | The script seed function is available and advances the generator once after a supplied argument, including failed conversion. |
+| 4080 | The outer main-loop entry seeds the generator from the engine clock. |
+| 4081–4083 | The generator uses the target's libc sequence and seeds from wall time while its native seed flag is zero. The stored flag retains unsigned-long width; libc receives an unsigned-int seed. |
+| 4084 | The custom multiply/add generator uses native unsigned-long seed storage and its source-defined default seed. |
 | 4094 | True-color static PNG backgrounds can use the 32-bit background path. Earlier profiles retain their indexed-background requirement. |
 | 4095 | The engine-credit-screen system variable is present. String names and numeric system-variable IDs follow each profile's native namespace. |
 | 4096 | Level alpha masks apply to one sprite layer. Missing mask images retain the original accepted result; unsafe missing base images fail cleanly. |
@@ -630,6 +663,21 @@ Profiles are compatibility selections. Several profiles use one physical source 
 | v3.0 3847-dev | `3842` |
 | v3.0 3849 | `3842` |
 | v3.0 3854 | `3842` |
+| v3.0 3968-dev | `4086` |
+| v3.0 3970-dev | `4086` |
+| v3.0 3978 | `4086` |
+| v3.0 3984 | `4086` |
+| v3.0 3993 | `4086` |
+| v3.0 3994 | `4086` |
+| v3.0 4011 | `4086` |
+| v3.0 4046 | `4086` |
+| v3.0 4051 | `4086` |
+| v3.0 4054 | `4086` |
+| v3.0 4055 | `4086` |
+| v3.0 4079 | `4086` |
+| v3.0 4080 | `4086` |
+| v3.0 4082 | `4086` |
+| v3.0 4085 | `4086` |
 | v3.0 4086 | `4086` |
 | v3.0 4088-dev | `4086` |
 | v3.0 4107 | `4086` |

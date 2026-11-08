@@ -1,0 +1,137 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ * Native defaults, parser arms and counter damage; unrelated combat is separate.
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "openbor.h"
+#undef printf
+#undef assert
+#ifdef NDEBUG
+#error Defense checks must remain enabled
+#endif
+uint32_t obor_profile_build;
+static unsigned active_case;
+#define assert(c) do {if(!(c)){fprintf(stderr,"Defense revision=%u case=%u line=%d\n",obor_profile_build,active_case,__LINE__);abort();}}while(0)
+HRESULT Interpreter_Call(Interpreter *p) { (void)p; abort(); }
+HRESULT Interpreter_EvalInstruction(Interpreter *p) { (void)p; abort(); }
+entity *self;
+int max_attack_types = STA_ATKS + 2;
+static s_model model;
+static s_defense defenses[STA_ATKS + 2];
+static float offense[STA_ATKS + 2];
+static entity actor;
+static s_anim animation;
+enum { CMD_MODEL_DEFENSE, CMD_MODEL_COUNTERFRAME, CMD_MODEL_COUNTERRANGE,
+       _ep_defense_blocktype };
+void writeToLogFile(const char *message, ...) { (void)message; abort(); }
+@DEFAULT@
+@HELPERS@
+static void initialize(void)
+{
+    s_model *newchar = &model;
+    int i;
+    memset(&model, 0, sizeof(model));
+    memset(defenses, 0x5a, sizeof(defenses));
+    memset(offense, 0, sizeof(offense));
+    model.defense = defenses; model.offense_factors = offense;
+    @INIT@
+}
+static void directive(int cmd, int count, char **args)
+{
+    ArgList arglist = {0};
+    s_model *newchar = &model;
+    s_anim *newanim = &animation;
+    s_defense defense;
+    int tempInt, i;
+    char *value, *filename = "fixture", *command = "defense";
+    arglist.count = count;
+    for(i = 0; i < count; ++i) arglist.args[i] = args[i];
+    switch(cmd)
+    {
+        @DEFENSE@
+        @COUNTER@
+    }
+}
+static double getter(int index)
+{
+    entity *ent = &actor;
+    LONG ltemp = index;
+    ScriptVariant result, *value = &result, **pretvar = &value;
+    switch(_ep_defense_blocktype)
+    {
+        @GETTER@
+    }
+    return result.dblVal;
+}
+static int counter(int force)
+{
+    if(@GATE@)
+    {
+        @DAMAGE@
+        return 1;
+    }
+    return 0;
+}
+static const struct { unsigned revision; int default_blocktype, counter_nonzero, attack_slots[5]; } contexts[] = {@CONTEXTS@};
+int main(void)
+{
+    static char *keys[] = {"normal", "NORMAL2", "ALL"};
+    static char *modes[] = {"-1", "0", "1", "2"};
+    for(unsigned p = 0; p < sizeof(contexts)/sizeof(contexts[0]); ++p)
+    {
+        obor_profile_build = contexts[p].revision; active_case = 0;
+        initialize(); actor.defense = defenses;
+        ++active_case;
+        for(int i = 0; i < max_attack_types; ++i)
+        {
+            assert(getter(i) == contexts[p].default_blocktype);
+            assert(defenses[i].factor == 1 && defenses[i].knockdown == 1);
+            assert(defenses[i].pain == 0 && defenses[i].blockpower == 0 &&
+                   defenses[i].blockthreshold == 0 && defenses[i].blockratio == 0);
+            assert(offense[i] == 1);
+        }
+        for(int biker = 0; biker < 2; ++biker)
+        for(unsigned key = 0; key < sizeof(keys)/sizeof(keys[0]); ++key)
+        for(int scenario = 0; scenario < 11; ++scenario)
+        {
+            ++active_case; initialize(); model.subtype = biker ? SUBTYPE_BIKER : SUBTYPE_NONE;
+            char *args[] = {"defense", keys[key], "1", "0", "1", "0", "0", "1", modes[scenario < 7 ? 0 : scenario - 7]};
+            int count = scenario < 7 ? scenario + 2 : 9;
+            directive(CMD_MODEL_DEFENSE, count, args);
+            /* count 8 takes the original optional branch but GET_ARG(8)
+             * supplies an empty string, whose native numeric value is zero. */
+            int expected = count < 8 ? contexts[p].default_blocktype : count == 8 ? 0 : atoi(args[8]);
+            for(int i = 0; i < max_attack_types; ++i)
+            {
+                const int *slots = contexts[p].attack_slots;
+                int changed = key == 0 ? i == slots[0] : key == 1 ? i == slots[1] :
+                    (i != slots[2] && i != slots[3] && i != slots[4]);
+                assert(getter(i) == (changed ? expected : contexts[p].default_blocktype));
+            }
+        }
+        for(int kind = 0; kind < 2; ++kind)
+        for(unsigned mode = 0; mode < sizeof(modes)/sizeof(modes[0]); ++mode)
+        for(int frame = 0; frame < 3; ++frame)
+        for(int frozen = 0; frozen < 2; ++frozen)
+        {
+            ++active_case;
+            memset(&animation, 0, sizeof(animation)); memset(&actor, 0, sizeof(actor));
+            actor.animation = &animation; actor.health = 100; actor.animpos = frame + 1;
+            actor.frozen = frozen; self = &actor;
+            char *range[] = {"counterrange", "2", "2", "0", modes[mode]};
+            char *single[] = {"counterframe", "2", "0", modes[mode]};
+            directive(kind ? CMD_MODEL_COUNTERRANGE : CMD_MODEL_COUNTERFRAME,
+                      kind ? 5 : 4, kind ? range : single);
+            assert(animation.counterrange.damaged == (e_counteraction_damage)atoi(modes[mode]));
+            int reached = frame == 1 && !frozen;
+            assert(counter(7) == reached);
+            int takes_damage = contexts[p].counter_nonzero ? atoi(modes[mode]) != 0 : atoi(modes[mode]) == 1;
+            assert(actor.health == 100 - (reached && takes_damage ? 7 : 0));
+        }
+        printf("{\"revision\":%u,\"cases\":%u,\"status\":\"PASS\"}\n", obor_profile_build, active_case);
+    }
+    return 0;
+}

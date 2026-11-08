@@ -1,0 +1,97 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ * Native slow-motion update prefix and script storage controls.
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <limits.h>
+#include "openbor.h"
+#undef printf
+#undef assert
+#ifdef NDEBUG
+#error Slow-motion assertions must remain enabled
+#endif
+uint32_t obor_profile_build;
+static unsigned active_case;
+#define assert(c) do {if(!(c)){fprintf(stderr,"Slowmotion revision=%u case=%u line=%d\n",obor_profile_build,active_case,__LINE__);abort();}}while(0)
+HRESULT Interpreter_Call(Interpreter *p) {(void)p;abort();}
+HRESULT Interpreter_EvalInstruction(Interpreter *p) {(void)p;abort();}
+int StrCache_Pop(void) {abort();}
+void StrCache_Collect(int index) {(void)index;abort();}
+@VARIANTS@
+@INITIALIZER@
+static s_level scene;
+s_level *level=&scene;
+static int level_completed,tospeedup,pause,alwaysupdate,selectScreen;
+static unsigned events[4],event_count;
+static int update_write,key_write;
+static u32 fixture_clock,newtime,interval;
+static void event(unsigned value)
+{assert(event_count<4);events[event_count++]=value;}
+static void script_write(int enabled)
+{if(enabled){slowmotion.toggle=-1;slowmotion.duration=2;slowmotion.counter=0;}}
+u32 getinterval(void) {event(1);return interval;}
+void inputrefresh(void) {event(2);}
+void execute_updatescripts(void) {event(3);script_write(update_write);}
+void execute_keyscripts(void) {event(4);script_write(key_write);}
+#undef time
+#define time fixture_clock
+static void native_prefix(int ingame,int usevwait)
+{@PREFIX@}
+#undef time
+static int get_field(int index,ScriptVariant *var)
+{switch(index){@GETTERS@ default:return 0;}return 1;}
+static int set_field(int index,ScriptVariant *value)
+{LONG ltemp;switch(index){@SETTERS@ default:return 0;}return 1;}
+static const struct {unsigned revision;int legacy;} contexts[]={@CONTEXTS@};
+struct oracle {int selected,toggle,duration,counter;u32 nexttime;unsigned events[4];};
+static const struct {
+    int toggle,duration,counter;u32 clock,interval;
+    int completed,noslow,speedup,paused,always,ingame,select_screen,update_write,key_write;
+    struct oracle legacy,modern;
+} cases[]={@CASES@};
+static const struct {VARTYPE type;double value;int converts,integer;} inputs[]={@INPUTS@};
+int main(void)
+{
+    assert(sizeof(int)==4 && sizeof(unsigned)==4 && sizeof(LONG)==4);
+    {int minus_one=-1;unsigned bits;memcpy(&bits,&minus_one,sizeof(bits));assert(bits==UINT_MAX);}
+    assert(slowmotion.toggle==0 && slowmotion.duration==2 && slowmotion.counter==0);
+    for(unsigned p=0;p<sizeof(contexts)/sizeof(contexts[0]);++p)
+    {
+        obor_profile_build=contexts[p].revision;active_case=0;
+        for(unsigned c=0;c<sizeof(cases)/sizeof(cases[0]);++c)
+        {
+            const struct oracle *o=contexts[p].legacy?&cases[c].legacy:&cases[c].modern;
+            if(!o->selected)continue;
+            slowmotion.toggle=cases[c].toggle;slowmotion.duration=cases[c].duration;slowmotion.counter=cases[c].counter;
+            fixture_clock=cases[c].clock;interval=cases[c].interval;newtime=91;
+            level_completed=cases[c].completed;scene.noslow=cases[c].noslow;tospeedup=cases[c].speedup;
+            pause=cases[c].paused;alwaysupdate=cases[c].always;selectScreen=cases[c].select_screen;
+            update_write=cases[c].update_write;key_write=cases[c].key_write;
+            memset(events,0,sizeof(events));event_count=0;++active_case;
+            native_prefix(cases[c].ingame,0);
+            assert(slowmotion.toggle==o->toggle && slowmotion.duration==o->duration && slowmotion.counter==o->counter);
+            assert(newtime==o->nexttime && fixture_clock==cases[c].clock && interval==cases[c].interval);
+            assert(!memcmp(events,o->events,sizeof(events)));
+        }
+        for(unsigned i=0;i<sizeof(inputs)/sizeof(inputs[0]);++i)
+        for(int field=0;field<2;++field)
+        {
+            ScriptVariant input={0},output={0};input.vt=inputs[i].type;
+            if(input.vt==VT_DECIMAL)input.dblVal=inputs[i].value;
+            else input.lVal=(LONG)inputs[i].value;
+            slowmotion.toggle=3;slowmotion.duration=7;slowmotion.counter=11;++active_case;
+            int index=field?_sv_slowmotion_duration:_sv_slowmotion;
+            assert(set_field(index,&input)==1 && get_field(index,&output)==1);
+            int expected=inputs[i].converts?inputs[i].integer:(field?7:3);
+            assert(output.vt==VT_INTEGER && output.lVal==expected);
+            assert(slowmotion.counter==11);
+            assert((field?slowmotion.toggle:slowmotion.duration)==(field?3:7));
+            assert(input.vt==inputs[i].type);
+        }
+        printf("{\"revision\":%u,\"cases\":%u,\"status\":\"PASS\"}\n",obor_profile_build,active_case);
+    }
+    return 0;
+}

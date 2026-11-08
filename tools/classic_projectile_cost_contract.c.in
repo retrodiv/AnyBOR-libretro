@@ -1,0 +1,68 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ * Native hit-cost caller prefix, using native entity and animation records.
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "openbor.h"
+#undef printf
+#undef assert
+#include <assert.h>
+#ifdef NDEBUG
+#error Projectile-cost assertions must remain enabled
+#endif
+HRESULT Interpreter_Call(Interpreter *p) { (void)p; abort(); }
+HRESULT Interpreter_EvalInstruction(Interpreter *p) { (void)p; abort(); }
+uint32_t obor_profile_build;
+static entity *e, *topowner;
+static s_anim *current_anim;
+static int didhit, nocost, healthcheat;
+static void hit_cost(void)
+{
+@COST@
+}
+static const struct {
+    int mode, hp, mp, cost, hit, owner, nocost, cheat, already_charged;
+} cases[] = {@CASES@};
+static const struct {
+    uint32_t revision;
+    int result[@CASE_COUNT@][4];
+} contexts[] = {@CONTEXTS@};
+int main(void)
+{
+    for(unsigned p = 0; p < sizeof(contexts)/sizeof(contexts[0]); ++p)
+    {
+        obor_profile_build = contexts[p].revision;
+        for(unsigned c = 0; c < sizeof(cases)/sizeof(cases[0]); ++c)
+        {
+            entity shot, owner;
+            s_anim animation;
+            memset(&shot, 0, sizeof(shot)); memset(&owner, 0, sizeof(owner));
+            memset(&animation, 0, sizeof(animation));
+            shot.health = owner.health = cases[c].hp;
+            shot.mp = owner.mp = cases[c].mp;
+            shot.cantfire = owner.cantfire = 1;
+            shot.tocost = cases[c].already_charged;
+            e = &shot; topowner = cases[c].owner ? &shot : &owner;
+            current_anim = &animation;
+            animation.energycost.cost = cases[c].cost;
+            animation.energycost.mponly = cases[c].mode;
+            didhit = cases[c].hit; nocost = cases[c].nocost; healthcheat = cases[c].cheat;
+            for(int repeat = 0; repeat != 2; ++repeat)
+            {
+                hit_cost();
+                assert(topowner->health == contexts[p].result[c][0]);
+                assert(topowner->mp == contexts[p].result[c][1]);
+                assert(e->tocost == contexts[p].result[c][2]);
+                assert(topowner->cantfire == contexts[p].result[c][3]);
+            }
+            if(!cases[c].owner)
+                assert(shot.health == cases[c].hp && shot.mp == cases[c].mp);
+        }
+        printf("{\"revision\":%u,\"cases\":%u,\"repeats\":2,\"status\":\"PASS\"}\n",
+               obor_profile_build, (unsigned)(sizeof(cases)/sizeof(cases[0])));
+    }
+    return 0;
+}

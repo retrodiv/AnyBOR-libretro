@@ -1,0 +1,128 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ * Complete native attack caller; live targets and event-only script decisions.
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "openbor.h"
+#undef printf
+#undef assert
+#undef cangrab
+#ifdef NDEBUG
+#error Attack cancellation checks must remain enabled
+#endif
+uint32_t obor_profile_build;
+static unsigned active_case;
+#define assert(c) do {if(!(c)){fprintf(stderr,"Cancellation revision=%u case=%u line=%d\n",obor_profile_build,active_case,__LINE__);abort();}}while(0)
+HRESULT Interpreter_Call(Interpreter *p) {(void)p;abort();}
+HRESULT Interpreter_EvalInstruction(Interpreter *p) {(void)p;abort();}
+entity *self,**ent_list;
+int ent_max,max_attack_types=MAX_ATKS,level_completed;
+int combodelay=11,equalairpause,nocost,healthcheat,blockratio,mpblock,nochipdeath,noslowfx;
+int SAMPLE_BLOCK=-1,SAMPLE_INDIRECT=-1,rush[6];
+s_savedata savedata;
+s_lasthit lasthit;
+s_level *level;
+int *animfollows;
+static unsigned fixture_clock=100;
+static entity actors[3],*entities[2];
+static s_anim animation;
+static s_anim *animations[3][MAX_ANIS+1];
+static s_defense defenses[3][MAX_ATKS];
+static s_attack attack,*attacks[1];
+static int trace[16],trace_count,summary_sounds,summary_kills,expected_type;
+static const struct {int count,decision[2][2];} cases[]={@CASES@};
+static void event(int code) {assert(trace_count<16);trace[trace_count++]=code;}
+static int target_id(entity *ent)
+{assert(ent==&actors[1] || ent==&actors[2]);return ent==&actors[1]?1:2;}
+static void unexpected(void) {abort();}
+int checkhit(entity *ent,entity *other,int counter)
+{assert(ent==&actors[0] && counter==0);event(10*target_id(other)+1);lasthit.confirm=1;return 1;}
+void execute_ondoattack_script(entity *ent,entity *other,int force,int drop,int type,
+    int noblock,int guardcost,int jugglecost,int pauseadd,int which,int id)
+{
+    int target=target_id(self);
+    assert(id==17 && type==expected_type && force==12 && drop==0 && noblock==0 &&
+        guardcost==0 && jugglecost==0 && pauseadd==0 && (which==0 || which==1));
+    assert(which==0?(ent==self && other==&actors[0]):(ent==&actors[0] && other==self));
+    event(10*target+2+which);
+    int decision=cases[active_case].decision[target-1][which];
+    if(decision>=0)lasthit.confirm=decision;
+}
+static int damage(entity *other,s_attack *value)
+{assert(other==&actors[0] && value==&attack);event(10*target_id(self)+4);return 1;}
+void execute_didhit_script(entity *ent,entity *other,int force,int drop,int type,
+    int noblock,int guardcost,int jugglecost,int pauseadd,int blocked)
+{
+    assert(ent==&actors[0] && other==self && type==expected_type && force==12 &&
+        drop==0 && noblock==0 && guardcost==0 && jugglecost==0 && pauseadd==0 && blocked==0);
+    event(10*target_id(self)+5);
+}
+int inair(entity *ent) {(void)ent;return 0;}
+int sound_play_sample(int sample,unsigned priority,int left,int right,unsigned speed)
+{assert(sample==2 && priority==0 && left==9 && right==9 && speed==93);++summary_sounds;event(91);return 0;}
+void kill(entity *ent) {assert(ent==&actors[0]);++summary_kills;event(92);}
+unsigned int rand32(void) {unexpected();return 0;}
+void common_lie(void) {unexpected();}
+void common_block(void) {unexpected();}
+void ent_set_anim(entity *ent,int index,int reset) {(void)ent;(void)index;(void)reset;unexpected();}
+int set_blockpain(entity *ent,int type,int reset) {(void)ent;(void)type;(void)reset;unexpected();return 0;}
+entity *spawn(float x,float z,float y,int direction,char *name,int index,s_model *model)
+{(void)x;(void)z;(void)y;(void)direction;(void)name;(void)index;(void)model;unexpected();return NULL;}
+void execute_onspawn_script(entity *ent) {(void)ent;unexpected();}
+void didfind_item(entity *ent) {(void)ent;unexpected();}
+void execute_didblock_script(entity *ent,entity *other,int force,int drop,int type,
+    int noblock,int guardcost,int jugglecost,int pauseadd)
+{(void)ent;(void)other;(void)force;(void)drop;(void)type;(void)noblock;(void)guardcost;(void)jugglecost;(void)pauseadd;unexpected();}
+static int fixture_grab(entity *ent,entity *other) {(void)ent;(void)other;unexpected();return 0;}
+#define cangrab fixture_grab
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wimplicit-fallthrough"
+@CALLER@
+#pragma GCC diagnostic pop
+static const struct {
+    unsigned revision;int normal_type;
+    struct {int context,hit_ids[2],hits,rush,summary,last_hit,combo,trace[16],trace_count;} expected[@CASE_COUNT@];
+} contexts[]={@CONTEXTS@};
+int main(void)
+{
+    for(unsigned p=0;p<sizeof(contexts)/sizeof(contexts[0]);++p)
+    {
+        obor_profile_build=contexts[p].revision;expected_type=contexts[p].normal_type;
+        for(active_case=0;active_case<sizeof(cases)/sizeof(cases[0]);++active_case)
+        {
+            memset(actors,0,sizeof(actors));memset(&animation,0,sizeof(animation));
+            memset(animations,0,sizeof(animations));memset(defenses,0,sizeof(defenses));
+            memset(&attack,0,sizeof(attack));memset(&lasthit,0,sizeof(lasthit));
+            trace_count=summary_sounds=summary_kills=0;savedata.effectvol=9;
+            actors[0].exists=1;actors[0].animation=&animation;actors[0].defense=defenses[0];
+            actors[0].modeldata.type=TYPE_PLAYER;actors[0].modeldata.candamage=TYPE_ENEMY;
+            actors[0].attack_id=17;actors[0].remove_on_attack=1;
+            animation.numframes=1;animation.counterrange.frame.min=animation.counterrange.frame.max=-1;
+            attack.attack_type=expected_type;attack.attack_force=12;attack.no_flash=1;attack.hitsound=2;
+            attacks[0]=&attack;animation.attacks=attacks;
+            for(int i=1;i<=2;++i)
+            {
+                actors[i].exists=1;actors[i].health=100;actors[i].animation=&animation;
+                actors[i].modeldata.type=TYPE_ENEMY;actors[i].modeldata.nopassiveblock=1;
+                actors[i].modeldata.animation=animations[i];actors[i].modeldata.animation_capacity=MAX_ANIS+1;
+                actors[i].defense=defenses[i];actors[i].takedamage=damage;entities[i-1]=&actors[i];
+            }
+            ent_list=entities;ent_max=cases[active_case].count;self=&actors[0];do_attack(&actors[0]);
+            assert(self==&actors[contexts[p].expected[active_case].context]);
+            assert(actors[1].hit_by_attack_id==contexts[p].expected[active_case].hit_ids[0]);
+            assert(actors[2].hit_by_attack_id==contexts[p].expected[active_case].hit_ids[1]);
+            assert(animation.animhits==contexts[p].expected[active_case].hits);
+            assert(actors[0].rush.count.current==contexts[p].expected[active_case].rush);
+            assert(summary_sounds==contexts[p].expected[active_case].summary && summary_kills==summary_sounds);
+            assert(actors[0].lasthit==(contexts[p].expected[active_case].last_hit?&actors[contexts[p].expected[active_case].last_hit]:NULL));
+            assert(actors[0].combotime==(unsigned)contexts[p].expected[active_case].combo);
+            assert(trace_count==contexts[p].expected[active_case].trace_count);
+            for(int i=0;i<trace_count;++i)assert(trace[i]==contexts[p].expected[active_case].trace[i]);
+        }
+        printf("{\"revision\":%u,\"cases\":%u,\"status\":\"PASS\"}\n",obor_profile_build,active_case);
+    }
+    return 0;
+}

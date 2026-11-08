@@ -1,0 +1,120 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ * Native grab script wrapper, registry and diagnostic-name lookup.
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <stdarg.h>
+#include "openbor.h"
+#undef printf
+#undef assert
+#ifdef NDEBUG
+#error Grab script checks must remain enabled
+#endif
+uint32_t obor_profile_build;
+static unsigned active_case;
+#define assert(c) do {if(!(c)){fprintf(stderr,"Grab wrapper revision=%u case=%u line=%d\n",obor_profile_build,active_case,__LINE__);abort();}}while(0)
+HRESULT Interpreter_Call(Interpreter *p) {(void)p;abort();}
+HRESULT Interpreter_EvalInstruction(Interpreter *p) {(void)p;abort();}
+int StrCache_Pop(void) {abort();}
+void StrCache_Collect(int index) {(void)index;abort();}
+@VARIANTS@
+static unsigned unused_calls[@SYMBOL_COUNT@];
+@STUBS@
+static entity attacker, target, context, changed_context;
+entity *self;
+static unsigned grab_calls;
+static int returned_value, seen_adjust, mutate_context;
+int dograb(entity *a,entity *t,e_dograb_adjustcheck adjust)
+{
+    assert(a==&attacker && t==&target && self==&context);
+    ++grab_calls;seen_adjust=(int)adjust;
+    if(mutate_context)self=&changed_context;
+    return returned_value;
+}
+static char diagnostic[512];
+static int record_printf(const char *format,...)
+{
+    va_list args;va_start(args,format);
+    size_t len=strlen(diagnostic);
+    int n=vsnprintf(diagnostic+len,sizeof(diagnostic)-len,format,args);
+    va_end(args);assert(n>=0 && (size_t)n<sizeof(diagnostic)-len);return n;
+}
+#define printf record_printf
+@CALLBACK@
+#undef printf
+List theFunctionList;
+static struct {void *callback;const char *name;} registry[512];
+static unsigned entries,resets;
+void List_Reset(List *list) {assert(list==&theFunctionList);entries=0;++resets;}
+void List_InsertAfter(List *list,void *callback,const char *name)
+{
+    assert(list==&theFunctionList && callback && name && entries<512);
+    for(unsigned i=0;i<entries;++i)assert(strcmp(name,registry[i].name));
+    registry[entries].callback=callback;registry[entries++].name=name;
+}
+static void *lookup(const char *name)
+{
+    for(unsigned i=0;i<entries;++i)if(!strcmp(name,registry[i].name))return registry[i].callback;
+    return NULL;
+}
+@METHODS@
+static const struct {unsigned revision;int registered,legacy;const char *label;} contexts[]={@CONTEXTS@};
+static const struct {int arguments,entities,type,value;} cases[]={@CASES@};
+int main(void)
+{
+    for(unsigned p=0;p<sizeof(contexts)/sizeof(contexts[0]);++p)
+    {
+        obor_profile_build=contexts[p].revision;active_case=1;
+        Script_LoadSystemFunctions();assert(resets==p+1 && entries>8);
+        assert(lookup("dograb")== (contexts[p].registered?(void *)openbor_dograb:NULL));
+        assert(!strcmp(Script_GetFunctionName((void *)openbor_dograb),contexts[p].label));
+        assert(!strcmp(Script_GetFunctionName(NULL),"<unknown function>"));
+        if(contexts[p].registered)
+        for(unsigned c=0;c<sizeof(cases)/sizeof(cases[0]);++c)
+        for(int result=0;result<2;++result)
+        for(int mutate=0;mutate<2;++mutate)
+        {
+            ScriptVariant args[4],output={0},*ret=&output;
+            memset(args,0,sizeof(args));
+            ScriptVariant *varlist[]={&args[0],&args[1],&args[2],&args[3]};
+            args[0].vt=args[1].vt=VT_PTR;
+            args[0].ptrVal=(cases[c].entities&1)?&attacker:NULL;
+            args[1].ptrVal=(cases[c].entities&2)?&target:NULL;
+            args[2].vt=cases[c].type;
+            if(args[2].vt==VT_DECIMAL)args[2].dblVal=cases[c].value+0.25;
+            else args[2].lVal=cases[c].value;
+            output.vt=VT_INTEGER;output.lVal=37;
+            self=&context;grab_calls=0;seen_adjust=19;returned_value=result;
+            mutate_context=mutate;diagnostic[0]=0;++active_case;
+            HRESULT status=openbor_dograb(varlist,&ret,cases[c].arguments);
+            int valid=cases[c].arguments>=2 && cases[c].entities==3;
+            if(valid)
+            {
+                int adjust=1;
+                if(cases[c].arguments>2 && (cases[c].type==VT_INTEGER || cases[c].type==VT_DECIMAL))adjust=cases[c].value;
+                assert(status==S_OK && ret==&output && grab_calls==1);
+                assert(output.vt==(contexts[p].legacy?VT_PTR:VT_INTEGER) && output.lVal==result);
+                assert(seen_adjust==adjust && self==(mutate?&changed_context:&context));
+                assert(!diagnostic[0]);
+            }
+            else
+            {
+                assert(grab_calls==0 && seen_adjust==19 && self==&context);
+                if(contexts[p].legacy && cases[c].arguments<2)
+                {assert(status==E_FAIL && ret==NULL && output.vt==VT_INTEGER && output.lVal==37);}
+                else
+                {assert(ret==&output && output.vt==VT_EMPTY && output.ptrVal==NULL);
+                 assert(status==(contexts[p].legacy?S_OK:E_FAIL));}
+                assert(!strcmp(diagnostic,contexts[p].legacy?"":@ERROR_TEXT@));
+            }
+            assert(args[0].vt==VT_PTR && args[1].vt==VT_PTR);
+            assert((int)args[2].vt==cases[c].type);
+        }
+        for(unsigned i=0;i<sizeof(unused_calls)/sizeof(unused_calls[0]);++i)assert(!unused_calls[i]);
+        printf("{\"revision\":%u,\"cases\":%u,\"status\":\"PASS\"}\n",obor_profile_build,active_case);
+    }
+    return 0;
+}

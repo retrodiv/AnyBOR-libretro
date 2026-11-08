@@ -8,8 +8,11 @@
 /* libc's global rand state lives outside the core's snapshot regions.
  * Keep the game's generator in engine-owned data instead. The Windows
  * sequence and glibc's default 128-byte sequence match their libc controls;
- * other POSIX hosts use their reentrant generator with an owned seed. */
-#if defined(__GLIBC__)
+ * the early Android family uses its libc's additive sequence; other POSIX
+ * hosts use their reentrant generator with an owned seed. */
+#if defined(__ANDROID__) && defined(OBOR_ENGINE_BUILD) && OBOR_ENGINE_BUILD == 4086
+#include "obor_random_additive.h"
+#elif defined(__GLIBC__)
 static struct random_data obor_random_context;
 static int32_t obor_random_buffer[32];
 static int obor_random_initialized;

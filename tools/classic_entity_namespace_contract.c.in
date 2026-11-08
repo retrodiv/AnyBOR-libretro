@@ -1,0 +1,197 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ * Complete native mapper and call prefixes; selected native field cases.
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <strings.h>
+#include <stdarg.h>
+#include "openbor.h"
+#undef printf
+#undef assert
+#ifdef NDEBUG
+#error Entity namespace assertions must remain enabled
+#endif
+uint32_t obor_profile_build;
+static const char *active_name;
+static unsigned active_case;
+#define assert(c) do {if(!(c)){fprintf(stderr,"Entity namespace revision=%u case=%u name=%s line=%d\n",obor_profile_build,active_case,active_name?active_name:"?",__LINE__);abort();}}while(0)
+HRESULT Interpreter_Call(Interpreter *p) { (void)p; abort(); }
+HRESULT Interpreter_EvalInstruction(Interpreter *p) { (void)p; abort(); }
+static char strings[32][128],diagnostic[4096];
+static int used[32],last_property,stub_calls[@STUB_COUNT@];
+static entity actor;
+int StrCache_Pop(void)
+{for(int i=0;i<32;++i)if(!used[i]){used[i]=1;strings[i][0]=0;return i;}abort();}
+void StrCache_Collect(int i) {assert(i>=0 && i<32 && used[i]);used[i]=0;}
+CHAR *StrCache_Get(int i) {assert(i>=0 && i<32 && used[i]);return strings[i];}
+void StrCache_Copy(int i,CHAR *text)
+{assert(i>=0 && i<32 && used[i] && strlen(text)<sizeof(strings[i]));strcpy(strings[i],text);}
+static int record_printf(const char *format,...)
+{va_list args;va_start(args,format);size_t len=strlen(diagnostic);int n=vsnprintf(diagnostic+len,sizeof(diagnostic)-len,format,args);va_end(args);assert(n>=0 && (size_t)n<sizeof(diagnostic)-len);return n;}
+@VARIANTS@
+@SEARCH@
+#define printf record_printf
+@MACROS@
+@STUBS@
+@DECLARATIONS@
+@PREFIXES@
+@DISPATCH@
+#undef printf
+static const struct {
+    uint32_t revision;
+    int count;
+    const char *names[_ep_the_end];
+    int native_ids[_ep_the_end];
+    const char *mapper_warning,*callback_warning;
+    int query_count;
+    struct {int slot,getter,setter;} queries[7];
+} contexts[] = {@CONTEXTS@};
+typedef int (*map_function)(ScriptVariant **,int);
+static map_function mapper_for(int setter)
+{
+    void *reference=setter?(void *)probe_set_entry:(void *)probe_get_entry;
+    map_function result=(map_function)Script_GetStringMapFunction(reference);
+    assert(result==mapstrings_entityproperty);return result;
+}
+static void reset_actor(void)
+{memset(&actor,0,sizeof(actor));actor.health=10;actor.modeldata.health=100;
+ actor.position.x=12.5f;actor.position.y=11.25f;actor.position.z=13.75f;actor.velocity.z=14.5f;}
+static void property_value(ScriptVariant *value,int named,const char *name,int slot)
+{
+    memset(value,0,sizeof(*value));
+    if(named){ScriptVariant_ChangeType(value,VT_STR);StrCache_Copy(value->strVal,(char *)name);}
+    else {value->vt=VT_INTEGER;value->lVal=slot;}
+}
+static void expected_actor(const char *name,int changed)
+{
+    assert(actor.health==(changed && !strcmp(name,"health")?42:10));
+    assert(actor.modeldata.health==100);
+    assert(actor.position.x==(changed && !strcmp(name,"x")?2.25f:12.5f));
+    assert(actor.position.y==(changed && (!strcmp(name,"a") || !strcmp(name,"y"))?2.25f:11.25f));
+    assert(actor.position.z==(changed && !strcmp(name,"z")?2.25f:13.75f));
+    assert(actor.velocity.z==14.5f);
+}
+static void append(char *buffer,const char *text)
+{assert(strlen(buffer)+strlen(text)<1024);strcat(buffer,text);}
+int main(void)
+{
+    for(unsigned p=0;p<sizeof(contexts)/sizeof(contexts[0]);++p)
+    {
+        obor_profile_build=contexts[p].revision;active_case=0;
+        for(int setter=0;setter<2;++setter)
+        {
+            active_name="short-mapper";diagnostic[0]=0;
+            ++active_case;assert(mapper_for(setter)(NULL,0)==1 && !diagnostic[0]);
+            ScriptVariant *one[]={NULL};++active_case;
+            assert(mapper_for(setter)(one,1)==1 && !diagnostic[0]);
+        }
+        for(int slot=0;slot<contexts[p].count;++slot)
+        for(int named=0;named<2;++named)
+        for(int setter=0;setter<2;++setter)
+        {
+            active_name=contexts[p].names[slot];reset_actor();
+            ScriptVariant values[8],*args[8];
+            memset(values,0,sizeof(values));
+            for(int i=0;i<8;++i){values[i].vt=VT_INTEGER;args[i]=&values[i];}
+            values[0].vt=VT_PTR;values[0].ptrVal=&actor;
+            property_value(&values[1],named,active_name,slot);
+            diagnostic[0]=0;assert(mapper_for(setter)(args,2)==1);
+            assert(values[1].vt==VT_INTEGER && values[1].lVal==slot && !diagnostic[0]);
+            for(int repeat=0;repeat<2;++repeat)
+            {
+                ++active_case;diagnostic[0]=0;last_property=-999;
+                ScriptVariant result={.vt=VT_EMPTY},*output=&result;
+                HRESULT status=setter?probe_set_entry(args,&output,3):probe_get_entry(args,&output,2);
+                assert(status==S_OK && last_property==contexts[p].native_ids[slot]);
+                assert((output==NULL)==setter && result.vt==VT_EMPTY);
+                assert(values[1].vt==VT_INTEGER && values[1].lVal==slot);
+                assert(!strcmp(diagnostic,setter && !strcmp(active_name,"a")?contexts[p].mapper_warning:""));
+                expected_actor("",0);ScriptVariant_Clear(&result);
+            }
+            ScriptVariant_Clear(&values[1]);
+        }
+        const char *missing[]={"anim","y"};
+        for(int m=0;m<2;++m)
+        {
+            int found=0;for(int i=0;i<contexts[p].count;++i)found|=!strcmp(contexts[p].names[i],missing[m]);
+            if(found)continue;
+            ++active_case;active_name=missing[m];diagnostic[0]=0;
+            ScriptVariant property={.vt=VT_EMPTY},handle={.vt=VT_EMPTY};
+            property_value(&property,1,active_name,0);ScriptVariant *args[]={&handle,&property};
+            assert(mapper_for(0)(args,2)==0 && property.vt==VT_STR);
+            char message[256];snprintf(message,sizeof(message),"Property name '%s' is not supported by function getentityproperty.\n",active_name);
+            assert(!strcmp(diagnostic,message));ScriptVariant_Clear(&property);
+        }
+        for(int setter=0;setter<2;++setter)
+        for(int k=0;k<3;++k)
+        {
+            ++active_case;active_name="numeric-endpoint";reset_actor();diagnostic[0]=0;
+            ScriptVariant handle={.vt=VT_PTR,.ptrVal=&actor};
+            ScriptVariant property={.vt=VT_INTEGER,.lVal=k?contexts[p].count+k-1:-1};
+            ScriptVariant value={.vt=VT_INTEGER,.lVal=42},result={.vt=VT_EMPTY},*output=&result;
+            ScriptVariant *args[]={&handle,&property,&value};
+            HRESULT status=setter?probe_set_fields(args,&output,3):probe_get_fields(args,&output,2);
+            assert(status==E_FAIL && output==NULL && !diagnostic[0]);expected_actor("",0);
+            ScriptVariant_Clear(&result);
+        }
+        for(int q=0;q<contexts[p].query_count;++q)
+        for(int named=0;named<2;++named)
+        for(int setter=0;setter<2;++setter)
+        for(int extra=0;extra<2;++extra)
+        for(int absent=0;absent<2;++absent)
+        for(int preconvert=0;preconvert<2;++preconvert)
+        {
+            int slot=contexts[p].queries[q].slot;
+            active_name=contexts[p].names[slot];
+            int supported=setter?contexts[p].queries[q].setter:contexts[p].queries[q].getter;
+            ScriptVariant values[4],*args[4];memset(values,0,sizeof(values));
+            for(int i=0;i<4;++i){values[i].vt=VT_INTEGER;args[i]=&values[i];}
+            values[0].vt=absent?VT_EMPTY:VT_PTR;values[0].ptrVal=absent?NULL:&actor;
+            property_value(&values[1],named,active_name,slot);
+            if(!strcmp(active_name,"health")){values[2].vt=VT_INTEGER;values[2].lVal=42;}
+            else {values[2].vt=VT_DECIMAL;values[2].dblVal=2.25;}
+            int count=2+setter+extra;
+            for(int repeat=0;repeat<2;++repeat)
+            {
+                ++active_case;reset_actor();diagnostic[0]=0;
+                char expected[1024]={0};
+                int warning_mapper=count>=3 && !strcmp(active_name,"a");
+                if(preconvert && !repeat)
+                {
+                    assert(mapper_for(setter)(args,count)==1);
+                    if(warning_mapper)append(expected,contexts[p].mapper_warning);
+                }
+                if(warning_mapper)append(expected,contexts[p].mapper_warning);
+                if(!absent && supported && !strcmp(active_name,"a"))append(expected,contexts[p].callback_warning);
+                ScriptVariant result={.vt=VT_EMPTY},*output=&result;
+                HRESULT status=setter?probe_set_fields(args,&output,count):probe_get_fields(args,&output,count);
+                assert(status==(!absent && !supported?E_FAIL:S_OK));
+                assert(!strcmp(diagnostic,expected));
+                assert(values[1].vt==VT_INTEGER && values[1].lVal==slot);
+                if(setter || (!absent && !supported))assert(output==NULL);
+                else
+                {
+                    assert(output==&result);
+                    if(absent)assert(result.vt==VT_EMPTY);
+                    else if(!strcmp(active_name,"health"))assert(result.vt==VT_INTEGER && result.lVal==10);
+                    else
+                    {
+                        double value=!strcmp(active_name,"x")?12.5:!strcmp(active_name,"z")?13.75:
+                                     !strcmp(active_name,"zdir")?14.5:11.25;
+                        assert(result.vt==VT_DECIMAL && result.dblVal==value);
+                    }
+                }
+                expected_actor(active_name,setter && !absent && supported);
+                ScriptVariant_Clear(&result);
+            }
+            ScriptVariant_Clear(&values[1]);
+        }
+        for(int i=0;i<32;++i)assert(!used[i]);
+        for(unsigned i=0;i<sizeof(stub_calls)/sizeof(stub_calls[0]);++i)assert(!stub_calls[i]);
+        printf("{\"revision\":%u,\"cases\":%u,\"status\":\"PASS\"}\n",obor_profile_build,active_case);
+    }
+    return 0;
+}

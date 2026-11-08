@@ -1,0 +1,151 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ * Native constant mapper/callback, parser and complete indexed-vector loader.
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <strings.h>
+#include <stdarg.h>
+#include <ctype.h>
+#include <limits.h>
+#include "openbor.h"
+#undef printf
+#undef assert
+#ifdef NDEBUG
+#error Animation-index assertions must remain enabled
+#endif
+uint32_t obor_profile_build;
+static unsigned active_case;
+#define assert(c) do {if(!(c)){fprintf(stderr,"Animation index revision=%u case=%u line=%d\n",obor_profile_build,active_case,__LINE__);abort();}}while(0)
+HRESULT Interpreter_Call(Interpreter *p) {(void)p;abort();}
+HRESULT Interpreter_EvalInstruction(Interpreter *p) {(void)p;abort();}
+static char strings[32][128],diagnostic[4096];
+static int refs[32];
+int StrCache_Pop(void)
+{for(int i=0;i<32;++i)if(!refs[i]){refs[i]=1;strings[i][0]=0;return i;}abort();}
+void StrCache_Collect(int i) {assert(i>=0 && i<32 && refs[i]>0);--refs[i];}
+void StrCache_Grab(int i) {assert(i>=0 && i<32 && refs[i]>0);++refs[i];}
+CHAR *StrCache_Get(int i) {assert(i>=0 && i<32 && refs[i]>0);return strings[i];}
+void StrCache_Copy(int i,CHAR *text)
+{assert(i>=0 && i<32 && refs[i]>0 && strlen(text)<sizeof(strings[i]));strcpy(strings[i],text);}
+static int record_printf(const char *format,...)
+{va_list args;va_start(args,format);size_t len=strlen(diagnostic);int n=vsnprintf(diagnostic+len,sizeof(diagnostic)-len,format,args);va_end(args);assert(n>=0 && (size_t)n<sizeof(diagnostic)-len);return n;}
+@VARIANTS@
+@ENUM@
+@ARRAYS@
+@LIMITS@
+@GLOBALS@
+enum {NAME_COUNT=@NAME_COUNT@,FAMILY_COUNT=@FAMILY_COUNT@,SETTING_COUNT=@SETTING_COUNT@};
+static const char *names[]={@NAMES@},*settings[]={@SETTINGS@},*prefixes[]={@PREFIXES@};
+static const int commands[]={@COMMANDS@},defaults[]={@DEFAULTS@},default_settings[]={@DEFAULT_SETTINGS@};
+static const int configurations[][SETTING_COUNT]={@CONFIGURATIONS@};
+static const int family_settings[]={@FAMILY_SETTINGS@};
+static int **vectors[]={@POINTERS@},lengths[FAMILY_COUNT],configuration;
+static int modelstxtcmdlist;
+static int getModelCommand(int list,char *name)
+{
+    assert(list==0);
+    for(unsigned i=0;i<SETTING_COUNT;++i)if(!strcmp(name,settings[i]))return commands[i];
+    abort();
+}
+int buffer_pakfile(char *name,char **buffer,size_t *size)
+{
+    assert(!strcmp(name,"data/models.txt"));char text[1024]={0};size_t pos=0;
+    for(unsigned i=0;i<SETTING_COUNT;++i)
+    {
+        int value=default_settings[i]+configurations[configuration][i];
+        if(!strcmp(settings[i],"maxattacktypes"))value-=STA_ATKS;
+        int n=snprintf(text+pos,sizeof(text)-pos,"%s %d\n",settings[i],value);
+        assert(n>0 && (size_t)n<sizeof(text)-pos);pos+=(size_t)n;
+    }
+    *buffer=malloc(pos+1);assert(*buffer);memcpy(*buffer,text,pos+1);*size=pos;return 1;
+}
+void shutdown(int status,char *format,...) {(void)status;(void)format;abort();}
+@LINES@
+#define printf record_printf
+@FUNCTIONS@
+@MACROS@
+@MAPPER@
+@ENTRY@
+#undef printf
+static const struct {
+    uint32_t revision;int public_count,storage_count,values[NAME_COUNT],native_ids[NAME_COUNT];
+    int initial[FAMILY_COUNT][20],dynamic[FAMILY_COUNT];
+} contexts[]={@CONTEXTS@};
+static void query(const char *name,int expected)
+{
+    for(int premap=0;premap<2;++premap)
+    {
+        ScriptVariant arg={.vt=VT_EMPTY};ScriptVariant_ChangeType(&arg,VT_STR);StrCache_Copy(arg.strVal,(char *)name);
+        ScriptVariant *args[]={&arg};diagnostic[0]=0;
+        if(premap)assert(mapstrings_transconst(args,1)==(expected>=0));
+        for(int repeat=0;repeat<2;++repeat)
+        {
+            ++active_case;ScriptVariant result={.vt=VT_EMPTY},*output=&result;
+            HRESULT status=openbor_transconst(args,&output,1);
+            if(expected>=0)
+            {
+                assert(status==S_OK && output==&result && result.vt==VT_INTEGER && result.lVal==expected);
+                assert(arg.vt==VT_INTEGER && arg.lVal==expected && !diagnostic[0]);
+            }
+            else assert(status==E_FAIL && !output && arg.vt==VT_STR);
+            ScriptVariant_Clear(&result);
+        }
+        ScriptVariant_Clear(&arg);for(int i=0;i<32;++i)assert(!refs[i]);
+    }
+}
+int main(void)
+{
+    for(unsigned p=0;p<sizeof(contexts)/sizeof(contexts[0]);++p)
+    {
+        obor_profile_build=contexts[p].revision;active_case=0;
+        ++active_case;
+        assert(obor_animation_public_count(obor_profile_build)==contexts[p].public_count);
+        assert(obor_animation_storage_count(obor_profile_build)==contexts[p].storage_count);
+        assert(obor_animation_native(-17,obor_profile_build)==-17 && obor_animation_public(-17,obor_profile_build)==-17);
+        assert(obor_animation_native(INT_MIN,obor_profile_build)==INT_MIN);
+        int delta=contexts[p].storage_count-contexts[p].public_count;
+        assert(obor_animation_native(INT_MAX,obor_profile_build)==(delta?-1:INT_MAX));
+        for(configuration=0;configuration<(int)(sizeof(configurations)/sizeof(configurations[0]));++configuration)
+        {
+            diagnostic[0]=0;load_model_constants();assert(!diagnostic[0]);@LENGTHS@
+            int public_next=contexts[p].public_count;++active_case;
+            for(unsigned f=0;f<FAMILY_COUNT;++f)
+            {
+                int growth=configurations[configuration][family_settings[f]];
+                assert(lengths[f]==defaults[f]+growth && *vectors[f]);
+                for(int i=0;i<lengths[f];++i)
+                {
+                    ++active_case;int expected=i<defaults[f]?contexts[p].initial[f][i]:public_next++;
+                    int native=(*vectors[f])[i];
+                    assert(obor_animation_public(native,obor_profile_build)==expected);
+                    assert(obor_animation_native(expected,obor_profile_build)==native);
+                }
+                if(growth)
+                {
+                    char name[64];int suffix=lengths[f]-(f>=8?STA_ATKS:0);
+                    snprintf(name,sizeof(name),"%s%d",prefixes[f],suffix);
+                    query(name,contexts[p].dynamic[f]?public_next-1:-1);
+                }
+            }
+            assert(max_animations==public_next+delta);
+            assert(obor_animation_public(max_animations,obor_profile_build)==public_next);
+        }
+        for(unsigned i=0;i<NAME_COUNT;++i)
+        {
+            ++active_case;
+            if(contexts[p].values[i]>=0 && strcmp(names[i],"MAX_ANIS") && strncmp(names[i],"ATK_",4))
+            {
+                int id=contexts[p].values[i],native=contexts[p].native_ids[i];
+                assert(obor_animation_native(id,obor_profile_build)==native);
+                assert(obor_animation_public(native,obor_profile_build)==id);
+            }
+            query(names[i],contexts[p].values[i]);
+        }
+        for(unsigned f=0;f<FAMILY_COUNT;++f){free(*vectors[f]);*vectors[f]=NULL;}
+        printf("{\"revision\":%u,\"cases\":%u,\"status\":\"PASS\"}\n",obor_profile_build,active_case);
+    }
+    return 0;
+}

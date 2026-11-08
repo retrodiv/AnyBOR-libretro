@@ -1,0 +1,200 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ * Native numeric storage, predicates, range, binding, targeting and projectiles.
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "openbor.h"
+#undef printf
+#undef assert
+#ifdef NDEBUG
+#error Facing checks must remain enabled
+#endif
+uint32_t obor_profile_build;
+static unsigned active_case;
+#define assert(c) do {if(!(c)){fprintf(stderr,"Facing revision=%u case=%u line=%d\n",obor_profile_build,active_case,__LINE__);abort();}}while(0)
+HRESULT Interpreter_Call(Interpreter *p) {(void)p;abort();}
+HRESULT Interpreter_EvalInstruction(Interpreter *p) {(void)p;abort();}
+int StrCache_Pop(void) {abort();}
+void StrCache_Collect(int slot) {(void)slot;abort();}
+CHAR *StrCache_Get(int slot) {assert(slot==0);return "fixture";}
+@VARIANTS@
+entity *self,**ent_list;
+int ent_max,advancex,advancey;
+s_level *level;
+static entity actor,parent,near_target,far_target,child;
+static s_anim animation;
+static s_anim *table[MAX_ANIS+1];
+static int vulnerable[]={1};
+static float frame[5]={0,10,2,3,0};
+static int spawn_calls,spawn_events,spawn_kind,spawn_direction,chase_target;
+static float spawned_x,spawned_z,spawned_y;
+static void unexpected(void) {abort();}
+int *animups,*animdowns,*animwalks;
+int max_ups,max_downs,max_walks;
+static int common_anim_series(entity *ent,int ids[],int count,int mode,int base)
+{(void)ent;(void)ids;(void)count;(void)mode;(void)base;unexpected();return 0;}
+@MACROS@
+void kill(entity *ent) {(void)ent;unexpected();}
+void ent_set_anim(entity *ent,int index,int reset) {(void)ent;(void)index;(void)reset;unexpected();}
+void update_frame(entity *ent,int frame_number) {(void)ent;(void)frame_number;unexpected();}
+void common_fall(void) {unexpected();}
+unsigned int rand32(void) {unexpected();return 0;}
+void toss(entity *ent,float value) {(void)ent;(void)value;unexpected();}
+int set_fall(entity *ent,int type,int reset,entity *other,int force,int drop,int noblock,int guardcost,int jugglecost,int pauseadd)
+{(void)ent;(void)type;(void)reset;(void)other;(void)force;(void)drop;(void)noblock;(void)guardcost;(void)jugglecost;(void)pauseadd;unexpected();return 0;}
+int checkwall(float x,float z) {(void)x;(void)z;unexpected();return -1;}
+entity *homing_find_target(int type) {(void)type;return chase_target?&parent:NULL;}
+entity *spawn(float x,float z,float y,int direction,char *name,int index,s_model *model)
+{
+    assert(!name && index==7 && !model);++spawn_calls;spawn_kind=0;
+    spawned_x=x;spawned_z=z;spawned_y=y;spawn_direction=direction;return &child;
+}
+void execute_onspawn_script(entity *ent) {assert(ent==&child);++spawn_events;}
+entity *knife_spawn(char *name,int index,float x,float z,float y,int direction,int type,int map)
+{
+    assert(!strcmp(name,"fixture") && index==-1 && type==2 && map==3);++spawn_calls;spawn_kind=1;
+    spawned_x=x;spawned_z=z;spawned_y=y;spawn_direction=direction;return &child;
+}
+entity *bomb_spawn(char *name,int index,float x,float z,float y,int direction,int map)
+{
+    assert(!strcmp(name,"fixture") && index==-1 && map==3);++spawn_calls;spawn_kind=2;
+    spawned_x=x;spawned_z=z;spawned_y=y;spawn_direction=direction;return &child;
+}
+@FUNCTIONS@
+@PROJECTILE@
+enum {_ep_direction};
+static LONG getter(entity *ent)
+{
+    ScriptVariant result={.vt=VT_EMPTY},*value=&result,**pretvar=&value;
+    switch(_ep_direction) {@GETTER@}
+    assert(value==&result && result.vt==VT_INTEGER);return result.lVal;
+}
+static void setter(entity *ent,ScriptVariant *arg)
+{
+    ScriptVariant *varlist[]={NULL,NULL,arg};DOUBLE dbltemp;
+    switch(_ep_direction) {@SETTER@}
+}
+static float grab_position(int which)
+{
+    entity *self=&actor,*other=&child;
+    if(which) {@GRAB_B@} else {@GRAB_A@}
+    return child.position.x;
+}
+static const int directions[]={@DIRECTIONS@},modes[]={@MODES@},stored[]={@STORED@};
+static const double inputs[]={@INPUTS@};
+static const struct {
+    unsigned revision;int signed_field,whole_routes,right[@DIR_COUNT@];
+    long long getter32[@INPUT_COUNT@],getter64[@INPUT_COUNT@];float grab_x[@DIR_COUNT@];
+    int binding_x[@DIR_COUNT@][@MODE_COUNT@],binding_stored[@DIR_COUNT@][@MODE_COUNT@];
+    int target_selected[@DIR_COUNT@][3],range_accepted[@DIR_COUNT@][2];
+    float arrow_velocity[@DIR_COUNT@][2];
+} contexts[]={@CONTEXTS@};
+static void reset_actor(int direction)
+{
+    memset(&actor,0,sizeof(actor));memset(&parent,0,sizeof(parent));
+    memset(&child,0,sizeof(child));memset(&near_target,0,sizeof(near_target));memset(&far_target,0,sizeof(far_target));
+    memset(&animation,0,sizeof(animation));memset(table,0,sizeof(table));
+    animation.numframes=1;animation.vulnerable=vulnerable;
+    animation.projectile.position.y=7;animation.subentity=7;animation.spawnframe=frame;animation.summonframe=frame;
+    table[0]=&animation;actor.animation=&animation;actor.modeldata.animation=table;
+    actor.modeldata.animation_capacity=MAX_ANIS+1;actor.modeldata.grabdistance=10;
+    actor.position.x=100;actor.position.z=20;actor.position.y=30;actor.direction=direction;
+    parent.position.x=100;parent.position.z=20;parent.position.y=30;parent.direction=direction;
+    actor.binding.ent=&parent;actor.binding.offset.x=10;actor.binding.offset.z=4;actor.binding.offset.y=5;
+    self=&actor;level=NULL;spawn_calls=spawn_events=spawn_kind=0;
+}
+int main(void)
+{
+    for(unsigned p=0;p<sizeof(contexts)/sizeof(contexts[0]);++p)
+    {
+        obor_profile_build=contexts[p].revision;active_case=0;
+        for(unsigned i=0;i<sizeof(inputs)/sizeof(inputs[0]);++i)
+        for(int integral=0;integral<2;++integral)
+        {
+            ++active_case;reset_actor(0);
+            ScriptVariant arg={.vt=integral?VT_INTEGER:VT_DECIMAL};
+            if(integral)arg.lVal=stored[i];else arg.dblVal=inputs[i];
+            setter(&actor,&arg);assert((uint32_t)actor.direction==(uint32_t)stored[i]);
+            assert((long long)getter(&actor)==(sizeof(LONG)==8?contexts[p].getter64[i]:contexts[p].getter32[i]));
+        }
+        ++active_case;reset_actor(2);ScriptVariant empty={.vt=VT_EMPTY};setter(&actor,&empty);
+        assert((uint32_t)actor.direction==2);
+        for(unsigned d=0;d<sizeof(directions)/sizeof(directions[0]);++d)
+        {
+            int direction=directions[d],right=contexts[p].right[d];
+            ++active_case;assert(obor_direction_right((e_direction)direction,obor_profile_build)==right);
+            if(contexts[p].whole_routes)
+            {
+                for(int which=0;which<2;++which)
+                {
+                    ++active_case;reset_actor(direction);assert(grab_position(which)==contexts[p].grab_x[d]);
+                }
+                for(unsigned m=0;m<sizeof(modes)/sizeof(modes[0]);++m)
+                {
+                    ++active_case;reset_actor(-1);parent.direction=direction;actor.binding.direction=modes[m];
+                    adjust_bind(&actor);int expected=contexts[p].binding_stored[d][m];
+                    assert((uint32_t)actor.direction==(uint32_t)expected && (uint32_t)parent.direction==(uint32_t)direction);
+                    assert(actor.position.x==contexts[p].binding_x[d][m]);
+                    assert(actor.position.z==24 && actor.position.y==35);
+                }
+                for(int side=-1;side<=1;++side)
+                {
+                    ++active_case;reset_actor(direction);actor.modeldata.hostile=TYPE_ENEMY;
+                    entity *targets[]={&far_target,&near_target};ent_list=targets;ent_max=2;
+                    far_target.exists=near_target.exists=1;far_target.animation=near_target.animation=&animation;
+                    far_target.modeldata.type=near_target.modeldata.type=TYPE_ENEMY;
+                    far_target.position.x=150;near_target.position.x=100+side*10;
+                    far_target.position.z=near_target.position.z=20;
+                    int selected=contexts[p].target_selected[d][side+1];
+                    assert(normal_find_target(-1,0)==(selected?&near_target:&far_target));
+                }
+                for(int side=-1;side<=1;side+=2)
+                {
+                    ++active_case;reset_actor(direction);parent.position.x=100+10*side;
+                    animation.range.min.x=5;animation.range.max.x=20;
+                    animation.range.min.z=animation.range.min.y=animation.range.min.base=-100;
+                    animation.range.max.z=animation.range.max.y=animation.range.max.base=100;
+                    entity *source=&actor,*target=&parent;
+                    int accepted=!!(check_range(source,target,0));
+                    assert(accepted==contexts[p].range_accepted[d][side==1]);
+                }
+                for(int target=0;target<2;++target)
+                {
+                    ++active_case;reset_actor(direction);parent.position.x=150;parent.position.z=20;
+                    actor.modeldata.subtype=SUBTYPE_CHASE;actor.modeldata.noflip=1;actor.modeldata.nomove=1;
+                    actor.modeldata.speed=3;chase_target=target;
+                    assert(arrow_move()==1);
+                    float expected=contexts[p].arrow_velocity[d][target];
+                    assert(actor.velocity.x==expected && (uint32_t)actor.direction==(uint32_t)direction);
+                }
+            }
+            for(int summon=0;summon<2;++summon)
+            {
+                ++active_case;reset_actor(direction);if(summon)ent_summon_ent(&actor);else ent_spawn_ent(&actor);
+                assert(spawn_calls==1 && spawn_events==1 && spawn_kind==0 && spawned_x==(right?110:90));
+                assert(spawned_z==22 && spawned_y==33 && spawn_direction==direction && child.parent==&actor);
+                if(summon)assert(actor.subentity==&child && (uint32_t)child.direction==(uint32_t)direction);
+            }
+            for(int relative=0;relative<2;++relative)
+            for(int kind=0;kind<2;++kind)
+            {
+                ++active_case;reset_actor(direction);
+                ScriptVariant args[9]={{.vt=VT_INTEGER,.lVal=1},{.vt=VT_STR,.strVal=0},
+                    {.vt=VT_DECIMAL,.dblVal=10},{.vt=VT_DECIMAL,.dblVal=2},{.vt=VT_DECIMAL,.dblVal=3},
+                    {.vt=VT_INTEGER,.lVal=2},{.vt=VT_INTEGER,.lVal=2},
+                    {.vt=VT_INTEGER,.lVal=kind},{.vt=VT_INTEGER,.lVal=3}};
+                ScriptVariant *vars[9];for(int i=0;i<9;++i)vars[i]=&args[i];
+                ScriptVariant result={.vt=VT_EMPTY},*output=&result;
+                assert(openbor_projectile(vars+(relative?0:1),&output,relative?9:8)==S_OK);
+                assert(output==&result && result.vt==VT_PTR && result.ptrVal==&child && spawn_calls==1 && spawn_kind==kind+1);
+                assert(spawned_x==(relative?(right?110:90):10) && spawned_z==(relative?22:2) && spawned_y==(relative?33:3));
+                assert(spawn_direction==(relative&&!right?0:2));
+            }
+        }
+        printf("{\"revision\":%u,\"cases\":%u,\"status\":\"PASS\"}\n",obor_profile_build,active_case);
+    }
+    return 0;
+}

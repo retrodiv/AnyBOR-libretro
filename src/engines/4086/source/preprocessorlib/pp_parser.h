@@ -1,3 +1,15 @@
+/* AnyBOR modification record: 2026-11-08.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Declare owned macro-expansion parameters and retained parser chains so
+ * historical bindings remain valid until context shutdown.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/4086.md
+ * at the source repository root. Original notices follow below.
+ */
+
 /*
  * OpenBOR - http://www.chronocrash.com
  * -----------------------------------------------------------------------
@@ -57,6 +69,7 @@ typedef struct pp_context
     List imports;                      // list of files for the interpreter to "import"
     conditional_stack conditionals;    // the conditional stack
     int num_conditionals;              // current size of the conditional stack
+    struct pp_parser *discarded_parsers; // Owned expansions replaced before EOF.
 } pp_context;
 
 typedef enum
@@ -85,6 +98,7 @@ typedef struct pp_parser
     pp_token last_token;
     struct pp_parser *parent;
     struct pp_parser *child;
+    struct pp_parser *discarded_next;
     bool newline;
     bool overread;
 } pp_parser;

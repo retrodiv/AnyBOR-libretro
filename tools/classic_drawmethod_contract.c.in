@@ -1,0 +1,148 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ * Native mapper/setter, variants and defaults; explicit source field oracles.
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <strings.h>
+#include <stdarg.h>
+#include "openbor.h"
+#undef printf
+#undef assert
+#ifdef NDEBUG
+#error Drawing property assertions must remain enabled
+#endif
+uint32_t obor_profile_build;
+static const char *active_name;
+static unsigned active_case;
+#define assert(c) do {if(!(c)){fprintf(stderr,"Draw property revision=%u case=%u name=%s line=%d\n",obor_profile_build,active_case,active_name?active_name:"?",__LINE__);abort();}}while(0)
+HRESULT Interpreter_Call(Interpreter *p) { (void)p; abort(); }
+HRESULT Interpreter_EvalInstruction(Interpreter *p) { (void)p; abort(); }
+static char strings[64][128], diagnostic[512];
+static int used[64], cache_hint;
+static unsigned char table[1];
+static entity actor;
+s_drawmethod drawmethod;
+@DEFAULT@
+int StrCache_Pop(void)
+{ for(int n=0;n<64;++n){int i=(cache_hint+n)%64;if(!used[i]){used[i]=1;strings[i][0]=0;return i;}}abort(); }
+void StrCache_Collect(int i) {assert(i>=0 && i<64 && used[i]);used[i]=0;}
+CHAR *StrCache_Get(int i) {assert(i>=0 && i<64 && used[i]);return strings[i];}
+void StrCache_Copy(int i,CHAR *text)
+{assert(i>=0 && i<64 && used[i] && strlen(text)<sizeof(strings[i]));strcpy(strings[i],text);}
+static int record_printf(const char *format,...)
+{va_list args;va_start(args,format);size_t len=strlen(diagnostic);int n=vsnprintf(diagnostic+len,sizeof(diagnostic)-len,format,args);va_end(args);assert(n>=0 && (size_t)n<sizeof(diagnostic)-len);return n;}
+@VARIANTS@
+@ENUM@
+@SEARCH@
+#define printf record_printf
+@MAP_MACRO@
+@METHODS@
+#undef printf
+static const struct {uint32_t revision;int count;const char *names[39];} contexts[] = {@CONTEXTS@};
+static s_drawmethod initial_drawmethod(void)
+{s_drawmethod value;memset(&value,0,sizeof(value));value.water.wavespeed=2.0f;return value;}
+static void equal_method(const s_drawmethod *a,const s_drawmethod *b)
+{
+#define FIELD(n) assert(a->n==b->n)
+    FIELD(table);FIELD(fp);FIELD(fillcolor);FIELD(flag);FIELD(alpha);FIELD(remap);
+    FIELD(flipx);FIELD(flipy);FIELD(transbg);FIELD(fliprotate);FIELD(rotate);
+    FIELD(scalex);FIELD(scaley);FIELD(shiftx);FIELD(centerx);FIELD(centery);
+    FIELD(xrepeat);FIELD(yrepeat);FIELD(xspan);FIELD(yspan);
+    FIELD(channelr);FIELD(channelg);FIELD(channelb);FIELD(tintmode);FIELD(tintcolor);
+    FIELD(clipx);FIELD(clipy);FIELD(clipw);FIELD(cliph);
+    FIELD(water.wavetime);FIELD(water.watermode);
+#undef FIELD
+    /* Compare initialized union storage without reading an inactive float. */
+    uint32_t av,bv;
+#define UNION(n) do {memcpy(&av,&a->water.n,sizeof(av));memcpy(&bv,&b->water.n,sizeof(bv));assert(av==bv);}while(0)
+    UNION(amplitude);UNION(wavelength);UNION(wavespeed);
+#undef UNION
+}
+static void expected_write(s_drawmethod *value,const char *name)
+{
+#define INT(n,path) if(!strcmp(name,n)){value->path=17;return;}
+    INT("alpha",alpha);INT("amplitude",water.amplitude);INT("centerx",centerx);INT("centery",centery);
+    INT("channelb",channelb);INT("channelg",channelg);INT("channelr",channelr);
+    INT("cliph",cliph);INT("clipw",clipw);INT("clipx",clipx);INT("clipy",clipy);
+    INT("enabled",flag);INT("flag",flag);INT("fillcolor",fillcolor);INT("fliprotate",fliprotate);
+    INT("flipx",flipx);INT("flipy",flipy);INT("perspective",water.perspective);INT("remap",remap);
+    INT("rotate",rotate);INT("scalex",scalex);INT("scaley",scaley);INT("shiftx",shiftx);
+    INT("tintcolor",tintcolor);INT("tintmode",tintmode);INT("transbg",transbg);INT("watermode",water.watermode);
+    INT("xrepeat",xrepeat);INT("xspan",xspan);INT("yrepeat",yrepeat);INT("yspan",yspan);
+    INT("beginsize",water.beginsize);INT("endsize",water.endsize);
+    INT("wavelength",water.wavelength);INT("wavespeed",water.wavespeed);
+#undef INT
+    if(!strcmp(name,"clip")){value->clipx=17;value->clipy=18;value->clipw=19;value->cliph=20;return;}
+    if(!strcmp(name,"table")){value->table=table;return;}
+    if(!strcmp(name,"reset")){*value=plainmethod;return;}
+    if(!strcmp(name,"wavetime")){value->water.wavetime=34;return;}
+    abort();
+}
+static void check_target(int target,const s_drawmethod *expected)
+{s_drawmethod unchanged=initial_drawmethod();equal_method(target?&actor.drawmethod:&drawmethod,expected);equal_method(target?&drawmethod:&actor.drawmethod,&unchanged);}
+static void reset_targets(void) {actor.drawmethod=initial_drawmethod();drawmethod=initial_drawmethod();diagnostic[0]=0;}
+int main(void)
+{
+    assert(sizeof(int)==4 && sizeof(float)==4 && sizeof(((ScriptVariant *)0)->lVal)==4);
+    for(unsigned p=0;p<sizeof(contexts)/sizeof(contexts[0]);++p)
+    {
+        obor_profile_build=contexts[p].revision;active_case=0;
+        for(int slot=0;slot<contexts[p].count;++slot)
+        for(int named=0;named<2;++named)
+        for(int target=0;target<2;++target)
+        {
+            active_name=contexts[p].names[slot];cache_hint=0;
+            ScriptVariant handle={.vt=target?VT_PTR:VT_EMPTY,.ptrVal=target?&actor:NULL};
+            ScriptVariant property={.vt=VT_EMPTY},values[4],result={.vt=VT_EMPTY},*returned=&result;
+            if(named){ScriptVariant_ChangeType(&property,VT_STR);StrCache_Copy(property.strVal,(char *)active_name);}
+            else {property.vt=VT_INTEGER;property.lVal=slot;}
+            for(int i=0;i<4;++i){values[i].vt=VT_INTEGER;values[i].lVal=17+i;}
+            if(!strcmp(active_name,"table")){values[0].vt=VT_PTR;values[0].ptrVal=table;}
+            ScriptVariant *args[]={&handle,&property,&values[0],&values[1],&values[2],&values[3]};
+            assert(mapstrings_drawmethodproperty(args,6)==1 && property.vt==VT_INTEGER && property.lVal==slot);
+            for(int repeat=0;repeat<2;++repeat)
+            {
+                ++active_case;reset_targets();returned=&result;
+                s_drawmethod expected=initial_drawmethod();expected_write(&expected,active_name);
+                assert(openbor_changedrawmethod(args,&returned,6)==S_OK && returned==NULL);
+                assert(property.vt==VT_INTEGER && property.lVal==slot && !diagnostic[0]);
+                check_target(target,&expected);
+            }
+            ScriptVariant_Clear(&property);
+        }
+        for(int target=0;target<2;++target)
+        {
+            for(int i=0;i<3;++i)
+            {
+                ++active_case;active_name="numeric-endpoint";reset_targets();
+                ScriptVariant handle={.vt=target?VT_PTR:VT_EMPTY,.ptrVal=target?&actor:NULL};
+                ScriptVariant property={.vt=VT_INTEGER,.lVal=i?contexts[p].count+i-1:-1};
+                ScriptVariant value={.vt=VT_INTEGER,.lVal=17},result={.vt=VT_EMPTY},*returned=&result;
+                ScriptVariant *args[]={&handle,&property,&value};s_drawmethod expected=initial_drawmethod();
+                assert(openbor_changedrawmethod(args,&returned,3)==S_OK && returned==NULL);check_target(target,&expected);
+            }
+            /* A failed native mapper leaves the string-cache slot in the union.
+             * The original caller still dispatches it: preserve this behavior. */
+            for(int hint=0;hint<2;++hint)
+            {
+                ++active_case;cache_hint=hint?19:0;active_name=contexts[p].count==38?"flipy":"zzzz";reset_targets();
+                ScriptVariant handle={.vt=target?VT_PTR:VT_EMPTY,.ptrVal=target?&actor:NULL};
+                ScriptVariant property={.vt=VT_EMPTY},value={.vt=VT_INTEGER,.lVal=17},result={.vt=VT_EMPTY},*returned=&result;
+                ScriptVariant_ChangeType(&property,VT_STR);StrCache_Copy(property.strVal,(char *)active_name);
+                assert(property.strVal==cache_hint);
+                ScriptVariant *args[]={&handle,&property,&value};s_drawmethod expected=initial_drawmethod();
+                expected_write(&expected,contexts[p].names[cache_hint]);
+                assert(openbor_changedrawmethod(args,&returned,3)==S_OK && returned==NULL);
+                char message[128];snprintf(message,sizeof(message),"Property name '%s' is not supported by drawmethod.\n",active_name);
+                assert(!strcmp(diagnostic,message) && property.vt==VT_STR && property.strVal==cache_hint);
+                check_target(target,&expected);ScriptVariant_Clear(&property);
+            }
+        }
+        for(int i=0;i<64;++i)assert(!used[i]);
+        printf("{\"revision\":%u,\"cases\":%u,\"status\":\"PASS\"}\n",obor_profile_build,active_case);
+    }
+    return 0;
+}

@@ -1,0 +1,89 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ * Native walking case, dispatch macros and series; observe animation requests.
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "openbor.h"
+#undef printf
+#undef assert
+#include <assert.h>
+#ifdef NDEBUG
+#error Walking checks must remain enabled
+#endif
+HRESULT Interpreter_Call(Interpreter *p) { (void)p; abort(); }
+HRESULT Interpreter_EvalInstruction(Interpreter *p) { (void)p; abort(); }
+uint32_t obor_profile_build;
+entity *self;
+s_level *level;
+static int selected, calls;
+static int walk_ids[] = {ANI_WALK}, backwalk_ids[] = {ANI_BACKWALK};
+int *animwalks = walk_ids, *animbackwalks = backwalk_ids;
+int max_walks = 1, max_backwalks = 1;
+entity *normal_find_target(int animation, int detect)
+{
+    (void)animation; (void)detect;
+    abort(); /* Only the native default series entries are installed. */
+}
+void ent_set_anim(entity *actor, int animation, int resetable)
+{
+    assert(actor == self && resetable == 0);
+    assert(actor->takeaction == NULL && actor->idling == 1);
+    assert(animation == ANI_WALK || animation == ANI_BACKWALK);
+    assert(validanim(actor, animation));
+    selected = animation == ANI_BACKWALK;
+    ++calls;
+}
+@SERIES@
+@MACROS@
+static void action_marker(void) { abort(); }
+static void walking_dispatch(void)
+{
+    int action = 1, bkwalk = 0;
+@PREFIX@
+    switch(action) { case 1: @WALK@ }
+}
+static const struct {
+    int model_facing, level_facing, direction, left_scroll;
+    int level, animation, turn, delay;
+} cases[] = {@CASES@};
+static const struct { uint32_t revision; int backwalk[@CASE_COUNT@]; } contexts[] = {@CONTEXTS@};
+int main(void)
+{
+    for(unsigned p = 0; p < sizeof(contexts)/sizeof(contexts[0]); ++p)
+    {
+        obor_profile_build = contexts[p].revision;
+        for(unsigned c = 0; c < sizeof(cases)/sizeof(cases[0]); ++c)
+        {
+            entity actor;
+            s_level scene;
+            s_anim animation;
+            s_anim *slots[ANI_BACKWALK + 1];
+            memset(&actor, 0, sizeof(actor)); memset(&scene, 0, sizeof(scene));
+            memset(&animation, 0, sizeof(animation)); memset(slots, 0, sizeof(slots));
+            animation.numframes = 1;
+            slots[ANI_WALK] = &animation;
+            slots[ANI_BACKWALK] = cases[c].animation ? &animation : NULL;
+            actor.modeldata.animation = slots;
+            actor.modeldata.animation_capacity = sizeof(slots)/sizeof(slots[0]);
+            actor.modeldata.facing = cases[c].model_facing;
+            actor.direction = cases[c].direction;
+            actor.turntime = cases[c].turn;
+            actor.modeldata.turndelay = cases[c].delay;
+            actor.takeaction = action_marker;
+            scene.facing = cases[c].level_facing;
+            scene.scrolldir = cases[c].left_scroll ? SCROLL_LEFT : SCROLL_RIGHT;
+            self = &actor; level = cases[c].level ? &scene : NULL;
+            selected = -1; calls = 0;
+            walking_dispatch();
+            assert(calls == 1 && selected == contexts[p].backwalk[c]);
+            assert(actor.takeaction == NULL && actor.idling == 1);
+            assert((int)actor.direction == cases[c].direction);
+        }
+        printf("{\"revision\":%u,\"cases\":%u,\"status\":\"PASS\"}\n", obor_profile_build,
+               (unsigned)(sizeof(cases)/sizeof(cases[0])));
+    }
+    return 0;
+}

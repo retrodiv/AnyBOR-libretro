@@ -1,0 +1,120 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ * Native import/reset/call bodies with explicit delegated-service outcomes.
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <stdarg.h>
+#include "openbor.h"
+#include "ImportCache.h"
+#undef printf
+#undef assert
+#include <assert.h>
+#ifdef NDEBUG
+#error Script control checks must remain enabled
+#endif
+uint32_t obor_profile_build;
+List theFunctionList;
+static int mode, text_frees, steps, return_error;
+static char *owned_text;
+static char events[16], diagnostic[256];
+static unsigned event_count;
+static Parser parser_state;
+static Instruction entry;
+@RECORD@
+static void event(char ch) { assert(event_count < sizeof(events)-1); events[event_count++] = ch; events[event_count] = 0; }
+HRESULT Interpreter_Call(Interpreter *p) { (void)p; abort(); }
+HRESULT Interpreter_EvalInstruction(Interpreter *p)
+{
+    assert(p->pCurrentInstruction == &entry && ++steps == 1);
+    p->bCallCompleted = TRUE; return return_error ? E_FAIL : S_OK;
+}
+static int fixture_printf(const char *format, ...)
+{
+    va_list args; va_start(args, format);
+    int result = vsnprintf(diagnostic, sizeof(diagnostic), format, args);
+    va_end(args); assert(result >= 0 && (size_t)result < sizeof(diagnostic)); return result;
+}
+void List_Init(List *list) { memset(list, 0, sizeof(*list)); }
+void List_Clear(List *list) { assert(list && !list->size); event('L'); }
+int List_GetSize(const List *list) { assert(list && !list->size); return 0; }
+void List_Reset(List *list) { assert(list && !list->size); }
+void *List_Retrieve(const List *list) { (void)list; abort(); }
+char *List_GetName(const List *list) { (void)list; abort(); }
+void List_InsertAfter(List *list, void *value, const char *name) { (void)list; (void)value; (void)name; abort(); }
+int List_GotoNext(List *list) { (void)list; abort(); }
+void List_Update(List *list, void *value) { (void)list; (void)value; abort(); }
+void Interpreter_Init(Interpreter *p, const char *name, List *functions)
+{
+    assert(!strcmp(name, "imports/control.c") && functions == &theFunctionList);
+    memset(p, 0, sizeof(*p)); memset(&parser_state, 0, sizeof(parser_state));
+    p->theParser = mode ? &parser_state : NULL; event('I');
+}
+void Interpreter_Clear(Interpreter *p) { assert(p); p->theParser = NULL; event('X'); }
+char *readscript(const char *path)
+{
+    assert(!strcmp(path, "imports/control.c")); event('R');
+    if(mode == 1) return NULL;
+    owned_text = malloc(2); assert(owned_text); strcpy(owned_text, " "); return owned_text;
+}
+HRESULT Interpreter_ParseText(Interpreter *p, char *text, ULONG line, const char *path)
+{
+    assert(p->theParser == &parser_state && parser_state.isImport && text == owned_text);
+    assert(line == 1 && !strcmp(path, "imports/control.c")); event('P');
+    return mode == 2 ? E_FAIL : S_OK;
+}
+HRESULT Interpreter_CompileInstructions(Interpreter *p, List *exports)
+{
+    assert(text_frees == 1 && exports && !exports->size); event('C');
+    p->instructionStorage = &entry; return mode == 3 ? E_FAIL : S_OK;
+}
+static void release_text(void *value)
+{
+    assert(value == owned_text && ++text_frees == 1); free(value); owned_text = NULL; event('f');
+}
+#define printf fixture_printf
+#define free release_text
+@IMPORT@
+#undef free
+#undef printf
+@RESET@
+static const struct { unsigned revision; int import_diagnostics, reset_clears_call; } contexts[] = {@CONTEXTS@};
+int main(void)
+{
+    static const char *expected_events[] = {"IXL", "IRXL", "IRPfXL", "IRPfCXL", "IRPfC"};
+    for(unsigned p = 0; p < sizeof(contexts)/sizeof(contexts[0]); ++p)
+    {
+        obor_profile_build = contexts[p].revision;
+        for(mode = 0; mode < 5; ++mode)
+        {
+            ImportNode node; memset(&node, 0, sizeof(node));
+            owned_text = NULL; text_frees = event_count = 0; *events = *diagnostic = 0;
+            assert(ImportNode_Init(&node, "imports/control.c") == (mode == 4 ? S_OK : E_FAIL));
+            assert(!strcmp(events, expected_events[mode]));
+            assert(!owned_text && text_frees == (mode >= 2));
+            const char *expected = !contexts[p].import_diagnostics ? "" :
+                mode == 2 ? "Script error: failed to import 'imports/control.c': parsing failed\n" :
+                mode == 3 ? "Script error: failed to import 'imports/control.c': failed to compile\n" : "";
+            assert(!strcmp(diagnostic, expected));
+        }
+        for(int completed = 0; completed < 2; ++completed)
+        for(return_error = 0; return_error < 2; ++return_error)
+        {
+            Interpreter state; memset(&state, 0, sizeof(state));
+            state.pCurrentCall = state.pReturnEntry = state.pCurrentInstruction = &entry;
+            state.bMainCompleted = TRUE; state.bCallCompleted = completed;
+            Interpreter_Reset(&state);
+            assert(!state.pCurrentCall && !state.pReturnEntry && !state.pCurrentInstruction);
+            assert(!state.bMainCompleted && state.bReset);
+            assert(state.bCallCompleted == (completed && !contexts[p].reset_clears_call));
+            state.pCurrentInstruction = &entry; steps = 0;
+            int execute = !completed || contexts[p].reset_clears_call;
+            assert(Interpreter_EvaluateCall(&state) == (execute && return_error ? E_FAIL : S_OK));
+            assert(steps == execute && state.bCallCompleted);
+        }
+        printf("{\"revision\":%u,\"cases\":9,\"status\":\"PASS\"}\n", obor_profile_build);
+    }
+    return 0;
+}

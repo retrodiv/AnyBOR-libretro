@@ -1,0 +1,126 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ * Native level loader arms, whole spawnplayer and player altitude selection.
+ */
+#include <stdint.h>
+#include <stddef.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <strings.h>
+#include "openbor.h"
+#include "commands.h"
+#undef printf
+#undef assert
+#ifdef NDEBUG
+#error Spawn storage assertions must remain enabled
+#endif
+uint32_t obor_profile_build;
+static unsigned active_case;
+#define assert(c) do {if(!(c)){fprintf(stderr,"Spawn storage profile=%u case=%u line=%d\n",obor_profile_build,active_case,__LINE__);abort();}}while(0)
+HRESULT Interpreter_Call(Interpreter *p) {(void)p;abort();}
+HRESULT Interpreter_EvalInstruction(Interpreter *p) {(void)p;abort();}
+static s_level storage,*level=&storage;
+static s_player player[MAX_PLAYERS];
+static entity actor;
+static s_spawn_entry observed;
+static s_videomodes videomodes;
+static int PLAYER_MIN_Z,PLAYER_MAX_Z,advancex,currentspawnplayer,nomaxrushreset[5];
+static int MAX_WALL_HEIGHT=1000;
+static int game_time,animation_calls,wall_calls,hole_calls,weapon_calls;
+static const struct {unsigned revision;int integer_storage;} contexts[]={@CONTEXTS@};
+typedef struct {
+ int coordinates[3],minimum,maximum,width,scroll,player;
+ double expected[2][3],altitude;
+} Case;
+static const Case cases[]={@CASES@};
+static const Case *active;
+void shutdown(int status,char *message,...) {(void)status;(void)message;abort();}
+int checkwall(float x,float z)
+{assert(x==observed.position.x && z==observed.position.z);++wall_calls;return -1;}
+int checkhole(float x,float z)
+{assert(x==observed.position.x && z==observed.position.z);++hole_calls;return 0;}
+entity *smartspawn(s_spawn_entry *p)
+{
+ assert(p->position.x==observed.position.x && p->position.z==observed.position.z);
+ assert(p->position.y==0 && p->flip==!(active->scroll & SCROLL_LEFT));
+ int index=active->player & 3;
+ assert(p->name==player[index].name && p->index==-1 && p->itemindex==-1 && p->weaponindex==-1);
+ assert(p->colourmap==player[index].colourmap && p->spawnplayer_count==-1);
+ observed=*p;return &actor;
+}
+void set_weapon(entity *e,int number,int flags)
+{assert(e==&actor && number==level->setweap && !flags);++weapon_calls;}
+void common_spawn(void) {abort();}
+void common_drop(void) {abort();}
+void ent_set_anim(entity *e,int animation,int flags)
+{assert(e==&actor && animation==ANI_JUMP && !flags);++animation_calls;}
+@NUMBERS@
+static void defaults(void) {
+@DEFAULTS@
+}
+static void load(int cmd,ArgList arglist)
+{
+ int i=-1;char *filename="level.txt",*command="spawn";
+ switch(cmd){@LOADER@ default:abort();}
+}
+static void altitude(entity *e) {@ALTITUDE@}
+@SPAWN@
+int main(void)
+{
+ assert(sizeof(int)==4 && sizeof(float)==4 && MAX_PLAYERS==4);
+ assert(sizeof(storage.spawn)==sizeof(storage.obor_classic_spawn));
+ assert(offsetof(s_level,spawn)==offsetof(s_level,obor_classic_spawn));
+ assert(offsetof(s_level,setweap)==offsetof(s_level,spawn)+sizeof(storage.spawn));
+ for(unsigned context=0;context<sizeof(contexts)/sizeof(contexts[0]);++context)
+ {
+  obor_profile_build=contexts[context].revision;
+  for(active_case=0;active_case<sizeof(cases)/sizeof(cases[0]);++active_case)
+  {
+   active=&cases[active_case];int index=active->player & 3;
+   memset(&storage,0,sizeof(storage));defaults();
+   for(int p=0;p<MAX_PLAYERS;++p)
+    for(unsigned axis=0;axis<3;++axis)
+     assert(obor_level_spawn_get(level,p,axis,obor_profile_build)==(axis==2?300:0));
+   char numbers[3][32];ArgList args;memset(&args,0,sizeof(args));args.count=4;args.args[0]="spawn";
+   for(int axis=0;axis<3;++axis){snprintf(numbers[axis],sizeof(numbers[axis]),"%d",active->coordinates[axis]);args.args[axis+1]=numbers[axis];}
+   load(CMD_LEVEL_SPAWN1+index,args);
+   for(int p=0;p<MAX_PLAYERS;++p)
+    for(unsigned axis=0;axis<3;++axis)
+    {
+     float wanted=p==index?(axis==2?(float)active->altitude:(float)active->coordinates[axis]):(axis==2?300:0);
+     assert(obor_level_spawn_get(level,p,axis,obor_profile_build)==wanted);
+     if(contexts[context].integer_storage)
+      assert(storage.obor_classic_spawn[p][axis]==(p==index?(axis==2 && active->coordinates[axis]<0?300:active->coordinates[axis]):(axis==2?300:0)));
+    }
+   memset(&actor,0,sizeof(actor));memset(player,0,sizeof(player));memset(nomaxrushreset,0,sizeof(nomaxrushreset));
+   PLAYER_MIN_Z=active->minimum;PLAYER_MAX_Z=active->maximum;videomodes.hRes=active->width;
+   level->scrolldir=active->scroll;level->setweap=7;advancex=0;
+   actor.modeldata.health=100;actor.modeldata.mp=80;player[index].spawnhealth=91;player[index].spawnmp=72;
+   player[index].colourmap=3;strcpy(player[index].name,"player");player[index].combostep=9;
+   memset(player[index].combokey,1,sizeof(player[index].combokey));memset(player[index].inputtime,1,sizeof(player[index].inputtime));
+   memset(&observed,0,sizeof(observed));int mode=!contexts[context].integer_storage;
+   observed.position.x=(float)active->expected[mode][0];observed.position.z=(float)active->expected[mode][1];
+   wall_calls=hole_calls=weapon_calls=0;spawnplayer(active->player);
+   assert(wall_calls==1 && hole_calls==1 && weapon_calls==1 && currentspawnplayer==index);
+   assert(player[index].ent==&actor && actor.playerindex==index && actor.health==96 && actor.mp==74 && actor.rush.count.max==0 && player[index].combostep==0);
+   for(int i=0;i<MAX_SPECIAL_INPUTS;++i)assert(!player[index].combokey[i] && !player[index].inputtime[i]);
+   /* Exercise the actual altitude conditional and its native validanim macro.
+      Delegated animation playback is observed, not rendered. */
+   for(int enabled=0;enabled<2;++enabled)for(int jump=0;jump<2;++jump)for(int high=0;high<2;++high)
+   {
+    s_anim animation,*animations[256]={0};memset(&animation,0,sizeof(animation));animation.numframes=1;
+    assert(ANI_JUMP<256 && ANI_SPAWN<256 && ANI_RESPAWN<256);
+    if(jump)animations[ANI_JUMP]=&animation;
+    actor.modeldata.animation=animations;actor.modeldata.animation_capacity=256;actor.animation=NULL;actor.takeaction=NULL;
+    float initial=high?(float)active->altitude+1024.0f:-1.0f;
+    actor.position.y=initial;game_time=enabled;animation_calls=0;altitude(&actor);
+    int drop=enabled && (float)active->altitude>initial;
+    assert(actor.position.y==(drop?(float)active->altitude:initial));
+    assert(actor.takeaction==(drop?common_drop:NULL) && animation_calls==(drop && jump));
+   }
+  }
+  printf("{\"revision\":%u,\"cases\":%u,\"status\":\"PASS\"}\n",obor_profile_build,active_case);
+ }
+ return 0;
+}

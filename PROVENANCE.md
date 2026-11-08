@@ -8,6 +8,14 @@ distributed hash of every retained upstream file. This makes the port's modifica
 distinguishable from upstream code without importing upstream Git history.
 The shared port, frontend glue and build tooling are included as source.
 
+The early Android random provider uses an independently written, engine-owned
+state machine for the platform's additive random sequence. Its factual
+algorithm and sequence controls are checked against Android's
+[rand interface](https://github.com/aosp-mirror/platform_bionic/blob/main/libc/bionic/rand.cpp),
+[random implementation](https://github.com/aosp-mirror/platform_bionic/blob/main/libc/upstream-netbsd/common/lib/libc/stdlib/random.c)
+and [native library tests](https://github.com/aosp-mirror/platform_bionic/blob/main/tests/stdlib_test.cpp).
+The port does not import those platform implementation files.
+
 [ENGINE_EXECUTABLES.json](docs/ENGINE_EXECUTABLES.json) records verified engine
 program and installable-package SHA-256 values, builds, variants, byte sizes and official
 source package/member references. The lookup table contains these factual

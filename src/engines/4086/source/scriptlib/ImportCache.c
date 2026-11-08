@@ -1,12 +1,14 @@
-/* AnyBOR modification record: 2026-10-10.
+/* AnyBOR modification record: 2026-11-08.
  * Port maintained by retrodiv <retrodiv@proton.me>.
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
  * Upstream code retains its original license and notices.
- * Guard parser-only import metadata after compilation. Compact compiler-only
- * instruction records after resolving value ownership, preserving branch and
- * export anchors, all mutable values and exactly-once pool cleanup. Read
- * import metadata only while an interpreter still owns parser state.
+ * Guard parser-only import metadata after compilation. Select each profile's
+ * additional import-failure diagnostics without changing cleanup. Compact
+ * compiler-only instruction records after resolving value ownership,
+ * preserving branch and export anchors, all mutable values and exactly-once
+ * pool cleanup. Read import metadata only while an interpreter still owns
+ * parser state.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/4086.md
  * at the source repository root. Original notices follow below.
@@ -121,7 +123,7 @@ HRESULT ImportNode_Init(ImportNode *self, const char *path)
     }
     if(FAILED(Interpreter_ParseText(&self->interpreter, scriptText, 1, path)))
     {
-        printf("Script error: failed to import '%s': parsing failed\n", path);
+        if(obor_profile_build >= 3987) printf("Script error: failed to import '%s': parsing failed\n", path);
         goto error;
     }
     free(scriptText);
@@ -147,7 +149,7 @@ HRESULT ImportNode_Init(ImportNode *self, const char *path)
     // finish compiling and convert indices to pointers to the function entry points
     if(FAILED(Interpreter_CompileInstructions(&self->interpreter, &self->functions)))
     {
-        printf("Script error: failed to import '%s': failed to compile\n", path);
+        if(obor_profile_build >= 3987) printf("Script error: failed to import '%s': failed to compile\n", path);
         goto error;
     }
     assert(self->interpreter.instructionStorage != NULL);

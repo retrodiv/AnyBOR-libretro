@@ -1,0 +1,158 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ * Native loss branches, set/drop weapon and parser; controlled model updates.
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "openbor.h"
+#undef printf
+#undef assert
+#include <assert.h>
+#ifdef NDEBUG
+#error Weapon-loss assertions must remain enabled
+#endif
+HRESULT Interpreter_Call(Interpreter *p) { (void)p; abort(); }
+HRESULT Interpreter_EvalInstruction(Interpreter *p) { (void)p; abort(); }
+uint32_t obor_profile_build;
+entity *self;
+s_level *level;
+s_player player[MAX_PLAYERS];
+static entity actor, physical_weapon, other;
+static s_model base_model;
+static s_level scene;
+static u32 fixture_time;
+static int nolost, phase, model_policy, damage_health, damage_drop;
+static int events[8][4], event_count, weapons[] = {101,102,103};
+void writeToLogFile(const char *message, ...) { (void)message; abort(); }
+void set_model_ex(entity *ent, char *name, int index, s_model *model, int flag)
+{
+    assert(ent == self && name == NULL && flag == 1 && event_count < 8);
+    assert((index == -1 && model == &base_model) ||
+           (index >= 101 && index <= 103 && model == NULL));
+    events[event_count][0] = phase; events[event_count][1] = index;
+    events[event_count][2] = player[0].weapnum;
+    events[event_count++][3] = self->modeldata.weaploss[0];
+    if(model_policy && index >= 101)
+    {
+        static const int settings[2][3][2] = {
+            {{0,0},{3,0},{1,0}}, {{0,0},{1,3},{2,0}}
+        };
+        self->modeldata.weaploss[0] = settings[model_policy-1][index-101][0];
+        self->modeldata.weaploss[1] = settings[model_policy-1][index-101][1];
+    }
+}
+entity *check_platform(float x, float z, entity *exclude)
+{ (void)x; (void)z; (void)exclude; abort(); }
+int checkwall(float x, float z) { (void)x; (void)z; abort(); }
+void ent_set_anim(entity *ent, int animation, int reset)
+{ (void)ent; (void)animation; (void)reset; abort(); }
+void common_lie(void) { abort(); }
+void runanimal(void) { abort(); }
+void common_fall(void) { abort(); }
+void kill(entity *ent) { (void)ent; abort(); }
+void player_die(void) { abort(); }
+void ent_unlink(entity *ent) { assert(ent == self); ent->link = NULL; }
+void checkdamagedrop(s_attack *attack) { (void)attack; self->drop = damage_drop; }
+void checkdamageeffects(s_attack *attack) { (void)attack; }
+void checkdamageflip(entity *ent, s_attack *attack) { (void)ent; (void)attack; }
+void checkmpadd(void) { }
+void checkhitscore(entity *ent, s_attack *attack) { (void)ent; (void)attack; }
+void checkdamage(entity *ent, s_attack *attack)
+{ (void)ent; (void)attack; self->health = damage_health; phase = 1; }
+void checkdeath(void) { self->dead = self->health <= 0; }
+void control_rumble(int index, int strength) { assert(index == 0 && strength == 6); }
+@FUNCTIONS@
+@NUMBERS@
+static void initialize_defaults(void)
+{
+    s_model *newchar = &base_model;
+    memset(newchar, 0, sizeof(*newchar));
+@DEFAULT@
+}
+static void directive(int mode, int fallback)
+{
+    enum {CMD_MODEL_WEAPLOSS};
+    ArgList arglist = {0};
+    s_model *newchar = &actor.modeldata;
+    char mode_text[24], fallback_text[24];
+    char *filename = "fixture", *command = "weaploss";
+    snprintf(mode_text, sizeof(mode_text), "%d", mode);
+    snprintf(fallback_text, sizeof(fallback_text), "%d", fallback);
+    arglist.count = 3; arglist.args[0] = command;
+    arglist.args[1] = mode_text; arglist.args[2] = fallback_text;
+    switch(CMD_MODEL_WEAPLOSS) { @DIRECTIVE@ }
+}
+static void ai_loss(void) { @AI@ }
+static void player_loss(void) { @PLAYER@ }
+static int damage_prefix(entity *other, s_attack *attack)
+{
+@DAMAGE@
+    return 0;
+}
+static void exhausted_lives_weapon(void)
+{
+    int playerindex = 0;
+@STAGE@
+}
+static const struct { uint32_t revision; int default_mode, contract; } contexts[] = {@CONTEXTS@};
+static const struct {
+    int op, mode, fallback, is_player, nolost, after_hp, knockdown, physical, policy, weapon;
+} cases[] = {@CASES@};
+static const struct {
+    int saved, mode, fallback, physical, falling, count, trace[8][4];
+} expected[2][@CASE_COUNT@] = {@EXPECTED@};
+int main(void)
+{
+    for(unsigned p = 0; p < sizeof(contexts)/sizeof(contexts[0]); ++p)
+    {
+        obor_profile_build = contexts[p].revision;
+        initialize_defaults();
+        assert(base_model.weaploss[0] == contexts[p].default_mode && base_model.weaploss[1] == -1);
+        for(unsigned c = 0; c < sizeof(cases)/sizeof(cases[0]); ++c)
+        {
+            memset(&actor, 0, sizeof(actor)); memset(&other, 0, sizeof(other));
+            memset(&physical_weapon, 0, sizeof(physical_weapon));
+            memset(&scene, 0, sizeof(scene)); memset(player, 0, sizeof(player));
+            memset(events, 0, sizeof(events)); event_count = 0;
+            actor.modeldata = base_model;
+            actor.modeldata.weapon = weapons; actor.modeldata.numweapons = 3;
+            actor.modeldata.type = cases[c].is_player ? TYPE_PLAYER : TYPE_ENEMY;
+            actor.defaultmodel = &base_model;
+            actor.health = 20;
+            actor.weapent = cases[c].physical ? &physical_weapon : NULL;
+            self = &actor; level = &scene; scene.setweap = 1; player[0].weapnum = 2;
+            nolost = cases[c].nolost; model_policy = cases[c].policy;
+            phase = cases[c].op == 3 ? 0 : cases[c].op + 2;
+            damage_health = cases[c].after_hp; damage_drop = cases[c].knockdown;
+            directive(cases[c].mode, cases[c].fallback);
+            assert(actor.modeldata.weaploss[0] == cases[c].mode &&
+                   actor.modeldata.weaploss[1] == cases[c].fallback);
+            switch(cases[c].op)
+            {
+            case 0: set_weapon(self, cases[c].weapon, 0); break;
+            case 1: ai_loss(); break;
+            case 2: player_loss(); break;
+            case 3: {
+                s_attack attack = {0}; attack.attack_force = 2;
+                assert(damage_prefix(&other, &attack) == 0); break;
+            }
+            case 4: exhausted_lives_weapon(); break;
+            default: abort();
+            }
+            unsigned contract = contexts[p].contract;
+            assert(player[0].weapnum == expected[contract][c].saved);
+            assert(actor.modeldata.weaploss[0] == expected[contract][c].mode);
+            assert(actor.modeldata.weaploss[1] == expected[contract][c].fallback);
+            assert((actor.weapent != NULL) == expected[contract][c].physical);
+            assert((actor.takeaction == common_fall) == expected[contract][c].falling);
+            assert(event_count == expected[contract][c].count);
+            for(int i = 0; i < event_count; ++i)
+                for(int j = 0; j < 4; ++j) assert(events[i][j] == expected[contract][c].trace[i][j]);
+        }
+        printf("{\"revision\":%u,\"cases\":%u,\"status\":\"PASS\"}\n", obor_profile_build,
+               (unsigned)(sizeof(cases)/sizeof(cases[0])));
+    }
+    return 0;
+}

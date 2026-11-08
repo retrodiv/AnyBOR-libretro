@@ -1,0 +1,275 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ * Native changed query cases, callers, animation setter and script-local output.
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <strings.h>
+#include <stdarg.h>
+#include <limits.h>
+#include "openbor.h"
+#undef printf
+#undef assert
+#ifdef NDEBUG
+#error Animation-ID assertions must remain enabled
+#endif
+uint32_t obor_profile_build;
+static unsigned active_case;
+#define assert(c) do {if(!(c)){fprintf(stderr,"Script animation ID revision=%u case=%u line=%d\n",obor_profile_build,active_case,__LINE__);abort();}}while(0)
+HRESULT Interpreter_Call(Interpreter *p) {(void)p;abort();}
+HRESULT Interpreter_EvalInstruction(Interpreter *p) {(void)p;abort();}
+static char strings[32][128],diagnostic[4096];
+static int refs[32];
+int StrCache_Pop(void)
+{for(int i=0;i<32;++i)if(!refs[i]){refs[i]=1;strings[i][0]=0;return i;}abort();}
+void StrCache_Collect(int i) {assert(i>=0 && i<32 && refs[i]>0);--refs[i];}
+CHAR *StrCache_Get(int i) {assert(i>=0 && i<32 && refs[i]>0);return strings[i];}
+void StrCache_Copy(int i,CHAR *text)
+{assert(i>=0 && i<32 && refs[i]>0 && strlen(text)<sizeof(strings[i]));strcpy(strings[i],text);}
+static int record_printf(const char *format,...)
+{va_list args;va_start(args,format);size_t len=strlen(diagnostic);int n=vsnprintf(diagnostic+len,sizeof(diagnostic)-len,format,args);va_end(args);assert(n>=0 && (size_t)n<sizeof(diagnostic)-len);return n;}
+@VARIANTS@
+@SEARCH@
+enum {SLOT_COUNT=@SLOT_COUNT@};
+static entity actor,other,sentinel;
+entity *self;
+int max_animations;
+unsigned int fixture_game_clock;
+static s_anim animations[SLOT_COUNT],*animation_table[SLOT_COUNT];
+static int sprite_ids[SLOT_COUNT][2],vulnerable[SLOT_COUNT][2],boxes[SLOT_COUNT][2][6];
+static s_attack attacks[SLOT_COUNT],*attack_frames[SLOT_COUNT][2];
+static s_sprite_map maps[SLOT_COUNT];
+s_sprite_map *sprite_map=maps;
+static int current_public,expected_native,range_calls,target_calls,update_calls,bind_calls;
+static int expected_target_type;
+void update_frame(entity *ent,int frame)
+{assert(ent==&actor && frame==0);ent->animpos=frame;++update_calls;}
+void common_attack_proc(void) {abort();}
+static int observe_check_range(entity *ent,entity *target,int animation)
+{
+    assert(ent==&actor && target==&other && animation==expected_native);++range_calls;
+    return check_range(ent,target,animation);
+}
+#undef check_range
+#define check_range(ent,target,animation) observe_check_range(ent,target,animation)
+entity *normal_find_target(int animation,int type)
+{assert(self==&actor && animation==expected_native && type==expected_target_type);++target_calls;return &other;}
+void adjust_bind(entity *ent)
+{assert(ent==&actor && ent->binding.ent==&other);++bind_calls;}
+static Script instance_script,model_script,default_script;
+static s_model model,default_model;
+static s_scripts instance_scripts,model_scripts,default_scripts;
+static Interpreter interpreter;
+static Varlist locals;
+static ScriptVariant visible[4];
+static int variable_sets,save_calls,load_calls,copy_calls,execute_calls;
+static Script *copied[2];
+int Varlist_SetByName(Varlist *list,char *name,ScriptVariant *value)
+{
+    const char *names[]={"self","animnum","frame","animhandle"};assert(list==&locals);
+    unsigned i=0;while(i<4 && strcmp(names[i],name))++i;assert(i<4);
+    assert(i==(unsigned)variable_sets%4);visible[i]=*value;++variable_sets;return 1;
+}
+int Script_Save_Local_Variant(Script *script,char *names[])
+{
+    assert(script==&instance_script && !strcmp(names[0],"self") && !strcmp(names[1],"animnum"));
+    assert(!strcmp(names[2],"frame") && !strcmp(names[3],"animhandle") && !names[4][0]);
+    ++save_calls;return 17;
+}
+void Script_Load_Local_Variant(Script *script,int handle)
+{assert(script==&instance_script && handle==17 && variable_sets==8);++load_calls;}
+void Script_Copy(Script *dest,Script *source,int clear)
+{assert(dest==&instance_script && !clear && copy_calls<2);copied[copy_calls++]=source;}
+int Script_Execute(Script *script)
+{
+    assert(script==&instance_script && variable_sets==4 && copy_calls==execute_calls+1);
+    assert(visible[0].vt==VT_PTR && visible[0].ptrVal==&actor);
+    assert(visible[1].vt==VT_INTEGER && visible[1].lVal==current_public);
+    assert(visible[2].vt==VT_INTEGER && visible[2].lVal==actor.animpos);
+    assert(visible[3].vt==VT_INTEGER && visible[3].lVal==actor.animation->index);
+    ++execute_calls;return 1;
+}
+@SCRIPT_INIT@
+@STUBS@
+#define printf record_printf
+@MACROS@
+@DECLARATIONS@
+@CALLBACKS@
+@FUNCTIONS@
+@CORE@
+static void maximum_property(ScriptVariant *var) {switch(0){case 0:@MAXIMUM@}}
+#undef printf
+static const struct {uint32_t revision;int public_count,storage_count,native[SLOT_COUNT];} contexts[]={@CONTEXTS@};
+static ScriptVariant values[7],*args[7];
+static void release_args(void)
+{for(int i=0;i<7;++i)ScriptVariant_Clear(&values[i]);for(int i=0;i<32;++i)assert(!refs[i]);}
+static void init_args(const char *property)
+{
+    release_args();memset(values,0,sizeof(values));for(int i=0;i<7;++i){args[i]=&values[i];values[i].vt=VT_INTEGER;}
+    values[0].vt=VT_PTR;values[0].ptrVal=&actor;
+    if(property){ScriptVariant_ChangeType(&values[1],VT_STR);StrCache_Copy(values[1].strVal,(char *)property);}
+    diagnostic[0]=0;
+}
+static void named_subproperty(const char *property)
+{ScriptVariant_ChangeType(&values[2],VT_STR);StrCache_Copy(values[2].strVal,(char *)property);}
+static void reset_actor(unsigned p,int logical)
+{
+    memset(&actor,0,sizeof(actor));actor.modeldata.animation=animation_table;
+    actor.modeldata.animation_capacity=contexts[p].storage_count;
+    actor.animnum=contexts[p].native[logical];actor.animation=&animations[actor.animnum];actor.animpos=1;
+    actor.position.x=23;actor.position.z=31;actor.nextanim=7;self=&sentinel;
+    other.position.x=23;other.position.z=31;
+    update_calls=range_calls=target_calls=bind_calls=0;
+}
+static int get_integer(int count,int id_arg,int premap)
+{
+    ScriptVariant saved;if(id_arg>=0)saved=values[id_arg];
+    if(premap)assert(mapstrings_entityproperty(args,count)==1);
+    ScriptVariant result={.vt=VT_EMPTY},*out=&result;++active_case;
+    assert(openbor_getentityproperty(args,&out,count)==S_OK && out==&result && result.vt==VT_INTEGER);
+    int value=result.lVal;ScriptVariant_Clear(&result);
+    if(id_arg>=0)assert(!memcmp(&saved,&values[id_arg],sizeof(saved)));
+    assert(!diagnostic[0]);return value;
+}
+static void set_property(int count,int id_arg,int premap)
+{
+    ScriptVariant saved;if(id_arg>=0)saved=values[id_arg];
+    if(premap)assert(mapstrings_entityproperty(args,count)==1);
+    ScriptVariant result={.vt=VT_EMPTY},*out=&result;++active_case;
+    assert(openbor_changeentityproperty(args,&out,count)==S_OK && !out);
+    if(id_arg>=0)assert(!memcmp(&saved,&values[id_arg],sizeof(saved)));
+    assert(!diagnostic[0]);ScriptVariant_Clear(&result);
+}
+static void script_locals(unsigned p,int logical)
+{
+    current_public=logical;
+    for(int mask=0;mask<4;++mask)for(int nested=0;nested<2;++nested)
+    {
+        reset_actor(p,logical);model.scripts=&model_scripts;default_model.scripts=&default_scripts;
+        model_scripts.animation_script=&model_script;default_scripts.animation_script=&default_script;
+        instance_scripts.animation_script=&instance_script;actor.scripts=&instance_scripts;
+        actor.model=&model;actor.defaultmodel=&default_model;
+        model_script.initialized=!!(mask&1);default_script.initialized=!!(mask&2);
+        interpreter.bReset=nested;instance_script.pinterpreter=&interpreter;instance_script.varlist=&locals;
+        memset(visible,0,sizeof(visible));variable_sets=save_calls=load_calls=copy_calls=execute_calls=0;
+        ++active_case;execute_animation_script(&actor);
+        int expected=!!(mask&1)+!!(mask&2);
+        assert(execute_calls==expected && copy_calls==expected && variable_sets==(mask?8:0));
+        assert(save_calls==(mask && nested) && load_calls==save_calls);
+        if(mask&1)assert(copied[0]==&model_script);
+        if(mask&2)assert(copied[!!(mask&1)]==&default_script);
+        for(int i=0;i<4;++i)assert(visible[i].vt==VT_EMPTY);
+        assert(actor.animnum==contexts[p].native[logical]);
+    }
+}
+int main(void)
+{
+    for(unsigned p=0;p<sizeof(contexts)/sizeof(contexts[0]);++p)
+    {
+        obor_profile_build=contexts[p].revision;max_animations=contexts[p].storage_count;active_case=0;
+        memset(animations,0,sizeof(animations));memset(maps,0,sizeof(maps));
+        for(int id=0;id<contexts[p].public_count;++id)
+        {
+            int native=contexts[p].native[id];s_anim *a=&animations[native];animation_table[native]=a;
+            a->numframes=2;a->sync=-1;a->index=10000+id;a->sprite=sprite_ids[native];a->vulnerable=vulnerable[native];
+            a->bbox_coords=boxes[native];a->attacks=attack_frames[native];a->dropframe.frame=100+id;
+            a->range.max.x=300+id;a->landframe.ent=400+id;a->landframe.frame=500+id;a->energycost.cost=600+id;
+            attacks[native].attack_force=700+id;maps[id].centerx=800+id;
+            for(int f=0;f<2;++f){sprite_ids[native][f]=id;vulnerable[native][f]=100+id+f;
+                boxes[native][f][0]=200+id+f;attack_frames[native][f]=&attacks[native];}
+        }
+        ScriptVariant maximum={.vt=VT_EMPTY};++active_case;maximum_property(&maximum);
+        assert(maximum.vt==VT_INTEGER && maximum.lVal==contexts[p].public_count);ScriptVariant_Clear(&maximum);
+        for(int id=0;id<contexts[p].public_count;++id)
+        {
+            int native=contexts[p].native[id],other_id=(id+1)%contexts[p].public_count;
+            for(int premap=0;premap<2;++premap)
+            {
+                reset_actor(p,other_id);
+                init_args("animvalid");values[2].lVal=id;animations[native].numframes=0;
+                assert(get_integer(3,2,premap)==0);animations[native].numframes=2;
+                init_args("dropframe");values[2].lVal=id;assert(get_integer(3,2,premap)==100+id);
+                init_args("vulnerable");values[2].lVal=id;values[3].lVal=1;assert(get_integer(4,2,premap)==101+id);
+                init_args("bbox");values[3].lVal=id;values[4].lVal=1;assert(get_integer(6,3,premap)==201+id);
+                init_args("attack");named_subproperty("force");values[4].lVal=id;assert(get_integer(6,4,premap)==700+id);
+                init_args("energycost");named_subproperty("cost");values[3].lVal=id;assert(get_integer(4,3,premap)==600+id);
+                init_args("landframe");named_subproperty("ent");values[3].lVal=id;assert(get_integer(4,3,premap)==400+id);
+                init_args("range");named_subproperty("xmax");values[3].lVal=id;assert(get_integer(4,3,premap)==300+id);
+                init_args("spritea");named_subproperty("centerx");values[3].lVal=id;assert(get_integer(5,3,premap)==800+id);
+                init_args("energycost");named_subproperty("cost");values[3].lVal=id;values[4].lVal=900+id;
+                set_property(5,3,premap);assert(animations[native].energycost.cost==900+id);animations[native].energycost.cost=600+id;
+                init_args("spritea");named_subproperty("centerx");values[3].lVal=id;values[5].lVal=1000+id;
+                set_property(6,3,premap);assert(maps[id].centerx==1000+id);maps[id].centerx=800+id;
+                init_args("animation");values[2].lVal=id;set_property(3,2,premap);
+                assert(actor.animnum==native && actor.animation==&animations[native] && actor.animpos==0 && update_calls==1);
+                init_args("animnum");assert(get_integer(2,-1,premap)==id);
+                init_args("animationid");assert(get_integer(2,-1,premap)==id);
+                init_args("animation");if(premap)assert(mapstrings_entityproperty(args,2)==1);
+                ScriptVariant pointer={.vt=VT_EMPTY},*pointer_out=&pointer;++active_case;
+                assert(openbor_getentityproperty(args,&pointer_out,2)==S_OK && pointer_out==&pointer);
+                assert(pointer.vt==VT_PTR && pointer.ptrVal==&animations[native]);ScriptVariant_Clear(&pointer);
+                reset_actor(p,other_id);init_args("animation");values[2].lVal=id;values[3].lVal=2;set_property(4,2,premap);
+                assert(actor.animnum==native && actor.animpos==1 && !update_calls);
+                init_args("nextanim");values[2].lVal=7;set_property(3,2,premap);assert(actor.nextanim==7);
+                init_args("nextanim");assert(get_integer(2,-1,premap)==7);
+            }
+            reset_actor(p,other_id);init_args("dropframe");assert(get_integer(2,-1,0)==100);
+            init_args("dropframe");values[2].vt=VT_PTR;values[2].ptrVal=&actor;assert(get_integer(3,2,0)==100);
+            init_args("animvalid");animations[contexts[p].native[0]].numframes=0;
+            assert(get_integer(2,-1,0)==0);
+            init_args("animvalid");values[2].vt=VT_PTR;values[2].ptrVal=&actor;assert(get_integer(3,2,0)==0);
+            animations[contexts[p].native[0]].numframes=2;
+            init_args("vulnerable");assert(get_integer(2,-1,0)==101+other_id);
+            init_args(NULL);values[1].vt=VT_PTR;values[1].ptrVal=&other;values[2].lVal=id;
+            expected_native=native;ScriptVariant result={.vt=VT_EMPTY},*out=&result;
+            ++active_case;assert(openbor_checkrange(args,&out,3)==S_OK && out==&result && result.lVal==1 && range_calls==1);
+            assert(values[2].lVal==id);ScriptVariant_Clear(&result);
+            expected_native=contexts[p].native[other_id];out=&result;++active_case;
+            assert(openbor_checkrange(args,&out,2)==S_OK && result.lVal==1 && range_calls==2);ScriptVariant_Clear(&result);
+            init_args(NULL);values[1].lVal=id;values[2].lVal=3;expected_native=native;expected_target_type=3;out=&result;
+            ++active_case;assert(openbor_findtarget(args,&out,3)==S_OK && result.vt==VT_PTR && result.ptrVal==&other);
+            assert(self==&sentinel && values[1].lVal==id && target_calls==1);ScriptVariant_Clear(&result);
+            for(int caller=0;caller<2;++caller)
+            {
+                for(int reset=0;reset<=2;reset+=2)
+                {
+                    reset_actor(p,other_id);init_args(NULL);values[1].lVal=id;values[2].lVal=reset;values[3].lVal=3;
+                    fixture_game_clock=@CLOCK@;actor.stalltime=5;out=&result;++active_case;
+                    assert((caller?openbor_setidle(args,&out,4):openbor_performattack(args,&out,3))==S_OK && !out);
+                    assert(actor.animnum==native && actor.animpos==(reset?1:0) && update_calls==!reset);
+                    assert(values[1].lVal==id && values[2].lVal==reset);
+                    assert(actor.attacking==!caller && actor.idling==caller);
+                    assert(actor.takeaction==(caller?NULL:common_attack_proc));
+                    assert(actor.stalltime==(unsigned)(caller?@CLOCK@+3:5));
+                }
+                reset_actor(p,other_id);init_args(NULL);out=&result;++active_case;
+                assert((caller?openbor_setidle(args,&out,1):openbor_performattack(args,&out,1))==S_OK && !out);
+                assert(actor.animnum==contexts[p].native[other_id] && !update_calls);
+            }
+            script_locals(p,id);
+        }
+        reset_actor(p,0);init_args(NULL);values[1].vt=VT_PTR;values[1].ptrVal=&other;
+        values[2].lVal=INT_MAX;ScriptVariant result={.vt=VT_EMPTY},*out=&result;++active_case;
+        assert(openbor_checkrange(args,&out,3)==E_FAIL && !out && !range_calls);
+        char limit[80];snprintf(limit,sizeof(limit),"Animation id out of range: %d / %d.",INT_MAX,contexts[p].public_count);
+        assert(strstr(diagnostic,limit) && values[2].lVal==INT_MAX);
+        reset_actor(p,0);init_args(NULL);values[1].lVal=-7;expected_native=-7;expected_target_type=0;out=&result;
+        ++active_case;assert(openbor_findtarget(args,&out,2)==S_OK && result.ptrVal==&other && target_calls==1);
+        assert(self==&sentinel && values[1].lVal==-7);ScriptVariant_Clear(&result);
+        expected_native=-1;out=&result;++active_case;
+        assert(openbor_findtarget(args,&out,1)==S_OK && result.ptrVal==&other && target_calls==2);
+        assert(self==&sentinel);ScriptVariant_Clear(&result);
+        for(int flags=0;flags<=6;flags+=2)
+        {
+            reset_actor(p,0);init_args(NULL);values[1].vt=VT_PTR;values[1].ptrVal=&other;
+            values[2].lVal=2;values[3].lVal=3;values[4].lVal=4;values[5].lVal=1;values[6].lVal=flags;out=&result;
+            ++active_case;assert(openbor_bindentity(args,&out,7)==S_OK && !out && bind_calls==1);
+            assert(actor.binding.ani_bind==flags && values[6].lVal==flags);
+            assert(actor.binding.offset.x==2 && actor.binding.offset.z==3 && actor.binding.offset.y==4);
+        }
+        release_args();printf("{\"revision\":%u,\"cases\":%u,\"status\":\"PASS\"}\n",obor_profile_build,active_case);
+    }
+    return 0;
+}

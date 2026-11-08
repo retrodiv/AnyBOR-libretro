@@ -1,0 +1,89 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ * Actual native types and caller segments; palette/menu services observe calls.
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "openbor.h"
+#undef printf
+#undef assert
+#include <assert.h>
+#ifdef NDEBUG
+#error Loading checks must remain enabled
+#endif
+/* Native headers declare these inline services; this segment never calls them. */
+HRESULT Interpreter_Call(Interpreter *p) { (void)p; abort(); }
+HRESULT Interpreter_EvalInstruction(Interpreter *p) { (void)p; abort(); }
+uint32_t obor_profile_build;
+entity *self;
+s_level *level;
+float scrolldx, scrolldy;
+int pixelformat;
+static int events[4], event_count;
+void standard_palette(int immediate)
+{
+    assert(immediate == 1 && event_count < 4);
+    events[event_count++] = 1;
+}
+void load_menu_txt(void)
+{
+    assert(event_count < 4);
+    events[event_count++] = 2;
+}
+static int quiet_printf(const char *format, ...) { (void)format; return 0; }
+static void apply_scroll(void)
+{
+    float scrollv = 0;
+@SCROLL@
+}
+#define printf quiet_printf
+static void palette_before_menu(void)
+{
+@STARTUP@
+}
+#undef printf
+static const struct { uint32_t revision; int altitude_base, palette8; } contexts[] = { @CONTEXTS@ };
+static const struct {
+    int level, panel, up;
+    float speed, scroll, dx, dy, x, y;
+    int base_written;
+} cases[] = { @CASES@ };
+int main(void)
+{
+    const int formats[] = {PIXEL_8, PIXEL_x8, PIXEL_16, PIXEL_32};
+    for(unsigned p = 0; p < sizeof(contexts)/sizeof(contexts[0]); ++p)
+    {
+        obor_profile_build = contexts[p].revision;
+        for(unsigned i = 0; i < sizeof(cases)/sizeof(cases[0]); ++i)
+        {
+            entity actor;
+            s_level scene;
+            memset(&actor, 0, sizeof(actor)); memset(&scene, 0, sizeof(scene));
+            self = &actor; level = cases[i].level ? &scene : NULL;
+            scene.scrolldir = cases[i].up ? SCROLL_UP : SCROLL_RIGHT;
+            actor.modeldata.type = cases[i].panel ? TYPE_PANEL : TYPE_ENEMY;
+            actor.modeldata.speed = cases[i].speed; actor.modeldata.scroll = cases[i].scroll;
+            actor.position.x = 100; actor.position.y = 20; actor.base = 7;
+            scrolldx = cases[i].dx; scrolldy = cases[i].dy;
+            apply_scroll();
+            assert(actor.position.x == cases[i].x && actor.position.y == cases[i].y);
+            assert(actor.base == (cases[i].base_written ?
+                (contexts[p].altitude_base ? cases[i].y : -99999.0f) : 7.0f));
+        }
+        for(unsigned i = 0; i < sizeof(formats)/sizeof(formats[0]); ++i)
+        {
+            pixelformat = formats[i]; event_count = 0; memset(events, 0, sizeof(events));
+            palette_before_menu();
+            int expected_palette = contexts[p].palette8 && pixelformat == PIXEL_8;
+            assert(event_count == 1 + expected_palette);
+            assert(events[0] == (expected_palette ? 1 : 2));
+            if(expected_palette) assert(events[1] == 2);
+        }
+        printf("{\"revision\":%u,\"scroll_cases\":%u,\"formats\":%u,\"status\":\"PASS\"}\n",
+               obor_profile_build, (unsigned)(sizeof(cases)/sizeof(cases[0])),
+               (unsigned)(sizeof(formats)/sizeof(formats[0])));
+    }
+    return 0;
+}

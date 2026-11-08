@@ -1,0 +1,240 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ * Native mapper/callback cases, actual terrain layout and owned-table growth.
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <strings.h>
+#include <stdarg.h>
+#include <limits.h>
+#include "openbor.h"
+#undef printf
+#undef assert
+#ifdef NDEBUG
+#error Terrain assertions must remain enabled
+#endif
+uint32_t obor_profile_build;
+static unsigned active_case;
+static int active_kind;
+#define assert(c) do {if(!(c)){fprintf(stderr,"Terrain revision=%u kind=%d case=%u line=%d\n",obor_profile_build,active_kind,active_case,__LINE__);abort();}}while(0)
+HRESULT Interpreter_Call(Interpreter *p) { (void)p; abort(); }
+HRESULT Interpreter_EvalInstruction(Interpreter *p) { (void)p; abort(); }
+static char strings[32][128],diagnostic[4096];
+static int used[32],allocations,fail_allocation;
+static s_level scene,*level=&scene;
+int StrCache_Pop(void)
+{for(int i=0;i<32;++i)if(!used[i]){used[i]=1;strings[i][0]=0;return i;}abort();}
+void StrCache_Collect(int i) {assert(i>=0 && i<32 && used[i]);used[i]=0;}
+CHAR *StrCache_Get(int i) {assert(i>=0 && i<32 && used[i]);return strings[i];}
+void StrCache_Copy(int i,CHAR *text)
+{assert(i>=0 && i<32 && used[i] && strlen(text)<sizeof(strings[i]));strcpy(strings[i],text);}
+static int record_printf(const char *format,...)
+{va_list args;va_start(args,format);size_t len=strlen(diagnostic);int n=vsnprintf(diagnostic+len,sizeof(diagnostic)-len,format,args);va_end(args);assert(n>=0 && (size_t)n<sizeof(diagnostic)-len);return n;}
+static void *record_realloc(void *data,size_t bytes)
+{++allocations;assert(bytes<=8*sizeof(s_terrain));if(fail_allocation)return NULL;return realloc(data,bytes);}
+@VARIANTS@
+@SEARCH@
+#define printf record_printf
+#define realloc record_realloc
+@MACROS@
+@DECLARATIONS@
+@CALLBACKS@
+#undef realloc
+#undef printf
+static const struct {uint32_t revision;int old[2];} contexts[]={@CONTEXTS@};
+static const char *kind_names[]={"hole","wall"};
+static const char *field_names[]={"depth","height","lowerleft","lowerright","upperleft","upperright","x","z"};
+/* Independent source-derived order from the original addhole/addwall bodies. */
+static void store_field(s_terrain *item,int field,float value)
+{switch(field){case 0:item->x=value;break;case 1:item->z=value;break;
+case 2:item->upperleft=value;break;case 3:item->lowerleft=value;break;
+case 4:item->upperright=value;break;case 5:item->lowerright=value;break;
+case 6:item->depth=value;break;case 7:item->height=value;break;default:abort();}}
+static float read_field(const s_terrain *item,int field)
+{switch(field){case 0:return item->x;case 1:return item->z;case 2:return item->upperleft;
+case 3:return item->lowerleft;case 4:return item->upperright;case 5:return item->lowerright;
+case 6:return item->depth;case 7:return item->height;default:abort();}}
+static float initial(int kind,int row,int field) {return (float)(10+kind*50+row*100)+field*1.25f;}
+static s_terrain *table(int kind) {return kind?level->walls:level->holes;}
+static int count(int kind) {return kind?level->numwalls:level->numholes;}
+static int root_property(int kind) {return kind?_lp_wall:_lp_hole;}
+static void reset_scene(void)
+{
+    free(level->holes);free(level->walls);memset(level,0,sizeof(*level));
+    level->holes=calloc(2,sizeof(s_terrain));level->walls=calloc(2,sizeof(s_terrain));
+    assert(level->holes && level->walls);level->numholes=level->numwalls=2;
+    for(int k=0;k<2;++k)for(int row=0;row<2;++row)for(int f=0;f<8;++f)
+        store_field(table(k)+row,f,initial(k,row,f));
+    allocations=fail_allocation=0;diagnostic[0]=0;
+}
+static void check_scene(int changed_kind,int changed_row,int changed_field,float value,int expected_count)
+{
+    for(int k=0;k<2;++k)
+    {
+        assert(count(k)==(k==changed_kind?expected_count:2));
+        for(int row=0;row<count(k);++row)for(int f=0;f<8;++f)
+        {
+            float expected=row<2?initial(k,row,f):0;
+            if(k==changed_kind && row==changed_row && (changed_field==f ||
+               (changed_field==-2 && f<(k?8:7))))expected=value;
+            assert(read_field(table(k)+row,f)==expected);
+        }
+    }
+}
+static void string_value(ScriptVariant *v,const char *text)
+{ScriptVariant_ChangeType(v,VT_STR);StrCache_Copy(v->strVal,(char *)text);}
+static void arguments(ScriptVariant *v,ScriptVariant **args,int kind,int named)
+{
+    memset(v,0,10*sizeof(*v));for(int i=0;i<10;++i){v[i].vt=VT_INTEGER;args[i]=v+i;}
+    v[0].lVal=root_property(kind);if(named)string_value(v,kind_names[kind]);
+}
+static void clear_arguments(ScriptVariant *values)
+{for(int i=0;i<10;++i)ScriptVariant_Clear(values+i);for(int i=0;i<32;++i)assert(!used[i]);}
+static void setter_error(char *out,ScriptVariant *values,int argc,int warning,int kind)
+{
+    out[0]=0;if(warning)snprintf(out,1024,"You must provide a string value for %s subproperty.\n",kind_names[kind]);
+    strcat(out,"Function changelevelproperty(prop, value) received invalid value(s). \nDumping values: ");
+    for(int i=1;i<argc;++i)
+    {
+        char text[128];
+        if(values[i].vt==VT_INTEGER)snprintf(text,sizeof(text),"%d",values[i].lVal);
+        else if(values[i].vt==VT_DECIMAL)snprintf(text,sizeof(text),"%.6f",values[i].dblVal);
+        else if(values[i].vt==VT_STR)snprintf(text,sizeof(text),"%s",StrCache_Get(values[i].strVal));
+        else abort();
+        assert(strlen(out)+strlen(text)+3<1024);strcat(out,text);strcat(out,", ");
+    }
+    strcat(out,"\n");
+}
+int main(void)
+{
+    for(unsigned p=0;p<sizeof(contexts)/sizeof(contexts[0]);++p)
+    {
+        obor_profile_build=contexts[p].revision;active_case=0;
+        for(int k=0;k<2;++k)
+        {
+            active_kind=k;int legacy=contexts[p].old[k],fields=k?8:7;
+            for(int f=0;f<8;++f)for(int named=0;named<2;++named)for(int argc=2;argc<=3;++argc)
+            {
+                ScriptVariant values[10],*args[10];arguments(values,args,k,named);string_value(values+2,field_names[f]);
+                int slot=values[2].strVal;
+                for(int repeat=0;repeat<2;++repeat)
+                {
+                    diagnostic[0]=0;++active_case;assert(mapstrings_levelproperty(args,argc)==1 && !diagnostic[0]);
+                    assert(values[0].vt==VT_INTEGER && values[0].lVal==root_property(k));
+                    assert(values[2].vt==(!legacy && argc==3?VT_INTEGER:VT_STR));
+                    assert(values[2].lVal==(!legacy && argc==3?f:slot));
+                }
+                clear_arguments(values);
+            }
+            {
+                ScriptVariant values[10],*args[10];arguments(values,args,k,1);string_value(values+2,"unknown_terrain");
+                char expected[128];expected[0]=0;if(!legacy)snprintf(expected,sizeof(expected),"'unknown_terrain' is not supported by '%s'.\n",obor_profile_build<3997?"wall":"wall/hole");
+                diagnostic[0]=0;++active_case;assert(mapstrings_levelproperty(args,3)==legacy && !strcmp(diagnostic,expected));
+                assert(values[2].vt==VT_STR);clear_arguments(values);
+            }
+            for(int f=0;f<fields;++f)for(int named=0;named<2;++named)for(int decimal=0;decimal<2;++decimal)
+            {
+                reset_scene();ScriptVariant values[10],*args[10];arguments(values,args,k,named);
+                int row=f%2;values[1].lVal=row;values[2].vt=decimal?VT_DECIMAL:VT_INTEGER;
+                if(decimal)values[2].dblVal=f+0.5;else values[2].lVal=f;
+                for(int repeat=0;repeat<2;++repeat)
+                {
+                    ScriptVariant result={.vt=VT_EMPTY},*output=&result;diagnostic[0]=0;++active_case;
+                    HRESULT status=openbor_getlevelproperty(args,&output,3);
+                    if(legacy)assert(status==S_OK && output==&result && result.vt==VT_DECIMAL && result.dblVal==initial(k,row,f) && !diagnostic[0]);
+                    else {char expected[128];snprintf(expected,sizeof(expected),"You must provide a string value for %s subproperty.\n",kind_names[k]);assert(status==E_FAIL && !output && result.vt==VT_EMPTY && !strcmp(diagnostic,expected));}
+                    check_scene(-1,-1,-1,0,2);ScriptVariant_Clear(&result);
+                }
+                clear_arguments(values);
+                reset_scene();arguments(values,args,k,named);values[1].lVal=row;values[2].lVal=f;
+                values[3].vt=decimal?VT_DECIMAL:VT_INTEGER;if(decimal)values[3].dblVal=42.5;else values[3].lVal=42;
+                for(int repeat=0;repeat<2;++repeat)
+                {
+                    ScriptVariant result={.vt=VT_EMPTY},*output=&result;diagnostic[0]=0;++active_case;
+                    HRESULT status=openbor_changelevelproperty(args,&output,4);assert(!output);
+                    if(legacy){assert(status==S_OK && !diagnostic[0]);check_scene(k,row,f,decimal?42.5f:42,2);}
+                    else {char expected[1024];setter_error(expected,values,4,1,k);assert(status==E_FAIL && !strcmp(diagnostic,expected));check_scene(-1,-1,-1,0,2);}
+                    assert(!allocations);ScriptVariant_Clear(&result);
+                }
+                clear_arguments(values);
+            }
+            for(int f=0;f<8;++f)for(int named=0;named<2;++named)for(int setter=0;setter<2;++setter)
+            {
+                reset_scene();ScriptVariant values[10],*args[10];arguments(values,args,k,named);string_value(values+2,field_names[f]);values[3].lVal=42;
+                for(int repeat=0;repeat<2;++repeat)
+                {
+                    ScriptVariant result={.vt=VT_EMPTY},*output=&result;diagnostic[0]=0;++active_case;
+                    HRESULT status=setter?openbor_changelevelproperty(args,&output,4):openbor_getlevelproperty(args,&output,3);
+                    char expected[1024];expected[0]=0;if(setter)setter_error(expected,values,4,!legacy,k);
+                    else if(!legacy)snprintf(expected,sizeof(expected),"You must provide a string value for %s subproperty.\n",kind_names[k]);
+                    assert(status==E_FAIL && !output && !strcmp(diagnostic,expected));
+                    assert(values[2].vt==(legacy?VT_STR:VT_INTEGER));check_scene(-1,-1,-1,0,2);assert(!allocations);ScriptVariant_Clear(&result);
+                }
+                clear_arguments(values);
+            }
+            for(int named=0;named<2;++named)for(int selection=0;selection<3;++selection)
+            {
+                reset_scene();ScriptVariant values[10],*args[10];arguments(values,args,k,named);
+                int row=selection==2?3:selection;values[1].lVal=row;int argc=fields+2;
+                for(int i=2;i<argc;++i)values[i].lVal=(i-1)*11;
+                values[3].vt=VT_DECIMAL;values[3].dblVal=22.5;
+                for(int repeat=0;repeat<2;++repeat)
+                {
+                    ScriptVariant result={.vt=VT_EMPTY},*output=&result;diagnostic[0]=0;++active_case;
+                    HRESULT status=openbor_changelevelproperty(args,&output,argc);assert(!output);
+                    if(legacy){assert(status==S_OK && !diagnostic[0]);check_scene(k,row,-2,22.5f,row==3?4:2);assert(allocations==(row==3));}
+                    else {char expected[1024];setter_error(expected,values,argc,1,k);assert(status==E_FAIL && !strcmp(diagnostic,expected));check_scene(-1,-1,-1,0,2);assert(!allocations);}
+                    ScriptVariant_Clear(&result);
+                }
+                clear_arguments(values);
+            }
+            for(int bad=0;bad<3;++bad)
+            {
+                reset_scene();ScriptVariant values[10],*args[10];arguments(values,args,k,0);values[1].lVal=bad==0?-1:bad==1?2:INT_MAX;
+                ScriptVariant result={.vt=VT_EMPTY},*output=&result;++active_case;
+                assert(openbor_getlevelproperty(args,&output,3)==E_FAIL && !output);
+                assert(!strcmp(diagnostic,legacy?"":"Error in wall property.\n"));check_scene(-1,-1,-1,0,2);clear_arguments(values);
+            }
+            for(int bad=0;bad<2;++bad)for(int setter=0;setter<2;++setter)
+            {
+                reset_scene();ScriptVariant values[10],*args[10];arguments(values,args,k,0);values[2].lVal=bad?fields:-1;values[3].lVal=42;
+                ScriptVariant result={.vt=VT_EMPTY},*output=&result;++active_case;
+                HRESULT status=setter?openbor_changelevelproperty(args,&output,4):openbor_getlevelproperty(args,&output,3);
+                char expected[1024];expected[0]=0;if(setter)setter_error(expected,values,4,!legacy,k);
+                else if(!legacy)snprintf(expected,sizeof(expected),"You must provide a string value for %s subproperty.\n",kind_names[k]);
+                assert(status==E_FAIL && !output && !strcmp(diagnostic,expected));check_scene(-1,-1,-1,0,2);clear_arguments(values);
+            }
+            {
+                reset_scene();ScriptVariant values[10],*args[10];arguments(values,args,k,0);values[1].lVal=3;values[3].lVal=42;
+                ScriptVariant result={.vt=VT_EMPTY},*output=&result;++active_case;
+                assert(openbor_changelevelproperty(args,&output,5)==E_FAIL && !output);
+                char expected[1024];setter_error(expected,values,5,!legacy,k);assert(!strcmp(diagnostic,expected));
+                check_scene(legacy?k:-1,-1,-1,0,legacy?4:2);assert(allocations==legacy);clear_arguments(values);
+            }
+            /* Allocation failure and unrepresentable growth retain owned data.
+             * They are safety checks, not original successful-input oracles. */
+            for(int safety=0;safety<2;++safety)
+            {
+                reset_scene();ScriptVariant values[10],*args[10];arguments(values,args,k,0);values[1].lVal=safety?INT_MAX:3;values[3].lVal=42;
+                s_terrain *owned=table(k);fail_allocation=1;ScriptVariant result={.vt=VT_EMPTY},*output=&result;++active_case;
+                assert(openbor_changelevelproperty(args,&output,4)==E_FAIL && !output);
+                char expected[1024];setter_error(expected,values,4,!legacy,k);assert(!strcmp(diagnostic,expected));
+                assert(table(k)==owned && allocations==(legacy && !safety));check_scene(-1,-1,-1,0,2);clear_arguments(values);
+            }
+            if(legacy)
+            {
+                reset_scene();ScriptVariant values[10],*args[10];arguments(values,args,k,0);values[1].lVal=3;
+                ScriptVariant result={.vt=VT_EMPTY},*output=&result;++active_case;
+                assert(openbor_changelevelproperty(args,&output,2)==E_FAIL && !output);
+                char expected[1024];setter_error(expected,values,2,0,k);assert(!strcmp(diagnostic,expected));
+                check_scene(k,-1,-1,0,4);assert(allocations==1);clear_arguments(values);
+            }
+        }
+        diagnostic[0]=0;++active_case;assert(mapstrings_levelproperty(NULL,0)==1 && !diagnostic[0]);
+        free(level->holes);free(level->walls);memset(level,0,sizeof(*level));
+        printf("{\"revision\":%u,\"cases\":%u,\"status\":\"PASS\"}\n",obor_profile_build,active_case);
+    }
+    return 0;
+}
