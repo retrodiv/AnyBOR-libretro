@@ -1,3 +1,15 @@
+/* AnyBOR modification record: 2026-11-09.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Translate native entity property names, numeric IDs and animation values
+ * for each logical profile.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/7533.md
+ * at the source repository root. Original notices follow below.
+ */
+
 /*
  * OpenBOR - http://www.chronocrash.com
  * -----------------------------------------------------------------------
@@ -8,11 +20,29 @@
 
  #include "scriptcommon.h"
 
+static int obor_profile_entity_property_end(void)
+{
+    return (int)ENTITY_PROPERTY_END - (obor_profile_build < 7553 ? 1 : 0);
+}
+
+
 const s_property_access_map entity_get_property_map(const void* acting_object_param, const unsigned int property_index_param)
 {	
 	s_property_access_map property_map;
 	const entity* acting_object = acting_object_param;
-	const e_entity_properties property_index = property_index_param;
+	unsigned int profile_index = property_index_param;
+	if(obor_profile_build < 7553)
+	{
+	    if(profile_index >= (unsigned int)obor_profile_entity_property_end())
+	    {
+	        profile_index = ENTITY_PROPERTY_END;
+	    }
+	    else if(profile_index >= ENTITY_PROPERTY_GUARD_POINTS)
+	    {
+	        profile_index += 1;
+	    }
+	}
+	const e_entity_properties property_index = profile_index;
 	
 	switch (property_index)
 	{
@@ -472,6 +502,13 @@ const s_property_access_map entity_get_property_map(const void* acting_object_pa
 		property_map.id_string = "ENTITY_PROPERTY_GRAB_WALK_STATE";
 		property_map.type = VT_INTEGER;
 		break;
+
+    case ENTITY_PROPERTY_GUARD_POINTS:
+        property_map.config_flags = PROPERTY_ACCESS_CONFIG_MACRO_DEFAULT;
+        property_map.field = &acting_object->guardpoints;
+        property_map.id_string = "ENTITY_PROPERTY_GUARD_POINTS";
+        property_map.type = VT_INTEGER;
+        break;
 
 	case ENTITY_PROPERTY_GUARD_TIME:
 
@@ -1084,7 +1121,8 @@ const s_property_access_map entity_get_property_map(const void* acting_object_pa
 
 		property_map.config_flags = PROPERTY_ACCESS_CONFIG_MACRO_DEFAULT;
 		property_map.field = &acting_object->update_mark;
-		property_map.id_string = "ENTITY_PROPERTY_TURN_TIME";
+        property_map.id_string = obor_profile_build >= 7534
+            ? "ENTITY_PROPERTY_UPDATE_MARK" : "ENTITY_PROPERTY_TURN_TIME";
 		property_map.type = VT_INTEGER;
 		break;
 
@@ -1220,7 +1258,7 @@ HRESULT openbor_get_entity_property(const ScriptVariant* const* varlist, ScriptV
 	* for population, then ext.
 	*/
 
-	if (property_id_param >= 0 && property_id_param < ENTITY_PROPERTY_END) {
+	if (property_id_param >= 0 && property_id_param < obor_profile_entity_property_end()) {
 		property_access_get_member(&property_map, *pretvar);
 		return S_OK;
 	}
@@ -1231,7 +1269,7 @@ HRESULT openbor_get_entity_property(const ScriptVariant* const* varlist, ScriptV
 	*/
 
 	if (property_id_param == PROPERTY_ACCESS_DUMP) {
-		property_access_dump_members(entity_get_property_map, ENTITY_PROPERTY_END, acting_object);
+		property_access_dump_members(entity_get_property_map, obor_profile_entity_property_end(), acting_object);
 	}
 	else {
 		printf("\n\nScript error: %s. Unknown property id (%d). \n\n", SELF_NAME, property_id_param);
@@ -1290,7 +1328,7 @@ HRESULT openbor_set_entity_property(ScriptVariant** varlist, ScriptVariant** con
 	const int property_id_param = (const int)varlist[ARG_PROPERTY]->lVal;
 	const e_entity_properties property_id = (e_entity_properties)(property_id_param);
 
-	if (property_id_param < 0 && property_id_param >= ENTITY_PROPERTY_END) {
+	if (property_id_param < 0 && property_id_param >= obor_profile_entity_property_end()) {
 		printf("\n\nScript error: %s. Unknown property id (%d). \n\n", SELF_NAME, property_id_param);
 		return E_FAIL;
 	}

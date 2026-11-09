@@ -1,0 +1,149 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wignored-qualifiers"
+#if defined(__clang__)
+#pragma GCC diagnostic ignored "-Wdeprecated-non-prototype"
+#endif
+#include "openbor.h"
+#include "ScriptVariant.h"
+#undef printf
+uint32_t obor_profile_build;
+entity *self;
+static entity target, other_entity, sentinel, enemies[3];
+static entity *enemy_pointers[3];
+entity **ent_list = enemy_pointers;
+int ent_max = 3;
+static s_attack attack, received, falls[3];
+static s_defense defense;
+static int damage_calls, computed_calls, kill_calls, defense_type, other_seen, fall_count;
+static int mutate_fall;
+@DEFAULT@
+
+void StrCache_Collect(int index) { (void)index; abort(); }
+CHAR *StrCache_Get(int index) { (void)index; abort(); }
+int StrCache_Pop(int size) { (void)size; abort(); }
+int StrCache_CreateNewFrom(const CHAR *text) { (void)text; abort(); }
+@VARIANTS@
+
+s_defense *defense_find_current_object(entity *ent, s_body *body, e_attack_types type)
+{ (void)ent; if(body) abort(); defense_type = type; return &defense; }
+int calculate_force_damage(entity *ent, entity *other, s_attack *value, s_defense *def)
+{
+    if(ent != &target || def != &defense) abort();
+    ++computed_calls; received = *value; other_seen = other == &other_entity;
+    return value->attack_force + value->attack_drop + value->attack_type;
+}
+static int take_damage(entity *other, s_attack *value, int reset, s_defense *def)
+{
+    if(self != &target || def != &defense || reset) abort();
+    ++damage_calls; received = *value; other_seen = other == &other_entity;
+    return 37;
+}
+void kill_entity(entity *ent, e_kill_entity_trigger trigger)
+{ if(ent != &target || trigger != KILL_ENTITY_TRIGGER_SCRIPT_DAMAGEENTITY) abort(); ++kill_calls; }
+void common_fall(void) {}
+void ent_unlink(entity *ent) { if(ent != self) abort(); }
+void dropweapon(int flag) { if(flag != 1) abort(); }
+void toss(entity *ent, float height) { if(ent != self || height != 3.0f) abort(); }
+float randf(float max) { if(max != 1.0f) abort(); return 0.5f; }
+int set_fall(entity *ent, entity *other, s_attack *value, int reset)
+{
+    if(ent != self || other != self || reset != 1 || fall_count >= 3) abort();
+    falls[fall_count++] = *value;
+    /* The real callback boundary exposes a mutable attack to on-fall scripts. */
+    if(mutate_fall) { value->attack_force += 7; value->meta_tag += 1; }
+    return 1;
+}
+
+@FUNCTIONS@
+#pragma GCC diagnostic pop
+
+static void attack_values(const s_attack *value)
+{
+    printf("[%d,%d,%d,%d,%d,%.9g,%.9g,%.9g]", value->attack_force,
+        value->attack_drop, value->attack_type, value->seal, value->meta_tag,
+        (double)value->dropv.x, (double)value->dropv.y, (double)value->dropv.z);
+}
+static void reset(void)
+{
+    memset(&target, 0, sizeof(target)); memset(&received, 0, sizeof(received));
+    self = &sentinel; damage_calls = computed_calls = kill_calls = 0;
+    defense_type = -99; other_seen = 0;
+    attack = emptyattack;
+    attack.attack_force = 17; attack.attack_drop = 2; attack.attack_type = 3;
+    attack.seal = 23; attack.meta_tag = 29;
+    attack.dropv = (s_axis_principal_float){.x=4,.y=5,.z=6};
+}
+int main(void)
+{
+    static const unsigned profiles[] = {@PROFILES@};
+    static const struct input_case { int count, force_kind, force, drop, type, callback, health, other; }
+        cases[] = {@CASES@};
+    static const struct loop_case { int mutate, excluded; } loops[] = {@LOOP_CASES@};
+    static s_anim fall_animation;
+    static s_anim *animations[ANI_FALL + 1];
+    size_t p, c; int kind, i;
+    puts("{\"status\":\"PASS\",\"profiles\":[");
+    for(p=0; p<sizeof(profiles)/sizeof(*profiles); ++p)
+    {
+        obor_profile_build = profiles[p];
+        printf("%s{\"revision\":%u,\"script\":[", p ? "," : "", profiles[p]);
+        for(kind=0; kind<2; ++kind) for(c=0; c<sizeof(cases)/sizeof(*cases); ++c)
+        {
+            const struct input_case *input = &cases[c];
+            ScriptVariant values[5], result = {0}, *out = &result;
+            ScriptVariant *args[] = {values, values+1, values+2, values+3, values+4};
+            HRESULT status;
+            if(kind && input->count < 3) continue;
+            memset(values,0,sizeof(values));
+            reset(); target.energy_state.health_current = input->health;
+            target.takedamage = input->callback ? take_damage : NULL;
+            values[0].vt=VT_PTR; values[0].ptrVal=&target;
+            values[1].vt=VT_PTR; values[1].ptrVal=input->other ? &other_entity : NULL;
+            values[2].vt=input->force_kind ? VT_DECIMAL : VT_INTEGER;
+            if(input->force_kind) values[2].dblVal=input->force + 0.75;
+            else values[2].lVal=input->force;
+            values[3].vt=VT_INTEGER; values[3].lVal=input->drop;
+            values[4].vt=VT_INTEGER; values[4].lVal=input->type;
+            status=kind ? openbor_getcomputeddamage(args,&out,input->count)
+                        : openbor_damageentity(args,&out,input->count);
+            if(out != &result) abort();
+            printf("%s[%d,%d,%ld,%d,%d,%d,%d,%d,%d,%d,", (kind || c) ? "," : "",
+                kind,(int)status,(long)result.lVal,target.energy_state.health_current,
+                damage_calls,computed_calls,kill_calls,defense_type,other_seen,self==&sentinel);
+            attack_values(&received); putchar(']');
+        }
+        printf("],\"loops\":[");
+        fall_animation.numframes=1; animations[ANI_FALL]=&fall_animation;
+        for(c=0; c<sizeof(loops)/sizeof(*loops); ++c)
+        {
+            reset(); fall_count=0; mutate_fall=loops[c].mutate;
+            memset(enemies,0,sizeof(enemies)); memset(falls,0,sizeof(falls));
+            for(i=0;i<3;++i)
+            {
+                enemy_pointers[i]=&enemies[i]; enemies[i].exists=1;
+                enemies[i].energy_state.health_current=50;
+                enemies[i].modeldata.type=TYPE_ENEMY;
+                enemies[i].modeldata.animation_capacity=ANI_FALL+1;
+                enemies[i].modeldata.animation=animations;
+                enemies[i].modeldata.knockdowncount=9;
+            }
+            if(loops[c].excluded==1) enemies[1].frozen=1;
+            if(loops[c].excluded==2) enemies[1].modeldata.move_config_flags=MOVE_CONFIG_NO_MOVE;
+            if(loops[c].excluded==3) enemies[1].owner=&sentinel;
+            if(loops[c].excluded==4) enemies[1].modeldata.pain_config_flags=PAIN_CONFIG_FALL_DISABLE;
+            drop_all_enemies();
+            printf("%s[%d,%d,[",c ? "," : "",fall_count,self==&sentinel);
+            for(i=0;i<fall_count;++i) { if(i) putchar(','); attack_values(&falls[i]); }
+            printf("]]");
+        }
+        printf("]}");
+    }
+    puts("]}"); return 0;
+}

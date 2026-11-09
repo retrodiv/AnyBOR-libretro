@@ -1,6 +1,20 @@
+/* AnyBOR modification record: 2026-11-09.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Convert the command-list lookup result to its command enumeration
+ * explicitly instead of through a plain pointer cast.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/7533.md
+ * at the source repository root. Original notices follow below.
+ */
+
 #include <string.h>
 #include "commands.h"
 #include "globals.h"
+
+extern uint32_t obor_profile_build;
 
 void freeCommandList(List *list)
 {
@@ -408,6 +422,11 @@ List *createModelCommandList(void)
     LIST_ADD(CMD_MODEL_ICONMPHALF, "iconmphalf");
     LIST_ADD(CMD_MODEL_ICONMPHIGH, "iconmphigh");
     LIST_ADD(CMD_MODEL_ICONMPLOW, "iconmplow");
+    if(obor_profile_build >= 7544)
+    {
+        LIST_ADD(CMD_MODEL_ICONMPMAX, "iconmpmax");
+        LIST_ADD(CMD_MODEL_ICONMPNONE, "iconmpnone");
+    }
     LIST_ADD(CMD_MODEL_ICONPAIN, "iconpain");
     LIST_ADD(CMD_MODEL_ICONPOSITION, "iconposition");
     LIST_ADD(CMD_MODEL_ICONW, "iconw");

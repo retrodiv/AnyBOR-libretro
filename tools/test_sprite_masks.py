@@ -18,10 +18,12 @@ ROOT = Path(os.environ.get('OBOR_TEST_SOURCE', Path(__file__).resolve().parents[
 PROGRAM = r'''
 #include <assert.h>
 #include <stddef.h>
+#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 #include "types.h"
 #include "sprite.h"
+uint32_t obor_profile_build = OBOR_ENGINE_BUILD;
 static unsigned short mix16(unsigned short s,unsigned short d) {return s^d;}
 static unsigned mix32(unsigned s,unsigned d) {return s^d;}
 static s_sprite *image(int mask) {
@@ -137,6 +139,7 @@ int main(void) {
                 (work/'probe.c').write_text(PROGRAM)
                 source = ROOT/'src/engines'/engine/'source'
                 flags = ['-std=gnu99', '-O1', '-g', '-fcommon', '-fno-strict-aliasing',
+                         '-DLIBRETRO=1', '-DOBOR_ENGINE_BUILD=' + engine,
                          '-fsanitize=address,undefined,pointer-overflow',
                          '-ffunction-sections', '-fdata-sections',
                          '-I', str(source), '-I', str(source/'gamelib'),

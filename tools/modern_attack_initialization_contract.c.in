@@ -1,0 +1,212 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "openbor.h"
+#undef printf
+uint32_t obor_profile_build;
+entity *self,*smartbomber,*textbox;
+static entity entities[4],sentinel;
+static entity *pointers[4];
+entity **ent_list=pointers;
+int ent_max=4,ent_count,level_completed,autoland;
+s_player player[MAX_PLAYERS];
+s_savedata savedata;
+s_level *level;
+s_lasthit lasthit;
+u32 _time=17;
+@DEFAULTS@
+static s_defense defense;
+static int event_count,defense_count,kill_count,onkill_calls,clear_calls,animation_calls;
+static int variant,damage_calls,grab_calls,drop_calls,effect_calls,mp_calls,score_calls,didhit_calls;
+static struct event { int kind,recipient,other; s_attack value; } events[16];
+static int defenses[8][2],kills[8][2];
+static int index_of(const entity *ent)
+{
+    int i;
+    for(i=0;i<4;++i) if(ent==&entities[i]) return i;
+    if(ent==&sentinel) return 4;
+    abort();
+}
+static int attack_type_id(e_attack_types type)
+{
+    if(type==ATK_NORMAL) return 0;
+    if(type==ATK_SUB_ENTITY_UNSUMMON) return 1;
+    if(type==ATK_SUB_ENTITY_PARENT_KILL) return 2;
+    if(type==ATK_LAND) return 3;
+    abort();
+}
+static void record(int kind,entity *ent,entity *other,s_attack *value)
+{
+    struct event *event;
+    if(event_count>=16) abort();
+    event=&events[event_count++];event->kind=kind;
+    event->recipient=index_of(ent);event->other=index_of(other);event->value=*value;
+}
+s_defense *defense_find_current_object(entity *ent,s_body *body,e_attack_types type)
+{
+    if(body || defense_count>=8) abort();
+    defenses[defense_count][0]=index_of(ent);defenses[defense_count++][1]=attack_type_id(type);
+    return &defense;
+}
+static int take_damage(entity *other,s_attack *value,int fall,s_defense *object)
+{
+    if(object!=&defense || (fall!=0 && fall!=1)) abort();
+    record(0,self,other,value);return 1;
+}
+void kill_entity(entity *ent,e_kill_entity_trigger trigger)
+{
+    int kind;
+    if(trigger==KILL_ENTITY_TRIGGER_UNSUMMON) kind=1;
+    else if(trigger==KILL_ENTITY_TRIGGER_PARENT_KILL_SUMMON) kind=2;
+    else if(trigger==KILL_ENTITY_TRIGGER_PARENT_KILL_ALL) kind=3;
+    else if(trigger==KILL_ENTITY_TRIGGER_DAMAGE_ON_LANDING) kind=4;
+    else abort();
+    if(kill_count>=8) abort();
+    kills[kill_count][0]=index_of(ent);kills[kill_count++][1]=kind;
+}
+void execute_onkill_script(entity *ent,e_kill_entity_trigger trigger)
+{ (void)trigger;if(ent!=entities) abort();++onkill_calls; }
+void ent_unlink(entity *ent) { if(ent!=entities) abort(); }
+void clear_all_scripts(s_scripts *scripts,int method)
+{ if(scripts || method!=1) abort();++clear_calls; }
+int calculate_edelay(entity *ent,int frame)
+{ (void)frame;if(ent!=entities) abort();return 7; }
+void execute_animation_script(entity *ent)
+{ if(ent!=entities) abort();++animation_calls;ent->animpos=1; }
+void dropweapon(int mode) { if(mode!=1) abort(); }
+void set_weapon(entity *ent,int weapon,int flag) { (void)ent;(void)weapon;(void)flag;abort(); }
+int set_idle(entity *ent) { (void)ent;abort(); }
+void ent_spawn_ent(entity *ent) { (void)ent;abort(); }
+void ent_summon_ent(entity *ent) { (void)ent;abort(); }
+void child_spawn_execute_list(s_child_spawn *head,entity *parent) { (void)head;(void)parent;abort(); }
+int sound_play_sample(int sample,unsigned priority,int left,int right,unsigned speed)
+{ (void)sample;(void)priority;(void)left;(void)right;(void)speed;abort(); }
+bool check_jumpframe(entity *ent,unsigned frame) { (void)frame;if(ent!=entities) abort();return false; }
+entity *knife_spawn(entity *ent,s_projectile *projectile) { (void)ent;(void)projectile;abort(); }
+entity *bomb_spawn(entity *ent,s_projectile *projectile) { (void)ent;(void)projectile;abort(); }
+int star_spawn(entity *ent,s_projectile *projectile) { (void)ent;(void)projectile;abort(); }
+void execute_ondoattack_script(entity *ent,entity *other,s_attack *attack,e_exchange which,int id)
+{
+    (void)id;record(which==EXCHANGE_RECIPIANT ? 1 : 2,ent,other,attack);
+    if(variant==2) lasthit.confirm=0;
+    if(variant==3) entities[0].death_state=DEATH_STATE_DEAD;
+}
+int checkgrab(entity *other,s_attack *attack)
+{ (void)other;(void)attack;++grab_calls;return variant!=4; }
+void set_opponent(entity *ent,entity *other) { ent->opponent=other; }
+void checkdamagedrop(entity *ent,s_attack *attack,s_defense *object)
+{ (void)ent;(void)attack;if(object!=&defense) abort();++drop_calls; }
+void checkdamageeffects(s_attack *attack) { (void)attack;++effect_calls; }
+void checkmpadd(void) { ++mp_calls; }
+void checkhitscore(entity *other,s_attack *attack) { (void)other;(void)attack;++score_calls; }
+void checkdamage(entity *ent,entity *other,s_attack *attack,s_defense *object)
+{
+    if(object!=&defense) abort();
+    ++damage_calls;record(4,ent,other,attack);
+    if(variant==8) ent->energy_state.health_current=0;
+}
+void checkdeath(void) {}
+void execute_didhit_script(entity *ent,entity *other,s_attack *attack,int blocked)
+{ if(blocked) abort();++didhit_calls;record(3,ent,other,attack); }
+float diff(float a,float b) { return a>b ? a-b : b-a; }
+@FUNCTIONS@
+
+static void print_observations(void)
+{
+    int i;
+    printf("],\"events\":[");
+    for(i=0;i<event_count;++i)
+    {
+        const struct event *e=&events[i];const s_attack *a=&e->value;
+        printf("%s[%d,%d,%d,%d,%d,%d,%d,%d,%.9g,%.9g,%.9g,%d]",i ? "," : "",
+            e->kind,e->recipient,e->other,a->attack_force,a->attack_drop,attack_type_id(a->attack_type),
+            a->seal,a->meta_tag,(double)a->dropv.x,(double)a->dropv.y,(double)a->dropv.z,
+            a->flash.object_type==emptyattack.flash.object_type && a->no_kill==emptyattack.no_kill
+            && a->hitsound==emptyattack.hitsound && a->recursive==emptyattack.recursive);
+    }
+    printf("],\"defenses\":[");
+    for(i=0;i<defense_count;++i) printf("%s[%d,%d]",i ? "," : "",defenses[i][0],defenses[i][1]);
+    printf("],\"kills\":[");
+    for(i=0;i<kill_count;++i) printf("%s[%d,%d]",i ? "," : "",kills[i][0],kills[i][1]);
+    printf("]}");
+}
+int main(void)
+{
+    static const unsigned profiles[]={@PROFILES@};
+    static const struct input_case { int kind,variant; } cases[]={@CASES@};
+    static s_anim animation;
+    static s_move move;
+    static s_move *moves[]={&move,&move};
+    size_t p,c;int i;
+    puts("{\"status\":\"PASS\",\"profiles\":[");
+    for(p=0;p<sizeof(profiles)/sizeof(*profiles);++p)
+    {
+        obor_profile_build=profiles[p];printf("%s{\"revision\":%u,\"cases\":[",p ? "," : "",profiles[p]);
+        for(c=0;c<sizeof(cases)/sizeof(*cases);++c)
+        {
+            int kind=cases[c].kind;variant=cases[c].variant;
+            memset(entities,0,sizeof(entities));memset(&sentinel,0,sizeof(sentinel));
+            memset(player,0,sizeof(player));memset(&animation,0,sizeof(animation));
+            memset(&lasthit,0,sizeof(lasthit));
+            event_count=defense_count=kill_count=onkill_calls=clear_calls=animation_calls=0;
+            damage_calls=grab_calls=drop_calls=effect_calls=mp_calls=score_calls=didhit_calls=0;
+            level_completed=0;ent_count=4;self=&sentinel;
+            animation.numframes=2;animation.move=moves;animation.flipframe=-1;
+            animation.quakeframe.framestart=100;animation.sub_entity_model_index=-1;
+            for(i=0;i<4;++i)
+            {
+                pointers[i]=&entities[i];entities[i].exists=1;
+                entities[i].energy_state.health_current=(i+1)*10;
+                entities[i].modeldata.type=TYPE_ENEMY;entities[i].animation=&animation;
+                entities[i].takedamage=take_damage;
+            }
+            printf("%s{\"state\":[",c ? "," : "");
+            if(kind==0)
+            {
+                entities[0].subentity=variant==2 ? NULL : &entities[1];
+                if(variant==1) entities[1].takedamage=NULL;
+                if(variant==4) entities[0].animating=1;
+                update_frame(entities,variant==3 ? 3 : 0);
+                printf("%d,%d,%d,%d,%lu",entities[0].subentity!=NULL,self==&sentinel,
+                    animation_calls,entities[0].animpos,(unsigned long)entities[0].nextanim);
+            }
+            else if(kind==1)
+            {
+                entities[0].modeldata.summonkill=variant==2 ? 2 : variant>=1 ? 1 : 0;
+                entities[0].parent=&sentinel;sentinel.subentity=entities;
+                entities[0].subentity=&entities[1];entities[1].parent=entities;
+                entities[2].parent=entities;
+                if(variant==5) entities[1].takedamage=NULL;
+                if(variant==6) level_completed=1;
+                if(variant==-2) entities[0].exists=0;
+                player[0].ent=smartbomber=textbox=entities;
+                observed_kill_entity(variant==-1 ? NULL : entities,KILL_ENTITY_TRIGGER_SCRIPT_DAMAGEENTITY);
+                printf("%d,%d,%d,%d,%d,%d,%d,%d,%d,%d",entities[0].exists,
+                    entities[0].energy_state.health_current,ent_count,self==&sentinel,onkill_calls,
+                    clear_calls,sentinel.subentity==entities,player[0].ent==NULL,smartbomber==NULL,textbox==NULL);
+            }
+            else
+            {
+                self=entities;entities[0].energy_state.health_current=variant==0 ? 0 : 30;
+                entities[0].damage_on_landing.attack_force=variant==6 || variant==7 ? 0 : 7;
+                entities[0].damage_on_landing.attack_type=ATK_NORMAL2;
+                if(variant==5) entities[0].toexplode=EXPLODE_DETONATE_HIT;
+                if(variant==6 || variant==7) entities[0].die_on_landing=1;
+                if(variant==7) entities[0].takedamage=NULL;
+                if(variant==9) entities[0].opponent=&entities[1];
+                checkdamageonlanding(entities);
+                printf("%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d",entities[0].energy_state.health_current,
+                    entities[0].damage_on_landing.attack_force,entities[0].damage_on_landing.attack_type==ATK_NONE,
+                    entities[0].die_on_landing,self==entities,grab_calls,drop_calls,effect_calls,mp_calls,
+                    score_calls,damage_calls,didhit_calls);
+            }
+            print_observations();
+        }
+        printf("]}");
+    }
+    puts("]}");return 0;
+}

@@ -1,0 +1,169 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wignored-qualifiers"
+#if defined(__clang__)
+#pragma GCC diagnostic ignored "-Wdeprecated-non-prototype"
+#endif
+#include "scriptcommon.h"
+#undef printf
+uint32_t obor_profile_build;
+@DEFAULT@
+s_drawmethod drawmethod;
+static int token,queue_count;
+static s_drawmethod queued[2];
+static int queue_args[2][5];
+void exitIfFalse(int value,const char *assertion,const char *func,const char *file,int line)
+{ (void)assertion;(void)func;(void)file;(void)line;if(!value) abort(); }
+/* Exercise successful native allocations; allocation-failure policy is separate. */
+void *checkAlloc(void *ptr,size_t size,const char *func,const char *file,int line)
+{ (void)func;(void)file;(void)line;if(size && !ptr) abort();return ptr; }
+@HELPERS@
+void spriteq_add_sprite(int x,int y,int z,int frame,s_drawmethod *method,int sortid)
+{
+    if(!method || queue_count>=2) abort();
+    queued[queue_count]=*method;queue_args[queue_count][0]=x;queue_args[queue_count][1]=y;
+    queue_args[queue_count][2]=z;queue_args[queue_count][3]=frame;queue_args[queue_count][4]=sortid;
+    ++queue_count;
+}
+static void fixture_store(s_addframe_data *data,int currentframe)
+{
+    @STORAGE@
+}
+static s_drawmethod fixture_select(entity *e)
+{
+    s_drawmethod *drawmethod=NULL,commonmethod;
+    @SELECTION@
+    return commonmethod;
+}
+static s_drawmethod fixture_face(entity *e,s_drawmethod value)
+{
+    s_drawmethod *drawmethod=&value;
+    @FACING@
+    return value;
+}
+static void fixture_shadow(s_drawmethod *drawmethod,int light_y,int use_mirror)
+{
+    s_drawmethod shadowmethod;
+    struct { int x,y; } light={11,light_y};
+    int shadowcolor=77,shadowalpha=2,shadowopacity=123,alty=7;
+    int qx=10,qy=20,z=30,sy=40,sz=50;
+    unsigned f=3;
+    @SHADOW@
+}
+static s_drawmethod fixture_spawn(void)
+{
+    entity storage,*acting_entity=&storage;
+    s_drawmethod result;
+    memset(&storage,0,sizeof(storage));
+    @SPAWN@
+    if(!acting_entity->drawmethod) abort();
+    result=*acting_entity->drawmethod;
+    free(acting_entity->drawmethod);
+    return result;
+}
+static void fixture_hud(void)
+{
+    @HUD@
+}
+#pragma GCC diagnostic pop
+struct fixture_state { int flag; unsigned config; int flipx,flipy,fliprotate; float rotate; };
+static s_drawmethod fixture_method(const struct fixture_state *input)
+{
+    s_drawmethod result=plainmethod;
+    result.flag=input->flag;result.config=input->config;
+    result.flipx=input->flipx;result.flipy=input->flipy;result.fliprotate=input->fliprotate;
+    result.rotate=input->rotate;result.scalex=301;result.scaley=384;result.centery=9;
+    result.shiftx=13;result.alpha=-1;result.channelr=241;result.table=(unsigned char *)&token;
+    return result;
+}
+static void method(const s_drawmethod *m)
+{
+    printf("[%d,%u,%d,%d,%d,%.9g,%d,%d,%d,%d,%d,%u,%d,%d]",m->flag,(unsigned)m->config,
+           m->flipx,m->flipy,m->fliprotate,(double)m->rotate,m->scalex,m->scaley,m->centery,m->shiftx,
+           (int)m->alpha,(unsigned)m->channelr,m->table==(unsigned char *)&token,
+           m->object_type==OBJECT_TYPE_DRAWMETHOD);
+}
+int main(void)
+{
+    static const unsigned profiles[]={@PROFILES@};
+    static const struct fixture_state states[]={@STATES@};
+    static const int lights[]={@LIGHTS@};
+    unsigned p,s,mode,i,light,mirror;
+    printf("{\"status\":\"PASS\",\"profiles\":[");
+    for(p=0;p<sizeof(profiles)/sizeof(*profiles);++p)
+    {
+        if(p) { putchar(','); }
+        obor_profile_build=profiles[p];
+        printf("{\"revision\":%u,\"storage\":[",profiles[p]);
+        for(s=0;s<sizeof(states)/sizeof(*states);++s) for(mode=0;mode<2;++mode)
+        {
+            s_anim animation; s_addframe_data data; s_drawmethod value=fixture_method(&states[s]),marker=plainmethod;
+            s_drawmethod *stored;
+            memset(&animation,0,sizeof(animation));memset(&data,0,sizeof(data));animation.numframes=3;
+            data.animation=&animation;data.drawmethod=&value;data.framecount=3;
+            if(mode) { animation.drawmethods=calloc(3,sizeof(*animation.drawmethods));if(!animation.drawmethods) abort();animation.drawmethods[0]=&marker; }
+            fixture_store(&data,1);stored=animation.drawmethods?getDrawMethod(&animation,1):NULL;
+            if(s || mode) { putchar(','); }
+            printf("[%d,%d,",animation.drawmethods!=NULL,stored!=NULL);
+            if(stored) method(stored);else printf("null");
+            printf(",%d,%d]",!mode || animation.drawmethods[0]==&marker,
+                   !stored || memcmp(stored,&value,sizeof(value))==0);
+            free(stored);free(animation.drawmethods);
+        }
+        printf("],\"selection\":[");
+        for(s=0;s<sizeof(states)/sizeof(*states);++s) for(mode=0;mode<2;++mode)
+        {
+            entity actor;s_anim animation;s_drawmethod entity_method=fixture_method(&states[s]);
+            s_drawmethod animation_method=entity_method,*entries[1]={&animation_method},selected;
+            memset(&actor,0,sizeof(actor));memset(&animation,0,sizeof(animation));
+            animation_method.scalex=401;animation_method.alpha=5;
+            animation.drawmethods=mode?entries:NULL;animation.numframes=1;
+            actor.animation=&animation;actor.drawmethod=&entity_method;actor.animpos=0;actor.modeldata.alpha=2;
+            selected=fixture_select(&actor);
+            if(s || mode) { putchar(','); } method(&selected);
+        }
+        printf("],\"facing\":[");
+        for(s=0;s<sizeof(states)/sizeof(*states);++s) for(mode=0;mode<2;++mode)
+        {
+            entity actor;s_drawmethod value;
+            memset(&actor,0,sizeof(actor));actor.direction=mode?DIRECTION_LEFT:DIRECTION_RIGHT;
+            value=fixture_face(&actor,fixture_method(&states[s]));
+            if(s || mode) { putchar(','); } method(&value);
+        }
+        printf("],\"shadows\":[");
+        i=0;
+        for(s=0;s<sizeof(states)/sizeof(*states);++s)
+        for(light=0;light<sizeof(lights)/sizeof(*lights);++light) for(mirror=0;mirror<2;++mirror)
+        {
+            s_drawmethod value=fixture_method(&states[s]),before=value;
+            unsigned q,n;
+            queue_count=0;fixture_shadow(&value,lights[light],(int)mirror);
+            if(i++) { putchar(','); }
+            printf("[%d,[",memcmp(&before,&value,sizeof(before))==0);
+            for(q=0;q<(unsigned)queue_count;++q)
+            {
+                if(q) { putchar(','); }
+                putchar('[');method(&queued[q]);printf(",[");
+                for(n=0;n<5;++n) { if(n) putchar(',');printf("%d",queue_args[q][n]); }
+                printf("]]");
+            }
+            printf("]]");
+        }
+        printf("],\"hud\":[");
+        for(s=0;s<sizeof(states)/sizeof(*states);++s)
+        {
+            drawmethod=fixture_method(&states[s]);fixture_hud();
+            if(s) { putchar(','); }
+            method(&drawmethod);
+        }
+        { s_drawmethod value=fixture_spawn();printf("],\"spawn\":");method(&value); }
+        printf("}");
+    }
+    printf("]}\n");return 0;
+}

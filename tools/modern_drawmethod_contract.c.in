@@ -1,0 +1,237 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stdint.h>
+#include <stddef.h>
+#include <stdarg.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wignored-qualifiers"
+#pragma GCC diagnostic ignored "-Wimplicit-fallthrough"
+#if defined(__clang__)
+#pragma GCC diagnostic ignored "-Wdeprecated-non-prototype"
+#endif
+#include "scriptcommon.h"
+#undef printf
+#undef malloc
+#undef free
+uint32_t obor_profile_build;
+@DEFAULT@
+static s_drawmethod actor;
+static unsigned char token_a,token_b;
+static char log_text[8192];
+static int dump_calls,dump_rows;
+static int capture_log(const char *format,...)
+{
+    va_list args;size_t used=strlen(log_text);int count;
+    va_start(args,format);count=vsnprintf(log_text+used,sizeof(log_text)-used,format,args);va_end(args);
+    if(count<0 || (size_t)count>=sizeof(log_text)-used)abort();
+    return count;
+}
+void StrCache_Collect(int index){(void)index;abort();}
+CHAR *StrCache_Get(int index){(void)index;abort();}
+int StrCache_Pop(int size){(void)size;abort();}
+int StrCache_CreateNewFrom(const CHAR *text){(void)text;abort();}
+@VARIANTS@
+#define printf capture_log
+@COMMON@
+@MAP@
+@ADAPTER@
+void property_access_dump_members(property_access_map mapper,const int count,const void *object)
+{
+    ++dump_calls;dump_rows=0;
+    for(int i=0;i<count;++i)
+    {
+        const s_property_access_map map=mapper(object,i);
+        if(map.config_flags && map.field)
+        {
+            ScriptVariant out={0};
+            if(property_access_get_member(&map,&out)!=S_OK)abort();
+            ++dump_rows;
+        }
+    }
+}
+static void *fixture_allocate(size_t size)
+{
+    if(size!=sizeof(s_drawmethod))abort();
+    void *result=malloc(size);if(!result)abort();return result;
+}
+@CONSTRUCTOR@
+@API@
+#undef printf
+#pragma GCC diagnostic pop
+enum { FIXTURE_WORD, FIXTURE_BYTE, FIXTURE_FLOAT, FIXTURE_POINTER };
+static const struct {size_t offset,width;int kind;} fields[]={@FIELDS@};
+static void fixture_seed(void)
+{
+    actor=plainmethod;
+    @SEED@
+    actor.object_type=OBJECT_TYPE_DRAWMETHOD;
+}
+static int marker(const void *pointer)
+{
+    return pointer==NULL?0:pointer==&token_a?1:pointer==&token_b?2:-1;
+}
+static void quote(const char *text)
+{
+    putchar('"');
+    for(const unsigned char *p=(const unsigned char*)text;*p;++p)
+    {
+        if(*p=='\n')printf("\\n");else if(*p=='\r')printf("\\r");
+        else if(*p=='\t')printf("\\t");
+        else if(*p=='"'||*p=='\\')printf("\\%c",*p);else putchar(*p);
+    }
+    putchar('"');
+}
+static void print_variant(HRESULT status,const ScriptVariant *out,const ScriptVariant *result)
+{
+    int code=status==S_OK?1:status==E_FAIL?-1:999;
+    int type=result->vt==VT_EMPTY?0:result->vt==VT_INTEGER?1:result->vt==VT_DECIMAL?2:result->vt==VT_PTR?3:999;
+    if(code==999 || type==999)abort();
+    printf("[%d,%d,%d,",code,out==result,type);
+    if(type==1)printf("%d",(int)result->lVal);else if(type==2)printf("%.9g",result->dblVal);else putchar('0');
+    printf(",%d]",type==3?marker(result->ptrVal):-1);
+}
+static void print_state(void)
+{
+    putchar('[');
+    for(unsigned i=0;i<sizeof(fields)/sizeof(*fields);++i)
+    {
+        const void *field=(const unsigned char*)&actor+fields[i].offset;
+        if(i)putchar(',');
+        if(fields[i].kind==FIXTURE_POINTER){void *value;memcpy(&value,field,sizeof(value));printf("%d",marker(value));}
+        else if(fields[i].kind==FIXTURE_BYTE){unsigned char value;memcpy(&value,field,sizeof(value));printf("%u",(unsigned)value);}
+        else {uint32_t value;if(fields[i].width!=4)abort();memcpy(&value,field,4);printf("%u",value);}
+    }
+    putchar(']');
+}
+static int field_marker(const void *pointer)
+{
+    if(!pointer)return -1;
+    for(unsigned i=0;i<sizeof(fields)/sizeof(*fields);++i)
+        if(pointer==(const unsigned char*)&actor+fields[i].offset)return (int)i;
+    abort();
+}
+static void get_result(int property)
+{
+    ScriptVariant handle={.vt=VT_PTR,.ptrVal=&actor},id={.vt=VT_INTEGER,.lVal=property};
+    ScriptVariant result={.vt=VT_INTEGER,.lVal=123},*out=&result,*args[]={&handle,&id};
+    log_text[0]=0;
+    HRESULT status=openbor_get_drawmethod_property(args,&out,2);
+    print_variant(status,out,&result);putchar(',');quote(log_text);
+}
+int main(void)
+{
+    static const struct {unsigned revision;int table_property,modern_api;} profiles[]={@PROFILES@};
+    static const int kinds[]={VT_INTEGER,VT_DECIMAL,VT_EMPTY};
+    puts("{\"status\":\"PASS\",\"profiles\":[");
+    for(unsigned p=0;p<sizeof(profiles)/sizeof(*profiles);++p)
+    {
+        obor_profile_build=profiles[p].revision;int index=0;
+        printf("%s{\"revision\":%u,\"access\":[",p?",":"",obor_profile_build);
+        for(int property=0;property<38;++property)
+            for(unsigned kind=0;kind<3;++kind)
+            {
+                if(property==profiles[p].table_property && kind)continue;
+                ScriptVariant handle={.vt=VT_PTR,.ptrVal=&actor},id={.vt=VT_INTEGER,.lVal=property};
+                ScriptVariant input={0},result={.vt=VT_INTEGER,.lVal=123},*out=&result,*args[]={&handle,&id,&input};
+                fixture_seed();input.vt=kinds[kind];if(input.vt==VT_DECIMAL)input.dblVal=3.75;else input.lVal=-7;
+                if(property==profiles[p].table_property){input.vt=VT_PTR;input.ptrVal=&token_b;}
+                printf("%s[",index++?",":"");get_result(property);putchar(',');
+                log_text[0]=0;HRESULT status=openbor_set_drawmethod_property(args,&out,3);
+                print_variant(status,out,&result);putchar(',');quote(log_text);putchar(',');
+                get_result(property);putchar(',');print_state();putchar(']');
+            }
+        printf("],\"admission\":[");index=0;
+        for(int setter=0;setter<2;++setter)
+            for(int count=-1;count<(setter?3:2);++count)
+            {
+                ScriptVariant result={.vt=VT_INTEGER,.lVal=123},*out=&result;log_text[0]=0;
+                HRESULT status=setter?openbor_set_drawmethod_property(NULL,&out,count):openbor_get_drawmethod_property(NULL,&out,count);
+                printf("%s[",index++?",":"");print_variant(status,out,&result);putchar(',');quote(log_text);putchar(']');
+            }
+        printf("],\"type_admission\":[");index=0;
+        for(int setter=0;setter<2;++setter)
+            for(int mode=0;mode<(profiles[p].modern_api?4:3);++mode)
+            {
+                fixture_seed();
+                ScriptVariant handle={.vt=VT_PTR,.ptrVal=mode==3?NULL:&actor},id={.vt=VT_INTEGER,.lVal=0};
+                ScriptVariant value={.vt=VT_INTEGER,.lVal=-7},result={.vt=VT_INTEGER,.lVal=123},*out=&result;
+                ScriptVariant *args[]={&handle,&id,&value};
+                if(mode==0)handle.vt=VT_INTEGER;
+                if(mode==1)id.vt=VT_EMPTY;
+                if(mode==2)actor.object_type=OBJECT_TYPE_NONE;
+                log_text[0]=0;
+                HRESULT status=setter?openbor_set_drawmethod_property(args,&out,3):openbor_get_drawmethod_property(args,&out,2);
+                printf("%s[",index++?",":"");print_variant(status,out,&result);
+                printf(",%d,",(int)actor.alpha);quote(log_text);putchar(']');
+            }
+        printf("],\"packed\":[");
+        if(profiles[p].modern_api)
+            for(int mode=0;mode<3;++mode)
+            {
+                union {DOUBLE alignment;unsigned char bytes[sizeof(s_drawmethod)+16];} storage;
+                s_drawmethod *packed=(s_drawmethod*)(storage.bytes+4),expected;
+                ScriptVariant handle={.vt=VT_PTR,.ptrVal=packed},id={.vt=VT_INTEGER};
+                ScriptVariant value={0},result={.vt=VT_INTEGER,.lVal=123},*out=&result,*args[]={&handle,&id,&value};
+                fixture_seed();memcpy(packed,&actor,sizeof(actor));expected=actor;
+                if(mode==0){id.lVal=OBOR_DRAWMETHOD_PROPERTY_COLORSET_TABLE;value.vt=VT_PTR;value.ptrVal=&token_b;expected.table=&token_b;}
+                else if(mode==1){id.lVal=OBOR_DRAWMETHOD_PROPERTY_CHANNEL_RED;value.vt=VT_INTEGER;value.lVal=7;expected.channelr=7;}
+                else {id.lVal=OBOR_DRAWMETHOD_PROPERTY_ROTATE;value.vt=VT_DECIMAL;value.dblVal=3.75;expected.rotate=3.75f;}
+                log_text[0]=0;
+                HRESULT status=openbor_set_drawmethod_property(args,&out,3);
+                printf("%s[",mode?",":"");print_variant(status,out,&result);putchar(',');
+                result=(ScriptVariant){.vt=VT_INTEGER,.lVal=123};out=&result;
+                status=openbor_get_drawmethod_property(args,&out,2);print_variant(status,out,&result);
+                for(unsigned i=0;i<sizeof(fields)/sizeof(*fields);++i)
+                    if(memcmp((const unsigned char*)packed+fields[i].offset,
+                              (const unsigned char*)&expected+fields[i].offset,fields[i].width))abort();
+                if(log_text[0] || packed->object_type!=OBJECT_TYPE_DRAWMETHOD)abort();
+                printf(",1]");
+            }
+        printf("],\"dump\":[");fixture_seed();dump_calls=dump_rows=0;get_result(PROPERTY_ACCESS_DUMP);
+        printf(",%d,%d],\"producer\":[",dump_calls,dump_rows);
+        {
+            ScriptVariant result={0},*out=&result;log_text[0]=0;
+            HRESULT status=openbor_allocate_drawmethod(NULL,&out,0);
+            s_drawmethod *record=result.ptrVal;
+            printf("%d,%d,%d,%d]",status==S_OK,out==&result,result.vt==VT_PTR,
+                record && !memcmp(record,&plainmethod,sizeof(*record)) && record->object_type==OBJECT_TYPE_DRAWMETHOD);
+            free(record);
+        }
+        printf(",\"maps\":[");
+        if(profiles[p].modern_api)
+            for(unsigned i=0;i<=OBOR_DRAWMETHOD_PROPERTY_END;++i)
+            {
+                const s_property_access_map map=obor_profile_drawmethod_get_property_map(&actor,i);
+                printf("%s[%u,%d,%d,",i?",":"",(unsigned)map.config_flags,map.type,field_marker(map.field));
+                quote(map.id_string);putchar(']');
+            }
+        printf("],\"default_set\":[");
+        {
+            ScriptVariant handle={.vt=VT_PTR,.ptrVal=(void*)&plainmethod},id={.vt=VT_INTEGER,.lVal=0};
+            ScriptVariant value={.vt=VT_INTEGER,.lVal=99},result={.vt=VT_INTEGER,.lVal=123},*out=&result;
+            ScriptVariant *args[]={&handle,&id,&value};log_text[0]=0;
+            HRESULT status=openbor_set_drawmethod_property(args,&out,3);
+            print_variant(status,out,&result);putchar(',');quote(log_text);printf(",%d]",(int)plainmethod.alpha);
+        }
+        printf(",\"copies\":[");
+        for(int c=0;c<6;++c)
+        {
+            s_drawmethod a=plainmethod,b=plainmethod;a.alpha=11;b.alpha=22;
+            ScriptVariant left={.vt=VT_PTR,.ptrVal=c==1?(void*)&plainmethod:&a};
+            ScriptVariant right={.vt=VT_PTR,.ptrVal=c==2?(void*)&plainmethod:&b};
+            ScriptVariant result={.vt=VT_INTEGER,.lVal=123},*out=&result,*args[]={&left,&right};
+            if(c==3)left.vt=VT_INTEGER;
+            log_text[0]=0;
+            int count=c==4?1:c==5?-1:2;
+            HRESULT status=openbor_copy_drawmethod(c>=4?NULL:args,&out,count);
+            printf("%s[",c?",":"");print_variant(status,out,&result);
+            printf(",%d,%d,",(int)a.alpha,(int)b.alpha);quote(log_text);putchar(']');
+        }
+        printf("]}");
+    }
+    puts("]}");return 0;
+}

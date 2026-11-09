@@ -1,0 +1,128 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdarg.h>
+#include <stdlib.h>
+#include <string.h>
+#include <strings.h>
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wignored-qualifiers"
+#if defined(__clang__)
+#pragma GCC diagnostic ignored "-Wdeprecated-non-prototype"
+#endif
+#include "scriptcommon.h"
+#undef printf
+#ifndef stricmp
+#define stricmp strcasecmp
+#endif
+uint32_t obor_profile_build;
+entity *self;
+static entity parent_object,child;
+static int model_ok,spawn_ok,spawn_calls,spawn_kind,color;
+static unsigned prime_seed;
+static const char *active_name;
+static char log_text[8192];
+static int capture_log(const char *format,...)
+{
+    va_list args;size_t used=strlen(log_text);int count;
+    va_start(args,format);count=vsnprintf(log_text+used,sizeof(log_text)-used,format,args);va_end(args);
+    if(count<0 || (size_t)count>=sizeof(log_text)-used) abort();
+    return count;
+}
+void StrCache_Collect(int index) { if(index!=0) abort(); }
+CHAR *StrCache_Get(int index) { if(index!=0 || !active_name) abort();return (CHAR*)active_name; }
+int StrCache_Pop(int size) { (void)size;abort(); }
+int StrCache_CreateNewFrom(const CHAR *text) { (void)text;abort(); }
+@VARIANTS@
+@SEARCH@
+@ENUMS@
+@NAMES@
+@DEFAULT@
+int get_cached_model_index(char *name)
+{ if(strcmp(name,"model")) abort();return model_ok ? 2 : MODEL_INDEX_NONE; }
+entity *knife_spawn(entity *parent,s_projectile *settings)
+{
+    if(parent!=self || settings->knife!=2) abort();
+    ++spawn_calls;spawn_kind=0;if(!spawn_ok) return NULL;
+    child.projectile_prime=prime_seed;return &child;
+}
+entity *bomb_spawn(entity *parent,s_projectile *settings)
+{
+    if(parent!=self || settings->bomb!=2) abort();
+    ++spawn_calls;spawn_kind=1;if(!spawn_ok) return NULL;
+    child.projectile_prime=prime_seed;return &child;
+}
+void ent_set_colourmap(entity *ent,unsigned map)
+{ if(ent!=&child) abort();color=(int)map; }
+#define printf capture_log
+@MAPPER@
+@GETTER@
+@PROJECTILE@
+#undef printf
+#pragma GCC diagnostic pop
+static void print_string(const char *text)
+{
+    const unsigned char *s=(const unsigned char*)text;putchar('"');
+    for(;*s;++s)
+    {
+        if(*s=='\n') printf("\\n");
+        else if(*s=='\r') printf("\\r");
+        else if(*s=='\t') printf("\\t");
+        else if(*s=='"' || *s=='\\') printf("\\%c",*s);
+        else putchar(*s);
+    }
+    putchar('"');
+}
+int main(void)
+{
+    static const unsigned profiles[]={@PROFILES@};
+    static const struct input { int count,flag,kind,model,spawn;unsigned seed; } inputs[]={@CASES@};
+    size_t p,c;int i;
+    self=&parent_object;
+    printf("{\"status\":\"PASS\",\"flags\":[%u,%u,%u,%u,%u],\"profiles\":[",
+        PROJECTILE_PRIME_BASE_FLOOR,PROJECTILE_PRIME_LAUNCH_STATIONARY,PROJECTILE_PRIME_BASE_Y,
+        PROJECTILE_PRIME_LAUNCH_MOVING,PROJECTILE_PRIME_INITIALIZE_LEGACY_PROJECTILE_FUNCTION);
+    for(p=0;p<sizeof(profiles)/sizeof(*profiles);++p)
+    {
+        obor_profile_build=profiles[p];printf("%s{\"revision\":%u,\"getters\":[",p ? "," : "",profiles[p]);
+        for(i=0;i<4;++i)
+        {
+            ScriptVariant handle={.vt=VT_PTR,.ptrVal=&parent_object},prop={.vt=VT_INTEGER,.lVal=_ep_health};
+            ScriptVariant result={.vt=VT_INTEGER,.lVal=99},*out=&result,*args[]={&handle,&prop};
+            HRESULT status;double value=0;
+            memset(&parent_object,0,sizeof(parent_object));parent_object.position.y=13;
+            parent_object.energy_state.health_current=77;active_name="health";log_text[0]=0;
+            if(i==1) { prop.vt=VT_STR;prop.strVal=0; }
+            if(i==3) handle.ptrVal=NULL;
+            status=openbor_getentityproperty(args,&out,i==2 ? 1 : 2);
+            if(result.vt==VT_INTEGER) value=result.lVal;
+            if(result.vt==VT_DECIMAL) value=result.dblVal;
+            printf("%s[%d,%d,%d,%.9g,%d,%d,",i ? "," : "",(int)status,out==&result,
+                result.vt,value,prop.vt,prop.lVal);print_string(log_text);putchar(']');
+        }
+        printf("],\"projectiles\":[");
+        for(c=0;c<sizeof(inputs)/sizeof(*inputs);++c)
+        {
+            const struct input *input=&inputs[c];ScriptVariant values[8],result={0},*out=&result,*args[8];
+            HRESULT status;
+            memset(values,0,sizeof(values));
+            for(i=0;i<8;++i) { values[i].vt=VT_INTEGER;args[i]=&values[i]; }
+            values[0].vt=VT_STR;values[0].strVal=0;
+            values[1].lVal=2;values[2].lVal=3;values[3].lVal=4;values[4].lVal=DIRECTION_RIGHT;
+            values[5].lVal=input->flag;values[6].lVal=input->kind;values[7].lVal=5;
+            memset(&parent_object,0,sizeof(parent_object));memset(&child,0,sizeof(child));
+            parent_object.base=7;parent_object.position.x=100;parent_object.position.y=50;parent_object.position.z=30;
+            active_name="model";model_ok=input->model;spawn_ok=input->spawn;prime_seed=input->seed;
+            spawn_calls=0;spawn_kind=color=-1;log_text[0]=0;
+            status=openbor_projectile(args,&out,input->count);
+            printf("%s[%d,%d,%d,%d,%d,%d,%u,%.9g,%.9g,%.9g,%.9g,%d,%d]",c ? "," : "",
+                (int)status,out==&result,result.vt,result.ptrVal==&child,spawn_kind,spawn_calls,
+                child.projectile_prime,(double)child.base,(double)child.position.x,(double)child.position.y,
+                (double)child.position.z,child.direction,color);
+        }
+        printf("]}");
+    }
+    puts("]}");return 0;
+}

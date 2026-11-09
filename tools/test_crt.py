@@ -64,8 +64,8 @@ def main():
                 assert marker in result, label + ": " + result
             assert "nonblack_max=0" not in result, result
             assert "FAILED" not in result, result
-            assert ("option_order=obor_crt_tv|obor_analog|obor_rumble|obor_macros|"
-                    "obor_engine|obor_state_content|obor_state_compression|obor_gamelog") in result, result
+            assert ("option_order=anybor_crt_tv|anybor_analog|anybor_rumble|anybor_macros|"
+                    "anybor_engine|anybor_state_content|anybor_state_compression|anybor_gamelog") in result, result
             if options.get("OBOR_LOAD_AT"):
                 assert "load state at frame 120: ok" in result, result
             if options.get("OBOR_SAVE_AT"):

@@ -80,10 +80,15 @@ def script_program(data):
         raise ValueError('Unresolved script registry dependency')
     return text
 
-def native_output(code, data):
+def native_output(code, data, *, extra_includes=()):
     engine = ROOT / 'src/engines' / data['engine']
     includes = [ROOT / 'src/port/libretro', engine, engine / 'source'] + [p for p in
         sorted((engine / 'source').iterdir()) if p.is_dir()]
+    for directory in extra_includes:
+        directory = Path(directory)
+        if not directory.is_dir():
+            raise ValueError('Missing declared native dependency include directory')
+        includes.append(directory)
     compiler = shlex.split(os.environ.get('HOST_CC', 'cc'))
     warnings = ['-Wno-pragma-pack'] if sys.platform == 'darwin' or any(
         'clang' in Path(word).name for word in compiler) else []

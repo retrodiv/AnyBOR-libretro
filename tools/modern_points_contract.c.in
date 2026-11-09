@@ -1,0 +1,280 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdarg.h>
+#include <stdlib.h>
+#include <string.h>
+#include "openbor.h"
+#include "commands.h"
+#undef printf
+
+uint32_t obor_profile_build;
+static unsigned long _time;
+static entity *self;
+static int airborne;
+static s_defense defense;
+static char debug_text[1024];
+
+static int capture_debug(const char *format, ...)
+{
+    va_list args;
+    int result;
+    size_t used = strlen(debug_text);
+    va_start(args, format);
+    result = vsnprintf(debug_text + used, sizeof(debug_text) - used, format, args);
+    va_end(args);
+    if(result < 0 || (size_t)result >= sizeof(debug_text) - used) abort();
+    return result;
+}
+
+s_defense *defense_find_current_object(entity *actor, s_body *body, e_attack_types type)
+{
+    (void)actor; (void)body; (void)type;
+    return &defense;
+}
+
+void StrCache_Collect(int index) { (void)index; abort(); }
+@VARIANTS@
+
+enum { _ep_guardpoints, _ep_jugglepoints, _ep_maxguardpoints, _ep_maxjugglepoints };
+
+static LONG read_points(entity *ent, int property)
+{
+    ScriptVariant output = {0};
+    ScriptVariant *result = &output;
+    ScriptVariant **pretvar = &result;
+    switch(property)
+    {
+        @GET_CASES@
+    default:
+        abort();
+    }
+    if(output.vt != VT_INTEGER) abort();
+    return output.lVal;
+}
+
+static void write_points(entity *ent, int property, int type, int value)
+{
+    ScriptVariant input = {0};
+    ScriptVariant *varlist[3] = {NULL, NULL, &input};
+    LONG ltemp = 0;
+    input.vt = type;
+    if(type == VT_DECIMAL) input.dblVal = value + (value < 0 ? -0.75 : 0.75);
+    else input.lVal = value;
+    switch(property)
+    {
+        @SET_CASES@
+    default:
+        abort();
+    }
+}
+
+static void initialize_points(s_model *newchar)
+{
+    @DEFAULTS@
+}
+
+static void initialize_entity_points(entity *e)
+{
+    @INITIALIZE@
+}
+
+static void load_points(s_model *newchar, int cmd, const char *text)
+{
+    char *value;
+    ArgList arglist = {0};
+    arglist.count = 2;
+    arglist.args[1] = (char *)text;
+    switch(cmd)
+    {
+        @LOAD_CASES@
+    default:
+        abort();
+    }
+}
+
+@ELIGIBLE@
+
+static void deduct_guard(entity *ent, s_attack *attack)
+{
+    @GUARD_DEDUCTION@
+}
+
+static void recover_guard(void)
+{
+    @RECOVERY@
+}
+
+@RESETS@
+@PREDICATES@
+
+static int guard_pain_reset(entity *iPain)
+{
+    int pain = 0;
+    @PAIN@
+    return pain == ANI_GUARDBREAK;
+}
+
+#define inair(actor) airborne
+#define printf capture_debug
+static int allow_juggle(entity *target, s_attack *attack)
+{
+    int once;
+    for(once = 0; once < 1; ++once)
+    {
+        @AIRBORNE_ELIGIBILITY@
+        return 1;
+    }
+    return 0;
+}
+
+static void deduct_juggle(s_attack *attack)
+{
+    @JUGGLE_DEDUCTION@
+}
+#undef printf
+#undef inair
+
+static void print_state(entity *actor)
+{
+    printf("[%d,%d,%d,%d]", (int)read_points(actor, _ep_guardpoints),
+           (int)read_points(actor, _ep_jugglepoints),
+           (int)read_points(actor, _ep_maxguardpoints),
+           (int)read_points(actor, _ep_maxjugglepoints));
+}
+
+static long long guard_current(entity *actor)
+{
+    return obor_profile_build >= 7553 ? (long long)actor->guardpoints :
+                                      (long long)actor->modeldata.guardpoints.current;
+}
+
+static long long juggle_current(entity *actor)
+{
+    return obor_profile_build >= 7553 ? (long long)actor->jugglepoints :
+                                      (long long)actor->modeldata.jugglepoints.current;
+}
+
+static void set_guard(entity *actor, int maximum, int current)
+{
+    actor->modeldata.profile_guardpoints = maximum;
+    actor->modeldata.guardpoints.max = maximum;
+    actor->guardpoints = current;
+    actor->modeldata.guardpoints.current = current;
+}
+
+static void set_juggle(entity *actor, int maximum, int current)
+{
+    actor->modeldata.profile_jugglepoints = maximum;
+    actor->modeldata.jugglepoints.max = maximum;
+    actor->jugglepoints = current;
+    actor->modeldata.jugglepoints.current = current;
+}
+
+static void print_debug(void)
+{
+    const unsigned char *p = (const unsigned char *)debug_text;
+    putchar('"');
+    for(; *p; ++p)
+    {
+        if(*p == '\n') printf("\\n");
+        else if(*p == '\t') printf("\\t");
+        else if(*p == '"' || *p == '\\') printf("\\%c", *p);
+        else putchar(*p);
+    }
+    putchar('"');
+}
+
+int main(void)
+{
+    static const unsigned profiles[] = {@PROFILES@};
+    static const struct script_case {
+        const char *guard, *juggle;
+        int property, type, value;
+    } scripts[] = {@SCRIPT_CASES@};
+    static const struct guard_case {
+        int maximum, current, cost, rate, blocking;
+        unsigned long now, deadline;
+    } guards[] = {@GUARD_CASES@};
+    static const struct juggle_case { int maximum, current, cost, air; } juggles[] = {
+        @JUGGLE_CASES@
+    };
+    static entity actor, other;
+    static s_attack attack;
+    size_t p, c;
+    puts("{\"status\":\"PASS\",\"profiles\":[");
+    for(p = 0; p < sizeof(profiles) / sizeof(profiles[0]); ++p)
+    {
+        obor_profile_build = profiles[p];
+        self = &actor;
+        printf("%s{\"revision\":%u,\"script\":[", p ? "," : "", profiles[p]);
+        for(c = 0; c < sizeof(scripts) / sizeof(scripts[0]); ++c)
+        {
+            memset(&actor, 0, sizeof(actor));
+            actor.guardpoints = 777; actor.jugglepoints = 888;
+            initialize_points(&actor.modeldata);
+            printf("%s{\"defaults\":", c ? "," : "");
+            print_state(&actor);
+            load_points(&actor.modeldata, CMD_MODEL_GUARDPOINTS, scripts[c].guard);
+            load_points(&actor.modeldata, CMD_MODEL_JUGGLEPOINTS, scripts[c].juggle);
+            printf(",\"loaded\":"); print_state(&actor);
+            initialize_entity_points(&actor);
+            printf(",\"spawned\":"); print_state(&actor);
+            write_points(&actor, scripts[c].property, scripts[c].type, scripts[c].value);
+            printf(",\"written\":"); print_state(&actor);
+            putchar('}');
+        }
+        printf("],\"guard\":[");
+        for(c = 0; c < sizeof(guards) / sizeof(guards[0]); ++c)
+        {
+            int eligible, pain;
+            long long deducted, recovered;
+            memset(&actor, 0, sizeof(actor));
+            memset(&attack, 0, sizeof(attack));
+            actor.blocking = guards[c].blocking;
+            actor.direction = DIRECTION_RIGHT;
+            other.direction = DIRECTION_LEFT;
+            set_guard(&actor, guards[c].maximum, guards[c].current);
+            attack.guardcost = guards[c].cost;
+            actor.modeldata.guardrate = guards[c].rate;
+            _time = guards[c].now; actor.guardtime = guards[c].deadline;
+            eligible = check_blocking_eligible(&actor, &other, &attack, NULL);
+            deduct_guard(&actor, &attack); deducted = guard_current(&actor);
+            recover_guard(); recovered = guard_current(&actor);
+            printf("%s{\"eligible\":%d,\"deducted\":%lld,\"recovered\":%lld,"
+                   "\"deadline\":%lu,\"break_checks\":[%d,%d,%d,%d,%d]",
+                   c ? "," : "", eligible, deducted, recovered, actor.guardtime,
+                   probe_set_pain(&actor), probe_checkdamagedrop(&actor),
+                   probe_calculate_force_damage(&actor), probe_checkdamageonlanding(&actor),
+                   probe_common_takedamage(&actor));
+            pain = guard_pain_reset(&actor);
+            printf(",\"pain\":%d,\"after_pain\":%lld}", pain, guard_current(&actor));
+        }
+        printf("],\"juggle\":[");
+        for(c = 0; c < sizeof(juggles) / sizeof(juggles[0]); ++c)
+        {
+            int allowed;
+            long long deducted, rise, riseattack;
+            memset(&actor, 0, sizeof(actor));
+            set_juggle(&actor, juggles[c].maximum, juggles[c].current);
+            attack.jugglecost = juggles[c].cost;
+            airborne = juggles[c].air;
+            debug_text[0] = '\0';
+            allowed = allow_juggle(&actor, &attack);
+            /* Observe the deduction independently, including unsigned wrap. */
+            deduct_juggle(&attack); deducted = juggle_current(&actor);
+            probe_set_rise(&actor); rise = juggle_current(&actor);
+            set_juggle(&actor, juggles[c].maximum, -7);
+            probe_set_riseattack(&actor); riseattack = juggle_current(&actor);
+            printf("%s{\"allowed\":%d,\"deducted\":%lld,\"rise\":%lld,"
+                   "\"riseattack\":%lld,\"debug\":", c ? "," : "", allowed,
+                   deducted, rise, riseattack);
+            print_debug(); putchar('}');
+        }
+        printf("]}");
+    }
+    puts("]}");
+    return 0;
+}

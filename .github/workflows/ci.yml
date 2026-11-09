@@ -547,6 +547,54 @@ jobs:
           run_check python3 tools/test_4453.py --core anybor_libretro.dylib
           run_check python3 tools/test_6330_6510.py --core anybor_libretro.dylib
           run_check python3 tools/test_script_file_records.py
+          run_check python3 tools/test_modern_attack_callers.py
+          run_check python3 tools/test_modern_attack_initialization.py
+          run_check python3 tools/test_modern_attack_lifecycle.py
+          run_check python3 tools/test_modern_attack_transitions.py
+          run_check python3 tools/test_modern_audio_cache.py
+          run_check python3 tools/test_modern_audio_mixer.py
+          run_check python3 tools/test_modern_binding.py
+          run_check python3 tools/test_modern_boot_flow.py
+          run_check python3 tools/test_modern_combat_running.py
+          run_check python3 tools/test_modern_control_menu.py
+          run_check python3 tools/test_modern_drawing_free.py
+          run_check python3 tools/test_modern_drawing_loading.py
+          run_check python3 tools/test_modern_drawing_names.py
+          run_check python3 tools/test_modern_drawing_parents.py
+          run_check python3 tools/test_modern_drawing_primitives.py
+          run_check python3 tools/test_modern_drawing_queue.py
+          run_check python3 tools/test_modern_drawmethod.py
+          run_check python3 tools/test_modern_energy.py
+          run_check python3 tools/test_modern_entity_drawing.py
+          run_check python3 tools/test_modern_failure_diagnostics.py
+          run_check python3 tools/test_modern_flash.py
+          run_check python3 tools/test_modern_flash_effects.py
+          run_check python3 tools/test_modern_flash_loading.py
+          run_check python3 tools/test_modern_flash_producer.py
+          run_check python3 tools/test_modern_global_config.py
+          run_check python3 tools/test_modern_landing_damage.py
+          run_check python3 tools/test_modern_layer_drawing.py
+          run_check python3 tools/test_modern_legacy_drawing.py
+          run_check python3 tools/test_modern_legacy_script_routing.py
+          run_check python3 tools/test_modern_level_drawing.py
+          run_check python3 tools/test_modern_loading.py
+          run_check python3 tools/test_modern_model_palette_paths.py
+          run_check python3 tools/test_modern_mp_icons.py
+          run_check python3 tools/test_modern_music_api.py
+          run_check python3 tools/test_modern_music_dispatch.py
+          run_check python3 tools/test_modern_music_lifecycle.py
+          run_check python3 tools/test_modern_music_producers.py
+          run_check python3 tools/test_modern_palette_api.py
+          run_check python3 tools/test_modern_palette_loading.py
+          run_check python3 tools/test_modern_palette_transport.py
+          run_check python3 tools/test_modern_points.py
+          run_check python3 tools/test_modern_progress_records.py
+          run_check python3 tools/test_modern_projectiles.py
+          run_check python3 tools/test_modern_properties.py
+          run_check python3 tools/test_modern_script_registry.py
+          run_check python3 tools/test_modern_software_fade.py
+          run_check python3 tools/test_modern_sprite_masks.py
+          run_check python3 tools/test_modern_system_routing.py
           if (( ${#failures[@]} )); then
             printf "Failed regression commands (%s):\n" "${#failures[@]}"
             printf "  %s\n" "${failures[@]}"

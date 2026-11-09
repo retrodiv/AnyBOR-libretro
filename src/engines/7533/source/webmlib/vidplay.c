@@ -1,4 +1,4 @@
-/* AnyBOR modification record: 2026-10-10.
+/* AnyBOR modification record: 2026-11-09.
  * Port maintained by retrodiv <retrodiv@proton.me>.
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
@@ -6,7 +6,8 @@
  * Coordinate WebM worker shutdown and yield while waiting for video frames.
  * Add an opt-in common media rendezvous with bounded active waits, packet
  * queues and decoded-frame reserves; coordinate PCM and video without
- * changing engine clocks or default scheduling.
+ * changing engine clocks or default scheduling. Transport the selected music
+ * volume through the shared media adapter and its native lifecycle.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/7533.md
  * at the source repository root. Original notices follow below.
@@ -402,7 +403,7 @@ static void init_audio(nestegg *ctx, int track, audio_context *audio_ctx, int vo
 
     // initialize soundmix music channel
     sound_close_music();
-    memset(&musicchannel, 0, sizeof(musicchannel));
+    sound_music_channel_clear(&musicchannel);
     musicchannel.fp_period = INT_TO_FIX(audio_ctx->frequency) / playfrequency;
     musicchannel.volume[0] = volume;
     musicchannel.volume[1] = volume;

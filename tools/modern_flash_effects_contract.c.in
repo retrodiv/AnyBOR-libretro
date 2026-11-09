@@ -1,0 +1,205 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stdint.h>
+#include <stdarg.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "openbor.h"
+#undef printf
+uint32_t obor_profile_build;
+s_global_sample global_sample_list;
+s_axis_principal_float default_model_dropv = {.x=2,.y=3,.z=4};
+s_lasthit lasthit;
+@DEFAULTS@
+static entity actor, attacker, effect;
+static s_attack attack;
+static s_body body;
+static int spawn_calls, spawn_failed, spawn_model, spawn_direction, spawn_scripts, toflip;
+static float spawn_x, spawn_z, spawn_y;
+static int smart_model, smart_attack;
+static char log_text[16384];
+static int capture_log(const char *format, ...)
+{
+    va_list args;
+    size_t used = strlen(log_text);
+    int count;
+    va_start(args, format);
+    count = vsnprintf(log_text + used, sizeof(log_text) - used, format, args);
+    va_end(args);
+    if(count < 0 || (size_t)count >= sizeof(log_text) - used) abort();
+    return count;
+}
+void *checkAlloc(void *pointer, size_t size, const char *func, const char *file, int line)
+{
+    (void)func; (void)file; (void)line;
+    if(size && !pointer) abort();
+    return pointer;
+}
+void borShutdown(int status, char *message, ...)
+{
+    (void)status; (void)message; abort();
+}
+void recursive_damage_dump_object(s_damage_recursive *recursive)
+{
+    (void)recursive; abort();
+}
+int get_cached_model_index(char *name)
+{
+    if(strcmp(name, "flash")) abort();
+    return 33;
+}
+entity *spawn(const float x, const float z, const float y, const e_direction direction,
+              char *name, const int model, s_model *pointer)
+{
+    if(name || pointer) abort();
+    ++spawn_calls; spawn_x=x; spawn_z=z; spawn_y=y;
+    spawn_model=model; spawn_direction=direction;
+    memset(&effect, 0, sizeof(effect));
+    effect.modeldata.toflip=toflip;
+    return spawn_failed || model < 0 ? NULL : &effect;
+}
+void execute_onspawn_script(entity *ent)
+{
+    if(ent != &effect) abort();
+    ++spawn_scripts;
+}
+#define printf capture_log
+@FUNCTIONS@
+#undef printf
+static entity *record_smart_flash(entity *self, s_attack *argument, int selected_attack, int selected_model)
+{
+    if(self != &actor || argument != &attack) abort();
+    smart_model=selected_model; smart_attack=selected_attack;
+    return NULL;
+}
+static void select_smart_flash(entity *self, s_attack *attack) { @SMART_CALL@ }
+static int shadow_flip(int direction)
+{
+    s_drawmethod shadowmethod = {0};
+    entity *e = &actor;
+    e->direction=direction;
+    @SHADOW@
+    return !!shadowmethod.flipx;
+}
+static void initialize_model(s_model *newchar) { @MODEL_INITIALIZE@ }
+static void inherit_model(s_model *newmodel, s_model *model) { @MODEL_INHERIT@ }
+static void quote(const char *text)
+{
+    const unsigned char *p = (const unsigned char *)text;
+    putchar('"');
+    for(; *p; ++p)
+    {
+        if(*p == '\n') printf("\\n");
+        else if(*p == '\r') printf("\\r");
+        else if(*p == '\t') printf("\\t");
+        else if(*p == '"' || *p == '\\') printf("\\%c", *p);
+        else putchar(*p);
+    }
+    putchar('"');
+}
+static void print_flash_lines(void)
+{
+    char *line=log_text;
+    int count=0;
+    putchar('[');
+    while(*line)
+    {
+        char *end=strchr(line, '\n'), *member;
+        if(end) *end='\0';
+        member=strstr(line, "->flash");
+        if(!member) member=strstr(line, "->hitflash");
+        if(!member) member=strstr(line, "->blockflash");
+        if(member) { if(count++) putchar(','); quote(member); }
+        if(!end) break;
+        *end='\n'; line=end+1;
+    }
+    putchar(']');
+}
+struct input_case {
+    int attack_flash, model_flash, noatflash, noflash, z_global, z_attack, z_body;
+    int layer_global, layer_attack, layer_body, adjust_global, adjust_attack, adjust_body;
+    int has_attacker, flip, direction, hit_right, failed;
+};
+static const struct input_case cases[] = {@CASES@};
+static void effect_case(const struct input_case *input)
+{
+    entity *result;
+    memset(&actor,0,sizeof(actor)); memset(&attacker,0,sizeof(attacker));
+    memset(&lasthit,0,sizeof(lasthit)); attack=emptyattack; body=empty_body;
+    actor.position.x=40; actor.position.z=30; actor.direction=input->direction;
+    actor.modeldata.noatflash=input->noatflash; attacker.position.z=20;
+    attack.no_flash=input->noflash;
+    attack.flash.z_source=input->z_attack; body.flash.z_source=input->z_body;
+    attack.flash.layer_source=input->layer_attack; body.flash.layer_source=input->layer_body;
+    attack.flash.layer_adjust=input->adjust_attack; body.flash.layer_adjust=input->adjust_body;
+    global_config.flash_z_source=input->z_global;
+    global_config.flash_layer_source=input->layer_global;
+    global_config.flash_layer_adjust=input->adjust_global;
+    global_config.flash.z_source=input->z_global+1;
+    global_config.flash.layer_source=input->layer_global+1;
+    global_config.flash.layer_adjust=input->adjust_global+10;
+    lasthit.position.x=input->hit_right ? 45 : 35; lasthit.position.y=7; lasthit.position.z=25;
+    lasthit.attack=&attack; lasthit.detect_body=&body;
+    lasthit.attacker=input->has_attacker ? &attacker : NULL;
+    spawn_calls=spawn_scripts=0; spawn_model=spawn_direction=-99;
+    spawn_x=spawn_y=spawn_z=-99; spawn_failed=input->failed; toflip=input->flip;
+    memset(&effect,0,sizeof(effect));
+    result=spawn_attack_flash(&actor,&attack,input->attack_flash,input->model_flash);
+    printf("[%d,%d,%d,%g,%g,%g,%d,%d,%g,%d,%d,%d,%d]", result==&effect,spawn_calls,
+           spawn_model,spawn_x,spawn_z,spawn_y,spawn_direction,effect.modeldata.setlayer,
+           effect.base,(int)effect.direction,!!(effect.autokill&AUTOKILL_ANIMATION_COMPLETE),
+           effect.spawntype==SPAWN_TYPE_FLASH,spawn_scripts);
+}
+int main(void)
+{
+    static const unsigned profiles[] = {@PROFILES@};
+    static const int inherited[][2]={{-1,-1},{0,-1},{-1,0},{45,46}};
+    static s_model model, parent;
+    unsigned p,c;
+    puts("{\"status\":\"PASS\",\"profiles\":[");
+    for(p=0;p<sizeof(profiles)/sizeof(*profiles);++p)
+    {
+        s_attack *allocated;
+        s_body *allocated_body;
+        ArgList args={0};
+        obor_profile_build=profiles[p]; global_sample_list.beat=41;
+        allocated=attack_allocate_object(); allocated_body=body_allocate_object();
+        printf("%s{\"revision\":%u,\"allocated\":[%d,%g,%g,%g,%d,%d,%d],",p?",":"",profiles[p],
+               allocated->hitsound,allocated->dropv.x,allocated->dropv.y,allocated->dropv.z,
+               allocated->flash.model_block,allocated->flash.model_hit,allocated_body->defense==NULL);
+        (free)(allocated); (free)(allocated_body);
+        memset(&model,0,sizeof(model)); initialize_model(&model);
+        printf("\"model_default\":[%d,%d],\"inherit\":[",model.flash.model_hit,model.flash.model_block);
+        parent.flash.model_hit=51; parent.flash.model_block=52;
+        for(c=0;c<sizeof(inherited)/sizeof(*inherited);++c)
+        {
+            model.flash.model_hit=inherited[c][0]; model.flash.model_block=inherited[c][1];
+            inherit_model(&model,&parent);
+            printf("%s[%d,%d]",c?",":"",model.flash.model_hit,model.flash.model_block);
+        }
+        memset(&model,0,sizeof(model));
+        args.count=5; args.args[0]="smartbomb"; args.args[1]="17"; args.args[2]="0";
+        args.args[3]="0"; args.args[4]="2";
+        lcmHandleCommandSmartbomb(&args,&model,"synthetic");
+        printf("],\"smart_default\":[%d,%g,%g,%g,%d,%d,%d],",model.smartbomb->hitsound,
+               model.smartbomb->dropv.x,model.smartbomb->dropv.y,model.smartbomb->dropv.z,
+               model.smartbomb->attack_force,model.smartbomb->attack_drop,
+               model.smartbomb->freezetime==2*GAME_SPEED);
+        (free)(model.smartbomb);
+        actor.modeldata.flash.model_hit=51;actor.modeldata.flash.model_block=52;attack.flash.model_hit=53;
+        select_smart_flash(&actor,&attack);
+        printf("\"smart_selection\":[%d,%d],\"shadow\":[",smart_attack,smart_model);
+        for(c=0;c<4;++c) printf("%s%d",c?",":"",shadow_flip(c==2?-1:(int)c));
+        attack=emptyattack;body=empty_body;
+        attack.flash=(s_flash_properties){.layer_adjust=11,.layer_source=12,.model_block=13,.model_hit=14,.z_source=15};
+        body.flash=attack.flash;
+        log_text[0]='\0';attack_dump_object(&attack);printf("],\"attack_dump\":");print_flash_lines();
+        log_text[0]='\0';body_dump_object(&body);printf(",\"body_dump\":");print_flash_lines();
+        printf(",\"effects\":[");
+        for(c=0;c<sizeof(cases)/sizeof(*cases);++c) { if(c)putchar(',');effect_case(&cases[c]); }
+        printf("]}");
+    }
+    puts("]}");return 0;
+}

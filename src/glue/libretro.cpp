@@ -389,11 +389,16 @@ static int content_profile_for_range(int lower, int upper)
             p->engine_build >= lower && p->engine_build <= upper) return p->build;
     }
     if (upper < OBOR_FALLBACK_BUILD) return profile_for_range(lower, upper, true);
+    int latest_release = OBOR_FALLBACK_BUILD;
+    for (size_t i = 0; i < sizeof(kProfiles) / sizeof(kProfiles[0]); ++i)
+        if (kProfiles[i].automatic && !kProfiles[i].variant[0] &&
+            kProfiles[i].build > latest_release) latest_release = kProfiles[i].build;
     for (size_t i = 0; i < sizeof(kProfiles) / sizeof(kProfiles[0]); ++i) {
         const obor_profile_def *p = &kProfiles[i];
-        if (p->automatic && p->build > OBOR_FALLBACK_BUILD && p->build <= 7533 &&
+        if (p->automatic && p->build > OBOR_FALLBACK_BUILD && p->build <= latest_release &&
             p->build >= lower && p->build <= upper &&
-            p->engine_build >= lower && p->engine_build <= upper) return p->build;
+            ((p->engine_build >= lower && p->engine_build <= upper) ||
+             p->build != p->engine_build)) return p->build;
     }
     return profile_for_range(lower, upper, true);
 }
@@ -692,7 +697,7 @@ static int pick_anchor(int build)
 
 static void get_engine_option(char *out, size_t out_len)
 {
-    struct retro_variable var = { "obor_engine", NULL };
+    struct retro_variable var = { "anybor_engine", NULL };
     strncpy(out, "Auto", out_len);
     if (env_cb && env_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
         strncpy(out, var.value, out_len - 1);
@@ -725,20 +730,20 @@ static int state_option(const char *key, const char *on, const char *off)
 
 static void load_state_options(void)
 {
-    obor_state_session_settings.content = state_option("obor_state_content", "Smart", "Full");
-    obor_state_session_settings.compression = state_option("obor_state_compression", "On", "Off");
+    obor_state_session_settings.content = state_option("anybor_state_content", "Smart", "Full");
+    obor_state_session_settings.compression = state_option("anybor_state_compression", "On", "Off");
 }
 
 /* Re-read the live-effect options (the engine option is only sampled at
  * load/reset by decide_engine). */
 static void refresh_options(void)
 {
-    g_analog = opt_is_on("obor_analog", true);
-    g_rumble_on = opt_is_on("obor_rumble", true);
-    g_macros_on = opt_is_on("obor_macros", true);
-    g_gamelog_on = opt_is_on("obor_gamelog", false);
-    g_crt_on = opt_is_on("obor_crt_tv", false);
-    g_storage.clear_on_unload = opt_is_on("obor_clear_game_cache", true);
+    g_analog = opt_is_on("anybor_analog", true);
+    g_rumble_on = opt_is_on("anybor_rumble", true);
+    g_macros_on = opt_is_on("anybor_macros", true);
+    g_gamelog_on = opt_is_on("anybor_gamelog", false);
+    g_crt_on = opt_is_on("anybor_crt_tv", false);
+    g_storage.clear_on_unload = opt_is_on("anybor_clear_game_cache", true);
 }
 
 /* ---------------------------------------------- frame-loop accessories --- */
@@ -1130,7 +1135,7 @@ void retro_set_environment(retro_environment_t cb)
             { NULL, NULL, NULL },
         };
         static struct retro_core_option_v2_definition defs[] = {
-            { "obor_crt_tv", "Adjust for 4:3 CRT TV", "Adjust for 4:3 CRT TV",
+            { "anybor_crt_tv", "Adjust for 4:3 CRT TV", "Adjust for 4:3 CRT TV",
               "When the game is wider than 364 pixels or taller than 244 "
               "pixels, fit it inside a 640x480 (4:3) frame with sharp bilinear "
               "filtering, preserving its aspect ratio without cropping. "
@@ -1143,28 +1148,28 @@ void retro_set_environment(retro_environment_t cb)
               "The frontend controls the TV's video mode and interlacing.",
               NULL, "video",
               { { "Off", NULL }, { "On", NULL }, { NULL, NULL } }, "Off" },
-            { "obor_analog", "Left analog stick as D-pad",
+            { "anybor_analog", "Left analog stick as D-pad",
               "Left analog stick as D-pad",
               "Move with the left stick in addition to the D-pad.",
               NULL, "input",
               { { "On", NULL }, { "Off", NULL }, { NULL, NULL } }, "On" },
-            { "obor_rumble", "Rumble",
+            { "anybor_rumble", "Rumble",
               "Rumble",
               "Forward the game's hit vibration to the controller.",
               NULL, "input",
               { { "On", NULL }, { "Off", NULL }, { NULL, NULL } }, "On" },
-            { "obor_macros", "Special move macros (L2/R2/L3/R3)",
+            { "anybor_macros", "Special move macros (L2/R2/L3/R3)",
               "Special move macros (L2/R2/L3/R3)",
               "Bind the active character's special-move sequences (from the "
               "game's own movelist) to the free shoulder/stick buttons. "
               "Pressing one performs the full input sequence.",
               NULL, "input",
               { { "On", NULL }, { "Off", NULL }, { NULL, NULL } }, "On" },
-            { "obor_engine", "Engine build", "Engine build",
+            { "anybor_engine", "Engine build", "Engine build",
               ENGINE_OPT_INFO, NULL, "system",
               { { "Auto", "Auto (detect from pak)" }, { NULL, NULL } },
               "Auto" },
-            { "obor_state_content", "Save state content", "Save state content",
+            { "anybor_state_content", "Save state content", "Save state content",
               "Smart reconstructs resources whose bytes can be reproduced exactly. "
               "Full stores complete engine memory. Changes apply when content is loaded. "
               "Smart is the default on every platform. Full with compression Off may "
@@ -1172,7 +1177,7 @@ void retro_set_environment(retro_environment_t cb)
               NULL, "system",
               { { "Smart", NULL }, { "Full", NULL }, { NULL, NULL } },
               OBOR_STATE_CONTENT_DEFAULT },
-            { "obor_state_compression", "Save state compression", "Save state compression",
+            { "anybor_state_compression", "Save state compression", "Save state compression",
               "On reduces state size. Off avoids compression work and can require "
               "more rewind memory; unchanged blocks remain reusable. Changes apply "
               "when content is loaded. On is the default on every platform. Full "
@@ -1180,23 +1185,23 @@ void retro_set_environment(retro_environment_t cb)
               NULL, "system",
               { { "On", NULL }, { "Off", NULL }, { NULL, NULL } },
               OBOR_STATE_COMPRESSION_DEFAULT },
-            { "obor_gamelog", "Forward game log",
+            { "anybor_gamelog", "Forward game log",
               "Forward game log",
               "Mirror the game's OpenBorLog into the frontend log "
               "(useful to debug mods).",
               NULL, "system",
               { { "Off", NULL }, { "On", NULL }, { NULL, NULL } }, "Off" },
-            { "obor_clear_local_data", "Clear current game saved data on load", NULL,
+            { "anybor_clear_local_data", "Clear current game saved data on load", NULL,
               "Deletes everything in this game's folder under AnyBOR before it loads, "
               "so the next run behaves like the first on this machine. Includes saved "
               "data from all engine builds. Other games and frontend save states are unaffected.", NULL, "development",
               { { "Off", NULL }, { "On", NULL }, { NULL, NULL } }, "Off" },
-            { "obor_clear_game_cache", "Clear current game cache on unload", NULL,
+            { "anybor_clear_game_cache", "Clear current game cache on unload", NULL,
               "Deletes the cache directories used by the current game after unloading it "
               "or closing the core. The next load rebuilds them. Saved game data is unaffected.",
               NULL, "development",
               { { "On", NULL }, { "Off", NULL }, { NULL, NULL } }, "On" },
-            { "obor_clear_all_caches", "Clear all game caches on load", NULL,
+            { "anybor_clear_all_caches", "Clear all game caches on load", NULL,
               "Deletes all contents of AnyBOR-cache before loading a game or generating its "
               "cache. Every load starts with an empty cache while this is On. Saved game "
               "data is unaffected.", NULL, "development",
@@ -1204,7 +1209,7 @@ void retro_set_environment(retro_environment_t cb)
             { NULL, NULL, NULL, NULL, NULL, NULL, { { NULL, NULL } }, NULL },
         };
         for (struct retro_core_option_v2_definition *def = defs; def->key; ++def) {
-            if (strcmp(def->key, "obor_engine"))
+            if (strcmp(def->key, "anybor_engine"))
                 continue;
             for (size_t i = 0; i < n_profiles; i++) {
                 def->values[i + 1].value = kProfiles[i].disp;
@@ -1231,17 +1236,17 @@ void retro_set_environment(retro_environment_t cb)
         }
     }
     static const struct retro_variable vars[] = {
-        { "obor_crt_tv", "Adjust for 4:3 CRT TV; Off|On" },
-        { "obor_analog", "Left analog stick as D-pad; On|Off" },
-        { "obor_rumble", "Rumble; On|Off" },
-        { "obor_macros", "Special move macros (L2/R2/L3/R3); On|Off" },
-        { "obor_engine", values },
-        { "obor_state_content", "Save state content; " OBOR_STATE_CONTENT_VALUES },
-        { "obor_state_compression", "Save state compression; " OBOR_STATE_COMPRESSION_VALUES },
-        { "obor_gamelog", "Forward game log; Off|On" },
-        { "obor_clear_local_data", "Clear current game saved data on load; Off|On" },
-        { "obor_clear_game_cache", "Clear current game cache on unload; On|Off" },
-        { "obor_clear_all_caches", "Clear all game caches on load; On|Off" },
+        { "anybor_crt_tv", "Adjust for 4:3 CRT TV; Off|On" },
+        { "anybor_analog", "Left analog stick as D-pad; On|Off" },
+        { "anybor_rumble", "Rumble; On|Off" },
+        { "anybor_macros", "Special move macros (L2/R2/L3/R3); On|Off" },
+        { "anybor_engine", values },
+        { "anybor_state_content", "Save state content; " OBOR_STATE_CONTENT_VALUES },
+        { "anybor_state_compression", "Save state compression; " OBOR_STATE_COMPRESSION_VALUES },
+        { "anybor_gamelog", "Forward game log; Off|On" },
+        { "anybor_clear_local_data", "Clear current game saved data on load; Off|On" },
+        { "anybor_clear_game_cache", "Clear current game cache on unload; On|Off" },
+        { "anybor_clear_all_caches", "Clear all game caches on load; On|Off" },
         { NULL, NULL },
     };
     cb(RETRO_ENVIRONMENT_SET_VARIABLES, (void *)vars);
@@ -1453,7 +1458,7 @@ void retro_reset(void)
     }
     /* True restart: shut the engine down (fds, logs, the whole arena),
      * restore pristine statics and boot again — re-running the version
-     * decision so a changed obor_engine core option takes effect NOW. */
+     * decision so a changed anybor_engine core option takes effect NOW. */
     if (g_error_active) {
         struct retro_game_info info = {};
         char path[sizeof(g_error_path)];
@@ -2207,7 +2212,7 @@ static bool select_engine_vtbl(const char *engine, char *err, int err_len)
 }
 
 /* full detection cascade; used by retro_load_game AND retro_reset (a
- * Restart must honour a live change of the obor_engine core option) */
+ * Restart must honour a live change of the anybor_engine core option) */
 #include "obor_legacy_api.h"
 
 static void decide_engine(void)
@@ -2690,8 +2695,8 @@ static bool load_game(const struct retro_game_info *info, bool retry, bool prepa
         return false;
     }
     refresh_options();
-    if (!obor_storage_begin(g_save_dir, !retry && opt_is_on("obor_clear_all_caches", true),
-                            opt_is_on("obor_clear_game_cache", true))) {
+    if (!obor_storage_begin(g_save_dir, !retry && opt_is_on("anybor_clear_all_caches", true),
+                            opt_is_on("anybor_clear_game_cache", true))) {
         log_cb(RETRO_LOG_ERROR, "[OpenBOR] Could not clear the cache directory.\n");
         error_reason("Could not prepare the game cache directory.");
         return false;
@@ -2808,11 +2813,11 @@ static bool load_game(const struct retro_game_info *info, bool retry, bool prepa
     obor_dbg("load_game: pak=%s", g_pak_path);
 
     refresh_options();
-    if (prepare_only && !g_loading_pixels) loading_image(g_pak_path, true, g_raw);
+    if (prepare_only) loading_image(g_pak_path, true, g_raw);
     decide_engine();
     obor_dbg("load_game: engine %s (save_dir=%s)", g_engine, g_save_dir);
 
-    if (!retry && opt_is_on("obor_clear_local_data", false) &&
+    if (!retry && opt_is_on("anybor_clear_local_data", false) &&
         !obor_storage_remove(g_game_dir)) {
         log_cb(RETRO_LOG_ERROR, "[OpenBOR] Could not clear current game saved data.\n");
         error_reason("Could not clear current game saved data.");
@@ -3025,6 +3030,8 @@ static bool loading_image(const char *path, bool notify, bool raw)
     int width, height;
     if (!(raw ? obor_video_directory_resolution(path, &width, &height) :
                 obor_video_resolution(path, &width, &height))) return false;
+    if (g_loading_pixels && width == g_loading_width && height == g_loading_height)
+        return true;
     return loading_image_size(width, height, notify);
 }
 
@@ -3064,7 +3071,16 @@ static bool loading_begin(const struct retro_game_info *info, bool retry)
     refresh_options();
     /* Unknown/protected or outer ZIP content keeps preparation running until
      * its ordinary settings become accessible. Never guess a custom raster. */
-    loading_image(path, retry);
+    if (!loading_image(path, retry) && n > 4 && !strcasecmp(path + n - 4, ".zip")) {
+        /* A duplicate frame has no source before the first real image. ZIP
+         * metadata arrives later; start with the negotiated loading raster. */
+        unsigned maximum_width = g_max_width, maximum_height = g_max_height;
+        if (!loading_image_size(g_width, g_height, retry)) {
+            error_reason("Could not prepare the loading image."); return false;
+        }
+        if (maximum_width > g_max_width) g_max_width = maximum_width;
+        if (maximum_height > g_max_height) g_max_height = maximum_height;
+    }
     g_state_capacity = loading_capacity(path);
     if (!g_state_capacity) { error_reason("Could not reserve the initial state capacity."); return false; }
     g_loading_stack = malloc(2u << 20);

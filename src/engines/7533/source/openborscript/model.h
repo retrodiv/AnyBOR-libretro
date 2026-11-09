@@ -1,3 +1,15 @@
+/* AnyBOR modification record: 2026-11-09.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Declare shared model-property selectors while preserving each profile's
+ * native domain.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/7533.md
+ * at the source repository root. Original notices follow below.
+ */
+
 /*
  * OpenBOR - http://www.chronocrash.com
  * -----------------------------------------------------------------------
@@ -35,6 +47,8 @@ typedef enum e_model_properties
 	MODEL_PROPERTY_FACTION,
 	MODEL_PROPERTY_FLIP,
 	MODEL_PROPERTY_GROUND,
+	MODEL_PROPERTY_GUARD_POINTS,
+	MODEL_PROPERTY_GUARD_RATE,
 	MODEL_PROPERTY_HP,
 	MODEL_PROPERTY_HUD_DISABLE,
 	MODEL_PROPERTY_HUD_POPUP,

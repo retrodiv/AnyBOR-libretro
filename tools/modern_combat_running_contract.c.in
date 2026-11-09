@@ -1,0 +1,112 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "openbor.h"
+#undef printf
+uint32_t obor_profile_build;
+entity *self;
+s_player player[MAX_PLAYERS];
+static entity actor, threshold_owner;
+static e_animations fall_ids[2] = {ANI_FALL, ANI_FALL2};
+static e_animations back_ids[2] = {ANI_FALL3, ANI_IDLE};
+e_animations *animfalls = fall_ids, *animbackfalls = back_ids;
+static const int animation_ids[] = {ANI_FALL,ANI_FALL2,ANI_FALL3,ANI_IDLE};
+static int selected, back_resets, unfrozen_calls, onfall_calls, onfall_running;
+static int idle_calls, idle_running, callback_change, callback_land, callback_keys;
+int common_idle_anim(entity *ent)
+{
+    if(ent != &actor) abort();
+    ++idle_calls; idle_running = ent->running;
+    if(callback_change)
+    {
+        ent->modeldata.run_config_flags = callback_land ? RUN_CONFIG_LAND : 0;
+        if((unsigned)ent->playerindex < MAX_PLAYERS) player[ent->playerindex].keys = callback_keys;
+    }
+    return 0;
+}
+void ent_set_anim(entity *ent, int animation, int reset)
+{
+    unsigned i; (void)reset; if(ent != &actor) abort();
+    for(i=0;i<sizeof(animation_ids)/sizeof(*animation_ids);++i)
+        if(animation == animation_ids[i]) { selected=i; return; }
+    abort();
+}
+int reset_backpain(entity *ent) { if(ent != &actor) abort(); ++back_resets; return 0; }
+void unfrozen(entity *ent) { if(ent != &actor) abort(); ++unfrozen_calls; ent->frozen=0; }
+void execute_onfall_script(entity *ent, entity *other, s_attack *attack)
+{
+    (void)attack; if(ent != &actor || other != &threshold_owner) abort();
+    ++onfall_calls; onfall_running=ent->running;
+}
+@FUNCTIONS@
+
+static void fixture_reset(void)
+{
+    memset(&actor,0,sizeof(actor)); memset(player,0,sizeof(player));
+    actor.running=RUN_STATE_START_X | RUN_STATE_START_Z;
+    selected=-1; back_resets=unfrozen_calls=onfall_calls=idle_calls=0;
+    onfall_running=idle_running=-1; callback_change=0;
+}
+int main(void)
+{
+    static const unsigned profiles[] = {@PROFILES@};
+    static const struct block_case { int threshold, force; } blocks[] = {@BLOCK_CASES@};
+    static const struct idle_case { int land, keys, change, new_land, new_keys, index; }
+        idles[] = {@IDLE_CASES@};
+    static const struct fall_case { int back, type, mask, frozen; } falls[] = {@FALL_CASES@};
+    static s_anim animations[4];
+    static s_anim *animation_pointers[ANI_FALL3+1];
+    size_t p,c; unsigned i;
+    puts("{\"status\":\"PASS\",\"profiles\":[");
+    for(p=0;p<sizeof(profiles)/sizeof(*profiles);++p)
+    {
+        obor_profile_build=profiles[p];
+        printf("%s{\"revision\":%u,\"block\":[",p ? "," : "",profiles[p]);
+        for(c=0;c<sizeof(blocks)/sizeof(*blocks);++c)
+        {
+            s_attack attack={0}; fixture_reset(); self=&threshold_owner;
+            threshold_owner.modeldata.blockpain=blocks[c].threshold;
+            actor.modeldata.blockpain=99; attack.attack_force=blocks[c].force;
+            printf("%s%d",c ? "," : "",check_blocking_pain(&actor,&attack));
+        }
+        printf("],\"idle\":[");
+        for(c=0;c<sizeof(idles)/sizeof(*idles);++c)
+        {
+            int result,flags; fixture_reset(); actor.playerindex=idles[c].index;
+            actor.modeldata.run_config_flags=idles[c].land ? RUN_CONFIG_LAND : 0;
+            if((unsigned)actor.playerindex < MAX_PLAYERS) player[actor.playerindex].keys=idles[c].keys;
+            callback_change=idles[c].change; callback_land=idles[c].new_land; callback_keys=idles[c].new_keys;
+            actor.attacking=1; actor.inpain=1; actor.rising=1;
+            actor.ducking=1; actor.inbackpain=1;
+            actor.falling=actor.jumping=actor.blocking=1;
+            result=set_idle(&actor);
+            flags=actor.idling==IDLING_PREPARED && actor.attacking==ATTACKING_NONE
+                && actor.inpain==IN_PAIN_NONE && actor.rising==RISING_NONE
+                && actor.ducking==DUCK_NONE && !actor.inbackpain && !actor.falling
+                && !actor.jumping && !actor.blocking;
+            printf("%s[%d,%d,%d,%d,%d]",c ? "," : "",result,actor.running,idle_calls,idle_running,flags);
+        }
+        printf("],\"fall\":[");
+        for(c=0;c<sizeof(falls)/sizeof(*falls);++c)
+        {
+            int result; s_attack attack={0}; fixture_reset(); actor.inbackpain=falls[c].back;
+            actor.frozen=falls[c].frozen; attack.attack_type=falls[c].type;
+            actor.modeldata.animation_capacity=ANI_FALL3+1;
+            actor.modeldata.animation=animation_pointers;
+            for(i=0;i<4;++i)
+            {
+                animations[i].numframes=(falls[c].mask & (1u<<i)) ? 1 : 0;
+                animation_pointers[animation_ids[i]]=&animations[i];
+            }
+            result=set_fall(&actor,&threshold_owner,&attack,1);
+            printf("%s[%d,%d,%d,%d,%d,%d,%d,%d]",c ? "," : "",result,
+                actor.running,selected,back_resets,unfrozen_calls,onfall_calls,onfall_running,actor.inbackpain);
+        }
+        printf("]}");
+    }
+    puts("]}"); return 0;
+}

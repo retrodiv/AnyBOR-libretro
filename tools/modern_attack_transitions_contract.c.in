@@ -1,0 +1,143 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "openbor.h"
+#undef printf
+uint32_t obor_profile_build;
+entity *self;
+static s_level level_object;
+s_level *level=&level_object;
+s_videomodes videomodes;
+float advancex,advancey;
+int autoland;
+@DEFAULTS@
+static entity actor,other,obstacle;
+static s_defense defense;
+static s_attack captured;
+static int captures,recipient_id,other_id,fall_calls,damage_calls,kill_kind,player_dies;
+static int idle_calls,toss_calls,animation_calls,wall_value,obstacle_value,wall_calls,obstacle_calls;
+static float toss_height;
+static void capture(entity *ent,entity *parent,s_attack *value)
+{
+    ++captures;captured=*value;
+    recipient_id=ent==&actor ? 0 : ent==&other ? 1 : -1;
+    other_id=parent==&actor ? 0 : parent==&other ? 1 : -1;
+    if(recipient_id<0 || other_id<0) abort();
+}
+s_defense *defense_find_current_object(entity *ent,s_body *body,e_attack_types type)
+{ (void)type;if(ent!=&actor || body) abort();return &defense; }
+static int take_damage(entity *parent,s_attack *value,int fall,s_defense *object)
+{ if(object!=&defense || fall) abort();++damage_calls;capture(self,parent,value);return 1; }
+void kill_entity(entity *ent,e_kill_entity_trigger trigger)
+{
+    if(ent!=&actor) abort();
+    if(trigger==KILL_ENTITY_TRIGGER_PIT) kill_kind=1;
+    else if(trigger==KILL_ENTITY_TRIGGER_LIFESPAN) kill_kind=2;
+    else if(trigger==KILL_ENTITY_TRIGGER_OUT_OF_BOUNDS) kill_kind=3;
+    else abort();
+}
+void player_die(void) { ++player_dies; }
+int is_frozen(entity *ent) { return ent->frozen; }
+int set_idle(entity *ent) { if(ent!=&actor) abort();++idle_calls;return 1; }
+void toss(entity *ent,float height)
+{ if(ent!=&actor && ent!=&other) abort();++toss_calls;toss_height=height; }
+void ent_unlink(entity *ent) { if(ent!=&other) abort(); }
+void common_fall(void) {}
+void common_throw(void) {}
+int set_fall(entity *ent,entity *parent,s_attack *value,int reset)
+{ if(reset) abort();++fall_calls;capture(ent,parent,value);return 1; }
+void ent_set_anim(entity *ent,int animation,int reset)
+{ if(ent!=&actor || animation!=ANI_THROW || reset) abort();++animation_calls; }
+int check_block_wall(entity *ent) { if(ent!=&actor) abort();++wall_calls;return wall_value; }
+entity *check_block_obstacle(entity *ent)
+{ if(ent!=&actor) abort();++obstacle_calls;return obstacle_value ? &obstacle : NULL; }
+float randf(float max) { if(max!=1.0f) abort();return 0.5f; }
+@FUNCTIONS@
+
+static void print_attack(void)
+{
+    int type;
+    if(!captures) { printf("[]");return; }
+    if(captures!=1) abort();
+    type=captured.attack_type==ATK_PIT ? 1 : captured.attack_type==ATK_LIFESPAN ? 2
+        : captured.attack_type==ATK_NORMAL ? 3 : -1;
+    if(type<0) abort();
+    printf("[[%d,%d,%d,%d,%d,%d,%d,%.9g,%.9g,%.9g,%d]]",recipient_id,other_id,
+        captured.attack_force,captured.attack_drop,type,captured.seal,captured.meta_tag,
+        (double)captured.dropv.x,(double)captured.dropv.y,(double)captured.dropv.z,
+        captured.flash.object_type==emptyattack.flash.object_type && captured.no_kill==emptyattack.no_kill
+        && captured.hitsound==emptyattack.hitsound && captured.recursive==emptyattack.recursive);
+}
+int main(void)
+{
+    enum { ANIMATION_CAPACITY=(ANI_LAND>ANI_FALL ? ANI_LAND : ANI_FALL)+1 };
+    static const unsigned profiles[]={@PROFILES@};
+    static const struct input_case { int kind,a,b,c,d,e; } cases[]={@CASES@};
+    static s_anim animation;
+    static s_anim *animations[ANIMATION_CAPACITY];
+    size_t p,c;
+    animation.numframes=1;videomodes.hRes=320;videomodes.vRes=240;
+    puts("{\"status\":\"PASS\",\"profiles\":[");
+    for(p=0;p<sizeof(profiles)/sizeof(*profiles);++p)
+    {
+        obor_profile_build=profiles[p];
+        printf("%s{\"revision\":%u,\"cases\":[",p ? "," : "",profiles[p]);
+        for(c=0;c<sizeof(cases)/sizeof(*cases);++c)
+        {
+            const struct input_case *input=&cases[c];int result=0;
+            memset(&actor,0,sizeof(actor));memset(&other,0,sizeof(other));
+            memset(animations,0,sizeof(animations));self=&actor;
+            captures=fall_calls=damage_calls=kill_kind=player_dies=idle_calls=toss_calls=animation_calls=0;
+            wall_calls=obstacle_calls=0;toss_height=0;
+            actor.energy_state.health_current=30;actor.modeldata.type=TYPE_ENEMY;
+            actor.modeldata.animation_capacity=other.modeldata.animation_capacity=ANIMATION_CAPACITY;
+            actor.modeldata.animation=other.modeldata.animation=animations;
+            printf("%s{\"state\":[",c ? "," : "");
+            if(input->kind==0)
+            {
+                actor.takedamage=input->b ? take_damage : NULL;
+                actor.frozen=input->c;actor.lifespancountdown=4;
+                actor.modeldata.offscreenkill=input->a>=3 ? 50 : 100000;
+                if(input->a==1) actor.position.y=PIT_DEPTH-1;
+                if(input->a==2) actor.lifespancountdown=-1;
+                if(input->a>=3) actor.position.x=10000;
+                if(input->a==4) actor.modeldata.type=TYPE_PLAYER;
+                result=check_lost();
+                printf("%d,%d,%d,%d,%d,%d",result,kill_kind,player_dies,
+                    (int)actor.lifespancountdown,damage_calls,self==&actor);
+            }
+            else if(input->kind==1)
+            {
+                actor.link=input->a ? &other : NULL;
+                actor.velocity.x=3;actor.velocity.z=4;
+                actor.direction=input->e ? DIRECTION_RIGHT : DIRECTION_LEFT;
+                actor.modeldata.throwdamage=17;other.modeldata.throwheight=input->b ? 9 : 0;
+                other.modeldata.jumpheight=6;other.modeldata.throwdist=4.5f;
+                autoland=input->c;if(input->d) animations[ANI_LAND]=&animation;
+                dothrow();
+                printf("%d,%d,%.9g,%d,%d,%.9g,%d,%.9g,%.9g,%d",idle_calls,toss_calls,
+                    (double)toss_height,fall_calls,animation_calls,(double)other.velocity.x,
+                    other.damage_on_landing.attack_force==ATTACK_FORCE_LAND_AUTO ? 1
+                        : other.damage_on_landing.attack_force==17 ? 2 : 0,
+                    (double)actor.velocity.x,(double)actor.velocity.z,self==&actor);
+            }
+            else
+            {
+                if(input->a) animations[ANI_FALL]=&animation;
+                if(input->b) actor.modeldata.move_config_flags=MOVE_CONFIG_PROJECTILE_WALL_BOUNCE;
+                wall_value=input->c;obstacle_value=input->d;actor.velocity.x=input->e;
+                result=projectile_wall_deflect(&actor);
+                printf("%d,%d,%.9g,%d,%.9g,%d,%d,%d,%d",result,toss_calls,
+                    (double)toss_height,fall_calls,(double)actor.velocity.x,
+                    actor.energy_state.health_current,wall_calls,obstacle_calls,self==&actor);
+            }
+            printf("],\"attacks\":");print_attack();putchar('}');
+        }
+        printf("]}");
+    }
+    puts("]}");return 0;
+}

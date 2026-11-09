@@ -1,0 +1,111 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stddef.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <strings.h>
+#ifndef stricmp
+#define stricmp strcasecmp
+#endif
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wignored-qualifiers"
+#if defined(__clang__)
+#pragma GCC diagnostic ignored "-Wdeprecated-non-prototype"
+#endif
+#include "scriptcommon.h"
+#include "commands.h"
+#undef printf
+uint32_t obor_profile_build;
+@DEFAULT@
+s_drawmethod drawmethod;
+static int token;
+void exitIfFalse(int value, const char *assertion, const char *func, const char *file, int line)
+{
+    (void)assertion; (void)func; (void)file; (void)line;
+    if(!value) abort();
+}
+/* Cases use raw integer colors. RGB conversion is outside this contract. */
+int _makecolour(int r, int g, int b) { (void)r; (void)g; (void)b; abort(); }
+@HELPERS@
+static int blendfx[MAX_BLENDINGS];
+static void fixture_load(int cmd, int locked, int count, const char *const *args)
+{
+    ArgList arglist={0};
+    char *value=NULL,*filename="synthetic",*command="drawmethod";
+    int blendfx_is_set=locked,i;
+    arglist.count=count;
+    for(i=0;i<count;++i) arglist.args[i]=(char *)args[i];
+    switch(cmd)
+    {
+        @CASES@
+        default: abort();
+    }
+}
+static s_drawmethod fixture_frame(s_drawmethod dm)
+{
+    struct { int x,y; } offset={2,3};
+    @FRAME@
+    return dm;
+}
+#pragma GCC diagnostic pop
+enum { FIXTURE_WORD,FIXTURE_BYTE,FIXTURE_FLOAT,FIXTURE_POINTER };
+static const struct { size_t offset,size; int kind; } fields[]={@FIELDS@};
+static void print_method(const s_drawmethod *method)
+{
+    unsigned i;
+    putchar('[');
+    for(i=0;i<sizeof(fields)/sizeof(*fields);++i)
+    {
+        const unsigned char *p=(const unsigned char *)method+fields[i].offset;
+        uint32_t word=0;
+        if(fields[i].kind==FIXTURE_POINTER)
+        {
+            void *ptr=NULL;
+            if(fields[i].size!=sizeof(ptr)) abort();
+            memcpy(&ptr,p,sizeof(ptr)); word=ptr==(void *)&token;
+        }
+        else
+        {
+            if(fields[i].size!=1 && fields[i].size!=4) abort();
+            memcpy(&word,p,fields[i].size);
+        }
+        if(i) putchar(',');
+        printf("%u",word);
+    }
+    putchar(']');
+}
+int main(void)
+{
+    static const unsigned profiles[]={@PROFILES@};
+    static const struct { int command,locked,count; const char *args[12]; } cases[]={@INPUTS@};
+    unsigned p,c,i;
+    printf("{\"status\":\"PASS\",\"profiles\":[");
+    for(p=0;p<sizeof(profiles)/sizeof(*profiles);++p)
+    {
+        if(p) { putchar(','); }
+        obor_profile_build=profiles[p];
+        printf("{\"revision\":%u,\"cases\":[",profiles[p]);
+        for(c=0;c<sizeof(cases)/sizeof(*cases);++c)
+        {
+            s_drawmethod prior,frame;
+            drawmethod=plainmethod;
+            @SEED@
+            prior=drawmethod;
+            prior.flag=-2; prior.config=1023; prior.fillcolor=999; prior.xrepeat=4;
+            memset(blendfx,0,sizeof(blendfx));
+            fixture_load(cases[c].command,cases[c].locked,cases[c].count,cases[c].args);
+            frame=fixture_frame(prior);
+            if(c) { putchar(','); }
+            putchar('['); print_method(&drawmethod); putchar(','); print_method(&frame);
+            printf(",[");
+            for(i=0;i<MAX_BLENDINGS;++i) { if(i) putchar(','); printf("%d",blendfx[i]); }
+            printf("],%d,%d]",drawmethod.object_type==OBJECT_TYPE_DRAWMETHOD,
+                   frame.object_type==OBJECT_TYPE_DRAWMETHOD);
+        }
+        printf("]}");
+    }
+    printf("]}\n");return 0;
+}

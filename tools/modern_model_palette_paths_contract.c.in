@@ -1,0 +1,97 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdarg.h>
+#include <stdlib.h>
+#include <string.h>
+#include "openbor.h"
+#include "commands.h"
+#undef printf
+uint32_t obor_profile_build;
+int pixelbytes[5]={1,1,2,3,4};
+static s_model model;
+static void *cleanup_owners[4];
+static int loaded,load_calls,stopped,cleanup_frees,waits;
+static char *argument;
+static char log_text[512];
+void *checkAlloc(void *ptr,size_t size,const char *func,const char *file,int line)
+{ (void)func;(void)file;(void)line;if(size && !ptr) abort();return ptr; }
+static int append_log(const char *format,va_list args)
+{
+    size_t used=strlen(log_text);int n=vsnprintf(log_text+used,sizeof(log_text)-used,format,args);
+    if(n<0 || (size_t)n>=sizeof(log_text)-used) abort();
+    return n;
+}
+static int capture_log(const char *format,...)
+{ va_list args;int n;va_start(args,format);n=append_log(format,args);va_end(args);return n; }
+void borShutdown(int status,char *format,...)
+{ va_list args;if(status!=1 || stopped) abort();stopped=status;va_start(args,format);append_log(format,args);va_end(args); }
+int obor_preload_active(void) { return 0; }
+void obor_wait_frame(void) { ++waits; }
+int load_palette(unsigned char *out,char *filename)
+{ if(strcmp(filename,"palette.act") || !out) abort();++load_calls;if(loaded) memset(out,99,PAL_BYTES);return loaded; }
+static void observed_free(void *ptr)
+{
+    int i;for(i=0;i<4;++i) if(ptr && ptr==cleanup_owners[i])
+    { cleanup_owners[i]=NULL;++cleanup_frees;free(ptr);return; }
+    abort();
+}
+#undef GET_ARG
+#define GET_ARG(index) ((index)==1 ? argument : (abort(),(char*)NULL))
+#define printf capture_log
+#define free observed_free
+static s_model *model_command(int command)
+{
+    s_model *newchar=&model;int nopalette=0;
+    char *value,*filename="model.cfg",*shutdownmessage=NULL;
+    int line=7;
+    char *buf=cleanup_owners[0],*scriptbuf=cleanup_owners[1],*animscriptbuf=cleanup_owners[2];
+    unsigned *mapflag=cleanup_owners[3];
+    switch(command)
+    {
+        @COMMANDS@
+    }
+    /* The command may grow its local map flags before native cleanup. */
+    cleanup_owners[3]=mapflag;
+    @CLEANUP@
+}
+#undef printf
+#undef free
+static void quote(const char *text)
+{
+    const unsigned char *s=(const unsigned char*)text;putchar('"');
+    for(;*s;++s) { if(*s=='\n') printf("\\n");else if(*s=='"' || *s=='\\') printf("\\%c",*s);else putchar(*s); }
+    putchar('"');
+}
+int main(void)
+{
+    static const unsigned profiles[]={@PROFILES@};size_t p;int c,i;
+    printf("{\"status\":\"PASS\",\"profiles\":[");
+    for(p=0;p<sizeof(profiles)/sizeof(*profiles);++p)
+    {
+        obor_profile_build=profiles[p];
+        printf("%s{\"revision\":%u,\"cases\":[",p ? ",":"",profiles[p]);
+        for(c=0;c<8;++c)
+        {
+            int alternate=c>=4,initial=c>=6,result;
+            memset(&model,0,sizeof(model));argument=c==2 ? "none":"palette.act";
+            loaded=c!=1 && c!=5 && c!=7;load_calls=stopped=cleanup_frees=waits=0;log_text[0]=0;
+            for(i=0;i<3;++i) cleanup_owners[i]=malloc(4);
+            cleanup_owners[3]=initial ? calloc(1,sizeof(unsigned)):NULL;
+            if(c==3) { model.palette=malloc(PAL_BYTES);memset(model.palette,77,PAL_BYTES); }
+            if(initial) { model.maps_loaded=1;model.colourmap=malloc(sizeof(*model.colourmap));model.colourmap[0]=malloc(PAL_BYTES);memset(model.colourmap[0],77,PAL_BYTES); }
+            result=model_command(alternate ? CMD_MODEL_ALTERNATEPAL:CMD_MODEL_PALETTE)==&model;
+            if(initial && model.colourmap[0][0]!=77) abort();
+            printf("%s{\"result\":%d,\"state\":[%d,%d],\"services\":[%d,%d,%d,%d],\"log\":",
+                c ? ",":"",result,model.palette!=NULL,model.maps_loaded,load_calls,stopped,cleanup_frees,waits);
+            quote(log_text);putchar('}');
+            free(model.palette);
+            if(alternate) { for(i=0;i<initial+1;++i) free(model.colourmap[i]);free(model.colourmap); }
+            for(i=0;i<4;++i) if(cleanup_owners[i]) abort();
+        }
+        printf("]}");
+    }
+    printf("]}\n");return 0;
+}

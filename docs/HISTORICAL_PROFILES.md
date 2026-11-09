@@ -36,11 +36,16 @@ v3.0 3968-dev, v3.0 3970-dev, v3.0 3978, v3.0 3984, v3.0 3993, v3.0 3994, v3.0
 4082, v3.0 4085, v3.0 4086, v3.0 4088-dev, v3.0 4107, v3.0 4111, v3.0 4129, v3.0
 4153, v3.0 4432, v3.0 4453, v3.0 6330, v3.0 6391, v3.0 6391-mod, v3.0 6392-dev,
 v3.0 6412-dev, v3.0 6510-dev, v3.0 7086-dev, v3.0 7123-dev, v4.0 7142-alpha,
-v4.0 7533 and v4.0 8023-dev.
+v4.0 7530, v4.0 7533, v4.0 7555, v4.0 7556, v4.0 7735 and v4.0 8023-dev.
 
 Auto uses build tags and content clues to choose a profile. You can select one
 manually when a game needs it. Historical profiles preserve selected earlier
 content behavior while retaining safety and lifecycle corrections.
+
+The libretro video adapter has no native gamma/brightness correction backend.
+Screen fades use software modulation and final clearing for every profile.
+Host gamma-adjustment output is outside this adapter; the internal result
+reports the available backend capability.
 
 The 3741 source tree reads GIF headers and image descriptors as 13 and 9 bytes.
 Persisted configuration, progress and score records have their own explicit
@@ -695,8 +700,46 @@ Profiles are compatibility selections. Several profiles use one physical source 
 | v3.0 7086-dev | `7142` |
 | v3.0 7123-dev | `7142` |
 | v4.0 7142-alpha | `7142` |
+| v4.0 7530 | `7533` |
 | v4.0 7533 | `7533` |
+| v4.0 7555 | `7533` |
+| v4.0 7556 | `7533` |
+| v4.0 7735 | `7533` |
 | v4.0 8023-dev | `8023` |
+
+## Modern source contracts
+
+The official v4.0 7530, 7555, 7556 and 7735 profiles use source tree 7533.
+Each selects its own script registration, property names and numeric IDs,
+model defaults, combat and drawing behavior, audio state and saved records.
+Valid source-defined results remain unchanged; argument and storage bounds
+remain checked for every profile.
+
+| Profile | Own source revision |
+|---|---|
+| v4.0 7530 | [`96959080`](https://github.com/DCurrent/openbor/commit/9695908083f4641278c64fb2e947a11216ab0f9a) |
+| v4.0 7555 | [`b1676f97`](https://github.com/DCurrent/openbor/commit/b1676f97bbe93473a2b93582a164005b4c77b78a) |
+| v4.0 7556 | [`fc92d78d`](https://github.com/DCurrent/openbor/commit/fc92d78dbf8110c8af10702233ba4f022d6bdc50) |
+| v4.0 7735 | [`f64d63c2`](https://github.com/DCurrent/openbor/commit/f64d63c2fc4e0c6e8993a58fbce1816502fff63a) |
+
+The 7556 profile exposes its global-configuration constants and read/write
+flags. Palette and drawing callbacks retain their native argument order,
+copy width, result types and object-tag checks. A callback can reject a native
+producer's handle when that original revision used different object tags;
+profiles preserve that result safely.
+
+Music properties retain the selected namespace, counter width and stream
+state. Saved games use their selected record layout: the game record loses
+its two-byte name padding at 7613; settings drop the vsync field and use
+signature 33749 at 7617. Earlier record prefixes and short-read behavior remain
+source-defined. These wire formats do not depend on the host's pointer width.
+
+Font loading order and GIF palette retention change at 7587; the model palette
+failure diagnostic and controlled stop change at 7732. Menu entry layout and
+rumble controls follow the 7690 boundary. Allocation diagnostics select their
+source-defined fields while adapting allocator statistics to host capability.
+The matching `tools/test_modern_*.py` contracts use authored data and explicit
+boundary controls; they do not establish whole-game or native-host acceptance.
 
 ## Baselines and complete file inventories
 

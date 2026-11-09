@@ -1,10 +1,12 @@
-/* AnyBOR modification record: 2026-10-23.
+/* AnyBOR modification record: 2026-11-09.
  * Port maintained by retrodiv <retrodiv@proton.me>.
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
  * Upstream code retains its original license and notices.
  * Route circle drawing through the port's integer rasterizer. Ignore point
- * coordinates outside screen bounds while preserving valid pixels.
+ * coordinates outside screen bounds while preserving valid pixels. Select
+ * native drawing enable flags by profile and include the runtime
+ * declarations used by the complete drawing unit.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/7533.md
  * at the source repository root. Original notices follow below.
@@ -23,6 +25,9 @@
 
 #include "types.h"
 #include "draw.h"
+#ifdef LIBRETRO
+#include "libretroport.h"
+#endif
 
 #ifndef		NULL
 #define		NULL	 ((void*)0)
@@ -331,7 +336,8 @@ static int draw_init( s_drawmethod *drawmethod)
     int alpha = 0;
     drawmethod_global_init(drawmethod);
 
-    if (drawmethod && drawmethod->flag)
+    if (drawmethod && (obor_profile_build >= 7567
+            ? (int)(drawmethod->config & DRAWMETHOD_CONFIG_ENABLED) : drawmethod->flag))
     {
         alpha = drawmethod->alpha;
     }

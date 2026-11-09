@@ -1,0 +1,60 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include "openbor.h"
+#undef printf
+
+uint32_t obor_profile_build;
+entity *self;
+static int overridden;
+
+int check_bind_override(entity *ent, e_bind_config config)
+{
+    (void)ent;
+    (void)config;
+    return overridden;
+}
+
+@FUNCTION@
+
+int main(void)
+{
+    static entity actor;
+    static s_anim animation;
+    static s_anim *animations[] = {&animation};
+    static const unsigned profiles[] = {@PROFILES@};
+    static const struct energy_case {
+        int seal, cost, which, mp, hp, mponly, disable, type, frames, binding;
+    } cases[] = {
+        @CASES@
+    };
+    size_t p, c;
+    self = &actor;
+    actor.modeldata.animation = animations;
+    actor.modeldata.animation_capacity = 1;
+    puts("{\"status\":\"PASS\",\"profiles\":[");
+    for(p = 0; p < sizeof(profiles) / sizeof(profiles[0]); ++p)
+    {
+        obor_profile_build = profiles[p];
+        printf("%s{\"revision\":%u,\"results\":[", p ? "," : "", profiles[p]);
+        for(c = 0; c < sizeof(cases) / sizeof(cases[0]); ++c)
+        {
+            const struct energy_case *input = &cases[c];
+            actor.seal = input->seal;
+            actor.modeldata.type = input->type;
+            actor.energy_state.mp_current = input->mp;
+            actor.energy_state.health_current = input->hp;
+            animation.energy_cost.cost = input->cost;
+            animation.energy_cost.mponly = input->mponly;
+            animation.energy_cost.disable = input->disable;
+            animation.numframes = input->frames;
+            overridden = input->binding;
+            printf("%s%d", c ? "," : "", check_energy(input->which, 0));
+        }
+        puts("]}");
+    }
+    puts("]}");
+    return 0;
+}

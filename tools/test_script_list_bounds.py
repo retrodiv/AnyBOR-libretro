@@ -23,7 +23,7 @@ SOURCE = Path(os.environ.get('OBOR_TEST_SOURCE', ROOT))
 FIXTURE = Path(__file__).parent / 'fixtures/script-list-contracts.json'
 
 
-def mapper_program(script, lookup, *, type_definitions=''):
+def mapper_program(script, lookup, *, type_definitions='', revision=3741):
     """Retain real mapper/tables; stub variant storage/conversion and logging."""
     start = re.search(r'(?m)^enum (?:get)?entityproperty_enum\s*\{', script)
     entry = re.search(r'(?m)^(?:void|int) mapstrings_(?:getentityproperty|entityproperty)\(', script)
@@ -43,6 +43,8 @@ def mapper_program(script, lookup, *, type_definitions=''):
     if macro is None:
         raise ValueError('Own string mapping macro required')
     mapper = function(script, name)
+    if type(revision) is not int or not 0 < revision <= 0xffffffff:
+        raise ValueError('Explicit bounded native profile revision required')
     if (not isinstance(type_definitions,str) or len(type_definitions)>512 or
             type_definitions and not re.fullmatch(
                 r'#define[ \t]+TYPE_RESERVED[ \t]+[^\r\n\0]+',type_definitions)):
@@ -60,6 +62,10 @@ def mapper_program(script, lookup, *, type_definitions=''):
         if not referenced or any(sum(bool(re.search(r'\b' + re.escape(name) + r'\s*=', row)) for row in tables) != 1 for name in referenced):
             raise ValueError('Every selected namespace must retain its actual table')
         support = '\n'.join(tables) + '\n' + support
+    if 'obor_entityproperty_native(' in mapper:
+        helper = function(script, 'obor_entityproperty_native')
+        if helper not in declarations:
+            support += '\n' + helper
     prefix = r'''
 #include <assert.h>
 #include <stdint.h>
@@ -73,7 +79,7 @@ typedef struct {int vt;union {int32_t lVal,strVal;};} ScriptVariant;
 static const char *strings[2];
 static char *StrCache_Get(int32_t index) {assert(index>=0 && index<2);return (char*)strings[index];}
 static void ScriptVariant_ChangeType(ScriptVariant *value,int type) {value->vt=type;}
-static uint32_t obor_profile_build=3741;
+static uint32_t obor_profile_build=@REVISION@;
 static int quiet_printf(const char *format,...) {(void)format;return 0;}
 #define printf quiet_printf
 #define stricmp strcasecmp
@@ -99,7 +105,7 @@ int main(void) {
  return 0;
 }
 '''
-    return '\n'.join((prefix, type_definitions, descriptor, lookup, macro[0], declarations,
+    return '\n'.join((prefix.replace('@REVISION@', str(revision) + 'u'), type_definitions, descriptor, lookup, macro[0], declarations,
                        support, mapper, main.replace('@MAPPER@', name)))
 
 
@@ -207,7 +213,7 @@ class ScriptListTests(unittest.TestCase):
                                          (root/'openbor.h').read_text())
                     source.write_text(mapper_program((root / 'openborscript.c').read_text(),
                         function((root / 'source/utils.c').read_text(), 'searchList'),
-                        type_definitions=definition[0] if definition else ''))
+                        type_definitions=definition[0] if definition else '', revision=int(engine)))
                     subprocess.run(shlex.split(os.environ.get('HOST_CC', 'cc')) + [
                         '-std=c11', '-Wall', '-Wextra', '-Werror',
                         '-Wno-error=deprecated-declarations', '-Wno-unused-function',

@@ -68,17 +68,21 @@ class ScreenDispatchTests(unittest.TestCase):
             unit_flags = ['-O1' if flag == '-O0' else flag for flag in flags] + metadata['color_unit_flags']
             compile_checked(compiler + unit_flags + ['-c', str(root / 'source/gamelib/pixelformat.c'),
                                                      '-o', str(unit)])
-            names = {metadata['default_contract']}
-            names.update(row['contract'] for row in cls.contexts.values() if row['engine'] == engine)
-            for contract in sorted(names):
-                source = work / (engine + '-' + contract + '.c'); executable = source.with_suffix('')
-                source.write_text(program(engine, metadata['layout'], cls.fixture['contracts'][contract]))
+            names = {(metadata['default_contract'], json.dumps(metadata['layout'], sort_keys=True))}
+            names.update((row['contract'], json.dumps(row.get('layout', metadata['layout']), sort_keys=True))
+                         for row in cls.contexts.values() if row['engine'] == engine)
+            for index, (contract, layout) in enumerate(sorted(names)):
+                source = work / (engine + '-' + contract + '-' + str(index) + '.c')
+                executable = source.with_suffix('')
+                source.write_text(program(engine, json.loads(layout), cls.fixture['contracts'][contract]))
                 compile_checked(compiler + flags + [str(source), str(unit), *links, '-lm', '-o', str(executable)])
-                cls.executables[engine, contract] = executable
+                cls.executables[engine, contract, layout] = executable
 
     def check_context(self, engine, revision, contract):
+        context = self.contexts.get((engine, revision), {})
+        layout = json.dumps(context.get('layout', self.fixture['engines'][engine]['layout']), sort_keys=True)
         observed = json.loads(subprocess.check_output([
-            str(self.executables[engine, contract]), str(revision)], text=True,
+            str(self.executables[engine, contract, layout]), str(revision)], text=True,
             timeout=15, env=sanitizer_environment()))
         self.assertEqual(observed, dict(status='PASS', cases=len(self.fixture['contracts'][contract])))
 

@@ -1,11 +1,12 @@
-/* AnyBOR modification record: 2026-09-29.
+/* AnyBOR modification record: 2026-11-09.
  * Port maintained by retrodiv <retrodiv@proton.me>.
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
  * Upstream code retains its original license and notices.
  * Remove a guard whose only statement assigned the counter to itself. Bound
  * screen blend selectors and use transparent copy when an indexed table is
- * unavailable.
+ * unavailable. Select native screen-drawing enable and transparency flags by
+ * profile.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/7533.md
  * at the source repository root. Original notices follow below.
@@ -494,7 +495,7 @@ static void _putscreen(s_screen *dest, s_screen *src, int x, int y, s_drawmethod
     int alpha, transbg;
     gfx_entry gfx;
 
-    if(!drawmethod || drawmethod->flag == 0)
+    if(!drawmethod || (obor_profile_build >= 7567 ? (int)(drawmethod->config & DRAWMETHOD_CONFIG_ENABLED) : drawmethod->flag) == 0)
     {
         table = NULL;
         alpha = 0;
@@ -529,7 +530,7 @@ static void _putscreen(s_screen *dest, s_screen *src, int x, int y, s_drawmethod
     {
         table = drawmethod->table;
         alpha = drawmethod->alpha;
-        transbg = drawmethod->transbg;
+        transbg = (obor_profile_build >= 7567 ? (int)(drawmethod->config & DRAWMETHOD_CONFIG_BACKGROUND_TRANSPARENCY) : drawmethod->transbg);
         x -= drawmethod->centerx;
         y -= drawmethod->centery;
     }
@@ -594,7 +595,7 @@ void putscreen(s_screen *dest, s_screen *src, int x, int y, s_drawmethod *drawme
 
     drawmethod_global_init(drawmethod);
 
-    if(drawmethod && drawmethod->flag)
+    if(drawmethod && (obor_profile_build >= 7567 ? (int)(drawmethod->config & DRAWMETHOD_CONFIG_ENABLED) : drawmethod->flag))
     {
         xrepeat = drawmethod->xrepeat;
         yrepeat = drawmethod->yrepeat;

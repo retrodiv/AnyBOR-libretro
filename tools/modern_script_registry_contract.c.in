@@ -1,0 +1,50 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+uint32_t obor_profile_build;
+typedef struct { int unused; } List;
+static List theFunctionList;
+@STUBS@
+static void unknown_callable(void) {}
+static void *pointers[]={@POINTERS@};
+static const char *symbols[]={@SYMBOLS@};
+static void *registered[512];
+static const char *registered_names[512];
+static unsigned registered_count;
+static const char *symbol_name(void *entry)
+{
+    unsigned i;
+    for(i=0;i<sizeof(pointers)/sizeof(*pointers);++i) if(entry==pointers[i]) return symbols[i];
+    return "-";
+}
+void List_Reset(List *list) { if(list!=&theFunctionList) abort();registered_count=0; }
+void List_InsertAfter(List *list,void *entry,const char *name)
+{
+    if(list!=&theFunctionList || registered_count>=512) abort();
+    registered[registered_count]=entry;registered_names[registered_count++]=name;
+}
+@METHODS@
+int main(void)
+{
+    static const unsigned profiles[]={@PROFILES@};size_t p;unsigned i;
+    printf("{\"status\":\"PASS\",\"profiles\":[");
+    for(p=0;p<sizeof(profiles)/sizeof(*profiles);++p)
+    {
+        obor_profile_build=profiles[p];Script_LoadSystemFunctions();
+        printf("%s{\"revision\":%u,\"registered\":[",p ? "," : "",profiles[p]);
+        for(i=0;i<registered_count;++i) printf("%s[\"%s\",\"%s\"]",i ? "," : "",
+            symbol_name(registered[i]),registered_names[i]);
+        printf("],\"reverse\":[");
+        for(i=0;i<sizeof(pointers)/sizeof(*pointers);++i)
+            printf("%s\"%s\"",i ? "," : "",Script_GetFunctionName(pointers[i]));
+        printf("],\"maps\":[");
+        for(i=0;i<sizeof(pointers)/sizeof(*pointers);++i)
+            printf("%s\"%s\"",i ? "," : "",symbol_name(Script_GetStringMapFunction(pointers[i])));
+        printf("],\"unknown\":[\"%s\",\"%s\"]}",Script_GetFunctionName((void*)unknown_callable),
+            symbol_name(Script_GetStringMapFunction((void*)unknown_callable)));
+    }
+    puts("]}");return 0;
+}

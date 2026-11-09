@@ -79,5 +79,12 @@
     "bytes": 1543,
     "license": "BSD-3-Clause",
     "scope": "Selected early profile source imports"
+  },
+  "OpenBOR-profile-7735-BSD-3-Clause.txt": {
+    "url": "https://raw.githubusercontent.com/DCurrent/openbor/f64d63c2fc4e0c6e8993a58fbce1816502fff63a/engine/LICENSE",
+    "sha256": "b8f3916944f0b5aee216ef7a494820d17ae658336a4680992dc244ebedecf3ea",
+    "bytes": 1537,
+    "license": "BSD-3-Clause",
+    "scope": "Imported and adapted native flash and music script interfaces from OpenBOR7735; original source and binary redistribution conditions apply."
   }
 }

@@ -1,0 +1,56 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "openbor.h"
+#undef printf
+uint32_t obor_profile_build;
+s_savedata savedata;
+s_global_config global_config;
+static int clears;
+void clearbuttons(int player)
+{
+    int key;if(player!=clears++ || player<0 || player>=MAX_PLAYERS) abort();
+    for(key=0;key<MAX_BTN_NUM;++key) savedata.keys[player][key]=player*100+key;
+}
+@FUNCTION@
+int main(void)
+{
+    static const unsigned profiles[]={@PROFILES@};
+    size_t p;int c,player,key;
+    printf("{\"status\":\"PASS\",\"profiles\":[");
+    for(p=0;p<sizeof(profiles)/sizeof(*profiles);++p)
+    {
+        obor_profile_build=profiles[p];
+        printf("%s{\"revision\":%u,\"cases\":[",p ? ",":"",profiles[p]);
+        for(c=0;c<2;++c)
+        {
+            int keys_ok=1,untouched=1,touch=-1;
+            unsigned seed=c ? 0 : 0xa5a5a5a5u;
+            memset(&savedata,c ? 0:0xa5,sizeof(savedata));memset(&global_config,0,sizeof(global_config));clears=0;
+            clearsettings();
+            for(player=0;player<MAX_PLAYERS;++player)
+            {
+                if((unsigned)savedata.joyrumble[player]!=seed) untouched=0;
+                for(key=0;key<MAX_BTN_NUM;++key)
+                    if(savedata.keys[player][key]!=player*100+key) keys_ok=0;
+            }
+            if((unsigned)savedata.videoNTSC!=seed || (unsigned)savedata.screen[0][0]!=seed ||
+               (unsigned)savedata.screen[0][1]!=seed) untouched=0;
+#if ANDROID
+            touch=savedata.is_touchpad_vibration_enabled;
+#endif
+            printf("%s[%u,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%u,%d,%d,%d,%d,%d,%d]",
+                c ? ",":"",savedata.compatibleversion,savedata.gamma,savedata.brightness,
+                savedata.soundvol,savedata.usemusic,savedata.musicvol,savedata.effectvol,savedata.usejoy,
+                savedata.mode,savedata.windowpos,savedata.showtitles,savedata.swfilter,savedata.logo,
+                savedata.uselog,savedata.debuginfo,savedata.fullscreen,savedata.stretch,(unsigned)savedata.vsync,
+                savedata.fpslimit,keys_ok,clears,global_config.cheats==CHEAT_OPTIONS_ALL_MENU,untouched,touch);
+        }
+        printf("]}");
+    }
+    printf("]}\n");return 0;
+}

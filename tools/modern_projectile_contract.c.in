@@ -1,0 +1,187 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "openbor.h"
+#undef printf
+
+uint32_t obor_profile_build;
+s_savedata savedata;
+s_level *level;
+entity *self;
+u32 _time = 17;
+int max_attack_types = 1;
+
+static entity parent_object, child, obstacle;
+static int spawn_ok, spawn_calls, color_calls, onspawn_calls, mutate_onspawn;
+static int toss_calls, adjusted_direction;
+static float toss_lift;
+static s_axis_principal_float callback_speed;
+static int wall_result, obstacle_result, air_result, hole_result;
+static int selected_animation, kill_calls, sound_calls;
+
+entity *spawn(float x, float z, float y, e_direction direction,
+              char *name, int index, s_model *model)
+{
+    (void)name; (void)index; (void)model;
+    ++spawn_calls;
+    if(!spawn_ok) return NULL;
+    child.position.x = x; child.position.y = y; child.position.z = z;
+    child.direction = direction;
+    return &child;
+}
+e_direction direction_get_adjustment_result(entity *ent, const entity *parent,
+                                            e_direction_adjust adjustment)
+{
+    (void)ent; (void)parent; (void)adjustment;
+    return adjusted_direction;
+}
+void apply_color_set_adjust(entity *ent, entity *parent, e_color_adjust adjustment)
+{
+    (void)ent; (void)parent; (void)adjustment;
+    ++color_calls;
+}
+void faction_copy_all(entity *ent, entity *source) { ent->faction = source->faction; }
+void execute_onspawn_script(entity *ent)
+{
+    ++onspawn_calls;
+    callback_speed = ent->modeldata.speed;
+    if(mutate_onspawn)
+    {
+        ent->modeldata.speed.x = 42; ent->modeldata.speed.y = 43;
+        ent->modeldata.speed.z = 44;
+    }
+}
+void toss(entity *ent, float lift) { (void)ent; ++toss_calls; toss_lift = lift; }
+void common_think(void) {}
+void bomb_explode(void) {}
+int arrow_takedamage(entity *other, s_attack *attack, int fall, s_defense *defense)
+{ (void)other; (void)attack; (void)fall; (void)defense; return 0; }
+int common_takedamage(entity *other, s_attack *attack, int fall, s_defense *defense)
+{ (void)other; (void)attack; (void)fall; (void)defense; return 0; }
+
+int check_block_wall(entity *ent) { (void)ent; return wall_result; }
+entity *check_block_obstacle(entity *ent)
+{ (void)ent; return obstacle_result ? &obstacle : NULL; }
+int inair(entity *ent) { (void)ent; return air_result; }
+int checkhole(float x, float z) { (void)x; (void)z; return hole_result; }
+int sound_play_sample(int sample, unsigned priority, int left, int right, unsigned speed)
+{ (void)sample; (void)priority; (void)left; (void)right; (void)speed; ++sound_calls; return 0; }
+void ent_set_anim(entity *ent, int animation, int reset)
+{
+    (void)reset;
+    if(animation != ANI_ATTACK1 && animation != ANI_ATTACK2) abort();
+    selected_animation = animation == ANI_ATTACK1 ? 1 : 2;
+    ent->animation = ent->modeldata.animation[animation];
+}
+void kill_entity(entity *ent, e_kill_entity_trigger trigger)
+{ (void)ent; (void)trigger; ++kill_calls; }
+
+@FUNCTIONS@
+
+static void vector(s_axis_principal_float value)
+{ printf("[%.9g,%.9g,%.9g]", (double)value.x, (double)value.y, (double)value.z); }
+
+int main(void)
+{
+    static const unsigned profiles[] = {@PROFILES@};
+    static const struct launch_case {
+        int kind, no_move, succeeds, direction, mutate, null_parent, null_argument;
+        s_axis_principal_float model_speed, argument_velocity;
+    } launches[] = {@LAUNCH_CASES@};
+    static const struct detonation_case {
+        int flags, wall, obstacle, airborne, hole, attack1, attack2, remove, sound, already;
+    } detonations[] = {@DETONATION_CASES@};
+    static s_projectile projectile;
+    static s_anim idle, attack1, attack2;
+    static s_anim *animations[ANI_ATTACK2 + 1];
+    size_t p, c;
+    savedata.effectvol = 17;
+    self = &parent_object;
+    puts("{\"status\":\"PASS\",\"profiles\":[");
+    for(p = 0; p < sizeof(profiles) / sizeof(profiles[0]); ++p)
+    {
+        obor_profile_build = profiles[p];
+        printf("%s{\"revision\":%u,\"launches\":[", p ? "," : "", profiles[p]);
+        for(c = 0; c < sizeof(launches) / sizeof(launches[0]); ++c)
+        {
+            entity *result;
+            memset(&parent_object, 0, sizeof(parent_object));
+            memset(&child, 0, sizeof(child));
+            memset(&projectile, 0, sizeof(projectile));
+            parent_object.modeldata.type = TYPE_ENEMY;
+            parent_object.position.x = 100; parent_object.position.y = 12;
+            parent_object.position.z = 30;
+            child.modeldata.type = TYPE_PROJECTILE;
+            child.modeldata.speed = launches[c].model_speed;
+            child.modeldata.jumpheight = 4.5;
+            if(launches[c].no_move) child.modeldata.move_config_flags = MOVE_CONFIG_NO_MOVE;
+            projectile.offense = PROJECTILE_OFFENSE_SELF;
+            projectile.position.x = 5;
+            projectile.position.y = 1; projectile.position.z = 2;
+            projectile.velocity = launches[c].argument_velocity;
+            spawn_ok = launches[c].succeeds;
+            adjusted_direction = launches[c].direction;
+            mutate_onspawn = launches[c].mutate;
+            spawn_calls = color_calls = onspawn_calls = toss_calls = 0;
+            toss_lift = 0;
+            memset(&callback_speed, 0, sizeof(callback_speed));
+            result = launches[c].kind == 0
+                ? knife_spawn(launches[c].null_parent ? NULL : &parent_object,
+                              launches[c].null_argument ? NULL : &projectile)
+                : bomb_spawn(launches[c].null_parent ? NULL : &parent_object,
+                             launches[c].null_argument ? NULL : &projectile);
+            printf("%s{\"spawned\":%d,\"argument\":", c ? "," : "", result != NULL);
+            vector(projectile.velocity);
+            printf(",\"model\":");
+            if(result) vector(result->modeldata.speed); else printf("null");
+            printf(",\"at_callback\":");
+            if(onspawn_calls) vector(callback_speed); else printf("null");
+            printf(",\"spawn_calls\":%d,\"color_calls\":%d,\"onspawn_calls\":%d,"
+                   "\"toss_calls\":%d,\"toss_lift\":%.9g}",
+                   spawn_calls, color_calls, onspawn_calls, toss_calls, (double)toss_lift);
+        }
+        printf("],\"detonations\":[");
+        for(c = 0; c < sizeof(detonations) / sizeof(detonations[0]); ++c)
+        {
+            int result;
+            memset(&child, 0, sizeof(child));
+            memset(&idle, 0, sizeof(idle));
+            memset(&attack1, 0, sizeof(attack1));
+            memset(&attack2, 0, sizeof(attack2));
+            memset(animations, 0, sizeof(animations));
+            idle.move_config_flags = attack1.move_config_flags = attack2.move_config_flags =
+                MOVE_CONFIG_NO_FLIP | MOVE_CONFIG_SUBJECT_TO_GRAVITY;
+            attack1.numframes = attack2.numframes = 1;
+            animations[ANI_ATTACK1] = detonations[c].attack1 ? &attack1 : NULL;
+            animations[ANI_ATTACK2] = detonations[c].attack2 ? &attack2 : NULL;
+            child.modeldata.animation = animations;
+            child.modeldata.animation_capacity = ANI_ATTACK2 + 1;
+            child.animation = &idle;
+            child.toexplode = detonations[c].flags;
+            child.modeldata.remove = detonations[c].remove;
+            child.modeldata.diesound = detonations[c].sound;
+            child.position.y = 12; child.base = 5;
+            child.velocity.x = 1; child.velocity.y = 2; child.velocity.z = 3;
+            if(detonations[c].already) child.takeaction = bomb_explode;
+            wall_result = detonations[c].wall;
+            obstacle_result = detonations[c].obstacle;
+            air_result = detonations[c].airborne;
+            hole_result = detonations[c].hole;
+            selected_animation = kill_calls = sound_calls = 0;
+            result = bomb_try_detonate(&child);
+            printf("%s{\"result\":%d,\"selected\":%d,\"animation_flags\":[%u,%u,%u],"
+                   "\"base\":%.9g,\"velocity\":", c ? "," : "", result, selected_animation,
+                   (unsigned)idle.move_config_flags, (unsigned)attack1.move_config_flags,
+                   (unsigned)attack2.move_config_flags, (double)child.base);
+            vector(child.velocity);
+            printf(",\"kill_calls\":%d,\"sound_calls\":%d}", kill_calls, sound_calls);
+        }
+        puts("]}");
+    }
+    puts("]}");
+    return 0;
+}

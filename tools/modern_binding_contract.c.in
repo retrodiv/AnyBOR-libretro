@@ -1,0 +1,298 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stdint.h>
+#include <stdarg.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wignored-qualifiers"
+#if defined(__clang__)
+#pragma GCC diagnostic ignored "-Wdeprecated-non-prototype"
+#endif
+#include "scriptcommon.h"
+#undef printf
+
+uint32_t obor_profile_build;
+s_level *level;
+static s_level present_level;
+static e_screen_status screen_status;
+static unsigned long _time;
+static entity actor, target;
+static s_meta_data metadata;
+static s_anim present_animation;
+static int idle_calls, animation_calls, adjust_calls, adjust_matches;
+static size_t allocation_size;
+static int allocation_checks, dump_calls, dump_rows;
+static char log_text[8192];
+
+static int capture_log(const char *format, ...)
+{
+    va_list args;
+    size_t used = strlen(log_text);
+    int count;
+    va_start(args, format);
+    count = vsnprintf(log_text + used, sizeof(log_text) - used, format, args);
+    va_end(args);
+    if(count < 0 || (size_t)count >= sizeof(log_text) - used) abort();
+    return count;
+}
+
+void *checkAlloc(void *pointer, size_t size, const char *func, const char *file, int line)
+{
+    (void)func; (void)file; (void)line;
+    if(size && !pointer) abort();
+    allocation_size = size;
+    ++allocation_checks;
+    return pointer;
+}
+
+void ent_set_anim(entity *ent, int animation, int reset)
+{
+    (void)animation; (void)reset;
+    ++animation_calls;
+    ent->animation = &present_animation;
+}
+int set_idle(entity *ent) { ++idle_calls; ent->animation = &present_animation; return 1; }
+void adjust_bind(entity *ent) { ++adjust_calls; adjust_matches = ent == &actor; }
+void StrCache_Collect(int index) { (void)index; abort(); }
+CHAR *StrCache_Get(int index) { (void)index; abort(); }
+int StrCache_Pop(int size) { (void)size; abort(); }
+int StrCache_CreateNewFrom(const CHAR *text) { (void)text; abort(); }
+@VARIANTS@
+
+void property_access_dump_members(property_access_map mapper, const int count, const void *object)
+{
+    int i;
+    ++dump_calls;
+    dump_rows = 0;
+    for(i = 0; i < count; ++i)
+    {
+        const s_property_access_map map = mapper(object, i);
+        if(map.config_flags != PROPERTY_ACCESS_CONFIG_NONE && map.field) ++dump_rows;
+    }
+}
+
+#define printf capture_log
+@COMMON@
+@HELPERS@
+@ENTRIES@
+@ALLOCATE@
+@INITIALIZE@
+#undef printf
+#pragma GCC diagnostic pop
+
+static void quote(const char *text)
+{
+    const unsigned char *p = (const unsigned char *)text;
+    putchar('"');
+    for(; *p; ++p)
+    {
+        if(*p == '\n') printf("\\n");
+        else if(*p == '\r') printf("\\r");
+        else if(*p == '\t') printf("\\t");
+        else if(*p == '"' || *p == '\\') printf("\\%c", *p);
+        else putchar(*p);
+    }
+    putchar('"');
+}
+
+static int pointer_marker(const void *pointer)
+{
+    if(!pointer) return 0;
+    if(pointer == &target) return 1;
+    if(pointer == &metadata) return 2;
+    return -1;
+}
+
+static void *marker_pointer(int marker)
+{
+    if(marker == 0) return NULL;
+    if(marker == 1) return &target;
+    if(marker == 2) return &metadata;
+    abort();
+}
+
+static void print_variant(HRESULT status, ScriptVariant *out, const ScriptVariant *result)
+{
+    printf("[%d,%d,%d,%d,%d]", (int)status, out == result, result->vt,
+           result->vt == VT_INTEGER ? (int)result->lVal : 0,
+           result->vt == VT_PTR ? pointer_marker(result->ptrVal) : -1);
+}
+
+static void print_state(const s_bind *bind)
+{
+    printf("[%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d]", (int)(LONG)bind->frame,
+           (int)(LONG)bind->animation, (int)(LONG)bind->config,
+           (int)(LONG)bind->direction_adjust, pointer_marker(bind->meta_data),
+           bind->meta_tag, bind->offset.x, bind->offset.y, bind->offset.z,
+           bind->sortid, pointer_marker(bind->target));
+}
+
+static void initialize_actor(int has_level)
+{
+    memset(&actor, 0, sizeof(actor));
+    actor.modeldata.type = TYPE_ANY;
+    actor.modeldata.profile_guardpoints = 21;
+    actor.modeldata.profile_jugglepoints = 22;
+    actor.modeldata.guardpoints.current = 23;
+    actor.modeldata.jugglepoints.current = 24;
+    actor.guardpoints = 121;
+    actor.jugglepoints = 122;
+    actor.nograb_default = 19;
+    level = has_level ? &present_level : NULL;
+    screen_status = IN_SCREEN_NONE;
+    _time = 0;
+    idle_calls = animation_calls = 0;
+    ent_default_init(&actor);
+}
+
+static void seed_bind(s_bind *bind, int initial_target, int initial_meta)
+{
+    bind->frame = 11;
+    bind->animation = 12;
+    bind->config = 13;
+    bind->direction_adjust = 14;
+    bind->meta_data = marker_pointer(initial_meta);
+    bind->meta_tag = 15;
+    bind->offset.x = 16; bind->offset.y = 17; bind->offset.z = 18;
+    bind->sortid = 19;
+    bind->target = marker_pointer(initial_target);
+}
+
+struct input_case {
+    int property, value_type, value, value_pointer, initial_target, initial_meta;
+    int bad_tag, object_type, property_type;
+};
+static const struct input_case cases[] = {@CASES@};
+
+static void api_case(const struct input_case *input, int embedded)
+{
+    ScriptVariant object = {0}, property = {0}, value = {0};
+    ScriptVariant result = {0}, *out;
+    ScriptVariant *args[] = {&object, &property, &value};
+    s_bind *bind;
+    HRESULT status;
+    if(embedded)
+    {
+        initialize_actor(1);
+        bind = &actor.binding;
+    }
+    else bind = bind_allocate_object();
+    seed_bind(bind, input->initial_target, input->initial_meta);
+    if(input->bad_tag) bind->object_type = OBJECT_TYPE_NONE;
+    object.vt = input->object_type; object.ptrVal = bind;
+    property.vt = input->property_type; property.lVal = input->property;
+    value.vt = input->value_type;
+    if(value.vt == VT_DECIMAL) value.dblVal = input->value + (input->value < 0 ? -0.75 : 0.75);
+    else if(value.vt == VT_PTR) value.ptrVal = marker_pointer(input->value_pointer);
+    else value.lVal = input->value;
+    dump_calls = dump_rows = 0;
+    printf("{\"get\":");
+    result.vt = VT_INTEGER; result.lVal = 77; out = &result; log_text[0] = '\0';
+    status = openbor_get_bind_property(args, &out, 2);
+    print_variant(status, out, &result); printf(",\"get_log\":"); quote(log_text);
+    result.vt = VT_INTEGER; result.lVal = 77; out = &result; log_text[0] = '\0';
+    status = openbor_set_bind_property(args, &out, 3);
+    printf(",\"set\":"); print_variant(status, out, &result);
+    printf(",\"set_log\":"); quote(log_text);
+    result.vt = VT_INTEGER; result.lVal = 77; out = &result; log_text[0] = '\0';
+    status = openbor_get_bind_property(args, &out, 2);
+    printf(",\"after\":"); print_variant(status, out, &result);
+    printf(",\"after_log\":"); quote(log_text);
+    printf(",\"state\":"); print_state(bind);
+    printf(",\"dump\":[%d,%d]}", dump_calls, dump_rows);
+    if(!embedded) (free)(bind);
+}
+
+static void limit_case(int setter, int count)
+{
+    ScriptVariant values[3], result = {.lVal=77,.vt=VT_INTEGER}, *out = &result;
+    ScriptVariant **args = count > 0 ? (malloc)((size_t)count * sizeof(*args)) : NULL;
+    s_bind *bind = bind_allocate_object();
+    HRESULT status;
+    int i;
+    memset(values, 0, sizeof(values));
+    values[0].vt = VT_PTR; values[0].ptrVal = bind;
+    values[1].vt = VT_INTEGER; values[1].lVal = BIND_PROPERTY_ANIMATION_FRAME;
+    values[2].vt = VT_INTEGER; values[2].lVal = 7;
+    for(i = 0; i < count; ++i) args[i] = &values[i];
+    log_text[0] = '\0';
+    status = setter ? openbor_set_bind_property(args, &out, count) :
+                      openbor_get_bind_property(args, &out, count);
+    printf("{\"result\":"); print_variant(status, out, &result);
+    printf(",\"log\":"); quote(log_text); printf(",\"state\":"); print_state(bind); putchar('}');
+    (free)(args); (free)(bind);
+}
+
+int main(void)
+{
+    static const struct { unsigned revision; int signed_points; } profiles[] = {@PROFILES@};
+    unsigned p, c;
+    int embedded, has_level, count;
+    puts("{\"status\":\"PASS\",\"profiles\":[");
+    for(p = 0; p < sizeof(profiles) / sizeof(profiles[0]); ++p)
+    {
+        s_bind expected;
+        s_bind *allocated;
+        obor_profile_build = profiles[p].revision;
+        target.object_type = OBJECT_TYPE_ENTITY;
+        allocation_checks = 0; allocation_size = 0;
+        allocated = bind_allocate_object();
+        memset(&expected, 0, sizeof(expected)); expected.object_type = allocated->object_type;
+        printf("%s{\"revision\":%u,\"allocation\":{\"zeroed\":%d,\"size_ok\":%d,"
+               "\"checks\":%d,\"tagged\":%d},\"initialization\":[", p ? "," : "",
+               profiles[p].revision, memcmp(allocated, &expected, sizeof(expected)) == 0,
+               allocation_size == sizeof(*allocated), allocation_checks,
+               allocated->object_type == OBJECT_TYPE_BIND);
+        (free)(allocated);
+        for(has_level = 0; has_level < 2; ++has_level)
+        {
+            initialize_actor(has_level);
+            printf("%s{\"tagged\":%d,\"guard\":%lld,\"juggle\":%lld,\"nograb\":%d,"
+                   "\"idle\":%d,\"animation\":%d}", has_level ? "," : "",
+                   actor.binding.object_type == OBJECT_TYPE_BIND,
+                   profiles[p].signed_points ? (long long)actor.guardpoints :
+                                               (long long)actor.modeldata.guardpoints.current,
+                   profiles[p].signed_points ? (long long)actor.jugglepoints :
+                                               (long long)actor.modeldata.jugglepoints.current,
+                   actor.nograb_default, idle_calls, animation_calls);
+        }
+        ent_default_init(NULL);
+        printf("],\"api\":[");
+        for(embedded = 0; embedded < 2; ++embedded)
+        {
+            if(embedded) putchar(',');
+            putchar('[');
+            for(c = 0; c < sizeof(cases) / sizeof(cases[0]); ++c)
+            {
+                if(c) putchar(',');
+                api_case(&cases[c], embedded);
+            }
+            putchar(']');
+        }
+        printf("],\"limits\":[");
+        for(count = 0; count < 7; ++count)
+        {
+            if(count) putchar(',');
+            limit_case(count >= 3, count < 3 ? count - 1 : count - 4);
+        }
+        printf("],\"updates\":[");
+        for(count = 0; count < 3; ++count)
+        {
+            ScriptVariant input = {.ptrVal=&actor,.vt=VT_PTR}, result = {.lVal=77,.vt=VT_INTEGER};
+            ScriptVariant *out = &result, *args[] = {&input};
+            HRESULT status;
+            adjust_calls = adjust_matches = 0; log_text[0] = '\0';
+            if(count == 1) input.vt = VT_INTEGER;
+            status = openbor_update_bind(args, &out, count == 2 ? 0 : 1);
+            printf("%s{\"result\":", count ? "," : ""); print_variant(status, out, &result);
+            printf(",\"calls\":%d,\"matched\":%d,\"log\":", adjust_calls, adjust_matches);
+            quote(log_text); putchar('}');
+        }
+        printf("]}");
+    }
+    puts("]}");
+    return 0;
+}

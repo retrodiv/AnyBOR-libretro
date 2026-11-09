@@ -1,0 +1,128 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <strings.h>
+#ifndef stricmp
+#define stricmp strcasecmp
+#endif
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wignored-qualifiers"
+#if defined(__clang__)
+#pragma GCC diagnostic ignored "-Wdeprecated-non-prototype"
+#endif
+#include "scriptcommon.h"
+#include "commands.h"
+#undef printf
+uint32_t obor_profile_build;
+int pixelformat=PIXEL_32;
+int PLAYER_MIN_Z=0,PLAYER_MAX_Z=1000;
+char packfile[OBOR_CONTENT_PATH_MAX]="synthetic";
+@DEFAULT@
+static s_level fixture_level;
+static s_layer fixture_layers[8];
+s_level *level=&fixture_level;
+static s_sprite fixture_sprites[8];
+static s_screen fixture_screens[8];
+static int sprite_calls,screen_calls;
+void exitIfFalse(int value, const char *assertion, const char *func, const char *file, int line)
+{
+    (void)assertion; (void)func; (void)file; (void)line;
+    if(!value) abort();
+}
+void borShutdown(int status, char *format, ...)
+{ (void)status; (void)format; abort(); }
+@HELPERS@
+s_sprite *loadsprite2(char *filename,int *width,int *height)
+{
+    if(!filename || !*filename || sprite_calls>=8) abort();
+    *width=32; *height=24;
+    return &fixture_sprites[sprite_calls++];
+}
+int loadscreen(char *filename,char *pack,unsigned char *palette,int format,s_screen **out)
+{
+    s_screen *screen;
+    if(!filename || !*filename || pack!=packfile || palette || format!=PIXEL_32 || screen_calls>=8) abort();
+    screen=&fixture_screens[screen_calls++]; screen->width=32; screen->height=24;
+    /* The real receiving field can be packed; do not add a probe-only alignment requirement. */
+    memcpy(out,&screen,sizeof(screen));
+    return 1;
+}
+@LOAD@
+static int blendfx[MAX_BLENDINGS];
+@NAN_MACRO@
+static int fixture_command(int cmd,char *maskPath,int count,const char *const *args)
+{
+    ArgList arglist={0};
+    s_layer *bgl=NULL;
+    s_drawmethod *dm=NULL;
+    char bgPath[128]="",*value=NULL,*filename="synthetic",*command="layer",*errormessage=NULL;
+    int panels[8][3]={{0}},panelcount=0,frontpanels_loaded=0,blendfx_is_set=0,i;
+    arglist.count=count;
+    for(i=0;i<count;++i) arglist.args[i]=(char *)args[i];
+    /* Reserved native arrays isolate these commands from allocator policy. */
+#undef __realloc
+#define __realloc(array,index) do { (void)(array); if((index)<0 || (index)>=8) abort(); } while(0)
+    switch(cmd)
+    {
+        @COMMANDS@
+        default: abort();
+    }
+#undef __realloc
+    return 1;
+lCleanup:
+    (void)errormessage;
+    return 0;
+}
+#pragma GCC diagnostic pop
+static int route(const s_layer *layer)
+{
+    unsigned i;
+    for(i=0;i<8;++i)
+    {
+        if(layer->gfx.handle==(void *)&fixture_sprites[i]) return 1;
+        if(layer->gfx.handle==(void *)&fixture_screens[i]) return 2;
+    }
+    return layer->gfx.handle ? -1 : 0;
+}
+int main(void)
+{
+    static const unsigned profiles[]={@PROFILES@};
+    static const struct { int command; const char *mask; int count; const char *args[24]; } cases[]={@INPUTS@};
+    unsigned p,c,i;
+    printf("{\"status\":\"PASS\",\"profiles\":[");
+    for(p=0;p<sizeof(profiles)/sizeof(*profiles);++p)
+    {
+        if(p) { putchar(','); }
+        obor_profile_build=profiles[p];
+        printf("{\"revision\":%u,\"cases\":[",profiles[p]);
+        for(c=0;c<sizeof(cases)/sizeof(*cases);++c)
+        {
+            char mask[32]; int status;
+            memset(&fixture_level,0,sizeof(fixture_level)); memset(fixture_layers,0,sizeof(fixture_layers));
+            memset(fixture_sprites,0,sizeof(fixture_sprites)); memset(fixture_screens,0,sizeof(fixture_screens));
+            memset(blendfx,0,sizeof(blendfx)); sprite_calls=screen_calls=0;
+            fixture_level.layers=fixture_layers;
+            if(strlen(cases[c].mask)>=sizeof(mask)) abort();
+            strcpy(mask,cases[c].mask);
+            status=fixture_command(cases[c].command,mask,cases[c].count,cases[c].args);
+            if(c) { putchar(','); }
+            printf("[%d,%d,%d,%d,[",status,sprite_calls,screen_calls,mask[0]==0);
+            for(i=0;i<(unsigned)level->numlayers;++i)
+            {
+                const s_layer *l=&level->layers[i]; const s_drawmethod *m=&l->drawmethod;
+                if(i) putchar(',');
+                printf("[%d,%u,%d,%d,%d,%d,%d,%d,%d]",m->transbg,(unsigned)m->config,(int)m->alpha,
+                       m->water.watermode,m->xrepeat,m->yrepeat,l->size.x,l->size.y,route(l));
+            }
+            printf("],[");
+            for(i=0;i<MAX_BLENDINGS;++i) { if(i) putchar(','); printf("%d",blendfx[i]); }
+            printf("]]");
+        }
+        printf("]}");
+    }
+    printf("]}\n");return 0;
+}

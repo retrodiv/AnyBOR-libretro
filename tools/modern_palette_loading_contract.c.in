@@ -1,0 +1,72 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "openbor.h"
+#undef printf
+uint32_t obor_profile_build;
+char packfile[OBOR_CONTENT_PATH_MAX]="archive";
+static int available,position,open_failed,image_result,opens,reads,closes,images;
+static const char *requested_path;
+int openpackfile(const char *filename,const char *archive)
+{
+    if(strcmp(filename,requested_path) || archive!=packfile) abort();
+    ++opens;return open_failed ? -1 : 9;
+}
+int readpackfile(int handle,void *memory,int length)
+{
+    unsigned char *out=memory;int count,i;
+    if(handle!=9 || length!=3) abort();
+    ++reads;count=available-position;if(count>length) count=length;
+    if(count<0) abort();
+    for(i=0;i<count;++i) out[i]=(unsigned char)((position+i)*29+17);
+    position+=count;return count;
+}
+int closepackfile(int handle) { if(handle!=9) abort();++closes;return 0; }
+int loadimagepalette(char *filename,char *archive,unsigned char *out)
+{
+    if(strcmp(filename,requested_path) || archive!=packfile) abort();
+    ++images;
+    if(image_result) { out[0]=77;out[1]=88;out[2]=99;out[3]=0; }
+    return image_result;
+}
+@COLOR@
+@FUNCTION@
+int main(void)
+{
+    static const unsigned profiles[]={@PROFILES@};
+    static const unsigned offsets[]={@OFFSETS@};
+    static const struct input { const char *path;int length,open_failed,image_result; }
+        inputs[]={@CASES@};
+    size_t p,c,o,i;
+    printf("{\"status\":\"PASS\",\"profiles\":[");
+    for(p=0;p<sizeof(profiles)/sizeof(*profiles);++p)
+    {
+        int first=1;obor_profile_build=profiles[p];
+        printf("%s{\"revision\":%u,\"cases\":[",p ? ",":"",profiles[p]);
+        for(c=0;c<sizeof(inputs)/sizeof(*inputs);++c)
+            for(o=0;o<sizeof(offsets)/sizeof(*offsets);++o)
+            {
+                unsigned char storage[MAX_PAL_SIZE+32];unsigned char *out=storage+16+offsets[o];
+                int result,guards=1;
+                if(offsets[o]>3) abort();
+                memset(storage,0xcd,sizeof(storage));
+                for(i=0;i<MAX_PAL_SIZE;++i) out[i]=(unsigned char)(i*37+11);
+                available=inputs[c].length;open_failed=inputs[c].open_failed;
+                image_result=inputs[c].image_result;requested_path=inputs[c].path;
+                position=opens=reads=closes=images=0;
+                result=load_palette(out,(char*)requested_path);
+                for(i=0;i<sizeof(storage);++i)
+                    if((i<16+offsets[o] || i>=16+offsets[o]+MAX_PAL_SIZE) && storage[i]!=0xcd) guards=0;
+                printf("%s[%d,%d,%d,%d,%d,%d,%d,[",first ? "":",",result,opens,reads,closes,images,position,guards);
+                first=0;
+                for(i=0;i<MAX_PAL_SIZE;++i) printf("%s%u",i ? ",":"",(unsigned)out[i]);
+                printf("]]");
+            }
+        printf("]}");
+    }
+    printf("]}\n");return 0;
+}

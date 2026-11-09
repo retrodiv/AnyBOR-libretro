@@ -1,7 +1,7 @@
 {
   "core_name": "AnyBOR",
   "core_basename": "anybor_libretro",
-  "version": "0.1.84",
+  "version": "0.1.85",
   "fallback_build": "6391",
   "profiles": [
     {
@@ -2934,15 +2934,59 @@
       "stage": "alpha"
     },
     {
+      "build": "7530",
+      "engine": "7533",
+      "major": "v4.0",
+      "automatic": true,
+      "auto_until": 7530,
+      "upstream_commit": "9695908083f4641278c64fb2e947a11216ab0f9a",
+      "upstream_date": "2023-12-31",
+      "covers": "7143-7530 automatically; exact filename tag or core option",
+      "upstream_branch": "master"
+    },
+    {
       "build": "7533",
       "engine": "7533",
-      "covers": "7143-7533 by automatic detection; stable v4.0 anchor",
+      "covers": "7531-7533 automatically; exact filename tag or core option",
       "major": "v4.0"
+    },
+    {
+      "build": "7555",
+      "engine": "7533",
+      "major": "v4.0",
+      "automatic": true,
+      "auto_until": 7555,
+      "upstream_commit": "b1676f97bbe93473a2b93582a164005b4c77b78a",
+      "upstream_date": "2024-01-09",
+      "covers": "7534-7555 automatically; exact filename tag or core option",
+      "upstream_branch": "master"
+    },
+    {
+      "build": "7556",
+      "engine": "7533",
+      "major": "v4.0",
+      "automatic": true,
+      "auto_until": 7556,
+      "upstream_commit": "fc92d78dbf8110c8af10702233ba4f022d6bdc50",
+      "upstream_date": "2024-01-09",
+      "covers": "7556-7556 automatically; exact filename tag or core option",
+      "upstream_branch": "master"
+    },
+    {
+      "build": "7735",
+      "engine": "7533",
+      "major": "v4.0",
+      "automatic": true,
+      "auto_until": 7735,
+      "upstream_commit": "f64d63c2fc4e0c6e8993a58fbce1816502fff63a",
+      "upstream_date": "2025-05-04",
+      "covers": "7557-7735 automatically; exact filename tag or core option",
+      "upstream_branch": "master"
     },
     {
       "build": "8023",
       "engine": "8023",
-      "covers": "7534-8023; newer builds best effort via latest pinned v4 anchor",
+      "covers": "7736-8023; newer builds best effort via latest pinned v4 anchor",
       "major": "v4.0",
       "stage": "dev"
     }

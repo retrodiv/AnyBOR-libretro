@@ -1,0 +1,151 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stdint.h>
+#include <stdarg.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <strings.h>
+#ifndef stricmp
+#define stricmp strcasecmp
+#endif
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wignored-qualifiers"
+#if defined(__clang__)
+#pragma GCC diagnostic ignored "-Wdeprecated-non-prototype"
+#endif
+#include "scriptcommon.h"
+#undef printf
+uint32_t obor_profile_build;
+@DEFAULT@
+s_drawmethod drawmethod;
+static s_drawmethod actor_method;
+static entity owner;
+static int token;
+static const char *const names[] = {@NAMES@};
+static char log_text[8192];
+static int capture_log(const char *format, ...)
+{
+    va_list args;
+    size_t used = strlen(log_text);
+    int count;
+    va_start(args, format);
+    count = vsnprintf(log_text + used, sizeof(log_text) - used, format, args);
+    va_end(args);
+    if(count < 0 || (size_t)count >= sizeof(log_text) - used) abort();
+    return count;
+}
+void StrCache_Collect(int index) { (void)index; }
+CHAR *StrCache_Get(int index)
+{
+    if(index < 0 || (unsigned)index >= sizeof(names)/sizeof(*names)) abort();
+    return (CHAR *)names[index];
+}
+int StrCache_Pop(int size) { (void)size; abort(); }
+int StrCache_CreateNewFrom(const CHAR *text) { (void)text; abort(); }
+@VARIANTS@
+#define printf capture_log
+@SEARCH@
+@ENUM@
+@API@
+#undef printf
+#pragma GCC diagnostic pop
+static void fixture_seed(void)
+{
+    static const int value[] = {@SEED@};
+    actor_method = plainmethod;
+    actor_method.flag=value[0]; actor_method.fliprotate=value[1];
+    actor_method.flipx=value[2]; actor_method.flipy=value[3]; actor_method.transbg=value[4];
+    actor_method.config=value[5]; actor_method.scalex=value[6]; actor_method.scaley=value[7];
+    actor_method.shiftx=value[8]; actor_method.alpha=value[9]; actor_method.remap=value[10];
+    actor_method.fillcolor=value[11]; actor_method.rotate=value[12];
+    actor_method.centerx=value[13]; actor_method.centery=value[14];
+    actor_method.table=(unsigned char *)&token;
+    drawmethod=actor_method; memset(&owner,0,sizeof(owner)); owner.drawmethod=&actor_method;
+}
+static void state(const s_drawmethod *m)
+{
+    printf("[%d,%d,%d,%d,%d,%u,%d,%d,%d,%d,%d,%u,%d,%d,%d,%d]",
+           m->flag,m->fliprotate,m->flipx,m->flipy,m->transbg,(unsigned)m->config,
+           m->scalex,m->scaley,m->shiftx,(int)m->alpha,m->remap,(unsigned)m->fillcolor,
+           (int)m->rotate,m->centerx,m->centery,m->table==(unsigned char *)&token);
+}
+static void normalize(s_drawmethod *m, int positional)
+{
+    m->flag=m->fliprotate=m->flipx=m->flipy=m->transbg=0; m->config=0;
+    if(positional)
+    {
+        m->scalex=m->scaley=m->shiftx=m->alpha=m->remap=m->fillcolor=m->rotate=0;
+        m->centerx=m->centery=0; m->table=NULL;
+    }
+}
+static int unchanged_other(s_drawmethod before, s_drawmethod after, int positional)
+{
+    normalize(&before,positional); normalize(&after,positional);
+    return memcmp(&before,&after,sizeof(before))==0;
+}
+static void getter(ScriptVariant *target, unsigned name)
+{
+    ScriptVariant property={0},result={0},*out=&result;
+    ScriptVariant *args[]={target,&property};
+    HRESULT status;
+    property.vt=VT_STR; property.strVal=name;
+    log_text[0]='\0'; status=openbor_getdrawmethod(args,&out,2);
+    printf("[%d,%d,%d,%ld,%d]",(int)status,out==&result,result.vt,(long)result.lVal,log_text[0]==0);
+}
+int main(void)
+{
+    static const unsigned profiles[]={@PROFILES@};
+    static const struct { int kind; double value; } values[]={@VALUES@};
+    static const struct { int count, v[14]; } positional[]={@POSITIONAL@};
+    unsigned p,t,n,v,c;
+    printf("{\"status\":\"PASS\",\"profiles\":[");
+    for(p=0;p<sizeof(profiles)/sizeof(*profiles);++p)
+    {
+        if(p) { putchar(','); }
+        obor_profile_build=profiles[p];
+        printf("{\"revision\":%u,\"named\":[",profiles[p]);
+        c=0;
+        for(t=0;t<2;++t) for(n=0;n<sizeof(names)/sizeof(*names);++n)
+        for(v=0;v<sizeof(values)/sizeof(*values);++v)
+        {
+            ScriptVariant target={0},property={0},value={0},result={0},*out=&result;
+            ScriptVariant *args[]={&target,&property,&value};
+            s_drawmethod before,other; s_drawmethod *method; HRESULT status;
+            fixture_seed(); method=t?&actor_method:&drawmethod; before=*method;
+            other=t?drawmethod:actor_method;
+            if(t) { target.vt=VT_PTR; target.ptrVal=&owner; }
+            property.vt=VT_STR; property.strVal=n; value.vt=values[v].kind;
+            if(value.vt==VT_DECIMAL) value.dblVal=values[v].value;
+            else if(value.vt==VT_PTR) value.ptrVal=&token;
+            else value.lVal=(LONG)values[v].value;
+            if(c++) { putchar(','); }
+            putchar('['); getter(&target,n); putchar(',');
+            log_text[0]='\0'; status=openbor_changedrawmethod(args,&out,3);
+            printf("[%d,%d,%d],",(int)status,out==NULL,log_text[0]==0); state(method); putchar(',');
+            getter(&target,n);
+            printf(",%d,%d]",unchanged_other(before,*method,0),
+                   memcmp(&other,t?&drawmethod:&actor_method,sizeof(other))==0);
+        }
+        printf("],\"positional\":[");c=0;
+        for(t=0;t<2;++t) for(v=0;v<sizeof(positional)/sizeof(*positional);++v)
+        {
+            ScriptVariant args_storage[16],*args[16],result={0},*out=&result;
+            s_drawmethod before,other,*method; HRESULT status; unsigned i;
+            fixture_seed(); method=t?&actor_method:&drawmethod; before=*method; other=t?drawmethod:actor_method;
+            memset(args_storage,0,sizeof(args_storage));
+            for(i=0;i<16;++i) { args[i]=&args_storage[i]; args[i]->vt=VT_INTEGER; }
+            args[0]->vt=t?VT_PTR:VT_EMPTY; args[0]->ptrVal=t?&owner:NULL;
+            for(i=1;i<16;++i) if(i!=13) args[i]->lVal=positional[v].v[i-(i>13?2:1)];
+            args[13]->vt=VT_PTR; args[13]->ptrVal=&token;
+            log_text[0]='\0'; status=openbor_setdrawmethod(args,&out,positional[v].count);
+            if(c++) { putchar(','); }
+            printf("[[%d,%d,%d],",(int)status,out==NULL,log_text[0]==0);
+            state(method);printf(",%d,%d]",unchanged_other(before,*method,1),
+                                 memcmp(&other,t?&drawmethod:&actor_method,sizeof(other))==0);
+        }
+        printf("]}");
+    }
+    printf("]}\n");return 0;
+}

@@ -1,0 +1,127 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wignored-qualifiers"
+#if defined(__clang__)
+#pragma GCC diagnostic ignored "-Wdeprecated-non-prototype"
+#endif
+#include "types.h"
+#include "globals.h"
+#include "screen.h"
+#include "sprite.h"
+#include "transform.h"
+#undef printf
+uint32_t obor_profile_build;
+unsigned channelr,channelg,channelb,tintmode,tintcolor;
+int usechannel,useclip,clipx1,clipy1,clipx2,clipy2;
+unsigned char *blendtables[MAX_BLENDINGS];
+static s_screen source_screen,destination;
+static s_sprite image;
+static unsigned palette[256];
+static s_drawmethod *expected_method;
+static int trace[4][4],calls;
+static void record(int route,int x,int y,int key)
+{
+    if(calls>=4) abort();
+    trace[calls][0]=route;trace[calls][1]=x;trace[calls][2]=y;trace[calls][3]=key;++calls;
+}
+blend16fp getblendfunction16(int alpha) { if(alpha) abort();return NULL; }
+blend32fp getblendfunction32(int alpha) { if(alpha) abort();return NULL; }
+void copyscreen(s_screen *d,s_screen *s) { (void)d;(void)s;abort(); }
+static void screen_args(s_screen *d,s_screen *s)
+{
+    if(d!=&destination || s!=&source_screen) abort();
+}
+void copyscreen_o(s_screen *d,s_screen *s,int x,int y) { screen_args(d,s);record(5,x,y,0); }
+void copyscreen_trans(s_screen *d,s_screen *s,int x,int y) { screen_args(d,s);record(6,x,y,1); }
+void copyscreen_remap(s_screen *d,s_screen *s,int x,int y,unsigned char *table)
+{ (void)d;(void)s;(void)x;(void)y;(void)table;abort(); }
+void blendscreen(s_screen *d,s_screen *s,int x,int y,unsigned char *table)
+{ (void)d;(void)s;(void)x;(void)y;(void)table;abort(); }
+void putscreenx8p16(s_screen *d,s_screen *s,int x,int y,int key,u16 *table,blend16fp fp)
+{ screen_args(d,s);if(table || fp)abort();record(7,x,y,key); }
+void blendscreen16(s_screen *d,s_screen *s,int x,int y,int key,blend16fp fp)
+{ screen_args(d,s);if(fp)abort();record(8,x,y,key); }
+void putscreenx8p32(s_screen *d,s_screen *s,int x,int y,int key,u32 *table,blend32fp fp)
+{ screen_args(d,s);if(table || fp)abort();record(9,x,y,key); }
+void blendscreen32(s_screen *d,s_screen *s,int x,int y,int key,blend32fp fp)
+{ screen_args(d,s);if(fp)abort();record(10,x,y,key); }
+static void sprite_args(s_sprite *frame,s_screen *screen)
+{ if(frame!=&image || screen!=&destination)abort(); }
+void putsprite_ex(int x,int y,s_sprite *frame,s_screen *screen,s_drawmethod *method)
+{ sprite_args(frame,screen);if(method!=expected_method)abort();record(1,x,y,0); }
+void putsprite_8(int x,int y,int flip,s_sprite *frame,s_screen *screen,unsigned char *table,unsigned char *blend)
+{ sprite_args(frame,screen);if(flip || table || blend)abort();record(2,x,y,0); }
+void putsprite_x8p16(int x,int y,int flip,s_sprite *frame,s_screen *screen,u16 *table,blend16fp fp)
+{ sprite_args(frame,screen);if(flip || table!=(u16*)image.palette || fp)abort();record(3,x,y,0); }
+void putsprite_x8p32(int x,int y,int flip,s_sprite *frame,s_screen *screen,u32 *table,blend32fp fp)
+{ sprite_args(frame,screen);if(flip || table!=(u32*)image.palette || fp)abort();record(4,x,y,0); }
+#define REFUSE_TRANSFORM(name) \
+void name(s_screen *d,gfx_entry *s,int x,int y,int cx,int cy,s_drawmethod *m) \
+{ (void)d;(void)s;(void)x;(void)y;(void)cx;(void)cy;(void)m;abort(); }
+REFUSE_TRANSFORM(gfx_draw_rotate)
+REFUSE_TRANSFORM(gfx_draw_scale)
+REFUSE_TRANSFORM(gfx_draw_water)
+REFUSE_TRANSFORM(gfx_draw_plane)
+@FUNCTIONS@
+static int source_key(s_drawmethod *drawmethod,int magic)
+{
+    s_screen screen={0};gfx_entry entry, *src=&entry;int transbg;
+    screen.magic=magic;src->screen=&screen;
+    @SOURCE_KEY@
+    return transbg;
+}
+#pragma GCC diagnostic pop
+int main(void)
+{
+    static const unsigned profiles[]={@PROFILES@};
+    static const struct { int flag;unsigned mask;int key,provided; } states[]={@CASES@};
+    static const struct { int sprite,format,indexed; } formats[]={
+        {1,PIXEL_8,0},{1,PIXEL_16,0},{1,PIXEL_32,0},
+        {0,PIXEL_8,0},{0,PIXEL_16,1},{0,PIXEL_16,0},{0,PIXEL_32,1},{0,PIXEL_32,0}};
+    unsigned p,f,c,n,index;
+    image.palette=(unsigned char*)palette;
+    puts("{\"status\":\"PASS\",\"profiles\":[");
+    for(p=0;p<sizeof(profiles)/sizeof(*profiles);++p)
+    {
+        obor_profile_build=profiles[p];index=0;
+        printf("%s{\"revision\":%u,\"parents\":[",p?",":"",profiles[p]);
+        for(f=0;f<sizeof(formats)/sizeof(*formats);++f)
+            for(c=0;c<sizeof(states)/sizeof(*states);++c)
+            {
+                s_drawmethod method={0};unsigned char before[sizeof(method)];
+                method.flag=states[c].flag;method.config=(e_drawmethod_config)states[c].mask;
+                method.transbg=states[c].key;method.scalex=method.scaley=256;
+                method.xrepeat=method.yrepeat=2;method.xspan=3;method.yspan=4;
+                method.centerx=1;method.centery=2;method.channelr=method.channelg=method.channelb=255;
+                memcpy(before,&method,sizeof(method));expected_method=&method;
+                destination=(s_screen){0};source_screen=(s_screen){0};
+                destination.width=8;destination.height=6;source_screen.width=4;source_screen.height=3;
+                destination.pixelformat=formats[f].format;
+                source_screen.pixelformat=formats[f].indexed?PIXEL_x8:formats[f].format;
+                calls=0;
+                if(formats[f].sprite)putsprite(6,8,&image,&destination,states[c].provided?&method:NULL);
+                else putscreen(&destination,&source_screen,6,8,states[c].provided?&method:NULL);
+                if(memcmp(before,&method,sizeof(method)))abort();
+                printf("%s[",index++?",":"");
+                for(n=0;n<(unsigned)calls;++n)
+                    printf("%s[%d,%d,%d,%d]",n?",":"",trace[n][0],trace[n][1],trace[n][2],trace[n][3]);
+                putchar(']');
+            }
+        printf("],\"source_keys\":[");index=0;
+        for(c=0;c<sizeof(states)/sizeof(*states);++c)
+            for(n=0;n<2;++n)
+            {
+                s_drawmethod method={0};method.transbg=states[c].key;
+                method.config=(e_drawmethod_config)states[c].mask;
+                printf("%s%d",index++?",":"",source_key(&method,n?sprite_magic:screen_magic));
+            }
+        printf("]}");
+    }
+    puts("]}");return 0;
+}

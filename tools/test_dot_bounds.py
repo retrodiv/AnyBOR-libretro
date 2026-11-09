@@ -31,12 +31,30 @@ def run_contract(engine, revisions):
     for name in ('obor_combat_defense', 'obor_combat_offense'):
         if name + '(' in body:
             helpers += function(source, name)
+    combat_helpers = bool(helpers)
     header = (engine / 'openbor.h').read_text()
     if not re.search(r'^#define\s+MAX_DOTS\s+10\b', header, re.M):
         raise AssertionError('Review changed native effect capacity before reusing this contract')
     includes = [engine, engine / 'source', ROOT / 'src/port/libretro', ROOT / 'src/glue']
     includes += sorted(path for path in (engine / 'source').iterdir() if path.is_dir())
-    if re.search(r'\bDOT_MODE_MP\b', body):
+    mode_helpers = ('obor_profile_dot_hits_hp', 'obor_profile_dot_hits_mp')
+    if all(name + '(' in body for name in mode_helpers):
+        helpers += '\n' + '\n'.join(function(source, name) for name in mode_helpers)
+        # Select a pure-MP input for this bounds/cleanup contract. Numeric mode
+        # fidelity has separate per-source oracles in profile-classic-dot-modes.
+        helpers += '''
+static int obor_probe_mp_only_mode(void)
+{
+    int selected = -1, count = 0;
+    for(int mode = 0; mode < 8; ++mode)
+        if(obor_profile_dot_hits_mp(mode) && !obor_profile_dot_hits_hp(mode))
+        { selected = mode; ++count; }
+    assert(count == 1);
+    return selected;
+}
+'''
+        mp_mode = 'obor_probe_mp_only_mode()'
+    elif re.search(r'\bDOT_MODE_MP\b', body):
         mp_mode = 'DOT_MODE_MP'
     elif 'if(iDot==2||iDot==3||iDot==5)' in re.sub(r'\s+', '', body):
         mp_mode = '2'
@@ -47,7 +65,7 @@ def run_contract(engine, revisions):
     if not attack_type or not callback or callback[1].count(',') not in (8, 9):
         raise AssertionError('Review native attack type and damage-script signature')
     features = ['-DDOT_ATTACK_TYPE=' + attack_type[1]]
-    if helpers:
+    if combat_helpers:
         features.append('-DDOT_HAS_PROFILE_COMBAT=1')
     if callback[1].count(',') == 9:
         if not re.search(r'\bint\s+tag\s*$', callback[1]):

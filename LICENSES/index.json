@@ -367,7 +367,7 @@
     "file": "LICENSES/Embedded-source-notices.txt",
     "license": "see each notice",
     "scope": "source and binary",
-    "sha256": "667b308c91d82936080f47948cd9e066e30e35f19286a27acafaa50c52f3641e",
+    "sha256": "a529ff938d0e93087a526c4a7d103315c7e48093cab1b9c39c2bd9c6aa1327a0",
     "source": "Individual source headers listed in this document"
   },
   {
@@ -467,5 +467,12 @@
     "scope": "Selected early profile source imports",
     "sha256": "3f12a435af24fce556b67e4c97a45fa750bccb9d3a17ff25209311b865efe3fb",
     "source": "https://raw.githubusercontent.com/DCurrent/openbor/4a276c8b81fe0fc96d0f98b0e535da802c7417f7/engine/LICENSE"
+  },
+  {
+    "file": "LICENSES/OpenBOR-profile-7735-BSD-3-Clause.txt",
+    "license": "BSD-3-Clause",
+    "scope": "Imported and adapted native flash and music script interfaces from OpenBOR7735; original source and binary redistribution conditions apply.",
+    "sha256": "b8f3916944f0b5aee216ef7a494820d17ae658336a4680992dc244ebedecf3ea",
+    "source": "https://raw.githubusercontent.com/DCurrent/openbor/f64d63c2fc4e0c6e8993a58fbce1816502fff63a/engine/LICENSE"
   }
 ]

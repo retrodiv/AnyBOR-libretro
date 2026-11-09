@@ -40,7 +40,7 @@ static const struct {uint32_t revision;int property,subproperty,axis_names;} con
 static entity actor;
 static s_attack attack;
 static s_anim animation;
-static s_anim *animations[]={&animation};
+static s_anim *animations[MAX_ANIS];
 static s_attack *attacks[]={&attack};
 static const char *axis_names[]={"a","x","z"};
 static const double expected[]={11.25,12.5,13.75};
@@ -48,7 +48,11 @@ static void string_value(ScriptVariant *v,const char *text)
 {ScriptVariant_ChangeType(v,VT_STR);StrCache_Copy(v->strVal,(char *)text);}
 int main(void)
 {
-    actor.modeldata.animation=animations;actor.modeldata.animation_capacity=1;
+    /* Public animation numbers can map to another native slot. Every
+     * synthetic animation used by this axis-only contract has attack data.
+     * The independent animation contract checks numbering itself. */
+    for(unsigned i=0;i<MAX_ANIS;++i) animations[i]=&animation;
+    actor.modeldata.animation=animations;actor.modeldata.animation_capacity=MAX_ANIS;
     animation.numframes=1;animation.attacks=attacks;
     attack.dropv.y=11.25f;attack.dropv.x=12.5f;attack.dropv.z=13.75f;
     for(unsigned p=0;p<sizeof(contexts)/sizeof(contexts[0]);++p)

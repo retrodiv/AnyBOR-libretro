@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.1.85 — modern historical profiles and loading display
+
+- Add official v4.0 7530, 7555, 7556 and 7735 profiles.
+- Preserve each profile's scripts, combat, palettes, audio, defaults and save formats.
+- Match imprecise build tags to source-defined script API availability.
+- Display a preparation frame before ZIP inspection and extraction.
+- Use `anybor_*` identifiers for all core options.
+
 ## 0.1.84 — historical profiles through 4085
 
 - Add 13 official profiles from 3978 through 4085 and exact-tag/manual 3968-dev and 3970-dev.

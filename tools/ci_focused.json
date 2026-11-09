@@ -664,7 +664,7 @@
     {
       "id": "test_historical_behavior",
       "memory_mib": 1024,
-      "seconds": 180,
+      "seconds": 360,
       "command": [
         "python3",
         "tools/test_historical_behavior.py"
@@ -2668,6 +2668,486 @@
       "command": [
         "python3",
         "tools/test_zip_content.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_modern_attack_callers",
+      "memory_mib": 1024,
+      "seconds": 300,
+      "command": [
+        "python3",
+        "tools/test_modern_attack_callers.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_modern_attack_initialization",
+      "memory_mib": 1024,
+      "seconds": 300,
+      "command": [
+        "python3",
+        "tools/test_modern_attack_initialization.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_modern_attack_lifecycle",
+      "memory_mib": 1024,
+      "seconds": 300,
+      "command": [
+        "python3",
+        "tools/test_modern_attack_lifecycle.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_modern_attack_transitions",
+      "memory_mib": 1024,
+      "seconds": 300,
+      "command": [
+        "python3",
+        "tools/test_modern_attack_transitions.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_modern_audio_cache",
+      "memory_mib": 1024,
+      "seconds": 300,
+      "command": [
+        "python3",
+        "tools/test_modern_audio_cache.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_modern_audio_mixer",
+      "memory_mib": 1024,
+      "seconds": 300,
+      "command": [
+        "python3",
+        "tools/test_modern_audio_mixer.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_modern_binding",
+      "memory_mib": 1024,
+      "seconds": 300,
+      "command": [
+        "python3",
+        "tools/test_modern_binding.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_modern_boot_flow",
+      "memory_mib": 1024,
+      "seconds": 300,
+      "command": [
+        "python3",
+        "tools/test_modern_boot_flow.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_modern_combat_running",
+      "memory_mib": 1024,
+      "seconds": 300,
+      "command": [
+        "python3",
+        "tools/test_modern_combat_running.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_modern_control_menu",
+      "memory_mib": 1024,
+      "seconds": 300,
+      "command": [
+        "python3",
+        "tools/test_modern_control_menu.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_modern_drawing_free",
+      "memory_mib": 1024,
+      "seconds": 300,
+      "command": [
+        "python3",
+        "tools/test_modern_drawing_free.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_modern_drawing_loading",
+      "memory_mib": 1024,
+      "seconds": 300,
+      "command": [
+        "python3",
+        "tools/test_modern_drawing_loading.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_modern_drawing_names",
+      "memory_mib": 1024,
+      "seconds": 300,
+      "command": [
+        "python3",
+        "tools/test_modern_drawing_names.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_modern_drawing_parents",
+      "memory_mib": 1024,
+      "seconds": 300,
+      "command": [
+        "python3",
+        "tools/test_modern_drawing_parents.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_modern_drawing_primitives",
+      "memory_mib": 1024,
+      "seconds": 300,
+      "command": [
+        "python3",
+        "tools/test_modern_drawing_primitives.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_modern_drawing_queue",
+      "memory_mib": 1024,
+      "seconds": 300,
+      "command": [
+        "python3",
+        "tools/test_modern_drawing_queue.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_modern_drawmethod",
+      "memory_mib": 1024,
+      "seconds": 300,
+      "command": [
+        "python3",
+        "tools/test_modern_drawmethod.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_modern_energy",
+      "memory_mib": 1024,
+      "seconds": 300,
+      "command": [
+        "python3",
+        "tools/test_modern_energy.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_modern_entity_drawing",
+      "memory_mib": 1024,
+      "seconds": 300,
+      "command": [
+        "python3",
+        "tools/test_modern_entity_drawing.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_modern_failure_diagnostics",
+      "memory_mib": 1024,
+      "seconds": 300,
+      "command": [
+        "python3",
+        "tools/test_modern_failure_diagnostics.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_modern_flash",
+      "memory_mib": 1024,
+      "seconds": 300,
+      "command": [
+        "python3",
+        "tools/test_modern_flash.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_modern_flash_effects",
+      "memory_mib": 1024,
+      "seconds": 300,
+      "command": [
+        "python3",
+        "tools/test_modern_flash_effects.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_modern_flash_loading",
+      "memory_mib": 1024,
+      "seconds": 300,
+      "command": [
+        "python3",
+        "tools/test_modern_flash_loading.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_modern_flash_producer",
+      "memory_mib": 1024,
+      "seconds": 300,
+      "command": [
+        "python3",
+        "tools/test_modern_flash_producer.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_modern_global_config",
+      "memory_mib": 1024,
+      "seconds": 300,
+      "command": [
+        "python3",
+        "tools/test_modern_global_config.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_modern_landing_damage",
+      "memory_mib": 1024,
+      "seconds": 300,
+      "command": [
+        "python3",
+        "tools/test_modern_landing_damage.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_modern_layer_drawing",
+      "memory_mib": 1024,
+      "seconds": 300,
+      "command": [
+        "python3",
+        "tools/test_modern_layer_drawing.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_modern_legacy_drawing",
+      "memory_mib": 1024,
+      "seconds": 300,
+      "command": [
+        "python3",
+        "tools/test_modern_legacy_drawing.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_modern_legacy_script_routing",
+      "memory_mib": 1024,
+      "seconds": 300,
+      "command": [
+        "python3",
+        "tools/test_modern_legacy_script_routing.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_modern_level_drawing",
+      "memory_mib": 1024,
+      "seconds": 300,
+      "command": [
+        "python3",
+        "tools/test_modern_level_drawing.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_modern_loading",
+      "memory_mib": 1024,
+      "seconds": 300,
+      "command": [
+        "python3",
+        "tools/test_modern_loading.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_modern_model_palette_paths",
+      "memory_mib": 1024,
+      "seconds": 300,
+      "command": [
+        "python3",
+        "tools/test_modern_model_palette_paths.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_modern_mp_icons",
+      "memory_mib": 1024,
+      "seconds": 300,
+      "command": [
+        "python3",
+        "tools/test_modern_mp_icons.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_modern_music_api",
+      "memory_mib": 1024,
+      "seconds": 300,
+      "command": [
+        "python3",
+        "tools/test_modern_music_api.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_modern_music_dispatch",
+      "memory_mib": 1024,
+      "seconds": 300,
+      "command": [
+        "python3",
+        "tools/test_modern_music_dispatch.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_modern_music_lifecycle",
+      "memory_mib": 1024,
+      "seconds": 300,
+      "command": [
+        "python3",
+        "tools/test_modern_music_lifecycle.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_modern_music_producers",
+      "memory_mib": 1024,
+      "seconds": 300,
+      "command": [
+        "python3",
+        "tools/test_modern_music_producers.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_modern_palette_api",
+      "memory_mib": 1024,
+      "seconds": 300,
+      "command": [
+        "python3",
+        "tools/test_modern_palette_api.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_modern_palette_loading",
+      "memory_mib": 1024,
+      "seconds": 300,
+      "command": [
+        "python3",
+        "tools/test_modern_palette_loading.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_modern_palette_transport",
+      "memory_mib": 1024,
+      "seconds": 300,
+      "command": [
+        "python3",
+        "tools/test_modern_palette_transport.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_modern_points",
+      "memory_mib": 1024,
+      "seconds": 300,
+      "command": [
+        "python3",
+        "tools/test_modern_points.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_modern_progress_records",
+      "memory_mib": 1024,
+      "seconds": 300,
+      "command": [
+        "python3",
+        "tools/test_modern_progress_records.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_modern_projectiles",
+      "memory_mib": 1024,
+      "seconds": 300,
+      "command": [
+        "python3",
+        "tools/test_modern_projectiles.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_modern_properties",
+      "memory_mib": 1024,
+      "seconds": 300,
+      "command": [
+        "python3",
+        "tools/test_modern_properties.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_modern_script_registry",
+      "memory_mib": 1024,
+      "seconds": 300,
+      "command": [
+        "python3",
+        "tools/test_modern_script_registry.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_modern_software_fade",
+      "memory_mib": 1024,
+      "seconds": 300,
+      "command": [
+        "python3",
+        "tools/test_modern_software_fade.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_modern_sprite_masks",
+      "memory_mib": 1024,
+      "seconds": 300,
+      "command": [
+        "python3",
+        "tools/test_modern_sprite_masks.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_modern_system_routing",
+      "memory_mib": 1024,
+      "seconds": 300,
+      "command": [
+        "python3",
+        "tools/test_modern_system_routing.py"
       ],
       "ci": "shared"
     }

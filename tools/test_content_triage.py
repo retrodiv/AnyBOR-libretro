@@ -221,6 +221,48 @@ class ContentTriageTests(unittest.TestCase):
                 self.assertEqual(bool(int(actual)), lower <= revision <= upper,
                                  (name, revision))
 
+    def test_modern_api_requirements_match_each_own_source(self):
+        fixture = load_contract_fixture(Path(__file__).parent / 'fixtures' /
+                                        'profile-modern-content-contracts.json')
+        rules = subprocess.check_output([str(self.host), '--rules'], text=True, timeout=8)
+        ids = {(int(parts[1]), parts[2]): parts[0]
+               for parts in (line.split() for line in rules.splitlines())}
+        for row in fixture['sources']:
+            self.assertRegex(row['commit'], r'^[0-9a-f]{40}$')
+            self.assertEqual(len(row['supported']), len(fixture['rules']))
+            for rule, expected in zip(fixture['rules'], row['supported']):
+                actual = subprocess.check_output([str(self.host), '--rule-probe',
+                    ids[(rule['kind'], rule['name'])], str(row['revision']), row['engine']],
+                    text=True, timeout=8)
+                self.assertEqual(bool(int(actual)), expected, (row['revision'], rule))
+
+    def test_unlabelled_modern_requirements_use_available_official_profiles(self):
+        for source, expected in (
+                ('void main(){get_global_config_property(0);}', 7530),
+                ('void main(){log(openborconstant("GLOBAL_CONFIG_PROPERTY_AJSPECIAL"));}', 7556),
+                ('void main(){load_palette(0,"x");}', 7735),
+                ('void main(){get_flash_property(0);}', 7735),
+                ('void main(){get_music_channel_property(0);}', 7735)):
+            self.assertEqual(self.script('', source)[0], expected, source)
+
+    def test_missing_modern_profiles_respect_api_additions_and_retirements(self):
+        for name in ('copy_palette', 'get_palette_property', 'set_palette_property',
+                     'load_palette', 'get_flash_property', 'set_flash_property'):
+            profile, log = self.script('7500', 'void main(){' + name + '(0);}')
+            self.assertEqual(profile, 7735, log)
+            self.assertIn('name=' + name + ' bounds=', log)
+        profile, log = self.script('7600', 'void main(){free_drawmethod(0);}')
+        self.assertEqual(profile, 7556, log)
+        self.assertIn('name=free_drawmethod bounds=6982-7581', log)
+        for source in ('void main(){get_music_channel_property(0);}',
+                       'void main(){set_music_channel_property(0,1);}',
+                       'void main(){openborvariant("music_channel");}'):
+            profile, log = self.script('7900', source)
+            self.assertEqual(profile, 7735, log)
+            self.assertIn('bounds=7590-7887', log)
+        # An exact available declaration keeps its established authority.
+        self.assertEqual(self.script('7530', 'void main(){load_palette(0,"x");}')[0], 7530)
+
     def test_unavailable_tags_respect_later_script_retirements(self):
         for name in ('settexture', 'setvertex', 'trianglelist'):
             profile, log = self.script('3843', 'void main(){' + name + '(0);}')
@@ -420,7 +462,7 @@ class ContentTriageTests(unittest.TestCase):
     def test_without_tag_retains_the_existing_content_scan(self):
         # The extra property rule is used only to refine an imprecise tag.
         self.assertEqual(self.script('', 'void main(){getplayerproperty(0,"weaponum");}')[0],6391)
-        self.assertEqual(self.script('', 'void main(){get_global_config_property(0);}')[0],7533)
+        self.assertEqual(self.script('', 'void main(){get_global_config_property(0);}')[0],7530)
 
     def test_every_rule_has_a_syntactic_probe_and_checked_native_boundaries(self):
         rules=subprocess.check_output([str(self.host),'--rules'],text=True,timeout=8).splitlines()

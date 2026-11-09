@@ -1,0 +1,131 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "openbor.h"
+#undef printf
+uint32_t obor_profile_build;
+entity *self;
+s_player player[MAX_PLAYERS];
+static entity entities[4], sentinel;
+static entity *entity_pointers[4];
+entity **ent_list=entity_pointers;
+int ent_max=4,endgame;
+@DEFAULT@
+@VELOCITY@
+static s_defense defense;
+static int event_count, mutate_attack;
+struct event { int kind,recipient,other,fall; s_attack attack; };
+static struct event events[8];
+static int entity_index(const entity *ent)
+{
+    int i;
+    for(i=0;i<4;++i) if(ent==&entities[i]) return i;
+    abort();
+}
+static void record(int kind,entity *ent,entity *other,s_attack *value,int fall)
+{
+    struct event *event;
+    if(event_count>=8) abort();
+    event=&events[event_count++];
+    event->kind=kind;event->recipient=entity_index(ent);event->other=entity_index(other);
+    event->fall=fall;event->attack=*value;
+    if(mutate_attack) { value->seal+=3; value->meta_tag+=2; }
+}
+void execute_didhit_script(entity *ent,entity *other,s_attack *value,int blocked)
+{ if(self!=&sentinel || blocked) abort(); record(0,ent,other,value,blocked); }
+static int take_damage(entity *other,s_attack *value,int fall,s_defense *object)
+{
+    if(object!=&defense) abort();
+    record(1,self,other,value,fall);return 1;
+}
+s_defense *defense_find_current_object(entity *ent,s_body *body,e_attack_types type)
+{ (void)type;entity_index(ent);if(body) abort();return &defense; }
+int inair(entity *ent) { return ent->position.y>0; }
+@FUNCTIONS@
+
+static int type_id(e_attack_types type)
+{
+    if(type==ATK_BOSS_DEATH) return 1;
+    if(type==ATK_TIMEOVER) return 2;
+    if(type==ATK_LOSE) return 3;
+    if(type==ATK_ITEM) return 4;
+    abort();
+}
+static void print_event(const struct event *event)
+{
+    const s_attack *a=&event->attack;
+    int defaults=a->no_kill==emptyattack.no_kill && a->no_pain==emptyattack.no_pain
+        && a->no_flash==emptyattack.no_flash && a->hitsound==emptyattack.hitsound
+        && a->flash.object_type==emptyattack.flash.object_type
+        && a->flash.model_hit==emptyattack.flash.model_hit && a->recursive==emptyattack.recursive;
+    printf("[%d,%d,%d,%d,%d,%d,%d,%d,%d,%.9g,%.9g,%.9g,%d]",
+        event->kind,event->recipient,event->other,event->fall,a->attack_force,a->attack_drop,
+        type_id(a->attack_type),a->seal,a->meta_tag,(double)a->dropv.x,(double)a->dropv.y,
+        (double)a->dropv.z,defaults);
+}
+int main(void)
+{
+    enum { ANIMATION_CAPACITY=(ANI_LOSE>ANI_FALLLOSE ? ANI_LOSE : ANI_FALLLOSE)+1 };
+    static const unsigned profiles[]={@PROFILES@};
+    static const struct input_case { int kind,variant,mutate; } cases[]={@CASES@};
+    static s_anim lose_animation,fall_animation;
+    static s_anim *animations[4][ANIMATION_CAPACITY];
+    size_t p,c;int i;
+    lose_animation.numframes=fall_animation.numframes=1;
+    puts("{\"status\":\"PASS\",\"profiles\":[");
+    for(p=0;p<sizeof(profiles)/sizeof(*profiles);++p)
+    {
+        obor_profile_build=profiles[p];
+        printf("%s{\"revision\":%u,\"cases\":[",p ? "," : "",profiles[p]);
+        for(c=0;c<sizeof(cases)/sizeof(*cases);++c)
+        {
+            memset(entities,0,sizeof(entities));memset(player,0,sizeof(player));
+            memset(animations,0,sizeof(animations));
+            self=&sentinel;event_count=0;mutate_attack=cases[c].mutate;endgame=7;
+            for(i=0;i<4;++i)
+            {
+                entity_pointers[i]=&entities[i];entities[i].exists=1;
+                entities[i].energy_state.health_current=(i+1)*10;
+                entities[i].modeldata.type=TYPE_ENEMY;
+                entities[i].modeldata.animation_capacity=ANIMATION_CAPACITY;
+                entities[i].modeldata.animation=animations[i];
+                entities[i].takedamage=take_damage;entities[i].defense=&defense;
+            }
+            if(cases[c].kind==0)
+            {
+                int n=cases[c].variant;
+                do_item_script(&entities[n],&entities[(n+1)%4]);
+            }
+            else if(cases[c].kind==1)
+            {
+                if(cases[c].variant==1) entities[1].energy_state.health_current=0;
+                if(cases[c].variant==2) entities[1].modeldata.type=TYPE_PLAYER;
+                if(cases[c].variant==3) entities[1].takedamage=NULL;
+                if(cases[c].variant==4) entities[1].exists=0;
+                kill_all_enemies();
+            }
+            else
+            {
+                for(i=0;i<4;++i)
+                {
+                    if(cases[c].variant==0 || (cases[c].variant==5 && (i==1 || i==3))) continue;
+                    player[i].ent=&entities[i];
+                    if(cases[c].variant==2 || cases[c].variant==4 || cases[c].variant==5
+                       || (cases[c].variant==3 && (i%2))) animations[i][ANI_LOSE]=&lose_animation;
+                    if(cases[c].variant!=4) animations[i][ANI_FALLLOSE]=&fall_animation;
+                    entities[i].position.y=(i%2)==0 ? 1 : 0;
+                }
+                kill_all_players_by_timeover();
+            }
+            printf("%s[%d,%d,[",c ? "," : "",endgame,self==&sentinel);
+            for(i=0;i<event_count;++i) { if(i) putchar(',');print_event(&events[i]); }
+            printf("]]");
+        }
+        printf("]}");
+    }
+    puts("]}");return 0;
+}

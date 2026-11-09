@@ -1,0 +1,97 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stdint.h>
+#include <stdarg.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wignored-qualifiers"
+#if defined(__clang__)
+#pragma GCC diagnostic ignored "-Wdeprecated-non-prototype"
+#endif
+#include "scriptcommon.h"
+#undef printf
+uint32_t obor_profile_build;
+@DEFAULT@
+static volatile int marker;
+static void *owned;
+static int frees,null_free,registered,fixture_list;
+static char log_text[4096];
+static int capture_log(const char *format,...)
+{
+    va_list args;size_t used=strlen(log_text);int count;
+    va_start(args,format);count=vsnprintf(log_text+used,sizeof(log_text)-used,format,args);va_end(args);
+    if(count<0 || (size_t)count>=sizeof(log_text)-used) abort();
+    return count;
+}
+void *checkAlloc(void *ptr,size_t size,const char *func,const char *file,int line)
+{ (void)func;(void)file;(void)line;if(size && !ptr) abort();return ptr; }
+static void fixture_free(void *ptr)
+{
+    if(ptr && ptr!=owned) abort();
+    ++frees;null_free=ptr==NULL;free(ptr);owned=NULL;
+}
+#define printf capture_log
+@FREE@
+#undef printf
+@PROVIDERS@
+static void fixture_unmatched(void) { marker=-1; }
+@GETNAME@
+static void fixture_register(void *list,void *callback,const char *name)
+{
+    if(list!=&fixture_list || callback!=(void *)openbor_free_drawmethod || strcmp(name,"free_drawmethod")) abort();
+    ++registered;
+}
+static void fixture_registration(void)
+{
+    @REGISTER@
+}
+#pragma GCC diagnostic pop
+static void quote(const char *text)
+{
+    const unsigned char *p=(const unsigned char *)text;
+    putchar('"');
+    for(;*p;++p)
+    {
+        if(*p=='\n') printf("\\n");
+        else if(*p=='\r') printf("\\r");
+        else if(*p=='\t') printf("\\t");
+        else if(*p=='"' || *p=='\\') printf("\\%c",*p);
+        else putchar(*p);
+    }
+    putchar('"');
+}
+int main(void)
+{
+    static const unsigned profiles[]={@PROFILES@};
+    unsigned p,c;
+    printf("{\"status\":\"PASS\",\"profiles\":[");
+    for(p=0;p<sizeof(profiles)/sizeof(*profiles);++p)
+    {
+        if(p) { putchar(','); }
+        obor_profile_build=profiles[p];registered=0;fixture_registration();
+        printf("{\"revision\":%u,\"registered\":%d,\"name\":",profiles[p],registered);
+        quote(Script_GetFunctionName((void *)openbor_free_drawmethod));
+        printf(",\"unknown\":");quote(Script_GetFunctionName((void *)fixture_unmatched));
+        printf(",\"calls\":[");
+        if(registered) for(c=0;c<5;++c)
+        {
+            ScriptVariant target={0},result={0},*out=&result,*args[]={&target};HRESULT status;
+            target.vt=VT_PTR;result.vt=VT_INTEGER;result.lVal=77;
+            frees=null_free=0;owned=NULL;log_text[0]='\0';
+            if(c==0) { owned=malloc(sizeof(s_drawmethod));if(!owned) abort();target.ptrVal=owned; }
+            else if(c==1) target.ptrVal=NULL;
+            else if(c==2) target.ptrVal=(void *)&plainmethod;
+            else target.vt=VT_INTEGER;
+            status=openbor_free_drawmethod(c==4?NULL:args,&out,c==4?0:1);
+            if(c) putchar(',');
+            printf("[%d,%d,%d,%ld,%d,%d,",(int)status,out==&result,result.vt,(long)result.lVal,frees,null_free);
+            quote(log_text);putchar(']');
+            if(owned) abort();
+        }
+        printf("]}");
+    }
+    printf("]}\n");return 0;
+}

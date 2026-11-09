@@ -1,0 +1,47 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stdio.h>
+#include <stdint.h>
+#include <string.h>
+#include "soundmix.h"
+#undef printf
+uint32_t obor_profile_build;
+@DECLARATION@
+static int calls[8],tempo[2];
+void sound_close_adpcm(void) { ++calls[0];music_type=42; }
+void sound_close_ogg(void) { ++calls[1];music_type=-1; }
+void sound_update_adpcm(void) { ++calls[2]; }
+void sound_update_ogg(void) { ++calls[3]; }
+int sound_query_adpcm(char *artist,char *title)
+{ ++calls[4];strcpy(artist,"a");strcpy(title,"b");return 17; }
+int sound_query_ogg(char *artist,char *title)
+{ ++calls[5];strcpy(artist,"c");strcpy(title,"d");return 29; }
+void sound_adpcm_tempo(int value) { ++calls[6];tempo[0]=value; }
+void sound_ogg_tempo(int value) { ++calls[7];tempo[1]=value; }
+@FUNCTIONS@
+int main(void)
+{
+    static const unsigned profiles[]={@PROFILES@};
+    static const int modes[]={@MODES@};size_t p,c;unsigned i;
+    printf("{\"status\":\"PASS\",\"initial_mode\":%d,\"file_modes\":[%d,%d,%d],\"profiles\":[",
+        music_type,SOUND_FILE_TYPE_NONE,SOUND_FILE_TYPE_ADPCM,SOUND_FILE_TYPE_VORBIS);
+    for(p=0;p<sizeof(profiles)/sizeof(*profiles);++p)
+    {
+        obor_profile_build=profiles[p];
+        printf("%s{\"revision\":%u,\"cases\":[",p ? "," : "",profiles[p]);
+        for(c=0;c<sizeof(modes)/sizeof(*modes);++c)
+        {
+            char artist[4]="?",title[4]="?";int query;
+            memset(calls,0,sizeof(calls));memset(tempo,0,sizeof(tempo));music_type=modes[c];
+            sound_update_music();query=sound_query_music(artist,title);
+            sound_music_tempo(-7);sound_music_tempo(170);sound_close_music();
+            printf("%s{\"mode\":%d,\"query\":%d,\"tags\":[\"%s\",\"%s\"],\"calls\":[",
+                c ? "," : "",music_type,query,artist,title);
+            for(i=0;i<8;++i) printf("%s%d",i ? "," : "",calls[i]);
+            printf("],\"tempo\":[%d,%d]}",tempo[0],tempo[1]);
+        }
+        printf("]}");
+    }
+    puts("]}");return 0;
+}

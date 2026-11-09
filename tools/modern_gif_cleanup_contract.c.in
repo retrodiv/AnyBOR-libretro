@@ -1,0 +1,67 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "openbor.h"
+#include "anigif.h"
+#include "soundmix.h"
+#include "spriteq.h"
+#undef printf
+uint32_t obor_profile_build;
+u32 _time,newtime;
+unsigned int bothnewkeys;
+s_screen *background;
+char packfile[OBOR_CONTENT_PATH_MAX]="archive";
+static s_screen frame,original_background;
+static int opened,buffered,frame_number,escape,noskip,sound_sync;
+static int opens,decodes,closes,sprites,updates,waits,palettes,warnings;
+void *checkAlloc(void *ptr,size_t size,const char *func,const char *file,int line)
+{ (void)func;(void)file;(void)line;if(size && !ptr) abort();return ptr; }
+int anigif_open(char *filename,char *archive,anigif_info *info)
+{
+    if(strcmp(filename,"clip.gif") || archive!=packfile || background || _time) abort();
+    ++opens;info->frame=frame_number;return opened;
+}
+int anigif_decode_frame(anigif_info *info) { ++decodes;info->done=1;return 1; }
+s_screen *anigif_getbuffer(anigif_info *info) { (void)info;return buffered ? &frame : NULL; }
+void anigif_close(anigif_info *info) { if(!info) abort();++closes; }
+u32 sound_getinterval(void) { return sound_sync ? 10u : UINT32_MAX; }
+void spriteq_add_screen(int x,int y,int z,s_screen *screen,s_drawmethod *method,int sortid)
+{ if(x!=5 || y!=9 || z || screen!=&frame || method || sortid) abort();++sprites; }
+static void observed_update(int ingame,int wait)
+{ if(ingame || wait!=(frame_number!=0)) abort();++updates;bothnewkeys=escape ? FLAG_ESC:0;_time+=2;newtime+=3; }
+static void observed_vwait(void) { ++waits; }
+void standard_palette(int immediate)
+{ if(immediate!=1 || background!=&original_background || _time!=41 || newtime!=73) abort();++palettes; }
+#define update observed_update
+#define vga_vwait observed_vwait
+#define printf(...) ((void)++warnings)
+@FUNCTION@
+#undef printf
+int main(void)
+{
+    static const unsigned profiles[]={@PROFILES@};
+    size_t p;int c;
+    printf("{\"status\":\"PASS\",\"profiles\":[");
+    for(p=0;p<sizeof(profiles)/sizeof(*profiles);++p)
+    {
+        obor_profile_build=profiles[p];
+        printf("%s{\"revision\":%u,\"cases\":[",p ? ",":"",profiles[p]);
+        for(c=0;c<6;++c)
+        {
+            int result;opened=c!=0;buffered=c!=1;frame_number=c==3 ? 1:0;
+            escape=c>=4;noskip=c==5;sound_sync=c==2;
+            opens=decodes=closes=sprites=updates=waits=palettes=warnings=0;
+            background=&original_background;_time=41;newtime=73;bothnewkeys=0;
+            result=playgif("clip.gif",5,9,noskip);
+            printf("%s{\"result\":%d,\"services\":[%d,%d,%d,%d,%d,%d,%d,%d],\"restored\":%d}",
+                c ? ",":"",result,opens,decodes,closes,sprites,updates,waits,palettes,warnings,
+                background==&original_background && _time==41 && newtime==73);
+        }
+        printf("]}");
+    }
+    printf("]}\n");return 0;
+}

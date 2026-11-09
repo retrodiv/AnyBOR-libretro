@@ -20,6 +20,8 @@ FIXTURE = HERE / ('early-v3-profile-contracts.json' if PUBLIC else
                   'fixtures/early-v3-profile-contracts.json')
 SOURCE = Path(os.environ.get('OBOR_TEST_SOURCE', DEFAULT_SOURCE))
 from early_profile_probe import attack_program, shutdown_program, playback_program, cache_program, system_program, menu_flags_program, layer_program, level_commands_program, background_program, scene_program, collision_program, png_bounds_program, expression_program, keyboard_program, frame_boxes_program, menu_state_program, credits_program, credit_entry_program, shutdown_format_program, compile_program
+sys.path.append(str(SOURCE / 'tools'))
+from contract_fixtures import contract_profiles, load_contract_fixture
 
 
 class EarlyV3ProfileTests(unittest.TestCase):
@@ -40,9 +42,22 @@ class EarlyV3ProfileTests(unittest.TestCase):
 
     def test_physical_family_has_own_source_evidence_for_every_profile(self):
         pins = json.loads((SOURCE / 'src/pin.json').read_text())
-        self.assertEqual({str(p['build']) for p in pins['profiles']
-                          if str(p['engine']) == '4086'},
-                         {p['profile'] for p in self.contracts})
+        family = [p for p in pins['profiles'] if str(p['engine']) == '4086']
+        forward = {p['profile']: p['source_commit'] for p in self.contracts}
+        # Earlier profiles retain their own native contracts instead of using
+        # this file's later attack/shutdown/playback expectations.
+        earlier = load_contract_fixture(SOURCE / 'tools/fixtures/profile-classic-dot-modes.json')
+        self.assertEqual(earlier['engine'], '4086')
+        required = {str(p['build']) for p in contract_profiles(earlier, family)} | set(forward)
+        evidence = {str(p['revision']): p['commit'] for p in earlier['sources']}
+        evidence.update(forward)
+        self.assertTrue(set(forward) <= {str(p['build']) for p in family})
+        base = next(p['commit'] for p in pins['engines'] if p['build'] == '4086')
+        for profile in family:
+            if str(profile['build']) in required:
+                with self.subTest(profile=profile['build']):
+                    self.assertEqual(evidence.get(str(profile['build'])),
+                                     profile.get('upstream_commit', base))
         for row in self.contracts:
             self.assertEqual(row['engine'], '4086')
             self.assertEqual(len(row['source_commit']), 40)

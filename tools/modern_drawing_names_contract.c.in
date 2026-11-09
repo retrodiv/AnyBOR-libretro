@@ -1,0 +1,129 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stdint.h>
+#include <stdarg.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <strings.h>
+#ifndef stricmp
+#define stricmp strcasecmp
+#endif
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wignored-qualifiers"
+#if defined(__clang__)
+#pragma GCC diagnostic ignored "-Wdeprecated-non-prototype"
+#endif
+#include "scriptcommon.h"
+#undef printf
+uint32_t obor_profile_build;
+static const char *const strings[] = {@STRINGS@};
+static char log_text[8192];
+static int collected;
+static volatile int marker;
+static int capture_log(const char *format, ...)
+{
+    va_list args;
+    size_t used = strlen(log_text);
+    int count;
+    va_start(args, format);
+    count = vsnprintf(log_text + used, sizeof(log_text) - used, format, args);
+    va_end(args);
+    if(count < 0 || (size_t)count >= sizeof(log_text) - used) abort();
+    return count;
+}
+void StrCache_Collect(int index) { (void)index; ++collected; }
+CHAR *StrCache_Get(int index)
+{
+    if(index < 0 || (unsigned)index >= sizeof(strings)/sizeof(*strings)) abort();
+    return (CHAR *)strings[index];
+}
+int StrCache_Pop(int size) { (void)size; abort(); }
+int StrCache_CreateNewFrom(const CHAR *text) { (void)text; abort(); }
+@VARIANTS@
+/* Distinct providers isolate this callback lookup from other registry entries. */
+HRESULT openbor_get_drawmethod_property(ScriptVariant **v, ScriptVariant **r, int n)
+{ (void)v; (void)r; (void)n; marker = 1; return S_OK; }
+HRESULT openbor_set_drawmethod_property(ScriptVariant **v, ScriptVariant **r, int n)
+{ (void)v; (void)r; (void)n; marker = 2; return S_OK; }
+@OTHER_PROVIDERS@
+static void fixture_unmatched(void) { marker = 4; }
+#define printf capture_log
+@SEARCH@
+@MAPPER@
+@INDEX@
+#undef printf
+@CONSTANT_HELPER@
+@MACROS@
+static int constant_query(const char *constname, LONG *result)
+{
+    ScriptVariant v = {0};
+    if(0) { }
+    @CONSTANT_CHAIN@
+    else return 0;
+    *result = v.lVal;
+    return 1;
+}
+#pragma GCC diagnostic pop
+static void quote(const char *text)
+{
+    const unsigned char *p = (const unsigned char *)text;
+    putchar('"');
+    for(; *p; ++p)
+    {
+        if(*p == '\n') printf("\\n");
+        else if(*p == '\r') printf("\\r");
+        else if(*p == '\t') printf("\\t");
+        else if(*p == '"' || *p == '\\') printf("\\%c", *p);
+        else putchar(*p);
+    }
+    putchar('"');
+}
+int main(void)
+{
+    static const unsigned profiles[] = {@PROFILES@};
+    static const char *const queries[] = {@QUERIES@};
+    void *const entries[] = {(void *)openbor_get_drawmethod_property,
+                            (void *)openbor_set_drawmethod_property};
+    unsigned p, q, e;
+    printf("{\"status\":\"PASS\",\"profiles\":[");
+    for(p = 0; p < sizeof(profiles)/sizeof(*profiles); ++p)
+    {
+        if(p) putchar(',');
+        obor_profile_build = profiles[p];
+        printf("{\"revision\":%u,\"constants\":[", profiles[p]);
+        for(q = 0; q < sizeof(queries)/sizeof(*queries); ++q)
+        {
+            LONG value = -99;
+            int found = constant_query(queries[q], &value);
+            if(q) putchar(',');
+            printf("[%d,%ld]", found, (long)value);
+        }
+        printf("],\"callbacks\":[");
+        for(e = 0; e < 2; ++e)
+        {
+            void *callback = Script_GetStringMapFunction(entries[e]);
+            if(e) putchar(',');
+            printf("{\"present\":%d,\"identity\":%d,\"names\":[", callback != NULL,
+                   callback == (void *)mapstrings_drawmethod);
+            for(q = 0; q < sizeof(strings)/sizeof(*strings); ++q)
+            {
+                ScriptVariant handle = {0}, property = {0};
+                ScriptVariant *args[] = {&handle, &property};
+                int status = -1;
+                property.vt = VT_STR; property.strVal = q;
+                collected = 0; log_text[0] = '\0';
+                if(callback) status = ((int (*)(ScriptVariant **, int))callback)(args, 2);
+                if(q) putchar(',');
+                printf("[%d,%d,%ld,%d,", status, property.vt,
+                       property.vt == VT_INTEGER ? (long)property.lVal : -99L, collected);
+                quote(log_text); putchar(']');
+            }
+            printf("]}");
+        }
+        printf("],\"unmatched\":%d}", Script_GetStringMapFunction((void *)fixture_unmatched) == NULL);
+    }
+    printf("]}\n");
+    return 0;
+}

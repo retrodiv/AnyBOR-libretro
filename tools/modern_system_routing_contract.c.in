@@ -1,0 +1,120 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdarg.h>
+#include <stdlib.h>
+#include <string.h>
+#include <strings.h>
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wignored-qualifiers"
+#if defined(__clang__)
+#pragma GCC diagnostic ignored "-Wdeprecated-non-prototype"
+#endif
+#include "scriptcommon.h"
+#include "soundmix.h"
+#undef printf
+#ifndef stricmp
+#define stricmp strcasecmp
+#endif
+uint32_t obor_profile_build;
+#pragma pack(push,4)
+@TYPES@
+#pragma pack(pop)
+static s_audio_global audio_global;
+int sample_play_id;
+musicchannelstruct musicchannel;
+s_savedata savedata;
+static s_level level_storage;
+s_level *level=&level_storage;
+int MAX_WALL_HEIGHT;
+static const char *active_name;
+static char log_text[8192];
+static int capture_log(const char *format,...)
+{
+    va_list args;size_t used=strlen(log_text);int count;
+    va_start(args,format);count=vsnprintf(log_text+used,sizeof(log_text)-used,format,args);va_end(args);
+    if(count<0 || (size_t)count>=sizeof(log_text)-used) abort();
+    return count;
+}
+void StrCache_Collect(int index) { if(index!=0) abort(); }
+CHAR *StrCache_Get(int index) { if(index!=0 || !active_name) abort();return (CHAR*)active_name; }
+int StrCache_Pop(int size) { (void)size;abort(); }
+int StrCache_CreateNewFrom(const CHAR *text) { (void)text;abort(); }
+@VARIANTS@
+@COUNTER@
+@SEARCH@
+static const char *labels[]={@LABELS@};
+@ARRAYS@
+#define printf capture_log
+@HELPERS@
+@FIELDS@
+@METHODS@
+#undef printf
+#pragma GCC diagnostic pop
+static void print_string(const char *text)
+{
+    const unsigned char *s=(const unsigned char*)text;putchar('"');
+    for(;*s;++s)
+    {
+        if(*s=='\n') printf("\\n");
+        else if(*s=='\r') printf("\\r");
+        else if(*s=='\t') printf("\\t");
+        else if(*s=='"' || *s=='\\') printf("\\%c",*s);
+        else putchar(*s);
+    }
+    putchar('"');
+}
+static void get_field(int id)
+{
+    ScriptVariant prop={.vt=VT_INTEGER,.lVal=id},result={0},*out=&result,*args[]={&prop};
+    HRESULT status=openbor_systemvariant(args,&out,1);int value=0;
+    if(result.vt==VT_INTEGER) value=result.lVal;
+    if(result.vt==VT_PTR) { if(result.ptrVal!=&musicchannel) abort();value=1; }
+    printf("[%d,%d,%d,%d]",(int)status,out==&result,result.vt,value);
+}
+int main(void)
+{
+    static const struct context { unsigned revision;int count;const char *queries[192];int fields[4]; }
+        contexts[]={@CONTEXTS@};
+    size_t p;int q,i;
+    printf("{\"status\":\"PASS\",\"integer_bytes\":%zu,\"profiles\":[",sizeof(LONG));
+    for(p=0;p<sizeof(contexts)/sizeof(*contexts);++p)
+    {
+        const struct context *input=&contexts[p];obor_profile_build=input->revision;
+        printf("%s{\"revision\":%u,\"names\":[",p ? "," : "",input->revision);
+        for(q=0;q<input->count;++q)
+        {
+            ScriptVariant prop={.vt=VT_STR,.strVal=0},*args[]={&prop};int result,native;
+            active_name=input->queries[q];log_text[0]=0;result=mapstrings_systemvariant(args,1);
+            native=prop.vt==VT_INTEGER ? obor_profile_system_native_index(prop.lVal) : -1;
+            printf("%s[%d,%d,%d,",q ? "," : "",result,prop.vt,prop.lVal);
+            print_string(native>=0 ? labels[native] : "-");putchar(',');print_string(log_text);putchar(']');
+        }
+        printf("],\"numeric\":[");
+        for(i=-1;i<=obor_profile_system_property_count();++i)
+        {
+            int native=obor_profile_system_native_index(i);
+            if(i!=-1) putchar(',');
+            print_string(native>=0 ? labels[native] : "-");
+        }
+        printf("],\"fields\":[");MAX_WALL_HEIGHT=1000;savedata.musicvol=23;
+        sample_play_id=-7;audio_global.sample_play_id=UINT32_MAX;
+        for(i=0;i<4;++i) { if(i) putchar(',');get_field(input->fields[i]); }
+        printf("],\"setters\":[");
+        for(i=0;i<3;++i)
+        {
+            ScriptVariant prop={.vt=VT_INTEGER,.lVal=input->fields[0]},value={0},result={0},*out=&result;
+            ScriptVariant *args[]={&prop,&value};HRESULT status;
+            MAX_WALL_HEIGHT=1000;level->pos=17;
+            if(i==0) { value.vt=VT_INTEGER;value.lVal=119; }
+            if(i==1) { value.vt=VT_DECIMAL;value.dblVal=119.75; }
+            if(i==2) { value.vt=VT_PTR;value.ptrVal=&musicchannel; }
+            status=openbor_setsystemvariant(args,&out,2);
+            printf("%s[%d,%d,%d,%d]",i ? "," : "",(int)status,out==&result,MAX_WALL_HEIGHT,level->pos);
+        }
+        printf("]}");
+    }
+    puts("]}");return 0;
+}

@@ -1,0 +1,92 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdarg.h>
+#include <stdlib.h>
+#include <string.h>
+#include "openbor.h"
+#include "globals.h"
+#include "soundmix.h"
+#include "font.h"
+#include "translation.h"
+#undef printf
+uint32_t obor_profile_build;
+s_savedata savedata;
+s_videomodes videomodes;
+s_debug_xy_msg debug_xy_msg;
+char currentmusic[MAX_BUFFER_LEN];
+char packfile[OBOR_CONTENT_PATH_MAX]="archive";
+static int open_result,query_result,metadata,translated,opens,queries,debug_calls;
+static unsigned translation_mask;
+static char message[256],log_text[256];
+static int capture_log(const char *format,...)
+{
+    va_list args;int count;
+    va_start(args,format);count=vsnprintf(log_text,sizeof(log_text),format,args);va_end(args);
+    if(count<0 || count>=(int)sizeof(log_text)) abort();
+    return count;
+}
+void debug_printf(char *format,...)
+{
+    va_list args;int count;++debug_calls;
+    va_start(args,format);count=vsnprintf(message,sizeof(message),format,args);va_end(args);
+    if(count<0 || count>=(int)sizeof(message)) abort();
+}
+char *ob_gettrans(char *id)
+{
+    static const char *keys[]={"Playing","by","Playing unknown song by","by unknown artist","Playing unknown song by unknown artist"};
+    static const char *values[]={"Reproduciendo","de","Reproduciendo pista desconocida de","de autor desconocido","Reproduciendo pista y autor desconocidos"};
+    unsigned i;
+    for(i=0;i<5;++i) if(strcmp(id,keys[i])==0)
+    { translation_mask|=1u<<i;return translated ? (char*)values[i] : id; }
+    abort();
+}
+int sound_open_music(char *filename,char *archive,int volume,int loop,u32 offset)
+{
+    if(strcmp(filename,"next.dat") || archive!=packfile || volume!=23 || loop!=1 || offset!=31) abort();
+    ++opens;return open_result;
+}
+int sound_query_music(char *artist,char *title)
+{ ++queries;strcpy(artist,metadata&1 ? "Author" : "");strcpy(title,metadata&2 ? "Track" : "");return query_result; }
+int fontmonowidth(int index) { if(index!=0) abort();return 6; }
+int fontheight(int index) { if(index!=0) abort();return 8; }
+#define printf capture_log
+@FUNCTION@
+#undef printf
+static void print_string(const char *text)
+{
+    const unsigned char *s=(const unsigned char*)text;putchar('"');
+    for(;*s;++s)
+    {
+        if(*s=='\n') printf("\\n");else if(*s=='\r') printf("\\r");
+        else if(*s=='"' || *s=='\\') printf("\\%c",*s);else putchar(*s);
+    }
+    putchar('"');
+}
+int main(void)
+{
+    static const unsigned profiles[]={@PROFILES@};
+    static const struct input { int enabled,titles,opened,queried,metadata,translated; } inputs[]={@CASES@};
+    size_t p,c;
+    printf("{\"status\":\"PASS\",\"profiles\":[");
+    for(p=0;p<sizeof(profiles)/sizeof(*profiles);++p)
+    {
+        obor_profile_build=profiles[p];printf("%s{\"revision\":%u,\"cases\":[",p ? "," : "",profiles[p]);
+        for(c=0;c<sizeof(inputs)/sizeof(*inputs);++c)
+        {
+            const struct input *input=&inputs[c];int result;
+            savedata.usemusic=input->enabled;savedata.showtitles=input->titles;savedata.musicvol=23;
+            open_result=input->opened;query_result=input->queried;metadata=input->metadata;translated=input->translated;
+            opens=queries=debug_calls=0;translation_mask=0;message[0]=log_text[0]=0;strcpy(currentmusic,"prior");
+            debug_xy_msg.font_index=9;debug_xy_msg.x=91;debug_xy_msg.y=92;videomodes.vRes=240;
+            result=music("next.dat",1,31);
+            printf("%s{\"result\":%d,\"services\":[%d,%d,%d,%u],\"message\":",c ? "," : "",result,opens,queries,debug_calls,translation_mask);
+            print_string(message);printf(",\"log\":");print_string(log_text);printf(",\"current\":");print_string(currentmusic);
+            printf(",\"geometry\":[%d,%d,%d]}",debug_xy_msg.font_index,debug_xy_msg.x,debug_xy_msg.y);
+        }
+        printf("]}");
+    }
+    puts("]}");return 0;
+}

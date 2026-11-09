@@ -1,0 +1,81 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "openbor.h"
+#include "soundmix.h"
+#undef printf
+#undef CACHE_BACKGROUNDS
+uint32_t obor_profile_build;
+s_savedata savedata;
+s_videomodes videomodes;
+unsigned char neontable[MAX_PAL_SIZE];
+unsigned char *blendtables[MAX_BLENDINGS];
+int pixelformat,startup_done;
+static int events[64],event_count,font_identity,script_font,model_font,override_font;
+static int event(int id) { if(event_count==64) abort();events[event_count++]=id;return 1; }
+static void fonts(void) { event(12);font_identity=1; }
+static void scripts(void) { event(17);script_font=font_identity; }
+static void models(void) { event(18);model_font=font_identity;if(override_font) font_identity=2; }
+static void volume(int channel,int value)
+{ if((channel!=SB_MASTERVOL && channel!=SB_VOICEVOL) || value!=57) abort();event(10); }
+#define pak_init() event(1)
+#define loadHighScoreFile() event(2)
+#define clearSavedGame() event(3)
+#define init_videomodes(log) ((void)(log),(void)event(4))
+#define video_set_mode(mode) ((void)(mode),event(5))
+#define borTimerInit() event(6)
+#define sound_init(channels) ((channels)==12 ? event(7) : (abort(),0))
+#define load_special_sounds() event(8)
+#define sound_start_playback() event(9)
+#define SB_setvolume(channel,value) volume(channel,value)
+#define init_input_recorder() event(11)
+#define load_all_fonts() fonts()
+#define load_special_sprites() event(13)
+#define load_levelorder() event(14)
+#define load_model_constants() event(15)
+#define load_script_setting() event(16)
+#define load_scripts() scripts()
+#define load_models() models()
+#define alloc_ents() event(19)
+#define load_menu_txt() event(20)
+#define ob_inittrans() event(21)
+#define control_init(joystick) ((joystick)==1 ? event(22) : (abort(),0))
+#define apply_controls() event(23)
+#define create_blend_tables_x8(tables) ((void)(tables),(void)event(24))
+#define savesettings() event(25)
+#define borShutdown(...) abort()
+#define printf(...) ((void)0)
+@FUNCTION@
+#undef printf
+int main(void)
+{
+    static const unsigned profiles[]={@PROFILES@};
+    size_t p,i;int c;
+    printf("{\"status\":\"PASS\",\"profiles\":[");
+    for(p=0;p<sizeof(profiles)/sizeof(*profiles);++p)
+    {
+        obor_profile_build=profiles[p];
+        printf("%s{\"revision\":%u,\"cases\":[",p ? ",":"",profiles[p]);
+        for(c=0;c<3;++c)
+        {
+            memset(&savedata,0,sizeof(savedata));savedata.soundvol=57;savedata.usejoy=1;
+            savedata.logo=c==0 ? 0 : c==1 ? 10 : 11;
+            memset(neontable,0xa5,sizeof(neontable));event_count=0;
+            font_identity=script_font=model_font=startup_done=0;override_font=c!=0;
+            pixelformat=c==2 ? PIXEL_32 : PIXEL_x8;
+            startup();
+            for(i=0;i<256;++i) if(neontable[i]!=(unsigned char)i) abort();
+            for(;i<sizeof(neontable);++i) if(neontable[i]!=0xa5) abort();
+            printf("%s{\"fonts\":[%d,%d,%d],\"logo\":%d,\"done\":%d,\"events\":[",
+                c ? ",":"",script_font,model_font,font_identity,savedata.logo,startup_done);
+            for(i=0;i<(size_t)event_count;++i) printf("%s%d",i ? ",":"",events[i]);
+            printf("]}");
+        }
+        printf("]}");
+    }
+    printf("]}\n");return 0;
+}

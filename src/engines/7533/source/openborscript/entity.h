@@ -1,3 +1,15 @@
+/* AnyBOR modification record: 2026-11-09.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Keep legacy entity IDs and append selectors needed by the nearby logical
+ * profiles.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/7533.md
+ * at the source repository root. Original notices follow below.
+ */
+
 /*
  * OpenBOR - http://www.chronocrash.com
  * -----------------------------------------------------------------------
@@ -69,6 +81,7 @@ typedef enum
 	ENTITY_PROPERTY_GET_STATE,
 	ENTITY_PROPERTY_GRAB_TARGET,
 	ENTITY_PROPERTY_GRAB_WALK_STATE,
+	ENTITY_PROPERTY_GUARD_POINTS,
 	ENTITY_PROPERTY_GUARD_TIME,
 	ENTITY_PROPERTY_HP,
 	ENTITY_PROPERTY_HP_OLD,

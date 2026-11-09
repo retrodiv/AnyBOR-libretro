@@ -1,0 +1,146 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <stdint.h>
+#include <vorbis/vorbisfile.h>
+#include "soundmix.h"
+#include "adpcm.h"
+#include "borendian.h"
+#undef printf
+uint32_t obor_profile_build;
+@DEFINES@
+#pragma pack(push,1)
+@TYPE@
+#pragma pack(pop)
+@GLOBAL@
+static bor_header borhead,input_header;
+static short loop_valprev[2];static char loop_index[2];
+static int loop_state_set;static u32 loop_offset;
+static int adpcm_handle=-1,music_looping,music_atend,music_type=-1;
+static unsigned char *adpcm_inbuf;
+static int mixing_inited,mixing_active;
+int playfrequency=44100;
+OggVorbis_File *oggfile;
+vorbis_info *stream_info;
+int current_section,ogg_handle;
+static vorbis_info observed_info;
+static char *comments[]={"ARTIST=synthetic artist","TITLE=synthetic title"};
+static vorbis_comment observed_comments={.user_comments=comments,.comments=2};
+static int input_codec,input_open,cursor,header_pending;
+static unsigned value_mask,index_mask,reset_mask,zero_reset_mask;
+int openpackfile(const char *filename,const char *archive)
+{
+    if(strcmp(filename,"music") || strcmp(archive,"archive")) abort();
+    cursor=sizeof(bor_header);header_pending=input_codec==0;
+    return input_open ? 7 : -1;
+}
+int closepackfile(int handle) { (void)handle;return 0; }
+int readpackfile(int handle,void *buffer,int length)
+{
+    int count;
+    if(handle!=7 || length<0) abort();
+    if(header_pending)
+    {
+        if(length!=(int)sizeof(input_header)) abort();
+        memcpy(buffer,&input_header,sizeof(input_header));header_pending=0;return length;
+    }
+    count=(int)sizeof(bor_header)+4096-cursor;
+    if(count>length) count=length;
+    if(count<0) abort();
+    memset(buffer,0x11,(size_t)count);cursor+=count;return count;
+}
+int seekpackfile(int handle,int offset,int whence)
+{
+    if(handle!=7) abort();
+    if(whence==SEEK_SET) cursor=offset;
+    else if(whence==SEEK_CUR) cursor+=offset;
+    else abort();
+    return cursor;
+}
+void adpcm_reset(void) { }
+short adpcm_valprev(int channel) { value_mask|=1u<<channel;return 100+channel; }
+char adpcm_index(int channel) { index_mask|=1u<<channel;return 10+channel; }
+void adpcm_loop_reset(int channel,short value,char index)
+{
+    if(channel<0 || channel>1) abort();
+    if(value==0 && index==0) zero_reset_mask|=1u<<channel;
+    else if(value!=100+channel || index!=10+channel) abort();
+    reset_mask|=1u<<channel;
+}
+int adpcm_decode(unsigned char *in,short *out,int length,int channels)
+{
+    int i;(void)in;
+    if(length<0 || length>MUSIC_BUF_SIZE/2) abort();
+    for(i=0;i<2*length;++i) out[i]=(short)(11+channels);
+    return 2*length;
+}
+int ov_open_callbacks(void *source,OggVorbis_File *file,const char *initial,long bytes,ov_callbacks callbacks)
+{ (void)source;(void)file;(void)initial;(void)bytes;(void)callbacks;return 0; }
+vorbis_info *ov_info(OggVorbis_File *file,int link) { (void)file;(void)link;return &observed_info; }
+vorbis_comment *ov_comment(OggVorbis_File *file,int link) { (void)file;(void)link;return &observed_comments; }
+int ov_clear(OggVorbis_File *file) { if(!file) abort();return 0; }
+static size_t readpackfile_callback(void *buf,size_t len,size_t count,void *source)
+{ (void)buf;(void)len;(void)count;(void)source;abort(); }
+static int seekpackfile_callback(void *source,ogg_int64_t offset,int whence)
+{ (void)source;(void)offset;(void)whence;abort(); }
+static int closepackfile_callback(void *source) { (void)source;abort(); }
+static long tellpackfile_callback(void *source) { (void)source;abort(); }
+@FUNCTIONS@
+static int clean_channel(void)
+{
+    musicchannelstruct copy=musicchannel;unsigned i;
+    copy.object_type=0;
+    for(i=0;i<sizeof(copy);++i) if(((unsigned char*)&copy)[i]) return 0;
+    return 1;
+}
+static void print_state(void)
+{
+    unsigned i;int sums[4]={0};
+    for(i=0;i<4;++i) if(musicchannel.buf[i])
+    { unsigned j;for(j=0;j<MUSIC_BUF_SIZE;++j) sums[i]+=musicchannel.buf[i][j]; }
+    printf("{\"channel\":[%d,%d,%u,%d,%d,%d,%d],\"play_to\":[%u,%u,%u,%u],\"sums\":[%d,%d,%d,%d],\"mode\":[%d,%d,%d,%u],\"owned\":[%d,%d],\"loop_masks\":[%u,%u,%u,%u]}",
+        musicchannel.object_type,musicchannel.channels,musicchannel.fp_period,
+        musicchannel.volume[0],musicchannel.volume[1],musicchannel.active,musicchannel.playing_buffer,
+        musicchannel.fp_playto[0],musicchannel.fp_playto[1],musicchannel.fp_playto[2],musicchannel.fp_playto[3],
+        sums[0],sums[1],sums[2],sums[3],music_type,music_looping,music_atend,loop_offset,
+        adpcm_inbuf!=NULL,oggfile!=NULL,value_mask,index_mask,reset_mask,zero_reset_mask);
+}
+int main(void)
+{
+    static const unsigned profiles[]={@PROFILES@};
+    static const struct input { int codec,inited,active,channels,frequency,volume,loop,open;unsigned offset; }
+        cases[]={@CASES@};
+    size_t p,c;
+    printf("{\"status\":\"PASS\",\"header_size\":%zu,\"profiles\":[",sizeof(bor_header));
+    for(p=0;p<sizeof(profiles)/sizeof(*profiles);++p)
+    {
+        obor_profile_build=profiles[p];
+        printf("%s{\"revision\":%u,\"cases\":[",p ? "," : "",profiles[p]);
+        for(c=0;c<sizeof(cases)/sizeof(*cases);++c)
+        {
+            const struct input *input=&cases[c];char artist[32]="?",title[32]="?";int opened,query;
+            sound_music_channel_clear(&musicchannel);music_type=-1;music_looping=music_atend=0;
+            loop_state_set=0;loop_offset=0;value_mask=index_mask=reset_mask=zero_reset_mask=0;adpcm_handle=-1;
+            mixing_inited=input->inited;mixing_active=input->active;input_codec=input->codec;input_open=input->open;
+            memset(&input_header,0,sizeof(input_header));strcpy(input_header.identifier,BOR_IDENTIFIER);
+            strcpy(input_header.artist,"synthetic artist");strcpy(input_header.title,"synthetic title");
+            input_header.version=SwapLSB32(input->channels==1 ? BOR_MUSIC_VERSION_MONO : BOR_MUSIC_VERSION_STEREO);
+            input_header.frequency=SwapLSB32(input->frequency);input_header.channels=SwapLSB32(input->channels);
+            input_header.datastart=SwapLSB32(sizeof(bor_header));
+            memset(&observed_info,0,sizeof(observed_info));observed_info.channels=input->channels;observed_info.rate=input->frequency;
+            opened=input->codec ? sound_open_ogg("music","archive",input->volume,input->loop,input->offset)
+                : sound_open_adpcm("music","archive",input->volume,input->loop,input->offset);
+            if(opened && !input->codec) sound_update_adpcm();
+            query=sound_query_music(artist,title);
+            printf("%s{\"opened\":%d,\"query\":%d,\"tags\":[\"%s\",\"%s\"],\"before\":",c ? "," : "",opened,query,artist,title);
+            print_state();sound_close_music();
+            printf(",\"after\":[%d,%d,%d,%d,%d,%d,%d]}",musicchannel.object_type,music_type,clean_channel(),
+                adpcm_handle,adpcm_inbuf!=NULL,oggfile!=NULL,loop_state_set);
+        }
+        printf("]}");
+    }
+    puts("]}");return 0;
+}

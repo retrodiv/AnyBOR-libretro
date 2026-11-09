@@ -1,0 +1,227 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <strings.h>
+/* Upstream qualifies structures returned by value, including the map callback. */
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wignored-qualifiers"
+#if defined(__clang__)
+#pragma GCC diagnostic ignored "-Wdeprecated-non-prototype"
+#endif
+#include "scriptcommon.h"
+#undef printf
+#ifndef stricmp
+#define stricmp strcasecmp
+#endif
+
+uint32_t obor_profile_build;
+static entity actor;
+static s_model model;
+static int dump_calls, dump_count, dump_valid_rows;
+
+static int quiet_printf(const char *format, ...) { (void)format; return 0; }
+void StrCache_Collect(int index) { (void)index; abort(); }
+CHAR *StrCache_Get(int index) { (void)index; abort(); }
+int StrCache_Pop(int size) { (void)size; abort(); }
+int StrCache_CreateNewFrom(const CHAR *text) { (void)text; abort(); }
+@VARIANTS@
+@HELPERS@
+
+/* Only the selected production registrations change in this contract. */
+@MACROS@
+static int query_constant(const char *constname, LONG *result)
+{
+    ScriptVariant v = {0};
+    v.vt = VT_INTEGER;
+    if(0) {}
+    @CONSTANT_CHAIN@
+    else return 0;
+    *result = v.lVal;
+    return 1;
+}
+#undef ICMPCONST
+#undef ICMPCONST_SINCE
+
+#define printf quiet_printf
+@MAPS@
+@COMMON@
+
+void property_access_dump_members(property_access_map mapper, const int count, const void *object)
+{
+    int i;
+    ++dump_calls;
+    dump_count = count;
+    dump_valid_rows = 0;
+    for(i = 0; i < count; ++i)
+    {
+        const s_property_access_map map = mapper(object, i);
+        if(map.config_flags != PROPERTY_ACCESS_CONFIG_NONE && map.field != NULL)
+            ++dump_valid_rows;
+    }
+}
+
+@ENTRIES@
+#pragma GCC diagnostic pop
+#undef printf
+
+@ADDRESSES@
+static const void *expected_field(unsigned profile, int family, unsigned index)
+{
+    switch(profile)
+    {
+        @ADDRESS_SWITCH@
+    default:
+        abort();
+    }
+}
+
+static void initialize_objects(void)
+{
+    memset(&actor, 0, sizeof(actor));
+    memset(&model, 0, sizeof(model));
+    actor.object_type = OBJECT_TYPE_ENTITY;
+    model.object_type = OBJECT_TYPE_MODEL;
+    actor.grabwalking = 71;
+    actor.guardpoints = 53;
+    actor.guardtime = 109;
+    actor.energy_state.health_current = 61;
+    model.ground = 81;
+    model.profile_guardpoints = 11;
+    model.guardrate = 5;
+    model.health = 91;
+}
+
+static void print_values(void)
+{
+    printf("[%u,%d,%d,%d,%d,%d,%d,%d]", actor.grabwalking, actor.guardpoints,
+           (int)(LONG)actor.guardtime, actor.energy_state.health_current, model.ground,
+           model.profile_guardpoints, model.guardrate, model.health);
+}
+
+static HRESULT get_property(int family, int index, ScriptVariant **out)
+{
+    ScriptVariant object = {.ptrVal=family ? (void *)&model : (void *)&actor, .vt=VT_PTR};
+    ScriptVariant property = {.lVal=index, .vt=VT_INTEGER};
+    const ScriptVariant *args[] = {&object, &property};
+    return family ? openbor_get_model_property(args, out, 2) :
+                    openbor_get_entity_property(args, out, 2);
+}
+
+static HRESULT set_property(int family, int index, ScriptVariant **out)
+{
+    ScriptVariant object = {.ptrVal=family ? (void *)&model : (void *)&actor, .vt=VT_PTR};
+    ScriptVariant property = {.lVal=index, .vt=VT_INTEGER};
+    ScriptVariant value = {.lVal=-17, .vt=VT_INTEGER};
+    ScriptVariant *args[] = {&object, &property, &value};
+    return family ? openbor_set_model_property(args, out, 3) :
+                    openbor_set_entity_property(args, out, 3);
+}
+
+static void print_value_case(int family, int property, int found)
+{
+    ScriptVariant result = {0};
+    ScriptVariant *out = &result;
+    int before, after, get_status, set_status;
+    initialize_objects();
+    printf("{\"found\":%d", found);
+    if(found)
+    {
+        get_status = get_property(family, property, &out);
+        if(out != &result || result.vt != VT_INTEGER) abort();
+        before = result.lVal;
+        set_status = set_property(family, property, &out);
+        if(out != &result) abort();
+        if(get_property(family, property, &out) != get_status ||
+           out != &result || result.vt != VT_INTEGER) abort();
+        after = result.lVal;
+        printf(",\"get\":%d,\"set\":%d,\"before\":%d,\"after\":%d",
+               get_status, set_status, before, after);
+    }
+    printf(",\"state\":"); print_values(); putchar('}');
+}
+
+int main(void)
+{
+    static const unsigned profiles[] = {@PROFILES@};
+    static const char *queries[] = {@CONSTANT_QUERIES@};
+    static const struct { int family; const char *name; } value_queries[] = {@VALUE_QUERIES@};
+    static const int direct_indices[][8] = {@DIRECT_INDICES@};
+    unsigned p, c;
+    int family, index;
+    puts("{\"status\":\"PASS\",\"profiles\":[");
+    for(p = 0; p < sizeof(profiles) / sizeof(profiles[0]); ++p)
+    {
+        obor_profile_build = profiles[p];
+        initialize_objects();
+        printf("%s{\"revision\":%u,\"constants\":[", p ? "," : "", profiles[p]);
+        for(c = 0; c < sizeof(queries) / sizeof(queries[0]); ++c)
+        {
+            LONG value = -1;
+            int found = query_constant(queries[c], &value);
+            printf("%s[%d,%d]", c ? "," : "", found, (int)value);
+        }
+        printf("],\"maps\":[");
+        for(family = 0; family < 2; ++family)
+        {
+            int end = family ? obor_profile_model_property_end() : obor_profile_entity_property_end();
+            printf("%s[", family ? "," : "");
+            for(index = 0; index < end; ++index)
+            {
+                const s_property_access_map map = family ? model_get_property_map(&model, index) :
+                                                          entity_get_property_map(&actor, index);
+                printf("%s[\"%s\",%d,%u,%d]", index ? "," : "", map.id_string,
+                       map.type, (unsigned)map.config_flags,
+                       map.field == expected_field(p, family, index));
+            }
+            putchar(']');
+        }
+        printf("],\"values\":[");
+        for(c = 0; c < sizeof(value_queries) / sizeof(value_queries[0]); ++c)
+        {
+            LONG property = -1;
+            int found = query_constant(value_queries[c].name, &property);
+            if(c) putchar(',');
+            print_value_case(value_queries[c].family, property, found);
+        }
+        printf("],\"direct_values\":[");
+        for(c = 0; c < sizeof(value_queries) / sizeof(value_queries[0]); ++c)
+        {
+            if(c) putchar(',');
+            print_value_case(value_queries[c].family, direct_indices[p][c],
+                             direct_indices[p][c] >= 0);
+        }
+        printf("],\"boundaries\":[");
+        for(family = 0; family < 2; ++family)
+        {
+            int end = family ? obor_profile_model_property_end() : obor_profile_entity_property_end();
+            int indices[] = {-1, end, end + 1, PROPERTY_ACCESS_DUMP - 1, PROPERTY_ACCESS_DUMP};
+            printf("%s[", family ? "," : "");
+            for(c = 0; c < sizeof(indices) / sizeof(indices[0]); ++c)
+            {
+                ScriptVariant result = {.lVal=77, .vt=VT_INTEGER};
+                ScriptVariant *out = &result;
+                int get_status, get_kind, get_out, set_status;
+                initialize_objects();
+                dump_calls = dump_count = dump_valid_rows = 0;
+                get_status = get_property(family, indices[c], &out);
+                get_kind = result.vt; get_out = out == &result;
+                result.vt = VT_INTEGER; result.lVal = 77; out = &result;
+                set_status = set_property(family, indices[c], &out);
+                printf("%s{\"index\":%d,\"get\":%d,\"get_type\":%d,\"get_out\":%d,"
+                       "\"set\":%d,\"set_type\":%d,\"set_value\":%d,\"set_out\":%d,"
+                       "\"dump\":[%d,%d,%d],\"state\":", c ? "," : "", indices[c],
+                       get_status, get_kind, get_out, set_status, result.vt, (int)result.lVal,
+                       out == &result, dump_calls, dump_count, dump_valid_rows);
+                print_values(); putchar('}');
+            }
+            putchar(']');
+        }
+        printf("]}");
+    }
+    puts("]}");
+    return 0;
+}

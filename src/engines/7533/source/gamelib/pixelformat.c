@@ -1,11 +1,12 @@
-/* AnyBOR modification record: 2026-09-29.
+/* AnyBOR modification record: 2026-11-09.
  * Port maintained by retrodiv <retrodiv@proton.me>.
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
  * Upstream code retains its original license and notices.
  * Bound clip endpoints without signed overflow while retaining native color
  * and draw-method initialization. Bound blend and tint function selection
- * while preserving valid native operations.
+ * while preserving valid native operations. Select native drawing enable and
+ * transparency flags before deriving pixel blend operations.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/7533.md
  * at the source repository root. Original notices follow below.
@@ -83,7 +84,8 @@ int clipx1, clipy1, clipx2, clipy2;
 void drawmethod_global_init(s_drawmethod *drawmethod)
 {
 
-    if(drawmethod && drawmethod->flag)
+    if(drawmethod && (obor_profile_build >= 7567
+            ? (int)(drawmethod->config & DRAWMETHOD_CONFIG_ENABLED) : drawmethod->flag))
     {
 #if REVERSE_COLOR
         channelr = drawmethod->channelb;
@@ -103,7 +105,8 @@ void drawmethod_global_init(s_drawmethod *drawmethod)
     }
 
 
-    if((useclip = drawmethod && drawmethod->flag && drawmethod->clipw > 0 && drawmethod->cliph > 0))
+    if((useclip = drawmethod && (obor_profile_build >= 7567
+            ? (int)(drawmethod->config & DRAWMETHOD_CONFIG_ENABLED) : drawmethod->flag) && drawmethod->clipw > 0 && drawmethod->cliph > 0))
     {
         clipx1 = drawmethod->clipx;
         clipy1 = drawmethod->clipy;

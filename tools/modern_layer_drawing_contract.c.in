@@ -1,0 +1,75 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wignored-qualifiers"
+#if defined(__clang__)
+#pragma GCC diagnostic ignored "-Wdeprecated-non-prototype"
+#endif
+#include "scriptcommon.h"
+#undef printf
+uint32_t obor_profile_build;
+static s_drawmethod drawmethod;
+void StrCache_Collect(int index) { (void)index; abort(); }
+CHAR *StrCache_Get(int index) { (void)index; abort(); }
+int StrCache_Pop(int size) { (void)size; abort(); }
+int StrCache_CreateNewFrom(const CHAR *text) { (void)text; abort(); }
+@VARIANTS@
+@ENUM@
+@FUNCTIONS@
+#pragma GCC diagnostic pop
+static int result_code(HRESULT code)
+{
+    if(code == S_OK) return 1;
+    if(code == E_FAIL) return -1;
+    abort();
+}
+static int read_property(s_layer *layer, int property)
+{
+    ScriptVariant result={0}, *out=&result;
+    if(_getlayerproperty(layer,property,&out)!=S_OK || out!=&result || result.vt!=VT_INTEGER)
+        abort();
+    return result.lVal;
+}
+int main(void)
+{
+    static const unsigned profiles[]={@PROFILES@};
+    static const unsigned globals[]={@GLOBALS@};
+    static const int properties[]={@PROPERTIES@};
+    static const struct { int type; double value; } cases[]={@CASES@};
+    unsigned p,g,n,c,index;
+    puts("{\"status\":\"PASS\",\"profiles\":[");
+    for(p=0;p<sizeof(profiles)/sizeof(*profiles);++p)
+    {
+        obor_profile_build=profiles[p]; index=0;
+        printf("%s{\"revision\":%u,\"cases\":[",p?",":"",profiles[p]);
+        for(g=0;g<sizeof(globals)/sizeof(*globals);++g)
+            for(n=0;n<sizeof(properties)/sizeof(*properties);++n)
+                for(c=0;c<sizeof(cases)/sizeof(*cases);++c)
+                {
+                    s_layer layer={0}; ScriptVariant input={0};
+                    int before, code, after;
+                    layer.drawmethod.config=(e_drawmethod_config)0x200u;
+                    layer.drawmethod.transbg=17;
+                    layer.drawmethod.water.watermode=19;
+                    layer.drawmethod.water.wavelength=11.5f;
+                    drawmethod.config=(e_drawmethod_config)globals[g];
+                    input.vt=cases[c].type;
+                    if(input.vt==VT_DECIMAL) input.dblVal=cases[c].value;
+                    else input.lVal=(LONG)cases[c].value;
+                    before=read_property(&layer,properties[n]);
+                    code=result_code(_changelayerproperty(&layer,properties[n],&input));
+                    after=read_property(&layer,properties[n]);
+                    printf("%s[%d,%d,%d,%d,%u,%d,%.9g,%u]",index++?",":"",
+                        before,code,after,layer.drawmethod.transbg,(unsigned)layer.drawmethod.config,
+                        (int)layer.drawmethod.water.watermode,(double)layer.drawmethod.water.wavelength,
+                        (unsigned)drawmethod.config);
+                }
+        printf("]}");
+    }
+    puts("]}"); return 0;
+}

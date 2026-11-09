@@ -1,9 +1,11 @@
-/* AnyBOR modification record: 2026-10-22.
+/* AnyBOR modification record: 2026-11-09.
  * Port maintained by retrodiv <retrodiv@proton.me>.
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
  * Upstream code retains its original license and notices.
  * Declare the modern logical profiles' unload_model script entry point.
+ * Declare the selected script and system-property interfaces for the shared
+ * runtime.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/7533.md
  * at the source repository root. Original notices follow below.
@@ -24,12 +26,14 @@
 #include "pp_parser.h"
 
 #include "animation.h"
+#include "audio.h"
 #include "axis.h"
 #include "binding.h"
 #include "drawmethod.h"
 #include "colorset.h"
 #include "entity.h"
 #include "faction.h"
+#include "flash.h"
 #include "global_config.h"
 #include "icon.h"
 #include "model.h"
@@ -462,6 +466,7 @@ enum systemvariant_enum
     SYSTEM_PROPERTY_MIRROR_Z,
     SYSTEM_PROPERTY_MODELS_CACHED,
     SYSTEM_PROPERTY_MODELS_LOADED,
+    SYSTEM_PROPERTY_MUSIC_CHANNEL,
     SYSTEM_PROPERTY_MUSICVOL,
     SYSTEM_PROPERTY_NEON_PANEL_Z,
     SYSTEM_PROPERTY_NOAIRCANCEL,

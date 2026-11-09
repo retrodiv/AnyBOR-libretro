@@ -37,7 +37,7 @@ v3.0 3968-dev, v3.0 3970-dev, v3.0 3978, v3.0 3984, v3.0 3993, v3.0 3994, v3.0
 4082, v3.0 4085, v3.0 4086, v3.0 4088-dev, v3.0 4107, v3.0 4111, v3.0 4129, v3.0
 4153, v3.0 4432, v3.0 4453, v3.0 6330, v3.0 6391, v3.0 6391-mod, v3.0 6392-dev,
 v3.0 6412-dev, v3.0 6510-dev, v3.0 7086-dev, v3.0 7123-dev, v4.0 7142-alpha,
-v4.0 7533 and v4.0 8023-dev.
+v4.0 7530, v4.0 7533, v4.0 7555, v4.0 7556, v4.0 7735 and v4.0 8023-dev.
 Auto uses build tags and content clues to choose a profile. You can select one
 manually when a game needs it. See [choosing a profile](HISTORICAL_PROFILES.md).
 OpenBOR and Beats of Rage originate with Senile Team and OpenBOR Team; the port
@@ -134,17 +134,17 @@ The macros account for the active character's facing direction.
 
 | Option | Key | Default and effect |
 |---|---|---|
-| Adjust for 4:3 CRT TV | `obor_crt_tv` | **Off**. Fit images wider than 364 pixels or taller than 244 pixels into 640x480, preserving their aspect with borders and sharp-bilinear scaling. Smaller images outside 4:3 +/-10% receive native-pixel black padding to 4:3, then the size limits are checked again. Applies during play; see the [video contract](#video-contract-adjust-for-43-crt-tv) for thresholds and examples. |
-| Left analog stick as D-pad | `obor_analog` | **On**. Adds movement with the left stick. |
-| Rumble | `obor_rumble` | **On**. Forwards game hit vibration. |
-| Special move macros (L2/R2/L3/R3) | `obor_macros` | **On**. Executes supported character move sequences. |
-| Engine build | `obor_engine` | **Auto**. Select an explicit compatibility profile when needed; changes apply on Restart. |
-| Save state content | `obor_state_content` | **Smart** reconstructs resources after an exact byte proof. **Full** retains complete engine memory. Applies when content is loaded. |
-| Save state compression | `obor_state_compression` | **On** compresses state blocks. **Off** leaves changed blocks uncompressed while retaining reuse of unchanged blocks. Applies when content is loaded. |
-| Forward game log | `obor_gamelog` | **Off**. Mirrors the engine log into the frontend log. |
-| Clear current game saved data on load | `obor_clear_local_data` | **Off**. In Development. Deletes the current game's entire `AnyBOR/<game>/` folder before loading, across all engine builds. |
-| Clear current game cache on unload | `obor_clear_game_cache` | **On**. In Development. Deletes the cache directories used by this game after unloading or closing the core. The next load rebuilds them; saved data is unaffected. |
-| Clear all game caches on load | `obor_clear_all_caches` | **On**. In Development. Empties `AnyBOR-cache/` before each load and before generating new cache files; saved data is unaffected. |
+| Adjust for 4:3 CRT TV | `anybor_crt_tv` | **Off**. Fit images wider than 364 pixels or taller than 244 pixels into 640x480, preserving their aspect with borders and sharp-bilinear scaling. Smaller images outside 4:3 +/-10% receive native-pixel black padding to 4:3, then the size limits are checked again. Applies during play; see the [video contract](#video-contract-adjust-for-43-crt-tv) for thresholds and examples. |
+| Left analog stick as D-pad | `anybor_analog` | **On**. Adds movement with the left stick. |
+| Rumble | `anybor_rumble` | **On**. Forwards game hit vibration. |
+| Special move macros (L2/R2/L3/R3) | `anybor_macros` | **On**. Executes supported character move sequences. |
+| Engine build | `anybor_engine` | **Auto**. Select an explicit compatibility profile when needed; changes apply on Restart. |
+| Save state content | `anybor_state_content` | **Smart** reconstructs resources after an exact byte proof. **Full** retains complete engine memory. Applies when content is loaded. |
+| Save state compression | `anybor_state_compression` | **On** compresses state blocks. **Off** leaves changed blocks uncompressed while retaining reuse of unchanged blocks. Applies when content is loaded. |
+| Forward game log | `anybor_gamelog` | **Off**. Mirrors the engine log into the frontend log. |
+| Clear current game saved data on load | `anybor_clear_local_data` | **Off**. In Development. Deletes the current game's entire `AnyBOR/<game>/` folder before loading, across all engine builds. |
+| Clear current game cache on unload | `anybor_clear_game_cache` | **On**. In Development. Deletes the cache directories used by this game after unloading or closing the core. The next load rebuilds them; saved data is unaffected. |
+| Clear all game caches on load | `anybor_clear_all_caches` | **On**. In Development. Empties `AnyBOR-cache/` before each load and before generating new cache files; saved data is unaffected. |
 
 The state options are in the System category. Their defaults are
 **Smart + On**. Writer selection
@@ -196,7 +196,7 @@ highest compatible stable or automatic profile inside it. If the evidence
 contradicts the interval, the interval wins and the nearest declared candidate
 is selected with a log message. For example, **Build 3780-3839** selects 3839 and
 **Build 3792-3911** selects 3842. Only if none fits, it uses the first automatic revision
-above the upper endpoint; 7369-7532 therefore uses 7533. If there is no later
+above the upper endpoint; 7557-7590 therefore uses 7735. If there is no later
 profile, loading reports an error. An explicit interval takes precedence over
 other inferred requirements; manual selection overrides it.
 
@@ -219,7 +219,7 @@ its compile date does not supply a build.
 When no higher-priority clue supplies a build, a bounded PAK text scan combines
 known command, animation, native-function and literal-constant introductions
 and removals into an inclusive range, then keeps v3.0 6391 when it satisfies that range. Requirements beyond it
-select the first compatible intervening era up to v4.0 7533; requirements
+select the first compatible intervening era up to v4.0 7735; requirements
 beyond that stable release select the latest compatible snapshot, currently
 v4.0 8023-dev. Explicit filename intervals retain their highest-profile /
 next-revision policy. Ordinary unlabelled inference offers only automatic
@@ -249,8 +249,10 @@ A separate dependency probe follows the engine's fixed global script paths,
 literal imports, and model paths listed by `load`/`cache` in `data/models.txt`.
 It can retain a proven modern minimum when the broad scan exceeds its limit.
 `child_follow_*` commands require the stable v4 era; literal
-`GLOBAL_CONFIG_PROPERTY_*` constants and later coordinate, speed and sound-group
-commands require a snapshot newer than v4.0 7533. Comments, strings, local
+`GLOBAL_CONFIG_PROPERTY_*` constants and later commands provide their own
+source-defined minimum: global-config constants
+select v4.0 7556, while later coordinate, speed and sound-group commands
+require the latest compatible snapshot. Comments, strings, local
 builtin declarations and uncertain conditional preprocessing supply no native
 requirement. The dependency probe permits 4096 eligible entries, 2 MiB per
 source, 16 MiB total and 65536 directory entries, with its own 750 ms deadline.

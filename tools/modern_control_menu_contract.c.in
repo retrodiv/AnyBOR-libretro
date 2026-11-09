@@ -1,0 +1,91 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "openbor.h"
+#include "translation.h"
+#undef printf
+#undef _menutext
+#undef _menutextm
+uint32_t obor_profile_build;
+s_savedata savedata;
+s_level *level;
+unsigned screen_status,bothnewkeys;
+static s_savedata stored;
+static int scenario,frames,updates,saves,loads,applies,defaults,scans,flushes,rumble_rows;
+static int before_load,at_apply;
+static const unsigned A=FLAG_ATTACK;
+static void save_settings(void) { ++saves;stored=savedata; }
+static void load_settings(void) { ++loads;before_load=savedata.joyrumble[0];savedata=stored; }
+static void apply(void) { ++applies;at_apply=savedata.joyrumble[0]; }
+static void clear_buttons(int player)
+{ int key;if(player) abort();++defaults;for(key=0;key<MAX_BTN_NUM;++key) savedata.keys[player][key]=900+key; }
+static int no_config(char *path,char **buffer,size_t *size)
+{ if(strcmp(path,"translation/menu.txt") && strcmp(path,"data/menu.txt")) abort();*buffer=NULL;*size=0;return 0; }
+static void menu_text(int selected,int x,int y,const char *format,...)
+{
+    (void)selected;(void)x;(void)y;
+    if(!strcmp(format,"Rumble Enabled") || !strcmp(format,"Rumble Disabled")) ++rumble_rows;
+}
+char *ob_gettrans(char *id) { return id; }
+static void observed_update(int ingame,int wait)
+{
+    unsigned keys=0;if(ingame || wait) abort();++updates;
+    if(!(screen_status&IN_SCREEN_BUTTON_CONFIG_MENU)) return;
+    ++frames;if(frames>24) abort();
+    if(scenario==0) keys=FLAG_ESC;
+    else if(scenario==1) keys=frames==1 ? FLAG_MOVEUP : frames==2 ? A : FLAG_ESC;
+    else if(scenario==2) keys=frames<=12 ? FLAG_MOVEDOWN : frames==13 ? A : FLAG_ESC;
+    else if(scenario==3) keys=frames<=12 ? FLAG_MOVEDOWN : frames==13 ? FLAG_MOVELEFT : frames==14 ? FLAG_MOVEDOWN : A;
+    else if(scenario==4) keys=frames==1 ? FLAG_MOVEUP : frames==2 ? FLAG_MOVERIGHT : FLAG_ESC;
+    else if(scenario==5) keys=frames==1 || frames==6 ? A : frames>=3 ? FLAG_MOVEUP : 0;
+    else abort();
+    bothnewkeys=keys;
+}
+static int scanned_key(void) { ++scans;return 777; }
+static void store_key(int *keys,int index,int value,int old)
+{ if(index || value!=777 || old!=100 || keys!=savedata.keys[0]) abort();keys[index]=value; }
+#define savesettings save_settings
+#define loadsettings load_settings
+#define apply_controls apply
+#define clearbuttons clear_buttons
+#define buffer_pakfile no_config
+#define ParseArgs(...) abort()
+#define getNewLineStart(...) (abort(),0)
+#define translate_SDID(...) (abort(),0)
+#define control_getkeyname(...) "bound"
+#define control_scankey scanned_key
+#define keyboard_getlastkey() ((void)++flushes)
+#define safe_set store_key
+#define sound_play_sample(...) ((void)0)
+#define update observed_update
+#define _menutext menu_text
+#define _menutextm menu_text
+#define printf(...) ((void)0)
+@FUNCTION@
+#undef printf
+int main(void)
+{
+    static const unsigned profiles[]={@PROFILES@};size_t p;int c,key;
+    printf("{\"status\":\"PASS\",\"profiles\":[");
+    for(p=0;p<sizeof(profiles)/sizeof(*profiles);++p)
+    {
+        obor_profile_build=profiles[p];
+        printf("%s{\"revision\":%u,\"cases\":[",p ? ",":"",profiles[p]);
+        for(c=0;c<6;++c)
+        {
+            memset(&savedata,0,sizeof(savedata));for(key=0;key<MAX_BTN_NUM;++key) savedata.keys[0][key]=100+key;
+            scenario=c;frames=updates=saves=loads=applies=defaults=scans=flushes=rumble_rows=0;
+            before_load=at_apply=-1;screen_status=0;bothnewkeys=0;level=NULL;
+            keyboard_setup(0);
+            printf("%s{\"state\":[%d,%d],\"services\":[%d,%d,%d,%d,%d,%d],\"frames\":[%d,%d],\"rumble\":[%d,%d,%d],\"closed\":%d}",
+                c ? ",":"",savedata.keys[0][0],savedata.joyrumble[0],saves,loads,applies,defaults,scans,flushes,
+                frames,updates,rumble_rows,before_load,at_apply,screen_status==0 && bothnewkeys==0);
+        }
+        printf("]}");
+    }
+    printf("]}\n");return 0;
+}

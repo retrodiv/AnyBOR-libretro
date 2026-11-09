@@ -1,3 +1,16 @@
+/* AnyBOR modification record: 2026-11-09.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Register native functions according to each logical profile's upstream
+ * API. Preserve native callback registration, preconversion routes and
+ * function-name lookup by profile.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/7533.md
+ * at the source repository root. Original notices follow below.
+ */
+
 /*
  * OpenBOR - http://www.chronocrash.com
  * -----------------------------------------------------------------------
@@ -246,7 +259,31 @@ const char *Script_GetFunctionName(void *functionRef)
 	{
 		return "copy_drawmethod";
 	}
-	else if (functionRef == ((void *)openbor_free_drawmethod))
+    else if(obor_profile_build >= 7582 && functionRef == ((void *)openbor_allocate_palette))
+    {
+        return "allocate_palette";
+    }
+
+    else if(obor_profile_build >= 7582 && functionRef == ((void *)openbor_copy_palette))
+    {
+        return "copy_palette";
+    }
+
+    else if(obor_profile_build >= 7585 && functionRef == ((void *)openbor_load_palette))
+    {
+        return "load_palette";
+    }
+
+    else if(obor_profile_build >= 7580 && functionRef == ((void *)openbor_get_palette_property))
+    {
+        return obor_profile_build < 7582 ? "get_color_component" : "get_palette_property";
+    }
+
+    else if(obor_profile_build >= 7580 && functionRef == ((void *)openbor_set_palette_property))
+    {
+        return obor_profile_build < 7582 ? "set_color_component" : "set_palette_property";
+    }
+	else if (obor_profile_build < 7582 && functionRef == ((void *)openbor_free_drawmethod))
 	{
 	return "free_drawmethod";
 	}
@@ -260,11 +297,11 @@ const char *Script_GetFunctionName(void *functionRef)
 	}
 
     /* Global config properties */
-    else if (functionRef == ((void*)openbor_set_global_config_property))
+    else if (obor_profile_build < 7557 && functionRef == ((void*)openbor_set_global_config_property))
     {
         return "get_global_config_property";
     }
-    else if (functionRef == ((void*)openbor_set_global_config_property))
+    else if (obor_profile_build < 7557 && functionRef == ((void*)openbor_set_global_config_property))
     {
         return "set_global_config_property";
     }
@@ -425,6 +462,23 @@ const char *Script_GetFunctionName(void *functionRef)
     else if (functionRef == ((void *)openbor_set_entity_collision_property))
     {
         return "set_entity_collision_property";
+    }
+
+    else if (obor_profile_build >= 7590 && functionRef == ((void*)openbor_get_music_channel_property))
+    {
+        return "get_music_channel_property";
+    }
+    else if (obor_profile_build >= 7590 && functionRef == ((void*)openbor_set_music_channel_property))
+    {
+        return "set_music_channel_property";
+    }
+    else if (obor_profile_build >= 7557 && functionRef == ((void*)openbor_get_flash_property))
+    {
+        return "get_flash_property";
+        }
+    else if (obor_profile_build >= 7557 && functionRef == ((void*)openbor_set_flash_property))
+    {
+        return "set_flash_property";
     }
 
     /* Global config property. */
@@ -1092,21 +1146,21 @@ void *Script_GetStringMapFunction(void *functionRef)
 	// Drawmethod
 	else if (functionRef == ((void *)openbor_get_drawmethod_property))
 	{
-		return (void *)mapstrings_drawmethod;
+		return obor_profile_build < 7573 ? (void *)mapstrings_drawmethod : NULL;
 	}
 	else if (functionRef == ((void *)openbor_set_drawmethod_property))
 	{
-		return (void *)mapstrings_drawmethod;
+		return obor_profile_build < 7573 ? (void *)mapstrings_drawmethod : NULL;
 	}
 
     /* Global config properties. */
     else if (functionRef == ((void*)openbor_get_global_config_property))
     {
-        return (void*)mapstrings_global_config_property;
+        return obor_profile_build < 7556 ? (void*)mapstrings_global_config_property : NULL;
     }
     else if (functionRef == ((void*)openbor_set_global_config_property))
     {
-        return (void*)mapstrings_global_config_property;
+        return obor_profile_build < 7556 ? (void*)mapstrings_global_config_property : NULL;
     }
 
     else if (functionRef == ((void *)openbor_setspawnentry))
@@ -1287,13 +1341,30 @@ void Script_LoadSystemFunctions()
 		(void *)openbor_allocate_drawmethod, "allocate_drawmethod");
 	List_InsertAfter(&theFunctionList,
 		(void *)openbor_copy_drawmethod, "copy_drawmethod");
-	List_InsertAfter(&theFunctionList,
+	if(obor_profile_build < 7582)
+    {
+        List_InsertAfter(&theFunctionList,
 		(void *)openbor_free_drawmethod, "free_drawmethod");
+    }
 	List_InsertAfter(&theFunctionList,
 		(void *)openbor_get_drawmethod_property, "get_drawmethod_property");
 	List_InsertAfter(&theFunctionList,
 		(void *)openbor_set_drawmethod_property, "set_drawmethod_property");
 
+    if(obor_profile_build >= 7582)
+    {
+        List_InsertAfter(&theFunctionList, (void *)openbor_allocate_palette, "allocate_palette");
+        List_InsertAfter(&theFunctionList, (void *)openbor_copy_palette, "copy_palette");
+    }
+    if(obor_profile_build >= 7580)
+    {
+        List_InsertAfter(&theFunctionList, (void *)openbor_get_palette_property, obor_profile_build < 7582 ? "get_color_component" : "get_palette_property");
+        List_InsertAfter(&theFunctionList, (void *)openbor_set_palette_property, obor_profile_build < 7582 ? "set_color_component" : "set_palette_property");
+    }
+    if(obor_profile_build >= 7585)
+    {
+        List_InsertAfter(&theFunctionList, (void *)openbor_load_palette, "load_palette");
+    }
     List_InsertAfter(&theFunctionList,
                      (void *)openbor_getplayerproperty, "getplayerproperty");
     
@@ -1363,6 +1434,12 @@ void Script_LoadSystemFunctions()
     List_InsertAfter(&theFunctionList,
         (void*)openbor_set_faction_property, "set_faction_property");
 
+    if(obor_profile_build >= 7557)
+    {
+        List_InsertAfter(&theFunctionList, (void*)openbor_get_flash_property, "get_flash_property");
+        List_InsertAfter(&theFunctionList, (void*)openbor_set_flash_property, "set_flash_property");
+    }
+
     /* Global config properties. */
     List_InsertAfter(&theFunctionList,
         (void*)openbor_get_global_config_property, "get_global_config_property");
@@ -1380,6 +1457,12 @@ void Script_LoadSystemFunctions()
         (void*)openbor_get_model_property, "get_model_property");
     List_InsertAfter(&theFunctionList,
         (void*)openbor_set_model_property, "set_model_property");
+
+    if(obor_profile_build >= 7590)
+    {
+        List_InsertAfter(&theFunctionList, (void*)openbor_get_music_channel_property, "get_music_channel_property");
+        List_InsertAfter(&theFunctionList, (void*)openbor_set_music_channel_property, "set_music_channel_property");
+    }
 
     /* Spawn HUD properties. */
     List_InsertAfter(&theFunctionList,

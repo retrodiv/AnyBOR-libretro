@@ -1,0 +1,70 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdarg.h>
+#include <stdlib.h>
+#include <string.h>
+#include "openbor.h"
+#undef printf
+/* Select only the extracted host-service branch, after native headers. */
+#undef WIN
+#undef DARWIN
+#undef LINUX
+@PLATFORM@
+uint32_t obor_profile_build;
+static uint64_t ram_value;
+static int narrow_calls,wide_calls,ram_calls,exit_code;
+static char log_text[1024];
+struct fixture_narrow { int arena; };
+struct fixture_wide { size_t arena; };
+static struct fixture_narrow fixture_mallinfo(void)
+{
+    struct fixture_narrow value;uint32_t bits=(uint32_t)ram_value;
+    ++narrow_calls;memcpy(&value.arena,&bits,sizeof(bits));return value;
+}
+static struct fixture_wide fixture_mallinfo2(void)
+{ struct fixture_wide value={ (size_t)(ram_value+256) };++wide_calls;return value; }
+u64 getUsedRam(int unit) { if(unit!=BYTES) abort();++ram_calls;return ram_value+512; }
+void borExit(int status) { if(status!=2 || exit_code) abort();exit_code=status; }
+void writeToLogFile(const char *format,...)
+{
+    va_list args;size_t used=strlen(log_text);int n;
+    va_start(args,format);n=vsnprintf(log_text+used,sizeof(log_text)-used,format,args);va_end(args);
+    if(n<0 || (size_t)n>=sizeof(log_text)-used) abort();
+}
+#define mallinfo fixture_mallinfo
+#define mallinfo2 fixture_mallinfo2
+#if !defined(WIN) && !defined(DARWIN)
+@HELPER@
+#endif
+@FUNCTION@
+static void quote(const char *text)
+{
+    const unsigned char *s=(const unsigned char*)text;putchar('"');
+    for(;*s;++s) { if(*s=='\n') printf("\\n");else if(*s=='"' || *s=='\\') printf("\\%c",*s);else putchar(*s); }
+    putchar('"');
+}
+int main(void)
+{
+    static const unsigned profiles[]={@PROFILES@};size_t p;int c,token;
+    printf("{\"status\":\"PASS\",\"profiles\":[");
+    for(p=0;p<sizeof(profiles)/sizeof(*profiles);++p)
+    {
+        obor_profile_build=profiles[p];
+        printf("%s{\"revision\":%u,\"cases\":[",p ? ",":"",profiles[p]);
+        for(c=0;c<5;++c)
+        {
+            void *input=c==0 ? &token:NULL,*result;size_t size=c==1 ? 0:512;
+            ram_value=c==3 ? UINT32_MAX:c==4 ? (UINT64_C(1)<<32)+17:12345;
+            narrow_calls=wide_calls=ram_calls=exit_code=0;log_text[0]=0;
+            result=checkAlloc(input,size,"allocate","source.c",7);
+            printf("%s{\"identity\":%d,\"services\":[%d,%d,%d,%d],\"log\":",
+                c ? ",":"",result==input,narrow_calls,wide_calls,ram_calls,exit_code);
+            quote(log_text);putchar('}');
+        }
+        printf("]}");
+    }
+    printf("]}\n");return 0;
+}

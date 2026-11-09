@@ -1,0 +1,100 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <strings.h>
+#include "openbor.h"
+#undef printf
+#ifndef stricmp
+#define stricmp strcasecmp
+#endif
+
+uint32_t obor_profile_build;
+s_videomodes videomodes;
+static int walk_animation_calls;
+
+void borShutdown(int status, char *message, ...)
+{
+    (void)status;
+    (void)message;
+    abort();
+}
+
+void anything_walk(void) {}
+int common_trymove(float x, float z) { (void)x; (void)z; return 0; }
+static void common_walk_anim(entity *ent) { (void)ent; ++walk_animation_calls; }
+
+@TYPE_FUNCTION@
+
+static void initialize_type_case(entity *e)
+{
+    switch(e->modeldata.type)
+    {
+        @ENTITY_CASE@
+    default:
+        break;
+    }
+}
+
+int main(void)
+{
+    static const unsigned profiles[] = {@PROFILES@};
+    static const struct input_case {
+        const char *command;
+        unsigned initial, clear, add;
+        int walk, direction;
+    } cases[] = {@CASES@};
+    static s_model model;
+    static entity actor;
+    static s_anim walking;
+    static s_anim *animations[ANI_WALK + 1];
+    size_t p, c;
+    puts("{\"status\":\"PASS\",\"profiles\":[");
+    for(p = 0; p < sizeof(profiles) / sizeof(profiles[0]); ++p)
+    {
+        obor_profile_build = profiles[p];
+        printf("%s{\"revision\":%u,\"cases\":[", p ? "," : "", profiles[p]);
+        for(c = 0; c < sizeof(cases) / sizeof(cases[0]); ++c)
+        {
+            ArgList arguments = {0};
+            unsigned loaded, written;
+            memset(&model, 0, sizeof(model));
+            memset(&actor, 0, sizeof(actor));
+            memset(animations, 0, sizeof(animations));
+            arguments.count = 2;
+            arguments.args[0] = "type";
+            arguments.args[1] = (char *)cases[c].command;
+            model.move_config_flags = cases[c].initial;
+            lcmHandleCommandType(&arguments, &model, "data/model.txt");
+            loaded = model.move_config_flags;
+            actor.modeldata = model;
+            actor.modeldata.move_config_flags &= ~cases[c].clear;
+            actor.modeldata.move_config_flags |= cases[c].add;
+            written = actor.modeldata.move_config_flags;
+            walking.numframes = 1;
+            animations[ANI_WALK] = cases[c].walk ? &walking : NULL;
+            actor.modeldata.animation = animations;
+            actor.modeldata.animation_capacity = ANI_WALK + 1;
+            actor.modeldata.speed.x = 2.5f;
+            actor.direction = cases[c].direction;
+            actor.velocity.x = 9.5f;
+            actor.speedmul = 17;
+            walk_animation_calls = 0;
+            initialize_type_case(&actor);
+            printf("%s{\"type\":%u,\"loaded\":%u,\"written\":%u,\"initialized\":%u,"
+                   "\"nograb\":%d,\"nograb_default\":%d,\"velocity_x\":%g,"
+                   "\"speedmul\":%g,\"walk_animation_calls\":%d,\"walk_think\":%d,\"trymove\":%d}",
+                   c ? "," : "", (unsigned)model.type, loaded, written,
+                   (unsigned)actor.modeldata.move_config_flags, actor.nograb,
+                   actor.nograb_default, (double)actor.velocity.x, (double)actor.speedmul,
+                   walk_animation_calls, actor.think == anything_walk,
+                   actor.trymove == common_trymove);
+        }
+        puts("]}");
+    }
+    puts("]}");
+    return 0;
+}

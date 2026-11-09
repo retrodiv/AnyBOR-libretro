@@ -1,10 +1,11 @@
-/* AnyBOR modification record: 2026-10-23.
+/* AnyBOR modification record: 2026-11-09.
  * Port maintained by retrodiv <retrodiv@proton.me>.
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
  * Upstream code retains its original license and notices.
  * Match drawing-method typedef alignment to packed owning records without
- * changing fields, offsets or sizes.
+ * changing fields, offsets or sizes. Represent source-defined drawing flags,
+ * object classes and shared audio fields with explicit profile conversions.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/7533.md
  * at the source repository root. Original notices follow below.
@@ -255,6 +256,37 @@ typedef struct
     e_water_mode watermode;
 } water_transform;
 
+typedef enum e_object_type {
+    OBJECT_TYPE_NONE,
+    OBJECT_TYPE_ENTITY,
+    OBJECT_TYPE_MODEL,
+    OBJECT_TYPE_BIND,
+    OBJECT_TYPE_GLOBAL_CONFIG,
+    OBJECT_TYPE_FLASH,
+    OBJECT_TYPE_DRAWMETHOD,
+    OBJECT_TYPE_MUSIC_CHANNEL
+} e_object_type;
+
+typedef enum e_color_components {
+    COLOR_COMPONENT_RED    = 0,
+    COLOR_COMPONENT_GREEN  = 1,
+    COLOR_COMPONENT_BLUE   = 2,
+    COLOR_COMPONENT_ALPHA  = 3,
+    COLOR_COMPONENT_RGB    = 3,
+    COLOR_COMPONENT_END    = 4
+} e_color_components;
+
+typedef enum e_drawmethod_config
+{
+    DRAWMETHOD_CONFIG_NONE                      = 0,
+    DRAWMETHOD_CONFIG_BACKGROUND_TRANSPARENCY   = (1 << 1),
+    DRAWMETHOD_CONFIG_ENABLED                   = (1 << 2),
+    DRAWMETHOD_CONFIG_FLIP_ROTATE               = (1 << 3),
+    DRAWMETHOD_CONFIG_FLIP_X                    = (1 << 4),
+    DRAWMETHOD_CONFIG_FLIP_Y                    = (1 << 5)
+    
+} e_drawmethod_config;
+
 typedef struct
 {
     unsigned char *table;	// ~~
@@ -282,6 +314,8 @@ typedef struct
     unsigned char channelb;	// ~~
     unsigned tintmode;		// tint the sprite with color ~~
     unsigned tintcolor;		// ~~
+    e_drawmethod_config config; // Newer mask; retain legacy raw flag slots.
+    e_object_type object_type; // Canonical class; hidden from older property APIs.
     int clipx;				// ~~
     int clipy;				// ~~
     int clipw;				// ~~

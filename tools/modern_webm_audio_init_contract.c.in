@@ -1,0 +1,104 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stdio.h>
+#include <stdarg.h>
+#include <stdint.h>
+#include <stdlib.h>
+#include <string.h>
+#include <assert.h>
+#include "vorbis.h"
+#include "nestegg/nestegg.h"
+#include "threads.h"
+#include "types.h"
+#include "globals.h"
+#include "soundmix.h"
+#include "obor_media_diag.h"
+#undef printf
+@QUEUE_BOUND@
+@TYPES@
+uint32_t obor_profile_build;
+musicchannelstruct musicchannel;
+int playfrequency=48000;
+static FixedSizeQueue queue_object;
+static vorbis_context *expected_codec;
+static union { long double alignment;char bytes[32]; } opaque;
+static nestegg *context=(nestegg*)&opaque;
+static int frequency,channels,depth,codec_inits,codec_prepares,codec_destroys,music_closes,queue_size,queue_packets,queue_destroys;
+static unsigned header_mask;
+static char log_text[512];
+void *checkAlloc(void *ptr,size_t size,const char *func,const char *file,int line)
+{ (void)func;(void)file;(void)line;if(size && !ptr) abort();return ptr; }
+void exitIfFalse(int value,const char *assertion,const char *func,const char *file,int line)
+{ (void)assertion;(void)func;(void)file;(void)line;if(!value) abort(); }
+static int capture_log(const char *format,...)
+{
+    va_list args;int count;size_t used=strlen(log_text);
+    va_start(args,format);count=vsnprintf(log_text+used,sizeof(log_text)-used,format,args);va_end(args);
+    if(count<0 || (size_t)count>=sizeof(log_text)-used) abort();
+    return count;
+}
+void vorbis_init(vorbis_context *codec)
+{ if(codec!=expected_codec) abort();++codec_inits;memset(codec,0,sizeof(*codec)); }
+void vorbis_prepare(vorbis_context *codec) { if(codec!=expected_codec) abort();++codec_prepares; }
+void vorbis_destroy(vorbis_context *codec) { if(codec!=expected_codec) abort();++codec_destroys; }
+void vorbis_headerpacket(vorbis_context *codec,void *data,size_t size,int count)
+{ if(codec!=expected_codec || data!=&opaque || size!=1 || count<0 || count>2) abort();header_mask|=1u<<count; }
+int nestegg_track_codec_data_count(nestegg *ctx,unsigned track,unsigned *count)
+{ if(ctx!=context || track!=7) abort();*count=3;return 0; }
+int nestegg_track_codec_data(nestegg *ctx,unsigned track,unsigned item,unsigned char **data,size_t *size)
+{ if(ctx!=context || track!=7 || item>2) abort();*data=(unsigned char*)&opaque;*size=1;return 0; }
+int nestegg_track_audio_params(nestegg *ctx,unsigned track,nestegg_audio_params *params)
+{ if(ctx!=context || track!=7) abort();memset(params,0,sizeof(*params));params->channels=channels;params->rate=frequency;params->depth=depth;return 0; }
+FixedSizeQueue *queue_init(int maximum,int packets)
+{ queue_size=maximum;queue_packets=packets;memset(&queue_object,0,sizeof(queue_object));return &queue_object; }
+void *queue_get(FixedSizeQueue *queue) { (void)queue;abort(); }
+void queue_destroy(FixedSizeQueue *queue) { if(queue!=&queue_object) abort();++queue_destroys; }
+void nestegg_free_packet(nestegg_packet *packet) { (void)packet;abort(); }
+void sound_close_music(void) { ++music_closes; }
+@CLEAR@
+#define printf capture_log
+@FUNCTIONS@
+#undef printf
+static void print_string(const char *text)
+{
+    const unsigned char *s=(const unsigned char*)text;putchar('"');
+    for(;*s;++s)
+    {
+        if(*s=='\n') printf("\\n");else if(*s=='\r') printf("\\r");
+        else if(*s=='"' || *s=='\\') printf("\\%c",*s);else putchar(*s);
+    }
+    putchar('"');
+}
+int main(void)
+{
+    static const unsigned profiles[]={@PROFILES@};
+    static const struct input { int channels,frequency,volume,depth; } inputs[]={@CASES@};size_t p,c;unsigned i,j;
+    printf("{\"status\":\"PASS\",\"profiles\":[");
+    for(p=0;p<sizeof(profiles)/sizeof(*profiles);++p)
+    {
+        obor_profile_build=profiles[p];printf("%s{\"revision\":%u,\"cases\":[",p ? "," : "",profiles[p]);
+        for(c=0;c<sizeof(inputs)/sizeof(*inputs);++c)
+        {
+            const struct input *input=&inputs[c];audio_context audio;int zeros=1,freed=1;
+            memset(&audio,0,sizeof(audio));expected_codec=&audio.vorbis_ctx;
+            frequency=input->frequency;channels=input->channels;depth=input->depth;
+            codec_inits=codec_prepares=codec_destroys=music_closes=queue_size=queue_packets=queue_destroys=0;header_mask=0;log_text[0]=0;
+            memset(&musicchannel,0xa5,sizeof(musicchannel));init_audio(context,7,&audio,input->volume);
+            for(i=0;i<MUSIC_NUM_BUFFERS;++i)
+            {
+                if(!musicchannel.buf[i]) abort();
+                for(j=0;j<MUSIC_BUF_SIZE;++j) if(musicchannel.buf[i][j]!=0) zeros=0;
+            }
+            printf("%s{\"before\":[%d,%d,%d,%u,%d,%d,%d,%d,%d],\"services\":[%u,%d,%d,%d,%d,%d],\"log\":",
+                c ? "," : "",musicchannel.object_type,musicchannel.active,musicchannel.channels,musicchannel.fp_period,
+                musicchannel.volume[0],musicchannel.volume[1],audio.avail_samples,audio.last_samples,zeros,
+                header_mask,codec_inits,codec_prepares,music_closes,queue_size,queue_packets);
+            print_string(log_text);close_audio(&audio);
+            for(i=0;i<MUSIC_NUM_BUFFERS;++i) if(musicchannel.buf[i]) freed=0;
+            printf(",\"after\":[%d,%d,%d,%d,%d]}",musicchannel.object_type,musicchannel.active,freed,queue_destroys,codec_destroys);
+        }
+        printf("]}");
+    }
+    puts("]}");return 0;
+}

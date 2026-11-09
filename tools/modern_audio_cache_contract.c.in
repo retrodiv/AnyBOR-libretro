@@ -1,0 +1,93 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <ctype.h>
+#include "soundmix.h"
+#include "List.h"
+#include "List.c"
+#undef printf
+void *checkAlloc(void *ptr,size_t size,const char *func,const char *file,int line)
+{
+    (void)func;(void)file;(void)line;
+    if(size && !ptr) abort();
+    return ptr;
+}
+uint32_t obor_profile_build;
+@DEFINITIONS@
+#pragma pack(push,4)
+@TYPES@
+#pragma pack(pop)
+@GLOBALS@
+static List samplelist;
+static s_soundcache *soundcache;
+static channelstruct vchannel[MAX_CHANNELS];
+static int sound_cached,max_channels,mixing_inited,mixing_active;
+static s32 *mixbuf;
+int sample_play_id;
+char packfile[OBOR_CONTENT_PATH_MAX]="root.pak";
+static char custom_archive[]=@ARCHIVE@;
+static struct { char name[64],archive[64];unsigned limit; } loads[8];
+static int load_count,stop_count;
+void sound_stop_playback(void) { ++stop_count;mixing_active=0; }
+static int loadwave(char *filename,char *archive,samplestruct *sample,unsigned maxsize)
+{
+    if(load_count>=8 || strlen(filename)>=64 || strlen(archive)>=64) abort();
+    strcpy(loads[load_count].name,filename);strcpy(loads[load_count].archive,archive);
+    loads[load_count++].limit=maxsize;
+    if(strcmp(filename,@FAILURE@)==0) return 0;
+    sample->sampleptr=calloc(12,1);
+    if(!sample->sampleptr) abort();
+    sample->soundlen=6;sample->bits=16;sample->channels=SOUND_MONO;sample->frequency=24000;
+    return 12;
+}
+@LOWERCASE@
+@FUNCTIONS@
+static void print_state(int result)
+{
+    printf("[%d,%d,%d,%d,%d,%d,%d,%u,%u,%d,%d,%d]",result,sound_cached,
+        List_GetSize(&samplelist),List_GetSize(&audio_global.samplelist),
+        sound_cached>0 && soundcache[0].sample.sampleptr!=NULL,
+        sound_cached>1 && soundcache[1].sample.sampleptr!=NULL,
+        sample_play_id,audio_global.sample_play_id,sound_profile_sample_play_id(),
+        mixing_inited,max_channels,mixbuf!=NULL);
+    if(audio_global.soundcache!=NULL || audio_global.sound_cached!=0) abort();
+}
+int main(void)
+{
+    static const unsigned profiles[]={@PROFILES@};size_t p;int i,j,zero;
+    printf("{\"status\":\"PASS\",\"profiles\":[");
+    for(p=0;p<sizeof(profiles)/sizeof(*profiles);++p)
+    {
+        obor_profile_build=profiles[p];sample_play_id=55;audio_global.sample_play_id=77;
+        load_count=stop_count=0;max_channels=0;
+        printf("%s{\"revision\":%u,\"states\":[",p ? "," : "",profiles[p]);
+        print_state(sound_load_sample(@NAME@,custom_archive,0));putchar(',');
+        memset(vchannel,0xa5,sizeof(vchannel));print_state(sound_init(-3));putchar(',');
+        zero=1;
+        for(i=0;i<2;++i) for(j=0;j<(int)sizeof(channelstruct);++j)
+            if(((unsigned char*)&vchannel[i])[j]!=0) zero=0;
+        print_state(sound_load_sample(@NAME@,custom_archive,0));putchar(',');
+        print_state(sound_load_sample(@ALIAS@,custom_archive,0));putchar(',');
+        sound_unload_sample(0);print_state(100);putchar(',');
+        print_state(sound_load_sample(@RELOAD_NAME@,custom_archive,0));putchar(',');
+        print_state(sound_load_sample(@SECOND@,custom_archive,0));putchar(',');
+        print_state(sound_load_sample(@FAILURE@,custom_archive,0));putchar(',');
+        print_state(sound_reload_sample(-1));putchar(',');
+        print_state(sound_reload_sample(2));putchar(',');
+        sound_unload_all_samples();print_state(101);putchar(',');
+        sound_exit();print_state(102);putchar(',');
+        memset(vchannel,0xa5,sizeof(vchannel));print_state(sound_init(999));putchar(',');
+        for(i=0;i<MAX_CHANNELS;++i) for(j=0;j<(int)sizeof(channelstruct);++j)
+            if(((unsigned char*)&vchannel[i])[j]!=0) zero=0;
+        sound_exit();print_state(102);
+        printf("],\"loads\":[");
+        for(i=0;i<load_count;++i) printf("%s[\"%s\",\"%s\",%u]",i ? "," : "",
+            loads[i].name,loads[i].archive,loads[i].limit);
+        printf("],\"stops\":%d,\"channels_zero\":%d}",stop_count,zero);
+    }
+    puts("]}");return 0;
+}

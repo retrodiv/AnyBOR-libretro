@@ -1,0 +1,243 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stdint.h>
+#include <stdarg.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <strings.h>
+#ifndef stricmp
+#define stricmp strcasecmp
+#endif
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wignored-qualifiers"
+#if defined(__clang__)
+#pragma GCC diagnostic ignored "-Wdeprecated-non-prototype"
+#endif
+#include "scriptcommon.h"
+#undef printf
+uint32_t obor_profile_build;
+@INITIALIZER@
+static s_global_config object;
+static const char *const strings[] = {@STRINGS@};
+static char log_text[8192];
+static int dump_calls, dump_rows;
+static int capture_log(const char *format, ...)
+{
+    va_list args;
+    size_t used = strlen(log_text);
+    int count;
+    va_start(args, format);
+    count = vsnprintf(log_text + used, sizeof(log_text) - used, format, args);
+    va_end(args);
+    if(count < 0 || (size_t)count >= sizeof(log_text) - used) abort();
+    return count;
+}
+void StrCache_Collect(int index) { (void)index; }
+CHAR *StrCache_Get(int index)
+{
+    if(index < 0 || (unsigned)index >= sizeof(strings) / sizeof(*strings)) abort();
+    return (CHAR *)strings[index];
+}
+int StrCache_Pop(int size) { (void)size; abort(); }
+int StrCache_CreateNewFrom(const CHAR *text) { (void)text; abort(); }
+@VARIANTS@
+void property_access_dump_members(property_access_map mapper, const int count, const void *acting)
+{
+    int i;
+    ++dump_calls;
+    dump_rows = 0;
+    for(i = 0; i < count; ++i)
+    {
+        const s_property_access_map map = mapper(acting, i);
+        if(map.config_flags != PROPERTY_ACCESS_CONFIG_NONE && map.field) ++dump_rows;
+    }
+}
+#define printf capture_log
+@SEARCH@
+@COMMON@
+@HELPERS@
+@ENTRIES@
+#undef printf
+static void *global_preconversion(void *functionRef)
+{
+    if(0) { }
+    @PRECONVERSION@
+    return NULL;
+}
+@CONSTANT_HELPER@
+@MACROS@
+static int constant_query(const char *constname, LONG *result)
+{
+    ScriptVariant v = {0};
+    if(0) { }
+    @CONSTANT_CHAIN@
+    else return 0;
+    *result = v.lVal;
+    return 1;
+}
+#pragma GCC diagnostic pop
+static void quote(const char *text)
+{
+    const unsigned char *p = (const unsigned char *)text;
+    putchar('"');
+    for(; *p; ++p)
+    {
+        if(*p == '\n') printf("\\n");
+        else if(*p == '\r') printf("\\r");
+        else if(*p == '\t') printf("\\t");
+        else if(*p == '"' || *p == '\\') printf("\\%c", *p);
+        else putchar(*p);
+    }
+    putchar('"');
+}
+static void print_variant(HRESULT status, ScriptVariant *out, ScriptVariant *result,
+                          ScriptVariant *property)
+{
+    printf("[%d,%d,%d,%d,%d,%d,%d]", (int)status, out == result, result->vt,
+           result->vt == VT_INTEGER ? (int)result->lVal : 0,
+           result->vt == VT_PTR ? result->ptrVal == &object.flash : -1,
+           property->vt, property->vt == VT_INTEGER ? (int)property->lVal : 0);
+}
+static void print_state(void)
+{
+    printf("[%d,%u,%d,%d,%d,%d,%d,%u,%d,%d,%d,%d,%d,%d]",
+           (int)object.ajspecial, object.block_ratio, (int)object.block_type, (int)object.cheats,
+           object.flash_layer_adjust, object.flash_layer_source, object.flash_z_source,
+           object.showgo, object.flash.layer_adjust, object.flash.layer_source,
+           object.flash.model_block, object.flash.model_hit, object.flash.z_source,
+           object.flash.object_type == OBJECT_TYPE_FLASH);
+}
+static int field_marker(const void *field)
+{
+    const void *const fields[] = {&object.ajspecial, &object.block_ratio,
+        &object.block_type, &object.cheats, &object.flash_layer_adjust,
+        &object.flash_layer_source, &object.flash_z_source, &object.showgo, &object.flash};
+    unsigned i;
+    for(i = 0; i < sizeof(fields) / sizeof(*fields); ++i)
+        if(field == fields[i]) return (int)i;
+    return -1;
+}
+struct input_case { int property, string_index, value_kind, bad_tag, object_type, property_type; };
+static const struct input_case cases[] = {@CASES@};
+static void seed_object(void)
+{
+    object = global_config;
+    object.ajspecial = 11; object.block_ratio = 12; object.block_type = 13; object.cheats = 14;
+    object.flash_layer_adjust = 15; object.flash_layer_source = 16; object.flash_z_source = 17;
+    object.showgo = 18; object.flash.layer_adjust = 21; object.flash.layer_source = 22;
+    object.flash.model_block = 23; object.flash.model_hit = 24; object.flash.z_source = 25;
+}
+static void reset_property(ScriptVariant *property, const struct input_case *input)
+{
+    memset(property, 0, sizeof(*property));
+    property->vt = input->property_type;
+    if(property->vt == VT_STR) property->strVal = input->string_index;
+    else if(property->vt == VT_DECIMAL) property->dblVal = 1.5;
+    else property->lVal = input->property;
+}
+static void api_case(const struct input_case *input)
+{
+    ScriptVariant handle = {0}, property = {0}, value = {0};
+    ScriptVariant result = {0}, *out;
+    ScriptVariant *args[] = {&handle, &property, &value};
+    HRESULT status;
+    seed_object();
+    if(input->bad_tag) object.object_type = OBJECT_TYPE_NONE;
+    handle.vt = input->object_type; handle.ptrVal = &object;
+    value.vt = input->value_kind;
+    if(value.vt == VT_DECIMAL) value.dblVal = 3.75;
+    else value.lVal = -7;
+    dump_calls = dump_rows = 0;
+    reset_property(&property, input);
+    result.vt = VT_INTEGER; result.lVal = 77; out = &result; log_text[0] = '\0';
+    status = openbor_get_global_config_property(args, &out, 2);
+    printf("{\"get\":"); print_variant(status, out, &result, &property);
+    printf(",\"get_log\":"); quote(log_text);
+    reset_property(&property, input);
+    result.vt = VT_INTEGER; result.lVal = 77; out = &result; log_text[0] = '\0';
+    status = openbor_set_global_config_property(args, &out, 3);
+    printf(",\"set\":"); print_variant(status, out, &result, &property);
+    printf(",\"set_log\":"); quote(log_text);
+    reset_property(&property, input);
+    result.vt = VT_INTEGER; result.lVal = 77; out = &result; log_text[0] = '\0';
+    status = openbor_get_global_config_property(args, &out, 2);
+    printf(",\"after\":"); print_variant(status, out, &result, &property);
+    printf(",\"after_log\":"); quote(log_text);
+    printf(",\"state\":"); print_state();
+    printf(",\"dump\":[%d,%d]}", dump_calls, dump_rows);
+}
+static void limit_case(int setter, int count)
+{
+    ScriptVariant values[3], result = {.lVal=77,.vt=VT_INTEGER}, *out = &result;
+    ScriptVariant **args = count > 0 ? (malloc)((size_t)count * sizeof(*args)) : NULL;
+    HRESULT status;
+    int i;
+    memset(values, 0, sizeof(values));
+    values[0].vt = VT_PTR; values[0].ptrVal = &object;
+    values[1].vt = VT_INTEGER; values[1].lVal = 1;
+    values[2].vt = VT_INTEGER; values[2].lVal = 7;
+    for(i = 0; i < count; ++i) args[i] = &values[i];
+    log_text[0] = '\0';
+    status = setter ? openbor_set_global_config_property(args, &out, count) :
+                      openbor_get_global_config_property(args, &out, count);
+    printf("{\"result\":");
+    printf("[%d,%d,%d,%d]", (int)status, out == &result, result.vt,
+           result.vt == VT_INTEGER ? (int)result.lVal : 0);
+    printf(",\"log\":"); quote(log_text); putchar('}');
+    (free)(args);
+}
+int main(void)
+{
+    static const unsigned profiles[] = {@PROFILES@};
+    static const char *const queries[] = {@CONSTANT_QUERIES@};
+    unsigned p, c;
+    puts("{\"status\":\"PASS\",\"profiles\":[");
+    for(p = 0; p < sizeof(profiles) / sizeof(*profiles); ++p)
+    {
+        obor_profile_build = profiles[p];
+        printf("%s{\"revision\":%u,\"defaults\":[%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d],\"constants\":[",
+               p ? "," : "", profiles[p], global_config.object_type == OBJECT_TYPE_GLOBAL_CONFIG,
+               global_config.ajspecial == AJSPECIAL_KEY_SPECIAL, global_config.block_ratio == 0,
+               global_config.block_type == BLOCK_TYPE_GLOBAL, global_config.cheats == CHEAT_OPTIONS_ALL_MENU,
+               global_config.flash_layer_adjust == 1, global_config.flash_layer_source == 255,
+               global_config.flash_z_source == 0, global_config.showgo == 0,
+               global_config.flash.object_type == OBJECT_TYPE_FLASH,
+               global_config.flash.layer_adjust == 1 && global_config.flash.layer_source == 255,
+               global_config.flash.model_block == 0 && global_config.flash.model_hit == 0 && global_config.flash.z_source == 0);
+        for(c = 0; c < sizeof(queries) / sizeof(*queries); ++c)
+        {
+            LONG value = -1;
+            int found = constant_query(queries[c], &value);
+            printf("%s[%d,%d]", c ? "," : "", found, (int)value);
+        }
+        printf("],\"maps\":[");
+        if(obor_profile_build >= 7556)
+        {
+            for(c = 0; c <= (unsigned)obor_profile_global_config_property_end(); ++c)
+            {
+                const s_property_access_map map = obor_profile_global_config_get_property_map(&object, c);
+                printf("%s[%d,%d,%d,", c ? "," : "", map.config_flags, map.type, field_marker(map.field));
+                quote(map.id_string); putchar(']');
+            }
+        }
+        printf("],\"preconversion\":[%d,%d],\"api\":[",
+               global_preconversion((void*)openbor_get_global_config_property) == (void*)mapstrings_global_config_property,
+               global_preconversion((void*)openbor_set_global_config_property) == (void*)mapstrings_global_config_property);
+        for(c = 0; c < sizeof(cases) / sizeof(*cases); ++c)
+        {
+            if(c) putchar(',');
+            api_case(&cases[c]);
+        }
+        printf("],\"limits\":[");
+        for(c = 0; c < 7; ++c)
+        {
+            if(c) putchar(',');
+            limit_case(c >= 3, c < 3 ? (int)c - 1 : (int)c - 4);
+        }
+        printf("]}");
+    }
+    puts("]}");
+    return 0;
+}

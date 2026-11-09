@@ -1,3 +1,14 @@
+/* AnyBOR modification record: 2026-11-09.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Translate native attack-type IDs at the script API boundary.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/7533.md
+ * at the source repository root. Original notices follow below.
+ */
+
 /*
  * OpenBOR - http://www.chronocrash.com
  * -----------------------------------------------------------------------
@@ -266,7 +277,7 @@ HRESULT openbor_get_attack_property(ScriptVariant **varlist, ScriptVariant **pre
         case ATTACK_PROPERTY_EFFECT_BLOCK_FLASH:
 
             ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
-            (*pretvar)->lVal = (LONG)handle->blockflash;
+            (*pretvar)->lVal = (LONG)handle->flash.model_block;
             break;
 
         case ATTACK_PROPERTY_EFFECT_BLOCK_SOUND:
@@ -278,7 +289,7 @@ HRESULT openbor_get_attack_property(ScriptVariant **varlist, ScriptVariant **pre
         case ATTACK_PROPERTY_EFFECT_HIT_FLASH:
 
             ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
-            (*pretvar)->lVal = (LONG)handle->hitflash;
+            (*pretvar)->lVal = (LONG)handle->flash.model_hit;
             break;
 
         case ATTACK_PROPERTY_EFFECT_HIT_FLASH_DISABLE:
@@ -579,7 +590,7 @@ HRESULT openbor_set_attack_property(ScriptVariant **varlist, ScriptVariant **pre
 
             if(SUCCEEDED(ScriptVariant_IntegerValue(varlist[ARG_VALUE], &temp_int)))
             {
-                handle->blockflash = temp_int;
+                handle->flash.model_block = temp_int;
             }
             break;
 
@@ -595,7 +606,7 @@ HRESULT openbor_set_attack_property(ScriptVariant **varlist, ScriptVariant **pre
 
             if(SUCCEEDED(ScriptVariant_IntegerValue(varlist[ARG_VALUE], &temp_int)))
             {
-                handle->hitflash = temp_int;
+                handle->flash.model_hit = temp_int;
             }
             break;
 

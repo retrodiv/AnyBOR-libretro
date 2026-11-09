@@ -11,7 +11,7 @@
  *       BTN: up down left right attack attack2 attack3 attack4 jump special
  *            start esc  (RetroPad ids resolved per the glue's mapping)
  *            analog_left analog_right analog_up analog_down (full stick)
- *   OBOR_ENGINE=<build>   force the obor_engine core option
+ *   OBOR_ENGINE=<build>   force the anybor_engine core option
  *   OBOR_DUMP_EVERY=N     dump a PPM every N frames (needs ppm_prefix)
  *   OBOR_SAVE_AT=N / OBOR_SAVE_STATE=file   serialize at frame N
  *   OBOR_LOAD_AT=N / OBOR_LOAD_STATE=file   unserialize at frame N
@@ -525,12 +525,12 @@ static bool env_cb(unsigned cmd, void *data)
                 if (!strcmp(cat->key, "video"))
                     printf("video_category=%s\n", cat->desc);
             for (; def->key; ++def)
-                if (!strcmp(def->key, "obor_crt_tv"))
+                if (!strcmp(def->key, "anybor_crt_tv"))
                     printf("crt_option=%s category=%s default=%s\n",
                            def->desc, def->category_key, def->default_value);
             for (def = opts->definitions; def->key; ++def)
-                if (!strcmp(def->key, "obor_state_content") ||
-                    !strcmp(def->key, "obor_state_compression"))
+                if (!strcmp(def->key, "anybor_state_content") ||
+                    !strcmp(def->key, "anybor_state_compression"))
                     printf("state_option=%s label=%s category=%s default=%s values=%s|%s\n",
                            def->key, def->desc, def->category_key, def->default_value,
                            def->values[0].value, def->values[1].value);
@@ -558,26 +558,26 @@ static bool env_cb(unsigned cmd, void *data)
     case RETRO_ENVIRONMENT_GET_VARIABLE: {
         struct retro_variable *storage_var = (struct retro_variable *)data;
         const char *storage_env = NULL;
-        if (!strcmp(storage_var->key, "obor_clear_local_data")) storage_env = "OBOR_CLEAR_LOCAL_DATA";
-        if (!strcmp(storage_var->key, "obor_clear_game_cache")) storage_env = "OBOR_CLEAR_GAME_CACHE";
-        if (!strcmp(storage_var->key, "obor_clear_all_caches")) storage_env = "OBOR_CLEAR_ALL_CACHES";
-        if (!strcmp(storage_var->key, "obor_state_content")) storage_env = "OBOR_HOST_STATE_CONTENT";
-        if (!strcmp(storage_var->key, "obor_state_compression")) storage_env = "OBOR_HOST_STATE_COMPRESSION";
+        if (!strcmp(storage_var->key, "anybor_clear_local_data")) storage_env = "OBOR_CLEAR_LOCAL_DATA";
+        if (!strcmp(storage_var->key, "anybor_clear_game_cache")) storage_env = "OBOR_CLEAR_GAME_CACHE";
+        if (!strcmp(storage_var->key, "anybor_clear_all_caches")) storage_env = "OBOR_CLEAR_ALL_CACHES";
+        if (!strcmp(storage_var->key, "anybor_state_content")) storage_env = "OBOR_HOST_STATE_CONTENT";
+        if (!strcmp(storage_var->key, "anybor_state_compression")) storage_env = "OBOR_HOST_STATE_COMPRESSION";
         if (storage_env && getenv(storage_env)) {
             storage_var->value = getenv(storage_env);
             return true;
         }
 
         struct retro_variable *var = (struct retro_variable *)data;
-        if (!strcmp(var->key, "obor_crt_tv") && g_crt_opt) {
+        if (!strcmp(var->key, "anybor_crt_tv") && g_crt_opt) {
             var->value = g_crt_opt;
             return true;
         }
-        if (!strcmp(var->key, "obor_gamelog") && getenv("OBOR_GAMELOG")) {
+        if (!strcmp(var->key, "anybor_gamelog") && getenv("OBOR_GAMELOG")) {
             var->value = getenv("OBOR_GAMELOG");
             return true;
         }
-        if (!strcmp(var->key, "obor_engine")) {
+        if (!strcmp(var->key, "anybor_engine")) {
             var->value = g_engine_opt;
             return true;
         }
@@ -636,11 +636,11 @@ static bool env_cb(unsigned cmd, void *data)
             printf("\n");
             var = data;
             for (; var->key; ++var)
-                if (!strcmp(var->key, "obor_crt_tv"))
+                if (!strcmp(var->key, "anybor_crt_tv"))
                     printf("crt_legacy=%s\n", var->value);
             for (var = data; var->key; ++var)
-                if (!strcmp(var->key, "obor_state_content") ||
-                    !strcmp(var->key, "obor_state_compression"))
+                if (!strcmp(var->key, "anybor_state_content") ||
+                    !strcmp(var->key, "anybor_state_compression"))
                     printf("state_legacy=%s %s\n", var->key, var->value);
         }
         return true;
@@ -1537,7 +1537,7 @@ int main(int argc, char **argv)
         if (g_frame == setopt_at && setopt_val[0]) {
             snprintf(g_engine_opt, sizeof(g_engine_opt), "%s", setopt_val);
             g_var_dirty = 1;
-            printf("core option obor_engine := %s at frame %d\n", setopt_val,
+            printf("core option anybor_engine := %s at frame %d\n", setopt_val,
                    g_frame);
         }
         if (g_frame == stateopt_at) {

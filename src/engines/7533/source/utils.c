@@ -1,4 +1,4 @@
-/* AnyBOR modification record: 2026-10-12.
+/* AnyBOR modification record: 2026-11-09.
  * Port maintained by retrodiv <retrodiv@proton.me>.
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
@@ -7,7 +7,8 @@
  * and mkdir forms macOS also uses, and the standard allocation declarations
  * instead of the glibc-only <malloc.h>. Derive output names from the content
  * basename with explicit destination capacities, and reject overflowing
- * output path joins.
+ * output path joins. Select native allocation diagnostics and query wide
+ * allocator statistics only when that host libc supports them.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/7533.md
  * at the source repository root. Original notices follow below.
@@ -318,6 +319,19 @@ void debug_printf(char *format, ...)
     debug_time = 0xFFFFFFFF;
 }
 
+#if !defined(WIN) && !defined(DARWIN)
+static unsigned obor_profile_allocation_arena_bytes(void)
+{
+#if defined(__GLIBC__) && defined(__GLIBC_PREREQ)
+#if __GLIBC_PREREQ(2, 33)
+    if(obor_profile_build >= 7628u) return (unsigned)mallinfo2().arena;
+#endif
+#endif
+    /* The diagnostic uses the low unsigned word on the supported libc ABI. */
+    return (unsigned)mallinfo().arena;
+}
+#endif
+
 void *checkAlloc(void *ptr, size_t size, const char *func, const char *file, int line)
 {
     if (size > 0 && ptr == NULL)
@@ -325,11 +339,17 @@ void *checkAlloc(void *ptr, size_t size, const char *func, const char *file, int
         writeToLogFile("\n\n********** An Error Occurred **********"
                        "\n*            Shutting Down            *\n\n");
         writeToLogFile("Out of memory!\n");
-        writeToLogFile("Allocation of size %i failed in function '%s' at %s:%i.\n", size, func, file, line);
+        writeToLogFile("Allocation of size %zu failed in function '%s' at %s:%i.\n", size, func, file, line);
 #if defined(DARWIN)
-        writeToLogFile("Memory usage at exit: %llu\n", (unsigned long long)getUsedRam(BYTES));
-#elif !defined(WIN)
-        writeToLogFile("Memory usage at exit: %u\n", mallinfo().arena);
+        if(obor_profile_build >= 7628u)
+            writeToLogFile("Memory usage at exit: %u\n", (unsigned)getUsedRam(BYTES));
+        else
+            writeToLogFile("Memory usage at exit: %llu\n", (unsigned long long)getUsedRam(BYTES));
+#elif defined(WIN)
+        if(obor_profile_build >= 7628u)
+            writeToLogFile("Memory usage at exit: %u\n", (unsigned)getUsedRam(BYTES));
+#else
+        writeToLogFile("Memory usage at exit: %u\n", obor_profile_allocation_arena_bytes());
 #endif
         borExit(2);
     }

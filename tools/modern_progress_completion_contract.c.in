@@ -1,0 +1,62 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "openbor.h"
+#include "translation.h"
+#undef printf
+uint32_t obor_profile_build;
+static int current_level,current_stage,bonus,nofadeout,selector,saveslot,num_difficulties;
+static int save_calls,fade_calls,hall_calls,menu_calls;
+static int saved_level,saved_stage,saved_current_level,saved_current_stage;
+static s_savelevel slot;
+int saveGameFile(void)
+{
+    ++save_calls;saved_level=slot.level;saved_stage=slot.stage;
+    saved_current_level=current_level;saved_current_stage=current_stage;return 1;
+}
+void fade_out(int type,int speed) { if(type || speed) abort();++fade_calls; }
+void hallfame(int add) { if(add!=1) abort();++hall_calls; }
+char *ob_gettrans(char *id) { return id; }
+static void menu_text(int a,int b,int c,const char *text,...)
+{ (void)a;(void)b;(void)c;if(!text || !*text) abort();++menu_calls; }
+#undef _menutext
+#undef _menutextm
+#define _menutext menu_text
+#define _menutextm menu_text
+static void completion(s_set_entry *set,s_savelevel *save)
+{ @COMPLETION@ }
+static void missing_selection(void)
+{
+    int col1=-8,col2=6;
+    @MISSING@
+}
+int main(void)
+{
+    static const unsigned profiles[]={@PROFILES@};
+    size_t p;int c;
+    printf("{\"status\":\"PASS\",\"profiles\":[");
+    for(p=0;p<sizeof(profiles)/sizeof(*profiles);++p)
+    {
+        obor_profile_build=profiles[p];
+        printf("%s{\"revision\":%u,\"cases\":[",p ? ",":"",profiles[p]);
+        for(c=0;c<4;++c)
+        {
+            s_set_entry set={0};set.numlevels=10;set.noshowhof=c==3;
+            memset(&slot,0,sizeof(slot));slot.level=12;slot.stage=5;slot.times_completed=2;
+            current_level=c==0 ? 9 : c==1 ? 10 : 11;current_stage=5;bonus=7;
+            nofadeout=c==2;save_calls=fade_calls=hall_calls=menu_calls=0;
+            saved_level=saved_stage=saved_current_level=saved_current_stage=-1;
+            selector=77;saveslot=c==0 ? 1 : 2;num_difficulties=2;
+            completion(&set,&slot);missing_selection();
+            printf("%s{\"current\":[%d,%d],\"slot\":[%u,%u,%u],\"bonus\":%d,\"services\":[%d,%d,%d,%d],\"saved\":[%d,%d,%d,%d],\"selector\":%d}",
+                c ? ",":"",current_level,current_stage,slot.level,slot.stage,slot.times_completed,bonus,
+                save_calls,fade_calls,hall_calls,menu_calls,saved_level,saved_stage,saved_current_level,saved_current_stage,selector);
+        }
+        printf("]}");
+    }
+    printf("]}\n");return 0;
+}

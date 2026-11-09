@@ -17,9 +17,9 @@
       "upstream_sha256": null
     },
     "openbor.c": {
-      "distributed_sha256": "75a6b79fa758280aec4f11885d0d06b00050afabd324ea046c3e00fda36cb854",
+      "distributed_sha256": "1537284da6acc6f0e65324a55c710b83d09a3cc6020a4a3cab0ec39be7f33dc3",
       "modified": true,
-      "summary": "Apply the port's engine corrections and select the PC video configuration on macOS. Derive output names from the content basename with explicit destination capacities, and reject overflowing output path joins. Leave multiplayer slots without a selected model available to join even if game scripts preassign lives to them. Let a missing basename-only PAK self-check read the active frontend content after it has been validated and prepared. Allocate each model's animation pointer table through the highest animation index that model uses, and bound cache, copy and cleanup paths to that capacity. Ignore optional defense and offense entries outside the configured attack-type range with a log warning before accessing their tables. Yield after each newly completed model during explicit model-list or level preparation, and defer states until that preparation has cleaned up its intermediate parsers and handles. Initialize all four RetroPads and repair legacy unbound player profiles without replacing custom bindings. Return a defined null result for absent colourmap models or tables while retaining valid palette fallback. Keep selected palette-conversion reads bounded and reject missing maps or flags, while preserving unselected slots and native allocation failure callbacks. Check destination animation capacity when retaining an animation across model changes, preserving the native fallback and timing. Access script-container pointer slots with byte copies, preserving record layout, pointer values and native copy/cleanup order. Pointer-slot allocation and release accept byte storage without imposing pointer alignment on a packed field. Release each sprite owner once and complete cleanup independently of alias counts. Preserve native sprite-map capacity policies, check allocation extents and retain existing storage and capacity when growth is unavailable. Validate sprite-node allocations and release partial resources without changing existing owners. Check cached sprite availability before reading metadata and ignore cache requests for absent nodes.",
+      "summary": "Apply the port's engine corrections and select the PC video configuration on macOS. Derive output names from the content basename with explicit destination capacities, and reject overflowing output path joins. Leave multiplayer slots without a selected model available to join even if game scripts preassign lives to them. Let a missing basename-only PAK self-check read the active frontend content after it has been validated and prepared. Allocate each model's animation pointer table through the highest animation index that model uses, and bound cache, copy and cleanup paths to that capacity. Ignore optional defense and offense entries outside the configured attack-type range with a log warning before accessing their tables. Yield after each newly completed model during explicit model-list or level preparation, and defer states until that preparation has cleaned up its intermediate parsers and handles. Initialize all four RetroPads and repair legacy unbound player profiles without replacing custom bindings. Return a defined null result for absent colourmap models or tables while retaining valid palette fallback. Keep selected palette-conversion reads bounded and reject missing maps or flags, while preserving unselected slots and native allocation failure callbacks. Check destination animation capacity when retaining an animation across model changes, preserving the native fallback and timing. Access script-container pointer slots with byte copies, preserving record layout, pointer values and native copy/cleanup order. Pointer-slot allocation and release accept byte storage without imposing pointer alignment on a packed field. Release each sprite owner once and complete cleanup independently of alias counts. Preserve native sprite-map capacity policies, check allocation extents and retain existing storage and capacity when growth is unavailable. Validate sprite-node allocations and release partial resources without changing existing owners. Check cached sprite availability before reading metadata and ignore cache requests for absent nodes. Select source-defined combat, drawing, palette, music, startup/menu/default and saved-record behavior for profiles 7530, 7555, 7556 and 7735.",
       "topics": [
         "active-content-pak-aliases",
         "animation-memory-layout",
@@ -28,6 +28,7 @@
         "empty-player-slot-safety",
         "four-player-controls",
         "loading-screen-presentation",
+        "logical-profile-compatibility",
         "model-attack-type-bounds",
         "palette-conversion-safety",
         "panel-order-bounds",
@@ -41,21 +42,23 @@
       "upstream_sha256": "cee8b05ccf51961ac3847f2b41e879f14aeb05d6d4030ca898ffcb3eb13b06bb"
     },
     "openbor.h": {
-      "distributed_sha256": "01355b37c84abc07e0f73c976622b1c6e8682ff68c9647fd89a65852fc2932d5",
+      "distributed_sha256": "a839dedaa26e81a6711b18142cb3b73dc40e80db0f31a8f49791f226736a0f25",
       "modified": true,
-      "summary": "Allocate collision pointer slots through the highest author-facing index used by each collection. Track each model's allocated animation-table capacity and reject lookups outside it.",
+      "summary": "Allocate collision pointer slots through the highest author-facing index used by each collection. Track each model's allocated animation-table capacity and reject lookups outside it. Declare the shared typed profile fields and explicit native saved-record layouts without changing the selected wire format.",
       "topics": [
         "animation-memory-layout",
+        "logical-profile-compatibility",
         "record-dates-and-file-notices"
       ],
       "upstream_sha256": "af6be352e04112724da5aa2cd26be2f75169fd727ecdc5b03927ab80f41ec7df"
     },
     "openborscript.c": {
-      "distributed_sha256": "2d2c20b0638b7f8250a091f52a4a83245376bda85bd4f6c8765b25dc8b016c27",
+      "distributed_sha256": "0982954295f86e2c43da1bf135f8543333d3b383c6a138b3d7e8fb2e08c311cd",
       "modified": true,
-      "summary": "Keep the dormant constant-lowering diagnostic compatible with the single-value instruction layout. Derive output names from the content basename with explicit destination capacities, and reject overflowing output path joins. Compact compiler-only instruction records after resolving value ownership, preserving branch and export anchors, all mutable values and exactly-once pool cleanup. Retain shared interpreters through the last script reference while preserving independent variables, replacement and native callbacks. Track diagnostic comments independently so interpreter replacement can retain them. Resolve text-property names within the actual table bounds while preserving native numeric selectors. Reuse each text object's owned buffer when replacing its contents. Reject missing colourtable indices and keep selector arithmetic and table reads defined. Transfer loaded stream buffers through aligned local outputs while preserving native record layout and results. Close owned input files after stream loading and on buffer allocation failure.",
+      "summary": "Keep the dormant constant-lowering diagnostic compatible with the single-value instruction layout. Derive output names from the content basename with explicit destination capacities, and reject overflowing output path joins. Compact compiler-only instruction records after resolving value ownership, preserving branch and export anchors, all mutable values and exactly-once pool cleanup. Retain shared interpreters through the last script reference while preserving independent variables, replacement and native callbacks. Track diagnostic comments independently so interpreter replacement can retain them. Resolve text-property names within the actual table bounds while preserving native numeric selectors. Reuse each text object's owned buffer when replacing its contents. Reject missing colourtable indices and keep selector arithmetic and table reads defined. Transfer loaded stream buffers through aligned local outputs while preserving native record layout and results. Close owned input files after stream loading and on buffer allocation failure. Select the native property namespaces, script result types, legacy call routing and music/system property domains.",
       "topics": [
         "colourtable-selector-bounds",
+        "logical-profile-compatibility",
         "record-dates-and-file-notices",
         "script-memory-layout",
         "script-property-names",
@@ -107,10 +110,11 @@
       "upstream_sha256": "756a21ae0842d10f054a5e8508baa561f5c7ce3dce94fb70f344c0e8e12bf74a"
     },
     "source/gamelib/draw.c": {
-      "distributed_sha256": "5fd67e72d1fc3c16cc1c3f428b9ccf51daeb133fde2e4404173a097877decb08",
+      "distributed_sha256": "9267eea9a96b80586496ed222f2ca6d92f72d5159d920825eb9c608ee1ec17d6",
       "modified": true,
-      "summary": "Route circle drawing through the port's integer rasterizer. Ignore point coordinates outside screen bounds while preserving valid pixels.",
+      "summary": "Route circle drawing through the port's integer rasterizer. Ignore point coordinates outside screen bounds while preserving valid pixels. Select native drawing enable flags by profile and include the runtime declarations used by the complete drawing unit.",
       "topics": [
+        "logical-profile-compatibility",
         "primitive-coordinate-bounds",
         "record-dates-and-file-notices",
         "replacement-implementations-and-attribution"
@@ -235,20 +239,22 @@
       "upstream_sha256": "0a3ed9b87f66d2cd51810d86d79cc1beec83ca477172fb033f2851404da143b8"
     },
     "source/gamelib/pixelformat.c": {
-      "distributed_sha256": "2e7548f9072bd671c48de5d627374beb3f144e5035ef4d040be8f30009298af8",
+      "distributed_sha256": "d0f89a38568592382aefbba2cf08fc3507457fc2b44c9aa776a661f6e8c9d65f",
       "modified": true,
-      "summary": "Bound clip endpoints without signed overflow while retaining native color and draw-method initialization. Bound blend and tint function selection while preserving valid native operations.",
+      "summary": "Bound clip endpoints without signed overflow while retaining native color and draw-method initialization. Bound blend and tint function selection while preserving valid native operations. Select native drawing enable and transparency flags before deriving pixel blend operations.",
       "topics": [
+        "logical-profile-compatibility",
         "record-dates-and-file-notices",
         "screen-blend-bounds"
       ],
       "upstream_sha256": "1b8b2ceb1e9732d60074425ce8757a2e93ac136348f180de04d5fbf6f04570d8"
     },
     "source/gamelib/screen.c": {
-      "distributed_sha256": "03b32f64f16122d3575595445d161905c4cd7e47100ba08a878bd76dd0f99dd5",
+      "distributed_sha256": "e42743db08a501a20e68b54b845205747b767ed006ec090f95b07d3b362f84d4",
       "modified": true,
-      "summary": "Remove a guard whose only statement assigned the counter to itself. Bound screen blend selectors and use transparent copy when an indexed table is unavailable.",
+      "summary": "Remove a guard whose only statement assigned the counter to itself. Bound screen blend selectors and use transparent copy when an indexed table is unavailable. Select native screen-drawing enable and transparency flags by profile.",
       "topics": [
+        "logical-profile-compatibility",
         "record-dates-and-file-notices",
         "screen-blend-bounds"
       ],
@@ -273,27 +279,34 @@
       "upstream_sha256": "d69a29810c89cbf421a723c1eb78ae2a6bbf1f4ccfab304d0a3a0e9b532a4b19"
     },
     "source/gamelib/soundmix.c": {
-      "distributed_sha256": "866a6aa56f8ebf5ee26b09d2302a84b3aa25cd8dac9e660d79a1bb93dbd98f41",
+      "distributed_sha256": "fba4790688c96d8ce1118a4cb1f216a337a4c9d671b37b7d94c20faa46c103e4",
       "modified": true,
-      "summary": "Declare exact resident PCM content-member ranges for independently verified reconstruction; preserve allocation tails and mutable mixer state.",
+      "summary": "Declare exact resident PCM content-member ranges for independently verified reconstruction; preserve allocation tails and mutable mixer state. Select native sample caching, counter width, channel mixing, music stream state and lifecycle behavior.",
       "topics": [
+        "logical-profile-compatibility",
         "reconstructible-resources",
         "record-dates-and-file-notices"
       ],
       "upstream_sha256": "9a73ee3defb6c0ffc08c8fb91c8706f2f601d9b6990ac59217dbe2d07b377437"
     },
     "source/gamelib/soundmix.h": {
-      "distributed_sha256": "7e7c301099131253ec92bdef0e5cdd5224943154db11a21e28bcae17827e6414",
-      "modified": false,
-      "topics": [],
+      "distributed_sha256": "f65e453efe377b31fa3b70655814bb1ffa373dbac9168481597fecb0f952c35e",
+      "modified": true,
+      "summary": "Expose the native media mixer layout to the cutscene decoder. Declare the selected audio fields and property adapters used by scripts and media callers.",
+      "topics": [
+        "logical-profile-compatibility",
+        "record-dates-and-file-notices"
+      ],
       "upstream_sha256": "7e7c301099131253ec92bdef0e5cdd5224943154db11a21e28bcae17827e6414"
     },
     "source/gamelib/sprite.c": {
-      "distributed_sha256": "1dfbb5d86e553d7dde9034bf35c400bedfbf247495e5f79d2e1ce0bccf734cff",
+      "distributed_sha256": "c4fcd1dd582d7e9eafd7bb5c8698f450ecf88cee9b921c92e2ba94974dece51e",
       "modified": true,
-      "summary": "Declare initialized encoded sprite-body ranges and source crops for exact reconstruction proof, retaining headers, palettes and mutable changes.",
+      "summary": "Declare initialized encoded sprite-body ranges and source crops for exact reconstruction proof, retaining headers, palettes and mutable changes. Select native sprite enable, flip and transparency flags by profile.",
       "topics": [
-        "reconstructible-resources"
+        "logical-profile-compatibility",
+        "reconstructible-resources",
+        "record-dates-and-file-notices"
       ],
       "upstream_sha256": "0c343058ac6e9f6012af42df3318f9a0ed61d0eaabfb8792f40123d6b6860d06"
     },
@@ -304,10 +317,11 @@
       "upstream_sha256": "a777d4da515962b4dc3c10f7ae54be6eefbbeae20cb7821672939050e2326520"
     },
     "source/gamelib/spriteq.c": {
-      "distributed_sha256": "519e6a46f9052deb3d01a58e28d4a3b269d8977e806b6fa1ff8cfd8280266963",
+      "distributed_sha256": "ae629c66cc373fd4f0be35270584d2436a79d85f61c2a22f4466de128162c22e",
       "modified": true,
-      "summary": "Keep unavailable sprite images out of the drawing queue while retaining native requests, ordering and copied draw methods.",
+      "summary": "Keep unavailable sprite images out of the drawing queue while retaining native requests, ordering and copied draw methods. Preserve each profile's drawmethod representation when copying and dispatching queued entries.",
       "topics": [
+        "logical-profile-compatibility",
         "record-dates-and-file-notices",
         "unavailable-sprite-images"
       ],
@@ -354,11 +368,13 @@
       "upstream_sha256": "cc774c998f9a8cebf7b769910045f47a9c52bbb2380ad4f82668b1bd10178e6a"
     },
     "source/gamelib/transform.c": {
-      "distributed_sha256": "183335b8c2d8c376887c982a4e3c1d248802aee8a3167b00256ba0110a5f5fdf",
+      "distributed_sha256": "73b460b718168e74095e02142476b52198c821ed76a3078b69ee9330e73defb1",
       "modified": true,
-      "summary": "Keep absent transform masks null during sprite seeks and traversal; retain native masked cursor positioning.",
+      "summary": "Keep absent transform masks null during sprite seeks and traversal; retain native masked cursor positioning. Select native transformation flip and transparency flags by profile.",
       "topics": [
-        "encoded-sprite-safety"
+        "encoded-sprite-safety",
+        "logical-profile-compatibility",
+        "record-dates-and-file-notices"
       ],
       "upstream_sha256": "a9e34c67d1be58e2a3fe3e14f3497353d0a102a60f57e54605824c5087c9559e"
     },
@@ -381,11 +397,12 @@
       "upstream_sha256": "c100dcbcc5b2f7f486ed5707a358bf480564a2d0dc4f65738dd3c0c29871107b"
     },
     "source/gamelib/types.h": {
-      "distributed_sha256": "7f69154b02923c510c9cba58760d7f14eccfe267fe0d39ea6ff5693568cc2c35",
+      "distributed_sha256": "09668bebd6a6a6ca17e3115a0d7df3678819d48a826f3410a14648f88d34e6fe",
       "modified": true,
-      "summary": "Match drawing-method typedef alignment to packed owning records without changing fields, offsets or sizes.",
+      "summary": "Match drawing-method typedef alignment to packed owning records without changing fields, offsets or sizes. Represent source-defined drawing flags, object classes and shared audio fields with explicit profile conversions.",
       "topics": [
         "drawing-record-alignment",
+        "logical-profile-compatibility",
         "record-dates-and-file-notices"
       ],
       "upstream_sha256": "98ee06ac679979e2cf0d25308230a41f5fa968bf4c854174011a9dca78b5e8fe"
@@ -442,6 +459,38 @@
       "topics": [],
       "upstream_sha256": "fc00aab9e9a98dff37978f4747ce3fe2542539f1d95c57fe1a7a796e79a9fe18"
     },
+    "source/openborscript/audio.c": {
+      "distributed_sha256": "0e430eb815518f8f0bd424222df3217741f903fdd499e9801c51eb8d04a874e8",
+      "modified": true,
+      "source_import": {
+        "build": "7735",
+        "commit": "f64d63c2fc4e0c6e8993a58fbce1816502fff63a",
+        "repository": "https://github.com/DCurrent/openbor",
+        "sha256": "f2a8ce36f7446c04c60f47c91ed0254f6efff758b0cd40753cba954d52a49f51"
+      },
+      "summary": "Adapt the native 7735music-channel property callbacks to each logical profile's types, registration and result semantics; validate arguments and preserve source diagnostics.",
+      "topics": [
+        "logical-profile-compatibility",
+        "record-dates-and-file-notices"
+      ],
+      "upstream_sha256": null
+    },
+    "source/openborscript/audio.h": {
+      "distributed_sha256": "1c2de7a5aad75630bf6919e9c7c31c3389838f36e835825c3cca78d5d790e838",
+      "modified": true,
+      "source_import": {
+        "build": "7735",
+        "commit": "f64d63c2fc4e0c6e8993a58fbce1816502fff63a",
+        "repository": "https://github.com/DCurrent/openbor",
+        "sha256": "862b62d76bc5b05420261ef1d0e55bab93985857c502b792c32d9631cadf168f"
+      },
+      "summary": "Declare the imported 7735music-channel callback interface with its original property numbering.",
+      "topics": [
+        "logical-profile-compatibility",
+        "record-dates-and-file-notices"
+      ],
+      "upstream_sha256": null
+    },
     "source/openborscript/axis.c": {
       "distributed_sha256": "f96cb2b06d60bb2fb2f4d345a907ab5064db3fd1835b3f3e54f5924660bc7f4d",
       "modified": false,
@@ -455,9 +504,13 @@
       "upstream_sha256": "28d5b01b29bf9c70a44cb52962e4d8b6e4d64cccf1b6c798999b3846c860878c"
     },
     "source/openborscript/binding.c": {
-      "distributed_sha256": "17e8511d50acdad591a0fc1ffad7a83801eb04b3178cc44a8edf5ad60b4b7389",
-      "modified": false,
-      "topics": [],
+      "distributed_sha256": "fa9397cd1727a58e79be0793c7190bcc1c803b14f8f4c91399e70f8c95a68a14",
+      "modified": true,
+      "summary": "Map native legacy, 6412 and 6510 binding property names and IDs to the shared layout. Select native binding fields, initialization, object tags, argument conversions and property results.",
+      "topics": [
+        "logical-profile-compatibility",
+        "record-dates-and-file-notices"
+      ],
       "upstream_sha256": "17e8511d50acdad591a0fc1ffad7a83801eb04b3178cc44a8edf5ad60b4b7389"
     },
     "source/openborscript/binding.h": {
@@ -467,9 +520,13 @@
       "upstream_sha256": "2fbd42360190d311a876f9b570074e2eb3548f9fb8d7ab28d2756efca36269df"
     },
     "source/openborscript/collision_attack.c": {
-      "distributed_sha256": "f4475bb466687f894ea36e80482b8c6bf62b765db029e8e0c3fb54ecb564c096",
-      "modified": false,
-      "topics": [],
+      "distributed_sha256": "ac37b161d1771d1f5c5473aae6ca6e2819e68da6b18405b33462e0abc9db31ff",
+      "modified": true,
+      "summary": "Translate native attack-type IDs at the script API boundary.",
+      "topics": [
+        "logical-profile-compatibility",
+        "record-dates-and-file-notices"
+      ],
       "upstream_sha256": "f4475bb466687f894ea36e80482b8c6bf62b765db029e8e0c3fb54ecb564c096"
     },
     "source/openborscript/collision_attack.h": {
@@ -509,15 +566,23 @@
       "upstream_sha256": "c4e98bd87c81e2941474a09ab0e0c95eb283717e46489df1442f9dfee3f900a8"
     },
     "source/openborscript/commands.c": {
-      "distributed_sha256": "89d397434d7a936a1b65fd9051cf99eb5317b43f72bd1359e80b6b8592686403",
-      "modified": false,
-      "topics": [],
+      "distributed_sha256": "63172535586788ffc5f854e48349941c7842a0ee55d3e443b475ad695ace1eac",
+      "modified": true,
+      "summary": "Convert the command-list lookup result to its command enumeration explicitly instead of through a plain pointer cast.",
+      "topics": [
+        "logical-profile-compatibility",
+        "record-dates-and-file-notices"
+      ],
       "upstream_sha256": "89d397434d7a936a1b65fd9051cf99eb5317b43f72bd1359e80b6b8592686403"
     },
     "source/openborscript/commands.h": {
-      "distributed_sha256": "49ba511e6a1a84bd818b2af4edd8d1cdd66badc5bb15ea82d32e322a3ccd0b77",
-      "modified": false,
-      "topics": [],
+      "distributed_sha256": "588a9496a5e5d39f2b6512893c492ba098a9f908233350d53e98d231ab3d577c",
+      "modified": true,
+      "summary": "Append shared selectors for logical-profile model commands without shifting existing selectors.",
+      "topics": [
+        "logical-profile-compatibility",
+        "record-dates-and-file-notices"
+      ],
       "upstream_sha256": "49ba511e6a1a84bd818b2af4edd8d1cdd66badc5bb15ea82d32e322a3ccd0b77"
     },
     "source/openborscript/common_property.c": {
@@ -527,43 +592,64 @@
       "upstream_sha256": "249735d7be5c406974862beb5c87af9f88e06c6e033447c257221d0355057572"
     },
     "source/openborscript/config.h": {
-      "distributed_sha256": "6420c92901314f519fc19ba9ed9a8a410fc17a91ce94dec9ac12609f44ae904c",
+      "distributed_sha256": "e32ec109fd7ae60a9f2423840c58c9214083bef764436ea41d8296211058455e",
       "modified": true,
-      "summary": "Declare the modern logical profiles' unload_model script entry point.",
+      "summary": "Declare the modern logical profiles' unload_model script entry point. Declare the selected script and system-property interfaces for the shared runtime.",
       "topics": [
+        "logical-profile-compatibility",
         "record-dates-and-file-notices",
         "script-shared-storage"
       ],
       "upstream_sha256": "2fb2065f9a3e8e4e1da71cf200f5d4ff28839455a165299e8427bd6fe8781014"
     },
     "source/openborscript/constants.c": {
-      "distributed_sha256": "ffc6e9fe80c6c4b0ae3e91b70356b1a3d26c88c80c986bf96344051d2cc8c8fb",
-      "modified": false,
-      "topics": [],
+      "distributed_sha256": "845bbc3c6e038cd600a6b483fc150f78c792c34619743ccf62c0651ebb6447cd",
+      "modified": true,
+      "summary": "Expose each logical profile's native constants and translate shared selectors to native values. Expose each profile's native global-config, flash, drawing, palette and music constants.",
+      "topics": [
+        "logical-profile-compatibility",
+        "record-dates-and-file-notices"
+      ],
       "upstream_sha256": "ffc6e9fe80c6c4b0ae3e91b70356b1a3d26c88c80c986bf96344051d2cc8c8fb"
     },
     "source/openborscript/drawmethod.c": {
-      "distributed_sha256": "3c1bed661c0a0fd769a4feda0ce6b1b6da2c42152af67ebe11ac5d1cbf029807",
-      "modified": false,
-      "topics": [],
+      "distributed_sha256": "35e46a10a7b715a2a2e6646562d312ec4c4f63b1117005ac98b9c51acec25d9b",
+      "modified": true,
+      "summary": "Preserve source-defined drawing property names, numeric IDs, callback results and field ownership with bounded typed access. Select native drawing and palette callbacks, names, copy widths, object tags and typed field access.",
+      "topics": [
+        "logical-profile-compatibility",
+        "record-dates-and-file-notices"
+      ],
       "upstream_sha256": "3c1bed661c0a0fd769a4feda0ce6b1b6da2c42152af67ebe11ac5d1cbf029807"
     },
     "source/openborscript/drawmethod.h": {
-      "distributed_sha256": "d4f91c9c2f34c091e384d4f930922bac60bef6264942ab1f1cbb7ee110a5762a",
-      "modified": false,
-      "topics": [],
+      "distributed_sha256": "a15b34f69b91b73d6bc3e41b0c826325e3e80cbe31a3ac69021894183a47c41d",
+      "modified": true,
+      "summary": "Declare shared drawing-property selectors and the native callback interface. Declare the source-defined drawing/palette interfaces and shared selector domain.",
+      "topics": [
+        "logical-profile-compatibility",
+        "record-dates-and-file-notices"
+      ],
       "upstream_sha256": "d4f91c9c2f34c091e384d4f930922bac60bef6264942ab1f1cbb7ee110a5762a"
     },
     "source/openborscript/entity.c": {
-      "distributed_sha256": "ec7012c5484d64cc2906938fa4908e629e3c0099e2567b2d0e9415e86439783b",
-      "modified": false,
-      "topics": [],
+      "distributed_sha256": "35389440afea21d02620a79905f5841a5a1bc88eba42abe09e41f8362f7b14a1",
+      "modified": true,
+      "summary": "Translate native entity property names, numeric IDs and animation values for each logical profile.",
+      "topics": [
+        "logical-profile-compatibility",
+        "record-dates-and-file-notices"
+      ],
       "upstream_sha256": "ec7012c5484d64cc2906938fa4908e629e3c0099e2567b2d0e9415e86439783b"
     },
     "source/openborscript/entity.h": {
-      "distributed_sha256": "b3493e261298f99deaf3953ad2fed92e25832f8c3caf131dc0c8dc61f0e5dc9a",
-      "modified": false,
-      "topics": [],
+      "distributed_sha256": "d3ccd5902fa0acd26e6ad2751675814981fbdd43c4cabb74b5169dfea7314958",
+      "modified": true,
+      "summary": "Keep legacy entity IDs and append selectors needed by the nearby logical profiles.",
+      "topics": [
+        "logical-profile-compatibility",
+        "record-dates-and-file-notices"
+      ],
       "upstream_sha256": "b3493e261298f99deaf3953ad2fed92e25832f8c3caf131dc0c8dc61f0e5dc9a"
     },
     "source/openborscript/faction.c": {
@@ -578,16 +664,56 @@
       "topics": [],
       "upstream_sha256": "57d5e8b2d008b169eb1d943e3026a480dae4afd1f76eea18750f3ef288a50022"
     },
+    "source/openborscript/flash.c": {
+      "distributed_sha256": "7ff010390f0ad0c1434281ae27de1212eae8dde650e7259a9ab690e4e2c40d88",
+      "modified": true,
+      "source_import": {
+        "build": "7735",
+        "commit": "f64d63c2fc4e0c6e8993a58fbce1816502fff63a",
+        "repository": "https://github.com/DCurrent/openbor",
+        "sha256": "9c99ec996dee4f8d1ef9692fd41a0c543e8874640722f8ef3e805a89b2a92118"
+      },
+      "summary": "Adapt the native 7735flash property callbacks to the selected property map, object tags and write flags with bounded field access.",
+      "topics": [
+        "logical-profile-compatibility",
+        "record-dates-and-file-notices"
+      ],
+      "upstream_sha256": null
+    },
+    "source/openborscript/flash.h": {
+      "distributed_sha256": "8be6f03cb1ac421ab9f5f38a1c2bc6db2edf329a64d560759a8e0adcfc5da997",
+      "modified": true,
+      "source_import": {
+        "build": "7735",
+        "commit": "f64d63c2fc4e0c6e8993a58fbce1816502fff63a",
+        "repository": "https://github.com/DCurrent/openbor",
+        "sha256": "d793eff42299f32f4154e6003ec096cefd48cbb2cf225e73e3640029874f74df"
+      },
+      "summary": "Declare the imported 7735flash property namespace and callbacks.",
+      "topics": [
+        "logical-profile-compatibility",
+        "record-dates-and-file-notices"
+      ],
+      "upstream_sha256": null
+    },
     "source/openborscript/global_config.c": {
-      "distributed_sha256": "8dd6c6bf3ff6c3e0c1b259fb9437c460c427b6c9e359cb93d883b51ef703388a",
-      "modified": false,
-      "topics": [],
+      "distributed_sha256": "d3ff0306eb1a1cd14ba9e005b7753c65c80ceb4f7f6432d9285c0352946736ac",
+      "modified": true,
+      "summary": "Preserve native global-configuration property names, flags, results and typed field access. Select the native global-config property maps, read/write flags, field conversions and setter results.",
+      "topics": [
+        "logical-profile-compatibility",
+        "record-dates-and-file-notices"
+      ],
       "upstream_sha256": "8dd6c6bf3ff6c3e0c1b259fb9437c460c427b6c9e359cb93d883b51ef703388a"
     },
     "source/openborscript/global_config.h": {
-      "distributed_sha256": "14653cc5f643e1fdbacd9c3678b630c1f7947eb0aa5f18964c228ba3e090d27e",
-      "modified": false,
-      "topics": [],
+      "distributed_sha256": "15a936faece1ab46deb7809e8d115ed2a93400245cef2bf42cc697725246fc31",
+      "modified": true,
+      "summary": "Declare the shared global-configuration property selectors and callbacks. Declare the shared global-config property domain and profile adapters.",
+      "topics": [
+        "logical-profile-compatibility",
+        "record-dates-and-file-notices"
+      ],
       "upstream_sha256": "14653cc5f643e1fdbacd9c3678b630c1f7947eb0aa5f18964c228ba3e090d27e"
     },
     "source/openborscript/icon.c": {
@@ -603,9 +729,13 @@
       "upstream_sha256": "00fe52601bfab561a9a9a3bda4e0e3a0f79e925dbd4c5483eeee7f841e9f6e71"
     },
     "source/openborscript/index.c": {
-      "distributed_sha256": "ebd9ed20f090a2d12a98b8364bc16e311cccf03be5c6e9b28215dae7a042c31e",
-      "modified": false,
-      "topics": [],
+      "distributed_sha256": "c9aabc54a77e2440e760368c2f8b87c9e32f3c48c875fb272fea4c0a3c6f4171",
+      "modified": true,
+      "summary": "Register native functions according to each logical profile's upstream API. Preserve native callback registration, preconversion routes and function-name lookup by profile.",
+      "topics": [
+        "logical-profile-compatibility",
+        "record-dates-and-file-notices"
+      ],
       "upstream_sha256": "ebd9ed20f090a2d12a98b8364bc16e311cccf03be5c6e9b28215dae7a042c31e"
     },
     "source/openborscript/layer.c": {
@@ -615,7 +745,7 @@
       "upstream_sha256": "7ff27e41939d64ad60b49891bd00956eebd97355aeec1f0d1e0783ae08b50509"
     },
     "source/openborscript/level.c": {
-      "distributed_sha256": "b5d3631dff4b7ac9404e403bf1756dfde3b0b15c8b4c6c1f7734c786ab09f6d0",
+      "distributed_sha256": "1977978b6c1108d99f7097cd2d8fb50c1d043bae5bbeada1efe99e3dca1f62a9",
       "modified": true,
       "summary": "Select the native 6330 background-speed return representation.",
       "topics": [
@@ -631,15 +761,23 @@
       "upstream_sha256": "c145e93b742c0b957361c61960debd75b324b30751753c40c5da256917f28a5f"
     },
     "source/openborscript/model.c": {
-      "distributed_sha256": "5acb40805775b50ffaf34c53b300694da86d4543d14ad2e451061715f755f2f6",
-      "modified": false,
-      "topics": [],
+      "distributed_sha256": "4334bfaa844163c975fe998184034b31f2028e5d1115efe7b68e7e83deea46ad",
+      "modified": true,
+      "summary": "Select native model-property names, numeric IDs and typed query/update results for each logical profile.",
+      "topics": [
+        "logical-profile-compatibility",
+        "record-dates-and-file-notices"
+      ],
       "upstream_sha256": "5acb40805775b50ffaf34c53b300694da86d4543d14ad2e451061715f755f2f6"
     },
     "source/openborscript/model.h": {
-      "distributed_sha256": "2aa40c45f13e56822f08aebdc17aeb55026efbcd26bf6bf02c48417b6925019c",
-      "modified": false,
-      "topics": [],
+      "distributed_sha256": "bb45e1bf689c5a395694cf74b01b4d201e0d21c1d0c91e0d1f3ec903e9fb4cb3",
+      "modified": true,
+      "summary": "Declare shared model-property selectors while preserving each profile's native domain.",
+      "topics": [
+        "logical-profile-compatibility",
+        "record-dates-and-file-notices"
+      ],
       "upstream_sha256": "2aa40c45f13e56822f08aebdc17aeb55026efbcd26bf6bf02c48417b6925019c"
     },
     "source/openborscript/recursive_damage.c": {
@@ -655,7 +793,7 @@
       "upstream_sha256": "5a85c0ee6b73bf9862d456e481bb3a46897d1747b2a786107e5124ef6255404f"
     },
     "source/openborscript/scriptcommon.h": {
-      "distributed_sha256": "16018002d69d98cc2b3afcdcd2d6e9cdc8b94e89cba4aab75b2f6a2a048d995d",
+      "distributed_sha256": "0eca2c0c5d8168cf8c7ca3309fa386c251a074f64a32a438178feefff5e6cc12",
       "modified": true,
       "summary": "Keep rejected-property diagnostics within each mapping table's declared length. Bound rejected-property diagnostics by the actual mapping-table length.",
       "topics": [
@@ -1018,11 +1156,12 @@
       "upstream_sha256": "d96196d834fe4a16fdf704a9f69658ff220c405f9da1a01be466e9548e5dcb06"
     },
     "source/utils.c": {
-      "distributed_sha256": "eb9ad1fcf001178f47fd8c48bc8f113ad6c4808aa55bd8836bf497967ddc3974",
+      "distributed_sha256": "4228a7c6de4215cebf401eddb272fff431b8daef343bd7048960306142343c59",
       "modified": true,
-      "summary": "Enable libretro platform and PNG helper declarations, the POSIX directory and mkdir forms macOS also uses, and the standard allocation declarations instead of the glibc-only <malloc.h>. Derive output names from the content basename with explicit destination capacities, and reject overflowing output path joins.",
+      "summary": "Enable libretro platform and PNG helper declarations, the POSIX directory and mkdir forms macOS also uses, and the standard allocation declarations instead of the glibc-only <malloc.h>. Derive output names from the content basename with explicit destination capacities, and reject overflowing output path joins. Select native allocation diagnostics and query wide allocator statistics only when that host libc supports them.",
       "topics": [
         "darwin-platform-support",
+        "logical-profile-compatibility",
         "platform-integration",
         "record-dates-and-file-notices",
         "session-relative-filesystem"
@@ -1113,10 +1252,11 @@
       "upstream_sha256": "da664e303c0fe5045dd102b07023b175b0952776a85439c4eccbd50b675ef4b2"
     },
     "source/webmlib/vidplay.c": {
-      "distributed_sha256": "8b8113016e0e42f03beb1716a642593b8c4cbf36fb4fee1e773dc00d135f25bb",
+      "distributed_sha256": "de234dd4018de9fd610ca729b7d09d906c01a074042b2453eb03d0d2b6cf54df",
       "modified": true,
-      "summary": "Coordinate WebM worker shutdown and yield while waiting for video frames. Add an opt-in common media rendezvous with bounded active waits, packet queues and decoded-frame reserves; coordinate PCM and video without changing engine clocks or default scheduling.",
+      "summary": "Coordinate WebM worker shutdown and yield while waiting for video frames. Add an opt-in common media rendezvous with bounded active waits, packet queues and decoded-frame reserves; coordinate PCM and video without changing engine clocks or default scheduling. Transport the selected music volume through the shared media adapter and its native lifecycle.",
       "topics": [
+        "logical-profile-compatibility",
         "record-dates-and-file-notices",
         "webm-playback-lifecycle"
       ],

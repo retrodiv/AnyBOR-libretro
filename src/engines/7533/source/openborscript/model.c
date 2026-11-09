@@ -1,3 +1,15 @@
+/* AnyBOR modification record: 2026-11-09.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Select native model-property names, numeric IDs and typed query/update
+ * results for each logical profile.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/7533.md
+ * at the source repository root. Original notices follow below.
+ */
+
 /*
  * OpenBOR - http://www.chronocrash.com
  * -----------------------------------------------------------------------
@@ -8,12 +20,30 @@
 
 #include "scriptcommon.h"
 
+static int obor_profile_model_property_end(void)
+{
+    return (int)MODEL_PROPERTY_END - (obor_profile_build < 7553 ? 2 : 0);
+}
+
+
 
 const s_property_access_map model_get_property_map(const void* acting_object_param, const unsigned int property_index_param)
 {
     s_property_access_map property_map;
     const s_model* acting_object = acting_object_param;
-    const e_model_properties property_index = property_index_param;
+    unsigned int profile_index = property_index_param;
+    if(obor_profile_build < 7553)
+    {
+        if(profile_index >= (unsigned int)obor_profile_model_property_end())
+        {
+            profile_index = MODEL_PROPERTY_END;
+        }
+        else if(profile_index >= MODEL_PROPERTY_GUARD_POINTS)
+        {
+            profile_index += 2;
+        }
+    }
+    const e_model_properties property_index = profile_index;
 
     switch (property_index)
     {
@@ -161,6 +191,20 @@ const s_property_access_map model_get_property_map(const void* acting_object_par
         property_map.config_flags = PROPERTY_ACCESS_CONFIG_MACRO_DEFAULT;
         property_map.field = &acting_object->ground;
         property_map.id_string = "MODEL_PROPERTY_GROUND";
+        property_map.type = VT_INTEGER;
+        break;
+
+    case MODEL_PROPERTY_GUARD_POINTS:
+        property_map.config_flags = PROPERTY_ACCESS_CONFIG_MACRO_DEFAULT;
+        property_map.field = &acting_object->profile_guardpoints;
+        property_map.id_string = "MODEL_PROPERTY_GUARD_POINTS";
+        property_map.type = VT_INTEGER;
+        break;
+
+    case MODEL_PROPERTY_GUARD_RATE:
+        property_map.config_flags = PROPERTY_ACCESS_CONFIG_MACRO_DEFAULT;
+        property_map.field = &acting_object->guardrate;
+        property_map.id_string = "MODEL_PROPERTY_GUARD_RATE";
         property_map.type = VT_INTEGER;
         break;
 
@@ -455,7 +499,7 @@ HRESULT openbor_get_model_property(const ScriptVariant* const* varlist, ScriptVa
     * for population, then ext.
     */
 
-    if (property_id_param >= 0 && property_id_param < MODEL_PROPERTY_END) {
+    if (property_id_param >= 0 && property_id_param < obor_profile_model_property_end()) {
         property_access_get_member(&property_map, *pretvar);
         return S_OK;
     }
@@ -466,7 +510,7 @@ HRESULT openbor_get_model_property(const ScriptVariant* const* varlist, ScriptVa
     */
 
     if (property_id_param == PROPERTY_ACCESS_DUMP) {
-        property_access_dump_members(model_get_property_map, MODEL_PROPERTY_END, acting_object);
+        property_access_dump_members(model_get_property_map, obor_profile_model_property_end(), acting_object);
     }
     else {
         printf("\n\nScript error: %s. Unknown property id (%d). \n\n", SELF_NAME, property_id_param);
@@ -525,7 +569,7 @@ HRESULT openbor_set_model_property(ScriptVariant** varlist, ScriptVariant** cons
     const int property_id_param = (const int)varlist[ARG_PROPERTY]->lVal;
     const e_model_properties property_id = (e_model_properties)(property_id_param);
 
-    if (property_id_param < 0 && property_id_param >= MODEL_PROPERTY_END) {
+    if (property_id_param < 0 && property_id_param >= obor_profile_model_property_end()) {
         printf("\n\nScript error: %s. Unknown property id (%d). \n\n", SELF_NAME, property_id_param);
         return E_FAIL;
     }

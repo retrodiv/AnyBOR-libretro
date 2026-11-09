@@ -1,0 +1,169 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <limits.h>
+#include "soundmix.h"
+#include "List.h"
+#include "borendian.h"
+#undef printf
+uint32_t obor_profile_build;
+#define MAXVOLUME 64
+#pragma pack(push,4)
+@TYPES@
+#pragma pack(pop)
+@GLOBALS@
+static List samplelist;
+static s_soundcache cache[2],*soundcache=cache;
+static channelstruct vchannel[3];
+static int sound_cached=2,max_channels=3,mixing_inited=1;
+int playfrequency=48000;
+int sample_play_id;
+static s32 accumulator[48],*mixbuf=accumulator+8;
+static unsigned char pcm8[12];
+static short pcm16[12],music_pcm[4][MUSIC_BUF_SIZE];
+static char sample_name[]="synthetic.wav";
+char packfile[OBOR_CONTENT_PATH_MAX]="synthetic.pak";
+static int reload_calls,reload_ok;
+static unsigned reload_limit;
+static int loadwave(char *filename,char *archive,samplestruct *sample,unsigned maxsize)
+{
+    if(filename!=sample_name || archive!=packfile) abort();
+    ++reload_calls;reload_limit=maxsize;
+    if(reload_ok) sample->sampleptr=sample->bits==8 ? (void*)pcm8 : (void*)pcm16;
+    return reload_ok;
+}
+@FUNCTIONS@
+
+static void reset_fixture(void)
+{
+    static const unsigned char eight[]={0,64,127,128,129,192,255,17,240,35,110,210};
+    static const short sixteen[]={-32768,-16384,-1001,-1,0,1,1001,16384,32767,31,-31,4095};
+    unsigned i,j;
+    memcpy(pcm8,eight,sizeof(pcm8));memcpy(pcm16,sixteen,sizeof(pcm16));
+    memset(cache,0,sizeof(cache));memset(vchannel,0,sizeof(vchannel));
+    sound_music_channel_clear(&musicchannel);
+    for(i=0;i<4;++i) for(j=0;j<MUSIC_BUF_SIZE;++j) music_pcm[i][j]=sixteen[(j+i*3)%12];
+    for(i=0;i<2;++i)
+    {
+        cache[i].filename=sample_name;cache[i].sample.sampleptr=pcm16;
+        cache[i].sample.soundlen=12;cache[i].sample.bits=16;
+        cache[i].sample.frequency=24000;cache[i].sample.channels=SOUND_MONO;
+    }
+    sound_parameters.sound_length_max=UINT32_MAX;
+    audio_global.sample_play_id=0;sample_play_id=0;
+    reload_calls=0;reload_limit=0;reload_ok=1;mixing_inited=1;playfrequency=48000;
+}
+static void prepare_accumulator(void)
+{
+    unsigned i;
+    for(i=0;i<48;++i) accumulator[i]=0x12345678;
+    memset(mixbuf,0,32*sizeof(*mixbuf));
+}
+static void print_block(void)
+{
+    unsigned i;int guards=1;
+    printf("{\"sums\":[");
+    for(i=0;i<32;++i) printf("%s%d",i ? "," : "",mixbuf[i]);
+    for(i=0;i<8;++i) if(accumulator[i]!=0x12345678 || accumulator[i+40]!=0x12345678) guards=0;
+    printf("],\"music\":[%d,%d,%u,%u,%u],\"sample\":[%d,%u,%u,%d,%d],\"guards\":%d}",
+        musicchannel.active,musicchannel.playing_buffer,musicchannel.fp_samplepos,
+        musicchannel.fp_playto[0],musicchannel.fp_playto[1],vchannel[2].active,
+        vchannel[2].fp_samplepos,vchannel[2].fp_period,vchannel[2].volume[0],vchannel[2].volume[1],guards);
+}
+int main(void)
+{
+    static const unsigned profiles[]={@PROFILES@};
+    static const struct mix_case { int kind,bits,channels,left,right,speed,loop,paused,frequency; }
+        mixes[]={@MIX_CASES@};
+    static const struct play_case { int index,inited,reload,speed,left,right,busy;uint32_t seed;int length,rate; }
+        plays[]={@PLAY_CASES@};
+    static const struct volume_case { int channel,left,right; } volumes[]={@VOLUME_CASES@};
+    size_t p,c;unsigned i;int block;
+    printf("{\"status\":\"PASS\",\"initial_music_class\":%d,\"sizes\":[%zu,%zu,%zu],\"profiles\":[",
+        musicchannel.object_type,sizeof(channelstruct),sizeof(samplestruct),sizeof(s_soundcache));
+    for(p=0;p<sizeof(profiles)/sizeof(*profiles);++p)
+    {
+        obor_profile_build=profiles[p];reset_fixture();
+        printf("%s{\"revision\":%u,\"format\":[%u,%u],\"mixes\":[",p ? "," : "",profiles[p],
+            OBOR_AUDIO_FRACTION_BITS,MAX_SOUND_LEN);
+        for(c=0;c<sizeof(mixes)/sizeof(*mixes);++c)
+        {
+            const struct mix_case *input=&mixes[c];int channel=-1;
+            reset_fixture();
+            if(input->kind!=1)
+            {
+                cache[0].sample.bits=input->bits;cache[0].sample.channels=input->channels;
+                cache[0].sample.frequency=input->frequency;
+                cache[0].sample.sampleptr=input->bits==8 ? (void*)pcm8 : (void*)pcm16;
+                channel=sound_play_sample(0,11,input->left,input->right,input->speed);
+                if(channel!=2) abort();
+                if(input->loop) vchannel[channel].active=CHANNEL_LOOPING;
+                vchannel[channel].paused=input->paused;
+            }
+            if(input->kind!=0)
+            {
+                musicchannel.active=1;musicchannel.paused=input->paused;
+                musicchannel.channels=input->channels;
+                musicchannel.fp_period=INT_TO_FIX(input->frequency)/(unsigned)playfrequency;
+                musicchannel.buf[0]=music_pcm[0];musicchannel.fp_playto[0]=INT_TO_FIX(8);
+                if(input->loop) { musicchannel.buf[1]=music_pcm[1];musicchannel.fp_playto[1]=INT_TO_FIX(8); }
+                sound_volume_music(input->left,input->right);
+            }
+            printf("%s{\"channel\":%d,\"blocks\":[",c ? "," : "",channel);
+            for(block=0;block<2;++block)
+            {
+                if(block) putchar(',');
+                prepare_accumulator();mixaudio(32);print_block();
+            }
+            printf("]}");
+        }
+        printf("],\"plays\":[");
+        for(c=0;c<sizeof(plays)/sizeof(*plays);++c)
+        {
+            const struct play_case *input=&plays[c];int channel;
+            reset_fixture();mixing_inited=input->inited;reload_ok=input->reload!=2;
+            if(input->reload) cache[0].sample.sampleptr=NULL;
+            cache[0].sample.soundlen=input->length;playfrequency=input->rate;
+            memcpy(&sample_play_id,&input->seed,sizeof(sample_play_id));audio_global.sample_play_id=input->seed;
+            if(input->busy) for(i=0;i<3;++i)
+            { vchannel[i].active=1;vchannel[i].priority=input->busy==1 ? 100+i : 10+i; }
+            channel=sound_play_sample(input->index,11,input->left,input->right,input->speed);
+            printf("%s[%d,%u,%d,%u,%d,%u",c ? "," : "",channel,sound_profile_sample_play_id(),
+                sample_play_id,audio_global.sample_play_id,reload_calls,reload_limit);
+            if(channel>=0) printf(",[%d,%u,%u,%d,%d]]",vchannel[channel].playid,
+                vchannel[channel].fp_samplepos,vchannel[channel].fp_period,
+                vchannel[channel].volume[0],vchannel[channel].volume[1]);
+            else printf(",[]]");
+        }
+        printf("],\"volumes\":[");
+        for(c=0;c<sizeof(volumes)/sizeof(*volumes);++c)
+        {
+            reset_fixture();vchannel[1].volume[0]=17;vchannel[1].volume[1]=18;
+            sound_volume_sample(volumes[c].channel,volumes[c].left,volumes[c].right);
+            sound_volume_music(volumes[c].left,volumes[c].right);
+            printf("%s[%d,%d,%d,%d]",c ? "," : "",vchannel[1].volume[0],vchannel[1].volume[1],
+                musicchannel.volume[0],musicchannel.volume[1]);
+        }
+        printf("],\"invalid_music\":[");
+        for(c=0;c<6;++c)
+        {
+            reset_fixture();musicchannel.active=1;musicchannel.channels=SOUND_MONO;
+            musicchannel.buf[0]=music_pcm[0];musicchannel.fp_playto[0]=INT_TO_FIX(8);
+            if(c==0 || c==5) musicchannel.playing_buffer=-1;
+            if(c==1) musicchannel.playing_buffer=MUSIC_NUM_BUFFERS;
+            if(c==2) musicchannel.buf[0]=NULL;
+            if(c==3) { musicchannel.fp_samplepos=INT_TO_FIX(8);musicchannel.fp_playto[1]=INT_TO_FIX(8); }
+            if(c==4) { musicchannel.fp_samplepos=INT_TO_FIX(MUSIC_BUF_SIZE+1);musicchannel.fp_playto[0]=INT_TO_FIX(MUSIC_BUF_SIZE+2); }
+            if(c==5) musicchannel.paused=1;
+            prepare_accumulator();mixaudio(32);
+            if(c) putchar(',');
+            print_block();
+        }
+        printf("]}");
+    }
+    puts("]}");return 0;
+}

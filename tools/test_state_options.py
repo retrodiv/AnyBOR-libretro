@@ -260,8 +260,8 @@ def main():
             for key, title, values, chosen in (
                     ("content", "Save state content", "Smart|Full", default[0]),
                     ("compression", "Save state compression", "On|Off", default[1])):
-                marker = "state_option=obor_state_" + key + " label=" + title + " category=system default=" + chosen + " values=" + values
-                legacy_marker = "state_legacy=obor_state_" + key + " " + title + "; " + values
+                marker = "state_option=anybor_state_" + key + " label=" + title + " category=system default=" + chosen + " values=" + values
+                legacy_marker = "state_legacy=anybor_state_" + key + " " + title + "; " + values
                 if marker not in log and legacy_marker not in log:
                     raise RuntimeError("state option metadata: " + log)
             frames = re.findall(r"^replay_frame source=.*$", result.stdout, re.M)

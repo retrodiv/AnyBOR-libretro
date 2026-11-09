@@ -1,0 +1,93 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wignored-qualifiers"
+#if defined(__clang__)
+#pragma GCC diagnostic ignored "-Wdeprecated-non-prototype"
+#endif
+#include "scriptcommon.h"
+#undef printf
+uint32_t obor_profile_build;
+@DEFAULT@
+s_drawmethod drawmethod;
+static s_drawmethod observed;
+static s_screen fixture_screen;
+static int token,calls,route,target,params[6];
+static void capture(int kind,s_screen *screen,s_drawmethod *method,int a,int b,int c,int d,int e,int f)
+{
+    if(!method) abort();
+    ++calls;route=kind;target=screen==&fixture_screen;
+    params[0]=a;params[1]=b;params[2]=c;params[3]=d;params[4]=e;params[5]=f;
+    observed=*method;
+}
+void spriteq_add_box(int x,int y,int w,int h,int z,int color,s_drawmethod *dm)
+{ capture(0,NULL,dm,x,y,w,h,z,color); }
+void putbox(int x,int y,int w,int h,int color,s_screen *screen,s_drawmethod *dm)
+{ capture(1,screen,dm,x,y,w,h,color,0); }
+void spriteq_add_line(int x,int y,int ex,int ey,int z,int color,s_drawmethod *dm)
+{ capture(2,NULL,dm,x,y,ex,ey,z,color); }
+void putline(int x,int y,int ex,int ey,int color,s_screen *screen,s_drawmethod *dm)
+{ capture(3,screen,dm,x,y,ex,ey,color,0); }
+void spriteq_add_dot(int x,int y,int z,int color,s_drawmethod *dm)
+{ capture(4,NULL,dm,x,y,z,color,0,0); }
+void putpixel(unsigned x,unsigned y,int color,s_screen *screen,s_drawmethod *dm)
+{ capture(5,screen,dm,(int)x,(int)y,color,0,0,0); }
+void spriteq_add_screen(int x,int y,int z,s_screen *screen,s_drawmethod *dm,int sortid)
+{ capture(6,screen,dm,x,y,z,sortid,0,0); }
+@VARIANT@
+@CALLBACKS@
+#pragma GCC diagnostic pop
+static void method(void)
+{
+    const s_drawmethod *m=&observed;
+    printf("[%d,%u,%d,%d,%d,%d,%d,%d,%d,%d,%u,%d,%d]",m->flag,(unsigned)m->config,
+           m->flipx,m->flipy,m->fliprotate,m->transbg,(int)m->alpha,m->scalex,m->xrepeat,
+           m->clipw,(unsigned)m->channelr,m->remap,m->table==(unsigned char *)&token);
+}
+int main(void)
+{
+    static const unsigned profiles[]={@PROFILES@};
+    static const int flags[]={@FLAGS@},alphas[]={@ALPHAS@};
+    static const unsigned masks[]={@MASKS@};
+    static HRESULT (*const callbacks[])(ScriptVariant **,ScriptVariant **,int)={@ENTRIES@};
+    unsigned p,r,f,m,a,i,n;
+    printf("{\"status\":\"PASS\",\"profiles\":[");
+    for(p=0;p<sizeof(profiles)/sizeof(*profiles);++p)
+    {
+        if(p) { putchar(','); }
+        obor_profile_build=profiles[p];n=0;
+        printf("{\"revision\":%u,\"cases\":[",profiles[p]);
+        for(r=0;r<sizeof(callbacks)/sizeof(*callbacks);++r)
+        for(f=0;f<sizeof(flags)/sizeof(*flags);++f)
+        for(m=0;m<sizeof(masks)/sizeof(*masks);++m)
+        for(a=0;a<sizeof(alphas)/sizeof(*alphas);++a)
+        {
+            ScriptVariant values[8],*args[8],result={0},*out=&result;
+            s_drawmethod before;HRESULT status;
+            int count=(r<4?6:4),direct=(r==1 || r==3 || r==5 || r==6);
+            drawmethod=plainmethod;drawmethod.flag=flags[f];drawmethod.config=masks[m];
+            drawmethod.flipx=-13;drawmethod.flipy=14;drawmethod.fliprotate=12;drawmethod.transbg=-15;
+            drawmethod.alpha=6;drawmethod.scalex=301;drawmethod.xrepeat=3;drawmethod.clipw=4;
+            drawmethod.channelr=241;drawmethod.remap=7;drawmethod.table=(unsigned char *)&token;
+            before=drawmethod;
+            memset(values,0,sizeof(values));
+            for(i=0;i<8;++i) { args[i]=&values[i];values[i].vt=VT_INTEGER;values[i].lVal=10+i; }
+            if(direct) { values[0].vt=VT_PTR;values[0].ptrVal=&fixture_screen; }
+            if(alphas[a]!=-99) { values[count].lVal=alphas[a];++count; }
+            calls=0;route=target=-1;memset(params,0,sizeof(params));memset(&observed,0,sizeof(observed));
+            status=callbacks[r](args,&out,count);
+            if(n++) { putchar(','); }
+            printf("[%d,%d,%d,%d,%d,[",(int)status,out==NULL,calls,route,target);
+            for(i=0;i<6;++i) { if(i) putchar(',');printf("%d",params[i]); }
+            printf("],");method();printf(",%d,%d]",memcmp(&before,&drawmethod,sizeof(before))==0,
+                                        observed.object_type==OBJECT_TYPE_DRAWMETHOD);
+        }
+        printf("]}");
+    }
+    printf("]}\n");return 0;
+}

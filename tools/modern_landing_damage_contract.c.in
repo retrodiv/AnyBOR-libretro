@@ -1,0 +1,83 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "openbor.h"
+#undef printf
+uint32_t obor_profile_build;
+entity *self;
+s_level *level;
+s_savedata savedata;
+s_global_sample global_sample_list;
+s_global_config global_config;
+u32 _time=17;
+int autoland;
+float default_level_gravity=-0.1f,default_level_maxfallspeed=-10,default_level_maxtossspeed=10;
+static entity actor,sentinel;
+static int damage_calls,land_calls,binding_override;
+void adjust_base(entity *ent,entity **platform)
+{ if(ent!=&actor) abort(); *platform=NULL; }
+int check_edge(entity *ent) { if(ent!=&actor) abort(); return EDGE_NONE; }
+int is_frozen(entity *ent) { return ent->frozen; }
+entity *check_platform_above_entity(entity *ent) { (void)ent; abort(); }
+void execute_onblocka_script(entity *ent,entity *other) { (void)ent;(void)other;abort(); }
+bool check_frame_set_drop(entity *ent) { if(ent!=&actor) abort(); return false; }
+void execute_onmovea_script(entity *ent) { if(ent!=&actor) abort(); }
+float diff(float a,float b) { return a>b ? a-b : b-a; }
+entity *check_platform_below(float x,float z,float y,entity *exclude)
+{ (void)x;(void)z;(void)y;(void)exclude;abort(); }
+float get_platform_base(entity *ent) { (void)ent;abort(); }
+void common_walkoff(void) { abort(); }
+void ent_set_anim(entity *ent,int animation,int reset)
+{ (void)ent;(void)animation;(void)reset;abort(); }
+int inair(entity *ent) { return ent->position.y>ent->base; }
+int check_bind_override(entity *ent,e_bind_config flag)
+{ if(ent!=&actor || flag!=BIND_CONFIG_OVERRIDE_FALL_LAND) abort(); return binding_override; }
+entity *spawn(float x,float z,float y,e_direction direction,char *name,int index,s_model *model)
+{ (void)x;(void)z;(void)y;(void)direction;(void)name;(void)index;(void)model;abort(); }
+void execute_onspawn_script(entity *ent) { (void)ent;abort(); }
+void toss(entity *ent,float height) { (void)ent;(void)height;abort(); }
+int sound_play_sample(int sample,unsigned priority,int left,int right,unsigned speed)
+{ (void)sample;(void)priority;(void)left;(void)right;(void)speed;abort(); }
+void control_rumble(int port,int ratio,int msec) { (void)port;(void)ratio;(void)msec;abort(); }
+bool check_landframe(entity *ent)
+{ if(ent!=&actor || self!=ent) abort(); ++land_calls; return false; }
+void checkdamageonlanding(entity *ent)
+{ if(ent!=&actor || self!=ent || land_calls!=1) abort(); ++damage_calls; }
+@FUNCTION@
+
+int main(void)
+{
+    static const unsigned profiles[]={@PROFILES@};
+    static const struct input_case { int type,cheat,frozen,bind,marked,ascending; } cases[]={@CASES@};
+    static s_anim animation;
+    static s_move move;
+    static s_move *moves[]={&move};
+    size_t p,c;
+    animation.move=moves;
+    puts("{\"status\":\"PASS\",\"profiles\":[");
+    for(p=0;p<sizeof(profiles)/sizeof(*profiles);++p)
+    {
+        obor_profile_build=profiles[p];
+        printf("%s{\"revision\":%u,\"cases\":[",p ? "," : "",profiles[p]);
+        for(c=0;c<sizeof(cases)/sizeof(*cases);++c)
+        {
+            memset(&actor,0,sizeof(actor)); damage_calls=land_calls=0; self=&sentinel;
+            actor.animation=&animation; actor.modeldata.type=cases[c].type;
+            actor.position.y=0.5f; actor.velocity.y=cases[c].ascending ? 2 : -2;
+            actor.falling=1; actor.frozen=cases[c].frozen;
+            actor.modeldata.dust.fall_land=-1;
+            actor.update_mark=cases[c].marked ? UPDATE_MARK_CHECK_GRAVITY : 0;
+            binding_override=cases[c].bind;
+            global_config.cheats=cases[c].cheat ? CHEAT_OPTIONS_HEALTH_ACTIVE : 0;
+            check_gravity(&actor);
+            printf("%s[%d,%d,%d,%d,%d,%d]",c ? "," : "",damage_calls,land_calls,self==&sentinel,
+                !!(actor.update_mark & UPDATE_MARK_CHECK_GRAVITY),actor.falling,actor.position.y==actor.base);
+        }
+        printf("]}");
+    }
+    puts("]}"); return 0;
+}

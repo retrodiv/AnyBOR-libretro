@@ -8,6 +8,13 @@ distributed hash of every retained upstream file. This makes the port's modifica
 distinguishable from upstream code without importing upstream Git history.
 The shared port, frontend glue and build tooling are included as source.
 
+The official v4.0 7530, 7555, 7556 and 7735 profiles identify their own source
+revisions in `src/pin.json`. The 7556 package's engine has an embedded 7555
+label; its verified package identity and global-configuration implementation
+correspond to source revision `fc92d78dbf8110c8af10702233ba4f022d6bdc50`.
+Profile adaptations retain source copyright notices and the applicable BSD terms.
+The imported flash and music interfaces retain their [7735 source license](LICENSES/OpenBOR-profile-7735-BSD-3-Clause.txt); source-import records preserve their own original hashes.
+
 The early Android random provider uses an independently written, engine-owned
 state machine for the platform's additive random sequence. Its factual
 algorithm and sequence controls are checked against Android's

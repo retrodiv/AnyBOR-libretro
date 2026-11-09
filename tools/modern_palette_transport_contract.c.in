@@ -1,0 +1,73 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "openbor.h"
+#undef printf
+uint32_t obor_profile_build;
+int pixelbytes[5]={1,1,2,3,4};
+unsigned char pal[MAX_PAL_SIZE];
+char packfile[OBOR_CONTENT_PATH_MAX]="archive";
+static int available,position,failed_open,image_result,opens,reads,closes,images,changes,current_palette;
+int openpackfile(const char *filename,const char *archive)
+{
+    if(!filename || archive!=packfile) abort();
+    ++opens;return failed_open ? -1 : 9;
+}
+int readpackfile(int handle,void *memory,int length)
+{
+    unsigned char *out=memory;int count,i;
+    if(handle!=9 || length!=3) abort();
+    ++reads;count=available-position;if(count>length) count=length;
+    if(count<0) abort();
+    for(i=0;i<count;++i) out[i]=(unsigned char)((position+i)*13+7);
+    position+=count;return count;
+}
+int closepackfile(int handle) { if(handle!=9) abort();++closes;return 0; }
+int loadimagepalette(char *filename,char *archive,unsigned char *out)
+{
+    size_t i;if(!filename || archive!=packfile) abort();++images;
+    for(i=0;i<MAX_PAL_SIZE;++i) out[i]=(unsigned char)(i*5+23);
+    return image_result;
+}
+void change_system_palette(int index) { if(index) abort();++changes;current_palette=index; }
+@COLOR@
+@FUNCTIONS@
+static uint64_t digest(const unsigned char *bytes,size_t count)
+{
+    uint64_t hash=UINT64_C(14695981039346656037);
+    while(count--) { hash^=*bytes++;hash*=UINT64_C(1099511628211); }
+    return hash;
+}
+int main(void)
+{
+    static const unsigned profiles[]={@PROFILES@};
+    static const struct input { int standard,format,length,failed_open,image_result,unaligned,immediate; }
+        inputs[]={@CASES@};
+    size_t p,c;
+    printf("{\"status\":\"PASS\",\"profiles\":[");
+    for(p=0;p<sizeof(profiles)/sizeof(*profiles);++p)
+    {
+        obor_profile_build=profiles[p];
+        printf("%s{\"revision\":%u,\"cases\":[",p ? ",":"",profiles[p]);
+        for(c=0;c<sizeof(inputs)/sizeof(*inputs);++c)
+        {
+            const struct input *in=inputs+c;unsigned char storage[MAX_PAL_SIZE+2];
+            unsigned char *out=storage+in->unaligned;int result=9;
+            char *filename=in->format==0 ? "palette.ACT" : in->format==1 ? "palette.img" : "palette";
+            memset(storage,0xa5,sizeof(storage));memset(pal,0xcc,sizeof(pal));
+            available=in->length;failed_open=in->failed_open;image_result=in->image_result;
+            position=opens=reads=closes=images=changes=0;current_palette=7;
+            if(in->standard) standard_palette(in->immediate);else result=load_palette(out,filename);
+            if((in->unaligned && storage[0]!=0xa5) || storage[MAX_PAL_SIZE+in->unaligned]!=0xa5) abort();
+            printf("%s{\"result\":%d,\"services\":[%d,%d,%d,%d,%d],\"position\":%d,\"current\":%d,\"bytes\":\"%016" PRIx64 "\"}",
+                c ? ",":"",result,opens,reads,closes,images,changes,position,current_palette,
+                digest(in->standard ? pal : out,MAX_PAL_SIZE));
+        }
+        printf("]}");
+    }
+    printf("]}\n");return 0;
+}

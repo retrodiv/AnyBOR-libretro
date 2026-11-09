@@ -1,0 +1,225 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <assert.h>
+#include <ctype.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "openbor.h"
+#include "commands.h"
+#undef printf
+
+uint32_t obor_profile_build;
+int max_animations, pixelformat;
+s_videomodes videomodes;
+s_savedata savedata;
+s_player player[MAX_PLAYERS];
+static int mpicon[MAX_PLAYERS][2];
+static s_drawmethod drawmethod;
+static unsigned char palette[1024], previous_palette[1024];
+static int drawn, drawn_id, drawn_x, drawn_y, drawn_z, drawn_sort, drawn_map;
+static int sprite_ids[64], sprite_modes[64], sprite_count;
+static int sound_ids[64], sound_modes[64], sound_count;
+static int load_calls, supplied_sprite, load_x, load_y, load_format;
+static char loaded_path[80];
+static List command_list;
+static Node command_nodes[1024];
+static char command_names[1024][80];
+static size_t command_count;
+
+static void check_condition(int condition)
+{
+    if(!condition) abort();
+}
+
+List *prepareList(void)
+{
+    memset(&command_list, 0, sizeof(command_list));
+    command_count = 0;
+    return &command_list;
+}
+
+void List_InsertAfter(List *list, void *value, const char *name)
+{
+    check_condition(list == &command_list && command_count < 1024 && strlen(name) < 80);
+    strcpy(command_names[command_count], name);
+    command_nodes[command_count].value = value;
+    ++command_count;
+}
+
+Node *List_GetNodeByName(List *list, const char *name)
+{
+    size_t n;
+    check_condition(list == &command_list);
+    for(n = 0; n < command_count; ++n)
+        if(strcmp(command_names[n], name) == 0) return &command_nodes[n];
+    return NULL;
+}
+
+@REGISTRY@
+
+int loadsprite(char *filename, int x, int y, int format)
+{
+    check_condition(strlen(filename) < sizeof(loaded_path));
+    strcpy(loaded_path, filename);
+    ++load_calls;
+    load_x = x; load_y = y; load_format = format;
+    return supplied_sprite;
+}
+
+void cachesprite(int index, int load)
+{
+    check_condition(sprite_count < 64);
+    sprite_ids[sprite_count] = index;
+    sprite_modes[sprite_count++] = load;
+}
+
+void cachesound(int index, int load)
+{
+    check_condition(sound_count < 64);
+    sound_ids[sound_count] = index;
+    sound_modes[sound_count++] = load;
+}
+
+void cache_attack_hit_sounds(s_collision_attack *head, int load)
+{
+    (void)head; (void)load;
+    abort(); /* The controlled animations have no collision sound lists. */
+}
+
+@CACHE@
+
+void spriteq_add_sprite(int x, int y, int z, int id, s_drawmethod *method, int sort)
+{
+    ++drawn; drawn_id = id; drawn_x = x; drawn_y = y; drawn_z = z; drawn_sort = sort;
+    drawn_map = method->table == palette;
+}
+
+static void initialize_icon(s_model *newchar)
+{
+    @INITIALIZER@
+}
+
+static int load_icon(s_model *newchar, const char *name, int result)
+{
+    char command[80];
+    char *value;
+    ArgList arglist = {0};
+    check_condition(strlen(name) < sizeof(command));
+    strcpy(command, name);
+    supplied_sprite = result;
+    arglist.count = 2;
+    arglist.args[1] = "data/icon.png";
+    switch((modelCommands)(uintptr_t)getCommandlistCommand(&command_list, command))
+    {
+        @LOAD_CASES@
+    default:
+        return 0;
+    }
+    return 1;
+}
+
+static void draw_mp(void)
+{
+    int i = 0;
+    @HUD_BLOCK@
+}
+
+static void print_icons(const s_icon *icon)
+{
+    printf("[%d,%d,%d,%d,%d,%d,%d,%d,%d,%d]", icon->def, icon->die, icon->get,
+           icon->mphigh, icon->mplow, icon->mpmed, icon->mpmax, icon->mpnone,
+           icon->pain, icon->weapon);
+}
+
+int main(void)
+{
+    static const unsigned profiles[] = {@PROFILES@};
+    static const char *commands[] = {@COMMANDS@};
+    static const struct hud_case {
+        int current, capacity, high, low, medium, maximum, empty, usemap;
+    } cases[] = {@CASES@};
+    static entity actor;
+    static s_model model;
+    static s_anim animation;
+    static s_anim *animations[1];
+    static int frame_sprites[] = {41,42}, frame_sounds[] = {51,52};
+    size_t p, c;
+    int n, mode;
+    puts("{\"status\":\"PASS\",\"profiles\":[");
+    for(p = 0; p < sizeof(profiles) / sizeof(profiles[0]); ++p)
+    {
+        obor_profile_build = profiles[p];
+        printf("%s{\"revision\":%u,\"initial\":", p ? "," : "", profiles[p]);
+        memset(&model, 0, sizeof(model));
+        initialize_icon(&model);
+        print_icons(&model.icon);
+        createModelCommandList();
+        printf(",\"commands\":[");
+        for(c = 0; c < sizeof(commands) / sizeof(commands[0]); ++c)
+        {
+            int accepted;
+            initialize_icon(&model);
+            load_calls = 0; loaded_path[0] = '\0';
+            load_x = load_y = load_format = -1;
+            pixelformat = 77;
+            accepted = load_icon(&model, commands[c], 91);
+            printf("%s{\"accepted\":%d,\"calls\":%d,\"path\":\"%s\","
+                   "\"x\":%d,\"y\":%d,\"format\":%d,\"icons\":",
+                   c ? "," : "", accepted, load_calls, loaded_path,
+                   load_x, load_y, load_format);
+            print_icons(&model.icon);
+            putchar('}');
+        }
+        printf("],\"cache\":[");
+        model.icon = (s_icon){.def=11,.die=12,.get=13,.mphigh=14,.mplow=15,
+                             .mpmed=16,.mpmax=17,.mpnone=18,.pain=19,.weapon=20};
+        model.diesound = 31;
+        for(n = 0; n < MAX_PLAYERS; ++n) model.player_arrow[n].sprite = 21 + n;
+        animation.numframes = 2;
+        animation.sprite = frame_sprites;
+        animation.soundtoplay = frame_sounds;
+        animations[0] = &animation;
+        model.animation = animations;
+        model.animation_capacity = 1;
+        max_animations = 1;
+        for(mode = 0; mode < 2; ++mode)
+        {
+            sprite_count = sound_count = 0;
+            cache_model_sprites(&model, mode);
+            printf("%s{\"sprites\":[", mode ? "," : "");
+            for(n = 0; n < sprite_count; ++n)
+                printf("%s[%d,%d]", n ? "," : "", sprite_ids[n], sprite_modes[n]);
+            printf("],\"sounds\":[");
+            for(n = 0; n < sound_count; ++n)
+                printf("%s[%d,%d]", n ? "," : "", sound_ids[n], sound_modes[n]);
+            printf("]}");
+        }
+        printf("],\"hud\":[");
+        player[0].ent = &actor;
+        actor.colourmap = palette;
+        videomodes.shiftpos[0] = 100;
+        savedata.windowpos = 20;
+        mpicon[0][0] = 3; mpicon[0][1] = 4;
+        for(c = 0; c < sizeof(cases) / sizeof(cases[0]); ++c)
+        {
+            actor.energy_state.mp_old = cases[c].current;
+            actor.modeldata.mp = cases[c].capacity;
+            actor.modeldata.icon = (s_icon){.mphigh=cases[c].high,.mplow=cases[c].low,
+                .mpmed=cases[c].medium,.mpmax=cases[c].maximum,.mpnone=cases[c].empty,
+                .usemap=cases[c].usemap};
+            drawn = 0; drawn_id = drawn_x = drawn_y = drawn_z = drawn_sort = drawn_map = -1;
+            drawmethod.table = previous_palette;
+            draw_mp();
+            printf("%s{\"calls\":%d,\"id\":%d,\"x\":%d,\"y\":%d,\"z\":%d,"
+                   "\"sort\":%d,\"map\":%d,\"table\":%d}", c ? "," : "",
+                   drawn, drawn_id, drawn_x, drawn_y, drawn_z, drawn_sort, drawn_map,
+                   drawmethod.table == palette ? 1 : drawmethod.table == NULL ? 0 : 2);
+        }
+        printf("]}");
+    }
+    puts("]}");
+    return 0;
+}

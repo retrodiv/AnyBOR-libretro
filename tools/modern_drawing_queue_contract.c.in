@@ -1,0 +1,107 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wignored-qualifiers"
+#if defined(__clang__)
+#pragma GCC diagnostic ignored "-Wdeprecated-non-prototype"
+#endif
+#include "types.h"
+#include "globals.h"
+#undef printf
+uint32_t obor_profile_build;
+unsigned channelr,channelg,channelb,tintmode,tintcolor;
+int usechannel,useclip,clipx1,clipy1,clipx2,clipy2;
+@QUEUE_RECORD@
+static qstruct queue[MAXQSPRITES];
+static qstruct *order[MAXQSPRITES];
+static int spritequeue_len;
+static s_sprite frame;
+static s_screen screen;
+static s_sprite_list node;
+static s_sprite_map map_record;
+s_sprite_map *sprite_map=&map_record;
+s_sprite *loadsprite2(char *filename,int *width,int *height)
+{
+    (void)filename;(void)width;(void)height;abort();
+}
+@QUEUE_FUNCTIONS@
+@PIXEL_INIT@
+@DRAW_INIT@
+#pragma GCC diagnostic pop
+static void add_entry(unsigned route,s_drawmethod *method)
+{
+    switch(route)
+    {
+    case 0: spriteq_add_frame(2,3,4,&frame,method,5);break;
+    case 1: spriteq_add_sprite(2,3,4,0,method,5);break;
+    case 2: spriteq_add_screen(2,3,4,&screen,method,5);break;
+    case 3: spriteq_add_dot(2,3,4,7,method);break;
+    case 4: spriteq_add_line(2,3,8,9,4,7,method);break;
+    case 5: spriteq_add_box(2,3,8,9,4,7,method);break;
+    default:abort();
+    }
+}
+int main(void)
+{
+    static const unsigned profiles[]={@PROFILES@};
+    static const int flags[]={-7,0,5};
+    static const unsigned masks[]={0u,4u,0x403u};
+    unsigned p,route,provided,seed,full,f,m,c,index;
+    node.sprite=&frame;map_record.node=&node;map_record.centerx=11;map_record.centery=12;
+    puts("{\"status\":\"PASS\",\"profiles\":[");
+    for(p=0;p<sizeof(profiles)/sizeof(*profiles);++p)
+    {
+        obor_profile_build=profiles[p];index=0;
+        printf("%s{\"revision\":%u,\"queue\":[",p?",":"",profiles[p]);
+        for(route=0;route<6;++route)
+            for(provided=0;provided<2;++provided)
+                for(seed=0;seed<2;++seed)
+                    for(full=0;full<2;++full)
+                    {
+                        s_drawmethod method={0};
+                        queue[0]=(qstruct){0};order[0]=NULL;
+                        queue[0].drawmethod.flag=17;
+                        queue[0].drawmethod.config=(e_drawmethod_config)(seed?0xffffffffu:0x403u);
+                        queue[0].drawmethod.alpha=9;queue[0].drawmethod.scalex=99;
+                        method.flag=seed?-7:0;
+                        method.config=(e_drawmethod_config)(seed?4u:0x400u);
+                        method.alpha=6;method.scalex=123;
+                        spritequeue_len=full?MAXQSPRITES:0;
+                        add_entry(route,provided?&method:NULL);
+                        printf("%s[%d,%d,%u,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d]",index++?",":"",
+                            spritequeue_len,queue[0].drawmethod.flag,(unsigned)queue[0].drawmethod.config,
+                            queue[0].drawmethod.alpha,queue[0].drawmethod.scalex,order[0]==&queue[0],
+                            queue[0].type,queue[0].x,queue[0].y,queue[0].z,queue[0].sortid,
+                            queue[0].params[0],queue[0].params[1],queue[0].params[2]);
+                    }
+        printf("],\"init\":[");index=0;
+        for(f=0;f<3;++f)
+            for(m=0;m<3;++m)
+                for(c=0;c<2;++c)
+                {
+                    s_drawmethod method={0};int alpha;
+                    method.flag=flags[f];method.config=(e_drawmethod_config)masks[m];method.alpha=6;
+                    method.channelr=111;method.channelg=222;method.channelb=33;
+                    method.tintmode=3;method.tintcolor=0x1234;
+                    method.clipx=-2;method.clipy=3;method.clipw=c?4:0;method.cliph=5;
+                    channelr=71;channelg=72;channelb=73;tintmode=74;tintcolor=75;
+                    usechannel=76;useclip=81;clipx1=77;clipy1=78;clipx2=79;clipy2=80;
+                    alpha=draw_init(&method);
+                    printf("%s[%d,%u,%u,%u,%u,%u,%d,%d,%d,%d,%d,%d]",index++?",":"",
+                        alpha,channelr,channelg,channelb,tintmode,tintcolor,usechannel,useclip,
+                        clipx1,clipy1,clipx2,clipy2);
+                }
+        channelr=71;channelg=72;channelb=73;tintmode=74;tintcolor=75;
+        usechannel=76;useclip=81;clipx1=77;clipy1=78;clipx2=79;clipy2=80;
+        { int alpha=draw_init(NULL);
+          printf(",[%d,%u,%u,%u,%u,%u,%d,%d,%d,%d,%d,%d]",alpha,channelr,channelg,
+            channelb,tintmode,tintcolor,usechannel,useclip,clipx1,clipy1,clipx2,clipy2); }
+        printf("]}");
+    }
+    puts("]}");return 0;
+}

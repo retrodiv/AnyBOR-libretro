@@ -1,10 +1,11 @@
-/* AnyBOR modification record: 2026-10-21.
+/* AnyBOR modification record: 2026-11-09.
  * Port maintained by retrodiv <retrodiv@proton.me>.
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
  * Upstream code retains its original license and notices.
  * Keep absent transform masks null during sprite seeks and traversal; retain
- * native masked cursor positioning.
+ * native masked cursor positioning. Select native transformation flip and
+ * transparency flags by profile.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/7533.md
  * at the source repository root. Original notices follow below.
@@ -810,7 +811,7 @@ void init_gfx_global_draw_stuff(s_screen *dest, gfx_entry *src, s_drawmethod *dr
 
     span_src = spb * trans_sw;
     span_dest = dpb * trans_dw;
-    transbg = (drawmethod->transbg || src->screen->magic == sprite_magic); // check color key, we'll need this for screen and bitmap
+    transbg = ((obor_profile_build >= 7567 ? (int)(drawmethod->config & DRAWMETHOD_CONFIG_BACKGROUND_TRANSPARENCY) : drawmethod->transbg) || src->screen->magic == sprite_magic); // check color key, we'll need this for screen and bitmap
     calc_wp_cond();
 
     if(!trans_sw)
@@ -943,8 +944,8 @@ void gfx_draw_rotate(s_screen *dest, gfx_entry *src, int x, int y, int centerx, 
     centery += drawmethod->centery;
 
     /////////////////begin clipping////////////////////////////
-    xboundf[0] = drawmethod->flipx ? (centerx - trans_sw) * zoomx : -centerx * zoomx;
-    yboundf[0] = drawmethod->flipy ? (centery - trans_sh) * zoomy : -centery * zoomy;
+    xboundf[0] = (obor_profile_build >= 7567 ? (int)(drawmethod->config & DRAWMETHOD_CONFIG_FLIP_X) : drawmethod->flipx) ? (centerx - trans_sw) * zoomx : -centerx * zoomx;
+    yboundf[0] = (obor_profile_build >= 7567 ? (int)(drawmethod->config & DRAWMETHOD_CONFIG_FLIP_Y) : drawmethod->flipy) ? (centery - trans_sh) * zoomy : -centery * zoomy;
     xboundf[1] = xboundf[0] + trans_sw * zoomx;
     yboundf[1] = yboundf[0];
     xboundf[2] = xboundf[0];
@@ -969,7 +970,7 @@ void gfx_draw_rotate(s_screen *dest, gfx_entry *src, int x, int y, int centerx, 
     /////////////////end clipping////////////////////////////
 
     // tricks to keep rotate not affected by flip
-    if(drawmethod->flipx)
+    if((obor_profile_build >= 7567 ? (int)(drawmethod->config & DRAWMETHOD_CONFIG_FLIP_X) : drawmethod->flipx))
     {
         zoomx = -zoomx;
     }
@@ -977,7 +978,7 @@ void gfx_draw_rotate(s_screen *dest, gfx_entry *src, int x, int y, int centerx, 
     {
         angle = -angle;
     }
-    if(drawmethod->flipy)
+    if((obor_profile_build >= 7567 ? (int)(drawmethod->config & DRAWMETHOD_CONFIG_FLIP_Y) : drawmethod->flipy))
     {
         zoomy = -zoomy;
         angle = -angle;
@@ -1352,7 +1353,7 @@ void gfx_draw_scale(s_screen *dest, gfx_entry *src, int x, int y, int centerx, i
     cx = centerx * zoomx;
     cy = centery * zoomy;
 
-    if(drawmethod->flipx)
+    if((obor_profile_build >= 7567 ? (int)(drawmethod->config & DRAWMETHOD_CONFIG_FLIP_X) : drawmethod->flipx))
     {
         dx = cx - w + x;
     }
@@ -1361,7 +1362,7 @@ void gfx_draw_scale(s_screen *dest, gfx_entry *src, int x, int y, int centerx, i
         dx = x - cx;
     }
 
-    if(drawmethod->flipy)
+    if((obor_profile_build >= 7567 ? (int)(drawmethod->config & DRAWMETHOD_CONFIG_FLIP_Y) : drawmethod->flipy))
     {
         dy = cy - h + y;
         shiftf = - shiftf;
@@ -1373,7 +1374,7 @@ void gfx_draw_scale(s_screen *dest, gfx_entry *src, int x, int y, int centerx, i
 
     dx += ((dy + h - y) * shiftf) >> 8;
 
-    if(drawmethod->flipx)
+    if((obor_profile_build >= 7567 ? (int)(drawmethod->config & DRAWMETHOD_CONFIG_FLIP_X) : drawmethod->flipx))
     {
         stepdx = 65536 / zoomx;
         osx = 0;
@@ -1383,7 +1384,7 @@ void gfx_draw_scale(s_screen *dest, gfx_entry *src, int x, int y, int centerx, i
         stepdx = -65536 / zoomx;
         osx = (trans_sw << 8) + stepdx;
     }
-    if(drawmethod->flipy)
+    if((obor_profile_build >= 7567 ? (int)(drawmethod->config & DRAWMETHOD_CONFIG_FLIP_Y) : drawmethod->flipy))
     {
         stepdy = 65536 / zoomy;
         sy = 0;

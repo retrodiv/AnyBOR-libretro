@@ -36,6 +36,7 @@ def program(glue, header):
                  glue.index('\nvoid retro_set_environment(')]
     registration = function(glue, 'retro_set_environment')
     getter = function(glue, 'get_engine_option')
+    option_readers = '\n'.join(function(glue, name) for name in ('opt_is_on', 'state_option'))
     fixtures = [('actual', actual)]
     for count in (1, capacity - 3, capacity - 2, capacity - 1,
                   capacity, capacity + 15, capacity * 2, capacity * 4):
@@ -71,10 +72,15 @@ struct frontend_fixture {
     std::vector<option_snapshot> options;
     const retro_core_options_v2 *retained_v2;
     const retro_variable *retained_legacy;
-    const char *selected;
+    const char *selected, *option_value;
 };
 static frontend_fixture *active;
 static unsigned registration_checks, selection_checks;
+static const char *const expected_keys[]={
+    "anybor_crt_tv","anybor_analog","anybor_rumble","anybor_macros","anybor_engine",
+    "anybor_state_content","anybor_state_compression","anybor_gamelog",
+    "anybor_clear_local_data","anybor_clear_game_cache","anybor_clear_all_caches"
+};
 
 static std::vector<std::string> split(const char *text) {
     assert(text && *text);
@@ -90,15 +96,16 @@ static std::vector<std::string> split(const char *text) {
 }
 static void check_values(const option_snapshot &option) {
     assert(!option.key.empty() && !option.values.empty());
+    assert(option.key.compare(0,7,"anybor_")==0);
     assert(option.default_value==option.values[0]);
-    if (option.key=="obor_engine") {
+    if (option.key=="anybor_engine") {
         assert(option.default_value=="Auto");
         assert(option.values.size()==active->profiles.size()+1);
         for (size_t i=0;i<active->profiles.size();++i)
             assert(option.values[i+1]==active->profiles[i]);
     }
-    if (option.key=="obor_state_content") assert(option.default_value==OBOR_STATE_CONTENT_DEFAULT);
-    if (option.key=="obor_state_compression") assert(option.default_value==OBOR_STATE_COMPRESSION_DEFAULT);
+    if (option.key=="anybor_state_content") assert(option.default_value==OBOR_STATE_CONTENT_DEFAULT);
+    if (option.key=="anybor_state_compression") assert(option.default_value==OBOR_STATE_COMPRESSION_DEFAULT);
 }
 static void read_v2(const retro_core_options_v2 *options) {
     assert(options && options->definitions && options->categories);
@@ -144,7 +151,12 @@ static bool environment(unsigned command,void *data) {
     }
     if (command==RETRO_ENVIRONMENT_GET_VARIABLE) {
         retro_variable *var=(retro_variable*)data;
-        assert(!strcmp(var->key,"obor_engine"));var->value=active->selected;return true;
+        bool known=false;
+        for (size_t i=0;i<sizeof(expected_keys)/sizeof(*expected_keys);++i)
+            if (!strcmp(var->key,expected_keys[i])) known=true;
+        assert(known);
+        var->value=!strcmp(var->key,"anybor_engine")?active->selected:active->option_value;
+        return true;
     }
     assert(!"unexpected environment call");return false;
 }
@@ -153,7 +165,7 @@ static bool environment(unsigned command,void *data) {
     calls = []
     for name, declarations in fixtures:
         source += '\nnamespace ' + name + ' {\n' + declarations + '\n'
-        source += 'static retro_environment_t env_cb;\n' + registration + '\n' + getter
+        source += 'static retro_environment_t env_cb;\n' + registration + '\n' + getter + '\n' + option_readers
         source += r'''
 void run(void) {
     char output[48];get_engine_option(output,sizeof(output));assert(!strcmp(output,"Auto"));
@@ -171,6 +183,8 @@ void run(void) {
             active=&fixture;retro_set_environment(environment);
             assert(fixture.queries==1 && fixture.registrations==1);
             assert(!fixture.options.empty());
+            assert(fixture.options.size()==sizeof(expected_keys)/sizeof(*expected_keys));
+            for (size_t i=0;i<fixture.options.size();++i) assert(fixture.options[i].key==expected_keys[i]);
             if (baseline.empty()) baseline=fixture.options;else assert(fixture.options==baseline);
             std::vector<option_snapshot> captured=fixture.options;fixture.options.clear();
             // Storage remains valid after registration returns and on repeated registration.
@@ -181,6 +195,25 @@ void run(void) {
                 get_engine_option(output,sizeof(output));assert(profiles[i]==output);++selection_checks;
             }
             fixture.selected=NULL;get_engine_option(output,sizeof(output));assert(!strcmp(output,"Auto"));
+            for (size_t i=0;i<fixture.options.size();++i) {
+                const option_snapshot &option=fixture.options[i];
+                if (option.key=="anybor_engine") continue;
+                const bool state=option.key=="anybor_state_content" || option.key=="anybor_state_compression";
+                fixture.option_value=NULL;
+                if (state) {
+                    assert(state_option(option.key.c_str(),option.values[0].c_str(),option.values[1].c_str())==OBOR_STATE_SETTING_DEFAULT);
+                    fixture.option_value=option.values[0].c_str();
+                    assert(state_option(option.key.c_str(),option.values[0].c_str(),option.values[1].c_str())==OBOR_STATE_SETTING_ON);
+                    fixture.option_value=option.values[1].c_str();
+                    assert(state_option(option.key.c_str(),option.values[0].c_str(),option.values[1].c_str())==OBOR_STATE_SETTING_OFF);
+                    fixture.option_value="unknown";
+                    assert(state_option(option.key.c_str(),option.values[0].c_str(),option.values[1].c_str())==OBOR_STATE_SETTING_DEFAULT);
+                } else {
+                    assert(opt_is_on(option.key.c_str(),true) && !opt_is_on(option.key.c_str(),false));
+                    fixture.option_value="On";assert(opt_is_on(option.key.c_str(),false));
+                    fixture.option_value="Off";assert(!opt_is_on(option.key.c_str(),true));
+                }
+            }
             ++registration_checks;
         }
     }

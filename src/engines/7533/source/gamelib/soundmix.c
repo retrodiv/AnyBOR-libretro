@@ -1,11 +1,12 @@
-/* AnyBOR modification record: 2026-10-08.
+/* AnyBOR modification record: 2026-11-09.
  * Port maintained by retrodiv <retrodiv@proton.me>.
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
  * Upstream code retains its original license and notices.
  * Declare exact resident PCM content-member ranges for independently
  * verified reconstruction; preserve allocation tails and mutable mixer
- * state.
+ * state. Select native sample caching, counter width, channel mixing, music
+ * stream state and lifecycle behavior.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/7533.md
  * at the source repository root. Original notices follow below.
@@ -49,6 +50,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <limits.h>
 #include "obor_resources.h"
 /*
 Caution: move vorbis headers here otherwise the structs will
@@ -123,12 +125,51 @@ typedef struct
 } s_soundcache;
 
 
+typedef struct s_sound_parameters {
+    unsigned int sound_length_max;
+    const unsigned int music_buffers_count;
+    const unsigned int music_buffer_size;
+} s_sound_parameters;
+typedef struct s_audio_global {
+    List samplelist;
+    s_soundcache *soundcache;
+    int sound_cached;
+    unsigned int sample_play_id;
+} s_audio_global;
+s_sound_parameters sound_parameters = { .sound_length_max=UINT32_MAX, .music_buffers_count=MUSIC_NUM_BUFFERS, .music_buffer_size=MUSIC_BUF_SIZE };
+s_audio_global audio_global = { .soundcache=NULL, .sound_cached=0, .sample_play_id=0 };
+#define OBOR_AUDIO_SAMPLE_LIST (*(obor_profile_build >= 7596 ? &audio_global.samplelist : &samplelist))
+
 static List samplelist;
 static s_soundcache *soundcache = NULL;
 static int sound_cached = 0;
 int sample_play_id = 0;
+unsigned int sound_profile_sample_limit(void)
+{
+    return obor_profile_build >= 7587 ? sound_parameters.sound_length_max
+        : obor_profile_build >= 7557 ? 0x4ffffbu : 0xfffffu;
+}
+uint32_t sound_profile_sample_play_id(void)
+{
+    return obor_profile_build >= 7596 ? audio_global.sample_play_id : (uint32_t)sample_play_id;
+}
+static int obor_audio_next_sample_id(void)
+{
+    if(obor_profile_build >= 7596)
+    {
+        uint32_t value=++audio_global.sample_play_id;
+        int result;
+        memcpy(&result,&value,sizeof(result));
+        return result;
+    }
+    /* Keep defined historical values and a stable signed rollover. */
+    if(sample_play_id==INT_MAX) sample_play_id=INT_MIN;
+    else ++sample_play_id;
+    return sample_play_id;
+}
+
 static channelstruct vchannel[MAX_CHANNELS];
-musicchannelstruct musicchannel;
+musicchannelstruct musicchannel = { .object_type = OBJECT_TYPE_MUSIC_CHANNEL };
 static s32 *mixbuf = NULL;
 static int playbits;
 int playfrequency;
@@ -145,6 +186,12 @@ static u32 samplesplayed;
 
 // Records type of currently playing music: 0=ADPCM, 1=Vorbis
 static int music_type = 0;
+
+void sound_music_channel_clear(musicchannelstruct *const music_channel)
+{
+    memset(music_channel, 0, sizeof(*music_channel));
+    if(obor_profile_build >= 7595) music_channel->object_type = OBJECT_TYPE_MUSIC_CHANNEL;
+}
 
 //////////////////////////////// WAVE LOADER //////////////////////////////////
 
@@ -349,9 +396,9 @@ int sound_load_sample(char *filename, char *packfilename, int iLog)
     /////////////////////////////
     strcpy(convcache, filename);
     lc(convcache, strlen(convcache));
-    if(List_FindByName(&samplelist, convcache))
+    if(List_FindByName(&OBOR_AUDIO_SAMPLE_LIST, convcache))
     {
-        cache = &soundcache[(size_t)List_Retrieve(&samplelist)];
+        cache = &soundcache[(size_t)List_Retrieve(&OBOR_AUDIO_SAMPLE_LIST)];
         if(!cache->sample.sampleptr)
         {
             if(!sound_reload_sample(cache->index) && iLog)
@@ -375,10 +422,10 @@ int sound_load_sample(char *filename, char *packfilename, int iLog)
     __realloc(soundcache, sound_cached);
     soundcache[sound_cached].sample = sample;
 
-    List_GotoLast(&samplelist);
-    List_InsertAfter(&samplelist, (void *)(size_t)sound_cached, convcache);
+    List_GotoLast(&OBOR_AUDIO_SAMPLE_LIST);
+    List_InsertAfter(&OBOR_AUDIO_SAMPLE_LIST, (void *)(size_t)sound_cached, convcache);
     soundcache[sound_cached].index = sound_cached;
-    soundcache[sound_cached].filename = List_GetName(&samplelist);
+    soundcache[sound_cached].filename = List_GetName(&OBOR_AUDIO_SAMPLE_LIST);
 
     sound_cached++;
     return sound_cached - 1;
@@ -415,7 +462,7 @@ void sound_unload_all_samples()
     {
         sound_unload_sample(i);
     }
-    List_Clear(&samplelist);
+    List_Clear(&OBOR_AUDIO_SAMPLE_LIST);
     free(soundcache);
     soundcache = NULL;
     sound_cached = 0;
@@ -455,6 +502,12 @@ static void mixaudio(unsigned int todo)
     static unsigned char *sptr8;
     static short *sptr16;
 
+    /* Script-visible slots may be invalid; retain defined samples safely. */
+    if(musicchannel.active && !musicchannel.paused
+       && (musicchannel.playing_buffer < 0 || musicchannel.playing_buffer >= MUSIC_NUM_BUFFERS
+           || !musicchannel.buf[musicchannel.playing_buffer]))
+        musicchannel.active=0;
+
     // First mix the music, if playing
     if(musicchannel.active && !musicchannel.paused)
     {
@@ -482,7 +535,7 @@ static void mixaudio(unsigned int todo)
                 // Correct position in next buffer
                 fp_pos = fp_pos - fp_playto;
                 // Anything to play?
-                if(fp_pos < musicchannel.fp_playto[musicchannel.playing_buffer])
+                if(fp_pos < musicchannel.fp_playto[musicchannel.playing_buffer] && musicchannel.buf[musicchannel.playing_buffer])
                 {
                     // Yeah, switch!
                     sptr16 = musicchannel.buf[musicchannel.playing_buffer];
@@ -501,9 +554,14 @@ static void mixaudio(unsigned int todo)
             }
 
             // Mix a sample
+            if(FIX_TO_INT(fp_pos) >= MUSIC_BUF_SIZE)
+            {
+                musicchannel.active=0;
+                break;
+            }
             lmusic = rmusic = sptr16[FIX_TO_INT(fp_pos)];
-            lmusic = (lmusic * lvolume / MAXVOLUME * 2.5);
-            rmusic = (rmusic * rvolume / MAXVOLUME * 2.5);
+            lmusic = obor_profile_build >= 7587 ? (lmusic * lvolume / 60) : (lmusic * lvolume / MAXVOLUME * 2.5);
+            rmusic = obor_profile_build >= 7587 ? (rmusic * rvolume / 60) : (rmusic * rvolume / MAXVOLUME * 2.5);
             mixbuf[i++] += lmusic;
             if(musicchannel.channels == SOUND_MONO)
             {
@@ -546,10 +604,10 @@ static void mixaudio(unsigned int todo)
                 for(i = 0; i < (int)todo;)
                 {
                     lmusic = rmusic = sptr8[FIX_TO_INT(fp_pos)];
-                    mixbuf[i++] += ((lmusic << 8) * lvolume / MAXVOLUME * 1.5) - 0x8000;
+                    mixbuf[i++] += (obor_profile_build >= 7587 ? ((lmusic << 8) * lvolume / 100) : ((lmusic << 8) * lvolume / MAXVOLUME * 1.5)) - 0x8000;
                     if(vchannel[chan].channels == SOUND_MONO)
                     {
-                        mixbuf[i++] += ((rmusic << 8) * rvolume / MAXVOLUME * 1.5) - 0x8000;
+                        mixbuf[i++] += (obor_profile_build >= 7587 ? ((rmusic << 8) * rvolume / 100) : ((rmusic << 8) * rvolume / MAXVOLUME * 1.5)) - 0x8000;
                     }
                     fp_pos += fp_period;
 
@@ -571,10 +629,10 @@ static void mixaudio(unsigned int todo)
                 for(i = 0; i < (int)todo;)
                 {
                     lmusic = rmusic = (int)(short)SwapLSB16(sptr16[FIX_TO_INT(fp_pos)]);
-                    mixbuf[i++] += (lmusic * lvolume / MAXVOLUME * 1.5);
+                    mixbuf[i++] += (obor_profile_build >= 7587 ? (lmusic * lvolume / 100) : (lmusic * lvolume / MAXVOLUME * 1.5));
                     if(vchannel[chan].channels == SOUND_MONO)
                     {
-                        mixbuf[i++] += (rmusic * rvolume / MAXVOLUME * 1.5);
+                        mixbuf[i++] += (obor_profile_build >= 7587 ? (rmusic * rvolume / 100) : (rmusic * rvolume / MAXVOLUME * 1.5));
                     }
                     fp_pos += fp_period;
 
@@ -677,6 +735,8 @@ int sound_play_sample(int samplenum, unsigned int priority, int lvolume, int rvo
         return -1;
     }
 
+    if(soundcache[samplenum].sample.soundlen <= 0 || playfrequency <= 0) return -1;
+
     // Try to find unused SFX channel
     channel = -1;
     for(i = 0; i < max_channels; i++)
@@ -712,13 +772,13 @@ int sound_play_sample(int samplenum, unsigned int priority, int lvolume, int rvo
     {
         rvolume = 0;
     }
-    if(lvolume > MAXVOLUME * 1.5)
+    if(lvolume > (obor_profile_build >= 7587 ? 100 : 96))
     {
-        lvolume = MAXVOLUME * 1.5;
+        lvolume = (obor_profile_build >= 7587 ? 100 : 96);
     }
-    if(rvolume > MAXVOLUME * 1.5)
+    if(rvolume > (obor_profile_build >= 7587 ? 100 : 96))
     {
-        rvolume = MAXVOLUME * 1.5;
+        rvolume = (obor_profile_build >= 7587 ? 100 : 96);
     }
 
     vchannel[channel].samplenum = samplenum;
@@ -731,7 +791,7 @@ int sound_play_sample(int samplenum, unsigned int priority, int lvolume, int rvo
     vchannel[channel].channels = soundcache[samplenum].sample.channels;
     vchannel[channel].active = CHANNEL_PLAYING;
     vchannel[channel].paused = 0;
-    vchannel[channel].playid = ++sample_play_id;
+    vchannel[channel].playid = obor_audio_next_sample_id();
 
     return channel;
 }
@@ -817,13 +877,13 @@ void sound_volume_sample(int channel, int lvolume, int rvolume)
     {
         rvolume = 0;
     }
-    if(lvolume > MAXVOLUME * 1.5)
+    if(lvolume > (obor_profile_build >= 7587 ? 100 : 96))
     {
-        lvolume = MAXVOLUME * 1.5;
+        lvolume = (obor_profile_build >= 7587 ? 100 : 96);
     }
-    if(rvolume > MAXVOLUME * 1.5)
+    if(rvolume > (obor_profile_build >= 7587 ? 100 : 96))
     {
-        rvolume = MAXVOLUME * 1.5;
+        rvolume = (obor_profile_build >= 7587 ? 100 : 96);
     }
     vchannel[channel].volume[0] = lvolume;
     vchannel[channel].volume[1] = rvolume;
@@ -907,7 +967,7 @@ void sound_close_adpcm()
         }
     }
 
-    memset(&musicchannel, 0, sizeof(musicchannelstruct));
+    sound_music_channel_clear(&musicchannel);
     memset(&borhead, 0, sizeof(bor_header));
 
     adpcm_reset();
@@ -969,7 +1029,7 @@ int sound_open_adpcm(char *filename, char *packname, int volume, int loop, u32 m
         goto error_exit;
     }
 
-    memset(&musicchannel, 0, sizeof(musicchannelstruct));
+    sound_music_channel_clear(&musicchannel);
 
     musicchannel.fp_period = INT_TO_FIX(borhead.frequency) / playfrequency;
     musicchannel.volume[0] = volume;
@@ -1217,7 +1277,7 @@ void sound_close_ogg()
         }
     }
 
-    memset(&musicchannel, 0, sizeof(musicchannelstruct));
+    sound_music_channel_clear(&musicchannel);
 }
 
 int sound_open_ogg(char *filename, char *packname, int volume, int loop, u32 music_offset)
@@ -1279,7 +1339,7 @@ int sound_open_ogg(char *filename, char *packname, int volume, int loop, u32 mus
         goto error_exit;
     }
 
-    memset(&musicchannel, 0, sizeof(musicchannelstruct));
+    sound_music_channel_clear(&musicchannel);
 
     musicchannel.fp_period = INT_TO_FIX(stream_info->rate) / playfrequency;
     musicchannel.volume[0] = volume;
@@ -1558,13 +1618,13 @@ void sound_volume_music(int left, int right)
     {
         right = 0;
     }
-    if(left > MAXVOLUME * 8)
+    if(left > (obor_profile_build >= 7587 ? 800 : 512))
     {
-        left = MAXVOLUME * 8;
+        left = (obor_profile_build >= 7587 ? 800 : 512);
     }
-    if(right > MAXVOLUME * 8)
+    if(right > (obor_profile_build >= 7587 ? 800 : 512))
     {
-        right = MAXVOLUME * 8;
+        right = (obor_profile_build >= 7587 ? 800 : 512);
     }
     musicchannel.volume[0] = left;
     musicchannel.volume[1] = right;
@@ -1677,7 +1737,7 @@ int sound_init(int channels)
 
     mixing_active = 0;
     mixing_inited = 1;
-    List_Init(&samplelist);
+    List_Init(&OBOR_AUDIO_SAMPLE_LIST);
 
     return 1;
 }

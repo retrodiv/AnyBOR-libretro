@@ -73,12 +73,12 @@
       "entity_embedded": false
     },
     "7533": {
-      "entity_size": 2020,
+      "entity_size": 2064,
       "entity_alignment": 4,
-      "method_size": 136,
+      "method_size": 144,
       "method_alignment": 4,
-      "entity_method_offset": 1136,
-      "layer_size": 216,
+      "entity_method_offset": 1172,
+      "layer_size": 224,
       "layer_method_offset": 48,
       "entity_embedded": false
     },

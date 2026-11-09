@@ -1,0 +1,74 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "openbor.h"
+#include "soundmix.h"
+#undef printf
+uint32_t obor_profile_build;
+s_savedata savedata;
+static s_screen live_frame,retained_frame;
+s_screen *vscreen=&live_frame;
+int fade=64,musicoverlap;
+static int allocs,copies,clears,draw_count,videos,waits,frees,ticks,music_updates,music_volumes,music_closes;
+static int channels[64];
+@DEFAULT@
+@BACKEND@
+static s_screen *allocated(int width,int height,int format)
+{ if(width!=2 || height!=2 || format!=PIXEL_32 || allocs++) abort();return &retained_frame; }
+static void copied(s_screen *out,s_screen *in)
+{ if(out!=&retained_frame || in!=vscreen) abort();++copies; }
+static void cleared(s_screen *screen) { if(screen!=vscreen) abort();++clears; }
+static void drawn(s_screen *out,s_screen *in,int x,int y,s_drawmethod *method)
+{
+    if(out!=vscreen || in!=&retained_frame || x || y || draw_count>=64 || method->alpha!=BLEND_MODE_AVERAGE ||
+       method->channelr!=method->channelg || method->channelr!=method->channelb) abort();
+    channels[draw_count++]=method->channelr;
+}
+static void displayed(s_screen *screen) { if(screen!=vscreen) abort();++videos; }
+static void waited(void) { ++waits; }
+static void released(s_screen **screen)
+{ if(!screen || *screen!=&retained_frame) abort();++frees;*screen=NULL; }
+static u32 observed_interval(int speed) { if(speed!=64 && speed!=128) abort();++ticks;return 1; }
+static void music_update(void) { ++music_updates; }
+static void music_volume(int left,int right) { if(left!=right || left<0 || left>100) abort();++music_volumes; }
+static void music_close(void) { ++music_closes; }
+#define allocscreen allocated
+#define copyscreen copied
+#define clearscreen cleared
+#define putscreen drawn
+#define video_copy_screen displayed
+#define vga_vwait waited
+#define freescreen released
+#define timer_getinterval observed_interval
+#define sound_update_music music_update
+#define sound_volume_music music_volume
+#define sound_close_music music_close
+@FUNCTIONS@
+int main(void)
+{
+    static const unsigned profiles[]={@PROFILES@};size_t p;int c,i;
+    printf("{\"status\":\"PASS\",\"profiles\":[");
+    for(p=0;p<sizeof(profiles)/sizeof(*profiles);++p)
+    {
+        obor_profile_build=profiles[p];
+        printf("%s{\"revision\":%u,\"cases\":[",p ? ",":"",profiles[p]);
+        for(c=0;c<4;++c)
+        {
+            memset(&savedata,0,sizeof(savedata));savedata.musicvol=100;
+            live_frame.width=2;live_frame.height=2;live_frame.pixelformat=PIXEL_32;
+            musicoverlap=c==3;allocs=copies=clears=draw_count=videos=waits=frees=ticks=0;
+            music_updates=music_volumes=music_closes=0;
+            fade_out(c==3 ? 0:c,c==1 ? 128:0);
+            printf("%s{\"services\":[%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d],\"channels\":[",
+                c ? ",":"",allocs,copies,clears,draw_count,videos,waits,frees,ticks,music_updates,music_volumes,music_closes);
+            for(i=0;i<draw_count;++i) printf("%s%d",i ? ",":"",channels[i]);
+            printf("]}");
+        }
+        printf("]}");
+    }
+    printf("]}\n");return 0;
+}

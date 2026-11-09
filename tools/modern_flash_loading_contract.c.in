@@ -1,0 +1,199 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <strings.h>
+#ifndef stricmp
+#define stricmp strcasecmp
+#endif
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wignored-qualifiers"
+#if defined(__clang__)
+#pragma GCC diagnostic ignored "-Wdeprecated-non-prototype"
+#endif
+#include "scriptcommon.h"
+#include "commands.h"
+#undef printf
+uint32_t obor_profile_build;
+@DEFAULTS@
+static s_model model;
+static s_anim animation;
+static s_attack smart, collision_attack;
+static s_body collision_body;
+static entity actor;
+static s_collision_attack **expected_attack_head;
+static s_collision_body **expected_body_head;
+static int attack_calls, body_calls, observed_index, cache_calls;
+static int call_attack, call_model, call_count;
+void exitIfFalse(int value, const char *assertion, const char *func, const char *file, int line)
+{
+    (void)assertion; (void)func; (void)file; (void)line;
+    if(!value) abort();
+}
+void StrCache_Collect(int index) { (void)index; abort(); }
+CHAR *StrCache_Get(int index) { (void)index; abort(); }
+int StrCache_Pop(int size) { (void)size; abort(); }
+int StrCache_CreateNewFrom(const CHAR *text) { (void)text; abort(); }
+@VARIANTS@
+@HELPERS@
+s_attack *collision_attack_upsert_property(s_collision_attack **head, const int index)
+{
+    if(head != expected_attack_head || index != 7) abort();
+    ++attack_calls; observed_index=index; return &collision_attack;
+}
+s_body *collision_body_upsert_property(s_collision_body **head, const int index)
+{
+    if(head != expected_body_head || index != 7) abort();
+    ++body_calls; observed_index=index; return &collision_body;
+}
+int get_cached_model_index(char *name)
+{
+    if(strcmp(name,"authored")) abort();
+    ++cache_calls; return 44;
+}
+static void load_value(s_model *newchar, int cmd, const char *text, int mode)
+{
+    ArgList arglist={0};
+    s_anim *newanim=mode==1 ? &animation : NULL;
+    s_collision_attack *temp_collision_head=NULL;
+    s_collision_body *temp_collision_body_head=NULL;
+    int temp_collision_index=7, tempInt=0;
+    char *value=NULL, *filename="synthetic", *command="flash-command";
+    arglist.count=2; arglist.args[0]=command; arglist.args[1]=(char*)text;
+    expected_attack_head=&temp_collision_head; expected_body_head=&temp_collision_body_head;
+    switch(cmd)
+    {
+        @MODEL_CASES@
+        @GLOBAL_CASES@
+        default: abort();
+    }
+}
+@ARG_VALUE@
+static void legacy_attack_set(s_attack *handle, int property, ScriptVariant *value)
+{
+    ScriptVariant *varlist[3]={NULL,NULL,value};
+    LONG temp_int;
+    switch(property)
+    {
+        @SET_CASES@
+        default: abort();
+    }
+}
+#undef ARG_VALUE
+static int legacy_attack_get(s_attack *handle, int property)
+{
+    ScriptVariant result={0}, *out=&result, **pretvar=&out;
+    switch(property)
+    {
+        @GET_CASES@
+        default: abort();
+    }
+    if(out!=&result || result.vt!=VT_INTEGER) abort();
+    return result.lVal;
+}
+@ENTITY_ENUM@
+static int legacy_entity_get(entity *ent, int ltemp)
+{
+    int i=-99;
+    switch(ltemp)
+    {
+        @ENTITY_CASES@
+        default: abort();
+    }
+    return i;
+}
+static entity *record_flash_call(entity *ent, s_attack *attack, int attack_model, int model_id)
+{
+    if(ent!=&actor || attack!=&collision_attack) abort();
+    ++call_count; call_attack=attack_model; call_model=model_id; return NULL;
+}
+static void run_caller(int selected)
+{
+    entity *ent=&actor, *target=&actor, *self=&actor;
+    s_attack *attack=&collision_attack, *attack_object=&collision_attack;
+    switch(selected) { @CALLERS@ default: abort(); }
+}
+#pragma GCC diagnostic pop
+static void print_default_flash(const s_flash_properties *flash, int models)
+{
+    printf("[%d,%d,%d,%d,%d,%d]",models?flash->model_block:0,models?flash->model_hit:0,
+           flash->layer_adjust,flash->layer_source,flash->z_source,
+           obor_profile_build>=7557 ? flash->object_type==OBJECT_TYPE_FLASH : -1);
+}
+static void seed_values(int mode)
+{
+    memset(&model,0,sizeof(model)); smart=emptyattack; collision_attack=emptyattack;
+    collision_body=empty_body;
+    model.flash.model_hit=101;model.flash.model_block=102;
+    model.smartbomb=mode==2?NULL:&smart;
+    smart.flash.model_hit=201;smart.flash.model_block=202;
+    collision_attack.flash=(s_flash_properties){.model_hit=301,.model_block=302,
+        .layer_adjust=303,.layer_source=304,.z_source=305};
+    collision_body.flash=(s_flash_properties){.layer_adjust=403,.layer_source=404,.z_source=405};
+    global_config.flash_layer_adjust=501;global_config.flash_layer_source=502;global_config.flash_z_source=503;
+    global_config.flash.layer_adjust=601;global_config.flash.layer_source=602;global_config.flash.z_source=603;
+    attack_calls=body_calls=cache_calls=0;observed_index=-1;
+}
+static void print_values(void)
+{
+    printf("[%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d]",
+        model.flash.model_hit,model.flash.model_block,smart.flash.model_hit,smart.flash.model_block,
+        collision_attack.flash.model_hit,collision_attack.flash.model_block,collision_attack.flash.layer_adjust,
+        collision_attack.flash.layer_source,collision_attack.flash.z_source,collision_body.flash.layer_adjust,
+        collision_body.flash.layer_source,collision_body.flash.z_source,global_config.flash_layer_adjust,
+        global_config.flash_layer_source,global_config.flash_z_source,global_config.flash.layer_adjust,
+        global_config.flash.layer_source,global_config.flash.z_source,attack_calls,body_calls,observed_index,cache_calls);
+}
+int main(void)
+{
+    static const unsigned profiles[]={@PROFILES@};
+    static const struct { int cmd; const char *text; int mode; } cases[]={@CASES@};
+    static const int properties[]={ATTACK_PROPERTY_EFFECT_BLOCK_FLASH,ATTACK_PROPERTY_EFFECT_HIT_FLASH};
+    static const int value_types[]={VT_INTEGER,VT_DECIMAL,VT_EMPTY};
+    unsigned p,c,property,kind;
+    puts("{\"status\":\"PASS\",\"profiles\":[");
+    for(p=0;p<sizeof(profiles)/sizeof(*profiles);++p)
+    {
+        s_global_config initial=global_config;
+        obor_profile_build=profiles[p];
+        /* Each context observes the actual initializer before any command writes. */
+        printf("%s{\"revision\":%u,\"attack_default\":",p?",":"",profiles[p]);
+        print_default_flash(&emptyattack.flash,1);
+        printf(",\"body_default\":");print_default_flash(&empty_body.flash,obor_profile_build>=7563);
+        printf(",\"global_default\":[%d,%d,%d,%d],\"loads\":[",
+            *obor_profile_global_flash_layer_adjust(),*obor_profile_global_flash_layer_source(),
+            *obor_profile_global_flash_z_source(),obor_profile_build>=7557?global_config.flash.object_type==OBJECT_TYPE_FLASH:-1);
+        for(c=0;c<sizeof(cases)/sizeof(*cases);++c)
+        {
+            if(c)putchar(',');
+            seed_values(cases[c].mode);
+            load_value(&model,cases[c].cmd,cases[c].text,cases[c].mode);print_values();
+        }
+        printf("],\"legacy_entity\":[");actor.modeldata.flash.model_block=71;actor.modeldata.flash.model_hit=72;
+        printf("%d,%d],\"legacy_attack\":[",legacy_entity_get(&actor,_ep_flash_block),legacy_entity_get(&actor,_ep_flash_def));
+        for(property=0;property<2;++property)
+            for(kind=0;kind<3;++kind)
+            {
+                ScriptVariant value={0};int before;
+                collision_attack.flash.model_block=81;collision_attack.flash.model_hit=82;
+                value.vt=value_types[kind];if(value.vt==VT_DECIMAL)value.dblVal=3.75;else value.lVal=-7;
+                before=legacy_attack_get(&collision_attack,properties[property]);
+                legacy_attack_set(&collision_attack,properties[property],&value);
+                printf("%s[%d,%d,%d,%d]",property||kind?",":"",before,
+                    legacy_attack_get(&collision_attack,properties[property]),
+                    collision_attack.flash.model_block,collision_attack.flash.model_hit);
+            }
+        printf("],\"callers\":[");
+        for(c=0;c<3;++c)
+        {
+            call_count=0;collision_attack.flash.model_block=91;collision_attack.flash.model_hit=92;
+            actor.modeldata.flash.model_block=93;actor.modeldata.flash.model_hit=94;
+            run_caller(c);printf("%s[%d,%d,%d]",c?",":"",call_count,call_attack,call_model);
+        }
+        printf("]}");global_config=initial;
+    }
+    puts("]}");return 0;
+}

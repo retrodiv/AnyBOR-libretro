@@ -1,4 +1,4 @@
-/* AnyBOR modification record: 2026-10-22.
+/* AnyBOR modification record: 2026-11-09.
  * Port maintained by retrodiv <retrodiv@proton.me>.
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
  * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
@@ -17,7 +17,9 @@
  * colourtable indices and keep selector arithmetic and table reads defined.
  * Transfer loaded stream buffers through aligned local outputs while
  * preserving native record layout and results. Close owned input files after
- * stream loading and on buffer allocation failure.
+ * stream loading and on buffer allocation failure. Select the native
+ * property namespaces, script result types, legacy call routing and
+ * music/system property domains.
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/7533.md
  * at the source repository root. Original notices follow below.
@@ -774,7 +776,7 @@ int Script_Execute(Script *pscript)
     return result;
 }
 
-static s_attack attack;
+static s_attack attack = {.flash.object_type = OBJECT_TYPE_FLASH};
 
 //////////////////////////////////////////////////////////
 ////////////   system functions
@@ -1242,6 +1244,180 @@ static const char *svlist[] =
 };
 
 
+static const char *obor_profile_system_music_names[] =
+{
+    "background",
+    "background_height",
+    "blockade",
+    "bossescount",
+    "branchname",
+    "count_enemies",
+    "count_entities",
+    "count_npcs",
+    "count_players",
+    "current_branch",
+    "current_level",
+    "current_palette",
+    "current_scene",
+    "current_set",
+    "current_stage",
+    "drawmethod_common",
+    "drawmethod_default",
+    "effectvol",
+    "elapsed_time",
+    "ent_max",
+    "fps",
+    "freeram",
+    "front_panel_z",
+    "game_paused",
+    "game_speed",
+    "game_time",
+    "gfx_x_offset",
+    "gfx_y_offset",
+    "gfx_y_offset_adj",
+    "global_config",
+    "global_sample_beat",
+    "global_sample_beep",
+    "global_sample_beep_2",
+    "global_sample_bike",
+    "global_sample_block",
+    "global_sample_fall",
+    "global_sample_get",
+    "global_sample_get_2",
+    "global_sample_go",
+    "global_sample_indirect",
+    "global_sample_jump",
+    "global_sample_one_up",
+    "global_sample_pause",
+    "global_sample_punch",
+    "global_sample_time_over",
+    "hole_z",
+    "hresolution",
+    "hud_common_opponent",
+    "hud_common_main",
+    "hud_common_mp",
+    "hud_loading",
+    "hud_z",
+    "in_button_config",
+    "in_cheat_options",
+    "in_control_options",
+    "in_enginecreditsscreen",
+    "in_gameoverscreen",
+    "in_halloffamescreen",
+    "in_level",
+    "in_load_game",
+    "in_menuscreen",
+    "in_new_game",
+    "in_options",
+    "in_selectscreen",
+    "in_showcomplete",
+    "in_sound_options",
+    "in_start_game",
+    "in_system_options",
+    "in_titlescreen",
+    "in_video_options",
+    "lasthit_attack",
+    "lasthit_attacker",
+    "lasthit_target",
+    "lasthita",
+    "lasthitc",
+    "lasthitt",
+    "lasthitx",
+    "lasthity",
+    "lasthitz",
+    "levelheight",
+    "levelpos",
+    "levelwidth",
+    "lightx",
+    "lightz",
+    "max_wall_height",
+    "maxanimations",
+    "maxattacktypes",
+    "maxentityvars",
+    "maxglobalvars",
+    "maxindexedvars",
+    "maxplayers",
+    "maxscriptvars",
+    "maxsoundchannels",
+    "mirror_z",
+    "models_cached",
+    "models_loaded",
+    "music_channel",
+    "musicvol",
+    "neon_panel_z",
+    "noaircancel",
+    "nofadeout",
+    "nogameover",
+    "nohof",
+    "nojoin",
+    "nopause",
+    "nosave",
+    "noscreenshot",
+    "noshowcomplete",
+    "numbasemaps",
+    "numbosses",
+    "numholes",
+    "numlayers",
+    "numpalettes",
+    "numwalls",
+    "pakname",
+    "panel_z",
+    "pause",
+    "pixelformat",
+    "player",
+    "player1",
+    "player2",
+    "player3",
+    "player4",
+    "player_max_z",
+    "player_min_z",
+    "porting",
+    "sample_play_id",
+    "screen_panel_z",
+    "screen_status",
+    "scrollmaxx",
+    "scrollmaxz",
+    "scrollminx",
+    "scrollminz",
+    "self",
+    "sets_count",
+    "shadow_z",
+    "shadowalpha",
+    "shadowcolor",
+    "shadowopacity",
+    "showgo",
+    "skiptoset",
+    "slowmotion",
+    "slowmotion_duration",
+    "smartbomber",
+    "soundvol",
+    "textbox",
+    "ticks",
+    "totalram",
+    "usedram",
+    "viewporth",
+    "viewportw",
+    "viewportx",
+    "viewporty",
+    "vresolution",
+    "vscreen",
+    "waiting",
+    "xpos",
+    "ypos",
+};
+
+static int obor_profile_system_property_count(void)
+{
+    return (int)SYSTEM_PROPERTY_THE_END - (obor_profile_build < 7590 ? 1 : 0);
+}
+
+static int obor_profile_system_native_index(int index)
+{
+    if(index < 0 || index >= obor_profile_system_property_count()) return -1;
+    if(obor_profile_build < 7590 && index >= SYSTEM_PROPERTY_MUSIC_CHANNEL) ++index;
+    return index;
+}
+
 // ===== openborvariant =====
 int mapstrings_systemvariant(ScriptVariant **varlist, int paramCount)
 {
@@ -1249,7 +1425,10 @@ int mapstrings_systemvariant(ScriptVariant **varlist, int paramCount)
     int prop;
 
 
-    MAPSTRINGS(varlist[0], svlist, SYSTEM_PROPERTY_THE_END,
+    const char **names = obor_profile_build >= 7590 ? obor_profile_system_music_names : svlist;
+    int count = obor_profile_system_property_count();
+
+    MAPSTRINGS(varlist[0], names, count,
                "openborvariant: System variable name not found: '%s'\n");
 
     return 1;
@@ -1475,7 +1654,7 @@ HRESULT openbor_drawbox(ScriptVariant **varlist , ScriptVariant **pretvar, int p
     {
         l %= MAX_BLENDINGS + 1;
     }
-    if(drawmethod.flag)
+    if(obor_profile_build >= 7567 ? (drawmethod.config & DRAWMETHOD_CONFIG_ENABLED) != 0 : drawmethod.flag != 0)
     {
         dm = drawmethod;
     }
@@ -1539,7 +1718,7 @@ HRESULT openbor_drawboxtoscreen(ScriptVariant **varlist , ScriptVariant **pretva
     {
         l %= MAX_BLENDINGS + 1;
     }
-    if(drawmethod.flag)
+    if(obor_profile_build >= 7567 ? (drawmethod.config & DRAWMETHOD_CONFIG_ENABLED) != 0 : drawmethod.flag != 0)
     {
         dm = drawmethod;
     }
@@ -1596,7 +1775,7 @@ HRESULT openbor_drawline(ScriptVariant **varlist , ScriptVariant **pretvar, int 
     {
         l %= MAX_BLENDINGS + 1;
     }
-    if(drawmethod.flag)
+    if(obor_profile_build >= 7567 ? (drawmethod.config & DRAWMETHOD_CONFIG_ENABLED) != 0 : drawmethod.flag != 0)
     {
         dm = drawmethod;
     }
@@ -1660,7 +1839,7 @@ HRESULT openbor_drawlinetoscreen(ScriptVariant **varlist , ScriptVariant **pretv
     {
         l %= MAX_BLENDINGS + 1;
     }
-    if(drawmethod.flag)
+    if(obor_profile_build >= 7567 ? (drawmethod.config & DRAWMETHOD_CONFIG_ENABLED) != 0 : drawmethod.flag != 0)
     {
         dm = drawmethod;
     }
@@ -1806,7 +1985,7 @@ HRESULT openbor_drawdot(ScriptVariant **varlist , ScriptVariant **pretvar, int p
     {
         l %= MAX_BLENDINGS + 1;
     }
-    if(drawmethod.flag)
+    if(obor_profile_build >= 7567 ? (drawmethod.config & DRAWMETHOD_CONFIG_ENABLED) != 0 : drawmethod.flag != 0)
     {
         dm = drawmethod;
     }
@@ -1870,7 +2049,7 @@ HRESULT openbor_drawdottoscreen(ScriptVariant **varlist , ScriptVariant **pretva
     {
         l %= MAX_BLENDINGS + 1;
     }
-    if(drawmethod.flag)
+    if(obor_profile_build >= 7567 ? (drawmethod.config & DRAWMETHOD_CONFIG_ENABLED) != 0 : drawmethod.flag != 0)
     {
         dm = drawmethod;
     }
@@ -1944,7 +2123,14 @@ HRESULT openbor_drawscreen(ScriptVariant **varlist , ScriptVariant **pretvar, in
     {
         screenmethod = plainmethod;
         screenmethod.alpha = l;
-        screenmethod.transbg = 1;
+        if(obor_profile_build >= 7567)
+        {
+            screenmethod.config |= DRAWMETHOD_CONFIG_BACKGROUND_TRANSPARENCY;
+        }
+        else
+        {
+            screenmethod.transbg = 1;
+        }
     }
 
     spriteq_add_screen((int)value[0], (int)value[1], (int)value[2], s, &screenmethod, 0);
@@ -3444,7 +3630,7 @@ HRESULT openbor_getentityproperty(ScriptVariant **varlist , ScriptVariant **pret
     }
 
     ScriptVariant_Clear(*pretvar);
-    //mapstrings_entityproperty(varlist, paramCount);
+    if(obor_profile_build >= 7609) mapstrings_entityproperty(varlist, paramCount);
 
     arg = varlist[0];
     if(arg->vt != VT_PTR && arg->vt != VT_EMPTY)
@@ -4200,12 +4386,12 @@ HRESULT openbor_getentityproperty(ScriptVariant **varlist , ScriptVariant **pret
         {
         case _ep_flash_block:
         {
-            i = ent->modeldata.bflash;
+            i = ent->modeldata.flash.model_block;
             break;
         }
         case _ep_flash_def:
         {
-            i = ent->modeldata.flash;
+            i = ent->modeldata.flash.model_hit;
             break;
         }
         case _ep_flash_noattack:
@@ -4277,7 +4463,9 @@ HRESULT openbor_getentityproperty(ScriptVariant **varlist , ScriptVariant **pret
     case _ep_guardpoints:
     {
         ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
-        (*pretvar)->lVal = (LONG)ent->modeldata.guardpoints.current;
+        (*pretvar)->lVal = obor_profile_build >= 7553
+            ? (LONG)ent->guardpoints
+            : (LONG)ent->modeldata.guardpoints.current;
         break;
     }
     case _ep_hasplatforms:
@@ -4446,7 +4634,9 @@ HRESULT openbor_getentityproperty(ScriptVariant **varlist , ScriptVariant **pret
     case _ep_jugglepoints:
     {
         ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
-        (*pretvar)->lVal = (LONG)ent->modeldata.jugglepoints.current;
+        (*pretvar)->lVal = obor_profile_build >= 7553
+            ? (LONG)ent->jugglepoints
+            : (LONG)ent->modeldata.jugglepoints.current;
         break;
     }
     case _ep_jumpheight:
@@ -4752,7 +4942,9 @@ HRESULT openbor_getentityproperty(ScriptVariant **varlist , ScriptVariant **pret
     case _ep_maxguardpoints:
     {
         ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
-        (*pretvar)->lVal = (LONG)ent->modeldata.guardpoints.max;
+        (*pretvar)->lVal = obor_profile_build >= 7553
+            ? (LONG)ent->modeldata.profile_guardpoints
+            : (LONG)ent->modeldata.guardpoints.max;
         break;
     }
     case _ep_maxhealth:
@@ -4764,7 +4956,9 @@ HRESULT openbor_getentityproperty(ScriptVariant **varlist , ScriptVariant **pret
     case _ep_maxjugglepoints:
     {
         ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
-        (*pretvar)->lVal = (LONG)ent->modeldata.jugglepoints.max;
+        (*pretvar)->lVal = obor_profile_build >= 7553
+            ? (LONG)ent->modeldata.profile_jugglepoints
+            : (LONG)ent->modeldata.jugglepoints.max;
         break;
     }
     case _ep_maxmp:
@@ -6357,7 +6551,14 @@ HRESULT openbor_changeentityproperty(ScriptVariant **varlist , ScriptVariant **p
     {
         if(SUCCEEDED(ScriptVariant_IntegerValue(varlist[2], &ltemp)))
         {
-            ent->modeldata.guardpoints.current = (LONG)ltemp;
+            if(obor_profile_build >= 7553)
+            {
+                ent->guardpoints = (LONG)ltemp;
+            }
+            else
+            {
+                ent->modeldata.guardpoints.current = (LONG)ltemp;
+            }
         }
         break;
     }
@@ -6485,7 +6686,14 @@ HRESULT openbor_changeentityproperty(ScriptVariant **varlist , ScriptVariant **p
     {
         if(SUCCEEDED(ScriptVariant_IntegerValue(varlist[2], &ltemp)))
         {
-            ent->modeldata.jugglepoints.current = (LONG)ltemp;
+            if(obor_profile_build >= 7553)
+            {
+                ent->jugglepoints = (LONG)ltemp;
+            }
+            else
+            {
+                ent->modeldata.jugglepoints.current = (LONG)ltemp;
+            }
         }
         break;
     }
@@ -6643,7 +6851,14 @@ HRESULT openbor_changeentityproperty(ScriptVariant **varlist , ScriptVariant **p
     {
         if(SUCCEEDED(ScriptVariant_IntegerValue(varlist[2], &ltemp)))
         {
-            ent->modeldata.guardpoints.max = (LONG)ltemp;
+            if(obor_profile_build >= 7553)
+            {
+                ent->modeldata.profile_guardpoints = (LONG)ltemp;
+            }
+            else
+            {
+                ent->modeldata.guardpoints.max = (LONG)ltemp;
+            }
         }
         break;
     }
@@ -6663,7 +6878,14 @@ HRESULT openbor_changeentityproperty(ScriptVariant **varlist , ScriptVariant **p
     {
         if(SUCCEEDED(ScriptVariant_IntegerValue(varlist[2], &ltemp)))
         {
-            ent->modeldata.jugglepoints.max = (LONG)ltemp;
+            if(obor_profile_build >= 7553)
+            {
+                ent->modeldata.profile_jugglepoints = (LONG)ltemp;
+            }
+            else
+            {
+                ent->modeldata.jugglepoints.max = (LONG)ltemp;
+            }
         }
         break;
     }
@@ -8490,6 +8712,8 @@ int getsyspropertybyindex(ScriptVariant *var, int index)
         return 0;
     }
 
+    index = obor_profile_system_native_index(index);
+
     switch(index)
     {
     case SYSTEM_PROPERTY_BACKGROUND:
@@ -9098,6 +9322,12 @@ int getsyspropertybyindex(ScriptVariant *var, int index)
         var->lVal = models_loaded;
         break;
 
+    case SYSTEM_PROPERTY_MUSIC_CHANNEL:
+
+        ScriptVariant_ChangeType(var, VT_PTR);
+        var->ptrVal = &musicchannel;
+        break;
+
     case SYSTEM_PROPERTY_MUSICVOL:
 
         ScriptVariant_ChangeType(var, VT_INTEGER);
@@ -9302,7 +9532,7 @@ int getsyspropertybyindex(ScriptVariant *var, int index)
     case SYSTEM_PROPERTY_SAMPLE_PLAY_ID:
 
         ScriptVariant_ChangeType(var, VT_INTEGER);
-		var->lVal = sample_play_id;
+		var->lVal = (LONG)sound_profile_sample_play_id();
 		break;
 
     case SYSTEM_PROPERTY_SCROLLMAXX:
@@ -9508,6 +9738,8 @@ int changesyspropertybyindex(int index, ScriptVariant *value)
     //char* tempstr = NULL;
     LONG ltemp;
     DOUBLE dbltemp;
+
+    index = obor_profile_system_native_index(index);
 
     switch(index)
     {
@@ -9794,7 +10026,8 @@ int changesyspropertybyindex(int index, ScriptVariant *value)
 
         if (SUCCEEDED(ScriptVariant_IntegerValue(value, &ltemp)))
         {
-            level->pos = (LONG)MAX_WALL_HEIGHT;
+            if(obor_profile_build >= 7557) MAX_WALL_HEIGHT = (LONG)ltemp;
+            else level->pos = (LONG)MAX_WALL_HEIGHT;
         }
         break;
 
@@ -11145,7 +11378,7 @@ HRESULT openbor_damageentity(ScriptVariant **varlist , ScriptVariant **pretvar, 
         }
         atk.attack_type = type;
     }
-    else
+    else if(obor_profile_build < 7564)
     {
         atk = attack;
     }
@@ -11182,7 +11415,7 @@ HRESULT openbor_getcomputeddamage(ScriptVariant **varlist , ScriptVariant **pret
     entity *defender = NULL;
     entity *attacker = NULL;
     LONG force, drop, type;
-    s_attack atk;
+    s_attack atk = emptyattack;
     s_defense* defense_object = NULL;
 
     if(paramCount < 3)
@@ -11233,7 +11466,6 @@ HRESULT openbor_getcomputeddamage(ScriptVariant **varlist , ScriptVariant **pret
         }
     }
 
-    atk = emptyattack;
     atk.attack_force = force;
     atk.attack_drop = drop;
     if(drop)
@@ -12134,6 +12366,8 @@ HRESULT openbor_projectile(ScriptVariant **varlist , ScriptVariant **pretvar, in
         direction = self->direction;
     }
 
+    e_projectile_prime *profile_prime = obor_profile_build >= 7613 ? &ent->projectile_prime : &projectile_prime;
+
     if(paramCount >= 6 && SUCCEEDED(ScriptVariant_IntegerValue(varlist[5], &ltemp)))
     {
         // Backwards compatibility for modules made before bitwise update
@@ -12141,13 +12375,13 @@ HRESULT openbor_projectile(ScriptVariant **varlist , ScriptVariant **pretvar, in
         // behavior to both be tied to a single 0 or 1 value.
         if((LONG)ltemp)
         {
-            projectile_prime |= PROJECTILE_PRIME_BASE_FLOOR;
-            projectile_prime |= PROJECTILE_PRIME_LAUNCH_STATIONARY;
+            *profile_prime |= PROJECTILE_PRIME_BASE_FLOOR;
+            *profile_prime |= PROJECTILE_PRIME_LAUNCH_STATIONARY;
         }
         else
         {
-            projectile_prime |= PROJECTILE_PRIME_BASE_Y;
-            projectile_prime |= PROJECTILE_PRIME_LAUNCH_MOVING;
+            *profile_prime |= PROJECTILE_PRIME_BASE_Y;
+            *profile_prime |= PROJECTILE_PRIME_LAUNCH_MOVING;
         }
     }	
 
@@ -13411,7 +13645,9 @@ HRESULT _getlayerproperty(s_layer *layer, int propind, ScriptVariant **pretvar)
     case _glp_transparency:
     {
         ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
-        (*pretvar)->lVal = (LONG)layer->drawmethod.transbg;
+        (*pretvar)->lVal = obor_profile_build >= 7567
+            ? (LONG)(layer->drawmethod.config & DRAWMETHOD_CONFIG_BACKGROUND_TRANSPARENCY)
+            : (LONG)layer->drawmethod.transbg;
         break;
     }
     case _glp_watermode:
@@ -13498,6 +13734,7 @@ HRESULT _changelayerproperty(s_layer *layer, int propind, ScriptVariant *var)
 {
     e_blend_mode temp;
     DOUBLE temp2;
+    LONG temp3;
     switch(propind)
     {
     case _glp_alpha:
@@ -13560,16 +13797,25 @@ HRESULT _changelayerproperty(s_layer *layer, int propind, ScriptVariant *var)
         {
             return E_FAIL;
         }
-        layer->drawmethod.transbg = temp;
+        if(obor_profile_build >= 7567)
+        {
+            layer->drawmethod.config = temp
+                ? (drawmethod.config | DRAWMETHOD_CONFIG_BACKGROUND_TRANSPARENCY)
+                : (drawmethod.config & ~DRAWMETHOD_CONFIG_BACKGROUND_TRANSPARENCY);
+        }
+        else
+        {
+            layer->drawmethod.transbg = temp;
+        }
         break;
     }
     case _glp_watermode:
     {
-        if(FAILED(ScriptVariant_IntegerValue(var, &temp)))
+        if(FAILED(ScriptVariant_IntegerValue(var, &temp3)))
         {
             return E_FAIL;
         }
-        layer->drawmethod.water.watermode = temp;
+        layer->drawmethod.water.watermode = temp3;
         break;
     }
 
@@ -14714,7 +14960,14 @@ HRESULT openbor_changedrawmethod(ScriptVariant **varlist , ScriptVariant **pretv
         {
             return E_FAIL;
         }
-        pmethod->flag = (int)temp;
+        if(obor_profile_build >= 7567)
+        {
+            pmethod->config = (int)temp ? (pmethod->config | DRAWMETHOD_CONFIG_ENABLED) : (pmethod->config & ~DRAWMETHOD_CONFIG_ENABLED);
+        }
+        else
+        {
+            pmethod->flag = (int)temp;
+        }
         break;
     case _dm_endsize:
         if(FAILED(ScriptVariant_DecimalValue(varlist[2], &ftemp)))
@@ -14735,21 +14988,42 @@ HRESULT openbor_changedrawmethod(ScriptVariant **varlist , ScriptVariant **pretv
         {
             return E_FAIL;
         }
-        pmethod->fliprotate = (int)temp;
+        if(obor_profile_build >= 7567)
+        {
+            pmethod->config = (int)temp ? (pmethod->config | DRAWMETHOD_CONFIG_FLIP_ROTATE) : (pmethod->config & ~DRAWMETHOD_CONFIG_FLIP_ROTATE);
+        }
+        else
+        {
+            pmethod->fliprotate = (int)temp;
+        }
         break;
     case _dm_flipx:
         if(FAILED(ScriptVariant_IntegerValue(varlist[2], &temp)))
         {
             return E_FAIL;
         }
-        pmethod->flipx = (int)temp;
+        if(obor_profile_build >= 7567)
+        {
+            pmethod->config = (int)temp ? (pmethod->config | DRAWMETHOD_CONFIG_FLIP_X) : (pmethod->config & ~DRAWMETHOD_CONFIG_FLIP_X);
+        }
+        else
+        {
+            pmethod->flipx = (int)temp;
+        }
         break;
     case _dm_flipy:
         if(FAILED(ScriptVariant_IntegerValue(varlist[2], &temp)))
         {
             return E_FAIL;
         }
-        pmethod->flipy = (int)temp;
+        if(obor_profile_build >= 7567)
+        {
+            pmethod->config = (int)temp ? (pmethod->config | DRAWMETHOD_CONFIG_FLIP_Y) : (pmethod->config & ~DRAWMETHOD_CONFIG_FLIP_Y);
+        }
+        else
+        {
+            pmethod->flipy = (int)temp;
+        }
         break;
     case _dm_perspective:
         if(FAILED(ScriptVariant_IntegerValue(varlist[2], &temp)))
@@ -14829,7 +15103,14 @@ HRESULT openbor_changedrawmethod(ScriptVariant **varlist , ScriptVariant **pretv
         {
             return E_FAIL;
         }
-        pmethod->transbg = (int)temp;
+        if(obor_profile_build >= 7567)
+        {
+            pmethod->config = (int)temp ? (pmethod->config | DRAWMETHOD_CONFIG_BACKGROUND_TRANSPARENCY) : (pmethod->config & ~DRAWMETHOD_CONFIG_BACKGROUND_TRANSPARENCY);
+        }
+        else
+        {
+            pmethod->transbg = (int)temp;
+        }
         break;
     case _dm_watermode:
         if(FAILED(ScriptVariant_IntegerValue(varlist[2], &temp)))
@@ -14991,13 +15272,13 @@ HRESULT openbor_getdrawmethod(ScriptVariant **varlist , ScriptVariant **pretvar,
             (*pretvar)->lVal = (int)pmethod->fillcolor;
             break;
         case _dm_fliprotate:
-            (*pretvar)->lVal = (int)pmethod->fliprotate;
+            (*pretvar)->lVal = obor_profile_build >= 7567 ? (int)(pmethod->config & DRAWMETHOD_CONFIG_FLIP_ROTATE) : (int)pmethod->fliprotate;
             break;
         case _dm_flipx:
-            (*pretvar)->lVal = (int)pmethod->flipx;
+            (*pretvar)->lVal = obor_profile_build >= 7567 ? (int)(pmethod->config & DRAWMETHOD_CONFIG_FLIP_X) : (int)pmethod->flipx;
             break;
         case _dm_flipy:
-            (*pretvar)->lVal = (int)pmethod->flipy;
+            (*pretvar)->lVal = obor_profile_build >= 7567 ? (int)(pmethod->config & DRAWMETHOD_CONFIG_FLIP_Y) : (int)pmethod->flipy;
             break;
         case _dm_perspective:
             (*pretvar)->lVal = (int)pmethod->water.perspective;
@@ -15028,7 +15309,7 @@ HRESULT openbor_getdrawmethod(ScriptVariant **varlist , ScriptVariant **pretvar,
             (*pretvar)->lVal = (int)pmethod->tintcolor;
             break;
         case _dm_transbg:
-            (*pretvar)->lVal = (int)pmethod->transbg;
+            (*pretvar)->lVal = obor_profile_build >= 7567 ? (int)(pmethod->config & DRAWMETHOD_CONFIG_BACKGROUND_TRANSPARENCY) : (int)pmethod->transbg;
             break;
         case _dm_watermode:
             (*pretvar)->lVal = (int)pmethod->water.watermode;
@@ -15059,7 +15340,7 @@ HRESULT openbor_getdrawmethod(ScriptVariant **varlist , ScriptVariant **pretvar,
         default:
         case _dm_enabled:
         case _dm_flag:
-            (*pretvar)->lVal = (int)pmethod->flag;
+            (*pretvar)->lVal = obor_profile_build >= 7567 ? (int)(pmethod->config & DRAWMETHOD_CONFIG_ENABLED) : (int)pmethod->flag;
             break;
     }
 
@@ -15130,18 +15411,53 @@ HRESULT openbor_setdrawmethod(ScriptVariant **varlist , ScriptVariant **pretvar,
         }
     }
 
-    pmethod->flag = (int)value[0];
+    if(obor_profile_build >= 7567)
+        {
+            pmethod->config = (int)value[0] ? (pmethod->config | DRAWMETHOD_CONFIG_ENABLED) : (pmethod->config & ~DRAWMETHOD_CONFIG_ENABLED);
+        }
+        else
+        {
+            pmethod->flag = (int)value[0];
+        }
     pmethod->scalex = (int)value[1];
     pmethod->scaley = (int)value[2];
-    pmethod->flipx = (int)value[3];
-    pmethod->flipy = (int)value[4];
+    if(obor_profile_build >= 7567)
+        {
+            pmethod->config = (int)value[3] ? (pmethod->config | DRAWMETHOD_CONFIG_FLIP_X) : (pmethod->config & ~DRAWMETHOD_CONFIG_FLIP_X);
+        }
+        else
+        {
+            pmethod->flipx = (int)value[3];
+        }
+    if(obor_profile_build >= 7567)
+        {
+            pmethod->config = (int)value[4] ? (pmethod->config | DRAWMETHOD_CONFIG_FLIP_Y) : (pmethod->config & ~DRAWMETHOD_CONFIG_FLIP_Y);
+        }
+        else
+        {
+            pmethod->flipy = (int)value[4];
+        }
     pmethod->shiftx = (int)value[5];
     pmethod->alpha = (e_blend_mode)value[6];
     pmethod->remap = (int)value[7];
     pmethod->fillcolor = (int)value[8];
     pmethod->rotate = ((int)value[9]) % 360;
-    pmethod->fliprotate = (int)value[10];
-    pmethod->transbg = (int)value[11];
+    if(obor_profile_build >= 7567)
+        {
+            pmethod->config = (int)value[10] ? (pmethod->config | DRAWMETHOD_CONFIG_FLIP_ROTATE) : (pmethod->config & ~DRAWMETHOD_CONFIG_FLIP_ROTATE);
+        }
+        else
+        {
+            pmethod->fliprotate = (int)value[10];
+        }
+    if(obor_profile_build >= 7567)
+        {
+            pmethod->config = (int)value[11] ? (pmethod->config | DRAWMETHOD_CONFIG_BACKGROUND_TRANSPARENCY) : (pmethod->config & ~DRAWMETHOD_CONFIG_BACKGROUND_TRANSPARENCY);
+        }
+        else
+        {
+            pmethod->transbg = (int)value[11];
+        }
     if(paramCount >= 14)
     {
         pmethod->table = (unsigned char *)varlist[13]->ptrVal;

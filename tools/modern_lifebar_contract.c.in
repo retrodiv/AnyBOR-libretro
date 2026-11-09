@@ -1,0 +1,128 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdarg.h>
+#include <string.h>
+#include <strings.h>
+#include "openbor.h"
+#undef printf
+#ifndef stricmp
+#define stricmp strcasecmp
+#endif
+
+uint32_t obor_profile_build;
+int color_black, color_red, color_orange, color_yellow, color_white;
+int color_blue, color_green, color_pink, color_purple, color_magic, color_magic2;
+int shadowcolor, shadowalpha, shadowopacity, colorbars;
+
+static const char *external_text, *internal_text;
+static char files[2][32];
+static size_t file_count, warning_size;
+static char warnings[8192];
+
+void exitIfFalse(int value, const char *assertion, const char *func,
+                 const char *file, int line)
+{
+    (void)assertion;
+    (void)func;
+    (void)file;
+    (void)line;
+    if(!value) abort();
+}
+
+int buffer_pakfile(char *filename, char **buffer, size_t *size)
+{
+    const char *text;
+    size_t length;
+    if(file_count >= 2 || strlen(filename) >= sizeof(files[0])) abort();
+    strcpy(files[file_count++], filename);
+    if(strcmp(filename, "saves/lifebar.txt") == 0) text = external_text;
+    else if(strcmp(filename, "data/lifebar.txt") == 0) text = internal_text;
+    else abort();
+    if(text == NULL) return 0;
+    length = strlen(text);
+    /* This controlled provider owns a host buffer, outside the engine heap. */
+    *buffer = (malloc)(length + 1);
+    if(*buffer == NULL) abort();
+    memcpy(*buffer, text, length + 1);
+    *size = length;
+    return 1;
+}
+
+static int capture_warning(const char *format, ...)
+{
+    int count;
+    va_list arguments;
+    va_start(arguments, format);
+    count = vsnprintf(warnings + warning_size, sizeof(warnings) - warning_size,
+                      format, arguments);
+    va_end(arguments);
+    if(count < 0 || (size_t)count >= sizeof(warnings) - warning_size) abort();
+    warning_size += (size_t)count;
+    return count;
+}
+
+#define printf capture_warning
+@FUNCTIONS@
+#undef printf
+
+static void json_string(const char *text)
+{
+    const unsigned char *cursor = (const unsigned char *)text;
+    putchar('"');
+    for(; *cursor; ++cursor)
+    {
+        if(*cursor == '"' || *cursor == '\\') printf("\\%c", *cursor);
+        else if(*cursor < 32) printf("\\u%04x", *cursor);
+        else putchar(*cursor);
+    }
+    putchar('"');
+}
+
+int main(void)
+{
+    static const unsigned profiles[] = {@PROFILES@};
+    static const struct input_case {
+        const char *external, *internal;
+    } cases[] = {@CASES@};
+    static int *const colors[] = {@COLOR_NAMES@};
+    static const int initial[] = {@INITIAL_COLORS@};
+    size_t p, c, i;
+    puts("{\"status\":\"PASS\",\"profiles\":[");
+    for(p = 0; p < sizeof(profiles) / sizeof(profiles[0]); ++p)
+    {
+        obor_profile_build = profiles[p];
+        printf("%s{\"revision\":%u,\"cases\":[", p ? "," : "", profiles[p]);
+        for(c = 0; c < sizeof(cases) / sizeof(cases[0]); ++c)
+        {
+            for(i = 0; i < sizeof(colors) / sizeof(colors[0]); ++i) *colors[i] = initial[i];
+            shadowalpha = @INITIAL_ALPHA@;
+            shadowopacity = @INITIAL_OPACITY@;
+            colorbars = @INITIAL_BARS@;
+            external_text = cases[c].external;
+            internal_text = cases[c].internal;
+            file_count = warning_size = 0;
+            warnings[0] = '\0';
+            lifebar_colors();
+            printf("%s{\"colors\":[", c ? "," : "");
+            for(i = 0; i < sizeof(colors) / sizeof(colors[0]); ++i)
+                printf("%s%d", i ? "," : "", *colors[i]);
+            printf("],\"shadowalpha\":%d,\"shadowopacity\":%d,\"colorbars\":%d,\"files\":[",
+                   shadowalpha, shadowopacity, colorbars);
+            for(i = 0; i < file_count; ++i)
+            {
+                if(i) putchar(',');
+                json_string(files[i]);
+            }
+            printf("],\"warnings\":");
+            json_string(warnings);
+            putchar('}');
+        }
+        puts("]}");
+    }
+    puts("]}");
+    return 0;
+}

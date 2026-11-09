@@ -21,12 +21,52 @@ SOURCE = Path(os.environ.get('OBOR_TEST_SOURCE', Path(__file__).resolve().parent
 FIXTURE = Path(__file__).parent / 'fixtures/sprite-raster-contracts.json'
 
 
-def program(engine, cases):
-    fixture = load_contract_fixture(FIXTURE)
+def program(engine, cases, *, fixture=None):
+    if fixture is None:
+        fixture = load_contract_fixture(FIXTURE)
     context = fixture['engines'][engine]
     code = render_sprite_raster(revision=int(engine), clipping=context['clipping'],
         resource_hooks=context['resource_hooks'], assert_refusal=context['assert_refusal'],
         palettes=fixture['palettes'], cases=cases)
+    format_global = context.get('format_global', 'screenformat')
+    if format_global not in ('screenformat', 'pixelformat'):
+        raise ValueError('A native screen format global is required')
+    code = code.replace('screenformat=dest->pixelformat;', format_global + '=dest->pixelformat;')
+    if context.get('bitmap_clip_fields', False):
+        marker = '  bitmap->width=bitmap->height=4;'
+        if code.count(marker) != 1:
+            raise ValueError('One native bitmap initialization required')
+        code = code.replace(marker, marker +
+                            'bitmap->clipped_width=bitmap->clipped_height=4;')
+    palette_storage = context.get('palette_storage_bytes')
+    if palette_storage is not None:
+        if type(palette_storage) is not int or not 1024 <= palette_storage <= 65536:
+            raise ValueError('A bounded complete palette storage size is required')
+        marker = 'size_t palette_bytes=test->bits==8?0:(size_t)(test->bits/8)*256;'
+        if code.count(marker) != 1:
+            raise ValueError('One native palette storage allocation required')
+        code = code.replace(marker, 'size_t palette_bytes=test->bits==8?0:%du;' % palette_storage)
+        marker = 'memcpy(bitmap->palette,test->bits==16?(void*)palette_16_original:(void*)palette_32_original,palette_bytes);'
+        if code.count(marker) != 1:
+            raise ValueError('One initialized palette source required')
+        # Fill only the authored entries; calloc initializes unused storage.
+        code = code.replace(marker, marker.replace('palette_bytes);', '(size_t)(test->bits/8)*256);'))
+    mask_from = context.get('mask_from')
+    if mask_from is not None:
+        if type(mask_from) is not int or not 0 < mask_from <= 0xffffffff:
+            raise ValueError('A bounded drawing mask boundary is required')
+        marker = '  method.fillcolor=(unsigned)test->fill;'
+        if code.count(marker) != 1:
+            raise ValueError('One drawing record initialization required')
+        code = code.replace(marker, '''  if(obor_profile_build >= %du){
+   method.config=DRAWMETHOD_CONFIG_ENABLED |
+    (test->flip[0]?DRAWMETHOD_CONFIG_FLIP_X:0) |
+    (test->flip[1]?DRAWMETHOD_CONFIG_FLIP_Y:0) |
+    (test->key?DRAWMETHOD_CONFIG_BACKGROUND_TRANSPARENCY:0) | 0x400;
+   /* Unused legacy slots differ deliberately: a reader must use its epoch. */
+   method.flag=0;method.flipx=!test->flip[0];method.flipy=!test->flip[1];method.transbg=!test->key;
+  }else{method.config=DRAWMETHOD_CONFIG_NONE;}
+''' % mask_from + marker)
     marker = 'int main(void){'
     if code.count(marker) != 1:
         raise ValueError('One sprite raster entry point required')
@@ -38,8 +78,12 @@ def program(engine, cases):
 
 class SpriteRasterTests(unittest.TestCase):
     @classmethod
+    def fixture_data(cls):
+        return load_contract_fixture(FIXTURE)
+
+    @classmethod
     def setUpClass(cls):
-        cls.fixture = load_contract_fixture(FIXTURE)
+        cls.fixture = cls.fixture_data()
         cls.pin = json.loads((SOURCE / 'src/pin.json').read_text())
         cls.contexts = {}
         for row in cls.fixture['contexts']:
@@ -77,11 +121,16 @@ class SpriteRasterTests(unittest.TestCase):
                 compile_checked(compiler + flags + ['-finstrument-functions', '-c',
                     str(root / 'source/gamelib' / (name + '.c')), '-o', str(unit)])
                 drawing_units.append(str(unit))
+            if cls.fixture['engines'][engine].get('math_unit', False):
+                unit = work / (engine + '-omath.o')
+                compile_checked(compiler + flags + ['-c', str(root / 'source/omath.c'),
+                                                     '-o', str(unit)])
+                drawing_units.append(str(unit))
             names = sorted({row['contract'] for row in cls.contexts.values() if row['engine'] == engine})
             for contract in names:
                 source = work / (engine + '-' + contract + '.c')
                 executable = source.with_suffix('')
-                source.write_text(program(engine, cls.fixture['contracts'][contract]))
+                source.write_text(program(engine, cls.fixture['contracts'][contract], fixture=cls.fixture))
                 compile_checked(compiler + flags + ['-finstrument-functions', str(source), str(provider),
                     *drawing_units, *links, '-lm', '-o', str(executable)])
                 cls.executables[engine, contract] = executable
@@ -103,7 +152,10 @@ class SpriteRasterTests(unittest.TestCase):
         for row in self.contexts.values():
             self.assertIn(row['contract'], self.fixture['contracts'])
             self.assertRegex(row['source_commit'], r'^[0-9a-f]{40}$')
-            self.assertEqual(set(row['source_units']), {'sprite', 'transform', 'spritex8p16', 'spritex8p32', 'pixelformat'})
+            required = {'sprite', 'transform', 'spritex8p16', 'spritex8p32', 'pixelformat'}
+            if self.fixture['engines'][row['engine']].get('math_unit', False):
+                required.add('omath')
+            self.assertEqual(set(row['source_units']), required)
             for digest in row['source_units'].values():
                 self.assertRegex(digest, r'^[0-9a-f]{40}$')
 

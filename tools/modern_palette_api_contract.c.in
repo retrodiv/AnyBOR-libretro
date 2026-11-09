@@ -1,0 +1,191 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stdint.h>
+#include <stdarg.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <strings.h>
+#ifndef stricmp
+#define stricmp strcasecmp
+#endif
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wignored-qualifiers"
+#if defined(__clang__)
+#pragma GCC diagnostic ignored "-Wdeprecated-non-prototype"
+#endif
+#include "scriptcommon.h"
+#undef printf
+uint32_t obor_profile_build;
+@PIXEL_BYTES@
+static volatile int marker;
+static unsigned char storage[MAX_PAL_SIZE+32],before[MAX_PAL_SIZE],source_bytes[MAX_PAL_SIZE];
+static unsigned char *palette=storage+16,*allocated;
+static size_t allocation_size;
+static int fixture_list,cache_calls,load_calls;
+static char log_text[4096],registered[5][64];
+static const char *paths[]={"synthetic.act","missing.act"};
+static void *callbacks[]={@CALLBACKS@};
+static int capture_log(const char *format,...)
+{
+    va_list args;size_t used=strlen(log_text);int count;
+    va_start(args,format);count=vsnprintf(log_text+used,sizeof(log_text)-used,format,args);va_end(args);
+    if(count<0 || (size_t)count>=sizeof(log_text)-used) abort();
+    return count;
+}
+void *checkAlloc(void *ptr,size_t size,const char *func,const char *file,int line)
+{ (void)func;(void)file;(void)line;if(size && !ptr) abort();return ptr; }
+static void *fixture_allocate(size_t size)
+{
+    if(allocated || size>MAX_PAL_SIZE) abort();
+    allocation_size=size;allocated=malloc(size);if(!allocated) abort();memset(allocated,0xA5,size);return allocated;
+}
+void StrCache_Collect(int index) { (void)index;abort(); }
+CHAR *StrCache_Get(int index)
+{ if(index<0 || index>=2) abort();++cache_calls;return (CHAR *)paths[index]; }
+int StrCache_Pop(int size) { (void)size;abort(); }
+int StrCache_CreateNewFrom(const CHAR *text) { (void)text;abort(); }
+/* This API contract observes delegation; actual file/color loading is separate. */
+int load_palette(unsigned char *target,char *path)
+{
+    if(target!=palette || (strcmp(path,paths[0]) && strcmp(path,paths[1]))) abort();
+    ++load_calls;
+    if(!strcmp(path,paths[0])) { target[0]=90;return 1; }
+    return 0;
+}
+@VARIANTS@
+#define printf capture_log
+@API@
+#undef printf
+@PROVIDERS@
+@GETNAME@
+static void fixture_register(void *list,void *callback,const char *name)
+{
+    unsigned i;
+    if(list!=&fixture_list) abort();
+    for(i=0;i<5;++i) if(callback==callbacks[i])
+    { if(registered[i][0] || strlen(name)>=sizeof(registered[i])) abort();strcpy(registered[i],name);return; }
+    abort();
+}
+static void fixture_registration(void)
+{
+    @REGISTER@
+}
+@CONSTANT_HELPER@
+@CONSTANT_MACRO@
+static int constant_query(const char *constname,LONG *out)
+{
+    ScriptVariant v={0};if(0) { }
+    @CONSTANT_CHAIN@
+    else return 0;
+    *out=v.lVal;return 1;
+}
+#pragma GCC diagnostic pop
+static void quote(const char *text)
+{
+    const unsigned char *p=(const unsigned char *)text;putchar('"');
+    for(;*p;++p)
+    { if(*p=='\n') printf("\\n");else if(*p=='\r') printf("\\r");else if(*p=='\t') printf("\\t");
+      else if(*p=='"' || *p=='\\') printf("\\%c",*p);else putchar(*p); }
+    putchar('"');
+}
+static void fixture_seed(void)
+{
+    unsigned i;memset(storage,0xA5,sizeof(storage));
+    for(i=0;i<MAX_PAL_SIZE;++i) { palette[i]=(unsigned char)(i*37+11);source_bytes[i]=(unsigned char)(i^198); }
+    memcpy(before,palette,MAX_PAL_SIZE);log_text[0]='\0';cache_calls=load_calls=0;
+}
+static void status(HRESULT code,ScriptVariant *out,ScriptVariant *result)
+{
+    printf("[%d,%d,%d,%ld,",(int)code,out==result,result->vt,result->vt==VT_INTEGER?(long)result->lVal:0L);
+    quote(log_text);putchar(']');
+}
+static void mutation(void)
+{
+    unsigned i,count=0;int first=-1,value=0,guards=1;
+    for(i=0;i<MAX_PAL_SIZE;++i) if(palette[i]!=before[i])
+    { if(!count) { first=(int)i;value=palette[i]; } ++count; }
+    for(i=0;i<16;++i) if(storage[i]!=0xA5 || storage[MAX_PAL_SIZE+16+i]!=0xA5) guards=0;
+    printf("[%u,%d,%d,%d]",count,first,value,guards);
+}
+int main(void)
+{
+    static const unsigned profiles[]={@PROFILES@};
+    static void *global_queries[]={@GLOBAL_QUERIES@};
+    static const char *queries[]={@QUERIES@};
+    static const struct { int mode;LONG color,component;int value_type;LONG value; } cases[]={@CASES@};
+    unsigned p,c,i;
+    printf("{\"status\":\"PASS\",\"profiles\":[");
+    for(p=0;p<sizeof(profiles)/sizeof(*profiles);++p)
+    {
+        if(p) { putchar(','); } obor_profile_build=profiles[p];
+        memset(registered,0,sizeof(registered));fixture_registration();
+        printf("{\"revision\":%u,\"registration\":[",profiles[p]);
+        for(i=0;i<5;++i) { if(i) putchar(',');putchar('[');quote(registered[i]);putchar(',');quote(Script_GetFunctionName(callbacks[i]));putchar(']'); }
+        printf("],\"global_names\":[");
+        for(i=0;i<2;++i) { if(i) putchar(',');quote(Script_GetFunctionName(global_queries[i])); }
+        printf("],\"constants\":[");
+        for(i=0;i<sizeof(queries)/sizeof(*queries);++i)
+        { LONG v=-99;int found=constant_query(queries[i],&v);if(i) putchar(',');printf("[%d,%ld]",found,(long)v); }
+        printf("],\"access\":[");
+        if(registered[3][0]) for(c=0;c<sizeof(cases)/sizeof(*cases);++c)
+        {
+            ScriptVariant v[4],*args[4],result,*out;HRESULT code;int get_count=3,set_count=4;
+            fixture_seed();memset(v,0,sizeof(v));memset(&result,0,sizeof(result));
+            for(i=0;i<4;++i) { args[i]=&v[i];v[i].vt=VT_INTEGER; }
+            v[0].vt=VT_PTR;v[0].ptrVal=palette;v[1].lVal=cases[c].color;v[2].lVal=cases[c].component;
+            v[3].vt=cases[c].value_type;v[3].lVal=cases[c].value;
+            if(v[3].vt==VT_DECIMAL) v[3].dblVal=3.75;
+            if(v[3].vt==VT_STR) v[3].strVal=5;
+            if(cases[c].mode==1) v[0].ptrVal=NULL;
+            if(cases[c].mode==2) v[0].vt=VT_EMPTY;
+            if(cases[c].mode==3) v[1].vt=VT_DECIMAL;
+            if(cases[c].mode==4) v[2].vt=VT_DECIMAL;
+            if(cases[c].mode==5) args[3]=NULL;
+            if(cases[c].mode==7) { get_count=2;set_count=3; }
+            if(cases[c].mode==8) args[1]=NULL;
+            if(cases[c].mode==9) { get_count=-1;set_count=-1; }
+            result.vt=VT_INTEGER;result.lVal=77;out=&result;
+            code=openbor_get_palette_property(cases[c].mode==6?NULL:(const ScriptVariant* const*)args,&out,get_count);
+            if(c) { putchar(','); } putchar('[');status(code,out,&result);putchar(',');
+            result.vt=VT_INTEGER;result.lVal=77;out=&result;log_text[0]='\0';
+            code=openbor_set_palette_property(cases[c].mode==6?NULL:args,&out,set_count);
+            status(code,out,&result);putchar(',');mutation();putchar(']');
+        }
+        printf("],\"allocate\":");
+        if(registered[0][0])
+        {
+            ScriptVariant result={0},*out=&result;HRESULT code;int zero=1;
+            allocation_size=0;allocated=NULL;code=openbor_allocate_palette(NULL,&out,0);
+            if(!allocated || result.ptrVal!=allocated) abort();
+            for(i=0;i<allocation_size;++i) if(allocated[i]) zero=0;
+            printf("[%d,%d,%d,%zu,%d]",(int)code,out==&result,result.vt,allocation_size,zero);free(allocated);allocated=NULL;
+        }
+        else printf("null");
+        printf(",\"copy\":[");
+        if(registered[1][0]) for(c=0;c<6;++c)
+        {
+            ScriptVariant target={0},source={0},result={0},*out=&result,*args[]={&target,&source};HRESULT code;
+            fixture_seed();target.vt=source.vt=VT_PTR;target.ptrVal=palette;source.ptrVal=source_bytes;
+            if(c==1) source.ptrVal=palette;
+            if(c==2) source.vt=VT_INTEGER;
+            if(c==3) target.ptrVal=NULL;
+            if(c==4) source.ptrVal=NULL;
+            result.vt=VT_INTEGER;result.lVal=77;code=openbor_copy_palette(args,&out,c==5?1:2);
+            if(c) { putchar(','); } putchar('[');status(code,out,&result);putchar(',');mutation();putchar(']');
+        }
+        printf("],\"load\":[");
+        if(registered[2][0]) for(c=0;c<4;++c)
+        {
+            ScriptVariant target={0},path={0},result={0},*out=&result,*args[]={&target,&path};HRESULT code;
+            fixture_seed();target.vt=VT_PTR;target.ptrVal=palette;path.vt=VT_STR;path.strVal=c==1?1:0;
+            if(c==2) target.ptrVal=NULL;
+            if(c==3) path.vt=VT_INTEGER;
+            result.vt=VT_INTEGER;result.lVal=77;code=openbor_load_palette(args,&out,2);
+            if(c) { putchar(','); } putchar('[');status(code,out,&result);putchar(',');mutation();printf(",%d,%d]",cache_calls,load_calls);
+        }
+        printf("]}");
+    }
+    printf("]}\n");return 0;
+}

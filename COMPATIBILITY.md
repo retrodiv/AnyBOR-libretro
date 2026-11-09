@@ -36,7 +36,7 @@ v3.0 3968-dev, v3.0 3970-dev, v3.0 3978, v3.0 3984, v3.0 3993, v3.0 3994, v3.0
 4082, v3.0 4085, v3.0 4086, v3.0 4088-dev, v3.0 4107, v3.0 4111, v3.0 4129, v3.0
 4153, v3.0 4432, v3.0 4453, v3.0 6330, v3.0 6391, v3.0 6391-mod, v3.0 6392-dev,
 v3.0 6412-dev, v3.0 6510-dev, v3.0 7086-dev, v3.0 7123-dev, v4.0 7142-alpha,
-v4.0 7533 and v4.0 8023-dev.
+v4.0 7530, v4.0 7533, v4.0 7555, v4.0 7556, v4.0 7735 and v4.0 8023-dev.
 
 Auto uses build tags and content clues to choose a profile. Manual selection
 remains available. States require the same profile; states from another
@@ -77,8 +77,10 @@ Bare numeric tags, ordinary content evidence and unidentified executable declara
 not select that variant. Missing build numbers are not inferred from an
 executable's compile date. See [variant rules](docs/ANYBOR.md#core-options).
 Builds 6413 through 7142 select v4.0 7142-alpha, unless an exact test-build
-tag or a manual choice selects v3.0 7086-dev or v3.0 7123-dev; builds 7143 through 7533 select v4.0 7533. Builds 7534
-through 8023 and later builds select v4.0 8023-dev.
+tag or a manual choice selects v3.0 7086-dev or v3.0 7123-dev.
+Builds 7143–7530 select v4.0 7530; 7531–7533 select v4.0 7533;
+7534–7555 select v4.0 7555; 7556 selects v4.0 7556; 7557–7735 select
+v4.0 7735. Builds 7736 and later select v4.0 8023-dev.
 Other routing combines filename/sidecar metadata with bounded content ranges
 and sparse marker estimates. Filename ranges prefer the highest compatible stable or automatic
 profile within their effective bounds, or the next automatic revision above the
