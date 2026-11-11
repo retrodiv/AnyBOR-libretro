@@ -1,0 +1,194 @@
+/* Native table reserve/release with bounded allocation/extent providers.
+ * SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <assert.h>
+#include <limits.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <setjmp.h>
+@CONFIG@
+#include "openbor.h"
+#include "obor_resources.h"
+#undef printf
+#undef assert
+#undef malloc
+#undef calloc
+#undef realloc
+#undef free
+#undef shutdown
+#define LEGACY @LEGACY@
+#define BOOLEAN @BOOLEAN@
+uint32_t obor_profile_build;
+static unsigned checks,cases;
+#define CHECK(c) do {++checks;if(!(c)){fprintf(stderr,"command revision=%u line=%d: %s\n",obor_profile_build,__LINE__,#c);abort();}} while(0)
+#define assert CHECK
+int max_freespecials=4;
+static _Alignas(max_align_t) unsigned char arena[1u<<20];
+static size_t used;
+static struct allocation {void *pointer;size_t bytes,visible;int owner,live;} blocks[24];
+static unsigned allocated,active_owner,refuse;
+static struct event {int kind,owner;size_t bytes;} events[48],baseline[48];
+static unsigned event_count,baseline_count;
+static unsigned char snapshot[16*sizeof(s_com)];
+static size_t snapshot_bytes;
+static unsigned snapshot_flags;
+static jmp_buf stop;
+static const char *diagnostic;
+static void event(int kind,size_t bytes) {
+ CHECK(event_count<sizeof(events)/sizeof(*events));
+ struct event *e=events+event_count++;e->kind=kind;e->owner=active_owner;e->bytes=bytes;
+}
+static struct allocation *owner(const void *p) {
+ for(unsigned i=0;i<allocated;++i)if(blocks[i].live && blocks[i].pointer==p)return blocks+i;
+ return NULL;
+}
+size_t obor_allocation_size(const void *p){struct allocation *b=owner(p);return b?b->visible:0;}
+static unsigned live_count(void){unsigned n=0;for(unsigned i=0;i<allocated;++i)n+=blocks[i].live;return n;}
+static void *allocate(size_t bytes,int kind) {
+ CHECK(bytes && bytes<sizeof(arena));event(kind,bytes);
+ if(refuse){refuse=0;return NULL;}
+ CHECK(allocated<sizeof(blocks)/sizeof(*blocks));
+ size_t start=(used+_Alignof(max_align_t)-1)&~(size_t)(_Alignof(max_align_t)-1);
+ CHECK(start<=sizeof(arena) && bytes<=sizeof(arena)-start);
+ void *p=arena+start;used=start+bytes;memset(p,0xa5,bytes);
+ blocks[allocated++]=(struct allocation){p,bytes,bytes,(int)active_owner,1};return p;
+}
+static void *observe_malloc(size_t bytes){return allocate(bytes,1);}
+static void *observe_calloc(size_t count,size_t bytes){CHECK(count && bytes && count<=sizeof(arena)/bytes);void *p=allocate(count*bytes,2);if(p)memset(p,0,count*bytes);return p;}
+static void *observe_realloc(void *old,size_t bytes) {
+ struct allocation *b=old?owner(old):NULL;
+ CHECK(!old || (b && b->owner==(int)active_owner) || !"table owner");
+ void *p=allocate(bytes,3);if(!p)return NULL;
+ if(b){memcpy(p,old,b->bytes<bytes?b->bytes:bytes);b->live=0;}return p;
+}
+static void observe_free(void *p) {
+ if(!p)return;
+ struct allocation *b=owner(p);
+ CHECK(b && b->owner==(int)active_owner);event(4,b->bytes);b->live=0;
+}
+static void fixture_fail(int status,const char *message){CHECK(status==1 && message);diagnostic=message;longjmp(stop,1);}
+static void fixture_stop_legacy(int status,const char *message,...){fixture_fail(status,message);}
+static void fixture_stop_modern(int status,const char *message,...){fixture_fail(status,message);}
+#define malloc observe_malloc
+#define calloc observe_calloc
+#define realloc observe_realloc
+#define free observe_free
+@DIAGNOSTIC@
+@ROUTINES@
+static void release_table(s_model *model){@RELEASE@}
+#undef free
+#undef realloc
+#undef calloc
+#undef malloc
+static int reserve(int original,s_model *model) {
+ diagnostic=NULL;if(setjmp(stop))return 0;
+ @CALL@
+}
+static void reset(void) {
+ CHECK(live_count()==0);allocated=used=event_count=refuse=0;
+ memset(blocks,0,sizeof(blocks));memset(events,0,sizeof(events));active_owner=1;
+}
+static int fixed(void){return LEGACY && obor_profile_build<3711;}
+static void fixture_seed_row(s_com *row,int value) {
+ memset(row,0,sizeof(*row));row->anim=value;
+#if !BOOLEAN
+ row->input[0]=FLAG_ATTACK;
+#endif
+}
+static void change_row(s_com *row) {
+#if BOOLEAN
+ row->anim=ANI_FREESPECIAL;
+#else
+ row->input[0]=FLAG_FORWARD;
+#endif
+}
+static void owned(int original,int index) {
+ reset();s_model model;memset(&model,0,sizeof(model));model.freetypes=MF_ALL;model.specials_loaded=index;
+ size_t rows=fixed()?(size_t)max_freespecials:(size_t)(index?index:1);
+ model.special=observe_calloc(rows,sizeof(*model.special));CHECK(model.special);
+ for(size_t i=0;i<rows;++i)fixture_seed_row(model.special+i,(int)i+ANI_ATTACK1);
+ CHECK(reserve(original,&model));struct allocation *b=owner(model.special);CHECK(b);
+ if(original){snapshot_bytes=b->bytes;CHECK(snapshot_bytes<=sizeof(snapshot));memcpy(snapshot,model.special,b->bytes);snapshot_flags=(unsigned)model.freetypes;}
+ else CHECK(b->bytes==snapshot_bytes && !memcmp(snapshot,model.special,snapshot_bytes) && (unsigned)model.freetypes==snapshot_flags);
+ release_table(&model);CHECK(live_count()==0);++cases;
+ if(original){baseline_count=event_count;memcpy(baseline,events,sizeof(events));}
+ else {
+  CHECK(event_count==baseline_count);
+  for(unsigned i=0;i<event_count;++i)CHECK(events[i].kind==baseline[i].kind && events[i].bytes==baseline[i].bytes && events[i].owner==baseline[i].owner);
+ }
+}
+static void borrowed(int original,int index,int parent_first) {
+ reset();s_model parent,child;memset(&parent,0,sizeof(parent));parent.freetypes=MF_ALL;
+ size_t rows=fixed()?(size_t)max_freespecials:(size_t)(index?index:1);
+ parent.special=observe_calloc(rows,sizeof(*parent.special));CHECK(parent.special);
+ for(size_t i=0;i<rows;++i)fixture_seed_row(parent.special+i,(int)i+ANI_ATTACK1);
+ unsigned char before[8*sizeof(s_com)];CHECK(rows<=8);memcpy(before,parent.special,rows*sizeof(s_com));
+ child=parent;child.freetypes=MF_SCRIPTS;child.isSubclassed=1;child.specials_loaded=index;active_owner=2;
+ CHECK(reserve(original,&child));int shared=fixed() && index<max_freespecials;
+ if(shared)CHECK(child.special==parent.special && !(child.freetypes&MF_SPECIAL));
+ else {
+  CHECK(child.special!=parent.special);
+#ifndef NEGATIVE_ONLY
+  CHECK(child.freetypes&MF_SPECIAL);
+#endif
+  size_t preserved=(LEGACY && obor_profile_build<3713 && index==0)?1:(size_t)index;
+  CHECK(!memcmp(child.special,before,preserved*sizeof(s_com)));
+ }
+ CHECK(!memcmp(parent.special,before,rows*sizeof(s_com)));
+ change_row(child.special+index);
+ if(shared)CHECK(!memcmp(child.special,parent.special,rows*sizeof(s_com)));
+ else CHECK(!memcmp(parent.special,before,rows*sizeof(s_com)));
+ if(parent_first){active_owner=1;release_table(&parent);active_owner=2;release_table(&child);}
+ else {active_owner=2;release_table(&child);active_owner=1;release_table(&parent);}
+ CHECK(live_count()==0);++cases;
+}
+static void refusal(int borrowed_table) {
+ if(fixed() && obor_profile_build<3652)return;
+ reset();s_model parent,model;memset(&parent,0,sizeof(parent));parent.freetypes=MF_ALL;
+ int index=fixed()?max_freespecials:1;size_t rows=(size_t)index;
+ parent.special=observe_calloc(rows,sizeof(s_com));CHECK(parent.special);
+ model=parent;model.specials_loaded=index;if(borrowed_table)model.freetypes=MF_SCRIPTS;
+ unsigned flags=(unsigned)model.freetypes;void *pointer=model.special;active_owner=borrowed_table?2:1;refuse=1;
+ CHECK(!reserve(0,&model) && !refuse && model.special==pointer && (unsigned)model.freetypes==flags && model.specials_loaded==index);
+ CHECK(owner(pointer) && live_count()==1);active_owner=1;release_table(&parent);CHECK(live_count()==0);++cases;
+}
+static void malformed(void) {
+ static s_com foreign;
+ for(int kind=0;kind<6;++kind) {
+  reset();s_model model;memset(&model,0,sizeof(model));model.freetypes=MF_ALL;
+  model.special=observe_calloc(1,sizeof(s_com));CHECK(model.special);void *pointer=model.special;
+  struct allocation *b=owner(pointer);model.specials_loaded=0;
+  if(kind==0)model.specials_loaded=-1;
+  if(kind==1){int large=INT_MAX;model.specials_loaded=large;}
+  if(kind==2)model.specials_loaded=2;
+  if(kind==3)model.special=&foreign;
+  if(kind==4)b->visible=sizeof(s_com)-1;
+  if(kind==5){model.special=NULL;model.specials_loaded=1;}
+  int count=model.specials_loaded;unsigned flags=(unsigned)model.freetypes;void *before=model.special;unsigned calls=event_count;
+  CHECK(!reserve(0,&model));CHECK(model.special==before && model.specials_loaded==count && (unsigned)model.freetypes==flags && event_count==calls);
+  if(LEGACY && obor_profile_build<3652 && count<0)CHECK(diagnostic && !strcmp(diagnostic,"Too many Freespecials and/or Cancels. Please increase Maxfreespecials"));
+  model.special=pointer;b->visible=b->bytes;release_table(&model);CHECK(live_count()==0);++cases;
+ }
+ reset();CHECK(!reserve(0,NULL));++cases;
+}
+int main(void) {
+ static const unsigned profiles[]={@PROFILES@};
+ for(unsigned p=0;p<sizeof(profiles)/sizeof(*profiles);++p) {
+  obor_profile_build=profiles[p];
+#ifdef NEGATIVE_ONLY
+  borrowed(0,1,0);
+#else
+  for(int index=0;index<=4;++index){if(LEGACY && obor_profile_build<3652 && index>=max_freespecials)continue;owned(1,index);owned(0,index);}
+  for(int index=0;index<2;++index)for(int first=0;first<2;++first){
+   if(BOOLEAN || fixed())borrowed(1,index,first);
+   borrowed(0,index,first);
+  }
+  refusal(0);refusal(1);malformed();
+#endif
+ }
+ printf("{\"status\":\"PASS\",\"profiles\":%zu,\"cases\":%u,\"checks\":%u}\n",sizeof(profiles)/sizeof(*profiles),cases,checks);
+ return 0;
+}

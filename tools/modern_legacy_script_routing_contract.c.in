@@ -33,6 +33,7 @@ static int capture_log(const char *format,...)
 }
 void StrCache_Collect(int index) { if(index!=0) abort(); }
 CHAR *StrCache_Get(int index) { if(index!=0 || !active_name) abort();return (CHAR*)active_name; }
+CHAR *StrCache_GetIfPresent(int index) { return index==0 ? (CHAR*)active_name : NULL; }
 int StrCache_Pop(int size) { (void)size;abort(); }
 int StrCache_CreateNewFrom(const CHAR *text) { (void)text;abort(); }
 @VARIANTS@

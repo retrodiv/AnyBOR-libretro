@@ -20,7 +20,7 @@ SOURCE=Path(os.environ.get('OBOR_TEST_SOURCE',Path(__file__).resolve().parents[1
 FIXTURE=Path(__file__).parent/'fixtures/drawmethod-alignment.json'
 
 
-def program(shape, extra_owners=()):
+def program(shape, extra_owners=(), *, owned_variable_table=False):
     fields={'entity_size','entity_alignment','method_size','method_alignment',
             'entity_method_offset','layer_size','layer_method_offset','entity_embedded'}
     if (not isinstance(shape,dict) or set(shape)!=fields or
@@ -35,9 +35,18 @@ def program(shape, extra_owners=()):
                 any(type(row[key])is not int or not 0<row[key]<=1<<20
                     for key in ('size','alignment','method_offset')) for row in extra_owners)):
         raise ValueError('Explicit bounded additional method owners required')
+    if type(owned_variable_table) is not bool:
+        raise ValueError('Explicit runtime variable-table ownership flag required')
     checks=''
+    if owned_variable_table:
+        checks+='_Static_assert(sizeof(Varlist*)==8,"64-bit ownership slot required");\n'
+        checks+='_Static_assert(sizeof(((entity*)0)->obor_varlist_owned)==sizeof(Varlist*),"One owned variable-table pointer required");\n'
+        checks+='_Static_assert(offsetof(entity,obor_varlist_owned)==offsetof(entity,varlist)+sizeof(Varlist*),"Ownership slot follows the visible variable table");\n'
     for record,field,expected in [('entity','',shape['entity_size']),('s_drawmethod','',shape['method_size'])]:
-        checks+='_Static_assert(sizeof('+record+')=='+str(expected)+',"Preserve declared runtime record extent");\n'
+        # The independent drawing-layout oracle predates ownership tracking.
+        # Only these three declared owners gain exactly one 64-bit pointer.
+        extent=expected+(8 if record=='entity' and owned_variable_table else 0)
+        checks+='_Static_assert(sizeof('+record+')=='+str(extent)+',"Preserve declared runtime record extent");\n'
     checks+='_Static_assert(_Alignof(entity)=='+str(shape['entity_alignment'])+',"Preserve owner alignment");\n'
     checks+='_Static_assert(_Alignof(s_drawmethod)=='+str(shape['method_alignment'])+',"Safe embedded alignment");\n'
     checks+='_Static_assert(offsetof(entity,drawmethod)=='+str(shape['entity_method_offset'])+',"Preserve method offset");\n'
@@ -115,7 +124,8 @@ class DrawmethodAlignmentTests(unittest.TestCase):
                       *sorted(p for p in (root/'source').iterdir() if p.is_dir())]
             source=work/(engine+'.c');executable=source.with_suffix('')
             source.write_text(program(cls.fixture['shapes'][engine],
-                                      cls.fixture.get('extra_owners',{}).get(engine,())))
+                                      cls.fixture.get('extra_owners',{}).get(engine,()),
+                                      owned_variable_table=engine in ('7142','7533','8023')))
             result=subprocess.run(compiler+['-I'+str(p) for p in includes]+[
                 '-std=gnu11','-Wall','-Wextra','-Werror','-Wno-error=deprecated-declarations',
                 '-Wno-unused-function','-Wno-unused-variable','-Wno-unused-parameter',*warnings,

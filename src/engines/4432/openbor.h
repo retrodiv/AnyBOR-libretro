@@ -52,6 +52,7 @@
 #include	"anigif.h"
 #include    "openborscript.h"
 #include    "globals.h"
+#include "obor_draw_assert.h"
 #include    "ram.h"
 #include    "version.h"
 #include    "savedata.h"
@@ -1399,6 +1400,7 @@ typedef struct
 typedef struct
 {
     s_collision_body **instance;
+    size_t obor_instance_capacity;
 } s_collision_body_list;
 
 // Collision box for active
@@ -1451,6 +1453,7 @@ typedef struct
 typedef struct
 {
     s_collision_attack **instance;
+    size_t obor_instance_capacity;
 } s_collision_attack_list;
 
 // Caskey, Damon V.
@@ -1621,6 +1624,8 @@ typedef struct
     int             unsummonframe;          // Un-summon the entity
     int             *vulnerable;
     int             *weaponframe;           // Specify with a frame when to switch to a weapon model
+    size_t obor_attack_frame_capacity; /* Actual owned frame-table extent. */
+    size_t obor_frame_capacity;
 } s_anim;
 
 struct animlist

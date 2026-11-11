@@ -10,6 +10,7 @@ static char menu_text[80];
 #define calloc owned_calloc
 #define realloc owned_realloc
 #define malloc owned_malloc
+#define free owned_free
 #define shutdown controlled_stop
 @ADD_SET@
 static int command(int cmd,char *text,int number)
@@ -38,6 +39,7 @@ lCleanup:
 #undef calloc
 #undef realloc
 #undef malloc
+#undef free
 #undef shutdown
 static void menu_print(int marked,int column,int row,const char *format,...)
 {

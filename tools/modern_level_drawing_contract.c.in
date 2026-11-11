@@ -72,6 +72,9 @@ static int fixture_command(int cmd,char *maskPath,int count,const char *const *a
         default: abort();
     }
 #undef __realloc
+    /* These cases load exactly one panel for either panel command. */
+    if(frontpanels_loaded != (cmd == CMD_LEVEL_FRONTPANEL) ||
+       panelcount != (cmd == CMD_LEVEL_PANEL)) abort();
     return 1;
 lCleanup:
     (void)errormessage;

@@ -1,0 +1,132 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ * Complete native list constructors; opaque collision records and an observed
+ * allocator. This does not exercise frame consumers or the engine arena.
+ */
+#include <assert.h>
+#include <limits.h>
+#include <setjmp.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+typedef struct collision_attack s_collision_attack;
+typedef struct collision_body s_collision_body;
+typedef struct collision_entity s_collision_entity;
+
+static int max_collisons;
+static size_t requested, cleared;
+static unsigned alloc_calls, clear_calls, shutdown_calls, checks;
+static int size_only, refuse;
+static max_align_t cookie;
+static void *allocated;
+static jmp_buf failure;
+static const int counts[] = {@COUNTS@};
+static const char *profiles[] = {@PROFILES@};
+static const uint32_t revisions[] = {@REVISIONS@};
+uint32_t obor_profile_build;
+
+static void reset_observer(void)
+{
+    requested = cleared = 0;
+    alloc_calls = clear_calls = shutdown_calls = 0;
+    size_only = refuse = 0;
+    allocated = NULL;
+}
+
+static void *observed_malloc(size_t bytes)
+{
+    ++alloc_calls;
+    requested = bytes;
+    if(refuse) return NULL;
+    if(size_only) return allocated = &cookie;
+    assert(bytes <= 4096);
+    allocated = malloc(bytes);
+    assert(allocated);
+    memset(allocated, 0xa5, bytes);
+    return allocated;
+}
+
+static void *observed_memset(void *pointer, int value, size_t bytes)
+{
+    assert(pointer && pointer == allocated && value == 0);
+    assert(bytes == requested);
+    ++clear_calls;
+    cleared = bytes;
+    if(!size_only) memset(pointer, value, bytes);
+    return pointer;
+}
+
+static void observed_shutdown(int status, const char *message, ...)
+{
+    assert(status == 1);
+    assert(strcmp(message, "Not enough memory for collision data.") == 0);
+    ++shutdown_calls;
+    longjmp(failure, 1);
+}
+
+#define malloc observed_malloc
+#define memset observed_memset
+#define @SHUTDOWN@ observed_shutdown
+@FUNCTIONS@
+#undef @SHUTDOWN@
+#undef memset
+#undef malloc
+
+#define CHECK_CONSTRUCTOR(Type, Function) do { \
+    max_align_t payloads[37]; \
+    for(size_t case_index = 0; case_index < sizeof(counts)/sizeof(*counts); ++case_index) { \
+        reset_observer(); \
+        max_collisons = counts[case_index]; \
+        size_t slots = max_collisons > 0 ? (size_t)max_collisons : 1; \
+        Type **table = Function(); \
+        assert(table && (void *)table == allocated); \
+        /* Check capacity before any table access, including in old-source controls. */ \
+        assert(alloc_calls == 1 && requested == slots * sizeof(*table)); \
+        assert(clear_calls == 1 && cleared == requested && shutdown_calls == 0); \
+        for(size_t slot = 0; slot < slots; ++slot) assert(table[slot] == NULL); \
+        for(size_t slot = 0; slot < slots; ++slot) table[slot] = (Type *)&payloads[slot]; \
+        for(size_t slot = 0; slot < slots; ++slot) assert(table[slot] == (Type *)&payloads[slot]); \
+        free(table); \
+        ++checks; \
+    } \
+    /* Observe the large request without reserving or clearing a large buffer. */ \
+    reset_observer(); \
+    size_only = 1; max_collisons = INT_MAX; \
+    assert((void *)Function() == &cookie); \
+    assert(requested == (size_t)INT_MAX * sizeof(void *)); \
+    assert(cleared == requested && clear_calls == 1 && shutdown_calls == 0); \
+    ++checks; \
+    /* Refused allocation must reach the engine's controlled failure route first. */ \
+    reset_observer(); \
+    refuse = 1; max_collisons = 3; \
+    if(setjmp(failure) == 0) { (void)Function(); assert(!"missing controlled shutdown"); } \
+    assert(alloc_calls == 1 && shutdown_calls == 1 && clear_calls == 0); \
+    assert(allocated == NULL); \
+    ++checks; \
+} while(0)
+
+static void check_native_lists(void)
+{
+    @CHECKS@
+}
+
+int main(void)
+{
+    assert(sizeof(void *) == 8 && sizeof(int) == 4);
+    assert(sizeof(profiles)/sizeof(*profiles) == sizeof(revisions)/sizeof(*revisions));
+    /* Keep unchanged-source controls free of unrelated unused-helper warnings. */
+    (void)observed_shutdown;
+    for(size_t i = 0; i < sizeof(profiles)/sizeof(*profiles); ++i)
+    {
+        obor_profile_build = revisions[i];
+        check_native_lists();
+    }
+    printf("{\"status\":\"PASS\",\"engine\":\"@ENGINE@\",\"profiles\":[");
+    for(size_t i = 0; i < sizeof(profiles)/sizeof(*profiles); ++i)
+        printf("%s\"%s\"", i ? "," : "", profiles[i]);
+    printf("],\"checks\":%u}\n", checks);
+    return 0;
+}

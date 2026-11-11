@@ -1,0 +1,138 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <stddef.h>
+#include <stdint.h>
+#include <limits.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+@CONFIG@
+#include "openbor.h"
+#include "@SCRIPT_HEADER@"
+#include "globals.h"
+#undef printf
+#undef malloc
+#undef calloc
+#undef realloc
+#undef free
+#undef assert
+uint32_t obor_profile_build;
+static unsigned cases;
+#define assert(c) do{if(!(c)){fprintf(stderr,"Variable profile=%u case=%u line=%d: %s\n",obor_profile_build,cases,__LINE__,#c);abort();}}while(0)
+HRESULT Interpreter_Call(Interpreter *p){(void)p;abort();}
+HRESULT Interpreter_EvalInstruction(Interpreter *p){(void)p;abort();}
+void borExit(int status){(void)status;abort();}
+#include "source/scriptlib/List.c"
+@CACHE_TYPE@
+static Varstr strcache[8];
+static int strcache_index[8],strcache_top,strcache_size=8;
+static int cache_events[128];
+static unsigned cache_count;
+static void cache_event(int n){assert(cache_count<128);cache_events[cache_count++]=n;}
+@NATIVE_CACHE@
+void StrCache_Grab(int index){cache_event(10+index);native_cache_grab(index);}
+void StrCache_Collect(int index){cache_event(20+index);native_cache_collect(index);}
+int StrCache_Pop(@POP_ARGS@){@POP_UNUSED@abort();}
+@VARIANT_METHODS@
+static struct {void *value;size_t bytes,reserved;int live;} blocks[16];
+static unsigned used,calls,fail_at,request_count;
+static int move_storage;
+static size_t requests[32];
+static void request(size_t bytes){assert(request_count<32);requests[request_count++]=bytes;++calls;}
+static void *observe_calloc(size_t n,size_t bytes)
+{
+    assert(!bytes || n<=SIZE_MAX/bytes);size_t total=n*bytes;request(total);
+    if(calls==fail_at || total>65536)return NULL;
+    assert(used<16);size_t reserved=total<2048?2048:total;void *p=calloc(1,reserved);assert(p);
+    blocks[used].value=p;blocks[used].bytes=total;blocks[used].reserved=reserved;blocks[used++].live=1;return p;
+}
+static unsigned block_index(void *value)
+{for(unsigned i=0;i<used;++i)if(blocks[i].live && blocks[i].value==value)return i;assert(0);return 0;}
+static void observe_free(void *value)
+{if(value){unsigned i=block_index(value);blocks[i].live=0;free(value);}}
+static void *observe_realloc(void *value,size_t bytes)
+{
+    unsigned i=block_index(value);request(bytes);
+    if(calls==fail_at || bytes>65536)return NULL;
+    if(!move_storage){assert(bytes<=blocks[i].reserved);blocks[i].bytes=bytes;return value;}
+    size_t reserved=bytes<2048?2048:bytes;void *p=malloc(reserved);assert(p);
+    memset(p,0xA5,reserved);memcpy(p,value,blocks[i].bytes<bytes?blocks[i].bytes:bytes);free(value);
+    blocks[i].value=p;blocks[i].bytes=bytes;blocks[i].reserved=reserved;return p;
+}
+#define calloc observe_calloc
+#define realloc observe_realloc
+#define free observe_free
+@VARLIST_METHODS@
+@BEFORE_INDEX@
+@AFTER_INDEX@
+@BEFORE_NAME@
+@AFTER_NAME@
+#undef free
+#undef realloc
+#undef calloc
+static void begin(int moving)
+{
+    for(unsigned i=0;i<used;++i)assert(!blocks[i].live);
+    used=calls=fail_at=request_count=cache_count=0;move_storage=moving;memset(requests,0,sizeof(requests));
+    memset(cache_events,0,sizeof(cache_events));memset(strcache,0,sizeof(strcache));
+    for(int i=0;i<7;++i)strcache_index[i]=i+1;
+    strcache_top=6;strcache[0].ref=1;strcache[0].len=3;strcache[0].str=malloc(4);assert(strcache[0].str);memcpy(strcache[0].str,"str",4);
+}
+static void end(void)
+{
+    ScriptVariant value={0};value.vt=VT_STR;value.strVal=0;ScriptVariant_Clear(&value);
+    assert(strcache[0].ref==0 && strcache_top==7);
+    free(strcache[0].str);strcache[0].str=NULL;
+    for(unsigned i=0;i<used;++i)assert(!blocks[i].live);
+}
+typedef int(*index_fn)(Varlist*,int,ScriptVariant*);
+typedef int(*name_fn)(Varlist*,char*,ScriptVariant*);
+struct observation {ScriptVariant vars[8];int final_refs,top,events[128];unsigned event_count,allocations;size_t requests[32];};
+static void observe(struct observation *out,index_fn index,name_fn name,int alias,int moving)
+{
+    begin(moving);memset(out,0,sizeof(*out));Varlist table={0};Varlist_Init(&table,2);
+    ScriptVariant string={0},number={0};string.vt=VT_STR;string.strVal=0;number.vt=VT_INTEGER;number.lVal=42;
+    assert(index(&table,0,&string)==1);assert(name(&table,"key",&string)==1);assert(name(&table,"key",&number)==1);
+    ScriptVariant *source=alias==1?table.vars+1:alias==2?table.vars:&number;
+    assert(index(&table,4,source)==1);assert(table.vars->lVal==5);
+    assert(table.vars[5].vt==(alias==1?VT_STR:VT_INTEGER));
+    assert(alias==1?table.vars[5].strVal==0:table.vars[5].lVal==(alias==2?5:42));
+    assert(Varlist_GetByIndex(&table,4)==table.vars+5 && !Varlist_GetByIndex(&table,5));
+    assert(Varlist_GetByName(&table,"key")->lVal==42);memcpy(out->vars,table.vars,6*sizeof(*table.vars));
+    Varlist_Cleanup(&table);assert(List_GetSize(table.list)==0);
+    for(int i=1;i<=table.vars->lVal;++i)assert(table.vars[i].vt==VT_EMPTY && !table.vars[i].ptrVal);
+    Varlist_Clear(&table);assert(!table.list && !table.vars && !table.magic);
+    out->final_refs=strcache[0].ref;out->top=strcache_top;out->event_count=cache_count;
+    memcpy(out->events,cache_events,sizeof(cache_events));out->allocations=request_count;memcpy(out->requests,requests,sizeof(requests));end();
+}
+static void refusals(void)
+{
+    begin(1);Varlist table={0};Varlist_Init(&table,2);ScriptVariant value={0};value.vt=VT_INTEGER;value.lVal=7;
+    ScriptVariant old[3];memcpy(old,table.vars,sizeof(old));ScriptVariant *base=table.vars;
+    fail_at=calls+1;assert(!Varlist_SetByIndex(&table,5,&value));assert(table.vars==base && !memcmp(old,table.vars,sizeof(old)));++cases;
+    fail_at=calls+1;assert(!Varlist_SetByName(&table,"new",&value));assert(List_GetSize(table.list)==0 && strcache[0].ref==1);++cases;
+    fail_at=0;
+    assert(!Varlist_SetByIndex(&table,INT_MAX,&value));assert(!Varlist_SetByIndex(&table,INT_MAX-1,&value));
+    assert(!Varlist_SetByIndex(&table,INT_MAX-2,&value));assert(table.vars==base && !memcmp(old,table.vars,sizeof(old)));cases+=3;
+    assert(!Varlist_SetByIndex(NULL,0,&value));assert(!Varlist_SetByIndex(&table,0,NULL));assert(!Varlist_SetByIndex(&table,-1,&value));cases+=3;
+    assert(!Varlist_SetByName(NULL,"key",&value));assert(!Varlist_SetByName(&table,NULL,&value));assert(!Varlist_SetByName(&table,"",&value));assert(!Varlist_SetByName(&table,"key",NULL));cases+=4;
+    Varlist empty={0};assert(!Varlist_SetByIndex(&empty,0,&value));assert(!Varlist_SetByName(&empty,"key",&value));cases+=2;
+    Varlist_Clear(&table);end();
+}
+int main(void)
+{
+    static const uint32_t profiles[]={@PROFILES@};
+    for(unsigned i=0;i<sizeof(profiles)/sizeof(*profiles);++i)
+    {
+        obor_profile_build=profiles[i];
+        for(int alias=0;alias<3;++alias)
+        {
+            struct observation expected,actual;observe(&expected,before_index,before_name,alias,0);
+            observe(&actual,Varlist_SetByIndex,Varlist_SetByName,alias,0);assert(!memcmp(&expected,&actual,sizeof(expected)));++cases;
+            observe(&actual,Varlist_SetByIndex,Varlist_SetByName,alias,1);assert(!memcmp(&expected,&actual,sizeof(expected)));++cases;
+        }
+        struct observation before,after;observe(&before,before_index,before_name,0,1);observe(&after,Varlist_SetByIndex,Varlist_SetByName,0,1);
+        assert(!memcmp(&before,&after,sizeof(before)));++cases;refusals();
+    }
+    printf("{\"status\":\"PASS\",\"profiles\":%zu,\"cases\":%u}\n",sizeof(profiles)/sizeof(*profiles),cases);return 0;
+}

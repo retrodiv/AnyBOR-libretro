@@ -12,6 +12,7 @@ import unittest
 from contract_fixtures import contract_revisions, load_contract_fixture
 from test_historical_common_think import ROOT, native_output
 from test_historical_player import function
+from native_header_fixtures import assertion_refusals
 
 
 FIXTURE = Path(__file__).with_name('fixtures') / 'modern-entity-drawing-contracts.json'
@@ -38,7 +39,7 @@ def program(data):
     hud = function(core, 'predrawstatus')
     index = hud.index('drawmethod.table = 0;')
     hud = hud[index:hud.index('spriteq_add_sprite(40,', index)]
-    parts = dict(
+    parts = dict(ASSERTIONS=assertion_refusals(),
         DEFAULT=core[start.start():core.index('\n};', start.end()) + 3],
         HELPERS='\n'.join(function(core, n) for n in ('allocate_drawmethod', 'getDrawMethod', 'setDrawMethod')),
         SELECTION=selection, FACING=facing, SHADOW=shadow, STORAGE=storage, SPAWN=spawn, HUD=hud,

@@ -1,0 +1,171 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ * Native constructor and record types; bounded interpreter/list/file services.
+ * Full parser/compiler execution and shared module references are separate.
+ */
+#include <assert.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdarg.h>
+#include <string.h>
+#include "Interpreter.h"
+#include "ImportCache.h"
+#undef printf
+#undef malloc
+#undef calloc
+#undef realloc
+#undef free
+#define CHECK(c) do { if(!(c)) { fprintf(stderr, "Import init check: %s at %d\n", #c, __LINE__); abort(); } } while(0)
+#define HAS_FUNCTIONS @HAS_FUNCTIONS@
+#define EARLY_REFUSAL @EARLY_REFUSAL@
+#define ENGINE @ENGINE@
+@NODE@
+uint32_t obor_profile_build;
+List theFunctionList;
+List *builtins = &theFunctionList;
+static ImportNode node;
+static Interpreter parent;
+static int phase, active, clears, parser_live, instructions_live;
+static unsigned source_allocations, source_releases;
+static char *source_text;
+static char events[64], diagnostic[256];
+static const char path[] = "unit%path.c";
+
+static void event(char value)
+{
+    size_t n = strlen(events); CHECK(n + 1 < sizeof(events));
+    events[n] = value; events[n + 1] = 0;
+}
+void borExit(int code) { (void)code; abort(); }
+void exitIfFalse(int value, const char *condition, const char *function,
+                 const char *file, int line)
+{
+    (void)condition; (void)function; (void)file; (void)line; CHECK(value);
+}
+HRESULT Interpreter_Call(Interpreter *interpreter) { (void)interpreter; abort(); }
+HRESULT Interpreter_EvalInstruction(Interpreter *interpreter) { (void)interpreter; abort(); }
+void List_Init(List *list) { memset(list, 0, sizeof(*list)); event('F'); }
+void List_Clear(List *list) { CHECK(!list->size); event('L'); }
+int List_GetSize(const List *list) { CHECK(!list->size); return 0; }
+void List_Reset(List *list) { CHECK(!list->size); }
+void *List_Retrieve(const List *list) { (void)list; abort(); }
+char *List_GetName(const List *list) { (void)list; abort(); }
+void List_InsertAfter(List *list, void *value, const char *name)
+{ (void)list; (void)value; (void)name; abort(); }
+int List_GotoNext(List *list) { (void)list; abort(); }
+void List_Update(List *list, void *value) { (void)list; (void)value; abort(); }
+
+void Interpreter_Init(Interpreter *interpreter, LPCSTR name, List *functions)
+{
+    CHECK(interpreter == &node.interpreter && !active && functions == &theFunctionList);
+    const char *expected = ENGINE < 3842 || (ENGINE == 3842 && obor_profile_build < 3779)
+                         ? "#import" : path;
+    CHECK(!strcmp(name, expected)); event('I');
+    memset(interpreter, 0, sizeof(*interpreter)); active = 1;
+    if(phase)
+    {
+        interpreter->theParser = calloc(1, sizeof(*interpreter->theParser));
+        CHECK(interpreter->theParser); parser_live = 1;
+    }
+}
+void Interpreter_Clear(Interpreter *interpreter)
+{
+    CHECK(interpreter == &node.interpreter && active && !clears);
+    event('X'); ++clears;
+    CHECK((interpreter->theParser != NULL) == parser_live);
+    CHECK((interpreter->instructionStorage != NULL) == instructions_live);
+    free(interpreter->theParser); free(interpreter->instructionStorage);
+    memset(interpreter, 0, sizeof(*interpreter));
+    active = parser_live = instructions_live = 0;
+}
+char *readscript(const char *name)
+{
+    CHECK(!strcmp(name, path) && active); event('R');
+    if(phase == 1) return NULL;
+    CHECK(!source_text); source_text = malloc(8); CHECK(source_text);
+    memcpy(source_text, "return;", 8); ++source_allocations; return source_text;
+}
+HRESULT Interpreter_ParseText(Interpreter *interpreter, LPSTR text, ULONG line, LPCSTR name)
+{
+    CHECK(interpreter == &node.interpreter && active && text == source_text &&
+          !strcmp(text, "return;") && line == 1 && !strcmp(name, path));
+    event('P'); return !interpreter->theParser || phase == 2 ? E_FAIL : S_OK;
+}
+HRESULT Interpreter_CompileInstructions(Interpreter *interpreter, List *exports)
+{
+    CHECK(interpreter == &node.interpreter && active && parser_live);
+#if HAS_FUNCTIONS
+    CHECK(exports == &node.functions);
+#else
+    CHECK(!exports);
+#endif
+    event('C');
+    interpreter->instructionStorage = calloc(1, sizeof(*interpreter->instructionStorage));
+    CHECK(interpreter->instructionStorage); instructions_live = 1;
+    return phase == 3 ? E_FAIL : S_OK;
+}
+static void release_source(void *pointer)
+{
+    CHECK(pointer && pointer == source_text && source_releases + 1 == source_allocations);
+    event('D'); free(pointer); source_text = NULL; ++source_releases;
+}
+static int record_diagnostic(const char *format, ...) __attribute__((format(printf, 1, 2)));
+static int record_diagnostic(const char *format, ...)
+{
+    CHECK(!diagnostic[0]); va_list args; va_start(args, format);
+    int length = vsnprintf(diagnostic, sizeof(diagnostic), format, args);
+    va_end(args); CHECK(length >= 0 && (size_t)length < sizeof(diagnostic)); return length;
+}
+#define free release_source
+#define printf record_diagnostic
+@INIT@
+#undef printf
+#undef free
+
+int main(void)
+{
+    static const unsigned profiles[] = {@PROFILES@};
+    static const char *basic[] = {"IRPDX", "IRX", "IRPDX", "IRPCDX", "IRPCD"};
+    static const char *exported[] = {"FIXL", "FIRXL", "FIRPDXL", "FIRPDCXL", "FIRPDC"};
+    unsigned cases = 0;
+    parent.theParser = calloc(1, sizeof(*parent.theParser)); CHECK(parent.theParser);
+    void *parent_parser = parent.theParser;
+    for(unsigned p = 0; p < sizeof(profiles) / sizeof(*profiles); ++p)
+    for(unsigned round = 0; round < 2; ++round)
+    for(phase = 0; phase < 5; ++phase)
+    {
+        memset(&node, 0xa5, sizeof(node));
+        active = clears = parser_live = instructions_live = 0;
+        source_allocations = source_releases = 0; source_text = NULL;
+        events[0] = diagnostic[0] = 0; obor_profile_build = profiles[p];
+        CHECK(ImportNode_Init(&node, path) == (phase == 4 ? S_OK : E_FAIL));
+        const char *wanted = HAS_FUNCTIONS ? exported[phase] : basic[phase];
+        if(HAS_FUNCTIONS && !EARLY_REFUSAL && !phase) wanted = "FIRPDXL";
+        CHECK(!strcmp(events, wanted));
+        CHECK(!source_text && source_allocations == source_releases);
+        CHECK(parent.theParser == parent_parser);
+        char expected[256] = "";
+        if(!HAS_FUNCTIONS && phase != 4)
+            snprintf(expected, sizeof(expected), "Script error: unable to import script file '%s'\n", path);
+        else if((ENGINE >= 4432 || (ENGINE == 4086 && profiles[p] >= 3987)) &&
+                (phase == 2 || phase == 3))
+            snprintf(expected, sizeof(expected), "Script error: failed to import '%s': %s\n", path,
+                     phase == 2 ? "parsing failed" : "failed to compile");
+        CHECK(!strcmp(diagnostic, expected));
+        if(phase == 4)
+        {
+            CHECK(active && !clears && parser_live && instructions_live);
+            Interpreter_Clear(&node.interpreter);
+#if HAS_FUNCTIONS
+            List_Clear(&node.functions);
+#endif
+        }
+        CHECK(!active && clears == 1 && !parser_live && !instructions_live);
+        ++cases;
+    }
+    free(parent.theParser);
+    printf("{\"status\":\"PASS\",\"profiles\":%zu,\"cases\":%u}\n",
+           sizeof(profiles) / sizeof(*profiles), cases);
+    return 0;
+}

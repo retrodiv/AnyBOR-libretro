@@ -23,6 +23,7 @@ static unsigned checked;
 static char strings[16][128],diagnostic[1024];
 static int used_strings;
 CHAR *StrCache_Get(int index){assert(index>=0 && index<used_strings);return strings[index];}
+CHAR *StrCache_GetIfPresent(int index){return index>=0 && index<used_strings?strings[index]:NULL;}
 int StrCache_Pop(void){assert(used_strings<16);return used_strings++;}
 void StrCache_Collect(int index){assert(index>=0 && index<used_strings);}
 static int report(const char *format,...){

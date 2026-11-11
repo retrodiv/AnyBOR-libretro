@@ -61,7 +61,9 @@ class EarlyScriptClearTests(unittest.TestCase):
                      'obor_script_share_references', 'alloc_script', 'Script_Init', 'Script_Copy',
                      'Script_Clear', 'Script_AppendText', '_set_var', 'Script_Get_Local_Variant',
                      'Script_Set_Local_Variant', 'Script_Local_Clear', 'system_getlocalvar']
-        bodies = '\n'.join(function(script, name) for name in functions)
+        # Fresh script storage must not enter the core stop path in this VM test.
+        bodies = 'void borExit(int reset){(void)reset;abort();}\n'
+        bodies += '\n'.join(function(script, name) for name in functions)
         bodies += '\n' + '\n'.join(function(core, name) for name in
                                   ('alloc_all_scripts', 'clear_all_scripts', 'free_all_scripts', 'kill_all'))
         code = (FIXTURE.parent / 'early_script_clear.c').read_text()

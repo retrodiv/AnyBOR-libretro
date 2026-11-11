@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.86 — core stability
+
+- Validate script arguments and preserve the original results of valid queries in each profile.
+- Keep animation, collision, text, colour-map and script data within their allocated storage and release them according to ownership.
+- Preserve directory prefixes when resolving asset names with different filename case.
+- Make the music, drawing and CI checks portable across supported test hosts.
+
 ## 0.1.85 — modern historical profiles and loading display
 
 - Add official v4.0 7530, 7555, 7556 and 7735 profiles.

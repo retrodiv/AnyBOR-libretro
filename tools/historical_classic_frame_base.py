@@ -8,6 +8,7 @@ import re
 
 from test_historical_player import function
 from test_early_jump_walkoff import braced_statement
+from native_header_fixtures import assertion_refusals
 
 
 def frame_base_program(root, data):
@@ -39,7 +40,7 @@ def frame_base_program(root, data):
                             for value in case['commands'])
         cases.append('{%d,{%s},%s,%s}' % (len(case['commands']), commands,
                                         oracle('legacy'), oracle('modern')))
-    values = dict(FUNCTIONS='\n'.join(function(source, name) for name in
+    values = dict(ASSERTIONS=assertion_refusals(), FUNCTIONS='\n'.join(function(source, name) for name in
         ('setDrawMethod', 'getDrawMethod', 'alloc_frames', 'addframe', 'free_frames',
          'diff', 'inair', 'obor_classic_vault_animation', 'adjust_base')),
         NUMBERS='\n'.join(function(source, name) for name in ('isNumeric', 'getValidInt')),

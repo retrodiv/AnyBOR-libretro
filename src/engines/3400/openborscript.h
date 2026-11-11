@@ -35,6 +35,9 @@ typedef struct
 
 #include "obor_script_storage.h"
 
+#include <stdint.h>
+/* Preserve member offsets while allowing native packed owners. */
+#pragma pack(push, 4)
 typedef struct Script
 {
 	Interpreter* pinterpreter;
@@ -43,6 +46,7 @@ typedef struct Script
 	int interpreterowner;   //flag
     obor_script_reference *obor_interpreter;
 }Script;
+#pragma pack(pop)
 
 extern s_variantnode** global_var_list;
 extern List           theFunctionList;

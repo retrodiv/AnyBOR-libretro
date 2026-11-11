@@ -226,7 +226,8 @@ HRESULT pp_error(pp_parser* self, char* format, ...)
 	va_list arglist;
 
 	va_start(arglist, format);
-	vsprintf(buf, format, arglist);
+	vsnprintf(buf, sizeof(buf), format, arglist);
+    buf[sizeof(buf) - 1] = 0;
 	va_end(arglist);
 	pp_message(self, "error", buf);
 
@@ -242,7 +243,8 @@ void pp_warning(pp_parser* self, char* format, ...)
 	va_list arglist;
 
 	va_start(arglist, format);
-	vsprintf(buf, format, arglist);
+	vsnprintf(buf, sizeof(buf), format, arglist);
+    buf[sizeof(buf) - 1] = 0;
 	va_end(arglist);
 	pp_message(self, "warning", buf);
 }
@@ -980,7 +982,7 @@ HRESULT pp_parser_insert_function_macro(pp_parser* self, char* name)
 					paramCount++;
 
 				if((strlen(paramBuffer) + strlen(self->token.theSource) + 1) > sizeof(paramBuffer))
-					return pp_error(self, "parameter %d of function '%s' exceeds max length of %d characters", name, sizeof(paramBuffer)-1);
+					return pp_error(self, "parameter %d of function '%s' exceeds max length of %d characters", paramCount, name, (int)sizeof(paramBuffer) - 1);
 
 				strcat(paramBuffer, self->token.theSource);
 		}

@@ -38,7 +38,7 @@ class EarlyZoomTests(unittest.TestCase):
         variant = (engine / 'source/scriptlib/ScriptVariant.c').read_text()
         queue_source = (engine / 'source/gamelib/spriteq.c').read_text()
         update = function(core, 'update')
-        start = update.index('if(obor_profile_build >= 3366 && zoom_scale_x)')
+        start = update.index('if(obor_profile_build >= 3366 && zoom_scale_x > 0 && zoom_scale_y > 0)')
         first = block(update, start)
         second_start = start + len(first)
         self.assertRegex(update[second_start:], r'^\s*else\s*\{')
@@ -92,6 +92,7 @@ static int ingame=1; /* The isolated composition window represents gameplay. */
 static s_screen *vscreen,*zoombuffer;
 List theFunctionList;
 static int registered,draw_mask,draw_count,trace_on,at,observed_background;
+static int refuse_allocation,stop_count;
 static char trace[128],diagnostic[512];
 static void event(char c){if(trace_on){assert(at+1<(int)sizeof(trace));trace[at++]=c;trace[at]=0;}}
 CHAR *StrCache_Get(int index){(void)index;abort();}
@@ -99,12 +100,14 @@ void StrCache_Collect(int index){(void)index;}
 int StrCache_Pop(void){abort();}
 static int probe_printf(const char *format,...){va_list ap;va_start(ap,format);int n=vsnprintf(diagnostic,sizeof(diagnostic),format,ap);va_end(ap);return n;}
 #define printf probe_printf
+static void probe_shutdown(int status,const char *message,...){assert(status==1 && message);stop_count++;event('S');}
+#define shutdown probe_shutdown
 void List_InsertAfter(List *list,void *entry,const char *name){assert(list==&theFunctionList && entry==(void*)openbor_zoom && !strcmp(name,"zoom"));registered++;}
 static s_screen *screen_new(void){
  s_screen *s=calloc(1,sizeof(*s)+4);assert(s);s->width=4;s->height=1;s->pixelformat=PIXEL_8;return s;
 }
 s_screen *allocscreen(int w,int h,int format){
- assert(w==4 && h==1 && format==PIXEL_8);s_screen *s=screen_new();memset(s->data,0x5a,4);event('A');return s;
+ assert(w==4 && h==1 && format==PIXEL_8);if(refuse_allocation){refuse_allocation=0;event('A');return NULL;}s_screen *s=screen_new();memset(s->data,0x5a,4);event('A');return s;
 }
 void freescreen(s_screen **screen){assert(*screen==zoombuffer);free(*screen);*screen=NULL;event('F');}
 void clearscreen(s_screen *s){assert(s==zoombuffer);memset(s->data,0,4);event('C');}
@@ -128,6 +131,7 @@ static void verify_api(int available){
   out=&result;assert(openbor_zoom(args,&out,n)==(available?S_OK:E_FAIL) && !out);
   if(available)assert(zoom_center_x==7 && zoom_center_y==9 && zoom_scale_x==256 && zoom_scale_y==300 && zoom_z==0);
  }
+ assert(openbor_zoom(args,NULL,5)==E_FAIL);
  if(!available)return;
  ScriptVariant *short_args[]={value,value+1,value+2,value+3};
  for(int n=0;n<5;n++){out=&result;diagnostic[0]=0;assert(openbor_zoom(short_args,&out,n)==E_FAIL && !out && diagnostic[0]);}
@@ -173,6 +177,11 @@ static void verify_composition(int available,int copies){
   zoom_z=MIN_INT;reset_trace();compose();assert(!strcmp(trace,copies?"BZUUU":"ZUUU") && draw_count==3);
  }
  zoom_scale_x=0;reset_trace();compose();assert(!strcmp(trace,available?"FUUU":"UUU") && !zoombuffer && draw_count==3);
+ if(available){
+  zoom_scale_x=256;zoom_scale_y=300;refuse_allocation=1;stop_count=0;reset_trace();compose();
+  assert(!strcmp(trace,"AS") && stop_count==1 && !zoombuffer && draw_count==0);
+  zoom_scale_y=0;reset_trace();compose();assert(!strcmp(trace,"UUU") && !zoombuffer);
+ }
  trace_on=0;spriteq_clear();for(int i=0;i<3;i++)free(images[i]);
 }
 static void check(unsigned revision,int available,int filtered,int copies){

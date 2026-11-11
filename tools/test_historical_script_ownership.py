@@ -51,7 +51,8 @@ def source_parts():
         raise ValueError('The tested source must contain its actual shared storage header')
     options = dict(pointer_container=True, allocation_magic=True, cleanup_safe=True,
                    labels=['source_contract'], includes=('#include '+json.dumps(str(header))+
-                       '\nstatic uint32_t obor_profile_build;\nstatic int fixture_expected_magic;'),
+                       '\n#define OBOR_TEST_ACTIVE_CLEAR 1\nstatic uint32_t obor_profile_build;\nstatic int fixture_expected_magic;'
+                       '\nstatic void borExit(int status) {(void)status;abort();}'),
                    support=support)
     return parts, options
 

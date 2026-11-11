@@ -1,0 +1,36 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ * Actual native scalar stores; explicit results at both arithmetic boundaries.
+ * This component does not emulate projectile collision or callback decisions.
+ */
+#include <limits.h>
+#include <stdio.h>
+#include <stdlib.h>
+
+#define CHECK(c) do { if(!(c)) { fprintf(stderr, "Projectile health check: %s\n", #c); abort(); } } while(0)
+@STORES@
+
+int main(void)
+{
+    static const unsigned profiles[] = {@PROFILES@};
+    static const int inputs[] = {INT_MIN, INT_MIN + 99999, INT_MIN + 100000,
+        INT_MIN + 100001, -1, 0, 99999, 100000, 100001, INT_MAX};
+    static const int expected[] = {INT_MIN, INT_MIN, INT_MIN, INT_MIN + 1,
+        -100001, -100000, -1, 0, 1, INT_MAX - 100000};
+    int (*stores[])(int) = {site_0, site_1, site_2};
+    unsigned cases = 0;
+    for(unsigned p = 0; p < sizeof(profiles) / sizeof(*profiles); ++p)
+    for(unsigned s = 0; s < sizeof(stores) / sizeof(*stores); ++s)
+    {
+        for(unsigned i = 0; i < sizeof(inputs) / sizeof(*inputs); ++i)
+        {
+            CHECK(stores[s](inputs[i]) == expected[i]);
+            ++cases;
+        }
+        CHECK(stores[s](stores[s](INT_MIN + 150000)) == INT_MIN);
+        ++cases;
+    }
+    printf("{\"status\":\"PASS\",\"profiles\":%zu,\"stores\":3,\"cases\":%u}\n",
+           sizeof(profiles) / sizeof(*profiles), cases);
+    return 0;
+}

@@ -1,0 +1,85 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ * Real native record types/getters; later named queries link the native List.
+ * Values are borrowed scalar fixtures. Persistence/VM execution is separate.
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+@CONFIG@
+#include "openbor.h"
+#include "@HEADER@"
+#undef printf
+#undef malloc
+#undef calloc
+#undef realloc
+#undef free
+#define LEGACY @LEGACY@
+#define CHECK(c) do { if(!(c)) { fprintf(stderr, "Script slot check: %s at %d\n", #c, __LINE__); abort(); } } while(0)
+uint32_t obor_profile_build;
+void borExit(int code) { (void)code; abort(); }
+void exitIfFalse(int value, const char *condition, const char *function,
+                 const char *file, int line)
+{ (void)condition; (void)function; (void)file; (void)line; CHECK(value); }
+HRESULT Interpreter_Call(Interpreter *interpreter) { (void)interpreter; abort(); }
+HRESULT Interpreter_EvalInstruction(Interpreter *interpreter) { (void)interpreter; abort(); }
+#if LEGACY
+int max_global_var_index;
+s_variantnode **global_var_list;
+#endif
+@GETTER@
+
+int main(void)
+{
+    static const unsigned profiles[] = {@PROFILES@};
+    char hit[] = "hit", tail[] = "tail", missing[] = "missing", empty[] = "";
+    unsigned cases = 0;
+    for(unsigned p = 0; p < sizeof(profiles) / sizeof(*profiles); ++p)
+    {
+        obor_profile_build = profiles[p];
+#if LEGACY
+        s_variantnode nodes[5], before[5];
+        s_variantnode *pointers[] = {nodes, nodes + 1, nodes + 2, nodes + 3, nodes + 4};
+        Script owner;
+        memset(nodes, 0, sizeof(nodes)); memset(&owner, 0, sizeof(owner));
+        nodes[0].key = hit; nodes[1].key = NULL; nodes[2].key = empty;
+        nodes[3].key = tail; nodes[3].owner = &owner; nodes[4].key = tail;
+        memcpy(before, nodes, sizeof(nodes)); global_var_list = pointers; max_global_var_index = 4;
+        CHECK(!Script_Get_Global_Variant(NULL)); ++cases;
+        CHECK(!Script_Get_Global_Variant(empty)); ++cases;
+        CHECK(!Script_Get_Global_Variant(missing)); ++cases;
+        CHECK(Script_Get_Global_Variant(hit) == &nodes[0].value); ++cases;
+        CHECK(Script_Get_Global_Variant(tail) == &nodes[4].value); ++cases;
+        max_global_var_index = 1;
+        CHECK(!Script_Get_Global_Variant(tail)); ++cases;
+        max_global_var_index = -1;
+        CHECK(!Script_Get_Global_Variant(hit)); ++cases;
+        CHECK(!memcmp(nodes, before, sizeof(nodes))); ++cases;
+        global_var_list = NULL;
+#else
+        List list;
+        Varlist variables;
+        ScriptVariant indexed[5], named;
+        memset(&variables, 0, sizeof(variables)); memset(indexed, 0, sizeof(indexed));
+        memset(&named, 0, sizeof(named)); List_Init(&list);
+        indexed[0].vt = VT_INTEGER; indexed[0].lVal = 4;
+        variables.list = &list; variables.vars = indexed;
+        CHECK(!Varlist_GetByName(&variables, NULL)); ++cases;
+        CHECK(!Varlist_GetByName(&variables, empty)); ++cases;
+        CHECK(!Varlist_GetByName(&variables, missing)); ++cases;
+        List_InsertAfter(&list, &indexed[1], NULL);
+        CHECK(!Varlist_GetByName(&variables, missing)); ++cases;
+        List_InsertAfter(&list, &named, hit);
+        CHECK(Varlist_GetByName(&variables, hit) == &named); ++cases;
+        Node *selected = list.current;
+        CHECK(!Varlist_GetByName(&variables, missing) && list.current == selected); ++cases;
+        CHECK(!Varlist_GetByName(&variables, empty) && list.current == selected); ++cases;
+        CHECK(indexed[0].vt == VT_INTEGER && indexed[0].lVal == 4); ++cases;
+        List_Clear(&list);
+#endif
+    }
+    printf("{\"status\":\"PASS\",\"profiles\":%zu,\"cases\":%u}\n",
+           sizeof(profiles) / sizeof(*profiles), cases);
+    return 0;
+}

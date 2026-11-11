@@ -1,3 +1,14 @@
+/* AnyBOR modification record: 2026-09-12.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Use the current storage capacity when indexing body-collision slots.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/8023.md
+ * at the source repository root. Original notices follow below.
+ */
+
 /*
  * OpenBOR - http://www.chronocrash.com
  * -----------------------------------------------------------------------
@@ -123,7 +134,8 @@ HRESULT openbor_get_body_collision_instance(ScriptVariant **varlist, ScriptVaria
 
     // If this index has an active collision instance,
     // send it back to user.
-    if((handle->active_status & active_bit) && handle->slots[index])
+    if((handle->active_status & active_bit) && handle->slots
+       && index < handle->slot_capacity && handle->slots[index])
     {
         collision = handle->slots[index];
 

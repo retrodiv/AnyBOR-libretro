@@ -1360,7 +1360,7 @@ static void check(unsigned revision,int supported,int owned_mask,int colourmaps)
 int main(void) {assert(!free_model(NULL));@CHECKS@ puts("early_model_resources=1");return 0;}
 '''
         replacements = dict(ENUM=enums[0], CONSTANTS='\n'.join(constants), FIELDS='\n'.join('void *%s;' % field for field in fields),
-                            HAS_FREETYPE=function(source, 'hasFreetype'), FREE_MODEL=function(source, 'free_model'),
+                            HAS_FREETYPE=function(source, 'hasFreetype')+'\n'+function(source, 'obor_model_release_constructor_storage'), FREE_MODEL=function(source, 'free_model'),
                             FLAG_INITIALIZERS='\n'.join(flag_initializers), SUBCLASS=cases['CMD_MODEL_SUBCLASS']['body'],
                             ALLOCATE_FIELDS='\n'.join('if(%s)newchar->%s=owned(owner);' %
                                                      ('!external_weapon' if field == 'weapon' else '!sparse' if i & 1 else '1', field)

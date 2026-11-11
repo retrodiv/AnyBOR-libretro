@@ -56,6 +56,8 @@ typedef struct {
  char name[32];unsigned health;int isSubclassed;ModelFreetype freetypes;
  s_scripts *scripts;
 } s_model;
+/* Constructor backing tables are absent from this palette-only model. */
+static void obor_model_release_constructor_storage(s_model *model,const s_model *parent) {assert(model&&parent);}
 static unsigned obor_profile_build;
 #define MAX_PAL_SIZE 1024
 #define PAL_BYTES 1024

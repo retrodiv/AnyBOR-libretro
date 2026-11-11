@@ -55,6 +55,7 @@
 #include	"anigif.h"
 #include    "config.h"
 #include    "globals.h"
+#include "obor_draw_assert.h"
 #include    "ram.h"
 #include    "version.h"
 #include    "savedata.h"
@@ -1954,6 +1955,7 @@ typedef struct
 typedef struct
 {
     s_collision_body **instance;
+    size_t obor_instance_capacity;
 } s_collision_body_list;
 
 // Collision box for detecting
@@ -1970,6 +1972,7 @@ typedef struct
 typedef struct
 {
     s_collision_entity **instance;
+    size_t obor_instance_capacity;
 } s_collision_entity_list;
 
 // Collision box for active
@@ -2022,6 +2025,7 @@ typedef struct
 typedef struct
 {
     s_collision_attack **instance;
+    size_t obor_instance_capacity;
 } s_collision_attack_list;
 
 // Caskey, Damon V.
@@ -2243,6 +2247,8 @@ typedef struct
     unsigned char obor_land_present;
     unsigned char obor_energy_present;
     unsigned char obor_projectile_position_explicit;
+    size_t obor_attack_frame_capacity; /* Actual owned frame-table extent. */
+    size_t obor_frame_capacity;
 } s_anim;
 
 #include "source/openborscript/profile_ids.h"
@@ -2700,6 +2706,7 @@ typedef struct entity
 	unsigned char			*colourmap;							// Colortable in use. ~~
 
 	Varlist					*varlist;							// Entity var collection. ~~
+    Varlist *obor_varlist_owned;
 
 	// Floating decimals.
 	float					altbase;							// Altitude affected by movea. ~~
@@ -3025,6 +3032,7 @@ typedef struct
     ///////////////////////////////////////////////////////////////
     int numtextobjs;
     s_textobj *textobjs;
+    struct obor_text_table *obor_text_tables;
     int cameraxoffset;
     int camerazoffset;
     int numholes;
@@ -3077,6 +3085,11 @@ typedef struct
     int waiting;
 
 } s_level;
+
+int obor_textobjs_count(const s_level *lv);
+int obor_textobj_index(s_level *lv, int index, int grow);
+void obor_textobjs_release_visible(s_level *lv);
+void obor_textobjs_release_all(s_level *lv);
 
 typedef struct ArgList
 {
@@ -3192,7 +3205,7 @@ float randf(float max);
 int _makecolour(int r, int g, int b);
 int load_colourmap(s_model *model, char *image1, char *image2);
 int load_palette(unsigned char *pal, char *filename);
-void standard_palette();
+void standard_palette(int immediate);
 void change_system_palette(int palindex);
 void unload_background();
 void lifebar_colors();
@@ -3215,7 +3228,7 @@ s_model *prevplayermodel(s_model *current);
 void free_anim(s_anim *anim);
 void free_models();
 int free_model();
-void cache_model_sprites();
+void cache_model_sprites(s_model *m, int ld);
 
 s_onframe_set			*allocate_frame_set();
 s_energy_cost			*allocate_energy_cost();

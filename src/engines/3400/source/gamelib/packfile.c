@@ -296,6 +296,8 @@ char * casesearch(const char *dir, const char *filepath)
 	char filename[256] = {""}, *rest_of_path;
 	static char fullpath[256];
 	int i=0;
+    if(!dir || !filepath || strcspn(filepath, "/") >= sizeof(filename)) return NULL;
+
 #ifdef VERBOSE
 	printf("casesearch: %s, %s\n", dir, filepath);
 #endif

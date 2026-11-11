@@ -465,6 +465,43 @@ class HistoricalBehaviorTests(unittest.TestCase):
         self.assertEqual(actual, [dict(revision=row['revision'], cases=cases, status='PASS')
                                  for row in data['sources']])
 
+    def test_classic_animation_query_uses_current_and_callback_actor(self):
+        from test_historical_common_think import native_output
+        engine = ROOT / 'src/engines/4086'
+        source = (engine / 'openborscript.c').read_text()
+        core = (engine / 'openbor.c').read_text()
+        registry = function(source, 'Script_LoadSystemFunctions')
+        registration = re.search(
+            r'if\(([^\n]+)\)\s*\{\s*List_InsertAfter\(&theFunctionList,\s*'
+            r'\(void \*\)openbor_getanimationproperty, "getanimationproperty"\);',
+            registry)
+        self.assertIsNotNone(registration)
+        actor_scope = re.search(
+            r'struct obor_animation_actor_scope\s*\{[^}]+\};\s*'
+            r'static struct obor_animation_actor_scope \*obor_animation_actors;',
+            core)
+        properties = re.search(
+            r'^typedef enum animationprop_enum\s*\{[\s\S]+?^\}\s*e_animation_properties;',
+            source, re.MULTILINE)
+        energy = re.search(r'enum gep_energycost_enum\s*\{[^}]+\};', source)
+        self.assertTrue(actor_scope and properties and energy)
+        original = {4079, 4080, 4082, 4085, 4086, 4088, 4107, 4111, 4129, 4153}
+        pin = json.loads((ROOT / 'src/pin.json').read_text())
+        revisions = [int(p.get('revision', p['build'])) for p in pin['profiles'] if p['engine'] == '4086']
+        self.assertTrue(original <= set(revisions))
+        parts = dict(ACTOR_SCOPE=actor_scope[0], PROPERTIES=properties[0], ENERGY=energy[0],
+                     CURRENT=function(core, 'obor_script_current_animation'),
+                     CALLBACK=function(core, 'execute_onmodelcopy_script'),
+                     GETTER=function(source, 'openbor_getanimationproperty'),
+                     REGISTRATION=registration[1],
+                     PROFILES=','.join('{%du,%d}' % (r, r in original) for r in revisions))
+        code = Path(__file__).with_name('animation_query_contract.c.in').read_text()
+        for key, value in parts.items():
+            code = code.replace('@' + key + '@', value)
+        actual = json.loads(native_output(code, {'engine': '4086'}))
+        self.assertEqual(actual, dict(available=len(original), callbacks=len(original),
+                                      absent=len(revisions)-len(original)))
+
     def test_classic_terrain_numeric_fields_tuple_writes_and_refusal_routes(self):
         from historical_classic_terrain import terrain_program
         from test_historical_common_think import native_output
@@ -4467,9 +4504,9 @@ static void check(int runtime,int saved_flag,int save_phase,int initial_flag,int
   for(int i=0;i<5;++i)arguments[i]="";
   if(count>1)arguments[1]="alpha";
   if(count>2)arguments[2]="beta";
-  for(int i=0;i<4;++i)set->skipselect[i]="prior";
+  for(int i=0;i<4;++i){set->skipselect[i]=malloc(6);assert(set->skipselect[i]);memcpy(set->skipselect[i],"prior",6);}
   parse_skip();assert(set->noselect==(runtime && count==1?1:before));
-  for(int i=0;i<4;++i)assert(!strcmp(set->skipselect[i],i+1<count?arguments[i+1]:"prior"));
+  for(int i=0;i<4;++i){assert(!strcmp(set->skipselect[i],i+1<count?arguments[i+1]:"prior"));free(set->skipselect[i]);set->skipselect[i]=NULL;}
  }
  for(level->type=-1;level->type<4;++level->type)for(level->settime=0;level->settime<2;++level->settime)
  for(int active=0;active<2;++active) {

@@ -1,0 +1,99 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <assert.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#pragma GCC diagnostic ignored "-Wignored-qualifiers"
+#if defined(__clang__)
+#pragma GCC diagnostic ignored "-Wdeprecated-non-prototype"
+#endif
+#include "openbor.h"
+#undef printf
+#if OBOR_ENGINE_BUILD <= 4432
+/* The classic header declares these inline services; this contract never calls them. */
+HRESULT Interpreter_Call(Interpreter *interpreter) { (void)interpreter; abort(); }
+HRESULT Interpreter_EvalInstruction(Interpreter *interpreter) { (void)interpreter; abort(); }
+#endif
+void exitIfFalse(int value, const char *expression, const char *func, const char *file, int line)
+{
+    (void)expression; (void)func; (void)file; (void)line;
+    if(!value) abort();
+}
+uint32_t obor_profile_build;
+s_drawmethod drawmethod;
+static s_sprite sprite;
+static s_screen screen;
+static int drawn;
+void putsprite(int x, int y, s_sprite *frame, s_screen *target, s_drawmethod *method)
+{
+    assert(x == -42 && y == 314 && frame == &sprite && target == &screen && method == &drawmethod);
+    ++drawn;
+}
+HRESULT ScriptVariant_IntegerValue(ScriptVariant *value, LONG *result)
+{
+    assert(value->vt == VT_INTEGER);
+    *result = value->lVal;
+    return S_OK;
+}
+@FUNCTION@
+int main(void)
+{
+    static const unsigned profiles[] = {@PROFILES@};
+    static unsigned char token;
+    ScriptVariant storage[16], *args[16], result, *out;
+    unsigned p;
+    int i, count;
+    memset(storage, 0, sizeof(storage));
+    for(i = 0; i < 16; ++i)
+    {
+        args[i] = &storage[i];
+        storage[i].vt = VT_INTEGER;
+        storage[i].lVal = 100 + i;
+    }
+    storage[0].vt = VT_EMPTY;
+    storage[13].vt = VT_PTR;
+    storage[13].ptrVal = &token;
+    storage[14].lVal = -42;
+    storage[15].lVal = 314;
+    for(p = 0; p < sizeof(profiles) / sizeof(*profiles); ++p)
+    {
+        obor_profile_build = profiles[p];
+#if @HAS_CENTERS@
+        storage[0].vt = VT_EMPTY;
+        storage[1].vt = VT_INTEGER;
+        storage[1].lVal = 101;
+        storage[2].lVal = 102;
+        storage[3].lVal = 103;
+        for(count = 2; count <= 16; ++count)
+        {
+            memset(&drawmethod, 0, sizeof(drawmethod));
+            out = &result;
+            assert(openbor_setdrawmethod(args, &out, count) == S_OK);
+            assert(out == NULL);
+            assert(drawmethod.scalex == (count > 2 ? 102 : 0));
+            assert(drawmethod.scaley == (count > 3 ? 103 : 0));
+            assert(drawmethod.shiftx == (count > 6 ? 106 : 0));
+            assert(drawmethod.centerx == (count > 14 && obor_profile_build >= 3551u ? -42 : 0));
+            assert(drawmethod.centery == (count > 15 && obor_profile_build >= 3551u ? 314 : 0));
+            assert(drawmethod.table == (count >= 14 ? &token : NULL));
+        }
+#else
+        (void)count;
+#endif
+        storage[0].vt = VT_PTR;
+        storage[0].ptrVal = &sprite;
+        storage[1].vt = VT_PTR;
+        storage[1].ptrVal = &screen;
+        storage[2].lVal = -42;
+        storage[3].lVal = 314;
+        drawn = 0;
+        out = &result;
+        assert(openbor_drawspritetoscreen(args, &out, 4) == S_OK);
+        assert(out == NULL && drawn == 1);
+    }
+    printf("{\"status\":\"PASS\",\"profiles\":%zu}\n", sizeof(profiles) / sizeof(*profiles));
+    return 0;
+}

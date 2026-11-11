@@ -1,0 +1,29 @@
+{
+  "schema": 1,
+  "engines": {
+    "4086": {
+      "body": null,
+      "needs_guard": false
+    },
+    "4432": {
+      "body": "int Varlist_DeleteByIndex(Varlist *array, int index)\r\n{\r\n    if(index < 0 || index >= array->vars->lVal)\r\n    {\r\n        return 0;\r\n    }\r\n    else\r\n    {\r\n        int i = 0;\r\n        int size = array->vars->lVal;\r\n        ScriptVariant *elem;\r\n\r\n        for ( i = index; i < size-1; i++ )\r\n        {\r\n            ScriptVariant_Copy(array->vars+1+i, array->vars+1+i+1); // first value of array is his size!\r\n        }\r\n        --array->vars->lVal;\r\n\r\n        // set last element to NULL\r\n        elem = array->vars+1+size-1;\r\n        ScriptVariant_ChangeType(elem, VT_EMPTY);\r\n        elem->ptrVal = NULL;\r\n\r\n        //realloc mem\r\n        array->vars = realloc((array->vars), sizeof(*(array->vars))*(array->vars->lVal+1));\r\n\r\n        //printf(\"aaa: %s\\n\", (char*)StrCache_Get(elem->strVal) );\r\n    }\r\n\r\n    return 1;\r\n}",
+      "needs_guard": true
+    },
+    "6391": {
+      "body": "int Varlist_DeleteByIndex(Varlist *array, int index)\n{\n    if(index < 0 || index >= array->vars->lVal)\n    {\n        return 0;\n    }\n    else\n    {\n        int i = 0;\n        int size = array->vars->lVal;\n        ScriptVariant *elem;\n\n        for ( i = index; i < size-1; i++ )\n        {\n            ScriptVariant_Copy(array->vars+1+i, array->vars+1+i+1); // first value of array is his size!\n        }\n        --array->vars->lVal;\n\n        // set last element to NULL\n        elem = array->vars+1+size-1;\n        ScriptVariant_ChangeType(elem, VT_EMPTY);\n        elem->ptrVal = NULL;\n\n        //realloc mem\n        array->vars = realloc((array->vars), sizeof(*(array->vars))*(array->vars->lVal+1));\n\n        //printf(\"aaa: %s\\n\", (char*)StrCache_Get(elem->strVal) );\n    }\n\n    return 1;\n}",
+      "needs_guard": true
+    },
+    "7142": {
+      "body": "int Varlist_DeleteByIndex(Varlist *array, int index)\n{\n    if(index < 0 || index >= array->vars->lVal)\n    {\n        return 0;\n    }\n    else\n    {\n        int i = 0;\n        int size = array->vars->lVal;\n        ScriptVariant *elem;\n\n        for ( i = index; i < size-1; i++ )\n        {\n            ScriptVariant_Copy(array->vars+1+i, array->vars+1+i+1); // first value of array is his size!\n        }\n        --array->vars->lVal;\n\n        // set last element to NULL\n        elem = array->vars+1+size-1;\n        ScriptVariant_ChangeType(elem, VT_EMPTY);\n        elem->ptrVal = NULL;\n\n        //realloc mem\n        array->vars = realloc((array->vars), sizeof(*(array->vars))*(array->vars->lVal+1));\n\n        //printf(\"aaa: %s\\n\", (char*)StrCache_Get(elem->strVal) );\n    }\n\n    return 1;\n}",
+      "needs_guard": true
+    },
+    "7533": {
+      "body": "int Varlist_DeleteByIndex(Varlist *array, int index)\n{\n    if(index < 0 || index >= array->vars->lVal)\n    {\n        return 0;\n    }\n    else\n    {\n        int i = 0;\n        int size = array->vars->lVal;\n        ScriptVariant *elem;\n\n        for ( i = index; i < size-1; i++ )\n        {\n            ScriptVariant_Copy(array->vars+1+i, array->vars+1+i+1); // first value of array is his size!\n        }\n        --array->vars->lVal;\n\n        // set last element to NULL\n        elem = array->vars+1+size-1;\n        ScriptVariant_ChangeType(elem, VT_EMPTY);\n        elem->ptrVal = NULL;\n\n        //realloc mem\n        array->vars = realloc((array->vars), sizeof(*(array->vars))*(array->vars->lVal+1));\n\n        //printf(\"aaa: %s\\n\", (char*)StrCache_Get(elem->strVal) );\n    }\n\n    return 1;\n}",
+      "needs_guard": true
+    },
+    "8023": {
+      "body": "bool Varlist_DeleteByIndex(Varlist *array, int index) {\n    assert(array != NULL);\n    assert(array->vars != NULL);\n\n    /*\n     * Reject indexes outside the logical value range.\n     */\n    if(index < 0 || index >= array->vars->lVal) {\n        return false;\n    }\n\n    const int size = array->vars->lVal;\n\n    /*\n     * Shift subsequent values left over the removed\n     * entry. ScriptVariant_Copy() is required instead\n     * of assignment or memmove because string variants\n     * maintain reference counts.\n     */\n    for(int i = index; i < size - 1; i++) {\n        ScriptVariant_Copy(\n            array->vars + 1 + i,\n            array->vars + 1 + i + 1);\n    }\n\n    /*\n     * Clear the final value, which became redundant\n     * after the shift. This releases any string\n     * reference still owned by that element.\n     */\n    ScriptVariant_Clear(array->vars + size);\n\n    /*\n     * Update the logical length stored in the allocation's\n     * leading ScriptVariant.\n     */\n    array->vars->lVal = size - 1;\n\n    /*\n     * Attempt to release the unused final allocation slot.\n     * Shrinking failure is harmless because the logical\n     * deletion is already complete and the original\n     * allocation remains valid.\n     */\n    const size_t allocation_count = (size_t)array->vars->lVal + 1U;\n\n    ScriptVariant *resized_vars = realloc(array->vars, sizeof(*array->vars) * allocation_count);\n\n    if(resized_vars) {\n        array->vars = resized_vars;\n    }\n\n    return true;\n}",
+      "needs_guard": false
+    }
+  }
+}

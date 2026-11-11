@@ -10,7 +10,7 @@ import re
 import unittest
 
 from contract_fixtures import contract_revisions, load_contract_fixture
-from test_historical_common_think import ROOT, native_output
+from test_historical_common_think import ROOT, native_output, ogg_configuration
 from test_historical_player import function
 
 FIXTURE = Path(__file__).with_name('fixtures') / 'modern-music-lifecycle-contracts.json'
@@ -53,7 +53,12 @@ class ModernMusicLifecycleContracts(unittest.TestCase):
         expected = dict(status='PASS', header_size=160, profiles=[
             dict(revision=s['revision'], **data['contracts'][s['contract']]) for s in data['sources']])
         includes = [ROOT / 'src/deps' / name / 'include' for name in data['dependencies']]
-        self.assertEqual(json.loads(native_output(program(data), data, extra_includes=includes)), expected)
+        self.assertEqual(json.loads(native_output(program(data), data, extra_includes=includes,
+                                                 configure_ogg=True)), expected)
+
+    def test_unrecognized_ogg_configuration_is_rejected(self):
+        with self.assertRaisesRegex(ValueError, 'Unresolved vendored Ogg'):
+            ogg_configuration('typedef @UNKNOWN_INTEGER_TYPE@ ogg_int64_t;')
 
 
 if __name__ == '__main__':

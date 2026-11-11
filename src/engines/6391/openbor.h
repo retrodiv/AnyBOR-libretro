@@ -57,6 +57,7 @@
 #include	"anigif.h"
 #include    "config.h"
 #include    "globals.h"
+#include "obor_draw_assert.h"
 #include    "ram.h"
 #include    "version.h"
 #include    "savedata.h"
@@ -1736,6 +1737,7 @@ typedef struct
 typedef struct
 {
     s_collision_body **instance;
+    size_t obor_instance_capacity;
 } s_collision_body_list;
 
 // Collision box for detecting
@@ -1752,6 +1754,7 @@ typedef struct
 typedef struct
 {
     s_collision_entity **instance;
+    size_t obor_instance_capacity;
 } s_collision_entity_list;
 
 // Collision box for active
@@ -1804,6 +1807,7 @@ typedef struct
 typedef struct
 {
     s_collision_attack **instance;
+    size_t obor_instance_capacity;
 } s_collision_attack_list;
 
 // Caskey, Damon V.
@@ -1983,6 +1987,8 @@ typedef struct
     s_energycost            *energycost;            // 1-10-05 to adjust the amount of energy used for specials. 2011_03_31, DC: Moved to struct.
     s_move                  **move;                 // base = seta, x = move, y = movea, z = movez
     s_axis_plane_vertical_int   **offset;               // original sprite offsets
+    size_t obor_attack_frame_capacity; /* Actual owned frame-table extent. */
+    size_t obor_frame_capacity;
 } s_anim;
 
 struct animlist
@@ -2764,6 +2770,7 @@ typedef struct
     ///////////////////////////////////////////////////////////////
     int numtextobjs;
     s_textobj *textobjs;
+    struct obor_text_table *obor_text_tables;
     int cameraxoffset;
     int camerazoffset;
     int numholes;
@@ -2817,6 +2824,11 @@ typedef struct
     int waiting;
 
 } s_level;
+
+int obor_textobjs_count(const s_level *lv);
+int obor_textobj_index(s_level *lv, int index, int grow);
+void obor_textobjs_release_visible(s_level *lv);
+void obor_textobjs_release_all(s_level *lv);
 
 typedef struct ArgList
 {

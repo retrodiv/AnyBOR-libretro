@@ -16,6 +16,7 @@
 /* Shared internal selectors, native logical-profile script IDs. */
 #ifndef OBOR_PROFILE_IDS_H
 #define OBOR_PROFILE_IDS_H
+#include <limits.h>
 static inline int obor_animation_from_native(int id)
 {
     int original_max = ANI_GETBOOMERANG;
@@ -30,9 +31,9 @@ static inline int obor_animation_from_native(int id)
     if(obor_profile_build == 6510)
     {
         if(id == 0) return ANI_NONE;
-        return id < original_max + 1 ? id - 1 : id + 1;
+        return id < original_max + 1 ? id - 1 : id < INT_MAX ? id + 1 : -1;
     }
-    return id < original_max ? id : id + 2;
+    return id < original_max ? id : id <= INT_MAX - 2 ? id + 2 : -1;
 }
 static inline int obor_animation_to_native(int id)
 {
@@ -53,7 +54,7 @@ static inline int obor_animation_to_native(int id)
 }
 static inline int obor_animation_property_from_native(int id)
 {
-    return obor_profile_build == 6330 && id >= ANI_PROP_ENTITY_COLLISION ? id + 1 : id;
+    return obor_profile_build == 6330 && id >= ANI_PROP_ENTITY_COLLISION ? (id < INT_MAX ? id + 1 : -1) : id;
 }
 static inline int obor_animation_property_to_native(int id)
 {
@@ -100,7 +101,7 @@ static inline int obor_attack_from_native(int id)
             default: return id;
         }
     }
-    return id >= ATK_BOSS_DEATH ? id + 1 : id;
+    return id >= ATK_BOSS_DEATH ? (id < INT_MAX ? id + 1 : -1) : id;
 }
 static inline int obor_attack_to_native(int id)
 {

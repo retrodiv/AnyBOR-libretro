@@ -50,6 +50,8 @@ def render_reads(parts, *, scalar, components, visible_components, revision,
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <strings.h>
+#define stricmp strcasecmp
 #ifdef NDEBUG
 #error Native contract assertions must remain enabled
 #endif
@@ -62,7 +64,7 @@ typedef struct {union {LONG lVal;DOUBLE dblVal;void *ptrVal;int strVal;};VARTYPE
 typedef @SCALAR@ coord_t;
 enum {COMPONENTS=@COMPONENTS@,VISIBLE=@VISIBLE@};
 enum {BBOX_REQUIRES_VULNERABLE=@BBOX_VULNERABLE@};
-enum {_ep_attack=1,_ep_bbox=2,_gep_attack_coords=3,_ep_attack_coords=3};
+enum {_ep_attack=1,_ep_bbox=2,_gep_attack_coords=3,_ep_attack_coords=3,_ep_defense=4,_ep_the_end=5};
 typedef struct {int unused;} s_sprite;
 typedef struct {coord_t attack_coords[COMPONENTS];} s_attack;
 typedef struct {int numframes;coord_t (*bbox_coords)[COMPONENTS];
@@ -76,6 +78,7 @@ typedef struct {struct {s_anim **animation;int animation_capacity;} modeldata;} 
 static uint32_t obor_profile_build=@REVISION@;
 static char cache[2];
 static char *StrCache_Get(int index) {assert(index==0);return cache;}
+static const char *StrCache_GetIfPresent(int index) {return index==0 && memchr(cache,0,sizeof(cache))?cache:NULL;}
 static int StrCache_Pop(void) {return 0;}
 static void StrCache_Collect(int index) {assert(index==0);}
 void ScriptVariant_ChangeType(ScriptVariant *var,VARTYPE type);

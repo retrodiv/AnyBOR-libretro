@@ -1,0 +1,197 @@
+/* Native table callers; actor construction and heap extent are providers.
+ * SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <limits.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+@CONFIG@
+#include "openbor.h"
+#include "obor_resources.h"
+#undef printf
+#undef assert
+#undef malloc
+#undef realloc
+#undef free
+#define DUAL @DUAL@
+static unsigned checks;
+uint32_t obor_profile_build;
+#define CHECK(c) do {++checks;if(!(c)){fprintf(stderr,"pool revision=%u line=%d: %s\n",obor_profile_build,__LINE__,#c);abort();}} while(0)
+static entity **ent_list;
+static int ent_list_size,ent_count,ent_max;
+#if DUAL
+static entity **ent_stack;
+static int ent_stack_size;
+#endif
+static int maxentities=999999;
+static entity foreign_entity;
+static struct block {void *pointer;size_t bytes,visible;} blocks[2];
+static struct actor {entity *pointer;unsigned identity;} actors[MAX_ENTS*3];
+static struct event {int kind,count,index;size_t bytes;} events[MAX_ENTS*16],baseline[MAX_ENTS*16];
+static unsigned event_count,baseline_count,reservations,constructors,releases,active;
+static unsigned refuse_table,refuse_actor;
+static void event(int kind,int index,size_t bytes) {
+ CHECK(event_count<sizeof(events)/sizeof(*events));
+ struct event *item=events+event_count++;
+ item->kind=kind;item->count=ent_list_size;item->index=index;item->bytes=bytes;
+}
+size_t obor_allocation_size(const void *owner) {
+ for(unsigned i=0;i<2;++i)if(owner && owner==blocks[i].pointer)return blocks[i].visible;
+ return 0;
+}
+static void *table_reserve(void *old,size_t bytes,int kind) {
+ event(kind,0,bytes);++reservations;
+ if(refuse_table==reservations)return NULL;
+ struct block *block=NULL;
+ for(unsigned i=0;i<2;++i)if(old && old==blocks[i].pointer)block=blocks+i;
+ if(!old)for(unsigned i=0;i<2;++i)if(!blocks[i].pointer){block=blocks+i;break;}
+ CHECK(block && bytes && bytes%sizeof(entity*)==0);
+ entity **next=malloc(bytes);CHECK(next);
+ for(size_t i=0;i<bytes/sizeof(*next);++i)next[i]=&foreign_entity;
+ if(old){size_t copy=block->bytes<bytes?block->bytes:bytes;memcpy(next,old,copy);free(old);}
+ *block=(struct block){next,bytes,bytes};return next;
+}
+static void *table_malloc(size_t bytes){return table_reserve(NULL,bytes,1);}
+static void *table_realloc(void *old,size_t bytes){return table_reserve(old,bytes,2);}
+static void table_free(void *pointer) {
+ if(!pointer)return;
+ for(unsigned i=0;i<2;++i)if(pointer==blocks[i].pointer){
+  event(4,(int)i,blocks[i].bytes);free(pointer);memset(blocks+i,0,sizeof(*blocks));return;
+ }
+ CHECK(!"unowned table entry");
+}
+entity *alloc_ent(void) {
+ ++constructors;event(3,(int)constructors,0);
+ if(constructors==refuse_actor)return NULL;
+ for(unsigned i=0;i<sizeof(actors)/sizeof(*actors);++i)if(!actors[i].pointer){
+  entity *value=calloc(1,sizeof(*value));CHECK(value);
+  actors[i]=(struct actor){value,constructors};++active;return value;
+ }
+ CHECK(!"actor provider capacity");return NULL;
+}
+void free_ent(entity *value) {
+ if(!value)return;
+ for(unsigned i=0;i<sizeof(actors)/sizeof(*actors);++i)if(value==actors[i].pointer){
+  event(5,value->sortid,actors[i].identity);free(value);memset(actors+i,0,sizeof(*actors));
+  CHECK(active);--active;++releases;return;
+ }
+ /* A logical ownership control, before any read/free through this value. */
+ CHECK(!"owned entity entry");
+}
+#define malloc table_malloc
+#define realloc table_realloc
+#define free table_free
+@ROUTINES@
+#undef malloc
+#undef realloc
+#undef free
+static void reset(void) {
+ CHECK(!ent_list && !ent_list_size && !active);
+ for(unsigned i=0;i<2;++i)CHECK(!blocks[i].pointer);
+#if DUAL
+ CHECK(!ent_stack && !ent_stack_size);
+#endif
+ memset(events,0,sizeof(events));event_count=reservations=constructors=releases=0;
+ refuse_table=refuse_actor=0;ent_count=7;ent_max=9;maxentities=999999;
+#if DUAL
+ ent_stack_size=3;
+#endif
+}
+static void finished(void) {
+ CHECK(!ent_list && !ent_list_size && !active && !ent_count && !ent_max);
+#if DUAL
+ CHECK(!ent_stack && !ent_stack_size);
+#endif
+ for(unsigned i=0;i<2;++i)CHECK(!blocks[i].pointer);
+}
+static void valid(int original,int limit) {
+ reset();
+ CHECK((original?original_alloc_ents():alloc_ents())==1 && ent_list_size==MAX_ENTS && active==MAX_ENTS);
+ entity *first=ent_list[0];
+ for(int i=0;i<MAX_ENTS;++i)CHECK(ent_list[i] && ent_list[i]->sortid==i*100);
+#if DUAL
+ for(int i=0;i<MAX_ENTS;++i)CHECK(!ent_stack[i]);
+ ent_stack[0]=first;
+#endif
+ if(limit)maxentities=MAX_ENTS+1; /* Native growth may pass the nominal cap. */
+ CHECK((original?original_alloc_ents():alloc_ents())==1 && ent_list_size==2*MAX_ENTS && active==2*MAX_ENTS && ent_list[0]==first);
+ for(int i=0;i<2*MAX_ENTS;++i)CHECK(ent_list[i] && ent_list[i]->sortid==i*100);
+#if DUAL
+ CHECK(ent_stack[0]==first && ent_stack_size==3);
+ for(int i=MAX_ENTS;i<2*MAX_ENTS;++i)CHECK(!ent_stack[i]);
+#endif
+ CHECK(ent_count==7 && ent_max==9);
+ maxentities=ent_list_size;unsigned calls=event_count;
+ CHECK((original?original_alloc_ents():alloc_ents())==0 && event_count==calls);
+ free_ents();finished();
+ if(original){memcpy(baseline,events,sizeof(events));baseline_count=event_count;}
+ else {CHECK(event_count==baseline_count);CHECK(!memcmp(events,baseline,event_count*sizeof(*events)));}
+}
+static void refusal(int existing,unsigned reservation,unsigned actor) {
+ reset();if(existing)CHECK(alloc_ents()==1);
+ entity **list=ent_list;
+#if DUAL
+ entity **stack=ent_stack;
+#endif
+ unsigned previous=active,prior_releases=releases;
+ int count=ent_list_size;
+ refuse_table=reservation?reservations+reservation:0;
+ refuse_actor=actor?constructors+actor:0;
+ CHECK(alloc_ents()==0);
+ if(actor) {
+  finished();CHECK(releases-prior_releases==previous+actor-1);
+ } else {
+  CHECK(ent_list_size==count && active==previous && releases==prior_releases);
+  CHECK(ent_count==7 && ent_max==9);
+  if(reservation==1)CHECK(ent_list==list);
+#if DUAL
+  CHECK(ent_stack==stack && ent_stack_size==3);
+#endif
+  refuse_table=0;CHECK(alloc_ents()==1 && ent_list_size==count+MAX_ENTS);
+  free_ents();finished();
+ }
+}
+static void invalid(void) {
+ static const int counts[]={-1,INT_MAX-1,INT_MAX/100};
+ reset();maxentities=INT_MAX;
+ for(unsigned i=0;i<sizeof(counts)/sizeof(*counts);++i){
+  ent_list_size=counts[i];CHECK(alloc_ents()==0 && ent_list_size==counts[i] && !event_count);
+ }
+ ent_list_size=1;CHECK(alloc_ents()==0 && !event_count);ent_list_size=0;
+ CHECK(alloc_ents()==1);entity **list=ent_list;
+ size_t visible=blocks[0].visible;unsigned calls=event_count;
+ blocks[0].visible=(MAX_ENTS-1)*sizeof(*ent_list);
+ CHECK(alloc_ents()==0 && event_count==calls && ent_list==list);
+ blocks[0].visible=visible;
+ ent_list=NULL;CHECK(alloc_ents()==0 && event_count==calls);ent_list=list;
+#if DUAL
+ entity **stack=ent_stack;ent_stack=NULL;
+ CHECK(alloc_ents()==0 && event_count==calls);ent_stack=stack;
+ visible=blocks[1].visible;blocks[1].visible=(MAX_ENTS-1)*sizeof(*ent_stack);
+ CHECK(alloc_ents()==0 && event_count==calls);blocks[1].visible=visible;
+#endif
+ free_ents();finished();
+}
+int main(void) {
+ static const unsigned profiles[]={@PROFILES@};
+ for(unsigned p=0;p<sizeof(profiles)/sizeof(*profiles);++p) {
+  obor_profile_build=profiles[p];
+#ifdef NEGATIVE_ONLY
+  refusal(0,0,1);
+#else
+  valid(1,0);valid(0,0);valid(1,1);valid(0,1);
+  for(int existing=0;existing<2;++existing){
+   refusal(existing,1,0);
+#if DUAL
+   refusal(existing,2,0);
+#endif
+   refusal(existing,0,1);refusal(existing,0,MAX_ENTS/2);refusal(existing,0,MAX_ENTS);
+  }
+  invalid();
+#endif
+ }
+ printf("{\"status\":\"PASS\",\"profiles\":%zu,\"checks\":%u}\n",sizeof(profiles)/sizeof(*profiles),checks);
+ return 0;
+}

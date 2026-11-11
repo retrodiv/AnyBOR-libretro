@@ -1348,6 +1348,12 @@ HRESULT openbor_set_entity_property(ScriptVariant** varlist, ScriptVariant** con
 	* acting object and return OK/FAIL.
 	*/
 
+	if(property_map.field == &acting_object->varlist &&
+	   (property_map.config_flags & PROPERTY_ACCESS_CONFIG_WRITE))
+	{
+		obor_entity_varlist_set((entity *)acting_object, varlist[ARG_VALUE]->ptrVal);
+		return S_OK;
+	}
 	return property_access_set_member(acting_object, &property_map, varlist[ARG_VALUE]);
 
 	return S_OK;

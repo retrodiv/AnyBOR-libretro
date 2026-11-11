@@ -1,0 +1,109 @@
+/* Native getter/conversion; mapping/result/pixel services are providers.
+ * SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <limits.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+@CONFIG@
+#include "openbor.h"
+#undef printf
+#undef assert
+uint32_t obor_profile_build;
+static unsigned checks,cases,conversions,pixels,diagnostics;
+static LONG *first_target;
+#define CHECK(c) do{++checks;if(!(c)){fprintf(stderr,"gfx coordinate revision=%u line=%d: %s\n",obor_profile_build,__LINE__,#c);abort();}}while(0)
+@ENUM@
+@CONVERSION@
+static HRESULT fixture_integer(ScriptVariant *value,LONG *target) {
+ if(conversions==0)first_target=target;
+ else CHECK(target==first_target+1 || !"coordinate destination");
+ ++conversions;CHECK(conversions<=2);return ScriptVariant_IntegerValue(value,target);
+}
+static void fixture_map_numeric(ScriptVariant **list,int count) {
+ CHECK(count>=2 && list && list[1] && list[1]->vt==VT_INTEGER && list[1]->lVal==_gfx_pixel);
+}
+static void fixture_result_type(ScriptVariant *value,int type) {
+ CHECK(value && value->vt==VT_INTEGER && type==VT_INTEGER);value->vt=type;
+}
+static unsigned int fixture_sprite_pixel(s_sprite *sprite,int x,int y) {
+ CHECK(sprite && sprite->magic==sprite_magic && x>=0 && x<3 && y>=0 && y<2);
+ ++pixels;return (unsigned int)(23+x+3*y);
+}
+static int fixture_diagnostic(const char *format,...) {CHECK(format);++diagnostics;return 0;}
+@GETTER@
+static void query(int shape,int format,int x,int y,int mode,int argc) {
+ size_t header=sizeof(s_screen)>sizeof(s_bitmap)?sizeof(s_screen):sizeof(s_bitmap);
+ unsigned char *storage=calloc(1,header+24+1024);CHECK(storage);
+ s_screen *screen=(s_screen*)storage;s_sprite sprite;memset(&sprite,0,sizeof(sprite));
+ size_t data_offset;
+ if(shape==1) {
+  s_bitmap *bitmap=(s_bitmap*)storage;
+  bitmap->magic=bitmap_magic;bitmap->width=3;bitmap->height=2;bitmap->pixelformat=format;
+  @BITMAP_CLIP_SETUP@
+  data_offset=offsetof(s_bitmap,data);
+  if(format==PIXEL_x8)bitmap->palette=storage+data_offset+8;
+ } else {
+  screen->magic=screen_magic;screen->width=3;screen->height=2;screen->pixelformat=format;
+  data_offset=offsetof(s_screen,data);
+  if(format==PIXEL_x8)screen->palette=storage+data_offset+8;
+ }
+ sprite.magic=sprite_magic;sprite.width=3;sprite.height=2;
+ for(unsigned i=0;i<6;++i) {
+  unsigned char *pixel=storage+data_offset+i*(format==PIXEL_16?2:format==PIXEL_32?4:1);
+  if(format==PIXEL_16){uint16_t value=(uint16_t)(1000+i);memcpy(pixel,&value,sizeof(value));}
+  else if(format==PIXEL_32){uint32_t value=UINT32_C(0x102030)+i;memcpy(pixel,&value,sizeof(value));}
+  else *pixel=(unsigned char)(10+i);
+ }
+ ScriptVariant args[5],*list[5],result,*out=&result;
+ memset(args,0,sizeof(args));memset(&result,0,sizeof(result));result.vt=VT_INTEGER;
+ for(unsigned i=0;i<5;++i){args[i].vt=VT_INTEGER;list[i]=args+i;}
+ args[0].vt=VT_PTR;args[0].ptrVal=shape==2?(void*)&sprite:(void*)screen;
+ args[1].lVal=_gfx_pixel;args[2].lVal=x;args[3].lVal=y;
+ if(mode==1){args[2].vt=args[3].vt=VT_DECIMAL;args[2].dblVal=x+(x<0?-0.75:0.75);args[3].dblVal=y+(y<0?-0.75:0.75);}
+ if(mode==2)args[3].vt=VT_EMPTY;
+ conversions=pixels=diagnostics=0;first_target=NULL;
+ HRESULT status=openbor_getgfxproperty(list,&out,argc);
+ if(argc<4 || mode==2) {
+  CHECK(status==E_FAIL && !out && diagnostics==1 && !pixels);
+  CHECK(conversions==(argc<4?0u:2u));
+ } else {
+  CHECK(status==S_OK && out==&result && out->vt==VT_INTEGER && conversions==2 && !diagnostics);
+  LONG expected=0;
+  if(x>=0 && x<3 && y>=0 && y<2) {
+   int index=x+3*y;
+   expected=shape==2?23+index:format==PIXEL_16?1000+index:format==PIXEL_32?INT32_C(0x102030)+index:10+index;
+   /* Own originals retain a screen-view offset for bitmap pixel queries.
+    * Preserve that view where clipping fields make the record layouts differ. */
+   if(shape==1 && offsetof(s_screen,data)!=offsetof(s_bitmap,data)) {
+    const unsigned char *view=storage+offsetof(s_screen,data)+index*(format==PIXEL_16?2:format==PIXEL_32?4:1);
+    if(format==PIXEL_16){uint16_t value;memcpy(&value,view,sizeof(value));expected=value;}
+    else if(format==PIXEL_32){uint32_t value;memcpy(&value,view,sizeof(value));expected=(LONG)value;}
+    else expected=*view;
+   }
+  }
+  CHECK(out->lVal==expected);
+  CHECK(pixels==(unsigned)(shape==2 && x>=0 && x<3 && y>=0 && y<2));
+ }
+ free(storage);++cases;
+}
+int main(void) {
+ static const unsigned profiles[]={@PROFILES@};
+ static const int coordinates[][2]={{0,0},{2,0},{1,1},{-1,1},{3,1},{1,2},{INT_MAX,0},{INT_MIN,0}};
+ static const int formats[]={PIXEL_8,PIXEL_x8,PIXEL_16,PIXEL_32};
+ for(unsigned p=0;p<sizeof(profiles)/sizeof(*profiles);++p) {
+  obor_profile_build=profiles[p];
+#ifdef NEGATIVE_ONLY
+  query(0,PIXEL_8,2,0,0,4);
+#else
+  for(int shape=0;shape<3;++shape)for(unsigned f=0;f<sizeof(formats)/sizeof(*formats);++f)
+  for(unsigned i=0;i<sizeof(coordinates)/sizeof(*coordinates);++i)for(int mode=0;mode<2;++mode)
+   query(shape,formats[f],coordinates[i][0],coordinates[i][1],mode,4);
+  for(int shape=0;shape<3;++shape){query(shape,PIXEL_8,1,1,2,4);query(shape,PIXEL_8,1,1,0,3);query(shape,PIXEL_8,2,1,0,5);}
+#endif
+ }
+ printf("{\"status\":\"PASS\",\"profiles\":%zu,\"cases\":%u,\"checks\":%u}\n",sizeof(profiles)/sizeof(*profiles),cases,checks);
+ return 0;
+}

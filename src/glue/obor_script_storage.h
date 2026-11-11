@@ -9,6 +9,7 @@
 
 #include <stdint.h>
 #include <stdlib.h>
+#include <string.h>
 
 #ifndef OBOR_SCRIPT_STORAGE_ALLOC
 #define OBOR_SCRIPT_STORAGE_ALLOC(n) malloc(n)
@@ -16,6 +17,27 @@
 #ifndef OBOR_SCRIPT_STORAGE_FREE
 #define OBOR_SCRIPT_STORAGE_FREE(p) free(p)
 #endif
+
+typedef struct obor_script_cleanup {
+    const void *script;
+    struct obor_script_cleanup *previous;
+} obor_script_cleanup;
+
+/* The engine thread owns the chain. Reset it when starting a new engine
+ * because a controlled stop can abandon an active callback. */
+static inline obor_script_cleanup **obor_script_cleanup_chain(void)
+{
+    static obor_script_cleanup *active;
+    return &active;
+}
+
+static inline int obor_script_cleanup_active(const void *script)
+{
+    const obor_script_cleanup *active = *obor_script_cleanup_chain();
+    for(; active; active = active->previous)
+        if(active->script == script) return 1;
+    return 0;
+}
 
 typedef struct obor_script_reference {
     void *value;
@@ -44,14 +66,18 @@ static inline int obor_script_reference_retain(obor_script_reference *reference)
     return 1;
 }
 
-static inline int obor_script_reference_release(obor_script_reference **slot)
+static inline int obor_script_reference_release(void *slot)
 {
     obor_script_reference *reference;
     if(!slot) return 0;
-    reference = *slot;
+    /* Pointer slots can belong to packed engine records. */
+    memcpy(&reference, (const void *)slot, sizeof(reference));
     if(!reference) return 1;
     if(!reference->references) return 0;
-    *slot = NULL;
+    {
+        obor_script_reference *empty = NULL;
+        memcpy((void *)slot, &empty, sizeof(empty));
+    }
     if(--reference->references == 0)
     {
         reference->destroy(reference->value);

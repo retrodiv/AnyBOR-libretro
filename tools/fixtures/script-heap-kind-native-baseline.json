@@ -1,0 +1,1070 @@
+{
+  "schema": 1,
+  "scope": "Frozen native heap helper/free methods; native List and real typed records with bounded destructor observers. Not constructor allocation, nested VM/cache/lifetime acceptance.",
+  "engines": {
+    "3400": {
+      "helper": null,
+      "system_free": "HRESULT system_free(ScriptVariant** varlist , ScriptVariant** pretvar, int paramCount)\n{\n\t*pretvar = NULL;\n\tif(paramCount<1) return E_FAIL;\n\tif(List_Includes(&scriptheap, varlist[0]->ptrVal))\n\t{\n\t\tfree(List_Retrieve(&scriptheap));\n\t\tList_Remove(&scriptheap);\n\t\treturn S_OK;\n\t}\n\treturn E_FAIL;\n}\n",
+      "kind": "raw",
+      "script_before": 0
+    },
+    "3741": {
+      "helper": "void _freeheapnode(void* ptr){\n    const char *owner = List_GetName(&scriptheap);\n    /* Heap-entry ownership identifies Script values without reading other data. */\n    if(ptr && obor_profile_build >= 3629 && owner &&\n       strcmp(owner, \"openbor_allocscript\") == 0) {\n        Script_Clear((Script*)ptr, 2);\n    }\n    free(ptr);\n}\n",
+      "system_free": "HRESULT system_free(ScriptVariant** varlist , ScriptVariant** pretvar, int paramCount)\n{\n\t*pretvar = NULL;\n\tif(paramCount<1) return E_FAIL;\n\tif(List_Includes(&scriptheap, varlist[0]->ptrVal))\n\t{\n\t\t_freeheapnode(List_Retrieve(&scriptheap));\n\t\tList_Remove(&scriptheap);\n\t\treturn S_OK;\n\t}\n\treturn E_FAIL;\n}\n",
+      "kind": "script",
+      "script_before": 3629
+    },
+    "3842": {
+      "helper": "void _freeheapnode(void* ptr){\n\tif(((Script*)ptr)->magic==script_magic) {\n\t\tScript_Clear((Script*)ptr,2);\n\t}\n\tfree(ptr);\n}\n",
+      "system_free": "HRESULT system_free(ScriptVariant** varlist , ScriptVariant** pretvar, int paramCount)\n{\n\t*pretvar = NULL;\n\tif(paramCount<1) return E_FAIL;\n\tif(List_Includes(&scriptheap, varlist[0]->ptrVal))\n\t{\n\t\t_freeheapnode(List_Retrieve(&scriptheap));\n\t\tList_Remove(&scriptheap);\n\t\treturn S_OK;\n\t}\n\treturn E_FAIL;\n}\n",
+      "kind": "script",
+      "script_before": 0
+    },
+    "4086": {
+      "helper": "void _freeheapnode(void *ptr)\n{\n    if(((Script *)ptr)->magic == script_magic)\n    {\n        Script_Clear((Script *)ptr, 2);\n    }\n    else if(((anigif_info *)ptr)->magic == anigif_magic)\n    {\n        anigif_close((anigif_info *)ptr);\n    }\n    else if(((Varlist *)ptr)->magic == varlist_magic)\n    {\n        Varlist_Clear((Varlist *)ptr);\n    }\n    else if(((s_sprite *)ptr)->magic == sprite_magic)\n    {\n        if(((s_sprite *)ptr)->mask)\n        {\n            free(((s_sprite *)ptr)->mask);\n        }\n    }\n    free(ptr);\n}\n",
+      "system_free": "HRESULT system_free(ScriptVariant **varlist , ScriptVariant **pretvar, int paramCount)\n{\n    *pretvar = NULL;\n    if(paramCount < 1)\n    {\n        return E_FAIL;\n    }\n    if(List_Includes(&scriptheap, varlist[0]->ptrVal))\n    {\n        _freeheapnode(List_Retrieve(&scriptheap));\n        // a script's ondestroy() may free something else and change the list\n        // position, so set the position to this variant again\n        List_Includes(&scriptheap, varlist[0]->ptrVal);\n        List_Remove(&scriptheap);\n        return S_OK;\n    }\n    return E_FAIL;\n}\n",
+      "kind": "typed",
+      "script_before": 0
+    },
+    "4432": {
+      "helper": "void _freeheapnode(void *ptr)\n{\n    if(((Script *)ptr)->magic == script_magic)\n    {\n        Script_Clear((Script *)ptr, 2);\n    }\n    else if(((anigif_info *)ptr)->magic == anigif_magic)\n    {\n        anigif_close((anigif_info *)ptr);\n    }\n    else if(((Varlist *)ptr)->magic == varlist_magic)\n    {\n        Varlist_Clear((Varlist *)ptr);\n    }\n    else if(((s_sprite *)ptr)->magic == sprite_magic)\n    {\n        if(((s_sprite *)ptr)->mask)\n        {\n            free(((s_sprite *)ptr)->mask);\n        }\n    }\n    free(ptr);\n}\n",
+      "system_free": "HRESULT system_free(ScriptVariant **varlist , ScriptVariant **pretvar, int paramCount)\n{\n    *pretvar = NULL;\n    if(paramCount < 1)\n    {\n        return E_FAIL;\n    }\n    if(List_Includes(&scriptheap, varlist[0]->ptrVal))\n    {\n        _freeheapnode(List_Retrieve(&scriptheap));\n        // a script's ondestroy() may free something else and change the list\n        // position, so set the position to this variant again\n        List_Includes(&scriptheap, varlist[0]->ptrVal);\n        List_Remove(&scriptheap);\n        return S_OK;\n    }\n    return E_FAIL;\n}\n",
+      "kind": "typed",
+      "script_before": 0
+    },
+    "6391": {
+      "helper": "void _freeheapnode(void *ptr)\n{\n    if(((Script *)ptr)->magic == script_magic)\n    {\n        Script_Clear((Script *)ptr, 2);\n    }\n    else if(((anigif_info *)ptr)->magic == anigif_magic)\n    {\n        anigif_close((anigif_info *)ptr);\n    }\n    else if(((Varlist *)ptr)->magic == varlist_magic)\n    {\n        Varlist_Clear((Varlist *)ptr);\n    }\n    else if(((s_sprite *)ptr)->magic == sprite_magic)\n    {\n        if(((s_sprite *)ptr)->mask)\n        {\n            free(((s_sprite *)ptr)->mask);\n        }\n    }\n    free(ptr);\n}\n",
+      "system_free": "HRESULT system_free(ScriptVariant **varlist , ScriptVariant **pretvar, int paramCount)\n{\n    *pretvar = NULL;\n    if(paramCount < 1)\n    {\n        return E_FAIL;\n    }\n    if(List_Includes(&scriptheap, varlist[0]->ptrVal))\n    {\n        _freeheapnode(List_Retrieve(&scriptheap));\n        // a script's ondestroy() may free something else and change the list\n        // position, so set the position to this variant again\n        List_Includes(&scriptheap, varlist[0]->ptrVal);\n        List_Remove(&scriptheap);\n        return S_OK;\n    }\n    return E_FAIL;\n}\n",
+      "kind": "typed",
+      "script_before": 0
+    },
+    "7142": {
+      "helper": "void _freeheapnode(void *ptr)\n{\n    if(((Script *)ptr)->magic == script_magic)\n    {\n        Script_Clear((Script *)ptr, 2);\n    }\n    else if(((anigif_info *)ptr)->magic == anigif_magic)\n    {\n        anigif_close((anigif_info *)ptr);\n    }\n    else if(((Varlist *)ptr)->magic == varlist_magic)\n    {\n        Varlist_Clear((Varlist *)ptr);\n    }\n    else if(((s_sprite *)ptr)->magic == sprite_magic)\n    {\n        if(((s_sprite *)ptr)->mask)\n        {\n            free(((s_sprite *)ptr)->mask);\n        }\n    }\n    free(ptr);\n}\n",
+      "system_free": "HRESULT system_free(ScriptVariant **varlist , ScriptVariant **pretvar, int paramCount)\n{\n    *pretvar = NULL;\n    if(paramCount < 1)\n    {\n        return E_FAIL;\n    }\n    if(List_Includes(&scriptheap, varlist[0]->ptrVal))\n    {\n        _freeheapnode(List_Retrieve(&scriptheap));\n        // a script's ondestroy() may free something else and change the list\n        // position, so set the position to this variant again\n        List_Includes(&scriptheap, varlist[0]->ptrVal);\n        List_Remove(&scriptheap);\n        return S_OK;\n    }\n    return E_FAIL;\n}\n",
+      "kind": "typed",
+      "script_before": 0
+    },
+    "7533": {
+      "helper": "void _freeheapnode(void *ptr)\n{\n    if(((Script *)ptr)->magic == script_magic)\n    {\n        Script_Clear((Script *)ptr, 2);\n    }\n    else if(((anigif_info *)ptr)->magic == anigif_magic)\n    {\n        anigif_close((anigif_info *)ptr);\n    }\n    else if(((Varlist *)ptr)->magic == varlist_magic)\n    {\n        Varlist_Clear((Varlist *)ptr);\n    }\n    else if(((s_sprite *)ptr)->magic == sprite_magic)\n    {\n        if(((s_sprite *)ptr)->mask)\n        {\n            free(((s_sprite *)ptr)->mask);\n        }\n    }\n    free(ptr);\n}\n",
+      "system_free": "HRESULT system_free(ScriptVariant **varlist , ScriptVariant **pretvar, int paramCount)\n{\n    *pretvar = NULL;\n    if(paramCount < 1)\n    {\n        return E_FAIL;\n    }\n    if(List_Includes(&scriptheap, varlist[0]->ptrVal))\n    {\n        _freeheapnode(List_Retrieve(&scriptheap));\n        // a script's ondestroy() may free something else and change the list\n        // position, so set the position to this variant again\n        List_Includes(&scriptheap, varlist[0]->ptrVal);\n        List_Remove(&scriptheap);\n        return S_OK;\n    }\n    return E_FAIL;\n}\n",
+      "kind": "typed",
+      "script_before": 0
+    },
+    "8023": {
+      "helper": "void _freeheapnode(void *ptr)\n{\n    if(((Script *)ptr)->magic == script_magic)\n    {\n        Script_Clear((Script *)ptr, 2);\n    }\n    else if(((anigif_info *)ptr)->magic == anigif_magic)\n    {\n        anigif_close((anigif_info *)ptr);\n    }\n    else if(((Varlist *)ptr)->magic == varlist_magic)\n    {\n        Varlist_Clear((Varlist *)ptr);\n    }\n    else if(((s_sprite *)ptr)->magic == sprite_magic)\n    {\n        if(((s_sprite *)ptr)->mask)\n        {\n            free(((s_sprite *)ptr)->mask);\n        }\n    }\n    free(ptr);\n}\n",
+      "system_free": "HRESULT system_free(ScriptVariant **varlist , ScriptVariant **pretvar, int paramCount)\n{\n    *pretvar = NULL;\n    if(paramCount < 1)\n    {\n        return E_FAIL;\n    }\n    if(List_Includes(&scriptheap, varlist[0]->ptrVal))\n    {\n        _freeheapnode(List_Retrieve(&scriptheap));\n        // a script's ondestroy() may free something else and change the list\n        // position, so set the position to this variant again\n        List_Includes(&scriptheap, varlist[0]->ptrVal);\n        List_Remove(&scriptheap);\n        return S_OK;\n    }\n    return E_FAIL;\n}\n",
+      "kind": "typed",
+      "script_before": 0
+    }
+  },
+  "profiles": {
+    "3020": {
+      "revision": 3020,
+      "engine": "3400"
+    },
+    "3057": {
+      "revision": 3057,
+      "engine": "3400"
+    },
+    "3062": {
+      "revision": 3062,
+      "engine": "3400"
+    },
+    "3073": {
+      "revision": 3073,
+      "engine": "3400"
+    },
+    "3081": {
+      "revision": 3081,
+      "engine": "3400"
+    },
+    "3109": {
+      "revision": 3109,
+      "engine": "3400"
+    },
+    "3117": {
+      "revision": 3117,
+      "engine": "3400"
+    },
+    "3143": {
+      "revision": 3143,
+      "engine": "3400"
+    },
+    "3160": {
+      "revision": 3160,
+      "engine": "3400"
+    },
+    "3173": {
+      "revision": 3173,
+      "engine": "3400"
+    },
+    "3192": {
+      "revision": 3192,
+      "engine": "3400"
+    },
+    "3208": {
+      "revision": 3208,
+      "engine": "3400"
+    },
+    "3273": {
+      "revision": 3273,
+      "engine": "3400"
+    },
+    "3288": {
+      "revision": 3288,
+      "engine": "3400"
+    },
+    "3303": {
+      "revision": 3303,
+      "engine": "3400"
+    },
+    "3307": {
+      "revision": 3307,
+      "engine": "3400"
+    },
+    "3310": {
+      "revision": 3310,
+      "engine": "3400"
+    },
+    "3311": {
+      "revision": 3311,
+      "engine": "3400"
+    },
+    "3316": {
+      "revision": 3316,
+      "engine": "3400"
+    },
+    "3317": {
+      "revision": 3317,
+      "engine": "3400"
+    },
+    "3318": {
+      "revision": 3318,
+      "engine": "3400"
+    },
+    "3327": {
+      "revision": 3327,
+      "engine": "3400"
+    },
+    "3328": {
+      "revision": 3328,
+      "engine": "3400"
+    },
+    "3330": {
+      "revision": 3330,
+      "engine": "3400"
+    },
+    "3332": {
+      "revision": 3332,
+      "engine": "3400"
+    },
+    "3335": {
+      "revision": 3335,
+      "engine": "3400"
+    },
+    "3337": {
+      "revision": 3337,
+      "engine": "3400"
+    },
+    "3340": {
+      "revision": 3340,
+      "engine": "3400"
+    },
+    "3341": {
+      "revision": 3341,
+      "engine": "3400"
+    },
+    "3342": {
+      "revision": 3342,
+      "engine": "3400"
+    },
+    "3350": {
+      "revision": 3350,
+      "engine": "3400"
+    },
+    "3351": {
+      "revision": 3351,
+      "engine": "3400"
+    },
+    "3352": {
+      "revision": 3352,
+      "engine": "3400"
+    },
+    "3353": {
+      "revision": 3353,
+      "engine": "3400"
+    },
+    "3354": {
+      "revision": 3354,
+      "engine": "3400"
+    },
+    "3355": {
+      "revision": 3355,
+      "engine": "3400"
+    },
+    "3356": {
+      "revision": 3356,
+      "engine": "3400"
+    },
+    "3357": {
+      "revision": 3357,
+      "engine": "3400"
+    },
+    "3360": {
+      "revision": 3360,
+      "engine": "3400"
+    },
+    "3361": {
+      "revision": 3361,
+      "engine": "3400"
+    },
+    "3362": {
+      "revision": 3362,
+      "engine": "3400"
+    },
+    "3365": {
+      "revision": 3365,
+      "engine": "3400"
+    },
+    "3366": {
+      "revision": 3366,
+      "engine": "3400"
+    },
+    "3367": {
+      "revision": 3367,
+      "engine": "3400"
+    },
+    "3371": {
+      "revision": 3371,
+      "engine": "3400"
+    },
+    "3372": {
+      "revision": 3372,
+      "engine": "3400"
+    },
+    "3373": {
+      "revision": 3373,
+      "engine": "3400"
+    },
+    "3375": {
+      "revision": 3375,
+      "engine": "3400"
+    },
+    "3379": {
+      "revision": 3379,
+      "engine": "3400"
+    },
+    "3380": {
+      "revision": 3380,
+      "engine": "3400"
+    },
+    "3381": {
+      "revision": 3381,
+      "engine": "3400"
+    },
+    "3383": {
+      "revision": 3383,
+      "engine": "3400"
+    },
+    "3385": {
+      "revision": 3385,
+      "engine": "3400"
+    },
+    "3388": {
+      "revision": 3388,
+      "engine": "3400"
+    },
+    "3391": {
+      "revision": 3391,
+      "engine": "3400"
+    },
+    "3394": {
+      "revision": 3394,
+      "engine": "3400"
+    },
+    "3397": {
+      "revision": 3397,
+      "engine": "3400"
+    },
+    "3400": {
+      "revision": 3400,
+      "engine": "3400"
+    },
+    "3406": {
+      "revision": 3406,
+      "engine": "3400"
+    },
+    "3411": {
+      "revision": 3411,
+      "engine": "3400"
+    },
+    "3415": {
+      "revision": 3415,
+      "engine": "3400"
+    },
+    "3416": {
+      "revision": 3416,
+      "engine": "3400"
+    },
+    "3420": {
+      "revision": 3420,
+      "engine": "3400"
+    },
+    "3422": {
+      "revision": 3422,
+      "engine": "3400"
+    },
+    "3427": {
+      "revision": 3427,
+      "engine": "3400"
+    },
+    "3428": {
+      "revision": 3428,
+      "engine": "3400"
+    },
+    "3431": {
+      "revision": 3431,
+      "engine": "3400"
+    },
+    "3434": {
+      "revision": 3434,
+      "engine": "3400"
+    },
+    "3436": {
+      "revision": 3436,
+      "engine": "3400"
+    },
+    "3441": {
+      "revision": 3441,
+      "engine": "3400"
+    },
+    "3445": {
+      "revision": 3445,
+      "engine": "3400"
+    },
+    "3446": {
+      "revision": 3446,
+      "engine": "3400"
+    },
+    "3449": {
+      "revision": 3449,
+      "engine": "3400"
+    },
+    "3454": {
+      "revision": 3454,
+      "engine": "3400"
+    },
+    "3458": {
+      "revision": 3458,
+      "engine": "3400"
+    },
+    "3461": {
+      "revision": 3461,
+      "engine": "3400"
+    },
+    "3463": {
+      "revision": 3463,
+      "engine": "3400"
+    },
+    "3465": {
+      "revision": 3465,
+      "engine": "3400"
+    },
+    "3467": {
+      "revision": 3467,
+      "engine": "3400"
+    },
+    "3469": {
+      "revision": 3469,
+      "engine": "3400"
+    },
+    "3472": {
+      "revision": 3472,
+      "engine": "3400"
+    },
+    "3477": {
+      "revision": 3477,
+      "engine": "3400"
+    },
+    "3482": {
+      "revision": 3482,
+      "engine": "3400"
+    },
+    "3500": {
+      "revision": 3500,
+      "engine": "3741"
+    },
+    "3509": {
+      "revision": 3509,
+      "engine": "3741"
+    },
+    "3511": {
+      "revision": 3511,
+      "engine": "3741"
+    },
+    "3515": {
+      "revision": 3515,
+      "engine": "3741"
+    },
+    "3517": {
+      "revision": 3517,
+      "engine": "3741"
+    },
+    "3520": {
+      "revision": 3520,
+      "engine": "3741"
+    },
+    "3526": {
+      "revision": 3526,
+      "engine": "3741"
+    },
+    "3549": {
+      "revision": 3549,
+      "engine": "3741"
+    },
+    "3550": {
+      "revision": 3550,
+      "engine": "3741"
+    },
+    "3551": {
+      "revision": 3551,
+      "engine": "3741"
+    },
+    "3552": {
+      "revision": 3552,
+      "engine": "3741"
+    },
+    "3553": {
+      "revision": 3553,
+      "engine": "3741"
+    },
+    "3554": {
+      "revision": 3554,
+      "engine": "3741"
+    },
+    "3557": {
+      "revision": 3557,
+      "engine": "3741"
+    },
+    "3559": {
+      "revision": 3559,
+      "engine": "3741"
+    },
+    "3562": {
+      "revision": 3562,
+      "engine": "3741"
+    },
+    "3565": {
+      "revision": 3565,
+      "engine": "3741"
+    },
+    "3567": {
+      "revision": 3567,
+      "engine": "3741"
+    },
+    "3568": {
+      "revision": 3568,
+      "engine": "3741"
+    },
+    "3581": {
+      "revision": 3581,
+      "engine": "3741"
+    },
+    "3583": {
+      "revision": 3583,
+      "engine": "3741"
+    },
+    "3585": {
+      "revision": 3585,
+      "engine": "3741"
+    },
+    "3586": {
+      "revision": 3586,
+      "engine": "3741"
+    },
+    "3587": {
+      "revision": 3587,
+      "engine": "3741"
+    },
+    "3591": {
+      "revision": 3591,
+      "engine": "3741"
+    },
+    "3594": {
+      "revision": 3594,
+      "engine": "3741"
+    },
+    "3596": {
+      "revision": 3596,
+      "engine": "3741"
+    },
+    "3597": {
+      "revision": 3597,
+      "engine": "3741"
+    },
+    "3602": {
+      "revision": 3602,
+      "engine": "3741"
+    },
+    "3604": {
+      "revision": 3604,
+      "engine": "3741"
+    },
+    "3605": {
+      "revision": 3605,
+      "engine": "3741"
+    },
+    "3608": {
+      "revision": 3608,
+      "engine": "3741"
+    },
+    "3609": {
+      "revision": 3609,
+      "engine": "3741"
+    },
+    "3611": {
+      "revision": 3611,
+      "engine": "3741"
+    },
+    "3614": {
+      "revision": 3614,
+      "engine": "3741"
+    },
+    "3618": {
+      "revision": 3618,
+      "engine": "3741"
+    },
+    "3619": {
+      "revision": 3619,
+      "engine": "3741"
+    },
+    "3623": {
+      "revision": 3623,
+      "engine": "3741"
+    },
+    "3624": {
+      "revision": 3624,
+      "engine": "3741"
+    },
+    "3626": {
+      "revision": 3626,
+      "engine": "3741"
+    },
+    "3629": {
+      "revision": 3629,
+      "engine": "3741"
+    },
+    "3631": {
+      "revision": 3631,
+      "engine": "3741"
+    },
+    "3633": {
+      "revision": 3633,
+      "engine": "3741"
+    },
+    "3635": {
+      "revision": 3635,
+      "engine": "3741"
+    },
+    "3638": {
+      "revision": 3638,
+      "engine": "3741"
+    },
+    "3639": {
+      "revision": 3639,
+      "engine": "3741"
+    },
+    "3640": {
+      "revision": 3640,
+      "engine": "3741"
+    },
+    "3644": {
+      "revision": 3644,
+      "engine": "3741"
+    },
+    "3646": {
+      "revision": 3646,
+      "engine": "3741"
+    },
+    "3647": {
+      "revision": 3647,
+      "engine": "3741"
+    },
+    "3649": {
+      "revision": 3649,
+      "engine": "3741"
+    },
+    "3650": {
+      "revision": 3650,
+      "engine": "3741"
+    },
+    "3651": {
+      "revision": 3651,
+      "engine": "3741"
+    },
+    "3655": {
+      "revision": 3655,
+      "engine": "3741"
+    },
+    "3656": {
+      "revision": 3656,
+      "engine": "3741"
+    },
+    "3657": {
+      "revision": 3657,
+      "engine": "3741"
+    },
+    "3660": {
+      "revision": 3660,
+      "engine": "3741"
+    },
+    "3661": {
+      "revision": 3661,
+      "engine": "3741"
+    },
+    "3663": {
+      "revision": 3663,
+      "engine": "3741"
+    },
+    "3664": {
+      "revision": 3664,
+      "engine": "3741"
+    },
+    "3665": {
+      "revision": 3665,
+      "engine": "3741"
+    },
+    "3666": {
+      "revision": 3666,
+      "engine": "3741"
+    },
+    "3667": {
+      "revision": 3667,
+      "engine": "3741"
+    },
+    "3669": {
+      "revision": 3669,
+      "engine": "3741"
+    },
+    "3670": {
+      "revision": 3670,
+      "engine": "3741"
+    },
+    "3671": {
+      "revision": 3671,
+      "engine": "3741"
+    },
+    "3672": {
+      "revision": 3672,
+      "engine": "3741"
+    },
+    "3673": {
+      "revision": 3673,
+      "engine": "3741"
+    },
+    "3674": {
+      "revision": 3674,
+      "engine": "3741"
+    },
+    "3675": {
+      "revision": 3675,
+      "engine": "3741"
+    },
+    "3677": {
+      "revision": 3677,
+      "engine": "3741"
+    },
+    "3678": {
+      "revision": 3678,
+      "engine": "3741"
+    },
+    "3679": {
+      "revision": 3679,
+      "engine": "3741"
+    },
+    "3680": {
+      "revision": 3680,
+      "engine": "3741"
+    },
+    "3682": {
+      "revision": 3682,
+      "engine": "3741"
+    },
+    "3685": {
+      "revision": 3685,
+      "engine": "3741"
+    },
+    "3686": {
+      "revision": 3686,
+      "engine": "3741"
+    },
+    "3689": {
+      "revision": 3689,
+      "engine": "3741"
+    },
+    "3690": {
+      "revision": 3690,
+      "engine": "3741"
+    },
+    "3691": {
+      "revision": 3691,
+      "engine": "3741"
+    },
+    "3692": {
+      "revision": 3692,
+      "engine": "3741"
+    },
+    "3693": {
+      "revision": 3693,
+      "engine": "3741"
+    },
+    "3694": {
+      "revision": 3694,
+      "engine": "3741"
+    },
+    "3697": {
+      "revision": 3697,
+      "engine": "3741"
+    },
+    "3699": {
+      "revision": 3699,
+      "engine": "3741"
+    },
+    "3701": {
+      "revision": 3701,
+      "engine": "3741"
+    },
+    "3703": {
+      "revision": 3703,
+      "engine": "3741"
+    },
+    "3704": {
+      "revision": 3704,
+      "engine": "3741"
+    },
+    "3707": {
+      "revision": 3707,
+      "engine": "3741"
+    },
+    "3708": {
+      "revision": 3708,
+      "engine": "3741"
+    },
+    "3709": {
+      "revision": 3709,
+      "engine": "3741"
+    },
+    "3710": {
+      "revision": 3710,
+      "engine": "3741"
+    },
+    "3711": {
+      "revision": 3711,
+      "engine": "3741"
+    },
+    "3713": {
+      "revision": 3713,
+      "engine": "3741"
+    },
+    "3714": {
+      "revision": 3714,
+      "engine": "3741"
+    },
+    "3715": {
+      "revision": 3715,
+      "engine": "3741"
+    },
+    "3716": {
+      "revision": 3716,
+      "engine": "3741"
+    },
+    "3722": {
+      "revision": 3722,
+      "engine": "3741"
+    },
+    "3725": {
+      "revision": 3725,
+      "engine": "3741"
+    },
+    "3726": {
+      "revision": 3726,
+      "engine": "3741"
+    },
+    "3727": {
+      "revision": 3727,
+      "engine": "3741"
+    },
+    "3728": {
+      "revision": 3728,
+      "engine": "3741"
+    },
+    "3729": {
+      "revision": 3729,
+      "engine": "3741"
+    },
+    "3730": {
+      "revision": 3730,
+      "engine": "3741"
+    },
+    "3732": {
+      "revision": 3732,
+      "engine": "3741"
+    },
+    "3738": {
+      "revision": 3738,
+      "engine": "3741"
+    },
+    "3740": {
+      "revision": 3740,
+      "engine": "3741"
+    },
+    "3741": {
+      "revision": 3741,
+      "engine": "3741"
+    },
+    "3742": {
+      "revision": 3742,
+      "engine": "3741"
+    },
+    "3761": {
+      "revision": 3761,
+      "engine": "3842"
+    },
+    "3769": {
+      "revision": 3769,
+      "engine": "3842"
+    },
+    "3773": {
+      "revision": 3773,
+      "engine": "3842"
+    },
+    "3780": {
+      "revision": 3780,
+      "engine": "3842"
+    },
+    "3783": {
+      "revision": 3783,
+      "engine": "3842"
+    },
+    "3789": {
+      "revision": 3789,
+      "engine": "3842"
+    },
+    "3793": {
+      "revision": 3793,
+      "engine": "3842"
+    },
+    "3797": {
+      "revision": 3797,
+      "engine": "3842"
+    },
+    "3805": {
+      "revision": 3805,
+      "engine": "3842"
+    },
+    "3814": {
+      "revision": 3814,
+      "engine": "3842"
+    },
+    "3818": {
+      "revision": 3818,
+      "engine": "3842"
+    },
+    "3822": {
+      "revision": 3822,
+      "engine": "3842"
+    },
+    "3824": {
+      "revision": 3824,
+      "engine": "3842"
+    },
+    "3829": {
+      "revision": 3829,
+      "engine": "3842"
+    },
+    "3831": {
+      "revision": 3831,
+      "engine": "3842"
+    },
+    "3837": {
+      "revision": 3837,
+      "engine": "3842"
+    },
+    "3839": {
+      "revision": 3839,
+      "engine": "3842"
+    },
+    "3842": {
+      "revision": 3842,
+      "engine": "3842"
+    },
+    "3846": {
+      "revision": 3846,
+      "engine": "3842"
+    },
+    "3847": {
+      "revision": 3847,
+      "engine": "3842"
+    },
+    "3849": {
+      "revision": 3849,
+      "engine": "3842"
+    },
+    "3854": {
+      "revision": 3854,
+      "engine": "3842"
+    },
+    "3968": {
+      "revision": 3968,
+      "engine": "4086"
+    },
+    "3970": {
+      "revision": 3970,
+      "engine": "4086"
+    },
+    "3978": {
+      "revision": 3978,
+      "engine": "4086"
+    },
+    "3984": {
+      "revision": 3984,
+      "engine": "4086"
+    },
+    "3993": {
+      "revision": 3993,
+      "engine": "4086"
+    },
+    "3994": {
+      "revision": 3994,
+      "engine": "4086"
+    },
+    "4011": {
+      "revision": 4011,
+      "engine": "4086"
+    },
+    "4046": {
+      "revision": 4046,
+      "engine": "4086"
+    },
+    "4051": {
+      "revision": 4051,
+      "engine": "4086"
+    },
+    "4054": {
+      "revision": 4054,
+      "engine": "4086"
+    },
+    "4055": {
+      "revision": 4055,
+      "engine": "4086"
+    },
+    "4079": {
+      "revision": 4079,
+      "engine": "4086"
+    },
+    "4080": {
+      "revision": 4080,
+      "engine": "4086"
+    },
+    "4082": {
+      "revision": 4082,
+      "engine": "4086"
+    },
+    "4085": {
+      "revision": 4085,
+      "engine": "4086"
+    },
+    "4086": {
+      "revision": 4086,
+      "engine": "4086"
+    },
+    "4088": {
+      "revision": 4088,
+      "engine": "4086"
+    },
+    "4107": {
+      "revision": 4107,
+      "engine": "4086"
+    },
+    "4111": {
+      "revision": 4111,
+      "engine": "4086"
+    },
+    "4129": {
+      "revision": 4129,
+      "engine": "4086"
+    },
+    "4153": {
+      "revision": 4153,
+      "engine": "4086"
+    },
+    "4432": {
+      "revision": 4432,
+      "engine": "4432"
+    },
+    "4453": {
+      "revision": 4453,
+      "engine": "4432"
+    },
+    "6330": {
+      "revision": 6330,
+      "engine": "6391"
+    },
+    "6391": {
+      "revision": 6391,
+      "engine": "6391"
+    },
+    "6391-mod": {
+      "revision": 6391,
+      "engine": "6391"
+    },
+    "6392": {
+      "revision": 6392,
+      "engine": "6391"
+    },
+    "6412": {
+      "revision": 6412,
+      "engine": "6391"
+    },
+    "6510": {
+      "revision": 6510,
+      "engine": "6391"
+    },
+    "7086": {
+      "revision": 7086,
+      "engine": "7142"
+    },
+    "7123": {
+      "revision": 7123,
+      "engine": "7142"
+    },
+    "7142": {
+      "revision": 7142,
+      "engine": "7142"
+    },
+    "7530": {
+      "revision": 7530,
+      "engine": "7533"
+    },
+    "7533": {
+      "revision": 7533,
+      "engine": "7533"
+    },
+    "7555": {
+      "revision": 7555,
+      "engine": "7533"
+    },
+    "7556": {
+      "revision": 7556,
+      "engine": "7533"
+    },
+    "7735": {
+      "revision": 7735,
+      "engine": "7533"
+    },
+    "8023": {
+      "revision": 8023,
+      "engine": "8023"
+    }
+  }
+}

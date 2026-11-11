@@ -55,6 +55,7 @@
 #include	"anigif.h"
 #include    "config.h"
 #include    "globals.h"
+#include "obor_draw_assert.h"
 #include    "ram.h"
 #include    "version.h"
 #include    "savedata.h"
@@ -2868,6 +2869,8 @@ typedef struct s_anim {
     // Meta data.
     s_meta_data*                meta_data;              // User defiend data.
     int64_t				        meta_tag;	            // User defined int.
+    size_t obor_attack_frame_capacity; /* Actual owned frame-table extent. */
+    size_t obor_frame_capacity;
 } s_anim;
 
 struct animlist
@@ -3939,6 +3942,7 @@ typedef struct entity
 	unsigned char			*colourmap;							// Colortable in use. ~~
 
 	Varlist					*varlist;							// Entity var collection. ~~
+    Varlist *obor_varlist_owned;
 
 	// Floating decimals.
 	float					altbase;							// Altitude affected by movea. ~~
@@ -4298,6 +4302,7 @@ typedef struct
     ///////////////////////////////////////////////////////////////
     int numtextobjs;
     s_textobj *textobjs;
+    struct obor_text_table *obor_text_tables;
     int cameraxoffset;
     int camerazoffset;
     int numholes;
@@ -4356,6 +4361,11 @@ typedef struct
     s_meta_data*    meta_data;              // User defiend data.
     int			    meta_tag;	            // User defined int.
 } s_level;
+
+int obor_textobjs_count(const s_level *lv);
+int obor_textobj_index(s_level *lv, int index, int grow);
+void obor_textobjs_release_visible(s_level *lv);
+void obor_textobjs_release_all(s_level *lv);
 
 typedef struct ArgList
 {

@@ -1,0 +1,10 @@
+{
+  "schema": 1,
+  "counts": [-2147483648, -1, 0, 1, 2, 3, 7, 37],
+  "families": {
+    "4432": ["attack", "body"],
+    "6391": ["attack", "body", "entity"],
+    "7142": ["attack", "body", "entity"],
+    "7533": ["entity"]
+  }
+}

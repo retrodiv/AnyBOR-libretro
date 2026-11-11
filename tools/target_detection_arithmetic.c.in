@@ -1,0 +1,68 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <assert.h>
+#include <limits.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+@CONFIG@
+#include "openbor.h"
+#undef printf
+#undef assert
+#define assert(c) do {if(!(c)){fprintf(stderr,"target threshold selection profile=%u line=%d: %s\n",obor_profile_build,__LINE__,#c);abort();}}while(0)
+_Static_assert(INT_MAX==2147483647,"Native signed32 adjustments required");
+_Static_assert(sizeof(((entity*)0)->modeldata.stealth.detect)<=4,"Bounded native perception field required");
+_Static_assert(sizeof(((entity*)0)->modeldata.stealth.hide)<=4,"Bounded native concealment field required");
+uint32_t obor_profile_build;
+static const unsigned profiles[]={@PROFILES@};
+static entity actor,candidate;
+static entity *target_list[]={&candidate};
+entity *self=&actor;
+entity **ent_list=target_list;
+int ent_max=1;
+static unsigned range_calls,cases;
+static int fixture_range(entity *source,entity *target,int animation,...) {
+    assert(source==&actor && target==&candidate && animation>=0);++range_calls;return 1;
+}
+static int fixture_hostile(entity *source,entity *target) {
+    assert(source==&actor && target==&candidate);return 1;
+}
+#undef check_range
+#define check_range fixture_range
+#define check_range_target_all fixture_range
+#define faction_check_is_hostile fixture_hostile
+@DIFF@
+@TARGET@
+static void check(int perception,int adjustment,int concealment) {
+    memset(&actor,0,sizeof(actor));memset(&candidate,0,sizeof(candidate));
+    __typeof__(*candidate.animation) animation={0};
+    __typeof__(*animation.vulnerable) vulnerable[1]={1};
+    animation.vulnerable=vulnerable;candidate.animation=&animation;
+    actor.exists=candidate.exists=1;
+    actor.modeldata.stealth.detect=perception;candidate.modeldata.stealth.hide=concealment;
+    @HOSTILITY_INIT@
+    @POSITION_INIT@
+    int64_t threshold=(int64_t)actor.modeldata.stealth.detect+
+                      (obor_profile_build>=@INTRO@ ? (int64_t)adjustment : 0);
+    range_calls=0;
+    entity *found=normal_find_target(-1,adjustment);
+    assert(found==(candidate.modeldata.stealth.hide<=threshold ? &candidate : NULL));
+    assert(!range_calls);++cases;
+}
+int main(void) {
+    static const int perception[]={-100,-1,0,1,100};
+    static const int adjustment[]={INT_MIN,INT_MIN+128,-256,-1,0,1,256,INT_MAX-128,INT_MAX};
+    static const int concealment[]={-128,-101,-100,-1,0,1,99,100,101,127};
+    obor_profile_build=profiles[sizeof(profiles)/sizeof(*profiles)-1];
+    for(unsigned p=0;p<5;++p)for(unsigned a=0;a<9;++a)for(unsigned c=0;c<10;++c)
+        check(perception[p],adjustment[a],concealment[c]);
+    for(unsigned p=0;p<sizeof(profiles)/sizeof(*profiles);++p) {
+        obor_profile_build=profiles[p];
+        check(100,INT_MAX,127);check(-100,INT_MIN,-128);check(1,-1,0);check(-1,0,0);
+    }
+    printf("{\"status\":\"PASS\",\"profiles\":%u,\"cases\":%u}\n",
+           (unsigned)(sizeof(profiles)/sizeof(*profiles)),cases);
+    return 0;
+}

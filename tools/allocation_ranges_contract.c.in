@@ -1,0 +1,121 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ * The complete real allocator and live chunk metadata. ASan's Linux x86-64
+ * shadow layout requires a different fixture reservation; the native-address
+ * control separately retains the core's actual ABI address. Neither changes
+ * the published arena policy or establishes text-resource ownership.
+ */
+#define _GNU_SOURCE
+#include <assert.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "obor_abi.h"
+#ifndef OBOR_TEST_NATIVE_ARENA
+#undef OBOR_ARENA_BASE_VA
+#define OBOR_ARENA_BASE_VA 0x200000000000ULL
+#endif
+#include "obor_alloc.c"
+void obor_state_owned_discard(void) {}
+void obor_state_coded_discard(void) {}
+void obor_resources_close(void) {}
+void obor_resources_forget_owner(const void *owner) { (void)owner; }
+#if OBOR_WRITE_WATCH_ENABLED
+int obor_write_watch_stop(void) { return 1; }
+void obor_write_watch_abandon(void) {}
+#endif
+void obor_fault_allocator_activity(int active) { (void)active; }
+void obor_fault_abort(uint32_t kind, uintptr_t address) { (void)kind; (void)address; abort(); }
+void *__real_malloc(size_t bytes) { return malloc(bytes); }
+void *__real_realloc(void *pointer, size_t bytes) { return realloc(pointer, bytes); }
+void __real_free(void *pointer) { free(pointer); }
+
+static void refused(const void *pointer)
+{
+    const void *base = (void *)(uintptr_t)1;
+    size_t remaining = SIZE_MAX;
+    assert(!obor_allocation_query(pointer, &base, &remaining));
+    assert(!base && !remaining);
+}
+
+int main(void)
+{
+    const void *base;
+    size_t remaining;
+    refused(NULL);
+    void *claim = mmap(OBOR_ARENA_BASE, OBOR_ARENA_MAX, PROT_NONE,
+                      MAP_PRIVATE | MAP_ANONYMOUS | MAP_NORESERVE | MAP_FIXED_NOREPLACE, -1, 0);
+    assert(claim == OBOR_ARENA_BASE);
+    obor_arena_authorize(1);
+    assert(obor_arena_init());
+    refused(OBOR_ARENA_BASE);
+    unsigned char *first = __wrap_malloc(1000), *second = __wrap_malloc(2048);
+    unsigned char *blocker = __wrap_malloc(1024);
+    assert(first && second && blocker);
+    memset(first, 0x5a, 1000);
+    memset(second, 0xa5, 2048);
+    size_t usable = obor_allocation_size(first);
+    assert(usable >= 1000);
+    assert(obor_allocation_query(first, &base, &remaining) && base == first && remaining == usable);
+    assert(obor_allocation_query(first + 999, &base, &remaining));
+    assert(base == first && remaining == usable - 999);
+    assert(obor_allocation_query(first + usable - 1, &base, &remaining));
+    assert(base == first && remaining == 1);
+    assert(obor_allocation_query(first, NULL, NULL));
+    assert(obor_allocation_query(first + 31, &base, NULL) && base == first);
+    assert(obor_allocation_query(first + 31, NULL, &remaining) && remaining == usable - 31);
+    assert(obor_allocation_contains(first, 1000));
+    assert(obor_allocation_contains(first + usable - 1, 1));
+    assert(!obor_allocation_contains(first, 0));
+    assert(!obor_allocation_contains(first + 999, usable - 998));
+    assert(!obor_allocation_contains(first, SIZE_MAX));
+    refused(first + usable);
+    refused(&usable);
+    refused(NULL);
+    refused((void *)UINTPTR_MAX);
+    assert(obor_allocation_query(second + 24, &base, &remaining));
+    assert(base == second && remaining == obor_allocation_size(second) - 24);
+    uintptr_t previous = (uintptr_t)second;
+    second = __wrap_realloc(second, 4096);
+    assert(second);
+    for(unsigned i = 0; i < 2048; ++i) assert(second[i] == 0xa5);
+    assert(obor_allocation_query(second, &base, &remaining) && base == second && remaining >= 4096);
+    if((uintptr_t)second != previous) refused((void *)previous);
+    __wrap_free(second);
+    refused(second);
+    __wrap_free(blocker);
+    struct malloc_segment unsupported = {0};
+    msegmentptr saved = gm->seg.next;
+    gm->seg.next = &unsupported;
+    refused(first);
+    assert(!obor_allocation_contains(first, 1));
+    gm->seg.next = saved;
+    assert(obor_allocation_query(first, &base, &remaining) && base == first && remaining == usable);
+    for(unsigned i = 0; i < 1000; ++i) assert(first[i] == 0x5a);
+    __wrap_free(first);
+    refused(first);
+    /* Rejected engine work can retain private compiler allocations until the
+     * engine stops. Whole-arena retirement must discard those pages too. */
+    unsigned char *retained = __wrap_malloc(8192);
+    assert(retained);
+    memset(retained, 0xa5, 8192);
+    size_t retained_offset = (size_t)(retained - (unsigned char *)obor_arena_base());
+    size_t used_before_retirement = obor_arena_used();
+    assert(obor_allocation_query(retained, &base, &remaining));
+    obor_arena_release();
+    refused(first);
+    refused(retained);
+    assert(!obor_arena_used() && !arena_live_chunk_bytes);
+    assert(obor_arena_init() && obor_arena_grow_to(used_before_retirement));
+    unsigned char *fresh = (unsigned char *)obor_arena_base() + retained_offset;
+    for(unsigned i = 0; i < 8192; ++i) assert(fresh[i] == 0);
+    obor_arena_release();
+    assert(!munmap(claim, OBOR_ARENA_MAX));
+#ifdef OBOR_TEST_NATIVE_ARENA
+    puts("PASS allocation ranges: native");
+#else
+    puts("PASS allocation ranges: asan-fixture");
+#endif
+    return 0;
+}

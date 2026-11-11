@@ -172,6 +172,8 @@ def colourtable_program(components=None, common=None, contracts=None, *, origina
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <strings.h>
+#define stricmp strcasecmp
 typedef int32_t LONG,HRESULT;
 typedef double DOUBLE;
 typedef void VOID;
@@ -181,13 +183,14 @@ typedef struct {int marker;} s_sprite,s_attack;
 typedef struct {unsigned char **colourmap;int maps_loaded:8;
  unsigned char *palette;unsigned colourmap_capacity;} s_model;
 typedef struct {s_model modeldata;} entity;
-enum {_ep_colourtable};
+enum {_ep_colourtable,_ep_defense,_ep_the_end};
 #define MAX_COLOUR_MAPS 30
 #define S_OK 0
 #define E_FAIL (-1)
 static uint32_t obor_profile_build;
 static unsigned char palette[1],colours[128];
 static entity subject;
+static const char *StrCache_GetIfPresent(int index) {(void)index;return NULL;}
 static int StrCache_Pop(void) {abort();}
 static void StrCache_Collect(int index) {(void)index;abort();}
 static int quiet_printf(const char *format,...) {(void)format;return 0;}

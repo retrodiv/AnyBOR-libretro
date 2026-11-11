@@ -72,8 +72,19 @@ typedef struct {char *text;} s_textobj;
 static struct {s_textobj textobjs[1];} storage,*level=&storage;
 static uint32_t obor_profile_build;
 static size_t live_allocations;
-static void *counted_malloc(size_t n) {void *p=malloc(n);assert(p);++live_allocations;return p;}
-static void counted_free(void *p) {if(p){assert(live_allocations);--live_allocations;free(p);}}
+static void *observed_owner;
+static size_t observed_bytes;
+static void *counted_malloc(size_t n) {void *p=malloc(n);assert(p);++live_allocations;observed_owner=p;observed_bytes=n;return p;}
+static void counted_free(void *p) {if(p){assert(live_allocations);--live_allocations;if(p==observed_owner){observed_owner=NULL;observed_bytes=0;}free(p);}}
+int obor_allocation_query(const void *p,const void **base,size_t *remaining) {
+    uintptr_t address=(uintptr_t)p,origin=(uintptr_t)observed_owner;
+    if(base)*base=NULL;
+    if(remaining)*remaining=0;
+    if(!observed_owner||address<origin||address-origin>=observed_bytes)return 0;
+    if(base)*base=observed_owner;
+    if(remaining)*remaining=observed_bytes-(address-origin);
+    return 1;
+}
 #define malloc counted_malloc
 #define free counted_free
 #define StrCache_Get(x) (x)

@@ -45,12 +45,20 @@ def reader_program(components=None, common=None, contracts=None, *, original=Fal
             ('ScriptVariant_ChangeType', 'ScriptVariant_Clear')}
     if common is None:
         raise ValueError('Explicit source conversions required')
+    if 'obor_script_sprite_name_readable(' in components['entries'] and not original:
+        components = dict(components)
+        components['helpers'] = components.get('helpers', '') + function(
+            (SOURCE / 'src/engines/3741/openborscript.c').read_text(),
+            'obor_script_sprite_name_readable')
     program = r'''
 #include <assert.h>
 #include <stdint.h>
+#include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <strings.h>
+#define stricmp strcasecmp
 typedef int32_t LONG;
 typedef int HRESULT;
 typedef double DOUBLE;
@@ -65,7 +73,7 @@ typedef struct {int numframes;int *sprite;} s_animation;
 typedef struct {s_animation **animation;int animation_capacity;float stats[20];
  struct {short def,die,get,mphigh,mplow,mpmed,pain,weapon,x,y;} icon;} s_model;
 typedef struct {s_model modeldata;s_animation *animation;int animpos;float stats[20];} entity;
-enum {_ep_sprite,_ep_spritea,_ep_stats,_ep_icon};
+enum {_ep_sprite,_ep_spritea,_ep_stats,_ep_icon,_ep_defense,_ep_the_end};
 enum {_gep_spritea_centerx,_gep_spritea_centery,_gep_spritea_file,_gep_spritea_offsetx,_gep_spritea_offsety,_gep_spritea_sprite};
 enum {_gep_icon_def,_gep_icon_die,_gep_icon_get,_gep_icon_mphigh,_gep_icon_mplow,
  _gep_icon_mpmed,_gep_icon_pain,_gep_icon_weapon,_gep_icon_x,_gep_icon_y};
@@ -81,6 +89,21 @@ static s_sprite_map maps[5],*sprite_map=maps;
 static int sprite_map_max_items=5;
 static unsigned int sprites_loaded=5;
 static char names[5][MAX_STR_VAR_LEN+2],cache[MAX_STR_VAR_LEN+1];
+/* The reduced fixture declares exactly these five name buffers. */
+static int obor_allocation_query(const void *p,const void **base,size_t *remaining) {
+ if(base) *base=NULL;
+ if(remaining) *remaining=0;
+ uintptr_t at=(uintptr_t)p;
+ for(unsigned i=0;i<5;++i) {
+  uintptr_t first=(uintptr_t)names[i];
+  if(at>=first && at-first<sizeof(names[i])) {
+   if(base) *base=names[i];
+   if(remaining) *remaining=sizeof(names[i])-(at-first);
+   return 1;
+  }
+ }
+ return 0;
+}
 static int frame_ids[2][3]={{0,2,4},{1,3,0}};
 static s_animation animations[2]={{3,frame_ids[0]},{2,frame_ids[1]}};
 static s_animation *animation_table[2]={&animations[0],&animations[1]};
@@ -91,6 +114,9 @@ static int quiet_printf(const char *format,...) {(void)format;return 0;}
 static int StrCache_Pop(void) {memset(cache,0,sizeof(cache));return 0;}
 static void StrCache_Collect(int index) {assert(index==0);}
 static char *StrCache_Get(int index) {assert(index==0);return cache;}
+static const char *StrCache_GetIfPresent(int index) {
+ return index==0 && memchr(cache,0,sizeof(cache))?cache:NULL;
+}
 @CONVERSIONS@
 static void mapstrings_getentityproperty(ScriptVariant **args,int count) {(void)args;(void)count;}
 @TRANSLATION@

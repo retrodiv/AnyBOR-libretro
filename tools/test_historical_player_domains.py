@@ -76,6 +76,7 @@ typedef struct {
 #define SUCCEEDED(value) ((value)>=0)
 #define FAILED(value) ((value)<0)
 #define MAX_STR_VAR_LEN 255
+#define MAX_PLAYERS 4
 static uint32_t obor_profile_build;
 typedef struct { int marker; } entity;
 typedef struct {
@@ -90,6 +91,10 @@ static int noshare, credits, weapon_calls, weapon_value, weapon_extra;
 static char strings[64][512];
 static unsigned next_string;
 static char *StrCache_Get(int index) { assert(index>=0 && index<64); return strings[index]; }
+static char *StrCache_GetIfPresent(int index) {
+    return index>=0 && (unsigned)index<next_string &&
+        memchr(strings[index],0,sizeof(strings[index])) ? strings[index] : NULL;
+}
 static int StrCache_Pop(void) { assert(next_string<64); return next_string++; }
 static void StrCache_Collect(int index) { (void)index; }
 static void set_weapon(entity *ent, int value, int extra) {

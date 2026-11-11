@@ -1,0 +1,337 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <assert.h>
+#include <limits.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <strings.h>
+#include "types.h"
+#include "screen.h"
+#include "anigif.h"
+#undef printf
+#undef assert
+#include <assert.h>
+uint32_t obor_profile_build;
+int screenformat,pixelformat,pixelbytes[5]={1,1,2,3,4};
+static unsigned checks,attempts,refuse_attempt,owned_live;
+#define CHECK(x) do { ++checks;assert(x); } while(0)
+@COLORS@
+static struct allocation { unsigned char *pointer;size_t size;int live; } owned[32];
+static void check_canary(const struct allocation *entry) {
+ for(size_t i=0;i<32;++i)CHECK(entry->pointer[entry->size+i]==0xa5);
+}
+static void *owned_malloc(size_t size) {
+ if(++attempts==refuse_attempt)return NULL;
+ CHECK(size<=8192);
+ for(unsigned i=0;i<32;++i)if(!owned[i].live) {
+  unsigned char *p=malloc(size+32);CHECK(p);memset(p,0,size);memset(p+size,0xa5,32);
+  owned[i]=(struct allocation){p,size,1};++owned_live;return p;
+ }
+ abort();
+}
+static void *owned_calloc(size_t count,size_t size) {
+ CHECK(!count || size<=SIZE_MAX/count);return owned_malloc(count*size);
+}
+static void owned_free(void *pointer) {
+ if(!pointer)return;
+ for(unsigned i=0;i<32;++i)if(owned[i].live && owned[i].pointer==pointer) {
+  check_canary(&owned[i]);owned[i].live=0;--owned_live;free(pointer);return;
+ }
+ assert(!"GIF release without owned allocation");
+}
+s_screen *allocscreen(int width,int height,int format) {
+ CHECK(width>0 && width<=8 && height>0 && height<=4);
+ size_t bytes=(size_t)width*(size_t)height*(size_t)pixelbytes[format];
+ s_screen *s=owned_malloc(sizeof(*s)+bytes+1024);
+ if(!s)return NULL;
+ s->width=width;s->height=height;s->pixelformat=format;s->palette=NULL;
+ return s;
+}
+void clearscreen(s_screen *screen) {
+ CHECK(screen);memset(screen->data,0,(size_t)screen->width*(size_t)screen->height*(size_t)pixelbytes[(int)screen->pixelformat]);
+}
+static unsigned char wire[3][2048];
+static int wire_size,data_start,rgb_active,read_refusal;
+static const char *opening_name;
+static const char *plane_names[]={"clipr.gif","clipg.gif","clipb.gif"};
+static struct file {int active,position,plane;} files[4];
+static void reset_resources(void) {
+ CHECK(!owned_live);
+ for(unsigned i=0;i<4;++i)CHECK(!files[i].active);
+ attempts=refuse_attempt=0;read_refusal=0;memset(owned,0,sizeof(owned));
+ screenformat=PIXEL_32;pixelformat=rgb_active?PIXEL_x8:PIXEL_32;
+ opening_name="clip.gif";
+}
+#ifndef testpackfile
+int testpackfile(const char *name,const char *pack) {
+ CHECK(pack && !strcmp(pack,"archive"));
+ if(!rgb_active)return -1;
+ for(int i=0;i<3;++i)if(!strcmp(name,plane_names[i]))return 1;
+ return -1;
+}
+#endif
+int openpackfile(const char *name,const char *pack) {
+ CHECK(name && pack && !strcmp(pack,"archive"));
+ int plane=0;
+ if(rgb_active) {for(plane=0;plane<3 && strcmp(name,plane_names[plane]);++plane){}CHECK(plane<3);}
+ else CHECK(!strcmp(name,opening_name));
+ for(unsigned i=0;i<4;++i)if(!files[i].active) {
+  files[i]=(struct file){1,0,plane};return (int)i;
+ }
+ abort();
+}
+int readpackfile(int handle,void *out,int length) {
+ CHECK(handle>=0 && handle<4 && files[handle].active && length>=0);
+ struct file *f=&files[handle];
+ if(read_refusal && f->position>=data_start && length>1) {
+  int result=read_refusal==1?-1:0;read_refusal=0;return result;
+ }
+ int count=wire_size-f->position;if(count>length)count=length;CHECK(count>=0);
+ memcpy(out,wire[f->plane]+f->position,(size_t)count);f->position+=count;return count;
+}
+int seekpackfile(int handle,int offset,int whence) {
+ CHECK(handle>=0 && handle<4 && files[handle].active);
+ int position=whence==SEEK_SET?offset:whence==SEEK_CUR?files[handle].position+offset:wire_size+offset;
+ if(position<0) {position=0;}
+ if(position>wire_size) {position=wire_size;}
+ files[handle].position=position;return position;
+}
+int closepackfile(int handle) {
+ if(handle==-1)return -1;
+ CHECK(handle>=0 && handle<4 && files[handle].active);files[handle].active=0;return 0;
+}
+#define stricmp strcasecmp
+#define malloc owned_malloc
+#define calloc owned_calloc
+#define free owned_free
+@FREE_SCREEN@
+@DECODER@
+#undef malloc
+#undef calloc
+#undef free
+static void make_wire(int kind,int left,int top,int local,int palette) {
+ for(int plane=0;plane<3;++plane) {
+  unsigned char *w=wire[plane];int n=0;
+  memcpy(w,"GIF89a",6);n=6;
+  unsigned char header[]={4,0,2,0,0,0,0};header[4]=palette?0x80:0;
+  memcpy(w+n,header,sizeof(header));n+=(int)sizeof(header);
+  if(palette) {
+   memset(w+n,0,6);w[n+3]=rgb_active && plane!=0?0:20;
+   w[n+4]=rgb_active && plane!=1?0:40;w[n+5]=rgb_active && plane!=2?0:60;n+=6;
+  }
+  w[n++]=',';
+  unsigned char descriptor[]={0,0,0,0,4,0,2,0,0};
+  descriptor[0]=(unsigned char)left;descriptor[1]=(unsigned char)((unsigned)left>>8);
+  descriptor[2]=(unsigned char)top;descriptor[3]=(unsigned char)((unsigned)top>>8);descriptor[8]=local?0x80:0;
+  memcpy(w+n,descriptor,sizeof(descriptor));n+=(int)sizeof(descriptor);
+  if(local) {unsigned char pal[]={0,0,0,50,70,90};memcpy(w+n,pal,6);n+=6;}
+  w[n++]=kind==2?1:2;
+  unsigned long long bits=0;int shift=0;
+  if(kind==1) {
+   int codes[]={4,1,6,7,5},widths[]={3,3,3,3,4};
+   for(int i=0;i<5;++i){bits|=(unsigned long long)codes[i]<<shift;shift+=widths[i];}
+  } else if(kind==3) {bits=4u|(7u<<3)|(5u<<6);shift=9;}
+  else {for(int i=0;i<8;++i){bits|=4ull<<shift;shift+=3;bits|=1ull<<shift;shift+=3;}bits|=5ull<<shift;shift+=3;}
+  int bytes=(shift+7)/8;w[n++]=(unsigned char)bytes;data_start=n;
+  for(int i=0;i<bytes;++i)w[n++]=(unsigned char)(bits>>(8*i));
+  w[n++]=0;w[n++]=';';wire_size=n;
+ }
+}
+static anigif_info *new_context(void **storage) {
+ *storage=calloc(1,sizeof(anigif_info)+16);CHECK(*storage);
+ size_t displacement=0;
+#if @STREAM@
+ CHECK(_Alignof(anigif_info)<=4);
+ if(offsetof(anigif_info,gifbuffer)%_Alignof(void *)==0)displacement=4;
+#endif
+ anigif_info *info=(anigif_info *)((unsigned char *)*storage+displacement);
+#if !@STREAM@
+ info->handle=-1;info->transparent=-1;info->noblackenbg=0;
+#endif
+ return info;
+}
+static int open_context(char *name,anigif_info *info,unsigned char *palette) {
+#if @STREAM@
+ (void)palette;return @OPEN@(name,"archive",info);
+#else
+ return @OPEN@(name,"archive",palette,info);
+#endif
+}
+static s_screen *context_screen(anigif_info *info,s_screen *external) {
+#if @STREAM@
+ (void)external;return anigif_getbuffer(info);
+#else
+ (void)info;return external;
+#endif
+}
+static int decode_context(anigif_info *info,s_screen *external,unsigned char *palette) {
+#if @STREAM@
+ (void)external;(void)palette;return anigif_decode_frame(info)==0;
+#else
+ int delay=0,code,steps=0;
+ do{CHECK(++steps<32);code=@DECODE@(external,&delay,0,0,palette,info);}while(code==ANIGIF_DECODE_RETRY);
+ return (code&ANIGIF_DECODE_FRAME)!=0;
+#endif
+}
+static int pixels_match(s_screen *screen,int pixels,int local,int top) {
+ unsigned char expected[32]={0};uint32_t color=colour32(local?50:20,local?70:40,local?90:60);
+ if(@RAW@)for(int i=0;i<pixels;++i)expected[i]=1;
+ else for(int i=0;i<pixels;++i)memcpy(expected+i*4,&color,4);
+ if(top==-1) {memset(expected,0,32);if(@RAW@)memset(expected,1,4);else for(int i=0;i<4;++i)memcpy(expected+i*4,&color,4);}
+ return screen && screen->width==4 && screen->height==2 && !memcmp(screen->data,expected,32);
+}
+static void palette_check(anigif_info *info,unsigned char *external,int local) {
+#if @STREAM@
+ unsigned char *palette=local?info->info[0].local_pal:info->info[0].global_pal;
+#else
+ (void)info;unsigned char *palette=external;
+#endif
+ CHECK(palette && PAL_BYTES==1024);
+ for(unsigned i=0;i<256;++i) {
+  uint32_t expected=colour32(i==1?(local?50:20):0,i==1?(local?70:40):0,i==1?(local?90:60):0),actual;
+  memcpy(&actual,palette+i*4,sizeof(actual));CHECK(actual==expected);
+ }
+}
+static void pixel_case(int kind,int left,int top,int local,int palette_present) {
+ rgb_active=0;reset_resources();make_wire(kind,left,top,local,palette_present);
+ void *storage;anigif_info *info=new_context(&storage);
+ _Alignas(8) unsigned char palette_storage[1032]={0};unsigned char *palette=palette_storage+1;
+ s_screen *external=NULL;
+#if !@STREAM@
+ external=allocscreen(4,2,PIXEL_32);CHECK(external);
+#endif
+ CHECK(open_context("clip.gif",info,palette));
+ if(palette_present)palette_check(info,palette,0);
+ CHECK(decode_context(info,external,palette));
+ if(local)palette_check(info,palette,(@RAW@)?0:1);
+ int pixels=left==4 || (!palette_present && !(@RAW@))?0:kind==1?6:8;
+ CHECK(pixels_match(context_screen(info,external),pixels,local,top));
+ @CLOSE@(info);@CLOSE@(info);
+ if(external) {freescreen(&external);}
+ free(storage);CHECK(!owned_live);
+ for(int i=0;i<4;++i)CHECK(!files[i].active);
+}
+static void legacy_format_case(int format,int local,int palette_present) {
+#if !@STREAM@
+ rgb_active=0;reset_resources();screenformat=format;make_wire(0,0,0,local,palette_present);
+ void *storage;anigif_info *info=new_context(&storage);
+ _Alignas(8) unsigned char palette_storage[1032]={0};unsigned char *palette=palette_storage+1;
+ s_screen *screen=allocscreen(4,2,format);CHECK(screen);
+ CHECK(open_context("clip.gif",info,palette));CHECK(decode_context(info,screen,palette));
+ unsigned char expected[32]={0};int stride=pixelbytes[format];
+ if((@RAW@) || format==PIXEL_8)memset(expected,1,8);
+ else if(palette_present || local) {
+  for(int i=0;i<8;++i) {
+   if(format==PIXEL_16) {
+    unsigned short value=colour16(local?50:20,local?70:40,local?90:60);memcpy(expected+i*stride,&value,2);
+   } else {
+    unsigned value=colour32(local?50:20,local?70:40,local?90:60);memcpy(expected+i*stride,&value,4);
+   }
+  }
+ }
+ CHECK(!memcmp(screen->data,expected,(size_t)stride*8));
+ if(palette_present || (local && !(@RAW@))) {
+  int use_local=local && !(@RAW@);
+  for(int i=0;i<256;++i) {
+   unsigned char r=i==1?(use_local?50:20):0,g=i==1?(use_local?70:40):0,b=i==1?(use_local?90:60):0;
+   if(format==PIXEL_8)CHECK(palette[i*3]==r && palette[i*3+1]==g && palette[i*3+2]==b);
+   else if(format==PIXEL_16) {
+    unsigned short value;memcpy(&value,palette+i*2,2);CHECK(value==colour16(r,g,b));
+   } else {
+    unsigned value;memcpy(&value,palette+i*4,4);CHECK(value==colour32(r,g,b));
+   }
+  }
+ }
+ @CLOSE@(info);freescreen(&screen);free(storage);CHECK(!owned_live);
+ for(int i=0;i<4;++i)CHECK(!files[i].active);
+#else
+ (void)format;(void)local;(void)palette_present;
+#endif
+}
+static void primitive_cases(void) {
+ for(int kind=0;kind<5;++kind) {
+  rgb_active=0;reset_resources();make_wire(kind==0?2:kind==1?3:0,0,0,0,1);
+  void *storage;anigif_info *info=new_context(&storage);unsigned char palette[1024]={0};s_screen *external=NULL;
+#if !@STREAM@
+  external=allocscreen(4,2,PIXEL_32);CHECK(external);
+#endif
+  CHECK(open_context("clip.gif",info,palette));gifblockstruct descriptor={0};descriptor.width=4;descriptor.height=2;
+  if(kind==2){descriptor.width=0;descriptor.height=0;descriptor.flags=0x40;}
+  if(kind>=3)read_refusal=kind==3?1:2;
+  /* Start at the minimum code-size byte, after the image descriptor. */
+  files[0].position=data_start-2;
+#if @STREAM@
+  int status=decodegifblock(info,&descriptor,0);
+#else
+  int status=decodegifblock(info,external,4,2,&descriptor);
+#endif
+  CHECK(status==(kind>=3?1:0));@CLOSE@(info);
+  if(external) {freescreen(&external);}
+  free(storage);CHECK(!owned_live);
+ }
+}
+static void stream_cases(void) {
+#if @STREAM@
+ for(unsigned fail=0;fail<=7;++fail) {
+  rgb_active=1;reset_resources();make_wire(1,0,0,0,1);refuse_attempt=fail;
+  void *storage;anigif_info *info=new_context(&storage);int opened=open_context("clip.gif",info,NULL);
+  CHECK(opened==(fail==0));
+  if(opened) {
+   CHECK(decode_context(info,NULL,NULL));CHECK(pixels_match(anigif_getbuffer(info),6,0,0));
+   int before=files[0].position;
+   CHECK(anigif_decode(info,-1)==ANIGIF_DECODE_END);CHECK(anigif_decode(info,3)==ANIGIF_DECODE_END);
+   CHECK(anigif_decode(info,INT_MAX)==ANIGIF_DECODE_END && files[0].position==before);
+  }
+  @CLOSE@(info);@CLOSE@(info);free(storage);CHECK(!owned_live);
+  for(int i=0;i<4;++i)CHECK(!files[i].active);
+ }
+ char names[5][300];memset(names,'a',sizeof(names));
+ names[0][250]=0;memcpy(names[1]+250,".gif",5);names[2][251]=0;memcpy(names[3]+251,".gif",5);
+ char *cases[]={NULL,"","a","abc","clip.GIF",names[0],names[1],names[2],names[3],names[4]};
+ for(unsigned i=0;i<sizeof(cases)/sizeof(*cases);++i) {
+  rgb_active=0;reset_resources();make_wire(0,0,0,0,1);opening_name=cases[i];
+  void *storage;anigif_info *info=new_context(&storage);int opened=open_context(cases[i],info,NULL);
+  CHECK(opened==(i>=1 && i<=6));@CLOSE@(info);free(storage);CHECK(!owned_live);
+  for(int k=0;k<4;++k)CHECK(!files[k].active);
+ }
+ CHECK(!anigif_open(NULL,"archive",NULL));CHECK(anigif_decode(NULL,0)==ANIGIF_DECODE_END);
+ CHECK(anigif_decode_frame(NULL)==1 && !anigif_getbuffer(NULL));
+#else
+ CHECK(!open_context(NULL,NULL,NULL));
+ CHECK(@DECODE@(NULL,NULL,0,0,NULL,NULL)==ANIGIF_DECODE_END);
+ rgb_active=0;reset_resources();make_wire(0,0,0,0,1);
+ void *storage;anigif_info *info=new_context(&storage);unsigned char palette[1024]={0};
+ CHECK(!open_context(NULL,info,palette));@CLOSE@(info);free(storage);CHECK(!owned_live);
+#endif
+ @CLOSE@(NULL);
+}
+int main(void) {
+ _Static_assert(sizeof(short)==2,"native descriptor width");
+ CHECK(offsetof(gifheaderstruct,screenwidth)==6 && offsetof(gifheaderstruct,flags)==10);
+ CHECK(offsetof(gifblockstruct,width)==4 && offsetof(gifblockstruct,flags)==8);
+ unsigned profiles[]={@PROFILES@};
+ for(unsigned p=0;p<sizeof(profiles)/sizeof(*profiles);++p) {
+  obor_profile_build=profiles[p];
+#ifdef PIXEL_FORMAT_ONLY
+  int formats[]={PIXEL_8,PIXEL_16,PIXEL_32};
+  for(unsigned i=0;i<3;++i) {
+   legacy_format_case(formats[i],0,1);legacy_format_case(formats[i],1,1);legacy_format_case(formats[i],0,0);
+  }
+#elif defined(PIXEL_BOUND_ONLY)
+  pixel_case(0,4,0,0,1);
+#else
+  pixel_case(0,0,0,0,1);pixel_case(1,0,0,0,1);pixel_case(0,0,0,1,1);
+  pixel_case(0,0,0,0,0);pixel_case(0,4,0,0,1);pixel_case(0,0,-1,0,1);
+  primitive_cases();stream_cases();
+  short offsets[]={SHRT_MIN,-1,0,1,SHRT_MAX};int adjustments[]={INT_MIN,-1,0,1,INT_MAX};
+  for(unsigned i=0;i<5;++i)for(unsigned j=0;j<5;++j) {
+   int64_t value=((int64_t)offsets[i]+adjustments[j])%65536;if(value<0)value+=65536;if(value>32767)value-=65536;
+   CHECK(obor_gif_offset(offsets[i],adjustments[j])==value);
+  }
+#endif
+ }
+ printf("{\"status\":\"PASS\",\"profiles\":%zu,\"checks\":%u}\n",sizeof(profiles)/sizeof(*profiles),checks);return 0;
+}

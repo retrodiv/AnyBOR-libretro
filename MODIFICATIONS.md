@@ -332,6 +332,11 @@ consulting game identity.
 
 ## Collision memory layout
 
+Collision pointer tables reserve and initialize every configured slot before
+frame data is stored. Allocation refusal follows the controlled engine stop.
+Frame cleanup releases owned tables after their records. Partially constructed
+frames keep absent tables explicit, so cleanup skips unavailable entries.
+
 Build 8023 keeps the 64 author-facing collision indexes and their active
 bitmask, but allocates each collection's pointer table only through its highest
 used index. Lookup, cloning, mutation and cleanup retain the same indexed
@@ -356,6 +361,27 @@ behavior within that allocated capacity.
 Player selection validates a missing model before accessing its name. The
 historical missing-model diagnostic is retained, and failure returns control
 to the frontend through controlled engine shutdown.
+
+## Model constructor storage
+
+Subclass loading releases owned backing tables that it replaces with inherited
+tables. The child's script storage and the parent's resources retain their
+existing lifetimes. Constructor defaults and profile-specific copy behavior
+are preserved.
+
+## Zoom scaling safety
+
+Zoom validates positive scales and allocated pixel storage before sampling.
+Cropping preserves aligned frame widths, native fixed-point sampling and
+clipping. Previously unassigned crop pixels have a defined zero value.
+
+## Sprite array input bounds
+
+Script sprite-array queries and updates validate argument slots, animation and
+frame extents, and loaded sprite-table entries before use. Valid coordinates,
+sprite selection and profile-specific return values are preserved. Stored names are
+read and copied within their allocated spans. Shared filename buffers and
+nodes retain their alias behavior.
 
 ## Empty player slot safety
 
@@ -440,6 +466,54 @@ bounded buffer, retains its native three-plane refusal and converts the table
 to the active palette format. Sprite requests validate image headers before
 using dimensions. Direct raw-palette readers retain their native in-range
 layout and cannot write beyond the declared palette allocation.
+
+Screenshot writers release their PNG metadata and close the output stream on
+allocation refusal. The native RGB row conversion is preserved.
+
+Image loading and screen release copy pointer values through aligned local
+storage, preserving packed reference slots and each profile's native ownership
+and failure paths. Missing output slots return a defined refusal.
+
+## Rise action inputs
+
+Rise actions validate selectors and table availability before consulting
+animation entries. Valid actions retain each profile's native animation and
+state changes. The random timing check preserves its native unsigned interval
+and consumes one sample when reached; an empty interval returns false.
+
+## Command table ownership
+
+Inherited command tables retain shared writes within their historical fixed
+capacity. Resizing acquires independent owned storage without invalidating the
+parent. Valid row contents and initialization order are retained; invalid sizes
+and unavailable storage are rejected before use.
+
+## Entity storage ownership
+
+Entity construction validates its root and direct field reservations before
+initialization. Refused construction releases initialized owned fields through
+the native entity cleanup; valid allocation order and field values are retained.
+
+## Entity pool growth
+
+Entity pointer tables retain existing allocations when growth is refused. New
+slots are initialized before constructing entities so partial cleanup visits
+only initialized entries. Valid construction order and entity numbering are
+retained.
+
+## Legacy texture bounds
+
+Legacy texture drawing validates dimensions, numeric inputs and known storage
+extents. Valid clipping and pixel results are retained. Palette transfers use
+alignment-independent byte copies, and plane reads remain within their backing
+storage.
+
+## Collision selector inputs
+
+Script collision setters validate type indices and list entries before using
+them. Supported raw masks and valid field writes retain each profile's native
+results. Invalid selectors and missing entries follow the existing type-error
+path.
 
 ## Four player controls
 
@@ -532,6 +606,12 @@ code removal is not represented as a source edit. See each engine's
 `source/gamelib/packfile.c` and `packfile.h`.
 
 ## Compiler warning cleanup
+
+The control menu uses the compile-time button count for its name array.
+The array remains 13 entries of 32 bytes, with the same menu behavior.
+
+Palette and model-cache declarations use the parameter types of their native
+definitions, preserving calls and data layout.
 
 The engine is built with `-Wall` on Clang. Its type and alignment declarations
 preserve the intended behavior and structure layouts; record-layout dumps
@@ -871,6 +951,11 @@ filename or writing beyond the destination.
 Host content paths use a separate bounded 4096-byte representation, including
 the session values kept across restoration. They are not shortened to the
 engines' logical filename capacity. Oversized host paths fail before boot.
+Case-insensitive asset lookup assembles each directory prefix in separate
+bounded storage. A path that exceeds the lookup buffer is rejected while
+ordinary nested paths retain their complete directory prefix.
+Missing inputs and components that exceed the filename buffer are rejected
+before opening a directory.
 The optional game-log mirror consumes long lines in bounded chunks, preserving
 its per-frame work cap without hiding subsequent records behind a long path.
 
@@ -1159,22 +1244,42 @@ String lookup keeps adjacent reads within the declared table while retaining
 the search order and duplicate preference. Staydown property lookup uses its
 own name-table length. Missing entries return a failed lookup.
 
+## Script argument offsets
+
+Drawing calls calculate integer argument offsets before forming array
+pointers. Coordinate values, argument order and profile results are preserved.
+
+## Script initialization validation
+
+An absent script reports uninitialized without changing the current script.
+Existing scripts retain each profile's return value and current-script selection.
+
 ## Script parser table safety
 
 The grammar-table constructor bounds terminal writes to the declared
 production count while retaining valid entries and token membership.
 The historical parser refuses instructions with an unresolved control target
 before recording them; valid label instructions retain their native behavior.
+Constant-token prefixes validate room for the added operator and terminator.
+Fitting literals retain their exact bytes; a token that cannot hold its prefix
+uses the parser's normal error path.
 
 ## Script preprocessor safety
+
+Error and warning formatting stays within its message buffer. Fitting text and
+native return values are preserved; longer messages have a bounded terminator.
 
 Legacy preprocessor string scanners reject end-of-input, unfinished escapes and
 fixed token overflow before consuming an invalid byte. The dynamic-string engine
 keeps its existing complete-source-view implementation and receives the same
 malformed-input regression coverage.
 
-The early script parser releases temporary parameter storage after rejecting a
-macro definition, retaining the selected profile's diagnostic and token results.
+The script parser releases owned temporary parameter storage after rejecting a
+macro definition or call. Diagnostics retain the selected profile's argument
+counter and token results. Named global-variable queries skip unnamed slots.
+
+Macro concatenation initializes temporary tokens before copying them, preserving
+valid operand expansion and token order.
 
 Historical profiles preserve their source-defined initializer and compile-time
 name-conversion passes while retaining complete instruction storage and ordinary
@@ -1304,6 +1409,26 @@ override the declaration, and the log records the applicable rules. Exact
 declarations and unlabelled inference retain their existing priority. See
 [source-backed rules](docs/AUTO_SELECTION_RULES.md).
 
+## Projectile terminal health
+
+The 3400 projectile paths retain their native health discount when a projectile
+bounces or lands. A discount below the integer range stops at the minimum
+integer value. Other projectile fields and callback order remain unchanged.
+
+## Saved script input
+
+Saved-script byte loading validates seek results, nonempty length and complete
+reads before parsing, and closes its input stream on success or refusal.
+Valid files retain their native last-byte convention and script lifecycle.
+Profiles using the earlier script-loading route retain that route.
+
+## Script import initialization
+
+Rejected import construction releases its owned source and interpreter state.
+The earlier import diagnostic prints the supplied path. A refusal before the
+source is read uses an empty local reference for cleanup. Successful imports
+retain their native compilation, exported functions and reference behavior.
+
 ## Script text object ownership
 
 Replacing a text object's contents reuses its existing owned storage in the
@@ -1319,6 +1444,12 @@ The 3741 and 3842 trees validate text-table indices and growth arithmetic.
 Unavailable growth preserves the table and existing objects. Out-of-range
 queries and integer or void results follow the selected profile.
 
+The 6391, 7142, 7533 and 8023 trees check element alignment and capacity at
+table use. Drawing and level cleanup bound their local loop counts without
+changing the declared count. Interior table views cannot be resized or freed
+as allocation bases. Independent collection/count updates and valid callback
+ordering retain their native behavior.
+
 The 3842 tree keeps text terminators inside owned storage and checks native
 string extents before copying. Bounded conversion uses each variant type's
 native format. A formatted value that does not fit returns a defined error
@@ -1328,6 +1459,16 @@ profile's order.
 Text callbacks validate argument and required result slots before use. Missing
 entries have defined results. Valid numeric fields, optional result values, lazy
 index results and partial updates retain their selected profile's behavior.
+
+Text queries validate absent stored strings before invoking the string cache.
+Present strings retain their contents and the native result type.
+
+Fixed-buffer text conversion checks the formatted length before updating the
+stored text. Values that do not fit return a defined error. Valid conversions
+retain the native formats, padding and reuse of existing fixed storage.
+The 6391, 7142 and 7533 fixed writers also check an existing destination's
+remaining allocation capacity before copying or padding it. Insufficient
+capacity leaves that destination unchanged.
 
 Level text collection/count accessors preserve native returns and field-update
 order. Missing arguments, required result slots and level handles produce
@@ -1425,3 +1566,190 @@ their operation and side effects.
 Bitmap row reads stay within the requested output width. Palette-only reads
 retain their native behavior. Bitmap loading applies the selected profile's
 native image dimensions.
+
+## Lowercase byte domain
+
+Byte-count lowercase conversion passes unsigned byte values to the character
+conversion function, preserving ASCII conversion and embedded zero bytes.
+
+## Triangle numeric diagnostics
+
+Numeric diagnostics for triangle script calls print the signed argument value.
+Valid vertex coordinates and texture assignments retain their native results.
+
+## Target detection arithmetic
+
+Target detection adds perception adjustments with wide integer arithmetic.
+Valid thresholds and native candidate order, range and faction rules are retained.
+
+## Draw method input bounds
+
+Bound animation drawing-method indices and reject a missing table before
+accessing it. Preserve native assertion order and policy, valid pointer aliases
+and the null-method assignment accepted when historical assertions are disabled.
+
+Drawing diagnostics retain each source revision's assertion expression, function
+and original file/line. Active assertions stop the engine through its controlled
+exit; disabled historical assertions do not evaluate the predicate.
+For reconstructed variants, locations refer to their documented source basis.
+
+## Frame input bounds
+
+Validate an entity, its animation and its frame index before changing animation
+state or invoking frame services. Reject missing animations, nonpositive frame
+counts and invalid signed or unsigned indices; preserve valid frame processing.
+
+## Remap flag bounds
+
+Keep remap flag writes inside the allocated table when map creation is refused.
+Preserve valid flag updates, loader results and source-defined diagnostics.
+
+## Path output initialization
+
+Reserve space using the native waypoint element size and initialize the final
+returned movement point to the entity's current position. Preserve the
+source-defined coordinate prefix, count, search order and movement caller.
+
+## Attack query input bounds
+
+Validate required attack-query arguments, animation frames and vector indices.
+Preserve valid attack values and source-defined scalar selector behavior.
+Keep attack frame-table capacity independent of the script-editable frame count.
+Preserve each profile's instance indexing and defined empty-property results.
+
+## Defense query input bounds
+
+Validate defense query arguments and indices against the configured table size.
+Preserve valid table entries, model or entity values, optional selectors and
+each profile's error results.
+
+## GIF memory bounds
+
+Keep GIF dictionaries, pixel writes, palettes and filenames within their storage
+limits. Handle unavailable decoder storage cleanly and access packed screen
+references through aligned local values. Preserve valid decoded pixel bytes.
+
+## HUD model validation
+
+Player selection checks resolved models before drawing icons, joining, copying
+names or selecting colours. Missing selections retain a stable joining state;
+valid selections preserve native lookup timing, navigation and player changes.
+
+## Slow motion counters
+
+Slow motion retains each profile's counter width, activation and reset order.
+Signed counter successors have defined results at the integer endpoint without
+changing the stored fields.
+
+## Vulnerable frame queries
+
+Vulnerability queries retain native flag values, current-frame defaults and
+argument errors. Unavailable animation or frame storage produces an empty result.
+
+## Animation ID bounds
+
+Animation, animation-property and attack ID translation preserve native
+numbering and give unsupported integer endpoints a defined invalid result.
+
+## Player property inputs
+
+Player queries and changes validate slots, name capacity and optional indices
+before use. Valid stored values, conversion defaults and historical return
+conventions are retained; invalid data produces a defined failure.
+
+## Pickup inputs
+
+Pickup navigation checks object presence before calculating movement. Missing
+objects return without changing state; valid movement and animation are retained.
+
+## Toss inputs
+
+Toss script calls validate result storage and handle representation. NULL,
+numeric defaults, movement and rejection results retain each profile behavior.
+
+## Numeric argument inputs
+
+Decimal conversion rejects missing input or output storage before use, retaining
+valid numeric results and the destination value on failure.
+
+## Script record alignment
+
+Script records support their native packed containers while preserving existing
+member offsets and sizes. Shared references use byte copies for pointer slots;
+release order and ownership counts are preserved.
+
+## Script health arithmetic
+
+Direct script damage uses a wide intermediate and defined signed health
+endpoints. Representable results, the kill threshold and native argument and
+callback order are preserved in each profile.
+
+## Level consumer storage
+
+Saved names display within their fixed-width record fields without changing
+saved bytes. Selector replacement releases its previous owned string after the
+new copy exists; fixed selector buffers retain their native limit and terminate.
+
+## Restored player names
+
+Restored player-name fields have an in-field terminator. The native fixed-width
+copy, saved bytes and every already-terminated destination byte are preserved.
+
+## Script heap entry types
+
+Heap disposal checks the recorded object owner before reading a typed object.
+Native tag predicates, destructor callbacks and release order are retained.
+
+## Script heap lifecycle
+
+A script cleanup callback can release other objects. The active script stays
+live until its callback returns, and the original heap entry is removed even
+if a nested release moves the cursor. Shutdown retains the callback's
+traversal order and skips objects it has already released.
+
+## Script array storage
+
+Array creation validates its inputs and allocation size. Variable-list creation
+checks internal allocations before initialization. Valid array contents and
+results retain their native behavior; internal allocation refusal stops the
+engine through its controlled exit.
+
+## Script constructor storage
+
+Script creation checks object and local-variable storage before initializing it.
+A refused internal allocation stops the engine through its controlled exit.
+Successful initialization retains native values and callback behavior.
+
+## Script variable storage
+
+Global variable initialization checks allocation sizes and refused storage.
+Indexed table growth preserves existing values on allocation failure and keeps
+a source slot valid when storage moves. Named-slot allocation failure leaves
+the current list intact.
+
+Optional table shrinking preserves its existing storage on allocation refusal;
+the completed logical deletion and its result remain valid.
+
+## Script variable ownership
+
+Entities and arrays can share the same variable collection. Releasing one
+owner keeps the collection alive for the others, including a model-copy
+callback that borrows the previous entity's collection.
+
+## Text table ownership
+
+Text operations use the initialized entries of the level's own tables.
+Changing the visible collection or count preserves the script property values.
+Level cleanup releases the tables the level allocated.
+
+## Animation query inputs
+
+The legacy animation property query uses the entity's current animation.
+It validates the current animation and optional arguments before reading
+their data. Model-copy callbacks can query the previous entity.
+
+## Animation frame ownership
+
+Animation cleanup releases the initialized frame tables and collision entries
+using their allocation counts. Script edits to the visible frame count do
+not change which storage the animation owns.

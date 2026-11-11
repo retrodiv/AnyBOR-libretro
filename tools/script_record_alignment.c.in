@@ -1,0 +1,111 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ * Native records/accessor/reference helper; old accesses use aligned controls.
+ */
+#include <stddef.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+static void *reference_alloc(size_t);
+static void reference_free(void *);
+#define OBOR_SCRIPT_STORAGE_ALLOC(n) reference_alloc(n)
+#define OBOR_SCRIPT_STORAGE_FREE(p) reference_free(p)
+@CONFIG@
+#include "openbor.h"
+#include "@SCRIPT_HEADER@"
+#undef printf
+#undef assert
+#undef malloc
+#undef calloc
+#undef free
+#ifdef NDEBUG
+#error Script layout assertions must remain enabled
+#endif
+@BEFORE_DECLARATIONS@
+@ABI_CHECKS@
+uint32_t obor_profile_build;
+Script *pcurrentscript;
+static fixture_before_Script *fixture_before_current;
+static unsigned cases,reference_allocations,reference_frees,destroy_calls;
+static int payload;
+static const void *release_slots[2];
+#define assert(c) do {if(!(c)){fprintf(stderr,"Script alignment profile=%u case=%u line=%d: %s\n",obor_profile_build,cases,__LINE__,#c);abort();}}while(0)
+HRESULT Interpreter_Call(Interpreter *p){(void)p;abort();}
+HRESULT Interpreter_EvalInstruction(Interpreter *p){(void)p;abort();}
+static void *reference_alloc(size_t n){void *p=malloc(n);assert(p);++reference_allocations;return p;}
+static void reference_free(void *p){assert(p);++reference_frees;free(p);}
+static void destroy_value(void *p)
+{
+    obor_script_reference *first,*second;
+    assert(p==&payload);
+    memcpy(&first,release_slots[0],sizeof(first));memcpy(&second,release_slots[1],sizeof(second));
+    assert(!first && !second);++destroy_calls;
+}
+@ORIGINAL_GETTER@
+@GETTER@
+@FIELD_OFFSETS@
+static const struct {size_t size,alignment,count;const size_t *offsets;} owners[]={@OWNERS@};
+static const uint32_t profiles[]={@PROFILES@};
+static void reference_checks(Script *script,int parent_first)
+{
+    Script sibling;memset(&sibling,0,sizeof(sibling));
+    unsigned destroyed=destroy_calls,freed=reference_frees;
+    obor_script_reference *reference=obor_script_reference_new(&payload,destroy_value);assert(reference);
+    assert(obor_script_reference_retain(reference) && reference->references==2);
+    script->obor_interpreter=sibling.obor_interpreter=reference;
+    release_slots[0]=&script->obor_interpreter;release_slots[1]=&sibling.obor_interpreter;
+    void *first=parent_first?(void *)&script->obor_interpreter:(void *)&sibling.obor_interpreter;
+    void *second=parent_first?(void *)&sibling.obor_interpreter:(void *)&script->obor_interpreter;
+    assert(obor_script_reference_release(first) && reference->references==1);
+    assert(destroy_calls==destroyed && reference_frees==freed);
+    assert(obor_script_reference_release(first) && reference->references==1);
+    assert(obor_script_reference_release(second));
+    assert(destroy_calls==destroyed+1 && reference_frees==freed+1);
+    assert(!script->obor_interpreter && !sibling.obor_interpreter);
+    ++cases;
+}
+static void inspect_query(Script *script,int flag)
+{
+    fixture_before_Script before;
+    memset(script,0,sizeof(*script));script->initialized=flag;@MAGIC_INIT@
+    memcpy(&before,script,sizeof(before));pcurrentscript=NULL;fixture_before_current=NULL;
+    int observed=Script_IsInitialized(script),expected=fixture_before_is_initialized(&before);
+    assert(observed == expected);
+    assert((pcurrentscript==script)==(fixture_before_current==&before));
+    assert(pcurrentscript==script || !pcurrentscript);
+    assert(!memcmp(&before,script,sizeof(before)));
+    if(flag)reference_checks(script,flag==1);
+    assert(!memcmp(&before,script,sizeof(before)));++cases;
+}
+int main(void)
+{
+    for(unsigned p=0;p<sizeof(profiles)/sizeof(*profiles);++p)
+    {
+        obor_profile_build=profiles[p];
+        for(unsigned o=0;o<sizeof(owners)/sizeof(*owners);++o)
+        {
+            unsigned char *raw=malloc(owners[o].size+64);assert(raw);
+            unsigned char *base=(unsigned char *)(((uintptr_t)raw+15u)&~(uintptr_t)15u);
+#ifdef QUERY_ONLY
+            memset(base,0,owners[o].size);inspect_query((Script *)(void *)(base+owners[o].offsets[0]),1);
+#else
+            for(size_t residue=0;residue<16;residue+=owners[o].alignment)
+            for(size_t field=0;field<owners[o].count;++field)
+            {
+                memset(base+residue,0,owners[o].size);
+                Script *script=(Script *)(void *)(base+residue+owners[o].offsets[field]);
+                inspect_query(script,0);inspect_query(script,1);inspect_query(script,17);
+            }
+#endif
+            free(raw);
+        }
+        assert(!Script_IsInitialized(NULL));++cases;
+    }
+    assert(reference_allocations==reference_frees);
+    printf("{\"status\":\"PASS\",\"profiles\":%zu,\"cases\":%u,\"reference_allocations\":%u,\"reference_frees\":%u,\"before\":",sizeof(profiles)/sizeof(*profiles),cases,reference_allocations,reference_frees);
+    @BEFORE_LAYOUT@
+    printf(",\"after\":");
+    @AFTER_LAYOUT@
+    printf("}\n");return 0;
+}

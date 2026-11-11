@@ -1,0 +1,159 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <limits.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdarg.h>
+#include <stdlib.h>
+#include <string.h>
+@CONFIG@
+#include "openbor.h"
+#include "@SCRIPT_HEADER@"
+@PROFILE_HEADER@
+#undef printf
+#undef assert
+uint32_t obor_profile_build;
+static unsigned queries,diagnostics;
+static char diagnostic[512];
+#define CHECK(c) do {if(!(c)){fprintf(stderr,"vulnerability profile=%u query=%u: %s\n",obor_profile_build,queries,#c);abort();}}while(0)
+static int quiet_printf(const char *format,...)
+{va_list a;va_start(a,format);vsnprintf(diagnostic,sizeof(diagnostic),format,a);va_end(a);++diagnostics;return 0;}
+#define printf quiet_printf
+CHAR *StrCache_Get(int n){(void)n;abort();}
+CHAR *StrCache_GetIfPresent(int n){(void)n;abort();}
+int StrCache_Pop(@POP_ARGUMENTS@){abort();}
+void StrCache_Collect(int n){(void)n;abort();}
+void StrCache_Copy(int n,CHAR *s){(void)n;(void)s;abort();}
+int StrCache_CreateNewFrom(const CHAR *s){(void)s;abort();}
+void mapstrings_getentityproperty(ScriptVariant **a,int n){(void)a;(void)n;}
+@MAPPER_TYPE@ mapstrings_entityproperty(ScriptVariant **a,int n){(void)a;(void)n;@MAPPER_RETURN@}
+#define obor_property_index(space,index,end) (index)
+#define obor_entity_get_property_native(index) (index)
+#define obor_entityproperty_native(index) (index)
+#define obor_entityproperty(index) (index)
+enum {_ep_vulnerable=1,_ep_defense=2,_ep_the_end=3};
+@CONVERSIONS@
+static entity actor;
+static s_anim animations[2],*table[MAX_ANIS];
+static __typeof__(*animations[0].vulnerable) flags[2][4];
+static size_t table_bytes,record_bytes[2],flag_bytes[2];
+static size_t fixture_allocation_size(const void *p)
+{
+    if(p==table)return table_bytes;
+    for(int i=0;i<2;++i){if(p==animations+i)return record_bytes[i];if(p==flags[i])return flag_bytes[i];}
+    CHECK(!"unexpected native owner base");return 0;
+}
+@ORIGINAL_MAPPER@
+static int native_id(int value){return @MAPPER@;}
+@ORIGINAL@
+@NATIVE@
+static ScriptVariant values[5],*args[5],result,*out;
+static const struct {unsigned revision;int clear,limits[3];} contexts[]={@CONTEXTS@};
+static void setup(int public_id,int native,int frame)
+{
+    memset(&actor,0,sizeof(actor));memset(animations,0,sizeof(animations));memset(table,0,sizeof(table));
+    memset(values,0,sizeof(values));memset(&result,0,sizeof(result));
+    for(int n=0;n<5;++n){args[n]=values+n;values[n].vt=VT_INTEGER;}
+    values[0].vt=VT_PTR;values[0].ptrVal=&actor;values[1].lVal=_ep_vulnerable;
+    values[2].lVal=public_id;values[3].lVal=frame;
+    actor.animnum=native;actor.animpos=frame;actor.modeldata.animation=table;actor.modeldata.animation_capacity=MAX_ANIS;
+    table_bytes=sizeof(table);if(native>=0 && native<MAX_ANIS)table[native]=animations;
+    for(int n=0;n<2;++n){animations[n].numframes=3;animations[n].vulnerable=flags[n];record_bytes[n]=sizeof(*animations);flag_bytes[n]=sizeof(flags[n]);}
+    flags[0][0]=0;flags[0][1]=-1;flags[0][2]=73;flags[0][3]=91;
+    result.vt=VT_INTEGER;result.lVal=99;out=&result;diagnostics=0;*diagnostic=0;
+}
+static void empty(int count)
+{++queries;CHECK(openbor_getentityproperty(args,&out,count)==S_OK);CHECK(out==&result && result.vt==VT_EMPTY);CHECK(!diagnostics);}
+static void equivalent(int count)
+{
+    ++queries;HRESULT original=original_query(args,&out,count);CHECK(original==S_OK && out==&result && result.vt==VT_INTEGER);
+    LONG expected=result.lVal;result.vt=VT_INTEGER;result.lVal=99;out=&result;diagnostics=0;
+    CHECK(openbor_getentityproperty(args,&out,count)==S_OK && out==&result && result.vt==VT_INTEGER && result.lVal==expected);
+    CHECK(result.lVal==(LONG)flags[0][actor.animpos]);CHECK(!diagnostics);
+}
+int main(void)
+{
+    const int numeric[]={INT_MIN,-1,0,1,MAX_ANIS-1,MAX_ANIS,INT_MAX-2,INT_MAX-1,INT_MAX};
+    const int samples[]={-32768,-1,0,1,73,32767,INT_MIN,INT_MAX};
+    for(unsigned p=0;p<sizeof(contexts)/sizeof(*contexts);++p){
+        obor_profile_build=contexts[p].revision;
+#ifdef MAPPER_ONLY
+#if @HAS_MAPPER@
+        int (*current_maps[])(int)={obor_animation_from_native,obor_animation_property_from_native,obor_attack_from_native};
+        int (*original_maps[])(int)={original_animation_map,original_property_map,original_attack_map};
+        for(unsigned m=0;m<3;++m){
+            for(int n=0;n<MAX_ANIS+128;++n){++queries;CHECK(current_maps[m](n)==original_maps[m](n));}
+            for(unsigned n=0;n<sizeof(numeric)/sizeof(*numeric);++n){
+                ++queries;int value=numeric[n],actual=current_maps[m](value);
+                if(value<=contexts[p].limits[m])CHECK(actual==original_maps[m](value));
+                else CHECK(actual==-1);
+            }
+        }
+#else
+#error Translator-only control requires the source-owned mapper family
+#endif
+#elif defined(ENDPOINT_ONLY)
+        setup(0,0,3);empty(2);
+#else
+#if @HAS_MAPPER@
+        for(unsigned n=0;n<sizeof(numeric)/sizeof(*numeric);++n){
+            ++queries;int value=numeric[n],actual=native_id(value);
+            if(value<=contexts[p].limits[0])CHECK(actual==original_animation_map(value));
+            else CHECK(actual==-1);
+        }
+#endif
+        for(int pub=0;pub<MAX_ANIS;++pub){
+            int native=native_id(pub);if(native<0 || native>=MAX_ANIS)continue;
+            for(int frame=0;frame<3;++frame)for(unsigned v=0;v<sizeof(samples)/sizeof(*samples);++v){
+                if(sizeof(flags[0][0])<sizeof(int) && (samples[v]<-32768 || samples[v]>32767))continue;
+                setup(pub,native,frame);flags[0][frame]=samples[v];equivalent(2);equivalent(4);equivalent(5);
+            }
+        }
+        /* Argument errors retain the original diagnostic and result protocol. */
+        for(int mode=0;mode<3;++mode){
+            setup(0,0,0);int count=mode?4:3;
+            if(mode)values[mode==1?2:3].vt=VT_DECIMAL;
+            ++queries;CHECK(original_query(args,&out,count)==E_FAIL);
+            int expected_null=out==NULL;VARTYPE expected_type=result.vt;
+            char expected_text[512];strcpy(expected_text,diagnostic);unsigned expected_diagnostics=diagnostics;
+            result.vt=VT_INTEGER;result.lVal=99;out=&result;diagnostics=0;*diagnostic=0;
+            CHECK(openbor_getentityproperty(args,&out,count)==E_FAIL && (out==NULL)==expected_null);
+            CHECK(expected_null==contexts[p].clear && result.vt==expected_type);
+            CHECK(diagnostics==expected_diagnostics && !strcmp(diagnostic,expected_text));
+        }
+        for(int explicit=0;explicit<2;++explicit)for(unsigned n=0;n<sizeof(numeric)/sizeof(*numeric);++n){
+            int value=numeric[n];if(value>=0 && value<3)continue;
+            setup(0,0,0);if(explicit)values[3].lVal=value;else {actor.animpos=value;if((uint64_t)actor.animpos<3u)continue;}empty(explicit?4:2);
+        }
+        for(int explicit=0;explicit<2;++explicit)for(unsigned n=0;n<sizeof(numeric)/sizeof(*numeric);++n){
+            int value=numeric[n];int native=explicit?native_id(value):value;
+            if(native>=0 && native<MAX_ANIS)continue;
+            setup(0,0,0);if(explicit)values[2].lVal=value;else {actor.animnum=value;if((uint64_t)actor.animnum<(uint64_t)MAX_ANIS)continue;}empty(explicit?4:2);
+        }
+        for(int mode=0;mode<12;++mode){
+            setup(0,0,0);
+            switch(mode){
+            case 0:actor.modeldata.animation=NULL;break;
+            case 1:actor.modeldata.animation_capacity=0;break;
+            case 2:actor.modeldata.animation_capacity=-1;break;
+            case 3:table_bytes=0;break;
+            case 4:table[0]=NULL;break;
+            case 5:record_bytes[0]=sizeof(*animations)-1;break;
+            case 6:animations[0].numframes=0;break;
+            case 7:animations[0].numframes=-1;break;
+            case 8:animations[0].vulnerable=NULL;break;
+            case 9:flag_bytes[0]=0;break;
+            case 10:actor.animpos=2;flag_bytes[0]=2*sizeof(flags[0][0]);break;
+            case 11:actor.animnum=1;table[1]=animations;table_bytes=sizeof(*table);break;
+            }
+            empty(2);
+        }
+        setup(0,0,0);args[3]=NULL;++queries;
+        CHECK(openbor_getentityproperty(args,&out,4)==E_FAIL && (out==NULL)==contexts[p].clear);
+        setup(0,0,0);args[2]=NULL;++queries;CHECK(openbor_getentityproperty(args,&out,4)==E_FAIL && !out);
+#endif
+    }
+#undef printf
+    printf("{\"status\":\"PASS\",\"profiles\":%zu,\"queries\":%u}\n",sizeof(contexts)/sizeof(*contexts),queries);
+    return 0;
+}

@@ -48,6 +48,7 @@ def complex_program(components=None, contracts=None, *, driver=None):
     program = r'''
 #include <assert.h>
 #include <stdint.h>
+#include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -126,6 +127,7 @@ static int ScriptVariant_DecimalValue(ScriptVariant *v,DOUBLE *out) {
     return E_FAIL;
 }
 static char *StrCache_Get(LONG index) { assert(index==0);return cached_string; }
+static char *StrCache_GetIfPresent(LONG index) { return index==0 && memchr(cached_string,0,sizeof(cached_string))?cached_string:NULL; }
 static void mapstrings_changeentityproperty(ScriptVariant **args,int count) {
     (void)args;(void)count;
 }

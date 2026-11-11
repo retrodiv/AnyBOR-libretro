@@ -14,6 +14,7 @@
 #error Frame-base assertions must remain enabled
 #endif
 uint32_t obor_profile_build;
+@ASSERTIONS@
 static unsigned active_case;
 #define assert(c) do {if(!(c)){fprintf(stderr,"Frame base revision=%u case=%u line=%d\n",obor_profile_build,active_case,__LINE__);abort();}}while(0)
 HRESULT Interpreter_Call(Interpreter *p) { (void)p; abort(); }

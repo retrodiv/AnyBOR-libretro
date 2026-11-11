@@ -167,6 +167,11 @@ void Parser_AddInstructionViaToken(Parser* pparser, OpCode pCode, Token* pToken,
 ******************************************************************************/
 void Parser_AddInstructionViaLabel(Parser* pparser, OpCode pCode, Label instrLabel, Label listLabel )
 {
+    if(!instrLabel)
+    {
+        pparser->errorFound = TRUE;
+        return;
+    }
 	Instruction* pInstruction = NULL;
 	pInstruction = (Instruction*)obor_profile_malloc_named("Parser_AddInstructionViaLabel", sizeof(Instruction));
 	Instruction_InitViaLabel(pInstruction, pCode, instrLabel);

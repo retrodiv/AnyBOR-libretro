@@ -1,0 +1,296 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <assert.h>
+#include <limits.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+@CONFIG@
+#include "openbor.h"
+#include "@SCRIPT_HEADER@"
+@PROFILE_HEADER@
+#undef printf
+#undef exit
+#undef assert
+#include <assert.h>
+uint32_t obor_profile_build;
+static unsigned checks;
+#define CHECK(x) do { ++checks; assert(x); } while(0)
+static int quiet_printf(const char *format,...) { (void)format; return 0; }
+#define printf quiet_printf
+static struct { char *address; size_t capacity; int live; } allocations[16];
+static int fail_next_allocation,query_enabled=1;
+static void *name_malloc(size_t capacity) {
+ if(fail_next_allocation) { fail_next_allocation=0;return NULL; }
+ for(unsigned i=0;i<sizeof(allocations)/sizeof(*allocations);++i) if(!allocations[i].live) {
+  /* Extra backing bytes keep negative logical-capacity controls defined. */
+  char *p=malloc(capacity+64);assert(p);memset(p,0x5a,capacity+64);
+  allocations[i].address=p;allocations[i].capacity=capacity;allocations[i].live=1;return p;
+ }
+ abort();
+}
+static void name_free(void *p) {
+ if(!p) return;
+ for(unsigned i=0;i<sizeof(allocations)/sizeof(*allocations);++i)
+  if(allocations[i].live && allocations[i].address==p) { allocations[i].live=0;free(p);return; }
+ assert(!"filename release without ownership");
+}
+static void retire_names(void) {
+ for(unsigned i=0;i<sizeof(allocations)/sizeof(*allocations);++i)
+  if(allocations[i].live) name_free(allocations[i].address);
+}
+int obor_allocation_query(const void *p,const void **base,size_t *remaining) {
+ if(base) *base=NULL;
+ if(remaining) *remaining=0;
+ if(!query_enabled || !p) return 0;
+ uintptr_t address=(uintptr_t)p;
+ for(unsigned i=0;i<sizeof(allocations)/sizeof(*allocations);++i) {
+  uintptr_t first=(uintptr_t)allocations[i].address;
+  if(allocations[i].live && address>=first && address-first<allocations[i].capacity) {
+   if(base) *base=allocations[i].address;
+   if(remaining) *remaining=allocations[i].capacity-(address-first);
+   return 1;
+  }
+ }
+ return 0;
+}
+static char cache[4][MAX_STR_VAR_LEN+3];
+static int missing_cache;
+static const char *cache_alias;
+CHAR *StrCache_Get(int n) { assert(n>=0 && n<4); return cache[n]; }
+CHAR *StrCache_GetIfPresent(int n) {
+ if(n<0 || n>=4 || missing_cache) return NULL;
+ if(n==3 && cache_alias) {
+  size_t capacity;
+  return obor_allocation_query(cache_alias,NULL,&capacity) && memchr(cache_alias,0,capacity) ? (CHAR *)cache_alias : NULL;
+ }
+ size_t capacity=@FIXED_CACHE@?MAX_STR_VAR_LEN+1:sizeof(cache[n]);
+ return memchr(cache[n],0,capacity)?cache[n]:NULL;
+}
+int StrCache_Pop(@POP_ARGUMENTS@) { cache[0][0]=0; return 0; }
+void StrCache_Collect(int n) { assert(n>=0 && n<4); }
+void StrCache_Copy(int n,CHAR *s) { assert(strlen(s)<sizeof(cache[n])); strcpy(StrCache_Get(n),s); }
+int StrCache_CreateNewFrom(const CHAR *s) { StrCache_Copy(0,(CHAR *)s); return 0; }
+void mapstrings_getentityproperty(ScriptVariant **v,int n) { (void)v;(void)n; }
+void mapstrings_changeentityproperty(ScriptVariant **v,int n) { (void)v;(void)n; }
+@MAPPER_TYPE@ mapstrings_entityproperty(ScriptVariant **v,int n) { (void)v;(void)n;@MAPPER_RETURN@ }
+/* Inputs below use native numeric selectors; mapping is tested separately. */
+#define obor_property_index(ns,index,end) (index)
+#define obor_entity_get_property_native(index) (index)
+#define obor_entity_set_property_native(index) (index)
+#define obor_entityproperty_native(index) (index)
+#define obor_entityproperty(index) (index)
+@ENUMS@
+s_sprite_map *sprite_map;
+@LOADED_TYPE@ sprites_loaded;
+int sprite_map_max_items;
+@CONVERSIONS@
+#define malloc name_malloc
+#define free name_free
+@HELPERS@
+#undef malloc
+#undef free
+@GETTER@
+@SETTER@
+static entity actor;
+static s_anim animation,*animations[2];
+/* A physical spare slot makes the negative endpoint control an assertion,
+ * independent of allocator layout or a sanitizer diagnostic. */
+static __typeof__(*animation.sprite) frame_ids[3];
+static s_sprite_map maps[2];
+static s_sprite images[2],replacement;
+@NODE_DECL@
+static char *name;
+static ScriptVariant values[6],*args[6],result,*out;
+static const unsigned profiles[]={@PROFILES@};
+
+static void reset(void) {
+ retire_names();query_enabled=1;fail_next_allocation=0;missing_cache=0;cache_alias=NULL;
+ memset(cache,0,sizeof(cache));name=name_malloc(32);
+ actor=(entity){0};animation=(s_anim){0};
+ memset(maps,0,sizeof(maps));memset(images,0,sizeof(images));
+ animation.numframes=2;animation.sprite=frame_ids;frame_ids[0]=0;frame_ids[1]=1;frame_ids[2]=0;
+ animations[0]=&animation;animations[1]=NULL;
+ actor.modeldata.animation=animations;actor.modeldata.animation_capacity=1;
+ actor.animation=&animation;actor.animpos=0;
+ sprite_map=maps;sprite_map_max_items=2;sprites_loaded=2;strcpy(name,"original");
+ @NODE_INIT@
+ for(int i=0;i<2;++i) { maps[i].centerx=11+i;maps[i].centery=31+i;@MAP_INIT@ @LEGACY_INIT@ }
+ memset(values,0,sizeof(values));
+ for(int i=0;i<6;++i) { values[i].vt=VT_INTEGER;args[i]=&values[i]; }
+ values[0].vt=VT_PTR;values[0].ptrVal=&actor;
+ values[1].lVal=@GET_PROPERTY@;values[2].lVal=@GET_CENTER@;
+ values[3].lVal=@ANIMATION_ZERO@;
+ values[5].lVal=72;result=(ScriptVariant){.vt=VT_EMPTY};out=&result;
+}
+static HRESULT get(int count) { return openbor_getentityproperty(args,&out,count); }
+static HRESULT set(int count) { values[1].lVal=@SET_PROPERTY@;return openbor_changeentityproperty(args,&out,count); }
+static void empty_get(void) { CHECK(get(5)==S_OK && out==&result && result.vt==VT_EMPTY); }
+static void unchanged_set(int count) {
+ HRESULT status=set(count);
+ if(status!=S_OK || maps[0].centerx!=11 || maps[1].centerx!=12)
+  fprintf(stderr,"profile=%u check=%u count=%d status=%ld centers=%ld,%ld\n",obor_profile_build,checks,count,(long)status,(long)maps[0].centerx,(long)maps[1].centerx);
+ CHECK(status==S_OK && maps[0].centerx==11 && maps[1].centerx==12);
+ CHECK(maps[0].centery==31 && maps[1].centery==32 && @SPRITE_POINTER@==&images[0]);
+ CHECK(!strcmp(@MAP_NAME@,"original"));
+ if(@RETURNS_VALUE@) CHECK(out==&result && result.vt==VT_INTEGER && result.lVal==0);
+ else CHECK(!out);
+}
+static void check_names(void);
+static void check_profile(void) {
+ reset();CHECK(get(5)==S_OK && out && out->vt==VT_INTEGER && out->lVal==11);
+ reset();values[4].lVal=1;CHECK(get(5)==S_OK && out && out->lVal==12);
+ reset();values[2].lVal=@GET_SPRITE@;CHECK(get(5)==S_OK && out && out->vt==VT_PTR);
+ CHECK(out->ptrVal==@SPRITE_POINTER@);
+ CHECK(((s_sprite *)out->ptrVal)->centerx==(@GET_X_IS_Y@?31:11));
+ CHECK(((s_sprite *)out->ptrVal)->centery==31);
+ reset();values[2].lVal=@SET_CENTER@;CHECK(set(6)==S_OK && maps[0].centerx==72 && maps[1].centerx==12);
+ if(@RETURNS_VALUE@) CHECK(out && out->vt==VT_INTEGER && out->lVal==1);else CHECK(!out);
+ reset();values[2].lVal=@SET_SPRITE@;values[5].vt=VT_PTR;values[5].ptrVal=&replacement;
+ CHECK(set(6)==S_OK && @SPRITE_POINTER@==&replacement);
+#if @OFFSET_FIELDS@
+ if(@OLD_OFFSETS@) {
+  reset();values[2].lVal=@SET_OFFSETY@;CHECK(set(5)==S_OK && maps[0].ofsy==@SET_OFFSETY@);
+ }
+#endif
+ for(int n=2;n<5;++n) { reset();CHECK(get(n)==S_OK && out && out->vt==VT_EMPTY); }
+ for(int n=3;n<6;++n) { reset();values[2].lVal=@SET_CENTER@;unchanged_set(n); }
+ const int setters[]={@SET_CENTER@,@SET_CENTERY@,@SET_FILE@,@SET_SPRITE@};
+ for(unsigned i=0;i<sizeof(setters)/sizeof(*setters);++i) {
+  reset();values[2].lVal=setters[i];unchanged_set(5);
+  reset();values[2].lVal=setters[i];args[5]=NULL;unchanged_set(6);
+ }
+ reset();values[2].lVal=@SET_OFFSETX@;CHECK(set(5)==(@OLD_OFFSETS@?S_OK:E_FAIL));
+ CHECK(maps[0].centerx==11 && maps[0].centery==31);
+ for(int i=2;i<5;++i) {
+  reset();args[i]=NULL;CHECK(get(5)==(i==2?E_FAIL:S_OK));
+  reset();values[2].lVal=@SET_CENTER@;args[i]=NULL;
+  if(i==2) CHECK(set(6)==E_FAIL);else unchanged_set(6);
+ }
+ for(int i=2;i<5;++i) { reset();values[i].vt=VT_DECIMAL;empty_get(); }
+ for(int i=3;i<5;++i) { reset();values[2].lVal=@SET_CENTER@;values[i].vt=VT_DECIMAL;unchanged_set(6); }
+ for(int index=-1;index<3;index+=3) {
+  reset();values[3].lVal=index;empty_get();
+  reset();values[4].lVal=index;empty_get();
+  reset();values[2].lVal=@SET_CENTER@;values[3].lVal=index;unchanged_set(6);
+  reset();values[2].lVal=@SET_CENTER@;values[4].lVal=index;unchanged_set(6);
+ }
+ reset();actor.modeldata.animation=NULL;empty_get();
+ reset();actor.modeldata.animation=NULL;values[2].lVal=@SET_CENTER@;unchanged_set(6);
+ reset();animations[0]=NULL;empty_get();
+ reset();animations[0]=NULL;values[2].lVal=@SET_CENTER@;unchanged_set(6);
+ reset();animation.sprite=NULL;empty_get();
+ reset();animation.sprite=NULL;values[2].lVal=@SET_CENTER@;unchanged_set(6);
+ for(int index=-1;index<3;index+=3) {
+  reset();frame_ids[0]=index;empty_get();
+  reset();frame_ids[0]=index;values[2].lVal=@SET_CENTER@;unchanged_set(6);
+ }
+ reset();sprite_map=NULL;empty_get();
+ reset();sprite_map=NULL;values[2].lVal=@SET_CENTER@;unchanged_set(6);
+ reset();sprites_loaded=0;empty_get();
+ reset();sprites_loaded=0;values[2].lVal=@SET_CENTER@;unchanged_set(6);
+ reset();sprite_map_max_items=0;empty_get();
+ reset();sprite_map_max_items=0;values[2].lVal=@SET_CENTER@;unchanged_set(6);
+ reset();values[2].lVal=@SET_CENTER@;args[5]=NULL;unchanged_set(6);
+ reset();CHECK(openbor_getentityproperty(NULL,&out,5)==E_FAIL);
+ reset();CHECK(openbor_changeentityproperty(NULL,&out,6)==E_FAIL);
+ reset();CHECK(openbor_getentityproperty(args,NULL,5)==E_FAIL);
+ reset();CHECK(openbor_changeentityproperty(args,NULL,6)==E_FAIL);
+}
+#define STORED_NAME @MAP_NAME@
+#define OTHER_STORED_NAME @OTHER_NAME@
+static void prepare_name_input(const char *text) {
+ values[2].lVal=@SET_FILE@;values[5].vt=VT_STR;values[5].strVal=1;
+ assert(strlen(text)<sizeof(cache[1]));strcpy(cache[1],text);
+ result=(ScriptVariant){.vt=VT_EMPTY};out=&result;
+}
+static void name_result(int changed) {
+ if(@RETURNS_VALUE@) CHECK(out && out->vt==VT_INTEGER && out->lVal==changed);
+ else CHECK(!out);
+}
+static void set_name(const char *text) {
+ prepare_name_input(text);CHECK(set(6)==S_OK);name_result(1);
+ CHECK(!strcmp(STORED_NAME,text) && STORED_NAME==OTHER_STORED_NAME);
+}
+static void empty_name_get(void) {
+ values[1].lVal=@GET_PROPERTY@;values[2].lVal=@GET_FILE@;
+ result=(ScriptVariant){.vt=VT_EMPTY};out=&result;
+ empty_get();
+}
+static void name_get_length(size_t length) {
+ values[1].lVal=@GET_PROPERTY@;values[2].lVal=@GET_FILE@;
+ result=(ScriptVariant){.vt=VT_EMPTY};out=&result;
+ CHECK(get(5)==S_OK && out && out->vt==VT_STR);
+ CHECK(strlen(StrCache_Get(out->strVal))==length);
+ CHECK(!strcmp(StrCache_Get(out->strVal),STORED_NAME));
+}
+static void replace_name_storage(char *replacement) {
+ name_free(STORED_NAME);STORED_NAME=replacement;OTHER_STORED_NAME=replacement;
+ name=replacement;
+}
+static void refused_name_key(int key) {
+ values[2].lVal=@SET_FILE@;values[5].vt=VT_STR;values[5].strVal=key;
+ result=(ScriptVariant){.vt=VT_EMPTY};out=&result;
+ char *before=STORED_NAME;
+ CHECK(set(6)==S_OK && STORED_NAME==before && OTHER_STORED_NAME==before);
+ CHECK(!strcmp(STORED_NAME,"original"));name_result(0);
+}
+static void check_names(void) {
+ reset();name_get_length(8);values[4].lVal=1;name_get_length(8);
+ reset();char *before=STORED_NAME;set_name("x");
+ CHECK(@REPLACES_NAME@?STORED_NAME!=before:STORED_NAME==before);
+ set_name("restored-name");values[4].lVal=1;name_get_length(13);
+ reset();set_name("");name_get_length(0);
+
+ reset();
+ for(unsigned i=0;i<sizeof(allocations)/sizeof(*allocations);++i)
+  if(allocations[i].live && allocations[i].address==STORED_NAME) allocations[i].capacity=16;
+ before=STORED_NAME;prepare_name_input("this-name-is-longer-than-sixteen");CHECK(set(6)==S_OK);
+ if(@REPLACES_NAME@) {
+  CHECK(STORED_NAME!=before && STORED_NAME==OTHER_STORED_NAME);
+  CHECK(!strcmp(STORED_NAME,"this-name-is-longer-than-sixteen"));name_result(1);
+ } else {
+  if(strcmp(STORED_NAME,"original")) fprintf(stderr,"stored name changed after capacity refusal\n");
+  CHECK(!strcmp(STORED_NAME,"original") && STORED_NAME==before && OTHER_STORED_NAME==before);
+  name_result(0);
+ }
+
+ reset();refused_name_key(-1);reset();refused_name_key(4);
+ reset();missing_cache=1;refused_name_key(1);
+ reset();memset(cache[1],'Q',sizeof(cache[1]));refused_name_key(1);
+
+ reset();memset(STORED_NAME,'Q',32);empty_name_get();
+ set_name("fixed");name_get_length(5);
+ reset();query_enabled=0;empty_name_get();
+ if(!@REPLACES_NAME@) { prepare_name_input("safe");CHECK(set(6)==S_OK);name_result(0);CHECK(!strcmp(STORED_NAME,"original")); }
+
+ reset();replace_name_storage(NULL);empty_name_get();
+ prepare_name_input("safe");CHECK(set(6)==S_OK);name_result(@REPLACES_NAME@);
+ if(@REPLACES_NAME@) CHECK(!strcmp(STORED_NAME,"safe"));else CHECK(!STORED_NAME);
+ reset();@NULL_NODE_CONTROL@
+
+ reset();char *long_name=name_malloc(MAX_STR_VAR_LEN+1);
+ memset(long_name,'R',MAX_STR_VAR_LEN);long_name[MAX_STR_VAR_LEN]=0;
+ replace_name_storage(long_name);name_get_length(MAX_STR_VAR_LEN);
+ reset();long_name=name_malloc(MAX_STR_VAR_LEN+2);
+ memset(long_name,'R',MAX_STR_VAR_LEN+1);long_name[MAX_STR_VAR_LEN+1]=0;
+ replace_name_storage(long_name);
+ if(@FIXED_CACHE@) empty_name_get();else name_get_length(MAX_STR_VAR_LEN+1);
+
+ reset();cache_alias=STORED_NAME+2;
+ values[2].lVal=@SET_FILE@;values[5].vt=VT_STR;values[5].strVal=3;
+ result=(ScriptVariant){.vt=VT_EMPTY};out=&result;
+ CHECK(set(6)==S_OK && !strcmp(STORED_NAME,"iginal"));name_result(1);
+ CHECK(STORED_NAME==OTHER_STORED_NAME);
+ if(@REPLACES_NAME@) {
+  reset();before=STORED_NAME;prepare_name_input("replacement");fail_next_allocation=1;
+  CHECK(set(6)==S_OK && STORED_NAME==before && !strcmp(STORED_NAME,"original"));name_result(0);
+ }
+}
+int main(void) {
+ for(unsigned i=0;i<sizeof(profiles)/sizeof(*profiles);++i) { obor_profile_build=profiles[i];check_profile();check_names(); }
+ retire_names();
+ fprintf(stdout,"{\"status\":\"PASS\",\"profiles\":%zu,\"checks\":%u}\n",sizeof(profiles)/sizeof(*profiles),checks);
+ return 0;
+}

@@ -1,0 +1,118 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <limits.h>
+#include <stdarg.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <strings.h>
+#include "openbor.h"
+#undef printf
+#undef malloc
+#undef free
+#define CHECK(c) do {if(!(c)){fprintf(stderr,"remap flag contract profile=%u line=%d: %s\n",obor_profile_build,__LINE__,#c);abort();}}while(0)
+uint32_t obor_profile_build;
+int pixelformat=PIXEL_8,screenformat=PIXEL_8,pixelbytes[5]={1,1,2,0,4};
+char packfile[OBOR_CONTENT_PATH_MAX]="fixture.pak";
+unsigned char pal[MAX_PAL_SIZE];
+static unsigned live_bitmaps,cases;
+static int fail_map_malloc,last_error;
+static char *arguments[3];
+static char diagnostic[2048];
+static unsigned char existing_palette[MAX_PAL_SIZE];
+static const unsigned profiles[]={@PROFILES@};
+_Static_assert(sizeof(((s_model){0}).colourmap)/sizeof(((s_model){0}).colourmap[0])==MAX_COLOUR_MAPS,
+               "Native fixed colourmap extent required");
+static void *fixture_named_malloc(const char *name,size_t bytes) {
+    CHECK(!strcmp(name,"load_colormap") && bytes==MAX_PAL_SIZE/4);
+    if(fail_map_malloc){fail_map_malloc=0;return NULL;}
+    void *p=malloc(bytes);CHECK(p);return p;
+}
+s_bitmap *loadbitmap(char *name,char *pak,int format) {
+    CHECK(pak==packfile && format==PIXEL_8);
+    if(!strcmp(name,"missing"))return NULL;
+    CHECK(!strcmp(name,"first") || !strcmp(name,"second"));
+    s_bitmap *bitmap=calloc(1,sizeof(*bitmap));CHECK(bitmap);
+    bitmap->width=bitmap->height=1;bitmap->pixelformat=PIXEL_8;
+    bitmap->data[0]=!strcmp(name,"second")?7:0;++live_bitmaps;return bitmap;
+}
+void freebitmap(s_bitmap *bitmap) {CHECK(bitmap && live_bitmaps);--live_bitmaps;free(bitmap);}
+int loadimagepalette(char *name,char *pak,unsigned char *palette) {
+    (void)name;(void)pak;(void)palette;CHECK(!"Unexpected palette decoding");return 0;
+}
+#define obor_profile_malloc_named fixture_named_malloc
+@LOADER@
+int load_colourmap(s_model *model,char *first,char *second) {
+    last_error=native_load_colourmap(model,first,second);return last_error;
+}
+@MODEL_ERROR@
+#undef GET_ARG
+#define GET_ARG(n) arguments[n]
+static int command(s_model *newchar,unsigned char *mapflag) {
+    char *value=NULL,*value2=NULL,*shutdownmessage=NULL;
+    @ERROR_STORAGE@
+    int errorVal=0,accepted=1;
+    switch(1){case 1:@CASE@}
+    goto finished;
+lCleanup:
+    accepted=0;
+finished:
+    snprintf(diagnostic,sizeof(diagnostic),"%s",shutdownmessage?shutdownmessage:"");
+    return accepted;
+}
+static void check(unsigned seed,int mode,int hole,int invalid_count) {
+    s_model model;memset(&model,0,sizeof(model));
+    unsigned char *prior[MAX_COLOUR_MAPS];
+    unsigned char storage[MAX_COLOUR_MAPS+6];memset(storage,0xa5,sizeof(storage));
+    unsigned char *flags=storage+3;memset(flags,7,MAX_COLOUR_MAPS);
+    fail_map_malloc=0;pixelformat=mode==5?PIXEL_x8:PIXEL_8;
+    model.palette=mode==5?existing_palette:NULL;
+    for(unsigned i=0;i<seed;++i)CHECK(native_load_colourmap(&model,"first","second")==1);
+    if(hole){CHECK(seed==3);free(model.colourmap[1]);model.colourmap[1]=NULL;}
+    if(invalid_count!=INT_MIN)model.maps_loaded=invalid_count;
+    int initial_count=model.maps_loaded;
+    memcpy(prior,model.colourmap,sizeof(prior));
+    arguments[1]=mode==3?"missing":"first";
+    arguments[2]=mode==4?"missing":mode==1?"FIRST":"second";
+    int expected_error=mode==1?0:seed==MAX_COLOUR_MAPS?-1:
+                       mode==2?-2:mode==3?-3:mode==4?-4:1;
+    fail_map_malloc=mode==2;last_error=INT_MIN;diagnostic[0]=0;
+    int accepted=command(&model,flags);
+    CHECK(last_error==expected_error && accepted==(expected_error!=0));
+    int count=expected_error==1?(hole?2:(int)seed+1):initial_count;
+    CHECK(model.maps_loaded==count && !live_bitmaps);
+    CHECK(model.palette==(mode==5?existing_palette:NULL));
+    for(unsigned i=0;i<MAX_COLOUR_MAPS;++i) {
+        unsigned expected=(count>0 && count<=MAX_COLOUR_MAPS && (int)i==count-1)?1:7;
+        CHECK(flags[i]==expected);
+        if(expected_error==1 && i==(unsigned)count-1) {
+            CHECK(model.colourmap[i]);
+            for(unsigned c=0;c<MAX_PAL_SIZE/4;++c)CHECK(model.colourmap[i][c]==(c?c:7));
+        } else CHECK(model.colourmap[i]==prior[i]);
+    }
+    for(unsigned i=0;i<3;++i)CHECK(storage[i]==0xa5);
+    for(unsigned i=MAX_COLOUR_MAPS+3;i<sizeof(storage);++i)CHECK(storage[i]==0xa5);
+    if(expected_error==0) {
+        if(obor_profile_build<3221)
+            CHECK(!strcmp(diagnostic,"Failed to create colourmap from images\n\t'first'\nand\n\t'FIRST'. Image Used Twice!"));
+        else CHECK(!strcmp(diagnostic,"Failed to create colourmap. Image Used Twice!"));
+    } else CHECK(!diagnostic[0]);
+    fail_map_malloc=0;
+    for(unsigned i=0;i<MAX_COLOUR_MAPS;++i)free(model.colourmap[i]);
+    ++cases;
+}
+int main(void) {
+    memset(existing_palette,88,sizeof(existing_palette));
+    for(unsigned p=0;p<sizeof(profiles)/sizeof(*profiles);++p) {
+        obor_profile_build=profiles[p];
+        for(unsigned seed=0;seed<=MAX_COLOUR_MAPS;++seed)
+            for(int mode=0;mode<6;++mode)check(seed,mode,0,INT_MIN);
+        check(3,0,1,INT_MIN);
+        check(0,1,0,-1);check(0,1,0,MAX_COLOUR_MAPS+1);
+    }
+    for(unsigned i=0;i<sizeof(existing_palette);++i)CHECK(existing_palette[i]==88);
+    printf("{\"profiles\":%u,\"cases\":%u}\n",(unsigned)(sizeof(profiles)/sizeof(*profiles)),cases);
+    return 0;
+}

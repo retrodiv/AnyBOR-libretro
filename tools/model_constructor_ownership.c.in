@@ -1,0 +1,163 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ * Native constructors and subclass command; bounded script-service providers.
+ */
+#include <limits.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+@CONFIG@
+#include "openbor.h"
+#include "@SCRIPT_HEADER@"
+#undef printf
+#undef malloc
+#undef calloc
+#undef realloc
+#undef free
+#undef assert
+#undef shutdown
+#undef borShutdown
+#define CHECK(c) do {if(!(c)){fprintf(stderr,"Model constructor profile=%u phase=%u line=%d: %s\n",obor_profile_build,phase,__LINE__,#c);abort();}}while(0)
+#define assert CHECK
+uint32_t obor_profile_build;
+static unsigned phase,checks,copy_calls;
+static int active_owner;
+static struct {void *pointer;int owner,live;} allocations[512];
+static size_t allocated;
+@GLOBALS@
+HRESULT Interpreter_Call(Interpreter *p) {(void)p;abort();}
+HRESULT Interpreter_EvalInstruction(Interpreter *p) {(void)p;abort();}
+static void *observe_malloc(size_t size) {
+ CHECK(size && size<=(16u<<20) && allocated<512);
+ void *p=malloc(size);CHECK(p);
+ allocations[allocated].pointer=p;allocations[allocated].owner=active_owner;
+ allocations[allocated++].live=1;return p;
+}
+static void *observe_calloc(size_t count,size_t size) {
+ CHECK(size && count && count<=(16u<<20)/size);
+ void *p=observe_malloc(count*size);memset(p,0,count*size);return p;
+}
+static void observe_free(void *p) {
+ if(!p)return;
+ for(size_t i=allocated;i>0;--i) if(allocations[i-1].live && allocations[i-1].pointer==p) {
+  CHECK(allocations[i-1].owner==active_owner);
+  allocations[i-1].live=0;free(p);return;
+ }
+ CHECK(!"storage is unowned or already released");
+}
+static unsigned live(int owner) {
+ unsigned n=0;for(size_t i=0;i<allocated;++i)n+=allocations[i].live&&allocations[i].owner==owner;
+ return n;
+}
+static void fixture_shutdown(int code,const char *message,...) {
+ (void)code;(void)message;CHECK(!"unexpected constructor refusal");
+}
+static int fixture_lookup(const char *name) {
+ CHECK(!strcmp(name,"K'") || !strcmp(name,"flash"));return -1;
+}
+#define malloc observe_malloc
+#define calloc observe_calloc
+#define free observe_free
+@NAMED_ALLOCATION_SUPPORT@
+@SCRIPT_ALLOCATOR@
+#define shutdown fixture_shutdown
+#define borShutdown fixture_shutdown
+@DIAGNOSTIC@
+@MODERN_STORAGE@
+@DEFAULT_DEFENSE@
+#define alloc_all_scripts fixture_alloc_scripts
+#define get_cached_model_index fixture_lookup
+@CONSTRUCTOR@
+#undef borShutdown
+#undef shutdown
+#undef get_cached_model_index
+#undef alloc_all_scripts
+@HASFREE@
+@RELEASE@
+@MODEL_COPY@
+static void fixture_copy_scripts(s_scripts *source,s_scripts *destination,int mode) {
+ CHECK(source && destination && mode==1);++copy_calls;
+}
+static s_model *selected_parent;
+static s_model *fixture_findmodel(const char *name) {
+ CHECK(!strcmp(name,"parent"));return selected_parent;
+}
+enum {CMD_MODEL_SUBCLASS=1};
+static int inherit(s_model *newchar,s_model *parent) {
+ s_model *tempmodel=NULL;@SCRIPTS_TYPE@ tempscripts;char *shutdownmessage=NULL;
+ selected_parent=parent;
+#undef GET_ARG
+#define GET_ARG(n) ((void)(n),(char *)"parent")
+#define findmodel fixture_findmodel
+#define copy_all_scripts fixture_copy_scripts
+ switch(CMD_MODEL_SUBCLASS) {case CMD_MODEL_SUBCLASS:@CASE@}
+#undef copy_all_scripts
+#undef findmodel
+#undef GET_ARG
+ return 1;
+lCleanup:
+ CHECK(shutdownmessage && !strcmp(shutdownmessage,"tried to subclass a non-existing/not previously loaded model!"));
+ return 0;
+}
+#undef free
+#undef calloc
+#undef malloc
+static void destroy(s_model *model,int owner) {
+ s_model empty;memset(&empty,0,sizeof(empty));active_owner=owner;
+ obor_model_release_constructor_storage(model,&empty);
+ s_scripts *scripts=@SCRIPTS_ADDRESS@;
+ observe_free(scripts->animation_script);
+ @SCRIPT_AGGREGATE_RELEASE@
+ observe_free(model);CHECK(!live(owner));
+}
+int main(void) {
+ static const unsigned profiles[]={@PROFILES@};
+ static s_modelcache cache[3];
+ model_cache=cache;
+ cache[0].name=(char *)"parent";cache[1].name=(char *)"child";cache[2].name=(char *)"other";
+ cache[0].path=cache[1].path=cache[2].path=(char *)"data/model.txt";
+ for(size_t p=0;p<sizeof(profiles)/sizeof(*profiles);++p) {
+  obor_profile_build=profiles[p];
+  int supported=@SUPPORTS_SUBCLASS@;
+  for(int parent_first=0;parent_first<2;++parent_first) for(int repeat=0;repeat<2;++repeat) {
+   allocated=copy_calls=0;memset(allocations,0,sizeof(allocations));phase=0;
+   active_owner=0;s_model *parent=init_model(0,0);parent->health=11;
+   active_owner=2;s_model *other=init_model(2,0);other->health=22;
+   active_owner=1;s_model *child=init_model(1,0);child->health=33;
+   CHECK(live(1)==1+@SCRIPT_ALLOCATION_COUNT@+@STORAGE_FIELD_COUNT@);
+   @CHECK_CONSTRUCTOR_FIELDS@
+   s_scripts *saved_scripts=@CHILD_SCRIPTS_ADDRESS@;
+   unsigned parent_live=live(0),other_live=live(2),child_live=live(1);++checks;
+   unsigned char before[sizeof(*child)],parent_before[sizeof(*parent)],other_before[sizeof(*other)];
+   memcpy(before,child,sizeof(before));memcpy(parent_before,parent,sizeof(parent_before));
+   memcpy(other_before,other,sizeof(other_before));
+   phase=1;obor_model_release_constructor_storage(child,child);
+   CHECK(!memcmp(before,child,sizeof(before)) && live(1)==child_live);++checks;
+   phase=2;CHECK(!inherit(child,NULL) && !copy_calls && live(1)==child_live);
+   CHECK(!memcmp(before,child,sizeof(before)));++checks;
+   if(supported) {
+    phase=3;CHECK(inherit(child,parent) && copy_calls==1);
+    CHECK(child->isSubclassed && child->freetypes==MF_SCRIPTS && child->health==11);
+    CHECK(child->index==parent->index && child->name==parent->name);
+    CHECK(@CHILD_SCRIPTS_ADDRESS@==saved_scripts);
+    CHECK(live(1)==1+@SCRIPT_ALLOCATION_COUNT@ && live(0)==parent_live && live(2)==other_live);
+    CHECK(!memcmp(parent_before,parent,sizeof(parent_before)));++checks;
+    if(repeat) {
+     phase=4;CHECK(inherit(child,other) && copy_calls==2 && child->health==22);
+     CHECK(@CHILD_SCRIPTS_ADDRESS@==saved_scripts && live(1)==1+@SCRIPT_ALLOCATION_COUNT@);
+     CHECK(live(0)==parent_live && live(2)==other_live);
+     CHECK(!memcmp(parent_before,parent,sizeof(parent_before)) && !memcmp(other_before,other,sizeof(other_before)));
+     ++checks;
+    }
+   }
+   phase=5;
+   if(parent_first) {destroy(parent,0);destroy(other,2);destroy(child,1);}
+   else {destroy(child,1);destroy(parent,0);destroy(other,2);}
+   for(size_t i=0;i<allocated;++i) {CHECK(!allocations[i].live);}
+   ++checks;
+  }
+ }
+ printf("{\"status\":\"PASS\",\"profiles\":%zu,\"cases\":%u}\n",sizeof(profiles)/sizeof(*profiles),checks);
+ return 0;
+}

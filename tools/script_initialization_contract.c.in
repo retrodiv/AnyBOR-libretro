@@ -1,0 +1,51 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <assert.h>
+#include <stdbool.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#pragma GCC diagnostic ignored "-Wignored-qualifiers"
+#include "openbor.h"
+#undef printf
+#if OBOR_ENGINE_BUILD <= 4432
+/* The classic header declares these inline services; this contract never calls them. */
+HRESULT Interpreter_Call(Interpreter *interpreter) { (void)interpreter; abort(); }
+HRESULT Interpreter_EvalInstruction(Interpreter *interpreter) { (void)interpreter; abort(); }
+#endif
+void exitIfFalse(int value, const char *expression, const char *func, const char *file, int line)
+{
+    (void)expression; (void)func; (void)file; (void)line;
+    if(!value) abort();
+}
+uint32_t obor_profile_build;
+Script *pcurrentscript;
+@FUNCTION@
+int main(void)
+{
+    static const unsigned profiles[] = {@PROFILES@};
+    static const int values[] = {0, 1, 2, -1};
+    Script script, previous;
+    unsigned p, v;
+    memset(&script, 0, sizeof(script));
+    memset(&previous, 0, sizeof(previous));
+    for(p = 0; p < sizeof(profiles) / sizeof(*profiles); ++p)
+    {
+        obor_profile_build = profiles[p];
+        pcurrentscript = &previous;
+        assert(Script_IsInitialized(NULL) == 0 && pcurrentscript == &previous);
+        for(v = 0; v < sizeof(values) / sizeof(*values); ++v)
+        {
+            int expected;
+            script.initialized = values[v];
+            expected = @BOOLEAN_RESULT@ ? !!script.initialized : script.initialized;
+            pcurrentscript = &previous;
+            assert(Script_IsInitialized(&script) == expected);
+            assert(pcurrentscript == ((@SELECTS_CURRENT@) && script.initialized ? &script : &previous));
+        }
+    }
+    printf("{\"status\":\"PASS\",\"profiles\":%zu}\n", sizeof(profiles) / sizeof(*profiles));
+    return 0;
+}

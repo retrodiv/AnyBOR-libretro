@@ -8,7 +8,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <sanitizer/common_interface_defs.h>
 #include "pp_parser.h"
+#undef printf
 uint32_t obor_profile_build;
 static unsigned active_case,checks,contexts,last_profile;
 char *get_full_path(char *filename) {return filename;}
@@ -25,7 +27,11 @@ static void check(unsigned revision,unsigned which,const char *input,int accepte
  obor_profile_build=revision;active_case=which;++checks;if(last_profile!=revision){++contexts;last_profile=revision;}
  pp_context context;pp_parser parser;TEXTPOS start={1,0};
  char *source=strdup(input);assert(source);FILE *messages=tmpfile();assert(messages);
- fflush(stderr);int saved=dup(STDERR_FILENO);assert(saved>=0 && dup2(fileno(messages),STDERR_FILENO)>=0);
+ fflush(stdout);fflush(stderr);
+ int saved=dup(STDERR_FILENO),saved_output=dup(STDOUT_FILENO);
+ assert(saved>=0 && saved_output>=0 && dup2(fileno(messages),STDERR_FILENO)>=0);
+ __sanitizer_set_report_fd((void *)(intptr_t)saved);
+ assert(dup2(fileno(messages),STDOUT_FILENO)>=0);
  pp_context_init(&context);pp_parser_init(&parser,&context,"fixture.c",source,start);
  int eof=0,steps=0;char tokens[2048]={0},text[2048]={0};
  for(;;)
@@ -42,7 +48,10 @@ static void check(unsigned revision,unsigned which,const char *input,int accepte
  /* Exhausted child parsers are native-owned and released on EOF/error.
     This control deliberately refuses dangling children rather than hiding one. */
  assert(!parser.child);pp_context_destroy(&context);pp_context_destroy(&context);free(source);
- fflush(stderr);assert(dup2(saved,STDERR_FILENO)>=0);close(saved);
+ fflush(stdout);fflush(stderr);
+ assert(dup2(saved_output,STDOUT_FILENO)>=0);close(saved_output);
+ assert(dup2(saved,STDERR_FILENO)>=0);close(saved);
+ __sanitizer_set_report_fd((void *)(intptr_t)STDERR_FILENO);
  rewind(messages);char errors[8192]={0};size_t size=fread(errors,1,sizeof(errors)-1,messages);
  assert(!ferror(messages) && size<sizeof(errors)-1);fclose(messages);
  if(eof!=accepted || strcmp(tokens,wanted) || (exact[0] && strcmp(text,exact)) ||

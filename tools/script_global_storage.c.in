@@ -1,0 +1,68 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+_Static_assert(sizeof(void*)==8 && sizeof(int)==4,"Supported64bit allocation arithmetic");
+s_variantnode **global_var_list;
+ScriptVariant *indexed_var_list;
+int max_global_vars,max_indexed_vars,max_global_var_index;
+static s_spawn_entry spawnentry;
+static s_drawmethod drawmethod;
+@PLAIN_DECL@
+List theFunctionList;
+static unsigned init_stage;
+void Script_LoadSystemFunctions(void){assert(init_stage==0);init_stage=1;}
+void ImportCache_Init(void){assert(init_stage==1);init_stage=2;}
+#define malloc fixture_malloc
+#define calloc fixture_calloc
+#define free fixture_free
+@ALLOCATION_POLICY@
+@BEFORE_GLOBAL@
+@AFTER_GLOBAL@
+#undef free
+#undef calloc
+#undef malloc
+struct global_observation {unsigned allocations;size_t bytes[4],offsets[8];unsigned char nodes[1024],indexed[256];int global_index,method_flag;};
+static void reset_globals(int globals,int indexed,unsigned fail)
+{
+    reset(fail);max_global_vars=globals;max_indexed_vars=indexed;max_global_var_index=19;init_stage=0;
+    global_var_list=NULL;indexed_var_list=NULL;memset(&spawnentry,0xA5,sizeof(spawnentry));@PLAIN_RESET@
+}
+static void observe_globals(struct global_observation *out,int before,int globals,int indexed)
+{
+    memset(out,0,sizeof(*out));reset_globals(globals,indexed,0);if(before)before_global();else Script_Global_Init();assert(init_stage==2);
+    out->global_index=max_global_var_index;out->method_flag=drawmethod.flag;assert(out->global_index==-1 && out->method_flag==@FLAG_EXPECTED@);
+    if(globals)
+    {
+        assert(global_var_list);
+        for(int i=0;i<globals;++i)
+        {
+            out->offsets[i]=(size_t)((char*)global_var_list[i]-(char*)global_var_list);
+            assert((uintptr_t)global_var_list[i]%_Alignof(s_variantnode)==0);
+            memcpy(out->nodes+i*sizeof(s_variantnode),global_var_list[i],sizeof(s_variantnode));
+        }
+    }
+    else assert(!global_var_list);
+    if(indexed){assert(indexed_var_list);memcpy(out->indexed,indexed_var_list,((size_t)indexed+1)*sizeof(*indexed_var_list));}
+    else assert(!indexed_var_list);
+    out->allocations=allocation_count;memcpy(out->bytes,sizes,sizeof(sizes));cleanup();
+}
+static void global_failure(int globals,int indexed,unsigned fail)
+{
+    reset_globals(globals,indexed,fail);
+    if(!setjmp(stopped)){Script_Global_Init();assert(0);}
+    assert(stop_count==1 && init_stage==0);cleanup();++cases;
+}
+int main(void)
+{
+    static const uint32_t profiles[]={@PROFILES@};
+    for(unsigned i=0;i<sizeof(profiles)/sizeof(*profiles);++i)
+    {
+        obor_profile_build=profiles[i];
+        for(int globals=0;globals<4;++globals)for(int indexed=0;indexed<4;++indexed)
+        {
+            struct global_observation before,after;observe_globals(&before,1,globals,indexed);observe_globals(&after,0,globals,indexed);
+            assert(!memcmp(&before,&after,sizeof(before)));++cases;
+        }
+        global_failure(2,2,1);global_failure(2,2,2);global_failure(INT_MAX,0,0);global_failure(0,INT_MAX,0);
+    }
+    printf("{\"status\":\"PASS\",\"profiles\":%zu,\"cases\":%u}\n",sizeof(profiles)/sizeof(*profiles),cases);return 0;
+}

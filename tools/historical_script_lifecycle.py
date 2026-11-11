@@ -75,6 +75,10 @@ static int expected_reset_before_clear=@CLEAR_RESET@;
 static void *expected_clear_return;
 static int expected_method,last_method;
 static Script *expected_script;
+#ifdef OBOR_TEST_ACTIVE_CLEAR
+static int probe_active_clear;
+void Script_Clear(Script*,int);
+#endif
 static void ScriptVariant_Init(ScriptVariant *v) {*v=(ScriptVariant){0};}
 static void ScriptVariant_ChangeType(ScriptVariant *v,int type) {v->vt=type;v->lVal=0;}
 static void ScriptVariant_Clear(ScriptVariant *v) {*v=(ScriptVariant){0};}
@@ -92,7 +96,16 @@ static int Interpreter_EvaluateCall(Interpreter *p) {
  assert(p->pCurrentInstruction==p->pClearEntry && p->pClearEntry);
  assert(p->pReturnEntry==(expected_reset_before_clear?NULL:expected_clear_return));
  assert(p->pCurrentCall==(expected_reset_before_clear?NULL:expected_clear_return));
- assert(last_method==expected_method);++evaluated;return 0;
+ assert(last_method==expected_method);
+#ifdef OBOR_TEST_ACTIVE_CLEAR
+ if(probe_active_clear) {
+  probe_active_clear=0;
+  assert(obor_script_cleanup_active(expected_script));
+  Script_Clear(expected_script,2);
+  assert(expected_script->initialized && expected_script->pinterpreter==p);
+ }
+#endif
+ ++evaluated;return 0;
 }
 static void Script_Set_Local_Variant(Script *s,const char *name,ScriptVariant *v) {
  assert(s==pcurrentscript && !strcmp(name,"localclear"));
@@ -143,7 +156,13 @@ static void direct_checks(void) {
   Script_Init(&s,"",NULL,0);assert(s.vars==vars && !s.initialized);
   initialize(&s,"owned comment");assert(s.vars==vars);
   reset_counts();Script saved={0};pcurrentscript=&saved;
+#ifdef OBOR_TEST_ACTIVE_CLEAR
+  probe_active_clear=1;
+#endif
   enable_callback(&s,1);Script_Clear(&s,1);
+#ifdef OBOR_TEST_ACTIVE_CLEAR
+  assert(!probe_active_clear && !obor_script_cleanup_active(&s));
+#endif
   assert(pcurrentscript==&saved && !s.initialized && s.vars==vars);
   assert(evaluated==1 && resets==(unsigned)expected_reset_before_clear && local_sets==1 && local_unsets==1);
   assert(interpreter_clears==1 && local_clears==1 && !s.comment && !s.pinterpreter);

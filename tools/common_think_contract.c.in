@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "openbor.h"
+#include "obor_rise_inputs.h"
 #undef assert
 #undef printf
 #ifdef NDEBUG

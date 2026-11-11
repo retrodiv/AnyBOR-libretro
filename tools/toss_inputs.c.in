@@ -1,0 +1,177 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ * Whole native entry/variants and real records; observing toss provider.
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <stdarg.h>
+#include <limits.h>
+@CONFIG@
+#include "openbor.h"
+#include "@SCRIPT_HEADER@"
+#undef printf
+#undef assert
+#ifdef NDEBUG
+#error Toss assertions must remain enabled
+#endif
+uint32_t obor_profile_build;
+static unsigned cases,toss_calls;
+static float toss_height;
+static entity actor;
+static char diagnostic[256];
+#define assert(c) do {if(!(c)){fprintf(stderr,"Toss profile=%u case=%u line=%d: %s\n",obor_profile_build,cases,__LINE__,#c);abort();}}while(0)
+HRESULT Interpreter_Call(Interpreter *p){(void)p;abort();}
+HRESULT Interpreter_EvalInstruction(Interpreter *p){(void)p;abort();}
+int StrCache_Pop(@POP_ARGUMENTS@){@POP_UNUSED@ abort();}
+void StrCache_Collect(int i){(void)i;abort();}
+void toss(entity *ent,float height){assert(ent==&actor);++toss_calls;toss_height=height;}
+static int record_printf(const char *format,...)
+{
+    va_list ap;va_start(ap,format);size_t length=strlen(diagnostic);
+    int n=vsnprintf(diagnostic+length,sizeof(diagnostic)-length,format,ap);va_end(ap);
+    assert(n>=0 && (size_t)n<sizeof(diagnostic)-length);return n;
+}
+@CONVERSIONS@
+@ORIGINAL_DECIMAL@
+@NULL_FACTORY@
+#define printf record_printf
+@ORIGINAL_TOSS@
+@ENTRY@
+#undef printf
+static const struct {uint32_t revision;int null_false,numeric_false;} contexts[]={@CONTEXTS@};
+enum fixture_kind {EMPTY,INTEGER,DECIMAL,POINTER};
+static const unsigned numeric_cases[][3]={
+    {INTEGER,INTEGER,INTEGER},{DECIMAL,DECIMAL,DECIMAL},
+    {EMPTY,INTEGER,INTEGER},{INTEGER,EMPTY,INTEGER},{INTEGER,INTEGER,EMPTY},
+    {POINTER,INTEGER,INTEGER},{INTEGER,POINTER,INTEGER},{INTEGER,INTEGER,POINTER},
+    {INTEGER,DECIMAL,EMPTY},{DECIMAL,INTEGER,DECIMAL}};
+static void reset(void)
+{
+    memset(&actor,0,sizeof(actor));actor.@VX@=31;actor.@VZ@=37;
+    memset(diagnostic,0,sizeof(diagnostic));toss_calls=0;toss_height=0;
+}
+static ScriptVariant numeric(unsigned kind,unsigned position)
+{
+    ScriptVariant v={0};
+    if(kind==INTEGER){v.vt=VT_INTEGER;v.lVal=11+position;}
+    else if(kind==DECIMAL){v.vt=VT_DECIMAL;v.dblVal=position==1?-2.5:1.25+position;}
+    else if(kind==POINTER){v.vt=VT_PTR;v.ptrVal=&actor;}
+    return v;
+}
+static ScriptVariant handle(unsigned kind)
+{
+    ScriptVariant v={0};v.vt=VT_PTR;v.ptrVal=kind?NULL:&actor;
+    if(kind==2){v.ptrVal=&actor;ScriptVariant *p=&v;assert(system_NULL(NULL,&p,0)==S_OK && p==&v && v.vt==VT_EMPTY && !v.ptrVal);}
+    return v;
+}
+static DOUBLE converted(unsigned kind,unsigned position)
+{return kind==INTEGER?11+position:kind==DECIMAL?(position==1?-2.5:1.25+position):0;}
+struct observation
+{
+    HRESULT status;int has_result;ScriptVariant result;
+    entity state;unsigned calls;float height;char log[256];
+};
+typedef HRESULT (*entry_fn)(ScriptVariant**,ScriptVariant**,int);
+static void observe(struct observation *out,entry_fn fn,unsigned handle_kind,unsigned kinds,int count,int result_kind)
+{
+    reset();ScriptVariant h=handle(handle_kind),values[3],result={0},*returned=&result;
+    if(result_kind){result.vt=VT_INTEGER;result.lVal=17;}
+    for(unsigned i=0;i<3;++i)values[i]=numeric(numeric_cases[kinds][i],i);
+    ScriptVariant *args[]={&h,&values[0],&values[1],&values[2],NULL};
+    out->status=fn(args,&returned,count);out->has_result=returned!=NULL;memcpy(&out->result,&result,sizeof(result));
+    memcpy(&out->state,&actor,sizeof(actor));out->calls=toss_calls;out->height=toss_height;memcpy(out->log,diagnostic,sizeof(diagnostic));
+}
+static void compare_valid(unsigned handle_kind,unsigned kinds,int count,int result_kind,int null_false,int numeric_false)
+{
+    struct observation actual={0},expected={0};
+    observe(&actual,openbor_tossentity,handle_kind,kinds,count,result_kind);
+    observe(&expected,original_toss,handle_kind,kinds,count,result_kind);
+    assert(actual.status==expected.status && actual.has_result==expected.has_result);
+    assert(actual.result.vt==expected.result.vt);
+    assert(actual.result.lVal == expected.result.lVal);
+    assert(!memcmp(&actual.result,&expected.result,sizeof(actual.result)));
+    assert(!memcmp(&actual.state,&expected.state,sizeof(actual.state)));
+    assert(actual.calls==expected.calls && !memcmp(&actual.height,&expected.height,sizeof(actual.height)));
+    assert(!strcmp(actual.log,expected.log));
+    int bad_numeric=0;
+    for(int i=0;i<3 && i<count-1;++i)if(numeric_cases[kinds][i]==EMPTY || numeric_cases[kinds][i]==POINTER)bad_numeric=1;
+    int acted=count>=1 && handle_kind==0 && !(numeric_false && bad_numeric);
+    int error=count<1 || (handle_kind!=0 && !null_false);
+    assert(actual.status==(error?E_FAIL:S_OK) && actual.has_result==!error && actual.calls==(unsigned)acted);
+    if(!error)assert(actual.result.vt==VT_INTEGER && actual.result.lVal==acted);
+    assert(actual.state.@VX@==(acted?(count>=3?(float)converted(numeric_cases[kinds][1],1):0):31));
+    assert(actual.state.@VZ@==(acted?(count>=4?(float)converted(numeric_cases[kinds][2],2):0):37));
+    if(acted)assert(actual.height==(count>=2?(float)converted(numeric_cases[kinds][0],0):0));
+    ++cases;
+}
+static void invalid_cells(unsigned context)
+{
+    for(int mode=0;mode<6;++mode)
+    {
+        reset();ScriptVariant h=handle(0),value=numeric(INTEGER,0),result={0},*out=&result;entity before;
+        memcpy(&before,&actor,sizeof(actor));ScriptVariant *args[]={&h,&value,&value,&value};
+        if(mode==0)h.vt=VT_INTEGER;
+        else if(mode==1)h.vt=VT_DECIMAL;
+        else if(mode==2)h.vt=VT_EMPTY;
+        else if(mode==3)h.vt=VT_STR;
+        else if(mode==4)args[0]=NULL;
+        HRESULT status=openbor_tossentity(mode==5?NULL:args,&out,4);
+        if(contexts[context].null_false)assert(status==S_OK && out==&result && result.vt==VT_INTEGER && !result.lVal);
+        else assert(status==E_FAIL && !out);
+        assert(!toss_calls && !memcmp(&before,&actor,sizeof(actor)));++cases;
+    }
+    for(int position=1;position<=3;++position)
+    {
+        reset();ScriptVariant h=handle(0),v=numeric(INTEGER,0),result={0},*out=&result;ScriptVariant *args[]={&h,&v,&v,&v};
+        args[position]=NULL;HRESULT status=openbor_tossentity(args,&out,4);
+        assert(status==S_OK && out==&result && result.vt==VT_INTEGER);
+        if(contexts[context].numeric_false)assert(!result.lVal && !toss_calls && actor.@VX@==31 && actor.@VZ@==37);
+        else assert(result.lVal==1 && toss_calls==1);
+        ++cases;
+    }
+    reset();ScriptVariant h=handle(0),*args[]={&h},*out=NULL;entity before;
+    memcpy(&before,&actor,sizeof(actor));assert(openbor_tossentity(args,NULL,1)==E_FAIL);
+    assert(openbor_tossentity(args,&out,1)==E_FAIL && !out && !toss_calls);
+    assert(!memcmp(&before,&actor,sizeof(actor)));cases+=2;
+}
+static void converter_inputs(void)
+{
+    for(unsigned k=EMPTY;k<=POINTER;++k)
+    for(unsigned p=0;p<3;++p)
+    {
+        ScriptVariant v=numeric(k,p);DOUBLE actual=73,expected=73;
+        assert(ScriptVariant_DecimalValue(&v,&actual)==original_decimal(&v,&expected));
+        assert(!memcmp(&actual,&expected,sizeof(actual)));++cases;
+    }
+    DOUBLE value=73;assert(ScriptVariant_DecimalValue(NULL,&value)==E_FAIL && value==73);++cases;
+    ScriptVariant v=numeric(INTEGER,0);assert(ScriptVariant_DecimalValue(&v,NULL)==E_FAIL);++cases;
+    assert(ScriptVariant_DecimalValue(NULL,NULL)==E_FAIL);++cases;
+#if @HAS_WIDE@
+    for(int sign=0;sign<2;++sign)
+    {
+        v=(ScriptVariant){0};if(sign){v.vt=VT_INTEGER64;v.llVal=INT64_MIN;}else{v.vt=VT_UINTEGER64;v.ullVal=UINT64_MAX;}
+        DOUBLE actual=0,expected=0;assert(ScriptVariant_DecimalValue(&v,&actual)==S_OK && original_decimal(&v,&expected)==S_OK);
+        assert(!memcmp(&actual,&expected,sizeof(actual)));++cases;
+    }
+#endif
+}
+int main(void)
+{
+    for(unsigned c=0;c<sizeof(contexts)/sizeof(*contexts);++c)
+    {
+        obor_profile_build=contexts[c].revision;
+#ifdef ACTOR_ONLY
+        compare_valid(0,0,1,0,contexts[c].null_false,contexts[c].numeric_false);
+#else
+        for(unsigned h=0;h<3;++h)
+        for(unsigned n=0;n<sizeof(numeric_cases)/sizeof(*numeric_cases);++n)
+        for(int count=0;count<=5;++count)
+        for(int result=0;result<2;++result)
+            compare_valid(h,n,count,result,contexts[c].null_false,contexts[c].numeric_false);
+        invalid_cells(c);converter_inputs();
+#endif
+    }
+    printf("{\"status\":\"PASS\",\"profiles\":%zu,\"cases\":%u}\n",sizeof(contexts)/sizeof(*contexts),cases);return 0;
+}

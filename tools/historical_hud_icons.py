@@ -172,7 +172,20 @@ def render_selection_icon(engine, fixture):
     source = (engine / 'openbor.c').read_text()
     predraw = function(source, 'predrawstatus')
     first = predraw.index('icon = model->icon.def;')
-    branch = predraw[first:predraw.index('\n\t\t}\n\t\telse if(player[i].credits', first)]
+    # Keep the newly guarded model block balanced. Its outer close belongs
+    # to the joining-player branch, rather than to the icon operation.
+    owner = predraw.rfind('if(model)', 0, first)
+    if owner < 0:
+        raise ValueError('Guarded selection model block required')
+    brace = predraw.index('{', owner)
+    depth = 1
+    end = brace + 1
+    while end < len(predraw) and depth:
+        depth += (predraw[end] == '{') - (predraw[end] == '}')
+        end += 1
+    if depth:
+        raise ValueError('Complete selection model block required')
+    branch = predraw[first:end - 1]
     header = (engine / 'openbor.h').read_text()
     limit = re.search(r'(?m)^#define\s+MAX_COLOUR_MAPS\s+[^\n]+', header)[0]
     lookup = function(source, 'model_get_colourmap').replace(

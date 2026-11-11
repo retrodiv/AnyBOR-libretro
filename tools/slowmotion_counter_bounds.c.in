@@ -1,0 +1,86 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <limits.h>
+@CONFIG@
+#include "openbor.h"
+#undef printf
+#undef assert
+uint32_t obor_profile_build;
+@INITIALIZER@
+static s_level scene;
+s_level *level=&scene;
+static int level_completed,tospeedup;
+static uint64_t fixture_clock=100,interval=2,newtime;
+static unsigned cases;
+#define CHECK(c) do {if(!(c)){fprintf(stderr,"slow-motion profile=%u case=%u: %s\n",obor_profile_build,cases,#c);abort();}}while(0)
+#undef time
+#undef _time
+#define time fixture_clock
+#define _time fixture_clock
+static void original_step(void){newtime=0;@ORIGINAL@}
+static void checked_step(void){newtime=0;@CHECKED@}
+#undef time
+#undef _time
+#define TOGGLE @TOGGLE@
+#define DURATION @DURATION@
+#define COUNTER @COUNTER@
+static int word(uint32_t value)
+{return value<=INT_MAX?(int)value:-(int)(UINT32_MAX-value)-1;}
+static int increment_signed(int value)
+{
+    int64_t next=(int64_t)value+1;
+    if(next>INT_MAX)next-=INT64_C(4294967296);
+    return (int)next;
+}
+static void set(uint32_t t,uint32_t d,uint32_t c)
+{TOGGLE=word(t);DURATION=word(d);COUNTER=word(c);}
+static void snapshot(uint32_t out[3])
+{out[0]=(uint32_t)TOGGLE;out[1]=(uint32_t)DURATION;out[2]=(uint32_t)COUNTER;}
+int main(void)
+{
+    _Static_assert(sizeof(int)==4 && sizeof(unsigned)==4,"Native counter epochs require 32-bit int");
+    const unsigned profiles[]={@PROFILES@};
+    const uint32_t toggles[]={0,1,2,3,UINT32_MAX,UINT32_C(0x80000000)};
+    const uint32_t values[]={0,1,2,UINT32_MAX-1,UINT32_MAX,INT_MAX-1,INT_MAX,UINT32_C(0x80000000),UINT32_C(0x80000001)};
+    for(unsigned p=0;p<sizeof(profiles)/sizeof(*profiles);++p){
+        obor_profile_build=profiles[p];int uns=@UNSIGNED@;
+        for(unsigned t=0;t<6;++t)for(unsigned d=0;d<9;++d)for(unsigned c=0;c<9;++c)
+        for(int completed=0;completed<2;++completed)for(int noslow=0;noslow<2;++noslow)for(int speedup=0;speedup<2;++speedup){
+            ++cases;set(toggles[t],values[d],values[c]);uint32_t before[3];snapshot(before);
+            level_completed=completed;tospeedup=speedup;@NO_SLOW@
+            uint32_t expected[3]={before[0],before[1],before[2]};
+            uint64_t nexttime=(!(completed && !noslow && !speedup) && !(uns?before[0]!=0:word(before[0])>0)) || before[1]==before[2]?102:0;
+            int reset;
+            if(uns){
+                uint32_t next=before[2]+1u;
+                uint64_t threshold=(uint64_t)before[1]+1u;
+                if(@BYTE@)next&=255u;else threshold=(uint32_t)threshold;
+                reset=next==threshold;expected[2]=next;
+                if(reset && before[0]>1u)expected[1]=before[0];
+            }else{
+                int next=increment_signed(word(before[2]));
+                reset=next==increment_signed(word(before[1]));expected[2]=(uint32_t)next;
+                if(reset && word(before[0])>1)expected[1]=before[0];
+            }
+            if(reset)expected[2]=0;
+            /* Run the retained native expression only where its arithmetic is
+             * defined; representability boundaries use the independent widened
+             * reference above, with no undefined old-control operation. */
+            if(uns || (word(before[1])<INT_MAX && word(before[2])<INT_MAX)){
+                original_step();uint32_t original[3];snapshot(original);
+                CHECK(original[0]==expected[0] && original[1]==expected[1] && original[2]==expected[2]);
+                CHECK(newtime==nexttime);
+            }
+            set(before[0],before[1],before[2]);checked_step();uint32_t actual[3];snapshot(actual);
+            if(actual[0]!=expected[0] || actual[1]!=expected[1] || actual[2]!=expected[2] || newtime!=nexttime){
+                fprintf(stderr,"defined counter result differs profile=%u case=%u\n",obor_profile_build,cases);return 1;
+            }
+        }
+    }
+    printf("{\"status\":\"PASS\",\"profiles\":%zu,\"cases\":%u}\n",sizeof(profiles)/sizeof(*profiles),cases);
+    return 0;
+}

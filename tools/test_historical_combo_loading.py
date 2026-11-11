@@ -39,6 +39,10 @@ def program(data):
     initialize = function(core, 'init_model')
     first = initialize.index('\tnewchar->special ')
     allocate = initialize[first:initialize.index('\n\n', first)]
+    owner = re.search(r'newchar->freetypes\s*=\s*MF_ALL\s*;', initialize)
+    if owner is None:
+        raise ValueError('Native constructor table ownership required')
+    allocate = owner[0] + '\n' + allocate
     cases = []
     for row in data['cases']:
         operations = []

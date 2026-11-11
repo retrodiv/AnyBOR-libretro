@@ -1,0 +1,51 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#define realloc observe_realloc
+@BEFORE_DELETE@
+@AFTER_DELETE@
+#undef realloc
+struct delete_observation {int result,length,refs,top,events[128];unsigned event_count,allocations;size_t requests[32];ScriptVariant vars[4];};
+static void observe_delete(struct delete_observation *out,int before,int index,int moving)
+{
+    memset(out,0,sizeof(*out));begin(moving);Varlist table={0};Varlist_Init(&table,3);
+    ScriptVariant string={0};string.vt=VT_STR;string.strVal=0;
+    for(int i=0;i<3;++i)assert(Varlist_SetByIndex(&table,i,&string));
+    out->result=before?before_delete(&table,index):Varlist_DeleteByIndex(&table,index);
+    out->length=(int)table.vars->lVal;
+    assert(out->result==(index>=0 && index<3));assert(out->length==(out->result?2:3));
+    assert(strcache[0].ref==out->length+1);
+    memcpy(out->vars,table.vars,((size_t)out->length+1)*sizeof(*table.vars));
+    for(int i=1;i<=out->length;++i)assert(table.vars[i].vt==VT_STR && table.vars[i].strVal==0);
+    Varlist_Clear(&table);assert(!table.list && !table.vars && !table.magic);
+    out->refs=strcache[0].ref;out->top=strcache_top;out->event_count=cache_count;
+    memcpy(out->events,cache_events,sizeof(cache_events));out->allocations=request_count;memcpy(out->requests,requests,sizeof(requests));end();
+}
+static void refused_optional_shrink(void)
+{
+    begin(1);Varlist table={0};Varlist_Init(&table,3);ScriptVariant string={0};string.vt=VT_STR;string.strVal=0;
+    for(int i=0;i<3;++i)assert(Varlist_SetByIndex(&table,i,&string));
+    ScriptVariant *original=table.vars;fail_at=calls+1;
+    assert(Varlist_DeleteByIndex(&table,0));
+    assert(table.vars==original && table.vars->lVal==2);
+    assert(strcache[0].ref==3 && Varlist_GetByIndex(&table,1)==table.vars+2);
+    assert(table.vars[3].vt==VT_EMPTY && !table.vars[3].ptrVal);
+    Varlist_Clear(&table);end();++cases;
+}
+int main(void)
+{
+    static const uint32_t profiles[]={@PROFILES@};
+    for(unsigned i=0;i<sizeof(profiles)/sizeof(*profiles);++i)
+    {
+        obor_profile_build=profiles[i];
+        for(int moving=0;moving<2;++moving)for(int index=-1;index<=3;++index)
+        {
+            struct delete_observation before,after;observe_delete(&before,1,index,moving);observe_delete(&after,0,index,moving);
+            assert(!memcmp(&before,&after,sizeof(before)));++cases;
+        }
+        refused_optional_shrink();
+#if @CHECK_ABSENT@
+        Varlist empty={0};assert(!Varlist_DeleteByIndex(NULL,0));assert(!Varlist_DeleteByIndex(&empty,0));cases+=2;
+#endif
+    }
+    printf("{\"status\":\"PASS\",\"profiles\":%zu,\"cases\":%u}\n",sizeof(profiles)/sizeof(*profiles),cases);return 0;
+}

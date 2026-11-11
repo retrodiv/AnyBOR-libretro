@@ -192,6 +192,10 @@ static int fixture_source_lookup_invalid;
 static char strings[16][128];
 static int next_string;
 static char *StrCache_Get(int index) { assert(index>=0 && index<16);return strings[index]; }
+static char *StrCache_GetIfPresent(int index) {
+    return index >= 0 && index < next_string &&
+        memchr(strings[index], 0, sizeof(strings[index])) ? strings[index] : NULL;
+}
 static int StrCache_Pop(void) { assert(next_string<16);return next_string++; }
 static void StrCache_Collect(int index) { assert(index>=0 && index<16); }
 static int quiet_printf(const char *format,...) { (void)format;return 0; }

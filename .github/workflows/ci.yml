@@ -300,6 +300,7 @@ jobs:
           run_check python3 tools/test_historical_level.py
           run_check python3 tools/test_historical_tolerance.py
           run_check python3 tools/test_preprocessor_strings.py
+          run_check python3 tools/test_preprocessor_concatenation.py
           run_check python3 tools/test_early_script_lexers.py
           run_check python3 tools/test_early_entity_lifecycle.py
           run_check python3 tools/test_early_script_macros.py
@@ -316,6 +317,7 @@ jobs:
           run_check python3 tools/test_early_model_resources.py
           run_check python3 tools/test_early_packfile.py
           run_check python3 tools/test_early_screenshots.py
+          run_check python3 tools/test_png_writer_ownership.py
           run_check python3 tools/test_early_model_callers.py
           run_check python3 tools/test_early_model_passes.py
           run_check python3 tools/test_early_model_level_state.py
@@ -502,6 +504,10 @@ jobs:
           run_check python3 tools/test_historical_paths.py
           run_check python3 tools/test_historical_colourtable_reads.py
           run_check python3 tools/test_colourtable_bounds.py
+          run_check python3 tools/test_collision_list_capacity.py
+          run_check python3 tools/test_collision_list_ownership.py
+          run_check python3 tools/test_script_pointer_offsets.py
+          run_check python3 tools/test_script_initialization.py
           run_check python3 tools/test_render_colourmaps.py
           run_check python3 tools/test_historical_filestreams.py
           run_check python3 tools/test_filestream_transfer.py
@@ -538,6 +544,56 @@ jobs:
           run_check python3 tools/test_early_v3_profiles.py
           run_check python3 tools/test_property_error_lists.py
           run_check python3 tools/test_text_object_ownership.py
+          run_check python3 tools/test_text_object_queries.py
+          run_check python3 tools/test_text_object_values.py
+          run_check python3 tools/test_text_object_tables.py
+          run_check python3 tools/test_projectile_terminal_health.py
+          run_check python3 tools/test_script_save_input.py
+          run_check python3 tools/test_import_initialization.py
+          run_check python3 tools/test_parser_labels.py
+          run_check python3 tools/test_parser_token_prefix.py
+          run_check python3 tools/test_preprocessor_messages.py
+          run_check python3 tools/test_preprocessor_macro_ownership.py
+          run_check python3 tools/test_script_global_slots.py
+          run_check python3 tools/test_model_constructor_ownership.py
+          run_check python3 tools/test_sprite_array_inputs.py
+          run_check python3 tools/test_zoom_pixels.py
+          run_check python3 tools/test_lowercase_bytes.py
+          run_check python3 tools/test_sprite_size_counts.py
+          run_check python3 tools/test_triangle_diagnostics.py
+          run_check python3 tools/test_target_detection_arithmetic.py
+          run_check python3 tools/test_playable_model_validation.py
+          run_check python3 tools/test_draw_method_bounds.py
+          run_check python3 tools/test_frame_input_bounds.py
+          run_check python3 tools/test_remap_flag_bounds.py
+          run_check python3 tools/test_astar_output.py
+          run_check python3 tools/test_attack_query_bounds.py
+          run_check python3 tools/test_modern_attack_query_bounds.py
+          run_check python3 tools/test_defense_query_bounds.py
+          run_check python3 tools/test_gif_memory_bounds.py
+          run_check python3 tools/test_screen_reference_alignment.py
+          run_check python3 tools/test_rise_input_bounds.py
+          run_check python3 tools/test_collision_selector_inputs.py
+          run_check python3 tools/test_legacy_texture_bounds.py
+          run_check python3 tools/test_entity_pool_growth.py
+          run_check python3 tools/test_entity_storage_ownership.py
+          run_check python3 tools/test_command_table_ownership.py
+          run_check python3 tools/test_graphics_query_coordinates.py
+          run_check python3 tools/test_hud_model_inputs.py
+          run_check python3 tools/test_slowmotion_counter_bounds.py
+          run_check python3 tools/test_vulnerable_frame_queries.py
+          run_check python3 tools/test_player_property_inputs.py
+          run_check python3 tools/test_pickup_inputs.py
+          run_check python3 tools/test_toss_inputs.py
+          run_check python3 tools/test_script_record_alignment.py
+          run_check python3 tools/test_script_health_arithmetic.py
+          run_check python3 tools/test_level_consumer_storage.py
+          run_check python3 tools/test_saved_player_name_restore.py
+          run_check python3 tools/test_script_heap_entry_kinds.py
+          run_check python3 tools/test_script_array_storage.py
+          run_check python3 tools/test_script_constructor_storage.py
+          run_check python3 tools/test_script_variable_storage.py
+          run_check python3 tools/test_script_variable_delete_storage.py
           run_check python3 tools/test_content_triage.py
           run_check python3 tools/test_write_watch.py
           run_check python3 tools/smoke.py --core anybor_libretro.dylib

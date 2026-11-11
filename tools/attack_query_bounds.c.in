@@ -1,0 +1,150 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <limits.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "openbor.h"
+#include "openborscript.h"
+#undef printf
+#undef exit
+#define CHECK(c) do {if(!(c)){fprintf(stderr,"attack query contract profile=%u line=%d: %s\n",obor_profile_build,__LINE__,#c);abort();}}while(0)
+uint32_t obor_profile_build;
+static unsigned queries;
+static const unsigned profiles[]={@PROFILES@};
+static int quiet_printf(const char *format,...) {(void)format;return 0;}
+#define printf quiet_printf
+CHAR *StrCache_Get(int index) {(void)index;abort();}
+CHAR *StrCache_GetIfPresent(int index) {(void)index;abort();}
+void StrCache_Collect(int index) {(void)index;abort();}
+int StrCache_Pop(@POP_ARGUMENTS@) {abort();}
+void StrCache_Copy(int index,CHAR *text) {(void)index;(void)text;abort();}
+int StrCache_CreateNewFrom(const CHAR *text) {(void)text;abort();}
+void mapstrings_getentityproperty(ScriptVariant **args,int count) {(void)args;(void)count;}
+@MAPPER_TYPE@ mapstrings_entityproperty(ScriptVariant **args,int count) {(void)args;(void)count;@MAPPER_RETURN@}
+#define obor_property_index(space,index,end) (index)
+#define obor_entity_get_property_native(index) (index)
+#define obor_entityproperty_native(index) (index)
+#define obor_entityproperty(index) (index)
+@ENUM@
+@AXIS@
+enum {@OUTER@=1};
+@PREFIX_DEPENDENCY@
+@NAMESPACES@
+static int ordinal(int id) {@ORDINAL@}
+@CONVERSIONS@
+@GETTER@
+static entity actor;
+static s_anim animation,*animations[2];
+static s_attack attack,spare,*frames[3];
+static ScriptVariant values[7],*args[7],result,*out;
+static void setup(int property) {
+    memset(&actor,0,sizeof(actor));memset(&animation,0,sizeof(animation));
+    memset(&attack,0,sizeof(attack));memset(&spare,0,sizeof(spare));
+    memset(values,0,sizeof(values));memset(&result,0,sizeof(result));
+    for(int i=0;i<7;++i){args[i]=values+i;values[i].vt=VT_INTEGER;}
+    values[0].vt=VT_PTR;values[0].ptrVal=&actor;
+    values[1].lVal=@OUTER@;values[2].lVal=ordinal(property);
+    values[4].lVal=@ANIMATION_ZERO@;
+    animations[0]=&animation;animations[1]=NULL;
+    actor.modeldata.animation=animations;actor.modeldata.animation_capacity=1;
+    animation.numframes=2;animation.attacks=frames;
+    frames[0]=frames[1]=&attack;frames[2]=&spare;
+    attack.attack_force=73;spare.attack_force=99;
+    for(unsigned i=0;i<sizeof(attack.attack_coords)/sizeof(*attack.attack_coords);++i)
+        attack.attack_coords[i]=11+(int)i;
+    @INITIALIZE_DROPV@
+    result.vt=VT_INTEGER;result.lVal=91;out=&result;
+}
+static void empty(int count) {
+    CHECK(openbor_getentityproperty(args,&out,count)==S_OK);
+    CHECK(out==&result && result.vt==VT_EMPTY);++queries;
+}
+static void integer(int count,int expected) {
+    CHECK(openbor_getentityproperty(args,&out,count)==S_OK);
+    CHECK(out==&result && result.vt==VT_INTEGER && result.lVal==expected);++queries;
+}
+static void decimal(int count,double expected) {
+    CHECK(openbor_getentityproperty(args,&out,count)==S_OK);
+    CHECK(out==&result && result.vt==VT_DECIMAL && result.dblVal==expected);++queries;
+}
+int main(void) {
+    for(unsigned p=0;p<sizeof(profiles)/sizeof(*profiles);++p) {
+        obor_profile_build=profiles[p];
+#ifdef ENDPOINT_ONLY
+        setup(@FORCE@);values[5].lVal=2;empty(6);
+#else
+        setup(@FORCE@);integer(6,73);
+        setup(@FORCE@);values[5].lVal=1;integer(6,73);
+        /* The original requires an integer placeholder but ignores its value. */
+        setup(@FORCE@);values[3].lVal=-1;integer(6,73);
+        setup(@FORCE@);values[3].lVal=INT_MAX;integer(6,73);
+        for(int n=2;n<6;++n){setup(@FORCE@);empty(n);}
+        for(int n=2;n<6;++n){
+            setup(@FORCE@);args[n]=NULL;
+            CHECK(openbor_getentityproperty(args,&out,6)==E_FAIL && !out);++queries;
+        }
+        for(int n=3;n<6;++n){
+            setup(@FORCE@);values[n].vt=VT_DECIMAL;values[n].dblVal=0.0;
+            CHECK(openbor_getentityproperty(args,&out,6)==E_FAIL);
+            CHECK(out==&result && result.vt==VT_EMPTY);++queries;
+        }
+        for(int n=0;n<3;++n){
+            setup(@FORCE@);values[5].lVal=n==0?-1:n==1?2:INT_MAX;empty(6);
+        }
+        for(int n=0;n<3;++n){
+            setup(@FORCE@);values[4].lVal=n==0?-1:n==1?1:INT_MAX;empty(6);
+        }
+        for(int n=0;n<7;++n){
+            setup(@FORCE@);
+            switch(n){
+            case 0:actor.modeldata.animation=NULL;break;
+            case 1:actor.modeldata.animation_capacity=0;break;
+            case 2:animations[0]=NULL;break;
+            case 3:animation.numframes=0;break;
+            case 4:animation.numframes=-1;break;
+            case 5:animation.attacks=NULL;break;
+            case 6:frames[0]=NULL;break;
+            }
+            empty(6);
+        }
+        for(int i=0;i<@COORDINATE_LIMIT@;++i){
+            setup(@COORDS@);values[6].lVal=i;integer(7,11+i);
+        }
+        for(int n=0;n<6;++n){
+            setup(@COORDS@);
+            if(n==0){empty(6);continue;}
+            if(n==1)args[6]=NULL;
+            if(n==2)values[6].vt=VT_EMPTY;
+            if(n==3)values[6].lVal=-1;
+            if(n==4)values[6].lVal=@COORDINATE_LIMIT@;
+            if(n==5)values[6].lVal=INT_MAX;
+            empty(7);
+        }
+        for(int i=0;i<3;++i){setup(@DROPV@);values[6].lVal=i;decimal(7,1.25*(i+1));}
+        setup(@DROPV@);empty(6);setup(@DROPV@);args[6]=NULL;empty(7);
+        for(int n=0;n<3;++n){
+            setup(@DROPV@);values[6].lVal=n==0?-1:n==1?3:INT_MAX;
+#if @STRUCT_DROPV@
+            CHECK(openbor_getentityproperty(args,&out,7)==E_FAIL && !out);++queries;
+#else
+            empty(7);
+#endif
+        }
+        setup(@DROPV@);values[6].vt=VT_DECIMAL;values[6].dblVal=0.0;
+#if @STRUCT_DROPV@
+        /* This source-defined scalar switch reads the raw native axis value. */
+        decimal(7,1.25);
+#else
+        empty(7);
+#endif
+        setup(@FORCE@);CHECK(openbor_getentityproperty(NULL,&out,6)==E_FAIL && !out);++queries;
+        setup(@FORCE@);CHECK(openbor_getentityproperty(args,NULL,6)==E_FAIL);++queries;
+        setup(@FORCE@);out=NULL;CHECK(openbor_getentityproperty(args,&out,6)==E_FAIL && !out);++queries;
+#endif
+    }
+#undef printf
+    printf("{\"profiles\":%u,\"queries\":%u}\n",(unsigned)(sizeof(profiles)/sizeof(*profiles)),queries);
+    return 0;
+}

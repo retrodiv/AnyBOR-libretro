@@ -1,0 +1,165 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <assert.h>
+#include <ctype.h>
+#include <limits.h>
+#include <stdint.h>
+#include <stdarg.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <strings.h>
+@CONFIG@
+#include "openbor.h"
+#include "@SCRIPT_HEADER@"
+#pragma GCC diagnostic ignored "-Wmisleading-indentation"
+#undef printf
+#undef exit
+#undef assert
+#include <assert.h>
+uint32_t obor_profile_build;
+static unsigned checks;
+#define CHECK(x) do {++checks;assert(x);} while(0)
+static char diagnostic[4096];
+static int quiet_printf(const char *format,...) {
+ va_list args;va_start(args,format);
+ int n=vsnprintf(diagnostic+strlen(diagnostic),sizeof(diagnostic)-strlen(diagnostic),format,args);
+ va_end(args);assert(n>=0);return n;
+}
+#define printf quiet_printf
+static char *cache[8];
+CHAR *StrCache_Get(int n) {assert(n>=0 && n<8 && cache[n]);return cache[n];}
+CHAR *StrCache_GetIfPresent(int n) {return n>=0 && n<8?cache[n]:NULL;}
+int StrCache_Pop(@POP_ARGUMENTS@) {abort();}
+void StrCache_Collect(int n) {assert(n>=0 && n<8);}
+void StrCache_Copy(int n,CHAR *s) {(void)n;(void)s;abort();}
+int StrCache_CreateNewFrom(const CHAR *s) {(void)s;abort();}
+@CONVERSIONS@
+@ROOT_IDS@
+#define @END@ 20000
+#define obor_property_index(ns,index,end) (index)
+#define obor_entity_set_property_native(index) (index)
+#define obor_entityproperty_native(index) (index)
+#define obor_entityproperty(index) (index)
+#undef stricmp
+#define stricmp strcasecmp
+#define _is_not_supported_by_ "'%s' is not supported by '%s'.\n"
+@ENUM@
+@SEARCH@
+@MACRO@
+@MAPPING@
+@RESERVED@
+@SETTER@
+@BASELINE@
+static entity ent;
+static ScriptVariant values[8],result,*args[8],*out;
+static const char *names[]={"ground","type_enemy","type_npc","type_obstacle","type_player","type_shot"};
+static const int types[]={0,TYPE_ENEMY,TYPE_NPC,TYPE_OBSTACLE,TYPE_PLAYER,TYPE_SHOT};
+static void setup(int property) {
+ memset(&ent,0,sizeof(ent));@INIT_FIELDS@ ent.modeldata.ground=0;
+ memset(values,0,sizeof(values));memset(&result,0,sizeof(result));memset(cache,0,sizeof(cache));
+ for(int i=0;i<8;++i){args[i]=&values[i];values[i].vt=VT_INTEGER;}
+ values[0].vt=VT_PTR;values[0].ptrVal=&ent;values[1].lVal=10000+property;
+ out=&result;diagnostic[0]=0;
+}
+static void literal(int slot,int index) {
+ values[slot].vt=VT_STR;values[slot].strVal=slot;cache[slot]=(char*)names[index];
+}
+typedef struct {HRESULT status;int masks[3],ground,has_result,kind;LONG number;char message[4096];} observation;
+static observation observe(int baseline,int count) {
+ HRESULT status=baseline?baseline_changeentityproperty(args,&out,count):openbor_changeentityproperty(args,&out,count);
+ observation value={.status=status,.masks={@READ_FIELDS@},.ground=ent.modeldata.ground,
+                    .has_result=out!=NULL,.kind=result.vt,.number=result.lVal};
+ strcpy(value.message,diagnostic);return value;
+}
+static void equal(observation a,observation b) {
+ CHECK(a.status==b.status);CHECK(a.has_result==b.has_result);CHECK(a.kind==b.kind);CHECK(a.number==b.number);
+ for(int i=0;i<3;++i)CHECK(a.masks[i]==b.masks[i]);
+ CHECK(a.ground==b.ground);CHECK(!strcmp(a.message,b.message));
+}
+static void valid(int property,int selector,int named) {
+ observation rows[2];
+ for(int old=0;old<2;++old) {
+  setup(property);values[2].lVal=selector;if(named)literal(2,selector);
+  rows[old]=observe(old,3);
+ }
+ equal(rows[0],rows[1]);CHECK(rows[0].status==S_OK);
+ CHECK(rows[0].has_result==(obor_profile_build<3710));
+ CHECK(!rows[0].message[0]);
+ if(named || !@TAGGED@) {
+  CHECK(rows[0].masks[property]==types[selector]);
+  CHECK(rows[0].ground==(property==0 && selector==0));
+ } else {CHECK(rows[0].masks[property]==selector);CHECK(!rows[0].ground);}
+}
+static void sequence(int property) {
+ observation rows[2];int expected=0;
+ for(int i=0;i<6;++i)expected|=types[i];
+ for(int old=0;old<2;++old) {
+  setup(property);for(int i=0;i<6;++i)literal(i+2,i);
+  rows[old]=observe(old,8);
+ }
+ equal(rows[0],rows[1]);CHECK(rows[0].status==S_OK);CHECK(rows[0].masks[property]==expected);
+ CHECK(rows[0].ground==(property==0));
+}
+static void integer_masks(int property) {
+ LONG masks[]={0,6,127,(LONG)UINT64_C(0x100000003),(LONG)UINT32_C(0x80000000),
+               (LONG)INT_MIN,(LONG)UINT64_C(0x180000000)};
+ int count=@TAGGED@?7:4;
+ for(int i=0;i<count;++i) {
+  LONG number=masks[i];
+  if(!@TAGGED@) {
+   if(!(@MASK_FAST@))continue;
+   number|=(LONG)(obor_profile_build<3608?UINT32_C(0x80000000):UINT32_C(0x40000000));
+  }
+  observation rows[2];
+  for(int old=0;old<2;++old){setup(property);values[2].lVal=number;rows[old]=observe(old,3);}
+  equal(rows[0],rows[1]);CHECK(rows[0].status==S_OK);
+ }
+ /* Native LONG-to-int narrowing may keep a valid index on 64-bit hosts. */
+ if(!@TAGGED@ && sizeof(LONG)>4) {
+  observation rows[2];
+  for(int old=0;old<2;++old){setup(property);values[2].lVal=(LONG)UINT64_C(0x100000003);rows[old]=observe(old,3);}
+  equal(rows[0],rows[1]);CHECK(rows[0].status==S_OK);CHECK(rows[0].masks[property]==types[3]);
+ }
+}
+static void refused(int property) {
+ const LONG indices[]={6,7,INT_MAX,-1};
+ for(int i=0;i<4;++i) {
+  LONG bad=@TAGGED@?(indices[i]|(LONG)UINT32_C(0x80000000)):indices[i];
+  observation wrong,bounded;
+  setup(property);literal(2,1);values[3].vt=VT_EMPTY;wrong=observe(0,4);
+  setup(property);literal(2,1);values[3].lVal=bad;bounded=observe(0,4);
+  equal(bounded,wrong);CHECK(bounded.status==E_FAIL && !bounded.has_result);
+  CHECK(bounded.masks[property]==TYPE_ENEMY);
+  setup(property);literal(2,1);args[3]=NULL;bounded=observe(0,4);
+  equal(bounded,wrong);
+  setup(property);values[2].vt=VT_EMPTY;wrong=observe(0,4);
+  setup(property);values[2].lVal=bad;bounded=observe(0,4);
+  equal(bounded,wrong);CHECK(bounded.status==E_FAIL && !bounded.has_result);
+  CHECK(!bounded.masks[property] && !bounded.ground);
+ }
+ observation text_rows[2];
+ for(int old=0;old<2;++old) {
+  setup(property);literal(2,1);values[3].vt=VT_STR;values[3].strVal=3;cache[3]=(char*)"unknown_type";
+  text_rows[old]=observe(old,4);
+ }
+ equal(text_rows[0],text_rows[1]);CHECK(text_rows[0].status==E_FAIL && text_rows[0].message[0]);
+ /* Root null arguments are checked before the mask is modified. */
+ for(int slot=0;slot<3;++slot){setup(property);args[slot]=NULL;CHECK(openbor_changeentityproperty(args,&out,3)==E_FAIL && !out);}
+ setup(property);CHECK(openbor_changeentityproperty(args,NULL,3)==E_FAIL);
+ setup(property);CHECK(openbor_changeentityproperty(NULL,&out,3)==E_FAIL && !out);
+}
+int main(void) {
+ static const unsigned profiles[]={@PROFILES@};
+ for(unsigned p=0;p<sizeof(profiles)/sizeof(*profiles);++p) {
+  obor_profile_build=profiles[p];
+  for(int property=0;property<3;++property) {
+   /* The earliest original namespace has no projectilehit property. */
+   if(property==2 && obor_profile_build<3288)continue;
+   for(int selector=0;selector<6;++selector)for(int named=0;named<2;++named)valid(property,selector,named);
+   sequence(property);integer_masks(property);refused(property);
+  }
+ }
+ fprintf(stdout,"{\"status\":\"PASS\",\"profiles\":%u,\"checks\":%u}\n",
+         (unsigned)(sizeof(profiles)/sizeof(*profiles)),checks);return 0;
+}

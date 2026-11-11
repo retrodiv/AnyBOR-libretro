@@ -1,0 +1,125 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ * Native frame release, with a bounded owner ledger for fixture allocations.
+ */
+#include <stddef.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "openbor.h"
+#undef malloc
+#undef calloc
+#undef free
+#undef printf
+#define CHECK(c) do { if(!(c)) { fprintf(stderr, "Frame ownership: %s at %d\n", #c, __LINE__); abort(); } } while(0)
+
+static void *owners[64];
+static unsigned owner_count, live;
+static void *tracked_malloc(size_t bytes)
+{
+    CHECK(bytes && bytes <= 65536 && owner_count < 64);
+    void *owner = malloc(bytes);
+    CHECK(owner);
+    owners[owner_count++] = owner;
+    ++live;
+    return owner;
+}
+static void *tracked_calloc(size_t count, size_t bytes)
+{
+    CHECK(count && bytes <= 65536 / count);
+    void *owner = tracked_malloc(count * bytes);
+    memset(owner, 0, count * bytes);
+    return owner;
+}
+static void tracked_free(void *owner)
+{
+    if(!owner) return;
+    for(unsigned i = 0; i < owner_count; ++i)
+    {
+        if(owners[i] != owner) continue;
+        owners[i] = NULL;
+        --live;
+        free(owner);
+        return;
+    }
+    CHECK(!"release belongs to an initialized frame owner");
+}
+
+#define malloc tracked_malloc
+#define calloc tracked_calloc
+#define free tracked_free
+#define attack_free_object(...) abort()
+#define body_free_object(...) abort()
+#define space_free_object(...) abort()
+#define meta_data_free_list(...) abort()
+@SERVICES@
+@ALLOC@
+@RELEASE@
+
+static void check_frames(int visible)
+{
+    CHECK(!live);
+    owner_count = 0;
+    s_anim animation = {0};
+    alloc_frames(&animation, 3);
+    CHECK(animation.obor_frame_capacity == 3);
+    animation.offset = calloc(3, sizeof(*animation.offset));
+    animation.move = calloc(3, sizeof(*animation.move));
+    animation.drawmethods = calloc(3, sizeof(*animation.drawmethods));
+    animation.collision_attack = calloc(3, sizeof(*animation.collision_attack));
+    animation.obor_attack_frame_capacity = 3;
+    animation.collision_body = calloc(3, sizeof(*animation.collision_body));
+    animation.child_spawn = calloc(3, sizeof(*animation.child_spawn));
+#if @COLLECTIONS@
+    animation.collision_space = calloc(3, sizeof(*animation.collision_space));
+    animation.sound = calloc(3, sizeof(*animation.sound));
+#else
+    static s_meta_data borrowed = {.integer = 71};
+#endif
+    for(unsigned i = 0; i < 3; i += 2)
+    {
+        animation.offset[i] = calloc(1, sizeof(*animation.offset[i]));
+        animation.move[i] = calloc(1, sizeof(*animation.move[i]));
+        animation.drawmethods[i] = calloc(1, sizeof(*animation.drawmethods[i]));
+        animation.collision_attack[i] = calloc(1, sizeof(*animation.collision_attack[i]));
+        animation.collision_body[i] = calloc(1, sizeof(*animation.collision_body[i]));
+        animation.child_spawn[i] = calloc(1, sizeof(*animation.child_spawn[i]));
+#if @COLLECTIONS@
+        animation.collision_space[i] = calloc(1, sizeof(*animation.collision_space[i]));
+        animation.sound[i] = calloc(1, sizeof(*animation.sound[i]));
+        animation.sound[i]->slots[0] = calloc(1, sizeof(*animation.sound[i]->slots[0]));
+#else
+        animation.collision_attack[i]->meta_data = &borrowed;
+        animation.collision_body[i]->meta_data = &borrowed;
+#endif
+    }
+    animation.numframes = visible;
+    free_frames(&animation);
+    CHECK(!live && !animation.obor_frame_capacity && !animation.obor_attack_frame_capacity);
+    CHECK(animation.numframes == visible);
+    CHECK(!animation.offset && !animation.move && !animation.drawmethods &&
+          !animation.collision_attack && !animation.collision_body && !animation.child_spawn);
+#if @COLLECTIONS@
+    CHECK(!animation.collision_space && !animation.sound);
+#else
+    CHECK(borrowed.integer == 71);
+#endif
+    free_frames(&animation);
+    CHECK(!live);
+}
+
+int main(void)
+{
+    static const unsigned profiles[] = {@PROFILES@};
+    unsigned checks = 0;
+    for(unsigned p = 0; p < sizeof(profiles) / sizeof(*profiles); ++p)
+    {
+        CHECK(profiles[p] > 0);
+        check_frames(1);
+        check_frames(17);
+        checks += 2;
+    }
+    printf("{\"checks\":%u}\n", checks);
+    return 0;
+}

@@ -10,6 +10,7 @@
 #include <stdarg.h>
 #include "openbor.h"
 #include "commands.h"
+#include "obor_resources.h"
 #undef assert
 #undef printf
 #ifdef NDEBUG
@@ -18,6 +19,39 @@
 uint32_t obor_profile_build;
 static unsigned active_case;
 #define assert(c) do {if(!(c)){fprintf(stderr,"COMBO_LOADING revision=%u case=%u line=%d\n",obor_profile_build,active_case,__LINE__);abort();}}while(0)
+/* Exact test table extents; preserve the real constructor's owner flag. */
+static struct {void *pointer;size_t bytes;} table_storage[16];
+size_t obor_allocation_size(const void *pointer) {
+ for(unsigned i=0;i<16;++i)if(pointer && table_storage[i].pointer==pointer)return table_storage[i].bytes;
+ return 0;
+}
+static unsigned table_slot(void *pointer) {
+ for(unsigned i=0;i<16;++i)if(table_storage[i].pointer==pointer)return i;
+ assert(0);return 0;
+}
+static void *table_malloc(size_t bytes) {
+ unsigned slot=table_slot(NULL);assert(bytes && bytes<=(16u<<20));
+ void *pointer=malloc(bytes);assert(pointer);
+ table_storage[slot].pointer=pointer;table_storage[slot].bytes=bytes;return pointer;
+}
+static void *table_calloc(size_t count,size_t bytes) {
+ assert(count && bytes && count<=(16u<<20)/bytes);
+ void *pointer=table_malloc(count*bytes);memset(pointer,0,count*bytes);return pointer;
+}
+static void *table_realloc(void *old,size_t bytes) {
+ unsigned slot=table_slot(old);assert(bytes && bytes<=(16u<<20));
+ void *pointer=realloc(old,bytes);assert(pointer);
+ table_storage[slot].pointer=pointer;table_storage[slot].bytes=bytes;return pointer;
+}
+static void table_free(void *pointer) {
+ if(!pointer)return;
+ unsigned slot=table_slot(pointer);free(pointer);
+ table_storage[slot].pointer=NULL;table_storage[slot].bytes=0;
+}
+#define malloc table_malloc
+#define calloc table_calloc
+#define realloc table_realloc
+#define free table_free
 #define stricmp strcasecmp
 #define strnicmp strncasecmp
 @ERROR_DECL@

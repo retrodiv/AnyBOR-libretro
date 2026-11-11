@@ -1,0 +1,61 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ * Native token types and prefix helper. Fitting bytes use an ample formatting
+ * oracle; refused inputs preserve the token and use the normal parser error.
+ * Full grammar and constant evaluation remain separate native VM controls.
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "Parser.h"
+#undef printf
+#define CHECK(c) do { if(!(c)) { fprintf(stderr, "Parser token prefix check: %s at %d\n", #c, __LINE__); abort(); } } while(0)
+uint32_t obor_profile_build;
+static Parser parser;
+static unsigned errors;
+void Parser_Error2(Parser *owner, PRODUCTION offender, const char *name)
+{
+    CHECK(owner == &parser && offender == unary_expr && !strcmp(name, "unary_expr"));
+    owner->errorFound = TRUE; ++errors;
+}
+@PREFIX@
+
+int main(void)
+{
+    static const unsigned profiles[] = {@PROFILES@};
+    static const char prefixes[] = {'-', '!'};
+    Token token;
+    const size_t capacity = sizeof(token.theSource);
+    const size_t lengths[] = {0, 1, capacity - 2, capacity - 1, capacity, 0};
+    unsigned cases = 0;
+    CHECK(capacity >= 4);
+    for(unsigned p = 0; p < sizeof(profiles) / sizeof(*profiles); ++p)
+    for(unsigned initial_error = 0; initial_error < 2; ++initial_error)
+    for(unsigned pref = 0; pref < sizeof(prefixes); ++pref)
+    for(unsigned c = 0; c < sizeof(lengths) / sizeof(*lengths); ++c)
+    {
+        obor_profile_build = profiles[p];
+        memset(&parser, 0, sizeof(parser)); parser.errorFound = initial_error;
+        memset(&token, 0, sizeof(token)); memset(token.theSource, 'q', capacity);
+        if(lengths[c] < capacity) token.theSource[lengths[c]] = 0;
+        Token expected; memcpy(&expected, &token, sizeof(expected));
+        Parser expected_parser; memcpy(&expected_parser, &parser, sizeof(expected_parser));
+        int fits = c != 5 && lengths[c] + 1 < capacity;
+        if(fits)
+        {
+            char oracle[sizeof(token.theSource) + 2];
+            int written = snprintf(oracle, sizeof(oracle), "%c%s", prefixes[pref], token.theSource);
+            CHECK(written >= 0 && (size_t)written < capacity);
+            memcpy(expected.theSource, oracle, (size_t)written + 1);
+        }
+        else expected_parser.errorFound = TRUE;
+        errors = 0;
+        CHECK(obor_parser_prefix_token(&parser, c == 5 ? NULL : &token, prefixes[pref]) == fits);
+        CHECK(errors == (unsigned)!fits && !memcmp(&parser, &expected_parser, sizeof(parser)));
+        CHECK(!memcmp(&token, &expected, sizeof(token))); ++cases;
+    }
+    printf("{\"status\":\"PASS\",\"profiles\":%zu,\"cases\":%u}\n",
+           sizeof(profiles) / sizeof(*profiles), cases);
+    return 0;
+}

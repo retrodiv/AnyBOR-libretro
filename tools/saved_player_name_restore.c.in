@@ -1,0 +1,71 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ * Native restore statements and record types, with bounded byte observations.
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+@CONFIG@
+#include "openbor.h"
+#include "@SCRIPT_HEADER@"
+#undef printf
+#undef assert
+#ifdef NDEBUG
+#error Name-restore assertions must remain enabled
+#endif
+uint32_t obor_profile_build;
+static unsigned cases;
+#define assert(c) do{if(!(c)){fprintf(stderr,"Saved name profile=%u case=%u line=%d: %s\n",obor_profile_build,cases,__LINE__,#c);abort();}}while(0)
+HRESULT Interpreter_Call(Interpreter *p){(void)p;abort();}
+HRESULT Interpreter_EvalInstruction(Interpreter *p){(void)p;abort();}
+@SAVE_STORAGE@
+s_player player[MAX_PLAYERS];
+static int current_set;
+_Static_assert(sizeof(records[0].pName[0])>=MAX_NAME_LEN,"Native saved-field copy extent");
+_Static_assert(sizeof(player[0].name)>=MAX_NAME_LEN && sizeof(player[0].name)>0,"Native live-field copy extent");
+static void before_restore(unsigned i)
+{
+    s_savelevel *save=&savelevel[current_set];
+    @BEFORE@
+}
+static void restore(unsigned i)
+{
+    s_savelevel *save=&savelevel[current_set];
+    @AFTER@
+}
+static void check(unsigned i,size_t length,int previous_terminator,int pattern)
+{
+    s_player expected_players[MAX_PLAYERS];
+    unsigned char initial_players[sizeof(player)],saved_bytes[sizeof(records)];
+    memset(records,0x6b,sizeof(records));current_set=0;
+    memset(records[0].pName[i],pattern,sizeof(records[0].pName[i]));
+    if(length<sizeof(records[0].pName[i]))records[0].pName[i][length]=0;
+    memset(player,0x5a,sizeof(player));
+    if(previous_terminator)player[i].name[sizeof(player[i].name)-1]=0;
+    memcpy(initial_players,player,sizeof(player));memcpy(saved_bytes,records,sizeof(records));
+    before_restore(i);memcpy(expected_players,player,sizeof(player));
+    if(!memchr(expected_players[i].name,0,sizeof(expected_players[i].name)))
+        expected_players[i].name[sizeof(expected_players[i].name)-1]=0;
+    memcpy(player,initial_players,sizeof(player));restore(i);
+    assert(memchr(player[i].name,0,sizeof(player[i].name)));
+    assert(!memcmp(player,expected_players,sizeof(player)));
+    assert(!memcmp(records,saved_bytes,sizeof(records)));
+    ++cases;
+}
+int main(void)
+{
+    const uint32_t profiles[]={@PROFILES@};
+    const size_t lengths[]={0,1,MAX_NAME_LEN-1,MAX_NAME_LEN,sizeof(records[0].pName[0])};
+    const int patterns[]={'%',0x80};
+    for(unsigned p=0;p<sizeof(profiles)/sizeof(*profiles);++p)
+    {
+        obor_profile_build=profiles[p];
+        for(unsigned i=0;i<MAX_PLAYERS;++i)
+        for(unsigned n=0;n<sizeof(lengths)/sizeof(*lengths);++n)
+        for(int previous=0;previous<2;++previous)
+        for(unsigned pattern=0;pattern<sizeof(patterns)/sizeof(*patterns);++pattern)
+            check(i,lengths[n],previous,patterns[pattern]);
+    }
+    printf("{\"status\":\"PASS\",\"profiles\":%zu,\"cases\":%u}\n",sizeof(profiles)/sizeof(*profiles),cases);return 0;
+}

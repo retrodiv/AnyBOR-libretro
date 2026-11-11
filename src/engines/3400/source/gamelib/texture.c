@@ -1,3 +1,15 @@
+/* AnyBOR modification record: 2026-09-12.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Validate texture dimensions and backing storage before drawing, preserving
+ * valid clipping and pixels.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/3400.md
+ * at the source repository root. Original notices follow below.
+ */
+
 /*
  * OpenBOR - http://www.LavaLit.com
  * -----------------------------------------------------------------------
@@ -12,6 +24,7 @@
 
 #include <string.h>
 #include "types.h"
+#include "obor_texture_bounds.h"
 
 //static int distortion[256];
 float _sinfactors[256] = {1.0f,1.0245412285229123f,1.049067674327418f,1.0735645635996673f,1.0980171403295606f,1.1224106751992162f,1.1467304744553617f,1.1709618887603012f,1.1950903220161282f,1.2191012401568697f,1.2429801799032638f,1.2667127574748984f,1.2902846772544622f,1.3136817403988914f,1.33688985339222f,1.3598950365349882f,1.3826834323650898f,1.4052413140049897f,1.427555093430282f,1.4496113296546064f,1.4713967368259977f,1.492898192229784f,1.5141027441932215f,1.5349976198870971f,1.5555702330196021f,1.5758081914178454f,1.5956993044924332f,1.6152315905806267f,1.6343932841636454f,1.6531728429537766f,1.6715589548470184f,1.6895405447370668f,1.7071067811865474f,1.724247082951467f,1.7409511253549592f,1.7572088465064843f,1.7730104533627368f,1.7883464276266063f,1.8032075314806448f,1.8175848131515837f,1.8314696123025453f,1.8448535652497071f,1.8577286100002721f,1.8700869911087112f,1.881921264348355f,1.8932243011955152f,1.9039892931234434f,1.9142097557035307f,1.9238795325112867f,1.9329927988347388f,1.9415440651830207f,1.9495281805930366f,1.956940335732209f,1.96377606579544f,1.970031253194544f,1.9757021300385284f,1.9807852804032304f,1.985277642388941f,1.9891765099647811f,1.99247953459871f,1.9951847266721967f,1.9972904566786902f,1.9987954562051724f,1.9996988186962041f,2.0f,1.9996988186962041f,1.9987954562051724f,1.9972904566786902f,1.995184726672197f,1.99247953459871f,1.9891765099647811f,1.985277642388941f,1.9807852804032304f,1.9757021300385284f,1.970031253194544f,1.96377606579544f,1.956940335732209f,1.9495281805930366f,1.9415440651830207f,1.9329927988347388f,1.9238795325112867f,1.9142097557035307f,1.9039892931234434f,1.8932243011955152f,1.881921264348355f,1.8700869911087114f,1.8577286100002721f,1.8448535652497071f,1.8314696123025453f,1.8175848131515837f,1.8032075314806448f,1.7883464276266063f,1.773010453362737f,1.7572088465064848f,1.740951125354959f,1.724247082951467f,1.7071067811865474f,1.689540544737067f,1.6715589548470184f,1.6531728429537766f,1.6343932841636454f,1.615231590580627f,1.5956993044924334f,1.5758081914178454f,1.5555702330196021f,1.5349976198870971f,1.5141027441932217f,1.4928981922297841f,1.471396736825998f,1.449611329654607f,1.427555093430282f,1.40524131400499f,1.3826834323650898f,1.3598950365349882f,1.3368898533922202f,1.3136817403988914f,1.2902846772544625f,1.2667127574748984f,1.242980179903264f,1.2191012401568701f,1.1950903220161286f,1.1709618887603012f,1.146730474455362f,1.1224106751992164f,1.0980171403295608f,1.0735645635996677f,1.0490676743274178f,1.0245412285229123f,1.0000000000000002f,0.9754587714770879f,0.9509323256725822f,0.9264354364003325f,0.9019828596704394f,0.8775893248007839f,0.8532695255446384f,0.8290381112396991f,0.8049096779838716f,0.7808987598431302f,0.7570198200967362f,0.7332872425251018f,0.709715322745538f,0.6863182596011088f,0.6631101466077799f,0.6401049634650119f,0.6173165676349104f,0.5947586859950102f,0.5724449065697181f,0.5503886703453933f,0.5286032631740023f,0.5071018077702161f,0.48589725580677845f,0.46500238011290307f,0.44442976698039804f,0.42419180858215466f,0.40430069550756675f,0.3847684094193733f,0.36560671583635473f,0.34682715704622346f,0.32844104515298156f,0.31045945526293317f,0.29289321881345254f,0.2757529170485332f,0.2590488746450411f,0.24279115349351576f,0.22698954663726334f,0.2116535723733941f,0.19679246851935494f,0.18241518684841618f,0.16853038769745476f,0.155146434750293f,0.142271389999728f,0.12991300889128865f,0.11807873565164506f,0.10677569880448478f,0.09601070687655688f,0.08579024429646953f,0.07612046748871348f,0.06700720116526104f,0.058455934816979194f,0.050471819406963325f,0.043059664267791176f,0.03622393420456016f,0.029968746805456026f,0.02429786996147154f,0.01921471959676968f,0.01472235761105889f,0.010823490035219096f,0.007520465401289922f,0.004815273327803071f,0.002709543321309793f,0.001204543794827595f,0.00030118130379575003f,0.0f,0.00030118130379575003f,0.001204543794827595f,0.002709543321309793f,0.004815273327803071f,0.007520465401289922f,0.010823490035219096f,0.014722357611058778f,0.01921471959676957f,0.02429786996147143f,0.029968746805456026f,0.03622393420456005f,0.043059664267791065f,0.050471819406963214f,0.05845593481697908f,0.06700720116526093f,0.07612046748871337f,0.08579024429646942f,0.09601070687655666f,0.10677569880448467f,0.11807873565164495f,0.12991300889128854f,0.14227138999972777f,0.15514643475029277f,0.16853038769745454f,0.18241518684841595f,0.19679246851935472f,0.21165357237339388f,0.22698954663726312f,0.24279115349351543f,0.2590488746450409f,0.275752917048533f,0.2928932188134523f,0.31045945526293283f,0.32844104515298133f,0.3468271570462229f,0.36560671583635407f,0.3847684094193726f,0.40430069550756675f,0.4241918085821548f,0.4444297669803978f,0.46500238011290273f,0.4858972558067781f,0.5071018077702157f,0.5286032631740021f,0.5503886703453931f,0.5724449065697175f,0.5947586859950096f,0.6173165676349096f,0.640104963465012f,0.66311014660778f,0.6863182596011085f,0.7097153227455375f,0.7332872425251014f,0.7570198200967358f,0.7808987598431298f,0.8049096779838712f,0.8290381112396983f,0.8532695255446376f,0.877589324800784f,0.9019828596704394f,0.9264354364003325f,0.9509323256725819f,0.9754587714770876f};
@@ -102,6 +115,11 @@ void texture_wave(s_screen *screen, int x, int y, int width, int height, int off
 
 
 void texture_wave(s_screen *screen, int x, int y, int width, int height, int offsx, int offsy, s_bitmap *bitmap, int offsd, int step){
+    if(!screen || !bitmap) return;
+    size_t obor_source_bytes, obor_dest_bytes;
+    int obor_distortion;
+    int64_t obor_source_y = offsy;
+
 
 	unsigned char *src;
 	unsigned char *dest;
@@ -110,42 +128,32 @@ void texture_wave(s_screen *screen, int x, int y, int width, int height, int off
 	int twidth;
 	int tx;
 
-	// Check dimensions
-	if(x >= screen->width) return;
-	if(y >= screen->height) return;
-	if(x<0){
-		width += x;
-		x = 0;
-	}
-	if(y<0){
-		height += y;
-		y=0;
-	}
-	if(x+width > screen->width){
-		width = screen->width - x;
-	}
-	if(y+height > screen->height){
-		height = screen->height - y;
-	}
-	if(width<=0) return;
-	if(height<=0) return;
+	/* AnyBOR: validate texture dimensions and owned storage. */
+    if(!obor_texture_clip(screen->width, screen->height, bitmap->width, bitmap->height,
+            &x, &y, &width, &height) ||
+       !obor_texture_storage(screen, screen->data, screen->width, screen->height, 1, &obor_dest_bytes) ||
+       !obor_texture_storage(bitmap, bitmap->data, bitmap->width, bitmap->height, 1, &obor_source_bytes)) return;
+    /* AnyBOR: native clipped texture follows. */
 
 
 	// Dest ptr
-	dest = screen->data + ((y * screen->width) + x);
+    dest = screen->data + ((size_t)y * (size_t)screen->width + (size_t)x) * 1;
 
 	// Fill area
 	do{
 		// Source line ptr
-		sy = offsy % bitmap->height;
-		src = bitmap->data + (sy * bitmap->width);
-		offsy++;
+		sy = (int)(obor_source_y % bitmap->height);
+        if(sy < 0) return;
+        src = bitmap->data + (size_t)sy * (size_t)bitmap->width;
+		obor_source_y++;
 
 
 		// Adjust distortion stuff
 		offsd &= 255;
-		s = (offsx + distortion(offsd)) % bitmap->width;
-		offsd += step;
+		if(!obor_texture_distortion(_sinfactors[offsd], _amp, &obor_distortion)) return;
+        s = (int)(((int64_t)offsx + obor_distortion) % bitmap->width);
+        if(s < 0) return;
+		offsd = (int)(((unsigned int)offsd + (unsigned int)step) & 255u);
 
 		// Copy loop
 		tx = 0;
@@ -160,7 +168,7 @@ void texture_wave(s_screen *screen, int x, int y, int width, int height, int off
 		}
 
 		// Advance destination line pointer
-		dest += screen->width;
+		if(height > 1) dest += (size_t)screen->width * 1;
 	}while(--height);
 
 }
@@ -169,13 +177,15 @@ void texture_wave(s_screen *screen, int x, int y, int width, int height, int off
 
 
 
-static void draw_plane_line(unsigned char *destline, unsigned char *srcline, int destlen, int srclen, int stretchto, int texture_offset){
+static void draw_plane_line(unsigned char *destline, unsigned char *srcline, int destlen, int srclen, uint64_t stretchto, int texture_offset, size_t source_available){
+    if(!destline || !srcline || destlen <= 0 || srclen <= 0 || !stretchto) return;
+
 	int i;
 	unsigned int s, s_pos, s_step;
 	int center_offset = destlen / 2;
 
-	s_pos = texture_offset + (256 * srclen);
-	s_step = srclen * 256 / stretchto;
+	s_pos = (unsigned int)texture_offset + (unsigned int)srclen * 256u;
+	s_step = (unsigned int)((uint64_t)(unsigned int)srclen * 256u / stretchto);
 	s_pos -= center_offset * s_step;
 
 	for(i=0; i<destlen; i++){
@@ -184,7 +194,8 @@ static void draw_plane_line(unsigned char *destline, unsigned char *srcline, int
 			s %= srclen;
 			s_pos = (s_pos & 0xFF) | (s << 8);
 		}
-		destline[i] = srcline[s];
+        if((size_t)s >= source_available) return;
+        destline[i] = srcline[s];
 		s_pos += s_step;
 	}
 }
@@ -193,6 +204,9 @@ static void draw_plane_line(unsigned char *destline, unsigned char *srcline, int
 
 // Draw a plane (like the sea)
 void texture_plane(s_screen *screen, int x, int y, int width, int height, int fixp_offs, int factor, s_bitmap *bitmap){
+    if(!screen || !bitmap) return;
+    size_t obor_source_bytes, obor_dest_bytes;
+
 
 	int i;
 	unsigned char *dest;
@@ -200,40 +214,29 @@ void texture_plane(s_screen *screen, int x, int y, int width, int height, int fi
 	int sy;
 
 	if(factor < 0) return;
-	factor++;
+	uint64_t obor_factor = (uint64_t)(unsigned int)factor + 1;
 
 
-	// Check dimensions
-	if(x >= screen->width) return;
-	if(y >= screen->height) return;
-	if(x<0){
-		width += x;
-		x = 0;
-	}
-	if(y<0){
-		height += y;
-		y=0;
-	}
-	if(x+width > screen->width){
-		width = screen->width - x;
-	}
-	if(y+height > screen->height){
-		height = screen->height - y;
-	}
-	if(width<=0) return;
-	if(height<=0) return;
+	/* AnyBOR: validate texture dimensions and owned storage. */
+    if(!obor_texture_clip(screen->width, screen->height, bitmap->width, bitmap->height,
+            &x, &y, &width, &height) ||
+       !obor_texture_storage(screen, screen->data, screen->width, screen->height, 1, &obor_dest_bytes) ||
+       !obor_texture_storage(bitmap, bitmap->data, bitmap->width, bitmap->height, 1, &obor_source_bytes)) return;
+    /* AnyBOR: native clipped texture follows. */
 
 
-	dest = screen->data + ((y*screen->width) + x);
+    dest = screen->data + ((size_t)y * (size_t)screen->width + (size_t)x) * 1;
 	sy = 0;
 	for(i=0; i<height; i++)
 	{
 		sy = i % bitmap->height;
-		src = bitmap->data + (sy * bitmap->width);
+        src = bitmap->data + (size_t)sy * (size_t)bitmap->width;
 
-		draw_plane_line(dest,src, width,bitmap->width, bitmap->width + ((bitmap->width * i) / factor), fixp_offs);
+		draw_plane_line(dest, src, width, bitmap->width,
+            (uint64_t)(unsigned int)bitmap->width + (uint64_t)(unsigned int)bitmap->width * (unsigned int)i / obor_factor,
+            fixp_offs, obor_source_bytes - (size_t)sy * (size_t)bitmap->width);
 
-		dest += screen->width;
+		if(i + 1 < height) dest += (size_t)screen->width * 1;
 	}
 }
 
@@ -246,9 +249,10 @@ extern void texture_planex8p32(s_screen *screen, int x, int y, int width, int he
 
 void apply_texture_wave(s_screen *screen, int x, int y, int width, int height, int offsx, int offsy, s_bitmap *bitmap, int offsd, int step, s_drawmethod* drawmethod)
 {
-	unsigned char* table;
-	if(drawmethod || drawmethod->flag==0) table = NULL;
-	else table = drawmethod->table;
+	    /* AnyBOR: every valid native method ignored its custom table. */
+    (void)drawmethod;
+    unsigned char *table = NULL;
+    if(!screen || !bitmap) return;
 
 	switch(screen->pixelformat)
 	{
@@ -266,9 +270,10 @@ void apply_texture_wave(s_screen *screen, int x, int y, int width, int height, i
 
 void apply_texture_plane(s_screen *screen, int x, int y, int width, int height, int fixp_offs, int factor, s_bitmap *bitmap, s_drawmethod* drawmethod)
 {
-	unsigned char* table;
-	if(drawmethod || drawmethod->flag==0) table = NULL;
-	else table = drawmethod->table;
+	    /* AnyBOR: every valid native method ignored its custom table. */
+    (void)drawmethod;
+    unsigned char *table = NULL;
+    if(!screen || !bitmap) return;
 
 	switch(screen->pixelformat)
 	{

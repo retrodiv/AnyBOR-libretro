@@ -1484,9 +1484,27 @@ void Parser_Mult_expr2(Parser* pparser )
 	else Parser_Error(pparser, mult_expr2 );
 }
 
+/* Bound in-place token prefixes without changing fitting native literals.
+ * SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+static int obor_parser_prefix_token(Parser *parser, Token *token, char prefix)
+{
+    const char *end;
+    size_t length;
+    if(!token || !(end = memchr(token->theSource, 0, sizeof(token->theSource))) ||
+       (size_t)(end - token->theSource) + 1 >= sizeof(token->theSource))
+    {
+        Parser_Error(parser, unary_expr);
+        return 0;
+    }
+    length = (size_t)(end - token->theSource);
+    memmove(token->theSource + 1, token->theSource, length + 1);
+    token->theSource[0] = prefix;
+    return 1;
+}
+
 void Parser_Unary_expr(Parser* pparser )
 {
-	static CHAR buf[MAX_TOKEN_LENGTH+1];
 	Instruction* pInstruction = NULL;
 
 	if (ParserSet_First(&(pparser->theParserSet), postfix_expr, pparser->theNextToken.theType )){
@@ -1525,8 +1543,7 @@ void Parser_Unary_expr(Parser* pparser )
 			pInstruction->OpCode==CONSTDBL )
 		{
 			//convert to negative constant
-			sprintf(buf, "-%s", pInstruction->theToken->theSource);
-			strcpy(pInstruction->theToken->theSource, buf);
+			if(!obor_parser_prefix_token(pparser, pInstruction->theToken, '-')) return;
 		}else if(pInstruction->OpCode==CONSTSTR) {
 			//string constant should not be valid , drop it anyway
 			Parser_Error(pparser, unary_expr );
@@ -1547,8 +1564,7 @@ void Parser_Unary_expr(Parser* pparser )
 			pInstruction->OpCode==CONSTSTR)
 		{
 			//convert to negative constant
-			sprintf(buf, "!%s", pInstruction->theToken->theSource);
-			strcpy(pInstruction->theToken->theSource, buf);
+			if(!obor_parser_prefix_token(pparser, pInstruction->theToken, '!')) return;
 		}else Parser_AddInstructionViaToken(pparser, NOT, (Token*)NULL, NULL );
 	}
 	else Parser_Error(pparser, unary_expr );

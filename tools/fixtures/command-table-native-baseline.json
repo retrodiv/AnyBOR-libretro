@@ -1,0 +1,39 @@
+{
+  "schema": 1,
+  "scope": "Pre-delta materialized native table helper/release controls. Own upstream source and caller reviews are separate evidence. Original helper runs only on valid owned or fixed-shared paths.",
+  "source_notice": "Original code retains OpenBOR source notices/licenses in the engine trees. Control metadata: Copyright (c) 2026 retrodiv <retrodiv@proton.me>, BSD-3-Clause.",
+  "engines": {
+    "3741": {
+      "alloc_specials": "void alloc_specials(s_model* newchar){\n\tif(obor_profile_build < 3652)\n\t{\n\t\tif(newchar->specials_loaded < 0 || newchar->specials_loaded >= max_freespecials)\n\t\t\tshutdown(1, \"Too many Freespecials and/or Cancels. Please increase Maxfreespecials\");\n\t\treturn;\n\t}\n\t/* Fixed arrays retain the unused inherited row until the original grow point. */\n\tif(obor_profile_build < 3711 && newchar->specials_loaded < max_freespecials) return;\n\tnewchar->special = realloc(newchar->special, sizeof(s_com)*(newchar->specials_loaded+1));\n\t/* Retain the existing first row in3711; initialize newly grown storage. */\n\tif(obor_profile_build >= 3713 || newchar->specials_loaded > 0)\n\tmemset(newchar->special+newchar->specials_loaded, 0, sizeof(s_com));\n}\n",
+      "table_release": "if(hasFreetype(model, MF_SPECIAL) && model->special)\n\t\t{free(model->special); model->special = NULL;}"
+    },
+    "3842": {
+      "alloc_specials": "void alloc_specials(s_model* newchar){\n\tnewchar->special = realloc(newchar->special, sizeof(*newchar->special)*(newchar->specials_loaded+1));\n\tmemset(newchar->special+newchar->specials_loaded, 0, sizeof(*newchar->special));\n}\n",
+      "table_release": "if(hasFreetype(model, MF_SPECIAL) && model->special)\n\t\t{free(model->special); model->special = NULL;}"
+    },
+    "4086": {
+      "alloc_specials": "void alloc_specials(s_model *newchar)\n{\n    newchar->special = realloc(newchar->special, sizeof(*newchar->special) * (newchar->specials_loaded + 1));\n    memset(newchar->special + newchar->specials_loaded, 0, sizeof(*newchar->special));\n}\n",
+      "table_release": "if(hasFreetype(model, MF_SPECIAL) && model->special)\n    {\n        free(model->special);\n        model->special = NULL;\n    }"
+    },
+    "4432": {
+      "alloc_specials": "void alloc_specials(s_model *newchar)\n{\n    newchar->special = realloc(newchar->special, sizeof(*newchar->special) * (newchar->specials_loaded + 1));\n    memset(newchar->special + newchar->specials_loaded, 0, sizeof(*newchar->special));\n}\n",
+      "table_release": "if(hasFreetype(model, MF_SPECIAL) && model->special)\n    {\n        free(model->special);\n        model->special = NULL;\n    }"
+    },
+    "6391": {
+      "alloc_specials": "void alloc_specials(s_model *newchar)\n{\n    newchar->special = realloc(newchar->special, sizeof(*newchar->special) * (newchar->specials_loaded + 1));\n    memset(newchar->special + newchar->specials_loaded, 0, sizeof(*newchar->special));\n}\n",
+      "table_release": "if(hasFreetype(model, MF_SPECIAL) && model->special)\n    {\n        free(model->special);\n        model->special = NULL;\n    }"
+    },
+    "7142": {
+      "alloc_specials": "void alloc_specials(s_model *newchar)\n{\n    newchar->special = realloc(newchar->special, sizeof(s_com) * (newchar->specials_loaded + 1));\n    memset(newchar->special + newchar->specials_loaded, 0, sizeof(s_com));\n}\n",
+      "table_release": "if(hasFreetype(model, MF_SPECIAL) && model->special)\n    {\n        free(model->special);\n        model->special = NULL;\n    }"
+    },
+    "7533": {
+      "alloc_specials": "void alloc_specials(s_model *newchar)\n{\n    newchar->special = realloc(newchar->special, sizeof(s_com) * (newchar->specials_loaded + 1));\n    memset(newchar->special + newchar->specials_loaded, 0, sizeof(s_com));\n}\n",
+      "table_release": "if(hasFreetype(model, MF_SPECIAL) && model->special)\n    {\n        free(model->special);\n        model->special = NULL;\n    }"
+    },
+    "8023": {
+      "alloc_specials": "static bool alloc_specials(s_model* newchar)\n{\n    s_com* expanded_specials;\n    size_t expanded_count;\n    bool owns_special_table;\n\n    if(!newchar\n        || newchar->specials_loaded < 0\n        || newchar->specials_loaded == INT_MAX) {\n        return false;\n    }\n\n    owns_special_table =\n        (newchar->freetypes & MF_SPECIAL) != 0;\n\n    /*\n    * A subclass initially shares its parent's command\n    * table. A positive inherited count without a table\n    * is invalid and cannot be copied safely.\n    */\n    if(newchar->specials_loaded > 0\n        && !newchar->special) {\n        return false;\n    }\n\n    /*\n    * Calculate the new size of the table, which is\n    * the current number of loaded specials plus one\n    * for the new entry. Check for overflow before\n    * attempting to realloc the table.\n    */\n    expanded_count = (size_t)newchar->specials_loaded + 1;\n\n    if(expanded_count > SIZE_MAX / sizeof(*expanded_specials)) {\n        return false;\n    }\n\n    /*\n    * Models that own their table may expand it in place.\n    * A subclass that still shares an inherited table must\n    * allocate and copy first, leaving the parent untouched.\n    */\n\n    if(owns_special_table) {\n        expanded_specials = realloc(\n            newchar->special,\n            sizeof(*expanded_specials) * expanded_count\n        );\n    } else {\n        expanded_specials = malloc(\n            sizeof(*expanded_specials) * expanded_count\n        );\n\n        if(expanded_specials\n            && newchar->specials_loaded > 0) {\n            memcpy(\n                expanded_specials,\n                newchar->special,\n                sizeof(*expanded_specials)\n                    * (size_t)newchar->specials_loaded\n            );\n        }\n    }\n\n    if(!expanded_specials) {\n        return false;\n    }\n\n    newchar->special = expanded_specials;\n    newchar->freetypes |= MF_SPECIAL;\n\n    memset(\n        &newchar->special[newchar->specials_loaded],\n        0,\n        sizeof(*newchar->special)\n    );\n\n    return true;\n}\n",
+      "table_release": "if(hasFreetype(model, MF_SPECIAL) && model->special)\n    {\n        free(model->special);\n        model->special = NULL;\n    }"
+    }
+  }
+}

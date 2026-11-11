@@ -262,7 +262,8 @@ HRESULT pp_error(pp_parser *self, char *format, ...)
     va_list arglist;
 
     va_start(arglist, format);
-    vsprintf(buf, format, arglist);
+    vsnprintf(buf, sizeof(buf), format, arglist);
+    buf[sizeof(buf) - 1] = 0;
     va_end(arglist);
     pp_message(self, "error", buf);
 
@@ -278,7 +279,8 @@ void pp_warning(pp_parser *self, char *format, ...)
     va_list arglist;
 
     va_start(arglist, format);
-    vsprintf(buf, format, arglist);
+    vsnprintf(buf, sizeof(buf), format, arglist);
+    buf[sizeof(buf) - 1] = 0;
     va_end(arglist);
     pp_message(self, "warning", buf);
 }
@@ -474,7 +476,7 @@ pp_token *pp_parser_emit_token(pp_parser *self)
             {
                 pp_parser* p;
                 pp_lexer tmpLexer;
-                pp_token tokenA, tokenB;
+                pp_token tokenA = {0}, tokenB = {0};
                 char buf1[1024] = {""}, buf2[1024] = {""};
                 TEXTPOS start = {0,0};
 
@@ -1060,7 +1062,8 @@ HRESULT pp_parser_define(pp_parser *self, char *name)
                     break;
                 }
             default:
-                return pp_error(self, "unexpected token '%s' in #define parameter list", self->token.theSource);
+                pp_error(self, "unexpected token '%s' in #define parameter list", self->token.theSource);
+                goto error;
             }
 
             if(self->token.theType != PP_TOKEN_RPAREN)
@@ -1103,6 +1106,7 @@ error:
     {
         List_Remove(params);
     }
+    List_Clear(params);
     free(params);
     if(contents)
     {
@@ -1284,7 +1288,7 @@ HRESULT pp_parser_insert_function_macro(pp_parser *self, char *name)
     {
         if(FAILED(pp_parser_lex_token_essential(self, false)))
         {
-            return E_FAIL;
+            goto obor_macro_argument_error;
         }
         type = self->token.theType;
         bool write = false;
@@ -1294,10 +1298,12 @@ HRESULT pp_parser_insert_function_macro(pp_parser *self, char *name)
         case PP_TOKEN_NEWLINE:
             if(paramBuffer[0] != '\0')
             {
-                return pp_error(self, "unexpected newline in parameter list for function '%s'", name);
+                pp_error(self, "unexpected newline in parameter list for function '%s'", name);
+                goto obor_macro_argument_error;
             }
         case PP_TOKEN_EOF:
-            return pp_error(self, "unexpected end of file in parameter list for function '%s'", name);
+            pp_error(self, "unexpected end of file in parameter list for function '%s'", name);
+            goto obor_macro_argument_error;
         case PP_TOKEN_LPAREN:
             parenLevel++;
             write = true;
@@ -1335,7 +1341,8 @@ HRESULT pp_parser_insert_function_macro(pp_parser *self, char *name)
             paramCount++;
             if(paramCount > numParams)
             {
-                return pp_error(self, "too many parameters to function '%s'", name);
+                pp_error(self, "too many parameters to function '%s'", name);
+                goto obor_macro_argument_error;
             }
 
             // no need to create a macro if passed variable name is the same as the parameter name
@@ -1354,9 +1361,10 @@ HRESULT pp_parser_insert_function_macro(pp_parser *self, char *name)
             {
                 if((strlen(paramBuffer) + strlen(List_Retrieve(self->params)) + 1) > sizeof(paramBuffer))
                 {
-                    return pp_error(self,
+                    pp_error(self,
                                     "parameter %d of function '%s' exceeds max length of %d characters",
-                                    name, sizeof(paramBuffer)-1);
+                                    paramCount, name, (int)sizeof(paramBuffer) - 1);
+                    goto obor_macro_argument_error;
                 }
                 strcat(paramBuffer, List_Retrieve(self->params));
                 write = false;
@@ -1375,8 +1383,11 @@ HRESULT pp_parser_insert_function_macro(pp_parser *self, char *name)
         if(write)
         {
             if((strlen(paramBuffer) + strlen(self->token.theSource) + 1) > sizeof(paramBuffer))
-                return pp_error(self, "parameter %d of function '%s' exceeds max length of %d characters",
-                                name, sizeof(paramBuffer) - 1);
+            {
+                pp_error(self, "parameter %d of function '%s' exceeds max length of %d characters",
+                                paramCount, name, (int)sizeof(paramBuffer) - 1);
+                goto obor_macro_argument_error;
+            }
 
             strcat(paramBuffer, self->token.theSource);
         }
@@ -1384,8 +1395,11 @@ HRESULT pp_parser_insert_function_macro(pp_parser *self, char *name)
     while(parenLevel >= 0 || type != PP_TOKEN_RPAREN);
 
     if(paramCount < numParams)
-        return pp_error(self, "not enough parameters to function '%s' (%i given, %i expected)",
+    {
+        pp_error(self, "not enough parameters to function '%s' (%i given, %i expected)",
                         name, paramCount, numParams);
+        goto obor_macro_argument_error;
+    }
 
     // do the actual parsing
     List_GotoLast(params);
@@ -1393,6 +1407,18 @@ HRESULT pp_parser_insert_function_macro(pp_parser *self, char *name)
     self->child->macroName = strdup(name);
 
     return S_OK;
+
+obor_macro_argument_error:
+    /* The child owns this list only after successful macro creation. */
+    List_Reset(paramDefs);
+    while(List_GetSize(paramDefs) > 0)
+    {
+        free(List_Retrieve(paramDefs));
+        List_Remove(paramDefs);
+    }
+    List_Clear(paramDefs);
+    free(paramDefs);
+    return E_FAIL;
 }
 
 /**

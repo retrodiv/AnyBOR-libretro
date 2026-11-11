@@ -8,7 +8,7 @@ Copyright (c) 2026 retrodiv <retrodiv@proton.me>
 """
 import json
 import re
-from native_header_fixtures import inline_refusals, graphics_refusals
+from native_header_fixtures import inline_refusals, graphics_refusals, assertion_refusals
 
 
 def render_frames(parts, *, visible_components, revision, labels,
@@ -49,6 +49,7 @@ def render_frames(parts, *, visible_components, revision, labels,
 #endif
 #define assert(condition) do {if(!(condition))abort();} while(0)
 uint32_t obor_profile_build=@REVISION@;
+@ASSERTIONS@
 /* Some native headers declare these interpreter entries inline. The frame
    contract does not link the VM; refuse unexpected execution explicitly. */
 HRESULT Interpreter_Call(Interpreter *interpreter) {(void)interpreter;abort();}
@@ -173,6 +174,7 @@ int main(void) {
 '''
     unused_graphics=graphics_refusals(unused_graphics_inlines)
     values=dict(REVISION=str(revision),VISIBLE=str(visible_components),CACHE=parts['cache'],
+                ASSERTIONS=assertion_refusals(),
                 UNUSED_GRAPHICS=unused_graphics,
                 UNUSED_INLINES=refusal_definitions,
                 SET=parts['setDrawMethod'],GET=parts['getDrawMethod'],ALLOC=parts['alloc_frames'],

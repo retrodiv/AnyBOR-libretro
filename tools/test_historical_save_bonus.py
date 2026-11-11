@@ -265,6 +265,9 @@ static FILE *controlled_open(const char *path,const char *mode) {
  assert(!owned_file);owned_file=tmpfile();assert(owned_file);
  assert(fwrite("abc\n",1,4,owned_file)==4);rewind(owned_file);return owned_file;
 }
+static int controlled_close(FILE *file) {
+ assert(file && file==owned_file);owned_file=NULL;return fclose(file);
+}
 static void Script_Init(Script *s,const char *name,void *unused,int flag) {
  assert(!strcmp(name,"loadScriptFile") && !unused && flag==1);event('I');s->initialized=1;
 }
@@ -281,7 +284,9 @@ static int Script_AppendText(Script *s,char *text,char *path) {
  snprintf(appended,sizeof(appended),"%s",text);return append_ok;
 }
 #define fopen controlled_open
+#define fclose controlled_close
 @LOADER@
+#undef fclose
 #undef fopen
 static int caller_result,caller_count;
 static int caller_load(void) {++caller_count;return caller_result;}
@@ -311,8 +316,8 @@ static void check(int native_file) {
    /* The original loader is void and its caller ignores this internal result. */
    assert(!strcmp(loaded_path,expected_path) && !*appended);
   }
-  /* Teardown owns the service stream; this does not claim core stream cleanup. */
-  if(owned_file){assert(fclose(owned_file)==0);owned_file=NULL;}
+  /* A native byte loader must close its stream before returning. */
+  assert(!owned_file);
  }
  for(caller_result=0;caller_result<2;++caller_result) {
   caller_count=0;*warning=0;call_warning();assert(caller_count==1);

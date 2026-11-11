@@ -138,7 +138,7 @@ void debugBuf(unsigned char* buf, size_t size, int columns) {
 void lc(char* buf, size_t size) {
 	ptrdiff_t i;
 	for(i=0;i<size;i++)
-		buf[i] = tolower((int)buf[i]);
+		buf[i] = tolower((unsigned char)buf[i]);
 }
 
 // returns position after next newline in buf

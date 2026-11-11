@@ -1,0 +1,60 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#define FRAME_CHECK(c) do {if(!(c)){fprintf(stderr,"frame input contract profile=%u case=%u line=%d: %s\n",obor_profile_build,active_case,__LINE__,#c);abort();}}while(0)
+int main(void) {
+    for(volatile unsigned r=0;r<sizeof(contexts)/sizeof(*contexts);++r) {
+        obor_profile_build=contexts[r].revision;
+        for(active_case=0;active_case<12;++active_case) {
+            setup();memset(&subject,0,sizeof(subject));memset(&other,0,sizeof(other));
+            subject.animation=&animation;subject.animpos=1;subject.nextanim=77;self=&other;
+            entered=0;entered_frame=0;
+            volatile @TYPE@ frame=0;
+            entity *volatile target=&subject;
+            switch(active_case) {
+            case 0:break;
+            case 1:frame=2;break;
+            case 2:frame=3;break;
+            case 3:frame=(@TYPE@)-1;break;
+            case 4:target=NULL;break;
+            case 5:subject.animation=NULL;break;
+            case 6:animation.numframes=0;break;
+            case 7:animation.numframes=-1;break;
+            case 8:frame=@LARGE@;break;
+            case 9:animation.numframes=1;break;
+            case 10:frame=(@TYPE@)(INT_MIN);break;
+            case 11:animation.numframes=-2;break;
+            default:abort();
+            }
+            unsigned char old_subject[sizeof(subject)],old_other[sizeof(other)],old_animation[sizeof(animation)];
+            memcpy(old_subject,&subject,sizeof(subject));memcpy(old_other,&other,sizeof(other));
+            memcpy(old_animation,&animation,sizeof(animation));
+            volatile int valid=active_case==0 || active_case==1 || active_case==9;
+            volatile int expected_stop=0;
+#ifndef NDEBUG
+            /* This source-owned assertion precedes context restoration in
+             * early profiles; its existing controlled-stop path is retained. */
+            expected_stop=obor_profile_build>=3083 && obor_profile_build<3202 &&
+                (active_case==2 || active_case==6 || active_case==7 ||
+                 active_case==8 || active_case==11);
+#endif
+            if(!setjmp(frontend_return)) {
+                update_frame(target,frame);
+                FRAME_CHECK(!expected_stop && entered==(unsigned)valid);
+                FRAME_CHECK(!stopped && !records && !flushes && engine_alive && self==&other);
+                if(valid)FRAME_CHECK(entered_frame==(uint64_t)frame);
+            } else {
+                FRAME_CHECK(expected_stop && stopped==1 && !entered);
+                FRAME_CHECK(records==1 && flushes==1 && self==&subject);
+                FRAME_CHECK(strstr(diagnostic,"f < self->animation->numframes")!=NULL);
+                FRAME_CHECK(strstr(diagnostic,"update_frame")!=NULL);
+            }
+            FRAME_CHECK(!memcmp(old_subject,&subject,sizeof(subject)));
+            FRAME_CHECK(!memcmp(old_other,&other,sizeof(other)));
+            FRAME_CHECK(!memcmp(old_animation,&animation,sizeof(animation)));
+        }
+    }
+    printf("{\"profiles\":%u,\"cases\":%u}\n",(unsigned)(sizeof(contexts)/sizeof(*contexts)),
+           12u*(unsigned)(sizeof(contexts)/sizeof(*contexts)));
+    return 0;
+}

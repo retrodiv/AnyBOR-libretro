@@ -24,6 +24,8 @@ static s_model model;
 static int dump_calls, dump_count, dump_valid_rows;
 
 static int quiet_printf(const char *format, ...) { (void)format; return 0; }
+/* The numeric-field routing probe must not enter variable-table ownership. */
+void obor_entity_varlist_set(entity *owner,void *value) {(void)owner;(void)value;abort();}
 void StrCache_Collect(int index) { (void)index; abort(); }
 CHAR *StrCache_Get(int index) { (void)index; abort(); }
 int StrCache_Pop(int size) { (void)size; abort(); }

@@ -12,6 +12,7 @@
  */
 
 #include "obor_resources.h"
+#include <stddef.h>
 
 /*
  * OpenBOR - http://www.chronocrash.com
@@ -711,6 +712,7 @@ unsigned encodesprite(
     int *linetab;
     unsigned char *src = bitmap->data;
     int pb = PAL_BYTES, extrab;
+    size_t encoded_size;
 
     if(dest) obor_resources_forget_owner(dest);
     if(dest)
@@ -750,8 +752,9 @@ unsigned encodesprite(
         dest->pixelformat = bitmap->pixelformat;
         dest->mask = NULL;
     }
-    linetab = (int *)(dest->data);
-    data = (unsigned char *)(linetab + h);
+    linetab = dest ? dest->data : NULL;
+    data = dest ? (unsigned char *)(linetab + h) : NULL;
+    encoded_size = offsetof(s_sprite, data) + (size_t)h * sizeof(*linetab);
 
     src += bitmap->clipped_y_offset * origwidth;
     src += xoffset;
@@ -779,25 +782,25 @@ unsigned encodesprite(
             {
                 if(dest)
                 {
-                    *data = 0xFF;
+                    *data++ = 0xFF;
                 }
-                data++;
+                ++encoded_size;
                 break;
             }
             // encode clearcount
             if(dest)
             {
-                *data = x - x0;
+                *data++ = x - x0;
             }
-            data++;
+            ++encoded_size;
             // if we're still not visible, encode a null visible count and continue
             if(!src[x])
             {
                 if(dest)
                 {
-                    *data = 0;
+                    *data++ = 0;
                 }
-                data++;
+                ++encoded_size;
                 continue;
             }
             // search for the first invisible pixel
@@ -816,10 +819,7 @@ unsigned encodesprite(
                 memcpy(data, src + x0, x - x0);
                 data += x - x0;
             }
-            else
-            {
-                data += 1 + (x - x0);
-            }
+            encoded_size += 1 + (x - x0);
         }
     }
 
@@ -829,7 +829,7 @@ unsigned encodesprite(
     }
     else
     {
-        extrab = ((size_t)data) - ((size_t)dest);
+        extrab = encoded_size;
         extrab %= 4;
         extrab = 4 - extrab;
         extrab %= 4;
@@ -852,7 +852,7 @@ unsigned encodesprite(
         obor_resources_sprite_encoded(bitmap, dest, dest->data,
             (size_t)(data - (unsigned char *)dest->data),
             bitmap->clipped_x_offset, bitmap->clipped_y_offset, w, h);
-    return ((size_t)data) - ((size_t)dest) + extrab + pb + ANYNUMBER;
+    return encoded_size + extrab + pb + ANYNUMBER;
 }
 
 /////////////////////////////////////////////////////////////////////////////

@@ -1,0 +1,194 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <assert.h>
+#include <limits.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+@CONFIG@
+#include "openbor.h"
+#include "@SCRIPT_HEADER@"
+@PROFILE_HEADER@
+#undef printf
+#undef exit
+#undef malloc
+#undef assert
+#include <assert.h>
+uint32_t obor_profile_build;
+s_anim_list *anim_list;
+static unsigned queries, allocations;
+#define CHECK(x) do { ++queries; assert(x); } while(0)
+static int quiet_printf(const char *format,...) { (void)format;return 0; }
+#define printf quiet_printf
+/* Every call below is numeric. Unexpected string conversions are refused. */
+CHAR *StrCache_Get(int n) { (void)n;abort(); }
+CHAR *StrCache_GetIfPresent(int n) { (void)n;abort(); }
+int StrCache_Pop(@POP_ARGUMENTS@) { abort(); }
+void StrCache_Collect(int n) { (void)n;abort(); }
+void StrCache_Copy(int n,CHAR *s) { (void)n;(void)s;abort(); }
+int StrCache_CreateNewFrom(const CHAR *s) { (void)s;abort(); }
+@CONVERSIONS@
+@DIAGNOSTIC@
+@STOP@
+typedef __typeof__(**((s_anim *)0)->collision_attack) frame_record;
+static frame_record *backing[5];
+static frame_record frame_a,frame_b;
+static @ATTACK_TYPE@ attack;
+static s_anim animation,copy;
+static s_anim_list owners[3];
+static void *table_malloc(size_t bytes) {
+ CHECK(bytes==3*sizeof(*backing));CHECK(++allocations==1);
+ memset(backing,0x5a,sizeof(backing));return backing;
+}
+#define malloc table_malloc
+static void allocate_table(s_anim *a,int framecount) {
+ size_t size_col_on_frame,memory_size;
+ @ALLOCATION@
+}
+#undef malloc
+#include "obor_attack_query.h"
+@COLLECTION@
+@INSTANCE@
+@BODY_INSTANCE@
+@PROPERTY@
+
+typedef HRESULT (*getter)(ScriptVariant **,ScriptVariant **,int);
+static ScriptVariant values[2],result,*args[2],*out;
+static void reset(void *object,int index) {
+ memset(values,0,sizeof(values));memset(&result,0,sizeof(result));
+ values[0].vt=VT_PTR;values[0].ptrVal=object;
+ values[1].vt=VT_INTEGER;values[1].lVal=index;
+ args[0]=&values[0];args[1]=&values[1];out=&result;
+}
+static void empty_collection(void *table,int frame) {
+ reset(table,frame);CHECK(openbor_get_attack_collection(args,&out,2)==S_OK);
+ CHECK(out==&result && result.vt==VT_EMPTY);
+}
+static void pointer_collection(void *table,int frame,void *expected) {
+ reset(table,frame);CHECK(openbor_get_attack_collection(args,&out,2)==S_OK);
+ CHECK(out==&result && result.vt==VT_PTR && result.ptrVal==expected);
+}
+static void refused_collection(void *table,int frame) {
+ reset(table,frame);int status=openbor_get_attack_collection(args,&out,2);
+ CHECK(status==E_FAIL);CHECK(!out && result.vt==VT_EMPTY);
+}
+static void bad_arguments(getter query,void *object,int index) {
+ reset(object,index);CHECK(query(args,NULL,2)==E_FAIL);
+ reset(object,index);out=NULL;CHECK(query(args,&out,2)==E_FAIL);
+ reset(object,index);CHECK(query(NULL,&out,2)==E_FAIL && !out);
+ reset(object,index);CHECK(query(args,&out,1)==E_FAIL && !out);
+ for(int slot=0;slot<2;++slot) {
+  reset(object,index);args[slot]=NULL;CHECK(query(args,&out,2)==E_FAIL && !out);
+  reset(object,index);values[slot].vt=VT_EMPTY;CHECK(query(args,&out,2)==E_FAIL && !out);
+  reset(object,index);values[slot].vt=VT_DECIMAL;CHECK(query(args,&out,2)==E_FAIL && !out);
+ }
+}
+static void setup(void) {
+ memset(&animation,0,sizeof(animation));memset(&copy,0,sizeof(copy));
+ memset(owners,0,sizeof(owners));allocations=0;
+ owners[0].anim=NULL;owners[0].next=&owners[1];
+ owners[1].anim=&animation;owners[1].next=&owners[2];owners[2].anim=&copy;
+ anim_list=owners;
+ allocate_table(&animation,3);
+ CHECK(animation.collision_attack==backing && animation.obor_attack_frame_capacity==3);
+ allocate_table(&animation,99);
+ CHECK(allocations==1 && animation.obor_attack_frame_capacity==3);
+ CHECK(!backing[0] && !backing[1] && !backing[2]);
+ backing[0]=&frame_a;backing[1]=NULL;backing[2]=&frame_b;backing[3]=&frame_a;
+}
+static void collections(void) {
+ pointer_collection(backing,0,&frame_a);empty_collection(backing,1);
+ pointer_collection(backing,2,&frame_b);refused_collection(backing,3);
+ refused_collection(backing,-1);refused_collection(backing,INT_MAX);
+ empty_collection(backing+1,0);pointer_collection(backing+1,1,&frame_b);
+ refused_collection(backing+1,2);refused_collection((char *)backing+1,0);
+ frame_record *foreign[3]={&frame_a,NULL,&frame_b};refused_collection(foreign,0);
+ refused_collection(NULL,0);
+ animation.numframes=0;pointer_collection(backing,2,&frame_b);
+ animation.numframes=INT_MAX;pointer_collection(backing,2,&frame_b);
+ animation.obor_attack_frame_capacity=0;refused_collection(backing,0);
+ animation.obor_attack_frame_capacity=SIZE_MAX;refused_collection(backing,0);
+ animation.obor_attack_frame_capacity=3;
+ copy=animation;owners[1].anim=NULL;pointer_collection(backing,2,&frame_b);
+ owners[2].anim=NULL;refused_collection(backing,0);
+ owners[1].anim=&animation;
+ anim_list=NULL;refused_collection(backing,0);anim_list=owners;
+ bad_arguments(openbor_get_attack_collection,backing,0);
+}
+static void instances(void) {
+#if @INDEXED@
+ s_collision_collection collection={0};s_collision_instance item={0};
+ s_collision_instance *slots[2]={0};collection.slots=slots;collection.slot_capacity=2;
+ collection.active_status=(uint64_t)1<<1;collection.slots[1]=&item;item.attack=&attack;
+ reset(&collection,1);CHECK(openbor_get_attack_instance(args,&out,2)==S_OK);
+ CHECK(out==&result && result.vt==VT_PTR && result.ptrVal==&attack);
+ reset(&collection,0);CHECK(openbor_get_attack_instance(args,&out,2)==S_OK && result.vt==VT_EMPTY);
+ collection.slots[1]=NULL;
+ reset(&collection,1);CHECK(openbor_get_attack_instance(args,&out,2)==S_OK && result.vt==VT_EMPTY);
+ collection.slots[1]=&item;item.attack=NULL;
+ reset(&collection,1);CHECK(openbor_get_attack_instance(args,&out,2)==S_OK && result.vt==VT_EMPTY);
+ item.attack=&attack;
+ reset(&collection,1);CHECK(openbor_get_body_collision_instance(args,&out,2)==S_OK);
+ CHECK(out==&result && result.vt==VT_PTR && result.ptrVal==&item);
+ collection.slots=NULL;
+ reset(&collection,1);CHECK(openbor_get_attack_instance(args,&out,2)==S_OK && result.vt==VT_EMPTY);
+ reset(&collection,1);CHECK(openbor_get_body_collision_instance(args,&out,2)==S_OK && result.vt==VT_EMPTY);
+ collection.slots=slots;collection.slot_capacity=1;
+ reset(&collection,1);CHECK(openbor_get_attack_instance(args,&out,2)==S_OK && result.vt==VT_EMPTY);
+ reset(&collection,1);CHECK(openbor_get_body_collision_instance(args,&out,2)==S_OK && result.vt==VT_EMPTY);
+ collection.slot_capacity=2;
+ int invalid[]={-1,MAX_COLLISION_BOXES_PER_FRAME,INT_MAX};
+ for(unsigned i=0;i<sizeof(invalid)/sizeof(*invalid);++i) {
+  reset(&collection,invalid[i]);CHECK(openbor_get_attack_instance(args,&out,2)==E_FAIL && !out);
+ }
+ reset(NULL,0);CHECK(openbor_get_attack_instance(args,&out,2)==E_FAIL && !out);
+ bad_arguments(openbor_get_attack_instance,&collection,0);
+#else
+ int ignored[]={0,-1,INT_MAX};
+ for(unsigned i=0;i<sizeof(ignored)/sizeof(*ignored);++i) {
+  reset(&attack,ignored[i]);CHECK(openbor_get_attack_instance(args,&out,2)==S_OK);
+  CHECK(out==&result && result.vt==VT_PTR && result.ptrVal==&attack);
+  reset(NULL,ignored[i]);CHECK(openbor_get_attack_instance(args,&out,2)==S_OK);
+  CHECK(out==&result && result.vt==VT_PTR && !result.ptrVal);
+ }
+ bad_arguments(openbor_get_attack_instance,&attack,0);
+#endif
+}
+static void properties(void) {
+ attack.attack_force=73;
+ reset(&attack,@FORCE@);CHECK(openbor_get_attack_property(args,&out,2)==S_OK);
+ CHECK(out==&result && result.vt==VT_INTEGER && result.lVal==73);
+ int guarded[]={@GUARDED_CASES@};
+ for(unsigned i=0;i<sizeof(guarded)/sizeof(*guarded);++i) {
+  reset(NULL,guarded[i]);CHECK(openbor_get_attack_property(args,&out,2)==E_FAIL);
+  CHECK(!out && result.vt==VT_EMPTY);
+ }
+#if @NULL_CASE_COUNT@
+ int defined_null[]={@NULL_CASES@};
+ for(unsigned i=0;i<(unsigned)@NULL_CASE_COUNT@;++i) {
+  reset(NULL,defined_null[i]);CHECK(openbor_get_attack_property(args,&out,2)==S_OK);
+  CHECK(out==&result && result.vt==VT_INTEGER && result.lVal==0);
+ }
+#endif
+ int unknown[]={-1,INT_MAX};
+ for(unsigned i=0;i<sizeof(unknown)/sizeof(*unknown);++i) {
+  reset(NULL,unknown[i]);CHECK(openbor_get_attack_property(args,&out,2)==E_FAIL);
+  CHECK(out==&result && result.vt==VT_EMPTY);
+ }
+ bad_arguments(openbor_get_attack_property,&attack,@FORCE@);
+}
+int main(void) {
+ unsigned profiles[]={@PROFILES@};
+ for(unsigned i=0;i<sizeof(profiles)/sizeof(*profiles);++i) {
+  obor_profile_build=profiles[i];setup();
+#ifdef ENDPOINT_ONLY
+  refused_collection(backing,3);
+#else
+  collections();instances();properties();
+#endif
+ }
+#undef printf
+ printf("{\"status\":\"PASS\",\"profiles\":%zu,\"queries\":%u}\n",sizeof(profiles)/sizeof(*profiles),queries);
+ return 0;
+}

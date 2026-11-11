@@ -1,0 +1,145 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ * Native entries/records with bounded damage and kill observers.
+ */
+#include <stdint.h>
+#include <limits.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <stdarg.h>
+@CONFIG@
+#include "openbor.h"
+#include "@SCRIPT_HEADER@"
+#undef printf
+#undef assert
+#ifdef NDEBUG
+#error Health assertions must remain enabled
+#endif
+uint32_t obor_profile_build;
+@IDS_HEADER@@NATIVE_ATTACK_LIMIT@
+entity *self;
+static entity target,other_actor,sentinel;
+static unsigned cases,kills,callbacks,defenses;
+static int received_force,received_drop,received_type,defense_type;
+static char diagnostic[512];
+#define assert(c) do{if(!(c)){fprintf(stderr,"Script health profile=%u case=%u line=%d: %s\n",obor_profile_build,cases,__LINE__,#c);abort();}}while(0)
+typedef @ATTACK_TYPE@ fixture_attack;
+static fixture_attack attack,obor_script_attack;
+@DEFENSE_DECL@
+#pragma GCC diagnostic push
+/* A partial native static initializer has defined zero-filled trailing fields. */
+#pragma GCC diagnostic ignored "-Wmissing-field-initializers"
+@DEFAULT@
+#pragma GCC diagnostic pop
+_Static_assert(sizeof(LONG)==4 && sizeof(target.@HEALTH@)==4,"Native signed32 health/force");
+HRESULT Interpreter_Call(Interpreter *p){(void)p;abort();}
+HRESULT Interpreter_EvalInstruction(Interpreter *p){(void)p;abort();}
+int StrCache_Pop(@POP_ARGUMENTS@){@POP_UNUSED@ abort();}
+void StrCache_Collect(int index){(void)index;abort();}
+static int report(const char *format,...)
+{
+    va_list ap;va_start(ap,format);size_t at=strlen(diagnostic);
+    int n=vsnprintf(diagnostic+at,sizeof(diagnostic)-at,format,ap);va_end(ap);
+    assert(n>=0 && (size_t)n<sizeof(diagnostic)-at);return n;
+}
+static int take_damage(@CALLBACK_ARGUMENTS@)
+{
+    @CALLBACK_CHECKS@
+    assert(other==&other_actor || other==&target);++callbacks;
+    received_force=value->attack_force;received_drop=value->attack_drop;received_type=value->attack_type;
+    value->attack_force=29;return 37;
+}
+@KILL_PROVIDER@
+@DEFENSE_PROVIDER@
+@CONVERSIONS@
+#define printf report
+@HELPER@
+@ORIGINAL@
+@ENTRY@
+#undef printf
+static const uint32_t profiles[]={@PROFILES@};
+typedef HRESULT (*entry_fn)(ScriptVariant**,ScriptVariant**,int);
+struct observation
+{
+    HRESULT status;int has_result;ScriptVariant result;entity actor;
+    unsigned kills,calls,defenses;int force,drop,type,defense_type,self_restored;
+    char log[512];
+};
+static void observe(struct observation *out,entry_fn fn,int health,int force,int count,int callback,int bad,int null_target)
+{
+    memset(&target,0,sizeof(target));memset(&other_actor,0,sizeof(other_actor));
+    target.@HEALTH@=health;if(callback)target.takedamage=take_damage;
+    self=&sentinel;kills=callbacks=defenses=0;received_force=received_drop=received_type=defense_type=0;
+    memset(diagnostic,0,sizeof(diagnostic));attack=emptyattack;attack.attack_force=17;obor_script_attack=attack;
+    ScriptVariant args[5],result,*returned=&result,*p[5];
+    memset(args,0,sizeof(args));memset(&result,0,sizeof(result));
+    args[0].vt=VT_PTR;args[0].ptrVal=null_target?NULL:&target;
+    args[1].vt=VT_PTR;args[1].ptrVal=&other_actor;
+    args[2].vt=VT_INTEGER;args[2].lVal=force;
+    args[3].vt=VT_INTEGER;args[3].lVal=1;
+    args[4].vt=VT_INTEGER;args[4].lVal=ATK_NORMAL;
+    if(bad)args[bad].vt=VT_EMPTY;
+    for(unsigned i=0;i<5;++i)p[i]=&args[i];
+    out->status=fn(p,&returned,count);out->has_result=returned!=NULL;memcpy(&out->result,&result,sizeof(result));
+    memcpy(&out->actor,&target,sizeof(target));out->kills=kills;out->calls=callbacks;out->defenses=defenses;
+    out->force=received_force;out->drop=received_drop;out->type=received_type;out->defense_type=defense_type;
+    out->self_restored=self==&sentinel;memcpy(out->log,diagnostic,sizeof(diagnostic));
+}
+static int default_force(void)
+{
+    return @DEFAULT_FORCE@;
+}
+static void check(int health,int force,int count,int callback,int bad,int null_target)
+{
+    int64_t remaining=(int64_t)health-(count>=3?force:default_force());
+    int representable=remaining>=INT_MIN && remaining<=INT_MAX;
+    struct observation actual={0},expected={0};
+    observe(&actual,openbor_damageentity,health,force,count,callback,bad,null_target);
+    /* Original subtraction runs only in its defined domain. Callback/error
+     * controls never evaluate direct subtraction with these bad arguments. */
+    if(representable || callback || bad || null_target || count==0)
+    {
+        observe(&expected,before_damage,health,force,count,callback,bad,null_target);
+        assert(actual.status==expected.status && actual.has_result==expected.has_result);
+        assert(!memcmp(&actual.result,&expected.result,sizeof(actual.result)));
+        assert(!memcmp(&actual.actor,&expected.actor,sizeof(actual.actor)));
+        assert(actual.kills == expected.kills);
+        assert(actual.calls==expected.calls && actual.defenses==expected.defenses);
+        assert(actual.force==expected.force && actual.drop==expected.drop && actual.type==expected.type);
+        assert(actual.defense_type==expected.defense_type && actual.self_restored==expected.self_restored);
+        assert(!strcmp(actual.log,expected.log));
+    }
+    if(!callback && !bad && !null_target && count)
+    {
+        int value=remaining<INT_MIN?INT_MIN:remaining>INT_MAX?INT_MAX:(int)remaining;
+        assert(actual.status==S_OK && actual.has_result && actual.result.vt==VT_INTEGER && actual.result.lVal==1);
+        assert(actual.actor.@HEALTH@==value && actual.kills==(unsigned)(value<=0));
+        assert(!actual.calls && !actual.defenses && actual.self_restored && !actual.log[0]);
+    }
+    ++cases;
+}
+int main(void)
+{
+    const int healths[]={INT_MIN,INT_MIN+1,-1,0,1,47,INT_MAX-1,INT_MAX};
+    const int forces[]={INT_MIN,INT_MIN+1,-31,-1,0,1,17,INT_MAX-1,INT_MAX};
+    for(unsigned p=0;p<sizeof(profiles)/sizeof(*profiles);++p)
+    {
+        obor_profile_build=profiles[p];
+#ifdef THRESHOLD_ONLY
+        check(0,0,3,0,0,0);
+#else
+        for(unsigned h=0;h<sizeof(healths)/sizeof(*healths);++h)
+        for(int callback=0;callback<2;++callback)
+        {
+            for(unsigned f=0;f<sizeof(forces)/sizeof(*forces);++f)
+                check(healths[h],forces[f],3,callback,0,0);
+            check(healths[h],0,1,callback,0,0);
+        }
+        for(int bad=2;bad<=4;++bad)for(int callback=0;callback<2;++callback)
+            check(100,3,5,callback,bad,0);
+        check(100,3,0,0,0,0);check(100,3,3,0,0,1);
+#endif
+    }
+    printf("{\"status\":\"PASS\",\"profiles\":%zu,\"cases\":%u}\n",sizeof(profiles)/sizeof(*profiles),cases);return 0;
+}

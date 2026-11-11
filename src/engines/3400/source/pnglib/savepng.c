@@ -136,7 +136,11 @@ void savepng(const char* filename, s_screen* screen, u8* pal)
 	fp = fopen(filename, "wb");
 	if(!fp) return;
 	png_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
-	if(!png_ptr) return;
+	if(!png_ptr)
+    {
+        fclose(fp);
+        return;
+    }
 	info_ptr = png_create_info_struct(png_ptr);
 	if(!info_ptr)
 	{
@@ -150,6 +154,12 @@ void savepng(const char* filename, s_screen* screen, u8* pal)
 		         PNG_COMPRESSION_TYPE_DEFAULT, PNG_FILTER_TYPE_DEFAULT);
 	png_write_info(png_ptr, info_ptr);
 	line = (u8*)malloc(screen->width * 3);
+    if(!line)
+    {
+        png_destroy_write_struct(&png_ptr, &info_ptr);
+        fclose(fp);
+        return;
+    }
 	
 	vram32 = (u32*)screen->data;
 	vram16 = (u16*)screen->data;

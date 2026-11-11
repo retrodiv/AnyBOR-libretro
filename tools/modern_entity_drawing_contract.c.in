@@ -18,8 +18,7 @@ s_drawmethod drawmethod;
 static int token,queue_count;
 static s_drawmethod queued[2];
 static int queue_args[2][5];
-void exitIfFalse(int value,const char *assertion,const char *func,const char *file,int line)
-{ (void)assertion;(void)func;(void)file;(void)line;if(!value) abort(); }
+@ASSERTIONS@
 /* Exercise successful native allocations; allocation-failure policy is separate. */
 void *checkAlloc(void *ptr,size_t size,const char *func,const char *file,int line)
 { (void)func;(void)file;(void)line;if(size && !ptr) abort();return ptr; }

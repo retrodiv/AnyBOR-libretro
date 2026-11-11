@@ -1,0 +1,79 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ * Complete native parser adder, real types, bounded allocation/list observers.
+ * Instruction string storage, full grammar and VM are separate controls.
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "Parser.h"
+#undef malloc
+#undef calloc
+#undef realloc
+#undef free
+#undef printf
+#define CHECK(c) do { if(!(c)) { fprintf(stderr, "Parser label check: %s at %d\n", #c, __LINE__); abort(); } } while(0)
+uint32_t obor_profile_build;
+static Parser parser;
+static List instructions;
+static Instruction *allocated;
+static unsigned allocations, initialized, inserted;
+static Label expected_target, expected_binding;
+static OpCode expected_opcode;
+static void *instruction_malloc(size_t bytes)
+{
+    CHECK(bytes == sizeof(Instruction) && !allocated && !allocations);
+    allocated = calloc(1, bytes); CHECK(allocated); ++allocations; return allocated;
+}
+static void *named_instruction_malloc(const char *name, size_t bytes)
+{
+    CHECK(!strcmp(name, "Parser_AddInstructionViaLabel")); return instruction_malloc(bytes);
+}
+void Instruction_InitViaLabel(Instruction *instruction, OpCode code, LPCSTR label)
+{
+    CHECK(instruction == allocated && allocations == 1 && !initialized && !inserted);
+    CHECK(label && label == expected_target && code == expected_opcode);
+    instruction->OpCode = code; ++initialized;
+}
+void List_InsertAfter(List *list, void *entry, const char *binding)
+{
+    CHECK(list == &instructions && entry == allocated && initialized == 1 && !inserted);
+    CHECK(binding == expected_binding && allocated->OpCode == expected_opcode); ++inserted;
+}
+#define malloc instruction_malloc
+#define obor_profile_malloc_named(name, bytes) named_instruction_malloc(name, bytes)
+@ADDER@
+#undef malloc
+#undef obor_profile_malloc_named
+
+int main(void)
+{
+    static const unsigned profiles[] = {@PROFILES@};
+    static char empty[] = "", destination[] = "destination", branch[] = "branch";
+    static Label targets[] = {NULL, empty, destination};
+    static Label bindings[] = {NULL, branch};
+    static const OpCode opcodes[] = {JUMP, Branch_FALSE, Branch_TRUE};
+    unsigned cases = 0;
+    for(unsigned p = 0; p < sizeof(profiles) / sizeof(*profiles); ++p)
+    for(unsigned error = 0; error < 2; ++error)
+    for(unsigned t = 0; t < sizeof(targets) / sizeof(*targets); ++t)
+    for(unsigned b = 0; b < sizeof(bindings) / sizeof(*bindings); ++b)
+    for(unsigned op = 0; op < sizeof(opcodes) / sizeof(*opcodes); ++op)
+    {
+        memset(&parser, 0, sizeof(parser)); memset(&instructions, 0, sizeof(instructions));
+        parser.pIList = &instructions; parser.errorFound = error;
+        Parser expected; memcpy(&expected, &parser, sizeof(expected));
+        if(!targets[t]) expected.errorFound = TRUE;
+        obor_profile_build = profiles[p]; allocated = NULL;
+        allocations = initialized = inserted = 0;
+        expected_target = targets[t]; expected_binding = bindings[b]; expected_opcode = opcodes[op];
+        Parser_AddInstructionViaLabel(&parser, expected_opcode, expected_target, expected_binding);
+        CHECK(!memcmp(&parser, &expected, sizeof(parser)));
+        CHECK(allocations == (targets[t] != NULL) && initialized == allocations && inserted == allocations);
+        free(allocated); allocated = NULL; ++cases;
+    }
+    printf("{\"status\":\"PASS\",\"profiles\":%zu,\"cases\":%u}\n",
+           sizeof(profiles) / sizeof(*profiles), cases);
+    return 0;
+}

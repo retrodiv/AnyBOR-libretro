@@ -391,7 +391,8 @@ HRESULT pp_error(pp_parser *self, char *format, ...)
     va_list arglist;
 
     va_start(arglist, format);
-    vsprintf(buf, format, arglist);
+    vsnprintf(buf, sizeof(buf), format, arglist);
+    buf[sizeof(buf) - 1] = 0;
     va_end(arglist);
     pp_message(self, "error", buf);
 
@@ -407,7 +408,8 @@ void pp_warning(pp_parser *self, char *format, ...)
     va_list arglist;
 
     va_start(arglist, format);
-    vsprintf(buf, format, arglist);
+    vsnprintf(buf, sizeof(buf), format, arglist);
+    buf[sizeof(buf) - 1] = 0;
     va_end(arglist);
     pp_message(self, "warning", buf);
 }
@@ -1193,7 +1195,8 @@ HRESULT pp_parser_define(pp_parser *self, char *name)
                     break;
                 }
             default:
-                return pp_error(self, "unexpected token '%s' in #define parameter list", self->token.theSource);
+                pp_error(self, "unexpected token '%s' in #define parameter list", self->token.theSource);
+                goto error;
             }
 
             if(self->token.theType != PP_TOKEN_RPAREN)
@@ -1236,6 +1239,7 @@ error:
     {
         List_Remove(params);
     }
+    List_Clear(params);
     free(params);
     if(contents)
     {
@@ -1419,7 +1423,7 @@ HRESULT pp_parser_insert_function_macro(pp_parser *self, char *name)
     {
         if(FAILED(pp_parser_lex_token_essential(self, false)))
         {
-            return E_FAIL;
+            goto obor_macro_argument_error;
         }
         type = self->token.theType;
         bool write = false;
@@ -1429,10 +1433,12 @@ HRESULT pp_parser_insert_function_macro(pp_parser *self, char *name)
         case PP_TOKEN_NEWLINE:
             if(paramBuffer[0] != '\0')
             {
-                return pp_error(self, "unexpected newline in parameter list for function '%s'", name);
+                pp_error(self, "unexpected newline in parameter list for function '%s'", name);
+                goto obor_macro_argument_error;
             }
         case PP_TOKEN_EOF:
-            return pp_error(self, "unexpected end of file in parameter list for function '%s'", name);
+            pp_error(self, "unexpected end of file in parameter list for function '%s'", name);
+            goto obor_macro_argument_error;
         case PP_TOKEN_LPAREN:
             parenLevel++;
             write = true;
@@ -1498,9 +1504,10 @@ HRESULT pp_parser_insert_function_macro(pp_parser *self, char *name)
             {
                 if((strlen(paramBuffer) + strlen(List_Retrieve(self->params)) + 1) > sizeof(paramBuffer))
                 {
-                    return pp_error(self,
+                    pp_error(self,
                                     "parameter %d of function '%s' exceeds max length of %d characters",
-                                    name, sizeof(paramBuffer)-1);
+                                    paramCount, name, (int)sizeof(paramBuffer) - 1);
+                    goto obor_macro_argument_error;
                 }
                 strcat(paramBuffer, List_Retrieve(self->params));
                 write = false;
@@ -1519,8 +1526,11 @@ HRESULT pp_parser_insert_function_macro(pp_parser *self, char *name)
         if(write)
         {
             if((strlen(paramBuffer) + strlen(self->token.theSource) + 1) > sizeof(paramBuffer))
-                return pp_error(self, "parameter %d of function '%s' exceeds max length of %d characters",
-                                name, sizeof(paramBuffer) - 1);
+            {
+                pp_error(self, "parameter %d of function '%s' exceeds max length of %d characters",
+                                paramCount, name, (int)sizeof(paramBuffer) - 1);
+                goto obor_macro_argument_error;
+            }
 
             strcat(paramBuffer, self->token.theSource);
         }
@@ -1542,6 +1552,11 @@ HRESULT pp_parser_insert_function_macro(pp_parser *self, char *name)
     self->child->macroName = strdup(name);
 
     return S_OK;
+
+obor_macro_argument_error:
+    /* The child owns this list only after successful macro creation. */
+    obor_pp_release_arguments(self->ctx, paramDefs);
+    return E_FAIL;
 }
 
 /**

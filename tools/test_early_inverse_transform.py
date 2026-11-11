@@ -213,6 +213,13 @@ class EarlyInverseTransformTests(unittest.TestCase):
         units = split_macro_functions(colour,fixture['macro_start'],fixture['macro_end'],
                                       fixture['copy_functions'])
         units.append(('water-sines',water_sines(engine)))
+        units.append(('unused-zoom-storage', '''#include <stddef.h>
+#include <stdlib.h>
+size_t obor_allocation_size(const void *pointer) {
+    (void)pointer;
+    abort();
+}
+'''))
         with tempfile.TemporaryDirectory(prefix='early-inverse-transform-') as temporary:
             work = Path(temporary); objects = []; identities = []
             for i,(label,code) in enumerate([(name,None) for name in fixture['units']] + units):

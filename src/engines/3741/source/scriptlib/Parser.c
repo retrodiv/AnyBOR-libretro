@@ -170,6 +170,11 @@ void Parser_AddInstructionViaToken(Parser* pparser, OpCode pCode, Token* pToken,
 ******************************************************************************/
 void Parser_AddInstructionViaLabel(Parser* pparser, OpCode pCode, Label instrLabel, Label listLabel )
 {
+    if(!instrLabel)
+    {
+        pparser->errorFound = TRUE;
+        return;
+    }
 	Instruction* pInstruction = NULL;
 	pInstruction = (Instruction*)malloc(sizeof(Instruction));
 	Instruction_InitViaLabel(pInstruction, pCode, instrLabel);

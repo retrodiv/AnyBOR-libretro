@@ -17,56 +17,98 @@
       "upstream_sha256": null
     },
     "openbor.c": {
-      "distributed_sha256": "6afdec003fa8fe6dfb62935d1a8567750a3e6254c69faafb224fd209eac11d81",
+      "distributed_sha256": "29d6a456d0b3e4a7fe6d48129af768f47c088bd1835bf97e7451be6591558995",
       "modified": true,
       "summary": "Apply the port's engine corrections and select the PC video configuration on macOS. Derive output names from the content basename with explicit destination capacities, and reject overflowing output path joins. Select native 6330 boomerang, collision and settings behavior, 6412 frame-kill binding behavior, and 6510 binding, blocking and attack behavior. Preserve allocation handles used by inline animation-script guards. Reconstruct the 6391-mod and 6392 test contracts for four-ID attack history, native cheat toggles and selection-screen escape using explicit profile feature flags and published upstream code. Leave multiplayer slots without a selected model available to join even if game scripts preassign lives to them. Let a missing basename-only PAK self-check read the active frontend content after it has been validated and prepared. Allocate each model's animation pointer table through the highest animation index that model uses, and bound cache, copy and cleanup paths to that capacity. Ignore optional defense and offense entries outside the configured attack-type range with a log warning before accessing their tables. Yield after each newly completed model during explicit model-list or level preparation, and defer states until that preparation has cleaned up its intermediate parsers and handles. Resize repeated weapon lists and detach borrowed lists before replacing their entries. Return a defined null result for absent colourmap models or tables while retaining valid palette fallback. Keep selected palette-conversion reads bounded and reject missing maps or flags, while preserving unselected slots and native allocation failure callbacks. Check destination animation capacity when retaining an animation across model changes, preserving the native fallback and timing. Access script-container pointer slots with byte copies, preserving record layout, pointer values and native copy/cleanup order. Pointer-slot allocation and release accept byte storage without imposing pointer alignment on a packed field. Traverse binding script callbacks in their native profile order without moving shared fields. Release each sprite owner once and complete cleanup independently of alias counts. Preserve native sprite-map capacity policies, check allocation extents and retain existing storage and capacity when growth is unavailable. Validate sprite-node allocations and release partial resources without changing existing owners. Check cached sprite availability before reading metadata and ignore cache requests for absent nodes.",
       "topics": [
         "active-content-pak-aliases",
+        "animation-frame-ownership",
         "animation-memory-layout",
+        "attack-query-input-bounds",
+        "collision-memory-layout",
         "colourtable-selector-bounds",
+        "command-table-ownership",
+        "compiler-warning-cleanup",
         "darwin-platform-support",
+        "draw-method-input-bounds",
         "empty-player-slot-safety",
+        "entity-pool-growth",
+        "entity-storage-ownership",
+        "frame-input-bounds",
+        "hud-model-validation",
+        "level-consumer-storage",
         "loading-screen-presentation",
         "logical-profile-compatibility",
         "model-attack-type-bounds",
+        "model-constructor-storage",
         "palette-conversion-safety",
         "panel-order-bounds",
+        "path-output-initialization",
+        "pickup-inputs",
+        "playable-model-validation",
         "record-dates-and-file-notices",
         "repeated-weapon-lists",
+        "restored-player-names",
+        "rise-action-inputs",
+        "saved-script-input",
         "script-container-alignment",
+        "script-text-object-ownership",
         "session-relative-filesystem",
+        "slow-motion-counters",
         "sprite-map-growth",
         "sprite-node-loading",
-        "sprite-ownership-cleanup"
+        "sprite-ownership-cleanup",
+        "target-detection-arithmetic",
+        "text-table-ownership"
       ],
       "upstream_sha256": "09b28ba38c5c89ffe4ceba4aa1cbb5263319dda43c2251ce5a2b266a597cdfb5"
     },
     "openbor.h": {
-      "distributed_sha256": "8c52800ca07309c197b845264ecdf049663e64e6cb071c8e05273ed6ebcd545d",
+      "distributed_sha256": "bd1f97e1d5d13d2d97415af2a8044b6fe1a58f043ef51d61eb98f1b56686fe34",
       "modified": true,
       "summary": "Allocate collision pointer slots through the highest author-facing index used by each collection. Define shared selectors and layouts for native 6330, 6412 and 6510 behavior. Reconstruct the 6391-mod and 6392 test contracts for four-ID attack history, native cheat toggles and selection-screen escape using explicit profile feature flags and published upstream code. Track each model's allocated animation-table capacity and reject lookups outside it.",
       "topics": [
+        "animation-frame-ownership",
         "animation-memory-layout",
+        "attack-query-input-bounds",
         "compiler-warning-cleanup",
+        "draw-method-input-bounds",
         "logical-profile-compatibility",
-        "record-dates-and-file-notices"
+        "record-dates-and-file-notices",
+        "script-text-object-ownership",
+        "text-table-ownership"
       ],
       "upstream_sha256": "5a69069cc1d8dfdec66dba09c2df2141d050ea2f564f2f8c0a199a7842ff8345"
     },
     "openborscript.c": {
-      "distributed_sha256": "3348c7d59f6152280d596ff122178d7eb3b80bb9d5a987b7e0b9adcdc7b0505d",
+      "distributed_sha256": "36820d896d364c5697c667c4132f254aa5734dc4c2626ddd52947bbd924149f2",
       "modified": true,
       "summary": "Keep the dormant constant-lowering diagnostic compatible with the single-value instruction layout. Derive output names from the content basename with explicit destination capacities, and reject overflowing output path joins. Compact compiler-only instruction records after resolving value ownership, preserving branch and export anchors, all mutable values and exactly-once pool cleanup. Supply native profile script APIs and translate numeric animation, attack, subtype and spawn IDs. Keep next-animation timestamps unchanged at the script boundary. Expose the reconstructed 6392 test profile's earlier backtotitle alias only in that profile. Retain shared interpreters through the last script reference while preserving independent variables, replacement and native callbacks. Track diagnostic comments independently so interpreter replacement can retain them. Resolve text-property names within the actual table bounds while preserving native numeric selectors. Reuse each text object's owned buffer when replacing its contents. Reject missing colourtable indices and keep selector arithmetic and table reads defined. Transfer loaded stream buffers through aligned local outputs while preserving native record layout and results. Close owned input files after stream loading and on buffer allocation failure.",
       "topics": [
+        "collision-selector-inputs",
         "colourtable-selector-bounds",
+        "defense-query-input-bounds",
         "logical-profile-compatibility",
+        "player-property-inputs",
         "record-dates-and-file-notices",
+        "script-argument-offsets",
+        "script-array-storage",
+        "script-constructor-storage",
+        "script-health-arithmetic",
+        "script-heap-entry-types",
+        "script-heap-lifecycle",
+        "script-initialization-validation",
         "script-memory-layout",
         "script-property-names",
         "script-shared-storage",
         "script-streams",
         "script-text-object-ownership",
-        "session-relative-filesystem"
+        "script-variable-storage",
+        "session-relative-filesystem",
+        "sprite-array-input-bounds",
+        "text-table-ownership",
+        "toss-inputs",
+        "vulnerable-frame-queries"
       ],
       "upstream_sha256": "fdd3cf6cf3c0d51b6e14cca7de08809b570fd0697e22767812fc1d774630cbc1"
     },
@@ -77,9 +119,13 @@
       "upstream_sha256": "230e91cf4ae42a74e92b7e8dbb1bd6ab87bd6f4c768db7b7fda466ea0facf8d8"
     },
     "source/gamelib/anigif.c": {
-      "distributed_sha256": "1eef8eb4a27777e397ac56165830555481dd812a74d1954706ceb9b9114e83d3",
-      "modified": false,
-      "topics": [],
+      "distributed_sha256": "ffb7b2d7f3b3c3e9c5204e206e4e5b18526c5d4dc5da619b359761a5b9801ae4",
+      "modified": true,
+      "summary": "Check GIF decoder storage and palette bounds while preserving the decoded pixels of valid images.",
+      "topics": [
+        "gif-memory-bounds",
+        "record-dates-and-file-notices"
+      ],
       "upstream_sha256": "1eef8eb4a27777e397ac56165830555481dd812a74d1954706ceb9b9114e83d3"
     },
     "source/gamelib/anigif.h": {
@@ -183,7 +229,7 @@
       "upstream_sha256": "9ca3470f0a34b7d46ffde9407aa098e666850c2e60e46fa3d8f1c19a117e2029"
     },
     "source/gamelib/loadimg.c": {
-      "distributed_sha256": "37e35f72f13ba107db3452626813a233723c71b1501c71782d3cacfae615da74",
+      "distributed_sha256": "0197966349a9d14dc6b793700fc87cc73d5770ed0a93e2ab52dbbc6bee938824",
       "modified": true,
       "summary": "Declare the resolved source member and original bitmap dimensions for independent sprite reconstruction proof. Validate PCX sprite signatures before using header dimensions. Preserve native palette-only filename probing, three-plane refusals and final RGB table conversion without interpreting palette bytes as sprite dimensions. Keep bitmap row reads within the requested output width.",
       "topics": [
@@ -212,7 +258,7 @@
       "upstream_sha256": "bb9095aeea455e8b435ca545683a9508f4b3fd60e374d6cd93b74b0ed0f27882"
     },
     "source/gamelib/packfile.c": {
-      "distributed_sha256": "8a40e80a5d259177f5b3ee5b6e7286762a29f93cea670a9f102acc97b86f0655",
+      "distributed_sha256": "5dd190264da5480af5e58d0feebd42ba3851abddfd55e88005637523bdfed685",
       "modified": true,
       "summary": "Repair PAK handles after state loads, close resources on reset, prune unused frontend APIs, and compile the case-insensitive loose-file search on macOS. Skip a loose lookup only when the common bounded, watched directory index proves its first component absent; preserve script changes and case-insensitive overrides. Join case-corrected directory components through a bounded temporary buffer, preserving nested loose-asset paths.",
       "topics": [
@@ -257,12 +303,14 @@
       "upstream_sha256": "da61191c2344f55236581b2c42bf36056f62fdb590f18ceed8634358aeb74cf8"
     },
     "source/gamelib/screen.c": {
-      "distributed_sha256": "dd0dee21cc7e92d471d8e925024d572e587c5220b692ec55046da364d1f7bae7",
+      "distributed_sha256": "1726ffe9581361810b616a31063e3e460d8d769933f53d6b73a51b5f08428a80",
       "modified": true,
       "summary": "Remove a guard whose only statement assigned the counter to itself. Bound screen blend selectors and use transparent copy when an indexed table is unavailable.",
       "topics": [
+        "image-loader-safety",
         "record-dates-and-file-notices",
-        "screen-blend-bounds"
+        "screen-blend-bounds",
+        "zoom-scaling-safety"
       ],
       "upstream_sha256": "a884831d5d9a9bf9f85990ad83b45264bf84bb10bea52f616b6e3308d9a85c20"
     },
@@ -301,10 +349,11 @@
       "upstream_sha256": "0e66fc660edb34d9f4f5e0c508a91be92c97578a7c49e6896d6f97216e238785"
     },
     "source/gamelib/sprite.c": {
-      "distributed_sha256": "f1c0d8dc11131e64356d1313d5240c5544cea6d182efdc33fe2845f67c8d820c",
+      "distributed_sha256": "2d0bc5ba483a7870a335adf79927ca0b5338d7d78aba862eea9c73b8d38f23ab",
       "modified": true,
       "summary": "Declare initialized encoded sprite-body ranges and source crops for exact reconstruction proof, retaining headers, palettes and mutable changes.",
       "topics": [
+        "encoded-sprite-safety",
         "reconstructible-resources"
       ],
       "upstream_sha256": "9fe3a2aff92d2b4a992458a1d642b4a2b99a138c578bc20055f5155733062df4"
@@ -486,10 +535,11 @@
       "upstream_sha256": "8949653d6bb3be4677d74ec520d262a03332a5d119d8b19a1ea48276e68af773"
     },
     "source/openborscript/collision_attack.c": {
-      "distributed_sha256": "4b94e5222814ff82376e59b84f5ecc2241519b5fda8a986dd83b1a5b6c46e347",
+      "distributed_sha256": "c9d9b9a49802427055412f3e63b40aa6420f089cf6e9295a6cdd7baa337966ad",
       "modified": true,
       "summary": "Translate native attack-type IDs at the script API boundary.",
       "topics": [
+        "attack-query-input-bounds",
         "logical-profile-compatibility",
         "record-dates-and-file-notices"
       ],
@@ -535,12 +585,13 @@
       "upstream_sha256": "582ec018581bded82ae599de2889dbfb0e23c75f6554af75fa4fada5b285d916"
     },
     "source/openborscript/config.h": {
-      "distributed_sha256": "fd90fe5e885190b508cb6e658bf88c147c94db92c1e7842c1b428008c81c113a",
+      "distributed_sha256": "7cf9bc72a41639c17bd8006acc343a38850beb69260bf4b21d06db2c4d728a89",
       "modified": true,
       "summary": "Declare the modern logical profiles' unload_model script entry point. Expose the reconstructed 6392 test profile's earlier backtotitle alias only in that profile.",
       "topics": [
         "logical-profile-compatibility",
         "record-dates-and-file-notices",
+        "script-record-alignment",
         "script-shared-storage"
       ],
       "upstream_sha256": "33d661990d87256135d39abb62204ad051b070d285ac3267863c0bf9f5feae5b"
@@ -621,10 +672,11 @@
       "upstream_sha256": "bb7b74c3d04121233c5f27ac6923df3bcc713604646843fd4e0bf10e611c1535"
     },
     "source/openborscript/profile_ids.h": {
-      "distributed_sha256": "73478da3c70290b6df33aa4473b7b45591ba190f74f401e2c3472b91ea2f1a07",
+      "distributed_sha256": "4fe627e1a56967381ffa4258618377fa4ef2ea105311110173a8c57a27fa0eb4",
       "modified": true,
       "summary": "Map native logical-profile animation, attack, subtype and spawn IDs to the shared engine selectors.",
       "topics": [
+        "animation-id-bounds",
         "logical-profile-compatibility",
         "record-dates-and-file-notices"
       ],
@@ -659,11 +711,12 @@
       "upstream_sha256": "098be505005a0a6e7de5aee51fc09a94be6961b582b35b9b6eb1ce413ae83a96"
     },
     "source/pnglib/savepng.c": {
-      "distributed_sha256": "62a9ed47579833d059fff9174aed0a8382fe5c6d1f88172785f8260de31e6e98",
+      "distributed_sha256": "a65ee5d44aabad665daaf89d30797f068c3ee443f983e9467965076950fcc5a7",
       "modified": true,
       "summary": "Include the standard library declarations instead of the glibc-only <malloc.h> when writing a screenshot.",
       "topics": [
         "darwin-platform-support",
+        "image-loader-safety",
         "record-dates-and-file-notices"
       ],
       "upstream_sha256": "fc548685842da49ce8eeacf1a705f72ba0fb3e837fb33a008680989e112f5ad4"
@@ -703,12 +756,13 @@
       "upstream_sha256": "6261af9812335c94aea4cd2fc38bce2cec0ac4f5cdf2b5880e21cfac5b93e668"
     },
     "source/preprocessorlib/pp_parser.c": {
-      "distributed_sha256": "6c8926111261433052aad3a49d70eb0401c5072bbcba9592eab5527026ec1131",
+      "distributed_sha256": "80c017980a6755eb4531adddfcd58e61e0431f8e02dfe88a05324ac3fe529d04",
       "modified": true,
       "summary": "Drop the glibc-only <malloc.h> and rely on the standard library declarations the parser already includes.",
       "topics": [
         "darwin-platform-support",
-        "record-dates-and-file-notices"
+        "record-dates-and-file-notices",
+        "script-preprocessor-safety"
       ],
       "upstream_sha256": "45168ba23031cd5f0fae43a3a775a24ac7c4efffbf9ef480d42e4321dca45965"
     },
@@ -849,9 +903,13 @@
       "upstream_sha256": "a58e54a21a807fc5b9e6756aeda601d218b319eb1594784c47ac1c378a527113"
     },
     "source/scriptlib/Parser.c": {
-      "distributed_sha256": "3efc14c26d6d7624f84d466e530969452587206222fc5cfae21ff2e45cbec576",
-      "modified": false,
-      "topics": [],
+      "distributed_sha256": "d88341ece30cf69fc4b8c64e2d4d58b67ab4c045f37b4ebaeb6639b896777760",
+      "modified": true,
+      "summary": "Check constant-token prefix capacity and resolve instruction labels before recording control targets.",
+      "topics": [
+        "record-dates-and-file-notices",
+        "script-parser-table-safety"
+      ],
       "upstream_sha256": "3efc14c26d6d7624f84d466e530969452587206222fc5cfae21ff2e45cbec576"
     },
     "source/scriptlib/Parser.h": {
@@ -883,11 +941,12 @@
       "upstream_sha256": "1d66448d1f58d03690abf08980ca24e5f02e7ff6b7003273829d7e08f026cc49"
     },
     "source/scriptlib/ScriptVariant.c": {
-      "distributed_sha256": "b87deeee168fbe1239b6fb0ccb0f6b21ac0e9f7081e2c3b83af34e6b3c31a0a9",
+      "distributed_sha256": "cff5da452c97f45ad5e3db181150a27c92302efc815dd7d39fe2271a85e6c7c5",
       "modified": true,
       "summary": "Select the native 6330 decimal negation fallthrough. Preserve native signed32 integer conversion and truncated decimal results; refuse unavailable arguments and non-representable decimal results before conversion without changing result storage.",
       "topics": [
         "logical-profile-compatibility",
+        "numeric-argument-inputs",
         "record-dates-and-file-notices",
         "script-integer-conversion",
         "script-text-object-ownership"
@@ -972,11 +1031,12 @@
       "upstream_sha256": "d9bf8cdb39ccbdc026f120a82f8dd12cc9d30a65e410617da7462b3317ffa8ca"
     },
     "source/utils.c": {
-      "distributed_sha256": "7d261b4d355ada230de42e7f589d8f064e4e126dcb80e28013879ea0f083f6bc",
+      "distributed_sha256": "4a4af57961aef7ad937ecd52e2350e80dd8273a2c5a8a6bce2331c8fa0bb47fb",
       "modified": true,
       "summary": "Enable libretro platform and PNG helper declarations, the POSIX directory and mkdir forms macOS also uses, reach the standard allocation declarations without the glibc-only <malloc.h>, and report memory usage at exit on macOS through the port's own accounting instead of mallinfo(). Derive output names from the content basename with explicit destination capacities, and reject overflowing output path joins.",
       "topics": [
         "darwin-platform-support",
+        "lowercase-byte-domain",
         "platform-integration",
         "record-dates-and-file-notices",
         "session-relative-filesystem"

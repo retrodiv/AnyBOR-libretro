@@ -1,0 +1,128 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ * Current animation queries with real entity, animation and Script records.
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "openbor.h"
+#undef printf
+#define CHECK(c) do { if(!(c)) { fprintf(stderr, "Animation query: %s at %d\n", #c, __LINE__); abort(); } } while(0)
+
+uint32_t obor_profile_build;
+entity **ent_list;
+int ent_list_size;
+@ACTOR_SCOPE@
+@PROPERTIES@
+@ENERGY@
+static entity *old_value;
+static unsigned callbacks;
+
+void ScriptVariant_Init(ScriptVariant *value) { memset(value, 0, sizeof(*value)); }
+void ScriptVariant_Clear(ScriptVariant *value) { ScriptVariant_Init(value); }
+void ScriptVariant_ChangeType(ScriptVariant *value, VARTYPE type)
+{
+    ScriptVariant_Clear(value);
+    value->vt = type;
+}
+int Script_IsInitialized(Script *script) { return script && script->initialized; }
+HRESULT Interpreter_Call(Interpreter *interpreter) { (void)interpreter; abort(); }
+HRESULT Interpreter_EvalInstruction(Interpreter *interpreter) { (void)interpreter; abort(); }
+int Varlist_SetByName(Varlist *vars, char *name, ScriptVariant *value)
+{
+    (void)vars;
+    if(!strcmp(name, "old"))
+        old_value = value->vt == VT_PTR ? value->ptrVal : NULL;
+    return 1;
+}
+static int quiet(const char *format, ...) { (void)format; return 0; }
+@CURRENT@
+#define printf quiet
+@GETTER@
+#undef printf
+@CALLBACK@
+
+static int read_property(entity *actor, int index, int property, int extra,
+                         int argc, ScriptVariant *result)
+{
+    ScriptVariant args[4] = {0}, *out = result;
+    ScriptVariant *slots[] = {args, args + 1, args + 2, args + 3};
+    args[0].vt = VT_PTR;
+    args[0].ptrVal = actor;
+    for(unsigned i = 1; i < 4; ++i) args[i].vt = VT_INTEGER;
+    args[1].lVal = index;
+    args[2].lVal = property;
+    args[3].lVal = extra;
+    ScriptVariant_Init(result);
+    return openbor_getanimationproperty(slots, &out, argc);
+}
+
+static void integer_value(entity *actor, int property, int extra, int argc, LONG expected)
+{
+    ScriptVariant result;
+    CHECK(read_property(actor, 0, property, extra, argc, &result) == S_OK);
+    CHECK(result.vt == VT_INTEGER && result.lVal == expected);
+}
+
+int Script_Execute(Script *script)
+{
+    CHECK(script && script->initialized && old_value);
+    integer_value(old_value, _ANI_PROP_NUMFRAMES, 0, 3, 41);
+    ++callbacks;
+    return 1;
+}
+
+int main(void)
+{
+    static const struct { unsigned revision; int present; } profiles[] = {@PROFILES@};
+    unsigned available = 0, absent = 0;
+    for(unsigned i = 0; i < sizeof(profiles) / sizeof(*profiles); ++i)
+    {
+        obor_profile_build = profiles[i].revision;
+        CHECK((@REGISTRATION@) == profiles[i].present);
+        if(!profiles[i].present) { ++absent; continue; }
+        ++available;
+        s_anim current = {0}, previous = {0}, detached = {0};
+        current.numframes = 13;
+        current.model_index = 17;
+        current.dropframe.frame = 3;
+        current.energycost.cost = 9;
+        current.chargetime = 1.5;
+        previous.numframes = 41;
+        s_anim_list tail = {&previous, NULL}, head = {&current, &tail};
+        anim_list = &head;
+        Script script = {0};
+        script.initialized = 1;
+        s_scripts scripts = {0};
+        scripts.onmodelcopy_script = &script;
+        entity actor = {0}, borrowed = {0};
+        actor.animation = &current;
+        actor.scripts = &scripts;
+        borrowed.animation = &previous;
+        entity *pool[] = {&actor};
+        ent_list = pool;
+        ent_list_size = 1;
+        integer_value(&actor, _ANI_PROP_NUMFRAMES, 0, 3, 13);
+        integer_value(&actor, _ANI_PROP_MODEL_INDEX, 0, 3, 17);
+        integer_value(&actor, _ANI_PROP_DROPFRAME, 0, 3, 3);
+        integer_value(&actor, _ANI_PROP_ENERGYCOST, _ep_energycost_cost, 4, 9);
+        ScriptVariant result;
+        CHECK(read_property(&actor, 0, _ANI_PROP_CHARGETIME, 0, 3, &result) == S_OK);
+        CHECK(result.vt == VT_DECIMAL && result.dblVal == 1.5);
+        CHECK(read_property(&actor, 1, _ANI_PROP_NUMFRAMES, 0, 3, &result) == E_FAIL);
+        CHECK(read_property(&actor, 0, _ANI_PROP_ENERGYCOST, 0, 3, &result) == E_FAIL);
+        CHECK(read_property(&actor, 0, _ANI_PROP_LOOP, 0, 4, &result) == E_FAIL);
+        CHECK(read_property(&borrowed, 0, _ANI_PROP_NUMFRAMES, 0, 3, &result) == E_FAIL);
+        execute_onmodelcopy_script(&actor, &borrowed);
+        CHECK(!old_value && !obor_animation_actors);
+        CHECK(read_property(&borrowed, 0, _ANI_PROP_NUMFRAMES, 0, 3, &result) == E_FAIL);
+        actor.animation = &detached;
+        CHECK(read_property(&actor, 0, _ANI_PROP_NUMFRAMES, 0, 3, &result) == E_FAIL);
+        ent_list = NULL;
+        ent_list_size = 0;
+        anim_list = NULL;
+    }
+    printf("{\"available\":%u,\"absent\":%u,\"callbacks\":%u}\n", available, absent, callbacks);
+    return 0;
+}

@@ -223,7 +223,8 @@ HRESULT pp_error(pp_parser* self, char* format, ...)
 	va_list arglist;
 
 	va_start(arglist, format);
-	vsprintf(buf, format, arglist);
+	vsnprintf(buf, sizeof(buf), format, arglist);
+    buf[sizeof(buf) - 1] = 0;
 	va_end(arglist);
 	pp_message(self, "error", buf);
 
@@ -239,7 +240,8 @@ void pp_warning(pp_parser* self, char* format, ...)
 	va_list arglist;
 
 	va_start(arglist, format);
-	vsprintf(buf, format, arglist);
+	vsnprintf(buf, sizeof(buf), format, arglist);
+    buf[sizeof(buf) - 1] = 0;
 	va_end(arglist);
 	pp_message(self, "warning", buf);
 }
@@ -803,7 +805,8 @@ HRESULT pp_parser_define(pp_parser* self, char* name)
 					if(FAILED(pp_parser_lex_token(self, true))) goto error;
 					if(self->token.theType == PP_TOKEN_COMMA || self->token.theType == PP_TOKEN_RPAREN) break;
 				default:
-					return pp_error(self, "unexpected token '%s' in #define parameter list", self->token.theSource);
+					pp_error(self, "unexpected token '%s' in #define parameter list", self->token.theSource);
+					goto error;
 			}
 
 			if(self->token.theType != PP_TOKEN_RPAREN) pp_parser_lex_token(self, true);
@@ -834,6 +837,7 @@ HRESULT pp_parser_define(pp_parser* self, char* name)
 error:
 	List_Reset(params);
 	while(List_GetSize(params)) List_Remove(params);
+	List_Clear(params);
 	free(params);
 	if(contents) free(contents);
 	return E_FAIL;
@@ -974,7 +978,7 @@ HRESULT pp_parser_insert_function_macro(pp_parser* self, char* name)
 					paramCount++;
 
 				if((strlen(paramBuffer) + strlen(self->token.theSource) + 1) > sizeof(paramBuffer))
-					return pp_error(self, "parameter %d of function '%s' exceeds max length of %d characters", name, sizeof(paramBuffer)-1);
+					return pp_error(self, "parameter %d of function '%s' exceeds max length of %d characters", paramCount, name, (int)sizeof(paramBuffer) - 1);
 
 				strcat(paramBuffer, self->token.theSource);
 		}

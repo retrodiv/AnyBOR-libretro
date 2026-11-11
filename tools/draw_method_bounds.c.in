@@ -1,0 +1,166 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+@ASSERTION_POLICY@
+#define OBOR_CONTROLLED_ASSERTIONS 1
+#include <assert.h>
+#include <limits.h>
+#include <setjmp.h>
+#include <stdarg.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+@CONFIG@
+#include "openbor.h"
+#include "globals.h"
+#undef printf
+#define CHECK(c) do {if(!(c)){fprintf(stderr,"draw-method contract profile=%u case=%u line=%d: %s\n",obor_profile_build,active_case,__LINE__,#c);abort();}}while(0)
+uint32_t obor_profile_build;
+static unsigned active_case,stopped,records,flushes;
+static int engine_alive,engine_exit_status,frontend_token;
+static void *co_frontend=&frontend_token;
+static jmp_buf frontend_return;
+static char diagnostic[2048];
+static size_t diagnostic_size;
+void co_switch(void *target) {
+    CHECK(target==co_frontend && !engine_alive && engine_exit_status==1);
+    ++stopped;longjmp(frontend_return,1);
+}
+static void capture(const char *format,va_list args) {
+    int n=vsnprintf(diagnostic+diagnostic_size,sizeof(diagnostic)-diagnostic_size,format,args);
+    CHECK(n>=0 && (size_t)n<sizeof(diagnostic)-diagnostic_size);
+    diagnostic_size+=(size_t)n;++records;
+}
+void writeToLogFile(const char *format,...) {
+    va_list args;va_start(args,format);capture(format,args);va_end(args);
+}
+static int capture_fprintf(FILE *file,const char *format,...) {
+    CHECK(file==stderr);va_list args;va_start(args,format);
+    capture(format,args);va_end(args);return (int)diagnostic_size;
+}
+static int capture_fflush(FILE *file) {CHECK(file==stderr);++flushes;return 0;}
+@STOP@
+#define fprintf capture_fprintf
+#define fflush capture_fflush
+@PORT_ASSERT@
+@NATIVE_ASSERT@
+#undef fprintf
+#undef fflush
+@HOOK@
+@METHODS@
+static s_drawmethod *display_method(entity *e) {
+    s_drawmethod *drawmethod;
+    @LOOKUP@
+    return drawmethod;
+}
+struct context {unsigned revision;int asserts,logged;unsigned line[7];};
+static const struct context contexts[]={@CONTEXTS@};
+static s_anim animation;
+static entity display_entity;
+static s_drawmethod methods[4],*slots[5],*baseline[5];
+static s_drawmethod *result;
+static void setup(void) {
+    memset(&animation,0,sizeof(animation));memset(methods,0,sizeof(methods));
+    for(unsigned i=0;i<5;++i)slots[i]=&methods[i%4];
+    memcpy(baseline,slots,sizeof(slots));animation.numframes=3;animation.drawmethods=slots+1;
+    memset(&display_entity,0,sizeof(display_entity));display_entity.animation=&animation;display_entity.animpos=1;
+    engine_alive=1;engine_exit_status=0;stopped=records=flushes=0;
+    diagnostic[0]=0;diagnostic_size=0;result=&methods[3];
+}
+static int site(void) {
+    switch(active_case) {
+    case 5:case 19:return 2;
+    case 6:case 20:return 0;
+    case 7:return 1;
+    case 8:case 10:return 3;
+    case 11:case 16:case 18:return 4;
+    case 12:return 5;
+    case 13:case 15:case 17:case 26:return 6;
+    default:return -1;
+    }
+}
+static void execute_case(void) {
+    switch(active_case) {
+    case 0:CHECK(getDrawMethod(&animation,0)==slots[1]);break;
+    case 1:CHECK(getDrawMethod(&animation,2)==slots[3]);break;
+    case 2:setDrawMethod(&animation,0,&methods[3]);CHECK(slots[1]==&methods[3]);break;
+    case 3:setDrawMethod(&animation,2,&methods[3]);CHECK(slots[3]==&methods[3]);break;
+    case 4:slots[2]=NULL;CHECK(getDrawMethod(&animation,1)==NULL);break;
+    case 5:setDrawMethod(&animation,1,NULL);CHECK(slots[2]==NULL);break;
+    case 6:setDrawMethod(&animation,-1,&methods[0]);break;
+    case 7:setDrawMethod(NULL,0,&methods[0]);break;
+    case 8:setDrawMethod(&animation,3,&methods[0]);break;
+    case 9:animation.drawmethods=NULL;setDrawMethod(&animation,0,&methods[0]);break;
+    case 10:animation.numframes=-1;setDrawMethod(&animation,0,&methods[0]);break;
+    case 11:result=getDrawMethod(&animation,-1);CHECK(result==NULL);break;
+    case 12:result=getDrawMethod(NULL,0);CHECK(result==NULL);break;
+    case 13:result=getDrawMethod(&animation,3);CHECK(result==NULL);break;
+    case 14:animation.drawmethods=NULL;result=getDrawMethod(&animation,0);CHECK(result==NULL);break;
+    case 15:animation.numframes=-1;result=getDrawMethod(&animation,0);CHECK(result==NULL);break;
+    case 16:result=getDrawMethod(&animation,PTRDIFF_MIN);CHECK(result==NULL);break;
+    case 17:result=getDrawMethod(&animation,PTRDIFF_MAX);CHECK(result==NULL);break;
+    case 18:result=getDrawMethod(NULL,-1);CHECK(result==NULL);break;
+    case 19:setDrawMethod(&animation,3,NULL);break;
+    case 20:setDrawMethod(NULL,-1,NULL);break;
+    case 21:animation.numframes=0;CHECK(getDrawMethod(&animation,0)==NULL);break;
+    case 22:CHECK(display_method(&display_entity)==slots[2]);break;
+    case 23:slots[2]=NULL;CHECK(display_method(&display_entity)==NULL);break;
+    case 24:animation.drawmethods=NULL;display_entity.animpos=-1;CHECK(display_method(&display_entity)==NULL);break;
+    case 25:animation.drawmethods=NULL;display_entity.animpos=3;CHECK(display_method(&display_entity)==NULL);break;
+    case 26:display_entity.animpos=3;CHECK(display_method(&display_entity)==NULL);break;
+    default:abort();
+    }
+}
+int main(void) {
+    for(volatile unsigned r=0;r<sizeof(contexts)/sizeof(*contexts);++r) {
+        obor_profile_build=contexts[r].revision;
+        for(active_case=0;active_case<27;++active_case) {
+            setup();volatile int expected=contexts[r].asserts && site()>=0;
+#ifdef NDEBUG
+            expected=expected && contexts[r].logged;
+#endif
+            /* Empty tables hit the same original upper-bound assertion. */
+            if(active_case==21)expected=contexts[r].asserts &&
+#ifdef NDEBUG
+                contexts[r].logged;
+#else
+                1;
+#endif
+            if(!setjmp(frontend_return)) {
+                execute_case();CHECK(!expected && !stopped && !records && !flushes && engine_alive);
+            } else {
+                static const char *expressions[]={"index >= 0","a != NULL","m != NULL","index < a->numframes",
+                                                  "index >= 0","a != NULL","index < a->numframes"};
+                int which=active_case==21?6:site();CHECK(expected && stopped==1 && which>=0);
+                CHECK(strstr(diagnostic,expressions[which])!=NULL);
+                CHECK(strstr(diagnostic,which<4?"setDrawMethod":"getDrawMethod")!=NULL);
+                char expected_text[2048];
+                if(!contexts[r].logged) {
+                    CHECK(records==1 && flushes==1);
+                    snprintf(expected_text,sizeof(expected_text),
+                             "openbor.c:%u: %s: Assertion `%s' failed.\n",
+                             contexts[r].line[which],which<4?"setDrawMethod":"getDrawMethod",expressions[which]);
+                } else {
+                    CHECK(records==3 && !flushes);
+                    snprintf(expected_text,sizeof(expected_text),
+                             "\n\n********** An Error Occurred **********"
+                             "\n*            Shutting Down            *\n\n"
+                             "Assertion `%s' failed in function '%s' at openbor.c:%u.\n"
+                             "This is an OpenBOR bug.  Please report this at www.chronocrash.com.\n\n",
+                             expressions[which],which<4?"setDrawMethod":"getDrawMethod",contexts[r].line[which]);
+                }
+                CHECK(!strcmp(diagnostic,expected_text));
+            }
+            for(unsigned i=0;i<5;++i) {
+                s_drawmethod *expected_slot=baseline[i];
+                if((active_case==2 && i==1) || (active_case==3 && i==3))expected_slot=&methods[3];
+                if((active_case==4 || active_case==23 || (active_case==5 && !stopped)) && i==2)expected_slot=NULL;
+                CHECK(slots[i]==expected_slot);
+            }
+        }
+    }
+    printf("{\"profiles\":%u,\"cases\":%u}\n",(unsigned)(sizeof(contexts)/sizeof(*contexts)),
+           27u*(unsigned)(sizeof(contexts)/sizeof(*contexts)));
+    return 0;
+}

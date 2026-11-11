@@ -1,3 +1,15 @@
+/* AnyBOR modification record: 2026-10-19.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Check constant-token prefix capacity and resolve instruction labels before
+ * recording control targets.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/4086.md
+ * at the source repository root. Original notices follow below.
+ */
+
 /*
  * OpenBOR - http://www.chronocrash.com
  * -----------------------------------------------------------------------
@@ -168,6 +180,11 @@ void Parser_AddInstructionViaToken(Parser *pparser, OpCode pCode, Token *pToken,
 ******************************************************************************/
 void Parser_AddInstructionViaLabel(Parser *pparser, OpCode pCode, Label instrLabel, Label listLabel )
 {
+    if(!instrLabel)
+    {
+        pparser->errorFound = TRUE;
+        return;
+    }
     Instruction *pInstruction = NULL;
     pInstruction = (Instruction *)malloc(sizeof(Instruction));
     Instruction_InitViaLabel(pInstruction, pCode, instrLabel);
@@ -1800,9 +1817,27 @@ void Parser_Mult_expr2(Parser *pparser )
     }
 }
 
+/* Bound in-place token prefixes without changing fitting native literals.
+ * SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+static int obor_parser_prefix_token(Parser *parser, Token *token, char prefix)
+{
+    const char *end;
+    size_t length;
+    if(!token || !(end = memchr(token->theSource, 0, sizeof(token->theSource))) ||
+       (size_t)(end - token->theSource) + 1 >= sizeof(token->theSource))
+    {
+        Parser_Error(parser, unary_expr);
+        return 0;
+    }
+    length = (size_t)(end - token->theSource);
+    memmove(token->theSource + 1, token->theSource, length + 1);
+    token->theSource[0] = prefix;
+    return 1;
+}
+
 void Parser_Unary_expr(Parser *pparser )
 {
-    static CHAR buf[MAX_TOKEN_LENGTH + 1];
     Instruction *pInstruction = NULL;
 
     if (ParserSet_First(&(pparser->theParserSet), postfix_expr, pparser->theNextToken.theType ))
@@ -1841,8 +1876,7 @@ void Parser_Unary_expr(Parser *pparser )
                 pInstruction->OpCode == CONSTDBL )
         {
             //convert to negative constant
-            sprintf(buf, "-%s", pInstruction->theToken->theSource);
-            strcpy(pInstruction->theToken->theSource, buf);
+            if(!obor_parser_prefix_token(pparser, pInstruction->theToken, '-')) return;
         }
         else if(pInstruction->OpCode == CONSTSTR)
         {
@@ -1864,8 +1898,7 @@ void Parser_Unary_expr(Parser *pparser )
                 pInstruction->OpCode == CONSTSTR)
         {
             //convert to negative constant
-            sprintf(buf, "!%s", pInstruction->theToken->theSource);
-            strcpy(pInstruction->theToken->theSource, buf);
+            if(!obor_parser_prefix_token(pparser, pInstruction->theToken, '!')) return;
         }
         else
         {

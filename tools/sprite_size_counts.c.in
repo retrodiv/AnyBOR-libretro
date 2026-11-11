@@ -1,0 +1,128 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <assert.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "types.h"
+#include "sprite.h"
+#define CROPPED @CROPPED@
+#define HAS_REFERENCE @HAS_REFERENCE@
+#define NOTIFIES @NOTIFIES@
+uint32_t obor_profile_build;
+int screenformat;
+int pixelbytes[5]={1,1,2,3,4};
+static const unsigned profiles[]={@PROFILES@};
+static unsigned cases;
+static size_t body_bytes;
+static unsigned body_x,body_y,body_w,body_h,notifications,forgotten;
+void obor_resources_forget_owner(const void *owner) { assert(owner);++forgotten; }
+void obor_resources_sprite_encoded(const void *bitmap,void *owner,void *body,size_t length,
+                                  unsigned x,unsigned y,unsigned width,unsigned height) {
+    assert(bitmap && owner && body);
+    body_bytes=length;body_x=x;body_y=y;body_w=width;body_h=height;++notifications;
+}
+@METHODS@
+@REFERENCE@
+static void check(int original_width,int original_height,int format,int pattern,int palette,int crop) {
+    screenformat=format;
+    int left=crop && original_width ? 1 : 0, top=crop && original_height ? 1 : 0;
+    int width=original_width-left,height=original_height-top;
+    size_t pixels=(size_t)original_width*original_height;
+    size_t backing=sizeof(s_bitmap)+pixels+PAL_BYTES+16;
+    s_bitmap *bitmap=calloc(1,backing);assert(bitmap);
+    bitmap->width=original_width;bitmap->height=original_height;
+    bitmap->pixelformat=format==PIXEL_8 ? PIXEL_8 : PIXEL_x8;
+    @CROP_INIT@
+    if(palette)bitmap->palette=bitmap->data+pixels;
+    for(size_t i=0;i<pixels;++i) {
+        int x=(int)(i%(unsigned)original_width);
+        switch(pattern) {
+            case 0:bitmap->data[i]=0;break;
+            case 1:bitmap->data[i]=(unsigned char)(1+i%255);break;
+            case 2:bitmap->data[i]=i%2 ? 77 : 0;break;
+            case 3:bitmap->data[i]=x<254 ? 0 : 99;break;
+            case 4:bitmap->data[i]=x<255 ? 19 : 0;break;
+        }
+    }
+    if(palette)for(int i=0;i<PAL_BYTES;++i)bitmap->palette[i]=(unsigned char)(i*17+3);
+    unsigned char *input=malloc(backing);assert(input);memcpy(input,bitmap,backing);
+    notifications=forgotten=0;body_bytes=0;
+    unsigned size=fakey_encodesprite(bitmap);
+    assert(!notifications && !forgotten && !memcmp(input,bitmap,backing));
+    assert(size>=offsetof(s_sprite,data));
+    size_t bound=sizeof(s_sprite)+(size_t)height*(sizeof(int)+3u*(unsigned)width+2u)+PAL_BYTES+ANYNUMBER+16;
+    assert(size<=bound);
+    unsigned char *allocation=malloc((size_t)size+32);assert(allocation);
+    memset(allocation,0xa5,(size_t)size+32);
+    s_sprite *sprite=(s_sprite*)allocation;
+    assert(encodesprite(3,-2,bitmap,sprite)==size);
+    for(size_t k=size;k<(size_t)size+32;++k)if(allocation[k]!=0xa5) {
+        fprintf(stderr,"encoded size guard\n");abort();
+    }
+#if HAS_REFERENCE
+    unsigned char *encoded=malloc((size_t)size+32);assert(encoded);
+    memcpy(encoded,allocation,(size_t)size+32);
+    size_t previous_body=body_bytes;
+    unsigned previous_x=body_x,previous_y=body_y,previous_w=body_w,previous_h=body_h;
+    unsigned previous_notifications=notifications,previous_forgotten=forgotten;
+    memset(allocation,0xa5,(size_t)size+32);notifications=forgotten=0;
+    assert(reference_encodesprite(3,-2,bitmap,sprite)==size);
+    assert(!memcmp(encoded,allocation,(size_t)size+32));
+    assert(body_bytes==previous_body && body_x==previous_x && body_y==previous_y &&
+           body_w==previous_w && body_h==previous_h && notifications==previous_notifications &&
+           forgotten==previous_forgotten);
+    free(encoded);
+#endif
+    if(width && height) {
+        assert(sprite->width==width && sprite->height==height && sprite->centerx==3 && sprite->centery==-2);
+        const unsigned char *last=(unsigned char*)sprite->data+height*sizeof(int);
+        unsigned char *decoded=calloc(1,(size_t)width*height);assert(decoded);
+        for(int y=0;y<height;++y) {
+            const unsigned char *cursor=(unsigned char*)(sprite->data+y)+sprite->data[y];int x=0;
+            for(;;) {
+                assert(cursor>=allocation && cursor<allocation+size);
+                unsigned skip=*cursor++;if(skip==255)break;
+                x+=(int)skip;assert(x<=width && cursor<allocation+size);
+                unsigned run=*cursor++;assert(run<=(unsigned)(width-x) && cursor+run<=allocation+size);
+                memcpy(decoded+(size_t)y*width+x,cursor,run);cursor+=run;x+=(int)run;
+            }
+            if(cursor>last)last=cursor;
+        }
+        for(int y=0;y<height;++y)
+            assert(!memcmp(decoded+(size_t)y*width,bitmap->data+(size_t)(top+y)*original_width+left,width));
+        free(decoded);
+        size_t bytes=(size_t)(last-allocation),padding=palette ? (4-bytes%4)%4 : 0;
+        if(size!=bytes+padding+(palette?PAL_BYTES:0)+ANYNUMBER) {
+            fprintf(stderr,"encoded size guard: decoded byte count\n");abort();
+        }
+        if(palette) {
+            assert(sprite->palette==allocation+bytes+padding);
+            assert(!memcmp(sprite->palette,bitmap->palette,PAL_BYTES));
+        } else assert(!sprite->palette);
+#if NOTIFIES
+        assert(notifications==1 && body_bytes==(size_t)(last-(unsigned char*)sprite->data));
+        assert(body_x==(unsigned)left && body_y==(unsigned)top && body_w==(unsigned)width && body_h==(unsigned)height);
+#endif
+    } else assert(!sprite->width && !sprite->height && !sprite->palette);
+    assert(!memcmp(input,bitmap,backing));
+    free(allocation);free(input);free(bitmap);++cases;
+}
+int main(void) {
+    static const int widths[]={0,1,2,7,255,256,257,510},heights[]={0,1,7,16};
+    static const int formats[]={PIXEL_8,PIXEL_16,PIXEL_32};
+    obor_profile_build=profiles[0];
+    for(unsigned f=0;f<3;++f)for(unsigned w=0;w<8;++w)for(unsigned h=0;h<4;++h)
+        for(int pattern=0;pattern<5;++pattern)for(int palette=0;palette<2;++palette)
+            for(int crop=0;crop<=CROPPED;++crop)check(widths[w],heights[h],formats[f],pattern,palette,crop);
+    for(unsigned p=0;p<sizeof(profiles)/sizeof(*profiles);++p) {
+        obor_profile_build=profiles[p];
+        check(7,7,PIXEL_8,2,0,0);check(255,1,PIXEL_16,4,1,CROPPED);check(257,7,PIXEL_32,3,1,CROPPED);
+    }
+    printf("{\"profiles\":%u,\"cases\":%u,\"reference\":%s}\n",
+           (unsigned)(sizeof(profiles)/sizeof(*profiles)),cases,HAS_REFERENCE?"true":"false");
+    return 0;
+}

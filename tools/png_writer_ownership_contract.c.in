@@ -1,0 +1,206 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ * Native savepng with the pinned public PNG declarations and bounded
+ * observers. PNG codec encoding, file I/O and normal safealloc wrappers are
+ * outside this component control. RGB context: REVERSE_COLOR=0.
+ */
+#include <stdint.h>
+#include <stddef.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "fixture_png.h"
+#define REVERSE_COLOR 0
+#include "screen.h"
+#undef printf
+#undef malloc
+#undef calloc
+#undef free
+#undef fopen
+#undef fclose
+#define CHECK(c) do { if(!(c)) { fprintf(stderr, "PNG owner check: %s\n", #c); abort(); } } while(0)
+uint32_t obor_profile_build;
+static unsigned phase, opens, closes, writer_calls, info_calls, destroyed, info_destroyed;
+static unsigned row_attempts, row_frees, row_count, header_calls, end_calls;
+static unsigned pcx_calls;
+static int file_live;
+static png_structp writer_object;
+static png_infop info_object;
+static void *row_object;
+static unsigned char rows[2][6];
+static union { long double alignment; unsigned char bytes[64]; } file_cookie;
+
+static FILE *open_output(const char *name, const char *mode)
+{
+    CHECK(!strcmp(name, "capture.png") && !strcmp(mode, "wb"));
+    ++opens;
+    if(phase == 1) return NULL;
+    CHECK(!file_live);
+    file_live = 1;
+    return (FILE *)&file_cookie;
+}
+static int close_output(FILE *stream)
+{
+    CHECK(stream == (FILE *)&file_cookie && file_live);
+    file_live = 0;
+    ++closes;
+    return 0;
+}
+png_structp png_create_write_struct(png_const_charp version, png_voidp context,
+                                    png_error_ptr error, png_error_ptr warning)
+{
+    CHECK(!strcmp(version, PNG_LIBPNG_VER_STRING) && !context && !error && !warning);
+    CHECK(file_live && !writer_object);
+    ++writer_calls;
+    if(phase == 2) return NULL;
+    writer_object = (png_structp)malloc(1);
+    CHECK(writer_object != NULL);
+    return writer_object;
+}
+png_infop png_create_info_struct(png_const_structrp writer)
+{
+    CHECK(writer == writer_object && writer_object && !info_object);
+    ++info_calls;
+    if(phase == 3) return NULL;
+    info_object = (png_infop)malloc(1);
+    CHECK(info_object != NULL);
+    return info_object;
+}
+void png_init_io(png_structrp writer, FILE *stream)
+{
+    CHECK(writer == writer_object && stream == (FILE *)&file_cookie && file_live);
+}
+void png_set_IHDR(png_const_structrp writer, png_inforp info, png_uint_32 width,
+                  png_uint_32 height, int depth, int color, int interlace,
+                  int compression, int filter)
+{
+    CHECK(writer == writer_object && info == info_object);
+    CHECK(width == 2 && height == 2 && depth == 8 && color == PNG_COLOR_TYPE_RGB);
+    CHECK(interlace == PNG_INTERLACE_NONE && compression == PNG_COMPRESSION_TYPE_DEFAULT);
+    CHECK(filter == PNG_FILTER_TYPE_DEFAULT);
+    ++header_calls;
+}
+void png_write_info(png_structrp writer, png_const_inforp info)
+{
+    CHECK(writer == writer_object && info == info_object && header_calls == 1);
+}
+void png_write_row(png_structrp writer, png_const_bytep row)
+{
+    CHECK(writer == writer_object && row == row_object && row_count < 2);
+    memcpy(rows[row_count++], row, 6);
+}
+void png_write_end(png_structrp writer, png_inforp info)
+{
+    CHECK(writer == writer_object && info == info_object && row_count == 2);
+    ++end_calls;
+}
+void png_destroy_write_struct(png_structpp writer, png_infopp info)
+{
+    CHECK(writer && *writer == writer_object && writer_object);
+    if(info && *info)
+    {
+        CHECK(*info == info_object && info_object);
+        free(info_object);
+        info_object = NULL;
+        *info = NULL;
+        ++info_destroyed;
+    }
+    free(writer_object);
+    writer_object = NULL;
+    *writer = NULL;
+    ++destroyed;
+}
+static void *allocate_row(size_t bytes)
+{
+    CHECK(bytes == 6 && !row_object);
+    ++row_attempts;
+    if(phase == 4) return NULL;
+    row_object = malloc(bytes);
+    CHECK(row_object != NULL);
+    return row_object;
+}
+static void free_row(void *pointer)
+{
+    CHECK(pointer && pointer == row_object);
+    free(pointer);
+    row_object = NULL;
+    ++row_frees;
+}
+static void obor_savepcx(const char *filename, const s_screen *screen,
+                        const unsigned char *palette)
+{
+    CHECK(!strcmp(filename, "capture.png") && screen && palette);
+    ++pcx_calls;
+}
+#define fopen open_output
+#define fclose close_output
+#define malloc allocate_row
+#define free free_row
+@SAVEPNG@
+#undef free
+#undef malloc
+#undef fclose
+#undef fopen
+
+int main(void)
+{
+    static const unsigned profiles[] = {@PROFILES@};
+    static const int formats[] = {PIXEL_8, PIXEL_x8, PIXEL_16, PIXEL_32};
+    static const u16 colors16[] = {0x001f, 0x07e0, 0xf800, 0xffff};
+    static const u32 colors32[] = {0x00112233, 0x00445566, 0x00778899, 0x00aabbcc};
+    static const unsigned char expected16[2][6] = {{248,0,0,0,252,0},{0,0,248,248,252,248}};
+    static const unsigned char expected32[2][6] = {{0x33,0x22,0x11,0x66,0x55,0x44},
+                                                  {0x99,0x88,0x77,0xcc,0xbb,0xaa}};
+    unsigned char palette[768], expected8[2][6];
+    s_screen *screen = calloc(1, offsetof(s_screen, data) + 16);
+    unsigned char *pixels;
+    unsigned cases = 0;
+    CHECK(screen != NULL && sizeof(u32) == 4 && sizeof(u16) == 2);
+    pixels = (unsigned char *)screen + offsetof(s_screen, data);
+    screen->width = screen->height = 2;
+    for(unsigned i = 0; i < sizeof(palette); ++i) palette[i] = (unsigned char)(i * 17 + 3);
+    for(unsigned i = 0; i < 4; ++i) memcpy(expected8[i / 2] + (i % 2) * 3, palette + (i + 1) * 3, 3);
+    for(unsigned p = 0; p < sizeof(profiles) / sizeof(*profiles); ++p)
+    for(unsigned f = 0; f < sizeof(formats) / sizeof(*formats); ++f)
+    for(phase = 0; phase < 5; ++phase)
+    {
+        CHECK(!file_live && !writer_object && !info_object && !row_object);
+        obor_profile_build = profiles[p];
+        opens = closes = writer_calls = info_calls = destroyed = info_destroyed = 0;
+        row_attempts = row_frees = row_count = header_calls = end_calls = 0;
+        pcx_calls = 0;
+        memset(rows, 0, sizeof(rows));
+        screen->pixelformat = formats[f];
+        if(f < 2) { const unsigned char indices[] = {1,2,3,4}; memcpy(pixels, indices, sizeof(indices)); }
+        else if(f == 2) memcpy(pixels, colors16, sizeof(colors16));
+        else memcpy(pixels, colors32, sizeof(colors32));
+        savepng("capture.png", screen, palette);
+        if(OBOR_ENGINE_BUILD == 3400 && obor_profile_build < 3344)
+        {
+            CHECK(pcx_calls == 1 && !opens && !writer_calls && !info_calls && !row_attempts);
+            ++cases;
+            continue;
+        }
+        CHECK(pcx_calls == 0);
+        CHECK(!file_live && row_object == NULL && writer_object == NULL);
+        CHECK(info_object == NULL);
+        CHECK(opens == 1 && closes == (phase != 1));
+        CHECK(writer_calls == (phase != 1));
+        CHECK(info_calls == (phase != 1 && phase != 2));
+        CHECK(destroyed == (phase == 0 || phase == 3 || phase == 4));
+        CHECK(info_destroyed == (phase == 0 || phase == 4));
+        CHECK(row_attempts == (phase == 0 || phase == 4));
+        CHECK(row_frees == (phase == 0) && end_calls == (phase == 0));
+        CHECK(row_count == (phase == 0 ? 2u : 0u));
+        if(phase == 0)
+        {
+            const unsigned char *expected = f < 2 ? expected8[0] : f == 2 ? expected16[0] : expected32[0];
+            CHECK(memcmp(rows, expected, sizeof(rows)) == 0);
+        }
+        ++cases;
+    }
+    free(screen);
+    printf("{\"status\":\"PASS\",\"profiles\":%zu,\"cases\":%u}\n",
+           sizeof(profiles) / sizeof(*profiles), cases);
+    return 0;
+}

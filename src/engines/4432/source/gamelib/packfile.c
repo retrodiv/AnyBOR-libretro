@@ -348,6 +348,8 @@ char *casesearch(const char *dir, const char *filepath)
     char filename[256] = {""}, *rest_of_path;
     static char fullpath[256];
     int i = 0;
+    if(!dir || !filepath || strcspn(filepath, "/") >= sizeof(filename)) return NULL;
+
 #ifdef VERBOSE
     printf("casesearch: %s, %s\n", dir, filepath);
 #endif
@@ -382,9 +384,16 @@ char *casesearch(const char *dir, const char *filepath)
         }
     }
 
-    if (entry != NULL)
+    if(entry != NULL)
     {
-        sprintf(fullpath, "%s/%s", dir, entry->d_name);
+        char joined[sizeof(fullpath)];
+        int length = snprintf(joined, sizeof(joined), "%s/%s", dir, entry->d_name);
+        if(length < 0 || (size_t)length >= sizeof(joined))
+        {
+            (void)closedir(d);
+            return NULL;
+        }
+        memcpy(fullpath, joined, (size_t)length + 1);
     }
 
     if (closedir(d))

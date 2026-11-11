@@ -1,0 +1,100 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+int max_script_vars;
+Script *pcurrentscript;
+static int obor_script_replace_interpreter(Script *value,char *name)
+{(void)value;(void)name;abort();}
+static int obor_script_replace_comment(Script *value,char *comment)
+{(void)value;(void)comment;abort();}
+static void fixture_constructor_stop(int status,const char *message,...)
+{(void)status;(void)message;abort();}
+static unsigned char allocation_poison;
+static void *fixture_script_malloc(size_t bytes)
+{
+    void *value=fixture_malloc(bytes);
+    if(value)memset(value,allocation_poison,bytes);
+    return value;
+}
+#define malloc fixture_script_malloc
+#define calloc fixture_calloc
+#define free fixture_free
+@ALLOCATION_POLICY@
+@BEFORE_ALLOC@
+@AFTER_ALLOC@
+@BEFORE_SCRIPT_INIT@
+@AFTER_SCRIPT_INIT@
+#undef free
+#undef calloc
+#undef malloc
+struct script_observation {
+    unsigned char record[sizeof(Script)];
+    ScriptVariant vars[4];
+    unsigned allocations;
+    size_t bytes[4];
+};
+static void observe_script(struct script_observation *out,int before,int mode,int capacity)
+{
+    Script stack,*value;reset(0);memset(out,0,sizeof(*out));max_script_vars=capacity;
+    allocation_poison=mode&1?0xA5:0x3C;
+    if(mode==0)value=before?before_alloc_script():alloc_script();
+    else
+    {
+        value=&stack;memset(value,0xA5,sizeof(*value));
+        if(before) @CALL_BEFORE_INIT@
+        else @CALL_AFTER_INIT@
+        if(mode==2)
+        {
+            if(before) @CALL_BEFORE_REUSE@
+            else @CALL_AFTER_REUSE@
+        }
+    }
+    assert(value && !stop_count);memcpy(out->record,value,sizeof(*value));
+#if @MODERN@
+    memset(out->record+offsetof(Script,varlist),0,sizeof(value->varlist));
+    assert(value->varlist && value->varlist->magic==varlist_magic);
+    assert(value->varlist->vars->lVal==capacity);
+    memcpy(out->vars,value->varlist->vars,((size_t)capacity+1)*sizeof(*out->vars));
+#else
+    memset(out->record+offsetof(Script,vars),0,sizeof(value->vars));
+    if(capacity) {assert(value->vars);memcpy(out->vars,value->vars,(size_t)capacity*sizeof(*out->vars));}
+    else assert(!value->vars);
+#endif
+    out->allocations=allocation_count;memcpy(out->bytes,sizes,sizeof(sizes));cleanup();
+}
+static void script_failure(int mode,unsigned fail,int capacity)
+{
+    Script value={0};max_script_vars=capacity;reset(fail);
+    if(!setjmp(stopped))
+    {
+        if(!mode)(void)alloc_script();
+        else @CALL_FAILURE_INIT@
+        assert(0);
+    }
+    assert(stop_count==1);cleanup();++cases;
+}
+static void missing_script(int first)
+{
+    max_script_vars=0;reset(0);
+    if(!setjmp(stopped)){@CALL_MISSING_INIT@ assert(0);}
+    assert(stop_count==1 && !allocation_count);cleanup();++cases;
+}
+int main(void)
+{
+    static const uint32_t profiles[]={@PROFILES@};
+    for(unsigned i=0;i<sizeof(profiles)/sizeof(*profiles);++i)
+    {
+        obor_profile_build=profiles[i];
+        for(int mode=0;mode<4;++mode)for(int capacity=0;capacity<4;++capacity)
+        {
+            struct script_observation before,after;
+            observe_script(&before,1,mode,capacity);observe_script(&after,0,mode,capacity);
+            assert(!memcmp(&before,&after,sizeof(before)));++cases;
+        }
+        for(unsigned fail=1;fail<=(@MODERN@?4u:2u);++fail)script_failure(0,fail,2);
+        for(unsigned fail=1;fail<=(@MODERN@?3u:1u);++fail)script_failure(1,fail,2);
+        missing_script(0);missing_script(1);
+        script_failure(0,0,INT_MAX);script_failure(1,0,INT_MAX);
+    }
+    printf("{\"status\":\"PASS\",\"profiles\":%zu,\"cases\":%u}\n",sizeof(profiles)/sizeof(*profiles),cases);
+    return 0;
+}

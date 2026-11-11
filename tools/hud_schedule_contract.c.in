@@ -289,10 +289,9 @@ static void check_zoom_frame(int combined,int canvas_phase)
             if(ingame==1)strcat(expected,"BHUT");
             if(!ingame)strcat(expected,"CV");
             if(ingame==1 || selection)strcat(expected,"E");
-            if(storage==2)strcat(expected,"r");
-            if(storage!=1)strcat(expected,"a");
+            if(storage==0)strcat(expected,"a");
             strcat(expected,zoom_z<MAX_INT?"cDZDX":"cDZX");
-            assert(zoombuffer==&native_zoom && native_zoom.width==32);
+            assert(zoombuffer==&native_zoom && native_zoom.width==(storage==2?16:32));
             assert(draw_targets[0]==zoombuffer && depths[0][0]==MIN_INT && depths[0][1]==zoom_z);
             assert(draw_calls==(zoom_z<MAX_INT?2u:1u));
             if(draw_calls==2)assert(draw_targets[1]==vscreen && depths[1][0]==zoom_z+1 && depths[1][1]==MAX_INT);

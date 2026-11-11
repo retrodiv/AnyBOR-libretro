@@ -63,7 +63,7 @@ error:
 
 HRESULT ImportNode_Init(ImportNode* node, const char* path)
 {
-	char* scriptText;
+	char* scriptText = NULL;
 	node->numRefs = 0;
 
 	Interpreter_Init(&node->interpreter, "#import", &theFunctionList);
@@ -75,7 +75,9 @@ HRESULT ImportNode_Init(ImportNode* node, const char* path)
 	return S_OK;
 
 error:
-	printf("Script error: unable to import script file '%s'\n");
+	printf("Script error: unable to import script file '%s'\n", path);
+	if(scriptText) free(scriptText);
+	Interpreter_Clear(&node->interpreter);
 	return E_FAIL;
 }
 

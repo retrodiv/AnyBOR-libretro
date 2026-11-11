@@ -59,6 +59,7 @@
 #include	"anigif.h"
 #include    "openborscript.h"
 #include    "globals.h"
+#include "obor_draw_assert.h"
 #include    "ram.h"
 #include    "version.h"
 
@@ -2585,6 +2586,7 @@ void ent_default_init(entity *e);
 void ent_spawn_ent(entity *ent);
 void ent_summon_ent(entity *ent);
 void ent_set_anim(entity *ent, int aninum, int resetable);
+const s_anim *obor_script_current_animation(const entity *actor);
 void ent_set_colourmap(entity *ent, unsigned int which);
 void ent_set_model(entity *ent, char *modelname, int syncAnim);
 entity *spawn(float x, float z, float a, int direction, char *name, int index, s_model *model);

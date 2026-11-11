@@ -31,6 +31,7 @@ static int capture_printf(const char *format,...){
  assert(n>=0 && (size_t)n<sizeof(diagnostic));return n;
 }
 static void unexpected_shutdown(int code,const char *message,...){(void)code;(void)message;abort();}
+void borExit(int status){(void)status;abort();}
 CHAR *StrCache_Get(int index){
  static char strings[][32]={"first","second","","file.txt"};
  assert(index>=0 && index<4);return strings[index];

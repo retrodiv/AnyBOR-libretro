@@ -1,0 +1,105 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ * Real native getter, mapper, level/text types and separately compiled
+ * ScriptVariant/cache. Valid one-slot table; table provenance and setters
+ * have separate contracts. The ordinary allocation wrappers are not tested.
+ */
+#include <stdint.h>
+#include <limits.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <strings.h>
+#include "config.h"
+#include "openbor.h"
+#undef printf
+#undef malloc
+#undef calloc
+#undef realloc
+#undef free
+#define CHECK(c) do { if(!(c)) { fprintf(stderr, "Text query check: %s\n", #c); abort(); } } while(0)
+uint32_t obor_profile_build;
+static s_level storage;
+static s_textobj text_object;
+s_level *level = &storage;
+int obor_allocation_query(const void *pointer, const void **base, size_t *remaining)
+{
+    if(base) *base = NULL;
+    if(remaining) *remaining = 0;
+    if(pointer != &text_object) return 0;
+    if(base) *base = &text_object;
+    if(remaining) *remaining = sizeof(text_object);
+    return 1;
+}
+void writeToLogFile(const char *format, ...) { (void)format; abort(); }
+void exitIfFalse(int value, const char *condition, const char *function,
+                 const char *file, int line)
+{
+    (void)condition; (void)function; (void)file; (void)line;
+    CHECK(value);
+}
+void abortIfFalse(int value, const char *condition, const char *function,
+                  const char *file, int line)
+{
+    exitIfFalse(value, condition, function, file, line);
+}
+@ENUM@
+@MAPPER@
+@HELPERS@
+@GETTER@
+
+int main(void)
+{
+    static const unsigned profiles[] = {@PROFILES@};
+    char empty[] = "", present[] = "Native text", long_text[513];
+    char *texts[] = {NULL, empty, present, long_text};
+    unsigned cases = 0;
+    memset(long_text, 'x', sizeof(long_text) - 1);
+    long_text[sizeof(long_text) - 1] = 0;
+    storage.textobjs = &text_object;
+    storage.numtextobjs = 1;
+    struct obor_text_table fixture_table = {&text_object, 1, NULL};
+    storage.obor_text_tables = &fixture_table;
+    for(unsigned p = 0; p < sizeof(profiles) / sizeof(*profiles); ++p)
+    for(unsigned t = 0; t < sizeof(texts) / sizeof(*texts); ++t)
+    for(unsigned mode = 0; mode < 2; ++mode)
+    {
+        ScriptVariant index, property, result, *out = &result;
+        ScriptVariant *arguments[] = {&index, &property};
+        obor_profile_build = profiles[p];
+        text_object.text = texts[t];
+        ScriptVariant_Init(&index);
+        ScriptVariant_Init(&property);
+        ScriptVariant_Init(&result);
+        ScriptVariant_ChangeType(&index, VT_INTEGER);
+        index.lVal = 0;
+        if(mode)
+        {
+            ScriptVariant_ChangeType(&property, VT_STR);
+            property.strVal = StrCache_CreateNewFrom("text");
+        }
+        else
+        {
+            ScriptVariant_ChangeType(&property, VT_INTEGER);
+            property.lVal = _top_text;
+        }
+        for(unsigned repeat = 0; repeat < 3; ++repeat)
+        {
+            const char *expected = texts[t] ? texts[t] : "";
+            CHECK(openbor_gettextobjproperty(arguments, &out, 2) == S_OK);
+            CHECK(out == &result && result.vt == VT_STR);
+            CHECK(property.vt == VT_INTEGER && property.lVal == _top_text);
+            CHECK(!strcmp(StrCache_Get(result.strVal), expected));
+            CHECK(StrCache_Get(result.strVal) != texts[t]);
+            CHECK(text_object.text == texts[t]);
+            ++cases;
+        }
+        ScriptVariant_Clear(&result);
+        ScriptVariant_Clear(&property);
+        ScriptVariant_Clear(&index);
+        StrCache_Clear();
+    }
+    printf("{\"status\":\"PASS\",\"profiles\":%zu,\"cases\":%u}\n",
+           sizeof(profiles) / sizeof(*profiles), cases);
+    return 0;
+}

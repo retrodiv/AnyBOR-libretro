@@ -1,0 +1,64 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+static void check_@KIND@(int partial)
+{
+    s_anim animation = {0};
+    animation.numframes = 3;
+    animation.obor_frame_capacity = 3;
+    @ATTACK_CAPACITY@
+    for(int frame = 0; frame < 3; ++frame)
+    {
+        if(partial == 2 && frame == 1) continue;
+        if(partial == 1)
+        {
+            if(!animation.collision_@KIND@)
+                animation.collision_@KIND@ = calloc(3, sizeof(*animation.collision_@KIND@));
+            animation.collision_@KIND@[frame] = calloc(1, sizeof(**animation.collision_@KIND@));
+            continue;
+        }
+        allocate_@KIND@(&animation, frame, 3);
+        for(int slot = 0; slot < max_collisons; ++slot)
+        {
+            s_collision_@KIND@ *record = calloc(1, sizeof(*record));
+            animation.collision_@KIND@[frame]->instance[slot] = record;
+            record->index = slot;
+            record->coords = calloc(1, sizeof(*record->coords));
+            record->coords->x = 3;
+            record->coords->y = -7;
+            record->coords->width = 20;
+            record->coords->height = 12;
+            preserve_payload(record->coords);
+            @EXTRA@
+        }
+    }
+    int configured = max_collisons;
+    animation.numframes = partial == 1 ? 1 : partial == 2 ? 17 : 3;
+    if(partial == 2) max_collisons += 2;
+    free_frames(&animation);
+    max_collisons = configured;
+    CHECK(animation.collision_@KIND@ == NULL);
+    CHECK(owned_live == 0);
+    free_frames(&animation);
+    CHECK(owned_live == 0);
+    ++checks;
+}
+
+static void refuse_@KIND@(unsigned attempt)
+{
+    reset_owner();
+    memset(&fault_animation, 0, sizeof(fault_animation));
+    fault_animation.numframes = 1;
+    fault_animation.obor_frame_capacity = 1;
+    active_animation = &fault_animation;
+    refuse_attempt = attempt;
+    if(setjmp(stopped) == 0)
+    {
+        allocate_@KIND@(active_animation, 0, 1);
+        CHECK(0);
+    }
+    CHECK(stop_calls == 1);
+    CHECK(owned_live == 0);
+    active_animation = NULL;
+    ++checks;
+}

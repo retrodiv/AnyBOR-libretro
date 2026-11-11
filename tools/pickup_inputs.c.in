@@ -1,0 +1,116 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ * Complete native navigation, real records and observing callback provider.
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+@CONFIG@
+#include "openbor.h"
+#undef printf
+#undef assert
+#ifdef NDEBUG
+#error Pickup assertions must remain enabled
+#endif
+uint32_t obor_profile_build;
+static unsigned cases,animation_calls;
+static entity actor,target_actor,animation_self,animation_target;
+entity *self=&actor;
+#define assert(c) do {if(!(c)){fprintf(stderr,"Pickup profile=%u case=%u line=%d: %s\n",obor_profile_build,cases,__LINE__,#c);abort();}}while(0)
+void adjust_walk_animation(entity *other)
+{
+    assert(self==&actor && (other==self || other==&target_actor));
+    ++animation_calls;
+    memcpy(&animation_self,self,sizeof(*self));memcpy(&animation_target,other,sizeof(*other));
+}
+@DISTANCE@
+@ORIGINAL@
+@HELPER@
+static const struct {uint32_t revision;int has_destination;} contexts[]={@CONTEXTS@};
+static const float positions[][4]={
+    {0,0,0,0},{0,0,1,0},{0,0,-1,0},{0,0,0,1},
+    {0,0,0,-1},{4,5,-2,-3},{1,2,4,6},{13,-13,13,-13}};
+static const float speeds[]={0,1.25f,2.5f,-1.0f};
+static void reset(unsigned position,unsigned speed,int nomove)
+{
+    memset(&actor,0,sizeof(actor));memset(&target_actor,0,sizeof(target_actor));
+    memset(&animation_self,0,sizeof(animation_self));memset(&animation_target,0,sizeof(animation_target));
+    self=&actor;animation_calls=0;
+    actor.@X@=positions[position][0];actor.@Z@=positions[position][1];
+    target_actor.@X@=positions[position][2];target_actor.@Z@=positions[position][3];
+    actor.@SPEED@=speeds[speed];actor.@NO_MOVE@=nomove?@NO_MOVE_VALUE@:0;
+    actor.@VX@=31;actor.@VZ@=37;actor.running=1;
+#if @HAS_DEST@
+    actor.destx=41;actor.destz=43;
+#endif
+}
+struct observation
+{
+    int returned;unsigned calls;
+    entity actor,target,callback_self,callback_target;
+};
+static void observe(struct observation *out,int (*fn)(entity *),unsigned position,unsigned speed,int nomove,int alias)
+{
+    reset(position,speed,nomove);out->returned=fn(alias?self:&target_actor);out->calls=animation_calls;
+    memcpy(&out->actor,&actor,sizeof(actor));memcpy(&out->target,&target_actor,sizeof(target_actor));
+    memcpy(&out->callback_self,&animation_self,sizeof(animation_self));
+    memcpy(&out->callback_target,&animation_target,sizeof(animation_target));
+}
+static void compare_valid(unsigned position,unsigned speed,int nomove,int alias,int has_destination)
+{
+    struct observation actual={0},expected={0};
+    observe(&actual,common_try_pick,position,speed,nomove,alias);
+    observe(&expected,original_pick,position,speed,nomove,alias);
+    assert(actual.returned == expected.returned);
+    assert(actual.returned==(nomove?0:1) && actual.calls==(nomove?0u:1u));
+    assert(actual.calls==expected.calls);
+    assert(!memcmp(&actual.actor,&expected.actor,sizeof(actual.actor)));
+    assert(!memcmp(&actual.target,&expected.target,sizeof(actual.target)));
+    assert(!memcmp(&actual.callback_self,&expected.callback_self,sizeof(actual.callback_self)));
+    assert(!memcmp(&actual.callback_target,&expected.callback_target,sizeof(actual.callback_target)));
+#if @HAS_DEST@
+    if(!nomove)
+    {
+        float x=alias?positions[position][0]:positions[position][2];
+        float z=alias?positions[position][1]:positions[position][3];
+        assert(actual.actor.destx==(has_destination?x:41));
+        assert(actual.actor.destz==(has_destination?z:43));
+    }
+#else
+    assert(!has_destination);
+#endif
+    ++cases;
+}
+static void absent_objects(void)
+{
+    for(int missing=0;missing<3;++missing)
+    for(int nomove=0;nomove<2;++nomove)
+    {
+        reset(5,1,nomove);entity before_actor,before_target;
+        memcpy(&before_actor,&actor,sizeof(actor));memcpy(&before_target,&target_actor,sizeof(target_actor));
+        entity *other=missing==0?&target_actor:NULL;
+        if(missing!=1)self=NULL;
+        assert(common_try_pick(other)==0 && !animation_calls);
+        assert(!memcmp(&actor,&before_actor,sizeof(actor)) && !memcmp(&target_actor,&before_target,sizeof(target_actor)));
+        ++cases;
+    }
+}
+int main(void)
+{
+    for(unsigned c=0;c<sizeof(contexts)/sizeof(*contexts);++c)
+    {
+        obor_profile_build=contexts[c].revision;
+#ifdef ALIAS_ONLY
+        compare_valid(0,1,0,1,contexts[c].has_destination);
+#else
+        for(unsigned p=0;p<sizeof(positions)/sizeof(*positions);++p)
+        for(unsigned s=0;s<sizeof(speeds)/sizeof(*speeds);++s)
+        for(int nomove=0;nomove<2;++nomove)
+        for(int alias=0;alias<2;++alias)
+            compare_valid(p,s,nomove,alias,contexts[c].has_destination);
+        absent_objects();
+#endif
+    }
+    printf("{\"status\":\"PASS\",\"profiles\":%zu,\"cases\":%u}\n",sizeof(contexts)/sizeof(*contexts),cases);return 0;
+}

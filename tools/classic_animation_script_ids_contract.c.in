@@ -26,6 +26,8 @@ int StrCache_Pop(void)
 {for(int i=0;i<32;++i)if(!refs[i]){refs[i]=1;strings[i][0]=0;return i;}abort();}
 void StrCache_Collect(int i) {assert(i>=0 && i<32 && refs[i]>0);--refs[i];}
 CHAR *StrCache_Get(int i) {assert(i>=0 && i<32 && refs[i]>0);return strings[i];}
+CHAR *StrCache_GetIfPresent(int i)
+{return i>=0 && i<32 && refs[i]>0 && memchr(strings[i],0,sizeof(strings[i]))?strings[i]:NULL;}
 void StrCache_Copy(int i,CHAR *text)
 {assert(i>=0 && i<32 && refs[i]>0 && strlen(text)<sizeof(strings[i]));strcpy(strings[i],text);}
 static int record_printf(const char *format,...)
@@ -42,6 +44,21 @@ static int sprite_ids[SLOT_COUNT][2],vulnerable[SLOT_COUNT][2],boxes[SLOT_COUNT]
 static s_attack attacks[SLOT_COUNT],*attack_frames[SLOT_COUNT][2];
 static s_sprite_map maps[SLOT_COUNT];
 s_sprite_map *sprite_map=maps;
+int sprite_map_max_items=SLOT_COUNT;
+unsigned int sprites_loaded=SLOT_COUNT;
+size_t obor_allocation_size(const void *p){
+ if(p==animation_table)return sizeof(animation_table);
+ for(unsigned i=0;i<SLOT_COUNT;++i){
+  if(p==&animations[i])return sizeof(animations[i]);
+  if(p==vulnerable[i])return sizeof(vulnerable[i]);
+ }
+ return 0;
+}
+/* Filename branches are not part of these numeric animation queries. */
+static int obor_script_sprite_name_readable(const char *name,int limit)
+{(void)name;(void)limit;abort();}
+static int obor_script_sprite_name_store(char *name,int key)
+{(void)name;(void)key;abort();}
 static int current_public,expected_native,range_calls,target_calls,update_calls,bind_calls;
 static int expected_target_type;
 void update_frame(entity *ent,int frame)

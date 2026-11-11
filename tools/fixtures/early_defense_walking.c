@@ -23,6 +23,7 @@ int max_attack_types=3;
 static char diagnostic[4096];
 static char *cache[8];
 CHAR *StrCache_Get(int index) {assert(index>=0 && index<8 && cache[index]);return cache[index];}
+CHAR *StrCache_GetIfPresent(int index) {return index>=0 && index<8 ? cache[index] : NULL;}
 void StrCache_Collect(int index) {assert(index>=0 && index<8);}
 int StrCache_Pop(void) {abort();}
 static int message(const char *format,...) {

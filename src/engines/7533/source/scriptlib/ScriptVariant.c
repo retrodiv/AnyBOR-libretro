@@ -287,6 +287,7 @@ HRESULT ScriptVariant_IntegerValue(ScriptVariant *var, LONG *pVal)
 
 HRESULT ScriptVariant_DecimalValue(ScriptVariant *var, DOUBLE *pVal)
 {
+    if(!var || !pVal) return E_FAIL;
     if(var->vt == VT_INTEGER)
     {
         *pVal = (DOUBLE)var->lVal;

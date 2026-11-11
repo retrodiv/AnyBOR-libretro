@@ -30,10 +30,10 @@ enum {_gep_attack=1};
 static void map_attack(ScriptVariant **varlist,int paramCount){
  char *propname;int prop,obor_property=_gep_attack;if(paramCount<3)return;@MAPPING@
 }
-typedef struct {s_attack **attacks;} animation;
+typedef struct {int numframes;s_attack **attacks;} animation;
 typedef struct entity {
  struct {int health;struct {int maximum,current;} guardpoints;
-         float offense_factors[4],defense_factors[4];animation *animation[1];} modeldata;
+         float offense_factors[4],defense_factors[4];animation **animation;} modeldata;
  int health,damage_on_landing,projectile,invincible,lifespancountdown;float a;
 } entity;
 static int validanim(entity *ent,int index){return index==0 && ent->modeldata.animation[0]!=NULL;}
@@ -89,7 +89,8 @@ static void check(unsigned revision,int modern,const property_case *properties,s
   assert(!memcmp(&a,&attack,sizeof(a)) && !memcmp(&b,&bomb,sizeof(b)));
  }
  freeCommandList(commands);initialize();
- s_attack *frames[]={&attack};animation anim={frames};entity ent={0};ent.modeldata.animation[0]=&anim;
+ s_attack *frames[]={&attack};animation anim={1,frames};animation *animations[]={&anim};
+ entity ent={0};ent.modeldata.animation=animations;
  ScriptVariant args[7]={0},result={0};ScriptVariant *vars[7],*returned=&result;
  for(int i=0;i<7;i++)vars[i]=args+i;
  args[0].vt=VT_PTR;args[0].ptrVal=&ent;args[1].vt=VT_INTEGER;args[1].lVal=_gep_attack;

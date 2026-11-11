@@ -32,6 +32,7 @@ int StrCache_Pop(void)
 }
 void StrCache_Collect(int i) { assert(i>=0 && i<32 && used[i]); used[i]=0; }
 CHAR *StrCache_Get(int i) { assert(i>=0 && i<32 && used[i]); return strings[i]; }
+CHAR *StrCache_GetIfPresent(int i) { return i>=0 && i<32 && used[i] && memchr(strings[i],0,sizeof(strings[i]))?strings[i]:NULL; }
 void StrCache_Copy(int i, CHAR *value)
 { assert(i>=0 && i<32 && used[i] && strlen(value)<sizeof(strings[i])); strcpy(strings[i],value); }
 void set_weapon(entity *ent, int number, int flag)

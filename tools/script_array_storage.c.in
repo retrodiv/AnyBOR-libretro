@@ -1,0 +1,150 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <stddef.h>
+#include <stdint.h>
+#include <limits.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <setjmp.h>
+@CONFIG@
+#include "openbor.h"
+#include "@SCRIPT_HEADER@"
+#undef printf
+#undef assert
+#undef malloc
+#undef calloc
+#undef free
+uint32_t obor_profile_build;
+static unsigned cases;
+#define assert(c) do{if(!(c)){fprintf(stderr,"Array profile=%u case=%u line=%d: %s\n",obor_profile_build,cases,__LINE__,#c);abort();}}while(0)
+HRESULT Interpreter_Call(Interpreter *p){(void)p;abort();}
+HRESULT Interpreter_EvalInstruction(Interpreter *p){(void)p;abort();}
+static List scriptheap;
+#include "source/scriptlib/List.c"
+@VARIANT_SUPPORT@
+static jmp_buf stopped;
+static int stop_count;
+void borExit(int status){assert(status==1);++stop_count;longjmp(stopped,1);}
+static int fixture_printf(const char *fmt,...){(void)fmt;return 0;}
+static struct {void *pointer;size_t bytes;int live;} owned[4];
+static unsigned used,allocation_count,fail_at;
+static size_t sizes[4];
+static void *fixture_calloc(size_t count,size_t bytes)
+{
+    assert(!bytes || count<=SIZE_MAX/bytes);size_t total=count*bytes;
+    assert(allocation_count<4);sizes[allocation_count++]=total;
+    if(allocation_count==fail_at || total>1048576)return NULL;
+    assert(used<4);void *p=calloc(count,bytes);assert(p);
+    owned[used].pointer=p;owned[used].bytes=total;owned[used++].live=1;return p;
+}
+static void *fixture_malloc(size_t bytes){return fixture_calloc(1,bytes);}
+static void fixture_free(void *value)
+{
+    if(!value)return;
+    for(unsigned i=0;i<used;++i)if(owned[i].live && owned[i].pointer==value)
+    {owned[i].live=0;free(value);return;}
+    assert(0);
+}
+static void reset(unsigned fail)
+{
+    for(unsigned i=0;i<used;++i)assert(!owned[i].live);
+    used=allocation_count=stop_count=0;fail_at=fail;memset(sizes,0,sizeof(sizes));List_Init(&scriptheap);
+}
+static void cleanup(void)
+{
+    List_Clear(&scriptheap);
+    for(unsigned i=0;i<used;++i)if(owned[i].live){owned[i].live=0;free(owned[i].pointer);}
+}
+#define printf fixture_printf
+#define malloc fixture_malloc
+#define calloc fixture_calloc
+#define free fixture_free
+@BEFORE_INIT@
+@AFTER_INIT@
+@OWNER_REGISTRATION@
+@BEFORE_ARRAY@
+@AFTER_ARRAY@
+#undef printf
+#undef malloc
+#undef calloc
+#undef free
+struct observation{HRESULT status;int returned,vt;size_t allocations[4];unsigned count;LONG length;ScriptVariant vars[17];};
+typedef HRESULT (*array_fn)(ScriptVariant**,ScriptVariant**,int);
+static void observe(struct observation *out,array_fn fn,LONG count)
+{
+    reset(0);memset(out,0,sizeof(*out));
+    ScriptVariant arg={0},value={0},*result=&value,*args[]={&arg};arg.vt=VT_INTEGER;arg.lVal=count;
+    out->status=fn(args,&result,1);out->returned=result!=NULL;
+    if(result)
+    {
+        assert(result==&value && value.vt==VT_PTR && value.ptrVal);
+        assert(List_GetSize(&scriptheap)==1 && List_Includes(&scriptheap,value.ptrVal));
+        assert(!strcmp(List_GetName(&scriptheap),"openbor_array"));out->vt=value.vt;
+#if @MODERN@
+        Varlist *array=value.ptrVal;assert(array->magic==varlist_magic);
+        assert(List_GetSize(array->list)==0);out->length=array->vars->lVal;
+        assert(count<17);memcpy(out->vars,array->vars,((size_t)count+1)*sizeof(ScriptVariant));
+#else
+        size_t offset=@RAW_OFFSET@;assert(count>0 && count<17);
+        ScriptVariant *array=value.ptrVal;out->length=offset?array->lVal:count;
+        memcpy(out->vars,array,((size_t)count+offset)*sizeof(*array));
+#endif
+    }
+    else assert(out->status==E_FAIL && List_GetSize(&scriptheap)==0);
+    out->count=allocation_count;memcpy(out->allocations,sizes,sizeof(sizes));cleanup();
+}
+static void valid_controls(void)
+{
+    for(LONG size=-1;size<=16;++size)
+    {
+        struct observation before,after;observe(&before,before_array,size);observe(&after,openbor_array,size);
+        assert(!memcmp(&before,&after,sizeof(before)));++cases;
+    }
+}
+static void invalid_arguments(void)
+{
+    ScriptVariant value={0},arg={0},*result=&value,*args[]={&arg};arg.vt=VT_INTEGER;arg.lVal=1;
+    reset(0);assert(openbor_array(args,NULL,1)==E_FAIL);assert(!allocation_count);cleanup();
+    reset(0);result=NULL;assert(openbor_array(args,&result,1)==E_FAIL && !result);assert(!allocation_count);cleanup();
+    reset(0);result=&value;assert(openbor_array(NULL,&result,1)==E_FAIL && !result);assert(!allocation_count);cleanup();
+    reset(0);result=&value;args[0]=NULL;assert(openbor_array(args,&result,1)==E_FAIL && !result);assert(!allocation_count);cleanup();cases+=4;
+}
+static void allocation_refusals(void)
+{
+    ScriptVariant arg={0},value={0},*result=&value,*args[]={&arg};arg.vt=VT_INTEGER;arg.lVal=2;
+    reset(1);assert(openbor_array(args,&result,1)==E_FAIL && !result && !stop_count);cleanup();++cases;
+#if @MODERN@
+    for(unsigned fail=2;fail<=3;++fail)
+    {
+        reset(fail);result=&value;
+        if(!setjmp(stopped)){(void)openbor_array(args,&result,1);assert(0);}
+        assert(stop_count==1 && List_GetSize(&scriptheap)==0 && allocation_count==fail);cleanup();++cases;
+    }
+    for(int mode=0;mode<3;++mode)
+    {
+        Varlist list={0};reset(0);
+        if(!setjmp(stopped)){Varlist_Init(mode==0?NULL:&list,mode==1?-1:INT_MAX);assert(0);}
+        assert(stop_count==1 && !allocation_count);cleanup();++cases;
+    }
+#endif
+    reset(0);result=&value;arg.lVal=INT_MAX;
+    assert(openbor_array(args,&result,1)==E_FAIL && !result && !stop_count);
+#if @MODERN@
+    assert(!allocation_count);
+#else
+    assert(allocation_count==0 || (allocation_count==1 && sizes[0]>1048576));
+#endif
+    cleanup();++cases;
+}
+int main(void)
+{
+    static const uint32_t profiles[]={@PROFILES@};
+    for(unsigned i=0;i<sizeof(profiles)/sizeof(*profiles);++i)
+    {
+        obor_profile_build=profiles[i];
+        valid_controls();invalid_arguments();allocation_refusals();
+    }
+    printf("{\"status\":\"PASS\",\"profiles\":%zu,\"cases\":%u}\n",sizeof(profiles)/sizeof(*profiles),cases);
+    return 0;
+}

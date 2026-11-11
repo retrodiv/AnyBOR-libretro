@@ -1,0 +1,163 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ * Actual native types and formatter body, bounded cache service providers,
+ * and bounded destination range observers. This does not validate arbitrary
+ * table provenance, semantic ownership or the complete cache.
+ */
+#include <float.h>
+#include <limits.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "config.h"
+#include "openbor.h"
+#undef printf
+#undef malloc
+#undef calloc
+#undef realloc
+#undef free
+#define CHECK(c) do { if(!(c)) { fprintf(stderr, "Text value check: %s\n", #c); abort(); } } while(0)
+uint32_t obor_profile_build;
+static char *strings[5];
+static unsigned allocations;
+static int refusal;
+static void *destination;
+static size_t destination_bytes;
+int obor_allocation_query(const void *pointer, const void **base, size_t *remaining)
+{
+    uintptr_t address = (uintptr_t)pointer, origin = (uintptr_t)destination;
+    if(base) *base = NULL;
+    if(remaining) *remaining = 0;
+    if(!destination || address < origin || address - origin >= destination_bytes) return 0;
+    if(base) *base = destination;
+    if(remaining) *remaining = destination_bytes - (address - origin);
+    return 1;
+}
+CHAR *StrCache_Get(int index)
+{
+    CHECK(index >= 0 && index < 5 && strings[index]);
+    return strings[index];
+}
+CHAR *StrCache_GetIfPresent(int index)
+{
+    return index >= 0 && index < 5 ? strings[index] : NULL;
+}
+static void *store_malloc(size_t bytes)
+{
+    CHECK(bytes == MAX_STR_VAR_LEN);
+    ++allocations;
+    if(refusal) return NULL;
+    destination = malloc(bytes);
+    destination_bytes = destination ? bytes : 0;
+    return destination;
+}
+#define malloc store_malloc
+@STORE@
+#undef malloc
+@FORMAT@
+@ORIGINAL@
+
+int main(void)
+{
+    static const unsigned profiles[] = {@PROFILES@};
+    char empty[] = "", short_text[] = "Native text";
+    char edge[MAX_STR_VAR_LEN], over[MAX_STR_VAR_LEN + 1], long_text[513];
+    ScriptVariant values[15];
+    unsigned cases = 0;
+    memset(edge, 'e', sizeof(edge)); edge[sizeof(edge) - 1] = 0;
+    memset(over, 'o', sizeof(over)); over[sizeof(over) - 1] = 0;
+    memset(long_text, 'x', sizeof(long_text)); long_text[sizeof(long_text) - 1] = 0;
+    strings[0] = empty; strings[1] = short_text; strings[2] = edge;
+    strings[3] = over; strings[4] = long_text;
+    memset(values, 0, sizeof(values));
+    values[0].vt = VT_EMPTY;
+    for(unsigned i = 1; i <= 3; ++i) values[i].vt = VT_INTEGER;
+    values[1].lVal = INT_MIN; values[2].lVal = 0; values[3].lVal = INT_MAX;
+    for(unsigned i = 4; i <= 6; ++i) values[i].vt = VT_DECIMAL;
+    values[4].dblVal = -0.0; values[5].dblVal = 3.25; values[6].dblVal = DBL_MAX;
+    values[7].vt = values[8].vt = VT_PTR;
+    values[7].ptrVal = NULL; values[8].ptrVal = (void *)(uintptr_t)0x1234;
+    for(unsigned i = 9; i <= 13; ++i) { values[i].vt = VT_STR; values[i].strVal = (int)i - 9; }
+    values[14].vt = (VARTYPE)77;
+    for(unsigned p = 0; p < sizeof(profiles) / sizeof(*profiles); ++p)
+    {
+        s_textobj object = {0}, fresh = {0};
+        allocations = 0; refusal = 0; destination = NULL; destination_bytes = 0;
+        obor_profile_build = profiles[p];
+        for(unsigned i = 0; i < sizeof(values) / sizeof(*values); ++i)
+        {
+            char oracle[1024], previous[MAX_STR_VAR_LEN], expected[MAX_STR_VAR_LEN];
+            struct { unsigned char before[16]; char data[MAX_STR_VAR_LEN]; unsigned char after[16]; } bounded;
+            memset(&bounded, 0x5a, sizeof(bounded));
+            fixture_original_format(&values[i], oracle);
+            size_t length = strlen(oracle);
+            int fits = length < MAX_STR_VAR_LEN;
+            char *owner = object.text;
+            if(owner) memcpy(previous, owner, sizeof(previous));
+            CHECK(obor_textobj_format(&values[i], bounded.data) == fits);
+            for(unsigned g = 0; g < 16; ++g) CHECK(bounded.before[g] == 0x5a && bounded.after[g] == 0x5a);
+            if(fits)
+            {
+                CHECK(!strcmp(bounded.data, oracle));
+                CHECK(obor_textobj_store(&object, bounded.data));
+                CHECK(!owner || object.text == owner);
+                memset(expected, 0, sizeof(expected));
+                memcpy(expected, oracle, length);
+                CHECK(!memcmp(object.text, expected, sizeof(expected)));
+            }
+            else
+            {
+                CHECK(bounded.data[0] == 0 && object.text == owner);
+                CHECK(!owner || !memcmp(object.text, previous, sizeof(previous)));
+            }
+            ++cases;
+        }
+        {
+            ScriptVariant invalid = {0}; char buffer[MAX_STR_VAR_LEN];
+            invalid.vt = VT_STR; invalid.strVal = -1;
+            CHECK(!obor_textobj_format(&invalid, buffer) && buffer[0] == 0); ++cases;
+            CHECK(!obor_textobj_format(NULL, buffer) && buffer[0] == 0); ++cases;
+            CHECK(!obor_textobj_format(&values[0], NULL)); ++cases;
+            memset(buffer, 'x', sizeof(buffer));
+            CHECK(!obor_textobj_store(&fresh, buffer) && !fresh.text); ++cases;
+            CHECK(allocations == 1);
+            refusal = 1;
+            CHECK(!obor_textobj_store(&fresh, "") && !fresh.text); ++cases;
+            CHECK(allocations == 2);
+            refusal = 0;
+        }
+        free(object.text);
+        destination = NULL; destination_bytes = 0;
+        {
+            unsigned char region[MAX_STR_VAR_LEN + 8], before[sizeof(region)];
+            s_textobj view = {0};
+            memset(region, 0x5a, sizeof(region)); memcpy(before, region, sizeof(region));
+            destination = region; destination_bytes = MAX_STR_VAR_LEN - 1;
+            view.text = (char *)region;
+            CHECK(!obor_textobj_store(&view, "x") && view.text == (char *)region);
+            CHECK(!memcmp(region, before, sizeof(region))); ++cases;
+            CHECK(!obor_textobj_store(&view, ""));
+            CHECK(!memcmp(region, before, sizeof(region))); ++cases;
+            destination = NULL; destination_bytes = 0;
+            CHECK(!obor_textobj_store(&view, "x") && view.text == (char *)region);
+            CHECK(!memcmp(region, before, sizeof(region))); ++cases;
+            destination = region; destination_bytes = sizeof(region);
+            view.text = (char *)region + 4;
+            CHECK(obor_textobj_store(&view, "view") && view.text == (char *)region + 4);
+            CHECK(!strcmp(view.text, "view"));
+            for(unsigned i = 0; i < 4; ++i)
+                CHECK(region[i] == 0x5a && region[MAX_STR_VAR_LEN + 4 + i] == 0x5a);
+            for(unsigned i = 8; i < MAX_STR_VAR_LEN + 4; ++i) CHECK(!region[i]);
+            ++cases;
+            CHECK(obor_textobj_store(&view, view.text) && !strcmp(view.text, "view"));
+            for(unsigned i = 0; i < 4; ++i)
+                CHECK(region[i] == 0x5a && region[MAX_STR_VAR_LEN + 4 + i] == 0x5a);
+            ++cases;
+            destination = NULL; destination_bytes = 0;
+        }
+    }
+    printf("{\"status\":\"PASS\",\"profiles\":%zu,\"cases\":%u}\n",
+           sizeof(profiles) / sizeof(*profiles), cases);
+    return 0;
+}

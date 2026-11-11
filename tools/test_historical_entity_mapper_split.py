@@ -62,7 +62,14 @@ class EntityMapperSplitTests(unittest.TestCase):
                 row['revision'],*groups,json.dumps(row['main_diagnostic']['get']),
                 json.dumps(row['main_diagnostic']['set'])))
         engine=SOURCE/'src/engines/3842';source=(engine/'openborscript.c').read_text()
-        start=source.index('enum entityproperty_enum');stop=source.index('HRESULT openbor_getentityproperty(',start)
+        start=source.index('enum entityproperty_enum')
+        # Keep complete mapping declarations and bodies. Getter storage helpers
+        # following the final mapper are outside this contract.
+        mappers=[function(source,name).rstrip('\n') for name in (
+            'mapstrings_getentityproperty','mapstrings_changeentityproperty','mapstrings_entityproperty')
+            if re.search(r'(?m)^void\s+'+name+r'\s*\([^;{}]*\)\s*\{',source)]
+        self.assertTrue(mappers)
+        stop=max(source.index(body,start)+len(body) for body in mappers)
         declarations=source[start:stop]
         # Older prepared controls expose only the merged mapper. Keep those
         # compilable so this test detects their argument/diagnostic differences.
@@ -114,6 +121,7 @@ static int last_property;
 #define assert(c) do {if(!(c)){fprintf(stderr,"Entity mapper revision=%u case=%u line=%d\n",obor_profile_build,test_case,__LINE__);abort();}}while(0)
 static char cache[32][128],diagnostics[4096];static int next_string;
 static char *StrCache_Get(int index){assert(index>=0 && index<next_string);return cache[index];}
+static char *StrCache_GetIfPresent(int index){return index>=0 && index<next_string?cache[index]:NULL;}
 static int StrCache_Pop(void){assert(next_string<32);return next_string++;}
 static void StrCache_Collect(int index){assert(index>=0 && index<next_string);}
 static int report(const char *format,...) {

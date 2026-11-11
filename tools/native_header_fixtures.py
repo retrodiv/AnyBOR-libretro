@@ -8,6 +8,21 @@ Copyright (c) 2026 retrodiv <retrodiv@proton.me>
 import re
 
 
+def assertion_refusals():
+    """Refuse invariant failures in contracts limited to valid frame storage."""
+    return r'''
+void obor_port_assert(int value,const char *expression,const char *function,
+                      const char *file,int line) {
+ (void)expression;(void)function;(void)file;(void)line;
+ if(!value){fputs("Unexpected native assertion in valid-only contract\n",stderr);abort();}
+}
+void exitIfFalse(int value,const char *expression,const char *function,
+                 const char *file,int line) {
+ obor_port_assert(value,expression,function,file,line);
+}
+'''
+
+
 def inline_refusals(unused_inline_declarations=None, *, forbidden_names=()):
     declarations=[] if unused_inline_declarations is None else unused_inline_declarations
     if not isinstance(declarations,list) or len(declarations)>128:

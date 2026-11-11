@@ -74,6 +74,7 @@ static int observed_ingame,observed_wait,observed_filter,queue_calls,draw_count,
 static char trace[96];static unsigned at;
 static void event(char c){assert(at+1<sizeof(trace));trace[at++]=c;trace[at]=0;}
 static unsigned char *screen_pixels(s_screen *s){return (unsigned char*)s+offsetof(s_screen,data);}
+static void shutdown(int code,const char *message,...){(void)code;(void)message;abort();}
 void draw_scrolled_bg(void){event('B');}
 void predrawstatus(void){event('P');}
 void drawstatus(void){event('S');}

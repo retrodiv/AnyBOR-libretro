@@ -355,10 +355,14 @@ class NativeTextReturnTests(unittest.TestCase):
                 options['field_paths']=row['field_paths']
             for key in ['create_strings','string_limit']:
                 if key in row:options[key]=row[key]
-            for helper in ['obor_textproperty_native','obor_textobj_index','obor_textobj_store','obor_textobj_format',
+            for helper in ['obor_textproperty_native','obor_textobjs_count','obor_textobj_index','obor_textobj_store','obor_textobj_format',
                            'openbor_textobj_set_text']:
-                if re.search(r'(?m)^static (?:int|HRESULT) '+helper+r'\s*\(',script):
+                if re.search(r'(?m)^(?:static )?(?:int|HRESULT) '+helper+r'\s*\(',script):
                     helpers+='\n'+function(script,helper)
+            ownership='#include "obor_text_table_ownership.inc"'
+            if ownership in script:
+                helpers+='\n'+ownership
+                options['owned_tables']=True
             engine=(root/'openbor.c').read_text()
             if re.search(r'(?m)^static int obor_textobjs_initialize\s*\(',engine):
                 helpers+='\n'+function(engine,'obor_textobjs_initialize')

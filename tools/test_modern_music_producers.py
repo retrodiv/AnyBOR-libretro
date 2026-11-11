@@ -54,7 +54,8 @@ class ModernMusicProducerContracts(unittest.TestCase):
         expected = dict(status='PASS', profiles=[dict(revision=row['revision'],
             cases=data['contracts'][row['contract']][kind]) for row in data['sources']])
         includes = [ROOT / 'src/deps' / name / 'include' for name in data['dependencies']] if kind == 'webm' else []
-        self.assertEqual(json.loads(native_output(program(data, kind), data, extra_includes=includes)), expected)
+        self.assertEqual(json.loads(native_output(program(data, kind), data, extra_includes=includes,
+                                                 configure_ogg=kind == 'webm')), expected)
 
     def test_music_messages_and_translation_requests(self):
         self.run_contract('music')

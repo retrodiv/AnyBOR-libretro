@@ -352,6 +352,8 @@ char *casesearch(const char *dir, const char *filepath)
     char filename[PACKFILE_PATH_MAX] = {""}, *rest_of_path;
     static char fullpath[PACKFILE_PATH_MAX];
     int i = 0;
+    if(!dir || !filepath || strcspn(filepath, "/") >= sizeof(filename)) return NULL;
+
 #ifdef VERBOSE
     printf("casesearch: %s, %s\n", dir, filepath);
 #endif

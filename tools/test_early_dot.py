@@ -77,6 +77,9 @@ class EarlyDotTests(unittest.TestCase):
 uint32_t obor_profile_build;
 static char diagnostic[4096],cache[1024][128];
 CHAR *StrCache_Get(int index){assert(index>=0 && index<1024);return cache[index];}
+CHAR *StrCache_GetIfPresent(int index) {
+    return index >= 0 && index < 1024 && memchr(cache[index], 0, sizeof(cache[index])) ? cache[index] : NULL;
+}
 void StrCache_Collect(int index){(void)index;}
 int StrCache_Pop(void){abort();}
 static int probe_printf(const char *format,...){va_list ap;va_start(ap,format);int n=vsnprintf(diagnostic,sizeof(diagnostic),format,ap);va_end(ap);return n;}

@@ -1,0 +1,191 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ * Native table helpers, draw function and source-owned text-release blocks.
+ * Bounded allocator/font observers; ordinary safealloc wrappers, arbitrary
+ * string ownership and pixels are separate contracts.
+ */
+#include <limits.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "config.h"
+#include "openbor.h"
+#include "obor_resources.h"
+#undef printf
+#undef malloc
+#undef calloc
+#undef realloc
+#undef free
+#define CHECK(c) do { if(!(c)) { fprintf(stderr, "Text table check: %s at %d\n", #c, __LINE__); abort(); } } while(0)
+uint32_t obor_profile_build;
+@CLOCK@
+static s_level storage;
+s_level *level = &storage;
+static struct { void *base; size_t bytes; int live; } records[64];
+static unsigned record_count, realloc_calls, free_calls, font_calls;
+static int refusal;
+static void remember(void *pointer, size_t bytes)
+{
+    CHECK(pointer && record_count < 64);
+    records[record_count].base = pointer;
+    records[record_count].bytes = bytes;
+    records[record_count++].live = 1;
+}
+static unsigned record(const void *pointer)
+{
+    for(unsigned i = 0; i < record_count; ++i)
+        if(records[i].live && records[i].base == pointer) return i;
+    return 64;
+}
+static void *allocate(size_t bytes)
+{
+    CHECK(bytes && bytes < 1024 * 1024);
+    void *pointer = calloc(1, bytes);
+    remember(pointer, bytes);
+    return pointer;
+}
+int obor_allocation_query(const void *pointer, const void **base, size_t *remaining)
+{
+    uintptr_t address = (uintptr_t)pointer;
+    if(base) *base = NULL;
+    if(remaining) *remaining = 0;
+    for(unsigned i = 0; i < record_count; ++i)
+    {
+        uintptr_t origin = (uintptr_t)records[i].base;
+        if(records[i].live && address >= origin && address - origin < records[i].bytes)
+        {
+            if(base) *base = records[i].base;
+            if(remaining) *remaining = records[i].bytes - (address - origin);
+            return 1;
+        }
+    }
+    return 0;
+}
+static void *table_realloc(void *pointer, size_t bytes)
+{
+    unsigned old = pointer ? record(pointer) : 64;
+    CHECK(!pointer || old != 64);
+    ++realloc_calls;
+    if(refusal) return NULL;
+    CHECK(bytes && bytes < 1024 * 1024);
+    void *grown = realloc(pointer, bytes);
+    CHECK(grown);
+    if(old != 64) records[old].live = 0;
+    remember(grown, bytes);
+    return grown;
+}
+static void table_free(void *pointer)
+{
+    if(!pointer) return;
+    unsigned index = record(pointer);
+    CHECK(index != 64);
+    records[index].live = 0;
+    ++free_calls;
+    free(pointer);
+}
+#define malloc allocate
+#define realloc table_realloc
+#define free table_free
+@OWNERSHIP@
+#undef free
+#undef realloc
+#undef malloc
+@FONT@
+#define free table_free
+@DRAW@
+static void release_visible(s_level *lv) { @VISIBLE@ }
+static void release_tables(s_level *lv) { @RELEASE@ }
+#undef free
+
+int main(void)
+{
+    static const unsigned profiles[] = {@PROFILES@};
+    unsigned scenarios = 0;
+    for(unsigned p = 0; p < sizeof(profiles) / sizeof(*profiles); ++p)
+    {
+        memset(&storage, 0, sizeof(storage));
+        record_count = realloc_calls = free_calls = font_calls = 0;
+        refusal = 0; _time = 0; obor_profile_build = profiles[p];
+        CHECK(!obor_textobjs_count(NULL) && obor_textobj_index(NULL, 0, 1) < 0); ++scenarios;
+        CHECK(obor_textobj_index(level, 1, 1) == 1);
+        s_textobj *initial = storage.textobjs;
+        initial[0].font = 17;
+        realloc_calls = 0;
+        CHECK(obor_textobjs_count(level) == 2 && obor_textobj_index(level, 0, 0) == 1);
+        CHECK(obor_textobj_index(level, 1, 0) == 1 && initial[0].font == 17); ++scenarios;
+        storage.numtextobjs = 7;
+        CHECK(obor_textobjs_count(level) == 2 && storage.numtextobjs == 7);
+        CHECK(obor_textobj_index(level, 0, 0) == 1 && obor_textobj_index(level, 2, 0) < 0); ++scenarios;
+        storage.numtextobjs = 0;
+        CHECK(!obor_textobjs_count(level) && obor_textobj_index(level, 0, 0) == 0);
+        storage.numtextobjs = -1;
+        CHECK(obor_textobj_index(level, 0, 0) == 0 && obor_textobj_index(level, 0, 1) < 0);
+        CHECK(storage.numtextobjs == -1 && !realloc_calls); ++scenarios;
+        storage.textobjs = initial + 1; storage.numtextobjs = 1;
+        CHECK(obor_textobjs_count(level) == 1 && obor_textobj_index(level, 0, 0) == 1);
+        CHECK(obor_textobj_index(level, 1, 1) < 0 && storage.textobjs == initial + 1 && !realloc_calls); ++scenarios;
+        storage.textobjs = (s_textobj *)((unsigned char *)initial + 1);
+        CHECK(!obor_textobjs_count(level) && obor_textobj_index(level, 0, 0) < 0); ++scenarios;
+        storage.textobjs = (s_textobj *)(uintptr_t)16;
+        CHECK(!obor_textobjs_count(level) && obor_textobj_index(level, 0, 0) < 0); ++scenarios;
+        storage.textobjs = NULL; storage.numtextobjs = 3;
+        CHECK(obor_textobj_index(level, 3, 1) == 1 && storage.numtextobjs == 4);
+        s_textobj *staged = storage.textobjs;
+        const unsigned char *zeroes = (const unsigned char *)staged;
+        for(size_t i = 0; i < 4 * sizeof(*staged); ++i) CHECK(!zeroes[i]);
+        CHECK(initial[0].font == 17 && record(initial) != 64); ++scenarios;
+        storage.textobjs = initial; storage.numtextobjs = 0;
+        initial[1].text = allocate(4); memcpy(initial[1].text, "old", 4);
+        uintptr_t discarded = (uintptr_t)initial[1].text;
+        CHECK(obor_textobj_index(level, 0, 1) == 1 && storage.numtextobjs == 1);
+        initial = storage.textobjs;
+        CHECK(!initial[0].font && record((const void *)discarded) == 64); ++scenarios;
+        unsigned previous_calls = realloc_calls;
+        CHECK(obor_textobj_index(level, INT_MAX, 1) < 0 && realloc_calls == previous_calls);
+        refusal = 1;
+        CHECK(obor_textobj_index(level, INT_MAX - 1, 1) < 0 && storage.textobjs == initial && storage.numtextobjs == 1);
+        refusal = 0; ++scenarios;
+        initial[0].font = 23;
+        CHECK(obor_textobj_index(level, 2, 1) == 1 && storage.numtextobjs == 3);
+        s_textobj *parent = storage.textobjs;
+        CHECK(parent[0].font == 23 && !parent[1].font && !parent[2].font); ++scenarios;
+        parent[0].text = allocate(6); memcpy(parent[0].text, "alpha", 6);
+        parent[1].text = allocate(5); memcpy(parent[1].text, "beta", 5);
+        storage.numtextobjs = 9;
+        draw_textobjs(); CHECK(font_calls == 2 && storage.numtextobjs == 9);
+        parent[1].time = 5; _time = 5; font_calls = 0;
+        draw_textobjs(); CHECK(font_calls == 1 && !parent[1].text && !parent[1].time && !parent[1].font); ++scenarios;
+        parent[1].text = allocate(7); memcpy(parent[1].text, "parent", 7);
+        char *parent_text = parent[1].text;
+        storage.textobjs = parent + 1; storage.numtextobjs = 1;
+        unsigned before_free = free_calls;
+        release_visible(level);
+        CHECK(free_calls == before_free && record(parent) != 64 && record(parent_text) != 64);
+        CHECK(parent[1].text == parent_text); ++scenarios;
+        storage.textobjs = parent; storage.numtextobjs = 9;
+        uintptr_t parent_address = (uintptr_t)parent, parent_text_address = (uintptr_t)parent_text;
+        uintptr_t staged_address = (uintptr_t)staged;
+        release_visible(level);
+        CHECK(record((const void *)parent_address) != 64 && record((const void *)parent_text_address) == 64);
+        s_textobj *foreign = allocate(sizeof(*foreign));
+        foreign->text = allocate(5); memcpy(foreign->text, "keep", 5);
+        storage.textobjs = foreign;
+        CHECK(!obor_textobjs_count(level) && obor_textobj_index(level, 0, 0) < 0);
+        release_visible(level);
+        CHECK(foreign->text && !strcmp(foreign->text, "keep")); ++scenarios;
+        release_tables(level);
+        CHECK(record((const void *)parent_address) == 64 && record((const void *)staged_address) == 64);
+        CHECK(record(foreign) != 64 && record(foreign->text) != 64); ++scenarios;
+        storage.textobjs = NULL; storage.numtextobjs = 9;
+        before_free = free_calls;
+        release_visible(level); release_tables(level);
+        CHECK(free_calls == before_free && storage.numtextobjs == 9); ++scenarios;
+        table_free(foreign->text);
+        table_free(foreign);
+        for(unsigned i = 0; i < record_count; ++i) CHECK(!records[i].live);
+    }
+    printf("{\"status\":\"PASS\",\"profiles\":%zu,\"scenarios\":%u}\n",
+           sizeof(profiles) / sizeof(*profiles), scenarios);
+    return 0;
+}

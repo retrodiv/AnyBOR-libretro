@@ -56,6 +56,10 @@
 
 #include "openbor.h"
 #include <limits.h>
+#include "obor_resources.h"
+#include "obor_rise_inputs.h"
+#include "obor_resources.h"
+#include <limits.h>
 #include <stdint.h>
 #include "commands.h"
 #include "models.h"
@@ -903,18 +907,20 @@ extern Script *pcurrentscript;//used by local script functions
 
 void setDrawMethod(s_anim *a, ptrdiff_t index, s_drawmethod *m)
 {
-    assert(index >= 0);
-    assert(a != NULL);
-    assert(m != NULL);
-    assert(index < a->numframes);
+    OBOR_DRAW_ASSERT(index >= 0);
+    OBOR_DRAW_ASSERT(a != NULL);
+    OBOR_DRAW_ASSERT(m != NULL);
+    OBOR_DRAW_ASSERT(index < a->numframes);
+    if(!a || index < 0 || index >= a->numframes || !a->drawmethods) return;
     a->drawmethods[index] = m;
 }
 
 s_drawmethod *getDrawMethod(s_anim *a, ptrdiff_t index)
 {
-    assert(index >= 0);
-    assert(a != NULL);
-    assert(index < a->numframes);
+    OBOR_DRAW_ASSERT(index >= 0);
+    OBOR_DRAW_ASSERT(a != NULL);
+    OBOR_DRAW_ASSERT(index < a->numframes);
+    if(!a || index < 0 || index >= a->numframes || !a->drawmethods) return NULL;
     return a->drawmethods[index];
 }
 
@@ -3208,6 +3214,7 @@ int loadScriptFile()
     char *buf = NULL;
     ptrdiff_t l;
     size_t len;
+    long measured;
     FILE *handle = NULL;
 
     char path[MAX_BUFFER_LEN] = {""};
@@ -3225,17 +3232,28 @@ int loadScriptFile()
         return 0;
     }
 
-    fseek(handle, 0, SEEK_END);
-    len = ftell(handle);
-    fseek(handle, 0, SEEK_SET);
-    buf = malloc(len + 1);
-
-    if(!buf)
+    if(fseek(handle, 0, SEEK_END) != 0 ||
+       (measured = ftell(handle)) <= 0 ||
+       (uintmax_t)measured >= (uintmax_t)SIZE_MAX ||
+       fseek(handle, 0, SEEK_SET) != 0)
     {
+        fclose(handle);
         return 0;
     }
-
-    fread(buf, 1, len, handle);
+    len = (size_t)measured;
+    buf = malloc(len + 1);
+    if(!buf)
+    {
+        fclose(handle);
+        return 0;
+    }
+    if(fread(buf, 1, len, handle) != len)
+    {
+        free(buf);
+        fclose(handle);
+        return 0;
+    }
+    fclose(handle);
     buf[len - 1] = 0;
 
     Script_Init(&script, "loadScriptFile",  NULL, 1);
@@ -5529,11 +5547,16 @@ static void load_playable_list(char *buf)
     for(i = 1; (value = GET_ARG(i))[0]; i++)
     {
         playermodels = findmodel(value);
-        //if(playermodels == NULL) borShutdown(1, "Player model '%s' is not loaded.\n", value);
+        if(playermodels == NULL)
+        {
+            borShutdown(1, "Player model '%s' is not loaded.\n", value);
+            return;
+        }
         index = get_cached_model_index(playermodels->name);
         if(index == -1)
         {
             borShutdown(1, "Player model '%s' is not cached.\n", value);
+            return;
         }
         model_cache[index].selectable = 1;
     }
@@ -5541,14 +5564,47 @@ static void load_playable_list(char *buf)
     return;
 }
 
+#include <limits.h>
+#include "obor_resources.h"
 void alloc_specials(s_model *newchar)
 {
-    newchar->special = realloc(newchar->special, sizeof(s_com) * (newchar->specials_loaded + 1));
-    memset(newchar->special + newchar->specials_loaded, 0, sizeof(s_com));
+    s_com *grown, *previous;
+    size_t available = 0, count, preserved;
+    int index, owns, keep_first;
+    if(!newchar) { borShutdown(1, "Invalid freespecial table."); return; }
+    index = newchar->specials_loaded;
+
+    if(index < 0 || index == INT_MAX) { borShutdown(1, "Invalid freespecial table."); return; }
+    count = (size_t)index + 1;
+    if(count > SIZE_MAX / sizeof(*grown)) { borShutdown(1, "Invalid freespecial table."); return; }
+    previous = newchar->special;
+    if(previous)
+    {
+        available = obor_allocation_size(previous) / sizeof(*previous);
+        if(!available) { borShutdown(1, "Invalid freespecial table."); return; }
+    }
+
+    keep_first = 0;
+    preserved = keep_first ? 1 : (size_t)index;
+    if(preserved > available) { borShutdown(1, "Invalid freespecial table."); return; }
+    owns = (newchar->freetypes & MF_SPECIAL) != 0;
+    /* An inherited table remains shared until its historical grow point. */
+    if(owns) grown = realloc(previous, count * sizeof(*grown));
+    else
+    {
+        grown = malloc(count * sizeof(*grown));
+        if(grown && preserved) memcpy(grown, previous, preserved * sizeof(*grown));
+    }
+    if(!grown) { borShutdown(1, (char*)E_OUT_OF_MEMORY); return; }
+    newchar->special = grown;
+    newchar->freetypes |= MF_SPECIAL;
+    if(!keep_first) memset(grown + index, 0, sizeof(*grown));
+    return;
 }
 
 void alloc_frames(s_anim *anim, int fcount)
 {
+    anim->obor_frame_capacity = (size_t)fcount;
     anim->sprite = malloc(fcount * sizeof(*anim->sprite));
     anim->delay = malloc(fcount * sizeof(*anim->delay));
     anim->vulnerable = malloc(fcount * sizeof(*anim->vulnerable));
@@ -5559,11 +5615,11 @@ void alloc_frames(s_anim *anim, int fcount)
 
 void free_frames(s_anim *anim)
 {
-    int i, instance;
+    size_t i, instance;
 
     if(anim->offset)
     {
-        for(i = 0; i < anim->numframes; i++)
+        for(i = 0; i < anim->obor_frame_capacity; i++)
         {
             if(anim->offset[i])
             {
@@ -5583,7 +5639,7 @@ void free_frames(s_anim *anim)
 
     if(anim->move)
     {
-        for(i = 0; i < anim->numframes; i++)
+        for(i = 0; i < anim->obor_frame_capacity; i++)
         {
             if(anim->move[i])
             {
@@ -5618,31 +5674,38 @@ void free_frames(s_anim *anim)
 
     if (anim->collision_attack)
     {
-        collision_attack_free_list(*anim->collision_attack);
+        for(i = 0; i < anim->obor_attack_frame_capacity; ++i)
+            collision_attack_free_list(anim->collision_attack[i]);
+        free(anim->collision_attack);
         anim->collision_attack = NULL;
+        anim->obor_attack_frame_capacity = 0;
     }
 
     if (anim->collision_body)
     {
-        collision_body_free_list(*anim->collision_body);
+        for(i = 0; i < anim->obor_frame_capacity; ++i)
+            collision_body_free_list(anim->collision_body[i]);
+        free(anim->collision_body);
         anim->collision_body = NULL;
     }
 
     if (anim->child_spawn)
     {
-        child_spawn_free_list(*anim->child_spawn);
+        for(i = 0; i < anim->obor_frame_capacity; ++i)
+            child_spawn_free_list(anim->child_spawn[i]);
+        free(anim->child_spawn);
         anim->child_spawn = NULL;
     }
 
     if(anim->collision_entity)
     {
-        for(i = 0; i < anim->numframes; i++)
+        for(i = 0; i < anim->obor_frame_capacity; i++)
         {
             if(anim->collision_entity[i])
             {
                 // Check each instance and free memory as needed.
                 // Momma always said put your toys away when you're done!
-                for(instance = 0; instance < max_collisons; instance++)
+                for(instance = 0; anim->collision_entity[i]->instance && instance < anim->collision_entity[i]->obor_instance_capacity; instance++)
                 {
                     if(anim->collision_entity[i]->instance[instance])
                     {
@@ -5660,6 +5723,9 @@ void free_frames(s_anim *anim)
                         anim->collision_entity[i]->instance[instance] = NULL;
                     }
                 }
+
+                free(anim->collision_entity[i]->instance);
+                anim->collision_entity[i]->instance = NULL;
 
                 free(anim->collision_entity[i]);
                 anim->collision_entity[i] = NULL;
@@ -5686,7 +5752,7 @@ void free_frames(s_anim *anim)
     
     if(anim->drawmethods)
     {
-        for(i = 0; i < anim->numframes; i++)
+        for(i = 0; i < anim->obor_frame_capacity; i++)
         {
             if(anim->drawmethods[i])
             {
@@ -5697,6 +5763,7 @@ void free_frames(s_anim *anim)
         free(anim->drawmethods);
         anim->drawmethods = NULL;
     }
+    anim->obor_frame_capacity = 0;
 }
 
 #if 0
@@ -6153,10 +6220,15 @@ s_collision_entity **collision_alloc_entity_list()
     size_t             alloc_size;
 
     // Get amount of memory we'll need.
-    alloc_size = sizeof(*result);
+    alloc_size = sizeof(*result) * (size_t)(max_collisons > 0 ? max_collisons : 1);
 
     // Allocate memory and get pointer.
     result = malloc(alloc_size);
+    if(!result)
+    {
+        borShutdown(1, "Not enough memory for collision data.");
+        return NULL;
+    }
 
     // Make sure the list is blank.
     memset(result, 0, alloc_size);
@@ -7585,11 +7657,8 @@ void collision_attack_free_node(s_collision_attack* target)
     }
 
     /* To Do: Free tag function. */
-    if (target->meta_data)
-    {
-        meta_data_free_list(target->meta_data);
-        target->meta_data = NULL;
-    }
+    /* Clones share this borrowed pointer. */
+    target->meta_data = NULL;
 
     /* Free the collision structure. */
     free(target);
@@ -7624,6 +7693,7 @@ void collision_attack_initialize_frame_property(s_addframe_data* data, ptrdiff_t
 
         data->animation->collision_attack = malloc(memory_size);
         memset(data->animation->collision_attack, 0, memory_size);
+        data->animation->obor_attack_frame_capacity = (size_t)data->framecount;
     }
 
     /*
@@ -8273,11 +8343,8 @@ void collision_body_free_node(s_collision_body* target)
     }
 
     /* To Do: Free tag function. */
-    if (target->meta_data)
-    {
-        meta_data_free_list(target->meta_data);
-        target->meta_data = NULL;
-    }
+    /* Clones share this borrowed pointer. */
+    target->meta_data = NULL;
 
     /* Free the collision structure. */
     free(target);
@@ -9455,13 +9522,17 @@ int addframe(s_addframe_data* data)
             size_col_on_frame = data->framecount * sizeof(*data->animation->collision_entity);
 
             data->animation->collision_entity = malloc(size_col_on_frame);
+            if(!data->animation->collision_entity) borShutdown(1, "Not enough memory for collision frames.");
             memset(data->animation->collision_entity, 0, size_col_on_frame);
         }
 
         size_col_on_frame_struct = sizeof(**data->animation->collision_entity);
         data->animation->collision_entity[currentframe] = malloc(size_col_on_frame_struct);
+        if(!data->animation->collision_entity[currentframe]) borShutdown(1, "Not enough memory for collision frame.");
+        memset(data->animation->collision_entity[currentframe], 0, size_col_on_frame_struct);
 
         data->animation->collision_entity[currentframe]->instance = collision_alloc_entity_list();
+        data->animation->collision_entity[currentframe]->obor_instance_capacity = (size_t)(max_collisons > 0 ? max_collisons : 1);
 
         for(i=0; i<max_collisons; i++)
         {
@@ -12974,6 +13045,37 @@ s_model *init_model(const int cacheindex, const int unload)
     return newchar;
 }
 
+static void obor_model_release_constructor_storage(s_model *model, const s_model *parent)
+{
+    if(!model || !parent || model == parent) return;
+    /* Only constructor backing storage is replaced here. Scripts and the
+     * global animation records remain live while the loader is running. */
+    if(hasFreetype(model, MF_DEFENSE) && model->defense
+        && model->defense != parent->defense)
+    {
+        defense_free_object(model->defense);
+        model->defense = NULL;
+    }
+    if(hasFreetype(model, MF_OFF_FACTORS) && model->offense
+        && model->offense != parent->offense)
+    {
+        offense_free_object(model->offense);
+        model->offense = NULL;
+    }
+    if(hasFreetype(model, MF_SPECIAL) && model->special
+        && model->special != parent->special)
+    {
+        free(model->special);
+        model->special = NULL;
+    }
+    if(hasFreetype(model, MF_ANIMATION) && model->animation
+        && model->animation != parent->animation)
+    {
+        free(model->animation);
+        model->animation = NULL;
+        model->animation_capacity = 0;
+    }
+}
 static int model_animation_reserve(s_model *model, int animation_id)
 {
     int capacity;
@@ -13241,6 +13343,7 @@ s_model *load_cached_model(char *name, char *owner, char unload)
                     shutdownmessage = "tried to subclass a non-existing/not previously loaded model!";
                     goto lCleanup;
                 }
+                obor_model_release_constructor_storage(newchar, tempmodel);
                 tempscripts = newchar->scripts;
                 *newchar = *tempmodel;
                 newchar->scripts = tempscripts;
@@ -20248,14 +20351,7 @@ void free_level(s_level *lv)
     }
 
     //offload textobjs
-    for(i = 0; i < lv->numtextobjs; i++)
-    {
-        if(lv->textobjs[i].text)
-        {
-            free(lv->textobjs[i].text);
-            lv->textobjs[i].text = NULL;
-        }
-    }
+    obor_textobjs_release_visible(lv);
 
     //offload basemaps
     for(i = 0; i < lv->numbasemaps; i++)
@@ -20314,10 +20410,7 @@ void free_level(s_level *lv)
     {
         free(lv->waters);
     }
-    if(lv->textobjs)
-    {
-        free(lv->textobjs);
-    }
+    obor_textobjs_release_all(lv);
     if(lv->holes)
     {
         free(lv->holes);
@@ -22174,6 +22267,7 @@ void updatestatus()
             model = findmodel(player[i].name);
             if((player[i].playkeys & FLAG_ANYBUTTON || skipselect[i][0]) && !freezeall && !nojoin)    // Can't join while animations are frozen
             {
+                if(!model) continue;
                 player[i].lives = PLAYER_LIVES;            // to address new lives settings
                 player[i].joining = 0;
                 player[i].hasplayed = 1;
@@ -22200,6 +22294,8 @@ void updatestatus()
             else if(player[i].playkeys & (FLAG_MOVELEFT | FLAG_MOVERIGHT))
             {
                 model = ((player[i].playkeys & FLAG_MOVELEFT) ? prevplayermodeln : nextplayermodeln)(model, i);
+                /* AnyBOR: keep unresolved selections outside model storage. */
+                if(!model) continue;
                 strcpy(player[i].name, model->name);
 
                 player[i].colourmap = (colourselect && (set->nosame & 2)) ? nextcolourmapn(model, -1, i) : 0;
@@ -22209,6 +22305,7 @@ void updatestatus()
             // don't like a characters color try a new one!
             else if(player[i].playkeys & (FLAG_MOVEUP | FLAG_MOVEDOWN) && colourselect)
             {
+                if(!model) continue;
                 player[i].colourmap = ((player[i].playkeys & FLAG_MOVEUP) ? nextcolourmapn : prevcolourmapn)(model, player[i].colourmap, i);
 
                 player[i].playkeys = 0;
@@ -22220,6 +22317,8 @@ void updatestatus()
             {
                 player[i].lives = 0;
                 model = skipselect[i][0] ? findmodel(skipselect[i]) : nextplayermodeln(NULL, i);
+                /* AnyBOR: keep unresolved selections outside model storage. */
+                if(!model) continue;
                 strncpy(player[i].name, model->name, MAX_NAME_LEN);
 
                 player[i].colourmap = (colourselect && (set->nosame & 2)) ? nextcolourmapn(model, -1, i) : 0;
@@ -22851,12 +22950,16 @@ void predrawstatus()
             {
                 font_printf(videomodes.shiftpos[i] + pnameJ[i][2], savedata.windowpos + pnameJ[i][3], pnameJ[i][6], 0, Tr("Select Hero"));
             }
+            /* AnyBOR: unresolved selections have no model icon. */
+            if(model)
+            {
             icon = model->icon.def;
 
             if(icon >= 0)
             {
                 drawmethod.table = model->icon.usemap ? model_get_colourmap(model, player[i].colourmap) : NULL;
                 spriteq_add_sprite(videomodes.shiftpos[i] + picon[i][0], picon[i][1], 10000, icon, &drawmethod, 0);
+            }
             }
         }
         else if(player[i].credits || credits || (!player[i].hasplayed && noshare))
@@ -23227,8 +23330,7 @@ void free_ent(entity *e)
     {
         // Although free_ent will be only called once when the engine is shutting down,
         // just clear those in case we forget something
-        Varlist_Clear(e->varlist);
-        free(e->varlist);
+        obor_varlist_release(e->obor_varlist_owned, 1);
         e->varlist = NULL;
     }
     free(e);
@@ -23255,6 +23357,7 @@ void free_ents()
 entity *alloc_ent()
 {
     entity *ent = malloc(sizeof(*ent));
+    if(!ent) return NULL;
     memset(ent, 0, sizeof(*ent));
     
     ent->object_type = OBJECT_TYPE_ENTITY;
@@ -23262,35 +23365,61 @@ entity *alloc_ent()
     ent->offense = offense_allocate_object();
     
     ent->varlist = calloc(1, sizeof(*ent->varlist));
+    if(!ent->varlist) goto alloc_ent_error;
     // memset should be OK by know, because VT_EMPTY is zero by value, or else we should use ScriptVariant_Init
     Varlist_Init(ent->varlist, max_entity_vars);
+    obor_varlist_register(ent->varlist);
+    ent->obor_varlist_owned = ent->varlist;
     alloc_all_scripts(&ent->scripts);
     return ent;
+
+    /* AnyBOR: release only the initialized fields of this owned entity. */
+alloc_ent_error:
+    free_ent(ent);
+    return NULL;
 }
 
 
 
 int alloc_ents()
 {
-    int i;
-
-    if(ent_list_size >= maxentities)
+    int i, first = ent_list_size, total;
+    entity **grown;
+    entity **stack;
+    if(first >= maxentities) return 0;
+    if(first < 0 || first > INT_MAX - MAX_ENTS) return 0;
+    total = first + MAX_ENTS;
+    if(total - 1 > INT_MAX / 100) return 0;
+    if(ent_list)
     {
-        return 0;
+        size_t capacity = obor_allocation_size(ent_list);
+        if(!capacity || (size_t)first > capacity / sizeof(*ent_list)) return 0;
     }
-
-    ent_list_size += MAX_ENTS;
-
-    ent_list = realloc(ent_list, sizeof(*ent_list) * ent_list_size);
-    ent_stack = realloc(ent_stack, sizeof(*ent_list) * ent_list_size);
-
-    for(i = ent_list_size - MAX_ENTS; i < ent_list_size; i++)
+    else if(first) return 0;
+    if(ent_stack)
+    {
+        size_t capacity = obor_allocation_size(ent_stack);
+        if(!capacity || (size_t)first > capacity / sizeof(*ent_stack)) return 0;
+    }
+    else if(first) return 0;
+    /* Keep the native count visible to the allocation/construction calls. */
+    ent_list_size = total;
+    grown = realloc(ent_list, sizeof(*ent_list) * (size_t)total);
+    if(!grown) { ent_list_size = first; return 0; }
+    ent_list = grown;
+    /* AnyBOR: initialize the new pointer slots before partial cleanup. */
+    memset(ent_list + first, 0, sizeof(*ent_list) * (size_t)MAX_ENTS);
+    stack = realloc(ent_stack, sizeof(*ent_stack) * (size_t)total);
+    if(!stack) { ent_list_size = first; return 0; }
+    ent_stack = stack;
+    memset(ent_stack + first, 0, sizeof(*ent_stack) * (size_t)MAX_ENTS);
+    for(i = first; i < total; ++i)
     {
         ent_list[i] = alloc_ent();
+        if(!ent_list[i]) { free_ents(); return 0; }
         ent_list[i]->sortid = i * 100;
         ent_stack[i] = NULL;
     }
-    //ent_count = ent_max = 0;
     return 1;
 }
 
@@ -24063,9 +24192,9 @@ void update_frame(entity *ent, unsigned int f)
     s_attack attack = emptyattack;
     s_defense* defense_object = NULL;
     s_axis_principal_float move;
-    s_anim *anim = ent->animation;
+    s_anim *anim = ent ? ent->animation : NULL;
 
-    if(f >= anim->numframes) // prevent a crash with invalid frame index.
+    if(!anim || anim->numframes <= 0 || f >= anim->numframes) // prevent a crash with invalid frame index.
     {
         return;
     }
@@ -24568,7 +24697,7 @@ entity *spawn(const float pos_x, const float pos_z, const float pos_y, const e_d
     s_defense *dfs;
     s_offense *ofs;
     e_object_type object_type;
-    Varlist *vars;
+    Varlist *vars, *var_owner;
     s_scripts *scripts;
 
     /*
@@ -24620,7 +24749,8 @@ entity *spawn(const float pos_x, const float pos_z, const float pos_y, const e_d
 
             ofs     = acting_entity->offense;
             vars    = acting_entity->varlist;
-            Varlist_Cleanup(vars);
+            var_owner = acting_entity->obor_varlist_owned;
+            if(var_owner) Varlist_Cleanup(var_owner);
 
             memcpy(dfs, spawn_model->defense, sizeof(*dfs)*max_attack_types);
             memcpy(ofs, spawn_model->offense, sizeof(*ofs)*max_attack_types);
@@ -24703,6 +24833,7 @@ entity *spawn(const float pos_x, const float pos_z, const float pos_y, const e_d
             acting_entity->defense = dfs;
             acting_entity->offense = ofs;
             acting_entity->varlist = vars;
+            acting_entity->obor_varlist_owned = var_owner;
 
             ent_default_init(acting_entity);
             return acting_entity;
@@ -30778,6 +30909,12 @@ int set_rise(entity *iRise, int type, int reset)
 int set_riseattack(entity *iRiseattack, int type, int reset)
 {
     int riseattack = 0;
+    /* AnyBOR: validate rise selectors before native table reads. */
+    if(!iRiseattack || !animriseattacks || max_attack_types <= 0) return 0;
+    if(type < 0 || type >= max_attack_types) type = 0;
+    if(iRiseattack->inbackpain && !animbackriseattacks) return 0;
+    /* AnyBOR: native rise action follows. */
+
 
     if( (!validanim(iRiseattack, animriseattacks[type]) ||
         (iRiseattack->inbackpain && !validanim(iRiseattack, animbackriseattacks[type]) && !validanim(iRiseattack, animriseattacks[type]))) &&
@@ -31062,6 +31199,8 @@ void set_model_ex(entity *ent, char *modelname, int index, s_model *newmodel, in
 
     model = ent->model;
     tempe.exists = 0;
+    tempe.varlist = NULL;
+    tempe.obor_varlist_owned = NULL;
 
     if(!newmodel)
     {
@@ -31188,6 +31327,7 @@ void set_model_ex(entity *ent, char *modelname, int index, s_model *newmodel, in
     if(Script_IsInitialized(newmodel->scripts->onmodelcopy_script))
     {
         tempe = *ent;
+        obor_varlist_retain(tempe.obor_varlist_owned);
         dfs = malloc(sizeof(*dfs) * max_attack_types);
         ofs = malloc(sizeof(*ofs) * max_attack_types);
 
@@ -31225,6 +31365,7 @@ void set_model_ex(entity *ent, char *modelname, int index, s_model *newmodel, in
             free(dfs);
         }
     }
+    obor_varlist_release(tempe.obor_varlist_owned, 0);
 }
 
 void set_weapon(entity *ent, int wpnum, int anim_flag) // anim_flag added for scripted midair weapon changing
@@ -31334,7 +31475,7 @@ entity *normal_find_target(int anim, int detect_adj)
     int i;
     int min;
     int max;
-    int detect;
+    int64_t detect;
     int index = -1;
     float diffx = 0;
     float diffz = 0;
@@ -31344,7 +31485,7 @@ entity *normal_find_target(int anim, int detect_adj)
     min = 0;
     max = 9999;
 
-    detect = detect_adj + self->modeldata.stealth.detect;
+    detect = (int64_t)detect_adj + self->modeldata.stealth.detect;
 
     //find the 'nearest' one
     for(i = 0; i < ent_max; i++)
@@ -36937,6 +37078,7 @@ void adjust_walk_animation(entity *other)
 // TODO, check path or entity might get stuck under a wall
 int common_try_pick(entity *other)
 {
+    if(!self || !other) return 0;
     // if there's an item to pick up, move towards it.
     float maxspeed = self->modeldata.speed.x * 1.5;
     float dx = diff(self->position.x, other->position.x);
@@ -37045,7 +37187,10 @@ int astar(entity *ent, float destx, float destz, float step, s_axis_plane_latera
                 z = tz;
             }
             while(x >= 0);
-            *wp = malloc(sizeof(*wp) * result);
+            *wp = malloc(sizeof(**wp)*result);
+            /* The native parent walk leaves the final point unassigned. */
+            (*wp)[result-1].x = ent->position.x;
+            (*wp)[result-1].z = ent->position.z;
             tx = (*came_from)[dx][dz][0];
             tz = (*came_from)[dx][dz][1];
             j = 0;
@@ -39534,7 +39679,7 @@ int ai_check_lie()
 		&& self->position.y == self->base 
 		&& !self->velocity.y 
 		&& validanim(self, ANI_RISEATTACK) 
-		&& ((rand32() % (self->stalltime - _time + 1)) < 3) 
+		&& obor_rise_random(rand32(), (self->stalltime - _time + 1)) 
 		&& (self->energy_state.health_current > 0 
 		&& _time > self->staydown.riseattack_stall))
     {
@@ -45978,13 +46123,14 @@ void execute_updatedscripts()
 
 void draw_textobjs()
 {
-    int i;
+    int i, text_count;
     s_textobj *textobj;
     if(!level)
     {
         return;
     }
-    for(i = 0; i < level->numtextobjs ; i++)
+    text_count = obor_textobjs_count(level);
+    for(i = 0; i < text_count; i++)
     {
         textobj = level->textobjs + i;
 
@@ -46356,8 +46502,8 @@ void update(int ingame, int usevwait)
             newtime = _time + interval;
         }
 
-        slowmotion.counter++;
-        if(slowmotion.counter == (slowmotion.duration + 1))
+        slowmotion.counter = slowmotion.counter == INT_MAX ? INT_MIN : slowmotion.counter + 1;
+        if(slowmotion.counter == (slowmotion.duration == INT_MAX ? INT_MIN : slowmotion.duration + 1))
         {
             slowmotion.counter = 0;
             if(slowmotion.toggle > SLOW_MOTION_ON)
@@ -48633,6 +48779,8 @@ void playgame(int *players,  unsigned which_set, int useSavedGame)
                 player[i].spawnhealth = save->pSpawnhealth[i];
                 player[i].spawnmp = save->pSpawnmp[i];
                 strncpy(player[i].name, save->pName[i], MAX_NAME_LEN);
+                if(!memchr(player[i].name, 0, sizeof(player[i].name)))
+                    player[i].name[sizeof(player[i].name) - 1] = 0;
             }
             credits = save->credits;
         }
@@ -48997,7 +49145,7 @@ int load_saved_game()
             if(savedStatus)
             {
                 _menutext((selector == 0), col1, -1, Tr("Mode:"));
-                _menutext((selector == 0), col2, -1, "%s", savelevel[saveslot].dName);
+                _menutext((selector == 0), col2, -1, "%.*s", (int)sizeof(savelevel[saveslot].dName), savelevel[saveslot].dName);
                 _menutext(0, col1, 0, Tr("Stage:"));
                 _menutext(0, col2, 0, "%d", savelevel[saveslot].stage);
                 _menutext(0, col1, 1, Tr("Level:"));
@@ -49538,7 +49686,7 @@ void keyboard_setup(int player)
     char* command;
     char* filename = "translation/menu.txt";
     
-    char  buttonnames[btnnum][32];
+    char  buttonnames[MAX_BTN_NUM][32];
     
     size_t size;
     ArgList arglist;

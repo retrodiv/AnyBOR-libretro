@@ -1,3 +1,15 @@
+/* AnyBOR modification record: 2026-09-12.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Translate native entity property names, numeric IDs and animation values
+ * for each logical profile.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/8023.md
+ * at the source repository root. Original notices follow below.
+ */
+
 /*
  * OpenBOR - http://www.chronocrash.com
  * -----------------------------------------------------------------------
@@ -1060,6 +1072,12 @@ HRESULT openbor_set_entity_property(ScriptVariant** varlist, ScriptVariant** con
 	* acting object and return OK/FAIL.
 	*/
 
+	if(property_map.field == &acting_object->varlist &&
+	   (property_map.config_flags & PROPERTY_ACCESS_CONFIG_WRITE))
+	{
+		obor_entity_varlist_set((entity *)acting_object, varlist[ARG_VALUE]->ptrVal);
+		return S_OK;
+	}
 	return property_access_set_member(acting_object, &property_map, varlist[ARG_VALUE]);
 
 	return S_OK;

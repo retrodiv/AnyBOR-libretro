@@ -67,18 +67,27 @@ typedef enum
 
 //This structure holds a named variable list (list)
 // and an indexed list (vars).
-typedef struct
+typedef struct Varlist
 {
     int magic;
     List *list;
     ScriptVariant *vars;
+    struct Varlist *obor_owner_next;
+    size_t obor_owners;
+    int obor_dispose_pending;
 } Varlist;
 
 #include "obor_script_storage.h"
 
+#include <stdint.h>
+/* Preserve member offsets while allowing native packed owners. */
+#pragma pack(push, 4)
 typedef struct Script
 {
     int magic;
+#if UINTPTR_MAX > UINT32_MAX
+    unsigned char obor_alignment_padding[sizeof(void *) - sizeof(int)];
+#endif
     Interpreter *pinterpreter;
     char *comment; // debug purpose
     Varlist *varlist;
@@ -87,6 +96,7 @@ typedef struct Script
     obor_script_reference *obor_interpreter;
     obor_script_reference *obor_comment;
 } Script;
+#pragma pack(pop)
 
 extern Varlist global_var_list;
 extern List theFunctionList;
@@ -102,6 +112,12 @@ extern int global_var_count;
 void Varlist_Init(Varlist *varlist, int size);
 void Varlist_Clear(Varlist *varlist);
 void Varlist_Cleanup(Varlist *varlist);
+Varlist *obor_varlist_find(const void *value);
+void obor_varlist_register(Varlist *value);
+void obor_varlist_retain(const void *value);
+void obor_varlist_release(const void *value, int dispose);
+struct entity;
+void obor_entity_varlist_set(struct entity *owner, void *value);
 int Varlist_SetByName(Varlist *varlist, char *theName, ScriptVariant *var);
 #define Script_Set_Local_Variant(s, k, v) Varlist_SetByName((s)->varlist, (k), (v))
 void Script_Global_Init();

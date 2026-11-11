@@ -27,6 +27,7 @@ int StrCache_Pop(void)
 {for(int i=0;i<32;++i)if(!used[i]){used[i]=1;strings[i][0]=0;return i;}abort();}
 void StrCache_Collect(int i) {assert(i>=0 && i<32 && used[i]);used[i]=0;}
 CHAR *StrCache_Get(int i) {assert(i>=0 && i<32 && used[i]);return strings[i];}
+CHAR *StrCache_GetIfPresent(int i) {return i>=0 && i<32 && used[i]?strings[i]:NULL;}
 void StrCache_Copy(int i,CHAR *text)
 {assert(i>=0 && i<32 && used[i] && strlen(text)<sizeof(strings[i]));strcpy(strings[i],text);}
 static int record_printf(const char *format,...)

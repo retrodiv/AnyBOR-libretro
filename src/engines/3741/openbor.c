@@ -184,6 +184,7 @@
 /////////////////////////////////////////////////////////////////////////////
 
 #include "obor_pak_name.h"
+#include "obor_rise_inputs.h"
 #include "openbor.h"
 #include "commands.h"
 #include "models.h"
@@ -850,17 +851,19 @@ extern Script* pcurrentscript;//used by local script functions
 //-------------------------methods-------------------------------
 
 void setDrawMethod(s_anim* a, ptrdiff_t index, s_drawmethod* m) {
-	assert(index >= 0);
-	assert(a != NULL);
-	assert(m != NULL);
-	assert(index < a->numframes);
+	OBOR_DRAW_ASSERT(index >= 0);
+	OBOR_DRAW_ASSERT(a != NULL);
+	OBOR_DRAW_ASSERT(m != NULL);
+	OBOR_DRAW_ASSERT(index < a->numframes);
+	if(!a || index < 0 || index >= a->numframes || !a->drawmethods) return;
 	a->drawmethods[index] = m;
 }
 
 s_drawmethod* getDrawMethod(s_anim* a, ptrdiff_t index) {
-	assert(index >= 0);
-	assert(a != NULL);
-	assert(index < a->numframes);
+	OBOR_DRAW_ASSERT(index >= 0);
+	OBOR_DRAW_ASSERT(a != NULL);
+	OBOR_DRAW_ASSERT(index < a->numframes);
+	if(!a || index < 0 || index >= a->numframes || !a->drawmethods) return NULL;
 	return a->drawmethods[index];
 }
 
@@ -3031,6 +3034,7 @@ int loadScriptFile(){
 	char* buf = NULL;
 	ptrdiff_t l;
 	size_t len;
+    long measured;
 	FILE *handle = NULL;
 
 	char path[256] = {""};
@@ -3058,15 +3062,29 @@ int loadScriptFile(){
 	handle = fopen(path, "rb");
 	if(handle == NULL) return 0;
 
-	fseek(handle, 0, SEEK_END);
-	len = ftell(handle);
-	fseek(handle, 0, SEEK_SET);
-	buf = malloc(len+1);
-
-	if(!buf) return 0;
-
-	fread(buf, 1, len, handle);
-	buf[len-1] = 0;
+	if(fseek(handle, 0, SEEK_END) != 0 ||
+       (measured = ftell(handle)) <= 0 ||
+       (uintmax_t)measured >= (uintmax_t)SIZE_MAX ||
+       fseek(handle, 0, SEEK_SET) != 0)
+    {
+        fclose(handle);
+        return 0;
+    }
+    len = (size_t)measured;
+    buf = malloc(len + 1);
+    if(!buf)
+    {
+        fclose(handle);
+        return 0;
+    }
+    if(fread(buf, 1, len, handle) != len)
+    {
+        free(buf);
+        fclose(handle);
+        return 0;
+    }
+    fclose(handle);
+    buf[len - 1] = 0;
 
 	Script_Init(&script, "loadScriptFile",  NULL, 1);
 
@@ -4490,26 +4508,62 @@ static void load_playable_list(char* buf)
 	for(i=1;(value=GET_ARG(i))[0];i++)
 	{
 		playermodels = findmodel(value);
-		//if(playermodels == NULL) shutdown(1, "Player model '%s' is not loaded.\n", value);
+		if(playermodels == NULL)
+		{
+		    shutdown(1, "Player model '%s' is not loaded.\n", value);
+		    return;
+		}
 		index = get_cached_model_index(playermodels->name);
-		if(index == -1) shutdown(1, "Player model '%s' is not cached.\n", value);
+		if(index == -1)
+		{
+		    shutdown(1, "Player model '%s' is not cached.\n", value);
+		    return;
+		}
 		model_cache[index].selectable = 1;
 	}
 }
 
-void alloc_specials(s_model* newchar){
-	if(obor_profile_build < 3652)
-	{
-		if(newchar->specials_loaded < 0 || newchar->specials_loaded >= max_freespecials)
-			shutdown(1, "Too many Freespecials and/or Cancels. Please increase Maxfreespecials");
-		return;
-	}
-	/* Fixed arrays retain the unused inherited row until the original grow point. */
-	if(obor_profile_build < 3711 && newchar->specials_loaded < max_freespecials) return;
-	newchar->special = realloc(newchar->special, sizeof(s_com)*(newchar->specials_loaded+1));
-	/* Retain the existing first row in3711; initialize newly grown storage. */
-	if(obor_profile_build >= 3713 || newchar->specials_loaded > 0)
-	memset(newchar->special+newchar->specials_loaded, 0, sizeof(s_com));
+#include <limits.h>
+#include "obor_resources.h"
+void alloc_specials(s_model* newchar)
+{
+    s_com *grown, *previous;
+    size_t available = 0, count, preserved;
+    int index, owns, keep_first;
+    if(!newchar) { shutdown(1, "Invalid freespecial table."); return; }
+    index = newchar->specials_loaded;
+    if(obor_profile_build < 3652 && (index < 0 || index >= max_freespecials))
+    { shutdown(1, "Too many Freespecials and/or Cancels. Please increase Maxfreespecials"); return; }
+    if(index < 0 || index == INT_MAX) { shutdown(1, "Invalid freespecial table."); return; }
+    count = (size_t)index + 1;
+    if(count > SIZE_MAX / sizeof(*grown)) { shutdown(1, "Invalid freespecial table."); return; }
+    previous = newchar->special;
+    if(previous)
+    {
+        available = obor_allocation_size(previous) / sizeof(*previous);
+        if(!available) { shutdown(1, "Invalid freespecial table."); return; }
+    }
+    if(obor_profile_build < 3711 && index < max_freespecials)
+    {
+        if(count > available) { shutdown(1, "Invalid freespecial table."); return; }
+        return;
+    }
+    keep_first = obor_profile_build < 3713 && index == 0 && previous != NULL;
+    preserved = keep_first ? 1 : (size_t)index;
+    if(preserved > available) { shutdown(1, "Invalid freespecial table."); return; }
+    owns = (newchar->freetypes & MF_SPECIAL) != 0;
+    /* An inherited table remains shared until its historical grow point. */
+    if(owns) grown = realloc(previous, count * sizeof(*grown));
+    else
+    {
+        grown = malloc(count * sizeof(*grown));
+        if(grown && preserved) memcpy(grown, previous, preserved * sizeof(*grown));
+    }
+    if(!grown) { shutdown(1, (char*)E_OUT_OF_MEMORY); return; }
+    newchar->special = grown;
+    newchar->freetypes |= MF_SPECIAL;
+    if(!keep_first) memset(grown + index, 0, sizeof(*grown));
+    return;
 }
 
 void alloc_frames(s_anim * anim, int fcount)
@@ -5630,6 +5684,37 @@ s_model* init_model(int cacheindex, int unload) {
 	return newchar;
 }
 
+static void obor_model_release_constructor_storage(s_model *model, const s_model *parent)
+{
+    if(!model || !parent || model == parent) return;
+    /* Only constructor backing storage is replaced here. Scripts and the
+     * global animation records remain live while the loader is running. */
+    if(hasFreetype(model, MF_DEFENSE) && model->defense
+        && model->defense != parent->defense)
+    {
+        free(model->defense);
+        model->defense = NULL;
+    }
+    if(hasFreetype(model, MF_OFF_FACTORS) && model->offense_factors
+        && model->offense_factors != parent->offense_factors)
+    {
+        free(model->offense_factors);
+        model->offense_factors = NULL;
+    }
+    if(hasFreetype(model, MF_SPECIAL) && model->special
+        && model->special != parent->special)
+    {
+        free(model->special);
+        model->special = NULL;
+    }
+    if(hasFreetype(model, MF_ANIMATION) && model->animation
+        && model->animation != parent->animation)
+    {
+        free(model->animation);
+        model->animation = NULL;
+        model->animation_capacity = 0;
+    }
+}
 static int model_animation_reserve(s_model* model, int animation_id)
 {
 	int capacity;
@@ -5893,6 +5978,7 @@ s_model* load_cached_model(char * name, char * owner, char unload)
 						shutdownmessage = "tried to subclass a non-existing/not previously loaded model!";
 						goto lCleanup;
 					}
+					obor_model_release_constructor_storage(newchar, tempmodel);
 					tempscripts = newchar->scripts;
                     if(!obor_model_copy(newchar, tempmodel))
                     {
@@ -9403,7 +9489,14 @@ void load_levelorder()
                                 strncpy(set->skipselect[i], arg, MAX_NAME_LEN);
                                 set->skipselect[i][MAX_NAME_LEN] = 0;
                             }
-                            else set->skipselect[i] = NAME(arg);
+                            else {
+                            size_t length = strlen(arg);
+                            char *replacement = malloc(length + 1);
+                            if(!replacement) shutdown(1, "Out of memory!");
+                            memcpy(replacement, arg, length + 1);
+                            free(set->skipselect[i]);
+                            set->skipselect[i] = replacement;
+                        }
 						}
 					}
 				}
@@ -11548,6 +11641,9 @@ static void obor_legacy_predrawstatus(){
 			font_printf(videomodes.shiftpos[i]+pnameJ[i][0], savedata.windowpos+pnameJ[i][1], pnameJ[i][6], 0, player[i].name);
 			if(nojoin) font_printf(videomodes.shiftpos[i]+pnameJ[i][2], savedata.windowpos+pnameJ[i][3], pnameJ[i][6], 0, "Please Wait");
 			else font_printf(videomodes.shiftpos[i]+pnameJ[i][2], savedata.windowpos+pnameJ[i][3], pnameJ[i][6], 0, "Select Hero");
+			/* AnyBOR: unresolved selections have no model icon. */
+			if(model)
+			{
 			icon = model->icon.def;
 
 			if(icon>=0 && !player[i].colourmap){
@@ -11560,6 +11656,7 @@ static void obor_legacy_predrawstatus(){
 			}
 
 
+			}
 			if((player[i].playkeys & FLAG_ANYBUTTON || (set->skipselect[i])) && !freezeall && !nojoin)    // Can't join while animations are frozen
 			{
 				// reports error if players try to use the same character and sameplay mode is off
@@ -11573,6 +11670,7 @@ static void obor_legacy_predrawstatus(){
 				}
 
 				if (!tperror){    // Fixed so players can be selected if other player is no longer va //4player                        player[i].playkeys = player[i].newkeys = 0;
+					if(!model) continue;
 					player[i].lives = PLAYER_LIVES;            // to address new lives settings
 					player[i].joining = 0;
 					player[i].hasplayed = 1;
@@ -11593,6 +11691,8 @@ static void obor_legacy_predrawstatus(){
 			{
 				player[i].colourmap = i;
 				model = prevplayermodel(model);
+				/* AnyBOR: keep unresolved selections outside model storage. */
+				if(!model) continue;
 				strcpy(player[i].name, model->name);
 
 				while(   // Keep looping until a non-hmap is found
@@ -11611,6 +11711,8 @@ static void obor_legacy_predrawstatus(){
 			{
 				player[i].colourmap = i;
 				model = nextplayermodel(model);
+				/* AnyBOR: keep unresolved selections outside model storage. */
+				if(!model) continue;
 				strcpy(player[i].name, model->name);
 
 				while(   // Keep looping until a non-hmap is found
@@ -11629,6 +11731,7 @@ static void obor_legacy_predrawstatus(){
 			// don't like a characters color try a new one!
 			else if(player[i].playkeys & FLAG_MOVEUP && colourselect)
 			{
+                if(!model) continue;
 
 				do{
 					player[i].colourmap++;
@@ -11647,6 +11750,7 @@ static void obor_legacy_predrawstatus(){
 			}
 			else if(player[i].playkeys & FLAG_MOVEDOWN && colourselect)
 			{
+                if(!model) continue;
 
 				do{
 					player[i].colourmap--;
@@ -11675,6 +11779,8 @@ static void obor_legacy_predrawstatus(){
 			{
 				player[i].lives = 0;
 				model = (set->skipselect[i])?findmodel(set->skipselect[i]):nextplayermodel(NULL);
+				/* AnyBOR: keep unresolved selections outside model storage. */
+				if(!model) continue;
 				strncpy(player[i].name, model->name, MAX_NAME_LEN);
 				player[i].colourmap = i;
 				 // Keep looping until a non-hmap is found
@@ -11836,6 +11942,8 @@ void updatestatus(){
 			{
 				player[i].colourmap = i;
 				model = prevplayermodel(model);
+				/* AnyBOR: keep unresolved selections outside model storage. */
+				if(!model) continue;
 				strcpy(player[i].name, model->name);
 
 				while(   // Keep looping until a non-hmap is found
@@ -11854,6 +11962,8 @@ void updatestatus(){
 			{
 				player[i].colourmap = i;
 				model = nextplayermodel(model);
+				/* AnyBOR: keep unresolved selections outside model storage. */
+				if(!model) continue;
 				strcpy(player[i].name, model->name);
 
 				while(   // Keep looping until a non-hmap is found
@@ -11919,6 +12029,8 @@ void updatestatus(){
 				model = obor_profile_build < 3698 ?
                     (set->skipselect[i] ? findmodel(set->skipselect[i]) : nextplayermodel(NULL)) :
                     (skipselect[i][0] ? findmodel(skipselect[i]) : nextplayermodel(NULL));
+				/* AnyBOR: keep unresolved selections outside model storage. */
+				if(!model) continue;
 				strncpy(player[i].name, model->name, MAX_NAME_LEN);
 				player[i].colourmap = i;
 				 // Keep looping until a non-hmap is found
@@ -12097,6 +12209,9 @@ void predrawstatus(){
 			font_printf(videomodes.shiftpos[i]+pnameJ[i][0], savedata.windowpos+pnameJ[i][1], pnameJ[i][6], 0, player[i].name);
 			if(nojoin) font_printf(videomodes.shiftpos[i]+pnameJ[i][2], savedata.windowpos+pnameJ[i][3], pnameJ[i][6], 0, "Please Wait");
 			else font_printf(videomodes.shiftpos[i]+pnameJ[i][2], savedata.windowpos+pnameJ[i][3], pnameJ[i][6], 0, "Select Hero");
+			/* AnyBOR: unresolved selections have no model icon. */
+			if(model)
+			{
 			icon = model->icon.def;
 
 			if(icon>=0 && obor_profile_build < 3673 && !player[i].colourmap)
@@ -12107,6 +12222,7 @@ void predrawstatus(){
 			{
 				drawmethod.table = model_get_colourmap(model, player[i].colourmap);
 				spriteq_add_sprite(videomodes.shiftpos[i]+picon[i][0],picon[i][1], 10000, icon, &drawmethod, 0);
+			}
 			}
 		}
 		else if(player[i].credits || credits || (!player[i].hasplayed && noshare))
@@ -12358,17 +12474,25 @@ entity* alloc_ent()
 	if(!ent) return NULL;
 	memset(ent, 0, sizeof(entity));
 	ent->defense = (s_defense*)malloc(sizeof(s_defense)*max_attack_types);
+	if(!ent->defense) goto alloc_ent_error;
 	memset(ent->defense, 0, sizeof(s_defense)*max_attack_types);
 	ent->offense_factors = (float*)malloc(sizeof(float)*max_attack_types);
+	if(!ent->offense_factors) goto alloc_ent_error;
 	memset(ent->offense_factors, 0, sizeof(float)*max_attack_types);
 	if(max_entity_vars>0)
 	{
 		ent->entvars = (ScriptVariant*)malloc(sizeof(ScriptVariant)*max_entity_vars);
+		if(!ent->entvars) goto alloc_ent_error;
 		// memset should be OK by know, because VT_EMPTY is zero by value, or else we should use ScriptVariant_Init
 		memset(ent->entvars, 0, sizeof(ScriptVariant)*max_entity_vars);
 	}
 	alloc_all_scripts(&ent->scripts);
 	return ent;
+
+    /* AnyBOR: release only the initialized fields of this owned entity. */
+alloc_ent_error:
+    free_ent(ent);
+    return NULL;
 }
 
 
@@ -12709,9 +12833,9 @@ void update_frame(entity* ent, int f)
 	float move, movez, movea;
 	int iDelay, iED_Mode, iED_Capmin, iED_CapMax, iED_RangeMin, iED_RangeMax;
 	float fED_Factor;
-	s_anim* anim = ent->animation;
+	s_anim* anim = ent ? ent->animation : NULL;
 
-	if(f >= anim->numframes) // prevent a crash with invalid frame index.
+	if(!anim || anim->numframes <= 0 || f < 0 || f >= anim->numframes) // prevent a crash with invalid frame index.
 		return;
 
 	//important!
@@ -15657,6 +15781,11 @@ int set_rise(entity *iRise, int type, int reset)
 
 int set_riseattack(entity *iRiseattack, int type, int reset)
 {
+    /* AnyBOR: validate rise selectors before native table reads. */
+    if(!iRiseattack || !animriseattacks || max_attack_types <= 0) return 0;
+    if(type < 0 || type >= max_attack_types) type = 0;
+    /* AnyBOR: native rise action follows. */
+
     if(obor_profile_build < 3584)
     {
 	if(!validanim(iRiseattack,animriseattacks[type]) && iRiseattack->modeldata.riseattacktype == 1) type = 0;
@@ -15939,12 +16068,13 @@ entity* normal_find_target(int anim, int iDetect)
     */
 
 	int i , min, max;
+    int64_t obor_target_detect;
 	int index = -1;
 	min = 0;
 	max = 9999;
 	float diffx, diffz, diffd, diffo = 0;
 
-    iDetect += self->modeldata.stealth.detect;
+    obor_target_detect = (int64_t)iDetect + self->modeldata.stealth.detect;
 
 	//find the 'nearest' one
 	for(i=0; i<ent_max; i++)
@@ -15955,7 +16085,7 @@ entity* normal_find_target(int anim, int iDetect)
 			&& !ent_list[i]->dead //must be alive
 			&& (diffd=(diffx=diff(ent_list[i]->x,self->x))+ (diffz=diff(ent_list[i]->z,self->z))) >= min
 			&& diffd <= max
-			&& (ent_list[i]->modeldata.stealth.hide <= iDetect) //Stealth factor less then perception factor (allows invisibility).
+			&& (ent_list[i]->modeldata.stealth.hide <= obor_target_detect) //Stealth factor less then perception factor (allows invisibility).
 			  )
 		{
 					
@@ -18811,6 +18941,7 @@ void adjust_walk_animation(entity* other)
 // TODO, check path or entity might get stuck under a wall
 int common_try_pick(entity* other)
 {
+    if(!self || !other) return 0;
 	// if there's an item to pick up, move towards it.
 	float maxspeed = self->modeldata.speed*1.5;
 	float dx = diff(self->x, other->x);
@@ -18989,7 +19120,10 @@ int astar(entity* ent, float destx, float destz, float step, point2d** wp){
 				result++;
 				x = tx; z = tz;
 			 }while(x>=0);
-			 *wp = malloc(sizeof(point2d)*result);
+			 *wp = malloc(sizeof(**wp)*result);
+			 /* The native parent walk leaves the final point unassigned. */
+			 (*wp)[result-1].x = ent->x;
+			 (*wp)[result-1].z = ent->z;
 			 tx = (*came_from)[dx][dz][0];
 			 tz = (*came_from)[dx][dz][1];
 			 j = 0;
@@ -21120,7 +21254,7 @@ int ai_check_warp(){
 }
 
 int ai_check_lie(){
-	if(self->drop && self->a==self->base && !self->tossv && validanim(self,ANI_RISEATTACK) && ((rand32()%(self->stalltime-time+1)) < 3) && (self->health >0 && time > self->staydown.riseattack_stall))
+	if(self->drop && self->a==self->base && !self->tossv && validanim(self,ANI_RISEATTACK) && obor_rise_random(rand32(), (self->stalltime-time+1)) && (self->health >0 && time > self->staydown.riseattack_stall))
 	{
 		common_try_riseattack();
 		return 1;
@@ -26076,8 +26210,6 @@ if(ingame==1 &&
 
 	if(obor_profile_build < 3552 && zoom_scale_x > 0 && zoom_scale_y > 0)
     {
-        if(zoombuffer && (zoombuffer->width != vscreen->width || zoombuffer->height != vscreen->height ||
-                         zoombuffer->pixelformat != vscreen->pixelformat)) freescreen(&zoombuffer);
         if(!zoombuffer) zoombuffer=allocscreen(vscreen->width,vscreen->height,vscreen->pixelformat);
         if(!zoombuffer) { shutdown(1,"Unable to allocate zoom buffer"); return; }
         copyscreen(zoombuffer,vscreen);
@@ -26650,7 +26782,7 @@ static void update_backbuffer(s_screen* backbuffer, s_screen** gifbuffer){
 
 // Returns 0 on error, -1 on escape
 int playgif(char *filename, int x, int y, int noskip){
-	unsigned char gifpal[3][1024] ;
+	unsigned char gifpal[3][1024] = {{0}};
 	char tname[256] = {""};
 	int code[3];
 	int delay[3];
@@ -27627,6 +27759,8 @@ void playgame(int *players,  unsigned which_set, int useSavedGame)
 				player[i].spawnhealth = save->pSpawnhealth[i];
 				player[i].spawnmp = save->pSpawnmp[i];
 				strncpy(player[i].name, save->pName[i], MAX_NAME_LEN);
+				if(!memchr(player[i].name, 0, sizeof(player[i].name)))
+				    player[i].name[sizeof(player[i].name) - 1] = 0;
 			}
 			credits = save->credits;
 			if(obor_profile_build >= 3591) reset_playable_list(1); // add this because there's no select screen, temporary solution
@@ -27859,7 +27993,7 @@ int load_saved_game()
 
 			if(savedStatus){
 				_menutext((selector==0), col1, -2, "Mode:");
-				_menutext((selector==0), col2, -2, "%s", savelevel[saveslot].dName);
+				_menutext((selector==0), col2, -2, "%.*s", (int)sizeof(savelevel[saveslot].dName), savelevel[saveslot].dName);
 				_menutext(0, col1, -1, "Stage:");
 				_menutext(0, col2, -1, "%d", savelevel[saveslot].stage);
 				_menutext(0, col1, 0, "Level:");
@@ -27899,7 +28033,7 @@ int load_saved_game()
 
 			if(savedStatus){
 				_menutext((selector==0), col1, -1, "Mode:");
-				_menutext((selector==0), col2, -1, "%s", savelevel[saveslot].dName);
+				_menutext((selector==0), col2, -1, "%.*s", (int)sizeof(savelevel[saveslot].dName), savelevel[saveslot].dName);
 				_menutext(0, col1, 0, "Stage:");
 				_menutext(0, col2, 0, "%d", savelevel[saveslot].stage);
 				_menutext(0, col1, 1, "Level:");

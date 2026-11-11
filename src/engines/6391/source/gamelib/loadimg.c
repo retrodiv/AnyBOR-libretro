@@ -1167,21 +1167,25 @@ int loadscreen(char *filename, char *packfile, unsigned char *pal, int format, s
 {
     int result;
     unsigned char *p;
+    s_screen *loaded;
 #ifdef VERBOSE
     printf("loadscreen called packfile: %s, filename %s\n", packfile, filename);
 #endif
-    if((*screen))
+    if(!screen) return 0;
+    memcpy(&loaded, (const void *)screen, sizeof(loaded));
+    if(loaded)
     {
-        freescreen(screen);
+        freescreen(screen); loaded = NULL;
     }
     if(!openimage(filename, packfile))
     {
         return 0;
     }
-    if(!(*screen) || ((*screen)->width != res[0] && (*screen)->height != res[1] && (*screen)->pixelformat != format))
+    if(!loaded || (loaded->width != res[0] && loaded->height != res[1] && loaded->pixelformat != format))
     {
-        (*screen) = allocscreen(res[0], res[1], format);
-        if((*screen) == NULL)
+        loaded = allocscreen(res[0], res[1], format);
+        memcpy((void *)screen, &loaded, sizeof(loaded));
+        if(loaded == NULL)
         {
             closeimage();
             //assert(0);
@@ -1194,9 +1198,9 @@ int loadscreen(char *filename, char *packfile, unsigned char *pal, int format, s
     }
     else
     {
-        p = (*screen)->palette;
+        p = loaded->palette;
     }
-    result = readimage((unsigned char *)(*screen)->data, p, (*screen)->width, (*screen)->height);
+    result = readimage((unsigned char *)loaded->data, p, loaded->width, loaded->height);
     closeimage();
     if(!result)
     {

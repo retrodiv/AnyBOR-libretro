@@ -1,0 +1,1075 @@
+{
+  "schema": 1,
+  "scope": "Native pre-guard selected query dispatch and original mapper; numeric root namespace/lookup and storage extents are bounded test providers.",
+  "profiles": {
+    "3020": {
+      "present": false,
+      "clear_result_on_error": false
+    },
+    "3057": {
+      "present": false,
+      "clear_result_on_error": false
+    },
+    "3062": {
+      "present": false,
+      "clear_result_on_error": false
+    },
+    "3073": {
+      "present": false,
+      "clear_result_on_error": false
+    },
+    "3081": {
+      "present": false,
+      "clear_result_on_error": false
+    },
+    "3109": {
+      "present": false,
+      "clear_result_on_error": false
+    },
+    "3117": {
+      "present": false,
+      "clear_result_on_error": false
+    },
+    "3143": {
+      "present": false,
+      "clear_result_on_error": false
+    },
+    "3160": {
+      "present": false,
+      "clear_result_on_error": false
+    },
+    "3173": {
+      "present": false,
+      "clear_result_on_error": false
+    },
+    "3192": {
+      "present": false,
+      "clear_result_on_error": false
+    },
+    "3208": {
+      "present": false,
+      "clear_result_on_error": false
+    },
+    "3273": {
+      "present": false,
+      "clear_result_on_error": false
+    },
+    "3288": {
+      "present": false,
+      "clear_result_on_error": false
+    },
+    "3303": {
+      "present": false,
+      "clear_result_on_error": false
+    },
+    "3307": {
+      "present": false,
+      "clear_result_on_error": false
+    },
+    "3310": {
+      "present": false,
+      "clear_result_on_error": false
+    },
+    "3311": {
+      "present": false,
+      "clear_result_on_error": false
+    },
+    "3316": {
+      "present": false,
+      "clear_result_on_error": false
+    },
+    "3317": {
+      "present": false,
+      "clear_result_on_error": false
+    },
+    "3318": {
+      "present": false,
+      "clear_result_on_error": false
+    },
+    "3327": {
+      "present": false,
+      "clear_result_on_error": false
+    },
+    "3328": {
+      "present": false,
+      "clear_result_on_error": false
+    },
+    "3330": {
+      "present": false,
+      "clear_result_on_error": false
+    },
+    "3332": {
+      "present": false,
+      "clear_result_on_error": false
+    },
+    "3335": {
+      "present": false,
+      "clear_result_on_error": false
+    },
+    "3337": {
+      "present": false,
+      "clear_result_on_error": false
+    },
+    "3340": {
+      "present": false,
+      "clear_result_on_error": false
+    },
+    "3341": {
+      "present": false,
+      "clear_result_on_error": false
+    },
+    "3342": {
+      "present": false,
+      "clear_result_on_error": false
+    },
+    "3350": {
+      "present": false,
+      "clear_result_on_error": false
+    },
+    "3351": {
+      "present": false,
+      "clear_result_on_error": false
+    },
+    "3352": {
+      "present": false,
+      "clear_result_on_error": false
+    },
+    "3353": {
+      "present": false,
+      "clear_result_on_error": false
+    },
+    "3354": {
+      "present": false,
+      "clear_result_on_error": false
+    },
+    "3355": {
+      "present": false,
+      "clear_result_on_error": false
+    },
+    "3356": {
+      "present": false,
+      "clear_result_on_error": false
+    },
+    "3357": {
+      "present": false,
+      "clear_result_on_error": false
+    },
+    "3360": {
+      "present": false,
+      "clear_result_on_error": false
+    },
+    "3361": {
+      "present": false,
+      "clear_result_on_error": false
+    },
+    "3362": {
+      "present": false,
+      "clear_result_on_error": false
+    },
+    "3365": {
+      "present": false,
+      "clear_result_on_error": false
+    },
+    "3366": {
+      "present": false,
+      "clear_result_on_error": false
+    },
+    "3367": {
+      "present": false,
+      "clear_result_on_error": false
+    },
+    "3371": {
+      "present": false,
+      "clear_result_on_error": false
+    },
+    "3372": {
+      "present": false,
+      "clear_result_on_error": false
+    },
+    "3373": {
+      "present": false,
+      "clear_result_on_error": false
+    },
+    "3375": {
+      "present": false,
+      "clear_result_on_error": false
+    },
+    "3379": {
+      "present": false,
+      "clear_result_on_error": false
+    },
+    "3380": {
+      "present": false,
+      "clear_result_on_error": false
+    },
+    "3381": {
+      "present": false,
+      "clear_result_on_error": false
+    },
+    "3383": {
+      "present": false,
+      "clear_result_on_error": false
+    },
+    "3385": {
+      "present": false,
+      "clear_result_on_error": false
+    },
+    "3388": {
+      "present": false,
+      "clear_result_on_error": false
+    },
+    "3391": {
+      "present": false,
+      "clear_result_on_error": false
+    },
+    "3394": {
+      "present": false,
+      "clear_result_on_error": false
+    },
+    "3397": {
+      "present": false,
+      "clear_result_on_error": false
+    },
+    "3400": {
+      "present": false,
+      "clear_result_on_error": false
+    },
+    "3406": {
+      "present": false,
+      "clear_result_on_error": false
+    },
+    "3411": {
+      "present": false,
+      "clear_result_on_error": false
+    },
+    "3415": {
+      "present": false,
+      "clear_result_on_error": false
+    },
+    "3416": {
+      "present": false,
+      "clear_result_on_error": false
+    },
+    "3420": {
+      "present": false,
+      "clear_result_on_error": false
+    },
+    "3422": {
+      "present": false,
+      "clear_result_on_error": false
+    },
+    "3427": {
+      "present": false,
+      "clear_result_on_error": false
+    },
+    "3428": {
+      "present": false,
+      "clear_result_on_error": false
+    },
+    "3431": {
+      "present": false,
+      "clear_result_on_error": false
+    },
+    "3434": {
+      "present": false,
+      "clear_result_on_error": false
+    },
+    "3436": {
+      "present": false,
+      "clear_result_on_error": false
+    },
+    "3441": {
+      "present": false,
+      "clear_result_on_error": false
+    },
+    "3445": {
+      "present": false,
+      "clear_result_on_error": false
+    },
+    "3446": {
+      "present": false,
+      "clear_result_on_error": false
+    },
+    "3449": {
+      "present": false,
+      "clear_result_on_error": false
+    },
+    "3454": {
+      "present": false,
+      "clear_result_on_error": false
+    },
+    "3458": {
+      "present": false,
+      "clear_result_on_error": false
+    },
+    "3461": {
+      "present": false,
+      "clear_result_on_error": false
+    },
+    "3463": {
+      "present": false,
+      "clear_result_on_error": false
+    },
+    "3465": {
+      "present": false,
+      "clear_result_on_error": false
+    },
+    "3467": {
+      "present": false,
+      "clear_result_on_error": false
+    },
+    "3469": {
+      "present": false,
+      "clear_result_on_error": false
+    },
+    "3472": {
+      "present": false,
+      "clear_result_on_error": false
+    },
+    "3477": {
+      "present": false,
+      "clear_result_on_error": false
+    },
+    "3482": {
+      "present": false,
+      "clear_result_on_error": false
+    },
+    "3500": {
+      "present": false,
+      "clear_result_on_error": false
+    },
+    "3509": {
+      "present": false,
+      "clear_result_on_error": false
+    },
+    "3511": {
+      "present": false,
+      "clear_result_on_error": false
+    },
+    "3515": {
+      "present": false,
+      "clear_result_on_error": false
+    },
+    "3517": {
+      "present": false,
+      "clear_result_on_error": false
+    },
+    "3520": {
+      "present": false,
+      "clear_result_on_error": false
+    },
+    "3526": {
+      "present": false,
+      "clear_result_on_error": false
+    },
+    "3549": {
+      "present": false,
+      "clear_result_on_error": false
+    },
+    "3550": {
+      "present": false,
+      "clear_result_on_error": false
+    },
+    "3551": {
+      "present": false,
+      "clear_result_on_error": false
+    },
+    "3552": {
+      "present": false,
+      "clear_result_on_error": false
+    },
+    "3553": {
+      "present": false,
+      "clear_result_on_error": false
+    },
+    "3554": {
+      "present": false,
+      "clear_result_on_error": false
+    },
+    "3557": {
+      "present": false,
+      "clear_result_on_error": false
+    },
+    "3559": {
+      "present": false,
+      "clear_result_on_error": false
+    },
+    "3562": {
+      "present": false,
+      "clear_result_on_error": false
+    },
+    "3565": {
+      "present": false,
+      "clear_result_on_error": false
+    },
+    "3567": {
+      "present": false,
+      "clear_result_on_error": false
+    },
+    "3568": {
+      "present": false,
+      "clear_result_on_error": false
+    },
+    "3581": {
+      "present": false,
+      "clear_result_on_error": false
+    },
+    "3583": {
+      "present": false,
+      "clear_result_on_error": false
+    },
+    "3585": {
+      "present": false,
+      "clear_result_on_error": false
+    },
+    "3586": {
+      "present": false,
+      "clear_result_on_error": false
+    },
+    "3587": {
+      "present": false,
+      "clear_result_on_error": false
+    },
+    "3591": {
+      "present": true,
+      "clear_result_on_error": false
+    },
+    "3594": {
+      "present": true,
+      "clear_result_on_error": false
+    },
+    "3596": {
+      "present": true,
+      "clear_result_on_error": false
+    },
+    "3597": {
+      "present": true,
+      "clear_result_on_error": false
+    },
+    "3602": {
+      "present": true,
+      "clear_result_on_error": false
+    },
+    "3604": {
+      "present": true,
+      "clear_result_on_error": false
+    },
+    "3605": {
+      "present": true,
+      "clear_result_on_error": false
+    },
+    "3608": {
+      "present": true,
+      "clear_result_on_error": false
+    },
+    "3609": {
+      "present": true,
+      "clear_result_on_error": false
+    },
+    "3611": {
+      "present": true,
+      "clear_result_on_error": false
+    },
+    "3614": {
+      "present": true,
+      "clear_result_on_error": false
+    },
+    "3618": {
+      "present": true,
+      "clear_result_on_error": false
+    },
+    "3619": {
+      "present": true,
+      "clear_result_on_error": false
+    },
+    "3623": {
+      "present": true,
+      "clear_result_on_error": false
+    },
+    "3624": {
+      "present": true,
+      "clear_result_on_error": false
+    },
+    "3626": {
+      "present": true,
+      "clear_result_on_error": false
+    },
+    "3629": {
+      "present": true,
+      "clear_result_on_error": false
+    },
+    "3631": {
+      "present": true,
+      "clear_result_on_error": false
+    },
+    "3633": {
+      "present": true,
+      "clear_result_on_error": false
+    },
+    "3635": {
+      "present": true,
+      "clear_result_on_error": false
+    },
+    "3638": {
+      "present": true,
+      "clear_result_on_error": false
+    },
+    "3639": {
+      "present": true,
+      "clear_result_on_error": false
+    },
+    "3640": {
+      "present": true,
+      "clear_result_on_error": false
+    },
+    "3644": {
+      "present": true,
+      "clear_result_on_error": false
+    },
+    "3646": {
+      "present": true,
+      "clear_result_on_error": false
+    },
+    "3647": {
+      "present": true,
+      "clear_result_on_error": false
+    },
+    "3649": {
+      "present": true,
+      "clear_result_on_error": false
+    },
+    "3650": {
+      "present": true,
+      "clear_result_on_error": false
+    },
+    "3651": {
+      "present": true,
+      "clear_result_on_error": false
+    },
+    "3655": {
+      "present": true,
+      "clear_result_on_error": false
+    },
+    "3656": {
+      "present": true,
+      "clear_result_on_error": false
+    },
+    "3657": {
+      "present": true,
+      "clear_result_on_error": false
+    },
+    "3660": {
+      "present": true,
+      "clear_result_on_error": false
+    },
+    "3661": {
+      "present": true,
+      "clear_result_on_error": false
+    },
+    "3663": {
+      "present": true,
+      "clear_result_on_error": false
+    },
+    "3664": {
+      "present": true,
+      "clear_result_on_error": false
+    },
+    "3665": {
+      "present": true,
+      "clear_result_on_error": false
+    },
+    "3666": {
+      "present": true,
+      "clear_result_on_error": false
+    },
+    "3667": {
+      "present": true,
+      "clear_result_on_error": false
+    },
+    "3669": {
+      "present": true,
+      "clear_result_on_error": false
+    },
+    "3670": {
+      "present": true,
+      "clear_result_on_error": false
+    },
+    "3671": {
+      "present": true,
+      "clear_result_on_error": false
+    },
+    "3672": {
+      "present": true,
+      "clear_result_on_error": false
+    },
+    "3673": {
+      "present": true,
+      "clear_result_on_error": false
+    },
+    "3674": {
+      "present": true,
+      "clear_result_on_error": false
+    },
+    "3675": {
+      "present": true,
+      "clear_result_on_error": false
+    },
+    "3677": {
+      "present": true,
+      "clear_result_on_error": false
+    },
+    "3678": {
+      "present": true,
+      "clear_result_on_error": false
+    },
+    "3679": {
+      "present": true,
+      "clear_result_on_error": false
+    },
+    "3680": {
+      "present": true,
+      "clear_result_on_error": false
+    },
+    "3682": {
+      "present": true,
+      "clear_result_on_error": false
+    },
+    "3685": {
+      "present": true,
+      "clear_result_on_error": false
+    },
+    "3686": {
+      "present": true,
+      "clear_result_on_error": false
+    },
+    "3689": {
+      "present": true,
+      "clear_result_on_error": false
+    },
+    "3690": {
+      "present": true,
+      "clear_result_on_error": false
+    },
+    "3691": {
+      "present": true,
+      "clear_result_on_error": false
+    },
+    "3692": {
+      "present": true,
+      "clear_result_on_error": false
+    },
+    "3693": {
+      "present": true,
+      "clear_result_on_error": false
+    },
+    "3694": {
+      "present": true,
+      "clear_result_on_error": false
+    },
+    "3697": {
+      "present": true,
+      "clear_result_on_error": false
+    },
+    "3699": {
+      "present": true,
+      "clear_result_on_error": false
+    },
+    "3701": {
+      "present": true,
+      "clear_result_on_error": false
+    },
+    "3703": {
+      "present": true,
+      "clear_result_on_error": false
+    },
+    "3704": {
+      "present": true,
+      "clear_result_on_error": false
+    },
+    "3707": {
+      "present": true,
+      "clear_result_on_error": false
+    },
+    "3708": {
+      "present": true,
+      "clear_result_on_error": false
+    },
+    "3709": {
+      "present": true,
+      "clear_result_on_error": false
+    },
+    "3710": {
+      "present": true,
+      "clear_result_on_error": false
+    },
+    "3711": {
+      "present": true,
+      "clear_result_on_error": false
+    },
+    "3713": {
+      "present": true,
+      "clear_result_on_error": false
+    },
+    "3714": {
+      "present": true,
+      "clear_result_on_error": false
+    },
+    "3715": {
+      "present": true,
+      "clear_result_on_error": false
+    },
+    "3716": {
+      "present": true,
+      "clear_result_on_error": false
+    },
+    "3722": {
+      "present": true,
+      "clear_result_on_error": false
+    },
+    "3725": {
+      "present": true,
+      "clear_result_on_error": false
+    },
+    "3726": {
+      "present": true,
+      "clear_result_on_error": false
+    },
+    "3727": {
+      "present": true,
+      "clear_result_on_error": false
+    },
+    "3728": {
+      "present": true,
+      "clear_result_on_error": false
+    },
+    "3729": {
+      "present": true,
+      "clear_result_on_error": false
+    },
+    "3730": {
+      "present": true,
+      "clear_result_on_error": false
+    },
+    "3732": {
+      "present": true,
+      "clear_result_on_error": false
+    },
+    "3738": {
+      "present": true,
+      "clear_result_on_error": false
+    },
+    "3740": {
+      "present": true,
+      "clear_result_on_error": false
+    },
+    "3741": {
+      "present": true,
+      "clear_result_on_error": false
+    },
+    "3742": {
+      "present": true,
+      "clear_result_on_error": false
+    },
+    "3761": {
+      "present": true,
+      "clear_result_on_error": false
+    },
+    "3769": {
+      "present": true,
+      "clear_result_on_error": false
+    },
+    "3773": {
+      "present": true,
+      "clear_result_on_error": false
+    },
+    "3780": {
+      "present": true,
+      "clear_result_on_error": false
+    },
+    "3783": {
+      "present": true,
+      "clear_result_on_error": false
+    },
+    "3789": {
+      "present": true,
+      "clear_result_on_error": false
+    },
+    "3793": {
+      "present": true,
+      "clear_result_on_error": false
+    },
+    "3797": {
+      "present": true,
+      "clear_result_on_error": false
+    },
+    "3805": {
+      "present": true,
+      "clear_result_on_error": false
+    },
+    "3814": {
+      "present": true,
+      "clear_result_on_error": false
+    },
+    "3818": {
+      "present": true,
+      "clear_result_on_error": false
+    },
+    "3822": {
+      "present": true,
+      "clear_result_on_error": false
+    },
+    "3824": {
+      "present": true,
+      "clear_result_on_error": false
+    },
+    "3829": {
+      "present": true,
+      "clear_result_on_error": false
+    },
+    "3831": {
+      "present": true,
+      "clear_result_on_error": false
+    },
+    "3837": {
+      "present": true,
+      "clear_result_on_error": false
+    },
+    "3839": {
+      "present": true,
+      "clear_result_on_error": false
+    },
+    "3842": {
+      "present": true,
+      "clear_result_on_error": false
+    },
+    "3846": {
+      "present": true,
+      "clear_result_on_error": true
+    },
+    "3847": {
+      "present": true,
+      "clear_result_on_error": true
+    },
+    "3849": {
+      "present": true,
+      "clear_result_on_error": true
+    },
+    "3854": {
+      "present": true,
+      "clear_result_on_error": true
+    },
+    "3968": {
+      "present": true,
+      "clear_result_on_error": true
+    },
+    "3970": {
+      "present": true,
+      "clear_result_on_error": true
+    },
+    "3978": {
+      "present": true,
+      "clear_result_on_error": true
+    },
+    "3984": {
+      "present": true,
+      "clear_result_on_error": true
+    },
+    "3993": {
+      "present": true,
+      "clear_result_on_error": true
+    },
+    "3994": {
+      "present": true,
+      "clear_result_on_error": true
+    },
+    "4011": {
+      "present": true,
+      "clear_result_on_error": true
+    },
+    "4046": {
+      "present": true,
+      "clear_result_on_error": true
+    },
+    "4051": {
+      "present": true,
+      "clear_result_on_error": true
+    },
+    "4054": {
+      "present": true,
+      "clear_result_on_error": true
+    },
+    "4055": {
+      "present": true,
+      "clear_result_on_error": true
+    },
+    "4079": {
+      "present": true,
+      "clear_result_on_error": true
+    },
+    "4080": {
+      "present": true,
+      "clear_result_on_error": true
+    },
+    "4082": {
+      "present": true,
+      "clear_result_on_error": true
+    },
+    "4085": {
+      "present": true,
+      "clear_result_on_error": true
+    },
+    "4086": {
+      "present": true,
+      "clear_result_on_error": true
+    },
+    "4088": {
+      "present": true,
+      "clear_result_on_error": true
+    },
+    "4107": {
+      "present": true,
+      "clear_result_on_error": true
+    },
+    "4111": {
+      "present": true,
+      "clear_result_on_error": true
+    },
+    "4129": {
+      "present": true,
+      "clear_result_on_error": true
+    },
+    "4153": {
+      "present": true,
+      "clear_result_on_error": true
+    },
+    "4432": {
+      "present": true,
+      "clear_result_on_error": true
+    },
+    "4453": {
+      "present": true,
+      "clear_result_on_error": true
+    },
+    "6330": {
+      "present": true,
+      "clear_result_on_error": true
+    },
+    "6391": {
+      "present": true,
+      "clear_result_on_error": true
+    },
+    "6391-mod": {
+      "present": true,
+      "clear_result_on_error": true
+    },
+    "6392": {
+      "present": true,
+      "clear_result_on_error": true
+    },
+    "6412": {
+      "present": true,
+      "clear_result_on_error": true
+    },
+    "6510": {
+      "present": true,
+      "clear_result_on_error": true
+    },
+    "7086": {
+      "present": true,
+      "clear_result_on_error": true
+    },
+    "7123": {
+      "present": true,
+      "clear_result_on_error": true
+    },
+    "7142": {
+      "present": true,
+      "clear_result_on_error": true
+    },
+    "7530": {
+      "present": true,
+      "clear_result_on_error": true
+    },
+    "7533": {
+      "present": true,
+      "clear_result_on_error": true
+    },
+    "7555": {
+      "present": true,
+      "clear_result_on_error": true
+    },
+    "7556": {
+      "present": true,
+      "clear_result_on_error": true
+    },
+    "7735": {
+      "present": true,
+      "clear_result_on_error": true
+    },
+    "8023": {
+      "present": true,
+      "clear_result_on_error": true
+    }
+  },
+  "engines": {
+    "3741": {
+      "getter": "HRESULT openbor_getentityproperty(ScriptVariant** varlist , ScriptVariant** pretvar, int paramCount)\n{\n    if(!pretvar) return E_FAIL;\n    if(paramCount >= 2 && (!*pretvar || !varlist || !varlist[0] || !varlist[1] ||\n        (paramCount >= 3 && !varlist[2] &&\n         !((varlist[1]->vt == VT_INTEGER && varlist[1]->lVal >= 0 &&\n            varlist[1]->lVal < _ep_the_end && obor_entity_get_property_native(varlist[1]->lVal) == _ep_defense) ||\n           (varlist[1]->vt == VT_STR && StrCache_GetIfPresent(varlist[1]->strVal) &&\n            !stricmp(StrCache_GetIfPresent(varlist[1]->strVal), \"defense\"))))))\n        { *pretvar = NULL; return E_FAIL; }\n\n\tentity* ent\t\t\t= NULL;\n\tchar* tempstr\t\t= NULL;\n\tScriptVariant* arg\t= NULL;\n\tScriptVariant* arg1\t= NULL;\n\ts_sprite* spr;\n\ts_attack* attack;\n\tLONG ltemp, ltemp2;\n\tint i\t\t\t\t= 0;\n\tint propind ;\n\tint tempint\t\t\t= 0;\n\tshort *coords;\n\n\tif(paramCount < 2)  {\n\t\t*pretvar = NULL;\n\t\treturn E_FAIL;\n\t}\n\n\tScriptVariant_Clear(*pretvar);\n\tmapstrings_getentityproperty(varlist, paramCount);\n\n\targ = varlist[0];\n\tif(arg->vt != VT_PTR && arg->vt != VT_EMPTY)\n\t{\n\t\tprintf(\"Function getentityproperty must have a valid entity handle.\\n\");\n\t\t*pretvar = NULL;\n\t\treturn E_FAIL;\n\t}\n\tent = (entity*)arg->ptrVal; //retrieve the entity\n\tif(!ent) return S_OK;\n\n\targ = varlist[1];\n\tif(arg->vt!=VT_INTEGER)\n\t{\n\t\tprintf(\"Function getentityproperty must have a string property name.\\n\");\n\t}\n\n\tpropind = obor_entity_get_property_native(arg->lVal);\n\n\tswitch(propind){\ncase _ep_vulnerable:\n\t{\n\t\tif(paramCount==2){\n\t\t\ti\t\t= ent->animnum;\n\t\t\ttempint\t= ent->animpos;\n\t\t}\n\t\telse if(paramCount<4\n\t\t\t|| varlist[2]->vt != VT_INTEGER\n\t\t\t|| varlist[3]->vt != VT_INTEGER)\n\t\t{\n\t\t\tprintf(\"\\n Error, getentityproperty({ent}, \\\"vulnerable\\\", {animation}, {frame}): parameters missing or invalid. \\n\");\n\t\t\treturn E_FAIL;\n\t\t}else{\n\t\t\ti\t\t= varlist[2]->lVal;\t\t\t\t\t\t\t\t\t\t\t\t//Animation parameter.\n\t\t\ttempint\t= varlist[3]->lVal;\t\t\t\t\t\t\t\t\t\t\t\t//Frame parameter.\n\t\t}\n\t\tScriptVariant_ChangeType(*pretvar, VT_INTEGER);\n\t\t(*pretvar)->lVal = (LONG)ent->modeldata.animation[i]->vulnerable[tempint];\n\t\tbreak;\n\t}\n\t\ndefault:*pretvar=NULL;return E_FAIL;}return S_OK;}\n"
+    },
+    "3842": {
+      "getter": "HRESULT openbor_getentityproperty(ScriptVariant** varlist , ScriptVariant** pretvar, int paramCount)\n{\n    if(!pretvar) return E_FAIL;\n    if(paramCount >= 2 && (!*pretvar || !varlist || !varlist[0] || !varlist[1] ||\n        (paramCount >= 3 && !varlist[2] &&\n         !((varlist[1]->vt == VT_INTEGER && varlist[1]->lVal >= 0 &&\n            varlist[1]->lVal < _ep_the_end && varlist[1]->lVal == _ep_defense) ||\n           (varlist[1]->vt == VT_STR && StrCache_GetIfPresent(varlist[1]->strVal) &&\n            !stricmp(StrCache_GetIfPresent(varlist[1]->strVal), \"defense\"))))))\n        { *pretvar = NULL; return E_FAIL; }\n\n\tentity* ent\t\t\t= NULL;\n\tchar* tempstr\t\t= NULL;\n\tScriptVariant* arg\t= NULL;\n\tScriptVariant* arg1\t= NULL;\n\ts_sprite* spr;\n\ts_attack* attack;\n\tLONG ltemp, ltemp2;\n\tint i\t\t\t\t= 0;\n\tint propind ;\n\tint tempint\t\t\t= 0;\n\tint *coords;\n\n\tif(paramCount < 2)  {\n\t\t*pretvar = NULL;\n\t\treturn E_FAIL;\n\t}\n\n\tScriptVariant_Clear(*pretvar);\n\tif(obor_profile_build < 3828) mapstrings_getentityproperty(varlist, paramCount);\n\telse mapstrings_entityproperty(varlist, paramCount);\n\n\targ = varlist[0];\n\tif(arg->vt != VT_PTR && arg->vt != VT_EMPTY)\n\t{\n\t\tprintf(\"Function getentityproperty must have a valid entity handle.\\n\");\n\t\t*pretvar = NULL;\n\t\treturn E_FAIL;\n\t}\n\tent = (entity*)arg->ptrVal; //retrieve the entity\n\tif(!ent) return S_OK;\n\n\targ = varlist[1];\n\tif(arg->vt!=VT_INTEGER)\n\t{\n\t\tprintf(\"Function getentityproperty must have a string property name.\\n\");\n\t}\n\n\tpropind = arg->lVal;\n\n\tswitch(propind){\ncase _ep_vulnerable:\n\t{\n\t\tif(paramCount==2){\n\t\t\ti\t\t= ent->animnum;\n\t\t\ttempint\t= ent->animpos;\n\t\t}\n\t\telse if(paramCount<4\n\t\t\t|| varlist[2]->vt != VT_INTEGER\n\t\t\t|| varlist[3]->vt != VT_INTEGER)\n\t\t{\n\t\t\tprintf(\"\\n Error, getentityproperty({ent}, \\\"vulnerable\\\", {animation}, {frame}): parameters missing or invalid. \\n\");\n\t\t\tif(obor_profile_build >= 3843) *pretvar = NULL;\n                return E_FAIL;\n\t\t}else{\n\t\t\ti\t\t= varlist[2]->lVal;\t\t\t\t\t\t\t\t\t\t\t\t//Animation parameter.\n\t\t\ttempint\t= varlist[3]->lVal;\t\t\t\t\t\t\t\t\t\t\t\t//Frame parameter.\n\t\t}\n\t\tScriptVariant_ChangeType(*pretvar, VT_INTEGER);\n\t\t(*pretvar)->lVal = (LONG)ent->modeldata.animation[i]->vulnerable[tempint];\n\t\tbreak;\n\t}\n\t\ndefault:*pretvar=NULL;return E_FAIL;}return S_OK;}\n"
+    },
+    "4086": {
+      "getter": "HRESULT openbor_getentityproperty(ScriptVariant **varlist , ScriptVariant **pretvar, int paramCount)\n{\n    if(!pretvar) return E_FAIL;\n    if(paramCount >= 2 && (!*pretvar || !varlist || !varlist[0] || !varlist[1] ||\n        (paramCount >= 3 && !varlist[2] &&\n         !((varlist[1]->vt == VT_INTEGER && varlist[1]->lVal >= 0 &&\n            varlist[1]->lVal < _ep_the_end && obor_entityproperty_native(varlist[1]->lVal) == _ep_defense) ||\n           (varlist[1]->vt == VT_STR && StrCache_GetIfPresent(varlist[1]->strVal) &&\n            !stricmp(StrCache_GetIfPresent(varlist[1]->strVal), \"defense\"))))))\n        { *pretvar = NULL; return E_FAIL; }\n\n    entity *ent\t\t\t= NULL;\n    char *tempstr\t\t= NULL;\n    ScriptVariant *arg\t= NULL;\n    ScriptVariant *arg1\t= NULL;\n    s_sprite *spr;\n    s_attack *attack;\n    LONG ltemp, ltemp2;\n    int i\t\t\t\t= 0;\n    int propind ;\n    int tempint\t\t\t= 0;\n    int *coords;\n\n    if(paramCount < 2)\n    {\n        *pretvar = NULL;\n        return E_FAIL;\n    }\n\n    ScriptVariant_Clear(*pretvar);\n    mapstrings_entityproperty(varlist, paramCount);\n\n    arg = varlist[0];\n    if(arg->vt != VT_PTR && arg->vt != VT_EMPTY)\n    {\n        printf(\"Function getentityproperty must have a valid entity handle.\\n\");\n        *pretvar = NULL;\n        return E_FAIL;\n    }\n    ent = (entity *)arg->ptrVal; //retrieve the entity\n    if(!ent)\n    {\n        return S_OK;\n    }\n\n    arg = varlist[1];\n    if(arg->vt != VT_INTEGER)\n    {\n        printf(\"Function getentityproperty must have a string property name.\\n\");\n    }\n\n    propind = obor_entityproperty_native(arg->lVal);\n\n    switch(propind){\ncase _ep_vulnerable:\n    {\n        if(paramCount == 2)\n        {\n            i\t\t= ent->animnum;\n            tempint\t= ent->animpos;\n        }\n        else if(paramCount < 4\n                || varlist[2]->vt != VT_INTEGER\n                || varlist[3]->vt != VT_INTEGER)\n        {\n            printf(\"\\n Error, getentityproperty({ent}, \\\"vulnerable\\\", {animation}, {frame}): parameters missing or invalid. \\n\");\n            *pretvar = NULL;\n            return E_FAIL;\n        }\n        else\n        {\n            i\t\t= obor_animation_native((int)varlist[2]->lVal, obor_profile_build);\t\t\t\t\t\t\t\t\t\t\t\t//Animation parameter.\n            tempint\t= varlist[3]->lVal;\t\t\t\t\t\t\t\t\t\t\t\t//Frame parameter.\n        }\n        ScriptVariant_ChangeType(*pretvar, VT_INTEGER);\n        (*pretvar)->lVal = (LONG)ent->modeldata.animation[i]->vulnerable[tempint];\n        break;\n    }\n    \ndefault:*pretvar=NULL;return E_FAIL;}return S_OK;}\n"
+    },
+    "4432": {
+      "getter": "HRESULT openbor_getentityproperty(ScriptVariant **varlist , ScriptVariant **pretvar, int paramCount)\n{\n    if(!pretvar) return E_FAIL;\n    if(paramCount >= 2 && (!*pretvar || !varlist || !varlist[0] || !varlist[1] ||\n        (paramCount >= 3 && !varlist[2] &&\n         !((varlist[1]->vt == VT_INTEGER && varlist[1]->lVal >= 0 &&\n            varlist[1]->lVal < _ep_the_end && varlist[1]->lVal == _ep_defense) ||\n           (varlist[1]->vt == VT_STR && StrCache_GetIfPresent(varlist[1]->strVal) &&\n            !stricmp(StrCache_GetIfPresent(varlist[1]->strVal), \"defense\"))))))\n        { *pretvar = NULL; return E_FAIL; }\n\n    entity *ent\t\t\t= NULL;\n    char *tempstr\t\t= NULL;\n    ScriptVariant *arg\t= NULL;\n    ScriptVariant *arg1\t= NULL;\n    s_sprite *spr;\n    LONG ltemp, ltemp2;\n    int i\t\t\t\t= 0;\n    int propind ;\n    int tempint\t\t\t= 0;\n\n    if(paramCount < 2)\n    {\n        *pretvar = NULL;\n        return E_FAIL;\n    }\n\n    ScriptVariant_Clear(*pretvar);\n    mapstrings_entityproperty(varlist, paramCount);\n\n    arg = varlist[0];\n    if(arg->vt != VT_PTR && arg->vt != VT_EMPTY)\n    {\n        printf(\"Function getentityproperty must have a valid entity handle.\\n\");\n        *pretvar = NULL;\n        return E_FAIL;\n    }\n    ent = (entity *)arg->ptrVal; //retrieve the entity\n    if(!ent)\n    {\n        return S_OK;\n    }\n\n    arg = varlist[1];\n    if(arg->vt != VT_INTEGER)\n    {\n        printf(\"Function getentityproperty must have a string property name.\\n\");\n    }\n\n    propind = arg->lVal;\n\n    switch(propind){\ncase _ep_vulnerable:\n    {\n        if(paramCount == 2)\n        {\n            i\t\t= ent->animnum;\n            tempint\t= ent->animpos;\n        }\n        else if(paramCount < 4\n                || varlist[2]->vt != VT_INTEGER\n                || varlist[3]->vt != VT_INTEGER)\n        {\n            printf(\"\\n Error, getentityproperty({ent}, \\\"vulnerable\\\", {animation}, {frame}): parameters missing or invalid. \\n\");\n            *pretvar = NULL;\n            return E_FAIL;\n        }\n        else\n        {\n            i\t\t= varlist[2]->lVal;\t\t\t\t\t\t\t\t\t\t\t\t//Animation parameter.\n            tempint\t= varlist[3]->lVal;\t\t\t\t\t\t\t\t\t\t\t\t//Frame parameter.\n        }\n        ScriptVariant_ChangeType(*pretvar, VT_INTEGER);\n        (*pretvar)->lVal = (LONG)ent->modeldata.animation[i]->vulnerable[tempint];\n        break;\n    }\n    \ndefault:*pretvar=NULL;return E_FAIL;}return S_OK;}\n"
+    },
+    "6391": {
+      "getter": "HRESULT openbor_getentityproperty(ScriptVariant **varlist , ScriptVariant **pretvar, int paramCount)\n{\n    if(!pretvar) return E_FAIL;\n    if(paramCount >= 2 && (!*pretvar || !varlist || !varlist[0] || !varlist[1] ||\n        (paramCount >= 3 && !varlist[2] &&\n         !((varlist[1]->vt == VT_INTEGER && varlist[1]->lVal >= 0 &&\n            varlist[1]->lVal < _ep_the_end && obor_entityproperty(varlist[1]->lVal) == _ep_defense) ||\n           (varlist[1]->vt == VT_STR && StrCache_GetIfPresent(varlist[1]->strVal) &&\n            !stricmp(StrCache_GetIfPresent(varlist[1]->strVal), \"defense\"))))))\n        { *pretvar = NULL; return E_FAIL; }\n\n    entity *ent\t\t\t= NULL;\n    ScriptVariant *arg\t= NULL;\n    ScriptVariant *arg1\t= NULL;\n    s_sprite *spr;\n    LONG ltemp, ltemp2;\n    int i\t\t\t\t= 0;\n    int propind ;\n    int tempint\t\t\t= 0;\n\n    if(paramCount < 2)\n    {\n        *pretvar = NULL;\n        return E_FAIL;\n    }\n\n    ScriptVariant_Clear(*pretvar);\n    mapstrings_entityproperty(varlist, paramCount);\n\n    arg = varlist[0];\n    if(arg->vt != VT_PTR && arg->vt != VT_EMPTY)\n    {\n        printf(\"Function getentityproperty must have a valid entity handle.\\n\");\n        *pretvar = NULL;\n        return E_FAIL;\n    }\n    ent = (entity *)arg->ptrVal; //retrieve the entity\n    if(!ent)\n    {\n        return S_OK;\n    }\n\n    arg = varlist[1];\n    if(arg->vt != VT_INTEGER)\n    {\n        printf(\"Function getentityproperty must have a string property name.\\n\");\n    }\n\n    propind = obor_entityproperty(arg->lVal);\n\n    switch(propind){\ncase _ep_vulnerable:\n    {\n        if(paramCount == 2)\n        {\n            i\t\t= ent->animnum;\n            tempint\t= ent->animpos;\n        }\n        else if(paramCount < 4\n                || varlist[2]->vt != VT_INTEGER\n                || varlist[3]->vt != VT_INTEGER)\n        {\n            printf(\"\\n Error, getentityproperty({ent}, \\\"vulnerable\\\", {animation}, {frame}): parameters missing or invalid. \\n\");\n            *pretvar = NULL;\n            return E_FAIL;\n        }\n        else\n        {\n            i\t\t= obor_animation_from_native(varlist[2]->lVal);\t\t\t\t\t\t\t\t\t\t\t\t//Animation parameter.\n            tempint\t= varlist[3]->lVal;\t\t\t\t\t\t\t\t\t\t\t\t//Frame parameter.\n        }\n        ScriptVariant_ChangeType(*pretvar, VT_INTEGER);\n        (*pretvar)->lVal = (LONG)ent->modeldata.animation[i]->vulnerable[tempint];\n        break;\n    }\n    \ndefault:*pretvar=NULL;return E_FAIL;}return S_OK;}\n",
+      "original_mapper": "static inline int obor_animation_from_native(int id)\n{\n    int original_max = ANI_GETBOOMERANG;\n    if(id < 0) return id;\n    if(obor_profile_build == 6330)\n    {\n        if(id == ANI_EDGE) return ANI_GETBOOMERANG;\n        if(id == ANI_EDGE + 1) return ANI_GETBOOMERANGINAIR;\n        if(id >= ANI_EDGE + 2 && id < MAX_ANIS) return id - 2;\n        return id;\n    }\n    if(obor_profile_build == 6510)\n    {\n        if(id == 0) return ANI_NONE;\n        return id < original_max + 1 ? id - 1 : id + 1;\n    }\n    return id < original_max ? id : id + 2;\n}\n",
+      "mapper_limits": {
+        "6330": [
+          2147483647,
+          2147483646,
+          2147483646
+        ],
+        "6391": [
+          2147483645,
+          2147483647,
+          2147483646
+        ],
+        "6391-mod": [
+          2147483645,
+          2147483647,
+          2147483646
+        ],
+        "6392": [
+          2147483645,
+          2147483647,
+          2147483646
+        ],
+        "6412": [
+          2147483645,
+          2147483647,
+          2147483646
+        ],
+        "6510": [
+          2147483646,
+          2147483647,
+          2147483647
+        ]
+      },
+      "original_property_mapper": "static inline int obor_animation_property_from_native(int id)\n{\n    return obor_profile_build == 6330 && id >= ANI_PROP_ENTITY_COLLISION ? id + 1 : id;\n}\n",
+      "original_attack_mapper": "static inline int obor_attack_from_native(int id)\n{\n    if(id < 0) return id;\n    if(obor_profile_build == 6510)\n    {\n        switch(id)\n        {\n            case 15: return ATK_BOSS_DEATH;\n            case 16: return ATK_ITEM;\n            case 17: return ATK_LAND;\n            case 18: return ATK_LIFESPAN;\n            case 19: return ATK_LOSE;\n            case 20: return ATK_PIT;\n            case 21: return ATK_TIMEOVER;\n            default: return id;\n        }\n    }\n    return id >= ATK_BOSS_DEATH ? id + 1 : id;\n}\n"
+    },
+    "7142": {
+      "getter": "HRESULT openbor_getentityproperty(ScriptVariant **varlist , ScriptVariant **pretvar, int paramCount)\n{\n    if(!pretvar) return E_FAIL;\n    if(paramCount >= 2 && (!*pretvar || !varlist || !varlist[0] || !varlist[1] ||\n        (paramCount >= 3 && !varlist[2] &&\n         !((varlist[1]->vt == VT_INTEGER && varlist[1]->lVal >= 0 &&\n            varlist[1]->lVal < _ep_the_end && varlist[1]->lVal == _ep_defense) ||\n           (varlist[1]->vt == VT_STR && StrCache_GetIfPresent(varlist[1]->strVal) &&\n            !stricmp(StrCache_GetIfPresent(varlist[1]->strVal), \"defense\"))))))\n        { *pretvar = NULL; return E_FAIL; }\n\n    entity *ent\t\t\t= NULL;\n    ScriptVariant *arg\t= NULL;\n    ScriptVariant *arg1\t= NULL;\n    s_sprite *spr;\n    LONG ltemp, ltemp2;\n    int i\t\t\t\t= 0;\n    int propind ;\n    int tempint\t\t\t= 0;\n\n    if(paramCount < 2)\n    {\n        *pretvar = NULL;\n        return E_FAIL;\n    }\n\n    ScriptVariant_Clear(*pretvar);\n    mapstrings_entityproperty(varlist, paramCount);\n\n    arg = varlist[0];\n    if(arg->vt != VT_PTR && arg->vt != VT_EMPTY)\n    {\n        printf(\"Function getentityproperty must have a valid entity handle.\\n\");\n        *pretvar = NULL;\n        return E_FAIL;\n    }\n    ent = (entity *)arg->ptrVal; //retrieve the entity\n    if(!ent)\n    {\n        return S_OK;\n    }\n\n    arg = varlist[1];\n    if(arg->vt != VT_INTEGER)\n    {\n        printf(\"Function getentityproperty must have a string property name.\\n\");\n    }\n\n    propind = arg->lVal;\n\n    switch(propind){\ncase _ep_vulnerable:\n    {\n        if(paramCount == 2)\n        {\n            i\t\t= ent->animnum;\n            tempint\t= ent->animpos;\n        }\n        else if(paramCount < 4\n                || varlist[2]->vt != VT_INTEGER\n                || varlist[3]->vt != VT_INTEGER)\n        {\n            printf(\"\\n Error, getentityproperty({ent}, \\\"vulnerable\\\", {animation}, {frame}): parameters missing or invalid. \\n\");\n            *pretvar = NULL;\n            return E_FAIL;\n        }\n        else\n        {\n            i\t\t= varlist[2]->lVal;\t\t\t\t\t\t\t\t\t\t\t\t//Animation parameter.\n            tempint\t= varlist[3]->lVal;\t\t\t\t\t\t\t\t\t\t\t\t//Frame parameter.\n        }\n        ScriptVariant_ChangeType(*pretvar, VT_INTEGER);\n        (*pretvar)->lVal = (LONG)ent->modeldata.animation[i]->vulnerable[tempint];\n        break;\n    }\n    \ndefault:*pretvar=NULL;return E_FAIL;}return S_OK;}\n"
+    },
+    "7533": {
+      "getter": "HRESULT openbor_getentityproperty(ScriptVariant **varlist , ScriptVariant **pretvar, int paramCount)\n{\n    if(!pretvar) return E_FAIL;\n    if(paramCount >= 2 && (!*pretvar || !varlist || !varlist[0] || !varlist[1] ||\n        (paramCount >= 3 && !varlist[2] &&\n         !((varlist[1]->vt == VT_INTEGER && varlist[1]->lVal >= 0 &&\n            varlist[1]->lVal < _ep_the_end && varlist[1]->lVal == _ep_defense) ||\n           (varlist[1]->vt == VT_STR && StrCache_GetIfPresent(varlist[1]->strVal) &&\n            !stricmp(StrCache_GetIfPresent(varlist[1]->strVal), \"defense\"))))))\n        { *pretvar = NULL; return E_FAIL; }\n\n    entity *ent\t\t\t= NULL;\n    ScriptVariant *arg\t= NULL;\n    ScriptVariant *arg1\t= NULL;\n    s_sprite *spr;\n    LONG ltemp, ltemp2;\n    int i\t\t\t\t= 0;\n    int propind ;\n    int tempint\t\t\t= 0;\n\n    if(paramCount < 2)\n    {\n        *pretvar = NULL;\n        return E_FAIL;\n    }\n\n    ScriptVariant_Clear(*pretvar);\n    if(obor_profile_build >= 7609) mapstrings_entityproperty(varlist, paramCount);\n\n    arg = varlist[0];\n    if(arg->vt != VT_PTR && arg->vt != VT_EMPTY)\n    {\n        printf(\"Function getentityproperty must have a valid entity handle.\\n\");\n        *pretvar = NULL;\n        return E_FAIL;\n    }\n    ent = (entity *)arg->ptrVal; //retrieve the entity\n    if(!ent)\n    {\n        return S_OK;\n    }\n\n    arg = varlist[1];\n    if(arg->vt != VT_INTEGER)\n    {\n        printf(\"Function getentityproperty must have a string property name.\\n\");\n    }\n\n    propind = arg->lVal;\n\n    switch(propind){\ncase _ep_vulnerable:\n    {\n        if(paramCount == 2)\n        {\n            i\t\t= ent->animnum;\n            tempint\t= ent->animpos;\n        }\n        else if(paramCount < 4\n                || varlist[2]->vt != VT_INTEGER\n                || varlist[3]->vt != VT_INTEGER)\n        {\n            printf(\"\\n Error, getentityproperty({ent}, \\\"vulnerable\\\", {animation}, {frame}): parameters missing or invalid. \\n\");\n            *pretvar = NULL;\n            return E_FAIL;\n        }\n        else\n        {\n            i\t\t= varlist[2]->lVal;\t\t\t\t\t\t\t\t\t\t\t\t//Animation parameter.\n            tempint\t= varlist[3]->lVal;\t\t\t\t\t\t\t\t\t\t\t\t//Frame parameter.\n        }\n        ScriptVariant_ChangeType(*pretvar, VT_INTEGER);\n        (*pretvar)->lVal = (LONG)ent->modeldata.animation[i]->vulnerable[tempint];\n        break;\n    }\n    \ndefault:*pretvar=NULL;return E_FAIL;}return S_OK;}\n"
+    },
+    "8023": {
+      "getter": "HRESULT openbor_getentityproperty(ScriptVariant **varlist , ScriptVariant **pretvar, int paramCount)\n{\n    if(!pretvar) return E_FAIL;\n    if(paramCount >= 2 && (!*pretvar || !varlist || !varlist[0] || !varlist[1] ||\n        (paramCount >= 3 && !varlist[2] &&\n         !((varlist[1]->vt == VT_INTEGER && varlist[1]->lVal >= 0 &&\n            varlist[1]->lVal < _ep_the_end && varlist[1]->lVal == _ep_defense) ||\n           (varlist[1]->vt == VT_STR && StrCache_GetIfPresent(varlist[1]->strVal) &&\n            !stricmp(StrCache_GetIfPresent(varlist[1]->strVal), \"defense\"))))))\n        { *pretvar = NULL; return E_FAIL; }\n\n    entity *ent\t\t\t= NULL;\n    ScriptVariant *arg\t= NULL;\n    ScriptVariant *arg1\t= NULL;\n    s_sprite *spr;\n    LONG ltemp, ltemp2;\n    int i\t\t\t\t= 0;\n    int propind ;\n    int tempint\t\t\t= 0;\n\n    if(paramCount < 2)\n    {\n        *pretvar = NULL;\n        return E_FAIL;\n    }\n\n    ScriptVariant_Clear(*pretvar);\n    mapstrings_entityproperty(varlist, paramCount);\n\n    arg = varlist[0];\n    if(arg->vt != VT_PTR && arg->vt != VT_EMPTY)\n    {\n        printf(\"Function getentityproperty must have a valid entity handle.\\n\");\n        *pretvar = NULL;\n        return E_FAIL;\n    }\n    ent = (entity *)arg->ptrVal; //retrieve the entity\n    if(!ent)\n    {\n        return S_OK;\n    }\n\n    arg = varlist[1];\n    if(arg->vt != VT_INTEGER)\n    {\n        printf(\"Function getentityproperty must have a string property name.\\n\");\n    }\n\n    propind = arg->lVal;\n\n    switch(propind){\ncase _ep_vulnerable:\n    {\n        if(paramCount == 2)\n        {\n            i\t\t= ent->animnum;\n            tempint\t= ent->animpos;\n        }\n        else if(paramCount < 4\n                || varlist[2]->vt != VT_INTEGER\n                || varlist[3]->vt != VT_INTEGER)\n        {\n            printf(\"\\n Error, getentityproperty({ent}, \\\"vulnerable\\\", {animation}, {frame}): parameters missing or invalid. \\n\");\n            *pretvar = NULL;\n            return E_FAIL;\n        }\n        else\n        {\n            i\t\t= varlist[2]->lVal;\t\t\t\t\t\t\t\t\t\t\t\t//Animation parameter.\n            tempint\t= varlist[3]->lVal;\t\t\t\t\t\t\t\t\t\t\t\t//Frame parameter.\n        }\n        ScriptVariant_ChangeType(*pretvar, VT_INTEGER);\n        (*pretvar)->lVal = (LONG)ent->modeldata.animation[i]->vulnerable[tempint];\n        break;\n    }\n    \ndefault:*pretvar=NULL;return E_FAIL;}return S_OK;}\n"
+    }
+  }
+}

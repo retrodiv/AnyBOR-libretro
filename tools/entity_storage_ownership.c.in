@@ -1,0 +1,192 @@
+/* Native actor construction/release with bounded heap and script providers.
+ * SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <limits.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+@CONFIG@
+#include "openbor.h"
+#undef printf
+#undef assert
+#undef malloc
+#undef calloc
+#undef realloc
+#undef free
+#undef shutdown
+#define INLINE_SCRIPTS @INLINE_SCRIPTS@
+#define HAS_VARLIST @HAS_VARLIST@
+#define MODERN @MODERN@
+uint32_t obor_profile_build;
+static unsigned checks,cases;
+#define CHECK(c) do {++checks;if(!(c)){fprintf(stderr,"entity revision=%u line=%d: %s\n",obor_profile_build,__LINE__,#c);abort();}} while(0)
+int max_attack_types=2,max_entity_vars=2;
+static _Alignas(max_align_t) union {max_align_t alignment;unsigned char bytes[1u<<20];} arena;
+static unsigned char snapshot[sizeof(arena.bytes)];
+static size_t used,snapshot_used;
+static struct allocation {void *pointer;size_t bytes;int live;} owned[48];
+static unsigned allocated,direct_calls,refuse_direct,service_depth,script_calls,variable_calls;
+static struct event {int kind;size_t bytes;void *pointer;} events[160],baseline[160];
+static unsigned event_count,baseline_count;
+static void event(int kind,void *pointer,size_t bytes) {
+ CHECK(event_count<sizeof(events)/sizeof(*events));
+ struct event *e=events+event_count++;e->kind=kind;e->pointer=pointer;e->bytes=bytes;
+}
+static unsigned live_count(void){unsigned n=0;for(unsigned i=0;i<allocated;++i)n+=owned[i].live;return n;}
+static void *observe_allocate(size_t bytes,int clear) {
+ CHECK(bytes && bytes<=sizeof(arena.bytes) && allocated<sizeof(owned)/sizeof(*owned));
+ if(!service_depth)++direct_calls;
+ if(!service_depth && direct_calls==refuse_direct){event(clear?2:1,NULL,bytes);return NULL;}
+ size_t start=(used+_Alignof(max_align_t)-1)&~(size_t)(_Alignof(max_align_t)-1);
+ CHECK(start<=sizeof(arena.bytes) && bytes<=sizeof(arena.bytes)-start);
+ void *pointer=arena.bytes+start;used=start+bytes;
+ if(clear)memset(pointer,0,bytes);
+ owned[allocated++]=(struct allocation){pointer,bytes,1};event(clear?2:1,pointer,bytes);return pointer;
+}
+static void *observe_malloc(size_t bytes){return observe_allocate(bytes,0);}
+static void *observe_calloc(size_t count,size_t bytes){CHECK(count && bytes && count<=sizeof(arena.bytes)/bytes);return observe_allocate(count*bytes,1);}
+static void observe_free(void *pointer) {
+ if(!pointer)return;
+ for(unsigned i=0;i<allocated;++i)if(owned[i].pointer==pointer && owned[i].live){owned[i].live=0;event(3,pointer,owned[i].bytes);return;}
+ CHECK(!"unowned or repeated entity storage release");
+}
+static void *service_calloc(size_t count,size_t bytes) {
+ ++service_depth;void *p=observe_calloc(count,bytes);--service_depth;CHECK(p);return p;
+}
+static int contains(const void *pointer,size_t bytes) {
+ uintptr_t value=(uintptr_t)pointer;
+ for(unsigned i=0;i<allocated;++i)if(owned[i].live){
+  uintptr_t base=(uintptr_t)owned[i].pointer;
+  if(value>=base && value-base<=owned[i].bytes && bytes<=owned[i].bytes-(value-base))return 1;
+ }
+ return 0;
+}
+static void fixture_alloc_scripts(void *output) {
+ ++script_calls;s_scripts *scripts;
+#if INLINE_SCRIPTS
+ scripts=output;memset(output,0,sizeof(*scripts));
+#else
+ scripts=service_calloc(1,sizeof(*scripts));memcpy(output,&scripts,sizeof(scripts));
+#endif
+ CHECK(contains(scripts,sizeof(*scripts)));
+ Script *script=service_calloc(1,sizeof(*script));
+ memcpy((unsigned char*)scripts+offsetof(s_scripts,animation_script),&script,sizeof(script));
+ event(4,scripts,sizeof(*scripts));
+}
+static void fixture_clear_scripts(void *scripts,int mode) {
+ CHECK(mode==2);if(scripts)CHECK(contains(scripts,sizeof(s_scripts)));event(5,scripts,mode);
+}
+static void fixture_free_scripts(void *output) {
+ s_scripts *scripts;
+#if INLINE_SCRIPTS
+ scripts=output;
+#else
+ memcpy(&scripts,output,sizeof(scripts));
+#endif
+ if(!scripts)return;
+ CHECK(contains(scripts,sizeof(*scripts)));
+ Script *script=NULL;memcpy(&script,(unsigned char*)scripts+offsetof(s_scripts,animation_script),sizeof(script));
+ observe_free(script);
+#if INLINE_SCRIPTS
+ memset(scripts,0,sizeof(*scripts));
+#else
+ observe_free(scripts);scripts=NULL;memcpy(output,&scripts,sizeof(scripts));
+#endif
+}
+@CALLBACK_ENUM@
+static void fixture_callback_scripts(void *source,void *scripts,int mode,int operation) {
+ CHECK(!source);fixture_clear_scripts(scripts,mode);event(6,scripts,(size_t)operation);
+}
+static void fixture_colourmap_release(s_model *model) {@COLOURMAP_CHECK@}
+static void fixture_variant_clear(ScriptVariant *value){CHECK(contains(value,sizeof(*value)) && value->vt==VT_EMPTY);memset(value,0,sizeof(*value));}
+#if HAS_VARLIST
+static void fixture_varlist_init(Varlist *value,int count) {
+ CHECK(value && contains(value,sizeof(*value)) && count>=0 && count<=2);++variable_calls;
+ value->magic=17;value->list=service_calloc(1,sizeof(*value->list));
+ value->vars=service_calloc((size_t)count+1,sizeof(*value->vars));
+ value->vars->vt=VT_INTEGER;value->vars->lVal=count;event(7,value,count);
+}
+static void fixture_varlist_clear(Varlist *value) {
+ CHECK(value && contains(value,sizeof(*value)) && value->magic==17);
+ CHECK(value->vars && value->vars->vt==VT_INTEGER);observe_free(value->list);observe_free(value->vars);
+ value->list=NULL;value->vars=NULL;value->magic=0;event(8,value,0);
+}
+#if @OWNED_VARLIST@
+static void fixture_varlist_register(Varlist *value) {
+ CHECK(value && contains(value,sizeof(*value)) && value->magic==17);
+}
+static void fixture_varlist_release(Varlist *value,int dispose) {
+ CHECK(dispose==1);
+ fixture_varlist_clear(value);
+ observe_free(value);
+}
+#endif
+#endif
+static void fixture_empty_recursive_legacy(void *value){CHECK(!value);}
+static void fixture_empty_recursive_modern(void *value){CHECK(!value);}
+static void fixture_stop(int status,const char *message,...){(void)status;(void)message;CHECK(!"unexpected entity service stop");}
+static void fixture_stop_alias(int status,const char *message,...){(void)status;(void)message;CHECK(!"unexpected entity service stop");}
+HRESULT Interpreter_Call(Interpreter *p){(void)p;abort();}
+HRESULT Interpreter_EvalInstruction(Interpreter *p){(void)p;abort();}
+#if MODERN
+const s_defense default_defense={0};
+const s_offense default_offense={0};
+#endif
+#define malloc observe_malloc
+#define calloc observe_calloc
+#define free observe_free
+@NAMED_ALLOCATION_SUPPORT@
+@DIAGNOSTIC@
+@HELPERS@
+@ROUTINES@
+#undef free
+#undef calloc
+#undef malloc
+static void reset(void) {
+ CHECK(live_count()==0);used=allocated=direct_calls=refuse_direct=service_depth=script_calls=variable_calls=0;
+ memset(owned,0,sizeof(owned));memset(events,0,sizeof(events));event_count=0;
+ memset(arena.bytes,0xa5,sizeof(arena.bytes));
+}
+static void valid(int original) {
+ reset();entity *value=original?original_alloc_ent():alloc_ent();CHECK(value && script_calls==1);
+ CHECK(direct_calls==(unsigned)(@DIRECT_COUNT@));
+ CHECK(variable_calls==HAS_VARLIST);
+#if @OWNED_VARLIST@
+ if(original)value->obor_varlist_owned=value->varlist;
+ CHECK(value->varlist==value->obor_varlist_owned);
+#endif
+ if(original){snapshot_used=used;memcpy(snapshot,arena.bytes,used);}
+ else CHECK(used==snapshot_used && !memcmp(snapshot,arena.bytes,used));
+ free_ent(value);CHECK(live_count()==0);++cases;
+ if(original){baseline_count=event_count;memcpy(baseline,events,event_count*sizeof(*events));}
+ else {
+  CHECK(event_count==baseline_count);
+  for(unsigned i=0;i<event_count;++i)CHECK(events[i].kind==baseline[i].kind && events[i].bytes==baseline[i].bytes && events[i].pointer==baseline[i].pointer);
+ }
+}
+static void refusal(unsigned call) {
+ reset();refuse_direct=call;entity *value=alloc_ent();
+ CHECK(!value && direct_calls==call && !script_calls && !variable_calls);
+ CHECK(live_count()==0);++cases;
+}
+int main(void) {
+ static const unsigned profiles[]={@PROFILES@};
+ for(unsigned p=0;p<sizeof(profiles)/sizeof(*profiles);++p) {
+  obor_profile_build=profiles[p];
+#ifdef NEGATIVE_ONLY
+  max_entity_vars=2;refusal(3);
+#else
+  for(int vars=0;vars<=2;vars+=2) {
+   max_entity_vars=vars;valid(1);valid(0);
+   for(unsigned call=1;call<=(unsigned)(@DIRECT_COUNT@);++call){
+    if(MODERN && (call==2 || call==3))continue; /* Native helpers stop the engine on refusal. */
+    refusal(call);
+   }
+  }
+#endif
+ }
+ printf("{\"status\":\"PASS\",\"profiles\":%zu,\"cases\":%u,\"checks\":%u}\n",sizeof(profiles)/sizeof(*profiles),cases,checks);
+ return 0;
+}

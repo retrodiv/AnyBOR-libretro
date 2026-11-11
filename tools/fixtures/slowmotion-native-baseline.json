@@ -1,0 +1,60 @@
+{
+  "schema": 1,
+  "scope": "Native pre-guard slow-motion storage, profile routing and frame-counter sections. Original signed operations are executed only within defined arithmetic.",
+  "engines": {
+    "3400": {
+      "declaration": "unsigned char       slowmotion[3]       = {0,2,0};",
+      "section": "if((level_completed && !level->noslow && !tospeedup) || slowmotion[0])\n\t\t{\n\t\t\tif(slowmotion[1] == slowmotion[2]) newtime = time + interval;\n\t\t}\n\t\telse newtime = time + interval;\n\n\t\tslowmotion[2]++;\n\t\tif(slowmotion[2] == (slowmotion[1] + 1))\n\t\t{\n\t\t\tslowmotion[2] = 0;\n\t\t\tif(slowmotion[0] > 1) slowmotion[1] = slowmotion[0];\n\t\t}\n\t\t",
+      "kind": "byte-array",
+      "unsigned_before": 0
+    },
+    "3741": {
+      "declaration": "unsigned char       slowmotion[3]       = {0,2,0};",
+      "section": "if((level_completed && !level->noslow && !tospeedup) || slowmotion[0])\n\t\t{\n\t\t\tif(slowmotion[1] == slowmotion[2]) newtime = time + interval;\n\t\t}\n\t\telse newtime = time + interval;\n\n\t\tslowmotion[2]++;\n\t\tif(slowmotion[2] == (slowmotion[1] + 1))\n\t\t{\n\t\t\tslowmotion[2] = 0;\n\t\t\tif(slowmotion[0] > 1) slowmotion[1] = slowmotion[0];\n\t\t}\n\t\t",
+      "kind": "byte-array",
+      "unsigned_before": 0
+    },
+    "3842": {
+      "declaration": "unsigned            slowmotion[3]       = {0,2,0};",
+      "section": "if((level_completed && !level->noslow && !tospeedup) || slowmotion[0])\n\t\t{\n\t\t\tif(slowmotion[1] == slowmotion[2]) newtime = time + interval;\n\t\t}\n\t\telse newtime = time + interval;\n\n\t\tslowmotion[2]++;\n\t\tif(slowmotion[2] == (slowmotion[1] + 1))\n\t\t{\n\t\t\tslowmotion[2] = 0;\n\t\t\tif(slowmotion[0] > 1) slowmotion[1] = slowmotion[0];\n\t\t}\n\t\t",
+      "kind": "unsigned-array",
+      "unsigned_before": 0
+    },
+    "4086": {
+      "declaration": "s_slow_motion       slowmotion          = { .toggle     = SLOW_MOTION_OFF,\n                                            .counter    = 0,\n                                            .duration   = 2};",
+      "section": "if(obor_profile_build < 4072)\n        {\n            unsigned counter;\n            if((level_completed && !level->noslow && !tospeedup) || (unsigned)slowmotion.toggle)\n            {\n                if((unsigned)slowmotion.duration == (unsigned)slowmotion.counter)\n                {\n                    newtime = time + interval;\n                }\n            }\n            else\n            {\n                newtime = time + interval;\n            }\n            counter = (unsigned)slowmotion.counter + 1u;\n            if(counter == (unsigned)slowmotion.duration + 1u)\n            {\n                counter = 0;\n                if((unsigned)slowmotion.toggle > 1u)\n                {\n                    slowmotion.duration = slowmotion.toggle;\n                }\n            }\n            /* Preserve the old unsigned bit pattern in native signed storage. */\n            memcpy(&slowmotion.counter, &counter, sizeof(counter));\n        }\n        else\n        {\n            if((level_completed && !level->noslow && !tospeedup) || slowmotion.toggle > SLOW_MOTION_OFF)\n            {\n                if(slowmotion.duration == slowmotion.counter)\n                {\n                    newtime = time + interval;\n                }\n            }\n            else\n            {\n                newtime = time + interval;\n            }\n\n            slowmotion.counter++;\n            if(slowmotion.counter == (slowmotion.duration + 1))\n            {\n                slowmotion.counter = 0;\n                if(slowmotion.toggle > SLOW_MOTION_ON)\n                {\n                    slowmotion.duration = slowmotion.toggle;\n                }\n            }\n        }\n        ",
+      "kind": "signed-record",
+      "unsigned_before": 4072
+    },
+    "4432": {
+      "declaration": "s_slow_motion       slowmotion          = { .toggle     = SLOW_MOTION_OFF,\n                                            .counter    = 0,\n                                            .duration   = 2};",
+      "section": "if((level_completed && !level->noslow && !tospeedup) || slowmotion.toggle > SLOW_MOTION_OFF)\n        {\n            if(slowmotion.duration == slowmotion.counter)\n            {\n                newtime = time + interval;\n            }\n        }\n        else\n        {\n            newtime = time + interval;\n        }\n\n        slowmotion.counter++;\n        if(slowmotion.counter == (slowmotion.duration + 1))\n        {\n            slowmotion.counter = 0;\n            if(slowmotion.toggle > SLOW_MOTION_ON)\n            {\n                slowmotion.duration = slowmotion.toggle;\n            }\n        }\n        ",
+      "kind": "signed-record",
+      "unsigned_before": 0
+    },
+    "6391": {
+      "declaration": "s_slow_motion       slowmotion          = { .toggle     = SLOW_MOTION_OFF,\n                                            .counter    = 0,\n                                            .duration   = 2};",
+      "section": "if((level_completed && level->boss_slow == BOSS_SLOW_ON && !tospeedup) || slowmotion.toggle > SLOW_MOTION_OFF)\n        {\n            if(slowmotion.duration == slowmotion.counter)\n            {\n                newtime = _time + interval;\n            }\n        }\n        else\n        {\n            newtime = _time + interval;\n        }\n\n        slowmotion.counter++;\n        if(slowmotion.counter == (slowmotion.duration + 1))\n        {\n            slowmotion.counter = 0;\n            if(slowmotion.toggle > SLOW_MOTION_ON)\n            {\n                slowmotion.duration = slowmotion.toggle;\n            }\n        }\n        ",
+      "kind": "signed-record",
+      "unsigned_before": 0
+    },
+    "7142": {
+      "declaration": "s_slow_motion       slowmotion          = { .toggle     = SLOW_MOTION_OFF,\n                                            .counter    = 0,\n                                            .duration   = 2};",
+      "section": "if((level_completed && level->boss_slow == BOSS_SLOW_ON && !tospeedup) || slowmotion.toggle > SLOW_MOTION_OFF)\n        {\n            if(slowmotion.duration == slowmotion.counter)\n            {\n                newtime = _time + interval;\n            }\n        }\n        else\n        {\n            newtime = _time + interval;\n        }\n\n        slowmotion.counter++;\n        if(slowmotion.counter == (slowmotion.duration + 1))\n        {\n            slowmotion.counter = 0;\n            if(slowmotion.toggle > SLOW_MOTION_ON)\n            {\n                slowmotion.duration = slowmotion.toggle;\n            }\n        }\n        ",
+      "kind": "signed-record",
+      "unsigned_before": 0
+    },
+    "7533": {
+      "declaration": "s_slow_motion       slowmotion          = { .toggle     = SLOW_MOTION_OFF,\n                                            .counter    = 0,\n                                            .duration   = 2};",
+      "section": "if((level_completed && level->boss_slow == BOSS_SLOW_ON && !tospeedup) || slowmotion.toggle > SLOW_MOTION_OFF)\n        {\n            if(slowmotion.duration == slowmotion.counter)\n            {\n                newtime = _time + interval;\n            }\n        }\n        else\n        {\n            newtime = _time + interval;\n        }\n\n        slowmotion.counter++;\n        if(slowmotion.counter == (slowmotion.duration + 1))\n        {\n            slowmotion.counter = 0;\n            if(slowmotion.toggle > SLOW_MOTION_ON)\n            {\n                slowmotion.duration = slowmotion.toggle;\n            }\n        }\n        ",
+      "kind": "signed-record",
+      "unsigned_before": 0
+    },
+    "8023": {
+      "declaration": "s_slow_motion       slowmotion          = { .toggle     = SLOW_MOTION_OFF,\n                                            .counter    = 0,\n                                            .duration   = 2};",
+      "section": "if((level_completed && level->boss_slow == BOSS_SLOW_ON && !tospeedup) || slowmotion.toggle > SLOW_MOTION_OFF)\n        {\n            if(slowmotion.duration == slowmotion.counter)\n            {\n                newtime = _time + interval;\n            }\n        }\n        else\n        {\n            newtime = _time + interval;\n        }\n\n        slowmotion.counter++;\n        if(slowmotion.counter == (slowmotion.duration + 1))\n        {\n            slowmotion.counter = 0;\n            if(slowmotion.toggle > SLOW_MOTION_ON)\n            {\n                slowmotion.duration = slowmotion.toggle;\n            }\n        }\n        ",
+      "kind": "signed-record",
+      "unsigned_before": 0
+    }
+  }
+}

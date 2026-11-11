@@ -1,0 +1,133 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <assert.h>
+#include <limits.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+@CONFIG@
+#include "openbor.h"
+#undef printf
+#undef exit
+#undef assert
+#include <assert.h>
+uint32_t obor_profile_build;
+int pixelbytes[5]={[PIXEL_8]=1,[PIXEL_x8]=1,[PIXEL_16]=2,[3]=3,[PIXEL_32]=4};
+int useclip,clipx1,clipx2,clipy1,clipy2;
+static struct { s_screen *screen;size_t bytes,pixels; } records[8];
+static unsigned pixel_cases;
+static int fail_copy;
+static const unsigned profiles[]={@PROFILES@};
+size_t obor_allocation_size(const void *p) {
+ for(unsigned i=0;i<sizeof(records)/sizeof(*records);++i)
+  if(p && records[i].screen==p) return records[i].bytes;
+ return 0;
+}
+static size_t payload(const s_screen *screen) {
+ for(unsigned i=0;i<sizeof(records)/sizeof(*records);++i)
+  if(screen && records[i].screen==screen) return records[i].pixels;
+ abort();
+}
+static s_screen *screen_new(int width,int height,int format) {
+ width &= ~3;
+ assert(width>0 && height>0 && width<=128 && height<=128);
+ size_t pixels=(size_t)width*(size_t)height*pixelbytes[format];
+ s_screen *screen=calloc(1,sizeof(*screen)+pixels+64);assert(screen);
+ screen->width=width;screen->height=height;screen->pixelformat=format;@MAGIC_INIT@
+ for(unsigned i=0;i<sizeof(records)/sizeof(*records);++i) if(!records[i].screen) {
+  records[i].screen=screen;records[i].bytes=offsetof(s_screen,data)+pixels;records[i].pixels=pixels;return screen;
+ }
+ abort();
+}
+static void screen_delete(s_screen *screen) {
+ for(unsigned i=0;i<sizeof(records)/sizeof(*records);++i) if(records[i].screen==screen) {
+  records[i].screen=NULL;free(screen);return;
+ }
+ abort();
+}
+static void *copy_malloc(size_t bytes) {
+ if(fail_copy) { fail_copy=0;return NULL; }
+ return malloc(bytes);
+}
+@NATIVE_HELPERS@
+@STORAGE@
+#define malloc copy_malloc
+@ZOOM@
+#undef malloc
+
+/* An independent two-stage reference retains the allocator's width rounding.
+ * Crops start at zero so previously unassigned bytes have a bounded policy. */
+static void reference(s_screen *dest,s_screen *src,int x,int y,int scalex,int scaley) {
+ int width=(src->width*256)/scalex,height=(src->height*256)/scaley;
+ int xmin=width/2-x,ymin=height/2-y;
+ assert((width&~3)>0 && height>0);
+ s_screen *crop=screen_new(width,height,src->pixelformat);
+ copyscreen_o(crop,src,xmin,ymin);
+ switch(pixelbytes[(int)src->pixelformat]) {
+  case 1:scalescreen(dest,crop);break;
+  case 2:scalescreen16(dest,crop);break;
+  case 4:scalescreen32(dest,crop);break;
+  default:abort();
+ }
+ screen_delete(crop);
+}
+static void compare(int format,int scalex,int scaley,int alias,int small_dest,int clip) {
+ s_screen *source=screen_new(32,16,format),*control=screen_new(32,16,format);
+ for(size_t i=0;i<payload(source);++i) source->data[i]=(unsigned char)(1+(i*37+i/7)%251);
+ memcpy(control->data,source->data,payload(source));
+ s_screen *dest=alias?source:screen_new(small_dest?24:32,small_dest?12:16,format);
+ s_screen *expected=screen_new(dest->width,dest->height,format);
+ useclip=clip;clipx1=2;clipx2=20;clipy1=1;clipy2=7;
+ reference(expected,control,16,8,scalex,scaley);
+ zoomscreen(dest,source,16,8,scalex,scaley);
+ if(memcmp(expected->data,dest->data,payload(dest))) {
+  fprintf(stderr,"zoom pixel mismatch profile=%u format=%d scale=%d,%d alias=%d clipped=%d\n",
+      obor_profile_build,format,scalex,scaley,alias,clip);
+  assert(!"zoom pixel mismatch");
+ }
+ ++pixel_cases;useclip=0;
+ screen_delete(expected);screen_delete(control);if(dest!=source) screen_delete(dest);screen_delete(source);
+}
+static void unchanged(s_screen *dest,s_screen *src,int scalex,int scaley) {
+ unsigned char before[8192];size_t bytes=payload(dest);assert(bytes<=sizeof(before));
+ memcpy(before,dest->data,bytes);zoomscreen(dest,src,0,0,scalex,scaley);
+ assert(!memcmp(before,dest->data,bytes));
+}
+static void invalid_inputs(void) {
+ s_screen *src=screen_new(32,16,PIXEL_8),*dest=screen_new(32,16,PIXEL_8);
+ memset(dest->data,0x5a,payload(dest));
+ unchanged(dest,src,0,256);unchanged(dest,src,256,0);
+ unchanged(dest,src,-1,256);unchanged(dest,src,256,-1);
+ unchanged(dest,src,INT_MAX,INT_MAX);unchanged(dest,NULL,256,256);
+ zoomscreen(NULL,src,0,0,256,256);
+ int old=src->width;
+ src->width=0;unchanged(dest,src,256,256);src->width=-1;unchanged(dest,src,256,256);
+ src->width=INT_MAX;unchanged(dest,src,256,256);src->width=old;
+ old=src->height;src->height=0;unchanged(dest,src,256,256);src->height=INT_MAX;unchanged(dest,src,256,256);src->height=old;
+ old=src->pixelformat;src->pixelformat=3;unchanged(dest,src,256,256);src->pixelformat=old;
+ @INVALID_MAGIC@
+ old=dest->width;dest->width=0;unchanged(dest,src,256,256);dest->width=old;
+ fail_copy=1;unchanged(dest,dest,256,256);assert(!fail_copy);
+ screen_delete(dest);screen_delete(src);
+}
+int main(void) {
+ const int formats[]={PIXEL_8,PIXEL_x8,PIXEL_16,PIXEL_32};
+ const int scales[][2]={{256,256},{300,256},{384,300},{512,512}};
+ for(unsigned p=0;p<sizeof(profiles)/sizeof(*profiles);++p) {
+  obor_profile_build=profiles[p];
+  for(unsigned f=0;f<sizeof(formats)/sizeof(*formats);++f)
+   for(unsigned s=0;s<sizeof(scales)/sizeof(*scales);++s) {
+    compare(formats[f],scales[s][0],scales[s][1],0,0,0);
+    compare(formats[f],scales[s][0],scales[s][1],0,1,0);
+    compare(formats[f],scales[s][0],scales[s][1],1,0,0);
+   }
+  if(@HAS_CLIP@) for(unsigned f=0;f<sizeof(formats)/sizeof(*formats);++f)
+   compare(formats[f],300,256,0,0,1);
+  invalid_inputs();
+ }
+ for(unsigned i=0;i<sizeof(records)/sizeof(*records);++i) assert(!records[i].screen);
+ fprintf(stdout,"{\"status\":\"PASS\",\"profiles\":%zu,\"pixel_cases\":%u}\n",sizeof(profiles)/sizeof(*profiles),pixel_cases);
+ return 0;
+}

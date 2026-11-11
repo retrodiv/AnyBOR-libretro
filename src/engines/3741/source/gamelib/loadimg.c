@@ -1005,22 +1005,26 @@ static int iswavefile(char *filename, char *packname){
 int loadscreen(char *filename, char *packfile, unsigned char *pal, int format, s_screen **screen){
 	int result;
 	unsigned char* p;
+    s_screen *loaded;
 #ifdef VERBOSE
 	printf("loadscreen called packfile: %s, filename %s\n", packfile, filename);
 #endif
-	if((*screen)) freescreen(screen);
+	if(!screen) return 0;
+    memcpy(&loaded, (const void *)screen, sizeof(loaded));
+    if(loaded) { freescreen(screen); loaded = NULL; }
 	if(!openimage(filename, packfile)) return 0;
-	if(!(*screen) || ((*screen)->width != res[0] && (*screen)->height != res[1] && (*screen)->pixelformat != format)){
-		(*screen) = allocscreen(res[0], res[1], format);
-		if((*screen) == NULL){
+	if(!loaded || (loaded->width != res[0] && loaded->height != res[1] && loaded->pixelformat != format)){
+		loaded = allocscreen(res[0], res[1], format);
+        memcpy((void *)screen, &loaded, sizeof(loaded));
+		if(loaded == NULL){
 			closeimage();
 			assert(0);
 			return 0;
 		}
 	}
 	if(pal) p = pal;
-	else p = (*screen)->palette;
-	result = readimage((unsigned char*)(*screen)->data, p, (*screen)->width, (*screen)->height);
+	else p = loaded->palette;
+	result = readimage((unsigned char*)loaded->data, p, loaded->width, loaded->height);
 	closeimage();
 	if(!result){
 		freescreen(screen);

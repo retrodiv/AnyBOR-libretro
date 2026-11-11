@@ -1,0 +1,178 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <assert.h>
+#include <limits.h>
+#include <stdint.h>
+#include <stdarg.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+@CONFIG@
+#pragma GCC diagnostic push
+#pragma GCC diagnostic warning "-Wmissing-field-initializers"
+#if defined(__clang__)
+#if __has_warning("-Wsingle-bit-bitfield-constant-conversion")
+#pragma GCC diagnostic warning "-Wsingle-bit-bitfield-constant-conversion"
+#endif
+#endif
+@DECLARATIONS@
+#pragma GCC diagnostic pop
+#undef printf
+@SAVEDATA@
+@DISPLAY_DECL@
+uint32_t obor_profile_build;
+static s_model fixture_models[2];
+static entity fixture_entities[4];
+static s_level fixture_level;
+@SET_STORAGE@
+@FORCED_STORAGE@
+static unsigned char fixture_palette[4][256];
+static unsigned char *fixture_maps[4]={fixture_palette[0],fixture_palette[1],fixture_palette[2],fixture_palette[3]};
+static uint64_t trace_hash;
+static unsigned spawned,joined,lookup_count,nav_count,cases;
+static int missing,navigation_empty;
+#undef assert
+#define CHECK(c) do {if(!(c)){fprintf(stderr,"HUD profile=%u case=%u: %s\n",obor_profile_build,cases,#c);abort();}}while(0)
+static void observe(unsigned code,uint64_t arg)
+{trace_hash=(trace_hash^code)*UINT64_C(1099511628211);trace_hash=(trace_hash^arg)*UINT64_C(1099511628211);}
+static void observe_text(const char *text)
+{for(;*text;++text)observe(1,(unsigned char)*text);observe(2,0);}
+static s_model *fixture_findmodel(char *name)
+{
+    ++lookup_count;observe(3,0);observe_text(name);
+    if(!strcmp(name,"hero"))return fixture_models;
+    if(!strcmp(name,"other"))return fixture_models+1;
+    CHECK(missing && !strcmp(name,"missing"));return NULL;
+}
+static s_model *fixture_navigate(s_model *model,int reverse,int index)
+{
+    ++nav_count;observe(4,(reverse?16:0)+(unsigned)(model?model-fixture_models+1:0));observe(5,(unsigned)index);
+    if(navigation_empty)return NULL;
+    return reverse?(model==fixture_models+1?fixture_models:fixture_models+1):
+                   (model==fixture_models?fixture_models+1:fixture_models);
+}
+static s_model *fixture_prevplayermodel(s_model *m){return fixture_navigate(m,1,0);}
+static s_model *fixture_nextplayermodel(s_model *m){return fixture_navigate(m,0,0);}
+static s_model *fixture_prevplayermodeln(s_model *m,int p){return fixture_navigate(m,1,p);}
+static s_model *fixture_nextplayermodeln(s_model *m,int p){return fixture_navigate(m,0,p);}
+static int fixture_colour(s_model *model,int index,int reverse,int p)
+{CHECK(model || missing);observe(6,(unsigned)(index+10));observe(7,reverse+2*p);return model?((index+(reverse?4:1))%5):0;}
+static int fixture_nextcolourmap(s_model *m,int c){return fixture_colour(m,c,0,0);}
+static int fixture_prevcolourmap(s_model *m,int c){return fixture_colour(m,c,1,0);}
+static int fixture_nextcolourmapn(s_model *m,int c,int p){return fixture_colour(m,c,0,p);}
+static int fixture_prevcolourmapn(s_model *m,int c,int p){return fixture_colour(m,c,1,p);}
+static unsigned char *fixture_model_get_colourmap(s_model *model,int index)
+{CHECK(model);observe(8,(unsigned)index);return index>0 && index<=4?fixture_maps[index-1]:NULL;}
+static void fixture_font_printf(int x,int y,int font,int layer,char *format,...)
+{
+    char text[256];va_list args;va_start(args,format);vsnprintf(text,sizeof(text),format,args);va_end(args);
+    observe(9,(unsigned)x);observe(10,(unsigned)y);observe(11,(unsigned)font);observe(12,(unsigned)layer);observe_text(text);
+}
+static void fixture_spriteq_add_sprite(double x,double y,int z,int id,s_drawmethod *method,int sort)
+{
+    uint64_t bits;memcpy(&bits,&x,sizeof(bits));observe(13,bits);
+    memcpy(&bits,&y,sizeof(bits));observe(21,bits);observe(22,(unsigned)z);
+    observe(23,(unsigned)id);observe(24,(unsigned)sort);observe(25,!!method);
+    if(method)observe(26,(uintptr_t)method->table);
+}
+#define fixture_spriteq_add_box(...) observe(14,0)
+#define fixture_getFPS() 60
+#define fixture_commaprint(...) "12"
+#define fixture_sound_play_sample(...) observe(15,0)
+#define fixture_drop_all_enemies() observe(16,0)
+#define fixture_execute_timetick_script(dt,gt) observe(17,(unsigned)(dt))
+#define fixture_model_rush(...) 0
+#define fixture_obor_rush_value(...) 0
+#define fixture_draw_visual_debug() observe(18,0)
+#define fixture_spriteq_get_sprite_count() 0
+#define fixture_spriteq_get_sprite_max() 0
+#define fixture_Tr(s) (s)
+static void fixture_spawnplayer(int index)
+{CHECK(index>=0 && index<4);++spawned;observe(19,(unsigned)index);player[index].ent=fixture_entities+index;}
+static void fixture_execute_join_script(int index)
+{++joined;observe(20,(unsigned)index);}
+#pragma GCC diagnostic push
+#if defined(__clang__)
+#if __has_warning("-Wsingle-bit-bitfield-constant-conversion")
+#pragma GCC diagnostic warning "-Wsingle-bit-bitfield-constant-conversion"
+#endif
+#endif
+@ROUTINES@
+#pragma GCC diagnostic pop
+static void setup(int seed,unsigned keys,int frozen,int blocked,int same,int absent,int empty)
+{
+    int target=!!seed;
+    memset(player,0,sizeof(player));memset(fixture_entities,0,sizeof(fixture_entities));
+    memset(fixture_models,0,sizeof(fixture_models));memset(&fixture_level,0,sizeof(fixture_level));
+    memset(&savedata,0,sizeof(savedata));memset(&videomodes,0,sizeof(videomodes));
+    @CLEAR_SET@
+    current_set=0;@SETTINGS@
+    level=&fixture_level;level->notime=1;level->noreset=1;
+    fixture_models[0].name="hero";fixture_models[1].name="other";
+    for(int i=0;i<2;++i){
+        fixture_models[i].health=100*(i+1);fixture_models[i].mp=20*(i+1);
+        fixture_models[i].maps_loaded=4;@COLOUR_STORAGE@
+        fixture_models[i].type=@MODEL_TYPE@;
+        fixture_models[i].icon.def=7;fixture_models[i].icon.pain=fixture_models[i].icon.die=-1;
+        fixture_models[i].icon.get=fixture_models[i].icon.weapon=-1;
+        fixture_models[i].icon.mphigh=fixture_models[i].icon.mpmed=fixture_models[i].icon.mplow=-1;
+    }
+    missing=absent;navigation_empty=empty;
+    trace_hash=UINT64_C(1469598103934665603);spawned=joined=lookup_count=nav_count=0;
+    if(seed==1)player[0].playkeys=FLAG_START;
+    if(seed==2){
+        player[0].ent=fixture_entities;strcpy(player[0].name,"other");
+        fixture_entities[0].modeldata=fixture_models[0];strcpy(fixture_entities[0].name,"other");
+        @HEALTH@
+    }
+    player[target].joining=1;strcpy(player[target].name,absent?"missing":"other");
+    player[target].playkeys=keys;player[target].colourmap=1;
+    videomodes.hRes=320;videomodes.vRes=240;
+    bgicon=olicon=timeicon=-1;gosprite=-1;golsprite=-1;
+    @OLD_SAMEPLAYER@
+    textbox=frozen?fixture_entities+3:NULL;smartbomber=NULL;
+    nojoin=blocked;colourselect=1;PLAYER_LIVES=3;CONTINUES=5;credits=11;
+    noshare=nodropen=0;gosound=0;oldtime=99;go_time=0;showtimeover=0;fixture_display_state=-7;
+    @CLOCK_SETUP@
+}
+static void original_frame(void){@CALL_ORIGINAL@}
+static void checked_frame(void){@CALL_CHECKED@}
+int main(void)
+{
+    const unsigned profiles[]={@PROFILES@};
+    const unsigned keys[]={0,FLAG_ANYBUTTON,FLAG_MOVELEFT,FLAG_MOVERIGHT,
+        FLAG_MOVEUP,FLAG_MOVEDOWN,FLAG_MOVELEFT|FLAG_ANYBUTTON,FLAG_START};
+    for(unsigned p=0;p<sizeof(profiles)/sizeof(*profiles);++p){
+        obor_profile_build=profiles[p];
+        for(int seed=0;seed<3;++seed)for(unsigned k=0;k<8;++k)
+        for(int frozen=0;frozen<2;++frozen)for(int blocked=0;blocked<2;++blocked)for(int same=0;same<2;++same){
+            ++cases;setup(seed,keys[k],frozen,blocked,same,0,0);original_frame();
+            s_player expected[MAX_PLAYERS];memcpy(expected,player,sizeof(player));
+            uint64_t expected_trace=trace_hash;unsigned expected_spawn=spawned,expected_join=joined;
+            unsigned expected_lookups=lookup_count,expected_nav=nav_count;uint64_t expected_time=timeleft;
+            int expected_old=oldtime,expected_show=fixture_display_state,expected_go=gosound,expected_credits=credits;
+            setup(seed,keys[k],frozen,blocked,same,0,0);checked_frame();
+            if(memcmp(expected,player,sizeof(player)) || expected_trace!=trace_hash || expected_spawn!=spawned ||
+               expected_join!=joined || expected_lookups!=lookup_count || expected_nav!=nav_count ||
+               expected_time!=timeleft || expected_old!=oldtime || expected_show!=fixture_display_state ||
+               expected_go!=gosound || expected_credits!=credits){
+                fprintf(stderr,"valid native HUD observations differ\n");return 1;
+            }
+        }
+        for(unsigned k=0;k<8;++k)for(int empty=0;empty<2;++empty){
+            ++cases;setup(0,keys[k],0,0,0,1,empty);checked_frame();
+            CHECK(!spawned && !joined && !player[0].ent && player[0].joining);
+            CHECK(credits==11);
+            if(!empty && (keys[k]==FLAG_MOVELEFT || keys[k]==FLAG_MOVERIGHT)){
+                CHECK(strcmp(player[0].name,"missing") && nav_count==1);
+            }else CHECK(!strcmp(player[0].name,"missing"));
+        }
+        ++cases;setup(0,FLAG_START,0,0,0,1,0);player[0].joining=0;player[0].name[0]=0;
+        int target=0;@FORCED@
+        checked_frame();CHECK(!spawned && !joined && !player[0].joining && credits==11);
+        ++cases;setup(0,FLAG_START,0,0,0,1,1);player[0].joining=0;player[0].name[0]=0;
+        checked_frame();CHECK(!spawned && !joined && !player[0].joining && credits==11 && nav_count==1);
+    }
+    printf("{\"status\":\"PASS\",\"profiles\":%zu,\"cases\":%u}\n",sizeof(profiles)/sizeof(*profiles),cases);
+    return 0;
+}

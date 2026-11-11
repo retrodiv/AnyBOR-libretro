@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
 #include <stdint.h>
+#include <limits.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -14,6 +15,7 @@ uint32_t obor_profile_build;
 static unsigned test_case;
 #define assert(c) do {if(!(c)){fprintf(stderr,"QUERY_ERROR revision=%u case=%u line=%d\n",obor_profile_build,test_case,__LINE__);abort();}}while(0)
 CHAR *StrCache_Get(int index){(void)index;abort();}
+CHAR *StrCache_GetIfPresent(int index){(void)index;return NULL;}
 int StrCache_Pop(void){abort();}
 void StrCache_Collect(int index){(void)index;abort();}
 static char diagnostic[2048];
@@ -23,6 +25,17 @@ static int report(const char *format,...){
  assert(n>=0 && at+(size_t)n<sizeof(diagnostic));return n;
 }
 s_sprite_map sprite_records[10],*sprite_map=sprite_records;
+int sprite_map_max_items=sizeof(sprite_records)/sizeof(*sprite_records);
+unsigned int sprites_loaded=sizeof(sprite_records)/sizeof(*sprite_records);
+int max_attack_types=1; /* This fixture owns one defense entry. */
+static struct {const void *pointer;size_t bytes;} owned_spans[3];
+size_t obor_allocation_size(const void *pointer){
+ for(unsigned i=0;i<3;++i)if(pointer==owned_spans[i].pointer)return owned_spans[i].bytes;
+ return 0;
+}
+/* Filename reads are outside these declared numeric/error cases. */
+static int obor_script_sprite_name_readable(const char *name,int limit)
+{(void)name;(void)limit;abort();}
 @ENUMS@
 @VARIANTS@
 @NATIVE_ID@
@@ -52,6 +65,9 @@ int main(void){
  for(int i=0;i<10;++i){sprite_records[i].node=sprite_nodes+i;sprite_nodes[i].sprite=sprite_values+i;}
  sprite_records[9].centerx=23;sprite_records[9].centery=29;
  s_attack attack={0},*attacks[]={&attack};int vulnerable[]={1},bbox[1][6]={{91}},sprites[]={0};
+ owned_spans[0].pointer=animations;owned_spans[0].bytes=sizeof(animations);
+ owned_spans[1].pointer=&animation;owned_spans[1].bytes=sizeof(animation);
+ owned_spans[2].pointer=vulnerable;owned_spans[2].bytes=sizeof(vulnerable);
  actor.modeldata.animation=animations;actor.modeldata.animation_capacity=1;
  animation.numframes=1;animation.attacks=attacks;animation.vulnerable=vulnerable;
  animation.bbox_coords=bbox;animation.sprite=sprites;attack.attack_force=19;

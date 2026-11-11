@@ -1,3 +1,14 @@
+/* AnyBOR modification record: 2026-09-12.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Translate native attack-type IDs at the script API boundary.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/8023.md
+ * at the source repository root. Original notices follow below.
+ */
+
 /*
  * OpenBOR - http://www.chronocrash.com
  * -----------------------------------------------------------------------
@@ -27,6 +38,8 @@
 // item handle directly. You should instead use
 // get<item>instance(), and pass it the result from
 // this function.
+#include "obor_attack_query.h"
+
 HRESULT openbor_get_attack_collection(ScriptVariant **varlist, ScriptVariant **pretvar, int paramCount)
 {
     #define SELF_NAME       "get_attack_collection(void handle, int frame)"
@@ -40,12 +53,14 @@ HRESULT openbor_get_attack_collection(ScriptVariant **varlist, ScriptVariant **p
 
     // Clear pass by reference argument used to send
     // property data back to calling script.
+    if(!pretvar || !*pretvar) return E_FAIL;
     ScriptVariant_Clear(*pretvar);
 
     // Verify incoming arguments. There should at least
     // be a pointer for the property handle and an integer
     // to determine which frame is accessed.
     if(paramCount < ARG_MINIMUM
+       || !varlist || !varlist[ARG_OBJECT] || !varlist[ARG_FRAME]
        || varlist[ARG_OBJECT]->vt != VT_PTR
        || !varlist[ARG_OBJECT]->ptrVal
        || varlist[ARG_FRAME]->vt != VT_INTEGER)
@@ -60,6 +75,12 @@ HRESULT openbor_get_attack_collection(ScriptVariant **varlist, ScriptVariant **p
     }
 
     if(frame < 0)
+    {
+        *pretvar = NULL;
+        goto error_local;
+    }
+
+    if(!obor_attack_frame_is_valid(handle, frame))
     {
         *pretvar = NULL;
         goto error_local;
@@ -106,12 +127,14 @@ HRESULT openbor_get_attack_instance(ScriptVariant **varlist, ScriptVariant **pre
 
     // Clear pass by reference argument used to send
     // property data back to calling script.
+    if(!pretvar || !*pretvar) return E_FAIL;
     ScriptVariant_Clear(*pretvar);
 
     // Verify incoming arguments. There should at least
     // be a pointer for the collection handle and an integer
     // to determine which index is accessed.
     if(paramCount < ARG_MINIMUM
+       || !varlist || !varlist[ARG_OBJECT] || !varlist[ARG_INDEX]
        || varlist[ARG_OBJECT]->vt != VT_PTR
        || !varlist[ARG_OBJECT]->ptrVal
        || varlist[ARG_INDEX]->vt != VT_INTEGER)
@@ -135,7 +158,8 @@ HRESULT openbor_get_attack_instance(ScriptVariant **varlist, ScriptVariant **pre
 
     // If this index has an active attack collision,
     // send its attack property back to user.
-    if((handle->active_status & active_bit) && handle->slots[index])
+    if((handle->active_status & active_bit) && handle->slots
+       && index < handle->slot_capacity && handle->slots[index])
     {
         collision = handle->slots[index];
 
@@ -167,6 +191,8 @@ HRESULT openbor_get_attack_property(ScriptVariant **varlist, ScriptVariant **pre
 {
     #define SELF_NAME       "get_attack_property(void handle, int property)"
     #define ARG_MINIMUM     2   // Minimum required arguments.
+    #define OBOR_ATTACK_REQUIRE_HANDLE() \
+        do { if(!handle) { *pretvar = NULL; goto error_local; } } while(0)
     #define ARG_OBJECT      0   // Handle (pointer to property structure).
     #define ARG_PROPERTY    1   // Property to access.
 
@@ -176,12 +202,14 @@ HRESULT openbor_get_attack_property(ScriptVariant **varlist, ScriptVariant **pre
 
     // Clear pass by reference argument used to send
     // property data back to calling script.     .
+    if(!pretvar || !*pretvar) return E_FAIL;
     ScriptVariant_Clear(*pretvar);
 
     // Verify incoming arguments. There should at least
     // be a pointer for the property handle and an integer
     // to determine which property is accessed.
     if(paramCount < ARG_MINIMUM
+       || !varlist || !varlist[ARG_OBJECT] || !varlist[ARG_PROPERTY]
        || varlist[ARG_OBJECT]->vt != VT_PTR
        || varlist[ARG_PROPERTY]->vt != VT_INTEGER)
     {
@@ -198,54 +226,63 @@ HRESULT openbor_get_attack_property(ScriptVariant **varlist, ScriptVariant **pre
     switch(property)
     {
         case ATTACK_PROPERTY_BLOCK_COST:
+            OBOR_ATTACK_REQUIRE_HANDLE();
 
             ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
             (*pretvar)->lVal = (LONG)handle->guardcost;
             break;
 
         case ATTACK_PROPERTY_BLOCK_PENETRATE:
+            OBOR_ATTACK_REQUIRE_HANDLE();
 
             ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
             (*pretvar)->lVal = (LONG)handle->no_block;
             break;
 
         case ATTACK_PROPERTY_COUNTER:
+            OBOR_ATTACK_REQUIRE_HANDLE();
 
             ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
             (*pretvar)->lVal = (LONG)handle->counterattack;
             break;
 
         case ATTACK_PROPERTY_DAMAGE_FORCE:
+            OBOR_ATTACK_REQUIRE_HANDLE();
 
             ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
             (*pretvar)->lVal = (LONG)handle->attack_force;
             break;
 
         case ATTACK_PROPERTY_DAMAGE_LAND_FORCE:
+            OBOR_ATTACK_REQUIRE_HANDLE();
 
             ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
             (*pretvar)->lVal = (LONG)handle->damage_on_landing.attack_force;
             break;
 
         case ATTACK_PROPERTY_DAMAGE_LAND_MODE:
+            OBOR_ATTACK_REQUIRE_HANDLE();
 
             ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
             (*pretvar)->lVal = (LONG)handle->blast;
             break;
 
         case ATTACK_PROPERTY_DAMAGE_LETHAL_DISABLE:
+            OBOR_ATTACK_REQUIRE_HANDLE();
 
             ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
             (*pretvar)->lVal = (LONG)handle->no_kill;
             break;
 
         case ATTACK_PROPERTY_DAMAGE_STEAL:
+            OBOR_ATTACK_REQUIRE_HANDLE();
 
             ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
             (*pretvar)->lVal = (LONG)handle->steal;
             break;
 
         case ATTACK_PROPERTY_DAMAGE_TYPE:
+            OBOR_ATTACK_REQUIRE_HANDLE();
 
             ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
             (*pretvar)->lVal = (LONG)handle->attack_type;
@@ -282,60 +319,70 @@ HRESULT openbor_get_attack_property(ScriptVariant **varlist, ScriptVariant **pre
 //            break;
 
         case ATTACK_PROPERTY_EFFECT_BLOCK_FLASH:
+            OBOR_ATTACK_REQUIRE_HANDLE();
 
             ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
             (*pretvar)->lVal = (LONG)handle->flash.model_block;
             break;
 
         case ATTACK_PROPERTY_EFFECT_BLOCK_SOUND:
+            OBOR_ATTACK_REQUIRE_HANDLE();
 
             ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
             (*pretvar)->lVal = (LONG)handle->blocksound;
             break;
 
         case ATTACK_PROPERTY_EFFECT_HIT_FLASH:
+            OBOR_ATTACK_REQUIRE_HANDLE();
 
             ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
             (*pretvar)->lVal = (LONG)handle->flash.model_hit;
             break;
 
         case ATTACK_PROPERTY_EFFECT_HIT_FLASH_DISABLE:
+            OBOR_ATTACK_REQUIRE_HANDLE();
 
             ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
             (*pretvar)->lVal = (LONG)handle->no_flash;
             break;
 
         case ATTACK_PROPERTY_EFFECT_HIT_SOUND:
+            OBOR_ATTACK_REQUIRE_HANDLE();
 
             ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
             (*pretvar)->lVal = (LONG)handle->hitsound;
             break;
 
         case ATTACK_PROPERTY_GROUND:
+            OBOR_ATTACK_REQUIRE_HANDLE();
 
             ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
             (*pretvar)->lVal = (LONG)handle->otg;
             break;
 
         case ATTACK_PROPERTY_MAP_INDEX:
+            OBOR_ATTACK_REQUIRE_HANDLE();
 
             ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
             (*pretvar)->lVal = (LONG)handle->forcemap;
             break;
 
         case ATTACK_PROPERTY_MAP_TIME:
+            OBOR_ATTACK_REQUIRE_HANDLE();
 
             ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
             (*pretvar)->lVal = (LONG)handle->maptime;
             break;
 
         case ATTACK_PROPERTY_REACTION_FALL_FORCE:
+            OBOR_ATTACK_REQUIRE_HANDLE();
 
             ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
             (*pretvar)->lVal = (LONG)handle->attack_drop;
             break;
 
         case ATTACK_PROPERTY_REACTION_FALL_VELOCITY:
+            OBOR_ATTACK_REQUIRE_HANDLE();
 
             // Get memory address of sub structure
             // and pass it on as a handle.
@@ -345,78 +392,91 @@ HRESULT openbor_get_attack_property(ScriptVariant **varlist, ScriptVariant **pre
             break;
 
         case ATTACK_PROPERTY_REACTION_FREEZE_MODE:
+            OBOR_ATTACK_REQUIRE_HANDLE();
 
             ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
             (*pretvar)->lVal = (LONG)handle->freeze;
             break;
 
         case ATTACK_PROPERTY_REACTION_FREEZE_TIME:
+            OBOR_ATTACK_REQUIRE_HANDLE();
 
             ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
             (*pretvar)->lVal = (LONG)handle->freezetime;
             break;
 
         case ATTACK_PROPERTY_REACTION_INVINCIBLE_TIME:
+            OBOR_ATTACK_REQUIRE_HANDLE();
 
             ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
             (*pretvar)->lVal = (LONG)handle->next_hit_time;
             break;
 
         case ATTACK_PROPERTY_REACTION_PAIN_SKIP:
+            OBOR_ATTACK_REQUIRE_HANDLE();
 
             ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
             (*pretvar)->lVal = (LONG)handle->no_pain;
             break;
 
         case ATTACK_PROPERTY_REACTION_PAUSE_TIME:
+            OBOR_ATTACK_REQUIRE_HANDLE();
 
             ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
             (*pretvar)->lVal = (LONG)handle->pause_add;
             break;
 
         case ATTACK_PROPERTY_REACTION_REPOSITION_DIRECTION:
+            OBOR_ATTACK_REQUIRE_HANDLE();
 
             ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
             (*pretvar)->lVal = (LONG)handle->force_direction;
             break;
 
         case ATTACK_PROPERTY_REACTION_REPOSITION_DISTANCE:
+            OBOR_ATTACK_REQUIRE_HANDLE();
 
             ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
             (*pretvar)->lVal = (LONG)handle->grab_distance;
             break;
 
         case ATTACK_PROPERTY_REACTION_REPOSITION_MODE:
+            OBOR_ATTACK_REQUIRE_HANDLE();
 
             ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
             (*pretvar)->lVal = (LONG)handle->grab;
             break;
 
         case ATTACK_PROPERTY_SEAL_COST:
+            OBOR_ATTACK_REQUIRE_HANDLE();
 
             ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
             (*pretvar)->lVal = (LONG)handle->seal;
             break;
 
         case ATTACK_PROPERTY_SEAL_TIME:
+            OBOR_ATTACK_REQUIRE_HANDLE();
 
             ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
             (*pretvar)->lVal = (LONG)handle->sealtime;
             break;
 
         case ATTACK_PROPERTY_STAYDOWN_RISE:
+            OBOR_ATTACK_REQUIRE_HANDLE();
 
             ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
             (*pretvar)->lVal = (LONG)handle->staydown.rise;
             break;
 
         case ATTACK_PROPERTY_STAYDOWN_RISEATTACK:
+            OBOR_ATTACK_REQUIRE_HANDLE();
 
             ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
             (*pretvar)->lVal = (LONG)handle->staydown.riseattack;
             break;
 
         case ATTACK_PROPERTY_TAG:
+            OBOR_ATTACK_REQUIRE_HANDLE();
 
             ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
             (*pretvar)->lVal = (LONG)handle->meta_tag;
@@ -442,6 +502,7 @@ HRESULT openbor_get_attack_property(ScriptVariant **varlist, ScriptVariant **pre
     #undef SELF_NAME
     #undef ARG_MINIMUM
     #undef ARG_OBJECT
+    #undef OBOR_ATTACK_REQUIRE_HANDLE
     #undef ARG_PROPERTY
 }
 

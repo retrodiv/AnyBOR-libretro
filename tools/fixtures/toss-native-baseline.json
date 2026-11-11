@@ -1,0 +1,1565 @@
+{
+  "schema": 1,
+  "scope": "Exact pre-delta toss/NULL/decimal controls, executed only for defined valid storage. Own-profile contracts reviewed separately.",
+  "engines": {
+    "3400": {
+      "toss": "HRESULT openbor_tossentity(ScriptVariant** varlist , ScriptVariant** pretvar, int paramCount)\n{\n\tentity* ent = NULL;\n\tDOUBLE height=0, speedx=0, speedz=0;\n\n\tif(paramCount < 1)\n\t{\n\t\t*pretvar = NULL;\n\t\treturn E_FAIL;\n\t}\n\n\tScriptVariant_ChangeType(*pretvar, VT_INTEGER);\n\t(*pretvar)->lVal = (LONG)1;\n\n\tent = (entity*)varlist[0]->ptrVal; //retrieve the entity\n\tif(!ent)\n\t{\n\t\t(*pretvar)->lVal = (LONG)0;\n\n\t\treturn S_OK;\n\t}\n\n\tif(paramCount >= 2)\n\t{\n\t\tif(FAILED(ScriptVariant_DecimalValue(varlist[1], &height)))\n\t\t{\n\t\t\t(*pretvar)->lVal = (LONG)0;\n\t\t\treturn S_OK;\n\t\t}\n\t}\n\tif(paramCount >= 3)\n\t{\n\t\tif(FAILED(ScriptVariant_DecimalValue(varlist[2], &speedx)))\n\t\t{\n\t\t\t(*pretvar)->lVal = (LONG)0;\n\t\t\treturn S_OK;\n\t\t}\n\t}\n\tif(paramCount >= 4)\n\t{\n\t\tif(FAILED(ScriptVariant_DecimalValue(varlist[3], &speedz)))\n\t\t{\n\t\t\t(*pretvar)->lVal = (LONG)0;\n\t\t\treturn S_OK;\n\t\t}\n\t}\n\tent->xdir = (float)speedx;\n\tent->zdir = (float)speedz;\n\ttoss(ent, (float)height);\n\treturn S_OK;\n}\n",
+      "null_factory": "HRESULT system_NULL(ScriptVariant** varlist , ScriptVariant** pretvar, int paramCount)\n{\n\tScriptVariant_Clear(*pretvar);\n\n\treturn S_OK;\n}\n",
+      "decimal": "HRESULT ScriptVariant_DecimalValue(ScriptVariant* var, DOUBLE* pVal)\n{\n\tif(var->vt == VT_INTEGER)\n\t{\n\t\t*pVal = (DOUBLE)var->lVal;\n\t}\n\telse if(var->vt == VT_DECIMAL)\n\t{\n\t\t*pVal = var->dblVal;\n\t}\n\telse return E_FAIL;\n\n\treturn S_OK;\n}\n"
+    },
+    "3741": {
+      "toss": "HRESULT openbor_tossentity(ScriptVariant** varlist , ScriptVariant** pretvar, int paramCount)\n{\n\tentity* ent = NULL;\n\tDOUBLE height=0, speedx=0, speedz=0;\n\n\tif(paramCount < 1) goto toss_error;\n\n\tent = (entity*)varlist[0]->ptrVal; //retrieve the entity\n    if(!ent)\n    {\n        if(obor_profile_build >= 3641) goto toss_error;\n        ScriptVariant_ChangeType(*pretvar, VT_INTEGER);\n        (*pretvar)->lVal = (LONG)0;\n        return S_OK;\n    }\n\n\tScriptVariant_ChangeType(*pretvar, VT_INTEGER);\n\t(*pretvar)->lVal = (LONG)1;\n\n    if(paramCount >= 2 && FAILED(ScriptVariant_DecimalValue(varlist[1], &height)) &&\n       obor_profile_build < 3641)\n    {\n        (*pretvar)->lVal = (LONG)0;\n        return S_OK;\n    } \n    if(paramCount >= 3 && FAILED(ScriptVariant_DecimalValue(varlist[2], &speedx)) &&\n       obor_profile_build < 3641)\n    {\n        (*pretvar)->lVal = (LONG)0;\n        return S_OK;\n    }\n    if(paramCount >= 4 && FAILED(ScriptVariant_DecimalValue(varlist[3], &speedz)) &&\n       obor_profile_build < 3641)\n    {\n        (*pretvar)->lVal = (LONG)0;\n        return S_OK;\n    }\n\n\tent->xdir = (float)speedx;\n\tent->zdir = (float)speedz;\n\ttoss(ent, (float)height);\n\treturn S_OK;\n\ntoss_error:\n    if(obor_profile_build >= 3641)\n    {\n        printf(\"Function tossentity(entity,height, speedx, speedz) requires at least a valid entity handle.\\n\");\n    }\n\t*pretvar = NULL;\n\treturn E_FAIL;\n}\n",
+      "null_factory": "HRESULT system_NULL(ScriptVariant** varlist , ScriptVariant** pretvar, int paramCount)\n{\n\tScriptVariant_Clear(*pretvar);\n\n\treturn S_OK;\n}\n",
+      "decimal": "HRESULT ScriptVariant_DecimalValue(ScriptVariant* var, DOUBLE* pVal)\n{\n\tif(var->vt == VT_INTEGER)\n\t{\n\t\t*pVal = (DOUBLE)var->lVal;\n\t}\n\telse if(var->vt == VT_DECIMAL)\n\t{\n\t\t*pVal = var->dblVal;\n\t}\n\telse return E_FAIL;\n\n\treturn S_OK;\n}\n"
+    },
+    "3842": {
+      "toss": "HRESULT openbor_tossentity(ScriptVariant** varlist , ScriptVariant** pretvar, int paramCount)\n{\n\tentity* ent = NULL;\n\tDOUBLE height=0, speedx=0, speedz=0;\n\n\tif(paramCount < 1) goto toss_error;\n\n\tent = (entity*)varlist[0]->ptrVal; //retrieve the entity\n\tif(!ent) goto toss_error;\n\n\tScriptVariant_ChangeType(*pretvar, VT_INTEGER);\n\t(*pretvar)->lVal = (LONG)1;\n\n\tif(paramCount >= 2) ScriptVariant_DecimalValue(varlist[1], &height); \n\tif(paramCount >= 3) ScriptVariant_DecimalValue(varlist[2], &speedx);\n\tif(paramCount >= 4) ScriptVariant_DecimalValue(varlist[3], &speedz);\n\n\tent->xdir = (float)speedx;\n\tent->zdir = (float)speedz;\n\ttoss(ent, (float)height);\n\treturn S_OK;\n\ntoss_error:\n\tprintf(\"Function tossentity(entity,height, speedx, speedz) requires at least a valid entity handle.\\n\");\n\t*pretvar = NULL;\n\treturn E_FAIL;\n}\n",
+      "null_factory": "HRESULT system_NULL(ScriptVariant** varlist , ScriptVariant** pretvar, int paramCount)\n{\n\tScriptVariant_Clear(*pretvar);\n\n\treturn S_OK;\n}\n",
+      "decimal": "HRESULT ScriptVariant_DecimalValue(ScriptVariant* var, DOUBLE* pVal)\n{\n\tif(var->vt == VT_INTEGER)\n\t{\n\t\t*pVal = (DOUBLE)var->lVal;\n\t}\n\telse if(var->vt == VT_DECIMAL)\n\t{\n\t\t*pVal = var->dblVal;\n\t}\n\telse return E_FAIL;\n\n\treturn S_OK;\n}\n"
+    },
+    "4086": {
+      "toss": "HRESULT openbor_tossentity(ScriptVariant **varlist , ScriptVariant **pretvar, int paramCount)\n{\n    entity *ent = NULL;\n    DOUBLE height = 0, speedx = 0, speedz = 0;\n\n    if(paramCount < 1)\n    {\n        goto toss_error;\n    }\n\n    ent = (entity *)varlist[0]->ptrVal; //retrieve the entity\n    if(!ent)\n    {\n        goto toss_error;\n    }\n\n    ScriptVariant_ChangeType(*pretvar, VT_INTEGER);\n    (*pretvar)->lVal = (LONG)1;\n\n    if(paramCount >= 2)\n    {\n        ScriptVariant_DecimalValue(varlist[1], &height);\n    }\n    if(paramCount >= 3)\n    {\n        ScriptVariant_DecimalValue(varlist[2], &speedx);\n    }\n    if(paramCount >= 4)\n    {\n        ScriptVariant_DecimalValue(varlist[3], &speedz);\n    }\n\n    ent->velocity.x = (float)speedx;\n    ent->velocity.z = (float)speedz;\n    toss(ent, (float)height);\n    return S_OK;\n\ntoss_error:\n    printf(\"Function tossentity(entity,height, speedx, speedz) requires at least a valid entity handle.\\n\");\n    *pretvar = NULL;\n    return E_FAIL;\n}\n",
+      "null_factory": "HRESULT system_NULL(ScriptVariant **varlist , ScriptVariant **pretvar, int paramCount)\n{\n    ScriptVariant_Clear(*pretvar);\n\n    return S_OK;\n}\n",
+      "decimal": "HRESULT ScriptVariant_DecimalValue(ScriptVariant *var, DOUBLE *pVal)\n{\n    if(var->vt == VT_INTEGER)\n    {\n        *pVal = (DOUBLE)var->lVal;\n    }\n    else if(var->vt == VT_DECIMAL)\n    {\n        *pVal = var->dblVal;\n    }\n    else\n    {\n        return E_FAIL;\n    }\n\n    return S_OK;\n}\n"
+    },
+    "4432": {
+      "toss": "HRESULT openbor_tossentity(ScriptVariant **varlist , ScriptVariant **pretvar, int paramCount)\n{\n    entity *ent = NULL;\n    DOUBLE height = 0, speedx = 0, speedz = 0;\n\n    if(paramCount < 1)\n    {\n        goto toss_error;\n    }\n\n    ent = (entity *)varlist[0]->ptrVal; //retrieve the entity\n    if(!ent)\n    {\n        goto toss_error;\n    }\n\n    ScriptVariant_ChangeType(*pretvar, VT_INTEGER);\n    (*pretvar)->lVal = (LONG)1;\n\n    if(paramCount >= 2)\n    {\n        ScriptVariant_DecimalValue(varlist[1], &height);\n    }\n    if(paramCount >= 3)\n    {\n        ScriptVariant_DecimalValue(varlist[2], &speedx);\n    }\n    if(paramCount >= 4)\n    {\n        ScriptVariant_DecimalValue(varlist[3], &speedz);\n    }\n\n    ent->velocity.x = (float)speedx;\n    ent->velocity.z = (float)speedz;\n    toss(ent, (float)height);\n    return S_OK;\n\ntoss_error:\n    printf(\"Function tossentity(entity,height, speedx, speedz) requires at least a valid entity handle.\\n\");\n    *pretvar = NULL;\n    return E_FAIL;\n}\n",
+      "null_factory": "HRESULT system_NULL(ScriptVariant **varlist , ScriptVariant **pretvar, int paramCount)\n{\n    ScriptVariant_Clear(*pretvar);\n\n    return S_OK;\n}\n",
+      "decimal": "HRESULT ScriptVariant_DecimalValue(ScriptVariant *var, DOUBLE *pVal)\n{\n    if(var->vt == VT_INTEGER)\n    {\n        *pVal = (DOUBLE)var->lVal;\n    }\n    else if(var->vt == VT_DECIMAL)\n    {\n        *pVal = var->dblVal;\n    }\n    else\n    {\n        return E_FAIL;\n    }\n\n    return S_OK;\n}\n"
+    },
+    "6391": {
+      "toss": "HRESULT openbor_tossentity(ScriptVariant **varlist , ScriptVariant **pretvar, int paramCount)\n{\n    entity *ent = NULL;\n    DOUBLE height = 0, speedx = 0, speedz = 0;\n\n    if(paramCount < 1)\n    {\n        goto toss_error;\n    }\n\n    ent = (entity *)varlist[0]->ptrVal; //retrieve the entity\n    if(!ent)\n    {\n        goto toss_error;\n    }\n\n    ScriptVariant_ChangeType(*pretvar, VT_INTEGER);\n    (*pretvar)->lVal = (LONG)1;\n\n    if(paramCount >= 2)\n    {\n        ScriptVariant_DecimalValue(varlist[1], &height);\n    }\n    if(paramCount >= 3)\n    {\n        ScriptVariant_DecimalValue(varlist[2], &speedx);\n    }\n    if(paramCount >= 4)\n    {\n        ScriptVariant_DecimalValue(varlist[3], &speedz);\n    }\n\n    ent->velocity.x = (float)speedx;\n    ent->velocity.z = (float)speedz;\n    toss(ent, (float)height);\n    return S_OK;\n\ntoss_error:\n    printf(\"Function tossentity(entity,height, speedx, speedz) requires at least a valid entity handle.\\n\");\n    *pretvar = NULL;\n    return E_FAIL;\n}\n",
+      "null_factory": "HRESULT system_NULL(ScriptVariant **varlist , ScriptVariant **pretvar, int paramCount)\n{\n    ScriptVariant_Clear(*pretvar);\n\n    return S_OK;\n}\n",
+      "decimal": "HRESULT ScriptVariant_DecimalValue(ScriptVariant *var, DOUBLE *pVal)\n{\n    if(var->vt == VT_INTEGER)\n    {\n        *pVal = (DOUBLE)var->lVal;\n    }\n    else if(var->vt == VT_DECIMAL)\n    {\n        *pVal = var->dblVal;\n    }\n    else\n    {\n        return E_FAIL;\n    }\n\n    return S_OK;\n}\n"
+    },
+    "7142": {
+      "toss": "HRESULT openbor_tossentity(ScriptVariant **varlist , ScriptVariant **pretvar, int paramCount)\n{\n    entity *ent = NULL;\n    DOUBLE height = 0, speedx = 0, speedz = 0;\n\n    if(paramCount < 1)\n    {\n        goto toss_error;\n    }\n\n    ent = (entity *)varlist[0]->ptrVal; //retrieve the entity\n    if(!ent)\n    {\n        goto toss_error;\n    }\n\n    ScriptVariant_ChangeType(*pretvar, VT_INTEGER);\n    (*pretvar)->lVal = (LONG)1;\n\n    if(paramCount >= 2)\n    {\n        ScriptVariant_DecimalValue(varlist[1], &height);\n    }\n    if(paramCount >= 3)\n    {\n        ScriptVariant_DecimalValue(varlist[2], &speedx);\n    }\n    if(paramCount >= 4)\n    {\n        ScriptVariant_DecimalValue(varlist[3], &speedz);\n    }\n\n    ent->velocity.x = (float)speedx;\n    ent->velocity.z = (float)speedz;\n    toss(ent, (float)height);\n    return S_OK;\n\ntoss_error:\n    printf(\"Function tossentity(entity,height, speedx, speedz) requires at least a valid entity handle.\\n\");\n    *pretvar = NULL;\n    return E_FAIL;\n}\n",
+      "null_factory": "HRESULT system_NULL(ScriptVariant **varlist , ScriptVariant **pretvar, int paramCount)\n{\n    ScriptVariant_Clear(*pretvar);\n\n    return S_OK;\n}\n",
+      "decimal": "HRESULT ScriptVariant_DecimalValue(ScriptVariant *var, DOUBLE *pVal)\n{\n    if(var->vt == VT_INTEGER)\n    {\n        *pVal = (DOUBLE)var->lVal;\n    }\n    else if(var->vt == VT_DECIMAL)\n    {\n        *pVal = var->dblVal;\n    }\n    else\n    {\n        return E_FAIL;\n    }\n\n    return S_OK;\n}\n"
+    },
+    "7533": {
+      "toss": "HRESULT openbor_tossentity(ScriptVariant **varlist , ScriptVariant **pretvar, int paramCount)\n{\n    entity *ent = NULL;\n    DOUBLE height = 0, speedx = 0, speedz = 0;\n\n    if(paramCount < 1)\n    {\n        goto toss_error;\n    }\n\n    ent = (entity *)varlist[0]->ptrVal; //retrieve the entity\n    if(!ent)\n    {\n        goto toss_error;\n    }\n\n    ScriptVariant_ChangeType(*pretvar, VT_INTEGER);\n    (*pretvar)->lVal = (LONG)1;\n\n    if(paramCount >= 2)\n    {\n        ScriptVariant_DecimalValue(varlist[1], &height);\n    }\n    if(paramCount >= 3)\n    {\n        ScriptVariant_DecimalValue(varlist[2], &speedx);\n    }\n    if(paramCount >= 4)\n    {\n        ScriptVariant_DecimalValue(varlist[3], &speedz);\n    }\n\n    ent->velocity.x = (float)speedx;\n    ent->velocity.z = (float)speedz;   \n\n    toss(ent, (float)height);\n    return S_OK;\n\ntoss_error:\n    printf(\"Function tossentity(entity,height, speedx, speedz) requires at least a valid entity handle.\\n\");\n    *pretvar = NULL;\n    return E_FAIL;\n}\n",
+      "null_factory": "HRESULT system_NULL(ScriptVariant **varlist , ScriptVariant **pretvar, int paramCount)\n{\n    ScriptVariant_Clear(*pretvar);\n\n    return S_OK;\n}\n",
+      "decimal": "HRESULT ScriptVariant_DecimalValue(ScriptVariant *var, DOUBLE *pVal)\n{\n    if(var->vt == VT_INTEGER)\n    {\n        *pVal = (DOUBLE)var->lVal;\n    }\n    else if(var->vt == VT_DECIMAL)\n    {\n        *pVal = var->dblVal;\n    }\n    else\n    {\n        return E_FAIL;\n    }\n\n    return S_OK;\n}\n"
+    },
+    "8023": {
+      "toss": "HRESULT openbor_tossentity(ScriptVariant **varlist , ScriptVariant **pretvar, int paramCount)\n{\n    entity *ent = NULL;\n    DOUBLE height = 0, speedx = 0, speedz = 0;\n\n    if(paramCount < 1)\n    {\n        goto toss_error;\n    }\n\n    ent = (entity *)varlist[0]->ptrVal; //retrieve the entity\n    if(!ent)\n    {\n        goto toss_error;\n    }\n\n    ScriptVariant_ChangeType(*pretvar, VT_INTEGER);\n    (*pretvar)->lVal = (LONG)1;\n\n    if(paramCount >= 2)\n    {\n        ScriptVariant_DecimalValue(varlist[1], &height);\n    }\n    if(paramCount >= 3)\n    {\n        ScriptVariant_DecimalValue(varlist[2], &speedx);\n    }\n    if(paramCount >= 4)\n    {\n        ScriptVariant_DecimalValue(varlist[3], &speedz);\n    }\n\n    ent->velocity.x = (float)speedx;\n    ent->velocity.z = (float)speedz;   \n\n    toss(ent, (float)height);\n    return S_OK;\n\ntoss_error:\n    printf(\"Function tossentity(entity,height, speedx, speedz) requires at least a valid entity handle.\\n\");\n    *pretvar = NULL;\n    return E_FAIL;\n}\n",
+      "null_factory": "HRESULT system_NULL(ScriptVariant **varlist , ScriptVariant **pretvar, int paramCount)\n{\n    ScriptVariant_Clear(*pretvar);\n\n    return S_OK;\n}\n",
+      "decimal": "HRESULT ScriptVariant_DecimalValue(ScriptVariant *var, DOUBLE *pVal)\n{\n    if (!var || !pVal) {\n        return E_FAIL;\n    }\n\n    switch (var->vt) {\n    case VT_INTEGER:\n        *pVal = (DOUBLE)var->lVal;\n        return S_OK;\n\n    case VT_INTEGER64:\n        *pVal = (DOUBLE)var->llVal;\n        return S_OK;\n\n    case VT_UINTEGER64:\n        *pVal = (DOUBLE)var->ullVal;\n        return S_OK;\n\n    case VT_DECIMAL:\n        *pVal = var->dblVal;\n        return S_OK;\n\n    default:\n        return E_FAIL;\n    }\n}\n"
+    }
+  },
+  "profiles": {
+    "3020": {
+      "revision": 3020,
+      "engine": "3400",
+      "null_handle_is_nonfatal_false": true,
+      "failed_numeric_conversion_is_nonfatal_false": true
+    },
+    "3057": {
+      "revision": 3057,
+      "engine": "3400",
+      "null_handle_is_nonfatal_false": true,
+      "failed_numeric_conversion_is_nonfatal_false": true
+    },
+    "3062": {
+      "revision": 3062,
+      "engine": "3400",
+      "null_handle_is_nonfatal_false": true,
+      "failed_numeric_conversion_is_nonfatal_false": true
+    },
+    "3073": {
+      "revision": 3073,
+      "engine": "3400",
+      "null_handle_is_nonfatal_false": true,
+      "failed_numeric_conversion_is_nonfatal_false": true
+    },
+    "3081": {
+      "revision": 3081,
+      "engine": "3400",
+      "null_handle_is_nonfatal_false": true,
+      "failed_numeric_conversion_is_nonfatal_false": true
+    },
+    "3109": {
+      "revision": 3109,
+      "engine": "3400",
+      "null_handle_is_nonfatal_false": true,
+      "failed_numeric_conversion_is_nonfatal_false": true
+    },
+    "3117": {
+      "revision": 3117,
+      "engine": "3400",
+      "null_handle_is_nonfatal_false": true,
+      "failed_numeric_conversion_is_nonfatal_false": true
+    },
+    "3143": {
+      "revision": 3143,
+      "engine": "3400",
+      "null_handle_is_nonfatal_false": true,
+      "failed_numeric_conversion_is_nonfatal_false": true
+    },
+    "3160": {
+      "revision": 3160,
+      "engine": "3400",
+      "null_handle_is_nonfatal_false": true,
+      "failed_numeric_conversion_is_nonfatal_false": true
+    },
+    "3173": {
+      "revision": 3173,
+      "engine": "3400",
+      "null_handle_is_nonfatal_false": true,
+      "failed_numeric_conversion_is_nonfatal_false": true
+    },
+    "3192": {
+      "revision": 3192,
+      "engine": "3400",
+      "null_handle_is_nonfatal_false": true,
+      "failed_numeric_conversion_is_nonfatal_false": true
+    },
+    "3208": {
+      "revision": 3208,
+      "engine": "3400",
+      "null_handle_is_nonfatal_false": true,
+      "failed_numeric_conversion_is_nonfatal_false": true
+    },
+    "3273": {
+      "revision": 3273,
+      "engine": "3400",
+      "null_handle_is_nonfatal_false": true,
+      "failed_numeric_conversion_is_nonfatal_false": true
+    },
+    "3288": {
+      "revision": 3288,
+      "engine": "3400",
+      "null_handle_is_nonfatal_false": true,
+      "failed_numeric_conversion_is_nonfatal_false": true
+    },
+    "3303": {
+      "revision": 3303,
+      "engine": "3400",
+      "null_handle_is_nonfatal_false": true,
+      "failed_numeric_conversion_is_nonfatal_false": true
+    },
+    "3307": {
+      "revision": 3307,
+      "engine": "3400",
+      "null_handle_is_nonfatal_false": true,
+      "failed_numeric_conversion_is_nonfatal_false": true
+    },
+    "3310": {
+      "revision": 3310,
+      "engine": "3400",
+      "null_handle_is_nonfatal_false": true,
+      "failed_numeric_conversion_is_nonfatal_false": true
+    },
+    "3311": {
+      "revision": 3311,
+      "engine": "3400",
+      "null_handle_is_nonfatal_false": true,
+      "failed_numeric_conversion_is_nonfatal_false": true
+    },
+    "3316": {
+      "revision": 3316,
+      "engine": "3400",
+      "null_handle_is_nonfatal_false": true,
+      "failed_numeric_conversion_is_nonfatal_false": true
+    },
+    "3317": {
+      "revision": 3317,
+      "engine": "3400",
+      "null_handle_is_nonfatal_false": true,
+      "failed_numeric_conversion_is_nonfatal_false": true
+    },
+    "3318": {
+      "revision": 3318,
+      "engine": "3400",
+      "null_handle_is_nonfatal_false": true,
+      "failed_numeric_conversion_is_nonfatal_false": true
+    },
+    "3327": {
+      "revision": 3327,
+      "engine": "3400",
+      "null_handle_is_nonfatal_false": true,
+      "failed_numeric_conversion_is_nonfatal_false": true
+    },
+    "3328": {
+      "revision": 3328,
+      "engine": "3400",
+      "null_handle_is_nonfatal_false": true,
+      "failed_numeric_conversion_is_nonfatal_false": true
+    },
+    "3330": {
+      "revision": 3330,
+      "engine": "3400",
+      "null_handle_is_nonfatal_false": true,
+      "failed_numeric_conversion_is_nonfatal_false": true
+    },
+    "3332": {
+      "revision": 3332,
+      "engine": "3400",
+      "null_handle_is_nonfatal_false": true,
+      "failed_numeric_conversion_is_nonfatal_false": true
+    },
+    "3335": {
+      "revision": 3335,
+      "engine": "3400",
+      "null_handle_is_nonfatal_false": true,
+      "failed_numeric_conversion_is_nonfatal_false": true
+    },
+    "3337": {
+      "revision": 3337,
+      "engine": "3400",
+      "null_handle_is_nonfatal_false": true,
+      "failed_numeric_conversion_is_nonfatal_false": true
+    },
+    "3340": {
+      "revision": 3340,
+      "engine": "3400",
+      "null_handle_is_nonfatal_false": true,
+      "failed_numeric_conversion_is_nonfatal_false": true
+    },
+    "3341": {
+      "revision": 3341,
+      "engine": "3400",
+      "null_handle_is_nonfatal_false": true,
+      "failed_numeric_conversion_is_nonfatal_false": true
+    },
+    "3342": {
+      "revision": 3342,
+      "engine": "3400",
+      "null_handle_is_nonfatal_false": true,
+      "failed_numeric_conversion_is_nonfatal_false": true
+    },
+    "3350": {
+      "revision": 3350,
+      "engine": "3400",
+      "null_handle_is_nonfatal_false": true,
+      "failed_numeric_conversion_is_nonfatal_false": true
+    },
+    "3351": {
+      "revision": 3351,
+      "engine": "3400",
+      "null_handle_is_nonfatal_false": true,
+      "failed_numeric_conversion_is_nonfatal_false": true
+    },
+    "3352": {
+      "revision": 3352,
+      "engine": "3400",
+      "null_handle_is_nonfatal_false": true,
+      "failed_numeric_conversion_is_nonfatal_false": true
+    },
+    "3353": {
+      "revision": 3353,
+      "engine": "3400",
+      "null_handle_is_nonfatal_false": true,
+      "failed_numeric_conversion_is_nonfatal_false": true
+    },
+    "3354": {
+      "revision": 3354,
+      "engine": "3400",
+      "null_handle_is_nonfatal_false": true,
+      "failed_numeric_conversion_is_nonfatal_false": true
+    },
+    "3355": {
+      "revision": 3355,
+      "engine": "3400",
+      "null_handle_is_nonfatal_false": true,
+      "failed_numeric_conversion_is_nonfatal_false": true
+    },
+    "3356": {
+      "revision": 3356,
+      "engine": "3400",
+      "null_handle_is_nonfatal_false": true,
+      "failed_numeric_conversion_is_nonfatal_false": true
+    },
+    "3357": {
+      "revision": 3357,
+      "engine": "3400",
+      "null_handle_is_nonfatal_false": true,
+      "failed_numeric_conversion_is_nonfatal_false": true
+    },
+    "3360": {
+      "revision": 3360,
+      "engine": "3400",
+      "null_handle_is_nonfatal_false": true,
+      "failed_numeric_conversion_is_nonfatal_false": true
+    },
+    "3361": {
+      "revision": 3361,
+      "engine": "3400",
+      "null_handle_is_nonfatal_false": true,
+      "failed_numeric_conversion_is_nonfatal_false": true
+    },
+    "3362": {
+      "revision": 3362,
+      "engine": "3400",
+      "null_handle_is_nonfatal_false": true,
+      "failed_numeric_conversion_is_nonfatal_false": true
+    },
+    "3365": {
+      "revision": 3365,
+      "engine": "3400",
+      "null_handle_is_nonfatal_false": true,
+      "failed_numeric_conversion_is_nonfatal_false": true
+    },
+    "3366": {
+      "revision": 3366,
+      "engine": "3400",
+      "null_handle_is_nonfatal_false": true,
+      "failed_numeric_conversion_is_nonfatal_false": true
+    },
+    "3367": {
+      "revision": 3367,
+      "engine": "3400",
+      "null_handle_is_nonfatal_false": true,
+      "failed_numeric_conversion_is_nonfatal_false": true
+    },
+    "3371": {
+      "revision": 3371,
+      "engine": "3400",
+      "null_handle_is_nonfatal_false": true,
+      "failed_numeric_conversion_is_nonfatal_false": true
+    },
+    "3372": {
+      "revision": 3372,
+      "engine": "3400",
+      "null_handle_is_nonfatal_false": true,
+      "failed_numeric_conversion_is_nonfatal_false": true
+    },
+    "3373": {
+      "revision": 3373,
+      "engine": "3400",
+      "null_handle_is_nonfatal_false": true,
+      "failed_numeric_conversion_is_nonfatal_false": true
+    },
+    "3375": {
+      "revision": 3375,
+      "engine": "3400",
+      "null_handle_is_nonfatal_false": true,
+      "failed_numeric_conversion_is_nonfatal_false": true
+    },
+    "3379": {
+      "revision": 3379,
+      "engine": "3400",
+      "null_handle_is_nonfatal_false": true,
+      "failed_numeric_conversion_is_nonfatal_false": true
+    },
+    "3380": {
+      "revision": 3380,
+      "engine": "3400",
+      "null_handle_is_nonfatal_false": true,
+      "failed_numeric_conversion_is_nonfatal_false": true
+    },
+    "3381": {
+      "revision": 3381,
+      "engine": "3400",
+      "null_handle_is_nonfatal_false": true,
+      "failed_numeric_conversion_is_nonfatal_false": true
+    },
+    "3383": {
+      "revision": 3383,
+      "engine": "3400",
+      "null_handle_is_nonfatal_false": true,
+      "failed_numeric_conversion_is_nonfatal_false": true
+    },
+    "3385": {
+      "revision": 3385,
+      "engine": "3400",
+      "null_handle_is_nonfatal_false": true,
+      "failed_numeric_conversion_is_nonfatal_false": true
+    },
+    "3388": {
+      "revision": 3388,
+      "engine": "3400",
+      "null_handle_is_nonfatal_false": true,
+      "failed_numeric_conversion_is_nonfatal_false": true
+    },
+    "3391": {
+      "revision": 3391,
+      "engine": "3400",
+      "null_handle_is_nonfatal_false": true,
+      "failed_numeric_conversion_is_nonfatal_false": true
+    },
+    "3394": {
+      "revision": 3394,
+      "engine": "3400",
+      "null_handle_is_nonfatal_false": true,
+      "failed_numeric_conversion_is_nonfatal_false": true
+    },
+    "3397": {
+      "revision": 3397,
+      "engine": "3400",
+      "null_handle_is_nonfatal_false": true,
+      "failed_numeric_conversion_is_nonfatal_false": true
+    },
+    "3400": {
+      "revision": 3400,
+      "engine": "3400",
+      "null_handle_is_nonfatal_false": true,
+      "failed_numeric_conversion_is_nonfatal_false": true
+    },
+    "3406": {
+      "revision": 3406,
+      "engine": "3400",
+      "null_handle_is_nonfatal_false": true,
+      "failed_numeric_conversion_is_nonfatal_false": true
+    },
+    "3411": {
+      "revision": 3411,
+      "engine": "3400",
+      "null_handle_is_nonfatal_false": true,
+      "failed_numeric_conversion_is_nonfatal_false": true
+    },
+    "3415": {
+      "revision": 3415,
+      "engine": "3400",
+      "null_handle_is_nonfatal_false": true,
+      "failed_numeric_conversion_is_nonfatal_false": true
+    },
+    "3416": {
+      "revision": 3416,
+      "engine": "3400",
+      "null_handle_is_nonfatal_false": true,
+      "failed_numeric_conversion_is_nonfatal_false": true
+    },
+    "3420": {
+      "revision": 3420,
+      "engine": "3400",
+      "null_handle_is_nonfatal_false": true,
+      "failed_numeric_conversion_is_nonfatal_false": true
+    },
+    "3422": {
+      "revision": 3422,
+      "engine": "3400",
+      "null_handle_is_nonfatal_false": true,
+      "failed_numeric_conversion_is_nonfatal_false": true
+    },
+    "3427": {
+      "revision": 3427,
+      "engine": "3400",
+      "null_handle_is_nonfatal_false": true,
+      "failed_numeric_conversion_is_nonfatal_false": true
+    },
+    "3428": {
+      "revision": 3428,
+      "engine": "3400",
+      "null_handle_is_nonfatal_false": true,
+      "failed_numeric_conversion_is_nonfatal_false": true
+    },
+    "3431": {
+      "revision": 3431,
+      "engine": "3400",
+      "null_handle_is_nonfatal_false": true,
+      "failed_numeric_conversion_is_nonfatal_false": true
+    },
+    "3434": {
+      "revision": 3434,
+      "engine": "3400",
+      "null_handle_is_nonfatal_false": true,
+      "failed_numeric_conversion_is_nonfatal_false": true
+    },
+    "3436": {
+      "revision": 3436,
+      "engine": "3400",
+      "null_handle_is_nonfatal_false": true,
+      "failed_numeric_conversion_is_nonfatal_false": true
+    },
+    "3441": {
+      "revision": 3441,
+      "engine": "3400",
+      "null_handle_is_nonfatal_false": true,
+      "failed_numeric_conversion_is_nonfatal_false": true
+    },
+    "3445": {
+      "revision": 3445,
+      "engine": "3400",
+      "null_handle_is_nonfatal_false": true,
+      "failed_numeric_conversion_is_nonfatal_false": true
+    },
+    "3446": {
+      "revision": 3446,
+      "engine": "3400",
+      "null_handle_is_nonfatal_false": true,
+      "failed_numeric_conversion_is_nonfatal_false": true
+    },
+    "3449": {
+      "revision": 3449,
+      "engine": "3400",
+      "null_handle_is_nonfatal_false": true,
+      "failed_numeric_conversion_is_nonfatal_false": true
+    },
+    "3454": {
+      "revision": 3454,
+      "engine": "3400",
+      "null_handle_is_nonfatal_false": true,
+      "failed_numeric_conversion_is_nonfatal_false": true
+    },
+    "3458": {
+      "revision": 3458,
+      "engine": "3400",
+      "null_handle_is_nonfatal_false": true,
+      "failed_numeric_conversion_is_nonfatal_false": true
+    },
+    "3461": {
+      "revision": 3461,
+      "engine": "3400",
+      "null_handle_is_nonfatal_false": true,
+      "failed_numeric_conversion_is_nonfatal_false": true
+    },
+    "3463": {
+      "revision": 3463,
+      "engine": "3400",
+      "null_handle_is_nonfatal_false": true,
+      "failed_numeric_conversion_is_nonfatal_false": true
+    },
+    "3465": {
+      "revision": 3465,
+      "engine": "3400",
+      "null_handle_is_nonfatal_false": true,
+      "failed_numeric_conversion_is_nonfatal_false": true
+    },
+    "3467": {
+      "revision": 3467,
+      "engine": "3400",
+      "null_handle_is_nonfatal_false": true,
+      "failed_numeric_conversion_is_nonfatal_false": true
+    },
+    "3469": {
+      "revision": 3469,
+      "engine": "3400",
+      "null_handle_is_nonfatal_false": true,
+      "failed_numeric_conversion_is_nonfatal_false": true
+    },
+    "3472": {
+      "revision": 3472,
+      "engine": "3400",
+      "null_handle_is_nonfatal_false": true,
+      "failed_numeric_conversion_is_nonfatal_false": true
+    },
+    "3477": {
+      "revision": 3477,
+      "engine": "3400",
+      "null_handle_is_nonfatal_false": true,
+      "failed_numeric_conversion_is_nonfatal_false": true
+    },
+    "3482": {
+      "revision": 3482,
+      "engine": "3400",
+      "null_handle_is_nonfatal_false": true,
+      "failed_numeric_conversion_is_nonfatal_false": true
+    },
+    "3500": {
+      "revision": 3500,
+      "engine": "3741",
+      "null_handle_is_nonfatal_false": true,
+      "failed_numeric_conversion_is_nonfatal_false": true
+    },
+    "3509": {
+      "revision": 3509,
+      "engine": "3741",
+      "null_handle_is_nonfatal_false": true,
+      "failed_numeric_conversion_is_nonfatal_false": true
+    },
+    "3511": {
+      "revision": 3511,
+      "engine": "3741",
+      "null_handle_is_nonfatal_false": true,
+      "failed_numeric_conversion_is_nonfatal_false": true
+    },
+    "3515": {
+      "revision": 3515,
+      "engine": "3741",
+      "null_handle_is_nonfatal_false": true,
+      "failed_numeric_conversion_is_nonfatal_false": true
+    },
+    "3517": {
+      "revision": 3517,
+      "engine": "3741",
+      "null_handle_is_nonfatal_false": true,
+      "failed_numeric_conversion_is_nonfatal_false": true
+    },
+    "3520": {
+      "revision": 3520,
+      "engine": "3741",
+      "null_handle_is_nonfatal_false": true,
+      "failed_numeric_conversion_is_nonfatal_false": true
+    },
+    "3526": {
+      "revision": 3526,
+      "engine": "3741",
+      "null_handle_is_nonfatal_false": true,
+      "failed_numeric_conversion_is_nonfatal_false": true
+    },
+    "3549": {
+      "revision": 3549,
+      "engine": "3741",
+      "null_handle_is_nonfatal_false": true,
+      "failed_numeric_conversion_is_nonfatal_false": true
+    },
+    "3550": {
+      "revision": 3550,
+      "engine": "3741",
+      "null_handle_is_nonfatal_false": true,
+      "failed_numeric_conversion_is_nonfatal_false": true
+    },
+    "3551": {
+      "revision": 3551,
+      "engine": "3741",
+      "null_handle_is_nonfatal_false": true,
+      "failed_numeric_conversion_is_nonfatal_false": true
+    },
+    "3552": {
+      "revision": 3552,
+      "engine": "3741",
+      "null_handle_is_nonfatal_false": true,
+      "failed_numeric_conversion_is_nonfatal_false": true
+    },
+    "3553": {
+      "revision": 3553,
+      "engine": "3741",
+      "null_handle_is_nonfatal_false": true,
+      "failed_numeric_conversion_is_nonfatal_false": true
+    },
+    "3554": {
+      "revision": 3554,
+      "engine": "3741",
+      "null_handle_is_nonfatal_false": true,
+      "failed_numeric_conversion_is_nonfatal_false": true
+    },
+    "3557": {
+      "revision": 3557,
+      "engine": "3741",
+      "null_handle_is_nonfatal_false": true,
+      "failed_numeric_conversion_is_nonfatal_false": true
+    },
+    "3559": {
+      "revision": 3559,
+      "engine": "3741",
+      "null_handle_is_nonfatal_false": true,
+      "failed_numeric_conversion_is_nonfatal_false": true
+    },
+    "3562": {
+      "revision": 3562,
+      "engine": "3741",
+      "null_handle_is_nonfatal_false": true,
+      "failed_numeric_conversion_is_nonfatal_false": true
+    },
+    "3565": {
+      "revision": 3565,
+      "engine": "3741",
+      "null_handle_is_nonfatal_false": true,
+      "failed_numeric_conversion_is_nonfatal_false": true
+    },
+    "3567": {
+      "revision": 3567,
+      "engine": "3741",
+      "null_handle_is_nonfatal_false": true,
+      "failed_numeric_conversion_is_nonfatal_false": true
+    },
+    "3568": {
+      "revision": 3568,
+      "engine": "3741",
+      "null_handle_is_nonfatal_false": true,
+      "failed_numeric_conversion_is_nonfatal_false": true
+    },
+    "3581": {
+      "revision": 3581,
+      "engine": "3741",
+      "null_handle_is_nonfatal_false": true,
+      "failed_numeric_conversion_is_nonfatal_false": true
+    },
+    "3583": {
+      "revision": 3583,
+      "engine": "3741",
+      "null_handle_is_nonfatal_false": true,
+      "failed_numeric_conversion_is_nonfatal_false": true
+    },
+    "3585": {
+      "revision": 3585,
+      "engine": "3741",
+      "null_handle_is_nonfatal_false": true,
+      "failed_numeric_conversion_is_nonfatal_false": true
+    },
+    "3586": {
+      "revision": 3586,
+      "engine": "3741",
+      "null_handle_is_nonfatal_false": true,
+      "failed_numeric_conversion_is_nonfatal_false": true
+    },
+    "3587": {
+      "revision": 3587,
+      "engine": "3741",
+      "null_handle_is_nonfatal_false": true,
+      "failed_numeric_conversion_is_nonfatal_false": true
+    },
+    "3591": {
+      "revision": 3591,
+      "engine": "3741",
+      "null_handle_is_nonfatal_false": true,
+      "failed_numeric_conversion_is_nonfatal_false": true
+    },
+    "3594": {
+      "revision": 3594,
+      "engine": "3741",
+      "null_handle_is_nonfatal_false": true,
+      "failed_numeric_conversion_is_nonfatal_false": true
+    },
+    "3596": {
+      "revision": 3596,
+      "engine": "3741",
+      "null_handle_is_nonfatal_false": true,
+      "failed_numeric_conversion_is_nonfatal_false": true
+    },
+    "3597": {
+      "revision": 3597,
+      "engine": "3741",
+      "null_handle_is_nonfatal_false": true,
+      "failed_numeric_conversion_is_nonfatal_false": true
+    },
+    "3602": {
+      "revision": 3602,
+      "engine": "3741",
+      "null_handle_is_nonfatal_false": true,
+      "failed_numeric_conversion_is_nonfatal_false": true
+    },
+    "3604": {
+      "revision": 3604,
+      "engine": "3741",
+      "null_handle_is_nonfatal_false": true,
+      "failed_numeric_conversion_is_nonfatal_false": true
+    },
+    "3605": {
+      "revision": 3605,
+      "engine": "3741",
+      "null_handle_is_nonfatal_false": true,
+      "failed_numeric_conversion_is_nonfatal_false": true
+    },
+    "3608": {
+      "revision": 3608,
+      "engine": "3741",
+      "null_handle_is_nonfatal_false": true,
+      "failed_numeric_conversion_is_nonfatal_false": true
+    },
+    "3609": {
+      "revision": 3609,
+      "engine": "3741",
+      "null_handle_is_nonfatal_false": true,
+      "failed_numeric_conversion_is_nonfatal_false": true
+    },
+    "3611": {
+      "revision": 3611,
+      "engine": "3741",
+      "null_handle_is_nonfatal_false": true,
+      "failed_numeric_conversion_is_nonfatal_false": true
+    },
+    "3614": {
+      "revision": 3614,
+      "engine": "3741",
+      "null_handle_is_nonfatal_false": true,
+      "failed_numeric_conversion_is_nonfatal_false": true
+    },
+    "3618": {
+      "revision": 3618,
+      "engine": "3741",
+      "null_handle_is_nonfatal_false": true,
+      "failed_numeric_conversion_is_nonfatal_false": true
+    },
+    "3619": {
+      "revision": 3619,
+      "engine": "3741",
+      "null_handle_is_nonfatal_false": true,
+      "failed_numeric_conversion_is_nonfatal_false": true
+    },
+    "3623": {
+      "revision": 3623,
+      "engine": "3741",
+      "null_handle_is_nonfatal_false": true,
+      "failed_numeric_conversion_is_nonfatal_false": true
+    },
+    "3624": {
+      "revision": 3624,
+      "engine": "3741",
+      "null_handle_is_nonfatal_false": true,
+      "failed_numeric_conversion_is_nonfatal_false": true
+    },
+    "3626": {
+      "revision": 3626,
+      "engine": "3741",
+      "null_handle_is_nonfatal_false": true,
+      "failed_numeric_conversion_is_nonfatal_false": true
+    },
+    "3629": {
+      "revision": 3629,
+      "engine": "3741",
+      "null_handle_is_nonfatal_false": true,
+      "failed_numeric_conversion_is_nonfatal_false": true
+    },
+    "3631": {
+      "revision": 3631,
+      "engine": "3741",
+      "null_handle_is_nonfatal_false": true,
+      "failed_numeric_conversion_is_nonfatal_false": true
+    },
+    "3633": {
+      "revision": 3633,
+      "engine": "3741",
+      "null_handle_is_nonfatal_false": true,
+      "failed_numeric_conversion_is_nonfatal_false": true
+    },
+    "3635": {
+      "revision": 3635,
+      "engine": "3741",
+      "null_handle_is_nonfatal_false": true,
+      "failed_numeric_conversion_is_nonfatal_false": true
+    },
+    "3638": {
+      "revision": 3638,
+      "engine": "3741",
+      "null_handle_is_nonfatal_false": true,
+      "failed_numeric_conversion_is_nonfatal_false": true
+    },
+    "3639": {
+      "revision": 3639,
+      "engine": "3741",
+      "null_handle_is_nonfatal_false": true,
+      "failed_numeric_conversion_is_nonfatal_false": true
+    },
+    "3640": {
+      "revision": 3640,
+      "engine": "3741",
+      "null_handle_is_nonfatal_false": true,
+      "failed_numeric_conversion_is_nonfatal_false": true
+    },
+    "3644": {
+      "revision": 3644,
+      "engine": "3741",
+      "null_handle_is_nonfatal_false": false,
+      "failed_numeric_conversion_is_nonfatal_false": false
+    },
+    "3646": {
+      "revision": 3646,
+      "engine": "3741",
+      "null_handle_is_nonfatal_false": false,
+      "failed_numeric_conversion_is_nonfatal_false": false
+    },
+    "3647": {
+      "revision": 3647,
+      "engine": "3741",
+      "null_handle_is_nonfatal_false": false,
+      "failed_numeric_conversion_is_nonfatal_false": false
+    },
+    "3649": {
+      "revision": 3649,
+      "engine": "3741",
+      "null_handle_is_nonfatal_false": false,
+      "failed_numeric_conversion_is_nonfatal_false": false
+    },
+    "3650": {
+      "revision": 3650,
+      "engine": "3741",
+      "null_handle_is_nonfatal_false": false,
+      "failed_numeric_conversion_is_nonfatal_false": false
+    },
+    "3651": {
+      "revision": 3651,
+      "engine": "3741",
+      "null_handle_is_nonfatal_false": false,
+      "failed_numeric_conversion_is_nonfatal_false": false
+    },
+    "3655": {
+      "revision": 3655,
+      "engine": "3741",
+      "null_handle_is_nonfatal_false": false,
+      "failed_numeric_conversion_is_nonfatal_false": false
+    },
+    "3656": {
+      "revision": 3656,
+      "engine": "3741",
+      "null_handle_is_nonfatal_false": false,
+      "failed_numeric_conversion_is_nonfatal_false": false
+    },
+    "3657": {
+      "revision": 3657,
+      "engine": "3741",
+      "null_handle_is_nonfatal_false": false,
+      "failed_numeric_conversion_is_nonfatal_false": false
+    },
+    "3660": {
+      "revision": 3660,
+      "engine": "3741",
+      "null_handle_is_nonfatal_false": false,
+      "failed_numeric_conversion_is_nonfatal_false": false
+    },
+    "3661": {
+      "revision": 3661,
+      "engine": "3741",
+      "null_handle_is_nonfatal_false": false,
+      "failed_numeric_conversion_is_nonfatal_false": false
+    },
+    "3663": {
+      "revision": 3663,
+      "engine": "3741",
+      "null_handle_is_nonfatal_false": false,
+      "failed_numeric_conversion_is_nonfatal_false": false
+    },
+    "3664": {
+      "revision": 3664,
+      "engine": "3741",
+      "null_handle_is_nonfatal_false": false,
+      "failed_numeric_conversion_is_nonfatal_false": false
+    },
+    "3665": {
+      "revision": 3665,
+      "engine": "3741",
+      "null_handle_is_nonfatal_false": false,
+      "failed_numeric_conversion_is_nonfatal_false": false
+    },
+    "3666": {
+      "revision": 3666,
+      "engine": "3741",
+      "null_handle_is_nonfatal_false": false,
+      "failed_numeric_conversion_is_nonfatal_false": false
+    },
+    "3667": {
+      "revision": 3667,
+      "engine": "3741",
+      "null_handle_is_nonfatal_false": false,
+      "failed_numeric_conversion_is_nonfatal_false": false
+    },
+    "3669": {
+      "revision": 3669,
+      "engine": "3741",
+      "null_handle_is_nonfatal_false": false,
+      "failed_numeric_conversion_is_nonfatal_false": false
+    },
+    "3670": {
+      "revision": 3670,
+      "engine": "3741",
+      "null_handle_is_nonfatal_false": false,
+      "failed_numeric_conversion_is_nonfatal_false": false
+    },
+    "3671": {
+      "revision": 3671,
+      "engine": "3741",
+      "null_handle_is_nonfatal_false": false,
+      "failed_numeric_conversion_is_nonfatal_false": false
+    },
+    "3672": {
+      "revision": 3672,
+      "engine": "3741",
+      "null_handle_is_nonfatal_false": false,
+      "failed_numeric_conversion_is_nonfatal_false": false
+    },
+    "3673": {
+      "revision": 3673,
+      "engine": "3741",
+      "null_handle_is_nonfatal_false": false,
+      "failed_numeric_conversion_is_nonfatal_false": false
+    },
+    "3674": {
+      "revision": 3674,
+      "engine": "3741",
+      "null_handle_is_nonfatal_false": false,
+      "failed_numeric_conversion_is_nonfatal_false": false
+    },
+    "3675": {
+      "revision": 3675,
+      "engine": "3741",
+      "null_handle_is_nonfatal_false": false,
+      "failed_numeric_conversion_is_nonfatal_false": false
+    },
+    "3677": {
+      "revision": 3677,
+      "engine": "3741",
+      "null_handle_is_nonfatal_false": false,
+      "failed_numeric_conversion_is_nonfatal_false": false
+    },
+    "3678": {
+      "revision": 3678,
+      "engine": "3741",
+      "null_handle_is_nonfatal_false": false,
+      "failed_numeric_conversion_is_nonfatal_false": false
+    },
+    "3679": {
+      "revision": 3679,
+      "engine": "3741",
+      "null_handle_is_nonfatal_false": false,
+      "failed_numeric_conversion_is_nonfatal_false": false
+    },
+    "3680": {
+      "revision": 3680,
+      "engine": "3741",
+      "null_handle_is_nonfatal_false": false,
+      "failed_numeric_conversion_is_nonfatal_false": false
+    },
+    "3682": {
+      "revision": 3682,
+      "engine": "3741",
+      "null_handle_is_nonfatal_false": false,
+      "failed_numeric_conversion_is_nonfatal_false": false
+    },
+    "3685": {
+      "revision": 3685,
+      "engine": "3741",
+      "null_handle_is_nonfatal_false": false,
+      "failed_numeric_conversion_is_nonfatal_false": false
+    },
+    "3686": {
+      "revision": 3686,
+      "engine": "3741",
+      "null_handle_is_nonfatal_false": false,
+      "failed_numeric_conversion_is_nonfatal_false": false
+    },
+    "3689": {
+      "revision": 3689,
+      "engine": "3741",
+      "null_handle_is_nonfatal_false": false,
+      "failed_numeric_conversion_is_nonfatal_false": false
+    },
+    "3690": {
+      "revision": 3690,
+      "engine": "3741",
+      "null_handle_is_nonfatal_false": false,
+      "failed_numeric_conversion_is_nonfatal_false": false
+    },
+    "3691": {
+      "revision": 3691,
+      "engine": "3741",
+      "null_handle_is_nonfatal_false": false,
+      "failed_numeric_conversion_is_nonfatal_false": false
+    },
+    "3692": {
+      "revision": 3692,
+      "engine": "3741",
+      "null_handle_is_nonfatal_false": false,
+      "failed_numeric_conversion_is_nonfatal_false": false
+    },
+    "3693": {
+      "revision": 3693,
+      "engine": "3741",
+      "null_handle_is_nonfatal_false": false,
+      "failed_numeric_conversion_is_nonfatal_false": false
+    },
+    "3694": {
+      "revision": 3694,
+      "engine": "3741",
+      "null_handle_is_nonfatal_false": false,
+      "failed_numeric_conversion_is_nonfatal_false": false
+    },
+    "3697": {
+      "revision": 3697,
+      "engine": "3741",
+      "null_handle_is_nonfatal_false": false,
+      "failed_numeric_conversion_is_nonfatal_false": false
+    },
+    "3699": {
+      "revision": 3699,
+      "engine": "3741",
+      "null_handle_is_nonfatal_false": false,
+      "failed_numeric_conversion_is_nonfatal_false": false
+    },
+    "3701": {
+      "revision": 3701,
+      "engine": "3741",
+      "null_handle_is_nonfatal_false": false,
+      "failed_numeric_conversion_is_nonfatal_false": false
+    },
+    "3703": {
+      "revision": 3703,
+      "engine": "3741",
+      "null_handle_is_nonfatal_false": false,
+      "failed_numeric_conversion_is_nonfatal_false": false
+    },
+    "3704": {
+      "revision": 3704,
+      "engine": "3741",
+      "null_handle_is_nonfatal_false": false,
+      "failed_numeric_conversion_is_nonfatal_false": false
+    },
+    "3707": {
+      "revision": 3707,
+      "engine": "3741",
+      "null_handle_is_nonfatal_false": false,
+      "failed_numeric_conversion_is_nonfatal_false": false
+    },
+    "3708": {
+      "revision": 3708,
+      "engine": "3741",
+      "null_handle_is_nonfatal_false": false,
+      "failed_numeric_conversion_is_nonfatal_false": false
+    },
+    "3709": {
+      "revision": 3709,
+      "engine": "3741",
+      "null_handle_is_nonfatal_false": false,
+      "failed_numeric_conversion_is_nonfatal_false": false
+    },
+    "3710": {
+      "revision": 3710,
+      "engine": "3741",
+      "null_handle_is_nonfatal_false": false,
+      "failed_numeric_conversion_is_nonfatal_false": false
+    },
+    "3711": {
+      "revision": 3711,
+      "engine": "3741",
+      "null_handle_is_nonfatal_false": false,
+      "failed_numeric_conversion_is_nonfatal_false": false
+    },
+    "3713": {
+      "revision": 3713,
+      "engine": "3741",
+      "null_handle_is_nonfatal_false": false,
+      "failed_numeric_conversion_is_nonfatal_false": false
+    },
+    "3714": {
+      "revision": 3714,
+      "engine": "3741",
+      "null_handle_is_nonfatal_false": false,
+      "failed_numeric_conversion_is_nonfatal_false": false
+    },
+    "3715": {
+      "revision": 3715,
+      "engine": "3741",
+      "null_handle_is_nonfatal_false": false,
+      "failed_numeric_conversion_is_nonfatal_false": false
+    },
+    "3716": {
+      "revision": 3716,
+      "engine": "3741",
+      "null_handle_is_nonfatal_false": false,
+      "failed_numeric_conversion_is_nonfatal_false": false
+    },
+    "3722": {
+      "revision": 3722,
+      "engine": "3741",
+      "null_handle_is_nonfatal_false": false,
+      "failed_numeric_conversion_is_nonfatal_false": false
+    },
+    "3725": {
+      "revision": 3725,
+      "engine": "3741",
+      "null_handle_is_nonfatal_false": false,
+      "failed_numeric_conversion_is_nonfatal_false": false
+    },
+    "3726": {
+      "revision": 3726,
+      "engine": "3741",
+      "null_handle_is_nonfatal_false": false,
+      "failed_numeric_conversion_is_nonfatal_false": false
+    },
+    "3727": {
+      "revision": 3727,
+      "engine": "3741",
+      "null_handle_is_nonfatal_false": false,
+      "failed_numeric_conversion_is_nonfatal_false": false
+    },
+    "3728": {
+      "revision": 3728,
+      "engine": "3741",
+      "null_handle_is_nonfatal_false": false,
+      "failed_numeric_conversion_is_nonfatal_false": false
+    },
+    "3729": {
+      "revision": 3729,
+      "engine": "3741",
+      "null_handle_is_nonfatal_false": false,
+      "failed_numeric_conversion_is_nonfatal_false": false
+    },
+    "3730": {
+      "revision": 3730,
+      "engine": "3741",
+      "null_handle_is_nonfatal_false": false,
+      "failed_numeric_conversion_is_nonfatal_false": false
+    },
+    "3732": {
+      "revision": 3732,
+      "engine": "3741",
+      "null_handle_is_nonfatal_false": false,
+      "failed_numeric_conversion_is_nonfatal_false": false
+    },
+    "3738": {
+      "revision": 3738,
+      "engine": "3741",
+      "null_handle_is_nonfatal_false": false,
+      "failed_numeric_conversion_is_nonfatal_false": false
+    },
+    "3740": {
+      "revision": 3740,
+      "engine": "3741",
+      "null_handle_is_nonfatal_false": false,
+      "failed_numeric_conversion_is_nonfatal_false": false
+    },
+    "3741": {
+      "revision": 3741,
+      "engine": "3741",
+      "null_handle_is_nonfatal_false": false,
+      "failed_numeric_conversion_is_nonfatal_false": false
+    },
+    "3742": {
+      "revision": 3742,
+      "engine": "3741",
+      "null_handle_is_nonfatal_false": false,
+      "failed_numeric_conversion_is_nonfatal_false": false
+    },
+    "3761": {
+      "revision": 3761,
+      "engine": "3842",
+      "null_handle_is_nonfatal_false": false,
+      "failed_numeric_conversion_is_nonfatal_false": false
+    },
+    "3769": {
+      "revision": 3769,
+      "engine": "3842",
+      "null_handle_is_nonfatal_false": false,
+      "failed_numeric_conversion_is_nonfatal_false": false
+    },
+    "3773": {
+      "revision": 3773,
+      "engine": "3842",
+      "null_handle_is_nonfatal_false": false,
+      "failed_numeric_conversion_is_nonfatal_false": false
+    },
+    "3780": {
+      "revision": 3780,
+      "engine": "3842",
+      "null_handle_is_nonfatal_false": false,
+      "failed_numeric_conversion_is_nonfatal_false": false
+    },
+    "3783": {
+      "revision": 3783,
+      "engine": "3842",
+      "null_handle_is_nonfatal_false": false,
+      "failed_numeric_conversion_is_nonfatal_false": false
+    },
+    "3789": {
+      "revision": 3789,
+      "engine": "3842",
+      "null_handle_is_nonfatal_false": false,
+      "failed_numeric_conversion_is_nonfatal_false": false
+    },
+    "3793": {
+      "revision": 3793,
+      "engine": "3842",
+      "null_handle_is_nonfatal_false": false,
+      "failed_numeric_conversion_is_nonfatal_false": false
+    },
+    "3797": {
+      "revision": 3797,
+      "engine": "3842",
+      "null_handle_is_nonfatal_false": false,
+      "failed_numeric_conversion_is_nonfatal_false": false
+    },
+    "3805": {
+      "revision": 3805,
+      "engine": "3842",
+      "null_handle_is_nonfatal_false": false,
+      "failed_numeric_conversion_is_nonfatal_false": false
+    },
+    "3814": {
+      "revision": 3814,
+      "engine": "3842",
+      "null_handle_is_nonfatal_false": false,
+      "failed_numeric_conversion_is_nonfatal_false": false
+    },
+    "3818": {
+      "revision": 3818,
+      "engine": "3842",
+      "null_handle_is_nonfatal_false": false,
+      "failed_numeric_conversion_is_nonfatal_false": false
+    },
+    "3822": {
+      "revision": 3822,
+      "engine": "3842",
+      "null_handle_is_nonfatal_false": false,
+      "failed_numeric_conversion_is_nonfatal_false": false
+    },
+    "3824": {
+      "revision": 3824,
+      "engine": "3842",
+      "null_handle_is_nonfatal_false": false,
+      "failed_numeric_conversion_is_nonfatal_false": false
+    },
+    "3829": {
+      "revision": 3829,
+      "engine": "3842",
+      "null_handle_is_nonfatal_false": false,
+      "failed_numeric_conversion_is_nonfatal_false": false
+    },
+    "3831": {
+      "revision": 3831,
+      "engine": "3842",
+      "null_handle_is_nonfatal_false": false,
+      "failed_numeric_conversion_is_nonfatal_false": false
+    },
+    "3837": {
+      "revision": 3837,
+      "engine": "3842",
+      "null_handle_is_nonfatal_false": false,
+      "failed_numeric_conversion_is_nonfatal_false": false
+    },
+    "3839": {
+      "revision": 3839,
+      "engine": "3842",
+      "null_handle_is_nonfatal_false": false,
+      "failed_numeric_conversion_is_nonfatal_false": false
+    },
+    "3842": {
+      "revision": 3842,
+      "engine": "3842",
+      "null_handle_is_nonfatal_false": false,
+      "failed_numeric_conversion_is_nonfatal_false": false
+    },
+    "3846": {
+      "revision": 3846,
+      "engine": "3842",
+      "null_handle_is_nonfatal_false": false,
+      "failed_numeric_conversion_is_nonfatal_false": false
+    },
+    "3847": {
+      "revision": 3847,
+      "engine": "3842",
+      "null_handle_is_nonfatal_false": false,
+      "failed_numeric_conversion_is_nonfatal_false": false
+    },
+    "3849": {
+      "revision": 3849,
+      "engine": "3842",
+      "null_handle_is_nonfatal_false": false,
+      "failed_numeric_conversion_is_nonfatal_false": false
+    },
+    "3854": {
+      "revision": 3854,
+      "engine": "3842",
+      "null_handle_is_nonfatal_false": false,
+      "failed_numeric_conversion_is_nonfatal_false": false
+    },
+    "3968": {
+      "revision": 3968,
+      "engine": "4086",
+      "null_handle_is_nonfatal_false": false,
+      "failed_numeric_conversion_is_nonfatal_false": false
+    },
+    "3970": {
+      "revision": 3970,
+      "engine": "4086",
+      "null_handle_is_nonfatal_false": false,
+      "failed_numeric_conversion_is_nonfatal_false": false
+    },
+    "3978": {
+      "revision": 3978,
+      "engine": "4086",
+      "null_handle_is_nonfatal_false": false,
+      "failed_numeric_conversion_is_nonfatal_false": false
+    },
+    "3984": {
+      "revision": 3984,
+      "engine": "4086",
+      "null_handle_is_nonfatal_false": false,
+      "failed_numeric_conversion_is_nonfatal_false": false
+    },
+    "3993": {
+      "revision": 3993,
+      "engine": "4086",
+      "null_handle_is_nonfatal_false": false,
+      "failed_numeric_conversion_is_nonfatal_false": false
+    },
+    "3994": {
+      "revision": 3994,
+      "engine": "4086",
+      "null_handle_is_nonfatal_false": false,
+      "failed_numeric_conversion_is_nonfatal_false": false
+    },
+    "4011": {
+      "revision": 4011,
+      "engine": "4086",
+      "null_handle_is_nonfatal_false": false,
+      "failed_numeric_conversion_is_nonfatal_false": false
+    },
+    "4046": {
+      "revision": 4046,
+      "engine": "4086",
+      "null_handle_is_nonfatal_false": false,
+      "failed_numeric_conversion_is_nonfatal_false": false
+    },
+    "4051": {
+      "revision": 4051,
+      "engine": "4086",
+      "null_handle_is_nonfatal_false": false,
+      "failed_numeric_conversion_is_nonfatal_false": false
+    },
+    "4054": {
+      "revision": 4054,
+      "engine": "4086",
+      "null_handle_is_nonfatal_false": false,
+      "failed_numeric_conversion_is_nonfatal_false": false
+    },
+    "4055": {
+      "revision": 4055,
+      "engine": "4086",
+      "null_handle_is_nonfatal_false": false,
+      "failed_numeric_conversion_is_nonfatal_false": false
+    },
+    "4079": {
+      "revision": 4079,
+      "engine": "4086",
+      "null_handle_is_nonfatal_false": false,
+      "failed_numeric_conversion_is_nonfatal_false": false
+    },
+    "4080": {
+      "revision": 4080,
+      "engine": "4086",
+      "null_handle_is_nonfatal_false": false,
+      "failed_numeric_conversion_is_nonfatal_false": false
+    },
+    "4082": {
+      "revision": 4082,
+      "engine": "4086",
+      "null_handle_is_nonfatal_false": false,
+      "failed_numeric_conversion_is_nonfatal_false": false
+    },
+    "4085": {
+      "revision": 4085,
+      "engine": "4086",
+      "null_handle_is_nonfatal_false": false,
+      "failed_numeric_conversion_is_nonfatal_false": false
+    },
+    "4086": {
+      "revision": 4086,
+      "engine": "4086",
+      "null_handle_is_nonfatal_false": false,
+      "failed_numeric_conversion_is_nonfatal_false": false
+    },
+    "4088": {
+      "revision": 4088,
+      "engine": "4086",
+      "null_handle_is_nonfatal_false": false,
+      "failed_numeric_conversion_is_nonfatal_false": false
+    },
+    "4107": {
+      "revision": 4107,
+      "engine": "4086",
+      "null_handle_is_nonfatal_false": false,
+      "failed_numeric_conversion_is_nonfatal_false": false
+    },
+    "4111": {
+      "revision": 4111,
+      "engine": "4086",
+      "null_handle_is_nonfatal_false": false,
+      "failed_numeric_conversion_is_nonfatal_false": false
+    },
+    "4129": {
+      "revision": 4129,
+      "engine": "4086",
+      "null_handle_is_nonfatal_false": false,
+      "failed_numeric_conversion_is_nonfatal_false": false
+    },
+    "4153": {
+      "revision": 4153,
+      "engine": "4086",
+      "null_handle_is_nonfatal_false": false,
+      "failed_numeric_conversion_is_nonfatal_false": false
+    },
+    "4432": {
+      "revision": 4432,
+      "engine": "4432",
+      "null_handle_is_nonfatal_false": false,
+      "failed_numeric_conversion_is_nonfatal_false": false
+    },
+    "4453": {
+      "revision": 4453,
+      "engine": "4432",
+      "null_handle_is_nonfatal_false": false,
+      "failed_numeric_conversion_is_nonfatal_false": false
+    },
+    "6330": {
+      "revision": 6330,
+      "engine": "6391",
+      "null_handle_is_nonfatal_false": false,
+      "failed_numeric_conversion_is_nonfatal_false": false
+    },
+    "6391": {
+      "revision": 6391,
+      "engine": "6391",
+      "null_handle_is_nonfatal_false": false,
+      "failed_numeric_conversion_is_nonfatal_false": false
+    },
+    "6391-mod": {
+      "revision": 6391,
+      "engine": "6391",
+      "null_handle_is_nonfatal_false": false,
+      "failed_numeric_conversion_is_nonfatal_false": false
+    },
+    "6392": {
+      "revision": 6392,
+      "engine": "6391",
+      "null_handle_is_nonfatal_false": false,
+      "failed_numeric_conversion_is_nonfatal_false": false
+    },
+    "6412": {
+      "revision": 6412,
+      "engine": "6391",
+      "null_handle_is_nonfatal_false": false,
+      "failed_numeric_conversion_is_nonfatal_false": false
+    },
+    "6510": {
+      "revision": 6510,
+      "engine": "6391",
+      "null_handle_is_nonfatal_false": false,
+      "failed_numeric_conversion_is_nonfatal_false": false
+    },
+    "7086": {
+      "revision": 7086,
+      "engine": "7142",
+      "null_handle_is_nonfatal_false": false,
+      "failed_numeric_conversion_is_nonfatal_false": false
+    },
+    "7123": {
+      "revision": 7123,
+      "engine": "7142",
+      "null_handle_is_nonfatal_false": false,
+      "failed_numeric_conversion_is_nonfatal_false": false
+    },
+    "7142": {
+      "revision": 7142,
+      "engine": "7142",
+      "null_handle_is_nonfatal_false": false,
+      "failed_numeric_conversion_is_nonfatal_false": false
+    },
+    "7530": {
+      "revision": 7530,
+      "engine": "7533",
+      "null_handle_is_nonfatal_false": false,
+      "failed_numeric_conversion_is_nonfatal_false": false
+    },
+    "7533": {
+      "revision": 7533,
+      "engine": "7533",
+      "null_handle_is_nonfatal_false": false,
+      "failed_numeric_conversion_is_nonfatal_false": false
+    },
+    "7555": {
+      "revision": 7555,
+      "engine": "7533",
+      "null_handle_is_nonfatal_false": false,
+      "failed_numeric_conversion_is_nonfatal_false": false
+    },
+    "7556": {
+      "revision": 7556,
+      "engine": "7533",
+      "null_handle_is_nonfatal_false": false,
+      "failed_numeric_conversion_is_nonfatal_false": false
+    },
+    "7735": {
+      "revision": 7735,
+      "engine": "7533",
+      "null_handle_is_nonfatal_false": false,
+      "failed_numeric_conversion_is_nonfatal_false": false
+    },
+    "8023": {
+      "revision": 8023,
+      "engine": "8023",
+      "null_handle_is_nonfatal_false": false,
+      "failed_numeric_conversion_is_nonfatal_false": false
+    }
+  }
+}

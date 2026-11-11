@@ -48,6 +48,7 @@ class EarlySpriteaTests(unittest.TestCase):
                   function(source, 'mapstrings_getentityproperty'), function(source, 'mapstrings_changeentityproperty')]
         pieces += [function(variant, name) for name in ['ScriptVariant_ChangeType', 'ScriptVariant_Clear',
                                                        'ScriptVariant_DecimalValue', 'ScriptVariant_IntegerValue']]
+        pieces += [function(source, 'obor_script_sprite_name_readable'), function(source, 'obor_script_sprite_name_store')]
         pieces += [selected_dispatch(source, 'openbor_getentityproperty', ['_gep_spritea']),
                    selected_dispatch(source, 'openbor_changeentityproperty', ['_cep_spritea'])]
         checks = []
@@ -62,6 +63,7 @@ class EarlySpriteaTests(unittest.TestCase):
 #include <ctype.h>
 #include <math.h>
 #include <stdint.h>
+#include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdarg.h>
@@ -75,8 +77,21 @@ class EarlySpriteaTests(unittest.TestCase):
 #undef shutdown
 #undef printf
 uint32_t obor_profile_build;
+int sprite_map_max_items=2;
+unsigned int sprites_loaded=2;
 static char diagnostic[4096],cache[1024][128];
+static char filename[8];
+int obor_allocation_query(const void *p,const void **base,size_t *remaining) {
+ uintptr_t at=(uintptr_t)p,first=(uintptr_t)filename;
+ if(base) *base=NULL;
+ if(remaining) *remaining=0;
+ if(at<first || at-first>=sizeof(filename)) return 0;
+ if(base) *base=filename;
+ if(remaining) *remaining=sizeof(filename)-(at-first);
+ return 1;
+}
 CHAR *StrCache_Get(int index){assert(index>=0 && index<1024);return cache[index];}
+CHAR *StrCache_GetIfPresent(int index){return index>=0 && index<1024 && memchr(cache[index],0,sizeof(cache[index]))?cache[index]:NULL;}
 void StrCache_Collect(int index){(void)index;}
 int StrCache_Pop(void){return 900;}
 static int probe_printf(const char *format,...){va_list ap;va_start(ap,format);int n=vsnprintf(diagnostic,sizeof(diagnostic),format,ap);va_end(ap);return n;}
@@ -88,7 +103,7 @@ static s_anim animation,*animptrs[1];
 static s_sprite sprites[2];
 static s_sprite_map entries[2];
 static int frame_indices[2];
-static char filename[8];
+
 static ScriptVariant values[6],result,*args[6],*out;
 static void setup(int property,int selector){
  memset(values,0,sizeof(values));memset(&result,0,sizeof(result));memset(&ent,0,sizeof(ent));memset(&animation,0,sizeof(animation));memset(entries,0,sizeof(entries));memset(sprites,0,sizeof(sprites));

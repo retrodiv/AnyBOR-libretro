@@ -27,6 +27,10 @@ void obor_resources_member_bytes_loaded(const char *member, uint32_t member_offs
 /* Invoke before free or after successful realloc, even at the same address. */
 void obor_resources_forget_owner(const void *owner);
 size_t obor_allocation_size(const void *owner);
+/* Find the live allocation containing an interior reference and its remaining
+ * usable span. Optional outputs reset on refusal. A base is not evidence of
+ * semantic ownership of an engine object or permission to release it. */
+int obor_allocation_query(const void *address, const void **base, size_t *remaining);
 /* Check an interior reference against live chunks without reading metadata
  * at the supplied address. Zero bytes and unsupported heap layouts refuse. */
 int obor_allocation_contains(const void *address, size_t length);

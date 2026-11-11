@@ -1,0 +1,343 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stddef.h>
+#include <stdint.h>
+#include <limits.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+@CONFIG@
+#include "openbor.h"
+#include "@SCRIPT_HEADER@"
+@GIF_HEADER@
+#undef printf
+#undef assert
+#undef malloc
+#undef calloc
+#undef free
+#ifdef NDEBUG
+#error Heap entry assertions must remain enabled
+#endif
+uint32_t obor_profile_build;
+static unsigned cases;
+#define assert(c) do{if(!(c)){fprintf(stderr,"Heap kind profile=%u case=%u line=%d: %s\n",obor_profile_build,cases,__LINE__,#c);abort();}}while(0)
+HRESULT Interpreter_Call(Interpreter *p){(void)p;abort();}
+HRESULT Interpreter_EvalInstruction(Interpreter *p){(void)p;abort();}
+void borExit(int status){(void)status;abort();}
+static List scriptheap;
+#include "source/scriptlib/List.c"
+enum {FIX_SCREEN,FIX_SPRITE,FIX_UNKNOWN,FIX_SCRIPT,FIX_GIF,FIX_ARRAY,FIX_MASK,FIX_AUX};
+static struct {void *pointer;int kind,live;} owned[32];
+static unsigned used,event_count;
+static int retain_released;
+static int events[32];
+static void event(int value){assert(event_count<32);events[event_count++]=value;}
+static unsigned live_count(void)
+{unsigned n=0;for(unsigned i=0;i<used;++i)n+=owned[i].live;return n;}
+static int kind_of(void *value)
+{
+    for(unsigned i=0;i<used;++i)if(owned[i].live && owned[i].pointer==value)return owned[i].kind;
+    assert(0);return -1;
+}
+static void *new_object(size_t bytes,int kind)
+{
+    assert(used<32);void *p=calloc(1,bytes);assert(p);
+    owned[used].pointer=p;owned[used].kind=kind;owned[used++].live=1;return p;
+}
+static void *fixture_malloc(size_t bytes){return new_object(bytes,FIX_AUX);}
+static void *fixture_calloc(size_t count,size_t bytes){return new_object(count*bytes,FIX_AUX);}
+static void fixture_free(void *value)
+{
+    if(!value)return;
+    int kind=kind_of(value);event(40+kind);
+    for(unsigned i=0;i<used;++i)if(owned[i].live && owned[i].pointer==value)
+    {owned[i].live=0;if(!retain_released)free(value);return;}
+    assert(0);
+}
+static int byte_tag(void *value){int tag;memcpy(&tag,value,sizeof(tag));return tag;}
+#if @HAS_SCRIPT@
+static void *nested_release;
+HRESULT system_free(ScriptVariant **, ScriptVariant **, int);
+void Script_Clear(Script *value,int level)
+{
+    assert(kind_of(value)==FIX_SCRIPT && level==2);
+    event(20+FIX_SCRIPT);
+    if(nested_release)
+    {
+        obor_script_cleanup **chain=obor_script_cleanup_chain();
+        obor_script_cleanup scope={value,*chain};
+        ScriptVariant target={0},result={0},*returned=&result,*args[]={&target};
+        target.vt=VT_PTR;
+        target.ptrVal=value;
+        *chain=&scope;
+        assert(system_free(args,&returned,1)==E_FAIL && !returned);
+        target.ptrVal=nested_release;
+        assert(system_free(args,&returned,1)==S_OK);
+        *chain=scope.previous;
+    }
+}
+#endif
+#if @TYPED@
+void anigif_close(anigif_info *value)
+{assert(kind_of(value)==FIX_GIF);event(20+FIX_GIF);value->magic=0;}
+#endif
+@PREFIX_CHECKS@
+#define malloc fixture_malloc
+#define calloc fixture_calloc
+#define free fixture_free
+@NATIVE_VARLIST@
+#if @OWNED_VARLIST@
+#include "obor_varlist_ownership.inc"
+#endif
+@BEFORE_HELPER@
+@HELPER@
+@BEFORE_FREE@
+@FREE@
+#if @HAS_SCRIPT@
+static int ignore_heap_notice(const char *format,...){(void)format;return 0;}
+#define printf ignore_heap_notice
+@SHUTDOWN@
+#undef printf
+#endif
+#undef free
+#undef calloc
+#undef malloc
+static const char *owner_for(int kind)
+{
+    switch(kind){case FIX_SCREEN:return "openbor_allocscreen";case FIX_SPRITE:return "openbor_loadsprite";
+    case FIX_SCRIPT:return "openbor_allocscript";case FIX_GIF:return "openbor_openanigif";
+    case FIX_ARRAY:return "openbor_array";default:return "opaque";}
+}
+static void *payload(int kind,int closed)
+{
+    if(kind==FIX_SCREEN)
+    {
+        s_screen *value=new_object(sizeof(*value),FIX_SCREEN);value->width=value->height=1;
+#ifdef screen_magic
+        value->magic=closed?0:screen_magic;
+#endif
+        return value;
+    }
+    if(kind==FIX_SPRITE)
+    {
+        s_sprite *value=new_object(sizeof(*value),FIX_SPRITE);
+#ifdef sprite_magic
+        value->magic=closed?0:sprite_magic;
+#endif
+#if @TYPED@
+        if(!closed)value->mask=new_object(sizeof(*value),FIX_MASK);
+#endif
+        return value;
+    }
+#if @HAS_SCRIPT@
+    if(kind==FIX_SCRIPT)
+    {Script *value=new_object(sizeof(*value),FIX_SCRIPT);value->magic=closed?0:script_magic;return value;}
+#endif
+#if @TYPED@
+    if(kind==FIX_GIF)
+    {
+        anigif_info *value=new_object(sizeof(*value),FIX_GIF);value->magic=closed?0:anigif_magic;
+        for(unsigned i=0;i<3;++i){value->info[i].handle=-1;}return value;
+    }
+    if(kind==FIX_ARRAY)
+    {
+        Varlist *value=new_object(sizeof(*value),FIX_ARRAY);
+        if(!closed)Varlist_Init(value,0);
+#if @OWNED_VARLIST@
+        obor_varlist_register(value);
+#endif
+        return value;
+    }
+#endif
+    assert(kind==FIX_UNKNOWN);return new_object(8,FIX_UNKNOWN);
+}
+struct observation{HRESULT status;int null_result;unsigned count;int events[32];};
+typedef HRESULT (*entry_fn)(ScriptVariant**,ScriptVariant**,int);
+static void begin(void)
+{
+    assert(!live_count());
+    used=event_count=0;
+    memset(events,0,sizeof(events));
+    List_Init(&scriptheap);
+#if @OWNED_VARLIST@
+    obor_varlist_reset();
+#endif
+}
+static void observe(struct observation *out,entry_fn fn,int kind,int closed)
+{
+    begin();void *value=payload(kind,closed);List_InsertAfter(&scriptheap,value,owner_for(kind));
+    ScriptVariant handle={0},result={0},*returned=&result,*args[]={&handle};handle.vt=VT_PTR;handle.ptrVal=value;
+    out->status=fn(args,&returned,1);out->null_result=returned==NULL;
+    assert(List_GetSize(&scriptheap)==0 && !live_count());
+    out->count=event_count;memcpy(out->events,events,sizeof(events));List_Clear(&scriptheap);
+}
+static void forged_owner(void)
+{
+    begin();s_screen *value=payload(FIX_SCREEN,0);int tag=@SCRIPT_TAG@;
+    memcpy(value,&tag,sizeof(tag));List_InsertAfter(&scriptheap,value,owner_for(FIX_SCREEN));
+    ScriptVariant handle={0},result={0},*returned=&result,*args[]={&handle};handle.vt=VT_PTR;handle.ptrVal=value;
+    assert(system_free(args,&returned,1)==S_OK && !returned && !live_count());
+    assert(event_count==1 && events[0]==40+FIX_SCREEN);List_Clear(&scriptheap);++cases;
+}
+static void short_unknown(void)
+{
+    begin();void *value=new_object(1,FIX_UNKNOWN);List_InsertAfter(&scriptheap,value,"opaque");
+    ScriptVariant handle={0},result={0},*returned=&result,*args[]={&handle};handle.vt=VT_PTR;handle.ptrVal=value;
+    assert(system_free(args,&returned,1)==S_OK && !returned && !live_count());List_Clear(&scriptheap);++cases;
+}
+#if @OWNED_VARLIST@
+static void observe_shared_collections(void)
+{
+    begin();
+    Varlist *table=payload(FIX_ARRAY,0);
+    entity first={0},second={0};
+    obor_entity_varlist_set(&first,table);
+    obor_entity_varlist_set(&second,table);
+    assert(first.varlist==table && first.obor_varlist_owned==table &&
+           second.varlist==table && second.obor_varlist_owned==table);
+    List_InsertAfter(&scriptheap,table,owner_for(FIX_ARRAY));
+    ScriptVariant target={0},result={0},*returned=&result,*args[]={&target};
+    target.vt=VT_PTR;
+    target.ptrVal=table;
+    assert(system_free(args,&returned,1)==S_OK && !returned);
+    assert(List_GetSize(&scriptheap)==0 && !event_count);
+    obor_entity_varlist_set(&first,NULL);
+    assert(second.varlist==table && obor_varlist_find(table)==table);
+    obor_varlist_release(second.obor_varlist_owned,1);
+    assert(!live_count() && event_count==4);
+    List_Clear(&scriptheap);
+    ++cases;
+
+    begin();
+    table=payload(FIX_ARRAY,0);
+    entity owner={0};
+    owner.varlist=owner.obor_varlist_owned=table;
+    obor_entity_varlist_set(&owner,NULL);
+    assert(obor_varlist_find(table)==table && !event_count);
+    obor_entity_varlist_set(&owner,table);
+    entity borrowed=owner;
+    obor_varlist_retain(borrowed.obor_varlist_owned);
+    obor_varlist_release(owner.obor_varlist_owned,1);
+    assert(borrowed.varlist==table && obor_varlist_find(table)==table && !event_count);
+    obor_varlist_release(borrowed.obor_varlist_owned,0);
+    assert(!live_count() && event_count==4);
+    ++cases;
+
+    begin();
+    table=new_object(sizeof(*table),FIX_ARRAY);
+    entity opaque={0};
+    obor_entity_varlist_set(&opaque,table);
+    assert(opaque.varlist==table && !opaque.obor_varlist_owned);
+    Varlist_Init(table,0);
+    obor_varlist_register(table);
+    obor_varlist_release(opaque.obor_varlist_owned,1);
+    assert(obor_varlist_find(table)==table && !event_count);
+    obor_varlist_release(table,1);
+    assert(!live_count() && event_count==4);
+    ++cases;
+}
+#endif
+#if @HAS_SCRIPT@
+static void observe_nested_release(void)
+{
+    begin();
+    void *outer=payload(FIX_SCRIPT,0),*inner=payload(FIX_SCREEN,0);
+    void *survivor=payload(FIX_UNKNOWN,0);
+    List_InsertAfter(&scriptheap,outer,owner_for(FIX_SCRIPT));
+    List_InsertAfter(&scriptheap,inner,owner_for(FIX_SCREEN));
+    List_InsertAfter(&scriptheap,survivor,owner_for(FIX_UNKNOWN));
+    ScriptVariant target={0},result={0},*returned=&result,*args[]={&target};
+    target.vt=VT_PTR;
+    target.ptrVal=outer;
+    nested_release=inner;
+    assert(system_free(args,&returned,1)==S_OK && !returned);
+    nested_release=NULL;
+    assert(List_GetSize(&scriptheap)==1 && List_Retrieve(&scriptheap)==survivor);
+    assert(event_count==3 && events[0]==20+FIX_SCRIPT &&
+           events[1]==40+FIX_SCREEN && events[2]==40+FIX_SCRIPT);
+    target.ptrVal=survivor;
+    assert(system_free(args,&returned,1)==S_OK && !live_count());
+    List_Clear(&scriptheap);
+    ++cases;
+}
+static void observe_global_release(int skip_entry)
+{
+    begin();
+    void *outer=payload(FIX_SCRIPT,0),*inner=payload(FIX_SCREEN,0);
+    void *survivor=NULL;
+    List_InsertAfter(&scriptheap,outer,owner_for(FIX_SCRIPT));
+    List_InsertAfter(&scriptheap,inner,owner_for(FIX_SCREEN));
+    if(skip_entry)
+    {
+        survivor=payload(FIX_UNKNOWN,0);
+        List_InsertAfter(&scriptheap,survivor,owner_for(FIX_UNKNOWN));
+        List_InsertAfter(&scriptheap,payload(FIX_UNKNOWN,0),owner_for(FIX_UNKNOWN));
+    }
+    nested_release=inner;
+    /* Retain physical storage so a repeated release fails the ownership
+     * assertion before any storage can be used after free. */
+    retain_released=1;
+    clear_fixture_heap();
+    retain_released=0;
+    nested_release=NULL;
+    assert(List_GetSize(&scriptheap)==0 && live_count()==(unsigned)skip_entry);
+    assert(event_count==3u+(unsigned)skip_entry);
+    assert(events[0]==20+FIX_SCRIPT && events[1]==40+FIX_SCREEN &&
+           events[2]==40+FIX_SCRIPT);
+    if(skip_entry) assert(events[3]==40+FIX_UNKNOWN && kind_of(survivor)==FIX_UNKNOWN);
+    for(unsigned i=0;i<used;++i)
+    {
+        owned[i].live=0;
+        free(owned[i].pointer);
+    }
+    ++cases;
+}
+#endif
+int main(void)
+{
+    const uint32_t profiles[]={@PROFILES@};
+    const int kinds[]={FIX_SCREEN,FIX_SPRITE,FIX_UNKNOWN,
+#if @HAS_SCRIPT@
+        FIX_SCRIPT,
+#endif
+#if @TYPED@
+        FIX_GIF,FIX_ARRAY,
+#endif
+    };
+    for(unsigned p=0;p<sizeof(profiles)/sizeof(*profiles);++p)
+    {
+        obor_profile_build=profiles[p];
+#ifdef OWNER_CONTROL_ONLY
+        forged_owner();
+#else
+        for(unsigned k=0;k<sizeof(kinds)/sizeof(*kinds);++k)
+        {
+            if(kinds[k]==FIX_SCRIPT && !(@SCRIPT_ALLOWED@))continue;
+            for(int closed=0;closed<2;++closed)
+            {
+                struct observation actual={0},expected={0};
+                observe(&actual,system_free,kinds[k],closed);observe(&expected,before_system_free,kinds[k],closed);
+                assert(actual.status==S_OK && actual.null_result);
+                assert(actual.status==expected.status && actual.null_result==expected.null_result && actual.count==expected.count);
+                assert(!memcmp(actual.events,expected.events,sizeof(actual.events)));++cases;
+            }
+        }
+        forged_owner();short_unknown();
+#if @OWNED_VARLIST@
+        observe_shared_collections();
+#endif
+#if @HAS_SCRIPT@
+        if(@SCRIPT_ALLOWED@)
+        {
+            observe_nested_release();
+            observe_global_release(0);
+            observe_global_release(1);
+        }
+#endif
+        ScriptVariant result={0},*returned=&result;
+        assert(system_free(NULL,&returned,0)==E_FAIL && !returned);++cases;
+#endif
+    }
+    printf("{\"status\":\"PASS\",\"profiles\":%zu,\"cases\":%u}\n",sizeof(profiles)/sizeof(*profiles),cases);return 0;
+}

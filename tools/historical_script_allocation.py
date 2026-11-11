@@ -36,6 +36,8 @@ static unsigned active_case;
 #define assert(c) do {if(!(c)){fprintf(stderr,"Native script allocation mismatch: case=%u line=%d\n",active_case,__LINE__);abort();}}while(0)
 uint32_t obor_profile_build=@REVISION@;
 int max_script_vars;
+/* Valid fresh-record cases must never enter the core stop path. */
+void borExit(int reset){(void)reset;abort();}
 HRESULT Interpreter_Call(Interpreter *p){(void)p;abort();}
 HRESULT Interpreter_EvalInstruction(Interpreter *p){(void)p;abort();}
 @GRAPHICS@

@@ -56,8 +56,12 @@ s_screen * allocscreen(int width, int height, int pixelformat)
 
 void freescreen(s_screen **screen)
 {
-	if((*screen) != NULL) free((*screen));
-	(*screen) = NULL;
+    s_screen *owned;
+    if(!screen) return;
+    memcpy(&owned, (const void *)screen, sizeof(owned));
+    if(owned) free(owned);
+    owned = NULL;
+    memcpy((void *)screen, &owned, sizeof(owned));
 }
 
 // Screen copy func. Supports clipping.
@@ -478,6 +482,8 @@ void zoomscreen(s_screen *dest, s_screen *src, int centerx, int centery, int sca
     xmin=width/2-centerx; ymin=height/2-centery;
     if(xmin >= src->width || xmin+((width*scalex)/256) < 0 || ymin >= src->height) return;
     count=src->pixelformat==PIXEL_16?2:src->pixelformat==PIXEL_32?4:1;
+    width &= ~INT64_C(3); /* Native allocscreen rounds its crop width down. */
+    if(width <= 0) return;
     xstep=((uint64_t)width*65536)/(unsigned)dest->width;
     ystep=((uint64_t)height*65536)/(unsigned)dest->height;
     source=src->data;

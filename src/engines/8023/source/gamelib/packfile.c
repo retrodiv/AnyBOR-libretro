@@ -707,6 +707,8 @@ char *casesearch(const char *dir, const char *filepath) {
     const char *rest_of_path;
     static char fullpath[PACKFILE_PATH_MAX];
     int found = 0;
+    if(!dir || !filepath || strcspn(filepath, "/") >= sizeof(filename)) return NULL;
+
 #ifdef VERBOSE
     printf("casesearch: %s, %s\n", dir, filepath);
 #endif
@@ -735,10 +737,16 @@ char *casesearch(const char *dir, const char *filepath) {
         }
     }
 
-    if(entry != NULL)  {
-        strcpy(fullpath, dir);
-        strcat(fullpath, "/");
-        strcat(fullpath, entry->d_name);
+    if(entry != NULL)
+    {
+        char joined[sizeof(fullpath)];
+        int length = snprintf(joined, sizeof(joined), "%s/%s", dir, entry->d_name);
+        if(length < 0 || (size_t)length >= sizeof(joined))
+        {
+            (void)closedir(directory);
+            return NULL;
+        }
+        memcpy(fullpath, joined, (size_t)length + 1);
     }
 
     if(closedir(directory))  {

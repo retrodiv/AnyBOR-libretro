@@ -53,13 +53,15 @@ def reader_program(components=None, common=None, contracts=None, *, original=Fal
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <strings.h>
+#define stricmp strcasecmp
 typedef int32_t LONG,HRESULT;
 typedef double DOUBLE;
 typedef void VOID;
 typedef enum {VT_EMPTY=0,VT_INTEGER=1,VT_DECIMAL=2,VT_PTR=5,VT_STR=6} VARTYPE;
 typedef struct {union {LONG lVal;DOUBLE dblVal;void *ptrVal;int strVal;};VARTYPE vt;} ScriptVariant;
 typedef struct {int marker;} s_sprite,s_attack;
-enum {_ep_defense,_ep_offense};
+enum {_ep_defense,_ep_offense,_ep_the_end};
 enum {_gep_defense_factor,_gep_defense_pain,_gep_defense_knockdown,
  _gep_defense_blockpower,_gep_defense_blockthreshold,_gep_defense_blockratio,_gep_defense_blocktype};
 #define MAX_ATKS 16
@@ -78,6 +80,8 @@ static uint32_t obor_profile_build;
 static s_defense shared_defense[MAX_ATKS],private_defense[2][MAX_ATKS];
 static float shared_offense[MAX_ATKS],private_offense[2][MAX_ATKS],separate[7][MAX_ATKS];
 static entity actors[2];
+static const char *StrCache_GetIfPresent(int index) {(void)index;return NULL;}
+static int max_attack_types;
 static int StrCache_Pop(void) {abort();}
 static void StrCache_Collect(int index) {(void)index;abort();}
 static int quiet_printf(const char *format,...) {(void)format;return 0;}
@@ -121,7 +125,9 @@ static void run(int actor,int property,ScriptVariant index,ScriptVariant selecto
  if(kind==VT_DECIMAL) assert(result.dblVal==expected);
 }
 static void check(const struct contract *c) {
- obor_profile_build=c->revision;reset();
+ obor_profile_build=c->revision;
+ /* Earlier defense storage includes the named final attack type. */
+ max_attack_types=c->revision<3715?MAX_ATKS-1:MAX_ATKS;reset();
  for(int actor=0;actor<2;++actor) {
   for(int index=0;index<MAX_ATKS;++index) {
    for(int decimal=0;decimal<2;++decimal) {

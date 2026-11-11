@@ -16,7 +16,7 @@ CALLBACKS=dict(get='openbor_gettextobjproperty',change='openbor_changetextobjpro
 def render_text_objects(*,revisions,callbacks,mapping,helpers,physical_fixed,
                         seed_slots,slots,header_includes,cases,initializer=None,
                         field_paths=None,create_strings=False,
-                        string_limit='MAX_STR_VAR_LEN'):
+                        string_limit='MAX_STR_VAR_LEN',owned_tables=False):
     if (not isinstance(revisions,list)or not 0<len(revisions)<=128 or
         any(type(n)is not int or not 0<n<=0xffffffff for n in revisions)or
         revisions!=sorted(set(revisions))or type(physical_fixed)is not bool or
@@ -52,6 +52,8 @@ def render_text_objects(*,revisions,callbacks,mapping,helpers,physical_fixed,
         physical_fixed or seed_slots != 0 or not re.search(
             r'\bint\s+'+re.escape(initializer)+r'\s*\(',helpers)):
         raise ValueError('Native initializer requires its complete helper and empty dynamic storage')
+    if type(owned_tables) is not bool or (owned_tables and (physical_fixed or initializer)):
+        raise ValueError('Owned text tables require native dynamic storage')
     def integer(v):return type(v)is int and -(1<<31)<=v<(1<<31)
     def bytes_(v):return isinstance(v,list)and len(v)<=8192 and all(type(n)is int and 0<n<=255 for n in v)
     def value(v):
@@ -146,21 +148,22 @@ uint32_t obor_profile_build;
 s_level *level;
 static unsigned observations,diagnostics,orphans;
 static uintptr_t owner[1024];
+static size_t owner_bytes[1024];
 static unsigned live[1024],owners;
 static int refusal;
 static unsigned refused;
-static void remember(void *p){
- if(!p)return;CHECK(owners<1024,"bounded owner ledger");owner[owners]=(uintptr_t)p;live[owners++]=1;
+static void remember(void *p,size_t bytes){
+ if(!p)return;CHECK(owners<1024,"bounded owner ledger");owner[owners]=(uintptr_t)p;owner_bytes[owners]=bytes;live[owners++]=1;
 }
 static void *native_malloc(size_t bytes){
  CHECK(bytes<=8u*1024u*1024u,"bounded native text allocation");
  if(refusal==1){refusal=0;++refused;return NULL;}
- void *p=malloc(bytes);CHECK(p||!bytes,"fixture text allocation");remember(p);return p;
+ void *p=malloc(bytes);CHECK(p||!bytes,"fixture text allocation");remember(p,bytes);return p;
 }
 static void *native_calloc(size_t n,size_t bytes){
  CHECK(!n||bytes<=8u*1024u*1024u/n,"bounded native table allocation");
  if(refusal==2){refusal=0;++refused;return NULL;}
- void *p=calloc(n,bytes);CHECK(p||!n||!bytes,"fixture table allocation");remember(p);return p;
+ void *p=calloc(n,bytes);CHECK(p||!n||!bytes,"fixture table allocation");remember(p,n*bytes);return p;
 }
 static void native_free(void *p){
  if(!p)return;
@@ -174,7 +177,17 @@ static void *native_realloc(void *p,size_t bytes){
        CHECK(old!=1024,"growth preserves the original table owner");}
  if(refusal==2){refusal=0;++refused;return NULL;}
  void *grown=realloc(p,bytes);CHECK(grown,"fixture table growth");
- if(old!=1024)live[old]=0;remember(grown);return grown;
+ if(old!=1024)live[old]=0;remember(grown,bytes);return grown;
+}
+int obor_allocation_query(const void *p,const void **base,size_t *remaining){
+ uintptr_t address=(uintptr_t)p;
+ if(base)*base=NULL;if(remaining)*remaining=0;
+ for(unsigned i=0;i<owners;++i)if(live[i]&&address>=owner[i]&&address-owner[i]<owner_bytes[i]){
+  if(base)*base=(const void*)owner[i];
+  if(remaining)*remaining=owner_bytes[i]-(address-owner[i]);
+  return 1;
+ }
+ return 0;
 }
 static int native_printf(const char *format,...){
  va_list ap;va_start(ap,format);++diagnostics;int n=vfprintf(stderr,format,ap);va_end(ap);return n;
@@ -226,8 +239,7 @@ static void fixture_seed(int active){
 }
 static void retire(unsigned expected_orphans){
  if(level){
-  for(unsigned i=0;i<@COUNT@;++i)native_free(level->textobjs[i].text);
-  @RETIRE_TABLE@
+  @RETIRE_TEXT@
   free(level);level=NULL;
  }
  unsigned found=0;
@@ -302,11 +314,22 @@ int main(void){
         body.append('retire('+str(case['orphan_allocations'])+');')
         definitions.append('static void case_'+str(number)+'(void){\n'+'\n'.join(body)+'\n}')
         runs.append('case_'+str(number)+'();')
+    seed=''
+    count=str(slots)if physical_fixed else'(unsigned)level->numtextobjs'
+    retire_text='for(unsigned i=0;i<'+count+';++i)native_free(level->textobjs[i].text);'
+    if owned_tables:
+        seed=('CHECK(obor_textobj_index(level,'+str(seed_slots-1)+',1)==1,"native text table seed");'
+              if seed_slots else '')
+        retire_text='obor_textobjs_release_all(level);'
+    elif not physical_fixed:
+        retire_text+='native_free(level->textobjs);level->textobjs=NULL;level->numtextobjs=0;'
+        if initializer:
+            seed='CHECK('+initializer+'(level),"native level text initialization");'
+        else:
+            allocation='native_calloc('+str(seed_slots)+',sizeof(*level->textobjs))' if seed_slots else 'NULL'
+            seed='level->numtextobjs='+str(seed_slots)+';level->textobjs='+allocation+';'
     values=dict(HEADERS='\n'.join('#include "'+n+'"'for n in header_includes),SLOTS=str(slots),
-        COUNT=str(slots)if physical_fixed else'(unsigned)level->numtextobjs',
-        SEED=('CHECK('+initializer+'(level),"native level text initialization");')if initializer else ''if physical_fixed else'level->numtextobjs='+str(seed_slots)+';level->textobjs='+
-             ('native_calloc('+str(seed_slots)+',sizeof(*level->textobjs));'if seed_slots else'NULL;'),
-        RETIRE_TABLE=''if physical_fixed else'native_free(level->textobjs);level->textobjs=NULL;level->numtextobjs=0;',
+        COUNT=count, SEED=seed, RETIRE_TEXT=retire_text,
         MAPPING=mapping,HELPERS=helpers,CALLBACKS='\n'.join(callbacks[n]for n in CALLBACKS),
         OWNER_COUNT=('static unsigned native_owned_count(void){unsigned count=0;for(unsigned i=0;i<owners;++i)count+=live[i]!=0;return count;}\n')if any('live_allocations'in step for case in cases for step in case['steps'])else'',
         CASES='\n'.join(definitions),RUN=''.join(runs),REVISIONS=','.join(str(n)+'u'for n in revisions),

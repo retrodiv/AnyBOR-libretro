@@ -1,0 +1,146 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ * Complete native loader with bounded stream, allocation and script observers.
+ * The interpreter and filesystem are not simulated as acceptance evidence.
+ */
+#include <stdint.h>
+#include <stddef.h>
+#include <limits.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#define MAX_BUFFER_LEN 256
+#define CHECK(c) do { if(!(c)) { fprintf(stderr, "Script input check: %s at %d\n", #c, __LINE__); abort(); } } while(0)
+typedef struct { int initialized; } Script;
+static Script caller, *pcurrentscript = &caller;
+static unsigned obor_profile_build;
+static int current_set = 12, phase, opened, closed, live;
+static unsigned allocated, released;
+static void *buffer;
+static long measured;
+static char events[64];
+static union { long double alignment; unsigned char bytes[64]; } cookie;
+static FILE *const handle = (FILE *)&cookie;
+static void event(char value)
+{
+    size_t n = strlen(events); CHECK(n + 1 < sizeof(events));
+    events[n] = value; events[n + 1] = 0;
+}
+static void borExit(int code) { (void)code; abort(); }
+static void getBasePath(char *path, const char *kind, int mode)
+{
+    CHECK(!strcmp(kind, "Saves") && !mode); strcpy(path, "Saves/");
+}
+static void getPakName(char *path, size_t bytes, int kind)
+{
+    CHECK(bytes >= 10 && kind == 2); strcpy(path, "probe.scr");
+}
+static int obor_pak_path_append(char *path, size_t bytes, const char *name)
+{
+    CHECK(strlen(path) + strlen(name) < bytes); strcat(path, name); return 1;
+}
+static FILE *file_open(const char *path, const char *mode)
+{
+    event('O'); CHECK(!strcmp(path, "Saves/probe.s12") && !strcmp(mode, "rb"));
+    CHECK(!live);
+    if(!phase) return NULL;
+    ++opened; live = 1; return handle;
+}
+static int file_seek(FILE *file, long offset, int origin)
+{
+    CHECK(file == handle && live && !offset);
+    CHECK(origin == SEEK_END || origin == SEEK_SET);
+    event(origin == SEEK_END ? 'E' : 'B');
+    return phase == (origin == SEEK_END ? 1 : 4) ? -1 : 0;
+}
+static long file_tell(FILE *file)
+{
+    CHECK(file == handle && live); event('T'); return measured;
+}
+static int file_close(FILE *file)
+{
+    CHECK(file == handle && live); event('F'); live = 0; ++closed; return 0;
+}
+static void *input_malloc(size_t bytes)
+{
+    CHECK(measured > 0 && bytes == (size_t)measured + 1 && !buffer);
+    event('M');
+    if(phase == 5 || phase == 12) return NULL;
+    CHECK(bytes <= 5); buffer = malloc(bytes); CHECK(buffer); ++allocated; return buffer;
+}
+static void input_free(void *pointer)
+{
+    CHECK(pointer && pointer == buffer && allocated == released + 1);
+    event('D'); free(pointer); buffer = NULL; ++released;
+}
+static size_t file_read(void *out, size_t size, size_t count, FILE *file)
+{
+    CHECK(file == handle && live && size == 1 && count == (size_t)measured && out == buffer);
+    event('R');
+    const char *text = phase == 8 ? "x" : phase == 13 ? "xyzQ" : "abc\n";
+    size_t read = phase == 6 ? count - 1 : count;
+    CHECK(read <= strlen(text)); memcpy(out, text, read); return read;
+}
+static void Script_Init(Script *script, const char *name, void *unused, int enabled)
+{
+    CHECK(!strcmp(name, "loadScriptFile") && !unused && enabled == 1);
+    event('I'); script->initialized = 1;
+}
+static void Script_Clear(Script *script, int mode)
+{
+    CHECK(mode == 2); event('Z'); script->initialized = 0;
+}
+static int load_script(Script *script, char *path)
+{
+    CHECK(!strcmp(path, "Saves/probe.s12")); event('L');
+    script->initialized = phase != 9; return script->initialized;
+}
+static int Script_IsInitialized(Script *script) { event('N'); return script->initialized; }
+static int Script_AppendText(Script *script, char *text, char *path)
+{
+    CHECK(script->initialized && !strcmp(path, "Saves/probe.s12"));
+    CHECK(!strcmp(text, phase == 8 ? "" : phase == 13 ? "xyz" : "abc"));
+    CHECK(!live && closed == 1); event('A'); return phase != 9;
+}
+static int Script_Compile(Script *script) { (void)script; event('C'); return phase != 10; }
+static int Script_Execute(Script *script) { CHECK(script->initialized); event('X'); return phase != 11; }
+#define fopen file_open
+#define fclose file_close
+#define fseek file_seek
+#define ftell file_tell
+#define fread file_read
+#define malloc input_malloc
+#define free input_free
+@LOADER@
+#undef fopen
+#undef fclose
+#undef fseek
+#undef ftell
+#undef fread
+#undef malloc
+#undef free
+
+int main(void)
+{
+    static const unsigned profiles[] = {@PROFILES@};
+    static const char *expected[] = {"O", "OEF", "OETF", "OETF", "OETBF", "OETBMF",
+        "OETBMRDF", "OETBMRFIACXZD", "OETBMRFIACXZD", "OETBMRFIAZD",
+        "OETBMRFIACZD", "OETBMRFIACXZD", "OETBMF", "OETBMRFIACXZD"};
+    unsigned cases = 0;
+    for(unsigned p = 0; p < sizeof(profiles) / sizeof(*profiles); ++p)
+    for(phase = 0; phase < 14; ++phase)
+    {
+        obor_profile_build = profiles[p];
+        int legacy = @LEGACY@ && profiles[p] < 3708;
+        opened = closed = live = 0; allocated = released = 0; buffer = NULL; events[0] = 0;
+        measured = phase == 2 ? -1 : phase == 3 ? 0 : phase == 8 ? 1 : phase == 12 ? LONG_MAX : 4;
+        int result = loadScriptFile();
+        CHECK(!live && opened == closed && allocated == released && !buffer);
+        CHECK(!strcmp(events, legacy ? (phase == 9 ? "ILZCNZ" : "ILCNXZ") : expected[phase]));
+        CHECK(result == (legacy || phase == 7 || phase == 8 || phase == 13));
+        ++cases;
+    }
+    printf("{\"status\":\"PASS\",\"profiles\":%zu,\"cases\":%u}\n",
+           sizeof(profiles) / sizeof(*profiles), cases);
+    return 0;
+}

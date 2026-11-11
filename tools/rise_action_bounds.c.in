@@ -1,0 +1,147 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <limits.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+@CONFIG@
+#include "openbor.h"
+#include "obor_rise_inputs.h"
+#undef printf
+#undef assert
+#undef malloc
+#undef calloc
+#undef free
+#undef validanim
+#undef time
+#undef _time
+uint32_t obor_profile_build;
+static unsigned checks,used,availability,gate_mode,gate_valid,sample,rng_calls,rise_calls;
+static entity actor;
+entity *self=&actor;
+int max_attack_types;
+@ANIM_TYPE@ *animriseattacks;
+#if @HAS_BACK@
+@ANIM_TYPE@ *animbackriseattacks;
+#endif
+static @TIME_TYPE@ probe_time;
+#define time probe_time
+#define _time probe_time
+#define CHECK(c) do {++checks;if(!(c)){fprintf(stderr,"rise check profile=%u line=%d: %s\n",obor_profile_build,__LINE__,#c);abort();}}while(0)
+static struct call {int kind,value,reset;entity state;} calls[64],saved_calls[64];
+static void record(int kind,int value,int reset) {
+ CHECK(used<64);calls[used].kind=kind;calls[used].value=value;calls[used].reset=reset;
+ if(kind!=1){memcpy(&calls[used].state,&actor,sizeof(actor));}
+ ++used;
+}
+static void equal_state(const entity *a,const entity *b) {
+ @EQUAL_FIELDS@
+}
+static int probe_validanim(entity *value,int id) {
+ CHECK(value==&actor);record(1,id,0);
+ if(gate_mode){CHECK(id==ANI_RISEATTACK);return (int)gate_valid;}
+ CHECK(id>=0 && id<16);return (availability&(1u<<id))!=0;
+}
+#define validanim(e,a) probe_validanim((e),(a))
+void common_attack_proc(void) {}
+void ent_set_anim(entity *value,@ANIM_ID_TYPE@ id,int reset) {
+ CHECK(value==&actor);record(2,(int)id,reset);value->animnum=id;
+}
+#if @HAS_BACK@
+int reset_backpain(entity *value) {
+ CHECK(value==&actor);record(3,0,0);value->inbackpain=0;return 1;
+}
+#endif
+unsigned int rand32(void) {++rng_calls;record(4,0,0);return sample;}
+void common_try_riseattack(void) {++rise_calls;record(5,0,0);}
+@ACTION@
+@BASELINE_ACTION@
+@GATE@
+@BASELINE_GATE@
+static void setup(int model,int back,unsigned mask,int mode) {
+ memset(&actor,0,sizeof(actor));used=rng_calls=rise_calls=0;availability=mask;gate_mode=(unsigned)mode;gate_valid=1;
+ actor.modeldata.riseattacktype=model;actor.drop=1;actor.idling=1;actor.nograb=1;actor.staydown.riseattack_stall=9;
+ @POINT_INIT@
+ @OPTIONAL_INIT@
+ (void)back;probe_time=10;sample=0;
+}
+static void same_run(int expected,int actual,const entity *state,unsigned count) {
+ CHECK(expected==actual);equal_state(state,&actor);CHECK(count==used);
+ for(unsigned i=0;i<used;++i) {
+  CHECK(saved_calls[i].kind==calls[i].kind && saved_calls[i].value==calls[i].value && saved_calls[i].reset==calls[i].reset);
+  if(calls[i].kind!=1)equal_state(&saved_calls[i].state,&calls[i].state);
+ }
+}
+static void compare_action(int type,int actual_type,int model,int back,unsigned mask,int reset) {
+ setup(model,back,mask,0);int expected=baseline_riseattack(&actor,type,reset);entity state;memcpy(&state,&actor,sizeof(state));
+ unsigned count=used;memcpy(saved_calls,calls,sizeof(calls));
+ setup(model,back,mask,0);int actual=set_riseattack(&actor,actual_type,reset);same_run(expected,actual,&state,count);
+}
+static void action_cases(void) {
+ unsigned masks[]={0,2,4,8,16,30};
+ for(int extended=0;extended<2;++extended) {
+  max_attack_types=MAX_ATKS+extended;CHECK(max_attack_types>0 && max_attack_types<=1024);
+  animriseattacks=calloc((size_t)max_attack_types,sizeof(*animriseattacks));CHECK(animriseattacks);
+#if @HAS_BACK@
+  animbackriseattacks=calloc((size_t)max_attack_types,sizeof(*animbackriseattacks));CHECK(animbackriseattacks);
+#endif
+  for(int i=0;i<max_attack_types;++i) {
+   animriseattacks[i]=(@ANIM_TYPE@)(1+(i&1));
+#if @HAS_BACK@
+   animbackriseattacks[i]=(@ANIM_TYPE@)(3+(i&1));
+#endif
+  }
+  for(int model=0;model<3;++model)for(int back=0;back<=@HAS_BACK@;++back)
+   for(unsigned m=0;m<sizeof(masks)/sizeof(*masks);++m)for(int reset=0;reset<2;++reset) {
+    compare_action(0,0,model,back,masks[m],reset);
+    compare_action(max_attack_types-1,max_attack_types-1,model,back,masks[m],reset);
+   }
+  int invalid[]={-1,INT_MIN,max_attack_types,INT_MAX};
+  for(unsigned i=0;i<sizeof(invalid)/sizeof(*invalid);++i)compare_action(0,invalid[i],1,0,30,1);
+  setup(1,0,30,0);CHECK(set_riseattack(NULL,0,0)==0 && !used);
+  @ANIM_TYPE@ *front=animriseattacks;animriseattacks=NULL;
+  CHECK(set_riseattack(&actor,0,0)==0 && !used);animriseattacks=front;
+  int count=max_attack_types;max_attack_types=0;CHECK(set_riseattack(&actor,0,0)==0 && !used);
+  max_attack_types=-1;CHECK(set_riseattack(&actor,0,0)==0 && !used);max_attack_types=count;
+#if @HAS_BACK@
+  @ANIM_TYPE@ *backtable=animbackriseattacks;animbackriseattacks=NULL;
+  setup(1,1,30,0);CHECK(set_riseattack(&actor,0,0)==0 && !used);
+  compare_action(0,0,1,0,30,1);animbackriseattacks=backtable;free(animbackriseattacks);animbackriseattacks=NULL;
+#endif
+  free(animriseattacks);animriseattacks=NULL;
+ }
+}
+static void setup_gate(uint64_t clock,uint64_t stall,unsigned random,int early,int health,int delayed) {
+ setup(1,0,30,1);probe_time=(@TIME_TYPE@)clock;actor.stalltime=stall;sample=random;
+ actor.drop=early==1?0:1;gate_valid=early!=2;@HEALTH@=health;actor.staydown.riseattack_stall=delayed?probe_time:0;
+}
+static void gate_cases(void) {
+ uint64_t clocks[]={0,1,10,UINT32_MAX,UINT64_MAX};unsigned samples[]={0,2,3,UINT_MAX};
+ for(unsigned c=0;c<5;++c)for(unsigned st=0;st<5;++st)for(unsigned rv=0;rv<4;++rv)
+  for(int early=0;early<3;++early)for(int health=0;health<2;++health)for(int delayed=0;delayed<2;++delayed) {
+   setup_gate(clocks[c],clocks[st],samples[rv],early,health,delayed);
+   @SPAN_TYPE@ span=actor.stalltime-probe_time+1;if(!span)continue;
+   int expected=baseline_lie();unsigned expected_rng=rng_calls,expected_rise=rise_calls,count=used;
+   entity state;memcpy(&state,&actor,sizeof(state));memcpy(saved_calls,calls,sizeof(calls));
+   setup_gate(clocks[c],clocks[st],samples[rv],early,health,delayed);
+   int actual=probe_lie();same_run(expected,actual,&state,count);CHECK(rng_calls==expected_rng && rise_calls==expected_rise);
+  }
+ for(unsigned rv=0;rv<4;++rv) {
+  setup_gate(1,0,samples[rv],0,1,0);CHECK(probe_lie()==0 && rng_calls==1 && rise_calls==0);
+  setup_gate(1,0,samples[rv],1,1,0);CHECK(probe_lie()==0 && !rng_calls && !rise_calls);
+ }
+}
+int main(void) {
+ unsigned profiles[]={@PROFILES@};
+ for(unsigned p=0;p<sizeof(profiles)/sizeof(*profiles);++p) {
+  obor_profile_build=profiles[p];
+#ifdef REFUSAL_ONLY
+  setup(1,0,30,0);max_attack_types=MAX_ATKS;
+  CHECK(set_riseattack(NULL,0,0)==0);
+#else
+  action_cases();gate_cases();
+#endif
+ }
+ printf("{\"status\":\"PASS\",\"profiles\":%zu,\"checks\":%u}\n",sizeof(profiles)/sizeof(*profiles),checks);return 0;
+}

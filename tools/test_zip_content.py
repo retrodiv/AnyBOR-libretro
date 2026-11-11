@@ -233,12 +233,14 @@ class LooseCasePathTests(unittest.TestCase):
             long_folder.mkdir(parents=True)
             (long_folder / 'Frame.GIF').write_bytes(b'authored')
             long_query = '/'.join(parts + ['Frame.GIF']).lower()
-            for engine in ('3400', '6391'):
+            for entry in pin['engines']:
+                engine = entry['build']
                 unit = ROOT / 'src/engines' / engine / 'source/gamelib/packfile.c'
-                body = function(unit.read_text(), 'casesearch')
+                body = function(unit.read_text(encoding='latin1'), 'casesearch')
                 source, binary = work / (engine + '.c'), work / engine
                 source.write_text(r'''
 #include <assert.h>
+#include <stdint.h>
 #include <dirent.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -246,10 +248,12 @@ class LooseCasePathTests(unittest.TestCase):
 #include <strings.h>
 #define PACKFILE_PATH_MAX 512
 #define stricmp strcasecmp
+uint32_t obor_profile_build;
 static void obor_profile_casesearch_assert(void) { abort(); }
 @FUNCTION@
 int main(int argc, char **argv) {
     assert(argc == 3);
+    obor_profile_build = (uint32_t)strtoul(argv[1], NULL, 10);
     char query[] = "assets/actors/player/frame.gif";
     char *path = casesearch(".", "leaf.gif");
     assert(path && !strcmp(path, "./Leaf.GIF"));
@@ -262,6 +266,15 @@ int main(int argc, char **argv) {
     assert(!memcmp(bytes, "authored", sizeof(bytes)) && !fclose(file));
     assert(casesearch(".", "assets/actors/missing/frame.gif") == NULL);
     assert(casesearch(".", argv[2]) == NULL);
+    char oversized[1024], nested_oversized[1034];
+    memset(oversized, 'Q', sizeof(oversized) - 1);
+    oversized[sizeof(oversized) - 1] = 0;
+    int length = snprintf(nested_oversized, sizeof(nested_oversized), "%s/leaf.gif", oversized);
+    assert(length > 0 && (size_t)length < sizeof(nested_oversized));
+    assert(casesearch(".", oversized) == NULL);
+    assert(casesearch(".", nested_oversized) == NULL);
+    assert(casesearch(NULL, "leaf.gif") == NULL);
+    assert(casesearch(".", NULL) == NULL);
     puts(argv[1]);
     return 0;
 }
@@ -273,8 +286,7 @@ int main(int argc, char **argv) {
                     str(source), '-o', str(binary)]
                 subprocess.run(command, check=True, timeout=45)
                 profiles = [row['build'] for row in pin['profiles']
-                            if row['engine'] == engine and
-                            (engine == '6391' or row['build'] == '3400')]
+                            if row['engine'] == engine]
                 self.assertTrue(profiles)
                 for profile in profiles:
                     with self.subTest(profile=profile, engine=engine):

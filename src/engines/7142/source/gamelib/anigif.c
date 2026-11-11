@@ -1,3 +1,15 @@
+/* AnyBOR modification record: 2026-10-06.
+ * Port maintained by retrodiv <retrodiv@proton.me>.
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> (original contributions).
+ * These contributions are licensed under BSD-3-Clause; see LICENSE at the root.
+ * Upstream code retains its original license and notices.
+ * Check GIF decoder storage and palette bounds while preserving the decoded
+ * pixels of valid images.
+ * Existing changes recorded here; this is not their implementation date.
+ * See MODIFICATIONS.md and docs/modifications/7142.md
+ * at the source repository root. Original notices follow below.
+ */
+
 /*
  * OpenBOR - http://www.chronocrash.com
  * -----------------------------------------------------------------------
@@ -15,6 +27,7 @@
 #include "types.h"
 #include "screen.h"
 #include "anigif.h"
+#include "obor_gif_memory.h"
 
 // Animated GIF player.
 
@@ -41,7 +54,7 @@ static void handle_gfx_control(anigif_info *info, int n)
 {
     int len;
     int skip;
-    unsigned char buf[4];
+    unsigned char buf[4] = {0};
 
     // Handle all contained blocks
     while((len = readbyte(info->info[n].handle)) != 0)
@@ -105,7 +118,7 @@ static int decodegifblock(anigif_info *info, gifblockstruct *gb, int n)
     short oldcode;
     short bitsleft;
     short blocksize;
-    int line = 0, lineb;
+    int64_t line = 0;
     int byte = gb->left;
     int pass = 0;
     int transparent = info->info[n].transparent;
@@ -150,7 +163,6 @@ static int decodegifblock(anigif_info *info, gifblockstruct *gb, int n)
     codesize2 = 1 << (codesize = bits + 1);
     oldcode = oldtoken = NO_CODE;
 
-    lineb = gb->top * width;
 
     // loop until something breaks
     for(;;)
@@ -158,7 +170,7 @@ static int decodegifblock(anigif_info *info, gifblockstruct *gb, int n)
         if(bitsleft == 8)
         {
             if(++p >= q && (((blocksize = readbyte(handle)) < 1) ||
-                            (q = (p = b) + readpackfile(handle, b, blocksize)) < (b + blocksize)))
+                            (q = obor_gif_read_block(handle, (p = b), blocksize)) < (b + blocksize)))
             {
                 return 1;	// Done
             }
@@ -173,7 +185,7 @@ static int decodegifblock(anigif_info *info, gifblockstruct *gb, int n)
         else
         {
             if(++p >= q && (((blocksize = readbyte(handle)) < 1) ||
-                            (q = (p = b) + readpackfile(handle, b, blocksize)) < (b + blocksize)))
+                            (q = obor_gif_read_block(handle, (p = b), blocksize)) < (b + blocksize)))
             {
                 return 1;	// Done
             }
@@ -186,7 +198,7 @@ static int decodegifblock(anigif_info *info, gifblockstruct *gb, int n)
             else
             {
                 if(++p >= q && (((blocksize = readbyte(handle)) < 1) ||
-                                (q = (p = b) + readpackfile(handle, b, blocksize)) < (b + blocksize)))
+                                (q = obor_gif_read_block(handle, (p = b), blocksize)) < (b + blocksize)))
                 {
                     return 1;	// Done
                 }
@@ -229,6 +241,7 @@ static int decodegifblock(anigif_info *info, gifblockstruct *gb, int n)
 
         while(thiscode >= bits2)
         {
+            if(thiscode >= nextcode || thiscode >= 4096 || u >= firstcodestack + 4096) return 0;
             *u++ = lastcodestack [thiscode];
             thiscode = codestack[thiscode];
         }
@@ -236,21 +249,11 @@ static int decodegifblock(anigif_info *info, gifblockstruct *gb, int n)
         oldtoken = thiscode;
         do
         {
-            if(byte < width && byte >= 0 && gb->top + line >= 0 && line < (height - gb->top) && thiscode != transparent)
+            if(byte < width && byte >= 0 && line >= -(int64_t)gb->top &&
+               line < (int64_t)height - gb->top && thiscode != transparent)
             {
-                switch(buf->pixelformat)
-                {
-                case PIXEL_8:
-                    ((unsigned char *)buf->data)[lineb + byte] = thiscode;
-                    break;
-                case PIXEL_16:
-                    ((unsigned short *)buf->data)[lineb + byte] = ((unsigned short *)pal)[thiscode & 0xff];
-                    break;
-                case PIXEL_32:
-                    ((unsigned *)buf->data)[lineb + byte] = ((unsigned *)pal)[thiscode & 0xff];
-                    //printf("%08x, %02x, %ld\n", ((unsigned*)buf->data)[lineb + byte], thiscode&0xff, info->handle);
-                    break;
-                }
+                size_t position = (size_t)(gb->top + line) * (size_t)width + (size_t)byte;
+                obor_gif_store_pixel(buf, pal, position, (unsigned char)thiscode);
             }
             byte++;
             if(byte >= gb->left + gb->width)
@@ -262,14 +265,13 @@ static int decodegifblock(anigif_info *info, gifblockstruct *gb, int n)
                     line += inctable[pass];
                     if(line >= gb->height)
                     {
-                        line = startable[++pass];
+                        { if(pass >= 4) return 0; line = startable[++pass]; }
                     }
                 }
                 else
                 {
-                    ++line;
+                    { if(line == INT64_MAX) return 0; ++line; }
                 }
-                lineb = width * (gb->top + line);
             }
             if (u <= firstcodestack)
             {
@@ -295,8 +297,17 @@ static int decodegifblock(anigif_info *info, gifblockstruct *gb, int n)
 }
 
 
+static void obor_gif_release_screen(void *slot)
+{
+    s_screen *screen;
+    memcpy(&screen, slot, sizeof(screen));
+    freescreen(&screen);
+    memcpy(slot, &screen, sizeof(screen));
+}
+
 void anigif_close(anigif_info *info)
 {
+    if(!info) return;
     int i;
     for(i = 0; i < 3; i++)
     {
@@ -317,20 +328,20 @@ void anigif_close(anigif_info *info)
         }
         if(info->gifbuffer[i])
         {
-            freescreen(&info->gifbuffer[i]);
+            obor_gif_release_screen(&info->gifbuffer[i]);
         }
 
     }
     if(info->backbuffer)
     {
-        freescreen(&info->backbuffer);
+        obor_gif_release_screen(&info->backbuffer);
     }
 }
 
 static int test_anigif_open(anigif_info *info, char *tname, char *packfilename, int n)
 {
     int i, j;
-    unsigned char tpal[1024];
+    unsigned char tpal[1024] = {0};
     unsigned char *pal;
     if(
         (info->info[n].handle = openpackfile(tname, packfilename)) == -1 ||
@@ -367,6 +378,7 @@ static int test_anigif_open(anigif_info *info, char *tname, char *packfilename, 
     if(info->info[n].gif_header.flags & 0x80)
     {
         pal = info->info[n].global_pal = calloc(1, PAL_BYTES);
+        if(!pal) { anigif_close(info); return 0; }
 
         if(readpackfile(info->info[n].handle, tpal, info->info[n].numcolours * 3) != info->info[n].numcolours * 3)
         {
@@ -385,13 +397,13 @@ static int test_anigif_open(anigif_info *info, char *tname, char *packfilename, 
         case 1024:
             for(i = 0, j = 0; i < 1024; i += 4, j += 3)
             {
-                *(unsigned *)(pal + i) = colour32(tpal[j], tpal[j + 1], tpal[j + 2]);
+                { unsigned int obor_color_value = colour32(tpal[j], tpal[j + 1], tpal[j + 2]); memcpy(pal + i, &obor_color_value, sizeof(obor_color_value)); }
             }
             break;
         case 512:
             for(i = 0, j = 0; i < 512; i += 2, j += 3)
             {
-                *(unsigned short *)(pal + i) = colour16(tpal[j], tpal[j + 1], tpal[j + 2]);
+                { unsigned short obor_color_value = colour16(tpal[j], tpal[j + 1], tpal[j + 2]); memcpy(pal + i, &obor_color_value, sizeof(obor_color_value)); }
             }
             break;
         }
@@ -404,18 +416,25 @@ static int test_anigif_open(anigif_info *info, char *tname, char *packfilename, 
 // Returns true on success
 int anigif_open(char *filename, char *packfilename, anigif_info *info)
 {
+    if(!info) return 0;
     char tname[256] = {""};
     int i;
 
     memset(info, 0, sizeof(anigif_info));
-    info->isRGB = (pixelformat == PIXEL_x8);
-    strcpy(tname, filename);
-    if(stricmp(tname + strlen(tname) - 4, ".gif") == 0)
+    for(i = 0; i < 3; i++)
     {
-        tname[strlen(tname) - 4] = 0;
+        info->info[i].handle = -1;
+        info->info[i].transparent = -1;
     }
-
-    strcat(tname, "_.gif");
+    info->isRGB = (pixelformat == PIXEL_x8);
+    if(!filename) return 0;
+    size_t name_length = strnlen(filename, sizeof(tname));
+    if(name_length >= sizeof(tname)) return 0;
+    if(name_length >= 4 && !stricmp(filename + name_length - 4, ".gif"))
+        name_length -= 4;
+    if(name_length > sizeof(tname) - sizeof("_.gif")) return 0;
+    memcpy(tname, filename, name_length);
+    memcpy(tname + name_length, "_.gif", sizeof("_.gif"));
 
     if(info->isRGB)
     {
@@ -436,11 +455,7 @@ int anigif_open(char *filename, char *packfilename, anigif_info *info)
         }
     }
 
-    for(i = 0; i < 3; i++)
-    {
-        info->info[i].handle = -1;
-        info->info[i].transparent = -1;
-    }
+    
 
     if(info->isRGB)
     {
@@ -471,11 +486,13 @@ int anigif_open(char *filename, char *packfilename, anigif_info *info)
     if(info->isRGB)
     {
         info->backbuffer = allocscreen(info->info[0].gif_header.screenwidth, info->info[0].gif_header.screenheight, PIXEL_32);
+        if(!info->backbuffer) { anigif_close(info); return 0; }
         clearscreen(info->backbuffer);
     }
     for(i = info->isRGB ? 2 : 0; i >= 0; i--)
     {
         info->gifbuffer[i] = allocscreen(info->info[0].gif_header.screenwidth, info->info[0].gif_header.screenheight, PIXEL_32);
+        if(!info->gifbuffer[i]) { anigif_close(info); return 0; }
         clearscreen(info->gifbuffer[i]);
     }
     info->frame = -1;
@@ -486,9 +503,10 @@ int anigif_open(char *filename, char *packfilename, anigif_info *info)
 // Returns type of action to take (frame, retry, end)
 int anigif_decode(anigif_info *info, int n)
 {
+    if(!info || n < 0 || n >= 3) return ANIGIF_DECODE_END;
 
     gifblockstruct iblock;
-    unsigned char tpal[1024];
+    unsigned char tpal[1024] = {0};
     unsigned char *pal;
     unsigned char c;
     int i, j, numcolours;
@@ -515,6 +533,7 @@ int anigif_decode(anigif_info *info, int n)
                 info->info[n].local_pal = calloc(1, PAL_BYTES);
             }
             pal = info->info[n].local_pal;
+            if(!pal) goto decode_end;
             numcolours = 1 << ((iblock.flags & 7) + 1);
             if(readpackfile(info->info[n].handle, tpal, numcolours * 3) != numcolours * 3)
             {
@@ -532,13 +551,13 @@ int anigif_decode(anigif_info *info, int n)
             case 1024:
                 for(i = 0, j = 0; i < 1024; i += 4, j += 3)
                 {
-                    *(unsigned *)(pal + i) = colour32(tpal[j], tpal[j + 1], tpal[j + 2]);
+                    { unsigned int obor_color_value = colour32(tpal[j], tpal[j + 1], tpal[j + 2]); memcpy(pal + i, &obor_color_value, sizeof(obor_color_value)); }
                 }
                 break;
             case 512:
                 for(i = 0, j = 0; i < 512; i += 2, j += 3)
                 {
-                    *(unsigned short *)(pal + i) = colour16(tpal[j], tpal[j + 1], tpal[j + 2]);
+                    { unsigned short obor_color_value = colour16(tpal[j], tpal[j + 1], tpal[j + 2]); memcpy(pal + i, &obor_color_value, sizeof(obor_color_value)); }
                     //printf("%d*", *(unsigned short*)(pal+i));
                 }
                 break;
@@ -584,8 +603,12 @@ decode_end:
 static void anigif_updatebuffer(anigif_info *info)
 {
     s_screen *backbuffer = info->backbuffer;
-    s_screen **gifbuffer = info->gifbuffer;
-    int i, l = backbuffer->width * backbuffer->height;
+    s_screen *gifbuffer[3];
+    memcpy(gifbuffer, info->gifbuffer, sizeof(gifbuffer));
+    size_t i, l;
+    if(!backbuffer || backbuffer->width <= 0 || backbuffer->height <= 0 ||
+       !gifbuffer[0] || !gifbuffer[1] || !gifbuffer[2]) return;
+    l = (size_t)backbuffer->width * (size_t)backbuffer->height;
     unsigned int *ps32, *ppr32, *ppg32, *ppb32;
 
     ps32 = (unsigned int *)(backbuffer->data);
@@ -602,6 +625,7 @@ static void anigif_updatebuffer(anigif_info *info)
 
 int anigif_decode_frame(anigif_info *info)
 {
+    if(!info) return 1;
     int n, num = info->isRGB ? 3 : 1;
     if(!info->done)
     {
@@ -633,6 +657,7 @@ int anigif_decode_frame(anigif_info *info)
 
 s_screen *anigif_getbuffer(anigif_info *info)
 {
+    if(!info) return NULL;
     s_screen *buffer = info->isRGB ? info->backbuffer : info->gifbuffer[0];
     if(buffer)
     {

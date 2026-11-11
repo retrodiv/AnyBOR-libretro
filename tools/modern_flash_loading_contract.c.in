@@ -71,6 +71,9 @@ static void load_value(s_model *newchar, int cmd, const char *text, int mode)
         default: abort();
     }
 }
+/* This reduced property probe supplies only valid native attack handles.
+ * Refuse an unexpected null; full callback error routes have separate tests. */
+#define OBOR_ATTACK_REQUIRE_HANDLE() do {if(!handle) abort();} while(0)
 @ARG_VALUE@
 static void legacy_attack_set(s_attack *handle, int property, ScriptVariant *value)
 {

@@ -1660,7 +1660,7 @@ HRESULT openbor_set_entity_property(ScriptVariant **varlist, ScriptVariant **pre
 
 		case _ENTITY_ENTVAR_COLLECTION:
 
-			handle->varlist = (Varlist *)varlist[ARG_VALUE]->ptrVal;
+			obor_entity_varlist_set(handle, varlist[ARG_VALUE]->ptrVal);
 
 			break;
 

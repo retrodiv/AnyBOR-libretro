@@ -77,6 +77,9 @@ static int probe_printf(const char *format,...) {va_list ap;va_start(ap,format);
 uint32_t obor_profile_build;
 static char *cache[8];
 CHAR *StrCache_Get(int index) {assert(index>=0 && index<8 && cache[index]);return cache[index];}
+CHAR *StrCache_GetIfPresent(int index) {
+    return index >= 0 && index < 8 ? cache[index] : NULL;
+}
 void StrCache_Collect(int index) {(void)index;}
 int StrCache_Pop(void) {abort();}
 @PIECES@

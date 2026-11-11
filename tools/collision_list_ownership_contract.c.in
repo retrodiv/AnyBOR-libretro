@@ -1,0 +1,143 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ * Native allocation blocks, list constructors and complete free_frames.
+ * Other cleanup services must remain uncalled; the engine arena/frontend are
+ * outside this component control.
+ */
+#include <stddef.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <setjmp.h>
+#pragma GCC diagnostic ignored "-Wignored-qualifiers"
+#if defined(__clang__)
+#pragma GCC diagnostic ignored "-Wdeprecated-non-prototype"
+#endif
+#include "openbor.h"
+#undef printf
+/* Observe allocations independently of the header's safealloc wrappers. */
+#undef malloc
+#undef calloc
+#undef free
+#define CHECK(value) do { if(!(value)) { fprintf(stderr, "owner check: %s\n", #value); abort(); } } while(0)
+#if OBOR_ENGINE_BUILD <= 4432
+HRESULT Interpreter_Call(Interpreter *p) { (void)p; abort(); }
+HRESULT Interpreter_EvalInstruction(Interpreter *p) { (void)p; abort(); }
+#endif
+void exitIfFalse(int value, const char *expression, const char *func, const char *file, int line)
+{
+    (void)func; (void)file; (void)line;
+    if(!value) { fprintf(stderr, "native check: %s\n", expression); abort(); }
+}
+uint32_t obor_profile_build;
+int max_collisons;
+@BORROWED_DECL@
+static struct allocation {
+    void *pointer;
+    size_t bytes;
+    int live, preserve;
+    unsigned char payload[128];
+} owned[1024];
+static unsigned allocated, owned_live, attempts, refuse_attempt, stop_calls, checks;
+static s_anim fault_animation;
+static s_anim *active_animation;
+static jmp_buf stopped;
+void free_frames(s_anim *animation);
+
+static struct allocation *allocation(void *pointer)
+{
+    for(unsigned i = 0; i < allocated; ++i)
+        if(owned[i].live && owned[i].pointer == pointer) return &owned[i];
+    return NULL;
+}
+static void reset_owner(void)
+{
+    CHECK(owned_live == 0);
+    memset(owned, 0, sizeof(owned));
+    allocated = attempts = refuse_attempt = stop_calls = 0;
+}
+static void *allocate_owned(size_t bytes, int clear)
+{
+    void *pointer;
+    ++attempts;
+    if(refuse_attempt == attempts) return NULL;
+    CHECK(allocated < sizeof(owned) / sizeof(*owned));
+    pointer = malloc(bytes);
+    CHECK(pointer != NULL);
+    memset(pointer, clear ? 0 : 0xa5, bytes);
+    owned[allocated++] = (struct allocation){.pointer=pointer, .bytes=bytes, .live=1};
+    ++owned_live;
+    return pointer;
+}
+static void *owned_malloc(size_t bytes) { return allocate_owned(bytes, 0); }
+static void *owned_calloc(size_t count, size_t bytes)
+{
+    CHECK(!count || bytes <= SIZE_MAX / count);
+    return allocate_owned(count * bytes, 1);
+}
+static void preserve_payload(void *pointer)
+{
+    struct allocation *entry = allocation(pointer);
+    CHECK(entry != NULL && entry->bytes <= sizeof(entry->payload));
+    memcpy(entry->payload, pointer, entry->bytes);
+    entry->preserve = 1;
+}
+static void owned_free(void *pointer)
+{
+    struct allocation *entry;
+    if(!pointer) return;
+    entry = allocation(pointer);
+    CHECK(entry != NULL);
+    if(entry->preserve) CHECK(memcmp(pointer, entry->payload, entry->bytes) == 0);
+    entry->live = 0;
+    --owned_live;
+    free(pointer);
+}
+static void observed_stop(int status, const char *message, ...)
+{
+    CHECK(status == 1 && message && active_animation != NULL);
+    CHECK(++stop_calls == 1);
+    free_frames(active_animation);
+    longjmp(stopped, 1);
+}
+
+#define malloc owned_malloc
+#define calloc owned_calloc
+#define free owned_free
+#undef @SHUTDOWN@
+#define @SHUTDOWN@ observed_stop
+/* These independently represented families are absent from this fixture. */
+#define child_spawn_free_list(...) abort()
+#define collision_attack_free_list(...) abort()
+#define collision_body_free_list(...) abort()
+@CONSTRUCTORS@
+@RELEASE@
+@ALLOCATIONS@
+@FIXTURES@
+
+int main(void)
+{
+    static const unsigned profiles[] = {@PROFILES@};
+    static const int counts[] = {@COUNTS@};
+    for(unsigned p = 0; p < sizeof(profiles) / sizeof(*profiles); ++p)
+    {
+        obor_profile_build = profiles[p];
+        for(unsigned c = 0; c < sizeof(counts) / sizeof(*counts); ++c)
+        for(int partial = 0; partial < 3; ++partial)
+        {
+            reset_owner();
+            max_collisons = counts[c];
+@CHECKS@
+        }
+        for(unsigned attempt = 1; attempt <= 3; ++attempt)
+        {
+            reset_owner();
+            max_collisons = 2;
+@REFUSALS@
+        }
+    }
+    printf("{\"status\":\"PASS\",\"profiles\":%zu,\"checks\":%u}\n",
+           sizeof(profiles) / sizeof(*profiles), checks);
+    return 0;
+}

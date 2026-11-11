@@ -1,0 +1,68 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ * Complete native message formatters; the output callback is bounded.
+ * Whole logging, parser recovery and script execution remain separate.
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdarg.h>
+#include <string.h>
+#include "pp_parser.h"
+#undef printf
+#define CAPACITY @CAPACITY@
+#define CHECK(c) do { if(!(c)) { fprintf(stderr, "Preprocessor message check: %s at %d\n", #c, __LINE__); abort(); } } while(0)
+uint32_t obor_profile_build;
+static pp_parser parser;
+static char observed[CAPACITY];
+static unsigned calls;
+static int warning_mode;
+void pp_message(pp_parser *self, char *message_type, char *message)
+{
+    CHECK(self == &parser && !calls);
+    CHECK(!strcmp(message_type, warning_mode ? "warning" : "error"));
+    CHECK(memchr(message, 0, CAPACITY));
+    memcpy(observed, message, strlen(message) + 1); ++calls;
+}
+@ERROR@
+@WARNING@
+
+int main(void)
+{
+    static const unsigned profiles[] = {@PROFILES@};
+    static const size_t lengths[] = {0, 1, CAPACITY - 2, CAPACITY - 1, CAPACITY, CAPACITY * 2};
+    char source[CAPACITY * 2 + 1], oracle[CAPACITY * 2 + 64];
+    unsigned cases = 0;
+    for(unsigned p = 0; p < sizeof(profiles) / sizeof(*profiles); ++p)
+    for(unsigned n = 0; n < sizeof(lengths) / sizeof(*lengths); ++n)
+    for(unsigned form = 0; form < 2; ++form)
+    for(warning_mode = 0; warning_mode < 2; ++warning_mode)
+    {
+        obor_profile_build = profiles[p];
+        memset(&parser, 0, sizeof(parser));
+        pp_parser expected_parser; memcpy(&expected_parser, &parser, sizeof(parser));
+        memset(source, 'x', lengths[n]); source[lengths[n]] = 0;
+        if(lengths[n] > 1) source[1] = '%';
+        int written = form ? snprintf(oracle, sizeof(oracle), "prefix:%s:%u", source, 123u)
+                           : snprintf(oracle, sizeof(oracle), "%s", source);
+        CHECK(written >= 0 && (size_t)written < sizeof(oracle));
+        oracle[CAPACITY - 1] = 0;
+        calls = 0; observed[0] = 0;
+        if(warning_mode)
+        {
+            if(form) pp_warning(&parser, "prefix:%s:%u", source, 123u);
+            else pp_warning(&parser, "%s", source);
+        }
+        else
+        {
+            int result = form ? pp_error(&parser, "prefix:%s:%u", source, 123u)
+                              : pp_error(&parser, "%s", source);
+            CHECK(result == E_FAIL);
+        }
+        CHECK(calls == 1 && !strcmp(observed, oracle));
+        CHECK(!memcmp(&parser, &expected_parser, sizeof(parser))); ++cases;
+    }
+    printf("{\"status\":\"PASS\",\"profiles\":%zu,\"cases\":%u}\n",
+           sizeof(profiles) / sizeof(*profiles), cases);
+    return 0;
+}

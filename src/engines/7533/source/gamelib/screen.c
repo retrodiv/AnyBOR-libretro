@@ -66,11 +66,12 @@ s_screen *allocscreen(int width, int height, int pixelformat)
 
 void freescreen(s_screen **screen)
 {
-    if((*screen) != NULL)
-    {
-        free((*screen));
-    }
-    (*screen) = NULL;
+    s_screen *owned;
+    if(!screen) return;
+    memcpy(&owned, (const void *)screen, sizeof(owned));
+    if(owned) free(owned);
+    owned = NULL;
+    memcpy((void *)screen, &owned, sizeof(owned));
 }
 
 // Screen copy func. Supports clipping.
@@ -673,45 +674,64 @@ void scalescreen(s_screen *dest, s_screen *src)
  *     scalex - x scale factor
  *     scaley - y scale factor
  */
+#include <stddef.h>
+#include <stdint.h>
+#include "obor_resources.h"
+
+static int obor_zoom_storage(const s_screen *screen, size_t *length)
+{
+    size_t bytes=obor_allocation_size(screen), start=offsetof(s_screen,data);
+    unsigned count;
+    if(bytes < start || screen->magic != screen_magic || screen->width <= 0 || screen->height <= 0) return 0;
+    switch(screen->pixelformat) {
+        case PIXEL_8: case PIXEL_x8: count=1; break;
+        case PIXEL_16: count=2; break;
+        case PIXEL_32: count=4; break;
+        default: return 0;
+    }
+    if((size_t)screen->width > SIZE_MAX/count/(size_t)screen->height) return 0;
+    *length=(size_t)screen->width*(size_t)screen->height*count;
+    return *length <= bytes-start;
+}
+
 void zoomscreen(s_screen *dest, s_screen *src, int centerx, int centery, int scalex, int scaley)
 {
-    s_screen *frame;
-    int screenwidth = src->width;
-    int screenheight = src->height;
-    int width = (screenwidth << 8) / scalex; // width of clipped, unscaled screen
-    int height = (screenheight << 8) / scaley; // height of clipped, unscaled screen
-    int xmin = (width >> 1) - centerx; // x coord before clipping corresponding to x=0 after clipping
-    int ymin = (height >> 1) - centery; // y coord before clipping corresponding to y=0 after clipping
-    int pixelformat = dest->pixelformat;
-
-    if(src->pixelformat != pixelformat)
-    {
-        return;
+    size_t source_bytes,dest_bytes;
+    int64_t width,height,xmin,ymin;
+    uint64_t xstep,ystep;
+    unsigned count;
+    const unsigned char *source;
+    unsigned char *copy=NULL;
+    if(scalex <= 0 || scaley <= 0 || !obor_zoom_storage(src,&source_bytes) ||
+       !obor_zoom_storage(dest,&dest_bytes) || src->pixelformat != dest->pixelformat) return;
+    width=((int64_t)src->width*256)/scalex;
+    height=((int64_t)src->height*256)/scaley;
+    if(width <= 0 || height <= 0) return;
+    xmin=width/2-centerx; ymin=height/2-centery;
+    if(xmin >= src->width || xmin+((width*scalex)/256) < 0 || ymin >= src->height) return;
+    count=src->pixelformat==PIXEL_16?2:src->pixelformat==PIXEL_32?4:1;
+    width &= ~INT64_C(3); /* Native allocscreen rounds its crop width down. */
+    if(width <= 0) return;
+    xstep=((uint64_t)width*65536)/(unsigned)dest->width;
+    ystep=((uint64_t)height*65536)/(unsigned)dest->height;
+    source=src->data;
+    if(src==dest) {
+        copy=malloc(source_bytes);
+        if(!copy) return;
+        memcpy(copy,source,source_bytes);source=copy;
     }
-    if(xmin >= screenwidth || xmin + ((width * scalex) >> 8) < 0)
-    {
-        return;    // out of left or right border
+    for(int y=0;y<dest->height;++y) {
+        int64_t fy=(int64_t)(((uint64_t)(unsigned)y*ystep)/65536);
+        int64_t sy=fy-ymin;
+        for(int x=0;x<dest->width;++x) {
+            int64_t fx=(int64_t)(((uint64_t)(unsigned)x*xstep)/65536);
+            int64_t sx=fx-xmin;
+            unsigned char *pixel=dest->data+((size_t)y*(size_t)dest->width+(size_t)x)*count;
+            if((!useclip || (fx >= clipx1 && fx < clipx2 && fy >= clipy1 && fy < clipy2)) &&
+               sx >= 0 && sx < src->width && sy >= 0 && sy < src->height)
+                memcpy(pixel,source+((size_t)sy*(size_t)src->width+(size_t)sx)*count,count);
+            else memset(pixel,0,count); /* Define only originally unassigned crop bytes. */
+        }
     }
-    if(ymin >= screenheight)
-    {
-        return;
-    }
-
-    frame = allocscreen(width, height, pixelformat); // the part of the screen that will be zoomed
-    copyscreen_o(frame, src, xmin, ymin);
-
-    if(pixelbytes[pixelformat] == 1)
-    {
-        scalescreen(dest, frame);
-    }
-    else if(pixelbytes[pixelformat] == 2)
-    {
-        scalescreen16(dest, frame);
-    }
-    else if(pixelbytes[pixelformat] == 4)
-    {
-        scalescreen32(dest, frame);
-    }
-
-    freescreen(&frame);
+    free(copy);
 }

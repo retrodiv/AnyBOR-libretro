@@ -1,0 +1,2060 @@
+{
+  "schema": 1,
+  "scope": "Native pre-delta functions; only originally defined valid calls execute these controls. Own-profile original sources are reviewed separately.",
+  "engines": {
+    "3400": {
+      "getter": "HRESULT openbor_getplayerproperty(ScriptVariant** varlist , ScriptVariant** pretvar, int paramCount)\n{\n\tLONG ltemp;\n\tint index;\n\tentity* ent = NULL;\n\tint prop = -1;\n\tScriptVariant* arg = NULL;\n\n\tif(paramCount < 2)\n\t{\n\t\t*pretvar = NULL;\n\t\treturn E_FAIL;\n\t}\n\n\tmapstrings_getplayerproperty(varlist, paramCount);\n\tScriptVariant_Clear(*pretvar);\n\n\targ = varlist[0];\n\tif(FAILED(ScriptVariant_IntegerValue(arg, &ltemp)))\n\t{\n\t\tindex = 0;\n\t} else index = (int)ltemp;\n\tif(!(ent = player[index].ent))  //this player is not selected, so just return\n\t{\n\t\treturn S_OK; //return S_OK, to tell the engine it is not a FATAL error\n\t}\n\n\targ = varlist[1];\n\tif(arg->vt!=VT_INTEGER)\n\t{\n\t\tif(arg->vt!=VT_STR)\n\t\t\tprintf(\"Function call getplayerproperty has invalid propery name parameter, it must be a string value.\\n\");\n\t\t*pretvar = NULL;\n\t\treturn E_FAIL;\n\t}\n\tprop = arg->lVal;\n\n\t//change the model\n\tswitch(prop)\n\t{\n\tcase _gpp_ent:\n\tcase _gpp_entity:\n\t{\n\t\tScriptVariant_ChangeType(*pretvar, VT_PTR);\n\t\t(*pretvar)->ptrVal = (VOID*)ent;\n\t\tbreak;\n\t}\n\tcase _gpp_name:\n\t{\n\t\tScriptVariant_ChangeType(*pretvar, VT_STR);\n\t\tstrncpy(StrCache_Get((*pretvar)->strVal), (char*)player[index].name, MAX_STR_VAR_LEN);\n\t\tbreak;\n\t}\n\tcase _gpp_score:\n\t{\n\t\tScriptVariant_ChangeType(*pretvar, VT_INTEGER);\n\t\t(*pretvar)->lVal = (LONG)player[index].score;\n\t\tbreak;\n\t}\n\tcase _gpp_lives:\n\t{\n\t\tScriptVariant_ChangeType(*pretvar, VT_INTEGER);\n\t\t(*pretvar)->lVal = (LONG)player[index].lives;\n\t\tbreak;\n\t}\n\tcase _gpp_playkeys:\n\t{\n\t\tScriptVariant_ChangeType(*pretvar, VT_INTEGER);\n\t\t(*pretvar)->lVal = (LONG)player[index].playkeys;\n\t\tbreak;\n\t}\n\tcase _gpp_keys:\n\t{\n\t\tScriptVariant_ChangeType(*pretvar, VT_INTEGER);\n\t\t(*pretvar)->lVal = (LONG)player[index].keys;\n\t\tbreak;\n\t}\n\tcase _gpp_credits:\n\t{\n\t\tScriptVariant_ChangeType(*pretvar, VT_INTEGER);\n\t\tif(noshare) (*pretvar)->lVal = (LONG)player[index].credits;\n\t\telse        (*pretvar)->lVal = credits;\n\t\tbreak;\n\t}\n\tcase _gpp_weaponum:\n\t{\n\t\tScriptVariant_ChangeType(*pretvar, VT_INTEGER);\n\t\t(*pretvar)->lVal = (LONG)player[index].weapnum;\n\t\tbreak;\n\t}\n\t//this property is not known\n\t//default:{\n\t//  .....\n\t//}\n\t}\n\treturn S_OK;\n}\n",
+      "setter": "HRESULT openbor_changeplayerproperty(ScriptVariant** varlist , ScriptVariant** pretvar, int paramCount)\n{\n\tLONG ltemp, ltemp2;\n\tint index;\n\tentity* ent = NULL;\n\tint prop = -1;\n\tchar* tempstr = NULL;\n\tScriptVariant* arg = NULL;\n\n\tif(paramCount < 3)\n\t{\n\t\t*pretvar = NULL;\n\t\treturn E_FAIL;\n\t}\n\n\tmapstrings_changeplayerproperty(varlist, paramCount);\n\tScriptVariant_ChangeType(*pretvar, VT_INTEGER);\n\t(*pretvar)->lVal = (LONG)1;\n\targ = varlist[0];\n\tif(FAILED(ScriptVariant_IntegerValue(arg, &ltemp)))\n\t{\n\t\tindex = 0;\n\t} else index = (int)ltemp;\n\n\tif(!(ent = player[index].ent))  //this player is not selected, so just return\n\t{\n\t\treturn S_OK; //return S_OK, to tell the engine it is not a FATAL error\n\t}\n\n\tif(varlist[1]->vt != VT_INTEGER)\n\t{\n\t\tif(varlist[1]->vt != VT_STR)\n\t\t\tprintf(\"You must give a string value for player property name.\\n\");\n\t\treturn E_FAIL;\n\t}\n\tprop = varlist[1]->lVal;\n\n\targ = varlist[2];\n\n\t//change the model\n\tswitch(prop)\n\t{\n\tcase _cpp_weapon:\n\t{\n\t\tif(SUCCEEDED(ScriptVariant_IntegerValue(arg,&ltemp))){\n\t\t\tif(paramCount > 3)\n\t\t\t{\n\t\t\t\targ = varlist[3];\n\t\t\t\tif(SUCCEEDED(ScriptVariant_IntegerValue(arg, &ltemp2)))\n\t\t\t\t\t(*pretvar)->lVal = (LONG)1;\n\t\t\t}\n\t\t\telse\n\t\t\t{\n\t\t\t\tltemp2 = (LONG)0;\n\t\t\t\t(*pretvar)->lVal = (LONG)1;\n\t\t\t}\n\t\t\tset_weapon(player[index].ent, (int)ltemp, (int)ltemp2);\n\t\t\t(*pretvar)->lVal = (LONG)1;\n\t\t}\n\t\telse (*pretvar)->lVal = (LONG)0;\n\t\tbreak;\n\t}\n\tcase _cpp_name:\n\t{\n\t\tif(arg->vt != VT_STR)\n\t\t{\n\t\t\t//printf();\n\t\t\treturn E_FAIL;\n\t\t}\n\t\ttempstr = (char*)StrCache_Get(arg->strVal);\n\t\tstrcpy(player[index].name, tempstr);\n\t\t(*pretvar)->lVal = (LONG)1;\n\t\tbreak;\n\t}\n\tcase _cpp_score:\n\t{\n\t\tif(SUCCEEDED(ScriptVariant_IntegerValue(arg,&ltemp)))\n\t\t{\n\t\t\tif(ltemp < 0) ltemp = 0;\n\t\t\telse if(ltemp > 999999999) ltemp = 999999999;\n\t\t\tplayer[index].score = (unsigned int)ltemp;\n\t\t}\n\t\telse (*pretvar)->lVal = (LONG)0;\n\t\tbreak;\n\t}\n\tcase _cpp_lives:\n\t{\n\t\tif(SUCCEEDED(ScriptVariant_IntegerValue(arg,&ltemp)))\n\t\t\tplayer[index].lives = (int)ltemp;\n\t\telse (*pretvar)->lVal = (LONG)0;\n\t\tbreak;\n\t}\n\tcase _cpp_playkeys:\n\t{\n\t\tif(SUCCEEDED(ScriptVariant_IntegerValue(arg,&ltemp)))\n\t\t\tplayer[index].playkeys = (int)ltemp;\n\t\telse (*pretvar)->lVal = (LONG)0;\n\t\tbreak;\n\t}\n\tcase _cpp_credits:\n\t{\n\t\tif(SUCCEEDED(ScriptVariant_IntegerValue(arg,&ltemp)))\n\t\t{\n\t\t   \tif(noshare) player[index].credits = (int)ltemp;\n\t\t\telse        credits = (int)ltemp;\n\t\t}\n\t\telse (*pretvar)->lVal = (LONG)0;\n\t\tbreak;\n\t}\n\t//this property is not known, so return 0\n\t//default:\n\t//    (*pretvar)->lVal = (LONG)0;\n\t}\n\n\treturn S_OK;\n}\n"
+    },
+    "3741": {
+      "getter": "HRESULT openbor_getplayerproperty(ScriptVariant** varlist , ScriptVariant** pretvar, int paramCount)\n{\n\tLONG ltemp;\n\tint index;\n\tentity* ent = NULL;\n\tint prop = -1;\n\tScriptVariant* arg = NULL;\n\n\tif(paramCount < 2)\n\t{\n\t\t*pretvar = NULL;\n\t\treturn E_FAIL;\n\t}\n\n\tmapstrings_getplayerproperty(varlist, paramCount);\n\tScriptVariant_Clear(*pretvar);\n\n\targ = varlist[0];\n\tif(FAILED(ScriptVariant_IntegerValue(arg, &ltemp)))\n\t{\n\t\tindex = 0;\n\t} else index = (int)ltemp;\n\n\n\tent = player[index].ent;\n    if(obor_profile_build < 3682 && !ent) return S_OK;\n\n\targ = varlist[1];\n\tif(arg->vt!=VT_INTEGER)\n\t{\n\t\tif(arg->vt!=VT_STR)\n\t\t\tprintf(\"Function call getplayerproperty has invalid propery name parameter, it must be a string value.\\n\");\n\t\t*pretvar = NULL;\n\t\treturn E_FAIL;\n\t}\n\tprop = obor_player_get_property_native(arg->lVal);\n\n\tswitch(prop)\n\t{\n\tcase _pp_ent:\n\tcase _pp_entity:\n\t{\n\t\tif(!ent) ScriptVariant_Clear(*pretvar); // player not spawned\n\t\telse {\n\t\t\tScriptVariant_ChangeType(*pretvar, VT_PTR);\n\t\t\t(*pretvar)->ptrVal = (VOID*)ent;\n\t\t}\n\t\tbreak;\n\t}\n\tcase _pp_name:\n\t{\n\t\tScriptVariant_ChangeType(*pretvar, VT_STR);\n\t\tstrncpy(StrCache_Get((*pretvar)->strVal), (char*)player[index].name, MAX_STR_VAR_LEN);\n\t\tbreak;\n\t}\n\tcase _pp_colourmap:\n\t{\n\t\tScriptVariant_ChangeType(*pretvar, VT_INTEGER);\n\t\t(*pretvar)->lVal = (LONG)player[index].colourmap;\n\t\tbreak;\n\t}\n\tcase _pp_score:\n\t{\n\t\tScriptVariant_ChangeType(*pretvar, VT_INTEGER);\n\t\t(*pretvar)->lVal = (LONG)player[index].score;\n\t\tbreak;\n\t}\n\tcase _pp_lives:\n\t{\n\t\tScriptVariant_ChangeType(*pretvar, VT_INTEGER);\n\t\t(*pretvar)->lVal = (LONG)player[index].lives;\n\t\tbreak;\n\t}\n\tcase _pp_playkeys:\n\t{\n\t\tScriptVariant_ChangeType(*pretvar, VT_INTEGER);\n\t\t(*pretvar)->lVal = (LONG)player[index].playkeys;\n\t\tbreak;\n\t}\n\tcase _pp_keys:\n\t{\n\t\tScriptVariant_ChangeType(*pretvar, VT_INTEGER);\n\t\t(*pretvar)->lVal = (LONG)player[index].keys;\n\t\tbreak;\n\t}\n\tcase _pp_credits:\n\t{\n\t\tScriptVariant_ChangeType(*pretvar, VT_INTEGER);\n\t\tif(noshare) (*pretvar)->lVal = (LONG)player[index].credits;\n\t\telse        (*pretvar)->lVal = credits;\n\t\tbreak;\n\t}\n\tcase _pp_weaponum:\n\t{\n\t\tScriptVariant_ChangeType(*pretvar, VT_INTEGER);\n\t\t(*pretvar)->lVal = (LONG)player[index].weapnum;\n\t\tbreak;\n\t}\n\t//this property is not known\n\t//default:{\n\t//  .....\n\t//}\n\t}\n\treturn S_OK;\n}\n",
+      "setter": "HRESULT openbor_changeplayerproperty(ScriptVariant** varlist , ScriptVariant** pretvar, int paramCount)\n{\n\tLONG ltemp, ltemp2;\n\tint index;\n\tentity* ent = NULL;\n\tint prop = -1;\n\tchar* tempstr = NULL;\n\tScriptVariant* arg = NULL;\n\n\tif(paramCount < 3)\n\t{\n\t\t*pretvar = NULL;\n\t\treturn E_FAIL;\n\t}\n\n\tmapstrings_changeplayerproperty(varlist, paramCount);\n\tScriptVariant_ChangeType(*pretvar, VT_INTEGER);\n\t(*pretvar)->lVal = (LONG)1;\n\targ = varlist[0];\n\tif(FAILED(ScriptVariant_IntegerValue(arg, &ltemp)))\n\t{\n\t\tindex = 0;\n\t} else index = (int)ltemp;\n\n\tent = player[index].ent;\n    if(obor_profile_build < 3682 && !ent) return S_OK;\n\n\tif(varlist[1]->vt != VT_INTEGER)\n\t{\n\t\tif(varlist[1]->vt != VT_STR)\n\t\t\tprintf(\"You must give a string value for player property name.\\n\");\n\t\treturn E_FAIL;\n\t}\n\tprop = obor_player_set_property_native(varlist[1]->lVal);\n\n\targ = varlist[2];\n\n\t//change the model\n\tswitch(prop)\n\t{\n\tcase _pp_ent:\n\tcase _pp_entity:\n\t{\n\t\tif(arg->vt==VT_PTR)\n\t\t{\n\t\t\tplayer[index].ent = (entity*)arg->ptrVal;\n\t\t\t(*pretvar)->lVal = (LONG)1;\n\t\t}\n\t\telse (*pretvar)->lVal = (LONG)0;\n\t\tbreak;\n\t}\n\tcase _pp_weapon:\n\t{\n\t\tif(!ent) {\n\t\t\t(*pretvar)->lVal = (LONG)0;\n\t\t}\n\t\telse if(SUCCEEDED(ScriptVariant_IntegerValue(arg,&ltemp))){\n\t\t\tif(paramCount > 3)\n\t\t\t{\n\t\t\t\targ = varlist[3];\n\t\t\t\tif(SUCCEEDED(ScriptVariant_IntegerValue(arg, &ltemp2)))\n\t\t\t\t\t(*pretvar)->lVal = (LONG)1;\n\t\t\t}\n\t\t\telse\n\t\t\t{\n\t\t\t\tltemp2 = (LONG)0;\n\t\t\t\t(*pretvar)->lVal = (LONG)1;\n\t\t\t}\n\t\t\tset_weapon(player[index].ent, (int)ltemp, (int)ltemp2);\n\t\t\t(*pretvar)->lVal = (LONG)1;\n\t\t}\n\t\telse (*pretvar)->lVal = (LONG)0;\n\t\tbreak;\n\t}\n\tcase _pp_name:\n\t{\n\t\tif(arg->vt != VT_STR)\n\t\t{\n\t\t\t//printf();\n\t\t\treturn E_FAIL;\n\t\t}\n\t\ttempstr = (char*)StrCache_Get(arg->strVal);\n\t\tstrcpy(player[index].name, tempstr);\n\t\t(*pretvar)->lVal = (LONG)1;\n\t\tbreak;\n\t}\n\tcase _pp_colourmap:\n\t{\n\t\tif(SUCCEEDED(ScriptVariant_IntegerValue(arg,&ltemp)))\n\t\t\tplayer[index].colourmap = (int)ltemp;\n\t\telse (*pretvar)->lVal = (LONG)0;\n\t\tbreak;\n\t}\n\tcase _pp_score:\n\t{\n\t\tif(SUCCEEDED(ScriptVariant_IntegerValue(arg,&ltemp)))\n\t\t{\n\t\t\tif(ltemp < 0) ltemp = 0;\n\t\t\telse if(ltemp > 999999999) ltemp = 999999999;\n\t\t\tplayer[index].score = (unsigned int)ltemp;\n\t\t}\n\t\telse (*pretvar)->lVal = (LONG)0;\n\t\tbreak;\n\t}\n\tcase _pp_lives:\n\t{\n\t\tif(SUCCEEDED(ScriptVariant_IntegerValue(arg,&ltemp)))\n\t\t\tplayer[index].lives = (int)ltemp;\n\t\telse (*pretvar)->lVal = (LONG)0;\n\t\tbreak;\n\t}\n\tcase _pp_playkeys:\n\t{\n\t\tif(SUCCEEDED(ScriptVariant_IntegerValue(arg,&ltemp)))\n\t\t\tplayer[index].playkeys = (int)ltemp;\n\t\telse (*pretvar)->lVal = (LONG)0;\n\t\tbreak;\n\t}\n\tcase _pp_credits:\n\t{\n\t\tif(SUCCEEDED(ScriptVariant_IntegerValue(arg,&ltemp)))\n\t\t{\n\t\t   \tif(noshare) player[index].credits = (int)ltemp;\n\t\t\telse        credits = (int)ltemp;\n\t\t}\n\t\telse (*pretvar)->lVal = (LONG)0;\n\t\tbreak;\n\t}\n\t//this property is not known, so return 0\n\t//default:\n\t//    (*pretvar)->lVal = (LONG)0;\n\t}\n\n\treturn S_OK;\n}\n"
+    },
+    "3842": {
+      "getter": "HRESULT openbor_getplayerproperty(ScriptVariant** varlist , ScriptVariant** pretvar, int paramCount)\n{\n\tLONG ltemp;\n\tint index;\n\tentity* ent = NULL;\n\tint prop = -1;\n\tScriptVariant* arg = NULL;\n\n\tif(paramCount < 2)\n\t{\n\t\t*pretvar = NULL;\n\t\treturn E_FAIL;\n\t}\n\n\tmapstrings_playerproperty(varlist, paramCount);\n\tScriptVariant_Clear(*pretvar);\n\n\targ = varlist[0];\n\tif(FAILED(ScriptVariant_IntegerValue(arg, &ltemp)))\n\t{\n\t\tindex = 0;\n\t} else index = (int)ltemp;\n\n\n\tent = player[index].ent;\n\n\targ = varlist[1];\n\tif(arg->vt!=VT_INTEGER)\n\t{\n\t\tif(arg->vt!=VT_STR)\n\t\t\tprintf(\"Function call getplayerproperty has invalid propery name parameter, it must be a string value.\\n\");\n\t\t*pretvar = NULL;\n\t\treturn E_FAIL;\n\t}\n\tprop = obor_player_property_native(arg->lVal);\n\n\tswitch(prop)\n\t{\n\tcase _pp_ent:\n\tcase _pp_entity:\n\t{\n\t\tif(!ent) ScriptVariant_Clear(*pretvar); // player not spawned\n\t\telse {\n\t\t\tScriptVariant_ChangeType(*pretvar, VT_PTR);\n\t\t\t(*pretvar)->ptrVal = (VOID*)ent;\n\t\t}\n\t\tbreak;\n\t}\n\tcase _pp_name:\n\t{\n\t\tScriptVariant_ChangeType(*pretvar, VT_STR);\n\t\tstrncpy(StrCache_Get((*pretvar)->strVal), (char*)player[index].name, MAX_STR_VAR_LEN);\n\t\tbreak;\n\t}\n\tcase _pp_colourmap:\n\t{\n\t\tScriptVariant_ChangeType(*pretvar, VT_INTEGER);\n\t\t(*pretvar)->lVal = (LONG)player[index].colourmap;\n\t\tbreak;\n\t}\n\tcase _pp_score:\n\t{\n\t\tScriptVariant_ChangeType(*pretvar, VT_INTEGER);\n\t\t(*pretvar)->lVal = (LONG)player[index].score;\n\t\tbreak;\n\t}\n\tcase _pp_spawnhealth:\n\t{\n\t\tScriptVariant_ChangeType(*pretvar, VT_INTEGER);\n\t\t(*pretvar)->lVal = (LONG)player[index].spawnhealth;\n\t\tbreak;\n\t}\n\tcase _pp_spawnmp:\n\t{\n\t\tScriptVariant_ChangeType(*pretvar, VT_INTEGER);\n\t\t(*pretvar)->lVal = (LONG)player[index].spawnmp;\n\t\tbreak;\n\t}\n\tcase _pp_lives:\n\t{\n\t\tScriptVariant_ChangeType(*pretvar, VT_INTEGER);\n\t\t(*pretvar)->lVal = (LONG)player[index].lives;\n\t\tbreak;\n\t}\n\tcase _pp_playkeys:\n\t{\n\t\tScriptVariant_ChangeType(*pretvar, VT_INTEGER);\n\t\t(*pretvar)->lVal = (LONG)player[index].playkeys;\n\t\tbreak;\n\t}\n\tcase _pp_keys:\n\t{\n\t\tScriptVariant_ChangeType(*pretvar, VT_INTEGER);\n\t\t(*pretvar)->lVal = (LONG)player[index].keys;\n\t\tbreak;\n\t}\n\tcase _pp_credits:\n\t{\n\t\tScriptVariant_ChangeType(*pretvar, VT_INTEGER);\n\t\tif(noshare) (*pretvar)->lVal = (LONG)player[index].credits;\n\t\telse        (*pretvar)->lVal = credits;\n\t\tbreak;\n\t}\n\tcase _pp_weapnum:\n\t{\n\t\tScriptVariant_ChangeType(*pretvar, VT_INTEGER);\n\t\t(*pretvar)->lVal = (LONG)player[index].weapnum;\n\t\tbreak;\n\t}\n\t//this property is not known\n\t//default:{\n\t//  .....\n\t//}\n\t}\n\treturn S_OK;\n}\n",
+      "setter": "HRESULT openbor_changeplayerproperty(ScriptVariant** varlist , ScriptVariant** pretvar, int paramCount)\n{\n\tLONG ltemp, ltemp2;\n\tint index;\n\tentity* ent = NULL;\n\tint prop = -1;\n\tchar* tempstr = NULL;\n\tstatic char buffer[64];\n\tScriptVariant* arg = NULL;\n    const int legacy_result = obor_profile_build < 3797;\n\n    if(!legacy_result) *pretvar = NULL;\n\tif(paramCount < 3)\n\t{\n        *pretvar = NULL;\n\t\tprintf(\"Function changeplayerproperty must have at least 3 arguments.\\n\");\n\t\treturn E_FAIL;\n\t}\n\n\tmapstrings_playerproperty(varlist, paramCount);\n    if(legacy_result)\n    {\n        ScriptVariant_ChangeType(*pretvar, VT_INTEGER);\n        (*pretvar)->lVal = (LONG)1;\n    }\n\targ = varlist[0];\n\n\tif(FAILED(ScriptVariant_IntegerValue(arg, &ltemp)))\n\t{\n\t\tindex = 0;\n\t} else index = (int)ltemp;\n\n\tent = player[index].ent;\n\n\tif(varlist[1]->vt != VT_INTEGER)\n\t{\n\t\tif(varlist[1]->vt != VT_STR)\n\t\t\tprintf(\"You must give a string value for player property name.\\n\");\n\t\t*pretvar = NULL;\n\t\treturn E_FAIL;\n\t}\n\tprop = obor_player_property_native(varlist[1]->lVal);\n\n\targ = varlist[2];\n\n\t//change the model\n\tswitch(prop)\n\t{\n\tcase _pp_ent:\n\tcase _pp_entity:\n\t{\n\t\tif(arg->vt==VT_PTR)\n\t\t\tplayer[index].ent = (entity*)arg->ptrVal;\n\t\telse goto cpperror;\n\t\tbreak;\n\t}\n\tcase _pp_weapon:\n\t{\n        if(!ent && legacy_result)\n        {\n            (*pretvar)->lVal = (LONG)0;\n            break;\n        }\n\t\tif(ent){\n\t\t\tif(SUCCEEDED(ScriptVariant_IntegerValue(arg,&ltemp))){\n\t\t\t\tif(paramCount > 3)\n\t\t\t\t{\n\t\t\t\t\tif(FAILED(ScriptVariant_IntegerValue(varlist[3], &ltemp2)))\n\t\t\t\t\t\tgoto cpperror;\n\t\t\t\t}\n\t\t\t\telse ltemp2 = (LONG)0;\n\t\t\t\tset_weapon(player[index].ent, (int)ltemp, (int)ltemp2);\n\t\t\t}\n\t\t\telse goto cpperror;\n\t\t}\n\t\tbreak;\n\t}\n\tcase _pp_weapnum:\n\t{\n        if(obor_profile_build < 3821) goto cppunknown;\n\t\tif(SUCCEEDED(ScriptVariant_IntegerValue(arg,&ltemp)))\n\t\t\tplayer[index].weapnum = (int)ltemp;\n\t\telse goto cpperror;\n\t\tbreak;\n\t}\n\tcase _pp_name:\n\t{\n\t\tif(arg->vt != VT_STR) goto cpperror;\n\t\ttempstr = (char*)StrCache_Get(arg->strVal);\n\t\tstrcpy(player[index].name, tempstr);\n\t\tbreak;\n\t}\n\tcase _pp_colourmap:\n\t{\n\t\tif(SUCCEEDED(ScriptVariant_IntegerValue(arg,&ltemp)))\n\t\t\tplayer[index].colourmap = (int)ltemp;\n\t\telse goto cpperror;\n\t\tbreak;\n\t}\n\tcase _pp_score:\n\t{\n\t\tif(SUCCEEDED(ScriptVariant_IntegerValue(arg,&ltemp)))\n\t\t{\n\t\t\tif(ltemp < 0) ltemp = 0;\n\t\t\telse if(ltemp > 999999999) ltemp = 999999999;\n\t\t\tplayer[index].score = (unsigned int)ltemp;\n\t\t}\n\t\telse goto cpperror;\n\t\tbreak;\n\t}\n\tcase _pp_spawnhealth:\n\t{\n\t\tif(SUCCEEDED(ScriptVariant_IntegerValue(arg,&ltemp)))\n\t\t\tplayer[index].spawnhealth = (int)ltemp;\n\t\telse goto cpperror;\n\t\tbreak;\n\t}\n\tcase _pp_spawnmp:\n\t{\n\t\tif(SUCCEEDED(ScriptVariant_IntegerValue(arg,&ltemp)))\n\t\t\tplayer[index].spawnmp = (int)ltemp;\n\t\telse goto cpperror;\n\t\tbreak;\n\t}\n\tcase _pp_lives:\n\t{\n\t\tif(SUCCEEDED(ScriptVariant_IntegerValue(arg,&ltemp)))\n\t\t\tplayer[index].lives = (int)ltemp;\n\t\telse goto cpperror;\n\t\tbreak;\n\t}\n\tcase _pp_playkeys:\n\t{\n\t\tif(SUCCEEDED(ScriptVariant_IntegerValue(arg,&ltemp)))\n\t\t\tplayer[index].playkeys = (int)ltemp;\n\t\telse goto cpperror; \n\t\tbreak;\n\t}\n\tcase _pp_keys:\n\t{\n        if(obor_profile_build < 3798) goto cppunknown;\n\t\tif(SUCCEEDED(ScriptVariant_IntegerValue(arg,&ltemp)))\n\t\t\tplayer[index].keys = (int)ltemp;\n\t\telse goto cpperror; \n\t\tbreak;\n\t}\n\tcase _pp_credits:\n\t{\n\t\tif(SUCCEEDED(ScriptVariant_IntegerValue(arg,&ltemp)))\n\t\t{\n\t\t   \tif(noshare) player[index].credits = (int)ltemp;\n\t\t\telse        credits = (int)ltemp;\n\t\t}\n\t\telse goto cpperror;\n\t\tbreak;\n\t}\n\tdefault:\ncppunknown:\n        if(legacy_result) return S_OK;\n\t\tprintf(\"Invalid property name for function changeplayerproperty.\\n\");\n\t\treturn E_FAIL;\n\t}\n\n\treturn S_OK;\ncpperror:\n    /* Rejected numeric values returned false before the API cleanup. Keep\n     * invalid names as errors and never call a mutator with an unconverted\n     * argument (the old optional weapon argument could be uninitialized). */\n    if(legacy_result && prop != _pp_name)\n    {\n        (*pretvar)->lVal = (LONG)0;\n        return S_OK;\n    }\n    *pretvar = NULL;\n\tScriptVariant_ToString(arg, buffer);\n\tprintf(\"Function changeplayerproperty receives an invalid value: %s.\\n\", buffer);\n\treturn E_FAIL;\n}\n"
+    },
+    "4086": {
+      "getter": "HRESULT openbor_getplayerproperty(ScriptVariant **varlist , ScriptVariant **pretvar, int paramCount)\n{\n    LONG ltemp;\n    int index;\n    entity *ent = NULL;\n    int prop = -1;\n    ScriptVariant *arg = NULL;\n\n    if(paramCount < 2)\n    {\n        *pretvar = NULL;\n        return E_FAIL;\n    }\n\n    mapstrings_playerproperty(varlist, paramCount);\n    ScriptVariant_Clear(*pretvar);\n\n    arg = varlist[0];\n    if(FAILED(ScriptVariant_IntegerValue(arg, &ltemp)))\n    {\n        index = 0;\n    }\n    else\n    {\n        index = (int)ltemp;\n    }\n\n\n    ent = player[index].ent;\n\n    arg = varlist[1];\n    if(arg->vt != VT_INTEGER)\n    {\n        if(arg->vt != VT_STR)\n        {\n            printf(\"Function call getplayerproperty has invalid propery name parameter, it must be a string value.\\n\");\n        }\n        *pretvar = NULL;\n        return E_FAIL;\n    }\n    prop = obor_playerproperty_native(arg->lVal);\n\n    switch(prop)\n    {\n    case _pp_ent:\n    case _pp_entity:\n    {\n        if(!ent)\n        {\n            ScriptVariant_Clear(*pretvar);    // player not spawned\n        }\n        else\n        {\n            ScriptVariant_ChangeType(*pretvar, VT_PTR);\n            (*pretvar)->ptrVal = (VOID *)ent;\n        }\n        break;\n    }\n    case _pp_name:\n    {\n        ScriptVariant_ChangeType(*pretvar, VT_STR);\n        StrCache_Copy((*pretvar)->strVal, (char *)player[index].name);\n        break;\n    }\n    case _pp_colourmap:\n    {\n        ScriptVariant_ChangeType(*pretvar, VT_INTEGER);\n        (*pretvar)->lVal = (LONG)player[index].colourmap;\n        break;\n    }\n    case _pp_score:\n    {\n        ScriptVariant_ChangeType(*pretvar, VT_INTEGER);\n        (*pretvar)->lVal = (LONG)player[index].score;\n        break;\n    }\n    case _pp_hasplayed:\n    {\n        ScriptVariant_ChangeType(*pretvar, VT_INTEGER);\n        (*pretvar)->lVal = (LONG)player[index].hasplayed;\n        break;\n    }\n    case _pp_spawnhealth:\n    {\n        ScriptVariant_ChangeType(*pretvar, VT_INTEGER);\n        (*pretvar)->lVal = (LONG)player[index].spawnhealth;\n        break;\n    }\n    case _pp_spawnmp:\n    {\n        ScriptVariant_ChangeType(*pretvar, VT_INTEGER);\n        (*pretvar)->lVal = (LONG)player[index].spawnmp;\n        break;\n    }\n    case _pp_lives:\n    {\n        ScriptVariant_ChangeType(*pretvar, VT_INTEGER);\n        (*pretvar)->lVal = (LONG)player[index].lives;\n        break;\n    }\n    case _pp_playkeys:\n    {\n        ScriptVariant_ChangeType(*pretvar, VT_INTEGER);\n        (*pretvar)->lVal = (LONG)player[index].playkeys;\n        break;\n    }\n    case _pp_keys:\n    {\n        ScriptVariant_ChangeType(*pretvar, VT_INTEGER);\n        (*pretvar)->lVal = (LONG)player[index].keys;\n        break;\n    }\n    case _pp_newkeys:\n    {\n        ScriptVariant_ChangeType(*pretvar, VT_INTEGER);\n        (*pretvar)->lVal = (LONG)player[index].newkeys;\n        break;\n    }\n    case _pp_credits:\n    {\n        ScriptVariant_ChangeType(*pretvar, VT_INTEGER);\n        if(noshare)\n        {\n            (*pretvar)->lVal = (LONG)player[index].credits;\n        }\n        else\n        {\n            (*pretvar)->lVal = credits;\n        }\n        break;\n    }\n    case _pp_weapnum:\n    {\n        ScriptVariant_ChangeType(*pretvar, VT_INTEGER);\n        (*pretvar)->lVal = (LONG)player[index].weapnum;\n        break;\n    }\n    //this property is not known\n    //default:{\n    //  .....\n    //}\n    }\n    return S_OK;\n}\n",
+      "setter": "HRESULT openbor_changeplayerproperty(ScriptVariant **varlist , ScriptVariant **pretvar, int paramCount)\n{\n    LONG ltemp, ltemp2;\n    int index;\n    entity *ent = NULL;\n    int prop = -1;\n    char *tempstr = NULL;\n    static char buffer[64];\n    ScriptVariant *arg = NULL;\n\n    *pretvar = NULL;\n    if(paramCount < 3)\n    {\n        printf(\"Function changeplayerproperty must have at least 3 arguments.\\n\");\n        return E_FAIL;\n    }\n\n    mapstrings_playerproperty(varlist, paramCount);\n    arg = varlist[0];\n\n    if(FAILED(ScriptVariant_IntegerValue(arg, &ltemp)))\n    {\n        index = 0;\n    }\n    else\n    {\n        index = (int)ltemp;\n    }\n\n    ent = player[index].ent;\n\n    if(varlist[1]->vt != VT_INTEGER)\n    {\n        if(varlist[1]->vt != VT_STR)\n        {\n            printf(\"You must give a string value for player property name.\\n\");\n        }\n        return E_FAIL;\n    }\n    prop = obor_playerproperty_native(varlist[1]->lVal);\n\n    arg = varlist[2];\n\n    //change the model\n    switch(prop)\n    {\n    case _pp_ent:\n    case _pp_entity:\n    {\n        if(arg->vt == VT_PTR || arg->vt == VT_EMPTY)\n        {\n            player[index].ent = (entity *)arg->ptrVal;\n        }\n        else\n        {\n            goto cpperror;\n        }\n        break;\n    }\n    case _pp_weapon:\n    {\n        if(ent)\n        {\n            if(SUCCEEDED(ScriptVariant_IntegerValue(arg, &ltemp)))\n            {\n                if(paramCount > 3)\n                {\n                    if(FAILED(ScriptVariant_IntegerValue(varlist[3], &ltemp2)))\n                    {\n                        goto cpperror;\n                    }\n                }\n                else\n                {\n                    ltemp2 = (LONG)0;\n                }\n                set_weapon(player[index].ent, (int)ltemp, (int)ltemp2);\n            }\n            else\n            {\n                goto cpperror;\n            }\n        }\n        break;\n    }\n    case _pp_weapnum:\n    {\n        if(SUCCEEDED(ScriptVariant_IntegerValue(arg, &ltemp)))\n        {\n            player[index].weapnum = (int)ltemp;\n        }\n        else\n        {\n            goto cpperror;\n        }\n        break;\n    }\n    case _pp_name:\n    {\n        if(arg->vt != VT_STR)\n        {\n            goto cpperror;\n        }\n        tempstr = (char *)StrCache_Get(arg->strVal);\n        strcpy(player[index].name, tempstr);\n        break;\n    }\n    case _pp_colourmap:\n    {\n        if(SUCCEEDED(ScriptVariant_IntegerValue(arg, &ltemp)))\n        {\n            player[index].colourmap = (int)ltemp;\n        }\n        else\n        {\n            goto cpperror;\n        }\n        break;\n    }\n    case _pp_score:\n    {\n        if(SUCCEEDED(ScriptVariant_IntegerValue(arg, &ltemp)))\n        {\n            if(ltemp < 0)\n            {\n                ltemp = 0;\n            }\n            else if(ltemp > 999999999)\n            {\n                ltemp = 999999999;\n            }\n            player[index].score = (unsigned int)ltemp;\n        }\n        else\n        {\n            goto cpperror;\n        }\n        break;\n    }\n    case _pp_hasplayed:\n    {\n        if(SUCCEEDED(ScriptVariant_IntegerValue(arg, &ltemp)))\n        {\n            player[index].hasplayed = (int)ltemp;\n        }\n        else\n        {\n            goto cpperror;\n        }\n        break;\n    }\n    case _pp_spawnhealth:\n    {\n        if(SUCCEEDED(ScriptVariant_IntegerValue(arg, &ltemp)))\n        {\n            player[index].spawnhealth = (int)ltemp;\n        }\n        else\n        {\n            goto cpperror;\n        }\n        break;\n    }\n    case _pp_spawnmp:\n    {\n        if(SUCCEEDED(ScriptVariant_IntegerValue(arg, &ltemp)))\n        {\n            player[index].spawnmp = (int)ltemp;\n        }\n        else\n        {\n            goto cpperror;\n        }\n        break;\n    }\n    case _pp_lives:\n    {\n        if(SUCCEEDED(ScriptVariant_IntegerValue(arg, &ltemp)))\n        {\n            player[index].lives = (int)ltemp;\n        }\n        else\n        {\n            goto cpperror;\n        }\n        break;\n    }\n    case _pp_playkeys:\n    {\n        if(SUCCEEDED(ScriptVariant_IntegerValue(arg, &ltemp)))\n        {\n            player[index].playkeys = (int)ltemp;\n        }\n        else\n        {\n            goto cpperror;\n        }\n        break;\n    }\n    case _pp_keys:\n    {\n        if(SUCCEEDED(ScriptVariant_IntegerValue(arg, &ltemp)))\n        {\n            player[index].keys = (int)ltemp;\n        }\n        else\n        {\n            goto cpperror;\n        }\n        break;\n    }\n    case _pp_newkeys:\n    {\n        if(SUCCEEDED(ScriptVariant_IntegerValue(arg,&ltemp)))\n        {\n            player[index].newkeys = (int)ltemp;\n        }\n        else\n        {\n            goto cpperror;\n        }\n        break;\n    }\n    case _pp_credits:\n    {\n        if(SUCCEEDED(ScriptVariant_IntegerValue(arg, &ltemp)))\n        {\n            if(noshare)\n            {\n                player[index].credits = (int)ltemp;\n            }\n            else\n            {\n                credits = (int)ltemp;\n            }\n        }\n        else\n        {\n            goto cpperror;\n        }\n        break;\n    }\n    default:\n        printf(\"Invalid property name for function changeplayerproperty.\\n\");\n        return E_FAIL;\n    }\n\n    return S_OK;\ncpperror:\n    ScriptVariant_ToString(arg, buffer);\n    printf(\"Function changeplayerproperty receives an invalid value: %s.\\n\", buffer);\n    return E_FAIL;\n}\n"
+    },
+    "4432": {
+      "getter": "HRESULT openbor_getplayerproperty(ScriptVariant **varlist , ScriptVariant **pretvar, int paramCount)\n{\n    LONG ltemp;\n    int index;\n    entity *ent = NULL;\n    int prop = -1;\n    ScriptVariant *arg = NULL;\n\n    if(paramCount < 2)\n    {\n        *pretvar = NULL;\n        return E_FAIL;\n    }\n\n    mapstrings_playerproperty(varlist, paramCount);\n    ScriptVariant_Clear(*pretvar);\n\n    arg = varlist[0];\n    if(FAILED(ScriptVariant_IntegerValue(arg, &ltemp)))\n    {\n        index = 0;\n    }\n    else\n    {\n        index = (int)ltemp;\n    }\n\n\n    ent = player[index].ent;\n\n    arg = varlist[1];\n    if(arg->vt != VT_INTEGER)\n    {\n        if(arg->vt != VT_STR)\n        {\n            printf(\"Function call getplayerproperty has invalid propery name parameter, it must be a string value.\\n\");\n        }\n        *pretvar = NULL;\n        return E_FAIL;\n    }\n    prop = arg->lVal;\n\n    switch(prop)\n    {\n    case _pp_ent:\n    case _pp_entity:\n    {\n        if(!ent)\n        {\n            ScriptVariant_Clear(*pretvar);    // player not spawned\n        }\n        else\n        {\n            ScriptVariant_ChangeType(*pretvar, VT_PTR);\n            (*pretvar)->ptrVal = (VOID *)ent;\n        }\n        break;\n    }\n    case _pp_name:\n    {\n        ScriptVariant_ChangeType(*pretvar, VT_STR);\n        StrCache_Copy((*pretvar)->strVal, (char *)player[index].name);\n        break;\n    }\n    case _pp_colourmap:\n    {\n        ScriptVariant_ChangeType(*pretvar, VT_INTEGER);\n        (*pretvar)->lVal = (LONG)player[index].colourmap;\n        break;\n    }\n    case _pp_score:\n    {\n        ScriptVariant_ChangeType(*pretvar, VT_INTEGER);\n        (*pretvar)->lVal = (LONG)player[index].score;\n        break;\n    }\n    case _pp_hasplayed:\n    {\n        ScriptVariant_ChangeType(*pretvar, VT_INTEGER);\n        (*pretvar)->lVal = (LONG)player[index].hasplayed;\n        break;\n    }\n    case _pp_spawnhealth:\n    {\n        ScriptVariant_ChangeType(*pretvar, VT_INTEGER);\n        (*pretvar)->lVal = (LONG)player[index].spawnhealth;\n        break;\n    }\n    case _pp_spawnmp:\n    {\n        ScriptVariant_ChangeType(*pretvar, VT_INTEGER);\n        (*pretvar)->lVal = (LONG)player[index].spawnmp;\n        break;\n    }\n    case _pp_lives:\n    {\n        ScriptVariant_ChangeType(*pretvar, VT_INTEGER);\n        (*pretvar)->lVal = (LONG)player[index].lives;\n        break;\n    }\r\n    case _pp_disablekeys:\n    {\n        ScriptVariant_ChangeType(*pretvar, VT_INTEGER);\n        (*pretvar)->lVal = (LONG)player[index].disablekeys;\n        break;\n    }\n    case _pp_playkeys:\n    {\n        ScriptVariant_ChangeType(*pretvar, VT_INTEGER);\n        (*pretvar)->lVal = (LONG)player[index].playkeys;\n        break;\n    }\n    case _pp_keys:\n    {\n        ScriptVariant_ChangeType(*pretvar, VT_INTEGER);\n        (*pretvar)->lVal = (LONG)player[index].keys;\n        break;\n    }\n    case _pp_newkeys:\n    {\n        ScriptVariant_ChangeType(*pretvar, VT_INTEGER);\n        (*pretvar)->lVal = (LONG)player[index].newkeys;\n        break;\n    }\r\n    case _pp_releasekeys:\n    {\n        ScriptVariant_ChangeType(*pretvar, VT_INTEGER);\n        (*pretvar)->lVal = (LONG)player[index].releasekeys;\n        break;\n    }\n    case _pp_credits:\n    {\n        ScriptVariant_ChangeType(*pretvar, VT_INTEGER);\n        if(noshare)\n        {\n            (*pretvar)->lVal = (LONG)player[index].credits;\n        }\n        else\n        {\n            (*pretvar)->lVal = credits;\n        }\n        break;\n    }\n    case _pp_weapnum:\n    {\n        ScriptVariant_ChangeType(*pretvar, VT_INTEGER);\n        (*pretvar)->lVal = (LONG)player[index].weapnum;\n        break;\n    }\r\n    case _pp_numweapons:\n    {\n        int cacheindex;\r\n\r\n        ScriptVariant_ChangeType(*pretvar, VT_INTEGER);\r\n\r\n        if ( stricmp(player[index].name,\"\") != 0 ) {\r\n            cacheindex = get_cached_model_index(player[index].name);\r\n            if ( cacheindex == -1 )\r\n            {\r\n               (*pretvar)->lVal = (LONG)0;\r\n               break;\r\n            }\r\n        } else\r\n        {\r\n           (*pretvar)->lVal = (LONG)0;\r\n           break;\r\n        }\r\n\r\n        (*pretvar)->lVal = (LONG)model_cache[cacheindex].model->numweapons;\r\n        break;\n    }\r\n    case _pp_joining:\r\n    {\r\n        ScriptVariant_ChangeType(*pretvar, VT_INTEGER);\r\n        (*pretvar)->lVal = (LONG)player[index].joining;\r\n        break;\r\n    }\r\n    case _pp_combokey:\r\n    {\r\n        ScriptVariant *frm = NULL;\r\n        frm = varlist[2];\n        if(frm->vt != VT_INTEGER)\r\n        {\n            printf(\"Need a combostep value number for this property.\\n\");\r\n            *pretvar = NULL;\n            return E_FAIL;\n        }\r\n        ScriptVariant_ChangeType(*pretvar, VT_INTEGER);\r\n        (*pretvar)->lVal = (LONG)player[index].combokey[frm->lVal];\r\n        break;\r\n    }\r\n    case _pp_combostep:\r\n    {\r\n        ScriptVariant_ChangeType(*pretvar, VT_INTEGER);\r\n        (*pretvar)->lVal = (LONG)player[index].combostep;\r\n        break;\r\n    }\r\n    case _pp_inputtime:\r\n    {\r\n        ScriptVariant *frm = NULL;\r\n        frm = varlist[2];\n        if(frm->vt != VT_INTEGER)\r\n        {\n            printf(\"Need a combostep value number for this property.\\n\");\r\n            *pretvar = NULL;\n            return E_FAIL;\n        }\r\n        ScriptVariant_ChangeType(*pretvar, VT_INTEGER);\r\n        (*pretvar)->lVal = (LONG)player[index].inputtime[frm->lVal];\r\n        break;\r\n    }\r\n    case _pp_hmapl:\r\n    {\r\n        int cacheindex;\r\n\r\n        ScriptVariant_ChangeType(*pretvar, VT_INTEGER);\r\n\r\n        if ( stricmp(player[index].name,\"\") != 0 ) {\r\n            cacheindex = get_cached_model_index(player[index].name);\r\n            if ( cacheindex == -1 )\r\n            {\r\n               (*pretvar)->lVal = (LONG)0;\r\n               break;\r\n            }\r\n        } else\r\n        {\r\n           (*pretvar)->lVal = (LONG)0;\r\n           break;\r\n        }\r\n\r\n        (*pretvar)->lVal = (LONG)model_cache[cacheindex].model->maps.hide_start;\r\n        break;\r\n    }\r\n    case _pp_hmapu:\r\n    {\r\n        int cacheindex;\r\n\r\n        ScriptVariant_ChangeType(*pretvar, VT_INTEGER);\r\n\r\n        if ( stricmp(player[index].name,\"\") != 0 ) {\r\n            cacheindex = get_cached_model_index(player[index].name);\r\n            if ( cacheindex == -1 )\r\n            {\r\n               (*pretvar)->lVal = (LONG)0;\r\n               break;\r\n            }\r\n        } else\r\n        {\r\n           (*pretvar)->lVal = (LONG)0;\r\n           break;\r\n        }\r\n\r\n        (*pretvar)->lVal = (LONG)model_cache[cacheindex].model->maps.hide_end;\r\n        break;\r\n    }\r\n    case _pp_mapcount:\r\n    {\r\n        int cacheindex;\r\n\r\n        ScriptVariant_ChangeType(*pretvar, VT_INTEGER);\r\n\r\n        if ( stricmp(player[index].name,\"\") != 0 ) {\r\n            cacheindex = get_cached_model_index(player[index].name);\r\n            if ( cacheindex == -1 )\r\n            {\r\n               (*pretvar)->lVal = (LONG)0;\r\n               break;\r\n            }\r\n        } else\r\n        {\r\n           (*pretvar)->lVal = (LONG)0;\r\n           break;\r\n        }\r\n\r\n        (*pretvar)->lVal = (LONG)(model_cache[cacheindex].model->maps_loaded + 1);\r\n        break;\r\n    }\n    //this property is not known\n    //default:{\n    //  .....\n    //}\n    }\n    return S_OK;\n}\n",
+      "setter": "HRESULT openbor_changeplayerproperty(ScriptVariant **varlist , ScriptVariant **pretvar, int paramCount)\n{\n    LONG ltemp, ltemp2;\n    int index;\n    entity *ent = NULL;\n    int prop = -1;\n    char *tempstr = NULL;\n    static char buffer[64];\n    ScriptVariant *arg = NULL;\n\n    *pretvar = NULL;\n    if(paramCount < 3)\n    {\n        printf(\"Function changeplayerproperty must have at least 3 arguments.\\n\");\n        return E_FAIL;\n    }\n\n    mapstrings_playerproperty(varlist, paramCount);\n    arg = varlist[0];\n\n    if(FAILED(ScriptVariant_IntegerValue(arg, &ltemp)))\n    {\n        index = 0;\n    }\n    else\n    {\n        index = (int)ltemp;\n    }\n\n    ent = player[index].ent;\n\n    if(varlist[1]->vt != VT_INTEGER)\n    {\n        if(varlist[1]->vt != VT_STR)\n        {\n            printf(\"You must give a string value for player property name.\\n\");\n        }\n        return E_FAIL;\n    }\n    prop = varlist[1]->lVal;\n\n    arg = varlist[2];\n\n    //change the model\n    switch(prop)\n    {\n    case _pp_ent:\n    case _pp_entity:\n    {\n        if(arg->vt == VT_PTR || arg->vt == VT_EMPTY)\n        {\n            player[index].ent = (entity *)arg->ptrVal;\n        }\n        else\n        {\n            goto cpperror;\n        }\n        break;\n    }\n    case _pp_weapon:\n    {\n        if(ent)\n        {\n            if(SUCCEEDED(ScriptVariant_IntegerValue(arg, &ltemp)))\n            {\n                if(paramCount > 3)\n                {\n                    if(FAILED(ScriptVariant_IntegerValue(varlist[3], &ltemp2)))\n                    {\n                        goto cpperror;\n                    }\n                }\n                else\n                {\n                    ltemp2 = (LONG)0;\n                }\n                set_weapon(player[index].ent, (int)ltemp, (int)ltemp2);\n            }\n            else\n            {\n                goto cpperror;\n            }\n        }\n        break;\n    }\n    case _pp_weapnum:\n    {\n        if(SUCCEEDED(ScriptVariant_IntegerValue(arg, &ltemp)))\n        {\n            player[index].weapnum = (int)ltemp;\n        }\n        else\n        {\n            goto cpperror;\n        }\n        break;\n    }\n    case _pp_name:\n    {\n        if(arg->vt != VT_STR)\n        {\n            goto cpperror;\n        }\n        tempstr = (char *)StrCache_Get(arg->strVal);\n        strcpy(player[index].name, tempstr);\n        break;\n    }\n    case _pp_colourmap:\n    {\n        if(SUCCEEDED(ScriptVariant_IntegerValue(arg, &ltemp)))\n        {\n            player[index].colourmap = (int)ltemp;\n        }\n        else\n        {\n            goto cpperror;\n        }\n        break;\n    }\n    case _pp_score:\n    {\n        if(SUCCEEDED(ScriptVariant_IntegerValue(arg, &ltemp)))\n        {\n            if(ltemp < 0)\n            {\n                ltemp = 0;\n            }\n            else if(ltemp > 999999999)\n            {\n                ltemp = 999999999;\n            }\n            player[index].score = (unsigned int)ltemp;\n        }\n        else\n        {\n            goto cpperror;\n        }\n        break;\n    }\n    case _pp_hasplayed:\n    {\n        if(SUCCEEDED(ScriptVariant_IntegerValue(arg, &ltemp)))\n        {\n            player[index].hasplayed = (int)ltemp;\n        }\n        else\n        {\n            goto cpperror;\n        }\n        break;\n    }\n    case _pp_spawnhealth:\n    {\n        if(SUCCEEDED(ScriptVariant_IntegerValue(arg, &ltemp)))\n        {\n            player[index].spawnhealth = (int)ltemp;\n        }\n        else\n        {\n            goto cpperror;\n        }\n        break;\n    }\n    case _pp_spawnmp:\n    {\n        if(SUCCEEDED(ScriptVariant_IntegerValue(arg, &ltemp)))\n        {\n            player[index].spawnmp = (int)ltemp;\n        }\n        else\n        {\n            goto cpperror;\n        }\n        break;\n    }\n    case _pp_lives:\n    {\n        if(SUCCEEDED(ScriptVariant_IntegerValue(arg, &ltemp)))\n        {\n            player[index].lives = (int)ltemp;\n        }\n        else\n        {\n            goto cpperror;\n        }\n        break;\n    }\r\n    case _pp_disablekeys:\n    {\n        if(SUCCEEDED(ScriptVariant_IntegerValue(arg, &ltemp)))\n        {\n            player[index].disablekeys = (int)ltemp;\n        }\n        else\n        {\n            goto cpperror;\n        }\n        break;\n    }\n    case _pp_playkeys:\n    {\n        if(SUCCEEDED(ScriptVariant_IntegerValue(arg, &ltemp)))\n        {\n            player[index].playkeys = (int)ltemp;\n        }\n        else\n        {\n            goto cpperror;\n        }\n        break;\n    }\n    case _pp_keys:\n    {\n        if(SUCCEEDED(ScriptVariant_IntegerValue(arg, &ltemp)))\n        {\n            player[index].keys = (int)ltemp;\n        }\n        else\n        {\n            goto cpperror;\n        }\n        break;\n    }\n    case _pp_newkeys:\n    {\n        if(SUCCEEDED(ScriptVariant_IntegerValue(arg,&ltemp)))\n        {\n            player[index].newkeys = (int)ltemp;\n        }\n        else\n        {\n            goto cpperror;\n        }\n        break;\n    }\n    case _pp_credits:\n    {\n        if(SUCCEEDED(ScriptVariant_IntegerValue(arg, &ltemp)))\n        {\n            if(noshare)\n            {\n                player[index].credits = (int)ltemp;\n            }\n            else\n            {\n                credits = (int)ltemp;\n            }\n        }\n        else\n        {\n            goto cpperror;\n        }\n        break;\n    }\r\n    case _pp_joining:\r\n    {\r\n        if(SUCCEEDED(ScriptVariant_IntegerValue(arg,&ltemp)))\n        {\n            player[index].joining = (int)ltemp;\n        }\n        else\n        {\n            goto cpperror;\n        }\r\n        break;\r\n    }\r\n    case _pp_releasekeys:\r\n    {\r\n        if(SUCCEEDED(ScriptVariant_IntegerValue(arg,&ltemp)))\n        {\n            player[index].releasekeys = (int)ltemp;\n        }\n        else\n        {\n            goto cpperror;\n        }\r\n        break;\r\n    }\r\n    case _pp_combokey:\r\n    {\r\n        if(SUCCEEDED(ScriptVariant_IntegerValue(arg,&ltemp)))\n        {\r\n            ScriptVariant *value = NULL;\r\n            value = varlist[3];\n            if(value->vt != VT_INTEGER)\r\n            {\n                printf(\"Need a value and combostep value for this property.\\n\");\r\n                *pretvar = NULL;\n                return E_FAIL;\n            }\r\n            player[index].combokey[ltemp] = (int)value->lVal;\n        }\n        else\n        {\n            goto cpperror;\n        }\r\n        break;\r\n    }\r\n    case _pp_combostep:\r\n    {\r\n        if(SUCCEEDED(ScriptVariant_IntegerValue(arg,&ltemp)))\n        {\n            player[index].combostep = (int)ltemp;\n        }\n        else\n        {\n            goto cpperror;\n        }\r\n        break;\r\n    }\r\n    case _pp_inputtime:\r\n    {\r\n        if(SUCCEEDED(ScriptVariant_IntegerValue(arg,&ltemp)))\n        {\r\n            ScriptVariant *value = NULL;\r\n            value = varlist[3];\n            if(value->vt != VT_INTEGER)\r\n            {\n                printf(\"Need a value and combostep value number for this property.\\n\");\r\n                *pretvar = NULL;\n                return E_FAIL;\n            }\r\n            player[index].inputtime[ltemp] = (int)value->lVal;\n        }\n        else\n        {\n            goto cpperror;\n        }\r\n        break;\r\n    }\n    default:\n        printf(\"Invalid property name for function changeplayerproperty.\\n\");\n        return E_FAIL;\n    }\n\n    return S_OK;\ncpperror:\n    ScriptVariant_ToString(arg, buffer);\n    printf(\"Function changeplayerproperty receives an invalid value: %s.\\n\", buffer);\n    return E_FAIL;\n}\n"
+    },
+    "6391": {
+      "getter": "HRESULT openbor_getplayerproperty(ScriptVariant **varlist , ScriptVariant **pretvar, int paramCount)\n{\n    LONG ltemp;\n    int index;\n    entity *ent = NULL;\n    int prop = -1;\n    ScriptVariant *arg = NULL;\n\n    if(paramCount < 2)\n    {\n        *pretvar = NULL;\n        return E_FAIL;\n    }\n\n    mapstrings_playerproperty(varlist, paramCount);\n    ScriptVariant_Clear(*pretvar);\n\n    arg = varlist[0];\n    if(FAILED(ScriptVariant_IntegerValue(arg, &ltemp)))\n    {\n        index = 0;\n    }\n    else\n    {\n        index = (LONG)ltemp;\n    }\n\n\n    ent = player[index].ent;\n\n    arg = varlist[1];\n    if(arg->vt != VT_INTEGER)\n    {\n        if(arg->vt != VT_STR)\n        {\n            printf(\"Function call getplayerproperty has invalid propery name parameter, it must be a string value.\\n\");\n        }\n        *pretvar = NULL;\n        return E_FAIL;\n    }\n    prop = arg->lVal;\n\n    switch(prop)\n    {\n    case _pp_ent:\n    case _pp_entity:\n    {\n        if(!ent)\n        {\n            ScriptVariant_Clear(*pretvar);    // player not spawned\n        }\n        else\n        {\n            ScriptVariant_ChangeType(*pretvar, VT_PTR);\n            (*pretvar)->ptrVal = (VOID *)ent;\n        }\n        break;\n    }\n    case _pp_name:\n    {\n        ScriptVariant_ChangeType(*pretvar, VT_STR);\n        (*pretvar)->strVal = StrCache_CreateNewFrom(player[index].name);\n        break;\n    }\n    case _pp_colourmap:\n    {\n        ScriptVariant_ChangeType(*pretvar, VT_INTEGER);\n        (*pretvar)->lVal = (LONG)player[index].colourmap;\n        break;\n    }\n    case _pp_score:\n    {\n        ScriptVariant_ChangeType(*pretvar, VT_INTEGER);\n        (*pretvar)->lVal = (LONG)player[index].score;\n        break;\n    }\n    case _pp_hasplayed:\n    {\n        ScriptVariant_ChangeType(*pretvar, VT_INTEGER);\n        (*pretvar)->lVal = (LONG)player[index].hasplayed;\n        break;\n    }\n    case _pp_spawnhealth:\n    {\n        ScriptVariant_ChangeType(*pretvar, VT_INTEGER);\n        (*pretvar)->lVal = (LONG)player[index].spawnhealth;\n        break;\n    }\n    case _pp_spawnmp:\n    {\n        ScriptVariant_ChangeType(*pretvar, VT_INTEGER);\n        (*pretvar)->lVal = (LONG)player[index].spawnmp;\n        break;\n    }\n    case _pp_lives:\n    {\n        ScriptVariant_ChangeType(*pretvar, VT_INTEGER);\n        (*pretvar)->lVal = (LONG)player[index].lives;\n        break;\n    }\n    case _pp_disablekeys:\n    {\n        ScriptVariant_ChangeType(*pretvar, VT_INTEGER);\n        (*pretvar)->lVal = (LONG)player[index].disablekeys;\n        break;\n    }\n    case _pp_playkeys:\n    {\n        ScriptVariant_ChangeType(*pretvar, VT_INTEGER);\n        (*pretvar)->lVal = (LONG)player[index].playkeys;\n        break;\n    }\n    case _pp_keys:\n    {\n        ScriptVariant_ChangeType(*pretvar, VT_INTEGER);\n        (*pretvar)->lVal = (LONG)player[index].keys;\n        break;\n    }\n    case _pp_newkeys:\n    {\n        ScriptVariant_ChangeType(*pretvar, VT_INTEGER);\n        (*pretvar)->lVal = (LONG)player[index].newkeys;\n        break;\n    }\n    case _pp_releasekeys:\n    {\n        ScriptVariant_ChangeType(*pretvar, VT_INTEGER);\n        (*pretvar)->lVal = (LONG)player[index].releasekeys;\n        break;\n    }\n    case _pp_credits:\n    {\n        ScriptVariant_ChangeType(*pretvar, VT_INTEGER);\n        if(noshare)\n        {\n            (*pretvar)->lVal = (LONG)player[index].credits;\n        }\n        else\n        {\n            (*pretvar)->lVal = credits;\n        }\n        break;\n    }\n    case _pp_weapnum:\n    {\n        ScriptVariant_ChangeType(*pretvar, VT_INTEGER);\n        (*pretvar)->lVal = (LONG)player[index].weapnum;\n        break;\n    }\n    case _pp_numweapons:\n    {\n        int cacheindex;\n\n        ScriptVariant_ChangeType(*pretvar, VT_INTEGER);\n\n        if ( stricmp(player[index].name,\"\") != 0 ) {\n            cacheindex = get_cached_model_index(player[index].name);\n            if ( cacheindex == -1 )\n            {\n               (*pretvar)->lVal = (LONG)0;\n               break;\n            }\n        } else\n        {\n           (*pretvar)->lVal = (LONG)0;\n           break;\n        }\n\n        (*pretvar)->lVal = (LONG)model_cache[cacheindex].model->numweapons;\n        break;\n    }\n    case _pp_joining:\n    {\n        ScriptVariant_ChangeType(*pretvar, VT_INTEGER);\n        (*pretvar)->lVal = (LONG)player[index].joining;\n        break;\n    }\n    case _pp_combokey:\n    {\n        ScriptVariant *frm = NULL;\n        frm = varlist[2];\n        if(frm->vt != VT_INTEGER)\n        {\n            printf(\"Need a combostep value number for this property.\\n\");\n            *pretvar = NULL;\n            return E_FAIL;\n        }\n        ScriptVariant_ChangeType(*pretvar, VT_INTEGER);\n        (*pretvar)->lVal = (LONG)player[index].combokey[frm->lVal];\n        break;\n    }\n    case _pp_combostep:\n    {\n        ScriptVariant_ChangeType(*pretvar, VT_INTEGER);\n        (*pretvar)->lVal = (LONG)player[index].combostep;\n        break;\n    }\n    case _pp_inputtime:\n    {\n        ScriptVariant *frm = NULL;\n        frm = varlist[2];\n        if(frm->vt != VT_INTEGER)\n        {\n            printf(\"Need a combostep value number for this property.\\n\");\n            *pretvar = NULL;\n            return E_FAIL;\n        }\n        ScriptVariant_ChangeType(*pretvar, VT_INTEGER);\n        (*pretvar)->lVal = (LONG)player[index].inputtime[frm->lVal];\n        break;\n    }\n    case _pp_hmapl:\n    {\n        int cacheindex;\n\n        ScriptVariant_ChangeType(*pretvar, VT_INTEGER);\n\n        if ( stricmp(player[index].name,\"\") != 0 ) {\n            cacheindex = get_cached_model_index(player[index].name);\n            if ( cacheindex == -1 )\n            {\n               (*pretvar)->lVal = (LONG)0;\n               break;\n            }\n        } else\n        {\n           (*pretvar)->lVal = (LONG)0;\n           break;\n        }\n\n        (*pretvar)->lVal = (LONG)model_cache[cacheindex].model->maps.hide_start;\n        break;\n    }\n    case _pp_hmapu:\n    {\n        int cacheindex;\n\n        ScriptVariant_ChangeType(*pretvar, VT_INTEGER);\n\n        if ( stricmp(player[index].name,\"\") != 0 ) {\n            cacheindex = get_cached_model_index(player[index].name);\n            if ( cacheindex == -1 )\n            {\n               (*pretvar)->lVal = (LONG)0;\n               break;\n            }\n        } else\n        {\n           (*pretvar)->lVal = (LONG)0;\n           break;\n        }\n\n        (*pretvar)->lVal = (LONG)model_cache[cacheindex].model->maps.hide_end;\n        break;\n    }\n    case _pp_mapcount:\n    {\n        int cacheindex;\n\n        ScriptVariant_ChangeType(*pretvar, VT_INTEGER);\n\n        if ( stricmp(player[index].name,\"\") != 0 ) {\n            cacheindex = get_cached_model_index(player[index].name);\n            if ( cacheindex == -1 )\n            {\n               (*pretvar)->lVal = (LONG)0;\n               break;\n            }\n        } else\n        {\n           (*pretvar)->lVal = (LONG)0;\n           break;\n        }\n\n        (*pretvar)->lVal = (LONG)(model_cache[cacheindex].model->maps_loaded + 1);\n        break;\n    }\r\n    default:\r\n    {\n        //printf(\"Property name '%s' is not supported by function getplayerproperty.\\n\", propname);\n        *pretvar = NULL;\n        return E_FAIL;\n        break;\n    }\n    //this property is not known\n    //default:{\n    //  .....\n    //}\n    }\n    return S_OK;\n}\n",
+      "setter": "HRESULT openbor_changeplayerproperty(ScriptVariant **varlist , ScriptVariant **pretvar, int paramCount)\n{\n    LONG ltemp, ltemp2;\n    int index;\n    entity *ent = NULL;\n    int prop = -1;\n    char *tempstr = NULL;\n    static char buffer[64];\n    ScriptVariant *arg = NULL;\n\n    *pretvar = NULL;\n    if(paramCount < 3)\n    {\n        printf(\"Function changeplayerproperty must have at least 3 arguments.\\n\");\n        return E_FAIL;\n    }\n\n    mapstrings_playerproperty(varlist, paramCount);\n    arg = varlist[0];\n\n    if(FAILED(ScriptVariant_IntegerValue(arg, &ltemp)))\n    {\n        index = 0;\n    }\n    else\n    {\n        index = (LONG)ltemp;\n    }\n\n    ent = player[index].ent;\n\n    if(varlist[1]->vt != VT_INTEGER)\n    {\n        if(varlist[1]->vt != VT_STR)\n        {\n            printf(\"You must give a string value for player property name.\\n\");\n        }\n        return E_FAIL;\n    }\n    prop = varlist[1]->lVal;\n\n    arg = varlist[2];\n\n    //change the model\n    switch(prop)\n    {\n    case _pp_ent:\n    case _pp_entity:\n    {\n        if(arg->vt == VT_PTR || arg->vt == VT_EMPTY)\n        {\n            player[index].ent = (entity *)arg->ptrVal;\n        }\n        else\n        {\n            goto cpperror;\n        }\n        break;\n    }\n    case _pp_weapon:\n    {\n        if(ent)\n        {\n            if(SUCCEEDED(ScriptVariant_IntegerValue(arg, &ltemp)))\n            {\n                if(paramCount > 3)\n                {\n                    if(FAILED(ScriptVariant_IntegerValue(varlist[3], &ltemp2)))\n                    {\n                        goto cpperror;\n                    }\n                }\n                else\n                {\n                    ltemp2 = (LONG)0;\n                }\n                set_weapon(player[index].ent, (LONG)ltemp, (LONG)ltemp2);\n            }\n            else\n            {\n                goto cpperror;\n            }\n        }\n        break;\n    }\n    case _pp_weapnum:\n    {\n        if(SUCCEEDED(ScriptVariant_IntegerValue(arg, &ltemp)))\n        {\n            player[index].weapnum = (LONG)ltemp;\n        }\n        else\n        {\n            goto cpperror;\n        }\n        break;\n    }\n    case _pp_name:\n    {\n        if(arg->vt != VT_STR)\n        {\n            goto cpperror;\n        }\n        tempstr = (char *)StrCache_Get(arg->strVal);\n        strcpy(player[index].name, tempstr);\n        break;\n    }\n    case _pp_colourmap:\n    {\n        if(SUCCEEDED(ScriptVariant_IntegerValue(arg, &ltemp)))\n        {\n            player[index].colourmap = (LONG)ltemp;\n        }\n        else\n        {\n            goto cpperror;\n        }\n        break;\n    }\n    case _pp_score:\n    {\n        if(SUCCEEDED(ScriptVariant_IntegerValue(arg, &ltemp)))\n        {\n            if(ltemp < 0)\n            {\n                ltemp = 0;\n            }\n            else if(ltemp > 999999999)\n            {\n                ltemp = 999999999;\n            }\n            player[index].score = (unsigned int)ltemp;\n        }\n        else\n        {\n            goto cpperror;\n        }\n        break;\n    }\n    case _pp_hasplayed:\n    {\n        if(SUCCEEDED(ScriptVariant_IntegerValue(arg, &ltemp)))\n        {\n            player[index].hasplayed = (LONG)ltemp;\n        }\n        else\n        {\n            goto cpperror;\n        }\n        break;\n    }\n    case _pp_spawnhealth:\n    {\n        if(SUCCEEDED(ScriptVariant_IntegerValue(arg, &ltemp)))\n        {\n            player[index].spawnhealth = (LONG)ltemp;\n        }\n        else\n        {\n            goto cpperror;\n        }\n        break;\n    }\n    case _pp_spawnmp:\n    {\n        if(SUCCEEDED(ScriptVariant_IntegerValue(arg, &ltemp)))\n        {\n            player[index].spawnmp = (LONG)ltemp;\n        }\n        else\n        {\n            goto cpperror;\n        }\n        break;\n    }\n    case _pp_lives:\n    {\n        if(SUCCEEDED(ScriptVariant_IntegerValue(arg, &ltemp)))\n        {\n            player[index].lives = (LONG)ltemp;\n        }\n        else\n        {\n            goto cpperror;\n        }\n        break;\n    }\n    case _pp_disablekeys:\n    {\n        if(SUCCEEDED(ScriptVariant_IntegerValue(arg, &ltemp)))\n        {\n            player[index].disablekeys = (LONG)ltemp;\n        }\n        else\n        {\n            goto cpperror;\n        }\n        break;\n    }\n    case _pp_playkeys:\n    {\n        if(SUCCEEDED(ScriptVariant_IntegerValue(arg, &ltemp)))\n        {\n            player[index].playkeys = (LONG)ltemp;\n        }\n        else\n        {\n            goto cpperror;\n        }\n        break;\n    }\n    case _pp_keys:\n    {\n        if(SUCCEEDED(ScriptVariant_IntegerValue(arg, &ltemp)))\n        {\n            player[index].keys = (LONG)ltemp;\n        }\n        else\n        {\n            goto cpperror;\n        }\n        break;\n    }\n    case _pp_newkeys:\n    {\n        if(SUCCEEDED(ScriptVariant_IntegerValue(arg,&ltemp)))\n        {\n            player[index].newkeys = (LONG)ltemp;\n        }\n        else\n        {\n            goto cpperror;\n        }\n        break;\n    }\n    case _pp_credits:\n    {\n        if(SUCCEEDED(ScriptVariant_IntegerValue(arg, &ltemp)))\n        {\n            if(noshare)\n            {\n                player[index].credits = (LONG)ltemp;\n            }\n            else\n            {\n                credits = (LONG)ltemp;\n            }\n        }\n        else\n        {\n            goto cpperror;\n        }\n        break;\n    }\n    case _pp_joining:\n    {\n        if(SUCCEEDED(ScriptVariant_IntegerValue(arg,&ltemp)))\n        {\n            player[index].joining = (LONG)ltemp;\n        }\n        else\n        {\n            goto cpperror;\n        }\n        break;\n    }\n    case _pp_releasekeys:\n    {\n        if(SUCCEEDED(ScriptVariant_IntegerValue(arg,&ltemp)))\n        {\n            player[index].releasekeys = (LONG)ltemp;\n        }\n        else\n        {\n            goto cpperror;\n        }\n        break;\n    }\n    case _pp_combokey:\n    {\n        if(SUCCEEDED(ScriptVariant_IntegerValue(arg,&ltemp)))\n        {\n            ScriptVariant *value = NULL;\n            value = varlist[3];\n            if(value->vt != VT_INTEGER)\n            {\n                printf(\"Need a value and combostep value for this property.\\n\");\n                *pretvar = NULL;\n                return E_FAIL;\n            }\n            player[index].combokey[ltemp] = (int)value->lVal;\n        }\n        else\n        {\n            goto cpperror;\n        }\n        break;\n    }\n    case _pp_combostep:\n    {\n        if(SUCCEEDED(ScriptVariant_IntegerValue(arg,&ltemp)))\n        {\n            player[index].combostep = (LONG)ltemp;\n        }\n        else\n        {\n            goto cpperror;\n        }\n        break;\n    }\n    case _pp_inputtime:\n    {\n        if(SUCCEEDED(ScriptVariant_IntegerValue(arg,&ltemp)))\n        {\n            ScriptVariant *value = NULL;\n            value = varlist[3];\n            if(value->vt != VT_INTEGER)\n            {\n                printf(\"Need a value and combostep value number for this property.\\n\");\n                *pretvar = NULL;\n                return E_FAIL;\n            }\n            player[index].inputtime[ltemp] = (int)value->lVal;\n        }\n        else\n        {\n            goto cpperror;\n        }\n        break;\n    }\n    default:\n        printf(\"Invalid property name for function changeplayerproperty.\\n\");\n        return E_FAIL;\n    }\n\n    return S_OK;\ncpperror:\n    ScriptVariant_ToString(arg, buffer);\n    printf(\"Function changeplayerproperty receives an invalid value: %s.\\n\", buffer);\n    return E_FAIL;\n}\n"
+    },
+    "7142": {
+      "getter": "HRESULT openbor_getplayerproperty(ScriptVariant **varlist , ScriptVariant **pretvar, int paramCount)\n{\n    LONG ltemp;\n    int index;\n    entity *ent = NULL;\n    int prop = -1;\n    ScriptVariant *arg = NULL;\n\n    if(paramCount < 2)\n    {\n        *pretvar = NULL;\n        return E_FAIL;\n    }\n\n    mapstrings_playerproperty(varlist, paramCount);\n    ScriptVariant_Clear(*pretvar);\n\n    arg = varlist[0];\n    if(FAILED(ScriptVariant_IntegerValue(arg, &ltemp)))\n    {\n        index = 0;\n    }\n    else\n    {\n        index = (LONG)ltemp;\n    }\n\n\n    ent = player[index].ent;\n\n    arg = varlist[1];\n    if(arg->vt != VT_INTEGER)\n    {\n        if(arg->vt != VT_STR)\n        {\n            printf(\"Function call getplayerproperty has invalid propery name parameter, it must be a string value.\\n\");\n        }\n        *pretvar = NULL;\n        return E_FAIL;\n    }\n    prop = arg->lVal;\n\n    switch(prop)\n    {\n    case _pp_ent:\n    case _pp_entity:\n    {\n        if(!ent)\n        {\n            ScriptVariant_Clear(*pretvar);    // player not spawned\n        }\n        else\n        {\n            ScriptVariant_ChangeType(*pretvar, VT_PTR);\n            (*pretvar)->ptrVal = (VOID *)ent;\n        }\n        break;\n    }\n    case _pp_name:\n    {\n        ScriptVariant_ChangeType(*pretvar, VT_STR);\n        (*pretvar)->strVal = StrCache_CreateNewFrom(player[index].name);\n        break;\n    }\n    case _pp_colourmap:\n    {\n        ScriptVariant_ChangeType(*pretvar, VT_INTEGER);\n        (*pretvar)->lVal = (LONG)player[index].colourmap;\n        break;\n    }\n    case _pp_score:\n    {\n        ScriptVariant_ChangeType(*pretvar, VT_INTEGER);\n        (*pretvar)->lVal = (LONG)player[index].score;\n        break;\n    }\n    case _pp_hasplayed:\n    {\n        ScriptVariant_ChangeType(*pretvar, VT_INTEGER);\n        (*pretvar)->lVal = (LONG)player[index].hasplayed;\n        break;\n    }\n    case _pp_spawnhealth:\n    {\n        ScriptVariant_ChangeType(*pretvar, VT_INTEGER);\n        (*pretvar)->lVal = (LONG)player[index].spawnhealth;\n        break;\n    }\n    case _pp_spawnmp:\n    {\n        ScriptVariant_ChangeType(*pretvar, VT_INTEGER);\n        (*pretvar)->lVal = (LONG)player[index].spawnmp;\n        break;\n    }\n    case _pp_lives:\n    {\n        ScriptVariant_ChangeType(*pretvar, VT_INTEGER);\n        (*pretvar)->lVal = (LONG)player[index].lives;\n        break;\n    }\n    case _pp_disablekeys:\n    {\n        ScriptVariant_ChangeType(*pretvar, VT_INTEGER);\n        (*pretvar)->lVal = (LONG)player[index].disablekeys;\n        break;\n    }\n    case _pp_playkeys:\n    {\n        ScriptVariant_ChangeType(*pretvar, VT_INTEGER);\n        (*pretvar)->lVal = (LONG)player[index].playkeys;\n        break;\n    }\n    case _pp_keys:\n    {\n        ScriptVariant_ChangeType(*pretvar, VT_INTEGER);\n        (*pretvar)->lVal = (LONG)player[index].keys;\n        break;\n    }\n    case _pp_newkeys:\n    {\n        ScriptVariant_ChangeType(*pretvar, VT_INTEGER);\n        (*pretvar)->lVal = (LONG)player[index].newkeys;\n        break;\n    }\n    case _pp_releasekeys:\n    {\n        ScriptVariant_ChangeType(*pretvar, VT_INTEGER);\n        (*pretvar)->lVal = (LONG)player[index].releasekeys;\n        break;\n    }\n    case _pp_credits:\n    {\n        ScriptVariant_ChangeType(*pretvar, VT_INTEGER);\n        if(noshare)\n        {\n            (*pretvar)->lVal = (LONG)player[index].credits;\n        }\n        else\n        {\n            (*pretvar)->lVal = credits;\n        }\n        break;\n    }\n    case _pp_weapnum:\n    {\n        ScriptVariant_ChangeType(*pretvar, VT_INTEGER);\n        (*pretvar)->lVal = (LONG)player[index].weapnum;\n        break;\n    }\n    case _pp_numweapons:\n    {\n        int cacheindex;\n\n        ScriptVariant_ChangeType(*pretvar, VT_INTEGER);\n\n        if ( stricmp(player[index].name,\"\") != 0 ) {\n            cacheindex = get_cached_model_index(player[index].name);\n            if ( cacheindex == -1 )\n            {\n               (*pretvar)->lVal = (LONG)0;\n               break;\n            }\n        } else\n        {\n           (*pretvar)->lVal = (LONG)0;\n           break;\n        }\n\n        (*pretvar)->lVal = (LONG)model_cache[cacheindex].model->numweapons;\n        break;\n    }\n    case _pp_joining:\n    {\n        ScriptVariant_ChangeType(*pretvar, VT_INTEGER);\n        (*pretvar)->lVal = (LONG)player[index].joining;\n        break;\n    }\n    case _pp_combokey:\n    {\n        ScriptVariant *frm = NULL;\n        frm = varlist[2];\n        if(frm->vt != VT_INTEGER)\n        {\n            printf(\"Need a combostep value number for this property.\\n\");\n            *pretvar = NULL;\n            return E_FAIL;\n        }\n        ScriptVariant_ChangeType(*pretvar, VT_INTEGER);\n        (*pretvar)->lVal = (LONG)player[index].combokey[frm->lVal];\n        break;\n    }\n    case _pp_combostep:\n    {\n        ScriptVariant_ChangeType(*pretvar, VT_INTEGER);\n        (*pretvar)->lVal = (LONG)player[index].combostep;\n        break;\n    }\n    case _pp_inputtime:\n    {\n        ScriptVariant *frm = NULL;\n        frm = varlist[2];\n        if(frm->vt != VT_INTEGER)\n        {\n            printf(\"Need a combostep value number for this property.\\n\");\n            *pretvar = NULL;\n            return E_FAIL;\n        }\n        ScriptVariant_ChangeType(*pretvar, VT_INTEGER);\n        (*pretvar)->lVal = (LONG)player[index].inputtime[frm->lVal];\n        break;\n    }\n    case _pp_hmapl:\n    {\n        int cacheindex;\n\n        ScriptVariant_ChangeType(*pretvar, VT_INTEGER);\n\n        if ( stricmp(player[index].name,\"\") != 0 ) {\n            cacheindex = get_cached_model_index(player[index].name);\n            if ( cacheindex == -1 )\n            {\n               (*pretvar)->lVal = (LONG)0;\n               break;\n            }\n        } else\n        {\n           (*pretvar)->lVal = (LONG)0;\n           break;\n        }\n\n        (*pretvar)->lVal = (LONG)model_cache[cacheindex].model->maps.hide_start;\n        break;\n    }\n    case _pp_hmapu:\n    {\n        int cacheindex;\n\n        ScriptVariant_ChangeType(*pretvar, VT_INTEGER);\n\n        if ( stricmp(player[index].name,\"\") != 0 ) {\n            cacheindex = get_cached_model_index(player[index].name);\n            if ( cacheindex == -1 )\n            {\n               (*pretvar)->lVal = (LONG)0;\n               break;\n            }\n        } else\n        {\n           (*pretvar)->lVal = (LONG)0;\n           break;\n        }\n\n        (*pretvar)->lVal = (LONG)model_cache[cacheindex].model->maps.hide_end;\n        break;\n    }\n    case _pp_mapcount:\n    {\n        int cacheindex;\n\n        ScriptVariant_ChangeType(*pretvar, VT_INTEGER);\n\n        if ( stricmp(player[index].name,\"\") != 0 ) {\n            cacheindex = get_cached_model_index(player[index].name);\n            if ( cacheindex == -1 )\n            {\n               (*pretvar)->lVal = (LONG)0;\n               break;\n            }\n        } else\n        {\n           (*pretvar)->lVal = (LONG)0;\n           break;\n        }\n\n        (*pretvar)->lVal = (LONG)(model_cache[cacheindex].model->maps_loaded + 1);\n        break;\n    }\n    default:\n    {\n        //printf(\"Property name '%s' is not supported by function getplayerproperty.\\n\", propname);\n        *pretvar = NULL;\n        return E_FAIL;\n        break;\n    }\n    //this property is not known\n    //default:{\n    //  .....\n    //}\n    }\n    return S_OK;\n}\n",
+      "setter": "HRESULT openbor_changeplayerproperty(ScriptVariant **varlist , ScriptVariant **pretvar, int paramCount)\n{\n    LONG ltemp, ltemp2;\n    int index;\n    entity *ent = NULL;\n    int prop = -1;\n    char *tempstr = NULL;\n    static char buffer[64];\n    ScriptVariant *arg = NULL;\n\n    *pretvar = NULL;\n    if(paramCount < 3)\n    {\n        printf(\"Function changeplayerproperty must have at least 3 arguments.\\n\");\n        return E_FAIL;\n    }\n\n    mapstrings_playerproperty(varlist, paramCount);\n    arg = varlist[0];\n\n    if(FAILED(ScriptVariant_IntegerValue(arg, &ltemp)))\n    {\n        index = 0;\n    }\n    else\n    {\n        index = (LONG)ltemp;\n    }\n\n    ent = player[index].ent;\n\n    if(varlist[1]->vt != VT_INTEGER)\n    {\n        if(varlist[1]->vt != VT_STR)\n        {\n            printf(\"You must give a string value for player property name.\\n\");\n        }\n        return E_FAIL;\n    }\n    prop = varlist[1]->lVal;\n\n    arg = varlist[2];\n\n    //change the model\n    switch(prop)\n    {\n    case _pp_ent:\n    case _pp_entity:\n    {\n        if(arg->vt == VT_PTR || arg->vt == VT_EMPTY)\n        {\n            player[index].ent = (entity *)arg->ptrVal;\n        }\n        else\n        {\n            goto cpperror;\n        }\n        break;\n    }\n    case _pp_weapon:\n    {\n        if(ent)\n        {\n            if(SUCCEEDED(ScriptVariant_IntegerValue(arg, &ltemp)))\n            {\n                if(paramCount > 3)\n                {\n                    if(FAILED(ScriptVariant_IntegerValue(varlist[3], &ltemp2)))\n                    {\n                        goto cpperror;\n                    }\n                }\n                else\n                {\n                    ltemp2 = (LONG)0;\n                }\n                set_weapon(player[index].ent, (LONG)ltemp, (LONG)ltemp2);\n            }\n            else\n            {\n                goto cpperror;\n            }\n        }\n        break;\n    }\n    case _pp_weapnum:\n    {\n        if(SUCCEEDED(ScriptVariant_IntegerValue(arg, &ltemp)))\n        {\n            player[index].weapnum = (LONG)ltemp;\n        }\n        else\n        {\n            goto cpperror;\n        }\n        break;\n    }\n    case _pp_name:\n    {\n        if(arg->vt != VT_STR)\n        {\n            goto cpperror;\n        }\n        tempstr = (char *)StrCache_Get(arg->strVal);\n        strcpy(player[index].name, tempstr);\n        break;\n    }\n    case _pp_colourmap:\n    {\n        if(SUCCEEDED(ScriptVariant_IntegerValue(arg, &ltemp)))\n        {\n            player[index].colourmap = (LONG)ltemp;\n        }\n        else\n        {\n            goto cpperror;\n        }\n        break;\n    }\n    case _pp_score:\n    {\n        if(SUCCEEDED(ScriptVariant_IntegerValue(arg, &ltemp)))\n        {\n            if(ltemp < 0)\n            {\n                ltemp = 0;\n            }\n            else if(ltemp > 999999999)\n            {\n                ltemp = 999999999;\n            }\n            player[index].score = (unsigned int)ltemp;\n        }\n        else\n        {\n            goto cpperror;\n        }\n        break;\n    }\n    case _pp_hasplayed:\n    {\n        if(SUCCEEDED(ScriptVariant_IntegerValue(arg, &ltemp)))\n        {\n            player[index].hasplayed = (LONG)ltemp;\n        }\n        else\n        {\n            goto cpperror;\n        }\n        break;\n    }\n    case _pp_spawnhealth:\n    {\n        if(SUCCEEDED(ScriptVariant_IntegerValue(arg, &ltemp)))\n        {\n            player[index].spawnhealth = (LONG)ltemp;\n        }\n        else\n        {\n            goto cpperror;\n        }\n        break;\n    }\n    case _pp_spawnmp:\n    {\n        if(SUCCEEDED(ScriptVariant_IntegerValue(arg, &ltemp)))\n        {\n            player[index].spawnmp = (LONG)ltemp;\n        }\n        else\n        {\n            goto cpperror;\n        }\n        break;\n    }\n    case _pp_lives:\n    {\n        if(SUCCEEDED(ScriptVariant_IntegerValue(arg, &ltemp)))\n        {\n            player[index].lives = (LONG)ltemp;\n        }\n        else\n        {\n            goto cpperror;\n        }\n        break;\n    }\n    case _pp_disablekeys:\n    {\n        if(SUCCEEDED(ScriptVariant_IntegerValue(arg, &ltemp)))\n        {\n            player[index].disablekeys = (LONG)ltemp;\n        }\n        else\n        {\n            goto cpperror;\n        }\n        break;\n    }\n    case _pp_playkeys:\n    {\n        if(SUCCEEDED(ScriptVariant_IntegerValue(arg, &ltemp)))\n        {\n            player[index].playkeys = (LONG)ltemp;\n        }\n        else\n        {\n            goto cpperror;\n        }\n        break;\n    }\n    case _pp_keys:\n    {\n        if(SUCCEEDED(ScriptVariant_IntegerValue(arg, &ltemp)))\n        {\n            player[index].keys = (LONG)ltemp;\n        }\n        else\n        {\n            goto cpperror;\n        }\n        break;\n    }\n    case _pp_newkeys:\n    {\n        if(SUCCEEDED(ScriptVariant_IntegerValue(arg,&ltemp)))\n        {\n            player[index].newkeys = (LONG)ltemp;\n        }\n        else\n        {\n            goto cpperror;\n        }\n        break;\n    }\n    case _pp_credits:\n    {\n        if(SUCCEEDED(ScriptVariant_IntegerValue(arg, &ltemp)))\n        {\n            if(noshare)\n            {\n                player[index].credits = (LONG)ltemp;\n            }\n            else\n            {\n                credits = (LONG)ltemp;\n            }\n        }\n        else\n        {\n            goto cpperror;\n        }\n        break;\n    }\n    case _pp_joining:\n    {\n        if(SUCCEEDED(ScriptVariant_IntegerValue(arg,&ltemp)))\n        {\n            player[index].joining = (LONG)ltemp;\n        }\n        else\n        {\n            goto cpperror;\n        }\n        break;\n    }\n    case _pp_releasekeys:\n    {\n        if(SUCCEEDED(ScriptVariant_IntegerValue(arg,&ltemp)))\n        {\n            player[index].releasekeys = (LONG)ltemp;\n        }\n        else\n        {\n            goto cpperror;\n        }\n        break;\n    }\n    case _pp_combokey:\n    {\n        if(SUCCEEDED(ScriptVariant_IntegerValue(arg,&ltemp)))\n        {\n            ScriptVariant *value = NULL;\n            value = varlist[3];\n            if(value->vt != VT_INTEGER)\n            {\n                printf(\"Need a value and combostep value for this property.\\n\");\n                *pretvar = NULL;\n                return E_FAIL;\n            }\n            player[index].combokey[ltemp] = (int)value->lVal;\n        }\n        else\n        {\n            goto cpperror;\n        }\n        break;\n    }\n    case _pp_combostep:\n    {\n        if(SUCCEEDED(ScriptVariant_IntegerValue(arg,&ltemp)))\n        {\n            player[index].combostep = (LONG)ltemp;\n        }\n        else\n        {\n            goto cpperror;\n        }\n        break;\n    }\n    case _pp_inputtime:\n    {\n        if(SUCCEEDED(ScriptVariant_IntegerValue(arg,&ltemp)))\n        {\n            ScriptVariant *value = NULL;\n            value = varlist[3];\n            if(value->vt != VT_INTEGER)\n            {\n                printf(\"Need a value and combostep value number for this property.\\n\");\n                *pretvar = NULL;\n                return E_FAIL;\n            }\n            player[index].inputtime[ltemp] = (int)value->lVal;\n        }\n        else\n        {\n            goto cpperror;\n        }\n        break;\n    }\n    default:\n        printf(\"Invalid property name for function changeplayerproperty.\\n\");\n        return E_FAIL;\n    }\n\n    return S_OK;\ncpperror:\n    ScriptVariant_ToString(arg, buffer);\n    printf(\"Function changeplayerproperty receives an invalid value: %s.\\n\", buffer);\n    return E_FAIL;\n}\n"
+    },
+    "7533": {
+      "getter": "HRESULT openbor_getplayerproperty(ScriptVariant **varlist , ScriptVariant **pretvar, int paramCount)\n{\n    LONG ltemp;\n    int index;\n    entity *ent = NULL;\n    int prop = -1;\n    ScriptVariant *arg = NULL;\n\n    if(paramCount < 2)\n    {\n        *pretvar = NULL;\n        return E_FAIL;\n    }\n\n    mapstrings_playerproperty(varlist, paramCount);\n    ScriptVariant_Clear(*pretvar);\n\n    arg = varlist[0];\n    if(FAILED(ScriptVariant_IntegerValue(arg, &ltemp)))\n    {\n        index = 0;\n    }\n    else\n    {\n        index = (LONG)ltemp;\n    }\n\n\n    ent = player[index].ent;\n\n    arg = varlist[1];\n    if(arg->vt != VT_INTEGER)\n    {\n        if(arg->vt != VT_STR)\n        {\n            printf(\"Function call getplayerproperty has invalid propery name parameter, it must be a string value.\\n\");\n        }\n        *pretvar = NULL;\n        return E_FAIL;\n    }\n    prop = arg->lVal;\n\n    switch(prop)\n    {\n    case _pp_ent:\n    case _pp_entity:\n    {\n        if(!ent)\n        {\n            ScriptVariant_Clear(*pretvar);    // player not spawned\n        }\n        else\n        {\n            ScriptVariant_ChangeType(*pretvar, VT_PTR);\n            (*pretvar)->ptrVal = (VOID *)ent;\n        }\n        break;\n    }\n    case _pp_name:\n    {\n        ScriptVariant_ChangeType(*pretvar, VT_STR);\n        (*pretvar)->strVal = StrCache_CreateNewFrom(player[index].name);\n        break;\n    }\n    case _pp_colourmap:\n    {\n        ScriptVariant_ChangeType(*pretvar, VT_INTEGER);\n        (*pretvar)->lVal = (LONG)player[index].colourmap;\n        break;\n    }\n    case _pp_score:\n    {\n        ScriptVariant_ChangeType(*pretvar, VT_INTEGER);\n        (*pretvar)->lVal = (LONG)player[index].score;\n        break;\n    }\n    case _pp_hasplayed:\n    {\n        ScriptVariant_ChangeType(*pretvar, VT_INTEGER);\n        (*pretvar)->lVal = (LONG)player[index].hasplayed;\n        break;\n    }\n    case _pp_spawnhealth:\n    {\n        ScriptVariant_ChangeType(*pretvar, VT_INTEGER);\n        (*pretvar)->lVal = (LONG)player[index].spawnhealth;\n        break;\n    }\n    case _pp_spawnmp:\n    {\n        ScriptVariant_ChangeType(*pretvar, VT_INTEGER);\n        (*pretvar)->lVal = (LONG)player[index].spawnmp;\n        break;\n    }\n    case _pp_lives:\n    {\n        ScriptVariant_ChangeType(*pretvar, VT_INTEGER);\n        (*pretvar)->lVal = (LONG)player[index].lives;\n        break;\n    }\n    case _pp_disablekeys:\n    {\n        ScriptVariant_ChangeType(*pretvar, VT_INTEGER);\n        (*pretvar)->lVal = (LONG)player[index].disablekeys;\n        break;\n    }\n    case _pp_playkeys:\n    {\n        ScriptVariant_ChangeType(*pretvar, VT_INTEGER);\n        (*pretvar)->lVal = (LONG)player[index].playkeys;\n        break;\n    }\n    case _pp_keys:\n    {\n        ScriptVariant_ChangeType(*pretvar, VT_INTEGER);\n        (*pretvar)->lVal = (LONG)player[index].keys;\n        break;\n    }\n    case _pp_newkeys:\n    {\n        ScriptVariant_ChangeType(*pretvar, VT_INTEGER);\n        (*pretvar)->lVal = (LONG)player[index].newkeys;\n        break;\n    }\n    case _pp_releasekeys:\n    {\n        ScriptVariant_ChangeType(*pretvar, VT_INTEGER);\n        (*pretvar)->lVal = (LONG)player[index].releasekeys;\n        break;\n    }\n    case _pp_credits:\n    {\n        ScriptVariant_ChangeType(*pretvar, VT_INTEGER);\n        if(noshare)\n        {\n            (*pretvar)->lVal = (LONG)player[index].credits;\n        }\n        else\n        {\n            (*pretvar)->lVal = credits;\n        }\n        break;\n    }\n    case _pp_weapnum:\n    {\n        ScriptVariant_ChangeType(*pretvar, VT_INTEGER);\n        (*pretvar)->lVal = (LONG)player[index].weapnum;\n        break;\n    }\n    case _pp_numweapons:\n    {\n        int cacheindex;\n\n        ScriptVariant_ChangeType(*pretvar, VT_INTEGER);\n\n        if ( stricmp(player[index].name,\"\") != 0 ) {\n            cacheindex = get_cached_model_index(player[index].name);\n            if ( cacheindex == -1 )\n            {\n               (*pretvar)->lVal = (LONG)0;\n               break;\n            }\n        } else\n        {\n           (*pretvar)->lVal = (LONG)0;\n           break;\n        }\n\n        (*pretvar)->lVal = (LONG)model_cache[cacheindex].model->weapon_properties.weapon_count;\n        break;\n    }\n    case _pp_joining:\n    {\n        ScriptVariant_ChangeType(*pretvar, VT_INTEGER);\n        (*pretvar)->lVal = (LONG)player[index].joining;\n        break;\n    }\n    case _pp_combokey:\n    {\n        ScriptVariant *frm = NULL;\n        frm = varlist[2];\n        if(frm->vt != VT_INTEGER)\n        {\n            printf(\"Need a combostep value number for this property.\\n\");\n            *pretvar = NULL;\n            return E_FAIL;\n        }\n        ScriptVariant_ChangeType(*pretvar, VT_INTEGER);\n        (*pretvar)->lVal = (LONG)player[index].combokey[frm->lVal];\n        break;\n    }\n    case _pp_combostep:\n    {\n        ScriptVariant_ChangeType(*pretvar, VT_INTEGER);\n        (*pretvar)->lVal = (LONG)player[index].combostep;\n        break;\n    }\n    case _pp_inputtime:\n    {\n        ScriptVariant *frm = NULL;\n        frm = varlist[2];\n        if(frm->vt != VT_INTEGER)\n        {\n            printf(\"Need a combostep value number for this property.\\n\");\n            *pretvar = NULL;\n            return E_FAIL;\n        }\n        ScriptVariant_ChangeType(*pretvar, VT_INTEGER);\n        (*pretvar)->lVal = (LONG)player[index].inputtime[frm->lVal];\n        break;\n    }\n    case _pp_hmapl:\n    {\n        int cacheindex;\n\n        ScriptVariant_ChangeType(*pretvar, VT_INTEGER);\n\n        if ( stricmp(player[index].name,\"\") != 0 ) {\n            cacheindex = get_cached_model_index(player[index].name);\n            if ( cacheindex == -1 )\n            {\n               (*pretvar)->lVal = (LONG)0;\n               break;\n            }\n        } else\n        {\n           (*pretvar)->lVal = (LONG)0;\n           break;\n        }\n\n        (*pretvar)->lVal = (LONG)model_cache[cacheindex].model->colorsets.hide_start;\n        break;\n    }\n    case _pp_hmapu:\n    {\n        int cacheindex;\n\n        ScriptVariant_ChangeType(*pretvar, VT_INTEGER);\n\n        if ( stricmp(player[index].name,\"\") != 0 ) {\n            cacheindex = get_cached_model_index(player[index].name);\n            if ( cacheindex == -1 )\n            {\n               (*pretvar)->lVal = (LONG)0;\n               break;\n            }\n        } else\n        {\n           (*pretvar)->lVal = (LONG)0;\n           break;\n        }\n\n        (*pretvar)->lVal = (LONG)model_cache[cacheindex].model->colorsets.hide_end;\n        break;\n    }\n    case _pp_mapcount:\n    {\n        int cacheindex;\n\n        ScriptVariant_ChangeType(*pretvar, VT_INTEGER);\n\n        if ( stricmp(player[index].name,\"\") != 0 ) {\n            cacheindex = get_cached_model_index(player[index].name);\n            if ( cacheindex == -1 )\n            {\n               (*pretvar)->lVal = (LONG)0;\n               break;\n            }\n        } else\n        {\n           (*pretvar)->lVal = (LONG)0;\n           break;\n        }\n\n        (*pretvar)->lVal = (LONG)(model_cache[cacheindex].model->maps_loaded + 1);\n        break;\n    }\n    default:\n    {\n        //printf(\"Property name '%s' is not supported by function getplayerproperty.\\n\", propname);\n        *pretvar = NULL;\n        return E_FAIL;\n        break;\n    }\n    //this property is not known\n    //default:{\n    //  .....\n    //}\n    }\n    return S_OK;\n}\n",
+      "setter": "HRESULT openbor_changeplayerproperty(ScriptVariant **varlist , ScriptVariant **pretvar, int paramCount)\n{\n    LONG ltemp, ltemp2;\n    int index;\n    entity *ent = NULL;\n    int prop = -1;\n    char *tempstr = NULL;\n    static char buffer[64];\n    ScriptVariant *arg = NULL;\n\n    *pretvar = NULL;\n    if(paramCount < 3)\n    {\n        printf(\"Function changeplayerproperty must have at least 3 arguments.\\n\");\n        return E_FAIL;\n    }\n\n    mapstrings_playerproperty(varlist, paramCount);\n    arg = varlist[0];\n\n    if(FAILED(ScriptVariant_IntegerValue(arg, &ltemp)))\n    {\n        index = 0;\n    }\n    else\n    {\n        index = (LONG)ltemp;\n    }\n\n    ent = player[index].ent;\n\n    if(varlist[1]->vt != VT_INTEGER)\n    {\n        if(varlist[1]->vt != VT_STR)\n        {\n            printf(\"You must give a string value for player property name.\\n\");\n        }\n        return E_FAIL;\n    }\n    prop = varlist[1]->lVal;\n\n    arg = varlist[2];\n\n    //change the model\n    switch(prop)\n    {\n    case _pp_ent:\n    case _pp_entity:\n    {\n        if(arg->vt == VT_PTR || arg->vt == VT_EMPTY)\n        {\n            player[index].ent = (entity *)arg->ptrVal;\n        }\n        else\n        {\n            goto cpperror;\n        }\n        break;\n    }\n    case _pp_weapon:\n    {\n        if(ent)\n        {\n            if(SUCCEEDED(ScriptVariant_IntegerValue(arg, &ltemp)))\n            {\n                if(paramCount > 3)\n                {\n                    if(FAILED(ScriptVariant_IntegerValue(varlist[3], &ltemp2)))\n                    {\n                        goto cpperror;\n                    }\n                }\n                else\n                {\n                    ltemp2 = (LONG)0;\n                }\n                set_weapon(player[index].ent, (LONG)ltemp, (LONG)ltemp2);\n            }\n            else\n            {\n                goto cpperror;\n            }\n        }\n        break;\n    }\n    case _pp_weapnum:\n    {\n        if(SUCCEEDED(ScriptVariant_IntegerValue(arg, &ltemp)))\n        {\n            player[index].weapnum = (LONG)ltemp;\n        }\n        else\n        {\n            goto cpperror;\n        }\n        break;\n    }\n    case _pp_name:\n    {\n        if(arg->vt != VT_STR)\n        {\n            goto cpperror;\n        }\n        tempstr = (char *)StrCache_Get(arg->strVal);\n        strcpy(player[index].name, tempstr);\n        break;\n    }\n    case _pp_colourmap:\n    {\n        if(SUCCEEDED(ScriptVariant_IntegerValue(arg, &ltemp)))\n        {\n            player[index].colourmap = (LONG)ltemp;\n        }\n        else\n        {\n            goto cpperror;\n        }\n        break;\n    }\n    case _pp_score:\n    {\n        if(SUCCEEDED(ScriptVariant_IntegerValue(arg, &ltemp)))\n        {\n            if(ltemp < 0)\n            {\n                ltemp = 0;\n            }\n            else if(ltemp > 999999999)\n            {\n                ltemp = 999999999;\n            }\n            player[index].score = (unsigned int)ltemp;\n        }\n        else\n        {\n            goto cpperror;\n        }\n        break;\n    }\n    case _pp_hasplayed:\n    {\n        if(SUCCEEDED(ScriptVariant_IntegerValue(arg, &ltemp)))\n        {\n            player[index].hasplayed = (LONG)ltemp;\n        }\n        else\n        {\n            goto cpperror;\n        }\n        break;\n    }\n    case _pp_spawnhealth:\n    {\n        if(SUCCEEDED(ScriptVariant_IntegerValue(arg, &ltemp)))\n        {\n            player[index].spawnhealth = (LONG)ltemp;\n        }\n        else\n        {\n            goto cpperror;\n        }\n        break;\n    }\n    case _pp_spawnmp:\n    {\n        if(SUCCEEDED(ScriptVariant_IntegerValue(arg, &ltemp)))\n        {\n            player[index].spawnmp = (LONG)ltemp;\n        }\n        else\n        {\n            goto cpperror;\n        }\n        break;\n    }\n    case _pp_lives:\n    {\n        if(SUCCEEDED(ScriptVariant_IntegerValue(arg, &ltemp)))\n        {\n            player[index].lives = (LONG)ltemp;\n        }\n        else\n        {\n            goto cpperror;\n        }\n        break;\n    }\n    case _pp_disablekeys:\n    {\n        if(SUCCEEDED(ScriptVariant_IntegerValue(arg, &ltemp)))\n        {\n            player[index].disablekeys = (LONG)ltemp;\n        }\n        else\n        {\n            goto cpperror;\n        }\n        break;\n    }\n    case _pp_playkeys:\n    {\n        if(SUCCEEDED(ScriptVariant_IntegerValue(arg, &ltemp)))\n        {\n            player[index].playkeys = (LONG)ltemp;\n        }\n        else\n        {\n            goto cpperror;\n        }\n        break;\n    }\n    case _pp_keys:\n    {\n        if(SUCCEEDED(ScriptVariant_IntegerValue(arg, &ltemp)))\n        {\n            player[index].keys = (LONG)ltemp;\n        }\n        else\n        {\n            goto cpperror;\n        }\n        break;\n    }\n    case _pp_newkeys:\n    {\n        if(SUCCEEDED(ScriptVariant_IntegerValue(arg,&ltemp)))\n        {\n            player[index].newkeys = (LONG)ltemp;\n        }\n        else\n        {\n            goto cpperror;\n        }\n        break;\n    }\n    case _pp_credits:\n    {\n        if(SUCCEEDED(ScriptVariant_IntegerValue(arg, &ltemp)))\n        {\n            if(noshare)\n            {\n                player[index].credits = (LONG)ltemp;\n            }\n            else\n            {\n                credits = (LONG)ltemp;\n            }\n        }\n        else\n        {\n            goto cpperror;\n        }\n        break;\n    }\n    case _pp_joining:\n    {\n        if(SUCCEEDED(ScriptVariant_IntegerValue(arg,&ltemp)))\n        {\n            player[index].joining = (LONG)ltemp;\n        }\n        else\n        {\n            goto cpperror;\n        }\n        break;\n    }\n    case _pp_releasekeys:\n    {\n        if(SUCCEEDED(ScriptVariant_IntegerValue(arg,&ltemp)))\n        {\n            player[index].releasekeys = (LONG)ltemp;\n        }\n        else\n        {\n            goto cpperror;\n        }\n        break;\n    }\n    case _pp_combokey:\n    {\n        if(SUCCEEDED(ScriptVariant_IntegerValue(arg,&ltemp)))\n        {\n            ScriptVariant *value = NULL;\n            value = varlist[3];\n            if(value->vt != VT_INTEGER)\n            {\n                printf(\"Need a value and combostep value for this property.\\n\");\n                *pretvar = NULL;\n                return E_FAIL;\n            }\n            player[index].combokey[ltemp] = (int)value->lVal;\n        }\n        else\n        {\n            goto cpperror;\n        }\n        break;\n    }\n    case _pp_combostep:\n    {\n        if(SUCCEEDED(ScriptVariant_IntegerValue(arg,&ltemp)))\n        {\n            player[index].combostep = (LONG)ltemp;\n        }\n        else\n        {\n            goto cpperror;\n        }\n        break;\n    }\n    case _pp_inputtime:\n    {\n        if(SUCCEEDED(ScriptVariant_IntegerValue(arg,&ltemp)))\n        {\n            ScriptVariant *value = NULL;\n            value = varlist[3];\n            if(value->vt != VT_INTEGER)\n            {\n                printf(\"Need a value and combostep value number for this property.\\n\");\n                *pretvar = NULL;\n                return E_FAIL;\n            }\n            player[index].inputtime[ltemp] = (int)value->lVal;\n        }\n        else\n        {\n            goto cpperror;\n        }\n        break;\n    }\n    default:\n        printf(\"Invalid property name for function changeplayerproperty.\\n\");\n        return E_FAIL;\n    }\n\n    return S_OK;\ncpperror:\n    ScriptVariant_ToString(arg, buffer);\n    printf(\"Function changeplayerproperty receives an invalid value: %s.\\n\", buffer);\n    return E_FAIL;\n}\n"
+    },
+    "8023": {
+      "getter": "HRESULT openbor_getplayerproperty(ScriptVariant **varlist , ScriptVariant **pretvar, int paramCount)\n{\n    LONG ltemp;\n    int index;\n    entity *ent = NULL;\n    int prop = -1;\n    ScriptVariant *arg = NULL;\n\n    if(paramCount < 2)\n    {\n        *pretvar = NULL;\n        return E_FAIL;\n    }\n\n    mapstrings_playerproperty(varlist, paramCount);\n    ScriptVariant_Clear(*pretvar);\n\n    arg = varlist[0];\n    if(FAILED(ScriptVariant_IntegerValue(arg, &ltemp)))\n    {\n        index = 0;\n    }\n    else\n    {\n        index = (LONG)ltemp;\n    }\n\n\n    ent = player[index].ent;\n\n    arg = varlist[1];\n    if(arg->vt != VT_INTEGER)\n    {\n        if(arg->vt != VT_STR)\n        {\n            printf(\"Function call getplayerproperty has invalid propery name parameter, it must be a string value.\\n\");\n        }\n        *pretvar = NULL;\n        return E_FAIL;\n    }\n    prop = arg->lVal;\n\n    switch(prop)\n    {\n    case _pp_button_attack1: //Kratus (2026), allow button name detection via \"getplayerproperty\"\n    {\n        ScriptVariant_ChangeType(*pretvar, VT_STR);\n        (*pretvar)->strVal = StrCache_CreateNewFrom(control_getmappedkeyname(playercontrolpointers[index]->deviceID, SDID_ATTACK));\n        break;\n    }\n    case _pp_button_attack2:\n    {\n        ScriptVariant_ChangeType(*pretvar, VT_STR);\n        (*pretvar)->strVal = StrCache_CreateNewFrom(control_getmappedkeyname(playercontrolpointers[index]->deviceID, SDID_ATTACK2));\n        break;\n    }\n    case _pp_button_attack3:\n    {\n        ScriptVariant_ChangeType(*pretvar, VT_STR);\n        (*pretvar)->strVal = StrCache_CreateNewFrom(control_getmappedkeyname(playercontrolpointers[index]->deviceID, SDID_ATTACK3));\n        break;\n    }\n    case _pp_button_attack4:\n    {\n        ScriptVariant_ChangeType(*pretvar, VT_STR);\n        (*pretvar)->strVal = StrCache_CreateNewFrom(control_getmappedkeyname(playercontrolpointers[index]->deviceID, SDID_ATTACK4));\n        break;\n    }\n    case _pp_button_jump:\n    {\n        ScriptVariant_ChangeType(*pretvar, VT_STR);\n        (*pretvar)->strVal = StrCache_CreateNewFrom(control_getmappedkeyname(playercontrolpointers[index]->deviceID, SDID_JUMP));\n        break;\n    }\n    case _pp_button_movedown:\n    {\n        ScriptVariant_ChangeType(*pretvar, VT_STR);\n        (*pretvar)->strVal = StrCache_CreateNewFrom(control_getmappedkeyname(playercontrolpointers[index]->deviceID, SDID_MOVEDOWN));\n        break;\n    }\n    case _pp_button_moveleft:\n    {\n        ScriptVariant_ChangeType(*pretvar, VT_STR);\n        (*pretvar)->strVal = StrCache_CreateNewFrom(control_getmappedkeyname(playercontrolpointers[index]->deviceID, SDID_MOVELEFT));\n        break;\n    }\n    case _pp_button_moveright:\n    {\n        ScriptVariant_ChangeType(*pretvar, VT_STR);\n        (*pretvar)->strVal = StrCache_CreateNewFrom(control_getmappedkeyname(playercontrolpointers[index]->deviceID, SDID_MOVERIGHT));\n        break;\n    }\n    case _pp_button_moveup:\n    {\n        ScriptVariant_ChangeType(*pretvar, VT_STR);\n        (*pretvar)->strVal = StrCache_CreateNewFrom(control_getmappedkeyname(playercontrolpointers[index]->deviceID, SDID_MOVEUP));\n        break;\n    }\n    case _pp_button_screenshot:\n    {\n        ScriptVariant_ChangeType(*pretvar, VT_STR);\n        (*pretvar)->strVal = StrCache_CreateNewFrom(control_getmappedkeyname(playercontrolpointers[index]->deviceID, SDID_SCREENSHOT));\n        break;\n    }\n    case _pp_button_special:\n    {\n        ScriptVariant_ChangeType(*pretvar, VT_STR);\n        (*pretvar)->strVal = StrCache_CreateNewFrom(control_getmappedkeyname(playercontrolpointers[index]->deviceID, SDID_SPECIAL));\n        break;\n    }\n    case _pp_button_start:\n    {\n        ScriptVariant_ChangeType(*pretvar, VT_STR);\n        (*pretvar)->strVal = StrCache_CreateNewFrom(control_getmappedkeyname(playercontrolpointers[index]->deviceID, SDID_START));\n        break;\n    }\n    case _pp_ent:\n    case _pp_entity:\n    {\n        if(!ent)\n        {\n            ScriptVariant_Clear(*pretvar);    // player not spawned\n        }\n        else\n        {\n            ScriptVariant_ChangeType(*pretvar, VT_PTR);\n            (*pretvar)->ptrVal = (VOID *)ent;\n        }\n        break;\n    }\n    case _pp_name:\n    {\n        ScriptVariant_ChangeType(*pretvar, VT_STR);\n        (*pretvar)->strVal = StrCache_CreateNewFrom(player[index].name);\n        break;\n    }\n    case _pp_colourmap:\n    {\n        ScriptVariant_ChangeType(*pretvar, VT_INTEGER);\n        (*pretvar)->lVal = (LONG)player[index].colourmap;\n        break;\n    }\n    case _pp_score:\n    {\n        ScriptVariant_ChangeType(*pretvar, VT_INTEGER);\n        (*pretvar)->lVal = (LONG)player[index].score;\n        break;\n    }\n    case _pp_hasplayed:\n    {\n        ScriptVariant_ChangeType(*pretvar, VT_INTEGER);\n        (*pretvar)->lVal = (LONG)player[index].hasplayed;\n        break;\n    }\n    case _pp_spawnhealth:\n    {\n        ScriptVariant_ChangeType(*pretvar, VT_INTEGER);\n        (*pretvar)->lVal = (LONG)player[index].spawnhealth;\n        break;\n    }\n    case _pp_spawnmp:\n    {\n        ScriptVariant_ChangeType(*pretvar, VT_INTEGER);\n        (*pretvar)->lVal = (LONG)player[index].spawnmp;\n        break;\n    }\n    case _pp_lives:\n    {\n        ScriptVariant_ChangeType(*pretvar, VT_INTEGER);\n        (*pretvar)->lVal = (LONG)player[index].lives;\n        break;\n    }\n    case _pp_device_name: //Kratus (2026), allow device name detection via \"getplayerproperty\"\n    {\n        ScriptVariant_ChangeType(*pretvar, VT_STR);\n        (*pretvar)->strVal = StrCache_CreateNewFrom(control_getdevicename(playercontrolpointers[index]->deviceID));\n        break;\n    }\n    case _pp_disablekeys:\n    {\n        ScriptVariant_ChangeType(*pretvar, VT_INTEGER);\n        (*pretvar)->lVal = (LONG)player[index].disablekeys;\n        break;\n    }\n    case _pp_playkeys:\n    {\n        ScriptVariant_ChangeType(*pretvar, VT_INTEGER);\n        (*pretvar)->lVal = (LONG)player[index].playkeys;\n        break;\n    }\n    case _pp_keys:\n    {\n        ScriptVariant_ChangeType(*pretvar, VT_INTEGER);\n        (*pretvar)->lVal = (LONG)player[index].keys;\n        break;\n    }\n    case _pp_newkeys:\n    {\n        ScriptVariant_ChangeType(*pretvar, VT_INTEGER);\n        (*pretvar)->lVal = (LONG)player[index].newkeys;\n        break;\n    }\n    case _pp_releasekeys:\n    {\n        ScriptVariant_ChangeType(*pretvar, VT_INTEGER);\n        (*pretvar)->lVal = (LONG)player[index].releasekeys;\n        break;\n    }\n    case _pp_credits:\n    {\n        ScriptVariant_ChangeType(*pretvar, VT_INTEGER);\n        if(noshare)\n        {\n            (*pretvar)->lVal = (LONG)player[index].credits;\n        }\n        else\n        {\n            (*pretvar)->lVal = credits;\n        }\n        break;\n    }\n    case _pp_weapnum:\n    {\n        ScriptVariant_ChangeType(*pretvar, VT_INTEGER);\n        (*pretvar)->lVal = (LONG)player[index].weapnum;\n        break;\n    }\n    case _pp_numweapons:\n    {\n        int cacheindex;\n\n        ScriptVariant_ChangeType(*pretvar, VT_INTEGER);\n\n        if ( stricmp(player[index].name,\"\") != 0 ) {\n            cacheindex = get_cached_model_index(player[index].name);\n            if ( cacheindex == -1 )\n            {\n               (*pretvar)->lVal = (LONG)0;\n               break;\n            }\n        } else\n        {\n           (*pretvar)->lVal = (LONG)0;\n           break;\n        }\n\n        (*pretvar)->lVal = (LONG)model_cache[cacheindex].model->weapon_properties.weapon_count;\n        break;\n    }\n    case _pp_joining:\n    {\n        ScriptVariant_ChangeType(*pretvar, VT_INTEGER);\n        (*pretvar)->lVal = (LONG)player[index].joining;\n        break;\n    }\n    case _pp_combokey:\n    {\n        printf(\"Combokey is deprecated.\\n\");\n        *pretvar = NULL;\n        return E_FAIL;\n    }\n    case _pp_combostep:\n    {\n        printf(\"Combostep is deprecated.\\n\");\n        *pretvar = NULL;\n        return E_FAIL;\n    }\n    case _pp_inputtime:\n    {\n        printf(\"Inputtime is deprecated.\\n\");\n        *pretvar = NULL;\n        return E_FAIL;\n    }\n    case _pp_hmapl:\n    {\n        int cacheindex;\n\n        ScriptVariant_ChangeType(*pretvar, VT_INTEGER);\n\n        if ( stricmp(player[index].name,\"\") != 0 ) {\n            cacheindex = get_cached_model_index(player[index].name);\n            if ( cacheindex == -1 )\n            {\n               (*pretvar)->lVal = (LONG)0;\n               break;\n            }\n        } else\n        {\n           (*pretvar)->lVal = (LONG)0;\n           break;\n        }\n\n        (*pretvar)->lVal = (LONG)model_cache[cacheindex].model->colorsets.hide_start;\n        break;\n    }\n    case _pp_hmapu:\n    {\n        int cacheindex;\n\n        ScriptVariant_ChangeType(*pretvar, VT_INTEGER);\n\n        if ( stricmp(player[index].name,\"\") != 0 ) {\n            cacheindex = get_cached_model_index(player[index].name);\n            if ( cacheindex == -1 )\n            {\n               (*pretvar)->lVal = (LONG)0;\n               break;\n            }\n        } else\n        {\n           (*pretvar)->lVal = (LONG)0;\n           break;\n        }\n\n        (*pretvar)->lVal = (LONG)model_cache[cacheindex].model->colorsets.hide_end;\n        break;\n    }\n    case _pp_mapcount:\n    {\n        int cacheindex;\n\n        ScriptVariant_ChangeType(*pretvar, VT_INTEGER);\n\n        if ( stricmp(player[index].name,\"\") != 0 ) {\n            cacheindex = get_cached_model_index(player[index].name);\n            if ( cacheindex == -1 )\n            {\n               (*pretvar)->lVal = (LONG)0;\n               break;\n            }\n        } else\n        {\n           (*pretvar)->lVal = (LONG)0;\n           break;\n        }\n\n        (*pretvar)->lVal = (LONG)(model_cache[cacheindex].model->maps_loaded + 1);\n        break;\n    }\n    default:\n    {\n        //printf(\"Property name '%s' is not supported by function getplayerproperty.\\n\", propname);\n        *pretvar = NULL;\n        return E_FAIL;\n        break;\n    }\n    //this property is not known\n    //default:{\n    //  .....\n    //}\n    }\n    return S_OK;\n}\n",
+      "setter": "HRESULT openbor_changeplayerproperty(ScriptVariant **varlist , ScriptVariant **pretvar, int paramCount)\n{\n    ScriptVariantStringView string_view;\n    char conversion_buffer[SCRIPT_VARIANT_CONVERSION_BUFFER_LENGTH];\n    LONG ltemp, ltemp2;\n    int index;\n    entity *ent = NULL;\n    int prop = -1;\n    char *tempstr = NULL;\n    ScriptVariant *arg = NULL;\n\n    *pretvar = NULL;\n    if(paramCount < 3)\n    {\n        printf(\"Function changeplayerproperty must have at least 3 arguments.\\n\");\n        return E_FAIL;\n    }\n\n    mapstrings_playerproperty(varlist, paramCount);\n    arg = varlist[0];\n\n    if(FAILED(ScriptVariant_IntegerValue(arg, &ltemp)))\n    {\n        index = 0;\n    }\n    else\n    {\n        index = (LONG)ltemp;\n    }\n\n    ent = player[index].ent;\n\n    if(varlist[1]->vt != VT_INTEGER)\n    {\n        if(varlist[1]->vt != VT_STR)\n        {\n            printf(\"You must give a string value for player property name.\\n\");\n        }\n        return E_FAIL;\n    }\n    prop = varlist[1]->lVal;\n\n    arg = varlist[2];\n\n    //change the model\n    switch(prop)\n    {\n    case _pp_ent:\n    case _pp_entity:\n    {\n        if(arg->vt == VT_PTR || arg->vt == VT_EMPTY)\n        {\n            player[index].ent = (entity *)arg->ptrVal;\n        }\n        else\n        {\n            goto cpperror;\n        }\n        break;\n    }\n    case _pp_weapon:\n    {\n        if(ent)\n        {\n            if(SUCCEEDED(ScriptVariant_IntegerValue(arg, &ltemp)))\n            {\n                if(paramCount > 3)\n                {\n                    if(FAILED(ScriptVariant_IntegerValue(varlist[3], &ltemp2)))\n                    {\n                        goto cpperror;\n                    }\n                }\n                else\n                {\n                    ltemp2 = (LONG)0;\n                }\n                set_weapon(player[index].ent, (LONG)ltemp, (LONG)ltemp2);\n            }\n            else\n            {\n                goto cpperror;\n            }\n        }\n        break;\n    }\n    case _pp_weapnum:\n    {\n        if(SUCCEEDED(ScriptVariant_IntegerValue(arg, &ltemp)))\n        {\n            player[index].weapnum = (LONG)ltemp;\n        }\n        else\n        {\n            goto cpperror;\n        }\n        break;\n    }\n    case _pp_name:\n    {\n        if(arg->vt != VT_STR)\n        {\n            goto cpperror;\n        }\n        tempstr = (char *)StrCache_Get(arg->strVal);\n        strcpy(player[index].name, tempstr);\n        break;\n    }\n    case _pp_colourmap:\n    {\n        if(SUCCEEDED(ScriptVariant_IntegerValue(arg, &ltemp)))\n        {\n            player[index].colourmap = (LONG)ltemp;\n        }\n        else\n        {\n            goto cpperror;\n        }\n        break;\n    }\n    case _pp_score:\n    {\n        if(SUCCEEDED(ScriptVariant_IntegerValue(arg, &ltemp)))\n        {\n            if(ltemp < 0)\n            {\n                ltemp = 0;\n            }\n            else if(ltemp > 999999999)\n            {\n                ltemp = 999999999;\n            }\n            player[index].score = (unsigned int)ltemp;\n        }\n        else\n        {\n            goto cpperror;\n        }\n        break;\n    }\n    case _pp_hasplayed:\n    {\n        if(SUCCEEDED(ScriptVariant_IntegerValue(arg, &ltemp)))\n        {\n            player[index].hasplayed = (LONG)ltemp;\n        }\n        else\n        {\n            goto cpperror;\n        }\n        break;\n    }\n    case _pp_spawnhealth:\n    {\n        if(SUCCEEDED(ScriptVariant_IntegerValue(arg, &ltemp)))\n        {\n            player[index].spawnhealth = (LONG)ltemp;\n        }\n        else\n        {\n            goto cpperror;\n        }\n        break;\n    }\n    case _pp_spawnmp:\n    {\n        if(SUCCEEDED(ScriptVariant_IntegerValue(arg, &ltemp)))\n        {\n            player[index].spawnmp = (LONG)ltemp;\n        }\n        else\n        {\n            goto cpperror;\n        }\n        break;\n    }\n    case _pp_lives:\n    {\n        if(SUCCEEDED(ScriptVariant_IntegerValue(arg, &ltemp)))\n        {\n            player[index].lives = (LONG)ltemp;\n        }\n        else\n        {\n            goto cpperror;\n        }\n        break;\n    }\n    case _pp_disablekeys:\n    {\n        if(SUCCEEDED(ScriptVariant_IntegerValue(arg, &ltemp)))\n        {\n            player[index].disablekeys = (LONG)ltemp;\n        }\n        else\n        {\n            goto cpperror;\n        }\n        break;\n    }\n    case _pp_playkeys:\n    {\n        if(SUCCEEDED(ScriptVariant_IntegerValue(arg, &ltemp)))\n        {\n            player[index].playkeys = (LONG)ltemp;\n        }\n        else\n        {\n            goto cpperror;\n        }\n        break;\n    }\n    case _pp_keys:\n    {\n        if(SUCCEEDED(ScriptVariant_IntegerValue(arg, &ltemp)))\n        {\n            player[index].keys = (LONG)ltemp;\n        }\n        else\n        {\n            goto cpperror;\n        }\n        break;\n    }\n    case _pp_newkeys:\n    {\n        if(SUCCEEDED(ScriptVariant_IntegerValue(arg,&ltemp)))\n        {\n            player[index].newkeys = (LONG)ltemp;\n        }\n        else\n        {\n            goto cpperror;\n        }\n        break;\n    }\n    case _pp_credits:\n    {\n        if(SUCCEEDED(ScriptVariant_IntegerValue(arg, &ltemp)))\n        {\n            if(noshare)\n            {\n                player[index].credits = (LONG)ltemp;\n            }\n            else\n            {\n                credits = (LONG)ltemp;\n            }\n        }\n        else\n        {\n            goto cpperror;\n        }\n        break;\n    }\n    case _pp_joining:\n    {\n        if(SUCCEEDED(ScriptVariant_IntegerValue(arg,&ltemp)))\n        {\n            player[index].joining = (LONG)ltemp;\n        }\n        else\n        {\n            goto cpperror;\n        }\n        break;\n    }\n    case _pp_releasekeys:\n    {\n        if(SUCCEEDED(ScriptVariant_IntegerValue(arg,&ltemp)))\n        {\n            player[index].releasekeys = (LONG)ltemp;\n        }\n        else\n        {\n            goto cpperror;\n        }\n        break;\n    }\n    case _pp_combokey:\n    {\n        \n        printf(\"Combokey is deprecated.\\n\");\n        goto cpperror;\n       \n        break;\n    }\n    case _pp_combostep:\n    {\n        printf(\"Combostep is deprecated.\\n\");\n        goto cpperror;\n\n        break;\n    }\n    case _pp_inputtime:\n    {\n        \n        printf(\"Inputtime is deprecated.\\n\");\n        goto cpperror;\n        \n        break;\n    }\n    default:\n        printf(\"Invalid property name for function changeplayerproperty.\\n\");\n        return E_FAIL;\n    }\n\n    return S_OK;\ncpperror:\n    if(SUCCEEDED(ScriptVariant_GetStringView(\n        arg,\n        conversion_buffer,\n        sizeof(conversion_buffer),\n        &string_view\n    )))\n    {\n        printf(\n            \"Function changeplayerproperty receives an invalid value: %.*s.\\n\",\n            (int)string_view.length,\n            string_view.string\n        );\n    }\n    else\n    {\n        printf(\"Function changeplayerproperty receives an invalid or oversized value.\\n\");\n    }\n    return E_FAIL;\n}\n"
+    }
+  },
+  "profiles": {
+    "3020": {
+      "revision": 3020,
+      "engine": "3400",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": true
+    },
+    "3057": {
+      "revision": 3057,
+      "engine": "3400",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": true
+    },
+    "3062": {
+      "revision": 3062,
+      "engine": "3400",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": true
+    },
+    "3073": {
+      "revision": 3073,
+      "engine": "3400",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": true
+    },
+    "3081": {
+      "revision": 3081,
+      "engine": "3400",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": true
+    },
+    "3109": {
+      "revision": 3109,
+      "engine": "3400",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": true
+    },
+    "3117": {
+      "revision": 3117,
+      "engine": "3400",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": true
+    },
+    "3143": {
+      "revision": 3143,
+      "engine": "3400",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": true
+    },
+    "3160": {
+      "revision": 3160,
+      "engine": "3400",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": true
+    },
+    "3173": {
+      "revision": 3173,
+      "engine": "3400",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": true
+    },
+    "3192": {
+      "revision": 3192,
+      "engine": "3400",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": true
+    },
+    "3208": {
+      "revision": 3208,
+      "engine": "3400",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": true
+    },
+    "3273": {
+      "revision": 3273,
+      "engine": "3400",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": true
+    },
+    "3288": {
+      "revision": 3288,
+      "engine": "3400",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": true
+    },
+    "3303": {
+      "revision": 3303,
+      "engine": "3400",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": true
+    },
+    "3307": {
+      "revision": 3307,
+      "engine": "3400",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": true
+    },
+    "3310": {
+      "revision": 3310,
+      "engine": "3400",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": true
+    },
+    "3311": {
+      "revision": 3311,
+      "engine": "3400",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": true
+    },
+    "3316": {
+      "revision": 3316,
+      "engine": "3400",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": true
+    },
+    "3317": {
+      "revision": 3317,
+      "engine": "3400",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": true
+    },
+    "3318": {
+      "revision": 3318,
+      "engine": "3400",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": true
+    },
+    "3327": {
+      "revision": 3327,
+      "engine": "3400",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": true
+    },
+    "3328": {
+      "revision": 3328,
+      "engine": "3400",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": true
+    },
+    "3330": {
+      "revision": 3330,
+      "engine": "3400",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": true
+    },
+    "3332": {
+      "revision": 3332,
+      "engine": "3400",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": true
+    },
+    "3335": {
+      "revision": 3335,
+      "engine": "3400",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": true
+    },
+    "3337": {
+      "revision": 3337,
+      "engine": "3400",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": true
+    },
+    "3340": {
+      "revision": 3340,
+      "engine": "3400",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": true
+    },
+    "3341": {
+      "revision": 3341,
+      "engine": "3400",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": true
+    },
+    "3342": {
+      "revision": 3342,
+      "engine": "3400",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": true
+    },
+    "3350": {
+      "revision": 3350,
+      "engine": "3400",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": true
+    },
+    "3351": {
+      "revision": 3351,
+      "engine": "3400",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": true
+    },
+    "3352": {
+      "revision": 3352,
+      "engine": "3400",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": true
+    },
+    "3353": {
+      "revision": 3353,
+      "engine": "3400",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": true
+    },
+    "3354": {
+      "revision": 3354,
+      "engine": "3400",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": true
+    },
+    "3355": {
+      "revision": 3355,
+      "engine": "3400",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": true
+    },
+    "3356": {
+      "revision": 3356,
+      "engine": "3400",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": true
+    },
+    "3357": {
+      "revision": 3357,
+      "engine": "3400",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": true
+    },
+    "3360": {
+      "revision": 3360,
+      "engine": "3400",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": true
+    },
+    "3361": {
+      "revision": 3361,
+      "engine": "3400",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": true
+    },
+    "3362": {
+      "revision": 3362,
+      "engine": "3400",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": true
+    },
+    "3365": {
+      "revision": 3365,
+      "engine": "3400",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": true
+    },
+    "3366": {
+      "revision": 3366,
+      "engine": "3400",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": true
+    },
+    "3367": {
+      "revision": 3367,
+      "engine": "3400",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": true
+    },
+    "3371": {
+      "revision": 3371,
+      "engine": "3400",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": true
+    },
+    "3372": {
+      "revision": 3372,
+      "engine": "3400",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": true
+    },
+    "3373": {
+      "revision": 3373,
+      "engine": "3400",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": true
+    },
+    "3375": {
+      "revision": 3375,
+      "engine": "3400",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": true
+    },
+    "3379": {
+      "revision": 3379,
+      "engine": "3400",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": true
+    },
+    "3380": {
+      "revision": 3380,
+      "engine": "3400",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": true
+    },
+    "3381": {
+      "revision": 3381,
+      "engine": "3400",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": true
+    },
+    "3383": {
+      "revision": 3383,
+      "engine": "3400",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": true
+    },
+    "3385": {
+      "revision": 3385,
+      "engine": "3400",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": true
+    },
+    "3388": {
+      "revision": 3388,
+      "engine": "3400",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": true
+    },
+    "3391": {
+      "revision": 3391,
+      "engine": "3400",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": true
+    },
+    "3394": {
+      "revision": 3394,
+      "engine": "3400",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": true
+    },
+    "3397": {
+      "revision": 3397,
+      "engine": "3400",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": true
+    },
+    "3400": {
+      "revision": 3400,
+      "engine": "3400",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": true
+    },
+    "3406": {
+      "revision": 3406,
+      "engine": "3400",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": true
+    },
+    "3411": {
+      "revision": 3411,
+      "engine": "3400",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": true
+    },
+    "3415": {
+      "revision": 3415,
+      "engine": "3400",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": true
+    },
+    "3416": {
+      "revision": 3416,
+      "engine": "3400",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": true
+    },
+    "3420": {
+      "revision": 3420,
+      "engine": "3400",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": true
+    },
+    "3422": {
+      "revision": 3422,
+      "engine": "3400",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": true
+    },
+    "3427": {
+      "revision": 3427,
+      "engine": "3400",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": true
+    },
+    "3428": {
+      "revision": 3428,
+      "engine": "3400",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": true
+    },
+    "3431": {
+      "revision": 3431,
+      "engine": "3400",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": true
+    },
+    "3434": {
+      "revision": 3434,
+      "engine": "3400",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": true
+    },
+    "3436": {
+      "revision": 3436,
+      "engine": "3400",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": true
+    },
+    "3441": {
+      "revision": 3441,
+      "engine": "3400",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": true
+    },
+    "3445": {
+      "revision": 3445,
+      "engine": "3400",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": true
+    },
+    "3446": {
+      "revision": 3446,
+      "engine": "3400",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": true
+    },
+    "3449": {
+      "revision": 3449,
+      "engine": "3400",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": true
+    },
+    "3454": {
+      "revision": 3454,
+      "engine": "3400",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": true
+    },
+    "3458": {
+      "revision": 3458,
+      "engine": "3400",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": true
+    },
+    "3461": {
+      "revision": 3461,
+      "engine": "3400",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": true
+    },
+    "3463": {
+      "revision": 3463,
+      "engine": "3400",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": true
+    },
+    "3465": {
+      "revision": 3465,
+      "engine": "3400",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": true
+    },
+    "3467": {
+      "revision": 3467,
+      "engine": "3400",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": true
+    },
+    "3469": {
+      "revision": 3469,
+      "engine": "3400",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": true
+    },
+    "3472": {
+      "revision": 3472,
+      "engine": "3400",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": true
+    },
+    "3477": {
+      "revision": 3477,
+      "engine": "3400",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": true
+    },
+    "3482": {
+      "revision": 3482,
+      "engine": "3400",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": true
+    },
+    "3500": {
+      "revision": 3500,
+      "engine": "3741",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": true
+    },
+    "3509": {
+      "revision": 3509,
+      "engine": "3741",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": true
+    },
+    "3511": {
+      "revision": 3511,
+      "engine": "3741",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": true
+    },
+    "3515": {
+      "revision": 3515,
+      "engine": "3741",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": true
+    },
+    "3517": {
+      "revision": 3517,
+      "engine": "3741",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": true
+    },
+    "3520": {
+      "revision": 3520,
+      "engine": "3741",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": true
+    },
+    "3526": {
+      "revision": 3526,
+      "engine": "3741",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": true
+    },
+    "3549": {
+      "revision": 3549,
+      "engine": "3741",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": true
+    },
+    "3550": {
+      "revision": 3550,
+      "engine": "3741",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": true
+    },
+    "3551": {
+      "revision": 3551,
+      "engine": "3741",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": true
+    },
+    "3552": {
+      "revision": 3552,
+      "engine": "3741",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": true
+    },
+    "3553": {
+      "revision": 3553,
+      "engine": "3741",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": true
+    },
+    "3554": {
+      "revision": 3554,
+      "engine": "3741",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": true
+    },
+    "3557": {
+      "revision": 3557,
+      "engine": "3741",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": true
+    },
+    "3559": {
+      "revision": 3559,
+      "engine": "3741",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": true
+    },
+    "3562": {
+      "revision": 3562,
+      "engine": "3741",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": true
+    },
+    "3565": {
+      "revision": 3565,
+      "engine": "3741",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": true
+    },
+    "3567": {
+      "revision": 3567,
+      "engine": "3741",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": true
+    },
+    "3568": {
+      "revision": 3568,
+      "engine": "3741",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": true
+    },
+    "3581": {
+      "revision": 3581,
+      "engine": "3741",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": true
+    },
+    "3583": {
+      "revision": 3583,
+      "engine": "3741",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": true
+    },
+    "3585": {
+      "revision": 3585,
+      "engine": "3741",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": true
+    },
+    "3586": {
+      "revision": 3586,
+      "engine": "3741",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": true
+    },
+    "3587": {
+      "revision": 3587,
+      "engine": "3741",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": true
+    },
+    "3591": {
+      "revision": 3591,
+      "engine": "3741",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": true
+    },
+    "3594": {
+      "revision": 3594,
+      "engine": "3741",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": true
+    },
+    "3596": {
+      "revision": 3596,
+      "engine": "3741",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": true
+    },
+    "3597": {
+      "revision": 3597,
+      "engine": "3741",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": true
+    },
+    "3602": {
+      "revision": 3602,
+      "engine": "3741",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": true
+    },
+    "3604": {
+      "revision": 3604,
+      "engine": "3741",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": true
+    },
+    "3605": {
+      "revision": 3605,
+      "engine": "3741",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": true
+    },
+    "3608": {
+      "revision": 3608,
+      "engine": "3741",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": true
+    },
+    "3609": {
+      "revision": 3609,
+      "engine": "3741",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": true
+    },
+    "3611": {
+      "revision": 3611,
+      "engine": "3741",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": true
+    },
+    "3614": {
+      "revision": 3614,
+      "engine": "3741",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": true
+    },
+    "3618": {
+      "revision": 3618,
+      "engine": "3741",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": true
+    },
+    "3619": {
+      "revision": 3619,
+      "engine": "3741",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": true
+    },
+    "3623": {
+      "revision": 3623,
+      "engine": "3741",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": true
+    },
+    "3624": {
+      "revision": 3624,
+      "engine": "3741",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": true
+    },
+    "3626": {
+      "revision": 3626,
+      "engine": "3741",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": true
+    },
+    "3629": {
+      "revision": 3629,
+      "engine": "3741",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": true
+    },
+    "3631": {
+      "revision": 3631,
+      "engine": "3741",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": true
+    },
+    "3633": {
+      "revision": 3633,
+      "engine": "3741",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": true
+    },
+    "3635": {
+      "revision": 3635,
+      "engine": "3741",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": true
+    },
+    "3638": {
+      "revision": 3638,
+      "engine": "3741",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": true
+    },
+    "3639": {
+      "revision": 3639,
+      "engine": "3741",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": true
+    },
+    "3640": {
+      "revision": 3640,
+      "engine": "3741",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": true
+    },
+    "3644": {
+      "revision": 3644,
+      "engine": "3741",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": true
+    },
+    "3646": {
+      "revision": 3646,
+      "engine": "3741",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": true
+    },
+    "3647": {
+      "revision": 3647,
+      "engine": "3741",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": true
+    },
+    "3649": {
+      "revision": 3649,
+      "engine": "3741",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": true
+    },
+    "3650": {
+      "revision": 3650,
+      "engine": "3741",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": true
+    },
+    "3651": {
+      "revision": 3651,
+      "engine": "3741",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": true
+    },
+    "3655": {
+      "revision": 3655,
+      "engine": "3741",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": true
+    },
+    "3656": {
+      "revision": 3656,
+      "engine": "3741",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": true
+    },
+    "3657": {
+      "revision": 3657,
+      "engine": "3741",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": true
+    },
+    "3660": {
+      "revision": 3660,
+      "engine": "3741",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": true
+    },
+    "3661": {
+      "revision": 3661,
+      "engine": "3741",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": true
+    },
+    "3663": {
+      "revision": 3663,
+      "engine": "3741",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": true
+    },
+    "3664": {
+      "revision": 3664,
+      "engine": "3741",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": true
+    },
+    "3665": {
+      "revision": 3665,
+      "engine": "3741",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": true
+    },
+    "3666": {
+      "revision": 3666,
+      "engine": "3741",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": true
+    },
+    "3667": {
+      "revision": 3667,
+      "engine": "3741",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": true
+    },
+    "3669": {
+      "revision": 3669,
+      "engine": "3741",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": true
+    },
+    "3670": {
+      "revision": 3670,
+      "engine": "3741",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": true
+    },
+    "3671": {
+      "revision": 3671,
+      "engine": "3741",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": true
+    },
+    "3672": {
+      "revision": 3672,
+      "engine": "3741",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": true
+    },
+    "3673": {
+      "revision": 3673,
+      "engine": "3741",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": true
+    },
+    "3674": {
+      "revision": 3674,
+      "engine": "3741",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": true
+    },
+    "3675": {
+      "revision": 3675,
+      "engine": "3741",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": true
+    },
+    "3677": {
+      "revision": 3677,
+      "engine": "3741",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": true
+    },
+    "3678": {
+      "revision": 3678,
+      "engine": "3741",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": true
+    },
+    "3679": {
+      "revision": 3679,
+      "engine": "3741",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": true
+    },
+    "3680": {
+      "revision": 3680,
+      "engine": "3741",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": true
+    },
+    "3682": {
+      "revision": 3682,
+      "engine": "3741",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": false
+    },
+    "3685": {
+      "revision": 3685,
+      "engine": "3741",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": false
+    },
+    "3686": {
+      "revision": 3686,
+      "engine": "3741",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": false
+    },
+    "3689": {
+      "revision": 3689,
+      "engine": "3741",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": false
+    },
+    "3690": {
+      "revision": 3690,
+      "engine": "3741",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": false
+    },
+    "3691": {
+      "revision": 3691,
+      "engine": "3741",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": false
+    },
+    "3692": {
+      "revision": 3692,
+      "engine": "3741",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": false
+    },
+    "3693": {
+      "revision": 3693,
+      "engine": "3741",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": false
+    },
+    "3694": {
+      "revision": 3694,
+      "engine": "3741",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": false
+    },
+    "3697": {
+      "revision": 3697,
+      "engine": "3741",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": false
+    },
+    "3699": {
+      "revision": 3699,
+      "engine": "3741",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": false
+    },
+    "3701": {
+      "revision": 3701,
+      "engine": "3741",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": false
+    },
+    "3703": {
+      "revision": 3703,
+      "engine": "3741",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": false
+    },
+    "3704": {
+      "revision": 3704,
+      "engine": "3741",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": false
+    },
+    "3707": {
+      "revision": 3707,
+      "engine": "3741",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": false
+    },
+    "3708": {
+      "revision": 3708,
+      "engine": "3741",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": false
+    },
+    "3709": {
+      "revision": 3709,
+      "engine": "3741",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": false
+    },
+    "3710": {
+      "revision": 3710,
+      "engine": "3741",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": false
+    },
+    "3711": {
+      "revision": 3711,
+      "engine": "3741",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": false
+    },
+    "3713": {
+      "revision": 3713,
+      "engine": "3741",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": false
+    },
+    "3714": {
+      "revision": 3714,
+      "engine": "3741",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": false
+    },
+    "3715": {
+      "revision": 3715,
+      "engine": "3741",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": false
+    },
+    "3716": {
+      "revision": 3716,
+      "engine": "3741",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": false
+    },
+    "3722": {
+      "revision": 3722,
+      "engine": "3741",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": false
+    },
+    "3725": {
+      "revision": 3725,
+      "engine": "3741",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": false
+    },
+    "3726": {
+      "revision": 3726,
+      "engine": "3741",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": false
+    },
+    "3727": {
+      "revision": 3727,
+      "engine": "3741",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": false
+    },
+    "3728": {
+      "revision": 3728,
+      "engine": "3741",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": false
+    },
+    "3729": {
+      "revision": 3729,
+      "engine": "3741",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": false
+    },
+    "3730": {
+      "revision": 3730,
+      "engine": "3741",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": false
+    },
+    "3732": {
+      "revision": 3732,
+      "engine": "3741",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": false
+    },
+    "3738": {
+      "revision": 3738,
+      "engine": "3741",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": false
+    },
+    "3740": {
+      "revision": 3740,
+      "engine": "3741",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": false
+    },
+    "3741": {
+      "revision": 3741,
+      "engine": "3741",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": false
+    },
+    "3742": {
+      "revision": 3742,
+      "engine": "3741",
+      "name_declaration": "char\t\t\tname[MAX_NAME_LEN+1]",
+      "name_limit": 40,
+      "setter_integer_result": true,
+      "getter_requires_actor": false
+    },
+    "3761": {
+      "revision": 3761,
+      "engine": "3842",
+      "name_declaration": "char name[MAX_NAME_LEN+1]",
+      "name_limit": 47,
+      "setter_integer_result": true,
+      "getter_requires_actor": false
+    },
+    "3769": {
+      "revision": 3769,
+      "engine": "3842",
+      "name_declaration": "char name[MAX_NAME_LEN+1]",
+      "name_limit": 47,
+      "setter_integer_result": true,
+      "getter_requires_actor": false
+    },
+    "3773": {
+      "revision": 3773,
+      "engine": "3842",
+      "name_declaration": "char name[MAX_NAME_LEN+1]",
+      "name_limit": 47,
+      "setter_integer_result": true,
+      "getter_requires_actor": false
+    },
+    "3780": {
+      "revision": 3780,
+      "engine": "3842",
+      "name_declaration": "char name[MAX_NAME_LEN+1]",
+      "name_limit": 47,
+      "setter_integer_result": true,
+      "getter_requires_actor": false
+    },
+    "3783": {
+      "revision": 3783,
+      "engine": "3842",
+      "name_declaration": "char name[MAX_NAME_LEN+1]",
+      "name_limit": 47,
+      "setter_integer_result": true,
+      "getter_requires_actor": false
+    },
+    "3789": {
+      "revision": 3789,
+      "engine": "3842",
+      "name_declaration": "char name[MAX_NAME_LEN+1]",
+      "name_limit": 47,
+      "setter_integer_result": true,
+      "getter_requires_actor": false
+    },
+    "3793": {
+      "revision": 3793,
+      "engine": "3842",
+      "name_declaration": "char name[MAX_NAME_LEN+1]",
+      "name_limit": 47,
+      "setter_integer_result": true,
+      "getter_requires_actor": false
+    },
+    "3797": {
+      "revision": 3797,
+      "engine": "3842",
+      "name_declaration": "char name[MAX_NAME_LEN+1]",
+      "name_limit": 47,
+      "setter_integer_result": false,
+      "getter_requires_actor": false
+    },
+    "3805": {
+      "revision": 3805,
+      "engine": "3842",
+      "name_declaration": "char name[MAX_NAME_LEN+1]",
+      "name_limit": 47,
+      "setter_integer_result": false,
+      "getter_requires_actor": false
+    },
+    "3814": {
+      "revision": 3814,
+      "engine": "3842",
+      "name_declaration": "char name[MAX_NAME_LEN+1]",
+      "name_limit": 47,
+      "setter_integer_result": false,
+      "getter_requires_actor": false
+    },
+    "3818": {
+      "revision": 3818,
+      "engine": "3842",
+      "name_declaration": "char name[MAX_NAME_LEN+1]",
+      "name_limit": 47,
+      "setter_integer_result": false,
+      "getter_requires_actor": false
+    },
+    "3822": {
+      "revision": 3822,
+      "engine": "3842",
+      "name_declaration": "char name[MAX_NAME_LEN+1]",
+      "name_limit": 47,
+      "setter_integer_result": false,
+      "getter_requires_actor": false
+    },
+    "3824": {
+      "revision": 3824,
+      "engine": "3842",
+      "name_declaration": "char name[MAX_NAME_LEN+1]",
+      "name_limit": 47,
+      "setter_integer_result": false,
+      "getter_requires_actor": false
+    },
+    "3829": {
+      "revision": 3829,
+      "engine": "3842",
+      "name_declaration": "char name[MAX_NAME_LEN+1]",
+      "name_limit": 47,
+      "setter_integer_result": false,
+      "getter_requires_actor": false
+    },
+    "3831": {
+      "revision": 3831,
+      "engine": "3842",
+      "name_declaration": "char name[MAX_NAME_LEN+1]",
+      "name_limit": 47,
+      "setter_integer_result": false,
+      "getter_requires_actor": false
+    },
+    "3837": {
+      "revision": 3837,
+      "engine": "3842",
+      "name_declaration": "char name[MAX_NAME_LEN+1]",
+      "name_limit": 47,
+      "setter_integer_result": false,
+      "getter_requires_actor": false
+    },
+    "3839": {
+      "revision": 3839,
+      "engine": "3842",
+      "name_declaration": "char name[MAX_NAME_LEN+1]",
+      "name_limit": 47,
+      "setter_integer_result": false,
+      "getter_requires_actor": false
+    },
+    "3842": {
+      "revision": 3842,
+      "engine": "3842",
+      "name_declaration": "char name[MAX_NAME_LEN+1]",
+      "name_limit": 47,
+      "setter_integer_result": false,
+      "getter_requires_actor": false
+    },
+    "3846": {
+      "revision": 3846,
+      "engine": "3842",
+      "name_declaration": "char name[MAX_NAME_LEN+1]",
+      "name_limit": 47,
+      "setter_integer_result": false,
+      "getter_requires_actor": false
+    },
+    "3847": {
+      "revision": 3847,
+      "engine": "3842",
+      "name_declaration": "char name[MAX_NAME_LEN+1]",
+      "name_limit": 47,
+      "setter_integer_result": false,
+      "getter_requires_actor": false
+    },
+    "3849": {
+      "revision": 3849,
+      "engine": "3842",
+      "name_declaration": "char name[MAX_NAME_LEN+1]",
+      "name_limit": 47,
+      "setter_integer_result": false,
+      "getter_requires_actor": false
+    },
+    "3854": {
+      "revision": 3854,
+      "engine": "3842",
+      "name_declaration": "char name[MAX_NAME_LEN+1]",
+      "name_limit": 47,
+      "setter_integer_result": false,
+      "getter_requires_actor": false
+    },
+    "3968": {
+      "revision": 3968,
+      "engine": "4086",
+      "name_declaration": "char name[MAX_NAME_LEN+1]",
+      "name_limit": 47,
+      "setter_integer_result": false,
+      "getter_requires_actor": false
+    },
+    "3970": {
+      "revision": 3970,
+      "engine": "4086",
+      "name_declaration": "char name[MAX_NAME_LEN+1]",
+      "name_limit": 47,
+      "setter_integer_result": false,
+      "getter_requires_actor": false
+    },
+    "3978": {
+      "revision": 3978,
+      "engine": "4086",
+      "name_declaration": "char name[MAX_NAME_LEN + 1]",
+      "name_limit": 47,
+      "setter_integer_result": false,
+      "getter_requires_actor": false
+    },
+    "3984": {
+      "revision": 3984,
+      "engine": "4086",
+      "name_declaration": "char name[MAX_NAME_LEN + 1]",
+      "name_limit": 47,
+      "setter_integer_result": false,
+      "getter_requires_actor": false
+    },
+    "3993": {
+      "revision": 3993,
+      "engine": "4086",
+      "name_declaration": "char name[MAX_NAME_LEN + 1]",
+      "name_limit": 47,
+      "setter_integer_result": false,
+      "getter_requires_actor": false
+    },
+    "3994": {
+      "revision": 3994,
+      "engine": "4086",
+      "name_declaration": "char name[MAX_NAME_LEN + 1]",
+      "name_limit": 47,
+      "setter_integer_result": false,
+      "getter_requires_actor": false
+    },
+    "4011": {
+      "revision": 4011,
+      "engine": "4086",
+      "name_declaration": "char name[MAX_NAME_LEN + 1]",
+      "name_limit": 47,
+      "setter_integer_result": false,
+      "getter_requires_actor": false
+    },
+    "4046": {
+      "revision": 4046,
+      "engine": "4086",
+      "name_declaration": "char name[MAX_NAME_LEN + 1]",
+      "name_limit": 47,
+      "setter_integer_result": false,
+      "getter_requires_actor": false
+    },
+    "4051": {
+      "revision": 4051,
+      "engine": "4086",
+      "name_declaration": "char name[MAX_NAME_LEN + 1]",
+      "name_limit": 47,
+      "setter_integer_result": false,
+      "getter_requires_actor": false
+    },
+    "4054": {
+      "revision": 4054,
+      "engine": "4086",
+      "name_declaration": "char name[MAX_NAME_LEN + 1]",
+      "name_limit": 47,
+      "setter_integer_result": false,
+      "getter_requires_actor": false
+    },
+    "4055": {
+      "revision": 4055,
+      "engine": "4086",
+      "name_declaration": "char name[MAX_NAME_LEN + 1]",
+      "name_limit": 47,
+      "setter_integer_result": false,
+      "getter_requires_actor": false
+    },
+    "4079": {
+      "revision": 4079,
+      "engine": "4086",
+      "name_declaration": "char name[MAX_NAME_LEN + 1]",
+      "name_limit": 47,
+      "setter_integer_result": false,
+      "getter_requires_actor": false
+    },
+    "4080": {
+      "revision": 4080,
+      "engine": "4086",
+      "name_declaration": "char name[MAX_NAME_LEN + 1]",
+      "name_limit": 47,
+      "setter_integer_result": false,
+      "getter_requires_actor": false
+    },
+    "4082": {
+      "revision": 4082,
+      "engine": "4086",
+      "name_declaration": "char name[MAX_NAME_LEN + 1]",
+      "name_limit": 47,
+      "setter_integer_result": false,
+      "getter_requires_actor": false
+    },
+    "4085": {
+      "revision": 4085,
+      "engine": "4086",
+      "name_declaration": "char name[MAX_NAME_LEN + 1]",
+      "name_limit": 47,
+      "setter_integer_result": false,
+      "getter_requires_actor": false
+    },
+    "4086": {
+      "revision": 4086,
+      "engine": "4086",
+      "name_declaration": "char name[MAX_NAME_LEN + 1]",
+      "name_limit": 47,
+      "setter_integer_result": false,
+      "getter_requires_actor": false
+    },
+    "4088": {
+      "revision": 4088,
+      "engine": "4086",
+      "name_declaration": "char name[MAX_NAME_LEN + 1]",
+      "name_limit": 47,
+      "setter_integer_result": false,
+      "getter_requires_actor": false
+    },
+    "4107": {
+      "revision": 4107,
+      "engine": "4086",
+      "name_declaration": "char name[MAX_NAME_LEN + 1]",
+      "name_limit": 47,
+      "setter_integer_result": false,
+      "getter_requires_actor": false
+    },
+    "4111": {
+      "revision": 4111,
+      "engine": "4086",
+      "name_declaration": "char name[MAX_NAME_LEN + 1]",
+      "name_limit": 47,
+      "setter_integer_result": false,
+      "getter_requires_actor": false
+    },
+    "4129": {
+      "revision": 4129,
+      "engine": "4086",
+      "name_declaration": "char name[MAX_NAME_LEN + 1]",
+      "name_limit": 47,
+      "setter_integer_result": false,
+      "getter_requires_actor": false
+    },
+    "4153": {
+      "revision": 4153,
+      "engine": "4086",
+      "name_declaration": "char name[MAX_NAME_LEN + 1]",
+      "name_limit": 47,
+      "setter_integer_result": false,
+      "getter_requires_actor": false
+    },
+    "4432": {
+      "revision": 4432,
+      "engine": "4432",
+      "name_declaration": "char name[MAX_NAME_LEN + 1]",
+      "name_limit": 50,
+      "setter_integer_result": false,
+      "getter_requires_actor": false
+    },
+    "4453": {
+      "revision": 4453,
+      "engine": "4432",
+      "name_declaration": "char name[MAX_NAME_LEN + 1]",
+      "name_limit": 50,
+      "setter_integer_result": false,
+      "getter_requires_actor": false
+    },
+    "6330": {
+      "revision": 6330,
+      "engine": "6391",
+      "name_declaration": "char name[MAX_NAME_LEN]",
+      "name_limit": 50,
+      "setter_integer_result": false,
+      "getter_requires_actor": false
+    },
+    "6391": {
+      "revision": 6391,
+      "engine": "6391",
+      "name_declaration": "char name[MAX_NAME_LEN]",
+      "name_limit": 50,
+      "setter_integer_result": false,
+      "getter_requires_actor": false
+    },
+    "6391-mod": {
+      "revision": 6391,
+      "engine": "6391",
+      "name_declaration": "char name[MAX_NAME_LEN]",
+      "name_limit": 50,
+      "setter_integer_result": false,
+      "getter_requires_actor": false
+    },
+    "6392": {
+      "revision": 6392,
+      "engine": "6391",
+      "name_declaration": "char name[MAX_NAME_LEN]",
+      "name_limit": 50,
+      "setter_integer_result": false,
+      "getter_requires_actor": false
+    },
+    "6412": {
+      "revision": 6412,
+      "engine": "6391",
+      "name_declaration": "char name[MAX_NAME_LEN]",
+      "name_limit": 50,
+      "setter_integer_result": false,
+      "getter_requires_actor": false
+    },
+    "6510": {
+      "revision": 6510,
+      "engine": "6391",
+      "name_declaration": "char name[MAX_NAME_LEN]",
+      "name_limit": 50,
+      "setter_integer_result": false,
+      "getter_requires_actor": false
+    },
+    "7086": {
+      "revision": 7086,
+      "engine": "7142",
+      "name_declaration": "char name[MAX_NAME_LEN]",
+      "name_limit": 50,
+      "setter_integer_result": false,
+      "getter_requires_actor": false
+    },
+    "7123": {
+      "revision": 7123,
+      "engine": "7142",
+      "name_declaration": "char name[MAX_NAME_LEN]",
+      "name_limit": 50,
+      "setter_integer_result": false,
+      "getter_requires_actor": false
+    },
+    "7142": {
+      "revision": 7142,
+      "engine": "7142",
+      "name_declaration": "char name[MAX_NAME_LEN]",
+      "name_limit": 50,
+      "setter_integer_result": false,
+      "getter_requires_actor": false
+    },
+    "7530": {
+      "revision": 7530,
+      "engine": "7533",
+      "name_declaration": "char name[MAX_NAME_LEN]",
+      "name_limit": 50,
+      "setter_integer_result": false,
+      "getter_requires_actor": false
+    },
+    "7533": {
+      "revision": 7533,
+      "engine": "7533",
+      "name_declaration": "char name[MAX_NAME_LEN]",
+      "name_limit": 50,
+      "setter_integer_result": false,
+      "getter_requires_actor": false
+    },
+    "7555": {
+      "revision": 7555,
+      "engine": "7533",
+      "name_declaration": "char name[MAX_NAME_LEN]",
+      "name_limit": 50,
+      "setter_integer_result": false,
+      "getter_requires_actor": false
+    },
+    "7556": {
+      "revision": 7556,
+      "engine": "7533",
+      "name_declaration": "char name[MAX_NAME_LEN]",
+      "name_limit": 50,
+      "setter_integer_result": false,
+      "getter_requires_actor": false
+    },
+    "7735": {
+      "revision": 7735,
+      "engine": "7533",
+      "name_declaration": "char name[MAX_NAME_LEN]",
+      "name_limit": 50,
+      "setter_integer_result": false,
+      "getter_requires_actor": false
+    },
+    "8023": {
+      "revision": 8023,
+      "engine": "8023",
+      "name_declaration": "char name[MAX_NAME_LEN]",
+      "name_limit": 50,
+      "setter_integer_result": false,
+      "getter_requires_actor": false
+    }
+  }
+}

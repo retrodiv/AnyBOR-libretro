@@ -38,9 +38,15 @@ typedef struct
 
 #include "obor_script_storage.h"
 
+#include <stdint.h>
+/* Preserve member offsets while allowing native packed owners. */
+#pragma pack(push, 4)
 typedef struct Script
 {
 	int magic;
+#if UINTPTR_MAX > UINT32_MAX
+    unsigned char obor_alignment_padding[sizeof(void *) - sizeof(int)];
+#endif
 	Interpreter* pinterpreter;
 	char* comment; // debug purpose
 	ScriptVariant* vars;
@@ -49,6 +55,7 @@ typedef struct Script
     obor_script_reference *obor_interpreter;
     obor_script_reference *obor_comment;
 }Script;
+#pragma pack(pop)
 
 extern s_variantnode** global_var_list;
 extern List           theFunctionList;

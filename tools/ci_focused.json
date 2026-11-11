@@ -102,6 +102,16 @@
       "ci": "shared"
     },
     {
+      "id": "test_preprocessor_concatenation",
+      "memory_mib": 1024,
+      "seconds": 180,
+      "command": [
+        "python3",
+        "tools/test_preprocessor_concatenation.py"
+      ],
+      "ci": "shared"
+    },
+    {
       "id": "test_early_script_lexers",
       "memory_mib": 512,
       "seconds": 120,
@@ -268,6 +278,16 @@
       "command": [
         "python3",
         "tools/test_early_screenshots.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_png_writer_ownership",
+      "memory_mib": 1024,
+      "seconds": 300,
+      "command": [
+        "python3",
+        "tools/test_png_writer_ownership.py"
       ],
       "ci": "shared"
     },
@@ -1472,6 +1492,46 @@
       "ci": "shared"
     },
     {
+      "id": "test_collision_list_capacity",
+      "memory_mib": 512,
+      "seconds": 90,
+      "command": [
+        "python3",
+        "tools/test_collision_list_capacity.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_collision_list_ownership",
+      "memory_mib": 1024,
+      "seconds": 300,
+      "command": [
+        "python3",
+        "tools/test_collision_list_ownership.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_script_pointer_offsets",
+      "memory_mib": 512,
+      "seconds": 180,
+      "command": [
+        "python3",
+        "tools/test_script_pointer_offsets.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_script_initialization",
+      "memory_mib": 512,
+      "seconds": 180,
+      "command": [
+        "python3",
+        "tools/test_script_initialization.py"
+      ],
+      "ci": "shared"
+    },
+    {
       "id": "test_render_colourmaps",
       "memory_mib": 512,
       "seconds": 180,
@@ -1808,6 +1868,106 @@
       "command": [
         "python3",
         "tools/test_text_object_ownership.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_text_object_queries",
+      "memory_mib": 1024,
+      "seconds": 180,
+      "command": [
+        "python3",
+        "tools/test_text_object_queries.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_text_object_values",
+      "memory_mib": 1024,
+      "seconds": 180,
+      "command": [
+        "python3",
+        "tools/test_text_object_values.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_text_object_tables",
+      "memory_mib": 1024,
+      "seconds": 180,
+      "command": [
+        "python3",
+        "tools/test_text_object_tables.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_projectile_terminal_health",
+      "memory_mib": 1024,
+      "seconds": 180,
+      "command": [
+        "python3",
+        "tools/test_projectile_terminal_health.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_script_save_input",
+      "memory_mib": 1024,
+      "seconds": 180,
+      "command": [
+        "python3",
+        "tools/test_script_save_input.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_import_initialization",
+      "memory_mib": 1024,
+      "seconds": 180,
+      "command": [
+        "python3",
+        "tools/test_import_initialization.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_parser_labels",
+      "memory_mib": 1024,
+      "seconds": 180,
+      "command": [
+        "python3",
+        "tools/test_parser_labels.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_parser_token_prefix",
+      "memory_mib": 1024,
+      "seconds": 180,
+      "command": [
+        "python3",
+        "tools/test_parser_token_prefix.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_preprocessor_messages",
+      "memory_mib": 1024,
+      "seconds": 180,
+      "command": [
+        "python3",
+        "tools/test_preprocessor_messages.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_allocation_ranges",
+      "memory_mib": 1024,
+      "seconds": 180,
+      "command": [
+        "python3",
+        "tools/test_allocation_ranges.py"
       ],
       "ci": "shared"
     },
@@ -3148,6 +3308,416 @@
       "command": [
         "python3",
         "tools/test_modern_system_routing.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_preprocessor_macro_ownership",
+      "memory_mib": 1024,
+      "seconds": 180,
+      "command": [
+        "python3",
+        "tools/test_preprocessor_macro_ownership.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_script_global_slots",
+      "memory_mib": 1024,
+      "seconds": 180,
+      "command": [
+        "python3",
+        "tools/test_script_global_slots.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_model_constructor_ownership",
+      "memory_mib": 1024,
+      "seconds": 180,
+      "command": [
+        "python3",
+        "tools/test_model_constructor_ownership.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_sprite_array_inputs",
+      "memory_mib": 1024,
+      "seconds": 180,
+      "command": [
+        "python3",
+        "tools/test_sprite_array_inputs.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_zoom_pixels",
+      "memory_mib": 1024,
+      "seconds": 180,
+      "command": [
+        "python3",
+        "tools/test_zoom_pixels.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_lowercase_bytes",
+      "memory_mib": 512,
+      "seconds": 180,
+      "command": [
+        "python3",
+        "tools/test_lowercase_bytes.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_sprite_size_counts",
+      "memory_mib": 1024,
+      "seconds": 180,
+      "command": [
+        "python3",
+        "tools/test_sprite_size_counts.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_triangle_diagnostics",
+      "memory_mib": 512,
+      "seconds": 180,
+      "command": [
+        "python3",
+        "tools/test_triangle_diagnostics.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_target_detection_arithmetic",
+      "memory_mib": 1024,
+      "seconds": 180,
+      "command": [
+        "python3",
+        "tools/test_target_detection_arithmetic.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_playable_model_validation",
+      "memory_mib": 1024,
+      "seconds": 180,
+      "command": [
+        "python3",
+        "tools/test_playable_model_validation.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_draw_method_bounds",
+      "memory_mib": 1024,
+      "seconds": 180,
+      "command": [
+        "python3",
+        "tools/test_draw_method_bounds.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_frame_input_bounds",
+      "memory_mib": 1024,
+      "seconds": 180,
+      "command": [
+        "python3",
+        "tools/test_frame_input_bounds.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_remap_flag_bounds",
+      "memory_mib": 1024,
+      "seconds": 180,
+      "command": [
+        "python3",
+        "tools/test_remap_flag_bounds.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_astar_output",
+      "memory_mib": 1024,
+      "seconds": 180,
+      "command": [
+        "python3",
+        "tools/test_astar_output.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_attack_query_bounds",
+      "memory_mib": 1024,
+      "seconds": 180,
+      "command": [
+        "python3",
+        "tools/test_attack_query_bounds.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_modern_attack_query_bounds",
+      "memory_mib": 1024,
+      "seconds": 180,
+      "command": [
+        "python3",
+        "tools/test_modern_attack_query_bounds.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_defense_query_bounds",
+      "memory_mib": 1024,
+      "seconds": 180,
+      "command": [
+        "python3",
+        "tools/test_defense_query_bounds.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_gif_memory_bounds",
+      "memory_mib": 1024,
+      "seconds": 180,
+      "command": [
+        "python3",
+        "tools/test_gif_memory_bounds.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_screen_reference_alignment",
+      "memory_mib": 1024,
+      "seconds": 180,
+      "command": [
+        "python3",
+        "tools/test_screen_reference_alignment.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_rise_input_bounds",
+      "memory_mib": 1024,
+      "seconds": 180,
+      "command": [
+        "python3",
+        "tools/test_rise_input_bounds.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_collision_selector_inputs",
+      "memory_mib": 1024,
+      "seconds": 180,
+      "command": [
+        "python3",
+        "tools/test_collision_selector_inputs.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_legacy_texture_bounds",
+      "memory_mib": 1024,
+      "seconds": 180,
+      "command": [
+        "python3",
+        "tools/test_legacy_texture_bounds.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_entity_pool_growth",
+      "memory_mib": 1024,
+      "seconds": 180,
+      "command": [
+        "python3",
+        "tools/test_entity_pool_growth.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_entity_storage_ownership",
+      "memory_mib": 1024,
+      "seconds": 180,
+      "command": [
+        "python3",
+        "tools/test_entity_storage_ownership.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_command_table_ownership",
+      "memory_mib": 1024,
+      "seconds": 180,
+      "command": [
+        "python3",
+        "tools/test_command_table_ownership.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_graphics_query_coordinates",
+      "memory_mib": 1024,
+      "seconds": 180,
+      "command": [
+        "python3",
+        "tools/test_graphics_query_coordinates.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_hud_model_inputs",
+      "memory_mib": 1024,
+      "seconds": 300,
+      "command": [
+        "python3",
+        "tools/test_hud_model_inputs.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_slowmotion_counter_bounds",
+      "memory_mib": 1024,
+      "seconds": 300,
+      "command": [
+        "python3",
+        "tools/test_slowmotion_counter_bounds.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_vulnerable_frame_queries",
+      "memory_mib": 1024,
+      "seconds": 300,
+      "command": [
+        "python3",
+        "tools/test_vulnerable_frame_queries.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_player_property_inputs",
+      "memory_mib": 1024,
+      "seconds": 300,
+      "command": [
+        "python3",
+        "tools/test_player_property_inputs.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_pickup_inputs",
+      "memory_mib": 1024,
+      "seconds": 300,
+      "command": [
+        "python3",
+        "tools/test_pickup_inputs.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_toss_inputs",
+      "memory_mib": 1024,
+      "seconds": 300,
+      "command": [
+        "python3",
+        "tools/test_toss_inputs.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_script_record_alignment",
+      "memory_mib": 1024,
+      "seconds": 300,
+      "command": [
+        "python3",
+        "tools/test_script_record_alignment.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_script_health_arithmetic",
+      "memory_mib": 1024,
+      "seconds": 300,
+      "command": [
+        "python3",
+        "tools/test_script_health_arithmetic.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_level_consumer_storage",
+      "memory_mib": 1024,
+      "seconds": 300,
+      "command": [
+        "python3",
+        "tools/test_level_consumer_storage.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_saved_player_name_restore",
+      "memory_mib": 1024,
+      "seconds": 300,
+      "command": [
+        "python3",
+        "tools/test_saved_player_name_restore.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_script_heap_entry_kinds",
+      "memory_mib": 1024,
+      "seconds": 300,
+      "command": [
+        "python3",
+        "tools/test_script_heap_entry_kinds.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_script_array_storage",
+      "memory_mib": 1024,
+      "seconds": 300,
+      "command": [
+        "python3",
+        "tools/test_script_array_storage.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_script_constructor_storage",
+      "memory_mib": 1024,
+      "seconds": 300,
+      "command": [
+        "python3",
+        "tools/test_script_constructor_storage.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_script_variable_storage",
+      "memory_mib": 1024,
+      "seconds": 300,
+      "command": [
+        "python3",
+        "tools/test_script_variable_storage.py"
+      ],
+      "ci": "shared"
+    },
+    {
+      "id": "test_script_variable_delete_storage",
+      "memory_mib": 1024,
+      "seconds": 300,
+      "command": [
+        "python3",
+        "tools/test_script_variable_delete_storage.py"
       ],
       "ci": "shared"
     }

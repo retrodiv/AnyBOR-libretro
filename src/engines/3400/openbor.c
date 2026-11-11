@@ -54,6 +54,7 @@
 /////////////////////////////////////////////////////////////////////////////
 
 #include "openbor.h"
+#include "obor_rise_inputs.h"
 #include <limits.h>
 #include <stdint.h>
 #include "commands.h"
@@ -4097,9 +4098,17 @@ static void load_playable_list(char* buf)
 	for(i=1;i<MAX_ARG_LEN && (value=GET_ARG(i))[0];i++)
 	{
 		playermodels = findmodel(value);
-		if(playermodels == NULL) shutdown(1, "Player model '%s' is not loaded.\n", value);
+		if(playermodels == NULL)
+		{
+		    shutdown(1, "Player model '%s' is not loaded.\n", value);
+		    return;
+		}
 		index = get_cached_model_index(playermodels->name);
-		if(index == -1) shutdown(1, "Player model '%s' is not cached.\n", value);
+		if(index == -1)
+		{
+		    shutdown(1, "Player model '%s' is not cached.\n", value);
+		    return;
+		}
 		model_cache[index].selectable = 1;
 	}
 }
@@ -5214,6 +5223,73 @@ s_model* init_model(int cacheindex, int unload) {
 	return newchar;
 }
 
+static void obor_model_release_constructor_storage(s_model *model, const s_model *parent)
+{
+    if(!model || !parent || model == parent) return;
+    /* Only constructor backing storage is replaced here. Scripts and the
+     * global animation records remain live while the loader is running. */
+    if(hasFreetype(model, MF_DEF_FACTORS) && model->defense_factors
+        && model->defense_factors != parent->defense_factors)
+    {
+        free(model->defense_factors);
+        model->defense_factors = NULL;
+    }
+    if(hasFreetype(model, MF_DEF_PAIN) && model->defense_pain
+        && model->defense_pain != parent->defense_pain)
+    {
+        free(model->defense_pain);
+        model->defense_pain = NULL;
+    }
+    if(hasFreetype(model, MF_DEF_KNOCKDOWN) && model->defense_knockdown
+        && model->defense_knockdown != parent->defense_knockdown)
+    {
+        free(model->defense_knockdown);
+        model->defense_knockdown = NULL;
+    }
+    if(hasFreetype(model, MF_DEF_BLOCKPOWER) && model->defense_blockpower
+        && model->defense_blockpower != parent->defense_blockpower)
+    {
+        free(model->defense_blockpower);
+        model->defense_blockpower = NULL;
+    }
+    if(hasFreetype(model, MF_DEF_BLOCKTRESHOLD) && model->defense_blockthreshold
+        && model->defense_blockthreshold != parent->defense_blockthreshold)
+    {
+        free(model->defense_blockthreshold);
+        model->defense_blockthreshold = NULL;
+    }
+    if(hasFreetype(model, MF_DEF_BLOCKRATIO) && model->defense_blockratio
+        && model->defense_blockratio != parent->defense_blockratio)
+    {
+        free(model->defense_blockratio);
+        model->defense_blockratio = NULL;
+    }
+    if(hasFreetype(model, MF_DEF_BLOCKTYPE) && model->defense_blocktype
+        && model->defense_blocktype != parent->defense_blocktype)
+    {
+        free(model->defense_blocktype);
+        model->defense_blocktype = NULL;
+    }
+    if(hasFreetype(model, MF_OFF_FACTORS) && model->offense_factors
+        && model->offense_factors != parent->offense_factors)
+    {
+        free(model->offense_factors);
+        model->offense_factors = NULL;
+    }
+    if(hasFreetype(model, MF_SPECIAL) && model->special
+        && model->special != parent->special)
+    {
+        free(model->special);
+        model->special = NULL;
+    }
+    if(hasFreetype(model, MF_ANIMATION) && model->animation
+        && model->animation != parent->animation)
+    {
+        free(model->animation);
+        model->animation = NULL;
+        model->animation_capacity = 0;
+    }
+}
 static int model_animation_reserve(s_model* model, int animation_id)
 {
 	int capacity;
@@ -5456,6 +5532,7 @@ s_model* load_cached_model(char * name, char * owner, char unload)
 						shutdownmessage = "tried to subclass a non-existing/not previously loaded model!";
 						goto lCleanup;
 					}
+					obor_model_release_constructor_storage(newchar, tempmodel);
 					tempscripts = newchar->scripts;
 					*newchar = *tempmodel;
 					newchar->scripts = tempscripts;
@@ -6202,7 +6279,8 @@ s_model* load_cached_model(char * name, char * owner, char unload)
 								memcpy(newchar->palette, pal, PAL_BYTES);
 							}
 						}
-						mapflag[newchar->maps_loaded-1] = 1;
+						if(newchar->maps_loaded > 0 && newchar->maps_loaded <= MAX_COLOUR_MAPS)
+						    mapflag[newchar->maps_loaded-1] = 1;
 						if(!errorVal){
 							switch(errorVal){
 								case 0: // uhm wait, we just tested for !errorVal...
@@ -8688,6 +8766,7 @@ void load_levelorder()
 				CHKDEF;
 				if(!skipselect) {
 					skipselect = obor_profile_malloc_named("skipselect", sizeof(*skipselect));
+                    if(!skipselect) shutdown(1, "Out of memory!");
 					memset(skipselect, 0, sizeof(*skipselect));
 				}
 
@@ -8695,7 +8774,9 @@ void load_levelorder()
 					if((arg=GET_ARG(i+1))[0]) {
 						if(!(*skipselect)[current_set][i])
 							(*skipselect)[current_set][i] = obor_profile_malloc_named("skipselect#2", MAX_NAME_LEN+1);
+                        if(!(*skipselect)[current_set][i]) shutdown(1, "Out of memory!");
 						strncpy((*skipselect)[current_set][i], arg, MAX_NAME_LEN);
+                        (*skipselect)[current_set][i][MAX_NAME_LEN] = 0;
 					}
 				}
 				break;
@@ -10759,6 +10840,9 @@ void predrawstatus(){
 			font_printf(videomodes.shiftpos[i]+pnameJ[i][0], savedata.windowpos+pnameJ[i][1], pnameJ[i][6], 0, player[i].name);
 			if(nojoin) font_printf(videomodes.shiftpos[i]+pnameJ[i][2], savedata.windowpos+pnameJ[i][3], pnameJ[i][6], 0, "Please Wait");
 			else font_printf(videomodes.shiftpos[i]+pnameJ[i][2], savedata.windowpos+pnameJ[i][3], pnameJ[i][6], 0, "Select Hero");
+			/* AnyBOR: unresolved selections have no model icon. */
+			if(model)
+			{
 			icon = model->icon.def;
 
 			if(icon>=0 && !player[i].colourmap){
@@ -10771,6 +10855,7 @@ void predrawstatus(){
 			}
 
 
+			}
 			if((player[i].playkeys & FLAG_ANYBUTTON || (skipselect&&(*skipselect)[current_set][i])) && !freezeall && !nojoin)    // Can't join while animations are frozen
 			{
 				// reports error if players try to use the same character and sameplay mode is off
@@ -10784,6 +10869,7 @@ void predrawstatus(){
 				}
 
 				if (!tperror){    // Fixed so players can be selected if other player is no longer va //4player                        player[i].playkeys = player[i].newkeys = 0;
+					if(!model) continue;
 					player[i].lives = PLAYER_LIVES;            // to address new lives settings
 					player[i].joining = 0;
 					player[i].hasplayed = 1;
@@ -10804,6 +10890,8 @@ void predrawstatus(){
 			{
 				player[i].colourmap = i;
 				model = prevplayermodel(model);
+				/* AnyBOR: keep unresolved selections outside model storage. */
+				if(!model) continue;
 				strcpy(player[i].name, model->name);
 
 				while(   // Keep looping until a non-hmap is found
@@ -10822,6 +10910,8 @@ void predrawstatus(){
 			{
 				player[i].colourmap = i;
 				model = nextplayermodel(model);
+				/* AnyBOR: keep unresolved selections outside model storage. */
+				if(!model) continue;
 				strcpy(player[i].name, model->name);
 
 				while(   // Keep looping until a non-hmap is found
@@ -10840,6 +10930,7 @@ void predrawstatus(){
 			// don't like a characters color try a new one!
 			else if(player[i].playkeys & FLAG_MOVEUP && colourselect)
 			{
+                if(!model) continue;
 
 				do{
 					player[i].colourmap++;
@@ -10858,6 +10949,7 @@ void predrawstatus(){
 			}
 			else if(player[i].playkeys & FLAG_MOVEDOWN && colourselect)
 			{
+                if(!model) continue;
 
 				do{
 					player[i].colourmap--;
@@ -10886,6 +10978,8 @@ void predrawstatus(){
 			{
 				player[i].lives = 0;
 				model = (skipselect&&(*skipselect)[current_set][i])?findmodel((*skipselect)[current_set][i]):nextplayermodel(NULL);
+				/* AnyBOR: keep unresolved selections outside model storage. */
+				if(!model) continue;
 				strncpy(player[i].name, model->name, MAX_NAME_LEN);
 				player[i].colourmap = i;
 				 // Keep looping until a non-hmap is found
@@ -11223,29 +11317,43 @@ entity* alloc_ent()
 	if(!ent) return NULL;
 	memset(ent, 0, sizeof(entity));
 	ent->defense_factors        = (float*)obor_profile_malloc_named("ent->defense_factors", sizeof(float)*max_attack_types);
+	if(!ent->defense_factors) goto alloc_ent_error;
 	memset(ent->defense_factors,        0, sizeof(float)*max_attack_types);
 	ent->defense_pain           = (float*)obor_profile_malloc_named("ent->defense_pain", sizeof(float)*max_attack_types);
+	if(!ent->defense_pain) goto alloc_ent_error;
 	memset(ent->defense_pain,           0, sizeof(float)*max_attack_types);
 	ent->defense_knockdown      = (float*)obor_profile_malloc_named("ent->defense_knockdown", sizeof(float)*max_attack_types);
+	if(!ent->defense_knockdown) goto alloc_ent_error;
 	memset(ent->defense_knockdown,      0, sizeof(float)*max_attack_types);
 	ent->defense_blockpower     = (float*)obor_profile_malloc_named("ent->defense_blockpower", sizeof(float)*max_attack_types);
+	if(!ent->defense_blockpower) goto alloc_ent_error;
 	memset(ent->defense_blockpower,     0, sizeof(float)*max_attack_types);
 	ent->defense_blockthreshold = (float*)obor_profile_malloc_named("ent->defense_blockthreshold", sizeof(float)*max_attack_types);
+	if(!ent->defense_blockthreshold) goto alloc_ent_error;
 	memset(ent->defense_blockthreshold, 0, sizeof(float)*max_attack_types);
 	ent->defense_blockratio     = (float*)obor_profile_malloc_named("ent->defense_blockratio", sizeof(float)*max_attack_types);
+	if(!ent->defense_blockratio) goto alloc_ent_error;
 	memset(ent->defense_blockratio,     0, sizeof(float)*max_attack_types);
 	ent->defense_blocktype      = (float*)obor_profile_malloc_named("ent->defense_blocktype", sizeof(float)*max_attack_types);
+	if(!ent->defense_blocktype) goto alloc_ent_error;
 	memset(ent->defense_blocktype,      0, sizeof(float)*max_attack_types);
 	ent->offense_factors        = (float*)obor_profile_malloc_named("ent->offense_factors", sizeof(float)*max_attack_types);
+	if(!ent->offense_factors) goto alloc_ent_error;
 	memset(ent->offense_factors,        0, sizeof(float)*max_attack_types);
 	if(max_entity_vars>0)
 	{
 		ent->entvars = (ScriptVariant*)obor_profile_malloc_named("ent->entvars", sizeof(ScriptVariant)*max_entity_vars);
+		if(!ent->entvars) goto alloc_ent_error;
 		// memset should be OK by know, because VT_EMPTY is zero by value, or else we should use ScriptVariant_Init
 		memset(ent->entvars, 0, sizeof(ScriptVariant)*max_entity_vars);
 	}
 	alloc_all_scripts(&ent->scripts);
 	return ent;
+
+    /* AnyBOR: release only the initialized fields of this owned entity. */
+alloc_ent_error:
+    free_ent(ent);
+    return NULL;
 }
 
 
@@ -14293,6 +14401,11 @@ int set_rise(entity *iRise, int type, int reset)
 
 int set_riseattack(entity *iRiseattack, int type, int reset)
 {
+    /* AnyBOR: validate rise selectors before native table reads. */
+    if(!iRiseattack || !animriseattacks || max_attack_types <= 0) return 0;
+    if(type < 0 || type >= max_attack_types) type = 0;
+    /* AnyBOR: native rise action follows. */
+
 	if(!validanim(iRiseattack,animriseattacks[type]) && iRiseattack->modeldata.riseattacktype == 1) type = 0;
 	if(iRiseattack->modeldata.riseattacktype == 0 || type < 0 || type >= max_attack_types) type = 0;
 	if(validanim(iRiseattack,animriseattacks[type])) ent_set_anim(iRiseattack, animriseattacks[type], reset);
@@ -14484,13 +14597,14 @@ entity* normal_find_target(int anim, int iDetect)
     */
 
 	int i , min, max;
+    int64_t obor_target_detect;
 	int index = -1;
 	min = 0;
 	max = 9999;
     float diffd = 0, diffo = 0;
 
     if(obor_profile_build < 3355) iDetect = 0;
-    iDetect += self->modeldata.stealth.detect;
+    obor_target_detect = (int64_t)iDetect + self->modeldata.stealth.detect;
 
 	//find the 'nearest' one
 	for(i=0; i<ent_max; i++)
@@ -14503,7 +14617,7 @@ entity* normal_find_target(int anim, int iDetect)
                 ((diffd = diff(ent_list[i]->x,self->x) + diff(ent_list[i]->z,self->z)) >= min && diffd <= max) :
                 (diff(ent_list[i]->x,self->x) + diff(ent_list[i]->z,self->z) >= min &&
                  diff(ent_list[i]->x,self->x) + diff(ent_list[i]->z,self->z) <= max))
-			&& (ent_list[i]->modeldata.stealth.hide <= iDetect) //Stealth factor less then perception factor (allows invisibility).
+			&& (ent_list[i]->modeldata.stealth.hide <= obor_target_detect) //Stealth factor less then perception factor (allows invisibility).
 			  )
 		{
 			if(index <0 || (index>=0 && (!ent_list[index]->animation->vulnerable[ent_list[index]->animpos] || ent_list[index]->invincible == 1)) ||
@@ -16496,6 +16610,7 @@ void adjust_walk_animation(entity* other)
 // try to move towards the item
 int common_try_pick(entity* other)
 {
+    if(!self || !other) return 0;
 	// if there's an item to pick up, move towards it.
 	float maxspeed = self->modeldata.speed*1.5;
 	float dx = diff(self->x, other->x);
@@ -17725,7 +17840,7 @@ int arrow_move(){
 			if(validanim(self,ANI_FALL))
 			{
 				self->attacking = 0;
-				self->health -= 100000;
+				self->health = self->health < INT_MIN + 100000 ? INT_MIN : self->health - 100000;
 				self->projectile = 0;
 				if(self->direction == 0) self->xdir = (float)-1.2;
 				else if(self->direction == 1) self->xdir = (float)1.2;
@@ -17809,7 +17924,7 @@ int star_move(){
 			((wall = checkwall(self->x, self->z)) >= 0 && self->a < level->walls[wall][7]))
 		{
 			self->attacking = 0;
-			self->health -= 100000;
+			self->health = self->health < INT_MIN + 100000 ? INT_MIN : self->health - 100000;
 			self->projectile = 0;
 			self->xdir = (self->direction)?(-1.2):1.2;
 			self->takeaction = common_fall;
@@ -17821,7 +17936,7 @@ int star_move(){
 
 	if(self->landed_on_platform || self->base <= 0)
 	{
-		self->health -= 100000;
+		self->health = self->health < INT_MIN + 100000 ? INT_MIN : self->health - 100000;
 		if(self->modeldata.nodieblink == 2) self->animating = 0;
 		self->takeaction = common_lie;
 	}
@@ -18035,7 +18150,7 @@ void common_think()
 	}
 
 	// rise? try rise attack
-	if(self->drop && self->a==self->base && !self->tossv && validanim(self,ANI_RISEATTACK) && ((rand32()%(self->stalltime-time+1)) < 3) && (self->health >0 && time > self->staydown.riseattack_stall))
+	if(self->drop && self->a==self->base && !self->tossv && validanim(self,ANI_RISEATTACK) && obor_rise_random(rand32(), (self->stalltime-time+1)) && (self->health >0 && time > self->staydown.riseattack_stall))
 	{
 		common_try_riseattack();
 		return;
@@ -22397,11 +22512,12 @@ void update(int ingame, int usevwait)
 
 	if(ingame==1 || selectScreen) display_ents();
 
-    if(obor_profile_build >= 3366 && zoom_scale_x)
+    if(obor_profile_build >= 3366 && zoom_scale_x > 0 && zoom_scale_y > 0)
 	{
         if(!zoombuffer)
         {
             zoombuffer = allocscreen(vscreen->width, vscreen->height, vscreen->pixelformat);
+            if(!zoombuffer) { shutdown(1,"Unable to allocate zoom buffer"); return; }
             /* Earlier zoom sources retain the buffer instead of copying the
              * background; define only their initially unwritten pixels. */
             if(obor_profile_build < 3370) clearscreen(zoombuffer);
@@ -23969,6 +24085,8 @@ void playgame(int *players,  unsigned which_set, int useSavedGame)
 				player[i].spawnhealth = savelevel[current_set].pSpawnhealth[i];
 				player[i].spawnmp = savelevel[current_set].pSpawnmp[i];
 				strncpy(player[i].name, savelevel[current_set].pName[i], MAX_NAME_LEN);
+				if(!memchr(player[i].name, 0, sizeof(player[i].name)))
+				    player[i].name[sizeof(player[i].name) - 1] = 0;
 			}
 			credits = savelevel[current_set].credits;
 		}
@@ -24188,7 +24306,7 @@ int load_saved_game()
 
 			if(savedStatus){
 				_menutext((selector==0), col1, -2, "Mode:");
-				_menutext((selector==0), col2, -2, "%s", savelevel[saveslot].dName);
+				_menutext((selector==0), col2, -2, "%.*s", (int)sizeof(savelevel[saveslot].dName), savelevel[saveslot].dName);
 				_menutext(0, col1, -1, "Stage:");
 				_menutext(0, col2, -1, "%d", savelevel[saveslot].stage);
 				_menutext(0, col1, 0, "Level:");

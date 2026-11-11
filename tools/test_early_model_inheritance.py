@@ -82,6 +82,8 @@ class EarlyModelInheritanceTests(unittest.TestCase):
 @AGGREGATE@
 @FREETYPE@
 typedef struct {char *name;int index,health;void *palette;ModelFreetype freetypes;s_scripts scripts;int isSubclassed;} s_model;
+/* This reduced script fixture has no constructor backing tables. */
+static void obor_model_release_constructor_storage(s_model *model,const s_model *parent) {assert(model&&parent);}
 uint32_t obor_profile_build;
 Script *pcurrentscript;
 s_variantnode **global_var_list;
@@ -92,6 +94,7 @@ static jmp_buf stopped;
 static s_model *parent;
 static s_variantnode entries[65],*entry_ptrs[65];
 void shutdown(int code,char *message,...) {(void)code;(void)message;abort();}
+void borExit(int status) {(void)status;abort();}
 void ScriptVariant_Clear(ScriptVariant *value) {memset(value,0,sizeof(*value));}
 void ScriptVariant_Init(ScriptVariant *value) {memset(value,0,sizeof(*value));}
 /* A later cleanup path is outside these legacy contexts. */

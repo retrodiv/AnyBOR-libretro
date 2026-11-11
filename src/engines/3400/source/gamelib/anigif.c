@@ -29,6 +29,7 @@
 #include "types.h"
 #include "screen.h"
 #include "anigif.h"
+#include "obor_gif_memory.h"
 
 
 extern uint32_t obor_profile_build;
@@ -156,7 +157,7 @@ static int decodegifblock(anigif_info* info, s_screen* buf, int width, int heigh
 	short oldcode;
 	short bitsleft;
 	short blocksize;
-	int line = 0;
+	int64_t line = 0;
 	int byte = gb->left;
 	int pass = 0;
 
@@ -196,7 +197,7 @@ static int decodegifblock(anigif_info* info, s_screen* buf, int width, int heigh
 	for(;;){
 		if(bitsleft == 8){
 			if(++p >= q && (((blocksize = readbyte(info->handle)) < 1) ||
-				(q=(p=b) + readpackfile(info->handle, b, blocksize)) < (b+blocksize))){
+				(q = obor_gif_read_block(info->handle, (p = b), blocksize)) < (b+blocksize))){
 				return 1;	// Done
 			}
 			bitsleft = 0;
@@ -208,7 +209,7 @@ static int decodegifblock(anigif_info* info, s_screen* buf, int width, int heigh
 		}
 		else{
 			if(++p >= q && (((blocksize = readbyte(info->handle)) < 1) ||
-				(q=(p=b)+readpackfile(info->handle, b, blocksize)) < (b+blocksize))){
+				(q = obor_gif_read_block(info->handle, (p = b), blocksize)) < (b+blocksize))){
 				return 1;	// Done
 			}
 
@@ -216,7 +217,7 @@ static int decodegifblock(anigif_info* info, s_screen* buf, int width, int heigh
 			if(currentcode<=16) *p >>= (bitsleft = currentcode - 8);
 			else{
 				if(++p >= q && (((blocksize = readbyte(info->handle)) < 1) ||
-					(q=(p=b) + readpackfile(info->handle, b, blocksize)) < (b+blocksize))){
+					(q = obor_gif_read_block(info->handle, (p = b), blocksize)) < (b+blocksize))){
 					return 1;	// Done
 				}
 
@@ -258,10 +259,12 @@ static int decodegifblock(anigif_info* info, s_screen* buf, int width, int heigh
 
 		oldtoken = thiscode;
 		do{
-			if(byte<width && byte>=0 && (int64_t)gb->top+line>=0 &&
-               (int64_t)gb->top+line<height && thiscode!=info->transparent)
-                obor_gif_pixel(info, buf, ((size_t)((int64_t)gb->top+line)*(size_t)width)+(size_t)byte,
-                               (unsigned char)thiscode);
+			if(byte < width && byte >= 0 && line >= -(int64_t)gb->top &&
+               line < (int64_t)height - gb->top && thiscode != info->transparent)
+            {
+                size_t position = (size_t)(gb->top + line) * (size_t)width + (size_t)byte;
+                obor_gif_pixel(info, buf, position, (unsigned char)thiscode);
+            }
 			byte++;
 			if(byte >= gb->left + gb->width){
 				byte = gb->left;
@@ -273,7 +276,7 @@ static int decodegifblock(anigif_info* info, s_screen* buf, int width, int heigh
                         line = startable[++pass];
                     }
 				}
-				else ++line;
+				else { if(line == INT64_MAX) return 0; ++line; }
 			}
 			if (u<=firstcodestack) break;
 			thiscode = *--u;
@@ -318,6 +321,7 @@ int anigif_open_ex(char *filename, char *packfilename, unsigned char *pal, anigi
 	info->handle = -1;
 	info->transparent = obor_profile_build < 3418 ? legacy_transparent : -1;
 	info->noblackenbg = obor_profile_build >= 3477 ? noblackenbg : 0;
+    if(!filename) return 0;
 
 #if PSP || PS2 || DC
 	if((info->handle=openreadaheadpackfile(filename,packfilename,1*1024*1024, 131072))==-1) return 0;
@@ -422,8 +426,8 @@ int anigif_decode_ex(s_screen * screen, int *delay, int x, int y, unsigned char*
 			iblock.top = SwapLSB16(iblock.top);
 			iblock.width = SwapLSB16(iblock.width);
 			iblock.height = SwapLSB16(iblock.height);
-			iblock.left += x;
-			iblock.top += y;
+			iblock.left = obor_gif_offset(iblock.left, x);
+			iblock.top = obor_gif_offset(iblock.top, y);
 
 			decodegifblock(info, screen, screen->width, screen->height, &iblock);
 /*

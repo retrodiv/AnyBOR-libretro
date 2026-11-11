@@ -55,6 +55,7 @@
 #include	"anigif.h"
 #include    "config.h"
 #include    "globals.h"
+#include "obor_draw_assert.h"
 #include    "ram.h"
 #include    "version.h"
 #include    "savedata.h"
@@ -2309,6 +2310,7 @@ typedef struct
 typedef struct
 {
     s_collision_entity **instance;
+    size_t obor_instance_capacity;
 } s_collision_entity_list;
 
 // Collision box for active
@@ -2786,6 +2788,8 @@ typedef struct
     // Meta data.
     s_meta_data*                meta_data;              // User defiend data.
     int					        meta_tag;	            // User defined int.
+    size_t obor_attack_frame_capacity; /* Actual owned frame-table extent. */
+    size_t obor_frame_capacity;
 } s_anim;
 
 struct animlist
@@ -3687,6 +3691,7 @@ typedef struct entity
 	unsigned char			*colourmap;							// Colortable in use. ~~
 
 	Varlist					*varlist;							// Entity var collection. ~~
+    Varlist *obor_varlist_owned;
 
 	// Floating decimals.
 	float					altbase;							// Altitude affected by movea. ~~
@@ -4039,6 +4044,7 @@ typedef struct
     ///////////////////////////////////////////////////////////////
     int numtextobjs;
     s_textobj *textobjs;
+    struct obor_text_table *obor_text_tables;
     int cameraxoffset;
     int camerazoffset;
     int numholes;
@@ -4094,6 +4100,11 @@ typedef struct
     s_meta_data*    meta_data;              // User defiend data.
     int			    meta_tag;	            // User defined int.
 } s_level;
+
+int obor_textobjs_count(const s_level *lv);
+int obor_textobj_index(s_level *lv, int index, int grow);
+void obor_textobjs_release_visible(s_level *lv);
+void obor_textobjs_release_all(s_level *lv);
 
 typedef struct ArgList
 {
@@ -4250,7 +4261,7 @@ float randf(float max);
 int _makecolour(int r, int g, int b);
 int load_colourmap(s_model *model, char *image1, char *image2);
 int load_palette(unsigned char *pal, char *filename);
-void standard_palette();
+void standard_palette(int immediate);
 void change_system_palette(int palindex);
 void unload_background();
 void lifebar_colors();
@@ -4274,7 +4285,7 @@ void free_anim(s_anim *anim);
 void free_models();
 int free_model();
 void cache_attack_hit_sounds(s_collision_attack* head, int load);
-void cache_model_sprites();
+void cache_model_sprites(s_model *m, int ld);
 
 s_drawmethod			*allocate_drawmethod();
 s_projectile			*allocate_projectile();

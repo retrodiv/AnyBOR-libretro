@@ -1,0 +1,73 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ */
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <stdarg.h>
+#include <setjmp.h>
+@CONFIG@
+#include "openbor.h"
+#include "@SCRIPT_HEADER@"
+#undef printf
+#undef assert
+#undef malloc
+#undef calloc
+#undef free
+#undef shutdown
+#undef _menutext
+#ifdef NDEBUG
+#error Consumer assertions must remain enabled
+#endif
+uint32_t obor_profile_build;
+static unsigned cases;
+#define assert(c) do{if(!(c)){fprintf(stderr,"Level consumer profile=%u case=%u line=%d: %s\n",obor_profile_build,cases,__LINE__,#c);abort();}}while(0)
+HRESULT Interpreter_Call(Interpreter *p){(void)p;abort();}
+HRESULT Interpreter_EvalInstruction(Interpreter *p){(void)p;abort();}
+@SAVE_STORAGE@
+static int selector,col2=7,saveslot;
+static char rendered[256];
+static int focus_seen,column_seen,row_seen;
+static void display_text(int focus,int column,int row,const char *format,...)
+{
+    va_list ap;va_start(ap,format);int n=vsnprintf(rendered,sizeof(rendered),format,ap);va_end(ap);
+    assert(n>=0 && (size_t)n<sizeof(rendered));focus_seen=focus;column_seen=column;row_seen=row;
+}
+#define _menutext display_text
+static void display(unsigned which,int before)
+{
+    if(before){switch(which){@BEFORE_DISPLAY@ default:abort();}}
+    else{switch(which){@AFTER_DISPLAY@ default:abort();}}
+}
+static void display_checks(void)
+{
+    const size_t lengths[]={0,1,sizeof(records[0].dName)-1,sizeof(records[0].dName)};
+    for(unsigned stmt=0;stmt<@DISPLAY_COUNT@;++stmt)
+    for(selector=0;selector<2;++selector)
+    for(unsigned n=0;n<sizeof(lengths)/sizeof(*lengths);++n)
+    {
+        size_t length=lengths[n];saveslot=0;memset(records,0x5a,sizeof(records));
+        memset(records[0].dName,'%',sizeof(records[0].dName));
+        if(length<sizeof(records[0].dName))records[0].dName[length]=0;
+        unsigned char before[sizeof(records)];memcpy(before,records,sizeof(records));
+        display(stmt,0);assert(strlen(rendered)==length);
+        for(size_t i=0;i<length;++i)assert(rendered[i]=='%');
+        assert(!memcmp(before,records,sizeof(records)));
+        assert(focus_seen==(selector==0) && column_seen==col2);
+        if(length<sizeof(records[0].dName))
+        {
+            char expected[sizeof(rendered)];memcpy(expected,rendered,sizeof(expected));int row=row_seen;
+            display(stmt,1);assert(!strcmp(rendered,expected) && row_seen==row);
+        }
+        ++cases;
+    }
+}
+@SELECTOR@
+int main(void)
+{
+    const uint32_t profiles[]={@PROFILES@};
+    for(unsigned i=0;i<sizeof(profiles)/sizeof(*profiles);++i)
+    {obor_profile_build=profiles[i];display_checks();selector_checks();}
+    printf("{\"status\":\"PASS\",\"profiles\":%zu,\"cases\":%u}\n",sizeof(profiles)/sizeof(*profiles),cases);return 0;
+}

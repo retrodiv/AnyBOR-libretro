@@ -1,0 +1,36 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <assert.h>
+#include <limits.h>
+#include <stdint.h>
+#include <stdio.h>
+@HEADER@
+int main(void)
+{
+    uint64_t values[]={0,1,2,3,UINT32_MAX-1,UINT32_MAX,
+                       UINT64_C(1)<<32,UINT64_MAX-1,UINT64_MAX};
+    unsigned samples[]={0,1,2,3,4,UINT_MAX-1,UINT_MAX};
+    unsigned checks=0;
+    for(unsigned i=0;i<sizeof(values)/sizeof(*values);++i)
+        for(unsigned j=0;j<sizeof(values)/sizeof(*values);++j)
+            for(unsigned k=0;k<sizeof(samples)/sizeof(*samples);++k)
+            {
+                uint32_t clock32=(uint32_t)values[j],stall32=(uint32_t)values[i];
+                unsigned long stall_long=(unsigned long)values[i];
+                uint64_t clock64=values[j],stall64=values[i];
+                /* Keep native expression widths before passing the span. */
+                uint32_t span32=stall32-clock32+1;
+                unsigned long span_long=stall_long-clock32+1;
+                uint64_t span64=stall64-clock64+1;
+                int expected32=span32?(samples[k]%span32)<3:0;
+                int expected_long=span_long?(samples[k]%span_long)<3:0;
+                int expected64=span64?(samples[k]%span64)<3:0;
+                assert(obor_rise_random(samples[k],stall32-clock32+1)==expected32);
+                assert(obor_rise_random(samples[k],stall_long-clock32+1)==expected_long);
+                assert(obor_rise_random(samples[k],stall64-clock64+1)==expected64);
+                checks+=3;
+            }
+    assert(!obor_rise_random(UINT_MAX,0));
+    printf("{\"status\":\"PASS\",\"checks\":%u,\"long_bits\":%zu}\n",checks+1,sizeof(unsigned long)*CHAR_BIT);
+    return 0;
+}

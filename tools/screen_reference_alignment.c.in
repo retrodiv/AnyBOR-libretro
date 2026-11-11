@@ -1,0 +1,106 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <limits.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "types.h"
+#include "screen.h"
+#undef printf
+uint32_t obor_profile_build;
+static unsigned checks,live,used,fail_open,fail_alloc,fail_read;
+static unsigned char *expected_palette;
+static char events[32];
+static s_screen *owned[2];
+#define CHECK(x) do { ++checks;if(!(x)){fprintf(stderr,"screen reference check: %s, line %d\n",#x,__LINE__);abort();} } while(0)
+static void event(char value) {CHECK(used<sizeof(events));events[used++]=value;}
+void obor_port_assert(int value,const char *expression,const char *func,const char *file,int line) {
+ (void)expression;(void)func;(void)file;(void)line;if(!value)event('X');
+}
+@ASSERT_HEADER@
+#undef assert
+#define assert(value) do { if(!(value))event('X'); } while(0)
+static int res[2]={2,3};
+static struct {int width,height;} image_res={2,3};
+s_screen *allocscreen(int width,int height,int format) {
+ event('A');CHECK(width==2 && height==3 && format==PIXEL_32);
+ if(fail_alloc)return NULL;
+ s_screen *screen=calloc(1,sizeof(*screen)+64);CHECK(screen);
+ screen->width=width;screen->height=height;screen->pixelformat=format;screen->palette=screen->data+32;
+ if(!expected_palette)expected_palette=screen->palette;
+ for(unsigned i=0;i<2;++i)if(!owned[i]){owned[i]=screen;++live;return screen;}
+ abort();
+}
+static void observe_free(void *pointer) {
+ CHECK(pointer);
+ for(unsigned i=0;i<2;++i)if(owned[i]==pointer) {
+  owned[i]=NULL;CHECK(live);--live;event('F');free(pointer);return;
+ }
+ CHECK(!"screen release without ownership");
+}
+static int openimage(char *name,char *archive) {
+ CHECK(!strcmp(name,"image") && !strcmp(archive,"archive"));event('O');return !fail_open;
+}
+static int readimage(unsigned char *data,unsigned char *palette,int width,int height) {
+ CHECK(width==2 && height==3 && palette==expected_palette);event('R');
+ if(fail_read)return 0;
+ for(unsigned i=0;i<24;++i)data[i]=(unsigned char)(i+1);
+ return 1;
+}
+static void closeimage(void) {event('C');}
+#define free observe_free
+@FREE_SCREEN@
+@LOAD_SCREEN@
+#undef free
+static void sequence(const char *expected) {
+ char filtered[32];unsigned count=0,assertions=0;
+ for(unsigned i=0;i<used;++i) {
+  if(events[i]=='X'){++assertions;CHECK(i+1==used);}
+  else filtered[count++]=events[i];
+ }
+ CHECK(assertions<=1 && count==strlen(expected) && !memcmp(filtered,expected,count));
+}
+static void reset(void) {
+ CHECK(!live);memset(owned,0,sizeof(owned));memset(events,0,sizeof(events));used=fail_open=fail_alloc=fail_read=0;expected_palette=NULL;
+}
+static void check_case(int packed,int prior,int failure,int borrowed) {
+ reset();
+ _Alignas(16) unsigned char storage[64];memset(storage,0xa5,sizeof(storage));
+ unsigned char *slot=storage+(packed?1:16);s_screen *screen=NULL;
+ if(prior){screen=allocscreen(2,3,PIXEL_32);CHECK(screen);}
+ memcpy(slot,&screen,sizeof(screen));used=0;
+ fail_open=failure==1;fail_alloc=failure==2;fail_read=failure==3;
+ unsigned char palette[1024]={0};
+ /* The actual new screen's palette is checked in the read provider. */
+ expected_palette=borrowed?palette:NULL;
+ int result=loadscreen("image","archive",borrowed?palette:NULL,PIXEL_32,(s_screen **)(void *)slot);
+ memcpy(&screen,slot,sizeof(screen));
+ if(failure) {
+  CHECK(!result && !screen && !live);
+  const char *routes[]={"","O","OAC","OARCF"};
+  char expected[16];snprintf(expected,sizeof(expected),"%s%s",prior?"F":"",routes[failure]);sequence(expected);
+ } else {
+  CHECK(result==1 && screen && live==1);sequence(prior?"FOARC":"OARC");
+  for(unsigned i=0;i<24;++i)CHECK(screen->data[i]==i+1);
+  freescreen((s_screen **)(void *)slot);memcpy(&screen,slot,sizeof(screen));CHECK(!screen && !live);
+  freescreen((s_screen **)(void *)slot);CHECK(!live);
+ }
+ for(unsigned i=0;i<sizeof(storage);++i)if(i<(unsigned)(slot-storage) || i>=(unsigned)(slot-storage)+sizeof(screen))CHECK(storage[i]==0xa5);
+}
+int main(void) {
+ unsigned profiles[]={@PROFILES@};
+ for(unsigned p=0;p<sizeof(profiles)/sizeof(*profiles);++p) {
+  obor_profile_build=profiles[p];
+#ifdef NULL_ONLY
+  reset();CHECK(loadscreen("image","archive",NULL,PIXEL_32,NULL)==0);CHECK(!used);freescreen(NULL);CHECK(!used);
+#else
+  for(int packed=0;packed<2;++packed)for(int prior=0;prior<2;++prior)for(int failure=0;failure<4;++failure)for(int borrowed=0;borrowed<2;++borrowed)
+   check_case(packed,prior,failure,borrowed);
+  reset();CHECK(loadscreen("image","archive",NULL,PIXEL_32,NULL)==0);CHECK(!used);freescreen(NULL);CHECK(!used);
+#endif
+ }
+ printf("{\"status\":\"PASS\",\"profiles\":%zu,\"checks\":%u}\n",sizeof(profiles)/sizeof(*profiles),checks);
+ return 0;
+}

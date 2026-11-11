@@ -1,0 +1,233 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <assert.h>
+#include <ctype.h>
+#include <limits.h>
+#include <math.h>
+#include <stdint.h>
+#include <stdarg.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <strings.h>
+@CONFIG@
+#include "openbor.h"
+#include "@SCRIPT_HEADER@"
+@PROFILE_HEADER@
+#pragma GCC diagnostic ignored "-Wmisleading-indentation"
+#undef printf
+#undef exit
+#undef assert
+#include <assert.h>
+uint32_t obor_profile_build;
+@ATTACK_COUNT_DECLARATIONS@
+static unsigned checks;
+#define CHECK(x) do { ++checks;assert(x); } while(0)
+static char diagnostic[4096];
+static int quiet_printf(const char *format,...) {
+ va_list args;va_start(args,format);
+ int n=vsnprintf(diagnostic+strlen(diagnostic),sizeof(diagnostic)-strlen(diagnostic),format,args);
+ va_end(args);assert(n>=0);return n;
+}
+#define printf quiet_printf
+static char *cache;
+CHAR *StrCache_Get(int n) { assert(n==0 && cache);return cache; }
+CHAR *StrCache_GetIfPresent(int n) { return n==0?cache:NULL; }
+int StrCache_Pop(@POP_ARGUMENTS@) { abort(); }
+void StrCache_Collect(int n) { assert(n==0); }
+void StrCache_Copy(int n,CHAR *s) { (void)n;(void)s;abort(); }
+int StrCache_CreateNewFrom(const CHAR *s) { (void)s;abort(); }
+@CONVERSIONS@
+@ENUM@
+#define @OUTER@ 10000
+#define @END@ 20000
+/* Outer numeric selectors are bounded providers; the subproperty mapping
+ * below retains its native table, macro, search and conversion functions. */
+#define obor_property_index(ns,index,end) (index)
+#define obor_entity_get_property_native(index) (index)
+#define obor_entityproperty_native(index) (index)
+#define obor_entityproperty(index) (index)
+#undef stricmp
+#define stricmp strcasecmp
+#define _is_not_a_known_subproperty_of_ "'%s' is not a known subproperty of '%s'.\n"
+@SEARCH@
+@MAPPING_MACRO@
+@MAPPING@
+@GETTER@
+/* Storage follows the native getter so it cannot supply a missing declaration. */
+int max_attack_types;
+enum { CAP=MAX_ATKS+8 };
+static entity ent;
+#if @FLAT@
+static float scalar_values[7][CAP];
+#else
+static s_defense model_values[CAP],entity_values[CAP];
+#endif
+static int properties[]={@ORDINALS@};
+static const char *names[]={"blockpower","blockratio","blockthreshold","blocktype","factor","knockdown","pain"};
+static ScriptVariant values[4],result,*args[4],*out;
+static void reset(int index,int property) {
+ memset(values,0,sizeof(values));memset(&result,0,sizeof(result));
+ for(int k=0;k<4;++k)args[k]=&values[k];
+ values[0].vt=VT_PTR;values[0].ptrVal=&ent;
+ values[1].vt=VT_INTEGER;values[1].lVal=@OUTER@;
+ values[2].vt=VT_INTEGER;values[2].lVal=index;
+ values[3].vt=VT_INTEGER;values[3].lVal=property;
+ out=&result;diagnostic[0]=0;cache=NULL;
+}
+static void setup(int count) {
+ memset(&ent,0,sizeof(ent));max_attack_types=count;
+#if @FLAT@
+ for(int p=0;p<7;++p)for(int i=0;i<CAP;++i)scalar_values[p][i]=(float)(10*(p+1)+i);
+#define BIND(p,field) ent.modeldata.field=scalar_values[p]
+ BIND(0,defense_blockpower);BIND(1,defense_blockratio);BIND(2,defense_blockthreshold);
+ BIND(3,defense_blocktype);BIND(4,defense_factors);BIND(5,defense_knockdown);BIND(6,defense_pain);
+#undef BIND
+#else
+ memset(model_values,0,sizeof(model_values));memset(entity_values,0,sizeof(entity_values));
+ for(int i=0;i<CAP;++i) {
+#define FILL(p,field) model_values[i].field=10*(p+1)+i;entity_values[i].field=1010+10*p+i
+  FILL(0,blockpower);FILL(1,blockratio);FILL(2,blockthreshold);
+  FILL(4,factor);FILL(5,knockdown);FILL(6,pain);
+#undef FILL
+  @SET_BLOCK@
+ }
+ ent.modeldata.defense=model_values;ent.defense=entity_values;
+#endif
+}
+static double expected(int index,int property) {
+ if(@OLD@) index=0;
+#if @TRANSLATED@
+ index=obor_attack_from_native(index);
+#endif
+#if @FLAT@
+ return scalar_values[property][index];
+#else
+ if(property==3) return @MODEL@?2:1;
+ return (@MODEL@?0:1000)+10*(property+1)+index;
+#endif
+}
+static void map_literal(int nargs) {
+ @LITERAL_MAPPER@
+}
+static int last_index(void) {
+ int last=-1;
+ for(int i=0;i<max_attack_types;++i) {
+#if @TRANSLATED@
+  int effective=obor_attack_from_native(i);
+#else
+  int effective=i;
+#endif
+  if(effective>=0 && effective<max_attack_types)last=i;
+ }
+ CHECK(last>=1);return last;
+}
+static void valid(int index,int property,int named,int nargs) {
+ reset(index,properties[property]);
+ if(named) { values[3].vt=VT_STR;values[3].strVal=0;cache=(char *)names[property];map_literal(nargs); }
+ CHECK(openbor_getentityproperty(args,&out,nargs)==S_OK);
+ CHECK(out==&result && result.vt==VT_DECIMAL && result.dblVal==expected(index,property));
+ CHECK(!diagnostic[0]);
+}
+static void empty_bound(int index) {
+ reset(index,properties[4]);HRESULT status=openbor_getentityproperty(args,&out,4);
+ if(@OLD@) {
+  CHECK(status==S_OK && out==&result && result.vt==VT_DECIMAL && result.dblVal==expected(0,4));
+ } else if(@INDEX_ERROR@) {
+  CHECK(status==E_FAIL && !out && result.vt==VT_EMPTY);
+ } else if(@CLASSIC@) {
+  CHECK(status==E_FAIL && out==&result && result.vt==VT_EMPTY);
+ } else {
+  CHECK(status==S_OK && out==&result && result.vt==VT_EMPTY);
+ }
+ CHECK(!diagnostic[0]);
+}
+static void malformed(void) {
+ reset(0,properties[4]);CHECK(openbor_getentityproperty(args,NULL,4)==E_FAIL);
+ reset(0,properties[4]);out=NULL;CHECK(openbor_getentityproperty(args,&out,4)==E_FAIL && !out);
+ reset(0,properties[4]);CHECK(openbor_getentityproperty(NULL,&out,4)==E_FAIL && !out);
+ for(int slot=0;slot<3;++slot) {
+  reset(0,properties[4]);args[slot]=NULL;
+  HRESULT status=openbor_getentityproperty(args,&out,4);
+  if(slot==2) {
+   if(@OLD@) {CHECK(status==S_OK && out==&result && result.dblVal==expected(0,4));}
+   else {
+    CHECK(status==E_FAIL && (out==NULL)==(obor_profile_build>=3843));
+    CHECK(!strcmp(diagnostic,"You must specify an attack type for your defense property.\n"));
+   }
+  } else {CHECK(status==E_FAIL && !out);}
+ }
+ /* A missing optional selector must be safe in the mapper as well as getter. */
+ reset(0,properties[4]);args[3]=NULL;
+ map_literal(4);
+ CHECK(openbor_getentityproperty(args,&out,4)==E_FAIL);
+ CHECK((out==NULL)==(obor_profile_build>=3843) && result.vt==VT_EMPTY);
+ reset(0,properties[4]);values[2].vt=VT_EMPTY;
+ HRESULT status=openbor_getentityproperty(args,&out,4);
+ if(@OLD@) { CHECK(status==S_OK && result.dblVal==expected(0,4));CHECK(!diagnostic[0]); }
+ else {
+  CHECK(status==E_FAIL);CHECK((out==NULL)==(obor_profile_build>=3843));
+  CHECK(!strcmp(diagnostic,"You must specify an attack type for your defense property.\n"));
+ }
+ reset(0,properties[4]);values[3].vt=VT_EMPTY;
+ CHECK(openbor_getentityproperty(args,&out,4)==E_FAIL);
+ CHECK((out==NULL)==(obor_profile_build>=3843));
+ reset(0,INT_MAX);CHECK(openbor_getentityproperty(args,&out,4)==E_FAIL);
+ CHECK((out==NULL)==(obor_profile_build>=3843));
+ CHECK(result.vt==VT_DECIMAL && result.dblVal==0);
+ reset(0,properties[4]);
+ if(@CLASSIC@) {CHECK(openbor_getentityproperty(args,&out,2)==E_FAIL && out==&result && result.vt==VT_EMPTY);}
+ else {CHECK(openbor_getentityproperty(args,&out,2)==S_OK && out==&result && result.vt==VT_EMPTY);}
+}
+static void decimal_arguments(void) {
+ reset(1,properties[4]);values[2].vt=VT_DECIMAL;values[2].dblVal=1.75;
+ CHECK(openbor_getentityproperty(args,&out,4)==S_OK);
+ CHECK(out==&result && result.vt==VT_DECIMAL && result.dblVal==expected(1,4));
+ reset(1,properties[4]);values[3].vt=VT_DECIMAL;values[3].dblVal=properties[4]+0.75;
+ HRESULT status=openbor_getentityproperty(args,&out,4);
+ if(@OLD@) {
+  CHECK(status==E_FAIL && out==&result && result.vt==VT_EMPTY);
+  CHECK(!strcmp(diagnostic,"You must give a string name for defense property.\n"));
+ } else {
+  CHECK(status==S_OK && out==&result && result.vt==VT_DECIMAL && result.dblVal==expected(1,4));
+  CHECK(!diagnostic[0]);
+ }
+}
+static void missing_tables(void) {
+ reset(0,properties[4]);
+#if @FLAT@
+ ent.modeldata.defense_factors=NULL;
+ CHECK(openbor_getentityproperty(args,&out,4)==E_FAIL && out==&result && result.vt==VT_DECIMAL);
+#else
+ if(@MODEL@)ent.modeldata.defense=NULL;else ent.defense=NULL;
+ CHECK(openbor_getentityproperty(args,&out,4)==S_OK && out==&result && result.vt==VT_EMPTY);
+#endif
+}
+int main(void) {
+ unsigned profiles[]={@PROFILES@};int sizes[]={MAX_ATKS,MAX_ATKS+2};
+ for(unsigned p=0;p<sizeof(profiles)/sizeof(*profiles);++p) {
+  obor_profile_build=profiles[p];
+  for(unsigned c=0;c<sizeof(sizes)/sizeof(*sizes);++c) {
+   setup(sizes[c]);
+#ifdef ENDPOINT_ONLY
+   empty_bound(max_attack_types);
+#else
+   int indices[]={0,1,last_index()};
+   for(int property=0;property<7;++property) {
+    for(unsigned k=0;k<sizeof(indices)/sizeof(*indices);++k) {
+     valid(indices[k],property,0,4);valid(indices[k],property,1,4);
+    }
+    if(@EXTRA@)valid(max_attack_types,property,0,4);
+   }
+   if(!(@OLD@))valid(1,4,0,3);
+   else {reset(1,properties[4]);CHECK(openbor_getentityproperty(args,&out,3)==E_FAIL && out==&result);}
+   int rejected[]={-1,INT_MIN,INT_MAX,max_attack_types+(@EXTRA@?1:0)};
+   for(unsigned k=0;k<sizeof(rejected)/sizeof(*rejected);++k)empty_bound(rejected[k]);
+   decimal_arguments();malformed();missing_tables();
+#endif
+  }
+ }
+#undef printf
+ printf("{\"status\":\"PASS\",\"profiles\":%zu,\"checks\":%u}\n",sizeof(profiles)/sizeof(*profiles),checks);
+ return 0;
+}

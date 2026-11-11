@@ -1,0 +1,102 @@
+/* Native selector cases with tracked allocations and bounded argument provider. */
+static struct {void *pointer;size_t bytes;int live;} allocations[64];
+static unsigned allocated;
+static int fail_next,stop_expected;
+static jmp_buf stop_frame;
+static int current_set;
+@DECLARATION@
+static unsigned live_count(void)
+{unsigned n=0;for(unsigned i=0;i<allocated;++i)n+=allocations[i].live;return n;}
+static void *tracked_malloc(size_t bytes)
+{
+    if(fail_next){fail_next=0;return NULL;}
+    assert(allocated<64);void *p=malloc(bytes);assert(p);memset(p,0x5a,bytes);
+    allocations[allocated].pointer=p;allocations[allocated].bytes=bytes;allocations[allocated++].live=1;return p;
+}
+static void *tracked_calloc(size_t count,size_t size)
+{void *p=tracked_malloc(count*size);if(p)memset(p,0,count*size);return p;}
+static void tracked_free(void *pointer)
+{
+    if(!pointer)return;
+    for(unsigned i=0;i<allocated;++i)if(allocations[i].live && allocations[i].pointer==pointer)
+    {allocations[i].live=0;free(pointer);return;}
+    assert(0);
+}
+void *obor_profile_malloc_named(const char *name,size_t bytes)
+{assert(name && *name);return tracked_malloc(bytes);}
+static void stop_consumer(int status,const char *format,...)
+{assert(stop_expected && status==1 && !strcmp(format,"Out of memory!"));longjmp(stop_frame,1);}
+static char *args[5];
+static struct {int count;} arglist;
+@GET_ARG_RESET@#define GET_ARG(index) args[index]
+#define CHKDEF assert(1)
+#define malloc tracked_malloc
+#define calloc tracked_calloc
+#define free tracked_free
+#define shutdown stop_consumer
+static void apply(int before)
+{
+    int i;char *arg;
+    if(before){switch(1){case 1:@BEFORE@}}
+    else{switch(1){case 1:@AFTER@}}
+    ++cases;
+}
+#undef shutdown
+#undef free
+#undef calloc
+#undef malloc
+#undef CHKDEF
+#undef GET_ARG
+static char *slot(unsigned i){return @SLOT@;}
+static unsigned owned_count(void)
+{unsigned n=@BASE@;for(unsigned i=0;i<4;++i)n+=slot(i)!=NULL;return n;}
+static void clear_selector(void)
+{
+    for(unsigned i=0;i<allocated;++i)if(allocations[i].live)tracked_free(allocations[i].pointer);
+    assert(!live_count());allocated=0;fail_next=stop_expected=0;current_set=0;@RESET@
+    for(unsigned i=0;i<5;++i){args[i]="";}arglist.count=2;
+}
+struct selector_snapshot{char text[4][256];int present[4],noselect;};
+static void capture(struct selector_snapshot *value)
+{
+    memset(value,0,sizeof(*value));value->noselect=@NOSELECT@;
+    for(unsigned i=0;i<4;++i)if(slot(i))
+    {value->present[i]=1;assert(strlen(slot(i))<sizeof(value->text[i]));strcpy(value->text[i],slot(i));}
+}
+static void sequence(int before,struct selector_snapshot *out)
+{
+    clear_selector();args[1]="model0";args[2]="model1";args[3]="model2";args[4]="model3";
+    apply(before);if(!before)assert(live_count()==owned_count());
+    uintptr_t first=(uintptr_t)slot(0);args[1]="replacement";args[2]=args[3]=args[4]="";
+    apply(before);assert(((uintptr_t)slot(0)==first)==(@REUSE@));
+    if(!before)assert(live_count()==owned_count());
+    if(!(@REUSE@)){args[1]=slot(0);apply(before);if(!before)assert(live_count()==owned_count());}
+    args[1]="";arglist.count=1;apply(before);if(!before)assert(live_count()==owned_count());
+    capture(out);clear_selector();
+}
+static void selector_checks(void)
+{
+    struct selector_snapshot actual,expected;sequence(0,&actual);sequence(1,&expected);
+    assert(!memcmp(&actual,&expected,sizeof(actual)));
+    clear_selector();char long_name[201];memset(long_name,'L',200);long_name[200]=0;
+    args[1]=long_name;apply(0);assert(strlen(slot(0))==(@REUSE@?MAX_NAME_LEN:200u));
+    if(!(@REUSE@)){args[1]=slot(0);apply(0);}assert(live_count()==owned_count());clear_selector();
+    if(@REUSE@)
+    {
+        args[1]="model0";fail_next=stop_expected=1;
+        if(!setjmp(stop_frame)){apply(0);assert(0);}assert(!slot(0));clear_selector();
+        if(@TABLE@)
+        {
+            arglist.count=1;apply(0);unsigned alive=live_count();
+            args[1]="model0";arglist.count=2;fail_next=stop_expected=1;
+            if(!setjmp(stop_frame)){apply(0);assert(0);}assert(!slot(0) && live_count()==alive);clear_selector();
+        }
+    }
+    else
+    {
+        args[1]="owned";apply(0);char *owned=slot(0);unsigned alive=live_count();
+        args[1]="replacement";fail_next=stop_expected=1;
+        if(!setjmp(stop_frame)){apply(0);assert(0);}
+        assert(slot(0)==owned && !strcmp(slot(0),"owned") && live_count()==alive);clear_selector();
+    }
+}

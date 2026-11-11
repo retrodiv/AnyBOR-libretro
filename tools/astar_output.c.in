@@ -1,0 +1,94 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#include <math.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "openbor.h"
+#undef printf
+#undef malloc
+#undef free
+#define CHECK(c) do {if(!(c)){fprintf(stderr,"waypoint contract profile=%u line=%d: %s\n",obor_profile_build,__LINE__,#c);abort();}}while(0)
+uint32_t obor_profile_build;
+static const unsigned profiles[]={@PROFILES@};
+static entity actor;
+static unsigned calls,live,cases,queries;
+static int blocked;
+static void *pointers[7];
+static size_t sizes[7];
+static size_t expected_output_bytes;
+_Static_assert(sizeof(((@POINT@ *)0)->x)==sizeof(float) &&
+               sizeof(((@POINT@ *)0)->z)==sizeof(float),"Native float movement coordinates required");
+static void *observed_malloc(size_t bytes) {
+    CHECK(calls<7 && bytes && bytes<=4u*1024u*1024u);
+    if(calls==6)CHECK(bytes==expected_output_bytes);
+    void *p=malloc(bytes);CHECK(p);
+    if(calls==6)memset(p,0xa5,bytes);
+    pointers[calls]=p;sizes[calls++]=bytes;++live;return p;
+}
+static void observed_free(void *p) {
+    if(!p)return;
+    for(unsigned i=0;i<calls;++i)if(pointers[i]==p){
+        CHECK(live);free(p);pointers[i]=NULL;--live;return;
+    }
+    CHECK(!"Release of an unowned allocation");
+}
+int testmove(entity *ent,float x,float z,float tx,float tz) {
+    CHECK(ent==&actor && isfinite(x) && isfinite(z) && isfinite(tx) && isfinite(tz));
+    CHECK(++queries<=100000);return !blocked;
+}
+@DIFF@
+@DIMENSIONS@
+#define malloc observed_malloc
+#define free observed_free
+/* Legacy cleanup puts its unconditional reset on the conditional free's line. */
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wmisleading-indentation"
+@ASTAR@
+#pragma GCC diagnostic pop
+#undef malloc
+#undef free
+static void check(int dx,int dz,int length,float step,int no_path,int outside) {
+    memset(&actor,0,sizeof(actor));
+    actor.@POSITION@x=11.5f;actor.@POSITION@z=-7.25f;
+    float destx=actor.@POSITION@x+dx*length*step;
+    float destz=actor.@POSITION@z+dz*length*step;
+    if(outside)destx=actor.@POSITION@x+astarw*step;
+    blocked=no_path;calls=live=queries=0;
+    expected_output_bytes=(size_t)(length+1)*sizeof(@POINT@);
+    memset(pointers,0,sizeof(pointers));memset(sizes,0,sizeof(sizes));
+    @POINT@ *output=(@POINT@ *)(uintptr_t)1;
+    int count=astar(&actor,destx,destz,step,&output);
+    if(no_path || outside)CHECK(count==0 && !output && calls==6 && !live);
+    else {
+        CHECK(count==length+1 && output && calls==7 && live==1);
+        CHECK(pointers[6]==output && sizes[6]==(size_t)count*sizeof(*output));
+        for(int i=0;i<length;++i) {
+            CHECK(output[i].x==actor.@POSITION@x+dx*(length-i-1)*step);
+            CHECK(output[i].z==actor.@POSITION@z+dz*(length-i-1)*step);
+        }
+        CHECK(output[count-1].x==actor.@POSITION@x);
+        CHECK(output[count-1].z==actor.@POSITION@z);
+        /* This is the first point selected by the movement caller. */
+        actor.waypoints=output;actor.numwaypoints=count;
+        actor.destx=actor.waypoints[actor.numwaypoints-1].x;
+        actor.destz=actor.waypoints[actor.numwaypoints-1].z;
+        --actor.numwaypoints;
+        CHECK(actor.destx==actor.@POSITION@x && actor.destz==actor.@POSITION@z);
+        observed_free(output);CHECK(!live);
+    }
+    for(unsigned i=0;i<7;++i)CHECK(!pointers[i]);
+    ++cases;
+}
+int main(void) {
+    static const int directions[8][2]={{1,0},{1,1},{0,1},{-1,1},{-1,0},{-1,-1},{0,-1},{1,-1}};
+    for(unsigned p=0;p<sizeof(profiles)/sizeof(*profiles);++p) {
+        obor_profile_build=profiles[p];
+        for(unsigned d=0;d<8;++d)check(directions[d][0],directions[d][1],3,1.0f,0,0);
+        check(1,0,0,1.0f,0,0);check(1,0,1,1.0f,0,0);
+        check(1,-1,4,0.5f,0,0);check(1,0,2,1.0f,1,0);check(1,0,2,1.0f,0,1);
+    }
+    printf("{\"profiles\":%u,\"cases\":%u}\n",(unsigned)(sizeof(profiles)/sizeof(*profiles)),cases);
+    return 0;
+}
