@@ -85,7 +85,7 @@
     "NOTICE.txt": "9cf26b960bd7d9aff6a5e4063f22318b47b100d1664620bcdcf77004b9f17a9c",
     "PROVENANCE.md": "fc091d572c34ab5c07c6d44df8636e524ec5278637525016fb1f2b8f67057f49",
     "README.md": "b47a437c3843217437cfd6030905dbbebb3c937890575e46fa1679d63fccc7c5",
-    "SBOM.spdx.json": "e937a56eb494a2be7156db96cd18df967716e6d7811e750b6e14d4d5a3d78abb",
+    "SBOM.spdx.json": "4a2963dcdcaabd3427563779540b88bc5118fca870d96fa2fb3bdfaa5681b100",
     "SECURITY.md": "3aaf7f8f89ef7abc1cac8d4f25f358a5529410673fa04d97ddc123ae21f96f4b",
     "anybor_libretro.info": "ee899a80ef99f464e16c1cbef698c4afa86fb32f546f8e1b51ebb40a5e3cc609",
     "docs/ANYBOR.md": "e7cdf95d5c9db52a28d5da6e4fa21a896fb67f362d87267ed6f68e335b37fc94",
@@ -2685,7 +2685,7 @@
     "src/glue/obor_engine_executables.h": "06d357e48670990b9275615663bbf7e53f71e2eba94cc64bf8937d631642f85b",
     "src/glue/obor_engine_identity.h": "e7f16ee9035317f19ac8941a1ca53dabefe30298ed54b7b9dc148f984243b55c",
     "src/glue/obor_engine_resources.h": "8196f17ba5110e51c4b71388f005e3beb26c2cc72aaf0fb559a255c10842223b",
-    "src/glue/obor_engines.h": "dc50286b5074de5d836d037439d1266a79db52248bbb9c60d296c4cb81db4dba",
+    "src/glue/obor_engines.h": "ff916189a448d5bcb68a344df5e50f4a6bf4278eb24990c89cc304439926a725",
     "src/glue/obor_error_screen.h": "a894d32589e2d83710fb9c1d04db6b2e2f9c19dcd141fd1e87e971679e10f7ab",
     "src/glue/obor_game_content.h": "1d3acf782aa04c90dd16125546fb9b5644b60c2aab7fe6434d153db69076cf15",
     "src/glue/obor_hankaku.h": "639d8236cb4a82eaacafd1ec0f5f904ba734fdb6e8771db5b96ae03cb06e88ea",
@@ -2720,7 +2720,7 @@
     "src/glue/obor_video_config.h": "f8f68051ccbc1466a6fb171c44a8d1c57c8ca19c57bb8c9ba9dfdf0cde46ed1d",
     "src/glue/obor_zip.h": "206520343894d701246bc44760a863e133dd9f2eeac51780fbb1f3c1c5bc0a93",
     "src/glue/obor_zip_path.h": "a4baeb127b0f493955a271cce0215750916c16feb5274a5323058511b13a7e7d",
-    "src/pin.json": "52f2fe2fad5c682c867fb963e26cc45203e2d9b6ccf1946190145efed7862e46",
+    "src/pin.json": "ba77df87f415d80cb71568911ce2c10713b3f5a0fe5cc731e033968849d7d38a",
     "src/port/libretro/assert.h": "f78869bb7307860fd1c9ee6c2b6615b024785ceb08273387be35b8c0ab8cf560",
     "src/port/libretro/control.c": "134f70a8e7ecac404a879c3b67b1a493d5407de50871dccdff5394689e52eded",
     "src/port/libretro/control.h": "c8707029d3d09b9e9fbf97363f54e317729da38ee33045843377cfeeb3399045",
@@ -4392,5 +4392,5 @@
     "tools/zoom_pixels.c.in": "b1964154c7ee6eb28300e75a8cfff5bc7cc59d1e8f544e42bfa7f1fd3ba21763"
   },
   "schema": 1,
-  "version": "0.1.86"
+  "version": "0.2.0"
 }
