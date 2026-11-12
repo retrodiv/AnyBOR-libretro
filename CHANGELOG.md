@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.1 — model loading and CI setup
+
+- Keep model loading stable when animation tables grow on demand.
+- Skip CI package downloads when the required native packages are installed; retain bounded mirror recovery otherwise.
+
 ## 0.1.86 — core stability
 
 - Validate script arguments and preserve the original results of valid queries in each profile.

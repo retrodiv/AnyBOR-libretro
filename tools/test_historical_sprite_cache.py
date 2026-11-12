@@ -13,6 +13,7 @@ from test_historical_common_think import ROOT, native_output
 from test_historical_player import function
 
 FIXTURE = Path(__file__).with_name('fixtures') / 'profile-sprite-cache-contracts.json'
+MODEL_FIXTURE = FIXTURE.with_name('profile-model-animation-cache.json')
 
 
 def program(data):
@@ -42,6 +43,25 @@ def program(data):
 
 
 class SpriteCacheContracts(unittest.TestCase):
+    def test_model_cache_respects_allocated_animation_tables(self):
+        data = load_contract_fixture(MODEL_FIXTURE)
+        core = (ROOT / 'src/engines' / data['engine'] / 'openbor.c').read_text()
+        code = Path(__file__).with_name('model_animation_cache_contract.c.in').read_text()
+        values = dict(FUNCTION=function(core, 'cache_model_sprites'),
+            PLAYERS=str(data['players']),
+            CONTEXTS=','.join('{%du,%d,%d}' %
+                (r['revision'], r['load'], r['unload']) for r in data['sources']),
+            CASES=','.join('{%d,%d,%d}' %
+                (r['capacity'], r['global_limit'], r['extra']) for r in data['cases']))
+        for key, value in values.items():
+            code = code.replace('@' + key + '@', value)
+        self.assertNotRegex(code, r'@[A-Z_]+@')
+        self.assertEqual({r['revision'] for r in data['sources']},
+                         contract_revisions(data, data['expected_revisions']))
+        actual = [json.loads(line) for line in native_output(code, data).splitlines()]
+        self.assertEqual(actual, [dict(revision=r['revision'], cases=2 * len(data['cases']))
+                                 for r in data['sources']])
+
     def test_native_map_growth_and_missing_frame_queue_policy(self):
         data = load_contract_fixture(FIXTURE)
         self.assertEqual({r['revision'] for r in data['sources']},

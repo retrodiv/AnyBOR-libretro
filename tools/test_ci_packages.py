@@ -8,8 +8,10 @@ import io
 import sys
 import unittest
 from unittest.mock import patch
+import subprocess
 
-from ci_packages import PACKAGES, apt_commands, bounded_command, install_packages, main
+from ci_packages import (INDEX_SECONDS, PACKAGES, apt_commands, bounded_command,
+                         install_packages, main, missing_packages)
 
 
 class CIPackagesTests(unittest.TestCase):
@@ -52,7 +54,8 @@ class CIPackagesTests(unittest.TestCase):
     def test_slow_download_recovers_once_before_offline_install(self):
         import subprocess
         failure = subprocess.CalledProcessError(124, 'apt-get')
-        with patch('ci_packages.subprocess.run', side_effect=[None, failure, None, None, None]) as execute, \
+        with patch('ci_packages.missing_packages', return_value=['wine']), \
+                patch('ci_packages.subprocess.run', side_effect=[None, failure, None, None, None]) as execute, \
                 patch('ci_packages.platform.freedesktop_os_release', return_value={'ID':'ubuntu','VERSION_CODENAME':'noble'}), \
                 contextlib.redirect_stdout(io.StringIO()):
             install_packages('state-windows')
@@ -67,18 +70,70 @@ class CIPackagesTests(unittest.TestCase):
 
     def test_install_failure_is_not_retried_or_disguised_as_a_mirror_failure(self):
         import subprocess
-        with patch('ci_packages.subprocess.run', side_effect=[None, None, subprocess.CalledProcessError(100,'dpkg')]) as execute:
+        with patch('ci_packages.missing_packages', return_value=['libpng-dev']), \
+                patch('ci_packages.subprocess.run', side_effect=[None, None, subprocess.CalledProcessError(100,'dpkg')]) as execute:
             with self.assertRaises(subprocess.CalledProcessError):install_packages('focused')
         self.assertEqual(execute.call_count, 3)
 
     def test_two_acquisition_failures_stop_without_an_install(self):
         import subprocess
-        with patch('ci_packages.subprocess.run', side_effect=subprocess.CalledProcessError(124,'apt-get')) as execute, \
+        with patch('ci_packages.missing_packages', return_value=['libpng-dev']), \
+                patch('ci_packages.subprocess.run', side_effect=subprocess.CalledProcessError(124,'apt-get')) as execute, \
                 patch('ci_packages.platform.freedesktop_os_release', return_value={'ID':'ubuntu','VERSION_CODENAME':'noble'}), \
                 contextlib.redirect_stdout(io.StringIO()):
             with self.assertRaises(subprocess.CalledProcessError):install_packages('focused')
         self.assertEqual(execute.call_count, 2)
         self.assertTrue(all('install' not in call.args[0] for call in execute.call_args_list))
+
+    def test_installed_packages_need_no_network_or_installer(self):
+        with patch('ci_packages.missing_packages', return_value=[]), \
+                patch('ci_packages.run_phase') as phase, contextlib.redirect_stdout(io.StringIO()):
+            install_packages('focused')
+        phase.assert_not_called()
+
+    def test_only_configured_native_or_architecture_independent_packages_count(self):
+        rows = ('build-essential\tamd64\tinstall ok installed\n'
+                'python3\tamd64\thold ok installed\n'
+                'pkg-config\tall\tinstall ok installed\n'
+                'libpng-dev\tarm64\tinstall ok installed\n')
+        with patch('ci_packages.subprocess.run', side_effect=[
+                subprocess.CompletedProcess([], 0, 'amd64\n'),
+                subprocess.CompletedProcess([], 0, rows)]):
+            self.assertEqual(missing_packages('focused'), ['libpng-dev'])
+        rows = rows.replace('libpng-dev\tarm64\tinstall ok installed',
+                            'libpng-dev\tamd64\tinstall ok unpacked')
+        with patch('ci_packages.subprocess.run', side_effect=[
+                subprocess.CompletedProcess([], 0, 'amd64\n'),
+                subprocess.CompletedProcess([], 0, rows)]):
+            self.assertEqual(missing_packages('focused'), ['libpng-dev'])
+
+    def test_missing_package_query_keeps_requested_order_and_fatal_errors_fail(self):
+        with patch('ci_packages.subprocess.run', side_effect=[
+                subprocess.CompletedProcess([], 0, 'amd64\n'),
+                subprocess.CompletedProcess([], 1, 'python3\tamd64\tinstall ok installed\n')]):
+            self.assertEqual(missing_packages('focused'),
+                             ['build-essential', 'pkg-config', 'libpng-dev'])
+        with patch('ci_packages.subprocess.run', side_effect=[
+                subprocess.CompletedProcess([], 0, 'amd64\n'),
+                subprocess.CompletedProcess([], 2, '', 'database unavailable')]):
+            with self.assertRaises(subprocess.CalledProcessError):
+                missing_packages('focused')
+
+    def test_invalid_package_database_output_does_not_claim_dependencies_exist(self):
+        for architecture, rows in [('amd64\n', 'unstructured status output\n'),
+                                   ('', '')]:
+            with self.subTest(architecture=architecture, rows=rows), \
+                    patch('ci_packages.subprocess.run', side_effect=[
+                        subprocess.CompletedProcess([], 0, architecture),
+                        subprocess.CompletedProcess([], 0, rows)]):
+                with self.assertRaises(RuntimeError):
+                    missing_packages('focused')
+
+    def test_acquisition_budgets_leave_room_inside_the_outer_guard(self):
+        self.assertEqual(INDEX_SECONDS, 120)
+        # Two status queries, both acquisition attempts and one offline install,
+        # including kill grace for each timed APT command, fit the 900s guard.
+        self.assertLess(20 + 2 * INDEX_SECONDS + 180 + 240 + 180 + 5 * 5, 900)
 
     def test_root_timeout_encloses_the_package_manager(self):
         self.assertEqual(bounded_command(['sudo','apt-get','update'],60),

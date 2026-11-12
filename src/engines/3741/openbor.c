@@ -4706,7 +4706,7 @@ void cache_model_sprites(s_model* m, int ld){
 		cachesprite(m->parrow[i][0], ld);
 
 	//if(hasFreetype(model, MF_ANIMLIST)){
-	for(i=0; i<max_animations; i++){
+	for(i=0; i<m->animation_capacity; i++){
 		anim = m->animation[i];
 		if(anim){
 			for(f=0;f<anim->numframes;f++){

@@ -24,6 +24,7 @@ PACKAGES = {
     'state-linux': ('build-essential', 'python3', 'ffmpeg'),
     'state-windows': ('python3', 'wine64', 'wine', 'gcc-mingw-w64-x86-64-posix'),
 }
+INDEX_SECONDS = 120
 
 
 def apt_commands(role, *, root=False):
@@ -58,8 +59,38 @@ def run_phase(command, seconds, *, phase, attempt):
                               seconds=round(time.monotonic()-started, 3))), flush=True)
 
 
+def missing_packages(role):
+    """Require configured native packages before depending on network access."""
+    packages = PACKAGES[role]
+    architecture = subprocess.run(['dpkg', '--print-architecture'], check=True,
+                                  capture_output=True, text=True, timeout=10).stdout.strip()
+    if not architecture or not architecture.replace('-', '').isalnum():
+        raise RuntimeError('Could not establish the native package architecture')
+    query = subprocess.run(['dpkg-query', '-W',
+                            '-f=${Package}\t${Architecture}\t${Status}\n', '--', *packages],
+                           capture_output=True, text=True, timeout=10)
+    if query.returncode not in (0, 1):
+        raise subprocess.CalledProcessError(query.returncode, query.args,
+                                            output=query.stdout, stderr=query.stderr)
+    installed = set()
+    for line in query.stdout.splitlines():
+        fields = line.split('\t')
+        if len(fields) != 3:
+            raise RuntimeError('Unexpected package status response')
+        name, arch, status = fields
+        if (name in packages and arch in (architecture, 'all') and
+                status in ('install ok installed', 'hold ok installed')):
+            installed.add(name)
+    return [name for name in packages if name not in installed]
+
+
 def install_packages(role):
     """Retry only acquisition, before invoking the offline package installer."""
+    missing = missing_packages(role)
+    print(json.dumps(dict(role=role, missing_packages=missing)), flush=True)
+    if not missing:
+        print('Required host packages are installed; no APT network request needed', flush=True)
+        return
     commands = apt_commands(role, root=os.geteuid() == 0)
     with tempfile.TemporaryDirectory(prefix='anybor-apt-') as directory:
         for attempt in range(2):
@@ -86,7 +117,7 @@ def install_packages(role):
                 print('APT recovery: official Ubuntu archive and security mirrors', flush=True)
             update, install = selected
             try:
-                run_phase(update, 60, phase='index', attempt=attempt+1)
+                run_phase(update, INDEX_SECONDS, phase='index', attempt=attempt+1)
                 run_phase(install + ['--download-only'], 180 if not attempt else 240,
                           phase='download', attempt=attempt+1)
             except subprocess.CalledProcessError:
