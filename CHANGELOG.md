@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.2 — imohash cache identities
+
+- Use standard imohash for ZIP extraction cache identities, limiting hash reads to three 16 KiB samples for ZIPs of at least 128 KiB.
+- Record imohash values in engine executable provenance after verifying each complete payload against its SHA-256.
+
 ## 0.2.1 — model loading and CI setup
 
 - Keep model loading stable when animation tables grow on demand.

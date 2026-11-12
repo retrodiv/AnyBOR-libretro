@@ -112,6 +112,59 @@ class ZipContentTests(unittest.TestCase):
         fields = run.stdout.rstrip('\n').split(' ', 3)
         return tuple(map(int, fields[:3])), fields[3], run.stderr
 
+    def test_standard_imohash_vectors_and_bounded_reads_in_c_and_cpp(self):
+        source = Path(__file__).with_name('imohash_contract.c')
+        for language, compiler, standard in (
+                ('c', os.environ.get('HOST_CC', 'cc'), '-std=c99'),
+                ('c++', os.environ.get('HOST_CXX', 'c++'), '-std=c++11')):
+            with self.subTest(language=language):
+                binary = self.folder / ('imohash-' + language)
+                subprocess.run([*shlex.split(compiler), '-x', language, standard,
+                    '-Wall', '-Wextra', '-Werror', '-Wno-unused-function',
+                    '-fsanitize=address,undefined', '-fno-sanitize-recover=all',
+                    '-I', str(GLUE), str(source), '-o', str(binary)], check=True, timeout=60)
+                subprocess.run([str(binary)], check=True, timeout=30,
+                               env=sanitizer_environment())
+
+    def test_imohash_cache_reuse_and_sample_changes(self):
+        # Stored ZIP keeps the sample changes directly observable in archive bytes.
+        archive = self.folder / 'content.zip'
+        with zipfile.ZipFile(archive, 'w', compression=zipfile.ZIP_STORED) as stream:
+            for name, data in self.game().items():
+                stream.writestr(name, data)
+            stream.writestr('padding.bin', bytes(range(256)) * 1024)
+        command = [str(self.binary), str(archive), str(self.folder / 'save')]
+        def run():
+            return subprocess.run(command, capture_output=True, text=True, check=True,
+                                  timeout=30, env=sanitizer_environment())
+        first = run()
+        self.assertTrue(first.stdout.startswith('1 '), first.stderr)
+        chosen = Path(first.stdout.rstrip().split(' ', 3)[3])
+        cache = chosen.parents[1]
+        self.assertTrue(cache.name.startswith('imohash-v1-'))
+        self.assertRegex(cache.name, r'^imohash-v1-[0-9a-f]{32}$')
+        self.assertEqual((cache / '.complete').read_text(),
+                         'oborzip-imohash-v1 ' + cache.name[len('imohash-v1-'):] + '\n')
+        sentinel = cache / 'reuse-sentinel'
+        sentinel.write_text('keep')
+        second = run()
+        self.assertEqual(first.stdout, second.stdout)
+        self.assertIn('using imohash cache', second.stderr)
+        self.assertTrue(sentinel.is_file())
+        # Same size, changed middle sample, unchanged central directory.
+        with zipfile.ZipFile(archive) as stream:
+            padding = bytearray(stream.read('padding.bin'))
+        padding[len(padding) // 2] ^= 1
+        with zipfile.ZipFile(archive, 'w', compression=zipfile.ZIP_STORED) as stream:
+            for name, data in self.game().items():
+                stream.writestr(name, data)
+            stream.writestr('padding.bin', padding)
+        changed = run()
+        self.assertTrue(changed.stdout.startswith('1 '), changed.stderr)
+        self.assertNotEqual(first.stdout, changed.stdout)
+        self.assertNotIn('using imohash cache', changed.stderr)
+        self.assertTrue(sentinel.is_file())
+
     def test_single_real_pak_and_data_tree_load(self):
         result, path, _ = self.run_zip({'Paks/game.pak': self.pak()})
         self.assertEqual(result, (1, 0, 0)); self.assertTrue(path.endswith('/Paks/game.pak'))

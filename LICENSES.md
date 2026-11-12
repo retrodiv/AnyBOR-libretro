@@ -30,6 +30,7 @@ No endorsement by Senile Team, OpenBOR Team or libretro is claimed.
 | `src/port/libretro/libco/` | ISC; `valgrind.h` has its separate permissive header license, reproduced in the notice dossier |
 | `src/port/libretro/lz4.c`, `lz4.h` and `lz4/LICENSE` | BSD-2-Clause, Yann Collet; pinned LZ4 block codec, with source and binary notices retained |
 | `src/port/libretro/dlmalloc.inc` | Doug Lea's public-domain dedication, with the CC0 waiver referenced in its header |
+| `src/glue/obor_imohash.h`, `tools/imohash_contract.c` | imohash sampling and size encoding: MIT, Jim Kalafut; MurmurHash3: Austin Appleby's public-domain dedication, adapted from Peter Scott's C port. Original adaptation by retrodiv: MIT. Exact notices in `LICENSES/imohash.txt` and `LICENSES/murmur3.txt` |
 | `src/third_party/libretro.h` | MIT, libretro API contributors |
 | `src/third_party/miniz.c`, `miniz.h` | MIT; all amalgamated notices, including Rich Geldreich, RAD Game Tools and Martin Raiber, are retained |
 | `src/engines/*/source/webmlib/nestegg/` | ISC, Mozilla Foundation and Matthew Gregan |

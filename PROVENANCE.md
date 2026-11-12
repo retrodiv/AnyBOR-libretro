@@ -24,7 +24,7 @@ and [native library tests](https://github.com/aosp-mirror/platform_bionic/blob/m
 The port does not import those platform implementation files.
 
 [ENGINE_EXECUTABLES.json](docs/ENGINE_EXECUTABLES.json) records verified engine
-program and installable-package SHA-256 values, builds, variants, byte sizes and official
+program and installable-package SHA-256 and imohash values, builds, variants, byte sizes and official
 source package/member references. The lookup table contains these factual
 identities, not executable code. Verification checks archive members' sizes and
 CRCs, directly preserved packages' manifest hashes, executable/package formats
@@ -32,7 +32,9 @@ and local SHA-256. Package identity and embedded version labels are separate
 facts; supported discrepancies are recorded in the catalog. The catalog digest
 binds the published projection to its verified input. No game, PAK or game
 content hashes are compatibility selectors, and no executable is run for
-identification.
+identification. Imohash values use standard sampling parameters and are calculated
+only after each complete executable payload matches its recorded SHA-256.
+Different executables can share a sampled imohash value.
 
 Files imported from an upstream revision into another physical baseline have a
 `source_import` entry with their own upstream commit, repository and original
@@ -159,3 +161,17 @@ and [revision f5261e7cb97786909276c0b87f8f9f63504d2844](https://github.com/DCurr
 Their exact references are recorded with the selected profiles in `src/pin.json`.
 Retained OpenBOR implementations and adaptations keep their upstream copyright
 and BSD terms; added original helpers carry separate BSD-3-Clause notices.
+
+## ZIP cache identity
+
+`src/glue/obor_imohash.h` implements standard imohash defaults: complete input
+below 128 KiB, otherwise 16 KiB samples at the beginning, midpoint and end,
+MurmurHash3 x64_128 with seed zero, and unsigned LEB128 file-size encoding.
+Sampling and encoding follow Jim Kalafut's MIT implementation at commit
+`611245ae8069800035b185d9d43f36829885ab82`. MurmurHash3 follows Peter Scott's
+C port at commit `dae94be0c0f54a399d23ea6cbe54bca5a4e93ce4`, retaining Austin
+Appleby's public-domain dedication. The C adaptation is copied from retrodiv's
+AnyGM implementation at commit `31d5666d72559136327b3165bbaca3b81759965b`,
+with local names and a miniz archive-reader adapter. Known-answer test vectors
+retain Jim Kalafut's MIT notice. Full notices accompany source and binaries in
+`LICENSES/imohash.txt` and `LICENSES/murmur3.txt`.

@@ -4725,6 +4725,14 @@ Source: src/engines/7533/source/webmlib/vidplay.c, src/engines/7533/source/webml
  * at the source repository root. Original notices follow below.
  */
 
+Source: src/glue/obor_imohash.h
+/* MurmurHash3 was written by Austin Appleby, and is placed in the public
+ * domain. The author hereby disclaims copyright to this source code.
+ * Adapted from Peter Scott's C port: only x64_128, seed zero, explicit
+ * little-endian unaligned reads and big-endian output lanes for imohash.
+ * imohash sampling and size encoding follow Jim Kalafut's MIT implementation.
+ * See LICENSES/imohash.txt, LICENSES/murmur3.txt and docs/PROVENANCE.md. */
+
 Source: src/deps/libvorbis/include/vorbis/vorbisenc.h
 /********************************************************************
  *                                                                  *
@@ -5481,6 +5489,14 @@ Source: src/engines/7142/source/gamelib/packfile.c
  * Existing changes recorded here; this is not their implementation date.
  * See MODIFICATIONS.md and docs/modifications/7142.md
  * at the source repository root. Original notices follow below.
+ */
+
+Source: src/glue/obor_imohash.h
+/* SPDX-License-Identifier: MIT
+ * Copyright (c) 2015 Jim Kalafut
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
+ * Adapted from AnyGM gml_hash.c, commit 31d5666d72559136327b3165bbaca3b81759965b.
+ * See LICENSES/imohash.txt and LICENSES/murmur3.txt.
  */
 
 Source: src/deps/zlib/infback.c

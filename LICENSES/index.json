@@ -367,7 +367,7 @@
     "file": "LICENSES/Embedded-source-notices.txt",
     "license": "see each notice",
     "scope": "source and binary",
-    "sha256": "797e06a04cfd2a0cd77e5d14ea84afba086fd327bb521965b3ed41de494abad8",
+    "sha256": "750f94e7804c18cce97b077351778b175215eba10640daf4459f39528d699cf8",
     "source": "Individual source headers listed in this document"
   },
   {
@@ -474,5 +474,19 @@
     "scope": "Imported and adapted native flash and music script interfaces from OpenBOR7735; original source and binary redistribution conditions apply.",
     "sha256": "b8f3916944f0b5aee216ef7a494820d17ae658336a4680992dc244ebedecf3ea",
     "source": "https://raw.githubusercontent.com/DCurrent/openbor/f64d63c2fc4e0c6e8993a58fbce1816502fff63a/engine/LICENSE"
+  },
+  {
+    "file": "LICENSES/imohash.txt",
+    "license": "MIT",
+    "scope": "ZIP cache sampling and size encoding in src/glue/obor_imohash.h",
+    "sha256": "93ff2d6009c288efa291e02f7587457aecfc59d28dc0bc03e2fe51e0ebbf692c",
+    "source": "https://github.com/kalafut/imohash/tree/611245ae8069800035b185d9d43f36829885ab82"
+  },
+  {
+    "file": "LICENSES/murmur3.txt",
+    "license": "LicenseRef-MurmurHash3-PublicDomain",
+    "scope": "MurmurHash3 x64_128 in src/glue/obor_imohash.h",
+    "sha256": "0b8dbbc917ae625ffd6870fc079056303bf0b4e7b8b42eb0af9f3ab982ab23ad",
+    "source": "https://github.com/PeterScott/murmur3/tree/dae94be0c0f54a399d23ea6cbe54bca5a4e93ce4"
   }
 ]

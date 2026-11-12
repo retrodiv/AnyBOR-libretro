@@ -6,7 +6,8 @@
 #define OBOR_ZIP_H
 
 #include "miniz.h"
-#include "obor_sha256.h"
+#include "obor_imohash.h"
+#include "obor_prepare_progress.h"
 #include "obor_storage.h"
 
 #if !defined(_WIN32)
@@ -68,7 +69,7 @@ static int obor_zip_marker_ok(const char *marker, const char *hash)
     if (!f) return 0;
     int ok = fgets(line, sizeof(line), f) != NULL;
     fclose(f);
-    snprintf(expected, sizeof(expected), "oborzip-v3 %s\n", hash);
+    snprintf(expected, sizeof(expected), "oborzip-imohash-v1 %s\n", hash);
     return ok && strcmp(line, expected) == 0;
 }
 
@@ -117,18 +118,31 @@ static const obor_zip_content_entry *obor_zip_find_entry(
     return NULL;
 }
 
+/* Use miniz's 64-bit archive reader on every supported target. */
+static int obor_zip_hash_read(void *context, uint64_t offset, void *data, size_t size)
+{
+    size_t got = mz_zip_read_archive_data((mz_zip_archive *)context, offset, data, size);
+    obor_prepare_advance(got);
+    return got == size && obor_prepare_checkpoint();
+}
+
 static int obor_zip_prepare(const char *zip_path, const char *save_dir,
                             char *out, size_t out_cap, const char *system_dir = NULL,
                             obor_engine_identity *engine_identity = NULL)
 {
     obor_prepare_range progress = obor_prepare_phase;
     obor_prepare_stage(progress, 0, 150, 0);
-    char hash[65];
-    if (!obor_sha256_file(zip_path, hash)) return 0;
     obor_zip_reader_scope reader;
     mz_zip_archive *za = &reader.archive;
     reader.opened = mz_zip_reader_init_file(za, zip_path, 0);
     if (!reader.opened) return 0;
+    char hash[33];
+    unsigned char digest[16];
+    obor_prepare_stage(progress, 0, 150, za->m_archive_size < 131072 ?
+                       za->m_archive_size : 3 * 16384);
+    if (!obor_imohash_read(obor_zip_hash_read, za, za->m_archive_size, digest)) return 0;
+    for (unsigned i = 0; i < sizeof(digest); ++i)
+        snprintf(hash + i * 2, 3, "%02x", digest[i]);
     unsigned n = (unsigned)mz_zip_reader_get_num_files(za);
     if (!n || n > OBOR_ZIP_MAX_ENTRIES) return 0;
 
@@ -179,9 +193,9 @@ static int obor_zip_prepare(const char *zip_path, const char *save_dir,
     }
     char parent[1200], cache[1400], marker[1500];
     if (!obor_storage_parent(save_dir, "zipcache", parent, sizeof(parent))) return 0;
-    /* A new namespace avoids trusting caches made with the older extraction
-     * layout or deleting a cache another frontend could still be using. */
-    snprintf(cache, sizeof(cache), "%s/v3-%s", parent, hash);
+    /* Sampled identities have their own namespace and completion marker.
+     * Existing full-hash caches are not reused or removed here. */
+    snprintf(cache, sizeof(cache), "%s/imohash-v1-%s", parent, hash);
     snprintf(marker, sizeof(marker), "%s/.complete", cache);
     if (!obor_storage_track(cache)) return 0;
     if (!obor_storage_directory(cache) || !obor_zip_marker_ok(marker, hash)) {
@@ -215,13 +229,13 @@ static int obor_zip_prepare(const char *zip_path, const char *save_dir,
         snprintf(temp_marker, sizeof(temp_marker), "%s/.complete", partial.path);
         FILE *file = fopen(temp_marker, "wb");
         if (!file) return 0;
-        bool written = fprintf(file, "oborzip-v3 %s\n", hash) > 0;
+        bool written = fprintf(file, "oborzip-imohash-v1 %s\n", hash) > 0;
         if (fclose(file) || !written) return 0;
         if (rename(partial.path, cache)) {
             if (!obor_storage_directory(cache) || !obor_zip_marker_ok(marker, hash)) return 0;
         } else partial.path[0] = 0;
         log_cb(RETRO_LOG_INFO, "[OpenBOR] zip: extracted %u files\n", extracted);
-    } else log_cb(RETRO_LOG_INFO, "[OpenBOR] zip: using SHA-256 cache\n");
+    } else log_cb(RETRO_LOG_INFO, "[OpenBOR] zip: using imohash cache\n");
 
     unsigned games = 0, unknown = 0;
     char chosen[4096] = "";

@@ -1,0 +1,7 @@
+MurmurHash3 was written by Austin Appleby, and is placed in the public
+domain. The author hereby disclaims copyright to this source code.
+
+C port and general tidying by Peter Scott.
+
+Source: https://github.com/PeterScott/murmur3
+Revision: dae94be0c0f54a399d23ea6cbe54bca5a4e93ce4
