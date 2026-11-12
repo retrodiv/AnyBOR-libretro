@@ -208,7 +208,7 @@ void Varlist_Clear(Varlist *varlist)
     varlist->magic = 0;
 }
 
-#include "obor_varlist_ownership.inc"
+#include "anybor_varlist_ownership.inc"
 
 void Varlist_Cleanup(Varlist *varlist)
 {
@@ -3657,7 +3657,7 @@ int mapstrings_entityproperty(ScriptVariant **varlist, int paramCount)
 //getentityproperty(pentity, propname);
 extern int sprite_map_max_items;
 extern uint64_t sprites_loaded;
-#include "obor_resources.h"
+#include "anybor_resources.h"
 
 static int obor_script_sprite_name_readable(const char *name, size_t limit)
 {
@@ -13618,8 +13618,8 @@ int mapstrings_textobjproperty(ScriptVariant **varlist, int paramCount)
  * SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
 #include <limits.h>
-#include "obor_resources.h"
-#include "obor_text_table_ownership.inc"
+#include "anybor_resources.h"
+#include "anybor_text_table_ownership.inc"
 
 HRESULT openbor_gettextobjproperty(ScriptVariant **varlist , ScriptVariant **pretvar, int paramCount)
 {

@@ -15,7 +15,7 @@
 #include "video.h"
 #include "vga.h"
 #include "screen.h"
-#include "obor_resources.h"
+#include "anybor_resources.h"
 #include <stddef.h>
 
 #include <stdlib.h>

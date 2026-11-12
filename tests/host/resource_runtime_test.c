@@ -1,9 +1,9 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
 #define _POSIX_C_SOURCE 200809L
-#include "obor_resources.h"
-#include "obor_framebuffer_state.h"
-#include "obor_state_config.h"
+#include "anybor_resources.h"
+#include "anybor_framebuffer_state.h"
+#include "anybor_state_config.h"
 obor_state_settings obor_state_session_settings;
 #include <assert.h>
 #include <stdio.h>

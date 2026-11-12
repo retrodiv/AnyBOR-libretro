@@ -45,7 +45,7 @@ def program(data):
                                                        'ScriptVariant_IntegerValue', 'ScriptVariant_DecimalValue')),
         COMMON='\n'.join(function(common, n) for n in ('property_access_get_member', 'property_access_set_member')),
         MAP=function(source, 'obor_profile_drawmethod_get_property_map'),
-        ADAPTER=(port / 'obor_drawmethod_member.inc').read_text(),
+        ADAPTER=(port / 'anybor_drawmethod_member.inc').read_text(),
         API='\n'.join(function(source, n) for n in (
             'obor_profile_get_drawmethod_property', 'obor_profile_set_drawmethod_property',
             'obor_profile_copy_drawmethod', 'openbor_get_drawmethod_property',

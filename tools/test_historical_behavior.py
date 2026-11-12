@@ -4574,7 +4574,7 @@ int main(void) {@CHECKS@assert(cases==@TOTAL@);return 0;}
 #include <stdlib.h>
 #include <string.h>
 #include <stdarg.h>
-#include "obor_abi.h"
+#include "anybor_abi.h"
 static unsigned obor_profile_build,cases;
 static int diagnostics;
 int record_diagnostic(const char *format,...) {(void)format;++diagnostics;return 0;}
@@ -5117,7 +5117,7 @@ int main(void) {@CONTEXTS@return 0;}
                     'LEGACY': legacy, 'READ_FIELDS': read_fields,
                     'INITIALIZERS': initializers, 'DEFINITIONS': '\n'.join(definitions),
                     'CONTEXTS': '\n'.join(contexts), 'SLOWTYPE': 'unsigned char' if engine == '3741' else 'unsigned'}
-                replacements.update(PAK_HEADER=(ROOT / 'src/port/libretro/obor_pak_name.h').read_text(),
+                replacements.update(PAK_HEADER=(ROOT / 'src/port/libretro/anybor_pak_name.h').read_text(),
                     PAK_PROVIDER=pak_provider, LABEL_CHECKS=label_checks, STRING_LIMIT=str(string_limit))
                 for key, value in replacements.items():
                     program = program.replace('@' + key + '@', value)

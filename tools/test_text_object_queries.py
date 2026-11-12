@@ -28,7 +28,7 @@ def program(engine, profiles):
     if enum is None:
         raise ValueError('Complete native text-property enumeration required')
     code = (HERE / 'text_object_queries_contract.c.in').read_text()
-    ownership = '#include "obor_text_table_ownership.inc"'
+    ownership = '#include "anybor_text_table_ownership.inc"'
     if source.count(ownership) != 1:
         raise ValueError('Native table ownership helpers required')
     parts = dict(ENUM=enum[0], MAPPER=function(source, 'mapstrings_textobjproperty'),

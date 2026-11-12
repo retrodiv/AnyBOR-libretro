@@ -20,7 +20,7 @@ def program(engine, profiles):
     script = (engine / 'openborscript.c').read_text(encoding='latin1')
     core = (engine / 'openbor.c').read_text(encoding='latin1')
     release = function(core, 'free_level')
-    ownership = '#include "obor_text_table_ownership.inc"'
+    ownership = '#include "anybor_text_table_ownership.inc"'
     if script.count(ownership) != 1:
         raise ValueError('Native text table ownership helpers required')
     visible = 'obor_textobjs_release_visible(lv);'

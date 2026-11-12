@@ -19,9 +19,9 @@ from runtime_evidence import record_process
 
 ROOT = Path(os.environ.get('OBOR_TEST_SOURCE', Path(__file__).resolve().parents[1]))
 GLUE = Path(os.environ.get('OBOR_OPTIONS_GLUE', ROOT / 'src/glue/libretro.cpp'))
-HEADER = Path(os.environ.get('OBOR_OPTIONS_HEADER', ROOT / 'src/glue/obor_engines.h'))
+HEADER = Path(os.environ.get('OBOR_OPTIONS_HEADER', ROOT / 'src/glue/anybor_engines.h'))
 STATE = Path(os.environ.get('OBOR_STATE_CONFIG_HEADER',
-                            ROOT / 'src/port/libretro/obor_state_config.h'))
+                            ROOT / 'src/port/libretro/anybor_state_config.h'))
 
 
 def program(glue, header):

@@ -43,7 +43,7 @@ def generate(glue, output, allow_cache=False):
     try:
         from PIL import Image
     except ImportError:
-        cached = glue / 'obor_loading_background.h'
+        cached = glue / 'anybor_loading_background.h'
         if allow_cache and cached.is_file() and signature in cached.read_text():
             output.parent.mkdir(parents=True, exist_ok=True)
             if output.resolve() != cached.resolve():
@@ -101,7 +101,7 @@ def main():
     parser.add_argument('--allow-cache', action='store_true',
                         help='without Pillow, accept the precomputed copy only if both inputs match')
     args = parser.parse_args()
-    generate(args.glue, args.output or args.glue / 'obor_loading_background.h', args.allow_cache)
+    generate(args.glue, args.output or args.glue / 'anybor_loading_background.h', args.allow_cache)
 
 
 if __name__ == '__main__':

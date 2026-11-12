@@ -48,7 +48,7 @@ def additive_program(data, *, provider_header=False):
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "obor_random_additive.h"
+#include "anybor_random_additive.h"
 #define check(x) do {if(!(x)){fprintf(stderr,"Owned additive seed=%u draw=%u line=%d\\n",seed,draw,__LINE__);abort();}}while(0)
 static const struct {unsigned seed,count,values[16];} vectors[]={'''+','.join(rows)+'''};
 int main(void){
@@ -67,9 +67,9 @@ int main(void){
 }'''
     text = text.replace('@INITIAL@', ','.join(str(n)+'u' for n in default))
     if provider_header:
-        text = text.replace('#include "obor_random_additive.h"',
+        text = text.replace('#include "anybor_random_additive.h"',
             '#ifndef __ANDROID__\n#define __ANDROID__ 1\n#endif\n'
-            '#include "obor_random.h"\n#ifndef OBOR_RANDOM_ADDITIVE_H\n'
+            '#include "anybor_random.h"\n#ifndef OBOR_RANDOM_ADDITIVE_H\n'
             '#error Android engine provider must own additive state\n#endif')
     return text
 

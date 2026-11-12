@@ -33,7 +33,7 @@ static void four_cpus(LPSYSTEM_INFO info)
 }
 #define CreateThreadpoolWork counted_work
 #define GetSystemInfo four_cpus
-#include "obor_alloc.c"
+#include "anybor_alloc.c"
 
 void obor_state_owned_discard(void) {}
 #if OBOR_WRITE_WATCH_ENABLED

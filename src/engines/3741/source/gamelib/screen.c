@@ -33,7 +33,7 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <stdlib.h>
-#include "obor_resources.h"
+#include "anybor_resources.h"
 
 s_screen * allocscreen(int width, int height, int pixelformat)
 {

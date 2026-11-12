@@ -1,9 +1,9 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
 #define _GNU_SOURCE
-#include "obor_fault.h"
-#include "obor_abi.h"
-#include "obor_write_watch.h"
+#include "anybor_fault.h"
+#include "anybor_abi.h"
+#include "anybor_write_watch.h"
 #include "gamelib/threads.h"
 #include <assert.h>
 #include <errno.h>

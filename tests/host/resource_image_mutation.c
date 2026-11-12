@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
-#include "obor_resource_image.h"
+#include "anybor_resource_image.h"
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>

@@ -70,7 +70,7 @@ class EarlyArrayTests(unittest.TestCase):
 #include <string.h>
 #include "ScriptVariant.h"
 #include "List.h"
-#include "obor_script_storage.h"
+#include "anybor_script_storage.h"
 uint32_t obor_profile_build;
 static List scriptheap,theFunctionList;
 static char diagnostic[512];

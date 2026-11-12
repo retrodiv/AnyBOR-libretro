@@ -58,7 +58,7 @@
 #include	"anigif.h"
 #include    "openborscript.h"
 #include    "globals.h"
-#include "obor_draw_assert.h"
+#include "anybor_draw_assert.h"
 #include	"triangle.h"
 #include    "ram.h"
 #include    "version.h"

@@ -676,7 +676,7 @@ void scalescreen(s_screen *dest, s_screen *src)
  */
 #include <stddef.h>
 #include <stdint.h>
-#include "obor_resources.h"
+#include "anybor_resources.h"
 
 static int obor_zoom_storage(const s_screen *screen, size_t *length)
 {

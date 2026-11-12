@@ -12,7 +12,7 @@
 #include <windows.h>
 #endif
 #define OBOR_RUNTIME
-#include "obor_latency_boundaries.h"
+#include "anybor_latency_boundaries.h"
 
 static void variable(const char *value)
 {

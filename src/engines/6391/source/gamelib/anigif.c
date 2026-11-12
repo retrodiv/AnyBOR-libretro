@@ -27,7 +27,7 @@
 #include "types.h"
 #include "screen.h"
 #include "anigif.h"
-#include "obor_gif_memory.h"
+#include "anybor_gif_memory.h"
 
 // Animated GIF player.
 

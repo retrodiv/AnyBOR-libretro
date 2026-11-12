@@ -32,8 +32,8 @@ void ScriptVariant_Clear(ScriptVariant *value)
     ++cleared;
 }
 #define malloc limited_malloc
-#include "obor_script_compact.h"
-#include "obor_script_executable.h"
+#include "anybor_script_compact.h"
+#include "anybor_script_executable.h"
 #undef malloc
 
 static ScriptVariant *value(Instruction *ins, int number)

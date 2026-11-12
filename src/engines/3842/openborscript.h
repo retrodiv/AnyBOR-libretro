@@ -36,7 +36,7 @@ typedef struct
 //osc
 #define script_magic ((int)0x73636f)
 
-#include "obor_script_storage.h"
+#include "anybor_script_storage.h"
 
 #include <stdint.h>
 /* Preserve member offsets while allowing native packed owners. */

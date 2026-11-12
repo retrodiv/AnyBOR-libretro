@@ -16,21 +16,21 @@
 #define _GNU_SOURCE 1
 #endif
 #include "libretroport.h"
-#include "obor_runtime.h"
-#include "obor_state_config.h"
-#include "obor_paths.h"
-#include "obor_abi.h"
+#include "anybor_runtime.h"
+#include "anybor_state_config.h"
+#include "anybor_paths.h"
+#include "anybor_abi.h"
 #include "packfile.h"
 #include "utils.h"
 #include "libco/libco.h"
-#include "obor_fault.h"
-#include "obor_random.h"
+#include "anybor_fault.h"
+#include "anybor_random.h"
 #define OBOR_SHA256_STREAM_ONLY
-#include "obor_profile_identity.h"
+#include "anybor_profile_identity.h"
 
 #include <stdio.h>
 #include <stdlib.h>
-#include "obor_resources.h"
+#include "anybor_resources.h"
 #include <errno.h>
 #include <sys/stat.h>
 #ifdef _WIN32
@@ -643,7 +643,7 @@ capture_cwd:
     if (!obor_paths_set_root(engine_cwd)) goto fail;
 
     /* The engine runs on a dedicated ~16 MB stack inside the snapshot arena
-     * (fixed VA, guard page below) — see obor_alloc.c. */
+     * (fixed VA, guard page below) — see anybor_alloc.c. */
     if (!obor_arena_init())
         goto fail;
     obor_resources_open(info->pak_path, info->raw_dir);
@@ -805,7 +805,7 @@ void obor_set_button(int32_t player, int32_t button, int32_t down)
 }
 
 /* obor_get_audio lives in sblaster.c (needs the mixer);
- * obor_serialize/unserialize live in obor_state.c. */
+ * obor_serialize/unserialize live in anybor_state.c. */
 
 /* Walk the BOR PACK directory (format identical across eras): trailing u32
  * points at the entry table; each entry is {u32 len, u32 start, u32 size,

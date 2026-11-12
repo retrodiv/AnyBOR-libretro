@@ -45,7 +45,7 @@ static void log_cb(int,const char *format,...) {
 }
 static void mkdir_p(const char *path) { std::filesystem::create_directories(path); }
 @TABLE@
-#include "obor_zip.h"
+#include "anybor_zip.h"
 int main(int argc, char **argv) {
     if(argc!=3 && argc!=4) return 2;
     char path[4096] = "";
@@ -59,8 +59,8 @@ int main(int argc, char **argv) {
     flags = ['-g', '-O1', '-fsanitize=address,undefined', '-fno-sanitize-recover=all']
     objects = []
     for name, path in (('miniz', THIRD / 'miniz.c'),
-                       ('obor_transform_vm', GLUE / 'obor_transform_vm.c'),
-                       ('obor_transform_source', GLUE / 'obor_transform_source.c')):
+                       ('anybor_transform_vm', GLUE / 'anybor_transform_vm.c'),
+                       ('anybor_transform_source', GLUE / 'anybor_transform_source.c')):
         obj = directory / (name + '.o')
         subprocess.run([*shlex.split(os.environ.get('HOST_CC', 'cc')), '-std=gnu99',
                         *flags, '-c', str(path), '-o', str(obj)], check=True, timeout=60)
@@ -204,7 +204,7 @@ class ZipContentTests(unittest.TestCase):
 #define RETRO_LOG_INFO 0
 static void log_cb(int,const char *,...) {}
 static void mkdir_p(const char *) {}
-#include "obor_zip.h"
+#include "anybor_zip.h"
 extern "C" int zip_game_probe(const char *path,const char *save,char *out,size_t cap) {
     return obor_zip_prepare(path,save,out,cap);
 }

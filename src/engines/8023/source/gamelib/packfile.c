@@ -68,7 +68,7 @@
 #include "borendian.h"
 #include "stristr.h"
 #include "packfile.h"
-#include "obor_loose.h"
+#include "anybor_loose.h"
 #include "packfile_handle.h"
 #include "filecache.h"
 #include "soundmix.h"
@@ -814,7 +814,7 @@ void obor_packfile_closeall(void)
 }
 
 /* AnyBOR: these are owned operating-system paths, not game state. */
-#include "obor_content_path.h"
+#include "anybor_content_path.h"
 int obor_packfile_rebind_content(const char *saved, const char *current)
 {
     for(size_t i = 0; i < packfile_handle_table.capacity; ++i) {

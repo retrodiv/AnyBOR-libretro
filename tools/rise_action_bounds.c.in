@@ -7,7 +7,7 @@
 #include <string.h>
 @CONFIG@
 #include "openbor.h"
-#include "obor_rise_inputs.h"
+#include "anybor_rise_inputs.h"
 #undef printf
 #undef assert
 #undef malloc

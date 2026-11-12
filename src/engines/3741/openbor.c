@@ -183,12 +183,12 @@
 //	Side-scrolling beat-'em-up                                              //
 /////////////////////////////////////////////////////////////////////////////
 
-#include "obor_pak_name.h"
-#include "obor_rise_inputs.h"
+#include "anybor_pak_name.h"
+#include "anybor_rise_inputs.h"
 #include "openbor.h"
 #include "commands.h"
 #include "models.h"
-#include "obor_colourmap_storage.h"
+#include "anybor_colourmap_storage.h"
 #include <limits.h>
 #include <stdint.h>
 #include <math.h>
@@ -4524,7 +4524,7 @@ static void load_playable_list(char* buf)
 }
 
 #include <limits.h>
-#include "obor_resources.h"
+#include "anybor_resources.h"
 void alloc_specials(s_model* newchar)
 {
     s_com *grown, *previous;

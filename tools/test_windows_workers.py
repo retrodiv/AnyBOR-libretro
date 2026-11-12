@@ -43,7 +43,7 @@ def exercise(port, fixtures, exported, build):
                 '-DOBOR_BLOCK_STATE_CAPACITY=8388608', '-I', str(port),
                 '-I', str(exported), '-I', str(deps / 'include'),
                 str(fixtures / 'block_worker_test.c'),
-                str(port / 'obor_block_state.c'), str(exported / 'lz4.c'),
+                str(port / 'anybor_block_state.c'), str(exported / 'lz4.c'),
                 str(deps / 'lib/libz.a'),
                 '-Wl,--wrap=__imp_CreateThread',
                 '-Wl,--wrap=__imp_WaitForSingleObject',

@@ -7,7 +7,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "openbor.h"
-#include "obor_pak_name.h"
+#include "anybor_pak_name.h"
 #undef printf
 uint32_t obor_profile_build;
 s_savedata savedata;

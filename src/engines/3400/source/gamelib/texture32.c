@@ -20,7 +20,7 @@
 // see texture.c, this file uses 32bit palette and screen
 #include <string.h>
 #include "types.h"
-#include "obor_texture_bounds.h"
+#include "anybor_texture_bounds.h"
 
 //static int distortion[256];
 extern float _sinfactors[256];

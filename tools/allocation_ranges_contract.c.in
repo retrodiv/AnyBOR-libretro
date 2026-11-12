@@ -11,12 +11,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "obor_abi.h"
+#include "anybor_abi.h"
 #ifndef OBOR_TEST_NATIVE_ARENA
 #undef OBOR_ARENA_BASE_VA
 #define OBOR_ARENA_BASE_VA 0x200000000000ULL
 #endif
-#include "obor_alloc.c"
+#include "anybor_alloc.c"
 void obor_state_owned_discard(void) {}
 void obor_state_coded_discard(void) {}
 void obor_resources_close(void) {}

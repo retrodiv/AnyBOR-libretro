@@ -9,7 +9,7 @@
  */
 #include "libretroport.h"
 #include "control.h"
-#include "obor_abi.h"
+#include "anybor_abi.h"
 
 #include <stdio.h>
 #include <string.h>

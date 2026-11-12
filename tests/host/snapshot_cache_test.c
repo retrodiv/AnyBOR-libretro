@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
-#include "obor_snapshot_cache.h"
+#include "anybor_snapshot_cache.h"
 #include <assert.h>
 #include <stdio.h>
 

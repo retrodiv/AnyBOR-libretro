@@ -22,9 +22,9 @@ def exercise(port, fixtures, work):
         '-std=gnu99', '-O1', '-g', '-Wall', '-Wextra', '-Werror', '-Wno-error=deprecated-declarations',
         '-fPIC', '-D_GNU_SOURCE', '-I', str(port)]
     objects = []
-    for name in ('obor_files', 'obor_paths', 'obor_loose'):
+    for name in ('anybor_files', 'anybor_paths', 'anybor_loose'):
         obj = work / (name + '.o')
-        flags = ['-include', str(shim)] if name == 'obor_files' else []
+        flags = ['-include', str(shim)] if name == 'anybor_files' else []
         subprocess.check_call(common + flags + ['-c', str(port / (name + '.c')),
                               '-o', str(obj)], timeout=30)
         objects.append(str(obj))

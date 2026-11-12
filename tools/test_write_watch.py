@@ -24,7 +24,7 @@ def main():
         subprocess.run([*compiler, '-O2', '-pthread', '-DOBOR_WRITE_WATCH_TEST=1',
             '-D_DARWIN_C_SOURCE=1', '-I', str(port),
             str(release.ROOT / 'tests/host/write_watch_test.c'),
-            str(port / 'obor_fault.c'), str(port / 'obor_write_watch.c'),
+            str(port / 'anybor_fault.c'), str(port / 'anybor_write_watch.c'),
             *flags, '-o', str(executable)], check=True, timeout=45)
         for mode in ('cpu', 'read', 'fread', 'growth', 'fault', 'execute', 'errno', 'lease', 'worker', 'registered'):
             result = subprocess.run([str(executable), mode], capture_output=True,

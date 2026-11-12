@@ -43,8 +43,8 @@
 #include "types.h"
 #include "globals.h"
 #ifdef LIBRETRO
-#include "obor_threads.h"
-#include "obor_media_diag.h"
+#include "anybor_threads.h"
+#include "anybor_media_diag.h"
 #undef usleep /* Worker waits use wall time, never the coroutine clock. */
 #endif
 #include "borendian.h"

@@ -28,7 +28,7 @@ CONTRACTS = load_contract_fixture(Path(__file__).parent /
 def colourmap_storage_support(source):
     if 'obor_colourmap_table_reserve' not in source and 'obor_colourmap_find' not in source:
         return ''
-    header = SOURCE / 'src/port/libretro/obor_colourmap_storage.h'
+    header = SOURCE / 'src/port/libretro/anybor_colourmap_storage.h'
     if not header.is_file():
         raise ValueError('The tested engine requires its bound colourmap storage header')
     return '#include '+json.dumps(str(header.resolve()))+'\n'

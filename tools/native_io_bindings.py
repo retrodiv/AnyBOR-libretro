@@ -56,7 +56,7 @@ def verify_darwin_names(compiler, flags, port, output):
     output.mkdir(parents=True, exist_ok=True)
     source, obj = output / 'native-io-sdk.c', output / 'native-io-sdk.o'
     lines = ['#include <stdio.h>', '#include <sys/stat.h>', '#include <dirent.h>',
-             '#include <unistd.h>', '#include <fcntl.h>', '#include "obor_native_io.h"']
+             '#include <unistd.h>', '#include <fcntl.h>', '#include "anybor_native_io.h"']
     for name in OPERATIONS + WATCH_OPERATIONS:
         lines += ['__typeof__(&{0}) obor_probe_{0} = &{0};'.format(name),
                   'const char obor_native_name_{0}[] = OBOR_NATIVE_IO_{1};'.format(name, name.upper())]
@@ -85,15 +85,15 @@ def verify_darwin_names(compiler, flags, port, output):
         names[name] = native
     # The strings must be used by the actual native forwarders too. Merely
     # keeping an unused correct definition in a header would not guard a
-    # later accidental dlsym(RTLD_NEXT, "stat") in obor_files.c.
+    # later accidental dlsym(RTLD_NEXT, "stat") in anybor_files.c.
     implementation = output / 'native-io-port.o'
     subprocess.check_call(shlex.split(str(compiler)) + list(flags) + [
         '-std=gnu99', '-Werror', '-I', str(port), '-c',
-        str(Path(port) / 'obor_files.c'), '-o', str(implementation)])
+        str(Path(port) / 'anybor_files.c'), '-o', str(implementation)])
     watch_implementation = output / 'native-watch-port.o'
     subprocess.check_call(shlex.split(str(compiler)) + list(flags) + [
         '-std=gnu99', '-Werror', '-I', str(port), '-c',
-        str(Path(port) / 'obor_write_watch.c'), '-o', str(watch_implementation)])
+        str(Path(port) / 'anybor_write_watch.c'), '-o', str(watch_implementation)])
     strings = set()
     process_caches = 0
     for path in (implementation, watch_implementation):
@@ -133,10 +133,10 @@ def audit_engine(spec, objects, archives, output):
     objects, output = Path(objects), Path(output)
     macho = spec['plat'] == 'darwin'
     nm = spec['nm']
-    wrappers, unused = symbol_sets(objects / 'port/obor_files.o', nm)
+    wrappers, unused = symbol_sets(objects / 'port/anybor_files.o', nm)
     watch = spec['plat'] in ('linux', 'darwin')
     if watch:
-        watch_wrappers, unused = symbol_sets(objects / 'port/obor_write_watch.o', nm)
+        watch_wrappers, unused = symbol_sets(objects / 'port/anybor_write_watch.o', nm)
         wrappers |= watch_wrappers
     if macho:
         bound = wrappers
@@ -148,7 +148,7 @@ def audit_engine(spec, objects, archives, output):
         # real linker option and a definition; an unused option needs neither.
         bound = {name for name in configured if '__wrap_' + name in wrappers}
     checked, bindings = 0, set()
-    excluded = {'obor_files.o', 'obor_write_watch.o', 'whole.o', 'kept.o', 'android-kept.o'}
+    excluded = {'anybor_files.o', 'anybor_write_watch.o', 'whole.o', 'kept.o', 'android-kept.o'}
     paths = [p for p in sorted(objects.rglob('*.o'))
              if p.name not in excluded and not p.name.startswith(('obor_engine_', 'linker-probe'))]
     paths += list(map(Path, archives))

@@ -359,7 +359,7 @@ class NativeTextReturnTests(unittest.TestCase):
                            'openbor_textobj_set_text']:
                 if re.search(r'(?m)^(?:static )?(?:int|HRESULT) '+helper+r'\s*\(',script):
                     helpers+='\n'+function(script,helper)
-            ownership='#include "obor_text_table_ownership.inc"'
+            ownership='#include "anybor_text_table_ownership.inc"'
             if ownership in script:
                 helpers+='\n'+ownership
                 options['owned_tables']=True

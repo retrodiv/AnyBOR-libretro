@@ -720,7 +720,7 @@ Source: src/engines/7533/source/gamelib/draw16.c
  * at the source repository root. Original notices follow below.
  */
 
-Source: src/glue/obor_engines.h
+Source: src/glue/anybor_engines.h
 /* SPDX-License-Identifier: BSD-3-Clause */
 
 Source: src/engines/3842/source/gamelib/packfile.c
@@ -1128,7 +1128,7 @@ Source: src/engines/3842/source/gamelib/loadimg.c
  * at the source repository root. Original notices follow below.
  */
 
-Source: src/port/libretro/obor_script_storage.h, src/glue/obor_script_storage.h
+Source: src/port/libretro/anybor_script_storage.h, src/glue/anybor_script_storage.h
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
  * Shared script values keep their identities until their final reference ends.
@@ -1375,7 +1375,7 @@ Source: src/engines/7142/source/scriptlib/Interpreter.h
  * at the source repository root. Original notices follow below.
  */
 
-Source: src/port/libretro/obor_circle.h
+Source: src/port/libretro/anybor_circle.h
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
  * Integer circle rasterization from x*x + y*y = radius*radius.
@@ -1474,7 +1474,7 @@ Source: src/deps/libogg/src/framing.c
 
  ********************************************************************/
 
-Source: src/glue/obor_engines.h
+Source: src/glue/anybor_engines.h
 /* Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
 
 Source: src/engines/4086/source/scriptlib/ImportCache.c
@@ -1634,7 +1634,7 @@ Source: src/engines/4086/source/scriptlib/Interpreter.h
  * at the source repository root. Original notices follow below.
  */
 
-Source: src/port/libretro/obor_script_record32.h
+Source: src/port/libretro/anybor_script_record32.h
 /* Explicit fields of the historical 32-bit script save records.
  * SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
@@ -1909,7 +1909,7 @@ Source: src/deps/libvpx/rate_hist.c, src/deps/libvpx/rate_hist.h, src/deps/libvp
  *  be found in the AUTHORS file in the root of the source tree.
  */
 
-Source: src/engines/7533/source/webmlib/samplecvt.c, src/engines/7533/source/webmlib/samplecvt.h, src/engines/7533/source/webmlib/vidplay.c, src/engines/7533/source/webmlib/vidplay.h, src/engines/7533/source/webmlib/vorbis.c, src/engines/7533/source/webmlib/vorbis.h, src/engines/7533/source/webmlib/yuv.c, src/engines/7533/source/webmlib/yuv.h, src/engines/8023/source/webmlib/samplecvt.c, src/engines/8023/source/webmlib/samplecvt.h, src/engines/8023/source/webmlib/vidplay.c, src/engines/8023/source/webmlib/vidplay.h, src/engines/8023/source/webmlib/vorbis.c, src/engines/8023/source/webmlib/vorbis.h, src/engines/8023/source/webmlib/yuv.c, src/engines/8023/source/webmlib/yuv.h, src/engines/7533/source/adpcmlib/adpcm.h, src/engines/7533/source/gamelib/anigif.c, src/engines/7533/source/gamelib/anigif.h, src/engines/7533/source/gamelib/bitmap.c, src/engines/7533/source/gamelib/bitmap.h, src/engines/7533/source/gamelib/borendian.h, src/engines/7533/source/gamelib/draw.c, src/engines/7533/source/gamelib/draw.h, src/engines/7533/source/gamelib/draw16.c, src/engines/7533/source/gamelib/draw32.c, src/engines/7533/source/gamelib/font.c, src/engines/7533/source/gamelib/font.h, src/engines/7533/source/gamelib/loadimg.c, src/engines/7533/source/gamelib/loadimg.h, src/engines/7533/source/gamelib/packfile.c, src/engines/7533/source/gamelib/packfile.h, src/engines/7533/source/gamelib/palette.c, src/engines/7533/source/gamelib/palette.h, src/engines/7533/source/gamelib/pixelformat.c, src/engines/7533/source/gamelib/screen.c, src/engines/7533/source/gamelib/screen.h, src/engines/7533/source/gamelib/screen16.c, src/engines/7533/source/gamelib/screen32.c, src/engines/7533/source/gamelib/soundmix.c, src/engines/7533/source/gamelib/soundmix.h, src/engines/7533/source/gamelib/sprite.c, src/engines/7533/source/gamelib/sprite.h, src/engines/7533/source/gamelib/spriteq.c, src/engines/7533/source/gamelib/spriteq.h, src/engines/7533/source/gamelib/spritex8p16.c, src/engines/7533/source/gamelib/spritex8p32.c, src/engines/7533/source/gamelib/threads.h, src/engines/7533/source/gamelib/timer.h, src/engines/7533/source/gamelib/types.h, src/engines/7533/source/gamelib/vga.h, src/engines/7533/source/gfxlib/gfxtypes.h, src/engines/7533/source/globals.h, src/engines/7533/source/omath.c, src/engines/7533/source/omath.h, src/engines/7533/source/preprocessorlib/pp_lexer.c, src/engines/7533/source/preprocessorlib/pp_lexer.h, src/engines/7533/source/preprocessorlib/pp_parser.c, src/engines/7533/source/preprocessorlib/pp_parser.h, src/engines/7533/source/ramlib/ram.c, src/engines/7533/source/ramlib/ram.h, src/engines/7533/source/randlib/rand32.c, src/engines/7533/source/randlib/rand32.h, src/engines/7533/source/safealloc.h, src/engines/7533/source/savedata.h, src/engines/7533/source/scriptlib/FirstFollow.h, src/engines/7533/source/scriptlib/Instruction.c, src/engines/7533/source/scriptlib/Instruction.h, src/engines/7533/source/scriptlib/Interpreter.c, src/engines/7533/source/scriptlib/Interpreter.h, src/engines/7533/source/scriptlib/Lexer.c, src/engines/7533/source/scriptlib/Lexer.h, src/engines/7533/source/scriptlib/Parser.c, src/engines/7533/source/scriptlib/Parser.h, src/engines/7533/source/scriptlib/ParserSet.c, src/engines/7533/source/scriptlib/ParserSet.h, src/engines/7533/source/scriptlib/Productions.h, src/engines/7533/source/scriptlib/ScriptVariant.c, src/engines/7533/source/scriptlib/ScriptVariant.h, src/engines/7533/source/scriptlib/Stack.c, src/engines/7533/source/scriptlib/Stack.h, src/engines/7533/source/scriptlib/StackedSymbolTable.c, src/engines/7533/source/scriptlib/StackedSymbolTable.h, src/engines/7533/source/scriptlib/SymbolTable.c, src/engines/7533/source/scriptlib/SymbolTable.h, src/engines/7533/source/scriptlib/depends.h, src/engines/7533/source/stringptr.c, src/engines/7533/source/stringptr.h, src/engines/7533/source/stristr.c, src/engines/7533/source/stristr.h, src/engines/7533/source/utils.c, src/engines/7533/source/utils.h, src/engines/7533/source/webmlib/samplecvt.c, src/engines/7533/source/webmlib/samplecvt.h, src/engines/7533/source/webmlib/vidplay.c, src/engines/7533/source/webmlib/vidplay.h, src/engines/7533/source/webmlib/vorbis.c, src/engines/7533/source/webmlib/vorbis.h, src/engines/7533/source/webmlib/yuv.c, src/engines/7533/source/webmlib/yuv.h, src/engines/8023/source/gamelib/anigif.c, src/engines/8023/source/gamelib/anigif.h, src/engines/8023/source/gamelib/bitmap.c, src/engines/8023/source/gamelib/bitmap.h, src/engines/8023/source/gamelib/borendian.h, src/engines/8023/source/gamelib/draw.c, src/engines/8023/source/gamelib/draw.h, src/engines/8023/source/gamelib/draw16.c, src/engines/8023/source/gamelib/draw32.c, src/engines/8023/source/gamelib/font.c, src/engines/8023/source/gamelib/font.h, src/engines/8023/source/gamelib/loadimg.c, src/engines/8023/source/gamelib/loadimg.h, src/engines/8023/source/gamelib/packfile.h, src/engines/8023/source/gamelib/palette.c, src/engines/8023/source/gamelib/palette.h, src/engines/8023/source/gamelib/pixelformat.c, src/engines/8023/source/gamelib/screen.c, src/engines/8023/source/gamelib/screen.h, src/engines/8023/source/gamelib/screen16.c, src/engines/8023/source/gamelib/screen32.c, src/engines/8023/source/gamelib/soundmix.c, src/engines/8023/source/gamelib/soundmix.h, src/engines/8023/source/gamelib/sprite.c, src/engines/8023/source/gamelib/sprite.h, src/engines/8023/source/gamelib/spriteq.c, src/engines/8023/source/gamelib/spriteq.h, src/engines/8023/source/gamelib/spritex8p16.c, src/engines/8023/source/gamelib/spritex8p32.c, src/engines/8023/source/gamelib/threads.h, src/engines/8023/source/gamelib/timer.h, src/engines/8023/source/gamelib/types.h, src/engines/8023/source/gamelib/vga.h, src/engines/8023/source/gfxlib/gfxtypes.h, src/engines/8023/source/globals.h, src/engines/8023/source/omath.c, src/engines/8023/source/omath.h, src/engines/8023/source/preprocessorlib/pp_lexer.c, src/engines/8023/source/preprocessorlib/pp_lexer.h, src/engines/8023/source/preprocessorlib/pp_parser.c, src/engines/8023/source/preprocessorlib/pp_parser.h, src/engines/8023/source/ramlib/ram.c, src/engines/8023/source/ramlib/ram.h, src/engines/8023/source/randlib/rand32.c, src/engines/8023/source/randlib/rand32.h, src/engines/8023/source/safealloc.h, src/engines/8023/source/savedata.h, src/engines/8023/source/scriptlib/FirstFollow.h, src/engines/8023/source/scriptlib/Instruction.c, src/engines/8023/source/scriptlib/Instruction.h, src/engines/8023/source/scriptlib/Interpreter.c, src/engines/8023/source/scriptlib/Interpreter.h, src/engines/8023/source/scriptlib/Lexer.c, src/engines/8023/source/scriptlib/Lexer.h, src/engines/8023/source/scriptlib/Parser.c, src/engines/8023/source/scriptlib/Parser.h, src/engines/8023/source/scriptlib/ParserSet.c, src/engines/8023/source/scriptlib/ParserSet.h, src/engines/8023/source/scriptlib/Productions.h, src/engines/8023/source/scriptlib/ScriptVariant.c, src/engines/8023/source/scriptlib/ScriptVariant.h, src/engines/8023/source/scriptlib/Stack.c, src/engines/8023/source/scriptlib/Stack.h, src/engines/8023/source/scriptlib/StackedSymbolTable.c, src/engines/8023/source/scriptlib/StackedSymbolTable.h, src/engines/8023/source/scriptlib/SymbolTable.c, src/engines/8023/source/scriptlib/SymbolTable.h, src/engines/8023/source/scriptlib/depends.h, src/engines/8023/source/stringptr.c, src/engines/8023/source/stringptr.h, src/engines/8023/source/stristr.c, src/engines/8023/source/stristr.h, src/engines/8023/source/utils.c, src/engines/8023/source/utils.h, src/engines/8023/source/webmlib/samplecvt.c, src/engines/8023/source/webmlib/samplecvt.h, src/engines/8023/source/webmlib/vidplay.c, src/engines/8023/source/webmlib/vidplay.h, src/engines/8023/source/webmlib/vorbis.c, src/engines/8023/source/webmlib/vorbis.h, src/engines/8023/source/webmlib/yuv.c, src/engines/8023/source/webmlib/yuv.h, src/glue/obor_hankaku.h
+Source: src/engines/7533/source/webmlib/samplecvt.c, src/engines/7533/source/webmlib/samplecvt.h, src/engines/7533/source/webmlib/vidplay.c, src/engines/7533/source/webmlib/vidplay.h, src/engines/7533/source/webmlib/vorbis.c, src/engines/7533/source/webmlib/vorbis.h, src/engines/7533/source/webmlib/yuv.c, src/engines/7533/source/webmlib/yuv.h, src/engines/8023/source/webmlib/samplecvt.c, src/engines/8023/source/webmlib/samplecvt.h, src/engines/8023/source/webmlib/vidplay.c, src/engines/8023/source/webmlib/vidplay.h, src/engines/8023/source/webmlib/vorbis.c, src/engines/8023/source/webmlib/vorbis.h, src/engines/8023/source/webmlib/yuv.c, src/engines/8023/source/webmlib/yuv.h, src/engines/7533/source/adpcmlib/adpcm.h, src/engines/7533/source/gamelib/anigif.c, src/engines/7533/source/gamelib/anigif.h, src/engines/7533/source/gamelib/bitmap.c, src/engines/7533/source/gamelib/bitmap.h, src/engines/7533/source/gamelib/borendian.h, src/engines/7533/source/gamelib/draw.c, src/engines/7533/source/gamelib/draw.h, src/engines/7533/source/gamelib/draw16.c, src/engines/7533/source/gamelib/draw32.c, src/engines/7533/source/gamelib/font.c, src/engines/7533/source/gamelib/font.h, src/engines/7533/source/gamelib/loadimg.c, src/engines/7533/source/gamelib/loadimg.h, src/engines/7533/source/gamelib/packfile.c, src/engines/7533/source/gamelib/packfile.h, src/engines/7533/source/gamelib/palette.c, src/engines/7533/source/gamelib/palette.h, src/engines/7533/source/gamelib/pixelformat.c, src/engines/7533/source/gamelib/screen.c, src/engines/7533/source/gamelib/screen.h, src/engines/7533/source/gamelib/screen16.c, src/engines/7533/source/gamelib/screen32.c, src/engines/7533/source/gamelib/soundmix.c, src/engines/7533/source/gamelib/soundmix.h, src/engines/7533/source/gamelib/sprite.c, src/engines/7533/source/gamelib/sprite.h, src/engines/7533/source/gamelib/spriteq.c, src/engines/7533/source/gamelib/spriteq.h, src/engines/7533/source/gamelib/spritex8p16.c, src/engines/7533/source/gamelib/spritex8p32.c, src/engines/7533/source/gamelib/threads.h, src/engines/7533/source/gamelib/timer.h, src/engines/7533/source/gamelib/types.h, src/engines/7533/source/gamelib/vga.h, src/engines/7533/source/gfxlib/gfxtypes.h, src/engines/7533/source/globals.h, src/engines/7533/source/omath.c, src/engines/7533/source/omath.h, src/engines/7533/source/preprocessorlib/pp_lexer.c, src/engines/7533/source/preprocessorlib/pp_lexer.h, src/engines/7533/source/preprocessorlib/pp_parser.c, src/engines/7533/source/preprocessorlib/pp_parser.h, src/engines/7533/source/ramlib/ram.c, src/engines/7533/source/ramlib/ram.h, src/engines/7533/source/randlib/rand32.c, src/engines/7533/source/randlib/rand32.h, src/engines/7533/source/safealloc.h, src/engines/7533/source/savedata.h, src/engines/7533/source/scriptlib/FirstFollow.h, src/engines/7533/source/scriptlib/Instruction.c, src/engines/7533/source/scriptlib/Instruction.h, src/engines/7533/source/scriptlib/Interpreter.c, src/engines/7533/source/scriptlib/Interpreter.h, src/engines/7533/source/scriptlib/Lexer.c, src/engines/7533/source/scriptlib/Lexer.h, src/engines/7533/source/scriptlib/Parser.c, src/engines/7533/source/scriptlib/Parser.h, src/engines/7533/source/scriptlib/ParserSet.c, src/engines/7533/source/scriptlib/ParserSet.h, src/engines/7533/source/scriptlib/Productions.h, src/engines/7533/source/scriptlib/ScriptVariant.c, src/engines/7533/source/scriptlib/ScriptVariant.h, src/engines/7533/source/scriptlib/Stack.c, src/engines/7533/source/scriptlib/Stack.h, src/engines/7533/source/scriptlib/StackedSymbolTable.c, src/engines/7533/source/scriptlib/StackedSymbolTable.h, src/engines/7533/source/scriptlib/SymbolTable.c, src/engines/7533/source/scriptlib/SymbolTable.h, src/engines/7533/source/scriptlib/depends.h, src/engines/7533/source/stringptr.c, src/engines/7533/source/stringptr.h, src/engines/7533/source/stristr.c, src/engines/7533/source/stristr.h, src/engines/7533/source/utils.c, src/engines/7533/source/utils.h, src/engines/7533/source/webmlib/samplecvt.c, src/engines/7533/source/webmlib/samplecvt.h, src/engines/7533/source/webmlib/vidplay.c, src/engines/7533/source/webmlib/vidplay.h, src/engines/7533/source/webmlib/vorbis.c, src/engines/7533/source/webmlib/vorbis.h, src/engines/7533/source/webmlib/yuv.c, src/engines/7533/source/webmlib/yuv.h, src/engines/8023/source/gamelib/anigif.c, src/engines/8023/source/gamelib/anigif.h, src/engines/8023/source/gamelib/bitmap.c, src/engines/8023/source/gamelib/bitmap.h, src/engines/8023/source/gamelib/borendian.h, src/engines/8023/source/gamelib/draw.c, src/engines/8023/source/gamelib/draw.h, src/engines/8023/source/gamelib/draw16.c, src/engines/8023/source/gamelib/draw32.c, src/engines/8023/source/gamelib/font.c, src/engines/8023/source/gamelib/font.h, src/engines/8023/source/gamelib/loadimg.c, src/engines/8023/source/gamelib/loadimg.h, src/engines/8023/source/gamelib/packfile.h, src/engines/8023/source/gamelib/palette.c, src/engines/8023/source/gamelib/palette.h, src/engines/8023/source/gamelib/pixelformat.c, src/engines/8023/source/gamelib/screen.c, src/engines/8023/source/gamelib/screen.h, src/engines/8023/source/gamelib/screen16.c, src/engines/8023/source/gamelib/screen32.c, src/engines/8023/source/gamelib/soundmix.c, src/engines/8023/source/gamelib/soundmix.h, src/engines/8023/source/gamelib/sprite.c, src/engines/8023/source/gamelib/sprite.h, src/engines/8023/source/gamelib/spriteq.c, src/engines/8023/source/gamelib/spriteq.h, src/engines/8023/source/gamelib/spritex8p16.c, src/engines/8023/source/gamelib/spritex8p32.c, src/engines/8023/source/gamelib/threads.h, src/engines/8023/source/gamelib/timer.h, src/engines/8023/source/gamelib/types.h, src/engines/8023/source/gamelib/vga.h, src/engines/8023/source/gfxlib/gfxtypes.h, src/engines/8023/source/globals.h, src/engines/8023/source/omath.c, src/engines/8023/source/omath.h, src/engines/8023/source/preprocessorlib/pp_lexer.c, src/engines/8023/source/preprocessorlib/pp_lexer.h, src/engines/8023/source/preprocessorlib/pp_parser.c, src/engines/8023/source/preprocessorlib/pp_parser.h, src/engines/8023/source/ramlib/ram.c, src/engines/8023/source/ramlib/ram.h, src/engines/8023/source/randlib/rand32.c, src/engines/8023/source/randlib/rand32.h, src/engines/8023/source/safealloc.h, src/engines/8023/source/savedata.h, src/engines/8023/source/scriptlib/FirstFollow.h, src/engines/8023/source/scriptlib/Instruction.c, src/engines/8023/source/scriptlib/Instruction.h, src/engines/8023/source/scriptlib/Interpreter.c, src/engines/8023/source/scriptlib/Interpreter.h, src/engines/8023/source/scriptlib/Lexer.c, src/engines/8023/source/scriptlib/Lexer.h, src/engines/8023/source/scriptlib/Parser.c, src/engines/8023/source/scriptlib/Parser.h, src/engines/8023/source/scriptlib/ParserSet.c, src/engines/8023/source/scriptlib/ParserSet.h, src/engines/8023/source/scriptlib/Productions.h, src/engines/8023/source/scriptlib/ScriptVariant.c, src/engines/8023/source/scriptlib/ScriptVariant.h, src/engines/8023/source/scriptlib/Stack.c, src/engines/8023/source/scriptlib/Stack.h, src/engines/8023/source/scriptlib/StackedSymbolTable.c, src/engines/8023/source/scriptlib/StackedSymbolTable.h, src/engines/8023/source/scriptlib/SymbolTable.c, src/engines/8023/source/scriptlib/SymbolTable.h, src/engines/8023/source/scriptlib/depends.h, src/engines/8023/source/stringptr.c, src/engines/8023/source/stringptr.h, src/engines/8023/source/stristr.c, src/engines/8023/source/stristr.h, src/engines/8023/source/utils.c, src/engines/8023/source/utils.h, src/engines/8023/source/webmlib/samplecvt.c, src/engines/8023/source/webmlib/samplecvt.h, src/engines/8023/source/webmlib/vidplay.c, src/engines/8023/source/webmlib/vidplay.h, src/engines/8023/source/webmlib/vorbis.c, src/engines/8023/source/webmlib/vorbis.h, src/engines/8023/source/webmlib/yuv.c, src/engines/8023/source/webmlib/yuv.h, src/glue/anybor_hankaku.h
 /*
  * OpenBOR - http://www.chronocrash.com
  * -----------------------------------------------------------------------
@@ -2541,7 +2541,7 @@ Source: src/engines/7142/source/scriptlib/Instruction.c
  * at the source repository root. Original notices follow below.
  */
 
-Source: src/port/libretro/obor_adpcm.c
+Source: src/port/libretro/anybor_adpcm.c
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
  * IMA/DVI ADPCM with the OpenBOR stream convention: high nibble first,
@@ -3274,7 +3274,7 @@ Source: src/deps/libvpx/vp8/common/mfqe.c, src/deps/libvpx/vp8/common/mips/dspr2
  *  be found in the AUTHORS file in the root of the source tree.
  */
 
-Source: src/glue/obor_android_loader.cpp
+Source: src/glue/anybor_android_loader.cpp
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
  *
@@ -4429,7 +4429,7 @@ Source: src/engines/3741/source/scriptlib/ParserSet.c
  * at the source repository root. Original notices follow below.
  */
 
-Source: src/glue/obor_transform_source.c
+Source: src/glue/anybor_transform_source.c
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
  * AnyBOR adaptations: retrodiv <retrodiv@proton.me>
@@ -4725,7 +4725,7 @@ Source: src/engines/7533/source/webmlib/vidplay.c, src/engines/7533/source/webml
  * at the source repository root. Original notices follow below.
  */
 
-Source: src/glue/obor_imohash.h
+Source: src/glue/anybor_imohash.h
 /* MurmurHash3 was written by Austin Appleby, and is placed in the public
  * domain. The author hereby disclaims copyright to this source code.
  * Adapted from Peter Scott's C port: only x64_128, seed zero, explicit
@@ -5178,7 +5178,7 @@ Source: src/engines/4086/source/scriptlib/Instruction.h
  * at the source repository root. Original notices follow below.
  */
 
-Source: src/port/libretro/obor_libco.c
+Source: src/port/libretro/anybor_libco.c
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
  * The included libco implementation retains its upstream license. */
@@ -5491,7 +5491,7 @@ Source: src/engines/7142/source/gamelib/packfile.c
  * at the source repository root. Original notices follow below.
  */
 
-Source: src/glue/obor_imohash.h
+Source: src/glue/anybor_imohash.h
 /* SPDX-License-Identifier: MIT
  * Copyright (c) 2015 Jim Kalafut
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
@@ -6218,7 +6218,7 @@ Source: src/deps/libpng/powerpc/powerpc_init.c
  * and license in png.h
  */
 
-Source: src/port/libretro/obor_draw_assert.h
+Source: src/port/libretro/anybor_draw_assert.h
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
  * Drawing assertion locations from preserved original engine sources.
@@ -6607,7 +6607,7 @@ Source: src/engines/8023/source/gamelib/sprite.c
  * at the source repository root. Original notices follow below.
  */
 
-Source: src/glue/obor_transform_vm.c
+Source: src/glue/anybor_transform_vm.c
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
  * AnyBOR adaptations: retrodiv <retrodiv@proton.me>
@@ -7221,7 +7221,7 @@ Source: src/engines/8023/source/gamelib/font.c
  * at the source repository root. Original notices follow below.
  */
 
-Source: src/engines/3400/source/gamelib/obor_image_assert.h, src/engines/3400/version.h, src/engines/3741/version.h, src/engines/3842/version.h, src/engines/4086/version.h, src/engines/4432/version.h, src/engines/6391/version.h, src/engines/7142/version.h, src/engines/7533/version.h, src/engines/8023/version.h, src/port/libretro/assert.h, src/port/libretro/obor_attack_query.h, src/port/libretro/obor_block_crc.h, src/port/libretro/obor_block_state.c, src/port/libretro/obor_block_state.h, src/port/libretro/obor_block_threads.h, src/port/libretro/obor_block_worker_policy.h, src/port/libretro/obor_content_path.h, src/port/libretro/obor_directory.h, src/port/libretro/obor_directory_windows.h, src/port/libretro/obor_fault.c, src/port/libretro/obor_fault.h, src/port/libretro/obor_fault_context.h, src/port/libretro/obor_files.c, src/port/libretro/obor_framebuffer_state.h, src/port/libretro/obor_gif_memory.h, src/port/libretro/obor_loading.h, src/port/libretro/obor_loose.c, src/port/libretro/obor_loose.h, src/port/libretro/obor_media_diag.c, src/port/libretro/obor_media_diag.h, src/port/libretro/obor_native_io.h, src/port/libretro/obor_pak_name.h, src/port/libretro/obor_paths.c, src/port/libretro/obor_paths.h, src/port/libretro/obor_profile_identity.h, src/port/libretro/obor_random.h, src/port/libretro/obor_random_additive.h, src/port/libretro/obor_resource_catalog.c, src/port/libretro/obor_resource_catalog.h, src/port/libretro/obor_resource_image.c, src/port/libretro/obor_resource_image.h, src/port/libretro/obor_resource_recipe.c, src/port/libretro/obor_resource_recipe.h, src/port/libretro/obor_resource_source.c, src/port/libretro/obor_resource_source.h, src/port/libretro/obor_resources.c, src/port/libretro/obor_resources.h, src/port/libretro/obor_rise_inputs.h, src/port/libretro/obor_runtime.h, src/port/libretro/obor_script_compact.h, src/port/libretro/obor_script_executable.h, src/port/libretro/obor_snapshot_cache.h, src/port/libretro/obor_state_cache_win.h, src/port/libretro/obor_state_config.h, src/port/libretro/obor_state_copy.h, src/port/libretro/obor_state_layout.h, src/port/libretro/obor_state_padding.h, src/port/libretro/obor_state_stream.h, src/port/libretro/obor_texture_bounds.h, src/port/libretro/obor_write_watch.c, src/port/libretro/obor_write_watch.h, src/glue/obor_build_identity.h, src/glue/obor_capture_cadence.h, src/glue/obor_content_contracts.h, src/glue/obor_content_scan.h, src/glue/obor_crt.h, src/glue/obor_detection_clock.h, src/glue/obor_engine_executables.h, src/glue/obor_engine_identity.h, src/glue/obor_engine_resources.h, src/glue/obor_error_screen.h, src/glue/obor_game_content.h, src/glue/obor_legacy_api.h, src/glue/obor_loading_screen.h, src/glue/obor_modern_api.h, src/glue/obor_packed_prepare.h, src/glue/obor_pak_repair.h, src/glue/obor_pak_validate.h, src/glue/obor_prepare_co.h, src/glue/obor_prepare_progress.h, src/glue/obor_prepare_sync.h, src/glue/obor_profile_triage.h, src/glue/obor_rewind.h, src/glue/obor_runtime.h, src/glue/obor_state_padding.h, src/glue/obor_storage.h, src/glue/obor_transform.h, src/glue/obor_video_config.h, src/glue/obor_zip_path.h
+Source: src/engines/3400/source/gamelib/obor_image_assert.h, src/engines/3400/version.h, src/engines/3741/version.h, src/engines/3842/version.h, src/engines/4086/version.h, src/engines/4432/version.h, src/engines/6391/version.h, src/engines/7142/version.h, src/engines/7533/version.h, src/engines/8023/version.h, src/port/libretro/anybor_attack_query.h, src/port/libretro/anybor_block_crc.h, src/port/libretro/anybor_block_state.c, src/port/libretro/anybor_block_state.h, src/port/libretro/anybor_block_threads.h, src/port/libretro/anybor_block_worker_policy.h, src/port/libretro/anybor_content_path.h, src/port/libretro/anybor_directory.h, src/port/libretro/anybor_directory_windows.h, src/port/libretro/anybor_fault.c, src/port/libretro/anybor_fault.h, src/port/libretro/anybor_fault_context.h, src/port/libretro/anybor_files.c, src/port/libretro/anybor_framebuffer_state.h, src/port/libretro/anybor_gif_memory.h, src/port/libretro/anybor_loading.h, src/port/libretro/anybor_loose.c, src/port/libretro/anybor_loose.h, src/port/libretro/anybor_media_diag.c, src/port/libretro/anybor_media_diag.h, src/port/libretro/anybor_native_io.h, src/port/libretro/anybor_pak_name.h, src/port/libretro/anybor_paths.c, src/port/libretro/anybor_paths.h, src/port/libretro/anybor_profile_identity.h, src/port/libretro/anybor_random.h, src/port/libretro/anybor_random_additive.h, src/port/libretro/anybor_resource_catalog.c, src/port/libretro/anybor_resource_catalog.h, src/port/libretro/anybor_resource_image.c, src/port/libretro/anybor_resource_image.h, src/port/libretro/anybor_resource_recipe.c, src/port/libretro/anybor_resource_recipe.h, src/port/libretro/anybor_resource_source.c, src/port/libretro/anybor_resource_source.h, src/port/libretro/anybor_resources.c, src/port/libretro/anybor_resources.h, src/port/libretro/anybor_rise_inputs.h, src/port/libretro/anybor_runtime.h, src/port/libretro/anybor_script_compact.h, src/port/libretro/anybor_script_executable.h, src/port/libretro/anybor_snapshot_cache.h, src/port/libretro/anybor_state_cache_win.h, src/port/libretro/anybor_state_config.h, src/port/libretro/anybor_state_copy.h, src/port/libretro/anybor_state_layout.h, src/port/libretro/anybor_state_padding.h, src/port/libretro/anybor_state_stream.h, src/port/libretro/anybor_texture_bounds.h, src/port/libretro/anybor_write_watch.c, src/port/libretro/anybor_write_watch.h, src/port/libretro/assert.h, src/glue/anybor_build_identity.h, src/glue/anybor_capture_cadence.h, src/glue/anybor_content_contracts.h, src/glue/anybor_content_scan.h, src/glue/anybor_crt.h, src/glue/anybor_detection_clock.h, src/glue/anybor_engine_executables.h, src/glue/anybor_engine_identity.h, src/glue/anybor_engine_resources.h, src/glue/anybor_error_screen.h, src/glue/anybor_game_content.h, src/glue/anybor_legacy_api.h, src/glue/anybor_loading_screen.h, src/glue/anybor_modern_api.h, src/glue/anybor_packed_prepare.h, src/glue/anybor_pak_repair.h, src/glue/anybor_pak_validate.h, src/glue/anybor_prepare_co.h, src/glue/anybor_prepare_progress.h, src/glue/anybor_prepare_sync.h, src/glue/anybor_profile_triage.h, src/glue/anybor_rewind.h, src/glue/anybor_runtime.h, src/glue/anybor_state_padding.h, src/glue/anybor_storage.h, src/glue/anybor_transform.h, src/glue/anybor_video_config.h, src/glue/anybor_zip_path.h
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
 
@@ -7383,7 +7383,7 @@ Source: src/engines/7142/source/preprocessorlib/pp_lexer.c
  * at the source repository root. Original notices follow below.
  */
 
-Source: src/port/libretro/obor_endian.h
+Source: src/port/libretro/anybor_endian.h
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
  * Fixed-width byte-order helpers for the OpenBOR interfaces. */
@@ -7753,7 +7753,7 @@ Source: src/engines/4432/source/gamelib/anigif.c
  * at the source repository root. Original notices follow below.
  */
 
-Source: src/port/libretro/obor_colourmap_storage.h, src/glue/obor_colourmap_storage.h
+Source: src/port/libretro/anybor_colourmap_storage.h, src/glue/anybor_colourmap_storage.h
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
  * Ownership of palette tables and shared palette payloads. Entry pointers keep
@@ -8193,7 +8193,7 @@ Source: src/deps/libvpx/vp8/common/loongarch/sixtap_filter_lsx.c, src/deps/libvp
  * be found in the AUTHORS file in the root of the source tree.
  */
 
-Source: src/glue/obor_loading_background.h
+Source: src/glue/anybor_loading_background.h
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2003, Roel van Mastbergen & Senile Team
  * Copyright (c) 2004 - 2018, OpenBOR Team
@@ -8448,7 +8448,7 @@ Source: src/deps/libvorbis/lib/bitrate.c
 
  ********************************************************************/
 
-Source: src/glue/obor_latency_boundaries.h
+Source: src/glue/anybor_latency_boundaries.h
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
  * Bounded opt-in latency boundaries. No frame/state payloads are retained. */
@@ -9105,7 +9105,7 @@ Source: src/engines/4432/source/ramlib/ram.c
  * at the source repository root. Original notices follow below.
  */
 
-Source: src/glue/obor_prepare_co.c
+Source: src/glue/anybor_prepare_co.c
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
  * The included pinned libco implementation retains its upstream license. */
@@ -9240,7 +9240,7 @@ Source: src/engines/3400/openborscript.c
  * at the source repository root. Original notices follow below.
  */
 
-Source: src/glue/obor_transform_vm.h
+Source: src/glue/anybor_transform_vm.h
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
  * AnyBOR adaptations: retrodiv <retrodiv@proton.me>
@@ -9590,7 +9590,7 @@ Source: src/engines/6391/openborscript.c, src/engines/7142/openborscript.c, src/
  * SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
 
-Source: src/port/libretro/control.c, src/port/libretro/control.h, src/port/libretro/libretroport.c, src/port/libretro/libretroport.h, src/port/libretro/obor_abi.h, src/port/libretro/obor_alloc.c, src/port/libretro/obor_macho.h, src/port/libretro/obor_sha256.h, src/port/libretro/obor_state.c, src/port/libretro/obor_threads.h, src/port/libretro/playerinfo.c, src/port/libretro/sblaster.c, src/port/libretro/sblaster.h, src/port/libretro/threads.c, src/port/libretro/timer.c, src/port/libretro/vga.h, src/port/libretro/video.c, src/port/libretro/video.h, src/glue/libretro.cpp, src/glue/obor_abi.h, src/glue/obor_debug.h, src/glue/obor_macho.h, src/glue/obor_markers.h, src/glue/obor_padmap.h, src/glue/obor_sha256.h, src/glue/obor_zip.h, src/compat/glibc_compat_math.c
+Source: src/port/libretro/anybor_abi.h, src/port/libretro/anybor_alloc.c, src/port/libretro/anybor_macho.h, src/port/libretro/anybor_sha256.h, src/port/libretro/anybor_state.c, src/port/libretro/anybor_threads.h, src/port/libretro/control.c, src/port/libretro/control.h, src/port/libretro/libretroport.c, src/port/libretro/libretroport.h, src/port/libretro/playerinfo.c, src/port/libretro/sblaster.c, src/port/libretro/sblaster.h, src/port/libretro/threads.c, src/port/libretro/timer.c, src/port/libretro/vga.h, src/port/libretro/video.c, src/port/libretro/video.h, src/glue/anybor_abi.h, src/glue/anybor_debug.h, src/glue/anybor_macho.h, src/glue/anybor_markers.h, src/glue/anybor_padmap.h, src/glue/anybor_sha256.h, src/glue/anybor_zip.h, src/glue/libretro.cpp, src/compat/glibc_compat_math.c
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
  * Earlier incorporated material retains its original authorship notices. */
@@ -10221,7 +10221,7 @@ Source: src/engines/3400/source/scriptlib/Instruction.c
  * at the source repository root. Original notices follow below.
  */
 
-Source: src/glue/obor_profile.h
+Source: src/glue/anybor_profile.h
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me>
  * Opt-in measurement of the real frontend. No game-specific routes or data.

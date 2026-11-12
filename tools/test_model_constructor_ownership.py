@@ -55,7 +55,7 @@ s_modelcache *model_cache;
 }'''
     copy = ''
     if 'obor_model_copy(newchar, tempmodel)' in case:
-        copy = '#include "obor_colourmap_storage.h"\n' + function(game, 'obor_model_copy')
+        copy = '#include "anybor_colourmap_storage.h"\n' + function(game, 'obor_model_copy')
     header = 'openborscript.h' if (engine / 'openborscript.h').is_file() else 'scriptcommon.h'
     diagnostic = re.findall(r'(?m)^(?:static\s+const\s+char\s*\*\s*E_OUT_OF_MEMORY|char\s+E_OUT_OF_MEMORY\[\])[^;]*;', game)
     if len(diagnostic) != 1:

@@ -54,7 +54,7 @@
 /////////////////////////////////////////////////////////////////////////////
 
 #include "openbor.h"
-#include "obor_rise_inputs.h"
+#include "anybor_rise_inputs.h"
 #include <limits.h>
 #include <stdint.h>
 #include "commands.h"
@@ -2637,8 +2637,8 @@ void loadHighScoreFile(){
 }
 
 
-#include "obor_script_file32.inc"
-#include "obor_script_file_text.inc"
+#include "anybor_script_file32.inc"
+#include "anybor_script_file_text.inc"
 
 void saveScriptFile()
 {

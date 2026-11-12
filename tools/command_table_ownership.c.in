@@ -11,7 +11,7 @@
 #include <setjmp.h>
 @CONFIG@
 #include "openbor.h"
-#include "obor_resources.h"
+#include "anybor_resources.h"
 #undef printf
 #undef assert
 #undef malloc

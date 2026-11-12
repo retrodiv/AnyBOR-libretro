@@ -1,0 +1,501 @@
+/* SPDX-License-Identifier: BSD-3-Clause */
+/* Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+/* Engine ABI table generated from src/pin.json. */
+#include "anybor_abi.h"
+
+#define OBOR_CORE_VERSION "0.2.4"
+#define OBOR_FALLBACK_BUILD 6391
+
+typedef struct {
+    uint32_t (*abi_version)(void);
+    int32_t (*boot)(const obor_boot_info *);
+    int32_t (*run_frame)(void);
+    int32_t (*startup_complete)(void);
+    int32_t (*get_exit_status)(void);
+    int32_t (*get_fault_message)(char *, uint32_t);
+    int32_t (*abandon)(void);
+    void (*get_video)(const uint32_t **, int32_t *, int32_t *, int32_t *);
+    void (*set_button)(int32_t, int32_t, int32_t);
+    int32_t (*get_audio)(int16_t *, int32_t);
+    uint32_t (*serialize_size)(void);
+    uint32_t (*serialize)(void *, uint32_t);
+    int32_t (*unserialize)(const void *, uint32_t);
+    void (*shutdown)(void);
+    void (*get_rumble)(int32_t, int32_t *, int32_t *);
+    void (*get_arena)(void **, uint32_t *);
+    int32_t (*get_player_state)(int32_t, char *, int32_t, int32_t *);
+    int32_t (*owned_begin)(void *, void *, uint32_t);
+    uint32_t (*owned_serialize)(void *, uint32_t, obor_state_ranges *);
+    int32_t (*owned_end)(void);
+    uint32_t (*prepare_state)(void);
+} obor_vtbl;
+
+extern "C" {
+extern char __obor_bss_begin_3400[], __obor_bss_end_3400[];
+uint32_t obor_abi_version_3400(void);
+int32_t obor_boot_3400(const obor_boot_info *);
+int32_t obor_run_frame_3400(void);
+int32_t obor_startup_complete_3400(void);
+int32_t obor_get_exit_status_3400(void);
+int32_t obor_get_fault_message_3400(char *, uint32_t);
+int32_t obor_abandon_3400(void);
+void obor_get_video_3400(const uint32_t **, int32_t *, int32_t *, int32_t *);
+void obor_set_button_3400(int32_t, int32_t, int32_t);
+int32_t obor_get_audio_3400(int16_t *, int32_t);
+uint32_t obor_serialize_size_3400(void);
+uint32_t obor_serialize_3400(void *, uint32_t);
+int32_t obor_unserialize_3400(const void *, uint32_t);
+void obor_shutdown_3400(void);
+void obor_get_rumble_3400(int32_t, int32_t *, int32_t *);
+void obor_get_arena_3400(void **, uint32_t *);
+int32_t obor_get_player_state_3400(int32_t, char *, int32_t, int32_t *);
+int32_t obor_owned_begin_3400(void *, void *, uint32_t);
+uint32_t obor_owned_serialize_3400(void *, uint32_t, obor_state_ranges *);
+int32_t obor_owned_end_3400(void);
+uint32_t obor_prepare_state_3400(void);
+extern char __obor_bss_begin_3741[], __obor_bss_end_3741[];
+uint32_t obor_abi_version_3741(void);
+int32_t obor_boot_3741(const obor_boot_info *);
+int32_t obor_run_frame_3741(void);
+int32_t obor_startup_complete_3741(void);
+int32_t obor_get_exit_status_3741(void);
+int32_t obor_get_fault_message_3741(char *, uint32_t);
+int32_t obor_abandon_3741(void);
+void obor_get_video_3741(const uint32_t **, int32_t *, int32_t *, int32_t *);
+void obor_set_button_3741(int32_t, int32_t, int32_t);
+int32_t obor_get_audio_3741(int16_t *, int32_t);
+uint32_t obor_serialize_size_3741(void);
+uint32_t obor_serialize_3741(void *, uint32_t);
+int32_t obor_unserialize_3741(const void *, uint32_t);
+void obor_shutdown_3741(void);
+void obor_get_rumble_3741(int32_t, int32_t *, int32_t *);
+void obor_get_arena_3741(void **, uint32_t *);
+int32_t obor_get_player_state_3741(int32_t, char *, int32_t, int32_t *);
+int32_t obor_owned_begin_3741(void *, void *, uint32_t);
+uint32_t obor_owned_serialize_3741(void *, uint32_t, obor_state_ranges *);
+int32_t obor_owned_end_3741(void);
+uint32_t obor_prepare_state_3741(void);
+extern char __obor_bss_begin_3842[], __obor_bss_end_3842[];
+uint32_t obor_abi_version_3842(void);
+int32_t obor_boot_3842(const obor_boot_info *);
+int32_t obor_run_frame_3842(void);
+int32_t obor_startup_complete_3842(void);
+int32_t obor_get_exit_status_3842(void);
+int32_t obor_get_fault_message_3842(char *, uint32_t);
+int32_t obor_abandon_3842(void);
+void obor_get_video_3842(const uint32_t **, int32_t *, int32_t *, int32_t *);
+void obor_set_button_3842(int32_t, int32_t, int32_t);
+int32_t obor_get_audio_3842(int16_t *, int32_t);
+uint32_t obor_serialize_size_3842(void);
+uint32_t obor_serialize_3842(void *, uint32_t);
+int32_t obor_unserialize_3842(const void *, uint32_t);
+void obor_shutdown_3842(void);
+void obor_get_rumble_3842(int32_t, int32_t *, int32_t *);
+void obor_get_arena_3842(void **, uint32_t *);
+int32_t obor_get_player_state_3842(int32_t, char *, int32_t, int32_t *);
+int32_t obor_owned_begin_3842(void *, void *, uint32_t);
+uint32_t obor_owned_serialize_3842(void *, uint32_t, obor_state_ranges *);
+int32_t obor_owned_end_3842(void);
+uint32_t obor_prepare_state_3842(void);
+extern char __obor_bss_begin_4086[], __obor_bss_end_4086[];
+uint32_t obor_abi_version_4086(void);
+int32_t obor_boot_4086(const obor_boot_info *);
+int32_t obor_run_frame_4086(void);
+int32_t obor_startup_complete_4086(void);
+int32_t obor_get_exit_status_4086(void);
+int32_t obor_get_fault_message_4086(char *, uint32_t);
+int32_t obor_abandon_4086(void);
+void obor_get_video_4086(const uint32_t **, int32_t *, int32_t *, int32_t *);
+void obor_set_button_4086(int32_t, int32_t, int32_t);
+int32_t obor_get_audio_4086(int16_t *, int32_t);
+uint32_t obor_serialize_size_4086(void);
+uint32_t obor_serialize_4086(void *, uint32_t);
+int32_t obor_unserialize_4086(const void *, uint32_t);
+void obor_shutdown_4086(void);
+void obor_get_rumble_4086(int32_t, int32_t *, int32_t *);
+void obor_get_arena_4086(void **, uint32_t *);
+int32_t obor_get_player_state_4086(int32_t, char *, int32_t, int32_t *);
+int32_t obor_owned_begin_4086(void *, void *, uint32_t);
+uint32_t obor_owned_serialize_4086(void *, uint32_t, obor_state_ranges *);
+int32_t obor_owned_end_4086(void);
+uint32_t obor_prepare_state_4086(void);
+extern char __obor_bss_begin_4432[], __obor_bss_end_4432[];
+uint32_t obor_abi_version_4432(void);
+int32_t obor_boot_4432(const obor_boot_info *);
+int32_t obor_run_frame_4432(void);
+int32_t obor_startup_complete_4432(void);
+int32_t obor_get_exit_status_4432(void);
+int32_t obor_get_fault_message_4432(char *, uint32_t);
+int32_t obor_abandon_4432(void);
+void obor_get_video_4432(const uint32_t **, int32_t *, int32_t *, int32_t *);
+void obor_set_button_4432(int32_t, int32_t, int32_t);
+int32_t obor_get_audio_4432(int16_t *, int32_t);
+uint32_t obor_serialize_size_4432(void);
+uint32_t obor_serialize_4432(void *, uint32_t);
+int32_t obor_unserialize_4432(const void *, uint32_t);
+void obor_shutdown_4432(void);
+void obor_get_rumble_4432(int32_t, int32_t *, int32_t *);
+void obor_get_arena_4432(void **, uint32_t *);
+int32_t obor_get_player_state_4432(int32_t, char *, int32_t, int32_t *);
+int32_t obor_owned_begin_4432(void *, void *, uint32_t);
+uint32_t obor_owned_serialize_4432(void *, uint32_t, obor_state_ranges *);
+int32_t obor_owned_end_4432(void);
+uint32_t obor_prepare_state_4432(void);
+extern char __obor_bss_begin_6391[], __obor_bss_end_6391[];
+uint32_t obor_abi_version_6391(void);
+int32_t obor_boot_6391(const obor_boot_info *);
+int32_t obor_run_frame_6391(void);
+int32_t obor_startup_complete_6391(void);
+int32_t obor_get_exit_status_6391(void);
+int32_t obor_get_fault_message_6391(char *, uint32_t);
+int32_t obor_abandon_6391(void);
+void obor_get_video_6391(const uint32_t **, int32_t *, int32_t *, int32_t *);
+void obor_set_button_6391(int32_t, int32_t, int32_t);
+int32_t obor_get_audio_6391(int16_t *, int32_t);
+uint32_t obor_serialize_size_6391(void);
+uint32_t obor_serialize_6391(void *, uint32_t);
+int32_t obor_unserialize_6391(const void *, uint32_t);
+void obor_shutdown_6391(void);
+void obor_get_rumble_6391(int32_t, int32_t *, int32_t *);
+void obor_get_arena_6391(void **, uint32_t *);
+int32_t obor_get_player_state_6391(int32_t, char *, int32_t, int32_t *);
+int32_t obor_owned_begin_6391(void *, void *, uint32_t);
+uint32_t obor_owned_serialize_6391(void *, uint32_t, obor_state_ranges *);
+int32_t obor_owned_end_6391(void);
+uint32_t obor_prepare_state_6391(void);
+extern char __obor_bss_begin_7142[], __obor_bss_end_7142[];
+uint32_t obor_abi_version_7142(void);
+int32_t obor_boot_7142(const obor_boot_info *);
+int32_t obor_run_frame_7142(void);
+int32_t obor_startup_complete_7142(void);
+int32_t obor_get_exit_status_7142(void);
+int32_t obor_get_fault_message_7142(char *, uint32_t);
+int32_t obor_abandon_7142(void);
+void obor_get_video_7142(const uint32_t **, int32_t *, int32_t *, int32_t *);
+void obor_set_button_7142(int32_t, int32_t, int32_t);
+int32_t obor_get_audio_7142(int16_t *, int32_t);
+uint32_t obor_serialize_size_7142(void);
+uint32_t obor_serialize_7142(void *, uint32_t);
+int32_t obor_unserialize_7142(const void *, uint32_t);
+void obor_shutdown_7142(void);
+void obor_get_rumble_7142(int32_t, int32_t *, int32_t *);
+void obor_get_arena_7142(void **, uint32_t *);
+int32_t obor_get_player_state_7142(int32_t, char *, int32_t, int32_t *);
+int32_t obor_owned_begin_7142(void *, void *, uint32_t);
+uint32_t obor_owned_serialize_7142(void *, uint32_t, obor_state_ranges *);
+int32_t obor_owned_end_7142(void);
+uint32_t obor_prepare_state_7142(void);
+extern char __obor_bss_begin_7533[], __obor_bss_end_7533[];
+uint32_t obor_abi_version_7533(void);
+int32_t obor_boot_7533(const obor_boot_info *);
+int32_t obor_run_frame_7533(void);
+int32_t obor_startup_complete_7533(void);
+int32_t obor_get_exit_status_7533(void);
+int32_t obor_get_fault_message_7533(char *, uint32_t);
+int32_t obor_abandon_7533(void);
+void obor_get_video_7533(const uint32_t **, int32_t *, int32_t *, int32_t *);
+void obor_set_button_7533(int32_t, int32_t, int32_t);
+int32_t obor_get_audio_7533(int16_t *, int32_t);
+uint32_t obor_serialize_size_7533(void);
+uint32_t obor_serialize_7533(void *, uint32_t);
+int32_t obor_unserialize_7533(const void *, uint32_t);
+void obor_shutdown_7533(void);
+void obor_get_rumble_7533(int32_t, int32_t *, int32_t *);
+void obor_get_arena_7533(void **, uint32_t *);
+int32_t obor_get_player_state_7533(int32_t, char *, int32_t, int32_t *);
+int32_t obor_owned_begin_7533(void *, void *, uint32_t);
+uint32_t obor_owned_serialize_7533(void *, uint32_t, obor_state_ranges *);
+int32_t obor_owned_end_7533(void);
+uint32_t obor_prepare_state_7533(void);
+extern char __obor_bss_begin_8023[], __obor_bss_end_8023[];
+uint32_t obor_abi_version_8023(void);
+int32_t obor_boot_8023(const obor_boot_info *);
+int32_t obor_run_frame_8023(void);
+int32_t obor_startup_complete_8023(void);
+int32_t obor_get_exit_status_8023(void);
+int32_t obor_get_fault_message_8023(char *, uint32_t);
+int32_t obor_abandon_8023(void);
+void obor_get_video_8023(const uint32_t **, int32_t *, int32_t *, int32_t *);
+void obor_set_button_8023(int32_t, int32_t, int32_t);
+int32_t obor_get_audio_8023(int16_t *, int32_t);
+uint32_t obor_serialize_size_8023(void);
+uint32_t obor_serialize_8023(void *, uint32_t);
+int32_t obor_unserialize_8023(const void *, uint32_t);
+void obor_shutdown_8023(void);
+void obor_get_rumble_8023(int32_t, int32_t *, int32_t *);
+void obor_get_arena_8023(void **, uint32_t *);
+int32_t obor_get_player_state_8023(int32_t, char *, int32_t, int32_t *);
+int32_t obor_owned_begin_8023(void *, void *, uint32_t);
+uint32_t obor_owned_serialize_8023(void *, uint32_t, obor_state_ranges *);
+int32_t obor_owned_end_8023(void);
+uint32_t obor_prepare_state_8023(void);
+}
+
+typedef struct { int build; const char *name; obor_vtbl v; const char *bss_begin, *bss_end; } obor_engine_def;
+static const obor_engine_def kEngineDefs[] = {
+    { 3400, "3400", { obor_abi_version_3400, obor_boot_3400, obor_run_frame_3400, obor_startup_complete_3400, obor_get_exit_status_3400, obor_get_fault_message_3400, obor_abandon_3400, obor_get_video_3400, obor_set_button_3400, obor_get_audio_3400, obor_serialize_size_3400, obor_serialize_3400, obor_unserialize_3400, obor_shutdown_3400, obor_get_rumble_3400, obor_get_arena_3400, obor_get_player_state_3400, obor_owned_begin_3400, obor_owned_serialize_3400, obor_owned_end_3400, obor_prepare_state_3400 }, __obor_bss_begin_3400, __obor_bss_end_3400 },
+    { 3741, "3741", { obor_abi_version_3741, obor_boot_3741, obor_run_frame_3741, obor_startup_complete_3741, obor_get_exit_status_3741, obor_get_fault_message_3741, obor_abandon_3741, obor_get_video_3741, obor_set_button_3741, obor_get_audio_3741, obor_serialize_size_3741, obor_serialize_3741, obor_unserialize_3741, obor_shutdown_3741, obor_get_rumble_3741, obor_get_arena_3741, obor_get_player_state_3741, obor_owned_begin_3741, obor_owned_serialize_3741, obor_owned_end_3741, obor_prepare_state_3741 }, __obor_bss_begin_3741, __obor_bss_end_3741 },
+    { 3842, "3842", { obor_abi_version_3842, obor_boot_3842, obor_run_frame_3842, obor_startup_complete_3842, obor_get_exit_status_3842, obor_get_fault_message_3842, obor_abandon_3842, obor_get_video_3842, obor_set_button_3842, obor_get_audio_3842, obor_serialize_size_3842, obor_serialize_3842, obor_unserialize_3842, obor_shutdown_3842, obor_get_rumble_3842, obor_get_arena_3842, obor_get_player_state_3842, obor_owned_begin_3842, obor_owned_serialize_3842, obor_owned_end_3842, obor_prepare_state_3842 }, __obor_bss_begin_3842, __obor_bss_end_3842 },
+    { 4086, "4086", { obor_abi_version_4086, obor_boot_4086, obor_run_frame_4086, obor_startup_complete_4086, obor_get_exit_status_4086, obor_get_fault_message_4086, obor_abandon_4086, obor_get_video_4086, obor_set_button_4086, obor_get_audio_4086, obor_serialize_size_4086, obor_serialize_4086, obor_unserialize_4086, obor_shutdown_4086, obor_get_rumble_4086, obor_get_arena_4086, obor_get_player_state_4086, obor_owned_begin_4086, obor_owned_serialize_4086, obor_owned_end_4086, obor_prepare_state_4086 }, __obor_bss_begin_4086, __obor_bss_end_4086 },
+    { 4432, "4432", { obor_abi_version_4432, obor_boot_4432, obor_run_frame_4432, obor_startup_complete_4432, obor_get_exit_status_4432, obor_get_fault_message_4432, obor_abandon_4432, obor_get_video_4432, obor_set_button_4432, obor_get_audio_4432, obor_serialize_size_4432, obor_serialize_4432, obor_unserialize_4432, obor_shutdown_4432, obor_get_rumble_4432, obor_get_arena_4432, obor_get_player_state_4432, obor_owned_begin_4432, obor_owned_serialize_4432, obor_owned_end_4432, obor_prepare_state_4432 }, __obor_bss_begin_4432, __obor_bss_end_4432 },
+    { 6391, "6391", { obor_abi_version_6391, obor_boot_6391, obor_run_frame_6391, obor_startup_complete_6391, obor_get_exit_status_6391, obor_get_fault_message_6391, obor_abandon_6391, obor_get_video_6391, obor_set_button_6391, obor_get_audio_6391, obor_serialize_size_6391, obor_serialize_6391, obor_unserialize_6391, obor_shutdown_6391, obor_get_rumble_6391, obor_get_arena_6391, obor_get_player_state_6391, obor_owned_begin_6391, obor_owned_serialize_6391, obor_owned_end_6391, obor_prepare_state_6391 }, __obor_bss_begin_6391, __obor_bss_end_6391 },
+    { 7142, "7142", { obor_abi_version_7142, obor_boot_7142, obor_run_frame_7142, obor_startup_complete_7142, obor_get_exit_status_7142, obor_get_fault_message_7142, obor_abandon_7142, obor_get_video_7142, obor_set_button_7142, obor_get_audio_7142, obor_serialize_size_7142, obor_serialize_7142, obor_unserialize_7142, obor_shutdown_7142, obor_get_rumble_7142, obor_get_arena_7142, obor_get_player_state_7142, obor_owned_begin_7142, obor_owned_serialize_7142, obor_owned_end_7142, obor_prepare_state_7142 }, __obor_bss_begin_7142, __obor_bss_end_7142 },
+    { 7533, "7533", { obor_abi_version_7533, obor_boot_7533, obor_run_frame_7533, obor_startup_complete_7533, obor_get_exit_status_7533, obor_get_fault_message_7533, obor_abandon_7533, obor_get_video_7533, obor_set_button_7533, obor_get_audio_7533, obor_serialize_size_7533, obor_serialize_7533, obor_unserialize_7533, obor_shutdown_7533, obor_get_rumble_7533, obor_get_arena_7533, obor_get_player_state_7533, obor_owned_begin_7533, obor_owned_serialize_7533, obor_owned_end_7533, obor_prepare_state_7533 }, __obor_bss_begin_7533, __obor_bss_end_7533 },
+    { 8023, "8023", { obor_abi_version_8023, obor_boot_8023, obor_run_frame_8023, obor_startup_complete_8023, obor_get_exit_status_8023, obor_get_fault_message_8023, obor_abandon_8023, obor_get_video_8023, obor_set_button_8023, obor_get_audio_8023, obor_serialize_size_8023, obor_serialize_8023, obor_unserialize_8023, obor_shutdown_8023, obor_get_rumble_8023, obor_get_arena_8023, obor_get_player_state_8023, obor_owned_begin_8023, obor_owned_serialize_8023, obor_owned_end_8023, obor_prepare_state_8023 }, __obor_bss_begin_8023, __obor_bss_end_8023 },
+};
+
+typedef struct { int build; const char *name; const char *disp; int engine_build; int auto_until; int automatic; int tagged; int triage; const char *variant; uint32_t features; } obor_profile_def;
+static const obor_profile_def kProfiles[] = {
+    { 3020, "3020", "v3.0 3020-dev", 3400, 3020, 0, 1, 0, "dev", 0u },
+    { 3057, "3057", "v3.0 3057", 3400, 3057, 1, 1, 1, "", 0u },
+    { 3062, "3062", "v3.0 3062", 3400, 3062, 1, 1, 1, "", 0u },
+    { 3073, "3073", "v3.0 3073", 3400, 3073, 1, 1, 1, "", 0u },
+    { 3081, "3081", "v3.0 3081", 3400, 3081, 1, 1, 1, "", 0u },
+    { 3109, "3109", "v3.0 3109", 3400, 3109, 1, 1, 1, "", 0u },
+    { 3117, "3117", "v3.0 3117", 3400, 3117, 1, 1, 1, "", 0u },
+    { 3143, "3143", "v3.0 3143", 3400, 3143, 1, 1, 1, "", 0u },
+    { 3160, "3160", "v3.0 3160", 3400, 3160, 1, 1, 1, "", 0u },
+    { 3173, "3173", "v3.0 3173", 3400, 3173, 1, 1, 1, "", 0u },
+    { 3192, "3192", "v3.0 3192", 3400, 3192, 1, 1, 1, "", 0u },
+    { 3208, "3208", "v3.0 3208", 3400, 3208, 1, 1, 1, "", 0u },
+    { 3273, "3273", "v3.0 3273", 3400, 3273, 1, 1, 1, "", 0u },
+    { 3288, "3288", "v3.0 3288", 3400, 3288, 1, 1, 1, "", 0u },
+    { 3303, "3303", "v3.0 3303", 3400, 3303, 1, 1, 1, "", 0u },
+    { 3307, "3307", "v3.0 3307", 3400, 3307, 1, 1, 1, "", 0u },
+    { 3310, "3310", "v3.0 3310", 3400, 3310, 1, 1, 1, "", 0u },
+    { 3311, "3311", "v3.0 3311", 3400, 3311, 1, 1, 1, "", 0u },
+    { 3316, "3316", "v3.0 3316", 3400, 3316, 1, 1, 1, "", 0u },
+    { 3317, "3317", "v3.0 3317", 3400, 3317, 1, 1, 1, "", 0u },
+    { 3318, "3318", "v3.0 3318", 3400, 3318, 1, 1, 1, "", 0u },
+    { 3327, "3327", "v3.0 3327", 3400, 3327, 1, 1, 1, "", 0u },
+    { 3328, "3328", "v3.0 3328", 3400, 3328, 1, 1, 1, "", 0u },
+    { 3330, "3330", "v3.0 3330", 3400, 3330, 1, 1, 1, "", 0u },
+    { 3332, "3332", "v3.0 3332", 3400, 3332, 1, 1, 1, "", 0u },
+    { 3335, "3335", "v3.0 3335", 3400, 3335, 1, 1, 1, "", 0u },
+    { 3337, "3337", "v3.0 3337", 3400, 3337, 1, 1, 1, "", 0u },
+    { 3340, "3340", "v3.0 3340", 3400, 3340, 1, 1, 1, "", 0u },
+    { 3341, "3341", "v3.0 3341", 3400, 3341, 1, 1, 1, "", 0u },
+    { 3342, "3342", "v3.0 3342", 3400, 3342, 1, 1, 1, "", 0u },
+    { 3350, "3350", "v3.0 3350", 3400, 3350, 1, 1, 1, "", 0u },
+    { 3351, "3351", "v3.0 3351", 3400, 3351, 1, 1, 1, "", 0u },
+    { 3352, "3352", "v3.0 3352", 3400, 3352, 1, 1, 1, "", 0u },
+    { 3353, "3353", "v3.0 3353", 3400, 3353, 1, 1, 1, "", 0u },
+    { 3354, "3354", "v3.0 3354", 3400, 3354, 1, 1, 1, "", 0u },
+    { 3355, "3355", "v3.0 3355", 3400, 3355, 1, 1, 1, "", 0u },
+    { 3356, "3356", "v3.0 3356", 3400, 3356, 1, 1, 1, "", 0u },
+    { 3357, "3357", "v3.0 3357", 3400, 3357, 1, 1, 1, "", 0u },
+    { 3360, "3360", "v3.0 3360", 3400, 3360, 1, 1, 1, "", 0u },
+    { 3361, "3361", "v3.0 3361", 3400, 3361, 1, 1, 1, "", 0u },
+    { 3362, "3362", "v3.0 3362", 3400, 3362, 1, 1, 1, "", 0u },
+    { 3365, "3365", "v3.0 3365", 3400, 3365, 1, 1, 1, "", 0u },
+    { 3366, "3366", "v3.0 3366", 3400, 3366, 1, 1, 1, "", 0u },
+    { 3367, "3367", "v3.0 3367", 3400, 3367, 1, 1, 1, "", 0u },
+    { 3371, "3371", "v3.0 3371", 3400, 3371, 1, 1, 1, "", 0u },
+    { 3372, "3372", "v3.0 3372", 3400, 3372, 1, 1, 1, "", 0u },
+    { 3373, "3373", "v3.0 3373", 3400, 3373, 1, 1, 1, "", 0u },
+    { 3375, "3375", "v3.0 3375", 3400, 3375, 1, 1, 1, "", 0u },
+    { 3379, "3379", "v3.0 3379", 3400, 3379, 1, 1, 1, "", 0u },
+    { 3380, "3380", "v3.0 3380", 3400, 3380, 1, 1, 1, "", 0u },
+    { 3381, "3381", "v3.0 3381", 3400, 3381, 1, 1, 1, "", 0u },
+    { 3383, "3383", "v3.0 3383", 3400, 3383, 1, 1, 1, "", 0u },
+    { 3385, "3385", "v3.0 3385", 3400, 3385, 1, 1, 1, "", 0u },
+    { 3388, "3388", "v3.0 3388", 3400, 3388, 1, 1, 1, "", 0u },
+    { 3391, "3391", "v3.0 3391", 3400, 3391, 1, 1, 1, "", 0u },
+    { 3394, "3394", "v3.0 3394", 3400, 3394, 1, 1, 1, "", 0u },
+    { 3397, "3397", "v3.0 3397", 3400, 3397, 1, 1, 1, "", 0u },
+    { 3400, "3400", "v3.0 3400", 3400, 3400, 1, 1, 1, "", 0u },
+    { 3406, "3406", "v3.0 3406", 3400, 3406, 1, 1, 1, "", 0u },
+    { 3411, "3411", "v3.0 3411", 3400, 3411, 1, 1, 1, "", 0u },
+    { 3415, "3415", "v3.0 3415", 3400, 3415, 1, 1, 1, "", 0u },
+    { 3416, "3416", "v3.0 3416", 3400, 3416, 1, 1, 1, "", 0u },
+    { 3420, "3420", "v3.0 3420", 3400, 3420, 1, 1, 1, "", 0u },
+    { 3422, "3422", "v3.0 3422", 3400, 3422, 1, 1, 1, "", 0u },
+    { 3427, "3427", "v3.0 3427", 3400, 3427, 1, 1, 1, "", 0u },
+    { 3428, "3428", "v3.0 3428", 3400, 3428, 1, 1, 1, "", 0u },
+    { 3431, "3431", "v3.0 3431", 3400, 3431, 1, 1, 1, "", 0u },
+    { 3434, "3434", "v3.0 3434", 3400, 3434, 1, 1, 1, "", 0u },
+    { 3436, "3436", "v3.0 3436", 3400, 3436, 1, 1, 1, "", 0u },
+    { 3441, "3441", "v3.0 3441", 3400, 3441, 1, 1, 1, "", 0u },
+    { 3445, "3445", "v3.0 3445", 3400, 3445, 1, 1, 1, "", 0u },
+    { 3446, "3446", "v3.0 3446", 3400, 3446, 1, 1, 1, "", 0u },
+    { 3449, "3449", "v3.0 3449", 3400, 3449, 1, 1, 1, "", 0u },
+    { 3454, "3454", "v3.0 3454", 3400, 3454, 1, 1, 1, "", 0u },
+    { 3458, "3458", "v3.0 3458", 3400, 3458, 1, 1, 1, "", 0u },
+    { 3461, "3461", "v3.0 3461", 3400, 3461, 1, 1, 1, "", 0u },
+    { 3463, "3463", "v3.0 3463", 3400, 3463, 1, 1, 1, "", 0u },
+    { 3465, "3465", "v3.0 3465", 3400, 3465, 1, 1, 1, "", 0u },
+    { 3467, "3467", "v3.0 3467", 3400, 3467, 1, 1, 1, "", 0u },
+    { 3469, "3469", "v3.0 3469", 3400, 3469, 1, 1, 1, "", 0u },
+    { 3472, "3472", "v3.0 3472", 3400, 3472, 1, 1, 1, "", 0u },
+    { 3477, "3477", "v3.0 3477", 3400, 3477, 1, 1, 1, "", 0u },
+    { 3482, "3482", "v3.0 3482", 3400, 3482, 1, 1, 1, "", 0u },
+    { 3500, "3500", "v3.0 3500", 3741, 3500, 1, 1, 1, "", 0u },
+    { 3509, "3509", "v3.0 3509", 3741, 3509, 1, 1, 1, "", 0u },
+    { 3511, "3511", "v3.0 3511", 3741, 3511, 1, 1, 1, "", 0u },
+    { 3515, "3515", "v3.0 3515", 3741, 3515, 1, 1, 1, "", 0u },
+    { 3517, "3517", "v3.0 3517", 3741, 3517, 1, 1, 1, "", 0u },
+    { 3520, "3520", "v3.0 3520", 3741, 3520, 1, 1, 1, "", 0u },
+    { 3526, "3526", "v3.0 3526", 3741, 3526, 1, 1, 1, "", 0u },
+    { 3549, "3549", "v3.0 3549", 3741, 3549, 1, 1, 1, "", 0u },
+    { 3550, "3550", "v3.0 3550", 3741, 3550, 1, 1, 1, "", 0u },
+    { 3551, "3551", "v3.0 3551", 3741, 3551, 1, 1, 1, "", 0u },
+    { 3552, "3552", "v3.0 3552", 3741, 3552, 1, 1, 1, "", 0u },
+    { 3553, "3553", "v3.0 3553", 3741, 3553, 1, 1, 1, "", 0u },
+    { 3554, "3554", "v3.0 3554", 3741, 3554, 1, 1, 1, "", 0u },
+    { 3557, "3557", "v3.0 3557", 3741, 3557, 1, 1, 1, "", 0u },
+    { 3559, "3559", "v3.0 3559", 3741, 3559, 1, 1, 1, "", 0u },
+    { 3562, "3562", "v3.0 3562", 3741, 3562, 1, 1, 1, "", 0u },
+    { 3565, "3565", "v3.0 3565", 3741, 3565, 1, 1, 1, "", 0u },
+    { 3567, "3567", "v3.0 3567", 3741, 3567, 1, 1, 1, "", 0u },
+    { 3568, "3568", "v3.0 3568", 3741, 3568, 1, 1, 1, "", 0u },
+    { 3581, "3581", "v3.0 3581", 3741, 3581, 1, 1, 1, "", 0u },
+    { 3583, "3583", "v3.0 3583", 3741, 3583, 1, 1, 1, "", 0u },
+    { 3585, "3585", "v3.0 3585", 3741, 3585, 1, 1, 1, "", 0u },
+    { 3586, "3586", "v3.0 3586", 3741, 3586, 1, 1, 1, "", 0u },
+    { 3587, "3587", "v3.0 3587", 3741, 3587, 1, 1, 1, "", 0u },
+    { 3591, "3591", "v3.0 3591", 3741, 3591, 1, 1, 1, "", 0u },
+    { 3594, "3594", "v3.0 3594", 3741, 3594, 1, 1, 1, "", 0u },
+    { 3596, "3596", "v3.0 3596", 3741, 3596, 1, 1, 1, "", 0u },
+    { 3597, "3597", "v3.0 3597", 3741, 3597, 1, 1, 1, "", 0u },
+    { 3602, "3602", "v3.0 3602", 3741, 3602, 1, 1, 1, "", 0u },
+    { 3604, "3604", "v3.0 3604", 3741, 3604, 1, 1, 1, "", 0u },
+    { 3605, "3605", "v3.0 3605", 3741, 3605, 1, 1, 1, "", 0u },
+    { 3608, "3608", "v3.0 3608", 3741, 3608, 1, 1, 1, "", 0u },
+    { 3609, "3609", "v3.0 3609", 3741, 3609, 1, 1, 1, "", 0u },
+    { 3611, "3611", "v3.0 3611", 3741, 3611, 1, 1, 1, "", 0u },
+    { 3614, "3614", "v3.0 3614", 3741, 3614, 1, 1, 1, "", 0u },
+    { 3618, "3618", "v3.0 3618", 3741, 3618, 1, 1, 1, "", 0u },
+    { 3619, "3619", "v3.0 3619", 3741, 3619, 1, 1, 1, "", 0u },
+    { 3623, "3623", "v3.0 3623", 3741, 3623, 1, 1, 1, "", 0u },
+    { 3624, "3624", "v3.0 3624", 3741, 3624, 1, 1, 1, "", 0u },
+    { 3626, "3626", "v3.0 3626", 3741, 3626, 1, 1, 1, "", 0u },
+    { 3629, "3629", "v3.0 3629", 3741, 3629, 1, 1, 1, "", 0u },
+    { 3631, "3631", "v3.0 3631", 3741, 3631, 1, 1, 1, "", 0u },
+    { 3633, "3633", "v3.0 3633", 3741, 3633, 1, 1, 1, "", 0u },
+    { 3635, "3635", "v3.0 3635", 3741, 3635, 1, 1, 1, "", 0u },
+    { 3638, "3638", "v3.0 3638", 3741, 3638, 1, 1, 1, "", 0u },
+    { 3639, "3639", "v3.0 3639", 3741, 3639, 1, 1, 1, "", 0u },
+    { 3640, "3640", "v3.0 3640", 3741, 3640, 1, 1, 1, "", 0u },
+    { 3644, "3644", "v3.0 3644", 3741, 3644, 1, 1, 1, "", 0u },
+    { 3646, "3646", "v3.0 3646", 3741, 3646, 1, 1, 1, "", 0u },
+    { 3647, "3647", "v3.0 3647", 3741, 3647, 1, 1, 1, "", 0u },
+    { 3649, "3649", "v3.0 3649", 3741, 3649, 1, 1, 1, "", 0u },
+    { 3650, "3650", "v3.0 3650", 3741, 3650, 1, 1, 1, "", 0u },
+    { 3651, "3651", "v3.0 3651", 3741, 3651, 1, 1, 1, "", 0u },
+    { 3655, "3655", "v3.0 3655", 3741, 3655, 1, 1, 1, "", 0u },
+    { 3656, "3656", "v3.0 3656", 3741, 3656, 1, 1, 1, "", 0u },
+    { 3657, "3657", "v3.0 3657", 3741, 3657, 1, 1, 1, "", 0u },
+    { 3660, "3660", "v3.0 3660", 3741, 3660, 1, 1, 1, "", 0u },
+    { 3661, "3661", "v3.0 3661", 3741, 3661, 1, 1, 1, "", 0u },
+    { 3663, "3663", "v3.0 3663", 3741, 3663, 1, 1, 1, "", 0u },
+    { 3664, "3664", "v3.0 3664", 3741, 3664, 1, 1, 1, "", 0u },
+    { 3665, "3665", "v3.0 3665", 3741, 3665, 1, 1, 1, "", 0u },
+    { 3666, "3666", "v3.0 3666", 3741, 3666, 1, 1, 1, "", 0u },
+    { 3667, "3667", "v3.0 3667", 3741, 3667, 1, 1, 1, "", 0u },
+    { 3669, "3669", "v3.0 3669", 3741, 3669, 1, 1, 1, "", 0u },
+    { 3670, "3670", "v3.0 3670", 3741, 3670, 1, 1, 1, "", 0u },
+    { 3671, "3671", "v3.0 3671", 3741, 3671, 1, 1, 1, "", 0u },
+    { 3672, "3672", "v3.0 3672", 3741, 3672, 1, 1, 1, "", 0u },
+    { 3673, "3673", "v3.0 3673", 3741, 3673, 1, 1, 1, "", 0u },
+    { 3674, "3674", "v3.0 3674", 3741, 3674, 1, 1, 1, "", 0u },
+    { 3675, "3675", "v3.0 3675", 3741, 3675, 1, 1, 1, "", 0u },
+    { 3677, "3677", "v3.0 3677", 3741, 3677, 1, 1, 1, "", 0u },
+    { 3678, "3678", "v3.0 3678", 3741, 3678, 1, 1, 1, "", 0u },
+    { 3679, "3679", "v3.0 3679", 3741, 3679, 1, 1, 1, "", 0u },
+    { 3680, "3680", "v3.0 3680", 3741, 3680, 1, 1, 1, "", 0u },
+    { 3682, "3682", "v3.0 3682", 3741, 3682, 1, 1, 1, "", 0u },
+    { 3685, "3685", "v3.0 3685", 3741, 3685, 1, 1, 1, "", 0u },
+    { 3686, "3686", "v3.0 3686", 3741, 3686, 1, 1, 1, "", 0u },
+    { 3689, "3689", "v3.0 3689", 3741, 3689, 1, 1, 1, "", 0u },
+    { 3690, "3690", "v3.0 3690", 3741, 3690, 1, 1, 1, "", 0u },
+    { 3691, "3691", "v3.0 3691", 3741, 3691, 1, 1, 1, "", 0u },
+    { 3692, "3692", "v3.0 3692", 3741, 3692, 1, 1, 1, "", 0u },
+    { 3693, "3693", "v3.0 3693", 3741, 3693, 1, 1, 1, "", 0u },
+    { 3694, "3694", "v3.0 3694", 3741, 3694, 1, 1, 1, "", 0u },
+    { 3697, "3697", "v3.0 3697", 3741, 3697, 1, 1, 1, "", 0u },
+    { 3699, "3699", "v3.0 3699", 3741, 3699, 1, 1, 1, "", 0u },
+    { 3701, "3701", "v3.0 3701", 3741, 3701, 1, 1, 1, "", 0u },
+    { 3703, "3703", "v3.0 3703", 3741, 3703, 1, 1, 1, "", 0u },
+    { 3704, "3704", "v3.0 3704", 3741, 3704, 1, 1, 1, "", 0u },
+    { 3707, "3707", "v3.0 3707", 3741, 3707, 1, 1, 1, "", 0u },
+    { 3708, "3708", "v3.0 3708", 3741, 3708, 1, 1, 1, "", 0u },
+    { 3709, "3709", "v3.0 3709", 3741, 3709, 1, 1, 1, "", 0u },
+    { 3710, "3710", "v3.0 3710", 3741, 3710, 1, 1, 1, "", 0u },
+    { 3711, "3711", "v3.0 3711", 3741, 3711, 1, 1, 1, "", 0u },
+    { 3713, "3713", "v3.0 3713", 3741, 3713, 1, 1, 1, "", 0u },
+    { 3714, "3714", "v3.0 3714", 3741, 3714, 1, 1, 1, "", 0u },
+    { 3715, "3715", "v3.0 3715", 3741, 3715, 1, 1, 1, "", 0u },
+    { 3716, "3716", "v3.0 3716", 3741, 3716, 1, 1, 1, "", 0u },
+    { 3722, "3722", "v3.0 3722", 3741, 3722, 1, 1, 1, "", 0u },
+    { 3725, "3725", "v3.0 3725", 3741, 3725, 1, 1, 1, "", 0u },
+    { 3726, "3726", "v3.0 3726", 3741, 3726, 1, 1, 1, "", 0u },
+    { 3727, "3727", "v3.0 3727", 3741, 3727, 1, 1, 1, "", 0u },
+    { 3728, "3728", "v3.0 3728", 3741, 3728, 1, 1, 1, "", 0u },
+    { 3729, "3729", "v3.0 3729", 3741, 3729, 1, 1, 1, "", 0u },
+    { 3730, "3730", "v3.0 3730", 3741, 3730, 1, 1, 1, "", 0u },
+    { 3732, "3732", "v3.0 3732", 3741, 3732, 1, 1, 1, "", 0u },
+    { 3738, "3738", "v3.0 3738", 3741, 3738, 1, 1, 1, "", 0u },
+    { 3740, "3740", "v3.0 3740", 3741, 3740, 1, 1, 1, "", 0u },
+    { 3741, "3741", "v3.0 3741", 3741, 3741, 1, 1, 1, "", 0u },
+    { 3742, "3742", "v3.0 3742-dev", 3741, 3742, 0, 1, 0, "dev", 0u },
+    { 3761, "3761", "v3.0 3761-dev", 3842, 3761, 0, 1, 0, "dev", 0u },
+    { 3769, "3769", "v3.0 3769", 3842, 3769, 1, 1, 1, "", 0u },
+    { 3773, "3773", "v3.0 3773", 3842, 3773, 1, 1, 1, "", 0u },
+    { 3780, "3780", "v3.0 3780", 3842, 3780, 1, 1, 1, "", 0u },
+    { 3783, "3783", "v3.0 3783", 3842, 3783, 1, 1, 1, "", 0u },
+    { 3789, "3789", "v3.0 3789", 3842, 3789, 1, 1, 1, "", 0u },
+    { 3793, "3793", "v3.0 3793", 3842, 3793, 1, 1, 1, "", 0u },
+    { 3797, "3797", "v3.0 3797", 3842, 3797, 1, 1, 1, "", 0u },
+    { 3805, "3805", "v3.0 3805", 3842, 3805, 1, 1, 1, "", 0u },
+    { 3814, "3814", "v3.0 3814", 3842, 3814, 1, 1, 1, "", 0u },
+    { 3818, "3818", "v3.0 3818", 3842, 3818, 1, 1, 1, "", 0u },
+    { 3822, "3822", "v3.0 3822", 3842, 3822, 1, 1, 1, "", 0u },
+    { 3824, "3824", "v3.0 3824", 3842, 3824, 1, 1, 1, "", 0u },
+    { 3829, "3829", "v3.0 3829", 3842, 3829, 1, 1, 1, "", 0u },
+    { 3831, "3831", "v3.0 3831", 3842, 3831, 1, 1, 1, "", 0u },
+    { 3837, "3837", "v3.0 3837", 3842, 3837, 1, 1, 1, "", 0u },
+    { 3839, "3839", "v3.0 3839", 3842, 3839, 1, 1, 1, "", 0u },
+    { 3842, "3842", "v3.0 3842", 3842, 3842, 1, 1, 1, "", 0u },
+    { 3846, "3846", "v3.0 3846", 3842, 3846, 1, 1, 1, "", 0u },
+    { 3847, "3847", "v3.0 3847-dev", 3842, 3847, 0, 1, 0, "dev", 0u },
+    { 3849, "3849", "v3.0 3849", 3842, 3849, 1, 1, 1, "", 0u },
+    { 3854, "3854", "v3.0 3854", 3842, 3854, 1, 1, 1, "", 0u },
+    { 3968, "3968", "v3.0 3968-dev", 4086, 3968, 0, 1, 0, "dev", 0u },
+    { 3970, "3970", "v3.0 3970-dev", 4086, 3970, 0, 1, 0, "dev", 0u },
+    { 3978, "3978", "v3.0 3978", 4086, 3978, 1, 1, 1, "", 0u },
+    { 3984, "3984", "v3.0 3984", 4086, 3984, 1, 1, 1, "", 0u },
+    { 3993, "3993", "v3.0 3993", 4086, 3993, 1, 1, 1, "", 0u },
+    { 3994, "3994", "v3.0 3994", 4086, 3994, 1, 1, 1, "", 0u },
+    { 4011, "4011", "v3.0 4011", 4086, 4011, 1, 1, 1, "", 0u },
+    { 4046, "4046", "v3.0 4046", 4086, 4046, 1, 1, 1, "", 0u },
+    { 4051, "4051", "v3.0 4051", 4086, 4051, 1, 1, 1, "", 0u },
+    { 4054, "4054", "v3.0 4054", 4086, 4054, 1, 1, 1, "", 0u },
+    { 4055, "4055", "v3.0 4055", 4086, 4055, 1, 1, 1, "", 0u },
+    { 4079, "4079", "v3.0 4079", 4086, 4079, 1, 1, 1, "", 0u },
+    { 4080, "4080", "v3.0 4080", 4086, 4080, 1, 1, 1, "", 0u },
+    { 4082, "4082", "v3.0 4082", 4086, 4082, 1, 1, 1, "", 0u },
+    { 4085, "4085", "v3.0 4085", 4086, 4085, 1, 1, 1, "", 0u },
+    { 4086, "4086", "v3.0 4086", 4086, 4086, 1, 1, 1, "", 0u },
+    { 4088, "4088", "v3.0 4088-dev", 4086, 4088, 0, 1, 0, "dev", 0u },
+    { 4107, "4107", "v3.0 4107", 4086, 4107, 1, 1, 1, "", 0u },
+    { 4111, "4111", "v3.0 4111", 4086, 4111, 1, 1, 1, "", 0u },
+    { 4129, "4129", "v3.0 4129", 4086, 4129, 1, 1, 1, "", 0u },
+    { 4153, "4153", "v3.0 4153", 4086, 4153, 1, 1, 1, "", 0u },
+    { 4432, "4432", "v3.0 4432", 4432, 4432, 1, 1, 1, "", 0u },
+    { 4453, "4453", "v3.0 4453", 4432, 4453, 1, 1, 1, "", 0u },
+    { 6330, "6330", "v3.0 6330", 6391, 6330, 1, 1, 1, "", 0u },
+    { 6391, "6391", "v3.0 6391", 6391, 6412, 1, 1, 1, "", 0u },
+    { 6391, "6391-mod", "v3.0 6391-mod", 6391, 6391, 0, 1, 0, "mod", 3u },
+    { 6392, "6392", "v3.0 6392-dev", 6391, 6392, 0, 1, 1, "dev", 3u },
+    { 6412, "6412", "v3.0 6412-dev", 6391, 6412, 0, 1, 1, "dev", 0u },
+    { 6510, "6510", "v3.0 6510-dev", 6391, 6510, 0, 1, 1, "dev", 0u },
+    { 7086, "7086", "v3.0 7086-dev", 7142, 7086, 0, 1, 1, "dev", 0u },
+    { 7123, "7123", "v3.0 7123-dev", 7142, 7123, 0, 1, 1, "dev", 0u },
+    { 7142, "7142", "v4.0 7142-alpha", 7142, 7142, 1, 1, 1, "alpha", 0u },
+    { 7530, "7530", "v4.0 7530", 7533, 7530, 1, 1, 1, "", 0u },
+    { 7533, "7533", "v4.0 7533", 7533, 7533, 1, 1, 1, "", 0u },
+    { 7555, "7555", "v4.0 7555", 7533, 7555, 1, 1, 1, "", 0u },
+    { 7556, "7556", "v4.0 7556", 7533, 7556, 1, 1, 1, "", 0u },
+    { 7735, "7735", "v4.0 7735", 7533, 7735, 1, 1, 1, "", 0u },
+    { 8023, "8023", "v4.0 8023-dev", 8023, 8023, 1, 1, 1, "dev", 0u },
+};

@@ -43,15 +43,15 @@ def main():
                     raise RuntimeError(name + ': ' + result.stdout + result.stderr)
                 print(result.stdout, end='', flush=True)
                 print('PASS RISC-V ' + name + ' ' + ' '.join(case), flush=True)
-        compile_run('context', [root / 'tests/host/riscv64_context_test.c', port / 'obor_libco.c'],
+        compile_run('context', [root / 'tests/host/riscv64_context_test.c', port / 'anybor_libco.c'],
                     ['-Wall', '-Wextra', '-Werror'])
-        compile_run('fault', [root / 'tests/host/fault_guard_test.c', port / 'obor_fault.c',
-            port / 'obor_libco.c', port / 'obor_write_watch.c'],
+        compile_run('fault', [root / 'tests/host/fault_guard_test.c', port / 'anybor_fault.c',
+            port / 'anybor_libco.c', port / 'anybor_write_watch.c'],
             ['-U_FORTIFY_SOURCE', '-D_FORTIFY_SOURCE=2', '-Wl,--wrap=read', '-Wl,--wrap=fread'],
             cases=((), ('upper-stack',), ('frontend',), ('worker',), ('user',), ('sigbus',)))
         # No test override enables the backend or bypasses its fixed arena.
-        compile_run('watch', [root / 'tests/host/write_watch_test.c', port / 'obor_fault.c',
-            port / 'obor_write_watch.c'], ['-Wl,--wrap=read', '-Wl,--wrap=fread'],
+        compile_run('watch', [root / 'tests/host/write_watch_test.c', port / 'anybor_fault.c',
+            port / 'anybor_write_watch.c'], ['-Wl,--wrap=read', '-Wl,--wrap=fread'],
             cases=tuple((name,) for name in ('cpu', 'read', 'fread', 'growth', 'fault',
                 'execute', 'execute-boundary', 'errno', 'lease', 'worker', 'registered')))
         interface = work / 'gamelib'
@@ -64,7 +64,7 @@ bor_thread *thread_create(int (*)(void *), const char *, void *);
 void thread_join(bor_thread *);
 ''')
         compile_run('worker-watch', [root / 'tests/host/worker_watch_test.c',
-            port / 'obor_fault.c', port / 'obor_write_watch.c', port / 'threads.c'],
+            port / 'anybor_fault.c', port / 'anybor_write_watch.c', port / 'threads.c'],
             ['-I', str(work), '-Wl,--wrap=read', '-Wl,--wrap=fread', '-Wl,--wrap=pthread_create'],
             cases=tuple((name,) for name in ('default', 'user', 'worker-fault',
                 'worker-execute', 'foreign', 'frontend', 'disabled', 'inactive')))

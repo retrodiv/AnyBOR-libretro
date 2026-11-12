@@ -8,7 +8,7 @@
  *
  * Pre-webm engine eras have no threads.h at all — compile to nothing there.
  */
-/* Live engine-thread count: obor_state.c refuses to snapshot while any
+/* Live engine-thread count: anybor_state.c refuses to snapshot while any
  * webm thread might be mid-allocation. Defined even for threadless eras. */
 int obor_live_threads;
 void obor_state_owned_suspend(void);
@@ -31,9 +31,9 @@ typedef int obor_no_threads_in_this_era;
 #include <stdint.h>
 
 #include "gamelib/threads.h"
-#include "obor_fault.h"
-#include "obor_write_watch.h"
-#include "obor_state_config.h"
+#include "anybor_fault.h"
+#include "anybor_write_watch.h"
+#include "anybor_state_config.h"
 
 struct bor_thread {
     pthread_t th;
@@ -190,8 +190,8 @@ uint64_t obor_wall_uticks(void)
 
 #include "gamelib/threads.h"
 
-#include "obor_fault.h"
-#include "obor_state_config.h"
+#include "anybor_fault.h"
+#include "anybor_state_config.h"
 
 struct bor_thread {
     HANDLE th;

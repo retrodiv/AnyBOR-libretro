@@ -10,12 +10,12 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
-#include "obor_state_copy.h"
-#include "obor_state_padding.h"
-#include "obor_resources.h"
-#include "obor_state_layout.h"
+#include "anybor_state_copy.h"
+#include "anybor_state_padding.h"
+#include "anybor_resources.h"
+#include "anybor_state_layout.h"
 #define OBOR_SHA256_STREAM_ONLY
-#include "obor_sha256.h"
+#include "anybor_sha256.h"
 #if defined(_WIN32)
 #include <windows.h>
 #else
@@ -32,7 +32,7 @@
 #undef _WIN32
 #endif
 #endif
-#include "obor_state_config.h"
+#include "anybor_state_config.h"
 #ifdef OBOR_FIXTURE_WAS_LINUX
 #define __linux__ 1
 #endif

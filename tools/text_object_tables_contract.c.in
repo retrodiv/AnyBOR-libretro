@@ -11,7 +11,7 @@
 #include <string.h>
 #include "config.h"
 #include "openbor.h"
-#include "obor_resources.h"
+#include "anybor_resources.h"
 #undef printf
 #undef malloc
 #undef calloc

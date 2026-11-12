@@ -10,7 +10,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "types.h"
-#include "obor_resources.h"
+#include "anybor_resources.h"
 #pragma GCC diagnostic ignored "-Wsign-compare"
 #pragma GCC diagnostic ignored "-Wmisleading-indentation"
 #undef assert

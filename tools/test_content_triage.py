@@ -34,7 +34,7 @@ class ContentTriageTests(unittest.TestCase):
         cls.temp = tempfile.TemporaryDirectory(prefix='anybor-content-triage-')
         cls.root = Path(cls.temp.name)
         cls.host = cls.root / 'selector'
-        compile_probe(GLUE / 'libretro.cpp', GLUE / 'obor_engines.h', GLUE,
+        compile_probe(GLUE / 'libretro.cpp', GLUE / 'anybor_engines.h', GLUE,
                       ROOT / 'src/third_party', cls.host, sanitizers=True)
 
     @classmethod

@@ -7,7 +7,7 @@
 static int fail_allocate;
 static void *test_allocate(size_t n) { return fail_allocate ? NULL : malloc(n); }
 #define malloc test_allocate
-#include "obor_content_path.h"
+#include "anybor_content_path.h"
 #undef malloc
 static char *copy(const char *s)
 {

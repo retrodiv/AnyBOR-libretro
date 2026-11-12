@@ -52,7 +52,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "obor_resources.h"
+#include "anybor_resources.h"
 /*
 Caution: move vorbis headers here otherwise the structs will
  get poisoned by #pragma in other header files, i.e. list.h
@@ -122,7 +122,7 @@ static int sound_cached = 0;
 
 /* AnyBOR: resident samples can later reopen their source as streams. Their
  * content identity survives a state load, the old session's path does not. */
-#include "obor_content_path.h"
+#include "anybor_content_path.h"
 int obor_sound_rebind_content(const char *saved, const char *current)
 {
     for(int i = 0; i < sound_cached; ++i) {

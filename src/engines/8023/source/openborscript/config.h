@@ -78,7 +78,7 @@ typedef struct Varlist
     int obor_dispose_pending;
 } Varlist;
 
-#include "obor_script_storage.h"
+#include "anybor_script_storage.h"
 
 typedef struct Script
 {

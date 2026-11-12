@@ -48,7 +48,7 @@
 #include "borendian.h"
 #include "stristr.h"
 #include "packfile.h"
-#include "obor_loose.h"
+#include "anybor_loose.h"
 #include "filecache.h"
 #include "soundmix.h"
 #include "savedata.h"

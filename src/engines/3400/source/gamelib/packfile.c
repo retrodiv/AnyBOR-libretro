@@ -47,7 +47,7 @@
 #include "borendian.h"
 #include "stristr.h"
 #include "packfile.h"
-#include "obor_loose.h"
+#include "anybor_loose.h"
 #include "obor_packfile_profile.h"
 #include "filecache.h"
 #include "globals.h"

@@ -31,8 +31,8 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include "obor_script_compact.h"
-#include "obor_script_executable.h"
+#include "anybor_script_compact.h"
+#include "anybor_script_executable.h"
 
 static void Interpreter_CompactInstructionStorage(Interpreter *pinterpreter)
 {

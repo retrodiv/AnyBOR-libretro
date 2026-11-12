@@ -299,7 +299,7 @@ void _putpixel(int x, int y, int colour, s_screen *screen, int alpha)
 
 
 /* Circle rasterization for the libretro port. */
-#include "obor_circle.h"
+#include "anybor_circle.h"
 
 typedef struct {
     int colour, alpha;

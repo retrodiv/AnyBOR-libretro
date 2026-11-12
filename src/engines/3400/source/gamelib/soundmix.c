@@ -52,7 +52,7 @@
 #include <stdint.h>
 extern uint32_t obor_profile_build;
 #include <string.h>
-#include "obor_resources.h"
+#include "anybor_resources.h"
 #include <assert.h>
 #include "utils.h"
 #include "stristr.h"

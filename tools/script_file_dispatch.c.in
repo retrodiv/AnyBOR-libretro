@@ -6,7 +6,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "obor_pak_name.h"
+#include "anybor_pak_name.h"
 typedef struct {int initialized;} Script;
 typedef struct {int value;} ScriptVariant;
 static unsigned obor_profile_build;

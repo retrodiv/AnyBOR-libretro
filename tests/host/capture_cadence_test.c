@@ -2,7 +2,7 @@
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
 #include <assert.h>
 #include <stdio.h>
-#include "obor_capture_cadence.h"
+#include "anybor_capture_cadence.h"
 int main(void)
 {
     obor_capture_cadence c;

@@ -58,9 +58,9 @@
 
 #include "openbor.h"
 #include <limits.h>
-#include "obor_resources.h"
-#include "obor_rise_inputs.h"
-#include "obor_resources.h"
+#include "anybor_resources.h"
+#include "anybor_rise_inputs.h"
+#include "anybor_resources.h"
 #include <stdint.h>
 #include "commands.h"
 #include "models.h"
@@ -7565,7 +7565,7 @@ static void load_playable_list(const char* command_line)
 * cannot modify or reallocate the parent table.
 */
 #include <limits.h>
-#include "obor_resources.h"
+#include "anybor_resources.h"
 static bool alloc_specials(s_model* newchar)
 {
     s_com *grown, *previous;

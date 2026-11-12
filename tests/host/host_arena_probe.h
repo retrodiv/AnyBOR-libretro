@@ -3,7 +3,7 @@
 #ifndef ANYBOR_HOST_ARENA_PROBE_H
 #define ANYBOR_HOST_ARENA_PROBE_H
 #ifdef _WIN32
-#include "obor_abi.h"
+#include "anybor_abi.h"
 static int check_host_arena_released(void)
 {
     void *base = (void *)(uintptr_t)OBOR_ARENA_BASE_VA;

@@ -36,7 +36,7 @@ typedef struct { const char *sha256; int build; const char *variant; unsigned by
 static const obor_engine_executable obor_engine_executables[] = {
     @ROWS@
 };
-#include "obor_engine_identity.h"
+#include "anybor_engine_identity.h"
 int main(int argc, char **argv) {
     if (argc != 3) return 2;
     obor_engine_identity id = obor_engine_for_content(argv[1], atoi(argv[2]) != 0);
@@ -79,7 +79,7 @@ int main(int argc, char **argv) {
     def test_shipped_engine_facts_match_the_lookup_table(self):
         manifest = Path(os.environ.get('OBOR_ENGINE_MANIFEST', ROOT / 'docs/ENGINE_EXECUTABLES.json'))
         rows = json.loads(manifest.read_text())['executables']
-        header = (GLUE / 'obor_engine_executables.h').read_text()
+        header = (GLUE / 'anybor_engine_executables.h').read_text()
         actual = [(digest, int(build), variant, int(size)) for digest, build, variant, size in
                   re.findall(r'\{"([0-9a-f]{64})", ([0-9]+), "([a-z0-9-]*)", ([0-9]+)U\}', header)]
         expected = [(row['sha256'], row['build'], row['variant'], row['bytes']) for row in rows]

@@ -14,7 +14,7 @@
  * at the source repository root. Original notices follow below.
  */
 
-#include "obor_resources.h"
+#include "anybor_resources.h"
 #include <stddef.h>
 
 /*

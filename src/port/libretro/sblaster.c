@@ -11,12 +11,12 @@
 #include "libretroport.h"
 #include "sblaster.h"
 #include "soundmix.h"
-#include "obor_abi.h"
-#include "obor_media_diag.h"
+#include "anybor_abi.h"
+#include "anybor_media_diag.h"
 
 #include <string.h>
 #ifdef OBOR_HAS_MOVIE_PLAYBACK
-#include "obor_threads.h"
+#include "anybor_threads.h"
 /* Recursive ownership mirrors SDL's callback lock. Released locks contain
  * no native handles, and can be restored with the engine's ordinary state. */
 static uintptr_t audio_owner;

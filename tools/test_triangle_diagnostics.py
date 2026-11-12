@@ -17,7 +17,7 @@ ROOT = Path(os.environ.get('OBOR_TEST_SOURCE', HERE.parent))
 
 
 def api_window():
-    text = (ROOT / 'src/glue/obor_content_contracts.h').read_text()
+    text = (ROOT / 'src/glue/anybor_content_contracts.h').read_text()
     windows = []
     for name in ['setvertex', 'settexture']:
         rows = re.findall(r'\{\s*"'+name+r'",\s*OBOR_CT_FUNCTION,\s*(\d+),\s*(\d+),', text)

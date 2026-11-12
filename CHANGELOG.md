@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.4 — source filename consistency
+
+- Use the `anybor_` prefix for glue and port support filenames and update their includes, build inputs and tools.
+
 ## 0.2.3 — short ZIP cache names
 
 - Name ZIP extraction folders after the archive stem and an eight-digit locator, retaining full identities in completion markers and resolving short-name collisions without overwriting other entries.

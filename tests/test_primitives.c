@@ -5,12 +5,12 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
-#include "obor_circle.h"
+#include "anybor_circle.h"
 #include "adpcm.h"
-#include "obor_endian.h"
-#include "obor_zip_path.h"
-#include "obor_crt.h"
-#include "obor_state_padding.h"
+#include "anybor_endian.h"
+#include "anybor_zip_path.h"
+#include "anybor_crt.h"
+#include "anybor_state_padding.h"
 
 static void test_state_padding(void)
 {

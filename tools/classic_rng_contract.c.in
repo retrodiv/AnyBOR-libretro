@@ -15,7 +15,7 @@ static time_t observe_wallclock(time_t *out)
 #define time observe_wallclock
 #include "source/randlib/rand32.c"
 #undef time
-#include "obor_random.h"
+#include "anybor_random.h"
 #undef rand
 #undef srand
 #undef printf

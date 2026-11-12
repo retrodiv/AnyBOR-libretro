@@ -14,7 +14,7 @@
 #define OBOR_CATALOG_CACHE_FIELDS 0
 #endif
 #ifndef OBOR_CATALOG_IMPLEMENTATION
-#define OBOR_CATALOG_IMPLEMENTATION "obor_resource_catalog.c"
+#define OBOR_CATALOG_IMPLEMENTATION "anybor_resource_catalog.c"
 #endif
 static size_t recipe_writes, refused_write, refused_observed, dirty_proofs;
 int catalog_test_recipe_write(const obor_resource_recipe *, void *, size_t);

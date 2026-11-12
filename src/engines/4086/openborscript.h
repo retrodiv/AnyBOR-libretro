@@ -42,7 +42,7 @@ typedef struct
     ScriptVariant *vars;
 } Varlist;
 
-#include "obor_script_storage.h"
+#include "anybor_script_storage.h"
 
 #include <stdint.h>
 /* Preserve member offsets while allowing native packed owners. */

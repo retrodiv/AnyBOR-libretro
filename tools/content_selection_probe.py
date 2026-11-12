@@ -29,7 +29,7 @@ def compile_probe(glue, header, includes, third_party, output, sanitizers=False)
 #include <stdlib.h>
 #include <string.h>
 #include "libretro.h"
-#include "obor_legacy_api.h"
+#include "anybor_legacy_api.h"
 #define PATH_SEP '/'
 PROFILES
 FALLBACK

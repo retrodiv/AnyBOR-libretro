@@ -120,7 +120,7 @@ class ScriptHeapEntryKindTests(unittest.TestCase):
                         for p in profiles)
                 if native['kind'] == 'typed':
                     expected_cases += 4 * len(profiles)
-                if 'obor_varlist_ownership.inc' in (engine/'openborscript.c').read_text(encoding='latin1'):
+                if 'anybor_varlist_ownership.inc' in (engine/'openborscript.c').read_text(encoding='latin1'):
                     expected_cases += 3 * len(profiles)
                 self.assertEqual(value['cases'], expected_cases)
 

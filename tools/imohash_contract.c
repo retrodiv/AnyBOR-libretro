@@ -4,7 +4,7 @@
  * Adapted from AnyGM test_hash.c at 31d5666d72559136327b3165bbaca3b81759965b.
  * See LICENSES/imohash.txt.
  */
-#include "obor_imohash.h"
+#include "anybor_imohash.h"
 #include <assert.h>
 static int hex_value(char value){
   if(value>='0' && value<='9') return value-'0';

@@ -10,7 +10,7 @@
 #include <stdarg.h>
 #include "openbor.h"
 #include "commands.h"
-#include "obor_resources.h"
+#include "anybor_resources.h"
 #undef assert
 #undef printf
 #ifdef NDEBUG

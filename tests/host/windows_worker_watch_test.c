@@ -6,8 +6,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include "gamelib/threads.h"
-#include "obor_fault.h"
-#include "obor_state_config.h"
+#include "anybor_fault.h"
+#include "anybor_state_config.h"
 
 obor_state_settings obor_state_session_settings;
 extern int obor_live_threads;

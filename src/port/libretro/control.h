@@ -50,7 +50,7 @@ void control_clearmappings(void);
 #define OBOR_KEYBASE 100
 #define OBOR_KEYSPAN 32
 #define OBOR_KEY(pl, btn) (OBOR_KEYBASE + (pl) * OBOR_KEYSPAN + (btn))
-/* button indexes follow obor_abi.h (OBOR_BTN_*) */
+/* button indexes follow anybor_abi.h (OBOR_BTN_*) */
 
 #define JOY_TYPE_DEFAULT 0
 #define JOY_AXIS_X 0

@@ -1,0 +1,212 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#ifndef OBOR_PACKED_PREPARE_H
+#define OBOR_PACKED_PREPARE_H
+#include "anybor_pak_repair.h"
+#include "anybor_transform.h"
+#include <fcntl.h>
+#include "anybor_storage.h"
+#include "anybor_prepare_sync.h"
+
+struct obor_transform_buffers {
+    unsigned char *input;
+    obor_transform_result result;
+    obor_transform_buffers() : input(NULL), result() {}
+    ~obor_transform_buffers() {
+        obor_content_transform_result_release(&result);
+        free(input);
+    }
+};
+
+/* Generic byte preparation followed by the ordinary PACK validator. No
+ * encoded-format signature, recipe or automatic decoder is built in. */
+static bool obor_packed_prepare(const char *source, const char *save_dir,
+                                const char *system_dir, char *out, size_t out_cap)
+{
+    obor_prepare_range progress = obor_prepare_phase;
+    obor_input_transform transform;
+    FILE *input = fopen(source, "rb");
+    if (!input) return false;
+    bool header_repair = obor_pak_header_repair_detect(input) != 0;
+    /* A complete plain PACK structure takes precedence over an unrelated
+     * external transform, including a malformed or unavailable configuration. */
+    if (!header_repair && !obor_transform_load(system_dir, transform)) {
+        fclose(input);
+        return false;
+    }
+    int64_t bias = 0;
+    bool repair = !header_repair && !transform.program && obor_pak_repair_detect(input, &bias);
+    if (!transform.program && !repair && !header_repair) {
+        fclose(input);
+        int n = snprintf(out, out_cap, "%s", source);
+        return n >= 0 && (size_t)n < out_cap;
+    }
+    char source_hash[65], config_hash[65], result_hash[65], current_hash[65];
+    char parent[1400], cache[1800], temp[1500], error[256] = {0};
+    if (fseek(input, 0, SEEK_END)) { fclose(input); return false; }
+    long bytes = ftell(input);
+    if (bytes < 0 || (uint64_t)bytes > OBOR_TRANSFORM_MAX_INPUT_BYTES) { fclose(input); return false; }
+    obor_transform_buffers buffers;
+    if (transform.program) {
+        obor_prepare_stage(progress, 0, 100, bytes);
+        buffers.input = (unsigned char *)malloc(bytes ? (size_t)bytes : 1u);
+        bool ok = buffers.input && !fseek(input, 0, SEEK_SET);
+        for (size_t offset = 0; ok && offset < (size_t)bytes;) {
+            size_t chunk = (size_t)bytes - offset;
+            if (chunk > 65536) chunk = 65536;
+            ok = fread(buffers.input + offset, 1, chunk, input) == chunk;
+            if (ok) { obor_prepare_advance(chunk); ok = obor_prepare_checkpoint(); }
+            offset += chunk;
+        }
+        /* The external program's running time is unknown: hold this phase
+         * until it returns instead of fabricating progress from its clock. */
+        obor_prepare_stage(progress, 100, 200, 0);
+        if (ok) ok = obor_content_transform_execute_view(transform.program, transform.program_size,
+            transform.parameters, transform.parameter_size, buffers.input, (size_t)bytes, NULL, 0, 0,
+            &buffers.result, error, sizeof(error)) != 0;
+        if (!ok) {
+            fclose(input);
+            log_cb(RETRO_LOG_ERROR, "[OpenBOR] Content preparation failed: %s\n",
+                   error[0] ? error : "cannot read transform input");
+            return false;
+        }
+        if (buffers.result.size == (size_t)bytes && !memcmp(buffers.input, buffers.result.data, buffers.result.size)) {
+            repair = obor_pak_repair_detect(input, &bias) != 0;
+            if (!repair) {
+                /* The transform declined this input. Keep the ordinary
+                 * source path and its normal pre-boot validator, without
+                 * writing or hashing an unnecessary full archive copy. */
+                fclose(input);
+                int n = snprintf(out, out_cap, "%s", source);
+                return n >= 0 && (size_t)n < out_cap;
+            }
+        }
+        /* Identify the exact bytes the VM saw, then recheck the source
+         * before publishing a prepared result. */
+        obor_sha256_ctx hash;
+        unsigned char digest[32];
+        obor_prepare_stage(progress, 200, 350, bytes);
+        obor_sha256_init(&hash);
+        for (size_t offset = 0; offset < (size_t)bytes;) {
+            size_t chunk = (size_t)bytes - offset;
+            if (chunk > 65536) chunk = 65536;
+            obor_sha256_update(&hash, buffers.input + offset, chunk);
+            obor_prepare_advance(chunk);
+            if (!obor_prepare_checkpoint()) { fclose(input); return false; }
+            offset += chunk;
+        }
+        obor_sha256_final(&hash, digest);
+        for (unsigned i = 0; i < 32; ++i) snprintf(source_hash + 2*i, 3, "%02x", digest[i]);
+        /* An unchanged slice still borrows the input until publication. */
+        if (buffers.result.owned) { free(buffers.input); buffers.input = NULL; }
+        obor_transform_identity(transform, config_hash);
+    } else {
+        obor_prepare_stage(progress, 0, 200, bytes);
+        if (!obor_sha256_file(source, source_hash)) { fclose(input); return false; }
+        snprintf(config_hash, sizeof(config_hash), "%s",
+                 header_repair ? "pack-header-repair-v1" : "directory-rebase-v2");
+    }
+    if (!obor_storage_root(save_dir, parent, sizeof(parent))) { fclose(input); return false; }
+    int n;
+    if (!obor_zip_space_ok(parent, (uint64_t)bytes + (64u << 20))) { fclose(input); return false; }
+#if defined(_WIN32)
+    unsigned long pid = (unsigned long)GetCurrentProcessId();
+#else
+    unsigned long pid = (unsigned long)getpid();
+#endif
+    static unsigned sequence;
+    n = snprintf(temp, sizeof(temp), "%s/.partial-%lu-%u", parent, pid, ++sequence);
+    if (n < 0 || (size_t)n >= sizeof(temp)) { fclose(input); return false; }
+    int fd = open(temp, O_WRONLY | O_CREAT | O_EXCL
+#if defined(_WIN32)
+        | O_BINARY
+#endif
+        , 0600);
+    if (fd < 0) { fclose(input); return false; }
+    FILE *output = fdopen(fd, "wb");
+    if (!output) { close(fd); remove(temp); fclose(input); return false; }
+    bool ok = false;
+    obor_prepare_stage(progress, transform.program ? 350 : 200,
+                       transform.program ? 500 : 400,
+                       (header_repair || repair) ? (uint64_t)bytes : buffers.result.size);
+    if (header_repair) {
+        ok = obor_pak_repair_header(input, output) != 0;
+    } else if (repair) {
+        ok = obor_pak_repair_bias(input, output, bias) != 0;
+    } else {
+        ok = true;
+        for (size_t offset = 0; ok && offset < buffers.result.size;) {
+            size_t chunk = buffers.result.size - offset;
+            if (chunk > 65536) chunk = 65536;
+            ok = fwrite(buffers.result.data + offset, 1, chunk, output) == chunk;
+            if (ok) { obor_prepare_advance(chunk); ok = obor_prepare_checkpoint(); }
+            offset += chunk;
+        }
+    }
+    fclose(input);
+    /* Finish the generated input's writeback before publishing it for engine
+     * streaming. The cooperative helper keeps the loading screen responsive
+     * and retains no worker or extra content cache after preparation. */
+    if (ok && !obor_prepare_sync_file(output)) ok = false;
+    if (fclose(output)) ok = false;
+    /* Selected transforms never bypass result validation or reuse an old
+     * decoded file when their configuration is absent, changed or invalid. */
+    if (ok && obor_pak_validate(temp)) ok = false;
+    if (ok) {
+        obor_prepare_stage(progress, transform.program ? 500 : 400,
+                           transform.program ? 650 : 600, 0);
+        ok = obor_sha256_file(temp, result_hash) != 0;
+    }
+    if (ok) {
+        obor_prepare_stage(progress, transform.program ? 650 : 600, 800, 0);
+        ok = obor_sha256_file(source, current_hash) && !strcmp(source_hash, current_hash);
+    }
+    if (!ok) {
+        remove(temp);
+        log_cb(RETRO_LOG_ERROR, "[OpenBOR] Content preparation failed: %s\n", error[0] ? error : "invalid PACK result or source changed");
+        return false;
+    }
+    /* An identity transform retains ordinary structural repair and the
+     * original content path. It is applied exactly once. */
+    if (!strcmp(source_hash, result_hash)) {
+        remove(temp);
+        n = snprintf(out, out_cap, "%s", source);
+        return n >= 0 && (size_t)n < out_cap;
+    }
+    obor_sha256_ctx identity;
+    unsigned char digest[32];
+    char key[65];
+    obor_sha256_init(&identity);
+    obor_sha256_update(&identity, source_hash, strlen(source_hash) + 1);
+    obor_sha256_update(&identity, config_hash, strlen(config_hash) + 1);
+    obor_sha256_update(&identity, result_hash, strlen(result_hash) + 1);
+    obor_sha256_final(&identity, digest);
+    for (unsigned i = 0; i < 32; ++i) snprintf(key + i*2, 3, "%02x", digest[i]);
+    /* Keep paths short; reuse still requires the complete result SHA-256. */
+    n = snprintf(cache, sizeof(cache), "%s/input-%.8s", parent, key);
+    if (n < 0 || (size_t)n >= sizeof(cache)) { remove(temp); return false; }
+    const char *base = strrchr(source, '/'), *backslash = strrchr(source, '\\');
+    if (!base || (backslash && backslash > base)) base = backslash;
+    base = base ? base+1 : source;
+    n = snprintf(out, out_cap, "%s/%s", cache, base);
+    if (n < 0 || (size_t)n >= out_cap) { remove(temp); return false; }
+    if (!obor_storage_track(cache)) { remove(temp); return false; }
+    mkdir_p(cache);
+    if (!obor_storage_directory(cache)) { remove(temp); return false; }
+    obor_prepare_stage(progress, 800, 1000, 0);
+    if (obor_sha256_file(out, current_hash) && !strcmp(current_hash, result_hash)) {
+        remove(temp);
+    } else {
+#if defined(_WIN32)
+        ok = MoveFileExA(temp, out, MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH) != 0;
+#else
+        ok = rename(temp, out) == 0;
+#endif
+        if (!ok) { remove(temp); return false; }
+    }
+    log_cb(RETRO_LOG_INFO, "[OpenBOR] %s: validated prepared PACK\n",
+           header_repair ? "structural header repair" :
+           repair ? "structural directory repair" : "configured input transform");
+    return true;
+}
+#endif

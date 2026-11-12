@@ -13,7 +13,7 @@
 #include "types.h"
 #include "globals.h"
 #include "soundmix.h"
-#include "obor_media_diag.h"
+#include "anybor_media_diag.h"
 #undef printf
 @QUEUE_BOUND@
 @TYPES@

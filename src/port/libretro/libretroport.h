@@ -13,10 +13,10 @@
 #include <stdarg.h>
 #include <stddef.h>
 #include <string.h>
-#include "obor_abi.h"
-#include "obor_fault.h"
-#include "obor_loading.h"
-#include "obor_pak_name.h"
+#include "anybor_abi.h"
+#include "anybor_fault.h"
+#include "anybor_loading.h"
+#include "anybor_pak_name.h"
 
 /* mingw ships a unistd.h too — include it before the usleep macro below so
  * later includes are guard-stopped and never see the macro as a prototype */
@@ -143,7 +143,7 @@ int32_t obor_state_tracking_end(void);
 extern uint32_t obor_profile_build;
 extern uint32_t obor_profile_features;
 
-/* Snapshot arena (obor_alloc.c). */
+/* Snapshot arena (anybor_alloc.c). */
 int obor_arena_init(void);
 char *obor_arena_base(void);
 char *obor_stack_ptr(void);

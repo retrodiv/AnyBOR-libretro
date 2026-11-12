@@ -13,11 +13,11 @@ from test_historical_behavior import native
 
 ROOT = Path(os.environ.get('OBOR_TEST_SOURCE', Path(__file__).resolve().parents[1]))
 ENGINE = Path(os.environ.get('OBOR_6392_ENGINE', ROOT / 'src/engines/6391'))
-ABI = Path(os.environ.get('OBOR_PROFILE_ABI_HEADER', ROOT / 'src/glue/obor_abi.h'))
+ABI = Path(os.environ.get('OBOR_PROFILE_ABI_HEADER', ROOT / 'src/glue/anybor_abi.h'))
 
 
 def native_profile(program):
-    native(program.replace('#include "obor_abi.h"',
+    native(program.replace('#include "anybor_abi.h"',
                            '#include ' + json.dumps(ABI.resolve().as_posix())))
 
 
@@ -35,7 +35,7 @@ class Reconstructed6392Tests(unittest.TestCase):
 #include <assert.h>
 #include <stdint.h>
 #include <string.h>
-#include "obor_abi.h"
+#include "anybor_abi.h"
 typedef struct { struct {float y;} position;float base;int falling;
                  struct {struct {int current;} jugglepoints;} modeldata; } entity;
 typedef struct {int jugglecost;} s_collision_attack;
@@ -82,7 +82,7 @@ int main(void){
         native_profile(r'''
 #include <assert.h>
 #include <stdint.h>
-#include "obor_abi.h"
+#include "anybor_abi.h"
 #include <string.h>
 typedef struct { FIELDS } entity;
 static uint32_t obor_profile_build,obor_profile_features;
@@ -135,7 +135,7 @@ int main(void) {
         native_profile(r'''
 #include <assert.h>
 #include <stdint.h>
-#include "obor_abi.h"
+#include "anybor_abi.h"
 #include <stddef.h>
 #include <limits.h>
 #include <string.h>
@@ -195,7 +195,7 @@ int main(void) {
         native_profile(r'''
 #include <assert.h>
 #include <stdint.h>
-#include "obor_abi.h"
+#include "anybor_abi.h"
 #include <stdarg.h>
 #include <stddef.h>
 #include <string.h>

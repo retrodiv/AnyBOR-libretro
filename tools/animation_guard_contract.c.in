@@ -6,7 +6,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "obor_abi.h"
+#include "anybor_abi.h"
 typedef int32_t LONG;
 typedef struct {int index;} s_anim;
 static unsigned obor_profile_build;

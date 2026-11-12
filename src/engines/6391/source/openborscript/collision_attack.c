@@ -39,7 +39,7 @@
 // item handle directly. You should instead use
 // get<item>instance(), and pass it the result from
 // this function.
-#include "obor_attack_query.h"
+#include "anybor_attack_query.h"
 
 HRESULT openbor_get_attack_collection(ScriptVariant **varlist, ScriptVariant **pretvar, int paramCount)
 {

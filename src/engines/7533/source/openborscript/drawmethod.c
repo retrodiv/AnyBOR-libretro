@@ -264,7 +264,7 @@ static const s_property_access_map obor_profile_drawmethod_get_property_map(cons
 }
 
 
-#include "obor_drawmethod_member.inc"
+#include "anybor_drawmethod_member.inc"
 
 static HRESULT obor_profile_get_drawmethod_property(const ScriptVariant* const* varlist, ScriptVariant** const pretvar, const int paramCount)
 {

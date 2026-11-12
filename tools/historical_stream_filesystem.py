@@ -113,7 +113,7 @@ def render_filesystem(*, revisions, opening, saving, helpers, slots,
 #include <unistd.h>
 @RENAME_RECORD@
 @HEADERS@
-#include "obor_pak_name.h"
+#include "anybor_pak_name.h"
 @OWN_RECORD@
 #undef malloc
 #undef calloc

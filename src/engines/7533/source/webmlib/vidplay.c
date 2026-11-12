@@ -42,8 +42,8 @@
 #include "types.h"
 #include "globals.h"
 #include "soundmix.h"
-#include "obor_media_diag.h"
-#include "obor_threads.h"
+#include "anybor_media_diag.h"
+#include "anybor_threads.h"
 
 /* AnyBOR, 2026-09-08: these sleeps run on playback workers,
  * not on the engine coroutine. Keep the host OS sleep function. */

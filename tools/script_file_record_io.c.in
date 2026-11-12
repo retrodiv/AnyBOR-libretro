@@ -31,7 +31,7 @@ int obor_allocation_contains(const void *p, size_t length) {
 static char *StrCache_GetIfPresent(int index) {
     return index == 1 ? (char *)cache_value : NULL;
 }
-#include "obor_script_file32.inc"
+#include "anybor_script_file32.inc"
 @CONTEXTS@
 
 static void release(void) {

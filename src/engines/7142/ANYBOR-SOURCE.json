@@ -9,7 +9,7 @@
       "upstream_sha256": "adfc28feba4d32bb3933b29fe55fd0a6aa746084704c3ee71fc3f732706b9aa4"
     },
     "Makefile.libretro": {
-      "distributed_sha256": "aa38bea7d4709d4496bc15a6a447c17d10efb5c868847ae8e0c4bda99d70e26e",
+      "distributed_sha256": "1c5586cd077b75acf361228b9a4ac5cbe826ca81a7da770293a85417211fdbe9",
       "modified": true,
       "origin": "Project libretro build overlay",
       "summary": "Supply the shared libretro engine build and symbol-isolation rules.",
@@ -17,7 +17,7 @@
       "upstream_sha256": null
     },
     "openbor.c": {
-      "distributed_sha256": "208ceaa7f6a9905f23ff842b214e45c35c4933acb87ad753b2c19efdd379aeac",
+      "distributed_sha256": "8f98c74675eee64f8cdde0052de917309085d4a30b42455b8104acb1756d5c0f",
       "modified": true,
       "summary": "Apply the port's engine corrections and select the PC video configuration on macOS. Derive output names from the content basename with explicit destination capacities, and reject overflowing output path joins. Leave multiplayer slots without a selected model available to join even if game scripts preassign lives to them. Let a missing basename-only PAK self-check read the active frontend content after it has been validated and prepared. Allocate each model's animation pointer table through the highest animation index that model uses, and bound cache, copy and cleanup paths to that capacity. Ignore optional defense and offense entries outside the configured attack-type range with a log warning before accessing their tables. Yield after each newly completed model during explicit model-list or level preparation, and defer states until that preparation has cleaned up its intermediate parsers and handles. Initialize all four RetroPads and repair legacy unbound player profiles without replacing custom bindings. Return a defined null result for absent colourmap models or tables while retaining valid palette fallback. Keep selected palette-conversion reads bounded and reject missing maps or flags, while preserving unselected slots and native allocation failure callbacks. Check destination animation capacity when retaining an animation across model changes, preserving the native fallback and timing. Preserve divergent 7086 and 2021 7123 animation, combat, model, script-selector and menu contracts by logical profile, retaining safe storage and additive APIs. Access script-container pointer slots with byte copies, preserving record layout, pointer values and native copy/cleanup order. Pointer-slot allocation and release accept byte storage without imposing pointer alignment on a packed field. Release each sprite owner once and complete cleanup independently of alias counts. Preserve native sprite-map capacity policies, check allocation extents and retain existing storage and capacity when growth is unavailable. Validate sprite-node allocations and release partial resources without changing existing owners. Check cached sprite availability before reading metadata and ignore cache requests for absent nodes.",
       "topics": [
@@ -65,7 +65,7 @@
       "upstream_sha256": "71fd11c5f33bce214d0af7ef6ad521cc34440d460e4e2a45e99bf28ee9c03c69"
     },
     "openbor.h": {
-      "distributed_sha256": "064472992d31ae66fec1d4de0672b491fdb72db9f2d74e2bce478baa1f2d38cb",
+      "distributed_sha256": "d748ed4f7fc295664f46aad82c8694fd5e6f15fa479db805c049523ce3027c31",
       "modified": true,
       "summary": "Allocate collision pointer slots through the highest author-facing index used by each collection. Track each model's allocated animation-table capacity and reject lookups outside it. Preserve divergent 7086 and 2021 7123 animation, combat, model, script-selector and menu contracts by logical profile, retaining safe storage and additive APIs.",
       "topics": [
@@ -83,7 +83,7 @@
       "upstream_sha256": "06928e6765895d2d9f344a6bb9efd394c4fea0bef540f3fa061dee3da9c61f68"
     },
     "openborscript.c": {
-      "distributed_sha256": "9a3a27b3c947fdbf3cec3f061ed06dfc02fca1028b138d1a6c0e32c38b08d7a7",
+      "distributed_sha256": "afe72c71378f0ad19201ca6a9f8a68f1eefa232db855a0b536b716f51b5c79f3",
       "modified": true,
       "summary": "Keep the dormant constant-lowering diagnostic compatible with the single-value instruction layout. Derive output names from the content basename with explicit destination capacities, and reject overflowing output path joins. Compact compiler-only instruction records after resolving value ownership, preserving branch and export anchors, all mutable values and exactly-once pool cleanup. Retain shared interpreters through the last script reference while preserving independent variables, replacement and native callbacks. Track diagnostic comments independently so interpreter replacement can retain them. Resolve text-property names within the actual table bounds while preserving native numeric selectors. Reuse each text object's owned buffer when replacing its contents. Reject missing colourtable indices and keep selector arithmetic and table reads defined. Preserve divergent 7086 and 2021 7123 animation, combat, model, script-selector and menu contracts by logical profile, retaining safe storage and additive APIs. Transfer loaded stream buffers through aligned local outputs while preserving native record layout and results. Close owned input files after stream loading and on buffer allocation failure.",
       "topics": [
@@ -122,7 +122,7 @@
       "upstream_sha256": "230e91cf4ae42a74e92b7e8dbb1bd6ab87bd6f4c768db7b7fda466ea0facf8d8"
     },
     "source/gamelib/anigif.c": {
-      "distributed_sha256": "8d8ece888014d729bcac885a1b276c96286e150cdaf10c6629be03dcfcdb47ea",
+      "distributed_sha256": "5919c54327d59efb8ed7900e9329c1e6e1fb53b1fe29e8c045df39a4410c2877",
       "modified": true,
       "summary": "Check GIF decoder storage and palette bounds while preserving the decoded pixels of valid images.",
       "topics": [
@@ -150,7 +150,7 @@
       "upstream_sha256": "0fd839992c90f9f3d8557f2757adfee05848f4c0b8c3a30270ddf947907e0c4a"
     },
     "source/gamelib/borendian.h": {
-      "distributed_sha256": "e27fa39859fbc4a3487fddcbcd2abcf96bfbb385d56a39b86133d944c1ad65d1",
+      "distributed_sha256": "6deb86cd723fa5d3f731b0d0f1a589a51cf88c6e960279dde7d1c77716276a1e",
       "modified": true,
       "summary": "Use the port's fixed-width endian conversions.",
       "topics": [
@@ -160,7 +160,7 @@
       "upstream_sha256": "54377e86b27c03f1b41abc4cad9bb0466a3ab870cd2f9bec70392715709e32f7"
     },
     "source/gamelib/draw.c": {
-      "distributed_sha256": "01f1078ba6b46020a69eb46c0caca268348e6fcdacbb74588b57a047a023aba2",
+      "distributed_sha256": "424c66c65aaa70ddddfe4ab39ff667d763e47e21dba0ef5c8407ebbbed0557a2",
       "modified": true,
       "summary": "Route circle drawing through the port's integer rasterizer. Ignore point coordinates outside screen bounds while preserving valid pixels.",
       "topics": [
@@ -229,7 +229,7 @@
       "upstream_sha256": "ddfa2f06adeed431eb4c9b558a596e1b2ed46927ba3c08db26ba9613b88233ce"
     },
     "source/gamelib/loadimg.c": {
-      "distributed_sha256": "04f8c389c952bec7e55b38da74ea20ce5143420d41eade16f8a6c024a0dffde4",
+      "distributed_sha256": "3c2b5bc9837c051dbd754091358675f5794378ac1cb21e8f2198fb63f42b9bf2",
       "modified": true,
       "summary": "Declare the resolved source member and original bitmap dimensions for independent sprite reconstruction proof. Validate PCX sprite signatures before using header dimensions. Preserve native palette-only filename probing, three-plane refusals and final RGB table conversion without interpreting palette bytes as sprite dimensions. Keep bitmap row reads within the requested output width.",
       "topics": [
@@ -258,7 +258,7 @@
       "upstream_sha256": "bb9095aeea455e8b435ca545683a9508f4b3fd60e374d6cd93b74b0ed0f27882"
     },
     "source/gamelib/packfile.c": {
-      "distributed_sha256": "3bd3c692c0cb58ae6976b8206e3093ffb891cbb9805560b0cbed7fabf070aa14",
+      "distributed_sha256": "7afb08d0a73af2232f2079b8cb0864651d47b04e5f8b4f4d29b0c0b40250f6e4",
       "modified": true,
       "summary": "Repair PAK handles after state loads, close resources on reset, prune unused frontend APIs, and compile the case-insensitive loose-file search on macOS. Skip a loose lookup only when the common bounded, watched directory index proves its first component absent; preserve script changes and case-insensitive overrides.",
       "topics": [
@@ -298,7 +298,7 @@
       "upstream_sha256": "da61191c2344f55236581b2c42bf36056f62fdb590f18ceed8634358aeb74cf8"
     },
     "source/gamelib/screen.c": {
-      "distributed_sha256": "42f4a8128a3c7b9f65286fae15fdd02b5d60a111c3a9dff941a8114f1109777c",
+      "distributed_sha256": "a62faef0280f2795c35a8aed3db1135ac740cf7c20270030c8e41fe233b35602",
       "modified": true,
       "summary": "Remove a guard whose only statement assigned the counter to itself. Bound screen blend selectors and use transparent copy when an indexed table is unavailable.",
       "topics": [
@@ -328,7 +328,7 @@
       "upstream_sha256": "007f773be5f17eedda442b0be564c42d74d3b5780b869c88538e6fddd8505da7"
     },
     "source/gamelib/soundmix.c": {
-      "distributed_sha256": "91efd2bff2c2e7115227b51a63446f2adcc00c9662cb56d284ea5cca466be79c",
+      "distributed_sha256": "8d59091689cc1368a20680853e9d4a45772f1d94a3f43e7546ed3732663c481e",
       "modified": true,
       "summary": "Declare exact resident PCM content-member ranges for independently verified reconstruction; preserve allocation tails and mutable mixer state.",
       "topics": [
@@ -344,7 +344,7 @@
       "upstream_sha256": "4a3d304b118c4765ae2317706c359098996bb8a8a06d30e0d7f4dccdbdf1ba40"
     },
     "source/gamelib/sprite.c": {
-      "distributed_sha256": "dbb093934d3829d863130bab03624cb132f864d80f137b179e030fbf3ed4c032",
+      "distributed_sha256": "df1918edce25612a900cb1b5536594668134fc58052dfeba6637d18226c8821e",
       "modified": true,
       "summary": "Declare initialized encoded sprite-body ranges and source crops for exact reconstruction proof, retaining headers, palettes and mutable changes.",
       "topics": [
@@ -527,7 +527,7 @@
       "upstream_sha256": "ad00c3c6c3772d8acca9cf3a811366b66be47e9003225b0585e7805bc9768771"
     },
     "source/openborscript/collision_attack.c": {
-      "distributed_sha256": "30d1552c70b0f9a4467489071a69daff856aa73b0e1c5676e0134664604a728b",
+      "distributed_sha256": "799f77b4d044df9087b7948a8578353f5204f4efea80bf3146f0ea69f2e49024",
       "modified": true,
       "summary": "Translate native attack-type IDs at the script API boundary.",
       "topics": [
@@ -578,7 +578,7 @@
       "upstream_sha256": "ccf9ae3160addbffa14cd52fd1b1cd92ec746a7cca75e42c33e661bc14031833"
     },
     "source/openborscript/config.h": {
-      "distributed_sha256": "406d790cee5301bdb85af5ef7a5e64d3ab21e9bcb8042fcf6b1ac2a05de954e5",
+      "distributed_sha256": "3aed6fcddac02d23a1fe48345e5e69a7a1f5d6b3a17229e56d7e402925e8ec88",
       "modified": true,
       "summary": "Declare the modern logical profiles' unload_model script entry point.",
       "topics": [
@@ -860,7 +860,7 @@
       "upstream_sha256": "c11f3c10c95e428253195f44b0c16249ce8099adcd5425a35d37b31536cdc478"
     },
     "source/scriptlib/Interpreter.c": {
-      "distributed_sha256": "67c223f332d924b61dd87d9aa994848ba1889a07097cc30ebcf0c5ed756e7779",
+      "distributed_sha256": "677c2b1413c4764b2348d408d89349291f282ee1341d452206c45571204be048",
       "modified": true,
       "summary": "Push canonical constants, release parser-only instruction data, and pack compiled instructions, values, and call references into exact contiguous storage. Compact compiler-only instruction records after resolving value ownership, preserving branch and export anchors, all mutable values and exactly-once pool cleanup. Allocate parser state only while compiling and release it once runtime instructions are ready.",
       "topics": [
@@ -1098,7 +1098,7 @@
       "upstream_sha256": "505ee8e018326f36bb4070f69c6eb3caa6079b8fb796cd53a8d1bb168337e5ae"
     },
     "source/webmlib/nestegg/nestegg.c": {
-      "distributed_sha256": "875f19faa9180bf79127a44c48bb877482eeab5237da2c16460960763d6dceb4",
+      "distributed_sha256": "74e3be587e8f4438b9e8f7ebf46e66da58d7c800ba6d10f1efe1fe513adbcd20",
       "modified": true,
       "summary": "Bound compressed blocks before allocation in the explicitly enabled reproducible-media diagnostic; preserve normal parser limits otherwise.",
       "topics": [
@@ -1126,7 +1126,7 @@
       "upstream_sha256": "3fd1c478b5c9bce2a44c4a1cee1001ed95069568cfcd4b23b02f6ad0e3205835"
     },
     "source/webmlib/vidplay.c": {
-      "distributed_sha256": "eacb18c1e36854050947879b21a9e1f2ee6c483b9d2193954441528ed85f703b",
+      "distributed_sha256": "e15e22d19750df03762c4463d5f77f866726b61c3ffb4e446d58a11915d6b12f",
       "modified": true,
       "summary": "Coordinate WebM worker shutdown and yield while waiting for video frames. Add an opt-in common media rendezvous with bounded active waits, packet queues and decoded-frame reserves; coordinate PCM and video without changing engine clocks or default scheduling.",
       "topics": [

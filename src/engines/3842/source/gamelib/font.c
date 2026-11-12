@@ -14,7 +14,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "obor_resources.h"
+#include "anybor_resources.h"
 
 /*
  * OpenBOR - http://www.LavaLit.com

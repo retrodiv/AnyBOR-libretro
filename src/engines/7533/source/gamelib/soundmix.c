@@ -51,7 +51,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <limits.h>
-#include "obor_resources.h"
+#include "anybor_resources.h"
 /*
 Caution: move vorbis headers here otherwise the structs will
  get poisoned by #pragma in other header files, i.e. list.h

@@ -9,7 +9,7 @@
       "upstream_sha256": "f3801b6b2e30b61eb1254d1fc98676dd28b21c124731833f78e853a47f09a9e0"
     },
     "Makefile.libretro": {
-      "distributed_sha256": "aa38bea7d4709d4496bc15a6a447c17d10efb5c868847ae8e0c4bda99d70e26e",
+      "distributed_sha256": "1c5586cd077b75acf361228b9a4ac5cbe826ca81a7da770293a85417211fdbe9",
       "modified": true,
       "origin": "Project libretro build overlay",
       "summary": "Supply the shared libretro engine build and symbol-isolation rules.",
@@ -17,7 +17,7 @@
       "upstream_sha256": null
     },
     "openbor.c": {
-      "distributed_sha256": "5a2e8c6cdc672766c8b17c5ea74a51b5398972e0bba2d784649029dfab43cadb",
+      "distributed_sha256": "b0205c3b993da9fd94a8a62bb4d054191d80b0b03e70700d9c7f26019b78042e",
       "modified": true,
       "summary": "Apply the port's engine corrections and select the PC video configuration on macOS. Keep damage-over-time updates within the native effect arrays while retaining valid-slot tick and expiration calculations. Derive output names from the content basename with explicit destination capacities, and reject overflowing output path joins. Preserve source-defined separate or shared system read/write domains and compiler mappers, package/screen query availability, canvas query storage, self and maximum-query availability, and waiting getter fallthrough. Preserve each profile's authored collision extents, frame conversion order, default Z tolerance and hit positions. Preserve source-defined argument counts, line capacities and script constants for each historical profile. Leave multiplayer slots without a selected model available to join even if game scripts preassign lives to them. Let a missing basename-only PAK self-check read the active frontend content after it has been validated and prepared. Allocate each model's animation pointer table through the highest animation index that model uses, and bound cache, copy and cleanup paths to that capacity. Ignore optional defense and offense entries outside the allocated model attack-type range with a log warning before accessing their tables. Yield after each newly completed model during explicit model-list or level preparation, and defer states until that preparation has cleaned up its intermediate parsers and handles. Resize repeated weapon lists and detach borrowed lists before replacing their entries. Keep selected palette-conversion reads bounded and reject missing maps or flags, while preserving unselected slots and native allocation failure callbacks. Preserve profile-defined callback and saved-script caller context restoration. Preserve native animation synchronization availability, frame limits, scheduling and reset order, with bounded legacy frame positions. Preserve source-defined entity or model animation callbacks, frame-event continuation and typed animation identities shared by runtime locals and generated script guards. Preserve historical AI target-query order, random attack selection, weighted pools, special fallback and action publication around animation callbacks. Preserve source-defined cost-move action timing and movement-step clearing, with the native jump-action policy. Preserve first-eligible or random attack probes and source-defined ordinary attack pool weights. Preserve early normal-attack target reuse, rising-target exclusions, wait arithmetic and random draws, idle callback order and source-specific probability epochs. Preserve each profile's floating random modulo and normalization scale with its native zero guard. Preserve source-defined wandering velocities, destinations, stall effects, pursuit/orbit formulas and random draw order, including free-wandering edge reflection or forced return and destination availability. Preserve native movement caller target and item queries, pickup height, turning callback order, mixed movement priorities, waypoint transitions, arrival thresholds and wait updates. Preserve source-defined chase normalization, retreat and attack range; avoidance range/choice arithmetic; follow direction and running state; and pickup destination availability. Restore native early path search, source-defined node limits and geometry response handling, with bounded coordinates and controlled allocation failure. Preserve blocked-movement return, depth reflection, search selection and owned waypoint transitions. Record initialized colourmap pointer capacity separately from the historical narrow counter, and retain it through growth, model copies and owned cleanup. Release the level text array once during cleanup, retaining text and spawn-script ownership. Select historical model or entity combat factors with bounded indices, and retain periodic-damage drop defaults. Preserve early partial defense-command updates and the allocated extra model slot. Preserve fixed-table slot selection, limits and load failures in early profiles, and dynamic append/count side effects in later profiles. Preserve fixed-table alternate palette limits and persistent remap flags, and reject flag or palette allocation failures without losing prior flags. Materialize historical zero flags without palette commands, and stop model loading when selected map data cannot be converted. Preserve independent historical palette slots and shared dynamic tables, retaining borrowed maps through model and entity copies and releasing them after their last owner. Preserve the fixed colourmap selector limit in early logical profiles and the loaded-map limit in later profiles without reading missing dynamic table entries. Check destination animation capacity when retaining an animation across model changes, preserving the native fallback and timing. Preserve historical model-change reset and direct-copy routes, attacking state, preserved entity factors and synchronization frame callbacks, with owned colourmap copies and bounded animation lookup. Preserve fixed or configured model jump, grab and throw defaults, initial special-move allocation extent and the historical load-stop response when that allocation fails. Preserve native distance and group attack probabilities, always-attack availability, offscreen suppression and model throttling. Preserve native attack priority, think intervals and cooldown responses to target actions. Preserve normal-attack wait checks, probability arguments, callback order and clock arithmetic. Preserve native AI attack command arguments, switch state and load diagnostics. Preserve native jump-attack wait order, probabilities, cooldown arithmetic, movement and spawn callback order. Preserve historical platform and obstacle counter updates, resets and collision gates, with defined integer arithmetic. Preserve native zero or copied entity combat factors on spawn, and treat a missing prior model as an empty platform source. Preserve native wandering thresholds and destination arithmetic, profile-defined negative grab distances, and movement grab types, query positions and action order. Preserve native absent-model lookup diagnostics and unchanged entity state. Access script-container pointer slots with byte copies, preserving record layout, pointer values and native copy/cleanup order. Pointer-slot allocation and release accept byte storage without imposing pointer alignment on a packed field. Preserve the native sprite-palette selection for zero-map joining icons before its profile boundary. Preserve fixed or inherited level-set player defaults and the native regular-input port extent, retaining bounded player traversal. Preserve native frame-based or timer-based hit-pause accumulation and animation reset behavior. Preserve each profile's font loading diagnostics, menu flags and parser-result handling. Preserve native saved-game slot counts, record signatures and load validation by profile. Preserve source-defined level-entry capacities and ownership of empty branch names. Preserve per-profile level-set defaults and reload persistence, parser text limits and player-count menu controls. Preserve fixed legacy set slots, selector buffers, unlock comparisons and saved-menu traversal; validate player-count queries and game entry references. Preserve score persistence, restored character-list updates and level progression for each profile. Preserve combined or separate HUD updates, join/draw order, timer notices and go-arrow sound timing by profile. Preserve native animation refusal diagnostics and idle target-query context, with a stable fallback when that context is absent. Preserve frame spawn/removal order and removal drop defaults, attack follow masks, counterattack deadlines, hit-sound defaults and item callback order. Retain native attack sound initialization and literal-path versus silent hitfx handling. Reserve bounded blend-table storage for each profile's native six- or seven-mode domain. Release each sprite owner once and complete cleanup independently of alias counts. Preserve native sprite-map capacity policies, check allocation extents and retain existing storage and capacity when growth is unavailable. Validate sprite-node allocations and release partial resources without changing existing owners. Check cached sprite availability before reading metadata and ignore cache requests for absent nodes. Preserve each profile's drawing colourmap selection and palette fallback. Preserve native level-release timing for script stream buffers. Preserve model selection thresholds, secret metadata reads and selector diagnostics for each profile. Preserve native action completion, animation-call state visibility and held dodge movement by profile. Preserve rise-attack animation call counts and reset arguments, block-pain ordering and grab action/counter visibility by profile. Preserve attack, jump, warp, retreat, throw and projectile call ordering, partner visibility and post-fall knockdown resets by profile. Preserve supplied-target and block-specific AI lookup policy, random consumption and block animation callback state by profile. Preserve stuck-under-platform input routing, key consumption and callback state by profile. Preserve jump callback state, continuation writes and dust retirement payload by profile. Preserve attack-chain selection, live style reads, animation callback order and timeout renewal by profile. Preserve special-move callback state and partner-release order with bounded continuation. Preserve attack-exit retreat, waits, jump dive and landing callback state by profile. Preserve pickup scheduling, equipment and animation callback state, ride position and continuation writes by profile. Preserve independent dive velocities, loader initialization and gravity policy, with source-owned jump-frame entity resets. Preserve combo metadata, list priority, default insertion order and defined inherited rows by profile; initialize new storage and stop before fixed-table limits. Preserve legacy combo progress, key consumption and callback state; validate row and frame accesses after their original short-circuit conditions. Preserve airborne and grab input priority, consumption and callback continuation for each profile. Preserve player gate order, combo result handling and source-owned last-input recording. Preserve per-profile player callback assignment, charged-attack continuation, dodge velocity and platform animation reset. Preserve fixed weapon-list repetition, item-height and candidate-filter boundaries and the historical entity lookup extent; keep lookup reads within allocated storage. Preserve the per-profile input-history position after directional actions. Preserve per-profile back-attack deadlines, held-key gates, history timing and direction. Preserve legacy directional deadlines, key consumption, custom-combo calls and movement recording before history-based matching. Preserve each profile's special, attack, jump and block priority, pending-key consumption and movement history on early returns. Preserve current or entry player-slot selection across delegated services and end-level scoring. Preserve special and rise-attack key consumption, pain/recovery input continuation and autoland input updates for each profile. Preserve input-history recording, expiry and spawn resets from their source-defined boundaries, with timestamps where supported. Preserve source-era direction aliases in combo and player comparisons.",
       "topics": [
@@ -60,7 +60,7 @@
       "upstream_sha256": "35efd515ce696e9b0e93157bda9ecb3b3759a613f714bad0c5a6d371e6ea6480"
     },
     "openbor.h": {
-      "distributed_sha256": "8044b146fe61eb344b3d601239ad249090324010221039c55a512bf25e4626c7",
+      "distributed_sha256": "233c0d7a6cda291601b702932a9c8ca34461d9ccd9a6a32f6ee0445122be88ee",
       "modified": true,
       "summary": "Allocate collision pointer slots through the highest author-facing index used by each collection. Preserve source-defined argument counts, line capacities and script constants for each historical profile. Track each model's allocated animation-table capacity and reject lookups outside it. Track initialized colourmap allocation capacity independently of the native map counter. Reserve bounded blend-table storage for each profile's native six- or seven-mode domain. Retain source-defined frame and timer pause state within shared entity storage. Track owned script stream buffer extents. Preserve per-profile timer compensation during entity freezing.",
       "topics": [
@@ -73,7 +73,7 @@
       "upstream_sha256": "5a2ec870ce3dc0b90af4eaa04f6f5e62a6caf7a6a78ce6d03d743a65a2fb10b9"
     },
     "openborscript.c": {
-      "distributed_sha256": "a6e134ae2cb6eb5bc06340156372973cb5ff6d23cdbc5927de7fc49ec9710951",
+      "distributed_sha256": "d21da40145fb89446239b2d5806827b919a7af42fa6a53c3621f5d2390ef3717",
       "modified": true,
       "summary": "Keep the dormant constant-lowering diagnostic compatible with the single-value instruction layout. Derive output names from the content basename with explicit destination capacities, and reject overflowing output path joins. Compact compiler-only instruction records after resolving value ownership, preserving branch and export anchors, all mutable values and exactly-once pool cleanup. Preserve source-defined separate or shared system read/write domains and compiler mappers, package/screen query availability, canvas query storage, self and maximum-query availability, and waiting getter fallthrough. Validate coordinate query arguments and animation/frame indices; retain each profile's native coordinate extent and defined empty results outside it. Preserve source-defined argument counts, line capacities and script constants for each historical profile. Retain shared interpreters through the last script reference while preserving independent variables, replacement and native callbacks. Track diagnostic comments independently so interpreter replacement can retain them. Resolve text-property names within the actual table bounds while preserving native numeric selectors. Preserve separate historical player getter/setter numeric domains and compiler mappers, the table before colourmap, and early empty-player success while retaining native setter returns. Preserve profile-defined script selection and clear-entry variable ownership while retaining shared storage guards. Preserve fixed-slot, dynamic-table and helper colourtable getter results with bounded allocation extents and unsigned selector arithmetic. Keep separate or shared logical entity read/write names and numeric domains in compiler and runtime mapping, including historical escape-counter aliases and optional properties. Translate main and AI-flag callback selectors once and preserve getter/setter case availability. Preserve the historical colourmap target, pointer and map-index mutations, including empty fixed-table slots, with bounded accesses. Preserve historical shared-model and entity-private defense/offense reader and setter targets, bounding reader indices and missing buffers. Preserve each profile's unknown-string and empty action acceptance. Preserve early entity setter result values and conversion-dependent partial updates, with bounded scalar-name, input-array and effect-array accesses. Own replacement sprite filenames and reject missing sprite arguments, invalid frames, absent current animations and uninitialized optional weapon values. Preserve native sprite and icon getter centers and model/entity statistics values while bounding read arguments, animation frames, sprite slots and filename results. Preserve historical statistics setter targets and returns, including fractional index conversion, while rejecting missing or out-of-range arguments. Validate coordinate query arguments and animation/frame indices; retain each profile's native coordinate extent and defined empty results outside it. Use the declared staydown name-table length for lookup. Preserve each profile's fresh-script validity marker and native empty variable state. Preserve source-defined function registration and reverse names, legacy zoom parameters and pixel queries; validate arguments and owned pixel extents. Preserve native graphics property names and numeric selectors, palette availability and compiler mapping by profile. Preserve each profile's declared texture kind. Preserve alpha-only primitive calls before draw-method inheritance and the historical blend-selector domain. Preserve each profile's draw-method property names and numeric selectors. Preserve native script stream capacity, slot reuse and buffer lifetime. Validate callback arguments, owned extents and allocation results. Preserve each profile's entity type-mask marker, constant availability and property-specific conversion diagnostics. Preserve the script-visible forward and backward constant values for each profile. Transfer loaded stream buffers through aligned local outputs while preserving native record layout and results. Terminate fixed-cache stream line and argument results and preserve appended bytes with checked conversion and output allocation. Preserve native conversion, type/count-error returns, result clearing and diagnostics before admitting stream storage.",
       "topics": [
@@ -106,7 +106,7 @@
       "upstream_sha256": "3b508bbd7e5397d030ce1de864ae02af41ebd3d98326b546715980611a3588fb"
     },
     "openborscript.h": {
-      "distributed_sha256": "6e840fe432b7356ab9e7f6572aeb9daba52ef9271e6dbdf38c5296cb58d1ffd8",
+      "distributed_sha256": "48f4dba2541881616cfa60f00de6d394af348c5d470eb105b81c61a0b95864d6",
       "modified": true,
       "summary": "Declare owned script-variable name storage. Preserve separate historical player getter/setter numeric domains and compiler mappers, the table before colourmap, and early empty-player success while retaining native setter returns. Declare the profile-aware stream cleanup hook for level release.",
       "topics": [
@@ -125,7 +125,7 @@
       "upstream_sha256": "4315e99313d3648f0df5afd7c3752bf35ae193437901228b9810aeb2262cfb86"
     },
     "source/gamelib/anigif.c": {
-      "distributed_sha256": "c4718e9b34aa21dc21ea2cb85c42c433ea9307eba9e3d64e8e852f93f80510e9",
+      "distributed_sha256": "3b5d83eca047a8b2b5251cfbc5946f4d31a15ff36a276bd3261266ca48c458e8",
       "modified": true,
       "summary": "Check GIF decoder storage and palette bounds while preserving the decoded pixels of valid images.",
       "topics": [
@@ -145,7 +145,7 @@
       "upstream_sha256": "899c3e1243e2ad77d1de157b43b2e5ac597aa348e265ef5e0fa396af43bbcdd6"
     },
     "source/gamelib/bitmap.c": {
-      "distributed_sha256": "bf6641d48a0f052e2b28380ce3fd5cd488d781899d406acce00e5e73fed91790",
+      "distributed_sha256": "6c012db530973021126d6fe0761815ab8cd8f39fdfe948939eb6ef9c6eee4398",
       "modified": true,
       "summary": "Declare physical bitmap crops so independent sprite reconstruction composes each source rectangle without discarding unproven or modified bytes.",
       "topics": [
@@ -161,7 +161,7 @@
       "upstream_sha256": "aae04687b78c52256996e06948b143337cd80a50384184d82d9aba1bd5fd9bbd"
     },
     "source/gamelib/borendian.h": {
-      "distributed_sha256": "03e59a1d1e1bb3cedaac04d94a0f9f7769b94b58995c2258c56043d677906739",
+      "distributed_sha256": "213f9c3efc2e47a34c64045d9d26b22b35d9911f264b909ec52c58381d3b03a0",
       "modified": true,
       "summary": "Use the port's fixed-width endian conversions.",
       "topics": [
@@ -188,7 +188,7 @@
       "upstream_sha256": "faca1c26375a5a5c0b6769b843aaf64eecf8c498792b06c4e7d052076fe8fb1d"
     },
     "source/gamelib/draw.c": {
-      "distributed_sha256": "8dee147fad77759a3c14b904896e16a2445c52d8fceb73c9a602d9ffb5e5de5c",
+      "distributed_sha256": "21c0e73be43c8f279cb78506ea7e3c5b6ff2e7b59124247a6df7e1fd558b2e26",
       "modified": true,
       "summary": "Route circle drawing through the port's integer rasterizer. Resolve palette blend tables within the selected profile's native domain, retaining missing-table fallback. Ignore point coordinates outside screen bounds while preserving valid pixels.",
       "topics": [
@@ -242,7 +242,7 @@
       "upstream_sha256": "53b0638535bc6ed2efeea34bd8fea1532bef57085a95be374f6a87e5831de021"
     },
     "source/gamelib/font.c": {
-      "distributed_sha256": "57eedc607a2f00f9830e14f7ae3a3eca093568f6483fd2e0d6a7403b6381709e",
+      "distributed_sha256": "d55d87aef1030dffd9613a5fdfca11f19969a7d3d1ee377b173664d95847630d",
       "modified": true,
       "summary": "Validate indexed palette ownership and capacity, and retain the first glyph's shared palette when it is empty; preserve native per-glyph raster output. Preserve source-owned mono and multibyte selection, cached dimensions, glyph dispatch and newline positioning by profile.",
       "topics": [
@@ -260,7 +260,7 @@
       "upstream_sha256": "95a23ea831bf158538c56b8f3f630c933191a29744f12aa493a98fb437fe7a94"
     },
     "source/gamelib/loadimg.c": {
-      "distributed_sha256": "c65ce7cd8381686acc21f1e4cce89748132b32b6408cc94288db0ce5a0835e1e",
+      "distributed_sha256": "728efb8e5cb7ea5c2ed644dc236ba3853a4c1504fa316e27b8ebc0bffe638ff5",
       "modified": true,
       "summary": "Validate legacy PCX sprite headers, read uncompressed indexed PCX scanlines, and represent RIFF/WAVE paths used as animation frames with an empty frame. Keep bitmap row reads within the requested output width. Select the native image dimensions for each profile.",
       "topics": [
@@ -291,7 +291,7 @@
       "upstream_sha256": "a7ff19177bb6c3d61095d5d8aafb335b311654bbe89a37958bce8eaae8d981a0"
     },
     "source/gamelib/packfile.c": {
-      "distributed_sha256": "30682869750ac0b37b1be3f7afef37f6635a7b6a2679c8db9a511599c4a9d13f",
+      "distributed_sha256": "9f6d26af48710fd36778dd5e36ec6676b29b47637d7108219fe0b35d477048c8",
       "modified": true,
       "summary": "Repair PAK handles after state loads, close resources on reset, prune unused frontend APIs, and compile the case-insensitive loose-file search on macOS. Skip a loose lookup only when the common bounded, watched directory index proves its first component absent; preserve script changes and case-insensitive overrides.",
       "topics": [
@@ -338,7 +338,7 @@
       "upstream_sha256": "43f47de33cf9654fc68987c6420f2cf2c48c3ab7fd3af7c37f40c0336d562a90"
     },
     "source/gamelib/screen.c": {
-      "distributed_sha256": "a32d7e2e1ae937f25b93dfd5e476baabc6f803aec8309f26aa8d6145043686cc",
+      "distributed_sha256": "b368eb512012e20043bd035d7b76e21e8bb8ad0f0f6265773fc4a484e09e5780",
       "modified": true,
       "summary": "Match each profile's native screen centering and fixed-point zoom sampling; validate owned pixel storage and define unassigned crop pixels. Bound screen blend selectors and use transparent copy when an indexed table is unavailable.",
       "topics": [
@@ -376,7 +376,7 @@
       "upstream_sha256": "df9f61e8380be5a7dbb1fa00781ea5470557653ae80f8aa29feeae532173ef09"
     },
     "source/gamelib/soundmix.c": {
-      "distributed_sha256": "00580fe084b72a81eeeb3fa650dd314171431e646a8db6459df683f0d47468f3",
+      "distributed_sha256": "122cb442fad69651e2c19a659b8fb2108c565fc26da1ed6cc9d593a9b317ce6d",
       "modified": true,
       "summary": "Declare exact resident PCM content-member ranges for independently verified reconstruction; preserve allocation tails and mutable mixer state.",
       "topics": [
@@ -393,7 +393,7 @@
       "upstream_sha256": "088583c2888f252a58eee6b93737df23c2898dcc52f5e1657e3ffbb3f0397b1a"
     },
     "source/gamelib/sprite.c": {
-      "distributed_sha256": "25f2076c6fca61fcb88095c6f9736831e7c7043e5c717caec1fdd50e1808c320",
+      "distributed_sha256": "0df2f6c3f449af073a3757026447812f356e68793d066b3726877a0e0bbe612d",
       "modified": true,
       "summary": "Declare initialized encoded sprite-body ranges and source crops for exact reconstruction proof, retaining headers, palettes and mutable changes. Resolve palette blend tables within the selected profile's native domain, retaining missing-table fallback. Preserve each profile's centered-sprite drawing route and native remap/blend ordering.",
       "topics": [
@@ -629,7 +629,7 @@
       "upstream_sha256": "e8654f70a184ec07f0936619661c7217a06e1235c561b37ca5a2060fab8e6093"
     },
     "source/scriptlib/Interpreter.c": {
-      "distributed_sha256": "687a697cda63ad26a3eaa5f87534e5fb58d2ddf5bb063992b08e3a66035e2b2b",
+      "distributed_sha256": "bc17d63d191fe086815cfbc839b901c876a29005feb7c43a9b21c51165503e83",
       "modified": true,
       "summary": "Compact instruction/value storage while retaining constant refresh, runtime argument checks and the native clear entry; copy packed reference fields safely. Preserve each profile's reset/call gate and immediate flag bookkeeping. Compact compiler-only instruction records after resolving value ownership, preserving branch and export anchors, all mutable values and exactly-once pool cleanup. Allocate parser state only while compiling and release it once runtime instructions are ready.",
       "topics": [

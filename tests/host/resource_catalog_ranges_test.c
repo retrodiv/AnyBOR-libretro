@@ -7,7 +7,7 @@
 #define EXPECT_RANGE_MERGE 1
 #endif
 #ifndef OBOR_CATALOG_IMPLEMENTATION
-#define OBOR_CATALOG_IMPLEMENTATION "obor_resource_catalog.c"
+#define OBOR_CATALOG_IMPLEMENTATION "anybor_resource_catalog.c"
 #endif
 static size_t sorted_elements, sort_calls, recipe_calls, refuse_recipe, observed_refusal;
 void range_test_sort(void *,size_t,size_t,int (*)(const void *,const void *));

@@ -9,7 +9,7 @@
       "upstream_sha256": "f3801b6b2e30b61eb1254d1fc98676dd28b21c124731833f78e853a47f09a9e0"
     },
     "Makefile.libretro": {
-      "distributed_sha256": "aa38bea7d4709d4496bc15a6a447c17d10efb5c868847ae8e0c4bda99d70e26e",
+      "distributed_sha256": "1c5586cd077b75acf361228b9a4ac5cbe826ca81a7da770293a85417211fdbe9",
       "modified": true,
       "origin": "Project libretro build overlay",
       "summary": "Supply the shared libretro engine build and symbol-isolation rules.",
@@ -17,7 +17,7 @@
       "upstream_sha256": null
     },
     "openbor.c": {
-      "distributed_sha256": "f7662dacc61828e206ab738ddaf01bcd12a3af388256002464c1a12ea263d615",
+      "distributed_sha256": "6eb7f60479e7b9237b7e90b1bea2f605e2bb1dc5801b6d029e64a26ad925b7bb",
       "modified": true,
       "summary": "Apply the port's engine corrections and select the PC video configuration on macOS. Keep damage-over-time updates within the native effect arrays while retaining valid-slot tick and expiration calculations. Derive output names from the content basename with explicit destination capacities, and reject overflowing output path joins. Leave multiplayer slots without a selected model available to join even if game scripts preassign lives to them. Let a missing basename-only PAK self-check read the active frontend content after it has been validated and prepared. Allocate each model's animation pointer table through the highest animation index that model uses, and bound cache, copy and cleanup paths to that capacity. Ignore optional defense and offense entries outside the configured attack-type range with a log warning before accessing their tables. Yield after each newly completed model during explicit model-list or level preparation, and defer states until that preparation has cleaned up its intermediate parsers and handles. Validate playable-model lookup before using the result and retain the missing-model diagnostic with controlled engine stop. Fall back when legacy content names missing model, level, scene or background overrides. Keep selected palette-conversion reads bounded and reject missing maps or flags, while preserving unselected slots and native allocation failure callbacks. Access script-container pointer slots with byte copies, preserving record layout, pointer values and native copy/cleanup order. Release each sprite owner once and complete cleanup independently of alias counts. Preserve native sprite-map capacity policies, check allocation extents and retain existing storage and capacity when growth is unavailable. Validate sprite-node allocations and release partial resources without changing existing owners. Retire only the released level's owned stream bytes and extent metadata. Preserve source-defined model-allocation failure feedback. Preserve script-save values with explicit 32-bit fields, owned names, live references and profile-defined indexed capacity. Preserve native session-save ordering, movie-menu availability, layer loading, water clocks, shadow predicates and camera progress for each profile.",
       "topics": [
@@ -69,7 +69,7 @@
       "upstream_sha256": "47e3db32c70d173e16edf0dca15207a185d113cc09cca46685e6589c318bad23"
     },
     "openborscript.c": {
-      "distributed_sha256": "a00bf58aff6092076d2245bc69f97f4bd8375a5af51e7ba9c45273f6355adac5",
+      "distributed_sha256": "f0fe5961f1b16edd9c53b32f4abb043becefc7f5b09157f15b12c963b4dced04",
       "modified": true,
       "summary": "Keep the dormant constant-lowering diagnostic compatible with the single-value instruction layout, map string constants from direct contiguous instruction storage, and own complete dynamically allocated script variable names through slot reuse and shutdown. Derive output names from the content basename with explicit destination capacities, and reject overflowing output path joins. Compact compiler-only instruction records after resolving value ownership, preserving branch and export anchors, all mutable values and exactly-once pool cleanup. Retain shared interpreters through the last script reference while preserving independent variables, replacement and native callbacks. Resolve text-property names within the actual table bounds while preserving native numeric selectors. Reject missing colourtable indices and keep selector arithmetic and table reads defined. Use the declared staydown name-table length for lookup. Transfer loaded stream buffers through aligned local outputs while preserving native record layout and results. Close owned input files after stream loading and on buffer allocation failure. Terminate fixed-cache stream line and argument results and preserve appended bytes with checked conversion and output allocation. Track initialized owned stream bytes independently of native size, bound cursor reads and preserve buffer-base append/save behavior and native slot policy.",
       "topics": [
@@ -100,7 +100,7 @@
       "upstream_sha256": "c6ab6bbf79d7060c52350702f752c96d6227c75f4aea769e4b5149ee0f59510e"
     },
     "openborscript.h": {
-      "distributed_sha256": "d227bfd93cefe5241210a6fca9256384e7dd4570790506fbfd288d4db65b337a",
+      "distributed_sha256": "4142ab1ab3e23907bd7fd5edfb3883f996221bb3d9af6d672f7173aa02aaccd6",
       "modified": true,
       "summary": "Represent script variable names as owned pointers instead of fixed-size inline arrays.",
       "topics": [
@@ -119,7 +119,7 @@
       "upstream_sha256": "4315e99313d3648f0df5afd7c3752bf35ae193437901228b9810aeb2262cfb86"
     },
     "source/gamelib/anigif.c": {
-      "distributed_sha256": "cf24a423d1762259414d1575677572477584088b1bc6a896f718ebe40e0a69bf",
+      "distributed_sha256": "063bdcdd7a15fee8fed4ba2331cfb2004dcfa34940e1f6081fe04dd3299fa7ea",
       "modified": true,
       "summary": "Preserve each profile's GIF decoding, palette, frame disposal and playback results with bounded input and owned decoder storage.",
       "topics": [
@@ -156,7 +156,7 @@
       "upstream_sha256": "aae04687b78c52256996e06948b143337cd80a50384184d82d9aba1bd5fd9bbd"
     },
     "source/gamelib/borendian.h": {
-      "distributed_sha256": "5c21843109a76c3962e5829315b7264c8e689fd692d203e77955b3be3b1f8103",
+      "distributed_sha256": "30395e30d4fc54adfb0a64613e1a7dd9e01dfcd2d1b4c130ebd399825d002437",
       "modified": true,
       "summary": "Use the port's fixed-width endian conversions.",
       "topics": [
@@ -187,7 +187,7 @@
       "upstream_sha256": "fc2a13cf695baaf3640d01ae3e6acf36bbc65c4c4827ace86b4900c56f0abf23"
     },
     "source/gamelib/draw.c": {
-      "distributed_sha256": "c3006ed5439ede44f1e634407078cfcd7e0f58cb8b39a2fef82f025bda9572ff",
+      "distributed_sha256": "fe6f6ced4486f2b0e53c3e3a50010dd42abce3d235dcb344c67a1bf7e93c0b7a",
       "modified": true,
       "summary": "Route circle drawing through the port's integer rasterizer. Ignore point coordinates outside screen bounds while preserving valid pixels.",
       "topics": [
@@ -346,7 +346,7 @@
       "upstream_sha256": null
     },
     "source/gamelib/packfile.c": {
-      "distributed_sha256": "4e4d487f32a27ca494331c2879ce8f8d1539906a8850f03ceb496be778ac508a",
+      "distributed_sha256": "9144682a9bde8dbb6bba2cfa6198df275443f381b1a5dd6be76e28e8eb077d6e",
       "modified": true,
       "summary": "Repair PAK handles after state loads, close resources on reset, prune unused frontend APIs, and compile the case-insensitive loose-file search on macOS. Skip a loose lookup only when the common bounded, watched directory index proves its first component absent; preserve script changes and case-insensitive overrides.",
       "topics": [
@@ -402,7 +402,7 @@
       "upstream_sha256": "c3371b58605f5b5f2ebe58b2afaeafb265e92cf8d4fe5d7a371cd3fa0a7e786d"
     },
     "source/gamelib/screen.c": {
-      "distributed_sha256": "8661b40381c0a468f415109dc0459147d24525f8e338c3cedafa2990c391ff0d",
+      "distributed_sha256": "a2bf3a8bb15caed063e7402ba54df234ebd8a579186491349f5b63f92949549e",
       "modified": true,
       "summary": "Preserve native water phase, byte widths, clipping and transparent traversal by profile; bound screen extents before drawing. Bound screen blend selectors and use transparent copy when an indexed table is unavailable.",
       "topics": [
@@ -446,7 +446,7 @@
       "upstream_sha256": "2e8af3b1a8968d29038a42d42b44a6e537d57a0653eac9967e1e3122d6b76ea1"
     },
     "source/gamelib/soundmix.c": {
-      "distributed_sha256": "e83d9962830d8526b6b8c0afb6b5ecefdcb9aadc74c861fe90b98d0f9ee0c7ca",
+      "distributed_sha256": "aa2040f7725d6e24dd317c2df024e1240ce521850271a83988f21355ae46ec05",
       "modified": true,
       "summary": "Declare exact resident PCM content-member ranges for independently verified reconstruction; preserve allocation tails and mutable mixer state. Map stricmp on macOS. Enforce the profile's sample-slot capacity in allocation, caching, release and playback while retaining fixed backing storage. Preserve the profile's sample-load failure diagnostic.",
       "topics": [
@@ -521,7 +521,7 @@
       "upstream_sha256": "a6bfe7bec335170b550fa356013c38bee116015b35ab09472bd4aa815789c7e5"
     },
     "source/gamelib/texture.c": {
-      "distributed_sha256": "ac26937d816bde1843d55adedabb33c93b3b64d30e873161eb247cb97c250654",
+      "distributed_sha256": "c6d6255a3c70d75016b4db2059d466b7b45e26d37c46562b37bdfb9b3cf2f9b0",
       "modified": true,
       "summary": "Validate texture dimensions and backing storage before drawing, preserving valid clipping and pixels.",
       "topics": [
@@ -537,7 +537,7 @@
       "upstream_sha256": "f10c8b486591d6fb360401a3d50bf7e5a8cae86548abf5a7e2e1cdc0faa8cafe"
     },
     "source/gamelib/texture16.c": {
-      "distributed_sha256": "8f75c4fb35bb7e95725068d1d7c31761d51f38b7ef5303b6ffacefe9f328f1c6",
+      "distributed_sha256": "3451f716c1c740981c64b6634409672b0f4e963a806426c439ac422a1eaa44ea",
       "modified": true,
       "summary": "Validate 16-bit texture dimensions and palette transfers before drawing.",
       "topics": [
@@ -547,7 +547,7 @@
       "upstream_sha256": "c05c9229c1817693c73b8f2e4d23194423c472e0c5b157cca83e5c1f2e1ef885"
     },
     "source/gamelib/texture32.c": {
-      "distributed_sha256": "ef1f694955bf09e4b53dd755ed9b4e4e0a99eea7131bf512896d21b3e2db175e",
+      "distributed_sha256": "f8e31f673d637ea548140b00bd06c5576de5969808d9873df1f8a484b213ad81",
       "modified": true,
       "summary": "Validate 32-bit texture dimensions and palette transfers before drawing.",
       "topics": [
@@ -770,7 +770,7 @@
       "upstream_sha256": "e8654f70a184ec07f0936619661c7217a06e1235c561b37ca5a2060fab8e6093"
     },
     "source/scriptlib/Interpreter.c": {
-      "distributed_sha256": "e66c5b82a8f657fc5bcb2a932d4bde0940609aa748afb591ffd7ad3be1ac1427",
+      "distributed_sha256": "b765483e0d1123e862d3857dbd16ad23bc2c489e76f8afc85cd70c61ca29c5aa",
       "modified": true,
       "summary": "Push canonical constants, release parser-only instruction data, and pack compiled instructions, values, and call references into exact contiguous storage. Compact compiler-only instruction records after resolving value ownership, preserving branch and export anchors, all mutable values and exactly-once pool cleanup. Allocate parser state only while compiling and release it once runtime instructions are ready.",
       "topics": [

@@ -17,7 +17,7 @@
  * at the source repository root. Original notices follow below.
  */
 
-#include "obor_resources.h"
+#include "anybor_resources.h"
 extern uint32_t obor_profile_build;
 
 /*

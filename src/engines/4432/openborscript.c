@@ -5155,7 +5155,7 @@ HRESULT openbor_get_animation_property(ScriptVariant **varlist, ScriptVariant **
 // item handle directly. You should instead use
 // get<item>instance(), and pass it the result from
 // this function.
-#include "obor_attack_query.h"
+#include "anybor_attack_query.h"
 
 HRESULT openbor_get_attack_collection(ScriptVariant **varlist, ScriptVariant **pretvar, int paramCount)
 {
@@ -6436,7 +6436,7 @@ HRESULT openbor_set_body_collision_property(ScriptVariant **varlist, ScriptVaria
 //getentityproperty(pentity, propname);
 extern int sprite_map_max_items;
 extern unsigned int sprites_loaded;
-#include "obor_resources.h"
+#include "anybor_resources.h"
 
 static int obor_script_sprite_name_readable(const char *name, size_t limit)
 {

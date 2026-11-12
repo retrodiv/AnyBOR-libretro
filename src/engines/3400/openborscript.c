@@ -3570,7 +3570,7 @@ void mapstrings_getentityproperty(ScriptVariant** varlist, int paramCount)
 
 //getentityproperty(pentity, propname);
 extern unsigned int sprites_loaded;
-#include "obor_resources.h"
+#include "anybor_resources.h"
 
 static int obor_script_sprite_name_readable(const char *name, size_t limit)
 {
@@ -12526,7 +12526,7 @@ BIND:
 	return S_OK;
 }
 
-#include "obor_resources.h"
+#include "anybor_resources.h"
 
 /* The heap list identifies live arrays; native allocation size bounds all accesses. */
 static size_t obor_array_capacity(const ScriptVariant *handle)

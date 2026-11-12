@@ -20,5 +20,5 @@
 /* Fixed-width conversion supplied by the libretro platform layer. */
 #ifndef BOR_ENDIAN_H
 #define BOR_ENDIAN_H
-#include "obor_endian.h"
+#include "anybor_endian.h"
 #endif

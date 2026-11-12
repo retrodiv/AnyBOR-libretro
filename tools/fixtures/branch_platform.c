@@ -4,7 +4,7 @@
 #include <math.h>
 #include <string.h>
 #include "source/openborscript/scriptcommon.h"
-#include "obor_endian.h"
+#include "anybor_endian.h"
 #undef assert
 #define assert(x) ((x)?(void)0:__builtin_trap())
 uint32_t obor_profile_build;

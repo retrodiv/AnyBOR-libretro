@@ -36,7 +36,7 @@ class ScriptFileRecordsTests(unittest.TestCase):
         fixture = self.fixture()
         engine, unused = self.paths()
         source = (engine / 'openbor.c').read_text()
-        self.assertIn('#include "obor_script_file32.inc"', source)
+        self.assertIn('#include "anybor_script_file32.inc"', source)
         for name, call in [('saveScriptFile', 'obor_script_file32_write'),
                            ('loadScriptFile', 'obor_script_file32_read')]:
             body = function(source, name)
@@ -189,11 +189,11 @@ class ScriptFileRecordsTests(unittest.TestCase):
         import resource
         program = self.program()
         unused, port = self.paths()
-        helper = (port / 'obor_script_file32.inc').read_text()
+        helper = (port / 'anybor_script_file32.inc').read_text()
         expression = r'\(obor_profile_build >= [0-9]+\)'
         self.assertEqual(len(re.findall(expression, helper)), 1)
         mutated = re.sub(expression, '1', helper)
-        program = program.replace('#include "obor_script_file32.inc"', mutated)
+        program = program.replace('#include "anybor_script_file32.inc"', mutated)
         before = resource.getrlimit(resource.RLIMIT_CORE)
         try:
             resource.setrlimit(resource.RLIMIT_CORE, (0, before[1]))

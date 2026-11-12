@@ -106,7 +106,7 @@ endif
 ENGINE_SRCS = $(filter-out $(EXCLUDE),$(MAIN_SRCS) $(LIB_SRCS) \
        $(YUV_SRCS) $(WEBM_SRCS))
 ENGINE_OBJS = $(addprefix $(OBJDIR)/,$(ENGINE_SRCS:.c=.o))
-PORT_BASE_SRCS = $(notdir $(filter-out %/obor_libco.c,$(PORT_SRCS)))
+PORT_BASE_SRCS = $(notdir $(filter-out %/anybor_libco.c,$(PORT_SRCS)))
 PORT_BASE_OBJS = $(addprefix $(OBJDIR)/port/,$(PORT_BASE_SRCS:.c=.o))
 PORT_LIBCO_OBJ = $(OBJDIR)/port/libco.o
 
@@ -198,7 +198,7 @@ partial: $(OBJS)
 ifeq ($(PLATFORM),darwin)
 	# Mach-O: ld -r merges the engine's objects and its static libraries
 	# (the three -wrap groups below are replaced by the allocation
-	# interposers in obor_alloc.c/obor_files.c, which the rewriter keeps
+	# interposers in anybor_alloc.c/anybor_files.c, which the rewriter keeps
 	# inside the engine's namespace).  MACHO_COMMONS_FLAG is "-d" on
 	# linkers that need it to turn the tentative definitions that -fcommon
 	# produces into real definitions, and empty on linkers that define
@@ -226,7 +226,7 @@ $(OBJDIR)/port/%.o: $(PORT_ROOT)/%.c
 	@mkdir -p $(dir $@)
 	$(CC) $(CFLAGS) -c $< -o $@
 
-$(PORT_LIBCO_OBJ): $(PORT_ROOT)/obor_libco.c $(PORT_ROOT)/libco/libco.c $(PORT_ROOT)/obor_libco_riscv64.inc
+$(PORT_LIBCO_OBJ): $(PORT_ROOT)/anybor_libco.c $(PORT_ROOT)/libco/libco.c $(PORT_ROOT)/anybor_libco_riscv64.inc
 	@mkdir -p $(dir $@)
 	$(CC) $(CFLAGS) -c $< -o $@
 

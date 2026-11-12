@@ -1,10 +1,10 @@
 /* SPDX-License-Identifier: BSD-3-Clause
  * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
 #define _GNU_SOURCE
-#include "obor_fault.h"
-#include "obor_write_watch.h"
-#include "obor_snapshot_cache.h"
-#include "obor_block_state.h"
+#include "anybor_fault.h"
+#include "anybor_write_watch.h"
+#include "anybor_snapshot_cache.h"
+#include "anybor_block_state.h"
 #include <assert.h>
 #include <errno.h>
 #include <signal.h>

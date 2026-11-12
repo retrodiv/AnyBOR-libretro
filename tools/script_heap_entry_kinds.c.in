@@ -88,7 +88,7 @@ void anigif_close(anigif_info *value)
 #define free fixture_free
 @NATIVE_VARLIST@
 #if @OWNED_VARLIST@
-#include "obor_varlist_ownership.inc"
+#include "anybor_varlist_ownership.inc"
 #endif
 @BEFORE_HELPER@
 @HELPER@

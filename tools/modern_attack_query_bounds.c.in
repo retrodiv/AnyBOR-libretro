@@ -47,7 +47,7 @@ static void allocate_table(s_anim *a,int framecount) {
  @ALLOCATION@
 }
 #undef malloc
-#include "obor_attack_query.h"
+#include "anybor_attack_query.h"
 @COLLECTION@
 @INSTANCE@
 @BODY_INSTANCE@

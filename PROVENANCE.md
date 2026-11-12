@@ -73,14 +73,14 @@ source commits; the shared 3400 source tree retains its original license.
 Each included snapshot keeps its own license; later license grants do not
 replace the terms of earlier source.
 
-The circle rasterizer in `src/port/libretro/obor_circle.h` is a new integer
+The circle rasterizer in `src/port/libretro/anybor_circle.h` is a new integer
 geometry implementation for this port. It enumerates symmetric integer
 coordinates using the circle equation and clips them to the target surface.
 The engine wrappers preserve the original pixel-writing interface.
-`obor_adpcm.c` implements IMA ADPCM's predictor, quantizer adaptation and
+`anybor_adpcm.c` implements IMA ADPCM's predictor, quantizer adaptation and
 nibble packing for the OpenBOR audio API. Its algorithm is described by the
 [IMA format reference linked from RFC 3551](https://www.rfc-editor.org/rfc/rfc3551#section-4.5.1).
-`obor_endian.h` supplies fixed-width integer conversions for the engine APIs,
+`anybor_endian.h` supplies fixed-width integer conversions for the engine APIs,
 replacing the historical SDL-derived header and its assumption that an x86-64
 `long` is 64 bits (which is false on Windows).
 These original replacement implementations carry retrodiv's BSD-3-Clause notice.
@@ -164,7 +164,7 @@ and BSD terms; added original helpers carry separate BSD-3-Clause notices.
 
 ## ZIP cache identity
 
-`src/glue/obor_imohash.h` implements standard imohash defaults: complete input
+`src/glue/anybor_imohash.h` implements standard imohash defaults: complete input
 below 128 KiB, otherwise 16 KiB samples at the beginning, midpoint and end,
 MurmurHash3 x64_128 with seed zero, and unsigned LEB128 file-size encoding.
 Sampling and encoding follow Jim Kalafut's MIT implementation at commit

@@ -90,14 +90,14 @@
   "imohash.txt": {
     "url": "https://github.com/kalafut/imohash/tree/611245ae8069800035b185d9d43f36829885ab82",
     "license": "MIT",
-    "scope": "ZIP cache sampling and size encoding in src/glue/obor_imohash.h",
+    "scope": "ZIP cache sampling and size encoding in src/glue/anybor_imohash.h",
     "sha256": "93ff2d6009c288efa291e02f7587457aecfc59d28dc0bc03e2fe51e0ebbf692c",
     "bytes": 1078
   },
   "murmur3.txt": {
     "url": "https://github.com/PeterScott/murmur3/tree/dae94be0c0f54a399d23ea6cbe54bca5a4e93ce4",
     "license": "LicenseRef-MurmurHash3-PublicDomain",
-    "scope": "MurmurHash3 x64_128 in src/glue/obor_imohash.h",
+    "scope": "MurmurHash3 x64_128 in src/glue/anybor_imohash.h",
     "sha256": "0b8dbbc917ae625ffd6870fc079056303bf0b4e7b8b42eb0af9f3ab982ab23ad",
     "bytes": 280
   }

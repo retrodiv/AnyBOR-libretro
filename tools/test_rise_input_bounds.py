@@ -90,7 +90,7 @@ def action_program(engine, profiles, *, wrong_refusal=False):
 
 
 def timing_program(*, wrong_empty_span=False):
-    header = (ROOT / 'src/port/libretro/obor_rise_inputs.h').read_text()
+    header = (ROOT / 'src/port/libretro/anybor_rise_inputs.h').read_text()
     if wrong_empty_span:
         line = 'return span && (uint64_t)sample % span < UINT64_C(3);'
         if header.count(line) != 1:

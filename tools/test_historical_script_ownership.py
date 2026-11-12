@@ -46,7 +46,7 @@ def source_parts():
         'obor_script_destroy_interpreter', 'obor_script_replace_interpreter',
         'obor_script_destroy_comment', 'obor_script_replace_comment',
         'obor_script_share_references'))
-    header = SOURCE / 'src/port/libretro/obor_script_storage.h'
+    header = SOURCE / 'src/port/libretro/anybor_script_storage.h'
     if not header.is_file():
         raise ValueError('The tested source must contain its actual shared storage header')
     options = dict(pointer_container=True, allocation_magic=True, cleanup_safe=True,

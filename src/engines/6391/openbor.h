@@ -57,7 +57,7 @@
 #include	"anigif.h"
 #include    "config.h"
 #include    "globals.h"
-#include "obor_draw_assert.h"
+#include "anybor_draw_assert.h"
 #include    "ram.h"
 #include    "version.h"
 #include    "savedata.h"

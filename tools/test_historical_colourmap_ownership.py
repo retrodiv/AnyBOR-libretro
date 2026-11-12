@@ -30,7 +30,7 @@ def ownership_program():
                         r'(?=\n\tprintf\("\."\);)', function(game, 'free_model'))
     if cleanup is None:
         raise ValueError('One managed palette cleanup region required')
-    header = SOURCE / 'src/port/libretro/obor_colourmap_storage.h'
+    header = SOURCE / 'src/port/libretro/anybor_colourmap_storage.h'
     if not header.is_file():
         raise ValueError('The tested source must contain its actual ownership header')
     text = r'''

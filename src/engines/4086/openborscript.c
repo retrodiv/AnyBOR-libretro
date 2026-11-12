@@ -4899,7 +4899,7 @@ HRESULT openbor_getanimationproperty(ScriptVariant **varlist, ScriptVariant **pr
 //getentityproperty(pentity, propname);
 extern int sprite_map_max_items;
 extern unsigned int sprites_loaded;
-#include "obor_resources.h"
+#include "anybor_resources.h"
 
 static int obor_script_sprite_name_readable(const char *name, size_t limit)
 {

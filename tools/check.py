@@ -28,7 +28,7 @@ VERSION_LITERAL = re.compile(r"\b0\.1\.[0-9]+\b")
 # Files that legitimately carry the release series: the single source of the
 # version, the generated runtime identity, the generated records and the
 # release history.  Everywhere else a literal is a copy that can go stale.
-VERSION_CARRIERS = {"src/pin.json", "src/glue/obor_engines.h", "CHANGELOG.md",
+VERSION_CARRIERS = {"src/pin.json", "src/glue/anybor_engines.h", "CHANGELOG.md",
                     "SOURCES.json", "SBOM.spdx.json"}
 
 
@@ -138,7 +138,7 @@ def check_sources():
     check_operational_files(ROOT)
     for path in (ROOT / "tools").glob("*.py"):
         ast.parse(path.read_text(encoding="utf-8"))
-    if (ROOT / "src/glue/obor_abi.h").read_bytes() != (ROOT / "src/port/libretro/obor_abi.h").read_bytes():
+    if (ROOT / "src/glue/anybor_abi.h").read_bytes() != (ROOT / "src/port/libretro/anybor_abi.h").read_bytes():
         raise RuntimeError("Glue and engine ABI headers differ")
     pin = release.read_json(ROOT / "src/pin.json")
     check_readme_profiles(ROOT, pin)
@@ -175,7 +175,7 @@ def primitives():
             "-I", str(ROOT / "src/glue"),
             "-I", str(ROOT / "src/engines/6391/source/adpcmlib"),
             str(ROOT / "tests/test_primitives.c"),
-            str(ROOT / "src/port/libretro/obor_adpcm.c"), "-o", output])
+            str(ROOT / "src/port/libretro/anybor_adpcm.c"), "-o", output])
         subprocess.check_call([output])
     print("CRT framing, circle clipping/symmetry/blending and ADPCM format vectors: OK")
 

@@ -68,7 +68,7 @@ fi
 # The staged tree must agree with itself: the generated header carries the
 # same version, and the publishable metadata names the series instead of a
 # number.
-header=$(git show ":src/glue/obor_engines.h" 2>/dev/null \
+header=$(git show ":src/glue/anybor_engines.h" 2>/dev/null \
          | sed -n 's/^#define OBOR_CORE_VERSION "\([^"]*\)"$/\1/p' | head -n 1) || header=
 metadata=$(git show ":anybor_libretro.info" 2>/dev/null \
            | sed -n 's/^display_version = "\([^"]*\)"$/\1/p' | head -n 1) || metadata=

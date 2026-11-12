@@ -5,7 +5,7 @@
  *
  * Contains NO engine code. Pinned engine revisions are linked in as partial
  * objects whose only visible symbols are their suffixed obor_* ABI (see
- * obor_engines.h, generated from pin.json). At retro_load_game — and again
+ * anybor_engines.h, generated from pin.json). At retro_load_game — and again
  * at retro_reset — the glue detects which OpenBOR build the pak needs
  * (core option -> verified engine executable -> explicit special profile -> legacy API -> filename tag
  * -> sidecar exe -> content scan -> fallback),
@@ -24,37 +24,37 @@
 #endif
 
 #include "libretro.h"
-#include "obor_abi.h"
-#include "obor_build_identity.h"
-#include "obor_runtime.h"
-#include "obor_engine_resources.h"
-#include "obor_notices.h"
-#include "obor_crt.h"
-#include "obor_error_screen.h"
-#include "obor_loading_screen.h"
-#include "obor_video_config.h"
-#include "obor_prepare_co.h"
-#include "obor_prepare_progress.h"
-#include "obor_state_padding.h"
-#include "../port/libretro/obor_block_state.h"
-#include "../port/libretro/obor_state_config.h"
-#include "obor_latency_boundaries.h"
-#include "obor_profile.h"
-#include "obor_rewind.h"
+#include "anybor_abi.h"
+#include "anybor_build_identity.h"
+#include "anybor_runtime.h"
+#include "anybor_engine_resources.h"
+#include "anybor_notices.h"
+#include "anybor_crt.h"
+#include "anybor_error_screen.h"
+#include "anybor_loading_screen.h"
+#include "anybor_video_config.h"
+#include "anybor_prepare_co.h"
+#include "anybor_prepare_progress.h"
+#include "anybor_state_padding.h"
+#include "../port/libretro/anybor_block_state.h"
+#include "../port/libretro/anybor_state_config.h"
+#include "anybor_latency_boundaries.h"
+#include "anybor_profile.h"
+#include "anybor_rewind.h"
 #if defined(__APPLE__)
 /* Mach-O image introspection: writable snapshot ranges (pristine capture)
  * and the per-engine state sections of this same image. */
-#include "obor_macho.h"
+#include "anybor_macho.h"
 #endif
 
 static void mkdir_p(const char *path);
-#include "obor_storage.h"
+#include "anybor_storage.h"
 
 static bool g_arena_owned;
-#include "obor_engines.h"
-#include "obor_capture_cadence.h"
-#include "obor_debug.h"
-#include "obor_padmap.h"
+#include "anybor_engines.h"
+#include "anybor_capture_cadence.h"
+#include "anybor_debug.h"
+#include "anybor_padmap.h"
 
 #if defined(_WIN32)
 #define PATH_SEP '\\'
@@ -595,7 +595,7 @@ static int build_from_exe(const char *exe_path)
 }
 
 /* Bounded, syntax-scoped content range inference. */
-#include "obor_content_scan.h"
+#include "anybor_content_scan.h"
 
 /* Look for an OpenBOR exe next to the pak or one directory up
  * (the common "<Game>/<Game>.exe + <Game>/Paks/<game>.pak" layout). */
@@ -667,7 +667,7 @@ static int build_from_sidecar(const char *pak_path)
     return build;
 }
 
-#include "obor_engine_identity.h"
+#include "anybor_engine_identity.h"
 static obor_engine_identity g_zip_engine_identity;
 static bool g_zip_engine_scanned;
 
@@ -691,7 +691,7 @@ static int pick_anchor(int build)
     return best ? best->build : 0;
 }
 
-#include "obor_profile_triage.h"
+#include "anybor_profile_triage.h"
 
 /* ------------------------------------------------------- core options --- */
 
@@ -854,7 +854,7 @@ static void gamelog_close(void)
 }
 
 /* special-move macros: L2/R2/L3/R3 replay the active character's own com
- * sequences (parsed from the pak by obor_padmap.h) */
+ * sequences (parsed from the pak by anybor_padmap.h) */
 typedef struct {
     uint16_t steps[OBOR_PM_MAXSTEP]; /* resolved: F/B already absolute */
     int nsteps;
@@ -2069,7 +2069,7 @@ static void glue_collect_segments(void)
     }
 }
 #elif defined(__APPLE__)
-#include "obor_macho.h"
+#include "anybor_macho.h"
 
 static void glue_macho_seg_cb(uint64_t lo, uint64_t hi, void *context)
 {
@@ -2213,7 +2213,7 @@ static bool select_engine_vtbl(const char *engine, char *err, int err_len)
 
 /* full detection cascade; used by retro_load_game AND retro_reset (a
  * Restart must honour a live change of the anybor_engine core option) */
-#include "obor_legacy_api.h"
+#include "anybor_legacy_api.h"
 
 static void decide_engine(void)
 {
@@ -2474,9 +2474,9 @@ static void mkdir_p(const char *path)
 #endif
 }
 
-#include "obor_zip.h"
-#include "obor_pak_validate.h"
-#include "obor_packed_prepare.h"
+#include "anybor_zip.h"
+#include "anybor_pak_validate.h"
+#include "anybor_packed_prepare.h"
 
 static void abspath(const char *in, char *out, size_t out_len)
 {
@@ -2861,7 +2861,7 @@ static bool finish_load_game(void)
     }
 
     /* per-game button labels for the frontend's Port Controls menu,
-     * parsed from the pak's playable characters (obor_padmap.h).
+     * parsed from the pak's playable characters (anybor_padmap.h).
      * Unpacked mods keep the generic labels for now. */
     if (!g_raw)
         obor_padmap_apply(env_cb, g_pak_path);

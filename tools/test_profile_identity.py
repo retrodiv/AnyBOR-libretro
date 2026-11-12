@@ -15,11 +15,11 @@ from test_historical_behavior import native as compile_native
 
 ROOT = Path(os.environ.get('OBOR_TEST_SOURCE', Path(__file__).resolve().parents[1]))
 HEADER = Path(os.environ.get('OBOR_PROFILE_IDENTITY_HEADER',
-                            ROOT / 'src/port/libretro/obor_profile_identity.h'))
+                            ROOT / 'src/port/libretro/anybor_profile_identity.h'))
 STATE = Path(os.environ.get('OBOR_PROFILE_STATE_SOURCE',
-                           ROOT / 'src/port/libretro/obor_state.c'))
+                           ROOT / 'src/port/libretro/anybor_state.c'))
 ABI = Path(os.environ.get('OBOR_PROFILE_ABI_HEADER',
-                         ROOT / 'src/glue/obor_abi.h'))
+                         ROOT / 'src/glue/anybor_abi.h'))
 
 
 def native(program):

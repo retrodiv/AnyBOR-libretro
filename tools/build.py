@@ -623,7 +623,7 @@ def build_glue(target, spec, outdir):
     # The checked source copy keeps unchanged builds usable without Pillow;
     # its input hashes must match before that fallback can be selected.
     run([sys.executable, HERE / "tools/embed_loading_background.py",
-         "--output", outdir / "obor_loading_background.h", "--allow-cache"])
+         "--output", outdir / "anybor_loading_background.h", "--allow-cache"])
     # engines/miniz are built one-section-per-function so the final link's
     # --gc-sections drops everything unreachable from the exported retro_*
     # API. ELF targets only: on PE the partial-link localize step breaks
@@ -641,7 +641,7 @@ def build_glue(target, spec, outdir):
          "-c", third / "miniz.c", "-o", miniz_o])
 
     compat_objs = []
-    for name in ("obor_transform_vm", "obor_transform_source", "obor_prepare_co"):
+    for name in ("anybor_transform_vm", "anybor_transform_source", "anybor_prepare_co"):
         obj = outdir / (name + ".o")
         run([spec["cc"], "-O2", "-std=c99", "-fPIC", "-fvisibility=hidden",
              *arch_flags(spec), *native_io_flags(spec),
@@ -826,7 +826,7 @@ def package_android_engine(spec, out, third):
          '-fno-exceptions', '-fno-rtti', '-fno-threadsafe-statics', '-nostdlib++',
          '-DOBOR_ANDROID_ENGINE_SPAN=' + str(span),
          '-ffile-prefix-map=' + str(HERE) + '=.', '-I', third,
-         SRC / 'glue/obor_android_loader.cpp', assembly, '-ldl',
+         SRC / 'glue/anybor_android_loader.cpp', assembly, '-ldl',
          '-Wl,-z,relro', '-Wl,-z,now', '-Wl,-z,max-page-size=16384',
          '-Wl,-z,common-page-size=16384',
          '-Wl,--version-script=' + str(SRC / 'glue/exports.map'), '-o', loader])

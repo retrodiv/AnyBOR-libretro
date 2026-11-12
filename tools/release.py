@@ -135,8 +135,8 @@ def verify_notices(binary=None):
     expected = b"ANYBOR_LICENSES_BEGIN\n" + document + b"ANYBOR_LICENSES_END\n"
     # The generated wrapper must reproduce the published dossier exactly; a
     # stale wrapper would ship notices that differ from NOTICE.txt.
-    if embedded_document(ROOT / "src/glue/obor_notices.h") != expected:
-        raise RuntimeError("src/glue/obor_notices.h does not match NOTICE.txt")
+    if embedded_document(ROOT / "src/glue/anybor_notices.h") != expected:
+        raise RuntimeError("src/glue/anybor_notices.h does not match NOTICE.txt")
     if binary is not None:
         if expected not in binary.read_bytes():
             raise RuntimeError("The binary does not contain the matching license dossier.")

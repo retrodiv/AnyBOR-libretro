@@ -59,9 +59,9 @@
 
 #include "openbor.h"
 #include <limits.h>
-#include "obor_resources.h"
-#include "obor_rise_inputs.h"
-#include "obor_resources.h"
+#include "anybor_resources.h"
+#include "anybor_rise_inputs.h"
+#include "anybor_resources.h"
 #include <limits.h>
 #include <stdint.h>
 #include "source/openborscript/profile_ids.h"
@@ -5106,7 +5106,7 @@ static void load_playable_list(char *buf)
 }
 
 #include <limits.h>
-#include "obor_resources.h"
+#include "anybor_resources.h"
 void alloc_specials(s_model *newchar)
 {
     s_com *grown, *previous;
