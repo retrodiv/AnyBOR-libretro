@@ -127,6 +127,10 @@ def check_sources():
         changed = [n for n in current if current[n] != expected.get(n)]
         raise RuntimeError("Source inventory changed: " + ", ".join(changed[:10]))
     release.verify_notices()
+    from embed_loading_background import input_signature
+    glue = ROOT / 'src/glue'
+    if input_signature(glue) not in (glue / 'anybor_loading_background.h').read_text():
+        raise RuntimeError('Precomputed loading artwork does not match its master and generator')
     for name in current:
         path = ROOT / name
         if path.suffix.lower() in (".pak", ".exe", ".dll", ".so", ".dylib", ".ogg", ".wav", ".webm"):

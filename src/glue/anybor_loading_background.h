@@ -6,7 +6,7 @@
  * Generated from assets/OpenBOR_Logo_3200x1800.png with centred Lanczos3
  * filtering by tools/embed_loading_background.py.
  * See assets/README.md and assets/LICENSE. */
-/* Master SHA-256: 97d4ee02800b840c013b65d6869b68c7d19475db6e8b6fdfa15de0440dd104f6; generator SHA-256: aad4449ea5d03f8d323ffb639312a2ffde516a21f7afca5fcccb44dc36edb9af. */
+/* Master SHA-256: 97d4ee02800b840c013b65d6869b68c7d19475db6e8b6fdfa15de0440dd104f6; generator SHA-256: a463d05093eaadbaf2496ef042e39d368fec64034e88c95566d4cd3b9069dd3c. */
 #ifndef OBOR_LOADING_BACKGROUND_H
 #define OBOR_LOADING_BACKGROUND_H
 typedef struct obor_loading_asset {

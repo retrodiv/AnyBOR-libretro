@@ -3720,6 +3720,16 @@
         "tools/test_script_variable_delete_storage.py"
       ],
       "ci": "shared"
+    },
+    {
+      "id": "test_loading_background",
+      "memory_mib": 512,
+      "seconds": 90,
+      "command": [
+        "python3",
+        "tools/test_loading_background.py"
+      ],
+      "ci": "shared"
     }
   ]
 }

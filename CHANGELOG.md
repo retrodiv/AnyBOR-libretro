@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.5 — precomputed loading artwork
+
+- Restore builds without Pillow by refreshing the precomputed loading image after generator filename changes.
+- Check the master and generator signatures during source validation and test the cached-image path without Pillow.
+
 ## 0.2.4 — source filename consistency
 
 - Use the `anybor_` prefix for glue and port support filenames and update their includes, build inputs and tools.
