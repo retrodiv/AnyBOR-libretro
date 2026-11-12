@@ -141,16 +141,28 @@ class ZipContentTests(unittest.TestCase):
         self.assertTrue(first.stdout.startswith('1 '), first.stderr)
         chosen = Path(first.stdout.rstrip().split(' ', 3)[3])
         cache = chosen.parents[1]
-        self.assertTrue(cache.name.startswith('imohash-v1-'))
-        self.assertRegex(cache.name, r'^imohash-v1-[0-9a-f]{32}$')
-        self.assertEqual((cache / '.complete').read_text(),
-                         'oborzip-imohash-v1 ' + cache.name[len('imohash-v1-'):] + '\n')
+        self.assertRegex(cache.name, r'^content-[0-9a-f]{8}$')
+        self.assertRegex((cache / '.complete').read_text(),
+                         r'^oborzip-imohash-v1 [0-9a-f]{32}\n$')
         sentinel = cache / 'reuse-sentinel'
         sentinel.write_text('keep')
         second = run()
         self.assertEqual(first.stdout, second.stdout)
         self.assertIn('using imohash cache', second.stderr)
         self.assertTrue(sentinel.is_file())
+        # A rejected occupied slot must survive loading and select a stable alternative.
+        marker = cache / '.complete'
+        original_marker = marker.read_bytes()
+        for bad_marker in (b'unreadable marker\n', b'oborzip-imohash-v1 ' + b'0' * 32 + b'\n'):
+            marker.write_bytes(bad_marker)
+            alternative = run()
+            self.assertTrue(alternative.stdout.startswith('1 '), alternative.stderr)
+            self.assertNotEqual(first.stdout, alternative.stdout)
+            self.assertEqual(alternative.stdout, run().stdout)
+            self.assertEqual(marker.read_bytes(), bad_marker)
+            self.assertTrue(sentinel.is_file())
+        marker.write_bytes(original_marker)
+        self.assertEqual(first.stdout, run().stdout)
         # Same size, changed middle sample, unchanged central directory.
         with zipfile.ZipFile(archive) as stream:
             padding = bytearray(stream.read('padding.bin'))

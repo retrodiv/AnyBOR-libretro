@@ -173,7 +173,12 @@ to redistribute a game's assets. Saves use the directory supplied by the
 frontend, under `AnyBOR/<game>/<engine build>/`; ZIP extraction uses
 `AnyBOR-cache/zipcache/`. Cache identities use imohash: ZIPs smaller than
 128 KiB are hashed in full; ZIPs of at least 128 KiB use three 16 KiB samples
-and their size.
+and their size. Extraction folders use the ZIP filename stem, sanitized and
+limited to 80 characters, followed by an eight-digit hexadecimal locator
+(`Example-01234567`). The completion marker retains the complete 128-bit identity.
+Occupied folders with a different or unreadable marker select a deterministic
+alternative locator, with at most 64 candidates. Renaming a ZIP creates a separate
+cache entry.
 Changes outside those samples that preserve the ZIP size can reuse the same
 cache; remove that extraction cache after such content changes.
 Save states require the same core build and content.

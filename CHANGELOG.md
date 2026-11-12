@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.3 — short ZIP cache names
+
+- Name ZIP extraction folders after the archive stem and an eight-digit locator, retaining full identities in completion markers and resolving short-name collisions without overwriting other entries.
+
 ## 0.2.2 — imohash cache identities
 
 - Use standard imohash for ZIP extraction cache identities, limiting hash reads to three 16 KiB samples for ZIPs of at least 128 KiB.

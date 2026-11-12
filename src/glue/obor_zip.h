@@ -73,6 +73,56 @@ static int obor_zip_marker_ok(const char *marker, const char *hash)
     return ok && strcmp(line, expected) == 0;
 }
 
+/* The eight-digit name locates a slot; only the full marker owns it. */
+static int obor_zip_cache_directory(const char *parent, const char *zip_path,
+                                   const unsigned char digest[16], uint64_t size,
+                                   const char *hash, char *cache, size_t cap)
+{
+    const char *name = zip_path;
+    for (const char *p = zip_path; *p; ++p)
+        if (*p == '/' || *p == '\\') name = p + 1;
+    size_t length = strlen(name);
+    if (length >= 4 && !strcasecmp(name + length - 4, ".zip")) length -= 4;
+    char stem[81];
+    size_t count = 0;
+    for (size_t i = 0; i < length && count + 1 < sizeof(stem); ++i) {
+        unsigned char c = (unsigned char)name[i];
+        stem[count++] = ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') ||
+                         (c >= '0' && c <= '9') || c == '-' || c == '_') ? (char)c : '_';
+    }
+    stem[count] = 0;
+    if (!count) strcpy(stem, "content");
+    unsigned char identity[28], locator[16];
+    memcpy(identity, digest, 16);
+    for (unsigned i = 0; i < 8; ++i) identity[16 + i] = (unsigned char)(size >> (8 * i));
+    for (unsigned attempt = 0; attempt < 64; ++attempt) {
+        for (unsigned i = 0; i < 4; ++i) identity[24 + i] = (unsigned char)(attempt >> (8 * i));
+        if (!obor_imohash(identity, sizeof(identity), locator)) return 0;
+        char hex[9];
+        /* imohash's beginning encodes size; use the tail of the rehashed identity. */
+        for (unsigned i = 0; i < 4; ++i) snprintf(hex + 2 * i, 3, "%02x", locator[12 + i]);
+        int written = snprintf(cache, cap, "%s/%s-%s", parent, stem, hex);
+        if (written < 0 || (size_t)written >= cap) return 0;
+#if defined(_WIN32)
+        DWORD attrs = GetFileAttributesA(cache);
+        if (attrs == INVALID_FILE_ATTRIBUTES) {
+            DWORD error = GetLastError();
+            if (error == ERROR_FILE_NOT_FOUND || error == ERROR_PATH_NOT_FOUND) return 1;
+            return 0;
+        }
+#else
+        struct stat st;
+        if (lstat(cache, &st)) return errno == ENOENT;
+#endif
+        if (!obor_storage_directory(cache)) continue;
+        char marker[1500];
+        if (!obor_storage_join(marker, sizeof(marker), cache, ".complete")) return 0;
+        if (obor_zip_marker_ok(marker, hash)) return 1;
+    }
+    log_cb(RETRO_LOG_ERROR, "[OpenBOR] zip: no available short-name cache slot\n");
+    return 0;
+}
+
 #include <stdlib.h>
 #include "obor_engine_identity.h"
 #include "obor_game_content.h"
@@ -193,9 +243,8 @@ static int obor_zip_prepare(const char *zip_path, const char *save_dir,
     }
     char parent[1200], cache[1400], marker[1500];
     if (!obor_storage_parent(save_dir, "zipcache", parent, sizeof(parent))) return 0;
-    /* Sampled identities have their own namespace and completion marker.
-     * Existing full-hash caches are not reused or removed here. */
-    snprintf(cache, sizeof(cache), "%s/imohash-v1-%s", parent, hash);
+    if (!obor_zip_cache_directory(parent, zip_path, digest, za->m_archive_size,
+                                  hash, cache, sizeof(cache))) return 0;
     snprintf(marker, sizeof(marker), "%s/.complete", cache);
     if (!obor_storage_track(cache)) return 0;
     if (!obor_storage_directory(cache) || !obor_zip_marker_ok(marker, hash)) {
