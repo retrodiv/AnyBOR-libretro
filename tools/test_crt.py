@@ -31,12 +31,30 @@ def read_ppm(path):
     return width, height, pixels
 
 
+def check_option_order(result, profile_count, capacity, version):
+    """Check the full registration, including every consecutive profile page."""
+    assert profile_count > 0 and capacity >= 4
+    pages = (profile_count + capacity - 4) // (capacity - 3) if version >= 2 else 1
+    expected = ["anybor_crt_tv", "anybor_analog", "anybor_rumble", "anybor_macros",
+                "anybor_engine"]
+    expected += ["anybor_engine_" + str(page) for page in range(2, pages + 1)]
+    expected += ["anybor_state_content", "anybor_state_compression", "anybor_gamelog",
+                 "anybor_clear_local_data", "anybor_clear_game_cache", "anybor_clear_all_caches"]
+    orders = re.findall(r"^option_order=([^\r\n]*)$", result, re.M)
+    assert orders and all(order.split("|") == expected for order in orders), result
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--core", default=str(DEFAULT_CORE))
     args = parser.parse_args()
     root = release.ROOT
     core = Path(args.core).resolve()
+    pin = release.read_json(root / "src/pin.json")
+    capacity = re.search(r"^#define RETRO_NUM_CORE_OPTION_VALUES_MAX\s+(\d+)\s*$",
+                         (root / "src/third_party/libretro.h").read_text(), re.M)
+    assert capacity is not None
+    capacity = int(capacity[1])
     with tempfile.TemporaryDirectory(prefix="anybor-crt-") as temp:
         work = Path(temp)
         host = work / "host"
@@ -64,15 +82,15 @@ def main():
                 assert marker in result, label + ": " + result
             assert "nonblack_max=0" not in result, result
             assert "FAILED" not in result, result
-            assert ("option_order=anybor_crt_tv|anybor_analog|anybor_rumble|anybor_macros|"
-                    "anybor_engine|anybor_state_content|anybor_state_compression|anybor_gamelog") in result, result
+            check_option_order(result, len(pin["profiles"]), capacity,
+                               int(options.get("OBOR_OPTIONS_VERSION", 0)))
             if options.get("OBOR_LOAD_AT"):
                 assert "load state at frame 120: ok" in result, result
             if options.get("OBOR_SAVE_AT"):
                 assert re.search(r"saved state \(\d+ bytes\) at frame " +
                                  str(options["OBOR_SAVE_AT"]) + r"\b", result), result
             if options.get("OBOR_OPTIONS_VERSION") == 2 and "category_order=" in result:
-                assert "category_order=Video|Input|System" in result, result
+                assert "category_order=Video|Input|System|Development\n" in result, result
                 assert "video_category=Video" in result, result
                 assert "crt_option=Adjust for 4:3 CRT TV category=video default=Off" in result, result
             else:
@@ -80,7 +98,7 @@ def main():
             print("PASS " + engine + " " + label, flush=True)
             return result, read_ppm(system / "frame000180.ppm")
 
-        engines = [e["build"] for e in release.read_json(root / "src/pin.json")["engines"]]
+        engines = [e["build"] for e in pin["engines"]]
         for engine in engines:
             members = make_fixture.files()
             members["data/video.txt"] = b"video 1\n"

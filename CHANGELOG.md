@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.7 — paged option regression checks
+
+- Validate the complete core-option order across legacy and paged interfaces, including continued engine lists and cache controls.
+- Keep CRT geometry, pixels and state checks active with large profile catalogues.
+
 ## 0.2.6 — core option categories
 
 - Preserve option categories with large profile catalogues by continuing the engine selector across bounded lists. Select More... to use the following list.

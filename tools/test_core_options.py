@@ -255,6 +255,34 @@ printf("registrations=%u selections=%u\n",registration_checks,selection_checks);
 
 
 class CoreOptionTests(unittest.TestCase):
+    def test_crt_option_order_checks_complete_legacy_and_paged_registration(self):
+        from test_crt import check_option_order
+        prefix = ['anybor_crt_tv', 'anybor_analog', 'anybor_rumble', 'anybor_macros',
+                  'anybor_engine']
+        suffix = ['anybor_state_content', 'anybor_state_compression', 'anybor_gamelog',
+                  'anybor_clear_local_data', 'anybor_clear_game_cache', 'anybor_clear_all_caches']
+        for count, pages in ((1, 1), (125, 1), (126, 2), (250, 2), (251, 3), (501, 5)):
+            for version in (0, 1, 2, 9):
+                with self.subTest(profiles=count, version=version):
+                    continuation = ['anybor_engine_' + str(page)
+                                    for page in range(2, pages + 1)] if version >= 2 else []
+                    keys = prefix + continuation + suffix
+                    trace = 'option_order=' + '|'.join(keys) + '\n'
+                    check_option_order(trace, count, 128, version)
+                    for bad in (keys[:-1], keys + ['unexpected'], keys[:4] + keys[5:],
+                                keys[:5] + list(reversed(keys[5:])), keys + [keys[-1]]):
+                        with self.assertRaises(AssertionError):
+                            check_option_order('option_order=' + '|'.join(bad) + '\n',
+                                               count, 128, version)
+                    if continuation:
+                        for bad in (prefix + continuation[1:] + suffix,
+                                    prefix + continuation + continuation[-1:] + suffix):
+                            with self.assertRaises(AssertionError):
+                                check_option_order('option_order=' + '|'.join(bad) + '\n',
+                                                   count, 128, version)
+        with self.assertRaises(AssertionError):
+            check_option_order('', 252, 128, 2)
+
     def test_complete_lists_defaults_lifetimes_and_getter_across_interface_boundary(self):
         inputs = [GLUE, HEADER, STATE, ROOT / 'src/third_party/libretro.h',
                   Path(__file__), Path(function.__code__.co_filename)]
