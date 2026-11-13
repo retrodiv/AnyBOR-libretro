@@ -11,7 +11,7 @@
  *       BTN: up down left right attack attack2 attack3 attack4 jump special
  *            start esc  (RetroPad ids resolved per the glue's mapping)
  *            analog_left analog_right analog_up analog_down (full stick)
- *   OBOR_ENGINE=<build>   force the anybor_engine core option
+ *   OBOR_ENGINE=<build>   force a manual profile through the core options
  *   OBOR_DUMP_EVERY=N     dump a PPM every N frames (needs ppm_prefix)
  *   OBOR_SAVE_AT=N / OBOR_SAVE_STATE=file   serialize at frame N
  *   OBOR_LOAD_AT=N / OBOR_LOAD_STATE=file   unserialize at frame N
@@ -578,7 +578,7 @@ static bool env_cb(unsigned cmd, void *data)
             return true;
         }
         if (!strcmp(var->key, "anybor_engine")) {
-            var->value = (!strcmp(g_engine_opt, "Auto") || !strcmp(g_engine_opt, "auto")) ? "Auto" : "More";
+            var->value = (!strcmp(g_engine_opt, "Auto") || !strcmp(g_engine_opt, "auto")) ? "On" : "Off";
             return true;
         }
         if (!strncmp(var->key, "anybor_engine_", 14)) {

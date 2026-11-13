@@ -38,7 +38,7 @@ v3.0 3968-dev, v3.0 3970-dev, v3.0 3978, v3.0 3984, v3.0 3993, v3.0 3994, v3.0
 4153, v3.0 4432, v3.0 4453, v3.0 6330, v3.0 6391, v3.0 6391-mod, v3.0 6392-dev,
 v3.0 6412-dev, v3.0 6510-dev, v3.0 7086-dev, v3.0 7123-dev, v4.0 7142-alpha,
 v4.0 7530, v4.0 7533, v4.0 7555, v4.0 7556, v4.0 7735 and v4.0 8023-dev.
-Auto uses build tags and content clues to choose a profile. You can select one
+Automatic selection uses build tags and content clues to choose a profile. You can select one
 manually when a game needs it. See [choosing a profile](HISTORICAL_PROFILES.md).
 OpenBOR and Beats of Rage originate with Senile Team and OpenBOR Team; the port
 is maintained by retrodiv. The combined core has multiple component licenses,
@@ -65,7 +65,7 @@ The core does not start without content. It includes no third-party games,
 artwork or soundtracks. Use game data from sources you trust. A nearby OpenBOR
 executable can be read as data for version detection; it is not executed.
 
-Auto checks verified engine-executable SHA-256 identities before filename and
+Automatic selection checks verified engine-executable SHA-256 identities before filename and
 content clues. A manual profile choice takes priority. An identified engine
 selects its exact profile when available; otherwise the available-profile
 rules apply to that build. Unknown or absent executables, conflicting engine
@@ -96,7 +96,7 @@ and external input configuration as loose packed content.
 
 | Feature | Support |
 |---|---|
-| Restart | Reboots the game and applies a changed Engine build option. |
+| Restart | Reboots the game and applies changed engine selection options. |
 | In-game saves/settings | Engine-managed files in the frontend save directory. |
 | Save states and rewind | Supported; states require the same core build and content. Unavailable during model preloading or threaded video playback. |
 | Netplay/runahead | The metadata advertises `serialized` state support; it makes no general deterministic/netplay/runahead compatibility claim. |
@@ -138,12 +138,12 @@ The macros account for the active character's facing direction.
 | Left analog stick as D-pad | `anybor_analog` | **On**. Adds movement with the left stick. |
 | Rumble | `anybor_rumble` | **On**. Forwards game hit vibration. |
 | Special move macros (L2/R2/L3/R3) | `anybor_macros` | **On**. Executes supported character move sequences. |
-| Engine build | `anybor_engine` | **Auto (detect from file)**. More... shows the manual build ranges below. Auto ignores every range selection. Changes apply on Restart. |
+| Automatic engine selection | `anybor_engine` | **On** detects the engine from the file, hides the manual ranges and ignores their selections. Off shows the manual ranges. Changes apply on Restart. |
 | Engine build 3000 -> 3499 | `anybor_engine_3000_3499` | **-**. Select a profile in this range. |
 | Engine build 3500 -> 3749 | `anybor_engine_3500_3749` | **-**. Select a profile in this range. |
 | Engine build 3750 -> 3999 | `anybor_engine_3750_3999` | **-**. Select a profile in this range. |
 | Engine build 4000 -> 4999 | `anybor_engine_4000_4999` | **-**. Select a profile in this range. |
-| Engine build > 5000 | `anybor_engine_5000_plus` | **-**. Select a profile in this range. With More..., the last range with a selection in this table takes priority. A dash in every range uses Auto. |
+| Engine build > 5000 | `anybor_engine_5000_plus` | **-**. Select a profile in this range. With automatic selection Off, the last range with a selection in this table takes priority. A dash in every range uses automatic selection. |
 | Save state content | `anybor_state_content` | **Smart** reconstructs resources after an exact byte proof. **Full** retains complete engine memory. Applies when content is loaded. |
 | Save state compression | `anybor_state_compression` | **On** compresses state blocks. **Off** leaves changed blocks uncompressed while retaining reuse of unchanged blocks. Applies when content is loaded. |
 | Forward game log | `anybor_gamelog` | **Off**. Mirrors the engine log into the frontend log. |
@@ -178,7 +178,7 @@ use the 3400 anchor on a best-effort basis; games newer than the latest anchor
 also have best-effort coverage. [COMPATIBILITY.md](../COMPATIBILITY.md) describes
 the supported engine ranges.
 
-Filename build tags may end in unknown digits. Auto analyzes the content
+Filename build tags may end in unknown digits. automatic selection analyzes the content
 within that interval, then chooses the highest compatible stable or automatic
 profile. With no narrower evidence, **Build 4XXX** selects 4453 and **Build 6XXX**
 selects 6391. Palette conversion or 8/16-bit output excludes 4453; old boomerang
@@ -196,7 +196,7 @@ before the Build tag intersects the range: **v.3.0 Build 63XX-7762** becomes
 6300-7532, while **v.4.0 Build XXXX-7762** starts at 7142. A version in a
 separate bracket or in the title does not constrain the range.
 
-Auto intersects an inclusive interval with content evidence and prefers the
+Automatic selection intersects an inclusive interval with content evidence and prefers the
 highest compatible stable or automatic profile inside it. If the evidence
 contradicts the interval, the interval wins and the nearest declared candidate
 is selected with a log message. For example, **Build 3780-3839** selects 3839 and
@@ -215,7 +215,7 @@ An explicit variant after the number uses the profile table: **Build 6391 Mod**,
 the variant must be a complete word, so **Modern** does not mean **mod**.
 The same rule applies to declared **dev** and **alpha** variants. An unknown
 variant retains ordinary numeric routing. With a partial or range declaration,
-such as **Build 63XX Mod**, Auto chooses the highest matching variant inside
+such as **Build 63XX Mod**, automatic selection chooses the highest matching variant inside
 the bounds; without a matching variant, normal range routing applies. A bare
 numeric tag does not select a distinct variant with the same revision.
 An accompanying executable's **Build** label without a number is inconclusive;
@@ -235,15 +235,15 @@ ordinary unlabelled inference do not select these nonautomatic profiles.
 Imprecise filename tags can select them when no stable or automatic candidate
 remains compatible in the declared interval. A complete numeric Build tag
 without its own selectable profile checks its ordinary automatic candidate
-against proved content requirements. If that candidate is incompatible, Auto
+against proved content requirements. If that candidate is incompatible, automatic selection
 chooses the closest profile satisfying every requirement; if none exists,
 it logs the conflict and retains the existing routing. Exact tags with their
 own profile keep their existing priority. See the
 [content rules](AUTO_SELECTION_RULES.md) for syntax boundaries and tie-breaking.
 Historical profiles 3780–3839
-participate in Auto: a declared build selects the first available revision at
+participate in automatic selection: a declared build selects the first available revision at
 or above it, including declarations from an accompanying executable. Positive
-content bounds in this engine era use the same revisions. Auto uses its fallback when neither a declaration
+content bounds in this engine era use the same revisions. automatic selection uses its fallback when neither a declaration
 nor usable evidence supplies a requirement. Native rules ignore comments and quoted
 prose. Preprocessor directives or a local declaration of a reviewed builtin
 make native evidence inconclusive; model evidence remains usable. This scan

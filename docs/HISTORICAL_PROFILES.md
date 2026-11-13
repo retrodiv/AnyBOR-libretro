@@ -38,7 +38,7 @@ v3.0 3968-dev, v3.0 3970-dev, v3.0 3978, v3.0 3984, v3.0 3993, v3.0 3994, v3.0
 v3.0 6412-dev, v3.0 6510-dev, v3.0 7086-dev, v3.0 7123-dev, v4.0 7142-alpha,
 v4.0 7530, v4.0 7533, v4.0 7555, v4.0 7556, v4.0 7735 and v4.0 8023-dev.
 
-Auto uses build tags and content clues to choose a profile. You can select one
+Automatic selection uses build tags and content clues to choose a profile. You can select one
 manually when a game needs it. Historical profiles preserve selected earlier
 content behavior while retaining safety and lifecycle corrections.
 
@@ -206,18 +206,18 @@ engine stops.
 
 ## Select a profile
 
-Manual selection overrides Auto when the metadata is missing or incorrect:
+Select a profile manually when the metadata is missing or incorrect:
 
 1. Find the engine build specified by the content's author or original release.
-2. Open **Engine build** in the core-options list, under **System** when
+2. Open **Automatic engine selection** in the core-options list, under **System** when
    categories are available.
-3. Select **More...**, then select the full profile value, such as **v3.0 3780**,
+3. Set it to **Off**, then select the full profile value, such as **v3.0 3780**,
    in its build range. Leave the other ranges at **-**. Use **Restart** or
    reload the content. The frontend log reports the selected profile.
 4. Keep that profile for the session. States require the same logical profile,
    core build and content; switching profiles does not convert existing states.
 
-If the required revision is unknown, start with Auto and consult the content
+If the required revision is unknown, leave **Automatic engine selection** set to **On** and consult the content
 release documentation before choosing manually.
 
 ## Selected contracts and shared behavior

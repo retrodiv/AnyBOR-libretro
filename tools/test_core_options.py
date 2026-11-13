@@ -128,8 +128,8 @@ static void check_values(const option_snapshot &option) {
     assert(option.key.compare(0,7,"anybor_")==0);
     assert(option.default_value==option.values[0]);
     if (option.key=="anybor_engine") {
-        assert(option.default_value=="Auto");
-        assert(option.values==std::vector<std::string>({"Auto","More"}));
+        assert(option.default_value=="On");
+        assert(option.values==std::vector<std::string>({"On","Off"}));
     }
     int group=group_key(option.key.c_str());
     if (group>=0) {
@@ -160,9 +160,9 @@ static void read_v2(const retro_core_options_v2 *options) {
             !strncmp(def->key,"anybor_clear_",13) ? "development" : "system";
         assert(!strcmp(def->category_key,category));
         if (!strcmp(def->key,"anybor_engine")) {
-            assert(def->values[0].label && !strcmp(def->values[0].label,"Auto (detect from file)"));
-            assert(!strcmp(def->values[1].value,"More"));
-            assert(def->values[1].label && !strcmp(def->values[1].label,"More..."));
+            assert(!strcmp(def->desc,"Automatic engine selection"));
+            assert(!strcmp(def->desc_categorized,"Automatic engine selection"));
+            assert(!def->values[0].label && !def->values[1].label);
         }
         if (group_key(def->key)>=0) {
             assert(!strcmp(def->default_value,"None") && !strcmp(def->values[0].value,"None"));
@@ -181,10 +181,8 @@ static void read_legacy(const retro_variable *variables) {
         option_snapshot option;option.key=var->key;option.values=split(values+2);
         // v0 has no separate labels; verify its visible spelling, then compare
         // the logical choices with v2's stable stored values.
-        if (option.key=="anybor_engine") {
-            assert(option.values==std::vector<std::string>({"Auto","More..."}));
-            option.values[1]="More";
-        }
+        if (option.key=="anybor_engine")
+            assert(option.values==std::vector<std::string>({"On","Off"}));
         if (group_key(var->key)>=0) {
             assert(option.values[0]=="-");option.values[0]="None";
         }
@@ -253,10 +251,10 @@ void run(void) {
             fixture.version_available=test!=4;fixture.categories=test==2;fixture.profiles=profiles;
             fixture.builds=builds;fixture.display_supported=test!=1;
             fixture.v2_expected=test!=4 && versions[test]>=2;
-            const char *manual=fixture.v2_expected?"More":"More...";
+            const char *manual="Off";
             const char *empty=fixture.v2_expected?"None":"-";
             for (unsigned g=0;g<5;++g) fixture.groups[g]=empty;
-            fixture.selected=repeat?manual:"Auto";
+            fixture.selected=repeat?manual:"On";
             active=&fixture;retro_set_environment(environment);
             assert(fixture.queries==1 && fixture.registrations==1);
             assert(!fixture.options.empty());
@@ -270,7 +268,7 @@ void run(void) {
             assert(fixture.update_display && fixture.display_calls==5);
             for (unsigned g=0;g<5;++g) assert(fixture.visible[g]==(repeat!=0));
             assert(!fixture.update_display());
-            fixture.selected="Auto";fixture.update_display();
+            fixture.selected="On";fixture.update_display();
             fixture.selected=manual;
             assert(fixture.update_display()==fixture.display_supported);
             for (unsigned g=0;g<5;++g) assert(fixture.visible[g]);
@@ -281,8 +279,8 @@ void run(void) {
                 get_engine_option(output,sizeof(output));assert(profiles[i]==output);++selection_checks;
                 fixture.groups[group]=kProfiles[i].name;
                 get_engine_option(output,sizeof(output));assert(profiles[i]==output);
-                // Auto always wins over hidden retained values.
-                fixture.selected="Auto";assert(fixture.update_display()==fixture.display_supported);
+                // On always wins over hidden retained range values.
+                fixture.selected="On";assert(fixture.update_display()==fixture.display_supported);
                 for (unsigned g=0;g<5;++g) assert(!fixture.visible[g]);
                 get_engine_option(output,sizeof(output));assert(!strcmp(output,"Auto"));
                 fixture.selected=manual;fixture.update_display();fixture.groups[group]=empty;
@@ -302,12 +300,15 @@ void run(void) {
                 get_engine_option(output,sizeof(output));assert(!strcmp(output,expected));
                 fixture.groups[group]=empty;
             }
-            fixture.selected=!strcmp(manual,"More")?"More...":"More";
-            get_engine_option(output,sizeof(output));assert(!strcmp(output,"Auto"));
-            assert(!fixture.update_display());
+            // Older saved manual tokens retain their visibility semantics.
+            for (const char *old : {"More", "More..."}) {
+                fixture.selected=old;
+                get_engine_option(output,sizeof(output));assert(!strcmp(output,"Auto"));
+                assert(!fixture.update_display());
+            }
             fixture.selected=manual;
             fixture.groups[0]="unknown";fixture.groups[1]=NULL;
-            fixture.groups[2]="Auto";fixture.groups[3]="More";fixture.groups[4]=empty;
+            fixture.groups[2]="On";fixture.groups[3]="Off";fixture.groups[4]=empty;
             get_engine_option(output,sizeof(output));assert(!strcmp(output,"Auto"));
             // A profile stored in the wrong range is ignored.
             fixture.groups[(group_for(builds[0])+1)%5]=profiles[0].c_str();

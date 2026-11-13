@@ -38,7 +38,7 @@ v3.0 3968-dev, v3.0 3970-dev, v3.0 3978, v3.0 3984, v3.0 3993, v3.0 3994, v3.0
 v3.0 6412-dev, v3.0 6510-dev, v3.0 7086-dev, v3.0 7123-dev, v4.0 7142-alpha,
 v4.0 7530, v4.0 7533, v4.0 7555, v4.0 7556, v4.0 7735 and v4.0 8023-dev.
 
-Auto uses build tags and content clues to choose a profile. Manual selection
+Automatic selection uses build tags and content clues to choose a profile. Manual selection
 remains available. States require the same profile; states from another
 profile are refused.
 Before 3797, the player-property setter returns an integer success result and
@@ -97,9 +97,9 @@ a conflicting candidate is replaced by the nearest profile satisfying all
 requirements. If none exists, the conflict is logged and existing routing is
 retained. Exact tags with their own profile keep their existing priority.
 See [the source-backed rules](docs/AUTO_SELECTION_RULES.md). Historical
-profiles also participate in Auto declarations and bounded content evidence.
+profiles also participate in automatic selection declarations and bounded content evidence.
 The first available revision at or above a declared build is used;
-without a declaration or usable evidence, Auto uses its fallback profile.
+without a declaration or usable evidence, automatic selection uses its fallback profile.
 Builds newer than 8023 are best effort through the latest pinned v4 anchor;
 they are not claimed as universally compatible.
 

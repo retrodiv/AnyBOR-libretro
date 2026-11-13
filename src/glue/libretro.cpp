@@ -712,7 +712,7 @@ static bool engine_options_manual(void)
 {
     struct retro_variable var = { "anybor_engine", NULL };
     return env_cb && env_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) &&
-           var.value && (!strcmp(var.value, "More") || !strcmp(var.value, "More..."));
+           var.value && (!strcmp(var.value, "Off") || !strcmp(var.value, "More") || !strcmp(var.value, "More..."));
 }
 
 static int g_engine_options_visible = -1;
@@ -1159,10 +1159,11 @@ static void present_error_frame(void)
 /* ------------------------------------------------------------ libretro --- */
 
 #define ENGINE_OPT_INFO \
-    "Which OpenBOR engine runs the game. Auto detects it from the file " \
-    "(verified engine executable, filename build range or tag, sidecar exe, bounded content scan). A manual choice is " \
-    "applied on Restart. Select More... to show build ranges. A dash in every range " \
-    "uses Auto. If several ranges have a selection, the last range with a selection in the menu wins."
+    "Automatic engine selection detects the engine from the file when On " \
+    "(verified engine executable, filename build range or tag, sidecar exe, bounded content scan). " \
+    "Off shows the manual build ranges. On ignores all range selections. " \
+    "A dash in every range uses automatic detection. If several ranges have a selection, " \
+    "the last range with a selection in the menu wins. Changes apply on Restart."
 
 void retro_set_environment(retro_environment_t cb)
 {
@@ -1213,10 +1214,10 @@ void retro_set_environment(retro_environment_t cb)
               "Pressing one performs the full input sequence.",
               NULL, "input",
               { { "On", NULL }, { "Off", NULL }, { NULL, NULL } }, "On" },
-            { "anybor_engine", "Engine build", "Engine build",
+            { "anybor_engine", "Automatic engine selection", "Automatic engine selection",
               ENGINE_OPT_INFO, NULL, "system",
-              { { "Auto", "Auto (detect from file)" }, { "More", "More..." }, { NULL, NULL } },
-              "Auto" },
+              { { "On", NULL }, { "Off", NULL }, { NULL, NULL } },
+              "On" },
             { "anybor_state_content", "Save state content", "Save state content",
               "Smart reconstructs resources whose bytes can be reproduced exactly. "
               "Full stores complete engine memory. Changes apply when content is loaded. "
@@ -1307,7 +1308,7 @@ void retro_set_environment(retro_environment_t cb)
         { "anybor_analog", "Left analog stick as D-pad; On|Off" },
         { "anybor_rumble", "Rumble; On|Off" },
         { "anybor_macros", "Special move macros (L2/R2/L3/R3); On|Off" },
-        { "anybor_engine", "Engine build (needs restart); Auto|More..." },
+        { "anybor_engine", "Automatic engine selection; On|Off" },
         { kEngineOptionGroups[0].key, values[0] },
         { kEngineOptionGroups[1].key, values[1] },
         { kEngineOptionGroups[2].key, values[2] },

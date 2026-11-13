@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.10 — automatic engine selection switch
+
+- Offer Automatic engine selection as an On/Off switch. On detects the engine and hides the manual ranges; Off shows them.
+- Keep automatic detection when every range is empty, and retain the last populated range as the manual priority.
+
 ## 0.2.9 — engine selector labels
 
 - Display More... and - in the engine selectors, preserving visibility rules and selection priority.

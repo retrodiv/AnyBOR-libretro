@@ -48,8 +48,8 @@ profiles:
 | v3.0 6392-dev | v3.0 6412-dev | v3.0 6510-dev | v3.0 7086-dev | v3.0 7123-dev | v4.0 7142-alpha |
 | v4.0 7530 | v4.0 7533 | v4.0 7555 | v4.0 7556 | v4.0 7735 | v4.0 8023-dev |
 
-Core Options also provides Auto, which uses build tags and content clues to
-choose a profile. You can select one manually when a game needs it.
+Automatic engine selection uses build tags and content clues to choose a profile.
+Turn it off in Core Options to choose one manually when a game needs it.
 See [choosing a profile](docs/HISTORICAL_PROFILES.md) for details.
 Save states, rewind and four players are supported. OpenBOR, Senile Team and
 libretro credits identify upstream work; they do not imply endorsement of
