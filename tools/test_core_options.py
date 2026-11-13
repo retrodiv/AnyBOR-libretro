@@ -159,8 +159,15 @@ static void read_v2(const retro_core_options_v2 *options) {
             (!strcmp(def->key,"anybor_analog") || !strcmp(def->key,"anybor_rumble") || !strcmp(def->key,"anybor_macros")) ? "input" :
             !strncmp(def->key,"anybor_clear_",13) ? "development" : "system";
         assert(!strcmp(def->category_key,category));
-        if (!strcmp(def->key,"anybor_engine"))
+        if (!strcmp(def->key,"anybor_engine")) {
             assert(def->values[0].label && !strcmp(def->values[0].label,"Auto (detect from file)"));
+            assert(!strcmp(def->values[1].value,"More"));
+            assert(def->values[1].label && !strcmp(def->values[1].label,"More..."));
+        }
+        if (group_key(def->key)>=0) {
+            assert(!strcmp(def->default_value,"None") && !strcmp(def->values[0].value,"None"));
+            assert(def->values[0].label && !strcmp(def->values[0].label,"-"));
+        }
         check_values(option);
         active->options.push_back(option);
     }
@@ -172,6 +179,15 @@ static void read_legacy(const retro_variable *variables) {
         assert(var->value);
         const char *values=strstr(var->value,"; ");assert(values);
         option_snapshot option;option.key=var->key;option.values=split(values+2);
+        // v0 has no separate labels; verify its visible spelling, then compare
+        // the logical choices with v2's stable stored values.
+        if (option.key=="anybor_engine") {
+            assert(option.values==std::vector<std::string>({"Auto","More..."}));
+            option.values[1]="More";
+        }
+        if (group_key(var->key)>=0) {
+            assert(option.values[0]=="-");option.values[0]="None";
+        }
         option.default_value=option.values[0];check_values(option);active->options.push_back(option);
     }
 }
@@ -236,9 +252,11 @@ void run(void) {
             frontend_fixture fixture={};fixture.version=versions[test];
             fixture.version_available=test!=4;fixture.categories=test==2;fixture.profiles=profiles;
             fixture.builds=builds;fixture.display_supported=test!=1;
-            for (unsigned g=0;g<5;++g) fixture.groups[g]="None";
             fixture.v2_expected=test!=4 && versions[test]>=2;
-            fixture.selected=repeat?"More":"Auto";
+            const char *manual=fixture.v2_expected?"More":"More...";
+            const char *empty=fixture.v2_expected?"None":"-";
+            for (unsigned g=0;g<5;++g) fixture.groups[g]=empty;
+            fixture.selected=repeat?manual:"Auto";
             active=&fixture;retro_set_environment(environment);
             assert(fixture.queries==1 && fixture.registrations==1);
             assert(!fixture.options.empty());
@@ -253,7 +271,7 @@ void run(void) {
             for (unsigned g=0;g<5;++g) assert(fixture.visible[g]==(repeat!=0));
             assert(!fixture.update_display());
             fixture.selected="Auto";fixture.update_display();
-            fixture.selected="More";
+            fixture.selected=manual;
             assert(fixture.update_display()==fixture.display_supported);
             for (unsigned g=0;g<5;++g) assert(fixture.visible[g]);
             assert(!fixture.update_display());
@@ -267,7 +285,7 @@ void run(void) {
                 fixture.selected="Auto";assert(fixture.update_display()==fixture.display_supported);
                 for (unsigned g=0;g<5;++g) assert(!fixture.visible[g]);
                 get_engine_option(output,sizeof(output));assert(!strcmp(output,"Auto"));
-                fixture.selected="More";fixture.update_display();fixture.groups[group]="None";
+                fixture.selected=manual;fixture.update_display();fixture.groups[group]=empty;
             }
             // Conflicting selections choose the lowest occupied selector.
             for (size_t i=0;i<profiles.size();++i) {
@@ -282,10 +300,14 @@ void run(void) {
                 for (size_t i=0;i<profiles.size();++i)
                     if (group_for(builds[i])<=group) expected=profiles[i].c_str();
                 get_engine_option(output,sizeof(output));assert(!strcmp(output,expected));
-                fixture.groups[group]="None";
+                fixture.groups[group]=empty;
             }
+            fixture.selected=!strcmp(manual,"More")?"More...":"More";
+            get_engine_option(output,sizeof(output));assert(!strcmp(output,"Auto"));
+            assert(!fixture.update_display());
+            fixture.selected=manual;
             fixture.groups[0]="unknown";fixture.groups[1]=NULL;
-            fixture.groups[2]="Auto";fixture.groups[3]="More";fixture.groups[4]="None";
+            fixture.groups[2]="Auto";fixture.groups[3]="More";fixture.groups[4]=empty;
             get_engine_option(output,sizeof(output));assert(!strcmp(output,"Auto"));
             // A profile stored in the wrong range is ignored.
             fixture.groups[(group_for(builds[0])+1)%5]=profiles[0].c_str();

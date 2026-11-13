@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.9 — engine selector labels
+
+- Display More... and - in the engine selectors, preserving visibility rules and selection priority.
+
 ## 0.2.8 — grouped engine selection
 
 - Keep Engine build limited to Auto (detect from file) and More. More shows five build ranges, each starting with None.

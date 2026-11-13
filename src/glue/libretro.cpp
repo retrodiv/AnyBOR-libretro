@@ -712,7 +712,7 @@ static bool engine_options_manual(void)
 {
     struct retro_variable var = { "anybor_engine", NULL };
     return env_cb && env_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) &&
-           var.value && !strcmp(var.value, "More");
+           var.value && (!strcmp(var.value, "More") || !strcmp(var.value, "More..."));
 }
 
 static int g_engine_options_visible = -1;
@@ -1161,7 +1161,7 @@ static void present_error_frame(void)
 #define ENGINE_OPT_INFO \
     "Which OpenBOR engine runs the game. Auto detects it from the file " \
     "(verified engine executable, filename build range or tag, sidecar exe, bounded content scan). A manual choice is " \
-    "applied on Restart. Select More to show build ranges. None in every range " \
+    "applied on Restart. Select More... to show build ranges. A dash in every range " \
     "uses Auto. If several ranges have a selection, the last range with a selection in the menu wins."
 
 void retro_set_environment(retro_environment_t cb)
@@ -1215,7 +1215,7 @@ void retro_set_environment(retro_environment_t cb)
               { { "On", NULL }, { "Off", NULL }, { NULL, NULL } }, "On" },
             { "anybor_engine", "Engine build", "Engine build",
               ENGINE_OPT_INFO, NULL, "system",
-              { { "Auto", "Auto (detect from file)" }, { "More", NULL }, { NULL, NULL } },
+              { { "Auto", "Auto (detect from file)" }, { "More", "More..." }, { NULL, NULL } },
               "Auto" },
             { "anybor_state_content", "Save state content", "Save state content",
               "Smart reconstructs resources whose bytes can be reproduced exactly. "
@@ -1272,7 +1272,7 @@ void retro_set_environment(retro_environment_t cb)
                 entry.info = ENGINE_OPT_INFO;
                 entry.category_key = "system";
                 entry.default_value = "None";
-                entry.values[0] = { "None", NULL };
+                entry.values[0] = { "None", "-" };
                 size_t value = 1;
                 for (size_t i = 0; i < n_profiles; ++i) {
                     if (kProfiles[i].build >= range.first && kProfiles[i].build <= range.last &&
@@ -1295,7 +1295,7 @@ void retro_set_environment(retro_environment_t cb)
     static char values[n_engine_groups][64 + 48 * (sizeof(kProfiles) / sizeof(kProfiles[0]))];
     for (size_t group = 0; group < n_engine_groups; ++group) {
         const auto &range = kEngineOptionGroups[group];
-        snprintf(values[group], sizeof(values[group]), "%s; None", range.title);
+        snprintf(values[group], sizeof(values[group]), "%s; -", range.title);
         for (size_t i = 0; i < n_profiles; ++i) {
             if (kProfiles[i].build < range.first || kProfiles[i].build > range.last) continue;
             size_t used = strlen(values[group]);
@@ -1307,7 +1307,7 @@ void retro_set_environment(retro_environment_t cb)
         { "anybor_analog", "Left analog stick as D-pad; On|Off" },
         { "anybor_rumble", "Rumble; On|Off" },
         { "anybor_macros", "Special move macros (L2/R2/L3/R3); On|Off" },
-        { "anybor_engine", "Engine build (needs restart); Auto|More" },
+        { "anybor_engine", "Engine build (needs restart); Auto|More..." },
         { kEngineOptionGroups[0].key, values[0] },
         { kEngineOptionGroups[1].key, values[1] },
         { kEngineOptionGroups[2].key, values[2] },
