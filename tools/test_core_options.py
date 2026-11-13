@@ -120,8 +120,23 @@ static void read_v2(const retro_core_options_v2 *options) {
         for (;i<RETRO_NUM_CORE_OPTION_VALUES_MAX && def->values[i].value;++i)
             option.values.push_back(def->values[i].value);
         assert(i<RETRO_NUM_CORE_OPTION_VALUES_MAX && !def->values[i].label);
-        check_values(option);active->options.push_back(option);
+        assert(def->category_key);
+        const char *category = !strcmp(def->key,"anybor_crt_tv") ? "video" :
+            (!strcmp(def->key,"anybor_analog") || !strcmp(def->key,"anybor_rumble") || !strcmp(def->key,"anybor_macros")) ? "input" :
+            !strncmp(def->key,"anybor_clear_",13) ? "development" : "system";
+        assert(!strcmp(def->category_key,category));
+        if (!strncmp(def->key,"anybor_engine",13)) {
+            assert(option.default_value=="Auto" && option.values[0]=="Auto");
+            if (option.values.back()=="More...") option.values.pop_back();
+            if (option.key!="anybor_engine") {
+                assert(!active->options.empty() && active->options.back().key=="anybor_engine");
+                active->options.back().values.insert(active->options.back().values.end(),option.values.begin()+1,option.values.end());
+                continue;
+            }
+        } else check_values(option);
+        active->options.push_back(option);
     }
+    for (const auto &option : active->options) check_values(option);
 }
 static void read_legacy(const retro_variable *variables) {
     assert(variables);
@@ -154,6 +169,16 @@ static bool environment(unsigned command,void *data) {
         bool known=false;
         for (size_t i=0;i<sizeof(expected_keys)/sizeof(*expected_keys);++i)
             if (!strcmp(var->key,expected_keys[i])) known=true;
+        if (active->v2_expected && !strncmp(var->key,"anybor_engine",13)) {
+            known=true;
+            size_t selected=0;
+            for (;selected<active->profiles.size();++selected)
+                if (active->selected && active->profiles[selected]==active->selected) break;
+            size_t page=!strcmp(var->key,"anybor_engine")?0:strtoul(var->key+14,NULL,10)-1;
+            if (selected==active->profiles.size()) var->value=active->selected;
+            else var->value=selected/(RETRO_NUM_CORE_OPTION_VALUES_MAX-3)>page?"More...":active->selected;
+            return true;
+        }
         assert(known);
         var->value=!strcmp(var->key,"anybor_engine")?active->selected:active->option_value;
         return true;
@@ -179,7 +204,7 @@ void run(void) {
         for (unsigned repeat=0;repeat<2;++repeat) {
             frontend_fixture fixture={};fixture.version=versions[test];
             fixture.version_available=test!=4;fixture.categories=test==2;fixture.profiles=profiles;
-            fixture.v2_expected=test!=4 && versions[test]>=2 && profiles.size()<=RETRO_NUM_CORE_OPTION_VALUES_MAX-2;
+            fixture.v2_expected=test!=4 && versions[test]>=2;
             active=&fixture;retro_set_environment(environment);
             assert(fixture.queries==1 && fixture.registrations==1);
             assert(!fixture.options.empty());

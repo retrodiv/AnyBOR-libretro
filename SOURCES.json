@@ -5,7 +5,7 @@
     ".github/workflows/ci.yml": "3ee8fc87e8e0b13ef1fa57ea5f6b93987a1fb10ca68f2b52244ac7d056b78c4b",
     ".gitignore": "51eef046f754b4d264790dd07ff3c3d6b32b5245c682b3e1f64e92bb7a4ed39f",
     ".gitlab-ci.yml": "d0a7a43ff1dbcd3324279db48cdafb93d3963ef28f0d802f59c1741db1b2f087",
-    "CHANGELOG.md": "8eaa0ae7c86918da3aa9c17c0f6a51382089f96968853887ce03a79345ff0fd5",
+    "CHANGELOG.md": "39911b9586a81848406c4ac1fd18590e2f9bf8d0d859ab6c3c7187713156b59d",
     "COMPATIBILITY.md": "359008d6e45ef6a7c30f82621f06188022c36a55dac6f305ded83b486555b2a6",
     "CONTRIBUTING.md": "823ff67603edceccac6a3d8c30d70655414e6674200c7981d1314416c7ca4869",
     "LICENSE": "abeb4a9677c142a681910f7a2e937918213c68b83849b1431ccb4f3f5466a0fa",
@@ -87,7 +87,7 @@
     "NOTICE.txt": "5ad62d532fd00de35fc6353de7fd20eb4515a595c84463ec248b39fa06d0b03f",
     "PROVENANCE.md": "8e94ea88c9fa854b3bcc6778d1c46505df954650c2de2c5584a12ea64141fe68",
     "README.md": "b840da5e91e30855b725b02293d3cf65e1bcf369068cff3f59b681e19211844e",
-    "SBOM.spdx.json": "540ee67ca04033d1d74e97713297adacd851bd0e188e2ae9f1fd08f02d06f941",
+    "SBOM.spdx.json": "4d68c8a141dee6f4247c841a0399ca28b1a76e316c324ec86be69ff9556b9ca1",
     "SECURITY.md": "3aaf7f8f89ef7abc1cac8d4f25f358a5529410673fa04d97ddc123ae21f96f4b",
     "anybor_libretro.info": "ee899a80ef99f464e16c1cbef698c4afa86fb32f546f8e1b51ebb40a5e3cc609",
     "docs/ANYBOR.md": "e7cdf95d5c9db52a28d5da6e4fa21a896fb67f362d87267ed6f68e335b37fc94",
@@ -2681,7 +2681,7 @@
     "src/glue/anybor_engine_executables.h": "06d357e48670990b9275615663bbf7e53f71e2eba94cc64bf8937d631642f85b",
     "src/glue/anybor_engine_identity.h": "5419b31620c56e859365c3845c7d318ca77840a5c89e2b1f65e26dc9b4ea0773",
     "src/glue/anybor_engine_resources.h": "8196f17ba5110e51c4b71388f005e3beb26c2cc72aaf0fb559a255c10842223b",
-    "src/glue/anybor_engines.h": "5bdcd37636f794294f504cb062257f1125a65a0a3f9daace30c849988887e75a",
+    "src/glue/anybor_engines.h": "b6a17985d087102bf34c75f1c1d34525b0deee5f3e221abbe6eefaca6327f581",
     "src/glue/anybor_error_screen.h": "15c6d9c150494aaa425086d41b74277f3472fe2b2b749611632f4d85cfa3aeb0",
     "src/glue/anybor_game_content.h": "3814910250a6ba98dd4b9b76342ccd715bafd4c899ee5a71b7afa5a20c87efa3",
     "src/glue/anybor_hankaku.h": "639d8236cb4a82eaacafd1ec0f5f904ba734fdb6e8771db5b96ae03cb06e88ea",
@@ -2722,8 +2722,8 @@
     "src/glue/assets/README.md": "508b1b12cd6557e4a20fdac3611ba97e42b225cc12752caa6c2b2f5b0aaa69ea",
     "src/glue/exports.macho": "97150280ad24c4636b55e7fa760bbb3060bd9b200716547c5b939899751fde31",
     "src/glue/exports.map": "6313cbda366a9d3f60c42ace4a660baf39b6037f40a92bf486741a424c754c50",
-    "src/glue/libretro.cpp": "903c1420643a2261b82ab4a89113716856f5a305ff9f06605df87eb40323613b",
-    "src/pin.json": "fa9c2784a102fb004312f14bd2cdc3027b90f7dffa8707256d5ac3291f57e260",
+    "src/glue/libretro.cpp": "ec448134f750af2e5b25682f89c9fbf6aabbb865d81da296890804e2438f4483",
+    "src/pin.json": "32b554da3feaab81de137bff70be8e58dee0ceae92dd1dc7398c78c6e00d83a0",
     "src/port/libretro/anybor_abi.h": "4cac6476d8370315856ecf0dbf273be32b8d61dc3244f828631e078ce1229511",
     "src/port/libretro/anybor_adpcm.c": "40eed9f1f6f51f7b3a8d06083b7033945c014d763b896e6319e5e637b475ccc6",
     "src/port/libretro/anybor_alloc.c": "3e20df23a318d294581c29b46035eb0dcada030c9990e7b8bd43266a5b566f79",
@@ -4015,7 +4015,7 @@
     "tools/test_command_table_ownership.py": "33b8e41cdadb0fad07f88d693d5ec62fe129faabc752337f7be0d413ecfedd52",
     "tools/test_content_triage.py": "3f8e0c33e0aee58bda4ba77255f294eab98bc79e7283791f0faca9fe20f1894f",
     "tools/test_contract_fixtures.py": "fd9a253fd66fffb8b96fd3710e55873112f4fad434ed8faa042d034410c1e01a",
-    "tools/test_core_options.py": "71fb003165d801c83ae3969804f6d7d7ad76c06dc47cd4e5f16fcaeaf339726b",
+    "tools/test_core_options.py": "0a6545670d36ddc11c4ccdd3478ccd9ed80168370f340c14bba1e1abe608e566",
     "tools/test_crt.py": "3aaab1dcc283e650545435333979245e62de39fcea7d6edb7444bb2e65992b9b",
     "tools/test_defense_query_bounds.py": "32007ae765cc9a86913cc1180fb384c6f0a971d69515a656d9ed3884cf9896a9",
     "tools/test_dot_bounds.py": "d23c6bed59d0591e7b350588759bfd24dc72f8a1ec4f3bb111c0ab5de746ac4b",
@@ -4399,5 +4399,5 @@
     "tools/zoom_pixels.c.in": "b1964154c7ee6eb28300e75a8cfff5bc7cc59d1e8f544e42bfa7f1fd3ba21763"
   },
   "schema": 1,
-  "version": "0.2.5"
+  "version": "0.2.6"
 }

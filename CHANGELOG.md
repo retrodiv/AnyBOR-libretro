@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.6 — core option categories
+
+- Preserve option categories with large profile catalogues by continuing the engine selector across bounded lists. Select More... to use the following list.
+
 ## 0.2.5 — precomputed loading artwork
 
 - Restore builds without Pillow by refreshing the precomputed loading image after generator filename changes.

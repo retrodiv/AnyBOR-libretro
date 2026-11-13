@@ -697,11 +697,22 @@ static int pick_anchor(int build)
 
 static void get_engine_option(char *out, size_t out_len)
 {
-    struct retro_variable var = { "anybor_engine", NULL };
     strncpy(out, "Auto", out_len);
-    if (env_cb && env_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
-        strncpy(out, var.value, out_len - 1);
     out[out_len - 1] = '\0';
+    const size_t count = sizeof(kProfiles) / sizeof(kProfiles[0]);
+    const size_t page_size = RETRO_NUM_CORE_OPTION_VALUES_MAX - 3;
+    for (size_t page = 0; page * page_size < count; ++page) {
+        char key[64];
+        if (!page) snprintf(key, sizeof(key), "anybor_engine");
+        else snprintf(key, sizeof(key), "anybor_engine_%zu", page + 1);
+        struct retro_variable var = { key, NULL };
+        if (!env_cb || !env_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) || !var.value)
+            return;
+        if (!strcmp(var.value, "More...")) continue;
+        strncpy(out, var.value, out_len - 1);
+        out[out_len - 1] = '\0';
+        return;
+    }
 }
 
 static bool g_analog = true;  /* left stick doubles as D-pad */
@@ -1124,9 +1135,8 @@ void retro_set_environment(retro_environment_t cb)
     unsigned cov = 0;
     if (!cb(RETRO_ENVIRONMENT_GET_CORE_OPTIONS_VERSION, &cov))
         cov = 0;
-    /* The v2 ABI fixes the value array size. Reserve Auto and the terminator;
-     * larger profile lists use the complete legacy string below. */
-    if (cov >= 2 && n_profiles <= RETRO_NUM_CORE_OPTION_VALUES_MAX - 2) {
+    /* Keep categories even when the profile catalogue exceeds one ABI array. */
+    if (cov >= 2) {
         static struct retro_core_option_v2_category cats[] = {
             { "video", "Video", "Video output." },
             { "input", "Input", "Controller behaviour." },
@@ -1208,18 +1218,37 @@ void retro_set_environment(retro_environment_t cb)
               { { "On", NULL }, { "Off", NULL }, { NULL, NULL } }, "On" },
             { NULL, NULL, NULL, NULL, NULL, NULL, { { NULL, NULL } }, NULL },
         };
-        for (struct retro_core_option_v2_definition *def = defs; def->key; ++def) {
-            if (strcmp(def->key, "anybor_engine"))
+        enum { page_size = RETRO_NUM_CORE_OPTION_VALUES_MAX - 3 };
+        static const size_t pages = (sizeof(kProfiles) / sizeof(kProfiles[0]) + page_size - 1) / page_size;
+        static struct retro_core_option_v2_definition expanded[
+            sizeof(defs) / sizeof(defs[0]) + pages - 1];
+        static char keys[pages][64], titles[pages][64];
+        size_t output = 0;
+        for (const auto &def : defs) {
+            if (!def.key) break;
+            if (strcmp(def.key, "anybor_engine")) {
+                expanded[output++] = def;
                 continue;
-            for (size_t i = 0; i < n_profiles; i++) {
-                def->values[i + 1].value = kProfiles[i].disp;
-                def->values[i + 1].label = NULL;
             }
-            def->values[n_profiles + 1].value = NULL;
-            def->values[n_profiles + 1].label = NULL;
-            break;
+            for (size_t page = 0; page < pages; ++page) {
+                auto &entry = expanded[output++];
+                entry = def;
+                if (page) {
+                    snprintf(keys[page], sizeof(keys[page]), "anybor_engine_%zu", page + 1);
+                    snprintf(titles[page], sizeof(titles[page]), "Engine build (continued %zu)", page + 1);
+                    entry.key = keys[page];
+                    entry.desc = entry.desc_categorized = titles[page];
+                }
+                entry.info = ENGINE_OPT_INFO " Select More... to use the next Engine build list. Continued lists apply only when the preceding list selects More....";
+                size_t value = 1;
+                for (size_t i = page * page_size; i < n_profiles && i < (page + 1) * page_size; ++i)
+                    entry.values[value++] = { kProfiles[i].disp, NULL };
+                if (page + 1 < pages) entry.values[value++] = { "More...", NULL };
+                entry.values[value] = { NULL, NULL };
+            }
         }
-        static struct retro_core_options_v2 opts = { cats, defs };
+        expanded[output] = {};
+        static struct retro_core_options_v2 opts = { cats, expanded };
         cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_V2, &opts);
         return;
     }
