@@ -211,8 +211,9 @@ Manual selection overrides Auto when the metadata is missing or incorrect:
 1. Find the engine build specified by the content's author or original release.
 2. Open **Engine build** in the core-options list, under **System** when
    categories are available.
-3. Select the full value, such as **v3.0 3780**, and use **Restart** or reload
-   the content. The frontend log reports the selected profile.
+3. Select **More**, then select the full profile value, such as **v3.0 3780**,
+   in its build range. Leave the other ranges at **None**. Use **Restart** or
+   reload the content. The frontend log reports the selected profile.
 4. Keep that profile for the session. States require the same logical profile,
    core build and content; switching profiles does not convert existing states.
 

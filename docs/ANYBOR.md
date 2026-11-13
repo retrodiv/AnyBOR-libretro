@@ -138,7 +138,12 @@ The macros account for the active character's facing direction.
 | Left analog stick as D-pad | `anybor_analog` | **On**. Adds movement with the left stick. |
 | Rumble | `anybor_rumble` | **On**. Forwards game hit vibration. |
 | Special move macros (L2/R2/L3/R3) | `anybor_macros` | **On**. Executes supported character move sequences. |
-| Engine build | `anybor_engine` | **Auto**. Select an explicit compatibility profile when needed; changes apply on Restart. |
+| Engine build | `anybor_engine` | **Auto (detect from file)**. More shows the manual build ranges below. Auto ignores every range selection. Changes apply on Restart. |
+| Engine build 3000 -> 3499 | `anybor_engine_3000_3499` | **None**. Select a profile in this range. |
+| Engine build 3500 -> 3749 | `anybor_engine_3500_3749` | **None**. Select a profile in this range. |
+| Engine build 3750 -> 3999 | `anybor_engine_3750_3999` | **None**. Select a profile in this range. |
+| Engine build 4000 -> 4999 | `anybor_engine_4000_4999` | **None**. Select a profile in this range. |
+| Engine build > 5000 | `anybor_engine_5000_plus` | **None**. Select a profile in this range. With More, the last range with a selection in this table takes priority. None in every range uses Auto. |
 | Save state content | `anybor_state_content` | **Smart** reconstructs resources after an exact byte proof. **Full** retains complete engine memory. Applies when content is loaded. |
 | Save state compression | `anybor_state_compression` | **On** compresses state blocks. **Off** leaves changed blocks uncompressed while retaining reuse of unchanged blocks. Applies when content is loaded. |
 | Forward game log | `anybor_gamelog` | **Off**. Mirrors the engine log into the frontend log. |

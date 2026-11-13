@@ -578,7 +578,16 @@ static bool env_cb(unsigned cmd, void *data)
             return true;
         }
         if (!strcmp(var->key, "anybor_engine")) {
-            var->value = g_engine_opt;
+            var->value = (!strcmp(g_engine_opt, "Auto") || !strcmp(g_engine_opt, "auto")) ? "Auto" : "More";
+            return true;
+        }
+        if (!strncmp(var->key, "anybor_engine_", 14)) {
+            const char *number = strrchr(g_engine_opt, ' ');
+            int build = atoi(number ? number + 1 : g_engine_opt);
+            int first = 0, last = 0;
+            bool match = !strcmp(var->key, "anybor_engine_5000_plus") ? build > 5000 :
+                sscanf(var->key, "anybor_engine_%d_%d", &first, &last) == 2 && build >= first && build <= last;
+            var->value = match ? g_engine_opt : "None";
             return true;
         }
         return false;

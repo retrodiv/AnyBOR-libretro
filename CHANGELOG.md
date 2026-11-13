@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.8 — grouped engine selection
+
+- Keep Engine build limited to Auto (detect from file) and More. More shows five build ranges, each starting with None.
+- Auto takes priority over stored range selections. With More, the last range with a selection in the menu wins; None in every range uses automatic detection.
+- Check range coverage, option visibility, conflicting selections and legacy registration at the ABI limit.
+
 ## 0.2.7 — paged option regression checks
 
 - Validate the complete core-option order across legacy and paged interfaces, including continued engine lists and cache controls.

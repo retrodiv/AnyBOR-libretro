@@ -32,12 +32,11 @@ def read_ppm(path):
 
 
 def check_option_order(result, profile_count, capacity, version):
-    """Check the full registration, including every consecutive profile page."""
+    """Check complete registration, including every manual build range."""
     assert profile_count > 0 and capacity >= 4
-    pages = (profile_count + capacity - 4) // (capacity - 3) if version >= 2 else 1
     expected = ["anybor_crt_tv", "anybor_analog", "anybor_rumble", "anybor_macros",
-                "anybor_engine"]
-    expected += ["anybor_engine_" + str(page) for page in range(2, pages + 1)]
+                "anybor_engine", "anybor_engine_3000_3499", "anybor_engine_3500_3749",
+                "anybor_engine_3750_3999", "anybor_engine_4000_4999", "anybor_engine_5000_plus"]
     expected += ["anybor_state_content", "anybor_state_compression", "anybor_gamelog",
                  "anybor_clear_local_data", "anybor_clear_game_cache", "anybor_clear_all_caches"]
     orders = re.findall(r"^option_order=([^\r\n]*)$", result, re.M)

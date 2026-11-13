@@ -695,23 +695,58 @@ static int pick_anchor(int build)
 
 /* ------------------------------------------------------- core options --- */
 
+struct engine_option_group {
+    const char *key, *title;
+    int first, last;
+};
+static const engine_option_group kEngineOptionGroups[] = {
+    { "anybor_engine_3000_3499", "Engine build 3000 -> 3499", 3000, 3499 },
+    { "anybor_engine_3500_3749", "Engine build 3500 -> 3749", 3500, 3749 },
+    { "anybor_engine_3750_3999", "Engine build 3750 -> 3999", 3750, 3999 },
+    { "anybor_engine_4000_4999", "Engine build 4000 -> 4999", 4000, 4999 },
+    { "anybor_engine_5000_plus", "Engine build > 5000", 5001, INT_MAX },
+};
+static const size_t n_engine_groups = sizeof(kEngineOptionGroups) / sizeof(kEngineOptionGroups[0]);
+
+static bool engine_options_manual(void)
+{
+    struct retro_variable var = { "anybor_engine", NULL };
+    return env_cb && env_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) &&
+           var.value && !strcmp(var.value, "More");
+}
+
+static int g_engine_options_visible = -1;
+
+static bool update_engine_option_visibility(void)
+{
+    if (!env_cb) return false;
+    bool visible = engine_options_manual();
+    if (g_engine_options_visible == (int)visible) return false;
+    g_engine_options_visible = (int)visible;
+    bool changed = false;
+    for (size_t group = 0; group < n_engine_groups; ++group) {
+        struct retro_core_option_display display = { kEngineOptionGroups[group].key, visible };
+        changed = env_cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_DISPLAY, &display) || changed;
+    }
+    return changed;
+}
+
 static void get_engine_option(char *out, size_t out_len)
 {
-    strncpy(out, "Auto", out_len);
-    out[out_len - 1] = '\0';
-    const size_t count = sizeof(kProfiles) / sizeof(kProfiles[0]);
-    const size_t page_size = RETRO_NUM_CORE_OPTION_VALUES_MAX - 3;
-    for (size_t page = 0; page * page_size < count; ++page) {
-        char key[64];
-        if (!page) snprintf(key, sizeof(key), "anybor_engine");
-        else snprintf(key, sizeof(key), "anybor_engine_%zu", page + 1);
-        struct retro_variable var = { key, NULL };
-        if (!env_cb || !env_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) || !var.value)
-            return;
-        if (!strcmp(var.value, "More...")) continue;
-        strncpy(out, var.value, out_len - 1);
-        out[out_len - 1] = '\0';
-        return;
+    if (!out_len) return;
+    snprintf(out, out_len, "Auto");
+    if (!engine_options_manual()) return;
+    for (size_t group = 0; group < n_engine_groups; ++group) {
+        struct retro_variable var = { kEngineOptionGroups[group].key, NULL };
+        if (!env_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) || !var.value) continue;
+        for (size_t i = 0; i < sizeof(kProfiles) / sizeof(kProfiles[0]); ++i) {
+            if (kProfiles[i].build >= kEngineOptionGroups[group].first &&
+                kProfiles[i].build <= kEngineOptionGroups[group].last &&
+                (!strcmp(var.value, kProfiles[i].disp) || !strcmp(var.value, kProfiles[i].name))) {
+                snprintf(out, out_len, "%s", kProfiles[i].disp);
+                break;
+            }
+        }
     }
 }
 
@@ -749,6 +784,7 @@ static void load_state_options(void)
  * load/reset by decide_engine). */
 static void refresh_options(void)
 {
+    update_engine_option_visibility();
     g_analog = opt_is_on("anybor_analog", true);
     g_rumble_on = opt_is_on("anybor_rumble", true);
     g_macros_on = opt_is_on("anybor_macros", true);
@@ -1123,19 +1159,21 @@ static void present_error_frame(void)
 /* ------------------------------------------------------------ libretro --- */
 
 #define ENGINE_OPT_INFO \
-    "Which OpenBOR engine runs the game. Auto detects it from the pak " \
+    "Which OpenBOR engine runs the game. Auto detects it from the file " \
     "(verified engine executable, filename build range or tag, sidecar exe, bounded content scan). A manual choice is " \
-    "applied on Restart."
+    "applied on Restart. Select More to show build ranges. None in every range " \
+    "uses Auto. If several ranges have a selection, the last range with a selection in the menu wins."
 
 void retro_set_environment(retro_environment_t cb)
 {
     env_cb = cb;
+    g_engine_options_visible = -1;
     size_t n_profiles = sizeof(kProfiles) / sizeof(kProfiles[0]);
 
     unsigned cov = 0;
     if (!cb(RETRO_ENVIRONMENT_GET_CORE_OPTIONS_VERSION, &cov))
         cov = 0;
-    /* Keep categories even when the profile catalogue exceeds one ABI array. */
+    /* Each build range has its own bounded ABI value list. */
     if (cov >= 2) {
         static struct retro_core_option_v2_category cats[] = {
             { "video", "Video", "Video output." },
@@ -1177,7 +1215,7 @@ void retro_set_environment(retro_environment_t cb)
               { { "On", NULL }, { "Off", NULL }, { NULL, NULL } }, "On" },
             { "anybor_engine", "Engine build", "Engine build",
               ENGINE_OPT_INFO, NULL, "system",
-              { { "Auto", "Auto (detect from pak)" }, { NULL, NULL } },
+              { { "Auto", "Auto (detect from file)" }, { "More", NULL }, { NULL, NULL } },
               "Auto" },
             { "anybor_state_content", "Save state content", "Save state content",
               "Smart reconstructs resources whose bytes can be reproduced exactly. "
@@ -1218,50 +1256,50 @@ void retro_set_environment(retro_environment_t cb)
               { { "On", NULL }, { "Off", NULL }, { NULL, NULL } }, "On" },
             { NULL, NULL, NULL, NULL, NULL, NULL, { { NULL, NULL } }, NULL },
         };
-        enum { page_size = RETRO_NUM_CORE_OPTION_VALUES_MAX - 3 };
-        static const size_t pages = (sizeof(kProfiles) / sizeof(kProfiles[0]) + page_size - 1) / page_size;
         static struct retro_core_option_v2_definition expanded[
-            sizeof(defs) / sizeof(defs[0]) + pages - 1];
-        static char keys[pages][64], titles[pages][64];
+            sizeof(defs) / sizeof(defs[0]) + n_engine_groups];
         size_t output = 0;
         for (const auto &def : defs) {
             if (!def.key) break;
-            if (strcmp(def.key, "anybor_engine")) {
-                expanded[output++] = def;
-                continue;
-            }
-            for (size_t page = 0; page < pages; ++page) {
+            expanded[output++] = def;
+            if (strcmp(def.key, "anybor_engine")) continue;
+            for (size_t group = 0; group < n_engine_groups; ++group) {
+                const auto &range = kEngineOptionGroups[group];
                 auto &entry = expanded[output++];
-                entry = def;
-                if (page) {
-                    snprintf(keys[page], sizeof(keys[page]), "anybor_engine_%zu", page + 1);
-                    snprintf(titles[page], sizeof(titles[page]), "Engine build (continued %zu)", page + 1);
-                    entry.key = keys[page];
-                    entry.desc = entry.desc_categorized = titles[page];
-                }
-                entry.info = ENGINE_OPT_INFO " Select More... to use the next Engine build list. Continued lists apply only when the preceding list selects More....";
+                entry = {};
+                entry.key = range.key;
+                entry.desc = entry.desc_categorized = range.title;
+                entry.info = ENGINE_OPT_INFO;
+                entry.category_key = "system";
+                entry.default_value = "None";
+                entry.values[0] = { "None", NULL };
                 size_t value = 1;
-                for (size_t i = page * page_size; i < n_profiles && i < (page + 1) * page_size; ++i)
-                    entry.values[value++] = { kProfiles[i].disp, NULL };
-                if (page + 1 < pages) entry.values[value++] = { "More...", NULL };
+                for (size_t i = 0; i < n_profiles; ++i) {
+                    if (kProfiles[i].build >= range.first && kProfiles[i].build <= range.last &&
+                        value + 1 < RETRO_NUM_CORE_OPTION_VALUES_MAX)
+                        entry.values[value++] = { kProfiles[i].disp, NULL };
+                }
                 entry.values[value] = { NULL, NULL };
             }
         }
         expanded[output] = {};
         static struct retro_core_options_v2 opts = { cats, expanded };
         cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_V2, &opts);
+        struct retro_core_options_update_display_callback display = { update_engine_option_visibility };
+        cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_UPDATE_DISPLAY_CALLBACK, &display);
+        update_engine_option_visibility();
         return;
     }
 
-    /* legacy fallback: flat v0 variables */
-    static char values[64 + 48 * (sizeof(kProfiles) / sizeof(kProfiles[0]))];
-    if (!values[0]) {
-        strcpy(values, "Engine build (needs restart); Auto");
-        for (size_t i = 0; i < n_profiles; i++) {
-            size_t used = strlen(values);
-            if (strlen(kProfiles[i].disp) + 2 > sizeof(values) - used)
-                break;
-            snprintf(values + used, sizeof(values) - used, "|%s", kProfiles[i].disp);
+    /* legacy fallback: grouped v0 variables (no separate value labels). */
+    static char values[n_engine_groups][64 + 48 * (sizeof(kProfiles) / sizeof(kProfiles[0]))];
+    for (size_t group = 0; group < n_engine_groups; ++group) {
+        const auto &range = kEngineOptionGroups[group];
+        snprintf(values[group], sizeof(values[group]), "%s; None", range.title);
+        for (size_t i = 0; i < n_profiles; ++i) {
+            if (kProfiles[i].build < range.first || kProfiles[i].build > range.last) continue;
+            size_t used = strlen(values[group]);
+            snprintf(values[group] + used, sizeof(values[group]) - used, "|%s", kProfiles[i].disp);
         }
     }
     static const struct retro_variable vars[] = {
@@ -1269,7 +1307,12 @@ void retro_set_environment(retro_environment_t cb)
         { "anybor_analog", "Left analog stick as D-pad; On|Off" },
         { "anybor_rumble", "Rumble; On|Off" },
         { "anybor_macros", "Special move macros (L2/R2/L3/R3); On|Off" },
-        { "anybor_engine", values },
+        { "anybor_engine", "Engine build (needs restart); Auto|More" },
+        { kEngineOptionGroups[0].key, values[0] },
+        { kEngineOptionGroups[1].key, values[1] },
+        { kEngineOptionGroups[2].key, values[2] },
+        { kEngineOptionGroups[3].key, values[3] },
+        { kEngineOptionGroups[4].key, values[4] },
         { "anybor_state_content", "Save state content; " OBOR_STATE_CONTENT_VALUES },
         { "anybor_state_compression", "Save state compression; " OBOR_STATE_COMPRESSION_VALUES },
         { "anybor_gamelog", "Forward game log; Off|On" },
@@ -1279,6 +1322,9 @@ void retro_set_environment(retro_environment_t cb)
         { NULL, NULL },
     };
     cb(RETRO_ENVIRONMENT_SET_VARIABLES, (void *)vars);
+    struct retro_core_options_update_display_callback display = { update_engine_option_visibility };
+    cb(RETRO_ENVIRONMENT_SET_CORE_OPTIONS_UPDATE_DISPLAY_CALLBACK, &display);
+    update_engine_option_visibility();
 }
 
 void retro_set_video_refresh(retro_video_refresh_t cb) { video_cb = cb; }
