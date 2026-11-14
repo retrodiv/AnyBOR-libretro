@@ -1832,6 +1832,16 @@
       "ci": "shared"
     },
     {
+      "id": "test_engine_error_log",
+      "memory_mib": 512,
+      "seconds": 120,
+      "command": [
+        "python3",
+        "tools/test_engine_error_log.py"
+      ],
+      "ci": "shared"
+    },
+    {
       "id": "test_core_options",
       "memory_mib": 1024,
       "seconds": 180,

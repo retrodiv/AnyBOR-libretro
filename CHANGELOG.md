@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.11 — loading diagnostics
+
+- Show the engine loading error instead of shutdown memory-accounting lines.
+- Preserve fault messages and diagnostics from the active profile.
+
 ## 0.2.10 — automatic engine selection switch
 
 - Offer Automatic engine selection as an On/Off switch. On detects the engine and hides the manual ranges; Off shows them.

@@ -1058,8 +1058,8 @@ static void error_reason(const char *reason)
              reason && reason[0] ? reason : "The game could not be loaded.");
 }
 
-/* borShutdown writes the reason just after this marker. Ignore the later
- * teardown chatter and any log from a different engine profile. */
+/* Read only the active profile's log. Some engines append the reason after
+ * shutdown accounting; that accounting is not the game loading error. */
 static bool engine_log_error(char *out, size_t cap)
 {
     if (g_vtbl && p_get_fault_message(out, (uint32_t)cap)) return true;
@@ -1071,18 +1071,44 @@ static bool engine_log_error(char *out, size_t cap)
     FILE *fp = fopen(path, "rb");
     if (!fp) return false;
     char line[512];
-    bool marker = false, found = false;
+    bool marker = false, found = false, shutdown_summary = false;
     while (fgets(line, sizeof(line), fp)) {
         if (strstr(line, "An Error Occurred")) {
             marker = true;
             found = false;
+            shutdown_summary = false;
             continue;
         }
         if (!marker) continue;
         size_t len = strlen(line);
         while (len && (line[len - 1] == '\n' || line[len - 1] == '\r'))
             line[--len] = '\0';
+        if (line[0] == '*' && strstr(line, "Shutting Down")) {
+            shutdown_summary = true;
+            continue;
+        }
+        if (shutdown_summary) {
+            if (line[0] == '*' && strstr(line, " Done "))
+                shutdown_summary = false;
+            continue;
+        }
         if (!len || line[0] == '*') continue;
+        const char *text = line;
+        while (*text == ' ' || *text == '\t') ++text;
+        if (!*text) continue;
+        const char *amount = NULL;
+        if (!strncmp(text, "Total Ram:", 10)) amount = text + 10;
+        else if (!strncmp(text, "Free Ram:", 9)) amount = text + 9;
+        else if (!strncmp(text, "Used Ram:", 9)) amount = text + 9;
+        if (amount) {
+            while (*amount == ' ' || *amount == '\t') ++amount;
+            const char *digits = amount;
+            while (*amount >= '0' && *amount <= '9') ++amount;
+            if (amount != digits && !strcmp(amount, " Bytes")) {
+                shutdown_summary = true;
+                continue;
+            }
+        }
         snprintf(out, cap, "%s", line);
         found = true;
         break;

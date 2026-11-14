@@ -651,6 +651,7 @@ jobs:
           run_check python3 tools/test_modern_software_fade.py
           run_check python3 tools/test_modern_sprite_masks.py
           run_check python3 tools/test_modern_system_routing.py
+          run_check python3 tools/test_engine_error_log.py
           if (( ${#failures[@]} )); then
             printf "Failed regression commands (%s):\n" "${#failures[@]}"
             printf "  %s\n" "${failures[@]}"
