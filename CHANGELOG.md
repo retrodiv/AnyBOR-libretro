@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.12 — Linux header compatibility
+
+- Build with older Linux kernel headers that omit filesystem identifiers, preserving filesystem notification detection.
+
 ## 0.2.11 — loading diagnostics
 
 - Show the engine loading error instead of shutdown memory-accounting lines.
