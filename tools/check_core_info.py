@@ -104,7 +104,7 @@ def check_core_info(root, pin):
         "display_name": "OpenBOR (AnyBOR)", "corename": pin["core_name"],
         # The offered metadata names the series, never a build: the core
         # reports its own version at runtime, so this copy cannot go stale.
-        "display_version": "Git", "supported_extensions": "pak|spk|txt|zip",
+        "display_version": "Git", "supported_extensions": "pak|spk|txt|zip|anybor",
         "systemname": "OpenBOR", "license": "Non-commercial",
         "firmware_count": 0, "supports_no_game": "false",
         "savestate": "true", "savestate_features": "serialized",

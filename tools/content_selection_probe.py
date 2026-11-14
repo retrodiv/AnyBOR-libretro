@@ -4,13 +4,16 @@ SPDX-License-Identifier: BSD-3-Clause
 Copyright (c) 2026 retrodiv <retrodiv@proton.me>
 """
 import hashlib
+import os
+import shlex
 from pathlib import Path
 import re
 import subprocess
 
 def compile_probe(glue, header, includes, third_party, output, sanitizers=False):
     inputs = {str(p.resolve()): hashlib.sha256(p.read_bytes()).hexdigest()
-              for p in {glue, header, *includes.glob('*.h'), third_party/'libretro.h'}}
+              for p in {glue, header, *includes.glob('*.h'), includes/'anybor_transform_vm.c',
+                        includes/'anybor_transform_source.c', third_party/'libretro.h'}}
     source = glue.read_text()
     definitions = header.read_text()
     start = definitions.index('typedef struct { int build; const char *name; const char *disp;')
@@ -36,9 +39,14 @@ FALLBACK
 static char g_pak_path[4096],g_engine[48],g_logical_engine[48],g_selection_error[160];
 static char g_engine_source_path[4096];
 static bool g_raw;
-static bool environment(unsigned,void *) {return false;}
+static const char *system_dir, *manual="Auto";
+static bool environment(unsigned command,void *data) {
+ if(command==RETRO_ENVIRONMENT_GET_SYSTEM_DIRECTORY) {*(const char **)data=system_dir;return system_dir!=NULL;}
+ return false;
+}
+static void mkdir_p(const char *) {}
 static retro_environment_t env_cb=environment;
-static void get_engine_option(char *out,size_t n) {snprintf(out,n,"Auto");}
+static void get_engine_option(char *out,size_t n) {snprintf(out,n,"%s",manual);}
 static void log_cb(int,const char *format,...) {
  va_list ap;va_start(ap,format);vprintf(format,ap);va_end(ap);
 }
@@ -80,9 +88,16 @@ int main(int argc,char **argv) {
   return 0;
  }
 #endif
+ if(argc==6&&!strcmp(argv[1],"--external")) {
+  system_dir=argv[3];manual=argv[4];
+  snprintf(g_content_choice.source,sizeof(g_content_choice.source),"%s",argv[2]);
+  snprintf(g_content_choice.engine,sizeof(g_content_choice.engine),"%s",argv[5]);
+  snprintf(g_content_choice.descriptor,sizeof(g_content_choice.descriptor),"synthetic.anybor");
+  argv[1]=argv[2];argc=2;
+ }
  if(argc!=2||strlen(argv[1])>=sizeof(g_pak_path))return 2;
  strcpy(g_pak_path,argv[1]);decide_engine();
- printf("selection_profile=%s selection_engine=%s\n",g_logical_engine,g_engine);
+ printf("selection_profile=%s selection_engine=%s error=%s\n",g_logical_engine,g_engine,g_selection_error);
  return *g_logical_engine?0:3;
 }
 '''
@@ -92,9 +107,15 @@ int main(int argc,char **argv) {
     cpp = output.with_suffix('.cpp')
     cpp.write_text(program)
     extra = ['-g', '-fsanitize=address,undefined'] if sanitizers else []
-    subprocess.run(['c++', '-std=c++11', '-O2', '-Wall', '-Wextra', '-Werror', *extra,
+    objects = []
+    for name in ('anybor_transform_vm', 'anybor_transform_source'):
+        obj = output.with_name(output.name + '-' + name + '.o')
+        subprocess.run([*shlex.split(os.environ.get('HOST_CC', 'cc')), '-std=gnu99', '-O2', *extra,
+                        '-c', str(includes / (name + '.c')), '-o', str(obj)], check=True, timeout=60)
+        objects.append(str(obj))
+    subprocess.run([*shlex.split(os.environ.get('HOST_CXX', 'c++')), '-std=c++11', '-O2', '-Wall', '-Wextra', '-Werror', *extra,
                     '-Wno-unused-function', '-I', str(includes), '-I', str(third_party),
-                    str(cpp), '-o', str(output)], check=True, timeout=60)
+                    str(cpp), *objects, '-o', str(output)], check=True, timeout=60)
     assert all(hashlib.sha256(Path(p).read_bytes()).hexdigest()==digest for p,digest in inputs.items())
     return inputs
 

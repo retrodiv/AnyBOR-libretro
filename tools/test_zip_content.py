@@ -21,7 +21,7 @@ GLUE = Path(os.environ.get('OBOR_GLUE_DIR', ROOT / 'src/glue'))
 THIRD = Path(os.environ.get('OBOR_THIRD_PARTY', ROOT / 'src/third_party'))
 
 
-def build_probe(directory, *, synthetic=True):
+def build_probe(directory, *, synthetic=True, program=None):
     source = directory / 'zip-probe.cpp'
     table = ''
     if synthetic:
@@ -31,7 +31,7 @@ def build_probe(directory, *, synthetic=True):
 typedef struct {const char *sha256; int build; const char *variant; unsigned bytes;} obor_engine_executable;
 static const obor_engine_executable obor_engine_executables[] = {''' + ','.join(
             '{"%s",%d,"",8}' % row for row in rows) + '};'
-    source.write_text(r'''
+    source.write_text((program or r'''
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -55,7 +55,7 @@ int main(int argc, char **argv) {
     printf("%d %d %d %s\n",ok,identity.status,
         identity.status==OBOR_ENGINE_IDENTIFIED?identity.engine->build:0,path);
 }
-'''.replace('@TABLE@', table))
+''').replace('@TABLE@', table))
     flags = ['-g', '-O1', '-fsanitize=address,undefined', '-fno-sanitize-recover=all']
     objects = []
     for name, path in (('miniz', THIRD / 'miniz.c'),

@@ -4,6 +4,7 @@
 #define OBOR_TRANSFORM_H
 #include "anybor_transform_vm.h"
 #include "anybor_sha256.h"
+#include "anybor_content_config.h"
 #include <errno.h>
 
 struct obor_input_transform {
@@ -20,11 +21,13 @@ private:
  * compiler owns multiline functions, so section-shaped text in a comment or
  * string cannot escape into INI syntax. Parse everything before execution. */
 static bool obor_transform_parse(const char *text, size_t size, obor_input_transform &input,
-                                  char *error, size_t capacity)
+                                  char *error, size_t capacity, obor_content_rules *overrides = NULL)
 {
     char names[OBOR_TRANSFORM_MAX_PROGRAMS][64] = {{0}};
     unsigned count = 0;
     bool active = false, seen = false;
+    obor_content_rules rules;
+    int rule = -1;
     size_t at = size >= 3 && !memcmp(text, "\xef\xbb\xbf", 3) ? 3 : 0;
     unsigned char *selected = NULL, *parameters = NULL;
     size_t selected_size = 0, parameter_size = 0;
@@ -38,10 +41,19 @@ static bool obor_transform_parse(const char *text, size_t size, obor_input_trans
         while (end > start && (text[end-1] == ' ' || text[end-1] == '\t')) --end;
         if (start == end || text[start] == '#' || text[start] == ';') continue;
         if (text[start] == '[') {
-            if (text[end-1] != ']') goto invalid;
+            if (text[end-1] != ']' || (rule >= 0 && !rules.rows[rule].engine[0])) goto invalid;
+            rule = -1;
+            if (memchr(text+start, ':', end-start)) {
+                if (!obor_content_rule_section(text+start, end-start, rules)) goto invalid;
+                rule = (int)rules.count - 1;
+            }
             active = end-start == 12 && !memcmp(text+start, "[transforms]", 12);
             if (active && seen) goto invalid;
             seen |= active;
+            continue;
+        }
+        if (rule >= 0) {
+            if (!obor_content_engine_line(text+start, end-start, rules.rows[rule].engine)) goto invalid;
             continue;
         }
         if (!active) continue;
@@ -70,6 +82,8 @@ static bool obor_transform_parse(const char *text, size_t size, obor_input_trans
         while (at < size && (text[at] == ' ' || text[at] == '\t')) ++at;
         if (at < size && text[at] != '\r' && text[at] != '\n') goto invalid;
     }
+    if (rule >= 0 && !rules.rows[rule].engine[0]) goto invalid;
+    if (overrides) *overrides = rules;
     free(input.program); free(input.parameters);
     input.program = selected; input.program_size = selected_size;
     input.parameters = parameters; input.parameter_size = parameter_size;

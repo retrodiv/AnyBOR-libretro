@@ -59,18 +59,21 @@ Load one of these with **Load Content**, then select AnyBOR:
 | `.pak` | An OpenBOR game archive. An otherwise complete, unencoded PACK with a damaged four-byte signature is repaired automatically after structural validation. |
 | `.spk` | Accepted only for an ordinary PACK archive misnamed with this extension. A genuine SPAK/protected archive is recognized and rejected with an explicit error; it is never decoded. |
 | `.txt` | Exactly the `data/models.txt` entry point of an unpacked game. |
-| `.zip` | One structurally recognizable PAK or unpacked game. Identifiable auxiliary files are ignored; ambiguous candidates are rejected. |
+| `.zip` | One structurally recognizable PAK or unpacked game, or the packed payload selected by a unique `.anybor` descriptor. |
+| `.anybor` | A descriptor naming a relative PAK and optionally an engine profile. |
 
 The core does not start without content. It includes no third-party games,
 artwork or soundtracks. Use game data from sources you trust. A nearby OpenBOR
 executable can be read as data for version detection; it is not executed.
 
-Automatic selection checks verified engine-executable SHA-256 identities before filename and
-content clues. A manual profile choice takes priority. An identified engine
+Automatic selection checks matching external INI overrides, descriptor engine settings,
+verified engine-executable SHA-256 identities, then filename/content clues. A manual
+profile choice takes priority. See [content configuration](CONTENT_CONFIGURATION.md). An identified engine
 selects its exact profile when available; otherwise the available-profile
 rules apply to that build. Unknown or absent executables, conflicting engine
 identities and incomplete scans retain the filename/content detection rules.
-Only engine executables supply these identities, never game or PAK hashes.
+Only verified engine executables supply the built-in catalog identities. PAK imohashes
+apply only to user-authored external configuration.
 The [verified catalog](ENGINE_EXECUTABLES.json) records the published engine
 packages supporting each identity.
 

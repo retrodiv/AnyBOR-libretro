@@ -1,0 +1,185 @@
+/* SPDX-License-Identifier: BSD-3-Clause
+ * Copyright (c) 2026 retrodiv <retrodiv@proton.me> */
+#ifndef OBOR_CONTENT_OVERRIDE_H
+#define OBOR_CONTENT_OVERRIDE_H
+#include "anybor_transform.h"
+#include "anybor_imohash.h"
+#include "anybor_storage.h"
+#include "anybor_prepare_progress.h"
+
+/* Bounded, regular-file inputs; never read a device/FIFO as configuration. */
+static bool obor_content_regular(const char *path)
+{
+#if defined(_WIN32)
+    DWORD a = GetFileAttributesA(path);
+    return a != INVALID_FILE_ATTRIBUTES && !(a & (FILE_ATTRIBUTE_DIRECTORY | FILE_ATTRIBUTE_REPARSE_POINT));
+#else
+    struct stat s;
+    return !lstat(path,&s) && S_ISREG(s.st_mode);
+#endif
+}
+static bool obor_descriptor_read(const char *path, obor_descriptor &out)
+{
+    if (!obor_content_regular(path)) return false;
+    FILE *file = fopen(path,"rb");
+    if (!file) return false;
+    char *text = (char *)malloc(OBOR_DESCRIPTOR_MAX_BYTES+1);
+    size_t got = text ? fread(text,1,OBOR_DESCRIPTOR_MAX_BYTES+1,file) : 0;
+    bool ok = text && !ferror(file) && obor_descriptor_parse(text,got,out);
+    free(text); fclose(file);
+    return ok;
+}
+static const char *obor_content_basename(const char *path)
+{
+    const char *name = path;
+    for (const char *p=path; *p; ++p) if (*p=='/' || *p=='\\') name=p+1;
+    return name;
+}
+/* The descriptor may select only a regular packed file inside its subtree.
+ * No symlink/junction component can redirect a declared relative target. */
+static bool obor_descriptor_target(const char *descriptor, const char *payload, char *out, size_t cap)
+{
+    size_t root = (size_t)(obor_content_basename(descriptor)-descriptor);
+    if (root+strlen(payload)+1 > cap) return false;
+    memcpy(out,descriptor,root); strcpy(out+root,payload);
+    for (char *p=out+root; *p; ++p) if (*p=='/') {
+        *p=0; bool ok=obor_storage_directory(out); *p='/';
+        if (!ok) return false;
+    }
+    return obor_content_regular(out);
+}
+static bool obor_content_loose(const char *path, char *out, size_t cap, obor_content_choice &choice)
+{
+    if (strlen(path)>=cap) return false;
+    strcpy(out,path);
+    if (obor_content_suffix(path,".anybor")) {
+        obor_descriptor descriptor = {};
+        if (!obor_descriptor_read(path,descriptor) ||
+            !obor_descriptor_target(path,descriptor.payload,out,cap)) {
+            log_cb(RETRO_LOG_ERROR,"[OpenBOR] invalid descriptor or missing packed payload: %s\n",path);
+            return false;
+        }
+        snprintf(choice.engine,sizeof(choice.engine),"%s",descriptor.engine);
+        snprintf(choice.descriptor,sizeof(choice.descriptor),"%s",path);
+    } else if (obor_content_suffix(path,".pak") || obor_content_suffix(path,".spk")) {
+        char parent[4096];
+        size_t root=(size_t)(obor_content_basename(path)-path);
+        if (!root || root>=sizeof(parent)) return false;
+        memcpy(parent,path,root); parent[root]=0;
+        DIR *dir=opendir(parent);
+        if (!dir) return false;
+        unsigned scanned=0, matched=0;
+        bool ok=true;
+        struct dirent *entry;
+        while ((entry=readdir(dir))) {
+            if (++scanned>4096) { ok=false; break; }
+            if (!obor_content_suffix(entry->d_name,".anybor")) continue;
+            char descriptor_path[4096], target[4096];
+            obor_descriptor descriptor = {};
+            int length=snprintf(descriptor_path,sizeof(descriptor_path),"%s%s",parent,entry->d_name);
+            if (length<0 || (size_t)length>=sizeof(descriptor_path)) { ok=false; break; }
+            if (!obor_descriptor_read(descriptor_path,descriptor)) {
+                log_cb(RETRO_LOG_WARN,"[OpenBOR] ignoring invalid sibling descriptor: %s\n",descriptor_path);
+                continue;
+            }
+            if (!obor_descriptor_target(descriptor_path,descriptor.payload,target,sizeof(target))) continue;
+#if defined(_WIN32)
+            bool same=!strcasecmp(path,target);
+#else
+            bool same=!strcmp(path,target);
+#endif
+            if (!same) continue;
+            ++matched;
+            snprintf(choice.engine,sizeof(choice.engine),"%s",descriptor.engine);
+            snprintf(choice.descriptor,sizeof(choice.descriptor),"%s",descriptor_path);
+        }
+        closedir(dir);
+        if (!ok || matched>1) {
+            log_cb(RETRO_LOG_ERROR,"[OpenBOR] sibling descriptor scan incomplete or ambiguous\n");
+            return false;
+        }
+    }
+    if (obor_content_suffix(out,".pak") || obor_content_suffix(out,".spk"))
+        snprintf(choice.source,sizeof(choice.source),"%s",out);
+    return true;
+}
+static int obor_content_hash_read(void *context, uint64_t offset, void *data, size_t size)
+{
+    FILE *file=(FILE *)context;
+#if defined(_WIN32)
+    if (_fseeki64(file,(__int64)offset,SEEK_SET)) return 0;
+#else
+    if (fseeko(file,(off_t)offset,SEEK_SET)) return 0;
+#endif
+    return fread(data,1,size,file)==size && obor_prepare_checkpoint();
+}
+/* An INI rule matches the untransformed selected PAK, not its ZIP or an
+ * extracted transform result. Size filtering avoids unnecessary sampled reads. */
+static bool obor_content_override(const char *system, const obor_content_choice &choice,
+                                  char engine[48], char *evidence, size_t capacity)
+{
+    engine[0]=0; evidence[0]=0;
+    obor_content_rules rules;
+    if (system && system[0]) {
+        char path[4096], error[256]={0};
+        if (!obor_storage_join(path,sizeof(path),system,"AnyBOR.ini")) return false;
+        struct stat configuration;
+        if (!stat(path,&configuration) && !S_ISREG(configuration.st_mode)) return false;
+        FILE *file=fopen(path,"rb");
+        if (file) {
+            char *text=(char *)malloc(OBOR_TRANSFORM_MAX_CONFIG_BYTES+1u);
+            size_t size=text ? fread(text,1,OBOR_TRANSFORM_MAX_CONFIG_BYTES+1u,file) : 0;
+            obor_input_transform transform;
+            bool ok=text && !ferror(file) && size<=OBOR_TRANSFORM_MAX_CONFIG_BYTES;
+            /* Content preparation owns transform errors and its structural
+             * repair exception. Only section-shaped selector declarations
+             * opt into this independent engine configuration surface. The
+             * real parser then owns function/comment/string boundaries. */
+            bool selectors=false;
+            for (size_t at=0; ok && at<size;) {
+                size_t first=at, end;
+                while (at<size && text[at]!='\r' && text[at]!='\n') ++at;
+                end=at;
+                while (at<size && (text[at]=='\r' || text[at]=='\n')) ++at;
+                while (first<end && (text[first]==' ' || text[first]=='\t')) ++first;
+                if (size>=3 && first==0 && !memcmp(text,"\xef\xbb\xbf",3)) first=3;
+                if (first<end && text[first]=='[' && memchr(text+first,':',end-first)) selectors=true;
+            }
+            if (ok && selectors) ok=obor_transform_parse(text,size,transform,error,sizeof(error),&rules);
+            free(text); fclose(file);
+            if (!ok) { log_cb(RETRO_LOG_ERROR,"[OpenBOR] AnyBOR.ini: %s\n",error); return false; }
+        } else if (errno!=ENOENT) return false;
+    }
+    if (rules.count && choice.source[0]) {
+#if defined(_WIN32)
+        struct _stat64 st;
+        if (_stat64(choice.source,&st) || !(st.st_mode & _S_IFREG) || st.st_size<0) return false;
+#else
+        struct stat st;
+        if (stat(choice.source,&st) || !S_ISREG(st.st_mode) || st.st_size<0) return false;
+#endif
+        bool candidate=false;
+        for (unsigned i=0;i<rules.count;++i) if (rules.rows[i].size==(uint64_t)st.st_size) candidate=true;
+        if (candidate) {
+            FILE *file=fopen(choice.source,"rb");
+            unsigned char digest[16]; char hex[33];
+            bool ok=file && obor_imohash_read(obor_content_hash_read,file,(uint64_t)st.st_size,digest);
+            if (file) fclose(file);
+            if (!ok) return false;
+            for (unsigned i=0;i<16;++i) snprintf(hex+2*i,3,"%02x",digest[i]);
+            for (unsigned i=0;i<rules.count;++i)
+                if (rules.rows[i].size==(uint64_t)st.st_size && !strcmp(rules.rows[i].hash,hex)) {
+                    snprintf(engine,48,"%s",rules.rows[i].engine);
+                    snprintf(evidence,capacity,"AnyBOR.ini imohash:%llu:%s",
+                             (unsigned long long)st.st_size,hex);
+                    return true;
+                }
+        }
+    }
+    if (choice.engine[0]) {
+        snprintf(engine,48,"%s",choice.engine);
+        snprintf(evidence,capacity,"descriptor %s",choice.descriptor);
+    }
+    return true;
+}
+#endif

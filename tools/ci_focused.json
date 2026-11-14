@@ -2842,6 +2842,16 @@
       "ci": "shared"
     },
     {
+      "id": "test_content_overrides",
+      "memory_mib": 1024,
+      "seconds": 180,
+      "command": [
+        "python3",
+        "tools/test_content_overrides.py"
+      ],
+      "ci": "shared"
+    },
+    {
       "id": "test_modern_attack_callers",
       "memory_mib": 1024,
       "seconds": 300,

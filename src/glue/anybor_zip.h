@@ -178,7 +178,8 @@ static int obor_zip_hash_read(void *context, uint64_t offset, void *data, size_t
 
 static int obor_zip_prepare(const char *zip_path, const char *save_dir,
                             char *out, size_t out_cap, const char *system_dir = NULL,
-                            obor_engine_identity *engine_identity = NULL)
+                            obor_engine_identity *engine_identity = NULL,
+                            obor_content_choice *content_choice = NULL)
 {
     obor_prepare_range progress = obor_prepare_phase;
     obor_prepare_stage(progress, 0, 150, 0);
@@ -240,6 +241,38 @@ static int obor_zip_prepare(const char *zip_path, const char *save_dir,
             const obor_zip_content_entry *parent = obor_zip_find_entry(entries.data, count, ancestor);
             if (parent && !parent->directory) return 0;
         }
+    }
+    /* Read descriptors from the current archive even on a warm cache. They
+     * route content; cached text is not authoritative configuration. */
+    int descriptor_target = -1;
+    obor_descriptor descriptor = {};
+    char descriptor_name[512] = "";
+    for (unsigned i = 0; i < count; ++i) {
+        const obor_zip_content_entry *entry = entries.data + i;
+        size_t len = strlen(entry->lower);
+        if (entry->directory || len < 7 || strcmp(entry->lower + len - 7, ".anybor")) continue;
+        mz_zip_archive_file_stat st;
+        if (descriptor_name[0] || !mz_zip_reader_file_stat(za, entry->index, &st) ||
+            st.m_uncomp_size > OBOR_DESCRIPTOR_MAX_BYTES) {
+            log_cb(RETRO_LOG_ERROR, "[OpenBOR] zip: ambiguous or oversized descriptor\n"); return 0;
+        }
+        char *text = (char *)malloc((size_t)st.m_uncomp_size + 1);
+        bool ok = text && mz_zip_reader_extract_to_mem(za, entry->index, text, (size_t)st.m_uncomp_size, 0) &&
+                  obor_descriptor_parse(text, (size_t)st.m_uncomp_size, descriptor);
+        free(text);
+        if (!ok) { log_cb(RETRO_LOG_ERROR, "[OpenBOR] zip: invalid descriptor\n"); return 0; }
+        snprintf(descriptor_name, sizeof(descriptor_name), "%s", entry->name);
+        char target[1024], lower[1024];
+        const char *base = strrchr(entry->name, '/');
+        size_t prefix = base ? (size_t)(base + 1 - entry->name) : 0;
+        int length = snprintf(target, sizeof(target), "%.*s%s", (int)prefix, entry->name, descriptor.payload);
+        if (length < 0 || (size_t)length >= sizeof(target)) return 0;
+        obor_zip_lower(target, lower, sizeof(lower));
+        const obor_zip_content_entry *found = obor_zip_find_entry(entries.data, count, lower);
+        if (!found || found->directory) {
+            log_cb(RETRO_LOG_ERROR, "[OpenBOR] zip: descriptor payload not found\n"); return 0;
+        }
+        descriptor_target = (int)(found - entries.data);
     }
     char parent[1200], cache[1400], marker[1500];
     if (!obor_storage_parent(save_dir, "zipcache", parent, sizeof(parent))) return 0;
@@ -307,6 +340,7 @@ static int obor_zip_prepare(const char *zip_path, const char *save_dir,
             low + length - models_length : NULL;
         bool raw = models && (models == low || models[-1] == '/');
         if (!packed && !raw) continue;
+        if (descriptor_target >= 0 && (int)i != descriptor_target) continue;
         char candidate[4096];
         if (packed) {
             if (obor_game_wave_asset(path)) {
@@ -316,6 +350,7 @@ static int obor_zip_prepare(const char *zip_path, const char *save_dir,
             if (!obor_packed_prepare(path, save_dir, system_dir, candidate, sizeof(candidate)) ||
                 !obor_game_recognizable(candidate, true)) { ++unknown; continue; }
             snprintf(chosen, sizeof(chosen), "%s", candidate);
+            if (content_choice) snprintf(content_choice->source, sizeof(content_choice->source), "%s", path);
         } else {
             size_t root_length = strlen(cache) + 1 + (size_t)(models - low);
             snprintf(candidate, sizeof(candidate), "%s", path);
@@ -328,6 +363,10 @@ static int obor_zip_prepare(const char *zip_path, const char *save_dir,
     if (games != 1 || unknown) {
         log_cb(RETRO_LOG_ERROR, "[OpenBOR] zip: %u recognizable games, %u inconclusive candidates; one game and no inconclusive candidates required\n", games, unknown);
         return 0;
+    }
+    if (content_choice) {
+        snprintf(content_choice->engine, sizeof(content_choice->engine), "%s", descriptor.engine);
+        snprintf(content_choice->descriptor, sizeof(content_choice->descriptor), "%s", descriptor_name);
     }
     if (engine_identity) *engine_identity = identity;
     int written = snprintf(out, out_cap, "%s", chosen);

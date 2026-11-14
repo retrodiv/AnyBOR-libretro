@@ -65,7 +65,8 @@ exact filename Build 6392 or Build 6412 tag selects the corresponding test
 profile. Manual selection remains available. Profile v3.0 4453 uses 32-bit
 color, ignores `colourdepth` and removes legacy `remap` palette conversion;
 content needing those features requires an earlier compatible profile.
-Manual profile choices take priority over verified engine-executable hashes,
+Manual profile choices take priority over external INI/descriptor engine settings,
+which take priority over verified engine-executable hashes,
 which take priority over filename and content evidence. An identified engine
 uses its exact profile when available, or the available-profile rules for its
 build. Unknown, absent, conflicting or incompletely scanned executables leave

@@ -13,6 +13,7 @@ necessarily literal folders called `system` and `saves`.
 | Item | Location |
 |---|---|
 | Optional external configuration | `AnyBOR.ini` in the frontend system directory |
+| Optional content descriptor | `.anybor` beside its relative PAK, or inside its ZIP |
 | In-game saves, settings and logs | `AnyBOR/<game>/<engine>/` below the frontend save directory |
 | ZIP extraction cache | `AnyBOR-cache/zipcache/` below the frontend save directory |
 | Prepared content cache | `AnyBOR-cache/input-<8-hex>/` below the frontend save directory |
@@ -24,8 +25,9 @@ overrides, core options, controller remaps and shader presets can also have
 per-core folders or filenames. Use `AnyBOR` wherever the frontend asks for
 the core name.
 
-Optional buffer adapters are configured in `AnyBOR.ini` in the frontend system
-directory. See [content transforms](CONTENT_TRANSFORMS.md) for selecting an adapter
+Engine overrides and optional buffer adapters are configured in `AnyBOR.ini` in the frontend system
+directory. See [content configuration](CONTENT_CONFIGURATION.md) for engine rules and
+descriptors, and [content transforms](CONTENT_TRANSFORMS.md) for selecting an adapter
 and examples of extracting an embedded archive or converting its word order.
 
 The internal `obor_*` API, core-option keys and `OBOR_*` diagnostic/build

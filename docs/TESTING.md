@@ -184,3 +184,11 @@ name across LOAD, reset and a fresh host process. Native unit tests also check
 allocation failure, slot reuse and cleanup. Ordered level spawn scripts use
 compiled fixtures on both sides of the 3805 boundary, checking declaration order
 and shared versus per-entry locals.
+
+## External content settings
+
+`python3 tools/test_content_overrides.py` checks the descriptor and INI parsers,
+selection precedence and standard imohash keys with synthetic inputs under native
+sanitizers. Set `OBOR_TEST_CORE` to a freshly built core to run the additional
+linked-core loading, restart and save-namespace controls. These controls compile
+the maintained test host; no frontend installation is modified.

@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.13 — external content settings
+
+- Select an engine with external size/imohash rules in `AnyBOR.ini`.
+- Load `.anybor` descriptors directly or inside ZIPs to choose a packed payload and optionally an engine.
+- Preserve manual engine priority and validate explicit profile names and descriptor targets.
+
 ## 0.2.12 — Linux header compatibility
 
 - Build with older Linux kernel headers that omit filesystem identifiers, preserving filesystem notification detection.

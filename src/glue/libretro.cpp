@@ -7,7 +7,7 @@
  * objects whose only visible symbols are their suffixed obor_* ABI (see
  * anybor_engines.h, generated from pin.json). At retro_load_game — and again
  * at retro_reset — the glue detects which OpenBOR build the pak needs
- * (core option -> verified engine executable -> explicit special profile -> legacy API -> filename tag
+ * (core option -> external override -> verified engine executable -> explicit special profile -> legacy API -> filename tag
  * -> sidecar exe -> content scan -> fallback),
  * points g_vtbl at that engine and shuttles video/audio/input.
  */
@@ -670,6 +670,8 @@ static int build_from_sidecar(const char *pak_path)
 #include "anybor_engine_identity.h"
 static obor_engine_identity g_zip_engine_identity;
 static bool g_zip_engine_scanned;
+#include "anybor_content_override.h"
+static obor_content_choice g_content_choice;
 
 /* Choose the first automatic profile whose covered range reaches the
  * detected build. Explicit-only profiles never win a heuristic. */
@@ -1040,6 +1042,7 @@ static void content_stop(bool preserve_geometry = false)
     g_pak_path[0] = '\0';
     g_engine_source_path[0] = '\0';
     g_zip_engine_scanned = false;
+    g_content_choice = obor_content_choice();
     memset(&g_zip_engine_identity, 0, sizeof(g_zip_engine_identity));
     free(g_crt_pixels);
     g_crt_pixels = NULL;
@@ -1388,7 +1391,7 @@ void retro_get_system_info(struct retro_system_info *info)
     info->library_name = "AnyBOR";
     info->library_version = OBOR_CORE_VERSION;
     /* .pak, or the models.txt of an unpacked mod (…/<mod>/data/models.txt) */
-    info->valid_extensions = "pak|spk|txt|zip";
+    info->valid_extensions = "pak|spk|txt|zip|anybor";
     info->need_fullpath = true;
     info->block_extract = true;
 }
@@ -1574,6 +1577,26 @@ void retro_reset(void)
     }
     if (!g_booted)
         return;
+    /* Archive descriptors are read from the ZIP, not from an extracted cache.
+     * A descriptor may also change its payload between restarts. */
+    bool reroute = g_zip_engine_scanned || g_content_choice.descriptor[0];
+    if (!reroute && g_content_choice.source[0]) {
+        char target[4096];
+        obor_content_choice refreshed;
+        reroute = !obor_content_loose(g_content_choice.source, target, sizeof(target), refreshed) ||
+                  refreshed.descriptor[0];
+        if (!reroute) g_content_choice = refreshed;
+    }
+    if (reroute) {
+        struct retro_game_info info = {};
+        char path[sizeof(g_error_path)];
+        snprintf(path, sizeof(path), "%s", g_error_path);
+        info.path = path;
+        uint32_t capacity = g_state_capacity;
+        obor_load_retry(&info);
+        if (g_state_capacity < capacity) g_state_capacity = capacity;
+        return;
+    }
     g_booted = false;
     obor_dbg("reset: shutdown engine %s", g_engine);
     rumble_stop();
@@ -2343,6 +2366,31 @@ static void decide_engine(void)
         if (build)
             how = "core option";
     }
+    if (!build) {
+        const char *system = NULL;
+        char value[48], evidence[4608];
+        env_cb(RETRO_ENVIRONMENT_GET_SYSTEM_DIRECTORY, &system);
+        if (!obor_content_override(system, g_content_choice, value, evidence, sizeof(evidence))) {
+            g_engine[0] = g_logical_engine[0] = 0;
+            snprintf(g_selection_error, sizeof(g_selection_error), "Invalid or unreadable AnyBOR.ini engine override.");
+            return;
+        }
+        if (value[0]) {
+            for (int i = 0; i < n_avail; ++i) {
+                const char *bare = strchr(kProfiles[i].disp, ' ');
+                if (!strcasecmp(value, kProfiles[i].name) || !strcasecmp(value, kProfiles[i].disp) ||
+                    (bare && !strcasecmp(value, bare + 1))) explicit_profile = &kProfiles[i];
+            }
+            if (!explicit_profile) {
+                g_engine[0] = g_logical_engine[0] = 0;
+                snprintf(g_selection_error, sizeof(g_selection_error), "Engine override profile '%s' is unavailable.", value);
+                return;
+            }
+            build = explicit_profile->build;
+            how = "external engine override";
+            log_cb(RETRO_LOG_INFO, "[OpenBOR] %s -> profile %s\n", evidence, explicit_profile->name);
+        }
+    }
     obor_engine_identity identity = {};
     if (!build) {
         identity = g_zip_engine_scanned ? g_zip_engine_identity :
@@ -2791,6 +2839,13 @@ static bool load_game(const struct retro_game_info *info, bool retry, bool prepa
         return false;
     }
 
+    char routed[4096];
+    if (!obor_content_loose(g_pak_path, routed, sizeof(routed), g_content_choice)) {
+        error_reason("Invalid, ambiguous or unavailable .anybor packed-content descriptor.");
+        return false;
+    }
+    snprintf(g_pak_path, sizeof(g_pak_path), "%s", routed);
+
     if (!obor_storage_game_directory(g_save_dir, g_pak_path, g_game_dir, sizeof(g_game_dir))) {
         log_cb(RETRO_LOG_ERROR, "[OpenBOR] Could not resolve a safe game save directory.\n");
         error_reason("Could not resolve a safe game save directory.");
@@ -2816,7 +2871,7 @@ static bool load_game(const struct retro_game_info *info, bool retry, bool prepa
             const char *system = NULL;
             env_cb(RETRO_ENVIRONMENT_GET_SYSTEM_DIRECTORY, &system);
             if (!obor_zip_prepare(g_pak_path, g_save_dir, newpath,
-                                  sizeof(newpath), system, &g_zip_engine_identity)) {
+                                  sizeof(newpath), system, &g_zip_engine_identity, &g_content_choice)) {
                 error_reason("Could not extract a single OpenBOR game from the ZIP.");
                 return false;
             }
@@ -2869,7 +2924,7 @@ static bool load_game(const struct retro_game_info *info, bool retry, bool prepa
         if (n <= 4 || (strcasecmp(g_pak_path + n - 4, ".pak") != 0 &&
                        strcasecmp(g_pak_path + n - 4, ".spk") != 0)) {
             log_cb(RETRO_LOG_ERROR, "[OpenBOR] unsupported content path\n");
-            error_reason("Unsupported content path; expected PAK, SPK, ZIP or data/models.txt.");
+            error_reason("Unsupported content path; expected PAK, SPK, ZIP, ANYBOR or data/models.txt.");
             return false;
         }
         char prepared[4096];
@@ -3156,6 +3211,18 @@ static bool loading_begin(const struct retro_game_info *info, bool retry)
     if (!g_arena_owned) {
         error_reason("The snapshot address is unavailable. Restart the frontend.");
         return false;
+    }
+    /* Initial state capacity, loading artwork and saves use the actual PAK.
+     * Keep g_error_path as the original descriptor for preparation/restart. */
+    if (obor_content_suffix(path, ".anybor")) {
+        obor_descriptor descriptor = {};
+        char target[4096];
+        if (!obor_descriptor_read(path, descriptor) ||
+            !obor_descriptor_target(path, descriptor.payload, target, sizeof(target))) {
+            error_reason("Invalid .anybor descriptor or unavailable packed payload.");
+            return false;
+        }
+        snprintf(path, sizeof(path), "%s", target);
     }
     /* Unpacked mods retain their original synchronous setup and namespace;
      * there is no packed-content preparation phase or archive-size hint. */

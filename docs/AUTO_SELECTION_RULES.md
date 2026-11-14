@@ -1,12 +1,19 @@
 # Content evidence for build tags
 
-Manual selection is authoritative. A unique verified engine-executable hash
-identifies the build and variant before filename or content evidence. The
+Manual selection is authoritative. In Auto, matching external `AnyBOR.ini`
+engine rules take priority over descriptor engine settings, followed by verified
+engine-executable identities and filename/content evidence. Explicit settings
+name an available profile, including a development or modified variant. See
+[content configuration](CONTENT_CONFIGURATION.md).
+
+A unique verified engine-executable hash identifies the build and variant before
+filename or content evidence. The
 exact corresponding profile wins when available; otherwise the existing
 available-profile and content-triage rules apply to that build. Executables
 are read without execution. Unknown, missing, ambiguous or incompletely scanned
-executables leave the filename/content rules unchanged. Game, PAK and content
-hashes are not compatibility selectors. See the
+executables leave the filename/content rules unchanged. Built-in detection has
+no game, PAK or content hash table; user-authored external overrides are explicit
+configuration. See the
 [verified engine catalog](ENGINE_EXECUTABLES.json).
 
 An exact filename Build tag with its own
@@ -21,7 +28,8 @@ This check applies to prepared PACK content with a complete numeric Build tag,
 not to the separate legacy v2 filename form.
 
 Exact-only development profiles are available through their exact filename
-Build tag or a manual core option. They are excluded from imprecise-tag triage,
+Build tag, a manual core option or an explicit external engine setting. They are
+excluded from imprecise-tag triage,
 replacement candidates and ordinary sidecar or unlabelled inference.
 
 An imprecise tag, such as Build 44XX or Build 3792-3911, is
@@ -136,7 +144,8 @@ rules and whether the selected profile supports them.
 
 No absence of newer syntax establishes an old revision. Numeric values whose
 meaning changed, without a distinguishing API spelling, do not establish a
-version by themselves. A game identity or game-content hash never selects a rule.
+version by themselves. Built-in content-evidence rules do not use game identities
+or game-content hashes.
 The reconstructed test profile has no invented content signature.
 
 Unlabelled content retains the existing inference/fallback policy. The two

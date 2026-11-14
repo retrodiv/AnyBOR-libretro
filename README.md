@@ -157,12 +157,14 @@ requirements, controls and core options are in [docs/ANYBOR.md](docs/ANYBOR.md).
 
 ## Content
 
-Load a `.pak`, an unpacked game's `data/models.txt`, or a ZIP containing one
-game. ZIP entries are checked before extraction. A unique recognizable game
-can share its ZIP with identifiable auxiliary files; multiple games or
-inconclusive candidates are rejected. Verified engine executable hashes select
-the corresponding build before filename and content detection. A manual profile
-choice takes priority. Executables are inspected as data, never executed.
+Load a `.pak`, an unpacked game's `data/models.txt`, a ZIP, or a `.anybor`
+descriptor pointing to a PAK. A unique descriptor inside a ZIP selects its
+packed payload; without one, the ZIP must contain one recognizable game and no
+inconclusive candidates. ZIP paths and extraction quotas are always checked.
+External INI engine overrides take priority over descriptor engine settings,
+then verified engine-executable identities and filename/content detection.
+A manual profile choice takes priority over all of them. Executables are
+inspected as data, never executed. See [content configuration](docs/CONTENT_CONFIGURATION.md).
 The `.txt` extension is for `data/models.txt`, not
 arbitrary text documents. Newer engine versions are supported on a best
 effort basis through the latest pinned engine.
@@ -344,3 +346,11 @@ Optional buffer transforms can extract an archive from a custom header or a
 specified byte range, or convert stored 32-bit words to the byte order expected
 by the reader. Select an adapter in the frontend system directory's `AnyBOR.ini`.
 See [configuration and examples](docs/CONTENT_TRANSFORMS.md).
+
+## Per-content engine settings
+
+External `AnyBOR.ini` rules can select an engine by a PAK's size and imohash.
+A `.anybor` descriptor can select a relative PAK and optionally its engine,
+including inside a ZIP. Both `engine = 6330` and `engine = v3.0 6330` are accepted.
+A manual core-option choice takes priority. See
+[content configuration](docs/CONTENT_CONFIGURATION.md) for syntax and precedence.

@@ -12,7 +12,7 @@
 #include <string.h>
 
 /* Standard defaults: full input below 128 KiB; otherwise three 16 KiB samples.
- * A cache identity, not a full-content integrity check. Read failures leave
+ * A sampled identity, not a full-content integrity check. Read failures leave
  * the digest untouched. Readers must fill the complete requested range. */
 typedef int (*obor_imohash_read_at)(void *, uint64_t, void *, size_t);
 

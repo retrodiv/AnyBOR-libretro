@@ -30,9 +30,10 @@ identities, not executable code. Verification checks archive members' sizes and
 CRCs, directly preserved packages' manifest hashes, executable/package formats
 and local SHA-256. Package identity and embedded version labels are separate
 facts; supported discrepancies are recorded in the catalog. The catalog digest
-binds the published projection to its verified input. No game, PAK or game
-content hashes are compatibility selectors, and no executable is run for
-identification. Imohash values use standard sampling parameters and are calculated
+binds the published projection to its verified input. The built-in catalog contains
+no game, PAK or game-content identities. User-authored external imohash engine
+settings follow [content configuration](docs/CONTENT_CONFIGURATION.md); they are
+separate from the engine catalog. No executable is run for identification. Imohash values use standard sampling parameters and are calculated
 only after each complete executable payload matches its recorded SHA-256.
 Different executables can share a sampled imohash value.
 
@@ -175,3 +176,5 @@ AnyGM implementation at commit `31d5666d72559136327b3165bbaca3b81759965b`,
 with local names and a miniz archive-reader adapter. Known-answer test vectors
 retain Jim Kalafut's MIT notice. Full notices accompany source and binaries in
 `LICENSES/imohash.txt` and `LICENSES/murmur3.txt`.
+`tools/content_key.py` implements the same sampled selector in Python under MIT,
+with the same algorithm credits; its vectors are checked against the core.
