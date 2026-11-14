@@ -88,11 +88,16 @@ int main(int argc,char **argv) {
   return 0;
  }
 #endif
- if(argc==6&&!strcmp(argv[1],"--external")) {
+ if((argc==6||argc==8)&&!strcmp(argv[1],"--external")) {
   system_dir=argv[3];manual=argv[4];
   snprintf(g_content_choice.source,sizeof(g_content_choice.source),"%s",argv[2]);
   snprintf(g_content_choice.engine,sizeof(g_content_choice.engine),"%s",argv[5]);
   snprintf(g_content_choice.descriptor,sizeof(g_content_choice.descriptor),"synthetic.anybor");
+  if(argc==8) {
+   snprintf(g_content_choice.archive,sizeof(g_content_choice.archive),"%s",argv[6]);
+   snprintf(g_content_choice.zip_engine,sizeof(g_content_choice.zip_engine),"%s",argv[7]);
+   snprintf(g_content_choice.zip_descriptor,sizeof(g_content_choice.zip_descriptor),"inside.anybor");
+  }
   argv[1]=argv[2];argc=2;
  }
  if(argc!=2||strlen(argv[1])>=sizeof(g_pak_path))return 2;

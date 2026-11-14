@@ -188,7 +188,8 @@ and shared versus per-entry locals.
 ## External content settings
 
 `python3 tools/test_content_overrides.py` checks the descriptor and INI parsers,
-selection precedence and standard imohash keys with synthetic inputs under native
+ZIP and PAK selector namespaces, external ZIP routing, selection precedence,
+repacking behavior and standard imohash keys with synthetic inputs under native
 sanitizers. Set `OBOR_TEST_CORE` to a freshly built core to run the additional
 linked-core loading, restart and save-namespace controls. These controls compile
 the maintained test host; no frontend installation is modified.

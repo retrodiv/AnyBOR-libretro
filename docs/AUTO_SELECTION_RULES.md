@@ -1,7 +1,8 @@
 # Content evidence for build tags
 
 Manual selection is authoritative. In Auto, matching external `AnyBOR.ini`
-engine rules take priority over descriptor engine settings, followed by verified
+`zip-imohash` rules take priority over `pak-imohash` rules, then external
+descriptor engine settings, internal ZIP descriptor settings, verified
 engine-executable identities and filename/content evidence. Explicit settings
 name an available profile, including a development or modified variant. See
 [content configuration](CONTENT_CONFIGURATION.md).

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Print the standard imohash selector for an original, untransformed PAK.
+"""Print the standard imohash selector for an original PAK or ZIP.
 
 SPDX-License-Identifier: MIT
 Copyright (c) 2015 Jim Kalafut
@@ -54,7 +54,9 @@ def murmur(data):
     return bytearray(h1.to_bytes(8, 'big') + h2.to_bytes(8, 'big'))
 
 
-def selector(stream, size):
+def selector(stream, size, kind='pak'):
+    if kind not in ('pak', 'zip'):
+        raise ValueError('Selector kind must be pak or zip')
     if not 0 < size < (1 << 64):
         raise ValueError('A selector requires a positive 64-bit file size')
     offsets = (0,) if size < 131072 else (0, size // 2, size - 16384)
@@ -74,17 +76,20 @@ def selector(stream, size):
         remaining >>= 7
         if not remaining:
             break
-    return f'imohash:{size}:{digest.hex()}'
+    return f'{kind}-imohash:{digest.hex()}'
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parser.add_argument('pak', type=Path, help='original PAK before preparation, outside its ZIP')
+    parser.add_argument('content', type=Path, help='original .pak/.spk before preparation, or complete .zip')
     args = parser.parse_args()
-    if not stat.S_ISREG(args.pak.stat().st_mode):
+    suffix = args.content.suffix.lower()
+    if suffix not in ('.pak', '.spk', '.zip'):
+        parser.error('Input must be a .pak, .spk or .zip file')
+    if not stat.S_ISREG(args.content.stat().st_mode):
         parser.error('Input must be a regular file')
-    with args.pak.open('rb') as stream:
-        print(selector(stream, args.pak.stat().st_size))
+    with args.content.open('rb') as stream:
+        print(selector(stream, args.content.stat().st_size, 'zip' if suffix == '.zip' else 'pak'))
 
 
 if __name__ == '__main__':

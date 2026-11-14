@@ -35,7 +35,7 @@ static const char *obor_content_basename(const char *path)
     for (const char *p=path; *p; ++p) if (*p=='/' || *p=='\\') name=p+1;
     return name;
 }
-/* The descriptor may select only a regular packed file inside its subtree.
+/* The descriptor may select only a regular PAK or ZIP inside its subtree.
  * No symlink/junction component can redirect a declared relative target. */
 static bool obor_descriptor_target(const char *descriptor, const char *payload, char *out, size_t cap)
 {
@@ -56,12 +56,13 @@ static bool obor_content_loose(const char *path, char *out, size_t cap, obor_con
         obor_descriptor descriptor = {};
         if (!obor_descriptor_read(path,descriptor) ||
             !obor_descriptor_target(path,descriptor.payload,out,cap)) {
-            log_cb(RETRO_LOG_ERROR,"[OpenBOR] invalid descriptor or missing packed payload: %s\n",path);
+            log_cb(RETRO_LOG_ERROR,"[OpenBOR] invalid descriptor or missing payload: %s\n",path);
             return false;
         }
         snprintf(choice.engine,sizeof(choice.engine),"%s",descriptor.engine);
         snprintf(choice.descriptor,sizeof(choice.descriptor),"%s",path);
-    } else if (obor_content_suffix(path,".pak") || obor_content_suffix(path,".spk")) {
+    } else if (obor_content_suffix(path,".pak") || obor_content_suffix(path,".spk") ||
+               obor_content_suffix(path,".zip")) {
         char parent[4096];
         size_t root=(size_t)(obor_content_basename(path)-path);
         if (!root || root>=sizeof(parent)) return false;
@@ -101,6 +102,8 @@ static bool obor_content_loose(const char *path, char *out, size_t cap, obor_con
     }
     if (obor_content_suffix(out,".pak") || obor_content_suffix(out,".spk"))
         snprintf(choice.source,sizeof(choice.source),"%s",out);
+    if (obor_content_suffix(out,".zip"))
+        snprintf(choice.archive,sizeof(choice.archive),"%s",out);
     return true;
 }
 static int obor_content_hash_read(void *context, uint64_t offset, void *data, size_t size)
@@ -113,8 +116,8 @@ static int obor_content_hash_read(void *context, uint64_t offset, void *data, si
 #endif
     return fread(data,1,size,file)==size && obor_prepare_checkpoint();
 }
-/* An INI rule matches the untransformed selected PAK, not its ZIP or an
- * extracted transform result. Size filtering avoids unnecessary sampled reads. */
+/* INI rules identify either the complete original ZIP or its selected,
+ * untransformed PAK. Kind/size filtering avoids unnecessary sampled reads. */
 static bool obor_content_override(const char *system, const obor_content_choice &choice,
                                   char engine[48], char *evidence, size_t capacity)
 {
@@ -150,28 +153,33 @@ static bool obor_content_override(const char *system, const obor_content_choice 
             if (!ok) { log_cb(RETRO_LOG_ERROR,"[OpenBOR] AnyBOR.ini: %s\n",error); return false; }
         } else if (errno!=ENOENT) return false;
     }
-    if (rules.count && choice.source[0]) {
+    /* The outer ZIP rule wins over the selected, untransformed PAK rule. */
+    for (unsigned kind=0; kind<2; ++kind) {
+        bool zip = kind==0;
+        const char *source = zip ? choice.archive : choice.source;
+        bool relevant=false;
+        for (unsigned i=0;i<rules.count;++i) if (rules.rows[i].zip==zip) relevant=true;
+        if (!relevant || !source[0]) continue;
 #if defined(_WIN32)
         struct _stat64 st;
-        if (_stat64(choice.source,&st) || !(st.st_mode & _S_IFREG) || st.st_size<0) return false;
+        if (_stat64(source,&st) || !(st.st_mode & _S_IFREG) || st.st_size<0) return false;
 #else
         struct stat st;
-        if (stat(choice.source,&st) || !S_ISREG(st.st_mode) || st.st_size<0) return false;
+        if (stat(source,&st) || !S_ISREG(st.st_mode) || st.st_size<0) return false;
 #endif
         bool candidate=false;
-        for (unsigned i=0;i<rules.count;++i) if (rules.rows[i].size==(uint64_t)st.st_size) candidate=true;
+        for (unsigned i=0;i<rules.count;++i) if (rules.rows[i].zip==zip && rules.rows[i].size==(uint64_t)st.st_size) candidate=true;
         if (candidate) {
-            FILE *file=fopen(choice.source,"rb");
+            FILE *file=fopen(source,"rb");
             unsigned char digest[16]; char hex[33];
             bool ok=file && obor_imohash_read(obor_content_hash_read,file,(uint64_t)st.st_size,digest);
             if (file) fclose(file);
             if (!ok) return false;
             for (unsigned i=0;i<16;++i) snprintf(hex+2*i,3,"%02x",digest[i]);
             for (unsigned i=0;i<rules.count;++i)
-                if (rules.rows[i].size==(uint64_t)st.st_size && !strcmp(rules.rows[i].hash,hex)) {
+                if (rules.rows[i].zip==zip && rules.rows[i].size==(uint64_t)st.st_size && !strcmp(rules.rows[i].hash,hex)) {
                     snprintf(engine,48,"%s",rules.rows[i].engine);
-                    snprintf(evidence,capacity,"AnyBOR.ini imohash:%llu:%s",
-                             (unsigned long long)st.st_size,hex);
+                    snprintf(evidence,capacity,"AnyBOR.ini %s-imohash:%s", zip ? "zip" : "pak", hex);
                     return true;
                 }
         }
@@ -179,6 +187,9 @@ static bool obor_content_override(const char *system, const obor_content_choice 
     if (choice.engine[0]) {
         snprintf(engine,48,"%s",choice.engine);
         snprintf(evidence,capacity,"descriptor %s",choice.descriptor);
+    } else if (choice.zip_engine[0]) {
+        snprintf(engine,48,"%s",choice.zip_engine);
+        snprintf(evidence,capacity,"descriptor %s",choice.zip_descriptor);
     }
     return true;
 }

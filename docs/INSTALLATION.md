@@ -13,7 +13,7 @@ necessarily literal folders called `system` and `saves`.
 | Item | Location |
 |---|---|
 | Optional external configuration | `AnyBOR.ini` in the frontend system directory |
-| Optional content descriptor | `.anybor` beside its relative PAK, or inside its ZIP |
+| Optional content descriptor | `.anybor` naming a relative PAK or ZIP; inside a ZIP, naming a relative PAK |
 | In-game saves, settings and logs | `AnyBOR/<game>/<engine>/` below the frontend save directory |
 | ZIP extraction cache | `AnyBOR-cache/zipcache/` below the frontend save directory |
 | Prepared content cache | `AnyBOR-cache/input-<8-hex>/` below the frontend save directory |

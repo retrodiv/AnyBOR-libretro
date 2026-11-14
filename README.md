@@ -158,11 +158,12 @@ requirements, controls and core options are in [docs/ANYBOR.md](docs/ANYBOR.md).
 ## Content
 
 Load a `.pak`, an unpacked game's `data/models.txt`, a ZIP, or a `.anybor`
-descriptor pointing to a PAK. A unique descriptor inside a ZIP selects its
+descriptor pointing to a PAK or ZIP. A unique descriptor inside a ZIP selects its
 packed payload; without one, the ZIP must contain one recognizable game and no
 inconclusive candidates. ZIP paths and extraction quotas are always checked.
-External INI engine overrides take priority over descriptor engine settings,
-then verified engine-executable identities and filename/content detection.
+External INI rules for the ZIP take priority over rules for the selected PAK,
+then external descriptor settings, internal ZIP descriptor settings, verified
+engine-executable identities and filename/content detection.
 A manual profile choice takes priority over all of them. Executables are
 inspected as data, never executed. See [content configuration](docs/CONTENT_CONFIGURATION.md).
 The `.txt` extension is for `data/models.txt`, not

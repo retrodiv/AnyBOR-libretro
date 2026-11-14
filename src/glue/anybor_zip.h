@@ -258,7 +258,7 @@ static int obor_zip_prepare(const char *zip_path, const char *save_dir,
         }
         char *text = (char *)malloc((size_t)st.m_uncomp_size + 1);
         bool ok = text && mz_zip_reader_extract_to_mem(za, entry->index, text, (size_t)st.m_uncomp_size, 0) &&
-                  obor_descriptor_parse(text, (size_t)st.m_uncomp_size, descriptor);
+                  obor_descriptor_parse(text, (size_t)st.m_uncomp_size, descriptor, false);
         free(text);
         if (!ok) { log_cb(RETRO_LOG_ERROR, "[OpenBOR] zip: invalid descriptor\n"); return 0; }
         snprintf(descriptor_name, sizeof(descriptor_name), "%s", entry->name);
@@ -365,8 +365,9 @@ static int obor_zip_prepare(const char *zip_path, const char *save_dir,
         return 0;
     }
     if (content_choice) {
-        snprintf(content_choice->engine, sizeof(content_choice->engine), "%s", descriptor.engine);
-        snprintf(content_choice->descriptor, sizeof(content_choice->descriptor), "%s", descriptor_name);
+        snprintf(content_choice->archive, sizeof(content_choice->archive), "%s", zip_path);
+        snprintf(content_choice->zip_engine, sizeof(content_choice->zip_engine), "%s", descriptor.engine);
+        snprintf(content_choice->zip_descriptor, sizeof(content_choice->zip_descriptor), "%s", descriptor_name);
     }
     if (engine_identity) *engine_identity = identity;
     int written = snprintf(out, out_cap, "%s", chosen);

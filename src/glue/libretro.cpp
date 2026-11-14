@@ -2841,7 +2841,7 @@ static bool load_game(const struct retro_game_info *info, bool retry, bool prepa
 
     char routed[4096];
     if (!obor_content_loose(g_pak_path, routed, sizeof(routed), g_content_choice)) {
-        error_reason("Invalid, ambiguous or unavailable .anybor packed-content descriptor.");
+        error_reason("Invalid, ambiguous or unavailable .anybor content descriptor.");
         return false;
     }
     snprintf(g_pak_path, sizeof(g_pak_path), "%s", routed);
@@ -3212,14 +3212,14 @@ static bool loading_begin(const struct retro_game_info *info, bool retry)
         error_reason("The snapshot address is unavailable. Restart the frontend.");
         return false;
     }
-    /* Initial state capacity, loading artwork and saves use the actual PAK.
+    /* Initial state capacity, loading artwork and saves use the actual PAK or ZIP.
      * Keep g_error_path as the original descriptor for preparation/restart. */
     if (obor_content_suffix(path, ".anybor")) {
         obor_descriptor descriptor = {};
         char target[4096];
         if (!obor_descriptor_read(path, descriptor) ||
             !obor_descriptor_target(path, descriptor.payload, target, sizeof(target))) {
-            error_reason("Invalid .anybor descriptor or unavailable packed payload.");
+            error_reason("Invalid .anybor descriptor or unavailable payload.");
             return false;
         }
         snprintf(path, sizeof(path), "%s", target);
