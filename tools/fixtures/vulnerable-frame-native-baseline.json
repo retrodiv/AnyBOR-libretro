@@ -1009,6 +1009,10 @@
     "8023": {
       "present": true,
       "clear_result_on_error": true
+    },
+    "6330-lns-010g": {
+      "present": true,
+      "clear_result_on_error": true
     }
   },
   "engines": {
@@ -1057,6 +1061,11 @@
           2147483646,
           2147483647,
           2147483647
+        ],
+        "6330-lns-010g": [
+          2147483647,
+          2147483646,
+          2147483646
         ]
       },
       "original_property_mapper": "static inline int obor_animation_property_from_native(int id)\n{\n    return obor_profile_build == 6330 && id >= ANI_PROP_ENTITY_COLLISION ? id + 1 : id;\n}\n",

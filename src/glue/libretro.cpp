@@ -306,7 +306,8 @@ static const obor_profile_def *profile_variant_from_filename(const char *path)
             const obor_profile_def *profile = &kProfiles[i];
             size_t length = strlen(profile->variant);
             if (!length || !profile->tagged || profile->build < lower || profile->build > upper ||
-                strncasecmp(q, profile->variant, length) || isalnum((unsigned char)q[length])) continue;
+                strncasecmp(q, profile->variant, length) || isalnum((unsigned char)q[length]) ||
+                q[length] == '-' || q[length] == '_') continue;
             if ((generation == 3 && strncmp(profile->disp, "v3.0 ", 5)) ||
                 (generation == 4 && strncmp(profile->disp, "v4.0 ", 5))) continue;
             if (!best || profile->build > best->build) best = profile;

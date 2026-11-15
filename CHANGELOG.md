@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.2.34
+
+- Name the LNS v0.10g profile `v3.0 6330-lns-010g` consistently in selection,
+  configuration, executable identification and storage paths.
+- Complete modified 6330 coverage in native contract fixtures and retain current
+  runtime drawing-record layout checks.
+- Load deferred models explicitly before checking attack-bound diagnostics.
+
 ## 0.2.33
 
 - Avoid video reinitialization when larger internal images keep the same CRT
@@ -22,7 +30,7 @@
 
 ## 0.2.30
 
-- Add the v3.0 6330-mod profile with deferred model loading, character selection,
+- Add the v3.0 6330-lns-010g profile with deferred model loading, character selection,
   Hall of Fame, settings, combat, script and HUD behavior from its own source.
 - Recognize the variant through explicit tags, verified engine identities and
   exclusive native directives in the bound level-order metadata.

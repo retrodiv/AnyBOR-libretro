@@ -40,6 +40,10 @@ static void display(unsigned which,int before)
     if(before){switch(which){@BEFORE_DISPLAY@ default:abort();}}
     else{switch(which){@AFTER_DISPLAY@ default:abort();}}
 }
+static int display_focus(unsigned which)
+{
+    switch(which){@DISPLAY_FOCUS@ default:abort();}
+}
 static void display_checks(void)
 {
     const size_t lengths[]={0,1,sizeof(records[0].dName)-1,sizeof(records[0].dName)};
@@ -54,7 +58,7 @@ static void display_checks(void)
         display(stmt,0);assert(strlen(rendered)==length);
         for(size_t i=0;i<length;++i)assert(rendered[i]=='%');
         assert(!memcmp(before,records,sizeof(records)));
-        assert(focus_seen==(selector==0) && column_seen==col2);
+        assert(focus_seen==display_focus(stmt) && column_seen==col2);
         if(length<sizeof(records[0].dName))
         {
             char expected[sizeof(rendered)];memcpy(expected,rendered,sizeof(expected));int row=row_seen;

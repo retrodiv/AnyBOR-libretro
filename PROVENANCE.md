@@ -139,7 +139,7 @@ The generic buffer transform compiler/interpreter is original AnyBOR work.
 It provides only generic buffer execution and source compilation.
 
 
-The v3.0 6330-mod profile reconstructs the modified 6330 LNS v0.10g engine
+The v3.0 6330-lns-010g profile reconstructs the modified 6330 LNS v0.10g engine
 with LNS Enhancements by Hechelion and Gonzalo MVP, from the initial
 [AveyondFly/openbor-fflns source](https://github.com/AveyondFly/openbor-fflns/commit/cfb4f3a676613714757d4539275482f7c323d6ad)
 uploaded by yizhigai. The adapted portions cover model loading/unloading,
@@ -149,7 +149,7 @@ changes. OpenBOR's BSD-3-Clause licence and original OpenBOR Team copyright
 notices apply and are retained. Attribution identifies the contributors;
 it does not imply endorsement or complete binary equivalence.
 The original modified-source BSD grant is retained in
-`LICENSES/OpenBOR-profile-6330-mod-BSD-3-Clause.txt`; source regression excerpts
+`LICENSES/OpenBOR-profile-6330-lns-010g-BSD-3-Clause.txt`; source regression excerpts
 retain their associated notices in `tools/fixtures/lns-6330-NOTICE.txt`.
 The independent PACK 1.1 container adapter uses the published format and
 volume lookup rules documented in the later

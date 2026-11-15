@@ -34,7 +34,7 @@ v3.0 3837, v3.0 3839, v3.0 3842, v3.0 3846, v3.0 3847-dev, v3.0 3849, v3.0 3854,
 v3.0 3968-dev, v3.0 3970-dev, v3.0 3978, v3.0 3984, v3.0 3993, v3.0 3994, v3.0
 4011, v3.0 4046, v3.0 4051, v3.0 4054, v3.0 4055, v3.0 4079, v3.0 4080, v3.0
 4082, v3.0 4085, v3.0 4086, v3.0 4088-dev, v3.0 4107, v3.0 4111, v3.0 4129, v3.0
-4153, v3.0 4432, v3.0 4453, v3.0 6330, v3.0 6330-mod, v3.0 6391, v3.0 6391-mod, v3.0 6392-dev,
+4153, v3.0 4432, v3.0 4453, v3.0 6330, v3.0 6330-lns-010g, v3.0 6391, v3.0 6391-mod, v3.0 6392-dev,
 v3.0 6412-dev, v3.0 6510-dev, v3.0 7086-dev, v3.0 7123-dev, v4.0 7142-alpha,
 v4.0 7530, v4.0 7533, v4.0 7555, v4.0 7556, v4.0 7735 and v4.0 8023-dev.
 
@@ -392,7 +392,7 @@ complete executable equivalence.
 
 ## Reconstructed variants
 
-**v3.0 6330-mod** reconstructs Hechelion and Gonzalo MVP's modified
+**v3.0 6330-lns-010g** reconstructs Hechelion and Gonzalo MVP's modified
 6330 LNS v0.10g engine from its published initial source. It uses physical
 engine 6391 with explicit profile conditions. Its native contracts cover
 deferred and partial model loading, model unloading, colour and random-player
@@ -401,10 +401,10 @@ a 100-entry incoming-attack history, model/script properties and HUD colours.
 The cached reader retains unsigned coordinates and a separate large-file ABI.
 Memory-safety and lifecycle corrections apply across the physical family.
 
-**Build 6330 Mod**, **Build 6330-mod** and **Build 6330_MOD** select this profile,
+**Build 6330-lns-010g** selects this profile,
 as does a manual choice. A bare **Build 6330** retains ordinary routing;
 **Build 63XX Mod** selects the highest matching variant, v3.0 6391-mod.
-Settings, logs and state identity use the distinct `6330-mod` key. This is a
+Settings, logs and state identity use the distinct `6330-lns-010g` key. This is a
 reconstruction, with no claim of complete binary equivalence or endorsement
 by the authors. Later uploader-specific platform and scaling changes are
 outside its source baseline. A separate read-only PACK 1.1 container adapter
@@ -723,7 +723,7 @@ Profiles are compatibility selections. Several profiles use one physical source 
 | v3.0 4432 | `4432` |
 | v3.0 4453 | `4432` |
 | v3.0 6330 | `6391` |
-| v3.0 6330-mod | `6391` |
+| v3.0 6330-lns-010g | `6391` |
 | v3.0 6391 | `6391` |
 | v3.0 6391-mod | `6391` |
 | v3.0 6392-dev | `6391` |

@@ -19,6 +19,7 @@
 #error Player input assertions must remain enabled
 #endif
 uint32_t obor_profile_build;
+@PROFILE_SUPPORT@
 static unsigned cases;
 static int own_requires_actor,own_integer_result;
 #define assert(c) do {if(!(c)){fprintf(stderr,"Player input revision=%u case=%u line=%d: %s\n",obor_profile_build,cases,__LINE__,#c);abort();}}while(0)

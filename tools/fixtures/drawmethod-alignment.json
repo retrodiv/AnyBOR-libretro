@@ -53,11 +53,11 @@
       "entity_embedded": true
     },
     "6391": {
-      "entity_size": 2388,
+      "entity_size": 2824,
       "entity_alignment": 4,
       "method_size": 144,
       "method_alignment": 4,
-      "entity_method_offset": 2236,
+      "entity_method_offset": 2672,
       "layer_size": 212,
       "layer_method_offset": 48,
       "entity_embedded": true

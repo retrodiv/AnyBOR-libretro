@@ -82,6 +82,8 @@ def program(engine, profiles, *, reject_last_slot=False):
         SEARCH=function((engine / 'source/utils.c').read_text(encoding='latin1'), 'searchList'),
         VARIANTS='\n'.join(function(variant, n) for n in conversions),
         METHODS=methods, BASELINE=baseline, CONTEXTS=','.join(contexts),
+        PROFILE_SUPPORT=('uint32_t obor_profile_features;\nint obor_lns_players[MAX_PLAYERS];\n'
+                         if 'obor_lns_players' in methods else ''),
         HAS_HISTORY=str(int(engine.name in ['4432', '6391', '7142', '7533'])),
         CONTROL_UNDEF='#undef control_getmappedkeyname\n#undef control_getdevicename\n' if engine.name == '8023' else '',
         MODERN_VIEW=str(int(engine.name == '8023')))

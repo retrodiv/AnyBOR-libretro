@@ -310,10 +310,26 @@ def main():
             make_fixture.write_pak(model_pak, model_members)
             for profile in profiles:
                 engine = profile["build"]
+                content = model_pak
+                deferred = "lns_6330" in profile.get("features", [])
+                if deferred:
+                    # This profile caches model metadata during startup. Exercise
+                    # the actual parser before checking its optional-entry bound.
+                    forced_members = dict(model_members)
+                    forced_members["data/script.txt"] = b"alwaysupdate 1\n"
+                    forced_members["data/scripts/updated.c"] = b'''void main() {
+    if(getglobalvar("bounds_loaded") == 1) return;
+    setglobalvar("bounds_loaded", 1);
+    loadmodel("TestBlock", 0);
+    log("MODEL_ATTACK_BOUNDS_LOADED\\n");
+}
+'''
+                    content = work / ("model-attack-forced-{0}.pak".format(index))
+                    make_fixture.write_pak(content, forced_members)
                 warn = model_attack_warning(profile, number, declared)
                 system = work / ("model-attack-{0}-{1}".format(index, engine))
                 label = "model attack bounds {0} normal{1} max={2}".format(command, number, declared)
-                result = run(engine, model_pak, label, frames=1000, system_dir=system,
+                result = run(engine, content, label, frames=1000, system_dir=system,
                              OBOR_GAMELOG="On", OBOR_CRT_TV="Off")
                 for log in system.rglob("OpenBorLog.txt"):
                     if log.stat().st_size > 1024 * 1024:
@@ -321,6 +337,7 @@ def main():
                     result += log.read_text(errors="replace")
                 diagnostic = "Ignoring out-of-range attack type"
                 if ("resource initialization complete" not in result or
+                        (deferred and "MODEL_ATTACK_BOUNDS_LOADED" not in result) or
                         (not args.windows and "arena_released=1" not in result) or
                         "Allocator failed" in result or "invalid memory access" in result or
                         (warn and (diagnostic not in result or "normal{0}".format(number) not in result)) or

@@ -28,6 +28,9 @@ def program(engine, profiles, *, short_display=False, omit_release=False):
     statements = re.findall(r'_menutext\([^;\n]*?savelevel\[saveslot\]\.dName\);', source)
     if len(statements) != len(data['display_statements']):
         raise ValueError('All native saved-name display statements required')
+    focus = data.get('display_focus', ['selected'] * len(statements))
+    if len(focus) != len(statements) or any(value not in (0, 'selected') for value in focus):
+        raise ValueError('Explicit native display focus required for every statement')
     if short_display:
         statements = [s.replace('(int)sizeof(savelevel[saveslot].dName)',
                                 '(int)sizeof(savelevel[saveslot].dName)-1') for s in statements]
@@ -61,6 +64,8 @@ def program(engine, profiles, *, short_display=False, omit_release=False):
         SCRIPT_HEADER='openborscript.h' if (engine / 'openborscript.h').is_file() else 'scriptcommon.h',
         BEFORE_DISPLAY=display_switch(data['display_statements']),
         AFTER_DISPLAY=display_switch(statements), DISPLAY_COUNT=str(len(statements)),
+        DISPLAY_FOCUS='\n'.join('case %d: return %s;' %
+            (i, '(selector == 0)' if value == 'selected' else '0') for i, value in enumerate(focus)),
         SELECTOR=selector,
         SAVE_STORAGE='#define records savelevel' if re.search(r'^s_savelevel\s+savelevel\[', header, re.M) else
             'static s_savelevel records[2];\ns_savelevel *savelevel=records;',

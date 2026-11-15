@@ -1,7 +1,7 @@
 {
   "schema": 1,
   "purpose": "Verified engine executable identities, not game identities",
-  "catalog_sha256": "517fe9e0fbda63165ffba58b224e3869914ad5c7255e2cb8e07c515ba63c0134",
+  "catalog_sha256": "2bc3fb344e73b25f86c6b796ecd9b57d687dcc52037d33c2f9daf08d6eda049e",
   "executables": [
     {
       "sha256": "000627b9380e4c93e0be0ab18c0a8bbed422ada582f6ba68cef1128fc0dad74c",
@@ -4855,7 +4855,7 @@
     {
       "sha256": "1fe7382d63b2a4b39bb831cf3c7b4d6abec32badf9e6dd7846f36631da057304",
       "build": 6330,
-      "variant": "mod",
+      "variant": "lns-010g",
       "bytes": 3813390,
       "format": "pe",
       "platform": "windows",
@@ -6494,7 +6494,7 @@
     {
       "sha256": "2aae1c9e5839e428de98071d18335283920a5577ac773a4d4d7c48bc8b6def66",
       "build": 6330,
-      "variant": "mod",
+      "variant": "lns-010g",
       "bytes": 3602446,
       "format": "pe",
       "platform": "windows",

@@ -1,7 +1,7 @@
 {
   "core_name": "AnyBOR",
   "core_basename": "anybor_libretro",
-  "version": "0.2.33",
+  "version": "0.2.34",
   "fallback_build": "6391",
   "profiles": [
     {
@@ -2831,11 +2831,11 @@
       "auto_until": 6330
     },
     {
-      "build": "6330-mod",
+      "build": "6330-lns-010g",
       "revision": "6330",
       "engine": "6391",
       "major": "v3.0",
-      "stage": "mod",
+      "stage": "lns-010g",
       "covers": "Modified 6330 LNS v0.10g behavior; explicit variant tag or core option, with independently bound native-capability detection.",
       "automatic": false,
       "tagged": true,

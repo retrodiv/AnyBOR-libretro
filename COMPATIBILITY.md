@@ -34,7 +34,7 @@ v3.0 3837, v3.0 3839, v3.0 3842, v3.0 3846, v3.0 3847-dev, v3.0 3849, v3.0 3854,
 v3.0 3968-dev, v3.0 3970-dev, v3.0 3978, v3.0 3984, v3.0 3993, v3.0 3994, v3.0
 4011, v3.0 4046, v3.0 4051, v3.0 4054, v3.0 4055, v3.0 4079, v3.0 4080, v3.0
 4082, v3.0 4085, v3.0 4086, v3.0 4088-dev, v3.0 4107, v3.0 4111, v3.0 4129, v3.0
-4153, v3.0 4432, v3.0 4453, v3.0 6330, v3.0 6330-mod, v3.0 6391, v3.0 6391-mod, v3.0 6392-dev,
+4153, v3.0 4432, v3.0 4453, v3.0 6330, v3.0 6330-lns-010g, v3.0 6391, v3.0 6391-mod, v3.0 6392-dev,
 v3.0 6412-dev, v3.0 6510-dev, v3.0 7086-dev, v3.0 7123-dev, v4.0 7142-alpha,
 v4.0 7530, v4.0 7533, v4.0 7555, v4.0 7556, v4.0 7735 and v4.0 8023-dev.
 
@@ -73,9 +73,9 @@ build. Unknown, absent, conflicting or incompletely scanned executables leave
 the filename/content rules unchanged. See the
 [verified engine catalog](docs/ENGINE_EXECUTABLES.json).
 
-An explicit **Build 6330 Mod** variant or manual choice selects v3.0 6330-mod.
+An explicit **Build 6330-lns-010g** variant or manual choice selects v3.0 6330-lns-010g.
 Plain **Build 6330** retains the ordinary profile.
-Auto can select v3.0 6330-mod from exclusive native Hall of Fame directives in
+Auto can select v3.0 6330-lns-010g from exclusive native Hall of Fame directives in
 the bound level-order metadata, when its bounded scan completes unambiguously.
 This profile reads PACK 1.1 containers with their numbered companion volumes;
 all declared volumes must be present.

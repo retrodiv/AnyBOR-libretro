@@ -1560,6 +1560,12 @@
       "engine": "8023",
       "null_handle_is_nonfatal_false": false,
       "failed_numeric_conversion_is_nonfatal_false": false
+    },
+    "6330-lns-010g": {
+      "revision": 6330,
+      "engine": "6391",
+      "null_handle_is_nonfatal_false": false,
+      "failed_numeric_conversion_is_nonfatal_false": false
     }
   }
 }

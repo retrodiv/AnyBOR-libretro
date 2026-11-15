@@ -2055,6 +2055,14 @@
       "name_limit": 50,
       "setter_integer_result": false,
       "getter_requires_actor": false
+    },
+    "6330-lns-010g": {
+      "revision": 6330,
+      "engine": "6391",
+      "name_declaration": "char name[MAX_NAME_LEN]",
+      "name_limit": 50,
+      "setter_integer_result": false,
+      "getter_requires_actor": false
     }
   }
 }

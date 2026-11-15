@@ -476,7 +476,7 @@
     "source": "https://raw.githubusercontent.com/DCurrent/openbor/4a276c8b81fe0fc96d0f98b0e535da802c7417f7/engine/LICENSE"
   },
   {
-    "file": "LICENSES/OpenBOR-profile-6330-mod-BSD-3-Clause.txt",
+    "file": "LICENSES/OpenBOR-profile-6330-lns-010g-BSD-3-Clause.txt",
     "license": "BSD-3-Clause",
     "scope": "Modified6330 source adaptations and own-source regression extracts. Original OpenBOR Team notices and contributor credits are retained.",
     "sha256": "adfc28feba4d32bb3933b29fe55fd0a6aa746084704c3ee71fc3f732706b9aa4",
